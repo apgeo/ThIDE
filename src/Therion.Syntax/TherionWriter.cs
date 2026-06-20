@@ -1,4 +1,4 @@
-// Implementation Plan §9 — round-trip / code generation.
+// Implementation Plan ï¿½9 ï¿½ round-trip / code generation.
 // M6 stub: emitter visits the AST and writes Therion-formatted text.
 // Preserves trivia (TrivialComment, raw option strings) where present.
 
@@ -58,8 +58,17 @@ public sealed class TherionWriter : ITherionWriter
                 sb.Append('\n');
                 break;
 
+            case FlagsCommand fl:
+                Indent(sb, indent); sb.Append("flags");
+                foreach (var tk in fl.Tokens) sb.Append(' ').Append(tk);
+                sb.Append('\n');
+                break;
+
             case DataRow r:
-                Indent(sb, indent); sb.Append(string.Join(' ', r.Values)).Append('\n'); break;
+                Indent(sb, indent); sb.Append(string.Join(' ', r.Values));
+                if (!string.IsNullOrEmpty(r.TrailingComment)) sb.Append(" # ").Append(r.TrailingComment);
+                sb.Append('\n');
+                break;
 
             case StationFix f:
                 Indent(sb, indent); sb.Append("fix ").Append(f.Station).Append(' ')

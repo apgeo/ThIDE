@@ -25,8 +25,15 @@ public partial class MainWindowViewModel : ViewModelBase
         "    date 2024.01.15\n" +
         "    team \"Alice\" instruments\n" +
         "    data normal from to length compass clino\n" +
-        "      0 1 12.5 0 -5\n" +
+        "      # entrance series\n" +
+        "      0 1 12.5 0 -5    # start at the drip\n" +
         "      1 2  8.0 90 0\n" +
+        "    flags duplicate\n" +
+        "      2 3  4.2 180 10  # re-survey of the squeeze\n" +
+        "    flags not duplicate\n" +
+        "    flags splay\n" +
+        "      3 4  2.0 270 -20\n" +
+        "    flags not splay\n" +
         "    fix 0 100.0 200.0 -3.25\n" +
         "  endcentreline\n" +
         "endsurvey\n";
@@ -65,6 +72,7 @@ public partial class MainWindowViewModel : ViewModelBase
     public string MenuBuild          => L("Menu_Build",                  "_Build");
 
     public ObjectBrowserViewModel ObjectBrowser { get; }
+    public MeasurementsViewModel Measurements { get; }
     public DiagnosticsViewModel Diagnostics { get; }
     public BuildViewModel Build { get; }
     public WorkspaceExplorerViewModel WorkspaceExplorer { get; }
@@ -88,6 +96,7 @@ public partial class MainWindowViewModel : ViewModelBase
         IStringLocalizer<Strings> localizer,
         ILanguageService language,
         ObjectBrowserViewModel objectBrowser,
+        MeasurementsViewModel measurements,
         IDocumentService documents,
         DiagnosticsViewModel diagnostics,
         BuildViewModel build,
@@ -106,6 +115,7 @@ public partial class MainWindowViewModel : ViewModelBase
         if (_layout is not null)
             _layout.LayoutChanged += (_, _) => OnPropertyChanged(nameof(Layout));
         ObjectBrowser = objectBrowser;
+        Measurements = measurements;
         Diagnostics = diagnostics;
         Build = build;
         WorkspaceExplorer = workspaceExplorer;
@@ -135,6 +145,7 @@ public partial class MainWindowViewModel : ViewModelBase
         new NullLocalizer(),
         new LanguageService(),
         new ObjectBrowserViewModel(),
+        new MeasurementsViewModel(),
         new NullDocumentService(),
         new DiagnosticsViewModel(),
         new BuildViewModel(),
@@ -237,15 +248,31 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void SyncFromDocument()
     {
+        // DocumentChanged is raised from IDocumentService after a ConfigureAwait(false)
+        // file read, i.e. on a thread-pool thread. Updating bound UI state (notably the
+        // Measurements DataGridCollectionView) must happen on the UI thread, otherwise
+        // Avalonia throws "Call from invalid thread" and the open silently fails.
+        if (!Avalonia.Threading.Dispatcher.UIThread.CheckAccess())
+        {
+            Avalonia.Threading.Dispatcher.UIThread.Post(SyncFromDocument);
+            return;
+        }
+
         DocumentText = string.IsNullOrEmpty(_documents.CurrentText) ? SampleText : _documents.CurrentText;
         CurrentFilePath = _documents.CurrentPath;
         CurrentDiagnostics = _documents.CurrentDiagnostics;
         Navigation = _documents.CurrentNavigation;
         Diagnostics.Load(_documents.CurrentDiagnostics);
         if (_documents.Workspace is { } workspace)
+        {
             ObjectBrowser.Load(workspace);
+            Measurements.Load(workspace);
+        }
         else if (_documents.CurrentSemantics is { } model)
+        {
             ObjectBrowser.Load(model);
+            Measurements.Load(model);
+        }
         XviReferences.Refresh();
         WorkspaceExplorer.Refresh();
     }
@@ -254,7 +281,11 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         var parse = new ThParser().Parse("(sample)", SampleText);
         if (parse.Value is { } ast)
-            ObjectBrowser.Load(new SemanticBinder().Bind(ast));
+        {
+            var model = new SemanticBinder().Bind(ast);
+            ObjectBrowser.Load(model);
+            Measurements.Load(model);
+        }
     }
 
     private void Refresh()

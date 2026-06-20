@@ -1,4 +1,4 @@
-// Implementation Plan §7.1 — DI composition root.
+// Implementation Plan ï¿½7.1 ï¿½ DI composition root.
 // Wires Microsoft.Extensions.* and Therion.* concrete implementations.
 
 using System;
@@ -28,7 +28,7 @@ internal static class AppServices
     {
         var services = new ServiceCollection();
 
-        // Logging (§13 M1 — Console + Debug providers; rolling file provider added in M5b).
+        // Logging (ï¿½13 M1 ï¿½ Console + Debug providers; rolling file provider added in M5b).
         services.AddLogging(b =>
         {
             b.SetMinimumLevel(LogLevel.Information);
@@ -36,17 +36,17 @@ internal static class AppServices
             b.AddDebug();
         });
 
-        // Localization (§7.6).
+        // Localization (ï¿½7.6).
         var resourcesPath = "Resources";
         services.AddLocalization(o => o.ResourcesPath = resourcesPath);
         services.AddSingleton<ILanguageService, LanguageService>();
 
-        // Workspace primitives (§6).
+        // Workspace primitives (ï¿½6).
         services.AddSingleton(WorkspaceOptions.FromEnvironment());
         services.AddSingleton<IThconfigSniffer, ThconfigSniffer>();
         services.AddSingleton<IProjectEntryPointResolver, ProjectEntryPointResolver>();
 
-        // Parse caches (§4.5 / §M5 / Post-M6 D — disk cache is opt-in and format-selectable).
+        // Parse caches (ï¿½4.5 / ï¿½M5 / Post-M6 D ï¿½ disk cache is opt-in and format-selectable).
         services.AddSingleton<IDiskParseCache>(sp =>
         {
             var opts = sp.GetRequiredService<WorkspaceOptions>();
@@ -63,14 +63,14 @@ internal static class AppServices
             return new TieredParseCache(l1, sp.GetRequiredService<IDiskParseCache>());
         });
 
-        // Semantics (§5 / §M6) — uses AddTherionSemantics() so rule plugins flow in via ISemanticRule.
+        // Semantics (ï¿½5 / ï¿½M6) ï¿½ uses AddTherionSemantics() so rule plugins flow in via ISemanticRule.
         services.AddTherionSemantics();
         services.AddTherionBuiltinSemanticRules();
 
-        // Syntax extensibility (§4.4) — command handlers register via ICommandHandler.
+        // Syntax extensibility (ï¿½4.4) ï¿½ command handlers register via ICommandHandler.
         services.AddTherionCommands();
 
-        // Build / external tools (§9bis).
+        // Build / external tools (ï¿½9bis).
         services.AddSingleton<IExternalToolPathOverrides, JsonExternalToolPathOverrides>();
         services.AddSingleton<IExternalToolLocator>(sp =>
             new ExternalToolLocator(sp.GetRequiredService<IExternalToolPathOverrides>()));
@@ -81,18 +81,19 @@ internal static class AppServices
         services.AddSingleton<IShellOpener, ShellOpener>();
         services.AddSingleton<ITherionCompiler, TherionCompiler>();
 
-        // Active-document host (§7.3).
+        // Active-document host (ï¿½7.3).
         services.AddSingleton<IDocumentService, DocumentService>();
 
-        // Keyboard shortcuts (§9bis.5a / Decision #29).
+        // Keyboard shortcuts (ï¿½9bis.5a / Decision #29).
         services.AddSingleton<IKeyboardShortcutService, JsonKeyboardShortcutService>();
 
-        // Shell layout persistence (§7.2 / M6 #1 interim — Dock.Avalonia swap deferred).
+        // Shell layout persistence (ï¿½7.2 / M6 #1 interim ï¿½ Dock.Avalonia swap deferred).
         services.AddSingleton<ILayoutService, JsonLayoutService>();
 
         // ViewModels.
         services.AddTransient<MainWindowViewModel>();
         services.AddTransient<ObjectBrowserViewModel>();
+        services.AddTransient<MeasurementsViewModel>();
         services.AddTransient<DiagnosticsViewModel>();
         services.AddTransient<BuildViewModel>();
         services.AddTransient<WorkspaceExplorerViewModel>();

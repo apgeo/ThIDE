@@ -1,4 +1,4 @@
-// Implementation Plan §5.1 — symbol records produced by the binder.
+// Implementation Plan ï¿½5.1 ï¿½ symbol records produced by the binder.
 
 using System.Collections.Immutable;
 using Therion.Core;
@@ -31,6 +31,21 @@ public sealed record SurveySymbol(
     QualifiedName? Parent,
     ImmutableArray<QualifiedName> Children);
 
+/// <summary>
+/// Centreline shot flags (Therion <c>flags surface|duplicate|splay|approximate</c>).
+/// Stateful in source: a <c>flags</c> command toggles these for subsequent shots until
+/// changed by another <c>flags [not] ...</c>.
+/// </summary>
+[System.Flags]
+public enum ShotFlags
+{
+    None        = 0,
+    Surface     = 1 << 0,
+    Duplicate   = 1 << 1,
+    Splay       = 1 << 2,
+    Approximate = 1 << 3,
+}
+
 /// <summary>A "shot" leg between two stations (from one data row).</summary>
 public sealed record ShotSymbol(
     QualifiedName From,
@@ -40,9 +55,18 @@ public sealed record ShotSymbol(
     double? Clino,
     SourceSpan Span)
 {
+    /// <summary>Effective flags in force at this shot (folded from preceding <c>flags</c> commands).</summary>
+    public ShotFlags Flags { get; init; }
+
     /// <summary>
-    /// AST node this shot was lowered from — required to round-trip inline edits
-    /// through <see cref="IModelEditService.ReplaceNode"/> (Plan §7.3 / M6 #8).
+    /// Comment attached to the shot: the inline <c># ...</c> after the values and/or the
+    /// <c># ...</c> line directly above it, joined with " | ". Null when none.
+    /// </summary>
+    public string? Comment { get; init; }
+
+    /// <summary>
+    /// AST node this shot was lowered from ï¿½ required to round-trip inline edits
+    /// through <see cref="IModelEditService.ReplaceNode"/> (Plan ï¿½7.3 / M6 #8).
     /// Null on Empty/synthetic shots.
     /// </summary>
     public DataRow? SourceRow { get; init; }
@@ -54,7 +78,7 @@ public sealed record ShotSymbol(
     public DataCommand? FieldDefinition { get; init; }
 }
 
-/// <summary>A <c>scrap</c> symbol (.th2): id + declaration span (Plan §7.3 / M6 #7).</summary>
+/// <summary>A <c>scrap</c> symbol (.th2): id + declaration span (Plan ï¿½7.3 / M6 #7).</summary>
 public sealed record ScrapSymbol(
     string Id,
     SourceSpan DeclarationSpan);

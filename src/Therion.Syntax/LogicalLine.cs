@@ -1,4 +1,4 @@
-// Implementation Plan §4.2 — line-oriented cursor over the token stream.
+// Implementation Plan ï¿½4.2 ï¿½ line-oriented cursor over the token stream.
 // Most Therion commands are line-based (with backslash continuations); this
 // helper splits a token list into "logical lines" so parsers can match on
 // keyword + tail without rewriting iteration logic each time.
@@ -13,12 +13,14 @@ namespace Therion.Syntax;
 /// A "logical line": a contiguous slice of significant tokens (no whitespace,
 /// no newlines, no line-continuations) that originally lived on the same
 /// physical line (with backslash continuations collapsed).
-/// Comments encountered before / on this line are exposed as <see cref="LeadingComments"/>.
+/// Comments encountered before / on this line are exposed as <see cref="LeadingComments"/>;
+/// an inline comment after the line's tokens is exposed as <see cref="TrailingComment"/>.
 /// </summary>
 public readonly record struct LogicalLine(
     ImmutableArray<TherionToken> Tokens,
     ImmutableArray<TherionToken> LeadingComments,
-    SourceSpan Span)
+    SourceSpan Span,
+    TherionToken? TrailingComment = null)
 {
     public bool IsEmpty => Tokens.IsDefaultOrEmpty;
     public TherionToken Head => Tokens[0];
@@ -34,6 +36,7 @@ internal static class LogicalLineReader
         var current = new List<TherionToken>();
         var leadingComments = new List<TherionToken>();
         TherionToken? lineStart = null;
+        TherionToken? trailingComment = null;
 
         void Flush(TherionToken? lineEnd)
         {
@@ -51,6 +54,7 @@ internal static class LogicalLineReader
                         SpanFromTo(firstC, lastC)));
                     leadingComments.Clear();
                 }
+                trailingComment = null;
                 return;
             }
 
@@ -59,9 +63,11 @@ internal static class LogicalLineReader
             lines.Add(new LogicalLine(
                 current.ToImmutableArray(),
                 leadingComments.ToImmutableArray(),
-                SpanFromTo(first, last)));
+                SpanFromTo(first, last),
+                trailingComment));
             current.Clear();
             leadingComments.Clear();
+            trailingComment = null;
         }
 
         for (int i = 0; i < tokens.Length; i++)
@@ -80,8 +86,10 @@ internal static class LogicalLineReader
                 case TherionTokenKind.LineComment:
                     if (current.Count == 0)
                         leadingComments.Add(t);
-                    // Inline trailing comments are dropped from the logical
-                    // token stream but preserved at the file-level walker.
+                    else
+                        // Inline trailing comment: kept off the token stream but
+                        // attached to the line so data rows can surface it.
+                        trailingComment = t;
                     continue;
 
                 default:

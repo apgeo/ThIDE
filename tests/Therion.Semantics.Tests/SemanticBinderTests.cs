@@ -1,4 +1,4 @@
-// M3 semantic tests — bind the synthetic cave.th fixture and assert
+// M3 semantic tests ï¿½ bind the synthetic cave.th fixture and assert
 // station/survey indexes, qualified-name resolution, and equate graph.
 
 using System.Collections.Immutable;
@@ -66,7 +66,7 @@ public class SemanticBinderTests
         var u1 = QualifiedName.Of("cave", "upper", "u1");
         var cave0 = QualifiedName.Of("cave", "0");
         Assert.True(model.Equates.Find(u1).Equals(model.Equates.Find(cave0)));
-    }"C:\Users\Z\source\repos\TherionProc\TherionProc\bin\Debug\net8.0\TherionProc.exe"
+    }
 
     [Fact]
     public void GoToDefinition_resolves_qualified_station()

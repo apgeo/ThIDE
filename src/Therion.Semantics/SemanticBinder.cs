@@ -1,4 +1,4 @@
-// Implementation Plan §5.2 — bind + resolve passes.
+// Implementation Plan ï¿½5.2 ï¿½ bind + resolve passes.
 // Walks a TherionFile AST, collecting surveys, stations, shots and equates.
 // Builds qualified names by prefixing the current survey scope.
 
@@ -12,7 +12,7 @@ using Therion.Syntax;
 
 namespace Therion.Semantics;
 
-/// <summary>Stateless binder — call <see cref="Bind"/> to produce a <see cref="SemanticModel"/>.</summary>
+/// <summary>Stateless binder ï¿½ call <see cref="Bind"/> to produce a <see cref="SemanticModel"/>.</summary>
 public sealed class SemanticBinder
 {
     public SemanticModel Bind(TherionFile file)
@@ -71,10 +71,17 @@ public sealed class SemanticBinder
         DataCommand? dataFields)
     {
         var currentFields = dataFields;
+        // Flags are stateful within a centreline body, and a comment line directly
+        // above a data row binds to that row. Both are tracked across this child list.
+        var activeFlags = ShotFlags.None;
+        TrivialComment? pendingComment = null;
         foreach (var node in children)
         {
             switch (node)
             {
+                case TrivialComment tc:
+                    pendingComment = tc;
+                    continue; // keep the comment pending; don't reset it below.
                 case SurveyCommand sv:
                     BindSurvey(sv, ctx, scope);
                     break;
@@ -88,17 +95,75 @@ public sealed class SemanticBinder
                 case EquateCommand eq:
                     BindEquate(eq, ctx, scope);
                     break;
+                case FlagsCommand flags:
+                    activeFlags = ApplyFlags(activeFlags, flags.Tokens);
+                    break;
                 case DataCommand d:
                     currentFields = d;
                     break;
                 case DataRow row when currentFields is not null:
-                    BindShot(row, currentFields, ctx, scope);
+                    var leading = AdjacentLeadingComment(pendingComment, row);
+                    BindShot(row, currentFields, ctx, scope, activeFlags,
+                        CombineComments(leading, row.TrailingComment));
                     break;
                 case ScrapBlock scrap:
                     BindScrap(scrap, ctx, scope);
                     break;
             }
+            pendingComment = null;
         }
+    }
+
+    /// <summary>Folds a <c>flags [not] name...</c> token list into the active flag set.</summary>
+    private static ShotFlags ApplyFlags(ShotFlags active, ImmutableArray<string> tokens)
+    {
+        bool negate = false;
+        foreach (var raw in tokens)
+        {
+            var t = raw.ToLowerInvariant();
+            if (t is "not")
+            {
+                negate = true;
+                continue;
+            }
+            var flag = t switch
+            {
+                "surface"                   => ShotFlags.Surface,
+                "duplicate"                 => ShotFlags.Duplicate,
+                "splay"                     => ShotFlags.Splay,
+                "approximate" or "approx"   => ShotFlags.Approximate,
+                _                           => ShotFlags.None,
+            };
+            if (flag != ShotFlags.None)
+                active = negate ? active & ~flag : active | flag;
+            negate = false;
+        }
+        return active;
+    }
+
+    /// <summary>Returns the comment text only when it sits on the line directly above the row.</summary>
+    private static string? AdjacentLeadingComment(TrivialComment? comment, DataRow row)
+    {
+        if (comment is null) return null;
+        if (comment.Span.End.Line != row.Span.Start.Line - 1) return null;
+        return CleanComment(comment.Text);
+    }
+
+    /// <summary>Strips the leading <c>#</c> and surrounding whitespace from a comment.</summary>
+    private static string? CleanComment(string? raw)
+    {
+        if (string.IsNullOrEmpty(raw)) return null;
+        var s = raw.TrimStart();
+        if (s.StartsWith('#')) s = s[1..];
+        s = s.Trim();
+        return s.Length == 0 ? null : s;
+    }
+
+    private static string? CombineComments(string? leading, string? trailing)
+    {
+        if (string.IsNullOrEmpty(leading)) return string.IsNullOrEmpty(trailing) ? null : trailing;
+        if (string.IsNullOrEmpty(trailing)) return leading;
+        return $"{leading} | {trailing}";
     }
 
     private void BindScrap(ScrapBlock scrap, BindContext ctx, ImmutableArray<string> scope)
@@ -161,7 +226,8 @@ public sealed class SemanticBinder
         if (group.Count > 0) ctx.EquateGroups.Add(group);
     }
 
-    private void BindShot(DataRow row, DataCommand data, BindContext ctx, ImmutableArray<string> scope)
+    private void BindShot(DataRow row, DataCommand data, BindContext ctx, ImmutableArray<string> scope,
+        ShotFlags flags, string? comment)
     {
         int fromIdx = IndexOf(data.Fields, "from");
         int toIdx   = IndexOf(data.Fields, "to");
@@ -180,6 +246,8 @@ public sealed class SemanticBinder
         {
             SourceRow = row,
             FieldDefinition = data,
+            Flags = flags,
+            Comment = comment,
         });
     }
 

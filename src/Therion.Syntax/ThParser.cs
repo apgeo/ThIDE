@@ -138,6 +138,7 @@ public sealed class ThParser
             "survey"                       => ParseSurvey(line, lines, ref cursor, filePath, options, diagnostics),
             "centreline" or "centerline"   => ParseCentreline(line, lines, ref cursor, filePath, options, diagnostics),
             "data"                         => ParseData(line, diagnostics),
+            "flags"                        => ParseFlags(line),
             "fix"                          => ParseFix(line, diagnostics),
             "equate"                       => ParseEquate(line, diagnostics),
             "input" or "load"              => ParseInput(line, diagnostics),
@@ -190,7 +191,8 @@ public sealed class ThParser
         {
             var b = ImmutableArray.CreateBuilder<string>();
             foreach (var t in line.Tokens) b.Add(t.Text);
-            return new DataRow(line.Span, b.ToImmutable());
+            return new DataRow(line.Span, b.ToImmutable(),
+                TrailingComment: CleanComment(line.TrailingComment?.Text));
         }
         return ParseUnknown(line, options, diagnostics);
     }
@@ -249,6 +251,13 @@ public sealed class ThParser
             fields.Add(line.Tokens[i].Text);
 
         return new DataCommand(line.Span, style, fields.ToImmutable());
+    }
+
+    private FlagsCommand ParseFlags(LogicalLine line)
+    {
+        var b = ImmutableArray.CreateBuilder<string>();
+        for (int i = 1; i < line.Tokens.Length; i++) b.Add(line.Tokens[i].Text);
+        return new FlagsCommand(line.Span, b.ToImmutable());
     }
 
     private StationFix ParseFix(LogicalLine line, ImmutableArray<Diagnostic>.Builder diagnostics)
@@ -349,6 +358,16 @@ public sealed class ThParser
 
     private static double ParseDouble(string text) =>
         double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var d) ? d : 0d;
+
+    /// <summary>Strips the leading <c>#</c> and surrounding whitespace from a comment token.</summary>
+    internal static string? CleanComment(string? raw)
+    {
+        if (string.IsNullOrEmpty(raw)) return null;
+        var s = raw.TrimStart();
+        if (s.StartsWith('#')) s = s[1..];
+        s = s.Trim();
+        return s.Length == 0 ? null : s;
+    }
 
     private static string Unquote(string text) =>
         text.Length >= 2 && text[0] == '"' && text[^1] == '"'
