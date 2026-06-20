@@ -1,4 +1,4 @@
-// Implementation Plan §7.3 — host-agnostic syntax classification.
+// Implementation Plan ï¿½7.3 ï¿½ host-agnostic syntax classification.
 // AvaloniaEdit, Roslyn-style classifiers, or a plain HTML renderer all consume
 // the same TokenClassification stream. Drives a single source of truth (the lexer).
 
@@ -52,6 +52,9 @@ public static class TokenClassifier
         "source", "layout", "export", "select", "cs", "system-charset",
         "language", "lang", "translate", "revise", "group", "endgroup",
     };
+
+    /// <summary>The known Therion command/block keywords (used for editor autocomplete).</summary>
+    public static IReadOnlyCollection<string> Keywords => KnownKeywords;
 
     /// <summary>Classify the given token stream.</summary>
     public static ImmutableArray<ClassifiedSpan> Classify(ImmutableArray<TherionToken> tokens)
