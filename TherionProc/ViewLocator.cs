@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using TherionProc.ViewModels;
+using TherionProc.ViewModels.Docking;
 
 namespace TherionProc;
 
@@ -32,6 +33,9 @@ public class ViewLocator : IDataTemplate
 
     public bool Match(object? data)
     {
-        return data is ViewModelBase;
+        // ViewModelBase covers the classic panels; IDockContent covers the Dock
+        // document/tool leaves. Container docks (RootDock/DocumentDock/ToolDock)
+        // are intentionally not matched — the Dock theme renders those.
+        return data is ViewModelBase or IDockContent;
     }
 }
