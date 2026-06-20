@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>Therion.Cli</RootNamespace>
+    <AssemblyName>therion-cli</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Therion.Core\Therion.Core.csproj" />
+    <ProjectReference Include="..\Therion.Syntax\Therion.Syntax.csproj" />
+    <ProjectReference Include="..\Therion.Workspace\Therion.Workspace.csproj" />
+  </ItemGroup>
+
+</Project>

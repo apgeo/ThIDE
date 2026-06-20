@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(TherionLibraryTargetFrameworks)</TargetFrameworks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Plan §4.5 / D2 / Post-M6 D — MessagePack disk cache backend (opt-in). -->
+    <PackageReference Include="MessagePack" Version="2.5.187" />
+    <ProjectReference Include="..\Therion.Core\Therion.Core.csproj" />
+    <ProjectReference Include="..\Therion.Syntax\Therion.Syntax.csproj" />
+    <ProjectReference Include="..\Therion.Semantics\Therion.Semantics.csproj" />
+    <ProjectReference Include="..\Therion.Processing.Abstractions\Therion.Processing.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

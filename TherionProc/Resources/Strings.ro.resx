@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="AppTitle" xml:space="preserve"><value>TherionProc</value></data>
+  <data name="Menu_File" xml:space="preserve"><value>_Fi&#x219;ier</value></data>
+  <data name="Menu_File_OpenFile" xml:space="preserve"><value>_Deschide fi&#x219;ier...</value></data>
+  <data name="Menu_File_OpenFolder" xml:space="preserve"><value>Deschide d_osar...</value></data>
+  <data name="Menu_File_Exit" xml:space="preserve"><value>_Ie&#x219;ire</value></data>
+  <data name="Menu_View" xml:space="preserve"><value>_Vizualizare</value></data>
+  <data name="Menu_View_Language" xml:space="preserve"><value>_Limb&#x103;</value></data>
+  <data name="Menu_View_Language_English" xml:space="preserve"><value>English</value></data>
+  <data name="Menu_View_Language_Romanian" xml:space="preserve"><value>Rom&#xE2;n&#x103;</value></data>
+  <data name="Menu_Build" xml:space="preserve"><value>_Compilare</value></data>
+  <data name="Menu_Build_Build" xml:space="preserve"><value>_Compileaz&#x103;</value></data>
+  <data name="Menu_Build_Rebuild" xml:space="preserve"><value>_Recompileaz&#x103;</value></data>
+  <data name="Menu_Build_Cancel" xml:space="preserve"><value>_Anuleaz&#x103;</value></data>
+  <data name="Tool_WorkspaceExplorer" xml:space="preserve"><value>Explorator proiect</value></data>
+  <data name="Tool_Diagnostics" xml:space="preserve"><value>Diagnostice</value></data>
+  <data name="Tool_ObjectBrowser" xml:space="preserve"><value>Navigator obiecte</value></data>
+  <data name="Tool_CompilerOutput" xml:space="preserve"><value>Ie&#x219;ire compilator</value></data>
+  <data name="Tool_GeneratedFiles" xml:space="preserve"><value>Fi&#x219;iere generate</value></data>
+  <data name="Welcome_Title" xml:space="preserve"><value>Bine a&#x21B;i venit la TherionProc</value></data>
+  <data name="Welcome_Message" xml:space="preserve"><value>Deschide&#x21B;i un fi&#x219;ier de configurare Therion sau un dosar pentru a &#xEE;ncepe.</value></data>
+  <data name="Domain_Station" xml:space="preserve"><value>Sta&#x21B;ie</value></data>
+  <data name="Domain_Survey" xml:space="preserve"><value>Topografie</value></data>
+  <data name="Domain_Shot" xml:space="preserve"><value>Vizare</value></data>
+  <data name="Domain_Scrap" xml:space="preserve"><value>Schi&#x21B;&#x103;</value></data>
+  <data name="Domain_Fix" xml:space="preserve"><value>Punct fix</value></data>
+  <data name="Domain_Equate" xml:space="preserve"><value>Echivalare</value></data>
+  <data name="Domain_Map" xml:space="preserve"><value>Hart&#x103;</value></data>
+  <data name="Domain_Cave" xml:space="preserve"><value>Pe&#x219;ter&#x103;</value></data>
+  <data name="Domain_Passage" xml:space="preserve"><value>Galerie</value></data>
+  <data name="Domain_Entrance" xml:space="preserve"><value>Intrare</value></data>
+  <data name="Browser_Tab_Stations" xml:space="preserve"><value>Sta&#x21B;ii</value></data>
+  <data name="Browser_Tab_Shots" xml:space="preserve"><value>Viz&#x103;ri</value></data>
+  <data name="Browser_Col_QualifiedName" xml:space="preserve"><value>Nume calificat</value></data>
+  <data name="Browser_Col_Kind" xml:space="preserve"><value>Tip</value></data>
+  <data name="Browser_Col_Survey" xml:space="preserve"><value>Topografie</value></data>
+  <data name="Browser_Col_Line" xml:space="preserve"><value>Linie</value></data>
+  <data name="Browser_Col_From" xml:space="preserve"><value>De la</value></data>
+  <data name="Browser_Col_To" xml:space="preserve"><value>P&#xE2;n&#x103; la</value></data>
+  <data name="Browser_Col_Length" xml:space="preserve"><value>Lungime</value></data>
+  <data name="Browser_Col_Compass" xml:space="preserve"><value>Azimut</value></data>
+  <data name="Browser_Col_Clino" xml:space="preserve"><value>&#xCE;nclinare</value></data>
+</root>

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="AppTitle" xml:space="preserve"><value>TherionProc</value></data>
+  <data name="Menu_File" xml:space="preserve"><value>_File</value></data>
+  <data name="Menu_File_OpenFile" xml:space="preserve"><value>Open _File...</value></data>
+  <data name="Menu_File_OpenFolder" xml:space="preserve"><value>Open F_older...</value></data>
+  <data name="Menu_File_Exit" xml:space="preserve"><value>E_xit</value></data>
+  <data name="Menu_View" xml:space="preserve"><value>_View</value></data>
+  <data name="Menu_View_Language" xml:space="preserve"><value>_Language</value></data>
+  <data name="Menu_View_Language_English" xml:space="preserve"><value>English</value></data>
+  <data name="Menu_View_Language_Romanian" xml:space="preserve"><value>Rom&#226;n&#259;</value></data>
+  <data name="Menu_Build" xml:space="preserve"><value>_Build</value></data>
+  <data name="Menu_Build_Build" xml:space="preserve"><value>_Build</value></data>
+  <data name="Menu_Build_Rebuild" xml:space="preserve"><value>_Rebuild</value></data>
+  <data name="Menu_Build_Cancel" xml:space="preserve"><value>_Cancel</value></data>
+  <data name="Tool_WorkspaceExplorer" xml:space="preserve"><value>Workspace Explorer</value></data>
+  <data name="Tool_Diagnostics" xml:space="preserve"><value>Diagnostics</value></data>
+  <data name="Tool_ObjectBrowser" xml:space="preserve"><value>Object Browser</value></data>
+  <data name="Tool_CompilerOutput" xml:space="preserve"><value>Compiler Output</value></data>
+  <data name="Tool_GeneratedFiles" xml:space="preserve"><value>Generated Files</value></data>
+  <data name="Welcome_Title" xml:space="preserve"><value>Welcome to TherionProc</value></data>
+  <data name="Welcome_Message" xml:space="preserve"><value>Open a Therion configuration file or folder to begin.</value></data>
+  <data name="Domain_Station" xml:space="preserve"><value>Station</value></data>
+  <data name="Domain_Survey" xml:space="preserve"><value>Survey</value></data>
+  <data name="Domain_Shot" xml:space="preserve"><value>Shot</value></data>
+  <data name="Domain_Scrap" xml:space="preserve"><value>Scrap</value></data>
+  <data name="Domain_Fix" xml:space="preserve"><value>Fix</value></data>
+  <data name="Domain_Equate" xml:space="preserve"><value>Equate</value></data>
+  <data name="Domain_Map" xml:space="preserve"><value>Map</value></data>
+  <data name="Domain_Cave" xml:space="preserve"><value>Cave</value></data>
+  <data name="Domain_Passage" xml:space="preserve"><value>Passage</value></data>
+  <data name="Domain_Entrance" xml:space="preserve"><value>Entrance</value></data>
+  <data name="Browser_Tab_Stations" xml:space="preserve"><value>Stations</value></data>
+  <data name="Browser_Tab_Shots" xml:space="preserve"><value>Shots</value></data>
+  <data name="Browser_Col_QualifiedName" xml:space="preserve"><value>Qualified name</value></data>
+  <data name="Browser_Col_Kind" xml:space="preserve"><value>Kind</value></data>
+  <data name="Browser_Col_Survey" xml:space="preserve"><value>Survey</value></data>
+  <data name="Browser_Col_Line" xml:space="preserve"><value>Line</value></data>
+  <data name="Browser_Col_From" xml:space="preserve"><value>From</value></data>
+  <data name="Browser_Col_To" xml:space="preserve"><value>To</value></data>
+  <data name="Browser_Col_Length" xml:space="preserve"><value>Length</value></data>
+  <data name="Browser_Col_Compass" xml:space="preserve"><value>Compass</value></data>
+  <data name="Browser_Col_Clino" xml:space="preserve"><value>Clino</value></data>
+</root>

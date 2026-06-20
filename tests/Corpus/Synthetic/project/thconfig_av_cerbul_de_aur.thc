@@ -1,0 +1,49 @@
+encoding  utf-8
+source av_cerbul_de_aur.th
+
+#!PROCESS
+#!TITLE grind
+
+layout l1
+  code metapost
+  def a_water (expr p) =
+    T:=identity;
+    thfill p withcolor (0.0, 0.5, 1.0);
+  enddef;
+
+   scale 1 100
+
+   code metapost
+      #fonts_setup(3,4,5,7,11);
+      #fonts_setup(7,8,10,12,14);
+      % default values depend on scale; for 1:200 they are 7,8,10,12,14
+   endcode
+    
+  code tex-map
+     \legendwidth=15cm
+     #\legendtextcolor={\color[0 0 100]}  % color as RGB 0..100
+     \legendtextsize={\size[12]}
+     \legendtextheadersize={\size[24]}
+  endcode
+  
+  legend on
+
+endlayout
+
+export model -output rez\av_cerbul_de_aur_20260505_v1.lox	#\
+#-wall-source maps
+# wall-source <maps/centerline/all/splays>
+
+export model -fmt survex -output rez\av_cerbul_de_aur_20260505_v1.3d
+#export model -fmt compass -output rez\av_cerbul_de_aur_20260505_v1.plt
+
+#system "cd rez";
+##system "start c:\ ... \therion\rez\av_cerbul_de_aur_20260505_v1.lox"
+
+#procesarea partii de export in format KML ia mai mult timp (si nu il generam de fiecare data)
+export model -fmt kml -output rez\av_cerbul_de_aur_20260505_v1.kml 
+export model -fmt shp -output rez\av_cerbul_de_aur_20260505_v1.shp \
+-wall-source splays
+#	-wall-source centerline
+#	#-wall-source splays
+#	#-wall-source centerline

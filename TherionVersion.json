@@ -1,0 +1,13 @@
+{
+  "//": "Pinned Therion source-of-truth. Decision #4, §2 of Implementation Plan.",
+  "repository": "https://github.com/therion/therion",
+  "tag": "v6.4.0",
+  "commitSha": null,
+  "thbookSource": "https://github.com/therion/therion/tree/v6.4.0/thbook",
+  "thbookPdf": "https://github.com/therion/therion/releases/download/v6.4.0/thbook-v6.4.0.pdf",
+  "syntaxVersion": {
+    "major": 6,
+    "minor": 4,
+    "patch": 0
+  }
+}

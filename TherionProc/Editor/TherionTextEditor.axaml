@@ -1,0 +1,9 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ae="https://github.com/avaloniaui/avaloniaedit"
+             x:Class="TherionProc.Editor.TherionTextEditor">
+    <ae:TextEditor x:Name="Editor"
+                   ShowLineNumbers="True"
+                   FontFamily="Cascadia Mono,Consolas,Menlo,monospace"
+                   FontSize="13" />
+</UserControl>

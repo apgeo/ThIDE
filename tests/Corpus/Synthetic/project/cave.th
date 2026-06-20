@@ -1,0 +1,32 @@
+encoding utf-8
+
+# Synthetic cave — exercises the lenient .th parser path
+survey cave -title "Synthetic Cave"
+
+  centreline
+    date 2024.01.15
+    team "Alice" instruments
+    team "Bob" notes
+    units length metres
+    units compass clino degrees
+
+    data normal from to length compass clino
+      0   1   12.5  0    -5
+      1   2    8.0  90    0
+      2   3   15.0 180   -10 \
+                                  # line continuation example
+      3   4    7.25 270   5
+
+    fix 0 100.000 200.000 -3.250
+  endcentreline
+
+  survey upper
+    centreline
+      data normal from to length compass clino
+        u1 u2  5.0  45  0
+        u2 u3  6.0 135  0
+    endcentreline
+    equate u1 cave.0
+  endsurvey
+
+endsurvey

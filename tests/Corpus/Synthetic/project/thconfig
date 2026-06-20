@@ -1,0 +1,14 @@
+encoding utf-8
+
+# top-level config for the synthetic test cave
+source cave.th
+
+layout default
+  scale 1 500
+endlayout
+
+export model -fmt lox -o out/cave.lox
+export model -fmt survex -o out/cave.3d
+export map -projection plan -o out/cave.pdf
+
+select cave@upper

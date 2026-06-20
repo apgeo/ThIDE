@@ -1,0 +1,32 @@
+<Project>
+
+  <!--
+    Common settings for every project in the solution.
+    Per Implementation Plan (docs/ImplementationPlan.md) §1, §17 (API stability).
+  -->
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
+    <Deterministic>true</Deterministic>
+    <NeutralLanguage>en</NeutralLanguage>
+    <Product>TherionProc</Product>
+  </PropertyGroup>
+
+  <!--
+    Plan §13 M7 / Post-M6 follow-up C — .NET 10 readiness scaffolding.
+    Libraries opt into multi-targeting via the shared
+    `TherionLibraryTargetFrameworks` property. Default is single-target net8.0
+    so day-to-day builds stay unchanged; pass `-p:TherionMultiTargetNet10=true`
+    (or set the env var of the same name) to also produce net10.0 binaries.
+    Apps (TherionProc, Therion.Cli) and tests stay net8.0-only.
+  -->
+  <PropertyGroup>
+    <TherionMultiTargetNet10 Condition="'$(TherionMultiTargetNet10)' == ''">false</TherionMultiTargetNet10>
+    <TherionLibraryTargetFrameworks Condition="'$(TherionMultiTargetNet10)' == 'true'">net8.0;net10.0</TherionLibraryTargetFrameworks>
+    <TherionLibraryTargetFrameworks Condition="'$(TherionLibraryTargetFrameworks)' == ''">net8.0</TherionLibraryTargetFrameworks>
+  </PropertyGroup>
+
+</Project>

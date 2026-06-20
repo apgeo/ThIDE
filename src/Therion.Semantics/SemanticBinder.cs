@@ -1,0 +1,290 @@
+// Implementation Plan §5.2 — bind + resolve passes.
+// Walks a TherionFile AST, collecting surveys, stations, shots and equates.
+// Builds qualified names by prefixing the current survey scope.
+
+using System;
+using System.Collections.Frozen;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Globalization;
+using Therion.Core;
+using Therion.Syntax;
+
+namespace Therion.Semantics;
+
+/// <summary>Stateless binder — call <see cref="Bind"/> to produce a <see cref="SemanticModel"/>.</summary>
+public sealed class SemanticBinder
+{
+    public SemanticModel Bind(TherionFile file)
+    {
+        var ctx = new BindContext();
+        WalkChildren(file.Children, ctx, scope: ImmutableArray<string>.Empty,
+            dataFields: null);
+
+        // Resolve all equate references; emit TH_SEM_001 for unresolved.
+        // Equate groups are resolved as a post-pass so all stations declared
+        // anywhere in the file are visible regardless of source order.
+        foreach (var group in ctx.EquateGroups)
+        {
+            QualifiedName? firstResolved = null;
+            foreach (var (raw, span, scope) in group)
+            {
+                var resolved = TryResolveRef(raw, scope, ctx.Stations.Keys);
+                if (resolved is null)
+                {
+                    ctx.Diagnostics.Add(Diagnostic.Create(
+                        SemanticDiagnosticCodes.UnresolvedStation,
+                        DiagnosticSeverity.Warning,
+                        $"Unresolved station reference '{raw}'.",
+                        span,
+                        hint: NearestHint(raw, ctx.Stations.Keys)));
+                    continue;
+                }
+                var st = ctx.Stations[resolved.Value];
+                ctx.Stations[resolved.Value] = st with { References = st.References.Add(span) };
+                ctx.Equates.Add(resolved.Value);
+                if (firstResolved is null) firstResolved = resolved;
+                else ctx.Equates.Union(firstResolved.Value, resolved.Value);
+            }
+        }
+
+        var stations = ctx.Stations.ToFrozenDictionary();
+        var surveys = ctx.Surveys.ToFrozenDictionary();
+        var scraps = ctx.Scraps.ToFrozenDictionary(System.StringComparer.Ordinal);
+        return new SemanticModel(
+            stations,
+            surveys,
+            ctx.Shots.ToImmutable(),
+            ctx.Equates,
+            ctx.Diagnostics.ToImmutable())
+        {
+            Scraps = scraps,
+        };
+    }
+
+    // ---- walk ------------------------------------------------------------
+
+    private void WalkChildren(
+        ImmutableArray<TherionNode> children,
+        BindContext ctx,
+        ImmutableArray<string> scope,
+        DataCommand? dataFields)
+    {
+        var currentFields = dataFields;
+        foreach (var node in children)
+        {
+            switch (node)
+            {
+                case SurveyCommand sv:
+                    BindSurvey(sv, ctx, scope);
+                    break;
+                case CentrelineCommand cl:
+                    // centreline body inherits the enclosing survey scope.
+                    BindCentreline(cl, ctx, scope);
+                    break;
+                case StationFix fix:
+                    BindFix(fix, ctx, scope);
+                    break;
+                case EquateCommand eq:
+                    BindEquate(eq, ctx, scope);
+                    break;
+                case DataCommand d:
+                    currentFields = d;
+                    break;
+                case DataRow row when currentFields is not null:
+                    BindShot(row, currentFields, ctx, scope);
+                    break;
+                case ScrapBlock scrap:
+                    BindScrap(scrap, ctx, scope);
+                    break;
+            }
+        }
+    }
+
+    private void BindScrap(ScrapBlock scrap, BindContext ctx, ImmutableArray<string> scope)
+    {
+        if (!string.IsNullOrEmpty(scrap.Id) && !ctx.Scraps.ContainsKey(scrap.Id))
+            ctx.Scraps[scrap.Id] = new ScrapSymbol(scrap.Id, scrap.Span);
+        WalkChildren(scrap.Children, ctx, scope, dataFields: null);
+    }
+
+    private void BindSurvey(SurveyCommand sv, BindContext ctx, ImmutableArray<string> scope)
+    {
+        if (string.IsNullOrEmpty(sv.Name)) return;
+        var newScope = scope.Add(sv.Name);
+        var qn = new QualifiedName(newScope);
+        var parent = scope.IsEmpty ? (QualifiedName?)null : new QualifiedName(scope);
+
+        ctx.Surveys[qn] = new SurveySymbol(qn, sv.Span, parent,
+            ImmutableArray<QualifiedName>.Empty);
+
+        // attach as child of parent
+        if (parent is { } p && ctx.Surveys.TryGetValue(p, out var ps))
+            ctx.Surveys[p] = ps with { Children = ps.Children.Add(qn) };
+
+        WalkChildren(sv.Children, ctx, newScope, dataFields: null);
+    }
+
+    private void BindCentreline(CentrelineCommand cl, BindContext ctx, ImmutableArray<string> scope)
+    {
+        WalkChildren(cl.Children, ctx, scope, dataFields: null);
+    }
+
+    private void BindFix(StationFix fix, BindContext ctx, ImmutableArray<string> scope)
+    {
+        var qn = QualifyLocal(fix.Station, scope);
+        if (ctx.Stations.TryGetValue(qn, out var existing))
+        {
+            if (existing.Kind == StationDeclarationKind.Fix)
+            {
+                ctx.Diagnostics.Add(Diagnostic.Create(
+                    SemanticDiagnosticCodes.DuplicateFix,
+                    DiagnosticSeverity.Warning,
+                    $"Station '{qn}' is fixed more than once.",
+                    fix.Span));
+            }
+            ctx.Stations[qn] = existing with { Kind = StationDeclarationKind.Fix, DeclarationSpan = fix.Span };
+        }
+        else
+        {
+            ctx.Stations[qn] = new StationSymbol(qn, fix.Span,
+                StationDeclarationKind.Fix, ImmutableArray<SourceSpan>.Empty);
+        }
+        ctx.Equates.Add(qn);
+    }
+
+    private void BindEquate(EquateCommand eq, BindContext ctx, ImmutableArray<string> scope)
+    {
+        var group = new List<(string Raw, SourceSpan Span, ImmutableArray<string> Scope)>(eq.Stations.Length);
+        foreach (var raw in eq.Stations)
+            group.Add((raw, eq.Span, scope));
+        if (group.Count > 0) ctx.EquateGroups.Add(group);
+    }
+
+    private void BindShot(DataRow row, DataCommand data, BindContext ctx, ImmutableArray<string> scope)
+    {
+        int fromIdx = IndexOf(data.Fields, "from");
+        int toIdx   = IndexOf(data.Fields, "to");
+        if (fromIdx < 0 || toIdx < 0) return;
+        if (row.Values.Length <= Math.Max(fromIdx, toIdx)) return;
+
+        var from = QualifyLocal(row.Values[fromIdx], scope);
+        var to   = QualifyLocal(row.Values[toIdx],   scope);
+        DeclareImplicit(ctx, from, row.Span);
+        DeclareImplicit(ctx, to,   row.Span);
+
+        double? length = TryGet(row, data, "length");
+        double? compass = TryGet(row, data, "compass");
+        double? clino = TryGet(row, data, "clino");
+        ctx.Shots.Add(new ShotSymbol(from, to, length, compass, clino, row.Span)
+        {
+            SourceRow = row,
+            FieldDefinition = data,
+        });
+    }
+
+    private static void DeclareImplicit(BindContext ctx, QualifiedName qn, SourceSpan span)
+    {
+        if (!ctx.Stations.ContainsKey(qn))
+        {
+            ctx.Stations[qn] = new StationSymbol(qn, span,
+                StationDeclarationKind.Shot, ImmutableArray<SourceSpan>.Empty);
+        }
+        ctx.Equates.Add(qn);
+    }
+
+    private static int IndexOf(ImmutableArray<string> fields, string name)
+    {
+        for (int i = 0; i < fields.Length; i++)
+            if (string.Equals(fields[i], name, StringComparison.OrdinalIgnoreCase)) return i;
+        return -1;
+    }
+
+    private static double? TryGet(DataRow row, DataCommand data, string field)
+    {
+        int i = IndexOf(data.Fields, field);
+        if (i < 0 || i >= row.Values.Length) return null;
+        return double.TryParse(row.Values[i], NumberStyles.Float, CultureInfo.InvariantCulture, out var d)
+            ? d : null;
+    }
+
+    // ---- resolution ------------------------------------------------------
+
+    /// <summary>
+    /// Builds a qualified name for a token relative to the current survey scope.
+    /// If the token contains '.', it's treated as an absolute (top-down) reference.
+    /// </summary>
+    private static QualifiedName QualifyLocal(string token, ImmutableArray<string> scope)
+    {
+        if (token.Contains('.'))
+            return QualifiedName.Parse(token);
+        if (scope.IsEmpty)
+            return QualifiedName.Of(token);
+        return new QualifiedName(scope.Add(token));
+    }
+
+    /// <summary>
+    /// Therion-style ancestor lookup: try local scope first, then walk outward.
+    /// </summary>
+    private static QualifiedName? TryResolveRef(
+        string raw, ImmutableArray<string> scope,
+        IReadOnlyCollection<QualifiedName> known)
+    {
+        var parts = raw.Split('.');
+        // 1. local scope candidate
+        for (int depth = scope.Length; depth >= 0; depth--)
+        {
+            var candidate = ImmutableArray.CreateRange(scope, 0, depth, x => x).AddRange(parts);
+            var qn = new QualifiedName(candidate);
+            if (known.Contains(qn)) return qn;
+        }
+        return null;
+    }
+
+    private static string? NearestHint(string raw, IReadOnlyCollection<QualifiedName> known)
+    {
+        string? best = null;
+        int bestDist = int.MaxValue;
+        foreach (var k in known)
+        {
+            int d = Levenshtein(raw, k.ToString());
+            if (d < bestDist) { bestDist = d; best = k.ToString(); }
+        }
+        return (best is not null && bestDist <= Math.Max(2, raw.Length / 3))
+            ? $"did you mean '{best}'?"
+            : null;
+    }
+
+    private static int Levenshtein(string a, string b)
+    {
+        if (a.Length == 0) return b.Length;
+        if (b.Length == 0) return a.Length;
+        var prev = new int[b.Length + 1];
+        var cur  = new int[b.Length + 1];
+        for (int j = 0; j <= b.Length; j++) prev[j] = j;
+        for (int i = 1; i <= a.Length; i++)
+        {
+            cur[0] = i;
+            for (int j = 1; j <= b.Length; j++)
+            {
+                int cost = a[i - 1] == b[j - 1] ? 0 : 1;
+                cur[j] = Math.Min(Math.Min(cur[j - 1] + 1, prev[j] + 1), prev[j - 1] + cost);
+            }
+            (prev, cur) = (cur, prev);
+        }
+        return prev[b.Length];
+    }
+
+    // ---- mutable context -------------------------------------------------
+
+    private sealed class BindContext
+    {
+        public Dictionary<QualifiedName, StationSymbol> Stations { get; } = new();
+        public Dictionary<QualifiedName, SurveySymbol> Surveys { get; } = new();
+        public Dictionary<string, ScrapSymbol> Scraps { get; } = new(System.StringComparer.Ordinal);
+        public ImmutableArray<ShotSymbol>.Builder Shots { get; } = ImmutableArray.CreateBuilder<ShotSymbol>();
+        public EquateGraph Equates { get; } = new();
+        public ImmutableArray<Diagnostic>.Builder Diagnostics { get; } = ImmutableArray.CreateBuilder<Diagnostic>();
+        public List<List<(string Raw, SourceSpan Span, ImmutableArray<string> Scope)>> EquateGroups { get; } = new();
+    }
+}

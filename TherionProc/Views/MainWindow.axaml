@@ -1,0 +1,250 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:TherionProc.ViewModels"
+        xmlns:ed="using:TherionProc.Editor"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="1300" d:DesignHeight="800"
+        x:Class="TherionProc.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Width="1300" Height="800"
+        Title="{Binding Title}">
+
+    <Design.DataContext>
+        <vm:MainWindowViewModel/>
+    </Design.DataContext>
+
+    <!-- Window.KeyBindings populated at runtime via IKeyboardShortcutService (Decision #29). -->
+
+    <DockPanel>
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="{Binding MenuFile}">
+                <MenuItem Header="{Binding MenuFileOpenFile}"   Command="{Binding OpenFileCommand}" />
+                <MenuItem Header="{Binding MenuFileOpenFolder}" Command="{Binding OpenFolderCommand}" />
+                <Separator />
+                <MenuItem Header="{Binding MenuFileExit}" Command="{Binding ExitCommand}" />
+            </MenuItem>
+            <MenuItem Header="{Binding MenuView}">
+                <MenuItem Header="{Binding MenuViewLanguage}">
+                    <MenuItem Header="{Binding MenuViewLanguageEn}" Command="{Binding SwitchToEnglishCommand}" />
+                    <MenuItem Header="{Binding MenuViewLanguageRo}" Command="{Binding SwitchToRomanianCommand}" />
+                </MenuItem>
+                <MenuItem Header="Strict parser mode"
+                          ToggleType="CheckBox"
+                          IsChecked="{Binding StrictParserMode, Mode=TwoWay}" />
+            </MenuItem>
+            <MenuItem Header="{Binding MenuBuild}">
+                <MenuItem Header="_Build      F5"        Command="{Binding Build.BuildCommand}" />
+                <MenuItem Header="_Rebuild    Ctrl+F5"   Command="{Binding Build.RebuildCommand}" />
+                <MenuItem Header="_Cancel     Shift+F5"  Command="{Binding Build.CancelCommand}" />
+                <Separator />
+                <MenuItem Header="Open in _Loch   F9"    Command="{Binding Build.OpenInLochCommand}" />
+                <MenuItem Header="Open in _Aven   F10"   Command="{Binding Build.OpenInAvenCommand}" />
+                <Separator />
+                <MenuItem Header="Open last _output folder" Command="{Binding Build.OpenLastOutputFolderCommand}" />
+            </MenuItem>
+        </Menu>
+
+        <!-- Toolbar with Loch/Aven quick actions (§9bis.4 / Decision #26). -->
+        <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="6,3">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+                <Button Content="Build (F5)"       Command="{Binding Build.BuildCommand}" />
+                <Button Content="Cancel"           Command="{Binding Build.CancelCommand}" />
+                <Separator />
+                <Button Content="Open in Loch (F9)"  Command="{Binding Build.OpenInLochCommand}"
+                        IsEnabled="{Binding Build.HasLoxArtifact}"
+                        ToolTip.Tip="Open the generated .lox file in Loch" />
+                <Button Content="Open in Aven (F10)" Command="{Binding Build.OpenInAvenCommand}"
+                        IsEnabled="{Binding Build.HasAvenArtifact}"
+                        ToolTip.Tip="Open the generated .3d file in Aven" />
+                <TextBlock VerticalAlignment="Center" Margin="12,0,0,0"
+                           Text="{Binding Build.Status}" Foreground="Gray" />
+            </StackPanel>
+        </Border>
+
+        <Border DockPanel.Dock="Bottom" BorderBrush="Gray" BorderThickness="0,1,0,0" Padding="6,2">
+            <TextBlock Text="{Binding StatusText}" Foreground="Gray" />
+        </Border>
+
+        <Grid x:Name="ShellGrid" ColumnDefinitions="280,4,*" RowDefinitions="*">
+            <!-- Workspace Explorer (§7.3) — flat node list driven by WorkspaceSemanticModel. -->
+            <Border x:Name="LeftPane" Grid.Column="0" BorderBrush="Gray" BorderThickness="0,0,1,0"
+                    IsVisible="{Binding Layout.LeftPaneVisible}">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" FontWeight="Bold" Margin="8,8,8,4" Text="Workspace" />
+                    <TextBlock DockPanel.Dock="Top" Foreground="Gray" Margin="8,0,8,4"
+                               Text="{Binding WorkspaceExplorer.RootPath}" TextTrimming="CharacterEllipsis" />
+                    <ListBox ItemsSource="{Binding WorkspaceExplorer.Nodes}"
+                             SelectedItem="{Binding WorkspaceExplorer.Selected, Mode=TwoWay}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding DisplayName}" />
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </Border>
+
+            <GridSplitter x:Name="LeftSplitter" Grid.Column="1" Width="4" Background="Transparent"
+                          ResizeDirection="Columns" HorizontalAlignment="Stretch"
+                          IsVisible="{Binding Layout.LeftPaneVisible}" />
+
+            <Grid Grid.Column="2" x:Name="BodyGrid" RowDefinitions="*,4,260">
+                <ed:TherionTextEditor x:Name="Editor" Grid.Row="0"
+                                      Text="{Binding DocumentText}"
+                                      Navigation="{Binding Navigation}"
+                                      Diagnostics="{Binding CurrentDiagnostics}"
+                                      CurrentFilePath="{Binding CurrentFilePath}" />
+
+                <GridSplitter x:Name="BottomSplitter" Grid.Row="1" Height="4" Background="Transparent"
+                              ResizeDirection="Rows" HorizontalAlignment="Stretch"
+                              IsVisible="{Binding Layout.BottomPaneVisible}" />
+
+                <!-- Bottom tool panes (§7.3, §7.4, §9bis.5). -->
+                <Border x:Name="BottomPane" Grid.Row="2" BorderBrush="Gray" BorderThickness="0,1,0,0"
+                        IsVisible="{Binding Layout.BottomPaneVisible}">
+                    <TabControl>
+                    <TabItem Header="{Binding ObjectBrowser.TabStations}">
+                        <DataGrid ItemsSource="{Binding ObjectBrowser.Stations}"
+                                  IsReadOnly="True" GridLinesVisibility="Horizontal"
+                                  CanUserResizeColumns="True" AutoGenerateColumns="False">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Qualified name" Binding="{Binding QualifiedName}" Width="*" />
+                                <DataGridTextColumn Header="Kind"   Binding="{Binding Kind}"   Width="100" />
+                                <DataGridTextColumn Header="Survey" Binding="{Binding Survey}" Width="160" />
+                                <DataGridTextColumn Header="Line"   Binding="{Binding Line}"   Width="60"  />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </TabItem>
+                    <TabItem Header="{Binding ObjectBrowser.TabShots}">
+                        <DataGrid ItemsSource="{Binding ObjectBrowser.Shots}"
+                                  GridLinesVisibility="Horizontal"
+                                  CanUserResizeColumns="True" AutoGenerateColumns="False">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="From"    Binding="{Binding From}"    Width="*"  IsReadOnly="True" />
+                                <DataGridTextColumn Header="To"      Binding="{Binding To}"      Width="*"  IsReadOnly="True" />
+                                <DataGridTextColumn Header="Length"  Binding="{Binding Length,  Mode=TwoWay}" Width="80" />
+                                <DataGridTextColumn Header="Compass" Binding="{Binding Compass, Mode=TwoWay}" Width="80" />
+                                <DataGridTextColumn Header="Clino"   Binding="{Binding Clino,   Mode=TwoWay}" Width="80" />
+                                <DataGridTextColumn Header="Line"    Binding="{Binding Line}"    Width="60" IsReadOnly="True" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </TabItem>
+                    <TabItem Header="XVI">
+                        <DataGrid ItemsSource="{Binding XviReferences.Rows}"
+                                  IsReadOnly="True" GridLinesVisibility="Horizontal"
+                                  CanUserResizeColumns="True" AutoGenerateColumns="False">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="XVI"    Binding="{Binding XviPath}"   Width="*" />
+                                <DataGridTextColumn Header="Image"  Binding="{Binding ImagePath}" Width="*" />
+                                <DataGridTextColumn Header="OK?"    Binding="{Binding ImageExists}" Width="60" />
+                                <DataGridTextColumn Header="Scale"  Binding="{Binding Scale}"     Width="80" />
+                                <DataGridTextColumn Header="CPs"    Binding="{Binding CalibrationPoints}"  Width="60" />
+                                <DataGridTextColumn Header="Scraps" Binding="{Binding ReferencingScraps}"  Width="80" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </TabItem>
+                    <TabItem Header="Diagnostics">
+                        <DataGrid x:Name="DiagnosticsGrid"
+                                  ItemsSource="{Binding Diagnostics.Rows}"
+                                  SelectedItem="{Binding Diagnostics.Selected, Mode=TwoWay}"
+                                  IsReadOnly="True" GridLinesVisibility="Horizontal"
+                                  CanUserResizeColumns="True" AutoGenerateColumns="False">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Code"     Binding="{Binding Code}"     Width="100" />
+                                <DataGridTextColumn Header="Severity" Binding="{Binding Severity}" Width="80"  />
+                                <DataGridTextColumn Header="Message"  Binding="{Binding Message}"  Width="*"   />
+                                <DataGridTextColumn Header="File"     Binding="{Binding File}"     Width="220" />
+                                <DataGridTextColumn Header="Line"     Binding="{Binding Line}"     Width="60"  />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </TabItem>
+                    <TabItem Header="Compiler Output">
+                        <DataGrid x:Name="CompilerOutputGrid"
+                                  ItemsSource="{Binding Build.Output}"
+                                  SelectedItem="{Binding Build.SelectedOutput, Mode=TwoWay}"
+                                  IsReadOnly="True" GridLinesVisibility="Horizontal"
+                                  CanUserResizeColumns="True" AutoGenerateColumns="False"
+                                  HeadersVisibility="None">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Binding="{Binding Severity}" Width="80" />
+                                <DataGridTextColumn Binding="{Binding Text}"     Width="*"  />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </TabItem>
+                    <TabItem Header="Generated Files">
+                        <DataGrid ItemsSource="{Binding Build.Artifacts}"
+                                  IsReadOnly="True" GridLinesVisibility="Horizontal"
+                                  CanUserResizeColumns="True" AutoGenerateColumns="False">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Kind" Binding="{Binding Kind}" Width="80"  />
+                                <DataGridTextColumn Header="Path" Binding="{Binding Path}" Width="*"   />
+                                <DataGridTextColumn Header="Size" Binding="{Binding SizeDisplay}" Width="80" />
+                                <DataGridTextColumn Header="Modified" Binding="{Binding LastWriteUtc}" Width="180" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </TabItem>
+                    <TabItem Header="Settings">
+                        <TabControl>
+                            <TabItem Header="External Tools">
+                                <DockPanel>
+                                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="6">
+                                        <Button Content="Refresh" Command="{Binding Settings.RefreshCommand}" />
+                                        <TextBlock VerticalAlignment="Center" Margin="12,0,0,0"
+                                                   Text="{Binding Settings.Status}" Foreground="Gray" />
+                                    </StackPanel>
+                                    <DataGrid ItemsSource="{Binding Settings.Tools}"
+                                              GridLinesVisibility="Horizontal"
+                                              CanUserResizeColumns="True" AutoGenerateColumns="False">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Header="Tool"     Binding="{Binding ToolId}"  Width="100" IsReadOnly="True" />
+                                            <DataGridTextColumn Header="Detected" Binding="{Binding Path}"    Width="*"   IsReadOnly="True" />
+                                            <DataGridTextColumn Header="Version"  Binding="{Binding Version}" Width="120" IsReadOnly="True" />
+                                            <DataGridTextColumn Header="Source"   Binding="{Binding Source}"  Width="100" IsReadOnly="True" />
+                                            <DataGridTextColumn Header="Override" Binding="{Binding OverridePath, Mode=TwoWay}" Width="220" />
+                                            <DataGridTemplateColumn Header="" Width="80">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <Button Content="Test" Command="{Binding TestCommand}" />
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
+                                            <DataGridTextColumn Header="Result"   Binding="{Binding TestResult}" Width="120" IsReadOnly="True" />
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                </DockPanel>
+                            </TabItem>
+                            <TabItem Header="Keyboard">
+                                <DockPanel>
+                                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="6">
+                                        <Button Content="Reset all to defaults"
+                                                Command="{Binding KeyboardShortcuts.ResetAllCommand}" />
+                                        <TextBlock VerticalAlignment="Center" Margin="12,0,0,0" Foreground="Gray"
+                                                   Text="Edit a gesture to apply &amp; persist; Reset returns to plan default." />
+                                    </StackPanel>
+                                    <DataGrid ItemsSource="{Binding KeyboardShortcuts.Rows}"
+                                              GridLinesVisibility="Horizontal"
+                                              CanUserResizeColumns="True" AutoGenerateColumns="False">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Header="Command"       Binding="{Binding CommandId}"      Width="200" IsReadOnly="True" />
+                                            <DataGridTextColumn Header="Gesture"       Binding="{Binding Gesture, Mode=TwoWay}" Width="160" />
+                                            <DataGridTextColumn Header="Default"       Binding="{Binding DefaultGesture}" Width="120" IsReadOnly="True" />
+                                            <DataGridTemplateColumn Header="" Width="80">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <Button Content="Reset" Command="{Binding ResetToDefaultCommand}" />
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                </DockPanel>
+                            </TabItem>
+                        </TabControl>
+                    </TabItem>
+                        </TabControl>
+                </Border>
+            </Grid>
+        </Grid>
+    </DockPanel>
+</Window>
