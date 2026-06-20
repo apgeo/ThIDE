@@ -1,0 +1,34 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:TherionProc.ViewModels.Docking"
+             x:Class="TherionProc.Views.Docking.ObjectBrowserToolView"
+             x:DataType="vm:ObjectBrowserToolViewModel">
+    <TabControl>
+        <TabItem Header="{Binding Browser.TabStations}">
+            <DataGrid ItemsSource="{Binding Browser.Stations}"
+                      IsReadOnly="True" GridLinesVisibility="Horizontal"
+                      CanUserResizeColumns="True" CanUserSortColumns="True" AutoGenerateColumns="False">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Qualified name" Binding="{Binding QualifiedName}" Width="*" />
+                    <DataGridTextColumn Header="Kind"   Binding="{Binding Kind}"   Width="100" />
+                    <DataGridTextColumn Header="Survey" Binding="{Binding Survey}" Width="160" />
+                    <DataGridTextColumn Header="Line"   Binding="{Binding Line}"   Width="60"  />
+                </DataGrid.Columns>
+            </DataGrid>
+        </TabItem>
+        <TabItem Header="{Binding Browser.TabShots}">
+            <DataGrid ItemsSource="{Binding Browser.Shots}"
+                      GridLinesVisibility="Horizontal"
+                      CanUserResizeColumns="True" CanUserSortColumns="True" AutoGenerateColumns="False">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="From"    Binding="{Binding From}"    Width="*"  IsReadOnly="True" />
+                    <DataGridTextColumn Header="To"      Binding="{Binding To}"      Width="*"  IsReadOnly="True" />
+                    <DataGridTextColumn Header="Length"  Binding="{Binding Length,  Mode=TwoWay}" Width="80" />
+                    <DataGridTextColumn Header="Compass" Binding="{Binding Compass, Mode=TwoWay}" Width="80" />
+                    <DataGridTextColumn Header="Clino"   Binding="{Binding Clino,   Mode=TwoWay}" Width="80" />
+                    <DataGridTextColumn Header="Line"    Binding="{Binding Line}"    Width="60" IsReadOnly="True" />
+                </DataGrid.Columns>
+            </DataGrid>
+        </TabItem>
+    </TabControl>
+</UserControl>

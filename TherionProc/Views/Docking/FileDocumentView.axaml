@@ -1,0 +1,57 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:TherionProc.ViewModels.Docking"
+             xmlns:ed="using:TherionProc.Editor"
+             x:Class="TherionProc.Views.Docking.FileDocumentView"
+             x:DataType="vm:FileDocumentViewModel">
+
+    <TabControl>
+        <TabItem Header="Source">
+            <ed:TherionTextEditor x:Name="Editor"
+                                  Text="{Binding DocumentText, Mode=TwoWay}"
+                                  Navigation="{Binding Navigation}"
+                                  Diagnostics="{Binding Diagnostics}"
+                                  CompletionTerms="{Binding CompletionTerms}"
+                                  CurrentFilePath="{Binding FilePath}" />
+        </TabItem>
+        <TabItem Header="Measurements">
+            <DockPanel>
+                <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="6,4">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Text="Filter:" VerticalAlignment="Center" />
+                        <TextBox Width="240"
+                                 Text="{Binding Measurements.FilterText, Mode=TwoWay}"
+                                 Watermark="from / to / survey / flags / comment" />
+                        <TextBlock Text="Group by:" VerticalAlignment="Center" Margin="8,0,0,0" />
+                        <ComboBox MinWidth="110"
+                                  ItemsSource="{Binding Measurements.GroupByOptions}"
+                                  SelectedItem="{Binding Measurements.GroupBy, Mode=TwoWay}" />
+                        <TextBlock VerticalAlignment="Center" Foreground="Gray" Margin="8,0,0,0">
+                            <Run Text="{Binding Measurements.Count}" /><Run Text=" of " /><Run Text="{Binding Measurements.TotalCount}" /><Run Text=" shown" />
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+                <DataGrid ItemsSource="{Binding Measurements.View}"
+                          x:CompileBindings="False"
+                          IsReadOnly="True" GridLinesVisibility="All"
+                          CanUserSortColumns="True" CanUserResizeColumns="True"
+                          CanUserReorderColumns="True" AutoGenerateColumns="False">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Survey"  Binding="{Binding Survey}"  Width="130" />
+                        <DataGridTextColumn Header="From"    Binding="{Binding From}"    Width="110" />
+                        <DataGridTextColumn Header="To"      Binding="{Binding To}"      Width="110" />
+                        <DataGridTextColumn Header="Length"  Binding="{Binding Length}"  Width="70"  />
+                        <DataGridTextColumn Header="Compass" Binding="{Binding Compass}" Width="80"  />
+                        <DataGridTextColumn Header="Clino"   Binding="{Binding Clino}"   Width="70"  />
+                        <DataGridCheckBoxColumn Header="Surf"   Binding="{Binding Surface}"     Width="50" />
+                        <DataGridCheckBoxColumn Header="Dup"    Binding="{Binding Duplicate}"   Width="50" />
+                        <DataGridCheckBoxColumn Header="Splay"  Binding="{Binding Splay}"       Width="55" />
+                        <DataGridCheckBoxColumn Header="Approx" Binding="{Binding Approximate}" Width="65" />
+                        <DataGridTextColumn Header="Comment" Binding="{Binding Comment}" Width="*" />
+                        <DataGridTextColumn Header="Line"    Binding="{Binding Line}"    Width="60" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </DockPanel>
+        </TabItem>
+    </TabControl>
+</UserControl>

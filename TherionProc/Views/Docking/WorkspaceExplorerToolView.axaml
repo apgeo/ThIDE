@@ -1,0 +1,20 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:TherionProc.ViewModels.Docking"
+             x:Class="TherionProc.Views.Docking.WorkspaceExplorerToolView"
+             x:DataType="vm:WorkspaceExplorerToolViewModel">
+    <DockPanel>
+        <TextBlock DockPanel.Dock="Top" Foreground="Gray" Margin="8,6,8,4"
+                   Text="{Binding Explorer.RootPath}" TextTrimming="CharacterEllipsis" />
+        <ListBox x:Name="NodeList"
+                 ItemsSource="{Binding Explorer.Nodes}"
+                 SelectedItem="{Binding Explorer.Selected, Mode=TwoWay}"
+                 DoubleTapped="OnNodeDoubleTapped">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <TextBlock Text="{Binding DisplayName}" />
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+    </DockPanel>
+</UserControl>

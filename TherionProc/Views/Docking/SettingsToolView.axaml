@@ -1,0 +1,64 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:TherionProc.ViewModels.Docking"
+             x:Class="TherionProc.Views.Docking.SettingsToolView"
+             x:DataType="vm:SettingsToolViewModel">
+    <TabControl>
+        <TabItem Header="External Tools">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="6">
+                    <Button Content="Refresh" Command="{Binding Settings.RefreshCommand}" />
+                    <TextBlock VerticalAlignment="Center" Margin="12,0,0,0"
+                               Text="{Binding Settings.Status}" Foreground="Gray" />
+                </StackPanel>
+                <DataGrid ItemsSource="{Binding Settings.Tools}"
+                          x:CompileBindings="False"
+                          GridLinesVisibility="Horizontal"
+                          CanUserResizeColumns="True" AutoGenerateColumns="False">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Tool"     Binding="{Binding ToolId}"  Width="100" IsReadOnly="True" />
+                        <DataGridTextColumn Header="Detected" Binding="{Binding Path}"    Width="*"   IsReadOnly="True" />
+                        <DataGridTextColumn Header="Version"  Binding="{Binding Version}" Width="120" IsReadOnly="True" />
+                        <DataGridTextColumn Header="Source"   Binding="{Binding Source}"  Width="100" IsReadOnly="True" />
+                        <DataGridTextColumn Header="Override" Binding="{Binding OverridePath, Mode=TwoWay}" Width="220" />
+                        <DataGridTemplateColumn Header="" Width="80">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Button Content="Test" Command="{Binding TestCommand}" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTextColumn Header="Result"   Binding="{Binding TestResult}" Width="120" IsReadOnly="True" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </DockPanel>
+        </TabItem>
+        <TabItem Header="Keyboard">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="6">
+                    <Button Content="Reset all to defaults"
+                            Command="{Binding Keyboard.ResetAllCommand}" />
+                    <TextBlock VerticalAlignment="Center" Margin="12,0,0,0" Foreground="Gray"
+                               Text="Edit a gesture to apply &amp; persist; Reset returns to plan default." />
+                </StackPanel>
+                <DataGrid ItemsSource="{Binding Keyboard.Rows}"
+                          x:CompileBindings="False"
+                          GridLinesVisibility="Horizontal"
+                          CanUserResizeColumns="True" AutoGenerateColumns="False">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Command"       Binding="{Binding CommandId}"      Width="200" IsReadOnly="True" />
+                        <DataGridTextColumn Header="Gesture"       Binding="{Binding Gesture, Mode=TwoWay}" Width="160" />
+                        <DataGridTextColumn Header="Default"       Binding="{Binding DefaultGesture}" Width="120" IsReadOnly="True" />
+                        <DataGridTemplateColumn Header="" Width="80">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Button Content="Reset" Command="{Binding ResetToDefaultCommand}" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </DockPanel>
+        </TabItem>
+    </TabControl>
+</UserControl>

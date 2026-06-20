@@ -1,0 +1,18 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:TherionProc.ViewModels.Docking"
+             x:Class="TherionProc.Views.Docking.XviToolView"
+             x:DataType="vm:XviToolViewModel">
+    <DataGrid ItemsSource="{Binding Xvi.Rows}"
+              IsReadOnly="True" GridLinesVisibility="Horizontal"
+              CanUserResizeColumns="True" CanUserSortColumns="True" AutoGenerateColumns="False">
+        <DataGrid.Columns>
+            <DataGridTextColumn Header="XVI"    Binding="{Binding XviPath}"   Width="*" />
+            <DataGridTextColumn Header="Image"  Binding="{Binding ImagePath}" Width="*" />
+            <DataGridTextColumn Header="OK?"    Binding="{Binding ImageExists}" Width="60" />
+            <DataGridTextColumn Header="Scale"  Binding="{Binding Scale}"     Width="80" />
+            <DataGridTextColumn Header="CPs"    Binding="{Binding CalibrationPoints}"  Width="60" />
+            <DataGridTextColumn Header="Scraps" Binding="{Binding ReferencingScraps}"  Width="80" />
+        </DataGrid.Columns>
+    </DataGrid>
+</UserControl>

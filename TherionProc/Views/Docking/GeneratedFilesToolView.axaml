@@ -1,0 +1,16 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:TherionProc.ViewModels.Docking"
+             x:Class="TherionProc.Views.Docking.GeneratedFilesToolView"
+             x:DataType="vm:GeneratedFilesToolViewModel">
+    <DataGrid ItemsSource="{Binding Build.Artifacts}"
+              IsReadOnly="True" GridLinesVisibility="Horizontal"
+              CanUserResizeColumns="True" CanUserSortColumns="True" AutoGenerateColumns="False">
+        <DataGrid.Columns>
+            <DataGridTextColumn Header="Kind" Binding="{Binding Kind}" Width="80"  />
+            <DataGridTextColumn Header="Path" Binding="{Binding Path}" Width="*"   />
+            <DataGridTextColumn Header="Size" Binding="{Binding SizeDisplay}" Width="80" />
+            <DataGridTextColumn Header="Modified" Binding="{Binding LastWriteUtc}" Width="180" />
+        </DataGrid.Columns>
+    </DataGrid>
+</UserControl>

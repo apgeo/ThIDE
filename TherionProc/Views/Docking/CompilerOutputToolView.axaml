@@ -1,0 +1,17 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:TherionProc.ViewModels.Docking"
+             x:Class="TherionProc.Views.Docking.CompilerOutputToolView"
+             x:DataType="vm:CompilerOutputToolViewModel">
+    <DataGrid x:Name="Grid"
+              ItemsSource="{Binding Build.Output}"
+              SelectedItem="{Binding Build.SelectedOutput, Mode=TwoWay}"
+              IsReadOnly="True" GridLinesVisibility="Horizontal"
+              CanUserResizeColumns="True" AutoGenerateColumns="False"
+              HeadersVisibility="None" DoubleTapped="OnRowDoubleTapped">
+        <DataGrid.Columns>
+            <DataGridTextColumn Binding="{Binding Severity}" Width="80" />
+            <DataGridTextColumn Binding="{Binding Text}"     Width="*"  />
+        </DataGrid.Columns>
+    </DataGrid>
+</UserControl>
