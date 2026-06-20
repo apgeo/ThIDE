@@ -87,19 +87,30 @@ internal static class AppServices
         // Keyboard shortcuts (�9bis.5a / Decision #29).
         services.AddSingleton<IKeyboardShortcutService, JsonKeyboardShortcutService>();
 
-        // Shell layout persistence (�7.2 / M6 #1 interim � Dock.Avalonia swap deferred).
+        // Window-bounds persistence (dock layout is rebuilt fresh each launch).
         services.AddSingleton<ILayoutService, JsonLayoutService>();
 
-        // ViewModels.
+        // Shared content ViewModels — singletons so the same instance flows to both
+        // the dockable tool wrapper (shown in the UI) and the shell (event wiring).
+        services.AddSingleton<ObjectBrowserViewModel>();
+        services.AddSingleton<DiagnosticsViewModel>();
+        services.AddSingleton<BuildViewModel>();
+        services.AddSingleton<WorkspaceExplorerViewModel>();
+        services.AddSingleton<XviReferencesViewModel>();
+        services.AddSingleton<SettingsViewModel>();
+        services.AddSingleton<KeyboardShortcutsViewModel>();
+
+        // Dock tool wrappers + the VS-classic layout factory.
+        services.AddSingleton<ViewModels.Docking.WorkspaceExplorerToolViewModel>();
+        services.AddSingleton<ViewModels.Docking.ObjectBrowserToolViewModel>();
+        services.AddSingleton<ViewModels.Docking.DiagnosticsToolViewModel>();
+        services.AddSingleton<ViewModels.Docking.CompilerOutputToolViewModel>();
+        services.AddSingleton<ViewModels.Docking.GeneratedFilesToolViewModel>();
+        services.AddSingleton<ViewModels.Docking.XviToolViewModel>();
+        services.AddSingleton<ViewModels.Docking.SettingsToolViewModel>();
+        services.AddSingleton<Docking.DockFactory>();
+
         services.AddTransient<MainWindowViewModel>();
-        services.AddTransient<ObjectBrowserViewModel>();
-        services.AddTransient<MeasurementsViewModel>();
-        services.AddTransient<DiagnosticsViewModel>();
-        services.AddTransient<BuildViewModel>();
-        services.AddTransient<WorkspaceExplorerViewModel>();
-        services.AddTransient<XviReferencesViewModel>();
-        services.AddTransient<SettingsViewModel>();
-        services.AddTransient<KeyboardShortcutsViewModel>();
 
         _provider = services.BuildServiceProvider();
         return _provider;

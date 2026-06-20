@@ -1,25 +1,28 @@
-// Implementation Plan �7.1 / �7.3 / �7.6 � main shell ViewModel.
-// Owns active-document state via IDocumentService and exposes Open File /
-// Open Folder commands. Storage picker is injected so the VM remains testable.
+// Main shell ViewModel. Hosts the Dock.Avalonia layout (VS-classic) and owns the
+// menu/toolbar commands. Documents are multi-file (MDI) via IDocumentService;
+// the document-tracking tools (Object Browser, Diagnostics) follow the active doc.
 
 using System;
-using System.Collections.Immutable;
 using System.Globalization;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Dock.Model.Controls;
+using Dock.Model.Core;
 using Microsoft.Extensions.Localization;
 using Therion.Semantics;
 using Therion.Syntax;
+using TherionProc.Docking;
 using TherionProc.Resources;
 using TherionProc.Services;
+using TherionProc.ViewModels.Docking;
 
 namespace TherionProc.ViewModels;
 
 public partial class MainWindowViewModel : ViewModelBase
 {
     private const string SampleText =
-        "# Sample Therion centreline \u2014 use File \u2192 Open File... or Open Folder... to load real data.\n" +
+        "# Sample Therion centreline — use File → Open File... or Open Folder... to load real data.\n" +
         "survey demo -title \"Demo Cave\"\n" +
         "  centreline\n" +
         "    date 2024.01.15\n" +
@@ -31,9 +34,6 @@ public partial class MainWindowViewModel : ViewModelBase
         "    flags duplicate\n" +
         "      2 3  4.2 180 10  # re-survey of the squeeze\n" +
         "    flags not duplicate\n" +
-        "    flags splay\n" +
-        "      3 4  2.0 270 -20\n" +
-        "    flags not splay\n" +
         "    fix 0 100.0 200.0 -3.25\n" +
         "  endcentreline\n" +
         "endsurvey\n";
@@ -43,42 +43,33 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly IDocumentService _documents;
     private readonly IModelEditService? _editService;
     private readonly ILayoutService? _layout;
+    private readonly DockFactory _factory;
     private IStoragePicker? _picker;
 
-    /// <summary>Shell layout snapshot (Plan �7.2 / M6 #1). Bound by MainWindow.axaml splitters.</summary>
-    public LayoutState Layout => _layout?.Current ?? LayoutState.Default;
     public ILayoutService? LayoutService => _layout;
 
+    // Dock layout bound by MainWindow.axaml.
+    public IRootDock Layout { get; }
+    public DockFactory Factory => _factory;
+
+    // Tool wrappers (shown in the dock); content VMs are reached through them.
+    public WorkspaceExplorerToolViewModel WorkspaceTool { get; }
+    public ObjectBrowserToolViewModel ObjectBrowserTool { get; }
+    public DiagnosticsToolViewModel DiagnosticsTool { get; }
+    public CompilerOutputToolViewModel CompilerOutputTool { get; }
+    public GeneratedFilesToolViewModel GeneratedFilesTool { get; }
+    public XviToolViewModel XviTool { get; }
+    public SettingsToolViewModel SettingsTool { get; }
+
+    // Convenience accessors so menu/toolbar/keyboard bindings stay stable.
+    public BuildViewModel Build => CompilerOutputTool.Build;
+    public DiagnosticsViewModel Diagnostics => DiagnosticsTool.Diagnostics;
+    public ObjectBrowserViewModel ObjectBrowser => ObjectBrowserTool.Browser;
+    public WorkspaceExplorerViewModel WorkspaceExplorer => WorkspaceTool.Explorer;
+    public XviReferencesViewModel XviReferences => XviTool.Xvi;
+
     [ObservableProperty] private string _title = string.Empty;
-    [ObservableProperty] private string _welcomeTitle = string.Empty;
-    [ObservableProperty] private string _welcomeMessage = string.Empty;
-    [ObservableProperty] private string _documentText = SampleText;
     [ObservableProperty] private string _statusText = string.Empty;
-    [ObservableProperty] private string? _currentFilePath;
-    [ObservableProperty] private System.Collections.Generic.IReadOnlyList<Therion.Core.Diagnostic> _currentDiagnostics = System.Array.Empty<Therion.Core.Diagnostic>();
-
-    /// <summary>Raised when a diagnostic / compiler-output row is clicked so the View can scroll the editor.</summary>
-    public event System.EventHandler<Therion.Core.SourceSpan>? NavigateToSpanRequested;
-
-    // Localized menu labels.
-    public string MenuFile           => L("Menu_File",                   "_File");
-    public string MenuFileOpenFile   => L("Menu_File_OpenFile",          "Open _File...");
-    public string MenuFileOpenFolder => L("Menu_File_OpenFolder",        "Open F_older...");
-    public string MenuFileExit       => L("Menu_File_Exit",              "E_xit");
-    public string MenuView           => L("Menu_View",                   "_View");
-    public string MenuViewLanguage   => L("Menu_View_Language",          "_Language");
-    public string MenuViewLanguageEn => L("Menu_View_Language_English",  "English");
-    public string MenuViewLanguageRo => L("Menu_View_Language_Romanian", "Rom\u00e2n\u0103");
-    public string MenuBuild          => L("Menu_Build",                  "_Build");
-
-    public ObjectBrowserViewModel ObjectBrowser { get; }
-    public MeasurementsViewModel Measurements { get; }
-    public DiagnosticsViewModel Diagnostics { get; }
-    public BuildViewModel Build { get; }
-    public WorkspaceExplorerViewModel WorkspaceExplorer { get; }
-    public XviReferencesViewModel XviReferences { get; }
-    public SettingsViewModel Settings { get; }
-    public KeyboardShortcutsViewModel KeyboardShortcuts { get; }
 
     [ObservableProperty] private bool _strictParserMode;
     partial void OnStrictParserModeChanged(bool value)
@@ -89,21 +80,29 @@ public partial class MainWindowViewModel : ViewModelBase
         };
     }
 
-    [ObservableProperty]
-    private Therion.Processing.Abstractions.ISymbolNavigationService? _navigation;
+    // Localized menu labels.
+    public string MenuFile           => L("Menu_File",                   "_File");
+    public string MenuFileOpenFile   => L("Menu_File_OpenFile",          "Open _File...");
+    public string MenuFileOpenFolder => L("Menu_File_OpenFolder",        "Open F_older...");
+    public string MenuFileExit       => L("Menu_File_Exit",              "E_xit");
+    public string MenuView           => L("Menu_View",                   "_View");
+    public string MenuViewLanguage   => L("Menu_View_Language",          "_Language");
+    public string MenuViewLanguageEn => L("Menu_View_Language_English",  "English");
+    public string MenuViewLanguageRo => L("Menu_View_Language_Romanian", "Română");
+    public string MenuBuild          => L("Menu_Build",                  "_Build");
 
     public MainWindowViewModel(
         IStringLocalizer<Strings> localizer,
         ILanguageService language,
-        ObjectBrowserViewModel objectBrowser,
-        MeasurementsViewModel measurements,
         IDocumentService documents,
-        DiagnosticsViewModel diagnostics,
-        BuildViewModel build,
-        WorkspaceExplorerViewModel workspaceExplorer,
-        XviReferencesViewModel xviReferences,
-        SettingsViewModel settings,
-        KeyboardShortcutsViewModel keyboardShortcuts,
+        DockFactory factory,
+        WorkspaceExplorerToolViewModel workspaceTool,
+        ObjectBrowserToolViewModel objectBrowserTool,
+        DiagnosticsToolViewModel diagnosticsTool,
+        CompilerOutputToolViewModel compilerOutputTool,
+        GeneratedFilesToolViewModel generatedFilesTool,
+        XviToolViewModel xviTool,
+        SettingsToolViewModel settingsTool,
         IModelEditService? editService = null,
         ILayoutService? layout = null)
     {
@@ -112,50 +111,76 @@ public partial class MainWindowViewModel : ViewModelBase
         _documents = documents;
         _editService = editService;
         _layout = layout;
-        if (_layout is not null)
-            _layout.LayoutChanged += (_, _) => OnPropertyChanged(nameof(Layout));
-        ObjectBrowser = objectBrowser;
-        Measurements = measurements;
-        Diagnostics = diagnostics;
-        Build = build;
-        WorkspaceExplorer = workspaceExplorer;
-        XviReferences = xviReferences;
-        Settings = settings;
-        KeyboardShortcuts = keyboardShortcuts;
+        _factory = factory;
+
+        WorkspaceTool = workspaceTool;
+        ObjectBrowserTool = objectBrowserTool;
+        DiagnosticsTool = diagnosticsTool;
+        CompilerOutputTool = compilerOutputTool;
+        GeneratedFilesTool = generatedFilesTool;
+        XviTool = xviTool;
+        SettingsTool = settingsTool;
+
+        Layout = _factory.CreateLayout();
+        _factory.InitLayout(Layout);
+
+        // Bridge the document service and the dock host (kept decoupled to avoid a DI cycle).
+        // OpenFileAsync resumes on a thread-pool thread (ConfigureAwait(false)), so adding
+        // the document to the dock — which mutates UI-bound VisibleDockables — must be
+        // marshalled to the UI thread.
+        _documents.OpenInDockRequested += (_, doc) => OnUiThread(() => _factory.OpenDocument(doc));
+        _factory.ActiveDockableChanged += (_, e) =>
+        {
+            if (e.Dockable is FileDocumentViewModel doc) _documents.SetActive(doc);
+        };
+        _factory.DockableClosed += (_, e) =>
+        {
+            if (e.Dockable is FileDocumentViewModel doc) _documents.CloseDocument(doc);
+        };
 
         _language.LanguageChanged += (_, _) => Refresh();
-        documents.DocumentChanged += (_, _) => SyncFromDocument();
+        _documents.DocumentChanged += (_, _) => RefreshActiveTools();
         ObjectBrowser.ShotEditRequested += async (_, e) => await ApplyShotEditAsync(e).ConfigureAwait(true);
+        WorkspaceExplorer.OpenRequested += async (_, node) => await OpenNodeAsync(node).ConfigureAwait(true);
+
         Build.CompileCompleted += (_, diags) =>
         {
-            // Merge compile diagnostics into the panel + squiggles.
             var combined = System.Collections.Immutable.ImmutableArray.CreateBuilder<Therion.Core.Diagnostic>();
             combined.AddRange(_documents.CurrentDiagnostics);
             combined.AddRange(diags);
-            CurrentDiagnostics = combined.ToImmutable();
-            Diagnostics.Load(CurrentDiagnostics);
+            Diagnostics.Load(combined.ToImmutable());
         };
-        Diagnostics.NavigateRequested += (_, row) => NavigateToSpanRequested?.Invoke(this, row.Span);
-        Build.NavigateRequested += (_, span) => NavigateToSpanRequested?.Invoke(this, span);
+        Diagnostics.NavigateRequested += (_, row) => NavigateTo(row.Span);
+        Build.NavigateRequested += (_, span) => NavigateTo(span);
+
         Refresh();
-        LoadSampleIntoBrowser();
+        _documents.OpenTextDocument("(sample).th", SampleText);
     }
 
     public MainWindowViewModel() : this(
         new NullLocalizer(),
         new LanguageService(),
-        new ObjectBrowserViewModel(),
-        new MeasurementsViewModel(),
         new NullDocumentService(),
-        new DiagnosticsViewModel(),
-        new BuildViewModel(),
-        new WorkspaceExplorerViewModel(),
-        new XviReferencesViewModel(),
-        new SettingsViewModel(),
-        new KeyboardShortcutsViewModel())
+        DesignFactory(),
+        new WorkspaceExplorerToolViewModel(new WorkspaceExplorerViewModel()),
+        new ObjectBrowserToolViewModel(new ObjectBrowserViewModel()),
+        new DiagnosticsToolViewModel(new DiagnosticsViewModel()),
+        new CompilerOutputToolViewModel(new BuildViewModel()),
+        new GeneratedFilesToolViewModel(new BuildViewModel()),
+        new XviToolViewModel(new XviReferencesViewModel()),
+        new SettingsToolViewModel(new SettingsViewModel(), new KeyboardShortcutsViewModel()))
     {
         // Designer-only.
     }
+
+    private static DockFactory DesignFactory() => new(
+        new WorkspaceExplorerToolViewModel(new WorkspaceExplorerViewModel()),
+        new ObjectBrowserToolViewModel(new ObjectBrowserViewModel()),
+        new DiagnosticsToolViewModel(new DiagnosticsViewModel()),
+        new CompilerOutputToolViewModel(new BuildViewModel()),
+        new GeneratedFilesToolViewModel(new BuildViewModel()),
+        new XviToolViewModel(new XviReferencesViewModel()),
+        new SettingsToolViewModel(new SettingsViewModel(), new KeyboardShortcutsViewModel()));
 
     /// <summary>Wires the storage picker once the View is attached to a TopLevel.</summary>
     public void AttachStoragePicker(IStoragePicker picker) => _picker = picker;
@@ -201,18 +226,33 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand] private void SwitchToEnglish()  => _language.SetLanguage("en");
     [RelayCommand] private void SwitchToRomanian() => _language.SetLanguage("ro");
 
-    [RelayCommand]
-    private void ToggleWorkspaceExplorer()
+    [RelayCommand] private void ToggleWorkspaceExplorer() => Activate(WorkspaceTool);
+    [RelayCommand] private void ToggleDiagnostics()       => Activate(DiagnosticsTool);
+
+    private void Activate(IDockable tool)
     {
-        if (_layout is null) return;
-        _layout.Save(_layout.Current with { LeftPaneVisible = !_layout.Current.LeftPaneVisible });
+        try { _factory.SetActiveDockable(tool); } catch { /* best-effort focus */ }
     }
 
-    [RelayCommand]
-    private void ToggleDiagnostics()
+    private async Task OpenNodeAsync(WorkspaceNode node)
     {
-        if (_layout is null) return;
-        _layout.Save(_layout.Current with { BottomPaneVisible = !_layout.Current.BottomPaneVisible });
+        try { await _documents.OpenFileAsync(node.FullPath).ConfigureAwait(true); }
+        catch (Exception ex) { StatusText = ex.Message; }
+    }
+
+    private void NavigateTo(Therion.Core.SourceSpan span)
+    {
+        // Activate the document the span lives in (open it if needed), then scroll.
+        foreach (var doc in _documents.Documents)
+        {
+            if (string.Equals(doc.FilePath, span.FilePath, StringComparison.OrdinalIgnoreCase))
+            {
+                _factory.OpenDocument(doc);
+                doc.RequestScrollTo(span);
+                return;
+            }
+        }
+        _documents.Active?.RequestScrollTo(span);
     }
 
     private async Task ApplyShotEditAsync(ShotEditEventArgs e)
@@ -241,58 +281,40 @@ public partial class MainWindowViewModel : ViewModelBase
         try
         {
             await _documents.WriteCurrentTextAsync(result.UpdatedText).ConfigureAwait(true);
-            StatusText = $"Shot {e.Row.From} ? {e.Row.To} updated.";
+            StatusText = $"Shot {e.Row.From} → {e.Row.To} updated.";
         }
         catch (Exception ex) { StatusText = ex.Message; }
     }
 
-    private void SyncFromDocument()
+    private static void OnUiThread(Action action)
     {
-        // DocumentChanged is raised from IDocumentService after a ConfigureAwait(false)
-        // file read, i.e. on a thread-pool thread. Updating bound UI state (notably the
-        // Measurements DataGridCollectionView) must happen on the UI thread, otherwise
-        // Avalonia throws "Call from invalid thread" and the open silently fails.
+        if (Avalonia.Threading.Dispatcher.UIThread.CheckAccess()) action();
+        else Avalonia.Threading.Dispatcher.UIThread.Post(action);
+    }
+
+    private void RefreshActiveTools()
+    {
         if (!Avalonia.Threading.Dispatcher.UIThread.CheckAccess())
         {
-            Avalonia.Threading.Dispatcher.UIThread.Post(SyncFromDocument);
+            Avalonia.Threading.Dispatcher.UIThread.Post(RefreshActiveTools);
             return;
         }
 
-        DocumentText = string.IsNullOrEmpty(_documents.CurrentText) ? SampleText : _documents.CurrentText;
-        CurrentFilePath = _documents.CurrentPath;
-        CurrentDiagnostics = _documents.CurrentDiagnostics;
-        Navigation = _documents.CurrentNavigation;
-        Diagnostics.Load(_documents.CurrentDiagnostics);
         if (_documents.Workspace is { } workspace)
-        {
             ObjectBrowser.Load(workspace);
-            Measurements.Load(workspace);
-        }
         else if (_documents.CurrentSemantics is { } model)
-        {
             ObjectBrowser.Load(model);
-            Measurements.Load(model);
-        }
+        else
+            ObjectBrowser.Load(SemanticModel.Empty);
+
+        Diagnostics.Load(_documents.CurrentDiagnostics);
         XviReferences.Refresh();
         WorkspaceExplorer.Refresh();
-    }
-
-    private void LoadSampleIntoBrowser()
-    {
-        var parse = new ThParser().Parse("(sample)", SampleText);
-        if (parse.Value is { } ast)
-        {
-            var model = new SemanticBinder().Bind(ast);
-            ObjectBrowser.Load(model);
-            Measurements.Load(model);
-        }
     }
 
     private void Refresh()
     {
         Title = _l["AppTitle"];
-        WelcomeTitle = _l["Welcome_Title"];
-        WelcomeMessage = _l["Welcome_Message"];
         OnPropertyChanged(nameof(MenuFile));
         OnPropertyChanged(nameof(MenuFileOpenFile));
         OnPropertyChanged(nameof(MenuFileOpenFolder));
