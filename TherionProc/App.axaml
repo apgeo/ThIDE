@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="TherionProc.App"
              xmlns:local="using:TherionProc"
+             xmlns:dockFluent="using:Dock.Avalonia.Themes.Fluent"
              RequestedThemeVariant="Default">
              <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
 
@@ -12,5 +13,10 @@
     <Application.Styles>
         <FluentTheme />
         <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml" />
+        <!-- AvaloniaEdit's TextEditor has no control template without this — the Source
+             editor renders blank (no text/line-numbers/background) if it's missing. -->
+        <StyleInclude Source="avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml" />
+        <!-- VS-style docking chrome (Dock.Avalonia 12). -->
+        <dockFluent:DockFluentTheme />
     </Application.Styles>
 </Application>
