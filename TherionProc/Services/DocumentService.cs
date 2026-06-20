@@ -1,42 +1,51 @@
-// Implementation Plan ง6 / ง7.3 — active-document host for the UI.
+// Implementation Plan ยง6 / ยง7.3 โ€” active-document host, now multi-document (MDI).
 //
-// Wraps `TherionWorkspace` so the UI gets a single source of truth for:
-//   - what's open (single file or a thconfig-driven set),
-//   - the current document's text,
-//   - the latest semantic model.
-//
-// Lives in the UI assembly because it deliberately owns the choice of which
-// parser to dispatch by extension (mirrors `TherionWorkspace.ParseFile` but
-// without forcing a workspace load for the simple "open one file" case).
+// Owns the set of open documents (one FileDocumentViewModel per file) and adds
+// them to the central DocumentDock via DockFactory. The legacy "Current*" surface
+// is preserved as a projection of the Active document so existing consumers
+// (BuildViewModel, WorkspaceExplorer, XVI) keep working unchanged.
 
 using System;
+using System.Collections.Immutable;
+using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Therion.Processing.Abstractions;
 using Therion.Semantics;
 using Therion.Syntax;
 using Therion.Workspace;
+using TherionProc.ViewModels.Docking;
 
 namespace TherionProc.Services;
 
 public interface IDocumentService
 {
+    // ---- Multi-document (MDI) ----
+    ObservableCollection<FileDocumentViewModel> Documents { get; }
+    FileDocumentViewModel? Active { get; }
+    event EventHandler? ActiveDocumentChanged;
+    /// <summary>Raised when a document should be shown/activated in the dock host.</summary>
+    event EventHandler<FileDocumentViewModel>? OpenInDockRequested;
+    /// <summary>Updates the active document (called by the dock host when the tab changes).</summary>
+    void SetActive(FileDocumentViewModel? document);
+    /// <summary>Opens an unsaved in-memory document (e.g. the startup sample).</summary>
+    FileDocumentViewModel OpenTextDocument(string displayPath, string text);
+    void CloseDocument(FileDocumentViewModel document);
+
+    // ---- Legacy "current" surface (projection of Active) ----
     string? CurrentPath { get; }
     string CurrentText { get; }
     SemanticModel? CurrentSemantics { get; }
-    /// <summary>Active document's parsed AST root (Plan ง7.3 / M6 #8) — needed for inline edits.</summary>
     TherionFile? CurrentAst { get; }
     WorkspaceSemanticModel? Workspace { get; }
-    /// <summary>Parser + semantic diagnostics for the active document (and workspace files when loaded).</summary>
-    System.Collections.Immutable.ImmutableArray<Therion.Core.Diagnostic> CurrentDiagnostics { get; }
-    /// <summary>Navigation service for the editor (workspace-aware when a workspace is loaded).</summary>
-    Therion.Processing.Abstractions.ISymbolNavigationService? CurrentNavigation { get; }
+    ImmutableArray<Therion.Core.Diagnostic> CurrentDiagnostics { get; }
+    ISymbolNavigationService? CurrentNavigation { get; }
     event EventHandler? DocumentChanged;
 
     Task OpenFileAsync(string absolutePath, CancellationToken ct = default);
     Task OpenFolderAsync(string folderPath, CancellationToken ct = default);
-    /// <summary>Persist <paramref name="newText"/> to the current document and re-parse (Plan ง7.3 / M6 #8).</summary>
     Task WriteCurrentTextAsync(string newText, CancellationToken ct = default);
     void Close();
 }
@@ -47,14 +56,22 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
     private readonly ICommandRegistry? _commands;
     private TherionWorkspace? _workspace;
 
-    public string? CurrentPath { get; private set; }
-    public string CurrentText { get; private set; } = string.Empty;
-    public SemanticModel? CurrentSemantics { get; private set; }
-    public TherionFile? CurrentAst { get; private set; }
+    public ObservableCollection<FileDocumentViewModel> Documents { get; } = new();
+    public FileDocumentViewModel? Active { get; private set; }
     public WorkspaceSemanticModel? Workspace { get; private set; }
-    public System.Collections.Immutable.ImmutableArray<Therion.Core.Diagnostic> CurrentDiagnostics { get; private set; } = System.Collections.Immutable.ImmutableArray<Therion.Core.Diagnostic>.Empty;
-    public Therion.Processing.Abstractions.ISymbolNavigationService? CurrentNavigation { get; private set; }
+
+    public event EventHandler? ActiveDocumentChanged;
     public event EventHandler? DocumentChanged;
+    public event EventHandler<FileDocumentViewModel>? OpenInDockRequested;
+
+    // Projection of the active document.
+    public string? CurrentPath => Active?.FilePath;
+    public string CurrentText => Active?.DocumentText ?? string.Empty;
+    public SemanticModel? CurrentSemantics => Active?.Semantics;
+    public TherionFile? CurrentAst => Active?.Ast;
+    public ImmutableArray<Therion.Core.Diagnostic> CurrentDiagnostics =>
+        Active?.Diagnostics ?? ImmutableArray<Therion.Core.Diagnostic>.Empty;
+    public ISymbolNavigationService? CurrentNavigation => Active?.Navigation;
 
     public DocumentService(IProjectEntryPointResolver resolver, ICommandRegistry? commands = null)
     {
@@ -68,32 +85,18 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
         var full = Path.GetFullPath(absolutePath);
         if (!File.Exists(full)) return;
 
-        await DisposeWorkspaceAsync().ConfigureAwait(false);
+        if (FindOpen(full) is { } already)
+        {
+            OpenInDockRequested?.Invoke(this, already);
+            SetActive(already);
+            return;
+        }
 
         var text = await File.ReadAllTextAsync(full, ct).ConfigureAwait(false);
-        var ext = Path.GetExtension(full).ToLowerInvariant();
-        ParseResult<TherionFile> parsed = ext switch
-        {
-            ".th2"      => new Th2Parser().Parse(full, text),
-            ".thconfig" => new ThconfigParser().Parse(full, text),
-            ".thc"      => new ThconfigParser().Parse(full, text),
-            ".th"       => new ThParser(_commands).Parse(full, text),
-            _           => new ThParser(_commands).Parse(full, text),
-        };
-
-        CurrentPath = full;
-        CurrentText = text;
-        CurrentAst = parsed.Value;
-        CurrentSemantics = parsed.Value is null ? null : new SemanticBinder().Bind(parsed.Value);
-        Workspace = null;
-        CurrentNavigation = CurrentSemantics is null
-            ? null
-            : new SymbolNavigationService(CurrentSemantics);
-        var diags = System.Collections.Immutable.ImmutableArray.CreateBuilder<Therion.Core.Diagnostic>();
-        diags.AddRange(parsed.Diagnostics);
-        if (CurrentSemantics is not null) diags.AddRange(CurrentSemantics.Diagnostics);
-        CurrentDiagnostics = diags.ToImmutable();
-        Raise();
+        var doc = CreateDocument(full, text);
+        Documents.Add(doc);
+        OpenInDockRequested?.Invoke(this, doc);
+        SetActive(doc);
     }
 
     public async Task OpenFolderAsync(string folderPath, CancellationToken ct = default)
@@ -105,44 +108,77 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
 
         _workspace = new TherionWorkspace();
         await _workspace.LoadAsync(resolved.Selected, ct).ConfigureAwait(false);
-
-        var entryParse = _workspace.TryGetFile(resolved.Selected);
-        CurrentPath = resolved.Selected;
-        CurrentText = File.Exists(resolved.Selected)
-            ? await File.ReadAllTextAsync(resolved.Selected, ct).ConfigureAwait(false)
-            : string.Empty;
-        CurrentAst = entryParse?.Value;
-        CurrentSemantics = entryParse?.Value is null ? null : new SemanticBinder().Bind(entryParse.Value);
         Workspace = _workspace.BuildSemanticModel();
-        CurrentNavigation = Workspace is null
-            ? (CurrentSemantics is null ? null : new SymbolNavigationService(CurrentSemantics))
-            : new WorkspaceSymbolNavigationService(Workspace, CurrentSemantics);
-        var diags = System.Collections.Immutable.ImmutableArray.CreateBuilder<Therion.Core.Diagnostic>();
-        if (entryParse is not null) diags.AddRange(entryParse.Diagnostics);
-        if (Workspace is not null) diags.AddRange(Workspace.Diagnostics);
-        CurrentDiagnostics = diags.ToImmutable();
-        Raise();
+
+        // Show the entry file as a document; per-file semantics live on the document.
+        if (File.Exists(resolved.Selected))
+            await OpenFileAsync(resolved.Selected, ct).ConfigureAwait(false);
+        else
+            Raise();
     }
+
+    public FileDocumentViewModel OpenTextDocument(string displayPath, string text)
+    {
+        if (FindOpen(displayPath) is { } already)
+        {
+            OpenInDockRequested?.Invoke(this, already);
+            SetActive(already);
+            return already;
+        }
+        var doc = CreateDocument(displayPath, text);
+        Documents.Add(doc);
+        OpenInDockRequested?.Invoke(this, doc);
+        SetActive(doc);
+        return doc;
+    }
+
+    public void CloseDocument(FileDocumentViewModel document) => OnClosed(document);
 
     public void Close()
     {
-        CurrentPath = null;
-        CurrentText = string.Empty;
-        CurrentAst = null;
-        CurrentSemantics = null;
+        foreach (var d in Documents.ToList()) OnClosed(d);
         Workspace = null;
-        CurrentNavigation = null;
-        CurrentDiagnostics = System.Collections.Immutable.ImmutableArray<Therion.Core.Diagnostic>.Empty;
         _ = DisposeWorkspaceAsync();
         Raise();
     }
 
     public async Task WriteCurrentTextAsync(string newText, CancellationToken ct = default)
     {
-        if (string.IsNullOrEmpty(CurrentPath)) return;
-        await File.WriteAllTextAsync(CurrentPath, newText, ct).ConfigureAwait(false);
-        await OpenFileAsync(CurrentPath, ct).ConfigureAwait(false);
+        if (Active is not { } doc) return;
+        if (File.Exists(doc.FilePath))
+            await File.WriteAllTextAsync(doc.FilePath, newText, ct).ConfigureAwait(false);
+        doc.SetText(newText, reparse: true);
     }
+
+    private FileDocumentViewModel CreateDocument(string path, string text)
+    {
+        var doc = new FileDocumentViewModel(path, text, new ViewModels.MeasurementsViewModel(), _commands);
+        doc.Reparsed += (_, _) => { if (ReferenceEquals(doc, Active)) Raise(); };
+        return doc;
+    }
+
+    private FileDocumentViewModel? FindOpen(string path) =>
+        Documents.FirstOrDefault(d =>
+            string.Equals(d.FilePath, path, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(Path.GetFullPath(d.FilePath), TryFull(path), StringComparison.OrdinalIgnoreCase));
+
+    private static string TryFull(string p) { try { return Path.GetFullPath(p); } catch { return p; } }
+
+    public void SetActive(FileDocumentViewModel? doc)
+    {
+        if (ReferenceEquals(Active, doc)) return;
+        Active = doc;
+        ActiveDocumentChanged?.Invoke(this, EventArgs.Empty);
+        Raise();
+    }
+
+    private void OnClosed(FileDocumentViewModel doc)
+    {
+        if (Documents.Remove(doc) && ReferenceEquals(Active, doc))
+            SetActive(Documents.LastOrDefault());
+    }
+
+    private void Raise() => DocumentChanged?.Invoke(this, EventArgs.Empty);
 
     private async Task DisposeWorkspaceAsync()
     {
@@ -154,6 +190,4 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
     }
 
     public ValueTask DisposeAsync() => new(DisposeWorkspaceAsync());
-
-    private void Raise() => DocumentChanged?.Invoke(this, EventArgs.Empty);
 }
