@@ -1,0 +1,463 @@
+encoding  utf-8
+survey 2046-81_Ponor_suspendat
+
+centreline
+#echipa de explorari
+
+team "Ovidiu Dolcan"
+team "Alex Pologea"
+team "George Vasiliu"
+team "Iulia Pop"
+team "Catalin Radu"
+team "Adi Ghita"
+team "Bogdan Ghita"
+team "Marius Milascon"
+
+explo-team "Andreea Baluta"
+explo-team "Iulian Mihai"
+explo-team "Razvan Baluta"
+explo-team "Adi Mocanu"
+explo-team "Dan Boieriu"
+explo-team "Ovidiu Dolcan"
+explo-team "Alex Pologea"
+explo-team "George Vasiliu"
+explo-team "Andreea Stan"
+explo-team "Marius Sibianu"
+explo-team "Mircea Iepure"
+explo-team "Iulia Pop"
+explo-team "Catalin Radu"
+
+explo-date 2015.08.25
+
+date 2015.09.26
+date 2015.10.24
+date 2015.11.28
+date 2016.02.27
+date 2016.03.26
+    
+station 0 "Intrare Ponorul Suspendat" entrance
+station ps10 "P13" continuation
+station ps32 "Cascada C1" continuation
+station ps44 "Cascada C2" continuation
+station ps46 "Cascada C3" continuation
+station ps50 "Cascada C4" continuation
+station ps80 "Cascada C5" continuation
+station psB.30 "Galeria B" continuation
+station psB.85 "Galeria A" continuation
+station psC.20 "Galeria C" continuation
+#    units compass degrees
+
+data normal from to compass tape clino  
+    
+# Cartare Ovidiu, Alex si George - 26.09.2015      
+# Busola Quechua - cadran fix
+# Galeria de Intrare - Piticilor      
+0     ps1  286  2.88  -21
+ps1   ps2  304  2.7  -22
+#
+ps1   ps1a  0 0.45  90
+ps1a  ps1b  222 2.6 0
+#
+ps2   ps3  260  1.6  -22
+ps3   ps4  204  1.44  -5
+ps4   ps5  240  2.88  -11
+ps4   ps4a  118 3.8 35
+#
+ps5   ps6  162  1.5  -37
+ps6   ps7  250  3.16  2
+ps7   ps8  201  1.87  -2
+ps8   ps9  188  2.46  -2
+ps9   ps10  242  3.42  -16
+ps10  ps10a 0 10  -90
+ps10a  ps10b 200 2.5 0
+ps10a  ps10c  20  3 20
+ps10a ps11  0 3.5 -90
+ps11  ps12  308  2.71  -11
+ps11  ps11a 90  3 0
+ps12  ps13  264  4.2  -4
+#12  12h 0 6 90
+ps13  ps14  267  4.68  -9
+#13  13h 0 8 90
+ps14  ps15  316  6.5  -22
+ps15  ps16  333  7.1  -13
+ps16  ps17  24  0.9  -12
+ps17  ps18  293  1.8  -11
+ps18  ps19  14  1.8  -23
+ps19  ps20  266  3.16  -19
+ps20  ps21  316  2  -13
+ps21  ps22  6  1.84  -27
+ps22  ps23  288  4.04  -4
+ps23  ps24  277  2.18  -4
+ps24  ps25  298  2.54  -15
+ps25  ps26  204  3.34  2
+ps26  ps27  251  1.75  -64
+ps27  ps28  333  3.16  -8
+ps28  ps29  269  1.84  -14
+ps29  ps30  308  2.39  -22
+ps30  ps31  34  2.47  -28
+# Cartare Ovidiu, Alex - 28.11.2015 
+# Busola Quechua - cadran fix
+ps31  ps32  39    2.6   -32
+ps32  ps33  10    4.8   -54
+ps33  ps34  253   2     -14
+ps34  ps35  304  3.4    -12
+ps35  ps36  271  2.25  -2
+ps36  ps37  295  5.4  3
+ps37  ps38  180  3.8  -20
+ps38  ps39  254  2.36  -5
+ps39  ps40  217  3.4  -20
+ps40  ps41  181  2.1  0
+ps41  ps42  291  2.36  0
+ps42  ps43  198  2.15  -15
+ps43  ps44  324  1.3  -35
+ps44  ps45  336  5  -31
+ps45  ps46  308  3.8  -42
+ps46  ps47  242  2  -15
+ps47  ps48  281  3.2  -12
+ps48  ps49  350  6.05  -35
+ps49  ps50  63  2.45  -9
+ps50  ps51  34  4.95  -58
+ps51  ps52  276  3.16  -3
+ps52  ps53  221  10.4  -7
+ps53  ps54  197  2.82  3
+ps54  ps55  231  2.53  -16
+ps55  ps56  132  2.9  -27
+ps56  ps57  243  4.8  -2
+# cartare Ovidiu si Iulia Pop 29.11.2015
+# Busola Quechua - cadran fix
+ps57  ps58  191  1.18  -9
+ps58  ps59  258  4.65  -2
+ps59  ps60  298  2.25  0
+ps60  ps61  246  3.35  -2
+ps61  ps62  308  5.10  -37
+ps62  ps63  214  3.75  -6
+ps63  ps64  239  4.10  -2
+ps64  ps65  282  3.80  -5
+ps65  ps66  194  2.70  -1
+ps66  ps67  242  3.88  -8
+ps67  ps68  302  2.10  -3
+ps68  ps69  205  2.55  -1
+ps69  ps70  228  3.90  -7
+ps70  ps71  200  4.60  -5
+ps71  ps72  232  3.75  -9
+ps72  ps73  261  3.65  -7
+ps73  ps74  173  2.65  -3
+ps74  ps75  221  3.55  -1
+ps75  ps76  259  3.03  -7
+ps76  ps77  189  3.21  -3
+ps77  ps78  230  5.30  -4
+ps78  ps79  218  5.00  -4
+ps79  ps80  217  5.60  0
+ps80  ps81  0     3.70  -90
+ps81  ps82  302  2.45  -2
+ps82  ps83  320  2.40  -37
+ps83  ps84  306  6.80  -12
+ps84  ps85  271  3.00  19
+ps85  ps86  306  2.10  5
+ps86  ps87  295  7.50  -18
+ps87  ps88  245  2.60  -5
+ps88  ps89  231  3.70  -5
+ps89  ps90  231  10.00  -5
+ps90  ps91  284  3.50  -4
+ps91  ps92  227  4.70  -1
+
+# afluent la cascada C1
+ps33    ps33.1  104  6.4  18
+#         
+ps48    ps48a  216  2.3  14
+ps48a   ps48b  237  4.05  -25
+ps48b   ps48c  0  7  -90
+        
+ps54  ps54.1  293  2.9  47
+        
+ps54  ps54a  107  3.85  23
+# laterala la C5
+ps76  76.1  219  2.5  45
+76.1  76.2  204  4.28  23
+76.2  76.3  221  4.11  -9
+76.3  76.4  253  3.5  -20
+76.4  76.5  226  5.9  -9
+76.5  76.6  137  1.5  24
+76.6  76.7  248  2.2  3
+        
+psA.9   psA.9a  192  3.35  32
+psA.9a  psA.9b  236  4.4  31
+
+# cartare fosil de la sorb        
+ps89  psA.1  198  4.00  16
+psA.1 psA.2  200  4.90  10
+psA.2 psA.3  197  9.30  23
+psA.3 psA.4  236  9.45  -4
+psA.4 psA.5  210  4.30  12
+psA.5 psA.6  264  4.85  9
+psA.6 psA.7  226  10.40  5
+psA.7 psA.8  233  8.40  0
+psA.8 psA.9  221  3.80  21
+psA.9  psA.10  235  5.45  1
+psA.10 psA.11  322  1.40  19
+psA.11 psA.12  262  7.85  -5
+psA.12 psA.13  219  3.50  0
+# cartare drumul spre Colector
+# cartare Ovidiu si Catalin Radu 27.02.2016
+# Busola Quechua - cadran fix
+psA.13    psA.14  250  1.81  13
+psA.14    psA.15  213  2.86  26
+psA.15    psA.15.1  268  1.80  33
+psA.15.1  psA.15.2  239  3.52  1
+psA.15.2  psA.15.3  259  3.42  -2
+psA.15.3  psA.15.4  210  1.92  -3
+psA.15.4  psA.15.5  235  1.94  -13
+psA.15.5  psA.15.6  356  1.73  2
+psA.15.6  psA.15.7  340  1.05  0
+psA.15.7  psA.15.8  327  2.20  -28
+psA.15.8  psA.15.9  312  1.60  17
+psA.15.9  psA.15.10  203  0.50  60
+psA.15.10  psA.15.11  278  1.78  0
+psA.15.11  psA.15.12  280  1.03  2
+psA.15.12  psA.15.13  302  1.92  13
+psA.15.13  psA.15.14  350  1.34  -10
+psA.15.14  psA.15.15  307  3.37  -15
+psA.15.15  psA.15.16  285  2.58  -1
+psA.15.16  psA.15.17  300  1.92  -27
+psA.15.17  psA.15.18  304  2.03  -42
+psA.15.18  psA.15.19  284  2.63  27
+psA.15.19  psA.15.20  294  2.61  20
+psA.15.20  psA.15.21  295  3.82  0
+psA.15.21  psA.15.22  279  1.90  -20
+psA.15.22  psA.15.23  0    0.70  -90
+psA.15.23  psA.15.24  224  9.66  -5
+psA.15.24  psA.15.25  233  2.47  -12
+psA.15.25  psA.15.26  216  5.52  -4
+psA.15.26  psA.15.27  225  3.71  -11
+psA.15.27  psA.15.28  180  1.32  -9
+psA.15.28  psA.15.29  222  4.25  -1
+psA.15.29  psA.15.30  232  6.94  1
+psA.15.30  psA.15.31  227  5.03  -5
+psA.15.31  psA.15.32  245  4.04  -12
+psA.15.32  psA.15.33  221  2.59  -4
+psA.15.33  psA.15.34  217  9.59  -9
+psA.15.34  psA.15.35  218  4.60  2
+psA.15.35  psA.15.36  230  5.04  2
+psA.15.36  psA.15.37  223  9.90  4
+psA.15.37  psA.15.38  250  2.58  0
+psA.15.38  psA.15.39  259  2.03  9
+# bucla 15c1
+psA.15.3    psA.15.3.1  323  2.27  21
+psA.15.3.1  psA.15.3.2  258  1.72  27
+psA.15.3.2  psA.15.3.3  266  2.06  0
+psA.15.3.3  psA.15.3.4  285  2.50  -9
+psA.15.3.4  psA.15.3.5  360  2.05  -58  
+
+# cartare Adi Ghita si Bogdan Ghita
+psA.10   psB.1  226  3.6   -2
+psB.1   psB.2  210  6     -5
+psB.2   psB.3  230  2.2   -3.7
+psB.3   psB.4  250  4.9   -9
+psB.4   psB.5  240  6     -4.5
+psB.5   psB.6  222  4.7  -17.8
+psB.6   psB.7  226  5     -1
+psB.7   psB.8  264  2.4  -43.6
+psB.8   psB.9  224  9.8  -4.2
+psB.9   psB.10  278  6.3  -55.7
+psB.10  psB.11  226  6.5  -2.6
+psB.11  psB.12  176  3.2  22
+psB.12  psB.13  220  2.7  24
+psB.13  psB.14  132  3.3  71.5
+psB.14  psB.15  278  1.7  46.5
+psB.15  psB.16  254  2.5  0.7
+psB.16  psB.17  214  2.4  -0.7
+psB.17  psB.18  274  3    -11
+psB.18  psB.19  224  6.5  -2
+psB.19  psB.20  314  1.2  0
+psB.20  psB.21  224  9    -0.4
+psB.21  psB.22  216  9.6  -3.9
+psB.22  psB.23  224  4.1  -20
+psB.23  psB.24  240  4.3  -45
+psB.24  psB.25  236  2.8  -1.1
+psB.25  psB.26  258  1.8  44
+psB.26  psB.27  228  3.7  -2.6
+psB.27  psB.28  278  1    20
+psB.28  psB.29  214  1.6  11.3
+psB.29  psB.30  224  2.7  -9.1
+psB.30  psB.31  210  3  -21
+psB.31  psB.32  260  1.2  20
+psB.32  psB.33  224  2.1  0.5
+psB.33  psB.34  248  3.3  22.5
+psB.34  psB.35  228  1.6  20.3
+psB.35  psB.36  224  4.4  -5
+psB.36  psB.37  214  2.4  -3.2
+psB.37  psB.38  236  1.7  -1.4
+psB.38  psB.39  220  5.4  -17
+psB.39  psB.40  230  3.9  -7
+psB.40  psB.41  256  2    -9
+psB.41  psB.42  228  8.6  -1.6
+psB.42  psB.43  260  2.5  -6.3
+psB.43  psB.44  224  2.3  2
+psB.44  psB.45  254  2    3.2
+psB.45  psB.46  316  6    -10.1
+psB.46  psB.47  226  3.4  -8
+psB.47  psB.48  244  2    -50
+psB.48  psB.49  274  1.8  -10
+psB.49  psB.50  224  5.1  -6.4
+psB.50  psB.51  240  2.1  9.1
+psB.51  psB.52  216  1.3  37.3
+psB.52  psB.53  220  5.2  -12.4
+psB.53  psB.54  160  1    22
+psB.54  psB.55  256  1.7  38
+psB.55  psB.56  260  2.6  -3.7
+psB.56  psB.57  254  3.4  -0.2
+psB.57  psB.58  336  1.5  0
+psB.58  psB.59  104  2.6  55.6
+psB.59  psB.60  244  3.5  61.3
+psB.60  psB.61  72   1.4  32.4
+psB.61  psB.62  160  2.2  15.3
+psB.62  psB.63  142  2.6  0
+psB.63  psB.64  0    1.3  -90
+psB.64  psB.65  70   2.5  19.1
+psB.65  psB.66  82   2.2  0
+psB.66  psB.67  44   3.8  -20.4
+psB.67  psB.68  50   2.1  28.8
+psB.68  psB.69  52   1.5  0
+psB.68  psB.70  52   4.6  4.4
+psB.70  psB.71  44   3.6  -3.5
+psB.71  psB.72  54   3.6  7.3
+psB.72  psB.73  334  3.8  -7.2
+psB.73  psB.74  0    0.8  -90
+psB.74  psB.75  88   2.6  6.8
+psB.75  psB.76  44   8  5.8
+psB.76  psB.77  44   11.7  0.5
+psB.77  psB.78  55   2  2.9
+psB.78  psB.79  100  2.5  44.5
+psB.79  psB.80  64   5.7  13.7
+psB.80  psB.81  64   5.3  9.8
+psB.81  psB.82  128  3.8  38.2
+psB.82  psB.83  0   0.6  90
+psB.83  psB.84  68  4.5  8.8
+psB.84  psB.85  50  4.8  2.7
+psB.85  psB.86  30  3.9  -17.3
+psB.86  psB.87  74  2.8  13.4
+psB.87  psB.88  88  1.7  7.3
+psB.88  psB.89  118 2.5  33.7
+psB.89  psB.90  88  2  15.7
+psB.90  psB.91  56  2.5  -15.2
+psB.91  psB.92  316 3  -62.2
+psB.92  psB.93  76  3  8.7
+psB.93  psB.94  36  20  3
+psB.94  psB.95  18  1.8  -31.2
+psB.95  psB.96  38  11.9  -6
+psB.96  psB.97  42  11  1.5
+psB.97  psB.98  44  5.3  13.3
+psB.98  psB.99  44  6.7  4.7
+psB.99  psB.100  46   4.8  7.6
+psB.100  psB.101  46  3    0
+psB.101  psB.102  68  2.4  -8.7
+psB.102  psB.103  56  10.8  -1.2
+psB.103  psB.104  0   1.7  -90
+psB.104  psB.105  290  1.2  -22.2
+psB.105  psB.106  40  5.5  -30
+psB.106  psA.15  350  1.2  -2.7
+# segment galerie suprapusa Adi Ghita si Ovidiu
+#psB.107  psB.108  50  5.3  -24.8
+#psB.108  psB.109  38  3.3  -1.6
+#psB.109  psB.110  78  7.5  7.4
+
+# cartare Ovidiu Dolcan, Andreea Baluta
+psB.57  psC.45  255  2.26  30
+psC.45  psC.44  289  1.63  23
+psC.44  psC.43  284  6.77  -9
+psC.43  psC.42  272  2.49  -27
+psC.42  psC.41  260  3.93  -4
+psC.41  psC.40  294  2.61  -6
+psC.40  psC.39  249  2.12  -10
+psC.39  psC.38  270  3.24  -13
+psC.38  psC.37  243  5.14  -9
+psC.37  psC.36  221  3.12  -2
+psC.36  psC.35  223  2.77  -37
+psC.35  psC.34  109  5.86  -57
+psC.34  psC.33  201  4.89  -8
+psC.33  psC.32  264  3.57  -2
+psC.32  psC.31  205  3.22  -7
+psC.31  psC.30  264  3.19  -15
+psC.30  psC.29  252  3.96  11
+psC.29  psC.28  327  6.26  -7
+psC.28  psC.27  266  3.27  12
+psC.27  psC.26  223  4.75  -4
+psC.26  psC.25  293  0.7   0
+psC.25  psC.24  180  0.9  -90
+psC.24  psC.23  244  4.24  12
+psC.23  psC.22  306  1.12  -1
+psC.22  psC.21  240  10.34  -4
+psC.21  psC.20  347  1.97  2
+psC.20  psC.19  289  3.15  4
+psC.19  psC.18  282  1.9   51
+psC.18  psC.17  253  2.73  32
+psC.17  psC.16  242  1.68  9
+psC.16  psC.15  228  2.55  -24
+psC.15  psC.14  236  2.8   -5
+psC.14  psC.13  269  3.35  30
+psC.13  psC.12  246  0.93  25
+psC.12  psC.11  259  2.11  9
+psC.11  psC.10  232  4.61  -23
+psC.10  psC.9  282  4.71  7
+psC.9  psC.8  192  5.48  21
+psC.8  psC.7  145  1.67  -41
+psC.7  psC.6  217  7.18  -60
+psC.6  psC.5  204  2.93  -35.3
+psC.5  psC.4  232  5.09  -3.2
+psC.4  psC.3  206  7.52  -1
+psC.3  psC.2  231  12.2  -9.1
+psC.2  psC.1  224  10.29  -9.2
+psC.1  psC.0  208  8.06  -3.1
+
+psC.0   psC.0a  233  6.1   0
+psC.0   psC.0b  155  4.8   0
+
+psC.3   psC.3a  36   19.9  33
+
+psC.9   psC.9a  321  3.92  18
+psC.9a  psC.9b  276  13.8  31
+        
+psC.9   psC.9c  45   11.4  12
+        
+psC.11  psC.11a 52   3     20
+# cartare Razvan
+ps89	psR.16	197	3.09	14
+psR.16	psR.17	198	4.6	13
+psR.17	psR.18	227	1.3	8
+psR.18	psR.19	196	8	25
+psR.19	psR.20	230	10.8	-3
+psR.20	psR.21	204	2.96	21
+psR.21	psR.22	243	3.72	4
+psR.22	psR.23	275	2.29	13
+psR.23	psR.24	221	7.04	4
+psR.24	psR.25	222	8.6	5
+psR.25	psR.26	241	3.96	-9
+psR.26	psR.27	209	2.96	20
+psR.27	psR.27a	195	3.64	31
+psR.27a	psR.27b	239	4.37	27
+psR.27	psR.28	233	5.24	8
+psR.28	psR.29	308	1.69	-16
+psR.29	psR.30	255	7.57	-3
+psR.30	psR.31	230	4.27	-4
+psR.31	psR.32	237	1.49	32
+psR.32	psR.33	187	3.65	22
+psR.32	psR.32a	259	1.02	43
+psR.33	psR.34	216	4.12	30
+psR.34	psR.35	117	2.31	24
+psR.35	psR.36	246	3.3	6
+psR.36	psR.37	234	7.27	-2
+psR.37	psR.38	248	4.42	4
+psR.38	psR.39	224	3.72	-2
+psR.28	psR.28a	227	4.84	-2
+psR.28a	psR.28b	213	3.9		-2
+
+
+                    
+cs lat-long
+fix 0 45.227295 23.81907 806
+
+endcentreline
+
+
+endsurvey 2046-81_Ponor_suspendat
+
