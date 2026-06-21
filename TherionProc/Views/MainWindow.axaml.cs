@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Platform.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Therion.Processing.Abstractions;
 using TherionProc.Services;
@@ -13,6 +15,9 @@ namespace TherionProc.Views;
 
 public partial class MainWindow : Window
 {
+    private static readonly HashSet<string> OpenableExtensions = new(StringComparer.OrdinalIgnoreCase)
+        { ".th", ".th2", ".thconfig", ".thc", "" };
+
     private IKeyboardShortcutService? _shortcuts;
     private ILayoutService? _layout;
 
@@ -34,6 +39,64 @@ public partial class MainWindow : Window
             if (DataContext is MainWindowViewModel vm) vm.PersistSession();
             SaveLayout();
         };
+
+        // Drag-and-drop file open (#17).
+        DragDrop.SetAllowDrop(this, true);
+        AddHandler(DragDrop.DragOverEvent, OnDragOver);
+        AddHandler(DragDrop.DropEvent, OnDrop);
+    }
+
+    // ----- full screen (#8) ----------------------------------------------
+
+    private void OnToggleFullScreen(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ToggleFullScreen();
+
+    private void ToggleFullScreen() =>
+        WindowState = WindowState == WindowState.FullScreen ? WindowState.Normal : WindowState.FullScreen;
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        base.OnKeyDown(e);
+        if (e.Handled) return;
+        switch (e.Key)
+        {
+            case Key.F11:
+                ToggleFullScreen();
+                e.Handled = true;
+                break;
+            case Key.Left when e.KeyModifiers == KeyModifiers.Alt:
+                (DataContext as MainWindowViewModel)?.GoBackCommand.Execute(null);
+                e.Handled = true;
+                break;
+            case Key.Right when e.KeyModifiers == KeyModifiers.Alt:
+                (DataContext as MainWindowViewModel)?.GoForwardCommand.Execute(null);
+                e.Handled = true;
+                break;
+        }
+    }
+
+    // ----- drag-and-drop open (#17) --------------------------------------
+
+    private static void OnDragOver(object? sender, DragEventArgs e) =>
+        e.DragEffects = e.DataTransfer?.TryGetFiles() is { Length: > 0 }
+            ? DragDropEffects.Copy : DragDropEffects.None;
+
+    private void OnDrop(object? sender, DragEventArgs e)
+    {
+        if (e.DataTransfer?.TryGetFiles() is not { } files) return;
+
+        IDocumentService? docs = null;
+        try { docs = AppServices.Provider.GetService<IDocumentService>(); }
+        catch { /* design-time / no container */ }
+        if (docs is null) return;
+
+        foreach (var item in files)
+        {
+            if (item is not IStorageFile file) continue;
+            var path = file.TryGetLocalPath();
+            if (string.IsNullOrEmpty(path)) continue;
+            if (OpenableExtensions.Contains(Path.GetExtension(path)))
+                _ = docs.OpenFileAsync(path);
+        }
     }
 
     private async void OnPreferencesClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)

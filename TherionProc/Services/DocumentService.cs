@@ -50,6 +50,14 @@ public interface IDocumentService
     Task NavigateToSpanAsync(Therion.Core.SourceSpan span, CancellationToken ct = default);
     Task WriteCurrentTextAsync(string newText, CancellationToken ct = default);
     void Close();
+
+    // ---- navigation history (back/forward across files, VSCode-style) ----
+    bool CanGoBack { get; }
+    bool CanGoForward { get; }
+    Task GoBackAsync(CancellationToken ct = default);
+    Task GoForwardAsync(CancellationToken ct = default);
+    /// <summary>Raised when the back/forward availability changes.</summary>
+    event EventHandler? HistoryChanged;
 }
 
 public sealed class DocumentService : IDocumentService, IAsyncDisposable
@@ -155,9 +163,53 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
         foreach (var d in Documents) d.SetWorkspace(Workspace);
     }
 
+    // ---- navigation history -------------------------------------------------
+
+    private readonly System.Collections.Generic.List<Therion.Core.SourceSpan> _history = new();
+    private int _historyIndex = -1;
+    private bool _suppressHistory;
+
+    public event EventHandler? HistoryChanged;
+    public bool CanGoBack => _historyIndex > 0;
+    public bool CanGoForward => _historyIndex >= 0 && _historyIndex < _history.Count - 1;
+
+    public Task GoBackAsync(CancellationToken ct = default) =>
+        CanGoBack ? NavigateHistoryAsync(--_historyIndex, ct) : Task.CompletedTask;
+
+    public Task GoForwardAsync(CancellationToken ct = default) =>
+        CanGoForward ? NavigateHistoryAsync(++_historyIndex, ct) : Task.CompletedTask;
+
+    private async Task NavigateHistoryAsync(int index, CancellationToken ct)
+    {
+        _suppressHistory = true;
+        try { await NavigateToSpanAsync(_history[index], ct).ConfigureAwait(true); }
+        finally { _suppressHistory = false; HistoryChanged?.Invoke(this, EventArgs.Empty); }
+    }
+
+    private void RecordHistory(Therion.Core.SourceSpan loc)
+    {
+        if (loc.IsEmpty || string.IsNullOrEmpty(loc.FilePath)) return;
+        if (_historyIndex >= 0 && SameLine(_history[_historyIndex], loc)) return; // collapse dupes
+        if (_historyIndex < _history.Count - 1)
+            _history.RemoveRange(_historyIndex + 1, _history.Count - _historyIndex - 1); // drop forward branch
+        _history.Add(loc);
+        _historyIndex = _history.Count - 1;
+        HistoryChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    private static bool SameLine(Therion.Core.SourceSpan a, Therion.Core.SourceSpan b) =>
+        string.Equals(a.FilePath, b.FilePath, StringComparison.OrdinalIgnoreCase) &&
+        a.Start.Line == b.Start.Line;
+
     public async Task NavigateToSpanAsync(Therion.Core.SourceSpan span, CancellationToken ct = default)
     {
         if (span.IsEmpty || string.IsNullOrEmpty(span.FilePath)) return;
+
+        if (!_suppressHistory)
+        {
+            if (Active?.CurrentCaret is { IsEmpty: false } from) RecordHistory(from); // leaving here
+            RecordHistory(span);                                                       // going there
+        }
 
         var target = FindOpen(span.FilePath);
         if (target is null)

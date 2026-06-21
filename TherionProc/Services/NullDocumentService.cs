@@ -24,10 +24,15 @@ internal sealed class NullDocumentService : IDocumentService
     public ImmutableArray<Therion.Core.Diagnostic> CurrentDiagnostics =>
         ImmutableArray<Therion.Core.Diagnostic>.Empty;
     public Therion.Processing.Abstractions.ISymbolNavigationService? CurrentNavigation => null;
+    public bool CanGoBack => false;
+    public bool CanGoForward => false;
+    public Task GoBackAsync(CancellationToken ct = default) => Task.CompletedTask;
+    public Task GoForwardAsync(CancellationToken ct = default) => Task.CompletedTask;
 #pragma warning disable CS0067
     public event EventHandler? DocumentChanged;
     public event EventHandler? ActiveDocumentChanged;
     public event EventHandler<FileDocumentViewModel>? OpenInDockRequested;
+    public event EventHandler? HistoryChanged;
 #pragma warning restore CS0067
 
     public Task OpenFileAsync(string absolutePath, CancellationToken ct = default) => Task.CompletedTask;

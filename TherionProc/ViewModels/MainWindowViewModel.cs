@@ -143,8 +143,14 @@ public partial class MainWindowViewModel : ViewModelBase
 
         _language.LanguageChanged += (_, _) => Refresh();
         _documents.DocumentChanged += (_, _) => RefreshActiveTools();
+        _documents.HistoryChanged += (_, _) => OnUiThread(() =>
+        {
+            GoBackCommand.NotifyCanExecuteChanged();
+            GoForwardCommand.NotifyCanExecuteChanged();
+        });
         ObjectBrowser.ShotEditRequested += async (_, e) => await ApplyShotEditAsync(e).ConfigureAwait(true);
         WorkspaceExplorer.OpenRequested += async (_, node) => await OpenNodeAsync(node).ConfigureAwait(true);
+        WorkspaceExplorer.NavigateRequested += (_, span) => NavigateTo(span);
 
         Build.CompileCompleted += (_, diags) =>
         {
@@ -266,14 +272,24 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand] private void ToggleWorkspaceExplorer() => Activate(WorkspaceTool);
     [RelayCommand] private void ToggleDiagnostics()       => Activate(DiagnosticsTool);
 
+    // ---- navigation history (back/forward across files, #1) ----
+    [RelayCommand(CanExecute = nameof(CanGoBack))]
+    private Task GoBack() => _documents.GoBackAsync();
+    private bool CanGoBack() => _documents.CanGoBack;
+
+    [RelayCommand(CanExecute = nameof(CanGoForward))]
+    private Task GoForward() => _documents.GoForwardAsync();
+    private bool CanGoForward() => _documents.CanGoForward;
+
     private void Activate(IDockable tool)
     {
         try { _factory.SetActiveDockable(tool); } catch { /* best-effort focus */ }
     }
 
-    private async Task OpenNodeAsync(WorkspaceNode node)
+    private async Task OpenNodeAsync(WorkspaceTreeNode node)
     {
-        try { await _documents.OpenFileAsync(node.FullPath).ConfigureAwait(true); }
+        if (node.FullPath is not { } path) return;
+        try { await _documents.OpenFileAsync(path).ConfigureAwait(true); }
         catch (Exception ex) { StatusText = ex.Message; }
     }
 

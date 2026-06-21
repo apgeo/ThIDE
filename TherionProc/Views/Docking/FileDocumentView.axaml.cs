@@ -17,11 +17,30 @@ public partial class FileDocumentView : UserControl
     {
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
+        AttachedToVisualTree += (_, _) => RestoreViewState();
         if (this.FindControl<TherionTextEditor>("Editor") is { } editor)
         {
             editor.OpenFileRequested += OnOpenFileRequested;
             editor.NavigateToSpanRequested += OnNavigateToSpanRequested;
+            editor.CaretMoved += OnCaretMoved;
         }
+    }
+
+    private void OnCaretMoved(object? sender, SourceSpan span)
+    {
+        if (_vm is null) return;
+        _vm.SetCaret(span);
+        _vm.SavedCaretOffset = span.StartOffset; // remember position for tab switches (#11)
+    }
+
+    // Restore the caret when this tab is shown again — unless a navigation scroll is pending.
+    private void RestoreViewState()
+    {
+        if (_vm is null || _vm.PendingScroll is not null || _vm.SavedCaretOffset <= 0) return;
+        var offset = _vm.SavedCaretOffset;
+        Dispatcher.UIThread.Post(
+            () => this.FindControl<TherionTextEditor>("Editor")?.RestoreCaret(offset),
+            DispatcherPriority.Loaded);
     }
 
     private void OnOpenFileRequested(object? sender, string path)

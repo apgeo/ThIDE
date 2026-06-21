@@ -6,7 +6,11 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Input.Platform;
 using Avalonia.Threading;
+using CommunityToolkit.Mvvm.Input;
 using Dock.Model.Mvvm.Controls;
 using Therion.Core;
 using Therion.Processing.Abstractions;
@@ -16,7 +20,7 @@ using TherionProc.Services;
 
 namespace TherionProc.ViewModels.Docking;
 
-public sealed class FileDocumentViewModel : Document, IDockContent, IDisposable
+public sealed partial class FileDocumentViewModel : Document, IDockContent, IDisposable
 {
     private readonly ICommandRegistry? _commands;
     private bool _disposed;
@@ -54,10 +58,33 @@ public sealed class FileDocumentViewModel : Document, IDockContent, IDisposable
         SetText(text, reparse: true);
     }
 
+    private string _savedText = string.Empty;
+    private bool _isDirty;
+
+    /// <summary>True when the in-editor text differs from what's persisted on disk (#3).</summary>
+    public bool IsDirty
+    {
+        get => _isDirty;
+        private set { if (SetProperty(ref _isDirty, value)) UpdateTitle(); }
+    }
+
     public string DocumentText
     {
         get => _documentText;
-        set { if (SetProperty(ref _documentText, value)) ScheduleReparse(); }
+        set
+        {
+            if (SetProperty(ref _documentText, value))
+            {
+                IsDirty = !string.Equals(_documentText, _savedText, StringComparison.Ordinal);
+                ScheduleReparse();
+            }
+        }
+    }
+
+    private void UpdateTitle()
+    {
+        var name = System.IO.Path.GetFileName(FilePath);
+        Title = _isDirty ? name + " ●" : name;
     }
 
     private DispatcherTimer? _reparseTimer;
@@ -96,6 +123,8 @@ public sealed class FileDocumentViewModel : Document, IDockContent, IDisposable
     public void SetText(string text, bool reparse)
     {
         _documentText = text;
+        _savedText = text;          // SetText reflects the persisted (loaded/saved) content.
+        IsDirty = false;
         OnPropertyChanged(nameof(DocumentText));
         if (reparse) Reparse();
     }
@@ -116,6 +145,13 @@ public sealed class FileDocumentViewModel : Document, IDockContent, IDisposable
     /// <summary>Called by the view once it has applied <see cref="PendingScroll"/>.</summary>
     public void ClearPendingScroll() => PendingScroll = null;
 
+    /// <summary>Latest caret location reported by the editor (drives navigation history).</summary>
+    public SourceSpan CurrentCaret { get; private set; }
+    public void SetCaret(SourceSpan span) => CurrentCaret = span;
+
+    /// <summary>Saved caret offset, so the view position survives tab switches (#11).</summary>
+    public int SavedCaretOffset { get; set; }
+
     /// <summary>
     /// Attaches (or clears) the cross-file workspace snapshot. When set, navigation
     /// becomes workspace-aware (resolves Therion's <c>@</c> notation across files);
@@ -132,7 +168,7 @@ public sealed class FileDocumentViewModel : Document, IDockContent, IDisposable
     private void UpdateNavigation()
     {
         Navigation = _workspace is { } ws
-            ? new WorkspaceSymbolNavigationService(ws, _semantics)
+            ? new WorkspaceSymbolNavigationService(ws, _semantics, FilePath)
             : (_semantics is null ? null : new SymbolNavigationService(_semantics));
     }
 
@@ -165,6 +201,35 @@ public sealed class FileDocumentViewModel : Document, IDockContent, IDisposable
             foreach (var sv in model.Surveys.Values) set.Add(sv.Name.ToString());
         }
         return set.ToList();
+    }
+
+    // ----- tab context-menu commands (#7) --------------------------------
+
+    [RelayCommand] private void CopyFileName() => SetClipboard(System.IO.Path.GetFileName(FilePath));
+    [RelayCommand] private void CopyFullPath() => SetClipboard(FilePath);
+    [RelayCommand] private void CopyRelativePath() => SetClipboard(RelativePathToProjectRoot());
+    [RelayCommand] private void FloatTab() => Factory?.FloatDockable(this);
+    [RelayCommand] private void CloseTab() => Factory?.CloseDockable(this);
+
+    /// <summary>Path relative to the project's highest parent (the entry .thconfig's folder).</summary>
+    private string RelativePathToProjectRoot()
+    {
+        try
+        {
+            var entry = ProjectEntryDiscovery.FindEntryPoint(FilePath);
+            var root = System.IO.Path.GetDirectoryName(entry);
+            return string.IsNullOrEmpty(root)
+                ? System.IO.Path.GetFileName(FilePath)
+                : System.IO.Path.GetRelativePath(root, FilePath);
+        }
+        catch { return System.IO.Path.GetFileName(FilePath); }
+    }
+
+    private static void SetClipboard(string text)
+    {
+        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
+            && desktop.MainWindow?.Clipboard is { } clipboard)
+            _ = clipboard.SetTextAsync(text);
     }
 
     /// <summary>Stops the debounced re-parse timer so a closed document doesn't keep firing.</summary>

@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="TherionProc.App"
              xmlns:local="using:TherionProc"
+             xmlns:docking="using:TherionProc.ViewModels.Docking"
              xmlns:dockFluent="using:Dock.Avalonia.Themes.Fluent"
              RequestedThemeVariant="Default">
              <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
@@ -9,6 +10,19 @@
     <Application.DataTemplates>
         <local:ViewLocator/>
     </Application.DataTemplates>
+
+    <Application.Resources>
+        <!-- Override Dock's document-tab context menu to add path-copy options (#7).
+             The menu's DataContext is the document (FileDocumentViewModel). -->
+        <ContextMenu x:Key="DocumentContextMenu" x:DataType="docking:FileDocumentViewModel">
+            <MenuItem Header="Float" Command="{Binding FloatTabCommand}" />
+            <MenuItem Header="Close" Command="{Binding CloseTabCommand}" />
+            <Separator />
+            <MenuItem Header="Copy File Name" Command="{Binding CopyFileNameCommand}" />
+            <MenuItem Header="Copy Relative Path" Command="{Binding CopyRelativePathCommand}" />
+            <MenuItem Header="Copy Full Path" Command="{Binding CopyFullPathCommand}" />
+        </ContextMenu>
+    </Application.Resources>
   
     <Application.Styles>
         <FluentTheme />
