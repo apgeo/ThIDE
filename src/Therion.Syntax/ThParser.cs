@@ -142,6 +142,7 @@ public sealed class ThParser
             "flags"                        => ParseFlags(line),
             "fix"                          => ParseFix(line, diagnostics),
             "equate"                       => ParseEquate(line, diagnostics),
+            "join"                         => ParseJoin(line),
             "input" or "load"              => ParseInput(line, diagnostics),
             "team"                         => ParseTeam(line),
             "date"                         => ParseDate(line),
@@ -347,6 +348,19 @@ public sealed class ThParser
         var b = ImmutableArray.CreateBuilder<string>();
         for (int i = 1; i < line.Tokens.Length; i++) b.Add(line.Tokens[i].Text);
         return new EquateCommand(line.Span, b.ToImmutable());
+    }
+
+    /// <summary>Parses <c>join a b [...] [-opt val]</c>: leading non-option tokens are targets.</summary>
+    private static JoinCommand ParseJoin(LogicalLine line)
+    {
+        var targets = ImmutableArray.CreateBuilder<string>();
+        int i = 1;
+        for (; i < line.Tokens.Length; i++)
+        {
+            if (line.Tokens[i].Text.StartsWith('-')) break;
+            targets.Add(line.Tokens[i].Text);
+        }
+        return new JoinCommand(line.Span, targets.ToImmutable(), JoinFrom(line, i));
     }
 
     private InputCommand ParseInput(LogicalLine line, ImmutableArray<Diagnostic>.Builder diagnostics)

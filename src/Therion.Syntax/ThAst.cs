@@ -94,6 +94,16 @@ public sealed record DateCommand(
     string Value) : TherionCommand(Span, "date");
 
 /// <summary>
+/// <c>join &lt;obj1&gt; &lt;obj2&gt; [...] [-options]</c> � connects scrap point/line objects
+/// (or whole scraps) by id. <see cref="Targets"/> are the non-option id tokens (each may use
+/// Therion's <c>id[:mark][@scrap]</c> notation); trailing <c>-option value</c> pairs are kept raw.
+/// </summary>
+public sealed record JoinCommand(
+    SourceSpan Span,
+    ImmutableArray<string> Targets,
+    string OptionsRaw) : TherionCommand(Span, "join");
+
+/// <summary>
 /// <c>map &lt;id&gt; [-title "..."] ... endmap</c> block. The body lists scrap / map
 /// references; it is not Therion command syntax, so the parser consumes it opaquely
 /// rather than sub-parsing it. Only the map <see cref="Id"/> is a declaration the

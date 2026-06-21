@@ -1,4 +1,4 @@
-// Implementation Plan §4 — .th2 parser (M4).
+// Implementation Plan ï¿½4 ï¿½ .th2 parser (M4).
 // Recognizes scrap/point/line/area + their inner structure; surfaces
 // `-sketch <xvi-path>` references as SketchReference nodes attached to scraps.
 
@@ -76,6 +76,9 @@ public sealed class Th2Parser
                     break;
                 case "area":
                     children.Add(ParseArea(line, lines, ref cursor, options, diags));
+                    break;
+                case "join":
+                    children.Add(ParseJoin(line));
                     break;
                 default:
                     var sev = options.Mode == ParserMode.Strict
@@ -172,7 +175,7 @@ public sealed class Th2Parser
             {
                 cursor++; terminated = true; break;
             }
-            // Vertex: <x> <y> [options...] — first token is a number, not a keyword.
+            // Vertex: <x> <y> [options...] ï¿½ first token is a number, not a keyword.
             if (ln.Tokens.Length >= 2 &&
                 double.TryParse(ln.Tokens[0].Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var vx) &&
                 double.TryParse(ln.Tokens[1].Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var vy))
@@ -193,6 +196,19 @@ public sealed class Th2Parser
         var endSpan = vertices.Count > 0 ? vertices[^1].Span : header.Span;
         return new LineObject(SpanUnion(header.Span, endSpan), type, optsRaw,
             vertices.ToImmutable(), terminated);
+    }
+
+    /// <summary>Parses <c>join a b [...] [-opt val]</c>: leading non-option tokens are targets.</summary>
+    private static JoinCommand ParseJoin(LogicalLine line)
+    {
+        var targets = ImmutableArray.CreateBuilder<string>();
+        int i = 1;
+        for (; i < line.Tokens.Length; i++)
+        {
+            if (line.Tokens[i].Text.StartsWith('-')) break;
+            targets.Add(line.Tokens[i].Text);
+        }
+        return new JoinCommand(line.Span, targets.ToImmutable(), JoinFrom(line, i));
     }
 
     private AreaObject ParseArea(
