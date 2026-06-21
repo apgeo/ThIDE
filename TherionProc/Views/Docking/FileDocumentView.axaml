@@ -38,8 +38,10 @@
                           CanUserReorderColumns="True" AutoGenerateColumns="False">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Survey"  Binding="{Binding Survey}"  Width="130" />
-                        <DataGridTextColumn Header="From"    Binding="{Binding From}"    Width="110" />
-                        <DataGridTextColumn Header="To"      Binding="{Binding To}"      Width="110" />
+                        <DataGridTextColumn Header="From"    Binding="{Binding From}"    Width="110"
+                                            FontWeight="Bold" Foreground="#1565C0" />
+                        <DataGridTextColumn Header="To"      Binding="{Binding To}"      Width="110"
+                                            FontWeight="Bold" Foreground="#1565C0" />
                         <DataGridTextColumn Header="Length"  Binding="{Binding Length}"  Width="70"  />
                         <DataGridTextColumn Header="Compass" Binding="{Binding Compass}" Width="80"  />
                         <DataGridTextColumn Header="Clino"   Binding="{Binding Clino}"   Width="70"  />

@@ -1,12 +1,13 @@
-// Implementation Plan �7.3 � Workspace Explorer ViewModel.
-// Renders the FileGraph of the active workspace as a flat tree-like
-// projection: entry-point first, then files grouped by extension, then
-// .xvi siblings with image-existence badges.
+// Implementation Plan �7.3 � Workspace Explorer ViewModel.
+// Renders the project's file-inclusion graph as a nested tree: the entry point
+// (.thconfig) → its `source` files → their `input` files (recursively) → .th2
+// sketches → .xvi backgrounds → images. Depth drives indentation in the view.
 
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Avalonia;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Therion.Semantics;
@@ -19,7 +20,11 @@ public sealed record WorkspaceNode(
     string FullPath,
     string Kind,             // "thconfig" | "th" | "th2" | "xvi" | "image" | "missing"
     int Depth,
-    bool Exists);
+    bool Exists)
+{
+    /// <summary>Left indentation reflecting the node's depth in the inclusion tree.</summary>
+    public Thickness Indent => new(Depth * 14, 0, 0, 0);
+}
 
 public partial class WorkspaceExplorerViewModel : ViewModelBase
 {
@@ -43,45 +48,68 @@ public partial class WorkspaceExplorerViewModel : ViewModelBase
     public void Refresh()
     {
         var ws = _documents.Workspace;
-        if (ws is null || _documents.CurrentPath is null)
+        if (ws is null)
         {
             Nodes = Array.Empty<WorkspaceNode>();
             RootPath = string.Empty;
             return;
         }
 
-        RootPath = _documents.CurrentPath;
+        // Adjacency + roots from the file-inclusion graph.
+        var children = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+        var allNodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var hasIncoming = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var (from, to) in ws.FileGraphEdges)
+        {
+            allNodes.Add(from);
+            allNodes.Add(to);
+            if (!children.TryGetValue(from, out var list)) children[from] = list = new();
+            if (!list.Any(x => string.Equals(x, to, StringComparison.OrdinalIgnoreCase))) list.Add(to);
+            hasIncoming.Add(to);
+        }
+        foreach (var p in ws.PerFile.Keys) allNodes.Add(p);
+
+        // image-per-xvi lookup for the leaf rows.
+        var imageByXvi = new Dictionary<string, (string Path, bool Exists)>(StringComparer.OrdinalIgnoreCase);
+        foreach (var x in ws.Xvi.ByPath.Values)
+            if (!string.IsNullOrEmpty(x.ResolvedImagePath))
+                imageByXvi[x.ResolvedXviPath] = (x.ResolvedImagePath, x.ImageExists);
+
+        // Roots = nodes with no incoming edge (the entry .thconfig / a lone .th).
+        var roots = allNodes.Where(n => !hasIncoming.Contains(n))
+                            .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
+                            .ToList();
+        if (roots.Count == 0 && _documents.CurrentPath is { } cp) roots.Add(cp);
+
         var nodes = new List<WorkspaceNode>();
+        var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        // Entry-point.
-        nodes.Add(new WorkspaceNode(Path.GetFileName(RootPath), RootPath, KindFor(RootPath), 0, File.Exists(RootPath)));
-
-        // All other files reached through PerFile / FileGraph.
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { RootPath };
-
-        foreach (var path in ws.PerFile.Keys.OrderBy(p => p, StringComparer.OrdinalIgnoreCase))
+        void Visit(string path, int depth)
         {
-            if (!seen.Add(path)) continue;
-            nodes.Add(new WorkspaceNode(Path.GetFileName(path), path, KindFor(path), 1, File.Exists(path)));
+            if (!visited.Add(path)) return; // already placed (DAG diamond / cycle guard)
+            nodes.Add(MakeNode(path, depth));
+
+            if (imageByXvi.TryGetValue(path, out var img))
+                nodes.Add(new WorkspaceNode(Path.GetFileName(img.Path), img.Path,
+                    img.Exists ? "image" : "missing", depth + 1, img.Exists));
+
+            if (children.TryGetValue(path, out var kids))
+                foreach (var k in kids.OrderBy(k => k, StringComparer.OrdinalIgnoreCase))
+                    Visit(k, depth + 1);
         }
 
-        foreach (var xvi in ws.Xvi.ByPath.Values.OrderBy(x => x.ResolvedXviPath, StringComparer.OrdinalIgnoreCase))
-        {
-            if (!seen.Add(xvi.ResolvedXviPath)) continue;
-            nodes.Add(new WorkspaceNode(Path.GetFileName(xvi.ResolvedXviPath), xvi.ResolvedXviPath, "xvi", 1, File.Exists(xvi.ResolvedXviPath)));
-            if (!string.IsNullOrEmpty(xvi.ResolvedImagePath))
-            {
-                nodes.Add(new WorkspaceNode(
-                    Path.GetFileName(xvi.ResolvedImagePath),
-                    xvi.ResolvedImagePath,
-                    xvi.ImageExists ? "image" : "missing",
-                    2,
-                    xvi.ImageExists));
-            }
-        }
+        foreach (var r in roots) Visit(r, 0);
+        // Any file reached by binding but disconnected from the graph (rare).
+        foreach (var p in ws.PerFile.Keys.OrderBy(p => p, StringComparer.OrdinalIgnoreCase))
+            if (!visited.Contains(p)) Visit(p, 0);
 
+        RootPath = roots.Count > 0 ? roots[0] : (_documents.CurrentPath ?? string.Empty);
         Nodes = nodes;
     }
+
+    private static WorkspaceNode MakeNode(string path, int depth) =>
+        new(Path.GetFileName(path), path, KindFor(path), depth, File.Exists(path));
 
     [RelayCommand]
     private void Open(WorkspaceNode? node)

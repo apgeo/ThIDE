@@ -12,7 +12,11 @@
                  DoubleTapped="OnNodeDoubleTapped">
             <ListBox.ItemTemplate>
                 <DataTemplate>
-                    <TextBlock Text="{Binding DisplayName}" />
+                    <StackPanel Orientation="Horizontal" Margin="{Binding Indent}" Spacing="6">
+                        <TextBlock Text="{Binding Kind}" FontSize="10" Foreground="Gray"
+                                   VerticalAlignment="Center" Width="58" />
+                        <TextBlock Text="{Binding DisplayName}" />
+                    </StackPanel>
                 </DataTemplate>
             </ListBox.ItemTemplate>
         </ListBox>
