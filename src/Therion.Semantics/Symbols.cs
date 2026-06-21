@@ -82,3 +82,17 @@ public sealed record ShotSymbol(
 public sealed record ScrapSymbol(
     string Id,
     SourceSpan DeclarationSpan);
+
+/// <summary>A <c>map &lt;id&gt;</c> declaration (.th). Referenced cross-file as <c>map@survey</c>.</summary>
+public sealed record MapSymbol(
+    string Id,
+    SourceSpan DeclarationSpan);
+
+/// <summary>
+/// A point/line object id inside a <c>.th2</c> scrap (<c>-id name</c>). The target of a
+/// <c>join</c>. <see cref="ScrapId"/> records the enclosing scrap (may be empty).
+/// </summary>
+public sealed record ScrapObjectSymbol(
+    string Id,
+    SourceSpan DeclarationSpan,
+    string ScrapId);

@@ -1,6 +1,6 @@
-// Implementation Plan §1 (decoupling), §4.4 (extensibility),
-// §5.3 (semantic rule plugins), §9bis (toolchain abstractions).
-// This project intentionally has zero implementation — only public contracts.
+// Implementation Plan ï¿½1 (decoupling), ï¿½4.4 (extensibility),
+// ï¿½5.3 (semantic rule plugins), ï¿½9bis (toolchain abstractions).
+// This project intentionally has zero implementation ï¿½ only public contracts.
 
 using System.Collections.Immutable;
 using Therion.Core;
@@ -33,7 +33,7 @@ public interface IWorkspace : IAsyncDisposable
     void InvalidateAll();
 }
 
-/// <summary>Resolves the entry-point file (see Implementation Plan §6.1).</summary>
+/// <summary>Resolves the entry-point file (see Implementation Plan ï¿½6.1).</summary>
 public interface IProjectEntryPointResolver
 {
     ValueTask<EntryPointResolution> ResolveAsync(string pathOrFolder, CancellationToken cancellationToken = default);
@@ -61,7 +61,26 @@ public interface ISymbolIndex
 }
 
 /// <summary>
-/// UI-facing navigation service (Implementation Plan §7.3): the backing model
+/// What kind of entity a textual reference points at. Lets the editor disambiguate
+/// the two halves of Therion's <c>point@survey</c> / <c>map@survey</c> notation and
+/// hint the resolver (e.g. a <c>join</c> id is a scrap object, not a station).
+/// </summary>
+public enum ReferenceKind
+{
+    /// <summary>Try every kind (station, survey, map, scrap object) in turn.</summary>
+    Any,
+    /// <summary>A station (the <c>point</c> half of <c>point@survey</c>; equate/fix/station ids).</summary>
+    Station,
+    /// <summary>A survey (the half after <c>@</c>, or a bare survey-name reference).</summary>
+    Survey,
+    /// <summary>A map (the <c>map</c> half of <c>map@survey</c> in a <c>select</c>).</summary>
+    Map,
+    /// <summary>A scrap or scrap object / point-line id (the targets of <c>join</c>).</summary>
+    ScrapObject,
+}
+
+/// <summary>
+/// UI-facing navigation service (Implementation Plan ï¿½7.3): the backing model
 /// for Go to Definition (F12) and Find All References (Shift+F12).
 /// </summary>
 public interface ISymbolNavigationService
@@ -69,11 +88,19 @@ public interface ISymbolNavigationService
     /// <summary>Returns the declaration span of <paramref name="qualifiedName"/>, or <c>null</c> if not found.</summary>
     SourceSpan? GoToDefinition(string qualifiedName);
 
+    /// <summary>
+    /// Returns the declaration span of a reference, using <paramref name="kind"/> to
+    /// resolve Therion's <c>@</c> notation across files. The default implementation
+    /// ignores the hint and falls back to <see cref="GoToDefinition(string)"/> â€” only
+    /// the workspace-aware service implements true cross-file reference resolution.
+    /// </summary>
+    SourceSpan? GoToDefinition(string reference, ReferenceKind kind) => GoToDefinition(reference);
+
     /// <summary>Returns all reference spans of <paramref name="qualifiedName"/> (may be empty).</summary>
     ImmutableArray<SourceSpan> FindReferences(string qualifiedName);
 }
 
-/// <summary>Locates installed Therion / Loch / Aven executables (§9bis.1).</summary>
+/// <summary>Locates installed Therion / Loch / Aven executables (ï¿½9bis.1).</summary>
 public interface IExternalToolLocator
 {
     ValueTask<ToolInfo?> FindAsync(string toolId, CancellationToken cancellationToken = default);
@@ -83,7 +110,7 @@ public interface IExternalToolLocator
 public sealed record ToolInfo(string ToolId, string Path, string? Version, string Source);
 
 /// <summary>
-/// User-configured override paths for <see cref="IExternalToolLocator"/> (§9bis.5 / D #29).
+/// User-configured override paths for <see cref="IExternalToolLocator"/> (ï¿½9bis.5 / D #29).
 /// When an entry is set, <see cref="IExternalToolLocator.FindAsync"/> short-circuits to it.
 /// </summary>
 public interface IExternalToolPathOverrides
@@ -98,7 +125,7 @@ public interface IExternalToolPathOverrides
     event EventHandler? OverridesChanged;
 }
 
-/// <summary>Drives the external Therion compiler (§9bis.2).</summary>
+/// <summary>Drives the external Therion compiler (ï¿½9bis.2).</summary>
 public interface ITherionCompiler
 {
     ValueTask<CompileResult> CompileAsync(
@@ -117,7 +144,7 @@ public sealed record CompileResult(
 public sealed record OutputArtifact(string Path, string Kind, long SizeBytes, DateTimeOffset LastWriteUtc);
 
 /// <summary>
-/// Configurable keyboard shortcut map for shell commands (Plan §9bis.5a / Decision #29).
+/// Configurable keyboard shortcut map for shell commands (Plan ï¿½9bis.5a / Decision #29).
 /// Gesture strings use Avalonia syntax (e.g. <c>"F5"</c>, <c>"Ctrl+F5"</c>).
 /// </summary>
 public interface IKeyboardShortcutService

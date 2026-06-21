@@ -1,4 +1,4 @@
-// Implementation Plan §5 — cross-file model + indexes.
+// Implementation Plan ï¿½5 ï¿½ cross-file model + indexes.
 // Implements ISymbolIndex from Therion.Processing.Abstractions.
 
 using System.Collections.Frozen;
@@ -11,7 +11,7 @@ namespace Therion.Semantics;
 
 /// <summary>
 /// Immutable result of running <see cref="SemanticBinder"/> over a parse tree.
-/// Exposes Roslyn-style snapshot indexes (§8: FrozenDictionary on .NET 8).
+/// Exposes Roslyn-style snapshot indexes (ï¿½8: FrozenDictionary on .NET 8).
 /// </summary>
 public sealed class SemanticModel : ISymbolIndex
 {
@@ -21,14 +21,18 @@ public sealed class SemanticModel : ISymbolIndex
     public EquateGraph Equates { get; }
     public ImmutableArray<Diagnostic> Diagnostics { get; }
     /// <summary>
-    /// Cross-file XVI index, populated at the workspace level (Plan §5.1).
+    /// Cross-file XVI index, populated at the workspace level (Plan ï¿½5.1).
     /// Per-file models leave this at <see cref="XviIndex.Empty"/>.
     /// </summary>
     public XviIndex Xvi { get; init; } = XviIndex.Empty;
 
-    /// <summary>Scrap declarations in this file, keyed by scrap id (Plan §7.3 / M6 #7).</summary>
+    /// <summary>Scrap declarations in this file, keyed by scrap id (Plan ï¿½7.3 / M6 #7).</summary>
     public FrozenDictionary<string, ScrapSymbol> Scraps { get; init; } =
         FrozenDictionary<string, ScrapSymbol>.Empty;
+
+    /// <summary>Map declarations in this file, keyed by map id (<c>map &lt;id&gt; ... endmap</c>).</summary>
+    public FrozenDictionary<string, MapSymbol> Maps { get; init; } =
+        FrozenDictionary<string, MapSymbol>.Empty;
 
     public SemanticModel(
         FrozenDictionary<QualifiedName, StationSymbol> stations,
@@ -69,6 +73,11 @@ public sealed class SemanticModel : ISymbolIndex
         if (Scraps.TryGetValue(qualifiedName, out var sc))
         {
             declarationSpan = sc.DeclarationSpan;
+            return true;
+        }
+        if (Maps.TryGetValue(qualifiedName, out var m))
+        {
+            declarationSpan = m.DeclarationSpan;
             return true;
         }
         declarationSpan = SourceSpan.None;

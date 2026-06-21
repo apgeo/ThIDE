@@ -51,6 +51,7 @@ public sealed class SemanticBinder
         var stations = ctx.Stations.ToFrozenDictionary();
         var surveys = ctx.Surveys.ToFrozenDictionary();
         var scraps = ctx.Scraps.ToFrozenDictionary(System.StringComparer.Ordinal);
+        var maps = ctx.Maps.ToFrozenDictionary(System.StringComparer.Ordinal);
         return new SemanticModel(
             stations,
             surveys,
@@ -59,6 +60,7 @@ public sealed class SemanticBinder
             ctx.Diagnostics.ToImmutable())
         {
             Scraps = scraps,
+            Maps = maps,
         };
     }
 
@@ -108,6 +110,9 @@ public sealed class SemanticBinder
                     break;
                 case ScrapBlock scrap:
                     BindScrap(scrap, ctx, scope);
+                    break;
+                case MapCommand map:
+                    BindMap(map, ctx);
                     break;
             }
             pendingComment = null;
@@ -171,6 +176,13 @@ public sealed class SemanticBinder
         if (!string.IsNullOrEmpty(scrap.Id) && !ctx.Scraps.ContainsKey(scrap.Id))
             ctx.Scraps[scrap.Id] = new ScrapSymbol(scrap.Id, scrap.Span);
         WalkChildren(scrap.Children, ctx, scope, dataFields: null);
+    }
+
+    /// <summary>Records a <c>map &lt;id&gt;</c> declaration (first one wins per id).</summary>
+    private static void BindMap(MapCommand map, BindContext ctx)
+    {
+        if (!string.IsNullOrEmpty(map.Id) && !ctx.Maps.ContainsKey(map.Id))
+            ctx.Maps[map.Id] = new MapSymbol(map.Id, map.Span);
     }
 
     private void BindSurvey(SurveyCommand sv, BindContext ctx, ImmutableArray<string> scope)
@@ -350,6 +362,7 @@ public sealed class SemanticBinder
         public Dictionary<QualifiedName, StationSymbol> Stations { get; } = new();
         public Dictionary<QualifiedName, SurveySymbol> Surveys { get; } = new();
         public Dictionary<string, ScrapSymbol> Scraps { get; } = new(System.StringComparer.Ordinal);
+        public Dictionary<string, MapSymbol> Maps { get; } = new(System.StringComparer.Ordinal);
         public ImmutableArray<ShotSymbol>.Builder Shots { get; } = ImmutableArray.CreateBuilder<ShotSymbol>();
         public EquateGraph Equates { get; } = new();
         public ImmutableArray<Diagnostic>.Builder Diagnostics { get; } = ImmutableArray.CreateBuilder<Diagnostic>();

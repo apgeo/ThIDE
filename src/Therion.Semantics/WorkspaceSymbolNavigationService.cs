@@ -1,4 +1,4 @@
-// Implementation Plan §5 / §7.3 (M6 follow-up #7) — workspace-aware navigation.
+// Implementation Plan ï¿½5 / ï¿½7.3 (M6 follow-up #7) ï¿½ workspace-aware navigation.
 // Resolves go-to-definition / find-references across every per-file SemanticModel
 // in a WorkspaceSemanticModel, plus XVI cross-file edges (sketch references).
 
@@ -23,6 +23,24 @@ public sealed class WorkspaceSymbolNavigationService : ISymbolNavigationService
     {
         _workspace = workspace;
         _activeFile = activeFile;
+    }
+
+    /// <summary>
+    /// Reference-aware go-to-definition: when the token carries Therion's <c>@</c>
+    /// notation or the caller hints a specific <see cref="ReferenceKind"/>, resolve it
+    /// cross-file via <see cref="WorkspaceSemanticModel.ResolveReference"/> first; then
+    /// fall back to the plain qualified-name / file / xvi resolution.
+    /// </summary>
+    public SourceSpan? GoToDefinition(string reference, ReferenceKind kind)
+    {
+        if (string.IsNullOrWhiteSpace(reference)) return null;
+
+        if (kind != ReferenceKind.Any || reference.Contains('@'))
+        {
+            if (_workspace.ResolveReference(reference, kind) is { } span && !span.IsEmpty)
+                return span;
+        }
+        return GoToDefinition(reference);
     }
 
     public SourceSpan? GoToDefinition(string qualifiedName)

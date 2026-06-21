@@ -1,11 +1,12 @@
-// Implementation Plan §5 / §6 — workspace-level semantic snapshot.
+// Implementation Plan ï¿½5 / ï¿½6 ï¿½ workspace-level semantic snapshot.
 // Combines all per-file SemanticModels with cross-file indexes (XviIndex,
-// FileGraph). Immutable; rebuilt atomically (§18 — UI threading).
+// FileGraph). Immutable; rebuilt atomically (ï¿½18 ï¿½ UI threading).
 
 using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using Therion.Core;
+using Therion.Processing.Abstractions;
 using Therion.Syntax;
 
 namespace Therion.Semantics;
@@ -22,6 +23,38 @@ public sealed class WorkspaceSemanticModel
     /// <summary>All cross-file edges (`.thconfig source`, `.th input`/`load`, `.th2 sketch`).</summary>
     public ImmutableArray<(string From, string To)> FileGraphEdges { get; }
     public ImmutableArray<Diagnostic> Diagnostics { get; }
+
+    // ---- cross-file reference indexes (Plan: @-notation resolution) ----------
+    // Built from PerFile (.th surveys/stations/maps) and the .th2 ASTs (scrap +
+    // scrap-object ids). Keyed case-sensitively (Therion names are).
+
+    /// <summary>Surveys keyed by full top-down dotted name (e.g. <c>cave.upper</c>).</summary>
+    public FrozenDictionary<string, SurveySymbol> SurveysByFullName { get; init; } =
+        FrozenDictionary<string, SurveySymbol>.Empty;
+
+    /// <summary>Surveys grouped by their last name component (survey names are effectively unique).</summary>
+    public FrozenDictionary<string, ImmutableArray<SurveySymbol>> SurveysByLastName { get; init; } =
+        FrozenDictionary<string, ImmutableArray<SurveySymbol>>.Empty;
+
+    /// <summary>Stations keyed by full top-down dotted QN (first definition wins).</summary>
+    public FrozenDictionary<string, StationSymbol> StationsByQn { get; init; } =
+        FrozenDictionary<string, StationSymbol>.Empty;
+
+    /// <summary>Stations keyed by <c>&lt;immediate-survey-last&gt;\0&lt;point&gt;</c> (resolves <c>point@survey</c>).</summary>
+    public FrozenDictionary<string, StationSymbol> StationsBySurveyAndPoint { get; init; } =
+        FrozenDictionary<string, StationSymbol>.Empty;
+
+    /// <summary>Maps keyed by id (the <c>map</c> half of <c>map@survey</c>).</summary>
+    public FrozenDictionary<string, MapSymbol> MapsById { get; init; } =
+        FrozenDictionary<string, MapSymbol>.Empty;
+
+    /// <summary>Scraps keyed by id (a <c>join</c> can target a whole scrap).</summary>
+    public FrozenDictionary<string, ScrapSymbol> ScrapsById { get; init; } =
+        FrozenDictionary<string, ScrapSymbol>.Empty;
+
+    /// <summary>Scrap point/line objects keyed by their <c>-id</c> (the usual <c>join</c> target).</summary>
+    public FrozenDictionary<string, ScrapObjectSymbol> ScrapObjectsById { get; init; } =
+        FrozenDictionary<string, ScrapObjectSymbol>.Empty;
 
     public WorkspaceSemanticModel(
         FrozenDictionary<string, SemanticModel> perFile,
@@ -65,7 +98,7 @@ public sealed class WorkspaceSemanticModel
             if (path.EndsWith(".th2", System.StringComparison.OrdinalIgnoreCase))
                 th2Files.Add(parse.Value);
 
-            // Bind per-file semantics (.th only — others have no station model yet).
+            // Bind per-file semantics (.th only ï¿½ others have no station model yet).
             if (path.EndsWith(".th", System.StringComparison.OrdinalIgnoreCase))
             {
                 var model = binder.Bind(parse.Value);
@@ -81,58 +114,90 @@ public sealed class WorkspaceSemanticModel
         allDiags.AddRange(xvi.Diagnostics);
         foreach (var edge in xvi.FileGraphEdges) graphEdges.Add(edge);
 
+        var frozenPerFile = perFile.ToFrozenDictionary(System.StringComparer.OrdinalIgnoreCase);
+        var idx = ReferenceIndexBuilder.Build(frozenPerFile.Values, th2Files);
+
         return new WorkspaceSemanticModel(
-            perFile.ToFrozenDictionary(System.StringComparer.OrdinalIgnoreCase),
+            frozenPerFile,
             xvi,
             graphEdges.ToImmutable(),
-            allDiags.ToImmutable());
+            allDiags.ToImmutable())
+        {
+            SurveysByFullName = idx.SurveysByFullName,
+            SurveysByLastName = idx.SurveysByLastName,
+            StationsByQn = idx.StationsByQn,
+            StationsBySurveyAndPoint = idx.StationsBySurveyAndPoint,
+            MapsById = idx.MapsById,
+            ScrapsById = idx.ScrapsById,
+            ScrapObjectsById = idx.ScrapObjectsById,
+        };
     }
+
+    // ---- cross-file reference resolution (@-notation) ------------------------
+
+    /// <summary>
+    /// Resolves a textual reference (<c>point@survey</c>, <c>map@survey</c>, a bare
+    /// survey name, or a <c>join</c> id) to its declaration span, applying Therion's
+    /// <c>@</c> rule. <paramref name="kind"/> disambiguates which half of the token to
+    /// chase; <see cref="ReferenceKind.Any"/> tries each kind in turn.
+    /// </summary>
+    public SourceSpan? ResolveReference(string raw, ReferenceKind kind)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return null;
+        var r = StationRef.Parse(raw.Trim());
+        return kind switch
+        {
+            ReferenceKind.Survey      => ResolveSurvey(r),
+            ReferenceKind.Station     => ResolveStation(r),
+            ReferenceKind.Map         => ResolveMap(r),
+            ReferenceKind.ScrapObject => ResolveScrapObject(r),
+            _ => ResolveStation(r) ?? ResolveSurvey(r) ?? ResolveMap(r) ?? ResolveScrapObject(r),
+        };
+    }
+
+    private SourceSpan? ResolveSurvey(StationRef r)
+    {
+        // The survey is the @-part if present, else the bare token itself.
+        var path = r.HasSurvey ? r.SurveyPathTopDown : ImmutableArray.Create(r.Point);
+        if (path.IsDefaultOrEmpty || string.IsNullOrEmpty(path[^1])) return null;
+
+        if (SurveysByFullName.TryGetValue(string.Join('.', path), out var exact))
+            return exact.DeclarationSpan;
+        if (SurveysByLastName.TryGetValue(path[^1], out var list) && list.Length > 0)
+            return list[0].DeclarationSpan;
+        return null;
+    }
+
+    private SourceSpan? ResolveStation(StationRef r)
+    {
+        if (r.SurveyLastName is { } surveyLast &&
+            StationsBySurveyAndPoint.TryGetValue(SurveyPointKey(surveyLast, r.Point), out var byKey))
+            return byKey.DeclarationSpan;
+        if (StationsByQn.TryGetValue(r.StationQuery, out var byQn))
+            return byQn.DeclarationSpan;
+        return null;
+    }
+
+    private SourceSpan? ResolveMap(StationRef r)
+        => MapsById.TryGetValue(r.Point, out var m) ? m.DeclarationSpan : null;
+
+    private SourceSpan? ResolveScrapObject(StationRef r)
+    {
+        var id = r.PointWithoutMark;
+        if (ScrapObjectsById.TryGetValue(id, out var so)) return so.DeclarationSpan;
+        if (ScrapsById.TryGetValue(id, out var sc)) return sc.DeclarationSpan;
+        return null;
+    }
+
+    /// <summary>Composite key for <see cref="StationsBySurveyAndPoint"/> (space-joined; names contain no spaces).</summary>
+    internal static string SurveyPointKey(string surveyLastName, string point)
+        => string.Concat(surveyLastName, " ", point);
 
     private static void CollectSourceEdges(
         string parentPath, TherionFile file,
         ImmutableArray<(string, string)>.Builder edges)
     {
-        var dir = System.IO.Path.GetDirectoryName(parentPath) ?? string.Empty;
-        foreach (var child in file.Children)
-        {
-            if (child is not UnknownCommand cmd) continue;
-            if (!IsSourceLike(cmd.Keyword)) continue;
-            foreach (var token in SplitArgs(cmd.RawArguments))
-            {
-                var dep = System.IO.Path.IsPathRooted(token)
-                    ? token
-                    : System.IO.Path.Combine(dir, token);
-                edges.Add((parentPath, System.IO.Path.GetFullPath(dep)));
-            }
-        }
-    }
-
-    private static bool IsSourceLike(string keyword)
-        => string.Equals(keyword, "source", System.StringComparison.OrdinalIgnoreCase)
-        || string.Equals(keyword, "input", System.StringComparison.OrdinalIgnoreCase)
-        || string.Equals(keyword, "load", System.StringComparison.OrdinalIgnoreCase);
-
-    private static IEnumerable<string> SplitArgs(string raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw)) yield break;
-        int i = 0;
-        while (i < raw.Length)
-        {
-            while (i < raw.Length && char.IsWhiteSpace(raw[i])) i++;
-            if (i >= raw.Length) yield break;
-            if (raw[i] == '"')
-            {
-                int end = raw.IndexOf('"', ++i);
-                if (end < 0) { yield return raw[i..]; yield break; }
-                yield return raw[i..end];
-                i = end + 1;
-            }
-            else
-            {
-                int start = i;
-                while (i < raw.Length && !char.IsWhiteSpace(raw[i])) i++;
-                yield return raw[start..i];
-            }
-        }
+        foreach (var dep in SourceGraph.Dependencies(file, parentPath))
+            edges.Add((parentPath, dep));
     }
 }
