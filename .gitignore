@@ -169,3 +169,6 @@ Desktop.ini
 
 # Claude Code local (machine-specific) settings — keep shared .claude/ config tracked
 .claude/settings.local.json
+.claude/skills/committer.agent.md
+
+tests/Corpus/sample_projects/*

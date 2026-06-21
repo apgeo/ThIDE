@@ -1,4 +1,4 @@
-// Implementation Plan §9bis.1 / §9bis.5. Locator: user overrides first,
+// Implementation Plan ï¿½9bis.1 / ï¿½9bis.5. Locator: user overrides first,
 // then well-known install locations per OS, then PATH. Version sniffing
 // spawns `<exe> --version` with a short timeout.
 
@@ -14,6 +14,11 @@ public sealed class ExternalToolLocator : IExternalToolLocator
     public const string Therion = "therion";
     public const string Loch = "loch";
     public const string Aven = "aven";
+
+    // GUI viewers: invoking `<exe> --version` actually pops their window open, so
+    // we detect them by path only and never spawn them for version sniffing.
+    private static readonly HashSet<string> GuiTools =
+        new(StringComparer.OrdinalIgnoreCase) { Loch, Aven };
 
     private readonly IExternalToolPathOverrides? _overrides;
 
@@ -32,7 +37,7 @@ public sealed class ExternalToolLocator : IExternalToolLocator
             && !string.IsNullOrWhiteSpace(overridePath)
             && File.Exists(overridePath))
         {
-            var v = await SniffVersionAsync(overridePath, cancellationToken).ConfigureAwait(false);
+            var v = await ResolveVersionAsync(toolId, overridePath, cancellationToken).ConfigureAwait(false);
             return new ToolInfo(toolId, overridePath, v, Source: "override");
         }
 
@@ -41,7 +46,7 @@ public sealed class ExternalToolLocator : IExternalToolLocator
         {
             if (File.Exists(path))
             {
-                var v = await SniffVersionAsync(path, cancellationToken).ConfigureAwait(false);
+                var v = await ResolveVersionAsync(toolId, path, cancellationToken).ConfigureAwait(false);
                 return new ToolInfo(toolId, path, v, Source: "well-known");
             }
         }
@@ -59,7 +64,7 @@ public sealed class ExternalToolLocator : IExternalToolLocator
                     var full = Path.Combine(dir, exeName);
                     if (File.Exists(full))
                     {
-                        var v = await SniffVersionAsync(full, cancellationToken).ConfigureAwait(false);
+                        var v = await ResolveVersionAsync(toolId, full, cancellationToken).ConfigureAwait(false);
                         return new ToolInfo(toolId, full, v, Source: "PATH");
                     }
                 }
@@ -69,6 +74,10 @@ public sealed class ExternalToolLocator : IExternalToolLocator
 
         return null;
     }
+
+    // Sniff the version unless the tool is a GUI viewer (which we must not spawn).
+    private static async Task<string?> ResolveVersionAsync(string toolId, string exe, CancellationToken ct)
+        => GuiTools.Contains(toolId) ? null : await SniffVersionAsync(exe, ct).ConfigureAwait(false);
 
     private static async Task<string?> SniffVersionAsync(string exe, CancellationToken ct)
     {

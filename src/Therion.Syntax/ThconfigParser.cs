@@ -1,8 +1,8 @@
-// Implementation Plan §3 / §4.2 (.thconfig parser). M1 minimal: recognizes
+// Implementation Plan ï¿½3 / ï¿½4.2 (.thconfig parser). M1 minimal: recognizes
 // `source`, `layout`, `export`, `select`, `cs` at top level + line comments;
 // anything else becomes an UnknownCommand so nothing is silently dropped.
 //
-// Therion source-of-truth: therion/src/thconfig.cxx. thbook §3 "Configuration".
+// Therion source-of-truth: therion/src/thconfig.cxx. thbook ï¿½3 "Configuration".
 
 using System.Collections.Immutable;
 using Therion.Core;
@@ -15,7 +15,7 @@ namespace Therion.Syntax;
 /// </summary>
 public sealed class ThconfigParser
 {
-    /// <summary>Top-level keywords that may appear in a <c>.thconfig</c> (per thbook §3).</summary>
+    /// <summary>Top-level keywords that may appear in a <c>.thconfig</c> (per thbook ï¿½3).</summary>
     public static readonly ImmutableHashSet<string> TopLevelKeywords =
         ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase,
             "source", "layout", "export", "select", "cs",
@@ -75,6 +75,19 @@ public sealed class ThconfigParser
                     var fullSpan = SpanFromTo(commandStart, tokens[lineEnd - 1]);
                     var rawArgs = ExtractRawArguments(sourceText, tokens, i + 1, lineEnd);
 
+                    // A `layout â€¦ endlayout` block is consumed opaquely: its body is
+                    // metapost / tex code, not Therion syntax, so we neither validate
+                    // nor warn about the lines inside it. (A bare single-line `layout`
+                    // with no matching `endlayout` falls through to normal handling.)
+                    if (string.Equals(keyword, "layout", StringComparison.OrdinalIgnoreCase) &&
+                        TryFindLayoutEnd(tokens, lineEnd, out int blockNext, out int blockLastToken))
+                    {
+                        var blockSpan = SpanFromTo(commandStart, tokens[blockLastToken]);
+                        children.Add(new UnknownCommand(blockSpan, keyword, rawArgs));
+                        i = blockNext;
+                        break;
+                    }
+
                     if (!TopLevelKeywords.Contains(keyword))
                     {
                         var severity = options.Mode == ParserMode.Strict
@@ -117,6 +130,45 @@ public sealed class ThconfigParser
             options.Version ?? TherionSyntaxVersion.Default);
 
         return new ParseResult<TherionFile>(file, diagnostics.ToImmutable());
+    }
+
+    /// <summary>
+    /// Scans for the <c>endlayout</c> that closes a layout block, ignoring the
+    /// metapost/tex body in between (including any nested <c>endcode</c>/<c>enddef</c>).
+    /// </summary>
+    /// <param name="start">Index to begin scanning (just past the <c>layout</c> header line).</param>
+    /// <param name="next">Index just past the <c>endlayout</c> line (where parsing resumes).</param>
+    /// <param name="lastContentToken">Index of the <c>endlayout</c> token (for the block span).</param>
+    private static bool TryFindLayoutEnd(
+        ImmutableArray<TherionToken> tokens, int start, out int next, out int lastContentToken)
+    {
+        next = tokens.Length;
+        lastContentToken = -1;
+
+        int i = start;
+        bool atLineStart = true;
+        while (i < tokens.Length)
+        {
+            var t = tokens[i];
+            if (t.Kind == TherionTokenKind.NewLine) { atLineStart = true; i++; continue; }
+            if (t.Kind is TherionTokenKind.Whitespace or TherionTokenKind.LineContinuation) { i++; continue; }
+
+            if (atLineStart)
+            {
+                atLineStart = false;
+                if (t.Kind == TherionTokenKind.Identifier &&
+                    string.Equals(t.Text, "endlayout", StringComparison.OrdinalIgnoreCase))
+                {
+                    lastContentToken = i;
+                    int k = i + 1;
+                    while (k < tokens.Length && tokens[k].Kind != TherionTokenKind.NewLine) k++;
+                    next = k < tokens.Length ? k + 1 : k;
+                    return true;
+                }
+            }
+            i++;
+        }
+        return false;
     }
 
     private static SourceSpan SpanFromTo(TherionToken from, TherionToken to)
