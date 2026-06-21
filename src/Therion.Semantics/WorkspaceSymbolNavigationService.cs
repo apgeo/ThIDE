@@ -18,29 +18,51 @@ public sealed class WorkspaceSymbolNavigationService : ISymbolNavigationService
 {
     private readonly WorkspaceSemanticModel _workspace;
     private readonly SemanticModel? _activeFile;
+    private readonly string? _activeFilePath;
 
-    public WorkspaceSymbolNavigationService(WorkspaceSemanticModel workspace, SemanticModel? activeFile = null)
+    public WorkspaceSymbolNavigationService(
+        WorkspaceSemanticModel workspace, SemanticModel? activeFile = null, string? activeFilePath = null)
     {
         _workspace = workspace;
         _activeFile = activeFile;
+        _activeFilePath = activeFilePath;
     }
 
     /// <summary>
     /// Reference-aware go-to-definition: when the token carries Therion's <c>@</c>
     /// notation or the caller hints a specific <see cref="ReferenceKind"/>, resolve it
-    /// cross-file via <see cref="WorkspaceSemanticModel.ResolveReference"/> first; then
-    /// fall back to the plain qualified-name / file / xvi resolution.
+    /// cross-file via the workspace resolver first; then fall back to the plain
+    /// qualified-name / file / xvi resolution.
     /// </summary>
     public SourceSpan? GoToDefinition(string reference, ReferenceKind kind)
     {
         if (string.IsNullOrWhiteSpace(reference)) return null;
-
-        if (kind != ReferenceKind.Any || reference.Contains('@'))
-        {
-            if (_workspace.ResolveReference(reference, kind) is { } span && !span.IsEmpty)
-                return span;
-        }
+        if (ResolveReferenceWithScope(reference, kind) is { } span) return span;
         return GoToDefinition(reference);
+    }
+
+    /// <inheritdoc/>
+    public bool CanNavigate(string reference, ReferenceKind kind)
+        => !string.IsNullOrWhiteSpace(reference) && ResolveReferenceWithScope(reference, kind) is not null;
+
+    /// <summary>
+    /// Index-only resolution (no per-file scans): the workspace <c>@</c> resolver plus a
+    /// <c>.th2</c>-scope fallback that resolves a bare station name against the survey of
+    /// the <c>.th</c> that inputs the active sketch (Plan items: .th2 station navigation).
+    /// </summary>
+    private SourceSpan? ResolveReferenceWithScope(string reference, ReferenceKind kind)
+    {
+        if (_workspace.ResolveReference(reference, kind) is { } span && !span.IsEmpty)
+            return span;
+
+        if ((kind is ReferenceKind.Any or ReferenceKind.Station) &&
+            _activeFilePath is { } path && path.EndsWith(".th2", System.StringComparison.OrdinalIgnoreCase))
+        {
+            var r = StationRef.Parse(reference);
+            if (!r.HasSurvey && _workspace.ResolveStationInFileScope(r.Point, path) is { } s && !s.IsEmpty)
+                return s;
+        }
+        return null;
     }
 
     public SourceSpan? GoToDefinition(string qualifiedName)

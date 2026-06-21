@@ -123,4 +123,46 @@ public class CrossFileReferenceTests
         var ws = Build(("/p/m.th", "survey s\nendsurvey\n"));
         Assert.Null(ws.ResolveReference("nope@nowhere", ReferenceKind.Station));
     }
+
+    [Fact]
+    public void Resolves_th2_station_name_to_parent_th_survey()
+    {
+        var ws = Build(
+            ("/p/plan.th", """
+                survey SV_x
+                  input plan.th2
+                  centreline
+                    data normal from to length compass clino
+                    0 14 1 0 0
+                  endcentreline
+                endsurvey
+                """),
+            ("/p/plan.th2", """
+                scrap sc1
+                  point 1 2 station -name 14
+                endscrap
+                """));
+
+        // A bare station name written in the .th2 resolves into its parent .th survey.
+        var span = ws.ResolveStationInFileScope("14", "/p/plan.th2");
+
+        Assert.NotNull(span);
+        Assert.EndsWith("plan.th", span!.Value.FilePath);
+    }
+
+    [Fact]
+    public void Survey_and_map_titles_are_captured_for_the_object_tree()
+    {
+        var ws = Build(("/p/m.th", """
+            survey demo -title "Demo Cave"
+              map MP-1 -title "Plan View"
+                ps1
+              endmap
+            endsurvey
+            """));
+
+        var model = ws.PerFile["/p/m.th"];
+        Assert.Equal("Demo Cave", model.Surveys.Values.Single().Title);
+        Assert.Equal("Plan View", model.Maps.Values.Single().Title);
+    }
 }

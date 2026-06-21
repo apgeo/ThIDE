@@ -189,6 +189,31 @@ public sealed class WorkspaceSemanticModel
         return null;
     }
 
+    /// <summary>
+    /// Resolves a bare station name written inside a <c>.th2</c> file (e.g. a
+    /// <c>point ... station -name 14</c>) to its definition in the <c>.th</c> survey
+    /// that <c>input</c>s the sketch. Walks the file graph to find the parent <c>.th</c>,
+    /// then looks the station up in each of that file's surveys.
+    /// </summary>
+    public SourceSpan? ResolveStationInFileScope(string stationName, string sketchPath)
+    {
+        if (string.IsNullOrEmpty(stationName) || string.IsNullOrEmpty(sketchPath)) return null;
+        var full = System.IO.Path.GetFullPath(sketchPath);
+
+        foreach (var (from, to) in FileGraphEdges)
+        {
+            if (!string.Equals(to, full, System.StringComparison.OrdinalIgnoreCase)) continue;
+            if (!PerFile.TryGetValue(from, out var model)) continue;
+            foreach (var sv in model.Surveys.Values)
+            {
+                if (StationsBySurveyAndPoint.TryGetValue(
+                        SurveyPointKey(sv.Name.Last, stationName), out var st))
+                    return st.DeclarationSpan;
+            }
+        }
+        return null;
+    }
+
     /// <summary>Composite key for <see cref="StationsBySurveyAndPoint"/> (space-joined; names contain no spaces).</summary>
     internal static string SurveyPointKey(string surveyLastName, string point)
         => string.Concat(surveyLastName, " ", point);

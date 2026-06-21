@@ -182,7 +182,44 @@ public sealed class SemanticBinder
     private static void BindMap(MapCommand map, BindContext ctx)
     {
         if (!string.IsNullOrEmpty(map.Id) && !ctx.Maps.ContainsKey(map.Id))
-            ctx.Maps[map.Id] = new MapSymbol(map.Id, map.Span);
+            ctx.Maps[map.Id] = new MapSymbol(map.Id, map.Span) { Title = ExtractTitle(map.OptionsRaw) };
+    }
+
+    /// <summary>Extracts the value of a <c>-title "..."</c> option (quote-aware) from a raw option string.</summary>
+    private static string? ExtractTitle(string optionsRaw)
+    {
+        if (string.IsNullOrEmpty(optionsRaw)) return null;
+        bool wantValue = false;
+        foreach (var token in TokenizeOptions(optionsRaw))
+        {
+            if (wantValue) return token;
+            if (string.Equals(token, "-title", StringComparison.OrdinalIgnoreCase)) wantValue = true;
+        }
+        return null;
+    }
+
+    /// <summary>Splits an option string into whitespace- or quote-delimited tokens (quotes stripped).</summary>
+    private static IEnumerable<string> TokenizeOptions(string raw)
+    {
+        int i = 0;
+        while (i < raw.Length)
+        {
+            while (i < raw.Length && char.IsWhiteSpace(raw[i])) i++;
+            if (i >= raw.Length) yield break;
+            if (raw[i] == '"')
+            {
+                int end = raw.IndexOf('"', ++i);
+                if (end < 0) { yield return raw[i..]; yield break; }
+                yield return raw[i..end];
+                i = end + 1;
+            }
+            else
+            {
+                int start = i;
+                while (i < raw.Length && !char.IsWhiteSpace(raw[i])) i++;
+                yield return raw[start..i];
+            }
+        }
     }
 
     private void BindSurvey(SurveyCommand sv, BindContext ctx, ImmutableArray<string> scope)
@@ -193,7 +230,10 @@ public sealed class SemanticBinder
         var parent = scope.IsEmpty ? (QualifiedName?)null : new QualifiedName(scope);
 
         ctx.Surveys[qn] = new SurveySymbol(qn, sv.Span, parent,
-            ImmutableArray<QualifiedName>.Empty);
+            ImmutableArray<QualifiedName>.Empty)
+        {
+            Title = ExtractTitle(sv.OptionsRaw),
+        };
 
         // attach as child of parent
         if (parent is { } p && ctx.Surveys.TryGetValue(p, out var ps))

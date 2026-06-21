@@ -96,6 +96,13 @@ public interface ISymbolNavigationService
     /// </summary>
     SourceSpan? GoToDefinition(string reference, ReferenceKind kind) => GoToDefinition(reference);
 
+    /// <summary>
+    /// Cheap "would this reference resolve?" check for the editor's hover affordance
+    /// (so it only underlines genuinely-navigable tokens). Implementations should avoid
+    /// expensive scans here. Defaults to a <see cref="GoToDefinition(string, ReferenceKind)"/> probe.
+    /// </summary>
+    bool CanNavigate(string reference, ReferenceKind kind) => GoToDefinition(reference, kind) is not null;
+
     /// <summary>Returns all reference spans of <paramref name="qualifiedName"/> (may be empty).</summary>
     ImmutableArray<SourceSpan> FindReferences(string qualifiedName);
 }

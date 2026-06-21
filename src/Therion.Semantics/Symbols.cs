@@ -29,7 +29,11 @@ public sealed record SurveySymbol(
     QualifiedName Name,
     SourceSpan DeclarationSpan,
     QualifiedName? Parent,
-    ImmutableArray<QualifiedName> Children);
+    ImmutableArray<QualifiedName> Children)
+{
+    /// <summary>The survey's <c>-title "..."</c>, if declared.</summary>
+    public string? Title { get; init; }
+}
 
 /// <summary>
 /// Centreline shot flags (Therion <c>flags surface|duplicate|splay|approximate</c>).
@@ -86,7 +90,11 @@ public sealed record ScrapSymbol(
 /// <summary>A <c>map &lt;id&gt;</c> declaration (.th). Referenced cross-file as <c>map@survey</c>.</summary>
 public sealed record MapSymbol(
     string Id,
-    SourceSpan DeclarationSpan);
+    SourceSpan DeclarationSpan)
+{
+    /// <summary>The map's <c>-title "..."</c>, if declared.</summary>
+    public string? Title { get; init; }
+}
 
 /// <summary>
 /// A point/line object id inside a <c>.th2</c> scrap (<c>-id name</c>). The target of a
