@@ -1,0 +1,36 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="TherionProc.Views.PreferencesWindow"
+        x:CompileBindings="False"
+        Title="Preferences"
+        Width="440" SizeToContent="Height"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner">
+    <StackPanel Margin="18" Spacing="10">
+        <TextBlock Text="Startup" FontWeight="Bold" />
+        <CheckBox Content="Reopen files from last session on startup"
+                  IsChecked="{Binding RestoreSessionOnStartup}" />
+
+        <Separator Margin="0,4" />
+
+        <TextBlock Text="Editor" FontWeight="Bold" />
+        <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,Auto" Margin="0,0,0,2">
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="Font size"
+                       VerticalAlignment="Center" Margin="0,0,8,6" />
+            <NumericUpDown Grid.Row="0" Grid.Column="1" Minimum="8" Maximum="32" Increment="1"
+                           Value="{Binding EditorFontSize}" Margin="0,0,0,6" />
+            <TextBlock Grid.Row="1" Grid.Column="0" Text="Indent size"
+                       VerticalAlignment="Center" Margin="0,0,8,0" />
+            <NumericUpDown Grid.Row="1" Grid.Column="1" Minimum="1" Maximum="8" Increment="1"
+                           Value="{Binding IndentationSize}" />
+        </Grid>
+        <CheckBox Content="Show line numbers" IsChecked="{Binding ShowLineNumbers}" />
+        <CheckBox Content="Highlight current line" IsChecked="{Binding HighlightCurrentLine}" />
+        <CheckBox Content="Convert tabs to spaces" IsChecked="{Binding ConvertTabsToSpaces}" />
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,10,0,0">
+            <Button Content="Cancel" Click="OnCancel" MinWidth="80" />
+            <Button Content="OK" Click="OnOk" IsDefault="True" MinWidth="80" />
+        </StackPanel>
+    </StackPanel>
+</Window>

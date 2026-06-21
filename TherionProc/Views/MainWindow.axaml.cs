@@ -29,7 +29,22 @@ public partial class MainWindow : Window
             }
         };
 
-        Closing += (_, _) => SaveLayout();
+        Closing += (_, _) =>
+        {
+            if (DataContext is MainWindowViewModel vm) vm.PersistSession();
+            SaveLayout();
+        };
+    }
+
+    private async void OnPreferencesClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        IAppSettingsService? settings = null;
+        try { settings = AppServices.Provider.GetService<IAppSettingsService>(); }
+        catch { /* design-time / no container */ }
+        if (settings is null) return;
+
+        var window = new PreferencesWindow { DataContext = new PreferencesViewModel(settings) };
+        await window.ShowDialog(this);
     }
 
     private void AttachLayout(MainWindowViewModel vm)

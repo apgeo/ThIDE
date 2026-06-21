@@ -90,6 +90,9 @@ internal static class AppServices
         // Window-bounds persistence (dock layout is rebuilt fresh each launch).
         services.AddSingleton<ILayoutService, JsonLayoutService>();
 
+        // Application preferences + session restore.
+        services.AddSingleton<IAppSettingsService, AppSettingsService>();
+
         // Shared content ViewModels — singletons so the same instance flows to both
         // the dockable tool wrapper (shown in the UI) and the shell (event wiring).
         services.AddSingleton<ObjectBrowserViewModel>();

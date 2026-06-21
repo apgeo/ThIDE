@@ -22,6 +22,8 @@
                 <MenuItem Header="{Binding MenuFileOpenFile}"   Command="{Binding OpenFileCommand}" />
                 <MenuItem Header="{Binding MenuFileOpenFolder}" Command="{Binding OpenFolderCommand}" />
                 <Separator />
+                <MenuItem Header="_Preferences..." Click="OnPreferencesClick" />
+                <Separator />
                 <MenuItem Header="{Binding MenuFileExit}" Command="{Binding ExitCommand}" />
             </MenuItem>
             <MenuItem Header="{Binding MenuView}">
