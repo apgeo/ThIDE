@@ -11,6 +11,6 @@ public partial class WorkspaceExplorerToolView : UserControl
     private void OnNodeDoubleTapped(object? sender, RoutedEventArgs e)
     {
         if (DataContext is WorkspaceExplorerToolViewModel vm && vm.Explorer.Selected is { } node)
-            vm.Explorer.OpenCommand.Execute(node);
+            vm.Explorer.ActivateCommand.Execute(node);
     }
 }

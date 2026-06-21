@@ -1,44 +1,87 @@
 // Implementation Plan �7.3 � Workspace Explorer ViewModel.
-// Renders the project's file-inclusion graph as a nested tree: the entry point
-// (.thconfig) → its `source` files → their `input` files (recursively) → .th2
-// sketches → .xvi backgrounds → images. Depth drives indentation in the view.
+// Renders the project as a Visual-Studio-style tree: the file-inclusion hierarchy
+// (entry .thconfig -> source -> input -> .th2 -> .xvi -> image) with per-type icons,
+// and � when enabled (#16) � each file's object model (surveys / maps / scraps,
+// shown with id + title) nested underneath, each navigable to its declaration.
 
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
-using Avalonia;
+using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Therion.Core;
 using Therion.Semantics;
 using TherionProc.Services;
 
 namespace TherionProc.ViewModels;
 
-public sealed record WorkspaceNode(
-    string DisplayName,
-    string FullPath,
-    string Kind,             // "thconfig" | "th" | "th2" | "xvi" | "image" | "missing"
-    int Depth,
-    bool Exists)
+/// <summary>A node in the workspace tree: either a file (openable) or a model object (navigable).</summary>
+public sealed partial class WorkspaceTreeNode : ObservableObject
 {
-    /// <summary>Left indentation reflecting the node's depth in the inclusion tree.</summary>
-    public Thickness Indent => new(Depth * 14, 0, 0, 0);
+    public string Name { get; init; } = string.Empty;
+    /// <summary>Secondary text (e.g. a survey/map title), shown dimmed after the name.</summary>
+    public string? Detail { get; init; }
+    /// <summary>File path for file nodes (double-click opens it).</summary>
+    public string? FullPath { get; init; }
+    /// <summary>Declaration span for object nodes (double-click navigates to it).</summary>
+    public SourceSpan? Target { get; init; }
+    public string Kind { get; init; } = string.Empty;
+    public ObservableCollection<WorkspaceTreeNode> Children { get; } = new();
+
+    [ObservableProperty] private bool _isExpanded;
+
+    /// <summary>Glyph icon for the node's kind (BMP symbols render in Segoe UI Symbol).</summary>
+    public string Glyph => Kind switch
+    {
+        "thconfig" => "⚙", // gear
+        "th"       => "▤", // data rows
+        "th2"      => "✎", // pencil
+        "xvi"      => "▦", // grid
+        "image"    => "▩", // filled grid
+        "survey"   => "◈", // diamond-in-square
+        "map"      => "▣", // square-in-square
+        "scrap"    => "◇", // diamond
+        "missing"  => "⚠", // warning
+        _          => "•", // bullet
+    };
+
+    public IBrush IconBrush => new SolidColorBrush(Kind switch
+    {
+        "thconfig" => Color.FromRgb(0x75, 0x75, 0x75),
+        "th"       => Color.FromRgb(0x15, 0x65, 0xC0),
+        "th2"      => Color.FromRgb(0x2E, 0x7D, 0x32),
+        "xvi"      => Color.FromRgb(0x6A, 0x1B, 0x9A),
+        "image"    => Color.FromRgb(0x00, 0x83, 0x8F),
+        "survey"   => Color.FromRgb(0x19, 0x76, 0xD2),
+        "map"      => Color.FromRgb(0xEF, 0x6C, 0x00),
+        "scrap"    => Color.FromRgb(0x2E, 0x7D, 0x32),
+        "missing"  => Color.FromRgb(0xC6, 0x28, 0x28),
+        _          => Color.FromRgb(0x75, 0x75, 0x75),
+    });
 }
 
 public partial class WorkspaceExplorerViewModel : ViewModelBase
 {
     private readonly IDocumentService _documents;
 
-    [ObservableProperty] private IReadOnlyList<WorkspaceNode> _nodes = Array.Empty<WorkspaceNode>();
+    [ObservableProperty] private ObservableCollection<WorkspaceTreeNode> _roots = new();
     [ObservableProperty] private string _rootPath = string.Empty;
-    [ObservableProperty] private WorkspaceNode? _selected;
+    [ObservableProperty] private WorkspaceTreeNode? _selected;
 
-    public event EventHandler<WorkspaceNode>? OpenRequested;
+    /// <summary>Show the object model (surveys/maps/scraps) under each file (#16, default on).</summary>
+    [ObservableProperty] private bool _showObjectModel = true;
+    partial void OnShowObjectModelChanged(bool value) => Refresh();
+
+    /// <summary>Raised to open a file node.</summary>
+    public event EventHandler<WorkspaceTreeNode>? OpenRequested;
+    /// <summary>Raised to navigate to an object node's declaration.</summary>
+    public event EventHandler<SourceSpan>? NavigateRequested;
 
     public WorkspaceExplorerViewModel() : this(new NullDocumentService()) { }
 
-    // Public constructor for DI.
     public WorkspaceExplorerViewModel(IDocumentService documents)
     {
         _documents = documents;
@@ -50,16 +93,15 @@ public partial class WorkspaceExplorerViewModel : ViewModelBase
         var ws = _documents.Workspace;
         if (ws is null)
         {
-            Nodes = Array.Empty<WorkspaceNode>();
+            Roots = new ObservableCollection<WorkspaceTreeNode>();
             RootPath = string.Empty;
             return;
         }
 
-        // Adjacency + roots from the file-inclusion graph.
+        // Build adjacency + roots from the file-inclusion graph.
         var children = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
         var allNodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var hasIncoming = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
         foreach (var (from, to) in ws.FileGraphEdges)
         {
             allNodes.Add(from);
@@ -70,52 +112,109 @@ public partial class WorkspaceExplorerViewModel : ViewModelBase
         }
         foreach (var p in ws.PerFile.Keys) allNodes.Add(p);
 
-        // image-per-xvi lookup for the leaf rows.
         var imageByXvi = new Dictionary<string, (string Path, bool Exists)>(StringComparer.OrdinalIgnoreCase);
         foreach (var x in ws.Xvi.ByPath.Values)
             if (!string.IsNullOrEmpty(x.ResolvedImagePath))
                 imageByXvi[x.ResolvedXviPath] = (x.ResolvedImagePath, x.ImageExists);
 
-        // Roots = nodes with no incoming edge (the entry .thconfig / a lone .th).
         var roots = allNodes.Where(n => !hasIncoming.Contains(n))
                             .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
                             .ToList();
         if (roots.Count == 0 && _documents.CurrentPath is { } cp) roots.Add(cp);
 
-        var nodes = new List<WorkspaceNode>();
         var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var result = new ObservableCollection<WorkspaceTreeNode>();
 
-        void Visit(string path, int depth)
+        WorkspaceTreeNode BuildFile(string path, int depth)
         {
-            if (!visited.Add(path)) return; // already placed (DAG diamond / cycle guard)
-            nodes.Add(MakeNode(path, depth));
+            var node = new WorkspaceTreeNode
+            {
+                Name = Path.GetFileName(path),
+                FullPath = path,
+                Kind = KindFor(path),
+                IsExpanded = depth < 2,
+            };
+
+            if (ShowObjectModel) AddObjectModel(node, ws, path);
 
             if (imageByXvi.TryGetValue(path, out var img))
-                nodes.Add(new WorkspaceNode(Path.GetFileName(img.Path), img.Path,
-                    img.Exists ? "image" : "missing", depth + 1, img.Exists));
+                node.Children.Add(new WorkspaceTreeNode
+                {
+                    Name = Path.GetFileName(img.Path),
+                    FullPath = img.Path,
+                    Kind = img.Exists ? "image" : "missing",
+                });
 
             if (children.TryGetValue(path, out var kids))
                 foreach (var k in kids.OrderBy(k => k, StringComparer.OrdinalIgnoreCase))
-                    Visit(k, depth + 1);
+                    if (visited.Add(k))
+                        node.Children.Add(BuildFile(k, depth + 1));
+            return node;
         }
 
-        foreach (var r in roots) Visit(r, 0);
-        // Any file reached by binding but disconnected from the graph (rare).
+        foreach (var r in roots)
+            if (visited.Add(r))
+                result.Add(BuildFile(r, 0));
         foreach (var p in ws.PerFile.Keys.OrderBy(p => p, StringComparer.OrdinalIgnoreCase))
-            if (!visited.Contains(p)) Visit(p, 0);
+            if (visited.Add(p))
+                result.Add(BuildFile(p, 0));
 
         RootPath = roots.Count > 0 ? roots[0] : (_documents.CurrentPath ?? string.Empty);
-        Nodes = nodes;
+        Roots = result;
     }
 
-    private static WorkspaceNode MakeNode(string path, int depth) =>
-        new(Path.GetFileName(path), path, KindFor(path), depth, File.Exists(path));
+    /// <summary>Adds the surveys/maps (.th) or scraps (.th2) declared in <paramref name="path"/>.</summary>
+    private static void AddObjectModel(WorkspaceTreeNode fileNode, WorkspaceSemanticModel ws, string path)
+    {
+        if (ws.PerFile.TryGetValue(path, out var model))
+        {
+            // Surveys, nested by parent/child relationship.
+            var nodes = model.Surveys.Values.ToDictionary(
+                s => s.Name,
+                s => new WorkspaceTreeNode
+                {
+                    Name = s.Name.Last,
+                    Detail = s.Title,
+                    Kind = "survey",
+                    Target = s.DeclarationSpan,
+                });
+            foreach (var sv in model.Surveys.Values)
+            {
+                var node = nodes[sv.Name];
+                if (sv.Parent is { } parent && nodes.TryGetValue(parent, out var parentNode))
+                    parentNode.Children.Add(node);
+                else
+                    fileNode.Children.Add(node);
+            }
+
+            foreach (var m in model.Maps.Values.OrderBy(m => m.Id, StringComparer.Ordinal))
+                fileNode.Children.Add(new WorkspaceTreeNode
+                {
+                    Name = m.Id,
+                    Detail = m.Title,
+                    Kind = "map",
+                    Target = m.DeclarationSpan,
+                });
+        }
+
+        // Scraps declared in this .th2 file.
+        foreach (var sc in ws.ScrapsById.Values
+                     .Where(s => string.Equals(s.DeclarationSpan.FilePath, path, StringComparison.OrdinalIgnoreCase))
+                     .OrderBy(s => s.Id, StringComparer.Ordinal))
+            fileNode.Children.Add(new WorkspaceTreeNode
+            {
+                Name = sc.Id,
+                Kind = "scrap",
+                Target = sc.DeclarationSpan,
+            });
+    }
 
     [RelayCommand]
-    private void Open(WorkspaceNode? node)
+    private void Activate(WorkspaceTreeNode? node)
     {
         if (node is null) return;
-        OpenRequested?.Invoke(this, node);
+        if (node.FullPath is not null) OpenRequested?.Invoke(this, node);
+        else if (node.Target is { } span && !span.IsEmpty) NavigateRequested?.Invoke(this, span);
     }
 
     private static string KindFor(string path)

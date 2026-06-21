@@ -1,24 +1,40 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:TherionProc.ViewModels.Docking"
+             xmlns:vmw="using:TherionProc.ViewModels"
              x:Class="TherionProc.Views.Docking.WorkspaceExplorerToolView"
              x:DataType="vm:WorkspaceExplorerToolViewModel">
     <DockPanel>
-        <TextBlock DockPanel.Dock="Top" Foreground="Gray" Margin="8,6,8,4"
-                   Text="{Binding Explorer.RootPath}" TextTrimming="CharacterEllipsis" />
-        <ListBox x:Name="NodeList"
-                 ItemsSource="{Binding Explorer.Nodes}"
-                 SelectedItem="{Binding Explorer.Selected, Mode=TwoWay}"
-                 DoubleTapped="OnNodeDoubleTapped">
-            <ListBox.ItemTemplate>
-                <DataTemplate>
-                    <StackPanel Orientation="Horizontal" Margin="{Binding Indent}" Spacing="6">
-                        <TextBlock Text="{Binding Kind}" FontSize="10" Foreground="Gray"
-                                   VerticalAlignment="Center" Width="58" />
-                        <TextBlock Text="{Binding DisplayName}" />
+        <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="8,5">
+            <StackPanel Spacing="4">
+                <TextBlock Foreground="Gray" Text="{Binding Explorer.RootPath}"
+                           TextTrimming="CharacterEllipsis" />
+                <CheckBox Content="Show object model" FontSize="11"
+                          IsChecked="{Binding Explorer.ShowObjectModel, Mode=TwoWay}" />
+            </StackPanel>
+        </Border>
+
+        <TreeView x:Name="Tree" x:CompileBindings="False"
+                  ItemsSource="{Binding Explorer.Roots}"
+                  SelectedItem="{Binding Explorer.Selected, Mode=TwoWay}"
+                  DoubleTapped="OnNodeDoubleTapped">
+            <TreeView.Styles>
+                <!-- Honor each node's default-expansion state. -->
+                <Style Selector="TreeViewItem">
+                    <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                </Style>
+            </TreeView.Styles>
+            <TreeView.ItemTemplate>
+                <TreeDataTemplate ItemsSource="{Binding Children}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Text="{Binding Glyph}" Foreground="{Binding IconBrush}"
+                                   FontSize="13" Width="16" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding Detail}" Foreground="Gray" FontStyle="Italic"
+                                   VerticalAlignment="Center" />
                     </StackPanel>
-                </DataTemplate>
-            </ListBox.ItemTemplate>
-        </ListBox>
+                </TreeDataTemplate>
+            </TreeView.ItemTemplate>
+        </TreeView>
     </DockPanel>
 </UserControl>
