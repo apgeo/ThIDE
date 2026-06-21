@@ -92,3 +92,15 @@ public sealed record TeamCommand(
 public sealed record DateCommand(
     SourceSpan Span,
     string Value) : TherionCommand(Span, "date");
+
+/// <summary>
+/// <c>map &lt;id&gt; [-title "..."] ... endmap</c> block. The body lists scrap / map
+/// references; it is not Therion command syntax, so the parser consumes it opaquely
+/// rather than sub-parsing it. Only the map <see cref="Id"/> is a declaration the
+/// symbol model needs (references into the body are resolved from raw editor text).
+/// </summary>
+public sealed record MapCommand(
+    SourceSpan Span,
+    string Id,
+    string OptionsRaw,
+    bool IsTerminated) : TherionCommand(Span, "map");

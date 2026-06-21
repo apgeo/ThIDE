@@ -137,6 +137,7 @@ public sealed class ThParser
         {
             "survey"                       => ParseSurvey(line, lines, ref cursor, filePath, options, diagnostics),
             "centreline" or "centerline"   => ParseCentreline(line, lines, ref cursor, filePath, options, diagnostics),
+            "map"                          => ParseMap(line, lines, ref cursor, diagnostics, options),
             "data"                         => ParseData(line, diagnostics),
             "flags"                        => ParseFlags(line),
             "fix"                          => ParseFix(line, diagnostics),
@@ -144,6 +145,9 @@ public sealed class ThParser
             "input" or "load"              => ParseInput(line, diagnostics),
             "team"                         => ParseTeam(line),
             "date"                         => ParseDate(line),
+            // Recognized file-header directive (charset declaration). Carries no
+            // semantics for us, but must not be flagged as an unknown command.
+            "encoding"                     => new UnknownCommand(line.Span, line.Keyword, JoinFrom(line, 1)),
             _ => ParseViaRegistryOrFallback(line, parentBlock, options, filePath, diagnostics),
         };
     }
@@ -231,6 +235,52 @@ public sealed class ThParser
 
         var endSpan = inner.Length > 0 ? inner[^1].Span : line.Span;
         return new CentrelineCommand(SpanUnion(line.Span, endSpan), rest, inner, IsTerminated: true);
+    }
+
+    /// <summary>
+    /// Parses a <c>map &lt;id&gt; ... endmap</c> block. The body is consumed opaquely
+    /// (its lines are scrap/map references, not commands) so they don't surface as
+    /// "unknown command" diagnostics.
+    /// </summary>
+    private MapCommand ParseMap(
+        LogicalLine line,
+        ImmutableArray<LogicalLine> lines,
+        ref int cursor,
+        ImmutableArray<Diagnostic>.Builder diagnostics,
+        ParserOptions options)
+    {
+        var (id, opts) = HeadAndRest(line, fromIndex: 1);
+
+        bool terminated = false;
+        var lastSpan = line.Span;
+        while (cursor < lines.Length)
+        {
+            var ln = lines[cursor];
+            if (!ln.IsEmpty &&
+                string.Equals(ln.Keyword, "endmap", StringComparison.OrdinalIgnoreCase))
+            {
+                lastSpan = ln.Span;
+                cursor++;
+                terminated = true;
+                break;
+            }
+            if (!ln.IsEmpty) lastSpan = ln.Span;
+            cursor++;
+        }
+
+        if (!terminated)
+        {
+            var severity = options.Mode == ParserMode.Strict
+                ? DiagnosticSeverity.Error
+                : DiagnosticSeverity.Warning;
+            diagnostics.Add(Diagnostic.Create(
+                DiagnosticCodes.UnterminatedBlock,
+                severity,
+                "Block 'map' is missing its 'endmap' terminator.",
+                line.Span));
+        }
+
+        return new MapCommand(SpanUnion(line.Span, lastSpan), id ?? string.Empty, opts, terminated);
     }
 
     private DataCommand ParseData(LogicalLine line, ImmutableArray<Diagnostic>.Builder diagnostics)

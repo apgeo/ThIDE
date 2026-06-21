@@ -1,4 +1,4 @@
-// Implementation Plan §6 — in-memory project / session.
+// Implementation Plan ï¿½6 ï¿½ in-memory project / session.
 // Loads a .thconfig (or any entry-point), BFS-walks `source` directives,
 // parses each file (cache-backed), and re-parses on file changes.
 
@@ -88,7 +88,7 @@ public sealed class TherionWorkspace : IWorkspace
     }
 
     /// <summary>
-    /// Build a workspace-wide semantic snapshot (Plan §5, §5.1) — aggregates
+    /// Build a workspace-wide semantic snapshot (Plan ï¿½5, ï¿½5.1) ï¿½ aggregates
     /// per-file <see cref="SemanticModel"/> + cross-file <see cref="XviIndex"/>
     /// and FileGraph edges. Parsed `.xvi` files in the workspace are picked
     /// up automatically by extension; pass <paramref name="extraXvi"/> to
@@ -152,51 +152,14 @@ public sealed class TherionWorkspace : IWorkspace
         return new ThconfigParser().Parse(path, text);
     }
 
+    /// <summary>
+    /// Files pulled in by <paramref name="file"/> via <c>source</c>/<c>input</c>/<c>load</c>,
+    /// recursing into nested survey/centreline blocks (see <see cref="SourceGraph"/>).
+    /// </summary>
     private static IEnumerable<string> ExtractDependencies(string parentPath, TherionFile? file)
-    {
-        if (file is null) yield break;
-        var dir = Path.GetDirectoryName(parentPath)!;
-        foreach (var child in file.Children)
-        {
-            if (child is not UnknownCommand cmd) continue;
-            if (!IsSourceLike(cmd.Keyword)) continue;
-            foreach (var token in SplitArgs(cmd.RawArguments))
-            {
-                var dep = token;
-                if (!Path.IsPathRooted(dep)) dep = Path.Combine(dir, dep);
-                yield return Path.GetFullPath(dep);
-            }
-        }
-    }
-
-    private static bool IsSourceLike(string keyword)
-        => string.Equals(keyword, "source", StringComparison.OrdinalIgnoreCase)
-        || string.Equals(keyword, "input", StringComparison.OrdinalIgnoreCase)
-        || string.Equals(keyword, "load", StringComparison.OrdinalIgnoreCase);
-
-    private static IEnumerable<string> SplitArgs(string raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw)) yield break;
-        int i = 0;
-        while (i < raw.Length)
-        {
-            while (i < raw.Length && char.IsWhiteSpace(raw[i])) i++;
-            if (i >= raw.Length) yield break;
-            if (raw[i] == '"')
-            {
-                int end = raw.IndexOf('"', ++i);
-                if (end < 0) { yield return raw[i..]; yield break; }
-                yield return raw[i..end];
-                i = end + 1;
-            }
-            else
-            {
-                int start = i;
-                while (i < raw.Length && !char.IsWhiteSpace(raw[i])) i++;
-                yield return raw[start..i];
-            }
-        }
-    }
+        => file is null
+            ? System.Linq.Enumerable.Empty<string>()
+            : SourceGraph.Dependencies(file, parentPath);
 
     private void OnFileChanged(string path)
     {
