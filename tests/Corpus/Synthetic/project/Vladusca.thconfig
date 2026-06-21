@@ -1,0 +1,76 @@
+encoding  utf-8
+source "./th/Av_Vladusca.th"
+
+# source ./rez/Av_Vladusca-Planp.th2
+#!PROCESS
+#!TITLE 2 zzzzz
+
+layout l1
+  code metapost
+  def a_water (expr p) =
+    T:=identity;
+    thfill p withcolor (0.0, 0.5, 1.0);
+  enddef;
+
+   scale 1 100
+
+   code metapost
+      #fonts_setup(3,4,5,7,11);
+      #fonts_setup(7,8,10,12,14);
+      % default values depend on scale; for 1:200 they are 7,8,10,12,14
+   endcode
+    
+  code tex-map
+     \legendwidth=15cm
+     #\legendtextcolor={\color[0 0 100]}  % color as RGB 0..100
+     \legendtextsize={\size[12]}
+     \legendtextheadersize={\size[24]}
+  endcode
+  
+  legend on
+
+endlayout
+
+#select pdx@Av_Vladusca
+#select pdp@Av_Vladusca
+
+export model -output ./rez/Av_Vladusca.lox	
+#\
+#-wall-source maps
+
+export map -format svg -output ./rez/Av_Vladusca-plan.svg -layout l1
+export model -fmt 3dmf -output ./rez/Av_Vladusca.3dmf
+export model -fmt survex -output ./rez/Av_Vladusca.3d
+export model -fmt compass -output ./rez/Av_Vladusca.plt
+export model -fmt vrml -output ./rez/Av_Vladusca.wrl
+
+export model -fmt kml -output ./rez/Av_Vladusca.kml
+
+#export map -projection plan -output ./rez/Av_Vladusca-plan.pdf \
+#  -layout l1 \
+#  -layout-symbol-hide group centerline \
+#  -layout-debug off \
+#  #-layout-color map-fg 80 \
+  
+#  #-layout-map-header 0 0 s \
+#  #-disable splay-shots
+#  #-disable centerline
+
+#export map -projection extended -output ./rez/Av_Vladusca-extended_profile.pdf \
+#  -layout l1
+#  #-layout-map-header 0 0 s \
+#  #-disable splay-shots
+#  #-disable centerline
+
+#!IMAGE ./rez/Av_Vladusca-plan.pdf
+
+#export map -projection extended -output ./rez/Av_Vladusca-xelev.pdf \
+#  -layout-map-header 0 110 sw -layout water-blue
+
+#!IMAGE ./rez/Av_Vladusca-xelev.pdf
+
+
+#!CLEAN ./rez/Av_Vladusca.lox ./rez/Av_Vladusca-plan.pdf ./rez/Av_Vladusca-xelev.pdf
+
+system ./rez/Av_Vladusca-extended_profile.pdf
+system ./rez/Av_Vladusca-plan.pdf

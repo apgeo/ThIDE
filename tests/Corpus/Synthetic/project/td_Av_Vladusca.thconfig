@@ -1,0 +1,15 @@
+# 2020.10.27 created by TopoDroid v 5.0.57
+
+source "./th/Av_Vladusca.th"
+
+layout topodroid
+  legend on
+  symbol-hide group centerline
+  symbol-show point station
+  debug station-names
+endlayout
+
+export map -layout topodroid -o Av_Vladusca-p.pdf -proj plan 
+
+export map -layout topodroid -o Av_Vladusca-s.pdf -proj extended 
+
