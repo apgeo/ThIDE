@@ -103,7 +103,10 @@ public sealed class ThParser
             }
 
             cursor++;
-            var node = ParseLine(line, lines, ref cursor, filePath, options, parentBlock: blockKeyword, diagnostics);
+            // Children see the surrounding context. For most blocks parentBlock == blockKeyword;
+            // a context-transparent `group` passes its enclosing context through instead.
+            var node = ParseLine(line, lines, ref cursor, filePath, options,
+                parentBlock: parentBlock ?? blockKeyword, diagnostics);
             if (node is not null) children.Add(node);
         }
 
@@ -137,6 +140,8 @@ public sealed class ThParser
         {
             "survey"                       => ParseSurvey(line, lines, ref cursor, filePath, options, diagnostics),
             "centreline" or "centerline"   => ParseCentreline(line, lines, ref cursor, filePath, options, diagnostics),
+            "group"                        => ParseGroup(line, lines, ref cursor, filePath, options, parentBlock, diagnostics),
+            "surface"                      => ParseSurface(line, lines, ref cursor, diagnostics, options),
             "map"                          => ParseMap(line, lines, ref cursor, diagnostics, options),
             "data"                         => ParseData(line, diagnostics),
             "flags"                        => ParseFlags(line),
@@ -282,6 +287,69 @@ public sealed class ThParser
         }
 
         return new MapCommand(SpanUnion(line.Span, lastSpan), id ?? string.Empty, opts, terminated);
+    }
+
+    /// <summary>
+    /// Parses a <c>group ... endgroup</c> block. The body inherits <paramref name="parentBlock"/>
+    /// (the enclosing context) so a group nested in a centreline still parses shot rows as data.
+    /// </summary>
+    private GroupCommand ParseGroup(
+        LogicalLine line,
+        ImmutableArray<LogicalLine> lines,
+        ref int cursor,
+        string filePath,
+        ParserOptions options,
+        string? parentBlock,
+        ImmutableArray<Diagnostic>.Builder diagnostics)
+    {
+        var inner = ParseBlockBody(lines, ref cursor, filePath, options,
+            blockTerminator: "endgroup", blockKeyword: "group", parentBlock: parentBlock, diagnostics);
+        var endSpan = inner.Length > 0 ? inner[^1].Span : line.Span;
+        return new GroupCommand(SpanUnion(line.Span, endSpan), inner, IsTerminated: true);
+    }
+
+    /// <summary>
+    /// Parses a <c>surface ... endsurface</c> block. The body (grid header + elevation values
+    /// or bitmaps) is consumed opaquely � it isn't command syntax and can be very large.
+    /// </summary>
+    private SurfaceCommand ParseSurface(
+        LogicalLine line,
+        ImmutableArray<LogicalLine> lines,
+        ref int cursor,
+        ImmutableArray<Diagnostic>.Builder diagnostics,
+        ParserOptions options)
+    {
+        var opts = JoinFrom(line, 1);
+        bool terminated = false;
+        var lastSpan = line.Span;
+        while (cursor < lines.Length)
+        {
+            var ln = lines[cursor];
+            if (!ln.IsEmpty &&
+                string.Equals(ln.Keyword, "endsurface", StringComparison.OrdinalIgnoreCase))
+            {
+                lastSpan = ln.Span;
+                cursor++;
+                terminated = true;
+                break;
+            }
+            if (!ln.IsEmpty) lastSpan = ln.Span;
+            cursor++;
+        }
+
+        if (!terminated)
+        {
+            var severity = options.Mode == ParserMode.Strict
+                ? DiagnosticSeverity.Error
+                : DiagnosticSeverity.Warning;
+            diagnostics.Add(Diagnostic.Create(
+                DiagnosticCodes.UnterminatedBlock,
+                severity,
+                "Block 'surface' is missing its 'endsurface' terminator.",
+                line.Span));
+        }
+
+        return new SurfaceCommand(SpanUnion(line.Span, lastSpan), opts, terminated);
     }
 
     private DataCommand ParseData(LogicalLine line, ImmutableArray<Diagnostic>.Builder diagnostics)

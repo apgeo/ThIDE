@@ -33,6 +33,26 @@ public sealed record CentrelineCommand(
     bool IsTerminated) : BlockCommand(Span, "centreline", Children, IsTerminated);
 
 /// <summary>
+/// <c>group ... endgroup</c> � a scoping block that groups settings/commands. It is
+/// context-transparent: its children are parsed with the surrounding block's context,
+/// so e.g. shot rows in a group inside a centreline are still recognized as data.
+/// </summary>
+public sealed record GroupCommand(
+    SourceSpan Span,
+    ImmutableArray<TherionNode> Children,
+    bool IsTerminated) : BlockCommand(Span, "group", Children, IsTerminated);
+
+/// <summary>
+/// <c>surface [-options] ... endsurface</c> � a terrain/DEM block (a <c>grid</c> header
+/// plus a list of elevation values, or bitmap references). The body is not Therion
+/// command syntax and can be huge, so the parser consumes it opaquely.
+/// </summary>
+public sealed record SurfaceCommand(
+    SourceSpan Span,
+    string OptionsRaw,
+    bool IsTerminated) : TherionCommand(Span, "surface");
+
+/// <summary>
 /// <c>data &lt;style&gt; &lt;field-list&gt;</c> declaration � defines the columns
 /// for subsequent <see cref="DataRow"/> entries.
 /// </summary>

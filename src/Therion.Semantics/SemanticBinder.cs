@@ -91,6 +91,11 @@ public sealed class SemanticBinder
                     // centreline body inherits the enclosing survey scope.
                     BindCentreline(cl, ctx, scope);
                     break;
+                case GroupCommand grp:
+                    // `group` is transparent: process its children in the current scope,
+                    // inheriting the active data-field definition (it may sit in a centreline).
+                    WalkChildren(grp.Children, ctx, scope, currentFields);
+                    break;
                 case StationFix fix:
                     BindFix(fix, ctx, scope);
                     break;

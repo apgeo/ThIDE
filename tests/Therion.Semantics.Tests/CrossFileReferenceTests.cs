@@ -151,6 +151,25 @@ public class CrossFileReferenceTests
     }
 
     [Fact]
+    public void Group_inside_centreline_binds_its_shots()
+    {
+        var parse = new ThParser().Parse("/p/a.th", """
+            survey s
+              centreline
+                group
+                  data normal from to length compass clino
+                  1 2 5 0 0
+                endgroup
+              endcentreline
+            endsurvey
+            """);
+        var model = new SemanticBinder().Bind(parse.Value!);
+
+        Assert.Contains(model.Stations.Keys, q => q.ToString() == "s.1");
+        Assert.Contains(model.Stations.Keys, q => q.ToString() == "s.2");
+    }
+
+    [Fact]
     public void Survey_and_map_titles_are_captured_for_the_object_tree()
     {
         var ws = Build(("/p/m.th", """
