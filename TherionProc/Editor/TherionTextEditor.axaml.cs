@@ -58,12 +58,16 @@ public partial class TherionTextEditor : UserControl
     /// <summary>Raised when a cross-file reference resolves to a span in a different file.</summary>
     public event EventHandler<SourceSpan>? NavigateToSpanRequested;
 
+    /// <summary>Raised when the caret moves, carrying its document span (for navigation history).</summary>
+    public event EventHandler<SourceSpan>? CaretMoved;
+
     private TextEditor? _editor;
     private TherionColorizer? _colorizer;
     private HyperlinkColorizer? _hyperlinkColorizer;
     private DiagnosticSquiggleRenderer? _squiggles;
     private DiagnosticOverviewRuler? _overviewRuler;
     private FlashHighlightRenderer? _flash;
+    private OccurrenceHighlightRenderer? _occurrences;
     private FoldingManager? _foldingManager;
     private CompletionWindow? _completionWindow;
     private Diagnostic? _hoverDiagnostic;
@@ -141,6 +145,11 @@ public partial class TherionTextEditor : UserControl
 
         _squiggles = new DiagnosticSquiggleRenderer(editor.TextArea.TextView);
         editor.TextArea.TextView.BackgroundRenderers.Add(_squiggles);
+
+        // Dim highlight of every occurrence of the identifier under the caret.
+        _occurrences = new OccurrenceHighlightRenderer(editor.TextArea.TextView);
+        editor.TextArea.TextView.BackgroundRenderers.Add(_occurrences);
+        editor.TextArea.Caret.PositionChanged += OnCaretPositionChanged;
 
         // Transient highlight painted on a navigation arrival, then faded out.
         _flash = new FlashHighlightRenderer(editor.TextArea.TextView);
@@ -579,10 +588,12 @@ public partial class TherionTextEditor : UserControl
         if (_editor is null || _squiggles is null) return;
         var view = _editor.TextArea.TextView;
 
-        // Hyperlink affordance: underline + hand cursor over a navigable file path.
-        UpdateHoverLink(view, e.GetPosition(view) + view.ScrollOffset);
-
         var visualPos = e.GetPosition(view) + view.ScrollOffset;
+
+        // Hyperlink affordance: underline + hand cursor over a navigable token (only
+        // when the pointer is genuinely over the glyphs, not anywhere on the line).
+        UpdateHoverLink(view, visualPos);
+
         var pos = view.GetPositionFloor(visualPos);
         if (pos is null) { ClearHover(); return; }
 
@@ -611,6 +622,56 @@ public partial class TherionTextEditor : UserControl
         ToolTip.SetIsOpen(_editor, false);
     }
 
+    // ----- occurrence highlight + caret reporting ------------------------
+
+    private void OnCaretPositionChanged(object? sender, EventArgs e)
+    {
+        if (_editor is null) return;
+
+        // Dim-highlight every occurrence of the identifier under the caret/selection (#10).
+        if (_occurrences?.SetWord(SelectedOrCaretWord()) == true)
+            _editor.TextArea.TextView.InvalidateVisual();
+
+        // Report the caret location for the navigation history (#1).
+        if (!string.IsNullOrEmpty(CurrentFilePath))
+        {
+            var loc = _editor.Document.GetLocation(_editor.CaretOffset);
+            CaretMoved?.Invoke(this, new SourceSpan(
+                CurrentFilePath!, new SourceLocation(loc.Line, loc.Column),
+                new SourceLocation(loc.Line, loc.Column), _editor.CaretOffset, 0));
+        }
+    }
+
+    /// <summary>The whole-word identifier to highlight: the selection if it is one, else the word at the caret.</summary>
+    private string? SelectedOrCaretWord()
+    {
+        if (_editor is null) return null;
+        if (_editor.SelectionLength > 0)
+        {
+            var sel = _editor.SelectedText;
+            return IsIdentifier(sel) ? sel : null;
+        }
+        var w = WordAt(_editor.Text, _editor.CaretOffset);
+        return w.Length >= 2 ? w : null;
+    }
+
+    private static bool IsIdentifier(string s)
+    {
+        if (s.Length < 2) return false;
+        foreach (var c in s) if (!IsWordChar(c)) return false;
+        return true;
+    }
+
+    // ----- view-state persistence (keep caret/scroll across tab switches, #11) -----
+
+    /// <summary>Restores a previously-saved caret offset and scrolls it into view.</summary>
+    public void RestoreCaret(int caret)
+    {
+        if (_editor is null || caret < 0 || caret > _editor.Document.TextLength) return;
+        _editor.CaretOffset = caret;
+        _editor.ScrollToLine(_editor.Document.GetLineByOffset(caret).LineNumber);
+    }
+
     private void OnEditorPointerExited(object? sender, PointerEventArgs e)
     {
         if (_editor is null) return;
@@ -627,12 +688,14 @@ public partial class TherionTextEditor : UserControl
     {
         if (_editor is null) return;
         var view = _editor.TextArea.TextView;
-        var loc = view.GetPosition(e.GetPosition(view) + view.ScrollOffset);
-        if (loc is null) return;
-        var off = _editor.Document.GetOffset(loc.Value.Location);
+        var visualPos = e.GetPosition(view) + view.ScrollOffset;
+        var hit = RefTokenUnderPointer(visualPos);
 
         bool leftButton = e.GetCurrentPoint(_editor).Properties.IsLeftButtonPressed;
         bool ctrl = (e.KeyModifiers & KeyModifiers.Control) != 0;
+
+        if (hit is null) return;
+        int off = hit.Value.Offset;
 
         // Click on a path hyperlink opens it (mirrors the hover affordance).
         if (leftButton && ResolvePathLinkAt(off) is { } link)
@@ -644,8 +707,7 @@ public partial class TherionTextEditor : UserControl
 
         // Plain left-click on an @-reference navigates (like a path hyperlink); the
         // '@' makes it unambiguously a reference, so this won't hijack normal edits.
-        if (leftButton && !ctrl &&
-            ExtractRefToken(_editor.Text, off) is { } reftok && reftok.Raw.Contains('@'))
+        if (leftButton && !ctrl && hit.Value.Raw.Contains('@'))
         {
             TryNavigateAt(off);
             e.Handled = true;
@@ -653,16 +715,14 @@ public partial class TherionTextEditor : UserControl
         }
 
         // Ctrl+click → go to definition / linked file (covers bare references too).
-        if (ctrl)
-            TryNavigateAt(off);
+        if (ctrl) TryNavigateAt(off);
     }
 
     private void UpdateHoverLink(TextView view, Point visualPos)
     {
         if (_editor is null || _hyperlinkColorizer is null) return;
-        var loc = view.GetPosition(visualPos);
         bool changed;
-        if (loc is { } l && HoverLinkAt(_editor.Document.GetOffset(l.Location)) is { } link)
+        if (HoverLinkAt(visualPos) is { } link)
         {
             changed = _hyperlinkColorizer.SetLink(link.Start, link.Length);
             view.Cursor = _handCursor;
@@ -675,14 +735,23 @@ public partial class TherionTextEditor : UserControl
         if (changed) view.Redraw();
     }
 
-    /// <summary>A navigable path link or an @-reference under <paramref name="offset"/> (drives the hover affordance).</summary>
-    private (int Start, int Length)? HoverLinkAt(int offset)
+    /// <summary>
+    /// The navigable sub-range under the pointer: a file path, or — for an
+    /// <c>a@b</c> reference — only the half the pointer is over (so it's clear which
+    /// part will be navigated, item #14). Returns null unless the token resolves.
+    /// </summary>
+    private (int Start, int Length)? HoverLinkAt(Point visualPos)
     {
-        if (ResolvePathLinkAt(offset) is { } link) return (link.Start, link.Length);
-        if (Navigation is not null && _editor is not null &&
-            ExtractRefToken(_editor.Text, offset) is { } tok && tok.Raw.Contains('@'))
-            return (tok.Start, tok.Length);
-        return null;
+        if (RefTokenUnderPointer(visualPos) is not { } hit) return null;
+        var tok = (hit.Start, hit.Length, hit.Raw);
+
+        // Path links (input/load/source/…) — but never the command keyword itself (#15).
+        if (ResolvePathLinkAt(hit.Offset) is { } link) return (link.Start, link.Length);
+
+        if (Navigation is null) return null;
+        var kind = ChooseReferenceKind(tok, hit.Offset);
+        if (!Navigation.CanNavigate(hit.Raw, kind)) return null;
+        return RefPartRange(tok, hit.Offset);
     }
 
     private void TryNavigateAt(int offset)
@@ -698,6 +767,43 @@ public partial class TherionTextEditor : UserControl
         if (span is null || span.Value.IsEmpty) return;
 
         NavigateToSpan(span.Value);
+    }
+
+    /// <summary>
+    /// The reference token under the pointer, but only when the pointer is actually over
+    /// the glyphs (not whitespace or virtual space past the line end) — items #12/#13.
+    /// </summary>
+    private (int Start, int Length, string Raw, int Offset)? RefTokenUnderPointer(Point visualPos)
+    {
+        if (_editor is null) return null;
+        var view = _editor.TextArea.TextView;
+        var loc = view.GetPositionFloor(visualPos);
+        if (loc is null) return null;
+        int off = _editor.Document.GetOffset(loc.Value.Location);
+        if (ExtractRefToken(_editor.Text, off) is not { } tok) return null;
+        if (!PointerWithinRange(view, tok.Start, tok.Start + tok.Length, visualPos.X)) return null;
+        return (tok.Start, tok.Length, tok.Raw, off);
+    }
+
+    /// <summary>True when the pointer X lies within the glyph range of [start, end) on its line.</summary>
+    private bool PointerWithinRange(TextView view, int startOffset, int endOffset, double x)
+    {
+        if (_editor is null) return false;
+        var doc = _editor.Document;
+        endOffset = Math.Min(endOffset, doc.TextLength);
+        var startX = view.GetVisualPosition(new TextViewPosition(doc.GetLocation(startOffset)), VisualYPosition.TextTop).X;
+        var endX = view.GetVisualPosition(new TextViewPosition(doc.GetLocation(endOffset)), VisualYPosition.TextTop).X;
+        return x >= startX - 1 && x <= endX + 1;
+    }
+
+    /// <summary>For an <c>a@b</c> token returns the half under the caret; otherwise the whole token.</summary>
+    private static (int Start, int Length) RefPartRange((int Start, int Length, string Raw) tok, int offset)
+    {
+        int at = tok.Raw.IndexOf('@');
+        if (at < 0) return (tok.Start, tok.Length);
+        return offset - tok.Start <= at
+            ? (tok.Start, at)                              // point half
+            : (tok.Start + at + 1, tok.Length - at - 1);  // survey half
     }
 
     /// <summary>Scrolls to a resolved span in this file, or routes to the shell for a different file.</summary>
@@ -720,11 +826,13 @@ public partial class TherionTextEditor : UserControl
         int at = tok.Raw.IndexOf('@');
         if (at >= 0 && caretOffset - tok.Start > at) return ReferenceKind.Survey;
 
+        // Point/bare half: the keyword narrows it; otherwise let the resolver try every
+        // kind (station first, then survey/map/scrap) so map scraps and .th2 stations work.
         return LineKeyword(tok.Start) switch
         {
             "select" => ReferenceKind.Map,
             "join"   => ReferenceKind.ScrapObject,
-            _        => ReferenceKind.Station,
+            _        => ReferenceKind.Any,
         };
     }
 
@@ -781,8 +889,13 @@ public partial class TherionTextEditor : UserControl
         if (raw.Length == 0) return null;
 
         var line = _editor.Document.GetLineByOffset(offset);
-        var keyword = FirstWordRaw(_editor.Document.GetText(line));
+        var lineText = _editor.Document.GetText(line);
+        var keyword = FirstWordRaw(lineText);
         if (!PathCommands.Contains(keyword)) return null;
+
+        // The keyword itself (e.g. "input") is not a link — only its path argument (#15).
+        int kwStart = line.Offset + (lineText.Length - lineText.TrimStart().Length);
+        if (offset < kwStart + keyword.Length) return null;
 
         var full = ComputeFullPath(raw);
         if (full is null) return null;
@@ -1023,5 +1136,59 @@ public partial class TherionTextEditor : UserControl
             if (builder.CreateGeometry() is { } geometry)
                 drawingContext.DrawGeometry(new SolidColorBrush(FlashColor, _opacity), null, geometry);
         }
+    }
+
+    /// <summary>
+    /// Dim background highlight of every whole-word occurrence of the identifier under
+    /// the caret, drawn across the visible region only (item #10).
+    /// </summary>
+    private sealed class OccurrenceHighlightRenderer : IBackgroundRenderer
+    {
+        private static readonly IBrush Fill = new SolidColorBrush(Color.FromArgb(0x38, 0x80, 0x80, 0x80));
+
+        private readonly TextView _view;
+        private string? _word;
+
+        public OccurrenceHighlightRenderer(TextView view) => _view = view;
+
+        public KnownLayer Layer => KnownLayer.Selection;
+
+        /// <summary>Sets the word to highlight; returns true when it changed (caller should redraw).</summary>
+        public bool SetWord(string? word)
+        {
+            word = string.IsNullOrEmpty(word) ? null : word;
+            if (string.Equals(word, _word, StringComparison.Ordinal)) return false;
+            _word = word;
+            return true;
+        }
+
+        public void Draw(TextView textView, DrawingContext drawingContext)
+        {
+            if (_word is null || textView.Document is not { } doc || textView.VisualLines.Count == 0) return;
+
+            int viewStart = textView.VisualLines[0].FirstDocumentLine.Offset;
+            int viewEnd = textView.VisualLines[^1].LastDocumentLine.EndOffset;
+            if (viewEnd <= viewStart) return;
+
+            var text = doc.GetText(viewStart, viewEnd - viewStart);
+            int idx = 0;
+            while ((idx = text.IndexOf(_word, idx, StringComparison.Ordinal)) >= 0)
+            {
+                int start = viewStart + idx;
+                int end = start + _word.Length;
+                if (IsWholeWord(doc, start, end))
+                {
+                    var builder = new BackgroundGeometryBuilder { CornerRadius = 2 };
+                    builder.AddSegment(textView, new TextSegment { StartOffset = start, Length = _word.Length });
+                    if (builder.CreateGeometry() is { } geometry)
+                        drawingContext.DrawGeometry(Fill, null, geometry);
+                }
+                idx += _word.Length;
+            }
+        }
+
+        private static bool IsWholeWord(TextDocument doc, int start, int end) =>
+            (start == 0 || !IsWordChar(doc.GetCharAt(start - 1))) &&
+            (end >= doc.TextLength || !IsWordChar(doc.GetCharAt(end)));
     }
 }
