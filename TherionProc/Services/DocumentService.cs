@@ -46,6 +46,8 @@ public interface IDocumentService
 
     Task OpenFileAsync(string absolutePath, CancellationToken ct = default);
     Task OpenFolderAsync(string folderPath, CancellationToken ct = default);
+    /// <summary>Opens the file a span lives in (if needed) and scrolls/flashes the editor to it.</summary>
+    Task NavigateToSpanAsync(Therion.Core.SourceSpan span, CancellationToken ct = default);
     Task WriteCurrentTextAsync(string newText, CancellationToken ct = default);
     void Close();
 }
@@ -95,6 +97,12 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
         var text = await File.ReadAllTextAsync(full, ct).ConfigureAwait(false);
         var doc = CreateDocument(full, text);
         Documents.Add(doc);
+
+        // Ensure a project workspace covers this file (auto-discovering its parent
+        // .thconfig when a lone .th/.th2 is opened), then light up cross-file nav.
+        await EnsureWorkspaceForAsync(full, ct).ConfigureAwait(false);
+        doc.SetWorkspace(Workspace);
+
         OpenInDockRequested?.Invoke(this, doc);
         SetActive(doc);
     }
@@ -102,19 +110,67 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
     public async Task OpenFolderAsync(string folderPath, CancellationToken ct = default)
     {
         var resolved = await _resolver.ResolveAsync(folderPath, ct).ConfigureAwait(false);
-        if (resolved.Selected is null) return;
+        if (resolved.Selected is null || !File.Exists(resolved.Selected)) return;
 
-        await DisposeWorkspaceAsync().ConfigureAwait(false);
+        // OpenFileAsync builds/reuses the workspace for the resolved entry point.
+        await OpenFileAsync(resolved.Selected, ct).ConfigureAwait(false);
+    }
 
-        _workspace = new TherionWorkspace();
-        await _workspace.LoadAsync(resolved.Selected, ct).ConfigureAwait(false);
-        Workspace = _workspace.BuildSemanticModel();
+    /// <summary>
+    /// Guarantees <see cref="Workspace"/> covers <paramref name="full"/>: reuses the
+    /// current workspace when it already does, otherwise auto-discovers the project
+    /// entry, loads it and rebuilds the cross-file semantic snapshot.
+    /// </summary>
+    private async Task EnsureWorkspaceForAsync(string full, CancellationToken ct)
+    {
+        if (_workspace is not null && Covers(_workspace, full)) return;
 
-        // Show the entry file as a document; per-file semantics live on the document.
-        if (File.Exists(resolved.Selected))
-            await OpenFileAsync(resolved.Selected, ct).ConfigureAwait(false);
+        string entry;
+        try { entry = await Task.Run(() => ProjectEntryDiscovery.FindEntryPoint(full), ct).ConfigureAwait(false); }
+        catch { entry = full; }
+
+        var ws = new TherionWorkspace();
+        try { await ws.LoadAsync(entry, ct).ConfigureAwait(false); }
+        catch { await ws.DisposeAsync().ConfigureAwait(false); return; }
+
+        var model = ws.BuildSemanticModel();
+        var old = _workspace;
+        _workspace = ws;
+        Workspace = model;
+        if (old is not null) await old.DisposeAsync().ConfigureAwait(false);
+
+        PropagateWorkspaceToDocuments();
+        Raise();
+    }
+
+    private static bool Covers(TherionWorkspace ws, string full)
+    {
+        foreach (var p in ws.LoadedFiles)
+            if (string.Equals(p, full, StringComparison.OrdinalIgnoreCase)) return true;
+        return false;
+    }
+
+    private void PropagateWorkspaceToDocuments()
+    {
+        foreach (var d in Documents) d.SetWorkspace(Workspace);
+    }
+
+    public async Task NavigateToSpanAsync(Therion.Core.SourceSpan span, CancellationToken ct = default)
+    {
+        if (span.IsEmpty || string.IsNullOrEmpty(span.FilePath)) return;
+
+        var target = FindOpen(span.FilePath);
+        if (target is null)
+        {
+            await OpenFileAsync(span.FilePath, ct).ConfigureAwait(true);
+            target = FindOpen(span.FilePath);
+        }
         else
-            Raise();
+        {
+            OpenInDockRequested?.Invoke(this, target);
+            SetActive(target);
+        }
+        target?.RequestScrollTo(span);
     }
 
     public FileDocumentViewModel OpenTextDocument(string displayPath, string text)
@@ -174,8 +230,13 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
 
     private void OnClosed(FileDocumentViewModel doc)
     {
-        if (Documents.Remove(doc) && ReferenceEquals(Active, doc))
-            SetActive(Documents.LastOrDefault());
+        bool removed = Documents.Remove(doc);
+        if (removed)
+        {
+            doc.Dispose(); // stop its debounced re-parse timer
+            if (ReferenceEquals(Active, doc))
+                SetActive(Documents.LastOrDefault());
+        }
     }
 
     private void Raise() => DocumentChanged?.Invoke(this, EventArgs.Empty);

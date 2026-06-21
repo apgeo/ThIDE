@@ -43,6 +43,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly IDocumentService _documents;
     private readonly IModelEditService? _editService;
     private readonly ILayoutService? _layout;
+    private readonly IAppSettingsService? _settings;
     private readonly DockFactory _factory;
     private IStoragePicker? _picker;
 
@@ -104,13 +105,15 @@ public partial class MainWindowViewModel : ViewModelBase
         XviToolViewModel xviTool,
         SettingsToolViewModel settingsTool,
         IModelEditService? editService = null,
-        ILayoutService? layout = null)
+        ILayoutService? layout = null,
+        IAppSettingsService? settings = null)
     {
         _l = localizer;
         _language = language;
         _documents = documents;
         _editService = editService;
         _layout = layout;
+        _settings = settings;
         _factory = factory;
 
         WorkspaceTool = workspaceTool;
@@ -154,7 +157,7 @@ public partial class MainWindowViewModel : ViewModelBase
         Build.NavigateRequested += (_, span) => NavigateTo(span);
 
         Refresh();
-        _documents.OpenTextDocument("(sample).th", SampleText);
+        RestoreSessionOrSample();
     }
 
     public MainWindowViewModel() : this(
@@ -184,6 +187,40 @@ public partial class MainWindowViewModel : ViewModelBase
 
     /// <summary>Wires the storage picker once the View is attached to a TopLevel.</summary>
     public void AttachStoragePicker(IStoragePicker picker) => _picker = picker;
+
+    /// <summary>Reopens last session's files (when enabled), else shows the sample document.</summary>
+    private void RestoreSessionOrSample()
+    {
+        var s = _settings?.Current;
+        var files = s is { RestoreSessionOnStartup: true } ? s.LastSessionFiles : Array.Empty<string>();
+        _ = RestoreSessionAsync(files);
+    }
+
+    private async Task RestoreSessionAsync(System.Collections.Generic.IReadOnlyList<string> files)
+    {
+        bool opened = false;
+        foreach (var path in files)
+        {
+            if (!System.IO.File.Exists(path)) continue;
+            try { await _documents.OpenFileAsync(path).ConfigureAwait(true); opened = true; }
+            catch { /* skip files that fail to open */ }
+        }
+        if (!opened) _documents.OpenTextDocument("(sample).th", SampleText);
+    }
+
+    /// <summary>Records the currently-open (on-disk) files so they can be restored next launch.</summary>
+    public void PersistSession()
+    {
+        if (_settings is null) return;
+        var paths = new System.Collections.Generic.List<string>();
+        foreach (var doc in _documents.Documents)
+        {
+            if (!string.IsNullOrEmpty(doc.FilePath) && System.IO.File.Exists(doc.FilePath))
+                paths.Add(doc.FilePath);
+        }
+        try { _settings.Save(_settings.Current with { LastSessionFiles = paths }); }
+        catch { /* best-effort */ }
+    }
 
     [RelayCommand]
     private async Task OpenFileAsync()
@@ -242,17 +279,8 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void NavigateTo(Therion.Core.SourceSpan span)
     {
-        // Activate the document the span lives in (open it if needed), then scroll.
-        foreach (var doc in _documents.Documents)
-        {
-            if (string.Equals(doc.FilePath, span.FilePath, StringComparison.OrdinalIgnoreCase))
-            {
-                _factory.OpenDocument(doc);
-                doc.RequestScrollTo(span);
-                return;
-            }
-        }
-        _documents.Active?.RequestScrollTo(span);
+        // Open the document the span lives in (if needed), activate it, then scroll/flash.
+        _ = _documents.NavigateToSpanAsync(span);
     }
 
     private async Task ApplyShotEditAsync(ShotEditEventArgs e)

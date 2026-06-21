@@ -20,16 +20,23 @@ public sealed record ParsedDocument(
 
 public static class DocumentParser
 {
-    public static ParsedDocument Parse(string filePath, string text, ICommandRegistry? commands = null)
+    /// <summary>Parses a file's text into an AST, dispatching on its extension.</summary>
+    public static ParseResult<TherionFile> ParseByExtension(
+        string filePath, string text, ICommandRegistry? commands = null)
     {
         var ext = Path.GetExtension(filePath).ToLowerInvariant();
-        ParseResult<TherionFile> parsed = ext switch
+        return ext switch
         {
             ".th2"      => new Th2Parser().Parse(filePath, text),
             ".thconfig" => new ThconfigParser().Parse(filePath, text),
             ".thc"      => new ThconfigParser().Parse(filePath, text),
             _           => new ThParser(commands).Parse(filePath, text),
         };
+    }
+
+    public static ParsedDocument Parse(string filePath, string text, ICommandRegistry? commands = null)
+    {
+        var parsed = ParseByExtension(filePath, text, commands);
 
         var semantics = parsed.Value is null ? null : new SemanticBinder().Bind(parsed.Value);
         var navigation = semantics is null ? null : new SymbolNavigationService(semantics);
