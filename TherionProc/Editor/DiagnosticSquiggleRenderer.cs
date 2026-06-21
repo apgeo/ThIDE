@@ -1,4 +1,4 @@
-// Implementation Plan §7.3 / D5 — diagnostic squiggle adornments in the editor.
+// Implementation Plan ï¿½7.3 / D5 ï¿½ diagnostic squiggle adornments in the editor.
 // IBackgroundRenderer that paints rustc-style wavy underlines for each diagnostic
 // whose SourceSpan falls inside the bound document.
 
@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using Avalonia;
 using Avalonia.Media;
+using AvaloniaEdit.Document;
 using AvaloniaEdit.Rendering;
 using Therion.Core;
 
@@ -20,6 +21,23 @@ internal sealed class DiagnosticSquiggleRenderer : IBackgroundRenderer
     public DiagnosticSquiggleRenderer(TextView view) => _view = view;
 
     public KnownLayer Layer => KnownLayer.Selection;
+
+    /// <summary>Diagnostics currently bound (for the overview ruler).</summary>
+    public IReadOnlyList<Diagnostic> Diagnostics => _diagnostics;
+
+    /// <summary>The diagnostic whose span contains <paramref name="offset"/>, if any (for hover tooltips).</summary>
+    public Diagnostic? GetDiagnosticAt(int offset)
+    {
+        var doc = _view.Document;
+        if (doc is null) return null;
+        foreach (var d in _diagnostics)
+        {
+            if (d.Span.IsEmpty || !MatchesCurrentFile(d.Span)) continue;
+            if (!TryGetRange(doc, d, out var start, out var end)) continue;
+            if (offset >= start && offset <= end) return d;
+        }
+        return null;
+    }
 
     public void SetFilePath(string? path)
     {
@@ -39,22 +57,8 @@ internal sealed class DiagnosticSquiggleRenderer : IBackgroundRenderer
 
         foreach (var d in _diagnostics)
         {
-            if (d.Span.IsEmpty) continue;
-            if (!MatchesCurrentFile(d.Span)) continue;
-
-            var line = d.Span.Start.Line;
-            var col = Math.Max(1, d.Span.Start.Column);
-            if (line < 1 || line > textView.Document.LineCount) continue;
-
-            int startOffset, endOffset;
-            try
-            {
-                startOffset = textView.Document.GetOffset(line, col);
-                var length = Math.Max(1, d.Span.Length);
-                endOffset = Math.Min(startOffset + length, textView.Document.TextLength);
-            }
-            catch { continue; }
-            if (endOffset <= startOffset) continue;
+            if (d.Span.IsEmpty || !MatchesCurrentFile(d.Span)) continue;
+            if (!TryGetRange(textView.Document, d, out var startOffset, out var endOffset)) continue;
 
             var segment = new TextSegmentLike(startOffset, endOffset - startOffset);
             foreach (var rect in BackgroundGeometryBuilder.GetRectsForSegment(textView, segment))
@@ -62,6 +66,21 @@ internal sealed class DiagnosticSquiggleRenderer : IBackgroundRenderer
                 DrawWavyLine(drawingContext, rect, ColorFor(d.Severity));
             }
         }
+    }
+
+    private static bool TryGetRange(TextDocument document, Diagnostic d, out int start, out int end)
+    {
+        start = end = 0;
+        var line = d.Span.Start.Line;
+        var col = Math.Max(1, d.Span.Start.Column);
+        if (line < 1 || line > document.LineCount) return false;
+        try
+        {
+            start = document.GetOffset(line, col);
+            end = Math.Min(start + Math.Max(1, d.Span.Length), document.TextLength);
+        }
+        catch { return false; }
+        return end > start;
     }
 
     private bool MatchesCurrentFile(SourceSpan span)

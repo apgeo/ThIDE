@@ -2,8 +2,12 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ae="https://github.com/avaloniaui/avaloniaedit"
              x:Class="TherionProc.Editor.TherionTextEditor">
-    <ae:TextEditor x:Name="Editor"
-                   ShowLineNumbers="True"
-                   FontFamily="Cascadia Mono,Consolas,Menlo,monospace"
-                   FontSize="13" />
+    <Grid x:Name="Root" ColumnDefinitions="*,Auto">
+        <ae:TextEditor x:Name="Editor"
+                       Grid.Column="0"
+                       ShowLineNumbers="True"
+                       FontFamily="Cascadia Mono,Consolas,Menlo,monospace"
+                       FontSize="13" />
+        <!-- Diagnostic overview ruler is injected into column 1 from code-behind. -->
+    </Grid>
 </UserControl>
