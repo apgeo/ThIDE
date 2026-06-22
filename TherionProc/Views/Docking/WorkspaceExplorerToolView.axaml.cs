@@ -82,21 +82,21 @@ public partial class WorkspaceExplorerToolView : UserControl
 
     private WorkspaceTreeNode? Ctx() => _ctxNode ?? Explorer?.Selected;
 
-    // Only show the menu on real filesystem nodes. Adapt per platform: hide Windows-only
-    // shell verbs off-Windows, and label "Delete" with what it actually does on this OS
-    // (Recycle Bin / Trash / permanent) via the cross-platform IFileOperations service.
+    // Only show the menu on real filesystem nodes. Adapt per platform via the abstractions
+    // (no raw OS checks here): show the native-shell entry only where supported, and label
+    // "Delete" with what it actually does on this OS (Recycle Bin / Trash / permanent).
     private void OnContextMenuOpening(object? sender, CancelEventArgs e)
     {
         if (Ctx()?.FullPath is null) { e.Cancel = true; return; }
 
-        bool windows = OperatingSystem.IsWindows();
         var fileOps = Service<IFileOperations>();
+        var nativeMenu = Service<INativeContextMenuService>();
         if (sender is ContextMenu menu)
             foreach (var item in menu.Items)
                 if (item is MenuItem mi)
                     switch (mi.Tag as string)
                     {
-                        case "winonly": mi.IsVisible = windows; break;
+                        case "nativemenu": mi.IsVisible = nativeMenu?.IsSupported ?? false; break;
                         case "delete" when fileOps is not null: mi.Header = fileOps.DeleteActionLabel; break;
                     }
     }
@@ -157,11 +157,10 @@ public partial class WorkspaceExplorerToolView : UserControl
 
     private void OnCtxShellMenu(object? sender, RoutedEventArgs e)
     {
-        if (!OperatingSystem.IsWindows()) return;
         if (Ctx()?.FullPath is not { } path) return;
+        // Delegate to the platform service; the interop lives in WindowsNativeContextMenuService.
         var hwnd = TopLevel.GetTopLevel(this)?.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
-        if (hwnd == IntPtr.Zero) return;
-        try { WindowsShellContextMenu.Show(hwnd, path); } catch { /* best-effort */ }
+        Service<INativeContextMenuService>()?.TryShow(hwnd, path);
     }
 
     // ----- helpers ------------------------------------------------------------

@@ -92,6 +92,10 @@ internal static class AppServices
         // the Windows or Unix implementation, isolating per-OS code from the views.
         services.AddSingleton<IFileOperations>(_ => FileOperationsFactory.Create());
 
+        // Native OS shell context menu (Windows only today; no-op elsewhere) — keeps the
+        // shell32 interop out of the views and lets the UI hide the entry where unsupported.
+        services.AddSingleton<INativeContextMenuService>(_ => NativeContextMenuServiceFactory.Create());
+
         // Active-document host (�7.3).
         services.AddSingleton<IDocumentService, DocumentService>();
 

@@ -98,7 +98,8 @@
                                 <MenuItem Header="Copy Relative Path" Click="OnCtxCopyRel" />
                                 <Separator />
                                 <MenuItem Header="Refresh" Click="OnCtxRefresh" />
-                                <MenuItem Header="More options (Windows shell)…" Tag="winonly" Click="OnCtxShellMenu" />
+                                <!-- Visible only where a native shell menu exists (INativeContextMenuService). -->
+                                <MenuItem Header="More options (Windows shell)…" Tag="nativemenu" Click="OnCtxShellMenu" />
                             </ContextMenu>
                         </Border.ContextMenu>
                         <ToolTip.Tip>
