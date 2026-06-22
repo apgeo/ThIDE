@@ -11,6 +11,13 @@ using System.Text.Json;
 
 namespace TherionProc.Services;
 
+/// <summary>Workspace-panel presentation: relational object graph vs. plain file explorer.</summary>
+public enum WorkspaceViewMode
+{
+    Relational = 0,
+    FileExplorer = 1,
+}
+
 public sealed record AppSettings
 {
     // ---- session ----
@@ -18,6 +25,23 @@ public sealed record AppSettings
     public bool RestoreSessionOnStartup { get; init; } = true;
     /// <summary>Absolute paths of files open at last shutdown (most-recent active last).</summary>
     public IReadOnlyList<string> LastSessionFiles { get; init; } = Array.Empty<string>();
+
+    // ---- workspace session (single root + single active thconfig) ----
+    /// <summary>Root directory of the workspace at last shutdown (restored on launch, #9).</summary>
+    public string? LastWorkspaceRoot { get; init; }
+    /// <summary>Active thconfig path at last shutdown (restored on launch, #9).</summary>
+    public string? LastActiveThconfig { get; init; }
+    /// <summary>
+    /// Last active thconfig chosen per workspace-root directory (full root path → full
+    /// thconfig path). When a root is reopened, its remembered thconfig is reactivated
+    /// instead of auto-picking one (task 1).
+    /// </summary>
+    public IReadOnlyDictionary<string, string> LastThconfigByRoot { get; init; } =
+        new Dictionary<string, string>();
+    /// <summary>Reload an open editor when its file changes on disk (clean files only; #6).</summary>
+    public bool AutoReloadExternalChanges { get; init; } = true;
+    /// <summary>Rebuild the object graph when a tracked file changes on disk (#5b).</summary>
+    public bool AutoReloadGraphOnExternalChange { get; init; } = true;
 
     // ---- editor preferences ----
     public double EditorFontSize { get; init; } = 13;
@@ -31,6 +55,10 @@ public sealed record AppSettings
     public bool WorkspaceShowObjectModel { get; init; } = true;
     public bool WorkspaceRevealOnHover { get; init; }
     public bool WorkspaceRevealOnTabSwitch { get; init; }
+    /// <summary>Relational (object graph) vs. file-explorer view (#5).</summary>
+    public WorkspaceViewMode WorkspaceViewMode { get; init; } = WorkspaceViewMode.Relational;
+    /// <summary>Show file nodes in the relational view; when off, only logical objects (#5a).</summary>
+    public bool WorkspaceShowFilesInModel { get; init; } = true;
 
     public static AppSettings Default { get; } = new();
 }

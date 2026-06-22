@@ -28,6 +28,14 @@
         <CheckBox Content="Highlight current line" IsChecked="{Binding HighlightCurrentLine}" />
         <CheckBox Content="Convert tabs to spaces" IsChecked="{Binding ConvertTabsToSpaces}" />
 
+        <Separator Margin="0,4" />
+
+        <TextBlock Text="Workspace" FontWeight="Bold" />
+        <CheckBox Content="Reload open files changed outside the editor"
+                  IsChecked="{Binding AutoReloadExternalChanges}" />
+        <CheckBox Content="Update the object graph when files change on disk"
+                  IsChecked="{Binding AutoReloadGraphOnExternalChange}" />
+
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,10,0,0">
             <Button Content="Cancel" Click="OnCancel" MinWidth="80" />
             <Button Content="OK" Click="OnOk" IsDefault="True" MinWidth="80" />

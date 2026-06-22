@@ -17,6 +17,8 @@ public partial class PreferencesViewModel : ObservableObject
     [ObservableProperty] private bool _showLineNumbers;
     [ObservableProperty] private bool _highlightCurrentLine;
     [ObservableProperty] private bool _convertTabsToSpaces;
+    [ObservableProperty] private bool _autoReloadExternalChanges;
+    [ObservableProperty] private bool _autoReloadGraphOnExternalChange;
 
     public PreferencesViewModel(IAppSettingsService settings)
     {
@@ -28,6 +30,8 @@ public partial class PreferencesViewModel : ObservableObject
         _showLineNumbers = s.ShowLineNumbers;
         _highlightCurrentLine = s.HighlightCurrentLine;
         _convertTabsToSpaces = s.ConvertTabsToSpaces;
+        _autoReloadExternalChanges = s.AutoReloadExternalChanges;
+        _autoReloadGraphOnExternalChange = s.AutoReloadGraphOnExternalChange;
     }
 
     public PreferencesViewModel() : this(new AppSettingsService()) { } // design-time
@@ -43,6 +47,8 @@ public partial class PreferencesViewModel : ObservableObject
             ShowLineNumbers = ShowLineNumbers,
             HighlightCurrentLine = HighlightCurrentLine,
             ConvertTabsToSpaces = ConvertTabsToSpaces,
+            AutoReloadExternalChanges = AutoReloadExternalChanges,
+            AutoReloadGraphOnExternalChange = AutoReloadGraphOnExternalChange,
         });
     }
 }
