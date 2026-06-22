@@ -36,7 +36,11 @@ public partial class MainWindow : Window
 
         Closing += (_, _) =>
         {
-            if (DataContext is MainWindowViewModel vm) vm.PersistSession();
+            if (DataContext is MainWindowViewModel vm)
+            {
+                vm.PersistSession();
+                vm.Factory.SaveLayout(); // persist dock/float arrangement (#10)
+            }
             SaveLayout();
         };
 
