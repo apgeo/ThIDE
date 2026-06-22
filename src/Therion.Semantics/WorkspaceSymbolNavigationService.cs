@@ -116,13 +116,29 @@ public sealed class WorkspaceSymbolNavigationService : ISymbolNavigationService
 
     private SourceSpan? ResolveBareStationByName(string point)
     {
-        if (!_workspace.StationsByLastName.TryGetValue(point, out var list) || list.IsEmpty)
-            return null;
-        if (_activeFilePath is { } path)
-            foreach (var st in list)
-                if (string.Equals(st.DeclarationSpan.FilePath, path, System.StringComparison.OrdinalIgnoreCase))
-                    return st.DeclarationSpan;
-        return list[0].DeclarationSpan;
+        if (_workspace.StationsByLastName.TryGetValue(point, out var list) && !list.IsEmpty)
+        {
+            if (_activeFilePath is { } path)
+                foreach (var st in list)
+                    if (string.Equals(st.DeclarationSpan.FilePath, path, System.StringComparison.OrdinalIgnoreCase))
+                        return st.DeclarationSpan;
+            return list[0].DeclarationSpan;
+        }
+        // Workspace index only covers saved content; scan the active-file's fresh parse
+        // for stations whose bare (last-component) name matches — catches newly-typed
+        // unsaved identifiers that the workspace hasn't seen yet (#4).
+        if (_activeFile is not null)
+        {
+            foreach (var kvp in _activeFile.Stations)
+            {
+                var qn = kvp.Key.ToString();
+                int dot = qn.LastIndexOf('.');
+                var lastName = dot >= 0 ? qn[(dot + 1)..] : qn;
+                if (string.Equals(lastName, point, System.StringComparison.OrdinalIgnoreCase))
+                    return kvp.Value.DeclarationSpan;
+            }
+        }
+        return null;
     }
 
     public SourceSpan? GoToDefinition(string qualifiedName)
