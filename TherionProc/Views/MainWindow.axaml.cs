@@ -71,7 +71,35 @@ public partial class MainWindow : Window
                 (DataContext as MainWindowViewModel)?.GoForwardCommand.Execute(null);
                 e.Handled = true;
                 break;
+            case Key.S when e.KeyModifiers == KeyModifiers.Control:
+                (DataContext as MainWindowViewModel)?.SaveCommand.Execute(null);
+                e.Handled = true;
+                break;
+            case Key.F when e.KeyModifiers == (KeyModifiers.Control | KeyModifiers.Shift):
+                ShowSearch();
+                e.Handled = true;
+                break;
         }
+    }
+
+    // ----- global search window (#3) -------------------------------------
+
+    private SearchWindow? _searchWindow;
+
+    private void OnSearchClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ShowSearch();
+
+    private void ShowSearch()
+    {
+        if (_searchWindow is { } w && w.IsVisible) { w.Activate(); return; }
+
+        ViewModels.SearchViewModel? vm = null;
+        try { vm = AppServices.Provider.GetService<ViewModels.SearchViewModel>(); }
+        catch { /* design-time / no container */ }
+        if (vm is null) return;
+
+        _searchWindow = new SearchWindow { DataContext = vm };
+        _searchWindow.Closed += (_, _) => _searchWindow = null;
+        _searchWindow.Show(this);
     }
 
     // ----- drag-and-drop open (#17) --------------------------------------

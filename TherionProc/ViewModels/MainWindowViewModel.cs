@@ -272,6 +272,18 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand] private void ToggleWorkspaceExplorer() => Activate(WorkspaceTool);
     [RelayCommand] private void ToggleDiagnostics()       => Activate(DiagnosticsTool);
 
+    [RelayCommand]
+    private async Task Save()
+    {
+        if (_documents.Active is not { } doc) return;
+        try
+        {
+            await _documents.WriteCurrentTextAsync(doc.DocumentText).ConfigureAwait(true);
+            StatusText = $"Saved {doc.FilePath}";
+        }
+        catch (Exception ex) { StatusText = ex.Message; }
+    }
+
     // ---- navigation history (back/forward across files, #1) ----
     [RelayCommand(CanExecute = nameof(CanGoBack))]
     private Task GoBack() => _documents.GoBackAsync();

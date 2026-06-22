@@ -102,6 +102,7 @@ internal static class AppServices
         services.AddSingleton<XviReferencesViewModel>();
         services.AddSingleton<SettingsViewModel>();
         services.AddSingleton<KeyboardShortcutsViewModel>();
+        services.AddSingleton<SearchViewModel>();
 
         // Dock tool wrappers + the VS-classic layout factory.
         services.AddSingleton<ViewModels.Docking.WorkspaceExplorerToolViewModel>();

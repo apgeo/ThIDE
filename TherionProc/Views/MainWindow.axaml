@@ -22,9 +22,12 @@
             <Setter Property="Width" Value="34" />
             <Setter Property="Height" Value="30" />
             <Setter Property="Padding" Value="0" />
-            <Setter Property="FontSize" Value="16" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.tool > PathIcon">
+            <Setter Property="Width" Value="17" />
+            <Setter Property="Height" Value="17" />
         </Style>
     </Window.Styles>
 
@@ -66,23 +69,39 @@
         <!-- Icon toolbar: navigation history, build/cancel, 3D viewers, full screen. -->
         <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="6,3">
             <StackPanel Orientation="Horizontal" Spacing="3">
-                <Button Classes="tool" Content="&#x2190;" Command="{Binding GoBackCommand}"
-                        ToolTip.Tip="Back (Alt+Left)" />
-                <Button Classes="tool" Content="&#x2192;" Command="{Binding GoForwardCommand}"
-                        ToolTip.Tip="Forward (Alt+Right)" />
+                <Button Classes="tool" Command="{Binding GoBackCommand}" ToolTip.Tip="Back (Alt+Left)">
+                    <PathIcon Data="{DynamicResource Icon.Back}" />
+                </Button>
+                <Button Classes="tool" Command="{Binding GoForwardCommand}" ToolTip.Tip="Forward (Alt+Right)">
+                    <PathIcon Data="{DynamicResource Icon.Forward}" />
+                </Button>
                 <Separator Width="1" Margin="4,2" Background="Gray" />
-                <Button Classes="tool" Content="&#x25B6;" Foreground="#2E7D32"
-                        Command="{Binding Build.BuildCommand}" ToolTip.Tip="Build (F5)" />
-                <Button Classes="tool" Content="&#x25A0;" Foreground="#C62828"
-                        Command="{Binding Build.CancelCommand}" ToolTip.Tip="Cancel build (Shift+F5)" />
+                <Button Classes="tool" Command="{Binding SaveCommand}" ToolTip.Tip="Save (Ctrl+S)">
+                    <PathIcon Data="{DynamicResource Icon.Save}" />
+                </Button>
+                <Button Classes="tool" Click="OnSearchClick" ToolTip.Tip="Find in Files (Ctrl+Shift+F)">
+                    <PathIcon Data="{DynamicResource Icon.Search}" />
+                </Button>
                 <Separator Width="1" Margin="4,2" Background="Gray" />
-                <Button Classes="tool" Content="&#x25F0;" Command="{Binding Build.OpenInLochCommand}"
-                        IsEnabled="{Binding Build.HasLoxArtifact}" ToolTip.Tip="Open in Loch (F9)" />
-                <Button Classes="tool" Content="&#x25F3;" Command="{Binding Build.OpenInAvenCommand}"
-                        IsEnabled="{Binding Build.HasAvenArtifact}" ToolTip.Tip="Open in Aven (F10)" />
+                <Button Classes="tool" Command="{Binding Build.BuildCommand}" ToolTip.Tip="Build (F5)">
+                    <PathIcon Data="{DynamicResource Icon.Build}" Foreground="#2E7D32" />
+                </Button>
+                <Button Classes="tool" Command="{Binding Build.CancelCommand}" ToolTip.Tip="Cancel build (Shift+F5)">
+                    <PathIcon Data="{DynamicResource Icon.Stop}" Foreground="#C62828" />
+                </Button>
                 <Separator Width="1" Margin="4,2" Background="Gray" />
-                <Button Classes="tool" Content="&#x26F6;" Click="OnToggleFullScreen"
-                        ToolTip.Tip="Full screen (F11)" />
+                <Button Classes="tool" Command="{Binding Build.OpenInLochCommand}"
+                        IsEnabled="{Binding Build.HasLoxArtifact}" ToolTip.Tip="Open in Loch (F9)">
+                    <PathIcon Data="{DynamicResource Icon.Cube}" />
+                </Button>
+                <Button Classes="tool" Command="{Binding Build.OpenInAvenCommand}"
+                        IsEnabled="{Binding Build.HasAvenArtifact}" ToolTip.Tip="Open in Aven (F10)">
+                    <PathIcon Data="{DynamicResource Icon.Eye}" />
+                </Button>
+                <Separator Width="1" Margin="4,2" Background="Gray" />
+                <Button Classes="tool" Click="OnToggleFullScreen" ToolTip.Tip="Full screen (F11)">
+                    <PathIcon Data="{DynamicResource Icon.FullScreen}" />
+                </Button>
                 <TextBlock VerticalAlignment="Center" Margin="12,0,0,0"
                            Text="{Binding Build.Status}" Foreground="Gray" />
             </StackPanel>
