@@ -1,4 +1,4 @@
-// Implementation Plan §4.5 / §6 — debounced FileSystemWatcher.
+// Implementation Plan ï¿½4.5 / ï¿½6 ï¿½ debounced FileSystemWatcher.
 
 using System.Collections.Concurrent;
 
@@ -27,7 +27,7 @@ public sealed class DebouncedFileWatcher : IDisposable
             TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(50));
     }
 
-    public void Watch(string directory)
+    public void Watch(string directory, bool includeSubdirectories = false)
     {
         if (!Directory.Exists(directory)) return;
         var full = Path.GetFullPath(directory);
@@ -35,7 +35,7 @@ public sealed class DebouncedFileWatcher : IDisposable
 
         var w = new FileSystemWatcher(full)
         {
-            IncludeSubdirectories = false,
+            IncludeSubdirectories = includeSubdirectories,
             NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.Size,
             EnableRaisingEvents = true,
         };
@@ -61,7 +61,7 @@ public sealed class DebouncedFileWatcher : IDisposable
             if (_pending.TryRemove(kv))
             {
                 try { FileChanged?.Invoke(kv.Key); }
-                catch { /* swallow — never let observer kill the timer */ }
+                catch { /* swallow ï¿½ never let observer kill the timer */ }
             }
         }
     }
