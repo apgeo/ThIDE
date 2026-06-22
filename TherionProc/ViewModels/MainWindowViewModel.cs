@@ -44,6 +44,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly IModelEditService? _editService;
     private readonly ILayoutService? _layout;
     private readonly IAppSettingsService? _settings;
+    private readonly IWorkspaceSession? _session;
     private readonly DockFactory _factory;
     private IStoragePicker? _picker;
 
@@ -113,7 +114,8 @@ public partial class MainWindowViewModel : ViewModelBase
         SettingsToolViewModel settingsTool,
         IModelEditService? editService = null,
         ILayoutService? layout = null,
-        IAppSettingsService? settings = null)
+        IAppSettingsService? settings = null,
+        IWorkspaceSession? session = null)
     {
         _l = localizer;
         _language = language;
@@ -121,6 +123,7 @@ public partial class MainWindowViewModel : ViewModelBase
         _editService = editService;
         _layout = layout;
         _settings = settings;
+        _session = session;
         _wordWrap = settings?.Current.EditorWordWrap ?? false; // seed without persisting
         _factory = factory;
 
@@ -150,6 +153,11 @@ public partial class MainWindowViewModel : ViewModelBase
         };
 
         _language.LanguageChanged += (_, _) => Refresh();
+        if (_session is not null)
+        {
+            _session.Changed += (_, _) => OnUiThread(Refresh);          // active config / graph (#7)
+            _session.CandidatesChanged += (_, _) => OnUiThread(Refresh);
+        }
         _documents.DocumentChanged += (_, _) => RefreshActiveTools();
         _documents.HistoryChanged += (_, _) => OnUiThread(() =>
         {
@@ -202,16 +210,25 @@ public partial class MainWindowViewModel : ViewModelBase
     /// <summary>Wires the storage picker once the View is attached to a TopLevel.</summary>
     public void AttachStoragePicker(IStoragePicker picker) => _picker = picker;
 
-    /// <summary>Reopens last session's files (when enabled), else shows the sample document.</summary>
-    private void RestoreSessionOrSample()
-    {
-        var s = _settings?.Current;
-        var files = s is { RestoreSessionOnStartup: true } ? s.LastSessionFiles : Array.Empty<string>();
-        _ = RestoreSessionAsync(files);
-    }
+    /// <summary>Restores the workspace root + active thconfig (#9) and last session's files.</summary>
+    private void RestoreSessionOrSample() => _ = RestoreSessionAsync(_settings?.Current);
 
-    private async Task RestoreSessionAsync(System.Collections.Generic.IReadOnlyList<string> files)
+    private async Task RestoreSessionAsync(AppSettings? s)
     {
+        // Re-establish the single-root workspace from last shutdown (#9).
+        if (_session is not null && s is not null)
+        {
+            try
+            {
+                if (!string.IsNullOrEmpty(s.LastWorkspaceRoot) && System.IO.Directory.Exists(s.LastWorkspaceRoot))
+                    await _session.SetRootAsync(s.LastWorkspaceRoot).ConfigureAwait(true);
+                if (!string.IsNullOrEmpty(s.LastActiveThconfig) && System.IO.File.Exists(s.LastActiveThconfig))
+                    await _session.SetActiveThconfigAsync(s.LastActiveThconfig).ConfigureAwait(true);
+            }
+            catch { /* fall through to file/sample restore */ }
+        }
+
+        var files = s is { RestoreSessionOnStartup: true } ? s.LastSessionFiles : Array.Empty<string>();
         bool opened = false;
         foreach (var path in files)
         {
@@ -222,7 +239,7 @@ public partial class MainWindowViewModel : ViewModelBase
         if (!opened) _documents.OpenTextDocument("(sample).th", SampleText);
     }
 
-    /// <summary>Records the currently-open (on-disk) files so they can be restored next launch.</summary>
+    /// <summary>Records the open files + workspace root/active thconfig for next launch (#9).</summary>
     public void PersistSession()
     {
         if (_settings is null) return;
@@ -232,7 +249,15 @@ public partial class MainWindowViewModel : ViewModelBase
             if (!string.IsNullOrEmpty(doc.FilePath) && System.IO.File.Exists(doc.FilePath))
                 paths.Add(doc.FilePath);
         }
-        try { _settings.Save(_settings.Current with { LastSessionFiles = paths }); }
+        try
+        {
+            _settings.Save(_settings.Current with
+            {
+                LastSessionFiles = paths,
+                LastWorkspaceRoot = _session?.RootPath,
+                LastActiveThconfig = _session?.ActiveThconfig?.FullPath,
+            });
+        }
         catch { /* best-effort */ }
     }
 
@@ -378,7 +403,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void Refresh()
     {
-        Title = _l["AppTitle"];
+        Title = ComposeTitle();
         OnPropertyChanged(nameof(MenuFile));
         OnPropertyChanged(nameof(MenuFileOpenFile));
         OnPropertyChanged(nameof(MenuFileOpenFolder));
@@ -394,6 +419,35 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         var v = _l[key];
         return v.ResourceNotFound ? fallback : v.Value;
+    }
+
+    /// <summary>App title + active thconfig filename (+ main survey title when detectable, #7).</summary>
+    private string ComposeTitle()
+    {
+        var appTitle = L("AppTitle", "TherionProc");
+        if (_session?.ActiveThconfig is not { } active) return appTitle;
+
+        var name = System.IO.Path.GetFileName(active.FullPath);
+        var survey = MainSurveyLabel(_session.Model);
+        return survey is null ? $"{appTitle} — {name}" : $"{appTitle} — {name} > {survey}";
+    }
+
+    /// <summary>The single root survey's title/name, or null when the graph has 0 or many roots.</summary>
+    private static string? MainSurveyLabel(WorkspaceSemanticModel? model)
+    {
+        if (model is null) return null;
+        SurveySymbol? root = null;
+        foreach (var perFile in model.PerFile.Values)
+        {
+            foreach (var sv in perFile.Surveys.Values)
+            {
+                if (sv.Parent is not null) continue;
+                if (root is not null) return null; // more than one root → ambiguous
+                root = sv;
+            }
+        }
+        if (root is null) return null;
+        return string.IsNullOrWhiteSpace(root.Title) ? root.Name.Last : root.Title;
     }
 
     private sealed class NullLocalizer : IStringLocalizer<Strings>

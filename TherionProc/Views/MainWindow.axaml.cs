@@ -31,6 +31,12 @@ public partial class MainWindow : Window
                 vm.AttachStoragePicker(new AvaloniaStoragePicker(this));
                 AttachLayout(vm);
                 AttachKeyboardShortcuts(vm);
+                // The layout rendered without crashing — clear the crash sentinel so the next
+                // launch trusts it (deferred so the dock has finished materializing).
+                Avalonia.Threading.Dispatcher.UIThread.Post(
+                    () => vm.Factory.ConfirmLayoutLoaded(),
+                    Avalonia.Threading.DispatcherPriority.Background);
+                StartAutosave();
             }
             try
             {
@@ -40,20 +46,31 @@ public partial class MainWindow : Window
             catch { /* design-time / no container */ }
         };
 
-        Closing += (_, _) =>
-        {
-            if (DataContext is MainWindowViewModel vm)
-            {
-                vm.PersistSession();
-                vm.Factory.SaveLayout(); // persist dock/float arrangement (#10)
-            }
-            SaveLayout();
-        };
+        // Persist when focus leaves the app — covers a debugger stop that never fires Closing.
+        Deactivated += (_, _) => PersistAll();
+        Closing += (_, _) => { _autosaveTimer?.Stop(); PersistAll(); };
 
         // Drag-and-drop file open (#17).
         DragDrop.SetAllowDrop(this, true);
         AddHandler(DragDrop.DragOverEvent, OnDragOver);
         AddHandler(DragDrop.DropEvent, OnDrop);
+    }
+
+    // ----- bookmarks window (B3) -----------------------------------------
+
+    private BookmarksWindow? _bookmarksWindow;
+
+    private void OnBookmarksClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (_bookmarksWindow is null || !_bookmarksWindow.IsVisible)
+        {
+            _bookmarksWindow = new BookmarksWindow { ShowInTaskbar = false };
+            _bookmarksWindow.Show(this);
+        }
+        else
+        {
+            _bookmarksWindow.Activate();
+        }
     }
 
     // ----- full screen (#8) ----------------------------------------------
@@ -196,9 +213,40 @@ public partial class MainWindow : Window
                 WindowLeft = Position.X,
                 WindowTop = Position.Y,
             };
+            if (next == current) return; // value-equal record — nothing to write
             _layout.Save(next);
         }
         catch { /* best-effort */ }
+    }
+
+    // ----- continuous persistence (task 2) -------------------------------
+    // Save the dock arrangement + window bounds on a timer (and on focus loss / close) so
+    // the layout survives even a hard process stop from the debugger.
+    private Avalonia.Threading.DispatcherTimer? _autosaveTimer;
+
+    private void StartAutosave()
+    {
+        if (_autosaveTimer is not null) return;
+        _autosaveTimer = new Avalonia.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(5),
+        };
+        _autosaveTimer.Tick += (_, _) => PersistLayout();
+        _autosaveTimer.Start();
+    }
+
+    /// <summary>Persists the dock arrangement + window bounds (both deduplicated).</summary>
+    private void PersistLayout()
+    {
+        (DataContext as MainWindowViewModel)?.Factory.SaveLayout();
+        SaveLayout();
+    }
+
+    /// <summary>Persists layout + the open-document session.</summary>
+    private void PersistAll()
+    {
+        (DataContext as MainWindowViewModel)?.PersistSession();
+        PersistLayout();
     }
 
     private void AttachKeyboardShortcuts(MainWindowViewModel vm)

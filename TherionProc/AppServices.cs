@@ -81,8 +81,21 @@ internal static class AppServices
         services.AddSingleton<IShellOpener, ShellOpener>();
         services.AddSingleton<ITherionCompiler, TherionCompiler>();
 
+        // Single-root workspace session (re-org #1�#9) � owns root, active thconfig,
+        // the shared object graph and the recursive filesystem watcher.
+        services.AddSingleton<IWorkspaceSession, WorkspaceSessionService>();
+
+        // Native OS shell icons for the file-explorer view.
+        services.AddSingleton<IFileIconProvider, FileIconProvider>();
+
         // Active-document host (�7.3).
         services.AddSingleton<IDocumentService, DocumentService>();
+
+        // Bookmarks (B3).
+        services.AddSingleton<IBookmarksService, BookmarksService>();
+
+        // thbook documentation lookup (#6) — term→page map + open-at-page in default viewer.
+        services.AddSingleton<IThbookDocumentationService, ThbookDocumentationService>();
 
         // Keyboard shortcuts (�9bis.5a / Decision #29).
         services.AddSingleton<IKeyboardShortcutService, JsonKeyboardShortcutService>();

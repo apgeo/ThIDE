@@ -24,7 +24,13 @@ public sealed class DockFactory : Factory
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "TherionProc", "dock-layout.json");
 
+    // Crash sentinel: created while a saved layout is being applied, deleted once the window
+    // has rendered. If it's still present on the next launch, that apply crashed mid-render,
+    // so we discard the layout instead of bricking startup (task 2).
+    private static readonly string LoadSentinelPath = LayoutPath + ".loading";
+
     private readonly IDockSerializer _serializer = CreateSerializer();
+    private string? _lastSavedJson;
 
     // Custom Tool subclasses fall back to reflection serialization, which would follow
     // the Owner/Factory/Context back-references and hit a cycle. Strip those nav props
@@ -36,10 +42,16 @@ public sealed class DockFactory : Factory
         resolver.Modifiers.Add(static ti =>
         {
             if (!typeof(IDockable).IsAssignableFrom(ti.Type)) return;
+            bool isDocumentDock = typeof(DocumentDock).IsAssignableFrom(ti.Type);
             for (int i = ti.Properties.Count - 1; i >= 0; i--)
             {
-                if (ti.Properties[i].Name is "Owner" or "Factory" or "Context"
-                    or "OriginalOwner" or "FocusedDockable")
+                var name = ti.Properties[i].Name;
+                if (name is "Owner" or "Factory" or "Context" or "OriginalOwner" or "FocusedDockable")
+                    ti.Properties.RemoveAt(i);
+                // Never persist open documents (FileDocumentViewModel has no parameterless
+                // ctor, so it can't round-trip). Dropping the document well's children keeps
+                // the layout deserializable; session restore reopens the files (task 2).
+                else if (isDocumentDock && name is "VisibleDockables" or "ActiveDockable" or "DefaultDockable")
                     ti.Properties.RemoveAt(i);
             }
         });
@@ -182,12 +194,21 @@ public sealed class DockFactory : Factory
         try
         {
             if (!File.Exists(LayoutPath)) return null;
-            // Consume-on-read: delete first so a bad/incompatible layout can't brick
-            // startup more than once — a clean close re-saves it.
+
+            // A leftover sentinel means the previous attempt to apply this layout crashed
+            // during render — discard it rather than crash again.
+            if (File.Exists(LoadSentinelPath))
+            {
+                TryDelete(LayoutPath);
+                TryDelete(LoadSentinelPath);
+                return null;
+            }
+
             var json = File.ReadAllText(LayoutPath);
-            try { File.Delete(LayoutPath); } catch { }
+            TryWrite(LoadSentinelPath, string.Empty);
+
             var root = _serializer.Deserialize<IRootDock>(json);
-            if (root is null) return null;
+            if (root is null) { TryDelete(LoadSentinelPath); return null; }
 
             _documentDock = NewDocumentDock();   // fresh empty well to swap in
             var map = SingletonsById();
@@ -195,27 +216,57 @@ public sealed class DockFactory : Factory
 
             // Require every tool + the document well to be present (guards version skew).
             foreach (var singleton in map.Values)
-                if (!ContainsRef(root, singleton)) return null;
+                if (!ContainsRef(root, singleton)) { TryDelete(LoadSentinelPath); return null; }
 
             _rootDock = root;
+            _lastSavedJson = json; // identical layout — no need to immediately rewrite it
             return root;
         }
-        catch { return null; }
+        catch
+        {
+            // Corrupt/incompatible layout — drop it so it can't fail again.
+            TryDelete(LayoutPath);
+            TryDelete(LoadSentinelPath);
+            return null;
+        }
     }
 
-    /// <summary>Serializes the current layout to disk (open documents excluded — session restore reopens them).</summary>
+    /// <summary>
+    /// Confirms the loaded layout rendered successfully (clears the crash sentinel). Call
+    /// once the main window is shown so the next launch trusts the saved layout (task 2).
+    /// </summary>
+    public void ConfirmLayoutLoaded() => TryDelete(LoadSentinelPath);
+
+    /// <summary>
+    /// Serializes the current layout to disk. Non-destructive (open documents are excluded by
+    /// the serializer, not by mutating the live tree) and deduplicated, so it is safe to call
+    /// continuously — which is how the layout survives a hard stop from the debugger (task 2).
+    /// </summary>
     public void SaveLayout()
     {
         try
         {
             if (_rootDock is null) return;
-            _documentDock?.VisibleDockables?.Clear(); // don't persist open documents
             var json = _serializer.Serialize(_rootDock);
+            if (string.Equals(json, _lastSavedJson, StringComparison.Ordinal)) return; // unchanged
             var dir = Path.GetDirectoryName(LayoutPath);
             if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
             File.WriteAllText(LayoutPath, json);
+            _lastSavedJson = json;
         }
         catch { /* best-effort */ }
+    }
+
+    private static void TryDelete(string path) { try { if (File.Exists(path)) File.Delete(path); } catch { } }
+    private static void TryWrite(string path, string content)
+    {
+        try
+        {
+            var dir = Path.GetDirectoryName(path);
+            if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+            File.WriteAllText(path, content);
+        }
+        catch { }
     }
 
     /// <summary>Replaces deserialized dockables whose Id matches a DI singleton with that singleton.</summary>
