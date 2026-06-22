@@ -58,6 +58,12 @@ public interface IDocumentService
     Task GoForwardAsync(CancellationToken ct = default);
     /// <summary>Raised when the back/forward availability changes.</summary>
     event EventHandler? HistoryChanged;
+    /// <summary>
+    /// Reports the active editor's caret so the back/forward history tracks cursor jumps
+    /// like a normal editor (#1). Term-navigation moves (Shift+F12) pass
+    /// <paramref name="isTermNavigation"/>=true and are ignored.
+    /// </summary>
+    void ReportCaret(Therion.Core.SourceSpan span, bool isTermNavigation);
 
     // ---- workspace reveal (highlight a file/object in the Workspace tree) ----
     /// <summary>Asks the Workspace Explorer to reveal/highlight the node for a target (#8/#9).</summary>
@@ -72,16 +78,15 @@ public interface IDocumentService
 public sealed class DocumentService : IDocumentService, IAsyncDisposable
 {
     private readonly IProjectEntryPointResolver _resolver;
+    private readonly IWorkspaceSession _session;
+    private readonly IAppSettingsService? _settings;
     private readonly ICommandRegistry? _commands;
-    private TherionWorkspace? _workspace;
-    // Built workspaces keyed by entry path, so switching back to a previously-opened
-    // project reuses (and keeps) its tree rather than rebuilding it (#14).
-    private readonly Dictionary<string, (TherionWorkspace Ws, WorkspaceSemanticModel Model)> _workspaceCache
-        = new(StringComparer.OrdinalIgnoreCase);
 
     public ObservableCollection<FileDocumentViewModel> Documents { get; } = new();
     public FileDocumentViewModel? Active { get; private set; }
-    public WorkspaceSemanticModel? Workspace { get; private set; }
+
+    // The single shared object graph lives in the workspace session (re-org #1/#4).
+    public WorkspaceSemanticModel? Workspace => _session.Model;
 
     public event EventHandler? ActiveDocumentChanged;
     public event EventHandler? DocumentChanged;
@@ -106,10 +111,19 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
         Active?.Diagnostics ?? ImmutableArray<Therion.Core.Diagnostic>.Empty;
     public ISymbolNavigationService? CurrentNavigation => Active?.Navigation;
 
-    public DocumentService(IProjectEntryPointResolver resolver, ICommandRegistry? commands = null)
+    public DocumentService(IProjectEntryPointResolver resolver, IWorkspaceSession session,
+        IAppSettingsService? settings = null, ICommandRegistry? commands = null)
     {
         _resolver = resolver;
+        _session = session;
+        _settings = settings;
         _commands = commands;
+
+        // The graph changed (active config switched, or a tracked file changed on disk):
+        // re-attach it to every open document and refresh orphan banners (#4).
+        _session.Changed += (_, _) => { PropagateWorkspaceToDocuments(); Raise(); };
+        // A tracked file changed on disk while open → drive the editor reload banner (#6).
+        _session.ExternalFileChanged += (_, e) => OnExternalFileChanged(e);
     }
 
     public async Task OpenFileAsync(string absolutePath, CancellationToken ct = default)
@@ -129,10 +143,11 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
         var doc = CreateDocument(full, text);
         Documents.Add(doc);
 
-        // Ensure a project workspace covers this file (auto-discovering its parent
-        // .thconfig when a lone .th/.th2 is opened), then light up cross-file nav.
-        await EnsureWorkspaceForAsync(full, ct).ConfigureAwait(false);
+        // Establish a workspace for a directly-opened file when none exists yet, then
+        // light up cross-file navigation and the orphan banner (#1/#4).
+        await _session.EnsureCoversAsync(full, ct).ConfigureAwait(false);
         doc.SetWorkspace(Workspace);
+        UpdateMembership(doc);
 
         OpenInDockRequested?.Invoke(this, doc);
         SetActive(doc);
@@ -140,76 +155,34 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
 
     public async Task OpenFolderAsync(string folderPath, CancellationToken ct = default)
     {
-        var resolved = await _resolver.ResolveAsync(folderPath, ct).ConfigureAwait(false);
-        if (resolved.Selected is null || !File.Exists(resolved.Selected)) return;
+        if (string.IsNullOrEmpty(folderPath) || !Directory.Exists(folderPath)) return;
 
-        // OpenFileAsync builds/reuses the workspace for the resolved entry point.
-        await OpenFileAsync(resolved.Selected, ct).ConfigureAwait(false);
-    }
-
-    /// <summary>
-    /// Guarantees <see cref="Workspace"/> covers <paramref name="full"/>: reuses the
-    /// current workspace when it already does, otherwise auto-discovers the project
-    /// entry, loads it and rebuilds the cross-file semantic snapshot.
-    /// </summary>
-    private async Task EnsureWorkspaceForAsync(string full, CancellationToken ct)
-    {
-        if (_workspace is not null && Covers(_workspace, full)) return;
-
-        string entry;
-        try { entry = await Task.Run(() => ProjectEntryDiscovery.FindEntryPoint(full), ct).ConfigureAwait(false); }
-        catch { entry = full; }
-        entry = TryFull(entry);
-
-        if (_workspaceCache.TryGetValue(entry, out var cached))
-        {
-            SwitchWorkspace(cached.Ws, cached.Model);
-            return;
-        }
-
-        var ws = new TherionWorkspace();
-        try { await ws.LoadAsync(entry, ct).ConfigureAwait(false); }
-        catch { await ws.DisposeAsync().ConfigureAwait(false); return; }
-
-        var model = ws.BuildSemanticModel();
-        _workspaceCache[entry] = (ws, model);
-        SwitchWorkspace(ws, model);
-    }
-
-    /// <summary>Makes <paramref name="ws"/> the active workspace and notifies documents/tools.</summary>
-    private void SwitchWorkspace(TherionWorkspace ws, WorkspaceSemanticModel model)
-    {
-        if (ReferenceEquals(_workspace, ws)) return;
-        _workspace = ws;
-        Workspace = model;
-        PropagateWorkspaceToDocuments();
-        Raise();
-    }
-
-    /// <summary>If the active document's project differs from the current workspace, switch to it (#14).</summary>
-    private async Task FollowActiveDocumentAsync(FileDocumentViewModel doc)
-    {
-        if (string.IsNullOrEmpty(doc.FilePath) || !File.Exists(doc.FilePath)) return;
-        var full = TryFull(doc.FilePath);
-        if (_workspace is not null && Covers(_workspace, full)) return;
-        try
-        {
-            await EnsureWorkspaceForAsync(full, CancellationToken.None).ConfigureAwait(true);
-            doc.SetWorkspace(Workspace);
-        }
-        catch { /* leave the existing workspace in place */ }
-    }
-
-    private static bool Covers(TherionWorkspace ws, string full)
-    {
-        foreach (var p in ws.LoadedFiles)
-            if (string.Equals(p, full, StringComparison.OrdinalIgnoreCase)) return true;
-        return false;
+        // Open Folder explicitly sets the single workspace root and activates the first
+        // detected thconfig (#1/#2). Open that active config so the user sees the project.
+        await _session.SetRootAsync(folderPath, ct).ConfigureAwait(false);
+        if (_session.ActiveThconfig is { } active && File.Exists(active.FullPath))
+            await OpenFileAsync(active.FullPath, ct).ConfigureAwait(false);
     }
 
     private void PropagateWorkspaceToDocuments()
     {
-        foreach (var d in Documents) d.SetWorkspace(Workspace);
+        foreach (var d in Documents) { d.SetWorkspace(Workspace); UpdateMembership(d); }
+    }
+
+    /// <summary>Flags a document's orphan banner: true when it isn't in the active graph (#4).</summary>
+    private void UpdateMembership(FileDocumentViewModel doc)
+    {
+        bool member = _session.Covers(doc.FilePath);
+        var activeName = _session.ActiveThconfig is { } a ? Path.GetFileName(a.FullPath) : null;
+        doc.SetWorkspaceMembership(member, activeName);
+    }
+
+    /// <summary>A tracked file changed on disk → ask the matching open document to react (#6).</summary>
+    private void OnExternalFileChanged(ExternalFileChange change)
+    {
+        if (FindOpen(change.Path) is not { } doc) return;
+        bool autoReload = _settings?.Current.AutoReloadExternalChanges ?? true;
+        doc.NotifyExternalChange(change.TimeUtc.ToLocalTime(), change.Deleted, autoReload);
     }
 
     // ---- navigation history -------------------------------------------------
@@ -235,6 +208,36 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
         finally { _suppressHistory = false; HistoryChanged?.Invoke(this, EventArgs.Empty); }
     }
 
+    // ----- caret-driven history (#1) -----------------------------------------
+    // History records the cursor's "jump" points like a normal editor's back/forward.
+    // Continuous line-by-line movement never registers (each step is small); only a
+    // sudden caret relocation (click far away, go-to-definition, tab/file switch) does.
+    private Therion.Core.SourceSpan _lastCaret;
+    private const int JumpLineThreshold = 5;
+
+    public void ReportCaret(Therion.Core.SourceSpan span, bool isTermNavigation)
+    {
+        if (span.IsEmpty || string.IsNullOrEmpty(span.FilePath)) return;
+
+        // Term cycling (Shift+F12) and programmatic back/forward never add history,
+        // but they do update the reference point so later real jumps measure correctly.
+        if (isTermNavigation || _suppressHistory) { _lastCaret = span; return; }
+
+        if (IsJump(_lastCaret, span))
+        {
+            RecordHistory(_lastCaret); // where we jumped from
+            RecordHistory(span);       // where we landed
+        }
+        _lastCaret = span;
+    }
+
+    private static bool IsJump(Therion.Core.SourceSpan from, Therion.Core.SourceSpan to)
+    {
+        if (from.IsEmpty || string.IsNullOrEmpty(from.FilePath)) return false;
+        if (!string.Equals(from.FilePath, to.FilePath, StringComparison.OrdinalIgnoreCase)) return true;
+        return Math.Abs(from.Start.Line - to.Start.Line) >= JumpLineThreshold;
+    }
+
     private void RecordHistory(Therion.Core.SourceSpan loc)
     {
         if (loc.IsEmpty || string.IsNullOrEmpty(loc.FilePath)) return;
@@ -254,12 +257,9 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
     {
         if (span.IsEmpty || string.IsNullOrEmpty(span.FilePath)) return;
 
-        if (!_suppressHistory)
-        {
-            if (Active?.CurrentCaret is { IsEmpty: false } from) RecordHistory(from); // leaving here
-            RecordHistory(span);                                                       // going there
-        }
-
+        // History is no longer recorded here — the resulting caret move is captured by
+        // ReportCaret, so navigation (go-to-definition, diagnostics, tree) lands in the
+        // history as an ordinary cursor jump (#1).
         var target = FindOpen(span.FilePath);
         if (target is null)
         {
@@ -294,8 +294,6 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
     public void Close()
     {
         foreach (var d in Documents.ToList()) OnClosed(d);
-        Workspace = null;
-        _ = DisposeWorkspaceAsync();
         Raise();
     }
 
@@ -303,7 +301,11 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
     {
         if (Active is not { } doc) return;
         if (File.Exists(doc.FilePath))
+        {
+            // Mark the path so the watcher doesn't treat our own save as an external edit (#6).
+            _session.SuppressSelfWrite(doc.FilePath);
             await File.WriteAllTextAsync(doc.FilePath, newText, ct).ConfigureAwait(false);
+        }
         doc.SetText(newText, reparse: true);
     }
 
@@ -327,8 +329,7 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
         Active = doc;
         ActiveDocumentChanged?.Invoke(this, EventArgs.Empty);
         Raise();
-        // Switch the workspace tree to follow the newly-active document's project (#14).
-        if (doc is not null) _ = FollowActiveDocumentAsync(doc);
+        // Single shared workspace (#1): switching tabs no longer changes the active project.
     }
 
     private void OnClosed(FileDocumentViewModel doc)
@@ -344,15 +345,6 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
 
     private void Raise() => DocumentChanged?.Invoke(this, EventArgs.Empty);
 
-    private async Task DisposeWorkspaceAsync()
-    {
-        foreach (var (ws, _) in _workspaceCache.Values)
-        {
-            try { await ws.DisposeAsync().ConfigureAwait(false); } catch { /* best-effort */ }
-        }
-        _workspaceCache.Clear();
-        _workspace = null;
-    }
-
-    public ValueTask DisposeAsync() => new(DisposeWorkspaceAsync());
+    // The workspace session is a DI singleton and disposes itself; nothing to do here.
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 }

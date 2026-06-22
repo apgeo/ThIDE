@@ -28,6 +28,7 @@ internal sealed class NullDocumentService : IDocumentService
     public bool CanGoForward => false;
     public Task GoBackAsync(CancellationToken ct = default) => Task.CompletedTask;
     public Task GoForwardAsync(CancellationToken ct = default) => Task.CompletedTask;
+    public void ReportCaret(Therion.Core.SourceSpan span, bool isTermNavigation) { }
     public void RequestRevealInWorkspace(Therion.Core.SourceSpan target) { }
     public void RequestFindReferences(string term) { }
 #pragma warning disable CS0067
