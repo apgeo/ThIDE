@@ -64,6 +64,40 @@ public partial class TherionTextEditor : UserControl
     /// <summary>Raised when the caret moves, carrying its document span (for navigation history).</summary>
     public event EventHandler<SourceSpan>? CaretMoved;
 
+    /// <summary>Raised when the user requests "find all references" for an identifier (#4).</summary>
+    public event EventHandler<string>? FindReferencesRequested;
+
+    private const string ThbookUrl = "https://therion.speleo.sk/wiki/start";
+
+    // Short descriptions for the hover overlay on command keywords (#4).
+    private static readonly Dictionary<string, string> CommandDocs = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["survey"]      = "survey <id> [-title …] … endsurvey — a named group (scope) of centrelines, maps and scraps.",
+        ["centreline"]  = "centreline … endcentreline — survey shots (data rows) between stations.",
+        ["centerline"]  = "centerline … endcentreline — survey shots (data rows) between stations.",
+        ["data"]        = "data <style> <fields…> — declares the column layout for the following shot rows.",
+        ["fix"]         = "fix <station> <x> <y> <z> [stdev…] — fixes a station at the given coordinates.",
+        ["equate"]      = "equate <station> <station> [...] — declares that the listed stations are the same point.",
+        ["station"]     = "station <name> \"comment\" [flags] — annotates a station (entrance, fixed, …).",
+        ["flags"]       = "flags [not] surface|duplicate|splay|approximate — toggles flags for following shots.",
+        ["join"]        = "join <obj1> <obj2> [-options] — connects scrap point/line objects (or scraps) by id.",
+        ["input"]       = "input <path> — includes another source file.",
+        ["load"]        = "load <path> — includes another source file.",
+        ["map"]         = "map <id> [-projection …] … endmap — a collection of scraps or other maps of one projection.",
+        ["scrap"]       = "scrap <id> [-projection …] … endscrap — a 2-D drawing fragment.",
+        ["point"]       = "point <x> <y> <type> [-options] — a symbol in a scrap (station, label, …).",
+        ["line"]        = "line <type> [-options] … endline — a poly-line in a scrap (wall, …).",
+        ["area"]        = "area <type> … endarea — a filled area bounded by lines.",
+        ["surface"]     = "surface … endsurface — terrain/DEM grid of elevation values.",
+        ["group"]       = "group … endgroup — scopes settings/commands without forming a survey.",
+        ["import"]      = "import <path> — imports surface/scrap data.",
+        ["source"]      = "source <path> — (.thconfig) the survey data to process.",
+        ["select"]      = "select <map@survey> — chooses what to export.",
+        ["export"]      = "export <type> [-options] -output <file> — produces an output (map/model/…).",
+        ["layout"]      = "layout <id> … endlayout — output styling (metapost/tex) block.",
+        ["encoding"]    = "encoding <charset> — declares the file's character set.",
+    };
+
     private TextEditor? _editor;
     private TherionColorizer? _colorizer;
     private HyperlinkColorizer? _hyperlinkColorizer;
@@ -71,6 +105,11 @@ public partial class TherionTextEditor : UserControl
     private DiagnosticOverviewRuler? _overviewRuler;
     private FlashHighlightRenderer? _flash;
     private OccurrenceHighlightRenderer? _occurrences;
+    private Avalonia.Controls.Primitives.Popup? _infoPopup;
+    private DispatcherTimer? _infoShowTimer;
+    private DispatcherTimer? _infoHideTimer;
+    private int _infoTokenStart = -1;
+    private Point _infoPointer;
     private FoldingManager? _foldingManager;
     private CompletionWindow? _completionWindow;
     private Diagnostic? _hoverDiagnostic;
@@ -608,6 +647,7 @@ public partial class TherionTextEditor : UserControl
         var diag = _squiggles.GetDiagnosticAt(offset);
         if (diag is { } d)
         {
+            HideHoverInfo();
             if (!ReferenceEquals(_hoverDiagnostic, d))
             {
                 _hoverDiagnostic = d;
@@ -619,7 +659,185 @@ public partial class TherionTextEditor : UserControl
         else
         {
             ClearHover();
+            ScheduleHoverInfo(visualPos);
         }
+    }
+
+    // ----- rich hover overlay (command/identifier info, #4) --------------
+
+    private void ScheduleHoverInfo(Point visualPos)
+    {
+        _infoPointer = visualPos;
+        int start = HoverInfoTokenStart(visualPos);
+        if (start == _infoTokenStart) return; // same token — leave the popup as is
+
+        _infoTokenStart = start;
+        _infoShowTimer ??= CreateTimer(350, ShowHoverInfo);
+        _infoShowTimer.Stop();
+        if (start < 0) { HideHoverInfo(); return; }
+        _infoShowTimer.Start();
+    }
+
+    /// <summary>Document offset of an info-bearing token (command keyword / reference / path) under the pointer, or -1.</summary>
+    private int HoverInfoTokenStart(Point visualPos)
+    {
+        if (_editor is null || FloorOffset(visualPos) is not { } off) return -1;
+        if (HoverCommandWord(off) is not null) return WordStart(off);
+        if (RefTokenUnderPointer(visualPos) is { } tok &&
+            (Navigation?.Describe(tok.Raw, ChooseReferenceKind((tok.Start, tok.Length, tok.Raw), tok.Offset)) is not null))
+            return tok.Start;
+        if (ResolvePathLinkAt(off) is { } link &&
+            PointerWithinRange(_editor.TextArea.TextView, link.Start, link.Start + link.Length, visualPos.X))
+            return link.Start;
+        return -1;
+    }
+
+    private void ShowHoverInfo()
+    {
+        _infoShowTimer?.Stop();
+        if (_editor is null || FloorOffset(_infoPointer) is not { } off) return;
+
+        Control? content =
+            HoverCommandWord(off) is { } cmd ? BuildCommandInfo(cmd) :
+            RefTokenUnderPointer(_infoPointer) is { } tok &&
+                Navigation?.Describe(tok.Raw, ChooseReferenceKind((tok.Start, tok.Length, tok.Raw), tok.Offset)) is { } info
+                ? BuildIdentifierInfo(tok.Raw, info) :
+            ResolvePathLinkAt(off) is { } link ? BuildFileInfo(link) : null;
+
+        if (content is null) { HideHoverInfo(); return; }
+
+        EnsureInfoPopup();
+        _infoPopup!.Child = new Border
+        {
+            Background = IsDark() ? Brushes.Black : Brushes.White,
+            BorderBrush = Brushes.Gray,
+            BorderThickness = new Thickness(1),
+            Padding = new Thickness(10, 8),
+            MaxWidth = 460,
+            Child = content,
+        };
+        _infoPopup.IsOpen = true;
+    }
+
+    private void HideHoverInfo()
+    {
+        _infoShowTimer?.Stop();
+        _infoTokenStart = -1;
+        if (_infoPopup is { IsOpen: true }) _infoPopup.IsOpen = false;
+    }
+
+    private void EnsureInfoPopup()
+    {
+        if (_infoPopup is not null) return;
+        _infoPopup = new Avalonia.Controls.Primitives.Popup
+        {
+            PlacementTarget = _editor,
+            Placement = PlacementMode.Pointer,
+            IsLightDismissEnabled = true,
+            HorizontalOffset = 8,
+            VerticalOffset = 16,
+        };
+        _infoPopup.PointerEntered += (_, _) => _infoHideTimer?.Stop();
+        _infoPopup.PointerExited += (_, _) => StartHoverHide();
+        if (this.FindControl<Grid>("Root") is { } root) root.Children.Add(_infoPopup);
+    }
+
+    private void StartHoverHide()
+    {
+        _infoHideTimer ??= CreateTimer(250, HideHoverInfo);
+        _infoHideTimer.Stop();
+        _infoHideTimer.Start();
+    }
+
+    private DispatcherTimer CreateTimer(int ms, Action tick)
+    {
+        var t = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(ms) };
+        t.Tick += (_, _) => { t.Stop(); tick(); };
+        return t;
+    }
+
+    private string? HoverCommandWord(int offset)
+    {
+        if (_editor is null) return null;
+        var line = _editor.Document.GetLineByOffset(offset);
+        var text = _editor.Document.GetText(line);
+        int lead = 0; while (lead < text.Length && char.IsWhiteSpace(text[lead])) lead++;
+        int end = lead; while (end < text.Length && !char.IsWhiteSpace(text[end])) end++;
+        int col = offset - line.Offset;
+        if (col < lead || col >= end) return null; // not over the first word
+        var word = text[lead..end];
+        return CommandDocs.ContainsKey(word) ? word : null;
+    }
+
+    private int WordStart(int offset)
+    {
+        var line = _editor!.Document.GetLineByOffset(offset);
+        var text = _editor.Document.GetText(line);
+        int lead = 0; while (lead < text.Length && char.IsWhiteSpace(text[lead])) lead++;
+        return line.Offset + lead;
+    }
+
+    private Control BuildCommandInfo(string command)
+    {
+        var panel = new StackPanel { Spacing = 6 };
+        panel.Children.Add(new TextBlock { Text = command, FontWeight = FontWeight.Bold, FontSize = 14 });
+        panel.Children.Add(new TextBlock { Text = CommandDocs[command], TextWrapping = TextWrapping.Wrap });
+        var doc = new Button { Content = "Documentation ↗", Padding = new Thickness(6, 2), HorizontalAlignment = HorizontalAlignment.Left };
+        doc.Click += (_, _) => { OpenExternalRequested?.Invoke(this, ThbookUrl); HideHoverInfo(); };
+        panel.Children.Add(doc);
+        return panel;
+    }
+
+    private Control BuildIdentifierInfo(string raw, ReferenceInfo info)
+    {
+        var panel = new StackPanel { Spacing = 6 };
+        panel.Children.Add(new TextBlock { Text = raw, FontWeight = FontWeight.Bold, FontSize = 14 });
+        panel.Children.Add(new TextBlock { Text = $"{info.Kind}", Foreground = Brushes.Gray });
+
+        var where = info.Declaration;
+        if (!string.IsNullOrEmpty(where.FilePath))
+        {
+            var link = new TextBlock
+            {
+                Text = $"{System.IO.Path.GetFileName(where.FilePath)} : {where.Start.Line}",
+                Foreground = Brushes.SteelBlue,
+                Cursor = _handCursor,
+                TextDecorations = TextDecorations.Underline,
+            };
+            link.PointerPressed += (_, _) => { NavigateToSpan(where); HideHoverInfo(); };
+            panel.Children.Add(link);
+        }
+
+        var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
+        var go = new Button { Content = "Go to definition", Padding = new Thickness(6, 2) };
+        go.Click += (_, _) => { NavigateToSpan(where); HideHoverInfo(); };
+        var refs = new Button { Content = "Find all references", Padding = new Thickness(6, 2) };
+        refs.Click += (_, _) => { FindReferencesRequested?.Invoke(this, StationRef.Parse(raw).PointWithoutMark); HideHoverInfo(); };
+        actions.Children.Add(go);
+        actions.Children.Add(refs);
+        panel.Children.Add(actions);
+        return panel;
+    }
+
+    private Control BuildFileInfo(PathLink link)
+    {
+        var panel = new StackPanel { Spacing = 6 };
+        panel.Children.Add(new TextBlock { Text = link.Raw, FontWeight = FontWeight.Bold, FontSize = 14 });
+        panel.Children.Add(new TextBlock
+        {
+            Text = link.ResolvedExisting is null ? "file (not found)" : "file",
+            Foreground = Brushes.Gray,
+        });
+        var open = new Button
+        {
+            Content = link.ShellOpen ? "Open in default app" : "Open file",
+            Padding = new Thickness(6, 2),
+            HorizontalAlignment = HorizontalAlignment.Left,
+            IsEnabled = link.ResolvedExisting is not null,
+        };
+        open.Click += (_, _) => { OpenLink(link); HideHoverInfo(); };
+        panel.Children.Add(open);
+        return panel;
     }
 
     private void ClearHover()

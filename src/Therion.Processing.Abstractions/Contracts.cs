@@ -79,12 +79,23 @@ public enum ReferenceKind
     ScrapObject,
 }
 
+/// <summary>Resolved information about a reference, for the editor's hover overlay.</summary>
+/// <param name="Kind">Human-readable kind (station / survey / map / scrap / file).</param>
+/// <param name="Declaration">Where it is declared.</param>
+public sealed record ReferenceInfo(string Kind, SourceSpan Declaration);
+
 /// <summary>
 /// UI-facing navigation service (Implementation Plan �7.3): the backing model
 /// for Go to Definition (F12) and Find All References (Shift+F12).
 /// </summary>
 public interface ISymbolNavigationService
 {
+    /// <summary>
+    /// Describes what a reference resolves to (kind + declaration) for hover info.
+    /// Returns null when it doesn't resolve. Default implementation reports nothing.
+    /// </summary>
+    ReferenceInfo? Describe(string reference, ReferenceKind kind) => null;
+
     /// <summary>Returns the declaration span of <paramref name="qualifiedName"/>, or <c>null</c> if not found.</summary>
     SourceSpan? GoToDefinition(string qualifiedName);
 

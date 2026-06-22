@@ -1,9 +1,10 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:TherionProc.ViewModels"
+        xmlns:ae="using:AvaloniaEdit"
         x:Class="TherionProc.Views.SearchWindow"
         x:DataType="vm:SearchViewModel"
-        Width="560" Height="520"
+        Width="600" Height="640"
         WindowStartupLocation="CenterOwner"
         Title="Find in Files">
     <DockPanel Margin="10">
@@ -34,15 +35,26 @@
             <TextBlock Foreground="Gray" Text="{Binding Status}" />
         </StackPanel>
 
-        <ListBox x:Name="ResultsList" Margin="0,8,0,0"
-                 ItemsSource="{Binding Results}"
-                 SelectedItem="{Binding Selected, Mode=TwoWay}"
-                 DoubleTapped="OnResultActivated">
-            <ListBox.ItemTemplate>
-                <DataTemplate x:DataType="vm:SearchHit">
-                    <TextBlock Text="{Binding Display}" FontFamily="Cascadia Code,Consolas,monospace" FontSize="12" />
-                </DataTemplate>
-            </ListBox.ItemTemplate>
-        </ListBox>
+        <Grid RowDefinitions="*,4,220" Margin="0,8,0,0">
+            <ListBox x:Name="ResultsList" Grid.Row="0"
+                     ItemsSource="{Binding Results}"
+                     SelectedItem="{Binding Selected, Mode=TwoWay}"
+                     SelectionChanged="OnResultSelected"
+                     DoubleTapped="OnResultActivated">
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:SearchHit">
+                        <TextBlock Text="{Binding Display}" FontFamily="Cascadia Code,Consolas,monospace" FontSize="12" />
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <GridSplitter Grid.Row="1" ResizeDirection="Rows" Background="Gray" />
+
+            <!-- Inline peek of the selected result (single-click); double-click navigates (#5). -->
+            <Border Grid.Row="2" BorderBrush="Gray" BorderThickness="1">
+                <ae:TextEditor x:Name="Peek" IsReadOnly="True" ShowLineNumbers="True"
+                               FontFamily="Cascadia Code,Consolas,monospace" FontSize="12" />
+            </Border>
+        </Grid>
     </DockPanel>
 </Window>

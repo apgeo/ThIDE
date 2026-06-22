@@ -164,6 +164,25 @@ public sealed class WorkspaceSemanticModel
         };
     }
 
+    /// <summary>Like <see cref="ResolveReference"/> but also reports the matched kind (for hover info).</summary>
+    public ReferenceInfo? DescribeReference(string raw, ReferenceKind kind)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return null;
+        var r = StationRef.Parse(raw.Trim());
+
+        ReferenceInfo? Of(string name, SourceSpan? span) => span is { IsEmpty: false } s ? new ReferenceInfo(name, s) : null;
+
+        return kind switch
+        {
+            ReferenceKind.Survey      => Of("survey", ResolveSurvey(r)),
+            ReferenceKind.Map         => Of("map", ResolveMap(r)),
+            ReferenceKind.ScrapObject => Of("scrap", ResolveScrapObject(r)),
+            ReferenceKind.Station     => Of("station", ResolveStation(r)),
+            _ => Of("station", ResolveStation(r)) ?? Of("survey", ResolveSurvey(r))
+                 ?? Of("map", ResolveMap(r)) ?? Of("scrap", ResolveScrapObject(r)),
+        };
+    }
+
     private SourceSpan? ResolveSurvey(StationRef r)
     {
         // The survey is the @-part if present, else the bare token itself.

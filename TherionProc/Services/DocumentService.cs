@@ -63,6 +63,10 @@ public interface IDocumentService
     /// <summary>Asks the Workspace Explorer to reveal/highlight the node for a target (#8/#9).</summary>
     void RequestRevealInWorkspace(Therion.Core.SourceSpan target);
     event EventHandler<Therion.Core.SourceSpan>? RevealInWorkspaceRequested;
+
+    /// <summary>Asks the shell to open Find-in-Files as a "find all references" for an identifier (#4).</summary>
+    void RequestFindReferences(string term);
+    event EventHandler<string>? FindReferencesRequested;
 }
 
 public sealed class DocumentService : IDocumentService, IAsyncDisposable
@@ -83,9 +87,15 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
     public event EventHandler? DocumentChanged;
     public event EventHandler<FileDocumentViewModel>? OpenInDockRequested;
     public event EventHandler<Therion.Core.SourceSpan>? RevealInWorkspaceRequested;
+    public event EventHandler<string>? FindReferencesRequested;
 
     public void RequestRevealInWorkspace(Therion.Core.SourceSpan target)
         => RevealInWorkspaceRequested?.Invoke(this, target);
+
+    public void RequestFindReferences(string term)
+    {
+        if (!string.IsNullOrWhiteSpace(term)) FindReferencesRequested?.Invoke(this, term);
+    }
 
     // Projection of the active document.
     public string? CurrentPath => Active?.FilePath;

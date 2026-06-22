@@ -29,12 +29,14 @@ internal sealed class NullDocumentService : IDocumentService
     public Task GoBackAsync(CancellationToken ct = default) => Task.CompletedTask;
     public Task GoForwardAsync(CancellationToken ct = default) => Task.CompletedTask;
     public void RequestRevealInWorkspace(Therion.Core.SourceSpan target) { }
+    public void RequestFindReferences(string term) { }
 #pragma warning disable CS0067
     public event EventHandler? DocumentChanged;
     public event EventHandler? ActiveDocumentChanged;
     public event EventHandler<FileDocumentViewModel>? OpenInDockRequested;
     public event EventHandler? HistoryChanged;
     public event EventHandler<Therion.Core.SourceSpan>? RevealInWorkspaceRequested;
+    public event EventHandler<string>? FindReferencesRequested;
 #pragma warning restore CS0067
 
     public Task OpenFileAsync(string absolutePath, CancellationToken ct = default) => Task.CompletedTask;

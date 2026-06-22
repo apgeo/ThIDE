@@ -45,6 +45,33 @@ public sealed class WorkspaceSymbolNavigationService : ISymbolNavigationService
     public bool CanNavigate(string reference, ReferenceKind kind)
         => !string.IsNullOrWhiteSpace(reference) && ResolveReferenceWithScope(reference, kind) is not null;
 
+    /// <inheritdoc/>
+    public ReferenceInfo? Describe(string reference, ReferenceKind kind)
+    {
+        if (string.IsNullOrWhiteSpace(reference)) return null;
+        if (_workspace.DescribeReference(reference, kind) is { } info) return info;
+
+        // .th2 / bare-name station fallbacks (mirror ResolveReferenceWithScope).
+        if (kind is ReferenceKind.Any or ReferenceKind.Station)
+        {
+            var r = StationRef.Parse(reference);
+            if (!r.HasSurvey)
+            {
+                if (_activeFilePath is { } path &&
+                    path.EndsWith(".th2", System.StringComparison.OrdinalIgnoreCase) &&
+                    _workspace.ResolveStationInFileScope(r.Point, path) is { } s && !s.IsEmpty)
+                    return new ReferenceInfo("station", s);
+                if (ResolveBareStationByName(r.Point) is { } s2)
+                    return new ReferenceInfo("station", s2);
+            }
+        }
+
+        // Input/load/xvi file targets.
+        if (GoToDefinition(reference) is { } fs && !fs.IsEmpty)
+            return new ReferenceInfo("file", fs);
+        return null;
+    }
+
     /// <summary>
     /// Index-only resolution (no per-file scans): the workspace <c>@</c> resolver plus a
     /// <c>.th2</c>-scope fallback that resolves a bare station name against the survey of

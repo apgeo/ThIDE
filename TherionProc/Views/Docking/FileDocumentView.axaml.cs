@@ -25,8 +25,12 @@ public partial class FileDocumentView : UserControl
             editor.NavigateToSpanRequested += OnNavigateToSpanRequested;
             editor.CaretMoved += OnCaretMoved;
             editor.HoverTargetChanged += OnHoverTargetChanged;
+            editor.FindReferencesRequested += OnFindReferencesRequested;
         }
     }
+
+    private void OnFindReferencesRequested(object? sender, string term)
+        => TryDocuments()?.RequestFindReferences(term);
 
     // Ask the Workspace Explorer to reveal the hovered link's target (gated by its toggle, #8).
     private void OnHoverTargetChanged(object? sender, SourceSpan? target)

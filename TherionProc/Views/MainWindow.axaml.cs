@@ -32,6 +32,12 @@ public partial class MainWindow : Window
                 AttachLayout(vm);
                 AttachKeyboardShortcuts(vm);
             }
+            try
+            {
+                if (AppServices.Provider.GetService<IDocumentService>() is { } docs)
+                    docs.FindReferencesRequested += (_, term) => ShowFindReferences(term);
+            }
+            catch { /* design-time / no container */ }
         };
 
         Closing += (_, _) =>
@@ -104,6 +110,25 @@ public partial class MainWindow : Window
         _searchWindow = new SearchWindow { DataContext = vm };
         _searchWindow.Closed += (_, _) => _searchWindow = null;
         _searchWindow.Show(this);
+    }
+
+    // Find all references (#4): configure Find-in-Files as a whole-word, project-scoped
+    // search for the identifier and run it.
+    private void ShowFindReferences(string term)
+    {
+        if (string.IsNullOrWhiteSpace(term)) return;
+        ViewModels.SearchViewModel? vm = null;
+        try { vm = AppServices.Provider.GetService<ViewModels.SearchViewModel>(); }
+        catch { return; }
+        if (vm is null) return;
+
+        vm.Query = term;
+        vm.WholeWord = true;
+        vm.MatchCase = true;
+        vm.UseRegex = false;
+        vm.Scope = ViewModels.SearchViewModel.ScopeProject;
+        ShowSearch();
+        vm.SearchCommand.Execute(null);
     }
 
     // ----- drag-and-drop open (#17) --------------------------------------
