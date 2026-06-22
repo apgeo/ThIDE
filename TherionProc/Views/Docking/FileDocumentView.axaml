@@ -5,6 +5,7 @@
              x:Class="TherionProc.Views.Docking.FileDocumentView"
              x:DataType="vm:FileDocumentViewModel">
 
+    <Grid>
     <TabControl>
         <TabItem Header="Source">
             <ed:TherionTextEditor x:Name="Editor"
@@ -56,4 +57,18 @@
             </DockPanel>
         </TabItem>
     </TabControl>
+
+        <!-- File-actions button, overlaid on the tab-strip row (no extra height, #7). -->
+        <Button HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,2,6,0"
+                Padding="6,2" Background="Transparent" BorderThickness="0" FontSize="14"
+                Content="&#x22EF;" ToolTip.Tip="File actions">
+            <Button.Flyout>
+                <MenuFlyout>
+                    <MenuItem Header="Copy File Name" Command="{Binding CopyFileNameCommand}" />
+                    <MenuItem Header="Copy Relative Path" Command="{Binding CopyRelativePathCommand}" />
+                    <MenuItem Header="Copy Full Path" Command="{Binding CopyFullPathCommand}" />
+                </MenuFlyout>
+            </Button.Flyout>
+        </Button>
+    </Grid>
 </UserControl>

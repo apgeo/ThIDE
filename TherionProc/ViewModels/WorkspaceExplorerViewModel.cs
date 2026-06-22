@@ -73,12 +73,14 @@ public partial class WorkspaceExplorerViewModel : ViewModelBase
 
     /// <summary>Show the object model (surveys/maps/scraps) under each file (#16, default on).</summary>
     [ObservableProperty] private bool _showObjectModel = true;
-    partial void OnShowObjectModelChanged(bool value) => Refresh();
+    partial void OnShowObjectModelChanged(bool value) { Refresh(); SaveSettings(); }
 
     /// <summary>Reveal/highlight the workspace item when hovering a hyperlink in the editor (#8).</summary>
     [ObservableProperty] private bool _revealOnHover;
+    partial void OnRevealOnHoverChanged(bool value) => SaveSettings();
     /// <summary>Reveal/highlight the active file in the workspace when switching tabs (#9).</summary>
     [ObservableProperty] private bool _revealOnTabSwitch;
+    partial void OnRevealOnTabSwitchChanged(bool value) => SaveSettings();
 
     /// <summary>Raised to open a file node.</summary>
     public event EventHandler<WorkspaceTreeNode>? OpenRequested;
@@ -91,13 +93,39 @@ public partial class WorkspaceExplorerViewModel : ViewModelBase
     private bool _builtShowObjectModel;
     private string? _lastRevealedActive;
 
+    private readonly IAppSettingsService? _settings;
+    private bool _loadingSettings;
+
     public WorkspaceExplorerViewModel() : this(new NullDocumentService()) { }
 
-    public WorkspaceExplorerViewModel(IDocumentService documents)
+    public WorkspaceExplorerViewModel(IDocumentService documents, IAppSettingsService? settings = null)
     {
         _documents = documents;
+        _settings = settings;
+
+        if (settings is not null)
+        {
+            _loadingSettings = true;
+            var s = settings.Current;
+            ShowObjectModel = s.WorkspaceShowObjectModel;
+            RevealOnHover = s.WorkspaceRevealOnHover;
+            RevealOnTabSwitch = s.WorkspaceRevealOnTabSwitch;
+            _loadingSettings = false;
+        }
+
         _documents.DocumentChanged += (_, _) => { Refresh(); MaybeRevealActive(); };
         _documents.RevealInWorkspaceRequested += (_, target) => { if (RevealOnHover) Reveal(target); };
+    }
+
+    private void SaveSettings()
+    {
+        if (_loadingSettings || _settings is null) return;
+        _settings.Save(_settings.Current with
+        {
+            WorkspaceShowObjectModel = ShowObjectModel,
+            WorkspaceRevealOnHover = RevealOnHover,
+            WorkspaceRevealOnTabSwitch = RevealOnTabSwitch,
+        });
     }
 
     public void Refresh()

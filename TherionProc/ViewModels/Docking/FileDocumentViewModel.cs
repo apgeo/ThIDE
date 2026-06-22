@@ -83,8 +83,10 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
 
     private void UpdateTitle()
     {
+        // Prefix the dirty marker so it can't be clipped when the tab text hits the
+        // header's right edge (#12); the leading dot is always visible.
         var name = System.IO.Path.GetFileName(FilePath);
-        Title = _isDirty ? name + " ●" : name;
+        Title = _isDirty ? "● " + name : name;
     }
 
     private DispatcherTimer? _reparseTimer;

@@ -26,6 +26,11 @@ public sealed record AppSettings
     public bool ConvertTabsToSpaces { get; init; } = true;
     public int IndentationSize { get; init; } = 2;
 
+    // ---- workspace panel ----
+    public bool WorkspaceShowObjectModel { get; init; } = true;
+    public bool WorkspaceRevealOnHover { get; init; }
+    public bool WorkspaceRevealOnTabSwitch { get; init; }
+
     public static AppSettings Default { get; } = new();
 }
 
