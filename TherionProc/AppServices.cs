@@ -88,6 +88,10 @@ internal static class AppServices
         // Native OS shell icons for the file-explorer view.
         services.AddSingleton<IFileIconProvider, FileIconProvider>();
 
+        // Destructive filesystem ops (delete → recycle bin / trash). The factory picks
+        // the Windows or Unix implementation, isolating per-OS code from the views.
+        services.AddSingleton<IFileOperations>(_ => FileOperationsFactory.Create());
+
         // Active-document host (�7.3).
         services.AddSingleton<IDocumentService, DocumentService>();
 

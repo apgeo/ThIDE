@@ -82,16 +82,23 @@ public partial class WorkspaceExplorerToolView : UserControl
 
     private WorkspaceTreeNode? Ctx() => _ctxNode ?? Explorer?.Selected;
 
-    // Only show the menu on real filesystem nodes; hide Windows-only items elsewhere.
+    // Only show the menu on real filesystem nodes. Adapt per platform: hide Windows-only
+    // shell verbs off-Windows, and label "Delete" with what it actually does on this OS
+    // (Recycle Bin / Trash / permanent) via the cross-platform IFileOperations service.
     private void OnContextMenuOpening(object? sender, CancelEventArgs e)
     {
         if (Ctx()?.FullPath is null) { e.Cancel = true; return; }
 
         bool windows = OperatingSystem.IsWindows();
+        var fileOps = Service<IFileOperations>();
         if (sender is ContextMenu menu)
             foreach (var item in menu.Items)
-                if (item is MenuItem mi && (mi.Tag as string) == "winonly")
-                    mi.IsVisible = windows;
+                if (item is MenuItem mi)
+                    switch (mi.Tag as string)
+                    {
+                        case "winonly": mi.IsVisible = windows; break;
+                        case "delete" when fileOps is not null: mi.Header = fileOps.DeleteActionLabel; break;
+                    }
     }
 
     private void OnCtxOpen(object? sender, RoutedEventArgs e)
@@ -131,7 +138,8 @@ public partial class WorkspaceExplorerToolView : UserControl
     private void OnCtxDelete(object? sender, RoutedEventArgs e)
     {
         if (Ctx()?.FullPath is not { } path) return;
-        if (WindowsFileOperations.Delete(path)) Explorer?.Refresh();
+        // Cross-platform delete (recycle bin / trash / permanent) via the OS-specific service.
+        if (Service<IFileOperations>()?.Delete(path) == true) Explorer?.Refresh();
     }
 
     private void OnCtxCopyFull(object? sender, RoutedEventArgs e)

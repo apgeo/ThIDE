@@ -91,7 +91,8 @@
                                 <Separator />
                                 <MenuItem Header="New File…" Click="OnCtxNewFile" />
                                 <MenuItem Header="New Folder…" Click="OnCtxNewFolder" />
-                                <MenuItem Header="Delete" Tag="winonly" Click="OnCtxDelete" />
+                                <!-- Shown on every OS; header is set per-platform in OnContextMenuOpening. -->
+                                <MenuItem Header="Delete" Tag="delete" Click="OnCtxDelete" />
                                 <Separator />
                                 <MenuItem Header="Copy Full Path" Click="OnCtxCopyFull" />
                                 <MenuItem Header="Copy Relative Path" Click="OnCtxCopyRel" />

@@ -1,26 +1,25 @@
-// Small filesystem helpers for the file-explorer context menu. Delete routes to the
-// Recycle Bin on Windows (undoable) via SHFileOperation; elsewhere it falls back to a
-// permanent delete. Best-effort; returns false on failure.
+// Windows IFileOperations implementation (Plan: cross-platform refactor). Delete sends
+// the item to the Recycle Bin (undoable) via shell32 SHFileOperation. This whole type is
+// [SupportedOSPlatform("windows")] and is only ever instantiated by FileOperationsFactory
+// on Windows, so the P/Invoke never loads on macOS / Linux.
 
 using System;
-using System.IO;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 
 namespace TherionProc.Services;
 
-public static class WindowsFileOperations
+[SupportedOSPlatform("windows")]
+public sealed class WindowsFileOperations : IFileOperations
 {
-    /// <summary>Deletes a file/folder, sending it to the Recycle Bin on Windows.</summary>
-    public static bool Delete(string path)
+    public bool DeleteIsUndoable => true;
+
+    public string DeleteActionLabel => "Move to Recycle Bin";
+
+    /// <summary>Deletes a file/folder, sending it to the Recycle Bin.</summary>
+    public bool Delete(string path)
     {
-        try
-        {
-            if (OperatingSystem.IsWindows()) return RecycleBin(path);
-            if (Directory.Exists(path)) Directory.Delete(path, recursive: true);
-            else if (File.Exists(path)) File.Delete(path);
-            return true;
-        }
+        try { return RecycleBin(path); }
         catch { return false; }
     }
 
