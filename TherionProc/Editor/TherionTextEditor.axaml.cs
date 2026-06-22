@@ -52,8 +52,11 @@ public partial class TherionTextEditor : UserControl
     public static readonly StyledProperty<IEnumerable<string>?> CompletionTermsProperty =
         AvaloniaProperty.Register<TherionTextEditor, IEnumerable<string>?>(nameof(CompletionTerms));
 
-    /// <summary>Raised when the user activates a file-path hyperlink (input/load/source/export/…); carries the resolved file path.</summary>
+    /// <summary>Raised when the user activates a file-path hyperlink (input/load/source); carries the resolved file path.</summary>
     public event EventHandler<string>? OpenFileRequested;
+
+    /// <summary>Raised when an export/output file link is activated; it should open in the OS default app (#15).</summary>
+    public event EventHandler<string>? OpenExternalRequested;
 
     /// <summary>Raised when a cross-file reference resolves to a span in a different file.</summary>
     public event EventHandler<SourceSpan>? NavigateToSpanRequested;
@@ -87,7 +90,8 @@ public partial class TherionTextEditor : UserControl
         { "input", "load", "source" };
 
     private readonly record struct PathLink(
-        int Start, int Length, string Raw, string? ResolvedExisting, string AttemptedFull, bool Expected);
+        int Start, int Length, string Raw, string? ResolvedExisting, string AttemptedFull,
+        bool Expected, bool ShellOpen);
 
     // Context-aware completion vocabularies.
     private static readonly string[] FlagValues =
@@ -689,33 +693,41 @@ public partial class TherionTextEditor : UserControl
         if (_editor is null) return;
         var view = _editor.TextArea.TextView;
         var visualPos = e.GetPosition(view) + view.ScrollOffset;
-        var hit = RefTokenUnderPointer(visualPos);
+        if (FloorOffset(visualPos) is not { } off) return;
 
         bool leftButton = e.GetCurrentPoint(_editor).Properties.IsLeftButtonPressed;
         bool ctrl = (e.KeyModifiers & KeyModifiers.Control) != 0;
+        if (!leftButton && !ctrl) return;
 
-        if (hit is null) return;
-        int off = hit.Value.Offset;
-
-        // Click on a path hyperlink opens it (mirrors the hover affordance).
-        if (leftButton && ResolvePathLinkAt(off) is { } link)
+        // Path hyperlink (input/load/source open in-editor; export output via the OS).
+        if (ResolvePathLinkAt(off) is { } link &&
+            PointerWithinRange(view, link.Start, link.Start + link.Length, visualPos.X))
         {
             OpenLink(link);
             e.Handled = true;
             return;
         }
 
-        // Plain left-click on an @-reference navigates (like a path hyperlink); the
-        // '@' makes it unambiguously a reference, so this won't hijack normal edits.
-        if (leftButton && !ctrl && hit.Value.Raw.Contains('@'))
+        // Reference link: navigate when the pointer is over a resolvable token
+        // (plain click, like a hyperlink — covers @-refs, stations, map scraps).
+        if (RefTokenUnderPointer(visualPos) is { } hit)
         {
-            TryNavigateAt(off);
-            e.Handled = true;
-            return;
+            var kind = ChooseReferenceKind((hit.Start, hit.Length, hit.Raw), hit.Offset);
+            if ((ctrl || Navigation?.CanNavigate(hit.Raw, kind) == true) &&
+                Navigation?.GoToDefinition(hit.Raw, kind) is { } span && !span.IsEmpty)
+            {
+                NavigateToSpan(span);
+                e.Handled = true;
+            }
         }
+    }
 
-        // Ctrl+click → go to definition / linked file (covers bare references too).
-        if (ctrl) TryNavigateAt(off);
+    /// <summary>Document offset of the glyph under <paramref name="visualPos"/>, or null if past the text.</summary>
+    private int? FloorOffset(Point visualPos)
+    {
+        if (_editor is null) return null;
+        var loc = _editor.TextArea.TextView.GetPositionFloor(visualPos);
+        return loc is null ? null : _editor.Document.GetOffset(loc.Value.Location);
     }
 
     private void UpdateHoverLink(TextView view, Point visualPos)
@@ -739,19 +751,47 @@ public partial class TherionTextEditor : UserControl
     /// The navigable sub-range under the pointer: a file path, or — for an
     /// <c>a@b</c> reference — only the half the pointer is over (so it's clear which
     /// part will be navigated, item #14). Returns null unless the token resolves.
+    /// Also reports the resolved target via <see cref="HoverTargetChanged"/> (#8).
     /// </summary>
     private (int Start, int Length)? HoverLinkAt(Point visualPos)
     {
-        if (RefTokenUnderPointer(visualPos) is not { } hit) return null;
-        var tok = (hit.Start, hit.Length, hit.Raw);
+        var view = _editor!.TextArea.TextView;
+        if (FloorOffset(visualPos) is { } off)
+        {
+            // Path links (input/load/source/export output) — keyword itself excluded.
+            if (ResolvePathLinkAt(off) is { } link &&
+                PointerWithinRange(view, link.Start, link.Start + link.Length, visualPos.X))
+            {
+                RaiseHoverTarget(link.ResolvedExisting is { } p
+                    ? new SourceSpan(p, SourceLocation.Start, SourceLocation.Start, 0, 0) : null);
+                return (link.Start, link.Length);
+            }
+        }
 
-        // Path links (input/load/source/…) — but never the command keyword itself (#15).
-        if (ResolvePathLinkAt(hit.Offset) is { } link) return (link.Start, link.Length);
+        if (Navigation is not null && RefTokenUnderPointer(visualPos) is { } hit)
+        {
+            var kind = ChooseReferenceKind((hit.Start, hit.Length, hit.Raw), hit.Offset);
+            if (Navigation.CanNavigate(hit.Raw, kind))
+            {
+                RaiseHoverTarget(Navigation.GoToDefinition(hit.Raw, kind));
+                return RefPartRange((hit.Start, hit.Length, hit.Raw), hit.Offset);
+            }
+        }
 
-        if (Navigation is null) return null;
-        var kind = ChooseReferenceKind(tok, hit.Offset);
-        if (!Navigation.CanNavigate(hit.Raw, kind)) return null;
-        return RefPartRange(tok, hit.Offset);
+        RaiseHoverTarget(null);
+        return null;
+    }
+
+    /// <summary>Raised (debounced via change-detection) with the workspace target under the pointer (#8).</summary>
+    public event EventHandler<SourceSpan?>? HoverTargetChanged;
+    private string? _lastHoverKey;
+
+    private void RaiseHoverTarget(SourceSpan? target)
+    {
+        var key = target is { } s ? $"{s.FilePath}|{s.StartOffset}" : null;
+        if (key == _lastHoverKey) return;
+        _lastHoverKey = key;
+        HoverTargetChanged?.Invoke(this, target);
     }
 
     private void TryNavigateAt(int offset)
@@ -890,26 +930,57 @@ public partial class TherionTextEditor : UserControl
 
         var line = _editor.Document.GetLineByOffset(offset);
         var lineText = _editor.Document.GetText(line);
-        var keyword = FirstWordRaw(lineText);
+        var keyword = FirstWordRaw(lineText).ToLowerInvariant();
         if (!PathCommands.Contains(keyword)) return null;
 
-        // The keyword itself (e.g. "input") is not a link — only its path argument (#15).
+        // The keyword itself (e.g. "input") is never a link — only its path argument.
         int kwStart = line.Offset + (lineText.Length - lineText.TrimStart().Length);
         if (offset < kwStart + keyword.Length) return null;
+
+        // On export/system lines only the OUTPUT file is a link — not map/-projection/
+        // plan/-output etc. (#16) — and it opens in the OS default app (#15).
+        bool shellOpen = false;
+        if (keyword is "export" or "system")
+        {
+            if (!IsOutputValueToken(line, lineText, tok.Start)) return null;
+            shellOpen = true;
+        }
 
         var full = ComputeFullPath(raw);
         if (full is null) return null;
         return new PathLink(tok.Start, tok.Length, raw, FindExisting(full), full,
-            Expected: ExpectedFileCommands.Contains(keyword));
+            Expected: ExpectedFileCommands.Contains(keyword), ShellOpen: shellOpen);
+    }
+
+    /// <summary>True when the token at <paramref name="tokenStart"/> is the value right after <c>-output</c>/<c>-o</c>.</summary>
+    private static bool IsOutputValueToken(AvaloniaEdit.Document.DocumentLine line, string lineText, int tokenStart)
+    {
+        int tokCol = tokenStart - line.Offset;
+        var words = System.Text.RegularExpressions.Regex.Matches(lineText, @"\S+");
+        for (int i = 0; i < words.Count - 1; i++)
+        {
+            if (words[i].Value.Equals("-output", StringComparison.OrdinalIgnoreCase) ||
+                words[i].Value.Equals("-o", StringComparison.OrdinalIgnoreCase))
+            {
+                var next = words[i + 1];
+                if (tokCol >= next.Index && tokCol < next.Index + next.Length) return true;
+            }
+        }
+        return false;
     }
 
     private void OpenLink(PathLink link)
     {
         if (link.ResolvedExisting is { } existing)
-            OpenFileRequested?.Invoke(this, existing);
+        {
+            if (link.ShellOpen) OpenExternalRequested?.Invoke(this, existing);
+            else OpenFileRequested?.Invoke(this, existing);
+        }
         else
-            _ = ShowMessageAsync("File not found",
+        {
+            _ = ShowMessageAsync(link.ShellOpen ? "Output not found" : "File not found",
                 $"The referenced file could not be found:\n\n{link.AttemptedFull}");
+        }
     }
 
     private async System.Threading.Tasks.Task ShowMessageAsync(string title, string message)

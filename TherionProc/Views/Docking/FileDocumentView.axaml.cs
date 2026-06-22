@@ -21,9 +21,21 @@ public partial class FileDocumentView : UserControl
         if (this.FindControl<TherionTextEditor>("Editor") is { } editor)
         {
             editor.OpenFileRequested += OnOpenFileRequested;
+            editor.OpenExternalRequested += OnOpenExternalRequested;
             editor.NavigateToSpanRequested += OnNavigateToSpanRequested;
             editor.CaretMoved += OnCaretMoved;
         }
+    }
+
+    // An export/output link (.lox/.pdf/.3d/...) — open in the OS default viewer (#15).
+    private void OnOpenExternalRequested(object? sender, string path)
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(
+                new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true });
+        }
+        catch { /* no associated app / launch failed */ }
     }
 
     private void OnCaretMoved(object? sender, SourceSpan span)

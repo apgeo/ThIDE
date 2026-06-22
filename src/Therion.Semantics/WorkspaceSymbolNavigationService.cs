@@ -55,14 +55,35 @@ public sealed class WorkspaceSymbolNavigationService : ISymbolNavigationService
         if (_workspace.ResolveReference(reference, kind) is { } span && !span.IsEmpty)
             return span;
 
-        if ((kind is ReferenceKind.Any or ReferenceKind.Station) &&
-            _activeFilePath is { } path && path.EndsWith(".th2", System.StringComparison.OrdinalIgnoreCase))
+        if (kind is ReferenceKind.Any or ReferenceKind.Station)
         {
             var r = StationRef.Parse(reference);
-            if (!r.HasSurvey && _workspace.ResolveStationInFileScope(r.Point, path) is { } s && !s.IsEmpty)
-                return s;
+            if (!r.HasSurvey)
+            {
+                // In a .th2 sketch, a bare station name belongs to the survey of the .th
+                // that inputs it (#4/#7).
+                if (_activeFilePath is { } path &&
+                    path.EndsWith(".th2", System.StringComparison.OrdinalIgnoreCase) &&
+                    _workspace.ResolveStationInFileScope(r.Point, path) is { } s && !s.IsEmpty)
+                    return s;
+
+                // Otherwise resolve a bare station id by its (usually-unique) name,
+                // preferring a definition in the active file (#13 station command, #17).
+                if (ResolveBareStationByName(r.Point) is { } byName) return byName;
+            }
         }
         return null;
+    }
+
+    private SourceSpan? ResolveBareStationByName(string point)
+    {
+        if (!_workspace.StationsByLastName.TryGetValue(point, out var list) || list.IsEmpty)
+            return null;
+        if (_activeFilePath is { } path)
+            foreach (var st in list)
+                if (string.Equals(st.DeclarationSpan.FilePath, path, System.StringComparison.OrdinalIgnoreCase))
+                    return st.DeclarationSpan;
+        return list[0].DeclarationSpan;
     }
 
     public SourceSpan? GoToDefinition(string qualifiedName)

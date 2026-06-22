@@ -16,6 +16,7 @@ internal sealed record ReferenceIndexes(
     FrozenDictionary<string, ImmutableArray<SurveySymbol>> SurveysByLastName,
     FrozenDictionary<string, StationSymbol> StationsByQn,
     FrozenDictionary<string, StationSymbol> StationsBySurveyAndPoint,
+    FrozenDictionary<string, ImmutableArray<StationSymbol>> StationsByLastName,
     FrozenDictionary<string, MapSymbol> MapsById,
     FrozenDictionary<string, ScrapSymbol> ScrapsById,
     FrozenDictionary<string, ScrapObjectSymbol> ScrapObjectsById);
@@ -30,6 +31,7 @@ internal static class ReferenceIndexBuilder
         var surveysByLast = new Dictionary<string, ImmutableArray<SurveySymbol>.Builder>(StringComparer.Ordinal);
         var stationsByQn = new Dictionary<string, StationSymbol>(StringComparer.Ordinal);
         var stationsBySp = new Dictionary<string, StationSymbol>(StringComparer.Ordinal);
+        var stationsByLast = new Dictionary<string, ImmutableArray<StationSymbol>.Builder>(StringComparer.Ordinal);
         var mapsById = new Dictionary<string, MapSymbol>(StringComparer.Ordinal);
         var scrapsById = new Dictionary<string, ScrapSymbol>(StringComparer.Ordinal);
         var scrapObjectsById = new Dictionary<string, ScrapObjectSymbol>(StringComparer.Ordinal);
@@ -51,6 +53,9 @@ internal static class ReferenceIndexBuilder
                 if (st.Name.Parts.Length >= 2)
                     stationsBySp.TryAdd(
                         WorkspaceSemanticModel.SurveyPointKey(st.Name.Parts[^2], st.Name.Last), st);
+                if (!stationsByLast.TryGetValue(st.Name.Last, out var byLast))
+                    stationsByLast[st.Name.Last] = byLast = ImmutableArray.CreateBuilder<StationSymbol>();
+                byLast.Add(st);
             }
 
             foreach (var map in model.Maps.Values)
@@ -65,6 +70,7 @@ internal static class ReferenceIndexBuilder
             surveysByLast.ToFrozenDictionary(kv => kv.Key, kv => kv.Value.ToImmutable(), StringComparer.Ordinal),
             stationsByQn.ToFrozenDictionary(StringComparer.Ordinal),
             stationsBySp.ToFrozenDictionary(StringComparer.Ordinal),
+            stationsByLast.ToFrozenDictionary(kv => kv.Key, kv => kv.Value.ToImmutable(), StringComparer.Ordinal),
             mapsById.ToFrozenDictionary(StringComparer.Ordinal),
             scrapsById.ToFrozenDictionary(StringComparer.Ordinal),
             scrapObjectsById.ToFrozenDictionary(StringComparer.Ordinal));

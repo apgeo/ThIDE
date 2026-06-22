@@ -80,6 +80,10 @@ public sealed class Th2Parser
                 case "join":
                     children.Add(ParseJoin(line));
                     break;
+                // File-header charset directive — recognized, carries no .th2 semantics.
+                case "encoding":
+                    children.Add(new UnknownCommand(line.Span, kw, JoinFrom(line, 1)));
+                    break;
                 default:
                     var sev = options.Mode == ParserMode.Strict
                         ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning;

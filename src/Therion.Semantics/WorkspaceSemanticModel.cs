@@ -44,6 +44,14 @@ public sealed class WorkspaceSemanticModel
     public FrozenDictionary<string, StationSymbol> StationsBySurveyAndPoint { get; init; } =
         FrozenDictionary<string, StationSymbol>.Empty;
 
+    /// <summary>
+    /// Stations grouped by their last (point) name component. Used to resolve a bare
+    /// station id (e.g. clicking <c>PCB2</c> on a <c>station</c> line, or a <c>-name</c>
+    /// in a .th2) when no survey qualifier is available — station names are usually unique.
+    /// </summary>
+    public FrozenDictionary<string, ImmutableArray<StationSymbol>> StationsByLastName { get; init; } =
+        FrozenDictionary<string, ImmutableArray<StationSymbol>>.Empty;
+
     /// <summary>Maps keyed by id (the <c>map</c> half of <c>map@survey</c>).</summary>
     public FrozenDictionary<string, MapSymbol> MapsById { get; init; } =
         FrozenDictionary<string, MapSymbol>.Empty;
@@ -127,6 +135,7 @@ public sealed class WorkspaceSemanticModel
             SurveysByLastName = idx.SurveysByLastName,
             StationsByQn = idx.StationsByQn,
             StationsBySurveyAndPoint = idx.StationsBySurveyAndPoint,
+            StationsByLastName = idx.StationsByLastName,
             MapsById = idx.MapsById,
             ScrapsById = idx.ScrapsById,
             ScrapObjectsById = idx.ScrapObjectsById,
@@ -211,6 +220,10 @@ public sealed class WorkspaceSemanticModel
                     return st.DeclarationSpan;
             }
         }
+
+        // Fallback: a station with this (usually-unique) name anywhere in the project.
+        if (StationsByLastName.TryGetValue(stationName, out var byName) && !byName.IsEmpty)
+            return byName[0].DeclarationSpan;
         return null;
     }
 

@@ -151,6 +151,26 @@ public class CrossFileReferenceTests
     }
 
     [Fact]
+    public void Bare_station_name_resolves_via_navigation_service()
+    {
+        var ws = Build(("/p/m.th", """
+            survey grind
+              centreline
+                data normal from to length compass clino
+                0 PCB2 1 0 0
+              endcentreline
+            endsurvey
+            """));
+        var nav = new WorkspaceSymbolNavigationService(ws, ws.PerFile["/p/m.th"], "/p/m.th");
+
+        // Clicking PCB2 on a `station PCB2 "..."` line resolves by unique name (#13).
+        var span = nav.GoToDefinition("PCB2", Therion.Processing.Abstractions.ReferenceKind.Any);
+
+        Assert.NotNull(span);
+        Assert.EndsWith("m.th", span!.Value.FilePath);
+    }
+
+    [Fact]
     public void Group_inside_centreline_binds_its_shots()
     {
         var parse = new ThParser().Parse("/p/a.th", """
