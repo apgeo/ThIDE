@@ -43,12 +43,6 @@
                         <PathIcon Data="{DynamicResource Icon.File}" Width="14" Height="14" />
                     </ToggleButton>
                     <ToggleButton Padding="5,3" VerticalAlignment="Center"
-                                  ToolTip.Tip="Show object model items in the graph"
-                                  IsVisible="{Binding Explorer.IsRelationalView}"
-                                  IsChecked="{Binding Explorer.ShowObjectModel, Mode=TwoWay}">
-                        <PathIcon Data="{DynamicResource Icon.NodeGraph}" Width="14" Height="14" />
-                    </ToggleButton>
-                    <ToggleButton Padding="5,3" VerticalAlignment="Center"
                                   ToolTip.Tip="Highlight workspace item when hovering a link in the editor"
                                   IsChecked="{Binding Explorer.RevealOnHover, Mode=TwoWay}">
                         <PathIcon Data="{DynamicResource Icon.Eye}" Width="14" Height="14" />
@@ -78,6 +72,7 @@
                   ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                   ItemsSource="{Binding Explorer.Roots}"
                   SelectedItem="{Binding Explorer.Selected, Mode=TwoWay}"
+                  ContextRequested="OnTreeContextRequested"
                   DoubleTapped="OnNodeDoubleTapped">
             <TreeView.Styles>
                 <!-- Honor each node's default-expansion state. -->
@@ -87,8 +82,9 @@
             </TreeView.Styles>
             <TreeView.ItemTemplate>
                 <TreeDataTemplate ItemsSource="{Binding Children}">
-                    <StackPanel Orientation="Horizontal" Spacing="6" ToolTip.Tip="{Binding Name}">
-                        <StackPanel.ContextMenu>
+                    <!-- Border carries the yellow hover-highlight (#4) and the hover tooltip (#2). -->
+                    <Border Background="{Binding RowBackground}" CornerRadius="2" Padding="2,0">
+                        <Border.ContextMenu>
                             <ContextMenu Opening="OnContextMenuOpening">
                                 <MenuItem Header="Open" Click="OnCtxOpen" />
                                 <MenuItem Header="Reveal in File Explorer" Click="OnCtxReveal" />
@@ -103,18 +99,27 @@
                                 <MenuItem Header="Refresh" Click="OnCtxRefresh" />
                                 <MenuItem Header="More options (Windows shell)…" Tag="winonly" Click="OnCtxShellMenu" />
                             </ContextMenu>
-                        </StackPanel.ContextMenu>
-                        <!-- Native shell icon (file-explorer view) with a glyph fallback. -->
-                        <Image Source="{Binding ShellIcon}" Width="16" Height="16" VerticalAlignment="Center"
-                               IsVisible="{Binding ShellIcon, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                        <PathIcon Data="{Binding Kind, Converter={x:Static conv:KindToIconConverter.Instance}}"
-                                  Foreground="{Binding IconBrush}" Width="14" Height="14" VerticalAlignment="Center"
-                                  IsVisible="{Binding ShellIcon, Converter={x:Static ObjectConverters.IsNull}}" />
-                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
-                                   TextTrimming="CharacterEllipsis" />
-                        <TextBlock Text="{Binding Detail}" Foreground="Gray" FontStyle="Italic"
-                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                    </StackPanel>
+                        </Border.ContextMenu>
+                        <ToolTip.Tip>
+                            <StackPanel MaxWidth="600">
+                                <TextBlock Text="{Binding TooltipTitle}" TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding LastModifiedText}" Foreground="Gray" FontSize="11"
+                                           IsVisible="{Binding LastModifiedText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                            </StackPanel>
+                        </ToolTip.Tip>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <!-- Native shell icon (file-explorer view) with a glyph fallback. -->
+                            <Image Source="{Binding ShellIcon}" Width="16" Height="16" VerticalAlignment="Center"
+                                   IsVisible="{Binding ShellIcon, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                            <PathIcon Data="{Binding Kind, Converter={x:Static conv:KindToIconConverter.Instance}}"
+                                      Foreground="{Binding IconBrush}" Width="14" Height="14" VerticalAlignment="Center"
+                                      IsVisible="{Binding ShellIcon, Converter={x:Static ObjectConverters.IsNull}}" />
+                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding Detail}" Foreground="Gray" FontStyle="Italic"
+                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                    </Border>
                 </TreeDataTemplate>
             </TreeView.ItemTemplate>
         </TreeView>

@@ -26,7 +26,9 @@ public sealed class KindToIconConverter : IValueConverter
             "map"      => "Icon.Map",
             "scrap"    => "Icon.Scrap",
             "missing"  => "Icon.Warning",
-            _          => "Icon.Th",
+            "folder"   => "Icon.Folder",
+            "file"     => "Icon.File",
+            _          => "Icon.File",
         };
 
         if (Application.Current is { } app &&
