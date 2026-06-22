@@ -13,6 +13,7 @@ using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Markup.Xaml;
@@ -64,6 +65,12 @@ public partial class TherionTextEditor : UserControl
     /// <summary>Raised when the caret moves, carrying its document span (for navigation history).</summary>
     public event EventHandler<SourceSpan>? CaretMoved;
 
+    /// <summary>
+    /// True while the caret is being moved by highlighted-term navigation (Shift+F12 cycling
+    /// through references). Such moves are excluded from the back/forward history (#1).
+    /// </summary>
+    public bool IsTermNavigating { get; private set; }
+
     /// <summary>Raised when the user requests "find all references" for an identifier (#4).</summary>
     public event EventHandler<string>? FindReferencesRequested;
 
@@ -95,6 +102,7 @@ public partial class TherionTextEditor : UserControl
         ["select"]      = "select <map@survey> — chooses what to export.",
         ["export"]      = "export <type> [-options] -output <file> — produces an output (map/model/…).",
         ["layout"]      = "layout <id> … endlayout — output styling (metapost/tex) block.",
+        ["lookup"]      = "lookup … endlookup — opaque lookup block (body is not parsed).",
         ["encoding"]    = "encoding <charset> — declares the file's character set.",
     };
 
@@ -109,7 +117,13 @@ public partial class TherionTextEditor : UserControl
     private DispatcherTimer? _infoShowTimer;
     private DispatcherTimer? _infoHideTimer;
     private int _infoTokenStart = -1;
+    private int _pendingNavOffset = -1;   // definition offset to collapse selection on PointerReleased (#2)
+    private TopLevel? _windowForPopup;     // window-level pointer routing while popup is open (#3)
+    private IBookmarksService? _bookmarks;
+    private BookmarkHighlightRenderer? _bookmarkHighlighter;
+    private BookmarkMargin? _bookmarkMargin;
     private Point _infoPointer;
+    private bool _pointerOverPopup;   // pointer is currently inside the hover popup (#5)
     private FoldingManager? _foldingManager;
     private CompletionWindow? _completionWindow;
     private Diagnostic? _hoverDiagnostic;
@@ -159,6 +173,8 @@ public partial class TherionTextEditor : UserControl
                 RoutingStrategies.Bubble, handledEventsToo: true);
             _editor.TextArea.TextView.PointerMoved += OnEditorPointerMoved;
             _editor.TextArea.TextView.PointerExited += OnEditorPointerExited;
+            _editor.TextArea.TextView.AddHandler(InputElement.PointerReleasedEvent, OnEditorPointerReleased,
+                RoutingStrategies.Bubble, handledEventsToo: true);
             _editor.TextArea.TextEntered += OnTextEntered;
             _editor.TextChanged += OnEditorTextChanged;
             ActualThemeVariantChanged += OnThemeVariantChanged;
@@ -201,6 +217,23 @@ public partial class TherionTextEditor : UserControl
         editor.TextArea.IndentationStrategy = new TherionIndentationStrategy();
         SearchPanel.Install(editor);                            // Ctrl+F / Ctrl+H
         _foldingManager = FoldingManager.Install(editor.TextArea);
+
+        // Context menu (B2).
+        editor.TextArea.ContextMenu = BuildContextMenu();
+
+        // Bookmark margin renderer (B3).
+        _bookmarkHighlighter = new BookmarkHighlightRenderer(editor.TextArea.TextView);
+        editor.TextArea.TextView.BackgroundRenderers.Add(_bookmarkHighlighter);
+        // A box marker in the left gutter beside the line number (B3 / #4).
+        _bookmarkMargin = new BookmarkMargin();
+        editor.TextArea.LeftMargins.Insert(0, _bookmarkMargin);
+        try
+        {
+            _bookmarks = AppServices.Provider.GetService<IBookmarksService>();
+            if (_bookmarks is not null)
+                _bookmarks.BookmarksChanged += (_, _) => editor.TextArea.TextView.InvalidateVisual();
+        }
+        catch { /* design-time / no container */ }
         UpdateFoldings();
         UpdateThconfigDecorations();
 
@@ -388,6 +421,8 @@ public partial class TherionTextEditor : UserControl
             var path = change.GetNewValue<string?>();
             _squiggles?.SetFilePath(path);
             _overviewRuler?.SetFilePath(path);
+            _bookmarkHighlighter?.SetContext(_bookmarks, path);
+            _bookmarkMargin?.SetContext(_bookmarks, path);
             UpdateThconfigDecorations();
             RecomputeFileWarnings();
         }
@@ -540,8 +575,16 @@ public partial class TherionTextEditor : UserControl
         var span = refs[_refIndex];
         var ln = Math.Max(1, span.Start.Line);
         if (ln > _editor.Document.LineCount) return;
-        _editor.CaretOffset = _editor.Document.GetOffset(ln, Math.Max(1, span.Start.Column));
-        _editor.ScrollToLine(ln);
+
+        // Flag this as term navigation so the caret move it triggers is kept out of
+        // the back/forward history (#1).
+        IsTermNavigating = true;
+        try
+        {
+            _editor.CaretOffset = _editor.Document.GetOffset(ln, Math.Max(1, span.Start.Column));
+            _editor.ScrollToLine(ln);
+        }
+        finally { IsTermNavigating = false; }
         _editor.Focus();
     }
 
@@ -675,7 +718,14 @@ public partial class TherionTextEditor : UserControl
         _infoTokenStart = start;
         _infoShowTimer ??= CreateTimer(350, ShowHoverInfo);
         _infoShowTimer.Stop();
-        if (start < 0) { CancelHoverInfo(); return; }
+        if (start < 0)
+        {
+            // Left the token: don't slam the popup shut — give the user a grace window to
+            // reach it (e.g. to click "Go to definition"). The hide is cancelled the moment
+            // the pointer enters the popup; if it's already over the popup, keep it open (#5).
+            if (!_pointerOverPopup) StartHoverHide();
+            return;
+        }
         _infoShowTimer.Start();
     }
 
@@ -753,25 +803,38 @@ public partial class TherionTextEditor : UserControl
             HorizontalOffset = 8,
             VerticalOffset = 16,
         };
-        _infoPopup.PointerEntered += (_, _) => _infoHideTimer?.Stop();
-        _infoPopup.PointerExited += (_, _) => StartHoverHide();
-        // While the mouse is over the popup, pipe its position back to the editor's
-        // hover-detection logic so moving to a different token (that happens to be
-        // under the popup) still triggers a new popup (#3).
-        _infoPopup.PointerMoved += OnInfoPopupPointerMoved;
+        _infoPopup.PointerEntered += (_, _) => { _pointerOverPopup = true; _infoHideTimer?.Stop(); };
+        _infoPopup.PointerExited += (_, _) => { _pointerOverPopup = false; StartHoverHide(); };
+        // Route all window pointer moves through the editor's hover detection while
+        // the popup is open so tokens geometrically behind it remain discoverable (#3).
+        _infoPopup.Opened += OnInfoPopupOpened;
+        _infoPopup.Closed += OnInfoPopupClosed;
         if (this.FindControl<Grid>("Root") is { } root) root.Children.Add(_infoPopup);
     }
 
-    private void OnInfoPopupPointerMoved(object? sender, PointerEventArgs e)
+    private void OnInfoPopupOpened(object? sender, EventArgs e)
     {
-        if (_editor?.TextArea.TextView is not { } tv || _infoPopup?.Child is not { } content) return;
-        try
-        {
-            var localPos = e.GetPosition(content);
-            if (content.TranslatePoint(localPos, tv) is { } tvPos)
-                ScheduleHoverInfo(tvPos + tv.ScrollOffset);
-        }
-        catch { /* TranslatePoint can fail across visual-tree boundaries */ }
+        _windowForPopup = TopLevel.GetTopLevel(this);
+        _windowForPopup?.AddHandler(InputElement.PointerMovedEvent, OnWindowPointerMovedForPopup,
+            RoutingStrategies.Tunnel);
+    }
+
+    private void OnInfoPopupClosed(object? sender, EventArgs e)
+    {
+        _windowForPopup?.RemoveHandler(InputElement.PointerMovedEvent, OnWindowPointerMovedForPopup);
+        _windowForPopup = null;
+    }
+
+    // Called in tunnel phase on the main window while the hover popup is open.
+    // Converts window-relative coordinates to TextView coordinates so the editor's
+    // hover detection keeps working even when the mouse is over the popup overlay (#3).
+    private void OnWindowPointerMovedForPopup(object? sender, PointerEventArgs e)
+    {
+        if (_windowForPopup is null || _editor?.TextArea.TextView is not { } tv) return;
+        var windowPos = e.GetPosition(_windowForPopup);
+        // tv is in the window's visual tree — TranslatePoint resolves correctly.
+        if (_windowForPopup.TranslatePoint(windowPos, tv) is { } tvPos)
+            ScheduleHoverInfo(tvPos + tv.ScrollOffset);
     }
 
     private void StartHoverHide()
@@ -780,7 +843,7 @@ public partial class TherionTextEditor : UserControl
         // show timer for a different token is NOT cancelled when the popup auto-hides (#3).
         if (_infoHideTimer is null)
         {
-            _infoHideTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
+            _infoHideTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(450) };
             _infoHideTimer.Tick += (_, _) => { _infoHideTimer!.Stop(); DismissHoverPopup(); };
         }
         _infoHideTimer.Stop();
@@ -821,9 +884,25 @@ public partial class TherionTextEditor : UserControl
         panel.Children.Add(new TextBlock { Text = command, FontWeight = FontWeight.Bold, FontSize = 14 });
         panel.Children.Add(new TextBlock { Text = CommandDocs[command], TextWrapping = TextWrapping.Wrap });
         var doc = new Button { Content = "Documentation ↗", Padding = new Thickness(6, 2), HorizontalAlignment = HorizontalAlignment.Left };
-        doc.Click += (_, _) => { OpenExternalRequested?.Invoke(this, ThbookUrl); HideHoverInfo(); };
+        doc.Click += (_, _) => { OpenDocumentation(command); HideHoverInfo(); };
         panel.Children.Add(doc);
         return panel;
+    }
+
+    private static IThbookDocumentationService? TryDocs()
+    {
+        try { return AppServices.Provider.GetService<IThbookDocumentationService>(); }
+        catch { return null; } // design-time / no container
+    }
+
+    /// <summary>
+    /// Opens the bundled thbook PDF at the page mapped to <paramref name="term"/> (#6),
+    /// falling back to the online wiki when there's no mapping or the PDF can't be opened.
+    /// </summary>
+    private void OpenDocumentation(string term)
+    {
+        if (TryDocs() is { } svc && svc.Open(term)) return;
+        OpenExternalRequested?.Invoke(this, ThbookUrl);
     }
 
     private Control BuildIdentifierInfo(string raw, ReferenceInfo info)
@@ -853,6 +932,16 @@ public partial class TherionTextEditor : UserControl
         refs.Click += (_, _) => { FindReferencesRequested?.Invoke(this, StationRef.Parse(raw).PointWithoutMark); HideHoverInfo(); };
         actions.Children.Add(go);
         actions.Children.Add(refs);
+
+        // Documentation button: links to the thbook page for this reference kind (#6),
+        // shown only when a page mapping exists for it (info.Kind is "station"/"survey"/…).
+        if (info.Kind is { Length: > 0 } docTerm && TryDocs() is { } svc && svc.TryGetPage(docTerm, out _))
+        {
+            var docBtn = new Button { Content = "Documentation ↗", Padding = new Thickness(6, 2) };
+            docBtn.Click += (_, _) => { OpenDocumentation(docTerm); HideHoverInfo(); };
+            actions.Children.Add(docBtn);
+        }
+
         panel.Children.Add(actions);
         return panel;
     }
@@ -945,6 +1034,15 @@ public partial class TherionTextEditor : UserControl
         }
     }
 
+    // Collapses any selection AvaloniaEdit created between anchor (definition) and
+    // mouse-up position after a navigation click fires on PointerPressed (#2).
+    private void OnEditorPointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (_pendingNavOffset < 0 || _editor is null) return;
+        _editor.Select(_pendingNavOffset, 0);
+        _pendingNavOffset = -1;
+    }
+
     // ----- go to definition / linked files -------------------------------
 
     private void OnEditorPointerPressed(object? sender, PointerPressedEventArgs e)
@@ -977,17 +1075,14 @@ public partial class TherionTextEditor : UserControl
             {
                 NavigateToSpan(span);
                 e.Handled = true;
-                // Synchronously reset selection anchor to the definition target so that
-                // the stale "anchor at click position" state cannot extend into a multi-line
-                // selection on the next click (#2). For same-file targets, ScrollTo will also
-                // do this asynchronously; we do it here too to cover the window between the
-                // click and the async scroll.
+                // Store the definition offset so OnEditorPointerReleased can collapse
+                // any selection AvaloniaEdit extends between anchor and mouse position (#2).
                 if (_editor?.Document is { } anchorDoc &&
                     string.Equals(span.FilePath, CurrentFilePath, StringComparison.OrdinalIgnoreCase))
                 {
-                    var ln = Math.Max(1, span.Start.Line);
-                    if (ln <= anchorDoc.LineCount)
-                        _editor.Select(anchorDoc.GetOffset(ln, Math.Max(1, span.Start.Column)), 0);
+                    var defLine = Math.Max(1, span.Start.Line);
+                    if (defLine <= anchorDoc.LineCount)
+                        _pendingNavOffset = anchorDoc.GetOffset(defLine, Math.Max(1, span.Start.Column));
                 }
             }
         }
@@ -1536,5 +1631,279 @@ public partial class TherionTextEditor : UserControl
         private static bool IsWholeWord(TextDocument doc, int start, int end) =>
             (start == 0 || !IsWordChar(doc.GetCharAt(start - 1))) &&
             (end >= doc.TextLength || !IsWordChar(doc.GetCharAt(end)));
+    }
+
+    // ----- context menu (B2) ---------------------------------------------
+
+    private ContextMenu BuildContextMenu()
+    {
+        var menu = new ContextMenu();
+        menu.Items.Add(MakeItem("Cut",                    CutSelection));
+        menu.Items.Add(MakeItem("Copy",                   CopySelection));
+        menu.Items.Add(MakeItem("Paste",                  () => _ = PasteAsync()));
+        menu.Items.Add(MakeItem("Delete",                 DeleteSelection));
+        menu.Items.Add(new Separator());
+        menu.Items.Add(MakeItem("Select All",             () => _editor?.SelectAll()));
+        menu.Items.Add(new Separator());
+        menu.Items.Add(MakeItem("UPPERCASE",              () => ApplyCase(upper: true)));
+        menu.Items.Add(MakeItem("lowercase",              () => ApplyCase(upper: false)));
+        menu.Items.Add(new Separator());
+        menu.Items.Add(MakeItem("Toggle Comment  Ctrl+/", ToggleLineComment));
+        menu.Items.Add(new Separator());
+        menu.Items.Add(MakeItem("Fold All",               () => SetAllFoldings(folded: true)));
+        menu.Items.Add(MakeItem("Unfold All",             () => SetAllFoldings(folded: false)));
+        menu.Items.Add(new Separator());
+        menu.Items.Add(MakeItem("Add Bookmark…",     () => _ = AddBookmarkAsync()));
+        return menu;
+    }
+
+    // Collapses/expands every foldable region in the document (#8).
+    private void SetAllFoldings(bool folded)
+    {
+        if (_foldingManager is null) return;
+        foreach (var folding in _foldingManager.AllFoldings)
+            folding.IsFolded = folded;
+        _editor?.TextArea.TextView.Redraw();
+    }
+
+    /// <summary>
+    /// The range a context action targets: the selection when there is one, otherwise the
+    /// whole current line. <paramref name="includeDelimiter"/> adds the line's newline so
+    /// cut/delete remove the entire line (like VS Code's no-selection line cut, #3).
+    /// </summary>
+    private (int Start, int Length) ActionRange(bool includeDelimiter)
+    {
+        if (_editor is null) return (0, 0);
+        if (_editor.SelectionLength > 0)
+            return (_editor.SelectionStart, _editor.SelectionLength);
+        var line = _editor.Document.GetLineByOffset(_editor.CaretOffset);
+        return (line.Offset, includeDelimiter ? line.TotalLength : line.Length);
+    }
+
+    private static MenuItem MakeItem(string header, Action onClick)
+    {
+        var item = new MenuItem { Header = header };
+        item.Click += (_, _) => onClick();
+        return item;
+    }
+
+    // Access clipboard via the same ApplicationLifetime path used elsewhere in the project.
+    private static void TrySetClipboard(string text)
+    {
+        if (Avalonia.Application.Current?.ApplicationLifetime is
+            Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime life)
+            _ = life.MainWindow?.Clipboard?.SetTextAsync(text);
+    }
+
+    private static async System.Threading.Tasks.Task<string?> TryGetClipboardAsync()
+    {
+        if (Avalonia.Application.Current?.ApplicationLifetime is
+            Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime life &&
+            life.MainWindow?.Clipboard is { } cb)
+            return await cb.TryGetTextAsync();
+        return null;
+    }
+
+    private void CutSelection()
+    {
+        if (_editor is null) return;
+        var (start, length) = ActionRange(includeDelimiter: true);
+        if (length == 0) return;
+        TrySetClipboard(_editor.Document.GetText(start, length));
+        _editor.Document.Remove(start, length);
+    }
+
+    private void CopySelection()
+    {
+        if (_editor is null) return;
+        var (start, length) = ActionRange(includeDelimiter: true);
+        if (length == 0) return;
+        TrySetClipboard(_editor.Document.GetText(start, length));
+    }
+
+    private async System.Threading.Tasks.Task PasteAsync()
+    {
+        if (_editor is null) return;
+        var text = await TryGetClipboardAsync();
+        if (text is null) return;
+        _editor.Document.BeginUpdate();
+        try
+        {
+            if (_editor.SelectionLength > 0)
+                _editor.Document.Replace(_editor.SelectionStart, _editor.SelectionLength, text);
+            else
+                _editor.Document.Insert(_editor.CaretOffset, text);
+        }
+        finally { _editor.Document.EndUpdate(); }
+    }
+
+    private void DeleteSelection()
+    {
+        if (_editor is null) return;
+        var (start, length) = ActionRange(includeDelimiter: true);
+        if (length == 0) return;
+        _editor.Document.Remove(start, length);
+    }
+
+    private void ApplyCase(bool upper)
+    {
+        if (_editor is null) return;
+        // Case ops keep the newline out of range so the line break isn't disturbed.
+        var (start, length) = ActionRange(includeDelimiter: false);
+        if (length == 0) return;
+        var src = _editor.Document.GetText(start, length);
+        var text = upper ? src.ToUpperInvariant() : src.ToLowerInvariant();
+        _editor.Document.Replace(start, length, text);
+    }
+
+    // ----- bookmark add (B3) ---------------------------------------------
+
+    private async System.Threading.Tasks.Task AddBookmarkAsync()
+    {
+        if (_editor is null || string.IsNullOrEmpty(CurrentFilePath)) return;
+        int line = _editor.Document.GetLineByOffset(_editor.CaretOffset).LineNumber;
+
+        var box = new TextBox { PlaceholderText = "Bookmark title (optional)", Width = 280, Margin = new Thickness(0, 0, 0, 4) };
+        var ok = new Button { Content = "Add", IsDefault = true, HorizontalAlignment = HorizontalAlignment.Right };
+        var dialog = new Window
+        {
+            Title = "Add Bookmark",
+            Width = 320,
+            SizeToContent = SizeToContent.Height,
+            CanResize = false,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Content = new StackPanel
+            {
+                Margin = new Thickness(12),
+                Spacing = 8,
+                Children = { box, ok },
+            },
+        };
+        ok.Click += (_, _) => dialog.Close(box.Text ?? string.Empty);
+        box.KeyDown += (_, ke) =>
+        {
+            if (ke.Key == Key.Enter) dialog.Close(box.Text ?? string.Empty);
+            else if (ke.Key == Key.Escape) dialog.Close(null);
+        };
+        box.Loaded += (_, _) => box.Focus();
+
+        if (TopLevel.GetTopLevel(this) is not Window owner) return;
+        var title = await dialog.ShowDialog<string?>(owner);
+        if (title is null) return; // cancelled
+
+        try
+        {
+            var svc = _bookmarks ?? AppServices.Provider.GetService<IBookmarksService>();
+            svc?.AddBookmark(CurrentFilePath!, line, title);
+        }
+        catch { }
+    }
+
+    // ----- bookmark highlight renderer (B3) ------------------------------
+
+    private sealed class BookmarkHighlightRenderer : IBackgroundRenderer
+    {
+        private static readonly IBrush Fill =
+            new SolidColorBrush(Color.FromArgb(0x55, 0x20, 0x80, 0xC8));
+
+        private readonly TextView _view;
+        private IBookmarksService? _service;
+        private string? _filePath;
+
+        public BookmarkHighlightRenderer(TextView view) => _view = view;
+
+        public KnownLayer Layer => KnownLayer.Background;
+
+        public void SetContext(IBookmarksService? service, string? filePath)
+        {
+            _service = service;
+            _filePath = filePath;
+            _view.InvalidateVisual();
+        }
+
+        public void Draw(TextView textView, DrawingContext drawingContext)
+        {
+            if (_service is null || string.IsNullOrEmpty(_filePath)) return;
+            if (textView.Document is null || textView.VisualLines.Count == 0) return;
+
+            var bookmarkedLines = new System.Collections.Generic.HashSet<int>();
+            foreach (var b in _service.Bookmarks)
+                if (string.Equals(b.FilePath, _filePath, StringComparison.OrdinalIgnoreCase))
+                    bookmarkedLines.Add(b.Line);
+            if (bookmarkedLines.Count == 0) return;
+
+            foreach (var vl in textView.VisualLines)
+            {
+                if (!bookmarkedLines.Contains(vl.FirstDocumentLine.LineNumber)) continue;
+                var seg = new TextSegment
+                {
+                    StartOffset = vl.FirstDocumentLine.Offset,
+                    Length      = vl.FirstDocumentLine.TotalLength,
+                };
+                var builder = new BackgroundGeometryBuilder { CornerRadius = 0 };
+                builder.AddSegment(textView, seg);
+                if (builder.CreateGeometry() is { } geom)
+                    drawingContext.DrawGeometry(Fill, null, geom);
+            }
+        }
+    }
+
+    /// <summary>
+    /// A thin left-gutter margin that draws a small coloured box next to the line number
+    /// of every bookmarked line, so bookmarks are visible at the line marker too (#4).
+    /// </summary>
+    private sealed class BookmarkMargin : AbstractMargin
+    {
+        private const double MarginWidth = 13;
+        private const double BoxSize = 9;
+        private static readonly IBrush BoxFill = new SolidColorBrush(Color.FromRgb(0x20, 0x80, 0xC8));
+        private static readonly IPen BoxPen = new Pen(new SolidColorBrush(Color.FromRgb(0x10, 0x50, 0x90)), 1);
+
+        private IBookmarksService? _service;
+        private string? _filePath;
+
+        public void SetContext(IBookmarksService? service, string? filePath)
+        {
+            if (_service is not null) _service.BookmarksChanged -= OnBookmarksChanged;
+            _service = service;
+            _filePath = filePath;
+            if (_service is not null) _service.BookmarksChanged += OnBookmarksChanged;
+            InvalidateVisual();
+        }
+
+        private void OnBookmarksChanged(object? sender, EventArgs e) => InvalidateVisual();
+
+        protected override Size MeasureOverride(Size availableSize) => new(MarginWidth, 0);
+
+        protected override void OnTextViewChanged(TextView oldTextView, TextView newTextView)
+        {
+            if (oldTextView is not null) oldTextView.VisualLinesChanged -= OnVisualLinesChanged;
+            base.OnTextViewChanged(oldTextView, newTextView);
+            if (newTextView is not null) newTextView.VisualLinesChanged += OnVisualLinesChanged;
+            InvalidateVisual();
+        }
+
+        private void OnVisualLinesChanged(object? sender, EventArgs e) => InvalidateVisual();
+
+        public override void Render(DrawingContext context)
+        {
+            var tv = TextView;
+            if (tv is null || !tv.VisualLinesValid || _service is null || string.IsNullOrEmpty(_filePath)) return;
+
+            var marked = new HashSet<int>();
+            foreach (var b in _service.Bookmarks)
+                if (string.Equals(b.FilePath, _filePath, StringComparison.OrdinalIgnoreCase))
+                    marked.Add(b.Line);
+            if (marked.Count == 0) return;
+
+            foreach (var vl in tv.VisualLines)
+            {
+                if (!marked.Contains(vl.FirstDocumentLine.LineNumber)) continue;
+                double top = vl.GetTextLineVisualYPosition(vl.TextLines[0], VisualYPosition.TextTop) - tv.VerticalOffset;
+                double y = top + (vl.TextLines[0].Height - BoxSize) / 2;
+                var rect = new Rect((MarginWidth - BoxSize) / 2, y, BoxSize, BoxSize);
+                context.DrawRectangle(BoxFill, BoxPen, new RoundedRect(rect, 2));
+            }
+        }
     }
 }
