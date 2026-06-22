@@ -49,7 +49,7 @@ public static class TokenClassifier
         "scrap", "endscrap", "point", "line", "endline", "area", "endarea",
         "encoding", "sketch", "map", "endmap", "join", "layer",
         // .thconfig
-        "source", "layout", "export", "select", "cs", "system-charset",
+        "source", "layout", "endlayout", "lookup", "endlookup", "export", "select", "cs", "system-charset",
         "language", "lang", "translate", "revise", "group", "endgroup",
     };
 

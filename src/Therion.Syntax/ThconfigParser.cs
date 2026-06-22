@@ -18,7 +18,7 @@ public sealed class ThconfigParser
     /// <summary>Top-level keywords that may appear in a <c>.thconfig</c> (per thbook �3).</summary>
     public static readonly ImmutableHashSet<string> TopLevelKeywords =
         ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase,
-            "source", "layout", "export", "select", "cs",
+            "source", "layout", "lookup", "export", "select", "cs",
             "input", "system-charset", "encoding", "language", "lang",
             "translate", "revise", "group", "endgroup");
 
@@ -75,12 +75,13 @@ public sealed class ThconfigParser
                     var fullSpan = SpanFromTo(commandStart, tokens[lineEnd - 1]);
                     var rawArgs = ExtractRawArguments(sourceText, tokens, i + 1, lineEnd);
 
-                    // A `layout … endlayout` block is consumed opaquely: its body is
-                    // metapost / tex code, not Therion syntax, so we neither validate
-                    // nor warn about the lines inside it. (A bare single-line `layout`
-                    // with no matching `endlayout` falls through to normal handling.)
-                    if (string.Equals(keyword, "layout", StringComparison.OrdinalIgnoreCase) &&
-                        TryFindLayoutEnd(tokens, lineEnd, out int blockNext, out int blockLastToken))
+                    // A `layout … endlayout` (or `lookup … endlookup`) block is consumed
+                    // opaquely: its body is metapost / tex / lookup code, not Therion syntax,
+                    // so we neither validate nor warn about the lines inside it. (A bare
+                    // single-line opener with no matching closer falls through to normal
+                    // handling.)
+                    if (OpaqueBlockEnd(keyword) is { } endKeyword &&
+                        TryFindBlockEnd(tokens, lineEnd, endKeyword, out int blockNext, out int blockLastToken))
                     {
                         var blockSpan = SpanFromTo(commandStart, tokens[blockLastToken]);
                         children.Add(new UnknownCommand(blockSpan, keyword, rawArgs));
@@ -132,15 +133,21 @@ public sealed class ThconfigParser
         return new ParseResult<TherionFile>(file, diagnostics.ToImmutable());
     }
 
+    /// <summary>The closing keyword for an opaque (unparsed-body) block opener, or null.</summary>
+    private static string? OpaqueBlockEnd(string keyword) =>
+        string.Equals(keyword, "layout", StringComparison.OrdinalIgnoreCase) ? "endlayout" :
+        string.Equals(keyword, "lookup", StringComparison.OrdinalIgnoreCase) ? "endlookup" :
+        null;
+
     /// <summary>
-    /// Scans for the <c>endlayout</c> that closes a layout block, ignoring the
-    /// metapost/tex body in between (including any nested <c>endcode</c>/<c>enddef</c>).
+    /// Scans for the <paramref name="endKeyword"/> that closes an opaque block, ignoring the
+    /// body in between (including any nested <c>endcode</c>/<c>enddef</c>).
     /// </summary>
-    /// <param name="start">Index to begin scanning (just past the <c>layout</c> header line).</param>
-    /// <param name="next">Index just past the <c>endlayout</c> line (where parsing resumes).</param>
-    /// <param name="lastContentToken">Index of the <c>endlayout</c> token (for the block span).</param>
-    private static bool TryFindLayoutEnd(
-        ImmutableArray<TherionToken> tokens, int start, out int next, out int lastContentToken)
+    /// <param name="start">Index to begin scanning (just past the opener's header line).</param>
+    /// <param name="next">Index just past the closing line (where parsing resumes).</param>
+    /// <param name="lastContentToken">Index of the closing token (for the block span).</param>
+    private static bool TryFindBlockEnd(
+        ImmutableArray<TherionToken> tokens, int start, string endKeyword, out int next, out int lastContentToken)
     {
         next = tokens.Length;
         lastContentToken = -1;
@@ -157,7 +164,7 @@ public sealed class ThconfigParser
             {
                 atLineStart = false;
                 if (t.Kind == TherionTokenKind.Identifier &&
-                    string.Equals(t.Text, "endlayout", StringComparison.OrdinalIgnoreCase))
+                    string.Equals(t.Text, endKeyword, StringComparison.OrdinalIgnoreCase))
                 {
                     lastContentToken = i;
                     int k = i + 1;
