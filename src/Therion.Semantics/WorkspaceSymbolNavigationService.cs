@@ -43,7 +43,13 @@ public sealed class WorkspaceSymbolNavigationService : ISymbolNavigationService
 
     /// <inheritdoc/>
     public bool CanNavigate(string reference, ReferenceKind kind)
-        => !string.IsNullOrWhiteSpace(reference) && ResolveReferenceWithScope(reference, kind) is not null;
+    {
+        if (string.IsNullOrWhiteSpace(reference)) return false;
+        if (ResolveReferenceWithScope(reference, kind) is not null) return true;
+        // The workspace snapshot only covers saved content; also check the freshly-parsed
+        // active file so newly-added (unsaved) identifiers get hyperlinks (#4).
+        return _activeFile is not null && _activeFile.TryResolve(reference, out _);
+    }
 
     /// <inheritdoc/>
     public ReferenceInfo? Describe(string reference, ReferenceKind kind)
@@ -65,6 +71,12 @@ public sealed class WorkspaceSymbolNavigationService : ISymbolNavigationService
                     return new ReferenceInfo("station", s2);
             }
         }
+
+        // Freshly-parsed active file: catch newly-added identifiers not yet in the workspace
+        // snapshot (i.e. added since the last save). GoToDefinition already checks _activeFile,
+        // but Describe must return the right kind label ("station" not "file") (#4).
+        if (_activeFile is not null && _activeFile.TryResolve(reference, out var freshSpan) && !freshSpan.IsEmpty)
+            return new ReferenceInfo("station", freshSpan);
 
         // Input/load/xvi file targets.
         if (GoToDefinition(reference) is { } fs && !fs.IsEmpty)

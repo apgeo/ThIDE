@@ -7,20 +7,71 @@
              x:DataType="vm:WorkspaceExplorerToolViewModel">
     <DockPanel>
         <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="8,5">
-            <StackPanel Spacing="4">
-                <TextBlock Foreground="Gray" Text="{Binding Explorer.RootPath}"
-                           TextTrimming="CharacterEllipsis" />
-                <StackPanel Orientation="Horizontal" Spacing="6">
-                    <CheckBox Content="Object model" FontSize="11" VerticalAlignment="Center"
-                              IsChecked="{Binding Explorer.ShowObjectModel, Mode=TwoWay}" />
-                    <ToggleButton Padding="5,1" FontSize="13" VerticalAlignment="Center"
+            <StackPanel Spacing="5">
+                <!-- View-mode switch (#5): relational object graph vs. file explorer. -->
+                <StackPanel Orientation="Horizontal" Spacing="0">
+                    <ToggleButton Padding="6,3" ToolTip.Tip="Relational object-graph view"
+                                  IsChecked="{Binding Explorer.IsRelationalView, Mode=OneWay}"
+                                  Command="{Binding Explorer.SwitchToRelationalCommand}">
+                        <PathIcon Data="{DynamicResource Icon.Cube}" Width="14" Height="14" />
+                    </ToggleButton>
+                    <ToggleButton Padding="6,3" ToolTip.Tip="File-explorer view"
+                                  IsChecked="{Binding Explorer.IsFileExplorerView, Mode=OneWay}"
+                                  Command="{Binding Explorer.SwitchToFileExplorerCommand}">
+                        <PathIcon Data="{DynamicResource Icon.Folder}" Width="14" Height="14" />
+                    </ToggleButton>
+                </StackPanel>
+
+                <!-- Active thconfig dropdown (#3) + its formatted path (#8). -->
+                <ComboBox HorizontalAlignment="Stretch" FontSize="11" x:CompileBindings="False"
+                          ToolTip.Tip="Active configuration (drives the object graph)"
+                          ItemsSource="{Binding Explorer.ThconfigCandidates}"
+                          SelectedItem="{Binding Explorer.SelectedThconfig, Mode=TwoWay}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding DisplayPath}" ToolTip.Tip="{Binding FullPath}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                    <!-- Show file nodes in the relational view (#5a); hidden in file-explorer mode. -->
+                    <ToggleButton Padding="5,3" VerticalAlignment="Center"
+                                  ToolTip.Tip="Show file nodes in the object graph"
+                                  IsVisible="{Binding Explorer.IsRelationalView}"
+                                  IsChecked="{Binding Explorer.ShowFilesInModel, Mode=TwoWay}">
+                        <PathIcon Data="{DynamicResource Icon.File}" Width="14" Height="14" />
+                    </ToggleButton>
+                    <ToggleButton Padding="5,3" VerticalAlignment="Center"
+                                  ToolTip.Tip="Show object model items in the graph"
+                                  IsVisible="{Binding Explorer.IsRelationalView}"
+                                  IsChecked="{Binding Explorer.ShowObjectModel, Mode=TwoWay}">
+                        <PathIcon Data="{DynamicResource Icon.NodeGraph}" Width="14" Height="14" />
+                    </ToggleButton>
+                    <ToggleButton Padding="5,3" VerticalAlignment="Center"
                                   ToolTip.Tip="Highlight workspace item when hovering a link in the editor"
-                                  IsChecked="{Binding Explorer.RevealOnHover, Mode=TwoWay}" Content="&#x1F50D;" />
-                    <ToggleButton Padding="5,1" FontSize="13" VerticalAlignment="Center"
+                                  IsChecked="{Binding Explorer.RevealOnHover, Mode=TwoWay}">
+                        <PathIcon Data="{DynamicResource Icon.Eye}" Width="14" Height="14" />
+                    </ToggleButton>
+                    <ToggleButton Padding="5,3" VerticalAlignment="Center"
                                   ToolTip.Tip="Highlight the active file in the workspace when switching tabs"
-                                  IsChecked="{Binding Explorer.RevealOnTabSwitch, Mode=TwoWay}" Content="&#x21C6;" />
+                                  IsChecked="{Binding Explorer.RevealOnTabSwitch, Mode=TwoWay}">
+                        <PathIcon Data="{DynamicResource Icon.Swap}" Width="14" Height="14" />
+                    </ToggleButton>
                 </StackPanel>
             </StackPanel>
+        </Border>
+
+        <!-- File-modified-outside-editor banner (#5b). -->
+        <Border DockPanel.Dock="Top" Background="#E3F2FD" Padding="8,4"
+                IsVisible="{Binding Explorer.WorkspaceBanner, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+            <DockPanel>
+                <Button DockPanel.Dock="Right" Content="&#x2715;" Padding="6,0"
+                        Background="Transparent" BorderThickness="0" Foreground="#0D47A1"
+                        Command="{Binding Explorer.DismissWorkspaceBannerCommand}" />
+                <TextBlock Text="{Binding Explorer.WorkspaceBanner}" Foreground="#0D47A1"
+                           VerticalAlignment="Center" TextWrapping="Wrap" FontSize="11" />
+            </DockPanel>
         </Border>
 
         <TreeView x:Name="Tree" x:CompileBindings="False"
@@ -37,9 +88,28 @@
             <TreeView.ItemTemplate>
                 <TreeDataTemplate ItemsSource="{Binding Children}">
                     <StackPanel Orientation="Horizontal" Spacing="6" ToolTip.Tip="{Binding Name}">
+                        <StackPanel.ContextMenu>
+                            <ContextMenu Opening="OnContextMenuOpening">
+                                <MenuItem Header="Open" Click="OnCtxOpen" />
+                                <MenuItem Header="Reveal in File Explorer" Click="OnCtxReveal" />
+                                <Separator />
+                                <MenuItem Header="New File…" Click="OnCtxNewFile" />
+                                <MenuItem Header="New Folder…" Click="OnCtxNewFolder" />
+                                <MenuItem Header="Delete" Tag="winonly" Click="OnCtxDelete" />
+                                <Separator />
+                                <MenuItem Header="Copy Full Path" Click="OnCtxCopyFull" />
+                                <MenuItem Header="Copy Relative Path" Click="OnCtxCopyRel" />
+                                <Separator />
+                                <MenuItem Header="Refresh" Click="OnCtxRefresh" />
+                                <MenuItem Header="More options (Windows shell)…" Tag="winonly" Click="OnCtxShellMenu" />
+                            </ContextMenu>
+                        </StackPanel.ContextMenu>
+                        <!-- Native shell icon (file-explorer view) with a glyph fallback. -->
+                        <Image Source="{Binding ShellIcon}" Width="16" Height="16" VerticalAlignment="Center"
+                               IsVisible="{Binding ShellIcon, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         <PathIcon Data="{Binding Kind, Converter={x:Static conv:KindToIconConverter.Instance}}"
-                                  Foreground="{Binding IconBrush}" Width="14" Height="14"
-                                  VerticalAlignment="Center" />
+                                  Foreground="{Binding IconBrush}" Width="14" Height="14" VerticalAlignment="Center"
+                                  IsVisible="{Binding ShellIcon, Converter={x:Static ObjectConverters.IsNull}}" />
                         <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
                                    TextTrimming="CharacterEllipsis" />
                         <TextBlock Text="{Binding Detail}" Foreground="Gray" FontStyle="Italic"

@@ -337,8 +337,9 @@ public partial class TherionTextEditor : UserControl
         int length = endOffset - startOffset;
         if (length <= 0) length = Math.Max(0, docLine.EndOffset - startOffset);
 
-        _editor.SelectionLength = 0;       // never leave a text selection from navigation (#6)
-        _editor.CaretOffset = startOffset;
+        // Select(start, 0) resets BOTH the selection anchor and the caret to startOffset,
+        // preventing AvaloniaEdit from extending selection on the next click (#2/#6).
+        _editor.Select(startOffset, 0);
         _editor.ScrollToLine(line);
         _flash?.Flash(startOffset, length);
         _editor.Focus();
@@ -674,7 +675,7 @@ public partial class TherionTextEditor : UserControl
         _infoTokenStart = start;
         _infoShowTimer ??= CreateTimer(350, ShowHoverInfo);
         _infoShowTimer.Stop();
-        if (start < 0) { HideHoverInfo(); return; }
+        if (start < 0) { CancelHoverInfo(); return; }
         _infoShowTimer.Start();
     }
 
@@ -704,7 +705,7 @@ public partial class TherionTextEditor : UserControl
                 ? BuildIdentifierInfo(tok.Raw, info) :
             ResolvePathLinkAt(off) is { } link ? BuildFileInfo(link) : null;
 
-        if (content is null) { HideHoverInfo(); return; }
+        if (content is null) { CancelHoverInfo(); return; }
 
         EnsureInfoPopup();
         _infoPopup!.Child = new Border
@@ -717,14 +718,29 @@ public partial class TherionTextEditor : UserControl
             Child = content,
         };
         _infoPopup.IsOpen = true;
+        // Return focus to the editor so the popup doesn't intercept keyboard and
+        // hover events (#3).
+        _editor.TextArea.Focus();
     }
 
-    private void HideHoverInfo()
+    // Fully cancel hover: stops the show timer and closes the popup.
+    // Call this when the mouse leaves all token areas or a diagnostic appears.
+    private void CancelHoverInfo()
     {
         _infoShowTimer?.Stop();
+        DismissHoverPopup();
+    }
+
+    // Close the popup without cancelling the pending show timer.
+    // Called from the popup's exit-hide timer so a new token's popup can still open (#3).
+    private void DismissHoverPopup()
+    {
         _infoTokenStart = -1;
         if (_infoPopup is { IsOpen: true }) _infoPopup.IsOpen = false;
     }
+
+    // Keep HideHoverInfo as an alias so all existing call-sites that mean "full cancel" still work.
+    private void HideHoverInfo() => CancelHoverInfo();
 
     private void EnsureInfoPopup()
     {
@@ -739,12 +755,34 @@ public partial class TherionTextEditor : UserControl
         };
         _infoPopup.PointerEntered += (_, _) => _infoHideTimer?.Stop();
         _infoPopup.PointerExited += (_, _) => StartHoverHide();
+        // While the mouse is over the popup, pipe its position back to the editor's
+        // hover-detection logic so moving to a different token (that happens to be
+        // under the popup) still triggers a new popup (#3).
+        _infoPopup.PointerMoved += OnInfoPopupPointerMoved;
         if (this.FindControl<Grid>("Root") is { } root) root.Children.Add(_infoPopup);
+    }
+
+    private void OnInfoPopupPointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (_editor?.TextArea.TextView is not { } tv || _infoPopup?.Child is not { } content) return;
+        try
+        {
+            var localPos = e.GetPosition(content);
+            if (content.TranslatePoint(localPos, tv) is { } tvPos)
+                ScheduleHoverInfo(tvPos + tv.ScrollOffset);
+        }
+        catch { /* TranslatePoint can fail across visual-tree boundaries */ }
     }
 
     private void StartHoverHide()
     {
-        _infoHideTimer ??= CreateTimer(250, HideHoverInfo);
+        // Use DismissHoverPopup (not CancelHoverInfo/HideHoverInfo) so that a pending
+        // show timer for a different token is NOT cancelled when the popup auto-hides (#3).
+        if (_infoHideTimer is null)
+        {
+            _infoHideTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
+            _infoHideTimer.Tick += (_, _) => { _infoHideTimer!.Stop(); DismissHoverPopup(); };
+        }
         _infoHideTimer.Stop();
         _infoHideTimer.Start();
     }
@@ -939,6 +977,18 @@ public partial class TherionTextEditor : UserControl
             {
                 NavigateToSpan(span);
                 e.Handled = true;
+                // Synchronously reset selection anchor to the definition target so that
+                // the stale "anchor at click position" state cannot extend into a multi-line
+                // selection on the next click (#2). For same-file targets, ScrollTo will also
+                // do this asynchronously; we do it here too to cover the window between the
+                // click and the async scroll.
+                if (_editor?.Document is { } anchorDoc &&
+                    string.Equals(span.FilePath, CurrentFilePath, StringComparison.OrdinalIgnoreCase))
+                {
+                    var ln = Math.Max(1, span.Start.Line);
+                    if (ln <= anchorDoc.LineCount)
+                        _editor.Select(anchorDoc.GetOffset(ln, Math.Max(1, span.Start.Column)), 0);
+                }
             }
         }
     }
@@ -1113,7 +1163,11 @@ public partial class TherionTextEditor : UserControl
         while (start > 0 && IsRefChar(text[start - 1])) start--;
         int end = offset;
         while (end < text.Length && IsRefChar(text[end])) end++;
-        return end > start ? (start, end - start, text.Substring(start, end - start)) : null;
+        if (end <= start) return null;
+        var raw = text.Substring(start, end - start);
+        // "." is Therion's splay placeholder (no destination station) — not a real ref (#5).
+        if (raw == ".") return null;
+        return (start, end - start, raw);
     }
 
     // A Therion reference: station chars plus '@' (survey qualifier) and ':' (join mark).
