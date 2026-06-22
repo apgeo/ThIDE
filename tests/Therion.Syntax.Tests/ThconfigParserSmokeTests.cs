@@ -24,6 +24,28 @@ public class ThconfigParserSmokeTests
     }
 
     [Fact]
+    public void Lookup_block_body_is_consumed_opaquely_without_warnings()
+    {
+        const string text = """
+            source cave.th
+            lookup
+              this is not therion syntax {grad} 1.0
+              frobnicate whatever
+            endlookup
+            select cave
+            """;
+
+        var parser = new ThconfigParser();
+        var result = parser.Parse("sample.thconfig", text);
+
+        Assert.False(result.HasErrors);
+        // No "unknown command" warnings for the lines inside the lookup block.
+        Assert.Empty(result.Diagnostics);
+        // source + lookup(block) + select = 3 children (the body is folded into the block).
+        Assert.Equal(3, result.Value!.Children.Length);
+    }
+
+    [Fact]
     public void Unknown_command_emits_warning_in_lenient_mode()
     {
         var parser = new ThconfigParser();
