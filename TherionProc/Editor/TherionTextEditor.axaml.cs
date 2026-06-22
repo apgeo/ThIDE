@@ -194,6 +194,8 @@ public partial class TherionTextEditor : UserControl
         editor.Options.HighlightCurrentLine = s.HighlightCurrentLine;
         editor.Options.ConvertTabsToSpaces = s.ConvertTabsToSpaces;
         editor.Options.IndentationSize = Math.Max(1, s.IndentationSize);
+        editor.WordWrap = s.EditorWordWrap; // #7
+
     }
 
     private bool IsDark() => ActualThemeVariant == ThemeVariant.Dark;
@@ -275,8 +277,9 @@ public partial class TherionTextEditor : UserControl
     }
 
     /// <summary>
-    /// Scrolls to a <see cref="SourceSpan"/>, selects its range (capped to the first
-    /// line so block declarations don't select their whole body) and briefly flashes it.
+    /// Scrolls to a <see cref="SourceSpan"/> and briefly flashes its range (capped to
+    /// the first line). Highlighting uses the transient flash adornment rather than a
+    /// text selection, so navigating never leaves a multi-line selection behind (#6).
     /// </summary>
     public void ScrollTo(SourceSpan span)
     {
@@ -295,9 +298,9 @@ public partial class TherionTextEditor : UserControl
         int length = endOffset - startOffset;
         if (length <= 0) length = Math.Max(0, docLine.EndOffset - startOffset);
 
+        _editor.SelectionLength = 0;       // never leave a text selection from navigation (#6)
         _editor.CaretOffset = startOffset;
         _editor.ScrollToLine(line);
-        if (length > 0) _editor.Select(startOffset, length);
         _flash?.Flash(startOffset, length);
         _editor.Focus();
     }
@@ -846,14 +849,14 @@ public partial class TherionTextEditor : UserControl
             : (tok.Start + at + 1, tok.Length - at - 1);  // survey half
     }
 
-    /// <summary>Scrolls to a resolved span in this file, or routes to the shell for a different file.</summary>
+    /// <summary>
+    /// Routes every navigation through the shell (document service) so the back/forward
+    /// history records each jump (#3), even within the same file. The service scrolls
+    /// this editor for same-file targets and opens+scrolls for cross-file ones.
+    /// </summary>
     private void NavigateToSpan(SourceSpan span)
     {
-        if (string.IsNullOrEmpty(span.FilePath) ||
-            string.Equals(span.FilePath, CurrentFilePath, StringComparison.OrdinalIgnoreCase))
-            ScrollTo(span);
-        else
-            NavigateToSpanRequested?.Invoke(this, span);
+        if (!span.IsEmpty) NavigateToSpanRequested?.Invoke(this, span);
     }
 
     /// <summary>

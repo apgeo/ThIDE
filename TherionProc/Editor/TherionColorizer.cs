@@ -22,7 +22,8 @@ public sealed class TherionColorizer : DocumentColorizingTransformer
     {
         [TokenClassification.Keyword]     = Brush(86, 156, 214),
         [TokenClassification.Option]      = Brush(220, 220, 170),
-        [TokenClassification.Number]      = Brush(181, 206, 168),
+        // Measurement values (numbers) in teal so they stand apart from green comments (#8).
+        [TokenClassification.Number]      = Brush(78, 201, 176),
         [TokenClassification.String]      = Brush(206, 145, 120),
         [TokenClassification.Comment]     = Brush(106, 153, 85),
         [TokenClassification.Punctuation] = Brush(212, 212, 212),
@@ -34,7 +35,8 @@ public sealed class TherionColorizer : DocumentColorizingTransformer
     {
         [TokenClassification.Keyword]     = Brush(0, 0, 200),
         [TokenClassification.Option]      = Brush(150, 110, 0),
-        [TokenClassification.Number]      = Brush(9, 134, 88),
+        // Measurement values (numbers) in teal so they stand apart from green comments (#8).
+        [TokenClassification.Number]      = Brush(0, 128, 140),
         [TokenClassification.String]      = Brush(163, 21, 21),
         [TokenClassification.Comment]     = Brush(0, 128, 0),
         [TokenClassification.Punctuation] = Brush(90, 90, 90),

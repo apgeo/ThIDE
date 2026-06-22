@@ -24,6 +24,7 @@
         </Border>
 
         <TreeView x:Name="Tree" x:CompileBindings="False"
+                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                   ItemsSource="{Binding Explorer.Roots}"
                   SelectedItem="{Binding Explorer.Selected, Mode=TwoWay}"
                   DoubleTapped="OnNodeDoubleTapped">
@@ -35,13 +36,14 @@
             </TreeView.Styles>
             <TreeView.ItemTemplate>
                 <TreeDataTemplate ItemsSource="{Binding Children}">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
+                    <StackPanel Orientation="Horizontal" Spacing="6" ToolTip.Tip="{Binding Name}">
                         <PathIcon Data="{Binding Kind, Converter={x:Static conv:KindToIconConverter.Instance}}"
                                   Foreground="{Binding IconBrush}" Width="14" Height="14"
                                   VerticalAlignment="Center" />
-                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis" />
                         <TextBlock Text="{Binding Detail}" Foreground="Gray" FontStyle="Italic"
-                                   VerticalAlignment="Center" />
+                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                     </StackPanel>
                 </TreeDataTemplate>
             </TreeView.ItemTemplate>

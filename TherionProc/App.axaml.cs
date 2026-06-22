@@ -20,6 +20,9 @@ public partial class App : Application
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
+            // Closing the main window quits the app, even if tool/float/search windows
+            // are still open (#9).
+            desktop.ShutdownMode = Avalonia.Controls.ShutdownMode.OnMainWindowClose;
             desktop.MainWindow = new MainWindow
             {
                 DataContext = services.GetRequiredService<MainWindowViewModel>(),

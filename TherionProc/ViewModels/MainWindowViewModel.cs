@@ -81,6 +81,13 @@ public partial class MainWindowViewModel : ViewModelBase
         };
     }
 
+    /// <summary>Editor word-wrap toggle (#7); persisted and applied live to all editors.</summary>
+    [ObservableProperty] private bool _wordWrap;
+    partial void OnWordWrapChanged(bool value)
+    {
+        if (_settings is { } s) s.Save(s.Current with { EditorWordWrap = value });
+    }
+
     // Localized menu labels.
     public string MenuFile           => L("Menu_File",                   "_File");
     public string MenuFileOpenFile   => L("Menu_File_OpenFile",          "Open _File...");
@@ -114,6 +121,7 @@ public partial class MainWindowViewModel : ViewModelBase
         _editService = editService;
         _layout = layout;
         _settings = settings;
+        _wordWrap = settings?.Current.EditorWordWrap ?? false; // seed without persisting
         _factory = factory;
 
         WorkspaceTool = workspaceTool;

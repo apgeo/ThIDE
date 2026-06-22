@@ -25,6 +25,7 @@ public sealed record AppSettings
     public bool HighlightCurrentLine { get; init; } = true;
     public bool ConvertTabsToSpaces { get; init; } = true;
     public int IndentationSize { get; init; } = 2;
+    public bool EditorWordWrap { get; init; }
 
     // ---- workspace panel ----
     public bool WorkspaceShowObjectModel { get; init; } = true;

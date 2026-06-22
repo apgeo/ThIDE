@@ -99,6 +99,9 @@
                     <PathIcon Data="{DynamicResource Icon.Eye}" />
                 </Button>
                 <Separator Width="1" Margin="4,2" Background="Gray" />
+                <ToggleButton Classes="tool" IsChecked="{Binding WordWrap, Mode=TwoWay}" ToolTip.Tip="Word wrap">
+                    <PathIcon Data="{DynamicResource Icon.WordWrap}" />
+                </ToggleButton>
                 <Button Classes="tool" Click="OnToggleFullScreen" ToolTip.Tip="Full screen (F11)">
                     <PathIcon Data="{DynamicResource Icon.FullScreen}" />
                 </Button>
