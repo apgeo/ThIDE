@@ -9,7 +9,9 @@ using System.Linq;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input.Platform;
+using Avalonia.Media;
 using Avalonia.Threading;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Dock.Model.Mvvm.Controls;
 using Therion.Core;
@@ -54,9 +56,35 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
         CanFloat = true;
         CanClose = true;
         CanPin = true;
+        TabBrush = TabBrushForExtension(System.IO.Path.GetExtension(filePath));
 
         SetText(text, reparse: true);
     }
+
+    /// <summary>
+    /// A soft vertical "fade" tint for this document's tab header, keyed on file type so
+    /// .th / .th2 / .thconfig tabs are visually distinguishable (task 2). Null for others.
+    /// </summary>
+    public IBrush? TabBrush { get; }
+
+    private static IBrush? TabBrushForExtension(string ext) => ext.ToLowerInvariant() switch
+    {
+        ".thconfig" or ".thc" => FadeBrush(Color.FromRgb(0x2E, 0x7D, 0x32)), // green
+        ".th2"                => FadeBrush(Color.FromRgb(0x6A, 0x1B, 0x9A)), // purple
+        ".th"                 => FadeBrush(Color.FromRgb(0xE6, 0x51, 0x00)), // orange
+        _                     => null,
+    };
+
+    private static IBrush FadeBrush(Color c) => new LinearGradientBrush
+    {
+        StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
+        EndPoint   = new RelativePoint(0, 1, RelativeUnit.Relative),
+        GradientStops =
+        {
+            new GradientStop(Color.FromArgb(0x70, c.R, c.G, c.B), 0),
+            new GradientStop(Color.FromArgb(0x10, c.R, c.G, c.B), 1),
+        },
+    };
 
     private string _savedText = string.Empty;
     private bool _isDirty;
@@ -234,6 +262,162 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
             _ = clipboard.SetTextAsync(text);
     }
 
+    // ----- banners: orphan (#4) + external-change reload (#6) ----------------
+
+    /// <summary>True when this file isn't part of the active project's object graph (#4).</summary>
+    [ObservableProperty] private bool _isOrphan;
+    /// <summary>Light-blue orphan banner text (names the active thconfig).</summary>
+    [ObservableProperty] private string _orphanBannerText = string.Empty;
+
+    /// <summary>Transient light-blue info banner (e.g. "Reloaded from disk (12:04)").</summary>
+    [ObservableProperty] private string? _infoBanner;
+
+    /// <summary>Red banner shown when the on-disk file changed while we have unsaved edits (#6).</summary>
+    [ObservableProperty] private bool _externalChangePending;
+    [ObservableProperty] private string _externalChangeText = string.Empty;
+    /// <summary>Second stage of the red banner: confirm discarding unsaved edits.</summary>
+    [ObservableProperty] private bool _confirmDiscardPending;
+    /// <summary>True when the on-disk file was deleted (reload is not offered).</summary>
+    [ObservableProperty] private bool _externalDeleted;
+
+    private DispatcherTimer? _infoBannerTimer;
+
+    /// <summary>Sets the orphan banner from the active workspace membership (#4).</summary>
+    public void SetWorkspaceMembership(bool isMember, string? activeThconfigName)
+    {
+        void Apply()
+        {
+            IsOrphan = !isMember;
+            OrphanBannerText = isMember
+                ? string.Empty
+                : activeThconfigName is { Length: > 0 } name
+                    ? $"This file seems like it is not bound to the active project relational tree ({name})."
+                    :  "This file seems like it is not bound to the active project relational tree.";
+        }
+        if (Dispatcher.UIThread.CheckAccess()) Apply(); else Dispatcher.UIThread.Post(Apply);
+    }
+
+    /// <summary>
+    /// Reacts to an on-disk change of this open file (#6): silently reloads a clean file
+    /// (when auto-reload is on), otherwise raises the red "changed on disk" banner.
+    /// </summary>
+    public void NotifyExternalChange(DateTime localTime, bool deleted, bool autoReload)
+    {
+        void Apply()
+        {
+            if (deleted)
+            {
+                ExternalDeleted = true;
+                ExternalChangeText = $"{System.IO.Path.GetFileName(FilePath)} was deleted on disk.";
+                ExternalChangePending = true;
+                ConfirmDiscardPending = false;
+                return;
+            }
+
+            if (!IsDirty && autoReload)
+            {
+                ReloadFromDisk();
+                FlashInfo($"Reloaded from disk ({localTime:HH:mm}).");
+                return;
+            }
+
+            ExternalDeleted = false;
+            ExternalChangeText =
+                $"{System.IO.Path.GetFileName(FilePath)} was changed on disk ({localTime:HH:mm}).";
+            ExternalChangePending = true;
+            ConfirmDiscardPending = false;
+        }
+        if (Dispatcher.UIThread.CheckAccess()) Apply(); else Dispatcher.UIThread.Post(Apply);
+    }
+
+    [RelayCommand]
+    private void ReloadExternal()
+    {
+        // Reloading would lose unsaved edits → ask first.
+        if (IsDirty) { ConfirmDiscardPending = true; return; }
+        ReloadFromDisk();
+        ClearExternalBanner();
+    }
+
+    [RelayCommand]
+    private void ConfirmDiscardReload()
+    {
+        ReloadFromDisk();
+        ClearExternalBanner();
+    }
+
+    [RelayCommand]
+    private void DismissExternal() => ClearExternalBanner();
+
+    [RelayCommand]
+    private void DismissInfo() => InfoBanner = null;
+
+    private void ClearExternalBanner()
+    {
+        ExternalChangePending = false;
+        ConfirmDiscardPending = false;
+        ExternalDeleted = false;
+    }
+
+    private void ReloadFromDisk()
+    {
+        try
+        {
+            if (!System.IO.File.Exists(FilePath)) return;
+            SetText(System.IO.File.ReadAllText(FilePath), reparse: true);
+        }
+        catch { /* leave editor content as-is on read failure */ }
+    }
+
+    private void FlashInfo(string message)
+    {
+        InfoBanner = message;
+        _infoBannerTimer ??= CreateInfoTimer();
+        _infoBannerTimer.Stop();
+        _infoBannerTimer.Start();
+    }
+
+    private DispatcherTimer CreateInfoTimer()
+    {
+        var t = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+        t.Tick += (_, _) => { t.Stop(); InfoBanner = null; };
+        return t;
+    }
+
+    // ----- tab tooltip: full path + cached last-write-time (B1) ----------------
+
+    private string? _cachedLastWrite;
+
+    /// <summary>Tooltip shown on the tab header: full path + cached last-modified time.</summary>
+    public string TabTooltip
+    {
+        get
+        {
+            _cachedLastWrite ??= LoadLastWriteDisplay();
+            return string.IsNullOrEmpty(_cachedLastWrite)
+                ? FilePath
+                : FilePath + "\n" + _cachedLastWrite;
+        }
+    }
+
+    private string LoadLastWriteDisplay()
+    {
+        try
+        {
+            if (!System.IO.File.Exists(FilePath)) return string.Empty;
+            var t = System.IO.File.GetLastWriteTime(FilePath);
+            return "Last modified: " + t.ToString("yyyy-MM-dd HH:mm");
+        }
+        catch { return string.Empty; }
+    }
+
+    /// <summary>Invalidates the cached last-write time (call after external-change events).</summary>
+    public void InvalidateTabTooltip()
+    {
+        _cachedLastWrite = null;
+        OnPropertyChanged(nameof(TabTooltip));
+    }
+
     /// <summary>Stops the debounced re-parse timer so a closed document doesn't keep firing.</summary>
     public void Dispose()
     {
@@ -241,5 +425,7 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
         _disposed = true;
         _reparseTimer?.Stop();
         _reparseTimer = null;
+        _infoBannerTimer?.Stop();
+        _infoBannerTimer = null;
     }
 }

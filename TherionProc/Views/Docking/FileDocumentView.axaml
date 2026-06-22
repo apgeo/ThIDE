@@ -5,6 +5,52 @@
              x:Class="TherionProc.Views.Docking.FileDocumentView"
              x:DataType="vm:FileDocumentViewModel">
 
+    <DockPanel>
+    <StackPanel DockPanel.Dock="Top">
+        <!-- Orphan banner (#4): file not part of the active project's object graph. -->
+        <Border Background="#E3F2FD" Padding="10,5" IsVisible="{Binding IsOrphan}">
+            <TextBlock Text="{Binding OrphanBannerText}" Foreground="#0D47A1"
+                       TextWrapping="Wrap" VerticalAlignment="Center" />
+        </Border>
+
+        <!-- Transient info banner (#6): silent reload-from-disk notice. -->
+        <Border Background="#E3F2FD" Padding="10,5"
+                IsVisible="{Binding InfoBanner, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+            <DockPanel>
+                <Button DockPanel.Dock="Right" Content="&#x2715;" Padding="6,1"
+                        Background="Transparent" BorderThickness="0" Foreground="#0D47A1"
+                        Command="{Binding DismissInfoCommand}" />
+                <TextBlock Text="{Binding InfoBanner}" Foreground="#0D47A1" VerticalAlignment="Center" />
+            </DockPanel>
+        </Border>
+
+        <!-- External-change banner (#6): on-disk change while we have unsaved edits. -->
+        <Border Background="#D32F2F" Padding="10,5" IsVisible="{Binding ExternalChangePending}">
+            <Grid>
+                <!-- Stage 1: changed-on-disk prompt. -->
+                <DockPanel IsVisible="{Binding !ConfirmDiscardPending}">
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
+                        <Button Content="Reload" Padding="8,2" Command="{Binding ReloadExternalCommand}"
+                                IsVisible="{Binding !ExternalDeleted}" />
+                        <Button Content="Dismiss" Padding="8,2" Command="{Binding DismissExternalCommand}" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding ExternalChangeText}" Foreground="White"
+                               VerticalAlignment="Center" TextWrapping="Wrap" />
+                </DockPanel>
+                <!-- Stage 2: discard-unsaved-changes confirmation. -->
+                <DockPanel IsVisible="{Binding ConfirmDiscardPending}">
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
+                        <Button Content="Discard &amp; reload" Padding="8,2"
+                                Command="{Binding ConfirmDiscardReloadCommand}" />
+                        <Button Content="Keep mine" Padding="8,2" Command="{Binding DismissExternalCommand}" />
+                    </StackPanel>
+                    <TextBlock Foreground="White" VerticalAlignment="Center" TextWrapping="Wrap"
+                               Text="Reloading will discard your unsaved changes. Continue?" />
+                </DockPanel>
+            </Grid>
+        </Border>
+    </StackPanel>
+
     <Grid>
     <TabControl>
         <TabItem Header="Source">
@@ -71,4 +117,5 @@
             </Button.Flyout>
         </Button>
     </Grid>
+    </DockPanel>
 </UserControl>

@@ -54,6 +54,11 @@ public partial class FileDocumentView : UserControl
         if (_vm is null) return;
         _vm.SetCaret(span);
         _vm.SavedCaretOffset = span.StartOffset; // remember position for tab switches (#11)
+
+        // Feed the caret into the back/forward history, but skip moves driven by
+        // highlighted-term navigation (Shift+F12 cycling), per #1.
+        bool termNav = (sender as TherionTextEditor)?.IsTermNavigating ?? false;
+        TryDocuments()?.ReportCaret(span, termNav);
     }
 
     // Restore the caret when this tab is shown again — unless a navigation scroll is pending.
