@@ -24,7 +24,14 @@ public partial class FileDocumentView : UserControl
             editor.OpenExternalRequested += OnOpenExternalRequested;
             editor.NavigateToSpanRequested += OnNavigateToSpanRequested;
             editor.CaretMoved += OnCaretMoved;
+            editor.HoverTargetChanged += OnHoverTargetChanged;
         }
+    }
+
+    // Ask the Workspace Explorer to reveal the hovered link's target (gated by its toggle, #8).
+    private void OnHoverTargetChanged(object? sender, SourceSpan? target)
+    {
+        if (target is { } span) TryDocuments()?.RequestRevealInWorkspace(span);
     }
 
     // An export/output link (.lox/.pdf/.3d/...) — open in the OS default viewer (#15).

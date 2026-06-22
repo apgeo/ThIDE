@@ -75,17 +75,29 @@ public partial class WorkspaceExplorerViewModel : ViewModelBase
     [ObservableProperty] private bool _showObjectModel = true;
     partial void OnShowObjectModelChanged(bool value) => Refresh();
 
+    /// <summary>Reveal/highlight the workspace item when hovering a hyperlink in the editor (#8).</summary>
+    [ObservableProperty] private bool _revealOnHover;
+    /// <summary>Reveal/highlight the active file in the workspace when switching tabs (#9).</summary>
+    [ObservableProperty] private bool _revealOnTabSwitch;
+
     /// <summary>Raised to open a file node.</summary>
     public event EventHandler<WorkspaceTreeNode>? OpenRequested;
     /// <summary>Raised to navigate to an object node's declaration.</summary>
     public event EventHandler<SourceSpan>? NavigateRequested;
+
+    // Only rebuild the tree when the workspace (or the object-model toggle) actually
+    // changes, so navigating/reparsing doesn't reset expansion state (#5).
+    private WorkspaceSemanticModel? _builtWorkspace;
+    private bool _builtShowObjectModel;
+    private string? _lastRevealedActive;
 
     public WorkspaceExplorerViewModel() : this(new NullDocumentService()) { }
 
     public WorkspaceExplorerViewModel(IDocumentService documents)
     {
         _documents = documents;
-        _documents.DocumentChanged += (_, _) => Refresh();
+        _documents.DocumentChanged += (_, _) => { Refresh(); MaybeRevealActive(); };
+        _documents.RevealInWorkspaceRequested += (_, target) => { if (RevealOnHover) Reveal(target); };
     }
 
     public void Refresh()
@@ -95,8 +107,15 @@ public partial class WorkspaceExplorerViewModel : ViewModelBase
         {
             Roots = new ObservableCollection<WorkspaceTreeNode>();
             RootPath = string.Empty;
+            _builtWorkspace = null;
             return;
         }
+
+        // Skip the rebuild when nothing structural changed (preserves expansion, #5).
+        if (ReferenceEquals(ws, _builtWorkspace) && _builtShowObjectModel == ShowObjectModel)
+            return;
+        _builtWorkspace = ws;
+        _builtShowObjectModel = ShowObjectModel;
 
         // Build adjacency + roots from the file-inclusion graph.
         var children = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
@@ -215,6 +234,56 @@ public partial class WorkspaceExplorerViewModel : ViewModelBase
         if (node is null) return;
         if (node.FullPath is not null) OpenRequested?.Invoke(this, node);
         else if (node.Target is { } span && !span.IsEmpty) NavigateRequested?.Invoke(this, span);
+    }
+
+    // ----- reveal / highlight (#8 hover, #9 tab switch) -------------------
+
+    private void MaybeRevealActive()
+    {
+        if (!RevealOnTabSwitch) return;
+        var path = _documents.CurrentPath;
+        if (string.Equals(path, _lastRevealedActive, StringComparison.OrdinalIgnoreCase)) return;
+        _lastRevealedActive = path;
+        RevealFile(path);
+    }
+
+    /// <summary>Selects and scrolls to the tree node for a target object (or its file), expanding ancestors.</summary>
+    public void Reveal(SourceSpan target)
+    {
+        if (target.IsEmpty && string.IsNullOrEmpty(target.FilePath)) return;
+        var path = new List<WorkspaceTreeNode>();
+        if (TryFindPath(Roots, n => n.Target is { } t && SameSpan(t, target), path) ||
+            TryFindPath(Roots, n => string.Equals(n.FullPath, target.FilePath, StringComparison.OrdinalIgnoreCase), path))
+            ApplyReveal(path);
+    }
+
+    public void RevealFile(string? filePath)
+    {
+        if (string.IsNullOrEmpty(filePath)) return;
+        var path = new List<WorkspaceTreeNode>();
+        if (TryFindPath(Roots, n => string.Equals(n.FullPath, filePath, StringComparison.OrdinalIgnoreCase), path))
+            ApplyReveal(path);
+    }
+
+    private void ApplyReveal(List<WorkspaceTreeNode> path)
+    {
+        for (int i = 0; i < path.Count - 1; i++) path[i].IsExpanded = true; // expand ancestors
+        Selected = path[^1];
+    }
+
+    private static bool SameSpan(SourceSpan a, SourceSpan b) =>
+        string.Equals(a.FilePath, b.FilePath, StringComparison.OrdinalIgnoreCase) && a.StartOffset == b.StartOffset;
+
+    private static bool TryFindPath(
+        IEnumerable<WorkspaceTreeNode> nodes, Func<WorkspaceTreeNode, bool> match, List<WorkspaceTreeNode> path)
+    {
+        foreach (var n in nodes)
+        {
+            path.Add(n);
+            if (match(n) || TryFindPath(n.Children, match, path)) return true;
+            path.RemoveAt(path.Count - 1);
+        }
+        return false;
     }
 
     private static string KindFor(string path)

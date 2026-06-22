@@ -9,8 +9,16 @@
             <StackPanel Spacing="4">
                 <TextBlock Foreground="Gray" Text="{Binding Explorer.RootPath}"
                            TextTrimming="CharacterEllipsis" />
-                <CheckBox Content="Show object model" FontSize="11"
-                          IsChecked="{Binding Explorer.ShowObjectModel, Mode=TwoWay}" />
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <CheckBox Content="Object model" FontSize="11" VerticalAlignment="Center"
+                              IsChecked="{Binding Explorer.ShowObjectModel, Mode=TwoWay}" />
+                    <ToggleButton Padding="5,1" FontSize="13" VerticalAlignment="Center"
+                                  ToolTip.Tip="Highlight workspace item when hovering a link in the editor"
+                                  IsChecked="{Binding Explorer.RevealOnHover, Mode=TwoWay}" Content="&#x1F50D;" />
+                    <ToggleButton Padding="5,1" FontSize="13" VerticalAlignment="Center"
+                                  ToolTip.Tip="Highlight the active file in the workspace when switching tabs"
+                                  IsChecked="{Binding Explorer.RevealOnTabSwitch, Mode=TwoWay}" Content="&#x21C6;" />
+                </StackPanel>
             </StackPanel>
         </Border>
 

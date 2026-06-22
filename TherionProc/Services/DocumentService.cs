@@ -58,6 +58,11 @@ public interface IDocumentService
     Task GoForwardAsync(CancellationToken ct = default);
     /// <summary>Raised when the back/forward availability changes.</summary>
     event EventHandler? HistoryChanged;
+
+    // ---- workspace reveal (highlight a file/object in the Workspace tree) ----
+    /// <summary>Asks the Workspace Explorer to reveal/highlight the node for a target (#8/#9).</summary>
+    void RequestRevealInWorkspace(Therion.Core.SourceSpan target);
+    event EventHandler<Therion.Core.SourceSpan>? RevealInWorkspaceRequested;
 }
 
 public sealed class DocumentService : IDocumentService, IAsyncDisposable
@@ -65,6 +70,10 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
     private readonly IProjectEntryPointResolver _resolver;
     private readonly ICommandRegistry? _commands;
     private TherionWorkspace? _workspace;
+    // Built workspaces keyed by entry path, so switching back to a previously-opened
+    // project reuses (and keeps) its tree rather than rebuilding it (#14).
+    private readonly Dictionary<string, (TherionWorkspace Ws, WorkspaceSemanticModel Model)> _workspaceCache
+        = new(StringComparer.OrdinalIgnoreCase);
 
     public ObservableCollection<FileDocumentViewModel> Documents { get; } = new();
     public FileDocumentViewModel? Active { get; private set; }
@@ -73,6 +82,10 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
     public event EventHandler? ActiveDocumentChanged;
     public event EventHandler? DocumentChanged;
     public event EventHandler<FileDocumentViewModel>? OpenInDockRequested;
+    public event EventHandler<Therion.Core.SourceSpan>? RevealInWorkspaceRequested;
+
+    public void RequestRevealInWorkspace(Therion.Core.SourceSpan target)
+        => RevealInWorkspaceRequested?.Invoke(this, target);
 
     // Projection of the active document.
     public string? CurrentPath => Active?.FilePath;
@@ -136,19 +149,45 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
         string entry;
         try { entry = await Task.Run(() => ProjectEntryDiscovery.FindEntryPoint(full), ct).ConfigureAwait(false); }
         catch { entry = full; }
+        entry = TryFull(entry);
+
+        if (_workspaceCache.TryGetValue(entry, out var cached))
+        {
+            SwitchWorkspace(cached.Ws, cached.Model);
+            return;
+        }
 
         var ws = new TherionWorkspace();
         try { await ws.LoadAsync(entry, ct).ConfigureAwait(false); }
         catch { await ws.DisposeAsync().ConfigureAwait(false); return; }
 
         var model = ws.BuildSemanticModel();
-        var old = _workspace;
+        _workspaceCache[entry] = (ws, model);
+        SwitchWorkspace(ws, model);
+    }
+
+    /// <summary>Makes <paramref name="ws"/> the active workspace and notifies documents/tools.</summary>
+    private void SwitchWorkspace(TherionWorkspace ws, WorkspaceSemanticModel model)
+    {
+        if (ReferenceEquals(_workspace, ws)) return;
         _workspace = ws;
         Workspace = model;
-        if (old is not null) await old.DisposeAsync().ConfigureAwait(false);
-
         PropagateWorkspaceToDocuments();
         Raise();
+    }
+
+    /// <summary>If the active document's project differs from the current workspace, switch to it (#14).</summary>
+    private async Task FollowActiveDocumentAsync(FileDocumentViewModel doc)
+    {
+        if (string.IsNullOrEmpty(doc.FilePath) || !File.Exists(doc.FilePath)) return;
+        var full = TryFull(doc.FilePath);
+        if (_workspace is not null && Covers(_workspace, full)) return;
+        try
+        {
+            await EnsureWorkspaceForAsync(full, CancellationToken.None).ConfigureAwait(true);
+            doc.SetWorkspace(Workspace);
+        }
+        catch { /* leave the existing workspace in place */ }
     }
 
     private static bool Covers(TherionWorkspace ws, string full)
@@ -278,6 +317,8 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
         Active = doc;
         ActiveDocumentChanged?.Invoke(this, EventArgs.Empty);
         Raise();
+        // Switch the workspace tree to follow the newly-active document's project (#14).
+        if (doc is not null) _ = FollowActiveDocumentAsync(doc);
     }
 
     private void OnClosed(FileDocumentViewModel doc)
@@ -295,11 +336,12 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
 
     private async Task DisposeWorkspaceAsync()
     {
-        if (_workspace is not null)
+        foreach (var (ws, _) in _workspaceCache.Values)
         {
-            await _workspace.DisposeAsync().ConfigureAwait(false);
-            _workspace = null;
+            try { await ws.DisposeAsync().ConfigureAwait(false); } catch { /* best-effort */ }
         }
+        _workspaceCache.Clear();
+        _workspace = null;
     }
 
     public ValueTask DisposeAsync() => new(DisposeWorkspaceAsync());
