@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json.Serialization.Metadata;
+using Microsoft.Extensions.Logging;
 using Dock.Avalonia.Controls;
 using Dock.Model.Controls;
 using Dock.Model.Core;
@@ -31,6 +32,7 @@ public sealed class DockFactory : Factory
 
     private readonly IDockSerializer _serializer = CreateSerializer();
     private string? _lastSavedJson;
+    private readonly ILogger? _logger;
 
     // Custom Tool subclasses fall back to reflection serialization, which would follow
     // the Owner/Factory/Context back-references and hit a cycle. Strip those nav props
@@ -75,7 +77,8 @@ public sealed class DockFactory : Factory
         CompilerOutputToolViewModel compilerOutput,
         GeneratedFilesToolViewModel generatedFiles,
         XviToolViewModel xvi,
-        SettingsToolViewModel settings)
+        SettingsToolViewModel settings,
+        ILogger<DockFactory>? logger = null)
     {
         _workspace = workspace;
         _objectBrowser = objectBrowser;
@@ -84,6 +87,7 @@ public sealed class DockFactory : Factory
         _generatedFiles = generatedFiles;
         _xvi = xvi;
         _settings = settings;
+        _logger = logger;
     }
 
     /// <summary>The central document well; <see cref="OpenDocument"/> adds tabs here.</summary>
@@ -222,9 +226,10 @@ public sealed class DockFactory : Factory
             _lastSavedJson = json; // identical layout — no need to immediately rewrite it
             return root;
         }
-        catch
+        catch (Exception ex)
         {
             // Corrupt/incompatible layout — drop it so it can't fail again.
+            _logger?.LogWarning(ex, "Saved dock layout could not be loaded; discarding {Path}.", LayoutPath);
             TryDelete(LayoutPath);
             TryDelete(LoadSentinelPath);
             return null;
@@ -254,7 +259,10 @@ public sealed class DockFactory : Factory
             File.WriteAllText(LayoutPath, json);
             _lastSavedJson = json;
         }
-        catch { /* best-effort */ }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Failed to persist dock layout to {Path}.", LayoutPath);
+        }
     }
 
     private static void TryDelete(string path) { try { if (File.Exists(path)) File.Delete(path); } catch { } }

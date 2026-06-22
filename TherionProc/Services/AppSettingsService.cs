@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 
 namespace TherionProc.Services;
 
@@ -73,13 +74,15 @@ public interface IAppSettingsService
 public sealed class AppSettingsService : IAppSettingsService
 {
     private readonly string _path;
+    private readonly ILogger? _logger;
     private AppSettings _state;
 
-    public AppSettingsService() : this(DefaultPath()) { }
+    public AppSettingsService(ILogger<AppSettingsService>? logger = null) : this(DefaultPath(), logger) { }
 
-    public AppSettingsService(string path)
+    public AppSettingsService(string path, ILogger<AppSettingsService>? logger = null)
     {
         _path = path;
+        _logger = logger;
         _state = TryLoad() ?? AppSettings.Default;
     }
 
@@ -101,7 +104,11 @@ public sealed class AppSettingsService : IAppSettingsService
             if (!File.Exists(_path)) return null;
             return JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(_path));
         }
-        catch { return null; }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Failed to load settings from {Path}; using defaults.", _path);
+            return null;
+        }
     }
 
     private void TryWrite()
@@ -113,7 +120,10 @@ public sealed class AppSettingsService : IAppSettingsService
             File.WriteAllText(_path,
                 JsonSerializer.Serialize(_state, new JsonSerializerOptions { WriteIndented = true }));
         }
-        catch { /* best-effort */ }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Failed to persist settings to {Path}; changes may be lost.", _path);
+        }
     }
 
     private static string DefaultPath()

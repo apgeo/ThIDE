@@ -1,4 +1,4 @@
-// Implementation Plan §7.2 / M6 #1 — shell layout persistence (interim).
+// Implementation Plan ï¿½7.2 / M6 #1 ï¿½ shell layout persistence (interim).
 //
 // Stores the user's adjustable shell metrics:
 //   - left tool pane width (Workspace Explorer)
@@ -16,6 +16,7 @@ using System;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Logging;
 
 namespace TherionProc.Services;
 
@@ -45,13 +46,15 @@ public sealed record LayoutState
 public sealed class JsonLayoutService : ILayoutService
 {
     private readonly string _path;
+    private readonly ILogger? _logger;
     private LayoutState _state;
 
-    public JsonLayoutService() : this(DefaultPath()) { }
+    public JsonLayoutService(ILogger<JsonLayoutService>? logger = null) : this(DefaultPath(), logger) { }
 
-    public JsonLayoutService(string path)
+    public JsonLayoutService(string path, ILogger<JsonLayoutService>? logger = null)
     {
         _path = path;
+        _logger = logger;
         _state = TryLoad() ?? LayoutState.Default;
     }
 
@@ -73,7 +76,11 @@ public sealed class JsonLayoutService : ILayoutService
             if (!File.Exists(_path)) return null;
             return JsonSerializer.Deserialize<LayoutState>(File.ReadAllText(_path));
         }
-        catch { return null; }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Failed to load layout from {Path}; using defaults.", _path);
+            return null;
+        }
     }
 
     private void TryWrite()
@@ -85,7 +92,10 @@ public sealed class JsonLayoutService : ILayoutService
             File.WriteAllText(_path,
                 JsonSerializer.Serialize(_state, new JsonSerializerOptions { WriteIndented = true }));
         }
-        catch { /* best-effort */ }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Failed to persist layout to {Path}; window bounds may be lost.", _path);
+        }
     }
 
     private static string DefaultPath()
