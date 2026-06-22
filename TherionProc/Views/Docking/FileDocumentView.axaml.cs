@@ -2,6 +2,7 @@ using System;
 using Avalonia.Controls;
 using Avalonia.Threading;
 using Microsoft.Extensions.DependencyInjection;
+using Therion.Build;
 using Therion.Core;
 using TherionProc.Editor;
 using TherionProc.Services;
@@ -38,16 +39,12 @@ public partial class FileDocumentView : UserControl
         if (target is { } span) TryDocuments()?.RequestRevealInWorkspace(span);
     }
 
-    // An export/output link (.lox/.pdf/.3d/...) — open in the OS default viewer (#15).
+    // An export/output link (.lox/.pdf/.3d/...) — open in the OS default viewer (#15)
+    // through the cross-platform IShellOpener (Windows ShellExecute / macOS `open` /
+    // Linux `xdg-open`), rather than a raw Process.Start whose UseShellExecute=true only
+    // resolves a default handler reliably on Windows.
     private void OnOpenExternalRequested(object? sender, string path)
-    {
-        try
-        {
-            System.Diagnostics.Process.Start(
-                new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true });
-        }
-        catch { /* no associated app / launch failed */ }
-    }
+        => TryShellOpener()?.Open(path);
 
     private void OnCaretMoved(object? sender, SourceSpan span)
     {
@@ -115,6 +112,12 @@ public partial class FileDocumentView : UserControl
     private static IDocumentService? TryDocuments()
     {
         try { return AppServices.Provider.GetService<IDocumentService>(); }
+        catch { return null; } // design-time / no container
+    }
+
+    private static IShellOpener? TryShellOpener()
+    {
+        try { return AppServices.Provider.GetService<IShellOpener>(); }
         catch { return null; } // design-time / no container
     }
 }
