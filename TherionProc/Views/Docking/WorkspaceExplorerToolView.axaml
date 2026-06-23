@@ -52,6 +52,28 @@
                                   IsChecked="{Binding Explorer.RevealOnTabSwitch, Mode=TwoWay}">
                         <PathIcon Data="{DynamicResource Icon.Swap}" Width="14" Height="14" />
                     </ToggleButton>
+
+                    <!-- Sort files/folders (file-explorer view only), Windows-Explorer style (#15). -->
+                    <Button Padding="5,3" VerticalAlignment="Center" x:CompileBindings="False"
+                            ToolTip.Tip="Sort by"
+                            IsVisible="{Binding Explorer.IsFileExplorerView}">
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <PathIcon Data="{DynamicResource Icon.Sort}" Width="14" Height="14" />
+                            <TextBlock Text="{Binding Explorer.SortModeLabel}" FontSize="11" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <Button.Flyout>
+                            <MenuFlyout>
+                                <MenuItem Header="Name" Command="{Binding Explorer.SortByNameCommand}" />
+                                <MenuItem Header="Date modified" Command="{Binding Explorer.SortByModifiedCommand}" />
+                                <MenuItem Header="Type" Command="{Binding Explorer.SortByTypeCommand}" />
+                                <MenuItem Header="Size" Command="{Binding Explorer.SortBySizeCommand}" />
+                                <MenuItem Header="Date created" Command="{Binding Explorer.SortByCreatedCommand}" />
+                                <Separator />
+                                <MenuItem Header="Ascending" Command="{Binding Explorer.SortAscendingCmdCommand}" />
+                                <MenuItem Header="Descending" Command="{Binding Explorer.SortDescendingCmdCommand}" />
+                            </MenuFlyout>
+                        </Button.Flyout>
+                    </Button>
                 </StackPanel>
             </StackPanel>
         </Border>

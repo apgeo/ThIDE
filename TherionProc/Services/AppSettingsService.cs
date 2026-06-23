@@ -19,6 +19,16 @@ public enum WorkspaceViewMode
     FileExplorer = 1,
 }
 
+/// <summary>File-explorer sort key (Windows-Explorer-style), applied within each folder (#15).</summary>
+public enum WorkspaceSortMode
+{
+    Name = 0,
+    Modified = 1,
+    Size = 2,
+    Type = 3,
+    Created = 4,
+}
+
 public sealed record AppSettings
 {
     // ---- session ----
@@ -60,6 +70,10 @@ public sealed record AppSettings
     public WorkspaceViewMode WorkspaceViewMode { get; init; } = WorkspaceViewMode.Relational;
     /// <summary>Show file nodes in the relational view; when off, only logical objects (#5a).</summary>
     public bool WorkspaceShowFilesInModel { get; init; } = true;
+    /// <summary>File-explorer sort key (#15).</summary>
+    public WorkspaceSortMode WorkspaceSortMode { get; init; } = WorkspaceSortMode.Name;
+    /// <summary>File-explorer sort direction; true = ascending (#15).</summary>
+    public bool WorkspaceSortAscending { get; init; } = true;
 
     public static AppSettings Default { get; } = new();
 }

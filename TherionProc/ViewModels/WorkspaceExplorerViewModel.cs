@@ -133,6 +133,44 @@ public partial class WorkspaceExplorerViewModel : ViewModelBase
     [ObservableProperty] private bool _showFilesInModel = true;
     partial void OnShowFilesInModelChanged(bool value) { Invalidate(); Refresh(); SaveSettings(); }
 
+    // ----- file-explorer sort (#15) ------------------------------------------
+
+    /// <summary>File-explorer sort key (Windows-Explorer-style), applied within each folder (#15).</summary>
+    [ObservableProperty] private WorkspaceSortMode _sortMode = WorkspaceSortMode.Name;
+    partial void OnSortModeChanged(WorkspaceSortMode value)
+    {
+        OnPropertyChanged(nameof(SortModeLabel));
+        if (IsFileExplorerView) { Invalidate(); Refresh(); }
+        SaveSettings();
+    }
+
+    /// <summary>Sort direction; true = ascending (#15).</summary>
+    [ObservableProperty] private bool _sortAscending = true;
+    partial void OnSortAscendingChanged(bool value)
+    {
+        if (IsFileExplorerView) { Invalidate(); Refresh(); }
+        SaveSettings();
+    }
+
+    /// <summary>Short label for the active sort key, shown on the sort dropdown button (#15).</summary>
+    public string SortModeLabel => SortMode switch
+    {
+        WorkspaceSortMode.Name => "Name",
+        WorkspaceSortMode.Modified => "Date modified",
+        WorkspaceSortMode.Size => "Size",
+        WorkspaceSortMode.Type => "Type",
+        WorkspaceSortMode.Created => "Date created",
+        _ => "Name",
+    };
+
+    [RelayCommand] private void SortByName() => SortMode = WorkspaceSortMode.Name;
+    [RelayCommand] private void SortByModified() => SortMode = WorkspaceSortMode.Modified;
+    [RelayCommand] private void SortBySize() => SortMode = WorkspaceSortMode.Size;
+    [RelayCommand] private void SortByType() => SortMode = WorkspaceSortMode.Type;
+    [RelayCommand] private void SortByCreated() => SortMode = WorkspaceSortMode.Created;
+    [RelayCommand] private void SortAscendingCmd() => SortAscending = true;
+    [RelayCommand] private void SortDescendingCmd() => SortAscending = false;
+
     /// <summary>The detected/known thconfig files, shown in the active-config dropdown (#3).</summary>
     [ObservableProperty] private ObservableCollection<ThconfigCandidate> _thconfigCandidates = new();
     /// <summary>The active thconfig (drives the whole object graph, #2).</summary>
@@ -187,6 +225,8 @@ public partial class WorkspaceExplorerViewModel : ViewModelBase
             RevealOnTabSwitch = s.WorkspaceRevealOnTabSwitch;
             ViewMode = s.WorkspaceViewMode;
             ShowFilesInModel = s.WorkspaceShowFilesInModel;
+            SortMode = s.WorkspaceSortMode;
+            SortAscending = s.WorkspaceSortAscending;
             _loadingSettings = false;
         }
 
@@ -244,6 +284,8 @@ public partial class WorkspaceExplorerViewModel : ViewModelBase
             WorkspaceRevealOnTabSwitch = RevealOnTabSwitch,
             WorkspaceViewMode = ViewMode,
             WorkspaceShowFilesInModel = ShowFilesInModel,
+            WorkspaceSortMode = SortMode,
+            WorkspaceSortAscending = SortAscending,
         });
     }
 
@@ -445,6 +487,14 @@ public partial class WorkspaceExplorerViewModel : ViewModelBase
         var root = _session?.RootPath ?? RootPath;
         RootPath = root ?? string.Empty;
         _builtWorkspace = null; // force a relational rebuild when we switch back
+
+        // Preserve which folders are expanded + the current selection across the rebuild.
+        // Opening a file fires DocumentChanged → Refresh, so without this the whole subtree
+        // would collapse and the selected file would be lost every time a file is opened (#1).
+        var expanded = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        CollectExpandedFolders(Roots, expanded);
+        var selectedPath = Selected?.FullPath;
+
         HighlightedNode = null; // tree rebuilt — drop any stale hover highlight
 
         var result = new ObservableCollection<WorkspaceTreeNode>();
@@ -452,6 +502,30 @@ public partial class WorkspaceExplorerViewModel : ViewModelBase
         if (!string.IsNullOrEmpty(root) && Directory.Exists(root))
             result.Add(BuildFolderNode(root, expandEager: true));
         Roots = result;
+
+        if (expanded.Count > 0) RestoreExpansion(result, expanded);
+        if (selectedPath is not null && ExpandToFile(selectedPath) is { } sel) Selected = sel;
+    }
+
+    /// <summary>Records the FullPath of every currently-expanded folder node (for #1's rebuild restore).</summary>
+    private static void CollectExpandedFolders(IEnumerable<WorkspaceTreeNode> nodes, HashSet<string> into)
+    {
+        foreach (var n in nodes)
+        {
+            if (n.Kind == "folder" && n.IsExpanded && n.FullPath is { } p) into.Add(p);
+            CollectExpandedFolders(n.Children, into);
+        }
+    }
+
+    /// <summary>Re-expands the folders that were open before a rebuild, lazily loading each level (#1).</summary>
+    private static void RestoreExpansion(IEnumerable<WorkspaceTreeNode> nodes, HashSet<string> expanded)
+    {
+        foreach (var n in nodes)
+            if (n.Kind == "folder" && n.FullPath is { } p && expanded.Contains(p))
+            {
+                n.IsExpanded = true; // triggers the lazy child load
+                RestoreExpansion(n.Children, expanded);
+            }
     }
 
     private WorkspaceTreeNode BuildFolderNode(string path, bool expandEager)
@@ -484,10 +558,12 @@ public partial class WorkspaceExplorerViewModel : ViewModelBase
         try { dirs = Directory.GetDirectories(dir); } catch { dirs = Array.Empty<string>(); }
         try { files = Directory.GetFiles(dir); } catch { files = Array.Empty<string>(); }
 
-        foreach (var d in dirs.OrderBy(p => Path.GetFileName(p), StringComparer.OrdinalIgnoreCase))
+        // Folders always sort above files (Windows Explorer behaviour), each group ordered by
+        // the active sort key + direction (#15).
+        foreach (var d in SortPaths(dirs, isDirectory: true))
             list.Add(BuildFolderNode(d, expandEager: false));
 
-        foreach (var f in files.OrderBy(p => Path.GetFileName(p), StringComparer.OrdinalIgnoreCase))
+        foreach (var f in SortPaths(files, isDirectory: false))
             list.Add(new WorkspaceTreeNode
             {
                 Name = Path.GetFileName(f),
@@ -497,6 +573,40 @@ public partial class WorkspaceExplorerViewModel : ViewModelBase
                 LastModifiedText = LastModified(f),
             });
         return list;
+    }
+
+    /// <summary>Orders a set of file/folder paths by the active <see cref="SortMode"/> + direction (#15).</summary>
+    private IEnumerable<string> SortPaths(string[] paths, bool isDirectory)
+    {
+        // Name and Type always break ties (and Type's secondary key) by name, so the order is
+        // deterministic. Size/dates fall back to name when equal.
+        IOrderedEnumerable<string> ordered = SortMode switch
+        {
+            WorkspaceSortMode.Modified => SortAscending
+                ? paths.OrderBy(SafeLastWrite)
+                : paths.OrderByDescending(SafeLastWrite),
+            WorkspaceSortMode.Created => SortAscending
+                ? paths.OrderBy(SafeCreated)
+                : paths.OrderByDescending(SafeCreated),
+            WorkspaceSortMode.Size => SortAscending
+                ? paths.OrderBy(p => SafeSize(p, isDirectory))
+                : paths.OrderByDescending(p => SafeSize(p, isDirectory)),
+            WorkspaceSortMode.Type => SortAscending
+                ? paths.OrderBy(p => Path.GetExtension(p), StringComparer.OrdinalIgnoreCase)
+                : paths.OrderByDescending(p => Path.GetExtension(p), StringComparer.OrdinalIgnoreCase),
+            _ => SortAscending
+                ? paths.OrderBy(p => Path.GetFileName(p), StringComparer.OrdinalIgnoreCase)
+                : paths.OrderByDescending(p => Path.GetFileName(p), StringComparer.OrdinalIgnoreCase),
+        };
+        return ordered.ThenBy(p => Path.GetFileName(p), StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static DateTime SafeLastWrite(string p) { try { return File.GetLastWriteTimeUtc(p); } catch { return DateTime.MinValue; } }
+    private static DateTime SafeCreated(string p) { try { return File.GetCreationTimeUtc(p); } catch { return DateTime.MinValue; } }
+    private static long SafeSize(string p, bool isDirectory)
+    {
+        if (isDirectory) return -1; // folders have no intrinsic size; keep them grouped together
+        try { return new FileInfo(p).Length; } catch { return 0; }
     }
 
     /// <summary>Cached last-write time for the hover tooltip; computed once so hover never hits disk (#2).</summary>
