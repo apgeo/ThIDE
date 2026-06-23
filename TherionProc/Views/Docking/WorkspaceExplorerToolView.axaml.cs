@@ -160,7 +160,16 @@ public partial class WorkspaceExplorerToolView : UserControl
         if (Ctx()?.FullPath is not { } path) return;
         // Delegate to the platform service; the interop lives in WindowsNativeContextMenuService.
         var hwnd = TopLevel.GetTopLevel(this)?.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
-        Service<INativeContextMenuService>()?.TryShow(hwnd, path);
+        if (hwnd == IntPtr.Zero) return;
+
+        // Defer the native shell menu until AFTER Avalonia's own ContextMenu has fully closed.
+        // Running the shell's modal TrackPopupMenuEx loop synchronously from inside this click
+        // handler re-enters the popup that is still tearing down, corrupting shell state and
+        // raising an AccessViolationException (item #13). Posting it breaks that re-entrancy.
+        var nativeMenu = Service<INativeContextMenuService>();
+        Avalonia.Threading.Dispatcher.UIThread.Post(
+            () => nativeMenu?.TryShow(hwnd, path),
+            Avalonia.Threading.DispatcherPriority.Background);
     }
 
     // ----- helpers ------------------------------------------------------------
