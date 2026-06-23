@@ -21,23 +21,6 @@ namespace TherionProc.ViewModels;
 
 public partial class MainWindowViewModel : ViewModelBase
 {
-    private const string SampleText =
-        "# Sample Therion centreline — use File → Open File... or Open Folder... to load real data.\n" +
-        "survey demo -title \"Demo Cave\"\n" +
-        "  centreline\n" +
-        "    date 2024.01.15\n" +
-        "    team \"Alice\" instruments\n" +
-        "    data normal from to length compass clino\n" +
-        "      # entrance series\n" +
-        "      0 1 12.5 0 -5    # start at the drip\n" +
-        "      1 2  8.0 90 0\n" +
-        "    flags duplicate\n" +
-        "      2 3  4.2 180 10  # re-survey of the squeeze\n" +
-        "    flags not duplicate\n" +
-        "    fix 0 100.0 200.0 -3.25\n" +
-        "  endcentreline\n" +
-        "endsurvey\n";
-
     private readonly IStringLocalizer<Strings> _l;
     private readonly ILanguageService _language;
     private readonly IDocumentService _documents;
@@ -179,7 +162,7 @@ public partial class MainWindowViewModel : ViewModelBase
         Build.NavigateRequested += (_, span) => NavigateTo(span);
 
         Refresh();
-        RestoreSessionOrSample();
+        RestoreSession();
     }
 
     public MainWindowViewModel() : this(
@@ -211,7 +194,7 @@ public partial class MainWindowViewModel : ViewModelBase
     public void AttachStoragePicker(IStoragePicker picker) => _picker = picker;
 
     /// <summary>Restores the workspace root + active thconfig (#9) and last session's files.</summary>
-    private void RestoreSessionOrSample() => _ = RestoreSessionAsync(_settings?.Current);
+    private void RestoreSession() => _ = RestoreSessionAsync(_settings?.Current);
 
     private async Task RestoreSessionAsync(AppSettings? s)
     {
@@ -229,14 +212,23 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         var files = s is { RestoreSessionOnStartup: true } ? s.LastSessionFiles : Array.Empty<string>();
-        bool opened = false;
         foreach (var path in files)
         {
             if (!System.IO.File.Exists(path)) continue;
-            try { await _documents.OpenFileAsync(path).ConfigureAwait(true); opened = true; }
+            // Each open swaps the file into its saved tab slot (dock/float/order) when a
+            // restore placeholder is holding it; otherwise it lands in the main well.
+            try { await _documents.OpenFileAsync(path).ConfigureAwait(true); }
             catch { /* skip files that fail to open */ }
         }
-        if (!opened) _documents.OpenTextDocument("(sample).th", SampleText);
+
+        // Drop any restore placeholders whose file wasn't reopened (deleted on disk, or
+        // session-restore disabled) so no blank "ghost" tab remains. Posted at Background
+        // priority so it runs AFTER the queued per-file OpenDocument swaps (which marshal
+        // onto the UI thread), never before them. Startup intentionally shows no sample
+        // document when nothing is restored (task 5).
+        Avalonia.Threading.Dispatcher.UIThread.Post(
+            () => _factory.RemoveUnresolvedPlaceholders(),
+            Avalonia.Threading.DispatcherPriority.Background);
     }
 
     /// <summary>Records the open files + workspace root/active thconfig for next launch (#9).</summary>

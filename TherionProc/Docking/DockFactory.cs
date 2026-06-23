@@ -73,7 +73,16 @@ public sealed class DockFactory : Factory
     /// <summary>The central document well; <see cref="OpenDocument"/> adds tabs here.</summary>
     public DocumentDock? DocumentDock => _documentDock;
 
-    public override IRootDock CreateLayout() => TryLoadLayout() ?? BuildDefaultLayout();
+    // Dock-tree persistence is DISABLED: Dock.Avalonia 12 does not render content for a
+    // deserialized-and-reswapped layout tree — the tab strips appear but the content controls
+    // never instantiate their views, leaving every panel blank. Building the default layout
+    // (which renders correctly) avoids that. Window geometry still persists via ILayoutService
+    // and the open files reopen via session restore. Re-enable only once a restore strategy
+    // that produces a renderable tree is in place (e.g. rebuilding rather than deserializing).
+    private const bool PersistDockLayout = false;
+
+    public override IRootDock CreateLayout() =>
+        (PersistDockLayout ? TryLoadLayout() : null) ?? BuildDefaultLayout();
 
     private DocumentDock NewDocumentDock() => new()
     {
@@ -156,9 +165,8 @@ public sealed class DockFactory : Factory
 
     // ---- layout persistence (#10) ---------------------------------------
 
-    private Dictionary<string, IDockable> SingletonsById() => new(StringComparer.Ordinal)
+    private Dictionary<string, IDockable> ToolSingletonsById() => new(StringComparer.Ordinal)
     {
-        ["Documents"]      = _documentDock!,
         ["Workspace"]      = _workspace,
         ["ObjectBrowser"]  = _objectBrowser,
         ["Diagnostics"]    = _diagnostics,
@@ -167,6 +175,33 @@ public sealed class DockFactory : Factory
         ["Xvi"]            = _xvi,
         ["Settings"]       = _settings,
     };
+
+    /// <summary>Depth-first search (including float windows) for a dock of type <typeparamref name="T"/> with the given Id.</summary>
+    // Replaces the deserializer's plain List<> collections with the Factory's observable
+    // lists (and recurses through float windows) so the restored tree renders like a built one.
+    private void NormalizeCollections(IDockable node)
+    {
+        if (node is IRootDock root && root.Windows is { Count: > 0 } windows)
+            foreach (var w in windows)
+                if (w.Layout is { } wl) NormalizeCollections(wl);
+
+        if (node is not IDock dock || dock.VisibleDockables is not { } list) return;
+        foreach (var c in list) NormalizeCollections(c);
+        var rebuilt = CreateList<IDockable>(list.ToArray());
+        dock.VisibleDockables = rebuilt;
+    }
+
+    private static T? FindDockById<T>(IDockable node, string id) where T : class, IDock
+    {
+        if (node is T dock && string.Equals(node.Id, id, StringComparison.Ordinal)) return dock;
+        if (node is IRootDock root && root.Windows is { } windows)
+            foreach (var w in windows)
+                if (w.Layout is { } wl && FindDockById<T>(wl, id) is { } hit) return hit;
+        if (node is IDock d && d.VisibleDockables is { } list)
+            foreach (var c in list)
+                if (FindDockById<T>(c, id) is { } hit) return hit;
+        return null;
+    }
 
     /// <summary>
     /// Loads a previously-saved dock layout, swapping the deserialized skeleton tools for
@@ -194,9 +229,20 @@ public sealed class DockFactory : Factory
             var root = _serializer.Deserialize<IRootDock>(json);
             if (root is null) { TryDelete(LoadSentinelPath); return null; }
 
-            _documentDock = NewDocumentDock();   // fresh empty well to swap in
-            var map = SingletonsById();
+            // The JSON deserializer fills VisibleDockables with plain non-observable List<>s,
+            // which the Dock content controls don't render from. Rebuild every collection as
+            // the Factory's observable list so the restored tree behaves like a freshly-built one.
+            NormalizeCollections(root);
+
+            // Swap the deserialized tool skeletons for the live DI singletons by Id. The main
+            // document well is NOT swapped — we keep the deserialized one (it carries the open
+            // tabs as placeholders) and adopt it as _documentDock so new opens still land here.
+            var map = ToolSingletonsById();
             SwapSingletons(root, map);
+
+            if (FindDockById<DocumentDock>(root, "Documents") is not { } documentDock)
+            { TryDelete(LoadSentinelPath); return null; }
+            _documentDock = documentDock;
 
             // Require every tool + the document well to be present (guards version skew).
             foreach (var singleton in map.Values)
@@ -229,6 +275,7 @@ public sealed class DockFactory : Factory
     /// </summary>
     public void SaveLayout()
     {
+        if (!PersistDockLayout) return; // dock-tree persistence disabled (see CreateLayout)
         try
         {
             if (_rootDock is null) return;
@@ -278,18 +325,50 @@ public sealed class DockFactory : Factory
             VisibleDockables = CloneChildren(src),
         };
         BindActiveAndDefault(clone, src);
+        clone.Windows = CloneWindows(src);
         return clone;
     }
 
+    // Floating windows (torn-off tools/documents): clone each window's bounds + state and
+    // its layout skeleton so float position/size and which tabs are floated round-trip.
+    // A window whose layout clones to nothing (e.g. only documents that were dropped in an
+    // older skeleton) is skipped so we never restore an empty ghost window.
+    private IList<IDockWindow> CloneWindows(IRootDock src)
+    {
+        var list = CreateList<IDockWindow>();
+        if (src.Windows is not { } windows) return list;
+        foreach (var w in windows)
+        {
+            if (w.Layout is not { } layout || BuildRootSkeleton(layout) is not { } clonedLayout) continue;
+            if (clonedLayout.VisibleDockables is not { Count: > 0 }) continue;
+            list.Add(new Dock.Model.Mvvm.Core.DockWindow
+            {
+                Id = w.Id,
+                Title = w.Title,
+                X = w.X,
+                Y = w.Y,
+                Width = w.Width,
+                Height = w.Height,
+                Topmost = w.Topmost,
+                Layout = clonedLayout,
+            });
+        }
+        return list;
+    }
+
+    // NOTE: in Dock 12 the Mvvm `Tool` base also implements IDocument, so the ITool case
+    // MUST precede the IDocument case — otherwise every tool is mistaken for a document and
+    // dropped, leaving empty tool docks whose missing singletons fail the load integrity
+    // check, which silently reset the layout to the default on every launch.
     private IDockable? CloneDockable(IDockable node) => node switch
     {
-        IDocument => null,                                  // documents reopen via session restore
         IRootDock root => BuildRootSkeleton(root),
         IDocumentDock dd => CloneDocumentDock(dd),
         IProportionalDock pd => CloneProportional(pd),
         IToolDock td => CloneToolDock(td),
         IProportionalDockSplitter => new ProportionalDockSplitter(),
         ITool tool => new Tool { Id = tool.Id, Title = tool.Title },
+        IDocument doc => new Document { Id = doc.Id, Title = doc.Title }, // placeholder; rehydrated on restore
         _ => null,
     };
 
@@ -321,16 +400,25 @@ public sealed class DockFactory : Factory
         return clone;
     }
 
-    // The document well keeps its position/Id but never its documents.
-    private IDocumentDock CloneDocumentDock(IDocumentDock src) => new DocumentDock
+    // The document well keeps its position/Id and the IDENTITY of its open tabs (as plain
+    // Document placeholders carrying the file path in Id), so the tab set, order, active tab
+    // and which dock/float-window each tab lives in all round-trip. The real
+    // FileDocumentViewModels (with their text/parse state) are rehydrated on restore by
+    // re-opening each file and swapping it into its placeholder slot (see OpenDocument).
+    private IDocumentDock CloneDocumentDock(IDocumentDock src)
     {
-        Id = src.Id,
-        Title = src.Title,
-        Proportion = src.Proportion,
-        IsCollapsable = src.IsCollapsable,
-        CanCreateDocument = false,
-        VisibleDockables = CreateList<IDockable>(),
-    };
+        var clone = new DocumentDock
+        {
+            Id = src.Id,
+            Title = src.Title,
+            Proportion = src.Proportion,
+            IsCollapsable = src.IsCollapsable,
+            CanCreateDocument = false,
+            VisibleDockables = CloneChildren(src),
+        };
+        BindActiveAndDefault(clone, src);
+        return clone;
+    }
 
     private IList<IDockable> CloneChildren(IDock src)
     {
@@ -411,28 +499,98 @@ public sealed class DockFactory : Factory
         base.InitLayout(layout);
     }
 
-    /// <summary>Adds (or re-activates) a document tab in the central document well.</summary>
+    /// <summary>
+    /// Adds (or re-activates) a document tab. If a restore placeholder is holding this file's
+    /// slot it is swapped out in place — preserving which dock / float window / tab position
+    /// (and active state) the tab had when the layout was saved; otherwise the tab is added to
+    /// the central document well.
+    /// </summary>
     public void OpenDocument(FileDocumentViewModel document)
     {
-        if (_documentDock is null) return;
+        if (_rootDock is null || _documentDock is null) return;
 
-        // De-dupe by file path (Id): activate the existing tab instead of re-adding.
-        if (_documentDock.VisibleDockables is { } existing)
+        // Already open anywhere (main well, a split dock, or a float window) → just activate.
+        if (FindRealDocumentById(_rootDock, document.Id) is { } existing)
         {
-            foreach (var d in existing)
-            {
-                if (d is FileDocumentViewModel f &&
-                    string.Equals(f.Id, document.Id, StringComparison.OrdinalIgnoreCase))
-                {
-                    SetActiveDockable(f);
-                    SetFocusedDockable(_rootDock!, f);
-                    return;
-                }
-            }
+            SetActiveDockable(existing);
+            SetFocusedDockable(_rootDock, existing);
+            return;
+        }
+
+        // A restore placeholder is holding this file's slot → swap the live document in.
+        if (FindPlaceholderSlot(_rootDock, document.Id) is { } slot && slot.Dock.VisibleDockables is { } slotList)
+        {
+            InitDockable(document, slot.Dock);
+            slotList[slot.Index] = document;
+            if (ReferenceEquals(slot.Dock.ActiveDockable, slot.Placeholder))
+                slot.Dock.ActiveDockable = document;
+            SetActiveDockable(document);
+            SetFocusedDockable(_rootDock, document);
+            return;
         }
 
         AddDockable(_documentDock, document);
         SetActiveDockable(document);
-        SetFocusedDockable(_rootDock!, document);
+        SetFocusedDockable(_rootDock, document);
+    }
+
+    /// <summary>
+    /// Removes any restore placeholders whose file was not re-opened (e.g. it was deleted on
+    /// disk), so a stale layout never leaves a blank "ghost" tab behind. Call once session
+    /// restore has finished opening the previous session's files.
+    /// </summary>
+    public void RemoveUnresolvedPlaceholders()
+    {
+        if (_rootDock is null) return;
+        foreach (var placeholder in CollectPlaceholders(_rootDock).ToList())
+            RemoveDockable(placeholder, collapse: true);
+    }
+
+    // A restore placeholder is a plain Dock document standing in for a not-yet-reopened file.
+    // Tools (IDockContent) and live documents (also IDockContent) are excluded.
+    private static bool IsPlaceholder(IDockable d) => d is IDocument && d is not IDockContent;
+
+    private static FileDocumentViewModel? FindRealDocumentById(IDockable node, string id)
+    {
+        if (node is FileDocumentViewModel f && string.Equals(f.Id, id, StringComparison.OrdinalIgnoreCase))
+            return f;
+        if (node is IRootDock root && root.Windows is { } windows)
+            foreach (var w in windows)
+                if (w.Layout is { } wl && FindRealDocumentById(wl, id) is { } hit) return hit;
+        if (node is IDock d && d.VisibleDockables is { } list)
+            foreach (var c in list)
+                if (FindRealDocumentById(c, id) is { } hit) return hit;
+        return null;
+    }
+
+    private readonly record struct PlaceholderSlot(IDock Dock, int Index, IDockable Placeholder);
+
+    private static PlaceholderSlot? FindPlaceholderSlot(IDockable node, string id)
+    {
+        if (node is IRootDock root && root.Windows is { } windows)
+            foreach (var w in windows)
+                if (w.Layout is { } wl && FindPlaceholderSlot(wl, id) is { } hit) return hit;
+        if (node is IDock d && d.VisibleDockables is { } list)
+            for (int i = 0; i < list.Count; i++)
+            {
+                var c = list[i];
+                if (IsPlaceholder(c) && string.Equals(c.Id, id, StringComparison.OrdinalIgnoreCase))
+                    return new PlaceholderSlot(d, i, c);
+                if (FindPlaceholderSlot(c, id) is { } hit) return hit;
+            }
+        return null;
+    }
+
+    private static IEnumerable<IDockable> CollectPlaceholders(IDockable node)
+    {
+        if (node is IRootDock root && root.Windows is { } windows)
+            foreach (var w in windows)
+                if (w.Layout is { } wl)
+                    foreach (var p in CollectPlaceholders(wl)) yield return p;
+        if (node is IDock d && d.VisibleDockables is { } list)
+            foreach (var c in list)
+                if (IsPlaceholder(c)) yield return c;
+                else
+                    foreach (var p in CollectPlaceholders(c)) yield return p;
     }
 }

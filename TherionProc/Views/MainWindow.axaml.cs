@@ -190,14 +190,17 @@ public partial class MainWindow : Window
         if (_layout is null) return;
         var s = _layout.Current;
 
-        // Restore window bounds. The dock arrangement itself is rebuilt fresh each
-        // launch (full Dock layout serialization is a follow-up).
+        // Restore the normal window bounds first, then re-apply a maximized state on top so
+        // un-maximizing returns to the saved size. The dock arrangement itself is restored
+        // separately by the DockFactory.
         if (s.WindowWidth > 200) Width = s.WindowWidth;
         if (s.WindowHeight > 200) Height = s.WindowHeight;
         if (s.WindowLeft is double l && s.WindowTop is double t)
         {
             try { Position = new PixelPoint((int)l, (int)t); } catch { }
         }
+        if ((WindowState)s.WindowState == WindowState.Maximized)
+            WindowState = WindowState.Maximized;
     }
 
     private void SaveLayout()
@@ -206,13 +209,19 @@ public partial class MainWindow : Window
         try
         {
             var current = _layout.Current;
-            var next = current with
-            {
-                WindowWidth = Width,
-                WindowHeight = Height,
-                WindowLeft = Position.X,
-                WindowTop = Position.Y,
-            };
+            // Only capture bounds while in the Normal state — when maximized/fullscreen the
+            // reported size is the screen frame, so keeping the last Normal bounds lets a later
+            // un-maximize restore the user's chosen size. The state itself is always recorded.
+            var next = WindowState == WindowState.Normal
+                ? current with
+                {
+                    WindowWidth = Width,
+                    WindowHeight = Height,
+                    WindowLeft = Position.X,
+                    WindowTop = Position.Y,
+                    WindowState = (int)WindowState.Normal,
+                }
+                : current with { WindowState = (int)WindowState };
             if (next == current) return; // value-equal record — nothing to write
             _layout.Save(next);
         }

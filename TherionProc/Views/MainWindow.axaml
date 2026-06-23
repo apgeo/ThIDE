@@ -18,9 +18,12 @@
     <!-- Window.KeyBindings populated at runtime via IKeyboardShortcutService (Decision #29). -->
 
     <Window.Styles>
-        <!-- Tab header tooltip: shows full path + last-write-time (B1). -->
-        <!-- DataContext of each tab item is FileDocumentViewModel, not the window VM. -->
-        <Style Selector="TabStripItem" x:DataType="docking:FileDocumentViewModel">
+        <!-- Tab header tooltip + file-type tint. The DataContext of each document tab item is
+             its FileDocumentViewModel. Dock renders document tabs as DocumentTabStripItem (a
+             TabStripItem subclass), and an Avalonia bare type selector is exact-match only, so
+             we use :is() to also match the subclass — otherwise neither setter applies (B1/#2).
+             Tool tabs (no TabBrush/TabTooltip) simply resolve to null → default appearance. -->
+        <Style Selector=":is(TabStripItem)" x:DataType="docking:FileDocumentViewModel">
             <Setter Property="ToolTip.Tip" Value="{Binding TabTooltip}" />
             <!-- Fade tint by file type (.th/.th2/.thconfig), task 2. -->
             <Setter Property="Background" Value="{Binding TabBrush}" />

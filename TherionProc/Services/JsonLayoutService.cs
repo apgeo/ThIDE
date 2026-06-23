@@ -40,6 +40,9 @@ public sealed record LayoutState
     public double? WindowLeft { get; init; }
     public double? WindowTop { get; init; }
 
+    /// <summary>Avalonia <c>WindowState</c> as an int (0=Normal, 1=Minimized, 2=Maximized, 3=FullScreen).</summary>
+    public int WindowState { get; init; }
+
     public static LayoutState Default { get; } = new();
 }
 

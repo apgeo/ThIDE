@@ -10,6 +10,7 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input.Platform;
 using Avalonia.Media;
+using Avalonia.Media.Immutable;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -75,16 +76,18 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
         _                     => null,
     };
 
-    private static IBrush FadeBrush(Color c) => new LinearGradientBrush
-    {
-        StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
-        EndPoint   = new RelativePoint(0, 1, RelativeUnit.Relative),
-        GradientStops =
+    // Built as an IMMUTABLE brush: a FileDocumentViewModel is constructed on a thread-pool
+    // thread (OpenFileAsync continues off the UI thread), and a mutable AvaloniaObject brush
+    // created there crashes the compositor with a cross-thread access when it is later rendered
+    // as the tab background. Immutable brushes have no thread affinity, so they are safe.
+    private static IBrush FadeBrush(Color c) => new ImmutableLinearGradientBrush(
+        new[]
         {
-            new GradientStop(Color.FromArgb(0x70, c.R, c.G, c.B), 0),
-            new GradientStop(Color.FromArgb(0x10, c.R, c.G, c.B), 1),
+            new ImmutableGradientStop(0, Color.FromArgb(0x70, c.R, c.G, c.B)),
+            new ImmutableGradientStop(1, Color.FromArgb(0x10, c.R, c.G, c.B)),
         },
-    };
+        startPoint: new RelativePoint(0, 0, RelativeUnit.Relative),
+        endPoint: new RelativePoint(0, 1, RelativeUnit.Relative));
 
     private string _savedText = string.Empty;
     private bool _isDirty;
