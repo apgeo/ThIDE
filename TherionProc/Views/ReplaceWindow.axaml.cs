@@ -8,18 +8,18 @@ using TherionProc.ViewModels;
 
 namespace TherionProc.Views;
 
-public partial class SearchWindow : Window
+public partial class ReplaceWindow : Window
 {
-    public SearchWindow()
+    public ReplaceWindow()
     {
         InitializeComponent();
         Opened += (_, _) =>
         {
-            (DataContext as SearchViewModel)?.PrepareDefaults();
+            (DataContext as ReplaceInFilesViewModel)?.PrepareDefaults();
             this.FindControl<TextBox>("QueryBox")?.Focus();
         };
-        // Esc closes the Find in Files window (#8). Tunnel so it fires even while a TextBox
-        // (which ignores Escape) holds focus.
+        // Esc closes the window (mirrors Find in Files, #8/#9). Tunnel so it fires even while a
+        // TextBox holds focus.
         AddHandler(KeyDownEvent, OnPreviewKeyDown, RoutingStrategies.Tunnel);
     }
 
@@ -28,10 +28,10 @@ public partial class SearchWindow : Window
         if (e.Key == Key.Escape) { e.Handled = true; Close(); }
     }
 
-    // Single-click: load the file into the inline peek and scroll to the match (#5).
+    // Single-click: load the file into the inline peek and scroll to the match.
     private void OnResultSelected(object? sender, SelectionChangedEventArgs e)
     {
-        if (DataContext is not SearchViewModel vm || vm.Selected is not { } hit) return;
+        if (DataContext is not ReplaceInFilesViewModel vm || vm.Selected is not { } hit) return;
         if (this.FindControl<TextEditor>("Peek") is not { } peek) return;
         try
         {
@@ -49,7 +49,7 @@ public partial class SearchWindow : Window
     // Double-click: navigate to the match in the main editor.
     private void OnResultActivated(object? sender, TappedEventArgs e)
     {
-        if (DataContext is SearchViewModel vm && vm.Selected is { } hit)
+        if (DataContext is ReplaceInFilesViewModel vm && vm.Selected is { } hit)
             vm.ActivateCommand.Execute(hit);
     }
 }
