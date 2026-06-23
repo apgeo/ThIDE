@@ -182,8 +182,16 @@ public partial class TherionTextEditor : UserControl
             _editor.TextArea.TextEntered += OnTextEntered;
             _editor.TextChanged += OnEditorTextChanged;
             ActualThemeVariantChanged += OnThemeVariantChanged;
+            // Track the most-recently focused editor so the shell Edit/Search menus can act on
+            // the active document's editor (#11/#12).
+            _editor.TextArea.GotFocus += (_, _) => LastFocused = this;
         }
     }
+
+    /// <summary>The editor that last held focus — the target of the shell Edit/Search menus (#11/#12).</summary>
+    public static TherionTextEditor? LastFocused { get; private set; }
+
+    private SearchPanel? _searchPanel;
 
     private void ConfigureEditor(TextEditor editor)
     {
@@ -219,7 +227,7 @@ public partial class TherionTextEditor : UserControl
         editor.TextArea.TextView.BackgroundRenderers.Add(_flash);
 
         editor.TextArea.IndentationStrategy = new TherionIndentationStrategy();
-        SearchPanel.Install(editor);                            // Ctrl+F / Ctrl+H
+        _searchPanel = SearchPanel.Install(editor);             // Ctrl+F / Ctrl+H
         _foldingManager = FoldingManager.Install(editor.TextArea);
 
         // Context menu (B2).
@@ -1715,6 +1723,50 @@ public partial class TherionTextEditor : UserControl
         menu.Items.Add(MakeItem("Add Bookmark…",     () => _ = AddBookmarkAsync()));
         return menu;
     }
+
+    // ----- public menu surface (shell Edit/Search menus mirror the context menu, #11/#12) ----
+
+    public void MenuCut() => CutSelection();
+    public void MenuCopy() => CopySelection();
+    public void MenuPaste() => _ = PasteAsync();
+    public void MenuDelete() => DeleteSelection();
+    public void MenuSelectAll() => _editor?.SelectAll();
+    public void MenuUpperCase() => ApplyCase(upper: true);
+    public void MenuLowerCase() => ApplyCase(upper: false);
+    public void MenuToggleComment() => ToggleLineComment();
+    public void MenuFoldAll() => SetAllFoldings(folded: true);
+    public void MenuUnfoldAll() => SetAllFoldings(folded: false);
+    public void MenuAddBookmark() => _ = AddBookmarkAsync();
+
+    /// <summary>Opens the in-document search panel (Find, #12).</summary>
+    public void MenuFind()
+    {
+        if (_searchPanel is null) return;
+        _searchPanel.IsReplaceMode = false;
+        _searchPanel.Open();
+        if (_editor?.SelectionLength > 0) _searchPanel.SearchPattern = _editor.SelectedText;
+    }
+
+    /// <summary>Opens the in-document search panel in replace mode (Replace, #12).</summary>
+    public void MenuReplace()
+    {
+        if (_searchPanel is null) return;
+        _searchPanel.IsReplaceMode = true;
+        _searchPanel.Open();
+        if (_editor?.SelectionLength > 0) _searchPanel.SearchPattern = _editor.SelectedText;
+    }
+
+    /// <summary>Go to line: scrolls/positions the caret at <paramref name="line"/> (1-based) (#12).</summary>
+    public void GoToLine(int line)
+    {
+        if (_editor is null) return;
+        line = Math.Clamp(line, 1, _editor.Document.LineCount);
+        ScrollTo(line, 1);
+        _editor.TextArea.Focus();
+    }
+
+    public int LineCount => _editor?.Document.LineCount ?? 0;
+    public int CurrentLine => _editor?.TextArea.Caret.Line ?? 1;
 
     // Collapses/expands every foldable region in the document (#8).
     private void SetAllFoldings(bool folded)

@@ -64,6 +64,8 @@ public interface IDocumentService
     /// <paramref name="isTermNavigation"/>=true and are ignored.
     /// </summary>
     void ReportCaret(Therion.Core.SourceSpan span, bool isTermNavigation);
+    /// <summary>Raised on every caret move so the status bar can show line/col/position (#10).</summary>
+    event EventHandler<Therion.Core.SourceSpan>? CaretMoved;
 
     // ---- workspace reveal (highlight a file/object in the Workspace tree) ----
     /// <summary>Asks the Workspace Explorer to reveal/highlight the node for a target (#8/#9).</summary>
@@ -215,9 +217,14 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
     private Therion.Core.SourceSpan _lastCaret;
     private const int JumpLineThreshold = 5;
 
+    public event EventHandler<Therion.Core.SourceSpan>? CaretMoved;
+
     public void ReportCaret(Therion.Core.SourceSpan span, bool isTermNavigation)
     {
         if (span.IsEmpty || string.IsNullOrEmpty(span.FilePath)) return;
+
+        // Surface every caret move to the status bar (independent of the history filtering below).
+        CaretMoved?.Invoke(this, span);
 
         // Term cycling (Shift+F12) and programmatic back/forward never add history,
         // but they do update the reference point so later real jumps measure correctly.

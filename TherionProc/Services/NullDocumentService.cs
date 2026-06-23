@@ -38,6 +38,7 @@ internal sealed class NullDocumentService : IDocumentService
     public event EventHandler? HistoryChanged;
     public event EventHandler<Therion.Core.SourceSpan>? RevealInWorkspaceRequested;
     public event EventHandler<string>? FindReferencesRequested;
+    public event EventHandler<Therion.Core.SourceSpan>? CaretMoved;
 #pragma warning restore CS0067
 
     public Task OpenFileAsync(string absolutePath, CancellationToken ct = default) => Task.CompletedTask;

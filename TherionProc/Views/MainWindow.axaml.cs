@@ -73,6 +73,39 @@ public partial class MainWindow : Window
         }
     }
 
+    // ----- Edit menu → active editor (#11) --------------------------------
+    // The shell Edit/Search menus act on the most-recently focused editor.
+
+    private static TherionProc.Editor.TherionTextEditor? ActiveEditor =>
+        TherionProc.Editor.TherionTextEditor.LastFocused;
+
+    private void OnEditCut(object? s, Avalonia.Interactivity.RoutedEventArgs e) => ActiveEditor?.MenuCut();
+    private void OnEditCopy(object? s, Avalonia.Interactivity.RoutedEventArgs e) => ActiveEditor?.MenuCopy();
+    private void OnEditPaste(object? s, Avalonia.Interactivity.RoutedEventArgs e) => ActiveEditor?.MenuPaste();
+    private void OnEditDelete(object? s, Avalonia.Interactivity.RoutedEventArgs e) => ActiveEditor?.MenuDelete();
+    private void OnEditSelectAll(object? s, Avalonia.Interactivity.RoutedEventArgs e) => ActiveEditor?.MenuSelectAll();
+    private void OnEditUpper(object? s, Avalonia.Interactivity.RoutedEventArgs e) => ActiveEditor?.MenuUpperCase();
+    private void OnEditLower(object? s, Avalonia.Interactivity.RoutedEventArgs e) => ActiveEditor?.MenuLowerCase();
+    private void OnEditToggleComment(object? s, Avalonia.Interactivity.RoutedEventArgs e) => ActiveEditor?.MenuToggleComment();
+    private void OnEditFoldAll(object? s, Avalonia.Interactivity.RoutedEventArgs e) => ActiveEditor?.MenuFoldAll();
+    private void OnEditUnfoldAll(object? s, Avalonia.Interactivity.RoutedEventArgs e) => ActiveEditor?.MenuUnfoldAll();
+    private void OnEditAddBookmark(object? s, Avalonia.Interactivity.RoutedEventArgs e) => ActiveEditor?.MenuAddBookmark();
+
+    // ----- Search menu (#12) ----------------------------------------------
+
+    private void OnSearchFind(object? s, Avalonia.Interactivity.RoutedEventArgs e) => ActiveEditor?.MenuFind();
+    private void OnSearchReplace(object? s, Avalonia.Interactivity.RoutedEventArgs e) => ActiveEditor?.MenuReplace();
+    private void OnSearchFindInFiles(object? s, Avalonia.Interactivity.RoutedEventArgs e) => ShowSearch();
+    private void OnSearchReplaceInFiles(object? s, Avalonia.Interactivity.RoutedEventArgs e) => ShowReplace();
+
+    private async void OnSearchGoTo(object? s, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (ActiveEditor is not { } ed) return;
+        var input = await new InputDialog("Go To Line",
+            $"Line number (1–{ed.LineCount}):", ed.CurrentLine.ToString()).ShowAsync(this);
+        if (int.TryParse(input, out var line)) ed.GoToLine(line);
+    }
+
     // ----- full screen (#8) ----------------------------------------------
 
     private void OnToggleFullScreen(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ToggleFullScreen();
@@ -127,6 +160,24 @@ public partial class MainWindow : Window
         _searchWindow = new SearchWindow { DataContext = vm };
         _searchWindow.Closed += (_, _) => _searchWindow = null;
         _searchWindow.Show(this);
+    }
+
+    // ----- replace in files window (#9) ----------------------------------
+
+    private ReplaceWindow? _replaceWindow;
+
+    private void ShowReplace()
+    {
+        if (_replaceWindow is { } w && w.IsVisible) { w.Activate(); return; }
+
+        ViewModels.ReplaceInFilesViewModel? vm = null;
+        try { vm = AppServices.Provider.GetService<ViewModels.ReplaceInFilesViewModel>(); }
+        catch { /* design-time / no container */ }
+        if (vm is null) return;
+
+        _replaceWindow = new ReplaceWindow { DataContext = vm };
+        _replaceWindow.Closed += (_, _) => _replaceWindow = null;
+        _replaceWindow.Show(this);
     }
 
     // Find all references (#4): configure Find-in-Files as a whole-word, project-scoped

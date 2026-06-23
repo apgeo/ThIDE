@@ -56,6 +56,21 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty] private string _title = string.Empty;
     [ObservableProperty] private string _statusText = string.Empty;
 
+    /// <summary>True while the previous session's files are being reopened — drives the
+    /// startup loading spinner overlay (#14).</summary>
+    [ObservableProperty] private bool _isLoading;
+
+    // ----- status bar: open-file metrics (#10) -------------------------------
+    /// <summary>True when a real text file is active — shows the file-info status groups.</summary>
+    [ObservableProperty] private bool _hasStatusFile;
+    [ObservableProperty] private string _statusFilePath = string.Empty;
+    [ObservableProperty] private int _statusLength;
+    [ObservableProperty] private int _statusLines;
+    [ObservableProperty] private int _statusCaretLine = 1;
+    [ObservableProperty] private int _statusCaretCol = 1;
+    [ObservableProperty] private int _statusCaretPos;
+    [ObservableProperty] private string _statusEncoding = string.Empty;
+
     [ObservableProperty] private bool _strictParserMode;
     partial void OnStrictParserModeChanged(bool value)
     {
@@ -142,6 +157,8 @@ public partial class MainWindowViewModel : ViewModelBase
             _session.CandidatesChanged += (_, _) => OnUiThread(Refresh);
         }
         _documents.DocumentChanged += (_, _) => RefreshActiveTools();
+        _documents.DocumentChanged += (_, _) => OnUiThread(UpdateFileStatus);   // status bar (#10)
+        _documents.CaretMoved += (_, span) => OnUiThread(() => UpdateCaretStatus(span));
         _documents.HistoryChanged += (_, _) => OnUiThread(() =>
         {
             GoBackCommand.NotifyCanExecuteChanged();
@@ -212,14 +229,23 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         var files = s is { RestoreSessionOnStartup: true } ? s.LastSessionFiles : Array.Empty<string>();
-        foreach (var path in files)
+
+        // Show the loading spinner while reopening the previous session's files — parsing each
+        // can take a few seconds (#14).
+        bool anyToLoad = files.Any(System.IO.File.Exists);
+        if (anyToLoad) OnUiThread(() => IsLoading = true);
+        try
         {
-            if (!System.IO.File.Exists(path)) continue;
-            // Each open swaps the file into its saved tab slot (dock/float/order) when a
-            // restore placeholder is holding it; otherwise it lands in the main well.
-            try { await _documents.OpenFileAsync(path).ConfigureAwait(true); }
-            catch { /* skip files that fail to open */ }
+            foreach (var path in files)
+            {
+                if (!System.IO.File.Exists(path)) continue;
+                // Each open swaps the file into its saved tab slot (dock/float/order) when a
+                // restore placeholder is holding it; otherwise it lands in the main well.
+                try { await _documents.OpenFileAsync(path).ConfigureAwait(true); }
+                catch { /* skip files that fail to open */ }
+            }
         }
+        finally { if (anyToLoad) OnUiThread(() => IsLoading = false); }
 
         // Drop any restore placeholders whose file wasn't reopened (deleted on disk, or
         // session-restore disabled) so no blank "ghost" tab remains. Posted at Background
@@ -391,6 +417,60 @@ public partial class MainWindowViewModel : ViewModelBase
         Diagnostics.Load(_documents.CurrentDiagnostics);
         XviReferences.Refresh();
         WorkspaceExplorer.Refresh();
+    }
+
+    // ----- status bar (#10) --------------------------------------------------
+
+    /// <summary>Refreshes the open-file metrics (path, length, lines, encoding) on the status bar.</summary>
+    private void UpdateFileStatus()
+    {
+        var doc = _documents.Active;
+        if (doc is null || string.IsNullOrEmpty(doc.FilePath))
+        {
+            HasStatusFile = false;
+            return;
+        }
+
+        HasStatusFile = true;
+        StatusFilePath = doc.FilePath;
+        var text = doc.DocumentText;
+        StatusLength = text.Length;
+        StatusLines = CountLines(text);
+        StatusEncoding = DetectEncoding(doc.FilePath);
+    }
+
+    /// <summary>Updates the caret line/column/offset on the status bar (#10).</summary>
+    private void UpdateCaretStatus(Therion.Core.SourceSpan span)
+    {
+        // Only the active document's caret drives the status bar.
+        if (!string.Equals(span.FilePath, _documents.CurrentPath, StringComparison.OrdinalIgnoreCase)) return;
+        StatusCaretLine = span.Start.Line;
+        StatusCaretCol = span.Start.Column;
+        StatusCaretPos = span.StartOffset;
+    }
+
+    private static int CountLines(string text)
+    {
+        if (text.Length == 0) return 1;
+        int lines = 1;
+        foreach (var c in text) if (c == '\n') lines++;
+        return lines;
+    }
+
+    /// <summary>BOM-based encoding label for the status bar (text / UTF-8 / Unicode / other, #10).</summary>
+    private static string DetectEncoding(string path)
+    {
+        try
+        {
+            using var fs = System.IO.File.OpenRead(path);
+            Span<byte> bom = stackalloc byte[4];
+            int n = fs.Read(bom);
+            if (n >= 3 && bom[0] == 0xEF && bom[1] == 0xBB && bom[2] == 0xBF) return "UTF-8 BOM";
+            if (n >= 2 && bom[0] == 0xFF && bom[1] == 0xFE) return "Unicode (UTF-16 LE)";
+            if (n >= 2 && bom[0] == 0xFE && bom[1] == 0xFF) return "Unicode (UTF-16 BE)";
+            return "UTF-8"; // no BOM — Therion files are UTF-8/ASCII text
+        }
+        catch { return "UTF-8"; }
     }
 
     private void Refresh()

@@ -3,6 +3,7 @@
         xmlns:vm="using:TherionProc.ViewModels"
         xmlns:docking="using:TherionProc.ViewModels.Docking"
         xmlns:dock="using:Dock.Avalonia.Controls"
+        xmlns:conv="using:TherionProc.Converters"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="1300" d:DesignHeight="800"
@@ -28,6 +29,19 @@
             <!-- Fade tint by file type (.th/.th2/.thconfig), task 2. -->
             <Setter Property="Background" Value="{Binding TabBrush}" />
         </Style>
+        <!-- Tab-strip arrow buttons scroll 3x faster (task 3). Dock renders the two end arrows
+             of the document/tool tab strips as RepeatButtons bound to ScrollViewerLineCommand,
+             so tripling their repeat rate (1/3 the interval) triples press-and-hold horizontal
+             scroll speed. Scoped to the tab strips so editor/scrollbar RepeatButtons are unaffected. -->
+        <Style Selector="dock|DocumentTabStrip RepeatButton">
+            <Setter Property="Delay" Value="200" />
+            <Setter Property="Interval" Value="33" />
+        </Style>
+        <Style Selector="dock|ToolTabStrip RepeatButton">
+            <Setter Property="Delay" Value="200" />
+            <Setter Property="Interval" Value="33" />
+        </Style>
+
         <!-- Medium icon buttons for the toolbar. -->
         <Style Selector="Button.tool">
             <Setter Property="Width" Value="34" />
@@ -65,8 +79,37 @@
                           ToggleType="CheckBox"
                           IsChecked="{Binding StrictParserMode, Mode=TwoWay}" />
             </MenuItem>
-            <MenuItem Header="_Edit">
-                <MenuItem Header="_Bookmarks..." Click="OnBookmarksClick" />
+            <!-- Edit menu mirrors the editor's right-click menu; enabled when a file is open (#11). -->
+            <MenuItem Header="_Edit" IsEnabled="{Binding HasStatusFile}">
+                <MenuItem Header="Cut"        InputGesture="Ctrl+X" Click="OnEditCut" />
+                <MenuItem Header="Copy"       InputGesture="Ctrl+C" Click="OnEditCopy" />
+                <MenuItem Header="Paste"      InputGesture="Ctrl+V" Click="OnEditPaste" />
+                <MenuItem Header="Delete"     Click="OnEditDelete" />
+                <Separator />
+                <MenuItem Header="Select All" InputGesture="Ctrl+A" Click="OnEditSelectAll" />
+                <Separator />
+                <MenuItem Header="UPPERCASE"  Click="OnEditUpper" />
+                <MenuItem Header="lowercase"  Click="OnEditLower" />
+                <Separator />
+                <MenuItem Header="Toggle Comment" InputGesture="Ctrl+/" Click="OnEditToggleComment" />
+                <Separator />
+                <MenuItem Header="Fold All"   Click="OnEditFoldAll" />
+                <MenuItem Header="Unfold All" Click="OnEditUnfoldAll" />
+                <Separator />
+                <MenuItem Header="Add Bookmark…" Click="OnEditAddBookmark" />
+            </MenuItem>
+
+            <!-- Search menu (#12). Find/Replace act on the focused editor; the rest are global. -->
+            <MenuItem Header="_Search">
+                <MenuItem Header="_Find"            InputGesture="Ctrl+F" Click="OnSearchFind" IsEnabled="{Binding HasStatusFile}" />
+                <MenuItem Header="_Replace"         InputGesture="Ctrl+H" Click="OnSearchReplace" IsEnabled="{Binding HasStatusFile}" />
+                <Separator />
+                <MenuItem Header="Find in Files…"    InputGesture="Ctrl+Shift+F" Click="OnSearchFindInFiles" />
+                <MenuItem Header="Replace in Files…" InputGesture="Ctrl+Shift+H" Click="OnSearchReplaceInFiles" />
+                <Separator />
+                <MenuItem Header="_Go To Line…"     InputGesture="Ctrl+G" Click="OnSearchGoTo" IsEnabled="{Binding HasStatusFile}" />
+                <Separator />
+                <MenuItem Header="_Bookmarks..."    Click="OnBookmarksClick" />
             </MenuItem>
             <MenuItem Header="{Binding MenuBuild}">
                 <MenuItem Header="_Build      F5"        Command="{Binding Build.BuildCommand}" />
@@ -124,11 +167,90 @@
             </StackPanel>
         </Border>
 
+        <!-- Status bar (#10): transient messages on the left; open-file metrics on the right,
+             grouped with thin separators. The full path is capped at 65% of the window width. -->
         <Border DockPanel.Dock="Bottom" BorderBrush="Gray" BorderThickness="0,1,0,0" Padding="6,2">
-            <TextBlock Text="{Binding StatusText}" Foreground="Gray" />
+            <DockPanel LastChildFill="False">
+                <TextBlock DockPanel.Dock="Left" Text="{Binding StatusText}" Foreground="Gray"
+                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="0"
+                            IsVisible="{Binding HasStatusFile}">
+                    <StackPanel.Styles>
+                        <!-- Thin separators between status groups. -->
+                        <Style Selector="Border.statusSep">
+                            <Setter Property="Width" Value="1" />
+                            <Setter Property="Margin" Value="8,1" />
+                            <Setter Property="Background" Value="#80808080" />
+                        </Style>
+                        <Style Selector="StackPanel.statusGroup > TextBlock">
+                            <Setter Property="Foreground" Value="Gray" />
+                            <Setter Property="VerticalAlignment" Value="Center" />
+                            <Setter Property="FontSize" Value="11" />
+                        </Style>
+                    </StackPanel.Styles>
+
+                    <TextBlock Text="{Binding StatusFilePath}" Foreground="Gray" FontSize="11"
+                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                               ToolTip.Tip="{Binding StatusFilePath}"
+                               MaxWidth="{Binding $parent[Window].Bounds.Width, Converter={x:Static conv:RatioConverter.Instance}, ConverterParameter=0.65}" />
+
+                    <Border Classes="statusSep" />
+                    <StackPanel Classes="statusGroup" Orientation="Horizontal" Spacing="3">
+                        <TextBlock Text="Length:" /><TextBlock Text="{Binding StatusLength}" />
+                    </StackPanel>
+                    <Border Classes="statusSep" />
+                    <StackPanel Classes="statusGroup" Orientation="Horizontal" Spacing="3">
+                        <TextBlock Text="Lines:" /><TextBlock Text="{Binding StatusLines}" />
+                    </StackPanel>
+                    <Border Classes="statusSep" />
+                    <StackPanel Classes="statusGroup" Orientation="Horizontal" Spacing="3">
+                        <TextBlock Text="Line:" /><TextBlock Text="{Binding StatusCaretLine}" />
+                    </StackPanel>
+                    <Border Classes="statusSep" />
+                    <StackPanel Classes="statusGroup" Orientation="Horizontal" Spacing="3">
+                        <TextBlock Text="Col:" /><TextBlock Text="{Binding StatusCaretCol}" />
+                    </StackPanel>
+                    <Border Classes="statusSep" />
+                    <StackPanel Classes="statusGroup" Orientation="Horizontal" Spacing="3">
+                        <TextBlock Text="Pos:" /><TextBlock Text="{Binding StatusCaretPos}" />
+                    </StackPanel>
+                    <Border Classes="statusSep" />
+                    <StackPanel Classes="statusGroup" Orientation="Horizontal" Spacing="3">
+                        <TextBlock Text="{Binding StatusEncoding}" />
+                    </StackPanel>
+                </StackPanel>
+            </DockPanel>
         </Border>
 
         <!-- VS-style docking host: documents (center) + dockable/floatable tool windows. -->
-        <dock:DockControl x:Name="Dock" Layout="{Binding Layout}" Factory="{Binding Factory}" />
+        <Grid>
+            <dock:DockControl x:Name="Dock" Layout="{Binding Layout}" Factory="{Binding Factory}" />
+
+            <!-- Startup loading overlay with a spinning glyph (#14). -->
+            <Border IsVisible="{Binding IsLoading}" Background="#66000000">
+                <Border.Styles>
+                    <Style Selector="PathIcon.spinner">
+                        <Style.Animations>
+                            <Animation Duration="0:0:1" IterationCount="INFINITE">
+                                <KeyFrame Cue="0%">
+                                    <Setter Property="RenderTransform" Value="rotate(0deg)" />
+                                </KeyFrame>
+                                <KeyFrame Cue="100%">
+                                    <Setter Property="RenderTransform" Value="rotate(360deg)" />
+                                </KeyFrame>
+                            </Animation>
+                        </Style.Animations>
+                    </Style>
+                </Border.Styles>
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
+                    <PathIcon Classes="spinner" Data="{DynamicResource Icon.Loading}"
+                              Width="44" Height="44" Foreground="White"
+                              HorizontalAlignment="Center" RenderTransformOrigin="50%,50%" />
+                    <TextBlock Text="Loading files…" Foreground="White" FontSize="14"
+                               HorizontalAlignment="Center" />
+                </StackPanel>
+            </Border>
+        </Grid>
     </DockPanel>
 </Window>
