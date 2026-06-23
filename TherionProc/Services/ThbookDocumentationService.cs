@@ -30,15 +30,15 @@ public sealed class ThbookDocumentationService : IThbookDocumentationService
     private const string PdfAsset = "avares://TherionProc/Assets/thbook-v6.4.0.pdf";
     private const string PagesAsset = "avares://TherionProc/Assets/thbook-pages.json";
 
-    private readonly IShellOpener _shell;
+    private readonly IPdfPageOpener _pdfOpener;
     private readonly Dictionary<string, int> _pages = new(StringComparer.OrdinalIgnoreCase);
     private string _pdfFileName = "thbook-v6.4.0.pdf";
     private string? _pdfPath;     // lazily-extracted real file path
     private bool _extractFailed;
 
-    public ThbookDocumentationService(IShellOpener shell)
+    public ThbookDocumentationService(IPdfPageOpener pdfOpener)
     {
-        _shell = shell;
+        _pdfOpener = pdfOpener;
         LoadPageMap();
     }
 
@@ -57,9 +57,9 @@ public sealed class ThbookDocumentationService : IThbookDocumentationService
     {
         var pdf = EnsurePdf();
         if (pdf is null) return false;
-        // file:///abs/path#page=N — the fragment is honoured by browser-based viewers.
-        var uri = new Uri(pdf).AbsoluteUri + "#page=" + Math.Max(1, page);
-        return _shell.Open(uri);
+        // Adapts the page syntax to the detected default viewer (Sumatra/Acrobat/Foxit/…),
+        // falling back to the "file://…#page=N" URL fragment for browser-based viewers (#2).
+        return _pdfOpener.OpenAt(pdf, Math.Max(1, page));
     }
 
     private void LoadPageMap()
