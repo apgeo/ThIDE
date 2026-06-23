@@ -1,7 +1,11 @@
 // Measurements document view (main panel): a filterable / sortable / groupable
-// projection of the centreline data legs produced by the semantic binder.
-// Sorting is handled natively by the DataGrid over the DataGridCollectionView;
-// filtering and grouping are driven from this ViewModel.
+// projection of the centreline data legs (shots) AND the stations produced by the
+// semantic binder, for a single file. Sorting is handled natively by the DataGrid
+// over the DataGridCollectionView; filtering and grouping are driven from this ViewModel.
+//
+// The grid is editable (#6): Length/Compass/Clino are TwoWay-bound. Two-way binding
+// back to the file text is deferred. A toggle switches station columns between the full
+// survey-qualified name ("SV-ps3d.R31") and the short station name ("R31") (#5).
 
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -12,15 +16,32 @@ using Therion.Semantics;
 
 namespace TherionProc.ViewModels;
 
-/// <summary>One measurement (data leg) projected for the Measurements grid.</summary>
-public sealed class MeasurementRow
+/// <summary>One measurement (data leg) projected for the Measurements grid; editable (#6).</summary>
+public sealed partial class MeasurementRow : ObservableObject
 {
     public string Survey { get; init; } = string.Empty;
-    public string From { get; init; } = string.Empty;
-    public string To { get; init; } = string.Empty;
-    public double? Length { get; init; }
-    public double? Compass { get; init; }
-    public double? Clino { get; init; }
+
+    // Full ("SV-ps3d.R31") and short ("R31") station names. The visible From/To switch on the
+    // panel-wide ShowFullName toggle (#5).
+    public string FromFull { get; init; } = string.Empty;
+    public string FromShort { get; init; } = string.Empty;
+    public string ToFull { get; init; } = string.Empty;
+    public string ToShort { get; init; } = string.Empty;
+
+    [ObservableProperty] private bool _showFullName;
+    partial void OnShowFullNameChanged(bool value)
+    {
+        OnPropertyChanged(nameof(From));
+        OnPropertyChanged(nameof(To));
+    }
+
+    public string From => ShowFullName ? FromFull : FromShort;
+    public string To => ShowFullName ? ToFull : ToShort;
+
+    // Editable measurement values (#6). Persistence back to the file text is deferred.
+    [ObservableProperty] private double? _length;
+    [ObservableProperty] private double? _compass;
+    [ObservableProperty] private double? _clino;
 
     // One column per flag (Therion centreline flags).
     public bool Surface { get; init; }
@@ -35,6 +56,22 @@ public sealed class MeasurementRow
     public string? Comment { get; init; }
 
     public string Style { get; init; } = string.Empty;
+    public int Line { get; init; }
+}
+
+/// <summary>One station projected for the Measurements "Stations" sub-panel (read-only).</summary>
+public sealed partial class StationMeasurementRow : ObservableObject
+{
+    public string Survey { get; init; } = string.Empty;
+    public string FullName { get; init; } = string.Empty;
+    public string ShortName { get; init; } = string.Empty;
+
+    [ObservableProperty] private bool _showFullName;
+    partial void OnShowFullNameChanged(bool value) => OnPropertyChanged(nameof(Name));
+
+    public string Name => ShowFullName ? FullName : ShortName;
+
+    public string Kind { get; init; } = string.Empty;
     public int Line { get; init; }
 }
 
@@ -53,6 +90,22 @@ public partial class MeasurementsViewModel : ViewModelBase
     [ObservableProperty] private string _filterText = string.Empty;
     [ObservableProperty] private string _groupBy = GroupByNone;
 
+    // Stations sub-panel (#7) — this file's stations only.
+    [ObservableProperty] private IReadOnlyList<StationMeasurementRow> _stations =
+        System.Array.Empty<StationMeasurementRow>();
+    [ObservableProperty] private int _stationCount;
+
+    /// <summary>Show the full survey-qualified station name vs. the short station name (#5, default off).</summary>
+    [ObservableProperty] private bool _showFullStationName;
+    partial void OnShowFullStationNameChanged(bool value)
+    {
+        foreach (var r in _all) r.ShowFullName = value;
+        foreach (var s in Stations) s.ShowFullName = value;
+    }
+
+    /// <summary>True when this file has at least one shot or station — drives the empty banner (#4).</summary>
+    public bool HasAnyData => _all.Count > 0 || Stations.Count > 0;
+
     public IReadOnlyList<string> GroupByOptions { get; } =
         new[] { GroupByNone, GroupBySurvey, GroupByStyle, GroupByFlags };
 
@@ -64,14 +117,21 @@ public partial class MeasurementsViewModel : ViewModelBase
 
     partial void OnGroupByChanged(string value) => ApplyGrouping();
 
-    /// <summary>Loads measurements from a single-file semantic model.</summary>
-    public void Load(SemanticModel model) => Build(Project(model.Shots));
+    /// <summary>Loads measurements + stations from a single-file semantic model.</summary>
+    public void Load(SemanticModel model)
+    {
+        BuildStations(ProjectStations(model.Stations.Values));
+        Build(Project(model.Shots));
+    }
 
-    /// <summary>Loads measurements from every per-file model in a workspace snapshot.</summary>
-    public void Load(WorkspaceSemanticModel workspace) =>
+    /// <summary>Loads measurements + stations from every per-file model in a workspace snapshot.</summary>
+    public void Load(WorkspaceSemanticModel workspace)
+    {
+        BuildStations(workspace.PerFile.Values.SelectMany(m => ProjectStations(m.Stations.Values)));
         Build(workspace.PerFile.Values.SelectMany(m => Project(m.Shots)));
+    }
 
-    private static IEnumerable<MeasurementRow> Project(ImmutableArray<ShotSymbol> shots)
+    private IEnumerable<MeasurementRow> Project(ImmutableArray<ShotSymbol> shots)
     {
         foreach (var s in shots)
         {
@@ -79,8 +139,11 @@ public partial class MeasurementsViewModel : ViewModelBase
             yield return new MeasurementRow
             {
                 Survey      = s.From.HasParent ? s.From.Parent().ToString() : string.Empty,
-                From        = s.From.ToString(),
-                To          = s.To.ToString(),
+                FromFull    = s.From.ToString(),
+                FromShort   = s.From.Last,
+                ToFull      = s.To.ToString(),
+                ToShort     = s.To.Last,
+                ShowFullName = ShowFullStationName,
                 Length      = s.Length,
                 Compass     = s.Compass,
                 Clino       = s.Clino,
@@ -96,6 +159,19 @@ public partial class MeasurementsViewModel : ViewModelBase
         }
     }
 
+    private IEnumerable<StationMeasurementRow> ProjectStations(IEnumerable<StationSymbol> stations) =>
+        stations
+            .Select(s => new StationMeasurementRow
+            {
+                Survey    = s.Name.HasParent ? s.Name.Parent().ToString() : string.Empty,
+                FullName  = s.Name.ToString(),
+                ShortName = s.Name.Last,
+                ShowFullName = ShowFullStationName,
+                Kind      = s.Kind.ToString(),
+                Line      = s.DeclarationSpan.Start.Line,
+            })
+            .OrderBy(r => r.FullName, System.StringComparer.Ordinal);
+
     private void Build(IEnumerable<MeasurementRow> rows)
     {
         _all.Clear();
@@ -106,6 +182,15 @@ public partial class MeasurementsViewModel : ViewModelBase
         ApplyGrouping();
         TotalCount = _all.Count;
         UpdateCount();
+        OnPropertyChanged(nameof(HasAnyData));
+    }
+
+    private void BuildStations(IEnumerable<StationMeasurementRow> rows)
+    {
+        var list = rows.ToList();
+        Stations = list;
+        StationCount = list.Count;
+        OnPropertyChanged(nameof(HasAnyData));
     }
 
     private void ApplyGrouping()
@@ -132,7 +217,9 @@ public partial class MeasurementsViewModel : ViewModelBase
         if (string.IsNullOrWhiteSpace(FilterText)) return true;
         if (o is not MeasurementRow r) return true;
         var q = FilterText.Trim();
-        return Contains(r.From, q) || Contains(r.To, q) || Contains(r.Survey, q)
+        // Match on the full qualified names so the filter behaves the same regardless of the
+        // short/full display toggle (#5).
+        return Contains(r.FromFull, q) || Contains(r.ToFull, q) || Contains(r.Survey, q)
             || Contains(r.Flags, q) || Contains(r.Comment, q) || Contains(r.Style, q);
     }
 

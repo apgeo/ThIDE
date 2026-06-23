@@ -45,6 +45,10 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
 
     public MeasurementsViewModel Measurements { get; }
 
+    /// <summary>True only for .th files — the Measurements tab is hidden for any other type (#4).</summary>
+    public bool IsThFile =>
+        string.Equals(System.IO.Path.GetExtension(FilePath), ".th", StringComparison.OrdinalIgnoreCase);
+
     public FileDocumentViewModel(string filePath, string text, MeasurementsViewModel measurements,
         ICommandRegistry? commands = null)
     {
