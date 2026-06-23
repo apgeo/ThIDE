@@ -175,6 +175,10 @@ public partial class TherionTextEditor : UserControl
             _editor.TextArea.TextView.PointerExited += OnEditorPointerExited;
             _editor.TextArea.TextView.AddHandler(InputElement.PointerReleasedEvent, OnEditorPointerReleased,
                 RoutingStrategies.Bubble, handledEventsToo: true);
+            // Move the caret to the right-clicked location before the context menu opens (tunnel
+            // runs ahead of the ContextMenu's own bubbling open handler), like a typical editor.
+            _editor.TextArea.AddHandler(InputElement.ContextRequestedEvent, OnEditorContextRequested,
+                RoutingStrategies.Tunnel);
             _editor.TextArea.TextEntered += OnTextEntered;
             _editor.TextChanged += OnEditorTextChanged;
             ActualThemeVariantChanged += OnThemeVariantChanged;
@@ -711,6 +715,11 @@ public partial class TherionTextEditor : UserControl
 
     private void ScheduleHoverInfo(Point visualPos)
     {
+        // While the pointer is over the open overlay, keep it exactly as is — never react to
+        // whatever token sits geometrically behind the popup (which would swap or close the
+        // popout the user is reaching for, item #1).
+        if (_pointerOverPopup) { _infoHideTimer?.Stop(); _infoShowTimer?.Stop(); return; }
+
         _infoPointer = visualPos;
         int start = HoverInfoTokenStart(visualPos);
         if (start == _infoTokenStart) return; // same token — leave the popup as is
@@ -758,7 +767,7 @@ public partial class TherionTextEditor : UserControl
         if (content is null) { CancelHoverInfo(); return; }
 
         EnsureInfoPopup();
-        _infoPopup!.Child = new Border
+        var border = new Border
         {
             Background = IsDark() ? Brushes.Black : Brushes.White,
             BorderBrush = Brushes.Gray,
@@ -767,10 +776,34 @@ public partial class TherionTextEditor : UserControl
             MaxWidth = 460,
             Child = content,
         };
+        // Enter/exit MUST be wired on the popup content (the Border), not the Popup control:
+        // a Popup hosts its child in a separate PopupRoot, so pointer events fire on the
+        // content, not the Popup. Keeping the popup open while the pointer is over it is what
+        // lets the user reach its "Go to definition" / "Find all references" buttons (#1).
+        border.PointerEntered += OnHoverContentEntered;
+        border.PointerExited += OnHoverContentExited;
+        _infoPopup!.Child = border;
         _infoPopup.IsOpen = true;
         // Return focus to the editor so the popup doesn't intercept keyboard and
         // hover events (#3).
         _editor.TextArea.Focus();
+    }
+
+    // The pointer moved onto the hover overlay → keep it open (cancel the grace-hide and any
+    // pending show for a token geometrically behind the popup).
+    private void OnHoverContentEntered(object? sender, PointerEventArgs e)
+    {
+        _pointerOverPopup = true;
+        _infoHideTimer?.Stop();
+        _infoShowTimer?.Stop();
+    }
+
+    // The pointer left the overlay → start the grace-hide. It is cancelled again if the
+    // pointer re-enters the overlay or settles back on the same token.
+    private void OnHoverContentExited(object? sender, PointerEventArgs e)
+    {
+        _pointerOverPopup = false;
+        StartHoverHide();
     }
 
     // Fully cancel hover: stops the show timer and closes the popup.
@@ -786,6 +819,7 @@ public partial class TherionTextEditor : UserControl
     private void DismissHoverPopup()
     {
         _infoTokenStart = -1;
+        _pointerOverPopup = false;
         if (_infoPopup is { IsOpen: true }) _infoPopup.IsOpen = false;
     }
 
@@ -799,12 +833,17 @@ public partial class TherionTextEditor : UserControl
         {
             PlacementTarget = _editor,
             Placement = PlacementMode.Pointer,
-            IsLightDismissEnabled = true,
+            // Light dismiss would lay an input-catching overlay over the window that swallows
+            // the editor's hover detection; we drive show/hide entirely from pointer enter/exit
+            // instead, so it stays off (#1).
+            IsLightDismissEnabled = false,
             HorizontalOffset = 8,
             VerticalOffset = 16,
         };
-        _infoPopup.PointerEntered += (_, _) => { _pointerOverPopup = true; _infoHideTimer?.Stop(); };
-        _infoPopup.PointerExited += (_, _) => { _pointerOverPopup = false; StartHoverHide(); };
+        // Backstop the content-level handlers in case a host renders the popup as an overlay
+        // within this window (where the Popup control itself sees the pointer).
+        _infoPopup.PointerEntered += OnHoverContentEntered;
+        _infoPopup.PointerExited += OnHoverContentExited;
         // Route all window pointer moves through the editor's hover detection while
         // the popup is open so tokens geometrically behind it remain discoverable (#3).
         _infoPopup.Opened += OnInfoPopupOpened;
@@ -843,7 +882,7 @@ public partial class TherionTextEditor : UserControl
         // show timer for a different token is NOT cancelled when the popup auto-hides (#3).
         if (_infoHideTimer is null)
         {
-            _infoHideTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(450) };
+            _infoHideTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(600) };
             _infoHideTimer.Tick += (_, _) => { _infoHideTimer!.Stop(); DismissHoverPopup(); };
         }
         _infoHideTimer.Stop();
@@ -1041,6 +1080,26 @@ public partial class TherionTextEditor : UserControl
         if (_pendingNavOffset < 0 || _editor is null) return;
         _editor.Select(_pendingNavOffset, 0);
         _pendingNavOffset = -1;
+    }
+
+    // ----- right-click: move caret to the click before showing the menu -------
+
+    private void OnEditorContextRequested(object? sender, ContextRequestedEventArgs e)
+    {
+        if (_editor is null) return;
+        var view = _editor.TextArea.TextView;
+        // Keyboard-invoked menus (Menu key) carry no pointer position — leave the caret put.
+        if (!e.TryGetPosition(view, out var p)) return;
+        if (FloorOffset(p + view.ScrollOffset) is not { } off) return;
+
+        // Right-clicking inside an existing selection keeps it (so Cut/Copy act on the
+        // selection); clicking elsewhere moves the caret there and clears any selection.
+        if (_editor.SelectionLength > 0)
+        {
+            int selStart = _editor.SelectionStart;
+            if (off >= selStart && off <= selStart + _editor.SelectionLength) return;
+        }
+        _editor.Select(off, 0);
     }
 
     // ----- go to definition / linked files -------------------------------
