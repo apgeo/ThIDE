@@ -14,6 +14,11 @@ public partial class App : Application
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
+
+    // disabled for now
+    // #if DEBUG
+    //     this.AttachDeveloperTools();
+    // #endif
     }
 
     public override void OnFrameworkInitializationCompleted()
