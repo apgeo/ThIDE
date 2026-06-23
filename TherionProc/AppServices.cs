@@ -103,6 +103,8 @@ internal static class AppServices
         services.AddSingleton<IBookmarksService, BookmarksService>();
 
         // thbook documentation lookup (#6) — term→page map + open-at-page in default viewer.
+        // PdfPageOpener detects the default PDF app and adapts the page syntax (#2).
+        services.AddSingleton<IPdfPageOpener, PdfPageOpener>();
         services.AddSingleton<IThbookDocumentationService, ThbookDocumentationService>();
 
         // Keyboard shortcuts (�9bis.5a / Decision #29).
@@ -124,6 +126,7 @@ internal static class AppServices
         services.AddSingleton<SettingsViewModel>();
         services.AddSingleton<KeyboardShortcutsViewModel>();
         services.AddSingleton<SearchViewModel>();
+        services.AddSingleton<ReplaceInFilesViewModel>();
 
         // Dock tool wrappers + the VS-classic layout factory.
         services.AddSingleton<ViewModels.Docking.WorkspaceExplorerToolViewModel>();
