@@ -7,7 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text.Json.Serialization.Metadata;
+using System.Linq;
 using Microsoft.Extensions.Logging;
 using Dock.Avalonia.Controls;
 using Dock.Model.Controls;
@@ -30,35 +30,15 @@ public sealed class DockFactory : Factory
     // so we discard the layout instead of bricking startup (task 2).
     private static readonly string LoadSentinelPath = LayoutPath + ".loading";
 
-    private readonly IDockSerializer _serializer = CreateSerializer();
+    // The stock Dock serializer: its built-in resolver carries the polymorphic type
+    // discriminators that let an IRootDock tree round-trip. (A custom resolver dropped
+    // those discriminators, which made deserialization throw "Deserialization of interface
+    // or abstract types is not supported" and silently reset the layout every launch.)
+    // We avoid the cyclic / non-round-trippable parts of OUR view-models by serializing a
+    // skeleton of plain Dock base types instead — see BuildSkeleton.
+    private readonly IDockSerializer _serializer = new DockSerializer();
     private string? _lastSavedJson;
     private readonly ILogger? _logger;
-
-    // Custom Tool subclasses fall back to reflection serialization, which would follow
-    // the Owner/Factory/Context back-references and hit a cycle. Strip those nav props
-    // from every IDockable so only the structural layout (Id/Title/Proportion/children)
-    // round-trips.
-    private static IDockSerializer CreateSerializer()
-    {
-        var resolver = new DefaultJsonTypeInfoResolver();
-        resolver.Modifiers.Add(static ti =>
-        {
-            if (!typeof(IDockable).IsAssignableFrom(ti.Type)) return;
-            bool isDocumentDock = typeof(DocumentDock).IsAssignableFrom(ti.Type);
-            for (int i = ti.Properties.Count - 1; i >= 0; i--)
-            {
-                var name = ti.Properties[i].Name;
-                if (name is "Owner" or "Factory" or "Context" or "OriginalOwner" or "FocusedDockable")
-                    ti.Properties.RemoveAt(i);
-                // Never persist open documents (FileDocumentViewModel has no parameterless
-                // ctor, so it can't round-trip). Dropping the document well's children keeps
-                // the layout deserializable; session restore reopens the files (task 2).
-                else if (isDocumentDock && name is "VisibleDockables" or "ActiveDockable" or "DefaultDockable")
-                    ti.Properties.RemoveAt(i);
-            }
-        });
-        return new DockSerializer(resolver);
-    }
     private readonly WorkspaceExplorerToolViewModel _workspace;
     private readonly ObjectBrowserToolViewModel _objectBrowser;
     private readonly DiagnosticsToolViewModel _diagnostics;
@@ -252,7 +232,10 @@ public sealed class DockFactory : Factory
         try
         {
             if (_rootDock is null) return;
-            var json = _serializer.Serialize(_rootDock);
+            // Serialize a skeleton of plain Dock base types (Id + structure, no documents,
+            // no custom view-model state) so the layout always round-trips; the live tools
+            // are substituted back by Id on load via SwapSingletons.
+            var json = _serializer.Serialize<IRootDock>(BuildRootSkeleton(_rootDock));
             if (string.Equals(json, _lastSavedJson, StringComparison.Ordinal)) return; // unchanged
             var dir = Path.GetDirectoryName(LayoutPath);
             if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
@@ -276,6 +259,99 @@ public sealed class DockFactory : Factory
         }
         catch { }
     }
+
+    // ---- layout skeleton (base-type clone for serialization) ------------
+    // We never serialize our live view-models: tool VMs have cyclic Owner/Factory back-refs
+    // and documents have no parameterless ctor. Instead we clone the layout into plain Dock
+    // base types carrying only Id + structure. On load these deserialize cleanly (the stock
+    // serializer's discriminators handle the interfaces) and SwapSingletons restores the
+    // live singletons by Id. Open documents are dropped and reopened via session restore.
+
+    private IRootDock BuildRootSkeleton(IRootDock src)
+    {
+        var clone = new RootDock
+        {
+            Id = src.Id,
+            Title = src.Title,
+            IsCollapsable = src.IsCollapsable,
+            Proportion = src.Proportion,
+            VisibleDockables = CloneChildren(src),
+        };
+        BindActiveAndDefault(clone, src);
+        return clone;
+    }
+
+    private IDockable? CloneDockable(IDockable node) => node switch
+    {
+        IDocument => null,                                  // documents reopen via session restore
+        IRootDock root => BuildRootSkeleton(root),
+        IDocumentDock dd => CloneDocumentDock(dd),
+        IProportionalDock pd => CloneProportional(pd),
+        IToolDock td => CloneToolDock(td),
+        IProportionalDockSplitter => new ProportionalDockSplitter(),
+        ITool tool => new Tool { Id = tool.Id, Title = tool.Title },
+        _ => null,
+    };
+
+    private IProportionalDock CloneProportional(IProportionalDock src)
+    {
+        var clone = new ProportionalDock
+        {
+            Id = src.Id,
+            Title = src.Title,
+            Proportion = src.Proportion,
+            Orientation = src.Orientation,
+            VisibleDockables = CloneChildren(src),
+        };
+        BindActiveAndDefault(clone, src);
+        return clone;
+    }
+
+    private IToolDock CloneToolDock(IToolDock src)
+    {
+        var clone = new ToolDock
+        {
+            Id = src.Id,
+            Title = src.Title,
+            Proportion = src.Proportion,
+            Alignment = src.Alignment,
+            VisibleDockables = CloneChildren(src),
+        };
+        BindActiveAndDefault(clone, src);
+        return clone;
+    }
+
+    // The document well keeps its position/Id but never its documents.
+    private IDocumentDock CloneDocumentDock(IDocumentDock src) => new DocumentDock
+    {
+        Id = src.Id,
+        Title = src.Title,
+        Proportion = src.Proportion,
+        IsCollapsable = src.IsCollapsable,
+        CanCreateDocument = false,
+        VisibleDockables = CreateList<IDockable>(),
+    };
+
+    private IList<IDockable> CloneChildren(IDock src)
+    {
+        var list = CreateList<IDockable>();
+        if (src.VisibleDockables is { } children)
+            foreach (var child in children)
+                if (CloneDockable(child) is { } clone)
+                    list.Add(clone);
+        return list;
+    }
+
+    private static void BindActiveAndDefault(IDock clone, IDock src)
+    {
+        clone.ActiveDockable = FindById(clone, src.ActiveDockable?.Id);
+        clone.DefaultDockable = FindById(clone, src.DefaultDockable?.Id);
+    }
+
+    private static IDockable? FindById(IDock dock, string? id) =>
+        id is null || dock.VisibleDockables is not { } list
+            ? null
+            : list.FirstOrDefault(d => string.Equals(d.Id, id, StringComparison.Ordinal));
 
     /// <summary>Replaces deserialized dockables whose Id matches a DI singleton with that singleton.</summary>
     private void SwapSingletons(IDockable node, Dictionary<string, IDockable> map)
