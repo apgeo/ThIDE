@@ -1,0 +1,99 @@
+// Code-behind for the Relational Map: wires the edge layer to the view model and implements
+// node dragging (mouse) + double-click-to-open-source. Edges are redrawn live while dragging.
+
+using System;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Markup.Xaml;
+using Avalonia.VisualTree;
+using TherionProc.ViewModels;
+
+namespace TherionProc.Views;
+
+public partial class RelationalMapView : UserControl
+{
+    private RelationalMapViewModel? _vm;
+    private RelationalNode? _drag;
+    private Point _dragOffset;
+
+    public RelationalMapView()
+    {
+        AvaloniaXamlLoader.Load(this);
+        DataContextChanged += OnDataContextChanged;
+
+        if (this.FindControl<ItemsControl>("NodesHost") is { } host)
+        {
+            host.PointerPressed += OnNodePointerPressed;
+            host.PointerMoved += OnNodePointerMoved;
+            host.PointerReleased += OnNodePointerReleased;
+            host.DoubleTapped += OnNodeDoubleTapped;
+        }
+    }
+
+    private void OnDataContextChanged(object? sender, EventArgs e)
+    {
+        if (_vm is not null) _vm.GraphChanged -= OnGraphChanged;
+        _vm = DataContext as RelationalMapViewModel;
+        if (_vm is not null && this.FindControl<RelationalEdgesControl>("EdgeLayer") is { } layer)
+        {
+            layer.Configure(_vm, span => _vm.Navigate(span));
+            _vm.GraphChanged += OnGraphChanged;
+        }
+    }
+
+    private void OnGraphChanged(object? sender, EventArgs e) => InvalidateEdges();
+
+    private void InvalidateEdges() =>
+        this.FindControl<RelationalEdgesControl>("EdgeLayer")?.InvalidateVisual();
+
+    // ---- node dragging ------------------------------------------------------
+
+    private void OnNodePointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (FindNode(e.Source as Visual) is not { } node) return;
+        var root = this.FindControl<Panel>("DiagramRoot");
+        if (root is null) return;
+        var p = e.GetPosition(root);
+        _drag = node;
+        _dragOffset = new Point(p.X - node.X, p.Y - node.Y);
+        e.Pointer.Capture(sender as IInputElement);
+    }
+
+    private void OnNodePointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (_drag is null) return;
+        var root = this.FindControl<Panel>("DiagramRoot");
+        if (root is null) return;
+        var p = e.GetPosition(root);
+        _drag.X = Math.Max(0, p.X - _dragOffset.X);
+        _drag.Y = Math.Max(0, p.Y - _dragOffset.Y);
+        InvalidateEdges();
+    }
+
+    private void OnNodePointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (_drag is null) return;
+        _drag = null;
+        e.Pointer.Capture(null);
+        InvalidateEdges();
+    }
+
+    private void OnNodeDoubleTapped(object? sender, TappedEventArgs e)
+    {
+        if (FindNode(e.Source as Visual) is { } node)
+            _vm?.NavigateNodeCommand.Execute(node);
+    }
+
+    // Walk up the visual tree to the item whose DataContext is a RelationalNode.
+    private static RelationalNode? FindNode(Visual? source)
+    {
+        var v = source;
+        while (v is not null)
+        {
+            if (v is Control { DataContext: RelationalNode n }) return n;
+            v = v.GetVisualParent();
+        }
+        return null;
+    }
+}

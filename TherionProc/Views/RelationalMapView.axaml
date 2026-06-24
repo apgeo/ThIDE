@@ -1,0 +1,96 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:TherionProc.ViewModels"
+             xmlns:views="using:TherionProc.Views"
+             x:Class="TherionProc.Views.RelationalMapView"
+             x:DataType="vm:RelationalMapViewModel">
+
+    <DockPanel>
+        <!-- Toolbar: files toggle, refresh, legend, status. -->
+        <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="8,5">
+            <WrapPanel Orientation="Horizontal">
+                <ToggleButton Margin="0,0,8,0" Padding="8,3"
+                              IsChecked="{Binding IncludeFiles, Mode=TwoWay}"
+                              ToolTip.Tip="Show the host thconfig / .th / .th2 files as nodes too">
+                    <TextBlock Text="Include files" VerticalAlignment="Center" />
+                </ToggleButton>
+                <Button Margin="0,0,8,0" Padding="8,3" Command="{Binding RefreshCommand}"
+                        ToolTip.Tip="Rebuild the diagram from the current project">
+                    <TextBlock Text="↻ Refresh" VerticalAlignment="Center" />
+                </Button>
+
+                <ComboBox MinWidth="180" Margin="0,0,12,0" VerticalAlignment="Center"
+                          ItemsSource="{Binding LayoutOptions}"
+                          SelectedItem="{Binding SelectedLayout, Mode=TwoWay}"
+                          ToolTip.Tip="Diagram arrangement" />
+
+                <!-- Legend. -->
+                <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" Margin="0,0,12,0">
+                    <StackPanel.Styles>
+                        <Style Selector="Ellipse"><Setter Property="Width" Value="11"/><Setter Property="Height" Value="11"/></Style>
+                        <Style Selector="StackPanel.lg"><Setter Property="Orientation" Value="Horizontal"/></Style>
+                        <Style Selector="StackPanel.lg > TextBlock"><Setter Property="Margin" Value="3,0,0,0"/><Setter Property="VerticalAlignment" Value="Center"/><Setter Property="FontSize" Value="11"/></Style>
+                        <Style Selector="StackPanel.lg > Ellipse"><Setter Property="VerticalAlignment" Value="Center"/></Style>
+                    </StackPanel.Styles>
+                    <StackPanel Classes="lg"><Ellipse Fill="#1565C0"/><TextBlock Text="survey"/></StackPanel>
+                    <StackPanel Classes="lg"><Ellipse Fill="#00897B"/><TextBlock Text="map"/></StackPanel>
+                    <StackPanel Classes="lg"><Ellipse Fill="#AD1457"/><TextBlock Text="scrap"/></StackPanel>
+                    <StackPanel Classes="lg"><Ellipse Fill="#2E7D32"/><TextBlock Text="thconfig"/></StackPanel>
+                    <StackPanel Classes="lg"><Ellipse Fill="#E65100"/><TextBlock Text=".th"/></StackPanel>
+                    <StackPanel Classes="lg"><Ellipse Fill="#6A1B9A"/><TextBlock Text=".th2"/></StackPanel>
+                </StackPanel>
+
+                <TextBlock Text="{Binding Status}" Foreground="Gray" VerticalAlignment="Center" />
+            </WrapPanel>
+        </Border>
+
+        <!-- Hint bar. -->
+        <Border DockPanel.Dock="Bottom" Background="#11000000" Padding="8,3">
+            <TextBlock Foreground="Gray" FontSize="11"
+                       Text="Drag nodes to rearrange · double-click a node to open its definition · hover a link to see it, double-click the link to jump to where the relation is defined." />
+        </Border>
+
+        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+                      Background="#FAFAFA">
+            <Panel x:Name="DiagramRoot"
+                   Width="{Binding CanvasWidth}" Height="{Binding CanvasHeight}">
+                <views:RelationalEdgesControl x:Name="EdgeLayer" />
+
+                <ItemsControl x:Name="NodesHost" ItemsSource="{Binding Nodes}"
+                              x:CompileBindings="False">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <Canvas />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.Styles>
+                        <Style Selector="ItemsControl#NodesHost > ContentPresenter">
+                            <Setter Property="Canvas.Left" Value="{Binding X}" />
+                            <Setter Property="Canvas.Top" Value="{Binding Y}" />
+                        </Style>
+                    </ItemsControl.Styles>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Width="{Binding Width}" Height="{Binding Height}"
+                                    Background="{Binding Fill}" BorderBrush="{Binding Stroke}"
+                                    BorderThickness="1.5" CornerRadius="6" Padding="8,4"
+                                    ToolTip.Tip="{Binding Label}">
+                                <Grid RowDefinitions="Auto,Auto,*">
+                                    <TextBlock Grid.Row="0" Text="{Binding KindLabel}"
+                                               FontSize="9" Foreground="{Binding Stroke}" Opacity="0.85" />
+                                    <TextBlock Grid.Row="1" Text="{Binding Label}"
+                                               FontWeight="SemiBold" FontSize="12"
+                                               TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Grid.Row="2" Text="{Binding SubLabel}"
+                                               IsVisible="{Binding HasSubLabel}"
+                                               FontSize="10" Foreground="Gray"
+                                               TextTrimming="CharacterEllipsis" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Panel>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

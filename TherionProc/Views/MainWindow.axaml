@@ -74,6 +74,9 @@
                 <Separator />
                 <MenuItem Header="Workspace" Command="{Binding ToggleWorkspaceExplorerCommand}" />
                 <MenuItem Header="Diagnostics" Command="{Binding ToggleDiagnosticsCommand}" />
+                <MenuItem Header="Settings" Command="{Binding ToggleSettingsCommand}" />
+                <Separator />
+                <MenuItem Header="Relational Map…" Click="OnRelationalMapClick" />
                 <Separator />
                 <MenuItem Header="Strict parser mode"
                           ToggleType="CheckBox"

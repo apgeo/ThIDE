@@ -76,6 +76,30 @@ public partial class MainWindow : Window
         }
     }
 
+    // ----- relational map window (object-relational tree diagram) ---------
+
+    private RelationalMapWindow? _relationalMapWindow;
+
+    private void OnRelationalMapClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (_relationalMapWindow is { } w && w.IsVisible) { w.Activate(); return; }
+
+        IDocumentService? docs = null;
+        IWorkspaceSession? session = null;
+        try
+        {
+            docs = AppServices.Provider.GetService<IDocumentService>();
+            session = AppServices.Provider.GetService<IWorkspaceSession>();
+        }
+        catch { /* design-time / no container */ }
+        if (docs is null) return;
+
+        var vm = new RelationalMapViewModel(docs, session);
+        _relationalMapWindow = new RelationalMapWindow { DataContext = vm };
+        _relationalMapWindow.Closed += (_, _) => _relationalMapWindow = null;
+        _relationalMapWindow.Show(this);
+    }
+
     // ----- Edit menu → active editor (#11) --------------------------------
     // The shell Edit/Search menus act on the most-recently focused editor.
 
