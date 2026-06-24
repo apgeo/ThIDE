@@ -491,7 +491,10 @@ public partial class MainWindow : Window
         if (_layout is null) return;
         try
         {
+            // Fold in the live dock pane sizes + active tabs before saving (#17).
             var current = _layout.Current;
+            if ((DataContext as MainWindowViewModel)?.Factory is { } factory)
+                current = factory.CaptureLayoutState(current);
             // Only capture bounds while in the Normal state — when maximized/fullscreen the
             // reported size is the screen frame, so keeping the last Normal bounds lets a later
             // un-maximize restore the user's chosen size. The state itself is always recorded.

@@ -50,6 +50,8 @@ public sealed class DockFactory : Factory
     private IRootDock? _rootDock;
     private DocumentDock? _documentDock;
 
+    private readonly TherionProc.Services.ILayoutService? _layoutState;
+
     public DockFactory(
         WorkspaceExplorerToolViewModel workspace,
         ObjectBrowserToolViewModel objectBrowser,
@@ -58,6 +60,7 @@ public sealed class DockFactory : Factory
         GeneratedFilesToolViewModel generatedFiles,
         XviToolViewModel xvi,
         SettingsToolViewModel settings,
+        TherionProc.Services.ILayoutService? layoutState = null,
         ILogger<DockFactory>? logger = null)
     {
         _workspace = workspace;
@@ -67,6 +70,7 @@ public sealed class DockFactory : Factory
         _generatedFiles = generatedFiles;
         _xvi = xvi;
         _settings = settings;
+        _layoutState = layoutState;
         _logger = logger;
     }
 
@@ -118,6 +122,35 @@ public sealed class DockFactory : Factory
     /// <summary>Builds a fresh default layout for the "reset layout" command (#16).</summary>
     public IRootDock ResetToDefault() => BuildDefaultLayout();
 
+    private IDockable BottomTabById(string? id) => id switch
+    {
+        "CompilerOutput" => _compilerOutput,
+        "GeneratedFiles" => _generatedFiles,
+        _                => _diagnostics,
+    };
+
+    /// <summary>
+    /// Reads the live dock tree's pane proportions + active tabs into <paramref name="baseState"/>
+    /// for persistence (#17). Safe to call any time; missing docks keep the base values.
+    /// </summary>
+    public TherionProc.Services.LayoutState CaptureLayoutState(TherionProc.Services.LayoutState baseState)
+    {
+        if (_rootDock is null) return baseState;
+        double Prop(string id, double fallback) =>
+            FindDockById<IDock>(_rootDock, id) is { Proportion: > 0 and var p } ? p : fallback;
+        string? Active(string id) =>
+            FindDockById<IDock>(_rootDock, id)?.ActiveDockable?.Id;
+        return baseState with
+        {
+            LeftProportion = Prop("LeftTools", baseState.LeftProportion),
+            RightProportion = Prop("RightTools", baseState.RightProportion),
+            BottomProportion = Prop("BottomTools", baseState.BottomProportion),
+            CenterProportion = Prop("CenterColumn", baseState.CenterProportion),
+            BottomActiveTab = Active("BottomTools") ?? baseState.BottomActiveTab,
+            RightActiveTab = Active("RightTools") ?? baseState.RightActiveTab,
+        };
+    }
+
     private DocumentDock NewDocumentDock() => new()
     {
         Id = "Documents",
@@ -130,6 +163,10 @@ public sealed class DockFactory : Factory
 
     private IRootDock BuildDefaultLayout()
     {
+        // Re-apply the persisted pane sizes + active tabs onto the freshly-built (renderable)
+        // default tree (#17).
+        var st = _layoutState?.Current ?? TherionProc.Services.LayoutState.Default;
+
         var documentDock = NewDocumentDock();
         _documentDock = documentDock;
 
@@ -143,7 +180,7 @@ public sealed class DockFactory : Factory
             Id = "LeftTools",
             Title = "LeftTools",
             Alignment = Alignment.Left,
-            Proportion = 0.18,
+            Proportion = st.LeftProportion,
             VisibleDockables = CreateList<IDockable>(_workspace),
             ActiveDockable = _workspace,
         };
@@ -153,9 +190,9 @@ public sealed class DockFactory : Factory
             Id = "BottomTools",
             Title = "BottomTools",
             Alignment = Alignment.Bottom,
-            Proportion = 0.28,
+            Proportion = st.BottomProportion,
             VisibleDockables = CreateList<IDockable>(_diagnostics, _compilerOutput, _generatedFiles),
-            ActiveDockable = _diagnostics,
+            ActiveDockable = BottomTabById(st.BottomActiveTab),
         };
 
         var rightTools = new ToolDock
@@ -163,7 +200,7 @@ public sealed class DockFactory : Factory
             Id = "RightTools",
             Title = "RightTools",
             Alignment = Alignment.Right,
-            Proportion = 0.22,
+            Proportion = st.RightProportion,
             // Object Browser moved to the central well (#10); External Tools/Settings moved into
             // the Preferences window (#13), so the right rail keeps just XVI references.
             VisibleDockables = CreateList<IDockable>(_xvi),
@@ -174,7 +211,7 @@ public sealed class DockFactory : Factory
         {
             Id = "CenterColumn",
             Orientation = Orientation.Vertical,
-            Proportion = 0.60,
+            Proportion = st.CenterProportion,
             VisibleDockables = CreateList<IDockable>(
                 documentDock,
                 new ProportionalDockSplitter(),

@@ -43,6 +43,19 @@ public sealed record LayoutState
     /// <summary>Avalonia <c>WindowState</c> as an int (0=Normal, 1=Minimized, 2=Maximized, 3=FullScreen).</summary>
     public int WindowState { get; init; }
 
+    // ---- dock proportions + active tabs (#17) ----
+    // Persisted as plain numbers/ids and re-applied onto the freshly-built default layout, so
+    // the restored tree always renders (deserializing a full Dock tree leaves panels blank in
+    // Dock.Avalonia 12). Captures the common adjustments: pane sizes and which tab is selected.
+    public double LeftProportion { get; init; } = 0.18;
+    public double RightProportion { get; init; } = 0.22;
+    public double BottomProportion { get; init; } = 0.28;
+    public double CenterProportion { get; init; } = 0.60;
+    /// <summary>Id of the active tab in the bottom tool dock (Diagnostics/CompilerOutput/GeneratedFiles).</summary>
+    public string? BottomActiveTab { get; init; }
+    /// <summary>Id of the active tab in the right tool dock.</summary>
+    public string? RightActiveTab { get; init; }
+
     public static LayoutState Default { get; } = new();
 }
 
