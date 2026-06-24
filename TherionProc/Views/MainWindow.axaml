@@ -158,8 +158,9 @@
                     <PathIcon Data="{DynamicResource Icon.Build}" Foreground="#2E7D32"
                               Classes.buildPulse="{Binding Build.IsBuilding}" />
                 </Button>
+                <!-- Stop is hidden while idle and only appears during a build (#6). -->
                 <Button Classes="tool" Command="{Binding Build.CancelCommand}"
-                        IsEnabled="{Binding Build.IsBuilding}" ToolTip.Tip="Cancel build (Shift+F5)">
+                        IsVisible="{Binding Build.IsBuilding}" ToolTip.Tip="Cancel build (Shift+F5)">
                     <PathIcon Data="{DynamicResource Icon.Stop}" Foreground="#C62828" />
                 </Button>
                 <Separator Width="1" Margin="4,2" Background="Gray" />
