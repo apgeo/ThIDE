@@ -447,11 +447,21 @@ public partial class MainWindow : Window
     private async void OnPreferencesClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         IAppSettingsService? settings = null;
-        try { settings = AppServices.Provider.GetService<IAppSettingsService>(); }
+        KeyboardShortcutsViewModel? keyboard = null;
+        ILanguageService? language = null;
+        try
+        {
+            settings = AppServices.Provider.GetService<IAppSettingsService>();
+            keyboard = AppServices.Provider.GetService<KeyboardShortcutsViewModel>();
+            language = AppServices.Provider.GetService<ILanguageService>();
+        }
         catch { /* design-time / no container */ }
         if (settings is null) return;
 
-        var window = new PreferencesWindow { DataContext = new PreferencesViewModel(settings) };
+        var window = new PreferencesWindow
+        {
+            DataContext = new PreferencesViewModel(settings, keyboard, language),
+        };
         await window.ShowDialog(this);
     }
 

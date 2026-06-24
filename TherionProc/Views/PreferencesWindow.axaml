@@ -3,52 +3,135 @@
         x:Class="TherionProc.Views.PreferencesWindow"
         x:CompileBindings="False"
         Title="Preferences"
-        Width="440" SizeToContent="Height"
-        CanResize="False"
+        Width="720" Height="520"
+        MinWidth="560" MinHeight="380"
         WindowStartupLocation="CenterOwner">
-    <StackPanel Margin="18" Spacing="10">
-        <TextBlock Text="Startup" FontWeight="Bold" />
-        <CheckBox Content="Reopen files from last session on startup"
-                  IsChecked="{Binding RestoreSessionOnStartup}" />
+    <DockPanel>
+        <!-- Footer: OK / Cancel -->
+        <Border DockPanel.Dock="Bottom" BorderBrush="#CCCCCC" BorderThickness="0,1,0,0" Padding="12,8">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                <Button Content="Cancel" Click="OnCancel" MinWidth="80" />
+                <Button Content="OK" Click="OnOk" IsDefault="True" MinWidth="80" />
+            </StackPanel>
+        </Border>
 
-        <Separator Margin="0,4" />
+        <!-- Left rail: search box + section list (VS2026-style options navigation). -->
+        <Border DockPanel.Dock="Left" Width="200" Background="#F3F3F3"
+                BorderBrush="#CCCCCC" BorderThickness="0,0,1,0">
+            <DockPanel Margin="8">
+                <TextBox DockPanel.Dock="Top" Watermark="Search settings…" Margin="0,0,0,8"
+                         Text="{Binding SearchQuery, Mode=TwoWay}" />
+                <ListBox ItemsSource="{Binding Sections}"
+                         SelectedItem="{Binding SelectedSection, Mode=TwoWay}"
+                         Background="Transparent">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Title}" Padding="2" />
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+        </Border>
 
-        <TextBlock Text="Editor" FontWeight="Bold" />
-        <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,Auto" Margin="0,0,0,2">
-            <TextBlock Grid.Row="0" Grid.Column="0" Text="Font size"
-                       VerticalAlignment="Center" Margin="0,0,8,6" />
-            <NumericUpDown Grid.Row="0" Grid.Column="1" Minimum="8" Maximum="32" Increment="1"
-                           Value="{Binding EditorFontSize}" Margin="0,0,0,6" />
-            <TextBlock Grid.Row="1" Grid.Column="0" Text="Indent size"
-                       VerticalAlignment="Center" Margin="0,0,8,0" />
-            <NumericUpDown Grid.Row="1" Grid.Column="1" Minimum="1" Maximum="8" Increment="1"
-                           Value="{Binding IndentationSize}" />
-        </Grid>
-        <CheckBox Content="Show line numbers" IsChecked="{Binding ShowLineNumbers}" />
-        <CheckBox Content="Highlight current line" IsChecked="{Binding HighlightCurrentLine}" />
-        <CheckBox Content="Convert tabs to spaces" IsChecked="{Binding ConvertTabsToSpaces}" />
+        <!-- Right pane: the selected section's settings. -->
+        <ScrollViewer Padding="18" VerticalScrollBarVisibility="Auto">
+            <Panel>
+                <!-- General -->
+                <StackPanel Spacing="10" IsVisible="{Binding IsGeneral}">
+                    <TextBlock Text="General" FontSize="16" FontWeight="Bold" />
+                    <CheckBox Content="Reopen files from last session on startup"
+                              IsChecked="{Binding RestoreSessionOnStartup}" />
+                    <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,4,0,0">
+                        <TextBlock Text="Language" VerticalAlignment="Center" Width="100" />
+                        <ComboBox MinWidth="180" SelectedIndex="{Binding LanguageIndex, Mode=TwoWay}">
+                            <ComboBoxItem>English</ComboBoxItem>
+                            <ComboBoxItem>Română</ComboBoxItem>
+                        </ComboBox>
+                    </StackPanel>
+                    <TextBlock Text="Language applies immediately to menus and labels."
+                               Foreground="Gray" FontSize="11" />
+                </StackPanel>
 
-        <Separator Margin="0,4" />
+                <!-- Editor -->
+                <StackPanel Spacing="10" IsVisible="{Binding IsEditor}">
+                    <TextBlock Text="Editor" FontSize="16" FontWeight="Bold" />
+                    <Grid ColumnDefinitions="140,*" RowDefinitions="Auto,Auto">
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Font size"
+                                   VerticalAlignment="Center" Margin="0,0,8,6" />
+                        <NumericUpDown Grid.Row="0" Grid.Column="1" Minimum="8" Maximum="32" Increment="1"
+                                       Value="{Binding EditorFontSize}" Margin="0,0,0,6" MaxWidth="160"
+                                       HorizontalAlignment="Left" />
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Indent size"
+                                   VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <NumericUpDown Grid.Row="1" Grid.Column="1" Minimum="1" Maximum="8" Increment="1"
+                                       Value="{Binding IndentationSize}" MaxWidth="160" HorizontalAlignment="Left" />
+                    </Grid>
+                    <CheckBox Content="Show line numbers" IsChecked="{Binding ShowLineNumbers}" />
+                    <CheckBox Content="Highlight current line" IsChecked="{Binding HighlightCurrentLine}" />
+                    <CheckBox Content="Convert tabs to spaces" IsChecked="{Binding ConvertTabsToSpaces}" />
+                    <CheckBox Content="Show a preview before applying a symbol rename"
+                              IsChecked="{Binding ShowRenamePreviewBeforeApply}" />
+                </StackPanel>
 
-        <TextBlock Text="Workspace" FontWeight="Bold" />
-        <CheckBox Content="Reload open files changed outside the editor"
-                  IsChecked="{Binding AutoReloadExternalChanges}" />
-        <CheckBox Content="Update the object graph when files change on disk"
-                  IsChecked="{Binding AutoReloadGraphOnExternalChange}" />
+                <!-- Workspace -->
+                <StackPanel Spacing="10" IsVisible="{Binding IsWorkspace}">
+                    <TextBlock Text="Workspace" FontSize="16" FontWeight="Bold" />
+                    <CheckBox Content="Reload open files changed outside the editor"
+                              IsChecked="{Binding AutoReloadExternalChanges}" />
+                    <CheckBox Content="Update the object graph when files change on disk"
+                              IsChecked="{Binding AutoReloadGraphOnExternalChange}" />
+                </StackPanel>
 
-        <Separator Margin="0,4" />
+                <!-- Build & Output -->
+                <StackPanel Spacing="10" IsVisible="{Binding IsBuild}">
+                    <TextBlock Text="Build &amp; Output" FontSize="16" FontWeight="Bold" />
+                    <TextBlock Text="After a successful build, open:" FontWeight="SemiBold" />
+                    <CheckBox Content=".lox (Loch 3D model)" IsChecked="{Binding OpenLoxAfterBuild}" />
+                    <CheckBox Content=".3d (Survex / Aven model)" IsChecked="{Binding Open3dAfterBuild}" />
+                    <CheckBox Content=".pdf (map export)" IsChecked="{Binding OpenPdfAfterBuild}" />
+                    <TextBlock Text="(leave all unchecked to open nothing)" Foreground="Gray" FontSize="11" />
+                    <CheckBox Content="Open every matching output (otherwise just the first)"
+                              IsChecked="{Binding OpenAllOutputsAfterBuild}" />
+                </StackPanel>
 
-        <TextBlock Text="After a successful build, open:" FontWeight="Bold" />
-        <CheckBox Content=".lox (Loch 3D model)" IsChecked="{Binding OpenLoxAfterBuild}" />
-        <CheckBox Content=".3d (Survex / Aven model)" IsChecked="{Binding Open3dAfterBuild}" />
-        <CheckBox Content=".pdf (map export)" IsChecked="{Binding OpenPdfAfterBuild}" />
-        <TextBlock Text="(leave all unchecked to open nothing)" Foreground="Gray" FontSize="11" />
-        <CheckBox Content="Open every matching output (otherwise just the first)"
-                  IsChecked="{Binding OpenAllOutputsAfterBuild}" />
-
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,10,0,0">
-            <Button Content="Cancel" Click="OnCancel" MinWidth="80" />
-            <Button Content="OK" Click="OnOk" IsDefault="True" MinWidth="80" />
-        </StackPanel>
-    </StackPanel>
+                <!-- Keyboard Shortcuts -->
+                <DockPanel IsVisible="{Binding IsKeyboard}">
+                    <TextBlock DockPanel.Dock="Top" Text="Keyboard Shortcuts"
+                               FontSize="16" FontWeight="Bold" Margin="0,0,0,8" />
+                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="10" Margin="0,0,0,8">
+                        <Button Content="Reset all to defaults" Command="{Binding Keyboard.ResetAllCommand}" />
+                        <TextBlock VerticalAlignment="Center" Foreground="Gray" FontSize="11"
+                                   Text="Click a gesture field and press the key combination to assign it." />
+                    </StackPanel>
+                    <DataGrid ItemsSource="{Binding Keyboard.Rows}"
+                              x:CompileBindings="False"
+                              GridLinesVisibility="Horizontal" Height="320"
+                              CanUserResizeColumns="True" AutoGenerateColumns="False">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Command" Binding="{Binding CommandId}" Width="*" IsReadOnly="True" />
+                            <!-- Capture box: focus it and press a chord to record the gesture (#11). -->
+                            <DataGridTemplateColumn Header="Gesture" Width="180">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBox Text="{Binding Gesture}" IsReadOnly="True"
+                                                 Watermark="press keys…" Margin="2"
+                                                 KeyDown="OnGestureKeyDown"
+                                                 ToolTip.Tip="Click and press a key combination" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="Default" Binding="{Binding DefaultGesture}" Width="120" IsReadOnly="True" />
+                            <DataGridTemplateColumn Header="" Width="70">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="Reset" Command="{Binding ResetToDefaultCommand}" Margin="2" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </Panel>
+        </ScrollViewer>
+    </DockPanel>
 </Window>
