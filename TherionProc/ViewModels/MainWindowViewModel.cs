@@ -71,6 +71,8 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty] private int _statusCaretCol = 1;
     [ObservableProperty] private int _statusCaretPos;
     [ObservableProperty] private string _statusEncoding = string.Empty;
+    /// <summary>Interpreted file type + parsed/not-parsed, shown on the status bar (#5).</summary>
+    [ObservableProperty] private string _statusFileType = string.Empty;
 
     [ObservableProperty] private bool _strictParserMode;
     partial void OnStrictParserModeChanged(bool value)
@@ -510,6 +512,9 @@ public partial class MainWindowViewModel : ViewModelBase
         StatusLength = text.Length;
         StatusLines = CountLines(text);
         StatusEncoding = DetectEncoding(doc.FilePath);
+        StatusFileType = string.IsNullOrEmpty(doc.InterpretedTypeText)
+            ? string.Empty
+            : doc.InterpretedTypeText + (doc.IsParsed ? " · parsed" : " · not parsed");
     }
 
     /// <summary>Updates the caret line/column/offset on the status bar (#10).</summary>

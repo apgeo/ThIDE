@@ -278,6 +278,11 @@
                     <StackPanel Classes="statusGroup" Orientation="Horizontal" Spacing="3">
                         <TextBlock Text="{Binding StatusEncoding}" />
                     </StackPanel>
+                    <!-- Interpreted file type + parsed/not-parsed (#5). -->
+                    <Border Classes="statusSep" />
+                    <StackPanel Classes="statusGroup" Orientation="Horizontal" Spacing="3">
+                        <TextBlock Text="{Binding StatusFileType}" />
+                    </StackPanel>
                 </StackPanel>
             </DockPanel>
         </Border>

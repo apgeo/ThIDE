@@ -213,9 +213,39 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
             : (_semantics is null ? null : new SymbolNavigationService(_semantics));
     }
 
+    /// <summary>Interpreted file type for the status bar, e.g. "Therion survey (.th)" (#5).</summary>
+    [ObservableProperty] private string _interpretedTypeText = string.Empty;
+    /// <summary>True when this file is a Therion source type that gets parsed/syntax-checked (#5).</summary>
+    [ObservableProperty] private bool _isParsed;
+
     private void Reparse()
     {
         if (_disposed) return;
+
+        // Only Therion source files are parsed/syntax-checked; .log/.txt/etc. are plain text
+        // and must not produce spurious diagnostics (#5).
+        var (type, parseable) = DocumentParser.Classify(FilePath, _documentText);
+        var typeText = DocumentParser.DescribeType(FilePath, type);
+
+        if (!parseable)
+        {
+            void ApplyText()
+            {
+                if (_disposed) return;
+                Ast = null;
+                Semantics = null;
+                UpdateNavigation();
+                Diagnostics = ImmutableArray<Diagnostic>.Empty;
+                CompletionTerms = BuildCompletionTerms(null);
+                InterpretedTypeText = typeText;
+                IsParsed = false;
+                Reparsed?.Invoke(this, EventArgs.Empty);
+            }
+            if (Dispatcher.UIThread.CheckAccess()) ApplyText();
+            else Dispatcher.UIThread.Post(ApplyText);
+            return;
+        }
+
         var parsed = DocumentParser.Parse(FilePath, _documentText, _commands);
         void Apply()
         {
@@ -226,6 +256,8 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
             Diagnostics = parsed.Diagnostics;
             CompletionTerms = BuildCompletionTerms(parsed.Semantics);
             if (parsed.Semantics is { } model) Measurements.Load(model);
+            InterpretedTypeText = typeText;
+            IsParsed = true;
             Reparsed?.Invoke(this, EventArgs.Empty);
         }
         if (Dispatcher.UIThread.CheckAccess()) Apply();
