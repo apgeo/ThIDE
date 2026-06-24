@@ -20,6 +20,13 @@ public partial class PreferencesViewModel : ObservableObject
     [ObservableProperty] private bool _autoReloadExternalChanges;
     [ObservableProperty] private bool _autoReloadGraphOnExternalChange;
 
+    // ---- build outputs ----
+    [ObservableProperty] private bool _openLoxAfterBuild;
+    [ObservableProperty] private bool _open3dAfterBuild;
+    [ObservableProperty] private bool _openPdfAfterBuild;
+    /// <summary>True = open every matching output; false = open just the first.</summary>
+    [ObservableProperty] private bool _openAllOutputsAfterBuild;
+
     public PreferencesViewModel(IAppSettingsService settings)
     {
         _settings = settings;
@@ -32,6 +39,10 @@ public partial class PreferencesViewModel : ObservableObject
         _convertTabsToSpaces = s.ConvertTabsToSpaces;
         _autoReloadExternalChanges = s.AutoReloadExternalChanges;
         _autoReloadGraphOnExternalChange = s.AutoReloadGraphOnExternalChange;
+        _openLoxAfterBuild = s.OpenLoxAfterBuild;
+        _open3dAfterBuild = s.Open3dAfterBuild;
+        _openPdfAfterBuild = s.OpenPdfAfterBuild;
+        _openAllOutputsAfterBuild = s.OpenAllOutputsAfterBuild;
     }
 
     public PreferencesViewModel() : this(new AppSettingsService()) { } // design-time
@@ -49,6 +60,10 @@ public partial class PreferencesViewModel : ObservableObject
             ConvertTabsToSpaces = ConvertTabsToSpaces,
             AutoReloadExternalChanges = AutoReloadExternalChanges,
             AutoReloadGraphOnExternalChange = AutoReloadGraphOnExternalChange,
+            OpenLoxAfterBuild = OpenLoxAfterBuild,
+            Open3dAfterBuild = Open3dAfterBuild,
+            OpenPdfAfterBuild = OpenPdfAfterBuild,
+            OpenAllOutputsAfterBuild = OpenAllOutputsAfterBuild,
         });
     }
 }

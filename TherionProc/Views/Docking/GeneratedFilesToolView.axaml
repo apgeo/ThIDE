@@ -3,9 +3,18 @@
              xmlns:vm="using:TherionProc.ViewModels.Docking"
              x:Class="TherionProc.Views.Docking.GeneratedFilesToolView"
              x:DataType="vm:GeneratedFilesToolViewModel">
-    <DataGrid ItemsSource="{Binding Build.Artifacts}"
+    <DataGrid x:Name="Grid"
+              ItemsSource="{Binding Build.Artifacts}"
+              SelectedItem="{Binding Build.SelectedArtifact, Mode=TwoWay}"
               IsReadOnly="True" GridLinesVisibility="Horizontal"
-              CanUserResizeColumns="True" CanUserSortColumns="True" AutoGenerateColumns="False">
+              CanUserResizeColumns="True" CanUserSortColumns="True" AutoGenerateColumns="False"
+              DoubleTapped="OnArtifactDoubleTapped">
+        <DataGrid.ContextMenu>
+            <ContextMenu>
+                <MenuItem Header="Open" Click="OnOpenArtifact" />
+                <MenuItem Header="Reveal in File Manager" Click="OnRevealArtifact" />
+            </ContextMenu>
+        </DataGrid.ContextMenu>
         <DataGrid.Columns>
             <DataGridTextColumn Header="Kind" Binding="{Binding Kind}" Width="80"  />
             <DataGridTextColumn Header="Path" Binding="{Binding Path}" Width="*"   />

@@ -75,6 +75,16 @@ public sealed record AppSettings
     public bool MColStationsKind { get; init; } = true;
     public bool MColStationsLine { get; init; } = true;
 
+    // ---- build outputs (auto-open after a successful build) ----
+    /// <summary>Open generated .lox files after a successful build.</summary>
+    public bool OpenLoxAfterBuild { get; init; }
+    /// <summary>Open generated Survex .3d files after a successful build.</summary>
+    public bool Open3dAfterBuild { get; init; }
+    /// <summary>Open generated .pdf files after a successful build.</summary>
+    public bool OpenPdfAfterBuild { get; init; }
+    /// <summary>Open every matching output (true) instead of just the first one (false).</summary>
+    public bool OpenAllOutputsAfterBuild { get; init; }
+
     // ---- editor preferences ----
     public double EditorFontSize { get; init; } = 13;
     public bool ShowLineNumbers { get; init; } = true;
