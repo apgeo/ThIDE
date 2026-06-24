@@ -25,27 +25,56 @@ namespace TherionProc.ViewModels;
 
 public enum OutputRowKind { Command, Normal, Summary }
 
-/// <summary>One compiler-output row: raw text + classification + a timestamp display.</summary>
-public sealed class CompilerOutputRow
+/// <summary>How the leading time column is rendered for every output row (#4).</summary>
+public enum TimeColumnMode
+{
+    /// <summary>Elapsed since the previous line (e.g. "+5 s").</summary>
+    SinceLast,
+    /// <summary>Full wall-clock timestamp (e.g. "14:03:21").</summary>
+    Timestamp,
+    /// <summary>Elapsed since the build started (e.g. "+12.3 s").</summary>
+    SinceStart,
+}
+
+/// <summary>One compiler-output row: raw text + classification + timing for the time column.</summary>
+public sealed class CompilerOutputRow : CommunityToolkit.Mvvm.ComponentModel.ObservableObject
 {
     private static readonly IBrush ErrorBrush   = new ImmutableSolidColorBrush(Color.FromRgb(0xC6, 0x28, 0x28));
     private static readonly IBrush WarnBrush     = new ImmutableSolidColorBrush(Color.FromRgb(0x8D, 0x6E, 0x00));
     private static readonly IBrush CommandBrush  = new ImmutableSolidColorBrush(Color.FromRgb(0x55, 0x55, 0x55));
     private static readonly IBrush SuccessBrush  = new ImmutableSolidColorBrush(Color.FromRgb(0x2E, 0x7D, 0x32));
     private static readonly IBrush NormalBrush   = new ImmutableSolidColorBrush(Color.FromRgb(0x20, 0x20, 0x20));
+    private static readonly IBrush InfoBrush     = new ImmutableSolidColorBrush(Color.FromRgb(0x75, 0x75, 0x75));
     private static readonly IBrush TimeBrush     = new ImmutableSolidColorBrush(Color.FromRgb(0x90, 0x90, 0x90));
 
     public string Text { get; }
     public string Severity { get; }
     public SourceSpan? Span { get; }
     public OutputRowKind Kind { get; }
-    public string TimeDisplay { get; }
+
+    // Raw timing captured at creation; the time column display is recomputed from these
+    // whenever the user flips the time-column mode (#4).
+    public DateTimeOffset Timestamp { get; }
+    public TimeSpan Delta { get; }
+    public TimeSpan SinceStart { get; }
+
+    private string _timeDisplay = string.Empty;
+    public string TimeDisplay { get => _timeDisplay; private set => SetProperty(ref _timeDisplay, value); }
 
     public bool IsError { get; }
     public bool IsWarning { get; }
+    public bool IsInfo { get; }
     public bool IsSuccess { get; }
-    public bool ShowWarningIcon => IsWarning;
     public IBrush TimeBrushValue => TimeBrush;
+
+    // ---- severity icon (#4): info=gray, warning=amber, error=red ----
+    // Per-glyph visibility flags so the cell can show the right colored icon without a
+    // string-keyed resource lookup in XAML.
+    public bool ShowSuccessIcon => Kind == OutputRowKind.Summary && IsSuccess;
+    public bool ShowErrorIcon   => (Kind == OutputRowKind.Summary && !IsSuccess)
+                                   || (Kind == OutputRowKind.Normal && IsError);
+    public bool ShowWarnIcon     => Kind == OutputRowKind.Normal && IsWarning;
+    public bool ShowInfoIcon     => Kind == OutputRowKind.Normal && IsInfo;
 
     /// <summary>Foreground for the text column: red for errors, amber for warnings, etc.</summary>
     public IBrush TextBrush { get; }
@@ -53,22 +82,55 @@ public sealed class CompilerOutputRow
         Kind is OutputRowKind.Command or OutputRowKind.Summary ? FontWeight.SemiBold : FontWeight.Normal;
 
     public CompilerOutputRow(string text, string severity, SourceSpan? span,
-        OutputRowKind kind, string timeDisplay, bool success = false)
+        OutputRowKind kind, DateTimeOffset timestamp, TimeSpan delta, TimeSpan sinceStart,
+        TimeColumnMode mode, bool success = false)
     {
         Text = text;
         Severity = severity;
         Span = span;
         Kind = kind;
-        TimeDisplay = timeDisplay;
-        IsError = string.Equals(severity, "Error", StringComparison.OrdinalIgnoreCase);
-        IsWarning = string.Equals(severity, "Warning", StringComparison.OrdinalIgnoreCase);
+        Timestamp = timestamp;
+        Delta = delta;
+        SinceStart = sinceStart;
+
+        bool err = string.Equals(severity, "Error", StringComparison.OrdinalIgnoreCase);
+        bool warn = string.Equals(severity, "Warning", StringComparison.OrdinalIgnoreCase);
+        // "average loop error" is a loop-closure statistic, not a failure — never color it
+        // as an error/warning in either output view (#4).
+        if ((err || warn) && text.Contains("average loop error", StringComparison.OrdinalIgnoreCase))
+        { err = false; warn = false; }
+
+        IsError = err;
+        IsWarning = warn;
         IsSuccess = success;
+        IsInfo = kind == OutputRowKind.Normal && !err && !warn;
         TextBrush = kind switch
         {
             OutputRowKind.Command => CommandBrush,
             OutputRowKind.Summary => success ? SuccessBrush : ErrorBrush,
             _ => IsError ? ErrorBrush : IsWarning ? WarnBrush : NormalBrush,
         };
+        ApplyTimeMode(mode);
+    }
+
+    /// <summary>Recomputes <see cref="TimeDisplay"/> for the given column mode (#4).</summary>
+    public void ApplyTimeMode(TimeColumnMode mode)
+    {
+        TimeDisplay = mode switch
+        {
+            TimeColumnMode.Timestamp => Timestamp.ToString("HH:mm:ss"),
+            TimeColumnMode.SinceStart => FormatElapsed(SinceStart),
+            // The command/summary rows always show wall-clock; intermediate rows show the delta.
+            _ => Kind == OutputRowKind.Normal ? FormatElapsed(Delta) : Timestamp.ToString("HH:mm:ss"),
+        };
+    }
+
+    /// <summary>Relative-time formatter: a space sits between the value and its unit (#4).</summary>
+    internal static string FormatElapsed(TimeSpan d)
+    {
+        var ms = d.TotalMilliseconds;
+        if (ms < 0) ms = 0;
+        return ms < 1000 ? $"+{(int)ms} ms" : $"+{d.TotalSeconds:0.#} s";
     }
 }
 public sealed record ArtifactRow(string Path, string Kind, long SizeBytes, DateTimeOffset LastWriteUtc)
@@ -101,6 +163,22 @@ public partial class BuildViewModel : ViewModelBase
     // Timestamp bookkeeping: the first/command row shows the wall-clock time; each subsequent
     // row shows the delta since the previous one; the final summary row shows wall-clock again.
     private DateTimeOffset _prevRowTime;
+    private DateTimeOffset _buildStart;
+
+    /// <summary>Selected rendering for the time column (since-last / timestamp / since-start, #4).</summary>
+    [ObservableProperty] private TimeColumnMode _timeColumnMode = TimeColumnMode.SinceLast;
+    partial void OnTimeColumnModeChanged(TimeColumnMode value)
+    {
+        foreach (var row in _outputBuffer) row.ApplyTimeMode(value); // re-render existing rows
+        OnPropertyChanged(nameof(TimeColumnModeIndex));
+    }
+
+    /// <summary>ComboBox-friendly view of <see cref="TimeColumnMode"/> (#4).</summary>
+    public int TimeColumnModeIndex
+    {
+        get => (int)TimeColumnMode;
+        set => TimeColumnMode = (TimeColumnMode)value;
+    }
 
     [ObservableProperty] private bool _isBuilding;
     [ObservableProperty] private string _status = string.Empty;
@@ -204,9 +282,10 @@ public partial class BuildViewModel : ViewModelBase
         // First row: the full command with its arguments.
         var tool = await _locator.FindAsync(ExternalToolLocator.Therion, _cts.Token).ConfigureAwait(true);
         var command = tool is null ? $"therion \"{entry}\"" : $"\"{tool.Path}\" \"{entry}\"";
+        _buildStart = DateTimeOffset.Now;
+        _prevRowTime = _buildStart;
         AddRow(new CompilerOutputRow(command, "Command", null, OutputRowKind.Command,
-            DateTimeOffset.Now.ToString("HH:mm:ss")));
-        _prevRowTime = DateTimeOffset.Now; // subsequent rows show the delta since the command line
+            _buildStart, TimeSpan.Zero, TimeSpan.Zero, TimeColumnMode));
 
         var sw = Stopwatch.StartNew();
         var progress = new Progress<CompilerOutputLine>(line => AddRow(MakeRow(line)));
@@ -223,7 +302,7 @@ public partial class BuildViewModel : ViewModelBase
             LastBuildSucceeded = ok;
             LastBuildHasWarnings = warnCount > 0;
             LastBuildWarningCount = warnCount;
-            AddRow(SummaryRow(ok, warnCount, sw.Elapsed, result.Artifacts.Length));
+            AddRow(SummaryRow(ok, warnCount, sw.Elapsed, result.Artifacts.Length, _buildStart));
             Status = ok
                 ? $"Build succeeded ({result.Artifacts.Length} artifact(s))."
                 : $"Build failed (exit {result.ExitCode}).";
@@ -235,7 +314,7 @@ public partial class BuildViewModel : ViewModelBase
             sw.Stop();
             Status = "Build cancelled.";
             AddRow(new CompilerOutputRow("Build cancelled.", "Error", null, OutputRowKind.Summary,
-                DateTimeOffset.Now.ToString("HH:mm:ss")));
+                DateTimeOffset.Now, TimeSpan.Zero, sw.Elapsed, TimeColumnMode));
         }
         catch (Exception ex)
         {
@@ -255,10 +334,11 @@ public partial class BuildViewModel : ViewModelBase
         var delta = now - _prevRowTime;
         _prevRowTime = now;
         return new CompilerOutputRow(line.Text, line.Severity.ToString(), line.Span,
-            OutputRowKind.Normal, FormatDelta(delta));
+            OutputRowKind.Normal, now, delta, now - _buildStart, TimeColumnMode);
     }
 
-    private static CompilerOutputRow SummaryRow(bool ok, int warnCount, TimeSpan elapsed, int artifactCount)
+    private CompilerOutputRow SummaryRow(bool ok, int warnCount, TimeSpan elapsed, int artifactCount,
+        DateTimeOffset buildStart)
     {
         var sb = new StringBuilder();
         sb.Append(ok ? "Build finished successfully" : "Build finished with errors");
@@ -266,15 +346,9 @@ public partial class BuildViewModel : ViewModelBase
         sb.Append($" in {elapsed.TotalSeconds:0.00} seconds");
         if (ok && artifactCount > 0) sb.Append($" and generated {artifactCount} output file(s)");
         sb.Append('.');
+        var now = DateTimeOffset.Now;
         return new CompilerOutputRow(sb.ToString(), ok ? "Info" : "Error", null, OutputRowKind.Summary,
-            DateTimeOffset.Now.ToString("HH:mm:ss"), success: ok);
-    }
-
-    private static string FormatDelta(TimeSpan d)
-    {
-        var ms = d.TotalMilliseconds;
-        if (ms < 0) ms = 0;
-        return ms < 1000 ? $"+{(int)ms}ms" : $"+{d.TotalSeconds:0.#}s";
+            now, TimeSpan.Zero, now - buildStart, TimeColumnMode, success: ok);
     }
 
     private void AddRow(CompilerOutputRow row)

@@ -1,9 +1,11 @@
 using System;
+using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Controls.Documents;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using TherionProc.ViewModels;
 using TherionProc.ViewModels.Docking;
 
@@ -13,11 +15,50 @@ public partial class CompilerOutputToolView : UserControl
 {
     private BuildViewModel? _build;
 
+    // Autoscroll-to-tail state (#3): each view follows new output until the user scrolls up,
+    // and resumes once they scroll back to the bottom.
+    private ScrollViewer? _gridScroll;
+    private bool _gridFollow = true;
+    private bool _rawFollow = true;
+
     public CompilerOutputToolView()
     {
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
+        AttachedToVisualTree += (_, _) => HookScrollViewers();
     }
+
+    private void HookScrollViewers()
+    {
+        // The DataGrid's scroll viewer only exists once its template is applied.
+        if (_gridScroll is null && this.FindControl<DataGrid>("Grid") is { } grid)
+        {
+            _gridScroll = grid.GetVisualDescendants().OfType<ScrollViewer>().FirstOrDefault();
+            if (_gridScroll is not null) _gridScroll.ScrollChanged += OnGridScrollChanged;
+        }
+        if (this.FindControl<ScrollViewer>("RawScroll") is { } raw)
+        {
+            raw.ScrollChanged -= OnRawScrollChanged;
+            raw.ScrollChanged += OnRawScrollChanged;
+        }
+    }
+
+    private void OnGridScrollChanged(object? sender, ScrollChangedEventArgs e)
+    {
+        // Ignore changes caused by content growth (offset unchanged); only a real scroll —
+        // user wheel/drag or our own ScrollIntoView — updates the follow flag.
+        if (sender is ScrollViewer sv && e.OffsetDelta.Y != 0)
+            _gridFollow = AtBottom(sv);
+    }
+
+    private void OnRawScrollChanged(object? sender, ScrollChangedEventArgs e)
+    {
+        if (sender is ScrollViewer sv && e.OffsetDelta.Y != 0)
+            _rawFollow = AtBottom(sv);
+    }
+
+    private static bool AtBottom(ScrollViewer sv) =>
+        sv.Offset.Y >= sv.Extent.Height - sv.Viewport.Height - 2;
 
     private void OnDataContextChanged(object? sender, EventArgs e)
     {
@@ -38,10 +79,31 @@ public partial class CompilerOutputToolView : UserControl
     // ---- raw colored view --------------------------------------------------
 
     private void OnOutputCleared(object? sender, EventArgs e) =>
-        Dispatcher.UIThread.Post(() => this.FindControl<SelectableTextBlock>("RawText")?.Inlines?.Clear());
+        Dispatcher.UIThread.Post(() =>
+        {
+            this.FindControl<SelectableTextBlock>("RawText")?.Inlines?.Clear();
+            _gridFollow = true;   // a new build resumes following the tail (#3)
+            _rawFollow = true;
+        });
 
     private void OnOutputRowAdded(object? sender, CompilerOutputRow row) =>
-        Dispatcher.UIThread.Post(() => AppendRaw(row));
+        Dispatcher.UIThread.Post(() =>
+        {
+            AppendRaw(row);
+            AutoScroll();
+        });
+
+    // Scroll both views to the latest line while following (#3).
+    private void AutoScroll()
+    {
+        if (_gridFollow && _build is { Output.Count: > 0 } && this.FindControl<DataGrid>("Grid") is { } grid)
+        {
+            var last = _build.Output[^1];
+            try { grid.ScrollIntoView(last, null); } catch { }
+        }
+        if (_rawFollow && this.FindControl<ScrollViewer>("RawScroll") is { } raw)
+            raw.ScrollToEnd();
+    }
 
     private void AppendRaw(CompilerOutputRow row)
     {

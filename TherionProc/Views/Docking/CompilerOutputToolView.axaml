@@ -3,14 +3,16 @@
              xmlns:vm="using:TherionProc.ViewModels.Docking"
              x:Class="TherionProc.Views.Docking.CompilerOutputToolView"
              x:DataType="vm:CompilerOutputToolViewModel">
+    <Grid>
     <TabControl>
-        <!-- Parsed view: per-line classification with time + warning icon + colored text. -->
+        <!-- Parsed view: per-line classification with time + severity icon + colored text. -->
         <TabItem Header="Output">
             <DataGrid x:Name="Grid"
                       ItemsSource="{Binding Build.Output}"
                       SelectedItem="{Binding Build.SelectedOutput, Mode=TwoWay}"
                       x:CompileBindings="False"
                       IsReadOnly="True" GridLinesVisibility="None"
+                      RowHeight="16"
                       CanUserResizeColumns="True" AutoGenerateColumns="False"
                       HeadersVisibility="None" DoubleTapped="OnRowDoubleTapped"
                       FontFamily="Consolas,Cascadia Mono,Courier New,monospace"
@@ -25,22 +27,29 @@
                     </ContextMenu>
                 </DataGrid.ContextMenu>
                 <DataGrid.Columns>
-                    <!-- Timestamp: wall-clock for first/last, +delta in between. -->
-                    <DataGridTemplateColumn Width="68">
+                    <!-- Time: since-last / wall-clock / since-start, per the mode switch (#4). Sized to fit. -->
+                    <DataGridTemplateColumn Width="86">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding TimeDisplay}" Foreground="{Binding TimeBrushValue}"
-                                           VerticalAlignment="Center" Margin="4,0" />
+                                           VerticalAlignment="Center" Margin="4,0" TextAlignment="Right" />
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
-                    <!-- Warning icon column. -->
-                    <DataGridTemplateColumn Width="20">
+                    <!-- Severity icon: info=gray, warning=amber, error=red, success=green (#4). -->
+                    <DataGridTemplateColumn Width="22">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <PathIcon Data="{DynamicResource Icon.Warning}" Width="12" Height="12"
-                                          Foreground="#F9A825" VerticalAlignment="Center"
-                                          IsVisible="{Binding ShowWarningIcon}" />
+                                <Panel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                    <PathIcon Data="{DynamicResource Icon.Info}" Width="11" Height="11"
+                                              Foreground="#9E9E9E" IsVisible="{Binding ShowInfoIcon}" />
+                                    <PathIcon Data="{DynamicResource Icon.Warning}" Width="12" Height="12"
+                                              Foreground="#F9A825" IsVisible="{Binding ShowWarnIcon}" />
+                                    <PathIcon Data="{DynamicResource Icon.ErrorCircle}" Width="12" Height="12"
+                                              Foreground="#C62828" IsVisible="{Binding ShowErrorIcon}" />
+                                    <PathIcon Data="{DynamicResource Icon.CheckCircle}" Width="12" Height="12"
+                                              Foreground="#2E7D32" IsVisible="{Binding ShowSuccessIcon}" />
+                                </Panel>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
@@ -60,7 +69,7 @@
 
         <!-- Raw view: verbatim stdout/stderr, selectable + copyable, warnings/errors colored. -->
         <TabItem Header="Raw">
-            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+            <ScrollViewer x:Name="RawScroll" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
                 <SelectableTextBlock x:Name="RawText"
                                      FontFamily="Consolas,Cascadia Mono,Courier New,monospace"
                                      FontSize="11" Padding="6" TextWrapping="NoWrap">
@@ -77,4 +86,15 @@
             </ScrollViewer>
         </TabItem>
     </TabControl>
+
+    <!-- Time-column mode switch, overlaid top-right above the tab strip (#4). -->
+    <ComboBox HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,2,8,0"
+              MinWidth="120" FontSize="11" Padding="6,2"
+              SelectedIndex="{Binding Build.TimeColumnModeIndex, Mode=TwoWay}"
+              ToolTip.Tip="Time column display">
+        <ComboBoxItem>Since last line</ComboBoxItem>
+        <ComboBoxItem>Timestamp</ComboBoxItem>
+        <ComboBoxItem>Since build start</ComboBoxItem>
+    </ComboBox>
+    </Grid>
 </UserControl>
