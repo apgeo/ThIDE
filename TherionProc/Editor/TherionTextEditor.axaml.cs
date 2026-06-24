@@ -71,6 +71,14 @@ public partial class TherionTextEditor : UserControl
     /// </summary>
     public bool IsTermNavigating { get; private set; }
 
+    /// <summary>
+    /// True when the most recent caret move was caused by a left-button pointer click — a
+    /// deliberate "place the cursor here" navigation point, recorded in history even for short
+    /// moves so back/forward behaves like a normal editor (#8).
+    /// </summary>
+    public bool LastCaretMoveFromPointer { get; private set; }
+    private bool _caretFromPointer;
+
     /// <summary>Raised when the user requests "find all references" for an identifier (#4).</summary>
     public event EventHandler<string>? FindReferencesRequested;
 
@@ -174,6 +182,10 @@ public partial class TherionTextEditor : UserControl
             // opt into handled events to receive the click for hyperlink navigation.
             _editor.AddHandler(InputElement.PointerPressedEvent, OnEditorPointerPressed,
                 RoutingStrategies.Bubble, handledEventsToo: true);
+            // Tunnel runs before AvaloniaEdit moves the caret, so we can flag the resulting caret
+            // move as pointer-driven for the navigation history (#8).
+            _editor.AddHandler(InputElement.PointerPressedEvent, OnEditorPointerPressedCapture,
+                RoutingStrategies.Tunnel, handledEventsToo: true);
             _editor.TextArea.TextView.PointerMoved += OnEditorPointerMoved;
             _editor.TextArea.TextView.PointerExited += OnEditorPointerExited;
             _editor.TextArea.TextView.AddHandler(InputElement.PointerReleasedEvent, OnEditorPointerReleased,
@@ -1054,14 +1066,24 @@ public partial class TherionTextEditor : UserControl
         if (_occurrences?.SetWord(SelectedOrCaretWord()) == true)
             _editor.TextArea.TextView.InvalidateVisual();
 
-        // Report the caret location for the navigation history (#1).
+        // Report the caret location for the navigation history (#1/#8). Consume the
+        // pointer-press flag so this single move is attributed to the click that caused it.
         if (!string.IsNullOrEmpty(CurrentFilePath))
         {
+            LastCaretMoveFromPointer = _caretFromPointer;
+            _caretFromPointer = false;
             var loc = _editor.Document.GetLocation(_editor.CaretOffset);
             CaretMoved?.Invoke(this, new SourceSpan(
                 CurrentFilePath!, new SourceLocation(loc.Line, loc.Column),
                 new SourceLocation(loc.Line, loc.Column), _editor.CaretOffset, 0));
         }
+    }
+
+    // Marks the imminent caret move as pointer-driven (left click only), for history (#8).
+    private void OnEditorPointerPressedCapture(object? sender, PointerPressedEventArgs e)
+    {
+        if (_editor is not null && e.GetCurrentPoint(_editor).Properties.IsLeftButtonPressed)
+            _caretFromPointer = true;
     }
 
     /// <summary>The whole-word identifier to highlight: the selection if it is one, else the word at the caret.</summary>
@@ -1108,6 +1130,7 @@ public partial class TherionTextEditor : UserControl
     // mouse-up position after a navigation click fires on PointerPressed (#2).
     private void OnEditorPointerReleased(object? sender, PointerReleasedEventArgs e)
     {
+        _caretFromPointer = false; // drop an unconsumed flag (click that didn't move the caret)
         if (_pendingNavOffset < 0 || _editor is null) return;
         _editor.Select(_pendingNavOffset, 0);
         _pendingNavOffset = -1;

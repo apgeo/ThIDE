@@ -63,7 +63,7 @@ public interface IDocumentService
     /// like a normal editor (#1). Term-navigation moves (Shift+F12) pass
     /// <paramref name="isTermNavigation"/>=true and are ignored.
     /// </summary>
-    void ReportCaret(Therion.Core.SourceSpan span, bool isTermNavigation);
+    void ReportCaret(Therion.Core.SourceSpan span, bool isTermNavigation, bool fromPointer = false);
     /// <summary>Raised on every caret move so the status bar can show line/col/position (#10).</summary>
     event EventHandler<Therion.Core.SourceSpan>? CaretMoved;
 
@@ -244,7 +244,7 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
 
     public event EventHandler<Therion.Core.SourceSpan>? CaretMoved;
 
-    public void ReportCaret(Therion.Core.SourceSpan span, bool isTermNavigation)
+    public void ReportCaret(Therion.Core.SourceSpan span, bool isTermNavigation, bool fromPointer = false)
     {
         if (span.IsEmpty || string.IsNullOrEmpty(span.FilePath)) return;
 
@@ -255,7 +255,9 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
         // but they do update the reference point so later real jumps measure correctly.
         if (isTermNavigation || _suppressHistory) { _lastCaret = span; return; }
 
-        if (IsJump(_lastCaret, span))
+        // A deliberate pointer click is always a navigation point (recorded even for a short
+        // move); keyboard moves only register when they cross a sizable gap (#8).
+        if (fromPointer || IsJump(_lastCaret, span))
         {
             RecordHistory(_lastCaret); // where we jumped from
             RecordHistory(span);       // where we landed
