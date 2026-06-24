@@ -54,6 +54,27 @@ public sealed record AppSettings
     /// <summary>Rebuild the object graph when a tracked file changes on disk (#5b).</summary>
     public bool AutoReloadGraphOnExternalChange { get; init; } = true;
 
+    // ---- rename symbol ----
+    /// <summary>Show a preview window before applying a symbol rename (#1).</summary>
+    public bool ShowRenamePreviewBeforeApply { get; init; } = true;
+
+    // ---- measurements column visibility ----
+    public bool MColShotsSurvey { get; init; } = true;
+    public bool MColShotsFrom { get; init; } = true;
+    public bool MColShotsTo { get; init; } = true;
+    public bool MColShotsLength { get; init; } = true;
+    public bool MColShotsCompass { get; init; } = true;
+    public bool MColShotsClino { get; init; } = true;
+    public bool MColShotsSurface { get; init; } = true;
+    public bool MColShotsDuplicate { get; init; } = true;
+    public bool MColShotsSplay { get; init; } = true;
+    public bool MColShotsApproximate { get; init; } = true;
+    public bool MColShotsComment { get; init; } = true;
+    public bool MColShotsLine { get; init; } = true;
+    public bool MColStationsSurvey { get; init; } = true;
+    public bool MColStationsKind { get; init; } = true;
+    public bool MColStationsLine { get; init; } = true;
+
     // ---- editor preferences ----
     public double EditorFontSize { get; init; } = 13;
     public bool ShowLineNumbers { get; init; } = true;

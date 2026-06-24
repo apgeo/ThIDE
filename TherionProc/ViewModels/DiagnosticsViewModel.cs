@@ -1,4 +1,4 @@
-// Implementation Plan §7.3 — Diagnostics panel ViewModel.
+// Implementation Plan ï¿½7.3 ï¿½ Diagnostics panel ViewModel.
 // Aggregates parser + semantic + compile diagnostics into a single flat list
 // for the Diagnostics tool window (click-to-navigate via Navigation property).
 
@@ -28,8 +28,13 @@ public partial class DiagnosticsViewModel : ViewModelBase
     [ObservableProperty] private int _errorCount;
     [ObservableProperty] private int _warningCount;
     [ObservableProperty] private DiagnosticRow? _selected;
+    [ObservableProperty] private bool _showProjectScope;
 
     public event EventHandler<DiagnosticRow>? NavigateRequested;
+    /// <summary>Raised when <see cref="ShowProjectScope"/> changes, so the shell can reload with the correct scope.</summary>
+    public event EventHandler? ScopeChanged;
+
+    partial void OnShowProjectScopeChanged(bool value) => ScopeChanged?.Invoke(this, EventArgs.Empty);
 
     public void Load(IEnumerable<Diagnostic> diagnostics)
     {

@@ -8,7 +8,16 @@
               SelectedItem="{Binding Build.SelectedOutput, Mode=TwoWay}"
               IsReadOnly="True" GridLinesVisibility="Horizontal"
               CanUserResizeColumns="True" AutoGenerateColumns="False"
-              HeadersVisibility="None" DoubleTapped="OnRowDoubleTapped">
+              HeadersVisibility="None" DoubleTapped="OnRowDoubleTapped"
+              FontFamily="Consolas,Courier New,monospace" FontSize="11">
+        <DataGrid.ContextMenu>
+            <ContextMenu>
+                <MenuItem Header="Clear Output" Command="{Binding Build.ClearOutputCommand}" />
+                <Separator />
+                <MenuItem Header="Select All" Click="OnSelectAll" />
+                <MenuItem Header="Copy All" Click="OnCopyAll" />
+            </ContextMenu>
+        </DataGrid.ContextMenu>
         <DataGrid.Columns>
             <DataGridTextColumn Binding="{Binding Severity}" Width="80" />
             <DataGridTextColumn Binding="{Binding Text}"     Width="*"  />

@@ -7,12 +7,16 @@
 // back to the file text is deferred. A toggle switches station columns between the full
 // survey-qualified name ("SV-ps3d.R31") and the short station name ("R31") (#5).
 
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.ComponentModel;
 using System.Linq;
 using Avalonia.Collections;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Microsoft.Extensions.DependencyInjection;
 using Therion.Semantics;
+using TherionProc.Services;
 
 namespace TherionProc.ViewModels;
 
@@ -81,41 +85,127 @@ public partial class MeasurementsViewModel : ViewModelBase
     public const string GroupBySurvey = "Survey";
     public const string GroupByStyle  = "Style";
     public const string GroupByFlags  = "Flags";
+    public const string GroupByKind   = "Kind";
 
     private readonly List<MeasurementRow> _all = new();
+    private readonly List<StationMeasurementRow> _allStations = new();
 
+    // ---- Shots view ----
     [ObservableProperty] private DataGridCollectionView? _view;
     [ObservableProperty] private int _count;
     [ObservableProperty] private int _totalCount;
     [ObservableProperty] private string _filterText = string.Empty;
     [ObservableProperty] private string _groupBy = GroupByNone;
 
-    // Stations sub-panel (#7) — this file's stations only.
-    [ObservableProperty] private IReadOnlyList<StationMeasurementRow> _stations =
-        System.Array.Empty<StationMeasurementRow>();
-    [ObservableProperty] private int _stationCount;
+    // ---- Stations view ----
+    [ObservableProperty] private DataGridCollectionView? _stationsView;
+    [ObservableProperty] private int _stationsCount;
+    [ObservableProperty] private int _stationsTotalCount;
+    [ObservableProperty] private string _stationsFilterText = string.Empty;
+    [ObservableProperty] private string _stationsGroupBy = GroupByNone;
+
+    // ---- Shots column visibility ----
+    [ObservableProperty] private bool _shotsColSurvey = true;
+    [ObservableProperty] private bool _shotsColFrom = true;
+    [ObservableProperty] private bool _shotsColTo = true;
+    [ObservableProperty] private bool _shotsColLength = true;
+    [ObservableProperty] private bool _shotsColCompass = true;
+    [ObservableProperty] private bool _shotsColClino = true;
+    [ObservableProperty] private bool _shotsColSurface = true;
+    [ObservableProperty] private bool _shotsColDuplicate = true;
+    [ObservableProperty] private bool _shotsColSplay = true;
+    [ObservableProperty] private bool _shotsColApproximate = true;
+    [ObservableProperty] private bool _shotsColComment = true;
+    [ObservableProperty] private bool _shotsColLine = true;
+
+    // ---- Stations column visibility ----
+    [ObservableProperty] private bool _stationsColSurvey = true;
+    [ObservableProperty] private bool _stationsColKind = true;
+    [ObservableProperty] private bool _stationsColLine = true;
 
     /// <summary>Show the full survey-qualified station name vs. the short station name (#5, default off).</summary>
     [ObservableProperty] private bool _showFullStationName;
-    partial void OnShowFullStationNameChanged(bool value)
-    {
-        foreach (var r in _all) r.ShowFullName = value;
-        foreach (var s in Stations) s.ShowFullName = value;
-    }
-
-    /// <summary>True when this file has at least one shot or station — drives the empty banner (#4).</summary>
-    public bool HasAnyData => _all.Count > 0 || Stations.Count > 0;
 
     public IReadOnlyList<string> GroupByOptions { get; } =
         new[] { GroupByNone, GroupBySurvey, GroupByStyle, GroupByFlags };
 
-    partial void OnFilterTextChanged(string value)
+    public IReadOnlyList<string> StationsGroupByOptions { get; } =
+        new[] { GroupByNone, GroupBySurvey, GroupByKind };
+
+    /// <summary>True when this file has at least one shot or station — drives the empty banner (#4).</summary>
+    public bool HasAnyData => _all.Count > 0 || _allStations.Count > 0;
+
+    public MeasurementsViewModel()
     {
-        View?.Refresh();
-        UpdateCount();
+        LoadColumnSettings();
     }
 
-    partial void OnGroupByChanged(string value) => ApplyGrouping();
+    // ---- Settings persistence ----
+
+    private void LoadColumnSettings()
+    {
+        try
+        {
+            var svc = AppServices.Provider.GetService<IAppSettingsService>();
+            if (svc is null) return;
+            var s = svc.Current;
+            ShotsColSurvey     = s.MColShotsSurvey;
+            ShotsColFrom       = s.MColShotsFrom;
+            ShotsColTo         = s.MColShotsTo;
+            ShotsColLength     = s.MColShotsLength;
+            ShotsColCompass    = s.MColShotsCompass;
+            ShotsColClino      = s.MColShotsClino;
+            ShotsColSurface    = s.MColShotsSurface;
+            ShotsColDuplicate  = s.MColShotsDuplicate;
+            ShotsColSplay      = s.MColShotsSplay;
+            ShotsColApproximate = s.MColShotsApproximate;
+            ShotsColComment    = s.MColShotsComment;
+            ShotsColLine       = s.MColShotsLine;
+            StationsColSurvey  = s.MColStationsSurvey;
+            StationsColKind    = s.MColStationsKind;
+            StationsColLine    = s.MColStationsLine;
+        }
+        catch { }
+    }
+
+    private void SaveColumnSettings()
+    {
+        try
+        {
+            var svc = AppServices.Provider.GetService<IAppSettingsService>();
+            if (svc is null) return;
+            svc.Save(svc.Current with
+            {
+                MColShotsSurvey     = ShotsColSurvey,
+                MColShotsFrom       = ShotsColFrom,
+                MColShotsTo         = ShotsColTo,
+                MColShotsLength     = ShotsColLength,
+                MColShotsCompass    = ShotsColCompass,
+                MColShotsClino      = ShotsColClino,
+                MColShotsSurface    = ShotsColSurface,
+                MColShotsDuplicate  = ShotsColDuplicate,
+                MColShotsSplay      = ShotsColSplay,
+                MColShotsApproximate = ShotsColApproximate,
+                MColShotsComment    = ShotsColComment,
+                MColShotsLine       = ShotsColLine,
+                MColStationsSurvey  = StationsColSurvey,
+                MColStationsKind    = StationsColKind,
+                MColStationsLine    = StationsColLine,
+            });
+        }
+        catch { }
+    }
+
+    protected override void OnPropertyChanged(PropertyChangedEventArgs e)
+    {
+        base.OnPropertyChanged(e);
+        if (e.PropertyName is { } name &&
+            (name.StartsWith("ShotsCol", StringComparison.Ordinal) ||
+             name.StartsWith("StationsCol", StringComparison.Ordinal)))
+            SaveColumnSettings();
+    }
+
+    // ---- Data loading ----
 
     /// <summary>Loads measurements + stations from a single-file semantic model.</summary>
     public void Load(SemanticModel model)
@@ -130,6 +220,34 @@ public partial class MeasurementsViewModel : ViewModelBase
         BuildStations(workspace.PerFile.Values.SelectMany(m => ProjectStations(m.Stations.Values)));
         Build(workspace.PerFile.Values.SelectMany(m => Project(m.Shots)));
     }
+
+    // ---- Shots filter / group ----
+
+    partial void OnShowFullStationNameChanged(bool value)
+    {
+        foreach (var r in _all) r.ShowFullName = value;
+        foreach (var s in _allStations) s.ShowFullName = value;
+    }
+
+    partial void OnFilterTextChanged(string value)
+    {
+        View?.Refresh();
+        UpdateCount();
+    }
+
+    partial void OnGroupByChanged(string value) => ApplyGrouping();
+
+    // ---- Stations filter / group ----
+
+    partial void OnStationsFilterTextChanged(string value)
+    {
+        StationsView?.Refresh();
+        UpdateStationsCount();
+    }
+
+    partial void OnStationsGroupByChanged(string value) => ApplyStationsGrouping();
+
+    // ---- Projection ----
 
     private IEnumerable<MeasurementRow> Project(ImmutableArray<ShotSymbol> shots)
     {
@@ -170,7 +288,9 @@ public partial class MeasurementsViewModel : ViewModelBase
                 Kind      = s.Kind.ToString(),
                 Line      = s.DeclarationSpan.Start.Line,
             })
-            .OrderBy(r => r.FullName, System.StringComparer.Ordinal);
+            .OrderBy(r => r.FullName, StringComparer.Ordinal);
+
+    // ---- Build / grouping / filtering ----
 
     private void Build(IEnumerable<MeasurementRow> rows)
     {
@@ -187,9 +307,14 @@ public partial class MeasurementsViewModel : ViewModelBase
 
     private void BuildStations(IEnumerable<StationMeasurementRow> rows)
     {
-        var list = rows.ToList();
-        Stations = list;
-        StationCount = list.Count;
+        _allStations.Clear();
+        _allStations.AddRange(rows);
+
+        var view = new DataGridCollectionView(_allStations) { Filter = FilterStation };
+        StationsView = view;
+        ApplyStationsGrouping();
+        StationsTotalCount = _allStations.Count;
+        UpdateStationsCount();
         OnPropertyChanged(nameof(HasAnyData));
     }
 
@@ -212,6 +337,24 @@ public partial class MeasurementsViewModel : ViewModelBase
         UpdateCount();
     }
 
+    private void ApplyStationsGrouping()
+    {
+        if (StationsView is null) return;
+        using (StationsView.DeferRefresh())
+        {
+            StationsView.GroupDescriptions.Clear();
+            var prop = StationsGroupBy switch
+            {
+                GroupBySurvey => nameof(StationMeasurementRow.Survey),
+                GroupByKind   => nameof(StationMeasurementRow.Kind),
+                _             => null,
+            };
+            if (prop is not null)
+                StationsView.GroupDescriptions.Add(new DataGridPathGroupDescription(prop));
+        }
+        UpdateStationsCount();
+    }
+
     private bool FilterRow(object o)
     {
         if (string.IsNullOrWhiteSpace(FilterText)) return true;
@@ -223,12 +366,26 @@ public partial class MeasurementsViewModel : ViewModelBase
             || Contains(r.Flags, q) || Contains(r.Comment, q) || Contains(r.Style, q);
     }
 
+    private bool FilterStation(object o)
+    {
+        if (string.IsNullOrWhiteSpace(StationsFilterText)) return true;
+        if (o is not StationMeasurementRow r) return true;
+        var q = StationsFilterText.Trim();
+        return Contains(r.FullName, q) || Contains(r.ShortName, q)
+            || Contains(r.Survey, q) || Contains(r.Kind, q);
+    }
+
     private void UpdateCount() =>
         Count = string.IsNullOrWhiteSpace(FilterText) ? _all.Count : _all.Count(FilterRow);
 
+    private void UpdateStationsCount() =>
+        StationsCount = string.IsNullOrWhiteSpace(StationsFilterText)
+            ? _allStations.Count
+            : _allStations.Count(FilterStation);
+
     private static bool Contains(string? haystack, string needle) =>
         haystack is not null &&
-        haystack.Contains(needle, System.StringComparison.OrdinalIgnoreCase);
+        haystack.Contains(needle, StringComparison.OrdinalIgnoreCase);
 
     private static string FlagText(ShotFlags f)
     {

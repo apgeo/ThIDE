@@ -91,7 +91,7 @@
                 <MenuItem Header="UPPERCASE"  Click="OnEditUpper" />
                 <MenuItem Header="lowercase"  Click="OnEditLower" />
                 <Separator />
-                <MenuItem Header="Toggle Comment" InputGesture="Ctrl+/" Click="OnEditToggleComment" />
+                <MenuItem Header="Toggle Comment  Ctrl+/" Click="OnEditToggleComment" />
                 <Separator />
                 <MenuItem Header="Fold All"   Click="OnEditFoldAll" />
                 <MenuItem Header="Unfold All" Click="OnEditUnfoldAll" />
@@ -170,9 +170,48 @@
         <!-- Status bar (#10): transient messages on the left; open-file metrics on the right,
              grouped with thin separators. The full path is capped at 65% of the window width. -->
         <Border DockPanel.Dock="Bottom" BorderBrush="Gray" BorderThickness="0,1,0,0" Padding="6,2">
+            <Border.Styles>
+                <!-- Build spinner animation for the status bar (#4). -->
+                <Style Selector="PathIcon.buildSpinner">
+                    <Setter Property="RenderTransform"><RotateTransform /></Setter>
+                    <Style.Animations>
+                        <Animation Duration="0:0:1" IterationCount="INFINITE">
+                            <KeyFrame Cue="0%"><Setter Property="RotateTransform.Angle" Value="0" /></KeyFrame>
+                            <KeyFrame Cue="100%"><Setter Property="RotateTransform.Angle" Value="360" /></KeyFrame>
+                        </Animation>
+                    </Style.Animations>
+                </Style>
+            </Border.Styles>
             <DockPanel LastChildFill="False">
                 <TextBlock DockPanel.Dock="Left" Text="{Binding StatusText}" Foreground="Gray"
                            VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+
+                <!-- Build spinner: visible while building (#4). -->
+                <PathIcon DockPanel.Dock="Left" Classes="buildSpinner"
+                          Data="{DynamicResource Icon.Loading}"
+                          Width="13" Height="13" Foreground="Gray" Margin="6,0,0,0"
+                          RenderTransformOrigin="50%,50%"
+                          IsVisible="{Binding Build.IsBuilding}"
+                          ToolTip.Tip="Build in progress…" />
+
+                <!-- Build result indicator: green check / red X + optional warning count (#7). -->
+                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="3" Margin="6,0,0,0"
+                            IsVisible="{Binding Build.HasBuildResult}" VerticalAlignment="Center">
+                    <PathIcon Data="{DynamicResource Icon.CheckCircle}" Width="13" Height="13"
+                              Foreground="#2E7D32" VerticalAlignment="Center"
+                              IsVisible="{Binding Build.LastBuildSucceeded}"
+                              ToolTip.Tip="Last build succeeded" />
+                    <PathIcon Data="{DynamicResource Icon.ErrorCircle}" Width="13" Height="13"
+                              Foreground="#C62828" VerticalAlignment="Center"
+                              IsVisible="{Binding !Build.LastBuildSucceeded}"
+                              ToolTip.Tip="Last build failed" />
+                    <PathIcon Data="{DynamicResource Icon.Warning}" Width="12" Height="12"
+                              Foreground="#E65100" VerticalAlignment="Center" Margin="3,0,0,0"
+                              IsVisible="{Binding Build.LastBuildHasWarnings}" />
+                    <TextBlock Text="{Binding Build.LastBuildWarningCount}" Foreground="#E65100"
+                               FontSize="11" VerticalAlignment="Center"
+                               IsVisible="{Binding Build.LastBuildHasWarnings}" />
+                </StackPanel>
 
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="0"
                             IsVisible="{Binding HasStatusFile}">
@@ -231,13 +270,16 @@
             <Border IsVisible="{Binding IsLoading}" Background="#66000000">
                 <Border.Styles>
                     <Style Selector="PathIcon.spinner">
+                        <Setter Property="RenderTransform">
+                            <RotateTransform />
+                        </Setter>
                         <Style.Animations>
                             <Animation Duration="0:0:1" IterationCount="INFINITE">
                                 <KeyFrame Cue="0%">
-                                    <Setter Property="RenderTransform" Value="rotate(0deg)" />
+                                    <Setter Property="RotateTransform.Angle" Value="0" />
                                 </KeyFrame>
                                 <KeyFrame Cue="100%">
-                                    <Setter Property="RenderTransform" Value="rotate(360deg)" />
+                                    <Setter Property="RotateTransform.Angle" Value="360" />
                                 </KeyFrame>
                             </Animation>
                         </Style.Animations>

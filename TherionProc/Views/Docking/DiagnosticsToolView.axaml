@@ -3,18 +3,26 @@
              xmlns:vm="using:TherionProc.ViewModels.Docking"
              x:Class="TherionProc.Views.Docking.DiagnosticsToolView"
              x:DataType="vm:DiagnosticsToolViewModel">
-    <DataGrid x:Name="Grid"
-              ItemsSource="{Binding Diagnostics.Rows}"
-              SelectedItem="{Binding Diagnostics.Selected, Mode=TwoWay}"
-              IsReadOnly="True" GridLinesVisibility="Horizontal"
-              CanUserResizeColumns="True" AutoGenerateColumns="False"
-              DoubleTapped="OnRowDoubleTapped">
-        <DataGrid.Columns>
-            <DataGridTextColumn Header="Code"     Binding="{Binding Code}"     Width="100" />
-            <DataGridTextColumn Header="Severity" Binding="{Binding Severity}" Width="80"  />
-            <DataGridTextColumn Header="Message"  Binding="{Binding Message}"  Width="*"   />
-            <DataGridTextColumn Header="File"     Binding="{Binding File}"     Width="220" />
-            <DataGridTextColumn Header="Line"     Binding="{Binding Line}"     Width="60"  />
-        </DataGrid.Columns>
-    </DataGrid>
+    <DockPanel>
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="4,2" Spacing="6">
+            <ToggleButton Content="Project scope"
+                          IsChecked="{Binding Diagnostics.ShowProjectScope, Mode=TwoWay}"
+                          ToolTip.Tip="Show diagnostics from all thconfig project files (requires workspace)"
+                          Padding="6,2" FontSize="11" />
+        </StackPanel>
+        <DataGrid x:Name="Grid"
+                  ItemsSource="{Binding Diagnostics.Rows}"
+                  SelectedItem="{Binding Diagnostics.Selected, Mode=TwoWay}"
+                  IsReadOnly="True" GridLinesVisibility="Horizontal"
+                  CanUserResizeColumns="True" AutoGenerateColumns="False"
+                  DoubleTapped="OnRowDoubleTapped">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Code"     Binding="{Binding Code}"     Width="100" />
+                <DataGridTextColumn Header="Severity" Binding="{Binding Severity}" Width="80"  />
+                <DataGridTextColumn Header="Message"  Binding="{Binding Message}"  Width="*"   />
+                <DataGridTextColumn Header="File"     Binding="{Binding File}"     Width="220" />
+                <DataGridTextColumn Header="Line"     Binding="{Binding Line}"     Width="60"  />
+            </DataGrid.Columns>
+        </DataGrid>
+    </DockPanel>
 </UserControl>

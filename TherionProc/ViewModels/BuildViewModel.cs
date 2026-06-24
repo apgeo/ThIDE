@@ -1,4 +1,4 @@
-// Implementation Plan §9bis.5 — Build menu + Compiler Output + Generated Files.
+// Implementation Plan ï¿½9bis.5 ï¿½ Build menu + Compiler Output + Generated Files.
 // One VM hosts the build pipeline (Build / Rebuild / Cancel), streams compiler
 // output, and exposes the artifact list so the Loch / Aven quick actions can
 // light up when matching outputs exist.
@@ -43,6 +43,16 @@ public partial class BuildViewModel : ViewModelBase
     [ObservableProperty] private bool _hasLoxArtifact;
     [ObservableProperty] private bool _hasAvenArtifact;
     [ObservableProperty] private CompilerOutputRow? _selectedOutput;
+
+    // ---- build result indicator (#7) ----------------------------------------
+    /// <summary>True once any build has completed in this session.</summary>
+    [ObservableProperty] private bool _hasBuildResult;
+    /// <summary>True when the last completed build had exit code 0.</summary>
+    [ObservableProperty] private bool _lastBuildSucceeded;
+    /// <summary>True when the last build produced diagnostics with Warning severity.</summary>
+    [ObservableProperty] private bool _lastBuildHasWarnings;
+    /// <summary>Number of warnings from the last build.</summary>
+    [ObservableProperty] private int _lastBuildWarningCount;
 
     /// <summary>Raised when a compiler-output row with a span is activated.</summary>
     public event System.EventHandler<Therion.Core.SourceSpan>? NavigateRequested;
@@ -99,7 +109,7 @@ public partial class BuildViewModel : ViewModelBase
         var progress = new Progress<CompilerOutputLine>(line =>
         {
             _outputBuffer.Add(new CompilerOutputRow(line.Text, line.Severity.ToString(), line.Span));
-            // Snapshot for binding (immutable swap, §18).
+            // Snapshot for binding (immutable swap, ï¿½18).
             Output = _outputBuffer.ToArray();
         });
 
@@ -108,6 +118,11 @@ public partial class BuildViewModel : ViewModelBase
             var result = await _compiler.CompileAsync(entry, progress, _cts.Token).ConfigureAwait(true);
             UpdateArtifacts(result.Artifacts);
             _artifactCache.Save(entry, "unknown", result.Artifacts);
+            var warnCount = result.Diagnostics.Count(d => d.Severity == DiagnosticSeverity.Warning);
+            HasBuildResult = true;
+            LastBuildSucceeded = result.ExitCode == 0;
+            LastBuildHasWarnings = warnCount > 0;
+            LastBuildWarningCount = warnCount;
             Status = result.ExitCode == 0
                 ? $"Build succeeded ({result.Artifacts.Length} artifact(s))."
                 : $"Build failed (exit {result.ExitCode}).";
@@ -134,6 +149,17 @@ public partial class BuildViewModel : ViewModelBase
 
     [RelayCommand]
     private void Cancel() => _cts?.Cancel();
+
+    [RelayCommand]
+    private void ClearOutput()
+    {
+        _outputBuffer.Clear();
+        Output = Array.Empty<CompilerOutputRow>();
+    }
+
+    /// <summary>Returns all output rows as plain text for clipboard copy.</summary>
+    public string OutputAsText() =>
+        string.Join(Environment.NewLine, Output.Select(r => $"{r.Severity,-8} {r.Text}"));
 
     [RelayCommand]
     private async Task OpenInLochAsync()
@@ -206,7 +232,7 @@ public partial class BuildViewModel : ViewModelBase
         UpdateArtifacts(cached);
     }
 
-    // ---- Designer-only null sinks (kept private — never resolved at runtime) ----
+    // ---- Designer-only null sinks (kept private ï¿½ never resolved at runtime) ----
 
     private sealed class NullCompiler : ITherionCompiler
     {

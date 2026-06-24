@@ -49,6 +49,10 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
     public bool IsThFile =>
         string.Equals(System.IO.Path.GetExtension(FilePath), ".th", StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>True for .th2 sketch files — gates the "Edit with Mapiah" button.</summary>
+    public bool IsTh2File =>
+        string.Equals(System.IO.Path.GetExtension(FilePath), ".th2", StringComparison.OrdinalIgnoreCase);
+
     public FileDocumentViewModel(string filePath, string text, MeasurementsViewModel measurements,
         ICommandRegistry? commands = null)
     {
@@ -213,13 +217,19 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
     {
         if (_disposed) return;
         var parsed = DocumentParser.Parse(FilePath, _documentText, _commands);
-        Ast = parsed.Ast;
-        Semantics = parsed.Semantics;
-        UpdateNavigation();
-        Diagnostics = parsed.Diagnostics;
-        CompletionTerms = BuildCompletionTerms(parsed.Semantics);
-        if (parsed.Semantics is { } model) Measurements.Load(model);
-        Reparsed?.Invoke(this, EventArgs.Empty);
+        void Apply()
+        {
+            if (_disposed) return;
+            Ast = parsed.Ast;
+            Semantics = parsed.Semantics;
+            UpdateNavigation();
+            Diagnostics = parsed.Diagnostics;
+            CompletionTerms = BuildCompletionTerms(parsed.Semantics);
+            if (parsed.Semantics is { } model) Measurements.Load(model);
+            Reparsed?.Invoke(this, EventArgs.Empty);
+        }
+        if (Dispatcher.UIThread.CheckAccess()) Apply();
+        else Dispatcher.UIThread.Post(Apply);
     }
 
     private static IReadOnlyList<string> BuildCompletionTerms(SemanticModel? model)

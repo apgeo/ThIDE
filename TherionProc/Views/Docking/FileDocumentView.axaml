@@ -52,7 +52,7 @@
     </StackPanel>
 
     <Grid>
-    <TabControl>
+    <TabControl x:Name="DocumentTabControl">
         <TabItem Header="Source">
             <ed:TherionTextEditor x:Name="Editor"
                                   Text="{Binding DocumentText, Mode=TwoWay}"
@@ -76,47 +76,104 @@
                     <TabItem Header="Shots">
                         <DockPanel>
                             <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="6,4">
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <TextBlock Text="Filter:" VerticalAlignment="Center" />
-                                    <TextBox Width="220"
-                                             Text="{Binding Measurements.FilterText, Mode=TwoWay}"
-                                             Watermark="from / to / survey / flags / comment" />
-                                    <TextBlock Text="Group by:" VerticalAlignment="Center" Margin="8,0,0,0" />
-                                    <ComboBox MinWidth="110"
-                                              ItemsSource="{Binding Measurements.GroupByOptions}"
-                                              SelectedItem="{Binding Measurements.GroupBy, Mode=TwoWay}" />
-                                    <!-- Full station name toggle (#5, push-style, default off). -->
-                                    <ToggleButton Padding="6,3" VerticalAlignment="Center"
+                                <WrapPanel Orientation="Horizontal">
+                                    <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,8,0">
+                                        <TextBlock Text="Filter:" VerticalAlignment="Center" />
+                                        <TextBox Width="180"
+                                                 Text="{Binding Measurements.FilterText, Mode=TwoWay}"
+                                                 Watermark="from / to / survey / flags / comment" />
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,8,0">
+                                        <TextBlock Text="Group by:" VerticalAlignment="Center" />
+                                        <ComboBox MinWidth="100"
+                                                  ItemsSource="{Binding Measurements.GroupByOptions}"
+                                                  SelectedItem="{Binding Measurements.GroupBy, Mode=TwoWay}" />
+                                    </StackPanel>
+                                    <!-- Full station name toggle (#5). -->
+                                    <ToggleButton Padding="6,3" VerticalAlignment="Center" Margin="0,0,4,0"
                                                   ToolTip.Tip="Show full station name (survey.station) instead of the station only"
                                                   IsChecked="{Binding Measurements.ShowFullStationName, Mode=TwoWay}">
                                         <PathIcon Data="{DynamicResource Icon.NodeGraph}" Width="14" Height="14" />
                                     </ToggleButton>
-                                    <TextBlock VerticalAlignment="Center" Foreground="Gray" Margin="8,0,0,0">
+                                    <!-- Auto-fit button. -->
+                                    <Button x:Name="ShotsFitBtn" Content="↔ Fit" Padding="6,3" VerticalAlignment="Center"
+                                            Margin="0,0,4,0" ToolTip.Tip="Fit all columns to their content"
+                                            Click="OnFitShotsColumns" />
+                                    <!-- Column visibility flyout. -->
+                                    <Button Content="Cols ▾" Padding="6,3" VerticalAlignment="Center"
+                                            Margin="0,0,8,0" ToolTip.Tip="Show or hide columns">
+                                        <Button.Flyout>
+                                            <Flyout>
+                                                <StackPanel Spacing="2" Margin="8">
+                                                    <CheckBox Content="Survey"  IsChecked="{Binding Measurements.ShotsColSurvey,    Mode=TwoWay}" />
+                                                    <CheckBox Content="From"    IsChecked="{Binding Measurements.ShotsColFrom,       Mode=TwoWay}" />
+                                                    <CheckBox Content="To"      IsChecked="{Binding Measurements.ShotsColTo,         Mode=TwoWay}" />
+                                                    <CheckBox Content="Length"  IsChecked="{Binding Measurements.ShotsColLength,     Mode=TwoWay}" />
+                                                    <CheckBox Content="Compass" IsChecked="{Binding Measurements.ShotsColCompass,    Mode=TwoWay}" />
+                                                    <CheckBox Content="Clino"   IsChecked="{Binding Measurements.ShotsColClino,      Mode=TwoWay}" />
+                                                    <Separator Margin="0,4" />
+                                                    <CheckBox Content="Surf"    IsChecked="{Binding Measurements.ShotsColSurface,    Mode=TwoWay}" />
+                                                    <CheckBox Content="Dup"     IsChecked="{Binding Measurements.ShotsColDuplicate,  Mode=TwoWay}" />
+                                                    <CheckBox Content="Splay"   IsChecked="{Binding Measurements.ShotsColSplay,      Mode=TwoWay}" />
+                                                    <CheckBox Content="Approx"  IsChecked="{Binding Measurements.ShotsColApproximate,Mode=TwoWay}" />
+                                                    <Separator Margin="0,4" />
+                                                    <CheckBox Content="Comment" IsChecked="{Binding Measurements.ShotsColComment,    Mode=TwoWay}" />
+                                                    <CheckBox Content="Line"    IsChecked="{Binding Measurements.ShotsColLine,       Mode=TwoWay}" />
+                                                </StackPanel>
+                                            </Flyout>
+                                        </Button.Flyout>
+                                    </Button>
+                                    <TextBlock VerticalAlignment="Center" Foreground="Gray">
                                         <Run Text="{Binding Measurements.Count}" /><Run Text=" of " /><Run Text="{Binding Measurements.TotalCount}" /><Run Text=" shown" />
                                     </TextBlock>
-                                </StackPanel>
+                                </WrapPanel>
                             </Border>
                             <!-- Editable shots grid (#6): Length/Compass/Clino are TwoWay-bound. -->
-                            <DataGrid ItemsSource="{Binding Measurements.View}"
+                            <DataGrid x:Name="ShotsGrid"
+                                      ItemsSource="{Binding Measurements.View}"
                                       x:CompileBindings="False"
                                       GridLinesVisibility="All"
                                       CanUserSortColumns="True" CanUserResizeColumns="True"
                                       CanUserReorderColumns="True" AutoGenerateColumns="False">
+                                <DataGrid.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="Copy Row"  Click="OnCopyShotRow" />
+                                        <MenuItem Header="Copy Cell" Click="OnCopyShotCell" />
+                                        <Separator />
+                                        <MenuItem Header="Go to Source"                Click="OnGoToShotSource" />
+                                        <MenuItem Header="Go to Declaration of 'From'" Click="OnGoToShotDefFrom" />
+                                        <MenuItem Header="Go to Declaration of 'To'"   Click="OnGoToShotDefTo" />
+                                        <Separator />
+                                        <MenuItem Header="Rename 'From' Station…" Click="OnRenameFromStation" />
+                                        <MenuItem Header="Rename 'To' Station…"   Click="OnRenameToStation" />
+                                    </ContextMenu>
+                                </DataGrid.ContextMenu>
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="Survey"  Binding="{Binding Survey}"  Width="130" IsReadOnly="True" />
                                     <DataGridTextColumn Header="From"    Binding="{Binding From}"    Width="110" IsReadOnly="True"
                                                         FontWeight="Bold" Foreground="#1565C0" />
                                     <DataGridTextColumn Header="To"      Binding="{Binding To}"      Width="110" IsReadOnly="True"
                                                         FontWeight="Bold" Foreground="#1565C0" />
-                                    <DataGridTextColumn Header="Length"  Binding="{Binding Length,  Mode=TwoWay}" Width="70"  />
-                                    <DataGridTextColumn Header="Compass" Binding="{Binding Compass, Mode=TwoWay}" Width="80"  />
-                                    <DataGridTextColumn Header="Clino"   Binding="{Binding Clino,   Mode=TwoWay}" Width="70"  />
-                                    <DataGridCheckBoxColumn Header="Surf"   Binding="{Binding Surface}"     Width="50" IsReadOnly="True" />
-                                    <DataGridCheckBoxColumn Header="Dup"    Binding="{Binding Duplicate}"   Width="50" IsReadOnly="True" />
-                                    <DataGridCheckBoxColumn Header="Splay"  Binding="{Binding Splay}"       Width="55" IsReadOnly="True" />
-                                    <DataGridCheckBoxColumn Header="Approx" Binding="{Binding Approximate}" Width="65" IsReadOnly="True" />
-                                    <DataGridTextColumn Header="Comment" Binding="{Binding Comment}" Width="*" />
-                                    <DataGridTextColumn Header="Line"    Binding="{Binding Line}"    Width="60" IsReadOnly="True" />
+                                    <DataGridTextColumn Header="Length"  Binding="{Binding Length,  Mode=TwoWay}" Width="72"  />
+                                    <DataGridTextColumn Header="Compass" Binding="{Binding Compass, Mode=TwoWay}" Width="82"  />
+                                    <DataGridTextColumn Header="Clino"   Binding="{Binding Clino,   Mode=TwoWay}" Width="72"  />
+                                    <DataGridTextColumn Header="Surf"    Binding="{Binding Surface}"     Width="50" IsReadOnly="True" />
+                                    <DataGridTextColumn Header="Dup"     Binding="{Binding Duplicate}"   Width="50" IsReadOnly="True" />
+                                    <DataGridTextColumn Header="Splay"   Binding="{Binding Splay}"       Width="58" IsReadOnly="True" />
+                                    <DataGridTextColumn Header="Approx"  Binding="{Binding Approximate}" Width="68" IsReadOnly="True" />
+                                    <!-- Comment: trimmed with ellipsis; full text on hover. -->
+                                    <DataGridTemplateColumn Header="Comment" Width="*" MaxWidth="380" IsReadOnly="True">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Comment}"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           VerticalAlignment="Center"
+                                                           Padding="4,0"
+                                                           ToolTip.Tip="{Binding Comment}" />
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                    <DataGridTextColumn Header="Line"    Binding="{Binding Line}"    Width="62" IsReadOnly="True" />
                                 </DataGrid.Columns>
                             </DataGrid>
                         </DockPanel>
@@ -124,28 +181,70 @@
                     <TabItem Header="Stations">
                         <DockPanel>
                             <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="6,4">
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <ToggleButton Padding="6,3" VerticalAlignment="Center"
+                                <WrapPanel Orientation="Horizontal">
+                                    <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,8,0">
+                                        <TextBlock Text="Filter:" VerticalAlignment="Center" />
+                                        <TextBox Width="180"
+                                                 Text="{Binding Measurements.StationsFilterText, Mode=TwoWay}"
+                                                 Watermark="name / survey / kind" />
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,8,0">
+                                        <TextBlock Text="Group by:" VerticalAlignment="Center" />
+                                        <ComboBox MinWidth="100"
+                                                  ItemsSource="{Binding Measurements.StationsGroupByOptions}"
+                                                  SelectedItem="{Binding Measurements.StationsGroupBy, Mode=TwoWay}" />
+                                    </StackPanel>
+                                    <!-- Full station name toggle. -->
+                                    <ToggleButton Padding="6,3" VerticalAlignment="Center" Margin="0,0,4,0"
                                                   ToolTip.Tip="Show full station name (survey.station) instead of the station only"
                                                   IsChecked="{Binding Measurements.ShowFullStationName, Mode=TwoWay}">
                                         <PathIcon Data="{DynamicResource Icon.NodeGraph}" Width="14" Height="14" />
                                     </ToggleButton>
+                                    <!-- Auto-fit button. -->
+                                    <Button Content="↔ Fit" Padding="6,3" VerticalAlignment="Center"
+                                            Margin="0,0,4,0" ToolTip.Tip="Fit all columns to their content"
+                                            Click="OnFitStationsColumns" />
+                                    <!-- Column visibility flyout. -->
+                                    <Button Content="Cols ▾" Padding="6,3" VerticalAlignment="Center"
+                                            Margin="0,0,8,0" ToolTip.Tip="Show or hide columns">
+                                        <Button.Flyout>
+                                            <Flyout>
+                                                <StackPanel Spacing="2" Margin="8">
+                                                    <CheckBox Content="Survey" IsChecked="{Binding Measurements.StationsColSurvey, Mode=TwoWay}" />
+                                                    <CheckBox Content="Kind"   IsChecked="{Binding Measurements.StationsColKind,   Mode=TwoWay}" />
+                                                    <CheckBox Content="Line"   IsChecked="{Binding Measurements.StationsColLine,   Mode=TwoWay}" />
+                                                </StackPanel>
+                                            </Flyout>
+                                        </Button.Flyout>
+                                    </Button>
                                     <TextBlock VerticalAlignment="Center" Foreground="Gray">
-                                        <Run Text="{Binding Measurements.StationCount}" /><Run Text=" stations" />
+                                        <Run Text="{Binding Measurements.StationsCount}" /><Run Text=" of " /><Run Text="{Binding Measurements.StationsTotalCount}" /><Run Text=" stations" />
                                     </TextBlock>
-                                </StackPanel>
+                                </WrapPanel>
                             </Border>
-                            <DataGrid ItemsSource="{Binding Measurements.Stations}"
+                            <DataGrid x:Name="StationsGrid"
+                                      ItemsSource="{Binding Measurements.StationsView}"
                                       x:CompileBindings="False"
                                       IsReadOnly="True" GridLinesVisibility="Horizontal"
                                       CanUserSortColumns="True" CanUserResizeColumns="True"
                                       AutoGenerateColumns="False">
+                                <DataGrid.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="Copy Row"  Click="OnCopyStationRow" />
+                                        <MenuItem Header="Copy Cell" Click="OnCopyStationCell" />
+                                        <Separator />
+                                        <MenuItem Header="Go to Source"   Click="OnGoToStationSource" />
+                                        <MenuItem Header="Go to Declaration" Click="OnGoToStationDeclaration" />
+                                        <Separator />
+                                        <MenuItem Header="Rename Station…" Click="OnRenameStation" />
+                                    </ContextMenu>
+                                </DataGrid.ContextMenu>
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="Station" Binding="{Binding Name}"   Width="*"
                                                         FontWeight="Bold" Foreground="#1565C0" />
                                     <DataGridTextColumn Header="Survey"  Binding="{Binding Survey}" Width="160" />
-                                    <DataGridTextColumn Header="Kind"    Binding="{Binding Kind}"   Width="100" />
-                                    <DataGridTextColumn Header="Line"    Binding="{Binding Line}"   Width="60"  />
+                                    <DataGridTextColumn Header="Kind"    Binding="{Binding Kind}"   Width="110" />
+                                    <DataGridTextColumn Header="Line"    Binding="{Binding Line}"   Width="62"  />
                                 </DataGrid.Columns>
                             </DataGrid>
                         </DockPanel>
@@ -155,18 +254,31 @@
         </TabItem>
     </TabControl>
 
-        <!-- File-actions button, overlaid on the tab-strip row (no extra height, #7). -->
-        <Button HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,2,6,0"
-                Padding="6,2" Background="Transparent" BorderThickness="0" FontSize="14"
-                Content="&#x22EF;" ToolTip.Tip="File actions">
-            <Button.Flyout>
-                <MenuFlyout>
-                    <MenuItem Header="Copy File Name" Command="{Binding CopyFileNameCommand}" />
-                    <MenuItem Header="Copy Relative Path" Command="{Binding CopyRelativePathCommand}" />
-                    <MenuItem Header="Copy Full Path" Command="{Binding CopyFullPathCommand}" />
-                </MenuFlyout>
-            </Button.Flyout>
-        </Button>
+        <!-- File-actions, overlaid on the tab-strip row (no extra height, #7). -->
+        <StackPanel HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,1,6,0"
+                    Orientation="Horizontal" Spacing="2">
+            <!-- Edit-with-Mapiah: only for .th2 sketches. Launches the external Mapiah editor;
+                 saved changes reload back into this tab automatically. -->
+            <Button Padding="6,2" FontSize="12" Click="OnEditWithMapiah"
+                    IsVisible="{Binding IsTh2File}"
+                    ToolTip.Tip="Open this sketch in the Mapiah editor (changes reload automatically)">
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                    <PathIcon Data="{DynamicResource Icon.NodeGraph}" Width="13" Height="13" />
+                    <TextBlock Text="Edit with Mapiah" VerticalAlignment="Center" />
+                </StackPanel>
+            </Button>
+
+            <Button Padding="6,2" Background="Transparent" BorderThickness="0" FontSize="14"
+                    Content="&#x22EF;" ToolTip.Tip="File actions">
+                <Button.Flyout>
+                    <MenuFlyout>
+                        <MenuItem Header="Copy File Name" Command="{Binding CopyFileNameCommand}" />
+                        <MenuItem Header="Copy Relative Path" Command="{Binding CopyRelativePathCommand}" />
+                        <MenuItem Header="Copy Full Path" Command="{Binding CopyFullPathCommand}" />
+                    </MenuFlyout>
+                </Button.Flyout>
+            </Button>
+        </StackPanel>
     </Grid>
     </DockPanel>
 </UserControl>

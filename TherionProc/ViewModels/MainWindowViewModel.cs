@@ -171,11 +171,12 @@ public partial class MainWindowViewModel : ViewModelBase
         Build.CompileCompleted += (_, diags) =>
         {
             var combined = System.Collections.Immutable.ImmutableArray.CreateBuilder<Therion.Core.Diagnostic>();
-            combined.AddRange(_documents.CurrentDiagnostics);
+            combined.AddRange(DiagnosticsSource());
             combined.AddRange(diags);
             Diagnostics.Load(combined.ToImmutable());
         };
         Diagnostics.NavigateRequested += (_, row) => NavigateTo(row.Span);
+        Diagnostics.ScopeChanged += (_, _) => RefreshDiagnostics();
         Build.NavigateRequested += (_, span) => NavigateTo(span);
 
         Refresh();
@@ -426,9 +427,36 @@ public partial class MainWindowViewModel : ViewModelBase
         else
             ObjectBrowser.Load(SemanticModel.Empty);
 
-        Diagnostics.Load(_documents.CurrentDiagnostics);
+        RefreshDiagnostics();
         XviReferences.Refresh();
         WorkspaceExplorer.Refresh();
+    }
+
+    /// <summary>Returns the diagnostics source based on the current scope toggle.</summary>
+    private System.Collections.Immutable.ImmutableArray<Therion.Core.Diagnostic> DiagnosticsSource()
+    {
+        if (Diagnostics.ShowProjectScope && _documents.Workspace is { } ws && !ws.Diagnostics.IsDefaultOrEmpty)
+        {
+            // Merge workspace-level diagnostics with current-file parser/semantic ones
+            // so the user sees both graph-level warnings and local parse errors.
+            var merged = System.Collections.Immutable.ImmutableArray.CreateBuilder<Therion.Core.Diagnostic>();
+            merged.AddRange(ws.Diagnostics);
+            // Also include per-file semantic diagnostics from every loaded file.
+            foreach (var model in ws.PerFile.Values)
+                merged.AddRange(model.Diagnostics);
+            return merged.ToImmutable();
+        }
+        return _documents.CurrentDiagnostics;
+    }
+
+    private void RefreshDiagnostics()
+    {
+        if (!Avalonia.Threading.Dispatcher.UIThread.CheckAccess())
+        {
+            Avalonia.Threading.Dispatcher.UIThread.Post(RefreshDiagnostics);
+            return;
+        }
+        Diagnostics.Load(DiagnosticsSource());
     }
 
     // ----- status bar (#10) --------------------------------------------------
