@@ -292,6 +292,15 @@
                 </StackPanel>
             </Button>
 
+            <!-- Open-files dropdown (#15): jump to any open document. -->
+            <Button Padding="6,2" Background="Transparent" BorderThickness="0" FontSize="12"
+                    Content="&#x25BE;" Click="OnShowOpenFiles"
+                    ToolTip.Tip="Switch to an open file">
+                <Button.Flyout>
+                    <MenuFlyout x:Name="OpenFilesFlyout" />
+                </Button.Flyout>
+            </Button>
+
             <!-- Reveal this file in the Workspace tree (#1): switches to file view and selects it. -->
             <Button Padding="6,2" Background="Transparent" BorderThickness="0" FontSize="13"
                     Content="&#x1F50D;" Click="OnSelectInWorkspace"
