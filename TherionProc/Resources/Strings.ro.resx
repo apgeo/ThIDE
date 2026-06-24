@@ -10,7 +10,35 @@
   <data name="Menu_File_OpenThconfig" xml:space="preserve"><value>Deschide _thconfig...</value></data>
   <data name="Menu_File_OpenFolder" xml:space="preserve"><value>Deschide d_osar...</value></data>
   <data name="Menu_File_Exit" xml:space="preserve"><value>_Ie&#x219;ire</value></data>
+  <data name="Menu_File_Recent" xml:space="preserve"><value>Fi&#x219;iere _recente</value></data>
   <data name="Menu_Settings" xml:space="preserve"><value>_Set&#x103;ri</value></data>
+  <data name="Menu_View_ObjectBrowser" xml:space="preserve"><value>Navigator obiecte</value></data>
+  <data name="Menu_View_Workspace" xml:space="preserve"><value>Spa&#x21B;iu de lucru</value></data>
+  <data name="Menu_View_Diagnostics" xml:space="preserve"><value>Diagnostice</value></data>
+  <data name="Menu_View_RelationalMap" xml:space="preserve"><value>Hart&#x103; rela&#x21B;ional&#x103;…</value></data>
+  <data name="Menu_View_StrictParser" xml:space="preserve"><value>Mod parser strict</value></data>
+  <data name="Menu_Edit" xml:space="preserve"><value>_Editare</value></data>
+  <data name="Menu_Edit_Cut" xml:space="preserve"><value>Decupeaz&#x103;</value></data>
+  <data name="Menu_Edit_Copy" xml:space="preserve"><value>Copiaz&#x103;</value></data>
+  <data name="Menu_Edit_Paste" xml:space="preserve"><value>Lipe&#x219;te</value></data>
+  <data name="Menu_Edit_Delete" xml:space="preserve"><value>&#x218;terge</value></data>
+  <data name="Menu_Edit_SelectAll" xml:space="preserve"><value>Selecteaz&#x103; tot</value></data>
+  <data name="Menu_Edit_Upper" xml:space="preserve"><value>MAJUSCULE</value></data>
+  <data name="Menu_Edit_Lower" xml:space="preserve"><value>minuscule</value></data>
+  <data name="Menu_Edit_ToggleComment" xml:space="preserve"><value>Comutare comentariu</value></data>
+  <data name="Menu_Edit_FoldAll" xml:space="preserve"><value>Plieaz&#x103; tot</value></data>
+  <data name="Menu_Edit_UnfoldAll" xml:space="preserve"><value>Deplieaz&#x103; tot</value></data>
+  <data name="Menu_Edit_AddBookmark" xml:space="preserve"><value>Adaug&#x103; semn de carte…</value></data>
+  <data name="Menu_Search" xml:space="preserve"><value>_C&#x103;utare</value></data>
+  <data name="Menu_Search_Find" xml:space="preserve"><value>_Caut&#x103;</value></data>
+  <data name="Menu_Search_Replace" xml:space="preserve"><value>În_locuie&#x219;te</value></data>
+  <data name="Menu_Search_FindInFiles" xml:space="preserve"><value>Caut&#x103; în fi&#x219;iere…</value></data>
+  <data name="Menu_Search_ReplaceInFiles" xml:space="preserve"><value>Înlocuie&#x219;te în fi&#x219;iere…</value></data>
+  <data name="Menu_Search_GoTo" xml:space="preserve"><value>_Salt la linie…</value></data>
+  <data name="Menu_Search_Bookmarks" xml:space="preserve"><value>_Semne de carte…</value></data>
+  <data name="Menu_Build_OpenLoch" xml:space="preserve"><value>Deschide în _Loch</value></data>
+  <data name="Menu_Build_OpenAven" xml:space="preserve"><value>Deschide în _Aven</value></data>
+  <data name="Menu_Build_OpenOutputFolder" xml:space="preserve"><value>Deschide ultimul d_osar de ie&#x219;ire</value></data>
   <data name="Menu_View" xml:space="preserve"><value>_Vizualizare</value></data>
   <data name="Menu_View_Language" xml:space="preserve"><value>_Limb&#x103;</value></data>
   <data name="Menu_View_Language_English" xml:space="preserve"><value>English</value></data>

@@ -75,7 +75,7 @@
                 <MenuItem Header="{Binding MenuFileOpenFolder}" Command="{Binding OpenFolderCommand}" />
                 <Separator />
                 <!-- Recent files, grouped per type (8 each), rebuilt in code-behind (#8). -->
-                <MenuItem x:Name="RecentMenu" Header="Recent _Files" />
+                <MenuItem x:Name="RecentMenu" Header="{Binding MenuFileRecent}" />
                 <Separator />
                 <MenuItem Header="{Binding MenuFileExit}" Command="{Binding ExitCommand}" />
             </MenuItem>
@@ -85,57 +85,57 @@
                     <MenuItem Header="{Binding MenuViewLanguageRo}" Command="{Binding SwitchToRomanianCommand}" />
                 </MenuItem>
                 <Separator />
-                <MenuItem Header="Object Browser" Command="{Binding ToggleObjectBrowserCommand}" />
-                <MenuItem Header="Workspace" Command="{Binding ToggleWorkspaceExplorerCommand}" />
-                <MenuItem Header="Diagnostics" Command="{Binding ToggleDiagnosticsCommand}" />
+                <MenuItem Header="{Binding MenuViewObjectBrowser}" Command="{Binding ToggleObjectBrowserCommand}" />
+                <MenuItem Header="{Binding MenuViewWorkspace}" Command="{Binding ToggleWorkspaceExplorerCommand}" />
+                <MenuItem Header="{Binding MenuViewDiagnostics}" Command="{Binding ToggleDiagnosticsCommand}" />
                 <Separator />
-                <MenuItem Header="Relational Map…" Click="OnRelationalMapClick" />
+                <MenuItem Header="{Binding MenuViewRelationalMap}" Click="OnRelationalMapClick" />
                 <Separator />
-                <MenuItem Header="Strict parser mode"
+                <MenuItem Header="{Binding MenuViewStrictParser}"
                           ToggleType="CheckBox"
                           IsChecked="{Binding StrictParserMode, Mode=TwoWay}" />
             </MenuItem>
             <!-- Edit menu mirrors the editor's right-click menu; enabled when a file is open (#11). -->
-            <MenuItem Header="_Edit" IsEnabled="{Binding HasStatusFile}">
-                <MenuItem Header="Cut"        InputGesture="Ctrl+X" Click="OnEditCut" />
-                <MenuItem Header="Copy"       InputGesture="Ctrl+C" Click="OnEditCopy" />
-                <MenuItem Header="Paste"      InputGesture="Ctrl+V" Click="OnEditPaste" />
-                <MenuItem Header="Delete"     Click="OnEditDelete" />
+            <MenuItem Header="{Binding MenuEdit}" IsEnabled="{Binding HasStatusFile}">
+                <MenuItem Header="{Binding MenuEditCut}"        InputGesture="Ctrl+X" Click="OnEditCut" />
+                <MenuItem Header="{Binding MenuEditCopy}"       InputGesture="Ctrl+C" Click="OnEditCopy" />
+                <MenuItem Header="{Binding MenuEditPaste}"      InputGesture="Ctrl+V" Click="OnEditPaste" />
+                <MenuItem Header="{Binding MenuEditDelete}"     Click="OnEditDelete" />
                 <Separator />
-                <MenuItem Header="Select All" InputGesture="Ctrl+A" Click="OnEditSelectAll" />
+                <MenuItem Header="{Binding MenuEditSelectAll}" InputGesture="Ctrl+A" Click="OnEditSelectAll" />
                 <Separator />
-                <MenuItem Header="UPPERCASE"  Click="OnEditUpper" />
-                <MenuItem Header="lowercase"  Click="OnEditLower" />
+                <MenuItem Header="{Binding MenuEditUpper}"  Click="OnEditUpper" />
+                <MenuItem Header="{Binding MenuEditLower}"  Click="OnEditLower" />
                 <Separator />
-                <MenuItem Header="Toggle Comment  Ctrl+/" Click="OnEditToggleComment" />
+                <MenuItem Header="{Binding MenuEditToggleComment}" InputGesture="Ctrl+OemQuestion" Click="OnEditToggleComment" />
                 <Separator />
-                <MenuItem Header="Fold All"   Click="OnEditFoldAll" />
-                <MenuItem Header="Unfold All" Click="OnEditUnfoldAll" />
+                <MenuItem Header="{Binding MenuEditFoldAll}"   Click="OnEditFoldAll" />
+                <MenuItem Header="{Binding MenuEditUnfoldAll}" Click="OnEditUnfoldAll" />
                 <Separator />
-                <MenuItem Header="Add Bookmark…" Click="OnEditAddBookmark" />
+                <MenuItem Header="{Binding MenuEditAddBookmark}" Click="OnEditAddBookmark" />
             </MenuItem>
 
             <!-- Search menu (#12). Find/Replace act on the focused editor; the rest are global. -->
-            <MenuItem Header="_Search">
-                <MenuItem Header="_Find"            InputGesture="Ctrl+F" Click="OnSearchFind" IsEnabled="{Binding HasStatusFile}" />
-                <MenuItem Header="_Replace"         InputGesture="Ctrl+H" Click="OnSearchReplace" IsEnabled="{Binding HasStatusFile}" />
+            <MenuItem Header="{Binding MenuSearch}">
+                <MenuItem Header="{Binding MenuSearchFind}"            InputGesture="Ctrl+F" Click="OnSearchFind" IsEnabled="{Binding HasStatusFile}" />
+                <MenuItem Header="{Binding MenuSearchReplace}"         InputGesture="Ctrl+H" Click="OnSearchReplace" IsEnabled="{Binding HasStatusFile}" />
                 <Separator />
-                <MenuItem Header="Find in Files…"    InputGesture="Ctrl+Shift+F" Click="OnSearchFindInFiles" />
-                <MenuItem Header="Replace in Files…" InputGesture="Ctrl+Shift+H" Click="OnSearchReplaceInFiles" />
+                <MenuItem Header="{Binding MenuSearchFindInFiles}"    InputGesture="Ctrl+Shift+F" Click="OnSearchFindInFiles" />
+                <MenuItem Header="{Binding MenuSearchReplaceInFiles}" InputGesture="Ctrl+Shift+H" Click="OnSearchReplaceInFiles" />
                 <Separator />
-                <MenuItem Header="_Go To Line…"     InputGesture="Ctrl+G" Click="OnSearchGoTo" IsEnabled="{Binding HasStatusFile}" />
+                <MenuItem Header="{Binding MenuSearchGoTo}"     InputGesture="Ctrl+G" Click="OnSearchGoTo" IsEnabled="{Binding HasStatusFile}" />
                 <Separator />
-                <MenuItem Header="_Bookmarks..."    Click="OnBookmarksClick" />
+                <MenuItem Header="{Binding MenuSearchBookmarks}"    Click="OnBookmarksClick" />
             </MenuItem>
             <MenuItem Header="{Binding MenuBuild}">
-                <MenuItem Header="_Compile    F5"        Command="{Binding Build.BuildCommand}" />
-                <MenuItem Header="_Recompile  Ctrl+F5"   Command="{Binding Build.RebuildCommand}" />
-                <MenuItem Header="_Cancel     Shift+F5"  Command="{Binding Build.CancelCommand}" />
+                <MenuItem Header="{Binding MenuBuildBuild}"     InputGesture="F5"       Command="{Binding Build.BuildCommand}" />
+                <MenuItem Header="{Binding MenuBuildRebuild}"   InputGesture="Ctrl+F5"  Command="{Binding Build.RebuildCommand}" />
+                <MenuItem Header="{Binding MenuBuildCancel}"    InputGesture="Shift+F5" Command="{Binding Build.CancelCommand}" />
                 <Separator />
-                <MenuItem Header="Open in _Loch   F9"    Command="{Binding Build.OpenInLochCommand}" />
-                <MenuItem Header="Open in _Aven   F10"   Command="{Binding Build.OpenInAvenCommand}" />
+                <MenuItem Header="{Binding MenuBuildOpenLoch}"  InputGesture="F9"  Command="{Binding Build.OpenInLochCommand}" />
+                <MenuItem Header="{Binding MenuBuildOpenAven}"  InputGesture="F10" Command="{Binding Build.OpenInAvenCommand}" />
                 <Separator />
-                <MenuItem Header="Open last _output folder" Command="{Binding Build.OpenLastOutputFolderCommand}" />
+                <MenuItem Header="{Binding MenuBuildOpenOutputFolder}" Command="{Binding Build.OpenLastOutputFolderCommand}" />
             </MenuItem>
             <!-- Settings: a top-level entry (renamed from File ▸ Preferences) that opens the
                  Preferences window directly (#7). -->

@@ -103,7 +103,56 @@ public partial class MainWindowViewModel : ViewModelBase
     public string MenuViewLanguage   => L("Menu_View_Language",          "_Language");
     public string MenuViewLanguageEn => L("Menu_View_Language_English",  "English");
     public string MenuViewLanguageRo => L("Menu_View_Language_Romanian", "Română");
-    public string MenuBuild          => L("Menu_Build",                  "_Build");
+    public string MenuBuild          => L("Menu_Build",                  "_Compile");
+    public string MenuBuildBuild     => L("Menu_Build_Build",            "_Compile");
+    public string MenuBuildRebuild   => L("Menu_Build_Rebuild",          "_Recompile");
+    public string MenuBuildCancel    => L("Menu_Build_Cancel",           "_Cancel");
+    public string MenuFileRecent     => L("Menu_File_Recent",           "Recent _Files");
+    // View menu
+    public string MenuViewObjectBrowser => L("Menu_View_ObjectBrowser", "Object Browser");
+    public string MenuViewWorkspace     => L("Menu_View_Workspace",     "Workspace");
+    public string MenuViewDiagnostics   => L("Menu_View_Diagnostics",   "Diagnostics");
+    public string MenuViewRelationalMap => L("Menu_View_RelationalMap", "Relational Map…");
+    public string MenuViewStrictParser  => L("Menu_View_StrictParser",  "Strict parser mode");
+    // Edit menu
+    public string MenuEdit           => L("Menu_Edit",                  "_Edit");
+    public string MenuEditCut        => L("Menu_Edit_Cut",              "Cut");
+    public string MenuEditCopy       => L("Menu_Edit_Copy",             "Copy");
+    public string MenuEditPaste      => L("Menu_Edit_Paste",            "Paste");
+    public string MenuEditDelete     => L("Menu_Edit_Delete",           "Delete");
+    public string MenuEditSelectAll  => L("Menu_Edit_SelectAll",        "Select All");
+    public string MenuEditUpper      => L("Menu_Edit_Upper",            "UPPERCASE");
+    public string MenuEditLower      => L("Menu_Edit_Lower",            "lowercase");
+    public string MenuEditToggleComment => L("Menu_Edit_ToggleComment", "Toggle Comment");
+    public string MenuEditFoldAll    => L("Menu_Edit_FoldAll",          "Fold All");
+    public string MenuEditUnfoldAll  => L("Menu_Edit_UnfoldAll",        "Unfold All");
+    public string MenuEditAddBookmark => L("Menu_Edit_AddBookmark",     "Add Bookmark…");
+    // Search menu
+    public string MenuSearch         => L("Menu_Search",                "_Search");
+    public string MenuSearchFind     => L("Menu_Search_Find",           "_Find");
+    public string MenuSearchReplace  => L("Menu_Search_Replace",        "_Replace");
+    public string MenuSearchFindInFiles    => L("Menu_Search_FindInFiles",    "Find in Files…");
+    public string MenuSearchReplaceInFiles => L("Menu_Search_ReplaceInFiles", "Replace in Files…");
+    public string MenuSearchGoTo     => L("Menu_Search_GoTo",           "_Go To Line…");
+    public string MenuSearchBookmarks => L("Menu_Search_Bookmarks",     "_Bookmarks…");
+    // Build menu extras
+    public string MenuBuildOpenLoch  => L("Menu_Build_OpenLoch",        "Open in _Loch");
+    public string MenuBuildOpenAven  => L("Menu_Build_OpenAven",        "Open in _Aven");
+    public string MenuBuildOpenOutputFolder => L("Menu_Build_OpenOutputFolder", "Open last _output folder");
+
+    private static readonly string[] LocalizedMenuProps =
+    {
+        nameof(MenuFileRecent), nameof(MenuViewObjectBrowser), nameof(MenuViewWorkspace),
+        nameof(MenuViewDiagnostics), nameof(MenuViewRelationalMap), nameof(MenuViewStrictParser),
+        nameof(MenuEdit), nameof(MenuEditCut), nameof(MenuEditCopy), nameof(MenuEditPaste),
+        nameof(MenuEditDelete), nameof(MenuEditSelectAll), nameof(MenuEditUpper), nameof(MenuEditLower),
+        nameof(MenuEditToggleComment), nameof(MenuEditFoldAll), nameof(MenuEditUnfoldAll),
+        nameof(MenuEditAddBookmark), nameof(MenuSearch), nameof(MenuSearchFind), nameof(MenuSearchReplace),
+        nameof(MenuSearchFindInFiles), nameof(MenuSearchReplaceInFiles), nameof(MenuSearchGoTo),
+        nameof(MenuSearchBookmarks), nameof(MenuBuildOpenLoch), nameof(MenuBuildOpenAven),
+        nameof(MenuBuildOpenOutputFolder), nameof(MenuBuildBuild), nameof(MenuBuildRebuild),
+        nameof(MenuBuildCancel),
+    };
 
     public MainWindowViewModel(
         IStringLocalizer<Strings> localizer,
@@ -608,6 +657,7 @@ public partial class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(MenuViewLanguageEn));
         OnPropertyChanged(nameof(MenuViewLanguageRo));
         OnPropertyChanged(nameof(MenuBuild));
+        foreach (var p in LocalizedMenuProps) OnPropertyChanged(p);
     }
 
     private string L(string key, string fallback)

@@ -11,7 +11,35 @@
   <data name="Menu_File_OpenFolder" xml:space="preserve"><value>Open F_older...</value></data>
   <data name="Menu_Settings" xml:space="preserve"><value>_Settings</value></data>
   <data name="Menu_File_Exit" xml:space="preserve"><value>E_xit</value></data>
+  <data name="Menu_File_Recent" xml:space="preserve"><value>Recent _Files</value></data>
   <data name="Menu_View" xml:space="preserve"><value>_View</value></data>
+  <data name="Menu_View_ObjectBrowser" xml:space="preserve"><value>Object Browser</value></data>
+  <data name="Menu_View_Workspace" xml:space="preserve"><value>Workspace</value></data>
+  <data name="Menu_View_Diagnostics" xml:space="preserve"><value>Diagnostics</value></data>
+  <data name="Menu_View_RelationalMap" xml:space="preserve"><value>Relational Map…</value></data>
+  <data name="Menu_View_StrictParser" xml:space="preserve"><value>Strict parser mode</value></data>
+  <data name="Menu_Edit" xml:space="preserve"><value>_Edit</value></data>
+  <data name="Menu_Edit_Cut" xml:space="preserve"><value>Cut</value></data>
+  <data name="Menu_Edit_Copy" xml:space="preserve"><value>Copy</value></data>
+  <data name="Menu_Edit_Paste" xml:space="preserve"><value>Paste</value></data>
+  <data name="Menu_Edit_Delete" xml:space="preserve"><value>Delete</value></data>
+  <data name="Menu_Edit_SelectAll" xml:space="preserve"><value>Select All</value></data>
+  <data name="Menu_Edit_Upper" xml:space="preserve"><value>UPPERCASE</value></data>
+  <data name="Menu_Edit_Lower" xml:space="preserve"><value>lowercase</value></data>
+  <data name="Menu_Edit_ToggleComment" xml:space="preserve"><value>Toggle Comment</value></data>
+  <data name="Menu_Edit_FoldAll" xml:space="preserve"><value>Fold All</value></data>
+  <data name="Menu_Edit_UnfoldAll" xml:space="preserve"><value>Unfold All</value></data>
+  <data name="Menu_Edit_AddBookmark" xml:space="preserve"><value>Add Bookmark…</value></data>
+  <data name="Menu_Search" xml:space="preserve"><value>_Search</value></data>
+  <data name="Menu_Search_Find" xml:space="preserve"><value>_Find</value></data>
+  <data name="Menu_Search_Replace" xml:space="preserve"><value>_Replace</value></data>
+  <data name="Menu_Search_FindInFiles" xml:space="preserve"><value>Find in Files…</value></data>
+  <data name="Menu_Search_ReplaceInFiles" xml:space="preserve"><value>Replace in Files…</value></data>
+  <data name="Menu_Search_GoTo" xml:space="preserve"><value>_Go To Line…</value></data>
+  <data name="Menu_Search_Bookmarks" xml:space="preserve"><value>_Bookmarks…</value></data>
+  <data name="Menu_Build_OpenLoch" xml:space="preserve"><value>Open in _Loch</value></data>
+  <data name="Menu_Build_OpenAven" xml:space="preserve"><value>Open in _Aven</value></data>
+  <data name="Menu_Build_OpenOutputFolder" xml:space="preserve"><value>Open last _output folder</value></data>
   <data name="Menu_View_Language" xml:space="preserve"><value>_Language</value></data>
   <data name="Menu_View_Language_English" xml:space="preserve"><value>English</value></data>
   <data name="Menu_View_Language_Romanian" xml:space="preserve"><value>Rom&#226;n&#259;</value></data>
