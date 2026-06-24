@@ -6,10 +6,14 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia.Media;
+using Avalonia.Media.Immutable;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Therion.Build;
@@ -19,7 +23,54 @@ using TherionProc.Services;
 
 namespace TherionProc.ViewModels;
 
-public sealed record CompilerOutputRow(string Text, string Severity, Therion.Core.SourceSpan? Span);
+public enum OutputRowKind { Command, Normal, Summary }
+
+/// <summary>One compiler-output row: raw text + classification + a timestamp display.</summary>
+public sealed class CompilerOutputRow
+{
+    private static readonly IBrush ErrorBrush   = new ImmutableSolidColorBrush(Color.FromRgb(0xC6, 0x28, 0x28));
+    private static readonly IBrush WarnBrush     = new ImmutableSolidColorBrush(Color.FromRgb(0x8D, 0x6E, 0x00));
+    private static readonly IBrush CommandBrush  = new ImmutableSolidColorBrush(Color.FromRgb(0x55, 0x55, 0x55));
+    private static readonly IBrush SuccessBrush  = new ImmutableSolidColorBrush(Color.FromRgb(0x2E, 0x7D, 0x32));
+    private static readonly IBrush NormalBrush   = new ImmutableSolidColorBrush(Color.FromRgb(0x20, 0x20, 0x20));
+    private static readonly IBrush TimeBrush     = new ImmutableSolidColorBrush(Color.FromRgb(0x90, 0x90, 0x90));
+
+    public string Text { get; }
+    public string Severity { get; }
+    public SourceSpan? Span { get; }
+    public OutputRowKind Kind { get; }
+    public string TimeDisplay { get; }
+
+    public bool IsError { get; }
+    public bool IsWarning { get; }
+    public bool IsSuccess { get; }
+    public bool ShowWarningIcon => IsWarning;
+    public IBrush TimeBrushValue => TimeBrush;
+
+    /// <summary>Foreground for the text column: red for errors, amber for warnings, etc.</summary>
+    public IBrush TextBrush { get; }
+    public Avalonia.Media.FontWeight Weight =>
+        Kind is OutputRowKind.Command or OutputRowKind.Summary ? FontWeight.SemiBold : FontWeight.Normal;
+
+    public CompilerOutputRow(string text, string severity, SourceSpan? span,
+        OutputRowKind kind, string timeDisplay, bool success = false)
+    {
+        Text = text;
+        Severity = severity;
+        Span = span;
+        Kind = kind;
+        TimeDisplay = timeDisplay;
+        IsError = string.Equals(severity, "Error", StringComparison.OrdinalIgnoreCase);
+        IsWarning = string.Equals(severity, "Warning", StringComparison.OrdinalIgnoreCase);
+        IsSuccess = success;
+        TextBrush = kind switch
+        {
+            OutputRowKind.Command => CommandBrush,
+            OutputRowKind.Summary => success ? SuccessBrush : ErrorBrush,
+            _ => IsError ? ErrorBrush : IsWarning ? WarnBrush : NormalBrush,
+        };
+    }
+}
 public sealed record ArtifactRow(string Path, string Kind, long SizeBytes, DateTimeOffset LastWriteUtc)
 {
     public string SizeDisplay => SizeBytes < 1024 ? $"{SizeBytes} B" : $"{SizeBytes / 1024} KB";
@@ -33,8 +84,23 @@ public partial class BuildViewModel : ViewModelBase
     private readonly IExternalToolLocator _locator;
     private readonly IDocumentService _documents;
     private readonly IOutputArtifactCache _artifactCache;
+    private readonly IWorkspaceSession? _session;
+    private readonly IAppSettingsService? _settings;
 
     private CancellationTokenSource? _cts;
+
+    /// <summary>Full raw stdout/stderr text, exactly as it came from the compiler (#raw panel).</summary>
+    [ObservableProperty] private string _rawOutput = string.Empty;
+    private readonly StringBuilder _rawBuffer = new();
+
+    /// <summary>Raised for each output row as it is appended (drives the raw colored view).</summary>
+    public event EventHandler<CompilerOutputRow>? OutputRowAdded;
+    /// <summary>Raised when the output is cleared (new build / Clear command).</summary>
+    public event EventHandler? OutputCleared;
+
+    // Timestamp bookkeeping: the first/command row shows the wall-clock time; each subsequent
+    // row shows the delta since the previous one; the final summary row shows wall-clock again.
+    private DateTimeOffset _prevRowTime;
 
     [ObservableProperty] private bool _isBuilding;
     [ObservableProperty] private string _status = string.Empty;
@@ -43,6 +109,7 @@ public partial class BuildViewModel : ViewModelBase
     [ObservableProperty] private bool _hasLoxArtifact;
     [ObservableProperty] private bool _hasAvenArtifact;
     [ObservableProperty] private CompilerOutputRow? _selectedOutput;
+    [ObservableProperty] private ArtifactRow? _selectedArtifact;
 
     // ---- build result indicator (#7) ----------------------------------------
     /// <summary>True once any build has completed in this session.</summary>
@@ -72,7 +139,9 @@ public partial class BuildViewModel : ViewModelBase
         IShellOpener shell,
         IExternalToolLocator locator,
         IDocumentService documents,
-        IOutputArtifactCache artifactCache)
+        IOutputArtifactCache artifactCache,
+        IWorkspaceSession? session = null,
+        IAppSettingsService? settings = null)
     {
         _compiler = compiler;
         _gate = gate;
@@ -80,6 +149,8 @@ public partial class BuildViewModel : ViewModelBase
         _locator = locator;
         _documents = documents;
         _artifactCache = artifactCache;
+        _session = session;
+        _settings = settings;
         _documents.DocumentChanged += (_, _) => RestoreLastArtifacts();
     }
 
@@ -90,47 +161,77 @@ public partial class BuildViewModel : ViewModelBase
 
     public event EventHandler<ImmutableArray<Diagnostic>>? CompileCompleted;
 
-    public bool CanBuild => !IsBuilding && _documents.CurrentPath is not null;
+    public bool CanBuild => !IsBuilding && ResolveBuildEntry() is not null;
+
+    /// <summary>
+    /// The build target: the active editor file when it is itself a thconfig, otherwise the
+    /// workspace's active thconfig; falls back to the active file when no thconfig is known.
+    /// </summary>
+    private string? ResolveBuildEntry()
+    {
+        var active = _documents.CurrentPath;
+        if (active is not null && IsThconfig(active)) return active;
+        return _session?.ActiveThconfig?.FullPath ?? active;
+    }
+
+    private static bool IsThconfig(string path)
+    {
+        var ext = Path.GetExtension(path);
+        return ext.Length == 0
+            ? string.Equals(Path.GetFileName(path), "thconfig", StringComparison.OrdinalIgnoreCase)
+            : ext.Equals(".thconfig", StringComparison.OrdinalIgnoreCase)
+              || ext.Equals(".thc", StringComparison.OrdinalIgnoreCase);
+    }
 
     [RelayCommand]
     private async Task BuildAsync()
     {
-        var entry = _documents.CurrentPath;
+        var entry = ResolveBuildEntry();
         if (entry is null) { Status = "No project loaded."; return; }
 
         using var lease = _gate.TryAcquire();
         if (lease is null) { Status = "A build is already in progress."; return; }
 
         IsBuilding = true;
-        _outputBuffer.Clear();
-        Output = Array.Empty<CompilerOutputRow>();
+        HasBuildResult = false;          // clear the previous success/error status-bar icon
+        ClearOutputState();
         _cts = new CancellationTokenSource();
 
-        var progress = new Progress<CompilerOutputLine>(line =>
-        {
-            _outputBuffer.Add(new CompilerOutputRow(line.Text, line.Severity.ToString(), line.Span));
-            // Snapshot for binding (immutable swap, �18).
-            Output = _outputBuffer.ToArray();
-        });
+        // First row: the full command with its arguments.
+        var tool = await _locator.FindAsync(ExternalToolLocator.Therion, _cts.Token).ConfigureAwait(true);
+        var command = tool is null ? $"therion \"{entry}\"" : $"\"{tool.Path}\" \"{entry}\"";
+        AddRow(new CompilerOutputRow(command, "Command", null, OutputRowKind.Command,
+            DateTimeOffset.Now.ToString("HH:mm:ss")));
+        _prevRowTime = DateTimeOffset.Now; // subsequent rows show the delta since the command line
+
+        var sw = Stopwatch.StartNew();
+        var progress = new Progress<CompilerOutputLine>(line => AddRow(MakeRow(line)));
 
         try
         {
             var result = await _compiler.CompileAsync(entry, progress, _cts.Token).ConfigureAwait(true);
+            sw.Stop();
             UpdateArtifacts(result.Artifacts);
             _artifactCache.Save(entry, "unknown", result.Artifacts);
             var warnCount = result.Diagnostics.Count(d => d.Severity == DiagnosticSeverity.Warning);
+            bool ok = result.ExitCode == 0;
             HasBuildResult = true;
-            LastBuildSucceeded = result.ExitCode == 0;
+            LastBuildSucceeded = ok;
             LastBuildHasWarnings = warnCount > 0;
             LastBuildWarningCount = warnCount;
-            Status = result.ExitCode == 0
+            AddRow(SummaryRow(ok, warnCount, sw.Elapsed, result.Artifacts.Length));
+            Status = ok
                 ? $"Build succeeded ({result.Artifacts.Length} artifact(s))."
                 : $"Build failed (exit {result.ExitCode}).";
             CompileCompleted?.Invoke(this, result.Diagnostics);
+            if (ok) AutoOpenOutputs(result.Artifacts);
         }
         catch (OperationCanceledException)
         {
+            sw.Stop();
             Status = "Build cancelled.";
+            AddRow(new CompilerOutputRow("Build cancelled.", "Error", null, OutputRowKind.Summary,
+                DateTimeOffset.Now.ToString("HH:mm:ss")));
         }
         catch (Exception ex)
         {
@@ -144,6 +245,69 @@ public partial class BuildViewModel : ViewModelBase
         }
     }
 
+    private CompilerOutputRow MakeRow(CompilerOutputLine line)
+    {
+        var now = DateTimeOffset.Now;
+        var delta = now - _prevRowTime;
+        _prevRowTime = now;
+        return new CompilerOutputRow(line.Text, line.Severity.ToString(), line.Span,
+            OutputRowKind.Normal, FormatDelta(delta));
+    }
+
+    private static CompilerOutputRow SummaryRow(bool ok, int warnCount, TimeSpan elapsed, int artifactCount)
+    {
+        var sb = new StringBuilder();
+        sb.Append(ok ? "Build finished successfully" : "Build finished with errors");
+        if (warnCount > 0) sb.Append(ok ? $" (with {warnCount} warning(s))" : $" and {warnCount} warning(s)");
+        sb.Append($" in {elapsed.TotalSeconds:0.00} seconds");
+        if (ok && artifactCount > 0) sb.Append($" and generated {artifactCount} output file(s)");
+        sb.Append('.');
+        return new CompilerOutputRow(sb.ToString(), ok ? "Info" : "Error", null, OutputRowKind.Summary,
+            DateTimeOffset.Now.ToString("HH:mm:ss"), success: ok);
+    }
+
+    private static string FormatDelta(TimeSpan d)
+    {
+        var ms = d.TotalMilliseconds;
+        if (ms < 0) ms = 0;
+        return ms < 1000 ? $"+{(int)ms}ms" : $"+{d.TotalSeconds:0.#}s";
+    }
+
+    private void AddRow(CompilerOutputRow row)
+    {
+        _outputBuffer.Add(row);
+        Output = _outputBuffer.ToArray();   // immutable swap for binding
+        _rawBuffer.AppendLine(row.Text);
+        RawOutput = _rawBuffer.ToString();
+        OutputRowAdded?.Invoke(this, row);
+    }
+
+    private void ClearOutputState()
+    {
+        _outputBuffer.Clear();
+        Output = Array.Empty<CompilerOutputRow>();
+        _rawBuffer.Clear();
+        RawOutput = string.Empty;
+        _prevRowTime = DateTimeOffset.Now;
+        OutputCleared?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>Opens the configured output types after a successful build.</summary>
+    private void AutoOpenOutputs(ImmutableArray<OutputArtifact> artifacts)
+    {
+        if (_settings is null) return;
+        var s = _settings.Current;
+        var kinds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (s.OpenLoxAfterBuild) kinds.Add("lox");
+        if (s.Open3dAfterBuild) kinds.Add("3d");
+        if (s.OpenPdfAfterBuild) kinds.Add("pdf");
+        if (kinds.Count == 0) return;
+
+        var matches = artifacts.Where(a => kinds.Contains(a.Kind)).Select(a => a.Path).ToList();
+        foreach (var path in s.OpenAllOutputsAfterBuild ? matches : matches.Take(1))
+            _shell.Open(path);
+    }
+
     [RelayCommand]
     private Task RebuildAsync() => BuildAsync();
 
@@ -151,11 +315,7 @@ public partial class BuildViewModel : ViewModelBase
     private void Cancel() => _cts?.Cancel();
 
     [RelayCommand]
-    private void ClearOutput()
-    {
-        _outputBuffer.Clear();
-        Output = Array.Empty<CompilerOutputRow>();
-    }
+    private void ClearOutput() => ClearOutputState();
 
     /// <summary>Returns all output rows as plain text for clipboard copy.</summary>
     public string OutputAsText() =>

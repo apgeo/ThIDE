@@ -3,24 +3,78 @@
              xmlns:vm="using:TherionProc.ViewModels.Docking"
              x:Class="TherionProc.Views.Docking.CompilerOutputToolView"
              x:DataType="vm:CompilerOutputToolViewModel">
-    <DataGrid x:Name="Grid"
-              ItemsSource="{Binding Build.Output}"
-              SelectedItem="{Binding Build.SelectedOutput, Mode=TwoWay}"
-              IsReadOnly="True" GridLinesVisibility="Horizontal"
-              CanUserResizeColumns="True" AutoGenerateColumns="False"
-              HeadersVisibility="None" DoubleTapped="OnRowDoubleTapped"
-              FontFamily="Consolas,Courier New,monospace" FontSize="11">
-        <DataGrid.ContextMenu>
-            <ContextMenu>
-                <MenuItem Header="Clear Output" Command="{Binding Build.ClearOutputCommand}" />
-                <Separator />
-                <MenuItem Header="Select All" Click="OnSelectAll" />
-                <MenuItem Header="Copy All" Click="OnCopyAll" />
-            </ContextMenu>
-        </DataGrid.ContextMenu>
-        <DataGrid.Columns>
-            <DataGridTextColumn Binding="{Binding Severity}" Width="80" />
-            <DataGridTextColumn Binding="{Binding Text}"     Width="*"  />
-        </DataGrid.Columns>
-    </DataGrid>
+    <TabControl>
+        <!-- Parsed view: per-line classification with time + warning icon + colored text. -->
+        <TabItem Header="Output">
+            <DataGrid x:Name="Grid"
+                      ItemsSource="{Binding Build.Output}"
+                      SelectedItem="{Binding Build.SelectedOutput, Mode=TwoWay}"
+                      x:CompileBindings="False"
+                      IsReadOnly="True" GridLinesVisibility="None"
+                      CanUserResizeColumns="True" AutoGenerateColumns="False"
+                      HeadersVisibility="None" DoubleTapped="OnRowDoubleTapped"
+                      FontFamily="Consolas,Cascadia Mono,Courier New,monospace"
+                      FontSize="11">
+                <DataGrid.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Copy" Click="OnCopyLine" />
+                        <MenuItem Header="Copy All" Click="OnCopyAll" />
+                        <MenuItem Header="Select All" Click="OnSelectAll" />
+                        <Separator />
+                        <MenuItem Header="Clear Output" Command="{Binding Build.ClearOutputCommand}" />
+                    </ContextMenu>
+                </DataGrid.ContextMenu>
+                <DataGrid.Columns>
+                    <!-- Timestamp: wall-clock for first/last, +delta in between. -->
+                    <DataGridTemplateColumn Width="68">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding TimeDisplay}" Foreground="{Binding TimeBrushValue}"
+                                           VerticalAlignment="Center" Margin="4,0" />
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <!-- Warning icon column. -->
+                    <DataGridTemplateColumn Width="20">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <PathIcon Data="{DynamicResource Icon.Warning}" Width="12" Height="12"
+                                          Foreground="#F9A825" VerticalAlignment="Center"
+                                          IsVisible="{Binding ShowWarningIcon}" />
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <!-- Message: red for errors, amber for warnings, bold for command/summary. -->
+                    <DataGridTemplateColumn Width="Auto">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Text}" Foreground="{Binding TextBrush}"
+                                           FontWeight="{Binding Weight}" FontStretch="Condensed"
+                                           VerticalAlignment="Center" Margin="2,0,12,0" />
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+        </TabItem>
+
+        <!-- Raw view: verbatim stdout/stderr, selectable + copyable, warnings/errors colored. -->
+        <TabItem Header="Raw">
+            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                <SelectableTextBlock x:Name="RawText"
+                                     FontFamily="Consolas,Cascadia Mono,Courier New,monospace"
+                                     FontSize="11" Padding="6" TextWrapping="NoWrap">
+                    <SelectableTextBlock.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="Copy" Click="OnRawCopy" />
+                            <MenuItem Header="Copy All" Click="OnRawCopyAll" />
+                            <MenuItem Header="Select All" Click="OnRawSelectAll" />
+                            <Separator />
+                            <MenuItem Header="Clear Output" Command="{Binding Build.ClearOutputCommand}" />
+                        </ContextMenu>
+                    </SelectableTextBlock.ContextMenu>
+                </SelectableTextBlock>
+            </ScrollViewer>
+        </TabItem>
+    </TabControl>
 </UserControl>
