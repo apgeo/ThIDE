@@ -125,6 +125,37 @@
                               IsChecked="{Binding OpenAllOutputsAfterBuild}" />
                 </StackPanel>
 
+                <!-- External Tools (moved here from the dockable Settings panel, #13) -->
+                <DockPanel IsVisible="{Binding IsExternal}">
+                    <TextBlock DockPanel.Dock="Top" Text="External Tools"
+                               FontSize="16" FontWeight="Bold" Margin="0,0,0,8" />
+                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="10" Margin="0,0,0,8">
+                        <Button Content="Refresh" Command="{Binding ExternalTools.RefreshCommand}" />
+                        <TextBlock VerticalAlignment="Center" Foreground="Gray"
+                                   Text="{Binding ExternalTools.Status}" />
+                    </StackPanel>
+                    <DataGrid ItemsSource="{Binding ExternalTools.Tools}"
+                              x:CompileBindings="False" Height="320"
+                              GridLinesVisibility="Horizontal"
+                              CanUserResizeColumns="True" AutoGenerateColumns="False">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Tool"     Binding="{Binding ToolId}"  Width="100" IsReadOnly="True" />
+                            <DataGridTextColumn Header="Detected" Binding="{Binding Path}"    Width="*"   IsReadOnly="True" />
+                            <DataGridTextColumn Header="Version"  Binding="{Binding Version}" Width="110" IsReadOnly="True" />
+                            <DataGridTextColumn Header="Source"   Binding="{Binding Source}"  Width="90"  IsReadOnly="True" />
+                            <DataGridTextColumn Header="Override" Binding="{Binding OverridePath, Mode=TwoWay}" Width="200" />
+                            <DataGridTemplateColumn Header="" Width="70">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="Test" Command="{Binding TestCommand}" Margin="2" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="Result"   Binding="{Binding TestResult}" Width="110" IsReadOnly="True" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+
                 <!-- Keyboard Shortcuts -->
                 <DockPanel IsVisible="{Binding IsKeyboard}">
                     <TextBlock DockPanel.Dock="Top" Text="Keyboard Shortcuts"

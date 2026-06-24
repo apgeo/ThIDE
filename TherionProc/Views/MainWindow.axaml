@@ -85,9 +85,9 @@
                     <MenuItem Header="{Binding MenuViewLanguageRo}" Command="{Binding SwitchToRomanianCommand}" />
                 </MenuItem>
                 <Separator />
+                <MenuItem Header="Object Browser" Command="{Binding ToggleObjectBrowserCommand}" />
                 <MenuItem Header="Workspace" Command="{Binding ToggleWorkspaceExplorerCommand}" />
                 <MenuItem Header="Diagnostics" Command="{Binding ToggleDiagnosticsCommand}" />
-                <MenuItem Header="Settings" Command="{Binding ToggleSettingsCommand}" />
                 <Separator />
                 <MenuItem Header="Relational Map…" Click="OnRelationalMapClick" />
                 <Separator />

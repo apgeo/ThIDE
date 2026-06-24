@@ -141,9 +141,10 @@ public partial class FileDocumentView : UserControl
         settings = sp.GetService<IAppSettingsService>();
         keyboard = sp.GetService<ViewModels.KeyboardShortcutsViewModel>();
         var language = sp.GetService<ILanguageService>();
+        var externalTools = sp.GetService<ViewModels.SettingsViewModel>();
         if (settings is null) return;
 
-        var vm = new ViewModels.PreferencesViewModel(settings, keyboard, language);
+        var vm = new ViewModels.PreferencesViewModel(settings, keyboard, language, externalTools);
         vm.SelectSectionById("performance");
         await new PreferencesWindow { DataContext = vm }.ShowDialog(owner);
     }

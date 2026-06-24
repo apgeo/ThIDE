@@ -449,18 +449,20 @@ public partial class MainWindow : Window
         IAppSettingsService? settings = null;
         KeyboardShortcutsViewModel? keyboard = null;
         ILanguageService? language = null;
+        SettingsViewModel? externalTools = null;
         try
         {
             settings = AppServices.Provider.GetService<IAppSettingsService>();
             keyboard = AppServices.Provider.GetService<KeyboardShortcutsViewModel>();
             language = AppServices.Provider.GetService<ILanguageService>();
+            externalTools = AppServices.Provider.GetService<SettingsViewModel>();
         }
         catch { /* design-time / no container */ }
         if (settings is null) return;
 
         var window = new PreferencesWindow
         {
-            DataContext = new PreferencesViewModel(settings, keyboard, language),
+            DataContext = new PreferencesViewModel(settings, keyboard, language, externalTools),
         };
         await window.ShowDialog(this);
     }

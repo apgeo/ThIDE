@@ -56,6 +56,9 @@ public partial class PreferencesViewModel : ObservableObject
     // ---- keyboard shortcuts (moved here from the Settings panel, #11) ----
     public KeyboardShortcutsViewModel? Keyboard { get; }
 
+    // ---- external tools (moved here from the dockable Settings panel, #13) ----
+    public SettingsViewModel? ExternalTools { get; }
+
     // ---- sections + search ----------------------------------------------
     private readonly List<PreferenceSection> _allSections;
     [ObservableProperty] private ObservableCollection<PreferenceSection> _sections;
@@ -63,11 +66,13 @@ public partial class PreferencesViewModel : ObservableObject
     [ObservableProperty] private string _searchQuery = string.Empty;
 
     public PreferencesViewModel(IAppSettingsService settings,
-        KeyboardShortcutsViewModel? keyboard = null, ILanguageService? language = null)
+        KeyboardShortcutsViewModel? keyboard = null, ILanguageService? language = null,
+        SettingsViewModel? externalTools = null)
     {
         _settings = settings;
         _language = language;
         Keyboard = keyboard;
+        ExternalTools = externalTools;
 
         var s = settings.Current;
         _restoreSessionOnStartup = s.RestoreSessionOnStartup;
@@ -96,6 +101,7 @@ public partial class PreferencesViewModel : ObservableObject
             new("performance","Performance",       "large file limit highlight parse lines size kb threshold"),
             new("workspace","Workspace",           "reload external graph disk watch"),
             new("build",    "Build & Output",      "build output open lox 3d pdf survex aven loch"),
+            new("external", "External Tools",      "therion loch aven survex path detect tool executable"),
             new("keyboard", "Keyboard Shortcuts",  "key binding gesture shortcut hotkey command"),
         };
         _sections = new ObservableCollection<PreferenceSection>(_allSections);
@@ -110,6 +116,7 @@ public partial class PreferencesViewModel : ObservableObject
     public bool IsPerformance => SelectedSection?.Id == "performance";
     public bool IsWorkspace   => SelectedSection?.Id == "workspace";
     public bool IsBuild       => SelectedSection?.Id == "build";
+    public bool IsExternal    => SelectedSection?.Id == "external";
     public bool IsKeyboard    => SelectedSection?.Id == "keyboard";
 
     partial void OnSelectedSectionChanged(PreferenceSection? value)
@@ -119,6 +126,7 @@ public partial class PreferencesViewModel : ObservableObject
         OnPropertyChanged(nameof(IsPerformance));
         OnPropertyChanged(nameof(IsWorkspace));
         OnPropertyChanged(nameof(IsBuild));
+        OnPropertyChanged(nameof(IsExternal));
         OnPropertyChanged(nameof(IsKeyboard));
     }
 

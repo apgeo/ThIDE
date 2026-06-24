@@ -161,8 +161,9 @@ public sealed class DockFactory : Factory
             Title = "RightTools",
             Alignment = Alignment.Right,
             Proportion = 0.22,
-            // Object Browser moved to the central well (#10); the right rail keeps XVI + Settings.
-            VisibleDockables = CreateList<IDockable>(_xvi, _settings),
+            // Object Browser moved to the central well (#10); External Tools/Settings moved into
+            // the Preferences window (#13), so the right rail keeps just XVI references.
+            VisibleDockables = CreateList<IDockable>(_xvi),
             ActiveDockable = _xvi,
         };
 
