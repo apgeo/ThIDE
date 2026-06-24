@@ -41,7 +41,10 @@ public partial class MainWindow : Window
             try
             {
                 if (AppServices.Provider.GetService<IDocumentService>() is { } docs)
+                {
                     docs.FindReferencesRequested += (_, term) => ShowFindReferences(term);
+                    docs.RenameSymbolRequested += (_, args) => _ = HandleRenameSymbolAsync(args.Raw, args.Kind);
+                }
             }
             catch { /* design-time / no container */ }
         };
@@ -178,6 +181,143 @@ public partial class MainWindow : Window
         _replaceWindow = new ReplaceWindow { DataContext = vm };
         _replaceWindow.Closed += (_, _) => _replaceWindow = null;
         _replaceWindow.Show(this);
+    }
+
+    // ----- symbol rename (#1) --------------------------------------------
+
+    private void TriggerRenameSymbol() => ActiveEditor?.StartRename();
+
+    private RenamePreviewWindow? _renamePreviewWindow;
+
+    private async System.Threading.Tasks.Task HandleRenameSymbolAsync(
+        string raw, Therion.Processing.Abstractions.ReferenceKind kind)
+    {
+        IDocumentService? docs = null;
+        IAppSettingsService? settings = null;
+        try
+        {
+            docs = AppServices.Provider.GetService<IDocumentService>();
+            settings = AppServices.Provider.GetService<IAppSettingsService>();
+        }
+        catch { return; }
+
+        var nav = docs?.CurrentNavigation;
+        var workspace = docs?.Workspace;
+        if (nav is null || workspace is null) return;
+
+        var targetSpan = nav.GoToDefinition(raw, kind);
+        if (targetSpan is null || targetSpan.Value.IsEmpty) return;
+
+        var stRef = Therion.Semantics.StationRef.Parse(raw);
+        var oldName = kind == Therion.Processing.Abstractions.ReferenceKind.Survey
+            ? (stRef.SurveyLastName ?? stRef.Point)
+            : stRef.PointWithoutMark;
+        if (string.IsNullOrEmpty(oldName)) return;
+
+        var newName = await new InputDialog("Rename Symbol",
+            $"New name for '{oldName}':", oldName).ShowAsync(this);
+        if (string.IsNullOrWhiteSpace(newName) || newName.Trim() == oldName) return;
+        newName = newName.Trim();
+
+        var changes = CollectRenameChanges(workspace, nav, raw, kind, oldName, targetSpan.Value);
+        if (changes.Count == 0) return;
+
+        if (settings?.Current.ShowRenamePreviewBeforeApply == true)
+        {
+            _renamePreviewWindow?.Close();
+            _renamePreviewWindow = new RenamePreviewWindow(changes, oldName, newName);
+            _renamePreviewWindow.Closed += (_, _) => _renamePreviewWindow = null;
+            var apply = await _renamePreviewWindow.ShowDialog<bool>(this);
+            if (!apply) return;
+        }
+
+        await ApplyRenameChangesAsync(changes, newName, docs!);
+    }
+
+    /// <summary>Scans every workspace file for ref tokens resolving to the same declaration span.</summary>
+    private static List<RenameFileChanges> CollectRenameChanges(
+        Therion.Semantics.WorkspaceSemanticModel workspace,
+        Therion.Processing.Abstractions.ISymbolNavigationService nav,
+        string raw,
+        Therion.Processing.Abstractions.ReferenceKind kind,
+        string oldName,
+        Therion.Core.SourceSpan targetSpan)
+    {
+        var result = new List<RenameFileChanges>();
+        foreach (var filePath in workspace.PerFile.Keys)
+        {
+            string text;
+            try { text = System.IO.File.ReadAllText(filePath); }
+            catch { continue; }
+
+            var hits = FindRenameHitsInText(text, oldName, nav, kind, targetSpan);
+            if (hits.Count > 0) result.Add(new RenameFileChanges(filePath, text, hits));
+        }
+        return result;
+    }
+
+    private static List<(int Start, int Length)> FindRenameHitsInText(
+        string text, string oldName,
+        Therion.Processing.Abstractions.ISymbolNavigationService nav,
+        Therion.Processing.Abstractions.ReferenceKind kind,
+        Therion.Core.SourceSpan targetSpan)
+    {
+        var hits = new List<(int, int)>();
+        int idx = 0;
+        while ((idx = text.IndexOf(oldName, idx, System.StringComparison.Ordinal)) >= 0)
+        {
+            bool beforeOk = idx == 0 || !IsRefChar(text[idx - 1]);
+            bool afterOk  = idx + oldName.Length >= text.Length || !IsRefChar(text[idx + oldName.Length]);
+            if (beforeOk && afterOk)
+            {
+                int mid = idx + oldName.Length / 2;
+                var tok = TherionProc.Editor.TherionTextEditor.ExtractRefTokenStatic(text, mid);
+                if (tok is { } t)
+                {
+                    var resolved = nav.GoToDefinition(t.Raw, kind);
+                    if (resolved is { } rs &&
+                        string.Equals(rs.FilePath, targetSpan.FilePath, System.StringComparison.OrdinalIgnoreCase) &&
+                        rs.StartOffset == targetSpan.StartOffset)
+                    {
+                        hits.Add((idx, oldName.Length));
+                    }
+                }
+            }
+            idx += oldName.Length;
+        }
+        return hits;
+    }
+
+    private static bool IsRefChar(char c) =>
+        char.IsLetterOrDigit(c) || c is '.' or '_' or '-' or '@' or ':';
+
+    private static async System.Threading.Tasks.Task ApplyRenameChangesAsync(
+        List<RenameFileChanges> changes,
+        string newName,
+        IDocumentService docs)
+    {
+        foreach (var fc in changes)
+        {
+            var sorted = new System.Collections.Generic.List<(int, int)>(fc.Hits);
+            sorted.Sort((a, b) => b.Item1.CompareTo(a.Item1));
+
+            var sb = new System.Text.StringBuilder(fc.FileText);
+            foreach (var (start, length) in sorted)
+                sb.Remove(start, length).Insert(start, newName);
+
+            var newText = sb.ToString();
+            try { await System.IO.File.WriteAllTextAsync(fc.FilePath, newText); }
+            catch { continue; }
+
+            foreach (var doc in docs.Documents)
+            {
+                if (string.Equals(doc.FilePath, fc.FilePath, System.StringComparison.OrdinalIgnoreCase))
+                {
+                    doc.NotifyExternalChange(System.DateTime.Now, deleted: false, autoReload: true);
+                    break;
+                }
+            }
+        }
     }
 
     // Find all references (#4): configure Find-in-Files as a whole-word, project-scoped
@@ -318,6 +458,10 @@ public partial class MainWindow : Window
         void Rebuild() => RebuildKeyBindings(vm, _shortcuts);
         _shortcuts.GesturesChanged += (_, _) => Avalonia.Threading.Dispatcher.UIThread.Post(Rebuild);
         Rebuild();
+
+        vm.ShowFindInFilesRequested   += (_, _) => ShowSearch();
+        vm.ShowReplaceInFilesRequested += (_, _) => ShowReplace();
+        vm.RenameSymbolRequested       += (_, _) => TriggerRenameSymbol();
     }
 
     private void RebuildKeyBindings(MainWindowViewModel vm, IKeyboardShortcutService shortcuts)
@@ -331,6 +475,12 @@ public partial class MainWindow : Window
             [ShellCommandIds.OpenInAven]               = vm.Build.OpenInAvenCommand,
             [ShellCommandIds.ToggleWorkspaceExplorer]  = vm.ToggleWorkspaceExplorerCommand,
             [ShellCommandIds.ToggleDiagnostics]        = vm.ToggleDiagnosticsCommand,
+            [ShellCommandIds.Save]                     = vm.SaveCommand,
+            [ShellCommandIds.GoBack]                   = vm.GoBackCommand,
+            [ShellCommandIds.GoForward]                = vm.GoForwardCommand,
+            [ShellCommandIds.FindInFiles]              = vm.ShowFindInFilesCommand,
+            [ShellCommandIds.ReplaceInFiles]           = vm.ShowReplaceInFilesCommand,
+            [ShellCommandIds.RenameSymbol]             = vm.RenameSymbolCommand,
         };
 
         KeyBindings.Clear();

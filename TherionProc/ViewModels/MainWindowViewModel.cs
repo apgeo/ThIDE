@@ -322,6 +322,18 @@ public partial class MainWindowViewModel : ViewModelBase
 
     [RelayCommand] private void ToggleWorkspaceExplorer() => Activate(WorkspaceTool);
     [RelayCommand] private void ToggleDiagnostics()       => Activate(DiagnosticsTool);
+    [RelayCommand] private void ToggleSettings()          => Activate(SettingsTool);
+
+    // ---- commands wired to keyboard shortcut service (#5) -------------------
+    // ShowFindInFiles / ShowReplaceInFiles / RenameSymbol are routed through the
+    // shortcut system and delegated to the View via events.
+    public event EventHandler? ShowFindInFilesRequested;
+    public event EventHandler? ShowReplaceInFilesRequested;
+    public event EventHandler? RenameSymbolRequested;
+
+    [RelayCommand] private void ShowFindInFiles()    => ShowFindInFilesRequested?.Invoke(this, EventArgs.Empty);
+    [RelayCommand] private void ShowReplaceInFiles() => ShowReplaceInFilesRequested?.Invoke(this, EventArgs.Empty);
+    [RelayCommand] private void RenameSymbol()       => RenameSymbolRequested?.Invoke(this, EventArgs.Empty);
 
     [RelayCommand]
     private async Task Save()

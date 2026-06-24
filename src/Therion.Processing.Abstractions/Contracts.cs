@@ -198,5 +198,11 @@ public static class ShellCommandIds
     public const string FindReferences     = "FindReferences";
     public const string ToggleWorkspaceExplorer = "ToggleWorkspaceExplorer";
     public const string ToggleDiagnostics  = "ToggleDiagnostics";
+    public const string Save               = "Save";
+    public const string GoBack             = "GoBack";
+    public const string GoForward          = "GoForward";
+    public const string FindInFiles        = "FindInFiles";
+    public const string ReplaceInFiles     = "ReplaceInFiles";
+    public const string RenameSymbol       = "RenameSymbol";
 }
 

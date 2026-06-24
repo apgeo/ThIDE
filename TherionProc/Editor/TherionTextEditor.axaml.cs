@@ -74,6 +74,9 @@ public partial class TherionTextEditor : UserControl
     /// <summary>Raised when the user requests "find all references" for an identifier (#4).</summary>
     public event EventHandler<string>? FindReferencesRequested;
 
+    /// <summary>Raised when the user requests a symbol rename (F2 / context menu / hover overlay).</summary>
+    public event EventHandler<(string Raw, ReferenceKind Kind)>? RenameSymbolRequested;
+
     private const string ThbookUrl = "https://therion.speleo.sk/wiki/start";
 
     // Short descriptions for the hover overlay on command keywords (#4).
@@ -446,7 +449,12 @@ public partial class TherionTextEditor : UserControl
         bool ctrl = (e.KeyModifiers & KeyModifiers.Control) != 0;
         bool shift = (e.KeyModifiers & KeyModifiers.Shift) != 0;
 
-        if (e.Key == Key.F12 && shift)
+        if (e.Key == Key.F2)
+        {
+            StartRename();
+            e.Handled = true;
+        }
+        else if (e.Key == Key.F12 && shift)
         {
             FindReferencesAt(_editor.CaretOffset);
             e.Handled = true;
@@ -559,6 +567,18 @@ public partial class TherionTextEditor : UserControl
                 // Inside a command/data row → station & survey names (+ keywords).
                 return (CompletionTerms ?? Array.Empty<string>()).ToList();
         }
+    }
+
+    // ----- rename symbol -------------------------------------------------
+
+    /// <summary>Fires <see cref="RenameSymbolRequested"/> for the ref token at the caret.</summary>
+    public void StartRename()
+    {
+        if (_editor is null) return;
+        var tok = ExtractRefToken(_editor.Text, _editor.CaretOffset);
+        if (tok is not { } t || string.IsNullOrEmpty(t.Raw)) return;
+        var kind = ChooseReferenceKind(t, _editor.CaretOffset);
+        RenameSymbolRequested?.Invoke(this, (t.Raw, kind));
     }
 
     // ----- find references / go to line / toggle comment -----------------
@@ -977,8 +997,11 @@ public partial class TherionTextEditor : UserControl
         go.Click += (_, _) => { NavigateToSpan(where); HideHoverInfo(); };
         var refs = new Button { Content = "Find all references", Padding = new Thickness(6, 2) };
         refs.Click += (_, _) => { FindReferencesRequested?.Invoke(this, StationRef.Parse(raw).PointWithoutMark); HideHoverInfo(); };
+        var renameBtn = new Button { Content = "Rename…", Padding = new Thickness(6, 2) };
+        renameBtn.Click += (_, _) => { HideHoverInfo(); StartRename(); };
         actions.Children.Add(go);
         actions.Children.Add(refs);
+        actions.Children.Add(renameBtn);
 
         // Documentation button: links to the thbook page for this reference kind (#6),
         // shown only when a page mapping exists for it (info.Kind is "station"/"survey"/…).
@@ -1316,6 +1339,10 @@ public partial class TherionTextEditor : UserControl
         var line = _editor.Document.GetLineByOffset(offset);
         return FirstWordRaw(_editor.Document.GetText(line)).ToLowerInvariant();
     }
+
+    /// <summary>Public wrapper so callers outside the editor can resolve ref tokens (e.g. rename-change search).</summary>
+    public static (int Start, int Length, string Raw)? ExtractRefTokenStatic(string text, int offset)
+        => ExtractRefToken(text, offset);
 
     /// <summary>Extracts the reference token (id, <c>@</c>, survey path) surrounding <paramref name="offset"/>.</summary>
     private static (int Start, int Length, string Raw)? ExtractRefToken(string text, int offset)
@@ -1716,6 +1743,8 @@ public partial class TherionTextEditor : UserControl
         menu.Items.Add(MakeItem("lowercase",              () => ApplyCase(upper: false)));
         menu.Items.Add(new Separator());
         menu.Items.Add(MakeItem("Toggle Comment  Ctrl+/", ToggleLineComment));
+        menu.Items.Add(new Separator());
+        menu.Items.Add(MakeItem("Rename Symbol…  F2",    StartRename));
         menu.Items.Add(new Separator());
         menu.Items.Add(MakeItem("Fold All",               () => SetAllFoldings(folded: true)));
         menu.Items.Add(MakeItem("Unfold All",             () => SetAllFoldings(folded: false)));

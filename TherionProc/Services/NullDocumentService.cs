@@ -31,6 +31,7 @@ internal sealed class NullDocumentService : IDocumentService
     public void ReportCaret(Therion.Core.SourceSpan span, bool isTermNavigation) { }
     public void RequestRevealInWorkspace(Therion.Core.SourceSpan target) { }
     public void RequestFindReferences(string term) { }
+    public void RequestRenameSymbol(string raw, Therion.Processing.Abstractions.ReferenceKind kind) { }
 #pragma warning disable CS0067
     public event EventHandler? DocumentChanged;
     public event EventHandler? ActiveDocumentChanged;
@@ -39,6 +40,7 @@ internal sealed class NullDocumentService : IDocumentService
     public event EventHandler<Therion.Core.SourceSpan>? RevealInWorkspaceRequested;
     public event EventHandler<string>? FindReferencesRequested;
     public event EventHandler<Therion.Core.SourceSpan>? CaretMoved;
+    public event EventHandler<(string Raw, Therion.Processing.Abstractions.ReferenceKind Kind)>? RenameSymbolRequested;
 #pragma warning restore CS0067
 
     public Task OpenFileAsync(string absolutePath, CancellationToken ct = default) => Task.CompletedTask;

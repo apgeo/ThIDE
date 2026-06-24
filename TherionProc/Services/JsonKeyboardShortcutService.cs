@@ -1,7 +1,7 @@
-// Implementation Plan §9bis.5a / Decision #29 / D19 — configurable keyboard shortcuts.
+// Implementation Plan ï¿½9bis.5a / Decision #29 / D19 ï¿½ configurable keyboard shortcuts.
 //
 // JSON-backed implementation of IKeyboardShortcutService. Persistence uses the
-// user-profile location described in §6.2 (sidecar override is not yet wired —
+// user-profile location described in ï¿½6.2 (sidecar override is not yet wired ï¿½
 // keyboard map is global by design; per-project remap can land later via the
 // same `.thp.json` infrastructure once it exists).
 
@@ -28,6 +28,12 @@ public sealed class JsonKeyboardShortcutService : IKeyboardShortcutService
             [ShellCommandIds.FindReferences]          = "Shift+F12",
             [ShellCommandIds.ToggleWorkspaceExplorer] = "Ctrl+Alt+L",
             [ShellCommandIds.ToggleDiagnostics]       = "Ctrl+Shift+D",
+            [ShellCommandIds.Save]                    = "Ctrl+S",
+            [ShellCommandIds.GoBack]                  = "Alt+Left",
+            [ShellCommandIds.GoForward]               = "Alt+Right",
+            [ShellCommandIds.FindInFiles]             = "Ctrl+Shift+F",
+            [ShellCommandIds.ReplaceInFiles]          = "Ctrl+Shift+H",
+            [ShellCommandIds.RenameSymbol]            = "F2",
         };
 
     private readonly string _storagePath;

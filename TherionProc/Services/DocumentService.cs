@@ -75,6 +75,10 @@ public interface IDocumentService
     /// <summary>Asks the shell to open Find-in-Files as a "find all references" for an identifier (#4).</summary>
     void RequestFindReferences(string term);
     event EventHandler<string>? FindReferencesRequested;
+
+    /// <summary>Asks the shell to start a rename-symbol flow for the given raw token (#1).</summary>
+    void RequestRenameSymbol(string raw, Therion.Processing.Abstractions.ReferenceKind kind);
+    event EventHandler<(string Raw, Therion.Processing.Abstractions.ReferenceKind Kind)>? RenameSymbolRequested;
 }
 
 public sealed class DocumentService : IDocumentService, IAsyncDisposable
@@ -102,6 +106,14 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
     public void RequestFindReferences(string term)
     {
         if (!string.IsNullOrWhiteSpace(term)) FindReferencesRequested?.Invoke(this, term);
+    }
+
+    public event EventHandler<(string Raw, Therion.Processing.Abstractions.ReferenceKind Kind)>? RenameSymbolRequested;
+
+    public void RequestRenameSymbol(string raw, Therion.Processing.Abstractions.ReferenceKind kind)
+    {
+        if (!string.IsNullOrWhiteSpace(raw))
+            RenameSymbolRequested?.Invoke(this, (raw, kind));
     }
 
     // Projection of the active document.
@@ -311,7 +323,7 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
         {
             // Mark the path so the watcher doesn't treat our own save as an external edit (#6).
             _session.SuppressSelfWrite(doc.FilePath);
-            await File.WriteAllTextAsync(doc.FilePath, newText, ct).ConfigureAwait(false);
+            await File.WriteAllTextAsync(doc.FilePath, newText, ct).ConfigureAwait(true);
         }
         doc.SetText(newText, reparse: true);
     }
