@@ -93,7 +93,9 @@ public partial class MainWindowViewModel : ViewModelBase
     // Localized menu labels.
     public string MenuFile           => L("Menu_File",                   "_File");
     public string MenuFileOpenFile   => L("Menu_File_OpenFile",          "Open _File...");
+    public string MenuFileOpenThconfig => L("Menu_File_OpenThconfig",    "Open _thconfig...");
     public string MenuFileOpenFolder => L("Menu_File_OpenFolder",        "Open F_older...");
+    public string MenuSettings       => L("Menu_Settings",               "_Settings");
     public string MenuFileExit       => L("Menu_File_Exit",              "E_xit");
     public string MenuView           => L("Menu_View",                   "_View");
     public string MenuViewLanguage   => L("Menu_View_Language",          "_Language");
@@ -316,6 +318,22 @@ public partial class MainWindowViewModel : ViewModelBase
         try
         {
             await _documents.OpenFileAsync(path).ConfigureAwait(true);
+            StatusText = path;
+        }
+        catch (Exception ex) { StatusText = ex.Message; }
+    }
+
+    [RelayCommand]
+    private async Task OpenThconfig()
+    {
+        if (_picker is null) return;
+        var path = await _picker.PickOpenThconfigAsync(MenuFileOpenThconfig).ConfigureAwait(true);
+        if (string.IsNullOrEmpty(path)) return;
+        try
+        {
+            await _documents.OpenFileAsync(path).ConfigureAwait(true);
+            // Make the opened thconfig the active project configuration.
+            if (_session is not null) await _session.SetActiveThconfigAsync(path).ConfigureAwait(true);
             StatusText = path;
         }
         catch (Exception ex) { StatusText = ex.Message; }
@@ -556,6 +574,8 @@ public partial class MainWindowViewModel : ViewModelBase
         Title = ComposeTitle();
         OnPropertyChanged(nameof(MenuFile));
         OnPropertyChanged(nameof(MenuFileOpenFile));
+        OnPropertyChanged(nameof(MenuFileOpenThconfig));
+        OnPropertyChanged(nameof(MenuSettings));
         OnPropertyChanged(nameof(MenuFileOpenFolder));
         OnPropertyChanged(nameof(MenuFileExit));
         OnPropertyChanged(nameof(MenuView));

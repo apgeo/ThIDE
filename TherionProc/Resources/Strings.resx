@@ -7,7 +7,9 @@
   <data name="AppTitle" xml:space="preserve"><value>TherionProc</value></data>
   <data name="Menu_File" xml:space="preserve"><value>_File</value></data>
   <data name="Menu_File_OpenFile" xml:space="preserve"><value>Open _File...</value></data>
+  <data name="Menu_File_OpenThconfig" xml:space="preserve"><value>Open _thconfig...</value></data>
   <data name="Menu_File_OpenFolder" xml:space="preserve"><value>Open F_older...</value></data>
+  <data name="Menu_Settings" xml:space="preserve"><value>_Settings</value></data>
   <data name="Menu_File_Exit" xml:space="preserve"><value>E_xit</value></data>
   <data name="Menu_View" xml:space="preserve"><value>_View</value></data>
   <data name="Menu_View_Language" xml:space="preserve"><value>_Language</value></data>

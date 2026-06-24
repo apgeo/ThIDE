@@ -71,12 +71,11 @@
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="{Binding MenuFile}">
                 <MenuItem Header="{Binding MenuFileOpenFile}"   Command="{Binding OpenFileCommand}" />
+                <MenuItem Header="{Binding MenuFileOpenThconfig}" Command="{Binding OpenThconfigCommand}" />
                 <MenuItem Header="{Binding MenuFileOpenFolder}" Command="{Binding OpenFolderCommand}" />
                 <Separator />
                 <!-- Recent files, grouped per type (8 each), rebuilt in code-behind (#8). -->
                 <MenuItem x:Name="RecentMenu" Header="Recent _Files" />
-                <Separator />
-                <MenuItem Header="_Preferences..." Click="OnPreferencesClick" />
                 <Separator />
                 <MenuItem Header="{Binding MenuFileExit}" Command="{Binding ExitCommand}" />
             </MenuItem>
@@ -138,6 +137,9 @@
                 <Separator />
                 <MenuItem Header="Open last _output folder" Command="{Binding Build.OpenLastOutputFolderCommand}" />
             </MenuItem>
+            <!-- Settings: a top-level entry (renamed from File ▸ Preferences) that opens the
+                 Preferences window directly (#7). -->
+            <MenuItem Header="{Binding MenuSettings}" Click="OnPreferencesClick" />
         </Menu>
 
         <!-- Icon toolbar: navigation history, build/cancel, 3D viewers, full screen. -->
