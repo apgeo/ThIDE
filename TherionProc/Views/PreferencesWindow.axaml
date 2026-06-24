@@ -73,6 +73,37 @@
                               IsChecked="{Binding ShowRenamePreviewBeforeApply}" />
                 </StackPanel>
 
+                <!-- Performance / large-file guards (#10) -->
+                <StackPanel Spacing="10" IsVisible="{Binding IsPerformance}">
+                    <TextBlock Text="Performance — large files" FontSize="16" FontWeight="Bold" />
+                    <TextBlock Text="Above these limits, syntax highlighting and hover features are disabled."
+                               Foreground="Gray" TextWrapping="Wrap" />
+                    <Grid ColumnDefinitions="200,*" RowDefinitions="Auto,Auto" Margin="0,0,0,4">
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Max highlight lines"
+                                   VerticalAlignment="Center" Margin="0,0,8,6" />
+                        <NumericUpDown Grid.Row="0" Grid.Column="1" Minimum="1000" Maximum="2000000" Increment="1000"
+                                       Value="{Binding MaxHighlightLines}" Margin="0,0,0,6" MaxWidth="180"
+                                       HorizontalAlignment="Left" />
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Max highlight size (KB)"
+                                   VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <NumericUpDown Grid.Row="1" Grid.Column="1" Minimum="64" Maximum="1048576" Increment="128"
+                                       Value="{Binding MaxHighlightKB}" MaxWidth="180" HorizontalAlignment="Left" />
+                    </Grid>
+                    <TextBlock Text="Above these limits, the file is not parsed and its identifiers stay out of the object graph."
+                               Foreground="Gray" TextWrapping="Wrap" />
+                    <Grid ColumnDefinitions="200,*" RowDefinitions="Auto,Auto">
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Max parse lines"
+                                   VerticalAlignment="Center" Margin="0,0,8,6" />
+                        <NumericUpDown Grid.Row="0" Grid.Column="1" Minimum="1000" Maximum="2000000" Increment="1000"
+                                       Value="{Binding MaxParseLines}" Margin="0,0,0,6" MaxWidth="180"
+                                       HorizontalAlignment="Left" />
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Max parse size (KB)"
+                                   VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <NumericUpDown Grid.Row="1" Grid.Column="1" Minimum="64" Maximum="1048576" Increment="128"
+                                       Value="{Binding MaxParseKB}" MaxWidth="180" HorizontalAlignment="Left" />
+                    </Grid>
+                </StackPanel>
+
                 <!-- Workspace -->
                 <StackPanel Spacing="10" IsVisible="{Binding IsWorkspace}">
                     <TextBlock Text="Workspace" FontSize="16" FontWeight="Bold" />

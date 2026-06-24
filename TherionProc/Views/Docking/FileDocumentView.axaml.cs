@@ -113,16 +113,39 @@ public partial class FileDocumentView : UserControl
         if (_vm?.Measurements is { } oldMvm)
             oldMvm.PropertyChanged -= OnMeasurementsPropertyChanged;
 
-        if (_vm is not null) _vm.ScrollToSpanRequested -= OnScrollRequested;
+        if (_vm is not null)
+        {
+            _vm.ScrollToSpanRequested -= OnScrollRequested;
+            _vm.OpenLimitSettingsRequested -= OnOpenLimitSettings;
+        }
         DisposeMapiahWatcher(); // the watcher is tied to the previous document's file
         _vm = DataContext as FileDocumentViewModel;
         if (_vm is not null)
         {
             _vm.ScrollToSpanRequested += OnScrollRequested;
+            _vm.OpenLimitSettingsRequested += OnOpenLimitSettings;
             ApplyPendingScrollDeferred();
             if (_vm.Measurements is { } mvm)
                 mvm.PropertyChanged += OnMeasurementsPropertyChanged;
         }
+    }
+
+    // Large-file banner "Settings…" button (#10): open Preferences at the Performance section.
+    private async void OnOpenLimitSettings(object? sender, EventArgs e)
+    {
+        if (TopLevel.GetTopLevel(this) is not Window owner) return;
+        IAppSettingsService? settings = null;
+        ViewModels.KeyboardShortcutsViewModel? keyboard = null;
+        IServiceProvider? sp = null;
+        try { sp = AppServices.Provider; } catch { return; }
+        settings = sp.GetService<IAppSettingsService>();
+        keyboard = sp.GetService<ViewModels.KeyboardShortcutsViewModel>();
+        var language = sp.GetService<ILanguageService>();
+        if (settings is null) return;
+
+        var vm = new ViewModels.PreferencesViewModel(settings, keyboard, language);
+        vm.SelectSectionById("performance");
+        await new PreferencesWindow { DataContext = vm }.ShowDialog(owner);
     }
 
     private void OnScrollRequested(object? sender, SourceSpan span)

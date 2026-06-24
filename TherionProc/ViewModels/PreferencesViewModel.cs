@@ -47,6 +47,12 @@ public partial class PreferencesViewModel : ObservableObject
     // ---- editor behaviour ----
     [ObservableProperty] private bool _showRenamePreviewBeforeApply;
 
+    // ---- performance / large-file guards (#10) ----
+    [ObservableProperty] private int _maxHighlightLines;
+    [ObservableProperty] private int _maxHighlightKB;
+    [ObservableProperty] private int _maxParseLines;
+    [ObservableProperty] private int _maxParseKB;
+
     // ---- keyboard shortcuts (moved here from the Settings panel, #11) ----
     public KeyboardShortcutsViewModel? Keyboard { get; }
 
@@ -78,11 +84,16 @@ public partial class PreferencesViewModel : ObservableObject
         _openPdfAfterBuild = s.OpenPdfAfterBuild;
         _openAllOutputsAfterBuild = s.OpenAllOutputsAfterBuild;
         _showRenamePreviewBeforeApply = s.ShowRenamePreviewBeforeApply;
+        _maxHighlightLines = s.MaxHighlightLines;
+        _maxHighlightKB = s.MaxHighlightKB;
+        _maxParseLines = s.MaxParseLines;
+        _maxParseKB = s.MaxParseKB;
 
         _allSections = new List<PreferenceSection>
         {
             new("general",  "General",             "startup session reopen language english romanian locale"),
             new("editor",   "Editor",              "font size indent line numbers highlight tabs spaces rename preview"),
+            new("performance","Performance",       "large file limit highlight parse lines size kb threshold"),
             new("workspace","Workspace",           "reload external graph disk watch"),
             new("build",    "Build & Output",      "build output open lox 3d pdf survex aven loch"),
             new("keyboard", "Keyboard Shortcuts",  "key binding gesture shortcut hotkey command"),
@@ -94,19 +105,28 @@ public partial class PreferencesViewModel : ObservableObject
     public PreferencesViewModel() : this(new AppSettingsService()) { } // design-time
 
     // ---- which section is shown (drives content IsVisible) --------------
-    public bool IsGeneral   => SelectedSection?.Id == "general";
-    public bool IsEditor    => SelectedSection?.Id == "editor";
-    public bool IsWorkspace => SelectedSection?.Id == "workspace";
-    public bool IsBuild     => SelectedSection?.Id == "build";
-    public bool IsKeyboard  => SelectedSection?.Id == "keyboard";
+    public bool IsGeneral     => SelectedSection?.Id == "general";
+    public bool IsEditor      => SelectedSection?.Id == "editor";
+    public bool IsPerformance => SelectedSection?.Id == "performance";
+    public bool IsWorkspace   => SelectedSection?.Id == "workspace";
+    public bool IsBuild       => SelectedSection?.Id == "build";
+    public bool IsKeyboard    => SelectedSection?.Id == "keyboard";
 
     partial void OnSelectedSectionChanged(PreferenceSection? value)
     {
         OnPropertyChanged(nameof(IsGeneral));
         OnPropertyChanged(nameof(IsEditor));
+        OnPropertyChanged(nameof(IsPerformance));
         OnPropertyChanged(nameof(IsWorkspace));
         OnPropertyChanged(nameof(IsBuild));
         OnPropertyChanged(nameof(IsKeyboard));
+    }
+
+    /// <summary>Selects a section by id (e.g. to deep-link from a large-file banner, #10).</summary>
+    public void SelectSectionById(string id)
+    {
+        var sec = _allSections.FirstOrDefault(s => s.Id == id);
+        if (sec is not null) { SearchQuery = string.Empty; SelectedSection = sec; }
     }
 
     partial void OnSearchQueryChanged(string value) => ApplyFilter();
@@ -151,6 +171,10 @@ public partial class PreferencesViewModel : ObservableObject
             OpenPdfAfterBuild = OpenPdfAfterBuild,
             OpenAllOutputsAfterBuild = OpenAllOutputsAfterBuild,
             ShowRenamePreviewBeforeApply = ShowRenamePreviewBeforeApply,
+            MaxHighlightLines = MaxHighlightLines,
+            MaxHighlightKB = MaxHighlightKB,
+            MaxParseLines = MaxParseLines,
+            MaxParseKB = MaxParseKB,
         });
         _language?.SetLanguage(code); // reflect the new language immediately
     }

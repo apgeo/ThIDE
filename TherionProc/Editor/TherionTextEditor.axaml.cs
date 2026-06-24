@@ -53,6 +53,10 @@ public partial class TherionTextEditor : UserControl
     public static readonly StyledProperty<IEnumerable<string>?> CompletionTermsProperty =
         AvaloniaProperty.Register<TherionTextEditor, IEnumerable<string>?>(nameof(CompletionTerms));
 
+    /// <summary>When false, syntax highlighting + hover/link features are disabled (large files, #10).</summary>
+    public static readonly StyledProperty<bool> HighlightingEnabledProperty =
+        AvaloniaProperty.Register<TherionTextEditor, bool>(nameof(HighlightingEnabled), defaultValue: true);
+
     /// <summary>Raised when the user activates a file-path hyperlink (input/load/source); carries the resolved file path.</summary>
     public event EventHandler<string>? OpenFileRequested;
 
@@ -418,6 +422,13 @@ public partial class TherionTextEditor : UserControl
         set => SetValue(NavigationProperty, value);
     }
 
+    /// <summary>When false, syntax highlighting + hover/link features are disabled (large files, #10).</summary>
+    public bool HighlightingEnabled
+    {
+        get => GetValue(HighlightingEnabledProperty);
+        set => SetValue(HighlightingEnabledProperty, value);
+    }
+
     private void InitializeComponent() => AvaloniaXamlLoader.Load(this);
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
@@ -453,6 +464,27 @@ public partial class TherionTextEditor : UserControl
             UpdateThconfigDecorations();
             RecomputeFileWarnings();
         }
+        else if (change.Property == HighlightingEnabledProperty)
+        {
+            ApplyHighlightingEnabled(change.GetNewValue<bool>());
+        }
+    }
+
+    // Large-file guard (#10): when disabled, drop the syntax colorizer so a huge document
+    // doesn't pay the per-line tokenization cost; hover/link features are also gated on the flag.
+    private void ApplyHighlightingEnabled(bool enabled)
+    {
+        if (_editor is null || _colorizer is null) return;
+        var transformers = _editor.TextArea.TextView.LineTransformers;
+        if (enabled)
+        {
+            if (!transformers.Contains(_colorizer)) transformers.Insert(0, _colorizer);
+        }
+        else
+        {
+            transformers.Remove(_colorizer);
+        }
+        _editor.TextArea.TextView.Redraw();
     }
 
     private void OnEditorKeyDown(object? sender, KeyEventArgs e)
@@ -720,6 +752,7 @@ public partial class TherionTextEditor : UserControl
     private void OnEditorPointerMoved(object? sender, PointerEventArgs e)
     {
         if (_editor is null || _squiggles is null) return;
+        if (!HighlightingEnabled) return; // hover/link features off for large files (#10)
         var view = _editor.TextArea.TextView;
 
         var visualPos = e.GetPosition(view) + view.ScrollOffset;
@@ -1161,6 +1194,7 @@ public partial class TherionTextEditor : UserControl
     private void OnEditorPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (_editor is null) return;
+        if (!HighlightingEnabled) return; // go-to-definition/link navigation off for large files (#10)
         var view = _editor.TextArea.TextView;
         var visualPos = e.GetPosition(view) + view.ScrollOffset;
         if (FloorOffset(visualPos) is not { } off) return;

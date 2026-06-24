@@ -13,6 +13,29 @@
                        TextWrapping="Wrap" VerticalAlignment="Center" />
         </Border>
 
+        <!-- Large-file guards (#10): parsing/highlighting disabled banners. -->
+        <Border Background="#FFF3E0" Padding="10,5" IsVisible="{Binding ParsingSuppressed}">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
+                    <Button Content="Parse anyway" Padding="8,2" Command="{Binding ForceParseCommand}" />
+                    <Button Content="Settings…" Padding="8,2" Command="{Binding OpenLimitSettingsCommand}" />
+                </StackPanel>
+                <TextBlock Text="{Binding ParseBannerText}" Foreground="#E65100"
+                           VerticalAlignment="Center" TextWrapping="Wrap" />
+            </DockPanel>
+        </Border>
+        <Border Background="#FFF8E1" Padding="10,5"
+                IsVisible="{Binding HighlightingSuppressed}">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
+                    <Button Content="Highlight anyway" Padding="8,2" Command="{Binding ForceHighlightCommand}" />
+                    <Button Content="Settings…" Padding="8,2" Command="{Binding OpenLimitSettingsCommand}" />
+                </StackPanel>
+                <TextBlock Text="{Binding HighlightBannerText}" Foreground="#8D6E00"
+                           VerticalAlignment="Center" TextWrapping="Wrap" />
+            </DockPanel>
+        </Border>
+
         <!-- Transient info banner (#6): silent reload-from-disk notice. -->
         <Border Background="#E3F2FD" Padding="10,5"
                 IsVisible="{Binding InfoBanner, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
@@ -59,6 +82,7 @@
                                   Navigation="{Binding Navigation}"
                                   Diagnostics="{Binding Diagnostics}"
                                   CompletionTerms="{Binding CompletionTerms}"
+                                  HighlightingEnabled="{Binding !HighlightingSuppressed}"
                                   CurrentFilePath="{Binding FilePath}" />
         </TabItem>
         <!-- Measurements tab: shown only for .th files (#4). -->

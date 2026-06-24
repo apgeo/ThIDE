@@ -345,7 +345,7 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
 
     private FileDocumentViewModel CreateDocument(string path, string text)
     {
-        var doc = new FileDocumentViewModel(path, text, new ViewModels.MeasurementsViewModel(), _commands);
+        var doc = new FileDocumentViewModel(path, text, new ViewModels.MeasurementsViewModel(), _commands, _settings);
         doc.Reparsed += (_, _) => { if (ReferenceEquals(doc, Active)) Raise(); };
         return doc;
     }

@@ -87,6 +87,16 @@ public sealed record AppSettings
     /// <summary>Open every matching output (true) instead of just the first one (false).</summary>
     public bool OpenAllOutputsAfterBuild { get; init; }
 
+    // ---- large-file guards (#10) ----
+    /// <summary>Skip syntax highlighting + hover features above this line count.</summary>
+    public int MaxHighlightLines { get; init; } = 25000;
+    /// <summary>Skip syntax highlighting + hover features above this size in KB.</summary>
+    public int MaxHighlightKB { get; init; } = 1024;
+    /// <summary>Skip parsing/object-graph above this line count.</summary>
+    public int MaxParseLines { get; init; } = 20000;
+    /// <summary>Skip parsing/object-graph above this size in KB.</summary>
+    public int MaxParseKB { get; init; } = 512;
+
     // ---- language ----
     /// <summary>UI language culture name (e.g. "en", "ro"); applied at startup (#9).</summary>
     public string UiLanguage { get; init; } = "en";

@@ -26,6 +26,7 @@ namespace TherionProc.ViewModels.Docking;
 public sealed partial class FileDocumentViewModel : Document, IDockContent, IDisposable
 {
     private readonly ICommandRegistry? _commands;
+    private readonly IAppSettingsService? _settings;
     private bool _disposed;
 
     private string _documentText = string.Empty;
@@ -54,10 +55,11 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
         string.Equals(System.IO.Path.GetExtension(FilePath), ".th2", StringComparison.OrdinalIgnoreCase);
 
     public FileDocumentViewModel(string filePath, string text, MeasurementsViewModel measurements,
-        ICommandRegistry? commands = null)
+        ICommandRegistry? commands = null, IAppSettingsService? settings = null)
     {
         FilePath = filePath;
         _commands = commands;
+        _settings = settings;
         Measurements = measurements;
 
         Id = filePath;
@@ -67,7 +69,44 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
         CanPin = true;
         TabBrush = TabBrushForExtension(System.IO.Path.GetExtension(filePath));
 
+        // Re-evaluate the large-file guards when their thresholds change in Preferences (#10).
+        if (_settings is not null) _settings.Changed += OnSettingsChanged;
+
         SetText(text, reparse: true);
+    }
+
+    private void OnSettingsChanged(object? sender, EventArgs e)
+    {
+        if (Dispatcher.UIThread.CheckAccess()) Reparse();
+        else Dispatcher.UIThread.Post(Reparse);
+    }
+
+    // ----- large-file guards (#10) -------------------------------------------
+    /// <summary>True when syntax highlighting + hover features are suppressed for size.</summary>
+    [ObservableProperty] private bool _highlightingSuppressed;
+    /// <summary>True when parsing/object-graph is suppressed for size.</summary>
+    [ObservableProperty] private bool _parsingSuppressed;
+    /// <summary>Banner text describing which highlight limit was exceeded.</summary>
+    [ObservableProperty] private string _highlightBannerText = string.Empty;
+    /// <summary>Banner text describing which parse limit was exceeded.</summary>
+    [ObservableProperty] private string _parseBannerText = string.Empty;
+
+    // Per-session overrides set by the banner's "enable anyway" buttons.
+    private bool _forceHighlightThisSession;
+    private bool _forceParseThisSession;
+
+    /// <summary>Raised when the user asks to open Preferences at the large-file limits (#10).</summary>
+    public event EventHandler? OpenLimitSettingsRequested;
+
+    [RelayCommand] private void ForceHighlight() { _forceHighlightThisSession = true; Reparse(); }
+    [RelayCommand] private void ForceParse() { _forceParseThisSession = true; Reparse(); }
+    [RelayCommand] private void OpenLimitSettings() => OpenLimitSettingsRequested?.Invoke(this, EventArgs.Empty);
+
+    private int LineCount(string text)
+    {
+        int n = 1;
+        foreach (var c in text) if (c == '\n') n++;
+        return n;
     }
 
     /// <summary>
@@ -239,10 +278,52 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
                 CompletionTerms = BuildCompletionTerms(null);
                 InterpretedTypeText = typeText;
                 IsParsed = false;
+                HighlightingSuppressed = false;
+                ParsingSuppressed = false;
                 Reparsed?.Invoke(this, EventArgs.Empty);
             }
             if (Dispatcher.UIThread.CheckAccess()) ApplyText();
             else Dispatcher.UIThread.Post(ApplyText);
+            return;
+        }
+
+        // Large-file guards (#10): evaluate size against the configured limits. The constraint
+        // lives here (the editor), never inside the parsing engine, so external callers of the
+        // parser are unaffected.
+        var s = _settings?.Current;
+        int lines = LineCount(_documentText);
+        int kb = _documentText.Length / 1024;
+        bool overHighlight = s is not null && (lines > s.MaxHighlightLines || kb > s.MaxHighlightKB);
+        bool overParse = s is not null && (lines > s.MaxParseLines || kb > s.MaxParseKB);
+        bool suppressHighlight = overHighlight && !_forceHighlightThisSession;
+        bool suppressParse = overParse && !_forceParseThisSession;
+
+        if (suppressParse)
+        {
+            var reason = lines > (s?.MaxParseLines ?? int.MaxValue)
+                ? $"{lines:N0} lines exceeds the {s!.MaxParseLines:N0}-line parse limit"
+                : $"{kb:N0} KB exceeds the {s!.MaxParseKB:N0} KB parse limit";
+            var warn = Diagnostic.Create("THP-LARGE-FILE", DiagnosticSeverity.Warning,
+                $"'{System.IO.Path.GetFileName(FilePath)}' was not parsed: {reason}. Its identifiers are not in the object graph.",
+                new SourceSpan(FilePath, new SourceLocation(1, 1), new SourceLocation(1, 1), 0, 0));
+            void ApplyBig()
+            {
+                if (_disposed) return;
+                Ast = null;
+                Semantics = null;
+                UpdateNavigation();
+                Diagnostics = ImmutableArray.Create(warn);
+                CompletionTerms = BuildCompletionTerms(null);
+                InterpretedTypeText = typeText;
+                IsParsed = false;
+                ParsingSuppressed = true;
+                ParseBannerText = $"Parsing is disabled — {reason}.";
+                HighlightingSuppressed = suppressHighlight;
+                HighlightBannerText = suppressHighlight ? HighlightReason(s, lines, kb) : string.Empty;
+                Reparsed?.Invoke(this, EventArgs.Empty);
+            }
+            if (Dispatcher.UIThread.CheckAccess()) ApplyBig();
+            else Dispatcher.UIThread.Post(ApplyBig);
             return;
         }
 
@@ -258,10 +339,22 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
             if (parsed.Semantics is { } model) Measurements.Load(model);
             InterpretedTypeText = typeText;
             IsParsed = true;
+            ParsingSuppressed = false;
+            ParseBannerText = string.Empty;
+            HighlightingSuppressed = suppressHighlight;
+            HighlightBannerText = suppressHighlight ? HighlightReason(s, lines, kb) : string.Empty;
             Reparsed?.Invoke(this, EventArgs.Empty);
         }
         if (Dispatcher.UIThread.CheckAccess()) Apply();
         else Dispatcher.UIThread.Post(Apply);
+    }
+
+    private static string HighlightReason(AppSettings? s, int lines, int kb)
+    {
+        if (s is null) return string.Empty;
+        return lines > s.MaxHighlightLines
+            ? $"Syntax highlighting is disabled — {lines:N0} lines exceeds the {s.MaxHighlightLines:N0}-line limit."
+            : $"Syntax highlighting is disabled — {kb:N0} KB exceeds the {s.MaxHighlightKB:N0} KB limit.";
     }
 
     private static IReadOnlyList<string> BuildCompletionTerms(SemanticModel? model)
@@ -472,6 +565,7 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
     {
         if (_disposed) return;
         _disposed = true;
+        if (_settings is not null) _settings.Changed -= OnSettingsChanged;
         _reparseTimer?.Stop();
         _reparseTimer = null;
         _infoBannerTimer?.Stop();
