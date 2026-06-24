@@ -99,6 +99,9 @@
                 <TextBlock Text="Open log" VerticalAlignment="Center" />
             </StackPanel>
         </Button>
+        <!-- Watch icon in front of the time-mode dropdown (#12). -->
+        <PathIcon Data="{DynamicResource Icon.Timer}" Width="13" Height="13"
+                  Foreground="Gray" VerticalAlignment="Center" />
         <ComboBox MinWidth="120" FontSize="11" Padding="6,2"
                   SelectedIndex="{Binding Build.TimeColumnModeIndex, Mode=TwoWay}"
                   ToolTip.Tip="Time column display">

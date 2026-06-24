@@ -113,14 +113,20 @@ public sealed class CompilerOutputRow : CommunityToolkit.Mvvm.ComponentModel.Obs
         ApplyTimeMode(mode);
     }
 
-    /// <summary>Recomputes <see cref="TimeDisplay"/> for the given column mode (#4).</summary>
+    /// <summary>Recomputes <see cref="TimeDisplay"/> for the given column mode (#4/#12).</summary>
     public void ApplyTimeMode(TimeColumnMode mode)
     {
         TimeDisplay = mode switch
         {
-            TimeColumnMode.Timestamp => Timestamp.ToString("HH:mm:ss"),
-            TimeColumnMode.SinceStart => FormatElapsed(SinceStart),
-            // The command/summary rows always show wall-clock; intermediate rows show the delta.
+            // Timestamp: full wall-clock with a 2-decimal millisecond part (#12).
+            TimeColumnMode.Timestamp => Timestamp.ToString("HH:mm:ss.ff"),
+            // Since-build-start: elapsed for every row, but the first (command) line shows the
+            // full timestamp so the absolute start time is visible (#12).
+            TimeColumnMode.SinceStart => Kind == OutputRowKind.Command
+                ? Timestamp.ToString("HH:mm:ss")
+                : FormatElapsed(SinceStart),
+            // Since-last-line: delta for intermediate rows; the first/last (command/summary)
+            // lines show the full wall-clock timestamp (#12).
             _ => Kind == OutputRowKind.Normal ? FormatElapsed(Delta) : Timestamp.ToString("HH:mm:ss"),
         };
     }
