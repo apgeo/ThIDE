@@ -36,6 +36,8 @@ public sealed record AppSettings
     public bool RestoreSessionOnStartup { get; init; } = true;
     /// <summary>Absolute paths of files open at last shutdown (most-recent active last).</summary>
     public IReadOnlyList<string> LastSessionFiles { get; init; } = Array.Empty<string>();
+    /// <summary>Recently-opened files, most-recent first; grouped per type in the menu (#8).</summary>
+    public IReadOnlyList<string> RecentFiles { get; init; } = Array.Empty<string>();
 
     // ---- workspace session (single root + single active thconfig) ----
     /// <summary>Root directory of the workspace at last shutdown (restored on launch, #9).</summary>

@@ -3,6 +3,7 @@
 // the document-tracking tools (Object Browser, Diagnostics) follow the active doc.
 
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -151,6 +152,8 @@ public partial class MainWindowViewModel : ViewModelBase
         };
 
         _language.LanguageChanged += (_, _) => Refresh();
+        if (_settings is not null)
+            _settings.Changed += (_, _) => OnUiThread(() => RecentFilesChanged?.Invoke(this, EventArgs.Empty));
         if (_session is not null)
         {
             _session.Changed += (_, _) => OnUiThread(Refresh);          // active config / graph (#7)
@@ -280,6 +283,21 @@ public partial class MainWindowViewModel : ViewModelBase
             });
         }
         catch { /* best-effort */ }
+    }
+
+    // ---- recent files (#8) --------------------------------------------------
+    /// <summary>Raised when the persisted recent-files list changes so the menu can rebuild.</summary>
+    public event EventHandler? RecentFilesChanged;
+    /// <summary>Recently-opened files, most-recent first (persisted across launches, #8).</summary>
+    public IReadOnlyList<string> RecentFiles => _settings?.Current.RecentFiles ?? Array.Empty<string>();
+
+    [RelayCommand]
+    private async Task OpenRecent(string? path)
+    {
+        if (string.IsNullOrEmpty(path)) return;
+        if (!System.IO.File.Exists(path)) { StatusText = $"File not found: {path}"; return; }
+        try { await _documents.OpenFileAsync(path).ConfigureAwait(true); StatusText = path; }
+        catch (Exception ex) { StatusText = ex.Message; }
     }
 
     [RelayCommand]

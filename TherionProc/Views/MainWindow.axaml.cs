@@ -31,6 +31,8 @@ public partial class MainWindow : Window
                 vm.AttachStoragePicker(new AvaloniaStoragePicker(this));
                 AttachLayout(vm);
                 AttachKeyboardShortcuts(vm);
+                vm.RecentFilesChanged += (_, _) => BuildRecentMenu(vm);
+                BuildRecentMenu(vm);
                 // The layout rendered without crashing — clear the crash sentinel so the next
                 // launch trusts it (deferred so the dock has finished materializing).
                 Avalonia.Threading.Dispatcher.UIThread.Post(
@@ -58,6 +60,60 @@ public partial class MainWindow : Window
         AddHandler(DragDrop.DragOverEvent, OnDragOver);
         AddHandler(DragDrop.DropEvent, OnDrop);
     }
+
+    // ----- recent files menu (#8) ----------------------------------------
+    // Recent files are grouped per type (thconfig / th / th2 / other), capped at 8 per
+    // group, with a separator between groups. Rebuilt whenever the persisted list changes.
+
+    private static readonly (string Label, string[] Exts)[] RecentGroups =
+    {
+        ("Configurations", new[] { ".thconfig", ".thc" }),
+        ("Surveys",        new[] { ".th" }),
+        ("Sketches",       new[] { ".th2" }),
+        ("Other",          Array.Empty<string>()),
+    };
+
+    private void BuildRecentMenu(MainWindowViewModel vm)
+    {
+        if (this.FindControl<MenuItem>("RecentMenu") is not { } menu) return;
+        var items = new List<Control>();
+
+        var recent = vm.RecentFiles;
+        for (int g = 0; g < RecentGroups.Length; g++)
+        {
+            var (_, exts) = RecentGroups[g];
+            var groupFiles = new List<string>();
+            foreach (var path in recent)
+            {
+                var ext = Path.GetExtension(path);
+                bool inGroup = exts.Length == 0
+                    ? !RecentGroupedExts.Contains(ext)         // "Other": anything not in a named group
+                    : Array.Exists(exts, x => string.Equals(x, ext, StringComparison.OrdinalIgnoreCase));
+                if (inGroup) groupFiles.Add(path);
+                if (groupFiles.Count == 8) break;              // cap per type (#8)
+            }
+            if (groupFiles.Count == 0) continue;
+
+            if (items.Count > 0) items.Add(new Separator());
+            foreach (var path in groupFiles)
+            {
+                items.Add(new MenuItem
+                {
+                    Header = Path.GetFileName(path),
+                    Command = vm.OpenRecentCommand,
+                    CommandParameter = path,
+                    [ToolTip.TipProperty] = path,
+                });
+            }
+        }
+
+        if (items.Count == 0)
+            items.Add(new MenuItem { Header = "(no recent files)", IsEnabled = false });
+        menu.ItemsSource = items;
+    }
+
+    private static readonly HashSet<string> RecentGroupedExts =
+        new(StringComparer.OrdinalIgnoreCase) { ".thconfig", ".thc", ".th", ".th2" };
 
     // ----- bookmarks window (B3) -----------------------------------------
 

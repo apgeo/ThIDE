@@ -73,6 +73,9 @@
                 <MenuItem Header="{Binding MenuFileOpenFile}"   Command="{Binding OpenFileCommand}" />
                 <MenuItem Header="{Binding MenuFileOpenFolder}" Command="{Binding OpenFolderCommand}" />
                 <Separator />
+                <!-- Recent files, grouped per type (8 each), rebuilt in code-behind (#8). -->
+                <MenuItem x:Name="RecentMenu" Header="Recent _Files" />
+                <Separator />
                 <MenuItem Header="_Preferences..." Click="OnPreferencesClick" />
                 <Separator />
                 <MenuItem Header="{Binding MenuFileExit}" Command="{Binding ExitCommand}" />

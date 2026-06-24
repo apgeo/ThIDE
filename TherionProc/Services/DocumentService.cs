@@ -158,6 +158,7 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
         var full = Path.GetFullPath(absolutePath);
         if (!File.Exists(full)) return;
 
+        RecordRecent(full);
         if (FindOpen(full) is { } already)
         {
             OpenInDockRequested?.Invoke(this, already);
@@ -345,6 +346,20 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
         var doc = new FileDocumentViewModel(path, text, new ViewModels.MeasurementsViewModel(), _commands);
         doc.Reparsed += (_, _) => { if (ReferenceEquals(doc, Active)) Raise(); };
         return doc;
+    }
+
+    private const int MaxRecentFiles = 64;
+
+    /// <summary>Promotes a just-opened file to the front of the persisted recent list (#8).</summary>
+    private void RecordRecent(string fullPath)
+    {
+        if (_settings is null) return;
+        var current = _settings.Current;
+        var list = new System.Collections.Generic.List<string>(current.RecentFiles.Count + 1) { fullPath };
+        foreach (var p in current.RecentFiles)
+            if (!string.Equals(p, fullPath, StringComparison.OrdinalIgnoreCase)) list.Add(p);
+        if (list.Count > MaxRecentFiles) list.RemoveRange(MaxRecentFiles, list.Count - MaxRecentFiles);
+        try { _settings.Save(current with { RecentFiles = list }); } catch { /* best-effort */ }
     }
 
     private FileDocumentViewModel? FindOpen(string path) =>
