@@ -161,6 +161,9 @@ public partial class BuildViewModel : ViewModelBase
 
     public event EventHandler<ImmutableArray<Diagnostic>>? CompileCompleted;
 
+    /// <summary>Raised when a build begins so the shell can surface the Compiler Output panel (#2).</summary>
+    public event EventHandler? BuildStarted;
+
     public bool CanBuild => !IsBuilding && ResolveBuildEntry() is not null;
 
     /// <summary>
@@ -194,6 +197,7 @@ public partial class BuildViewModel : ViewModelBase
 
         IsBuilding = true;
         HasBuildResult = false;          // clear the previous success/error status-bar icon
+        BuildStarted?.Invoke(this, EventArgs.Empty);  // surface the Compiler Output panel (#2)
         ClearOutputState();
         _cts = new CancellationTokenSource();
 

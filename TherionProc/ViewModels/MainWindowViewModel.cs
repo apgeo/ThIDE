@@ -178,6 +178,8 @@ public partial class MainWindowViewModel : ViewModelBase
         Diagnostics.NavigateRequested += (_, row) => NavigateTo(row.Span);
         Diagnostics.ScopeChanged += (_, _) => RefreshDiagnostics();
         Build.NavigateRequested += (_, span) => NavigateTo(span);
+        // Surface the Compiler Output panel when a build starts (#2).
+        Build.BuildStarted += (_, _) => OnUiThread(() => _factory.ShowCompilerOutput());
 
         Refresh();
         RestoreSession();

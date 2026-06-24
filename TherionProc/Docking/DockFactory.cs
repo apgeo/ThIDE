@@ -73,6 +73,37 @@ public sealed class DockFactory : Factory
     /// <summary>The central document well; <see cref="OpenDocument"/> adds tabs here.</summary>
     public DocumentDock? DocumentDock => _documentDock;
 
+    /// <summary>
+    /// Activates the Compiler Output tool: selects its tab in whatever dock holds it and, if it
+    /// has been torn off into a float window, raises that window to the front (#2).
+    /// </summary>
+    public void ShowCompilerOutput()
+    {
+        if (_rootDock is null) return;
+        try
+        {
+            SetActiveDockable(_compilerOutput);
+            SetFocusedDockable(_rootDock, _compilerOutput);
+            BringHostWindowToFront(_compilerOutput);
+        }
+        catch { /* best-effort focus */ }
+    }
+
+    /// <summary>If <paramref name="tool"/> lives in a float window, brings that window to front.</summary>
+    private void BringHostWindowToFront(IDockable tool)
+    {
+        if (_rootDock?.Windows is not { } windows) return;
+        foreach (var w in windows)
+        {
+            if (w.Layout is { } layout && ContainsRef(layout, tool) &&
+                w.Host is Avalonia.Controls.Window win)
+            {
+                win.Activate();
+                return;
+            }
+        }
+    }
+
     // Dock-tree persistence is DISABLED: Dock.Avalonia 12 does not render content for a
     // deserialized-and-reswapped layout tree — the tab strips appear but the content controls
     // never instantiate their views, leaving every panel blank. Building the default layout
