@@ -233,6 +233,8 @@ public partial class WorkspaceExplorerViewModel : ViewModelBase
         _documents.DocumentChanged += (_, _) => { Refresh(); MaybeRevealActive(); };
         _documents.RevealInWorkspaceRequested += (_, target) =>
             { if (RevealOnHover) OnUi(() => HighlightTarget(target)); };
+        // Editor "reveal in workspace" button (#1): force file view and select the node.
+        _documents.SelectFileInWorkspaceRequested += (_, path) => OnUi(() => SelectFile(path));
 
         if (_session is not null)
         {
@@ -667,6 +669,17 @@ public partial class WorkspaceExplorerViewModel : ViewModelBase
             ? (string.IsNullOrEmpty(target.FilePath) ? null : ExpandToFile(target.FilePath))
             : FindAndExpand(target);
         HighlightedNode = node; // clears the previous highlight, sets the new one
+    }
+
+    /// <summary>Switches to file-explorer view (if needed) and selects/expands to the file (#1).</summary>
+    public void SelectFile(string? filePath)
+    {
+        if (string.IsNullOrEmpty(filePath)) return;
+        if (!IsFileExplorerView)
+        {
+            ViewMode = WorkspaceViewMode.FileExplorer; // synchronously rebuilds the tree
+        }
+        if (ExpandToFile(filePath) is { } node) Selected = node;
     }
 
     /// <summary>Selects the file's node, expanding to it; works in both view modes (#4/#9).</summary>

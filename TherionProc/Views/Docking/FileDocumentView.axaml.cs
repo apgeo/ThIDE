@@ -47,6 +47,14 @@ public partial class FileDocumentView : UserControl
     private void OnFindReferencesRequested(object? sender, string term)
         => TryDocuments()?.RequestFindReferences(term);
 
+    // Reveal-in-workspace button (#1): ask the Workspace Explorer to switch to file view
+    // and select/expand to this document's file (only if it lives under the workspace root).
+    private void OnSelectInWorkspace(object? sender, RoutedEventArgs e)
+    {
+        if (_vm?.FilePath is { } path && !string.IsNullOrEmpty(path))
+            TryDocuments()?.RequestSelectFileInWorkspace(path);
+    }
+
     private void OnRenameSymbolRequested(object? sender, (string Raw, Therion.Processing.Abstractions.ReferenceKind Kind) args)
         => TryDocuments()?.RequestRenameSymbol(args.Raw, args.Kind);
 

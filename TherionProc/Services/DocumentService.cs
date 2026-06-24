@@ -72,6 +72,10 @@ public interface IDocumentService
     void RequestRevealInWorkspace(Therion.Core.SourceSpan target);
     event EventHandler<Therion.Core.SourceSpan>? RevealInWorkspaceRequested;
 
+    /// <summary>Asks the Workspace Explorer to switch to file view and select a file (editor "reveal" button, #1).</summary>
+    void RequestSelectFileInWorkspace(string filePath);
+    event EventHandler<string>? SelectFileInWorkspaceRequested;
+
     /// <summary>Asks the shell to open Find-in-Files as a "find all references" for an identifier (#4).</summary>
     void RequestFindReferences(string term);
     event EventHandler<string>? FindReferencesRequested;
@@ -102,6 +106,14 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
 
     public void RequestRevealInWorkspace(Therion.Core.SourceSpan target)
         => RevealInWorkspaceRequested?.Invoke(this, target);
+
+    public event EventHandler<string>? SelectFileInWorkspaceRequested;
+
+    public void RequestSelectFileInWorkspace(string filePath)
+    {
+        if (!string.IsNullOrWhiteSpace(filePath))
+            SelectFileInWorkspaceRequested?.Invoke(this, filePath);
+    }
 
     public void RequestFindReferences(string term)
     {

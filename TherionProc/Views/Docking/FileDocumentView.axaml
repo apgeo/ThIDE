@@ -268,6 +268,11 @@
                 </StackPanel>
             </Button>
 
+            <!-- Reveal this file in the Workspace tree (#1): switches to file view and selects it. -->
+            <Button Padding="6,2" Background="Transparent" BorderThickness="0" FontSize="13"
+                    Content="&#x1F50D;" Click="OnSelectInWorkspace"
+                    ToolTip.Tip="Select this file in the Workspace" />
+
             <Button Padding="6,2" Background="Transparent" BorderThickness="0" FontSize="14"
                     Content="&#x22EF;" ToolTip.Tip="File actions">
                 <Button.Flyout>
