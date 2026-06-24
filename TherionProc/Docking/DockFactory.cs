@@ -130,6 +130,11 @@ public sealed class DockFactory : Factory
         var documentDock = NewDocumentDock();
         _documentDock = documentDock;
 
+        // Object Browser opens in the central well by default (#10). It sits as the initial
+        // tab there; opened files are added alongside it and become active.
+        documentDock.VisibleDockables = CreateList<IDockable>(_objectBrowser);
+        documentDock.ActiveDockable = _objectBrowser;
+
         var leftTools = new ToolDock
         {
             Id = "LeftTools",
@@ -156,8 +161,9 @@ public sealed class DockFactory : Factory
             Title = "RightTools",
             Alignment = Alignment.Right,
             Proportion = 0.22,
-            VisibleDockables = CreateList<IDockable>(_objectBrowser, _xvi, _settings),
-            ActiveDockable = _objectBrowser,
+            // Object Browser moved to the central well (#10); the right rail keeps XVI + Settings.
+            VisibleDockables = CreateList<IDockable>(_xvi, _settings),
+            ActiveDockable = _xvi,
         };
 
         var centerColumn = new ProportionalDock
