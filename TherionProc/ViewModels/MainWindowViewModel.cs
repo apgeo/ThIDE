@@ -153,7 +153,12 @@ public partial class MainWindowViewModel : ViewModelBase
 
         _language.LanguageChanged += (_, _) => Refresh();
         if (_settings is not null)
+        {
             _settings.Changed += (_, _) => OnUiThread(() => RecentFilesChanged?.Invoke(this, EventArgs.Empty));
+            // Apply the persisted UI language at startup (#9).
+            var lang = _settings.Current.UiLanguage;
+            if (!string.IsNullOrEmpty(lang)) _language.SetLanguage(lang);
+        }
         if (_session is not null)
         {
             _session.Changed += (_, _) => OnUiThread(Refresh);          // active config / graph (#7)
@@ -338,8 +343,16 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
-    [RelayCommand] private void SwitchToEnglish()  => _language.SetLanguage("en");
-    [RelayCommand] private void SwitchToRomanian() => _language.SetLanguage("ro");
+    [RelayCommand] private void SwitchToEnglish()  => SetLanguage("en");
+    [RelayCommand] private void SwitchToRomanian() => SetLanguage("ro");
+
+    /// <summary>Applies a UI language and persists the choice for next launch (#9).</summary>
+    public void SetLanguage(string culture)
+    {
+        _language.SetLanguage(culture);
+        if (_settings is { } s && !string.Equals(s.Current.UiLanguage, culture, StringComparison.Ordinal))
+            s.Save(s.Current with { UiLanguage = culture });
+    }
 
     [RelayCommand] private void ToggleWorkspaceExplorer() => Activate(WorkspaceTool);
     [RelayCommand] private void ToggleDiagnostics()       => Activate(DiagnosticsTool);

@@ -87,6 +87,10 @@ public sealed record AppSettings
     /// <summary>Open every matching output (true) instead of just the first one (false).</summary>
     public bool OpenAllOutputsAfterBuild { get; init; }
 
+    // ---- language ----
+    /// <summary>UI language culture name (e.g. "en", "ro"); applied at startup (#9).</summary>
+    public string UiLanguage { get; init; } = "en";
+
     // ---- editor preferences ----
     public double EditorFontSize { get; init; } = 13;
     public bool ShowLineNumbers { get; init; } = true;

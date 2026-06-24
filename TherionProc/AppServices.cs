@@ -36,9 +36,14 @@ internal static class AppServices
             b.AddDebug();
         });
 
-        // Localization (�7.6).
-        var resourcesPath = "Resources";
-        services.AddLocalization(o => o.ResourcesPath = resourcesPath);
+        // Localization (§7.6). The Strings marker type lives in the TherionProc.Resources
+        // namespace and the .resx files sit in Resources/, so their manifest base name is
+        // already "TherionProc.Resources.Strings". Setting ResourcesPath="Resources" made the
+        // localizer look for "TherionProc.ResourcesResources.Strings" (doubled segment), so it
+        // never found any resource and every label fell back to its English literal — which is
+        // why switching to Romanian did nothing (#9). Leaving ResourcesPath empty resolves the
+        // base name to the type's full name, matching the embedded resources.
+        services.AddLocalization();
         services.AddSingleton<ILanguageService, LanguageService>();
 
         // Workspace primitives (�6).
