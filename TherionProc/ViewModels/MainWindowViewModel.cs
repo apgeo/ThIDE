@@ -376,6 +376,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     [RelayCommand] private void ToggleWorkspaceExplorer() => Activate(WorkspaceTool);
     [RelayCommand] private void ToggleDiagnostics()       => Activate(DiagnosticsTool);
+    [RelayCommand] private void ToggleObjectBrowser()     => Activate(ObjectBrowserTool);
     [RelayCommand] private void ToggleSettings()          => Activate(SettingsTool);
 
     // ---- commands wired to keyboard shortcut service (#5) -------------------

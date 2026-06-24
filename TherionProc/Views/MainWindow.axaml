@@ -142,9 +142,23 @@
             <MenuItem Header="{Binding MenuSettings}" Click="OnPreferencesClick" />
         </Menu>
 
-        <!-- Icon toolbar: navigation history, build/cancel, 3D viewers, full screen. -->
+        <!-- Icon toolbar: grouped action sections (File / Nav / Edit / Search / Build /
+             Viewers / View / editor toggles), separated by thin dividers (#11). Wraps to a
+             second row when the window is narrow. -->
         <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="6,3">
-            <StackPanel Orientation="Horizontal" Spacing="3">
+            <WrapPanel Orientation="Horizontal">
+                <!-- File group -->
+                <Button Classes="tool" Command="{Binding OpenFileCommand}" ToolTip.Tip="Open File (Ctrl+O)">
+                    <PathIcon Data="{DynamicResource Icon.File}" />
+                </Button>
+                <Button Classes="tool" Command="{Binding OpenThconfigCommand}" ToolTip.Tip="Open thconfig">
+                    <PathIcon Data="{DynamicResource Icon.Config}" />
+                </Button>
+                <Button Classes="tool" Command="{Binding OpenFolderCommand}" ToolTip.Tip="Open Folder">
+                    <PathIcon Data="{DynamicResource Icon.FolderOpen}" />
+                </Button>
+                <Separator Width="1" Margin="4,2" Background="Gray" />
+                <!-- Navigation group -->
                 <Button Classes="tool" Command="{Binding GoBackCommand}" ToolTip.Tip="Back (Alt+Left)">
                     <PathIcon Data="{DynamicResource Icon.Back}" />
                 </Button>
@@ -155,8 +169,24 @@
                 <Button Classes="tool" Command="{Binding SaveCommand}" ToolTip.Tip="Save (Ctrl+S)">
                     <PathIcon Data="{DynamicResource Icon.Save}" />
                 </Button>
+                <Separator Width="1" Margin="4,2" Background="Gray" />
+                <!-- Edit group: enabled only when a file is open/focused (#11). -->
+                <Button Classes="tool" Click="OnEditCut" IsEnabled="{Binding HasStatusFile}" ToolTip.Tip="Cut (Ctrl+X)">
+                    <PathIcon Data="{DynamicResource Icon.Cut}" />
+                </Button>
+                <Button Classes="tool" Click="OnEditCopy" IsEnabled="{Binding HasStatusFile}" ToolTip.Tip="Copy (Ctrl+C)">
+                    <PathIcon Data="{DynamicResource Icon.Copy}" />
+                </Button>
+                <Button Classes="tool" Click="OnEditPaste" IsEnabled="{Binding HasStatusFile}" ToolTip.Tip="Paste (Ctrl+V)">
+                    <PathIcon Data="{DynamicResource Icon.Paste}" />
+                </Button>
+                <Separator Width="1" Margin="4,2" Background="Gray" />
+                <!-- Search group -->
                 <Button Classes="tool" Click="OnSearchClick" ToolTip.Tip="Find in Files (Ctrl+Shift+F)">
                     <PathIcon Data="{DynamicResource Icon.Search}" />
+                </Button>
+                <Button Classes="tool" Command="{Binding RenameSymbolCommand}" IsEnabled="{Binding HasStatusFile}" ToolTip.Tip="Rename Symbol (F2)">
+                    <PathIcon Data="{DynamicResource Icon.Rename}" />
                 </Button>
                 <Separator Width="1" Margin="4,2" Background="Gray" />
                 <Button Classes="tool" Command="{Binding Build.BuildCommand}" ToolTip.Tip="Compile (F5)">
@@ -178,6 +208,17 @@
                     <PathIcon Data="{DynamicResource Icon.Eye}" />
                 </Button>
                 <Separator Width="1" Margin="4,2" Background="Gray" />
+                <!-- View group: focus the main tool panels (#11/#14). -->
+                <Button Classes="tool" Command="{Binding ToggleObjectBrowserCommand}" ToolTip.Tip="Object Browser">
+                    <PathIcon Data="{DynamicResource Icon.NodeGraph}" />
+                </Button>
+                <Button Classes="tool" Command="{Binding ToggleWorkspaceExplorerCommand}" ToolTip.Tip="Workspace">
+                    <PathIcon Data="{DynamicResource Icon.Folder}" />
+                </Button>
+                <Button Classes="tool" Command="{Binding ToggleDiagnosticsCommand}" ToolTip.Tip="Diagnostics">
+                    <PathIcon Data="{DynamicResource Icon.Warning}" />
+                </Button>
+                <Separator Width="1" Margin="4,2" Background="Gray" />
                 <ToggleButton Classes="tool" IsChecked="{Binding WordWrap, Mode=TwoWay}" ToolTip.Tip="Word wrap">
                     <PathIcon Data="{DynamicResource Icon.WordWrap}" />
                 </ToggleButton>
@@ -186,7 +227,7 @@
                 </Button>
                 <TextBlock VerticalAlignment="Center" Margin="12,0,0,0"
                            Text="{Binding Build.Status}" Foreground="Gray" />
-            </StackPanel>
+            </WrapPanel>
         </Border>
 
         <!-- Status bar (#10): transient messages on the left; open-file metrics on the right,
