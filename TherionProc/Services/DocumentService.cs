@@ -373,9 +373,19 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
     {
         if (ReferenceEquals(Active, doc)) return;
         Active = doc;
-        ActiveDocumentChanged?.Invoke(this, EventArgs.Empty);
+        OnUi(() => ActiveDocumentChanged?.Invoke(this, EventArgs.Empty));
         Raise();
         // Single shared workspace (#1): switching tabs no longer changes the active project.
+    }
+
+    // OpenFileAsync resumes on a thread-pool thread (ConfigureAwait(false)), so DocumentChanged
+    // can fire off the UI thread. Several subscribers mutate UI-bound state directly, which
+    // raised "the calling thread cannot access this object". Marshal the notifications onto the
+    // UI thread at the source so every subscriber is safe (#6).
+    private static void OnUi(Action action)
+    {
+        if (Avalonia.Threading.Dispatcher.UIThread.CheckAccess()) action();
+        else Avalonia.Threading.Dispatcher.UIThread.Post(action);
     }
 
     private void OnClosed(FileDocumentViewModel doc)
@@ -389,7 +399,7 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
         }
     }
 
-    private void Raise() => DocumentChanged?.Invoke(this, EventArgs.Empty);
+    private void Raise() => OnUi(() => DocumentChanged?.Invoke(this, EventArgs.Empty));
 
     // The workspace session is a DI singleton and disposes itself; nothing to do here.
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;
