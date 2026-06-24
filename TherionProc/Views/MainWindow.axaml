@@ -129,8 +129,8 @@
                 <MenuItem Header="_Bookmarks..."    Click="OnBookmarksClick" />
             </MenuItem>
             <MenuItem Header="{Binding MenuBuild}">
-                <MenuItem Header="_Build      F5"        Command="{Binding Build.BuildCommand}" />
-                <MenuItem Header="_Rebuild    Ctrl+F5"   Command="{Binding Build.RebuildCommand}" />
+                <MenuItem Header="_Compile    F5"        Command="{Binding Build.BuildCommand}" />
+                <MenuItem Header="_Recompile  Ctrl+F5"   Command="{Binding Build.RebuildCommand}" />
                 <MenuItem Header="_Cancel     Shift+F5"  Command="{Binding Build.CancelCommand}" />
                 <Separator />
                 <MenuItem Header="Open in _Loch   F9"    Command="{Binding Build.OpenInLochCommand}" />
@@ -157,13 +157,13 @@
                     <PathIcon Data="{DynamicResource Icon.Search}" />
                 </Button>
                 <Separator Width="1" Margin="4,2" Background="Gray" />
-                <Button Classes="tool" Command="{Binding Build.BuildCommand}" ToolTip.Tip="Build (F5)">
+                <Button Classes="tool" Command="{Binding Build.BuildCommand}" ToolTip.Tip="Compile (F5)">
                     <PathIcon Data="{DynamicResource Icon.Build}" Foreground="#2E7D32"
                               Classes.buildPulse="{Binding Build.IsBuilding}" />
                 </Button>
-                <!-- Stop is hidden while idle and only appears during a build (#6). -->
+                <!-- Stop is hidden while idle and only appears during a compilation (#6). -->
                 <Button Classes="tool" Command="{Binding Build.CancelCommand}"
-                        IsVisible="{Binding Build.IsBuilding}" ToolTip.Tip="Cancel build (Shift+F5)">
+                        IsVisible="{Binding Build.IsBuilding}" ToolTip.Tip="Cancel compilation (Shift+F5)">
                     <PathIcon Data="{DynamicResource Icon.Stop}" Foreground="#C62828" />
                 </Button>
                 <Separator Width="1" Margin="4,2" Background="Gray" />

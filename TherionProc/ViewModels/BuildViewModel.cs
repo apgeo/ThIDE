@@ -277,7 +277,7 @@ public partial class BuildViewModel : ViewModelBase
         if (entry is null) { Status = "No project loaded."; return; }
 
         using var lease = _gate.TryAcquire();
-        if (lease is null) { Status = "A build is already in progress."; return; }
+        if (lease is null) { Status = "A compilation is already in progress."; return; }
 
         IsBuilding = true;
         HasBuildResult = false;          // clear the previous success/error status-bar icon
@@ -312,21 +312,21 @@ public partial class BuildViewModel : ViewModelBase
             LastBuildWarningCount = warnCount;
             AddRow(SummaryRow(ok, warnCount, sw.Elapsed, result.Artifacts.Length, _buildStart));
             Status = ok
-                ? $"Build succeeded ({result.Artifacts.Length} artifact(s))."
-                : $"Build failed (exit {result.ExitCode}).";
+                ? $"Compilation succeeded ({result.Artifacts.Length} artifact(s))."
+                : $"Compilation failed (exit {result.ExitCode}).";
             CompileCompleted?.Invoke(this, result.Diagnostics);
             if (ok) AutoOpenOutputs(result.Artifacts);
         }
         catch (OperationCanceledException)
         {
             sw.Stop();
-            Status = "Build cancelled.";
-            AddRow(new CompilerOutputRow("Build cancelled.", "Error", null, OutputRowKind.Summary,
+            Status = "Compilation cancelled.";
+            AddRow(new CompilerOutputRow("Compilation cancelled.", "Error", null, OutputRowKind.Summary,
                 DateTimeOffset.Now, TimeSpan.Zero, sw.Elapsed, TimeColumnMode));
         }
         catch (Exception ex)
         {
-            Status = "Build error: " + ex.Message;
+            Status = "Compilation error: " + ex.Message;
         }
         finally
         {
@@ -349,7 +349,7 @@ public partial class BuildViewModel : ViewModelBase
         DateTimeOffset buildStart)
     {
         var sb = new StringBuilder();
-        sb.Append(ok ? "Build finished successfully" : "Build finished with errors");
+        sb.Append(ok ? "Compilation finished successfully" : "Compilation finished with errors");
         if (warnCount > 0) sb.Append(ok ? $" (with {warnCount} warning(s))" : $" and {warnCount} warning(s)");
         sb.Append($" in {elapsed.TotalSeconds:0.00} seconds");
         if (ok && artifactCount > 0) sb.Append($" and generated {artifactCount} output file(s)");

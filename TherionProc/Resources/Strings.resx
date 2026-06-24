@@ -13,9 +13,9 @@
   <data name="Menu_View_Language" xml:space="preserve"><value>_Language</value></data>
   <data name="Menu_View_Language_English" xml:space="preserve"><value>English</value></data>
   <data name="Menu_View_Language_Romanian" xml:space="preserve"><value>Rom&#226;n&#259;</value></data>
-  <data name="Menu_Build" xml:space="preserve"><value>_Build</value></data>
-  <data name="Menu_Build_Build" xml:space="preserve"><value>_Build</value></data>
-  <data name="Menu_Build_Rebuild" xml:space="preserve"><value>_Rebuild</value></data>
+  <data name="Menu_Build" xml:space="preserve"><value>_Compile</value></data>
+  <data name="Menu_Build_Build" xml:space="preserve"><value>_Compile</value></data>
+  <data name="Menu_Build_Rebuild" xml:space="preserve"><value>_Recompile</value></data>
   <data name="Menu_Build_Cancel" xml:space="preserve"><value>_Cancel</value></data>
   <data name="Tool_WorkspaceExplorer" xml:space="preserve"><value>Workspace Explorer</value></data>
   <data name="Tool_Diagnostics" xml:space="preserve"><value>Diagnostics</value></data>
