@@ -13,15 +13,33 @@
         <DataGrid x:Name="Grid"
                   ItemsSource="{Binding Diagnostics.Rows}"
                   SelectedItem="{Binding Diagnostics.Selected, Mode=TwoWay}"
+                  x:CompileBindings="False"
                   IsReadOnly="True" GridLinesVisibility="Horizontal"
                   CanUserResizeColumns="True" AutoGenerateColumns="False"
                   DoubleTapped="OnRowDoubleTapped">
+            <!-- Columns auto-size to fit their header + content; Message takes the remaining
+                 space and the long File path is capped with a hover tooltip (#5). -->
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Code"     Binding="{Binding Code}"     Width="100" />
-                <DataGridTextColumn Header="Severity" Binding="{Binding Severity}" Width="80"  />
-                <DataGridTextColumn Header="Message"  Binding="{Binding Message}"  Width="*"   />
-                <DataGridTextColumn Header="File"     Binding="{Binding File}"     Width="220" />
-                <DataGridTextColumn Header="Line"     Binding="{Binding Line}"     Width="60"  />
+                <DataGridTextColumn Header="Code"     Binding="{Binding Code}"     Width="Auto" MinWidth="70" />
+                <DataGridTextColumn Header="Severity" Binding="{Binding Severity}" Width="Auto" MinWidth="70" />
+                <DataGridTemplateColumn Header="Message" Width="*" MinWidth="160">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Message}" VerticalAlignment="Center" Padding="4,0"
+                                       TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Message}" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTemplateColumn Header="File" Width="Auto">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding File}" VerticalAlignment="Center" Padding="4,0"
+                                       MaxWidth="320" TextTrimming="CharacterEllipsis"
+                                       ToolTip.Tip="{Binding File}" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="Line"     Binding="{Binding Line}"     Width="Auto" MinWidth="48" />
             </DataGrid.Columns>
         </DataGrid>
     </DockPanel>
