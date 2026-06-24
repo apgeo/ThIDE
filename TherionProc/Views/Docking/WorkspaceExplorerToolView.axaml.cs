@@ -98,7 +98,27 @@ public partial class WorkspaceExplorerToolView : UserControl
                     {
                         case "nativemenu": mi.IsVisible = nativeMenu?.IsSupported ?? false; break;
                         case "delete" when fileOps is not null: mi.Header = fileOps.DeleteActionLabel; break;
+                        case "setactive": mi.IsVisible = IsThconfigNode(Ctx()); break;
                     }
+    }
+
+    /// <summary>True when the node is a .thconfig file (drives the "set active" entry, #7).</summary>
+    private static bool IsThconfigNode(WorkspaceTreeNode? node)
+    {
+        if (node?.FullPath is not { } path) return false;
+        if (string.Equals(node.Kind, "thconfig", StringComparison.OrdinalIgnoreCase)) return true;
+        var ext = Path.GetExtension(path);
+        return ext.Equals(".thconfig", StringComparison.OrdinalIgnoreCase)
+            || ext.Equals(".thc", StringComparison.OrdinalIgnoreCase);
+    }
+
+    // Make the right-clicked .thconfig the workspace's active configuration (#7).
+    private async void OnCtxSetActiveThconfig(object? sender, RoutedEventArgs e)
+    {
+        if (Ctx()?.FullPath is not { } path) return;
+        if (Service<IWorkspaceSession>() is not { } session) return;
+        try { await session.SetActiveThconfigAsync(path).ConfigureAwait(true); }
+        catch { /* best-effort */ }
     }
 
     private void OnCtxOpen(object? sender, RoutedEventArgs e)

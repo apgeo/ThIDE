@@ -110,6 +110,9 @@
                             <ContextMenu Opening="OnContextMenuOpening">
                                 <MenuItem Header="Open" Click="OnCtxOpen" />
                                 <MenuItem Header="Reveal in File Explorer" Click="OnCtxReveal" />
+                                <!-- Only shown for .thconfig nodes (toggled in OnContextMenuOpening, #7). -->
+                                <MenuItem Header="Set as Active Workspace thconfig" Tag="setactive"
+                                          Click="OnCtxSetActiveThconfig" />
                                 <Separator />
                                 <MenuItem Header="New File…" Click="OnCtxNewFile" />
                                 <MenuItem Header="New Folder…" Click="OnCtxNewFolder" />
