@@ -17,6 +17,15 @@ public sealed class TherionColorizer : DocumentColorizingTransformer
 {
     public enum Variant { Dark, Light }
 
+    /// <summary>
+    /// Global toggle (#1): when true, declared/referenced identifiers (survey/scrap/map names,
+    /// station refs) are drawn in a distinct blue with a light-bold weight; when false they
+    /// render as plain text exactly as before. Flip to revert to the legacy appearance.
+    /// </summary>
+    public const bool HighlightIdentifiers = true;
+
+    private static readonly FontWeight IdentifierWeight = FontWeight.Medium; // "light bold"
+
     // Tuned for a dark background (VS-dark-like).
     private static readonly Dictionary<TokenClassification, IBrush> DarkPalette = new()
     {
@@ -27,6 +36,8 @@ public sealed class TherionColorizer : DocumentColorizingTransformer
         [TokenClassification.String]      = Brush(206, 145, 120),
         [TokenClassification.Comment]     = Brush(106, 153, 85),
         [TokenClassification.Punctuation] = Brush(212, 212, 212),
+        // Identifiers in a brighter cyan-blue, distinct from the keyword blue (#1).
+        [TokenClassification.Identifier]  = Brush(120, 190, 255),
     };
 
     // Tuned for a light background (VS-light-like) — the dark palette's pale
@@ -40,6 +51,8 @@ public sealed class TherionColorizer : DocumentColorizingTransformer
         [TokenClassification.String]      = Brush(163, 21, 21),
         [TokenClassification.Comment]     = Brush(0, 128, 0),
         [TokenClassification.Punctuation] = Brush(90, 90, 90),
+        // Identifiers in a deeper azure, distinct from the keyword blue (#1).
+        [TokenClassification.Identifier]  = Brush(36, 114, 200),
     };
 
     private static readonly TherionTokenizer Tokenizer = new();
@@ -78,13 +91,26 @@ public sealed class TherionColorizer : DocumentColorizingTransformer
 
         foreach (var span in classified)
         {
+            // Identifier highlighting is opt-in via the global toggle (#1); when off, identifier
+            // tokens have no palette entry and render as plain text.
+            bool isIdentifier = span.Classification == TokenClassification.Identifier;
+            if (isIdentifier && !HighlightIdentifiers) continue;
             if (!_palette.TryGetValue(span.Classification, out var brush)) continue;
             int start = line.Offset + span.Span.StartOffset;
             int end = start + span.Span.Length;
             if (end > line.EndOffset) end = line.EndOffset;
             if (start >= end) continue;
 
-            ChangeLinePart(start, end, el => el.TextRunProperties.SetForegroundBrush(brush));
+            ChangeLinePart(start, end, el =>
+            {
+                el.TextRunProperties.SetForegroundBrush(brush);
+                if (isIdentifier)
+                {
+                    var tf = el.TextRunProperties.Typeface;
+                    el.TextRunProperties.SetTypeface(new Typeface(
+                        tf.FontFamily, tf.Style, IdentifierWeight, tf.Stretch));
+                }
+            });
         }
     }
 

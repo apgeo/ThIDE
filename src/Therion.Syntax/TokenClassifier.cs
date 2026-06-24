@@ -27,6 +27,8 @@ public enum TokenClassification
     Punctuation,
     /// <summary>Whitespace / line-continuation / newline.</summary>
     Whitespace,
+    /// <summary>A declared/referenced identifier name (survey/scrap/map name, station ref, ...).</summary>
+    Identifier,
 }
 
 /// <summary>A classified slice of source text.</summary>
@@ -56,32 +58,51 @@ public static class TokenClassifier
     /// <summary>The known Therion command/block keywords (used for editor autocomplete).</summary>
     public static IReadOnlyCollection<string> Keywords => KnownKeywords;
 
+    // Keywords whose following bare-word arguments on the same line are identifier names or
+    // station references (so the editor can highlight them distinctly from keywords, #1).
+    private static readonly HashSet<string> NameIntroducers = new(System.StringComparer.OrdinalIgnoreCase)
+    {
+        "survey", "scrap", "map", "station", "fix", "equate", "join", "select",
+    };
+
     /// <summary>Classify the given token stream.</summary>
     public static ImmutableArray<ClassifiedSpan> Classify(ImmutableArray<TherionToken> tokens)
     {
         var result = ImmutableArray.CreateBuilder<ClassifiedSpan>(tokens.Length);
+        // Once a name-introducer keyword is seen, the remaining bare words on that line are
+        // treated as identifiers. Reset at each line boundary.
+        bool namesFollow = false;
         foreach (var t in tokens)
         {
-            var c = t.Kind switch
+            TokenClassification c;
+            switch (t.Kind)
             {
-                TherionTokenKind.LineComment       => TokenClassification.Comment,
-                TherionTokenKind.String            => TokenClassification.String,
-                TherionTokenKind.Number            => TokenClassification.Number,
-                TherionTokenKind.Punctuation       => TokenClassification.Punctuation,
-                TherionTokenKind.Whitespace        => TokenClassification.Whitespace,
-                TherionTokenKind.NewLine           => TokenClassification.Whitespace,
-                TherionTokenKind.LineContinuation  => TokenClassification.Whitespace,
-                TherionTokenKind.Identifier        => ClassifyIdentifier(t.Text),
-                _                                  => TokenClassification.Text,
-            };
+                case TherionTokenKind.LineComment:      c = TokenClassification.Comment; break;
+                case TherionTokenKind.String:           c = TokenClassification.String; break;
+                case TherionTokenKind.Number:           c = TokenClassification.Number; break;
+                case TherionTokenKind.Punctuation:      c = TokenClassification.Punctuation; break;
+                case TherionTokenKind.Whitespace:
+                case TherionTokenKind.LineContinuation: c = TokenClassification.Whitespace; break;
+                case TherionTokenKind.NewLine:
+                    namesFollow = false; c = TokenClassification.Whitespace; break;
+                case TherionTokenKind.Identifier:
+                    c = ClassifyIdentifier(t.Text, ref namesFollow); break;
+                default:                                c = TokenClassification.Text; break;
+            }
             result.Add(new ClassifiedSpan(t.Span, c));
         }
         return result.MoveToImmutable();
     }
 
-    private static TokenClassification ClassifyIdentifier(string text)
+    private static TokenClassification ClassifyIdentifier(string text, ref bool namesFollow)
     {
-        if (text.Length > 0 && text[0] == '-') return TokenClassification.Option;
-        return KnownKeywords.Contains(text) ? TokenClassification.Keyword : TokenClassification.Text;
+        if (text.Length > 0 && text[0] == '-') return TokenClassification.Option; // option flag
+        if (KnownKeywords.Contains(text))
+        {
+            namesFollow = NameIntroducers.Contains(text);
+            return TokenClassification.Keyword;
+        }
+        // A bare word following a name-introducer keyword is an identifier/station name.
+        return namesFollow ? TokenClassification.Identifier : TokenClassification.Text;
     }
 }
