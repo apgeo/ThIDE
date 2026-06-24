@@ -87,14 +87,25 @@
         </TabItem>
     </TabControl>
 
-    <!-- Time-column mode switch, overlaid top-right above the tab strip (#4). -->
-    <ComboBox HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,2,8,0"
-              MinWidth="120" FontSize="11" Padding="6,2"
-              SelectedIndex="{Binding Build.TimeColumnModeIndex, Mode=TwoWay}"
-              ToolTip.Tip="Time column display">
-        <ComboBoxItem>Since last line</ComboBoxItem>
-        <ComboBoxItem>Timestamp</ComboBoxItem>
-        <ComboBoxItem>Since build start</ComboBoxItem>
-    </ComboBox>
+    <!-- Top-right controls overlaid above the tab strip: open-log button (#3) + time mode (#4). -->
+    <StackPanel HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,2,8,0"
+                Orientation="Horizontal" Spacing="6">
+        <!-- Open the Therion log produced by the last build, in the editor (#3). -->
+        <Button FontSize="11" Padding="6,2" Click="OnOpenLog"
+                IsVisible="{Binding Build.HasLog}"
+                ToolTip.Tip="Open the Therion log file in the editor">
+            <StackPanel Orientation="Horizontal" Spacing="4">
+                <PathIcon Data="{DynamicResource Icon.File}" Width="11" Height="11" />
+                <TextBlock Text="Open log" VerticalAlignment="Center" />
+            </StackPanel>
+        </Button>
+        <ComboBox MinWidth="120" FontSize="11" Padding="6,2"
+                  SelectedIndex="{Binding Build.TimeColumnModeIndex, Mode=TwoWay}"
+                  ToolTip.Tip="Time column display">
+            <ComboBoxItem>Since last line</ComboBoxItem>
+            <ComboBoxItem>Timestamp</ComboBoxItem>
+            <ComboBoxItem>Since build start</ComboBoxItem>
+        </ComboBox>
+    </StackPanel>
     </Grid>
 </UserControl>

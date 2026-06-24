@@ -189,6 +189,12 @@ public partial class BuildViewModel : ViewModelBase
     [ObservableProperty] private CompilerOutputRow? _selectedOutput;
     [ObservableProperty] private ArtifactRow? _selectedArtifact;
 
+    // ---- log file (#3) -------------------------------------------------------
+    /// <summary>Path of the Therion log file detected after the build, if any.</summary>
+    [ObservableProperty] private string? _logFilePath;
+    /// <summary>True when a log file was produced and can be opened in the editor.</summary>
+    [ObservableProperty] private bool _hasLog;
+
     // ---- build result indicator (#7) ----------------------------------------
     /// <summary>True once any build has completed in this session.</summary>
     [ObservableProperty] private bool _hasBuildResult;
@@ -275,6 +281,7 @@ public partial class BuildViewModel : ViewModelBase
 
         IsBuilding = true;
         HasBuildResult = false;          // clear the previous success/error status-bar icon
+        HasLog = false; LogFilePath = null;           // clear the previous build's log (#3)
         BuildStarted?.Invoke(this, EventArgs.Empty);  // surface the Compiler Output panel (#2)
         ClearOutputState();
         _cts = new CancellationTokenSource();
@@ -295,6 +302,7 @@ public partial class BuildViewModel : ViewModelBase
             var result = await _compiler.CompileAsync(entry, progress, _cts.Token).ConfigureAwait(true);
             sw.Stop();
             UpdateArtifacts(result.Artifacts);
+            DetectLog(entry, _buildStart);
             _artifactCache.Save(entry, "unknown", result.Artifacts);
             var warnCount = result.Diagnostics.Count(d => d.Severity == DiagnosticSeverity.Warning);
             bool ok = result.ExitCode == 0;
@@ -384,6 +392,34 @@ public partial class BuildViewModel : ViewModelBase
         var matches = artifacts.Where(a => kinds.Contains(a.Kind)).Select(a => a.Path).ToList();
         foreach (var path in s.OpenAllOutputsAfterBuild ? matches : matches.Take(1))
             _shell.Open(path);
+    }
+
+    /// <summary>Finds a Therion log (.log/.tlx) written during this build, for the open-log button (#3).</summary>
+    private void DetectLog(string entry, DateTimeOffset buildStart)
+    {
+        try
+        {
+            var dir = Path.GetDirectoryName(Path.GetFullPath(entry));
+            if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir)) return;
+            var floor = buildStart.AddSeconds(-2); // small tolerance for clock granularity
+            var log = new DirectoryInfo(dir)
+                .EnumerateFiles("*.*")
+                .Where(f => f.Extension.Equals(".log", StringComparison.OrdinalIgnoreCase)
+                         || f.Extension.Equals(".tlx", StringComparison.OrdinalIgnoreCase))
+                .Where(f => (DateTimeOffset)f.LastWriteTimeUtc >= floor)
+                .OrderByDescending(f => f.LastWriteTimeUtc)
+                .FirstOrDefault();
+            if (log is not null) { LogFilePath = log.FullName; HasLog = true; }
+        }
+        catch { /* best-effort log detection */ }
+    }
+
+    /// <summary>Opens the detected build log in the editor as a plain text file (#3).</summary>
+    [RelayCommand]
+    private async Task OpenLog()
+    {
+        if (HasLog && LogFilePath is { } path && File.Exists(path))
+            await _documents.OpenFileAsync(path).ConfigureAwait(true);
     }
 
     [RelayCommand]

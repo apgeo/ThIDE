@@ -121,6 +121,10 @@ public partial class CompilerOutputToolView : UserControl
 
     // ---- parsed-grid context menu ------------------------------------------
 
+    // Open the detected Therion log in the editor (#3).
+    private void OnOpenLog(object? sender, RoutedEventArgs e) =>
+        (DataContext as CompilerOutputToolViewModel)?.Build.OpenLogCommand.Execute(null);
+
     private void OnRowDoubleTapped(object? sender, RoutedEventArgs e)
     {
         if (DataContext is CompilerOutputToolViewModel vm && vm.Build.SelectedOutput is { } row)
