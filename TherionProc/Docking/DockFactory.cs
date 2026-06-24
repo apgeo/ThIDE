@@ -115,6 +115,9 @@ public sealed class DockFactory : Factory
     public override IRootDock CreateLayout() =>
         (PersistDockLayout ? TryLoadLayout() : null) ?? BuildDefaultLayout();
 
+    /// <summary>Builds a fresh default layout for the "reset layout" command (#16).</summary>
+    public IRootDock ResetToDefault() => BuildDefaultLayout();
+
     private DocumentDock NewDocumentDock() => new()
     {
         Id = "Documents",

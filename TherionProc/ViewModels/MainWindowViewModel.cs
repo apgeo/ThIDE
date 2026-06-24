@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -34,8 +35,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public ILayoutService? LayoutService => _layout;
 
-    // Dock layout bound by MainWindow.axaml.
-    public IRootDock Layout { get; }
+    // Dock layout bound by MainWindow.axaml (swappable so "reset layout" can rebuild it, #16).
+    private IRootDock _dockLayout = null!;
+    public IRootDock Layout { get => _dockLayout; private set => SetProperty(ref _dockLayout, value); }
     public DockFactory Factory => _factory;
 
     // Tool wrappers (shown in the dock); content VMs are reached through them.
@@ -372,6 +374,28 @@ public partial class MainWindowViewModel : ViewModelBase
         _language.SetLanguage(culture);
         if (_settings is { } s && !string.Equals(s.Current.UiLanguage, culture, StringComparison.Ordinal))
             s.Save(s.Current with { UiLanguage = culture });
+    }
+
+    // ---- layout controls (#16) ----------------------------------------------
+    /// <summary>Rebuilds the default dock arrangement and re-opens the current documents into it.</summary>
+    [RelayCommand]
+    private void ResetLayout()
+    {
+        var layout = _factory.ResetToDefault();
+        _factory.InitLayout(layout);
+        Layout = layout;
+        // The fresh layout has an empty document well — re-open the live documents into it.
+        foreach (var doc in _documents.Documents.ToList())
+            _factory.OpenDocument(doc);
+        if (_documents.Active is { } active) _factory.OpenDocument(active);
+    }
+
+    /// <summary>Tears the active document off into its own floating window.</summary>
+    [RelayCommand]
+    private void FloatActiveDocument()
+    {
+        if (_documents.Active is { } doc)
+            try { _factory.FloatDockable(doc); } catch { /* best-effort */ }
     }
 
     [RelayCommand] private void ToggleWorkspaceExplorer() => Activate(WorkspaceTool);

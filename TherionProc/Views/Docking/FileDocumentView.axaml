@@ -297,7 +297,7 @@
                     Content="&#x25BE;" Click="OnShowOpenFiles"
                     ToolTip.Tip="Switch to an open file">
                 <Button.Flyout>
-                    <MenuFlyout x:Name="OpenFilesFlyout" />
+                    <MenuFlyout />
                 </Button.Flyout>
             </Button>
 

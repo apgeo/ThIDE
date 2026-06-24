@@ -225,6 +225,19 @@
                 <Button Classes="tool" Click="OnToggleFullScreen" ToolTip.Tip="Full screen (F11)">
                     <PathIcon Data="{DynamicResource Icon.FullScreen}" />
                 </Button>
+                <!-- Layout controls (#16): float active document, reset to the default arrangement. -->
+                <Button Classes="tool" ToolTip.Tip="Layout">
+                    <PathIcon Data="{DynamicResource Icon.Swap}" />
+                    <Button.Flyout>
+                        <MenuFlyout>
+                            <MenuItem Header="Float Active Document"
+                                      Command="{Binding FloatActiveDocumentCommand}" />
+                            <Separator />
+                            <MenuItem Header="Reset to Default Layout"
+                                      Command="{Binding ResetLayoutCommand}" />
+                        </MenuFlyout>
+                    </Button.Flyout>
+                </Button>
                 <TextBlock VerticalAlignment="Center" Margin="12,0,0,0"
                            Text="{Binding Build.Status}" Foreground="Gray" />
             </WrapPanel>
