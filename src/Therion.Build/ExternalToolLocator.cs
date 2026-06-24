@@ -14,11 +14,13 @@ public sealed class ExternalToolLocator : IExternalToolLocator
     public const string Therion = "therion";
     public const string Loch = "loch";
     public const string Aven = "aven";
+    /// <summary>The Mapiah .th2 sketch editor (a Flutter desktop app the user installs separately).</summary>
+    public const string Mapiah = "mapiah";
 
-    // GUI viewers: invoking `<exe> --version` actually pops their window open, so
+    // GUI viewers/editors: invoking `<exe> --version` actually pops their window open, so
     // we detect them by path only and never spawn them for version sniffing.
     private static readonly HashSet<string> GuiTools =
-        new(StringComparer.OrdinalIgnoreCase) { Loch, Aven };
+        new(StringComparer.OrdinalIgnoreCase) { Loch, Aven, Mapiah };
 
     private readonly IExternalToolPathOverrides? _overrides;
 
@@ -114,6 +116,14 @@ public sealed class ExternalToolLocator : IExternalToolLocator
 
     private static IEnumerable<string> GetCandidatePaths(string toolId)
     {
+        // Mapiah ships as a stand-alone Flutter app, not part of the Therion bundle,
+        // so its install locations differ from therion/loch/aven.
+        if (string.Equals(toolId, Mapiah, StringComparison.OrdinalIgnoreCase))
+        {
+            foreach (var p in MapiahCandidatePaths()) yield return p;
+            yield break;
+        }
+
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             var pf = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
@@ -130,6 +140,35 @@ public sealed class ExternalToolLocator : IExternalToolLocator
         {
             yield return "/usr/bin/" + toolId;
             yield return "/usr/local/bin/" + toolId;
+        }
+    }
+
+    private static IEnumerable<string> MapiahCandidatePaths()
+    {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            // Default Mapiah installer location on this dev machine is Program Files (x86).
+            var pfx86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
+            var pf = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+            var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            if (!string.IsNullOrEmpty(pfx86)) yield return Path.Combine(pfx86, "Mapiah", "mapiah.exe");
+            if (!string.IsNullOrEmpty(pf))    yield return Path.Combine(pf, "Mapiah", "mapiah.exe");
+            if (!string.IsNullOrEmpty(local)) yield return Path.Combine(local, "Mapiah", "mapiah.exe");
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+            yield return "/Applications/Mapiah.app/Contents/MacOS/mapiah";
+        }
+        else
+        {
+            // Flatpak (flathub: io.github.rsevero.mapiah) installs a launcher wrapper that
+            // forwards arguments into the sandboxed app, plus the usual native locations.
+            var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            yield return "/var/lib/flatpak/exports/bin/io.github.rsevero.mapiah";
+            if (!string.IsNullOrEmpty(home))
+                yield return Path.Combine(home, ".local/share/flatpak/exports/bin/io.github.rsevero.mapiah");
+            yield return "/usr/bin/mapiah";
+            yield return "/usr/local/bin/mapiah";
         }
     }
 }

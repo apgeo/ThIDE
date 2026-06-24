@@ -1,4 +1,4 @@
-// Implementation Plan §9bis.5 — Settings ? External Tools surface.
+// Implementation Plan ï¿½9bis.5 ï¿½ Settings ? External Tools surface.
 // Detects Therion / Loch / Aven binaries via IExternalToolLocator, allows
 // user-edited override paths (persisted via IExternalToolPathOverrides),
 // and offers a per-row Test button that re-runs detection.
@@ -59,7 +59,7 @@ public sealed partial class ExternalToolRow : ObservableObject
     private async Task TestAsync()
     {
         if (_locator is null) { TestResult = "(no locator)"; return; }
-        TestResult = "Testing…";
+        TestResult = "Testingï¿½";
         var info = await _locator.FindAsync(ToolId).ConfigureAwait(true);
         if (info is null) { TestResult = "Not found"; return; }
         UpdateDetected(info.Path, info.Version ?? string.Empty, info.Source);
@@ -91,7 +91,7 @@ public partial class SettingsViewModel : ViewModelBase
     private void BuildRows()
     {
         var rows = new List<ExternalToolRow>();
-        foreach (var id in new[] { ExternalToolLocator.Therion, ExternalToolLocator.Loch, ExternalToolLocator.Aven })
+        foreach (var id in new[] { ExternalToolLocator.Therion, ExternalToolLocator.Loch, ExternalToolLocator.Aven, ExternalToolLocator.Mapiah })
         {
             rows.Add(_overrides is null
                 ? new ExternalToolRow(id)
@@ -103,7 +103,7 @@ public partial class SettingsViewModel : ViewModelBase
     [RelayCommand]
     public async Task RefreshAsync()
     {
-        Status = "Detecting…";
+        Status = "Detectingï¿½";
         foreach (var row in Tools)
         {
             var info = await _locator.FindAsync(row.ToolId).ConfigureAwait(true);

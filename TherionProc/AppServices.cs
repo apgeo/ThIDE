@@ -81,6 +81,9 @@ internal static class AppServices
         services.AddSingleton<IShellOpener, ShellOpener>();
         services.AddSingleton<ITherionCompiler, TherionCompiler>();
 
+        // "Edit with Mapiah" — detect + launch the external .th2 sketch editor.
+        services.AddSingleton<IMapiahService, MapiahService>();
+
         // Single-root workspace session (re-org #1�#9) � owns root, active thconfig,
         // the shared object graph and the recursive filesystem watcher.
         services.AddSingleton<IWorkspaceSession, WorkspaceSessionService>();
