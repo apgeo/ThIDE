@@ -141,7 +141,9 @@
                             <PathIcon Data="{Binding Kind, Converter={x:Static conv:KindToIconConverter.Instance}}"
                                       Foreground="{Binding IconBrush}" Width="14" Height="14" VerticalAlignment="Center"
                                       IsVisible="{Binding ShellIcon, Converter={x:Static ObjectConverters.IsNull}}" />
+                            <!-- Blue name = file is part of the active thconfig graph (#2). -->
                             <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
+                                       Foreground="{Binding NameBrush}"
                                        TextTrimming="CharacterEllipsis" />
                             <TextBlock Text="{Binding Detail}" Foreground="Gray" FontStyle="Italic"
                                        VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />

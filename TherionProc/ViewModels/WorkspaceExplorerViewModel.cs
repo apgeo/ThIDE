@@ -26,6 +26,13 @@ public sealed partial class WorkspaceTreeNode : ObservableObject
     public string? Detail { get; init; }
     /// <summary>File path for file nodes (double-click opens it).</summary>
     public string? FullPath { get; init; }
+
+    /// <summary>True when this file is part of the active thconfig's object graph (#2).</summary>
+    public bool InActiveGraph { get; init; }
+    /// <summary>File-name brush: blue for files in the active graph, default otherwise (#2).</summary>
+    public IBrush NameBrush => InActiveGraph
+        ? new SolidColorBrush(Color.FromRgb(0x15, 0x65, 0xC0))
+        : Brushes.Black;
     /// <summary>Declaration span for object nodes (double-click navigates to it).</summary>
     public SourceSpan? Target { get; init; }
     public string Kind { get; init; } = string.Empty;
@@ -573,6 +580,7 @@ public partial class WorkspaceExplorerViewModel : ViewModelBase
                 Kind = FileKind(f),
                 ShellIcon = _iconProvider?.GetIcon(f, isDirectory: false),
                 LastModifiedText = LastModified(f),
+                InActiveGraph = _session?.Covers(f) ?? false, // blue name when in the graph (#2)
             });
         return list;
     }
