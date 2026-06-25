@@ -49,7 +49,7 @@ public static class TokenClassifier
         "flags", "sd", "explo-date", "explo-team", "instrument",
         // .th2
         "scrap", "endscrap", "point", "line", "endline", "area", "endarea",
-        "encoding", "sketch", "map", "endmap", "join", "layer",
+        "encoding", "sketch", "map", "endmap", "join", "layer", "break", "preview",
         // .thconfig
         "source", "layout", "endlayout", "lookup", "endlookup", "export", "select", "cs", "system-charset",
         "language", "lang", "translate", "revise", "group", "endgroup",
@@ -72,6 +72,11 @@ public static class TokenClassifier
         // Once a name-introducer keyword is seen, the remaining bare words on that line are
         // treated as identifiers. Reset at each line boundary.
         bool namesFollow = false;
+        // Inside a "map ... endmap" block every bare word on its body lines is a scrap/map
+        // reference (the members being composed) — those are identifiers too, but they are NOT
+        // preceded by an introducer keyword on their own line, so they need block-level state
+        // that survives line boundaries (until "endmap"). Same for "endsurvey"-style refs (#10).
+        bool inMapBlock = false;
         foreach (var t in tokens)
         {
             TokenClassification c;
@@ -86,7 +91,7 @@ public static class TokenClassifier
                 case TherionTokenKind.NewLine:
                     namesFollow = false; c = TokenClassification.Whitespace; break;
                 case TherionTokenKind.Identifier:
-                    c = ClassifyIdentifier(t.Text, ref namesFollow); break;
+                    c = ClassifyIdentifier(t.Text, ref namesFollow, ref inMapBlock); break;
                 default:                                c = TokenClassification.Text; break;
             }
             result.Add(new ClassifiedSpan(t.Span, c));
@@ -94,15 +99,19 @@ public static class TokenClassifier
         return result.MoveToImmutable();
     }
 
-    private static TokenClassification ClassifyIdentifier(string text, ref bool namesFollow)
+    private static TokenClassification ClassifyIdentifier(string text, ref bool namesFollow, ref bool inMapBlock)
     {
         if (text.Length > 0 && text[0] == '-') return TokenClassification.Option; // option flag
         if (KnownKeywords.Contains(text))
         {
+            // Track map-block entry/exit so the member references on the body lines highlight.
+            if (text.Equals("map", System.StringComparison.OrdinalIgnoreCase)) inMapBlock = true;
+            else if (text.Equals("endmap", System.StringComparison.OrdinalIgnoreCase)) inMapBlock = false;
             namesFollow = NameIntroducers.Contains(text);
             return TokenClassification.Keyword;
         }
-        // A bare word following a name-introducer keyword is an identifier/station name.
-        return namesFollow ? TokenClassification.Identifier : TokenClassification.Text;
+        // A bare word following a name-introducer keyword — or any bare word on a map body line —
+        // is an identifier/station/scrap reference.
+        return (namesFollow || inMapBlock) ? TokenClassification.Identifier : TokenClassification.Text;
     }
 }
