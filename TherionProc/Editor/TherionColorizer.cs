@@ -4,6 +4,7 @@
 // palette (so tokens stay legible on either theme) and caches per-line
 // classification so scrolling/redraw doesn't re-tokenize unchanged lines.
 
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using Avalonia.Media;
@@ -57,12 +58,30 @@ public sealed class TherionColorizer : DocumentColorizingTransformer
 
     private static readonly TherionTokenizer Tokenizer = new();
 
+    // User custom syntax colors (#2): when set, these brushes override the theme palette for
+    // the listed classifications across all editors. Raised through ColorsChanged so open
+    // editors redraw on change.
+    private static Dictionary<TokenClassification, IBrush>? _customColors;
+    public static event EventHandler? ColorsChanged;
+    public static void SetCustomColors(Dictionary<TokenClassification, IBrush>? overrides)
+    {
+        _customColors = overrides is { Count: > 0 } ? overrides : null;
+        ColorsChanged?.Invoke(null, EventArgs.Empty);
+    }
+
     private Dictionary<TokenClassification, IBrush> _palette = LightPalette;
     private readonly Dictionary<string, ImmutableArray<ClassifiedSpan>> _cache = new();
     private HashSet<int>? _skipLines;
 
     public void SetVariant(Variant variant) =>
         _palette = variant == Variant.Dark ? DarkPalette : LightPalette;
+
+    /// <summary>Resolves a token's brush: user override first, then the theme palette.</summary>
+    private bool TryBrush(TokenClassification c, out IBrush brush)
+    {
+        if (_customColors is { } o && o.TryGetValue(c, out var custom)) { brush = custom; return true; }
+        return _palette.TryGetValue(c, out brush!);
+    }
 
     /// <summary>
     /// 1-based line numbers to leave unhighlighted (e.g. metapost/tex code inside a
@@ -95,7 +114,7 @@ public sealed class TherionColorizer : DocumentColorizingTransformer
             // tokens have no palette entry and render as plain text.
             bool isIdentifier = span.Classification == TokenClassification.Identifier;
             if (isIdentifier && !HighlightIdentifiers) continue;
-            if (!_palette.TryGetValue(span.Classification, out var brush)) continue;
+            if (!TryBrush(span.Classification, out var brush)) continue;
             int start = line.Offset + span.Span.StartOffset;
             int end = start + span.Span.Length;
             if (end > line.EndOffset) end = line.EndOffset;

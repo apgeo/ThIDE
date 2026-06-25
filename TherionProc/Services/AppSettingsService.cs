@@ -97,6 +97,20 @@ public sealed record AppSettings
     /// <summary>Skip parsing/object-graph above this size in KB.</summary>
     public int MaxParseKB { get; init; } = 512;
 
+    // ---- theme (#2) ----
+    /// <summary>App theme mode: "System", "Light", or "Dark".</summary>
+    public string ThemeMode { get; init; } = "System";
+    /// <summary>When true, the editor uses the custom syntax colors below instead of theme defaults.</summary>
+    public bool UseCustomSyntaxColors { get; init; }
+    // Custom syntax token colors as #RRGGBB hex (null ⇒ use the theme default for that token).
+    public string? SyntaxKeywordColor { get; init; }
+    public string? SyntaxIdentifierColor { get; init; }
+    public string? SyntaxNumberColor { get; init; }
+    public string? SyntaxStringColor { get; init; }
+    public string? SyntaxCommentColor { get; init; }
+    public string? SyntaxOptionColor { get; init; }
+    public string? SyntaxPunctuationColor { get; init; }
+
     // ---- language ----
     /// <summary>UI language culture name (e.g. "en", "ro"); applied at startup (#9).</summary>
     public string UiLanguage { get; init; } = "en";

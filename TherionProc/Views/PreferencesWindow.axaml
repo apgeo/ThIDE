@@ -1,10 +1,11 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:conv="using:TherionProc.Converters"
         x:Class="TherionProc.Views.PreferencesWindow"
         x:CompileBindings="False"
         Title="Preferences"
-        Width="720" Height="520"
-        MinWidth="560" MinHeight="380"
+        Width="1080" Height="780"
+        MinWidth="640" MinHeight="460"
         WindowStartupLocation="CenterOwner">
     <DockPanel>
         <!-- Footer: OK / Cancel -->
@@ -50,6 +51,56 @@
                     </StackPanel>
                     <TextBlock Text="Language applies immediately to menus and labels."
                                Foreground="Gray" FontSize="11" />
+                </StackPanel>
+
+                <!-- Theme & Colors (#2) -->
+                <StackPanel Spacing="10" IsVisible="{Binding IsTheme}">
+                    <TextBlock Text="Theme &amp; Colors" FontSize="16" FontWeight="Bold" />
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <TextBlock Text="App theme" VerticalAlignment="Center" Width="120" />
+                        <ComboBox MinWidth="200" SelectedIndex="{Binding ThemeModeIndex, Mode=TwoWay}">
+                            <ComboBoxItem>System default</ComboBoxItem>
+                            <ComboBoxItem>Light</ComboBoxItem>
+                            <ComboBoxItem>Dark (easy on the eyes)</ComboBoxItem>
+                        </ComboBox>
+                    </StackPanel>
+                    <TextBlock Text="The Dark theme adapts both control and editor syntax colors."
+                               Foreground="Gray" FontSize="11" />
+
+                    <Separator Margin="0,6" />
+                    <CheckBox Content="Use custom syntax colors (overrides the theme palette)"
+                              IsChecked="{Binding UseCustomSyntaxColors}" />
+                    <TextBlock Text="Enter #RRGGBB hex values; the swatch previews each color."
+                               Foreground="Gray" FontSize="11" />
+                    <Grid ColumnDefinitions="120,150,28" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+                          IsEnabled="{Binding UseCustomSyntaxColors}">
+                        <Grid.Styles>
+                            <Style Selector="TextBlock.lbl"><Setter Property="VerticalAlignment" Value="Center" /><Setter Property="Margin" Value="0,0,0,6" /></Style>
+                            <Style Selector="TextBox.hex"><Setter Property="Margin" Value="0,0,8,6" /></Style>
+                            <Style Selector="Border.swatch"><Setter Property="Width" Value="22" /><Setter Property="Height" Value="22" /><Setter Property="Margin" Value="0,0,0,6" /><Setter Property="BorderBrush" Value="Gray" /><Setter Property="BorderThickness" Value="1" /><Setter Property="CornerRadius" Value="3" /></Style>
+                        </Grid.Styles>
+                        <TextBlock Grid.Row="0" Grid.Column="0" Classes="lbl" Text="Keyword" />
+                        <TextBox    Grid.Row="0" Grid.Column="1" Classes="hex" Text="{Binding SyntaxKeywordColor}" />
+                        <Border     Grid.Row="0" Grid.Column="2" Classes="swatch" Background="{Binding SyntaxKeywordColor, Converter={x:Static conv:HexColorToBrushConverter.Instance}}" />
+                        <TextBlock Grid.Row="1" Grid.Column="0" Classes="lbl" Text="Identifier" />
+                        <TextBox    Grid.Row="1" Grid.Column="1" Classes="hex" Text="{Binding SyntaxIdentifierColor}" />
+                        <Border     Grid.Row="1" Grid.Column="2" Classes="swatch" Background="{Binding SyntaxIdentifierColor, Converter={x:Static conv:HexColorToBrushConverter.Instance}}" />
+                        <TextBlock Grid.Row="2" Grid.Column="0" Classes="lbl" Text="Number" />
+                        <TextBox    Grid.Row="2" Grid.Column="1" Classes="hex" Text="{Binding SyntaxNumberColor}" />
+                        <Border     Grid.Row="2" Grid.Column="2" Classes="swatch" Background="{Binding SyntaxNumberColor, Converter={x:Static conv:HexColorToBrushConverter.Instance}}" />
+                        <TextBlock Grid.Row="3" Grid.Column="0" Classes="lbl" Text="String" />
+                        <TextBox    Grid.Row="3" Grid.Column="1" Classes="hex" Text="{Binding SyntaxStringColor}" />
+                        <Border     Grid.Row="3" Grid.Column="2" Classes="swatch" Background="{Binding SyntaxStringColor, Converter={x:Static conv:HexColorToBrushConverter.Instance}}" />
+                        <TextBlock Grid.Row="4" Grid.Column="0" Classes="lbl" Text="Comment" />
+                        <TextBox    Grid.Row="4" Grid.Column="1" Classes="hex" Text="{Binding SyntaxCommentColor}" />
+                        <Border     Grid.Row="4" Grid.Column="2" Classes="swatch" Background="{Binding SyntaxCommentColor, Converter={x:Static conv:HexColorToBrushConverter.Instance}}" />
+                        <TextBlock Grid.Row="5" Grid.Column="0" Classes="lbl" Text="Option" />
+                        <TextBox    Grid.Row="5" Grid.Column="1" Classes="hex" Text="{Binding SyntaxOptionColor}" />
+                        <Border     Grid.Row="5" Grid.Column="2" Classes="swatch" Background="{Binding SyntaxOptionColor, Converter={x:Static conv:HexColorToBrushConverter.Instance}}" />
+                        <TextBlock Grid.Row="6" Grid.Column="0" Classes="lbl" Text="Punctuation" />
+                        <TextBox    Grid.Row="6" Grid.Column="1" Classes="hex" Text="{Binding SyntaxPunctuationColor}" />
+                        <Border     Grid.Row="6" Grid.Column="2" Classes="swatch" Background="{Binding SyntaxPunctuationColor, Converter={x:Static conv:HexColorToBrushConverter.Instance}}" />
+                    </Grid>
                 </StackPanel>
 
                 <!-- Editor -->

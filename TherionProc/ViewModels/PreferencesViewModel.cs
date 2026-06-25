@@ -47,6 +47,18 @@ public partial class PreferencesViewModel : ObservableObject
     // ---- editor behaviour ----
     [ObservableProperty] private bool _showRenamePreviewBeforeApply;
 
+    // ---- theme (#2) ----
+    /// <summary>0 = System, 1 = Light, 2 = Dark.</summary>
+    [ObservableProperty] private int _themeModeIndex;
+    [ObservableProperty] private bool _useCustomSyntaxColors;
+    [ObservableProperty] private string _syntaxKeywordColor = "";
+    [ObservableProperty] private string _syntaxIdentifierColor = "";
+    [ObservableProperty] private string _syntaxNumberColor = "";
+    [ObservableProperty] private string _syntaxStringColor = "";
+    [ObservableProperty] private string _syntaxCommentColor = "";
+    [ObservableProperty] private string _syntaxOptionColor = "";
+    [ObservableProperty] private string _syntaxPunctuationColor = "";
+
     // ---- performance / large-file guards (#10) ----
     [ObservableProperty] private int _maxHighlightLines;
     [ObservableProperty] private int _maxHighlightKB;
@@ -93,10 +105,20 @@ public partial class PreferencesViewModel : ObservableObject
         _maxHighlightKB = s.MaxHighlightKB;
         _maxParseLines = s.MaxParseLines;
         _maxParseKB = s.MaxParseKB;
+        _themeModeIndex = s.ThemeMode switch { "Light" => 1, "Dark" => 2, _ => 0 };
+        _useCustomSyntaxColors = s.UseCustomSyntaxColors;
+        _syntaxKeywordColor = s.SyntaxKeywordColor ?? "#0000C8";
+        _syntaxIdentifierColor = s.SyntaxIdentifierColor ?? "#2472C8";
+        _syntaxNumberColor = s.SyntaxNumberColor ?? "#00808C";
+        _syntaxStringColor = s.SyntaxStringColor ?? "#A31515";
+        _syntaxCommentColor = s.SyntaxCommentColor ?? "#008000";
+        _syntaxOptionColor = s.SyntaxOptionColor ?? "#966E00";
+        _syntaxPunctuationColor = s.SyntaxPunctuationColor ?? "#5A5A5A";
 
         _allSections = new List<PreferenceSection>
         {
             new("general",  "General",             "startup session reopen language english romanian locale"),
+            new("theme",    "Theme & Colors",      "theme dark light color syntax keyword identifier custom appearance"),
             new("editor",   "Editor",              "font size indent line numbers highlight tabs spaces rename preview"),
             new("performance","Performance",       "large file limit highlight parse lines size kb threshold"),
             new("workspace","Workspace",           "reload external graph disk watch"),
@@ -112,6 +134,7 @@ public partial class PreferencesViewModel : ObservableObject
 
     // ---- which section is shown (drives content IsVisible) --------------
     public bool IsGeneral     => SelectedSection?.Id == "general";
+    public bool IsTheme       => SelectedSection?.Id == "theme";
     public bool IsEditor      => SelectedSection?.Id == "editor";
     public bool IsPerformance => SelectedSection?.Id == "performance";
     public bool IsWorkspace   => SelectedSection?.Id == "workspace";
@@ -122,6 +145,7 @@ public partial class PreferencesViewModel : ObservableObject
     partial void OnSelectedSectionChanged(PreferenceSection? value)
     {
         OnPropertyChanged(nameof(IsGeneral));
+        OnPropertyChanged(nameof(IsTheme));
         OnPropertyChanged(nameof(IsEditor));
         OnPropertyChanged(nameof(IsPerformance));
         OnPropertyChanged(nameof(IsWorkspace));
@@ -183,7 +207,18 @@ public partial class PreferencesViewModel : ObservableObject
             MaxHighlightKB = MaxHighlightKB,
             MaxParseLines = MaxParseLines,
             MaxParseKB = MaxParseKB,
+            ThemeMode = ThemeModeIndex switch { 1 => "Light", 2 => "Dark", _ => "System" },
+            UseCustomSyntaxColors = UseCustomSyntaxColors,
+            SyntaxKeywordColor = NullIfBlank(SyntaxKeywordColor),
+            SyntaxIdentifierColor = NullIfBlank(SyntaxIdentifierColor),
+            SyntaxNumberColor = NullIfBlank(SyntaxNumberColor),
+            SyntaxStringColor = NullIfBlank(SyntaxStringColor),
+            SyntaxCommentColor = NullIfBlank(SyntaxCommentColor),
+            SyntaxOptionColor = NullIfBlank(SyntaxOptionColor),
+            SyntaxPunctuationColor = NullIfBlank(SyntaxPunctuationColor),
         });
         _language?.SetLanguage(code); // reflect the new language immediately
     }
+
+    private static string? NullIfBlank(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
 }

@@ -201,6 +201,9 @@ public partial class TherionTextEditor : UserControl
             _editor.TextArea.TextEntered += OnTextEntered;
             _editor.TextChanged += OnEditorTextChanged;
             ActualThemeVariantChanged += OnThemeVariantChanged;
+            // Live-apply custom syntax color changes (#2).
+            TherionColorizer.ColorsChanged += OnCustomColorsChanged;
+            DetachedFromVisualTree += (_, _) => TherionColorizer.ColorsChanged -= OnCustomColorsChanged;
             // Track the most-recently focused editor so the shell Edit/Search menus can act on
             // the active document's editor (#11/#12).
             _editor.TextArea.GotFocus += (_, _) => LastFocused = this;
@@ -308,6 +311,10 @@ public partial class TherionTextEditor : UserControl
         _colorizer?.SetVariant(IsDark() ? TherionColorizer.Variant.Dark : TherionColorizer.Variant.Light);
         _editor?.TextArea.TextView.Redraw();
     }
+
+    // Custom syntax colors changed in Preferences (#2) — repaint with the new brushes.
+    private void OnCustomColorsChanged(object? sender, EventArgs e) =>
+        _editor?.TextArea.TextView.Redraw();
 
     // Push user edits back to the bindable Text property so a TwoWay binding
     // flushes them to the document model (which re-parses).

@@ -45,6 +45,7 @@ internal static class AppServices
         // base name to the type's full name, matching the embedded resources.
         services.AddLocalization();
         services.AddSingleton<ILanguageService, LanguageService>();
+        services.AddSingleton<IThemeService, ThemeService>();
 
         // Workspace primitives (�6).
         services.AddSingleton(WorkspaceOptions.FromEnvironment());

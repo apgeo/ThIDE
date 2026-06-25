@@ -31,6 +31,9 @@ public partial class App : Application
 
         var services = AppServices.Build();
 
+        // Apply the persisted theme (mode + custom syntax colors) before the window shows (#2).
+        services.GetRequiredService<Services.IThemeService>().Apply();
+
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             // Closing the main window quits the app, even if tool/float/search windows
