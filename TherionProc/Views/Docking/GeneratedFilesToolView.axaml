@@ -2,13 +2,14 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:TherionProc.ViewModels.Docking"
              xmlns:conv="using:TherionProc.Converters"
+             xmlns:l="using:TherionProc.Resources"
              x:Class="TherionProc.Views.Docking.GeneratedFilesToolView"
              x:DataType="vm:GeneratedFilesToolViewModel">
     <DockPanel>
         <!-- Column visibility + fit controls (#4). -->
         <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="6,3">
             <StackPanel Orientation="Horizontal" Spacing="6">
-                <Button Content="Columns ▾" Padding="6,2" FontSize="11" ToolTip.Tip="Show or hide columns">
+                <Button Content="{l:Loc Common_Columns}" Padding="6,2" FontSize="11" ToolTip.Tip="Show or hide columns">
                     <Button.Flyout>
                         <Flyout>
                             <StackPanel Spacing="2" Margin="8">
@@ -21,7 +22,7 @@
                         </Flyout>
                     </Button.Flyout>
                 </Button>
-                <Button Content="↔ Fit" Padding="6,2" FontSize="11" Click="OnFitColumns"
+                <Button Content="{l:Loc Common_Fit}" Padding="6,2" FontSize="11" Click="OnFitColumns"
                         ToolTip.Tip="Fit all columns to their content" />
             </StackPanel>
         </Border>
@@ -35,8 +36,10 @@
                   DoubleTapped="OnArtifactDoubleTapped">
             <DataGrid.ContextMenu>
                 <ContextMenu>
-                    <MenuItem Header="Open" Click="OnOpenArtifact" />
-                    <MenuItem Header="Reveal in File Manager" Click="OnRevealArtifact" />
+                    <MenuItem Header="{l:Loc Common_Open}" Click="OnOpenArtifact" />
+                    <MenuItem Header="{l:Loc Gen_Reveal}" Click="OnRevealArtifact" />
+                    <Separator />
+                    <MenuItem Header="{l:Loc Gen_GoToDef}" Click="OnGoToArtifactDefinition" />
                 </ContextMenu>
             </DataGrid.ContextMenu>
             <DataGrid.Columns>

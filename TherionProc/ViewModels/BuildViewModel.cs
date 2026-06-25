@@ -521,9 +521,70 @@ public partial class BuildViewModel : ViewModelBase
     private void RestoreLastArtifacts()
     {
         var entry = _documents.CurrentPath;
-        if (entry is null) { UpdateArtifacts(ImmutableArray<OutputArtifact>.Empty); return; }
+        if (entry is null) return;
         var cached = _artifactCache.Load(entry, "unknown");
-        UpdateArtifacts(cached);
+        // Only repopulate when the newly-active file actually has cached build outputs.
+        // A bare document change (e.g. returning focus after opening an artifact externally)
+        // must not wipe the freshly-built artifact list to an empty grid (#4).
+        if (!cached.IsDefaultOrEmpty) UpdateArtifacts(cached);
+    }
+
+    /// <summary>
+    /// Navigates to the place in the active thconfig where this output file is defined (#7):
+    /// finds the artifact's file name (then its stem) in the thconfig text and scrolls there.
+    /// </summary>
+    [RelayCommand]
+    private async Task GoToArtifactDefinition(ArtifactRow? row)
+    {
+        if (row is null) return;
+        var thconfig = ResolveBuildEntry();
+        if (thconfig is null || !File.Exists(thconfig))
+        {
+            await Views.MessageDialog.ShowOverMainAsync("Go to definition",
+                "No thconfig is available to search for this output's definition.").ConfigureAwait(true);
+            return;
+        }
+
+        string text;
+        try { text = await File.ReadAllTextAsync(thconfig).ConfigureAwait(true); }
+        catch
+        {
+            await Views.MessageDialog.ShowOverMainAsync("Go to definition",
+                $"Could not read {Path.GetFileName(thconfig)}.").ConfigureAwait(true);
+            return;
+        }
+
+        var fileName = Path.GetFileName(row.Path);
+        int idx = text.IndexOf(fileName, StringComparison.OrdinalIgnoreCase);
+        int len = fileName.Length;
+        if (idx < 0)
+        {
+            var stem = Path.GetFileNameWithoutExtension(row.Path);
+            idx = text.IndexOf(stem, StringComparison.OrdinalIgnoreCase);
+            len = stem.Length;
+        }
+        if (idx < 0)
+        {
+            await Views.MessageDialog.ShowOverMainAsync("Go to definition",
+                $"Could not find where \"{fileName}\" is defined in {Path.GetFileName(thconfig)}.\n\n" +
+                "Therion may derive this output name automatically rather than from an explicit export line.")
+                .ConfigureAwait(true);
+            return;
+        }
+
+        await _documents.NavigateToSpanAsync(SpanAt(thconfig, text, idx, len)).ConfigureAwait(true);
+    }
+
+    private static Therion.Core.SourceSpan SpanAt(string path, string text, int offset, int length)
+    {
+        int line = 1, col = 1;
+        for (int i = 0; i < offset && i < text.Length; i++)
+        {
+            if (text[i] == '\n') { line++; col = 1; } else col++;
+        }
+        return new Therion.Core.SourceSpan(path,
+            new Therion.Core.SourceLocation(line, col),
+            new Therion.Core.SourceLocation(line, col + length), offset, length);
     }
 
     // ---- Designer-only null sinks (kept private � never resolved at runtime) ----

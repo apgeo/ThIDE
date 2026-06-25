@@ -23,6 +23,13 @@ public partial class GeneratedFilesToolView : UserControl
             vm.Build.RevealArtifactCommand.Execute(row);
     }
 
+    // Jump to where this output is defined in the active thconfig (#7).
+    private void OnGoToArtifactDefinition(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is GeneratedFilesToolViewModel vm && vm.Build.SelectedArtifact is { } row)
+            vm.Build.GoToArtifactDefinitionCommand.Execute(row);
+    }
+
     private void OpenSelected()
     {
         if (DataContext is GeneratedFilesToolViewModel vm && vm.Build.SelectedArtifact is { } row)
