@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:conv="using:TherionProc.Converters"
+        xmlns:l="using:TherionProc.Resources"
         x:Class="TherionProc.Views.PreferencesWindow"
         x:CompileBindings="False"
         Title="Preferences"
@@ -9,7 +10,7 @@
         WindowStartupLocation="CenterOwner">
     <DockPanel>
         <!-- Footer: OK / Cancel -->
-        <Border DockPanel.Dock="Bottom" BorderBrush="#CCCCCC" BorderThickness="0,1,0,0" Padding="12,8">
+        <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="0,1,0,0" Padding="12,8">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
                 <Button Content="Cancel" Click="OnCancel" MinWidth="80" />
                 <Button Content="OK" Click="OnOk" IsDefault="True" MinWidth="80" />
@@ -17,8 +18,9 @@
         </Border>
 
         <!-- Left rail: search box + section list (VS2026-style options navigation). -->
-        <Border DockPanel.Dock="Left" Width="200" Background="#F3F3F3"
-                BorderBrush="#CCCCCC" BorderThickness="0,0,1,0">
+        <Border DockPanel.Dock="Left" Width="200"
+                Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}"
+                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="0,0,1,0">
             <DockPanel Margin="8">
                 <TextBox DockPanel.Dock="Top" Watermark="Search settings…" Margin="0,0,0,8"
                          Text="{Binding SearchQuery, Mode=TwoWay}" />
@@ -39,7 +41,7 @@
             <Panel>
                 <!-- General -->
                 <StackPanel Spacing="10" IsVisible="{Binding IsGeneral}">
-                    <TextBlock Text="General" FontSize="16" FontWeight="Bold" />
+                    <TextBlock Text="{l:Loc Pref_General}" FontSize="16" FontWeight="Bold" />
                     <CheckBox Content="Reopen files from last session on startup"
                               IsChecked="{Binding RestoreSessionOnStartup}" />
                     <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,4,0,0">
@@ -55,7 +57,7 @@
 
                 <!-- Theme & Colors (#2) -->
                 <StackPanel Spacing="10" IsVisible="{Binding IsTheme}">
-                    <TextBlock Text="Theme &amp; Colors" FontSize="16" FontWeight="Bold" />
+                    <TextBlock Text="{l:Loc Pref_Theme}" FontSize="16" FontWeight="Bold" />
                     <StackPanel Orientation="Horizontal" Spacing="10">
                         <TextBlock Text="App theme" VerticalAlignment="Center" Width="120" />
                         <ComboBox MinWidth="200" SelectedIndex="{Binding ThemeModeIndex, Mode=TwoWay}">
@@ -105,7 +107,7 @@
 
                 <!-- Editor -->
                 <StackPanel Spacing="10" IsVisible="{Binding IsEditor}">
-                    <TextBlock Text="Editor" FontSize="16" FontWeight="Bold" />
+                    <TextBlock Text="{l:Loc Pref_Editor}" FontSize="16" FontWeight="Bold" />
                     <Grid ColumnDefinitions="140,*" RowDefinitions="Auto,Auto">
                         <TextBlock Grid.Row="0" Grid.Column="0" Text="Font size"
                                    VerticalAlignment="Center" Margin="0,0,8,6" />
@@ -126,7 +128,7 @@
 
                 <!-- Performance / large-file guards (#10) -->
                 <StackPanel Spacing="10" IsVisible="{Binding IsPerformance}">
-                    <TextBlock Text="Performance — large files" FontSize="16" FontWeight="Bold" />
+                    <TextBlock Text="{l:Loc Pref_Performance}" FontSize="16" FontWeight="Bold" />
                     <TextBlock Text="Above these limits, syntax highlighting and hover features are disabled."
                                Foreground="Gray" TextWrapping="Wrap" />
                     <Grid ColumnDefinitions="200,*" RowDefinitions="Auto,Auto" Margin="0,0,0,4">
@@ -157,7 +159,7 @@
 
                 <!-- Workspace -->
                 <StackPanel Spacing="10" IsVisible="{Binding IsWorkspace}">
-                    <TextBlock Text="Workspace" FontSize="16" FontWeight="Bold" />
+                    <TextBlock Text="{l:Loc Pref_Workspace}" FontSize="16" FontWeight="Bold" />
                     <CheckBox Content="Reload open files changed outside the editor"
                               IsChecked="{Binding AutoReloadExternalChanges}" />
                     <CheckBox Content="Update the object graph when files change on disk"
@@ -166,7 +168,7 @@
 
                 <!-- Build & Output -->
                 <StackPanel Spacing="10" IsVisible="{Binding IsBuild}">
-                    <TextBlock Text="Build &amp; Output" FontSize="16" FontWeight="Bold" />
+                    <TextBlock Text="{l:Loc Pref_Build}" FontSize="16" FontWeight="Bold" />
                     <TextBlock Text="After a successful build, open:" FontWeight="SemiBold" />
                     <CheckBox Content=".lox (Loch 3D model)" IsChecked="{Binding OpenLoxAfterBuild}" />
                     <CheckBox Content=".3d (Survex / Aven model)" IsChecked="{Binding Open3dAfterBuild}" />
@@ -178,7 +180,7 @@
 
                 <!-- External Tools (moved here from the dockable Settings panel, #13) -->
                 <DockPanel IsVisible="{Binding IsExternal}" VerticalAlignment="Top">
-                    <TextBlock DockPanel.Dock="Top" Text="External Tools"
+                    <TextBlock DockPanel.Dock="Top" Text="{l:Loc Pref_External}"
                                FontSize="16" FontWeight="Bold" Margin="0,0,0,8" />
                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="10" Margin="0,0,0,8">
                         <Button Content="Refresh" Command="{Binding ExternalTools.RefreshCommand}" />
@@ -209,7 +211,7 @@
 
                 <!-- Keyboard Shortcuts -->
                 <DockPanel IsVisible="{Binding IsKeyboard}" VerticalAlignment="Top">
-                    <TextBlock DockPanel.Dock="Top" Text="Keyboard Shortcuts"
+                    <TextBlock DockPanel.Dock="Top" Text="{l:Loc Pref_Keyboard}"
                                FontSize="16" FontWeight="Bold" Margin="0,0,0,8" />
                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="10" Margin="0,0,0,8">
                         <Button Content="Reset all to defaults" Command="{Binding Keyboard.ResetAllCommand}" />

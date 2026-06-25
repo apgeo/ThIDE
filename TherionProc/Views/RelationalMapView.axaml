@@ -51,7 +51,7 @@
         </Border>
 
         <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
-                      Background="#FAFAFA">
+                      Background="{DynamicResource SolidBackgroundFillColorBaseBrush}">
             <Panel x:Name="DiagramRoot"
                    Width="{Binding CanvasWidth}" Height="{Binding CanvasHeight}">
                 <views:RelationalEdgesControl x:Name="EdgeLayer" />

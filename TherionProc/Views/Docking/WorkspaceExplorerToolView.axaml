@@ -3,6 +3,7 @@
              xmlns:vm="using:TherionProc.ViewModels.Docking"
              xmlns:vmw="using:TherionProc.ViewModels"
              xmlns:conv="using:TherionProc.Converters"
+             xmlns:l="using:TherionProc.Resources"
              x:Class="TherionProc.Views.Docking.WorkspaceExplorerToolView"
              x:DataType="vm:WorkspaceExplorerToolViewModel">
     <DockPanel>
@@ -109,6 +110,13 @@
                 <Style Selector="TreeViewItem">
                     <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
                 </Style>
+                <!-- Files in the active thconfig graph: blue + bold so they stand out, and
+                     readable on both light and dark themes (#1/#9). Other names inherit the
+                     themed default foreground instead of a hard-coded black (#1). -->
+                <Style Selector="TextBlock.graphFile">
+                    <Setter Property="Foreground" Value="#3B82F6" />
+                    <Setter Property="FontWeight" Value="SemiBold" />
+                </Style>
             </TreeView.Styles>
             <TreeView.ItemTemplate>
                 <TreeDataTemplate ItemsSource="{Binding Children}">
@@ -116,23 +124,23 @@
                     <Border Background="{Binding RowBackground}" CornerRadius="2" Padding="2,0">
                         <Border.ContextMenu>
                             <ContextMenu Opening="OnContextMenuOpening">
-                                <MenuItem Header="Open" Click="OnCtxOpen" />
-                                <MenuItem Header="Reveal in File Explorer" Click="OnCtxReveal" />
+                                <MenuItem Header="{l:Loc Ctx_Open}" Click="OnCtxOpen" />
+                                <MenuItem Header="{l:Loc Ctx_Reveal}" Click="OnCtxReveal" />
                                 <!-- Only shown for .thconfig nodes (toggled in OnContextMenuOpening, #7). -->
-                                <MenuItem Header="Set as Active Workspace thconfig" Tag="setactive"
+                                <MenuItem Header="{l:Loc Ctx_SetActive}" Tag="setactive"
                                           Click="OnCtxSetActiveThconfig" />
                                 <Separator />
-                                <MenuItem Header="New File…" Click="OnCtxNewFile" />
-                                <MenuItem Header="New Folder…" Click="OnCtxNewFolder" />
+                                <MenuItem Header="{l:Loc Ctx_NewFile}" Click="OnCtxNewFile" />
+                                <MenuItem Header="{l:Loc Ctx_NewFolder}" Click="OnCtxNewFolder" />
                                 <!-- Shown on every OS; header is set per-platform in OnContextMenuOpening. -->
-                                <MenuItem Header="Delete" Tag="delete" Click="OnCtxDelete" />
+                                <MenuItem Header="{l:Loc Ctx_Delete}" Tag="delete" Click="OnCtxDelete" />
                                 <Separator />
-                                <MenuItem Header="Copy Full Path" Click="OnCtxCopyFull" />
-                                <MenuItem Header="Copy Relative Path" Click="OnCtxCopyRel" />
+                                <MenuItem Header="{l:Loc Ctx_CopyFull}" Click="OnCtxCopyFull" />
+                                <MenuItem Header="{l:Loc Ctx_CopyRel}" Click="OnCtxCopyRel" />
                                 <Separator />
-                                <MenuItem Header="Refresh" Click="OnCtxRefresh" />
+                                <MenuItem Header="{l:Loc Ctx_Refresh}" Click="OnCtxRefresh" />
                                 <!-- Visible only where a native shell menu exists (INativeContextMenuService). -->
-                                <MenuItem Header="More options (Windows shell)…" Tag="nativemenu" Click="OnCtxShellMenu" />
+                                <MenuItem Header="{l:Loc Ctx_ShellMore}" Tag="nativemenu" Click="OnCtxShellMenu" />
                             </ContextMenu>
                         </Border.ContextMenu>
                         <ToolTip.Tip>
@@ -149,9 +157,10 @@
                             <PathIcon Data="{Binding Kind, Converter={x:Static conv:KindToIconConverter.Instance}}"
                                       Foreground="{Binding IconBrush}" Width="14" Height="14" VerticalAlignment="Center"
                                       IsVisible="{Binding ShellIcon, Converter={x:Static ObjectConverters.IsNull}}" />
-                            <!-- Blue name = file is part of the active thconfig graph (#2). -->
+                            <!-- Blue + bold name = file is part of the active thconfig graph (#1/#9);
+                                 other names inherit the themed foreground (visible on dark, #1). -->
                             <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
-                                       Foreground="{Binding NameBrush}"
+                                       Classes.graphFile="{Binding InActiveGraph}"
                                        TextTrimming="CharacterEllipsis" />
                             <TextBlock Text="{Binding Detail}" Foreground="Gray" FontStyle="Italic"
                                        VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
