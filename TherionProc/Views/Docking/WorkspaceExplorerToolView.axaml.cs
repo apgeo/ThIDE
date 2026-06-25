@@ -55,18 +55,21 @@ public partial class WorkspaceExplorerToolView : UserControl
             try { tree.ScrollIntoView(node); } catch { /* best-effort */ }
     }
 
-    private void OnNodeDoubleTapped(object? sender, RoutedEventArgs e)
+    private void OnNodeDoubleTapped(object? sender, TappedEventArgs e)
     {
-        var node = NodeFromSource(e.Source) ?? Explorer?.Selected;
+        // The handler is attached to the content Border (a descendant of the TreeViewItem), so
+        // prefer that Border's own node; fall back to the event source / selection.
+        var node = (sender as Control)?.DataContext as WorkspaceTreeNode
+                   ?? NodeFromSource(e.Source) ?? Explorer?.Selected;
         if (node is null || Explorer is not { } ex) return;
 
+        // Double-tapping the text row performs the node's action: open a file / go to a
+        // definition for object + file nodes, expand for folders. We ALWAYS mark the event
+        // handled so it can't bubble up to the TreeViewItem's built-in expand-on-double-tap —
+        // that is what previously folded/unfolded the node out from under the open action (#5).
+        // Fold/unfold now happens only via the chevron arrow (which is outside this Border).
+        e.Handled = true;
         ex.ActivateCommand.Execute(node);
-
-        // For logical objects / files, double-clicking the text opens/navigates — it must NOT
-        // also toggle the tree node (fold/unfold is reserved for the expander arrow). Marking
-        // the event handled suppresses the TreeView's default expand-on-double-click (#11).
-        // Folders keep their double-click-to-expand behaviour in file-explorer view.
-        if (node.Kind != "folder") e.Handled = true;
     }
 
     // ----- file-explorer context menu ----------------------------------------
