@@ -301,6 +301,15 @@ public partial class WorkspaceExplorerViewModel : ViewModelBase
     [RelayCommand] private void SwitchToRelational() => ViewMode = WorkspaceViewMode.Relational;
     [RelayCommand] private void SwitchToFileExplorer() => ViewMode = WorkspaceViewMode.FileExplorer;
 
+    /// <summary>Opens the currently-selected thconfig in the editor, revealing it in file view (#6).</summary>
+    [RelayCommand]
+    private async System.Threading.Tasks.Task OpenSelectedThconfig()
+    {
+        if (SelectedThconfig?.FullPath is not { } path || string.IsNullOrEmpty(path)) return;
+        await _documents.OpenFileAsync(path).ConfigureAwait(true);
+        if (IsFileExplorerView) RevealFile(path);
+    }
+
     public void Refresh()
     {
         if (ViewMode == WorkspaceViewMode.FileExplorer) { RefreshFileExplorer(); return; }
