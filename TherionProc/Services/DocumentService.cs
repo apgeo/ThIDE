@@ -213,72 +213,84 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
     }
 
     // ---- navigation history -------------------------------------------------
+    // Back/forward walk the caret's actual trail, like a normal text editor (#6): every line
+    // the cursor comes to rest on — by clicking, arrowing, paging, go-to-definition, or
+    // switching files — is a stop. It is NOT limited to highlighted-term/reference jumps.
+    // Column-only moves (typing along a line) coalesce, and only programmatic back/forward
+    // and Shift+F12 occurrence cycling are kept out of the trail.
 
     private readonly System.Collections.Generic.List<Therion.Core.SourceSpan> _history = new();
     private int _historyIndex = -1;
     private bool _suppressHistory;
+    private Therion.Core.SourceSpan _lastCaret;
+    private bool _hasLastCaret;
+    private const int MaxHistory = 200;
 
     public event EventHandler? HistoryChanged;
     public bool CanGoBack => _historyIndex > 0;
     public bool CanGoForward => _historyIndex >= 0 && _historyIndex < _history.Count - 1;
 
     public Task GoBackAsync(CancellationToken ct = default) =>
-        CanGoBack ? NavigateHistoryAsync(--_historyIndex, ct) : Task.CompletedTask;
+        CanGoBack ? NavigateHistoryAsync(_historyIndex - 1, ct) : Task.CompletedTask;
 
     public Task GoForwardAsync(CancellationToken ct = default) =>
-        CanGoForward ? NavigateHistoryAsync(++_historyIndex, ct) : Task.CompletedTask;
+        CanGoForward ? NavigateHistoryAsync(_historyIndex + 1, ct) : Task.CompletedTask;
 
     private async Task NavigateHistoryAsync(int index, CancellationToken ct)
     {
-        _suppressHistory = true;
-        try { await NavigateToSpanAsync(_history[index], ct).ConfigureAwait(true); }
+        _historyIndex = index;
+        _suppressHistory = true; // the resulting caret move must not re-enter the trail
+        // History stores zero-length caret positions; the navigation/scroll path treats a
+        // zero-length span as "no location", so give the target a minimal extent to move to.
+        var target = _history[index];
+        if (target.IsEmpty) target = target with { Length = 1 };
+        try { await NavigateToSpanAsync(target, ct).ConfigureAwait(true); }
         finally { _suppressHistory = false; HistoryChanged?.Invoke(this, EventArgs.Empty); }
     }
-
-    // ----- caret-driven history (#1) -----------------------------------------
-    // History records the cursor's "jump" points like a normal editor's back/forward.
-    // Continuous line-by-line movement never registers (each step is small); only a
-    // sudden caret relocation (click far away, go-to-definition, tab/file switch) does.
-    private Therion.Core.SourceSpan _lastCaret;
-    private const int JumpLineThreshold = 5;
 
     public event EventHandler<Therion.Core.SourceSpan>? CaretMoved;
 
     public void ReportCaret(Therion.Core.SourceSpan span, bool isTermNavigation, bool fromPointer = false)
     {
-        if (span.IsEmpty || string.IsNullOrEmpty(span.FilePath)) return;
+        // A caret is a zero-length position, so DO NOT reject on span.IsEmpty (Length == 0) —
+        // that guard previously discarded every caret report, leaving the trail permanently
+        // empty (the back/forward buttons never lit up). Only a missing file is unusable (#6).
+        if (string.IsNullOrEmpty(span.FilePath)) return;
 
-        // Surface every caret move to the status bar (independent of the history filtering below).
+        // The status bar follows every caret move (#7), independent of the history filtering.
         CaretMoved?.Invoke(this, span);
 
-        // Term cycling (Shift+F12) and programmatic back/forward never add history,
-        // but they do update the reference point so later real jumps measure correctly.
-        if (isTermNavigation || _suppressHistory) { _lastCaret = span; return; }
+        // Programmatic back/forward navigation and highlighted-term cycling (Shift+F12) keep the
+        // reference point current but never add to the trail (#6).
+        if (isTermNavigation || _suppressHistory) { _lastCaret = span; _hasLastCaret = true; return; }
 
-        // A deliberate pointer click is always a navigation point (recorded even for a short
-        // move); keyboard moves only register when they cross a sizable gap (#8).
-        if (fromPointer || IsJump(_lastCaret, span))
-        {
-            RecordHistory(_lastCaret); // where we jumped from
-            RecordHistory(span);       // where we landed
-        }
+        // Record a stop whenever the caret settles on a new line (or another file). The
+        // fromPointer flag is retained for the interface but no longer gates recording — the
+        // trail captures keyboard navigation too, not just clicks.
+        _ = fromPointer;
+        if (!_hasLastCaret || !SameLine(_lastCaret, span))
+            RecordHistory(span);
         _lastCaret = span;
-    }
-
-    private static bool IsJump(Therion.Core.SourceSpan from, Therion.Core.SourceSpan to)
-    {
-        if (from.IsEmpty || string.IsNullOrEmpty(from.FilePath)) return false;
-        if (!string.Equals(from.FilePath, to.FilePath, StringComparison.OrdinalIgnoreCase)) return true;
-        return Math.Abs(from.Start.Line - to.Start.Line) >= JumpLineThreshold;
+        _hasLastCaret = true;
     }
 
     private void RecordHistory(Therion.Core.SourceSpan loc)
     {
-        if (loc.IsEmpty || string.IsNullOrEmpty(loc.FilePath)) return;
-        if (_historyIndex >= 0 && SameLine(_history[_historyIndex], loc)) return; // collapse dupes
+        if (string.IsNullOrEmpty(loc.FilePath)) return; // zero-length caret position is fine
+
+        // Moving after going back drops the forward branch (standard editor behaviour).
         if (_historyIndex < _history.Count - 1)
-            _history.RemoveRange(_historyIndex + 1, _history.Count - _historyIndex - 1); // drop forward branch
+            _history.RemoveRange(_historyIndex + 1, _history.Count - _historyIndex - 1);
+
+        // Coalesce: staying on the line we're already parked at just updates that stop's column.
+        if (_historyIndex >= 0 && SameLine(_history[_historyIndex], loc))
+        {
+            _history[_historyIndex] = loc;
+            return;
+        }
+
         _history.Add(loc);
+        if (_history.Count > MaxHistory) _history.RemoveAt(0); // cap the trail; oldest stop falls off
         _historyIndex = _history.Count - 1;
         HistoryChanged?.Invoke(this, EventArgs.Empty);
     }
