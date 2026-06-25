@@ -121,13 +121,35 @@ public partial class WorkspaceExplorerToolView : UserControl
             || ext.Equals(".thc", StringComparison.OrdinalIgnoreCase);
     }
 
-    // Make the right-clicked .thconfig the workspace's active configuration (#7).
+    // Make the right-clicked .thconfig the workspace's active configuration (#7/#8).
+    // Switching the active config rebuilds the shared object graph, which the session's
+    // Changed event propagates to the dropdown selector, the window title, every open
+    // editor's banner/highlighting and the diagnostics — so we only need to kick it off
+    // here and warn the user if the file can't be made active rather than failing silently.
     private async void OnCtxSetActiveThconfig(object? sender, RoutedEventArgs e)
     {
         if (Ctx()?.FullPath is not { } path) return;
-        if (Service<IWorkspaceSession>() is not { } session) return;
-        try { await session.SetActiveThconfigAsync(path).ConfigureAwait(true); }
-        catch { /* best-effort */ }
+        if (Service<IWorkspaceSession>() is not { } session)
+        {
+            await ShowWarning("Set active thconfig", "No workspace session is available.").ConfigureAwait(true);
+            return;
+        }
+
+        bool ok;
+        try { ok = await session.SetActiveThconfigAsync(path).ConfigureAwait(true); }
+        catch { ok = false; }
+
+        if (!ok)
+            await ShowWarning("Set active thconfig",
+                $"Could not make \"{System.IO.Path.GetFileName(path)}\" the active workspace thconfig.\n\n" +
+                "The file may be missing, unreadable, or not a valid Therion configuration.").ConfigureAwait(true);
+    }
+
+    private Task ShowWarning(string title, string message)
+    {
+        if (TopLevel.GetTopLevel(this) is Window owner)
+            return new MessageDialog(title, message).ShowAsync(owner);
+        return Task.CompletedTask;
     }
 
     private void OnCtxOpen(object? sender, RoutedEventArgs e)

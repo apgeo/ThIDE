@@ -46,8 +46,12 @@ public interface IWorkspaceSession : IAsyncDisposable
 
     /// <summary>Sets the workspace root, scans for thconfigs, and activates the first one.</summary>
     Task SetRootAsync(string rootDir, CancellationToken ct = default);
-    /// <summary>Makes <paramref name="thconfigPath"/> the active reference and rebuilds the graph.</summary>
-    Task SetActiveThconfigAsync(string thconfigPath, CancellationToken ct = default);
+    /// <summary>
+    /// Makes <paramref name="thconfigPath"/> the active reference and rebuilds the graph.
+    /// Returns false when the file is missing or fails to load (so callers can warn the user
+    /// instead of failing silently, #8).
+    /// </summary>
+    Task<bool> SetActiveThconfigAsync(string thconfigPath, CancellationToken ct = default);
     /// <summary>Establishes a workspace for a directly-opened file when none exists yet.</summary>
     Task EnsureCoversAsync(string filePath, CancellationToken ct = default);
     /// <summary>Adds an open thconfig located outside the root to the candidate list (#3).</summary>
@@ -171,14 +175,15 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
         _settings.Save(cur with { LastThconfigByRoot = map });
     }
 
-    public async Task SetActiveThconfigAsync(string thconfigPath, CancellationToken ct = default)
+    public async Task<bool> SetActiveThconfigAsync(string thconfigPath, CancellationToken ct = default)
     {
-        if (string.IsNullOrEmpty(thconfigPath)) return;
+        if (string.IsNullOrEmpty(thconfigPath)) return false;
         var full = Path.GetFullPath(thconfigPath);
+        if (!File.Exists(full)) return false; // missing file → let the caller warn (#8)
 
         var ws = new TherionWorkspace();
         try { await ws.LoadAsync(full, ct).ConfigureAwait(false); }
-        catch { await ws.DisposeAsync().ConfigureAwait(false); return; }
+        catch { await ws.DisposeAsync().ConfigureAwait(false); return false; }
 
         var model = ws.BuildSemanticModel();
         var old = SwapWorkspace(ws, model, full);
@@ -189,6 +194,7 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
         EnsureCandidate(full);
         RememberActiveForRoot();
         Raise();
+        return true;
     }
 
     public async Task EnsureCoversAsync(string filePath, CancellationToken ct = default)
