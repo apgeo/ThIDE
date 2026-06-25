@@ -94,6 +94,14 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
     {
         if (string.IsNullOrEmpty(rootDir) || !Directory.Exists(rootDir)) return;
         var full = Path.GetFullPath(rootDir);
+
+        // Switching to a *different* root must not carry the previous directory's state: drop
+        // the externally-registered thconfigs and unload the old active config + graph so the
+        // dropdown and object tree reflect only the new directory (#2). Without this, old
+        // thconfigs linger in the selector and the previous project stays loaded.
+        if (!string.Equals(full, RootPath, StringComparison.OrdinalIgnoreCase))
+            await ResetForNewRootAsync().ConfigureAwait(false);
+
         RootPath = full;
         RootChanged?.Invoke(this, EventArgs.Empty);
 
@@ -105,7 +113,27 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
         if (chosen is not null)
             await SetActiveThconfigAsync(chosen, ct).ConfigureAwait(false);
         else
-            Raise(); // empty root: still notify so the UI clears
+            Raise(); // empty root with no thconfig: notify so the UI clears the old graph
+    }
+
+    /// <summary>
+    /// Clears all carried-over state before adopting a new root: forgets externally-opened
+    /// thconfigs, unloads the active workspace/graph, and resets the active selection so a
+    /// fresh <see cref="RescanCandidates"/> reflects only the incoming directory (#2).
+    /// </summary>
+    private async Task ResetForNewRootAsync()
+    {
+        TherionWorkspace? old;
+        lock (_gate)
+        {
+            _externalConfigs.Clear();
+            old = _workspace;
+            if (old is not null) old.WorkspaceChanged -= OnWorkspaceChanged;
+            _workspace = null;
+            Model = null;
+        }
+        ActiveThconfig = null;
+        if (old is not null) { try { await old.DisposeAsync().ConfigureAwait(false); } catch { /* best-effort */ } }
     }
 
     /// <summary>

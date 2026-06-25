@@ -128,21 +128,35 @@ public partial class WorkspaceExplorerToolView : UserControl
     // here and warn the user if the file can't be made active rather than failing silently.
     private async void OnCtxSetActiveThconfig(object? sender, RoutedEventArgs e)
     {
-        if (Ctx()?.FullPath is not { } path) return;
+        if (Ctx()?.FullPath is not { } raw) return;
         if (Service<IWorkspaceSession>() is not { } session)
         {
             await ShowWarning("Set active thconfig", "No workspace session is available.").ConfigureAwait(true);
             return;
         }
 
+        // Normalize to a full path so this matches exactly what the dropdown selector passes
+        // (the combobox uses the candidate's already-normalized FullPath). Report the precise
+        // reason on failure rather than a single generic message (#2/#8).
+        string path;
+        try { path = System.IO.Path.GetFullPath(raw); }
+        catch { await ShowWarning("Set active thconfig", $"Invalid path:\n{raw}").ConfigureAwait(true); return; }
+
+        if (!System.IO.File.Exists(path))
+        {
+            await ShowWarning("Set active thconfig", $"The file no longer exists:\n{path}").ConfigureAwait(true);
+            return;
+        }
+
         bool ok;
+        string? error = null;
         try { ok = await session.SetActiveThconfigAsync(path).ConfigureAwait(true); }
-        catch { ok = false; }
+        catch (Exception ex) { ok = false; error = ex.Message; }
 
         if (!ok)
             await ShowWarning("Set active thconfig",
-                $"Could not make \"{System.IO.Path.GetFileName(path)}\" the active workspace thconfig.\n\n" +
-                "The file may be missing, unreadable, or not a valid Therion configuration.").ConfigureAwait(true);
+                error ?? $"\"{System.IO.Path.GetFileName(path)}\" could not be read as a Therion configuration.")
+                .ConfigureAwait(true);
     }
 
     private Task ShowWarning(string title, string message)
