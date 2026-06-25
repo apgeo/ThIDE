@@ -1881,6 +1881,9 @@ public partial class TherionTextEditor : UserControl
     }
 
     public int LineCount => _editor?.Document.LineCount ?? 0;
+    /// <summary>The current editor selection text (empty when nothing is selected) (#10).</summary>
+    public string EditorSelectedText => _editor?.SelectedText ?? string.Empty;
+
     public int CurrentLine => _editor?.TextArea.Caret.Line ?? 1;
 
     // Collapses/expands every foldable region in the document (#8).

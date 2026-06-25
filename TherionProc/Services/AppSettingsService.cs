@@ -111,6 +111,10 @@ public sealed record AppSettings
     public string? SyntaxOptionColor { get; init; }
     public string? SyntaxPunctuationColor { get; init; }
 
+    // ---- search history (#10) ----
+    /// <summary>Recent Find-in-Files queries (most-recent first), capped at 50.</summary>
+    public IReadOnlyList<string> RecentSearches { get; init; } = new List<string>();
+
     // ---- language ----
     /// <summary>UI language culture name (e.g. "en", "ro"); applied at startup (#9).</summary>
     public string UiLanguage { get; init; } = "en";

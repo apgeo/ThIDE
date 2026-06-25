@@ -287,6 +287,9 @@ public partial class MainWindow : Window
         _searchWindow = new SearchWindow { DataContext = vm };
         _searchWindow.Closed += (_, _) => _searchWindow = null;
         _searchWindow.Show(this);
+
+        // Prefill from the editor selection and auto-search (#10).
+        vm.SeedAndSearch(ActiveEditor?.EditorSelectedText);
     }
 
     // ----- replace in files window (#9) ----------------------------------

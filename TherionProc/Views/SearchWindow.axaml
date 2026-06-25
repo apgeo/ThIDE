@@ -9,7 +9,11 @@
         Title="Find in Files">
     <DockPanel Margin="10">
         <StackPanel DockPanel.Dock="Top" Spacing="6">
-            <TextBox x:Name="QueryBox" Watermark="Search…" Text="{Binding Query, Mode=TwoWay}" />
+            <!-- Editable query with a persistent MRU dropdown of past 50 searches (#10). -->
+            <AutoCompleteBox x:Name="QueryBox" Watermark="Search…"
+                             Text="{Binding Query, Mode=TwoWay}"
+                             ItemsSource="{Binding RecentQueries}"
+                             FilterMode="ContainsOrdinal" MinimumPrefixLength="0" />
 
             <StackPanel Orientation="Horizontal" Spacing="12">
                 <CheckBox Content="Match case"  IsChecked="{Binding MatchCase, Mode=TwoWay}" />

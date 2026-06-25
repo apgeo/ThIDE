@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -42,9 +43,43 @@ public sealed partial class SearchViewModel : ViewModelBase
     public const string ScopeOpenFiles = "Open files";
     public string[] Scopes { get; } = { ScopeProject, ScopeDirectory, ScopeOpenFiles };
 
+    private readonly IAppSettingsService? _settings;
+
+    /// <summary>Most-recent-first dropdown of past queries (#10), capped at 50, persisted.</summary>
+    public ObservableCollection<string> RecentQueries { get; } = new();
+
     public SearchViewModel() : this(new NullDocumentService()) { }
 
-    public SearchViewModel(IDocumentService documents) => _documents = documents;
+    public SearchViewModel(IDocumentService documents, IAppSettingsService? settings = null)
+    {
+        _documents = documents;
+        _settings = settings;
+        if (_settings is not null)
+            foreach (var q in _settings.Current.RecentSearches) RecentQueries.Add(q);
+    }
+
+    /// <summary>Prefills the query from the editor selection and runs the search immediately (#10).</summary>
+    public void SeedAndSearch(string? selectedText)
+    {
+        PrepareDefaults();
+        if (string.IsNullOrWhiteSpace(selectedText)) return;
+        Query = selectedText;
+        if (SearchCommand.CanExecute(null)) SearchCommand.Execute(null);
+    }
+
+    // Promotes a query to the front of the MRU list (deduped, capped at 50) and persists it.
+    private void RememberQuery(string query)
+    {
+        if (string.IsNullOrWhiteSpace(query)) return;
+        for (int i = RecentQueries.Count - 1; i >= 0; i--)
+            if (string.Equals(RecentQueries[i], query, StringComparison.Ordinal))
+                RecentQueries.RemoveAt(i);
+        RecentQueries.Insert(0, query);
+        while (RecentQueries.Count > 50) RecentQueries.RemoveAt(RecentQueries.Count - 1);
+        if (_settings is not null)
+            try { _settings.Save(_settings.Current with { RecentSearches = RecentQueries.ToList() }); }
+            catch { /* best-effort */ }
+    }
 
     /// <summary>Seeds the default search directory (the active project's root folder).</summary>
     public void PrepareDefaults()
@@ -91,6 +126,7 @@ public sealed partial class SearchViewModel : ViewModelBase
             Run(regex, scope, dir, mask, openText, projectFiles)).ConfigureAwait(true);
 
         Results = hits;
+        RememberQuery(query); // record this query in the persistent MRU dropdown (#10)
         Status = hits.Count >= MaxResults
             ? $"{hits.Count}+ matches (truncated) in {fileCount} files"
             : $"{hits.Count} matches in {fileCount} files";
