@@ -20,6 +20,21 @@ public partial class MainWindow : Window
 
     private IKeyboardShortcutService? _shortcuts;
     private ILayoutService? _layout;
+    private IGlobalHotkeyService? _globalHotkey;
+
+    // System-wide build hotkey (Ctrl+Alt+B): triggers a compile even when the app isn't
+    // focused, marshalled onto the UI thread (#3). No-op on platforms without support.
+    private void AttachGlobalHotkey(MainWindowViewModel vm)
+    {
+        _globalHotkey = AppServices.Provider.GetService<IGlobalHotkeyService>();
+        if (_globalHotkey is null) return;
+        _globalHotkey.BuildHotkeyPressed += (_, _) =>
+            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                if (vm.Build.BuildCommand.CanExecute(null)) vm.Build.BuildCommand.Execute(null);
+            });
+        _globalHotkey.Start();
+    }
 
     public MainWindow()
     {
@@ -39,6 +54,7 @@ public partial class MainWindow : Window
                     () => vm.Factory.ConfirmLayoutLoaded(),
                     Avalonia.Threading.DispatcherPriority.Background);
                 StartAutosave();
+                AttachGlobalHotkey(vm);
             }
             try
             {
@@ -53,7 +69,7 @@ public partial class MainWindow : Window
 
         // Persist when focus leaves the app — covers a debugger stop that never fires Closing.
         Deactivated += (_, _) => PersistAll();
-        Closing += (_, _) => { _autosaveTimer?.Stop(); PersistAll(); };
+        Closing += (_, _) => { _autosaveTimer?.Stop(); PersistAll(); _globalHotkey?.Dispose(); };
 
         // Drag-and-drop file open (#17).
         DragDrop.SetAllowDrop(this, true);
