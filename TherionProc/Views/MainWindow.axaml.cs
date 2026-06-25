@@ -189,8 +189,22 @@ public partial class MainWindow : Window
     // ----- Edit menu → active editor (#11) --------------------------------
     // The shell Edit/Search menus act on the most-recently focused editor.
 
-    private static TherionProc.Editor.TherionTextEditor? ActiveEditor =>
-        TherionProc.Editor.TherionTextEditor.LastFocused;
+    // Targets the ACTIVE document's editor first (so Find/Edit work right after a file is
+    // opened via navigation, before it's been clicked into), falling back to the last focused
+    // editor for design-time / no-active-document cases (#9).
+    private static TherionProc.Editor.TherionTextEditor? ActiveEditor
+    {
+        get
+        {
+            try
+            {
+                var path = AppServices.Provider.GetService<IDocumentService>()?.Active?.FilePath;
+                if (TherionProc.Editor.TherionTextEditor.ForPath(path) is { } ed) return ed;
+            }
+            catch { /* design-time / no container */ }
+            return TherionProc.Editor.TherionTextEditor.LastFocused;
+        }
+    }
 
     private void OnEditCut(object? s, Avalonia.Interactivity.RoutedEventArgs e) => ActiveEditor?.MenuCut();
     private void OnEditCopy(object? s, Avalonia.Interactivity.RoutedEventArgs e) => ActiveEditor?.MenuCopy();

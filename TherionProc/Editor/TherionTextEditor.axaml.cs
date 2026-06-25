@@ -208,10 +208,32 @@ public partial class TherionTextEditor : UserControl
             // the active document's editor (#11/#12).
             _editor.TextArea.GotFocus += (_, _) => LastFocused = this;
         }
+
+        // Register this editor instance so the shell can target it by file even when unfocused (#9).
+        AttachedToVisualTree += (_, _) => { if (!Instances.Contains(this)) Instances.Add(this); };
+        DetachedFromVisualTree += (_, _) =>
+        {
+            Instances.Remove(this);
+            if (ReferenceEquals(LastFocused, this)) LastFocused = null;
+        };
     }
 
     /// <summary>The editor that last held focus — the target of the shell Edit/Search menus (#11/#12).</summary>
     public static TherionTextEditor? LastFocused { get; private set; }
+
+    // Live editor instances, so the shell can target the ACTIVE document's editor even when it
+    // was never focused (e.g. a file just opened via navigation) (#9).
+    private static readonly System.Collections.Generic.List<TherionTextEditor> Instances = new();
+
+    /// <summary>Returns the live editor bound to <paramref name="filePath"/>, if any (#9).</summary>
+    public static TherionTextEditor? ForPath(string? filePath)
+    {
+        if (string.IsNullOrEmpty(filePath)) return null;
+        foreach (var ed in Instances)
+            if (string.Equals(ed.CurrentFilePath, filePath, StringComparison.OrdinalIgnoreCase))
+                return ed;
+        return null;
+    }
 
     private SearchPanel? _searchPanel;
 
