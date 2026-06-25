@@ -433,8 +433,32 @@ public sealed class ThParser
 
     private InputCommand ParseInput(LogicalLine line, ImmutableArray<Diagnostic>.Builder diagnostics)
     {
-        var path = line.Tokens.Length > 1 ? Unquote(line.Tokens[1].Text) : string.Empty;
+        var path = ReadPathArgument(line, fromIndex: 1);
         return new InputCommand(line.Span, path);
+    }
+
+    /// <summary>
+    /// Reads a filesystem path argument (e.g. for <c>input</c>/<c>load</c>) starting at
+    /// <paramref name="fromIndex"/>. The tokenizer splits an unquoted word at digit/letter
+    /// boundaries, so a path whose name starts with (or contains) digits — like
+    /// <c>20150926_ovi/20150926_ps1.th2</c> — arrives as several <em>adjacent</em> tokens.
+    /// Re-join tokens that touch in the source (no intervening whitespace) so the whole path
+    /// is recovered; a quoted path is a single string token and is just unquoted.
+    /// </summary>
+    private static string ReadPathArgument(LogicalLine line, int fromIndex)
+    {
+        if (line.Tokens.Length <= fromIndex) return string.Empty;
+        var first = line.Tokens[fromIndex];
+        var sb = new System.Text.StringBuilder(first.Text);
+        int prevEnd = first.Span.StartOffset + first.Span.Length;
+        for (int i = fromIndex + 1; i < line.Tokens.Length; i++)
+        {
+            var t = line.Tokens[i];
+            if (t.Span.StartOffset != prevEnd) break; // whitespace gap → end of the path word
+            sb.Append(t.Text);
+            prevEnd = t.Span.StartOffset + t.Span.Length;
+        }
+        return Unquote(sb.ToString());
     }
 
     private TeamCommand ParseTeam(LogicalLine line)
