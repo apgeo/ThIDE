@@ -78,4 +78,32 @@
   <data name="Browser_Col_Length" xml:space="preserve"><value>Length</value></data>
   <data name="Browser_Col_Compass" xml:space="preserve"><value>Compass</value></data>
   <data name="Browser_Col_Clino" xml:space="preserve"><value>Clino</value></data>
+  <data name="Tool_Xvi" xml:space="preserve"><value>XVI</value></data>
+  <data name="Tool_Settings" xml:space="preserve"><value>Settings</value></data>
+  <data name="Ctx_Open" xml:space="preserve"><value>Open</value></data>
+  <data name="Ctx_Reveal" xml:space="preserve"><value>Reveal in File Explorer</value></data>
+  <data name="Ctx_SetActive" xml:space="preserve"><value>Set as Active Workspace thconfig</value></data>
+  <data name="Ctx_NewFile" xml:space="preserve"><value>New File…</value></data>
+  <data name="Ctx_NewFolder" xml:space="preserve"><value>New Folder…</value></data>
+  <data name="Ctx_Delete" xml:space="preserve"><value>Delete</value></data>
+  <data name="Ctx_CopyFull" xml:space="preserve"><value>Copy Full Path</value></data>
+  <data name="Ctx_CopyRel" xml:space="preserve"><value>Copy Relative Path</value></data>
+  <data name="Ctx_Refresh" xml:space="preserve"><value>Refresh</value></data>
+  <data name="Ctx_ShellMore" xml:space="preserve"><value>More options (Windows shell)…</value></data>
+  <data name="Common_Columns" xml:space="preserve"><value>Columns ▾</value></data>
+  <data name="Common_Fit" xml:space="preserve"><value>↔ Fit</value></data>
+  <data name="Common_Copy" xml:space="preserve"><value>Copy</value></data>
+  <data name="Common_CopyAll" xml:space="preserve"><value>Copy All</value></data>
+  <data name="Common_Open" xml:space="preserve"><value>Open</value></data>
+  <data name="Diag_ProjectScope" xml:space="preserve"><value>Project scope</value></data>
+  <data name="Gen_Reveal" xml:space="preserve"><value>Reveal in File Manager</value></data>
+  <data name="Gen_GoToDef" xml:space="preserve"><value>Go to Definition in thconfig</value></data>
+  <data name="Pref_General" xml:space="preserve"><value>General</value></data>
+  <data name="Pref_Theme" xml:space="preserve"><value>Theme &amp; Colors</value></data>
+  <data name="Pref_Editor" xml:space="preserve"><value>Editor</value></data>
+  <data name="Pref_Performance" xml:space="preserve"><value>Performance</value></data>
+  <data name="Pref_Workspace" xml:space="preserve"><value>Workspace</value></data>
+  <data name="Pref_Build" xml:space="preserve"><value>Build &amp; Output</value></data>
+  <data name="Pref_External" xml:space="preserve"><value>External Tools</value></data>
+  <data name="Pref_Keyboard" xml:space="preserve"><value>Keyboard Shortcuts</value></data>
 </root>

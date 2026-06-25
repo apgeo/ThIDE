@@ -115,16 +115,18 @@ public partial class PreferencesViewModel : ObservableObject
         _syntaxOptionColor = s.SyntaxOptionColor ?? "#966E00";
         _syntaxPunctuationColor = s.SyntaxPunctuationColor ?? "#5A5A5A";
 
+        // Section titles are localized (#2); the keyword lists stay English so search keeps
+        // matching the same terms regardless of UI language.
         _allSections = new List<PreferenceSection>
         {
-            new("general",  "General",             "startup session reopen language english romanian locale"),
-            new("theme",    "Theme & Colors",      "theme dark light color syntax keyword identifier custom appearance"),
-            new("editor",   "Editor",              "font size indent line numbers highlight tabs spaces rename preview"),
-            new("performance","Performance",       "large file limit highlight parse lines size kb threshold"),
-            new("workspace","Workspace",           "reload external graph disk watch"),
-            new("build",    "Build & Output",      "build output open lox 3d pdf survex aven loch"),
-            new("external", "External Tools",      "therion loch aven survex path detect tool executable"),
-            new("keyboard", "Keyboard Shortcuts",  "key binding gesture shortcut hotkey command"),
+            new("general",  Resources.Tr.Get("Pref_General"),     "startup session reopen language english romanian locale"),
+            new("theme",    Resources.Tr.Get("Pref_Theme"),       "theme dark light color syntax keyword identifier custom appearance"),
+            new("editor",   Resources.Tr.Get("Pref_Editor"),      "font size indent line numbers highlight tabs spaces rename preview"),
+            new("performance",Resources.Tr.Get("Pref_Performance"),"large file limit highlight parse lines size kb threshold"),
+            new("workspace",Resources.Tr.Get("Pref_Workspace"),   "reload external graph disk watch"),
+            new("build",    Resources.Tr.Get("Pref_Build"),       "build output open lox 3d pdf survex aven loch"),
+            new("external", Resources.Tr.Get("Pref_External"),    "therion loch aven survex path detect tool executable"),
+            new("keyboard", Resources.Tr.Get("Pref_Keyboard"),    "key binding gesture shortcut hotkey command"),
         };
         _sections = new ObservableCollection<PreferenceSection>(_allSections);
         _selectedSection = _sections.FirstOrDefault();

@@ -78,4 +78,32 @@
   <data name="Browser_Col_Length" xml:space="preserve"><value>Lungime</value></data>
   <data name="Browser_Col_Compass" xml:space="preserve"><value>Azimut</value></data>
   <data name="Browser_Col_Clino" xml:space="preserve"><value>&#xCE;nclinare</value></data>
+  <data name="Tool_Xvi" xml:space="preserve"><value>XVI</value></data>
+  <data name="Tool_Settings" xml:space="preserve"><value>Set&#x103;ri</value></data>
+  <data name="Ctx_Open" xml:space="preserve"><value>Deschide</value></data>
+  <data name="Ctx_Reveal" xml:space="preserve"><value>Afi&#x219;eaz&#x103; &#xEE;n Explorator fi&#x219;iere</value></data>
+  <data name="Ctx_SetActive" xml:space="preserve"><value>Seteaz&#x103; ca thconfig activ al proiectului</value></data>
+  <data name="Ctx_NewFile" xml:space="preserve"><value>Fi&#x219;ier nou…</value></data>
+  <data name="Ctx_NewFolder" xml:space="preserve"><value>Folder nou…</value></data>
+  <data name="Ctx_Delete" xml:space="preserve"><value>&#x218;terge</value></data>
+  <data name="Ctx_CopyFull" xml:space="preserve"><value>Copiaz&#x103; calea complet&#x103;</value></data>
+  <data name="Ctx_CopyRel" xml:space="preserve"><value>Copiaz&#x103; calea relativ&#x103;</value></data>
+  <data name="Ctx_Refresh" xml:space="preserve"><value>Re&#xEE;mprosp&#x103;teaz&#x103;</value></data>
+  <data name="Ctx_ShellMore" xml:space="preserve"><value>Mai multe op&#x21B;iuni (shell Windows)…</value></data>
+  <data name="Common_Columns" xml:space="preserve"><value>Coloane ▾</value></data>
+  <data name="Common_Fit" xml:space="preserve"><value>↔ Potrive&#x219;te</value></data>
+  <data name="Common_Copy" xml:space="preserve"><value>Copiaz&#x103;</value></data>
+  <data name="Common_CopyAll" xml:space="preserve"><value>Copiaz&#x103; tot</value></data>
+  <data name="Common_Open" xml:space="preserve"><value>Deschide</value></data>
+  <data name="Diag_ProjectScope" xml:space="preserve"><value>Domeniu proiect</value></data>
+  <data name="Gen_Reveal" xml:space="preserve"><value>Afi&#x219;eaz&#x103; &#xEE;n managerul de fi&#x219;iere</value></data>
+  <data name="Gen_GoToDef" xml:space="preserve"><value>Salt la defini&#x21B;ie &#xEE;n thconfig</value></data>
+  <data name="Pref_General" xml:space="preserve"><value>General</value></data>
+  <data name="Pref_Theme" xml:space="preserve"><value>Tem&#x103; &amp; culori</value></data>
+  <data name="Pref_Editor" xml:space="preserve"><value>Editor</value></data>
+  <data name="Pref_Performance" xml:space="preserve"><value>Performan&#x21B;&#x103;</value></data>
+  <data name="Pref_Workspace" xml:space="preserve"><value>Proiect</value></data>
+  <data name="Pref_Build" xml:space="preserve"><value>Compilare &amp; ie&#x219;ire</value></data>
+  <data name="Pref_External" xml:space="preserve"><value>Unelte externe</value></data>
+  <data name="Pref_Keyboard" xml:space="preserve"><value>Scurt&#x103;turi tastatur&#x103;</value></data>
 </root>
