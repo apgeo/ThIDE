@@ -10,6 +10,9 @@
   <data name="Menu_File_OpenThconfig" xml:space="preserve"><value>Open _thconfig...</value></data>
   <data name="Menu_File_OpenFolder" xml:space="preserve"><value>Open F_older...</value></data>
   <data name="Menu_Settings" xml:space="preserve"><value>_Settings</value></data>
+  <data name="Menu_Help" xml:space="preserve"><value>_Help</value></data>
+  <data name="Menu_Help_Thbook" xml:space="preserve"><value>Therion _Book</value></data>
+  <data name="Menu_Help_About" xml:space="preserve"><value>_About TherionProc</value></data>
   <data name="Menu_File_Exit" xml:space="preserve"><value>E_xit</value></data>
   <data name="Menu_File_Recent" xml:space="preserve"><value>Recent _Files</value></data>
   <data name="Menu_View" xml:space="preserve"><value>_View</value></data>

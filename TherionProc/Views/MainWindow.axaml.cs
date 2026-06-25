@@ -136,6 +136,20 @@ public partial class MainWindow : Window
 
     private RelationalMapWindow? _relationalMapWindow;
 
+    // Help ▸ About (#1).
+    private async void OnAboutClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        IThbookDocumentationService? thbook = null;
+        try { thbook = AppServices.Provider.GetService<IThbookDocumentationService>(); } catch { }
+        await new AboutWindow(thbook).ShowDialog(this);
+    }
+
+    // Help ▸ Therion Book: open the bundled thbook PDF at page 1 (#1).
+    private void OnOpenThbook(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        try { AppServices.Provider.GetService<IThbookDocumentationService>()?.OpenAtPage(1); } catch { }
+    }
+
     private void OnRelationalMapClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         if (_relationalMapWindow is { } w && w.IsVisible) { w.Activate(); return; }

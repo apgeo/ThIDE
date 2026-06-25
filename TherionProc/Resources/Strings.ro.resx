@@ -12,6 +12,9 @@
   <data name="Menu_File_Exit" xml:space="preserve"><value>_Ie&#x219;ire</value></data>
   <data name="Menu_File_Recent" xml:space="preserve"><value>Fi&#x219;iere _recente</value></data>
   <data name="Menu_Settings" xml:space="preserve"><value>_Set&#x103;ri</value></data>
+  <data name="Menu_Help" xml:space="preserve"><value>_Ajutor</value></data>
+  <data name="Menu_Help_Thbook" xml:space="preserve"><value>_Cartea Therion</value></data>
+  <data name="Menu_Help_About" xml:space="preserve"><value>_Despre TherionProc</value></data>
   <data name="Menu_View_ObjectBrowser" xml:space="preserve"><value>Navigator obiecte</value></data>
   <data name="Menu_View_Workspace" xml:space="preserve"><value>Spa&#x21B;iu de lucru</value></data>
   <data name="Menu_View_Diagnostics" xml:space="preserve"><value>Diagnostice</value></data>
