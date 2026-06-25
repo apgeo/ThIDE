@@ -142,6 +142,20 @@ public sealed class CompilerOutputRow : CommunityToolkit.Mvvm.ComponentModel.Obs
 public sealed record ArtifactRow(string Path, string Kind, long SizeBytes, DateTimeOffset LastWriteUtc)
 {
     public string SizeDisplay => SizeBytes < 1024 ? $"{SizeBytes} B" : $"{SizeBytes / 1024} KB";
+    /// <summary>File name only, for the dedicated File Name column (#4).</summary>
+    public string FileName => System.IO.Path.GetFileName(Path);
+    /// <summary>Local timestamp without the timezone offset, default format (#4).</summary>
+    public string ModifiedDisplay => LastWriteUtc.LocalDateTime.ToString("yyyy-MM-dd HH:mm:ss");
+    /// <summary>Icon resource key for the file type, shown in front of Kind (#4).</summary>
+    public string IconKey => System.IO.Path.GetExtension(Path).ToLowerInvariant() switch
+    {
+        ".lox" or ".3d"           => "Icon.Cube",
+        ".pdf" or ".svg" or ".dxf" => "Icon.Map",
+        ".xvi"                    => "Icon.Xvi",
+        ".png" or ".jpg"          => "Icon.File",
+        ".log" or ".tlx"          => "Icon.Info",
+        _                          => "Icon.File",
+    };
 }
 
 public partial class BuildViewModel : ViewModelBase
