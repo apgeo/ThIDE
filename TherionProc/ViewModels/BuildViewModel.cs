@@ -81,14 +81,41 @@ public sealed class CompilerOutputRow : CommunityToolkit.Mvvm.ComponentModel.Obs
     public Avalonia.Media.FontWeight Weight =>
         Kind is OutputRowKind.Command or OutputRowKind.Summary ? FontWeight.SemiBold : FontWeight.Normal;
 
+    // ---- clickable file-path link (#1) --------------------------------------
+    /// <summary>The offending identifier from a Therion error (e.g. "E65a"); kept for future use (#1).</summary>
+    public string? Symbol { get; }
+    /// <summary>The line text before the file path (rendered normally).</summary>
+    public string MessagePrefix { get; } = string.Empty;
+    /// <summary>The file path inside the line (rendered as a blue, clickable hyperlink).</summary>
+    public string MessagePath { get; } = string.Empty;
+    /// <summary>The line text after the file path (rendered normally).</summary>
+    public string MessageSuffix { get; } = string.Empty;
+    /// <summary>True when a navigable file path was detected in this line.</summary>
+    public bool HasLink => MessagePath.Length > 0 && Span is { } s && !string.IsNullOrEmpty(s.FilePath);
+
     public CompilerOutputRow(string text, string severity, SourceSpan? span,
         OutputRowKind kind, DateTimeOffset timestamp, TimeSpan delta, TimeSpan sinceStart,
-        TimeColumnMode mode, bool success = false)
+        TimeColumnMode mode, bool success = false, string? linkText = null, string? symbol = null)
     {
         Text = text;
         Severity = severity;
         Span = span;
         Kind = kind;
+        Symbol = symbol;
+
+        // Split the line around the detected path so the path can be drawn/clicked as a link.
+        if (!string.IsNullOrEmpty(linkText))
+        {
+            int idx = text.IndexOf(linkText, StringComparison.Ordinal);
+            if (idx >= 0)
+            {
+                MessagePrefix = text[..idx];
+                MessagePath = linkText;
+                MessageSuffix = text[(idx + linkText.Length)..];
+            }
+            else { MessagePrefix = text; }
+        }
+        else { MessagePrefix = text; }
         Timestamp = timestamp;
         Delta = delta;
         SinceStart = sinceStart;
@@ -184,6 +211,8 @@ public partial class BuildViewModel : ViewModelBase
     // row shows the delta since the previous one; the final summary row shows wall-clock again.
     private DateTimeOffset _prevRowTime;
     private DateTimeOffset _buildStart;
+    /// <summary>Working directory of the running build, used to resolve relative output paths (#1).</summary>
+    private string? _buildWorkDir;
 
     /// <summary>Selected rendering for the time column (since-last / timestamp / since-start, #4).</summary>
     [ObservableProperty] private TimeColumnMode _timeColumnMode = TimeColumnMode.SinceLast;
@@ -311,6 +340,7 @@ public partial class BuildViewModel : ViewModelBase
         var command = tool is null ? $"therion \"{entry}\"" : $"\"{tool.Path}\" \"{entry}\"";
         _buildStart = DateTimeOffset.Now;
         _prevRowTime = _buildStart;
+        _buildWorkDir = Path.GetDirectoryName(Path.GetFullPath(entry)); // resolve output paths (#1)
         AddRow(new CompilerOutputRow(command, "Command", null, OutputRowKind.Command,
             _buildStart, TimeSpan.Zero, TimeSpan.Zero, TimeColumnMode));
 
@@ -361,8 +391,29 @@ public partial class BuildViewModel : ViewModelBase
         var now = DateTimeOffset.Now;
         var delta = now - _prevRowTime;
         _prevRowTime = now;
-        return new CompilerOutputRow(line.Text, line.Severity.ToString(), line.Span,
-            OutputRowKind.Normal, now, delta, now - _buildStart, TimeColumnMode);
+
+        // The path as Therion printed it (used to highlight it in the line); resolve it against
+        // the build's working directory so the link opens the right file even when relative (#1).
+        string? displayPath = line.Span?.FilePath;
+        var navSpan = ResolveOutputSpan(line.Span);
+
+        return new CompilerOutputRow(line.Text, line.Severity.ToString(), navSpan,
+            OutputRowKind.Normal, now, delta, now - _buildStart, TimeColumnMode,
+            linkText: displayPath, symbol: line.Symbol);
+    }
+
+    /// <summary>Resolves a relative output-path span to an absolute one against the build dir (#1).</summary>
+    private SourceSpan? ResolveOutputSpan(SourceSpan? span)
+    {
+        if (span is not { } s || string.IsNullOrEmpty(s.FilePath)) return span;
+        try
+        {
+            if (Path.IsPathRooted(s.FilePath) || _buildWorkDir is null) return span;
+            var rel = s.FilePath.Replace('/', Path.DirectorySeparatorChar);
+            var abs = Path.GetFullPath(Path.Combine(_buildWorkDir, rel));
+            return s with { FilePath = abs };
+        }
+        catch { return span; }
     }
 
     private CompilerOutputRow SummaryRow(bool ok, int warnCount, TimeSpan elapsed, int artifactCount,

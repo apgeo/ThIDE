@@ -2,8 +2,11 @@ using System;
 using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Controls.Documents;
+using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
+using Avalonia.Media;
+using Avalonia.Media.Immutable;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using TherionProc.ViewModels;
@@ -13,6 +16,9 @@ namespace TherionProc.Views.Docking;
 
 public partial class CompilerOutputToolView : UserControl
 {
+    // Blue used for clickable file-path links in both output views (#1).
+    private static readonly IBrush LinkBrush = new ImmutableSolidColorBrush(Color.FromRgb(0x3B, 0x82, 0xF6));
+
     private BuildViewModel? _build;
 
     // Autoscroll-to-tail state (#3): each view follows new output until the user scrolls up,
@@ -108,9 +114,45 @@ public partial class CompilerOutputToolView : UserControl
     private void AppendRaw(CompilerOutputRow row)
     {
         if (this.FindControl<SelectableTextBlock>("RawText") is not { } rt || rt.Inlines is null) return;
-        rt.Inlines.Add(new Run(row.Text) { Foreground = row.TextBrush });
+
+        if (row.HasLink)
+        {
+            // Keep the line selectable/copyable, but render the detected path as a blue
+            // clickable link via an embedded control (#1).
+            if (row.MessagePrefix.Length > 0) rt.Inlines.Add(new Run(row.MessagePrefix) { Foreground = row.TextBrush });
+            rt.Inlines.Add(new InlineUIContainer(MakeRawLink(row)));
+            if (row.MessageSuffix.Length > 0) rt.Inlines.Add(new Run(row.MessageSuffix) { Foreground = row.TextBrush });
+        }
+        else
+        {
+            rt.Inlines.Add(new Run(row.Text) { Foreground = row.TextBrush });
+        }
         rt.Inlines.Add(new LineBreak());
     }
+
+    private TextBlock MakeRawLink(CompilerOutputRow row)
+    {
+        var link = new TextBlock
+        {
+            Text = row.MessagePath,
+            Foreground = LinkBrush,
+            TextDecorations = TextDecorations.Underline,
+            Cursor = new Cursor(StandardCursorType.Hand),
+            FontFamily = new FontFamily("Consolas,Cascadia Mono,Courier New,monospace"),
+            FontSize = 11,
+        };
+        link.PointerPressed += (_, e) => { NavigateOutput(row); e.Handled = true; };
+        return link;
+    }
+
+    // Open the file detected in a compiler-output line and jump to its error line (#1).
+    private void OnOutputPathPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (sender is Control { Tag: CompilerOutputRow row }) { NavigateOutput(row); e.Handled = true; }
+    }
+
+    private void NavigateOutput(CompilerOutputRow row) =>
+        (DataContext as CompilerOutputToolViewModel)?.Build.NavigateOutputCommand.Execute(row);
 
     private void RebuildRaw()
     {

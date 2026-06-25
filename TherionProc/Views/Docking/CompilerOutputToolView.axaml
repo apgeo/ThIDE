@@ -53,13 +53,21 @@
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
-                    <!-- Message: red for errors, amber for warnings, bold for command/summary. -->
+                    <!-- Message: red for errors, amber for warnings, bold for command/summary.
+                         Any detected file path is drawn as a blue, clickable link (#1). -->
                     <DataGridTemplateColumn Width="Auto">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding Text}" Foreground="{Binding TextBrush}"
-                                           FontWeight="{Binding Weight}" FontStretch="Condensed"
-                                           VerticalAlignment="Center" Margin="2,0,12,0" />
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="2,0,12,0">
+                                    <TextBlock Text="{Binding MessagePrefix}" Foreground="{Binding TextBrush}"
+                                               FontWeight="{Binding Weight}" FontStretch="Condensed" />
+                                    <TextBlock Text="{Binding MessagePath}" Foreground="#3B82F6" FontStretch="Condensed"
+                                               TextDecorations="Underline" Cursor="Hand" IsVisible="{Binding HasLink}"
+                                               Tag="{Binding}" PointerPressed="OnOutputPathPressed"
+                                               ToolTip.Tip="Open this file" />
+                                    <TextBlock Text="{Binding MessageSuffix}" Foreground="{Binding TextBrush}"
+                                               FontWeight="{Binding Weight}" FontStretch="Condensed" />
+                                </StackPanel>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>

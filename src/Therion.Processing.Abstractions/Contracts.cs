@@ -152,7 +152,12 @@ public interface ITherionCompiler
         CancellationToken cancellationToken = default);
 }
 
-public sealed record CompilerOutputLine(string Text, DiagnosticSeverity Severity, SourceSpan? Span);
+/// <summary>
+/// A classified line of compiler output. <see cref="Span"/> carries a navigable file (and
+/// line, when known) detected in the text; <see cref="Symbol"/> is the offending identifier
+/// for Therion errors like "… does not exist -- E65a" (captured for future use, #1).
+/// </summary>
+public sealed record CompilerOutputLine(string Text, DiagnosticSeverity Severity, SourceSpan? Span, string? Symbol = null);
 
 public sealed record CompileResult(
     int ExitCode,
