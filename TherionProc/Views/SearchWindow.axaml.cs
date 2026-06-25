@@ -16,7 +16,7 @@ public partial class SearchWindow : Window
         Opened += (_, _) =>
         {
             (DataContext as SearchViewModel)?.PrepareDefaults();
-            this.FindControl<TextBox>("QueryBox")?.Focus();
+            this.FindControl<AutoCompleteBox>("QueryBox")?.Focus();
         };
         // Esc closes the Find in Files window (#8). Tunnel so it fires even while a TextBox
         // (which ignores Escape) holds focus.
