@@ -20,7 +20,14 @@ public sealed record DiagnosticRow(
     string File,
     int Line,
     int Column,
-    SourceSpan Span);
+    SourceSpan Span)
+{
+    /// <summary>Just the file name (the dedicated File Name column, #3).</summary>
+    public string FileName => string.IsNullOrEmpty(File) ? string.Empty : System.IO.Path.GetFileName(File);
+
+    /// <summary>Tab-separated row text for clipboard copy (#3).</summary>
+    public string ToClipboardText() => $"{Severity}\t{Code}\t{FileName}\t{Line}\t{Message}";
+}
 
 public partial class DiagnosticsViewModel : ViewModelBase
 {
@@ -29,6 +36,23 @@ public partial class DiagnosticsViewModel : ViewModelBase
     [ObservableProperty] private int _warningCount;
     [ObservableProperty] private DiagnosticRow? _selected;
     [ObservableProperty] private bool _showProjectScope;
+
+    /// <summary>Number of distinct files that have at least one warning or error (#3).</summary>
+    [ObservableProperty] private int _filesWithIssues;
+
+    /// <summary>Human-readable roll-up shown beside the scope toggle, e.g.
+    /// "189 warnings and 5 errors in 20 files" (#3).</summary>
+    public string SummaryText
+    {
+        get
+        {
+            if (ErrorCount == 0 && WarningCount == 0) return "No warnings or errors";
+            string warns = $"{WarningCount} warning{(WarningCount == 1 ? "" : "s")}";
+            string errs  = $"{ErrorCount} error{(ErrorCount == 1 ? "" : "s")}";
+            string files = $"{FilesWithIssues} file{(FilesWithIssues == 1 ? "" : "s")}";
+            return $"{warns} and {errs} in {files}";
+        }
+    }
 
     public event EventHandler<DiagnosticRow>? NavigateRequested;
     /// <summary>Raised when <see cref="ShowProjectScope"/> changes, so the shell can reload with the correct scope.</summary>
@@ -55,7 +79,18 @@ public partial class DiagnosticsViewModel : ViewModelBase
         Rows = rows;
         ErrorCount   = rows.Count(r => r.Severity == nameof(DiagnosticSeverity.Error));
         WarningCount = rows.Count(r => r.Severity == nameof(DiagnosticSeverity.Warning));
+        FilesWithIssues = rows
+            .Where(r => r.Severity == nameof(DiagnosticSeverity.Error)
+                     || r.Severity == nameof(DiagnosticSeverity.Warning))
+            .Select(r => r.File)
+            .Where(f => !string.IsNullOrEmpty(f))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Count();
+        OnPropertyChanged(nameof(SummaryText));
     }
+
+    /// <summary>All rows as text for "Copy All" (#3).</summary>
+    public string AllRowsAsText() => string.Join(Environment.NewLine, Rows.Select(r => r.ToClipboardText()));
 
     public void Clear() => Load(ImmutableArray<Diagnostic>.Empty);
 
