@@ -27,11 +27,11 @@
         <!-- VS-style docking chrome (Dock.Avalonia 12). -->
         <dockFluent:DockFluentTheme />
 
-        <!-- Shrink the oversized Fluent TabItem header font (~24px) to ~70% so inner tabs
+        <!-- Shrink the oversized Fluent TabItem header font (~19px) to ~85% so inner tabs
              (Source/Measurements/Shots/Stations/Output/Raw/Keyboard/External Tools) are
-             compact (#9). Dock document/tool tabs use their own controls, so they're unaffected. -->
+             compact (#9 / adjusted to 85%). Dock document/tool tabs use their own controls. -->
         <Style Selector="TabItem">
-            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontSize" Value="16" />
             <Setter Property="MinHeight" Value="0" />
             <Setter Property="Padding" Value="10,4" />
         </Style>
