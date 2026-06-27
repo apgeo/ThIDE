@@ -39,6 +39,10 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="8.0.1" />
     <PackageReference Include="Microsoft.Extensions.Localization" Version="8.0.10" />
     <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.2" />
+    <!-- VIS-03/05: in-app map rendering. SVG rasterized via Svg.Skia core (Avalonia-agnostic);
+         PDF via Docnet.Core (bundled PDFium → raw bitmap, no SkiaSharp version conflict). -->
+    <PackageReference Include="Svg.Skia" Version="3.0.4" />
+    <PackageReference Include="Docnet.Core" Version="2.6.0" />
   </ItemGroup>
 
   <ItemGroup>

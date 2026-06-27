@@ -1,0 +1,42 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:TherionProc.ViewModels.Docking"
+             x:Class="TherionProc.Views.Docking.MapViewerToolView"
+             x:CompileBindings="False"
+             x:DataType="vm:MapViewerToolViewModel">
+    <DockPanel>
+        <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="6,3">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+                <Button Content="Open…" Click="OnOpen" FontSize="11" Padding="8,2" />
+                <Button Content="Open externally" Command="{Binding Map.OpenExternallyCommand}"
+                        IsEnabled="{Binding Map.HasFile}" FontSize="11" Padding="8,2" />
+                <Separator Width="1" Margin="3,2" Background="Gray" />
+                <Button Content="◀" Command="{Binding Map.PrevPageCommand}"
+                        IsVisible="{Binding Map.HasMultiplePages}" FontSize="11" Padding="6,2" />
+                <TextBlock Text="{Binding Map.PageLabel}" VerticalAlignment="Center" FontSize="11"
+                           IsVisible="{Binding Map.HasMultiplePages}" />
+                <Button Content="▶" Command="{Binding Map.NextPageCommand}"
+                        IsVisible="{Binding Map.HasMultiplePages}" FontSize="11" Padding="6,2" />
+                <Separator Width="1" Margin="3,2" Background="Gray" />
+                <Button Content="–" Command="{Binding Map.ZoomOutCommand}" FontSize="11" Padding="8,2" />
+                <Button Content="Fit 100%" Command="{Binding Map.ZoomResetCommand}" FontSize="11" Padding="6,2" />
+                <Button Content="+" Command="{Binding Map.ZoomInCommand}" FontSize="11" Padding="8,2" />
+                <Button Content="↻ Refresh" Command="{Binding Map.RefreshCommand}" FontSize="11" Padding="6,2" />
+            </StackPanel>
+        </Border>
+
+        <TextBlock DockPanel.Dock="Bottom" Text="{Binding Map.Status}" Foreground="Gray"
+                   FontSize="11" Margin="6,2" TextTrimming="CharacterEllipsis" />
+
+        <ScrollViewer x:Name="Scroll" Background="#15808080"
+                      HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+                      PointerWheelChanged="OnWheel">
+            <LayoutTransformControl HorizontalAlignment="Center" VerticalAlignment="Center" Margin="12">
+                <LayoutTransformControl.LayoutTransform>
+                    <ScaleTransform ScaleX="{Binding Map.Zoom}" ScaleY="{Binding Map.Zoom}" />
+                </LayoutTransformControl.LayoutTransform>
+                <Image Source="{Binding Map.Image}" Stretch="None" />
+            </LayoutTransformControl>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>
