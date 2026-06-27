@@ -1,4 +1,4 @@
-// Implementation Plan §3 — encoding directive handling.
+// Implementation Plan ï¿½3 ï¿½ encoding directive handling.
 // A two-phase decoder: scan the ASCII prefix for an `encoding <name>` line,
 // then re-decode the entire byte buffer with that encoding. Falls back to UTF-8.
 
@@ -27,19 +27,40 @@ public static class EncodingResolver
         return Decode(bytes);
     }
 
-    /// <summary>Decode <paramref name="bytes"/> honoring an embedded directive.</summary>
+    /// <summary>
+    /// Decode <paramref name="bytes"/> honoring an embedded directive. A leading byte-order mark
+    /// (UTF-8 / UTF-16) is detected and stripped so it never leaks into the first token (LANG-11).
+    /// </summary>
     public static string Decode(byte[] bytes)
     {
-        var enc = DetectEncoding(bytes) ?? Default;
-        return enc.GetString(bytes);
+        int skip = BomLength(bytes, out var bomEncoding);
+        var enc = DetectEncoding(bytes, skip) ?? bomEncoding ?? Default;
+        return enc.GetString(bytes, skip, bytes.Length - skip);
+    }
+
+    /// <summary>Length (0/2/3) of a leading BOM, and the encoding it implies (if any).</summary>
+    public static int BomLength(byte[] bytes, out Encoding? encoding)
+    {
+        if (bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF)
+        { encoding = Default; return 3; }
+        if (bytes.Length >= 2 && bytes[0] == 0xFF && bytes[1] == 0xFE)
+        { encoding = Encoding.Unicode; return 2; }
+        if (bytes.Length >= 2 && bytes[0] == 0xFE && bytes[1] == 0xFF)
+        { encoding = Encoding.BigEndianUnicode; return 2; }
+        encoding = null;
+        return 0;
     }
 
     /// <summary>Detect the encoding declared by an <c>encoding &lt;name&gt;</c> directive, if any.</summary>
-    public static Encoding? DetectEncoding(byte[] bytes)
+    public static Encoding? DetectEncoding(byte[] bytes) => DetectEncoding(bytes, 0);
+
+    /// <summary>As <see cref="DetectEncoding(byte[])"/> but starting after a stripped BOM.</summary>
+    public static Encoding? DetectEncoding(byte[] bytes, int startOffset)
     {
-        // ASCII-decode just the probe prefix to find an `encoding` directive.
-        int n = Math.Min(bytes.Length, ProbeBytes);
-        string ascii = Encoding.ASCII.GetString(bytes, 0, n);
+        // ASCII-decode just the probe prefix (after any BOM) to find an `encoding` directive.
+        int n = Math.Min(bytes.Length, startOffset + ProbeBytes) - startOffset;
+        if (n <= 0) return null;
+        string ascii = Encoding.ASCII.GetString(bytes, startOffset, n);
 
         int lineStart = 0;
         while (lineStart < ascii.Length)
@@ -50,7 +71,7 @@ public static class EncodingResolver
             var line = ascii.AsSpan(lineStart, lineEnd - lineStart).Trim();
             if (line.Length > 0 && line[0] != '#')
             {
-                // Need an "encoding <name>" line — match case-insensitively.
+                // Need an "encoding <name>" line ï¿½ match case-insensitively.
                 if (line.Length >= 9 && line[..8].ToString().Equals("encoding", StringComparison.OrdinalIgnoreCase)
                     && char.IsWhiteSpace(line[8]))
                 {

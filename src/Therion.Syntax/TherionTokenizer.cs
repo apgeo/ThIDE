@@ -1,4 +1,4 @@
-// Implementation Plan §4.1 (Lexer). Hand-rolled tokenizer for the Therion text
+// Implementation Plan ï¿½4.1 (Lexer). Hand-rolled tokenizer for the Therion text
 // formats (.th / .th2 / .thconfig). Superpower 3.0.0 no longer ships
 // TokenizerBuilder<T>; we keep the door open to using TokenListParser<TKind,T>
 // in the higher-level parser layer (M2+) by emitting a token list shape that
@@ -7,7 +7,7 @@
 // Therion source-of-truth references:
 //   - Comments / line continuation: therion/src/thinput.cxx
 //   - Identifier / number / string rules: therion/src/thparse.cxx
-// thbook v6.4.0 §2 "General syntax".
+// thbook v6.4.0 ï¿½2 "General syntax".
 
 using System.Collections.Immutable;
 using System.Text;
@@ -22,7 +22,7 @@ public readonly record struct TherionToken(TherionTokenKind Kind, SourceSpan Spa
 }
 
 /// <summary>
-/// Hand-rolled tokenizer for the Therion text formats. Never throws — invalid
+/// Hand-rolled tokenizer for the Therion text formats. Never throws ï¿½ invalid
 /// characters are reported through the caller's diagnostic channel by inspecting
 /// the resulting tokens.
 /// </summary>
@@ -62,27 +62,35 @@ public sealed class TherionTokenizer
                 continue;
             }
 
-            // -- Line continuation: backslash + newline -----------------------
-            if (c == '\\' && pos + 1 < text.Length && (text[pos + 1] == '\r' || text[pos + 1] == '\n'))
+            // -- Line continuation: backslash + (optional trailing ws) + newline.
+            // Therion tolerates whitespace between the '\' and the line break, so a line ending
+            // in "\   " still continues. (A '\' followed by anything else â€” e.g. a Windows path
+            // separator "rez\grind" â€” is NOT a continuation and falls through to identifier.)
+            if (c == '\\')
             {
-                int startPos = pos;
-                int startLine = line;
-                int startCol = col;
-                pos++;
-                col++;
-                if (text[pos] == '\r' && pos + 1 < text.Length && text[pos + 1] == '\n')
-                    pos += 2;
-                else
-                    pos += 1;
+                int look = pos + 1;
+                while (look < text.Length && (text[look] == ' ' || text[look] == '\t')) look++;
+                if (look < text.Length && (text[look] == '\r' || text[look] == '\n'))
+                {
+                    int startPos = pos;
+                    int startLine = line;
+                    int startCol = col;
+                    col += look - pos;
+                    pos = look;
+                    if (text[pos] == '\r' && pos + 1 < text.Length && text[pos + 1] == '\n')
+                        pos += 2;
+                    else
+                        pos += 1;
 
-                builder.Add(new TherionToken(
-                    TherionTokenKind.LineContinuation,
-                    MakeSpan(filePath, startLine, startCol, line, col, startPos, pos - startPos),
-                    text.Substring(startPos, pos - startPos)));
+                    builder.Add(new TherionToken(
+                        TherionTokenKind.LineContinuation,
+                        MakeSpan(filePath, startLine, startCol, line, col, startPos, pos - startPos),
+                        text.Substring(startPos, pos - startPos)));
 
-                line++;
-                col = 1;
-                continue;
+                    line++;
+                    col = 1;
+                    continue;
+                }
             }
 
             // -- Whitespace (spaces / tabs) -----------------------------------

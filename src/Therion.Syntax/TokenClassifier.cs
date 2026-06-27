@@ -47,6 +47,8 @@ public static class TokenClassifier
         "data", "fix", "equate", "input", "load", "team", "date", "station",
         "extend", "units", "calibrate", "declination", "grade", "infer", "mark",
         "flags", "sd", "explo-date", "explo-team", "instrument",
+        "grid-angle", "break", "walls", "vthreshold", "station-names",
+        "surface", "endsurface",
         // .th2
         "scrap", "endscrap", "point", "line", "endline", "area", "endarea",
         "encoding", "sketch", "map", "endmap", "join", "layer", "break", "preview",
