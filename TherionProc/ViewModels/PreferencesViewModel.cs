@@ -16,6 +16,32 @@ namespace TherionProc.ViewModels;
 /// <summary>One left-hand entry in the Preferences window; Keywords feed the search filter.</summary>
 public sealed record PreferenceSection(string Id, string Title, string Keywords);
 
+/// <summary>
+/// One row in the "Editor Features" Preferences section — a per-feature runtime toggle (EDIT-*).
+/// A feature compiled out via <see cref="EditorFeatureFlags"/> shows disabled and forced off.
+/// </summary>
+public sealed partial class EditorFeatureToggle : ObservableObject
+{
+    public EditorFeature Feature { get; }
+    public string Code { get; }
+    public string Title { get; }
+    public string Description { get; }
+    /// <summary>False when the compile-time master constant removed this feature (row is disabled).</summary>
+    public bool IsCompiledIn { get; }
+
+    [ObservableProperty] private bool _isEnabled;
+
+    public EditorFeatureToggle(EditorFeatureInfo info, bool enabled)
+    {
+        Feature = info.Feature;
+        Code = info.Code;
+        Title = info.Title;
+        Description = info.Description;
+        IsCompiledIn = EditorFeatureFlags.Compiled(info.Feature);
+        _isEnabled = enabled && IsCompiledIn;
+    }
+}
+
 public partial class PreferencesViewModel : ObservableObject
 {
     private readonly IAppSettingsService _settings;
@@ -32,10 +58,13 @@ public partial class PreferencesViewModel : ObservableObject
     [ObservableProperty] private bool _showLineNumbers;
     [ObservableProperty] private bool _highlightCurrentLine;
     [ObservableProperty] private bool _convertTabsToSpaces;
+    [ObservableProperty] private bool _formatOnSave; // EDIT-04
 
     // ---- workspace ----
     [ObservableProperty] private bool _autoReloadExternalChanges;
     [ObservableProperty] private bool _autoReloadGraphOnExternalChange;
+    /// <summary>#3: limit Ctrl+P to thconfig-connected files instead of every file in the folder.</summary>
+    [ObservableProperty] private bool _quickOpenThconfigScope;
 
     // ---- build outputs ----
     [ObservableProperty] private bool _openLoxAfterBuild;
@@ -64,6 +93,11 @@ public partial class PreferencesViewModel : ObservableObject
     [ObservableProperty] private int _maxHighlightKB;
     [ObservableProperty] private int _maxParseLines;
     [ObservableProperty] private int _maxParseKB;
+    [ObservableProperty] private int _stationSearchLimit;
+
+    // ---- editor features (Section B / EDIT-*) ----
+    /// <summary>Per-feature runtime toggles shown in the "Editor Features" section.</summary>
+    public ObservableCollection<EditorFeatureToggle> EditorFeatureRows { get; } = new();
 
     // ---- keyboard shortcuts (moved here from the Settings panel, #11) ----
     public KeyboardShortcutsViewModel? Keyboard { get; }
@@ -94,8 +128,11 @@ public partial class PreferencesViewModel : ObservableObject
         _showLineNumbers = s.ShowLineNumbers;
         _highlightCurrentLine = s.HighlightCurrentLine;
         _convertTabsToSpaces = s.ConvertTabsToSpaces;
+        _formatOnSave = s.EditorFormatOnSave;
         _autoReloadExternalChanges = s.AutoReloadExternalChanges;
         _autoReloadGraphOnExternalChange = s.AutoReloadGraphOnExternalChange;
+        _quickOpenThconfigScope = s.QuickOpenSources.HasFlag(QuickOpenSources.ThconfigConnected)
+                                  && !s.QuickOpenSources.HasFlag(QuickOpenSources.Directory);
         _openLoxAfterBuild = s.OpenLoxAfterBuild;
         _open3dAfterBuild = s.Open3dAfterBuild;
         _openPdfAfterBuild = s.OpenPdfAfterBuild;
@@ -105,6 +142,9 @@ public partial class PreferencesViewModel : ObservableObject
         _maxHighlightKB = s.MaxHighlightKB;
         _maxParseLines = s.MaxParseLines;
         _maxParseKB = s.MaxParseKB;
+        _stationSearchLimit = s.StationSearchLimit;
+        foreach (var info in EditorFeatureCatalog.All)
+            EditorFeatureRows.Add(new EditorFeatureToggle(info, s.EditorFeatures.IsEnabled(info.Feature)));
         _themeModeIndex = s.ThemeMode switch { "Light" => 1, "Dark" => 2, _ => 0 };
         _useCustomSyntaxColors = s.UseCustomSyntaxColors;
         _syntaxKeywordColor = s.SyntaxKeywordColor ?? "#0000C8";
@@ -122,7 +162,8 @@ public partial class PreferencesViewModel : ObservableObject
             new("general",  Resources.Tr.Get("Pref_General"),     "startup session reopen language english romanian locale"),
             new("theme",    Resources.Tr.Get("Pref_Theme"),       "theme dark light color syntax keyword identifier custom appearance"),
             new("editor",   Resources.Tr.Get("Pref_Editor"),      "font size indent line numbers highlight tabs spaces rename preview"),
-            new("performance",Resources.Tr.Get("Pref_Performance"),"large file limit highlight parse lines size kb threshold"),
+            new("editorfeatures", "Editor Features",              "edit feature snippet completion signature outline minimap sticky breadcrumb peek split diff color whitespace format smart enter toggle enable disable"),
+            new("performance",Resources.Tr.Get("Pref_Performance"),"large file limit highlight parse lines size kb threshold station search symbol cap"),
             new("workspace",Resources.Tr.Get("Pref_Workspace"),   "reload external graph disk watch"),
             new("build",    Resources.Tr.Get("Pref_Build"),       "build output open lox 3d pdf survex aven loch"),
             new("external", Resources.Tr.Get("Pref_External"),    "therion loch aven survex path detect tool executable"),
@@ -138,6 +179,7 @@ public partial class PreferencesViewModel : ObservableObject
     public bool IsGeneral     => SelectedSection?.Id == "general";
     public bool IsTheme       => SelectedSection?.Id == "theme";
     public bool IsEditor      => SelectedSection?.Id == "editor";
+    public bool IsEditorFeatures => SelectedSection?.Id == "editorfeatures";
     public bool IsPerformance => SelectedSection?.Id == "performance";
     public bool IsWorkspace   => SelectedSection?.Id == "workspace";
     public bool IsBuild       => SelectedSection?.Id == "build";
@@ -149,6 +191,7 @@ public partial class PreferencesViewModel : ObservableObject
         OnPropertyChanged(nameof(IsGeneral));
         OnPropertyChanged(nameof(IsTheme));
         OnPropertyChanged(nameof(IsEditor));
+        OnPropertyChanged(nameof(IsEditorFeatures));
         OnPropertyChanged(nameof(IsPerformance));
         OnPropertyChanged(nameof(IsWorkspace));
         OnPropertyChanged(nameof(IsBuild));
@@ -189,8 +232,12 @@ public partial class PreferencesViewModel : ObservableObject
     public void Apply()
     {
         var code = LanguageCode;
+        var editorFeatures = _settings.Current.EditorFeatures;
+        foreach (var row in EditorFeatureRows)
+            editorFeatures = editorFeatures.With(row.Feature, row.IsEnabled);
         _settings.Save(_settings.Current with
         {
+            EditorFeatures = editorFeatures,
             RestoreSessionOnStartup = RestoreSessionOnStartup,
             UiLanguage = code,
             EditorFontSize = EditorFontSize,
@@ -198,8 +245,12 @@ public partial class PreferencesViewModel : ObservableObject
             ShowLineNumbers = ShowLineNumbers,
             HighlightCurrentLine = HighlightCurrentLine,
             ConvertTabsToSpaces = ConvertTabsToSpaces,
+            EditorFormatOnSave = FormatOnSave,
             AutoReloadExternalChanges = AutoReloadExternalChanges,
             AutoReloadGraphOnExternalChange = AutoReloadGraphOnExternalChange,
+            QuickOpenSources = QuickOpenThconfigScope
+                ? QuickOpenSources.History | QuickOpenSources.ThconfigConnected
+                : QuickOpenSources.History | QuickOpenSources.Directory,
             OpenLoxAfterBuild = OpenLoxAfterBuild,
             Open3dAfterBuild = Open3dAfterBuild,
             OpenPdfAfterBuild = OpenPdfAfterBuild,
@@ -209,6 +260,7 @@ public partial class PreferencesViewModel : ObservableObject
             MaxHighlightKB = MaxHighlightKB,
             MaxParseLines = MaxParseLines,
             MaxParseKB = MaxParseKB,
+            StationSearchLimit = StationSearchLimit,
             ThemeMode = ThemeModeIndex switch { 1 => "Light", 2 => "Dark", _ => "System" },
             UseCustomSyntaxColors = UseCustomSyntaxColors,
             SyntaxKeywordColor = NullIfBlank(SyntaxKeywordColor),

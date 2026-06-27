@@ -39,6 +39,10 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        // Ctrl+Tab document switching is registered in the tunnel phase so it fires before any
+        // focused child (the dock tab-strip, toolbar, menu, editor) can swallow it — otherwise it
+        // only works while the editor is focused and dies once focus lands on the toolbar (#4).
+        AddHandler(KeyDownEvent, OnTunnelKeyDown, Avalonia.Interactivity.RoutingStrategies.Tunnel);
         Opened += (_, _) =>
         {
             if (DataContext is MainWindowViewModel vm)
@@ -47,6 +51,13 @@ public partial class MainWindow : Window
                 AttachLayout(vm);
                 AttachKeyboardShortcuts(vm);
                 vm.RecentFilesChanged += (_, _) => BuildRecentMenu(vm);
+                vm.ConfirmLoadFolderRequested += (_, path) => _ = ConfirmLoadFolderAsync(vm, path);
+                // Command-palette (#4) view actions: open windows / settings.
+                vm.ShowPreferencesRequested += (_, section) => _ = OpenPreferences(section);
+                vm.ShowAboutRequested       += (_, _) => OnAboutClick(this, new Avalonia.Interactivity.RoutedEventArgs());
+                vm.ShowThbookRequested      += (_, _) => OnOpenThbook(this, new Avalonia.Interactivity.RoutedEventArgs());
+                vm.ShowBookmarksRequested   += (_, _) => OnBookmarksClick(this, new Avalonia.Interactivity.RoutedEventArgs());
+                vm.ShowRelationalMapRequested += (_, _) => OnRelationalMapClick(this, new Avalonia.Interactivity.RoutedEventArgs());
                 BuildRecentMenu(vm);
                 // The layout rendered without crashing — clear the crash sentinel so the next
                 // launch trusts it (deferred so the dock has finished materializing).
@@ -240,6 +251,46 @@ public partial class MainWindow : Window
     private void ToggleFullScreen() =>
         WindowState = WindowState == WindowState.FullScreen ? WindowState.Normal : WindowState.FullScreen;
 
+    // Go-to-File typed a directory path: confirm, then load it as the active workspace (#3).
+    private async System.Threading.Tasks.Task ConfirmLoadFolderAsync(MainWindowViewModel vm, string path)
+    {
+        var ok = new Button { Content = "Open", IsDefault = true, MinWidth = 80 };
+        var cancel = new Button { Content = "Cancel", IsCancel = true, MinWidth = 80 };
+        var dialog = new Window
+        {
+            Title = "Load folder as workspace?",
+            Width = 460,
+            SizeToContent = SizeToContent.Height,
+            CanResize = false,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Content = new StackPanel
+            {
+                Margin = new Thickness(16),
+                Spacing = 12,
+                Children =
+                {
+                    new TextBlock { Text = $"Open this folder as the active workspace?\n\n{path}", TextWrapping = Avalonia.Media.TextWrapping.Wrap },
+                    new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 8,
+                        HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right, Children = { cancel, ok } },
+                },
+            },
+        };
+        bool confirmed = false;
+        ok.Click += (_, _) => { confirmed = true; dialog.Close(); };
+        cancel.Click += (_, _) => dialog.Close();
+        await dialog.ShowDialog(this);
+        if (confirmed) await vm.OpenFolderPathAsync(path);
+    }
+
+    // Global Ctrl+Tab / Ctrl+Shift+Tab editor-document switcher (#4). Tunnel phase = focus-agnostic.
+    private void OnTunnelKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Tab || (e.KeyModifiers & KeyModifiers.Control) == 0) return;
+        bool forward = (e.KeyModifiers & KeyModifiers.Shift) == 0;
+        (DataContext as MainWindowViewModel)?.SwitchDocument(forward);
+        e.Handled = true;
+    }
+
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
@@ -264,6 +315,14 @@ public partial class MainWindow : Window
                 break;
             case Key.F when e.KeyModifiers == (KeyModifiers.Control | KeyModifiers.Shift):
                 ShowSearch();
+                e.Handled = true;
+                break;
+            case Key.P when e.KeyModifiers == KeyModifiers.Control:
+                (DataContext as MainWindowViewModel)?.ShowQuickOpen();
+                e.Handled = true;
+                break;
+            case Key.P when e.KeyModifiers == (KeyModifiers.Control | KeyModifiers.Shift):
+                (DataContext as MainWindowViewModel)?.ShowCommandPalette();
                 e.Handled = true;
                 break;
         }
@@ -491,7 +550,10 @@ public partial class MainWindow : Window
         }
     }
 
-    private async void OnPreferencesClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    private void OnPreferencesClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        => _ = OpenPreferences(null);
+
+    private async System.Threading.Tasks.Task OpenPreferences(string? section)
     {
         IAppSettingsService? settings = null;
         KeyboardShortcutsViewModel? keyboard = null;
@@ -507,11 +569,9 @@ public partial class MainWindow : Window
         catch { /* design-time / no container */ }
         if (settings is null) return;
 
-        var window = new PreferencesWindow
-        {
-            DataContext = new PreferencesViewModel(settings, keyboard, language, externalTools),
-        };
-        await window.ShowDialog(this);
+        var vm = new PreferencesViewModel(settings, keyboard, language, externalTools);
+        if (!string.IsNullOrEmpty(section)) vm.SelectSectionById(section!);
+        await new PreferencesWindow { DataContext = vm }.ShowDialog(this);
     }
 
     private void AttachLayout(MainWindowViewModel vm)

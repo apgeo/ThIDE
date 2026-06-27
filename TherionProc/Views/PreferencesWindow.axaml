@@ -124,6 +124,39 @@
                     <CheckBox Content="Convert tabs to spaces" IsChecked="{Binding ConvertTabsToSpaces}" />
                     <CheckBox Content="Show a preview before applying a symbol rename"
                               IsChecked="{Binding ShowRenamePreviewBeforeApply}" />
+                    <CheckBox Content="Format document on save (re-indent to block nesting)"
+                              IsChecked="{Binding FormatOnSave}" />
+                </StackPanel>
+
+                <!-- Editor Features (Section B / EDIT-*) -->
+                <StackPanel Spacing="8" IsVisible="{Binding IsEditorFeatures}">
+                    <TextBlock Text="Editor Features" FontSize="16" FontWeight="Bold" />
+                    <TextBlock Text="Enable or disable individual editor enhancements. A feature greyed out here was switched off at build time."
+                               Foreground="Gray" TextWrapping="Wrap" />
+                    <ItemsControl ItemsSource="{Binding EditorFeatureRows}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Padding="0,6" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                        BorderThickness="0,0,0,1">
+                                    <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto">
+                                        <CheckBox Grid.Row="0" Grid.Column="0" Grid.RowSpan="2"
+                                                  VerticalAlignment="Top" Margin="0,2,8,0"
+                                                  IsChecked="{Binding IsEnabled, Mode=TwoWay}"
+                                                  IsEnabled="{Binding IsCompiledIn}" />
+                                        <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" />
+                                            <Border Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}"
+                                                    CornerRadius="3" Padding="5,1" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Code}" FontSize="10" Foreground="Gray" />
+                                            </Border>
+                                        </StackPanel>
+                                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Description}"
+                                                   Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                 </StackPanel>
 
                 <!-- Performance / large-file guards (#10) -->
@@ -155,6 +188,14 @@
                         <NumericUpDown Grid.Row="1" Grid.Column="1" Minimum="64" Maximum="1048576" Increment="128"
                                        Value="{Binding MaxParseKB}" MaxWidth="180" HorizontalAlignment="Left" />
                     </Grid>
+                    <TextBlock Text="Caps how many stations the &quot;Go to Symbol&quot; / station search (Ctrl+Shift+P) lists, so very large caves stay responsive."
+                               Foreground="Gray" TextWrapping="Wrap" />
+                    <Grid ColumnDefinitions="200,*" RowDefinitions="Auto">
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Max stations in search"
+                                   VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <NumericUpDown Grid.Row="0" Grid.Column="1" Minimum="100" Maximum="1000000" Increment="500"
+                                       Value="{Binding StationSearchLimit}" MaxWidth="180" HorizontalAlignment="Left" />
+                    </Grid>
                 </StackPanel>
 
                 <!-- Workspace -->
@@ -164,6 +205,11 @@
                               IsChecked="{Binding AutoReloadExternalChanges}" />
                     <CheckBox Content="Update the object graph when files change on disk"
                               IsChecked="{Binding AutoReloadGraphOnExternalChange}" />
+                    <Separator Margin="0,6" />
+                    <CheckBox Content="Go to File (Ctrl+P): search only files connected to the active thconfig"
+                              IsChecked="{Binding QuickOpenThconfigScope}" />
+                    <TextBlock Text="When off, Ctrl+P searches every Therion file in the workspace folder (history is always included)."
+                               Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
                 </StackPanel>
 
                 <!-- Build & Output -->

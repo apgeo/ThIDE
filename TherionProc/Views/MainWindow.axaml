@@ -4,6 +4,8 @@
         xmlns:docking="using:TherionProc.ViewModels.Docking"
         xmlns:dock="using:Dock.Avalonia.Controls"
         xmlns:conv="using:TherionProc.Converters"
+        xmlns:qp="using:TherionProc.Views.QuickPick"
+        xmlns:ac="using:Avalonia.Data.Converters"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="1300" d:DesignHeight="800"
@@ -88,12 +90,33 @@
                 <MenuItem Header="{Binding MenuViewObjectBrowser}" Command="{Binding ToggleObjectBrowserCommand}" />
                 <MenuItem Header="{Binding MenuViewWorkspace}" Command="{Binding ToggleWorkspaceExplorerCommand}" />
                 <MenuItem Header="{Binding MenuViewDiagnostics}" Command="{Binding ToggleDiagnosticsCommand}" />
+                <!-- EDIT-09: document outline (hidden when the feature is disabled). -->
+                <MenuItem Header="Outline" Command="{Binding ToggleOutlineCommand}"
+                          IsVisible="{Binding OutlineFeatureEnabled}" />
                 <Separator />
                 <MenuItem Header="{Binding MenuViewRelationalMap}" Click="OnRelationalMapClick" />
                 <Separator />
                 <MenuItem Header="{Binding MenuViewStrictParser}"
                           ToggleType="CheckBox"
                           IsChecked="{Binding StrictParserMode, Mode=TwoWay}" />
+                <!-- EDIT-13: whitespace/EOL/indent-guide render toggles (hidden when the feature is off). -->
+                <Separator IsVisible="{Binding WhitespaceFeatureEnabled}" />
+                <MenuItem Header="Whitespace" IsVisible="{Binding WhitespaceFeatureEnabled}">
+                    <MenuItem Header="Show Spaces &amp; Tabs" ToggleType="CheckBox"
+                              IsChecked="{Binding ShowWhitespace, Mode=TwoWay}" />
+                    <MenuItem Header="Show End of Line" ToggleType="CheckBox"
+                              IsChecked="{Binding ShowEndOfLine, Mode=TwoWay}" />
+                    <MenuItem Header="Show Indentation Guides" ToggleType="CheckBox"
+                              IsChecked="{Binding ShowIndentGuides, Mode=TwoWay}" />
+                </MenuItem>
+                <!-- EDIT-07: minimap toggle (hidden when the feature is off). -->
+                <MenuItem Header="Show Minimap" ToggleType="CheckBox"
+                          IsChecked="{Binding ShowMinimap, Mode=TwoWay}"
+                          IsVisible="{Binding MinimapFeatureEnabled}" />
+                <!-- EDIT-11: open the active document side-by-side in a float window. -->
+                <Separator IsVisible="{Binding SplitFeatureEnabled}" />
+                <MenuItem Header="Split Editor (Float)" Command="{Binding SplitEditorCommand}"
+                          IsVisible="{Binding SplitFeatureEnabled}" />
             </MenuItem>
             <!-- Edit menu mirrors the editor's right-click menu; enabled when a file is open (#11). -->
             <MenuItem Header="{Binding MenuEdit}" IsEnabled="{Binding HasStatusFile}">
@@ -352,6 +375,11 @@
         <!-- VS-style docking host: documents (center) + dockable/floatable tool windows. -->
         <Grid>
             <dock:DockControl x:Name="Dock" Layout="{Binding Layout}" Factory="{Binding Factory}" />
+
+            <!-- Quick-pick overlay (#3 Ctrl+P Go-to-File / #4 Ctrl+Shift+P commands). Shown when
+                 MainWindowViewModel.QuickPick is set; its own DataContext is that VM. -->
+            <qp:QuickPickOverlay DataContext="{Binding QuickPick}"
+                                 IsVisible="{Binding Converter={x:Static ac:ObjectConverters.IsNotNull}}" />
 
             <!-- Startup loading overlay with a spinning glyph (#14). -->
             <Border IsVisible="{Binding IsLoading}" Background="#66000000">

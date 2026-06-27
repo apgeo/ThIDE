@@ -19,6 +19,19 @@ public enum WorkspaceViewMode
     FileExplorer = 1,
 }
 
+/// <summary>
+/// Which file categories the Go-to-File palette (Ctrl+P) searches. A [Flags] enum so categories
+/// can be independently enabled/disabled and new sources added later without breaking callers.
+/// </summary>
+[Flags]
+public enum QuickOpenSources
+{
+    None = 0,
+    History = 1,              // recently-opened + currently-open files (always useful)
+    Directory = 2,            // every Therion file under the active workspace root
+    ThconfigConnected = 4,    // only files that participate in the active thconfig's object graph
+}
+
 /// <summary>File-explorer sort key (Windows-Explorer-style), applied within each folder (#15).</summary>
 public enum WorkspaceSortMode
 {
@@ -96,6 +109,11 @@ public sealed record AppSettings
     public int MaxParseLines { get; init; } = 20000;
     /// <summary>Skip parsing/object-graph above this size in KB.</summary>
     public int MaxParseKB { get; init; } = 512;
+    /// <summary>
+    /// Maximum number of stations listed by the "Go to Symbol" / station search (Ctrl+Shift+P).
+    /// Caps the symbol list so huge caves stay responsive while the fuzzy matcher narrows it.
+    /// </summary>
+    public int StationSearchLimit { get; init; } = 4000;
 
     // ---- theme (#2) ----
     /// <summary>App theme mode: "System", "Light", or "Dark".</summary>
@@ -126,6 +144,28 @@ public sealed record AppSettings
     public bool ConvertTabsToSpaces { get; init; } = true;
     public int IndentationSize { get; init; } = 2;
     public bool EditorWordWrap { get; init; }
+
+    // ---- editor features (Section B / EDIT-*) ----
+    /// <summary>Per-feature runtime toggles for the EDIT-* editor features (default: all on).</summary>
+    public EditorFeatureSettings EditorFeatures { get; init; } = new();
+
+    // ---- whitespace rendering (EDIT-13; View-menu toggles, gated by the EDIT-13 feature) ----
+    /// <summary>Render spaces (·) and tabs (→) in the editor.</summary>
+    public bool EditorShowWhitespace { get; init; }
+    /// <summary>Render an end-of-line marker (¶) at each line break.</summary>
+    public bool EditorShowEndOfLine { get; init; }
+    /// <summary>Draw vertical indentation guide lines.</summary>
+    public bool EditorShowIndentGuides { get; init; }
+
+    /// <summary>Run "Format Document" (EDIT-04) automatically on save.</summary>
+    public bool EditorFormatOnSave { get; init; }
+
+    /// <summary>Show the code minimap (EDIT-07; View-menu toggle, gated by the EDIT-07 feature).</summary>
+    public bool EditorShowMinimap { get; init; }
+
+    // ---- quick open (Ctrl+P go-to-file) ----
+    /// <summary>Which categories the Go-to-File palette searches (besides history). Default: history + directory.</summary>
+    public QuickOpenSources QuickOpenSources { get; init; } = QuickOpenSources.History | QuickOpenSources.Directory;
 
     // ---- workspace panel ----
     public bool WorkspaceShowObjectModel { get; init; } = true;

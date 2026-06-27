@@ -26,6 +26,10 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly IStringLocalizer<Strings> _l;
     private readonly ILanguageService _language;
     private readonly IDocumentService _documents;
+    private readonly Therion.Semantics.ISemanticRuleRunner? _ruleRunner;
+    // Cache the rule diagnostics per workspace snapshot so they aren't recomputed every refresh.
+    private WorkspaceSemanticModel? _ruleDiagWorkspace;
+    private System.Collections.Immutable.ImmutableArray<Therion.Core.Diagnostic> _ruleDiagCache;
     private readonly IModelEditService? _editService;
     private readonly ILayoutService? _layout;
     private readonly IAppSettingsService? _settings;
@@ -47,6 +51,7 @@ public partial class MainWindowViewModel : ViewModelBase
     public CompilerOutputToolViewModel CompilerOutputTool { get; }
     public GeneratedFilesToolViewModel GeneratedFilesTool { get; }
     public XviToolViewModel XviTool { get; }
+    public OutlineToolViewModel OutlineTool { get; }
     public SettingsToolViewModel SettingsTool { get; }
 
     // Convenience accessors so menu/toolbar/keyboard bindings stay stable.
@@ -90,6 +95,124 @@ public partial class MainWindowViewModel : ViewModelBase
     partial void OnWordWrapChanged(bool value)
     {
         if (_settings is { } s) s.Save(s.Current with { EditorWordWrap = value });
+    }
+
+    // ---- EDIT-13: whitespace / EOL / indent-guide render toggles (View menu) ----
+    /// <summary>True when EDIT-13 is enabled (compile-time flag + runtime setting) — gates the View-menu items.</summary>
+    public bool WhitespaceFeatureEnabled =>
+        EditorFeatureFlags.IsEnabled(EditorFeature.WhitespaceGuides, _settings?.Current);
+
+    [ObservableProperty] private bool _showWhitespace;
+    partial void OnShowWhitespaceChanged(bool value)
+    {
+        if (_settings is { } s) s.Save(s.Current with { EditorShowWhitespace = value });
+    }
+
+    [ObservableProperty] private bool _showEndOfLine;
+    partial void OnShowEndOfLineChanged(bool value)
+    {
+        if (_settings is { } s) s.Save(s.Current with { EditorShowEndOfLine = value });
+    }
+
+    [ObservableProperty] private bool _showIndentGuides;
+    partial void OnShowIndentGuidesChanged(bool value)
+    {
+        if (_settings is { } s) s.Save(s.Current with { EditorShowIndentGuides = value });
+    }
+
+    // ---- EDIT-07: minimap toggle (View menu) ----
+    /// <summary>EDIT-07 gate (compile-time flag + runtime setting).</summary>
+    public bool MinimapFeatureEnabled =>
+        EditorFeatureFlags.IsEnabled(EditorFeature.Minimap, _settings?.Current);
+
+    [ObservableProperty] private bool _showMinimap;
+    partial void OnShowMinimapChanged(bool value)
+    {
+        if (_settings is { } s) s.Save(s.Current with { EditorShowMinimap = value });
+    }
+
+    // ---- EDIT-11: split editor (side-by-side via a float window) ----
+    /// <summary>EDIT-11 gate (compile-time flag + runtime setting).</summary>
+    public bool SplitFeatureEnabled =>
+        EditorFeatureFlags.IsEnabled(EditorFeature.SplitView, _settings?.Current);
+
+    [RelayCommand]
+    private void SplitEditor()
+    {
+        if (!SplitFeatureEnabled) return;
+        if (_documents.Active is { } doc)
+            try { _factory.FloatDockable(doc); } catch { /* best-effort */ }
+    }
+
+    // ---- #3: Go-to-File quick open (Ctrl+P) + #4: command palette (Ctrl+Shift+P) ----
+    private readonly QuickOpenProvider? _quickOpen;
+
+    /// <summary>The active quick-pick overlay VM (Go-to-File or Command palette), or null when hidden.</summary>
+    [ObservableProperty] private QuickPick.QuickPickViewModel? _quickPick;
+
+    /// <summary>Raised when the user picks a directory in Go-to-File; the view confirms then loads it.</summary>
+    public event EventHandler<string>? ConfirmLoadFolderRequested;
+
+    public Task OpenFolderPathAsync(string path) => _documents.OpenFolderAsync(path);
+
+    public void ShowQuickOpen()
+    {
+        if (_quickOpen is null) return;
+        var palette = _quickOpen.CreatePalette(path =>
+        {
+            ConfirmLoadFolderRequested?.Invoke(this, path);
+            return Task.CompletedTask;
+        });
+        palette.CloseRequested += (_, _) => QuickPick = null;
+        QuickPick = palette;
+    }
+
+    // View-level command-palette actions (handled by MainWindow code-behind: open windows / settings).
+    public event EventHandler<string?>? ShowPreferencesRequested;
+    public event EventHandler? ShowAboutRequested;
+    public event EventHandler? ShowThbookRequested;
+    public event EventHandler? ShowBookmarksRequested;
+    public event EventHandler? ShowRelationalMapRequested;
+
+    public void RaiseShowPreferences(string? section) => ShowPreferencesRequested?.Invoke(this, section);
+    public void RaiseShowAbout() => ShowAboutRequested?.Invoke(this, EventArgs.Empty);
+    public void RaiseShowThbook() => ShowThbookRequested?.Invoke(this, EventArgs.Empty);
+    public void RaiseShowBookmarks() => ShowBookmarksRequested?.Invoke(this, EventArgs.Empty);
+    public void RaiseShowRelationalMap() => ShowRelationalMapRequested?.Invoke(this, EventArgs.Empty);
+
+    /// <summary>Opens the Command palette (Ctrl+Shift+P, #4).</summary>
+    public void ShowCommandPalette()
+    {
+        var docs = TherionProc.AppServices.Provider.GetService(typeof(IThbookDocumentationService))
+            as IThbookDocumentationService;
+        var stationLimit = _settings?.Current.StationSearchLimit ?? 4000;
+        var provider = new CommandPaletteProvider(this, docs, _documents, _session, Push, stationLimit);
+        var palette = provider.CreatePalette();
+        palette.CloseRequested += (_, _) => QuickPick = null;
+        QuickPick = palette;
+
+        void Push(QuickPick.QuickPickViewModel next)
+        {
+            next.CloseRequested += (_, _) => QuickPick = null;
+            QuickPick = next;
+        }
+    }
+
+    /// <summary>
+    /// Cycles the active editor document (Ctrl+Tab forward / Ctrl+Shift+Tab backward, #4). Driven
+    /// from a window-level handler so it works no matter where focus is (menu, toolbar, panels).
+    /// </summary>
+    public void SwitchDocument(bool forward)
+    {
+        var docs = _documents.Documents;
+        if (docs.Count < 2) return;
+        int idx = _documents.Active is { } active ? docs.IndexOf(active) : -1;
+        if (idx < 0) idx = 0;
+        int next = forward
+            ? (idx + 1) % docs.Count
+            : (idx - 1 + docs.Count) % docs.Count;
+        var target = docs[next];
+        OnUiThread(() => _factory.OpenDocument(target));
     }
 
     // Localized menu labels.
@@ -168,20 +291,29 @@ public partial class MainWindowViewModel : ViewModelBase
         CompilerOutputToolViewModel compilerOutputTool,
         GeneratedFilesToolViewModel generatedFilesTool,
         XviToolViewModel xviTool,
+        OutlineToolViewModel outlineTool,
         SettingsToolViewModel settingsTool,
         IModelEditService? editService = null,
         ILayoutService? layout = null,
         IAppSettingsService? settings = null,
-        IWorkspaceSession? session = null)
+        IWorkspaceSession? session = null,
+        Therion.Semantics.ISemanticRuleRunner? ruleRunner = null,
+        QuickOpenProvider? quickOpen = null)
     {
+        _quickOpen = quickOpen;
         _l = localizer;
         _language = language;
         _documents = documents;
+        _ruleRunner = ruleRunner;
         _editService = editService;
         _layout = layout;
         _settings = settings;
         _session = session;
         _wordWrap = settings?.Current.EditorWordWrap ?? false; // seed without persisting
+        _showWhitespace = settings?.Current.EditorShowWhitespace ?? false;   // EDIT-13 (seed, no persist)
+        _showEndOfLine = settings?.Current.EditorShowEndOfLine ?? false;
+        _showIndentGuides = settings?.Current.EditorShowIndentGuides ?? false;
+        _showMinimap = settings?.Current.EditorShowMinimap ?? false;          // EDIT-07 (seed, no persist)
         _factory = factory;
 
         WorkspaceTool = workspaceTool;
@@ -190,6 +322,7 @@ public partial class MainWindowViewModel : ViewModelBase
         CompilerOutputTool = compilerOutputTool;
         GeneratedFilesTool = generatedFilesTool;
         XviTool = xviTool;
+        OutlineTool = outlineTool;
         SettingsTool = settingsTool;
 
         Layout = _factory.CreateLayout();
@@ -262,6 +395,7 @@ public partial class MainWindowViewModel : ViewModelBase
         new CompilerOutputToolViewModel(new BuildViewModel()),
         new GeneratedFilesToolViewModel(new BuildViewModel()),
         new XviToolViewModel(new XviReferencesViewModel()),
+        new OutlineToolViewModel(new OutlineViewModel()),
         new SettingsToolViewModel(new SettingsViewModel(), new KeyboardShortcutsViewModel()))
     {
         // Designer-only.
@@ -274,6 +408,7 @@ public partial class MainWindowViewModel : ViewModelBase
         new CompilerOutputToolViewModel(new BuildViewModel()),
         new GeneratedFilesToolViewModel(new BuildViewModel()),
         new XviToolViewModel(new XviReferencesViewModel()),
+        new OutlineToolViewModel(new OutlineViewModel()),
         new SettingsToolViewModel(new SettingsViewModel(), new KeyboardShortcutsViewModel()));
 
     /// <summary>Wires the storage picker once the View is attached to a TopLevel.</summary>
@@ -453,7 +588,12 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand] private void ToggleWorkspaceExplorer() => Activate(WorkspaceTool);
     [RelayCommand] private void ToggleDiagnostics()       => Activate(DiagnosticsTool);
     [RelayCommand] private void ToggleObjectBrowser()     => Activate(ObjectBrowserTool);
+    [RelayCommand] private void ToggleOutline()           => Activate(OutlineTool); // EDIT-09
     [RelayCommand] private void ToggleSettings()          => Activate(SettingsTool);
+
+    /// <summary>EDIT-09 gate (compile-time flag + runtime setting) — drives the Outline menu/toolbar entry.</summary>
+    public bool OutlineFeatureEnabled =>
+        EditorFeatureFlags.IsEnabled(EditorFeature.Outline, _settings?.Current);
 
     // ---- commands wired to keyboard shortcut service (#5) -------------------
     // ShowFindInFiles / ShowReplaceInFiles / RenameSymbol are routed through the
@@ -472,6 +612,7 @@ public partial class MainWindowViewModel : ViewModelBase
         if (_documents.Active is not { } doc) return;
         try
         {
+            doc.RequestSaveCleanup(); // EDIT-14: in-place trim/final-newline (caret-preserving) before write
             await _documents.WriteCurrentTextAsync(doc.DocumentText).ConfigureAwait(true);
             StatusText = $"Saved {doc.FilePath}";
         }
@@ -574,9 +715,24 @@ public partial class MainWindowViewModel : ViewModelBase
             // Also include per-file semantic diagnostics from every loaded file.
             foreach (var model in ws.PerFile.Values)
                 merged.AddRange(model.Diagnostics);
+            // LANG-13: run the (config-driven) semantic rules over the workspace and include their
+            // diagnostics. Cached per workspace snapshot so repeated refreshes don't re-run them.
+            merged.AddRange(RuleDiagnostics(ws));
             return merged.ToImmutable();
         }
         return _documents.CurrentDiagnostics;
+    }
+
+    /// <summary>Runs the semantic rule runner over <paramref name="ws"/>, caching by snapshot (LANG-13).</summary>
+    private System.Collections.Immutable.ImmutableArray<Therion.Core.Diagnostic> RuleDiagnostics(
+        WorkspaceSemanticModel ws)
+    {
+        if (_ruleRunner is null) return System.Collections.Immutable.ImmutableArray<Therion.Core.Diagnostic>.Empty;
+        if (ReferenceEquals(_ruleDiagWorkspace, ws) && !_ruleDiagCache.IsDefault) return _ruleDiagCache;
+        try { _ruleDiagCache = _ruleRunner.Run(ws); }
+        catch { _ruleDiagCache = System.Collections.Immutable.ImmutableArray<Therion.Core.Diagnostic>.Empty; }
+        _ruleDiagWorkspace = ws;
+        return _ruleDiagCache;
     }
 
     private void RefreshDiagnostics()
