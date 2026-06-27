@@ -1,5 +1,4 @@
-// M4 — XviIndex tests: cross-file resolution + diagnostics with injected file probe.
-using System.Collections.Generic;
+// XviIndex tests: cross-file .th2 -> sketch-target resolution with an injected file probe.
 using System.Collections.Immutable;
 using Therion.Core;
 using Therion.Semantics;
@@ -9,9 +8,10 @@ namespace Therion.Semantics.Tests;
 
 public class XviIndexTests
 {
-    private static XviFile MakeXvi(string path, string image, AffineTransform2D? t = null) =>
-        new(SourceSpan.None, path, 1, 200, t ?? new AffineTransform2D(1, 0, 0, 1, 0, 0),
-            image, ImmutableArray<CalibrationPoint>.Empty,
+    private static XviFile MakeXvi(string path) =>
+        new(SourceSpan.None, path, 1.0, "m",
+            ImmutableArray<XviStation>.Empty, ImmutableArray<XviShot>.Empty,
+            ImmutableArray<XviSketchLine>.Empty, null,
             ImmutableArray<TrivialComment>.Empty);
 
     private static TherionFile MakeTh2WithSketch(string th2Path, string xviPath)
@@ -25,19 +25,7 @@ public class XviIndexTests
     }
 
     [Fact]
-    public void Missing_image_emits_TH_XVI_001()
-    {
-        var dir = System.IO.Path.GetFullPath("xvitest");
-        var xviPath = System.IO.Path.Combine(dir, "a.xvi");
-        var xvi = MakeXvi(xviPath, "missing.jpg");
-        var idx = XviIndex.Build(new[] { xvi }, System.Array.Empty<TherionFile>(),
-            _ => false);
-        Assert.Contains(idx.Diagnostics,
-            d => d.Code == SemanticDiagnosticCodes.XviImageMissing);
-    }
-
-    [Fact]
-    public void Missing_xvi_referenced_from_scrap_emits_TH_XVI_002()
+    public void Missing_sketch_target_referenced_from_scrap_emits_TH_XVI_050()
     {
         var th2 = MakeTh2WithSketch("/p/draw.th2", "bg.xvi");
         var idx = XviIndex.Build(System.Array.Empty<XviFile>(), new[] { th2 },
@@ -48,14 +36,11 @@ public class XviIndexTests
     }
 
     [Fact]
-    public void Degenerate_transform_emits_TH_XVI_003()
+    public void Existing_sketch_target_emits_no_diagnostic()
     {
-        var xvi = MakeXvi("/p/a.xvi", "img.jpg",
-            new AffineTransform2D(0, 0, 0, 0, 0, 0));
-        var idx = XviIndex.Build(new[] { xvi }, System.Array.Empty<TherionFile>(),
-            _ => true); // image exists
-        Assert.Contains(idx.Diagnostics,
-            d => d.Code == SemanticDiagnosticCodes.XviTransformDegenerate);
+        var th2 = MakeTh2WithSketch("/p/draw.th2", "bg.xvi");
+        var idx = XviIndex.Build(System.Array.Empty<XviFile>(), new[] { th2 }, _ => true);
+        Assert.Empty(idx.Diagnostics);
     }
 
     [Fact]
@@ -63,7 +48,7 @@ public class XviIndexTests
     {
         var dir = System.IO.Path.GetFullPath("p");
         var xviPath = System.IO.Path.Combine(dir, "bg.xvi");
-        var xvi = MakeXvi(xviPath, "img.jpg");
+        var xvi = MakeXvi(xviPath);
         var th2Path = System.IO.Path.Combine(dir, "draw.th2");
         var th2 = MakeTh2WithSketch(th2Path, "bg.xvi");
         var idx = XviIndex.Build(new[] { xvi }, new[] { th2 }, _ => true);

@@ -1,30 +1,47 @@
-// Implementation Plan §3.1, §4.3 — XVI AST.
-// Geo-referenced sketch metadata: maps a raster image to Therion survey
-// coordinates via a 2D affine transform. Source-of-truth: xtherion output +
-// thbook §"Maps from scanned drawings".
+// XVI AST. Therion's `.xvi` (XTherion Vector Image) is the format written by
+// `export map -fmt xvi`. It is a Tcl script of `set <var> {<body>}` statements:
+//
+//   set XVIgrids {1.0 m}
+//   set XVIstations { {<x> <y> <name>} ... }
+//   set XVIshots    { {<x1> <y1> <x2> <y2>} ... }
+//   set XVIsketchlines { {<colour> <x1> <y1> <x2> <y2> ...} ... }
+//   set XVIgrid {<x0> <y0> <xax> <yax> <xay> <yay> <nx> <ny>}
+//
+// Coordinates are in drawing units (XTherion pixels). The grid maps them to the
+// real world. Source-of-truth: Therion `thexpmap.cxx` (xvi exporter) + xtherion.
 
 using System.Collections.Immutable;
 using Therion.Core;
 
 namespace Therion.Syntax;
 
-/// <summary>2-D affine transform <c>(survey ? pixel)</c>.</summary>
-public sealed record AffineTransform2D(double A, double B, double C, double D, double Tx, double Ty)
-{
-    /// <summary>Determinant: zero / near-zero ? non-invertible (degenerate).</summary>
-    public double Determinant => A * D - B * C;
-}
+/// <summary>A station marker in an <c>.xvi</c> (<c>XVIstations</c>): drawing-coords + name.</summary>
+public readonly record struct XviStation(double X, double Y, string Name);
 
-/// <summary>One ground-control point (survey ? pixel).</summary>
-public sealed record CalibrationPoint(double SurveyX, double SurveyY, double PixelX, double PixelY);
+/// <summary>A survey leg in an <c>.xvi</c> (<c>XVIshots</c>): two endpoints in drawing-coords.</summary>
+public readonly record struct XviShot(double X1, double Y1, double X2, double Y2);
 
-/// <summary>Parsed <c>.xvi</c> file.</summary>
+/// <summary>A sketch polyline (<c>XVIsketchlines</c>): a colour name + a flat <c>x y x y â€¦</c> list.</summary>
+public sealed record XviSketchLine(string Colour, ImmutableArray<double> Coordinates);
+
+/// <summary>
+/// The reference grid (<c>XVIgrid</c>): an origin, the two basis vectors of one grid cell
+/// (<c>(XAxisX,XAxisY)</c> and <c>(YAxisX,YAxisY)</c>) and the cell counts along each axis.
+/// </summary>
+public readonly record struct XviGrid(
+    double OriginX, double OriginY,
+    double XAxisX, double XAxisY,
+    double YAxisX, double YAxisY,
+    int CountX, int CountY);
+
+/// <summary>Parsed <c>.xvi</c> file (Therion <c>set XVI*</c> export format).</summary>
 public sealed record XviFile(
     SourceSpan Span,
     string Path,
-    int Version,
-    double Scale,
-    AffineTransform2D Transform,
-    string ImageRelativePath,
-    ImmutableArray<CalibrationPoint> CalibrationPoints,
+    double? GridSpacing,
+    string GridUnits,
+    ImmutableArray<XviStation> Stations,
+    ImmutableArray<XviShot> Shots,
+    ImmutableArray<XviSketchLine> SketchLines,
+    XviGrid? Grid,
     ImmutableArray<TrivialComment> LeadingComments) : TherionNode(Span);

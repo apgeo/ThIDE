@@ -350,11 +350,6 @@ public partial class WorkspaceExplorerViewModel : ViewModelBase
         }
         foreach (var p in ws.PerFile.Keys) allNodes.Add(p);
 
-        var imageByXvi = new Dictionary<string, (string Path, bool Exists)>(StringComparer.OrdinalIgnoreCase);
-        foreach (var x in ws.Xvi.ByPath.Values)
-            if (!string.IsNullOrEmpty(x.ResolvedImagePath))
-                imageByXvi[x.ResolvedXviPath] = (x.ResolvedImagePath, x.ImageExists);
-
         var roots = allNodes.Where(n => !hasIncoming.Contains(n))
                             .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
                             .ToList();
@@ -376,14 +371,6 @@ public partial class WorkspaceExplorerViewModel : ViewModelBase
             // Single switch (#5): when file nodes are shown they always carry their object
             // model nested underneath; the logical-only tree is the "off" state instead.
             AddObjectModel(node, ws, path);
-
-            if (imageByXvi.TryGetValue(path, out var img))
-                node.Children.Add(new WorkspaceTreeNode
-                {
-                    Name = Path.GetFileName(img.Path),
-                    FullPath = img.Path,
-                    Kind = img.Exists ? "image" : "missing",
-                });
 
             if (children.TryGetValue(path, out var kids))
                 foreach (var k in kids.OrderBy(k => k, StringComparer.OrdinalIgnoreCase))

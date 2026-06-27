@@ -1,4 +1,4 @@
-// Implementation Plan §7.3 — XVI References tab in Object Browser.
+// Implementation Plan ï¿½7.3 ï¿½ XVI References tab in Object Browser.
 // One row per indexed .xvi file with summary metadata + referencing scrap count.
 
 using System.Collections.Generic;
@@ -11,10 +11,10 @@ namespace TherionProc.ViewModels;
 
 public sealed record XviReferenceRow(
     string XviPath,
-    string ImagePath,
-    bool ImageExists,
-    double Scale,
-    int CalibrationPoints,
+    int Stations,
+    int Shots,
+    int SketchLines,
+    string Grid,
     int ReferencingScraps);
 
 public partial class XviReferencesViewModel : ViewModelBase
@@ -40,10 +40,10 @@ public partial class XviReferencesViewModel : ViewModelBase
         Rows = workspace.Xvi.ByPath.Values
             .Select(x => new XviReferenceRow(
                 x.ResolvedXviPath,
-                x.ResolvedImagePath,
-                x.ImageExists,
-                x.File.Scale,
-                x.File.CalibrationPoints.Length,
+                x.File.Stations.Length,
+                x.File.Shots.Length,
+                x.File.SketchLines.Length,
+                x.File.Grid is { } g ? $"{g.CountX}Ã—{g.CountY}" : "â€”",
                 x.ReferencingScraps.Length))
             .OrderBy(r => r.XviPath, System.StringComparer.OrdinalIgnoreCase)
             .ToList();

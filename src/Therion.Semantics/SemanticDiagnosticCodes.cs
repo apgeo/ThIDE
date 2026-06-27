@@ -31,8 +31,7 @@ public static class SemanticDiagnosticCodes
     /// <summary>A dangling reference: an <c>input</c>/<c>source</c> target that can't be resolved (DIAG-06).</summary>
     public const string DanglingReference    = "TH_SEM_014";
 
-    // XVI semantic codes (image / file resolution, transform validation).
-    public const string XviImageMissing         = "TH_XVI_001";
-    public const string XviFileMissing          = "TH_XVI_002";
-    public const string XviTransformDegenerate  = "TH_XVI_003";
+    // XVI semantic code: a `-sketch` target referenced from a .th2 scrap doesn't exist on disk.
+    // (Syntax-layer XVI codes live in Therion.Syntax.DiagnosticCodes as TH_XVI_001..004.)
+    public const string XviFileMissing          = "TH_XVI_050";
 }

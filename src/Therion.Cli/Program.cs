@@ -43,6 +43,22 @@ switch (args[0])
 
 static int Validate(string path)
 {
+    // .xvi has its own AST (not a TherionFile); validate it directly.
+    if (Path.GetExtension(Path.GetFullPath(path)).ToLowerInvariant() == ".xvi")
+    {
+        if (!File.Exists(path)) { Console.Error.WriteLine($"error: file not found: {path}"); return 2; }
+        var xtext = EncodingResolver.ReadAllText(Path.GetFullPath(path));
+        var xr = new XviParser().Parse(Path.GetFullPath(path), xtext);
+        var xfmt = new RustcStyleDiagnosticFormatter();
+        foreach (var d in xr.Diagnostics) Console.Write(xfmt.Format(d));
+        Console.WriteLine();
+        Console.WriteLine($"{xr.Value!.Stations.Length} station(s), {xr.Value.Shots.Length} shot(s), " +
+            $"{xr.Diagnostics.Length} diagnostic(s).");
+        foreach (var d in xr.Diagnostics)
+            if (d.Severity == DiagnosticSeverity.Error) return 1;
+        return 0;
+    }
+
     var (file, diagnostics) = ParseAny(path);
     if (file is null) return 2;
 

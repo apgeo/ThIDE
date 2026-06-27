@@ -1,4 +1,4 @@
-// Implementation Plan §5.1 — XVI index + per-scrap sketch resolution.
+// Implementation Plan ï¿½5.1 ï¿½ XVI index + per-scrap sketch resolution.
 // Built from .th2 ScrapBlock nodes (which carry SketchReferences) and the
 // parsed .xvi files known to the workspace.
 
@@ -16,8 +16,6 @@ namespace Therion.Semantics;
 public sealed record XviSymbol(
     string ResolvedXviPath,
     XviFile File,
-    string ResolvedImagePath,
-    bool ImageExists,
     ImmutableArray<SourceSpan> ReferencingScraps);
 
 /// <summary>Result of indexing .xvi + sketch references across the workspace.</summary>
@@ -86,34 +84,15 @@ public sealed class XviIndex
             }
         }
 
-        // Then, build XviSymbol entries for every parsed .xvi.
+        // Then, build XviSymbol entries for every parsed .xvi. The `set XVI*` format is
+        // self-contained vector data â€” it carries no external image reference or affine
+        // transform â€” so the only cross-file check is the .th2 â†’ sketch-target resolution above.
         foreach (var xvi in xviFiles)
         {
-            var dir = Path.GetDirectoryName(xvi.Path) ?? string.Empty;
-            var resolvedImage = string.IsNullOrEmpty(xvi.ImageRelativePath)
-                ? string.Empty
-                : ResolveRelative(dir, xvi.ImageRelativePath);
-            bool imageOk = resolvedImage.Length > 0 && fileExists(resolvedImage);
-
-            if (!imageOk && resolvedImage.Length > 0)
-            {
-                diags.Add(Diagnostic.Create(
-                    SemanticDiagnosticCodes.XviImageMissing,
-                    DiagnosticSeverity.Warning,
-                    $"Referenced image '{xvi.ImageRelativePath}' not found.", xvi.Span));
-            }
-            if (Math.Abs(xvi.Transform.Determinant) < 1e-12)
-            {
-                diags.Add(Diagnostic.Create(
-                    SemanticDiagnosticCodes.XviTransformDegenerate,
-                    DiagnosticSeverity.Warning,
-                    "XVI affine transform is degenerate (non-invertible).", xvi.Span));
-            }
-
             var refs = refsByXvi.TryGetValue(xvi.Path, out var b)
                 ? b.ToImmutable() : ImmutableArray<SourceSpan>.Empty;
 
-            byPath[xvi.Path] = new XviSymbol(xvi.Path, xvi, resolvedImage, imageOk, refs);
+            byPath[xvi.Path] = new XviSymbol(xvi.Path, xvi, refs);
         }
 
         return new XviIndex(byPath.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase),
