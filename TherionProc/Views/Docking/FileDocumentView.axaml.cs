@@ -113,7 +113,8 @@ public partial class FileDocumentView : UserControl
         // highlighted-term navigation (Shift+F12 cycling), per #1. Pointer clicks are
         // recorded even for short moves so back/forward tracks all visited points (#8).
         var ed = sender as TherionTextEditor;
-        bool termNav = ed?.IsTermNavigating ?? false;
+        // QOL-04: find-next moves from the search panel are excluded from the trail too.
+        bool termNav = (ed?.IsTermNavigating ?? false) || (ed?.LastCaretMoveFromSearch ?? false);
         bool fromPointer = ed?.LastCaretMoveFromPointer ?? false;
         TryDocuments()?.ReportCaret(span, termNav, fromPointer);
     }

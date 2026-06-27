@@ -83,6 +83,10 @@ public partial class TherionTextEditor : UserControl
     public bool LastCaretMoveFromPointer { get; private set; }
     private bool _caretFromPointer;
 
+    /// <summary>QOL-04: true when the latest caret move was driven by the in-editor search panel
+    /// (find next/previous), which must not pollute the back/forward navigation history.</summary>
+    public bool LastCaretMoveFromSearch { get; private set; }
+
     /// <summary>Raised when the user requests "find all references" for an identifier (#4).</summary>
     public event EventHandler<string>? FindReferencesRequested;
 
@@ -1877,6 +1881,7 @@ public partial class TherionTextEditor : UserControl
         {
             LastCaretMoveFromPointer = _caretFromPointer;
             _caretFromPointer = false;
+            LastCaretMoveFromSearch = IsSearchPanelFocused();   // QOL-04
             var loc = _editor.Document.GetLocation(_editor.CaretOffset);
             CaretMoved?.Invoke(this, new SourceSpan(
                 CurrentFilePath!, new SourceLocation(loc.Line, loc.Column),
@@ -2840,6 +2845,18 @@ public partial class TherionTextEditor : UserControl
 
     /// <summary>Opens the Go-to-Line dialog (command palette, #4).</summary>
     public void MenuGoToLine() => ShowGoToLine();
+
+    /// <summary>QOL-04: true when keyboard focus is inside the in-editor search panel (so its
+    /// find-next caret moves can be kept out of the navigation history).</summary>
+    private bool IsSearchPanelFocused()
+    {
+        if (_searchPanel is null) return false;
+        var top = TopLevel.GetTopLevel(this);
+        if (top?.FocusManager?.GetFocusedElement() is not Visual v) return false;
+        for (Visual? cur = v; cur is not null; cur = Avalonia.VisualTree.VisualExtensions.GetVisualParent(cur))
+            if (ReferenceEquals(cur, _searchPanel)) return true;
+        return false;
+    }
 
     /// <summary>Opens the in-document search panel in replace mode (Replace, #12).</summary>
     public void MenuReplace()
