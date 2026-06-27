@@ -281,6 +281,7 @@ public partial class TherionTextEditor : UserControl
         _occurrences = new OccurrenceHighlightRenderer(editor.TextArea.TextView);
         editor.TextArea.TextView.BackgroundRenderers.Add(_occurrences);
         editor.TextArea.Caret.PositionChanged += OnCaretPositionChanged;
+        editor.TextArea.SelectionChanged += OnSelectionChanged;   // QOL-06 status-bar selection stats
 
         // EDIT-15: highlight the matching opener/closer of the block keyword under the caret.
         _matchRenderer = new MatchingBlockRenderer();
@@ -1858,6 +1859,21 @@ public partial class TherionTextEditor : UserControl
     }
 
     // ----- occurrence highlight + caret reporting ------------------------
+
+    /// <summary>QOL-06: raised by the focused editor with the current selection's character and
+    /// line counts (0,0 when the selection is empty). The shell shows these in the status bar.</summary>
+    public static event EventHandler<(int Chars, int Lines)>? SelectionStatsChanged;
+
+    private void OnSelectionChanged(object? sender, EventArgs e)
+    {
+        if (_editor is null) return;
+        int chars = _editor.SelectionLength;
+        if (chars <= 0) { SelectionStatsChanged?.Invoke(this, (0, 0)); return; }
+        var text = _editor.SelectedText;
+        int lines = 1;
+        foreach (var c in text) if (c == '\n') lines++;
+        SelectionStatsChanged?.Invoke(this, (chars, lines));
+    }
 
     private void OnCaretPositionChanged(object? sender, EventArgs e)
     {

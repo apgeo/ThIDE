@@ -112,6 +112,20 @@ public partial class MainWindowViewModel : ViewModelBase
     /// <summary>Interpreted file type + parsed/not-parsed, shown on the status bar (#5).</summary>
     [ObservableProperty] private string _statusFileType = string.Empty;
 
+    // ----- QOL-06: selection stats -------------------------------------------
+    /// <summary>True when the active editor has a non-empty selection (shows the selection group).</summary>
+    [ObservableProperty] private bool _hasSelection;
+    [ObservableProperty] private int _selectionChars;
+    [ObservableProperty] private int _selectionLines;
+
+    /// <summary>Updates the status-bar selection counters (QOL-06).</summary>
+    public void SetSelectionStats(int chars, int lines)
+    {
+        HasSelection = chars > 0;
+        SelectionChars = chars;
+        SelectionLines = lines;
+    }
+
     [ObservableProperty] private bool _strictParserMode;
     partial void OnStrictParserModeChanged(bool value)
     {

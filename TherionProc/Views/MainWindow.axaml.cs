@@ -72,6 +72,9 @@ public partial class MainWindow : Window
                 AttachGlobalHotkey(vm);
                 AttachNotifications(vm);                 // UX-07 toast layer
                 OpenStartupFileArgs(vm);                 // UX-09 "open with" / file association
+                // QOL-06: mirror the active editor's selection stats into the status bar.
+                TherionProc.Editor.TherionTextEditor.SelectionStatsChanged += (_, s) =>
+                    Avalonia.Threading.Dispatcher.UIThread.Post(() => vm.SetSelectionStats(s.Chars, s.Lines));
             }
             try
             {
