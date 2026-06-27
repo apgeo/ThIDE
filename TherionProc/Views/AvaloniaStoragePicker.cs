@@ -72,4 +72,18 @@ public sealed class AvaloniaStoragePicker : IStoragePicker
         if (folders is null || folders.Count == 0) return null;
         return folders[0].TryGetLocalPath();
     }
+
+    public async Task<string?> PickSaveFileAsync(string title, string suggestedName)
+    {
+        var sp = _topLevel.StorageProvider;
+        if (sp is null) return null;
+        var ext = System.IO.Path.GetExtension(suggestedName).TrimStart('.');
+        var file = await sp.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = title,
+            SuggestedFileName = suggestedName,
+            DefaultExtension = ext,
+        });
+        return file?.TryGetLocalPath();
+    }
 }

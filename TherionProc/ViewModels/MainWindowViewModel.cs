@@ -14,6 +14,7 @@ using Dock.Model.Core;
 using Microsoft.Extensions.Localization;
 using Therion.Semantics;
 using Therion.Syntax;
+using Therion.Workspace.Import;
 using TherionProc.Docking;
 using TherionProc.Resources;
 using TherionProc.Services;
@@ -677,6 +678,100 @@ public partial class MainWindowViewModel : ViewModelBase
             StatusText = _documents.CurrentPath ?? folder;
         }
         catch (Exception ex) { StatusText = ex.Message; }
+    }
+
+    // ───────── Tools: import / GIS export / surface / scaffold (IMP-01, GIS-01/03, TH2-04) ─────────
+
+    /// <summary>IMP-01: import a Survex (.svx) or Compass (.dat) file → a new .th.</summary>
+    [RelayCommand]
+    private async Task ImportSurvey()
+    {
+        if (_picker is null) return;
+        var src = await _picker.PickOpenFileAsync("Import Survex (.svx) or Compass (.dat)").ConfigureAwait(true);
+        if (string.IsNullOrEmpty(src)) return;
+        try
+        {
+            var text = System.IO.File.ReadAllText(src);
+            var ext = System.IO.Path.GetExtension(src).ToLowerInvariant();
+            var th = ext switch
+            {
+                ".dat" => CompassImporter.Import(text),
+                _ => SurvexImporter.Import(text),   // .svx and anything else → Survex
+            };
+            var suggested = System.IO.Path.GetFileNameWithoutExtension(src) + ".th";
+            var outPath = await _picker.PickSaveFileAsync("Save imported Therion file", suggested).ConfigureAwait(true);
+            if (string.IsNullOrEmpty(outPath)) return;
+            System.IO.File.WriteAllText(outPath, th);
+            await _documents.OpenFileAsync(outPath).ConfigureAwait(true);
+            StatusText = $"Imported {System.IO.Path.GetFileName(src)} → {System.IO.Path.GetFileName(outPath)}";
+        }
+        catch (Exception ex) { StatusText = ex.Message; _log?.Warning($"Import failed: {ex.Message}"); }
+    }
+
+    /// <summary>GIS-01: export entrances / fixed points in the project CRS. Format via CommandParameter.</summary>
+    [RelayCommand]
+    private async Task ExportGis(string? format)
+    {
+        if (_picker is null) return;
+        var model = _documents.Workspace;
+        if (model is null || model.PerFile.Count == 0) { StatusText = "No project open to export."; return; }
+        var fmt = (format ?? "csv").ToLowerInvariant() switch
+        {
+            "kml" => GisFormat.Kml,
+            "gpx" => GisFormat.Gpx,
+            "geojson" => GisFormat.GeoJson,
+            _ => GisFormat.Csv,
+        };
+        try
+        {
+            var text = GisExport.Export(model, fmt);
+            var suggested = "entrances" + GisExport.FileExtension(fmt);
+            var outPath = await _picker.PickSaveFileAsync("Export entrances / fixed points", suggested).ConfigureAwait(true);
+            if (string.IsNullOrEmpty(outPath)) return;
+            System.IO.File.WriteAllText(outPath, text);
+            StatusText = $"Exported {GisExport.CollectPoints(model).Count} point(s) → {System.IO.Path.GetFileName(outPath)}";
+        }
+        catch (Exception ex) { StatusText = ex.Message; _log?.Warning($"GIS export failed: {ex.Message}"); }
+    }
+
+    /// <summary>GIS-03: convert an ESRI ASCII grid (.asc) into a Therion surface .th.</summary>
+    [RelayCommand]
+    private async Task ImportDemSurface()
+    {
+        if (_picker is null) return;
+        var src = await _picker.PickOpenFileAsync("Import DEM (ESRI ASCII .asc) as surface").ConfigureAwait(true);
+        if (string.IsNullOrEmpty(src)) return;
+        try
+        {
+            var surface = SurfaceFromDem.FromEsriAscii(System.IO.File.ReadAllText(src));
+            var th = $"survey {System.IO.Path.GetFileNameWithoutExtension(src)}_surface\n{surface}endsurvey\n";
+            var suggested = System.IO.Path.GetFileNameWithoutExtension(src) + "_surface.th";
+            var outPath = await _picker.PickSaveFileAsync("Save Therion surface file", suggested).ConfigureAwait(true);
+            if (string.IsNullOrEmpty(outPath)) return;
+            System.IO.File.WriteAllText(outPath, th);
+            await _documents.OpenFileAsync(outPath).ConfigureAwait(true);
+            StatusText = $"Generated surface from {System.IO.Path.GetFileName(src)}";
+        }
+        catch (Exception ex) { StatusText = ex.Message; _log?.Warning($"DEM import failed: {ex.Message}"); }
+    }
+
+    /// <summary>TH2-04: scaffold a new .th2 scrap stub; the scrap id is taken from the chosen filename.</summary>
+    [RelayCommand]
+    private async Task NewScrapScaffold()
+    {
+        if (_picker is null) return;
+        var outPath = await _picker.PickSaveFileAsync("Create new .th2 scrap", "scrap1.th2").ConfigureAwait(true);
+        if (string.IsNullOrEmpty(outPath)) return;
+        try
+        {
+            var id = System.IO.Path.GetFileNameWithoutExtension(outPath);
+            System.IO.File.WriteAllText(outPath, Th2Scaffold.NewScrap(id));
+            await _documents.OpenFileAsync(outPath).ConfigureAwait(true);
+            var inputLine = Th2Scaffold.InputLine(System.IO.Path.GetFileName(outPath));
+            ClipboardHelper.SetText(inputLine);
+            StatusText = $"Created scrap '{id}'. Copied '{inputLine}' to clipboard — paste it into your .th.";
+        }
+        catch (Exception ex) { StatusText = ex.Message; _log?.Warning($"Scaffold failed: {ex.Message}"); }
     }
 
     [RelayCommand]

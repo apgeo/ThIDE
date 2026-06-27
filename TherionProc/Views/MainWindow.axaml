@@ -172,6 +172,20 @@
                 <Separator />
                 <MenuItem Header="{Binding MenuSearchBookmarks}"    Click="OnBookmarksClick" />
             </MenuItem>
+            <!-- Tools: import / GIS export / surface / scaffold (IMP-01, GIS-01/03, TH2-04) -->
+            <MenuItem Header="Tools">
+                <MenuItem Header="Import survey (Survex / Compass)…" Command="{Binding ImportSurveyCommand}" />
+                <MenuItem Header="Import DEM as surface (.asc)…" Command="{Binding ImportDemSurfaceCommand}" />
+                <Separator />
+                <MenuItem Header="Export entrances / fixed points">
+                    <MenuItem Header="KML…"      Command="{Binding ExportGisCommand}" CommandParameter="kml" />
+                    <MenuItem Header="GeoJSON…"  Command="{Binding ExportGisCommand}" CommandParameter="geojson" />
+                    <MenuItem Header="GPX…"      Command="{Binding ExportGisCommand}" CommandParameter="gpx" />
+                    <MenuItem Header="CSV…"      Command="{Binding ExportGisCommand}" CommandParameter="csv" />
+                </MenuItem>
+                <Separator />
+                <MenuItem Header="New scrap (.th2)…" Command="{Binding NewScrapScaffoldCommand}" />
+            </MenuItem>
             <MenuItem Header="{Binding MenuBuild}">
                 <MenuItem Header="{Binding MenuBuildBuild}"     InputGesture="F5"       Command="{Binding Build.BuildCommand}" />
                 <MenuItem Header="{Binding MenuBuildRebuild}"   InputGesture="Ctrl+F5"  Command="{Binding Build.RebuildCommand}" />

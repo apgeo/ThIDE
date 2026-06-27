@@ -17,4 +17,7 @@ public interface IStoragePicker
 
     /// <summary>Show an "Open Folder" dialog. Returns the picked absolute path, or null if cancelled.</summary>
     Task<string?> PickOpenFolderAsync(string title);
+
+    /// <summary>Show a "Save File" dialog. Returns the chosen absolute path, or null if cancelled.</summary>
+    Task<string?> PickSaveFileAsync(string title, string suggestedName);
 }
