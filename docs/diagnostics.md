@@ -12,6 +12,11 @@
 | `TH0003` | Error   | Unexpected end of file.        | parsers |
 | `TH0010` | Warning (lenient) / Error (strict) | Unknown top-level command `<keyword>`. | `ThconfigParser`, `ThParser`, `Th2Parser` |
 | `TH0011` | Warning (lenient) / Error (strict) | Missing block terminator (e.g., `endsurvey`). | `ThParser`, `Th2Parser` |
+| `TH0033` | Warning (lenient) / Error (strict) | Unknown data style `<style>` (LANG-05). | `ThParser` |
+| `TH0034` | Warning (lenient) / Error (strict) | Unknown data reading `<keyword>` (LANG-05). | `ThParser` |
+| `TH0040` | Warning (lenient) / Error (strict) | Malformed `units` (unknown quantity / missing unit). | `ThParser` |
+| `TH0041` | Warning (lenient) / Error (strict) | Malformed `calibrate` (missing zero-error). | `ThParser` |
+| `TH0043` | Warning (lenient) / Error (strict) | Unknown coordinate system `<cs>` (LANG-03). | `ThParser` |
 
 ## Semantics (`TH_SEM_xxx`)
 
@@ -20,6 +25,10 @@
 | `TH_SEM_001` | Warning | Unresolved station reference `<name>` (with optional "did you mean" hint). | `SemanticBinder` |
 | `TH_SEM_002` | Warning | Station `<name>` is fixed more than once. | `SemanticBinder` |
 | `TH_SEM_003` | Warning | Malformed station reference `<name>`. | `SemanticBinder` |
+| `TH_SEM_005` | Warning | Data row column count doesn't match its reading order (LANG-05). | `SemanticBinder` |
+| `TH_SEM_006` | Error   | Data-row value isn't valid for its reading (e.g. a non-numeric length/compass/clino). | `SemanticBinder` |
+| `TH_SEM_007` | Warning | Data-row value is out of range for its reading (e.g. compass > 360°, clino > 180°). | `SemanticBinder` |
+| `TH_SEM_NAMING` | configurable | User naming-convention lint violated (LANG-13). | `NamingConventionRule` |
 
 ## XVI format (`TH_XVI_xxx`)
 
@@ -41,6 +50,9 @@
 | `TH2_001` | Warning | Malformed `point` � requires x, y and type. | `Th2Parser` |
 | `TH2_002` | Warning (lenient) / Error (strict) | `line` block is missing `endline`. | `Th2Parser` |
 | `TH2_003` | Warning (lenient) / Error (strict) | `area` block is missing `endarea`. | `Th2Parser` |
+| `TH2_004` | Warning (lenient) / Error (strict) | Unknown point type `<type>` (LANG-07). | `Th2Parser` |
+| `TH2_005` | Warning (lenient) / Error (strict) | Unknown line type `<type>` (LANG-07). | `Th2Parser` |
+| `TH2_006` | Warning (lenient) / Error (strict) | Unknown area type `<type>` (LANG-07). | `Th2Parser` |
 | `TH2_010` | Warning (lenient) / Error (strict) | `scrap` block is missing `endscrap`. | `Th2Parser` |
 
 ## Workspace (`TH_WS_xxx`)
