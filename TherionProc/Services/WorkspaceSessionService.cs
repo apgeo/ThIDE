@@ -33,6 +33,15 @@ public interface IWorkspaceSession : IAsyncDisposable
     ThconfigCandidate? ActiveThconfig { get; }
     WorkspaceSemanticModel? Model { get; }
 
+    /// <summary>PERF-02: true while the object graph is being (re)built on a background thread.</summary>
+    bool IsIndexing { get; }
+    /// <summary>PERF-02: raised when <see cref="IsIndexing"/> changes (drives the status-bar indicator).</summary>
+    event EventHandler? IndexingChanged;
+
+    /// <summary>PERF-03: the current persistent symbol-index snapshot — warm-loaded on root change
+    /// before the graph is (re)built, then refreshed after each build. Null when none is available.</summary>
+    WorkspaceSymbolIndex? SymbolIndex { get; }
+
     /// <summary>Raised after the object graph (<see cref="Model"/>) is rebuilt.</summary>
     event EventHandler? Changed;
     /// <summary>Raised when <see cref="RootPath"/> changes.</summary>
@@ -66,6 +75,7 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
 {
     private readonly IThconfigSniffer _sniffer;
     private readonly IAppSettingsService? _settings;
+    private readonly IWorkspaceSymbolIndexStore? _symbolIndexStore;   // PERF-03
     private readonly object _gate = new();
 
     private TherionWorkspace? _workspace;
@@ -78,6 +88,18 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
     public ThconfigCandidate? ActiveThconfig { get; private set; }
     public WorkspaceSemanticModel? Model { get; private set; }
 
+    public bool IsIndexing { get; private set; }
+    public event EventHandler? IndexingChanged;
+
+    public WorkspaceSymbolIndex? SymbolIndex { get; private set; }   // PERF-03
+
+    private void SetIndexing(bool value)
+    {
+        if (IsIndexing == value) return;
+        IsIndexing = value;
+        IndexingChanged?.Invoke(this, EventArgs.Empty);
+    }
+
     public event EventHandler? Changed;
     public event EventHandler? RootChanged;
     public event EventHandler? CandidatesChanged;
@@ -86,11 +108,13 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
 
     private readonly ILogService? _log;
 
-    public WorkspaceSessionService(IThconfigSniffer sniffer, IAppSettingsService? settings = null, ILogService? log = null)
+    public WorkspaceSessionService(IThconfigSniffer sniffer, IAppSettingsService? settings = null,
+        ILogService? log = null, IWorkspaceSymbolIndexStore? symbolIndexStore = null)
     {
         _sniffer = sniffer;
         _settings = settings;
         _log = log;
+        _symbolIndexStore = symbolIndexStore;
     }
 
     public async Task SetRootAsync(string rootDir, CancellationToken ct = default)
@@ -108,6 +132,11 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
         RootPath = full;
         RootChanged?.Invoke(this, EventArgs.Empty);
         _log?.Info($"Workspace root set: {full}");
+
+        // PERF-03: warm symbol search from the persisted index immediately, before the (background)
+        // graph build replaces it — so "Go to Symbol in Workspace" works the instant a project opens.
+        if (_symbolIndexStore is not null)
+            try { SymbolIndex = _symbolIndexStore.Load(full); } catch { /* best-effort */ }
 
         WatchRoot(full);
         RescanCandidates();
@@ -217,8 +246,14 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
         try { await ws.LoadAsync(full, ct).ConfigureAwait(false); }
         catch (Exception ex) { _log?.Error($"Failed to load thconfig '{full}': {ex.Message}"); await ws.DisposeAsync().ConfigureAwait(false); return false; }
 
-        var model = ws.BuildSemanticModel();
+        // PERF-02: build the (potentially heavy) cross-file semantic model on a background thread
+        // with a "ready" indicator, so a large project never blocks the UI while it indexes.
+        WorkspaceSemanticModel model;
+        SetIndexing(true);
+        try { model = await Task.Run(() => ws.BuildSemanticModel(), ct).ConfigureAwait(false); }
+        finally { SetIndexing(false); }
         var old = SwapWorkspace(ws, model, full);
+        UpdateSymbolIndex(model);   // PERF-03
         if (old is not null) await old.DisposeAsync().ConfigureAwait(false);
 
         // The active config (and its directory) may not be in the candidate list yet.
@@ -304,11 +339,35 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
     {
         if (_settings is { Current.AutoReloadGraphOnExternalChange: false }) return;
         if (sender is not TherionWorkspace ws) return;
-        WorkspaceSemanticModel model;
-        try { model = ws.BuildSemanticModel(); }
-        catch { return; }
-        lock (_gate) { if (!ReferenceEquals(_workspace, ws)) return; Model = model; }
-        Raise();
+        _ = RebuildGraphAsync(ws);   // PERF-02: rebuild off the watcher thread, with the indicator
+    }
+
+    private async Task RebuildGraphAsync(TherionWorkspace ws)
+    {
+        SetIndexing(true);
+        try
+        {
+            WorkspaceSemanticModel model;
+            try { model = await Task.Run(() => ws.BuildSemanticModel()).ConfigureAwait(false); }
+            catch { return; }
+            lock (_gate) { if (!ReferenceEquals(_workspace, ws)) return; Model = model; }
+            UpdateSymbolIndex(model);   // PERF-03
+            Raise();
+        }
+        finally { SetIndexing(false); }
+    }
+
+    /// <summary>PERF-03: rebuilds the persistent symbol index from the new model and persists it.</summary>
+    private void UpdateSymbolIndex(WorkspaceSemanticModel model)
+    {
+        if (_symbolIndexStore is null) return;
+        try
+        {
+            var index = _symbolIndexStore.Build(RootPath, model);
+            SymbolIndex = index;
+            _symbolIndexStore.Save(index);
+        }
+        catch { /* best-effort — symbol search still works from the live model */ }
     }
 
     private void WatchRoot(string? root)
