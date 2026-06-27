@@ -1,4 +1,4 @@
-// Implementation Plan §10 (Diagnostics), Decision #16.
+// Implementation Plan ï¿½10 (Diagnostics), Decision #16.
 // Catalog versioned in docs/diagnostics.md. Codes are culture-invariant strings.
 
 namespace Therion.Syntax;
@@ -21,6 +21,19 @@ public static class DiagnosticCodes
     public const string MalformedEquate          = "TH0031";
     public const string MalformedData            = "TH0032";
 
+    // -- data style / reading-order validation (LANG-05) ------------------
+    public const string UnknownDataStyle         = "TH0033";
+    public const string UnknownDataReading       = "TH0034";
+    public const string DataRowArityMismatch     = "TH0035";
+    public const string MissingFromTo            = "TH0036";
+
+    // -- centreline metadata commands (LANG-04/03) ------------------------
+    public const string MalformedUnits           = "TH0040";
+    public const string MalformedCalibrate       = "TH0041";
+    public const string MalformedDeclination     = "TH0042";
+    public const string UnknownCoordinateSystem  = "TH0043";
+    public const string UnknownUnit              = "TH0044";
+
     // -- XVI --------------------------------------------------------------
     public const string XviImageMissing          = "TH_XVI_001";
     public const string XviFileMissing           = "TH_XVI_002";
@@ -35,5 +48,8 @@ public static class DiagnosticCodes
     public const string Th2MalformedPoint        = "TH2_001";
     public const string Th2MalformedLine         = "TH2_002";
     public const string Th2MalformedArea         = "TH2_003";
+    public const string Th2UnknownPointType      = "TH2_004";
+    public const string Th2UnknownLineType       = "TH2_005";
+    public const string Th2UnknownAreaType       = "TH2_006";
     public const string Th2UnterminatedScrap     = "TH2_010";
 }
