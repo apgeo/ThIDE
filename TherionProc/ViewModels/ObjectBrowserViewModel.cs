@@ -17,16 +17,65 @@ using TherionProc.Services;
 
 namespace TherionProc.ViewModels;
 
-/// <summary>One row per station in the Object Browser.</summary>
-public sealed record StationRow(string QualifiedName, string Kind, string Survey, string File, int Line);
+/// <summary>One row per station in the Object Browser. <see cref="File"/> is the full path.</summary>
+public sealed record StationRow(string QualifiedName, string Kind, string Survey, string File, int Line)
+    : IBrowserNavRow
+{
+    public string? NavFile => File;
+    public int NavLine => Line;
+}
 
-// DATA-03 — entity rows for the additional Object Browser tabs.
-public sealed record SurveyEntityRow(string Name, string Title, string Parent, string File, int Line);
-public sealed record FixEntityRow(string Station, string Coordinates, string Cs, string File, int Line);
-public sealed record EquateEntityRow(string Stations, string File, int Line);
-public sealed record ScrapEntityRow(string Id, string File, int Line);
-public sealed record MapEntityRow(string Id, string Title, string Projection, int Members, string File, int Line);
-public sealed record Th2EntityRow(string Type, string Scrap, string File, int Line);
+/// <summary>A row that can navigate to source (TH2-03 click-to-source).</summary>
+public interface IBrowserNavRow
+{
+    string? NavFile { get; }
+    int NavLine { get; }
+}
+
+// DATA-03 / TH2-03 — entity rows for the additional Object Browser tabs. Each carries its
+// declaration <see cref="SourceSpan"/> so a double-click can jump to source.
+public sealed record SurveyEntityRow(string Name, string Title, string Parent, SourceSpan Span) : IBrowserNavRow
+{
+    public string File => System.IO.Path.GetFileName(Span.FilePath ?? string.Empty);
+    public int Line => Span.Start.Line;
+    public string? NavFile => Span.FilePath;
+    public int NavLine => Span.Start.Line;
+}
+public sealed record FixEntityRow(string Station, string Coordinates, string Cs, SourceSpan Span) : IBrowserNavRow
+{
+    public string File => System.IO.Path.GetFileName(Span.FilePath ?? string.Empty);
+    public int Line => Span.Start.Line;
+    public string? NavFile => Span.FilePath;
+    public int NavLine => Span.Start.Line;
+}
+public sealed record EquateEntityRow(string Stations, SourceSpan Span) : IBrowserNavRow
+{
+    public string File => System.IO.Path.GetFileName(Span.FilePath ?? string.Empty);
+    public int Line => Span.Start.Line;
+    public string? NavFile => Span.FilePath;
+    public int NavLine => Span.Start.Line;
+}
+public sealed record ScrapEntityRow(string Id, string Sketch, SourceSpan Span) : IBrowserNavRow
+{
+    public string File => System.IO.Path.GetFileName(Span.FilePath ?? string.Empty);
+    public int Line => Span.Start.Line;
+    public string? NavFile => Span.FilePath;
+    public int NavLine => Span.Start.Line;
+}
+public sealed record MapEntityRow(string Id, string Title, string Projection, int Members, SourceSpan Span) : IBrowserNavRow
+{
+    public string File => System.IO.Path.GetFileName(Span.FilePath ?? string.Empty);
+    public int Line => Span.Start.Line;
+    public string? NavFile => Span.FilePath;
+    public int NavLine => Span.Start.Line;
+}
+public sealed record Th2EntityRow(string Type, string Scrap, SourceSpan Span) : IBrowserNavRow
+{
+    public string File => System.IO.Path.GetFileName(Span.FilePath ?? string.Empty);
+    public int Line => Span.Start.Line;
+    public string? NavFile => Span.FilePath;
+    public int NavLine => Span.Start.Line;
+}
 
 /// <summary>
 /// One row per shot (data leg). Editable: Length / Compass / Clino edits are
@@ -132,18 +181,29 @@ public partial class ObjectBrowserViewModel : ViewModelBase
     public string ColClino   => L("Browser_Col_Clino",   "Clino");
 
     private readonly IAppSettingsService? _settings;
+    private readonly IDocumentService? _documents;
 
     public ObjectBrowserViewModel() { }
 
     public ObjectBrowserViewModel(IStringLocalizer<Strings> localizer, ILanguageService language,
-        IAppSettingsService? settings = null)
+        IAppSettingsService? settings = null, IDocumentService? documents = null)
     {
         _l = localizer;
         _settings = settings;
+        _documents = documents;
         language.LanguageChanged += (_, _) => RaiseHeadersChanged();
     }
 
     private bool EntitiesEnabled => _settings?.Current.EnableObjectBrowserEntities ?? true;
+
+    /// <summary>TH2-03: jump to a row's declaration in source.</summary>
+    public void NavigateTo(IBrowserNavRow? row)
+    {
+        if (row is null || string.IsNullOrEmpty(row.NavFile) || _documents is null) return;
+        var span = new SourceSpan(row.NavFile!,
+            new SourceLocation(row.NavLine, 1), new SourceLocation(row.NavLine, 1), 0, 0);
+        _ = _documents.NavigateToSpanAsync(span);
+    }
 
     private string L(string key, string fallback)
     {
@@ -242,7 +302,6 @@ public partial class ObjectBrowserViewModel : ViewModelBase
 
     // ---- DATA-03: entity tabs --------------------------------------------
 
-    private static string FileName(SourceSpan s) => System.IO.Path.GetFileName(s.FilePath ?? string.Empty);
     private static string Coords(StationSymbol s) =>
         s.FixX is not null && s.FixY is not null
             ? string.Format(CultureInfo.InvariantCulture, "{0:0.##} {1:0.##} {2:0.##}", s.FixX, s.FixY, s.FixZ ?? 0)
@@ -253,22 +312,19 @@ public partial class ObjectBrowserViewModel : ViewModelBase
         if (!EntitiesEnabled) { ClearEntities(); return; }
         Surveys = model.Surveys.Values
             .Select(sv => new SurveyEntityRow(sv.Name.ToString(), sv.Title ?? string.Empty,
-                sv.Name.HasParent ? sv.Name.Parent().ToString() : string.Empty,
-                FileName(sv.DeclarationSpan), sv.DeclarationSpan.Start.Line))
+                sv.Name.HasParent ? sv.Name.Parent().ToString() : string.Empty, sv.DeclarationSpan))
             .OrderBy(r => r.Name, System.StringComparer.Ordinal).ToList();
         Fixes = model.Stations.Values.Where(s => s.Kind == StationDeclarationKind.Fix)
-            .Select(s => new FixEntityRow(s.Name.ToString(), Coords(s), s.Cs ?? string.Empty,
-                FileName(s.DeclarationSpan), s.DeclarationSpan.Start.Line))
+            .Select(s => new FixEntityRow(s.Name.ToString(), Coords(s), s.Cs ?? string.Empty, s.DeclarationSpan))
             .OrderBy(r => r.Station, System.StringComparer.Ordinal).ToList();
         Equates = model.EquateRecords
-            .Select(e => new EquateEntityRow(string.Join(" = ", e.Stations), FileName(e.Span), e.Span.Start.Line))
-            .ToList();
+            .Select(e => new EquateEntityRow(string.Join(" = ", e.Stations), e.Span)).ToList();
         Maps = model.Maps.Values
             .Select(m => new MapEntityRow(m.Id, m.Title ?? string.Empty, m.Projection ?? string.Empty,
-                m.Members.Length, FileName(m.DeclarationSpan), m.DeclarationSpan.Start.Line))
+                m.Members.Length, m.DeclarationSpan))
             .OrderBy(r => r.Id, System.StringComparer.Ordinal).ToList();
         Scraps = model.Scraps.Values
-            .Select(s => new ScrapEntityRow(s.Id, FileName(s.DeclarationSpan), s.DeclarationSpan.Start.Line))
+            .Select(s => new ScrapEntityRow(s.Id, string.Empty, s.DeclarationSpan))
             .OrderBy(r => r.Id, System.StringComparer.Ordinal).ToList();
         Points = Lines = Areas = System.Array.Empty<Th2EntityRow>(); // .th2 objects only at workspace scope
     }
@@ -278,27 +334,43 @@ public partial class ObjectBrowserViewModel : ViewModelBase
         if (!EntitiesEnabled) { ClearEntities(); return; }
         Surveys = ws.SurveysByFullName.Values
             .Select(sv => new SurveyEntityRow(sv.Name.ToString(), sv.Title ?? string.Empty,
-                sv.Name.HasParent ? sv.Name.Parent().ToString() : string.Empty,
-                FileName(sv.DeclarationSpan), sv.DeclarationSpan.Start.Line))
+                sv.Name.HasParent ? sv.Name.Parent().ToString() : string.Empty, sv.DeclarationSpan))
             .OrderBy(r => r.Name, System.StringComparer.Ordinal).ToList();
         Fixes = ws.StationsByQn.Values.Where(s => s.Kind == StationDeclarationKind.Fix)
-            .Select(s => new FixEntityRow(s.Name.ToString(), Coords(s), s.Cs ?? string.Empty,
-                FileName(s.DeclarationSpan), s.DeclarationSpan.Start.Line))
+            .Select(s => new FixEntityRow(s.Name.ToString(), Coords(s), s.Cs ?? string.Empty, s.DeclarationSpan))
             .OrderBy(r => r.Station, System.StringComparer.Ordinal).ToList();
         Equates = ws.PerFile.Values.SelectMany(m => m.EquateRecords)
-            .Select(e => new EquateEntityRow(string.Join(" = ", e.Stations), FileName(e.Span), e.Span.Start.Line))
-            .ToList();
+            .Select(e => new EquateEntityRow(string.Join(" = ", e.Stations), e.Span)).ToList();
         Maps = ws.MapsById.Values
             .Select(m => new MapEntityRow(m.Id, m.Title ?? string.Empty, m.Projection ?? string.Empty,
-                m.Members.Length, FileName(m.DeclarationSpan), m.DeclarationSpan.Start.Line))
+                m.Members.Length, m.DeclarationSpan))
             .OrderBy(r => r.Id, System.StringComparer.Ordinal).ToList();
+        // TH2-02: which .xvi each scrap traces — from the .th2 → .xvi file-graph edges.
+        var sketchByTh2 = BuildSketchMap(ws);
         Scraps = ws.ScrapsById.Values
-            .Select(s => new ScrapEntityRow(s.Id, FileName(s.DeclarationSpan), s.DeclarationSpan.Start.Line))
+            .Select(s => new ScrapEntityRow(s.Id,
+                sketchByTh2.TryGetValue(s.DeclarationSpan.FilePath ?? string.Empty, out var sk) ? sk : string.Empty,
+                s.DeclarationSpan))
             .OrderBy(r => r.Id, System.StringComparer.Ordinal).ToList();
-        Th2EntityRow Row(Th2ObjectRecord o) => new(o.Type, o.ScrapId, FileName(o.Span), o.Span.Start.Line);
+        Th2EntityRow Row(Th2ObjectRecord o) => new(o.Type, o.ScrapId, o.Span);
         Points = ws.Th2Objects.Where(o => o.Kind == "point").Select(Row).ToList();
         Lines  = ws.Th2Objects.Where(o => o.Kind == "line").Select(Row).ToList();
         Areas  = ws.Th2Objects.Where(o => o.Kind == "area").Select(Row).ToList();
+    }
+
+    // Maps each .th2 file to the comma-joined .xvi file names it sketches (TH2-02 scrap→xvi).
+    private static Dictionary<string, string> BuildSketchMap(WorkspaceSemanticModel ws)
+    {
+        var byTh2 = new Dictionary<string, HashSet<string>>(System.StringComparer.OrdinalIgnoreCase);
+        foreach (var (from, to) in ws.FileGraphEdges)
+        {
+            if (!to.EndsWith(".xvi", System.StringComparison.OrdinalIgnoreCase)) continue;
+            if (!byTh2.TryGetValue(from, out var set))
+                byTh2[from] = set = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
+            set.Add(System.IO.Path.GetFileName(to));
+        }
+        return byTh2.ToDictionary(kv => kv.Key, kv => string.Join(", ", kv.Value.OrderBy(x => x)),
+            System.StringComparer.OrdinalIgnoreCase);
     }
 
     private void ClearEntities()

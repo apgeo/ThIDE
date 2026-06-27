@@ -5,7 +5,7 @@
              x:DataType="vm:ObjectBrowserToolViewModel">
     <TabControl>
         <TabItem Header="{Binding Browser.TabStations}">
-            <DataGrid ItemsSource="{Binding Browser.Stations}"
+            <DataGrid ItemsSource="{Binding Browser.Stations}" DoubleTapped="OnRowDoubleTapped"
                       IsReadOnly="True" GridLinesVisibility="Horizontal"
                       CanUserResizeColumns="True" CanUserSortColumns="True" AutoGenerateColumns="False">
                 <DataGrid.Columns>
@@ -32,7 +32,7 @@
         </TabItem>
         <!-- DATA-03 — entity tabs -->
         <TabItem Header="Surveys">
-            <DataGrid ItemsSource="{Binding Browser.Surveys}" IsReadOnly="True" GridLinesVisibility="Horizontal"
+            <DataGrid ItemsSource="{Binding Browser.Surveys}" DoubleTapped="OnRowDoubleTapped" IsReadOnly="True" GridLinesVisibility="Horizontal"
                       CanUserResizeColumns="True" CanUserSortColumns="True" AutoGenerateColumns="False">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*" />
@@ -44,7 +44,7 @@
             </DataGrid>
         </TabItem>
         <TabItem Header="Fixes">
-            <DataGrid ItemsSource="{Binding Browser.Fixes}" IsReadOnly="True" GridLinesVisibility="Horizontal"
+            <DataGrid ItemsSource="{Binding Browser.Fixes}" DoubleTapped="OnRowDoubleTapped" IsReadOnly="True" GridLinesVisibility="Horizontal"
                       CanUserResizeColumns="True" CanUserSortColumns="True" AutoGenerateColumns="False">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Station" Binding="{Binding Station}" Width="*" />
@@ -56,7 +56,7 @@
             </DataGrid>
         </TabItem>
         <TabItem Header="Equates">
-            <DataGrid ItemsSource="{Binding Browser.Equates}" IsReadOnly="True" GridLinesVisibility="Horizontal"
+            <DataGrid ItemsSource="{Binding Browser.Equates}" DoubleTapped="OnRowDoubleTapped" IsReadOnly="True" GridLinesVisibility="Horizontal"
                       CanUserResizeColumns="True" CanUserSortColumns="True" AutoGenerateColumns="False">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Equate" Binding="{Binding Stations}" Width="*" />
@@ -66,7 +66,7 @@
             </DataGrid>
         </TabItem>
         <TabItem Header="Maps">
-            <DataGrid ItemsSource="{Binding Browser.Maps}" IsReadOnly="True" GridLinesVisibility="Horizontal"
+            <DataGrid ItemsSource="{Binding Browser.Maps}" DoubleTapped="OnRowDoubleTapped" IsReadOnly="True" GridLinesVisibility="Horizontal"
                       CanUserResizeColumns="True" CanUserSortColumns="True" AutoGenerateColumns="False">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Id" Binding="{Binding Id}" Width="*" />
@@ -79,17 +79,18 @@
             </DataGrid>
         </TabItem>
         <TabItem Header="Scraps">
-            <DataGrid ItemsSource="{Binding Browser.Scraps}" IsReadOnly="True" GridLinesVisibility="Horizontal"
+            <DataGrid ItemsSource="{Binding Browser.Scraps}" DoubleTapped="OnRowDoubleTapped" IsReadOnly="True" GridLinesVisibility="Horizontal"
                       CanUserResizeColumns="True" CanUserSortColumns="True" AutoGenerateColumns="False">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Id" Binding="{Binding Id}" Width="*" />
+                    <DataGridTextColumn Header="Sketch (.xvi)" Binding="{Binding Sketch}" Width="180" />
                     <DataGridTextColumn Header="File" Binding="{Binding File}" Width="160" />
                     <DataGridTextColumn Header="Line" Binding="{Binding Line}" Width="60" />
                 </DataGrid.Columns>
             </DataGrid>
         </TabItem>
         <TabItem Header="Points">
-            <DataGrid ItemsSource="{Binding Browser.Points}" IsReadOnly="True" GridLinesVisibility="Horizontal"
+            <DataGrid ItemsSource="{Binding Browser.Points}" DoubleTapped="OnRowDoubleTapped" IsReadOnly="True" GridLinesVisibility="Horizontal"
                       CanUserResizeColumns="True" CanUserSortColumns="True" AutoGenerateColumns="False">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="*" />
@@ -100,7 +101,7 @@
             </DataGrid>
         </TabItem>
         <TabItem Header="Lines">
-            <DataGrid ItemsSource="{Binding Browser.Lines}" IsReadOnly="True" GridLinesVisibility="Horizontal"
+            <DataGrid ItemsSource="{Binding Browser.Lines}" DoubleTapped="OnRowDoubleTapped" IsReadOnly="True" GridLinesVisibility="Horizontal"
                       CanUserResizeColumns="True" CanUserSortColumns="True" AutoGenerateColumns="False">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="*" />
@@ -111,7 +112,7 @@
             </DataGrid>
         </TabItem>
         <TabItem Header="Areas">
-            <DataGrid ItemsSource="{Binding Browser.Areas}" IsReadOnly="True" GridLinesVisibility="Horizontal"
+            <DataGrid ItemsSource="{Binding Browser.Areas}" DoubleTapped="OnRowDoubleTapped" IsReadOnly="True" GridLinesVisibility="Horizontal"
                       CanUserResizeColumns="True" CanUserSortColumns="True" AutoGenerateColumns="False">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="*" />
