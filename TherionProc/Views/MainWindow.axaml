@@ -104,6 +104,7 @@
                 <MenuItem Header="{Binding MenuViewObjectBrowser}" Command="{Binding ToggleObjectBrowserCommand}" />
                 <MenuItem Header="{Binding MenuViewWorkspace}" Command="{Binding ToggleWorkspaceExplorerCommand}" />
                 <MenuItem Header="Project (Dashboard / Surveys / Audit)" Command="{Binding ToggleProjectCommand}" />
+                <MenuItem Header="Log" Command="{Binding ToggleLogCommand}" />
                 <MenuItem Header="{Binding MenuViewDiagnostics}" Command="{Binding ToggleDiagnosticsCommand}" />
                 <!-- EDIT-09: document outline (hidden when the feature is disabled). -->
                 <MenuItem Header="Outline" Command="{Binding ToggleOutlineCommand}"
@@ -420,11 +421,29 @@
 
             <!-- Ctrl+Tab document switcher overlay (#2): MRU list, opaque box, highlighted entry.
                  Shown while Ctrl is held; Ctrl-release activates the highlighted document. -->
-            <Border IsVisible="{Binding DocumentSwitcher.IsOpen}" Background="#33000000">
+            <Border IsVisible="{Binding DocumentSwitcher.IsOpen}" Background="#66000000">
                 <Border Width="480" MaxHeight="440" VerticalAlignment="Center" HorizontalAlignment="Center"
-                        Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}"
-                        BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1"
-                        CornerRadius="6" BoxShadow="0 8 24 0 #50000000" Padding="6">
+                        Background="{DynamicResource SwBoxBg}"
+                        BorderBrush="{DynamicResource SwBoxBorder}" BorderThickness="1"
+                        CornerRadius="6" BoxShadow="0 8 24 0 #80000000" Padding="6">
+                    <!-- Explicit, opaque, theme-aware brushes so the box never renders see-through
+                         and the highlighted row is always clearly visible (#2). -->
+                    <Border.Resources>
+                        <ResourceDictionary>
+                            <ResourceDictionary.ThemeDictionaries>
+                                <ResourceDictionary x:Key="Light">
+                                    <SolidColorBrush x:Key="SwBoxBg" Color="#FFF3F3F3" />
+                                    <SolidColorBrush x:Key="SwBoxBorder" Color="#FFB4B4B4" />
+                                    <SolidColorBrush x:Key="SwSelBg" Color="#FF2563EB" />
+                                </ResourceDictionary>
+                                <ResourceDictionary x:Key="Dark">
+                                    <SolidColorBrush x:Key="SwBoxBg" Color="#FF2B2B2D" />
+                                    <SolidColorBrush x:Key="SwBoxBorder" Color="#FF555558" />
+                                    <SolidColorBrush x:Key="SwSelBg" Color="#FF3B82F6" />
+                                </ResourceDictionary>
+                            </ResourceDictionary.ThemeDictionaries>
+                        </ResourceDictionary>
+                    </Border.Resources>
                     <DockPanel>
                         <TextBlock DockPanel.Dock="Top" Text="Open documents  —  Ctrl+Tab"
                                    Foreground="Gray" FontSize="11" Margin="8,4,8,6" />
@@ -434,7 +453,11 @@
                                     <Setter Property="Background" Value="Transparent" />
                                 </Style>
                                 <Style Selector="Border.swItem.selected">
-                                    <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+                                    <Setter Property="Background" Value="{DynamicResource SwSelBg}" />
+                                </Style>
+                                <!-- White text on the blue selection for contrast. -->
+                                <Style Selector="Border.swItem.selected TextBlock">
+                                    <Setter Property="Foreground" Value="White" />
                                 </Style>
                             </ItemsControl.Styles>
                             <ItemsControl.ItemTemplate>
