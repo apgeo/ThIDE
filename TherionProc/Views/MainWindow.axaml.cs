@@ -21,6 +21,7 @@ public partial class MainWindow : Window
     private IKeyboardShortcutService? _shortcuts;
     private ILayoutService? _layout;
     private IGlobalHotkeyService? _globalHotkey;
+    private ICrashRecoveryService? _crashRecovery;   // PERF-06
 
     // System-wide build hotkey (Ctrl+Alt+B): triggers a compile even when the app isn't
     // focused, marshalled onto the UI thread (#3). No-op on platforms without support.
@@ -69,6 +70,8 @@ public partial class MainWindow : Window
                     Avalonia.Threading.DispatcherPriority.Background);
                 StartAutosave();
                 AttachGlobalHotkey(vm);
+                AttachNotifications(vm);                 // UX-07 toast layer
+                OpenStartupFileArgs(vm);                 // UX-09 "open with" / file association
             }
             try
             {
@@ -77,13 +80,22 @@ public partial class MainWindow : Window
                     docs.FindReferencesRequested += (_, term) => ShowFindReferences(term);
                     docs.RenameSymbolRequested += (_, args) => _ = HandleRenameSymbolAsync(args.Raw, args.Kind);
                 }
+                _crashRecovery = AppServices.Provider.GetService<ICrashRecoveryService>();   // PERF-06
             }
             catch { /* design-time / no container */ }
         };
 
         // Persist when focus leaves the app — covers a debugger stop that never fires Closing.
-        Deactivated += (_, _) => PersistAll();
-        Closing += (_, _) => { _autosaveTimer?.Stop(); PersistAll(); _globalHotkey?.Dispose(); };
+        Deactivated += (_, _) => { PersistAll(); PersistRecoveryBuffers(); };
+        // A clean close clears the crash sentinel + recovery buffers (PERF-06) so the next launch
+        // doesn't enter safe mode or offer stale recovery.
+        Closing += (_, _) =>
+        {
+            _autosaveTimer?.Stop();
+            PersistAll();
+            _crashRecovery?.MarkCleanShutdown();
+            _globalHotkey?.Dispose();
+        };
 
         // Drag-and-drop file open (#17).
         DragDrop.SetAllowDrop(this, true);
@@ -348,6 +360,11 @@ public partial class MainWindow : Window
                 (DataContext as MainWindowViewModel)?.ShowCommandPalette();
                 e.Handled = true;
                 break;
+            // UX-10: reopen the most-recently-closed tab (VSCode Ctrl+Shift+T).
+            case Key.T when e.KeyModifiers == (KeyModifiers.Control | KeyModifiers.Shift):
+                (DataContext as MainWindowViewModel)?.ReopenClosedTabCommand.Execute(null);
+                e.Handled = true;
+                break;
             // DIAG-07: F8 / Shift+F8 jump to the next / previous diagnostic.
             case Key.F8:
                 (DataContext as MainWindowViewModel)?.Diagnostics.GoToAdjacent((e.KeyModifiers & KeyModifiers.Shift) == 0);
@@ -563,6 +580,57 @@ public partial class MainWindow : Window
         vm.SearchCommand.Execute(null);
     }
 
+    // ----- notifications / toast center (UX-07) --------------------------
+
+    private Avalonia.Controls.Notifications.WindowNotificationManager? _notificationManager;
+
+    private void AttachNotifications(MainWindowViewModel vm)
+    {
+        _notificationManager = new Avalonia.Controls.Notifications.WindowNotificationManager(this)
+        {
+            Position = Avalonia.Controls.Notifications.NotificationPosition.BottomRight,
+            MaxItems = 4,
+        };
+        vm.Notifications.Posted += (_, n) =>
+            Avalonia.Threading.Dispatcher.UIThread.Post(() => ShowToast(n));
+    }
+
+    // Opening the bell flyout clears the unread badge (the flyout opens from the same click).
+    private void OnNotificationsClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        => (DataContext as MainWindowViewModel)?.MarkNotificationsRead();
+
+    private void ShowToast(Services.AppNotification n)
+    {
+        if (_notificationManager is null) return;
+        var type = n.Kind switch
+        {
+            Services.NotificationKind.Success => Avalonia.Controls.Notifications.NotificationType.Success,
+            Services.NotificationKind.Warning => Avalonia.Controls.Notifications.NotificationType.Warning,
+            Services.NotificationKind.Error   => Avalonia.Controls.Notifications.NotificationType.Error,
+            _                                 => Avalonia.Controls.Notifications.NotificationType.Information,
+        };
+        // Errors linger; everything else auto-expires. The whole toast is clickable when the
+        // notification carries an action (e.g. "Show output").
+        var expiration = n.Kind == Services.NotificationKind.Error ? TimeSpan.FromSeconds(12) : TimeSpan.FromSeconds(6);
+        _notificationManager.Show(new Avalonia.Controls.Notifications.Notification(
+            n.Title, n.Message, type, expiration, onClick: n.Action));
+    }
+
+    // ----- "open with" / file association (UX-09) ------------------------
+
+    private void OpenStartupFileArgs(MainWindowViewModel vm)
+    {
+        var args = App.StartupFileArgs;
+        if (args.Count == 0) return;
+        IDocumentService? docs = null;
+        try { docs = AppServices.Provider.GetService<IDocumentService>(); }
+        catch { /* design-time / no container */ }
+        if (docs is null) return;
+        foreach (var path in args)
+            if (OpenableExtensions.Contains(Path.GetExtension(path)))
+                _ = docs.OpenFileAsync(path);
+    }
+
     // ----- drag-and-drop open (#17) --------------------------------------
 
     private static void OnDragOver(object? sender, DragEventArgs e) =>
@@ -671,8 +739,25 @@ public partial class MainWindow : Window
         {
             Interval = TimeSpan.FromSeconds(5),
         };
-        _autosaveTimer.Tick += (_, _) => PersistLayout();
+        _autosaveTimer.Tick += (_, _) => { PersistLayout(); PersistRecoveryBuffers(); };
         _autosaveTimer.Start();
+    }
+
+    /// <summary>PERF-06: writes the currently-dirty editor buffers to the crash-recovery folder.</summary>
+    private void PersistRecoveryBuffers()
+    {
+        if (_crashRecovery is null) return;
+        try
+        {
+            var docs = AppServices.Provider.GetService<IDocumentService>();
+            if (docs is null) return;
+            var dirty = new List<(string, string)>();
+            foreach (var d in docs.Documents)
+                if (d.IsDirty && !string.IsNullOrEmpty(d.FilePath))
+                    dirty.Add((d.FilePath, d.DocumentText));
+            _crashRecovery.SaveBuffers(dirty);
+        }
+        catch { /* best-effort */ }
     }
 
     /// <summary>Persists the dock arrangement + window bounds (both deduplicated).</summary>

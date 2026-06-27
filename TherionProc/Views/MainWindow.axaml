@@ -31,6 +31,30 @@
             <!-- Fade tint by file type (.th/.th2/.thconfig), task 2. -->
             <Setter Property="Background" Value="{Binding TabBrush}" />
         </Style>
+        <!-- UX-10: tab-management context menu on document tabs (pin / close others / close right /
+             reopen). Reflection-bound (the tab item's DataContext is the FileDocumentViewModel,
+             not the window VM). Scoped to DocumentTabStripItem so tool tabs are unaffected. -->
+        <Style Selector="dock|DocumentTabStripItem">
+            <Setter Property="ContextMenu">
+                <ContextMenu x:CompileBindings="False">
+                    <MenuItem Header="Pin Tab" Command="{Binding TogglePinCommand}" IsVisible="{Binding !IsPinned}" />
+                    <MenuItem Header="Unpin Tab" Command="{Binding TogglePinCommand}" IsVisible="{Binding IsPinned}" />
+                    <Separator />
+                    <MenuItem Header="Close" Command="{Binding CloseTabCommand}" />
+                    <MenuItem Header="Close Others" Command="{Binding CloseOtherTabsCommand}" />
+                    <MenuItem Header="Close to the Right" Command="{Binding CloseTabsToRightCommand}" />
+                    <MenuItem Header="Close All" Command="{Binding CloseAllTabsCommand}" />
+                    <Separator />
+                    <MenuItem Header="Reopen Closed Tab"
+                              Command="{Binding $parent[Window].DataContext.ReopenClosedTabCommand}" />
+                    <MenuItem Header="Float" Command="{Binding FloatTabCommand}" />
+                    <Separator />
+                    <MenuItem Header="Copy Full Path" Command="{Binding CopyFullPathCommand}" />
+                    <MenuItem Header="Copy Relative Path" Command="{Binding CopyRelativePathCommand}" />
+                    <MenuItem Header="Copy File Name" Command="{Binding CopyFileNameCommand}" />
+                </ContextMenu>
+            </Setter>
+        </Style>
         <!-- Tab-strip arrow buttons scroll 3x faster (task 3). Dock renders the two end arrows
              of the document/tool tab strips as RepeatButtons bound to ScrollViewerLineCommand,
              so tripling their repeat rate (1/3 the interval) triples press-and-hold horizontal
@@ -92,6 +116,9 @@
                 <Separator />
                 <!-- Recent files, grouped per type (8 each), rebuilt in code-behind (#8). -->
                 <MenuItem x:Name="RecentMenu" Header="{Binding MenuFileRecent}" />
+                <!-- UX-10: reopen the most-recently-closed tab. -->
+                <MenuItem Header="Reopen Closed Tab" InputGesture="Ctrl+Shift+T"
+                          Command="{Binding ReopenClosedTabCommand}" />
                 <Separator />
                 <MenuItem Header="{Binding MenuFileExit}" Command="{Binding ExitCommand}" />
             </MenuItem>
@@ -326,6 +353,63 @@
                         </MenuFlyout>
                     </Button.Flyout>
                 </Button>
+                <Separator Width="1" Margin="4,2" Background="Gray" />
+                <!-- UX-07: notification center bell + unread badge + history flyout. -->
+                <Button Classes="tool" Click="OnNotificationsClick" ToolTip.Tip="Notifications">
+                    <Panel>
+                        <PathIcon Data="{DynamicResource Icon.Bell}" />
+                        <Border IsVisible="{Binding HasUnreadNotifications}"
+                                Background="#C62828" CornerRadius="7" MinWidth="14" Height="14"
+                                Padding="3,0" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                Margin="0,-3,-4,0">
+                            <TextBlock Text="{Binding UnreadNotifications}" Foreground="White"
+                                       FontSize="9" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                    </Panel>
+                    <Button.Flyout>
+                        <Flyout Placement="Bottom">
+                            <Border Width="360" MaxHeight="420">
+                                <DockPanel LastChildFill="True">
+                                    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="4,2,2,6">
+                                        <TextBlock Grid.Column="0" Text="Notifications" FontWeight="SemiBold"
+                                                   VerticalAlignment="Center" />
+                                        <Button Grid.Column="1" Content="Clear" Padding="8,2"
+                                                Background="Transparent" BorderThickness="0"
+                                                Command="{Binding ClearNotificationsCommand}" />
+                                    </Grid>
+                                    <TextBlock DockPanel.Dock="Top" Text="No notifications yet."
+                                               Foreground="Gray" FontSize="12" Margin="4,8"
+                                               IsVisible="{Binding !HasNotificationHistory}" />
+                                    <ScrollViewer>
+                                        <ItemsControl ItemsSource="{Binding Notifications.History}"
+                                                      x:CompileBindings="False">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border BorderBrush="#40808080" BorderThickness="0,0,0,1" Padding="4,6">
+                                                        <StackPanel Spacing="2">
+                                                            <Grid ColumnDefinitions="*,Auto">
+                                                                <TextBlock Grid.Column="0" Text="{Binding Title}"
+                                                                           FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                                                <TextBlock Grid.Column="1" Text="{Binding TimeText}"
+                                                                           Foreground="Gray" FontSize="11" Margin="6,0,0,0" />
+                                                            </Grid>
+                                                            <TextBlock Text="{Binding Message}" Foreground="Gray"
+                                                                       FontSize="12" TextWrapping="Wrap" />
+                                                            <Button Content="{Binding ActionLabel}" Padding="8,2" Margin="0,2,0,0"
+                                                                    HorizontalAlignment="Left"
+                                                                    Command="{Binding ActionCommand}"
+                                                                    IsVisible="{Binding HasAction}" />
+                                                        </StackPanel>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+                                </DockPanel>
+                            </Border>
+                        </Flyout>
+                    </Button.Flyout>
+                </Button>
                 <TextBlock VerticalAlignment="Center" Margin="12,0,0,0"
                            Text="{Binding Build.Status}" Foreground="Gray" />
                 <!-- BUILD-05: stage label + stepped progress, shown alongside the spinner. -->
@@ -365,6 +449,15 @@
                           RenderTransformOrigin="50%,50%"
                           IsVisible="{Binding Build.IsBuilding}"
                           ToolTip.Tip="Build in progress…" />
+
+                <!-- PERF-02: background-indexing indicator (object graph being (re)built off-thread). -->
+                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="4" Margin="8,0,0,0"
+                            VerticalAlignment="Center" IsVisible="{Binding IsIndexing}"
+                            ToolTip.Tip="Building the project object graph…">
+                    <PathIcon Classes="buildSpinner" Data="{DynamicResource Icon.Loading}"
+                              Width="12" Height="12" Foreground="Gray" RenderTransformOrigin="50%,50%" />
+                    <TextBlock Text="Indexing…" Foreground="Gray" FontSize="11" VerticalAlignment="Center" />
+                </StackPanel>
 
                 <!-- Build result indicator: green check / red X + optional warning count (#7). -->
                 <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="3" Margin="6,0,0,0"

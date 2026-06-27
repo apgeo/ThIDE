@@ -35,11 +35,28 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly ILayoutService? _layout;
     private readonly IAppSettingsService? _settings;
     private readonly ILogService? _log;   // #3 in-app activity log
+    private readonly INotificationService _notifications;   // UX-07 toast/bell center
+    private readonly ICrashRecoveryService? _crashRecovery; // PERF-06 safe-mode + buffer recovery
     private readonly IWorkspaceSession? _session;
     private readonly DockFactory _factory;
     private IStoragePicker? _picker;
 
     public ILayoutService? LayoutService => _layout;
+
+    /// <summary>UX-07: the notification hub — bound by the toolbar bell flyout and the toast layer.</summary>
+    public INotificationService Notifications => _notifications;
+
+    /// <summary>UX-07: unread notification count for the toolbar bell badge.</summary>
+    [ObservableProperty] private int _unreadNotifications;
+    /// <summary>UX-07: true when there are unread notifications (drives the badge visibility).</summary>
+    [ObservableProperty] private bool _hasUnreadNotifications;
+    /// <summary>UX-07: true when the notification history has any entries (drives the empty-state text).</summary>
+    [ObservableProperty] private bool _hasNotificationHistory;
+
+    /// <summary>UX-07: clears the notification history (bound to the bell flyout "Clear" button).</summary>
+    [RelayCommand] private void ClearNotifications() => _notifications.Clear();
+    /// <summary>UX-07: resets the unread badge (called when the bell flyout is opened).</summary>
+    public void MarkNotificationsRead() => _notifications.MarkAllRead();
 
     // Dock layout bound by MainWindow.axaml (swappable so "reset layout" can rebuild it, #16).
     private IRootDock _dockLayout = null!;
@@ -77,6 +94,10 @@ public partial class MainWindowViewModel : ViewModelBase
     /// <summary>True while the previous session's files are being reopened — drives the
     /// startup loading spinner overlay (#14).</summary>
     [ObservableProperty] private bool _isLoading;
+
+    /// <summary>PERF-02: true while the cross-file object graph is being (re)built off-thread —
+    /// drives the status-bar "Indexing…" indicator.</summary>
+    [ObservableProperty] private bool _isIndexing;
 
     // ----- status bar: open-file metrics (#10) -------------------------------
     /// <summary>True when a real text file is active — shows the file-info status groups.</summary>
@@ -378,9 +399,19 @@ public partial class MainWindowViewModel : ViewModelBase
         IWorkspaceSession? session = null,
         Therion.Semantics.ISemanticRuleRunner? ruleRunner = null,
         QuickOpenProvider? quickOpen = null,
-        ILogService? log = null)
+        ILogService? log = null,
+        INotificationService? notifications = null,
+        ICrashRecoveryService? crashRecovery = null)
     {
         _log = log;
+        _crashRecovery = crashRecovery;
+        _notifications = notifications ?? new NotificationService();
+        _notifications.UnreadChanged += (_, _) => OnUiThread(() =>
+        {
+            UnreadNotifications = _notifications.UnreadCount;
+            HasUnreadNotifications = _notifications.UnreadCount > 0;
+            HasNotificationHistory = _notifications.History.Count > 0;
+        });
         _quickOpen = quickOpen;
         _l = localizer;
         _language = language;
@@ -449,6 +480,8 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             _session.Changed += (_, _) => OnUiThread(Refresh);          // active config / graph (#7)
             _session.CandidatesChanged += (_, _) => OnUiThread(Refresh);
+            // PERF-02: mirror the background-indexing state for the status-bar indicator.
+            _session.IndexingChanged += (_, _) => OnUiThread(() => IsIndexing = _session.IsIndexing);
         }
         _documents.DocumentChanged += (_, _) => RefreshActiveTools();
         _documents.DocumentChanged += (_, _) => OnUiThread(UpdateFileStatus);   // status bar (#10)
@@ -476,6 +509,24 @@ public partial class MainWindowViewModel : ViewModelBase
             combined.AddRange(diags);
             Diagnostics.Load(combined.ToImmutable());
         };
+        // UX-07: toast the build result with a one-click "Show output" action. The result flags
+        // are set on BuildViewModel before CompileCompleted fires, so they are current here.
+        Build.CompileCompleted += (_, _) => OnUiThread(() =>
+        {
+            void ShowOutput() => _factory.ShowCompilerOutput();
+            if (Build.LastBuildSucceeded)
+            {
+                var warn = Build.LastBuildWarningCount;
+                _notifications.Success("Build succeeded",
+                    $"{Build.Artifacts.Count} artifact(s)" + (warn > 0 ? $", {warn} warning(s)." : "."),
+                    "Show output", ShowOutput);
+            }
+            else
+            {
+                _notifications.Error("Build failed",
+                    "The compilation reported errors.", "Show output", ShowOutput);
+            }
+        });
         // VIS-03: after a build, auto-load the newest rendered map into the in-app viewer.
         Build.CompileCompleted += (_, _) =>
         {
@@ -597,6 +648,59 @@ public partial class MainWindowViewModel : ViewModelBase
         Avalonia.Threading.Dispatcher.UIThread.Post(
             () => _factory.RemoveUnresolvedPlaceholders(),
             Avalonia.Threading.DispatcherPriority.Background);
+
+        // UX-05: re-create the floated tool/document windows from the last session. Posted at
+        // Background priority AFTER the placeholder removal above (same priority = FIFO), so the
+        // restored documents already exist and can be resolved by id and floated.
+        // PERF-06: SAFE MODE — after a crash, skip the float-window restore so a bad saved layout
+        // can't bring the app down on relaunch.
+        if (_crashRecovery is not { PreviousRunCrashed: true })
+            Avalonia.Threading.Dispatcher.UIThread.Post(
+                () => _factory.RestoreFloatWindows(_layout?.Current.FloatWindows),
+                Avalonia.Threading.DispatcherPriority.Background);
+        else
+            _log?.Warning("Started in safe mode after an unclean shutdown — floated-window layout was not restored.");
+
+        // PERF-06: offer to recover unsaved buffers left by a crashed run.
+        OfferCrashRecovery();
+    }
+
+    /// <summary>PERF-06: if a crashed run left unsaved buffers, surface a recovery notification.</summary>
+    private void OfferCrashRecovery()
+    {
+        if (_crashRecovery is null) return;
+        var recoverable = _crashRecovery.GetRecoverable();
+        if (recoverable.Count == 0) return;
+        OnUiThread(() => _notifications.Warning(
+            "Unsaved changes recovered",
+            $"{recoverable.Count} file(s) had unsaved changes when the app last closed unexpectedly.",
+            "Restore", () => _ = RecoverBuffersAsync(recoverable)));
+    }
+
+    private async Task RecoverBuffersAsync(System.Collections.Generic.IReadOnlyList<RecoveredBuffer> buffers)
+    {
+        foreach (var b in buffers)
+        {
+            try
+            {
+                if (System.IO.File.Exists(b.OriginalPath))
+                {
+                    await _documents.OpenFileAsync(b.OriginalPath).ConfigureAwait(true);
+                    // Apply the recovered text on top of the on-disk content → the editor reopens
+                    // dirty with the unsaved work, ready to save.
+                    if (_documents.Documents.FirstOrDefault(d =>
+                            string.Equals(d.FilePath, b.OriginalPath, StringComparison.OrdinalIgnoreCase)) is { } doc)
+                        doc.DocumentText = b.Text;
+                }
+                else
+                {
+                    _documents.OpenTextDocument(b.OriginalPath, b.Text);
+                }
+            }
+            catch (Exception ex) { _log?.Warning($"Failed to recover '{b.OriginalPath}': {ex.Message}"); }
+        }
+        _crashRecovery?.ClearRecovery();
+        StatusText = $"Recovered {buffers.Count} unsaved file(s).";
     }
 
     /// <summary>Records the open files + workspace root/active thconfig for next launch (#9).</summary>
@@ -626,6 +730,18 @@ public partial class MainWindowViewModel : ViewModelBase
     public event EventHandler? RecentFilesChanged;
     /// <summary>Recently-opened files, most-recent first (persisted across launches, #8).</summary>
     public IReadOnlyList<string> RecentFiles => _settings?.Current.RecentFiles ?? Array.Empty<string>();
+
+    /// <summary>UX-10: reopen the most-recently-closed tab (Ctrl+Shift+T).</summary>
+    [RelayCommand]
+    private async Task ReopenClosedTab()
+    {
+        try
+        {
+            if (!await _documents.ReopenLastClosedAsync().ConfigureAwait(true))
+                StatusText = "No recently-closed tab to reopen.";
+        }
+        catch (Exception ex) { StatusText = ex.Message; }
+    }
 
     [RelayCommand]
     private async Task OpenRecent(string? path)
@@ -705,7 +821,7 @@ public partial class MainWindowViewModel : ViewModelBase
             await _documents.OpenFileAsync(outPath).ConfigureAwait(true);
             StatusText = $"Imported {System.IO.Path.GetFileName(src)} → {System.IO.Path.GetFileName(outPath)}";
         }
-        catch (Exception ex) { StatusText = ex.Message; _log?.Warning($"Import failed: {ex.Message}"); }
+        catch (Exception ex) { StatusText = ex.Message; _log?.Warning($"Import failed: {ex.Message}"); _notifications.Error("Import failed", ex.Message); }
     }
 
     /// <summary>GIS-01: export entrances / fixed points in the project CRS. Format via CommandParameter.</summary>
@@ -731,7 +847,7 @@ public partial class MainWindowViewModel : ViewModelBase
             System.IO.File.WriteAllText(outPath, text);
             StatusText = $"Exported {GisExport.CollectPoints(model).Count} point(s) → {System.IO.Path.GetFileName(outPath)}";
         }
-        catch (Exception ex) { StatusText = ex.Message; _log?.Warning($"GIS export failed: {ex.Message}"); }
+        catch (Exception ex) { StatusText = ex.Message; _log?.Warning($"GIS export failed: {ex.Message}"); _notifications.Error("GIS export failed", ex.Message); }
     }
 
     /// <summary>GIS-03: convert an ESRI ASCII grid (.asc) into a Therion surface .th.</summary>
@@ -752,7 +868,7 @@ public partial class MainWindowViewModel : ViewModelBase
             await _documents.OpenFileAsync(outPath).ConfigureAwait(true);
             StatusText = $"Generated surface from {System.IO.Path.GetFileName(src)}";
         }
-        catch (Exception ex) { StatusText = ex.Message; _log?.Warning($"DEM import failed: {ex.Message}"); }
+        catch (Exception ex) { StatusText = ex.Message; _log?.Warning($"DEM import failed: {ex.Message}"); _notifications.Error("DEM import failed", ex.Message); }
     }
 
     /// <summary>TH2-04: scaffold a new .th2 scrap stub; the scrap id is taken from the chosen filename.</summary>
@@ -771,7 +887,7 @@ public partial class MainWindowViewModel : ViewModelBase
             ClipboardHelper.SetText(inputLine);
             StatusText = $"Created scrap '{id}'. Copied '{inputLine}' to clipboard — paste it into your .th.";
         }
-        catch (Exception ex) { StatusText = ex.Message; _log?.Warning($"Scaffold failed: {ex.Message}"); }
+        catch (Exception ex) { StatusText = ex.Message; _log?.Warning($"Scaffold failed: {ex.Message}"); _notifications.Error("Scaffold failed", ex.Message); }
     }
 
     [RelayCommand]
