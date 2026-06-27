@@ -744,6 +744,38 @@ public partial class MainWindowViewModel : ViewModelBase
     public event EventHandler? RecentFilesChanged;
     /// <summary>Recently-opened files, most-recent first (persisted across launches, #8).</summary>
     public IReadOnlyList<string> RecentFiles => _settings?.Current.RecentFiles ?? Array.Empty<string>();
+    /// <summary>Pinned recent files (QOL-05).</summary>
+    public IReadOnlyList<string> PinnedRecentFiles => _settings?.Current.PinnedRecentFiles ?? Array.Empty<string>();
+
+    /// <summary>QOL-05: pin a recent file so it stays at the top and survives "Clear Recent".</summary>
+    [RelayCommand]
+    private void PinRecent(string? path)
+    {
+        if (_settings is null || string.IsNullOrEmpty(path)) return;
+        var s = _settings.Current;
+        if (s.PinnedRecentFiles.Contains(path, StringComparer.OrdinalIgnoreCase)) return;
+        var pinned = new List<string>(s.PinnedRecentFiles) { path };
+        _settings.Save(s with { PinnedRecentFiles = pinned });
+    }
+
+    /// <summary>QOL-05: unpin a previously-pinned recent file.</summary>
+    [RelayCommand]
+    private void UnpinRecent(string? path)
+    {
+        if (_settings is null || string.IsNullOrEmpty(path)) return;
+        var s = _settings.Current;
+        var pinned = s.PinnedRecentFiles.Where(p => !string.Equals(p, path, StringComparison.OrdinalIgnoreCase)).ToList();
+        if (pinned.Count == s.PinnedRecentFiles.Count) return;
+        _settings.Save(s with { PinnedRecentFiles = pinned });
+    }
+
+    /// <summary>QOL-05: clears the (unpinned) recent-files list.</summary>
+    [RelayCommand]
+    private void ClearRecent()
+    {
+        if (_settings is null) return;
+        _settings.Save(_settings.Current with { RecentFiles = Array.Empty<string>() });
+    }
 
     /// <summary>UX-10: reopen the most-recently-closed tab (Ctrl+Shift+T).</summary>
     [RelayCommand]

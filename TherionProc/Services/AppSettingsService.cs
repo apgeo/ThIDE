@@ -51,6 +51,8 @@ public sealed record AppSettings
     public IReadOnlyList<string> LastSessionFiles { get; init; } = Array.Empty<string>();
     /// <summary>Recently-opened files, most-recent first; grouped per type in the menu (#8).</summary>
     public IReadOnlyList<string> RecentFiles { get; init; } = Array.Empty<string>();
+    /// <summary>Pinned recent files (QOL-05): shown in their own group and never cleared by "Clear Recent".</summary>
+    public IReadOnlyList<string> PinnedRecentFiles { get; init; } = Array.Empty<string>();
 
     // ---- workspace session (single root + single active thconfig) ----
     /// <summary>Root directory of the workspace at last shutdown (restored on launch, #9).</summary>

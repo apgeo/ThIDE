@@ -123,6 +123,14 @@ public partial class MainWindow : Window
         if (this.FindControl<MenuItem>("RecentMenu") is not { } menu) return;
         var items = new List<Control>();
 
+        // QOL-05: pinned files first, in their own group; each can be unpinned.
+        var pinned = vm.PinnedRecentFiles;
+        if (pinned.Count > 0)
+        {
+            foreach (var path in pinned) items.Add(RecentItem(vm, path, isPinned: true));
+            items.Add(new Separator());
+        }
+
         var recent = vm.RecentFiles;
         for (int g = 0; g < RecentGroups.Length; g++)
         {
@@ -130,6 +138,7 @@ public partial class MainWindow : Window
             var groupFiles = new List<string>();
             foreach (var path in recent)
             {
+                if (pinned.Contains(path, StringComparer.OrdinalIgnoreCase)) continue;   // shown in pinned group
                 var ext = Path.GetExtension(path);
                 bool inGroup = exts.Length == 0
                     ? !RecentGroupedExts.Contains(ext)         // "Other": anything not in a named group
@@ -139,22 +148,38 @@ public partial class MainWindow : Window
             }
             if (groupFiles.Count == 0) continue;
 
-            if (items.Count > 0) items.Add(new Separator());
-            foreach (var path in groupFiles)
-            {
-                items.Add(new MenuItem
-                {
-                    Header = Path.GetFileName(path),
-                    Command = vm.OpenRecentCommand,
-                    CommandParameter = path,
-                    [ToolTip.TipProperty] = path,
-                });
-            }
+            if (items.Count > 0 && items[^1] is not Separator) items.Add(new Separator());
+            foreach (var path in groupFiles) items.Add(RecentItem(vm, path, isPinned: false));
         }
 
         if (items.Count == 0)
             items.Add(new MenuItem { Header = "(no recent files)", IsEnabled = false });
+        else
+        {
+            items.Add(new Separator());
+            items.Add(new MenuItem { Header = "Clear Recent Files", Command = vm.ClearRecentCommand });
+        }
         menu.ItemsSource = items;
+    }
+
+    // QOL-05: a recent/pinned file entry — opens on click; right-click pins or unpins it.
+    private static MenuItem RecentItem(MainWindowViewModel vm, string path, bool isPinned)
+    {
+        var item = new MenuItem
+        {
+            Header = (isPinned ? "📌 " : string.Empty) + Path.GetFileName(path),
+            Command = vm.OpenRecentCommand,
+            CommandParameter = path,
+            [ToolTip.TipProperty] = path,
+        };
+        var toggle = new MenuItem
+        {
+            Header = isPinned ? "Unpin" : "Pin",
+            Command = isPinned ? vm.UnpinRecentCommand : vm.PinRecentCommand,
+            CommandParameter = path,
+        };
+        item.ContextMenu = new ContextMenu { ItemsSource = new[] { toggle } };
+        return item;
     }
 
     private static readonly HashSet<string> RecentGroupedExts =
