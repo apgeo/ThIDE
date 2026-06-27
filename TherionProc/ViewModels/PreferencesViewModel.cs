@@ -94,6 +94,7 @@ public partial class PreferencesViewModel : ObservableObject
     [ObservableProperty] private int _maxParseLines;
     [ObservableProperty] private int _maxParseKB;
     [ObservableProperty] private int _stationSearchLimit;
+    [ObservableProperty] private int _startupLoadTimeoutSeconds;
 
     // ---- editor features (Section B / EDIT-*) ----
     /// <summary>Per-feature runtime toggles shown in the "Editor Features" section.</summary>
@@ -143,6 +144,7 @@ public partial class PreferencesViewModel : ObservableObject
         _maxParseLines = s.MaxParseLines;
         _maxParseKB = s.MaxParseKB;
         _stationSearchLimit = s.StationSearchLimit;
+        _startupLoadTimeoutSeconds = s.StartupLoadTimeoutSeconds;
         foreach (var info in EditorFeatureCatalog.All)
             EditorFeatureRows.Add(new EditorFeatureToggle(info, s.EditorFeatures.IsEnabled(info.Feature)));
         _themeModeIndex = s.ThemeMode switch { "Light" => 1, "Dark" => 2, _ => 0 };
@@ -163,7 +165,7 @@ public partial class PreferencesViewModel : ObservableObject
             new("theme",    Resources.Tr.Get("Pref_Theme"),       "theme dark light color syntax keyword identifier custom appearance"),
             new("editor",   Resources.Tr.Get("Pref_Editor"),      "font size indent line numbers highlight tabs spaces rename preview"),
             new("editorfeatures", "Editor Features",              "edit feature snippet completion signature outline minimap sticky breadcrumb peek split diff color whitespace format smart enter toggle enable disable"),
-            new("performance",Resources.Tr.Get("Pref_Performance"),"large file limit highlight parse lines size kb threshold station search symbol cap"),
+            new("performance",Resources.Tr.Get("Pref_Performance"),"large file limit highlight parse lines size kb threshold station search symbol cap startup load timeout session reopen"),
             new("workspace",Resources.Tr.Get("Pref_Workspace"),   "reload external graph disk watch"),
             new("build",    Resources.Tr.Get("Pref_Build"),       "build output open lox 3d pdf survex aven loch"),
             new("external", Resources.Tr.Get("Pref_External"),    "therion loch aven survex path detect tool executable"),
@@ -261,6 +263,7 @@ public partial class PreferencesViewModel : ObservableObject
             MaxParseLines = MaxParseLines,
             MaxParseKB = MaxParseKB,
             StationSearchLimit = StationSearchLimit,
+            StartupLoadTimeoutSeconds = StartupLoadTimeoutSeconds,
             ThemeMode = ThemeModeIndex switch { 1 => "Light", 2 => "Dark", _ => "System" },
             UseCustomSyntaxColors = UseCustomSyntaxColors,
             SyntaxKeywordColor = NullIfBlank(SyntaxKeywordColor),

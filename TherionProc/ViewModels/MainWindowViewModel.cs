@@ -33,6 +33,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly IModelEditService? _editService;
     private readonly ILayoutService? _layout;
     private readonly IAppSettingsService? _settings;
+    private readonly ILogService? _log;   // #3 in-app activity log
     private readonly IWorkspaceSession? _session;
     private readonly DockFactory _factory;
     private IStoragePicker? _picker;
@@ -53,6 +54,7 @@ public partial class MainWindowViewModel : ViewModelBase
     public XviToolViewModel XviTool { get; }
     public OutlineToolViewModel OutlineTool { get; }
     public ProjectToolViewModel ProjectTool { get; }   // PROJ-02/03/07
+    public LogToolViewModel LogTool { get; }           // #3 activity log
     public SettingsToolViewModel SettingsTool { get; }
 
     /// <summary>PROJ-08: clickable breadcrumb of the @-qualified name at the caret (status bar).</summary>
@@ -361,14 +363,17 @@ public partial class MainWindowViewModel : ViewModelBase
         XviToolViewModel xviTool,
         OutlineToolViewModel outlineTool,
         ProjectToolViewModel projectTool,
+        LogToolViewModel logTool,
         SettingsToolViewModel settingsTool,
         IModelEditService? editService = null,
         ILayoutService? layout = null,
         IAppSettingsService? settings = null,
         IWorkspaceSession? session = null,
         Therion.Semantics.ISemanticRuleRunner? ruleRunner = null,
-        QuickOpenProvider? quickOpen = null)
+        QuickOpenProvider? quickOpen = null,
+        ILogService? log = null)
     {
+        _log = log;
         _quickOpen = quickOpen;
         _l = localizer;
         _language = language;
@@ -393,6 +398,7 @@ public partial class MainWindowViewModel : ViewModelBase
         XviTool = xviTool;
         OutlineTool = outlineTool;
         ProjectTool = projectTool;
+        LogTool = logTool;
         SettingsTool = settingsTool;
         Breadcrumb = new BreadcrumbViewModel(_documents);   // PROJ-08
 
@@ -470,6 +476,7 @@ public partial class MainWindowViewModel : ViewModelBase
         new XviToolViewModel(new XviReferencesViewModel()),
         new OutlineToolViewModel(new OutlineViewModel()),
         new ProjectToolViewModel(new ProjectDashboardViewModel(), new SurveyTreeViewModel(), new ProjectAuditViewModel()),
+        new LogToolViewModel(new LogViewModel()),
         new SettingsToolViewModel(new SettingsViewModel(), new KeyboardShortcutsViewModel()))
     {
         // Designer-only.
@@ -484,6 +491,7 @@ public partial class MainWindowViewModel : ViewModelBase
         new XviToolViewModel(new XviReferencesViewModel()),
         new OutlineToolViewModel(new OutlineViewModel()),
         new ProjectToolViewModel(new ProjectDashboardViewModel(), new SurveyTreeViewModel(), new ProjectAuditViewModel()),
+        new LogToolViewModel(new LogViewModel()),
         new SettingsToolViewModel(new SettingsViewModel(), new KeyboardShortcutsViewModel()));
 
     /// <summary>Wires the storage picker once the View is attached to a TopLevel.</summary>
@@ -494,35 +502,49 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private async Task RestoreSessionAsync(AppSettings? s)
     {
-        // Re-establish the single-root workspace from last shutdown (#9).
-        if (_session is not null && s is not null)
-        {
-            try
-            {
-                if (!string.IsNullOrEmpty(s.LastWorkspaceRoot) && System.IO.Directory.Exists(s.LastWorkspaceRoot))
-                    await _session.SetRootAsync(s.LastWorkspaceRoot).ConfigureAwait(true);
-                if (!string.IsNullOrEmpty(s.LastActiveThconfig) && System.IO.File.Exists(s.LastActiveThconfig))
-                    await _session.SetActiveThconfigAsync(s.LastActiveThconfig).ConfigureAwait(true);
-            }
-            catch { /* fall through to file/sample restore */ }
-        }
-
         var files = s is { RestoreSessionOnStartup: true } ? s.LastSessionFiles : Array.Empty<string>();
+        bool anyToLoad = (_session is not null && !string.IsNullOrEmpty(s?.LastWorkspaceRoot))
+                         || files.Any(System.IO.File.Exists);
 
-        // Show the loading spinner while reopening the previous session's files — parsing each
-        // can take a few seconds (#14).
-        bool anyToLoad = files.Any(System.IO.File.Exists);
+        // Keep the loading overlay/spinner on top for the WHOLE restore — including the (often
+        // slow on big projects) workspace-graph build — not just the file reopen loop (#1/#14).
         if (anyToLoad) OnUiThread(() => IsLoading = true);
         try
         {
-            foreach (var path in files)
+            // Re-establish the single-root workspace from last shutdown (#9).
+            if (_session is not null && s is not null)
             {
-                if (!System.IO.File.Exists(path)) continue;
+                try
+                {
+                    if (!string.IsNullOrEmpty(s.LastWorkspaceRoot) && System.IO.Directory.Exists(s.LastWorkspaceRoot))
+                        await _session.SetRootAsync(s.LastWorkspaceRoot).ConfigureAwait(true);
+                    if (!string.IsNullOrEmpty(s.LastActiveThconfig) && System.IO.File.Exists(s.LastActiveThconfig))
+                        await _session.SetActiveThconfigAsync(s.LastActiveThconfig).ConfigureAwait(true);
+                }
+                catch { /* fall through to file/sample restore */ }
+            }
+
+            // Reopen last-session files, but stop once the configured time budget is exceeded so a
+            // huge project stays launchable; the remaining files can be opened manually (#1).
+            int timeoutSec = s?.StartupLoadTimeoutSeconds ?? 20;
+            var pending = files.Where(System.IO.File.Exists).ToList();
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            int loaded = 0;
+            foreach (var path in pending)
+            {
+                if (timeoutSec > 0 && sw.Elapsed.TotalSeconds > timeoutSec)
+                {
+                    _log?.Warning(
+                        $"Startup file loading exceeded {timeoutSec}s — skipped {pending.Count - loaded} remaining " +
+                        $"file(s). Open them manually, or raise the limit in Preferences ▸ Performance.");
+                    break;
+                }
                 // Each open swaps the file into its saved tab slot (dock/float/order) when a
                 // restore placeholder is holding it; otherwise it lands in the main well.
-                try { await _documents.OpenFileAsync(path).ConfigureAwait(true); }
-                catch { /* skip files that fail to open */ }
+                try { await _documents.OpenFileAsync(path).ConfigureAwait(true); loaded++; }
+                catch (Exception ex) { _log?.Warning($"Failed to load '{path}': {ex.Message}"); }
             }
+            if (loaded > 0) _log?.Info($"Restored {loaded} file(s) from the last session.");
         }
         finally { if (anyToLoad) OnUiThread(() => IsLoading = false); }
 
@@ -665,6 +687,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand] private void ToggleObjectBrowser()     => Activate(ObjectBrowserTool);
     [RelayCommand] private void ToggleOutline()           => Activate(OutlineTool); // EDIT-09
     [RelayCommand] private void ToggleProject()           => Activate(ProjectTool); // PROJ-02/03/07
+    [RelayCommand] private void ToggleLog()               => Activate(LogTool);      // #3
     [RelayCommand] private void ToggleSettings()          => Activate(SettingsTool);
 
     /// <summary>EDIT-09 gate (compile-time flag + runtime setting) — drives the Outline menu/toolbar entry.</summary>

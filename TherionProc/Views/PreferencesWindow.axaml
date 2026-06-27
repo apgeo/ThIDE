@@ -201,6 +201,14 @@
                         <NumericUpDown Grid.Row="0" Grid.Column="1" Minimum="100" Maximum="1000000" Increment="500"
                                        Value="{Binding StationSearchLimit}" MaxWidth="180" HorizontalAlignment="Left" />
                     </Grid>
+                    <TextBlock Text="On startup, last-session files are reopened until this time budget is reached; the rest are skipped (logged in the Log panel) so big projects stay launchable. 0 = no limit."
+                               Foreground="Gray" TextWrapping="Wrap" />
+                    <Grid ColumnDefinitions="200,*" RowDefinitions="Auto">
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Startup load timeout (seconds)"
+                                   VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <NumericUpDown Grid.Row="0" Grid.Column="1" Minimum="0" Maximum="600" Increment="5"
+                                       Value="{Binding StartupLoadTimeoutSeconds}" MaxWidth="180" HorizontalAlignment="Left" />
+                    </Grid>
                 </StackPanel>
 
                 <!-- Workspace -->

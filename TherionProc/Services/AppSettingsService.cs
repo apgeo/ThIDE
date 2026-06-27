@@ -115,6 +115,13 @@ public sealed record AppSettings
     /// </summary>
     public int StationSearchLimit { get; init; } = 4000;
 
+    /// <summary>
+    /// Time budget (seconds) for reopening last-session files at startup. Once exceeded, the
+    /// remaining files are skipped (a warning is logged) so a big project stays launchable. 0 = no
+    /// limit. A future background-load mode will supersede this stop-gap.
+    /// </summary>
+    public int StartupLoadTimeoutSeconds { get; init; } = 20;
+
     // ---- theme (#2) ----
     /// <summary>App theme mode: "System", "Light", or "Dark".</summary>
     public string ThemeMode { get; init; } = "System";
