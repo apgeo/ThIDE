@@ -165,12 +165,16 @@ public sealed class ExternalToolLocator : IExternalToolLocator
         }
         else
         {
-            // Flatpak (flathub: io.github.rsevero.mapiah) installs a launcher wrapper that
-            // forwards arguments into the sandboxed app, plus the usual native locations.
+            // Flatpak installs a launcher wrapper that forwards arguments into the sandboxed app.
+            // The app id has been seen as both "io.github.rsevero.mapiah" (flathub) and
+            // "org.mapiah.mapiah" — try both, system- and user-wide, plus the native locations.
             var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            yield return "/var/lib/flatpak/exports/bin/io.github.rsevero.mapiah";
-            if (!string.IsNullOrEmpty(home))
-                yield return Path.Combine(home, ".local/share/flatpak/exports/bin/io.github.rsevero.mapiah");
+            foreach (var id in new[] { "io.github.rsevero.mapiah", "org.mapiah.mapiah" })
+            {
+                yield return "/var/lib/flatpak/exports/bin/" + id;
+                if (!string.IsNullOrEmpty(home))
+                    yield return Path.Combine(home, ".local/share/flatpak/exports/bin/" + id);
+            }
             yield return "/usr/bin/mapiah";
             yield return "/usr/local/bin/mapiah";
         }

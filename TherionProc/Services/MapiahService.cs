@@ -46,21 +46,45 @@ public sealed class MapiahService : IMapiahService
 
     public async ValueTask<MapiahLaunchResult> EditAsync(string th2Path, CancellationToken ct = default)
     {
+        if (string.IsNullOrWhiteSpace(th2Path) || !System.IO.File.Exists(th2Path))
+            return new MapiahLaunchResult(MapiahLaunchStatus.LaunchFailed, null, $"File not found: {th2Path}");
+
         var exe = await ResolvePathAsync(ct).ConfigureAwait(false);
         if (string.IsNullOrEmpty(exe))
             return new MapiahLaunchResult(MapiahLaunchStatus.NotInstalled);
 
-        try
-        {
-            // Pass the .th2 as the first argument so Mapiah opens it directly. UseShellExecute
-            // is false so we don't pop a console and so the wrapper/flatpak launcher gets argv.
-            var psi = new ProcessStartInfo(exe, $"\"{th2Path}\"") { UseShellExecute = false };
-            Process.Start(psi);
+        // Always pass an absolute path so a sandboxed (flatpak) Mapiah can resolve it.
+        var file = System.IO.Path.GetFullPath(th2Path);
+
+        // Pass the .th2 as the first argument so Mapiah opens it directly. UseShellExecute is false
+        // so we don't pop a console and so the wrapper/flatpak launcher receives argv.
+        if (TryStart(new ProcessStartInfo(exe, $"\"{file}\"") { UseShellExecute = false }, out var err))
             return new MapiahLaunchResult(MapiahLaunchStatus.Launched, exe);
-        }
-        catch (Exception ex)
-        {
-            return new MapiahLaunchResult(MapiahLaunchStatus.LaunchFailed, exe, ex.Message);
-        }
+
+        // Fallback 1: a flatpak wrapper whose filename is the app id → `flatpak run <id> <file>`.
+        if (FlatpakAppId(exe) is { } appId &&
+            TryStart(new ProcessStartInfo("flatpak", $"run {appId} \"{file}\"") { UseShellExecute = false }, out _))
+            return new MapiahLaunchResult(MapiahLaunchStatus.Launched, exe);
+
+        // Fallback 2: launch Mapiah without the file so the user can open it manually.
+        if (TryStart(new ProcessStartInfo(exe) { UseShellExecute = false }, out _))
+            return new MapiahLaunchResult(MapiahLaunchStatus.Launched, exe,
+                "Opened Mapiah, but could not pass the file — open it manually.");
+
+        return new MapiahLaunchResult(MapiahLaunchStatus.LaunchFailed, exe, err);
+    }
+
+    private static bool TryStart(ProcessStartInfo psi, out string? error)
+    {
+        try { Process.Start(psi); error = null; return true; }
+        catch (Exception ex) { error = ex.Message; return false; }
+    }
+
+    // A flatpak exports/bin wrapper is named after the app id (e.g. io.github.rsevero.mapiah).
+    private static string? FlatpakAppId(string exePath)
+    {
+        if (!exePath.Replace('\\', '/').Contains("/flatpak/exports/bin/")) return null;
+        var name = System.IO.Path.GetFileName(exePath);
+        return name.Contains('.') ? name : null;
     }
 }
