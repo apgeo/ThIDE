@@ -1,0 +1,20 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:TherionProc.ViewModels.Docking"
+             xmlns:views="using:TherionProc.Views"
+             x:Class="TherionProc.Views.Docking.LivePreviewToolView"
+             x:CompileBindings="False"
+             x:DataType="vm:LivePreviewToolViewModel">
+    <DockPanel>
+        <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="6,3">
+            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                <ToggleButton Content="Elevation" IsChecked="{Binding Preview.IsElevation, Mode=TwoWay}"
+                              ToolTip.Tip="Switch between plan and elevation" FontSize="11" Padding="8,2" />
+                <Button Content="↻ Refresh" Command="{Binding Preview.RefreshCommand}" FontSize="11" Padding="8,2" />
+                <TextBlock Text="{Binding Preview.Status}" Foreground="Gray" VerticalAlignment="Center"
+                           FontSize="11" TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+        </Border>
+        <views:LivePreviewControl x:Name="Sketch" Segments="{Binding Preview.Segments}" />
+    </DockPanel>
+</UserControl>
