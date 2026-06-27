@@ -49,6 +49,7 @@
                               Command="{Binding $parent[Window].DataContext.ReopenClosedTabCommand}" />
                     <MenuItem Header="Float" Command="{Binding FloatTabCommand}" />
                     <Separator />
+                    <MenuItem Header="Reveal in File Manager" Command="{Binding RevealInFileManagerCommand}" />
                     <MenuItem Header="Copy Full Path" Command="{Binding CopyFullPathCommand}" />
                     <MenuItem Header="Copy Relative Path" Command="{Binding CopyRelativePathCommand}" />
                     <MenuItem Header="Copy File Name" Command="{Binding CopyFileNameCommand}" />

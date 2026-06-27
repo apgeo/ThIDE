@@ -423,6 +423,14 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
     [RelayCommand] private void CopyFileName() => SetClipboard(System.IO.Path.GetFileName(FilePath));
     [RelayCommand] private void CopyFullPath() => SetClipboard(FilePath);
     [RelayCommand] private void CopyRelativePath() => SetClipboard(RelativePathToProjectRoot());
+
+    /// <summary>QOL-01: reveal this document's file in the OS file manager.</summary>
+    [RelayCommand]
+    private void RevealInFileManager()
+    {
+        try { (TherionProc.AppServices.Provider.GetService(typeof(Therion.Build.IShellOpener)) as Therion.Build.IShellOpener)?.RevealInFileManager(FilePath); }
+        catch { /* design-time / no container */ }
+    }
     [RelayCommand] private void FloatTab() => Factory?.FloatDockable(this);
     [RelayCommand] private void CloseTab() => Factory?.CloseDockable(this);
 
