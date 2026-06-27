@@ -162,6 +162,9 @@ internal static class AppServices
         services.AddSingleton<WorkspaceExplorerViewModel>();
         services.AddSingleton<XviReferencesViewModel>();
         services.AddSingleton<OutlineViewModel>();   // EDIT-09 document outline content VM
+        services.AddSingleton<SurveyTreeViewModel>();         // PROJ-03 logical survey tree
+        services.AddSingleton<ProjectDashboardViewModel>();   // PROJ-07 project dashboard
+        services.AddSingleton<ProjectAuditViewModel>();       // PROJ-02 orphan/dead-file audit
         services.AddSingleton<SettingsViewModel>();
         services.AddSingleton<KeyboardShortcutsViewModel>();
         services.AddSingleton<SearchViewModel>();
@@ -175,6 +178,7 @@ internal static class AppServices
         services.AddSingleton<ViewModels.Docking.GeneratedFilesToolViewModel>();
         services.AddSingleton<ViewModels.Docking.XviToolViewModel>();
         services.AddSingleton<ViewModels.Docking.OutlineToolViewModel>();
+        services.AddSingleton<ViewModels.Docking.ProjectToolViewModel>();   // PROJ-02/03/07
         services.AddSingleton<ViewModels.Docking.SettingsToolViewModel>();
         services.AddSingleton<Docking.DockFactory>();
 

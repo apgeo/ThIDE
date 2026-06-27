@@ -52,7 +52,11 @@ public partial class MainWindowViewModel : ViewModelBase
     public GeneratedFilesToolViewModel GeneratedFilesTool { get; }
     public XviToolViewModel XviTool { get; }
     public OutlineToolViewModel OutlineTool { get; }
+    public ProjectToolViewModel ProjectTool { get; }   // PROJ-02/03/07
     public SettingsToolViewModel SettingsTool { get; }
+
+    /// <summary>PROJ-08: clickable breadcrumb of the @-qualified name at the caret (status bar).</summary>
+    public BreadcrumbViewModel Breadcrumb { get; }
 
     // Convenience accessors so menu/toolbar/keyboard bindings stay stable.
     public BuildViewModel Build => CompilerOutputTool.Build;
@@ -198,21 +202,85 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
-    /// <summary>
-    /// Cycles the active editor document (Ctrl+Tab forward / Ctrl+Shift+Tab backward, #4). Driven
-    /// from a window-level handler so it works no matter where focus is (menu, toolbar, panels).
-    /// </summary>
-    public void SwitchDocument(bool forward)
+    // ---- Ctrl+Tab document switcher (#2) --------------------------------
+
+    /// <summary>Overlay state for the Ctrl+Tab document switcher (bound in MainWindow.axaml).</summary>
+    public DocumentSwitcherViewModel DocumentSwitcher { get; } = new();
+
+    private readonly List<FileDocumentViewModel> _mru = new();
+    private int _switcherIndex;
+
+    /// <summary>Moves the active document to the front of the most-recently-used list.</summary>
+    private void TouchMru()
     {
-        var docs = _documents.Documents;
-        if (docs.Count < 2) return;
-        int idx = _documents.Active is { } active ? docs.IndexOf(active) : -1;
-        if (idx < 0) idx = 0;
-        int next = forward
-            ? (idx + 1) % docs.Count
-            : (idx - 1 + docs.Count) % docs.Count;
-        var target = docs[next];
-        OnUiThread(() => _factory.OpenDocument(target));
+        if (_documents.Active is not { } active) return;
+        _mru.Remove(active);
+        _mru.Insert(0, active);
+    }
+
+    /// <summary>
+    /// Opens the switcher (first Ctrl+Tab) or advances the highlighted entry (subsequent Tabs while
+    /// Ctrl is held). Forward = Ctrl+Tab, backward = Ctrl+Shift+Tab. MRU-ordered like Alt+Tab.
+    /// Driven from a window-level handler so it works no matter where focus is.
+    /// </summary>
+    public void ShowOrAdvanceDocumentSwitcher(bool forward)
+    {
+        var open = _documents.Documents;
+        if (open.Count < 2) return;
+
+        if (!DocumentSwitcher.IsOpen)
+        {
+            // Refresh MRU: drop closed docs, append any open ones not seen yet.
+            _mru.RemoveAll(d => !open.Contains(d));
+            foreach (var d in open) if (!_mru.Contains(d)) _mru.Add(d);
+            var ordered = _mru.Where(open.Contains).ToList();
+
+            DocumentSwitcher.Items.Clear();
+            foreach (var d in ordered)
+                DocumentSwitcher.Items.Add(new DocumentSwitcherItem(d, d.Title, FolderOf(d.FilePath)));
+
+            // Index 0 is the current document; start on the previous (forward) or last (backward).
+            _switcherIndex = forward ? 1 : DocumentSwitcher.Items.Count - 1;
+            DocumentSwitcher.IsOpen = true;
+        }
+        else
+        {
+            int n = DocumentSwitcher.Items.Count;
+            _switcherIndex = forward ? (_switcherIndex + 1) % n : (_switcherIndex - 1 + n) % n;
+        }
+        HighlightSwitcher();
+    }
+
+    private void HighlightSwitcher()
+    {
+        for (int i = 0; i < DocumentSwitcher.Items.Count; i++)
+            DocumentSwitcher.Items[i].IsSelected = i == _switcherIndex;
+    }
+
+    /// <summary>Activates the highlighted document and closes the overlay (Ctrl released).</summary>
+    public void CommitDocumentSwitcher()
+    {
+        if (!DocumentSwitcher.IsOpen) return;
+        DocumentSwitcher.IsOpen = false;
+        if (_switcherIndex >= 0 && _switcherIndex < DocumentSwitcher.Items.Count)
+        {
+            var target = DocumentSwitcher.Items[_switcherIndex].Document;
+            OnUiThread(() => _factory.OpenDocument(target));
+        }
+        DocumentSwitcher.Items.Clear();
+    }
+
+    /// <summary>Closes the overlay without switching (Escape).</summary>
+    public void CancelDocumentSwitcher()
+    {
+        DocumentSwitcher.IsOpen = false;
+        DocumentSwitcher.Items.Clear();
+    }
+
+    private static string FolderOf(string path)
+    {
+        try { return System.IO.Path.GetDirectoryName(path) ?? string.Empty; }
+        catch { return string.Empty; }
     }
 
     // Localized menu labels.
@@ -292,6 +360,7 @@ public partial class MainWindowViewModel : ViewModelBase
         GeneratedFilesToolViewModel generatedFilesTool,
         XviToolViewModel xviTool,
         OutlineToolViewModel outlineTool,
+        ProjectToolViewModel projectTool,
         SettingsToolViewModel settingsTool,
         IModelEditService? editService = null,
         ILayoutService? layout = null,
@@ -323,7 +392,9 @@ public partial class MainWindowViewModel : ViewModelBase
         GeneratedFilesTool = generatedFilesTool;
         XviTool = xviTool;
         OutlineTool = outlineTool;
+        ProjectTool = projectTool;
         SettingsTool = settingsTool;
+        Breadcrumb = new BreadcrumbViewModel(_documents);   // PROJ-08
 
         Layout = _factory.CreateLayout();
         _factory.InitLayout(Layout);
@@ -333,6 +404,8 @@ public partial class MainWindowViewModel : ViewModelBase
         // the document to the dock — which mutates UI-bound VisibleDockables — must be
         // marshalled to the UI thread.
         _documents.OpenInDockRequested += (_, doc) => OnUiThread(() => _factory.OpenDocument(doc));
+        // Track most-recently-used documents for the Ctrl+Tab switcher (#2).
+        _documents.ActiveDocumentChanged += (_, _) => OnUiThread(TouchMru);
         _factory.ActiveDockableChanged += (_, e) =>
         {
             if (e.Dockable is FileDocumentViewModel doc) _documents.SetActive(doc);
@@ -396,6 +469,7 @@ public partial class MainWindowViewModel : ViewModelBase
         new GeneratedFilesToolViewModel(new BuildViewModel()),
         new XviToolViewModel(new XviReferencesViewModel()),
         new OutlineToolViewModel(new OutlineViewModel()),
+        new ProjectToolViewModel(new ProjectDashboardViewModel(), new SurveyTreeViewModel(), new ProjectAuditViewModel()),
         new SettingsToolViewModel(new SettingsViewModel(), new KeyboardShortcutsViewModel()))
     {
         // Designer-only.
@@ -409,6 +483,7 @@ public partial class MainWindowViewModel : ViewModelBase
         new GeneratedFilesToolViewModel(new BuildViewModel()),
         new XviToolViewModel(new XviReferencesViewModel()),
         new OutlineToolViewModel(new OutlineViewModel()),
+        new ProjectToolViewModel(new ProjectDashboardViewModel(), new SurveyTreeViewModel(), new ProjectAuditViewModel()),
         new SettingsToolViewModel(new SettingsViewModel(), new KeyboardShortcutsViewModel()));
 
     /// <summary>Wires the storage picker once the View is attached to a TopLevel.</summary>
@@ -589,6 +664,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand] private void ToggleDiagnostics()       => Activate(DiagnosticsTool);
     [RelayCommand] private void ToggleObjectBrowser()     => Activate(ObjectBrowserTool);
     [RelayCommand] private void ToggleOutline()           => Activate(OutlineTool); // EDIT-09
+    [RelayCommand] private void ToggleProject()           => Activate(ProjectTool); // PROJ-02/03/07
     [RelayCommand] private void ToggleSettings()          => Activate(SettingsTool);
 
     /// <summary>EDIT-09 gate (compile-time flag + runtime setting) — drives the Outline menu/toolbar entry.</summary>
@@ -776,6 +852,7 @@ public partial class MainWindowViewModel : ViewModelBase
         StatusCaretLine = span.Start.Line;
         StatusCaretCol = span.Start.Column;
         StatusCaretPos = span.StartOffset;
+        Breadcrumb.Update(_documents.Active?.DocumentText, span.StartOffset);   // PROJ-08
     }
 
     private static int CountLines(string text)

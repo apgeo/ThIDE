@@ -46,6 +46,7 @@ public sealed class DockFactory : Factory
     private readonly GeneratedFilesToolViewModel _generatedFiles;
     private readonly XviToolViewModel _xvi;
     private readonly OutlineToolViewModel _outline;
+    private readonly ProjectToolViewModel _project;
     private readonly SettingsToolViewModel _settings;
 
     private IRootDock? _rootDock;
@@ -61,6 +62,7 @@ public sealed class DockFactory : Factory
         GeneratedFilesToolViewModel generatedFiles,
         XviToolViewModel xvi,
         OutlineToolViewModel outline,
+        ProjectToolViewModel project,
         SettingsToolViewModel settings,
         TherionProc.Services.ILayoutService? layoutState = null,
         ILogger<DockFactory>? logger = null)
@@ -72,6 +74,7 @@ public sealed class DockFactory : Factory
         _generatedFiles = generatedFiles;
         _xvi = xvi;
         _outline = outline;
+        _project = project;
         _settings = settings;
         _layoutState = layoutState;
         _logger = logger;
@@ -184,7 +187,8 @@ public sealed class DockFactory : Factory
             Title = "LeftTools",
             Alignment = Alignment.Left,
             Proportion = st.LeftProportion,
-            VisibleDockables = CreateList<IDockable>(_workspace),
+            // Workspace explorer + the PROJ-02/03/07 "Project" pane (dashboard / surveys / audit).
+            VisibleDockables = CreateList<IDockable>(_workspace, _project),
             ActiveDockable = _workspace,
         };
 
@@ -259,6 +263,7 @@ public sealed class DockFactory : Factory
         ["GeneratedFiles"] = _generatedFiles,
         ["Xvi"]            = _xvi,
         ["Outline"]        = _outline,
+        ["Project"]        = _project,
         ["Settings"]       = _settings,
     };
 
@@ -575,6 +580,7 @@ public sealed class DockFactory : Factory
             ["GeneratedFiles"] = () => _generatedFiles,
             ["Xvi"]            = () => _xvi,
             ["Outline"]        = () => _outline,
+            ["Project"]        = () => _project,
             ["Settings"]       = () => _settings,
         };
 

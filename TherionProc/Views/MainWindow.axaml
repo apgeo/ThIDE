@@ -67,6 +67,20 @@
             <Setter Property="Width" Value="17" />
             <Setter Property="Height" Value="17" />
         </Style>
+
+        <!-- PROJ-08: flat link-style segments for the @-qualified-name breadcrumb. -->
+        <Style Selector="Button.crumb">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="2,0" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="#1565C0" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Button.crumb:pointerover">
+            <Setter Property="TextBlock.TextDecorations" Value="Underline" />
+        </Style>
     </Window.Styles>
 
     <DockPanel>
@@ -89,6 +103,7 @@
                 <Separator />
                 <MenuItem Header="{Binding MenuViewObjectBrowser}" Command="{Binding ToggleObjectBrowserCommand}" />
                 <MenuItem Header="{Binding MenuViewWorkspace}" Command="{Binding ToggleWorkspaceExplorerCommand}" />
+                <MenuItem Header="Project (Dashboard / Surveys / Audit)" Command="{Binding ToggleProjectCommand}" />
                 <MenuItem Header="{Binding MenuViewDiagnostics}" Command="{Binding ToggleDiagnosticsCommand}" />
                 <!-- EDIT-09: document outline (hidden when the feature is disabled). -->
                 <MenuItem Header="Outline" Command="{Binding ToggleOutlineCommand}"
@@ -318,6 +333,28 @@
                                IsVisible="{Binding Build.LastBuildHasWarnings}" />
                 </StackPanel>
 
+                <!-- PROJ-08: clickable @-qualified-name breadcrumb of the token under the caret. -->
+                <ItemsControl DockPanel.Dock="Left" Margin="12,0,0,0" VerticalAlignment="Center"
+                              x:CompileBindings="False"
+                              IsVisible="{Binding Breadcrumb.HasBreadcrumb}"
+                              ItemsSource="{Binding Breadcrumb.Segments}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal">
+                                <Button Classes="crumb" Content="{Binding Text}"
+                                        Command="{Binding $parent[ItemsControl].DataContext.Breadcrumb.NavigateCommand}"
+                                        CommandParameter="{Binding}"
+                                        ToolTip.Tip="{Binding NavToken}" />
+                                <TextBlock Text="›" Foreground="Gray" Margin="2,0" VerticalAlignment="Center"
+                                           IsVisible="{Binding !IsLast}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="0"
                             IsVisible="{Binding HasStatusFile}">
                     <StackPanel.Styles>
@@ -380,6 +417,43 @@
                  MainWindowViewModel.QuickPick is set; its own DataContext is that VM. -->
             <qp:QuickPickOverlay DataContext="{Binding QuickPick}"
                                  IsVisible="{Binding Converter={x:Static ac:ObjectConverters.IsNotNull}}" />
+
+            <!-- Ctrl+Tab document switcher overlay (#2): MRU list, opaque box, highlighted entry.
+                 Shown while Ctrl is held; Ctrl-release activates the highlighted document. -->
+            <Border IsVisible="{Binding DocumentSwitcher.IsOpen}" Background="#33000000">
+                <Border Width="480" MaxHeight="440" VerticalAlignment="Center" HorizontalAlignment="Center"
+                        Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}"
+                        BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1"
+                        CornerRadius="6" BoxShadow="0 8 24 0 #50000000" Padding="6">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Text="Open documents  —  Ctrl+Tab"
+                                   Foreground="Gray" FontSize="11" Margin="8,4,8,6" />
+                        <ItemsControl ItemsSource="{Binding DocumentSwitcher.Items}">
+                            <ItemsControl.Styles>
+                                <Style Selector="Border.swItem">
+                                    <Setter Property="Background" Value="Transparent" />
+                                </Style>
+                                <Style Selector="Border.swItem.selected">
+                                    <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+                                </Style>
+                            </ItemsControl.Styles>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:DocumentSwitcherItem">
+                                    <Border Classes="swItem" Classes.selected="{Binding IsSelected}"
+                                            CornerRadius="4" Padding="8,5" Margin="0,1">
+                                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                            <PathIcon Data="{DynamicResource Icon.File}" Width="14" Height="14" />
+                                            <TextBlock Text="{Binding Title}" VerticalAlignment="Center" />
+                                            <TextBlock Text="{Binding Detail}" Foreground="Gray" FontSize="11"
+                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </DockPanel>
+                </Border>
+            </Border>
 
             <!-- Startup loading overlay with a spinning glyph (#14). -->
             <Border IsVisible="{Binding IsLoading}" Background="#66000000">

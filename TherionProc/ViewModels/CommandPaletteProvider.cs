@@ -95,6 +95,7 @@ public sealed class CommandPaletteProvider
         list.Add(VmCmd("View", "Toggle Workspace", _vm.ToggleWorkspaceExplorerCommand, "Icon.Folder"));
         list.Add(VmCmd("View", "Toggle Diagnostics", _vm.ToggleDiagnosticsCommand, "Icon.Search"));
         list.Add(VmCmd("View", "Toggle Outline", _vm.ToggleOutlineCommand, "Icon.Map"));
+        list.Add(VmCmd("View", "Toggle Project (Dashboard / Surveys / Audit)", _vm.ToggleProjectCommand, "Icon.NodeGraph"));
         list.Add(VmCmd("View", "Split Editor (Float)", _vm.SplitEditorCommand, "Icon.File"));
         list.Add(VmCmd("View", "Reset Layout", _vm.ResetLayoutCommand, "Icon.Folder"));
         list.Add(VmCmd("View", "Float Active Document", _vm.FloatActiveDocumentCommand, "Icon.File"));

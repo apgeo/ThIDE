@@ -43,6 +43,8 @@ public partial class MainWindow : Window
         // focused child (the dock tab-strip, toolbar, menu, editor) can swallow it — otherwise it
         // only works while the editor is focused and dies once focus lands on the toolbar (#4).
         AddHandler(KeyDownEvent, OnTunnelKeyDown, Avalonia.Interactivity.RoutingStrategies.Tunnel);
+        // Ctrl release commits the switcher selection (Alt+Tab style); also tunnelled.
+        AddHandler(KeyUpEvent, OnTunnelKeyUp, Avalonia.Interactivity.RoutingStrategies.Tunnel);
         Opened += (_, _) =>
         {
             if (DataContext is MainWindowViewModel vm)
@@ -282,13 +284,33 @@ public partial class MainWindow : Window
         if (confirmed) await vm.OpenFolderPathAsync(path);
     }
 
-    // Global Ctrl+Tab / Ctrl+Shift+Tab editor-document switcher (#4). Tunnel phase = focus-agnostic.
+    // Global Ctrl+Tab / Ctrl+Shift+Tab editor-document switcher overlay (#2/#4). Tunnel phase =
+    // focus-agnostic, so it works whether the editor, toolbar, menu or a panel has focus.
     private void OnTunnelKeyDown(object? sender, KeyEventArgs e)
     {
-        if (e.Key != Key.Tab || (e.KeyModifiers & KeyModifiers.Control) == 0) return;
-        bool forward = (e.KeyModifiers & KeyModifiers.Shift) == 0;
-        (DataContext as MainWindowViewModel)?.SwitchDocument(forward);
-        e.Handled = true;
+        if (DataContext is not MainWindowViewModel vm) return;
+
+        // Escape dismisses the switcher without changing the active document.
+        if (e.Key == Key.Escape && vm.DocumentSwitcher.IsOpen)
+        {
+            vm.CancelDocumentSwitcher();
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Key == Key.Tab && (e.KeyModifiers & KeyModifiers.Control) != 0)
+        {
+            bool forward = (e.KeyModifiers & KeyModifiers.Shift) == 0;
+            vm.ShowOrAdvanceDocumentSwitcher(forward);
+            e.Handled = true;
+        }
+    }
+
+    // Releasing Ctrl commits the switcher's highlighted document (Alt+Tab style).
+    private void OnTunnelKeyUp(object? sender, KeyEventArgs e)
+    {
+        if (e.Key is Key.LeftCtrl or Key.RightCtrl)
+            (DataContext as MainWindowViewModel)?.CommitDocumentSwitcher();
     }
 
     protected override void OnKeyDown(KeyEventArgs e)

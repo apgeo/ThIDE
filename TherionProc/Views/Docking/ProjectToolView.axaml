@@ -1,0 +1,152 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:TherionProc.ViewModels.Docking"
+             x:Class="TherionProc.Views.Docking.ProjectToolView"
+             x:CompileBindings="False"
+             x:DataType="vm:ProjectToolViewModel">
+    <UserControl.Styles>
+        <!-- Flat clickable row used by the audit lists. -->
+        <Style Selector="Button.row">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="6,3" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="TextBlock.h">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,10,0,3" />
+        </Style>
+        <Style Selector="TextBlock.k">
+            <Setter Property="Foreground" Value="Gray" />
+            <Setter Property="Width" Value="130" />
+        </Style>
+    </UserControl.Styles>
+
+    <TabControl>
+        <!-- PROJ-07 — Dashboard -->
+        <TabItem Header="Dashboard">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="12" Spacing="4">
+                    <TextBlock Text="{Binding Dashboard.ProjectName}" FontSize="18" FontWeight="Bold" />
+                    <Grid ColumnDefinitions="130,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" Margin="0,8,0,0">
+                        <TextBlock Grid.Row="0" Grid.Column="0" Classes="k" Text="Entry config" />
+                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Dashboard.EntryConfig}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Row="1" Grid.Column="0" Classes="k" Text="Files" />
+                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Dashboard.FileSummary}" />
+                        <TextBlock Grid.Row="2" Grid.Column="0" Classes="k" Text="Surveys" />
+                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Dashboard.SurveySummary}" />
+                        <TextBlock Grid.Row="3" Grid.Column="0" Classes="k" Text="Stations" />
+                        <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Dashboard.StationsText}" />
+                        <TextBlock Grid.Row="4" Grid.Column="0" Classes="k" Text="Total length" />
+                        <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding Dashboard.LengthText}" FontWeight="SemiBold" />
+                        <TextBlock Grid.Row="5" Grid.Column="0" Classes="k" Text="Depth" />
+                        <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding Dashboard.DepthText}" />
+                        <TextBlock Grid.Row="6" Grid.Column="0" Classes="k" Text="Entrances" />
+                        <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding Dashboard.EntrancesText}" />
+                        <TextBlock Grid.Row="7" Grid.Column="0" Classes="k" Text="Diagnostics" />
+                        <TextBlock Grid.Row="7" Grid.Column="1" Text="{Binding Dashboard.DiagnosticsText}" />
+                    </Grid>
+
+                    <Border Height="1" Background="{DynamicResource ControlStrokeColorDefaultBrush}" Margin="0,12" />
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Classes="k" Text="Last build" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding Dashboard.BuildStatus}" VerticalAlignment="Center" />
+                    </StackPanel>
+
+                    <TextBlock Classes="h" Text="Quick actions" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="Build" Command="{Binding Dashboard.Build.BuildCommand}" />
+                        <Button Content="Open output folder" Command="{Binding Dashboard.Build.OpenLastOutputFolderCommand}" />
+                        <Button Content="Refresh" Command="{Binding Dashboard.RefreshCommand}" />
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+        </TabItem>
+
+        <!-- PROJ-03 — Survey tree -->
+        <TabItem Header="Surveys">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Top" Margin="8,6" Foreground="Gray"
+                           Text="No surveys in the project yet."
+                           IsVisible="{Binding Surveys.IsEmpty}" />
+                <TreeView ItemsSource="{Binding Surveys.Roots}"
+                          SelectedItem="{Binding Surveys.Selected, Mode=TwoWay}">
+                    <TreeView.ItemTemplate>
+                        <TreeDataTemplate ItemsSource="{Binding Children}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Text="▣" Foreground="#1565C0" />
+                                <TextBlock Text="{Binding Name}" />
+                                <TextBlock Text="{Binding Counts}" Foreground="Gray" FontSize="11"
+                                           VerticalAlignment="Center" />
+                            </StackPanel>
+                        </TreeDataTemplate>
+                    </TreeView.ItemTemplate>
+                </TreeView>
+            </DockPanel>
+        </TabItem>
+
+        <!-- PROJ-02 — Orphan / dead-file audit -->
+        <TabItem Header="Audit">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="8,6">
+                    <Button Content="Re-scan" Command="{Binding Audit.RefreshCommand}" />
+                    <TextBlock Text="{Binding Audit.Summary}" Foreground="Gray" VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="8,0,8,8">
+                        <TextBlock Classes="h" Text="Orphan files (not reachable from any entry point)" />
+                        <ItemsControl ItemsSource="{Binding Audit.OrphanFiles}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Classes="row" Command="{Binding $parent[ItemsControl].DataContext.Audit.OpenCommand}"
+                                            CommandParameter="{Binding}">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <TextBlock Text="{Binding Title}" />
+                                            <TextBlock Text="{Binding Detail}" Foreground="Gray" FontSize="11"
+                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <TextBlock Classes="h" Text="Unreferenced scraps (not in any map)" />
+                        <ItemsControl ItemsSource="{Binding Audit.UnreferencedScraps}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Classes="row" Command="{Binding $parent[ItemsControl].DataContext.Audit.OpenCommand}"
+                                            CommandParameter="{Binding}">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <TextBlock Text="{Binding Title}" />
+                                            <TextBlock Text="{Binding Detail}" Foreground="Gray" FontSize="11"
+                                                       VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <TextBlock Classes="h" Text="Unexported maps (declared but not selected)" />
+                        <ItemsControl ItemsSource="{Binding Audit.UnexportedMaps}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Classes="row" Command="{Binding $parent[ItemsControl].DataContext.Audit.OpenCommand}"
+                                            CommandParameter="{Binding}">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <TextBlock Text="{Binding Title}" />
+                                            <TextBlock Text="{Binding Detail}" Foreground="Gray" FontSize="11"
+                                                       VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+            </DockPanel>
+        </TabItem>
+    </TabControl>
+</UserControl>

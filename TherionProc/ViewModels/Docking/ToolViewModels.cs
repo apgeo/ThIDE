@@ -89,6 +89,30 @@ public sealed class OutlineToolViewModel : ToolViewModelBase
         : base("Outline", "Outline", lang) => Outline = outline;
 }
 
+/// <summary>PROJ-02/03/07: a single "Project" pane with Dashboard / Surveys / Audit tabs.</summary>
+public sealed class ProjectToolViewModel : ToolViewModelBase
+{
+    [JsonIgnore] public ProjectDashboardViewModel Dashboard { get; }
+    [JsonIgnore] public SurveyTreeViewModel Surveys { get; }
+    [JsonIgnore] public ProjectAuditViewModel Audit { get; }
+
+    public ProjectToolViewModel() : base("Project", "Project")
+    {
+        Dashboard = null!;
+        Surveys = null!;
+        Audit = null!;
+    }
+
+    public ProjectToolViewModel(ProjectDashboardViewModel dashboard, SurveyTreeViewModel surveys,
+        ProjectAuditViewModel audit, ILanguageService? lang = null)
+        : base("Project", "Project", lang)
+    {
+        Dashboard = dashboard;
+        Surveys = surveys;
+        Audit = audit;
+    }
+}
+
 public sealed class XviToolViewModel : ToolViewModelBase
 {
     [JsonIgnore] public XviReferencesViewModel Xvi { get; }
