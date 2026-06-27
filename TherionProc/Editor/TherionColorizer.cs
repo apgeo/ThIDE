@@ -90,11 +90,18 @@ public sealed class TherionColorizer : DocumentColorizingTransformer
     public void SetSkipLines(HashSet<int>? lines) =>
         _skipLines = lines is { Count: > 0 } ? lines : null;
 
+    // PERF-04: skip syntax highlighting on pathologically long lines (e.g. a single huge
+    // surface/data row). Tokenizing + per-token ChangeLinePart on a multi-thousand-char line
+    // stalls scrolling, and caching the whole line as a dictionary key wastes memory. Such a
+    // line renders as plain text instead.
+    private const int MaxHighlightLineLength = 2000;
+
     protected override void ColorizeLine(DocumentLine line)
     {
         if (_skipLines is not null && _skipLines.Contains(line.LineNumber)) return;
 
         var doc = CurrentContext.Document;
+        if (line.Length > MaxHighlightLineLength) return;   // PERF-04
         var lineText = doc.GetText(line);
         if (string.IsNullOrEmpty(lineText)) return;
 
