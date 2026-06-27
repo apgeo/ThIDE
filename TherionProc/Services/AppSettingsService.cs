@@ -57,6 +57,8 @@ public sealed record AppSettings
     public bool RestoreSessionOnStartup { get; init; } = true;
     /// <summary>Absolute paths of files open at last shutdown (most-recent active last).</summary>
     public IReadOnlyList<string> LastSessionFiles { get; init; } = Array.Empty<string>();
+    /// <summary>QOL-10: last caret offset per open file, restored when the tab reopens.</summary>
+    public IReadOnlyDictionary<string, int> SessionCaretOffsets { get; init; } = new Dictionary<string, int>();
     /// <summary>Recently-opened files, most-recent first; grouped per type in the menu (#8).</summary>
     public IReadOnlyList<string> RecentFiles { get; init; } = Array.Empty<string>();
     /// <summary>Pinned recent files (QOL-05): shown in their own group and never cleared by "Clear Recent".</summary>

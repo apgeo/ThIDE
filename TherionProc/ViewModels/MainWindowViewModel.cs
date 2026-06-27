@@ -649,7 +649,14 @@ public partial class MainWindowViewModel : ViewModelBase
                 }
                 // Each open swaps the file into its saved tab slot (dock/float/order) when a
                 // restore placeholder is holding it; otherwise it lands in the main well.
-                try { await _documents.OpenFileAsync(path).ConfigureAwait(true); loaded++; }
+                try
+                {
+                    await _documents.OpenFileAsync(path).ConfigureAwait(true); loaded++;
+                    // QOL-10: restore the caret offset so the tab reopens where it was left.
+                    if (s?.SessionCaretOffsets is { } carets && carets.TryGetValue(path, out var off) && off > 0 &&
+                        _documents.Documents.FirstOrDefault(d => string.Equals(d.FilePath, path, StringComparison.OrdinalIgnoreCase)) is { } reopened)
+                        reopened.SavedCaretOffset = off;
+                }
                 catch (Exception ex) { _log?.Warning($"Failed to load '{path}': {ex.Message}"); }
             }
             if (loaded > 0) _log?.Info($"Restored {loaded} file(s) from the last session.");
@@ -724,16 +731,20 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         if (_settings is null) return;
         var paths = new System.Collections.Generic.List<string>();
+        // QOL-10: also remember each tab's caret offset so it restores where the user left off.
+        var carets = new System.Collections.Generic.Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         foreach (var doc in _documents.Documents)
         {
-            if (!string.IsNullOrEmpty(doc.FilePath) && System.IO.File.Exists(doc.FilePath))
-                paths.Add(doc.FilePath);
+            if (string.IsNullOrEmpty(doc.FilePath) || !System.IO.File.Exists(doc.FilePath)) continue;
+            paths.Add(doc.FilePath);
+            if (doc.SavedCaretOffset > 0) carets[doc.FilePath] = doc.SavedCaretOffset;
         }
         try
         {
             _settings.Save(_settings.Current with
             {
                 LastSessionFiles = paths,
+                SessionCaretOffsets = carets,
                 LastWorkspaceRoot = _session?.RootPath,
                 LastActiveThconfig = _session?.ActiveThconfig?.FullPath,
             });
