@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using Therion.Core;
+using Therion.Semantics;
 using Therion.Syntax;
 
 if (args.Length == 0 || args[0] is "-h" or "--help")
@@ -45,14 +46,24 @@ static int Validate(string path)
     var (file, diagnostics) = ParseAny(path);
     if (file is null) return 2;
 
+    // For .th files also run the semantic binder so cross-cutting checks (data-row arity,
+    // unresolved stations, …) surface from the CLI too (EXT-01 parity).
+    var all = diagnostics;
+    var ext = Path.GetExtension(Path.GetFullPath(path)).ToLowerInvariant();
+    if (ext is ".th")
+    {
+        var model = new SemanticBinder().Bind(file);
+        all = diagnostics.AddRange(model.Diagnostics);
+    }
+
     var formatter = new RustcStyleDiagnosticFormatter();
-    foreach (var d in diagnostics)
+    foreach (var d in all)
         Console.Write(formatter.Format(d));
 
     Console.WriteLine();
-    Console.WriteLine($"{file.Children.Length} top-level node(s), {diagnostics.Length} diagnostic(s).");
+    Console.WriteLine($"{file.Children.Length} top-level node(s), {all.Length} diagnostic(s).");
 
-    foreach (var d in diagnostics)
+    foreach (var d in all)
         if (d.Severity == DiagnosticSeverity.Error) return 1;
     return 0;
 }
@@ -115,16 +126,20 @@ static (TherionFile? File, System.Collections.Immutable.ImmutableArray<Diagnosti
     var text = EncodingResolver.ReadAllText(fullPath);
     var ext = Path.GetExtension(fullPath).ToLowerInvariant();
 
-    if (ext is ".thconfig" or ".thc")
+    if (ext is ".thconfig" or ".thc" or ".thl")
     {
-        var parser = new ThconfigParser();
-        var r = parser.Parse(fullPath, text);
+        // .thl = a layout-only file, written in thconfig (layout) syntax.
+        var r = new ThconfigParser().Parse(fullPath, text);
+        return (r.Value, r.Diagnostics);
+    }
+    else if (ext is ".th2")
+    {
+        var r = new Th2Parser().Parse(fullPath, text);
         return (r.Value, r.Diagnostics);
     }
     else
     {
-        var parser = new ThParser();
-        var r = parser.Parse(fullPath, text);
+        var r = new ThParser().Parse(fullPath, text);
         return (r.Value, r.Diagnostics);
     }
 }
