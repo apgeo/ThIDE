@@ -201,8 +201,44 @@ public partial class ObjectBrowserViewModel : ViewModelBase
     {
         if (row is null || string.IsNullOrEmpty(row.NavFile) || _documents is null) return;
         var span = new SourceSpan(row.NavFile!,
-            new SourceLocation(row.NavLine, 1), new SourceLocation(row.NavLine, 1), 0, 0);
+            new SourceLocation(row.NavLine, 1), new SourceLocation(row.NavLine, 1), 0, 1);
         _ = _documents.NavigateToSpanAsync(span);
+    }
+
+    // ----- QOL-12: identifier actions from any object grid row --------------
+
+    /// <summary>The identifier and reference-kind for a row, or (null, null) when it has none.</summary>
+    private static (string? Name, Therion.Processing.Abstractions.ReferenceKind? Kind) NameAndKind(IBrowserNavRow? row) => row switch
+    {
+        StationRow s      => (s.QualifiedName, Therion.Processing.Abstractions.ReferenceKind.Station),
+        SurveyEntityRow v => (v.Name,          Therion.Processing.Abstractions.ReferenceKind.Survey),
+        ScrapEntityRow sc => (sc.Id,           null),
+        MapEntityRow m    => (m.Id,            null),
+        _                 => (null, null),
+    };
+
+    /// <summary>True when a row carries a renamable identifier (station/survey) — gates the menu item.</summary>
+    public static bool CanRename(IBrowserNavRow? row) => NameAndKind(row).Kind is not null;
+
+    /// <summary>QOL-12: find every reference to the row's identifier across the project.</summary>
+    public void FindReferences(IBrowserNavRow? row)
+    {
+        var (name, _) = NameAndKind(row);
+        if (!string.IsNullOrEmpty(name)) _documents?.RequestFindReferences(name!);
+    }
+
+    /// <summary>QOL-12: start a project-wide rename of the row's identifier (station/survey only).</summary>
+    public void RenameSymbol(IBrowserNavRow? row)
+    {
+        var (name, kind) = NameAndKind(row);
+        if (!string.IsNullOrEmpty(name) && kind is { } k) _documents?.RequestRenameSymbol(name!, k);
+    }
+
+    /// <summary>QOL-12: copy the row's qualified identifier to the clipboard.</summary>
+    public void CopyQualifiedName(IBrowserNavRow? row)
+    {
+        var (name, _) = NameAndKind(row);
+        if (!string.IsNullOrEmpty(name)) ClipboardHelper.SetText(name!);
     }
 
     private string L(string key, string fallback)
