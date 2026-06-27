@@ -9,6 +9,7 @@ using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Media.Immutable;
 using Therion.Core;
+using Therion.Semantics;
 using TherionProc.ViewModels;
 
 namespace TherionProc.Views;
@@ -31,6 +32,25 @@ public sealed class LivePreviewControl : Control
         set => SetValue(SegmentsProperty, value);
     }
 
+    // LEAD-02: lead markers overlaid on the sketch.
+    public static readonly StyledProperty<IReadOnlyList<LeadMarker>?> LeadMarkersProperty =
+        AvaloniaProperty.Register<LivePreviewControl, IReadOnlyList<LeadMarker>?>(nameof(LeadMarkers));
+
+    public IReadOnlyList<LeadMarker>? LeadMarkers
+    {
+        get => GetValue(LeadMarkersProperty);
+        set => SetValue(LeadMarkersProperty, value);
+    }
+
+    private static readonly IPen MarkerOutline = new Pen(new ImmutableSolidColorBrush(Color.FromRgb(0x20, 0x20, 0x20)), 1);
+    private static IBrush MarkerBrush(LeadKind kind) => kind switch
+    {
+        LeadKind.ContinuationFlag => new ImmutableSolidColorBrush(Color.FromRgb(0xE6, 0x51, 0x00)), // orange
+        LeadKind.CommentMarker    => new ImmutableSolidColorBrush(Color.FromRgb(0x2E, 0x7D, 0x32)), // green
+        LeadKind.Th2Point         => new ImmutableSolidColorBrush(Color.FromRgb(0x6A, 0x1B, 0x9A)), // purple
+        _                         => new ImmutableSolidColorBrush(Color.FromRgb(0xC6, 0x28, 0x28)), // dead-end red
+    };
+
     /// <summary>Raised when the user clicks (without dragging) near a leg.</summary>
     public event EventHandler<SourceSpan>? SegmentActivated;
 
@@ -42,7 +62,7 @@ public sealed class LivePreviewControl : Control
 
     static LivePreviewControl()
     {
-        AffectsRender<LivePreviewControl>(SegmentsProperty);
+        AffectsRender<LivePreviewControl>(SegmentsProperty, LeadMarkersProperty);
     }
 
     public LivePreviewControl()
@@ -91,6 +111,11 @@ public sealed class LivePreviewControl : Control
                 ctx.DrawEllipse(StationBrush, null, ToScreen(s.X2, s.Y2, size), 1.6, 1.6);
                 ctx.DrawEllipse(StationBrush, null, ToScreen(s.X1, s.Y1, size), 1.6, 1.6);
             }
+
+        // LEAD-02: lead markers on top, coloured by kind.
+        if (LeadMarkers is { } leads)
+            foreach (var m in leads)
+                ctx.DrawEllipse(MarkerBrush(m.Kind), MarkerOutline, ToScreen(m.X, m.Y, size), 4.5, 4.5);
     }
 
     private Point ToScreen(double wx, double wy, Size size) =>
@@ -136,8 +161,22 @@ public sealed class LivePreviewControl : Control
     private void ActivateAt(Point click)
     {
         var segs = Segments;
-        if (segs is null) return;
         var size = Bounds.Size;
+
+        // LEAD-02: a click near a lead marker navigates to that lead first (markers sit on top).
+        if (LeadMarkers is { } leads)
+        {
+            double bestMarker = 9.0;
+            SourceSpan? markerSpan = null;
+            foreach (var m in leads)
+            {
+                var d = Distance(click, ToScreen(m.X, m.Y, size));
+                if (d < bestMarker) { bestMarker = d; markerSpan = m.Span; }
+            }
+            if (markerSpan is { } ms) { SegmentActivated?.Invoke(this, ms); return; }
+        }
+
+        if (segs is null) return;
         double best = 8.0; // px threshold
         SourceSpan? bestSpan = null;
         foreach (var s in segs)

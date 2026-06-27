@@ -18,11 +18,15 @@ namespace TherionProc.ViewModels;
 /// <summary>A drawn leg in world coordinates (Y already flipped so north/up points up).</summary>
 public sealed record SketchSegment(double X1, double Y1, double X2, double Y2, SourceSpan Span);
 
+/// <summary>LEAD-02: a lead plotted at a station's world position, coloured by kind, click→source.</summary>
+public sealed record LeadMarker(double X, double Y, string Location, LeadKind Kind, SourceSpan Span);
+
 public sealed partial class LivePreviewViewModel : ObservableObject
 {
     private readonly IDocumentService? _documents;
 
     [ObservableProperty] private IReadOnlyList<SketchSegment> _segments = Array.Empty<SketchSegment>();
+    [ObservableProperty] private IReadOnlyList<LeadMarker> _leadMarkers = Array.Empty<LeadMarker>();   // LEAD-02
     [ObservableProperty] private bool _isElevation;
     [ObservableProperty] private string _status = "No centreline yet.";
 
@@ -64,9 +68,27 @@ public sealed partial class LivePreviewViewModel : ObservableObject
             segs.Add(new SketchSegment(x1, y1, x2, y2, shot.Span));
         }
         Segments = segs;
+        LeadMarkers = BuildLeadMarkers(pos);   // LEAD-02
         Status = segs.Count == 0
             ? "No drawable legs (need length, compass and clino)."
-            : $"{(IsElevation ? "Elevation" : "Plan")} · {segs.Count} legs (preview only — not a Therion render)";
+            : $"{(IsElevation ? "Elevation" : "Plan")} · {segs.Count} legs" +
+              (LeadMarkers.Count > 0 ? $" · {LeadMarkers.Count} lead(s)" : "") +
+              " (preview only — not a Therion render)";
+    }
+
+    // LEAD-02: project each lead whose location is a centreline station into the sketch's frame.
+    private IReadOnlyList<LeadMarker> BuildLeadMarkers(Dictionary<string, (double E, double N, double Z)> pos)
+    {
+        var leads = LeadAnalysis.Analyze(_documents?.Workspace);
+        if (leads.IsDefaultOrEmpty) return Array.Empty<LeadMarker>();
+        var markers = new List<LeadMarker>();
+        foreach (var lead in leads)
+        {
+            if (!pos.TryGetValue(lead.Location, out var p)) continue;   // th2/scrap leads aren't centreline stations
+            var (x, y) = Project(p);
+            markers.Add(new LeadMarker(x, y, lead.Location, lead.Kind, lead.Span));
+        }
+        return markers;
     }
 
     private (double X, double Y) Project((double E, double N, double Z) p) =>

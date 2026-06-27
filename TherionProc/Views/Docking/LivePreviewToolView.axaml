@@ -15,6 +15,7 @@
                            FontSize="11" TextTrimming="CharacterEllipsis" />
             </StackPanel>
         </Border>
-        <views:LivePreviewControl x:Name="Sketch" Segments="{Binding Preview.Segments}" />
+        <views:LivePreviewControl x:Name="Sketch" Segments="{Binding Preview.Segments}"
+                                  LeadMarkers="{Binding Preview.LeadMarkers}" />
     </DockPanel>
 </UserControl>
