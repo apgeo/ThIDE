@@ -87,6 +87,116 @@
             </DockPanel>
         </TabItem>
 
+        <!-- DATA-01 — Statistics -->
+        <TabItem Header="Statistics">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="8,6">
+                    <Button Content="Refresh" Command="{Binding Analytics.RefreshCommand}" />
+                    <Button Content="Copy" Command="{Binding Analytics.CopyStatisticsCommand}" />
+                    <TextBlock Text="{Binding Analytics.Summary}" Foreground="Gray" VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+                <DataGrid ItemsSource="{Binding Analytics.Statistics}" IsReadOnly="True"
+                          GridLinesVisibility="Horizontal" AutoGenerateColumns="False" HeadersVisibility="None">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Binding="{Binding Label}" Width="220" />
+                        <DataGridTextColumn Binding="{Binding Value}" Width="*" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </DockPanel>
+        </TabItem>
+
+        <!-- DATA-02 — Charts -->
+        <TabItem Header="Charts">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="10" Spacing="2">
+                    <TextBlock Classes="h" Text="Length by survey (top 30)" />
+                    <ItemsControl ItemsSource="{Binding Analytics.LengthBySurvey}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid ColumnDefinitions="180,*,90" Margin="0,1">
+                                    <TextBlock Grid.Column="0" Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
+                                    <Border Grid.Column="1" Background="#3949AB" Height="12" HorizontalAlignment="Left"
+                                            Width="{Binding BarWidth}" />
+                                    <TextBlock Grid.Column="2" Text="{Binding Value}" HorizontalAlignment="Right" Foreground="Gray" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Classes="h" Text="Length by date" />
+                    <ItemsControl ItemsSource="{Binding Analytics.LengthByDate}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid ColumnDefinitions="180,*,90" Margin="0,1">
+                                    <TextBlock Grid.Column="0" Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
+                                    <Border Grid.Column="1" Background="#00897B" Height="12" HorizontalAlignment="Left"
+                                            Width="{Binding BarWidth}" />
+                                    <TextBlock Grid.Column="2" Text="{Binding Value}" HorizontalAlignment="Right" Foreground="Gray" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </ScrollViewer>
+        </TabItem>
+
+        <!-- DATA-05 — Team & expeditions -->
+        <TabItem Header="Team">
+            <DockPanel>
+                <Button DockPanel.Dock="Top" HorizontalAlignment="Left" Margin="8,6"
+                        Content="Copy team (CSV)" Command="{Binding Analytics.CopyTeamCommand}" />
+                <Grid RowDefinitions="*,Auto,*">
+                    <DataGrid Grid.Row="0" ItemsSource="{Binding Analytics.Team}" IsReadOnly="True"
+                              GridLinesVisibility="Horizontal" AutoGenerateColumns="False">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Person" Binding="{Binding Name}" Width="*" />
+                            <DataGridTextColumn Header="Surveys" Binding="{Binding Surveys}" Width="80" />
+                            <DataGridTextColumn Header="Length" Binding="{Binding Length}" Width="100" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                    <TextBlock Grid.Row="1" Classes="h" Text="Expeditions (by date)" Margin="8,6,0,3" />
+                    <DataGrid Grid.Row="2" ItemsSource="{Binding Analytics.Expeditions}" IsReadOnly="True"
+                              GridLinesVisibility="Horizontal" AutoGenerateColumns="False">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Date" Binding="{Binding Date}" Width="120" />
+                            <DataGridTextColumn Header="Surveys" Binding="{Binding Surveys}" Width="80" />
+                            <DataGridTextColumn Header="Length" Binding="{Binding Length}" Width="100" />
+                            <DataGridTextColumn Header="Members" Binding="{Binding Members}" Width="*" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </DockPanel>
+        </TabItem>
+
+        <!-- DATA-06 — Entrances & fixed points -->
+        <TabItem Header="Entrances">
+            <DockPanel>
+                <Button DockPanel.Dock="Top" HorizontalAlignment="Left" Margin="8,6"
+                        Content="Copy (CSV)" Command="{Binding Analytics.CopyFixedPointsCommand}" />
+                <DataGrid ItemsSource="{Binding Analytics.FixedPoints}" IsReadOnly="True"
+                          GridLinesVisibility="Horizontal" CanUserSortColumns="True" AutoGenerateColumns="False">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Station" Binding="{Binding Station}" Width="*" />
+                        <DataGridTextColumn Header="Kind" Binding="{Binding Kind}" Width="120" />
+                        <DataGridTextColumn Header="Coordinates" Binding="{Binding Coordinates}" Width="220" />
+                        <DataGridTextColumn Header="CRS" Binding="{Binding Cs}" Width="90" />
+                        <DataGridTextColumn Header="Location" Binding="{Binding Location}" Width="160" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </DockPanel>
+        </TabItem>
+
+        <!-- DATA-08 — Data quality -->
+        <TabItem Header="Quality">
+            <DataGrid ItemsSource="{Binding Analytics.Quality}" IsReadOnly="True"
+                      GridLinesVisibility="Horizontal" AutoGenerateColumns="False">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Metric" Binding="{Binding Metric}" Width="*" />
+                    <DataGridTextColumn Header="Count" Binding="{Binding Count}" Width="100" />
+                </DataGrid.Columns>
+            </DataGrid>
+        </TabItem>
+
         <!-- PROJ-02 — Orphan / dead-file audit -->
         <TabItem Header="Audit">
             <DockPanel>

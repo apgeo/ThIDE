@@ -169,6 +169,7 @@ internal static class AppServices
         services.AddSingleton<SurveyTreeViewModel>();         // PROJ-03 logical survey tree
         services.AddSingleton<ProjectDashboardViewModel>();   // PROJ-07 project dashboard
         services.AddSingleton<ProjectAuditViewModel>();       // PROJ-02 orphan/dead-file audit
+        services.AddSingleton<DataAnalyticsViewModel>();      // DATA-01/02/05/06/08 analytics
         services.AddSingleton<LogViewModel>();                // #3 activity log content VM
         services.AddSingleton<LivePreviewViewModel>();        // VIS-02 live centreline preview
         services.AddSingleton<MapViewerViewModel>();          // VIS-03/05 in-app map viewer

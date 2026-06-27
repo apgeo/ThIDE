@@ -95,21 +95,25 @@ public sealed class ProjectToolViewModel : ToolViewModelBase
     [JsonIgnore] public ProjectDashboardViewModel Dashboard { get; }
     [JsonIgnore] public SurveyTreeViewModel Surveys { get; }
     [JsonIgnore] public ProjectAuditViewModel Audit { get; }
+    /// <summary>DATA-01/02/05/06/08 analytics tabs.</summary>
+    [JsonIgnore] public DataAnalyticsViewModel Analytics { get; }
 
     public ProjectToolViewModel() : base("Project", "Project")
     {
         Dashboard = null!;
         Surveys = null!;
         Audit = null!;
+        Analytics = null!;
     }
 
     public ProjectToolViewModel(ProjectDashboardViewModel dashboard, SurveyTreeViewModel surveys,
-        ProjectAuditViewModel audit, ILanguageService? lang = null)
+        ProjectAuditViewModel audit, DataAnalyticsViewModel analytics, ILanguageService? lang = null)
         : base("Project", "Project", lang)
     {
         Dashboard = dashboard;
         Surveys = surveys;
         Audit = audit;
+        Analytics = analytics;
     }
 }
 
