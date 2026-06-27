@@ -55,5 +55,7 @@ internal sealed class NullDocumentService : IDocumentService
     public FileDocumentViewModel OpenTextDocument(string displayPath, string text) =>
         throw new NotSupportedException("Designer document service cannot open documents.");
     public void CloseDocument(FileDocumentViewModel document) { }
+    public bool HasRecentlyClosed => false;
+    public Task<bool> ReopenLastClosedAsync(CancellationToken ct = default) => Task.FromResult(false);
     public void Close() { }
 }

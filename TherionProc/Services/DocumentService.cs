@@ -34,6 +34,13 @@ public interface IDocumentService
     FileDocumentViewModel OpenTextDocument(string displayPath, string text);
     void CloseDocument(FileDocumentViewModel document);
 
+    // ---- recently-closed tabs (UX-10, VSCode Ctrl+Shift+T) ----
+    /// <summary>True when there is at least one closed tab that can be reopened.</summary>
+    bool HasRecentlyClosed { get; }
+    /// <summary>Reopens the most-recently-closed file that still exists and isn't already open.
+    /// Returns true if a tab was reopened.</summary>
+    Task<bool> ReopenLastClosedAsync(CancellationToken ct = default);
+
     // ---- Legacy "current" surface (projection of Active) ----
     string? CurrentPath { get; }
     string CurrentText { get; }
@@ -95,6 +102,11 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
     private readonly IWorkspaceSession _session;
     private readonly IAppSettingsService? _settings;
     private readonly ICommandRegistry? _commands;
+    private readonly INotificationService? _notifications;   // UX-07 (file-changed-on-disk toast)
+
+    // UX-10: stack of recently-closed file paths (most-recent last) for Ctrl+Shift+T.
+    private readonly System.Collections.Generic.List<string> _recentlyClosed = new();
+    private const int MaxRecentlyClosed = 25;
 
     public ObservableCollection<FileDocumentViewModel> Documents { get; } = new();
     public FileDocumentViewModel? Active { get; private set; }
@@ -150,12 +162,14 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
     public ISymbolNavigationService? CurrentNavigation => Active?.Navigation;
 
     public DocumentService(IProjectEntryPointResolver resolver, IWorkspaceSession session,
-        IAppSettingsService? settings = null, ICommandRegistry? commands = null)
+        IAppSettingsService? settings = null, ICommandRegistry? commands = null,
+        INotificationService? notifications = null)
     {
         _resolver = resolver;
         _session = session;
         _settings = settings;
         _commands = commands;
+        _notifications = notifications;
 
         // The graph changed (active config switched, or a tracked file changed on disk):
         // re-attach it to every open document and refresh orphan banners (#4).
@@ -222,6 +236,15 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
         if (FindOpen(change.Path) is not { } doc) return;
         bool autoReload = _settings?.Current.AutoReloadExternalChanges ?? true;
         doc.NotifyExternalChange(change.TimeUtc.ToLocalTime(), change.Deleted, autoReload);
+
+        // UX-07: surface the on-disk change as a toast/bell entry. A clean file that is being
+        // silently auto-reloaded raises no toast (the editor already flashes its info banner);
+        // only conflicts (unsaved edits) and deletions are worth a notification.
+        var name = Path.GetFileName(change.Path);
+        if (change.Deleted)
+            _notifications?.Warning("File deleted", $"{name} was deleted on disk.");
+        else if (doc.IsDirty || !autoReload)
+            _notifications?.Info("File changed on disk", $"{name} was modified outside the editor.");
     }
 
     // ---- navigation history -------------------------------------------------
@@ -422,10 +445,46 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
         bool removed = Documents.Remove(doc);
         if (removed)
         {
+            RecordRecentlyClosed(doc.FilePath);   // UX-10: enable Ctrl+Shift+T reopen
             doc.Dispose(); // stop its debounced re-parse timer
             if (ReferenceEquals(Active, doc))
                 SetActive(Documents.LastOrDefault());
         }
+    }
+
+    // ---- recently-closed tabs (UX-10) ---------------------------------------
+
+    /// <summary>Pushes a just-closed file onto the reopen stack (de-duplicated, capped).</summary>
+    private void RecordRecentlyClosed(string path)
+    {
+        if (string.IsNullOrEmpty(path) || !File.Exists(path)) return; // unsaved/in-memory → nothing to reopen
+        _recentlyClosed.RemoveAll(p => string.Equals(p, path, StringComparison.OrdinalIgnoreCase));
+        _recentlyClosed.Add(path);
+        if (_recentlyClosed.Count > MaxRecentlyClosed) _recentlyClosed.RemoveAt(0);
+    }
+
+    public bool HasRecentlyClosed
+    {
+        get
+        {
+            for (int i = _recentlyClosed.Count - 1; i >= 0; i--)
+                if (File.Exists(_recentlyClosed[i]) && FindOpen(_recentlyClosed[i]) is null) return true;
+            return false;
+        }
+    }
+
+    public async Task<bool> ReopenLastClosedAsync(CancellationToken ct = default)
+    {
+        // Pop until we find a file that still exists and isn't already open again.
+        while (_recentlyClosed.Count > 0)
+        {
+            var path = _recentlyClosed[^1];
+            _recentlyClosed.RemoveAt(_recentlyClosed.Count - 1);
+            if (!File.Exists(path) || FindOpen(path) is not null) continue;
+            await OpenFileAsync(path, ct).ConfigureAwait(false);
+            return true;
+        }
+        return false;
     }
 
     private void Raise() => OnUi(() => DocumentChanged?.Invoke(this, EventArgs.Empty));
