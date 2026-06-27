@@ -3238,6 +3238,30 @@ public partial class TherionTextEditor : UserControl
 
         private void OnVisualLinesChanged(object? sender, EventArgs e) => InvalidateVisual();
 
+        // QOL-03: right-click a bookmark in the gutter to remove it.
+        protected override void OnPointerPressed(PointerPressedEventArgs e)
+        {
+            base.OnPointerPressed(e);
+            if (_service is null || string.IsNullOrEmpty(_filePath) || TextView is not { VisualLinesValid: true } tv) return;
+            if (!e.GetCurrentPoint(this).Properties.IsRightButtonPressed) return;
+
+            double y = e.GetPosition(this).Y;
+            foreach (var vl in tv.VisualLines)
+            {
+                double top = vl.GetTextLineVisualYPosition(vl.TextLines[0], VisualYPosition.TextTop) - tv.VerticalOffset;
+                if (y < top || y >= top + vl.Height) continue;
+                int line = vl.FirstDocumentLine.LineNumber;
+                foreach (var b in _service.Bookmarks)
+                    if (b.Line == line && string.Equals(b.FilePath, _filePath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        _service.RemoveBookmark(b);
+                        e.Handled = true;
+                        return;
+                    }
+                return;
+            }
+        }
+
         public override void Render(DrawingContext context)
         {
             var tv = TextView;
