@@ -28,6 +28,11 @@
 | `TH_SEM_005` | Warning | Data row column count doesn't match its reading order (LANG-05). | `SemanticBinder` |
 | `TH_SEM_006` | Error   | Data-row value isn't valid for its reading (e.g. a non-numeric length/compass/clino). | `SemanticBinder` |
 | `TH_SEM_007` | Warning | Data-row value is out of range for its reading (e.g. compass > 360°, clino > 180°). | `SemanticBinder` |
+| `TH_SEM_010` | Info    | Naming collision: the same survey/map name is declared in more than one file (DIAG-05). | `ProjectDiagnostics` |
+| `TH_SEM_011` | Warning | Loop misclosure beyond tolerance — a closed centreline loop doesn't close (DIAG-02). | `ProjectDiagnostics` |
+| `TH_SEM_012` | Warning/Info | Blunder/outlier shot: zero-length leg, self-loop, or an implausibly long leg (DIAG-03). | `ProjectDiagnostics` |
+| `TH_SEM_013` | Warning | Foresight and backsight disagree beyond tolerance (compass ±180°, clino negated) (DIAG-04). | `ProjectDiagnostics` |
+| `TH_SEM_014` | Warning | Dangling include: an `input`/`source` target was not found on disk (DIAG-06). | `ProjectDiagnostics` |
 | `TH_SEM_NAMING` | configurable | User naming-convention lint violated (LANG-13). | `NamingConventionRule` |
 
 ## XVI format (`TH_XVI_xxx`)
