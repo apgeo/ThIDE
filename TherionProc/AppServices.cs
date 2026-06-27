@@ -200,7 +200,33 @@ internal static class AppServices
 
         services.AddTransient<MainWindowViewModel>();
 
-        _provider = services.BuildServiceProvider();
+        // REL-06: fail-fast DI validation. ValidateScopes catches captive/scoped-from-root misuse;
+        // we then eagerly resolve the critical singletons so a missing/broken registration throws
+        // at startup with a clear stack rather than NRE-ing deep in the UI later. (We deliberately
+        // don't use ValidateOnBuild — it would also construct the transient MainWindowViewModel,
+        // whose ctor has start-up side effects, an extra throwaway time.)
+        _provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
+        ValidateCriticalServices(_provider);
         return _provider;
+    }
+
+    /// <summary>
+    /// REL-06: eagerly resolves the services/tool view-models the shell can't run without, so a
+    /// composition error surfaces immediately at startup. The DockFactory pulls in every dockable
+    /// tool VM, and the document/workspace/build services cover the rest of the graph.
+    /// </summary>
+    private static void ValidateCriticalServices(IServiceProvider provider)
+    {
+        provider.GetRequiredService<ILogService>();
+        provider.GetRequiredService<INotificationService>();
+        provider.GetRequiredService<ICrashRecoveryService>();
+        provider.GetRequiredService<IWorkspaceSymbolIndexStore>();
+        provider.GetRequiredService<IWorkspaceSession>();
+        provider.GetRequiredService<IDocumentService>();
+        provider.GetRequiredService<ILayoutService>();
+        provider.GetRequiredService<IAppSettingsService>();
+        provider.GetRequiredService<IKeyboardShortcutService>();
+        provider.GetRequiredService<ViewModels.BuildViewModel>();
+        provider.GetRequiredService<Docking.DockFactory>();   // resolves all tool view-models
     }
 }
