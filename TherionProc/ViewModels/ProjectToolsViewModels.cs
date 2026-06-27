@@ -328,3 +328,99 @@ public sealed partial class ProjectAuditViewModel : ObservableObject
         return at > 0 ? selectObject[..at] : selectObject;
     }
 }
+
+// ───────────────────────────── LEAD-01/03/05 — leads register ─────────────────────────────
+
+/// <summary>One row in the Leads register: a lead plus its (sidecar) lifecycle status.</summary>
+public sealed partial class LeadRow : ObservableObject
+{
+    public LeadRow(Lead lead, string status) { Lead = lead; _status = status; }
+
+    public Lead Lead { get; }
+    public string Location => Lead.Location;
+    public string Kind => Lead.KindLabel;
+    public string Description => Lead.Description;
+    public string File => System.IO.Path.GetFileName(Lead.Span.FilePath ?? string.Empty);
+    public int Line => Lead.Span.Start.Line;
+
+    /// <summary>Lifecycle status: open / checked / pushed / dead (LEAD-03).</summary>
+    [ObservableProperty] private string _status;
+}
+
+/// <summary>LEAD-01/05: the exploration-leads register, with LEAD-03 lifecycle status.</summary>
+public sealed partial class LeadsViewModel : ObservableObject
+{
+    private readonly IWorkspaceSession? _session;
+    private readonly IDocumentService? _documents;
+    private readonly ILeadStatusStore? _status;
+
+    public ObservableCollection<LeadRow> Leads { get; } = new();
+
+    [ObservableProperty] private bool _isClean;
+    [ObservableProperty] private string _summary = "—";
+
+    public LeadsViewModel() { } // design-time
+
+    public LeadsViewModel(IWorkspaceSession session, IDocumentService documents, ILeadStatusStore status)
+    {
+        _session = session;
+        _documents = documents;
+        _status = status;
+        _session.Changed += (_, _) => ProjectFormat.OnUi(Rebuild);
+        Rebuild();
+    }
+
+    [RelayCommand] private void Refresh() => Rebuild();
+
+    [RelayCommand]
+    private void Open(LeadRow? row)
+    {
+        if (row?.Lead.Span is { IsEmpty: false } span) _ = _documents?.NavigateToSpanAsync(span);
+    }
+
+    [RelayCommand] private void MarkOpen(LeadRow? row) => SetStatus(row, LeadStatusStore.Open);
+    [RelayCommand] private void MarkChecked(LeadRow? row) => SetStatus(row, "checked");
+    [RelayCommand] private void MarkPushed(LeadRow? row) => SetStatus(row, "pushed");
+    [RelayCommand] private void MarkDead(LeadRow? row) => SetStatus(row, "dead");
+
+    /// <summary>LEAD-04 lite: copy the leads list as a Markdown table for a trip sheet.</summary>
+    [RelayCommand]
+    private void CopyAsMarkdown()
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("| Location | Kind | Status | Description | File | Line |");
+        sb.AppendLine("|---|---|---|---|---|---|");
+        foreach (var r in Leads)
+            sb.AppendLine($"| {r.Location} | {r.Kind} | {r.Status} | {r.Description} | {r.File} | {r.Line} |");
+        ClipboardHelper.SetText(sb.ToString());
+    }
+
+    private void SetStatus(LeadRow? row, string status)
+    {
+        if (row is null) return;
+        _status?.Set(_session?.RootPath, row.Location, status);
+        row.Status = status;
+        UpdateSummary();
+    }
+
+    private void Rebuild()
+    {
+        Leads.Clear();
+        var model = _documents?.Workspace;
+        foreach (var lead in LeadAnalysis.Analyze(model))
+        {
+            var st = _status?.Get(_session?.RootPath, lead.Location) ?? LeadStatusStore.Open;
+            Leads.Add(new LeadRow(lead, st));
+        }
+        UpdateSummary();
+    }
+
+    private void UpdateSummary()
+    {
+        IsClean = Leads.Count == 0;
+        int open = Leads.Count(l => string.Equals(l.Status, LeadStatusStore.Open, StringComparison.OrdinalIgnoreCase));
+        Summary = IsClean
+            ? "No leads detected."
+            : $"{Leads.Count} lead(s) · {open} open";
+    }
+}

@@ -258,5 +258,38 @@
                 </ScrollViewer>
             </DockPanel>
         </TabItem>
+
+        <!-- LEAD-01/03/05 — exploration leads register -->
+        <TabItem Header="Leads">
+            <DockPanel>
+                <WrapPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="8,6" VerticalAlignment="Center">
+                    <Button Content="Re-scan" Command="{Binding Leads.RefreshCommand}" Margin="0,0,6,0" />
+                    <Button Content="Go to source" Command="{Binding Leads.OpenCommand}"
+                            CommandParameter="{Binding #LeadsGrid.SelectedItem}" Margin="0,0,6,0" />
+                    <Button Content="Checked" Command="{Binding Leads.MarkCheckedCommand}"
+                            CommandParameter="{Binding #LeadsGrid.SelectedItem}" Margin="0,0,6,0" />
+                    <Button Content="Pushed" Command="{Binding Leads.MarkPushedCommand}"
+                            CommandParameter="{Binding #LeadsGrid.SelectedItem}" Margin="0,0,6,0" />
+                    <Button Content="Dead" Command="{Binding Leads.MarkDeadCommand}"
+                            CommandParameter="{Binding #LeadsGrid.SelectedItem}" Margin="0,0,6,0" />
+                    <Button Content="Open" Command="{Binding Leads.MarkOpenCommand}"
+                            CommandParameter="{Binding #LeadsGrid.SelectedItem}" Margin="0,0,6,0" />
+                    <Button Content="Copy as Markdown" Command="{Binding Leads.CopyAsMarkdownCommand}" Margin="0,0,12,0" />
+                    <TextBlock Text="{Binding Leads.Summary}" Foreground="Gray" VerticalAlignment="Center" />
+                </WrapPanel>
+                <DataGrid x:Name="LeadsGrid" ItemsSource="{Binding Leads.Leads}" IsReadOnly="True"
+                          GridLinesVisibility="Horizontal" CanUserResizeColumns="True"
+                          CanUserSortColumns="True" AutoGenerateColumns="False">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Location" Binding="{Binding Location}" Width="*" />
+                        <DataGridTextColumn Header="Kind" Binding="{Binding Kind}" Width="150" />
+                        <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="90" />
+                        <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="2*" />
+                        <DataGridTextColumn Header="File" Binding="{Binding File}" Width="140" />
+                        <DataGridTextColumn Header="Line" Binding="{Binding Line}" Width="60" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </DockPanel>
+        </TabItem>
     </TabControl>
 </UserControl>
