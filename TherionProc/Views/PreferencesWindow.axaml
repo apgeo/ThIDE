@@ -235,6 +235,12 @@
                     <TextBlock Text="(leave all unchecked to open nothing)" Foreground="Gray" FontSize="11" />
                     <CheckBox Content="Open every matching output (otherwise just the first)"
                               IsChecked="{Binding OpenAllOutputsAfterBuild}" />
+                    <Separator Margin="0,6" />
+                    <!-- BUILD-07: compile-on-save (off by default). -->
+                    <CheckBox Content="Compile on save (rebuild the project a moment after each save)"
+                              IsChecked="{Binding CompileOnSave}" />
+                    <TextBlock Text="Debounced background build; watch the spinner and the Log panel. Off by default."
+                               Foreground="Gray" FontSize="11" />
                 </StackPanel>
 
                 <!-- External Tools (moved here from the dockable Settings panel, #13) -->

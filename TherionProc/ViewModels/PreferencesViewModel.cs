@@ -72,6 +72,7 @@ public partial class PreferencesViewModel : ObservableObject
     [ObservableProperty] private bool _openPdfAfterBuild;
     /// <summary>True = open every matching output; false = open just the first.</summary>
     [ObservableProperty] private bool _openAllOutputsAfterBuild;
+    [ObservableProperty] private bool _compileOnSave;
 
     // ---- editor behaviour ----
     [ObservableProperty] private bool _showRenamePreviewBeforeApply;
@@ -138,6 +139,7 @@ public partial class PreferencesViewModel : ObservableObject
         _open3dAfterBuild = s.Open3dAfterBuild;
         _openPdfAfterBuild = s.OpenPdfAfterBuild;
         _openAllOutputsAfterBuild = s.OpenAllOutputsAfterBuild;
+        _compileOnSave = s.CompileOnSave;
         _showRenamePreviewBeforeApply = s.ShowRenamePreviewBeforeApply;
         _maxHighlightLines = s.MaxHighlightLines;
         _maxHighlightKB = s.MaxHighlightKB;
@@ -257,6 +259,7 @@ public partial class PreferencesViewModel : ObservableObject
             Open3dAfterBuild = Open3dAfterBuild,
             OpenPdfAfterBuild = OpenPdfAfterBuild,
             OpenAllOutputsAfterBuild = OpenAllOutputsAfterBuild,
+            CompileOnSave = CompileOnSave,
             ShowRenamePreviewBeforeApply = ShowRenamePreviewBeforeApply,
             MaxHighlightLines = MaxHighlightLines,
             MaxHighlightKB = MaxHighlightKB,

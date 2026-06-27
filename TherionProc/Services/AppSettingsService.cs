@@ -99,6 +99,8 @@ public sealed record AppSettings
     public bool OpenPdfAfterBuild { get; init; }
     /// <summary>Open every matching output (true) instead of just the first one (false).</summary>
     public bool OpenAllOutputsAfterBuild { get; init; }
+    /// <summary>BUILD-07: automatically (re)build the active project a short moment after each save. Off by default.</summary>
+    public bool CompileOnSave { get; init; }
 
     // ---- large-file guards (#10) ----
     /// <summary>Skip syntax highlighting + hover features above this line count.</summary>

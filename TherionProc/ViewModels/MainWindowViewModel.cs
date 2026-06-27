@@ -714,8 +714,26 @@ public partial class MainWindowViewModel : ViewModelBase
             doc.RequestSaveCleanup(); // EDIT-14: in-place trim/final-newline (caret-preserving) before write
             await _documents.WriteCurrentTextAsync(doc.DocumentText).ConfigureAwait(true);
             StatusText = $"Saved {doc.FilePath}";
+            TriggerCompileOnSave(); // BUILD-07
         }
         catch (Exception ex) { StatusText = ex.Message; }
+    }
+
+    private System.Threading.CancellationTokenSource? _autoBuildCts;
+
+    /// <summary>BUILD-07: debounced background (re)build after a save, when the setting is on.</summary>
+    private async void TriggerCompileOnSave()
+    {
+        if (_settings?.Current.CompileOnSave != true) return;
+        _autoBuildCts?.Cancel();
+        var cts = _autoBuildCts = new System.Threading.CancellationTokenSource();
+        try { await Task.Delay(700, cts.Token).ConfigureAwait(true); }
+        catch (TaskCanceledException) { return; }
+        if (Build.BuildCommand.CanExecute(null))
+        {
+            _log?.Info("Compile-on-save: rebuilding the project.");
+            Build.BuildCommand.Execute(null);
+        }
     }
 
     // ---- navigation history (back/forward across files, #1) ----
