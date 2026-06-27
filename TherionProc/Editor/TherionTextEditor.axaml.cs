@@ -705,6 +705,34 @@ public partial class TherionTextEditor : UserControl
             FormatDocument();
             e.Handled = true;
         }
+        else if (ctrl && e.Key == Key.OemPeriod) // DIAG-01: quick-fixes / code actions
+        {
+            ShowQuickFixes();
+            e.Handled = true;
+        }
+    }
+
+    /// <summary>DIAG-01: builds line-scoped quick-fixes for the caret and shows them in a flyout.</summary>
+    public void ShowQuickFixes()
+    {
+        if (_editor?.Document is not { } doc) return;
+        var fixes = TherionCodeActions.Build(doc, _boundDiagnostics, _editor.CaretOffset, CurrentFilePath);
+        var flyout = new Avalonia.Controls.MenuFlyout { Placement = Avalonia.Controls.PlacementMode.Bottom };
+        if (fixes.Count == 0)
+        {
+            flyout.Items.Add(new Avalonia.Controls.MenuItem { Header = "No quick-fixes here", IsEnabled = false });
+        }
+        else
+        {
+            foreach (var fix in fixes)
+            {
+                var apply = fix.Apply;
+                var item = new Avalonia.Controls.MenuItem { Header = fix.Title };
+                item.Click += (_, _) => { try { apply(); } catch { /* ignore failed fix */ } };
+                flyout.Items.Add(item);
+            }
+        }
+        flyout.ShowAt(_editor.TextArea, showAtPointer: false);
     }
 
     // ----- EDIT-15 / 16 / 17: block matching, smart Enter, reading-order navigation -----

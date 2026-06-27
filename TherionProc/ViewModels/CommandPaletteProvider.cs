@@ -147,6 +147,7 @@ public sealed class CommandPaletteProvider
         list.Add(Editor("Find", ed => ed.MenuFind()));
         list.Add(Editor("Replace", ed => ed.MenuReplace()));
         list.Add(Editor("Format Document", ed => ed.FormatDocument()));
+        list.Add(Editor("Quick Fix…  (Ctrl+.)", ed => ed.ShowQuickFixes()));
         list.Add(Editor("Go to Matching Block", ed => ed.GoToMatchingBlock()));
         list.Add(Editor("Peek Definition", ed => ed.PeekDefinition()));
         list.Add(Editor("Step Into Included File", ed => ed.FollowIncludeUnderCaret()));
