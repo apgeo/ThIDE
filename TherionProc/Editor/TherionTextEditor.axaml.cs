@@ -87,6 +87,11 @@ public partial class TherionTextEditor : UserControl
     /// (find next/previous), which must not pollute the back/forward navigation history.</summary>
     public bool LastCaretMoveFromSearch { get; private set; }
 
+    /// <summary>QOL-11: in-process drag format carrying a file path from the Workspace Explorer;
+    /// dropping it on the editor inserts an <c>input</c>/<c>source</c> line for that file.</summary>
+    public static readonly Avalonia.Input.DataFormat<string> InsertPathFormat =
+        Avalonia.Input.DataFormat.CreateInProcessFormat<string>("therionproc-insert-path");
+
     /// <summary>Raised when the user requests "find all references" for an identifier (#4).</summary>
     public event EventHandler<string>? FindReferencesRequested;
 
@@ -282,6 +287,11 @@ public partial class TherionTextEditor : UserControl
         editor.TextArea.TextView.BackgroundRenderers.Add(_occurrences);
         editor.TextArea.Caret.PositionChanged += OnCaretPositionChanged;
         editor.TextArea.SelectionChanged += OnSelectionChanged;   // QOL-06 status-bar selection stats
+
+        // QOL-11: accept a file dragged from the Workspace Explorer → insert an input/source line.
+        DragDrop.SetAllowDrop(editor, true);
+        editor.AddHandler(DragDrop.DragOverEvent, OnEditorDragOver);
+        editor.AddHandler(DragDrop.DropEvent, OnEditorDrop);
 
         // EDIT-15: highlight the matching opener/closer of the block keyword under the caret.
         _matchRenderer = new MatchingBlockRenderer();
@@ -2861,6 +2871,57 @@ public partial class TherionTextEditor : UserControl
 
     /// <summary>Opens the Go-to-Line dialog (command palette, #4).</summary>
     public void MenuGoToLine() => ShowGoToLine();
+
+    // ----- QOL-11: drop a workspace file → insert an input/source line ----
+
+    private void OnEditorDragOver(object? sender, DragEventArgs e)
+    {
+        if (e.DataTransfer is { } dt && dt.Contains(InsertPathFormat))
+        {
+            e.DragEffects = DragDropEffects.Copy;
+            e.Handled = true;   // claim it so it isn't treated as an open-file drop
+        }
+    }
+
+    private void OnEditorDrop(object? sender, DragEventArgs e)
+    {
+        if (_editor is null || e.DataTransfer is not { } dt) return;
+        if (dt.TryGetValue(InsertPathFormat) is not { Length: > 0 } path) return;
+
+        var keyword = IsThconfigPath(CurrentFilePath) ? "source" : "input";
+        var line = $"{keyword} \"{RelativeToCurrent(path)}\"";
+
+        int offset = _editor.CaretOffset;
+        try
+        {
+            if (_editor.GetPositionFromPoint(e.GetPosition(_editor)) is { } pos)
+                offset = _editor.Document.GetOffset(pos.Location);
+        }
+        catch { /* fall back to the caret offset */ }
+
+        var doc = _editor.Document;
+        var docLine = doc.GetLineByOffset(offset);
+        doc.Insert(docLine.Offset, line + NewlineFor(doc));
+        e.Handled = true;
+    }
+
+    private static bool IsThconfigPath(string? path)
+    {
+        var ext = System.IO.Path.GetExtension(path ?? string.Empty);
+        return ext.Equals(".thconfig", StringComparison.OrdinalIgnoreCase)
+            || ext.Equals(".thc", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private string RelativeToCurrent(string path)
+    {
+        try
+        {
+            var dir = System.IO.Path.GetDirectoryName(CurrentFilePath);
+            var rel = string.IsNullOrEmpty(dir) ? System.IO.Path.GetFileName(path) : System.IO.Path.GetRelativePath(dir, path);
+            return rel.Replace('\\', '/');
+        }
+        catch { return System.IO.Path.GetFileName(path); }
+    }
 
     /// <summary>QOL-04: true when keyboard focus is inside the in-editor search panel (so its
     /// find-next caret moves can be kept out of the navigation history).</summary>

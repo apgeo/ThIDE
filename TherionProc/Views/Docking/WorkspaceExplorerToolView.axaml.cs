@@ -72,6 +72,37 @@ public partial class WorkspaceExplorerToolView : UserControl
         ex.ActivateCommand.Execute(node);
     }
 
+    // ----- QOL-11: drag a file node into the editor to insert an input/source line ----
+
+    private WorkspaceTreeNode? _dragNode;
+    private PointerPressedEventArgs? _dragPress;
+    private Point _dragStart;
+
+    private void OnNodePointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (!e.GetCurrentPoint(null).Properties.IsLeftButtonPressed) return;
+        var node = (sender as Control)?.DataContext as WorkspaceTreeNode;
+        if (node?.FullPath is { } p && File.Exists(p)) { _dragNode = node; _dragPress = e; _dragStart = e.GetPosition(null); }
+    }
+
+    private async void OnNodePointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (_dragNode is null || _dragPress is null) return;
+        if (!e.GetCurrentPoint(null).Properties.IsLeftButtonPressed) { _dragNode = null; _dragPress = null; return; }
+        var pos = e.GetPosition(null);
+        if (Math.Abs(pos.X - _dragStart.X) < 4 && Math.Abs(pos.Y - _dragStart.Y) < 4) return;
+
+        var node = _dragNode; var press = _dragPress;
+        _dragNode = null; _dragPress = null;
+        try
+        {
+            var data = new DataTransfer();
+            data.Add(DataTransferItem.Create(Editor.TherionTextEditor.InsertPathFormat, node.FullPath!));
+            await DragDrop.DoDragDropAsync(press, data, DragDropEffects.Copy);
+        }
+        catch { /* drag unsupported / cancelled */ }
+    }
+
     // ----- file-explorer context menu ----------------------------------------
 
     // Capture the right-clicked node (and select it) before the menu opens.
