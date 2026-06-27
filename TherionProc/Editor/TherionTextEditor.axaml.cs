@@ -2786,6 +2786,12 @@ public partial class TherionTextEditor : UserControl
         menu.Items.Add(new Separator());
         menu.Items.Add(MakeItem("Toggle Comment  Ctrl+/", ToggleLineComment));
         menu.Items.Add(new Separator());
+        // QOL-07: line operations.
+        menu.Items.Add(MakeItem("Duplicate Line(s)",      DuplicateLines));
+        menu.Items.Add(MakeItem("Move Line(s) Up",        MoveLinesUp));
+        menu.Items.Add(MakeItem("Move Line(s) Down",      MoveLinesDown));
+        menu.Items.Add(MakeItem("Sort Selected Lines",    SortSelectedLines));
+        menu.Items.Add(new Separator());
         menu.Items.Add(MakeItem("Rename Symbol…  F2",    StartRename));
         menu.Items.Add(new Separator());
         // EDIT-15 / EDIT-17: shown only when their feature is enabled (refreshed on menu open).
@@ -2862,6 +2868,89 @@ public partial class TherionTextEditor : UserControl
         foreach (var folding in _foldingManager.AllFoldings)
             folding.IsFolded = folded;
         _editor?.TextArea.TextView.Redraw();
+    }
+
+    // ----- line operations (QOL-07) --------------------------------------
+    // Duplicate, move up/down and sort the selected lines (or the caret line). Useful for
+    // hand-editing centreline `data` blocks. Lines in the affected region are rejoined with the
+    // document's newline (Therion files use a uniform EOL).
+
+    /// <summary>Duplicates the selected lines (or the caret line) directly below.</summary>
+    public void DuplicateLines()
+    {
+        if (_editor is null) return;
+        var doc = _editor.Document;
+        var (first, last) = SelectedLineRange();
+        int from = first.Offset, to = last.EndOffset;
+        var block = doc.GetText(from, to - from);
+        doc.Insert(to, NewlineFor(doc) + block);
+    }
+
+    /// <summary>Moves the selected lines (or the caret line) up by one.</summary>
+    public void MoveLinesUp() => MoveLines(-1);
+    /// <summary>Moves the selected lines (or the caret line) down by one.</summary>
+    public void MoveLinesDown() => MoveLines(+1);
+
+    private void MoveLines(int dir)
+    {
+        if (_editor is null) return;
+        var doc = _editor.Document;
+        var (first, last) = SelectedLineRange();
+        var neighbour = dir < 0 ? first.PreviousLine : last.NextLine;
+        if (neighbour is null) return;
+
+        var regionFirst = dir < 0 ? neighbour : first;
+        var regionLast = dir < 0 ? last : neighbour;
+        int regionStart = regionFirst.Offset, regionEnd = regionLast.EndOffset;
+
+        var lines = new System.Collections.Generic.List<string>();
+        for (var l = regionFirst; l is not null; l = l.NextLine)
+        {
+            lines.Add(doc.GetText(l.Offset, l.Length));
+            if (l == regionLast) break;
+        }
+
+        string nl = NewlineFor(doc);
+        int blockCount = last.LineNumber - first.LineNumber + 1;
+        if (dir < 0) { var moved = lines[0]; lines.RemoveAt(0); lines.Add(moved); }
+        else { var moved = lines[^1]; lines.RemoveAt(lines.Count - 1); lines.Insert(0, moved); }
+
+        var replacement = string.Join(nl, lines);
+        doc.Replace(regionStart, regionEnd - regionStart, replacement);
+
+        // Re-select the moved block in its new position.
+        int newStart = dir < 0 ? regionStart : regionStart + lines[0].Length + nl.Length;
+        var blockLines = lines.GetRange(dir < 0 ? 0 : 1, blockCount);
+        int blockLen = string.Join(nl, blockLines).Length;
+        _editor.Select(newStart, blockLen);
+        _editor.CaretOffset = newStart + blockLen;
+    }
+
+    /// <summary>Sorts the selected lines alphabetically (case-insensitive).</summary>
+    public void SortSelectedLines()
+    {
+        if (_editor is null || _editor.SelectionLength == 0) return;
+        var doc = _editor.Document;
+        var (first, last) = SelectedLineRange();
+        var lines = new System.Collections.Generic.List<string>();
+        for (var l = first; l is not null; l = l.NextLine)
+        {
+            lines.Add(doc.GetText(l.Offset, l.Length));
+            if (l == last) break;
+        }
+        lines.Sort(StringComparer.OrdinalIgnoreCase);
+        int start = first.Offset, end = last.EndOffset;
+        doc.Replace(start, end - start, string.Join(NewlineFor(doc), lines));
+    }
+
+    /// <summary>The first/last document lines touched by the selection (or the caret line).</summary>
+    private (AvaloniaEdit.Document.DocumentLine First, AvaloniaEdit.Document.DocumentLine Last) SelectedLineRange()
+    {
+        var doc = _editor!.Document;
+        bool hasSel = _editor.SelectionLength > 0;
+        int s = hasSel ? _editor.SelectionStart : _editor.CaretOffset;
+        int e = hasSel ? _editor.SelectionStart + _editor.SelectionLength : _editor.CaretOffset;
+        return (doc.GetLineByOffset(s), doc.GetLineByOffset(e));
     }
 
     /// <summary>

@@ -159,6 +159,11 @@ public sealed class CommandPaletteProvider
         list.Add(Editor("Toggle Comment", ed => ed.MenuToggleComment()));
         list.Add(Editor("Fold All", ed => ed.MenuFoldAll()));
         list.Add(Editor("Unfold All", ed => ed.MenuUnfoldAll()));
+        // QOL-07: line operations.
+        list.Add(Editor("Duplicate Line(s)", ed => ed.DuplicateLines()));
+        list.Add(Editor("Move Line(s) Up", ed => ed.MoveLinesUp()));
+        list.Add(Editor("Move Line(s) Down", ed => ed.MoveLinesDown()));
+        list.Add(Editor("Sort Selected Lines", ed => ed.SortSelectedLines()));
         list.Add(Editor("Add Bookmark…", ed => ed.MenuAddBookmark()));
         list.Add(Editor("Find", ed => ed.MenuFind()));
         list.Add(Editor("Replace", ed => ed.MenuReplace()));
