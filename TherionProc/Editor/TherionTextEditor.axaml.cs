@@ -2792,6 +2792,10 @@ public partial class TherionTextEditor : UserControl
         menu.Items.Add(MakeItem("Move Line(s) Down",      MoveLinesDown));
         menu.Items.Add(MakeItem("Sort Selected Lines",    SortSelectedLines));
         menu.Items.Add(new Separator());
+        // QOL-08: insert helpers.
+        menu.Items.Add(MakeItem("Insert Today's Date",    InsertDate));
+        menu.Items.Add(MakeItem("Insert Team Member",     InsertTeamMember));
+        menu.Items.Add(new Separator());
         menu.Items.Add(MakeItem("Rename Symbol…  F2",    StartRename));
         menu.Items.Add(new Separator());
         // EDIT-15 / EDIT-17: shown only when their feature is enabled (refreshed on menu open).
@@ -2951,6 +2955,35 @@ public partial class TherionTextEditor : UserControl
         int s = hasSel ? _editor.SelectionStart : _editor.CaretOffset;
         int e = hasSel ? _editor.SelectionStart + _editor.SelectionLength : _editor.CaretOffset;
         return (doc.GetLineByOffset(s), doc.GetLineByOffset(e));
+    }
+
+    // ----- insert helpers (QOL-08) ---------------------------------------
+
+    /// <summary>Inserts today's date in Therion's <c>yyyy.mm.dd</c> format at the caret.</summary>
+    public void InsertDate()
+    {
+        if (_editor is null) return;
+        ReplaceSelectionOrInsert(DateTime.Now.ToString("yyyy.MM.dd"));
+    }
+
+    /// <summary>Inserts a <c>team ""</c> line template, leaving the caret between the quotes.</summary>
+    public void InsertTeamMember()
+    {
+        if (_editor is null) return;
+        const string tpl = "team \"\"";
+        int caret = _editor.CaretOffset;
+        _editor.Document.Insert(caret, tpl);
+        _editor.CaretOffset = caret + tpl.Length - 1;   // between the quotes
+        _editor.TextArea.Focus();
+    }
+
+    private void ReplaceSelectionOrInsert(string text)
+    {
+        if (_editor is null) return;
+        if (_editor.SelectionLength > 0)
+            _editor.Document.Replace(_editor.SelectionStart, _editor.SelectionLength, text);
+        else
+            _editor.Document.Insert(_editor.CaretOffset, text);
     }
 
     /// <summary>

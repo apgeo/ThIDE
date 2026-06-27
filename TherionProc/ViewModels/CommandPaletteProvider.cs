@@ -164,6 +164,9 @@ public sealed class CommandPaletteProvider
         list.Add(Editor("Move Line(s) Up", ed => ed.MoveLinesUp()));
         list.Add(Editor("Move Line(s) Down", ed => ed.MoveLinesDown()));
         list.Add(Editor("Sort Selected Lines", ed => ed.SortSelectedLines()));
+        // QOL-08: insert helpers.
+        list.Add(Editor("Insert Today's Date", ed => ed.InsertDate()));
+        list.Add(Editor("Insert Team Member", ed => ed.InsertTeamMember()));
         list.Add(Editor("Add Bookmark…", ed => ed.MenuAddBookmark()));
         list.Add(Editor("Find", ed => ed.MenuFind()));
         list.Add(Editor("Replace", ed => ed.MenuReplace()));
