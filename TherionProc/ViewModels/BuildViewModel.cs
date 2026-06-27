@@ -274,7 +274,8 @@ public partial class BuildViewModel : ViewModelBase
         IDocumentService documents,
         IOutputArtifactCache artifactCache,
         IWorkspaceSession? session = null,
-        IAppSettingsService? settings = null)
+        IAppSettingsService? settings = null,
+        ILogService? log = null)
     {
         _compiler = compiler;
         _gate = gate;
@@ -284,8 +285,11 @@ public partial class BuildViewModel : ViewModelBase
         _artifactCache = artifactCache;
         _session = session;
         _settings = settings;
+        _log = log;
         _documents.DocumentChanged += (_, _) => RestoreLastArtifacts();
     }
+
+    private readonly ILogService? _log;
 
     public BuildViewModel() : this(
         new NullCompiler(), new CompileGate(), new ShellOpener(),
@@ -331,6 +335,7 @@ public partial class BuildViewModel : ViewModelBase
         IsBuilding = true;
         HasBuildResult = false;          // clear the previous success/error status-bar icon
         HasLog = false; LogFilePath = null;           // clear the previous build's log (#3)
+        _log?.Info($"Build started: {entry}");
         BuildStarted?.Invoke(this, EventArgs.Empty);  // surface the Compiler Output panel (#2)
         ClearOutputState();
         _cts = new CancellationTokenSource();
@@ -364,6 +369,11 @@ public partial class BuildViewModel : ViewModelBase
             Status = ok
                 ? $"Compilation succeeded ({result.Artifacts.Length} artifact(s))."
                 : $"Compilation failed (exit {result.ExitCode}).";
+            _log?.Log(
+                ok ? (warnCount > 0 ? LogVerbosity.Warning : LogVerbosity.Info) : LogVerbosity.Error,
+                ok
+                    ? $"Build succeeded: {result.Artifacts.Length} artifact(s)" + (warnCount > 0 ? $", {warnCount} warning(s)" : "")
+                    : $"Build failed (exit {result.ExitCode}, {warnCount} warning(s)).");
             CompileCompleted?.Invoke(this, result.Diagnostics);
             if (ok) AutoOpenOutputs(result.Artifacts);
         }
@@ -371,12 +381,14 @@ public partial class BuildViewModel : ViewModelBase
         {
             sw.Stop();
             Status = "Compilation cancelled.";
+            _log?.Warning("Build cancelled.");
             AddRow(new CompilerOutputRow("Compilation cancelled.", "Error", null, OutputRowKind.Summary,
                 DateTimeOffset.Now, TimeSpan.Zero, sw.Elapsed, TimeColumnMode));
         }
         catch (Exception ex)
         {
             Status = "Compilation error: " + ex.Message;
+            _log?.Error("Build error: " + ex.Message);
         }
         finally
         {

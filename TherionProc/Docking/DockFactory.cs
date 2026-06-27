@@ -47,6 +47,7 @@ public sealed class DockFactory : Factory
     private readonly XviToolViewModel _xvi;
     private readonly OutlineToolViewModel _outline;
     private readonly ProjectToolViewModel _project;
+    private readonly LogToolViewModel _log;
     private readonly SettingsToolViewModel _settings;
 
     private IRootDock? _rootDock;
@@ -63,6 +64,7 @@ public sealed class DockFactory : Factory
         XviToolViewModel xvi,
         OutlineToolViewModel outline,
         ProjectToolViewModel project,
+        LogToolViewModel log,
         SettingsToolViewModel settings,
         TherionProc.Services.ILayoutService? layoutState = null,
         ILogger<DockFactory>? logger = null)
@@ -75,6 +77,7 @@ public sealed class DockFactory : Factory
         _xvi = xvi;
         _outline = outline;
         _project = project;
+        _log = log;
         _settings = settings;
         _layoutState = layoutState;
         _logger = logger;
@@ -132,6 +135,7 @@ public sealed class DockFactory : Factory
     {
         "CompilerOutput" => _compilerOutput,
         "GeneratedFiles" => _generatedFiles,
+        "Log"            => _log,
         _                => _diagnostics,
     };
 
@@ -198,7 +202,7 @@ public sealed class DockFactory : Factory
             Title = "BottomTools",
             Alignment = Alignment.Bottom,
             Proportion = st.BottomProportion,
-            VisibleDockables = CreateList<IDockable>(_diagnostics, _compilerOutput, _generatedFiles),
+            VisibleDockables = CreateList<IDockable>(_diagnostics, _compilerOutput, _generatedFiles, _log),
             ActiveDockable = BottomTabById(st.BottomActiveTab),
         };
 
@@ -264,6 +268,7 @@ public sealed class DockFactory : Factory
         ["Xvi"]            = _xvi,
         ["Outline"]        = _outline,
         ["Project"]        = _project,
+        ["Log"]            = _log,
         ["Settings"]       = _settings,
     };
 
@@ -581,6 +586,7 @@ public sealed class DockFactory : Factory
             ["Xvi"]            = () => _xvi,
             ["Outline"]        = () => _outline,
             ["Project"]        = () => _project,
+            ["Log"]            = () => _log,
             ["Settings"]       = () => _settings,
         };
 

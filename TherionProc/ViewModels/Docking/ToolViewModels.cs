@@ -113,6 +113,15 @@ public sealed class ProjectToolViewModel : ToolViewModelBase
     }
 }
 
+/// <summary>#3: activity / diagnostics log panel (bottom dock, after Generated Files).</summary>
+public sealed class LogToolViewModel : ToolViewModelBase
+{
+    [JsonIgnore] public LogViewModel Log { get; }
+    public LogToolViewModel() : base("Log", "Log") => Log = null!;
+    public LogToolViewModel(LogViewModel log, ILanguageService? lang = null)
+        : base("Log", "Log", lang) => Log = log;
+}
+
 public sealed class XviToolViewModel : ToolViewModelBase
 {
     [JsonIgnore] public XviReferencesViewModel Xvi { get; }

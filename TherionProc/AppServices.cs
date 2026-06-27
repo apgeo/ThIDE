@@ -153,6 +153,7 @@ internal static class AppServices
 
         // Application preferences + session restore.
         services.AddSingleton<IAppSettingsService, AppSettingsService>();
+        services.AddSingleton<ILogService, LogService>();   // #3 in-app activity log
 
         // Shared content ViewModels — singletons so the same instance flows to both
         // the dockable tool wrapper (shown in the UI) and the shell (event wiring).
@@ -165,6 +166,7 @@ internal static class AppServices
         services.AddSingleton<SurveyTreeViewModel>();         // PROJ-03 logical survey tree
         services.AddSingleton<ProjectDashboardViewModel>();   // PROJ-07 project dashboard
         services.AddSingleton<ProjectAuditViewModel>();       // PROJ-02 orphan/dead-file audit
+        services.AddSingleton<LogViewModel>();                // #3 activity log content VM
         services.AddSingleton<SettingsViewModel>();
         services.AddSingleton<KeyboardShortcutsViewModel>();
         services.AddSingleton<SearchViewModel>();
@@ -179,6 +181,7 @@ internal static class AppServices
         services.AddSingleton<ViewModels.Docking.XviToolViewModel>();
         services.AddSingleton<ViewModels.Docking.OutlineToolViewModel>();
         services.AddSingleton<ViewModels.Docking.ProjectToolViewModel>();   // PROJ-02/03/07
+        services.AddSingleton<ViewModels.Docking.LogToolViewModel>();       // #3
         services.AddSingleton<ViewModels.Docking.SettingsToolViewModel>();
         services.AddSingleton<Docking.DockFactory>();
 

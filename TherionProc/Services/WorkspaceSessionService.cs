@@ -84,10 +84,13 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
     public event EventHandler<ExternalFileChange>? ExternalFileChanged;
     public event EventHandler? FileSystemChanged;
 
-    public WorkspaceSessionService(IThconfigSniffer sniffer, IAppSettingsService? settings = null)
+    private readonly ILogService? _log;
+
+    public WorkspaceSessionService(IThconfigSniffer sniffer, IAppSettingsService? settings = null, ILogService? log = null)
     {
         _sniffer = sniffer;
         _settings = settings;
+        _log = log;
     }
 
     public async Task SetRootAsync(string rootDir, CancellationToken ct = default)
@@ -104,6 +107,7 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
 
         RootPath = full;
         RootChanged?.Invoke(this, EventArgs.Empty);
+        _log?.Info($"Workspace root set: {full}");
 
         WatchRoot(full);
         RescanCandidates();
@@ -211,7 +215,7 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
 
         var ws = new TherionWorkspace();
         try { await ws.LoadAsync(full, ct).ConfigureAwait(false); }
-        catch { await ws.DisposeAsync().ConfigureAwait(false); return false; }
+        catch (Exception ex) { _log?.Error($"Failed to load thconfig '{full}': {ex.Message}"); await ws.DisposeAsync().ConfigureAwait(false); return false; }
 
         var model = ws.BuildSemanticModel();
         var old = SwapWorkspace(ws, model, full);
@@ -221,6 +225,7 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
         if (RootPath is null) { RootPath = Path.GetDirectoryName(full); RootChanged?.Invoke(this, EventArgs.Empty); WatchRoot(RootPath); }
         EnsureCandidate(full);
         RememberActiveForRoot();
+        _log?.Info($"Active thconfig: {full} ({model.PerFile.Count} .th file(s) loaded)");
         Raise();
         return true;
     }

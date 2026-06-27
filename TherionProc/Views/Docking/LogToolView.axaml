@@ -1,0 +1,34 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:TherionProc.ViewModels.Docking"
+             x:Class="TherionProc.Views.Docking.LogToolView"
+             x:CompileBindings="False"
+             x:DataType="vm:LogToolViewModel">
+    <DockPanel>
+        <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="6,3">
+            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <TextBlock Text="Level:" VerticalAlignment="Center" Foreground="Gray" FontSize="11" />
+                <ComboBox ItemsSource="{Binding Log.Levels}"
+                          SelectedItem="{Binding Log.MinLevel, Mode=TwoWay}"
+                          MinWidth="110" FontSize="11"
+                          ToolTip.Tip="Minimum level shown for new entries (does not re-filter older ones)" />
+                <Button Content="Clear" Command="{Binding Log.ClearCommand}" Padding="10,2" FontSize="11" />
+            </StackPanel>
+        </Border>
+
+        <TextBox x:Name="LogBox" Text="{Binding Log.Text}" IsReadOnly="True"
+                 AcceptsReturn="True" TextWrapping="NoWrap" FontFamily="Consolas,Menlo,monospace"
+                 FontSize="12" VerticalContentAlignment="Top" TextChanged="OnTextChanged"
+                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                 ScrollViewer.HorizontalScrollBarVisibility="Auto">
+            <TextBox.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="Copy" Click="OnCopy" />
+                    <MenuItem Header="Copy All" Click="OnCopyAll" />
+                    <Separator />
+                    <MenuItem Header="Clear" Click="OnClear" />
+                </ContextMenu>
+            </TextBox.ContextMenu>
+        </TextBox>
+    </DockPanel>
+</UserControl>
