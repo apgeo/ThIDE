@@ -22,7 +22,33 @@ public sealed record StationSymbol(
     QualifiedName Name,
     SourceSpan DeclarationSpan,
     StationDeclarationKind Kind,
-    ImmutableArray<SourceSpan> References);
+    ImmutableArray<SourceSpan> References)
+{
+    /// <summary>The station's <c>station &lt;name&gt; "comment"</c> text, if declared (LANG-04).</summary>
+    public string? Comment { get; init; }
+
+    /// <summary>
+    /// Station flags from a <c>station … &lt;flags&gt;</c> command (entrance, continuation, sink,
+    /// spring, doline, dig, arch, overhang, …). Feeds entrance/leads features (LANG-06).
+    /// </summary>
+    public ImmutableArray<string> Flags { get; init; } = ImmutableArray<string>.Empty;
+
+    /// <summary>The <c>mark</c> type assigned to this station (fixed / painted / temporary), if any.</summary>
+    public string? MarkType { get; init; }
+
+    /// <summary>True if this station carries the <c>entrance</c> flag.</summary>
+    public bool IsEntrance => HasFlag("entrance");
+
+    /// <summary>True if this station carries the <c>continuation</c> flag (an unexplored lead).</summary>
+    public bool IsContinuation => HasFlag("continuation");
+
+    private bool HasFlag(string flag)
+    {
+        foreach (var f in Flags)
+            if (string.Equals(f, flag, System.StringComparison.OrdinalIgnoreCase)) return true;
+        return false;
+    }
+}
 
 /// <summary>A survey symbol (hierarchical scope).</summary>
 public sealed record SurveySymbol(
@@ -94,6 +120,12 @@ public sealed record MapSymbol(
 {
     /// <summary>The map's <c>-title "..."</c>, if declared.</summary>
     public string? Title { get; init; }
+
+    /// <summary>The map's <c>-projection</c> (plan / extended / elevation / none), if declared.</summary>
+    public string? Projection { get; init; }
+
+    /// <summary>Ids of the scraps / sub-maps composed by this map's body (LANG-08).</summary>
+    public ImmutableArray<string> Members { get; init; } = ImmutableArray<string>.Empty;
 }
 
 /// <summary>

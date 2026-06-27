@@ -34,6 +34,11 @@ public sealed class SemanticModel : ISymbolIndex
     public FrozenDictionary<string, MapSymbol> Maps { get; init; } =
         FrozenDictionary<string, MapSymbol>.Empty;
 
+    /// <summary>
+    /// The input coordinate system declared via <c>cs &lt;system&gt;</c> in this file, if any (LANG-03).
+    /// </summary>
+    public string? InputCoordinateSystem { get; init; }
+
     public SemanticModel(
         FrozenDictionary<QualifiedName, StationSymbol> stations,
         FrozenDictionary<QualifiedName, SurveySymbol> surveys,

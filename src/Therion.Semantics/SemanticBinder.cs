@@ -7,6 +7,7 @@ using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Globalization;
+using System.Linq;
 using Therion.Core;
 using Therion.Syntax;
 
@@ -61,6 +62,7 @@ public sealed class SemanticBinder
         {
             Scraps = scraps,
             Maps = maps,
+            InputCoordinateSystem = ctx.InputCs,
         };
     }
 
@@ -76,6 +78,10 @@ public sealed class SemanticBinder
         // Flags are stateful within a centreline body, and a comment line directly
         // above a data row binds to that row. Both are tracked across this child list.
         var activeFlags = ShotFlags.None;
+        // Active angle units for compass/clino (LANG-05 value validation). A `units` command
+        // earlier in this body switches degrees↔grads↔… for the range checks that follow.
+        var compassUnit = AngleUnit.Degree;
+        var clinoUnit = AngleUnit.Degree;
         TrivialComment? pendingComment = null;
         foreach (var node in children)
         {
@@ -105,10 +111,15 @@ public sealed class SemanticBinder
                 case FlagsCommand flags:
                     activeFlags = ApplyFlags(activeFlags, flags.Tokens);
                     break;
+                case UnitsCommand units:
+                    ApplyAngleUnits(units, ref compassUnit, ref clinoUnit);
+                    break;
                 case DataCommand d:
                     currentFields = d;
                     break;
                 case DataRow row when currentFields is not null:
+                    ValidateRowArity(row, currentFields, ctx);
+                    ValidateRowValues(row, currentFields, ctx, compassUnit, clinoUnit);
                     var leading = AdjacentLeadingComment(pendingComment, row);
                     BindShot(row, currentFields, ctx, scope, activeFlags,
                         CombineComments(leading, row.TrailingComment));
@@ -119,8 +130,50 @@ public sealed class SemanticBinder
                 case MapCommand map:
                     BindMap(map, ctx);
                     break;
+                case StationCommand st:
+                    BindStationCommand(st, ctx, scope);
+                    break;
+                case MarkCommand mk:
+                    BindMark(mk, ctx, scope);
+                    break;
+                case CsCommand cs:
+                    ctx.InputCs ??= cs.System;
+                    break;
             }
             pendingComment = null;
+        }
+    }
+
+    /// <summary>
+    /// Binds a <c>station &lt;name&gt; "comment" [flags]</c> command: attaches the comment + flags
+    /// to the (possibly implicitly declared) station. Does not create a shot (LANG-04/06).
+    /// </summary>
+    private static void BindStationCommand(StationCommand st, BindContext ctx, ImmutableArray<string> scope)
+    {
+        if (string.IsNullOrEmpty(st.Station)) return;
+        var qn = QualifyLocal(st.Station, scope);
+        var existing = ctx.Stations.TryGetValue(qn, out var s)
+            ? s
+            : new StationSymbol(qn, st.Span, StationDeclarationKind.Shot, ImmutableArray<SourceSpan>.Empty);
+        ctx.Stations[qn] = existing with
+        {
+            Comment = st.Comment ?? existing.Comment,
+            Flags = st.Flags.IsDefaultOrEmpty ? existing.Flags : existing.Flags.AddRange(st.Flags),
+        };
+        ctx.Equates.Add(qn);
+    }
+
+    /// <summary>Binds a <c>mark [&lt;stations&gt;] &lt;type&gt;</c> command, tagging the listed stations.</summary>
+    private static void BindMark(MarkCommand mk, BindContext ctx, ImmutableArray<string> scope)
+    {
+        if (string.IsNullOrEmpty(mk.MarkType)) return;
+        foreach (var raw in mk.Stations)
+        {
+            var qn = QualifyLocal(raw, scope);
+            if (!ctx.Stations.TryGetValue(qn, out var s))
+                s = new StationSymbol(qn, mk.Span, StationDeclarationKind.Shot, ImmutableArray<SourceSpan>.Empty);
+            ctx.Stations[qn] = s with { MarkType = mk.MarkType };
+            ctx.Equates.Add(qn);
         }
     }
 
@@ -183,11 +236,19 @@ public sealed class SemanticBinder
         WalkChildren(scrap.Children, ctx, scope, dataFields: null);
     }
 
-    /// <summary>Records a <c>map &lt;id&gt;</c> declaration (first one wins per id).</summary>
+    /// <summary>Records a <c>map &lt;id&gt;</c> declaration (first one wins per id), with members (LANG-08).</summary>
     private static void BindMap(MapCommand map, BindContext ctx)
     {
-        if (!string.IsNullOrEmpty(map.Id) && !ctx.Maps.ContainsKey(map.Id))
-            ctx.Maps[map.Id] = new MapSymbol(map.Id, map.Span) { Title = ExtractTitle(map.OptionsRaw) };
+        if (string.IsNullOrEmpty(map.Id) || ctx.Maps.ContainsKey(map.Id)) return;
+        var memberIds = map.Members.IsDefaultOrEmpty
+            ? ImmutableArray<string>.Empty
+            : map.Members.Select(m => m.Id).ToImmutableArray();
+        ctx.Maps[map.Id] = new MapSymbol(map.Id, map.Span)
+        {
+            Title = ExtractTitle(map.OptionsRaw),
+            Projection = map.Projection,
+            Members = memberIds,
+        };
     }
 
     /// <summary>Extracts the value of a <c>-title "..."</c> option (quote-aware) from a raw option string.</summary>
@@ -283,18 +344,90 @@ public sealed class SemanticBinder
         if (group.Count > 0) ctx.EquateGroups.Add(group);
     }
 
+    /// <summary>
+    /// LANG-05: warns when a data row supplies the wrong number of columns for its declared
+    /// reading order. Skipped for interleaved / <c>ignoreall</c> styles (expected == -1).
+    /// </summary>
+    private static void ValidateRowArity(DataRow row, DataCommand data, BindContext ctx)
+    {
+        int expected = DataStyles.ExpectedColumnCount(data.Fields);
+        if (expected < 0) return; // interleaved / ignoreall → arity is open
+        if (row.Values.Length == expected) return;
+        ctx.Diagnostics.Add(Diagnostic.Create(
+            SemanticDiagnosticCodes.DataRowArity,
+            DiagnosticSeverity.Warning,
+            $"Data row has {row.Values.Length} value(s) but the '{data.Style}' reading order " +
+            $"expects {expected}.",
+            row.Span));
+    }
+
+    /// <summary>
+    /// LANG-05: validates each value of a data row against the reading declared for its column —
+    /// that a number column actually holds a number, and that compass/clino/length values fall in
+    /// range. Only runs on fully-determined fixed-arity rows (not interleaved / <c>ignoreall</c>),
+    /// so the value↔reading mapping is unambiguous.
+    /// </summary>
+    private static void ValidateRowValues(DataRow row, DataCommand data, BindContext ctx,
+        AngleUnit compassUnit, AngleUnit clinoUnit)
+    {
+        int expected = DataStyles.ExpectedColumnCount(data.Fields);
+        if (expected < 0 || row.Values.Length != expected || data.Fields.Length != row.Values.Length)
+            return;
+
+        for (int i = 0; i < row.Values.Length; i++)
+        {
+            if (DataReadingValidation.CheckValue(data.Fields[i], row.Values[i], compassUnit, clinoUnit)
+                is not { } problem)
+                continue;
+
+            var span = !row.ValueSpans.IsDefaultOrEmpty && i < row.ValueSpans.Length
+                ? row.ValueSpans[i]
+                : row.Span;
+            ctx.Diagnostics.Add(Diagnostic.Create(
+                problem.IsError ? SemanticDiagnosticCodes.DataValueInvalid : SemanticDiagnosticCodes.DataValueRange,
+                problem.IsError ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
+                problem.Message,
+                span));
+        }
+    }
+
+    /// <summary>Folds an in-body <c>units</c> command into the active compass/clino angle units.</summary>
+    private static void ApplyAngleUnits(UnitsCommand units, ref AngleUnit compassUnit, ref AngleUnit clinoUnit)
+    {
+        if (MeasurementUnits.TryAngle(units.Unit) is not { } angle) return;
+        foreach (var q in units.Quantities)
+        {
+            switch (q.ToLowerInvariant())
+            {
+                case "compass" or "bearing" or "backcompass" or "backbearing":
+                    compassUnit = angle; break;
+                case "clino" or "gradient" or "backclino" or "backgradient":
+                    clinoUnit = angle; break;
+            }
+        }
+    }
+
     private void BindShot(DataRow row, DataCommand data, BindContext ctx, ImmutableArray<string> scope,
         ShotFlags flags, string? comment)
     {
-        int fromIdx = IndexOf(data.Fields, "from");
-        int toIdx   = IndexOf(data.Fields, "to");
+        var (fromIdx, toIdx) = DataStyles.FindFromTo(data.Fields);
         if (fromIdx < 0 || toIdx < 0) return;
         if (row.Values.Length <= Math.Max(fromIdx, toIdx)) return;
 
-        var from = QualifyLocal(row.Values[fromIdx], scope);
-        var to   = QualifyLocal(row.Values[toIdx],   scope);
-        DeclareImplicit(ctx, from, row.Span);
-        DeclareImplicit(ctx, to,   row.Span);
+        // A '.' or '-' endpoint is not a station: the shot is a splay (one real station + a
+        // ray to a feature/wall). Don't create a phantom station for the marker, and tag the
+        // shot as a splay so connectivity skips it (it doesn't extend the survey skeleton).
+        var fromRaw = row.Values[fromIdx];
+        var toRaw   = row.Values[toIdx];
+        bool fromSplay = IsSplayMarker(fromRaw);
+        bool toSplay   = IsSplayMarker(toRaw);
+
+        var from = fromSplay ? QualifiedName.Of(fromRaw) : QualifyLocal(fromRaw, scope);
+        var to   = toSplay   ? QualifiedName.Of(toRaw)   : QualifyLocal(toRaw,   scope);
+        if (!fromSplay) DeclareImplicit(ctx, from, row.Span);
+        if (!toSplay)   DeclareImplicit(ctx, to,   row.Span);
+
+        var effectiveFlags = fromSplay || toSplay ? flags | ShotFlags.Splay : flags;
 
         double? length = TryGet(row, data, "length");
         double? compass = TryGet(row, data, "compass");
@@ -303,10 +436,13 @@ public sealed class SemanticBinder
         {
             SourceRow = row,
             FieldDefinition = data,
-            Flags = flags,
+            Flags = effectiveFlags,
             Comment = comment,
         });
     }
+
+    /// <summary>A '.' (feature) or '-' (wall) endpoint marks the shot as a splay, not a station.</summary>
+    private static bool IsSplayMarker(string token) => token is "." or "-";
 
     private static void DeclareImplicit(BindContext ctx, QualifiedName qn, SourceSpan span)
     {
@@ -412,5 +548,7 @@ public sealed class SemanticBinder
         public EquateGraph Equates { get; } = new();
         public ImmutableArray<Diagnostic>.Builder Diagnostics { get; } = ImmutableArray.CreateBuilder<Diagnostic>();
         public List<List<(string Raw, SourceSpan Span, ImmutableArray<string> Scope)>> EquateGroups { get; } = new();
+        /// <summary>First <c>cs</c> declared in the file (input coordinate system), if any (LANG-03).</summary>
+        public string? InputCs { get; set; }
     }
 }
