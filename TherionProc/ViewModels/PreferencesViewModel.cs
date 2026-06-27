@@ -49,6 +49,8 @@ public partial class PreferencesViewModel : ObservableObject
 
     // ---- general ----
     [ObservableProperty] private bool _restoreSessionOnStartup;
+    /// <summary>REL-05: opt-in local-only telemetry / crash reports.</summary>
+    [ObservableProperty] private bool _telemetryEnabled;
     /// <summary>0 = English, 1 = Romanian (#9 selector lives in Preferences, #11).</summary>
     [ObservableProperty] private int _languageIndex;
 
@@ -138,6 +140,7 @@ public partial class PreferencesViewModel : ObservableObject
 
         var s = settings.Current;
         _restoreSessionOnStartup = s.RestoreSessionOnStartup;
+        _telemetryEnabled = s.TelemetryEnabled;
         _languageIndex = string.Equals(s.UiLanguage, "ro", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
         _editorFontSize = s.EditorFontSize;
         _indentationSize = s.IndentationSize;
@@ -269,6 +272,7 @@ public partial class PreferencesViewModel : ObservableObject
         {
             EditorFeatures = editorFeatures,
             RestoreSessionOnStartup = RestoreSessionOnStartup,
+            TelemetryEnabled = TelemetryEnabled,
             UiLanguage = code,
             EditorFontSize = EditorFontSize,
             IndentationSize = IndentationSize,

@@ -43,6 +43,9 @@ public partial class App : Application
         // which puts the app in safe mode) before any layout/session restore happens.
         services.GetRequiredService<Services.ICrashRecoveryService>().MarkRunning();
 
+        // REL-05: opt-in (off by default) anonymous, local-only usage telemetry.
+        services.GetService<Services.ITelemetryService>()?.TrackEvent("app.start");
+
         // Apply the persisted theme (mode + custom syntax colors) before the window shows (#2).
         services.GetRequiredService<Services.IThemeService>().Apply();
 
@@ -81,7 +84,11 @@ public partial class App : Application
 
     private static void OnDispatcherUnhandledException(object? sender, DispatcherUnhandledExceptionEventArgs e)
     {
-        if (IsBenignDockHoverError(e.Exception)) e.Handled = true;
+        if (IsBenignDockHoverError(e.Exception)) { e.Handled = true; return; }
+        // REL-05: write a local crash report if the user opted in (no-op otherwise). Handling is
+        // unchanged — we only record.
+        try { AppServices.Provider.GetService<Services.ITelemetryService>()?.ReportException(e.Exception, "dispatcher-unhandled"); }
+        catch { /* never let reporting mask the original failure */ }
     }
 
     // Narrowly matches the Dock.Avalonia DockControl.MovedHandler PointToScreen failure so

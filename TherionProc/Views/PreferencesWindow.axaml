@@ -70,6 +70,12 @@
                     </StackPanel>
                     <TextBlock Text="Dirty files are written automatically; the delay applies to the After-a-delay mode."
                                Foreground="Gray" FontSize="11" />
+                    <Separator Margin="0,6" />
+                    <!-- REL-05: opt-in, local-only telemetry / crash reports. -->
+                    <CheckBox Content="Record anonymous usage &amp; crash reports (stored locally, never sent)"
+                              IsChecked="{Binding TelemetryEnabled}" />
+                    <TextBlock Text="Off by default. When on, events and crash reports are written under %AppData%/TherionProc/telemetry and never leave your machine."
+                               Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
                 </StackPanel>
 
                 <!-- Theme & Colors (#2) -->

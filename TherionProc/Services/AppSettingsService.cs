@@ -81,6 +81,10 @@ public sealed record AppSettings
     /// <summary>Rebuild the object graph when a tracked file changes on disk (#5b).</summary>
     public bool AutoReloadGraphOnExternalChange { get; init; } = true;
 
+    // ---- telemetry (REL-05) ----
+    /// <summary>Opt-in: record anonymous usage events + crash reports to LOCAL files only. Off by default.</summary>
+    public bool TelemetryEnabled { get; init; }
+
     // ---- rename symbol ----
     /// <summary>Show a preview window before applying a symbol rename (#1).</summary>
     public bool ShowRenamePreviewBeforeApply { get; init; } = true;
