@@ -19,6 +19,18 @@ public static class SemanticDiagnosticCodes
     /// <summary>A user-authored naming-convention lint was violated (LANG-13).</summary>
     public const string NamingConvention    = "TH_SEM_NAMING";
 
+    // ---- project-level analysis diagnostics (DIAG-02..06) ----
+    /// <summary>A naming collision: the same survey/map name is declared in more than one file (DIAG-05).</summary>
+    public const string DuplicateDeclaration = "TH_SEM_010";
+    /// <summary>A closed loop in the centreline has a misclosure beyond tolerance (DIAG-02).</summary>
+    public const string LoopMisclosure       = "TH_SEM_011";
+    /// <summary>A shot looks like a blunder/outlier (zero/over-long leg, self-loop, …) (DIAG-03).</summary>
+    public const string ShotOutlier          = "TH_SEM_012";
+    /// <summary>Foresight and backsight readings disagree beyond tolerance (DIAG-04).</summary>
+    public const string ForeBackMismatch     = "TH_SEM_013";
+    /// <summary>A dangling reference: an <c>input</c>/<c>source</c> target that can't be resolved (DIAG-06).</summary>
+    public const string DanglingReference    = "TH_SEM_014";
+
     // XVI semantic codes (image / file resolution, transform validation).
     public const string XviImageMissing         = "TH_XVI_001";
     public const string XviFileMissing          = "TH_XVI_002";
