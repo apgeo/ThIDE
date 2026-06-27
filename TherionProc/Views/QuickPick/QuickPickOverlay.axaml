@@ -1,0 +1,42 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="using:TherionProc.Converters"
+             x:Class="TherionProc.Views.QuickPick.QuickPickOverlay"
+             x:CompileBindings="False">
+    <!-- Near-transparent backdrop captures clicks outside the box to dismiss it. -->
+    <Grid x:Name="Backdrop" Background="#01000000">
+        <Border Width="660" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,64,0,0"
+                Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}"
+                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1"
+                CornerRadius="6" BoxShadow="0 8 24 0 #50000000" x:Name="Box">
+            <DockPanel Margin="6">
+                <TextBlock DockPanel.Dock="Top" Text="{Binding Title}" Foreground="Gray"
+                           FontSize="11" Margin="4,2,4,4" />
+                <TextBox x:Name="SearchBox" DockPanel.Dock="Top" Margin="2"
+                         Watermark="{Binding Watermark}"
+                         Text="{Binding SearchText, Mode=TwoWay}" />
+                <ListBox x:Name="ResultList" Margin="0,6,0,0" MaxHeight="380"
+                         ItemsSource="{Binding Results}"
+                         SelectedItem="{Binding Selected, Mode=TwoWay}"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid ColumnDefinitions="22,*" Height="22">
+                                <Panel Grid.Column="0" Width="18" Height="16">
+                                    <PathIcon Width="14" Height="14"
+                                              Data="{Binding IconKey, Converter={x:Static conv:ResourceKeyToGeometryConverter.Instance}}" />
+                                    <Image Width="16" Height="16" Source="{Binding Icon}" />
+                                </Panel>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Title}" VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding Detail}" Foreground="Gray" FontSize="11"
+                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+        </Border>
+    </Grid>
+</UserControl>

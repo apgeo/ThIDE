@@ -1,0 +1,27 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:TherionProc.ViewModels.Docking"
+             x:Class="TherionProc.Views.Docking.OutlineToolView"
+             x:CompileBindings="False"
+             x:DataType="vm:OutlineToolViewModel">
+    <DockPanel>
+        <TextBox DockPanel.Dock="Top" Watermark="Filter outline…" Margin="4"
+                 Text="{Binding Outline.Filter, Mode=TwoWay}" />
+        <TextBlock DockPanel.Dock="Top" Margin="8,6" Foreground="Gray"
+                   Text="No survey/scrap structure in this file."
+                   IsVisible="{Binding Outline.IsEmpty}" />
+        <TreeView ItemsSource="{Binding Outline.Roots}"
+                  SelectedItem="{Binding Outline.SelectedNode, Mode=TwoWay}">
+            <TreeView.ItemTemplate>
+                <TreeDataTemplate ItemsSource="{Binding Children}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Text="{Binding Glyph}" Width="14" TextAlignment="Center" />
+                        <TextBlock Text="{Binding Title}" />
+                        <TextBlock Text="{Binding Line, StringFormat=':{0}'}"
+                                   Foreground="Gray" FontSize="10" VerticalAlignment="Center" />
+                    </StackPanel>
+                </TreeDataTemplate>
+            </TreeView.ItemTemplate>
+        </TreeView>
+    </DockPanel>
+</UserControl>
