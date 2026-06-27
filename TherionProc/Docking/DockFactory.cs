@@ -48,6 +48,9 @@ public sealed class DockFactory : Factory
     private readonly OutlineToolViewModel _outline;
     private readonly ProjectToolViewModel _project;
     private readonly LogToolViewModel _log;
+    private readonly LivePreviewToolViewModel _livePreview;
+    private readonly MapViewerToolViewModel _mapViewer;
+    private readonly TherionProc.Services.IAppSettingsService? _appSettings;
     private readonly SettingsToolViewModel _settings;
 
     private IRootDock? _rootDock;
@@ -65,8 +68,11 @@ public sealed class DockFactory : Factory
         OutlineToolViewModel outline,
         ProjectToolViewModel project,
         LogToolViewModel log,
+        LivePreviewToolViewModel livePreview,
+        MapViewerToolViewModel mapViewer,
         SettingsToolViewModel settings,
         TherionProc.Services.ILayoutService? layoutState = null,
+        TherionProc.Services.IAppSettingsService? appSettings = null,
         ILogger<DockFactory>? logger = null)
     {
         _workspace = workspace;
@@ -78,6 +84,9 @@ public sealed class DockFactory : Factory
         _outline = outline;
         _project = project;
         _log = log;
+        _livePreview = livePreview;
+        _mapViewer = mapViewer;
+        _appSettings = appSettings;
         _settings = settings;
         _layoutState = layoutState;
         _logger = logger;
@@ -171,6 +180,18 @@ public sealed class DockFactory : Factory
         VisibleDockables = CreateList<IDockable>(),
     };
 
+    /// <summary>The right-rail tools, gated by their feature settings (VIS-02/05).</summary>
+    private IDockable[] RightToolset()
+    {
+        var list = new System.Collections.Generic.List<IDockable> { _xvi };
+        if (TherionProc.Services.EditorFeatureFlags.Compiled(TherionProc.Services.EditorFeature.Outline))
+            list.Add(_outline);
+        var s = _appSettings?.Current ?? TherionProc.Services.AppSettings.Default;
+        if (s.EnableLivePreview) list.Add(_livePreview);
+        if (s.EnableInAppViewer) list.Add(_mapViewer);
+        return list.ToArray();
+    }
+
     private IRootDock BuildDefaultLayout()
     {
         // Re-apply the persisted pane sizes + active tabs onto the freshly-built (renderable)
@@ -214,11 +235,8 @@ public sealed class DockFactory : Factory
             Proportion = st.RightProportion,
             // Object Browser moved to the central well (#10); External Tools/Settings moved into
             // the Preferences window (#13). The right rail keeps XVI references plus the EDIT-09
-            // document outline (omitted only when that feature is compiled out).
-            VisibleDockables =
-                TherionProc.Services.EditorFeatureFlags.Compiled(TherionProc.Services.EditorFeature.Outline)
-                    ? CreateList<IDockable>(_xvi, _outline)
-                    : CreateList<IDockable>(_xvi),
+            // document outline and the VIS-02/05 preview panels (each gated by its setting).
+            VisibleDockables = CreateList<IDockable>(RightToolset()),
             ActiveDockable = _xvi,
         };
 
@@ -269,6 +287,8 @@ public sealed class DockFactory : Factory
         ["Outline"]        = _outline,
         ["Project"]        = _project,
         ["Log"]            = _log,
+        ["LivePreview"]    = _livePreview,
+        ["MapViewer"]      = _mapViewer,
         ["Settings"]       = _settings,
     };
 
@@ -587,6 +607,8 @@ public sealed class DockFactory : Factory
             ["Outline"]        = () => _outline,
             ["Project"]        = () => _project,
             ["Log"]            = () => _log,
+            ["LivePreview"]    = () => _livePreview,
+            ["MapViewer"]      = () => _mapViewer,
             ["Settings"]       = () => _settings,
         };
 

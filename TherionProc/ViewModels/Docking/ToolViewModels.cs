@@ -122,6 +122,24 @@ public sealed class LogToolViewModel : ToolViewModelBase
         : base("Log", "Log", lang) => Log = log;
 }
 
+/// <summary>VIS-02: live centreline preview (plan/elevation sketch).</summary>
+public sealed class LivePreviewToolViewModel : ToolViewModelBase
+{
+    [JsonIgnore] public LivePreviewViewModel Preview { get; }
+    public LivePreviewToolViewModel() : base("LivePreview", "Live Preview") => Preview = null!;
+    public LivePreviewToolViewModel(LivePreviewViewModel preview, ILanguageService? lang = null)
+        : base("LivePreview", "Live Preview", lang) => Preview = preview;
+}
+
+/// <summary>VIS-03/05: in-app map viewer (PNG/SVG/PDF).</summary>
+public sealed class MapViewerToolViewModel : ToolViewModelBase
+{
+    [JsonIgnore] public MapViewerViewModel Map { get; }
+    public MapViewerToolViewModel() : base("MapViewer", "Map Viewer") => Map = null!;
+    public MapViewerToolViewModel(MapViewerViewModel map, ILanguageService? lang = null)
+        : base("MapViewer", "Map Viewer", lang) => Map = map;
+}
+
 public sealed class XviToolViewModel : ToolViewModelBase
 {
     [JsonIgnore] public XviReferencesViewModel Xvi { get; }

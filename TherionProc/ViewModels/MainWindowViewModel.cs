@@ -55,6 +55,8 @@ public partial class MainWindowViewModel : ViewModelBase
     public OutlineToolViewModel OutlineTool { get; }
     public ProjectToolViewModel ProjectTool { get; }   // PROJ-02/03/07
     public LogToolViewModel LogTool { get; }           // #3 activity log
+    public LivePreviewToolViewModel LivePreviewTool { get; } // VIS-02
+    public MapViewerToolViewModel MapViewerTool { get; }     // VIS-03/05
     public SettingsToolViewModel SettingsTool { get; }
 
     /// <summary>PROJ-08: clickable breadcrumb of the @-qualified name at the caret (status bar).</summary>
@@ -364,6 +366,8 @@ public partial class MainWindowViewModel : ViewModelBase
         OutlineToolViewModel outlineTool,
         ProjectToolViewModel projectTool,
         LogToolViewModel logTool,
+        LivePreviewToolViewModel livePreviewTool,
+        MapViewerToolViewModel mapViewerTool,
         SettingsToolViewModel settingsTool,
         IModelEditService? editService = null,
         ILayoutService? layout = null,
@@ -399,6 +403,8 @@ public partial class MainWindowViewModel : ViewModelBase
         OutlineTool = outlineTool;
         ProjectTool = projectTool;
         LogTool = logTool;
+        LivePreviewTool = livePreviewTool;
+        MapViewerTool = mapViewerTool;
         SettingsTool = settingsTool;
         Breadcrumb = new BreadcrumbViewModel(_documents);   // PROJ-08
 
@@ -424,7 +430,12 @@ public partial class MainWindowViewModel : ViewModelBase
         _language.LanguageChanged += (_, _) => Refresh();
         if (_settings is not null)
         {
-            _settings.Changed += (_, _) => OnUiThread(() => RecentFilesChanged?.Invoke(this, EventArgs.Empty));
+            _settings.Changed += (_, _) => OnUiThread(() =>
+            {
+                RecentFilesChanged?.Invoke(this, EventArgs.Empty);
+                OnPropertyChanged(nameof(LivePreviewEnabled));   // VIS-02/05 menu gates
+                OnPropertyChanged(nameof(MapViewerEnabled));
+            });
             // Apply the persisted UI language at startup (#9).
             var lang = _settings.Current.UiLanguage;
             if (!string.IsNullOrEmpty(lang)) _language.SetLanguage(lang);
@@ -453,6 +464,12 @@ public partial class MainWindowViewModel : ViewModelBase
             combined.AddRange(diags);
             Diagnostics.Load(combined.ToImmutable());
         };
+        // VIS-03: after a build, auto-load the newest rendered map into the in-app viewer.
+        Build.CompileCompleted += (_, _) =>
+        {
+            if (_settings?.Current is { EnableMapAutoPreview: true, EnableInAppViewer: true })
+                OnUiThread(() => MapViewerTool.Map.ShowLatest(Build.Artifacts.Select(a => a.Path)));
+        };
         Diagnostics.NavigateRequested += (_, row) => NavigateTo(row.Span);
         Diagnostics.ScopeChanged += (_, _) => RefreshDiagnostics();
         Build.NavigateRequested += (_, span) => NavigateTo(span);
@@ -477,6 +494,8 @@ public partial class MainWindowViewModel : ViewModelBase
         new OutlineToolViewModel(new OutlineViewModel()),
         new ProjectToolViewModel(new ProjectDashboardViewModel(), new SurveyTreeViewModel(), new ProjectAuditViewModel()),
         new LogToolViewModel(new LogViewModel()),
+        new LivePreviewToolViewModel(new LivePreviewViewModel()),
+        new MapViewerToolViewModel(new MapViewerViewModel()),
         new SettingsToolViewModel(new SettingsViewModel(), new KeyboardShortcutsViewModel()))
     {
         // Designer-only.
@@ -492,6 +511,8 @@ public partial class MainWindowViewModel : ViewModelBase
         new OutlineToolViewModel(new OutlineViewModel()),
         new ProjectToolViewModel(new ProjectDashboardViewModel(), new SurveyTreeViewModel(), new ProjectAuditViewModel()),
         new LogToolViewModel(new LogViewModel()),
+        new LivePreviewToolViewModel(new LivePreviewViewModel()),
+        new MapViewerToolViewModel(new MapViewerViewModel()),
         new SettingsToolViewModel(new SettingsViewModel(), new KeyboardShortcutsViewModel()));
 
     /// <summary>Wires the storage picker once the View is attached to a TopLevel.</summary>
@@ -688,7 +709,13 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand] private void ToggleOutline()           => Activate(OutlineTool); // EDIT-09
     [RelayCommand] private void ToggleProject()           => Activate(ProjectTool); // PROJ-02/03/07
     [RelayCommand] private void ToggleLog()               => Activate(LogTool);      // #3
+    [RelayCommand] private void ToggleLivePreview()       => Activate(LivePreviewTool); // VIS-02
+    [RelayCommand] private void ToggleMapViewer()         => Activate(MapViewerTool);    // VIS-05
     [RelayCommand] private void ToggleSettings()          => Activate(SettingsTool);
+
+    /// <summary>VIS-02/05 gates — drive the View-menu entries (hidden when the feature is off).</summary>
+    public bool LivePreviewEnabled => _settings?.Current.EnableLivePreview ?? true;
+    public bool MapViewerEnabled   => _settings?.Current.EnableInAppViewer ?? true;
 
     /// <summary>EDIT-09 gate (compile-time flag + runtime setting) — drives the Outline menu/toolbar entry.</summary>
     public bool OutlineFeatureEnabled =>

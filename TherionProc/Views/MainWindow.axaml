@@ -105,6 +105,10 @@
                 <MenuItem Header="{Binding MenuViewWorkspace}" Command="{Binding ToggleWorkspaceExplorerCommand}" />
                 <MenuItem Header="Project (Dashboard / Surveys / Audit)" Command="{Binding ToggleProjectCommand}" />
                 <MenuItem Header="Log" Command="{Binding ToggleLogCommand}" />
+                <MenuItem Header="Live Preview" Command="{Binding ToggleLivePreviewCommand}"
+                          IsVisible="{Binding LivePreviewEnabled}" />
+                <MenuItem Header="Map Viewer" Command="{Binding ToggleMapViewerCommand}"
+                          IsVisible="{Binding MapViewerEnabled}" />
                 <MenuItem Header="{Binding MenuViewDiagnostics}" Command="{Binding ToggleDiagnosticsCommand}" />
                 <!-- EDIT-09: document outline (hidden when the feature is disabled). -->
                 <MenuItem Header="Outline" Command="{Binding ToggleOutlineCommand}"

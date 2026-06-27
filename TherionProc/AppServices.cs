@@ -154,6 +154,7 @@ internal static class AppServices
         // Application preferences + session restore.
         services.AddSingleton<IAppSettingsService, AppSettingsService>();
         services.AddSingleton<ILogService, LogService>();   // #3 in-app activity log
+        services.AddSingleton<IMapRenderService, MapRenderService>();   // VIS-03/05 in-app rendering
 
         // Shared content ViewModels — singletons so the same instance flows to both
         // the dockable tool wrapper (shown in the UI) and the shell (event wiring).
@@ -167,6 +168,8 @@ internal static class AppServices
         services.AddSingleton<ProjectDashboardViewModel>();   // PROJ-07 project dashboard
         services.AddSingleton<ProjectAuditViewModel>();       // PROJ-02 orphan/dead-file audit
         services.AddSingleton<LogViewModel>();                // #3 activity log content VM
+        services.AddSingleton<LivePreviewViewModel>();        // VIS-02 live centreline preview
+        services.AddSingleton<MapViewerViewModel>();          // VIS-03/05 in-app map viewer
         services.AddSingleton<SettingsViewModel>();
         services.AddSingleton<KeyboardShortcutsViewModel>();
         services.AddSingleton<SearchViewModel>();
@@ -182,6 +185,8 @@ internal static class AppServices
         services.AddSingleton<ViewModels.Docking.OutlineToolViewModel>();
         services.AddSingleton<ViewModels.Docking.ProjectToolViewModel>();   // PROJ-02/03/07
         services.AddSingleton<ViewModels.Docking.LogToolViewModel>();       // #3
+        services.AddSingleton<ViewModels.Docking.LivePreviewToolViewModel>(); // VIS-02
+        services.AddSingleton<ViewModels.Docking.MapViewerToolViewModel>();   // VIS-03/05
         services.AddSingleton<ViewModels.Docking.SettingsToolViewModel>();
         services.AddSingleton<Docking.DockFactory>();
 

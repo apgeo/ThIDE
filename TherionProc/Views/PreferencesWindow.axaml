@@ -243,6 +243,19 @@
                                Foreground="Gray" FontSize="11" />
                 </StackPanel>
 
+                <!-- Visualization (VIS-*): per-feature enable/disable. -->
+                <StackPanel Spacing="10" IsVisible="{Binding IsVisualization}">
+                    <TextBlock Text="Visualization" FontSize="16" FontWeight="Bold" />
+                    <TextBlock Text="Enable or disable the read-only preview features. Disabling one hides its panel and menu (reset the layout or restart to remove an open panel)."
+                               Foreground="Gray" TextWrapping="Wrap" />
+                    <CheckBox Content="Live centreline preview (plan/elevation sketch from the model, no compile) — VIS-02"
+                              IsChecked="{Binding EnableLivePreview}" />
+                    <CheckBox Content="In-app map viewer (PNG / SVG / PDF) — VIS-05"
+                              IsChecked="{Binding EnableInAppViewer}" />
+                    <CheckBox Content="Auto-show the rendered map after a build — VIS-03"
+                              IsChecked="{Binding EnableMapAutoPreview}" />
+                </StackPanel>
+
                 <!-- External Tools (moved here from the dockable Settings panel, #13) -->
                 <DockPanel IsVisible="{Binding IsExternal}" VerticalAlignment="Top">
                     <TextBlock DockPanel.Dock="Top" Text="{l:Loc Pref_External}"

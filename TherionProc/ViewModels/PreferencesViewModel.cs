@@ -74,6 +74,11 @@ public partial class PreferencesViewModel : ObservableObject
     [ObservableProperty] private bool _openAllOutputsAfterBuild;
     [ObservableProperty] private bool _compileOnSave;
 
+    // ---- visualization (VIS-*) ----
+    [ObservableProperty] private bool _enableLivePreview;
+    [ObservableProperty] private bool _enableMapAutoPreview;
+    [ObservableProperty] private bool _enableInAppViewer;
+
     // ---- editor behaviour ----
     [ObservableProperty] private bool _showRenamePreviewBeforeApply;
 
@@ -140,6 +145,9 @@ public partial class PreferencesViewModel : ObservableObject
         _openPdfAfterBuild = s.OpenPdfAfterBuild;
         _openAllOutputsAfterBuild = s.OpenAllOutputsAfterBuild;
         _compileOnSave = s.CompileOnSave;
+        _enableLivePreview = s.EnableLivePreview;
+        _enableMapAutoPreview = s.EnableMapAutoPreview;
+        _enableInAppViewer = s.EnableInAppViewer;
         _showRenamePreviewBeforeApply = s.ShowRenamePreviewBeforeApply;
         _maxHighlightLines = s.MaxHighlightLines;
         _maxHighlightKB = s.MaxHighlightKB;
@@ -169,7 +177,8 @@ public partial class PreferencesViewModel : ObservableObject
             new("editorfeatures", "Editor Features",              "edit feature snippet completion signature outline minimap sticky breadcrumb peek split diff color whitespace format smart enter toggle enable disable"),
             new("performance",Resources.Tr.Get("Pref_Performance"),"large file limit highlight parse lines size kb threshold station search symbol cap startup load timeout session reopen"),
             new("workspace",Resources.Tr.Get("Pref_Workspace"),   "reload external graph disk watch"),
-            new("build",    Resources.Tr.Get("Pref_Build"),       "build output open lox 3d pdf survex aven loch"),
+            new("build",    Resources.Tr.Get("Pref_Build"),       "build output open lox 3d pdf survex aven loch compile on save"),
+            new("visualization", "Visualization",                 "preview map viewer pdf svg png live centreline plan elevation render"),
             new("external", Resources.Tr.Get("Pref_External"),    "therion loch aven survex path detect tool executable"),
             new("keyboard", Resources.Tr.Get("Pref_Keyboard"),    "key binding gesture shortcut hotkey command"),
         };
@@ -187,6 +196,7 @@ public partial class PreferencesViewModel : ObservableObject
     public bool IsPerformance => SelectedSection?.Id == "performance";
     public bool IsWorkspace   => SelectedSection?.Id == "workspace";
     public bool IsBuild       => SelectedSection?.Id == "build";
+    public bool IsVisualization => SelectedSection?.Id == "visualization";
     public bool IsExternal    => SelectedSection?.Id == "external";
     public bool IsKeyboard    => SelectedSection?.Id == "keyboard";
 
@@ -199,6 +209,7 @@ public partial class PreferencesViewModel : ObservableObject
         OnPropertyChanged(nameof(IsPerformance));
         OnPropertyChanged(nameof(IsWorkspace));
         OnPropertyChanged(nameof(IsBuild));
+        OnPropertyChanged(nameof(IsVisualization));
         OnPropertyChanged(nameof(IsExternal));
         OnPropertyChanged(nameof(IsKeyboard));
     }
@@ -260,6 +271,9 @@ public partial class PreferencesViewModel : ObservableObject
             OpenPdfAfterBuild = OpenPdfAfterBuild,
             OpenAllOutputsAfterBuild = OpenAllOutputsAfterBuild,
             CompileOnSave = CompileOnSave,
+            EnableLivePreview = EnableLivePreview,
+            EnableMapAutoPreview = EnableMapAutoPreview,
+            EnableInAppViewer = EnableInAppViewer,
             ShowRenamePreviewBeforeApply = ShowRenamePreviewBeforeApply,
             MaxHighlightLines = MaxHighlightLines,
             MaxHighlightKB = MaxHighlightKB,

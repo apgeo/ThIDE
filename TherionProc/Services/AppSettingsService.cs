@@ -102,6 +102,14 @@ public sealed record AppSettings
     /// <summary>BUILD-07: automatically (re)build the active project a short moment after each save. Off by default.</summary>
     public bool CompileOnSave { get; init; }
 
+    // ---- visualization features (VIS-*) ----
+    /// <summary>VIS-02: the live centreline preview (plan/elevation sketch from our model).</summary>
+    public bool EnableLivePreview { get; init; } = true;
+    /// <summary>VIS-03: auto-load the latest rendered map output into the viewer after a build.</summary>
+    public bool EnableMapAutoPreview { get; init; } = true;
+    /// <summary>VIS-05: the in-app PNG/SVG/PDF map viewer.</summary>
+    public bool EnableInAppViewer { get; init; } = true;
+
     // ---- large-file guards (#10) ----
     /// <summary>Skip syntax highlighting + hover features above this line count.</summary>
     public int MaxHighlightLines { get; init; } = 25000;
