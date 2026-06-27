@@ -57,6 +57,7 @@ public partial class MainWindowViewModel : ViewModelBase
     public LogToolViewModel LogTool { get; }           // #3 activity log
     public LivePreviewToolViewModel LivePreviewTool { get; } // VIS-02
     public MapViewerToolViewModel MapViewerTool { get; }     // VIS-03/05
+    public Model3DViewerToolViewModel Model3DViewerTool { get; }  // VIS-01
     public SettingsToolViewModel SettingsTool { get; }
 
     /// <summary>PROJ-08: clickable breadcrumb of the @-qualified name at the caret (status bar).</summary>
@@ -368,6 +369,7 @@ public partial class MainWindowViewModel : ViewModelBase
         LogToolViewModel logTool,
         LivePreviewToolViewModel livePreviewTool,
         MapViewerToolViewModel mapViewerTool,
+        Model3DViewerToolViewModel model3dViewerTool,
         SettingsToolViewModel settingsTool,
         IModelEditService? editService = null,
         ILayoutService? layout = null,
@@ -405,6 +407,7 @@ public partial class MainWindowViewModel : ViewModelBase
         LogTool = logTool;
         LivePreviewTool = livePreviewTool;
         MapViewerTool = mapViewerTool;
+        Model3DViewerTool = model3dViewerTool;
         SettingsTool = settingsTool;
         Breadcrumb = new BreadcrumbViewModel(_documents);   // PROJ-08
 
@@ -433,8 +436,9 @@ public partial class MainWindowViewModel : ViewModelBase
             _settings.Changed += (_, _) => OnUiThread(() =>
             {
                 RecentFilesChanged?.Invoke(this, EventArgs.Empty);
-                OnPropertyChanged(nameof(LivePreviewEnabled));   // VIS-02/05 menu gates
+                OnPropertyChanged(nameof(LivePreviewEnabled));   // VIS-01/02/05 menu gates
                 OnPropertyChanged(nameof(MapViewerEnabled));
+                OnPropertyChanged(nameof(Model3DViewerEnabled));
             });
             // Apply the persisted UI language at startup (#9).
             var lang = _settings.Current.UiLanguage;
@@ -456,6 +460,13 @@ public partial class MainWindowViewModel : ViewModelBase
         ObjectBrowser.ShotEditRequested += async (_, e) => await ApplyShotEditAsync(e).ConfigureAwait(true);
         WorkspaceExplorer.OpenRequested += async (_, node) => await OpenNodeAsync(node).ConfigureAwait(true);
         WorkspaceExplorer.NavigateRequested += (_, span) => NavigateTo(span);
+        // VIS-01: "Show in 3D" from a station/survey context menu → reveal it in the embedded viewer.
+        _documents.ShowInModel3DRequested += (_, name) => OnUiThread(() =>
+        {
+            if (!Model3DViewerEnabled) return;
+            _factory.ShowTool(Model3DViewerTool);
+            Model3DViewerTool.Viewer.SelectInModel(name);
+        });
 
         Build.CompileCompleted += (_, diags) =>
         {
@@ -469,6 +480,12 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             if (_settings?.Current is { EnableMapAutoPreview: true, EnableInAppViewer: true })
                 OnUiThread(() => MapViewerTool.Map.ShowLatest(Build.Artifacts.Select(a => a.Path)));
+        };
+        // VIS-01: after a build, auto-load the newest .lox/.3d into the embedded 3D viewer.
+        Build.CompileCompleted += (_, _) =>
+        {
+            if (_settings?.Current is { EnableModel3DAutoPreview: true, EnableModel3DViewer: true })
+                OnUiThread(() => Model3DViewerTool.Viewer.ShowLatest(Build.Artifacts));
         };
         Diagnostics.NavigateRequested += (_, row) => NavigateTo(row.Span);
         Diagnostics.ScopeChanged += (_, _) => RefreshDiagnostics();
@@ -496,6 +513,7 @@ public partial class MainWindowViewModel : ViewModelBase
         new LogToolViewModel(new LogViewModel()),
         new LivePreviewToolViewModel(new LivePreviewViewModel()),
         new MapViewerToolViewModel(new MapViewerViewModel()),
+        new Model3DViewerToolViewModel(new Model3DViewerViewModel()),
         new SettingsToolViewModel(new SettingsViewModel(), new KeyboardShortcutsViewModel()))
     {
         // Designer-only.
@@ -513,6 +531,7 @@ public partial class MainWindowViewModel : ViewModelBase
         new LogToolViewModel(new LogViewModel()),
         new LivePreviewToolViewModel(new LivePreviewViewModel()),
         new MapViewerToolViewModel(new MapViewerViewModel()),
+        new Model3DViewerToolViewModel(new Model3DViewerViewModel()),
         new SettingsToolViewModel(new SettingsViewModel(), new KeyboardShortcutsViewModel()));
 
     /// <summary>Wires the storage picker once the View is attached to a TopLevel.</summary>
@@ -711,11 +730,13 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand] private void ToggleLog()               => Activate(LogTool);      // #3
     [RelayCommand] private void ToggleLivePreview()       => Activate(LivePreviewTool); // VIS-02
     [RelayCommand] private void ToggleMapViewer()         => Activate(MapViewerTool);    // VIS-05
+    [RelayCommand] private void ToggleModel3DViewer()     => _factory.ShowTool(Model3DViewerTool); // VIS-01 (may be off-by-default → add on demand)
     [RelayCommand] private void ToggleSettings()          => Activate(SettingsTool);
 
-    /// <summary>VIS-02/05 gates — drive the View-menu entries (hidden when the feature is off).</summary>
+    /// <summary>VIS-01/02/05 gates — drive the View-menu entries (hidden when the feature is off).</summary>
     public bool LivePreviewEnabled => _settings?.Current.EnableLivePreview ?? true;
     public bool MapViewerEnabled   => _settings?.Current.EnableInAppViewer ?? true;
+    public bool Model3DViewerEnabled => _settings?.Current.EnableModel3DViewer ?? false;
 
     /// <summary>EDIT-09 gate (compile-time flag + runtime setting) — drives the Outline menu/toolbar entry.</summary>
     public bool OutlineFeatureEnabled =>

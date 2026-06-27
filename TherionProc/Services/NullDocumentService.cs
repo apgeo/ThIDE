@@ -33,6 +33,7 @@ internal sealed class NullDocumentService : IDocumentService
     public void RequestSelectFileInWorkspace(string filePath) { }
     public void RequestFindReferences(string term) { }
     public void RequestRenameSymbol(string raw, Therion.Processing.Abstractions.ReferenceKind kind) { }
+    public void RequestShowInModel3D(string fullName) { }
 #pragma warning disable CS0067
     public event EventHandler? DocumentChanged;
     public event EventHandler? ActiveDocumentChanged;
@@ -43,6 +44,7 @@ internal sealed class NullDocumentService : IDocumentService
     public event EventHandler<string>? FindReferencesRequested;
     public event EventHandler<Therion.Core.SourceSpan>? CaretMoved;
     public event EventHandler<(string Raw, Therion.Processing.Abstractions.ReferenceKind Kind)>? RenameSymbolRequested;
+    public event EventHandler<string>? ShowInModel3DRequested;
 #pragma warning restore CS0067
 
     public Task OpenFileAsync(string absolutePath, CancellationToken ct = default) => Task.CompletedTask;

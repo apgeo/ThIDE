@@ -50,6 +50,7 @@ public sealed class DockFactory : Factory
     private readonly LogToolViewModel _log;
     private readonly LivePreviewToolViewModel _livePreview;
     private readonly MapViewerToolViewModel _mapViewer;
+    private readonly Model3DViewerToolViewModel _model3dViewer;
     private readonly TherionProc.Services.IAppSettingsService? _appSettings;
     private readonly SettingsToolViewModel _settings;
 
@@ -70,6 +71,7 @@ public sealed class DockFactory : Factory
         LogToolViewModel log,
         LivePreviewToolViewModel livePreview,
         MapViewerToolViewModel mapViewer,
+        Model3DViewerToolViewModel model3dViewer,
         SettingsToolViewModel settings,
         TherionProc.Services.ILayoutService? layoutState = null,
         TherionProc.Services.IAppSettingsService? appSettings = null,
@@ -86,6 +88,7 @@ public sealed class DockFactory : Factory
         _log = log;
         _livePreview = livePreview;
         _mapViewer = mapViewer;
+        _model3dViewer = model3dViewer;
         _appSettings = appSettings;
         _settings = settings;
         _layoutState = layoutState;
@@ -109,6 +112,25 @@ public sealed class DockFactory : Factory
             BringHostWindowToFront(_compilerOutput);
         }
         catch { /* best-effort focus */ }
+    }
+
+    /// <summary>
+    /// Activates a tool, first adding it to the right tool-rail if it isn't in the layout yet.
+    /// Lets feature-flagged tools (e.g. the VIS-01 3D viewer, off by default) appear the moment
+    /// they're enabled, without requiring a layout reset.
+    /// </summary>
+    public void ShowTool(IDockable tool)
+    {
+        if (_rootDock is null) return;
+        try
+        {
+            if (!ContainsRef(_rootDock, tool) && FindDockById<IToolDock>(_rootDock, "RightTools") is { } right)
+                AddDockable(right, tool);
+            SetActiveDockable(tool);
+            SetFocusedDockable(_rootDock, tool);
+            BringHostWindowToFront(tool);
+        }
+        catch { /* best-effort show */ }
     }
 
     /// <summary>If <paramref name="tool"/> lives in a float window, brings that window to front.</summary>
@@ -189,6 +211,7 @@ public sealed class DockFactory : Factory
         var s = _appSettings?.Current ?? TherionProc.Services.AppSettings.Default;
         if (s.EnableLivePreview) list.Add(_livePreview);
         if (s.EnableInAppViewer) list.Add(_mapViewer);
+        if (s.EnableModel3DViewer) list.Add(_model3dViewer);   // VIS-01 (off by default)
         return list.ToArray();
     }
 
@@ -289,6 +312,7 @@ public sealed class DockFactory : Factory
         ["Log"]            = _log,
         ["LivePreview"]    = _livePreview,
         ["MapViewer"]      = _mapViewer,
+        ["Model3DViewer"]  = _model3dViewer,
         ["Settings"]       = _settings,
     };
 
@@ -609,6 +633,7 @@ public sealed class DockFactory : Factory
             ["Log"]            = () => _log,
             ["LivePreview"]    = () => _livePreview,
             ["MapViewer"]      = () => _mapViewer,
+            ["Model3DViewer"]  = () => _model3dViewer,
             ["Settings"]       = () => _settings,
         };
 

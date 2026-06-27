@@ -109,6 +109,8 @@
                           IsVisible="{Binding LivePreviewEnabled}" />
                 <MenuItem Header="Map Viewer" Command="{Binding ToggleMapViewerCommand}"
                           IsVisible="{Binding MapViewerEnabled}" />
+                <MenuItem Header="3D Viewer" Command="{Binding ToggleModel3DViewerCommand}"
+                          IsVisible="{Binding Model3DViewerEnabled}" />
                 <MenuItem Header="{Binding MenuViewDiagnostics}" Command="{Binding ToggleDiagnosticsCommand}" />
                 <!-- EDIT-09: document outline (hidden when the feature is disabled). -->
                 <MenuItem Header="Outline" Command="{Binding ToggleOutlineCommand}"

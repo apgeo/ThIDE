@@ -1,0 +1,47 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:TherionProc.ViewModels.Docking"
+             x:Class="TherionProc.Views.Docking.Model3DViewerToolView"
+             x:CompileBindings="False"
+             x:DataType="vm:Model3DViewerToolViewModel">
+    <DockPanel>
+        <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="6,3">
+            <StackPanel Orientation="Horizontal" Spacing="4">
+                <Button Content="Open…" Click="OnOpen" FontSize="11" Padding="8,2"
+                        ToolTip.Tip="Open a .lox / .3d model file" />
+                <Separator Width="1" Margin="3,2" Background="Gray" />
+                <TextBlock Text="Color by:" VerticalAlignment="Center" FontSize="11" Foreground="Gray" />
+                <Button Content="Height" Command="{Binding Viewer.SetShadingCommand}" CommandParameter="height" FontSize="11" Padding="6,2" />
+                <Button Content="Survey" Command="{Binding Viewer.SetShadingCommand}" CommandParameter="survey" FontSize="11" Padding="6,2" />
+                <Button Content="Length" Command="{Binding Viewer.SetShadingCommand}" CommandParameter="length" FontSize="11" Padding="6,2" />
+                <Button Content="Inclination" Command="{Binding Viewer.SetShadingCommand}" CommandParameter="inclination" FontSize="11" Padding="6,2" />
+                <Button Content="Plain" Command="{Binding Viewer.SetShadingCommand}" CommandParameter="single" FontSize="11" Padding="6,2" />
+                <Separator Width="1" Margin="3,2" Background="Gray" />
+                <Button Content="⟲ Reset view" Command="{Binding Viewer.ResetViewCommand}" FontSize="11" Padding="6,2" />
+                <Button Content="↻ Refresh" Command="{Binding Viewer.RefreshCommand}" FontSize="11" Padding="6,2" />
+                <Button Content="Open externally" Command="{Binding Viewer.OpenExternallyCommand}"
+                        IsEnabled="{Binding Viewer.HasModel}" FontSize="11" Padding="8,2" />
+            </StackPanel>
+        </Border>
+
+        <TextBlock DockPanel.Dock="Bottom" Text="{Binding Viewer.Status}" Foreground="Gray"
+                   FontSize="11" Margin="6,2" TextTrimming="CharacterEllipsis" />
+
+        <Grid>
+            <!-- The NativeWebView is created in code-behind and added to this panel. -->
+            <Panel x:Name="WebHost" />
+
+            <!-- Fallback when the engine or vendored assets are unavailable (R5). -->
+            <Border Background="#1e1e1e" IsVisible="{Binding Viewer.ShowFallback}">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10" MaxWidth="420">
+                    <TextBlock Text="3D model viewer unavailable" FontSize="14" FontWeight="SemiBold"
+                               Foreground="#d4d4d4" HorizontalAlignment="Center" />
+                    <TextBlock Text="{Binding Viewer.Status}" Foreground="#a0a0a0" FontSize="12"
+                               TextWrapping="Wrap" TextAlignment="Center" />
+                    <Button Content="Open model externally (Loch / Aven)" HorizontalAlignment="Center"
+                            Command="{Binding Viewer.OpenExternallyCommand}" IsEnabled="{Binding Viewer.HasModel}" />
+                </StackPanel>
+            </Border>
+        </Grid>
+    </DockPanel>
+</UserControl>

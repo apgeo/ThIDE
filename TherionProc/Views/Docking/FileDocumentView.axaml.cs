@@ -407,6 +407,22 @@ public partial class FileDocumentView : UserControl
         TryDocuments()?.RequestRenameSymbol(row.ShortName, ReferenceKind.Station);
     }
 
+    // VIS-01: reveal the selected station/shot endpoint in the embedded 3D viewer.
+    private void OnShowStationIn3D(object? sender, RoutedEventArgs e)
+    {
+        if (StationGridSelectedRow() is { } row) TryDocuments()?.RequestShowInModel3D(row.FullName);
+    }
+
+    private void OnShowShotFromIn3D(object? sender, RoutedEventArgs e)
+    {
+        if (ShotGridSelectedRow() is { } row) TryDocuments()?.RequestShowInModel3D(row.FromFull);
+    }
+
+    private void OnShowShotToIn3D(object? sender, RoutedEventArgs e)
+    {
+        if (ShotGridSelectedRow() is { } row) TryDocuments()?.RequestShowInModel3D(row.ToFull);
+    }
+
     private static string? GetStationCellValue(StationMeasurementRow row, DataGridColumn? col)
     {
         if (col is null) return null;

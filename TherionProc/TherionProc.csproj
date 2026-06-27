@@ -13,6 +13,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- VIS-01: lets the test project exercise the asset-host's internal pure helpers / test seam. -->
+    <InternalsVisibleTo Include="TherionProc.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Avalonia" Version="12.0.3" />
     <PackageReference Include="Avalonia.AvaloniaEdit" Version="12.0.0" />
     <PackageReference Include="Avalonia.Controls.DataGrid" Version="12.0.0" />
@@ -43,6 +48,10 @@
          PDF via Docnet.Core (bundled PDFium → raw bitmap, no SkiaSharp version conflict). -->
     <PackageReference Include="Svg.Skia" Version="3.0.4" />
     <PackageReference Include="Docnet.Core" Version="2.6.0" />
+    <!-- VIS-01: embedded 3D model viewer. NativeWebView uses each OS's native web engine
+         (WebView2 on Windows, WKWebView on macOS, WebKitGTK/WPE on Linux) — no bundled
+         Chromium. Hosts the vendored CaveView.js dist (Assets/caveview/**). -->
+    <PackageReference Include="Avalonia.Controls.WebView" Version="12.0.1" />
   </ItemGroup>
 
   <ItemGroup>

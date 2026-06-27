@@ -83,6 +83,10 @@ public interface IDocumentService
     /// <summary>Asks the shell to start a rename-symbol flow for the given raw token (#1).</summary>
     void RequestRenameSymbol(string raw, Therion.Processing.Abstractions.ReferenceKind kind);
     event EventHandler<(string Raw, Therion.Processing.Abstractions.ReferenceKind Kind)>? RenameSymbolRequested;
+
+    /// <summary>Asks the shell to reveal a station/survey (by full dotted name) in the embedded 3D viewer (VIS-01).</summary>
+    void RequestShowInModel3D(string fullName);
+    event EventHandler<string>? ShowInModel3DRequested;
 }
 
 public sealed class DocumentService : IDocumentService, IAsyncDisposable
@@ -126,6 +130,14 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
     {
         if (!string.IsNullOrWhiteSpace(raw))
             RenameSymbolRequested?.Invoke(this, (raw, kind));
+    }
+
+    public event EventHandler<string>? ShowInModel3DRequested;
+
+    public void RequestShowInModel3D(string fullName)
+    {
+        if (!string.IsNullOrWhiteSpace(fullName))
+            ShowInModel3DRequested?.Invoke(this, fullName);
     }
 
     // Projection of the active document.

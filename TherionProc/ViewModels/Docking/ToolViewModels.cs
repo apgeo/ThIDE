@@ -140,6 +140,15 @@ public sealed class MapViewerToolViewModel : ToolViewModelBase
         : base("MapViewer", "Map Viewer", lang) => Map = map;
 }
 
+/// <summary>VIS-01: embedded 3D model viewer (CaveView.js in a NativeWebView).</summary>
+public sealed class Model3DViewerToolViewModel : ToolViewModelBase
+{
+    [JsonIgnore] public Model3DViewerViewModel Viewer { get; }
+    public Model3DViewerToolViewModel() : base("Model3DViewer", "3D Viewer") => Viewer = null!;
+    public Model3DViewerToolViewModel(Model3DViewerViewModel viewer, ILanguageService? lang = null)
+        : base("Model3DViewer", "3D Viewer", lang) => Viewer = viewer;
+}
+
 public sealed class XviToolViewModel : ToolViewModelBase
 {
     [JsonIgnore] public XviReferencesViewModel Xvi { get; }

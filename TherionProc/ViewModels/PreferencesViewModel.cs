@@ -78,6 +78,8 @@ public partial class PreferencesViewModel : ObservableObject
     [ObservableProperty] private bool _enableLivePreview;
     [ObservableProperty] private bool _enableMapAutoPreview;
     [ObservableProperty] private bool _enableInAppViewer;
+    [ObservableProperty] private bool _enableModel3DViewer;     // VIS-01 (off by default)
+    [ObservableProperty] private bool _enableModel3DAutoPreview;
 
     // ---- editor behaviour ----
     [ObservableProperty] private bool _showRenamePreviewBeforeApply;
@@ -148,6 +150,8 @@ public partial class PreferencesViewModel : ObservableObject
         _enableLivePreview = s.EnableLivePreview;
         _enableMapAutoPreview = s.EnableMapAutoPreview;
         _enableInAppViewer = s.EnableInAppViewer;
+        _enableModel3DViewer = s.EnableModel3DViewer;
+        _enableModel3DAutoPreview = s.EnableModel3DAutoPreview;
         _showRenamePreviewBeforeApply = s.ShowRenamePreviewBeforeApply;
         _maxHighlightLines = s.MaxHighlightLines;
         _maxHighlightKB = s.MaxHighlightKB;
@@ -274,6 +278,8 @@ public partial class PreferencesViewModel : ObservableObject
             EnableLivePreview = EnableLivePreview,
             EnableMapAutoPreview = EnableMapAutoPreview,
             EnableInAppViewer = EnableInAppViewer,
+            EnableModel3DViewer = EnableModel3DViewer,
+            EnableModel3DAutoPreview = EnableModel3DAutoPreview,
             ShowRenamePreviewBeforeApply = ShowRenamePreviewBeforeApply,
             MaxHighlightLines = MaxHighlightLines,
             MaxHighlightKB = MaxHighlightKB,

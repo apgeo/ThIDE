@@ -111,6 +111,8 @@ public sealed class CommandPaletteProvider
             list.Add(VmCmd("View", "Toggle Live Preview", _vm.ToggleLivePreviewCommand, "Icon.Map"));
         if (_vm.MapViewerEnabled)
             list.Add(VmCmd("View", "Toggle Map Viewer", _vm.ToggleMapViewerCommand, "Icon.Map"));
+        if (_vm.Model3DViewerEnabled)
+            list.Add(VmCmd("View", "Toggle 3D Viewer", _vm.ToggleModel3DViewerCommand, "Icon.Cube"));
         list.Add(VmCmd("View", "Split Editor (Float)", _vm.SplitEditorCommand, "Icon.File"));
         list.Add(VmCmd("View", "Reset Layout", _vm.ResetLayoutCommand, "Icon.Folder"));
         list.Add(VmCmd("View", "Float Active Document", _vm.FloatActiveDocumentCommand, "Icon.File"));

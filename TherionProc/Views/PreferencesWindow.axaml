@@ -254,6 +254,10 @@
                               IsChecked="{Binding EnableInAppViewer}" />
                     <CheckBox Content="Auto-show the rendered map after a build — VIS-03"
                               IsChecked="{Binding EnableMapAutoPreview}" />
+                    <CheckBox Content="Embedded 3D model viewer (CaveView.js in a native web view) — VIS-01"
+                              IsChecked="{Binding EnableModel3DViewer}" />
+                    <CheckBox Content="Auto-show the 3D model (.lox / .3d) after a build — VIS-01"
+                              IsChecked="{Binding EnableModel3DAutoPreview}" />
                 </StackPanel>
 
                 <!-- External Tools (moved here from the dockable Settings panel, #13) -->

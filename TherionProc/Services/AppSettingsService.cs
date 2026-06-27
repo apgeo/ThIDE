@@ -109,6 +109,12 @@ public sealed record AppSettings
     public bool EnableMapAutoPreview { get; init; } = true;
     /// <summary>VIS-05: the in-app PNG/SVG/PDF map viewer.</summary>
     public bool EnableInAppViewer { get; init; } = true;
+    /// <summary>VIS-01: the embedded 3D model viewer (CaveView.js in a NativeWebView). Off by default.</summary>
+    public bool EnableModel3DViewer { get; init; }
+    /// <summary>VIS-01: auto-load the newest .lox/.3d into the 3D viewer after a build.</summary>
+    public bool EnableModel3DAutoPreview { get; init; } = true;
+    /// <summary>VIS-01: last-used 3D color-by shading mode (height / survey / length / inclination / single).</summary>
+    public string Model3DShadingMode { get; init; } = "height";
 
     // ---- large-file guards (#10) ----
     /// <summary>Skip syntax highlighting + hover features above this line count.</summary>

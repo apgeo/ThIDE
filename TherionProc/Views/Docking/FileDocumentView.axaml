@@ -168,6 +168,9 @@
                                         <MenuItem Header="Go to Declaration of 'From'" Click="OnGoToShotDefFrom" />
                                         <MenuItem Header="Go to Declaration of 'To'"   Click="OnGoToShotDefTo" />
                                         <Separator />
+                                        <MenuItem Header="Show 'From' in 3D View" Click="OnShowShotFromIn3D" />
+                                        <MenuItem Header="Show 'To' in 3D View"   Click="OnShowShotToIn3D" />
+                                        <Separator />
                                         <MenuItem Header="Rename 'From' Station…" Click="OnRenameFromStation" />
                                         <MenuItem Header="Rename 'To' Station…"   Click="OnRenameToStation" />
                                     </ContextMenu>
@@ -259,6 +262,8 @@
                                         <Separator />
                                         <MenuItem Header="Go to Source"   Click="OnGoToStationSource" />
                                         <MenuItem Header="Go to Declaration" Click="OnGoToStationDeclaration" />
+                                        <Separator />
+                                        <MenuItem Header="Show in 3D View" Click="OnShowStationIn3D" />
                                         <Separator />
                                         <MenuItem Header="Rename Station…" Click="OnRenameStation" />
                                     </ContextMenu>
