@@ -5,6 +5,7 @@ using System;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.VisualTree;
 using TherionProc.ViewModels;
@@ -29,6 +30,29 @@ public partial class RelationalMapView : UserControl
             host.PointerReleased += OnNodePointerReleased;
             host.DoubleTapped += OnNodeDoubleTapped;
         }
+
+        // Ctrl+scroll to zoom (#2): tunnel so it runs before the ScrollViewer scrolls.
+        if (this.FindControl<ScrollViewer>("DiagramScroll") is { } scroll)
+            scroll.AddHandler(PointerWheelChangedEvent, OnWheelZoom, RoutingStrategies.Tunnel);
+    }
+
+    private void OnWheelZoom(object? sender, PointerWheelEventArgs e)
+    {
+        if (_vm is null || (e.KeyModifiers & KeyModifiers.Control) == 0) return;
+        if (e.Delta.Y > 0) _vm.ZoomInCommand.Execute(null);
+        else if (e.Delta.Y < 0) _vm.ZoomOutCommand.Execute(null);
+        e.Handled = true;
+    }
+
+    // Fit the whole diagram into the viewport (#2).
+    private void OnFitClick(object? sender, RoutedEventArgs e)
+    {
+        if (_vm is null || this.FindControl<ScrollViewer>("DiagramScroll") is not { } sv) return;
+        double vpW = sv.Viewport.Width > 0 ? sv.Viewport.Width : sv.Bounds.Width;
+        double vpH = sv.Viewport.Height > 0 ? sv.Viewport.Height : sv.Bounds.Height;
+        if (vpW <= 0 || vpH <= 0 || _vm.CanvasWidth <= 0 || _vm.CanvasHeight <= 0) return;
+        double z = Math.Min(vpW / _vm.CanvasWidth, vpH / _vm.CanvasHeight);
+        _vm.Zoom = Math.Clamp(z * 0.97, 0.15, 4.0);
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)

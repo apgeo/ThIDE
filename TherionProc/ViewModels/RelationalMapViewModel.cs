@@ -18,7 +18,7 @@ using TherionProc.Services;
 namespace TherionProc.ViewModels;
 
 /// <summary>Available arrangements for the relational diagram.</summary>
-public enum RelationalLayoutKind { TreeVertical, TreeHorizontal, LayeredColumns }
+public enum RelationalLayoutKind { TreeVertical, TreeHorizontal, LayeredColumns, Nested }
 
 /// <summary>A selectable layout option (display name + kind) for the toolbar combo.</summary>
 public sealed record RelationalLayoutOption(string Name, RelationalLayoutKind Kind)
@@ -36,13 +36,20 @@ public sealed partial class RelationalNode : ObservableObject
     public RelationalNodeKind Kind { get; }
     public SourceSpan? Declaration { get; }
 
-    public double Width { get; }
-    public double Height { get; }
     public IBrush Fill { get; }
     public IBrush Stroke { get; }
 
+    /// <summary>The node's natural height (with/without a sublabel) before any level sizing.</summary>
+    public double BaseHeight { get; }
+    /// <summary>Layout depth (0 = root); drives level-based sizing and nested z-order (#2).</summary>
+    public int Depth { get; set; }
+
     [ObservableProperty] private double _x;
     [ObservableProperty] private double _y;
+    [ObservableProperty] private double _width = 168;
+    [ObservableProperty] private double _height = 44;
+    /// <summary>True in the nested-containment layout (changes label alignment in the template, #2).</summary>
+    [ObservableProperty] private bool _nested;
 
     public bool HasSubLabel => !string.IsNullOrEmpty(SubLabel);
 
@@ -54,8 +61,9 @@ public sealed partial class RelationalNode : ObservableObject
         Kind = data.Kind;
         KindLabel = KindToLabel(data.Kind);
         Declaration = data.Declaration;
-        Height = string.IsNullOrEmpty(data.SubLabel) ? 44 : 56;
-        Width = 168;
+        BaseHeight = string.IsNullOrEmpty(data.SubLabel) ? 44 : 56;
+        _height = BaseHeight;
+        _width = 168;
         (Fill, Stroke) = Palette(data.Kind);
     }
 
@@ -120,16 +128,31 @@ public partial class RelationalMapViewModel : ViewModelBase
     [ObservableProperty] private double _canvasWidth = 800;
     [ObservableProperty] private double _canvasHeight = 600;
 
+    /// <summary>Diagram zoom factor (#2). Bound to a LayoutTransform so scrollbars track the scaled size.</summary>
+    [ObservableProperty] private double _zoom = 1.0;
+
+    /// <summary>Scale node sizes by depth — bigger near the root, smaller leaves — so a big project fits (#2).</summary>
+    [ObservableProperty] private bool _sizeByLevel;
+
+    /// <summary>Edges are hidden in the nested-containment layout (containment already shows hierarchy, #2).</summary>
+    [ObservableProperty] private bool _showEdges = true;
+
     public IReadOnlyList<RelationalLayoutOption> LayoutOptions { get; } = new[]
     {
         new RelationalLayoutOption("Tree ▽ (branches by area)", RelationalLayoutKind.TreeVertical),
         new RelationalLayoutOption("Tree ▷ (left-to-right)",     RelationalLayoutKind.TreeHorizontal),
         new RelationalLayoutOption("Layered columns",            RelationalLayoutKind.LayeredColumns),
+        new RelationalLayoutOption("Nested (containment)",       RelationalLayoutKind.Nested),
     };
 
     [ObservableProperty] private RelationalLayoutOption _selectedLayout;
 
     partial void OnSelectedLayoutChanged(RelationalLayoutOption value) => Relayout();
+    partial void OnSizeByLevelChanged(bool value) => Relayout();
+
+    [RelayCommand] private void ZoomIn() => Zoom = Math.Min(4.0, Math.Round(Zoom * 1.2, 3));
+    [RelayCommand] private void ZoomOut() => Zoom = Math.Max(0.15, Math.Round(Zoom / 1.2, 3));
+    [RelayCommand] private void ZoomReset() => Zoom = 1.0;
 
     /// <summary>Raised after a rebuild or relayout so the view re-renders the edge layer.</summary>
     public event EventHandler? GraphChanged;
@@ -176,8 +199,12 @@ public partial class RelationalMapViewModel : ViewModelBase
 
         ApplyLayout(nodes, edges);
 
+        // In the nested layout, draw shallower (bigger) boxes first so children render on top.
+        var ordered = SelectedLayout?.Kind == RelationalLayoutKind.Nested
+            ? nodes.OrderBy(n => n.Depth).ToList()
+            : nodes;
         Nodes.Clear();
-        foreach (var n in nodes) Nodes.Add(n);
+        foreach (var n in ordered) Nodes.Add(n);
         Edges = edges;
 
         Status = nodes.Count == 0
@@ -192,6 +219,12 @@ public partial class RelationalMapViewModel : ViewModelBase
     {
         if (Nodes.Count == 0) return;
         ApplyLayout(Nodes.ToList(), Edges);
+        if (SelectedLayout?.Kind == RelationalLayoutKind.Nested)
+        {
+            var sorted = Nodes.OrderBy(n => n.Depth).ToList();
+            Nodes.Clear();
+            foreach (var n in sorted) Nodes.Add(n);
+        }
         GraphChanged?.Invoke(this, EventArgs.Empty);
     }
 
@@ -213,14 +246,136 @@ public partial class RelationalMapViewModel : ViewModelBase
 
     private void ApplyLayout(List<RelationalNode> nodes, IReadOnlyList<RelationalEdge> edges)
     {
-        if (nodes.Count == 0) { CanvasWidth = 400; CanvasHeight = 300; return; }
-        switch (SelectedLayout?.Kind ?? RelationalLayoutKind.TreeVertical)
+        if (nodes.Count == 0) { CanvasWidth = 400; CanvasHeight = 300; ShowEdges = true; return; }
+        var kind = SelectedLayout?.Kind ?? RelationalLayoutKind.TreeVertical;
+        ShowEdges = kind != RelationalLayoutKind.Nested;
+
+        // Reset to the natural size before each layout (level sizing / nesting may have changed it).
+        foreach (var n in nodes) { n.Nested = false; n.Width = 168; n.Height = n.BaseHeight; }
+
+        if (kind == RelationalLayoutKind.Nested)
+        {
+            NestedLayout(nodes, edges);
+            FitCanvas(nodes);
+            return;
+        }
+
+        ComputeDepths(nodes, edges);
+        if (SizeByLevel) ApplyLevelSizing(nodes);
+        switch (kind)
         {
             case RelationalLayoutKind.TreeHorizontal: TreeLayout(nodes, edges, vertical: false); break;
             case RelationalLayoutKind.LayeredColumns: LayeredLayout(nodes, edges); break;
             default: TreeLayout(nodes, edges, vertical: true); break;
         }
         FitCanvas(nodes);
+    }
+
+    // Fills node.Depth via a spanning-forest BFS (roots = in-degree-0), independent of the layout.
+    private static void ComputeDepths(List<RelationalNode> nodes, IReadOnlyList<RelationalEdge> edges)
+    {
+        var outAdj = nodes.ToDictionary(n => n.Id, _ => new List<string>(), StringComparer.Ordinal);
+        var indeg = nodes.ToDictionary(n => n.Id, _ => 0, StringComparer.Ordinal);
+        foreach (var e in edges)
+            if (outAdj.ContainsKey(e.From.Id) && indeg.ContainsKey(e.To.Id)) { outAdj[e.From.Id].Add(e.To.Id); indeg[e.To.Id]++; }
+
+        var depth = nodes.ToDictionary(n => n.Id, _ => 0, StringComparer.Ordinal);
+        var visited = new HashSet<string>(StringComparer.Ordinal);
+        void Bfs(string s)
+        {
+            var q = new Queue<string>(); q.Enqueue(s); visited.Add(s);
+            while (q.Count > 0)
+            {
+                var u = q.Dequeue();
+                foreach (var v in outAdj[u]) if (visited.Add(v)) { depth[v] = depth[u] + 1; q.Enqueue(v); }
+            }
+        }
+        foreach (var n in nodes) if (indeg[n.Id] == 0 && !visited.Contains(n.Id)) Bfs(n.Id);
+        foreach (var n in nodes) if (!visited.Contains(n.Id)) Bfs(n.Id);
+        foreach (var n in nodes) n.Depth = depth[n.Id];
+    }
+
+    // Bigger nodes near the root, smaller leaves — so a large project reads better when fit to screen.
+    private static void ApplyLevelSizing(List<RelationalNode> nodes)
+    {
+        foreach (var n in nodes)
+        {
+            double scale = Math.Clamp(1.7 - 0.18 * n.Depth, 0.55, 1.7);
+            n.Width = Math.Round(168 * scale);
+            n.Height = Math.Round(n.BaseHeight * scale);
+        }
+    }
+
+    // Nested-containment ("embedded") layout: the root box contains its children, which contain
+    // theirs, recursively — a slice-and-dice treemap weighted by subtree size.
+    private void NestedLayout(List<RelationalNode> nodes, IReadOnlyList<RelationalEdge> edges)
+    {
+        var outAdj = nodes.ToDictionary(n => n.Id, _ => new List<string>(), StringComparer.Ordinal);
+        var indeg = nodes.ToDictionary(n => n.Id, _ => 0, StringComparer.Ordinal);
+        foreach (var e in edges)
+            if (outAdj.ContainsKey(e.From.Id) && indeg.ContainsKey(e.To.Id)) { outAdj[e.From.Id].Add(e.To.Id); indeg[e.To.Id]++; }
+        var byId = nodes.ToDictionary(n => n.Id, n => n, StringComparer.Ordinal);
+
+        var visited = new HashSet<string>(StringComparer.Ordinal);
+        var children = nodes.ToDictionary(n => n.Id, _ => new List<string>(), StringComparer.Ordinal);
+        var roots = new List<string>();
+        void Bfs(string s)
+        {
+            var q = new Queue<string>(); q.Enqueue(s); visited.Add(s);
+            while (q.Count > 0)
+            {
+                var u = q.Dequeue();
+                foreach (var v in outAdj[u]) if (visited.Add(v)) { children[u].Add(v); q.Enqueue(v); }
+            }
+        }
+        foreach (var n in nodes.Where(n => indeg[n.Id] == 0).OrderBy(n => n.Label, StringComparer.OrdinalIgnoreCase))
+            if (!visited.Contains(n.Id)) { roots.Add(n.Id); Bfs(n.Id); }
+        foreach (var n in nodes) if (!visited.Contains(n.Id)) { roots.Add(n.Id); Bfs(n.Id); }
+
+        var weight = new Dictionary<string, double>(StringComparer.Ordinal);
+        double Weight(string id)
+        {
+            if (weight.TryGetValue(id, out var w)) return w;
+            double sum = 1;
+            foreach (var c in children[id]) sum += Weight(c);
+            return weight[id] = sum;
+        }
+        foreach (var r in roots) Weight(r);
+
+        void Nest(string id, double x, double y, double w, double h, int depth)
+        {
+            var n = byId[id];
+            n.Nested = true; n.Depth = depth;
+            n.X = x; n.Y = y; n.Width = Math.Max(40, w); n.Height = Math.Max(26, h);
+            var ch = children[id];
+            if (ch.Count == 0) return;
+
+            const double headerH = 24, p = 6;
+            double ix = x + p, iy = y + headerH, iw = w - 2 * p, ih = h - headerH - p;
+            if (iw < 24 || ih < 24) return;
+
+            bool horizontal = depth % 2 == 0;
+            double total = ch.Sum(c => weight[c]);
+            double cursor = horizontal ? ix : iy;
+            foreach (var c in ch)
+            {
+                double frac = weight[c] / total;
+                if (horizontal) { double cw = iw * frac; Nest(c, cursor, iy, cw - 4, ih, depth + 1); cursor += cw; }
+                else            { double chh = ih * frac; Nest(c, ix, cursor, iw, chh - 4, depth + 1); cursor += chh; }
+            }
+        }
+
+        double totalW = roots.Sum(r => weight[r]);
+        double canvasW = Math.Max(960, totalW * 24);
+        double canvasH = 700;
+        const double pad = 8;
+        double off = pad;
+        foreach (var r in roots)
+        {
+            double w = (canvasW - 2 * pad) * (weight[r] / Math.Max(1, totalW)) - pad;
+            Nest(r, off, pad, Math.Max(80, w), canvasH - 2 * pad, 0);
+            off += w + pad;
+        }
     }
 
     // Spanning-tree layout: each branch gets its own contiguous band (parent centred over its
@@ -262,9 +417,10 @@ public partial class RelationalMapViewModel : ViewModelBase
         foreach (var n in nodes)
             if (!visited.Contains(n.Id)) { rootOrder.Add(n.Id); Bfs(n.Id); }
 
-        double nodeW = nodes[0].Width;
-        double primaryGap = vertical ? nodeW + 34 : 70;          // sibling spacing
-        double depthGap   = vertical ? 104 : nodeW + 70;          // per-level spacing
+        double nodeW = nodes.Max(n => n.Width);   // max so level-sized nodes never overlap (#2)
+        double nodeH = nodes.Max(n => n.Height);
+        double primaryGap = vertical ? nodeW + 34 : nodeH + 36;   // sibling spacing
+        double depthGap   = vertical ? nodeH + 60 : nodeW + 70;   // per-level spacing
 
         var primary = new Dictionary<string, double>(StringComparer.Ordinal);
         var depth = new Dictionary<string, int>(StringComparer.Ordinal);
