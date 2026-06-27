@@ -6,6 +6,8 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input.Platform;
@@ -29,6 +31,9 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
     private readonly IAppSettingsService? _settings;
     private bool _disposed;
 
+    /// <summary>Cancels the previous in-flight background parse when a newer reparse starts (LANG-12).</summary>
+    private CancellationTokenSource? _parseCts;
+
     private string _documentText = string.Empty;
     private TherionFile? _ast;
     private SemanticModel? _semantics;
@@ -41,6 +46,15 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
 
     /// <summary>Raised after a re-parse so document-tracking tools can refresh.</summary>
     public event EventHandler? Reparsed;
+
+    /// <summary>
+    /// Raised just before a save so the editor view can clean the document in place
+    /// (EDIT-14: trim trailing whitespace + final newline) while preserving the caret.
+    /// </summary>
+    public event EventHandler? SaveCleanupRequested;
+
+    /// <summary>Asks the bound editor view to apply the on-save cleanup (caret-preserving).</summary>
+    public void RequestSaveCleanup() => SaveCleanupRequested?.Invoke(this, EventArgs.Empty);
 
     public string FilePath { get; }
 
@@ -327,10 +341,18 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
             return;
         }
 
-        var parsed = DocumentParser.Parse(FilePath, _documentText, _commands);
-        void Apply()
+        // LANG-12: run the (potentially expensive) parse + semantic bind on a background thread so
+        // typing never blocks the UI. A snapshot of the text is captured; a fresh cancellation
+        // token supersedes any in-flight parse so only the latest result is applied.
+        var snapshot = _documentText;
+        _parseCts?.Cancel();
+        var cts = new CancellationTokenSource();
+        _parseCts = cts;
+        var token = cts.Token;
+
+        void Apply(ParsedDocument parsed)
         {
-            if (_disposed) return;
+            if (_disposed || token.IsCancellationRequested) return;
             Ast = parsed.Ast;
             Semantics = parsed.Semantics;
             UpdateNavigation();
@@ -345,8 +367,13 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
             HighlightBannerText = suppressHighlight ? HighlightReason(s, lines, kb) : string.Empty;
             Reparsed?.Invoke(this, EventArgs.Empty);
         }
-        if (Dispatcher.UIThread.CheckAccess()) Apply();
-        else Dispatcher.UIThread.Post(Apply);
+
+        Task.Run(() =>
+        {
+            var parsed = DocumentParser.Parse(FilePath, snapshot, _commands);
+            if (token.IsCancellationRequested) return;
+            Dispatcher.UIThread.Post(() => Apply(parsed));
+        }, token);
     }
 
     private static string HighlightReason(AppSettings? s, int lines, int kb)
@@ -570,5 +597,8 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
         _reparseTimer = null;
         _infoBannerTimer?.Stop();
         _infoBannerTimer = null;
+        _parseCts?.Cancel();
+        _parseCts?.Dispose();
+        _parseCts = null;
     }
 }

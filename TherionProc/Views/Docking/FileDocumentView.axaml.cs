@@ -41,11 +41,16 @@ public partial class FileDocumentView : UserControl
             editor.HoverTargetChanged += OnHoverTargetChanged;
             editor.FindReferencesRequested += OnFindReferencesRequested;
             editor.RenameSymbolRequested += OnRenameSymbolRequested;
+            editor.StepOutRequested += OnStepOutRequested; // EDIT-17
         }
     }
 
     private void OnFindReferencesRequested(object? sender, string term)
         => TryDocuments()?.RequestFindReferences(term);
+
+    // EDIT-17: step back out of an included file to whoever opened it (reuses the nav history).
+    private void OnStepOutRequested(object? sender, EventArgs e)
+        => _ = TryDocuments()?.GoBackAsync();
 
     // Reveal-in-workspace button (#1): ask the Workspace Explorer to switch to file view
     // and select/expand to this document's file (only if it lives under the workspace root).
@@ -144,6 +149,7 @@ public partial class FileDocumentView : UserControl
         {
             _vm.ScrollToSpanRequested -= OnScrollRequested;
             _vm.OpenLimitSettingsRequested -= OnOpenLimitSettings;
+            _vm.SaveCleanupRequested -= OnSaveCleanupRequested;
         }
         DisposeMapiahWatcher(); // the watcher is tied to the previous document's file
         _vm = DataContext as FileDocumentViewModel;
@@ -151,6 +157,7 @@ public partial class FileDocumentView : UserControl
         {
             _vm.ScrollToSpanRequested += OnScrollRequested;
             _vm.OpenLimitSettingsRequested += OnOpenLimitSettings;
+            _vm.SaveCleanupRequested += OnSaveCleanupRequested;
             ApplyPendingScrollDeferred();
             if (_vm.Measurements is { } mvm)
                 mvm.PropertyChanged += OnMeasurementsPropertyChanged;
@@ -181,6 +188,10 @@ public partial class FileDocumentView : UserControl
         this.FindControl<TherionTextEditor>("Editor")?.ScrollTo(span);
         _vm?.ClearPendingScroll();
     }
+
+    // EDIT-14: clean the document in place before the shell writes it, so the caret is preserved.
+    private void OnSaveCleanupRequested(object? sender, EventArgs e)
+        => this.FindControl<TherionTextEditor>("Editor")?.ApplySaveCleanup();
 
     // A document opened via navigation may bind its view after the scroll was requested;
     // replay the pending target once the editor is laid out.

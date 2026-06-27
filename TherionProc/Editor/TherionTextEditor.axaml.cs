@@ -140,6 +140,14 @@ public partial class TherionTextEditor : UserControl
     private Point _infoPointer;
     private bool _pointerOverPopup;   // pointer is currently inside the hover popup (#5)
     private FoldingManager? _foldingManager;
+    private MatchingBlockRenderer? _matchRenderer;        // EDIT-15: matching block opener/closer highlight
+    private ColorAdornmentRenderer? _colorAdorn;          // EDIT-12: inline color swatches
+    private MinimapControl? _minimap;                     // EDIT-07: code minimap
+    private Dictionary<int, int> _blockPairs = new();     // EDIT-15/16: opener↔closer line pairs
+    private MenuItem? _matchMenuItem;                     // EDIT-15: context-menu item (visibility gated)
+    private MenuItem? _stepIntoMenuItem;                  // EDIT-17: context-menu item (visibility gated)
+    private MenuItem? _formatMenuItem;                    // EDIT-04: context-menu item (visibility gated)
+    private MenuItem? _peekMenuItem;                      // EDIT-10: context-menu item (visibility gated)
     private CompletionWindow? _completionWindow;
     private Diagnostic? _hoverDiagnostic;
     private IAppSettingsService? _settings;
@@ -197,6 +205,10 @@ public partial class TherionTextEditor : UserControl
             // Move the caret to the right-clicked location before the context menu opens (tunnel
             // runs ahead of the ContextMenu's own bubbling open handler), like a typical editor.
             _editor.TextArea.AddHandler(InputElement.ContextRequestedEvent, OnEditorContextRequested,
+                RoutingStrategies.Tunnel);
+            // Tunnel KeyDown runs before AvaloniaEdit inserts a newline, so Smart Enter (EDIT-16)
+            // can intercept Return and substitute a block-aware insertion.
+            _editor.TextArea.AddHandler(InputElement.KeyDownEvent, OnTextAreaPreviewKeyDown,
                 RoutingStrategies.Tunnel);
             _editor.TextArea.TextEntered += OnTextEntered;
             _editor.TextChanged += OnEditorTextChanged;
@@ -266,6 +278,18 @@ public partial class TherionTextEditor : UserControl
         editor.TextArea.TextView.BackgroundRenderers.Add(_occurrences);
         editor.TextArea.Caret.PositionChanged += OnCaretPositionChanged;
 
+        // EDIT-15: highlight the matching opener/closer of the block keyword under the caret.
+        _matchRenderer = new MatchingBlockRenderer();
+        editor.TextArea.TextView.BackgroundRenderers.Add(_matchRenderer);
+
+        // EDIT-12: draw a colour swatch next to colour values.
+        _colorAdorn = new ColorAdornmentRenderer
+        {
+            Enabled = EditorFeatureFlags.IsEnabled(EditorFeature.ColorAdornments,
+                (_settings ?? TryGetSettings())?.Current),
+        };
+        editor.TextArea.TextView.BackgroundRenderers.Add(_colorAdorn);
+
         // Transient highlight painted on a navigation arrival, then faded out.
         _flash = new FlashHighlightRenderer(editor.TextArea.TextView);
         editor.TextArea.TextView.BackgroundRenderers.Add(_flash);
@@ -298,7 +322,14 @@ public partial class TherionTextEditor : UserControl
         {
             _overviewRuler = new DiagnosticOverviewRuler(editor);
             Grid.SetColumn(_overviewRuler, 1);
+            Grid.SetRow(_overviewRuler, 1); // EDIT-08 added a breadcrumb row at the top
             root.Children.Add(_overviewRuler);
+
+            // EDIT-07: code minimap in the rightmost column (hidden until enabled).
+            _minimap = new MinimapControl(editor) { IsVisible = false };
+            Grid.SetColumn(_minimap, 2);
+            Grid.SetRow(_minimap, 1);
+            root.Children.Add(_minimap);
         }
     }
 
@@ -311,6 +342,7 @@ public partial class TherionTextEditor : UserControl
     private void OnAppSettingsChanged(object? sender, EventArgs e)
     {
         if (_editor is not null) ApplyAppSettings(_editor);
+        UpdateBreadcrumb(); // EDIT-08 may have been toggled
     }
 
     // Applies the user's editor preferences (font, line numbers, indentation, …).
@@ -324,6 +356,84 @@ public partial class TherionTextEditor : UserControl
         editor.Options.IndentationSize = Math.Max(1, s.IndentationSize);
         editor.WordWrap = s.EditorWordWrap; // #7
 
+        // EDIT-13: whitespace / EOL / indent-guide rendering, gated by the feature flag.
+        bool wsFeature = EditorFeatureFlags.IsEnabled(EditorFeature.WhitespaceGuides, s);
+        editor.Options.ShowSpaces = wsFeature && s.EditorShowWhitespace;
+        editor.Options.ShowTabs = wsFeature && s.EditorShowWhitespace;
+        editor.Options.ShowEndOfLine = wsFeature && s.EditorShowEndOfLine;
+        ApplyIndentGuides(editor, wsFeature && s.EditorShowIndentGuides, Math.Max(1, s.IndentationSize));
+
+        // EDIT-12: toggle the colour swatches with the feature flag.
+        if (_colorAdorn is not null)
+        {
+            _colorAdorn.Enabled = EditorFeatureFlags.IsEnabled(EditorFeature.ColorAdornments, s);
+            editor.TextArea.TextView.InvalidateVisual();
+        }
+
+        // EDIT-07: show the minimap when enabled (feature flag + View-menu toggle).
+        if (_minimap is not null)
+            _minimap.IsVisible = EditorFeatureFlags.IsEnabled(EditorFeature.Minimap, s) && s.EditorShowMinimap;
+    }
+
+    private IndentGuideRenderer? _indentGuides;
+
+    // Adds/removes the indent-guide background renderer to match the EDIT-13 toggle.
+    private void ApplyIndentGuides(TextEditor editor, bool enabled, int indentSize)
+    {
+        var renderers = editor.TextArea.TextView.BackgroundRenderers;
+        if (enabled)
+        {
+            _indentGuides ??= new IndentGuideRenderer();
+            _indentGuides.SetIndentSize(indentSize);
+            if (!renderers.Contains(_indentGuides)) renderers.Add(_indentGuides);
+        }
+        else if (_indentGuides is not null)
+        {
+            renderers.Remove(_indentGuides);
+        }
+        editor.TextArea.TextView.InvalidateVisual();
+    }
+
+    /// <summary>
+    /// EDIT-14: trims trailing whitespace on every line and ensures a final newline, editing the
+    /// document in place so the caret position is preserved. No-op unless the feature is enabled.
+    /// </summary>
+    public void ApplySaveCleanup()
+    {
+        if (_editor is null) return;
+
+        // EDIT-04: optional format-on-save (runs before the trim; itself gated on the EDIT-04 flag).
+        if (CurrentSettings.EditorFormatOnSave) FormatDocument();
+
+        if (!EditorFeatureFlags.IsEnabled(EditorFeature.TrimTrailingOnSave,
+                (_settings ?? TryGetSettings())?.Current))
+            return;
+
+        var doc = _editor.Document;
+        doc.BeginUpdate();
+        try
+        {
+            // Trim trailing spaces/tabs, last line first so earlier offsets stay valid.
+            for (int i = doc.LineCount; i >= 1; i--)
+            {
+                var line = doc.GetLineByNumber(i);
+                int end = line.EndOffset;
+                int p = end;
+                while (p > line.Offset && doc.GetCharAt(p - 1) is ' ' or '\t') p--;
+                if (p < end) doc.Remove(p, end - p);
+            }
+            // Ensure the file ends with a newline.
+            if (doc.TextLength > 0 && doc.GetCharAt(doc.TextLength - 1) is not ('\n' or '\r'))
+                doc.Insert(doc.TextLength, NewlineFor(doc));
+        }
+        finally { doc.EndUpdate(); }
+    }
+
+    private static string NewlineFor(TextDocument doc)
+    {
+        if (doc.LineCount > 1)
+            return doc.GetLineByNumber(1).DelimiterLength == 2 ? "\r\n" : "\n";
+        return Environment.NewLine;
     }
 
     private bool IsDark() => ActualThemeVariant == ThemeVariant.Dark;
@@ -345,9 +455,25 @@ public partial class TherionTextEditor : UserControl
         if (_editor is null) return;
         SetCurrentValue(TextProperty, _editor.Text);
         UpdateFoldings();
+        UpdateBlockPairs();
         UpdateThconfigDecorations();
         RecomputeFileWarnings();
         _overviewRuler?.InvalidateVisual();
+    }
+
+    // EDIT-15/16: cache the opener↔closer line pairs whenever the text changes (cheap, line-based),
+    // but only while one of the consuming features is active.
+    private void UpdateBlockPairs()
+    {
+        if (_editor?.Document is not { } doc) return;
+        var s = (_settings ?? TryGetSettings())?.Current;
+        if (!EditorFeatureFlags.IsEnabled(EditorFeature.MatchTerminator, s) &&
+            !EditorFeatureFlags.IsEnabled(EditorFeature.SmartEnter, s))
+        {
+            if (_blockPairs.Count > 0) _blockPairs = new Dictionary<int, int>();
+            return;
+        }
+        _blockPairs = TherionBlocks.BuildPairs(doc);
     }
 
     private void UpdateFoldings()
@@ -473,6 +599,7 @@ public partial class TherionTextEditor : UserControl
             {
                 _editor.Text = v;
                 UpdateFoldings();
+                UpdateBlockPairs();
                 UpdateThconfigDecorations();
                 RecomputeFileWarnings();
                 _overviewRuler?.InvalidateVisual();
@@ -521,10 +648,31 @@ public partial class TherionTextEditor : UserControl
         if (_editor is null) return;
         bool ctrl = (e.KeyModifiers & KeyModifiers.Control) != 0;
         bool shift = (e.KeyModifiers & KeyModifiers.Shift) != 0;
+        bool alt = (e.KeyModifiers & KeyModifiers.Alt) != 0;
 
         if (e.Key == Key.F2)
         {
             StartRename();
+            e.Handled = true;
+        }
+        else if (ctrl && e.Key == Key.OemCloseBrackets) // EDIT-15: go to matching survey↔endsurvey
+        {
+            GoToMatchingBlock();
+            e.Handled = true;
+        }
+        else if (alt && e.Key == Key.Down && GatedReadingNav()) // EDIT-17: step into the include under the caret
+        {
+            FollowIncludeUnderCaret();
+            e.Handled = true;
+        }
+        else if (alt && e.Key == Key.Up && GatedReadingNav()) // EDIT-17: step back to the including file
+        {
+            StepOutRequested?.Invoke(this, EventArgs.Empty);
+            e.Handled = true;
+        }
+        else if (alt && e.Key == Key.F12) // EDIT-10: peek definition inline
+        {
+            PeekDefinition();
             e.Handled = true;
         }
         else if (e.Key == Key.F12 && shift)
@@ -551,6 +699,196 @@ public partial class TherionTextEditor : UserControl
         {
             ToggleLineComment();
             e.Handled = true;
+        }
+        else if (shift && alt && e.Key == Key.F) // EDIT-04: Format Document
+        {
+            FormatDocument();
+            e.Handled = true;
+        }
+    }
+
+    // ----- EDIT-15 / 16 / 17: block matching, smart Enter, reading-order navigation -----
+
+    /// <summary>Raised when the user steps back out of an included file (Alt+Up, EDIT-17).</summary>
+    public event EventHandler? StepOutRequested;
+
+    private AppSettings CurrentSettings => (_settings ?? TryGetSettings())?.Current ?? AppSettings.Default;
+
+    private bool GatedReadingNav() =>
+        EditorFeatureFlags.IsEnabled(EditorFeature.ReadingOrderNav, CurrentSettings);
+
+    // Tunnel-phase handler: lets Smart Enter (EDIT-16) and Tab snippet expansion (EDIT-03)
+    // preempt AvaloniaEdit's default newline / indent.
+    private void OnTextAreaPreviewKeyDown(object? sender, KeyEventArgs e)
+    {
+        bool plain = (e.KeyModifiers & (KeyModifiers.Control | KeyModifiers.Shift | KeyModifiers.Alt)) == 0;
+        if (plain && (e.Key == Key.Enter || e.Key == Key.Return) && TrySmartEnter())
+            e.Handled = true;
+        else if (plain && e.Key == Key.Tab && _completionWindow is null && TryExpandSnippet())
+            e.Handled = true;
+    }
+
+    /// <summary>
+    /// EDIT-03: if the word immediately before the caret is a snippet trigger, replace it with the
+    /// expanded template (continuation lines indented, caret at the <c>$0</c> marker).
+    /// </summary>
+    private bool TryExpandSnippet()
+    {
+        if (_editor is null || _editor.SelectionLength > 0) return false;
+        if (!EditorFeatureFlags.IsEnabled(EditorFeature.Snippets, CurrentSettings)) return false;
+
+        int caret = _editor.CaretOffset;
+        var text = _editor.Text;
+        int start = caret;
+        while (start > 0 && IsWordChar(text[start - 1])) start--;
+        if (start == caret) return false;
+        var word = text.Substring(start, caret - start);
+        if (TherionSnippets.Find(word) is not { } snippet) return false;
+
+        TherionSnippets.Insert(_editor.TextArea, start, caret - start, snippet);
+        return true;
+    }
+
+    /// <summary>
+    /// EDIT-16: when Enter is pressed at the end of an as-yet-unclosed block opener
+    /// (<c>survey foo</c>), insert an indented body line plus the matching <c>endX</c>, leaving the
+    /// caret on the indented line. Returns false to fall through to the normal newline + auto-indent.
+    /// </summary>
+    private bool TrySmartEnter()
+    {
+        if (_editor is null || _editor.SelectionLength > 0) return false;
+        if (!EditorFeatureFlags.IsEnabled(EditorFeature.SmartEnter, CurrentSettings)) return false;
+
+        var doc = _editor.Document;
+        int caret = _editor.CaretOffset;
+        var line = doc.GetLineByOffset(caret);
+        if (caret != line.EndOffset) return false; // only at the very end of the opener line
+
+        var text = doc.GetText(line);
+        if (!TherionBlocks.IsBlockOpenerLine(text, out var type)) return false;
+        if (_blockPairs.ContainsKey(line.LineNumber)) return false; // already has a closer
+
+        var indent = TherionBlocks.LeadingWhitespace(text);
+        var unit = IndentUnit();
+        var nl = NewlineFor(doc);
+        var insert = nl + indent + unit + nl + indent + TherionBlocks.CloserFor(type);
+        doc.Insert(caret, insert);
+        _editor.CaretOffset = caret + nl.Length + indent.Length + unit.Length;
+        return true;
+    }
+
+    private string IndentUnit()
+    {
+        var s = CurrentSettings;
+        return s.ConvertTabsToSpaces ? new string(' ', Math.Max(1, s.IndentationSize)) : "\t";
+    }
+
+    /// <summary>EDIT-04: re-indents the whole document to its block nesting (caret-preserving).</summary>
+    public void FormatDocument()
+    {
+        if (_editor is null) return;
+        if (!EditorFeatureFlags.IsEnabled(EditorFeature.FormatDocument, CurrentSettings)) return;
+        TherionFormatter.Reindent(_editor.Document, IndentUnit());
+    }
+
+    /// <summary>EDIT-15: jumps the caret to the matching opener/closer of the block keyword line.</summary>
+    public void GoToMatchingBlock()
+    {
+        if (_editor is null) return;
+        if (!EditorFeatureFlags.IsEnabled(EditorFeature.MatchTerminator, CurrentSettings)) return;
+        var doc = _editor.Document;
+        var line = doc.GetLineByOffset(_editor.CaretOffset);
+        if (!_blockPairs.TryGetValue(line.LineNumber, out var matchLine) ||
+            matchLine < 1 || matchLine > doc.LineCount) return;
+
+        var (start, length) = FirstWordRange(doc, matchLine);
+        _editor.Select(start, 0);
+        _editor.ScrollToLine(matchLine);
+        if (length > 0) _flash?.Flash(start, length);
+        _editor.Focus();
+    }
+
+    // EDIT-15: keep the matching-pair highlight in sync with the caret.
+    private void UpdateMatchingBlockHighlight()
+    {
+        if (_editor is null || _matchRenderer is null) return;
+        bool on = HighlightingEnabled &&
+                  EditorFeatureFlags.IsEnabled(EditorFeature.MatchTerminator, CurrentSettings);
+
+        (int, int)? a = null, b = null;
+        if (on)
+        {
+            var doc = _editor.Document;
+            var line = doc.GetLineByOffset(_editor.CaretOffset);
+            if (_blockPairs.TryGetValue(line.LineNumber, out var matchLine) &&
+                matchLine >= 1 && matchLine <= doc.LineCount)
+            {
+                a = FirstWordRange(doc, line.LineNumber);
+                b = FirstWordRange(doc, matchLine);
+            }
+        }
+        if (_matchRenderer.Set(a, b)) _editor.TextArea.TextView.InvalidateVisual();
+    }
+
+    private static (int Start, int Length) FirstWordRange(TextDocument doc, int lineNumber)
+    {
+        var line = doc.GetLineByNumber(lineNumber);
+        var text = doc.GetText(line);
+        int lead = TherionBlocks.LeadingWhitespace(text).Length;
+        int len = TherionBlocks.FirstWord(text).Length;
+        return (line.Offset + lead, len);
+    }
+
+    /// <summary>EDIT-17: opens the file referenced by the input/load/source command on the caret line.</summary>
+    public void FollowIncludeUnderCaret()
+    {
+        if (_editor is null) return;
+        if (!EditorFeatureFlags.IsEnabled(EditorFeature.ReadingOrderNav, CurrentSettings)) return;
+        var doc = _editor.Document;
+        var line = doc.GetLineByOffset(_editor.CaretOffset);
+        var lineText = doc.GetText(line);
+        var keyword = TherionBlocks.FirstWord(lineText).ToLowerInvariant();
+        if (keyword is not ("input" or "load" or "source")) return;
+
+        int lead = TherionBlocks.LeadingWhitespace(lineText).Length;
+        int argCol = lead + keyword.Length;
+        while (argCol < lineText.Length && char.IsWhiteSpace(lineText[argCol])) argCol++;
+        if (argCol >= lineText.Length) return;
+        if (ResolvePathLinkAt(line.Offset + argCol) is { } link) OpenLink(link);
+    }
+
+    /// <summary>EDIT-15: faint highlight of the matching block opener/closer keyword pair.</summary>
+    private sealed class MatchingBlockRenderer : IBackgroundRenderer
+    {
+        private static readonly IBrush Fill = new SolidColorBrush(Color.FromArgb(0x40, 0x4C, 0xAF, 0x50));
+        private static readonly IPen Stroke = new Pen(new SolidColorBrush(Color.FromArgb(0xB0, 0x4C, 0xAF, 0x50)), 1);
+
+        private (int Start, int Length)? _a;
+        private (int Start, int Length)? _b;
+
+        public KnownLayer Layer => KnownLayer.Selection;
+
+        /// <summary>Sets the two highlighted ranges; returns true when they changed.</summary>
+        public bool Set((int, int)? a, (int, int)? b)
+        {
+            if (Nullable.Equals(a, _a) && Nullable.Equals(b, _b)) return false;
+            _a = a; _b = b;
+            return true;
+        }
+
+        public void Draw(TextView textView, DrawingContext drawingContext)
+        {
+            Paint(textView, drawingContext, _a);
+            Paint(textView, drawingContext, _b);
+        }
+
+        private static void Paint(TextView textView, DrawingContext dc, (int Start, int Length)? range)
+        {
+            if (range is not { } r || r.Length <= 0) return;
+            var builder = new BackgroundGeometryBuilder { CornerRadius = 2 };
+            builder.AddSegment(textView, new TextSegment { StartOffset = r.Start, Length = r.Length });
+            if (builder.CreateGeometry() is { } geometry)
+                dc.DrawGeometry(Fill, Stroke, geometry);
         }
     }
 
@@ -579,6 +917,15 @@ public partial class TherionTextEditor : UserControl
 
     // ----- autocomplete --------------------------------------------------
 
+    // EDIT-01: a completion item's semantic kind (drives the glyph + description).
+    private enum CompletionKind { Command, Flag, DataStyle, DataField, Type, Station, Identifier, Snippet }
+
+    private readonly record struct CompletionCandidate(
+        string Text, CompletionKind Kind, string? Insert = null, string? Description = null, bool IsSnippet = false);
+
+    private static readonly HashSet<string> KeywordSet =
+        new(TokenClassifier.Keywords, StringComparer.OrdinalIgnoreCase);
+
     private void ShowCompletion(bool explicitTrigger)
     {
         if (_editor is null || _completionWindow is not null) return;
@@ -593,53 +940,413 @@ public partial class TherionTextEditor : UserControl
         var candidates = CandidateTerms(start);
         if (candidates.Count == 0) return;
 
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var matches = candidates
-            .Where(term => prefix.Length == 0 || term.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(term => term, StringComparer.OrdinalIgnoreCase)
+            .Where(c => prefix.Length == 0 || c.Text.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            .Where(c => seen.Add(c.Text))
+            .OrderBy(c => c.Text, StringComparer.OrdinalIgnoreCase)
             .Take(200)
             .ToList();
         if (matches.Count == 0) return;
 
+        bool rich = EditorFeatureFlags.IsEnabled(EditorFeature.RichCompletion, CurrentSettings);
         var window = new CompletionWindow(_editor.TextArea)
         {
             StartOffset = start,
             EndOffset = caret,
         };
-        foreach (var m in matches)
-            window.CompletionList.CompletionData.Add(new TherionCompletionData(m));
+        foreach (var c in matches)
+            window.CompletionList.CompletionData.Add(new TherionCompletionData(c, rich));
         window.Closed += (_, _) => _completionWindow = null;
         _completionWindow = window;
+        HideSignatureHelp(); // EDIT-02: don't overlap the completion popup
         window.Show();
     }
 
-    /// <summary>Picks the completion vocabulary based on what precedes the caret on the line.</summary>
-    private IReadOnlyList<string> CandidateTerms(int wordStart)
+    /// <summary>Picks the completion vocabulary (with kinds) based on what precedes the caret.</summary>
+    private IReadOnlyList<CompletionCandidate> CandidateTerms(int wordStart)
     {
-        if (_editor is null) return Array.Empty<string>();
+        if (_editor is null) return Array.Empty<CompletionCandidate>();
         var line = _editor.Document.GetLineByOffset(wordStart);
         var before = _editor.Document.GetText(line.Offset, wordStart - line.Offset);
         var tokens = before.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
 
-        // First word on the line → command keywords.
+        // First word on the line → command keywords (+ snippet triggers when EDIT-03 is on).
         if (tokens.Length == 0)
-            return TokenClassifier.Keywords.ToList();
+            return FirstWordCandidates();
 
         switch (tokens[0].ToLowerInvariant())
         {
             case "flags":
-                return FlagValues;
+                return Kinded(FlagValues, CompletionKind.Flag);
             case "data":
                 // 2nd token is the style (normal/diving/…); the rest are field names.
-                return tokens.Length == 1 ? DataStyles : DataFields;
+                return tokens.Length == 1
+                    ? Kinded(DataStyles, CompletionKind.DataStyle)
+                    : Kinded(DataFields, CompletionKind.DataField);
+            case "point" when IsTh2() && tokens.Length == 3:   // point x y <type>
+                return Kinded(Th2Symbols.PointTypeNames, CompletionKind.Type);
+            case "line" when IsTh2() && tokens.Length == 1:    // line <type>
+                return Kinded(Th2Symbols.LineTypeNames, CompletionKind.Type);
+            case "area" when IsTh2() && tokens.Length == 1:    // area <type>
+                return Kinded(Th2Symbols.AreaTypeNames, CompletionKind.Type);
             case "input":
             case "load":
             case "encoding":
-                return Array.Empty<string>(); // file paths / charsets — nothing useful to suggest
+                return Array.Empty<CompletionCandidate>(); // file paths / charsets — nothing to suggest
             default:
-                // Inside a command/data row → station & survey names (+ keywords).
-                return (CompletionTerms ?? Array.Empty<string>()).ToList();
+                return IdentifierCandidates();
         }
+    }
+
+    private static IReadOnlyList<CompletionCandidate> Kinded(IEnumerable<string> terms, CompletionKind kind) =>
+        terms.Select(t => new CompletionCandidate(t, kind)).ToList();
+
+    private IReadOnlyList<CompletionCandidate> FirstWordCandidates()
+    {
+        var list = TokenClassifier.Keywords
+            .Select(k => new CompletionCandidate(k, CompletionKind.Command, Description: CommandDocs.GetValueOrDefault(k)))
+            .ToList();
+        if (EditorFeatureFlags.IsEnabled(EditorFeature.Snippets, CurrentSettings))
+            foreach (var s in TherionSnippets.All)
+                list.Add(new CompletionCandidate(s.Trigger, CompletionKind.Snippet, Insert: s.Trigger,
+                    Description: $"Snippet: {s.Description}", IsSnippet: true));
+        return list;
+    }
+
+    private IReadOnlyList<CompletionCandidate> IdentifierCandidates()
+    {
+        var terms = CompletionTerms ?? Array.Empty<string>();
+        return terms.Select(t => new CompletionCandidate(t,
+            KeywordSet.Contains(t) ? CompletionKind.Command : CompletionKind.Identifier,
+            Description: CommandDocs.GetValueOrDefault(t))).ToList();
+    }
+
+    private bool IsTh2() =>
+        CurrentFilePath is { } p && p.EndsWith(".th2", StringComparison.OrdinalIgnoreCase);
+
+    // ----- EDIT-02: parameter / signature help -----------------------------
+
+    private Avalonia.Controls.Primitives.Popup? _sigPopup;
+    private string? _sigKey;
+
+    private static readonly Dictionary<string, string[]> CommandSignatures =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["fix"]     = new[] { "station", "x/east", "y/north", "z/alt", "[sdx]", "[sdy]", "[sdz]" },
+            ["equate"]  = new[] { "station", "station", "…" },
+            ["cs"]      = new[] { "coordinate-system" },
+            ["station"] = new[] { "name", "\"comment\"", "[flags]" },
+            ["point"]   = new[] { "x", "y", "type", "[-options]" },
+            ["line"]    = new[] { "type", "[-options]" },
+            ["scrap"]   = new[] { "id", "[-projection]", "[-scale]", "[-options]" },
+            ["map"]     = new[] { "id", "[-options]" },
+        };
+
+    // Refreshes the signature popup for the caret's command/data-row context (or hides it).
+    private void UpdateSignatureHelp()
+    {
+        if (_editor is null) return;
+        bool on = HighlightingEnabled && _completionWindow is null &&
+                  EditorFeatureFlags.IsEnabled(EditorFeature.SignatureHelp, CurrentSettings);
+        if (!on || ComputeSignature() is not { } sig) { HideSignatureHelp(); return; }
+
+        EnsureSignaturePopup();
+        var key = $"{sig.Title}|{sig.Active}|{string.Join(' ', sig.Params)}";
+        if (key != _sigKey)
+        {
+            _sigKey = key;
+            _sigPopup!.Child = BuildSignatureContent(sig.Title, sig.Params, sig.Active);
+        }
+        PositionSignaturePopup();
+        if (!_sigPopup!.IsOpen) _sigPopup.IsOpen = true;
+    }
+
+    private void HideSignatureHelp()
+    {
+        _sigKey = null;
+        if (_sigPopup is { IsOpen: true }) _sigPopup.IsOpen = false;
+    }
+
+    private (string Title, string[] Params, int Active)? ComputeSignature()
+    {
+        if (_editor is null) return null;
+        var doc = _editor.Document;
+        int caret = _editor.CaretOffset;
+        var line = doc.GetLineByOffset(caret);
+        var lineText = doc.GetText(line);
+        int caretCol = Math.Min(caret - line.Offset, lineText.Length);
+        var beforeCaret = lineText.Substring(0, caretCol);
+        var fw = TherionBlocks.FirstWord(lineText).ToLowerInvariant();
+
+        if (CommandSignatures.TryGetValue(fw, out var sig))
+            return (fw, sig, Math.Clamp(ArgIndex(beforeCaret, skipFirst: true), 0, sig.Length - 1));
+
+        if (fw.Length > 0 && !KeywordSet.Contains(fw) && NearestDataFields(line.LineNumber) is { Length: > 0 } fields)
+            return ("data", fields, Math.Clamp(ArgIndex(beforeCaret, skipFirst: false), 0, fields.Length - 1));
+
+        return null;
+    }
+
+    private static int ArgIndex(string beforeCaret, bool skipFirst)
+    {
+        var toks = beforeCaret.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        bool endsWithSpace = beforeCaret.Length > 0 && char.IsWhiteSpace(beforeCaret[^1]);
+        int idx = endsWithSpace ? toks.Length : toks.Length - 1;
+        if (skipFirst) idx -= 1;
+        return Math.Max(0, idx);
+    }
+
+    // Nearest preceding `data <style> <fields…>` reading order (the columns of the current shot row).
+    private string[]? NearestDataFields(int lineNumber)
+    {
+        var doc = _editor!.Document;
+        for (int i = lineNumber; i >= 1; i--)
+        {
+            var t = doc.GetText(doc.GetLineByNumber(i));
+            var w = TherionBlocks.FirstWord(t);
+            if (w.Length == 0) continue;
+            if (string.Equals(w, "data", StringComparison.OrdinalIgnoreCase))
+            {
+                var parts = t.Trim().Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+                return parts.Length > 2 ? parts.Skip(2).ToArray() : Array.Empty<string>();
+            }
+            if (TherionBlocks.CloserType(w) == "centreline") return null; // left the data section
+        }
+        return null;
+    }
+
+    private Control BuildSignatureContent(string title, string[] ps, int active)
+    {
+        var panel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 7 };
+        panel.Children.Add(new TextBlock { Text = title + ":", Foreground = Brushes.Gray });
+        for (int i = 0; i < ps.Length; i++)
+        {
+            bool act = i == active;
+            panel.Children.Add(new TextBlock
+            {
+                Text = ps[i],
+                FontWeight = act ? FontWeight.Bold : FontWeight.Normal,
+                Foreground = act ? (IsDark() ? Brushes.Gold : Brushes.SteelBlue) : (IBrush?)null,
+            });
+        }
+        return new Border
+        {
+            Background = IsDark() ? Brushes.Black : Brushes.White,
+            BorderBrush = Brushes.Gray,
+            BorderThickness = new Thickness(1),
+            Padding = new Thickness(8, 3),
+            Child = panel,
+        };
+    }
+
+    private void EnsureSignaturePopup()
+    {
+        if (_sigPopup is not null) return;
+        _sigPopup = new Avalonia.Controls.Primitives.Popup
+        {
+            PlacementTarget = _editor,
+            Placement = PlacementMode.TopEdgeAlignedLeft,
+            IsLightDismissEnabled = false,
+        };
+        if (this.FindControl<Grid>("Root") is { } root) root.Children.Add(_sigPopup);
+    }
+
+    private void PositionSignaturePopup()
+    {
+        if (_editor is null || _sigPopup is null) return;
+        var view = _editor.TextArea.TextView;
+        var loc = _editor.Document.GetLocation(_editor.CaretOffset);
+        var vpos = view.GetVisualPosition(new TextViewPosition(loc), VisualYPosition.LineTop);
+        if (view.TranslatePoint(vpos - view.ScrollOffset, _editor) is { } p)
+        {
+            _sigPopup.HorizontalOffset = p.X;
+            _sigPopup.VerticalOffset = p.Y - 26; // sit just above the caret line
+        }
+    }
+
+    // ----- EDIT-08: breadcrumb bar (enclosing survey/centreline/scrap path) -----
+
+    private void UpdateBreadcrumb()
+    {
+        if (_editor is null) return;
+        var bar = this.FindControl<Border>("BreadcrumbBar");
+        var panel = this.FindControl<StackPanel>("Breadcrumb");
+        if (bar is null || panel is null) return;
+
+        if (!EditorFeatureFlags.IsEnabled(EditorFeature.StickyScroll, CurrentSettings))
+        {
+            if (bar.IsVisible) { bar.IsVisible = false; panel.Children.Clear(); }
+            return;
+        }
+
+        var doc = _editor.Document;
+        var path = EnclosingBlocks(doc, doc.GetLineByOffset(_editor.CaretOffset).LineNumber);
+        if (path.Count == 0) { bar.IsVisible = false; panel.Children.Clear(); return; }
+
+        panel.Children.Clear();
+        for (int i = 0; i < path.Count; i++)
+        {
+            if (i > 0)
+                panel.Children.Add(new TextBlock
+                {
+                    Text = "›", Foreground = Brushes.Gray,
+                    VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(2, 0),
+                });
+            int target = path[i].Line;
+            var btn = new Button
+            {
+                Content = path[i].Label,
+                Padding = new Thickness(5, 1),
+                Background = Brushes.Transparent,
+                BorderThickness = new Thickness(0),
+                FontSize = 11,
+            };
+            btn.Click += (_, _) => ScrollTo(target, 1);
+            panel.Children.Add(btn);
+        }
+        bar.IsVisible = true;
+    }
+
+    private static List<(string Label, int Line)> EnclosingBlocks(TextDocument doc, int caretLine)
+    {
+        var stack = new List<(string Label, int Line, string Type)>();
+        int max = Math.Min(caretLine, doc.LineCount);
+        for (int i = 1; i <= max; i++)
+        {
+            var text = doc.GetText(doc.GetLineByNumber(i));
+            var fw = TherionBlocks.FirstWord(text);
+            if (fw.Length == 0) continue;
+            if (TherionBlocks.IsBlockOpenerLine(text, out var type))
+                stack.Add((BlockLabel(type, text), i, type));
+            else if (TherionBlocks.CloserType(fw) is { } ctype)
+                for (int k = stack.Count - 1; k >= 0; k--)
+                    if (stack[k].Type == ctype) { stack.RemoveRange(k, stack.Count - k); break; }
+        }
+        return stack.ConvertAll(s => (s.Label, s.Line));
+    }
+
+    private static string BlockLabel(string type, string lineText)
+    {
+        var parts = lineText.Trim().Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length >= 2 && !parts[1].StartsWith('-') ? $"{type} {parts[1]}" : type;
+    }
+
+    // ----- EDIT-10: peek definition (inline popup) -------------------------
+
+    private Avalonia.Controls.Primitives.Popup? _peekPopup;
+
+    /// <summary>EDIT-10: shows the definition of the symbol under the caret inline, without navigating.</summary>
+    public void PeekDefinition()
+    {
+        if (_editor is null || Navigation is null) return;
+        if (!EditorFeatureFlags.IsEnabled(EditorFeature.PeekDefinition, CurrentSettings)) return;
+        if (ExtractRefToken(_editor.Text, _editor.CaretOffset) is not { } tok) return;
+        var kind = ChooseReferenceKind(tok, _editor.CaretOffset);
+        var span = Navigation.GoToDefinition(tok.Raw, kind);
+        if (span is null || span.Value.IsEmpty) return;
+        ShowPeek(tok.Raw, span.Value);
+    }
+
+    private void ShowPeek(string symbol, SourceSpan span)
+    {
+        var ctx = ReadPeekContext(span, out int defLine, out int firstLine);
+        if (ctx is null) return;
+
+        var lines = new StackPanel();
+        for (int i = 0; i < ctx.Length; i++)
+        {
+            int lineNo = firstLine + i;
+            lines.Children.Add(new TextBlock
+            {
+                Text = $"{lineNo,5}  {ctx[i]}",
+                FontFamily = new FontFamily("Cascadia Mono,Consolas,monospace"),
+                FontSize = 12,
+                Background = lineNo == defLine ? new SolidColorBrush(Color.FromArgb(0x40, 0xFF, 0xC1, 0x07)) : null,
+            });
+        }
+
+        var header = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
+        header.Children.Add(new TextBlock
+        {
+            Text = $"{System.IO.Path.GetFileName(span.FilePath)} : {span.Start.Line}  —  {symbol}",
+            FontWeight = FontWeight.Bold, VerticalAlignment = VerticalAlignment.Center,
+        });
+        var openBtn = new Button { Content = "Open ↗", Padding = new Thickness(6, 1), FontSize = 11 };
+        openBtn.Click += (_, _) => { HidePeek(); NavigateToSpan(span); };
+        header.Children.Add(openBtn);
+
+        var border = new Border
+        {
+            Background = IsDark() ? Brushes.Black : Brushes.White,
+            BorderBrush = Brushes.Gray,
+            BorderThickness = new Thickness(1),
+            Padding = new Thickness(8, 6),
+            MaxWidth = 680,
+            Child = new StackPanel { Spacing = 4, Children = { header, lines } },
+        };
+
+        EnsurePeekPopup();
+        _peekPopup!.Child = border;
+        PositionPeekPopup();
+        _peekPopup.IsOpen = true;
+    }
+
+    private string[]? ReadPeekContext(SourceSpan span, out int defLine, out int firstLine)
+    {
+        const int Count = 7;
+        defLine = Math.Max(1, span.Start.Line);
+        firstLine = Math.Max(1, defLine - 2);
+        try
+        {
+            if (string.Equals(span.FilePath, CurrentFilePath, StringComparison.OrdinalIgnoreCase) && _editor is not null)
+            {
+                var doc = _editor.Document;
+                int last = Math.Min(doc.LineCount, firstLine + Count - 1);
+                var list = new List<string>();
+                for (int i = firstLine; i <= last; i++) list.Add(doc.GetText(doc.GetLineByNumber(i)));
+                return list.Count > 0 ? list.ToArray() : null;
+            }
+            if (!System.IO.File.Exists(span.FilePath)) return null;
+            var all = System.IO.File.ReadAllLines(span.FilePath);
+            if (all.Length == 0) return null;
+            firstLine = Math.Max(1, Math.Min(defLine - 2, all.Length));
+            int end = Math.Min(all.Length, firstLine + Count - 1);
+            var res = new List<string>();
+            for (int i = firstLine; i <= end; i++) res.Add(all[i - 1]);
+            return res.ToArray();
+        }
+        catch { return null; }
+    }
+
+    private void EnsurePeekPopup()
+    {
+        if (_peekPopup is not null) return;
+        _peekPopup = new Avalonia.Controls.Primitives.Popup
+        {
+            PlacementTarget = _editor,
+            Placement = PlacementMode.TopEdgeAlignedLeft,
+            IsLightDismissEnabled = true,
+        };
+        if (this.FindControl<Grid>("Root") is { } root) root.Children.Add(_peekPopup);
+    }
+
+    private void PositionPeekPopup()
+    {
+        if (_editor is null || _peekPopup is null) return;
+        var view = _editor.TextArea.TextView;
+        var loc = _editor.Document.GetLocation(_editor.CaretOffset);
+        var vpos = view.GetVisualPosition(new TextViewPosition(loc), VisualYPosition.LineBottom);
+        if (view.TranslatePoint(vpos - view.ScrollOffset, _editor) is { } p)
+        {
+            _peekPopup.HorizontalOffset = Math.Max(0, p.X);
+            _peekPopup.VerticalOffset = p.Y + 4; // just below the caret line
+        }
+    }
+
+    private void HidePeek()
+    {
+        if (_peekPopup is { IsOpen: true }) _peekPopup.IsOpen = false;
     }
 
     // ----- rename symbol -------------------------------------------------
@@ -1128,6 +1835,14 @@ public partial class TherionTextEditor : UserControl
         if (_occurrences?.SetWord(SelectedOrCaretWord()) == true)
             _editor.TextArea.TextView.InvalidateVisual();
 
+        // EDIT-15: highlight the matching block opener/closer when the caret sits on a block keyword.
+        UpdateMatchingBlockHighlight();
+        // EDIT-02: track the active parameter as the caret moves across a command/data row.
+        UpdateSignatureHelp();
+        // EDIT-08: refresh the enclosing-block breadcrumb. EDIT-10: dismiss any open peek.
+        UpdateBreadcrumb();
+        HidePeek();
+
         // Report the caret location for the navigation history (#1/#8). Consume the
         // pointer-press flag so this single move is attributed to the click that caused it.
         if (!string.IsNullOrEmpty(CurrentFilePath))
@@ -1203,6 +1918,17 @@ public partial class TherionTextEditor : UserControl
     private void OnEditorContextRequested(object? sender, ContextRequestedEventArgs e)
     {
         if (_editor is null) return;
+        // EDIT-15 / EDIT-17: refresh the gated items' visibility for the current settings.
+        var fs = CurrentSettings;
+        if (_matchMenuItem is not null)
+            _matchMenuItem.IsVisible = EditorFeatureFlags.IsEnabled(EditorFeature.MatchTerminator, fs);
+        if (_stepIntoMenuItem is not null)
+            _stepIntoMenuItem.IsVisible = EditorFeatureFlags.IsEnabled(EditorFeature.ReadingOrderNav, fs);
+        if (_formatMenuItem is not null)
+            _formatMenuItem.IsVisible = EditorFeatureFlags.IsEnabled(EditorFeature.FormatDocument, fs);
+        if (_peekMenuItem is not null)
+            _peekMenuItem.IsVisible = EditorFeatureFlags.IsEnabled(EditorFeature.PeekDefinition, fs) && Navigation is not null;
+
         var view = _editor.TextArea.TextView;
         // Keyboard-invoked menus (Menu key) carry no pointer position — leave the caret put.
         if (!e.TryGetPosition(view, out var p)) return;
@@ -1692,18 +2418,71 @@ public partial class TherionTextEditor : UserControl
         return text.Substring(start, i - start);
     }
 
+    // EDIT-01: a completion item that shows a per-kind glyph + a documentation/detail tooltip
+    // (when rich), and — for snippet triggers (EDIT-03) — expands its template on accept.
     private sealed class TherionCompletionData : ICompletionData
     {
-        public TherionCompletionData(string text) => Text = text;
+        private readonly CompletionKind _kind;
+        private readonly string _insert;
+        private readonly string? _description;
+        private readonly bool _rich;
+        private readonly bool _isSnippet;
+
+        public TherionCompletionData(string text) // plain (fallback)
+        {
+            Text = text;
+            _insert = text;
+            _kind = CompletionKind.Identifier;
+            _rich = false;
+        }
+
+        public TherionCompletionData(CompletionCandidate c, bool rich)
+        {
+            Text = c.Text;
+            _insert = c.Insert ?? c.Text;
+            _kind = c.Kind;
+            _description = c.Description;
+            _rich = rich;
+            _isSnippet = c.IsSnippet;
+        }
 
         public IImage? Image => null;
         public string Text { get; }
-        public object Content => Text;
-        public object Description => "Therion term";
+        public object Content => _rich ? $"{GlyphFor(_kind)}  {Text}" : Text;
+        public object Description => _description ?? KindLabel(_kind);
         public double Priority => 0;
 
         public void Complete(TextArea textArea, ISegment completionSegment, EventArgs insertionRequestEventArgs)
-            => textArea.Document.Replace(completionSegment, Text);
+        {
+            if (_isSnippet && TherionSnippets.Find(Text) is { } snippet)
+                TherionSnippets.Insert(textArea, completionSegment.Offset, completionSegment.Length, snippet);
+            else
+                textArea.Document.Replace(completionSegment, _insert);
+        }
+
+        private static string GlyphFor(CompletionKind kind) => kind switch
+        {
+            CompletionKind.Command   => "⌘",
+            CompletionKind.Flag      => "⚑",
+            CompletionKind.DataStyle => "≣",
+            CompletionKind.DataField => "▤",
+            CompletionKind.Type      => "◈",
+            CompletionKind.Station   => "•",
+            CompletionKind.Snippet   => "✂",
+            _                        => "·",
+        };
+
+        private static string KindLabel(CompletionKind kind) => kind switch
+        {
+            CompletionKind.Command   => "Command",
+            CompletionKind.Flag      => "Flag value",
+            CompletionKind.DataStyle => "Data style",
+            CompletionKind.DataField => "Data reading",
+            CompletionKind.Type      => "Symbol type",
+            CompletionKind.Station   => "Station",
+            CompletionKind.Snippet   => "Snippet",
+            _                        => "Identifier",
+        };
     }
 
     /// <summary>
@@ -1813,6 +2592,155 @@ public partial class TherionTextEditor : UserControl
             (end >= doc.TextLength || !IsWordChar(doc.GetCharAt(end)));
     }
 
+    /// <summary>
+    /// EDIT-13: draws faint dashed vertical guides at each indentation stop on the visible lines,
+    /// making nested survey / centreline / scrap blocks easier to scan.
+    /// </summary>
+    private sealed class IndentGuideRenderer : IBackgroundRenderer
+    {
+        private static readonly IPen GuidePen =
+            new Pen(new SolidColorBrush(Color.FromArgb(0x40, 0x80, 0x80, 0x80)), 1,
+                    dashStyle: new DashStyle(new double[] { 1, 3 }, 0));
+
+        private int _indentSize = 2;
+
+        public void SetIndentSize(int n) => _indentSize = Math.Max(1, n);
+
+        public KnownLayer Layer => KnownLayer.Background;
+
+        public void Draw(TextView textView, DrawingContext drawingContext)
+        {
+            if (textView.Document is not { } doc || textView.VisualLines.Count == 0) return;
+            double spaceWidth = textView.WideSpaceWidth;
+            if (spaceWidth <= 0) return;
+            double step = _indentSize * spaceWidth;
+
+            foreach (var vl in textView.VisualLines)
+            {
+                int cols = LeadingIndentColumns(doc, vl.FirstDocumentLine, _indentSize);
+                int levels = cols / _indentSize;
+                // Level 0 sits in the margin; a single-level indent has no ancestor guide to draw.
+                if (levels < 2) continue;
+
+                double yTop = vl.VisualTop - textView.VerticalOffset;
+                double yBottom = yTop + vl.Height;
+                for (int k = 1; k < levels; k++)
+                {
+                    double x = Math.Round(k * step) - textView.HorizontalOffset + 0.5;
+                    if (x < 0) continue;
+                    drawingContext.DrawLine(GuidePen, new Point(x, yTop), new Point(x, yBottom));
+                }
+            }
+        }
+
+        private static int LeadingIndentColumns(TextDocument doc, DocumentLine line, int indentSize)
+        {
+            int col = 0;
+            for (int offset = line.Offset; offset < line.EndOffset; offset++)
+            {
+                char c = doc.GetCharAt(offset);
+                if (c == ' ') col++;
+                else if (c == '\t') col += indentSize - (col % indentSize);
+                else break;
+            }
+            return col;
+        }
+    }
+
+    /// <summary>EDIT-12: draws a small colour swatch beside layout <c>color</c> values and <c>#hex</c> literals.</summary>
+    private sealed class ColorAdornmentRenderer : IBackgroundRenderer
+    {
+        private static readonly IPen SwatchPen = new Pen(new SolidColorBrush(Color.FromArgb(0xAA, 0x80, 0x80, 0x80)), 1);
+        private static readonly System.Text.RegularExpressions.Regex HexRegex =
+            new(@"#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+        public bool Enabled { get; set; } = true;
+        public KnownLayer Layer => KnownLayer.Selection;
+
+        public void Draw(TextView view, DrawingContext dc)
+        {
+            if (!Enabled || view.Document is not { } doc || view.VisualLines.Count == 0) return;
+            double size = Math.Max(8, view.DefaultLineHeight - 6);
+            foreach (var vl in view.VisualLines)
+            {
+                var line = vl.FirstDocumentLine;
+                if (FindColor(doc.GetText(line)) is not { } hit) continue;
+                int endOffset = Math.Min(line.Offset + hit.End, doc.TextLength);
+                var vpos = view.GetVisualPosition(new TextViewPosition(doc.GetLocation(endOffset)), VisualYPosition.TextTop);
+                double x = vpos.X - view.ScrollOffset.X + 4;
+                double y = vpos.Y - view.ScrollOffset.Y + 2;
+                if (x < 0 || y < 0) continue;
+                dc.DrawRectangle(new SolidColorBrush(hit.Color), SwatchPen, new RoundedRect(new Rect(x, y, size, size), 2));
+            }
+        }
+
+        private static (int End, Color Color)? FindColor(string text)
+        {
+            if (string.Equals(TherionBlocks.FirstWord(text), "color", StringComparison.OrdinalIgnoreCase))
+            {
+                var trimmed = text.TrimEnd();
+                string token;
+                if (trimmed.EndsWith("]", StringComparison.Ordinal))
+                {
+                    int open = trimmed.LastIndexOf('[');
+                    token = open >= 0 ? trimmed.Substring(open) : trimmed;
+                }
+                else
+                {
+                    int sep = Math.Max(trimmed.LastIndexOf(' '), trimmed.LastIndexOf('\t'));
+                    token = trimmed.Substring(sep + 1);
+                }
+                if (TryParseColor(token, out var c)) return (trimmed.Length, c);
+            }
+            var m = HexRegex.Match(text);
+            return m.Success && TryParseHex(m.Value, out var hc) ? (m.Index + m.Length, hc) : null;
+        }
+
+        private static bool TryParseColor(string token, out Color color)
+        {
+            color = default;
+            token = token.Trim();
+            if (token.Length == 0) return false;
+            if (token[0] == '#') return TryParseHex(token, out color);
+            if (token[0] == '[' && token[^1] == ']')
+            {
+                var inner = token.Substring(1, token.Length - 2)
+                    .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+                if (inner.Length == 3 && Num(inner[0], out var r) && Num(inner[1], out var g) && Num(inner[2], out var b))
+                { color = Color.FromRgb(Scale(r), Scale(g), Scale(b)); return true; }
+                if (inner.Length == 1 && Num(inner[0], out var gray))
+                { var v = Scale(gray); color = Color.FromRgb(v, v, v); return true; }
+                return false;
+            }
+            if (Num(token, out var grayVal)) { var v = Scale(grayVal); color = Color.FromRgb(v, v, v); return true; }
+            return false;
+        }
+
+        private static bool TryParseHex(string token, out Color color)
+        {
+            color = default;
+            var h = token.TrimStart('#');
+            if (h.Length == 3) h = string.Concat(h[0], h[0], h[1], h[1], h[2], h[2]);
+            if (h.Length != 6) return false;
+            try
+            {
+                color = Color.FromRgb(
+                    Convert.ToByte(h.Substring(0, 2), 16),
+                    Convert.ToByte(h.Substring(2, 2), 16),
+                    Convert.ToByte(h.Substring(4, 2), 16));
+                return true;
+            }
+            catch { return false; }
+        }
+
+        private static bool Num(string s, out double v) =>
+            double.TryParse(s, System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out v);
+
+        // Therion colour components are 0–100 (percent); map to 0–255.
+        private static byte Scale(double pct) => (byte)Math.Clamp(Math.Round(pct * 2.55), 0, 255);
+    }
+
     // ----- context menu (B2) ---------------------------------------------
 
     private ContextMenu BuildContextMenu()
@@ -1831,6 +2759,16 @@ public partial class TherionTextEditor : UserControl
         menu.Items.Add(MakeItem("Toggle Comment  Ctrl+/", ToggleLineComment));
         menu.Items.Add(new Separator());
         menu.Items.Add(MakeItem("Rename Symbol…  F2",    StartRename));
+        menu.Items.Add(new Separator());
+        // EDIT-15 / EDIT-17: shown only when their feature is enabled (refreshed on menu open).
+        _matchMenuItem = MakeItem("Go to Matching Block  Ctrl+]", GoToMatchingBlock);
+        _stepIntoMenuItem = MakeItem("Step Into Included File  Alt+↓", FollowIncludeUnderCaret);
+        _formatMenuItem = MakeItem("Format Document  Shift+Alt+F", FormatDocument);
+        _peekMenuItem = MakeItem("Peek Definition  Alt+F12", PeekDefinition);
+        menu.Items.Add(_matchMenuItem);
+        menu.Items.Add(_stepIntoMenuItem);
+        menu.Items.Add(_peekMenuItem);
+        menu.Items.Add(_formatMenuItem);
         menu.Items.Add(new Separator());
         menu.Items.Add(MakeItem("Fold All",               () => SetAllFoldings(folded: true)));
         menu.Items.Add(MakeItem("Unfold All",             () => SetAllFoldings(folded: false)));
@@ -1861,6 +2799,9 @@ public partial class TherionTextEditor : UserControl
         _searchPanel.Open();
         if (_editor?.SelectionLength > 0) _searchPanel.SearchPattern = _editor.SelectedText;
     }
+
+    /// <summary>Opens the Go-to-Line dialog (command palette, #4).</summary>
+    public void MenuGoToLine() => ShowGoToLine();
 
     /// <summary>Opens the in-document search panel in replace mode (Replace, #12).</summary>
     public void MenuReplace()

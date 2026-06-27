@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using Therion.Build;
 using Therion.Processing.Abstractions;
 using Therion.Semantics;
+using Therion.Semantics.UserRules;
 using Therion.Syntax;
 using Therion.Workspace;
 using TherionProc.Services;
@@ -23,6 +24,27 @@ internal static class AppServices
 
     public static IServiceProvider Provider =>
         _provider ?? throw new InvalidOperationException("AppServices not initialized.");
+
+    /// <summary>
+    /// Loads the optional user semantic-rule config from <c>%AppData%/TherionProc/rules.json</c>
+    /// (XDG fallback on POSIX). Returns an empty config when the file is absent or invalid (LANG-13).
+    /// </summary>
+    private static SemanticRuleConfig LoadRuleConfig()
+    {
+        try
+        {
+            var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            if (string.IsNullOrEmpty(appData))
+                appData = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config");
+            var path = Path.Combine(appData, "TherionProc", "rules.json");
+            return File.Exists(path) ? SemanticRuleConfig.Load(File.ReadAllText(path)) : SemanticRuleConfig.Empty;
+        }
+        catch
+        {
+            return SemanticRuleConfig.Empty;
+        }
+    }
 
     public static IServiceProvider Build()
     {
@@ -71,7 +93,10 @@ internal static class AppServices
         });
 
         // Semantics (�5 / �M6) � uses AddTherionSemantics() so rule plugins flow in via ISemanticRule.
-        services.AddTherionSemantics();
+        // LANG-13: a user rules.json (next to settings.json) can disable built-in rules and add
+        // naming-convention lints. Missing/invalid config falls back to the default (all rules on).
+        var ruleConfig = LoadRuleConfig();
+        services.AddTherionSemantics(ruleConfig);
         services.AddTherionBuiltinSemanticRules();
 
         // Syntax extensibility (�4.4) � command handlers register via ICommandHandler.
@@ -109,6 +134,9 @@ internal static class AppServices
         // Active-document host (�7.3).
         services.AddSingleton<IDocumentService, DocumentService>();
 
+        // Quick-open (Ctrl+P go-to-file) data source (#3).
+        services.AddSingleton<QuickOpenProvider>();
+
         // Bookmarks (B3).
         services.AddSingleton<IBookmarksService, BookmarksService>();
 
@@ -133,6 +161,7 @@ internal static class AppServices
         services.AddSingleton<BuildViewModel>();
         services.AddSingleton<WorkspaceExplorerViewModel>();
         services.AddSingleton<XviReferencesViewModel>();
+        services.AddSingleton<OutlineViewModel>();   // EDIT-09 document outline content VM
         services.AddSingleton<SettingsViewModel>();
         services.AddSingleton<KeyboardShortcutsViewModel>();
         services.AddSingleton<SearchViewModel>();
@@ -145,6 +174,7 @@ internal static class AppServices
         services.AddSingleton<ViewModels.Docking.CompilerOutputToolViewModel>();
         services.AddSingleton<ViewModels.Docking.GeneratedFilesToolViewModel>();
         services.AddSingleton<ViewModels.Docking.XviToolViewModel>();
+        services.AddSingleton<ViewModels.Docking.OutlineToolViewModel>();
         services.AddSingleton<ViewModels.Docking.SettingsToolViewModel>();
         services.AddSingleton<Docking.DockFactory>();
 

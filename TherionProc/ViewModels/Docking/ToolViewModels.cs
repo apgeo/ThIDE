@@ -80,6 +80,15 @@ public sealed class GeneratedFilesToolViewModel : ToolViewModelBase
         : base("GeneratedFiles", "Tool_GeneratedFiles", lang) => Build = build;
 }
 
+public sealed class OutlineToolViewModel : ToolViewModelBase
+{
+    // EDIT-09: titleKey "Outline" has no resx entry, so Tr.Get falls back to "Outline".
+    [JsonIgnore] public OutlineViewModel Outline { get; }
+    public OutlineToolViewModel() : base("Outline", "Outline") => Outline = null!;
+    public OutlineToolViewModel(OutlineViewModel outline, ILanguageService? lang = null)
+        : base("Outline", "Outline", lang) => Outline = outline;
+}
+
 public sealed class XviToolViewModel : ToolViewModelBase
 {
     [JsonIgnore] public XviReferencesViewModel Xvi { get; }

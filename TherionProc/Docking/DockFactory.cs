@@ -45,6 +45,7 @@ public sealed class DockFactory : Factory
     private readonly CompilerOutputToolViewModel _compilerOutput;
     private readonly GeneratedFilesToolViewModel _generatedFiles;
     private readonly XviToolViewModel _xvi;
+    private readonly OutlineToolViewModel _outline;
     private readonly SettingsToolViewModel _settings;
 
     private IRootDock? _rootDock;
@@ -59,6 +60,7 @@ public sealed class DockFactory : Factory
         CompilerOutputToolViewModel compilerOutput,
         GeneratedFilesToolViewModel generatedFiles,
         XviToolViewModel xvi,
+        OutlineToolViewModel outline,
         SettingsToolViewModel settings,
         TherionProc.Services.ILayoutService? layoutState = null,
         ILogger<DockFactory>? logger = null)
@@ -69,6 +71,7 @@ public sealed class DockFactory : Factory
         _compilerOutput = compilerOutput;
         _generatedFiles = generatedFiles;
         _xvi = xvi;
+        _outline = outline;
         _settings = settings;
         _layoutState = layoutState;
         _logger = logger;
@@ -202,8 +205,12 @@ public sealed class DockFactory : Factory
             Alignment = Alignment.Right,
             Proportion = st.RightProportion,
             // Object Browser moved to the central well (#10); External Tools/Settings moved into
-            // the Preferences window (#13), so the right rail keeps just XVI references.
-            VisibleDockables = CreateList<IDockable>(_xvi),
+            // the Preferences window (#13). The right rail keeps XVI references plus the EDIT-09
+            // document outline (omitted only when that feature is compiled out).
+            VisibleDockables =
+                TherionProc.Services.EditorFeatureFlags.Compiled(TherionProc.Services.EditorFeature.Outline)
+                    ? CreateList<IDockable>(_xvi, _outline)
+                    : CreateList<IDockable>(_xvi),
             ActiveDockable = _xvi,
         };
 
@@ -251,6 +258,7 @@ public sealed class DockFactory : Factory
         ["CompilerOutput"] = _compilerOutput,
         ["GeneratedFiles"] = _generatedFiles,
         ["Xvi"]            = _xvi,
+        ["Outline"]        = _outline,
         ["Settings"]       = _settings,
     };
 
@@ -566,6 +574,7 @@ public sealed class DockFactory : Factory
             ["CompilerOutput"] = () => _compilerOutput,
             ["GeneratedFiles"] = () => _generatedFiles,
             ["Xvi"]            = () => _xvi,
+            ["Outline"]        = () => _outline,
             ["Settings"]       = () => _settings,
         };
 

@@ -2,12 +2,19 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ae="https://github.com/avaloniaui/avaloniaedit"
              x:Class="TherionProc.Editor.TherionTextEditor">
-    <Grid x:Name="Root" ColumnDefinitions="*,Auto">
+    <Grid x:Name="Root" ColumnDefinitions="*,Auto,Auto" RowDefinitions="Auto,*">
+        <!-- EDIT-08: breadcrumb bar (enclosing survey/centreline/scrap path); shown from code-behind. -->
+        <Border x:Name="BreadcrumbBar" Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
+                IsVisible="False" Padding="6,1"
+                Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}"
+                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
+            <StackPanel x:Name="Breadcrumb" Orientation="Horizontal" Spacing="1" />
+        </Border>
         <ae:TextEditor x:Name="Editor"
-                       Grid.Column="0"
+                       Grid.Row="1" Grid.Column="0"
                        ShowLineNumbers="True"
                        FontFamily="Cascadia Mono,Consolas,Menlo,monospace"
                        FontSize="13" />
-        <!-- Diagnostic overview ruler is injected into column 1 from code-behind. -->
+        <!-- Diagnostic overview ruler is injected into row 1 / column 1 from code-behind. -->
     </Grid>
 </UserControl>

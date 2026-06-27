@@ -346,6 +346,9 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
     public async Task WriteCurrentTextAsync(string newText, CancellationToken ct = default)
     {
         if (Active is not { } doc) return;
+        // EDIT-14: trim trailing whitespace + ensure a final newline on save. Idempotent, so a
+        // loaded editor that already cleaned itself in place (caret-preserving) makes this a no-op.
+        newText = EditorTextCleanup.ApplyOnSave(newText, _settings?.Current);
         if (File.Exists(doc.FilePath))
         {
             // Mark the path so the watcher doesn't treat our own save as an external edit (#6).

@@ -17,6 +17,8 @@ public interface IThbookDocumentationService
 {
     /// <summary>True once at least one term→page mapping has loaded.</summary>
     bool IsAvailable { get; }
+    /// <summary>All documented terms (for the command palette, #4).</summary>
+    IReadOnlyCollection<string> Terms { get; }
     /// <summary>Resolves a term (command keyword or reference kind) to a 1-based PDF page.</summary>
     bool TryGetPage(string term, out int page);
     /// <summary>Opens the bundled thbook PDF at <paramref name="page"/> in the default viewer.</summary>
@@ -43,6 +45,8 @@ public sealed class ThbookDocumentationService : IThbookDocumentationService
     }
 
     public bool IsAvailable => _pages.Count > 0;
+
+    public IReadOnlyCollection<string> Terms => _pages.Keys;
 
     public bool TryGetPage(string term, out int page)
     {
