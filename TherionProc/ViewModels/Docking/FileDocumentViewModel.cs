@@ -16,6 +16,8 @@ using Avalonia.Media.Immutable;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Dock.Model.Controls;
+using Dock.Model.Core;
 using Dock.Model.Mvvm.Controls;
 using Therion.Core;
 using Therion.Processing.Abstractions;
@@ -176,10 +178,21 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
     private void UpdateTitle()
     {
         // Prefix the dirty marker so it can't be clipped when the tab text hits the
-        // header's right edge (#12); the leading dot is always visible.
+        // header's right edge (#12); the leading dot is always visible. A pinned tab (UX-10)
+        // gets a leading pin glyph so it reads as "kept open".
         var name = System.IO.Path.GetFileName(FilePath);
-        Title = _isDirty ? "● " + name : name;
+        var prefix = IsPinned ? "📌 " : string.Empty;
+        Title = prefix + (_isDirty ? "● " + name : name);
     }
+
+    // ----- tab pinning (UX-10) ----------------------------------------------
+    // A pinned document is excluded from the bulk "close others / right / all" actions and is
+    // marked with a pin glyph. It can still be closed individually (and unpinned). Pure model
+    // state — no Dock auto-hide rail involved (that is Dock's own "pin", which we don't use here).
+    [ObservableProperty] private bool _isPinned;
+    partial void OnIsPinnedChanged(bool value) => UpdateTitle();
+
+    [RelayCommand] private void TogglePin() => IsPinned = !IsPinned;
 
     private DispatcherTimer? _reparseTimer;
 
@@ -390,14 +403,17 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
         foreach (var k in TokenClassifier.Keywords) set.Add(k);
         if (model is not null)
         {
+            // PERF-05: station/survey names (and their shared leaf segments) repeat heavily across
+            // every open document — intern them so the per-document completion lists share instances.
+            var interner = Therion.Core.StringInterner.Shared;
             foreach (var s in model.Stations.Values)
             {
-                var qn = s.Name.ToString();
+                var qn = interner.Intern(s.Name.ToString());
                 set.Add(qn);
                 int dot = qn.LastIndexOf('.');
-                if (dot >= 0 && dot + 1 < qn.Length) set.Add(qn[(dot + 1)..]);
+                if (dot >= 0 && dot + 1 < qn.Length) set.Add(interner.Intern(qn[(dot + 1)..]));
             }
-            foreach (var sv in model.Surveys.Values) set.Add(sv.Name.ToString());
+            foreach (var sv in model.Surveys.Values) set.Add(interner.Intern(sv.Name.ToString()));
         }
         return set.ToList();
     }
@@ -409,6 +425,48 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
     [RelayCommand] private void CopyRelativePath() => SetClipboard(RelativePathToProjectRoot());
     [RelayCommand] private void FloatTab() => Factory?.FloatDockable(this);
     [RelayCommand] private void CloseTab() => Factory?.CloseDockable(this);
+
+    // ----- bulk tab close (UX-10) -------------------------------------------
+    // Operate on this tab's sibling documents within the same dock (the central well or a float
+    // window), honouring the pin flag. Driven from the document tab context menu.
+
+    /// <summary>Closes every other document in this tab's dock, keeping pinned tabs.</summary>
+    [RelayCommand]
+    private void CloseOtherTabs()
+    {
+        foreach (var sibling in SiblingDocuments())
+            if (!ReferenceEquals(sibling, this) && !sibling.IsPinned)
+                Factory?.CloseDockable(sibling);
+    }
+
+    /// <summary>Closes the documents to the right of this tab in its dock, keeping pinned tabs.</summary>
+    [RelayCommand]
+    private void CloseTabsToRight()
+    {
+        var siblings = SiblingDocuments();
+        int self = siblings.IndexOf(this);
+        if (self < 0) return;
+        for (int i = self + 1; i < siblings.Count; i++)
+            if (!siblings[i].IsPinned) Factory?.CloseDockable(siblings[i]);
+    }
+
+    /// <summary>Closes every document in this tab's dock, keeping pinned tabs.</summary>
+    [RelayCommand]
+    private void CloseAllTabs()
+    {
+        foreach (var sibling in SiblingDocuments())
+            if (!sibling.IsPinned) Factory?.CloseDockable(sibling);
+    }
+
+    /// <summary>Snapshot of the document tabs that share this tab's dock (stable for iteration).</summary>
+    private System.Collections.Generic.List<FileDocumentViewModel> SiblingDocuments()
+    {
+        var result = new System.Collections.Generic.List<FileDocumentViewModel>();
+        if (Owner is IDock dock && dock.VisibleDockables is { } list)
+            foreach (var d in list)
+                if (d is FileDocumentViewModel f) result.Add(f);
+        return result;
+    }
 
     /// <summary>Path relative to the project's highest parent (the entry .thconfig's folder).</summary>
     private string RelativePathToProjectRoot()
