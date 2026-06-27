@@ -454,13 +454,15 @@ public partial class BuildViewModel : ViewModelBase
     {
         if (_settings is null) return;
         var s = _settings.Current;
-        var kinds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        if (s.OpenLoxAfterBuild) kinds.Add("lox");
-        if (s.Open3dAfterBuild) kinds.Add("3d");
-        if (s.OpenPdfAfterBuild) kinds.Add("pdf");
-        if (kinds.Count == 0) return;
+        // Match on the file extension, not the artifact's Kind (which is a human-readable
+        // description like "Loch 3D model", never the short code "lox").
+        var exts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (s.OpenLoxAfterBuild) exts.Add(".lox");
+        if (s.Open3dAfterBuild) exts.Add(".3d");
+        if (s.OpenPdfAfterBuild) exts.Add(".pdf");
+        if (exts.Count == 0) return;
 
-        var matches = artifacts.Where(a => kinds.Contains(a.Kind)).Select(a => a.Path).ToList();
+        var matches = artifacts.Where(a => exts.Contains(Path.GetExtension(a.Path))).Select(a => a.Path).ToList();
         foreach (var path in s.OpenAllOutputsAfterBuild ? matches : matches.Take(1))
             _shell.Open(path);
     }
@@ -509,7 +511,7 @@ public partial class BuildViewModel : ViewModelBase
     [RelayCommand]
     private async Task OpenInLochAsync()
     {
-        var lox = Artifacts.FirstOrDefault(a => a.Kind.Equals("lox", StringComparison.OrdinalIgnoreCase));
+        var lox = Artifacts.FirstOrDefault(a => HasExt(a.Path, ".lox"));
         if (lox is null) return;
         var tool = await _locator.FindAsync(ExternalToolLocator.Loch).ConfigureAwait(true);
         if (tool is not null)
@@ -523,7 +525,7 @@ public partial class BuildViewModel : ViewModelBase
     [RelayCommand]
     private async Task OpenInAvenAsync()
     {
-        var d3 = Artifacts.FirstOrDefault(a => a.Kind.Equals("3d", StringComparison.OrdinalIgnoreCase));
+        var d3 = Artifacts.FirstOrDefault(a => HasExt(a.Path, ".3d"));
         if (d3 is null) return;
         var tool = await _locator.FindAsync(ExternalToolLocator.Aven).ConfigureAwait(true);
         if (tool is not null)
@@ -565,9 +567,13 @@ public partial class BuildViewModel : ViewModelBase
             .ThenBy(a => a.Path, StringComparer.Ordinal)
             .ToList();
         Artifacts = rows;
-        HasLoxArtifact  = rows.Any(a => a.Kind.Equals("lox", StringComparison.OrdinalIgnoreCase));
-        HasAvenArtifact = rows.Any(a => a.Kind.Equals("3d",  StringComparison.OrdinalIgnoreCase));
+        HasLoxArtifact  = rows.Any(a => HasExt(a.Path, ".lox"));
+        HasAvenArtifact = rows.Any(a => HasExt(a.Path, ".3d"));
     }
+
+    /// <summary>True when <paramref name="path"/> ends with the given (dotted) extension, case-insensitively.</summary>
+    private static bool HasExt(string path, string ext) =>
+        string.Equals(Path.GetExtension(path), ext, StringComparison.OrdinalIgnoreCase);
 
     private void RestoreLastArtifacts()
     {
