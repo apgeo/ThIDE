@@ -87,6 +87,16 @@ public sealed class CommandPaletteProvider
         list.Add(VmCmd("Build", "Open in Loch", _vm.Build.OpenInLochCommand, "Icon.Cube"));
         list.Add(VmCmd("Build", "Open in Aven", _vm.Build.OpenInAvenCommand, "Icon.Cube"));
         list.Add(VmCmd("Build", "Open output folder", _vm.Build.OpenLastOutputFolderCommand, "Icon.Folder"));
+        // BUILD-02/06: quick export + external round-trips.
+        list.Add(VmCmd("Build", "Quick Export…", _vm.Build.ShowQuickExportCommand, "Icon.Map"));
+        list.Add(VmCmd("Build", "Survex: dump3d (.3d → text)", _vm.Build.Dump3dCommand, "Icon.Cube"));
+        list.Add(VmCmd("Build", "Survex: extend (extended elevation)", _vm.Build.ExtendCommand, "Icon.Cube"));
+        list.Add(VmCmd("Build", "Therion: print version", _vm.Build.PrintTherionVersionCommand, "Icon.Info"));
+        list.Add(VmCmd("Build", "Therion: print environment", _vm.Build.PrintTherionEnvironmentCommand, "Icon.Info"));
+        // BUILD-01: each export target parsed from the active thconfig.
+        foreach (var target in _vm.Build.ExportTargets)
+            list.Add(Action("Build", $"Build target: {target.Title}",
+                () => { target.BuildCommand.Execute(null); return Task.CompletedTask; }, "Icon.Cube"));
         if (_session is { Candidates.Count: > 0 })
             list.Add(Action("Build", "Build a specific thconfig…", () => { PushThconfigBuild(); return Task.CompletedTask; }, "Icon.Config"));
 

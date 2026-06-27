@@ -25,6 +25,9 @@ namespace TherionProc.ViewModels;
 
 public enum OutputRowKind { Command, Normal, Summary }
 
+/// <summary>Coarse Therion build stage parsed from its output (BUILD-05). Monotonic: only advances.</summary>
+public enum BuildPhase { Idle, Starting, Reading, Processing, Exporting }
+
 /// <summary>How the leading time column is rendered for every output row (#4).</summary>
 public enum TimeColumnMode
 {
@@ -168,6 +171,10 @@ public sealed class CompilerOutputRow : CommunityToolkit.Mvvm.ComponentModel.Obs
 }
 public sealed record ArtifactRow(string Path, string Kind, long SizeBytes, DateTimeOffset LastWriteUtc)
 {
+    /// <summary>True when a project input is newer than this output (BUILD-03).</summary>
+    public bool IsStale { get; init; }
+    /// <summary>Short status text for the Generated Files grid.</summary>
+    public string StateText => IsStale ? "⚠ stale" : "current";
     public string SizeDisplay => SizeBytes < 1024 ? $"{SizeBytes} B" : $"{SizeBytes / 1024} KB";
     /// <summary>File name only, for the dedicated File Name column (#4).</summary>
     public string FileName => System.IO.Path.GetFileName(Path);
@@ -183,6 +190,18 @@ public sealed record ArtifactRow(string Path, string Kind, long SizeBytes, DateT
         ".log" or ".tlx"          => "Icon.Info",
         _                          => "Icon.File",
     };
+}
+
+/// <summary>A runnable export target parsed from the active thconfig (BUILD-01).</summary>
+public sealed class BuildTarget
+{
+    public string Title { get; }
+    public System.Windows.Input.ICommand BuildCommand { get; }
+    public BuildTarget(string title, System.Windows.Input.ICommand buildCommand)
+    {
+        Title = title;
+        BuildCommand = buildCommand;
+    }
 }
 
 public partial class BuildViewModel : ViewModelBase
@@ -231,10 +250,49 @@ public partial class BuildViewModel : ViewModelBase
 
     [ObservableProperty] private bool _isBuilding;
     [ObservableProperty] private string _status = string.Empty;
+
+    // ---- build phases (BUILD-05): a stage label + stepped progress, alongside the spinner ----
+    [ObservableProperty] private BuildPhase _phase;
+    [ObservableProperty] private string _currentPhase = string.Empty;
+    [ObservableProperty] private double _phaseProgress;
+
+    private void SetPhase(BuildPhase p)
+    {
+        Phase = p;
+        CurrentPhase = p switch
+        {
+            BuildPhase.Starting   => "Starting…",
+            BuildPhase.Reading     => "Reading data…",
+            BuildPhase.Processing  => "Processing…",
+            BuildPhase.Exporting   => "Exporting…",
+            _ => string.Empty,
+        };
+        PhaseProgress = p switch
+        {
+            BuildPhase.Starting => 0.08, BuildPhase.Reading => 0.3,
+            BuildPhase.Processing => 0.6, BuildPhase.Exporting => 0.9, _ => 0,
+        };
+    }
+
+    /// <summary>Advances the phase indicator from a Therion output line (monotonic).</summary>
+    private void UpdatePhase(string? text)
+    {
+        if (string.IsNullOrEmpty(text)) return;
+        var s = text.ToLowerInvariant();
+        if (Phase < BuildPhase.Reading && s.Contains("reading")) SetPhase(BuildPhase.Reading);
+        else if (Phase < BuildPhase.Processing &&
+                 (s.Contains("processing") || s.Contains("compiling") || s.Contains("computing") || s.Contains("loops")))
+            SetPhase(BuildPhase.Processing);
+        else if (Phase < BuildPhase.Exporting &&
+                 (s.Contains("writing") || s.Contains("exporting") || s.Contains("creating") || s.Contains(".pdf") || s.Contains(".lox")))
+            SetPhase(BuildPhase.Exporting);
+    }
     [ObservableProperty] private IReadOnlyList<CompilerOutputRow> _output = Array.Empty<CompilerOutputRow>();
     [ObservableProperty] private IReadOnlyList<ArtifactRow> _artifacts = Array.Empty<ArtifactRow>();
     [ObservableProperty] private bool _hasLoxArtifact;
     [ObservableProperty] private bool _hasAvenArtifact;
+    /// <summary>True when at least one output is older than a project input (BUILD-03).</summary>
+    [ObservableProperty] private bool _hasStaleArtifacts;
     [ObservableProperty] private CompilerOutputRow? _selectedOutput;
     [ObservableProperty] private ArtifactRow? _selectedArtifact;
 
@@ -286,7 +344,9 @@ public partial class BuildViewModel : ViewModelBase
         _session = session;
         _settings = settings;
         _log = log;
-        _documents.DocumentChanged += (_, _) => RestoreLastArtifacts();
+        _documents.DocumentChanged += (_, _) => { RestoreLastArtifacts(); RefreshExportTargets(); };
+        if (_session is not null) _session.Changed += (_, _) => RefreshExportTargets();
+        RefreshExportTargets();
     }
 
     private readonly ILogService? _log;
@@ -328,14 +388,23 @@ public partial class BuildViewModel : ViewModelBase
     {
         var entry = ResolveBuildEntry();
         if (entry is null) { Status = "No project loaded."; return; }
+        await RunBuildAsync(entry).ConfigureAwait(true);
+    }
 
+    /// <summary>
+    /// Runs Therion on <paramref name="entry"/> (which may be a generated temporary thconfig for
+    /// BUILD-01/02). <paramref name="tempThconfig"/>, when set, is deleted after the build.
+    /// </summary>
+    public async Task RunBuildAsync(string entry, string? tempThconfig = null, string? label = null)
+    {
         using var lease = _gate.TryAcquire();
         if (lease is null) { Status = "A compilation is already in progress."; return; }
 
         IsBuilding = true;
         HasBuildResult = false;          // clear the previous success/error status-bar icon
         HasLog = false; LogFilePath = null;           // clear the previous build's log (#3)
-        _log?.Info($"Build started: {entry}");
+        SetPhase(BuildPhase.Starting);                // BUILD-05
+        _log?.Info($"Build started: {label ?? entry}");
         BuildStarted?.Invoke(this, EventArgs.Empty);  // surface the Compiler Output panel (#2)
         ClearOutputState();
         _cts = new CancellationTokenSource();
@@ -350,7 +419,7 @@ public partial class BuildViewModel : ViewModelBase
             _buildStart, TimeSpan.Zero, TimeSpan.Zero, TimeColumnMode));
 
         var sw = Stopwatch.StartNew();
-        var progress = new Progress<CompilerOutputLine>(line => AddRow(MakeRow(line)));
+        var progress = new Progress<CompilerOutputLine>(line => { AddRow(MakeRow(line)); UpdatePhase(line.Text); });
 
         try
         {
@@ -395,6 +464,9 @@ public partial class BuildViewModel : ViewModelBase
             IsBuilding = false;
             _cts?.Dispose();
             _cts = null;
+            SetPhase(BuildPhase.Idle); // BUILD-05: clear the phase indicator
+            if (!string.IsNullOrEmpty(tempThconfig))
+                try { File.Delete(tempThconfig); } catch { /* best-effort temp cleanup */ }
         }
     }
 
@@ -525,6 +597,7 @@ public partial class BuildViewModel : ViewModelBase
     {
         var lox = Artifacts.FirstOrDefault(a => HasExt(a.Path, ".lox"));
         if (lox is null) return;
+        WarnIfStale(lox);
         var tool = await _locator.FindAsync(ExternalToolLocator.Loch).ConfigureAwait(true);
         if (tool is not null)
         {
@@ -539,6 +612,7 @@ public partial class BuildViewModel : ViewModelBase
     {
         var d3 = Artifacts.FirstOrDefault(a => HasExt(a.Path, ".3d"));
         if (d3 is null) return;
+        WarnIfStale(d3);
         var tool = await _locator.FindAsync(ExternalToolLocator.Aven).ConfigureAwait(true);
         if (tool is not null)
         {
@@ -557,6 +631,156 @@ public partial class BuildViewModel : ViewModelBase
         if (!string.IsNullOrEmpty(dir)) _shell.Open(dir);
     }
 
+    // ---- BUILD-01: export targets parsed from the active thconfig ----
+
+    /// <summary>The active thconfig's export commands, each runnable on its own (BUILD-01).</summary>
+    [ObservableProperty] private IReadOnlyList<BuildTarget> _exportTargets = Array.Empty<BuildTarget>();
+    /// <summary>True when the active thconfig declares at least one export target.</summary>
+    [ObservableProperty] private bool _hasExportTargets;
+
+    private void RefreshExportTargets()
+    {
+        var cfg = _session?.ActiveThconfig?.FullPath;
+        if (cfg is null || !File.Exists(cfg)) { ExportTargets = Array.Empty<BuildTarget>(); HasExportTargets = false; return; }
+        try
+        {
+            var infos = ThconfigExportEditor.ParseExports(File.ReadAllText(cfg));
+            ExportTargets = infos
+                .Select(info => new BuildTarget(info.Title,
+                    new RelayCommand(() => _ = BuildSingleExportAsync(cfg, info))))
+                .ToList();
+            HasExportTargets = ExportTargets.Count > 0;
+        }
+        catch { ExportTargets = Array.Empty<BuildTarget>(); HasExportTargets = false; }
+    }
+
+    /// <summary>BUILD-01: builds a derived thconfig that keeps only <paramref name="info"/>'s export.</summary>
+    private async Task BuildSingleExportAsync(string cfg, ExportTargetInfo info)
+    {
+        try
+        {
+            var modified = ThconfigExportEditor.IsolateExport(File.ReadAllText(cfg), info);
+            var temp = Path.Combine(Path.GetDirectoryName(cfg)!, ".therionproc-target.thconfig");
+            File.WriteAllText(temp, modified);
+            await RunBuildAsync(temp, temp, $"{Path.GetFileName(cfg)} :: {info.Title}").ConfigureAwait(true);
+        }
+        catch (Exception ex) { Status = ex.Message; _log?.Error("Target build error: " + ex.Message); }
+    }
+
+    /// <summary>BUILD-02: runs a composed quick-export (writes a temp thconfig, builds, opens the result).</summary>
+    public async Task RunQuickExportAsync(string exportBlock, string outputFileName)
+    {
+        var cfg = _session?.ActiveThconfig?.FullPath ?? ResolveBuildEntry();
+        if (cfg is null || !File.Exists(cfg)) { Status = "No project to export."; return; }
+        try
+        {
+            var dir = Path.GetDirectoryName(cfg)!;
+            var modified = ThconfigExportEditor.ComposeExport(File.ReadAllText(cfg), exportBlock);
+            var temp = Path.Combine(dir, ".therionproc-export.thconfig");
+            File.WriteAllText(temp, modified);
+            await RunBuildAsync(temp, temp, $"Quick export → {outputFileName}").ConfigureAwait(true);
+            var outPath = Path.Combine(dir, outputFileName);
+            if (LastBuildSucceeded && File.Exists(outPath)) _shell.Open(outPath);
+        }
+        catch (Exception ex) { Status = ex.Message; _log?.Error("Quick export error: " + ex.Message); }
+    }
+
+    /// <summary>Raised when the user asks for the Quick Export dialog (BUILD-02); the shell shows it.</summary>
+    public event EventHandler? QuickExportRequested;
+    [RelayCommand] private void ShowQuickExport() => QuickExportRequested?.Invoke(this, EventArgs.Empty);
+
+    // ---- BUILD-06: external round-trips (survex tools on .3d + therion --print-*) ----
+
+    /// <summary>survex <c>dump3d</c> on the emitted .3d; output streams into the Compiler Output panel.</summary>
+    [RelayCommand]
+    private async Task Dump3d()
+    {
+        var d3 = Artifacts.FirstOrDefault(a => HasExt(a.Path, ".3d"));
+        if (d3 is null) return;
+        await RunExternalAsync(ExternalToolLocator.Dump3d, $"\"{d3.Path}\"", "dump3d", Path.GetDirectoryName(d3.Path)).ConfigureAwait(true);
+    }
+
+    /// <summary>survex <c>extend</c>: build an extended-elevation .3d next to the model and open it.</summary>
+    [RelayCommand]
+    private async Task Extend()
+    {
+        var d3 = Artifacts.FirstOrDefault(a => HasExt(a.Path, ".3d"));
+        if (d3 is null) return;
+        var outPath = Path.Combine(Path.GetDirectoryName(d3.Path)!,
+            Path.GetFileNameWithoutExtension(d3.Path) + "_extend.3d");
+        var ok = await RunExternalAsync(ExternalToolLocator.Extend, $"\"{d3.Path}\" \"{outPath}\"", "extend", Path.GetDirectoryName(d3.Path)).ConfigureAwait(true);
+        if (ok && File.Exists(outPath)) _shell.Open(outPath);
+    }
+
+    [RelayCommand]
+    private Task PrintTherionVersion() => RunExternalAsync(ExternalToolLocator.Therion, "--version", "therion --version", _buildWorkDir);
+
+    [RelayCommand]
+    private Task PrintTherionEnvironment() => RunExternalAsync(ExternalToolLocator.Therion, "--print-environment", "therion --print-environment", _buildWorkDir);
+
+    /// <summary>
+    /// Runs an external tool with raw args and streams its stdout/stderr into the Compiler Output
+    /// panel. Returns true on exit code 0. Used for the BUILD-06 round-trips (not the main compile).
+    /// </summary>
+    private async Task<bool> RunExternalAsync(string toolId, string args, string label, string? workDir)
+    {
+        if (IsBuilding) { Status = "A compilation is already in progress."; return false; }
+        var tool = await _locator.FindAsync(toolId).ConfigureAwait(true);
+        if (tool is null)
+        {
+            Status = $"{toolId} not found.";
+            _log?.Warning($"{toolId} not found on PATH or in External Tools settings.");
+            return false;
+        }
+
+        BuildStarted?.Invoke(this, EventArgs.Empty); // surface the output panel (#2)
+        ClearOutputState();
+        _buildStart = DateTimeOffset.Now;
+        _prevRowTime = _buildStart;
+        AddRow(new CompilerOutputRow($"\"{tool.Path}\" {args}", "Command", null, OutputRowKind.Command,
+            _buildStart, TimeSpan.Zero, TimeSpan.Zero, TimeColumnMode));
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = tool.Path,
+                Arguments = args,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            };
+            if (!string.IsNullOrEmpty(workDir)) psi.WorkingDirectory = workDir;
+            using var proc = new Process { StartInfo = psi };
+            proc.Start();
+            string? line;
+            while ((line = await proc.StandardOutput.ReadLineAsync().ConfigureAwait(true)) is not null)
+                AddRow(PlainRow(line, "Info"));
+            var err = await proc.StandardError.ReadToEndAsync().ConfigureAwait(true);
+            foreach (var el in err.Split('\n'))
+                if (el.Trim().Length > 0) AddRow(PlainRow(el.TrimEnd('\r'), "Warning"));
+            await proc.WaitForExitAsync().ConfigureAwait(true);
+            AddRow(SummaryRow(proc.ExitCode == 0, 0, DateTimeOffset.Now - _buildStart, 0, _buildStart));
+            _log?.Info($"{label} finished (exit {proc.ExitCode}).");
+            Status = $"{label} finished (exit {proc.ExitCode}).";
+            return proc.ExitCode == 0;
+        }
+        catch (Exception ex)
+        {
+            Status = $"{label} error: {ex.Message}";
+            _log?.Error($"{label} error: {ex.Message}");
+            return false;
+        }
+    }
+
+    private CompilerOutputRow PlainRow(string text, string severity)
+    {
+        var now = DateTimeOffset.Now;
+        var delta = now - _prevRowTime;
+        _prevRowTime = now;
+        return new CompilerOutputRow(text, severity, null, OutputRowKind.Normal, now, delta, now - _buildStart, TimeColumnMode);
+    }
+
     [RelayCommand]
     private void OpenArtifact(ArtifactRow? row)
     {
@@ -573,19 +797,58 @@ public partial class BuildViewModel : ViewModelBase
 
     private void UpdateArtifacts(ImmutableArray<OutputArtifact> artifacts)
     {
+        // BUILD-03: an output is "stale" if any project input is newer than it.
+        var newest = NewestInputUtc();
         var rows = artifacts
-            .Select(a => new ArtifactRow(a.Path, a.Kind, a.SizeBytes, a.LastWriteUtc))
+            .Select(a => new ArtifactRow(a.Path, a.Kind, a.SizeBytes, a.LastWriteUtc)
+            {
+                IsStale = newest is { } n && a.LastWriteUtc < n,
+            })
             .OrderBy(a => a.Kind, StringComparer.Ordinal)
             .ThenBy(a => a.Path, StringComparer.Ordinal)
             .ToList();
         Artifacts = rows;
         HasLoxArtifact  = rows.Any(a => HasExt(a.Path, ".lox"));
         HasAvenArtifact = rows.Any(a => HasExt(a.Path, ".3d"));
+        HasStaleArtifacts = rows.Any(a => a.IsStale);
+    }
+
+    /// <summary>Newest last-write time across the project's source files (BUILD-03 stale check).</summary>
+    private DateTimeOffset? NewestInputUtc()
+    {
+        var files = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (_session?.Model is { } model)
+        {
+            foreach (var k in model.PerFile.Keys) files.Add(k);
+            foreach (var (from, to) in model.FileGraphEdges) { files.Add(from); files.Add(to); }
+        }
+        if (_session?.ActiveThconfig?.FullPath is { } cfg) files.Add(cfg);
+
+        DateTimeOffset? newest = null;
+        foreach (var f in files)
+        {
+            try
+            {
+                if (!File.Exists(f)) continue;
+                var t = (DateTimeOffset)File.GetLastWriteTimeUtc(f);
+                if (newest is null || t > newest) newest = t;
+            }
+            catch { /* skip unreadable */ }
+        }
+        return newest;
     }
 
     /// <summary>True when <paramref name="path"/> ends with the given (dotted) extension, case-insensitively.</summary>
     private static bool HasExt(string path, string ext) =>
         string.Equals(Path.GetExtension(path), ext, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>BUILD-03: surface a warning before opening an out-of-date output.</summary>
+    private void WarnIfStale(ArtifactRow row)
+    {
+        if (!row.IsStale) return;
+        Status = $"Opening a stale output ({Path.GetFileName(row.Path)}) — rebuild to refresh.";
+        _log?.Warning($"Opening a stale output '{Path.GetFileName(row.Path)}': a project input changed since the last build. Rebuild to refresh.");
+    }
 
     private void RestoreLastArtifacts()
     {

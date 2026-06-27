@@ -171,8 +171,31 @@
                 <MenuItem Header="{Binding MenuBuildRebuild}"   InputGesture="Ctrl+F5"  Command="{Binding Build.RebuildCommand}" />
                 <MenuItem Header="{Binding MenuBuildCancel}"    InputGesture="Shift+F5" Command="{Binding Build.CancelCommand}" />
                 <Separator />
+                <!-- BUILD-01: run a single export target from the active thconfig. -->
+                <MenuItem Header="Build target" IsEnabled="{Binding Build.HasExportTargets}"
+                          ItemsSource="{Binding Build.ExportTargets}">
+                    <MenuItem.ItemContainerTheme>
+                        <ControlTheme TargetType="MenuItem" x:DataType="vm:BuildTarget"
+                                      BasedOn="{StaticResource {x:Type MenuItem}}">
+                            <Setter Property="Header" Value="{Binding Title}" />
+                            <Setter Property="Command" Value="{Binding BuildCommand}" />
+                        </ControlTheme>
+                    </MenuItem.ItemContainerTheme>
+                </MenuItem>
+                <!-- BUILD-02: composed quick export. -->
+                <MenuItem Header="Quick Export…" Command="{Binding Build.ShowQuickExportCommand}" />
+                <Separator />
                 <MenuItem Header="{Binding MenuBuildOpenLoch}"  InputGesture="F9"  Command="{Binding Build.OpenInLochCommand}" />
                 <MenuItem Header="{Binding MenuBuildOpenAven}"  InputGesture="F10" Command="{Binding Build.OpenInAvenCommand}" />
+                <!-- BUILD-06: external round-trips. -->
+                <MenuItem Header="Survex tools (.3d)" IsEnabled="{Binding Build.HasAvenArtifact}">
+                    <MenuItem Header="dump3d (text dump)" Command="{Binding Build.Dump3dCommand}" />
+                    <MenuItem Header="extend (extended elevation)" Command="{Binding Build.ExtendCommand}" />
+                </MenuItem>
+                <MenuItem Header="Therion info">
+                    <MenuItem Header="Print version" Command="{Binding Build.PrintTherionVersionCommand}" />
+                    <MenuItem Header="Print environment" Command="{Binding Build.PrintTherionEnvironmentCommand}" />
+                </MenuItem>
                 <Separator />
                 <MenuItem Header="{Binding MenuBuildOpenOutputFolder}" Command="{Binding Build.OpenLastOutputFolderCommand}" />
             </MenuItem>
@@ -285,6 +308,14 @@
                 </Button>
                 <TextBlock VerticalAlignment="Center" Margin="12,0,0,0"
                            Text="{Binding Build.Status}" Foreground="Gray" />
+                <!-- BUILD-05: stage label + stepped progress, shown alongside the spinner. -->
+                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="10,0,0,0"
+                            IsVisible="{Binding Build.IsBuilding}">
+                    <TextBlock Text="{Binding Build.CurrentPhase}" Foreground="#2E7D32" FontSize="11"
+                               VerticalAlignment="Center" />
+                    <ProgressBar Width="120" Height="6" Minimum="0" Maximum="1"
+                                 Value="{Binding Build.PhaseProgress}" VerticalAlignment="Center" />
+                </StackPanel>
             </WrapPanel>
         </Border>
 

@@ -60,6 +60,7 @@ public partial class MainWindow : Window
                 vm.ShowThbookRequested      += (_, _) => OnOpenThbook(this, new Avalonia.Interactivity.RoutedEventArgs());
                 vm.ShowBookmarksRequested   += (_, _) => OnBookmarksClick(this, new Avalonia.Interactivity.RoutedEventArgs());
                 vm.ShowRelationalMapRequested += (_, _) => OnRelationalMapClick(this, new Avalonia.Interactivity.RoutedEventArgs());
+                vm.Build.QuickExportRequested += (_, _) => _ = ShowQuickExportAsync(vm); // BUILD-02
                 BuildRecentMenu(vm);
                 // The layout rendered without crashing — clear the crash sentinel so the next
                 // launch trusts it (deferred so the dock has finished materializing).
@@ -353,6 +354,16 @@ public partial class MainWindow : Window
                 e.Handled = true;
                 break;
         }
+    }
+
+    // ----- quick export dialog (BUILD-02) --------------------------------
+    private async System.Threading.Tasks.Task ShowQuickExportAsync(MainWindowViewModel vm)
+    {
+        var dialog = new QuickExportWindow();
+        await dialog.ShowDialog(this);
+        if (!dialog.Confirmed) return;
+        var m = dialog.Model;
+        await vm.Build.RunQuickExportAsync(m.ComposeBlock(), m.OutputFileName);
     }
 
     // ----- global search window (#3) -------------------------------------

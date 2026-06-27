@@ -6,6 +6,12 @@
              x:Class="TherionProc.Views.Docking.GeneratedFilesToolView"
              x:DataType="vm:GeneratedFilesToolViewModel">
     <DockPanel>
+        <!-- BUILD-03: stale-output banner (an input changed since the last build). -->
+        <Border DockPanel.Dock="Top" Background="#33E65100" Padding="8,4"
+                IsVisible="{Binding Build.HasStaleArtifacts}">
+            <TextBlock Text="⚠ Some outputs are out of date — a project input changed since the last build. Rebuild to refresh."
+                       Foreground="#E65100" FontSize="11" TextWrapping="Wrap" />
+        </Border>
         <!-- Column visibility + fit controls (#4). -->
         <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="6,3">
             <StackPanel Orientation="Horizontal" Spacing="6">
@@ -56,6 +62,8 @@
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
                 <DataGridTextColumn Header="File Name" Binding="{Binding FileName}" Width="Auto" />
+                <!-- BUILD-03: current / stale state. -->
+                <DataGridTextColumn Header="State" Binding="{Binding StateText}" Width="Auto" />
                 <DataGridTextColumn Header="Path" Binding="{Binding Path}" Width="*" />
                 <DataGridTextColumn Header="Size" Binding="{Binding SizeDisplay}" Width="Auto" />
                 <DataGridTextColumn Header="Modified" Binding="{Binding ModifiedDisplay}" Width="Auto" />
