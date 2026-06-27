@@ -13,6 +13,7 @@
 // consumers.
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -56,7 +57,25 @@ public sealed record LayoutState
     /// <summary>Id of the active tab in the right tool dock.</summary>
     public string? RightActiveTab { get; init; }
 
+    // ---- floated tool/document windows (UX-05) ----
+    // The dock TREE itself is rebuilt fresh each launch (a deserialized Dock.Avalonia 12 tree
+    // does not render), so float windows are persisted SEPARATELY and re-created at runtime by
+    // re-floating the live dockables (the same code path the user's tear-off uses, which renders
+    // correctly). Each entry records a window's bounds + the ids of the dockables it held.
+    public IReadOnlyList<FloatWindowState> FloatWindows { get; init; } = Array.Empty<FloatWindowState>();
+
     public static LayoutState Default { get; } = new();
+}
+
+/// <summary>A persisted floating window: its bounds plus the ids of the dockables it contained
+/// (tool singleton ids, or document file paths). Restored by re-floating those dockables (UX-05).</summary>
+public sealed record FloatWindowState
+{
+    public double X { get; init; }
+    public double Y { get; init; }
+    public double Width { get; init; } = 700;
+    public double Height { get; init; } = 500;
+    public IReadOnlyList<string> DockableIds { get; init; } = Array.Empty<string>();
 }
 
 public sealed class JsonLayoutService : ILayoutService

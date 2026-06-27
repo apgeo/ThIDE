@@ -189,7 +189,155 @@ public sealed class DockFactory : Factory
             CenterProportion = Prop("CenterColumn", baseState.CenterProportion),
             BottomActiveTab = Active("BottomTools") ?? baseState.BottomActiveTab,
             RightActiveTab = Active("RightTools") ?? baseState.RightActiveTab,
+            // UX-05: capture floated windows — but never before they were restored, or an
+            // autosave that fires mid-startup (big project) would clobber the saved set.
+            FloatWindows = _floatsRestored ? CaptureFloatWindows() : baseState.FloatWindows,
         };
+    }
+
+    // ---- floated-window persistence (UX-05) -----------------------------------
+    // The dock TREE is rebuilt fresh each launch (a deserialized Dock 12 tree won't render), so
+    // floated tool/document windows are persisted on their own and re-created at runtime by
+    // re-floating the live dockables — the same operation a manual tear-off performs, which
+    // renders correctly. Capture records each window's bounds + the ids of its dockables; restore
+    // resolves those ids back to the live tool singletons / open documents and floats them.
+
+    private bool _floatsRestored;
+    private IReadOnlyList<TherionProc.Services.FloatWindowState>? _lastCapturedFloats;
+
+    /// <summary>Snapshots the current floating windows (bounds + dockable ids). Returns a cached
+    /// reference when nothing changed so the layout-state dedup keeps working.</summary>
+    public IReadOnlyList<TherionProc.Services.FloatWindowState> CaptureFloatWindows()
+    {
+        var list = new List<TherionProc.Services.FloatWindowState>();
+        if (_rootDock?.Windows is { } windows)
+        {
+            foreach (var w in windows)
+            {
+                if (w.Layout is not { } layout) continue;
+                var ids = new List<string>();
+                CollectLeafIds(layout, ids);
+                if (ids.Count == 0) continue;
+
+                double x = w.X, y = w.Y, width = w.Width, height = w.Height;
+                if (w.Host is Avalonia.Controls.Window win)
+                {
+                    try { x = win.Position.X; y = win.Position.Y; width = win.Width; height = win.Height; }
+                    catch { /* window not realized — fall back to the model bounds */ }
+                }
+                list.Add(new TherionProc.Services.FloatWindowState
+                {
+                    X = x,
+                    Y = y,
+                    Width = width > 0 ? width : 700,
+                    Height = height > 0 ? height : 500,
+                    DockableIds = ids,
+                });
+            }
+        }
+        if (_lastCapturedFloats is not null && FloatsEqual(_lastCapturedFloats, list)) return _lastCapturedFloats;
+        return _lastCapturedFloats = list;
+    }
+
+    private static bool FloatsEqual(
+        IReadOnlyList<TherionProc.Services.FloatWindowState> a,
+        IReadOnlyList<TherionProc.Services.FloatWindowState> b)
+    {
+        if (a.Count != b.Count) return false;
+        for (int i = 0; i < a.Count; i++)
+        {
+            var x = a[i]; var y = b[i];
+            if (x.X != y.X || x.Y != y.Y || x.Width != y.Width || x.Height != y.Height) return false;
+            if (x.DockableIds.Count != y.DockableIds.Count) return false;
+            for (int j = 0; j < x.DockableIds.Count; j++)
+                if (!string.Equals(x.DockableIds[j], y.DockableIds[j], StringComparison.Ordinal)) return false;
+        }
+        return true;
+    }
+
+    private static void CollectLeafIds(IDockable node, List<string> ids)
+    {
+        // ITool MUST precede IDocument — the Mvvm Tool base also implements IDocument (see the
+        // CloneDockable note), so checking IDocument first would mis-bucket every tool.
+        switch (node)
+        {
+            case ITool t when !string.IsNullOrEmpty(t.Id): ids.Add(t.Id!); break;
+            case IDocument d when !string.IsNullOrEmpty(d.Id): ids.Add(d.Id!); break;
+        }
+        if (node is IDock dock && dock.VisibleDockables is { } list)
+            foreach (var c in list) CollectLeafIds(c, ids);
+    }
+
+    /// <summary>Re-creates the persisted floating windows by re-floating the live dockables they
+    /// held. Safe to call once startup (session restore) has materialized the documents; never
+    /// throws (a window that can't be rebuilt is skipped).</summary>
+    public void RestoreFloatWindows(IReadOnlyList<TherionProc.Services.FloatWindowState>? states)
+    {
+        _floatsRestored = true;   // from now on capture reflects the live float set
+        if (_rootDock is null || states is null || states.Count == 0) return;
+        var toolMap = ToolSingletonsById();
+        foreach (var st in states)
+        {
+            try { RestoreOneFloatWindow(st, toolMap); }
+            catch (Exception ex) { _logger?.LogWarning(ex, "Failed to restore a floated window."); }
+        }
+    }
+
+    private void RestoreOneFloatWindow(
+        TherionProc.Services.FloatWindowState st, Dictionary<string, IDockable> toolMap)
+    {
+        // Resolve ids → live dockables (tool singletons or already-open documents).
+        var resolved = new List<IDockable>();
+        foreach (var id in st.DockableIds)
+        {
+            if (string.IsNullOrEmpty(id)) continue;
+            IDockable? d = toolMap.TryGetValue(id, out var tool) ? tool : FindRealDocumentById(_rootDock!, id);
+            // Skip a dockable that is already floating (e.g. the user tore it off again).
+            if (d is not null && !resolved.Contains(d) && !IsInFloatWindow(d)) resolved.Add(d);
+        }
+        if (resolved.Count == 0) return;
+
+        var first = resolved[0];
+        FloatDockable(first);
+        if (first.Owner is IDock target)
+        {
+            for (int i = 1; i < resolved.Count; i++)
+            {
+                var d = resolved[i];
+                try { RemoveDockable(d, collapse: false); AddDockable(target, d); }
+                catch { /* best-effort grouping */ }
+            }
+        }
+        PositionFloatWindow(first, st);
+    }
+
+    private bool IsInFloatWindow(IDockable target)
+    {
+        if (_rootDock?.Windows is not { } windows) return false;
+        foreach (var w in windows)
+            if (w.Layout is { } wl && ContainsRef(wl, target)) return true;
+        return false;
+    }
+
+    private void PositionFloatWindow(IDockable member, TherionProc.Services.FloatWindowState st)
+    {
+        if (_rootDock?.Windows is not { } windows) return;
+        foreach (var w in windows)
+        {
+            if (w.Layout is not { } wl || !ContainsRef(wl, member)) continue;
+            w.X = st.X; w.Y = st.Y; w.Width = st.Width; w.Height = st.Height;
+            if (w.Host is Avalonia.Controls.Window win)
+            {
+                try
+                {
+                    win.Position = new Avalonia.PixelPoint((int)st.X, (int)st.Y);
+                    win.Width = st.Width;
+                    win.Height = st.Height;
+                }
+                catch { /* host not realized yet — model bounds above still apply */ }
+            }
+            return;
+        }
     }
 
     private DocumentDock NewDocumentDock() => new()
