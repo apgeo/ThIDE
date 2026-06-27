@@ -333,7 +333,8 @@ public partial class BuildViewModel : ViewModelBase
         IOutputArtifactCache artifactCache,
         IWorkspaceSession? session = null,
         IAppSettingsService? settings = null,
-        ILogService? log = null)
+        ILogService? log = null,
+        INotificationService? notifications = null)
     {
         _compiler = compiler;
         _gate = gate;
@@ -344,12 +345,14 @@ public partial class BuildViewModel : ViewModelBase
         _session = session;
         _settings = settings;
         _log = log;
+        _notifications = notifications;
         _documents.DocumentChanged += (_, _) => { RestoreLastArtifacts(); RefreshExportTargets(); };
         if (_session is not null) _session.Changed += (_, _) => RefreshExportTargets();
         RefreshExportTargets();
     }
 
     private readonly ILogService? _log;
+    private readonly INotificationService? _notifications;   // UX-07 (tool-not-found toast)
 
     public BuildViewModel() : this(
         new NullCompiler(), new CompileGate(), new ShellOpener(),
@@ -730,6 +733,8 @@ public partial class BuildViewModel : ViewModelBase
         {
             Status = $"{toolId} not found.";
             _log?.Warning($"{toolId} not found on PATH or in External Tools settings.");
+            _notifications?.Warning("Tool not found",
+                $"'{toolId}' was not found on PATH or in Settings ▸ External Tools.");   // UX-07
             return false;
         }
 
