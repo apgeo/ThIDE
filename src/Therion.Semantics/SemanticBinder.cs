@@ -63,6 +63,7 @@ public sealed class SemanticBinder
             Scraps = scraps,
             Maps = maps,
             InputCoordinateSystem = ctx.InputCs,
+            EquateRecords = ctx.EquateRecords.ToImmutable(),
         };
     }
 
@@ -83,10 +84,18 @@ public sealed class SemanticBinder
         var compassUnit = AngleUnit.Degree;
         var clinoUnit = AngleUnit.Degree;
         TrivialComment? pendingComment = null;
+        // The survey these direct children belong to (team/date attach here; DATA-05).
+        QualifiedName? currentSurvey = scope.IsEmpty ? null : new QualifiedName(scope);
         foreach (var node in children)
         {
             switch (node)
             {
+                case TeamCommand team when currentSurvey is { } tsv && !string.IsNullOrWhiteSpace(team.Name):
+                    AppendSurveyTeam(ctx, tsv, team.Name);
+                    break;
+                case DateCommand date when currentSurvey is { } dsv && !string.IsNullOrWhiteSpace(date.Value):
+                    AppendSurveyDate(ctx, dsv, date.Value);
+                    break;
                 case TrivialComment tc:
                     pendingComment = tc;
                     continue; // keep the comment pending; don't reset it below.
@@ -138,6 +147,7 @@ public sealed class SemanticBinder
                     break;
                 case CsCommand cs:
                     ctx.InputCs ??= cs.System;
+                    ctx.CurrentCs = cs.System;
                     break;
             }
             pendingComment = null;
@@ -161,6 +171,20 @@ public sealed class SemanticBinder
             Flags = st.Flags.IsDefaultOrEmpty ? existing.Flags : existing.Flags.AddRange(st.Flags),
         };
         ctx.Equates.Add(qn);
+    }
+
+    /// <summary>Appends a team member to the enclosing survey (DATA-05).</summary>
+    private static void AppendSurveyTeam(BindContext ctx, QualifiedName survey, string name)
+    {
+        if (ctx.Surveys.TryGetValue(survey, out var sv))
+            ctx.Surveys[survey] = sv with { Team = sv.Team.Add(name) };
+    }
+
+    /// <summary>Appends a survey date to the enclosing survey (DATA-05/08).</summary>
+    private static void AppendSurveyDate(BindContext ctx, QualifiedName survey, string date)
+    {
+        if (ctx.Surveys.TryGetValue(survey, out var sv))
+            ctx.Surveys[survey] = sv with { Dates = sv.Dates.Add(date) };
     }
 
     /// <summary>Binds a <c>mark [&lt;stations&gt;] &lt;type&gt;</c> command, tagging the listed stations.</summary>
@@ -326,12 +350,19 @@ public sealed class SemanticBinder
                     $"Station '{qn}' is fixed more than once.",
                     fix.Span));
             }
-            ctx.Stations[qn] = existing with { Kind = StationDeclarationKind.Fix, DeclarationSpan = fix.Span };
+            ctx.Stations[qn] = existing with
+            {
+                Kind = StationDeclarationKind.Fix, DeclarationSpan = fix.Span,
+                FixX = fix.X, FixY = fix.Y, FixZ = fix.Z, Cs = ctx.CurrentCs,
+            };
         }
         else
         {
             ctx.Stations[qn] = new StationSymbol(qn, fix.Span,
-                StationDeclarationKind.Fix, ImmutableArray<SourceSpan>.Empty);
+                StationDeclarationKind.Fix, ImmutableArray<SourceSpan>.Empty)
+            {
+                FixX = fix.X, FixY = fix.Y, FixZ = fix.Z, Cs = ctx.CurrentCs,
+            };
         }
         ctx.Equates.Add(qn);
     }
@@ -341,7 +372,11 @@ public sealed class SemanticBinder
         var group = new List<(string Raw, SourceSpan Span, ImmutableArray<string> Scope)>(eq.Stations.Length);
         foreach (var raw in eq.Stations)
             group.Add((raw, eq.Span, scope));
-        if (group.Count > 0) ctx.EquateGroups.Add(group);
+        if (group.Count > 0)
+        {
+            ctx.EquateGroups.Add(group);
+            ctx.EquateRecords.Add(new EquateRecord(eq.Stations, eq.Span));
+        }
     }
 
     /// <summary>
@@ -548,7 +583,10 @@ public sealed class SemanticBinder
         public EquateGraph Equates { get; } = new();
         public ImmutableArray<Diagnostic>.Builder Diagnostics { get; } = ImmutableArray.CreateBuilder<Diagnostic>();
         public List<List<(string Raw, SourceSpan Span, ImmutableArray<string> Scope)>> EquateGroups { get; } = new();
+        public ImmutableArray<EquateRecord>.Builder EquateRecords { get; } = ImmutableArray.CreateBuilder<EquateRecord>();
         /// <summary>First <c>cs</c> declared in the file (input coordinate system), if any (LANG-03).</summary>
         public string? InputCs { get; set; }
+        /// <summary>The <c>cs</c> in force at the current point of the walk (for fix coords; DATA-06).</summary>
+        public string? CurrentCs { get; set; }
     }
 }

@@ -36,6 +36,14 @@ public sealed record StationSymbol(
     /// <summary>The <c>mark</c> type assigned to this station (fixed / painted / temporary), if any.</summary>
     public string? MarkType { get; init; }
 
+    /// <summary>Fixed coordinates from a <c>fix</c> command (DATA-06), in the active input <see cref="Cs"/>.</summary>
+    public double? FixX { get; init; }
+    public double? FixY { get; init; }
+    public double? FixZ { get; init; }
+
+    /// <summary>The coordinate system in force when this station was fixed (<c>cs</c>), if any.</summary>
+    public string? Cs { get; init; }
+
     /// <summary>True if this station carries the <c>entrance</c> flag.</summary>
     public bool IsEntrance => HasFlag("entrance");
 
@@ -59,7 +67,28 @@ public sealed record SurveySymbol(
 {
     /// <summary>The survey's <c>-title "..."</c>, if declared.</summary>
     public string? Title { get; init; }
+
+    /// <summary>Team member names from <c>team</c> commands directly in this survey (DATA-05).</summary>
+    public ImmutableArray<string> Team { get; init; } = ImmutableArray<string>.Empty;
+
+    /// <summary>Dates from <c>date</c> commands directly in this survey (DATA-05/08; raw text).</summary>
+    public ImmutableArray<string> Dates { get; init; } = ImmutableArray<string>.Empty;
 }
+
+/// <summary>An <c>equate</c> relationship: the stations declared equivalent and its source span (DATA-03).</summary>
+public sealed record EquateRecord(
+    ImmutableArray<string> Stations,
+    SourceSpan Span);
+
+/// <summary>
+/// A summary of a <c>.th2</c> drawing object (point/line/area) for the Object Browser (DATA-03):
+/// its kind, type[:subtype], enclosing scrap and source location.
+/// </summary>
+public sealed record Th2ObjectRecord(
+    string Kind,      // "point" | "line" | "area"
+    string Type,
+    string ScrapId,
+    SourceSpan Span);
 
 /// <summary>
 /// Centreline shot flags (Therion <c>flags surface|duplicate|splay|approximate</c>).

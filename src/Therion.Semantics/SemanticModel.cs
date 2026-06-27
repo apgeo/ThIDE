@@ -39,6 +39,9 @@ public sealed class SemanticModel : ISymbolIndex
     /// </summary>
     public string? InputCoordinateSystem { get; init; }
 
+    /// <summary><c>equate</c> relationships declared in this file (DATA-03).</summary>
+    public ImmutableArray<EquateRecord> EquateRecords { get; init; } = ImmutableArray<EquateRecord>.Empty;
+
     public SemanticModel(
         FrozenDictionary<QualifiedName, StationSymbol> stations,
         FrozenDictionary<QualifiedName, SurveySymbol> surveys,

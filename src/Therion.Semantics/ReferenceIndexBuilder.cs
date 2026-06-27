@@ -19,7 +19,8 @@ internal sealed record ReferenceIndexes(
     FrozenDictionary<string, ImmutableArray<StationSymbol>> StationsByLastName,
     FrozenDictionary<string, MapSymbol> MapsById,
     FrozenDictionary<string, ScrapSymbol> ScrapsById,
-    FrozenDictionary<string, ScrapObjectSymbol> ScrapObjectsById);
+    FrozenDictionary<string, ScrapObjectSymbol> ScrapObjectsById,
+    ImmutableArray<Th2ObjectRecord> Th2Objects);
 
 internal static class ReferenceIndexBuilder
 {
@@ -35,6 +36,7 @@ internal static class ReferenceIndexBuilder
         var mapsById = new Dictionary<string, MapSymbol>(StringComparer.Ordinal);
         var scrapsById = new Dictionary<string, ScrapSymbol>(StringComparer.Ordinal);
         var scrapObjectsById = new Dictionary<string, ScrapObjectSymbol>(StringComparer.Ordinal);
+        var th2Objects = ImmutableArray.CreateBuilder<Th2ObjectRecord>();
 
         foreach (var model in perFile)
         {
@@ -63,7 +65,7 @@ internal static class ReferenceIndexBuilder
         }
 
         foreach (var th2 in th2Files)
-            IndexTh2(th2, scrapsById, scrapObjectsById);
+            IndexTh2(th2, scrapsById, scrapObjectsById, th2Objects);
 
         return new ReferenceIndexes(
             surveysByFull.ToFrozenDictionary(StringComparer.Ordinal),
@@ -73,13 +75,15 @@ internal static class ReferenceIndexBuilder
             stationsByLast.ToFrozenDictionary(kv => kv.Key, kv => kv.Value.ToImmutable(), StringComparer.Ordinal),
             mapsById.ToFrozenDictionary(StringComparer.Ordinal),
             scrapsById.ToFrozenDictionary(StringComparer.Ordinal),
-            scrapObjectsById.ToFrozenDictionary(StringComparer.Ordinal));
+            scrapObjectsById.ToFrozenDictionary(StringComparer.Ordinal),
+            th2Objects.ToImmutable());
     }
 
     private static void IndexTh2(
         TherionFile file,
         Dictionary<string, ScrapSymbol> scraps,
-        Dictionary<string, ScrapObjectSymbol> objects)
+        Dictionary<string, ScrapObjectSymbol> objects,
+        ImmutableArray<Th2ObjectRecord>.Builder th2Objects)
     {
         foreach (var node in file.Children)
         {
@@ -91,11 +95,18 @@ internal static class ReferenceIndexBuilder
             {
                 switch (child)
                 {
-                    case PointObject p when TryGetIdOption(p.OptionsRaw, out var pid):
-                        objects.TryAdd(pid, new ScrapObjectSymbol(pid, p.Span, scrap.Id));
+                    case PointObject p:
+                        if (TryGetIdOption(p.OptionsRaw, out var pid))
+                            objects.TryAdd(pid, new ScrapObjectSymbol(pid, p.Span, scrap.Id));
+                        th2Objects.Add(new Th2ObjectRecord("point", p.PointType, scrap.Id, p.Span));
                         break;
-                    case LineObject l when TryGetIdOption(l.OptionsRaw, out var lid):
-                        objects.TryAdd(lid, new ScrapObjectSymbol(lid, l.Span, scrap.Id));
+                    case LineObject l:
+                        if (TryGetIdOption(l.OptionsRaw, out var lid))
+                            objects.TryAdd(lid, new ScrapObjectSymbol(lid, l.Span, scrap.Id));
+                        th2Objects.Add(new Th2ObjectRecord("line", l.LineType, scrap.Id, l.Span));
+                        break;
+                    case AreaObject a:
+                        th2Objects.Add(new Th2ObjectRecord("area", a.AreaType, scrap.Id, a.Span));
                         break;
                 }
             }
