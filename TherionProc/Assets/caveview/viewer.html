@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>TherionProc — 3D Model Viewer</title>
+<link rel="stylesheet" href="CaveView/css/caveview.css" />
+<style>
+    html, body { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; background: #1e1e1e; }
+    #scene { position: absolute; inset: 0; }
+    #overlay {
+        position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+        color: #d4d4d4; font: 13px/1.5 "Segoe UI", system-ui, sans-serif; text-align: center;
+        padding: 24px; background: #1e1e1e; box-sizing: border-box; pointer-events: none;
+    }
+    #overlay.hidden { display: none; }
+</style>
+</head>
+<body>
+<div id="scene" class="cv-container"></div>
+<div id="overlay">Loading 3D engine…</div>
+
+<!-- Vendored CaveView.js (MIT). Detector provides WebGL feature detection. -->
+<script src="CaveView/lib/Detector.js"></script>
+<script src="CaveView/js/CaveView2.js"></script>
+<script>
+"use strict";
+// Host page bridging the embedded CaveView.js viewer to the TherionProc C# shell.
+//   C# -> JS : InvokeScript("cvLoadModel('cave.lox')") etc. (functions on window).
+//   JS -> C# : window.chrome.webview.postMessage(json)  (NativeWebView WebMessageReceived).
+// Every entry point is defensive: the C# side must never see a JS exception turn into a
+// blank control, so failures degrade to a status message + an 'error' message back to C#.
+(function () {
+
+    var viewer = null;
+    var pendingModel = null;   // a load requested before the viewer finished initialising
+    var pendingShading = null;
+
+    function post(obj) {
+        try {
+            var json = JSON.stringify(obj);
+            if (window.chrome && window.chrome.webview && window.chrome.webview.postMessage) {
+                window.chrome.webview.postMessage(json);
+            } else if (window.parent) {
+                window.parent.postMessage(json, "*"); // Browser/iframe backend fallback
+            }
+        } catch (e) { /* never throw from the bridge */ }
+    }
+
+    function showOverlay(msg) {
+        var o = document.getElementById("overlay");
+        if (o) { o.textContent = msg; o.classList.remove("hidden"); }
+    }
+    function hideOverlay() {
+        var o = document.getElementById("overlay");
+        if (o) o.classList.add("hidden");
+    }
+
+    // Maps our toolbar's shading-mode names to CaveView's CV2.SHADING_* constants.
+    // DEPTH needs terrain (not loaded here), so it falls back to HEIGHT.
+    function shadingFromName(name) {
+        switch (String(name || "").toLowerCase()) {
+            case "height":      return CV2.SHADING_HEIGHT;
+            case "survey":      return CV2.SHADING_SURVEY;
+            case "length":      return CV2.SHADING_LENGTH;
+            case "inclination": return CV2.SHADING_INCLINATION;
+            case "single":      return CV2.SHADING_SINGLE;
+            case "depth":       return (CV2.SHADING_DEPTH !== undefined) ? CV2.SHADING_DEPTH : CV2.SHADING_HEIGHT;
+            default:            return CV2.SHADING_HEIGHT;
+        }
+    }
+
+    // ---- C# -> JS API (invoked via NativeWebView.InvokeScript) ----
+
+    window.cvLoadModel = function (file) {
+        if (!file) return;
+        if (!viewer) { pendingModel = file; return; }
+        try {
+            hideOverlay();
+            viewer.clearView();
+            viewer.loadCave(file);
+        } catch (e) { post({ type: "error", message: String(e) }); }
+    };
+
+    window.cvSetShading = function (name) {
+        if (!viewer) { pendingShading = name; return; }
+        try { viewer.shadingMode = shadingFromName(name); } catch (e) { /* ignore */ }
+    };
+
+    // Select a station or survey by its full dotted path (outer.inner.point). For a station
+    // CaveView highlights the point; for a survey it shows the bounding box — both native.
+    window.cvSelect = function (name) {
+        if (!viewer || !name) return;
+        try { viewer.sectionByName = String(name); } catch (e) { /* ignore */ }
+    };
+
+    window.cvResetView = function () {
+        if (!viewer) return;
+        try { viewer.resetView(); } catch (e) { /* ignore */ }
+    };
+
+    // ---- JS -> C# : station pick ----
+    function onStation(e) {
+        try {
+            var n = e && e.node;
+            if (!n) return;
+            var name = (typeof n.name === "function") ? n.name() : (n.name || "");
+            var c = (typeof n.coordinates === "function") ? n.coordinates() : null;
+            post({
+                type: "station",
+                station: name,
+                x: c ? c.x : 0, y: c ? c.y : 0, z: c ? c.z : 0
+            });
+        } catch (err) { post({ type: "error", message: String(err) }); }
+    }
+
+    function init() {
+        if (typeof CV2 === "undefined") {
+            showOverlay("The 3D engine (CaveView.js) could not be loaded.");
+            post({ type: "error", message: "CV2 missing" });
+            return;
+        }
+        if (typeof Detector !== "undefined" && !Detector.webgl) {
+            showOverlay("WebGL is not available in this web engine, so the 3D model can't be shown.");
+            post({ type: "error", message: "no-webgl" });
+            return;
+        }
+        try {
+            viewer = new CV2.CaveViewer("scene", {
+                home: "CaveView/",
+                surveyDirectory: "model/",
+                view: {
+                    shadingMode: CV2.SHADING_HEIGHT,
+                    box: true,
+                    HUD: false,        // TherionProc supplies its own toolbar
+                    entrances: true,
+                    walls: false
+                }
+            });
+
+            viewer.addEventListener("newCave", function () { hideOverlay(); post({ type: "loaded" }); });
+            viewer.addEventListener("station", onStation);
+
+            post({ type: "ready" });
+
+            if (pendingShading) { window.cvSetShading(pendingShading); pendingShading = null; }
+            if (pendingModel) { var f = pendingModel; pendingModel = null; window.cvLoadModel(f); }
+            else showOverlay("Build a 3D model (.lox / .3d) to view it here.");
+        } catch (e) {
+            showOverlay("Could not start the 3D viewer: " + String(e));
+            post({ type: "error", message: String(e) });
+        }
+    }
+
+    if (document.readyState === "complete" || document.readyState === "interactive") init();
+    else window.addEventListener("DOMContentLoaded", init);
+})();
+</script>
+</body>
+</html>
