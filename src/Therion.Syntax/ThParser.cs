@@ -143,7 +143,9 @@ public sealed class ThParser
             "group"                        => ParseGroup(line, lines, ref cursor, filePath, options, parentBlock, diagnostics),
             "surface"                      => ParseSurface(line, lines, ref cursor, diagnostics, options),
             "map"                          => ParseMap(line, lines, ref cursor, diagnostics, options),
-            "data"                         => ParseData(line, diagnostics),
+            // layout … endlayout can appear in `.th` files that are input-ed (LANG-02/10).
+            "layout"                       => ParseLayout(line, lines, ref cursor, diagnostics, options),
+            "data"                         => ParseData(line, options, diagnostics),
             "flags"                        => ParseFlags(line),
             "fix"                          => ParseFix(line, diagnostics),
             "equate"                       => ParseEquate(line, diagnostics),
@@ -151,6 +153,25 @@ public sealed class ThParser
             "input" or "load"              => ParseInput(line, diagnostics),
             "team"                         => ParseTeam(line),
             "date"                         => ParseDate(line),
+            // ---- centreline / survey metadata commands (LANG-04/05/03) ----
+            "units"                        => ParseUnits(line, options, diagnostics),
+            "calibrate"                    => ParseCalibrate(line, options, diagnostics),
+            "declination"                  => ParseDeclination(line, options, diagnostics),
+            "grid-angle"                   => ParseGridAngle(line),
+            "sd"                           => ParseSd(line),
+            "grade"                        => ParseGrade(line),
+            "infer"                        => ParseInfer(line),
+            "mark"                         => ParseMark(line),
+            "station"                      => ParseStation(line),
+            "cs"                           => ParseCs(line, options, diagnostics),
+            "extend"                       => ParseExtend(line),
+            "break"                        => new BreakCommand(line.Span),
+            "walls"                        => new WallsCommand(line.Span, JoinFrom(line, 1)),
+            "vthreshold"                   => ParseVThreshold(line),
+            "station-names"                => ParseStationNames(line),
+            "instrument"                   => ParseInstrument(line),
+            "explo-date"                   => new ExploDateCommand(line.Span, JoinFrom(line, 1)),
+            "explo-team"                   => ParseExploTeam(line),
             // Recognized file-header directive (charset declaration). Carries no
             // semantics for us, but must not be flagged as an unknown command.
             "encoding"                     => new UnknownCommand(line.Span, line.Keyword, JoinFrom(line, 1)),
@@ -199,10 +220,12 @@ public sealed class ThParser
             (string.Equals(parentBlock, "centreline", StringComparison.OrdinalIgnoreCase) ||
              string.Equals(parentBlock, "centerline", StringComparison.OrdinalIgnoreCase)))
         {
-            var b = ImmutableArray.CreateBuilder<string>();
-            foreach (var t in line.Tokens) b.Add(t.Text);
-            return new DataRow(line.Span, b.ToImmutable(),
-                TrailingComment: CleanComment(line.TrailingComment?.Text));
+            var (values, valueSpans) = CoalesceValues(line);
+            return new DataRow(line.Span, values,
+                TrailingComment: CleanComment(line.TrailingComment?.Text))
+            {
+                ValueSpans = valueSpans,
+            };
         }
         return ParseUnknown(line, options, diagnostics);
     }
@@ -259,6 +282,9 @@ public sealed class ThParser
 
         bool terminated = false;
         var lastSpan = line.Span;
+        // LANG-08: capture the scrap / sub-map references on the body lines (each line's first
+        // token is the member id; any trailing tokens are placement offsets / comments).
+        var members = ImmutableArray.CreateBuilder<MapMemberRef>();
         while (cursor < lines.Length)
         {
             var ln = lines[cursor];
@@ -270,7 +296,14 @@ public sealed class ThParser
                 terminated = true;
                 break;
             }
-            if (!ln.IsEmpty) lastSpan = ln.Span;
+            if (!ln.IsEmpty)
+            {
+                lastSpan = ln.Span;
+                var head = ln.Tokens[0];
+                // Skip option lines (e.g. a stray "-projection") — members are bare ids.
+                if (!head.Text.StartsWith('-'))
+                    members.Add(new MapMemberRef(head.Span, head.Text));
+            }
             cursor++;
         }
 
@@ -286,7 +319,72 @@ public sealed class ThParser
                 line.Span));
         }
 
-        return new MapCommand(SpanUnion(line.Span, lastSpan), id ?? string.Empty, opts, terminated);
+        return new MapCommand(SpanUnion(line.Span, lastSpan), id ?? string.Empty, opts, terminated)
+        {
+            Members = members.ToImmutable(),
+            Projection = ExtractProjection(opts),
+        };
+    }
+
+    /// <summary>Extracts the <c>-projection &lt;value&gt;</c> option from a map header's raw options.</summary>
+    private static string? ExtractProjection(string optionsRaw)
+    {
+        if (string.IsNullOrEmpty(optionsRaw)) return null;
+        var parts = optionsRaw.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        for (int i = 0; i < parts.Length - 1; i++)
+            if (string.Equals(parts[i], "-projection", StringComparison.OrdinalIgnoreCase))
+                return parts[i + 1];
+        return null;
+    }
+
+    /// <summary>
+    /// Parses a <c>layout &lt;id&gt; ... endlayout</c> block in a <c>.th</c> file (some projects keep
+    /// layouts in input-ed <c>.th</c> files). Reuses <see cref="LayoutBodyParser"/> so the typed
+    /// model + opaque <c>code … endcode</c> handling match the <c>.thconfig</c> path (LANG-02/10).
+    /// </summary>
+    private LayoutCommand ParseLayout(
+        LogicalLine line,
+        ImmutableArray<LogicalLine> lines,
+        ref int cursor,
+        ImmutableArray<Diagnostic>.Builder diagnostics,
+        ParserOptions options)
+    {
+        var id = line.Tokens.Length > 1 ? line.Tokens[1].Text : string.Empty;
+        var rawArgs = JoinFrom(line, 2);
+        var body = ImmutableArray.CreateBuilder<LogicalLine>();
+        bool terminated = false;
+        var lastSpan = line.Span;
+
+        while (cursor < lines.Length)
+        {
+            var ln = lines[cursor];
+            if (!ln.IsEmpty && string.Equals(ln.Keyword, "endlayout", StringComparison.OrdinalIgnoreCase))
+            {
+                lastSpan = ln.Span;
+                cursor++;
+                terminated = true;
+                break;
+            }
+            if (!ln.IsEmpty) { lastSpan = ln.Span; body.Add(ln); }
+            cursor++;
+        }
+
+        if (!terminated)
+            diagnostics.Add(Diagnostic.Create(
+                DiagnosticCodes.UnterminatedBlock,
+                options.Mode == ParserMode.Strict ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
+                "Block 'layout' is missing its 'endlayout' terminator.",
+                line.Span));
+
+        var parts = LayoutBodyParser.Parse(body.ToImmutable());
+        return new LayoutCommand(SpanUnion(line.Span, lastSpan), id, rawArgs,
+            parts.Options, parts.CodeBlocks, terminated)
+        {
+            CopyFrom = parts.CopyFrom,
+            CoordinateSystem = parts.CoordinateSystem,
+            SymbolSet = parts.SymbolSet,
+            SymbolDirectives = parts.SymbolDirectives,
+        };
     }
 
     /// <summary>
@@ -352,7 +450,8 @@ public sealed class ThParser
         return new SurfaceCommand(SpanUnion(line.Span, lastSpan), opts, terminated);
     }
 
-    private DataCommand ParseData(LogicalLine line, ImmutableArray<Diagnostic>.Builder diagnostics)
+    private DataCommand ParseData(
+        LogicalLine line, ParserOptions options, ImmutableArray<Diagnostic>.Builder diagnostics)
     {
         if (line.Tokens.Length < 2)
         {
@@ -368,8 +467,260 @@ public sealed class ThParser
         var fields = ImmutableArray.CreateBuilder<string>();
         for (int i = 2; i < line.Tokens.Length; i++)
             fields.Add(line.Tokens[i].Text);
+        var fieldList = fields.ToImmutable();
 
-        return new DataCommand(line.Span, style, fields.ToImmutable());
+        // LANG-05: validate the style name + each reading keyword. Lenient by default.
+        var warn = options.Mode == ParserMode.Strict ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning;
+        if (DataStyles.ParseStyle(style) == DataStyle.Unknown)
+        {
+            diagnostics.Add(Diagnostic.Create(
+                DiagnosticCodes.UnknownDataStyle, warn,
+                $"Unknown data style '{style}'.",
+                line.Tokens[1].Span,
+                hint: "Expected one of: " + string.Join(", ", DataStyles.StyleNames)));
+        }
+        for (int i = 2; i < line.Tokens.Length; i++)
+        {
+            var reading = line.Tokens[i].Text;
+            if (!DataStyles.IsKnownReading(reading))
+                diagnostics.Add(Diagnostic.Create(
+                    DiagnosticCodes.UnknownDataReading, warn,
+                    $"Unknown data reading '{reading}'.",
+                    line.Tokens[i].Span));
+        }
+
+        return new DataCommand(line.Span, style, fieldList);
+    }
+
+    // ===== centreline metadata command parsers (LANG-04/05/03) ============
+
+    private static ImmutableArray<string> TokensFrom(LogicalLine line, int fromIndex)
+    {
+        if (line.Tokens.Length <= fromIndex) return ImmutableArray<string>.Empty;
+        var b = ImmutableArray.CreateBuilder<string>(line.Tokens.Length - fromIndex);
+        for (int i = fromIndex; i < line.Tokens.Length; i++) b.Add(line.Tokens[i].Text);
+        return b.ToImmutable();
+    }
+
+    private static bool LooksNumeric(string s) =>
+        double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out _);
+
+    private static double? TryDouble(string s) =>
+        double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var d) ? d : null;
+
+    /// <summary><c>units &lt;quantity list&gt; [&lt;factor&gt;] &lt;units&gt;</c>.</summary>
+    private UnitsCommand ParseUnits(
+        LogicalLine line, ParserOptions options, ImmutableArray<Diagnostic>.Builder diagnostics)
+    {
+        var quantities = ImmutableArray.CreateBuilder<string>();
+        double? factor = null;
+        string unit = string.Empty;
+        var warn = options.Mode == ParserMode.Strict ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning;
+
+        for (int i = 1; i < line.Tokens.Length; i++)
+        {
+            var t = line.Tokens[i].Text;
+            if (LooksNumeric(t)) { factor = TryDouble(t); continue; }       // optional scale factor
+            if (MeasurementUnits.IsUnit(t)) { unit = t; continue; }          // the units name
+            quantities.Add(t);                                               // a quantity keyword
+            if (!MeasurementUnits.IsQuantity(t))
+                diagnostics.Add(Diagnostic.Create(
+                    DiagnosticCodes.MalformedUnits, warn,
+                    $"Unknown unit quantity '{t}'.", line.Tokens[i].Span));
+        }
+        if (unit.Length == 0)
+            diagnostics.Add(Diagnostic.Create(
+                DiagnosticCodes.MalformedUnits, warn,
+                "'units' requires a unit name (e.g. metres, degrees).", line.Span));
+
+        return new UnitsCommand(line.Span, quantities.ToImmutable(), factor, unit, JoinFrom(line, 1));
+    }
+
+    /// <summary><c>calibrate &lt;quantity list&gt; &lt;zero error&gt; [&lt;scale&gt;]</c>.</summary>
+    private CalibrateCommand ParseCalibrate(
+        LogicalLine line, ParserOptions options, ImmutableArray<Diagnostic>.Builder diagnostics)
+    {
+        var quantities = ImmutableArray.CreateBuilder<string>();
+        var numbers = new List<double>();
+        for (int i = 1; i < line.Tokens.Length; i++)
+        {
+            var t = line.Tokens[i].Text;
+            if (LooksNumeric(t)) numbers.Add(TryDouble(t)!.Value);
+            else quantities.Add(t);
+        }
+        double zero = numbers.Count > 0 ? numbers[0] : 0d;
+        double? scale = numbers.Count > 1 ? numbers[1] : null;
+        if (numbers.Count == 0)
+            diagnostics.Add(Diagnostic.Create(
+                DiagnosticCodes.MalformedCalibrate,
+                options.Mode == ParserMode.Strict ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
+                "'calibrate' requires a zero-error value.", line.Span));
+        return new CalibrateCommand(line.Span, quantities.ToImmutable(), zero, scale, JoinFrom(line, 1));
+    }
+
+    /// <summary>
+    /// <c>declination [&lt;value&gt; &lt;units&gt;]</c> (single value, dated list, or reset).
+    /// Only the simple single-value form is decoded; the rest is kept raw.
+    /// </summary>
+    private DeclinationCommand ParseDeclination(
+        LogicalLine line, ParserOptions options, ImmutableArray<Diagnostic>.Builder diagnostics)
+    {
+        var raw = JoinFrom(line, 1);
+        // reset form: `declination` with no args, or `declination -`
+        if (line.Tokens.Length == 1 ||
+            (line.Tokens.Length == 2 && line.Tokens[1].Text == "-"))
+            return new DeclinationCommand(line.Span, null, null, IsReset: true, raw);
+
+        double? value = null;
+        string? unit = null;
+        int numericCount = 0;
+        foreach (var tok in TokensFrom(line, 1))
+        {
+            if (LooksNumeric(tok)) { numericCount++; value ??= TryDouble(tok); }
+            else if (MeasurementUnits.TryAngle(tok) is not null) unit = tok;
+        }
+        // A single numeric + unit is the simple form; multiple numerics ⇒ dated list (keep value=null).
+        if (numericCount != 1) value = null;
+        return new DeclinationCommand(line.Span, value, unit, IsReset: false, raw);
+    }
+
+    private static GridAngleCommand ParseGridAngle(LogicalLine line)
+    {
+        double? value = line.Tokens.Length > 1 ? TryDouble(line.Tokens[1].Text) : null;
+        string? unit = line.Tokens.Length > 2 ? line.Tokens[2].Text : null;
+        return new GridAngleCommand(line.Span, value, unit);
+    }
+
+    /// <summary><c>sd &lt;quantity list&gt; &lt;value&gt; &lt;units&gt;</c>.</summary>
+    private static SdCommand ParseSd(LogicalLine line)
+    {
+        var quantities = ImmutableArray.CreateBuilder<string>();
+        double? value = null;
+        string? unit = null;
+        for (int i = 1; i < line.Tokens.Length; i++)
+        {
+            var t = line.Tokens[i].Text;
+            if (LooksNumeric(t)) value ??= TryDouble(t);
+            else if (value is not null && MeasurementUnits.IsUnit(t)) unit = t;
+            else quantities.Add(t);
+        }
+        return new SdCommand(line.Span, quantities.ToImmutable(), value, unit, JoinFrom(line, 1));
+    }
+
+    private static GradeCommand ParseGrade(LogicalLine line) =>
+        new(line.Span, TokensFrom(line, 1));
+
+    /// <summary><c>infer &lt;what&gt; &lt;on/off&gt;</c>.</summary>
+    private static InferCommand ParseInfer(LogicalLine line)
+    {
+        var what = line.Tokens.Length > 1 ? line.Tokens[1].Text : string.Empty;
+        bool on = line.Tokens.Length > 2 &&
+                  string.Equals(line.Tokens[2].Text, "on", StringComparison.OrdinalIgnoreCase);
+        return new InferCommand(line.Span, what, on);
+    }
+
+    /// <summary><c>mark [&lt;station list&gt;] &lt;type&gt;</c> — last token is the type.</summary>
+    private static MarkCommand ParseMark(LogicalLine line)
+    {
+        if (line.Tokens.Length < 2)
+            return new MarkCommand(line.Span, ImmutableArray<string>.Empty, string.Empty);
+        var markType = line.Tokens[^1].Text;
+        var stations = ImmutableArray.CreateBuilder<string>();
+        for (int i = 1; i < line.Tokens.Length - 1; i++) stations.Add(line.Tokens[i].Text);
+        return new MarkCommand(line.Span, stations.ToImmutable(), markType);
+    }
+
+    /// <summary><c>station &lt;station&gt; &lt;comment&gt; [&lt;flags&gt;]</c>.</summary>
+    private static StationCommand ParseStation(LogicalLine line)
+    {
+        var station = line.Tokens.Length > 1 ? line.Tokens[1].Text : string.Empty;
+        string? comment = line.Tokens.Length > 2 ? Unquote(line.Tokens[2].Text) : null;
+        if (string.IsNullOrEmpty(comment)) comment = null;
+        var flags = ImmutableArray.CreateBuilder<string>();
+        for (int i = 3; i < line.Tokens.Length; i++) flags.Add(line.Tokens[i].Text);
+        return new StationCommand(line.Span, station, comment, flags.ToImmutable());
+    }
+
+    /// <summary><c>cs &lt;coordinate system&gt;</c> + validation (LANG-03).</summary>
+    private CsCommand ParseCs(
+        LogicalLine line, ParserOptions options, ImmutableArray<Diagnostic>.Builder diagnostics)
+    {
+        // The tokenizer breaks "epsg:3794" at the ':'; rejoin adjacent (no-whitespace) tokens
+        // so the whole system name ("EPSG:3794", "OSGB:SK") is recovered before validating.
+        var (system, span) = ReadAdjacentTokens(line, fromIndex: 1);
+        if (system.Length > 0 && !CoordinateSystems.IsKnown(system))
+            diagnostics.Add(Diagnostic.Create(
+                DiagnosticCodes.UnknownCoordinateSystem,
+                options.Mode == ParserMode.Strict ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
+                $"Unknown coordinate system '{system}'.",
+                span,
+                hint: "Use UTM<zone>, EPSG:<n>, lat-long, S-MERC, …"));
+        return new CsCommand(line.Span, system);
+    }
+
+    /// <summary>
+    /// Joins tokens starting at <paramref name="fromIndex"/> that touch in the source (no
+    /// intervening whitespace) into one string + its covering span. Recovers identifiers the
+    /// tokenizer split at punctuation (e.g. <c>EPSG:3794</c>, <c>OSGB:SK</c>).
+    /// </summary>
+    private static (string Text, SourceSpan Span) ReadAdjacentTokens(LogicalLine line, int fromIndex)
+    {
+        if (line.Tokens.Length <= fromIndex) return (string.Empty, line.Span);
+        var first = line.Tokens[fromIndex];
+        var sb = new System.Text.StringBuilder(first.Text);
+        int prevEnd = first.Span.StartOffset + first.Span.Length;
+        var last = first;
+        for (int i = fromIndex + 1; i < line.Tokens.Length; i++)
+        {
+            var t = line.Tokens[i];
+            if (t.Span.StartOffset != prevEnd) break; // whitespace gap → end of the joined word
+            sb.Append(t.Text);
+            prevEnd = t.Span.StartOffset + t.Span.Length;
+            last = t;
+        }
+        return (sb.ToString(), SpanUnion(first.Span, last.Span));
+    }
+
+    /// <summary><c>extend &lt;spec&gt; [&lt;station&gt; …]</c>.</summary>
+    private static ExtendCommand ParseExtend(LogicalLine line)
+    {
+        var spec = line.Tokens.Length > 1 ? line.Tokens[1].Text : string.Empty;
+        return new ExtendCommand(line.Span, spec, TokensFrom(line, 2));
+    }
+
+    private static VThresholdCommand ParseVThreshold(LogicalLine line)
+    {
+        double? value = line.Tokens.Length > 1 ? TryDouble(line.Tokens[1].Text) : null;
+        string? unit = line.Tokens.Length > 2 ? line.Tokens[2].Text : null;
+        return new VThresholdCommand(line.Span, value, unit);
+    }
+
+    private static StationNamesCommand ParseStationNames(LogicalLine line)
+    {
+        var prefix = line.Tokens.Length > 1 ? Unquote(line.Tokens[1].Text) : string.Empty;
+        var suffix = line.Tokens.Length > 2 ? Unquote(line.Tokens[2].Text) : string.Empty;
+        return new StationNamesCommand(line.Span, prefix, suffix);
+    }
+
+    /// <summary><c>instrument &lt;quantity list&gt; &lt;description&gt;</c>.</summary>
+    private static InstrumentCommand ParseInstrument(LogicalLine line)
+    {
+        // The description is a (usually quoted) trailing string; everything before it is quantities.
+        var quantities = ImmutableArray.CreateBuilder<string>();
+        string description = string.Empty;
+        for (int i = 1; i < line.Tokens.Length; i++)
+        {
+            var t = line.Tokens[i].Text;
+            if (t.Length > 0 && t[0] == '"') { description = Unquote(t); break; }
+            quantities.Add(t);
+        }
+        return new InstrumentCommand(line.Span, quantities.ToImmutable(), description);
+    }
+
+    private static ExploTeamCommand ParseExploTeam(LogicalLine line)
+    {
+        var name = line.Tokens.Length > 1 ? Unquote(line.Tokens[1].Text) : string.Empty;
+        return new ExploTeamCommand(line.Span, name, JoinFrom(line, 2));
     }
 
     private FlagsCommand ParseFlags(LogicalLine line)
@@ -491,6 +842,48 @@ public sealed class ThParser
     }
 
     // ----- helpers --------------------------------------------------------
+
+    /// <summary>
+    /// Reconstructs the whitespace-delimited <em>values</em> of a data row from the token stream.
+    /// The tokenizer over-splits barewords at digit/letter/punctuation boundaries (e.g. a station
+    /// named <c>38a</c> arrives as <c>38</c>+<c>a</c>); this coalesces tokens that touch in the
+    /// source (no intervening whitespace) back into one value, so a 5-column row yields 5 values
+    /// regardless of station naming. Fixes both data-row arity checks and station binding.
+    /// </summary>
+    private static (ImmutableArray<string> Values, ImmutableArray<SourceSpan> Spans) CoalesceValues(LogicalLine line)
+    {
+        if (line.Tokens.IsDefaultOrEmpty)
+            return (ImmutableArray<string>.Empty, ImmutableArray<SourceSpan>.Empty);
+        var values = ImmutableArray.CreateBuilder<string>();
+        var spans = ImmutableArray.CreateBuilder<SourceSpan>();
+        var sb = new System.Text.StringBuilder();
+        int prevEnd = -1;
+        SourceSpan groupStart = default, groupEnd = default;
+        foreach (var t in line.Tokens)
+        {
+            if (prevEnd >= 0 && t.Span.StartOffset != prevEnd)
+            {
+                values.Add(sb.ToString());
+                spans.Add(JoinSpans(groupStart, groupEnd));
+                sb.Clear();
+            }
+            if (sb.Length == 0) groupStart = t.Span;
+            groupEnd = t.Span;
+            sb.Append(t.Text);
+            prevEnd = t.Span.StartOffset + t.Span.Length;
+        }
+        if (sb.Length > 0)
+        {
+            values.Add(sb.ToString());
+            spans.Add(JoinSpans(groupStart, groupEnd));
+        }
+        return (values.ToImmutable(), spans.ToImmutable());
+    }
+
+    /// <summary>Union of two spans on the same line (first value token → last value token).</summary>
+    private static SourceSpan JoinSpans(SourceSpan first, SourceSpan last) =>
+        new(first.FilePath, first.Start, last.End, first.StartOffset,
+            (last.StartOffset + last.Length) - first.StartOffset);
 
     private static (string? HeadValue, string RestValue) HeadAndRest(LogicalLine line, int fromIndex)
     {
