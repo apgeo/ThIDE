@@ -485,7 +485,9 @@ public partial class MainWindowViewModel : ViewModelBase
                 OnPropertyChanged(nameof(LivePreviewEnabled));   // VIS-01/02/05 menu gates
                 OnPropertyChanged(nameof(MapViewerEnabled));
                 OnPropertyChanged(nameof(Model3DViewerEnabled));
+                ConfigureAutoSave();   // QOL-09
             });
+            ConfigureAutoSave();   // QOL-09 (apply persisted mode at startup)
             // Apply the persisted UI language at startup (#9).
             var lang = _settings.Current.UiLanguage;
             if (!string.IsNullOrEmpty(lang)) _language.SetLanguage(lang);
@@ -1022,6 +1024,47 @@ public partial class MainWindowViewModel : ViewModelBase
             TriggerCompileOnSave(); // BUILD-07
         }
         catch (Exception ex) { StatusText = ex.Message; }
+    }
+
+    // ---- auto-save (QOL-09) -------------------------------------------------
+    private Avalonia.Threading.DispatcherTimer? _autoSaveTimer;
+
+    /// <summary>Applies the current auto-save setting: starts/stops the periodic timer.</summary>
+    private void ConfigureAutoSave()
+    {
+        var mode = _settings?.Current.AutoSave ?? AutoSaveMode.Off;
+        if (mode == AutoSaveMode.AfterDelay)
+        {
+            int sec = Math.Max(5, _settings?.Current.AutoSaveDelaySeconds ?? 30);
+            _autoSaveTimer ??= CreateAutoSaveTimer();
+            _autoSaveTimer.Interval = TimeSpan.FromSeconds(sec);
+            _autoSaveTimer.Start();
+        }
+        else _autoSaveTimer?.Stop();
+    }
+
+    private Avalonia.Threading.DispatcherTimer CreateAutoSaveTimer()
+    {
+        var t = new Avalonia.Threading.DispatcherTimer();
+        t.Tick += async (_, _) => await SaveAllDirtyAsync().ConfigureAwait(true);
+        return t;
+    }
+
+    /// <summary>QOL-09: persists every dirty document with a real on-disk path.</summary>
+    public async Task SaveAllDirtyAsync()
+    {
+        foreach (var doc in _documents.Documents.ToList())
+        {
+            if (!doc.IsDirty) continue;
+            try { await _documents.SaveDocumentAsync(doc).ConfigureAwait(true); }
+            catch (Exception ex) { _log?.Warning($"Auto-save failed for '{doc.FilePath}': {ex.Message}"); }
+        }
+    }
+
+    /// <summary>QOL-09: auto-saves on focus loss when that mode is selected (called by the view).</summary>
+    public void AutoSaveOnFocusLoss()
+    {
+        if (_settings?.Current.AutoSave == AutoSaveMode.OnFocusLoss) _ = SaveAllDirtyAsync();
     }
 
     private System.Threading.CancellationTokenSource? _autoBuildCts;

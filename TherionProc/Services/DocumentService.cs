@@ -56,6 +56,8 @@ public interface IDocumentService
     /// <summary>Opens the file a span lives in (if needed) and scrolls/flashes the editor to it.</summary>
     Task NavigateToSpanAsync(Therion.Core.SourceSpan span, CancellationToken ct = default);
     Task WriteCurrentTextAsync(string newText, CancellationToken ct = default);
+    /// <summary>QOL-09: persists a specific document's current text to disk (auto-save).</summary>
+    Task SaveDocumentAsync(FileDocumentViewModel document, CancellationToken ct = default);
     void Close();
 
     // ---- navigation history (back/forward across files, VSCode-style) ----
@@ -391,6 +393,16 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
             await File.WriteAllTextAsync(doc.FilePath, newText, ct).ConfigureAwait(true);
         }
         doc.SetText(newText, reparse: true);
+    }
+
+    public async Task SaveDocumentAsync(FileDocumentViewModel document, CancellationToken ct = default)
+    {
+        if (document is null || string.IsNullOrEmpty(document.FilePath) || !File.Exists(document.FilePath)) return;
+        // EDIT-14 cleanup, then write — suppressing the watcher so our own save isn't flagged external (#6).
+        var newText = EditorTextCleanup.ApplyOnSave(document.DocumentText, _settings?.Current);
+        _session.SuppressSelfWrite(document.FilePath);
+        await File.WriteAllTextAsync(document.FilePath, newText, ct).ConfigureAwait(true);
+        document.SetText(newText, reparse: true);
     }
 
     private FileDocumentViewModel CreateDocument(string path, string text)

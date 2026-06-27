@@ -89,7 +89,12 @@ public partial class MainWindow : Window
         };
 
         // Persist when focus leaves the app — covers a debugger stop that never fires Closing.
-        Deactivated += (_, _) => { PersistAll(); PersistRecoveryBuffers(); };
+        Deactivated += (_, _) =>
+        {
+            (DataContext as MainWindowViewModel)?.AutoSaveOnFocusLoss();   // QOL-09
+            PersistAll();
+            PersistRecoveryBuffers();
+        };
         // A clean close clears the crash sentinel + recovery buffers (PERF-06) so the next launch
         // doesn't enter safe mode or offer stale recovery.
         Closing += (_, _) =>

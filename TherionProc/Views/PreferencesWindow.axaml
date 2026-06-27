@@ -53,6 +53,23 @@
                     </StackPanel>
                     <TextBlock Text="Language applies immediately to menus and labels."
                                Foreground="Gray" FontSize="11" />
+                    <Separator Margin="0,6" />
+                    <!-- QOL-09: configurable auto-save. -->
+                    <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,4,0,0">
+                        <TextBlock Text="Auto-save" VerticalAlignment="Center" Width="100" />
+                        <ComboBox MinWidth="180" SelectedIndex="{Binding AutoSaveModeIndex, Mode=TwoWay}">
+                            <ComboBoxItem>Off</ComboBoxItem>
+                            <ComboBoxItem>After a delay</ComboBoxItem>
+                            <ComboBoxItem>On focus loss</ComboBoxItem>
+                        </ComboBox>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <TextBlock Text="Delay (seconds)" VerticalAlignment="Center" Width="100" />
+                        <NumericUpDown Minimum="5" Maximum="3600" Increment="5" MinWidth="120"
+                                       Value="{Binding AutoSaveDelaySeconds, Mode=TwoWay}" />
+                    </StackPanel>
+                    <TextBlock Text="Dirty files are written automatically; the delay applies to the After-a-delay mode."
+                               Foreground="Gray" FontSize="11" />
                 </StackPanel>
 
                 <!-- Theme & Colors (#2) -->

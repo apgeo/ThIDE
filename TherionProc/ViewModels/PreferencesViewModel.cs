@@ -74,6 +74,11 @@ public partial class PreferencesViewModel : ObservableObject
     [ObservableProperty] private bool _openAllOutputsAfterBuild;
     [ObservableProperty] private bool _compileOnSave;
 
+    // ---- auto-save (QOL-09) ----
+    /// <summary>Auto-save mode index: 0 = Off, 1 = After delay, 2 = On focus loss.</summary>
+    [ObservableProperty] private int _autoSaveModeIndex;
+    [ObservableProperty] private int _autoSaveDelaySeconds;
+
     // ---- visualization (VIS-*) ----
     [ObservableProperty] private bool _enableLivePreview;
     [ObservableProperty] private bool _enableMapAutoPreview;
@@ -149,6 +154,8 @@ public partial class PreferencesViewModel : ObservableObject
         _openPdfAfterBuild = s.OpenPdfAfterBuild;
         _openAllOutputsAfterBuild = s.OpenAllOutputsAfterBuild;
         _compileOnSave = s.CompileOnSave;
+        _autoSaveModeIndex = (int)s.AutoSave;
+        _autoSaveDelaySeconds = s.AutoSaveDelaySeconds;
         _enableLivePreview = s.EnableLivePreview;
         _enableMapAutoPreview = s.EnableMapAutoPreview;
         _enableInAppViewer = s.EnableInAppViewer;
@@ -279,6 +286,8 @@ public partial class PreferencesViewModel : ObservableObject
             OpenPdfAfterBuild = OpenPdfAfterBuild,
             OpenAllOutputsAfterBuild = OpenAllOutputsAfterBuild,
             CompileOnSave = CompileOnSave,
+            AutoSave = (AutoSaveMode)Math.Clamp(AutoSaveModeIndex, 0, 2),
+            AutoSaveDelaySeconds = Math.Max(5, AutoSaveDelaySeconds),
             EnableLivePreview = EnableLivePreview,
             EnableMapAutoPreview = EnableMapAutoPreview,
             EnableInAppViewer = EnableInAppViewer,

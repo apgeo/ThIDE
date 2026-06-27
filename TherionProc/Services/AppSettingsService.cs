@@ -32,6 +32,14 @@ public enum QuickOpenSources
     ThconfigConnected = 4,    // only files that participate in the active thconfig's object graph
 }
 
+/// <summary>QOL-09: when the editor auto-saves dirty files.</summary>
+public enum AutoSaveMode
+{
+    Off = 0,
+    AfterDelay = 1,    // periodically while a file stays dirty
+    OnFocusLoss = 2,   // when the app window loses focus
+}
+
 /// <summary>File-explorer sort key (Windows-Explorer-style), applied within each folder (#15).</summary>
 public enum WorkspaceSortMode
 {
@@ -103,6 +111,12 @@ public sealed record AppSettings
     public bool OpenAllOutputsAfterBuild { get; init; }
     /// <summary>BUILD-07: automatically (re)build the active project a short moment after each save. Off by default.</summary>
     public bool CompileOnSave { get; init; }
+
+    // ---- auto-save (QOL-09) ----
+    /// <summary>When the editor auto-saves dirty files (off / after a delay / on focus loss).</summary>
+    public AutoSaveMode AutoSave { get; init; } = AutoSaveMode.Off;
+    /// <summary>Interval (seconds) for the AfterDelay auto-save mode.</summary>
+    public int AutoSaveDelaySeconds { get; init; } = 30;
 
     // ---- visualization features (VIS-*) ----
     /// <summary>VIS-02: the live centreline preview (plan/elevation sketch from our model).</summary>
