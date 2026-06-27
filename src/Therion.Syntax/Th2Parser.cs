@@ -42,7 +42,8 @@ public sealed class Th2Parser
         ImmutableArray<LogicalLine> lines,
         ref int cursor, string filePath, ParserOptions options,
         string? blockTerminator, string? blockKeyword,
-        ImmutableArray<Diagnostic>.Builder diags)
+        ImmutableArray<Diagnostic>.Builder diags,
+        string? blockId = null)
     {
         var children = ImmutableArray.CreateBuilder<TherionNode>();
 
@@ -58,6 +59,14 @@ public sealed class Th2Parser
             if (blockTerminator is not null &&
                 string.Equals(kw, blockTerminator, StringComparison.OrdinalIgnoreCase))
             {
+                // `endscrap [<id>]` must match the opener's id when present.
+                if (blockId is { Length: > 0 } && line.Tokens.Length > 1 &&
+                    !string.Equals(line.Tokens[1].Text, blockId, StringComparison.Ordinal))
+                    diags.Add(Diagnostic.Create(
+                        DiagnosticCodes.BlockIdMismatch,
+                        options.Mode == ParserMode.Strict ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
+                        $"'{kw} {line.Tokens[1].Text}' does not match '{blockKeyword} {blockId}'.",
+                        line.Tokens[1].Span));
                 cursor++;
                 return children.ToImmutable();
             }
@@ -113,6 +122,12 @@ public sealed class Th2Parser
     {
         string id = line.Tokens.Length > 1 ? line.Tokens[1].Text : string.Empty;
         string optionsRaw = JoinFrom(line, 2);
+        if (line.Tokens.Length > 1 && TherionIdentifiers.FirstIllegalChar(id) is { } badId)
+            diags.Add(Diagnostic.Create(
+                DiagnosticCodes.IllegalIdentifier,
+                options.Mode == ParserMode.Strict ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
+                $"Scrap id '{id}' contains an illegal character '{badId}'.",
+                line.Tokens[1].Span));
 
         // Extract any `-sketch <path> <x> <y>` option from the scrap header.
         var sketches = ExtractSketches(line, filePath);
@@ -120,7 +135,7 @@ public sealed class Th2Parser
         bool terminated = false;
         int startCursor = cursor;
         var body = ParseBody(lines, ref cursor, filePath, options,
-            blockTerminator: "endscrap", blockKeyword: "scrap", diags);
+            blockTerminator: "endscrap", blockKeyword: "scrap", diags, blockId: id);
         terminated = cursor != startCursor || body.Length > 0;
 
         var endSpan = body.Length > 0 ? body[^1].Span : line.Span;
@@ -155,6 +170,13 @@ public sealed class Th2Parser
                 "'point' requires x, y, and type.", line.Span));
             return new PointObject(line.Span, 0, 0, string.Empty, JoinFrom(line, 1));
         }
+        var sevNum = options.Mode == ParserMode.Strict ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning;
+        if (!IsNumeric(line.Tokens[1].Text))
+            diags.Add(Diagnostic.Create(DiagnosticCodes.Th2MalformedPoint, sevNum,
+                $"'point' x coordinate '{line.Tokens[1].Text}' is not a number.", line.Tokens[1].Span));
+        if (!IsNumeric(line.Tokens[2].Text))
+            diags.Add(Diagnostic.Create(DiagnosticCodes.Th2MalformedPoint, sevNum,
+                $"'point' y coordinate '{line.Tokens[2].Text}' is not a number.", line.Tokens[2].Span));
         double x = ParseDouble(line.Tokens[1].Text);
         double y = ParseDouble(line.Tokens[2].Text);
         var (type, optStart) = CoalesceFrom(line.Tokens, 3);
@@ -164,9 +186,11 @@ public sealed class Th2Parser
                 options.Mode == ParserMode.Strict ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
                 $"Unknown point type '{type}'.", line.Tokens[3].Span));
 
+        var pointOpts = Th2OptionList.Parse(line.Tokens, optStart);
+        ValidateOptions(pointOpts, options, diags);
         return new PointObject(line.Span, x, y, type, JoinFrom(line, optStart))
         {
-            Options = Th2OptionList.Parse(line.Tokens, optStart),
+            Options = pointOpts,
         };
     }
 
@@ -217,10 +241,12 @@ public sealed class Th2Parser
         }
 
         var endSpan = vertices.Count > 0 ? vertices[^1].Span : header.Span;
+        var lineOpts = Th2OptionList.Parse(header.Tokens, lineOptStart);
+        ValidateOptions(lineOpts, options, diags);
         return new LineObject(SpanUnion(header.Span, endSpan), type, optsRaw,
             vertices.ToImmutable(), terminated)
         {
-            Options = Th2OptionList.Parse(header.Tokens, lineOptStart),
+            Options = lineOpts,
         };
     }
 
@@ -274,9 +300,11 @@ public sealed class Th2Parser
                 "'area' block is missing 'endarea'.", header.Span));
         }
 
+        var areaOpts = Th2OptionList.Parse(header.Tokens, areaOptStart);
+        ValidateOptions(areaOpts, options, diags);
         return new AreaObject(header.Span, type, optsRaw, borders.ToImmutable(), terminated)
         {
-            Options = Th2OptionList.Parse(header.Tokens, areaOptStart),
+            Options = areaOpts,
         };
     }
 
@@ -316,6 +344,20 @@ public sealed class Th2Parser
 
     private static double ParseDouble(string text) =>
         double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var d) ? d : 0d;
+
+    private static bool IsNumeric(string text) =>
+        double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out _);
+
+    /// <summary>Warns on any <c>-option</c> name that isn't a known point/line/area option.</summary>
+    private static void ValidateOptions(
+        Th2OptionList opts, ParserOptions options, ImmutableArray<Diagnostic>.Builder diags)
+    {
+        var sev = options.Mode == ParserMode.Strict ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning;
+        foreach (var o in opts.Options)
+            if (!Th2Symbols.IsKnownOption(o.Name))
+                diags.Add(Diagnostic.Create(DiagnosticCodes.Th2UnknownOption, sev,
+                    $"Unknown option '-{o.Name}'.", o.Span));
+    }
 
     private static string Unquote(string text) =>
         text.Length >= 2 && text[0] == '"' && text[^1] == '"' ? text[1..^1] : text;

@@ -1,22 +1,49 @@
 # Diagnostic catalog
 
-> Codes never change once shipped.
 > Localized messages live in `Therion.Core.Resources` (`Strings.resx` / `Strings.ro.resx`).
+> Severities below are the lenient-mode defaults; in `ParserMode.Strict` the "lenient" rows
+> are promoted to Error.
 
 ## Parser core (`TH00xx`)
 
 | Code | Severity | Message | Source |
 |---|---|---|---|
-| `TH0001` | Error   | Lexer failed at this position. | `TherionTokenizer` |
-| `TH0002` | Warning | Unexpected token `<text>`.     | `TherionTokenizer`, parsers |
-| `TH0003` | Error   | Unexpected end of file.        | parsers |
-| `TH0010` | Warning (lenient) / Error (strict) | Unknown top-level command `<keyword>`. | `ThconfigParser`, `ThParser`, `Th2Parser` |
-| `TH0011` | Warning (lenient) / Error (strict) | Missing block terminator (e.g., `endsurvey`). | `ThParser`, `Th2Parser` |
-| `TH0033` | Warning (lenient) / Error (strict) | Unknown data style `<style>` (LANG-05). | `ThParser` |
-| `TH0034` | Warning (lenient) / Error (strict) | Unknown data reading `<keyword>` (LANG-05). | `ThParser` |
-| `TH0040` | Warning (lenient) / Error (strict) | Malformed `units` (unknown quantity / missing unit). | `ThParser` |
-| `TH0041` | Warning (lenient) / Error (strict) | Malformed `calibrate` (missing zero-error). | `ThParser` |
-| `TH0043` | Warning (lenient) / Error (strict) | Unknown coordinate system `<cs>` (LANG-03). | `ThParser` |
+| `TH0002` | Warning | Unexpected token `<text>`.     | `ThconfigParser` |
+| `TH0010` | lenient | Unknown command `<keyword>`. | `ThconfigParser`, `ThParser`, `Th2Parser` |
+| `TH0020` | lenient | Block `<x>` is missing its terminator (e.g. `endsurvey`). | `ThParser` |
+| `TH0021` | Error   | Mismatched block terminator (found a different `end…`). | `ThParser` |
+| `TH0030` | lenient | Malformed `fix` (missing or non-numeric `x`/`y`/`z`). | `ThParser` |
+| `TH0031` | Warning | Malformed `equate` (needs at least two stations). | `ThParser` |
+| `TH0032` | Warning | Malformed `data` (needs at least a style name). | `ThParser` |
+| `TH0033` | lenient | Unknown data style `<style>`. | `ThParser` |
+| `TH0034` | lenient | Unknown data reading `<keyword>`. | `ThParser` |
+| `TH0040` | lenient | Malformed `units` (unknown quantity / missing unit). | `ThParser` |
+| `TH0041` | lenient | Malformed `calibrate` (missing zero-error). | `ThParser` |
+| `TH0043` | lenient | Unknown coordinate system `<cs>`. | `ThParser`, `ThconfigParser` |
+
+### Identifiers & block matching
+
+| Code | Severity | Message | Source |
+|---|---|---|---|
+| `TH0050` | lenient | Identifier contains a character outside the keyword/ext-keyword set. | `ThParser` (survey/map), `Th2Parser` (scrap) |
+| `TH0051` | lenient | `endsurvey`/`endscrap` id does not match the opener. | `ThParser`, `Th2Parser` |
+
+### Centreline argument enums
+
+| Code | Severity | Message | Source |
+|---|---|---|---|
+| `TH0052` | lenient | Unknown shot flag (`flags`). | `ThParser` |
+| `TH0053` | lenient | Unknown mark type (`mark`). | `ThParser` |
+| `TH0054` | lenient | Unknown extend spec (`extend`). | `ThParser` |
+| `TH0055` | lenient | Unknown station flag (`station`). | `ThParser` |
+
+### .thconfig command arguments
+
+| Code | Severity | Message | Source |
+|---|---|---|---|
+| `TH0060` | lenient | Unknown export type (`export <type>`). | `ThconfigParser` |
+| `TH0061` | lenient | `-fmt` value invalid for the export type. | `ThconfigParser` |
+| `TH0062` | lenient | Unknown layout option key. | `LayoutBodyParser` (`.th` + `.thconfig`) |
 
 ## Semantics (`TH_SEM_xxx`)
 
@@ -25,40 +52,46 @@
 | `TH_SEM_001` | Warning | Unresolved station reference `<name>` (with optional "did you mean" hint). | `SemanticBinder` |
 | `TH_SEM_002` | Warning | Station `<name>` is fixed more than once. | `SemanticBinder` |
 | `TH_SEM_003` | Warning | Malformed station reference `<name>`. | `SemanticBinder` |
-| `TH_SEM_005` | Warning | Data row column count doesn't match its reading order (LANG-05). | `SemanticBinder` |
-| `TH_SEM_006` | Error   | Data-row value isn't valid for its reading (e.g. a non-numeric length/compass/clino). | `SemanticBinder` |
-| `TH_SEM_007` | Warning | Data-row value is out of range for its reading (e.g. compass > 360°, clino > 180°). | `SemanticBinder` |
-| `TH_SEM_010` | Info    | Naming collision: the same survey/map name is declared in more than one file (DIAG-05). | `ProjectDiagnostics` |
-| `TH_SEM_011` | Warning | Loop misclosure beyond tolerance — a closed centreline loop doesn't close (DIAG-02). | `ProjectDiagnostics` |
-| `TH_SEM_012` | Warning/Info | Blunder/outlier shot: zero-length leg, self-loop, or an implausibly long leg (DIAG-03). | `ProjectDiagnostics` |
-| `TH_SEM_013` | Warning | Foresight and backsight disagree beyond tolerance (compass ±180°, clino negated) (DIAG-04). | `ProjectDiagnostics` |
-| `TH_SEM_014` | Warning | Dangling include: an `input`/`source` target was not found on disk (DIAG-06). | `ProjectDiagnostics` |
+| `TH_SEM_005` | Warning | Data row column count doesn't match its reading order. | `SemanticBinder` |
+| `TH_SEM_006` | Error   | Data-row value isn't valid for its reading (non-numeric length/compass/clino). | `SemanticBinder` |
+| `TH_SEM_007` | Warning | Data-row value out of range for its reading (compass > 360°, clino > 180°). | `SemanticBinder` |
+| `TH_SEM_010` | Info    | Naming collision across files (DIAG-05). | `ProjectDiagnostics` |
+| `TH_SEM_011` | Warning | Loop misclosure beyond tolerance (DIAG-02). | `ProjectDiagnostics` |
+| `TH_SEM_012` | Warning/Info | Blunder/outlier shot (DIAG-03). | `ProjectDiagnostics` |
+| `TH_SEM_013` | Warning | Foresight/backsight disagreement (DIAG-04). | `ProjectDiagnostics` |
+| `TH_SEM_014` | Warning | Dangling include: an `input`/`source` target not found (DIAG-06). | `ProjectDiagnostics` |
 | `TH_SEM_NAMING` | configurable | User naming-convention lint violated (LANG-13). | `NamingConventionRule` |
 
-## XVI format (`TH_XVI_xxx`)
+## XVI format (`set XVI*` Tcl export)
+
+Syntax layer (`Therion.Syntax`):
 
 | Code | Severity | Message | Source |
 |---|---|---|---|
-| `TH_XVI_001` | Warning | Referenced image file `<path>` not found.    | `XviIndex` |
-| `TH_XVI_002` | Error   | Referenced `.xvi` file `<path>` not found.   | `XviIndex` |
-| `TH_XVI_003` | Warning | Affine transform is degenerate (non-invertible). | `XviIndex` |
-| `TH_XVI_010` | Warning | Missing XVI `<version>` header line.         | `XviParser` |
-| `TH_XVI_011` | Warning | Malformed `SCALE` � expected a single numeric value. | `XviParser` |
-| `TH_XVI_012` | Warning | Malformed `TRANSFORM` � expected 6 numeric values. | `XviParser` |
-| `TH_XVI_013` | Warning | Missing or malformed `IMAGE` directive.      | `XviParser` |
-| `TH_XVI_014` | Warning (lenient) / Error (strict) | Unknown XVI keyword `<keyword>`. | `XviParser` |
+| `TH_XVI_001` | lenient | Unknown `set XVI…` variable. | `XviParser` |
+| `TH_XVI_002` | lenient | Unexpected non-`set` statement. | `XviParser` |
+| `TH_XVI_003` | Error   | `{` block missing its closing `}`. | `XviParser` |
+| `TH_XVI_004` | lenient | `XVIgrid` not 8 numeric values. | `XviParser` |
+
+Semantic layer (`Therion.Semantics`):
+
+| Code | Severity | Message | Source |
+|---|---|---|---|
+| `TH_XVI_050` | Error   | A `-sketch` target referenced from a `.th2` scrap was not found on disk. | `XviIndex` |
 
 ## .th2 drawing format (`TH2_xxx`)
 
 | Code | Severity | Message | Source |
 |---|---|---|---|
-| `TH2_001` | Warning | Malformed `point` � requires x, y and type. | `Th2Parser` |
-| `TH2_002` | Warning (lenient) / Error (strict) | `line` block is missing `endline`. | `Th2Parser` |
-| `TH2_003` | Warning (lenient) / Error (strict) | `area` block is missing `endarea`. | `Th2Parser` |
-| `TH2_004` | Warning (lenient) / Error (strict) | Unknown point type `<type>` (LANG-07). | `Th2Parser` |
-| `TH2_005` | Warning (lenient) / Error (strict) | Unknown line type `<type>` (LANG-07). | `Th2Parser` |
-| `TH2_006` | Warning (lenient) / Error (strict) | Unknown area type `<type>` (LANG-07). | `Th2Parser` |
-| `TH2_010` | Warning (lenient) / Error (strict) | `scrap` block is missing `endscrap`. | `Th2Parser` |
+| `TH2_001` | lenient | Malformed `point` (needs x, y, type; coordinates must be numeric). | `Th2Parser` |
+| `TH2_002` | lenient | `line` block is missing `endline`. | `Th2Parser` |
+| `TH2_003` | lenient | `area` block is missing `endarea`. | `Th2Parser` |
+| `TH2_004` | lenient | Unknown point type `<type>`. | `Th2Parser` |
+| `TH2_005` | lenient | Unknown line type `<type>`. | `Th2Parser` |
+| `TH2_006` | lenient | Unknown area type `<type>`. | `Th2Parser` |
+| `TH2_008` | lenient | _(reserved)_ Unknown point/line/area subtype. | `Th2Parser` |
+| `TH2_009` | lenient | Unknown `-option` on a point/line/area object. | `Th2Parser` |
+| `TH2_010` | lenient | `scrap` block is missing `endscrap`. | `Th2Parser` |
 
 ## Workspace (`TH_WS_xxx`)
 

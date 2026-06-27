@@ -62,7 +62,8 @@ public sealed class ThParser
         string? blockTerminator,
         string? blockKeyword,
         string? parentBlock,
-        ImmutableArray<Diagnostic>.Builder diagnostics)
+        ImmutableArray<Diagnostic>.Builder diagnostics,
+        string? blockId = null)
     {
         var children = ImmutableArray.CreateBuilder<TherionNode>();
 
@@ -86,6 +87,18 @@ public sealed class ThParser
             if (blockTerminator is not null &&
                 string.Equals(NormalizeCentrelineAlias(kw), NormalizeCentrelineAlias(blockTerminator), StringComparison.OrdinalIgnoreCase))
             {
+                // `endsurvey [<id>]` / `endscrap [<id>]`: when the closer names an id it must
+                // match the opener's id (thbook §survey/scrap).
+                if (blockId is { Length: > 0 } && line.Tokens.Length > 1)
+                {
+                    var closerId = line.Tokens[1].Text;
+                    if (!string.Equals(closerId, blockId, StringComparison.Ordinal))
+                        diagnostics.Add(Diagnostic.Create(
+                            DiagnosticCodes.BlockIdMismatch,
+                            options.Mode == ParserMode.Strict ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
+                            $"'{kw} {closerId}' does not match '{blockKeyword} {blockId}'.",
+                            line.Tokens[1].Span));
+                }
                 cursor++;
                 return children.ToImmutable();
             }
@@ -146,8 +159,8 @@ public sealed class ThParser
             // layout … endlayout can appear in `.th` files that are input-ed (LANG-02/10).
             "layout"                       => ParseLayout(line, lines, ref cursor, diagnostics, options),
             "data"                         => ParseData(line, options, diagnostics),
-            "flags"                        => ParseFlags(line),
-            "fix"                          => ParseFix(line, diagnostics),
+            "flags"                        => ParseFlags(line, options, diagnostics),
+            "fix"                          => ParseFix(line, options, diagnostics),
             "equate"                       => ParseEquate(line, diagnostics),
             "join"                         => ParseJoin(line),
             "input" or "load"              => ParseInput(line, diagnostics),
@@ -161,10 +174,10 @@ public sealed class ThParser
             "sd"                           => ParseSd(line),
             "grade"                        => ParseGrade(line),
             "infer"                        => ParseInfer(line),
-            "mark"                         => ParseMark(line),
-            "station"                      => ParseStation(line),
+            "mark"                         => ParseMark(line, options, diagnostics),
+            "station"                      => ParseStation(line, options, diagnostics),
             "cs"                           => ParseCs(line, options, diagnostics),
-            "extend"                       => ParseExtend(line),
+            "extend"                       => ParseExtend(line, options, diagnostics),
             "break"                        => new BreakCommand(line.Span),
             "walls"                        => new WallsCommand(line.Span, JoinFrom(line, 1)),
             "vthreshold"                   => ParseVThreshold(line),
@@ -239,8 +252,15 @@ public sealed class ThParser
         ImmutableArray<Diagnostic>.Builder diagnostics)
     {
         var (name, rest) = HeadAndRest(line, fromIndex: 1);
+        if (line.Tokens.Length > 1 && TherionIdentifiers.FirstIllegalChar(name) is { } bad)
+            diagnostics.Add(Diagnostic.Create(
+                DiagnosticCodes.IllegalIdentifier,
+                options.Mode == ParserMode.Strict ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
+                $"Survey id '{name}' contains an illegal character '{bad}'.",
+                line.Tokens[1].Span));
         var inner = ParseBlockBody(lines, ref cursor, filePath, options,
-            blockTerminator: "endsurvey", blockKeyword: "survey", parentBlock: "survey", diagnostics);
+            blockTerminator: "endsurvey", blockKeyword: "survey", parentBlock: "survey", diagnostics,
+            blockId: name);
 
         var endSpan = inner.Length > 0 ? inner[^1].Span : line.Span;
         var fullSpan = SpanUnion(line.Span, endSpan);
@@ -279,6 +299,12 @@ public sealed class ThParser
         ParserOptions options)
     {
         var (id, opts) = HeadAndRest(line, fromIndex: 1);
+        if (line.Tokens.Length > 1 && TherionIdentifiers.FirstIllegalChar(id) is { } badId)
+            diagnostics.Add(Diagnostic.Create(
+                DiagnosticCodes.IllegalIdentifier,
+                options.Mode == ParserMode.Strict ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
+                $"Map id '{id}' contains an illegal character '{badId}'.",
+                line.Tokens[1].Span));
 
         bool terminated = false;
         var lastSpan = line.Span;
@@ -376,7 +402,7 @@ public sealed class ThParser
                 "Block 'layout' is missing its 'endlayout' terminator.",
                 line.Span));
 
-        var parts = LayoutBodyParser.Parse(body.ToImmutable());
+        var parts = LayoutBodyParser.Parse(body.ToImmutable(), diagnostics, options);
         return new LayoutCommand(SpanUnion(line.Span, lastSpan), id, rawArgs,
             parts.Options, parts.CodeBlocks, terminated)
         {
@@ -479,6 +505,7 @@ public sealed class ThParser
                 line.Tokens[1].Span,
                 hint: "Expected one of: " + string.Join(", ", DataStyles.StyleNames)));
         }
+        bool hasFrom = false, hasTo = false, hasStation = false, hasNewline = false;
         for (int i = 2; i < line.Tokens.Length; i++)
         {
             var reading = line.Tokens[i].Text;
@@ -487,7 +514,19 @@ public sealed class ThParser
                     DiagnosticCodes.UnknownDataReading, warn,
                     $"Unknown data reading '{reading}'.",
                     line.Tokens[i].Span));
+            if (string.Equals(reading, "from", StringComparison.OrdinalIgnoreCase)) hasFrom = true;
+            else if (string.Equals(reading, "to", StringComparison.OrdinalIgnoreCase)) hasTo = true;
+            else if (string.Equals(reading, "station", StringComparison.OrdinalIgnoreCase)) hasStation = true;
+            else if (string.Equals(reading, "newline", StringComparison.OrdinalIgnoreCase)) hasNewline = true;
         }
+
+        // A data command must name its shot endpoints: both from+to, or an interleaved station /
+        // newline form (thbook §centreline/data). Otherwise no shots can be bound.
+        if (line.Tokens.Length > 2 && !((hasFrom && hasTo) || hasStation || hasNewline))
+            diagnostics.Add(Diagnostic.Create(
+                DiagnosticCodes.MissingFromTo, warn,
+                "'data' reading order has no 'from'/'to' (or 'station') to identify shots.",
+                line.Span));
 
         return new DataCommand(line.Span, style, fieldList);
     }
@@ -504,6 +543,10 @@ public sealed class ThParser
 
     private static bool LooksNumeric(string s) =>
         double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out _);
+
+    /// <summary>Error in strict mode, warning otherwise — the standard lenient severity.</summary>
+    private static DiagnosticSeverity Warn(ParserOptions options) =>
+        options.Mode == ParserMode.Strict ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning;
 
     private static double? TryDouble(string s) =>
         double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var d) ? d : null;
@@ -620,24 +663,47 @@ public sealed class ThParser
     }
 
     /// <summary><c>mark [&lt;station list&gt;] &lt;type&gt;</c> — last token is the type.</summary>
-    private static MarkCommand ParseMark(LogicalLine line)
+    private static MarkCommand ParseMark(
+        LogicalLine line, ParserOptions options, ImmutableArray<Diagnostic>.Builder diagnostics)
     {
         if (line.Tokens.Length < 2)
             return new MarkCommand(line.Span, ImmutableArray<string>.Empty, string.Empty);
         var markType = line.Tokens[^1].Text;
+        if (!CommandVocabulary.IsMarkType(markType))
+            diagnostics.Add(Diagnostic.Create(DiagnosticCodes.InvalidMarkType, Warn(options),
+                $"Unknown mark type '{markType}'.", line.Tokens[^1].Span,
+                hint: "Expected: fixed, painted or temporary."));
         var stations = ImmutableArray.CreateBuilder<string>();
         for (int i = 1; i < line.Tokens.Length - 1; i++) stations.Add(line.Tokens[i].Text);
         return new MarkCommand(line.Span, stations.ToImmutable(), markType);
     }
 
     /// <summary><c>station &lt;station&gt; &lt;comment&gt; [&lt;flags&gt;]</c>.</summary>
-    private static StationCommand ParseStation(LogicalLine line)
+    private static StationCommand ParseStation(
+        LogicalLine line, ParserOptions options, ImmutableArray<Diagnostic>.Builder diagnostics)
     {
-        var station = line.Tokens.Length > 1 ? line.Tokens[1].Text : string.Empty;
-        string? comment = line.Tokens.Length > 2 ? Unquote(line.Tokens[2].Text) : null;
+        // Coalesce so a split station name (e.g. "3A@survey") stays one value and the comment lands
+        // in the right column. values[0] == "station", [1] == station, [2] == comment, [3..] == flags.
+        var (values, spans) = CoalesceValues(line);
+        var station = values.Length > 1 ? values[1] : string.Empty;
+        string? comment = values.Length > 2 ? Unquote(values[2]) : null;
         if (string.IsNullOrEmpty(comment)) comment = null;
         var flags = ImmutableArray.CreateBuilder<string>();
-        for (int i = 3; i < line.Tokens.Length; i++) flags.Add(line.Tokens[i].Text);
+        // After an `attr <name> <value>` or `explored <length>` keyword the next token(s) are free
+        // values, so stop flag-validation once one is seen.
+        bool freeValueTail = false;
+        for (int i = 3; i < values.Length; i++)
+        {
+            var t = values[i];
+            flags.Add(t);
+            if (freeValueTail) continue;
+            if (string.Equals(t, "attr", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(t, "explored", StringComparison.OrdinalIgnoreCase)) { freeValueTail = true; continue; }
+            if (!CommandVocabulary.IsStationFlag(t))
+                diagnostics.Add(Diagnostic.Create(DiagnosticCodes.InvalidStationFlag, Warn(options),
+                    $"Unknown station flag '{t}'.", i < spans.Length ? spans[i] : line.Span,
+                    hint: "Expected entrance/continuation/air-draught/sink/spring/doline/dig/arch/overhang."));
+        }
         return new StationCommand(line.Span, station, comment, flags.ToImmutable());
     }
 
@@ -682,9 +748,14 @@ public sealed class ThParser
     }
 
     /// <summary><c>extend &lt;spec&gt; [&lt;station&gt; …]</c>.</summary>
-    private static ExtendCommand ParseExtend(LogicalLine line)
+    private static ExtendCommand ParseExtend(
+        LogicalLine line, ParserOptions options, ImmutableArray<Diagnostic>.Builder diagnostics)
     {
         var spec = line.Tokens.Length > 1 ? line.Tokens[1].Text : string.Empty;
+        if (spec.Length > 0 && !CommandVocabulary.IsExtendSpec(spec))
+            diagnostics.Add(Diagnostic.Create(DiagnosticCodes.InvalidExtendSpec, Warn(options),
+                $"Unknown extend spec '{spec}'.", line.Tokens[1].Span,
+                hint: "Expected normal/reverse/left/right/vertical/start/ignore/hide or a 0–200 %."));
         return new ExtendCommand(line.Span, spec, TokensFrom(line, 2));
     }
 
@@ -723,17 +794,29 @@ public sealed class ThParser
         return new ExploTeamCommand(line.Span, name, JoinFrom(line, 2));
     }
 
-    private FlagsCommand ParseFlags(LogicalLine line)
+    private FlagsCommand ParseFlags(
+        LogicalLine line, ParserOptions options, ImmutableArray<Diagnostic>.Builder diagnostics)
     {
         var b = ImmutableArray.CreateBuilder<string>();
-        for (int i = 1; i < line.Tokens.Length; i++) b.Add(line.Tokens[i].Text);
+        for (int i = 1; i < line.Tokens.Length; i++)
+        {
+            var t = line.Tokens[i].Text;
+            b.Add(t);
+            if (!CommandVocabulary.IsShotFlag(t))
+                diagnostics.Add(Diagnostic.Create(DiagnosticCodes.InvalidFlag, Warn(options),
+                    $"Unknown shot flag '{t}'.", line.Tokens[i].Span,
+                    hint: "Expected surface, duplicate, splay or approximate (optionally prefixed with 'not')."));
+        }
         return new FlagsCommand(line.Span, b.ToImmutable());
     }
 
-    private StationFix ParseFix(LogicalLine line, ImmutableArray<Diagnostic>.Builder diagnostics)
+    private StationFix ParseFix(
+        LogicalLine line, ParserOptions options, ImmutableArray<Diagnostic>.Builder diagnostics)
     {
-        // fix <station> <x> <y> <z> [stdev...]
-        if (line.Tokens.Length < 5)
+        // fix <station> <x> <y> <z> [<sd x> <sd y> <sd z>]. Coalesce whitespace-separated values
+        // so a station like "38a" and a deg:min:sec coordinate "25:13:43.7" each stay one value.
+        var (values, spans) = CoalesceValues(line);   // values[0] == "fix"
+        if (values.Length < 5)
         {
             diagnostics.Add(Diagnostic.Create(
                 DiagnosticCodes.MalformedFix,
@@ -741,16 +824,48 @@ public sealed class ThParser
                 "'fix' requires station and x y z coordinates.",
                 line.Span));
             return new StationFix(line.Span,
-                line.Tokens.Length > 1 ? line.Tokens[1].Text : string.Empty,
-                0, 0, 0, string.Empty);
+                values.Length > 1 ? values[1] : string.Empty, 0, 0, 0, string.Empty);
         }
 
-        var station = line.Tokens[1].Text;
-        double x = ParseDouble(line.Tokens[2].Text);
-        double y = ParseDouble(line.Tokens[3].Text);
-        double z = ParseDouble(line.Tokens[4].Text);
-        var opts = JoinFrom(line, 5);
+        var sev = options.Mode == ParserMode.Strict ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning;
+        CheckFixCoordinate(values[2], spans[2], "x", sev, diagnostics);
+        CheckFixCoordinate(values[3], spans[3], "y", sev, diagnostics);
+        CheckFixCoordinate(values[4], spans[4], "z", sev, diagnostics);
+
+        var station = values[1];
+        double x = ParseDouble(values[2]);
+        double y = ParseDouble(values[3]);
+        double z = ParseDouble(values[4]);
+        string opts = string.Empty;
+        if (values.Length > 5)
+        {
+            var sb = new System.Text.StringBuilder();
+            for (int i = 5; i < values.Length; i++) { if (i > 5) sb.Append(' '); sb.Append(values[i]); }
+            opts = sb.ToString();
+        }
         return new StationFix(line.Span, station, x, y, z, opts);
+    }
+
+    /// <summary>Flags a <c>fix</c> coordinate that is neither a plain number nor a deg:min:sec form.</summary>
+    private static void CheckFixCoordinate(
+        string value, SourceSpan span, string axis, DiagnosticSeverity sev,
+        ImmutableArray<Diagnostic>.Builder diagnostics)
+    {
+        if (IsCoordinateValue(value)) return;
+        diagnostics.Add(Diagnostic.Create(
+            DiagnosticCodes.MalformedFix, sev,
+            $"'fix' {axis} coordinate '{value}' is not a number.", span));
+    }
+
+    /// <summary>A coordinate is a plain number or a <c>deg[:min[:sec]]</c> sexagesimal value.</summary>
+    private static bool IsCoordinateValue(string v)
+    {
+        if (string.IsNullOrEmpty(v)) return false;
+        if (LooksNumeric(v)) return true;
+        var parts = v.Split(':');
+        if (parts.Length is < 2 or > 3) return false;
+        foreach (var p in parts) if (!LooksNumeric(p)) return false;
+        return true;
     }
 
     private EquateCommand ParseEquate(LogicalLine line, ImmutableArray<Diagnostic>.Builder diagnostics)

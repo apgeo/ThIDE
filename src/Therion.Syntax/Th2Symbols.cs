@@ -86,4 +86,23 @@ public static class Th2Symbols
     public static IReadOnlyCollection<string> PointTypeNames => PointTypes;
     public static IReadOnlyCollection<string> LineTypeNames => LineTypes;
     public static IReadOnlyCollection<string> AreaTypeNames => AreaTypes;
+
+    /// <summary>
+    /// Option names (dash stripped) accepted on <c>point</c> / <c>line</c> / <c>area</c> objects and
+    /// their [LINE DATA] points (thbook §point/line/area pp.25-32). A union across object kinds — a
+    /// type-specific option used on the wrong object is not flagged, only genuinely unknown options.
+    /// </summary>
+    public static readonly ImmutableHashSet<string> ObjectOptions =
+        ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase,
+            // common
+            "id", "subtype", "orientation", "orient", "scale", "place", "clip", "visibility",
+            "context", "align", "text", "value", "name", "from", "scrap", "explored", "dist", "attr",
+            // line / line-data
+            "reverse", "close", "outline", "mark", "head", "direction", "smooth", "adjust",
+            "altitude", "l-size", "size", "gradient", "border", "rebound", "clip-radius",
+            // misc accepted forms
+            "station", "extend");
+
+    /// <summary>True if <paramref name="name"/> (dash stripped) is a known object option.</summary>
+    public static bool IsKnownOption(string name) => ObjectOptions.Contains(name);
 }

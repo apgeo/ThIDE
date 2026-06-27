@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections.Immutable;
+using Therion.Core;
 
 namespace Therion.Syntax;
 
@@ -20,7 +21,10 @@ public readonly record struct LayoutBodyParts(
 /// <summary>Walks the logical lines of a layout body, decoding options and skipping code blocks.</summary>
 public static class LayoutBodyParser
 {
-    public static LayoutBodyParts Parse(ImmutableArray<LogicalLine> bodyLines)
+    public static LayoutBodyParts Parse(
+        ImmutableArray<LogicalLine> bodyLines,
+        ImmutableArray<Diagnostic>.Builder? diagnostics = null,
+        ParserOptions? options = null)
     {
         var optionsB = ImmutableArray.CreateBuilder<LayoutOption>();
         var codeB = ImmutableArray.CreateBuilder<LayoutCodeBlock>();
@@ -48,6 +52,12 @@ public static class LayoutBodyParser
 
             var value = bl.Tokens.Length > 1 ? JoinTokenText(bl.Tokens, 1) : string.Empty;
             optionsB.Add(new LayoutOption(bl.Span, key, value));
+
+            if (diagnostics is not null && !LayoutKeywords.IsKnown(key))
+                diagnostics.Add(Diagnostic.Create(
+                    DiagnosticCodes.UnknownLayoutOption,
+                    (options?.Mode == ParserMode.Strict) ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
+                    $"Unknown layout option '{key}'.", bl.Head.Span));
 
             if (string.Equals(key, "copy", StringComparison.OrdinalIgnoreCase) && bl.Tokens.Length > 1)
                 copyFrom = bl.Tokens[1].Text;

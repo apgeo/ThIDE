@@ -1,5 +1,5 @@
-// Implementation Plan �10 (Diagnostics), Decision #16.
-// Catalog versioned in docs/diagnostics.md. Codes are culture-invariant strings.
+// Diagnostic codes emitted by the parsing layer. Catalog: docs/diagnostics.md.
+// Codes are culture-invariant strings; messages are localized in Therion.Core.Resources.
 
 namespace Therion.Syntax;
 
@@ -7,14 +7,11 @@ namespace Therion.Syntax;
 public static class DiagnosticCodes
 {
     // -- Lexer / parser core ----------------------------------------------
-    public const string LexFailed                = "TH0001";
     public const string UnexpectedToken          = "TH0002";
-    public const string UnexpectedEndOfFile      = "TH0003";
     public const string UnknownCommand           = "TH0010";
-    public const string MissingBlockTerminator   = "TH0011";
     public const string PluginHandlerFailed      = "TH0012";
 
-    // -- .th specific -----------------------------------------------------
+    // -- .th block structure ----------------------------------------------
     public const string UnterminatedBlock        = "TH0020";
     public const string MismatchedBlockTerminator = "TH0021";
     public const string MalformedFix             = "TH0030";
@@ -24,32 +21,42 @@ public static class DiagnosticCodes
     // -- data style / reading-order validation (LANG-05) ------------------
     public const string UnknownDataStyle         = "TH0033";
     public const string UnknownDataReading       = "TH0034";
-    public const string DataRowArityMismatch     = "TH0035";
-    public const string MissingFromTo            = "TH0036";
+    public const string MissingFromTo            = "TH0036";  // no from/to/station to bind shots
 
     // -- centreline metadata commands (LANG-04/03) ------------------------
     public const string MalformedUnits           = "TH0040";
     public const string MalformedCalibrate       = "TH0041";
-    public const string MalformedDeclination     = "TH0042";
     public const string UnknownCoordinateSystem  = "TH0043";
-    public const string UnknownUnit              = "TH0044";
 
-    // -- XVI --------------------------------------------------------------
-    public const string XviImageMissing          = "TH_XVI_001";
-    public const string XviFileMissing           = "TH_XVI_002";
-    public const string XviTransformDegenerate   = "TH_XVI_003";
-    public const string XviMissingVersion        = "TH_XVI_010";
-    public const string XviMalformedScale        = "TH_XVI_011";
-    public const string XviMalformedTransform    = "TH_XVI_012";
-    public const string XviMissingImage          = "TH_XVI_013";
-    public const string XviUnknownKeyword        = "TH_XVI_014";
+    // -- identifiers / block matching -------------------------------------
+    public const string IllegalIdentifier        = "TH0050";  // char outside keyword/ext-keyword
+    public const string BlockIdMismatch          = "TH0051";  // endsurvey/endscrap id != opener id
 
-    // -- .th2 -------------------------------------------------------------
+    // -- centreline argument enums (flags / mark / extend / station) ------
+    public const string InvalidFlag              = "TH0052";  // flags <shot flag>
+    public const string InvalidMarkType          = "TH0053";  // mark <type>
+    public const string InvalidExtendSpec        = "TH0054";  // extend <spec>
+    public const string InvalidStationFlag       = "TH0055";  // station … <flags>
+
+    // -- .thconfig command arguments --------------------------------------
+    public const string UnknownExportType        = "TH0060";  // export <type>
+    public const string UnknownExportFormat      = "TH0061";  // export … -fmt invalid for <type>
+    public const string UnknownLayoutOption      = "TH0062";  // layout body option key
+
+    // -- XVI (Therion `set XVI*` Tcl export format) -----------------------
+    public const string XviUnknownVariable       = "TH_XVI_001";  // unknown `set XVI…` variable
+    public const string XviUnexpectedStatement   = "TH_XVI_002";  // non-`set` top-level content
+    public const string XviUnterminatedBlock     = "TH_XVI_003";  // `{` without matching `}`
+    public const string XviMalformedGrid         = "TH_XVI_004";  // XVIgrid not 8 numeric values
+
+    // -- .th2 drawing format ----------------------------------------------
     public const string Th2MalformedPoint        = "TH2_001";
     public const string Th2MalformedLine         = "TH2_002";
     public const string Th2MalformedArea         = "TH2_003";
     public const string Th2UnknownPointType      = "TH2_004";
     public const string Th2UnknownLineType       = "TH2_005";
     public const string Th2UnknownAreaType       = "TH2_006";
+    public const string Th2UnknownSubtype        = "TH2_008";  // (reserved) point/line/area subtype
+    public const string Th2UnknownOption         = "TH2_009";  // unknown -option on point/line/area
     public const string Th2UnterminatedScrap     = "TH2_010";
 }

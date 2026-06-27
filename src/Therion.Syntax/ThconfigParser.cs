@@ -109,7 +109,7 @@ public sealed class ThconfigParser
                     if (string.Equals(keyword, "layout", StringComparison.OrdinalIgnoreCase))
                     {
                         var layout = ParseLayout(commandStart, lineTokens, fullSpan, rawArgs,
-                            tokens, lineEnd, out int next);
+                            tokens, lineEnd, out int next, options, diagnostics);
                         children.Add(layout);
                         i = next;
                         break;
@@ -236,7 +236,19 @@ public sealed class ThconfigParser
             case "export":
             {
                 var what = line.Count > 1 ? line[1].Text : string.Empty;
+                if (what.Length > 0 && !CommandVocabulary.IsExportType(what))
+                    diagnostics.Add(Diagnostic.Create(
+                        DiagnosticCodes.UnknownExportType,
+                        options.Mode == ParserMode.Strict ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
+                        $"Unknown export type '{what}'.", line[1].Span,
+                        hint: "Expected: " + string.Join(", ", CommandVocabulary.ExportTypes)));
                 var (fmt, output) = ExtractExportOptions(line);
+                if (what.Length > 0 && fmt is { Length: > 0 } &&
+                    CommandVocabulary.IsExportType(what) && !CommandVocabulary.IsExportFormat(what, fmt))
+                    diagnostics.Add(Diagnostic.Create(
+                        DiagnosticCodes.UnknownExportFormat,
+                        options.Mode == ParserMode.Strict ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
+                        $"'{fmt}' is not a valid format for 'export {what}'.", span));
                 return new ExportCommand(span, what, JoinFrom(line, 2)) { Format = fmt, Output = output };
             }
             case "maps":
@@ -273,9 +285,13 @@ public sealed class ThconfigParser
         for (int k = 2; k < line.Count - 1; k++)
         {
             var t = line[k].Text;
-            if (string.Equals(t, "-fmt", StringComparison.OrdinalIgnoreCase)) fmt = line[k + 1].Text;
+            // Coalesce adjacent tokens: the lexer splits a digit-led value like "3dmf"/"3d" into
+            // "3"+"dmf", so the format/output value must be rejoined from k+1.
+            if (string.Equals(t, "-fmt", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(t, "-format", StringComparison.OrdinalIgnoreCase))
+                fmt = JoinAdjacent(line, k + 1);
             else if (t is "-o" || string.Equals(t, "-output", StringComparison.OrdinalIgnoreCase))
-                output = Unquote(line[k + 1].Text);
+                output = Unquote(JoinAdjacent(line, k + 1));
         }
         return (fmt, output);
     }
@@ -287,7 +303,8 @@ public sealed class ThconfigParser
     /// </summary>
     private static LayoutCommand ParseLayout(
         TherionToken commandStart, List<TherionToken> headerLine, SourceSpan headerSpan, string rawArgs,
-        ImmutableArray<TherionToken> tokens, int headerEnd, out int next)
+        ImmutableArray<TherionToken> tokens, int headerEnd, out int next,
+        ParserOptions options, ImmutableArray<Diagnostic>.Builder diagnostics)
     {
         var id = headerLine.Count > 1 ? headerLine[1].Text : string.Empty;
 
@@ -309,7 +326,7 @@ public sealed class ThconfigParser
             ? ImmutableArray.Create(tokens, bodyStart, bodyEnd - bodyStart)
             : ImmutableArray<TherionToken>.Empty;
         var bodyLines = LogicalLineReader.Split(bodySlice);
-        var parts = LayoutBodyParser.Parse(bodyLines);
+        var parts = LayoutBodyParser.Parse(bodyLines, diagnostics, options);
 
         return new LayoutCommand(blockSpan, id, rawArgs,
             parts.Options, parts.CodeBlocks, IsTerminated: true)
