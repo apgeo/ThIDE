@@ -133,6 +133,10 @@
                     <TextBlock Text="Editor Features" FontSize="16" FontWeight="Bold" />
                     <TextBlock Text="Enable or disable individual editor enhancements. A feature greyed out here was switched off at build time."
                                Foreground="Gray" TextWrapping="Wrap" />
+                    <!-- The feature list can be longer than the window; give it its own scroll so
+                         every row stays reachable (#3). MaxHeight tracks the window height. -->
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                  MaxHeight="{Binding $parent[Window].Bounds.Height, Converter={x:Static conv:RatioConverter.Instance}, ConverterParameter=0.70}">
                     <ItemsControl ItemsSource="{Binding EditorFeatureRows}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
@@ -157,6 +161,7 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
+                    </ScrollViewer>
                 </StackPanel>
 
                 <!-- Performance / large-file guards (#10) -->
@@ -269,9 +274,9 @@
                               GridLinesVisibility="Horizontal" Height="440"
                               CanUserResizeColumns="True" AutoGenerateColumns="False">
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Command" Binding="{Binding CommandId}" Width="*" MinWidth="160" IsReadOnly="True" />
+                            <DataGridTextColumn Header="Command" Binding="{Binding CommandId}" Width="Auto" MinWidth="120" MaxWidth="260" IsReadOnly="True" />
                             <!-- Capture box: focus it and press a chord to record the gesture (#11). -->
-                            <DataGridTemplateColumn Header="Gesture" Width="Auto" MinWidth="160">
+                            <DataGridTemplateColumn Header="Gesture" Width="*" MinWidth="160">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <TextBox Text="{Binding Gesture}" IsReadOnly="True"
