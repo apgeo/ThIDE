@@ -1,0 +1,35 @@
+# REL-01 — CI matrix: build + test on Windows, Linux and macOS.
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-test:
+    name: build & test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore TherionProc.sln
+
+      # -m:1 mirrors the known-good local build (the solution OOMs MSBuild under parallel build).
+      - name: Build
+        run: dotnet build TherionProc.sln -m:1 --no-restore -c Release
+
+      - name: Test
+        run: dotnet test TherionProc.sln -m:1 --no-build -c Release --verbosity normal
