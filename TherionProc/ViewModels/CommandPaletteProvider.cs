@@ -255,6 +255,17 @@ public sealed class CommandPaletteProvider
             int n = 0;
             foreach (var kv in ws.StationsByQn) { AddSymbol(list, kv.Key, kv.Value.DeclarationSpan, "station"); if (++n >= _stationLimit) break; }
         }
+        // PERF-03: the live graph isn't built yet (or is being rebuilt) → fall back to the
+        // persisted symbol index so workspace symbol search still works instantly on reopen.
+        else if (workspace && _session?.SymbolIndex is { Symbols.Count: > 0 } idx)
+        {
+            int n = 0;
+            foreach (var s in idx.Symbols)
+            {
+                if (s.Kind == "station" && ++n > _stationLimit) continue;
+                AddSymbol(list, s.Name, s.ToSpan(), s.Kind);
+            }
+        }
         else if (_documents.CurrentSemantics is { } model)
         {
             foreach (var kv in model.Surveys) AddSymbol(list, kv.Key.ToString(), kv.Value.DeclarationSpan, "survey");
