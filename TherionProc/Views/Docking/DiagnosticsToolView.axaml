@@ -5,6 +5,27 @@
              x:Class="TherionProc.Views.Docking.DiagnosticsToolView"
              x:DataType="vm:DiagnosticsToolViewModel">
     <DockPanel>
+        <!-- DIAG-09: explanation pane for the selected diagnostic (thbook link + example fix). -->
+        <Border DockPanel.Dock="Bottom" BorderBrush="Gray" BorderThickness="0,1,0,0" Padding="8,5"
+                IsVisible="{Binding Diagnostics.HasExplanation}"
+                Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}">
+            <StackPanel Spacing="4">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <TextBlock Text="{Binding Diagnostics.Selected.Code}" FontWeight="SemiBold" FontSize="11"
+                               VerticalAlignment="Center" />
+                    <Button Content="Open docs ↗" FontSize="11" Padding="6,1"
+                            Command="{Binding Diagnostics.OpenDocsCommand}"
+                            IsVisible="{Binding Diagnostics.HasDocLink}" />
+                </StackPanel>
+                <TextBlock Text="{Binding Diagnostics.SelectedExplanation}" TextWrapping="Wrap" FontSize="12" />
+                <Border Background="#22808080" CornerRadius="3" Padding="6,3"
+                        IsVisible="{Binding Diagnostics.HasExample}">
+                    <TextBlock Text="{Binding Diagnostics.SelectedExample}" FontFamily="Consolas,monospace"
+                               FontSize="11" TextWrapping="NoWrap" />
+                </Border>
+            </StackPanel>
+        </Border>
+
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="4,2" Spacing="6">
             <ToggleButton Content="{l:Loc Diag_ProjectScope}"
                           IsChecked="{Binding Diagnostics.ShowProjectScope, Mode=TwoWay}"
@@ -31,6 +52,22 @@
             <Button Content="{l:Loc Common_Fit}" Padding="6,2" FontSize="11" Click="OnFitColumns"
                     ToolTip.Tip="Fit all columns to their content" />
         </StackPanel>
+
+        <!-- DIAG-07: search + severity/category filters + suppression. -->
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="4,0,4,3" Spacing="6">
+            <TextBox Width="180" Watermark="Filter…" FontSize="11" Padding="4,1"
+                     Text="{Binding Diagnostics.SearchText, Mode=TwoWay}" />
+            <ToggleButton Content="Errors"   IsChecked="{Binding Diagnostics.ShowErrors, Mode=TwoWay}"   Padding="6,2" FontSize="11" />
+            <ToggleButton Content="Warnings" IsChecked="{Binding Diagnostics.ShowWarnings, Mode=TwoWay}" Padding="6,2" FontSize="11" />
+            <ToggleButton Content="Info"     IsChecked="{Binding Diagnostics.ShowInfos, Mode=TwoWay}"    Padding="6,2" FontSize="11" />
+            <ToggleButton Content="References only" IsChecked="{Binding Diagnostics.OnlyReferences, Mode=TwoWay}"
+                          ToolTip.Tip="Show only dangling/unresolved reference diagnostics (DIAG-06)"
+                          Padding="6,2" FontSize="11" />
+            <Button Content="Clear suppressions" Padding="6,2" FontSize="11"
+                    Command="{Binding Diagnostics.ClearSuppressionsCommand}"
+                    IsVisible="{Binding Diagnostics.HasSuppressions}" />
+        </StackPanel>
+
         <DataGrid x:Name="Grid"
                   ItemsSource="{Binding Diagnostics.Rows}"
                   SelectedItem="{Binding Diagnostics.Selected, Mode=TwoWay}"
@@ -42,6 +79,10 @@
                 <ContextMenu>
                     <MenuItem Header="{l:Loc Common_Copy}" Click="OnCopyRow" />
                     <MenuItem Header="{l:Loc Common_CopyAll}" Click="OnCopyAll" />
+                    <Separator />
+                    <MenuItem Header="Explain (open docs)" Command="{Binding Diagnostics.OpenDocsCommand}"
+                              IsVisible="{Binding Diagnostics.HasDocLink}" />
+                    <MenuItem Header="Suppress this code" Command="{Binding Diagnostics.SuppressSelectedCodeCommand}" />
                 </ContextMenu>
             </DataGrid.ContextMenu>
             <!-- Columns auto-size to fit their header + content; Message takes the remaining

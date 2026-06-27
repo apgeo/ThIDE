@@ -347,6 +347,11 @@ public partial class MainWindow : Window
                 (DataContext as MainWindowViewModel)?.ShowCommandPalette();
                 e.Handled = true;
                 break;
+            // DIAG-07: F8 / Shift+F8 jump to the next / previous diagnostic.
+            case Key.F8:
+                (DataContext as MainWindowViewModel)?.Diagnostics.GoToAdjacent((e.KeyModifiers & KeyModifiers.Shift) == 0);
+                e.Handled = true;
+                break;
         }
     }
 

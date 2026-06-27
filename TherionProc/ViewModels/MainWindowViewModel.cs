@@ -817,9 +817,26 @@ public partial class MainWindowViewModel : ViewModelBase
             // LANG-13: run the (config-driven) semantic rules over the workspace and include their
             // diagnostics. Cached per workspace snapshot so repeated refreshes don't re-run them.
             merged.AddRange(RuleDiagnostics(ws));
+            // DIAG-02..06: project-wide correctness analysis (loops, blunders, fore/back,
+            // collisions, dangling includes). Cached per workspace snapshot like the rules.
+            merged.AddRange(ProjectAnalysisDiagnostics(ws));
             return merged.ToImmutable();
         }
         return _documents.CurrentDiagnostics;
+    }
+
+    private WorkspaceSemanticModel? _projDiagWorkspace;
+    private System.Collections.Immutable.ImmutableArray<Therion.Core.Diagnostic> _projDiagCache;
+
+    /// <summary>Runs the workspace correctness analysis (DIAG-02..06), cached per snapshot.</summary>
+    private System.Collections.Immutable.ImmutableArray<Therion.Core.Diagnostic> ProjectAnalysisDiagnostics(
+        WorkspaceSemanticModel ws)
+    {
+        if (ReferenceEquals(_projDiagWorkspace, ws) && !_projDiagCache.IsDefault) return _projDiagCache;
+        try { _projDiagCache = Therion.Semantics.ProjectDiagnostics.Analyze(ws, null, System.IO.File.Exists); }
+        catch { _projDiagCache = System.Collections.Immutable.ImmutableArray<Therion.Core.Diagnostic>.Empty; }
+        _projDiagWorkspace = ws;
+        return _projDiagCache;
     }
 
     /// <summary>Runs the semantic rule runner over <paramref name="ws"/>, caching by snapshot (LANG-13).</summary>

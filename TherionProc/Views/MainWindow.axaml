@@ -334,6 +334,19 @@
                                IsVisible="{Binding Build.LastBuildHasWarnings}" />
                 </StackPanel>
 
+                <!-- DIAG-07: clickable problems badge — opens the Diagnostics panel (F8 cycles). -->
+                <Button DockPanel.Dock="Left" Background="Transparent" BorderThickness="0" Padding="6,0"
+                        Margin="8,0,0,0" Command="{Binding ToggleDiagnosticsCommand}" Cursor="Hand"
+                        IsVisible="{Binding Diagnostics.HasProblems}"
+                        ToolTip.Tip="Open Diagnostics (F8: next, Shift+F8: previous)">
+                    <StackPanel Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
+                        <PathIcon Data="{DynamicResource Icon.ErrorCircle}" Width="12" Height="12" Foreground="#C62828" />
+                        <TextBlock Text="{Binding Diagnostics.ErrorCount}" FontSize="11" Foreground="Gray" VerticalAlignment="Center" />
+                        <PathIcon Data="{DynamicResource Icon.Warning}" Width="12" Height="12" Foreground="#E65100" Margin="5,0,0,0" />
+                        <TextBlock Text="{Binding Diagnostics.WarningCount}" FontSize="11" Foreground="Gray" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+
                 <!-- PROJ-08: clickable @-qualified-name breadcrumb of the token under the caret. -->
                 <ItemsControl DockPanel.Dock="Left" Margin="12,0,0,0" VerticalAlignment="Center"
                               x:CompileBindings="False"
