@@ -116,6 +116,14 @@ public sealed record AppSettings
     /// <summary>VIS-01: last-used 3D color-by shading mode (height / survey / length / inclination / single).</summary>
     public string Model3DShadingMode { get; init; } = "height";
 
+    // ---- survey-domain analytics (DATA-*) — disable on huge projects for performance ----
+    /// <summary>DATA-01/02/05/06/08: compute the project statistics / charts / team / entrances /
+    /// data-quality analytics. Adds processing time on every graph rebuild.</summary>
+    public bool EnableProjectAnalytics { get; init; } = true;
+    /// <summary>DATA-03: populate the extra Object Browser entity tabs (surveys, fixes, equates,
+    /// scraps, maps, points, lines, areas). Walks the whole model on each load.</summary>
+    public bool EnableObjectBrowserEntities { get; init; } = true;
+
     // ---- large-file guards (#10) ----
     /// <summary>Skip syntax highlighting + hover features above this line count.</summary>
     public int MaxHighlightLines { get; init; } = 25000;

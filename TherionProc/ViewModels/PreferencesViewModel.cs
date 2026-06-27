@@ -80,6 +80,8 @@ public partial class PreferencesViewModel : ObservableObject
     [ObservableProperty] private bool _enableInAppViewer;
     [ObservableProperty] private bool _enableModel3DViewer;     // VIS-01 (off by default)
     [ObservableProperty] private bool _enableModel3DAutoPreview;
+    [ObservableProperty] private bool _enableProjectAnalytics;       // DATA-01/02/05/06/08
+    [ObservableProperty] private bool _enableObjectBrowserEntities;  // DATA-03
 
     // ---- editor behaviour ----
     [ObservableProperty] private bool _showRenamePreviewBeforeApply;
@@ -152,6 +154,8 @@ public partial class PreferencesViewModel : ObservableObject
         _enableInAppViewer = s.EnableInAppViewer;
         _enableModel3DViewer = s.EnableModel3DViewer;
         _enableModel3DAutoPreview = s.EnableModel3DAutoPreview;
+        _enableProjectAnalytics = s.EnableProjectAnalytics;
+        _enableObjectBrowserEntities = s.EnableObjectBrowserEntities;
         _showRenamePreviewBeforeApply = s.ShowRenamePreviewBeforeApply;
         _maxHighlightLines = s.MaxHighlightLines;
         _maxHighlightKB = s.MaxHighlightKB;
@@ -280,6 +284,8 @@ public partial class PreferencesViewModel : ObservableObject
             EnableInAppViewer = EnableInAppViewer,
             EnableModel3DViewer = EnableModel3DViewer,
             EnableModel3DAutoPreview = EnableModel3DAutoPreview,
+            EnableProjectAnalytics = EnableProjectAnalytics,
+            EnableObjectBrowserEntities = EnableObjectBrowserEntities,
             ShowRenamePreviewBeforeApply = ShowRenamePreviewBeforeApply,
             MaxHighlightLines = MaxHighlightLines,
             MaxHighlightKB = MaxHighlightKB,
