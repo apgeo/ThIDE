@@ -9,6 +9,7 @@ using System.Globalization;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.Extensions.Localization;
+using Therion.Core;
 using Therion.Semantics;
 using Therion.Syntax;
 using TherionProc.Resources;
@@ -18,6 +19,14 @@ namespace TherionProc.ViewModels;
 
 /// <summary>One row per station in the Object Browser.</summary>
 public sealed record StationRow(string QualifiedName, string Kind, string Survey, string File, int Line);
+
+// DATA-03 — entity rows for the additional Object Browser tabs.
+public sealed record SurveyEntityRow(string Name, string Title, string Parent, string File, int Line);
+public sealed record FixEntityRow(string Station, string Coordinates, string Cs, string File, int Line);
+public sealed record EquateEntityRow(string Stations, string File, int Line);
+public sealed record ScrapEntityRow(string Id, string File, int Line);
+public sealed record MapEntityRow(string Id, string Title, string Projection, int Members, string File, int Line);
+public sealed record Th2EntityRow(string Type, string Scrap, string File, int Line);
 
 /// <summary>
 /// One row per shot (data leg). Editable: Length / Compass / Clino edits are
@@ -99,6 +108,16 @@ public partial class ObjectBrowserViewModel : ViewModelBase
     [ObservableProperty]
     private int _shotCount;
 
+    // DATA-03 — entity collections for the additional tabs.
+    [ObservableProperty] private IReadOnlyList<SurveyEntityRow> _surveys = System.Array.Empty<SurveyEntityRow>();
+    [ObservableProperty] private IReadOnlyList<FixEntityRow> _fixes = System.Array.Empty<FixEntityRow>();
+    [ObservableProperty] private IReadOnlyList<EquateEntityRow> _equates = System.Array.Empty<EquateEntityRow>();
+    [ObservableProperty] private IReadOnlyList<ScrapEntityRow> _scraps = System.Array.Empty<ScrapEntityRow>();
+    [ObservableProperty] private IReadOnlyList<MapEntityRow> _maps = System.Array.Empty<MapEntityRow>();
+    [ObservableProperty] private IReadOnlyList<Th2EntityRow> _points = System.Array.Empty<Th2EntityRow>();
+    [ObservableProperty] private IReadOnlyList<Th2EntityRow> _lines = System.Array.Empty<Th2EntityRow>();
+    [ObservableProperty] private IReadOnlyList<Th2EntityRow> _areas = System.Array.Empty<Th2EntityRow>();
+
     // Localized labels � bound directly so language switch refreshes headers.
     public string TabStations => L("Browser_Tab_Stations", "Stations");
     public string TabShots    => L("Browser_Tab_Shots",    "Shots");
@@ -112,13 +131,19 @@ public partial class ObjectBrowserViewModel : ViewModelBase
     public string ColCompass => L("Browser_Col_Compass", "Compass");
     public string ColClino   => L("Browser_Col_Clino",   "Clino");
 
+    private readonly IAppSettingsService? _settings;
+
     public ObjectBrowserViewModel() { }
 
-    public ObjectBrowserViewModel(IStringLocalizer<Strings> localizer, ILanguageService language)
+    public ObjectBrowserViewModel(IStringLocalizer<Strings> localizer, ILanguageService language,
+        IAppSettingsService? settings = null)
     {
         _l = localizer;
+        _settings = settings;
         language.LanguageChanged += (_, _) => RaiseHeadersChanged();
     }
+
+    private bool EntitiesEnabled => _settings?.Current.EnableObjectBrowserEntities ?? true;
 
     private string L(string key, string fallback)
     {
@@ -167,6 +192,7 @@ public partial class ObjectBrowserViewModel : ViewModelBase
         Shots = shots;
         StationCount = stations.Count;
         ShotCount = shots.Count;
+        LoadEntities(model);
     }
 
     /// <summary>
@@ -209,7 +235,79 @@ public partial class ObjectBrowserViewModel : ViewModelBase
         Shots = shots;
         StationCount = stations.Count;
         ShotCount = shots.Count;
+        LoadEntities(workspace);
     }
 
     private void OnRowEdit(object? sender, ShotEditEventArgs e) => ShotEditRequested?.Invoke(this, e);
+
+    // ---- DATA-03: entity tabs --------------------------------------------
+
+    private static string FileName(SourceSpan s) => System.IO.Path.GetFileName(s.FilePath ?? string.Empty);
+    private static string Coords(StationSymbol s) =>
+        s.FixX is not null && s.FixY is not null
+            ? string.Format(CultureInfo.InvariantCulture, "{0:0.##} {1:0.##} {2:0.##}", s.FixX, s.FixY, s.FixZ ?? 0)
+            : "—";
+
+    private void LoadEntities(SemanticModel model)
+    {
+        if (!EntitiesEnabled) { ClearEntities(); return; }
+        Surveys = model.Surveys.Values
+            .Select(sv => new SurveyEntityRow(sv.Name.ToString(), sv.Title ?? string.Empty,
+                sv.Name.HasParent ? sv.Name.Parent().ToString() : string.Empty,
+                FileName(sv.DeclarationSpan), sv.DeclarationSpan.Start.Line))
+            .OrderBy(r => r.Name, System.StringComparer.Ordinal).ToList();
+        Fixes = model.Stations.Values.Where(s => s.Kind == StationDeclarationKind.Fix)
+            .Select(s => new FixEntityRow(s.Name.ToString(), Coords(s), s.Cs ?? string.Empty,
+                FileName(s.DeclarationSpan), s.DeclarationSpan.Start.Line))
+            .OrderBy(r => r.Station, System.StringComparer.Ordinal).ToList();
+        Equates = model.EquateRecords
+            .Select(e => new EquateEntityRow(string.Join(" = ", e.Stations), FileName(e.Span), e.Span.Start.Line))
+            .ToList();
+        Maps = model.Maps.Values
+            .Select(m => new MapEntityRow(m.Id, m.Title ?? string.Empty, m.Projection ?? string.Empty,
+                m.Members.Length, FileName(m.DeclarationSpan), m.DeclarationSpan.Start.Line))
+            .OrderBy(r => r.Id, System.StringComparer.Ordinal).ToList();
+        Scraps = model.Scraps.Values
+            .Select(s => new ScrapEntityRow(s.Id, FileName(s.DeclarationSpan), s.DeclarationSpan.Start.Line))
+            .OrderBy(r => r.Id, System.StringComparer.Ordinal).ToList();
+        Points = Lines = Areas = System.Array.Empty<Th2EntityRow>(); // .th2 objects only at workspace scope
+    }
+
+    private void LoadEntities(WorkspaceSemanticModel ws)
+    {
+        if (!EntitiesEnabled) { ClearEntities(); return; }
+        Surveys = ws.SurveysByFullName.Values
+            .Select(sv => new SurveyEntityRow(sv.Name.ToString(), sv.Title ?? string.Empty,
+                sv.Name.HasParent ? sv.Name.Parent().ToString() : string.Empty,
+                FileName(sv.DeclarationSpan), sv.DeclarationSpan.Start.Line))
+            .OrderBy(r => r.Name, System.StringComparer.Ordinal).ToList();
+        Fixes = ws.StationsByQn.Values.Where(s => s.Kind == StationDeclarationKind.Fix)
+            .Select(s => new FixEntityRow(s.Name.ToString(), Coords(s), s.Cs ?? string.Empty,
+                FileName(s.DeclarationSpan), s.DeclarationSpan.Start.Line))
+            .OrderBy(r => r.Station, System.StringComparer.Ordinal).ToList();
+        Equates = ws.PerFile.Values.SelectMany(m => m.EquateRecords)
+            .Select(e => new EquateEntityRow(string.Join(" = ", e.Stations), FileName(e.Span), e.Span.Start.Line))
+            .ToList();
+        Maps = ws.MapsById.Values
+            .Select(m => new MapEntityRow(m.Id, m.Title ?? string.Empty, m.Projection ?? string.Empty,
+                m.Members.Length, FileName(m.DeclarationSpan), m.DeclarationSpan.Start.Line))
+            .OrderBy(r => r.Id, System.StringComparer.Ordinal).ToList();
+        Scraps = ws.ScrapsById.Values
+            .Select(s => new ScrapEntityRow(s.Id, FileName(s.DeclarationSpan), s.DeclarationSpan.Start.Line))
+            .OrderBy(r => r.Id, System.StringComparer.Ordinal).ToList();
+        Th2EntityRow Row(Th2ObjectRecord o) => new(o.Type, o.ScrapId, FileName(o.Span), o.Span.Start.Line);
+        Points = ws.Th2Objects.Where(o => o.Kind == "point").Select(Row).ToList();
+        Lines  = ws.Th2Objects.Where(o => o.Kind == "line").Select(Row).ToList();
+        Areas  = ws.Th2Objects.Where(o => o.Kind == "area").Select(Row).ToList();
+    }
+
+    private void ClearEntities()
+    {
+        Surveys = System.Array.Empty<SurveyEntityRow>();
+        Fixes = System.Array.Empty<FixEntityRow>();
+        Equates = System.Array.Empty<EquateEntityRow>();
+        Scraps = System.Array.Empty<ScrapEntityRow>();
+        Maps = System.Array.Empty<MapEntityRow>();
+        Points = Lines = Areas = System.Array.Empty<Th2EntityRow>();
+    }
 }
