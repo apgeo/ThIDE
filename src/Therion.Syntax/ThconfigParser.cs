@@ -18,9 +18,12 @@ public sealed class ThconfigParser
     /// <summary>Top-level keywords that may appear in a <c>.thconfig</c> (per thbook �3).</summary>
     public static readonly ImmutableHashSet<string> TopLevelKeywords =
         ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase,
-            "source", "layout", "lookup", "export", "select", "cs",
-            "input", "system-charset", "encoding", "language", "lang",
-            "translate", "revise", "group", "endgroup");
+            "source", "layout", "lookup", "export", "select", "unselect", "cs",
+            "input", "load", "system-charset", "encoding", "language", "lang",
+            "translate", "revise", "group", "endgroup",
+            // additional documented .thconfig commands (thbook §"Processing data")
+            "maps", "maps-offset", "log", "text", "system",
+            "scrap-sort", "sketch-warp", "sketch-colors", "setup");
 
     private readonly TherionTokenizer _tokenizer = new();
 
@@ -74,18 +77,50 @@ public sealed class ThconfigParser
                     var keyword = commandStart.Text;
                     var fullSpan = SpanFromTo(commandStart, tokens[lineEnd - 1]);
                     var rawArgs = ExtractRawArguments(sourceText, tokens, i + 1, lineEnd);
+                    var lineTokens = CollectSignificant(tokens, i, lineEnd);
 
-                    // A `layout … endlayout` (or `lookup … endlookup`) block is consumed
-                    // opaquely: its body is metapost / tex / lookup code, not Therion syntax,
-                    // so we neither validate nor warn about the lines inside it. (A bare
-                    // single-line opener with no matching closer falls through to normal
-                    // handling.)
+                    // Bare `source … endsource` (no filename on the opener) is the inline-source
+                    // multi-line form (thbook §source): its body is inline Therion data, not a file
+                    // path, so consume it opaquely. A single-line `source <file>` keeps its
+                    // UnknownCommand shape so SourceGraph still follows the include.
+                    if (string.Equals(keyword, "source", StringComparison.OrdinalIgnoreCase) &&
+                        lineTokens.Count == 1 &&
+                        TryFindBlockEnd(tokens, lineEnd, "endsource", out int srcNext, out int srcEnd))
+                    {
+                        var srcSpan = SpanFromTo(commandStart, tokens[srcEnd]);
+                        children.Add(new UnknownCommand(srcSpan, keyword, rawArgs));
+                        i = srcNext;
+                        break;
+                    }
+
+                    // `lookup … endlookup` stays opaque (its body is lookup-table code, not syntax).
                     if (OpaqueBlockEnd(keyword) is { } endKeyword &&
                         TryFindBlockEnd(tokens, lineEnd, endKeyword, out int blockNext, out int blockLastToken))
                     {
                         var blockSpan = SpanFromTo(commandStart, tokens[blockLastToken]);
                         children.Add(new UnknownCommand(blockSpan, keyword, rawArgs));
                         i = blockNext;
+                        break;
+                    }
+
+                    // `layout … endlayout` is now parsed into a typed LayoutCommand (LANG-02),
+                    // skipping embedded `code … endcode` blocks opaquely. A header-only `layout id`
+                    // with no matching endlayout is treated as a single line (no body consumed).
+                    if (string.Equals(keyword, "layout", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var layout = ParseLayout(commandStart, lineTokens, fullSpan, rawArgs,
+                            tokens, lineEnd, out int next);
+                        children.Add(layout);
+                        i = next;
+                        break;
+                    }
+
+                    // Typed non-traversal commands (cs / select / unselect / export / maps).
+                    var typed = ParseTypedConfigCommand(keyword, lineTokens, fullSpan, rawArgs, options, diagnostics);
+                    if (typed is not null)
+                    {
+                        children.Add(typed);
+                        i = lineEnd;
                         break;
                     }
 
@@ -135,9 +170,156 @@ public sealed class ThconfigParser
 
     /// <summary>The closing keyword for an opaque (unparsed-body) block opener, or null.</summary>
     private static string? OpaqueBlockEnd(string keyword) =>
-        string.Equals(keyword, "layout", StringComparison.OrdinalIgnoreCase) ? "endlayout" :
         string.Equals(keyword, "lookup", StringComparison.OrdinalIgnoreCase) ? "endlookup" :
         null;
+
+    /// <summary>Collects the significant (non-trivia) tokens of a line in <c>[start, end)</c>.</summary>
+    private static List<TherionToken> CollectSignificant(
+        ImmutableArray<TherionToken> tokens, int start, int end)
+    {
+        var list = new List<TherionToken>();
+        for (int k = start; k < end && k < tokens.Length; k++)
+        {
+            var t = tokens[k];
+            if (t.Kind is TherionTokenKind.Whitespace or TherionTokenKind.NewLine
+                or TherionTokenKind.LineContinuation or TherionTokenKind.LineComment) continue;
+            list.Add(t);
+        }
+        return list;
+    }
+
+    /// <summary>The whitespace-joined text of <paramref name="line"/> tokens from <paramref name="from"/>.</summary>
+    private static string JoinFrom(IReadOnlyList<TherionToken> line, int from)
+    {
+        if (from >= line.Count) return string.Empty;
+        var sb = new System.Text.StringBuilder();
+        for (int k = from; k < line.Count; k++)
+        {
+            if (k > from) sb.Append(' ');
+            sb.Append(line[k].Text);
+        }
+        return sb.ToString();
+    }
+
+    private static string Unquote(string s) =>
+        s.Length >= 2 && s[0] == '"' && s[^1] == '"' ? s[1..^1] : s;
+
+    /// <summary>
+    /// Dispatches the typed (non-traversal) .thconfig commands. Returns null for keywords that
+    /// should keep their existing UnknownCommand handling (source/input/load/system/…).
+    /// </summary>
+    private static TherionCommand? ParseTypedConfigCommand(
+        string keyword, List<TherionToken> line, SourceSpan span, string rawArgs,
+        ParserOptions options, ImmutableArray<Diagnostic>.Builder diagnostics)
+    {
+        switch (keyword.ToLowerInvariant())
+        {
+            case "cs":
+            {
+                // Rejoin adjacent tokens so "EPSG:3794" (split at ':') is recovered.
+                var system = JoinAdjacent(line, 1);
+                if (system.Length > 0 && !CoordinateSystems.IsKnown(system))
+                    diagnostics.Add(Diagnostic.Create(
+                        DiagnosticCodes.UnknownCoordinateSystem,
+                        options.Mode == ParserMode.Strict ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
+                        $"Unknown coordinate system '{system}'.", line.Count > 1 ? line[1].Span : span,
+                        hint: "Use UTM<zone>, EPSG:<n>, lat-long, S-MERC, …"));
+                return new CsCommand(span, system);
+            }
+            case "select":
+            case "unselect":
+            {
+                var obj = line.Count > 1 ? line[1].Text : string.Empty;
+                return new SelectCommand(span, obj, JoinFrom(line, 2),
+                    IsUnselect: string.Equals(keyword, "unselect", StringComparison.OrdinalIgnoreCase));
+            }
+            case "export":
+            {
+                var what = line.Count > 1 ? line[1].Text : string.Empty;
+                var (fmt, output) = ExtractExportOptions(line);
+                return new ExportCommand(span, what, JoinFrom(line, 2)) { Format = fmt, Output = output };
+            }
+            case "maps":
+            case "maps-offset":
+            {
+                bool on = line.Count <= 1 ||
+                          !string.Equals(line[1].Text, "off", StringComparison.OrdinalIgnoreCase);
+                return new MapsCommand(span, on,
+                    IsOffset: string.Equals(keyword, "maps-offset", StringComparison.OrdinalIgnoreCase));
+            }
+            default:
+                return null;
+        }
+    }
+
+    /// <summary>Joins line tokens from <paramref name="from"/> that touch in source (no whitespace).</summary>
+    private static string JoinAdjacent(List<TherionToken> line, int from)
+    {
+        if (from >= line.Count) return string.Empty;
+        var sb = new System.Text.StringBuilder(line[from].Text);
+        int prevEnd = line[from].Span.StartOffset + line[from].Span.Length;
+        for (int k = from + 1; k < line.Count; k++)
+        {
+            if (line[k].Span.StartOffset != prevEnd) break;
+            sb.Append(line[k].Text);
+            prevEnd = line[k].Span.StartOffset + line[k].Span.Length;
+        }
+        return sb.ToString();
+    }
+
+    private static (string? Format, string? Output) ExtractExportOptions(List<TherionToken> line)
+    {
+        string? fmt = null, output = null;
+        for (int k = 2; k < line.Count - 1; k++)
+        {
+            var t = line[k].Text;
+            if (string.Equals(t, "-fmt", StringComparison.OrdinalIgnoreCase)) fmt = line[k + 1].Text;
+            else if (t is "-o" || string.Equals(t, "-output", StringComparison.OrdinalIgnoreCase))
+                output = Unquote(line[k + 1].Text);
+        }
+        return (fmt, output);
+    }
+
+    /// <summary>
+    /// Parses a <c>layout &lt;id&gt; [opts] … endlayout</c> block (LANG-02). When no matching
+    /// <c>endlayout</c> exists the layout is treated as a single header line (no body consumed),
+    /// matching the previous lenient behaviour. <paramref name="next"/> is where parsing resumes.
+    /// </summary>
+    private static LayoutCommand ParseLayout(
+        TherionToken commandStart, List<TherionToken> headerLine, SourceSpan headerSpan, string rawArgs,
+        ImmutableArray<TherionToken> tokens, int headerEnd, out int next)
+    {
+        var id = headerLine.Count > 1 ? headerLine[1].Text : string.Empty;
+
+        if (!TryFindBlockEnd(tokens, headerEnd, "endlayout", out int blockNext, out int endTokenIdx))
+        {
+            next = headerEnd;
+            return new LayoutCommand(headerSpan, id, rawArgs,
+                ImmutableArray<LayoutOption>.Empty, ImmutableArray<LayoutCodeBlock>.Empty,
+                IsTerminated: false);
+        }
+
+        next = blockNext;
+        var blockSpan = SpanFromTo(commandStart, tokens[endTokenIdx]);
+
+        // Split the body (between the header line and endlayout) into logical lines.
+        int bodyStart = headerEnd;                 // first token after the header line
+        int bodyEnd = endTokenIdx;                 // the endlayout token (exclusive)
+        var bodySlice = bodyStart < bodyEnd
+            ? ImmutableArray.Create(tokens, bodyStart, bodyEnd - bodyStart)
+            : ImmutableArray<TherionToken>.Empty;
+        var bodyLines = LogicalLineReader.Split(bodySlice);
+        var parts = LayoutBodyParser.Parse(bodyLines);
+
+        return new LayoutCommand(blockSpan, id, rawArgs,
+            parts.Options, parts.CodeBlocks, IsTerminated: true)
+        {
+            CopyFrom = parts.CopyFrom,
+            CoordinateSystem = parts.CoordinateSystem,
+            SymbolSet = parts.SymbolSet,
+            SymbolDirectives = parts.SymbolDirectives,
+        };
+    }
 
     /// <summary>
     /// Scans for the <paramref name="endKeyword"/> that closes an opaque block, ignoring the
