@@ -69,7 +69,7 @@ public sealed class Th2Parser
                     children.Add(ParseScrap(line, lines, ref cursor, filePath, options, diags));
                     break;
                 case "point":
-                    children.Add(ParsePoint(line, diags));
+                    children.Add(ParsePoint(line, options, diags));
                     break;
                 case "line":
                     children.Add(ParseLine(line, lines, ref cursor, options, diags));
@@ -145,7 +145,7 @@ public sealed class Th2Parser
         return result.ToImmutable();
     }
 
-    private PointObject ParsePoint(LogicalLine line, ImmutableArray<Diagnostic>.Builder diags)
+    private PointObject ParsePoint(LogicalLine line, ParserOptions options, ImmutableArray<Diagnostic>.Builder diags)
     {
         // point <x> <y> <type> [options]
         if (line.Tokens.Length < 4)
@@ -157,8 +157,17 @@ public sealed class Th2Parser
         }
         double x = ParseDouble(line.Tokens[1].Text);
         double y = ParseDouble(line.Tokens[2].Text);
-        string type = line.Tokens[3].Text;
-        return new PointObject(line.Span, x, y, type, JoinFrom(line, 4));
+        var (type, optStart) = CoalesceFrom(line.Tokens, 3);
+
+        if (!Th2Symbols.IsKnownPointType(type))
+            diags.Add(Diagnostic.Create(DiagnosticCodes.Th2UnknownPointType,
+                options.Mode == ParserMode.Strict ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
+                $"Unknown point type '{type}'.", line.Tokens[3].Span));
+
+        return new PointObject(line.Span, x, y, type, JoinFrom(line, optStart))
+        {
+            Options = Th2OptionList.Parse(line.Tokens, optStart),
+        };
     }
 
     private LineObject ParseLine(
@@ -166,8 +175,15 @@ public sealed class Th2Parser
         ParserOptions options, ImmutableArray<Diagnostic>.Builder diags)
     {
         // line <type> [options]
-        string type = header.Tokens.Length > 1 ? header.Tokens[1].Text : string.Empty;
-        string optsRaw = JoinFrom(header, 2);
+        var (type, lineOptStart) = header.Tokens.Length > 1
+            ? CoalesceFrom(header.Tokens, 1) : (string.Empty, header.Tokens.Length);
+        string optsRaw = JoinFrom(header, lineOptStart);
+
+        if (type.Length > 0 && !Th2Symbols.IsKnownLineType(type))
+            diags.Add(Diagnostic.Create(DiagnosticCodes.Th2UnknownLineType,
+                options.Mode == ParserMode.Strict ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
+                $"Unknown line type '{type}'.", header.Tokens[1].Span));
+
         var vertices = ImmutableArray.CreateBuilder<LineVertex>();
         bool terminated = false;
 
@@ -184,7 +200,10 @@ public sealed class Th2Parser
                 double.TryParse(ln.Tokens[0].Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var vx) &&
                 double.TryParse(ln.Tokens[1].Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var vy))
             {
-                vertices.Add(new LineVertex(ln.Span, vx, vy, JoinFrom(ln, 2)));
+                vertices.Add(new LineVertex(ln.Span, vx, vy, JoinFrom(ln, 2))
+                {
+                    Options = Th2OptionList.Parse(ln.Tokens, 2),
+                });
             }
             cursor++;
         }
@@ -199,7 +218,10 @@ public sealed class Th2Parser
 
         var endSpan = vertices.Count > 0 ? vertices[^1].Span : header.Span;
         return new LineObject(SpanUnion(header.Span, endSpan), type, optsRaw,
-            vertices.ToImmutable(), terminated);
+            vertices.ToImmutable(), terminated)
+        {
+            Options = Th2OptionList.Parse(header.Tokens, lineOptStart),
+        };
     }
 
     /// <summary>Parses <c>join a b [...] [-opt val]</c>: leading non-option tokens are targets.</summary>
@@ -219,8 +241,15 @@ public sealed class Th2Parser
         LogicalLine header, ImmutableArray<LogicalLine> lines, ref int cursor,
         ParserOptions options, ImmutableArray<Diagnostic>.Builder diags)
     {
-        string type = header.Tokens.Length > 1 ? header.Tokens[1].Text : string.Empty;
-        string optsRaw = JoinFrom(header, 2);
+        var (type, areaOptStart) = header.Tokens.Length > 1
+            ? CoalesceFrom(header.Tokens, 1) : (string.Empty, header.Tokens.Length);
+        string optsRaw = JoinFrom(header, areaOptStart);
+
+        if (type.Length > 0 && !Th2Symbols.IsKnownAreaType(type))
+            diags.Add(Diagnostic.Create(DiagnosticCodes.Th2UnknownAreaType,
+                options.Mode == ParserMode.Strict ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
+                $"Unknown area type '{type}'.", header.Tokens[1].Span));
+
         var borders = ImmutableArray.CreateBuilder<string>();
         bool terminated = false;
 
@@ -232,7 +261,7 @@ public sealed class Th2Parser
             {
                 cursor++; terminated = true; break;
             }
-            // Each line is a border line identifier.
+            // Each body line lists a border line identifier (skip option/keyword tokens like `-id`).
             foreach (var t in ln.Tokens) borders.Add(t.Text);
             cursor++;
         }
@@ -245,10 +274,33 @@ public sealed class Th2Parser
                 "'area' block is missing 'endarea'.", header.Span));
         }
 
-        return new AreaObject(header.Span, type, optsRaw, borders.ToImmutable(), terminated);
+        return new AreaObject(header.Span, type, optsRaw, borders.ToImmutable(), terminated)
+        {
+            Options = Th2OptionList.Parse(header.Tokens, areaOptStart),
+        };
     }
 
     // ---- helpers --------------------------------------------------------
+
+    /// <summary>
+    /// Coalesces adjacent (no-whitespace-gap) tokens starting at <paramref name="start"/> into one
+    /// string, returning it and the index of the next whitespace-separated token. Recovers types
+    /// the lexer split at punctuation (e.g. <c>station:fixed</c>, <c>u:splay</c>, <c>wall:blocks</c>).
+    /// </summary>
+    private static (string Text, int Next) CoalesceFrom(ImmutableArray<TherionToken> tokens, int start)
+    {
+        if (tokens.Length <= start) return (string.Empty, start);
+        var sb = new System.Text.StringBuilder(tokens[start].Text);
+        int prevEnd = tokens[start].Span.StartOffset + tokens[start].Span.Length;
+        int i = start + 1;
+        for (; i < tokens.Length; i++)
+        {
+            if (tokens[i].Span.StartOffset != prevEnd) break;
+            sb.Append(tokens[i].Text);
+            prevEnd = tokens[i].Span.StartOffset + tokens[i].Span.Length;
+        }
+        return (sb.ToString(), i);
+    }
 
     private static string JoinFrom(LogicalLine line, int from)
     {
