@@ -36,6 +36,9 @@ public sealed class TherionTokenizer
         int pos = 0;
         int line = 1;
         int col = 1;
+        // Index in `builder` where the current physical line's tokens begin — used to detect a
+        // `surface` header line so its (potentially huge DEM) body can be collapsed opaquely.
+        int lineStartIdx = 0;
 
         while (pos < text.Length)
         {
@@ -57,8 +60,14 @@ public sealed class TherionTokenizer
                     MakeSpan(filePath, startLine, startCol, line, col, startPos, pos - startPos),
                     text.Substring(startPos, pos - startPos)));
 
+                bool wasSurfaceHeader = LineFirstSignificantIs(builder, lineStartIdx, "surface");
                 line++;
                 col = 1;
+                lineStartIdx = builder.Count;
+                // A `surface … endsurface` body is opaque to every consumer (DEM grids can be tens
+                // of MB). Collapse it to one token so we don't allocate millions of number tokens.
+                if (wasSurfaceHeader)
+                    TryCollapseSurfaceBody(text, filePath, builder, ref pos, ref line, ref col, ref lineStartIdx);
                 continue;
             }
 
@@ -252,4 +261,92 @@ public sealed class TherionTokenizer
             new SourceLocation(endLine, endCol),
             startOffset,
             length);
+
+    // ---- opaque `surface … endsurface` body collapse --------------------
+
+    /// <summary>True if the first significant token of <c>builder[startIdx..]</c> equals <paramref name="keyword"/>.</summary>
+    private static bool LineFirstSignificantIs(
+        ImmutableArray<TherionToken>.Builder builder, int startIdx, string keyword)
+    {
+        for (int i = startIdx; i < builder.Count; i++)
+        {
+            var k = builder[i].Kind;
+            if (k is TherionTokenKind.Whitespace or TherionTokenKind.LineContinuation
+                or TherionTokenKind.LineComment or TherionTokenKind.NewLine) continue;
+            return string.Equals(builder[i].Text, keyword, StringComparison.OrdinalIgnoreCase);
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// When positioned at the first body line of a <c>surface</c> block, scans to the matching
+    /// <c>endsurface</c> and emits the whole body as one opaque token (advancing past it). Does
+    /// nothing if there is no matching <c>endsurface</c> or the body is empty — so a stray
+    /// <c>surface</c> elsewhere can never swallow the rest of the file.
+    /// </summary>
+    private static void TryCollapseSurfaceBody(
+        string text, string filePath, ImmutableArray<TherionToken>.Builder builder,
+        ref int pos, ref int line, ref int col, ref int lineStartIdx)
+    {
+        int bodyStart = pos;
+        if (!FindEndsurfaceLine(text, bodyStart, out int endLineStart)) return;
+        int bodyEnd = NewlineStart(text, endLineStart);   // exclude the newline before endsurface
+        if (bodyEnd <= bodyStart) return;                 // empty body — let normal lexing handle it
+
+        int newlines = 0;
+        for (int i = bodyStart; i < bodyEnd; i++) if (text[i] == '\n') newlines++;
+
+        builder.Add(new TherionToken(
+            TherionTokenKind.Identifier,
+            new SourceSpan(filePath,
+                new SourceLocation(line, 1), new SourceLocation(line + newlines, 1),
+                bodyStart, bodyEnd - bodyStart),
+            text.Substring(bodyStart, bodyEnd - bodyStart)));
+
+        line += newlines;
+        col = 1;
+        pos = bodyEnd;
+        lineStartIdx = builder.Count;
+    }
+
+    /// <summary>Finds the start offset of the next line whose first word is <c>endsurface</c>.</summary>
+    private static bool FindEndsurfaceLine(string text, int from, out int endLineStart)
+    {
+        int lineStart = from;
+        while (lineStart < text.Length)
+        {
+            int j = lineStart;
+            while (j < text.Length && (text[j] == ' ' || text[j] == '\t')) j++;
+            if (IsKeywordAt(text, j, "endsurface")) { endLineStart = lineStart; return true; }
+            int k = lineStart;
+            while (k < text.Length && text[k] != '\n' && text[k] != '\r') k++;
+            if (k >= text.Length) break;
+            k += text[k] == '\r' && k + 1 < text.Length && text[k + 1] == '\n' ? 2 : 1;
+            lineStart = k;
+        }
+        endLineStart = -1;
+        return false;
+    }
+
+    /// <summary>True if the lowercase <paramref name="keyword"/> sits at <paramref name="j"/> as a whole word.</summary>
+    private static bool IsKeywordAt(string text, int j, string keyword)
+    {
+        if (j + keyword.Length > text.Length) return false;
+        for (int i = 0; i < keyword.Length; i++)
+            if (char.ToLowerInvariant(text[j + i]) != keyword[i]) return false;
+        int after = j + keyword.Length;
+        if (after >= text.Length) return true;
+        char c = text[after];
+        return c is ' ' or '\t' or '\r' or '\n';
+    }
+
+    /// <summary>The start offset of the newline sequence that terminates the line before <paramref name="lineStart"/>.</summary>
+    private static int NewlineStart(string text, int lineStart)
+    {
+        if (lineStart <= 0) return 0;
+        int p = lineStart - 1;
+        if (text[p] == '\n') return p >= 1 && text[p - 1] == '\r' ? p - 1 : p;
+        if (text[p] == '\r') return p;
+        return lineStart;
+    }
 }
