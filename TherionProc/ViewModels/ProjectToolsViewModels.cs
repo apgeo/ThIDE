@@ -424,3 +424,95 @@ public sealed partial class LeadsViewModel : ObservableObject
             : $"{Leads.Count} lead(s) · {open} open";
     }
 }
+
+// ───────────────────────────── NOTE-01 — TODO / FIXME / QM aggregator ─────────────────────────────
+
+/// <summary>One scanned comment tag (TODO/FIXME/QM/…) with its location.</summary>
+public sealed record TodoRow(string Tag, string Text, string File, int Line, SourceSpan Span);
+
+/// <summary>NOTE-01: aggregates TODO/FIXME/QM comment tags across all project files.</summary>
+public sealed partial class TodoScanViewModel : ObservableObject
+{
+    private readonly IWorkspaceSession? _session;
+    private readonly IDocumentService? _documents;
+    private readonly IAppSettingsService? _settings;
+    private const int MaxFiles = 3000;
+
+    public ObservableCollection<TodoRow> Todos { get; } = new();
+
+    [ObservableProperty] private string _summary = "—";
+
+    public TodoScanViewModel() { } // design-time
+
+    public TodoScanViewModel(IWorkspaceSession session, IDocumentService documents, IAppSettingsService settings)
+    {
+        _session = session;
+        _documents = documents;
+        _settings = settings;
+        _session.Changed += (_, _) => ProjectFormat.OnUi(Rebuild);
+        Rebuild();
+    }
+
+    [RelayCommand] private void Refresh() => Rebuild();
+
+    [RelayCommand]
+    private void Open(TodoRow? row)
+    {
+        if (row?.Span is { IsEmpty: false } span) _ = _documents?.NavigateToSpanAsync(span);
+    }
+
+    /// <summary>Copy the TODO list as a Markdown table (for a write-up / issue tracker).</summary>
+    [RelayCommand]
+    private void CopyAsMarkdown()
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("| Tag | Text | File | Line |");
+        sb.AppendLine("|---|---|---|---|");
+        foreach (var t in Todos) sb.AppendLine($"| {t.Tag} | {t.Text} | {t.File} | {t.Line} |");
+        ClipboardHelper.SetText(sb.ToString());
+    }
+
+    private void Rebuild()
+    {
+        Todos.Clear();
+        if (_settings is { Current.EnableTodoScan: false }) { Summary = "TODO scan disabled (Preferences ▸ Performance)."; return; }
+
+        // Prefer unsaved editor text for open files; read the rest from disk.
+        var openText = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (_documents is not null)
+            foreach (var d in _documents.Documents)
+                if (!string.IsNullOrEmpty(d.FilePath)) openText[d.FilePath] = d.DocumentText;
+
+        int scanned = 0;
+        foreach (var path in ReachableFiles())
+        {
+            if (scanned++ >= MaxFiles) break;
+            string text;
+            if (openText.TryGetValue(path, out var t)) text = t;
+            else { try { text = Therion.Syntax.EncodingResolver.ReadAllText(path); } catch { continue; } }
+
+            foreach (var item in TodoScanner.Scan(path, text))
+                Todos.Add(new TodoRow(item.Tag, item.Text, Path.GetFileName(path), item.Span.Start.Line, item.Span));
+        }
+
+        Summary = Todos.Count == 0 ? "No TODO/FIXME/QM tags found." : $"{Todos.Count} tag(s) in {scanned} file(s).";
+    }
+
+    // Every distinct project file: graph members + open documents.
+    private IEnumerable<string> ReachableFiles()
+    {
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (_documents?.Workspace is { } ws)
+        {
+            foreach (var p in ws.PerFile.Keys) if (seen.Add(p)) yield return p;
+            foreach (var (from, to) in ws.FileGraphEdges)
+            {
+                if (seen.Add(from)) yield return from;
+                if (seen.Add(to)) yield return to;
+            }
+        }
+        if (_documents is not null)
+            foreach (var d in _documents.Documents)
+                if (!string.IsNullOrEmpty(d.FilePath) && seen.Add(d.FilePath)) yield return d.FilePath;
+    }
+}

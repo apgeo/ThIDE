@@ -289,6 +289,8 @@
                               IsChecked="{Binding EnableProjectAnalytics}" />
                     <CheckBox Content="Object Browser entity tabs (surveys, fixes, equates, scraps, maps, points, lines, areas) — DATA-03"
                               IsChecked="{Binding EnableObjectBrowserEntities}" />
+                    <CheckBox Content="TODO / FIXME / QM comment scan — NOTE-01"
+                              IsChecked="{Binding EnableTodoScan}" />
                 </StackPanel>
 
                 <!-- External Tools (moved here from the dockable Settings panel, #13) -->

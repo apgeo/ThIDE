@@ -191,6 +191,7 @@ internal static class AppServices
         services.AddSingleton<DataAnalyticsViewModel>();      // DATA-01/02/05/06/08 analytics
         services.AddSingleton<ILeadStatusStore, LeadStatusStore>();   // LEAD-03 lifecycle status
         services.AddSingleton<LeadsViewModel>();              // LEAD-01/03/05 leads register
+        services.AddSingleton<TodoScanViewModel>();           // NOTE-01 TODO/FIXME/QM aggregator
         services.AddSingleton<LogViewModel>();                // #3 activity log content VM
         services.AddSingleton<LivePreviewViewModel>();        // VIS-02 live centreline preview
         services.AddSingleton<MapViewerViewModel>();          // VIS-03/05 in-app map viewer

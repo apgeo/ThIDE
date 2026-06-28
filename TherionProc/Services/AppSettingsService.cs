@@ -161,6 +161,9 @@ public sealed record AppSettings
     /// <summary>DATA-03: populate the extra Object Browser entity tabs (surveys, fixes, equates,
     /// scraps, maps, points, lines, areas). Walks the whole model on each load.</summary>
     public bool EnableObjectBrowserEntities { get; init; } = true;
+    /// <summary>NOTE-01: scan every project file's comments for TODO/FIXME/QM tags. Reads all files
+    /// on each graph rebuild, so it can be disabled for big projects (default on).</summary>
+    public bool EnableTodoScan { get; init; } = true;
 
     // ---- large-file guards (#10) ----
     /// <summary>Skip syntax highlighting + hover features above this line count.</summary>

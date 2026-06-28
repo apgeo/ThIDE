@@ -291,5 +291,28 @@
                 </DataGrid>
             </DockPanel>
         </TabItem>
+
+        <!-- NOTE-01 — TODO / FIXME / QM aggregator -->
+        <TabItem Header="TODOs">
+            <DockPanel>
+                <WrapPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="8,6" VerticalAlignment="Center">
+                    <Button Content="Re-scan" Command="{Binding Todos.RefreshCommand}" Margin="0,0,6,0" />
+                    <Button Content="Go to source" Command="{Binding Todos.OpenCommand}"
+                            CommandParameter="{Binding #TodosGrid.SelectedItem}" Margin="0,0,6,0" />
+                    <Button Content="Copy as Markdown" Command="{Binding Todos.CopyAsMarkdownCommand}" Margin="0,0,12,0" />
+                    <TextBlock Text="{Binding Todos.Summary}" Foreground="Gray" VerticalAlignment="Center" />
+                </WrapPanel>
+                <DataGrid x:Name="TodosGrid" ItemsSource="{Binding Todos.Todos}" IsReadOnly="True"
+                          GridLinesVisibility="Horizontal" CanUserResizeColumns="True"
+                          CanUserSortColumns="True" AutoGenerateColumns="False">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Tag" Binding="{Binding Tag}" Width="90" />
+                        <DataGridTextColumn Header="Text" Binding="{Binding Text}" Width="*" />
+                        <DataGridTextColumn Header="File" Binding="{Binding File}" Width="160" />
+                        <DataGridTextColumn Header="Line" Binding="{Binding Line}" Width="60" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </DockPanel>
+        </TabItem>
     </TabControl>
 </UserControl>

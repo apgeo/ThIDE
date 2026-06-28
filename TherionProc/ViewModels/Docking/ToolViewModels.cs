@@ -99,6 +99,8 @@ public sealed class ProjectToolViewModel : ToolViewModelBase
     [JsonIgnore] public DataAnalyticsViewModel Analytics { get; }
     /// <summary>LEAD-01/03/05 exploration leads register.</summary>
     [JsonIgnore] public LeadsViewModel Leads { get; }
+    /// <summary>NOTE-01 TODO/FIXME/QM aggregator.</summary>
+    [JsonIgnore] public TodoScanViewModel Todos { get; }
 
     public ProjectToolViewModel() : base("Project", "Project")
     {
@@ -107,11 +109,12 @@ public sealed class ProjectToolViewModel : ToolViewModelBase
         Audit = null!;
         Analytics = null!;
         Leads = null!;
+        Todos = null!;
     }
 
     public ProjectToolViewModel(ProjectDashboardViewModel dashboard, SurveyTreeViewModel surveys,
         ProjectAuditViewModel audit, DataAnalyticsViewModel analytics, LeadsViewModel leads,
-        ILanguageService? lang = null)
+        TodoScanViewModel todos, ILanguageService? lang = null)
         : base("Project", "Project", lang)
     {
         Dashboard = dashboard;
@@ -119,6 +122,7 @@ public sealed class ProjectToolViewModel : ToolViewModelBase
         Audit = audit;
         Analytics = analytics;
         Leads = leads;
+        Todos = todos;
     }
 }
 
