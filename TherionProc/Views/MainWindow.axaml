@@ -234,6 +234,7 @@
                 <!-- UTIL-* calculators. -->
                 <MenuItem Header="Calculators">
                     <MenuItem Header="Unit converter…" Click="OnUnitConverter" />
+                    <MenuItem Header="Coordinate converter…" Click="OnCoordinateConverter" />
                 </MenuItem>
             </MenuItem>
             <MenuItem Header="{Binding MenuBuild}">

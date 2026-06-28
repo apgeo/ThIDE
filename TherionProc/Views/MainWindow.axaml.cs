@@ -694,6 +694,9 @@ public partial class MainWindow : Window
     private void OnUnitConverter(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
         => new UnitConverterWindow().Show(this);
 
+    private void OnCoordinateConverter(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        => new CoordinateConverterWindow().Show(this);
+
     private void OnPreferencesClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
         => _ = OpenPreferences(null);
 
