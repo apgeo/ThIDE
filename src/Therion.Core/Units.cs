@@ -1,4 +1,4 @@
-// Implementation Plan §8.1 (Units: canonicalize to metres, preserve original).
+// Implementation Plan ï¿½8.1 (Units: canonicalize to metres, preserve original).
 
 namespace Therion.Core;
 
@@ -76,4 +76,38 @@ public sealed class UnitConverter : IUnitConverter
         AngleUnit.PercentSlope => Math.Atan(angle.Value / 100.0) * 180.0 / Math.PI,
         _ => throw new ArgumentOutOfRangeException(nameof(angle)),
     };
+
+    // UTIL-04 â€” inverse + cross-unit conversions for the unit-converter palette.
+
+    /// <summary>Converts canonical metres back into <paramref name="unit"/>.</summary>
+    public double FromMetres(double metres, LengthUnit unit) => unit switch
+    {
+        LengthUnit.Metre => metres,
+        LengthUnit.Centimetre => metres / 0.01,
+        LengthUnit.Millimetre => metres / 0.001,
+        LengthUnit.Kilometre => metres / 1000.0,
+        LengthUnit.Inch => metres / 0.0254,
+        LengthUnit.Foot => metres / 0.3048,
+        LengthUnit.Yard => metres / 0.9144,
+        _ => throw new ArgumentOutOfRangeException(nameof(unit)),
+    };
+
+    /// <summary>Converts canonical degrees back into <paramref name="unit"/>.</summary>
+    public double FromDegrees(double degrees, AngleUnit unit) => unit switch
+    {
+        AngleUnit.Degree => degrees,
+        AngleUnit.Grad => degrees / 0.9,
+        AngleUnit.Mil => degrees * 6400.0 / 360.0,
+        AngleUnit.Minute => degrees * 60.0,
+        AngleUnit.PercentSlope => Math.Tan(degrees * Math.PI / 180.0) * 100.0,
+        _ => throw new ArgumentOutOfRangeException(nameof(unit)),
+    };
+
+    /// <summary>Converts a length value from one unit to another.</summary>
+    public double ConvertLength(double value, LengthUnit from, LengthUnit to) =>
+        FromMetres(ToMetres(new Length(value, from)), to);
+
+    /// <summary>Converts an angle value from one unit to another.</summary>
+    public double ConvertAngle(double value, AngleUnit from, AngleUnit to) =>
+        FromDegrees(ToDegrees(new Angle(value, from)), to);
 }

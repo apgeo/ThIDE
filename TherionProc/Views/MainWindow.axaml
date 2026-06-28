@@ -230,6 +230,11 @@
                 <MenuItem Header="Generate survey report (HTML)…" Command="{Binding GenerateReportCommand}" />
                 <Separator />
                 <MenuItem Header="New scrap (.th2)…" Command="{Binding NewScrapScaffoldCommand}" />
+                <Separator />
+                <!-- UTIL-* calculators. -->
+                <MenuItem Header="Calculators">
+                    <MenuItem Header="Unit converter…" Click="OnUnitConverter" />
+                </MenuItem>
             </MenuItem>
             <MenuItem Header="{Binding MenuBuild}">
                 <MenuItem Header="{Binding MenuBuildBuild}"     InputGesture="F5"       Command="{Binding Build.BuildCommand}" />

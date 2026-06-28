@@ -689,6 +689,11 @@ public partial class MainWindow : Window
         }
     }
 
+    // ----- UTIL calculators (Tools ▸ Calculators) --------------------------
+
+    private void OnUnitConverter(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        => new UnitConverterWindow().Show(this);
+
     private void OnPreferencesClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
         => _ = OpenPreferences(null);
 
