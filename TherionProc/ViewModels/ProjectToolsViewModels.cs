@@ -580,3 +580,58 @@ public sealed partial class ProjectMetadataViewModel : ObservableObject
     partial void OnNotesChanged(string value) => Touch();
     private void Touch() { if (!_loading && HasProject) Status = "Unsaved changes."; }
 }
+
+// ───────────────────────────── MEDIA-02/03 — background-scan / media manager ─────────────────────────────
+
+/// <summary>MEDIA-02/03: lists the project's scan assets (referenced .xvi + on-disk orphans) with
+/// status (referenced / missing / orphan), resolution and referencing-scrap counts.</summary>
+public sealed partial class MediaManagerViewModel : ObservableObject
+{
+    private readonly IWorkspaceSession? _session;
+    private readonly IDocumentService? _documents;
+    private readonly IAppSettingsService? _settings;
+
+    public ObservableCollection<MediaItem> Media { get; } = new();
+
+    [ObservableProperty] private string _summary = "—";
+
+    public MediaManagerViewModel() { } // design-time
+
+    public MediaManagerViewModel(IWorkspaceSession session, IDocumentService documents, IAppSettingsService settings)
+    {
+        _session = session;
+        _documents = documents;
+        _settings = settings;
+        _session.Changed += (_, _) => ProjectFormat.OnUi(Rebuild);
+        _session.FileSystemChanged += (_, _) => ProjectFormat.OnUi(Rebuild);
+        Rebuild();
+    }
+
+    [RelayCommand] private void Refresh() => Rebuild();
+
+    [RelayCommand]
+    private void Reveal(MediaItem? item)
+    {
+        if (item is null || item.Status == MediaStatus.Missing) return;
+        try { (TherionProc.AppServices.Provider.GetService(typeof(Therion.Build.IShellOpener)) as Therion.Build.IShellOpener)?.RevealInFileManager(item.Path); }
+        catch { /* design-time / no container */ }
+    }
+
+    private void Rebuild()
+    {
+        Media.Clear();
+        if (_settings is { Current.EnableMediaScan: false }) { Summary = "Media scan disabled (Preferences ▸ Performance)."; return; }
+
+        foreach (var m in MediaScanner.ScanReferenced(_documents?.Workspace)) Media.Add(m);
+        UpdateSummary();
+    }
+
+    private void UpdateSummary()
+    {
+        int missing = Media.Count(m => m.Status == MediaStatus.Missing);
+        int orphan = Media.Count(m => m.Status == MediaStatus.Orphan);
+        Summary = Media.Count == 0
+            ? "No scans found."
+            : $"{Media.Count} scan(s)" + (missing > 0 ? $" · {missing} missing" : "") + (orphan > 0 ? $" · {orphan} orphan" : "");
+    }
+}

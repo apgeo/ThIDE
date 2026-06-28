@@ -103,6 +103,8 @@ public sealed class ProjectToolViewModel : ToolViewModelBase
     [JsonIgnore] public TodoScanViewModel Todos { get; }
     /// <summary>NOTE-04 project metadata editor.</summary>
     [JsonIgnore] public ProjectMetadataViewModel Metadata { get; }
+    /// <summary>MEDIA-02/03 background-scan / media manager.</summary>
+    [JsonIgnore] public MediaManagerViewModel MediaManager { get; }
 
     public ProjectToolViewModel() : base("Project", "Project")
     {
@@ -113,11 +115,13 @@ public sealed class ProjectToolViewModel : ToolViewModelBase
         Leads = null!;
         Todos = null!;
         Metadata = null!;
+        MediaManager = null!;
     }
 
     public ProjectToolViewModel(ProjectDashboardViewModel dashboard, SurveyTreeViewModel surveys,
         ProjectAuditViewModel audit, DataAnalyticsViewModel analytics, LeadsViewModel leads,
-        TodoScanViewModel todos, ProjectMetadataViewModel metadata, ILanguageService? lang = null)
+        TodoScanViewModel todos, ProjectMetadataViewModel metadata, MediaManagerViewModel mediaManager,
+        ILanguageService? lang = null)
         : base("Project", "Project", lang)
     {
         Dashboard = dashboard;
@@ -127,6 +131,7 @@ public sealed class ProjectToolViewModel : ToolViewModelBase
         Leads = leads;
         Todos = todos;
         Metadata = metadata;
+        MediaManager = mediaManager;
     }
 }
 

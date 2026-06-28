@@ -346,5 +346,29 @@
                 </StackPanel>
             </ScrollViewer>
         </TabItem>
+
+        <!-- MEDIA-02/03 — background-scan / media manager -->
+        <TabItem Header="Media">
+            <DockPanel>
+                <WrapPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="8,6" VerticalAlignment="Center">
+                    <Button Content="Re-scan" Command="{Binding MediaManager.RefreshCommand}" Margin="0,0,6,0" />
+                    <Button Content="Reveal in file manager" Command="{Binding MediaManager.RevealCommand}"
+                            CommandParameter="{Binding #MediaGrid.SelectedItem}" Margin="0,0,12,0" />
+                    <TextBlock Text="{Binding MediaManager.Summary}" Foreground="Gray" VerticalAlignment="Center" />
+                </WrapPanel>
+                <DataGrid x:Name="MediaGrid" ItemsSource="{Binding MediaManager.Media}" IsReadOnly="True"
+                          GridLinesVisibility="Horizontal" CanUserResizeColumns="True"
+                          CanUserSortColumns="True" AutoGenerateColumns="False">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="File" Binding="{Binding FileName}" Width="*" />
+                        <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="70" />
+                        <DataGridTextColumn Header="Status" Binding="{Binding StatusText}" Width="90" />
+                        <DataGridTextColumn Header="Resolution" Binding="{Binding Resolution}" Width="120" />
+                        <DataGridTextColumn Header="Georef" Binding="{Binding Georef}" Width="70" />
+                        <DataGridTextColumn Header="Scraps" Binding="{Binding ReferencingScraps}" Width="70" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </DockPanel>
+        </TabItem>
     </TabControl>
 </UserControl>

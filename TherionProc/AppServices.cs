@@ -194,6 +194,7 @@ internal static class AppServices
         services.AddSingleton<TodoScanViewModel>();           // NOTE-01 TODO/FIXME/QM aggregator
         services.AddSingleton<IProjectMetadataStore, ProjectMetadataStore>(); // NOTE-04 metadata sidecar
         services.AddSingleton<ProjectMetadataViewModel>();    // NOTE-04 project metadata editor
+        services.AddSingleton<MediaManagerViewModel>();       // MEDIA-02/03 media manager
         services.AddSingleton<LogViewModel>();                // #3 activity log content VM
         services.AddSingleton<LivePreviewViewModel>();        // VIS-02 live centreline preview
         services.AddSingleton<MapViewerViewModel>();          // VIS-03/05 in-app map viewer

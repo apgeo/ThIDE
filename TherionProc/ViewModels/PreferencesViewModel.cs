@@ -97,6 +97,7 @@ public partial class PreferencesViewModel : ObservableObject
     [ObservableProperty] private bool _enableProjectAnalytics;       // DATA-01/02/05/06/08
     [ObservableProperty] private bool _enableObjectBrowserEntities;  // DATA-03
     [ObservableProperty] private bool _enableTodoScan;               // NOTE-01
+    [ObservableProperty] private bool _enableMediaScan;              // MEDIA-02/03
 
     // ---- editor behaviour ----
     [ObservableProperty] private bool _showRenamePreviewBeforeApply;
@@ -180,6 +181,7 @@ public partial class PreferencesViewModel : ObservableObject
         _enableProjectAnalytics = s.EnableProjectAnalytics;
         _enableObjectBrowserEntities = s.EnableObjectBrowserEntities;
         _enableTodoScan = s.EnableTodoScan;
+        _enableMediaScan = s.EnableMediaScan;
         _showRenamePreviewBeforeApply = s.ShowRenamePreviewBeforeApply;
         _maxHighlightLines = s.MaxHighlightLines;
         _maxHighlightKB = s.MaxHighlightKB;
@@ -322,6 +324,7 @@ public partial class PreferencesViewModel : ObservableObject
             EnableProjectAnalytics = EnableProjectAnalytics,
             EnableObjectBrowserEntities = EnableObjectBrowserEntities,
             EnableTodoScan = EnableTodoScan,
+            EnableMediaScan = EnableMediaScan,
             ShowRenamePreviewBeforeApply = ShowRenamePreviewBeforeApply,
             MaxHighlightLines = MaxHighlightLines,
             MaxHighlightKB = MaxHighlightKB,

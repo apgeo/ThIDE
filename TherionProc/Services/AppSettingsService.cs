@@ -164,6 +164,9 @@ public sealed record AppSettings
     /// <summary>NOTE-01: scan every project file's comments for TODO/FIXME/QM tags. Reads all files
     /// on each graph rebuild, so it can be disabled for big projects (default on).</summary>
     public bool EnableTodoScan { get; init; } = true;
+    /// <summary>MEDIA-02/03: populate the Media manager (referenced .xvi scans + an on-disk orphan
+    /// scan). Walks the project folder, so it can be disabled for big projects (default on).</summary>
+    public bool EnableMediaScan { get; init; } = true;
 
     // ---- large-file guards (#10) ----
     /// <summary>Skip syntax highlighting + hover features above this line count.</summary>

@@ -291,6 +291,8 @@
                               IsChecked="{Binding EnableObjectBrowserEntities}" />
                     <CheckBox Content="TODO / FIXME / QM comment scan — NOTE-01"
                               IsChecked="{Binding EnableTodoScan}" />
+                    <CheckBox Content="Media manager scan (referenced .xvi + on-disk orphans) — MEDIA-02/03"
+                              IsChecked="{Binding EnableMediaScan}" />
                 </StackPanel>
 
                 <!-- External Tools (moved here from the dockable Settings panel, #13) -->
