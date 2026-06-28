@@ -516,3 +516,67 @@ public sealed partial class TodoScanViewModel : ObservableObject
                 if (!string.IsNullOrEmpty(d.FilePath) && seen.Add(d.FilePath)) yield return d.FilePath;
     }
 }
+
+// ───────────────────────────── NOTE-04 — project metadata editor ─────────────────────────────
+
+/// <summary>NOTE-04: a form for project-level metadata, persisted in a per-root sidecar.</summary>
+public sealed partial class ProjectMetadataViewModel : ObservableObject
+{
+    private readonly IWorkspaceSession? _session;
+    private readonly IProjectMetadataStore? _store;
+    private bool _loading;
+
+    [ObservableProperty] private string _name = string.Empty;
+    [ObservableProperty] private string _region = string.Empty;
+    [ObservableProperty] private string _crs = string.Empty;
+    [ObservableProperty] private string _declinationSource = string.Empty;
+    [ObservableProperty] private string _license = string.Empty;
+    [ObservableProperty] private string _notes = string.Empty;
+    [ObservableProperty] private string _status = string.Empty;
+    /// <summary>False until a workspace root exists (no project → nothing to store metadata against).</summary>
+    [ObservableProperty] private bool _hasProject;
+
+    public ProjectMetadataViewModel() { } // design-time
+
+    public ProjectMetadataViewModel(IWorkspaceSession session, IProjectMetadataStore store)
+    {
+        _session = session;
+        _store = store;
+        _session.RootChanged += (_, _) => ProjectFormat.OnUi(Load);
+        Load();
+    }
+
+    [RelayCommand]
+    private void Save()
+    {
+        if (_store is null || _session?.RootPath is not { } root) { Status = "Open a project first."; return; }
+        _store.Save(root, new ProjectMetadata
+        {
+            Name = Name, Region = Region, Crs = Crs,
+            DeclinationSource = DeclinationSource, License = License, Notes = Notes,
+        });
+        Status = $"Saved ({DateTime.Now:HH:mm}).";
+    }
+
+    [RelayCommand] private void Reload() => Load();
+
+    private void Load()
+    {
+        HasProject = _session?.RootPath is { Length: > 0 };
+        var md = _store?.Load(_session?.RootPath) ?? ProjectMetadata.Empty;
+        _loading = true;
+        Name = md.Name; Region = md.Region; Crs = md.Crs;
+        DeclinationSource = md.DeclinationSource; License = md.License; Notes = md.Notes;
+        _loading = false;
+        Status = HasProject ? string.Empty : "No project open.";
+    }
+
+    // Clear the "saved" hint as soon as the user edits a field.
+    partial void OnNameChanged(string value) => Touch();
+    partial void OnRegionChanged(string value) => Touch();
+    partial void OnCrsChanged(string value) => Touch();
+    partial void OnDeclinationSourceChanged(string value) => Touch();
+    partial void OnLicenseChanged(string value) => Touch();
+    partial void OnNotesChanged(string value) => Touch();
+    private void Touch() { if (!_loading && HasProject) Status = "Unsaved changes."; }
+}

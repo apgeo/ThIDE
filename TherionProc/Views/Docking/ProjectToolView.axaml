@@ -314,5 +314,37 @@
                 </DataGrid>
             </DockPanel>
         </TabItem>
+
+        <!-- NOTE-04 — project metadata editor -->
+        <TabItem Header="Metadata">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="10" Spacing="8" MaxWidth="560" HorizontalAlignment="Left">
+                    <TextBlock Text="Project metadata (stored in a sidecar, not in the .th source)."
+                               Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
+                    <Grid ColumnDefinitions="130,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto"
+                          IsEnabled="{Binding Metadata.HasProject}">
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Name" VerticalAlignment="Center" />
+                        <TextBox   Grid.Row="0" Grid.Column="1" Text="{Binding Metadata.Name}" Margin="0,0,0,4" />
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Region" VerticalAlignment="Center" />
+                        <TextBox   Grid.Row="1" Grid.Column="1" Text="{Binding Metadata.Region}" Margin="0,0,0,4" />
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="CRS" VerticalAlignment="Center" />
+                        <TextBox   Grid.Row="2" Grid.Column="1" Text="{Binding Metadata.Crs}" Watermark="e.g. EPSG:3844" Margin="0,0,0,4" />
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Declination source" VerticalAlignment="Center" />
+                        <TextBox   Grid.Row="3" Grid.Column="1" Text="{Binding Metadata.DeclinationSource}" Margin="0,0,0,4" />
+                        <TextBlock Grid.Row="4" Grid.Column="0" Text="License" VerticalAlignment="Center" />
+                        <TextBox   Grid.Row="4" Grid.Column="1" Text="{Binding Metadata.License}" />
+                    </Grid>
+                    <TextBlock Text="Notes" />
+                    <TextBox Text="{Binding Metadata.Notes}" AcceptsReturn="True" TextWrapping="Wrap"
+                             MinHeight="80" IsEnabled="{Binding Metadata.HasProject}" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="Save" Command="{Binding Metadata.SaveCommand}"
+                                IsEnabled="{Binding Metadata.HasProject}" />
+                        <Button Content="Reload" Command="{Binding Metadata.ReloadCommand}" />
+                        <TextBlock Text="{Binding Metadata.Status}" Foreground="Gray" VerticalAlignment="Center" />
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+        </TabItem>
     </TabControl>
 </UserControl>
