@@ -948,6 +948,30 @@ public partial class MainWindowViewModel : ViewModelBase
         catch (Exception ex) { StatusText = ex.Message; _log?.Warning($"Table export failed: {ex.Message}"); _notifications.Error("Table export failed", ex.Message); }
     }
 
+    /// <summary>PUB-01: generate a one-click HTML survey report and open it.</summary>
+    [RelayCommand]
+    private async Task GenerateReport()
+    {
+        if (_picker is null) return;
+        var model = _documents.Workspace;
+        if (model is null || model.PerFile.Count == 0) { StatusText = "No project open to report on."; return; }
+
+        var name = _session?.ActiveThconfig is { } a
+            ? System.IO.Path.GetFileNameWithoutExtension(a.FullPath)
+            : "survey";
+        try
+        {
+            var html = Therion.Semantics.SurveyReport.BuildHtml(model, name);
+            var outPath = await _picker.PickSaveFileAsync("Save survey report", name + "-report.html").ConfigureAwait(true);
+            if (string.IsNullOrEmpty(outPath)) return;
+            System.IO.File.WriteAllText(outPath, html);
+            StatusText = $"Report written → {System.IO.Path.GetFileName(outPath)}";
+            try { (AppServices.Provider.GetService(typeof(Therion.Build.IShellOpener)) as Therion.Build.IShellOpener)?.Open(outPath); }
+            catch { /* opening is best-effort */ }
+        }
+        catch (Exception ex) { StatusText = ex.Message; _log?.Warning($"Report failed: {ex.Message}"); _notifications.Error("Report failed", ex.Message); }
+    }
+
     /// <summary>Wraps an HTML table fragment in a minimal standalone document.</summary>
     private static string HtmlDocument(string title, string bodyHtml) =>
         $"<!doctype html>\n<html><head><meta charset=\"utf-8\"><title>{System.Net.WebUtility.HtmlEncode(title)}</title>\n" +

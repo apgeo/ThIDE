@@ -226,6 +226,8 @@
                         <MenuItem Header="LaTeX…"    Command="{Binding ExportTableCommand}" CommandParameter="shots|latex" />
                     </MenuItem>
                 </MenuItem>
+                <!-- PUB-01: one-click survey report. -->
+                <MenuItem Header="Generate survey report (HTML)…" Command="{Binding GenerateReportCommand}" />
                 <Separator />
                 <MenuItem Header="New scrap (.th2)…" Command="{Binding NewScrapScaffoldCommand}" />
             </MenuItem>
