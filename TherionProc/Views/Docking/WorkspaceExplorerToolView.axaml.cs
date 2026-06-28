@@ -234,11 +234,24 @@ public partial class WorkspaceExplorerToolView : UserControl
         Explorer?.RevealFile(path);
     }
 
-    private void OnCtxDelete(object? sender, RoutedEventArgs e)
+    private async void OnCtxDelete(object? sender, RoutedEventArgs e)
     {
         if (Ctx()?.FullPath is not { } path) return;
+        if (TopLevel.GetTopLevel(this) is not Window owner) return;
+
+        // TRUST-04: confirm before deleting. The message states whether it's undoable (trash) or
+        // permanent, so the user knows the stakes.
+        var fileOps = Service<IFileOperations>();
+        var label = fileOps?.DeleteActionLabel ?? "Delete";
+        bool undoable = fileOps?.DeleteIsUndoable ?? false;
+        var name = System.IO.Path.GetFileName(path);
+        var message = undoable
+            ? $"{label}:\n\n{name}\n\nYou can restore it from the trash/recycle bin."
+            : $"Permanently delete?\n\n{name}\n\nThis cannot be undone.";
+
+        if (!await new ConfirmDialog("Delete", message, label).ShowAsync(owner).ConfigureAwait(true)) return;
         // Cross-platform delete (recycle bin / trash / permanent) via the OS-specific service.
-        if (Service<IFileOperations>()?.Delete(path) == true) Explorer?.Refresh();
+        if (fileOps?.Delete(path) == true) Explorer?.Refresh();
     }
 
     private void OnCtxCopyFull(object? sender, RoutedEventArgs e)
