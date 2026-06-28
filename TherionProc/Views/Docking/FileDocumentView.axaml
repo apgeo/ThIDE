@@ -53,8 +53,12 @@
                 <!-- Stage 1: changed-on-disk prompt. -->
                 <DockPanel IsVisible="{Binding !ConfirmDiscardPending}">
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
+                        <!-- TRUST-05: reload (use disk) / compare / keep-mine-to-disk / dismiss. -->
                         <Button Content="Reload" Padding="8,2" Command="{Binding ReloadExternalCommand}"
                                 IsVisible="{Binding !ExternalDeleted}" />
+                        <Button Content="Compare" Padding="8,2" Command="{Binding CompareExternalCommand}"
+                                IsVisible="{Binding !ExternalDeleted}" />
+                        <Button Content="Keep mine (save)" Padding="8,2" Command="{Binding OverwriteExternalCommand}" />
                         <Button Content="Dismiss" Padding="8,2" Command="{Binding DismissExternalCommand}" />
                     </StackPanel>
                     <TextBlock Text="{Binding ExternalChangeText}" Foreground="White"

@@ -427,7 +427,22 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
     {
         var doc = new FileDocumentViewModel(path, text, new ViewModels.MeasurementsViewModel(), _commands, _settings);
         doc.Reparsed += (_, _) => { if (ReferenceEquals(doc, Active)) Raise(); };
+        // TRUST-05: "Keep mine (save to disk)" — write the editor text to disk (overwrite the
+        // external change or recreate a deleted file), suppressing the self-write watcher echo.
+        doc.SaveToDiskRequested += async (_, _) => await OverwriteToDiskAsync(doc).ConfigureAwait(true);
         return doc;
+    }
+
+    private async Task OverwriteToDiskAsync(FileDocumentViewModel doc)
+    {
+        try
+        {
+            var text = EditorTextCleanup.ApplyOnSave(doc.DocumentText, _settings?.Current);
+            _session.SuppressSelfWrite(doc.FilePath);
+            await File.WriteAllTextAsync(doc.FilePath, text).ConfigureAwait(true);
+            doc.SetText(text, reparse: true);
+        }
+        catch { /* best-effort; the banner is already cleared */ }
     }
 
     private const int MaxRecentFiles = 64;

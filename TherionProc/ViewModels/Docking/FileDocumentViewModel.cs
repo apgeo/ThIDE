@@ -584,6 +584,30 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
     [RelayCommand]
     private void DismissExternal() => ClearExternalBanner();
 
+    /// <summary>TRUST-05: keep the editor's version by writing it to disk (overwrites the external
+    /// change, or recreates a deleted file). The document service performs the actual save.</summary>
+    [RelayCommand]
+    private void OverwriteExternal()
+    {
+        SaveToDiskRequested?.Invoke(this, EventArgs.Empty);
+        ClearExternalBanner();
+    }
+
+    /// <summary>Raised when the user chooses "Keep mine (save to disk)" on the external-change banner.</summary>
+    public event EventHandler? SaveToDiskRequested;
+
+    /// <summary>TRUST-05: show a read-only side-by-side comparison of the on-disk vs editor text.</summary>
+    [RelayCommand]
+    private void CompareExternal()
+    {
+        string disk = string.Empty;
+        try { if (System.IO.File.Exists(FilePath)) disk = System.IO.File.ReadAllText(FilePath); } catch { }
+        CompareExternalRequested?.Invoke(this, disk);
+    }
+
+    /// <summary>Raised with the on-disk text when the user clicks "Compare" (the view opens a diff).</summary>
+    public event EventHandler<string>? CompareExternalRequested;
+
     [RelayCommand]
     private void DismissInfo() => InfoBanner = null;
 

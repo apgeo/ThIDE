@@ -151,6 +151,7 @@ public partial class FileDocumentView : UserControl
             _vm.ScrollToSpanRequested -= OnScrollRequested;
             _vm.OpenLimitSettingsRequested -= OnOpenLimitSettings;
             _vm.SaveCleanupRequested -= OnSaveCleanupRequested;
+            _vm.CompareExternalRequested -= OnCompareExternalRequested;
         }
         DisposeMapiahWatcher(); // the watcher is tied to the previous document's file
         _vm = DataContext as FileDocumentViewModel;
@@ -159,10 +160,19 @@ public partial class FileDocumentView : UserControl
             _vm.ScrollToSpanRequested += OnScrollRequested;
             _vm.OpenLimitSettingsRequested += OnOpenLimitSettings;
             _vm.SaveCleanupRequested += OnSaveCleanupRequested;
+            _vm.CompareExternalRequested += OnCompareExternalRequested;
             ApplyPendingScrollDeferred();
             if (_vm.Measurements is { } mvm)
                 mvm.PropertyChanged += OnMeasurementsPropertyChanged;
         }
+    }
+
+    // TRUST-05: "Compare" on the external-change banner → read-only disk-vs-editor diff.
+    private void OnCompareExternalRequested(object? sender, string diskText)
+    {
+        if (_vm is null || TopLevel.GetTopLevel(this) is not Window owner) return;
+        new DiffDialog($"Compare — {System.IO.Path.GetFileName(_vm.FilePath)}",
+            "On disk", diskText, "In editor (unsaved)", _vm.DocumentText).ShowDialog(owner);
     }
 
     // Large-file banner "Settings…" button (#10): open Preferences at the Performance section.
