@@ -25,6 +25,8 @@
   <ItemGroup>
     <!-- Exercises the app-layer services (workspace session, path formatting, discovery). -->
     <ProjectReference Include="..\..\TherionProc\TherionProc.csproj" />
+    <!-- EXT-05: LSP diagnostic provider. -->
+    <ProjectReference Include="..\..\src\Therion.Lsp\Therion.Lsp.csproj" />
   </ItemGroup>
 
 </Project>

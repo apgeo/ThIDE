@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>Therion.Lsp</RootNamespace>
+    <AssemblyName>therion-lsp</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Therion.Core\Therion.Core.csproj" />
+    <ProjectReference Include="..\Therion.Syntax\Therion.Syntax.csproj" />
+    <ProjectReference Include="..\Therion.Semantics\Therion.Semantics.csproj" />
+  </ItemGroup>
+
+</Project>
