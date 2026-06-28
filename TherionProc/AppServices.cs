@@ -46,6 +46,13 @@ internal static class AppServices
         }
     }
 
+    /// <summary>Reads persisted settings before the container is built (EXT-04 plugin gate).</summary>
+    private static AppSettings LoadInitialSettings()
+    {
+        try { return new AppSettingsService().Current; }
+        catch { return AppSettings.Default; }
+    }
+
     public static IServiceProvider Build()
     {
         var services = new ServiceCollection();
@@ -98,6 +105,13 @@ internal static class AppServices
         var ruleConfig = LoadRuleConfig();
         services.AddTherionSemantics(ruleConfig);
         services.AddTherionBuiltinSemanticRules();
+
+        // EXT-04: load external plugin semantic rules from the plugins folder (gated by the
+        // EnablePlugins setting, default on; disable for big projects). Registered as ISemanticRule
+        // singletons so the rule runner resolves them alongside the built-ins.
+        if (LoadInitialSettings().EnablePlugins)
+            foreach (var rule in PluginLoader.LoadSemanticRules(PluginLoader.DefaultPluginDirectory()))
+                services.AddSingleton<ISemanticRule>(rule);
 
         // Syntax extensibility (�4.4) � command handlers register via ICommandHandler.
         services.AddTherionCommands();
