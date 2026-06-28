@@ -948,6 +948,26 @@ public partial class MainWindowViewModel : ViewModelBase
         catch (Exception ex) { StatusText = ex.Message; _log?.Warning($"Table export failed: {ex.Message}"); _notifications.Error("Table export failed", ex.Message); }
     }
 
+    /// <summary>MEDIA-04: import GPX waypoints/track points → a Therion survey of fixed stations.</summary>
+    [RelayCommand]
+    private async Task ImportGpx()
+    {
+        if (_picker is null) return;
+        var src = await _picker.PickOpenFileAsync("Import GPX waypoints").ConfigureAwait(true);
+        if (string.IsNullOrEmpty(src)) return;
+        try
+        {
+            var name = System.IO.Path.GetFileNameWithoutExtension(src);
+            var th = Therion.Workspace.Import.GpxImporter.ToTherion(System.IO.File.ReadAllText(src), name);
+            var outPath = await _picker.PickSaveFileAsync("Save fixed-stations Therion file", name + "_gps.th").ConfigureAwait(true);
+            if (string.IsNullOrEmpty(outPath)) return;
+            System.IO.File.WriteAllText(outPath, th);
+            await _documents.OpenFileAsync(outPath).ConfigureAwait(true);
+            StatusText = $"Imported GPX → {System.IO.Path.GetFileName(outPath)}";
+        }
+        catch (Exception ex) { StatusText = ex.Message; _log?.Warning($"GPX import failed: {ex.Message}"); _notifications.Error("GPX import failed", ex.Message); }
+    }
+
     /// <summary>PUB-01: generate a one-click HTML survey report and open it.</summary>
     [RelayCommand]
     private async Task GenerateReport()

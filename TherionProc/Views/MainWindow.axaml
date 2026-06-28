@@ -204,6 +204,7 @@
             <MenuItem Header="Tools">
                 <MenuItem Header="Import survey (Survex / Compass)…" Command="{Binding ImportSurveyCommand}" />
                 <MenuItem Header="Import DEM as surface (.asc)…" Command="{Binding ImportDemSurfaceCommand}" />
+                <MenuItem Header="Import GPX waypoints (→ fix)…" Command="{Binding ImportGpxCommand}" />
                 <Separator />
                 <MenuItem Header="Export entrances / fixed points">
                     <MenuItem Header="KML…"      Command="{Binding ExportGisCommand}" CommandParameter="kml" />
