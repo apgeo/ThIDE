@@ -684,9 +684,36 @@ public partial class MainWindow : Window
             if (item is not IStorageFile file) continue;
             var path = file.TryGetLocalPath();
             if (string.IsNullOrEmpty(path)) continue;
-            if (OpenableExtensions.Contains(Path.GetExtension(path)))
-                _ = docs.OpenFileAsync(path);
+            var ext = Path.GetExtension(path);
+            if (OpenableExtensions.Contains(ext)) _ = docs.OpenFileAsync(path);
+            else if (ImageExtensions.Contains(ext)) ScaffoldScrapForImage(path, docs);   // MEDIA-05
         }
+    }
+
+    // MEDIA-05 — dropping a scan image scaffolds a .th2 scrap wired to it (Therion's scrap
+    // `-sketch <image>`), opens it, and copies the `input` line for the survey's .th.
+    private static readonly HashSet<string> ImageExtensions = new(StringComparer.OrdinalIgnoreCase)
+        { ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".tif", ".tiff", ".xvi" };
+
+    private void ScaffoldScrapForImage(string imagePath, IDocumentService docs)
+    {
+        try
+        {
+            var dir = Path.GetDirectoryName(imagePath);
+            if (string.IsNullOrEmpty(dir)) return;
+            var id = Path.GetFileNameWithoutExtension(imagePath);
+            var th2Path = Path.Combine(dir, id + ".th2");
+            if (!File.Exists(th2Path))
+                File.WriteAllText(th2Path,
+                    Therion.Workspace.Import.Th2Scaffold.NewScrap(id, "plan", Path.GetFileName(imagePath)));
+            _ = docs.OpenFileAsync(th2Path);
+
+            var inputLine = Therion.Workspace.Import.Th2Scaffold.InputLine(Path.GetFileName(th2Path));
+            Services.ClipboardHelper.SetText(inputLine);
+            (DataContext as MainWindowViewModel)?.Notifications.Success(
+                "Scrap created", $"Wired '{Path.GetFileName(imagePath)}' to {id}.th2 — '{inputLine}' copied to clipboard.");
+        }
+        catch { /* best-effort drop */ }
     }
 
     // ----- UTIL calculators (Tools ▸ Calculators) --------------------------
