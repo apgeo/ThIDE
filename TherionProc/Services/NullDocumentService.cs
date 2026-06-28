@@ -48,6 +48,7 @@ internal sealed class NullDocumentService : IDocumentService
 #pragma warning restore CS0067
 
     public Task OpenFileAsync(string absolutePath, CancellationToken ct = default) => Task.CompletedTask;
+    public Task ForceOpenFileAsync(string absolutePath, CancellationToken ct = default) => Task.CompletedTask;
     public Task OpenFolderAsync(string folderPath, CancellationToken ct = default) => Task.CompletedTask;
     public Task NavigateToSpanAsync(Therion.Core.SourceSpan span, CancellationToken ct = default) => Task.CompletedTask;
     public Task WriteCurrentTextAsync(string newText, CancellationToken ct = default) => Task.CompletedTask;

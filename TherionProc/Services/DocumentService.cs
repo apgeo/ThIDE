@@ -52,6 +52,8 @@ public interface IDocumentService
     event EventHandler? DocumentChanged;
 
     Task OpenFileAsync(string absolutePath, CancellationToken ct = default);
+    /// <summary>TRUST-03: opens a file bypassing the binary/huge-file guard (the "Open anyway" path).</summary>
+    Task ForceOpenFileAsync(string absolutePath, CancellationToken ct = default);
     Task OpenFolderAsync(string folderPath, CancellationToken ct = default);
     /// <summary>Opens the file a span lives in (if needed) and scrolls/flashes the editor to it.</summary>
     Task NavigateToSpanAsync(Therion.Core.SourceSpan span, CancellationToken ct = default);
@@ -182,7 +184,10 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
         _session.ExternalFileChanged += (_, e) => OnExternalFileChanged(e);
     }
 
-    public async Task OpenFileAsync(string absolutePath, CancellationToken ct = default)
+    public Task OpenFileAsync(string absolutePath, CancellationToken ct = default) => OpenFileAsync(absolutePath, force: false, ct);
+    public Task ForceOpenFileAsync(string absolutePath, CancellationToken ct = default) => OpenFileAsync(absolutePath, force: true, ct);
+
+    private async Task OpenFileAsync(string absolutePath, bool force, CancellationToken ct = default)
     {
         if (string.IsNullOrEmpty(absolutePath)) return;
         var full = Path.GetFullPath(absolutePath);
@@ -193,6 +198,15 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
         {
             OpenInDockRequested?.Invoke(this, already);
             SetActive(already);
+            return;
+        }
+
+        // TRUST-03: don't load a binary blob or a huge file into the text editor (it would hang /
+        // show garbage). Offer "Open anyway" via a notification instead of silently doing it.
+        if (!force && FileGuard.ShouldBlockTextOpen(full) is { } reason)
+        {
+            _notifications?.Warning("Not opened as text",
+                $"{Path.GetFileName(full)}: {reason}", "Open anyway", () => _ = ForceOpenFileAsync(full));
             return;
         }
 
