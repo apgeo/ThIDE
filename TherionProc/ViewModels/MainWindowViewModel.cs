@@ -914,6 +914,46 @@ public partial class MainWindowViewModel : ViewModelBase
         catch (Exception ex) { StatusText = ex.Message; _log?.Warning($"GIS export failed: {ex.Message}"); _notifications.Error("GIS export failed", ex.Message); }
     }
 
+    /// <summary>PUB-02: export the stations or shots table to CSV / Markdown / HTML / LaTeX.
+    /// CommandParameter is "&lt;which&gt;|&lt;format&gt;", e.g. "shots|html".</summary>
+    [RelayCommand]
+    private async Task ExportTable(string? spec)
+    {
+        if (_picker is null) return;
+        var model = _documents.Workspace;
+        if (model is null || model.PerFile.Count == 0) { StatusText = "No project open to export."; return; }
+
+        var parts = (spec ?? "shots|csv").Split('|');
+        var which = parts[0].ToLowerInvariant();
+        var format = (parts.Length > 1 ? parts[1] : "csv").ToLowerInvariant();
+
+        var (headers, rows) = which == "stations"
+            ? Therion.Semantics.SurveyTables.StationsTable(model)
+            : Therion.Semantics.SurveyTables.ShotsTable(model);
+
+        var (text, ext) = format switch
+        {
+            "markdown" => (DataExport.ToMarkdown(headers, rows), ".md"),
+            "html"     => (HtmlDocument($"{which} table", DataExport.ToHtml(headers, rows)), ".html"),
+            "latex"    => (DataExport.ToLatex(headers, rows), ".tex"),
+            _          => (DataExport.ToCsv(headers, rows), ".csv"),
+        };
+        try
+        {
+            var outPath = await _picker.PickSaveFileAsync($"Export {which} table", which + ext).ConfigureAwait(true);
+            if (string.IsNullOrEmpty(outPath)) return;
+            System.IO.File.WriteAllText(outPath, text);
+            StatusText = $"Exported {rows.Count} {which} row(s) → {System.IO.Path.GetFileName(outPath)}";
+        }
+        catch (Exception ex) { StatusText = ex.Message; _log?.Warning($"Table export failed: {ex.Message}"); _notifications.Error("Table export failed", ex.Message); }
+    }
+
+    /// <summary>Wraps an HTML table fragment in a minimal standalone document.</summary>
+    private static string HtmlDocument(string title, string bodyHtml) =>
+        $"<!doctype html>\n<html><head><meta charset=\"utf-8\"><title>{System.Net.WebUtility.HtmlEncode(title)}</title>\n" +
+        "<style>body{font-family:sans-serif}table{border-collapse:collapse}th,td{border:1px solid #ccc;padding:3px 8px;text-align:left}</style>\n" +
+        $"</head><body>\n<h2>{System.Net.WebUtility.HtmlEncode(title)}</h2>\n{bodyHtml}</body></html>\n";
+
     /// <summary>GIS-03: convert an ESRI ASCII grid (.asc) into a Therion surface .th.</summary>
     [RelayCommand]
     private async Task ImportDemSurface()

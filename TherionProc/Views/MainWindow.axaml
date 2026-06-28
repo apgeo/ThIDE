@@ -211,6 +211,21 @@
                     <MenuItem Header="GPX…"      Command="{Binding ExportGisCommand}" CommandParameter="gpx" />
                     <MenuItem Header="CSV…"      Command="{Binding ExportGisCommand}" CommandParameter="csv" />
                 </MenuItem>
+                <!-- PUB-02: station / shot data tables. -->
+                <MenuItem Header="Export data table">
+                    <MenuItem Header="Stations">
+                        <MenuItem Header="CSV…"      Command="{Binding ExportTableCommand}" CommandParameter="stations|csv" />
+                        <MenuItem Header="Markdown…" Command="{Binding ExportTableCommand}" CommandParameter="stations|markdown" />
+                        <MenuItem Header="HTML…"     Command="{Binding ExportTableCommand}" CommandParameter="stations|html" />
+                        <MenuItem Header="LaTeX…"    Command="{Binding ExportTableCommand}" CommandParameter="stations|latex" />
+                    </MenuItem>
+                    <MenuItem Header="Shots">
+                        <MenuItem Header="CSV…"      Command="{Binding ExportTableCommand}" CommandParameter="shots|csv" />
+                        <MenuItem Header="Markdown…" Command="{Binding ExportTableCommand}" CommandParameter="shots|markdown" />
+                        <MenuItem Header="HTML…"     Command="{Binding ExportTableCommand}" CommandParameter="shots|html" />
+                        <MenuItem Header="LaTeX…"    Command="{Binding ExportTableCommand}" CommandParameter="shots|latex" />
+                    </MenuItem>
+                </MenuItem>
                 <Separator />
                 <MenuItem Header="New scrap (.th2)…" Command="{Binding NewScrapScaffoldCommand}" />
             </MenuItem>

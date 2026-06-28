@@ -32,11 +32,66 @@ public static class DataExport
         return sb.ToString();
     }
 
+    /// <summary>An HTML <c>&lt;table&gt;</c> fragment (cells HTML-escaped). PUB-02.</summary>
+    public static string ToHtml(IReadOnlyList<string> headers, IEnumerable<IReadOnlyList<string>> rows)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("<table>");
+        sb.Append("  <thead><tr>");
+        foreach (var h in headers) sb.Append("<th>").Append(HtmlCell(h)).Append("</th>");
+        sb.AppendLine("</tr></thead>");
+        sb.AppendLine("  <tbody>");
+        foreach (var row in rows)
+        {
+            sb.Append("    <tr>");
+            foreach (var c in row) sb.Append("<td>").Append(HtmlCell(c)).Append("</td>");
+            sb.AppendLine("</tr>");
+        }
+        sb.AppendLine("  </tbody>");
+        sb.AppendLine("</table>");
+        return sb.ToString();
+    }
+
+    /// <summary>A LaTeX <c>tabular</c> environment (cells escaped for LaTeX). PUB-02.</summary>
+    public static string ToLatex(IReadOnlyList<string> headers, IEnumerable<IReadOnlyList<string>> rows)
+    {
+        var sb = new StringBuilder();
+        sb.Append("\\begin{tabular}{").Append(string.Concat(headers.Select(_ => "l"))).AppendLine("}");
+        sb.AppendLine("\\hline");
+        sb.Append(string.Join(" & ", headers.Select(LatexCell))).AppendLine(" \\\\");
+        sb.AppendLine("\\hline");
+        foreach (var row in rows)
+            sb.Append(string.Join(" & ", row.Select(LatexCell))).AppendLine(" \\\\");
+        sb.AppendLine("\\hline");
+        sb.AppendLine("\\end{tabular}");
+        return sb.ToString();
+    }
+
     private static string CsvField(string? value)
     {
         var v = value ?? string.Empty;
         if (v.IndexOfAny(new[] { ',', '"', '\n', '\r' }) < 0) return v;
         return "\"" + v.Replace("\"", "\"\"") + "\"";
+    }
+
+    private static string HtmlCell(string? value) =>
+        (value ?? string.Empty)
+            .Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;").Replace("\"", "&quot;");
+
+    private static string LatexCell(string? value)
+    {
+        var v = value ?? string.Empty;
+        var sb = new StringBuilder(v.Length);
+        foreach (var c in v)
+            sb.Append(c switch
+            {
+                '\\' => "\\textbackslash{}",
+                '&' or '%' or '$' or '#' or '_' or '{' or '}' => "\\" + c,
+                '~' => "\\textasciitilde{}",
+                '^' => "\\textasciicircum{}",
+                _ => c.ToString(),
+            });
+        return sb.ToString();
     }
 
     private static string MdCell(string? value) =>

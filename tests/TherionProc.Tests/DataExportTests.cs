@@ -34,4 +34,28 @@ public class DataExportTests
         Assert.Contains("| --- | --- |", md);
         Assert.Contains("x\\|y", md);
     }
+
+    // PUB-02
+
+    [Fact]
+    public void Html_escapes_cells_and_renders_table()
+    {
+        var html = DataExport.ToHtml(new[] { "A" },
+            new IReadOnlyList<string>[] { new[] { "<x> & \"y\"" } });
+        Assert.Contains("<table>", html);
+        Assert.Contains("<th>A</th>", html);
+        Assert.Contains("&lt;x&gt; &amp; &quot;y&quot;", html);
+    }
+
+    [Fact]
+    public void Latex_escapes_specials_and_renders_tabular()
+    {
+        var tex = DataExport.ToLatex(new[] { "A", "B" },
+            new IReadOnlyList<string>[] { new[] { "a_b", "100%" } });
+        Assert.Contains("\\begin{tabular}{ll}", tex);
+        Assert.Contains("A & B \\\\", tex);
+        Assert.Contains("a\\_b", tex);
+        Assert.Contains("100\\%", tex);
+        Assert.Contains("\\end{tabular}", tex);
+    }
 }
