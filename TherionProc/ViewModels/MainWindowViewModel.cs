@@ -37,6 +37,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly ILogService? _log;   // #3 in-app activity log
     private readonly INotificationService _notifications;   // UX-07 toast/bell center
     private readonly ICrashRecoveryService? _crashRecovery; // PERF-06 safe-mode + buffer recovery
+    private readonly IScriptHookService? _hooks;            // EXT-03 on-build hook
     private readonly IWorkspaceSession? _session;
     private readonly DockFactory _factory;
     private IStoragePicker? _picker;
@@ -415,10 +416,12 @@ public partial class MainWindowViewModel : ViewModelBase
         QuickOpenProvider? quickOpen = null,
         ILogService? log = null,
         INotificationService? notifications = null,
-        ICrashRecoveryService? crashRecovery = null)
+        ICrashRecoveryService? crashRecovery = null,
+        IScriptHookService? hooks = null)
     {
         _log = log;
         _crashRecovery = crashRecovery;
+        _hooks = hooks;
         _notifications = notifications ?? new NotificationService();
         _notifications.UnreadChanged += (_, _) => OnUiThread(() =>
         {
@@ -560,6 +563,8 @@ public partial class MainWindowViewModel : ViewModelBase
         Build.NavigateRequested += (_, span) => NavigateTo(span);
         // Surface the Compiler Output panel when a build starts (#2).
         Build.BuildStarted += (_, _) => OnUiThread(() => _factory.ShowCompilerOutput());
+        // EXT-03: run the on-build script hook (active thconfig as {file}).
+        Build.BuildStarted += (_, _) => _hooks?.Run(ScriptHookEvent.Build, _session?.ActiveThconfig?.FullPath);
 
         Refresh();
         RestoreSession();

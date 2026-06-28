@@ -158,6 +158,7 @@ internal static class AppServices
         services.AddSingleton<ICrashRecoveryService, CrashRecoveryService>(); // PERF-06 safe-mode + buffer recovery
         services.AddSingleton<IWorkspaceSymbolIndexStore, WorkspaceSymbolIndexStore>(); // PERF-03 persistent symbol index
         services.AddSingleton<ITelemetryService, LocalTelemetryService>();    // REL-05 opt-in local telemetry/crash reports
+        services.AddSingleton<IScriptHookService, ScriptHookService>();       // EXT-03 scripting/macro hooks
         services.AddSingleton<IMapRenderService, MapRenderService>();   // VIS-03/05 in-app rendering
         services.AddSingleton<ICaveview3DAssetHost, Caveview3DAssetHost>(); // VIS-01 loopback asset server
         services.AddSingleton<IStationSourceResolver, StationSourceResolver>(); // VIS-01 label → .th span

@@ -322,6 +322,37 @@
                     </DataGrid>
                 </DockPanel>
 
+                <!-- Extensions (EXT-03 hooks, EXT-04 plugins) -->
+                <StackPanel Spacing="10" IsVisible="{Binding IsExtensions}">
+                    <TextBlock Text="Extensions" FontSize="16" FontWeight="Bold" />
+
+                    <!-- EXT-03: scripting / macro hooks. -->
+                    <CheckBox Content="Enable script hooks (run a command on open / save / build)"
+                              IsChecked="{Binding EnableScriptHooks}" />
+                    <TextBlock Text="Use {file} for the file path (active thconfig for build). Disable for big projects."
+                               Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
+                    <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,Auto,Auto" Margin="0,2,0,0"
+                          IsEnabled="{Binding EnableScriptHooks}">
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="On open" VerticalAlignment="Center" />
+                        <TextBox   Grid.Row="0" Grid.Column="1" Text="{Binding HookOnOpen}" Watermark="(command)" Margin="0,0,0,4" />
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="On save" VerticalAlignment="Center" />
+                        <TextBox   Grid.Row="1" Grid.Column="1" Text="{Binding HookOnSave}" Watermark="(command)" Margin="0,0,0,4" />
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="On build" VerticalAlignment="Center" />
+                        <TextBox   Grid.Row="2" Grid.Column="1" Text="{Binding HookOnBuild}" Watermark="(command)" />
+                    </Grid>
+
+                    <Separator Margin="0,6" />
+                    <!-- EXT-04: plugin assemblies. -->
+                    <CheckBox Content="Load plugins (custom semantic rules from the plugins folder)"
+                              IsChecked="{Binding EnablePlugins}" />
+                    <TextBlock Text="Drop plugin .dll files (types implementing ISemanticRule) in %AppData%/TherionProc/plugins. Loaded at startup; disable for performance. Changes apply on restart."
+                               Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
+
+                    <Separator Margin="0,6" />
+                    <TextBlock Text="The headless CLI (therion-cli) and the LSP server (therion-lsp) are separate executables — see docs."
+                               Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
+                </StackPanel>
+
                 <!-- Keyboard Shortcuts -->
                 <DockPanel IsVisible="{Binding IsKeyboard}" VerticalAlignment="Top">
                     <TextBlock DockPanel.Dock="Top" Text="{l:Loc Pref_Keyboard}"

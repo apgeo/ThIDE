@@ -81,6 +81,22 @@ public sealed record AppSettings
     /// <summary>Rebuild the object graph when a tracked file changes on disk (#5b).</summary>
     public bool AutoReloadGraphOnExternalChange { get; init; } = true;
 
+    // ---- scripting / macro hooks (EXT-03) ----
+    /// <summary>Run the configured hook commands on open/save/build. Adds processing time, so it
+    /// can be turned off for big projects (default on, but hooks only fire when commands are set).</summary>
+    public bool EnableScriptHooks { get; init; } = true;
+    /// <summary>Shell command run when a file is opened (<c>{file}</c> is substituted), or null.</summary>
+    public string? HookOnOpen { get; init; }
+    /// <summary>Shell command run when a file is saved (<c>{file}</c> is substituted), or null.</summary>
+    public string? HookOnSave { get; init; }
+    /// <summary>Shell command run when a build starts (<c>{file}</c> = active thconfig), or null.</summary>
+    public string? HookOnBuild { get; init; }
+
+    // ---- plugins (EXT-04) ----
+    /// <summary>Load external plugin assemblies (custom semantic rules) from the plugins folder.
+    /// Plugin rules run during analysis, so this can be disabled for performance (default on).</summary>
+    public bool EnablePlugins { get; init; } = true;
+
     // ---- telemetry (REL-05) ----
     /// <summary>Opt-in: record anonymous usage events + crash reports to LOCAL files only. Off by default.</summary>
     public bool TelemetryEnabled { get; init; }

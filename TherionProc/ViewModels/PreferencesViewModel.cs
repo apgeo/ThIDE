@@ -51,6 +51,13 @@ public partial class PreferencesViewModel : ObservableObject
     [ObservableProperty] private bool _restoreSessionOnStartup;
     /// <summary>REL-05: opt-in local-only telemetry / crash reports.</summary>
     [ObservableProperty] private bool _telemetryEnabled;
+
+    // ---- extensions (EXT-03 hooks, EXT-04 plugins) ----
+    [ObservableProperty] private bool _enableScriptHooks;
+    [ObservableProperty] private string _hookOnOpen = string.Empty;
+    [ObservableProperty] private string _hookOnSave = string.Empty;
+    [ObservableProperty] private string _hookOnBuild = string.Empty;
+    [ObservableProperty] private bool _enablePlugins;
     /// <summary>0 = English, 1 = Romanian (#9 selector lives in Preferences, #11).</summary>
     [ObservableProperty] private int _languageIndex;
 
@@ -141,6 +148,11 @@ public partial class PreferencesViewModel : ObservableObject
         var s = settings.Current;
         _restoreSessionOnStartup = s.RestoreSessionOnStartup;
         _telemetryEnabled = s.TelemetryEnabled;
+        _enableScriptHooks = s.EnableScriptHooks;
+        _hookOnOpen = s.HookOnOpen ?? string.Empty;
+        _hookOnSave = s.HookOnSave ?? string.Empty;
+        _hookOnBuild = s.HookOnBuild ?? string.Empty;
+        _enablePlugins = s.EnablePlugins;
         _languageIndex = string.Equals(s.UiLanguage, "ro", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
         _editorFontSize = s.EditorFontSize;
         _indentationSize = s.IndentationSize;
@@ -198,6 +210,7 @@ public partial class PreferencesViewModel : ObservableObject
             new("build",    Resources.Tr.Get("Pref_Build"),       "build output open lox 3d pdf survex aven loch compile on save"),
             new("visualization", "Visualization",                 "preview map viewer pdf svg png live centreline plan elevation render"),
             new("external", Resources.Tr.Get("Pref_External"),    "therion loch aven survex path detect tool executable"),
+            new("extensions", "Extensions",                       "extension plugin hook script macro on save build open command run lsp cli enable disable performance"),
             new("keyboard", Resources.Tr.Get("Pref_Keyboard"),    "key binding gesture shortcut hotkey command"),
         };
         _sections = new ObservableCollection<PreferenceSection>(_allSections);
@@ -216,6 +229,7 @@ public partial class PreferencesViewModel : ObservableObject
     public bool IsBuild       => SelectedSection?.Id == "build";
     public bool IsVisualization => SelectedSection?.Id == "visualization";
     public bool IsExternal    => SelectedSection?.Id == "external";
+    public bool IsExtensions  => SelectedSection?.Id == "extensions";
     public bool IsKeyboard    => SelectedSection?.Id == "keyboard";
 
     partial void OnSelectedSectionChanged(PreferenceSection? value)
@@ -229,6 +243,7 @@ public partial class PreferencesViewModel : ObservableObject
         OnPropertyChanged(nameof(IsBuild));
         OnPropertyChanged(nameof(IsVisualization));
         OnPropertyChanged(nameof(IsExternal));
+        OnPropertyChanged(nameof(IsExtensions));
         OnPropertyChanged(nameof(IsKeyboard));
     }
 
@@ -273,6 +288,11 @@ public partial class PreferencesViewModel : ObservableObject
             EditorFeatures = editorFeatures,
             RestoreSessionOnStartup = RestoreSessionOnStartup,
             TelemetryEnabled = TelemetryEnabled,
+            EnableScriptHooks = EnableScriptHooks,
+            HookOnOpen = NullIfBlank(HookOnOpen),
+            HookOnSave = NullIfBlank(HookOnSave),
+            HookOnBuild = NullIfBlank(HookOnBuild),
+            EnablePlugins = EnablePlugins,
             UiLanguage = code,
             EditorFontSize = EditorFontSize,
             IndentationSize = IndentationSize,

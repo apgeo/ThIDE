@@ -105,6 +105,7 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
     private readonly IAppSettingsService? _settings;
     private readonly ICommandRegistry? _commands;
     private readonly INotificationService? _notifications;   // UX-07 (file-changed-on-disk toast)
+    private readonly IScriptHookService? _hooks;             // EXT-03 (on-open / on-save hooks)
 
     // UX-10: stack of recently-closed file paths (most-recent last) for Ctrl+Shift+T.
     private readonly System.Collections.Generic.List<string> _recentlyClosed = new();
@@ -165,13 +166,14 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
 
     public DocumentService(IProjectEntryPointResolver resolver, IWorkspaceSession session,
         IAppSettingsService? settings = null, ICommandRegistry? commands = null,
-        INotificationService? notifications = null)
+        INotificationService? notifications = null, IScriptHookService? hooks = null)
     {
         _resolver = resolver;
         _session = session;
         _settings = settings;
         _commands = commands;
         _notifications = notifications;
+        _hooks = hooks;
 
         // The graph changed (active config switched, or a tracked file changed on disk):
         // re-attach it to every open document and refresh orphan banners (#4).
@@ -206,6 +208,7 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
 
         OpenInDockRequested?.Invoke(this, doc);
         SetActive(doc);
+        _hooks?.Run(ScriptHookEvent.Open, full);   // EXT-03
     }
 
     public async Task OpenFolderAsync(string folderPath, CancellationToken ct = default)
@@ -391,6 +394,7 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
             // Mark the path so the watcher doesn't treat our own save as an external edit (#6).
             _session.SuppressSelfWrite(doc.FilePath);
             await File.WriteAllTextAsync(doc.FilePath, newText, ct).ConfigureAwait(true);
+            _hooks?.Run(ScriptHookEvent.Save, doc.FilePath);   // EXT-03
         }
         doc.SetText(newText, reparse: true);
     }
