@@ -235,6 +235,7 @@
                 <MenuItem Header="Calculators">
                     <MenuItem Header="Unit converter…" Click="OnUnitConverter" />
                     <MenuItem Header="Coordinate converter…" Click="OnCoordinateConverter" />
+                    <MenuItem Header="Declination calculator…" Click="OnDeclinationCalculator" />
                 </MenuItem>
             </MenuItem>
             <MenuItem Header="{Binding MenuBuild}">

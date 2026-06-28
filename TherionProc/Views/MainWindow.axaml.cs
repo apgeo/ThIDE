@@ -697,6 +697,9 @@ public partial class MainWindow : Window
     private void OnCoordinateConverter(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
         => new CoordinateConverterWindow().Show(this);
 
+    private void OnDeclinationCalculator(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        => new DeclinationWindow().Show(this);
+
     private void OnPreferencesClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
         => _ = OpenPreferences(null);
 
