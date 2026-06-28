@@ -623,6 +623,8 @@ public sealed partial class MediaManagerViewModel : ObservableObject
         if (_settings is { Current.EnableMediaScan: false }) { Summary = "Media scan disabled (Preferences ▸ Performance)."; return; }
 
         foreach (var m in MediaScanner.ScanReferenced(_documents?.Workspace)) Media.Add(m);
+        // MEDIA-03: asset health — present-but-unreferenced media on disk.
+        foreach (var m in MediaScanner.ScanOrphans(_documents?.Workspace, _session?.RootPath)) Media.Add(m);
         UpdateSummary();
     }
 

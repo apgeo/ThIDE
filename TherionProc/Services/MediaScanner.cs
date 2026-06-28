@@ -43,6 +43,41 @@ public static class MediaScanner
         return items;
     }
 
+    private static readonly string[] RasterExtensions =
+        { ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".tif", ".tiff" };
+
+    /// <summary>MEDIA-03: media files on disk under <paramref name="root"/> not referenced by any
+    /// scrap — likely stray scans. Raster dimensions are read from the file header when available.</summary>
+    public static List<MediaItem> ScanOrphans(WorkspaceSemanticModel? workspace, string? root)
+    {
+        var items = new List<MediaItem>();
+        if (string.IsNullOrEmpty(root) || !Directory.Exists(root)) return items;
+
+        var referenced = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (workspace is not null)
+            foreach (var sym in workspace.Xvi.ByPath.Values) referenced.Add(TryFull(sym.ResolvedXviPath));
+
+        try
+        {
+            var opts = new EnumerationOptions { RecurseSubdirectories = true, MaxRecursionDepth = 8, IgnoreInaccessible = true };
+            foreach (var f in Directory.EnumerateFiles(root, "*.*", opts))
+            {
+                var ext = Path.GetExtension(f).ToLowerInvariant();
+                bool isMedia = ext == ".xvi" || Array.IndexOf(RasterExtensions, ext) >= 0;
+                if (!isMedia) continue;
+                var full = TryFull(f);
+                if (referenced.Contains(full)) continue;   // already in the referenced list
+
+                var res = ext == ".xvi" ? "—"
+                    : ImageDimensions.TryGet(full) is { } d ? $"{d.Width}×{d.Height} px" : "(image)";
+                items.Add(new MediaItem(full, ext.TrimStart('.'), MediaStatus.Orphan, res, 0, Georeferenced: false));
+                if (items.Count >= 2000) break;
+            }
+        }
+        catch { /* best-effort */ }
+        return items;
+    }
+
     internal static bool SafeExists(string path) { try { return File.Exists(path); } catch { return false; } }
     internal static string TryFull(string p) { try { return Path.GetFullPath(p); } catch { return p; } }
 }
