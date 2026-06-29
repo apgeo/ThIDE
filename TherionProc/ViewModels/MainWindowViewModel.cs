@@ -227,13 +227,18 @@ public partial class MainWindowViewModel : ViewModelBase
     public void RaiseShowRelationalMap() => ShowRelationalMapRequested?.Invoke(this, EventArgs.Empty);
 
     /// <summary>Opens the Command palette (Ctrl+Shift+P, #4).</summary>
-    public void ShowCommandPalette()
+    public void ShowCommandPalette() => OpenCommandPalette(string.Empty);
+
+    /// <summary>Opens the palette pre-routed to symbol search: workspace (<c>#</c>) or document (<c>@</c>).</summary>
+    public void ShowGoToSymbol(bool workspace) => OpenCommandPalette(workspace ? "#" : "@");
+
+    private void OpenCommandPalette(string initialText)
     {
         var docs = TherionProc.AppServices.Provider.GetService(typeof(IThbookDocumentationService))
             as IThbookDocumentationService;
         var stationLimit = _settings?.Current.StationSearchLimit ?? 4000;
         var provider = new CommandPaletteProvider(this, docs, _documents, _session, Push, stationLimit);
-        var palette = provider.CreatePalette();
+        var palette = provider.CreatePalette(initialText);
         palette.CloseRequested += (_, _) => QuickPick = null;
         QuickPick = palette;
 
@@ -473,6 +478,10 @@ public partial class MainWindowViewModel : ViewModelBase
         _factory.ActiveDockableChanged += (_, e) =>
         {
             if (e.Dockable is FileDocumentViewModel doc) _documents.SetActive(doc);
+            // VIS-01: when the 3D Viewer pane is shown, refresh its model list and auto-open the
+            // default export-model output (even if stale).
+            else if (e.Dockable is Docking.Model3DViewerToolViewModel m3d)
+                OnUiThread(m3d.Viewer.OnPanelActivated);
         };
         _factory.DockableClosed += (_, e) =>
         {
@@ -518,6 +527,7 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             if (!Model3DViewerEnabled) return;
             _factory.ShowTool(Model3DViewerTool);
+            Model3DViewerTool.Viewer.OnPanelActivated();   // ensure a default model is loaded first
             Model3DViewerTool.Viewer.SelectInModel(name);
         });
 
@@ -558,6 +568,24 @@ public partial class MainWindowViewModel : ViewModelBase
             if (_settings?.Current is { EnableModel3DAutoPreview: true, EnableModel3DViewer: true })
                 OnUiThread(() => Model3DViewerTool.Viewer.ShowLatest(Build.Artifacts));
         };
+        // VIS-01: Generated Files → "View in internal 3D viewer".
+        Build.View3DRequested += (_, path) => OnUiThread(() =>
+        {
+            if (!Model3DViewerEnabled)
+            {
+                _notifications.Info("3D viewer disabled",
+                    "Enable the embedded 3D model viewer in Preferences ▸ Build / Visualization.");
+                return;
+            }
+            _factory.ShowTool(Model3DViewerTool);
+            Model3DViewerTool.Viewer.LoadModel(path);
+        });
+        // #3: the "N artifact(s)" status link surfaces + flashes the Generated Files panel.
+        Build.ShowOutputsRequested += (_, _) => OnUiThread(() =>
+        {
+            _factory.ShowTool(GeneratedFilesTool);
+            GeneratedFilesTool.Flash();
+        });
         Diagnostics.NavigateRequested += (_, row) => NavigateTo(row.Span);
         Diagnostics.ScopeChanged += (_, _) => RefreshDiagnostics();
         Build.NavigateRequested += (_, span) => NavigateTo(span);

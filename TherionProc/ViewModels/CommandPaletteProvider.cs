@@ -41,13 +41,14 @@ public sealed class CommandPaletteProvider
         _stationLimit = stationLimit > 0 ? stationLimit : int.MaxValue;
     }
 
-    public QuickPickViewModel CreatePalette()
+    public QuickPickViewModel CreatePalette(string initialText = "")
     {
         var commands = BuildCommands();
         return new QuickPickViewModel(
             "Command Palette",
             "Type a command…   (@ document symbol · # workspace symbol · :42 go to line)",
-            text => Route(commands, text));
+            text => Route(commands, text),
+            initialText);
     }
 
     // Prefix routing (VS-Code style): @ → document symbols, # → workspace symbols, :N → go to line.

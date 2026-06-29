@@ -422,6 +422,16 @@ public partial class MainWindow : Window
 
     private void OnSearchClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e) => ShowSearch();
 
+    // #4: quick-open / command-palette / symbol-search toolbar buttons.
+    private void OnGoToFile(object? sender, Avalonia.Interactivity.RoutedEventArgs e) =>
+        (DataContext as MainWindowViewModel)?.ShowQuickOpen();
+    private void OnGoToAction(object? sender, Avalonia.Interactivity.RoutedEventArgs e) =>
+        (DataContext as MainWindowViewModel)?.ShowCommandPalette();
+    private void OnGoToSymbolWorkspace(object? sender, Avalonia.Interactivity.RoutedEventArgs e) =>
+        (DataContext as MainWindowViewModel)?.ShowGoToSymbol(workspace: true);
+    private void OnGoToSymbolDocument(object? sender, Avalonia.Interactivity.RoutedEventArgs e) =>
+        (DataContext as MainWindowViewModel)?.ShowGoToSymbol(workspace: false);
+
     private void ShowSearch()
     {
         if (_searchWindow is { } w && w.IsVisible) { w.Activate(); return; }

@@ -79,6 +79,16 @@
                 </Animation>
             </Style.Animations>
         </Style>
+        <!-- #1: the compile/stop area pulses green while a build is running. -->
+        <Style Selector="Border.compiling">
+            <Setter Property="Background" Value="#3034A853" />
+            <Style.Animations>
+                <Animation Duration="0:0:1" IterationCount="INFINITE" PlaybackDirection="Alternate" Easing="SineEaseInOut">
+                    <KeyFrame Cue="0%"><Setter Property="Background" Value="#1A34A853" /></KeyFrame>
+                    <KeyFrame Cue="100%"><Setter Property="Background" Value="#9934A853" /></KeyFrame>
+                </Animation>
+            </Style.Animations>
+        </Style>
 
         <!-- Medium icon buttons for the toolbar. -->
         <Style Selector="Button.tool">
@@ -330,16 +340,21 @@
                     <PathIcon Data="{DynamicResource Icon.Rename}" />
                 </Button>
                 <Separator Width="1" Margin="4,2" Background="Gray" />
-                <Button Classes="tool" Command="{Binding Build.BuildCommand}" ToolTip.Tip="Compile (F5)">
-                    <PathIcon Data="{DynamicResource Icon.Build}" Foreground="#2E7D32"
-                              Classes.buildPulse="{Binding Build.IsBuilding}" />
+                <!-- Go-to group: quick-open, command palette, and symbol search (workspace / document). -->
+                <Button Classes="tool" Click="OnGoToFile" ToolTip.Tip="Go to File (Ctrl+P)">
+                    <PathIcon Data="{DynamicResource Icon.File}" />
                 </Button>
-                <!-- Stop is hidden while idle and only appears during a compilation (#6). -->
-                <Button Classes="tool" Command="{Binding Build.CancelCommand}"
-                        IsVisible="{Binding Build.IsBuilding}" ToolTip.Tip="Cancel compilation (Shift+F5)">
-                    <PathIcon Data="{DynamicResource Icon.Stop}" Foreground="#C62828" />
+                <Button Classes="tool" Click="OnGoToAction" ToolTip.Tip="Go to Action — Command Palette (Ctrl+Shift+P)">
+                    <PathIcon Data="{DynamicResource Icon.Config}" />
+                </Button>
+                <Button Classes="tool" Click="OnGoToSymbolWorkspace" ToolTip.Tip="Go to Symbol in Workspace">
+                    <PathIcon Data="{DynamicResource Icon.Map}" />
+                </Button>
+                <Button Classes="tool" Click="OnGoToSymbolDocument" ToolTip.Tip="Go to Symbol in Document">
+                    <PathIcon Data="{DynamicResource Icon.NodeGraph}" />
                 </Button>
                 <Separator Width="1" Margin="4,2" Background="Gray" />
+                <!-- Compile / Stop moved to the end of the toolbar (#1). -->
                 <Button Classes="tool" Command="{Binding Build.OpenInLochCommand}"
                         IsEnabled="{Binding Build.HasLoxArtifact}" ToolTip.Tip="Open in Loch (F9)">
                     <PathIcon Data="{DynamicResource Icon.Cube}" />
@@ -436,8 +451,34 @@
                         </Flyout>
                     </Button.Flyout>
                 </Button>
-                <TextBlock VerticalAlignment="Center" Margin="12,0,0,0"
-                           Text="{Binding Build.Status}" Foreground="Gray" />
+                <Separator Width="1" Margin="4,2" Background="Gray" />
+                <!-- #1: compile + stop live at the end; the area pulses green while a build runs. -->
+                <Border CornerRadius="6" Padding="2,0" Margin="2,0" VerticalAlignment="Center"
+                        Classes.compiling="{Binding Build.IsBuilding}">
+                    <StackPanel Orientation="Horizontal">
+                        <Button Classes="tool" Command="{Binding Build.BuildCommand}" ToolTip.Tip="Compile (F5)">
+                            <PathIcon Data="{DynamicResource Icon.Build}" Foreground="#2E7D32"
+                                      Classes.buildPulse="{Binding Build.IsBuilding}" />
+                        </Button>
+                        <!-- Stop is hidden while idle and only appears during a compilation (#6). -->
+                        <Button Classes="tool" Command="{Binding Build.CancelCommand}"
+                                IsVisible="{Binding Build.IsBuilding}" ToolTip.Tip="Cancel compilation (Shift+F5)">
+                            <PathIcon Data="{DynamicResource Icon.Stop}" Foreground="#C62828" />
+                        </Button>
+                    </StackPanel>
+                </Border>
+                <!-- #3: status text + a clickable "N artifact(s)" link (success only). -->
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
+                    <TextBlock Text="{Binding Build.Status}" Foreground="Gray" VerticalAlignment="Center" />
+                    <TextBlock Text=" (" Foreground="Gray" VerticalAlignment="Center"
+                               IsVisible="{Binding Build.HasArtifactLink}" />
+                    <Button Classes="crumb" Content="{Binding Build.StatusArtifactCount}"
+                            Command="{Binding Build.ShowOutputsCommand}"
+                            IsVisible="{Binding Build.HasArtifactLink}" VerticalAlignment="Center"
+                            ToolTip.Tip="Show Generated Files and the first &quot;export model&quot; command" />
+                    <TextBlock Text=")" Foreground="Gray" VerticalAlignment="Center"
+                               IsVisible="{Binding Build.HasArtifactLink}" />
+                </StackPanel>
                 <!-- BUILD-05: stage label + stepped progress, shown alongside the spinner. -->
                 <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="10,0,0,0"
                             IsVisible="{Binding Build.IsBuilding}">
