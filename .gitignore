@@ -171,3 +171,8 @@ Desktop.ini
 .claude/*
 
 tests/Corpus/sample_projects/*
+# Local-only quarantined corpus (downloaded, never committed)
+tests/Corpus_quarantine/
+
+# Local-only corpus tooling (not committed)
+/corpus-tools/

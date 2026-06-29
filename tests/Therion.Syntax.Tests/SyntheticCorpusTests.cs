@@ -6,8 +6,12 @@ using Therion.Syntax;
 namespace Therion.Syntax.Tests;
 
 /// <summary>
-/// Implementation Plan §11 — corpus tests. Asserts every bundled sample
-/// file parses with zero error diagnostics in lenient mode.
+/// Implementation Plan Â§11 â€” per-file corpus tests over the small, COMMITTED synthetic corpus
+/// (<c>tests/Corpus/Synthetic</c>). One xUnit case per file asserts zero error diagnostics in
+/// lenient mode, so a regression points at the exact file. The much larger, gitignored real-world
+/// corpus under <c>tests/Corpus/sample_projects</c> is intentionally NOT enumerated here (it would
+/// add thousands of cases and isn't present on CI) â€” it is covered in aggregate by
+/// <see cref="CorpusRegressionTests"/> and <see cref="CorpusThconfigBuildTests"/>.
 /// </summary>
 public class SyntheticCorpusTests
 {
@@ -65,12 +69,14 @@ public class SyntheticCorpusTests
         return (r.Value, r.Diagnostics);
     }
 
+    // Scoped to the committed synthetic corpus only (the gitignored real-world corpus is covered in
+    // aggregate by CorpusRegressionTests / CorpusThconfigBuildTests).
     private static string? LocateCorpusRoot()
     {
         var dir = new DirectoryInfo(System.AppContext.BaseDirectory);
         while (dir is not null)
         {
-            var candidate = Path.Combine(dir.FullName, "tests", "Corpus");
+            var candidate = Path.Combine(dir.FullName, "tests", "Corpus", "Synthetic");
             if (Directory.Exists(candidate)) return candidate;
             dir = dir.Parent;
         }
