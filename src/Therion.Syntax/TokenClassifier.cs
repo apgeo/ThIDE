@@ -45,13 +45,14 @@ public static class TokenClassifier
         // .th
         "survey", "endsurvey", "centreline", "centerline", "endcentreline", "endcenterline",
         "data", "fix", "equate", "input", "load", "team", "date", "station",
-        "extend", "units", "calibrate", "declination", "grade", "infer", "mark",
-        "flags", "sd", "explo-date", "explo-team", "instrument",
+        "extend", "units", "calibrate", "declination", "grade", "endgrade", "infer", "mark",
+        "flags", "sd", "explo-date", "explo-team", "instrument", "import",
         "grid-angle", "break", "walls", "vthreshold", "station-names",
-        "surface", "endsurface",
+        "surface", "endsurface", "scan", "endscan",
         // .th2
         "scrap", "endscrap", "point", "line", "endline", "area", "endarea",
         "encoding", "sketch", "map", "endmap", "join", "layer", "break", "preview",
+        "comment", "endcomment",
         // .thconfig
         "source", "layout", "endlayout", "lookup", "endlookup", "export", "select", "cs", "system-charset",
         "language", "lang", "translate", "revise", "group", "endgroup",
@@ -94,6 +95,48 @@ public static class TokenClassifier
                     namesFollow = false; c = TokenClassification.Whitespace; break;
                 case TherionTokenKind.Identifier:
                     c = ClassifyIdentifier(t.Text, ref namesFollow, ref inMapBlock); break;
+                default:                                c = TokenClassification.Text; break;
+            }
+            result.Add(new ClassifiedSpan(t.Span, c));
+        }
+        return result.MoveToImmutable();
+    }
+
+    /// <summary>
+    /// Classify a single <em>layout body</em> line (LANG-02). Used only for lines a
+    /// <see cref="LayoutRegionScanner"/> marked <see cref="EmbeddedRegion.LayoutOption"/>: the leading
+    /// bare word is the option key (highlighted as a keyword when it is a known layout option, e.g.
+    /// <c>scale</c>, <c>legend</c>, <c>symbol-hide</c>), and the rest classify by token kind. This is
+    /// kept separate from <see cref="Classify"/> so the global keyword set is not polluted with option
+    /// names like <c>scale</c>/<c>color</c>/<c>units</c> that mean other things outside a layout.
+    /// </summary>
+    public static ImmutableArray<ClassifiedSpan> ClassifyLayoutLine(ImmutableArray<TherionToken> tokens)
+    {
+        var result = ImmutableArray.CreateBuilder<ClassifiedSpan>(tokens.Length);
+        bool keySeen = false;
+        foreach (var t in tokens)
+        {
+            TokenClassification c;
+            switch (t.Kind)
+            {
+                case TherionTokenKind.LineComment:      c = TokenClassification.Comment; break;
+                case TherionTokenKind.String:           c = TokenClassification.String; break;
+                case TherionTokenKind.Number:           c = TokenClassification.Number; break;
+                case TherionTokenKind.Punctuation:      c = TokenClassification.Punctuation; break;
+                case TherionTokenKind.Whitespace:
+                case TherionTokenKind.LineContinuation:
+                case TherionTokenKind.NewLine:          c = TokenClassification.Whitespace; break;
+                case TherionTokenKind.Identifier:
+                    if (t.Text.Length > 0 && t.Text[0] == '-') c = TokenClassification.Option; // -flag
+                    else if (!keySeen)
+                    {
+                        keySeen = true;
+                        c = LayoutKeywords.IsKnown(t.Text)
+                            ? TokenClassification.Keyword
+                            : TokenClassification.Text;
+                    }
+                    else c = TokenClassification.Text;
+                    break;
                 default:                                c = TokenClassification.Text; break;
             }
             result.Add(new ClassifiedSpan(t.Span, c));

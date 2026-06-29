@@ -70,8 +70,10 @@ public sealed class TherionColorizer : DocumentColorizingTransformer
     }
 
     private Dictionary<TokenClassification, IBrush> _palette = LightPalette;
-    private readonly Dictionary<string, ImmutableArray<ClassifiedSpan>> _cache = new();
-    private HashSet<int>? _skipLines;
+    // Cache keyed by (region, line text): the same text can classify differently in a Therion line,
+    // a layout option line, or an embedded MetaPost/TeX line, so the region must be part of the key.
+    private readonly Dictionary<(int Region, string Text), ImmutableArray<ClassifiedSpan>> _cache = new();
+    private IReadOnlyDictionary<int, EmbeddedRegion>? _regions;
 
     public void SetVariant(Variant variant) =>
         _palette = variant == Variant.Dark ? DarkPalette : LightPalette;
@@ -84,11 +86,14 @@ public sealed class TherionColorizer : DocumentColorizingTransformer
     }
 
     /// <summary>
-    /// 1-based line numbers to leave unhighlighted (e.g. metapost/tex code inside a
-    /// .thconfig <c>layout … endlayout</c> block, which isn't Therion syntax).
+    /// Per-line embedded-language regions (LANG-02), 1-based. Lines mapped to
+    /// <see cref="EmbeddedRegion.MetaPost"/> / <see cref="EmbeddedRegion.Tex"/> are highlighted with
+    /// the embedded-language lexers; <see cref="EmbeddedRegion.LayoutOption"/> lines use the
+    /// layout-aware classifier; <see cref="EmbeddedRegion.None"/> lines are left unhighlighted
+    /// (opaque bodies such as <c>lookup</c>). Lines absent from the map are ordinary Therion lines.
     /// </summary>
-    public void SetSkipLines(HashSet<int>? lines) =>
-        _skipLines = lines is { Count: > 0 } ? lines : null;
+    public void SetLineRegions(IReadOnlyDictionary<int, EmbeddedRegion>? regions) =>
+        _regions = regions is { Count: > 0 } ? regions : null;
 
     // PERF-04: skip syntax highlighting on pathologically long lines (e.g. a single huge
     // surface/data row). Tokenizing + per-token ChangeLinePart on a multi-thousand-char line
@@ -98,21 +103,24 @@ public sealed class TherionColorizer : DocumentColorizingTransformer
 
     protected override void ColorizeLine(DocumentLine line)
     {
-        if (_skipLines is not null && _skipLines.Contains(line.LineNumber)) return;
+        // Resolve the line's embedded-language region (LANG-02). Absent ⇒ ordinary Therion line.
+        EmbeddedRegion? region = null;
+        if (_regions is not null && _regions.TryGetValue(line.LineNumber, out var r)) region = r;
+        if (region == EmbeddedRegion.None) return; // opaque body (e.g. lookup) — leave unhighlighted
 
         var doc = CurrentContext.Document;
         if (line.Length > MaxHighlightLineLength) return;   // PERF-04
         var lineText = doc.GetText(line);
         if (string.IsNullOrEmpty(lineText)) return;
 
-        if (!_cache.TryGetValue(lineText, out var classified))
+        var key = (region.HasValue ? (int)region.Value : -1, lineText);
+        if (!_cache.TryGetValue(key, out var classified))
         {
-            // Line-local lexing — safe for Therion (no multi-line constructs except
-            // rare quoted strings, which a future incremental highlighter can promote).
-            var tokens = Tokenizer.Tokenize("<inline>", lineText);
-            classified = TokenClassifier.Classify(tokens);
+            // Line-local lexing — safe for Therion (no multi-line constructs except rare quoted
+            // strings) and for the embedded MetaPost/TeX (their comments + strings are single-line).
+            classified = ClassifyForRegion(region, lineText);
             if (_cache.Count > 4000) _cache.Clear(); // bound memory on huge files
-            _cache[lineText] = classified;
+            _cache[key] = classified;
         }
 
         foreach (var span in classified)
@@ -139,6 +147,16 @@ public sealed class TherionColorizer : DocumentColorizingTransformer
             });
         }
     }
+
+    /// <summary>Classify one line with the lexer/classifier appropriate to its region.</summary>
+    private static ImmutableArray<ClassifiedSpan> ClassifyForRegion(EmbeddedRegion? region, string lineText) =>
+        region switch
+        {
+            EmbeddedRegion.MetaPost     => MetaPostLexer.Classify(lineText),
+            EmbeddedRegion.Tex          => TexLexer.Classify(lineText),
+            EmbeddedRegion.LayoutOption => TokenClassifier.ClassifyLayoutLine(Tokenizer.Tokenize("<inline>", lineText)),
+            _                           => TokenClassifier.Classify(Tokenizer.Tokenize("<inline>", lineText)),
+        };
 
     private static IBrush Brush(byte r, byte g, byte b) =>
         new SolidColorBrush(Color.FromRgb(r, g, b)).ToImmutable();
