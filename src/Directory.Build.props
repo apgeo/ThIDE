@@ -1,0 +1,25 @@
+<Project>
+
+  <!--
+    Licensing for the reusable libraries. Every project under src/ is licensed
+    under the Mozilla Public License 2.0 (file-level copyleft), so it can be
+    embedded in closed-source or differently-licensed tools while changes to the
+    MPL-covered files flow back. The application shell (TherionProc) is
+    GPL-3.0-or-later. See /LICENSING.md for the rationale.
+
+    The sources are deliberately NOT marked "Incompatible With Secondary
+    Licenses" (MPL Exhibit B); this keeps them compatible with GPL-3.0 and
+    AGPL-3.0 (MPL-2.0 §3.3), so they may be reused in stronger-copyleft projects.
+  -->
+  <PropertyGroup>
+    <PackageLicenseExpression>MPL-2.0</PackageLicenseExpression>
+  </PropertyGroup>
+
+  <!--
+    MSBuild stops at the first Directory.Build.props it finds walking up from a
+    project, so re-import the repository-root one to keep its shared settings
+    (LangVersion, Nullable, TherionLibraryTargetFrameworks, …).
+  -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+</Project>
