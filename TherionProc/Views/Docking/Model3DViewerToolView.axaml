@@ -1,47 +1,117 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:TherionProc.ViewModels.Docking"
+             xmlns:cnv="using:Avalonia.Data.Converters"
+             xmlns:conv="using:TherionProc.Converters"
              x:Class="TherionProc.Views.Docking.Model3DViewerToolView"
              x:CompileBindings="False"
              x:DataType="vm:Model3DViewerToolViewModel">
-    <DockPanel>
-        <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="6,3">
-            <StackPanel Orientation="Horizontal" Spacing="4">
-                <Button Content="Open…" Click="OnOpen" FontSize="11" Padding="8,2"
-                        ToolTip.Tip="Open a .lox / .3d model file" />
-                <Separator Width="1" Margin="3,2" Background="Gray" />
-                <TextBlock Text="Color by:" VerticalAlignment="Center" FontSize="11" Foreground="Gray" />
-                <Button Content="Height" Command="{Binding Viewer.SetShadingCommand}" CommandParameter="height" FontSize="11" Padding="6,2" />
-                <Button Content="Survey" Command="{Binding Viewer.SetShadingCommand}" CommandParameter="survey" FontSize="11" Padding="6,2" />
-                <Button Content="Length" Command="{Binding Viewer.SetShadingCommand}" CommandParameter="length" FontSize="11" Padding="6,2" />
-                <Button Content="Inclination" Command="{Binding Viewer.SetShadingCommand}" CommandParameter="inclination" FontSize="11" Padding="6,2" />
-                <Button Content="Plain" Command="{Binding Viewer.SetShadingCommand}" CommandParameter="single" FontSize="11" Padding="6,2" />
-                <Separator Width="1" Margin="3,2" Background="Gray" />
-                <Button Content="⟲ Reset view" Command="{Binding Viewer.ResetViewCommand}" FontSize="11" Padding="6,2" />
-                <Button Content="↻ Refresh" Command="{Binding Viewer.RefreshCommand}" FontSize="11" Padding="6,2" />
-                <Button Content="Open externally" Command="{Binding Viewer.OpenExternallyCommand}"
-                        IsEnabled="{Binding Viewer.HasModel}" FontSize="11" Padding="8,2" />
-            </StackPanel>
-        </Border>
+    <UserControl.Resources>
+        <conv:StringEqualsConverter x:Key="ShadingEquals" />
+    </UserControl.Resources>
+    <!-- OuterHost holds RootContent; RootContent is reparented into a borderless window for full screen. -->
+    <Panel x:Name="OuterHost">
+        <DockPanel x:Name="RootContent">
+            <!-- Control bar (mirrors the speosilex.ro reference viewer); reflows on narrow panes. -->
+            <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="6,4">
+                <WrapPanel Orientation="Horizontal">
+                    <!-- Model dropdown: every model produced by the active thconfig's export-model commands. -->
+                    <TextBlock Text="Model:" VerticalAlignment="Center" FontSize="11" Foreground="Gray" Margin="0,0,4,0" />
+                    <ComboBox MinWidth="200" FontSize="11" Margin="0,0,6,2"
+                              ItemsSource="{Binding Viewer.Models}"
+                              SelectedItem="{Binding Viewer.SelectedModel, Mode=TwoWay}"
+                              ToolTip.Tip="Models generated (or detected) from the active thconfig" />
+                    <Button Content="Open…" Click="OnOpen" FontSize="11" Padding="8,2" Margin="0,0,2,2"
+                            ToolTip.Tip="Open a .lox / .3d model file" />
+                    <Button Content="⛶ Full screen" Command="{Binding Viewer.ToggleFullscreenCommand}"
+                            FontSize="11" Padding="6,2" Margin="0,0,2,2"
+                            IsVisible="{Binding Viewer.IsFullscreen, Converter={x:Static cnv:BoolConverters.Not}}" />
+                    <Button Content="⤢ Exit full screen" Command="{Binding Viewer.ToggleFullscreenCommand}"
+                            FontSize="11" Padding="6,2" Margin="0,0,2,2"
+                            IsVisible="{Binding Viewer.IsFullscreen}" />
+                    <Button Content="⟲ Reset view" Command="{Binding Viewer.ResetViewCommand}" FontSize="11" Padding="6,2" Margin="0,0,2,2"
+                            ToolTip.Tip="Re-frame the model" />
+                    <Button Content="↺ Defaults" Command="{Binding Viewer.ResetControlsCommand}" FontSize="11" Padding="6,2" Margin="0,0,2,2"
+                            ToolTip.Tip="Reset all switches to their default values" />
+                    <Button Content="↻ Refresh" Command="{Binding Viewer.RefreshCommand}" FontSize="11" Padding="6,2" Margin="0,0,2,2" />
+                    <Button Content="DevTools" Command="{Binding Viewer.OpenDevToolsCommand}" FontSize="11" Padding="6,2" Margin="0,0,2,2"
+                            ToolTip.Tip="Open the web engine's developer tools (or F12 / right-click ▸ Inspect)" />
+                    <Button Content="Open externally" Command="{Binding Viewer.OpenExternallyCommand}"
+                            IsEnabled="{Binding Viewer.HasModel}" FontSize="11" Padding="8,2" Margin="0,0,6,2" />
 
-        <TextBlock DockPanel.Dock="Bottom" Text="{Binding Viewer.Status}" Foreground="Gray"
-                   FontSize="11" Margin="6,2" TextTrimming="CharacterEllipsis" />
+                    <Separator Width="1" Margin="3,2" Background="Gray" />
 
-        <Grid>
-            <!-- The NativeWebView is created in code-behind and added to this panel. -->
-            <Panel x:Name="WebHost" />
+                    <!-- Orientation: plan + the four elevation profiles. -->
+                    <TextBlock Text="View:" VerticalAlignment="Center" FontSize="11" Foreground="Gray" Margin="0,0,4,0" />
+                    <Button Content="Plan"  Command="{Binding Viewer.SetViewCommand}" CommandParameter="plan"  FontSize="11" Padding="6,2" Margin="0,0,2,2" />
+                    <Button Content="N"     Command="{Binding Viewer.SetViewCommand}" CommandParameter="north" FontSize="11" Padding="6,2" Margin="0,0,2,2" ToolTip.Tip="Profile — north" />
+                    <Button Content="E"     Command="{Binding Viewer.SetViewCommand}" CommandParameter="east"  FontSize="11" Padding="6,2" Margin="0,0,2,2" ToolTip.Tip="Profile — east" />
+                    <Button Content="S"     Command="{Binding Viewer.SetViewCommand}" CommandParameter="south" FontSize="11" Padding="6,2" Margin="0,0,2,2" ToolTip.Tip="Profile — south" />
+                    <Button Content="W"     Command="{Binding Viewer.SetViewCommand}" CommandParameter="west"  FontSize="11" Padding="6,2" Margin="0,0,6,2" ToolTip.Tip="Profile — west" />
 
-            <!-- Fallback when the engine or vendored assets are unavailable (R5). -->
-            <Border Background="#1e1e1e" IsVisible="{Binding Viewer.ShowFallback}">
-                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10" MaxWidth="420">
-                    <TextBlock Text="3D model viewer unavailable" FontSize="14" FontWeight="SemiBold"
-                               Foreground="#d4d4d4" HorizontalAlignment="Center" />
-                    <TextBlock Text="{Binding Viewer.Status}" Foreground="#a0a0a0" FontSize="12"
-                               TextWrapping="Wrap" TextAlignment="Center" />
-                    <Button Content="Open model externally (Loch / Aven)" HorizontalAlignment="Center"
-                            Command="{Binding Viewer.OpenExternallyCommand}" IsEnabled="{Binding Viewer.HasModel}" />
-                </StackPanel>
+                    <Separator Width="1" Margin="3,2" Background="Gray" />
+
+                    <!-- Camera projection. -->
+                    <Button Content="Perspective"  Command="{Binding Viewer.SetCameraCommand}" CommandParameter="perspective"  FontSize="11" Padding="6,2" Margin="0,0,2,2" />
+                    <Button Content="Orthographic" Command="{Binding Viewer.SetCameraCommand}" CommandParameter="orthographic" FontSize="11" Padding="6,2" Margin="0,0,6,2" />
+
+                    <Separator Width="1" Margin="3,2" Background="Gray" />
+
+                    <!-- Feature toggles (two-way to the view-model booleans). -->
+                    <ToggleButton Content="Walls"      IsChecked="{Binding Viewer.WallsOn, Mode=TwoWay}"           FontSize="11" Padding="6,2" Margin="0,0,2,2" />
+                    <ToggleButton Content="Splays"     IsChecked="{Binding Viewer.SplaysOn, Mode=TwoWay}"          FontSize="11" Padding="6,2" Margin="0,0,2,2" />
+                    <ToggleButton Content="Surface"    IsChecked="{Binding Viewer.SurfaceOn, Mode=TwoWay}"         FontSize="11" Padding="6,2" Margin="0,0,2,2" />
+                    <ToggleButton Content="Stations"   IsChecked="{Binding Viewer.StationsOn, Mode=TwoWay}"        FontSize="11" Padding="6,2" Margin="0,0,2,2" />
+                    <ToggleButton Content="Labels"     IsChecked="{Binding Viewer.LabelsOn, Mode=TwoWay}"          FontSize="11" Padding="6,2" Margin="0,0,2,2" />
+                    <ToggleButton Content="Names"      IsChecked="{Binding Viewer.NamesOn, Mode=TwoWay}"           FontSize="11" Padding="6,2" Margin="0,0,2,2" />
+                    <ToggleButton Content="Box"        IsChecked="{Binding Viewer.BoxOn, Mode=TwoWay}"             FontSize="11" Padding="6,2" Margin="0,0,2,2" ToolTip.Tip="Bounding box" />
+                    <ToggleButton Content="Auto-rotate" IsChecked="{Binding Viewer.AutoRotateOn, Mode=TwoWay}"      FontSize="11" Padding="6,2" Margin="0,0,2,2" />
+                    <ToggleButton Content="Light"      IsChecked="{Binding Viewer.DirectionalLightOn, Mode=TwoWay}" FontSize="11" Padding="6,2" Margin="0,0,2,2" ToolTip.Tip="Directional light" />
+                    <ToggleButton Content="HUD"        IsChecked="{Binding Viewer.HudOn, Mode=TwoWay}"             FontSize="11" Padding="6,2" Margin="0,0,2,2" ToolTip.Tip="CaveView heads-up display" />
+                    <ToggleButton Content="Menu"       IsChecked="{Binding Viewer.SidebarOn, Mode=TwoWay}"         FontSize="11" Padding="6,2" Margin="0,0,6,2" ToolTip.Tip="CaveView's own sidebar menu" />
+
+                    <Separator Width="1" Margin="3,2" Background="Gray" />
+
+                    <!-- Color-by shading (selection remembered). -->
+                    <TextBlock Text="Color by:" VerticalAlignment="Center" FontSize="11" Foreground="Gray" Margin="0,0,4,0" />
+                    <ToggleButton Content="Height"      Command="{Binding Viewer.SetShadingCommand}" CommandParameter="height"      FontSize="11" Padding="6,2" Margin="0,0,2,2"
+                                  IsChecked="{Binding Viewer.ShadingMode, Mode=OneWay, Converter={StaticResource ShadingEquals}, ConverterParameter=height}" />
+                    <ToggleButton Content="Survey"      Command="{Binding Viewer.SetShadingCommand}" CommandParameter="survey"      FontSize="11" Padding="6,2" Margin="0,0,2,2"
+                                  IsChecked="{Binding Viewer.ShadingMode, Mode=OneWay, Converter={StaticResource ShadingEquals}, ConverterParameter=survey}" />
+                    <ToggleButton Content="Length"      Command="{Binding Viewer.SetShadingCommand}" CommandParameter="length"      FontSize="11" Padding="6,2" Margin="0,0,2,2"
+                                  IsChecked="{Binding Viewer.ShadingMode, Mode=OneWay, Converter={StaticResource ShadingEquals}, ConverterParameter=length}" />
+                    <ToggleButton Content="Inclination" Command="{Binding Viewer.SetShadingCommand}" CommandParameter="inclination" FontSize="11" Padding="6,2" Margin="0,0,2,2"
+                                  IsChecked="{Binding Viewer.ShadingMode, Mode=OneWay, Converter={StaticResource ShadingEquals}, ConverterParameter=inclination}" />
+                    <ToggleButton Content="Plain"       Command="{Binding Viewer.SetShadingCommand}" CommandParameter="single"      FontSize="11" Padding="6,2" Margin="0,0,2,2"
+                                  IsChecked="{Binding Viewer.ShadingMode, Mode=OneWay, Converter={StaticResource ShadingEquals}, ConverterParameter=single}" />
+                </WrapPanel>
             </Border>
-        </Grid>
-    </DockPanel>
+
+            <!-- Bottom: an old-model notice (amber, when present) over the status line. -->
+            <StackPanel DockPanel.Dock="Bottom">
+                <TextBlock Text="{Binding Viewer.GeneratedNotice}" Foreground="#E65100" FontSize="11" Margin="6,2"
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding Viewer.GeneratedNotice, Converter={x:Static cnv:StringConverters.IsNotNullOrEmpty}}" />
+                <TextBlock Text="{Binding Viewer.Status}" Foreground="Gray" FontSize="11" Margin="6,2"
+                           TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+
+            <Grid>
+                <!-- The NativeWebView is created in code-behind and added to this panel. -->
+                <Panel x:Name="WebHost" />
+
+                <!-- Fallback when the engine or vendored assets are unavailable (R5). -->
+                <Border Background="#1e1e1e" IsVisible="{Binding Viewer.ShowFallback}">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10" MaxWidth="420">
+                        <TextBlock Text="3D model viewer unavailable" FontSize="14" FontWeight="SemiBold"
+                                   Foreground="#d4d4d4" HorizontalAlignment="Center" />
+                        <TextBlock Text="{Binding Viewer.Status}" Foreground="#a0a0a0" FontSize="12"
+                                   TextWrapping="Wrap" TextAlignment="Center" />
+                        <Button Content="Open model externally (Loch / Aven)" HorizontalAlignment="Center"
+                                Command="{Binding Viewer.OpenExternallyCommand}" IsEnabled="{Binding Viewer.HasModel}" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </DockPanel>
+    </Panel>
 </UserControl>

@@ -5,10 +5,15 @@
 // InvokeScript (C#→JS), and the asset-host URL → the control's Source.
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using TherionProc.ViewModels;
@@ -20,6 +25,8 @@ public partial class Model3DViewerToolView : UserControl
 {
     private NativeWebView? _web;
     private Model3DViewerViewModel? _vm;
+    private bool _eventsWired;
+    private Window? _fsWindow;   // borderless full-screen host for the whole panel
 
     public Model3DViewerToolView() => InitializeComponent();
 
@@ -38,9 +45,14 @@ public partial class Model3DViewerToolView : UserControl
     // Create + wire the web control exactly once (the singleton VM persists across tab switches).
     private void TryInitialize()
     {
-        if (_web is not null) return;
         if (DataContext is not Model3DViewerToolViewModel tool || tool.Viewer is null) return;
         _vm = tool.Viewer;
+
+        // Full-screen works even when the engine/assets are missing (the fallback panel goes
+        // full-screen too), so wire it before the availability gate — but only once.
+        if (!_eventsWired) { _vm.FullscreenRequested += OnFullscreenRequested; _eventsWired = true; }
+
+        if (_web is not null) return;
 
         // Assets missing → leave the fallback panel visible; don't instantiate the engine.
         if (!_vm.IsAvailable) { _vm.EnsureStarted(); return; }
@@ -48,9 +60,13 @@ public partial class Model3DViewerToolView : UserControl
         try
         {
             _web = new NativeWebView();
+            // JS console output + uncaught errors are forwarded to the in-app Log panel by viewer.html
+            // (the {type:"console"} bridge message). The engine's own inspector is also available where
+            // supported (WebView2: right-click ▸ Inspect / F12), so no extra wiring is needed here (#2).
             WebHost.Children.Add(_web);
             _web.WebMessageReceived += OnWebMessage;
             _vm.ScriptRequested += OnScriptRequested;
+            _vm.DevToolsRequested += OnDevToolsRequested;
 
             var url = _vm.EnsureStarted();
             if (url is not null) _web.Source = new Uri(url);
@@ -93,4 +109,128 @@ public partial class Model3DViewerToolView : UserControl
         });
         if (files.FirstOrDefault()?.TryGetLocalPath() is { } path) _vm.LoadModel(path);
     }
+
+    // ---- full screen: reparent the whole panel into a borderless full-screen window ----
+
+    private void OnFullscreenRequested(object? sender, bool on)
+        => Dispatcher.UIThread.Post(() => SetFullscreen(on));
+
+    private void SetFullscreen(bool on)
+    {
+        if (RootContent is null || OuterHost is null) return;
+        if (on)
+        {
+            if (_fsWindow is not null) return;
+            OuterHost.Children.Remove(RootContent);
+            _fsWindow = new Window
+            {
+                WindowState = WindowState.FullScreen,   // FullScreen hides the window chrome
+                Background = Brushes.Black,
+                ShowInTaskbar = false,
+                Content = RootContent,
+            };
+            _fsWindow.KeyDown += OnFullscreenKeyDown;
+            _fsWindow.Closed += OnFullscreenWindowClosed;
+            if (TopLevel.GetTopLevel(this) is Window owner) _fsWindow.Show(owner);
+            else _fsWindow.Show();
+        }
+        else
+        {
+            RestoreFromFullscreen();
+        }
+        // The native control's new size isn't applied synchronously after a reparent, so CaveView's
+        // canvas can keep the old size — nudge it a few times as the new layout settles (#2).
+        ScheduleResizeKicks();
+    }
+
+    // Re-fit the WebGL canvas after the panel has been reparented (full screen in/out).
+    private void ScheduleResizeKicks()
+    {
+        if (_web is null) return;
+        Dispatcher.UIThread.Post(async () =>
+        {
+            foreach (var ms in new[] { 60, 200, 500, 900 })
+            {
+                await Task.Delay(ms);
+                try { if (_web is not null) await _web.InvokeScript("cvResize()"); } catch { /* best-effort */ }
+            }
+        });
+    }
+
+    private void OnFullscreenKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Escape) { _vm?.ToggleFullscreenCommand.Execute(null); e.Handled = true; }
+    }
+
+    // OS-initiated close (Alt+F4) while still full-screen: salvage the panel back into the dock.
+    private void OnFullscreenWindowClosed(object? sender, EventArgs e)
+    {
+        if (_fsWindow is null) return;        // a normal restore already handled it
+        _fsWindow = null;
+        if (sender is Window w) w.Content = null;
+        ReturnRootContent();
+        if (_vm is { IsFullscreen: true }) _vm.ToggleFullscreenCommand.Execute(null);
+    }
+
+    private void RestoreFromFullscreen()
+    {
+        if (_fsWindow is null) return;
+        var w = _fsWindow;
+        _fsWindow = null;                     // clear first so Closed treats this as a normal restore
+        w.KeyDown -= OnFullscreenKeyDown;
+        w.Content = null;                     // detach before reparenting
+        ReturnRootContent();
+        try { w.Close(); } catch { /* best-effort */ }
+    }
+
+    private void ReturnRootContent()
+    {
+        if (RootContent is not null && OuterHost is not null && !OuterHost.Children.Contains(RootContent))
+            OuterHost.Children.Add(RootContent);
+    }
+
+    // ---- #5: best-effort "show DevTools" for the underlying web engine ----
+
+    private void OnDevToolsRequested(object? sender, EventArgs e)
+    {
+        // The vendored NativeWebView exposes no public DevTools API, so reach the platform control's
+        // CoreWebView2 (WebView2) reflectively and open its inspector. Where that isn't reachable
+        // (or on other engines), fall back to the standard F12 / right-click ▸ Inspect hint.
+        if (_web is not null && InvokeOpenDevTools(_web, 0, new HashSet<object>(ReferenceEqualityComparer.Instance)))
+            return;
+        if (_vm is not null)
+            _vm.Status = "Developer tools: right-click the 3D view ▸ Inspect, or press F12. JS logs are in the Log panel.";
+    }
+
+    private static bool InvokeOpenDevTools(object? obj, int depth, HashSet<object> seen)
+    {
+        if (obj is null || depth > 4 || !seen.Add(obj)) return false;
+        var type = obj.GetType();
+        var open = type.GetMethod("OpenDevToolsWindow", BindingFlags.Public | BindingFlags.Instance,
+            null, Type.EmptyTypes, null);
+        if (open is not null) { try { open.Invoke(obj, null); return true; } catch { } }
+
+        const BindingFlags Flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+        foreach (var p in type.GetProperties(Flags))
+        {
+            if (p.GetIndexParameters().Length > 0 || !LooksLikeWebMember(p.Name)) continue;
+            object? val = null; try { val = p.GetValue(obj); } catch { }
+            if (InvokeOpenDevTools(val, depth + 1, seen)) return true;
+        }
+        foreach (var f in type.GetFields(Flags))
+        {
+            if (!LooksLikeWebMember(f.Name)) continue;
+            object? val = null; try { val = f.GetValue(obj); } catch { }
+            if (InvokeOpenDevTools(val, depth + 1, seen)) return true;
+        }
+        return false;
+    }
+
+    private static bool LooksLikeWebMember(string n) =>
+        n.Contains("web", StringComparison.OrdinalIgnoreCase) ||
+        n.Contains("core", StringComparison.OrdinalIgnoreCase) ||
+        n.Contains("platform", StringComparison.OrdinalIgnoreCase) ||
+        n.Contains("impl", StringComparison.OrdinalIgnoreCase) ||
+        n.Contains("native", StringComparison.OrdinalIgnoreCase) ||
+        n.Contains("controller", StringComparison.OrdinalIgnoreCase);
 }

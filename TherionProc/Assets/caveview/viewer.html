@@ -14,6 +14,8 @@
         padding: 24px; background: #1e1e1e; box-sizing: border-box; pointer-events: none;
     }
     #overlay.hidden { display: none; }
+    /* When the host hides CaveView's own menu, suppress its control panel (the left sidebar). */
+    #scene.cv-hide-ui .cv-frame { display: none !important; }
 </style>
 </head>
 <body>
@@ -33,8 +35,18 @@
 (function () {
 
     var viewer = null;
+    var caveUI = null;         // CaveView's own control panel (created lazily on first sidebar-enable)
+    var fullscreenActive = false;  // host-managed: forward Esc to exit full screen only while set
     var pendingModel = null;   // a load requested before the viewer finished initialising
     var pendingShading = null;
+
+    // Esc closes full screen even when the web control has keyboard focus (#3). Capture-phase so
+    // it runs before CaveView's own handlers; only acts while the host marks us full-screen.
+    document.addEventListener("keydown", function (e) {
+        if (fullscreenActive && (e.key === "Escape" || e.keyCode === 27)) {
+            post({ type: "esc" });
+        }
+    }, true);
 
     function post(obj) {
         try {
@@ -46,6 +58,35 @@
             }
         } catch (e) { /* never throw from the bridge */ }
     }
+
+    // Forward the page's console output + uncaught errors to the C# Log panel so JS errors and
+    // notices are visible even when no dev console is available (a native one is also enabled
+    // host-side where the engine supports it — WebView2 F12 / right-click ▸ Inspect).
+    function postConsole(level, args) {
+        try {
+            var parts = [];
+            for (var i = 0; i < args.length; i++) {
+                var a = args[i];
+                if (typeof a === "string") { parts.push(a); }
+                else { try { parts.push(JSON.stringify(a)); } catch (e) { parts.push(String(a)); } }
+            }
+            post({ type: "console", level: level, message: parts.join(" ") });
+        } catch (e) { /* never throw from logging */ }
+    }
+    (function hookConsole() {
+        var c = window.console || (window.console = {});
+        ["log", "info", "warn", "error"].forEach(function (m) {
+            var orig = (typeof c[m] === "function") ? c[m].bind(c) : function () { };
+            c[m] = function () { postConsole(m, arguments); orig.apply(c, arguments); };
+        });
+        window.addEventListener("error", function (e) {
+            postConsole("error", [(e && e.message) || "script error", (e && e.filename) || "", (e && e.lineno) || ""]);
+        });
+        window.addEventListener("unhandledrejection", function (e) {
+            var r = e && e.reason;
+            postConsole("error", ["unhandled promise rejection: " + ((r && r.message) || r || "")]);
+        });
+    })();
 
     function showOverlay(msg) {
         var o = document.getElementById("overlay");
@@ -99,6 +140,79 @@
         try { viewer.resetView(); } catch (e) { /* ignore */ }
     };
 
+    // ---- external control bar (mirrors the speosilex.ro reference viewer) ----
+    // The C# shell drives all of these after the page reports 'ready', and re-asserts the full
+    // control state on each load, so every entry point can safely no-op until the viewer exists.
+
+    // Orientation: plan + the four elevation profiles (north/south/east/west).
+    window.cvSetView = function (name) {
+        if (!viewer) return;
+        try {
+            var map = {
+                none:  CV2.VIEW_NONE,  plan:  CV2.VIEW_PLAN,
+                north: CV2.VIEW_ELEVATION_N, south: CV2.VIEW_ELEVATION_S,
+                east:  CV2.VIEW_ELEVATION_E, west:  CV2.VIEW_ELEVATION_W
+            };
+            var v = map[String(name || "").toLowerCase()];
+            if (v !== undefined) viewer.view = v;
+        } catch (e) { /* ignore */ }
+    };
+
+    // Camera projection: perspective vs orthographic.
+    window.cvSetCamera = function (name) {
+        if (!viewer) return;
+        try {
+            viewer.cameraType = String(name || "").toLowerCase() === "orthographic"
+                ? CV2.CAMERA_ORTHOGRAPHIC : CV2.CAMERA_PERSPECTIVE;
+        } catch (e) { /* ignore */ }
+    };
+
+    // Generic boolean feature toggle (walls/splays/surface/stations/labels/names/box/autorotate/light/hud).
+    window.cvToggle = function (feature, on) {
+        if (!viewer) return;
+        on = !!on;
+        try {
+            switch (String(feature || "").toLowerCase()) {
+                case "walls":      viewer.walls = on; break;
+                case "splays":     viewer.splays = on; break;
+                case "surface":    viewer.surfaceLegs = on; break;
+                case "stations":   viewer.stations = on; break;
+                case "labels":     viewer.stationLabels = on; break;
+                case "names":      viewer.entrances = on; break;
+                case "box":        viewer.box = on; break;
+                case "autorotate": viewer.autoRotate = on; break;
+                case "light":      viewer.terrainDirectionalLighting = on; break;
+                case "hud":        viewer.HUD = on; break;
+            }
+        } catch (e) { /* ignore */ }
+    };
+
+    // CaveView's own full menu (the left sidebar). Created lazily, then shown/hidden via CSS.
+    window.cvSetSidebar = function (on) {
+        if (!viewer) return;
+        try {
+            if (on && !caveUI && typeof CV2.CaveViewUI === "function") caveUI = new CV2.CaveViewUI(viewer);
+            var scene = document.getElementById("scene");
+            if (scene) scene.classList.toggle("cv-hide-ui", !on);
+        } catch (e) { /* ignore */ }
+    };
+
+    // Re-fit the WebGL canvas to its container (CaveView only re-fits on a window 'resize').
+    // Called by the host after a layout change it can't observe (e.g. the full-screen reparent).
+    window.cvResize = function () {
+        try { window.dispatchEvent(new Event("resize")); } catch (e) { /* ignore */ }
+    };
+
+    // Unload the current model so a workspace/thconfig switch doesn't leave a stale cave on screen.
+    window.cvClear = function () {
+        try { if (viewer) viewer.clearView(); } catch (e) { /* ignore */ }
+        showOverlay("Build a 3D model (.lox / .3d) to view it here.");
+    };
+
+    // The host tells us when the panel is full-screen so we can forward Esc (the web control
+    // otherwise swallows it before C# sees the key) to close full screen.
+    window.cvSetFullscreen = function (on) { fullscreenActive = !!on; };
+
     // ---- JS -> C# : station pick ----
     function onStation(e) {
         try {
@@ -132,14 +246,25 @@
                 view: {
                     shadingMode: CV2.SHADING_HEIGHT,
                     box: true,
-                    HUD: false,        // TherionProc supplies its own toolbar
+                    HUD: !false,        // TherionProc supplies its own toolbar
                     entrances: true,
-                    walls: false
+                    walls: !false
                 }
             });
 
             viewer.addEventListener("newCave", function () { hideOverlay(); post({ type: "loaded" }); });
             viewer.addEventListener("station", onStation);
+
+            // Keep the WebGL canvas fitted to the panel. CaveView only re-fits on a window 'resize',
+            // which doesn't reliably fire when the host *control* (not the OS window) is resized — e.g.
+            // dragging the dock splitter or entering full screen. Drive it from a ResizeObserver.
+            try {
+                if (typeof ResizeObserver === "function") {
+                    var scene = document.getElementById("scene");
+                    var ro = new ResizeObserver(function () { window.dispatchEvent(new Event("resize")); });
+                    if (scene) ro.observe(scene);
+                }
+            } catch (e) { /* best-effort fit */ }
 
             post({ type: "ready" });
 
