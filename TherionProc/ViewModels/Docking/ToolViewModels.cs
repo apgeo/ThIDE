@@ -78,6 +78,10 @@ public sealed class GeneratedFilesToolViewModel : ToolViewModelBase
     public GeneratedFilesToolViewModel() : base("GeneratedFiles", "Tool_GeneratedFiles") => Build = null!;
     public GeneratedFilesToolViewModel(BuildViewModel build, ILanguageService? lang = null)
         : base("GeneratedFiles", "Tool_GeneratedFiles", lang) => Build = build;
+
+    /// <summary>#3: raised to briefly flash the panel after it's surfaced from the status link.</summary>
+    public event System.EventHandler? FlashRequested;
+    public void Flash() => FlashRequested?.Invoke(this, System.EventArgs.Empty);
 }
 
 public sealed class OutlineToolViewModel : ToolViewModelBase

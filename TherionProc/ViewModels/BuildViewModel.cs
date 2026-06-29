@@ -173,6 +173,15 @@ public sealed record ArtifactRow(string Path, string Kind, long SizeBytes, DateT
 {
     /// <summary>True when a project input is newer than this output (BUILD-03).</summary>
     public bool IsStale { get; init; }
+    /// <summary>True for .lox/.3d outputs that can be shown in a 3D viewer (drives the row's 3D buttons).</summary>
+    public bool CanView3D =>
+        System.IO.Path.GetExtension(Path).ToLowerInvariant() is ".lox" or ".3d";
+    /// <summary>
+    /// Per-file auto-open-after-build override (#7): null = use the general per-type setting,
+    /// true = always open this file, false = never. Bound two-way to the grid's 3-state checkbox;
+    /// persisted in <c>AppSettings.AutoOpenOverrides</c>.
+    /// </summary>
+    public bool? AutoOpen { get; set; }
     /// <summary>Short status text for the Generated Files grid.</summary>
     public string StateText => IsStale ? "⚠ stale" : "current";
     public string SizeDisplay => SizeBytes < 1024 ? $"{SizeBytes} B" : $"{SizeBytes / 1024} KB";
@@ -250,6 +259,13 @@ public partial class BuildViewModel : ViewModelBase
 
     [ObservableProperty] private bool _isBuilding;
     [ObservableProperty] private string _status = string.Empty;
+    /// <summary>#3: the "N artifact(s)" portion of a successful build's status, shown as a clickable link.</summary>
+    [ObservableProperty] private string _statusArtifactCount = string.Empty;
+    /// <summary>True when there's an artifact-count link to show next to the status.</summary>
+    public bool HasArtifactLink => _statusArtifactCount.Length > 0;
+    partial void OnStatusArtifactCountChanged(string value) => OnPropertyChanged(nameof(HasArtifactLink));
+    // Any status change drops a stale artifact link; the success path re-sets it immediately after.
+    partial void OnStatusChanged(string value) => StatusArtifactCount = string.Empty;
 
     // ---- build phases (BUILD-05): a stage label + stepped progress, alongside the spinner ----
     [ObservableProperty] private BuildPhase _phase;
@@ -318,7 +334,9 @@ public partial class BuildViewModel : ViewModelBase
     [RelayCommand]
     private void NavigateOutput(CompilerOutputRow? row)
     {
-        if (row?.Span is { } span && !span.IsEmpty)
+        // Output-link spans carry a file + line but a zero length (so IsEmpty is true); navigate
+        // whenever there's a file path rather than gating on IsEmpty, else the links never fire (#3).
+        if (row?.Span is { } span && !string.IsNullOrEmpty(span.FilePath))
             NavigateRequested?.Invoke(this, span);
     }
 
@@ -405,6 +423,8 @@ public partial class BuildViewModel : ViewModelBase
 
         IsBuilding = true;
         HasBuildResult = false;          // clear the previous success/error status-bar icon
+        Status = "Compiling…";           // clear the previous "succeeded/failed" label (#3)
+        StatusArtifactCount = string.Empty;
         HasLog = false; LogFilePath = null;           // clear the previous build's log (#3)
         SetPhase(BuildPhase.Starting);                // BUILD-05
         _log?.Info($"Build started: {label ?? entry}");
@@ -438,9 +458,17 @@ public partial class BuildViewModel : ViewModelBase
             LastBuildHasWarnings = warnCount > 0;
             LastBuildWarningCount = warnCount;
             AddRow(SummaryRow(ok, warnCount, sw.Elapsed, result.Artifacts.Length, _buildStart));
-            Status = ok
-                ? $"Compilation succeeded ({result.Artifacts.Length} artifact(s))."
-                : $"Compilation failed (exit {result.ExitCode}).";
+            // #3: on success the "N artifact(s)" count is shown as a separate clickable link.
+            if (ok)
+            {
+                Status = result.Artifacts.Length > 0 ? "Compilation succeeded" : "Compilation succeeded (no outputs).";
+                StatusArtifactCount = result.Artifacts.Length > 0 ? $"{result.Artifacts.Length} artifact(s)" : string.Empty;
+            }
+            else
+            {
+                Status = $"Compilation failed (exit {result.ExitCode}).";
+                StatusArtifactCount = string.Empty;
+            }
             _log?.Log(
                 ok ? (warnCount > 0 ? LogVerbosity.Warning : LogVerbosity.Info) : LogVerbosity.Error,
                 ok
@@ -536,22 +564,100 @@ public partial class BuildViewModel : ViewModelBase
         OutputCleared?.Invoke(this, EventArgs.Empty);
     }
 
-    /// <summary>Opens the configured output types after a successful build.</summary>
+    /// <summary>
+    /// Opens outputs after a successful build (#7). A per-file override (Auto-open checkbox) wins:
+    /// <c>true</c> always opens, <c>false</c> never; otherwise the general per-type setting applies,
+    /// subject to the open-all-vs-first rule. Explicit "always" files always open.
+    /// </summary>
     private void AutoOpenOutputs(ImmutableArray<OutputArtifact> artifacts)
     {
         if (_settings is null) return;
         var s = _settings.Current;
-        // Match on the file extension, not the artifact's Kind (which is a human-readable
-        // description like "Loch 3D model", never the short code "lox").
-        var exts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        if (s.OpenLoxAfterBuild) exts.Add(".lox");
-        if (s.Open3dAfterBuild) exts.Add(".3d");
-        if (s.OpenPdfAfterBuild) exts.Add(".pdf");
-        if (exts.Count == 0) return;
-
-        var matches = artifacts.Where(a => exts.Contains(Path.GetExtension(a.Path))).Select(a => a.Path).ToList();
-        foreach (var path in s.OpenAllOutputsAfterBuild ? matches : matches.Take(1))
+        foreach (var path in ResolveAutoOpenPaths(
+            artifacts.Select(a => a.Path).ToList(),
+            s.OpenLoxAfterBuild, s.Open3dAfterBuild, s.OpenPdfAfterBuild, s.OpenAllOutputsAfterBuild,
+            s.AutoOpenOverrides))
             _shell.Open(path);
+    }
+
+    /// <summary>
+    /// Pure auto-open decision (#7): explicit "always" overrides open first and unconditionally;
+    /// "never" overrides are skipped; the rest follow the general per-type flags, subject to the
+    /// open-all-vs-first rule. Order: explicit opens, then defaults; de-duplicated.
+    /// </summary>
+    internal static IReadOnlyList<string> ResolveAutoOpenPaths(
+        IReadOnlyList<string> artifactPaths, bool openLox, bool open3d, bool openPdf, bool openAll,
+        IReadOnlyDictionary<string, bool> overrides)
+    {
+        var defaultExts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (openLox) defaultExts.Add(".lox");
+        if (open3d) defaultExts.Add(".3d");
+        if (openPdf) defaultExts.Add(".pdf");
+
+        var explicitOpen = new List<string>();
+        var byDefault = new List<string>();
+        foreach (var path in artifactPaths)
+        {
+            switch (LookupAutoOpen(overrides, path))
+            {
+                case true: explicitOpen.Add(path); break;
+                case false: break;   // explicitly suppressed
+                default:
+                    if (defaultExts.Contains(Path.GetExtension(path))) byDefault.Add(path);
+                    break;
+            }
+        }
+
+        var toOpen = new List<string>(explicitOpen);
+        toOpen.AddRange(openAll ? byDefault : byDefault.Take(1));
+        return toOpen.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
+    /// <summary>Looks up a persisted auto-open override for <paramref name="path"/> (case-insensitive, normalized).</summary>
+    private static bool? LookupAutoOpen(IReadOnlyDictionary<string, bool>? overrides, string path)
+    {
+        if (overrides is null || overrides.Count == 0) return null;
+        var key = NormPath(path);
+        foreach (var kv in overrides)
+            if (string.Equals(NormPath(kv.Key), key, StringComparison.OrdinalIgnoreCase)) return kv.Value;
+        return null;
+    }
+
+    private static string NormPath(string path)
+    {
+        try { return Path.GetFullPath(path); } catch { return path; }
+    }
+
+    /// <summary>#7: persists (or clears) the per-file auto-open override for the grid's 3-state checkbox.</summary>
+    public void SetAutoOpenOverride(string path, bool? state)
+    {
+        if (_settings is null || string.IsNullOrEmpty(path)) return;
+        var key = NormPath(path);
+        var dict = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+        foreach (var kv in _settings.Current.AutoOpenOverrides)
+            if (!string.Equals(NormPath(kv.Key), key, StringComparison.OrdinalIgnoreCase)) dict[kv.Key] = kv.Value;
+        if (state is bool b) dict[key] = b;
+        _settings.Save(_settings.Current with { AutoOpenOverrides = dict });
+    }
+
+    /// <summary>#1: open a specific .lox in Loch / .3d in Aven (falls back to the OS default app).</summary>
+    [RelayCommand]
+    private async Task OpenInExternalViewer(ArtifactRow? row)
+    {
+        if (row is null) return;
+        WarnIfStale(row);
+        string toolId = HasExt(row.Path, ".lox") ? ExternalToolLocator.Loch
+            : HasExt(row.Path, ".3d") ? ExternalToolLocator.Aven : string.Empty;
+        if (toolId.Length > 0 && await _locator.FindAsync(toolId).ConfigureAwait(true) is { } tool)
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo(tool.Path, $"\"{row.Path}\"") { UseShellExecute = false });
+                return;
+            }
+            catch { /* fall through to shell-open */ }
+        }
+        _shell.Open(row.Path);
     }
 
     /// <summary>Finds a Therion log (.log/.tlx) written during this build, for the open-log button (#3).</summary>
@@ -800,14 +906,32 @@ public partial class BuildViewModel : ViewModelBase
         _shell.RevealInFileManager(row.Path);
     }
 
+    /// <summary>Raised when the user asks to view an artifact in the embedded 3D viewer (VIS-01).</summary>
+    public event EventHandler<string>? View3DRequested;
+
+    /// <summary>Generated Files → "View in internal 3D viewer": only .lox/.3d are viewable.</summary>
+    [RelayCommand]
+    private void ViewIn3D(ArtifactRow? row)
+    {
+        if (row is null) return;
+        if (!HasExt(row.Path, ".lox") && !HasExt(row.Path, ".3d"))
+        {
+            Status = $"{Path.GetFileName(row.Path)} isn’t a 3D model (.lox / .3d).";
+            return;
+        }
+        View3DRequested?.Invoke(this, row.Path);
+    }
+
     private void UpdateArtifacts(ImmutableArray<OutputArtifact> artifacts)
     {
         // BUILD-03: an output is "stale" if any project input is newer than it.
         var newest = NewestInputUtc();
+        var overrides = _settings?.Current.AutoOpenOverrides;
         var rows = artifacts
             .Select(a => new ArtifactRow(a.Path, a.Kind, a.SizeBytes, a.LastWriteUtc)
             {
                 IsStale = newest is { } n && a.LastWriteUtc < n,
+                AutoOpen = LookupAutoOpen(overrides, a.Path),   // #7: restore the persisted override
             })
             .OrderBy(a => a.Kind, StringComparer.Ordinal)
             .ThenBy(a => a.Path, StringComparer.Ordinal)
@@ -922,6 +1046,50 @@ public partial class BuildViewModel : ViewModelBase
         return new Therion.Core.SourceSpan(path,
             new Therion.Core.SourceLocation(line, col),
             new Therion.Core.SourceLocation(line, col + length), offset, length);
+    }
+
+    // ---- #3: clickable "N artifact(s)" status link ----
+
+    /// <summary>Raised when the artifact-count link is clicked, so the shell can surface + flash the Generated Files panel.</summary>
+    public event EventHandler? ShowOutputsRequested;
+
+    /// <summary>
+    /// #3: surface the Generated Files panel and open the active thconfig at its first
+    /// <c>export model</c> command (highlighting that line).
+    /// </summary>
+    [RelayCommand]
+    private async Task ShowOutputs()
+    {
+        ShowOutputsRequested?.Invoke(this, EventArgs.Empty);   // panel show + flash (shell)
+        await NavigateToFirstModelExportAsync().ConfigureAwait(true);
+    }
+
+    private async Task NavigateToFirstModelExportAsync()
+    {
+        var cfg = ResolveBuildEntry();
+        if (cfg is null || !File.Exists(cfg)) return;
+        try
+        {
+            var text = await File.ReadAllTextAsync(cfg).ConfigureAwait(true);
+            var model = ThconfigExportEditor.ParseExports(text)
+                .FirstOrDefault(e => e.Title.StartsWith("export model", StringComparison.Ordinal));
+            if (model is null) return;
+            await _documents.NavigateToSpanAsync(LineSpan(cfg, text, model.StartLine)).ConfigureAwait(true);
+        }
+        catch { /* best-effort navigation */ }
+    }
+
+    /// <summary>A span covering the whole 1-based <paramref name="line1"/> of <paramref name="text"/> (for highlight).</summary>
+    private static Therion.Core.SourceSpan LineSpan(string path, string text, int line1)
+    {
+        int line = 1, offset = 0;
+        while (line < line1 && offset < text.Length) { if (text[offset] == '\n') line++; offset++; }
+        int end = offset;
+        while (end < text.Length && text[end] is not ('\n' or '\r')) end++;
+        int len = end - offset;
+        return new Therion.Core.SourceSpan(path,
+            new Therion.Core.SourceLocation(line1, 1),
+            new Therion.Core.SourceLocation(line1, len + 1), offset, len);
     }
 
     // ---- Designer-only null sinks (kept private � never resolved at runtime) ----

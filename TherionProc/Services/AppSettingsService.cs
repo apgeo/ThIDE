@@ -131,6 +131,12 @@ public sealed record AppSettings
     public bool OpenPdfAfterBuild { get; init; }
     /// <summary>Open every matching output (true) instead of just the first one (false).</summary>
     public bool OpenAllOutputsAfterBuild { get; init; }
+    /// <summary>
+    /// Per-output auto-open overrides (#7): full output path → true (always open) / false (never).
+    /// Absent ⇒ use the general per-type setting above. Persisted across builds/sessions.
+    /// </summary>
+    public IReadOnlyDictionary<string, bool> AutoOpenOverrides { get; init; } =
+        new Dictionary<string, bool>();
     /// <summary>BUILD-07: automatically (re)build the active project a short moment after each save. Off by default.</summary>
     public bool CompileOnSave { get; init; }
 

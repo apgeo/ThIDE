@@ -5,6 +5,7 @@
              xmlns:l="using:TherionProc.Resources"
              x:Class="TherionProc.Views.Docking.GeneratedFilesToolView"
              x:DataType="vm:GeneratedFilesToolViewModel">
+    <Grid>
     <DockPanel>
         <!-- BUILD-03: stale-output banner (an input changed since the last build). -->
         <Border DockPanel.Dock="Top" Background="#33E65100" Padding="8,4"
@@ -41,8 +42,9 @@
                   CanUserResizeColumns="True" CanUserSortColumns="True" AutoGenerateColumns="False"
                   DoubleTapped="OnArtifactDoubleTapped">
             <DataGrid.ContextMenu>
-                <ContextMenu>
+                <ContextMenu Opening="OnArtifactContextOpening">
                     <MenuItem Header="{l:Loc Common_Open}" Click="OnOpenArtifact" />
+                    <MenuItem x:Name="View3DMenuItem" Header="View in internal 3D viewer" Click="OnViewArtifactIn3D" />
                     <MenuItem Header="{l:Loc Gen_Reveal}" Click="OnRevealArtifact" />
                     <Separator />
                     <MenuItem Header="{l:Loc Gen_GoToDef}" Click="OnGoToArtifactDefinition" />
@@ -62,6 +64,49 @@
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
                 <DataGridTextColumn Header="File Name" Binding="{Binding FileName}" Width="Auto" />
+                <!-- #7: per-file auto-open override (3-state: default / always / never). -->
+                <DataGridTemplateColumn Header="Auto-open" Width="Auto">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <CheckBox IsThreeState="True" IsChecked="{Binding AutoOpen, Mode=TwoWay}"
+                                      Click="OnAutoOpenToggled" HorizontalAlignment="Center" Margin="4,0"
+                                      ToolTip.Tip="Auto-open after build — ▣ default (use settings) · ✓ always · ✗ never" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <!-- #1/#8: per-row actions (external 3D, internal 3D, reveal, go to definition). -->
+                <DataGridTemplateColumn Header="Actions" Width="Auto">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <!-- Fixed-size slots so every row's buttons line up; the two 3D actions are
+                                 wrapped in equal-size panels and simply hidden (empty space) for non-model rows (#2/#3). -->
+                            <StackPanel Orientation="Horizontal" Spacing="1" Margin="2,0" VerticalAlignment="Center">
+                                <Panel Width="22" Height="20">
+                                    <Button Click="OnRowOpenExternal3D" IsVisible="{Binding CanView3D}"
+                                            Width="22" Height="20" Padding="0" Background="Transparent" BorderThickness="0"
+                                            ToolTip.Tip="Open in external 3D viewer (Loch / Aven)">
+                                        <PathIcon Data="{DynamicResource Icon.Cube}" Width="13" Height="13" />
+                                    </Button>
+                                </Panel>
+                                <Panel Width="22" Height="20">
+                                    <Button Click="OnRowOpenInternal3D" IsVisible="{Binding CanView3D}"
+                                            Width="22" Height="20" Padding="0" Background="Transparent" BorderThickness="0"
+                                            ToolTip.Tip="View in internal 3D viewer">
+                                        <PathIcon Data="{DynamicResource Icon.Eye}" Width="13" Height="13" />
+                                    </Button>
+                                </Panel>
+                                <Button Click="OnRowReveal" Width="22" Height="20" Padding="0" Background="Transparent" BorderThickness="0"
+                                        ToolTip.Tip="Reveal in file manager">
+                                    <PathIcon Data="{DynamicResource Icon.FolderOpen}" Width="13" Height="13" />
+                                </Button>
+                                <Button Click="OnRowGoToDef" Width="22" Height="20" Padding="0" Background="Transparent" BorderThickness="0"
+                                        ToolTip.Tip="Go to definition in the thconfig">
+                                    <PathIcon Data="{DynamicResource Icon.Search}" Width="13" Height="13" />
+                                </Button>
+                            </StackPanel>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
                 <!-- BUILD-03: current / stale state. -->
                 <DataGridTextColumn Header="State" Binding="{Binding StateText}" Width="Auto" />
                 <DataGridTextColumn Header="Path" Binding="{Binding Path}" Width="*" />
@@ -70,4 +115,7 @@
             </DataGrid.Columns>
         </DataGrid>
     </DockPanel>
+        <!-- #3: brief highlight flash when surfaced from the build-status artifact link. -->
+        <Border x:Name="FlashOverlay" IsHitTestVisible="False" Opacity="0" Background="#66FFC107" />
+    </Grid>
 </UserControl>
