@@ -5,13 +5,29 @@
              x:CompileBindings="False"
              x:DataType="vm:OutlineToolViewModel">
     <DockPanel>
-        <TextBox DockPanel.Dock="Top" Watermark="Filter outline…" Margin="4"
-                 Text="{Binding Outline.Filter, Mode=TwoWay}" />
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="4">
+            <TextBox Grid.Column="0" Watermark="Filter outline…"
+                     Text="{Binding Outline.Filter, Mode=TwoWay}" />
+            <!-- #1: include survey stations in the tree (off by default). -->
+            <ToggleButton Grid.Column="1" Margin="4,0,0,0" Padding="5"
+                          IsChecked="{Binding Outline.IncludeStations, Mode=TwoWay}"
+                          ToolTip.Tip="Include stations in the outline">
+                <PathIcon Data="{DynamicResource Icon.Survey}" Width="15" Height="15" />
+            </ToggleButton>
+        </Grid>
         <TextBlock DockPanel.Dock="Top" Margin="8,6" Foreground="Gray"
                    Text="No survey/scrap structure in this file."
                    IsVisible="{Binding Outline.IsEmpty}" />
+        <!-- #1: single click folds/unfolds, double click navigates (handled in code-behind). -->
         <TreeView ItemsSource="{Binding Outline.Roots}"
-                  SelectedItem="{Binding Outline.SelectedNode, Mode=TwoWay}">
+                  SelectedItem="{Binding Outline.SelectedNode, Mode=TwoWay}"
+                  Tapped="OnTreeTapped" DoubleTapped="OnTreeDoubleTapped">
+            <TreeView.Styles>
+                <!-- #1: all nodes expanded by default. -->
+                <Style Selector="TreeViewItem">
+                    <Setter Property="IsExpanded" Value="True" />
+                </Style>
+            </TreeView.Styles>
             <TreeView.ItemTemplate>
                 <TreeDataTemplate ItemsSource="{Binding Children}">
                     <StackPanel Orientation="Horizontal" Spacing="6">

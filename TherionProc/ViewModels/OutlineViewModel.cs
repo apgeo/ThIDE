@@ -41,6 +41,7 @@ public sealed class OutlineNode
         "surface"    => "≋",
         "group"      => "❏",
         "layout"     => "⚙",
+        "station"    => "∘",
         _            => "•",
     };
 }
@@ -49,20 +50,16 @@ public sealed partial class OutlineViewModel : ObservableObject
 {
     private readonly IDocumentService? _documents;
     private string? _currentFile;
-    private bool _suppressNavigate;
 
     public ObservableCollection<OutlineNode> Roots { get; } = new();
 
     [ObservableProperty] private string _filter = string.Empty;
     [ObservableProperty] private bool _isEmpty = true;
+    /// <summary>#1: also list survey stations under each centreline (off by default — verbose).</summary>
+    [ObservableProperty] private bool _includeStations;
 
-    private OutlineNode? _selectedNode;
-    /// <summary>Two-way bound to the tree; selecting a node navigates the editor to its line.</summary>
-    public OutlineNode? SelectedNode
-    {
-        get => _selectedNode;
-        set { if (SetProperty(ref _selectedNode, value) && !_suppressNavigate) NavigateTo(value); }
-    }
+    /// <summary>Two-way bound to the tree's selection; navigation happens on double-click, not select.</summary>
+    [ObservableProperty] private OutlineNode? _selectedNode;
 
     public OutlineViewModel() { } // design-time
 
@@ -75,29 +72,41 @@ public sealed partial class OutlineViewModel : ObservableObject
     }
 
     partial void OnFilterChanged(string value) => Rebuild();
+    partial void OnIncludeStationsChanged(bool value) => Rebuild();
 
     private void Rebuild()
     {
-        _suppressNavigate = true;
-        try
-        {
-            Roots.Clear();
-            var doc = _documents?.Active;
-            _currentFile = doc?.FilePath;
-            if (doc is null || string.IsNullOrEmpty(doc.DocumentText)) { IsEmpty = true; return; }
+        Roots.Clear();
+        var doc = _documents?.Active;
+        _currentFile = doc?.FilePath;
+        if (doc is null || string.IsNullOrEmpty(doc.DocumentText)) { IsEmpty = true; return; }
 
-            var tree = BuildTree(doc.DocumentText);
-            if (!string.IsNullOrWhiteSpace(Filter)) tree = Prune(tree, Filter.Trim());
-            foreach (var n in tree) Roots.Add(n);
-            IsEmpty = Roots.Count == 0;
-        }
-        finally { _suppressNavigate = false; }
+        var tree = BuildTree(doc.DocumentText, IncludeStations);
+        if (!string.IsNullOrWhiteSpace(Filter)) tree = Prune(tree, Filter.Trim());
+        foreach (var n in tree) Roots.Add(n);
+        IsEmpty = Roots.Count == 0;
     }
 
-    private static List<OutlineNode> BuildTree(string text)
+    // Centreline sub-commands that are NOT survey-data rows (so the rest are treated as shots).
+    private static readonly HashSet<string> CentrelineKeywords = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "data", "units", "calibrate", "sd", "grade", "declination", "instrument", "infer", "team",
+        "date", "explo-date", "explo-team", "flags", "station", "fix", "equate", "extend", "break",
+        "group", "endgroup", "mark", "walls", "vthreshold", "cs", "copyright", "attr", "count",
+        "station-names", "centreline", "centerline", "endcentreline", "endcenterline",
+    };
+    private static readonly string[] DefaultDataCols = { "from", "to", "length", "compass", "clino" };
+
+    internal static List<OutlineNode> BuildTree(string text, bool includeStations)
     {
         var roots = new List<OutlineNode>();
         var stack = new Stack<OutlineNode>();
+
+        // Station context for the innermost centreline (centrelines are not normally nested).
+        OutlineNode? centreline = null;
+        string[] cols = DefaultDataCols;
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
         int lineNo = 0;
         foreach (var line in SplitLines(text))
         {
@@ -111,14 +120,64 @@ public sealed partial class OutlineViewModel : ObservableObject
                 if (stack.Count > 0) stack.Peek().Children.Add(node);
                 else roots.Add(node);
                 stack.Push(node);
+                if (type == "centreline") { centreline = node; cols = DefaultDataCols; seen.Clear(); }
             }
             else if (TherionBlocks.CloserType(fw) is { } ctype)
             {
                 while (stack.Count > 0 && stack.Peek().Kind != ctype) stack.Pop();
                 if (stack.Count > 0) stack.Pop();
+                if (ctype == "centreline") centreline = null;
+            }
+            else if (includeStations && centreline is not null && !fw.StartsWith('#'))
+            {
+                AddStationsFromLine(line, fw, lineNo, centreline, seen, ref cols);
             }
         }
         return roots;
+    }
+
+    /// <summary>Extracts station names from a centreline line (data row, or station/fix/equate) (#1).</summary>
+    private static void AddStationsFromLine(string line, string firstWord, int lineNo,
+        OutlineNode centreline, HashSet<string> seen, ref string[] cols)
+    {
+        var tokens = line.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        var fw = firstWord.ToLowerInvariant();
+
+        if (fw == "data")
+        {
+            // "data <style> col1 col2 …" — record the column order (stations are from/to/station).
+            if (tokens.Length >= 3) cols = tokens[2..].Select(t => t.ToLowerInvariant()).ToArray();
+            return;
+        }
+        if (fw is "station" or "fix") { if (tokens.Length >= 2) Add(tokens[1]); return; }
+        if (fw == "equate") { for (int i = 1; i < tokens.Length; i++) Add(tokens[i]); return; }
+        if (CentrelineKeywords.Contains(fw)) return;   // another sub-command, not a shot
+
+        // A survey-data row: pick the tokens at the station columns of the active data format.
+        for (int i = 0; i < cols.Length && i < tokens.Length; i++)
+            if (cols[i] is "from" or "to" or "station") Add(tokens[i]);
+
+        void Add(string raw)
+        {
+            var name = raw.Trim();
+            if (name.Length == 0 || name == "-" || name == "." || !IsStationToken(name)) return;
+            if (seen.Add(name)) centreline.Children.Add(new OutlineNode(name, "station", lineNo));
+        }
+    }
+
+    private static bool IsStationToken(string s)
+    {
+        foreach (var c in s)
+            if (!(char.IsLetterOrDigit(c) || c is '.' or '_' or '-' or '@')) return false;
+        return true;
+    }
+
+    /// <summary>Navigates the editor to the node's source line (double-click from the tree, #1).</summary>
+    public void NavigateToNode(OutlineNode? node)
+    {
+        if (node is null || _documents is null || string.IsNullOrEmpty(_currentFile)) return;
+        var loc = new SourceLocation(node.Line, 1);
+        _ = _documents.NavigateToSpanAsync(new SourceSpan(_currentFile!, loc, loc, 0, 0));
     }
 
     private static List<OutlineNode> Prune(List<OutlineNode> nodes, string filter)
@@ -144,13 +203,6 @@ public sealed partial class OutlineViewModel : ObservableObject
         return parts.Length >= 2 && !parts[1].StartsWith('-')
             ? $"{type} {parts[1]}"
             : type;
-    }
-
-    private void NavigateTo(OutlineNode? node)
-    {
-        if (node is null || _documents is null || string.IsNullOrEmpty(_currentFile)) return;
-        var loc = new SourceLocation(node.Line, 1);
-        _ = _documents.NavigateToSpanAsync(new SourceSpan(_currentFile!, loc, loc, 0, 0));
     }
 
     private static IEnumerable<string> SplitLines(string text)
