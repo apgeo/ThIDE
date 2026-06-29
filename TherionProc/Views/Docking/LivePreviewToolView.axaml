@@ -2,20 +2,60 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:TherionProc.ViewModels.Docking"
              xmlns:views="using:TherionProc.Views"
+             xmlns:conv="using:TherionProc.Converters"
              x:Class="TherionProc.Views.Docking.LivePreviewToolView"
              x:CompileBindings="False"
              x:DataType="vm:LivePreviewToolViewModel">
+    <UserControl.Resources>
+        <conv:StringEqualsConverter x:Key="ColorEquals" />
+    </UserControl.Resources>
     <DockPanel>
         <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="6,3">
-            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+            <WrapPanel Orientation="Horizontal">
                 <ToggleButton Content="Elevation" IsChecked="{Binding Preview.IsElevation, Mode=TwoWay}"
-                              ToolTip.Tip="Switch between plan and elevation" FontSize="11" Padding="8,2" />
-                <Button Content="↻ Refresh" Command="{Binding Preview.RefreshCommand}" FontSize="11" Padding="8,2" />
+                              ToolTip.Tip="Switch between plan and elevation" FontSize="11" Padding="8,2" Margin="0,0,2,2" />
+                <Button Content="↻ Refresh" Command="{Binding Preview.RefreshCommand}" FontSize="11" Padding="8,2" Margin="0,0,6,2" />
+
+                <Separator Width="1" Margin="3,2" Background="Gray" />
+
+                <!-- Debug overlays: station labels + provenance colouring. -->
+                <ToggleButton Content="Labels" IsChecked="{Binding Preview.ShowStationLabels, Mode=TwoWay}"
+                              ToolTip.Tip="Show a name label at each station" FontSize="11" Padding="6,2" Margin="0,0,2,2" />
+                <ToggleButton Content="survey.station" IsChecked="{Binding Preview.ShowSurveyNames, Mode=TwoWay}"
+                              ToolTip.Tip="Qualify each station label with its survey (survey.station)" FontSize="11" Padding="6,2" Margin="0,0,2,2" />
+                <ToggleButton Content="Junctions" IsChecked="{Binding Preview.ShowJunctions, Mode=TwoWay}"
+                              ToolTip.Tip="Show clickable equate junctions (where surveys are stitched together)"
+                              FontSize="11" Padding="6,2" Margin="0,0,2,2" />
+                <ToggleButton Content="Separate" IsChecked="{Binding Preview.SeparateComponents, Mode=TwoWay}"
+                              ToolTip.Tip="Spread disconnected pieces into a grid instead of stacking them at the origin"
+                              FontSize="11" Padding="6,2" Margin="0,0,6,2" />
+
+                <Separator Width="1" Margin="3,2" Background="Gray" />
+
+                <!-- Colour legs by data origin. -->
+                <TextBlock Text="Color:" VerticalAlignment="Center" FontSize="11" Foreground="Gray" Margin="0,0,4,0" />
+                <ToggleButton Content="None" Command="{Binding Preview.SetColorModeCommand}" CommandParameter="none" FontSize="11" Padding="6,2" Margin="0,0,2,2"
+                              IsChecked="{Binding Preview.ColorMode, Mode=OneWay, Converter={StaticResource ColorEquals}, ConverterParameter=none}" />
+                <ToggleButton Content="Survey" Command="{Binding Preview.SetColorModeCommand}" CommandParameter="survey" FontSize="11" Padding="6,2" Margin="0,0,2,2"
+                              ToolTip.Tip="A distinct colour per survey"
+                              IsChecked="{Binding Preview.ColorMode, Mode=OneWay, Converter={StaticResource ColorEquals}, ConverterParameter=survey}" />
+                <ToggleButton Content="File" Command="{Binding Preview.SetColorModeCommand}" CommandParameter="file" FontSize="11" Padding="6,2" Margin="0,0,2,2"
+                              ToolTip.Tip="A distinct colour per source .th file"
+                              IsChecked="{Binding Preview.ColorMode, Mode=OneWay, Converter={StaticResource ColorEquals}, ConverterParameter=file}" />
+                <ToggleButton Content="Component" Command="{Binding Preview.SetColorModeCommand}" CommandParameter="component" FontSize="11" Padding="6,2" Margin="0,0,6,2"
+                              ToolTip.Tip="A distinct colour per disconnected piece (reveals surveys stacked at the origin)"
+                              IsChecked="{Binding Preview.ColorMode, Mode=OneWay, Converter={StaticResource ColorEquals}, ConverterParameter=component}" />
+
                 <TextBlock Text="{Binding Preview.Status}" Foreground="Gray" VerticalAlignment="Center"
                            FontSize="11" TextTrimming="CharacterEllipsis" />
-            </StackPanel>
+            </WrapPanel>
         </Border>
         <views:LivePreviewControl x:Name="Sketch" Segments="{Binding Preview.Segments}"
-                                  LeadMarkers="{Binding Preview.LeadMarkers}" />
+                                  LeadMarkers="{Binding Preview.LeadMarkers}"
+                                  EquateMarkers="{Binding Preview.EquateMarkers}"
+                                  ShowJunctions="{Binding Preview.ShowJunctions}"
+                                  ShowLabels="{Binding Preview.ShowStationLabels}"
+                                  ShowSurveyNames="{Binding Preview.ShowSurveyNames}"
+                                  ColorMode="{Binding Preview.ColorMode}" />
     </DockPanel>
 </UserControl>
