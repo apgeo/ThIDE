@@ -157,6 +157,8 @@ public partial class TherionTextEditor : UserControl
     private MenuItem? _stepIntoMenuItem;                  // EDIT-17: context-menu item (visibility gated)
     private MenuItem? _formatMenuItem;                    // EDIT-04: context-menu item (visibility gated)
     private MenuItem? _peekMenuItem;                      // EDIT-10: context-menu item (visibility gated)
+    private MenuItem? _open3dMenuItem;                    // #5: "Open in 3D" (shown for station/survey refs)
+    private string? _open3dName;                          // the station/survey under the right-click
     private CompletionWindow? _completionWindow;
     private Diagnostic? _hoverDiagnostic;
     private IAppSettingsService? _settings;
@@ -498,22 +500,31 @@ public partial class TherionTextEditor : UserControl
         _foldingManager.UpdateFoldings(foldings, -1);
     }
 
-    private bool IsThconfig()
+    // Files that can contain a `layout … endlayout` block (where embedded MetaPost/TeX live).
+    private bool MayContainLayout()
     {
         var p = CurrentFilePath;
         if (string.IsNullOrEmpty(p)) return false;
         var ext = Path.GetExtension(p).ToLowerInvariant();
-        return ext is ".thconfig" or ".thc";
+        return ext is ".thconfig" or ".thc" or ".th";
     }
 
-    // For .thconfig, leave the metapost/tex body inside layout…endlayout unhighlighted.
+    // LANG-02: classify each line's embedded-language region (Therion layout option / MetaPost / TeX)
+    // so the colorizer highlights layout bodies with the right lexer instead of blanking them.
     private void UpdateThconfigDecorations()
     {
-        if (_editor?.Document is null || _colorizer is null) return;
-        _colorizer.SetSkipLines(IsThconfig()
-            ? TherionFoldingStrategy.LayoutBodyLines(_editor.Document)
+        if (_editor?.Document is not { } doc || _colorizer is null) return;
+        _colorizer.SetLineRegions(MayContainLayout()
+            ? LayoutRegionScanner.Scan(DocumentLineTexts(doc))
             : null);
         _editor.TextArea.TextView.Redraw();
+    }
+
+    private static IReadOnlyList<string> DocumentLineTexts(TextDocument doc)
+    {
+        var texts = new List<string>(doc.LineCount);
+        foreach (var line in doc.Lines) texts.Add(doc.GetText(line));
+        return texts;
     }
 
     /// <summary>Autocomplete vocabulary (Therion keywords + station/survey names).</summary>
@@ -1786,6 +1797,33 @@ public partial class TherionTextEditor : UserControl
         catch { return null; } // design-time / no container
     }
 
+    private static IDocumentService? TryDocuments()
+    {
+        try { return AppServices.Provider.GetService<IDocumentService>(); }
+        catch { return null; }
+    }
+
+    // "Open in 3D" is offered for station/survey references when the embedded viewer is enabled
+    // and actually has a model to show. Stations highlight in place; surveys get a bounding box —
+    // both via the same selection path (IDocumentService.RequestShowInModel3D → SelectInModel).
+    private static bool Model3DAvailableFor(string? kind)
+    {
+        if (kind is not ("station" or "survey")) return false;
+        try
+        {
+            if (AppServices.Provider.GetService<IAppSettingsService>()?.Current.EnableModel3DViewer != true)
+                return false;
+            return AppServices.Provider.GetService<ViewModels.Model3DViewerViewModel>()?.CanShowInViewer == true;
+        }
+        catch { return false; }
+    }
+
+    private void OpenInModel3D(string name)
+    {
+        if (!string.IsNullOrWhiteSpace(name)) TryDocuments()?.RequestShowInModel3D(name);
+        HideHoverInfo();
+    }
+
     /// <summary>
     /// Opens the bundled thbook PDF at the page mapped to <paramref name="term"/> (#6),
     /// falling back to the online wiki when there's no mapping or the PDF can't be opened.
@@ -1826,6 +1864,14 @@ public partial class TherionTextEditor : UserControl
         actions.Children.Add(go);
         actions.Children.Add(refs);
         actions.Children.Add(renameBtn);
+
+        // "Open in 3D" — only for stations/surveys, and only when a 3D model is available.
+        if (Model3DAvailableFor(info.Kind))
+        {
+            var open3d = new Button { Content = "Open in 3D", Padding = new Thickness(6, 2) };
+            open3d.Click += (_, _) => OpenInModel3D(raw);
+            actions.Children.Add(open3d);
+        }
 
         // Documentation button: links to the thbook page for this reference kind (#6),
         // shown only when a page mapping exists for it (info.Kind is "station"/"survey"/…).
@@ -1987,11 +2033,15 @@ public partial class TherionTextEditor : UserControl
             _formatMenuItem.IsVisible = EditorFeatureFlags.IsEnabled(EditorFeature.FormatDocument, fs);
         if (_peekMenuItem is not null)
             _peekMenuItem.IsVisible = EditorFeatureFlags.IsEnabled(EditorFeature.PeekDefinition, fs) && Navigation is not null;
+        if (_open3dMenuItem is not null) _open3dMenuItem.IsVisible = false;   // hidden unless on a station/survey
+        _open3dName = null;
 
         var view = _editor.TextArea.TextView;
         // Keyboard-invoked menus (Menu key) carry no pointer position — leave the caret put.
         if (!e.TryGetPosition(view, out var p)) return;
         if (FloorOffset(p + view.ScrollOffset) is not { } off) return;
+
+        UpdateOpen3dMenuItem(p + view.ScrollOffset);
 
         // Right-clicking inside an existing selection keeps it (so Cut/Copy act on the
         // selection); clicking elsewhere moves the caret there and clears any selection.
@@ -2001,6 +2051,20 @@ public partial class TherionTextEditor : UserControl
             if (off >= selStart && off <= selStart + _editor.SelectionLength) return;
         }
         _editor.Select(off, 0);
+    }
+
+    // #5: enable the "Open in 3D" item when the token under the pointer is a station/survey
+    // reference and the embedded viewer has a model to show.
+    private void UpdateOpen3dMenuItem(Point visualPos)
+    {
+        if (_open3dMenuItem is null) return;
+        if (RefTokenUnderPointer(visualPos) is { } tok &&
+            Navigation?.Describe(tok.Raw, ChooseReferenceKind((tok.Start, tok.Length, tok.Raw), tok.Offset)) is { } info &&
+            Model3DAvailableFor(info.Kind))
+        {
+            _open3dName = tok.Raw;
+            _open3dMenuItem.IsVisible = true;
+        }
     }
 
     // ----- go to definition / linked files -------------------------------
@@ -2828,6 +2892,9 @@ public partial class TherionTextEditor : UserControl
         menu.Items.Add(MakeItem("Insert Team Member",     InsertTeamMember));
         menu.Items.Add(new Separator());
         menu.Items.Add(MakeItem("Rename Symbol…  F2",    StartRename));
+        // #5: shown only when right-clicking a station/survey reference and the 3D viewer has a model.
+        _open3dMenuItem = MakeItem("Open in 3D", () => { if (_open3dName is { } n) OpenInModel3D(n); });
+        menu.Items.Add(_open3dMenuItem);
         menu.Items.Add(new Separator());
         // EDIT-15 / EDIT-17: shown only when their feature is enabled (refreshed on menu open).
         _matchMenuItem = MakeItem("Go to Matching Block  Ctrl+]", GoToMatchingBlock);
