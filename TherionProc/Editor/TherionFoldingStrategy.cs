@@ -20,6 +20,7 @@ internal static class TherionFoldingStrategy
     private static readonly HashSet<string> BlockStarts = new(StringComparer.OrdinalIgnoreCase)
     {
         "survey", "centreline", "centerline", "scrap", "map", "line", "area", "group", "layout", "lookup",
+        "surface", "scan", "comment",
     };
 
     public static List<NewFolding> CreateFoldings(TextDocument document)

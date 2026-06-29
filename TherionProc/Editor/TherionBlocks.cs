@@ -21,6 +21,8 @@ internal static class TherionBlocks
             ["area"]       = "endarea",
             ["map"]        = "endmap",
             ["surface"]    = "endsurface",
+            ["scan"]       = "endscan",
+            ["comment"]    = "endcomment",
             ["group"]      = "endgroup",
             ["layout"]     = "endlayout",
             ["lookup"]     = "endlookup",

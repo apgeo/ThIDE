@@ -53,6 +53,16 @@ public sealed record SurfaceCommand(
     bool IsTerminated) : TherionCommand(Span, "surface");
 
 /// <summary>
+/// <c>scan [-options] ... endscan</c> — a survey-level block that attaches scanned drawings /
+/// 3D scan files (e.g. <c>file scan.stl</c>). thbook §"scan". The body is reference data, not
+/// Therion command syntax, so the parser consumes it opaquely (like <see cref="SurfaceCommand"/>).
+/// </summary>
+public sealed record ScanCommand(
+    SourceSpan Span,
+    string OptionsRaw,
+    bool IsTerminated) : TherionCommand(Span, "scan");
+
+/// <summary>
 /// <c>data &lt;style&gt; &lt;field-list&gt;</c> declaration � defines the columns
 /// for subsequent <see cref="DataRow"/> entries.
 /// </summary>
@@ -205,10 +215,19 @@ public sealed record SdCommand(
     string? Unit,
     string Raw) : TherionCommand(Span, "sd");
 
-/// <summary><c>grade &lt;grade list&gt;</c>.</summary>
+/// <summary>
+/// <c>grade &lt;grade list&gt;</c> (a reference) OR a <c>grade &lt;id&gt; [-title …] … endgrade</c>
+/// block that <em>defines</em> a named grade from <c>sd</c>/<c>units</c> lines (thbook §"grade";
+/// see Therion's own <c>therion-librarydata/grades.th</c>). The definition body is consumed
+/// opaquely; <see cref="IsBlockDefinition"/> distinguishes the two forms.
+/// </summary>
 public sealed record GradeCommand(
     SourceSpan Span,
-    ImmutableArray<string> Grades) : TherionCommand(Span, "grade");
+    ImmutableArray<string> Grades) : TherionCommand(Span, "grade")
+{
+    /// <summary>True when this is a <c>grade … endgrade</c> definition block (not a reference).</summary>
+    public bool IsBlockDefinition { get; init; }
+}
 
 /// <summary><c>infer &lt;what&gt; &lt;on/off&gt;</c> (<c>plumbs</c> / <c>equates</c>).</summary>
 public sealed record InferCommand(

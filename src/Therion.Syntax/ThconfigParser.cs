@@ -171,6 +171,7 @@ public sealed class ThconfigParser
     /// <summary>The closing keyword for an opaque (unparsed-body) block opener, or null.</summary>
     private static string? OpaqueBlockEnd(string keyword) =>
         string.Equals(keyword, "lookup", StringComparison.OrdinalIgnoreCase) ? "endlookup" :
+        string.Equals(keyword, "comment", StringComparison.OrdinalIgnoreCase) ? "endcomment" :
         null;
 
     /// <summary>Collects the significant (non-trivia) tokens of a line in <c>[start, end)</c>.</summary>

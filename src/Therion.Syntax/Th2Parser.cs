@@ -93,6 +93,11 @@ public sealed class Th2Parser
                 case "encoding":
                     children.Add(new UnknownCommand(line.Span, kw, JoinFrom(line, 1)));
                     break;
+                // `comment … endcomment` multi-line comment block — valid at top level AND inside a
+                // scrap (this body loop is shared). Consumed opaquely as a single TrivialComment.
+                case "comment":
+                    children.Add(ParseCommentBlock(line, lines, ref cursor));
+                    break;
                 default:
                     var sev = options.Mode == ParserMode.Strict
                         ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning;
@@ -203,6 +208,13 @@ public sealed class Th2Parser
             ? CoalesceFrom(header.Tokens, 1) : (string.Empty, header.Tokens.Length);
         string optsRaw = JoinFrom(header, lineOptStart);
 
+        // FUTURE (custom symbol awareness): Therion lets a project DEFINE its own point/line/area
+        // types (user symbols), so a type we don't know is not necessarily wrong — it may be valid
+        // in context. We deliberately keep this a lenient WARNING (never an error in lenient mode)
+        // rather than expanding the built-in known-type list with project-specific names. A future
+        // pass could suppress this warning when the enclosing scrap/project declares the matching
+        // custom symbol, instead of flagging every unrecognized type. Until then this is signal, not
+        // a hard failure.
         if (type.Length > 0 && !Th2Symbols.IsKnownLineType(type))
             diags.Add(Diagnostic.Create(DiagnosticCodes.Th2UnknownLineType,
                 options.Mode == ParserMode.Strict ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
@@ -361,6 +373,24 @@ public sealed class Th2Parser
 
     private static string Unquote(string text) =>
         text.Length >= 2 && text[0] == '"' && text[^1] == '"' ? text[1..^1] : text;
+
+    /// <summary>
+    /// <c>comment … endcomment</c> multi-line comment block — body is free text, consumed opaquely
+    /// and preserved as one <see cref="TrivialComment"/>. Scans for an <c>endcomment</c> line (the
+    /// body may contain <c>end…</c> prose); if none exists ahead the bare <c>comment</c> line is kept.
+    /// </summary>
+    private static TrivialComment ParseCommentBlock(
+        LogicalLine line, ImmutableArray<LogicalLine> lines, ref int cursor)
+    {
+        for (int i = cursor; i < lines.Length; i++)
+            if (!lines[i].IsEmpty &&
+                string.Equals(lines[i].Keyword, "endcomment", StringComparison.OrdinalIgnoreCase))
+            {
+                cursor = i + 1;
+                return new TrivialComment(SpanUnion(line.Span, lines[i].Span), "comment");
+            }
+        return new TrivialComment(line.Span, "comment");
+    }
 
     private static SourceSpan SpanUnion(SourceSpan a, SourceSpan b)
     {

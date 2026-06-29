@@ -155,6 +155,7 @@ public sealed class ThParser
             "centreline" or "centerline"   => ParseCentreline(line, lines, ref cursor, filePath, options, diagnostics),
             "group"                        => ParseGroup(line, lines, ref cursor, filePath, options, parentBlock, diagnostics),
             "surface"                      => ParseSurface(line, lines, ref cursor, diagnostics, options),
+            "scan"                         => ParseScan(line, lines, ref cursor, diagnostics, options),
             "map"                          => ParseMap(line, lines, ref cursor, diagnostics, options),
             // layout … endlayout can appear in `.th` files that are input-ed (LANG-02/10).
             "layout"                       => ParseLayout(line, lines, ref cursor, diagnostics, options),
@@ -172,7 +173,7 @@ public sealed class ThParser
             "declination"                  => ParseDeclination(line, options, diagnostics),
             "grid-angle"                   => ParseGridAngle(line),
             "sd"                           => ParseSd(line),
-            "grade"                        => ParseGrade(line),
+            "grade"                        => ParseGrade(line, lines, ref cursor),
             "infer"                        => ParseInfer(line),
             "mark"                         => ParseMark(line, options, diagnostics),
             "station"                      => ParseStation(line, options, diagnostics),
@@ -188,6 +189,12 @@ public sealed class ThParser
             // Recognized file-header directive (charset declaration). Carries no
             // semantics for us, but must not be flagged as an unknown command.
             "encoding"                     => new UnknownCommand(line.Span, line.Keyword, JoinFrom(line, 1)),
+            // `import <file.3d> [-surveys …]` pulls in Survex/Compass loop-closed data (thbook
+            // §"import"). The target is a compiled binary we don't parse, so it is NOT a source-graph
+            // edge — recognized here only so it isn't flagged as an unknown command.
+            "import"                       => new UnknownCommand(line.Span, line.Keyword, JoinFrom(line, 1)),
+            // `comment … endcomment` — a multi-line comment block (consumed opaquely, see below).
+            "comment"                      => ParseCommentBlock(line, lines, ref cursor),
             _ => ParseViaRegistryOrFallback(line, parentBlock, options, filePath, diagnostics),
         };
     }
@@ -476,6 +483,45 @@ public sealed class ThParser
         return new SurfaceCommand(SpanUnion(line.Span, lastSpan), opts, terminated);
     }
 
+    /// <summary>
+    /// <c>scan [-options] … endscan</c> — a survey-level block attaching scan/3D files. Consumed
+    /// opaquely (like <see cref="ParseSurface"/>) so its body never collides with the enclosing
+    /// <c>survey</c>'s <c>endsurvey</c>.
+    /// </summary>
+    private ScanCommand ParseScan(
+        LogicalLine line,
+        ImmutableArray<LogicalLine> lines,
+        ref int cursor,
+        ImmutableArray<Diagnostic>.Builder diagnostics,
+        ParserOptions options)
+    {
+        var opts = JoinFrom(line, 1);
+        bool terminated = false;
+        var lastSpan = line.Span;
+        while (cursor < lines.Length)
+        {
+            var ln = lines[cursor];
+            if (!ln.IsEmpty && string.Equals(ln.Keyword, "endscan", StringComparison.OrdinalIgnoreCase))
+            {
+                lastSpan = ln.Span;
+                cursor++;
+                terminated = true;
+                break;
+            }
+            if (!ln.IsEmpty) lastSpan = ln.Span;
+            cursor++;
+        }
+
+        if (!terminated)
+            diagnostics.Add(Diagnostic.Create(
+                DiagnosticCodes.UnterminatedBlock,
+                options.Mode == ParserMode.Strict ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
+                "Block 'scan' is missing its 'endscan' terminator.",
+                line.Span));
+
+        return new ScanCommand(SpanUnion(line.Span, lastSpan), opts, terminated);
+    }
+
     private DataCommand ParseData(
         LogicalLine line, ParserOptions options, ImmutableArray<Diagnostic>.Builder diagnostics)
     {
@@ -650,8 +696,75 @@ public sealed class ThParser
         return new SdCommand(line.Span, quantities.ToImmutable(), value, unit, JoinFrom(line, 1));
     }
 
-    private static GradeCommand ParseGrade(LogicalLine line) =>
-        new(line.Span, TokensFrom(line, 1));
+    /// <summary>
+    /// <c>grade</c> is two-faced: a single-line <em>reference</em> (<c>grade BCRA3</c>) or a
+    /// <c>grade &lt;id&gt; [-title …] … endgrade</c> <em>definition</em> block. We treat it as a
+    /// definition only when the next block terminator ahead is <c>endgrade</c> (so a `grade`
+    /// reference inside a centreline, whose next terminator is `endcentreline`, stays a line). The
+    /// definition body (<c>sd</c>/<c>units</c> lines) is consumed opaquely.
+    /// </summary>
+    private static GradeCommand ParseGrade(
+        LogicalLine line, ImmutableArray<LogicalLine> lines, ref int cursor)
+    {
+        if (!NextTerminatorIsEndgrade(lines, cursor))
+            return new GradeCommand(line.Span, TokensFrom(line, 1));
+
+        var lastSpan = line.Span;
+        while (cursor < lines.Length)
+        {
+            var ln = lines[cursor];
+            if (!ln.IsEmpty && string.Equals(ln.Keyword, "endgrade", StringComparison.OrdinalIgnoreCase))
+            {
+                lastSpan = ln.Span;
+                cursor++;
+                break;
+            }
+            if (!ln.IsEmpty) lastSpan = ln.Span;
+            cursor++;
+        }
+        return new GradeCommand(SpanUnion(line.Span, lastSpan), TokensFrom(line, 1))
+        {
+            IsBlockDefinition = true,
+        };
+    }
+
+    /// <summary>True if the first <c>end…</c> line at/after <paramref name="from"/> is <c>endgrade</c>.</summary>
+    private static bool NextTerminatorIsEndgrade(ImmutableArray<LogicalLine> lines, int from)
+    {
+        for (int i = from; i < lines.Length; i++)
+        {
+            if (lines[i].IsEmpty) continue;
+            var k = lines[i].Keyword;
+            if (k.StartsWith("end", StringComparison.OrdinalIgnoreCase))
+                return string.Equals(k, "endgrade", StringComparison.OrdinalIgnoreCase);
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// <c>comment … endcomment</c> — a multi-line comment block (thbook §"comments"). The body is
+    /// free text, so it is consumed opaquely and preserved as one <see cref="TrivialComment"/>. The
+    /// body may itself contain lines that start with <c>end…</c> (as prose), so we scan specifically
+    /// for an <c>endcomment</c> line; if none exists ahead, the bare <c>comment</c> line is kept
+    /// as-is (no greedy swallow of the rest of the file).
+    /// </summary>
+    private static TrivialComment ParseCommentBlock(
+        LogicalLine line, ImmutableArray<LogicalLine> lines, ref int cursor)
+    {
+        int end = IndexOfKeyword(lines, cursor, "endcomment");
+        if (end < 0) return new TrivialComment(line.Span, "comment");
+        cursor = end + 1;
+        return new TrivialComment(SpanUnion(line.Span, lines[end].Span), "comment");
+    }
+
+    /// <summary>Index of the first non-empty line at/after <paramref name="from"/> whose keyword matches.</summary>
+    private static int IndexOfKeyword(ImmutableArray<LogicalLine> lines, int from, string keyword)
+    {
+        for (int i = from; i < lines.Length; i++)
+            if (!lines[i].IsEmpty && string.Equals(lines[i].Keyword, keyword, StringComparison.OrdinalIgnoreCase))
+                return i;
+        return -1;
+    }
 
     /// <summary><c>infer &lt;what&gt; &lt;on/off&gt;</c>.</summary>
     private static InferCommand ParseInfer(LogicalLine line)
