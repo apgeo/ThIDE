@@ -60,6 +60,45 @@ public partial class FileDocumentView : UserControl
             TryDocuments()?.RequestSelectFileInWorkspace(path);
     }
 
+    // thconfig actions (#1): make this thconfig the active project configuration.
+    private void OnSetActiveThconfig(object? sender, RoutedEventArgs e)
+    {
+        if (_vm is { IsThconfigFile: true } vm) _ = ActivateThconfigAsync(vm.FilePath, setWorkingDir: false);
+    }
+
+    // thconfig actions (#1): set this file's folder as the working directory, then activate it.
+    private void OnSetWorkingDirectory(object? sender, RoutedEventArgs e)
+    {
+        if (_vm is { IsThconfigFile: true } vm) _ = ActivateThconfigAsync(vm.FilePath, setWorkingDir: true);
+    }
+
+    // Switches the workspace's active thconfig (and optionally its working-directory root) to this
+    // file. The session raises Changed, so the build pipeline, object graph and orphan banners all
+    // re-target without any extra wiring here.
+    private static async System.Threading.Tasks.Task ActivateThconfigAsync(string path, bool setWorkingDir)
+    {
+        if (TrySession() is not { } session) return;
+        var name = Path.GetFileName(path);
+        try
+        {
+            if (setWorkingDir)
+            {
+                var dir = Path.GetDirectoryName(Path.GetFullPath(path));
+                if (!string.IsNullOrEmpty(dir)) await session.SetRootAsync(dir).ConfigureAwait(true);
+            }
+            var ok = await session.SetActiveThconfigAsync(path).ConfigureAwait(true);
+            if (ok)
+                TryNotifications()?.Info(
+                    setWorkingDir ? "Working directory set" : "Active thconfig set",
+                    setWorkingDir
+                        ? $"Working directory is now {Path.GetDirectoryName(path)}, with {name} as the active thconfig."
+                        : $"{name} is now the active thconfig.");
+            else
+                TryNotifications()?.Warning("Could not activate thconfig", $"{name} could not be loaded.");
+        }
+        catch { /* best-effort — design-time / no container / load failure */ }
+    }
+
     // Open-files dropdown (#15): populate the flyout with every open document; clicking one
     // re-activates its tab.
     private void OnShowOpenFiles(object? sender, RoutedEventArgs e)
@@ -592,6 +631,12 @@ public partial class FileDocumentView : UserControl
     private static IWorkspaceSession? TrySession()
     {
         try { return AppServices.Provider.GetService<IWorkspaceSession>(); }
+        catch { return null; }
+    }
+
+    private static INotificationService? TryNotifications()
+    {
+        try { return AppServices.Provider.GetService<INotificationService>(); }
         catch { return null; }
     }
 

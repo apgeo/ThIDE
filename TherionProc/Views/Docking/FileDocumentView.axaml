@@ -290,6 +290,20 @@
         <!-- File-actions, overlaid on the tab-strip row (no extra height, #7). -->
         <StackPanel HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,1,6,0"
                     Orientation="Horizontal" Spacing="2">
+            <!-- thconfig actions (#1): only for .thconfig/.thc project files. -->
+            <!-- Make this thconfig the active project configuration (build/graph reference). -->
+            <Button Padding="6,2" Background="Transparent" BorderThickness="0" FontSize="12"
+                    IsVisible="{Binding IsThconfigFile}" Click="OnSetActiveThconfig"
+                    ToolTip.Tip="Set this file as the active thconfig (project configuration)">
+                <PathIcon Data="{DynamicResource Icon.Config}" Width="14" Height="14" />
+            </Button>
+            <!-- Set this file's folder as the working directory AND make it the active thconfig. -->
+            <Button Padding="6,2" Background="Transparent" BorderThickness="0" FontSize="12"
+                    IsVisible="{Binding IsThconfigFile}" Click="OnSetWorkingDirectory"
+                    ToolTip.Tip="Set this file's folder as the working directory and make it the active thconfig">
+                <PathIcon Data="{DynamicResource Icon.FolderOpen}" Width="14" Height="14" />
+            </Button>
+
             <!-- Edit-with-Mapiah: only for .th2 sketches. Launches the external Mapiah editor;
                  saved changes reload back into this tab automatically. -->
             <Button Padding="6,2" FontSize="12" Click="OnEditWithMapiah"
