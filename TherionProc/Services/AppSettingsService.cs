@@ -63,6 +63,9 @@ public sealed record AppSettings
     public IReadOnlyList<string> RecentFiles { get; init; } = Array.Empty<string>();
     /// <summary>Pinned recent files (QOL-05): shown in their own group and never cleared by "Clear Recent".</summary>
     public IReadOnlyList<string> PinnedRecentFiles { get; init; } = Array.Empty<string>();
+    /// <summary>Recently-opened working directories (workspace roots), most-recent first; listed in
+    /// the File ▸ Recent Directories submenu.</summary>
+    public IReadOnlyList<string> RecentDirectories { get; init; } = Array.Empty<string>();
 
     // ---- workspace session (single root + single active thconfig) ----
     /// <summary>Root directory of the workspace at last shutdown (restored on launch, #9).</summary>
@@ -139,6 +142,9 @@ public sealed record AppSettings
         new Dictionary<string, bool>();
     /// <summary>BUILD-07: automatically (re)build the active project a short moment after each save. Off by default.</summary>
     public bool CompileOnSave { get; init; }
+    /// <summary>Before compiling, ensure each export's output directory exists, creating it
+    /// recursively when missing (Therion otherwise fails on a non-existent output folder). On by default.</summary>
+    public bool EnsureOutputDirectories { get; init; } = true;
 
     // ---- auto-save (QOL-09) ----
     /// <summary>When the editor auto-saves dirty files (off / after a delay / on focus loss).</summary>
