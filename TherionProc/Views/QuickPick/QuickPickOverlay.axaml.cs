@@ -37,7 +37,15 @@ public partial class QuickPickOverlay : UserControl
         {
             var box = this.FindControl<TextBox>("SearchBox");
             box?.Focus();
-            box?.SelectAll();
+            // A pre-seeded palette (e.g. the "@" document-symbol / "#" workspace-symbol search
+            // opened from the toolbar) must keep its prefix: place the caret at the end so the
+            // typed term is appended, not replaced. Selecting all would clobber the prefix on the
+            // first keystroke, dropping the user back into command mode. An empty box selects all
+            // so a re-show can be typed over.
+            if (box is { Text.Length: > 0 })
+                box.CaretIndex = box.Text.Length;
+            else
+                box?.SelectAll();
         }, DispatcherPriority.Loaded);
     }
 
