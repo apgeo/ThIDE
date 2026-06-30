@@ -8,13 +8,28 @@
              x:DataType="vm:LivePreviewToolViewModel">
     <UserControl.Resources>
         <conv:StringEqualsConverter x:Key="ColorEquals" />
+        <conv:BoolAndConverter x:Key="BoolAnd" />
     </UserControl.Resources>
     <DockPanel>
         <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="6,3">
             <WrapPanel Orientation="Horizontal">
-                <ToggleButton Content="Elevation" IsChecked="{Binding Preview.IsElevation, Mode=TwoWay}"
-                              ToolTip.Tip="Switch between plan and elevation" FontSize="11" Padding="8,2" Margin="0,0,2,2" />
+                <!-- View: Plan / projected profile (radio-style push buttons). -->
+                <ToggleButton Content="Plan" Command="{Binding Preview.SetPlanModeCommand}"
+                              IsChecked="{Binding Preview.IsPlan, Mode=OneWay}"
+                              ToolTip.Tip="Plan view (looking down — north up)" FontSize="11" Padding="8,2" Margin="0,0,2,2" />
+                <ToggleButton Content="Proj. profile" Command="{Binding Preview.SetProfileModeCommand}"
+                              IsChecked="{Binding Preview.IsElevation, Mode=OneWay}"
+                              ToolTip.Tip="Projected profile (extended elevation — east vs up)" FontSize="11" Padding="8,2" Margin="0,0,6,2" />
                 <Button Content="↻ Refresh" Command="{Binding Preview.RefreshCommand}" FontSize="11" Padding="8,2" Margin="0,0,6,2" />
+
+                <Separator Width="1" Margin="3,2" Background="Gray" />
+
+                <!-- Splays: show + draw mode (faded lines vs edge points only). -->
+                <ToggleButton Content="Splays" IsChecked="{Binding Preview.ShowSplays, Mode=TwoWay}"
+                              ToolTip.Tip="Show splay (wall) shots" FontSize="11" Padding="6,2" Margin="0,0,2,2" />
+                <ToggleButton Content="as lines" IsChecked="{Binding Preview.SplaysAsLines, Mode=TwoWay}"
+                              IsEnabled="{Binding Preview.ShowSplays}"
+                              ToolTip.Tip="On: faded lines · Off: only the far edge points" FontSize="11" Padding="6,2" Margin="0,0,6,2" />
 
                 <Separator Width="1" Margin="3,2" Background="Gray" />
 
@@ -23,8 +38,13 @@
                               ToolTip.Tip="Show a name label at each station" FontSize="11" Padding="6,2" Margin="0,0,2,2" />
                 <ToggleButton Content="survey.station" IsChecked="{Binding Preview.ShowSurveyNames, Mode=TwoWay}"
                               ToolTip.Tip="Qualify each station label with its survey (survey.station)" FontSize="11" Padding="6,2" Margin="0,0,2,2" />
+                <ToggleButton Content="Stations" IsChecked="{Binding Preview.ShowStationSymbols, Mode=TwoWay}"
+                              ToolTip.Tip="Show the small dot at each station" FontSize="11" Padding="6,2" Margin="0,0,2,2" />
                 <ToggleButton Content="Junctions" IsChecked="{Binding Preview.ShowJunctions, Mode=TwoWay}"
                               ToolTip.Tip="Show clickable equate junctions (where surveys are stitched together)"
+                              FontSize="11" Padding="6,2" Margin="0,0,2,2" />
+                <ToggleButton Content="Legend" IsChecked="{Binding Preview.ShowLegend, Mode=TwoWay}"
+                              ToolTip.Tip="Show the legend / visibility list (hover a row to locate that group)"
                               FontSize="11" Padding="6,2" Margin="0,0,2,2" />
                 <ToggleButton Content="Separate" IsChecked="{Binding Preview.SeparateComponents, Mode=TwoWay}"
                               ToolTip.Tip="Spread disconnected pieces into a grid instead of stacking them at the origin"
@@ -32,15 +52,15 @@
 
                 <Separator Width="1" Margin="3,2" Background="Gray" />
 
-                <!-- Colour legs by data origin. -->
+                <!-- Colour legs by data origin (also buckets the legend / visibility groups). -->
                 <TextBlock Text="Color:" VerticalAlignment="Center" FontSize="11" Foreground="Gray" Margin="0,0,4,0" />
                 <ToggleButton Content="None" Command="{Binding Preview.SetColorModeCommand}" CommandParameter="none" FontSize="11" Padding="6,2" Margin="0,0,2,2"
                               IsChecked="{Binding Preview.ColorMode, Mode=OneWay, Converter={StaticResource ColorEquals}, ConverterParameter=none}" />
                 <ToggleButton Content="Survey" Command="{Binding Preview.SetColorModeCommand}" CommandParameter="survey" FontSize="11" Padding="6,2" Margin="0,0,2,2"
-                              ToolTip.Tip="A distinct colour per survey"
+                              ToolTip.Tip="A distinct colour per survey (groups the legend by survey)"
                               IsChecked="{Binding Preview.ColorMode, Mode=OneWay, Converter={StaticResource ColorEquals}, ConverterParameter=survey}" />
                 <ToggleButton Content="File" Command="{Binding Preview.SetColorModeCommand}" CommandParameter="file" FontSize="11" Padding="6,2" Margin="0,0,2,2"
-                              ToolTip.Tip="A distinct colour per source .th file"
+                              ToolTip.Tip="A distinct colour per source .th file (groups the legend by file)"
                               IsChecked="{Binding Preview.ColorMode, Mode=OneWay, Converter={StaticResource ColorEquals}, ConverterParameter=file}" />
                 <ToggleButton Content="Component" Command="{Binding Preview.SetColorModeCommand}" CommandParameter="component" FontSize="11" Padding="6,2" Margin="0,0,6,2"
                               ToolTip.Tip="A distinct colour per disconnected piece (reveals surveys stacked at the origin)"
@@ -50,12 +70,68 @@
                            FontSize="11" TextTrimming="CharacterEllipsis" />
             </WrapPanel>
         </Border>
-        <views:LivePreviewControl x:Name="Sketch" Segments="{Binding Preview.Segments}"
-                                  LeadMarkers="{Binding Preview.LeadMarkers}"
-                                  EquateMarkers="{Binding Preview.EquateMarkers}"
-                                  ShowJunctions="{Binding Preview.ShowJunctions}"
-                                  ShowLabels="{Binding Preview.ShowStationLabels}"
-                                  ShowSurveyNames="{Binding Preview.ShowSurveyNames}"
-                                  ColorMode="{Binding Preview.ColorMode}" />
+
+        <Grid>
+            <views:LivePreviewControl x:Name="Sketch" Segments="{Binding Preview.Segments}"
+                                      AllSegments="{Binding Preview.FullSegments}"
+                                      AllSplays="{Binding Preview.FullSplays}"
+                                      Splays="{Binding Preview.Splays}"
+                                      SplaysAsLines="{Binding Preview.SplaysAsLines}"
+                                      StationPoints="{Binding Preview.StationPoints}"
+                                      LeadMarkers="{Binding Preview.LeadMarkers}"
+                                      EquateMarkers="{Binding Preview.EquateMarkers}"
+                                      ShowJunctions="{Binding Preview.ShowJunctions}"
+                                      ShowSplays="{Binding Preview.ShowSplays}"
+                                      ShowStationSymbols="{Binding Preview.ShowStationSymbols}"
+                                      ShowLabels="{Binding Preview.ShowStationLabels}"
+                                      ShowSurveyNames="{Binding Preview.ShowSurveyNames}"
+                                      ShowNorthArrow="{Binding Preview.IsPlan}"
+                                      ColorMode="{Binding Preview.ColorMode}" />
+
+            <!-- Interactive legend = the per-survey/file/component visibility list. Hover a row to
+                 frame that group in the sketch. Shown only when enabled and there's >1 group. -->
+            <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8"
+                    Background="#E62B2B2B" CornerRadius="4" Padding="6,5" BoxShadow="0 1 4 0 #40000000">
+                <Border.IsVisible>
+                    <MultiBinding Converter="{StaticResource BoolAnd}">
+                        <Binding Path="Preview.ShowLegend" />
+                        <Binding Path="Preview.HasGroups" />
+                    </MultiBinding>
+                </Border.IsVisible>
+                <DockPanel MaxWidth="220">
+                    <TextBlock DockPanel.Dock="Top" Text="Groups" FontWeight="SemiBold" FontSize="11"
+                               Foreground="#EEEEEE" Margin="0,0,0,3" />
+                    <UniformGrid DockPanel.Dock="Top" Columns="4" Margin="0,0,0,4">
+                        <Button Content="all" Command="{Binding Preview.ShowAllGroupsCommand}" FontSize="10" Padding="4,0" Margin="0,0,2,0"
+                                ToolTip.Tip="Check all groups" />
+                        <Button Content="none" Command="{Binding Preview.HideAllGroupsCommand}" FontSize="10" Padding="4,0" Margin="0,0,2,0"
+                                ToolTip.Tip="Uncheck all groups" />
+                        <Button Content="invert" Command="{Binding Preview.InvertGroupsCommand}" FontSize="10" Padding="4,0" Margin="0,0,2,0"
+                                ToolTip.Tip="Invert the selection" />
+                        <Button Content="main" Command="{Binding Preview.ShowOnlyMainCommand}" FontSize="10" Padding="4,0"
+                                ToolTip.Tip="Show only the largest group" />
+                    </UniformGrid>
+                    <ScrollViewer x:Name="GroupScroller" MaxHeight="260" HorizontalScrollBarVisibility="Disabled"
+                                  VerticalScrollBarVisibility="Visible" AllowAutoHide="False">
+                        <!-- Right margin reserves space so the always-on scrollbar never sits over the titles. -->
+                        <ItemsControl x:Name="GroupList" ItemsSource="{Binding Preview.Groups}" Margin="0,0,14,0">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid ColumnDefinitions="Auto,Auto,*" Margin="0,1" Background="Transparent"
+                                          ToolTip.Tip="Hover to locate · tick to show/hide">
+                                        <CheckBox Grid.Column="0" IsChecked="{Binding IsVisible, Mode=TwoWay}"
+                                                  MinWidth="0" Padding="0" Margin="0,0,4,0" VerticalAlignment="Center" />
+                                        <Border Grid.Column="1" Width="11" Height="11" CornerRadius="2"
+                                                Background="{Binding Swatch}" Margin="0,0,5,0" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="2" Text="{Binding Label}" FontSize="11" Foreground="#EEEEEE"
+                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+        </Grid>
     </DockPanel>
 </UserControl>

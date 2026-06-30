@@ -5,10 +5,12 @@
 //   * TileComponents: spreads those disconnected pieces into a grid so they stop overlapping.
 //   * SketchColors: deterministic, process-independent colour palette for provenance colouring.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Therion.Core;
 using Therion.Semantics;
+using Therion.Syntax;
 using TherionProc.ViewModels;
 using TherionProc.Views;
 using Xunit;
@@ -84,6 +86,124 @@ public class LivePreviewLayoutTests
     }
 
     [Fact]
+    public void Cross_file_equates_merge_surveys_from_separate_files()
+    {
+        // Two files: survey "a" and survey "b" live in different files, stitched only by a
+        // cross-file equate whose per-file binder can't resolve the foreign endpoint.
+        var parsed = new Dictionary<string, ParseResult<TherionFile>>
+        {
+            ["/proj/a.th"] = new ThParser().Parse("/proj/a.th", """
+                survey a
+                  centreline
+                    data normal from to length compass clino
+                    0 1 10 90 0
+                  endcentreline
+                endsurvey
+                """),
+            ["/proj/b.th"] = new ThParser().Parse("/proj/b.th", """
+                survey b
+                  centreline
+                    data normal from to length compass clino
+                    0 1 10 0 0
+                  endcentreline
+                  equate 0@a 0@b
+                endsurvey
+                """),
+        };
+        var ws = WorkspaceSemanticModel.Build(parsed, Array.Empty<XviFile>(), _ => false);
+        var models = ws.PerFile.Values.ToList();
+        var shots = models.SelectMany(m => m.Shots).ToList();
+
+        var equates = LivePreviewViewModel.BuildEquateGraph(models);
+        var layout = LivePreviewViewModel.ComputeLayout(shots, equates);
+
+        Assert.Equal(1, layout.ComponentCount);   // a.0 and b.0 merged across files (via the @ equate)
+        Assert.Equal(
+            equates.Find(QualifiedName.Parse("a.0")).ToString(),
+            equates.Find(QualifiedName.Parse("b.0")).ToString());
+    }
+
+    [Fact]
+    public void Full_path_cross_file_equate_merges_via_suffix_match()
+    {
+        // The master uses fully-qualified names (cave.a.0) that the per-file binder stores unprefixed
+        // (a.0); the suffix fallback should still merge them.
+        var parsed = new Dictionary<string, ParseResult<TherionFile>>
+        {
+            ["/proj/a.th"] = new ThParser().Parse("/proj/a.th", """
+                survey a
+                  centreline
+                    data normal from to length compass clino
+                    0 1 10 90 0
+                  endcentreline
+                endsurvey
+                """),
+            ["/proj/b.th"] = new ThParser().Parse("/proj/b.th", """
+                survey b
+                  centreline
+                    data normal from to length compass clino
+                    0 1 10 0 0
+                  endcentreline
+                  equate cave.a.1 cave.b.1
+                endsurvey
+                """),
+        };
+        var ws = WorkspaceSemanticModel.Build(parsed, Array.Empty<XviFile>(), _ => false);
+        var models = ws.PerFile.Values.ToList();
+        var shots = models.SelectMany(m => m.Shots).ToList();
+
+        var equates = LivePreviewViewModel.BuildEquateGraph(models);
+        var layout = LivePreviewViewModel.ComputeLayout(shots, equates);
+
+        Assert.Equal(1, layout.ComponentCount);
+        Assert.Equal(
+            equates.Find(QualifiedName.Parse("a.1")).ToString(),
+            equates.Find(QualifiedName.Parse("b.1")).ToString());
+    }
+
+    [Fact]
+    public void AnchorByFixes_places_fixed_components_in_a_shared_frame()
+    {
+        var pos = new Dictionary<string, (double E, double N, double Z)>
+        {
+            ["x0"] = (0, 0, 0), ["x1"] = (10, 0, 0),   // component 0, fixed at x0
+            ["y0"] = (0, 0, 0), ["y1"] = (0, 10, 0),   // component 1, fixed at y0 (50m east of x0)
+        };
+        var comp = new Dictionary<string, int> { ["x0"] = 0, ["x1"] = 0, ["y0"] = 1, ["y1"] = 1 };
+        var fixes = new Dictionary<string, (double X, double Y, double Z, string? Cs)>
+        {
+            ["x0"] = (100, 200, 5, null),
+            ["y0"] = (150, 200, 5, null),
+        };
+
+        LivePreviewViewModel.AnchorByFixes(pos, comp, 2, fixes);
+
+        Assert.Equal((0.0, 0.0, 0.0), pos["x0"]);     // reference component anchored at the origin
+        Assert.Equal((50.0, 0.0, 0.0), pos["y0"]);    // second system 50 m east — no longer overlapping
+        Assert.Equal((50.0, 10.0, 0.0), pos["y1"]);   // its shape preserved (translation only)
+    }
+
+    [Fact]
+    public void AnchorByFixes_does_not_mix_coordinate_systems()
+    {
+        var pos = new Dictionary<string, (double E, double N, double Z)>
+        {
+            ["x0"] = (0, 0, 0), ["y0"] = (0, 0, 0),
+        };
+        var comp = new Dictionary<string, int> { ["x0"] = 0, ["y0"] = 1 };
+        var fixes = new Dictionary<string, (double X, double Y, double Z, string? Cs)>
+        {
+            ["x0"] = (100, 200, 0, "UTM33N"),
+            ["y0"] = (45, 25, 0, "long-lat"),   // different cs → must not be folded into x0's frame
+        };
+
+        LivePreviewViewModel.AnchorByFixes(pos, comp, 2, fixes);
+
+        Assert.Equal((0.0, 0.0, 0.0), pos["x0"]);   // reference anchored
+        Assert.Equal((0.0, 0.0, 0.0), pos["y0"]);   // incompatible cs → left at its relative origin
+    }
+
+    [Fact]
     public void Splays_and_incomplete_legs_are_excluded_from_the_layout()
     {
         var shots = new List<ShotSymbol>
@@ -100,6 +220,53 @@ public class LivePreviewLayoutTests
         Assert.True(layout.Positions.ContainsKey("s.2"));
         Assert.False(layout.Positions.ContainsKey("s.x")); // no length/compass/clino
         Assert.False(layout.Positions.ContainsKey("s.y")); // splay
+    }
+
+    [Fact]
+    public void ShotVector_resolves_compass_clino_into_east_north_up()
+    {
+        // East-pointing, level, 10 m → straight east.
+        var (e, n, z) = LivePreviewViewModel.ShotVector(Leg("a.1", "a.2", length: 10, compass: 90, clino: 0));
+        Assert.Equal(10, e, 6);
+        Assert.Equal(0, n, 6);
+        Assert.Equal(0, z, 6);
+
+        // Straight up, 5 m → all in Z.
+        var up = LivePreviewViewModel.ShotVector(Leg("a.1", "a.2", length: 5, compass: 0, clino: 90));
+        Assert.Equal(0, up.E, 6);
+        Assert.Equal(0, up.N, 6);
+        Assert.Equal(5, up.Z, 6);
+    }
+
+    [Fact]
+    public void ProjectVector_drops_north_in_plan_and_up_in_profile()
+    {
+        var v = (E: 3.0, N: 4.0, Z: 5.0);
+        Assert.Equal((3.0, -4.0), LivePreviewViewModel.ProjectVector(v, isElevation: false)); // plan: east vs north
+        Assert.Equal((3.0, -5.0), LivePreviewViewModel.ProjectVector(v, isElevation: true));  // profile: east vs up
+    }
+
+    [Fact]
+    public void SplayEndpoint_offsets_origin_by_the_projected_splay_vector()
+    {
+        var origin = (X: 10.0, Y: 20.0);
+
+        // East splay in plan lands east of the origin (north component is zero here).
+        var east = LivePreviewViewModel.SplayEndpoint(origin, (E: 5, N: 0, Z: 0), isElevation: false);
+        Assert.Equal(15, east.X, 6);
+        Assert.Equal(20, east.Y, 6);
+
+        // North splay in plan moves "up" the screen (Y negated so north points up).
+        var north = LivePreviewViewModel.SplayEndpoint(origin, (E: 0, N: 5, Z: 0), isElevation: false);
+        Assert.Equal(10, north.X, 6);
+        Assert.Equal(15, north.Y, 6);
+
+        // A vertical splay shows in profile but not in plan.
+        var upProfile = LivePreviewViewModel.SplayEndpoint(origin, (E: 0, N: 0, Z: 5), isElevation: true);
+        Assert.Equal(10, upProfile.X, 6);
+        Assert.Equal(15, upProfile.Y, 6);
+        var upPlan = LivePreviewViewModel.SplayEndpoint(origin, (E: 0, N: 0, Z: 5), isElevation: false);
+        Assert.Equal(origin, upPlan);  // no horizontal extent → coincides with the station in plan
     }
 
     [Theory]
