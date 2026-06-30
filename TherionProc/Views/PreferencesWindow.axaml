@@ -264,6 +264,11 @@
                               IsChecked="{Binding CompileOnSave}" />
                     <TextBlock Text="Debounced background build; watch the spinner and the Log panel. Off by default."
                                Foreground="Gray" FontSize="11" />
+                    <Separator Margin="0,6" />
+                    <CheckBox Content="Create missing output folders before compiling"
+                              IsChecked="{Binding EnsureOutputDirectories}" />
+                    <TextBlock Text="Checks each export's output directory and creates it recursively if absent (Therion otherwise fails on a missing folder). An info line is logged when a folder is created. On by default."
+                               Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
                 </StackPanel>
 
                 <!-- Visualization (VIS-*): per-feature enable/disable. -->

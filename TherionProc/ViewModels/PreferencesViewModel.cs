@@ -82,6 +82,8 @@ public partial class PreferencesViewModel : ObservableObject
     /// <summary>True = open every matching output; false = open just the first.</summary>
     [ObservableProperty] private bool _openAllOutputsAfterBuild;
     [ObservableProperty] private bool _compileOnSave;
+    /// <summary>Ensure (and recursively create) each export's output directory before compiling.</summary>
+    [ObservableProperty] private bool _ensureOutputDirectories;
 
     // ---- auto-save (QOL-09) ----
     /// <summary>Auto-save mode index: 0 = Off, 1 = After delay, 2 = On focus loss.</summary>
@@ -171,6 +173,7 @@ public partial class PreferencesViewModel : ObservableObject
         _openPdfAfterBuild = s.OpenPdfAfterBuild;
         _openAllOutputsAfterBuild = s.OpenAllOutputsAfterBuild;
         _compileOnSave = s.CompileOnSave;
+        _ensureOutputDirectories = s.EnsureOutputDirectories;
         _autoSaveModeIndex = (int)s.AutoSave;
         _autoSaveDelaySeconds = s.AutoSaveDelaySeconds;
         _enableLivePreview = s.EnableLivePreview;
@@ -314,6 +317,7 @@ public partial class PreferencesViewModel : ObservableObject
             OpenPdfAfterBuild = OpenPdfAfterBuild,
             OpenAllOutputsAfterBuild = OpenAllOutputsAfterBuild,
             CompileOnSave = CompileOnSave,
+            EnsureOutputDirectories = EnsureOutputDirectories,
             AutoSave = (AutoSaveMode)Math.Clamp(AutoSaveModeIndex, 0, 2),
             AutoSaveDelaySeconds = Math.Max(5, AutoSaveDelaySeconds),
             EnableLivePreview = EnableLivePreview,

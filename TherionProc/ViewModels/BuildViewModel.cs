@@ -337,7 +337,13 @@ public partial class BuildViewModel : ViewModelBase
         // Output-link spans carry a file + line but a zero length (so IsEmpty is true); navigate
         // whenever there's a file path rather than gating on IsEmpty, else the links never fire (#3).
         if (row?.Span is { } span && !string.IsNullOrEmpty(span.FilePath))
+        {
+            // NavigateToSpanAsync ignores IsEmpty (zero-length) spans, so a click on a compiler-
+            // output link was silently dropped. Give the span a minimal extent — exactly as the
+            // back/forward history does for its zero-length caret stops — so the jump happens (#4).
+            if (span.IsEmpty) span = span with { Length = 1 };
             NavigateRequested?.Invoke(this, span);
+        }
     }
 
     private readonly List<CompilerOutputRow> _outputBuffer = new();
@@ -441,6 +447,8 @@ public partial class BuildViewModel : ViewModelBase
         AddRow(new CompilerOutputRow(command, "Command", null, OutputRowKind.Command,
             _buildStart, TimeSpan.Zero, TimeSpan.Zero, TimeColumnMode));
 
+        EnsureExportOutputDirectories(entry);   // create any missing output folders (opt-out in Preferences)
+
         var sw = Stopwatch.StartNew();
         var progress = new Progress<CompilerOutputLine>(line => { AddRow(MakeRow(line)); UpdatePhase(line.Text); });
 
@@ -529,6 +537,65 @@ public partial class BuildViewModel : ViewModelBase
             return s with { FilePath = abs };
         }
         catch { return span; }
+    }
+
+    /// <summary>
+    /// Before compiling, ensures each export command's output directory exists, creating it
+    /// recursively when missing and logging an info row for each one created. Gated by the
+    /// <c>EnsureOutputDirectories</c> setting (on by default); best-effort — a failure here never
+    /// aborts the build, so Therion still runs and reports the real error.
+    /// </summary>
+    private void EnsureExportOutputDirectories(string entry)
+    {
+        if (_settings is null || !_settings.Current.EnsureOutputDirectories) return;
+        if (_buildWorkDir is null) return;
+        try
+        {
+            if (!File.Exists(entry)) return;
+            foreach (var dir in ResolveExportOutputDirectories(File.ReadAllText(entry), _buildWorkDir))
+            {
+                if (Directory.Exists(dir)) continue;
+                try
+                {
+                    Directory.CreateDirectory(dir);
+                    var now = DateTimeOffset.Now;
+                    AddRow(new CompilerOutputRow($"Created missing output directory: {dir}", "Info", null,
+                        OutputRowKind.Normal, now, now - _prevRowTime, now - _buildStart, TimeColumnMode));
+                    _prevRowTime = now;
+                    _log?.Info($"Created missing output directory: {dir}");
+                }
+                catch (Exception ex)
+                {
+                    _log?.Warning($"Could not create output directory '{dir}': {ex.Message}");
+                }
+            }
+        }
+        catch { /* best-effort pre-check: never block the build on it */ }
+    }
+
+    /// <summary>
+    /// Distinct absolute output directories declared by the <c>export … -o &lt;path&gt;</c> commands in
+    /// <paramref name="thconfigText"/>, resolved against <paramref name="workDir"/>. Outputs with no
+    /// folder part (a bare filename) resolve to the work dir itself, which always exists.
+    /// </summary>
+    internal static IReadOnlyList<string> ResolveExportOutputDirectories(string thconfigText, string workDir)
+    {
+        var dirs = new List<string>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var info in ThconfigExportEditor.ParseExports(thconfigText))
+        {
+            if (string.IsNullOrWhiteSpace(info.Output)) continue;
+            string? dir;
+            try
+            {
+                var rel = info.Output.Trim().Replace('/', Path.DirectorySeparatorChar);
+                var full = Path.IsPathRooted(rel) ? rel : Path.Combine(workDir, rel);
+                dir = Path.GetDirectoryName(Path.GetFullPath(full));
+            }
+            catch { continue; }
+            if (!string.IsNullOrEmpty(dir) && seen.Add(dir)) dirs.Add(dir);
+        }
+        return dirs;
     }
 
     private CompilerOutputRow SummaryRow(bool ok, int warnCount, TimeSpan elapsed, int artifactCount,
