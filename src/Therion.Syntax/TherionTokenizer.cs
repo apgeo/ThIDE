@@ -181,6 +181,19 @@ public sealed class TherionTokenizer
                     if (pos < text.Length && (text[pos] == '+' || text[pos] == '-')) { pos++; col++; }
                     while (pos < text.Length && char.IsDigit(text[pos])) { pos++; col++; }
                 }
+                // A "number" glued directly to more identifier characters (no separator) is really a
+                // bareword / station name — e.g. "0@entrance" (cross-reference), "2046-81_ponor",
+                // "12abc". Keep consuming it as a single identifier so digit-leading names and
+                // point@survey references don't get split (which broke equate resolution).
+                if (pos < text.Length && !IsIdentifierBreak(text[pos]))
+                {
+                    while (pos < text.Length && !IsIdentifierBreak(text[pos])) { pos++; col++; }
+                    builder.Add(new TherionToken(
+                        TherionTokenKind.Identifier,
+                        MakeSpan(filePath, startLine, startCol, line, col, startPos, pos - startPos),
+                        text.Substring(startPos, pos - startPos)));
+                    continue;
+                }
                 builder.Add(new TherionToken(
                     TherionTokenKind.Number,
                     MakeSpan(filePath, startLine, startCol, line, col, startPos, pos - startPos),
