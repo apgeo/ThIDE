@@ -146,6 +146,26 @@ public sealed class WorkspaceSemanticModel
         };
     }
 
+    /// <summary>
+    /// Re-validates a file's <see cref="SemanticModel.UnresolvedEquateRefs"/> against the whole
+    /// workspace. A per-file binder can't see cross-file or <c>@</c>-qualified targets, so it defers
+    /// here: TH_SEM_001 is emitted only for references that resolve nowhere in the project (using the
+    /// same cross-file <see cref="ResolveReference"/> that powers go-to-definition).
+    /// </summary>
+    public ImmutableArray<Diagnostic> ValidateEquateReferences(SemanticModel fileModel)
+    {
+        if (fileModel.UnresolvedEquateRefs.IsDefaultOrEmpty) return ImmutableArray<Diagnostic>.Empty;
+        var b = ImmutableArray.CreateBuilder<Diagnostic>();
+        foreach (var r in fileModel.UnresolvedEquateRefs)
+            if (ResolveReference(r.Raw, ReferenceKind.Station) is null)
+                b.Add(Diagnostic.Create(
+                    SemanticDiagnosticCodes.UnresolvedStation,
+                    DiagnosticSeverity.Warning,
+                    $"Unresolved station reference '{r.Raw}'.",
+                    r.Span));
+        return b.ToImmutable();
+    }
+
     // ---- cross-file reference resolution (@-notation) ------------------------
 
     /// <summary>

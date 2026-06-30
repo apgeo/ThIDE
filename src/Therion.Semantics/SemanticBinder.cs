@@ -33,12 +33,10 @@ public sealed class SemanticBinder
                 var resolved = TryResolveRef(raw, scope, ctx.Stations.Keys);
                 if (resolved is null)
                 {
-                    ctx.Diagnostics.Add(Diagnostic.Create(
-                        SemanticDiagnosticCodes.UnresolvedStation,
-                        DiagnosticSeverity.Warning,
-                        $"Unresolved station reference '{raw}'.",
-                        span,
-                        hint: NearestHint(raw, ctx.Stations.Keys)));
+                    // This file can't see cross-file / @-qualified targets, so don't warn here —
+                    // record the reference for the workspace-level validator, which has cross-file
+                    // and @ visibility. (Falls back to a per-file warning when there's no workspace.)
+                    ctx.UnresolvedEquateRefs.Add(new EquateRef(raw, span, NearestHint(raw, ctx.Stations.Keys)));
                     continue;
                 }
                 var st = ctx.Stations[resolved.Value];
@@ -64,6 +62,7 @@ public sealed class SemanticBinder
             Maps = maps,
             InputCoordinateSystem = ctx.InputCs,
             EquateRecords = ctx.EquateRecords.ToImmutable(),
+            UnresolvedEquateRefs = ctx.UnresolvedEquateRefs.ToImmutable(),
         };
     }
 
@@ -584,6 +583,8 @@ public sealed class SemanticBinder
         public ImmutableArray<Diagnostic>.Builder Diagnostics { get; } = ImmutableArray.CreateBuilder<Diagnostic>();
         public List<List<(string Raw, SourceSpan Span, ImmutableArray<string> Scope)>> EquateGroups { get; } = new();
         public ImmutableArray<EquateRecord>.Builder EquateRecords { get; } = ImmutableArray.CreateBuilder<EquateRecord>();
+        /// <summary>Equate references unresolved in this file (re-checked at the workspace level).</summary>
+        public ImmutableArray<EquateRef>.Builder UnresolvedEquateRefs { get; } = ImmutableArray.CreateBuilder<EquateRef>();
         /// <summary>First <c>cs</c> declared in the file (input coordinate system), if any (LANG-03).</summary>
         public string? InputCs { get; set; }
         /// <summary>The <c>cs</c> in force at the current point of the walk (for fix coords; DATA-06).</summary>

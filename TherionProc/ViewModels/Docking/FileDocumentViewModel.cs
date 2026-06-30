@@ -42,6 +42,8 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
     private ISymbolNavigationService? _navigation;
     private WorkspaceSemanticModel? _workspace;
     private ImmutableArray<Diagnostic> _diagnostics = ImmutableArray<Diagnostic>.Empty;
+    // Parse + per-file semantic diagnostics, before the workspace equate reconciliation is layered on.
+    private ImmutableArray<Diagnostic> _baseDiagnostics = ImmutableArray<Diagnostic>.Empty;
 
     /// <summary>Raised when something wants the editor to scroll to a span (e.g. diagnostics).</summary>
     public event EventHandler<SourceSpan>? ScrollToSpanRequested;
@@ -69,6 +71,20 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
     /// <summary>True for .th2 sketch files — gates the "Edit with Mapiah" button.</summary>
     public bool IsTh2File =>
         string.Equals(System.IO.Path.GetExtension(FilePath), ".th2", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>True for thconfig project files (.thconfig/.thc or a bare "thconfig") — gates the
+    /// "set as active thconfig" / "set working directory" tab buttons (task 1).</summary>
+    public bool IsThconfigFile
+    {
+        get
+        {
+            var ext = System.IO.Path.GetExtension(FilePath);
+            return ext.Length == 0
+                ? string.Equals(System.IO.Path.GetFileName(FilePath), "thconfig", StringComparison.OrdinalIgnoreCase)
+                : ext.Equals(".thconfig", StringComparison.OrdinalIgnoreCase)
+                  || ext.Equals(".thc", StringComparison.OrdinalIgnoreCase);
+        }
+    }
 
     public FileDocumentViewModel(string filePath, string text, MeasurementsViewModel measurements,
         ICommandRegistry? commands = null, IAppSettingsService? settings = null)
@@ -267,9 +283,16 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
     public void SetWorkspace(WorkspaceSemanticModel? workspace)
     {
         _workspace = workspace;
-        // Mutating Navigation raises PropertyChanged the editor binds to — keep it on the UI thread.
-        if (Dispatcher.UIThread.CheckAccess()) UpdateNavigation();
-        else Dispatcher.UIThread.Post(UpdateNavigation);
+        // Navigation and the equate-reference diagnostics both depend on the workspace; refresh both
+        // on the UI thread (mutating them raises PropertyChanged the editor binds to).
+        if (Dispatcher.UIThread.CheckAccess()) ApplyWorkspace();
+        else Dispatcher.UIThread.Post(ApplyWorkspace);
+    }
+
+    private void ApplyWorkspace()
+    {
+        UpdateNavigation();
+        Diagnostics = CombineDiagnostics();
     }
 
     private void UpdateNavigation()
@@ -277,6 +300,19 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
         Navigation = _workspace is { } ws
             ? new WorkspaceSymbolNavigationService(ws, _semantics, FilePath)
             : (_semantics is null ? null : new SymbolNavigationService(_semantics));
+    }
+
+    /// <summary>
+    /// Base (parse + per-file) diagnostics plus equate-reference validation: cross-file via the
+    /// workspace when attached, else the per-file fallback that flags every unresolved reference.
+    /// </summary>
+    private ImmutableArray<Diagnostic> CombineDiagnostics()
+    {
+        if (_semantics is not { } model) return _baseDiagnostics;
+        var equate = _workspace is { } ws
+            ? ws.ValidateEquateReferences(model)
+            : model.UnresolvedEquateDiagnostics();
+        return equate.IsDefaultOrEmpty ? _baseDiagnostics : _baseDiagnostics.AddRange(equate);
     }
 
     /// <summary>Interpreted file type for the status bar, e.g. "Therion survey (.th)" (#5).</summary>
@@ -301,7 +337,8 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
                 Ast = null;
                 Semantics = null;
                 UpdateNavigation();
-                Diagnostics = ImmutableArray<Diagnostic>.Empty;
+                _baseDiagnostics = ImmutableArray<Diagnostic>.Empty;
+                Diagnostics = CombineDiagnostics();
                 CompletionTerms = BuildCompletionTerms(null);
                 InterpretedTypeText = typeText;
                 IsParsed = false;
@@ -339,7 +376,8 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
                 Ast = null;
                 Semantics = null;
                 UpdateNavigation();
-                Diagnostics = ImmutableArray.Create(warn);
+                _baseDiagnostics = ImmutableArray.Create(warn);
+                Diagnostics = CombineDiagnostics();
                 CompletionTerms = BuildCompletionTerms(null);
                 InterpretedTypeText = typeText;
                 IsParsed = false;
@@ -369,7 +407,8 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
             Ast = parsed.Ast;
             Semantics = parsed.Semantics;
             UpdateNavigation();
-            Diagnostics = parsed.Diagnostics;
+            _baseDiagnostics = parsed.Diagnostics;
+            Diagnostics = CombineDiagnostics();
             CompletionTerms = BuildCompletionTerms(parsed.Semantics);
             if (parsed.Semantics is { } model) Measurements.Load(model);
             InterpretedTypeText = typeText;

@@ -49,7 +49,7 @@
 
 | Code | Severity | Message | Source |
 |---|---|---|---|
-| `TH_SEM_001` | Warning | Unresolved station reference `<name>` (with optional "did you mean" hint). | `SemanticBinder` |
+| `TH_SEM_001` | Warning | Unresolved station reference `<name>` (with optional "did you mean" hint). Equate references are validated workspace-wide, so cross-file / `@`-qualified targets resolve across the project and this only fires when a reference resolves nowhere. | `SemanticBinder` (standalone) / `WorkspaceSemanticModel.ValidateEquateReferences` (project) |
 | `TH_SEM_002` | Warning | Station `<name>` is fixed more than once. | `SemanticBinder` |
 | `TH_SEM_003` | Warning | Malformed station reference `<name>`. | `SemanticBinder` |
 | `TH_SEM_005` | Warning | Data row column count doesn't match its reading order. | `SemanticBinder` |

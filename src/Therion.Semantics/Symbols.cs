@@ -81,6 +81,14 @@ public sealed record EquateRecord(
     SourceSpan Span);
 
 /// <summary>
+/// A single <c>equate</c> station reference that the per-file binder could not resolve from this
+/// file alone (e.g. a cross-file or <c>@</c>-qualified target). Re-validated at the workspace level,
+/// which has cross-file + <c>@</c> visibility; only then is TH_SEM_001 emitted. <see cref="Hint"/> is
+/// a "did you mean" suggestion computed against this file's stations (used for the standalone case).
+/// </summary>
+public sealed record EquateRef(string Raw, SourceSpan Span, string? Hint = null);
+
+/// <summary>
 /// A summary of a <c>.th2</c> drawing object (point/line/area) for the Object Browser (DATA-03):
 /// its kind, type[:subtype], enclosing scrap and source location.
 /// </summary>

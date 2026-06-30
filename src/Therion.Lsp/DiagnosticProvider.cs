@@ -45,7 +45,14 @@ public static class DiagnosticProvider
                 // .th — parse, then bind so semantic diagnostics surface too.
                 var r = new ThParser().Parse(path, text);
                 var all = r.Diagnostics;
-                if (r.Value is not null) all = all.AddRange(new SemanticBinder().Bind(r.Value).Diagnostics);
+                if (r.Value is not null)
+                {
+                    var model = new SemanticBinder().Bind(r.Value);
+                    all = all.AddRange(model.Diagnostics);
+                    // The binder defers cross-file equate validation; the LSP is single-file (no
+                    // workspace), so flag any unresolved equate references here as the fallback.
+                    all = all.AddRange(model.UnresolvedEquateDiagnostics());
+                }
                 return all;
         }
     }

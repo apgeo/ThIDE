@@ -78,7 +78,7 @@ public class SemanticBinderTests
     }
 
     [Fact]
-    public void Unresolved_equate_target_emits_TH_SEM_001()
+    public void Unresolved_equate_target_is_deferred_to_the_workspace_and_warns_standalone()
     {
         const string src = """
             survey foo
@@ -91,7 +91,16 @@ public class SemanticBinderTests
             """;
         var parse = new ThParser().Parse("inline.th", src);
         var model = new SemanticBinder().Bind(parse.Value);
-        Assert.Contains(model.Diagnostics,
+
+        // The per-file binder no longer warns directly (it can't see other files); it records the
+        // unresolved reference for the workspace validator.
+        Assert.DoesNotContain(model.Diagnostics,
+            d => d.Code.Value == SemanticDiagnosticCodes.UnresolvedStation);
+        Assert.Contains(model.UnresolvedEquateRefs, r => r.Raw == "missing.zz");
+        Assert.DoesNotContain(model.UnresolvedEquateRefs, r => r.Raw == "a");   // 'a' resolves locally
+
+        // With no workspace, the standalone fallback still surfaces the warning.
+        Assert.Contains(model.UnresolvedEquateDiagnostics(),
             d => d.Code.Value == SemanticDiagnosticCodes.UnresolvedStation);
     }
 }

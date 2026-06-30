@@ -42,6 +42,32 @@ public sealed class SemanticModel : ISymbolIndex
     /// <summary><c>equate</c> relationships declared in this file (DATA-03).</summary>
     public ImmutableArray<EquateRecord> EquateRecords { get; init; } = ImmutableArray<EquateRecord>.Empty;
 
+    /// <summary>
+    /// <c>equate</c> references this file couldn't resolve on its own (cross-file / <c>@</c> targets).
+    /// The workspace re-validates these with cross-file visibility (<see cref="WorkspaceSemanticModel
+    /// .ValidateEquateReferences"/>); use <see cref="UnresolvedEquateDiagnostics"/> only when no
+    /// workspace is available (a standalone file).
+    /// </summary>
+    public ImmutableArray<EquateRef> UnresolvedEquateRefs { get; init; } = ImmutableArray<EquateRef>.Empty;
+
+    /// <summary>
+    /// TH_SEM_001 warnings for every <see cref="UnresolvedEquateRefs"/> — the fallback for a file
+    /// with no workspace to consult (where a cross-file target genuinely can't be checked).
+    /// </summary>
+    public ImmutableArray<Diagnostic> UnresolvedEquateDiagnostics()
+    {
+        if (UnresolvedEquateRefs.IsDefaultOrEmpty) return ImmutableArray<Diagnostic>.Empty;
+        var b = ImmutableArray.CreateBuilder<Diagnostic>(UnresolvedEquateRefs.Length);
+        foreach (var r in UnresolvedEquateRefs)
+            b.Add(Diagnostic.Create(
+                SemanticDiagnosticCodes.UnresolvedStation,
+                DiagnosticSeverity.Warning,
+                $"Unresolved station reference '{r.Raw}'.",
+                r.Span,
+                hint: r.Hint));
+        return b.ToImmutable();
+    }
+
     public SemanticModel(
         FrozenDictionary<QualifiedName, StationSymbol> stations,
         FrozenDictionary<QualifiedName, SurveySymbol> surveys,
