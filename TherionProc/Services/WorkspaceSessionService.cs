@@ -131,6 +131,7 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
 
         RootPath = full;
         RootChanged?.Invoke(this, EventArgs.Empty);
+        RecordRecentDirectory(full);
         _log?.Info($"Workspace root set: {full}");
 
         // PERF-03: warm symbol search from the persisted index immediately, before the (background)
@@ -215,6 +216,22 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
     {
         try { return Path.TrimEndingDirectorySeparator(Path.GetFullPath(dir)); }
         catch { return dir; }
+    }
+
+    private const int MaxRecentDirectories = 16;
+
+    // Promotes a just-opened working directory to the front of the persisted recent list, so it
+    // appears in File ▸ Recent Directories. De-duplicated (path-normalized) and capped.
+    private void RecordRecentDirectory(string fullDir)
+    {
+        if (_settings is null) return;
+        var key = NormalizeDir(fullDir);
+        var current = _settings.Current;
+        var list = new List<string>(current.RecentDirectories.Count + 1) { fullDir };
+        foreach (var p in current.RecentDirectories)
+            if (!string.Equals(NormalizeDir(p), key, StringComparison.OrdinalIgnoreCase)) list.Add(p);
+        if (list.Count > MaxRecentDirectories) list.RemoveRange(MaxRecentDirectories, list.Count - MaxRecentDirectories);
+        try { _settings.Save(current with { RecentDirectories = list }); } catch { /* best-effort */ }
     }
 
     // Persists the active thconfig for the current root so reopening the directory

@@ -127,6 +127,8 @@
                 <Separator />
                 <!-- Recent files, grouped per type (8 each), rebuilt in code-behind (#8). -->
                 <MenuItem x:Name="RecentMenu" Header="{Binding MenuFileRecent}" />
+                <!-- Recent working directories, rebuilt in code-behind. -->
+                <MenuItem x:Name="RecentDirectoriesMenu" Header="{Binding MenuFileRecentDirectories}" />
                 <!-- UX-10: reopen the most-recently-closed tab. -->
                 <MenuItem Header="Reopen Closed Tab" InputGesture="Ctrl+Shift+T"
                           Command="{Binding ReopenClosedTabCommand}" />
@@ -251,7 +253,6 @@
             </MenuItem>
             <MenuItem Header="{Binding MenuBuild}">
                 <MenuItem Header="{Binding MenuBuildBuild}"     InputGesture="F5"       Command="{Binding Build.BuildCommand}" />
-                <MenuItem Header="{Binding MenuBuildRebuild}"   InputGesture="Ctrl+F5"  Command="{Binding Build.RebuildCommand}" />
                 <MenuItem Header="{Binding MenuBuildCancel}"    InputGesture="Shift+F5" Command="{Binding Build.CancelCommand}" />
                 <Separator />
                 <!-- BUILD-01: run a single export target from the active thconfig. -->

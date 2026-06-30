@@ -349,6 +349,7 @@ public partial class MainWindowViewModel : ViewModelBase
     public string MenuBuildRebuild   => L("Menu_Build_Rebuild",          "_Recompile");
     public string MenuBuildCancel    => L("Menu_Build_Cancel",           "_Cancel");
     public string MenuFileRecent     => L("Menu_File_Recent",           "Recent _Files");
+    public string MenuFileRecentDirectories => L("Menu_File_RecentDirectories", "Recent _Directories");
     // View menu
     public string MenuViewObjectBrowser => L("Menu_View_ObjectBrowser", "Object Browser");
     public string MenuViewWorkspace     => L("Menu_View_Workspace",     "Workspace");
@@ -383,7 +384,8 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private static readonly string[] LocalizedMenuProps =
     {
-        nameof(MenuFileRecent), nameof(MenuViewObjectBrowser), nameof(MenuViewWorkspace),
+        nameof(MenuFileRecent), nameof(MenuFileRecentDirectories),
+        nameof(MenuViewObjectBrowser), nameof(MenuViewWorkspace),
         nameof(MenuViewDiagnostics), nameof(MenuViewRelationalMap), nameof(MenuViewStrictParser),
         nameof(MenuEdit), nameof(MenuEditCut), nameof(MenuEditCopy), nameof(MenuEditPaste),
         nameof(MenuEditDelete), nameof(MenuEditSelectAll), nameof(MenuEditUpper), nameof(MenuEditLower),
@@ -792,6 +794,8 @@ public partial class MainWindowViewModel : ViewModelBase
     public IReadOnlyList<string> RecentFiles => _settings?.Current.RecentFiles ?? Array.Empty<string>();
     /// <summary>Pinned recent files (QOL-05).</summary>
     public IReadOnlyList<string> PinnedRecentFiles => _settings?.Current.PinnedRecentFiles ?? Array.Empty<string>();
+    /// <summary>Recently-opened working directories, most-recent first (File ▸ Recent Directories).</summary>
+    public IReadOnlyList<string> RecentDirectories => _settings?.Current.RecentDirectories ?? Array.Empty<string>();
 
     /// <summary>QOL-05: pin a recent file so it stays at the top and survives "Clear Recent".</summary>
     [RelayCommand]
@@ -821,6 +825,24 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         if (_settings is null) return;
         _settings.Save(_settings.Current with { RecentFiles = Array.Empty<string>() });
+    }
+
+    /// <summary>Opens a directory from the File ▸ Recent Directories submenu as the workspace folder.</summary>
+    [RelayCommand]
+    private async Task OpenRecentDirectory(string? path)
+    {
+        if (string.IsNullOrEmpty(path)) return;
+        if (!System.IO.Directory.Exists(path)) { StatusText = $"Folder not found: {path}"; return; }
+        try { await _documents.OpenFolderAsync(path).ConfigureAwait(true); StatusText = _documents.CurrentPath ?? path; }
+        catch (Exception ex) { StatusText = ex.Message; }
+    }
+
+    /// <summary>Clears the recent-directories list.</summary>
+    [RelayCommand]
+    private void ClearRecentDirectories()
+    {
+        if (_settings is null) return;
+        _settings.Save(_settings.Current with { RecentDirectories = Array.Empty<string>() });
     }
 
     /// <summary>UX-10: reopen the most-recently-closed tab (Ctrl+Shift+T).</summary>

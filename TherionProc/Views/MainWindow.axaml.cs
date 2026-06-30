@@ -53,7 +53,7 @@ public partial class MainWindow : Window
                 vm.AttachStoragePicker(new AvaloniaStoragePicker(this));
                 AttachLayout(vm);
                 AttachKeyboardShortcuts(vm);
-                vm.RecentFilesChanged += (_, _) => BuildRecentMenu(vm);
+                vm.RecentFilesChanged += (_, _) => { BuildRecentMenu(vm); BuildRecentDirectoriesMenu(vm); };
                 vm.ConfirmLoadFolderRequested += (_, path) => _ = ConfirmLoadFolderAsync(vm, path);
                 // Command-palette (#4) view actions: open windows / settings.
                 vm.ShowPreferencesRequested += (_, section) => _ = OpenPreferences(section);
@@ -63,6 +63,7 @@ public partial class MainWindow : Window
                 vm.ShowRelationalMapRequested += (_, _) => OnRelationalMapClick(this, new Avalonia.Interactivity.RoutedEventArgs());
                 vm.Build.QuickExportRequested += (_, _) => _ = ShowQuickExportAsync(vm); // BUILD-02
                 BuildRecentMenu(vm);
+                BuildRecentDirectoriesMenu(vm);
                 // The layout rendered without crashing — clear the crash sentinel so the next
                 // launch trusts it (deferred so the dock has finished materializing).
                 Avalonia.Threading.Dispatcher.UIThread.Post(
@@ -189,6 +190,51 @@ public partial class MainWindow : Window
 
     private static readonly HashSet<string> RecentGroupedExts =
         new(StringComparer.OrdinalIgnoreCase) { ".thconfig", ".thc", ".th", ".th2" };
+
+    // ----- recent directories menu --------------------------------------------
+    // Working directories (workspace roots) the user has opened, most-recent first. Each entry
+    // re-opens that folder as the workspace; the full path is shown on hover.
+
+    private void BuildRecentDirectoriesMenu(MainWindowViewModel vm)
+    {
+        if (this.FindControl<MenuItem>("RecentDirectoriesMenu") is not { } menu) return;
+        var items = new List<Control>();
+
+        foreach (var dir in vm.RecentDirectories)
+        {
+            items.Add(new MenuItem
+            {
+                Header = RecentDirectoryLabel(dir),
+                Command = vm.OpenRecentDirectoryCommand,
+                CommandParameter = dir,
+                [ToolTip.TipProperty] = dir,
+            });
+        }
+
+        if (items.Count == 0)
+            items.Add(new MenuItem { Header = "(no recent directories)", IsEnabled = false });
+        else
+        {
+            items.Add(new Separator());
+            items.Add(new MenuItem { Header = "Clear Recent Directories", Command = vm.ClearRecentDirectoriesCommand });
+        }
+        menu.ItemsSource = items;
+    }
+
+    // A directory's display label: the leaf folder name, plus its parent for context (e.g.
+    // "caves › vladusca"). Falls back to the raw path for drive roots.
+    private static string RecentDirectoryLabel(string dir)
+    {
+        try
+        {
+            var trimmed = Path.TrimEndingDirectorySeparator(dir);
+            var leaf = Path.GetFileName(trimmed);
+            if (string.IsNullOrEmpty(leaf)) return dir;   // a drive root such as "C:\"
+            var parent = Path.GetFileName(Path.GetDirectoryName(trimmed) ?? string.Empty);
+            return string.IsNullOrEmpty(parent) ? leaf : $"{parent} › {leaf}";
+        }
+        catch { return dir; }
+    }
 
     // ----- bookmarks window (B3) -----------------------------------------
 
