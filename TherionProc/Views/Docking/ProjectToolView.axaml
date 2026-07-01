@@ -140,7 +140,7 @@
             </ScrollViewer>
         </TabItem>
 
-        <!-- DATA-05 — Team & expeditions -->
+        <!-- DATA-05 — Team & trips -->
         <TabItem Header="Team">
             <DockPanel>
                 <Button DockPanel.Dock="Top" HorizontalAlignment="Left" Margin="8,6"
@@ -154,8 +154,8 @@
                             <DataGridTextColumn Header="Length" Binding="{Binding Length}" Width="100" />
                         </DataGrid.Columns>
                     </DataGrid>
-                    <TextBlock Grid.Row="1" Classes="h" Text="Expeditions (by date)" Margin="8,6,0,3" />
-                    <DataGrid Grid.Row="2" ItemsSource="{Binding Analytics.Expeditions}" IsReadOnly="True"
+                    <TextBlock Grid.Row="1" Classes="h" Text="Trips (by date)" Margin="8,6,0,3" />
+                    <DataGrid Grid.Row="2" ItemsSource="{Binding Analytics.Trips}" IsReadOnly="True"
                               GridLinesVisibility="Horizontal" AutoGenerateColumns="False">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Date" Binding="{Binding Date}" Width="120" />

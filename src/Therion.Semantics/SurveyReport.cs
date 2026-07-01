@@ -1,5 +1,5 @@
 // PUB-01 — one-click survey report. Builds a self-contained HTML report from the workspace model
-// (project summary + statistics, length-by-survey, team, expeditions, station list), reusing the
+// (project summary + statistics, length-by-survey, team, trips, station list), reusing the
 // DATA-* analytics. Pure (no UI deps) so it's testable and reusable by the CLI; the app saves the
 // string and opens it (print-to-PDF covers the PDF case).
 
@@ -62,11 +62,11 @@ public static class SurveyReport
                 team.Select(m => (IReadOnlyList<string>)new[] { m.Name, m.Surveys.ToString(CultureInfo.InvariantCulture), Len(m.Length) }));
         }
 
-        // Expeditions.
-        var exp = DataAnalytics.Expeditions(model);
+        // Trips.
+        var exp = DataAnalytics.Trips(model);
         if (exp.Count > 0)
         {
-            sb.Append("<h2>Expeditions</h2>\n");
+            sb.Append("<h2>Trips</h2>\n");
             Table(sb, new[] { "Date", "Surveys", "Length", "Members" },
                 exp.Select(e => (IReadOnlyList<string>)new[] { e.Date, e.Surveys.ToString(CultureInfo.InvariantCulture), Len(e.Length), string.Join(", ", e.Members) }));
         }

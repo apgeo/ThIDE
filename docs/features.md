@@ -23,7 +23,7 @@
 - **Loch / Aven** launchers and **thbook** PDF page lookup.
 
 ## Survey analytics & notes
-- Project statistics: length breakdown (surface / underground / duplicate / splay), vertical range with hi/lo stations, horizontal extent; length by survey and by date; team members & expeditions; fixed points; data-quality checks.
+- Project statistics: length breakdown (surface / underground / duplicate / splay), vertical range with hi/lo stations, horizontal extent; length by survey and by date; team members & trips; fixed points; data-quality checks.
 - Charts, team, entrances, and quality tabs; export to **CSV / Markdown / HTML / LaTeX**; on-demand **HTML survey report** and station/shot **table export**.
 - **Exploration leads** register and map overlay (continuation flags, QM / lead / `?` comments, dead-ends) with a per-project lifecycle.
 - **TODO / QM aggregator** and a per-project **metadata** sidecar.

@@ -67,9 +67,9 @@ public class DataAnalyticsTests
     }
 
     [Fact]
-    public void Expeditions_group_by_date()
+    public void Trips_group_by_date()
     {
-        var exp = DataAnalytics.Expeditions(Build(("cave.th", Cave)));
+        var exp = DataAnalytics.Trips(Build(("cave.th", Cave)));
         var e = Assert.Single(exp);
         Assert.Equal("2024.07.01", e.Date);
         Assert.Equal(2, e.Members.Length);

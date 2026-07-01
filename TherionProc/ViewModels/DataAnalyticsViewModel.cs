@@ -22,7 +22,7 @@ public sealed record ChartBar(string Label, string Value, double Fraction)
     public double BarWidth => Math.Max(1, Fraction * 240);
 }
 public sealed record TeamRow(string Name, int Surveys, string Length);
-public sealed record ExpeditionRow(string Date, int Surveys, string Length, string Members);
+public sealed record TripRow(string Date, int Surveys, string Length, string Members);
 public sealed record FixedRow(string Station, string Kind, string Coordinates, string Cs, string Location);
 public sealed record QualityRow(string Metric, int Count);
 
@@ -35,7 +35,7 @@ public sealed partial class DataAnalyticsViewModel : ObservableObject
     public ObservableCollection<ChartBar> LengthBySurvey { get; } = new();      // DATA-02
     public ObservableCollection<ChartBar> LengthByDate { get; } = new();        // DATA-02
     public ObservableCollection<TeamRow> Team { get; } = new();                 // DATA-05
-    public ObservableCollection<ExpeditionRow> Expeditions { get; } = new();    // DATA-05
+    public ObservableCollection<TripRow> Trips { get; } = new();                // DATA-05
     public ObservableCollection<FixedRow> FixedPoints { get; } = new();         // DATA-06
     public ObservableCollection<QualityRow> Quality { get; } = new();           // DATA-08
 
@@ -87,7 +87,7 @@ public sealed partial class DataAnalyticsViewModel : ObservableObject
     private void Clear()
     {
         Statistics.Clear(); LengthBySurvey.Clear(); LengthByDate.Clear();
-        Team.Clear(); Expeditions.Clear(); FixedPoints.Clear(); Quality.Clear();
+        Team.Clear(); Trips.Clear(); FixedPoints.Clear(); Quality.Clear();
     }
 
     private void BuildStatistics(WorkspaceSemanticModel model)
@@ -133,8 +133,8 @@ public sealed partial class DataAnalyticsViewModel : ObservableObject
     {
         foreach (var m in DataAnalytics.TeamMembers(model))
             Team.Add(new TeamRow(m.Name, m.Surveys, ProjectFormat.Length(m.Length)));
-        foreach (var e in DataAnalytics.Expeditions(model))
-            Expeditions.Add(new ExpeditionRow(e.Date, e.Surveys, ProjectFormat.Length(e.Length),
+        foreach (var e in DataAnalytics.Trips(model))
+            Trips.Add(new TripRow(e.Date, e.Surveys, ProjectFormat.Length(e.Length),
                 string.Join(", ", e.Members)));
     }
 

@@ -33,8 +33,8 @@ public sealed record LengthBucket(string Key, double Length, int Shots);
 /// <summary>Per-person surveying totals across the project (DATA-05).</summary>
 public sealed record TeamMemberStat(string Name, int Surveys, double Length);
 
-/// <summary>Per-date (expedition) totals across the project (DATA-05).</summary>
-public sealed record ExpeditionStat(string Date, int Surveys, double Length, ImmutableArray<string> Members);
+/// <summary>Per-date (trip) totals across the project (DATA-05).</summary>
+public sealed record TripStat(string Date, int Surveys, double Length, ImmutableArray<string> Members);
 
 // ---- DATA-06 -----------------------------------------------------------------
 
@@ -187,7 +187,7 @@ public static class DataAnalytics
             .ToList();
     }
 
-    // ===== DATA-05: team / expedition ========================================
+    // ===== DATA-05: team / trip ==============================================
 
     public static IReadOnlyList<TeamMemberStat> TeamMembers(WorkspaceSemanticModel model)
     {
@@ -209,7 +209,7 @@ public static class DataAnalytics
             .ToList();
     }
 
-    public static IReadOnlyList<ExpeditionStat> Expeditions(WorkspaceSemanticModel model)
+    public static IReadOnlyList<TripStat> Trips(WorkspaceSemanticModel model)
     {
         var lenBySurvey = DirectLengthBySurvey(model);
         var byDate = new Dictionary<string, (int Surveys, double Len, HashSet<string> People)>(StringComparer.Ordinal);
@@ -224,7 +224,7 @@ public static class DataAnalytics
             foreach (var p in sv.Team) agg.People.Add(p);
         }
         return byDate
-            .Select(kv => new ExpeditionStat(kv.Key, kv.Value.Surveys, kv.Value.Len,
+            .Select(kv => new TripStat(kv.Key, kv.Value.Surveys, kv.Value.Len,
                 kv.Value.People.OrderBy(p => p, StringComparer.OrdinalIgnoreCase).ToImmutableArray()))
             .OrderBy(e => e.Date, StringComparer.Ordinal)
             .ToList();
