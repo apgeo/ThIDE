@@ -93,7 +93,8 @@
         addGizmoAxis(g, new THREE.Vector3(-1, 0, 0), "#c0392b", "W");
         addGizmoAxis(g, new THREE.Vector3(0, 1, 0), "#51cf66", "N");
         addGizmoAxis(g, new THREE.Vector3(0, -1, 0), "#2f9e44", "S");
-        addGizmoAxis(g, new THREE.Vector3(0, 0, 1), "#74c0fc", "Up");
+        // The vertical (Up) reference is drawn thick so it reads clearly as the plumb line.
+        addGizmoAxis(g, new THREE.Vector3(0, 0, 1), "#74c0fc", "Up", true);
         // Faint horizon ring in the E/N plane so it reads as a compass rose.
         g.add(new THREE.Mesh(
             new THREE.RingGeometry(0.94, 1.0, 48),
@@ -101,9 +102,21 @@
         gizmoScene.add(g);
     }
 
-    function addGizmoAxis(g, dir, css, label) {
-        var geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), dir.clone()]);
-        g.add(new THREE.Line(geo, new THREE.LineBasicMaterial({ color: new THREE.Color(css) })));
+    function addGizmoAxis(g, dir, css, label, thick) {
+        if (thick) {
+            // WebGL ignores LineBasicMaterial.linewidth on most platforms, so draw a thin cylinder to
+            // get a genuinely thicker line. CylinderGeometry is Y-aligned; rotate it onto `dir`.
+            var d = dir.clone().normalize();
+            var cyl = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.035, 0.035, 1, 12),
+                new THREE.MeshBasicMaterial({ color: new THREE.Color(css) }));
+            cyl.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d);
+            cyl.position.copy(d.clone().multiplyScalar(0.5));
+            g.add(cyl);
+        } else {
+            var geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), dir.clone()]);
+            g.add(new THREE.Line(geo, new THREE.LineBasicMaterial({ color: new THREE.Color(css) })));
+        }
         var sp = makeLabel(label, css);
         sp.position.copy(dir.clone().multiplyScalar(1.32));
         g.add(sp);
@@ -136,12 +149,14 @@
     function renderGizmoCore() {
         var host = document.getElementById("scene");
         var W = host.clientWidth, H = host.clientHeight;
-        var size = Math.max(64, Math.min(120, Math.round(Math.min(W, H) * 0.22))), m = 8;
+        var size = Math.max(72, Math.min(140, Math.round(Math.min(W, H) * 0.24))), m = 8;
 
         var dir = new THREE.Vector3().subVectors(camera.position, target);
         if (dir.lengthSq() < 1e-9) dir.set(0, -1, 0.4);
         dir.normalize();
-        gizmoCam.position.copy(dir.multiplyScalar(3.4));
+        // Pull the gizmo camera further back so the axis labels (out at ~1.32) sit inside the frustum
+        // with margin instead of being clipped at the edges of the corner viewport.
+        gizmoCam.position.copy(dir.multiplyScalar(5.0));
         gizmoCam.up.copy(camera.up);
         gizmoCam.lookAt(0, 0, 0);
         gizmoCam.updateProjectionMatrix();
