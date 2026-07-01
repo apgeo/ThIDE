@@ -1,7 +1,7 @@
 // Builds and owns the VS-classic dock layout:
 //   Left:   Workspace
 //   Center: document well (open .th files)  +  Bottom: Diagnostics / Compiler Output / Generated Files
-//   Right:  Object Browser / XVI / Settings
+//   Right:  Outline / preview panels (XVI references available behind the ShowXviPanel switch)
 // Also wires the locators Dock needs to materialize tools and floating windows.
 
 using System;
@@ -176,6 +176,11 @@ public sealed class DockFactory : Factory
     // that produces a renderable tree is in place (e.g. rebuilding rather than deserializing).
     private const bool PersistDockLayout = false;
 
+    // The XVI references panel is hidden by default. Flip this single switch to surface it in the
+    // right tool-rail again. There is no menu / command-palette / keyboard-shortcut entry for it,
+    // so this constant is the only place that decides whether the panel is reachable at all.
+    private const bool ShowXviPanel = false;
+
     public override IRootDock CreateLayout() =>
         (PersistDockLayout ? TryLoadLayout() : null) ?? BuildDefaultLayout();
 
@@ -312,6 +317,7 @@ public sealed class DockFactory : Factory
         {
             if (string.IsNullOrEmpty(id)) continue;
             IDockable? d = toolMap.TryGetValue(id, out var tool) ? tool : FindRealDocumentById(_rootDock!, id);
+            if (ReferenceEquals(d, _xvi) && !ShowXviPanel) continue;   // XVI hidden → don't resurrect a saved float
             // Skip a dockable that is already floating (e.g. the user tore it off again).
             if (d is not null && !resolved.Contains(d) && !IsInFloatWindow(d)) resolved.Add(d);
         }
@@ -373,7 +379,8 @@ public sealed class DockFactory : Factory
     /// <summary>The right-rail tools, gated by their feature settings (VIS-02/05).</summary>
     private IDockable[] RightToolset()
     {
-        var list = new System.Collections.Generic.List<IDockable> { _xvi };
+        var list = new System.Collections.Generic.List<IDockable>();
+        if (ShowXviPanel) list.Add(_xvi);                       // hidden by default (see ShowXviPanel)
         if (TherionProc.Services.EditorFeatureFlags.Compiled(TherionProc.Services.EditorFeature.Outline))
             list.Add(_outline);
         var s = _appSettings?.Current ?? TherionProc.Services.AppSettings.Default;
@@ -419,17 +426,19 @@ public sealed class DockFactory : Factory
             ActiveDockable = BottomTabById(st.BottomActiveTab),
         };
 
+        // Object Browser moved to the central well (#10); External Tools/Settings moved into
+        // the Preferences window (#13). The right rail holds the EDIT-09 document outline and the
+        // VIS-02/05 preview panels (each gated by its setting), plus the XVI references panel when
+        // ShowXviPanel is on. Its active tab is the first tool actually present.
+        var rightToolset = RightToolset();
         var rightTools = new ToolDock
         {
             Id = "RightTools",
             Title = "RightTools",
             Alignment = Alignment.Right,
             Proportion = st.RightProportion,
-            // Object Browser moved to the central well (#10); External Tools/Settings moved into
-            // the Preferences window (#13). The right rail keeps XVI references plus the EDIT-09
-            // document outline and the VIS-02/05 preview panels (each gated by its setting).
-            VisibleDockables = CreateList<IDockable>(RightToolset()),
-            ActiveDockable = _xvi,
+            VisibleDockables = CreateList<IDockable>(rightToolset),
+            ActiveDockable = rightToolset.Length > 0 ? rightToolset[0] : null,
         };
 
         var centerColumn = new ProportionalDock
