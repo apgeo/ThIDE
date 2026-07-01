@@ -4,6 +4,7 @@
 using System.Text.Json;
 using Therion.Core;
 using Therion.Semantics;
+using Therion.Structural;
 using Therion.Syntax;
 using Therion.Workspace;
 
@@ -27,6 +28,7 @@ switch (args[0])
     case "stats":         return await RequireArgAsync(args, Stats);
     case "deps":          return await RequireArgAsync(args, a => Deps(a, args));
     case "gis":           return await RequireArgAsync(args, a => Gis(a, args));
+    case "structural":    return RequireArg(args, a => Structural(a, args));
 
     default:
         Console.Error.WriteLine($"error: unknown command '{args[0]}'. Use --help.");
@@ -44,6 +46,8 @@ static void PrintHelp()
     Console.WriteLine("  therion-cli stats <file|thconfig>      Print project statistics (length, stations, …).");
     Console.WriteLine("  therion-cli deps <file|thconfig> [--dot]   Print the include/dependency graph.");
     Console.WriteLine("  therion-cli gis <file|thconfig> [--format kml|geojson|gpx|csv] [--out <path>]");
+    Console.WriteLine("  therion-cli structural <file.th> [--keyword geo] [--declination <deg>|survey] [--format table|csv]");
+    Console.WriteLine("                                         Fit geological planes (strike/dip) from 'geo' shots.");
     Console.WriteLine("  therion-cli dump-ast <file>            Print the parsed AST as JSON.");
     Console.WriteLine("  therion-cli list-stations <file>       List station references in a .th file.");
     Console.WriteLine("  therion-cli --version                  Print the pinned Therion syntax version.");
@@ -261,6 +265,79 @@ static async System.Threading.Tasks.Task<WorkspaceSemanticModel?> LoadWorkspaceA
 
 static bool HasFlag(string[] args, string flag) =>
     Array.Exists(args, a => string.Equals(a, flag, StringComparison.OrdinalIgnoreCase));
+
+// STRUCT-01 — fit geological planes (strike/dip) from structural shots, headless (proves the
+// Therion.Structural core is UI-independent).
+static int Structural(string path, string[] args)
+{
+    var ext = Path.GetExtension(Path.GetFullPath(path)).ToLowerInvariant();
+    if (ext != ".th") { Console.Error.WriteLine("error: 'structural' expects a .th file."); return 2; }
+
+    var (file, _) = ParseAny(path);
+    if (file is null) return 2;
+
+    var model = new SemanticBinder().Bind(file);
+
+    var detection = new DetectionOptions();
+    if (GetOption(args, "--keyword") is { Length: > 0 } kw)
+        detection = detection with { NameKeywords = System.Collections.Immutable.ImmutableArray.Create(kw) };
+
+    var declination = new DeclinationOptions();
+    var declInputs = default(DeclinationInputs);
+    if (GetOption(args, "--declination") is { Length: > 0 } ds)
+    {
+        if (string.Equals(ds, "survey", StringComparison.OrdinalIgnoreCase))
+        {
+            declination = new DeclinationOptions { Source = DeclinationSource.SurveyDeclared };
+            declInputs = new DeclinationInputs(SurveyDeclaredDegrees: model.Declination);
+        }
+        else if (double.TryParse(ds, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var dd))
+        {
+            declination = new DeclinationOptions { Source = DeclinationSource.Manual, ManualDegrees = dd };
+        }
+    }
+
+    var result = StructuralAnalysis.Analyze(model,
+        new StructuralOptions { Detection = detection, Declination = declination, DeclinationInputs = declInputs });
+
+    if (result.Planes.Length == 0)
+    {
+        Console.Error.WriteLine("No structural measurements detected (try --keyword <name>).");
+        return 0;
+    }
+
+    var ci = System.Globalization.CultureInfo.InvariantCulture;
+    string F(double v) => v.ToString("0.0", ci);
+    var fmt = (GetOption(args, "--format") ?? "table").ToLowerInvariant();
+
+    if (fmt == "csv")
+    {
+        Console.WriteLine("plane,dip,strike,dip_direction,points,rms,valid");
+        for (int i = 0; i < result.Planes.Length; i++)
+        {
+            var p = result.Planes[i];
+            Console.WriteLine($"\"{result.Batches[i].Name}\",{F(p.Dip)},{F(p.Strike)},{F(p.DipDirection)}," +
+                $"{p.PointCount},{p.RmsResidual.ToString("0.###", ci)},{p.IsValid}");
+        }
+    }
+    else
+    {
+        Console.WriteLine($"{"Plane",-22} {"Dip",6} {"Strike",7} {"DipDir",7} {"Pts",4} {"RMS",8}");
+        for (int i = 0; i < result.Planes.Length; i++)
+        {
+            var p = result.Planes[i];
+            var name = Trunc(result.Batches[i].Name, 22);
+            Console.WriteLine(p.IsValid
+                ? $"{name,-22} {F(p.Dip),6} {F(p.Strike),7} {F(p.DipDirection),7} {p.PointCount,4} {p.RmsResidual.ToString("0.###", ci),8}"
+                : $"{name,-22}  ({p.ErrorReason})");
+        }
+        if (result.Declination.Delta != 0) Console.Error.WriteLine($"declination {F(result.Declination.Delta)}° applied (true north).");
+        Console.Error.WriteLine($"{result.Planes.Length} plane(s).");
+    }
+    return 0;
+
+    static string Trunc(string s, int n) => s.Length <= n ? s : s[..(n - 1)] + "…";
+}
 
 static string? GetOption(string[] args, string name)
 {
