@@ -1,4 +1,4 @@
-// VIS-02 (debug overlays) — pure logic behind the live centreline preview:
+// (debug overlays) — pure logic behind the live centreline preview:
 //   * ComputeLayout: spanning-tree positions + per-station connected-component assignment. It does
 //     NOT resolve equates/fixes, so disconnected surveys all start at the origin (the cause of the
 //     "superimposed tracks" the debug overlays diagnose).
@@ -242,8 +242,12 @@ public class LivePreviewLayoutTests
     public void ProjectVector_drops_north_in_plan_and_up_in_profile()
     {
         var v = (E: 3.0, N: 4.0, Z: 5.0);
-        Assert.Equal((3.0, -4.0), LivePreviewViewModel.ProjectVector(v, isElevation: false)); // plan: east vs north
-        Assert.Equal((3.0, -5.0), LivePreviewViewModel.ProjectVector(v, isElevation: true));  // profile: east vs up
+        var plan = LivePreviewViewModel.ProjectVector(v, isElevation: false); // plan: east vs north
+        Assert.Equal(3.0, plan.X, 6);
+        Assert.Equal(-4.0, plan.Y, 6);
+        var profile = LivePreviewViewModel.ProjectVector(v, isElevation: true); // profile: east vs up
+        Assert.Equal(3.0, profile.X, 6);   // trig at 90° leaves a sub-ULP residue, so compare with tolerance
+        Assert.Equal(-5.0, profile.Y, 6);
     }
 
     [Theory]
