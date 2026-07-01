@@ -7,6 +7,7 @@ using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Therion.Core;
+using TherionProc.Resources;
 
 namespace TherionProc.Views;
 
@@ -31,7 +32,7 @@ public sealed class CoordinateConverterWindow : Window
 
     public CoordinateConverterWindow()
     {
-        Title = "Coordinate converter";
+        Title = Tr.Get("CC_Title");
         Width = 470;
         SizeToContent = SizeToContent.Height;
         CanResize = false;
@@ -42,28 +43,28 @@ public sealed class CoordinateConverterWindow : Window
             tb.TextChanged += (_, _) => Recompute();
         _hemi.SelectionChanged += (_, _) => Recompute();
 
-        var copyUtm = new Button { Content = "Copy fix (UTM)" };
+        var copyUtm = new Button { Content = Tr.Get("CC_CopyUtm") };
         copyUtm.Click += (_, _) => Services.ClipboardHelper.SetText(_utmFix);
-        var copyLl = new Button { Content = "Copy fix (lat-long)" };
+        var copyLl = new Button { Content = Tr.Get("CC_CopyLl") };
         copyLl.Click += (_, _) => Services.ClipboardHelper.SetText(_llFix);
-        var close = new Button { Content = "Close", IsCancel = true, MinWidth = 80 };
+        var close = new Button { Content = Tr.Get("Common_Close"), IsCancel = true, MinWidth = 80 };
         close.Click += (_, _) => Close();
 
-        var common = Row("Station", _station, "Altitude (m)", _alt);
+        var common = Row(Tr.Get("Col_Station"), _station, Tr.Get("CC_Altitude"), _alt);
 
         var toUtm = new StackPanel { Spacing = 6, Children =
         {
-            Header("WGS84 lat/long → UTM"),
-            Row("Latitude", _lat, "Longitude", _lon),
+            Header(Tr.Get("CC_ToUtmHeader")),
+            Row(Tr.Get("CC_Latitude"), _lat, Tr.Get("CC_Longitude"), _lon),
             _utmOut,
             Left(copyUtm),
         } };
 
         var toLl = new StackPanel { Spacing = 6, Margin = new(0, 10, 0, 0), Children =
         {
-            Header("UTM → WGS84 lat/long"),
-            Row("Zone", _zone, "Hemisphere", _hemi),
-            Row("Easting", _east, "Northing", _north),
+            Header(Tr.Get("CC_ToLlHeader")),
+            Row(Tr.Get("CC_Zone"), _zone, Tr.Get("CC_Hemisphere"), _hemi),
+            Row(Tr.Get("CC_Easting"), _east, Tr.Get("CC_Northing"), _north),
             _llOut,
             Left(copyLl),
         } };

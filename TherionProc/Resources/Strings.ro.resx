@@ -59,7 +59,7 @@
   <data name="Welcome_Message" xml:space="preserve"><value>Deschide&#x21B;i un fi&#x219;ier de configurare Therion sau un dosar pentru a &#xEE;ncepe.</value></data>
   <data name="Domain_Station" xml:space="preserve"><value>Sta&#x21B;ie</value></data>
   <data name="Domain_Survey" xml:space="preserve"><value>Topografie</value></data>
-  <data name="Domain_Shot" xml:space="preserve"><value>Vizare</value></data>
+  <data name="Domain_Shot" xml:space="preserve"><value>Măsurare</value></data>
   <data name="Domain_Scrap" xml:space="preserve"><value>Schi&#x21B;&#x103;</value></data>
   <data name="Domain_Fix" xml:space="preserve"><value>Punct fix</value></data>
   <data name="Domain_Equate" xml:space="preserve"><value>Echivalare</value></data>
@@ -142,7 +142,7 @@
   <data name="Struct_Tab3" xml:space="preserve"><value>3 · Plane rezultate</value></data>
   <data name="Struct_Tab4" xml:space="preserve"><value>4 · Grafic 3D</value></data>
   <data name="Struct_DetectionSignals" xml:space="preserve"><value>Semnale de detectare</value></data>
-  <data name="Struct_DetectionHelp" xml:space="preserve"><value>O vizare este structurală dacă se potrivește cu orice semnal activat. Ajustați-le conform convenției topografiei dvs.</value></data>
+  <data name="Struct_DetectionHelp" xml:space="preserve"><value>O măsurătoare este structurală dacă se potrivește cu orice semn activat in date. Ajustați-le conform convenției topografiei.</value></data>
   <data name="Struct_FromNameKeyword" xml:space="preserve"><value>Numele stației de plecare conține cuvânt(e)-cheie</value></data>
   <data name="Struct_CommentMarker" xml:space="preserve"><value>Comentariul vizei conține marcaj(e)</value></data>
   <data name="Struct_StationFlag" xml:space="preserve"><value>Stația de la/până la poartă indicator(i)</value></data>
@@ -706,4 +706,139 @@
   <data name="Ed_OpenArrow" xml:space="preserve"><value>Deschide ↗</value></data>
   <data name="Ed_OpenDefaultApp" xml:space="preserve"><value>Deschide în aplicația implicită</value></data>
   <data name="Ed_OpenFile" xml:space="preserve"><value>Deschide fișierul</value></data>
+  <!-- Code-built dialogs (calculators / About / Mapiah) -->
+  <data name="Common_Close" xml:space="preserve"><value>Închide</value></data>
+  <data name="UC_Title" xml:space="preserve"><value>Convertor de unități</value></data>
+  <data name="UC_Length" xml:space="preserve"><value>Lungime</value></data>
+  <data name="UC_Angle" xml:space="preserve"><value>Unghi</value></data>
+  <data name="UC_Metres" xml:space="preserve"><value>Metri</value></data>
+  <data name="UC_Feet" xml:space="preserve"><value>Picioare</value></data>
+  <data name="UC_Centimetres" xml:space="preserve"><value>Centimetri</value></data>
+  <data name="UC_Kilometres" xml:space="preserve"><value>Kilometri</value></data>
+  <data name="UC_Inches" xml:space="preserve"><value>Țoli</value></data>
+  <data name="UC_Yards" xml:space="preserve"><value>Iarzi</value></data>
+  <data name="UC_Degrees" xml:space="preserve"><value>Grade</value></data>
+  <data name="UC_Grads" xml:space="preserve"><value>Grade centesimale</value></data>
+  <data name="UC_Mils" xml:space="preserve"><value>Miimi</value></data>
+  <data name="UC_PercentSlope" xml:space="preserve"><value>Pantă procentuală</value></data>
+  <data name="UC_Minutes" xml:space="preserve"><value>Minute</value></data>
+  <data name="UC_SwapTip" xml:space="preserve"><value>Inversează din/în</value></data>
+  <data name="UC_CopyResult" xml:space="preserve"><value>Copiază rezultatul</value></data>
+  <data name="UC_Category" xml:space="preserve"><value>Categorie</value></data>
+  <data name="UC_Value" xml:space="preserve"><value>Valoare</value></data>
+  <data name="UC_From" xml:space="preserve"><value>Din</value></data>
+  <data name="UC_To" xml:space="preserve"><value>În</value></data>
+  <data name="CC_Title" xml:space="preserve"><value>Convertor de coordonate</value></data>
+  <data name="CC_CopyUtm" xml:space="preserve"><value>Copiază fix (UTM)</value></data>
+  <data name="CC_CopyLl" xml:space="preserve"><value>Copiază fix (lat-long)</value></data>
+  <data name="CC_Altitude" xml:space="preserve"><value>Altitudine (m)</value></data>
+  <data name="CC_ToUtmHeader" xml:space="preserve"><value>WGS84 lat/long → UTM</value></data>
+  <data name="CC_Latitude" xml:space="preserve"><value>Latitudine</value></data>
+  <data name="CC_Longitude" xml:space="preserve"><value>Longitudine</value></data>
+  <data name="CC_ToLlHeader" xml:space="preserve"><value>UTM → WGS84 lat/long</value></data>
+  <data name="CC_Zone" xml:space="preserve"><value>Zonă</value></data>
+  <data name="CC_Hemisphere" xml:space="preserve"><value>Emisferă</value></data>
+  <data name="CC_Easting" xml:space="preserve"><value>Est (E)</value></data>
+  <data name="CC_Northing" xml:space="preserve"><value>Nord (N)</value></data>
+  <data name="DC_Title" xml:space="preserve"><value>Calculator de declinație</value></data>
+  <data name="DC_CopyLine" xml:space="preserve"><value>Copiază linia de declinație</value></data>
+  <data name="DC_LoadModel" xml:space="preserve"><value>Încarcă model…</value></data>
+  <data name="DC_Year" xml:space="preserve"><value>An</value></data>
+  <data name="DC_NoModel" xml:space="preserve"><value>Niciun model magnetic încărcat</value></data>
+  <data name="DC_NoModelHelp" xml:space="preserve"><value>Descărcați un WMM.COF (NOAA, domeniu public) și puneți-l în %AppData%/TherionProc, sau apăsați „Încarcă model…”.</value></data>
+  <data name="DC_DeclinationFmt" xml:space="preserve"><value>Declinație: {0}° {1}</value></data>
+  <data name="DC_LoadFailed" xml:space="preserve"><value>Încărcarea modelului a eșuat</value></data>
+  <data name="DC_PickTitle" xml:space="preserve"><value>Selectați un fișier .COF WMM/IGRF</value></data>
+  <data name="DC_PickFilter" xml:space="preserve"><value>Model geomagnetic (*.COF)</value></data>
+  <data name="About_Title" xml:space="preserve"><value>Despre TherionProc</value></data>
+  <data name="About_VersionPrefix" xml:space="preserve"><value>Versiunea </value></data>
+  <data name="About_Blurb" xml:space="preserve"><value>Un editor și mediu de compilare pentru proiecte de topografie a peșterilor Therion.
+Vizează Therion v6.4.0 (thbook inclus).</value></data>
+  <data name="About_OpenBook" xml:space="preserve"><value>Deschide Cartea Therion</value></data>
+  <data name="Mapiah_Title" xml:space="preserve"><value>Mapiah nu a fost găsit</value></data>
+  <data name="Mapiah_Message" xml:space="preserve"><value>Editorul de schițe Mapiah nu a putut fi găsit pe acest calculator.
+
+Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.exe în Setări → Unelte externe (rândul „mapiah”).</value></data>
+  <data name="Mapiah_Download" xml:space="preserve"><value>Descarcă Mapiah…</value></data>
+  <data name="Mapiah_OpenSettings" xml:space="preserve"><value>Deschide Setări</value></data>
+  <!-- Command palette (Ctrl+Shift+P) -->
+  <data name="Cmd_Title" xml:space="preserve"><value>Paletă de comenzi</value></data>
+  <data name="Cmd_Watermark" xml:space="preserve"><value>Tastați o comandă…   (@ simbol document · # simbol spațiu de lucru · :42 salt la linie)</value></data>
+  <data name="Cmd_GoToLineFmt" xml:space="preserve"><value>Salt la linia {0}</value></data>
+  <data name="Cmd_Cat_Navigate" xml:space="preserve"><value>navigare</value></data>
+  <data name="Cmd_Cat_File" xml:space="preserve"><value>Fișier</value></data>
+  <data name="Cmd_Cat_Build" xml:space="preserve"><value>Compilare</value></data>
+  <data name="Cmd_Cat_View" xml:space="preserve"><value>Vizualizare</value></data>
+  <data name="Cmd_Cat_Go" xml:space="preserve"><value>Navigare</value></data>
+  <data name="Cmd_Cat_Search" xml:space="preserve"><value>Căutare</value></data>
+  <data name="Cmd_Cat_Edit" xml:space="preserve"><value>Editare</value></data>
+  <data name="Cmd_Cat_Language" xml:space="preserve"><value>Limbă</value></data>
+  <data name="Cmd_Cat_Window" xml:space="preserve"><value>Fereastră</value></data>
+  <data name="Cmd_Cat_Settings" xml:space="preserve"><value>Setări</value></data>
+  <data name="Cmd_Cat_Docs" xml:space="preserve"><value>Documentație</value></data>
+  <data name="Cmd_Cat_Editor" xml:space="preserve"><value>Editor</value></data>
+  <data name="Cmd_OpenFile" xml:space="preserve"><value>Deschide fișier…</value></data>
+  <data name="Cmd_OpenThconfig" xml:space="preserve"><value>Deschide thconfig…</value></data>
+  <data name="Cmd_OpenFolder" xml:space="preserve"><value>Deschide dosar…</value></data>
+  <data name="Cmd_Save" xml:space="preserve"><value>Salvează</value></data>
+  <data name="Cmd_GoToFile" xml:space="preserve"><value>Salt la fișier…  (Ctrl+P)</value></data>
+  <data name="Cmd_RevealActive" xml:space="preserve"><value>Afișează fișierul activ în spațiul de lucru</value></data>
+  <data name="Cmd_BuildCurrent" xml:space="preserve"><value>Compilează thconfig-ul curent</value></data>
+  <data name="Cmd_Rebuild" xml:space="preserve"><value>Recompilează</value></data>
+  <data name="Cmd_CancelBuild" xml:space="preserve"><value>Anulează compilarea</value></data>
+  <data name="Cmd_OpenLoch" xml:space="preserve"><value>Deschide în Loch</value></data>
+  <data name="Cmd_OpenAven" xml:space="preserve"><value>Deschide în Aven</value></data>
+  <data name="Cmd_Dump3d" xml:space="preserve"><value>Survex: dump3d (.3d → text)</value></data>
+  <data name="Cmd_Extend" xml:space="preserve"><value>Survex: extend (elevație extinsă)</value></data>
+  <data name="Cmd_PrintVersion" xml:space="preserve"><value>Therion: afișează versiunea</value></data>
+  <data name="Cmd_PrintEnv" xml:space="preserve"><value>Therion: afișează mediul</value></data>
+  <data name="Cmd_BuildTargetFmt" xml:space="preserve"><value>Compilează ținta: {0}</value></data>
+  <data name="Cmd_BuildSpecific" xml:space="preserve"><value>Compilează un anumit thconfig…</value></data>
+  <data name="Cmd_ToggleObjectBrowser" xml:space="preserve"><value>Comută Navigatorul de obiecte</value></data>
+  <data name="Cmd_ToggleWorkspace" xml:space="preserve"><value>Comută Spațiul de lucru</value></data>
+  <data name="Cmd_ToggleDiagnostics" xml:space="preserve"><value>Comută Diagnosticele</value></data>
+  <data name="Cmd_ToggleOutline" xml:space="preserve"><value>Comută Conturul</value></data>
+  <data name="Cmd_ToggleProject" xml:space="preserve"><value>Comută Proiectul (Tablou de bord / Topografii / Audit)</value></data>
+  <data name="Cmd_ToggleLog" xml:space="preserve"><value>Comută Jurnalul</value></data>
+  <data name="Cmd_ToggleLivePreview" xml:space="preserve"><value>Comută Previzualizarea live</value></data>
+  <data name="Cmd_ToggleMapViewer" xml:space="preserve"><value>Comută Vizualizatorul de hărți</value></data>
+  <data name="Cmd_Toggle3D" xml:space="preserve"><value>Comută Vizualizatorul 3D</value></data>
+  <data name="Cmd_ResetLayout" xml:space="preserve"><value>Resetează aranjamentul</value></data>
+  <data name="Cmd_ToggleWordWrap" xml:space="preserve"><value>Comută încadrarea textului</value></data>
+  <data name="Cmd_ToggleWhitespace" xml:space="preserve"><value>Comută spațiile albe</value></data>
+  <data name="Cmd_ToggleMinimap" xml:space="preserve"><value>Comută minimapa</value></data>
+  <data name="Cmd_ToggleIndent" xml:space="preserve"><value>Comută ghidajele de indentare</value></data>
+  <data name="Cmd_ToggleEol" xml:space="preserve"><value>Comută marcajele de sfârșit de linie</value></data>
+  <data name="Cmd_Back" xml:space="preserve"><value>Înapoi</value></data>
+  <data name="Cmd_Forward" xml:space="preserve"><value>Înainte</value></data>
+  <data name="Cmd_RenameSymbol" xml:space="preserve"><value>Redenumește simbolul</value></data>
+  <data name="Cmd_GoToSymbolWs" xml:space="preserve"><value>Salt la simbol în spațiul de lucru…</value></data>
+  <data name="Cmd_GoToSymbolDoc" xml:space="preserve"><value>Salt la simbol în document…</value></data>
+  <data name="Cmd_GoToLine" xml:space="preserve"><value>Salt la linie…</value></data>
+  <data name="Cmd_SwitchEnglish" xml:space="preserve"><value>Comută la engleză</value></data>
+  <data name="Cmd_SwitchRomanian" xml:space="preserve"><value>Comută la română</value></data>
+  <data name="Cmd_UpperSel" xml:space="preserve"><value>Selecție cu MAJUSCULE</value></data>
+  <data name="Cmd_LowerSel" xml:space="preserve"><value>selecție cu minuscule</value></data>
+  <data name="Cmd_Find" xml:space="preserve"><value>Caută</value></data>
+  <data name="Cmd_Replace" xml:space="preserve"><value>Înlocuiește</value></data>
+  <data name="Cmd_FormatDoc" xml:space="preserve"><value>Formatează documentul</value></data>
+  <data name="Cmd_QuickFix" xml:space="preserve"><value>Remediere rapidă…  (Ctrl+.)</value></data>
+  <data name="Cmd_GoToMatching" xml:space="preserve"><value>Salt la blocul pereche</value></data>
+  <data name="Cmd_PeekDef" xml:space="preserve"><value>Vezi definiția</value></data>
+  <data name="Cmd_StepInto" xml:space="preserve"><value>Intră în fișierul inclus</value></data>
+  <data name="Cmd_RenameEditor" xml:space="preserve"><value>Redenumește simbolul (editor)</value></data>
+  <data name="Cmd_Preferences" xml:space="preserve"><value>Preferințe…</value></data>
+  <data name="Cmd_About" xml:space="preserve"><value>Despre</value></data>
+  <data name="Cmd_TherionBook" xml:space="preserve"><value>Cartea Therion (documentație)</value></data>
+  <data name="Cmd_SettingsFmt" xml:space="preserve"><value>Setări: {0}</value></data>
+  <data name="Cmd_SearchDocs" xml:space="preserve"><value>Caută în documentație…</value></data>
+  <data name="Cmd_DocsTitle" xml:space="preserve"><value>Documentație</value></data>
+  <data name="Cmd_SearchTermWm" xml:space="preserve"><value>Caută un termen…</value></data>
+  <data name="Cmd_DocDetail" xml:space="preserve"><value>documentație</value></data>
+  <data name="Cmd_NoSymbols" xml:space="preserve"><value>(niciun simbol — deschideți și analizați mai întâi un proiect)</value></data>
+  <data name="Cmd_SymWsTitle" xml:space="preserve"><value>Salt la simbol (spațiu de lucru)</value></data>
+  <data name="Cmd_SymDocTitle" xml:space="preserve"><value>Salt la simbol (document)</value></data>
+  <data name="Cmd_SymWm" xml:space="preserve"><value>Caută topografii, stații, schițe, hărți…</value></data>
+  <data name="Cmd_BuildThTitle" xml:space="preserve"><value>Compilează thconfig</value></data>
+  <data name="Cmd_BuildThWm" xml:space="preserve"><value>Alegeți un thconfig de compilat…</value></data>
 </root>

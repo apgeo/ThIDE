@@ -8,24 +8,26 @@ using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Therion.Core;
+using TherionProc.Resources;
 
 namespace TherionProc.Views;
 
 public sealed class UnitConverterWindow : Window
 {
+    // Name holds the Strings.resx key; it is resolved to the current language at display time.
     private static readonly (string Name, LengthUnit Unit)[] Lengths =
     {
-        ("Metres", LengthUnit.Metre), ("Feet", LengthUnit.Foot), ("Centimetres", LengthUnit.Centimetre),
-        ("Kilometres", LengthUnit.Kilometre), ("Inches", LengthUnit.Inch), ("Yards", LengthUnit.Yard),
+        ("UC_Metres", LengthUnit.Metre), ("UC_Feet", LengthUnit.Foot), ("UC_Centimetres", LengthUnit.Centimetre),
+        ("UC_Kilometres", LengthUnit.Kilometre), ("UC_Inches", LengthUnit.Inch), ("UC_Yards", LengthUnit.Yard),
     };
 
     private static readonly (string Name, AngleUnit Unit)[] Angles =
     {
-        ("Degrees", AngleUnit.Degree), ("Grads", AngleUnit.Grad), ("Mils", AngleUnit.Mil),
-        ("Percent slope", AngleUnit.PercentSlope), ("Minutes", AngleUnit.Minute),
+        ("UC_Degrees", AngleUnit.Degree), ("UC_Grads", AngleUnit.Grad), ("UC_Mils", AngleUnit.Mil),
+        ("UC_PercentSlope", AngleUnit.PercentSlope), ("UC_Minutes", AngleUnit.Minute),
     };
 
-    private readonly ComboBox _category = new() { ItemsSource = new[] { "Length", "Angle" }, SelectedIndex = 0, MinWidth = 120 };
+    private readonly ComboBox _category = new() { ItemsSource = new[] { Tr.Get("UC_Length"), Tr.Get("UC_Angle") }, SelectedIndex = 0, MinWidth = 120 };
     private readonly ComboBox _from = new() { MinWidth = 150 };
     private readonly ComboBox _to = new() { MinWidth = 150 };
     private readonly TextBox _input = new() { Text = "1", MinWidth = 120 };
@@ -33,7 +35,7 @@ public sealed class UnitConverterWindow : Window
 
     public UnitConverterWindow()
     {
-        Title = "Unit converter";
+        Title = Tr.Get("UC_Title");
         Width = 400;
         SizeToContent = SizeToContent.Height;
         CanResize = false;
@@ -48,13 +50,13 @@ public sealed class UnitConverterWindow : Window
         _input.TextChanged += (_, _) => Recompute();
 
         var swap = new Button { Content = "⇄" };
-        ToolTip.SetTip(swap, "Swap from/to");
+        ToolTip.SetTip(swap, Tr.Get("UC_SwapTip"));
         swap.Click += (_, _) => { int f = _from.SelectedIndex, t = _to.SelectedIndex; _from.SelectedIndex = t; _to.SelectedIndex = f; };
 
-        var copy = new Button { Content = "Copy result", MinWidth = 100 };
+        var copy = new Button { Content = Tr.Get("UC_CopyResult"), MinWidth = 100 };
         copy.Click += (_, _) => Services.ClipboardHelper.SetText(_lastResult);
 
-        var close = new Button { Content = "Close", IsCancel = true, MinWidth = 80 };
+        var close = new Button { Content = Tr.Get("Common_Close"), IsCancel = true, MinWidth = 80 };
         close.Click += (_, _) => Close();
 
         var grid = new Grid
@@ -64,13 +66,13 @@ public sealed class UnitConverterWindow : Window
             RowDefinitions = new RowDefinitions("Auto,Auto,Auto,Auto,Auto"),
         };
         void Add(Control c, int r, int col, int cs = 1) { Grid.SetRow(c, r); Grid.SetColumn(c, col); Grid.SetColumnSpan(c, cs); grid.Children.Add(c); }
-        Add(new TextBlock { Text = "Category", VerticalAlignment = VerticalAlignment.Center, Margin = new(0, 0, 8, 6) }, 0, 0);
+        Add(new TextBlock { Text = Tr.Get("UC_Category"), VerticalAlignment = VerticalAlignment.Center, Margin = new(0, 0, 8, 6) }, 0, 0);
         Add(_category, 0, 1);
-        Add(new TextBlock { Text = "Value", VerticalAlignment = VerticalAlignment.Center, Margin = new(0, 6, 8, 6) }, 1, 0);
+        Add(new TextBlock { Text = Tr.Get("UC_Value"), VerticalAlignment = VerticalAlignment.Center, Margin = new(0, 6, 8, 6) }, 1, 0);
         Add(_input, 1, 1);
-        Add(new TextBlock { Text = "From", VerticalAlignment = VerticalAlignment.Center, Margin = new(0, 6, 8, 6) }, 2, 0);
+        Add(new TextBlock { Text = Tr.Get("UC_From"), VerticalAlignment = VerticalAlignment.Center, Margin = new(0, 6, 8, 6) }, 2, 0);
         Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { _from, swap } }, 2, 1);
-        Add(new TextBlock { Text = "To", VerticalAlignment = VerticalAlignment.Center, Margin = new(0, 6, 8, 6) }, 3, 0);
+        Add(new TextBlock { Text = Tr.Get("UC_To"), VerticalAlignment = VerticalAlignment.Center, Margin = new(0, 6, 8, 6) }, 3, 0);
         Add(_to, 3, 1);
         Add(_result, 4, 0, 2);
 
@@ -95,7 +97,7 @@ public sealed class UnitConverterWindow : Window
 
     private void PopulateUnits()
     {
-        var names = IsLength ? Lengths.Select(l => l.Name).ToArray() : Angles.Select(a => a.Name).ToArray();
+        var names = IsLength ? Lengths.Select(l => Tr.Get(l.Name)).ToArray() : Angles.Select(a => Tr.Get(a.Name)).ToArray();
         _from.ItemsSource = names;
         _to.ItemsSource = names.ToArray();
         _from.SelectedIndex = 0;
@@ -114,7 +116,7 @@ public sealed class UnitConverterWindow : Window
             ? UnitConverter.Instance.ConvertLength(v, Lengths[_from.SelectedIndex].Unit, Lengths[_to.SelectedIndex].Unit)
             : UnitConverter.Instance.ConvertAngle(v, Angles[_from.SelectedIndex].Unit, Angles[_to.SelectedIndex].Unit);
         _lastResult = double.IsFinite(r) ? r.ToString("0.######", CultureInfo.InvariantCulture) : "∞";
-        var toName = IsLength ? Lengths[_to.SelectedIndex].Name : Angles[_to.SelectedIndex].Name;
+        var toName = IsLength ? Tr.Get(Lengths[_to.SelectedIndex].Name) : Tr.Get(Angles[_to.SelectedIndex].Name);
         _result.Text = $"{_lastResult} {toName.ToLowerInvariant()}";
     }
 }

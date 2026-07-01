@@ -7,6 +7,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
+using TherionProc.Resources;
 using TherionProc.Services;
 
 namespace TherionProc.Views;
@@ -15,7 +16,7 @@ public sealed class AboutWindow : Window
 {
     public AboutWindow(IThbookDocumentationService? thbook = null)
     {
-        Title = "About TherionProc";
+        Title = Tr.Get("About_Title");
         Width = 440;
         SizeToContent = SizeToContent.Height;
         CanResize = false;
@@ -24,17 +25,16 @@ public sealed class AboutWindow : Window
         var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0";
 
         var title = new TextBlock { Text = "TherionProc", FontSize = 22, FontWeight = FontWeight.Bold };
-        var ver = new TextBlock { Text = "Version " + version, Foreground = Brushes.Gray };
+        var ver = new TextBlock { Text = Tr.Get("About_VersionPrefix") + version, Foreground = Brushes.Gray };
         var blurb = new TextBlock
         {
             TextWrapping = TextWrapping.Wrap,
-            Text = "An editor and build environment for Therion cave-survey projects.\n" +
-                   "Targets Therion v6.4.0 (thbook bundled).",
+            Text = Tr.Get("About_Blurb"),
         };
 
-        var book = new Button { Content = "Open Therion Book", MinWidth = 150 };
+        var book = new Button { Content = Tr.Get("About_OpenBook"), MinWidth = 150 };
         book.Click += (_, _) => thbook?.OpenAtPage(1);
-        var close = new Button { Content = "Close", IsCancel = true, MinWidth = 80 };
+        var close = new Button { Content = Tr.Get("Common_Close"), IsCancel = true, MinWidth = 80 };
         close.Click += (_, _) => Close();
 
         var buttons = new StackPanel

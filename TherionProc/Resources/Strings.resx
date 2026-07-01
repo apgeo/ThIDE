@@ -706,4 +706,139 @@
   <data name="Ed_OpenArrow" xml:space="preserve"><value>Open ↗</value></data>
   <data name="Ed_OpenDefaultApp" xml:space="preserve"><value>Open in default app</value></data>
   <data name="Ed_OpenFile" xml:space="preserve"><value>Open file</value></data>
+  <!-- Code-built dialogs (calculators / About / Mapiah) -->
+  <data name="Common_Close" xml:space="preserve"><value>Close</value></data>
+  <data name="UC_Title" xml:space="preserve"><value>Unit converter</value></data>
+  <data name="UC_Length" xml:space="preserve"><value>Length</value></data>
+  <data name="UC_Angle" xml:space="preserve"><value>Angle</value></data>
+  <data name="UC_Metres" xml:space="preserve"><value>Metres</value></data>
+  <data name="UC_Feet" xml:space="preserve"><value>Feet</value></data>
+  <data name="UC_Centimetres" xml:space="preserve"><value>Centimetres</value></data>
+  <data name="UC_Kilometres" xml:space="preserve"><value>Kilometres</value></data>
+  <data name="UC_Inches" xml:space="preserve"><value>Inches</value></data>
+  <data name="UC_Yards" xml:space="preserve"><value>Yards</value></data>
+  <data name="UC_Degrees" xml:space="preserve"><value>Degrees</value></data>
+  <data name="UC_Grads" xml:space="preserve"><value>Grads</value></data>
+  <data name="UC_Mils" xml:space="preserve"><value>Mils</value></data>
+  <data name="UC_PercentSlope" xml:space="preserve"><value>Percent slope</value></data>
+  <data name="UC_Minutes" xml:space="preserve"><value>Minutes</value></data>
+  <data name="UC_SwapTip" xml:space="preserve"><value>Swap from/to</value></data>
+  <data name="UC_CopyResult" xml:space="preserve"><value>Copy result</value></data>
+  <data name="UC_Category" xml:space="preserve"><value>Category</value></data>
+  <data name="UC_Value" xml:space="preserve"><value>Value</value></data>
+  <data name="UC_From" xml:space="preserve"><value>From</value></data>
+  <data name="UC_To" xml:space="preserve"><value>To</value></data>
+  <data name="CC_Title" xml:space="preserve"><value>Coordinate converter</value></data>
+  <data name="CC_CopyUtm" xml:space="preserve"><value>Copy fix (UTM)</value></data>
+  <data name="CC_CopyLl" xml:space="preserve"><value>Copy fix (lat-long)</value></data>
+  <data name="CC_Altitude" xml:space="preserve"><value>Altitude (m)</value></data>
+  <data name="CC_ToUtmHeader" xml:space="preserve"><value>WGS84 lat/long → UTM</value></data>
+  <data name="CC_Latitude" xml:space="preserve"><value>Latitude</value></data>
+  <data name="CC_Longitude" xml:space="preserve"><value>Longitude</value></data>
+  <data name="CC_ToLlHeader" xml:space="preserve"><value>UTM → WGS84 lat/long</value></data>
+  <data name="CC_Zone" xml:space="preserve"><value>Zone</value></data>
+  <data name="CC_Hemisphere" xml:space="preserve"><value>Hemisphere</value></data>
+  <data name="CC_Easting" xml:space="preserve"><value>Easting</value></data>
+  <data name="CC_Northing" xml:space="preserve"><value>Northing</value></data>
+  <data name="DC_Title" xml:space="preserve"><value>Declination calculator</value></data>
+  <data name="DC_CopyLine" xml:space="preserve"><value>Copy declination line</value></data>
+  <data name="DC_LoadModel" xml:space="preserve"><value>Load model…</value></data>
+  <data name="DC_Year" xml:space="preserve"><value>Year</value></data>
+  <data name="DC_NoModel" xml:space="preserve"><value>No magnetic model loaded</value></data>
+  <data name="DC_NoModelHelp" xml:space="preserve"><value>Download a WMM.COF (NOAA, public domain) and place it in %AppData%/TherionProc, or click "Load model…".</value></data>
+  <data name="DC_DeclinationFmt" xml:space="preserve"><value>Declination: {0}° {1}</value></data>
+  <data name="DC_LoadFailed" xml:space="preserve"><value>Failed to load model</value></data>
+  <data name="DC_PickTitle" xml:space="preserve"><value>Select a WMM/IGRF .COF file</value></data>
+  <data name="DC_PickFilter" xml:space="preserve"><value>Geomagnetic model (*.COF)</value></data>
+  <data name="About_Title" xml:space="preserve"><value>About TherionProc</value></data>
+  <data name="About_VersionPrefix" xml:space="preserve"><value>Version </value></data>
+  <data name="About_Blurb" xml:space="preserve"><value>An editor and build environment for Therion cave-survey projects.
+Targets Therion v6.4.0 (thbook bundled).</value></data>
+  <data name="About_OpenBook" xml:space="preserve"><value>Open Therion Book</value></data>
+  <data name="Mapiah_Title" xml:space="preserve"><value>Mapiah not found</value></data>
+  <data name="Mapiah_Message" xml:space="preserve"><value>The Mapiah sketch editor could not be found on this computer.
+
+Install Mapiah from its releases page, then set the path to mapiah.exe in Settings → External Tools (the "mapiah" row).</value></data>
+  <data name="Mapiah_Download" xml:space="preserve"><value>Download Mapiah…</value></data>
+  <data name="Mapiah_OpenSettings" xml:space="preserve"><value>Open Settings</value></data>
+  <!-- Command palette (Ctrl+Shift+P) -->
+  <data name="Cmd_Title" xml:space="preserve"><value>Command Palette</value></data>
+  <data name="Cmd_Watermark" xml:space="preserve"><value>Type a command…   (@ document symbol · # workspace symbol · :42 go to line)</value></data>
+  <data name="Cmd_GoToLineFmt" xml:space="preserve"><value>Go to line {0}</value></data>
+  <data name="Cmd_Cat_Navigate" xml:space="preserve"><value>navigate</value></data>
+  <data name="Cmd_Cat_File" xml:space="preserve"><value>File</value></data>
+  <data name="Cmd_Cat_Build" xml:space="preserve"><value>Build</value></data>
+  <data name="Cmd_Cat_View" xml:space="preserve"><value>View</value></data>
+  <data name="Cmd_Cat_Go" xml:space="preserve"><value>Go</value></data>
+  <data name="Cmd_Cat_Search" xml:space="preserve"><value>Search</value></data>
+  <data name="Cmd_Cat_Edit" xml:space="preserve"><value>Edit</value></data>
+  <data name="Cmd_Cat_Language" xml:space="preserve"><value>Language</value></data>
+  <data name="Cmd_Cat_Window" xml:space="preserve"><value>Window</value></data>
+  <data name="Cmd_Cat_Settings" xml:space="preserve"><value>Settings</value></data>
+  <data name="Cmd_Cat_Docs" xml:space="preserve"><value>Docs</value></data>
+  <data name="Cmd_Cat_Editor" xml:space="preserve"><value>Editor</value></data>
+  <data name="Cmd_OpenFile" xml:space="preserve"><value>Open File…</value></data>
+  <data name="Cmd_OpenThconfig" xml:space="preserve"><value>Open thconfig…</value></data>
+  <data name="Cmd_OpenFolder" xml:space="preserve"><value>Open Folder…</value></data>
+  <data name="Cmd_Save" xml:space="preserve"><value>Save</value></data>
+  <data name="Cmd_GoToFile" xml:space="preserve"><value>Go to File…  (Ctrl+P)</value></data>
+  <data name="Cmd_RevealActive" xml:space="preserve"><value>Reveal Active File in Workspace</value></data>
+  <data name="Cmd_BuildCurrent" xml:space="preserve"><value>Build current thconfig</value></data>
+  <data name="Cmd_Rebuild" xml:space="preserve"><value>Rebuild</value></data>
+  <data name="Cmd_CancelBuild" xml:space="preserve"><value>Cancel build</value></data>
+  <data name="Cmd_OpenLoch" xml:space="preserve"><value>Open in Loch</value></data>
+  <data name="Cmd_OpenAven" xml:space="preserve"><value>Open in Aven</value></data>
+  <data name="Cmd_Dump3d" xml:space="preserve"><value>Survex: dump3d (.3d → text)</value></data>
+  <data name="Cmd_Extend" xml:space="preserve"><value>Survex: extend (extended elevation)</value></data>
+  <data name="Cmd_PrintVersion" xml:space="preserve"><value>Therion: print version</value></data>
+  <data name="Cmd_PrintEnv" xml:space="preserve"><value>Therion: print environment</value></data>
+  <data name="Cmd_BuildTargetFmt" xml:space="preserve"><value>Build target: {0}</value></data>
+  <data name="Cmd_BuildSpecific" xml:space="preserve"><value>Build a specific thconfig…</value></data>
+  <data name="Cmd_ToggleObjectBrowser" xml:space="preserve"><value>Toggle Object Browser</value></data>
+  <data name="Cmd_ToggleWorkspace" xml:space="preserve"><value>Toggle Workspace</value></data>
+  <data name="Cmd_ToggleDiagnostics" xml:space="preserve"><value>Toggle Diagnostics</value></data>
+  <data name="Cmd_ToggleOutline" xml:space="preserve"><value>Toggle Outline</value></data>
+  <data name="Cmd_ToggleProject" xml:space="preserve"><value>Toggle Project (Dashboard / Surveys / Audit)</value></data>
+  <data name="Cmd_ToggleLog" xml:space="preserve"><value>Toggle Log</value></data>
+  <data name="Cmd_ToggleLivePreview" xml:space="preserve"><value>Toggle Live Preview</value></data>
+  <data name="Cmd_ToggleMapViewer" xml:space="preserve"><value>Toggle Map Viewer</value></data>
+  <data name="Cmd_Toggle3D" xml:space="preserve"><value>Toggle 3D Viewer</value></data>
+  <data name="Cmd_ResetLayout" xml:space="preserve"><value>Reset Layout</value></data>
+  <data name="Cmd_ToggleWordWrap" xml:space="preserve"><value>Toggle Word Wrap</value></data>
+  <data name="Cmd_ToggleWhitespace" xml:space="preserve"><value>Toggle Whitespace</value></data>
+  <data name="Cmd_ToggleMinimap" xml:space="preserve"><value>Toggle Minimap</value></data>
+  <data name="Cmd_ToggleIndent" xml:space="preserve"><value>Toggle Indentation Guides</value></data>
+  <data name="Cmd_ToggleEol" xml:space="preserve"><value>Toggle End-of-Line Markers</value></data>
+  <data name="Cmd_Back" xml:space="preserve"><value>Back</value></data>
+  <data name="Cmd_Forward" xml:space="preserve"><value>Forward</value></data>
+  <data name="Cmd_RenameSymbol" xml:space="preserve"><value>Rename Symbol</value></data>
+  <data name="Cmd_GoToSymbolWs" xml:space="preserve"><value>Go to Symbol in Workspace…</value></data>
+  <data name="Cmd_GoToSymbolDoc" xml:space="preserve"><value>Go to Symbol in Document…</value></data>
+  <data name="Cmd_GoToLine" xml:space="preserve"><value>Go to Line…</value></data>
+  <data name="Cmd_SwitchEnglish" xml:space="preserve"><value>Switch to English</value></data>
+  <data name="Cmd_SwitchRomanian" xml:space="preserve"><value>Switch to Romanian</value></data>
+  <data name="Cmd_UpperSel" xml:space="preserve"><value>UPPERCASE selection</value></data>
+  <data name="Cmd_LowerSel" xml:space="preserve"><value>lowercase selection</value></data>
+  <data name="Cmd_Find" xml:space="preserve"><value>Find</value></data>
+  <data name="Cmd_Replace" xml:space="preserve"><value>Replace</value></data>
+  <data name="Cmd_FormatDoc" xml:space="preserve"><value>Format Document</value></data>
+  <data name="Cmd_QuickFix" xml:space="preserve"><value>Quick Fix…  (Ctrl+.)</value></data>
+  <data name="Cmd_GoToMatching" xml:space="preserve"><value>Go to Matching Block</value></data>
+  <data name="Cmd_PeekDef" xml:space="preserve"><value>Peek Definition</value></data>
+  <data name="Cmd_StepInto" xml:space="preserve"><value>Step Into Included File</value></data>
+  <data name="Cmd_RenameEditor" xml:space="preserve"><value>Rename Symbol (editor)</value></data>
+  <data name="Cmd_Preferences" xml:space="preserve"><value>Preferences…</value></data>
+  <data name="Cmd_About" xml:space="preserve"><value>About</value></data>
+  <data name="Cmd_TherionBook" xml:space="preserve"><value>Therion Book (documentation)</value></data>
+  <data name="Cmd_SettingsFmt" xml:space="preserve"><value>Settings: {0}</value></data>
+  <data name="Cmd_SearchDocs" xml:space="preserve"><value>Search Documentation…</value></data>
+  <data name="Cmd_DocsTitle" xml:space="preserve"><value>Documentation</value></data>
+  <data name="Cmd_SearchTermWm" xml:space="preserve"><value>Search a term…</value></data>
+  <data name="Cmd_DocDetail" xml:space="preserve"><value>documentation</value></data>
+  <data name="Cmd_NoSymbols" xml:space="preserve"><value>(no symbols — open and parse a project first)</value></data>
+  <data name="Cmd_SymWsTitle" xml:space="preserve"><value>Go to Symbol (workspace)</value></data>
+  <data name="Cmd_SymDocTitle" xml:space="preserve"><value>Go to Symbol (document)</value></data>
+  <data name="Cmd_SymWm" xml:space="preserve"><value>Search surveys, stations, scraps, maps…</value></data>
+  <data name="Cmd_BuildThTitle" xml:space="preserve"><value>Build thconfig</value></data>
+  <data name="Cmd_BuildThWm" xml:space="preserve"><value>Pick a thconfig to build…</value></data>
 </root>

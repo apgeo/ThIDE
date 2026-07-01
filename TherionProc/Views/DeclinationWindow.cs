@@ -11,6 +11,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Therion.Core;
+using TherionProc.Resources;
 
 namespace TherionProc.Views;
 
@@ -21,14 +22,14 @@ public sealed class DeclinationWindow : Window
     private readonly TextBox _year = new() { MinWidth = 120 };
     private readonly TextBlock _model = new() { Foreground = Brushes.Gray, FontSize = 11, TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _result = new() { FontSize = 18, FontWeight = FontWeight.Bold };
-    private readonly Button _copy = new() { Content = "Copy declination line", IsEnabled = false };
+    private readonly Button _copy = new() { Content = Tr.Get("DC_CopyLine"), IsEnabled = false };
 
     private GeoMagneticModel? _geoModel;
     private string _declLine = string.Empty;
 
     public DeclinationWindow()
     {
-        Title = "Declination calculator";
+        Title = Tr.Get("DC_Title");
         Width = 440;
         SizeToContent = SizeToContent.Height;
         CanResize = false;
@@ -40,10 +41,10 @@ public sealed class DeclinationWindow : Window
 
         foreach (var tb in new[] { _lat, _lon, _year }) tb.TextChanged += (_, _) => Recompute();
 
-        var load = new Button { Content = "Load model…" };
+        var load = new Button { Content = Tr.Get("DC_LoadModel") };
         load.Click += async (_, _) => await PickModelAsync();
         _copy.Click += (_, _) => Services.ClipboardHelper.SetText(_declLine);
-        var close = new Button { Content = "Close", IsCancel = true, MinWidth = 80 };
+        var close = new Button { Content = Tr.Get("Common_Close"), IsCancel = true, MinWidth = 80 };
         close.Click += (_, _) => Close();
 
         Content = new StackPanel
@@ -52,9 +53,9 @@ public sealed class DeclinationWindow : Window
             Spacing = 8,
             Children =
             {
-                Row("Latitude", _lat),
-                Row("Longitude", _lon),
-                Row("Year", _year),
+                Row(Tr.Get("CC_Latitude"), _lat),
+                Row(Tr.Get("CC_Longitude"), _lon),
+                Row(Tr.Get("DC_Year"), _year),
                 _result,
                 _model,
                 new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Margin = new(0, 6, 0, 0),
@@ -71,9 +72,8 @@ public sealed class DeclinationWindow : Window
     {
         if (_geoModel is null)
         {
-            _result.Text = "No magnetic model loaded";
-            _model.Text = "Download a WMM.COF (NOAA, public domain) and place it in %AppData%/TherionProc, " +
-                          "or click “Load model…”.";
+            _result.Text = Tr.Get("DC_NoModel");
+            _model.Text = Tr.Get("DC_NoModelHelp");
             _copy.IsEnabled = false;
             return;
         }
@@ -88,7 +88,7 @@ public sealed class DeclinationWindow : Window
         {
             double d = _geoModel.Declination(lat, lon, 0, year);
             var hemi = d >= 0 ? "E" : "W";
-            _result.Text = $"Declination: {d:0.00}° {hemi}";
+            _result.Text = string.Format(Tr.Get("DC_DeclinationFmt"), d.ToString("0.00"), hemi);
             _declLine = $"declination {d:0.00} degrees";
             _copy.IsEnabled = true;
         }
@@ -102,14 +102,14 @@ public sealed class DeclinationWindow : Window
     {
         var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = "Select a WMM/IGRF .COF file",
+            Title = Tr.Get("DC_PickTitle"),
             AllowMultiple = false,
-            FileTypeFilter = new[] { new FilePickerFileType("Geomagnetic model (*.COF)") { Patterns = new[] { "*.cof", "*.COF" } } },
+            FileTypeFilter = new[] { new FilePickerFileType(Tr.Get("DC_PickFilter")) { Patterns = new[] { "*.cof", "*.COF" } } },
         });
         var path = files.FirstOrDefault()?.TryGetLocalPath();
         if (string.IsNullOrEmpty(path)) return;
         try { _geoModel = GeoMagneticModel.FromCof(File.ReadAllText(path)); }
-        catch (Exception ex) { _result.Text = "Failed to load model"; _model.Text = ex.Message; _copy.IsEnabled = false; return; }
+        catch (Exception ex) { _result.Text = Tr.Get("DC_LoadFailed"); _model.Text = ex.Message; _copy.IsEnabled = false; return; }
         Recompute();
     }
 
