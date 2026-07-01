@@ -167,8 +167,8 @@ public sealed record AppSettings
     public bool EnableModel3DAutoPreview { get; init; } = true;
     /// <summary>VIS-01: last-used 3D color-by shading mode (height / survey / length / inclination / single).</summary>
     public string Model3DShadingMode { get; init; } = "height";
-    /// <summary>STRUCT-01: the structural-geology module (plane strike/dip calculator). Off by default.</summary>
-    public bool EnableStructuralGeology { get; init; }
+    /// <summary>STRUCT-01: the structural-geology module (plane strike/dip calculator). On by default.</summary>
+    public bool EnableStructuralGeology { get; init; } = true;
     /// <summary>STRUCT-01: persisted panel state (detection/declination options, columns, plot prefs) as JSON.</summary>
     public string StructuralGeologySettings { get; init; } = "";
 
