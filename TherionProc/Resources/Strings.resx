@@ -267,7 +267,8 @@
   <!-- Main window: extra menus -->
   <data name="Menu_File_ReopenTab" xml:space="preserve"><value>Reopen Closed Tab</value></data>
   <data name="Menu_File_RecentDirectories" xml:space="preserve"><value>Recent _Directories</value></data>
-  <data name="Menu_View_Project" xml:space="preserve"><value>Project (Dashboard / Surveys / Audit)</value></data>
+  <data name="Menu_View_Project" xml:space="preserve"><value>Overview (Dashboard / Surveys / Audit)</value></data>
+  <data name="Tool_Project" xml:space="preserve"><value>Overview</value></data>
   <data name="Menu_View_Log" xml:space="preserve"><value>Log</value></data>
   <data name="Menu_View_LivePreview" xml:space="preserve"><value>Live Preview</value></data>
   <data name="Menu_View_MapViewer" xml:space="preserve"><value>Map Viewer</value></data>
@@ -889,4 +890,47 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Dlg_InvalidPath" xml:space="preserve"><value>Invalid path:</value></data>
   <data name="Dlg_FileGone" xml:space="preserve"><value>The file no longer exists:</value></data>
   <data name="Dlg_NotThconfigFmt" xml:space="preserve"><value>"{0}" could not be read as a Therion configuration.</value></data>
+  <data name="Diag_SummaryNone" xml:space="preserve"><value>No warnings or errors</value></data>
+  <data name="Diag_SummaryWarn1" xml:space="preserve"><value>{0} warning</value></data>
+  <data name="Diag_SummaryWarnN" xml:space="preserve"><value>{0} warnings</value></data>
+  <data name="Diag_SummaryErr1" xml:space="preserve"><value>{0} error</value></data>
+  <data name="Diag_SummaryErrN" xml:space="preserve"><value>{0} errors</value></data>
+  <data name="Diag_SummaryFile1" xml:space="preserve"><value>{0} file</value></data>
+  <data name="Diag_SummaryFileN" xml:space="preserve"><value>{0} files</value></data>
+  <data name="Diag_SummaryFmt" xml:space="preserve"><value>{0} and {1} in {2}</value></data>
+  <data name="Diag_SummarySuppressedFmt" xml:space="preserve"><value>  ·  {0} code(s) suppressed</value></data>
+  <data name="Struct_StatusNoData" xml:space="preserve"><value>No centreline data in scope. Open a survey (.th) with measurements.</value></data>
+  <data name="Struct_StatusFmt" xml:space="preserve"><value>{0} plane(s) from {1} measurement(s).{2}</value></data>
+  <data name="Struct_DeclManual" xml:space="preserve"><value> · declination {0}° → true N</value></data>
+  <data name="Struct_DeclSurvey" xml:space="preserve"><value> · declination {0}° (survey)</value></data>
+  <data name="Struct_DeclWmm" xml:space="preserve"><value> · declination {0}° (WMM)</value></data>
+  <data name="Struct_KindOrigin" xml:space="preserve"><value>origin</value></data>
+  <data name="Struct_KindSplay" xml:space="preserve"><value>splay</value></data>
+  <data name="Struct_KindLeg" xml:space="preserve"><value>leg</value></data>
+  <data name="Struct_Invalid" xml:space="preserve"><value>invalid</value></data>
+  <data name="Pref_Associations" xml:space="preserve"><value>File Associations</value></data>
+  <data name="Assoc_Intro" xml:space="preserve"><value>Choose which Therion file types open in TherionProc when you double-click them in your file manager. Nothing changes until you use a button below.</value></data>
+  <data name="Assoc_NoteWindows" xml:space="preserve"><value>Associations are stored per-user in the Windows registry (no administrator rights needed). If you have previously chosen another default app for a type, Windows may still ask you to confirm the change.</value></data>
+  <data name="Assoc_NoteLinux" xml:space="preserve"><value>Associations use the freedesktop xdg-mime system (per-user). The xdg-utils package must be installed.</value></data>
+  <data name="Assoc_NoteUnsupported" xml:space="preserve"><value>Managing file associations from the app is not supported on this operating system. Set TherionProc as the default app from your file manager instead.</value></data>
+  <data name="Assoc_Col_Type" xml:space="preserve"><value>Type</value></data>
+  <data name="Assoc_Col_Desc" xml:space="preserve"><value>Description</value></data>
+  <data name="Assoc_Col_Status" xml:space="preserve"><value>Status</value></data>
+  <data name="Assoc_Associate" xml:space="preserve"><value>Associate</value></data>
+  <data name="Assoc_Remove" xml:space="preserve"><value>Remove</value></data>
+  <data name="Assoc_AssociateAll" xml:space="preserve"><value>Associate all</value></data>
+  <data name="Assoc_RemoveAll" xml:space="preserve"><value>Remove all</value></data>
+  <data name="Assoc_StateAssociated" xml:space="preserve"><value>Associated with TherionProc</value></data>
+  <data name="Assoc_StateOtherFmt" xml:space="preserve"><value>Opened by {0}</value></data>
+  <data name="Assoc_StateNone" xml:space="preserve"><value>Not associated</value></data>
+  <data name="Assoc_StateUnknown" xml:space="preserve"><value>Unknown</value></data>
+  <data name="Assoc_MsgBulkFmt" xml:space="preserve"><value>Done — {0} of {1} file types updated.</value></data>
+  <data name="Pref_Vis_PdfInternal" xml:space="preserve"><value>Open clicked PDFs in the in-app viewer</value></data>
+  <data name="Tb_ValidateOnType" xml:space="preserve"><value>Validate on type — re-check the file and whole project as you type (not just on save)</value></data>
+  <data name="Pref_ValidateOnType" xml:space="preserve"><value>Validate on type (file + whole project)</value></data>
+  <data name="Pref_ValidateOnTypeHelp" xml:space="preserve"><value>Re-validate the whole object graph from the unsaved editor buffers on a short typing pause, instead of only on save. Off by default — it re-analyses the project on every pause, which can be heavy on large projects.</value></data>
+  <data name="Common_Undo" xml:space="preserve"><value>Undo</value></data>
+  <data name="Common_Redo" xml:space="preserve"><value>Redo</value></data>
+  <data name="Replace_UndoTip" xml:space="preserve"><value>Undo the last Replace All across every file it changed</value></data>
+  <data name="Replace_RedoTip" xml:space="preserve"><value>Re-apply the last undone Replace All across every file</value></data>
 </root>
