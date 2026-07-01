@@ -1,4 +1,4 @@
-// Implementation Plan §7.6 — runtime UI language switching.
+// Implementation Plan ï¿½7.6 ï¿½ runtime UI language switching.
 // Coordinate/measurement display uses invariant numeric formatting elsewhere.
 
 using System;
@@ -27,6 +27,8 @@ public sealed class LanguageService : ILanguageService
         CurrentCulture = culture;
         CultureInfo.CurrentUICulture = culture;
         CultureInfo.DefaultThreadCurrentUICulture = culture;
+        // Refresh every {l:Loc} binding (already-loaded views) before notifying VM listeners.
+        TherionProc.Resources.LocProxy.Instance.Invalidate();
         LanguageChanged?.Invoke(this, EventArgs.Empty);
     }
 }
