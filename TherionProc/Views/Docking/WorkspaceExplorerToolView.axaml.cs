@@ -261,8 +261,12 @@ public partial class WorkspaceExplorerToolView : UserControl
 
     private void OnCtxCopyRel(object? sender, RoutedEventArgs e)
     {
-        if (Ctx()?.FullPath is { } path)
-            SetClipboard(WorkspacePathFormatter.Relativize(Explorer?.RootPath, path));
+        if (Ctx()?.FullPath is not { } path) return;
+        // Relativize against the workspace ROOT DIRECTORY. Explorer.RootPath is view-dependent — in the
+        // relational view it holds the first root *file* (e.g. the thconfig), which would make
+        // Relativize fall back to the full path — so prefer the session's root directory.
+        var root = Service<IWorkspaceSession>()?.RootPath ?? Explorer?.RootPath;
+        SetClipboard(WorkspacePathFormatter.Relativize(root, path));
     }
 
     private void OnCtxRefresh(object? sender, RoutedEventArgs e) => Explorer?.Refresh();
