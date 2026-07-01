@@ -477,10 +477,11 @@ public sealed partial class TodoScanViewModel : ObservableObject
         Todos.Clear();
         if (_settings is { Current.EnableTodoScan: false }) { Summary = "TODO scan disabled (Preferences ▸ Performance)."; return; }
 
-        // Prefer unsaved editor text for open files; read the rest from disk.
+        // Prefer unsaved editor text for open files; read the rest from disk. Snapshot the live
+        // Documents collection — it can be mutated (open/close) while this scan runs.
         var openText = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         if (_documents is not null)
-            foreach (var d in _documents.Documents)
+            foreach (var d in _documents.Documents.ToList())
                 if (!string.IsNullOrEmpty(d.FilePath)) openText[d.FilePath] = d.DocumentText;
 
         int scanned = 0;
@@ -512,7 +513,7 @@ public sealed partial class TodoScanViewModel : ObservableObject
             }
         }
         if (_documents is not null)
-            foreach (var d in _documents.Documents)
+            foreach (var d in _documents.Documents.ToList())
                 if (!string.IsNullOrEmpty(d.FilePath) && seen.Add(d.FilePath)) yield return d.FilePath;
     }
 }

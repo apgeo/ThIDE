@@ -212,7 +212,7 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
 
         var text = await File.ReadAllTextAsync(full, ct).ConfigureAwait(false);
         var doc = CreateDocument(full, text);
-        Documents.Add(doc);
+        OnUiSync(() => Documents.Add(doc));
 
         // Establish a workspace for a directly-opened file when none exists yet, then
         // light up cross-file navigation and the orphan banner (#1/#4).
@@ -238,7 +238,8 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
 
     private void PropagateWorkspaceToDocuments()
     {
-        foreach (var d in Documents) { d.SetWorkspace(Workspace); UpdateMembership(d); }
+        // Snapshot: this can run off a session-changed callback while documents open/close.
+        foreach (var d in Documents.ToList()) { d.SetWorkspace(Workspace); UpdateMembership(d); }
     }
 
     /// <summary>Flags a document's orphan banner: true when it isn't in the active graph (#4).</summary>
@@ -383,7 +384,7 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
             return already;
         }
         var doc = CreateDocument(displayPath, text);
-        Documents.Add(doc);
+        OnUiSync(() => Documents.Add(doc));
         OpenInDockRequested?.Invoke(this, doc);
         SetActive(doc);
         return doc;
@@ -485,9 +486,20 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
         else Avalonia.Threading.Dispatcher.UIThread.Post(action);
     }
 
+    // The UI-bound Documents collection is an ObservableCollection and must only be MUTATED on the
+    // UI thread (OpenFileAsync's continuation can run on a thread-pool thread). Marshal synchronously
+    // (Invoke, not Post) so the open/close flow stays correctly ordered. This stops "Collection was
+    // modified" enumeration crashes in any consumer iterating Documents (e.g. TodoScanViewModel).
+    private static void OnUiSync(Action action)
+    {
+        if (Avalonia.Threading.Dispatcher.UIThread.CheckAccess()) action();
+        else Avalonia.Threading.Dispatcher.UIThread.Invoke(action);
+    }
+
     private void OnClosed(FileDocumentViewModel doc)
     {
-        bool removed = Documents.Remove(doc);
+        bool removed = false;
+        OnUiSync(() => removed = Documents.Remove(doc));
         if (removed)
         {
             RecordRecentlyClosed(doc.FilePath);   // UX-10: enable Ctrl+Shift+T reopen
