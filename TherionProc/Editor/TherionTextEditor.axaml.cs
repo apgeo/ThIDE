@@ -1555,11 +1555,6 @@ public partial class TherionTextEditor : UserControl
 
     // ----- diagnostic hover tooltip --------------------------------------
 
-    // Hardcoded switch (compile-time) for the small inline hover tooltip — the tiny native tooltip
-    // shown over a term/diagnostic in the form "kind: value" (e.g. "equate: station"). Set to false to
-    // suppress it; the big rich hover overlay (documentation / go-to / rename buttons) is unaffected.
-    private const bool ShowInlineHoverTooltip = false;
-
     private void OnEditorPointerMoved(object? sender, PointerEventArgs e)
     {
         if (_editor is null || _squiggles is null) return;
@@ -1576,7 +1571,8 @@ public partial class TherionTextEditor : UserControl
         if (pos is null) { ClearHover(); return; }
 
         var offset = _editor.Document.GetOffset(pos.Value.Location);
-        if (ShowInlineHoverTooltip && _squiggles.GetDiagnosticAt(offset) is { } d)
+        var diag = _squiggles.GetDiagnosticAt(offset);
+        if (diag is { } d)
         {
             HideHoverInfo();
             if (!ReferenceEquals(_hoverDiagnostic, d))
@@ -1589,8 +1585,6 @@ public partial class TherionTextEditor : UserControl
         }
         else
         {
-            // With the small tooltip off, hovering still shows the rich overlay (buttons) for
-            // commands / references / links; nothing appears for a plain diagnostic-only token.
             ClearHover();
             ScheduleHoverInfo(visualPos);
         }
