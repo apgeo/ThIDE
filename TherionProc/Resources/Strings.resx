@@ -264,4 +264,102 @@
   <data name="OB_Tab_Areas" xml:space="preserve"><value>Areas</value></data>
   <data name="OB_Col_Equate" xml:space="preserve"><value>Equate</value></data>
   <data name="OB_CopyQName" xml:space="preserve"><value>Copy Qualified Name</value></data>
+  <!-- Main window: extra menus -->
+  <data name="Menu_File_ReopenTab" xml:space="preserve"><value>Reopen Closed Tab</value></data>
+  <data name="Menu_File_RecentDirectories" xml:space="preserve"><value>Recent _Directories</value></data>
+  <data name="Menu_View_Project" xml:space="preserve"><value>Project (Dashboard / Surveys / Audit)</value></data>
+  <data name="Menu_View_Log" xml:space="preserve"><value>Log</value></data>
+  <data name="Menu_View_LivePreview" xml:space="preserve"><value>Live Preview</value></data>
+  <data name="Menu_View_MapViewer" xml:space="preserve"><value>Map Viewer</value></data>
+  <data name="Menu_View_Model3D" xml:space="preserve"><value>3D Viewer</value></data>
+  <data name="Menu_View_Structural" xml:space="preserve"><value>Structural Geology</value></data>
+  <data name="Menu_View_Outline" xml:space="preserve"><value>Outline</value></data>
+  <data name="Menu_View_Whitespace" xml:space="preserve"><value>Whitespace</value></data>
+  <data name="Menu_View_ShowSpacesTabs" xml:space="preserve"><value>Show Spaces &amp; Tabs</value></data>
+  <data name="Menu_View_ShowEol" xml:space="preserve"><value>Show End of Line</value></data>
+  <data name="Menu_View_ShowIndentGuides" xml:space="preserve"><value>Show Indentation Guides</value></data>
+  <data name="Menu_View_ShowMinimap" xml:space="preserve"><value>Show Minimap</value></data>
+  <data name="Menu_View_SplitEditor" xml:space="preserve"><value>Split Editor (Float)</value></data>
+  <data name="Menu_Tools" xml:space="preserve"><value>Tools</value></data>
+  <data name="Menu_Tools_ImportSurvey" xml:space="preserve"><value>Import survey (Survex / Compass)…</value></data>
+  <data name="Menu_Tools_ImportDem" xml:space="preserve"><value>Import DEM as surface (.asc)…</value></data>
+  <data name="Menu_Tools_ImportGpx" xml:space="preserve"><value>Import GPX waypoints (→ fix)…</value></data>
+  <data name="Menu_Tools_ExportEntrances" xml:space="preserve"><value>Export entrances / fixed points</value></data>
+  <data name="Menu_Tools_ExportTable" xml:space="preserve"><value>Export data table</value></data>
+  <data name="Menu_Tools_GenReport" xml:space="preserve"><value>Generate survey report (HTML)…</value></data>
+  <data name="Menu_Tools_NewScrap" xml:space="preserve"><value>New scrap (.th2)…</value></data>
+  <data name="Menu_Tools_Calculators" xml:space="preserve"><value>Calculators</value></data>
+  <data name="Menu_Tools_UnitConverter" xml:space="preserve"><value>Unit converter…</value></data>
+  <data name="Menu_Tools_CoordConverter" xml:space="preserve"><value>Coordinate converter…</value></data>
+  <data name="Menu_Tools_DeclinationCalc" xml:space="preserve"><value>Declination calculator…</value></data>
+  <data name="Menu_Tools_EntrancesFixed" xml:space="preserve"><value>Entrances / fixed points</value></data>
+  <data name="Menu_Tools_StationTable" xml:space="preserve"><value>Station table</value></data>
+  <data name="Menu_Tools_ShotTable" xml:space="preserve"><value>Shot table</value></data>
+  <data name="Menu_Build_Target" xml:space="preserve"><value>Build target</value></data>
+  <data name="Menu_Build_QuickExport" xml:space="preserve"><value>Quick Export…</value></data>
+  <data name="Menu_Build_SurvexTools" xml:space="preserve"><value>Survex tools (.3d)</value></data>
+  <data name="Menu_Build_Dump3d" xml:space="preserve"><value>dump3d (text dump)</value></data>
+  <data name="Menu_Build_Extend" xml:space="preserve"><value>extend (extended elevation)</value></data>
+  <data name="Menu_Build_TherionInfo" xml:space="preserve"><value>Therion info</value></data>
+  <data name="Menu_Build_PrintVersion" xml:space="preserve"><value>Print version</value></data>
+  <data name="Menu_Build_PrintEnv" xml:space="preserve"><value>Print environment</value></data>
+  <!-- Document tab context menu (UX-10) -->
+  <data name="Tab_Pin" xml:space="preserve"><value>Pin Tab</value></data>
+  <data name="Tab_Unpin" xml:space="preserve"><value>Unpin Tab</value></data>
+  <data name="Tab_Close" xml:space="preserve"><value>Close</value></data>
+  <data name="Tab_CloseOthers" xml:space="preserve"><value>Close Others</value></data>
+  <data name="Tab_CloseRight" xml:space="preserve"><value>Close to the Right</value></data>
+  <data name="Tab_CloseAll" xml:space="preserve"><value>Close All</value></data>
+  <data name="Tab_Float" xml:space="preserve"><value>Float</value></data>
+  <data name="Ctx_CopyName" xml:space="preserve"><value>Copy File Name</value></data>
+  <!-- Toolbar tooltips -->
+  <data name="Tb_OpenFile" xml:space="preserve"><value>Open File (Ctrl+O)</value></data>
+  <data name="Tb_OpenThconfig" xml:space="preserve"><value>Open thconfig</value></data>
+  <data name="Tb_OpenFolder" xml:space="preserve"><value>Open Folder</value></data>
+  <data name="Tb_Back" xml:space="preserve"><value>Back (Alt+Left)</value></data>
+  <data name="Tb_Forward" xml:space="preserve"><value>Forward (Alt+Right)</value></data>
+  <data name="Tb_Save" xml:space="preserve"><value>Save (Ctrl+S)</value></data>
+  <data name="Tb_Cut" xml:space="preserve"><value>Cut (Ctrl+X)</value></data>
+  <data name="Tb_Copy" xml:space="preserve"><value>Copy (Ctrl+C)</value></data>
+  <data name="Tb_Paste" xml:space="preserve"><value>Paste (Ctrl+V)</value></data>
+  <data name="Tb_FindInFiles" xml:space="preserve"><value>Find in Files (Ctrl+Shift+F)</value></data>
+  <data name="Tb_RenameSymbol" xml:space="preserve"><value>Rename Symbol (F2)</value></data>
+  <data name="Tb_GoToFile" xml:space="preserve"><value>Go to File (Ctrl+P)</value></data>
+  <data name="Tb_GoToAction" xml:space="preserve"><value>Go to Action — Command Palette (Ctrl+Shift+P)</value></data>
+  <data name="Tb_GoToSymbolWs" xml:space="preserve"><value>Go to Symbol in Workspace</value></data>
+  <data name="Tb_GoToSymbolDoc" xml:space="preserve"><value>Go to Symbol in Document</value></data>
+  <data name="Tb_Import" xml:space="preserve"><value>Import survey / DEM / GPX</value></data>
+  <data name="Tb_Export" xml:space="preserve"><value>Export entrances / data tables</value></data>
+  <data name="Tb_GenReport" xml:space="preserve"><value>Generate survey report (HTML)</value></data>
+  <data name="Tb_NewScrap" xml:space="preserve"><value>New scrap (.th2)</value></data>
+  <data name="Tb_OpenLoch" xml:space="preserve"><value>Open in Loch (F9)</value></data>
+  <data name="Tb_OpenAven" xml:space="preserve"><value>Open in Aven (F10)</value></data>
+  <data name="Tb_WordWrap" xml:space="preserve"><value>Word wrap</value></data>
+  <data name="Tb_FullScreen" xml:space="preserve"><value>Full screen (F11)</value></data>
+  <data name="Tb_Layout" xml:space="preserve"><value>Layout</value></data>
+  <data name="Tb_Notifications" xml:space="preserve"><value>Notifications</value></data>
+  <data name="Tb_Compile" xml:space="preserve"><value>Compile (F5)</value></data>
+  <data name="Tb_CancelCompile" xml:space="preserve"><value>Cancel compilation (Shift+F5)</value></data>
+  <data name="Tb_RelationalMap" xml:space="preserve"><value>Relational Map</value></data>
+  <data name="Tb_ShowOutputs" xml:space="preserve"><value>Show Generated Files and the first "export model" command</value></data>
+  <data name="Layout_FloatActive" xml:space="preserve"><value>Float Active Document</value></data>
+  <data name="Layout_Reset" xml:space="preserve"><value>Reset to Default Layout</value></data>
+  <data name="Notif_Empty" xml:space="preserve"><value>No notifications yet.</value></data>
+  <!-- Status bar -->
+  <data name="Status_Length" xml:space="preserve"><value>Length:</value></data>
+  <data name="Status_Lines" xml:space="preserve"><value>Lines:</value></data>
+  <data name="Status_Line" xml:space="preserve"><value>Line:</value></data>
+  <data name="Status_Col" xml:space="preserve"><value>Col:</value></data>
+  <data name="Status_Pos" xml:space="preserve"><value>Pos:</value></data>
+  <data name="Status_Sel" xml:space="preserve"><value>Sel:</value></data>
+  <data name="Status_Ch" xml:space="preserve"><value>ch,</value></data>
+  <data name="Status_Ln" xml:space="preserve"><value>ln</value></data>
+  <data name="Status_Indexing" xml:space="preserve"><value>Indexing…</value></data>
+  <data name="Status_BuildInProgress" xml:space="preserve"><value>Build in progress…</value></data>
+  <data name="Status_BuildingGraph" xml:space="preserve"><value>Building the project object graph…</value></data>
+  <data name="Status_LastBuildOk" xml:space="preserve"><value>Last build succeeded</value></data>
+  <data name="Status_LastBuildFail" xml:space="preserve"><value>Last build failed</value></data>
+  <data name="Status_OpenDiag" xml:space="preserve"><value>Open Diagnostics (F8: next, Shift+F8: previous)</value></data>
+  <data name="Sw_OpenDocs" xml:space="preserve"><value>Open documents  —  Ctrl+Tab</value></data>
+  <data name="Loading_Files" xml:space="preserve"><value>Loading files…</value></data>
 </root>

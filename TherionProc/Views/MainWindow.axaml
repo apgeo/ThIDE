@@ -5,6 +5,7 @@
         xmlns:dock="using:Dock.Avalonia.Controls"
         xmlns:conv="using:TherionProc.Converters"
         xmlns:qp="using:TherionProc.Views.QuickPick"
+        xmlns:l="using:TherionProc.Resources"
         xmlns:ac="using:Avalonia.Data.Converters"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -37,22 +38,22 @@
         <Style Selector="dock|DocumentTabStripItem">
             <Setter Property="ContextMenu">
                 <ContextMenu x:CompileBindings="False">
-                    <MenuItem Header="Pin Tab" Command="{Binding TogglePinCommand}" IsVisible="{Binding !IsPinned}" />
-                    <MenuItem Header="Unpin Tab" Command="{Binding TogglePinCommand}" IsVisible="{Binding IsPinned}" />
+                    <MenuItem Header="{l:Loc Tab_Pin}" Command="{Binding TogglePinCommand}" IsVisible="{Binding !IsPinned}" />
+                    <MenuItem Header="{l:Loc Tab_Unpin}" Command="{Binding TogglePinCommand}" IsVisible="{Binding IsPinned}" />
                     <Separator />
-                    <MenuItem Header="Close" Command="{Binding CloseTabCommand}" />
-                    <MenuItem Header="Close Others" Command="{Binding CloseOtherTabsCommand}" />
-                    <MenuItem Header="Close to the Right" Command="{Binding CloseTabsToRightCommand}" />
-                    <MenuItem Header="Close All" Command="{Binding CloseAllTabsCommand}" />
+                    <MenuItem Header="{l:Loc Tab_Close}" Command="{Binding CloseTabCommand}" />
+                    <MenuItem Header="{l:Loc Tab_CloseOthers}" Command="{Binding CloseOtherTabsCommand}" />
+                    <MenuItem Header="{l:Loc Tab_CloseRight}" Command="{Binding CloseTabsToRightCommand}" />
+                    <MenuItem Header="{l:Loc Tab_CloseAll}" Command="{Binding CloseAllTabsCommand}" />
                     <Separator />
-                    <MenuItem Header="Reopen Closed Tab"
+                    <MenuItem Header="{l:Loc Menu_File_ReopenTab}"
                               Command="{Binding $parent[Window].DataContext.ReopenClosedTabCommand}" />
-                    <MenuItem Header="Float" Command="{Binding FloatTabCommand}" />
+                    <MenuItem Header="{l:Loc Tab_Float}" Command="{Binding FloatTabCommand}" />
                     <Separator />
-                    <MenuItem Header="Reveal in File Manager" Command="{Binding RevealInFileManagerCommand}" />
-                    <MenuItem Header="Copy Full Path" Command="{Binding CopyFullPathCommand}" />
-                    <MenuItem Header="Copy Relative Path" Command="{Binding CopyRelativePathCommand}" />
-                    <MenuItem Header="Copy File Name" Command="{Binding CopyFileNameCommand}" />
+                    <MenuItem Header="{l:Loc Gen_Reveal}" Command="{Binding RevealInFileManagerCommand}" />
+                    <MenuItem Header="{l:Loc Ctx_CopyFull}" Command="{Binding CopyFullPathCommand}" />
+                    <MenuItem Header="{l:Loc Ctx_CopyRel}" Command="{Binding CopyRelativePathCommand}" />
+                    <MenuItem Header="{l:Loc Ctx_CopyName}" Command="{Binding CopyFileNameCommand}" />
                 </ContextMenu>
             </Setter>
         </Style>
@@ -130,7 +131,7 @@
                 <!-- Recent working directories, rebuilt in code-behind. -->
                 <MenuItem x:Name="RecentDirectoriesMenu" Header="{Binding MenuFileRecentDirectories}" />
                 <!-- UX-10: reopen the most-recently-closed tab. -->
-                <MenuItem Header="Reopen Closed Tab" InputGesture="Ctrl+Shift+T"
+                <MenuItem Header="{l:Loc Menu_File_ReopenTab}" InputGesture="Ctrl+Shift+T"
                           Command="{Binding ReopenClosedTabCommand}" />
                 <Separator />
                 <MenuItem Header="{Binding MenuFileExit}" Command="{Binding ExitCommand}" />
@@ -143,19 +144,19 @@
                 <Separator />
                 <MenuItem Header="{Binding MenuViewObjectBrowser}" Command="{Binding ToggleObjectBrowserCommand}" />
                 <MenuItem Header="{Binding MenuViewWorkspace}" Command="{Binding ToggleWorkspaceExplorerCommand}" />
-                <MenuItem Header="Project (Dashboard / Surveys / Audit)" Command="{Binding ToggleProjectCommand}" />
-                <MenuItem Header="Log" Command="{Binding ToggleLogCommand}" />
-                <MenuItem Header="Live Preview" Command="{Binding ToggleLivePreviewCommand}"
+                <MenuItem Header="{l:Loc Menu_View_Project}" Command="{Binding ToggleProjectCommand}" />
+                <MenuItem Header="{l:Loc Menu_View_Log}" Command="{Binding ToggleLogCommand}" />
+                <MenuItem Header="{l:Loc Menu_View_LivePreview}" Command="{Binding ToggleLivePreviewCommand}"
                           IsVisible="{Binding LivePreviewEnabled}" />
-                <MenuItem Header="Map Viewer" Command="{Binding ToggleMapViewerCommand}"
+                <MenuItem Header="{l:Loc Menu_View_MapViewer}" Command="{Binding ToggleMapViewerCommand}"
                           IsVisible="{Binding MapViewerEnabled}" />
-                <MenuItem Header="3D Viewer" Command="{Binding ToggleModel3DViewerCommand}"
+                <MenuItem Header="{l:Loc Menu_View_Model3D}" Command="{Binding ToggleModel3DViewerCommand}"
                           IsVisible="{Binding Model3DViewerEnabled}" />
-                <MenuItem Header="Structural Geology" Command="{Binding ToggleStructuralGeologyCommand}"
+                <MenuItem Header="{l:Loc Menu_View_Structural}" Command="{Binding ToggleStructuralGeologyCommand}"
                           IsVisible="{Binding StructuralGeologyEnabled}" />
                 <MenuItem Header="{Binding MenuViewDiagnostics}" Command="{Binding ToggleDiagnosticsCommand}" />
                 <!-- EDIT-09: document outline (hidden when the feature is disabled). -->
-                <MenuItem Header="Outline" Command="{Binding ToggleOutlineCommand}"
+                <MenuItem Header="{l:Loc Menu_View_Outline}" Command="{Binding ToggleOutlineCommand}"
                           IsVisible="{Binding OutlineFeatureEnabled}" />
                 <Separator />
                 <MenuItem Header="{Binding MenuViewRelationalMap}" Click="OnRelationalMapClick" />
@@ -165,21 +166,21 @@
                           IsChecked="{Binding StrictParserMode, Mode=TwoWay}" />
                 <!-- EDIT-13: whitespace/EOL/indent-guide render toggles (hidden when the feature is off). -->
                 <Separator IsVisible="{Binding WhitespaceFeatureEnabled}" />
-                <MenuItem Header="Whitespace" IsVisible="{Binding WhitespaceFeatureEnabled}">
-                    <MenuItem Header="Show Spaces &amp; Tabs" ToggleType="CheckBox"
+                <MenuItem Header="{l:Loc Menu_View_Whitespace}" IsVisible="{Binding WhitespaceFeatureEnabled}">
+                    <MenuItem Header="{l:Loc Menu_View_ShowSpacesTabs}" ToggleType="CheckBox"
                               IsChecked="{Binding ShowWhitespace, Mode=TwoWay}" />
-                    <MenuItem Header="Show End of Line" ToggleType="CheckBox"
+                    <MenuItem Header="{l:Loc Menu_View_ShowEol}" ToggleType="CheckBox"
                               IsChecked="{Binding ShowEndOfLine, Mode=TwoWay}" />
-                    <MenuItem Header="Show Indentation Guides" ToggleType="CheckBox"
+                    <MenuItem Header="{l:Loc Menu_View_ShowIndentGuides}" ToggleType="CheckBox"
                               IsChecked="{Binding ShowIndentGuides, Mode=TwoWay}" />
                 </MenuItem>
                 <!-- EDIT-07: minimap toggle (hidden when the feature is off). -->
-                <MenuItem Header="Show Minimap" ToggleType="CheckBox"
+                <MenuItem Header="{l:Loc Menu_View_ShowMinimap}" ToggleType="CheckBox"
                           IsChecked="{Binding ShowMinimap, Mode=TwoWay}"
                           IsVisible="{Binding MinimapFeatureEnabled}" />
                 <!-- EDIT-11: open the active document side-by-side in a float window. -->
                 <Separator IsVisible="{Binding SplitFeatureEnabled}" />
-                <MenuItem Header="Split Editor (Float)" Command="{Binding SplitEditorCommand}"
+                <MenuItem Header="{l:Loc Menu_View_SplitEditor}" Command="{Binding SplitEditorCommand}"
                           IsVisible="{Binding SplitFeatureEnabled}" />
             </MenuItem>
             <!-- Edit menu mirrors the editor's right-click menu; enabled when a file is open (#11). -->
@@ -215,26 +216,26 @@
                 <MenuItem Header="{Binding MenuSearchBookmarks}"    Click="OnBookmarksClick" />
             </MenuItem>
             <!-- Tools: import / GIS export / surface / scaffold (IMP-01, GIS-01/03, TH2-04) -->
-            <MenuItem Header="Tools">
-                <MenuItem Header="Import survey (Survex / Compass)…" Command="{Binding ImportSurveyCommand}" />
-                <MenuItem Header="Import DEM as surface (.asc)…" Command="{Binding ImportDemSurfaceCommand}" />
-                <MenuItem Header="Import GPX waypoints (→ fix)…" Command="{Binding ImportGpxCommand}" />
+            <MenuItem Header="{l:Loc Menu_Tools}">
+                <MenuItem Header="{l:Loc Menu_Tools_ImportSurvey}" Command="{Binding ImportSurveyCommand}" />
+                <MenuItem Header="{l:Loc Menu_Tools_ImportDem}" Command="{Binding ImportDemSurfaceCommand}" />
+                <MenuItem Header="{l:Loc Menu_Tools_ImportGpx}" Command="{Binding ImportGpxCommand}" />
                 <Separator />
-                <MenuItem Header="Export entrances / fixed points">
+                <MenuItem Header="{l:Loc Menu_Tools_ExportEntrances}">
                     <MenuItem Header="KML…"      Command="{Binding ExportGisCommand}" CommandParameter="kml" />
                     <MenuItem Header="GeoJSON…"  Command="{Binding ExportGisCommand}" CommandParameter="geojson" />
                     <MenuItem Header="GPX…"      Command="{Binding ExportGisCommand}" CommandParameter="gpx" />
                     <MenuItem Header="CSV…"      Command="{Binding ExportGisCommand}" CommandParameter="csv" />
                 </MenuItem>
                 <!-- PUB-02: station / shot data tables. -->
-                <MenuItem Header="Export data table">
-                    <MenuItem Header="Stations">
+                <MenuItem Header="{l:Loc Menu_Tools_ExportTable}">
+                    <MenuItem Header="{l:Loc Browser_Tab_Stations}">
                         <MenuItem Header="CSV…"      Command="{Binding ExportTableCommand}" CommandParameter="stations|csv" />
                         <MenuItem Header="Markdown…" Command="{Binding ExportTableCommand}" CommandParameter="stations|markdown" />
                         <MenuItem Header="HTML…"     Command="{Binding ExportTableCommand}" CommandParameter="stations|html" />
                         <MenuItem Header="LaTeX…"    Command="{Binding ExportTableCommand}" CommandParameter="stations|latex" />
                     </MenuItem>
-                    <MenuItem Header="Shots">
+                    <MenuItem Header="{l:Loc Browser_Tab_Shots}">
                         <MenuItem Header="CSV…"      Command="{Binding ExportTableCommand}" CommandParameter="shots|csv" />
                         <MenuItem Header="Markdown…" Command="{Binding ExportTableCommand}" CommandParameter="shots|markdown" />
                         <MenuItem Header="HTML…"     Command="{Binding ExportTableCommand}" CommandParameter="shots|html" />
@@ -242,15 +243,15 @@
                     </MenuItem>
                 </MenuItem>
                 <!-- PUB-01: one-click survey report. -->
-                <MenuItem Header="Generate survey report (HTML)…" Command="{Binding GenerateReportCommand}" />
+                <MenuItem Header="{l:Loc Menu_Tools_GenReport}" Command="{Binding GenerateReportCommand}" />
                 <Separator />
-                <MenuItem Header="New scrap (.th2)…" Command="{Binding NewScrapScaffoldCommand}" />
+                <MenuItem Header="{l:Loc Menu_Tools_NewScrap}" Command="{Binding NewScrapScaffoldCommand}" />
                 <Separator />
                 <!-- UTIL-* calculators. -->
-                <MenuItem Header="Calculators">
-                    <MenuItem Header="Unit converter…" Click="OnUnitConverter" />
-                    <MenuItem Header="Coordinate converter…" Click="OnCoordinateConverter" />
-                    <MenuItem Header="Declination calculator…" Click="OnDeclinationCalculator" />
+                <MenuItem Header="{l:Loc Menu_Tools_Calculators}">
+                    <MenuItem Header="{l:Loc Menu_Tools_UnitConverter}" Click="OnUnitConverter" />
+                    <MenuItem Header="{l:Loc Menu_Tools_CoordConverter}" Click="OnCoordinateConverter" />
+                    <MenuItem Header="{l:Loc Menu_Tools_DeclinationCalc}" Click="OnDeclinationCalculator" />
                 </MenuItem>
             </MenuItem>
             <MenuItem Header="{Binding MenuBuild}">
@@ -258,7 +259,7 @@
                 <MenuItem Header="{Binding MenuBuildCancel}"    InputGesture="Shift+F5" Command="{Binding Build.CancelCommand}" />
                 <Separator />
                 <!-- BUILD-01: run a single export target from the active thconfig. -->
-                <MenuItem Header="Build target" IsEnabled="{Binding Build.HasExportTargets}"
+                <MenuItem Header="{l:Loc Menu_Build_Target}" IsEnabled="{Binding Build.HasExportTargets}"
                           ItemsSource="{Binding Build.ExportTargets}">
                     <MenuItem.ItemContainerTheme>
                         <ControlTheme TargetType="MenuItem" x:DataType="vm:BuildTarget"
@@ -269,18 +270,18 @@
                     </MenuItem.ItemContainerTheme>
                 </MenuItem>
                 <!-- BUILD-02: composed quick export. -->
-                <MenuItem Header="Quick Export…" Command="{Binding Build.ShowQuickExportCommand}" />
+                <MenuItem Header="{l:Loc Menu_Build_QuickExport}" Command="{Binding Build.ShowQuickExportCommand}" />
                 <Separator />
                 <MenuItem Header="{Binding MenuBuildOpenLoch}"  InputGesture="F9"  Command="{Binding Build.OpenInLochCommand}" />
                 <MenuItem Header="{Binding MenuBuildOpenAven}"  InputGesture="F10" Command="{Binding Build.OpenInAvenCommand}" />
                 <!-- BUILD-06: external round-trips. -->
-                <MenuItem Header="Survex tools (.3d)" IsEnabled="{Binding Build.HasAvenArtifact}">
-                    <MenuItem Header="dump3d (text dump)" Command="{Binding Build.Dump3dCommand}" />
-                    <MenuItem Header="extend (extended elevation)" Command="{Binding Build.ExtendCommand}" />
+                <MenuItem Header="{l:Loc Menu_Build_SurvexTools}" IsEnabled="{Binding Build.HasAvenArtifact}">
+                    <MenuItem Header="{l:Loc Menu_Build_Dump3d}" Command="{Binding Build.Dump3dCommand}" />
+                    <MenuItem Header="{l:Loc Menu_Build_Extend}" Command="{Binding Build.ExtendCommand}" />
                 </MenuItem>
-                <MenuItem Header="Therion info">
-                    <MenuItem Header="Print version" Command="{Binding Build.PrintTherionVersionCommand}" />
-                    <MenuItem Header="Print environment" Command="{Binding Build.PrintTherionEnvironmentCommand}" />
+                <MenuItem Header="{l:Loc Menu_Build_TherionInfo}">
+                    <MenuItem Header="{l:Loc Menu_Build_PrintVersion}" Command="{Binding Build.PrintTherionVersionCommand}" />
+                    <MenuItem Header="{l:Loc Menu_Build_PrintEnv}" Command="{Binding Build.PrintTherionEnvironmentCommand}" />
                 </MenuItem>
                 <Separator />
                 <MenuItem Header="{Binding MenuBuildOpenOutputFolder}" Command="{Binding Build.OpenLastOutputFolderCommand}" />
@@ -302,89 +303,89 @@
         <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="6,3">
             <WrapPanel Orientation="Horizontal">
                 <!-- File group -->
-                <Button Classes="tool" Command="{Binding OpenFileCommand}" ToolTip.Tip="Open File (Ctrl+O)">
+                <Button Classes="tool" Command="{Binding OpenFileCommand}" ToolTip.Tip="{l:Loc Tb_OpenFile}">
                     <PathIcon Data="{DynamicResource Icon.File}" />
                 </Button>
-                <Button Classes="tool" Command="{Binding OpenThconfigCommand}" ToolTip.Tip="Open thconfig">
+                <Button Classes="tool" Command="{Binding OpenThconfigCommand}" ToolTip.Tip="{l:Loc Tb_OpenThconfig}">
                     <PathIcon Data="{DynamicResource Icon.Config}" />
                 </Button>
-                <Button Classes="tool" Command="{Binding OpenFolderCommand}" ToolTip.Tip="Open Folder">
+                <Button Classes="tool" Command="{Binding OpenFolderCommand}" ToolTip.Tip="{l:Loc Tb_OpenFolder}">
                     <PathIcon Data="{DynamicResource Icon.FolderOpen}" />
                 </Button>
                 <Separator Width="1" Margin="4,2" Background="Gray" />
                 <!-- Navigation group -->
-                <Button Classes="tool" Command="{Binding GoBackCommand}" ToolTip.Tip="Back (Alt+Left)">
+                <Button Classes="tool" Command="{Binding GoBackCommand}" ToolTip.Tip="{l:Loc Tb_Back}">
                     <PathIcon Data="{DynamicResource Icon.Back}" />
                 </Button>
-                <Button Classes="tool" Command="{Binding GoForwardCommand}" ToolTip.Tip="Forward (Alt+Right)">
+                <Button Classes="tool" Command="{Binding GoForwardCommand}" ToolTip.Tip="{l:Loc Tb_Forward}">
                     <PathIcon Data="{DynamicResource Icon.Forward}" />
                 </Button>
                 <Separator Width="1" Margin="4,2" Background="Gray" />
-                <Button Classes="tool" Command="{Binding SaveCommand}" ToolTip.Tip="Save (Ctrl+S)">
+                <Button Classes="tool" Command="{Binding SaveCommand}" ToolTip.Tip="{l:Loc Tb_Save}">
                     <PathIcon Data="{DynamicResource Icon.Save}" />
                 </Button>
                 <Separator Width="1" Margin="4,2" Background="Gray" />
                 <!-- Edit group: enabled only when a file is open/focused (#11). -->
-                <Button Classes="tool" Click="OnEditCut" IsEnabled="{Binding HasStatusFile}" ToolTip.Tip="Cut (Ctrl+X)">
+                <Button Classes="tool" Click="OnEditCut" IsEnabled="{Binding HasStatusFile}" ToolTip.Tip="{l:Loc Tb_Cut}">
                     <PathIcon Data="{DynamicResource Icon.Cut}" />
                 </Button>
-                <Button Classes="tool" Click="OnEditCopy" IsEnabled="{Binding HasStatusFile}" ToolTip.Tip="Copy (Ctrl+C)">
+                <Button Classes="tool" Click="OnEditCopy" IsEnabled="{Binding HasStatusFile}" ToolTip.Tip="{l:Loc Tb_Copy}">
                     <PathIcon Data="{DynamicResource Icon.Copy}" />
                 </Button>
-                <Button Classes="tool" Click="OnEditPaste" IsEnabled="{Binding HasStatusFile}" ToolTip.Tip="Paste (Ctrl+V)">
+                <Button Classes="tool" Click="OnEditPaste" IsEnabled="{Binding HasStatusFile}" ToolTip.Tip="{l:Loc Tb_Paste}">
                     <PathIcon Data="{DynamicResource Icon.Paste}" />
                 </Button>
                 <Separator Width="1" Margin="4,2" Background="Gray" />
                 <!-- Search group -->
-                <Button Classes="tool" Click="OnSearchClick" ToolTip.Tip="Find in Files (Ctrl+Shift+F)">
+                <Button Classes="tool" Click="OnSearchClick" ToolTip.Tip="{l:Loc Tb_FindInFiles}">
                     <PathIcon Data="{DynamicResource Icon.Search}" />
                 </Button>
-                <Button Classes="tool" Command="{Binding RenameSymbolCommand}" IsEnabled="{Binding HasStatusFile}" ToolTip.Tip="Rename Symbol (F2)">
+                <Button Classes="tool" Command="{Binding RenameSymbolCommand}" IsEnabled="{Binding HasStatusFile}" ToolTip.Tip="{l:Loc Tb_RenameSymbol}">
                     <PathIcon Data="{DynamicResource Icon.Rename}" />
                 </Button>
                 <Separator Width="1" Margin="4,2" Background="Gray" />
                 <!-- Go-to group: quick-open, command palette, and symbol search (workspace / document). -->
-                <Button Classes="tool" Click="OnGoToFile" ToolTip.Tip="Go to File (Ctrl+P)">
+                <Button Classes="tool" Click="OnGoToFile" ToolTip.Tip="{l:Loc Tb_GoToFile}">
                     <PathIcon Data="{DynamicResource Icon.File}" />
                 </Button>
-                <Button Classes="tool" Click="OnGoToAction" ToolTip.Tip="Go to Action — Command Palette (Ctrl+Shift+P)">
+                <Button Classes="tool" Click="OnGoToAction" ToolTip.Tip="{l:Loc Tb_GoToAction}">
                     <PathIcon Data="{DynamicResource Icon.Config}" />
                 </Button>
-                <Button Classes="tool" Click="OnGoToSymbolWorkspace" ToolTip.Tip="Go to Symbol in Workspace">
+                <Button Classes="tool" Click="OnGoToSymbolWorkspace" ToolTip.Tip="{l:Loc Tb_GoToSymbolWs}">
                     <PathIcon Data="{DynamicResource Icon.Map}" />
                 </Button>
-                <Button Classes="tool" Click="OnGoToSymbolDocument" ToolTip.Tip="Go to Symbol in Document">
+                <Button Classes="tool" Click="OnGoToSymbolDocument" ToolTip.Tip="{l:Loc Tb_GoToSymbolDoc}">
                     <PathIcon Data="{DynamicResource Icon.NodeGraph}" />
                 </Button>
                 <Separator Width="1" Margin="4,2" Background="Gray" />
                 <!-- Tools group: import / export / report / scaffold / calculators (mirrors the Tools menu). -->
-                <Button Classes="tool" ToolTip.Tip="Import survey / DEM / GPX">
+                <Button Classes="tool" ToolTip.Tip="{l:Loc Tb_Import}">
                     <PathIcon Data="{DynamicResource Icon.FolderOpen}" />
                     <Button.Flyout>
                         <MenuFlyout>
-                            <MenuItem Header="Import survey (Survex / Compass)…" Command="{Binding ImportSurveyCommand}" />
-                            <MenuItem Header="Import DEM as surface (.asc)…" Command="{Binding ImportDemSurfaceCommand}" />
-                            <MenuItem Header="Import GPX waypoints (→ fix)…" Command="{Binding ImportGpxCommand}" />
+                            <MenuItem Header="{l:Loc Menu_Tools_ImportSurvey}" Command="{Binding ImportSurveyCommand}" />
+                            <MenuItem Header="{l:Loc Menu_Tools_ImportDem}" Command="{Binding ImportDemSurfaceCommand}" />
+                            <MenuItem Header="{l:Loc Menu_Tools_ImportGpx}" Command="{Binding ImportGpxCommand}" />
                         </MenuFlyout>
                     </Button.Flyout>
                 </Button>
-                <Button Classes="tool" ToolTip.Tip="Export entrances / data tables">
+                <Button Classes="tool" ToolTip.Tip="{l:Loc Tb_Export}">
                     <PathIcon Data="{DynamicResource Icon.Map}" />
                     <Button.Flyout>
                         <MenuFlyout>
-                            <MenuItem Header="Entrances / fixed points">
+                            <MenuItem Header="{l:Loc Menu_Tools_EntrancesFixed}">
                                 <MenuItem Header="KML…"     Command="{Binding ExportGisCommand}" CommandParameter="kml" />
                                 <MenuItem Header="GeoJSON…" Command="{Binding ExportGisCommand}" CommandParameter="geojson" />
                                 <MenuItem Header="GPX…"     Command="{Binding ExportGisCommand}" CommandParameter="gpx" />
                                 <MenuItem Header="CSV…"     Command="{Binding ExportGisCommand}" CommandParameter="csv" />
                             </MenuItem>
-                            <MenuItem Header="Station table">
+                            <MenuItem Header="{l:Loc Menu_Tools_StationTable}">
                                 <MenuItem Header="CSV…"      Command="{Binding ExportTableCommand}" CommandParameter="stations|csv" />
                                 <MenuItem Header="Markdown…" Command="{Binding ExportTableCommand}" CommandParameter="stations|markdown" />
                                 <MenuItem Header="HTML…"     Command="{Binding ExportTableCommand}" CommandParameter="stations|html" />
                                 <MenuItem Header="LaTeX…"    Command="{Binding ExportTableCommand}" CommandParameter="stations|latex" />
                             </MenuItem>
-                            <MenuItem Header="Shot table">
+                            <MenuItem Header="{l:Loc Menu_Tools_ShotTable}">
                                 <MenuItem Header="CSV…"      Command="{Binding ExportTableCommand}" CommandParameter="shots|csv" />
                                 <MenuItem Header="Markdown…" Command="{Binding ExportTableCommand}" CommandParameter="shots|markdown" />
                                 <MenuItem Header="HTML…"     Command="{Binding ExportTableCommand}" CommandParameter="shots|html" />
@@ -393,103 +394,103 @@
                         </MenuFlyout>
                     </Button.Flyout>
                 </Button>
-                <Button Classes="tool" Command="{Binding GenerateReportCommand}" ToolTip.Tip="Generate survey report (HTML)">
+                <Button Classes="tool" Command="{Binding GenerateReportCommand}" ToolTip.Tip="{l:Loc Tb_GenReport}">
                     <PathIcon Data="{DynamicResource Icon.Th}" />
                 </Button>
-                <Button Classes="tool" Command="{Binding NewScrapScaffoldCommand}" ToolTip.Tip="New scrap (.th2)">
+                <Button Classes="tool" Command="{Binding NewScrapScaffoldCommand}" ToolTip.Tip="{l:Loc Tb_NewScrap}">
                     <PathIcon Data="{DynamicResource Icon.Th2}" />
                 </Button>
-                <Button Classes="tool" ToolTip.Tip="Calculators">
+                <Button Classes="tool" ToolTip.Tip="{l:Loc Menu_Tools_Calculators}">
                     <PathIcon Data="{DynamicResource Icon.Timer}" />
                     <Button.Flyout>
                         <MenuFlyout>
-                            <MenuItem Header="Unit converter…" Click="OnUnitConverter" />
-                            <MenuItem Header="Coordinate converter…" Click="OnCoordinateConverter" />
-                            <MenuItem Header="Declination calculator…" Click="OnDeclinationCalculator" />
+                            <MenuItem Header="{l:Loc Menu_Tools_UnitConverter}" Click="OnUnitConverter" />
+                            <MenuItem Header="{l:Loc Menu_Tools_CoordConverter}" Click="OnCoordinateConverter" />
+                            <MenuItem Header="{l:Loc Menu_Tools_DeclinationCalc}" Click="OnDeclinationCalculator" />
                         </MenuFlyout>
                     </Button.Flyout>
                 </Button>
                 <Separator Width="1" Margin="4,2" Background="Gray" />
                 <!-- Compile / Stop moved to the end of the toolbar (#1). -->
                 <Button Classes="tool" Command="{Binding Build.OpenInLochCommand}"
-                        IsEnabled="{Binding Build.HasLoxArtifact}" ToolTip.Tip="Open in Loch (F9)">
+                        IsEnabled="{Binding Build.HasLoxArtifact}" ToolTip.Tip="{l:Loc Tb_OpenLoch}">
                     <PathIcon Data="{DynamicResource Icon.Cube}" />
                 </Button>
                 <Button Classes="tool" Command="{Binding Build.OpenInAvenCommand}"
-                        IsEnabled="{Binding Build.HasAvenArtifact}" ToolTip.Tip="Open in Aven (F10)">
+                        IsEnabled="{Binding Build.HasAvenArtifact}" ToolTip.Tip="{l:Loc Tb_OpenAven}">
                     <PathIcon Data="{DynamicResource Icon.Eye}" />
                 </Button>
                 <!-- BUILD-02: composed quick export + open the last output folder. -->
-                <Button Classes="tool" Command="{Binding Build.ShowQuickExportCommand}" ToolTip.Tip="Quick Export…">
+                <Button Classes="tool" Command="{Binding Build.ShowQuickExportCommand}" ToolTip.Tip="{l:Loc Menu_Build_QuickExport}">
                     <PathIcon Data="{DynamicResource Icon.Swap}" />
                 </Button>
-                <Button Classes="tool" Command="{Binding Build.OpenLastOutputFolderCommand}" ToolTip.Tip="Open output folder">
+                <Button Classes="tool" Command="{Binding Build.OpenLastOutputFolderCommand}" ToolTip.Tip="{l:Loc Proj_OpenOutputFolder}">
                     <PathIcon Data="{DynamicResource Icon.Folder}" />
                 </Button>
                 <Separator Width="1" Margin="4,2" Background="Gray" />
                 <!-- View group: focus the main tool panels (#11/#14). -->
-                <Button Classes="tool" Command="{Binding ToggleObjectBrowserCommand}" ToolTip.Tip="Object Browser">
+                <Button Classes="tool" Command="{Binding ToggleObjectBrowserCommand}" ToolTip.Tip="{l:Loc Tool_ObjectBrowser}">
                     <PathIcon Data="{DynamicResource Icon.NodeGraph}" />
                 </Button>
-                <Button Classes="tool" Command="{Binding ToggleWorkspaceExplorerCommand}" ToolTip.Tip="Workspace">
+                <Button Classes="tool" Command="{Binding ToggleWorkspaceExplorerCommand}" ToolTip.Tip="{l:Loc Menu_View_Workspace}">
                     <PathIcon Data="{DynamicResource Icon.Folder}" />
                 </Button>
-                <Button Classes="tool" Command="{Binding ToggleDiagnosticsCommand}" ToolTip.Tip="Diagnostics">
+                <Button Classes="tool" Command="{Binding ToggleDiagnosticsCommand}" ToolTip.Tip="{l:Loc Tool_Diagnostics}">
                     <PathIcon Data="{DynamicResource Icon.Warning}" />
                 </Button>
-                <Button Classes="tool" Command="{Binding ToggleProjectCommand}" ToolTip.Tip="Project (Dashboard / Surveys / Audit)">
+                <Button Classes="tool" Command="{Binding ToggleProjectCommand}" ToolTip.Tip="{l:Loc Menu_View_Project}">
                     <PathIcon Data="{DynamicResource Icon.Survey}" />
                 </Button>
-                <Button Classes="tool" Command="{Binding ToggleLogCommand}" ToolTip.Tip="Log">
+                <Button Classes="tool" Command="{Binding ToggleLogCommand}" ToolTip.Tip="{l:Loc Menu_View_Log}">
                     <PathIcon Data="{DynamicResource Icon.Info}" />
                 </Button>
-                <Button Classes="tool" Command="{Binding ToggleOutlineCommand}" ToolTip.Tip="Outline"
+                <Button Classes="tool" Command="{Binding ToggleOutlineCommand}" ToolTip.Tip="{l:Loc Menu_View_Outline}"
                         IsVisible="{Binding OutlineFeatureEnabled}">
                     <PathIcon Data="{DynamicResource Icon.Sort}" />
                 </Button>
-                <Button Classes="tool" Click="OnRelationalMapClick" ToolTip.Tip="Relational Map">
+                <Button Classes="tool" Click="OnRelationalMapClick" ToolTip.Tip="{l:Loc Tb_RelationalMap}">
                     <PathIcon Data="{DynamicResource Icon.NodeGraph}" />
                 </Button>
                 <!-- Viewer panels, each gated by its feature setting (mirrors the View menu). -->
-                <Button Classes="tool" Command="{Binding ToggleLivePreviewCommand}" ToolTip.Tip="Live Preview"
+                <Button Classes="tool" Command="{Binding ToggleLivePreviewCommand}" ToolTip.Tip="{l:Loc Menu_View_LivePreview}"
                         IsVisible="{Binding LivePreviewEnabled}">
                     <PathIcon Data="{DynamicResource Icon.Eye}" />
                 </Button>
-                <Button Classes="tool" Command="{Binding ToggleMapViewerCommand}" ToolTip.Tip="Map Viewer"
+                <Button Classes="tool" Command="{Binding ToggleMapViewerCommand}" ToolTip.Tip="{l:Loc Menu_View_MapViewer}"
                         IsVisible="{Binding MapViewerEnabled}">
                     <PathIcon Data="{DynamicResource Icon.Map}" />
                 </Button>
-                <Button Classes="tool" Command="{Binding ToggleModel3DViewerCommand}" ToolTip.Tip="3D Viewer"
+                <Button Classes="tool" Command="{Binding ToggleModel3DViewerCommand}" ToolTip.Tip="{l:Loc Menu_View_Model3D}"
                         IsVisible="{Binding Model3DViewerEnabled}">
                     <PathIcon Data="{DynamicResource Icon.Cube}" />
                 </Button>
-                <Button Classes="tool" Command="{Binding ToggleStructuralGeologyCommand}" ToolTip.Tip="Structural Geology"
+                <Button Classes="tool" Command="{Binding ToggleStructuralGeologyCommand}" ToolTip.Tip="{l:Loc Menu_View_Structural}"
                         IsVisible="{Binding StructuralGeologyEnabled}">
                     <PathIcon Data="{DynamicResource Icon.Scrap}" />
                 </Button>
                 <Separator Width="1" Margin="4,2" Background="Gray" />
-                <ToggleButton Classes="tool" IsChecked="{Binding WordWrap, Mode=TwoWay}" ToolTip.Tip="Word wrap">
+                <ToggleButton Classes="tool" IsChecked="{Binding WordWrap, Mode=TwoWay}" ToolTip.Tip="{l:Loc Tb_WordWrap}">
                     <PathIcon Data="{DynamicResource Icon.WordWrap}" />
                 </ToggleButton>
-                <Button Classes="tool" Click="OnToggleFullScreen" ToolTip.Tip="Full screen (F11)">
+                <Button Classes="tool" Click="OnToggleFullScreen" ToolTip.Tip="{l:Loc Tb_FullScreen}">
                     <PathIcon Data="{DynamicResource Icon.FullScreen}" />
                 </Button>
                 <!-- Layout controls (#16): float active document, reset to the default arrangement. -->
-                <Button Classes="tool" ToolTip.Tip="Layout">
+                <Button Classes="tool" ToolTip.Tip="{l:Loc Tb_Layout}">
                     <PathIcon Data="{DynamicResource Icon.Swap}" />
                     <Button.Flyout>
                         <MenuFlyout>
-                            <MenuItem Header="Float Active Document"
+                            <MenuItem Header="{l:Loc Layout_FloatActive}"
                                       Command="{Binding FloatActiveDocumentCommand}" />
                             <Separator />
-                            <MenuItem Header="Reset to Default Layout"
+                            <MenuItem Header="{l:Loc Layout_Reset}"
                                       Command="{Binding ResetLayoutCommand}" />
                         </MenuFlyout>
                     </Button.Flyout>
                 </Button>
                 <Separator Width="1" Margin="4,2" Background="Gray" />
                 <!-- UX-07: notification center bell + unread badge + history flyout. -->
-                <Button Classes="tool" Click="OnNotificationsClick" ToolTip.Tip="Notifications">
+                <Button Classes="tool" Click="OnNotificationsClick" ToolTip.Tip="{l:Loc Tb_Notifications}">
                     <Panel>
                         <PathIcon Data="{DynamicResource Icon.Bell}" />
                         <Border IsVisible="{Binding HasUnreadNotifications}"
@@ -505,13 +506,13 @@
                             <Border Width="360" MaxHeight="420">
                                 <DockPanel LastChildFill="True">
                                     <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="4,2,2,6">
-                                        <TextBlock Grid.Column="0" Text="Notifications" FontWeight="SemiBold"
+                                        <TextBlock Grid.Column="0" Text="{l:Loc Tb_Notifications}" FontWeight="SemiBold"
                                                    VerticalAlignment="Center" />
-                                        <Button Grid.Column="1" Content="Clear" Padding="8,2"
+                                        <Button Grid.Column="1" Content="{l:Loc Common_Clear}" Padding="8,2"
                                                 Background="Transparent" BorderThickness="0"
                                                 Command="{Binding ClearNotificationsCommand}" />
                                     </Grid>
-                                    <TextBlock DockPanel.Dock="Top" Text="No notifications yet."
+                                    <TextBlock DockPanel.Dock="Top" Text="{l:Loc Notif_Empty}"
                                                Foreground="Gray" FontSize="12" Margin="4,8"
                                                IsVisible="{Binding !HasNotificationHistory}" />
                                     <ScrollViewer>
@@ -549,13 +550,13 @@
                 <Border CornerRadius="6" Padding="2,0" Margin="2,0" VerticalAlignment="Center"
                         Classes.compiling="{Binding Build.IsBuilding}">
                     <StackPanel Orientation="Horizontal">
-                        <Button Classes="tool" Command="{Binding Build.BuildCommand}" ToolTip.Tip="Compile (F5)">
+                        <Button Classes="tool" Command="{Binding Build.BuildCommand}" ToolTip.Tip="{l:Loc Tb_Compile}">
                             <PathIcon Data="{DynamicResource Icon.Build}" Foreground="#2E7D32"
                                       Classes.buildPulse="{Binding Build.IsBuilding}" />
                         </Button>
                         <!-- Stop is hidden while idle and only appears during a compilation (#6). -->
                         <Button Classes="tool" Command="{Binding Build.CancelCommand}"
-                                IsVisible="{Binding Build.IsBuilding}" ToolTip.Tip="Cancel compilation (Shift+F5)">
+                                IsVisible="{Binding Build.IsBuilding}" ToolTip.Tip="{l:Loc Tb_CancelCompile}">
                             <PathIcon Data="{DynamicResource Icon.Stop}" Foreground="#C62828" />
                         </Button>
                     </StackPanel>
@@ -568,7 +569,7 @@
                     <Button Classes="crumb" Content="{Binding Build.StatusArtifactCount}"
                             Command="{Binding Build.ShowOutputsCommand}"
                             IsVisible="{Binding Build.HasArtifactLink}" VerticalAlignment="Center"
-                            ToolTip.Tip="Show Generated Files and the first &quot;export model&quot; command" />
+                            ToolTip.Tip="{l:Loc Tb_ShowOutputs}" />
                     <TextBlock Text=")" Foreground="Gray" VerticalAlignment="Center"
                                IsVisible="{Binding Build.HasArtifactLink}" />
                 </StackPanel>
@@ -608,15 +609,15 @@
                           Width="13" Height="13" Foreground="Gray" Margin="6,0,0,0"
                           RenderTransformOrigin="50%,50%"
                           IsVisible="{Binding Build.IsBuilding}"
-                          ToolTip.Tip="Build in progress…" />
+                          ToolTip.Tip="{l:Loc Status_BuildInProgress}" />
 
                 <!-- PERF-02: background-indexing indicator (object graph being (re)built off-thread). -->
                 <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="4" Margin="8,0,0,0"
                             VerticalAlignment="Center" IsVisible="{Binding IsIndexing}"
-                            ToolTip.Tip="Building the project object graph…">
+                            ToolTip.Tip="{l:Loc Status_BuildingGraph}">
                     <PathIcon Classes="buildSpinner" Data="{DynamicResource Icon.Loading}"
                               Width="12" Height="12" Foreground="Gray" RenderTransformOrigin="50%,50%" />
-                    <TextBlock Text="Indexing…" Foreground="Gray" FontSize="11" VerticalAlignment="Center" />
+                    <TextBlock Text="{l:Loc Status_Indexing}" Foreground="Gray" FontSize="11" VerticalAlignment="Center" />
                 </StackPanel>
 
                 <!-- Build result indicator: green check / red X + optional warning count (#7). -->
@@ -625,11 +626,11 @@
                     <PathIcon Data="{DynamicResource Icon.CheckCircle}" Width="13" Height="13"
                               Foreground="#2E7D32" VerticalAlignment="Center"
                               IsVisible="{Binding Build.LastBuildSucceeded}"
-                              ToolTip.Tip="Last build succeeded" />
+                              ToolTip.Tip="{l:Loc Status_LastBuildOk}" />
                     <PathIcon Data="{DynamicResource Icon.ErrorCircle}" Width="13" Height="13"
                               Foreground="#C62828" VerticalAlignment="Center"
                               IsVisible="{Binding !Build.LastBuildSucceeded}"
-                              ToolTip.Tip="Last build failed" />
+                              ToolTip.Tip="{l:Loc Status_LastBuildFail}" />
                     <PathIcon Data="{DynamicResource Icon.Warning}" Width="12" Height="12"
                               Foreground="#E65100" VerticalAlignment="Center" Margin="3,0,0,0"
                               IsVisible="{Binding Build.LastBuildHasWarnings}" />
@@ -642,7 +643,7 @@
                 <Button DockPanel.Dock="Left" Background="Transparent" BorderThickness="0" Padding="6,0"
                         Margin="8,0,0,0" Command="{Binding ToggleDiagnosticsCommand}" Cursor="Hand"
                         IsVisible="{Binding Diagnostics.HasProblems}"
-                        ToolTip.Tip="Open Diagnostics (F8: next, Shift+F8: previous)">
+                        ToolTip.Tip="{l:Loc Status_OpenDiag}">
                     <StackPanel Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
                         <PathIcon Data="{DynamicResource Icon.ErrorCircle}" Width="12" Height="12" Foreground="#C62828" />
                         <TextBlock Text="{Binding Diagnostics.ErrorCount}" FontSize="11" Foreground="Gray" VerticalAlignment="Center" />
@@ -696,31 +697,31 @@
 
                     <Border Classes="statusSep" />
                     <StackPanel Classes="statusGroup" Orientation="Horizontal" Spacing="3">
-                        <TextBlock Text="Length:" /><TextBlock Text="{Binding StatusLength}" />
+                        <TextBlock Text="{l:Loc Status_Length}" /><TextBlock Text="{Binding StatusLength}" />
                     </StackPanel>
                     <Border Classes="statusSep" />
                     <StackPanel Classes="statusGroup" Orientation="Horizontal" Spacing="3">
-                        <TextBlock Text="Lines:" /><TextBlock Text="{Binding StatusLines}" />
+                        <TextBlock Text="{l:Loc Status_Lines}" /><TextBlock Text="{Binding StatusLines}" />
                     </StackPanel>
                     <Border Classes="statusSep" />
                     <StackPanel Classes="statusGroup" Orientation="Horizontal" Spacing="3">
-                        <TextBlock Text="Line:" /><TextBlock Text="{Binding StatusCaretLine}" />
+                        <TextBlock Text="{l:Loc Status_Line}" /><TextBlock Text="{Binding StatusCaretLine}" />
                     </StackPanel>
                     <Border Classes="statusSep" />
                     <StackPanel Classes="statusGroup" Orientation="Horizontal" Spacing="3">
-                        <TextBlock Text="Col:" /><TextBlock Text="{Binding StatusCaretCol}" />
+                        <TextBlock Text="{l:Loc Status_Col}" /><TextBlock Text="{Binding StatusCaretCol}" />
                     </StackPanel>
                     <Border Classes="statusSep" />
                     <StackPanel Classes="statusGroup" Orientation="Horizontal" Spacing="3">
-                        <TextBlock Text="Pos:" /><TextBlock Text="{Binding StatusCaretPos}" />
+                        <TextBlock Text="{l:Loc Status_Pos}" /><TextBlock Text="{Binding StatusCaretPos}" />
                     </StackPanel>
                     <!-- QOL-06: selection stats (chars / lines), shown only with an active selection. -->
                     <Border Classes="statusSep" IsVisible="{Binding HasSelection}" />
                     <StackPanel Classes="statusGroup" Orientation="Horizontal" Spacing="3"
                                 IsVisible="{Binding HasSelection}">
-                        <TextBlock Text="Sel:" /><TextBlock Text="{Binding SelectionChars}" />
-                        <TextBlock Text="ch," /><TextBlock Text="{Binding SelectionLines}" />
-                        <TextBlock Text="ln" />
+                        <TextBlock Text="{l:Loc Status_Sel}" /><TextBlock Text="{Binding SelectionChars}" />
+                        <TextBlock Text="{l:Loc Status_Ch}" /><TextBlock Text="{Binding SelectionLines}" />
+                        <TextBlock Text="{l:Loc Status_Ln}" />
                     </StackPanel>
                     <Border Classes="statusSep" />
                     <StackPanel Classes="statusGroup" Orientation="Horizontal" Spacing="3">
@@ -770,7 +771,7 @@
                         </ResourceDictionary>
                     </Border.Resources>
                     <DockPanel>
-                        <TextBlock DockPanel.Dock="Top" Text="Open documents  —  Ctrl+Tab"
+                        <TextBlock DockPanel.Dock="Top" Text="{l:Loc Sw_OpenDocs}"
                                    Foreground="Gray" FontSize="11" Margin="8,4,8,6" />
                         <ItemsControl ItemsSource="{Binding DocumentSwitcher.Items}">
                             <ItemsControl.Styles>
@@ -826,7 +827,7 @@
                     <PathIcon Classes="spinner" Data="{DynamicResource Icon.Loading}"
                               Width="44" Height="44" Foreground="White"
                               HorizontalAlignment="Center" RenderTransformOrigin="50%,50%" />
-                    <TextBlock Text="Loading files…" Foreground="White" FontSize="14"
+                    <TextBlock Text="{l:Loc Loading_Files}" Foreground="White" FontSize="14"
                                HorizontalAlignment="Center" />
                 </StackPanel>
             </Border>

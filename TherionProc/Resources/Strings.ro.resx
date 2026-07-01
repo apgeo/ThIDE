@@ -264,4 +264,102 @@
   <data name="OB_Tab_Areas" xml:space="preserve"><value>Suprafețe</value></data>
   <data name="OB_Col_Equate" xml:space="preserve"><value>Echivalare</value></data>
   <data name="OB_CopyQName" xml:space="preserve"><value>Copiază numele calificat</value></data>
+  <!-- Main window: extra menus -->
+  <data name="Menu_File_ReopenTab" xml:space="preserve"><value>Redeschide fila închisă</value></data>
+  <data name="Menu_File_RecentDirectories" xml:space="preserve"><value>_Dosare recente</value></data>
+  <data name="Menu_View_Project" xml:space="preserve"><value>Proiect (Tablou de bord / Topografii / Audit)</value></data>
+  <data name="Menu_View_Log" xml:space="preserve"><value>Jurnal</value></data>
+  <data name="Menu_View_LivePreview" xml:space="preserve"><value>Previzualizare live</value></data>
+  <data name="Menu_View_MapViewer" xml:space="preserve"><value>Vizualizator hărți</value></data>
+  <data name="Menu_View_Model3D" xml:space="preserve"><value>Vizualizator 3D</value></data>
+  <data name="Menu_View_Structural" xml:space="preserve"><value>Geologie structurală</value></data>
+  <data name="Menu_View_Outline" xml:space="preserve"><value>Contur</value></data>
+  <data name="Menu_View_Whitespace" xml:space="preserve"><value>Spații albe</value></data>
+  <data name="Menu_View_ShowSpacesTabs" xml:space="preserve"><value>Arată spații și taburi</value></data>
+  <data name="Menu_View_ShowEol" xml:space="preserve"><value>Arată sfârșitul de linie</value></data>
+  <data name="Menu_View_ShowIndentGuides" xml:space="preserve"><value>Arată ghidajele de indentare</value></data>
+  <data name="Menu_View_ShowMinimap" xml:space="preserve"><value>Arată minimapa</value></data>
+  <data name="Menu_View_SplitEditor" xml:space="preserve"><value>Împarte editorul (fereastră)</value></data>
+  <data name="Menu_Tools" xml:space="preserve"><value>Unelte</value></data>
+  <data name="Menu_Tools_ImportSurvey" xml:space="preserve"><value>Importă topografie (Survex / Compass)…</value></data>
+  <data name="Menu_Tools_ImportDem" xml:space="preserve"><value>Importă DEM ca suprafață (.asc)…</value></data>
+  <data name="Menu_Tools_ImportGpx" xml:space="preserve"><value>Importă puncte GPX (→ fix)…</value></data>
+  <data name="Menu_Tools_ExportEntrances" xml:space="preserve"><value>Exportă intrări / puncte fixe</value></data>
+  <data name="Menu_Tools_ExportTable" xml:space="preserve"><value>Exportă tabel de date</value></data>
+  <data name="Menu_Tools_GenReport" xml:space="preserve"><value>Generează raport topografic (HTML)…</value></data>
+  <data name="Menu_Tools_NewScrap" xml:space="preserve"><value>Schiță nouă (.th2)…</value></data>
+  <data name="Menu_Tools_Calculators" xml:space="preserve"><value>Calculatoare</value></data>
+  <data name="Menu_Tools_UnitConverter" xml:space="preserve"><value>Convertor de unități…</value></data>
+  <data name="Menu_Tools_CoordConverter" xml:space="preserve"><value>Convertor de coordonate…</value></data>
+  <data name="Menu_Tools_DeclinationCalc" xml:space="preserve"><value>Calculator de declinație…</value></data>
+  <data name="Menu_Tools_EntrancesFixed" xml:space="preserve"><value>Intrări / puncte fixe</value></data>
+  <data name="Menu_Tools_StationTable" xml:space="preserve"><value>Tabel stații</value></data>
+  <data name="Menu_Tools_ShotTable" xml:space="preserve"><value>Tabel vizări</value></data>
+  <data name="Menu_Build_Target" xml:space="preserve"><value>Compilează ținta</value></data>
+  <data name="Menu_Build_QuickExport" xml:space="preserve"><value>Export rapid…</value></data>
+  <data name="Menu_Build_SurvexTools" xml:space="preserve"><value>Unelte Survex (.3d)</value></data>
+  <data name="Menu_Build_Dump3d" xml:space="preserve"><value>dump3d (dump text)</value></data>
+  <data name="Menu_Build_Extend" xml:space="preserve"><value>extend (elevație extinsă)</value></data>
+  <data name="Menu_Build_TherionInfo" xml:space="preserve"><value>Informații Therion</value></data>
+  <data name="Menu_Build_PrintVersion" xml:space="preserve"><value>Afișează versiunea</value></data>
+  <data name="Menu_Build_PrintEnv" xml:space="preserve"><value>Afișează mediul</value></data>
+  <!-- Document tab context menu (UX-10) -->
+  <data name="Tab_Pin" xml:space="preserve"><value>Fixează fila</value></data>
+  <data name="Tab_Unpin" xml:space="preserve"><value>Anulează fixarea filei</value></data>
+  <data name="Tab_Close" xml:space="preserve"><value>Închide</value></data>
+  <data name="Tab_CloseOthers" xml:space="preserve"><value>Închide celelalte</value></data>
+  <data name="Tab_CloseRight" xml:space="preserve"><value>Închide filele din dreapta</value></data>
+  <data name="Tab_CloseAll" xml:space="preserve"><value>Închide toate</value></data>
+  <data name="Tab_Float" xml:space="preserve"><value>Desprinde</value></data>
+  <data name="Ctx_CopyName" xml:space="preserve"><value>Copiază numele fișierului</value></data>
+  <!-- Toolbar tooltips -->
+  <data name="Tb_OpenFile" xml:space="preserve"><value>Deschide fișier (Ctrl+O)</value></data>
+  <data name="Tb_OpenThconfig" xml:space="preserve"><value>Deschide thconfig</value></data>
+  <data name="Tb_OpenFolder" xml:space="preserve"><value>Deschide dosar</value></data>
+  <data name="Tb_Back" xml:space="preserve"><value>Înapoi (Alt+Stânga)</value></data>
+  <data name="Tb_Forward" xml:space="preserve"><value>Înainte (Alt+Dreapta)</value></data>
+  <data name="Tb_Save" xml:space="preserve"><value>Salvează (Ctrl+S)</value></data>
+  <data name="Tb_Cut" xml:space="preserve"><value>Decupează (Ctrl+X)</value></data>
+  <data name="Tb_Copy" xml:space="preserve"><value>Copiază (Ctrl+C)</value></data>
+  <data name="Tb_Paste" xml:space="preserve"><value>Lipește (Ctrl+V)</value></data>
+  <data name="Tb_FindInFiles" xml:space="preserve"><value>Caută în fișiere (Ctrl+Shift+F)</value></data>
+  <data name="Tb_RenameSymbol" xml:space="preserve"><value>Redenumește simbolul (F2)</value></data>
+  <data name="Tb_GoToFile" xml:space="preserve"><value>Salt la fișier (Ctrl+P)</value></data>
+  <data name="Tb_GoToAction" xml:space="preserve"><value>Salt la acțiune — Paletă de comenzi (Ctrl+Shift+P)</value></data>
+  <data name="Tb_GoToSymbolWs" xml:space="preserve"><value>Salt la simbol în spațiul de lucru</value></data>
+  <data name="Tb_GoToSymbolDoc" xml:space="preserve"><value>Salt la simbol în document</value></data>
+  <data name="Tb_Import" xml:space="preserve"><value>Importă topografie / DEM / GPX</value></data>
+  <data name="Tb_Export" xml:space="preserve"><value>Exportă intrări / tabele de date</value></data>
+  <data name="Tb_GenReport" xml:space="preserve"><value>Generează raport topografic (HTML)</value></data>
+  <data name="Tb_NewScrap" xml:space="preserve"><value>Schiță nouă (.th2)</value></data>
+  <data name="Tb_OpenLoch" xml:space="preserve"><value>Deschide în Loch (F9)</value></data>
+  <data name="Tb_OpenAven" xml:space="preserve"><value>Deschide în Aven (F10)</value></data>
+  <data name="Tb_WordWrap" xml:space="preserve"><value>Încadrare text</value></data>
+  <data name="Tb_FullScreen" xml:space="preserve"><value>Ecran complet (F11)</value></data>
+  <data name="Tb_Layout" xml:space="preserve"><value>Aranjament</value></data>
+  <data name="Tb_Notifications" xml:space="preserve"><value>Notificări</value></data>
+  <data name="Tb_Compile" xml:space="preserve"><value>Compilează (F5)</value></data>
+  <data name="Tb_CancelCompile" xml:space="preserve"><value>Anulează compilarea (Shift+F5)</value></data>
+  <data name="Tb_RelationalMap" xml:space="preserve"><value>Hartă relațională</value></data>
+  <data name="Tb_ShowOutputs" xml:space="preserve"><value>Afișează Fișiere generate și prima comandă „export model”</value></data>
+  <data name="Layout_FloatActive" xml:space="preserve"><value>Desprinde documentul activ</value></data>
+  <data name="Layout_Reset" xml:space="preserve"><value>Resetează la aranjamentul implicit</value></data>
+  <data name="Notif_Empty" xml:space="preserve"><value>Nicio notificare încă.</value></data>
+  <!-- Status bar -->
+  <data name="Status_Length" xml:space="preserve"><value>Lungime:</value></data>
+  <data name="Status_Lines" xml:space="preserve"><value>Linii:</value></data>
+  <data name="Status_Line" xml:space="preserve"><value>Linie:</value></data>
+  <data name="Status_Col" xml:space="preserve"><value>Col:</value></data>
+  <data name="Status_Pos" xml:space="preserve"><value>Poz:</value></data>
+  <data name="Status_Sel" xml:space="preserve"><value>Sel:</value></data>
+  <data name="Status_Ch" xml:space="preserve"><value>car,</value></data>
+  <data name="Status_Ln" xml:space="preserve"><value>ln</value></data>
+  <data name="Status_Indexing" xml:space="preserve"><value>Indexare…</value></data>
+  <data name="Status_BuildInProgress" xml:space="preserve"><value>Compilare în curs…</value></data>
+  <data name="Status_BuildingGraph" xml:space="preserve"><value>Se construiește graful de obiecte al proiectului…</value></data>
+  <data name="Status_LastBuildOk" xml:space="preserve"><value>Ultima compilare a reușit</value></data>
+  <data name="Status_LastBuildFail" xml:space="preserve"><value>Ultima compilare a eșuat</value></data>
+  <data name="Status_OpenDiag" xml:space="preserve"><value>Deschide Diagnostice (F8: următor, Shift+F8: anterior)</value></data>
+  <data name="Sw_OpenDocs" xml:space="preserve"><value>Documente deschise  —  Ctrl+Tab</value></data>
+  <data name="Loading_Files" xml:space="preserve"><value>Se încarcă fișierele…</value></data>
 </root>
