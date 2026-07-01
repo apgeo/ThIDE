@@ -13,11 +13,9 @@ public partial class ReplaceWindow : Window
     public ReplaceWindow()
     {
         InitializeComponent();
-        Opened += (_, _) =>
-        {
-            (DataContext as ReplaceInFilesViewModel)?.PrepareDefaults();
-            this.FindControl<TextBox>("QueryBox")?.Focus();
-        };
+        // Seeding (selection → Find All, or previous query) + status reset is done by the opener via
+        // PrepareForOpenAsync; here we just move focus to the Find box.
+        Opened += (_, _) => this.FindControl<TextBox>("QueryBox")?.Focus();
         // Esc closes the window (mirrors Find in Files, #8/#9). Tunnel so it fires even while a
         // TextBox holds focus.
         AddHandler(KeyDownEvent, OnPreviewKeyDown, RoutingStrategies.Tunnel);

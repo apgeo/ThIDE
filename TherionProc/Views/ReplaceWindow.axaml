@@ -5,7 +5,7 @@
         xmlns:l="using:TherionProc.Resources"
         x:Class="TherionProc.Views.ReplaceWindow"
         x:DataType="vm:ReplaceInFilesViewModel"
-        Width="620" Height="680"
+        Width="1240" Height="680"
         WindowStartupLocation="CenterOwner"
         Title="{l:Loc Replace_Title}">
     <DockPanel Margin="10">
@@ -26,6 +26,9 @@
                 <Button Content="{l:Loc Search_FindAll}" Command="{Binding FindAllCommand}" />
                 <Button Content="{l:Loc Replace_ReplaceAll}" Command="{Binding ReplaceAllCommand}" IsDefault="True"
                         Background="#C62828" Foreground="White" />
+                <!-- Global (cross-file) undo/redo of the whole Replace-All operation. -->
+                <Button Content="{l:Loc Common_Undo}" Command="{Binding UndoCommand}" ToolTip.Tip="{l:Loc Replace_UndoTip}" />
+                <Button Content="{l:Loc Common_Redo}" Command="{Binding RedoCommand}" ToolTip.Tip="{l:Loc Replace_RedoTip}" />
             </StackPanel>
 
             <Grid ColumnDefinitions="Auto,*,Auto,160" RowDefinitions="Auto"

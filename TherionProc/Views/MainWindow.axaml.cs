@@ -501,15 +501,24 @@ public partial class MainWindow : Window
 
     private void ShowReplace()
     {
-        if (_replaceWindow is { } w && w.IsVisible) { w.Activate(); return; }
-
         ViewModels.ReplaceInFilesViewModel? vm = null;
         try { vm = AppServices.Provider.GetService<ViewModels.ReplaceInFilesViewModel>(); }
         catch { /* design-time / no container */ }
         if (vm is null) return;
 
+        // Seed from the editor selection (auto Find All), else keep the previous query; clears old status.
+        var selection = ActiveEditor?.SelectedText;
+
+        if (_replaceWindow is { } w && w.IsVisible)
+        {
+            w.Activate();
+            _ = vm.PrepareForOpenAsync(selection);
+            return;
+        }
+
         _replaceWindow = new ReplaceWindow { DataContext = vm };
         _replaceWindow.Closed += (_, _) => _replaceWindow = null;
+        _ = vm.PrepareForOpenAsync(selection);
         _replaceWindow.Show(this);
     }
 

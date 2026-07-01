@@ -47,6 +47,26 @@ public sealed partial class ReplaceInFilesViewModel : ViewModelBase
 
     public ReplaceInFilesViewModel(IDocumentService documents) => _documents = documents;
 
+    /// <summary>
+    /// Prepares the panel each time it is opened: clears any stale status/results and seeds the search
+    /// directory. When the editor had a selection, it is put in the Find box and Find All runs at once
+    /// (like pressing the button); with no selection the previous query is kept (and not re-run).
+    /// </summary>
+    public async Task PrepareForOpenAsync(string? selection)
+    {
+        PrepareDefaults();
+        Status = string.Empty;
+        if (!string.IsNullOrEmpty(selection))
+        {
+            Query = selection;
+            await FindAll().ConfigureAwait(true);
+        }
+        else
+        {
+            Results = Array.Empty<SearchHit>();
+        }
+    }
+
     /// <summary>Seeds the default search directory (the active project's root folder).</summary>
     public void PrepareDefaults()
     {
@@ -91,6 +111,17 @@ public sealed partial class ReplaceInFilesViewModel : ViewModelBase
             : $"{hits.Count} matches in {fileCount} files";
     }
 
+    /// <summary>One file's before/after content in a replace batch (for global undo/redo).</summary>
+    private sealed record ReplaceEdit(string Path, string OldText, string NewText, int Count);
+
+    // Global (cross-file) undo/redo stacks for whole Replace-All operations. Each entry reverts/re-applies
+    // every file the operation touched, so a project-wide replace is a single reversible step.
+    private readonly Stack<IReadOnlyList<ReplaceEdit>> _undo = new();
+    private readonly Stack<IReadOnlyList<ReplaceEdit>> _redo = new();
+
+    public bool CanUndo => _undo.Count > 0;
+    public bool CanRedo => _redo.Count > 0;
+
     [RelayCommand]
     private async Task ReplaceAll()
     {
@@ -102,10 +133,11 @@ public sealed partial class ReplaceInFilesViewModel : ViewModelBase
         var replacement = Replacement;
         bool useRegexReplacement = UseRegex; // honour $1/$& substitutions only in regex mode
 
-        // Compute the new text per file off the UI thread; collect what actually changed.
+        // Compute the new text per file off the UI thread; collect what actually changed (with the
+        // old text so the whole batch can be undone/redone).
         var changes = await Task.Run(() =>
         {
-            var list = new List<(string Path, string NewText, int Count)>();
+            var list = new List<ReplaceEdit>();
             foreach (var path in paths.Distinct(StringComparer.OrdinalIgnoreCase))
             {
                 string? text = openText.TryGetValue(path, out var t) ? t : ReadFile(path);
@@ -116,30 +148,78 @@ public sealed partial class ReplaceInFilesViewModel : ViewModelBase
                     ? regex.Replace(text, replacement)
                     : regex.Replace(text, _ => replacement); // literal replacement (no $-expansion)
                 if (!string.Equals(newText, text, StringComparison.Ordinal))
-                    list.Add((path, newText, count));
+                    list.Add(new ReplaceEdit(path, text, newText, count));
             }
             return list;
         }).ConfigureAwait(true);
 
-        int fileCount = 0, total = 0;
-        foreach (var (path, newText, count) in changes)
+        int fileCount = ApplyEdits(changes.Select(c => (c.Path, c.NewText)));
+        int total = changes.Sum(c => c.Count);
+
+        if (changes.Count > 0)
         {
-            // Live editor buffer takes precedence: update the open document (reflected + reparsed)
-            // and persist it; otherwise write the file on disk directly.
+            _undo.Push(changes);   // a new operation invalidates the redo history
+            _redo.Clear();
+            NotifyHistory();
+        }
+
+        // Re-search for the replacement so the list shows where it landed (like Find All on the new value).
+        var summary = $"Replaced {total} occurrence(s) in {fileCount} file(s).";
+        Query = Replacement;
+        await FindAll().ConfigureAwait(true);
+        Status = summary;
+    }
+
+    /// <summary>Reverts the last Replace-All (restores every file's previous content), keeping it redoable.</summary>
+    [RelayCommand(CanExecute = nameof(CanUndo))]
+    private void Undo()
+    {
+        if (_undo.Count == 0) return;
+        var batch = _undo.Pop();
+        int n = ApplyEdits(batch.Select(e => (e.Path, e.OldText)));
+        _redo.Push(batch);
+        NotifyHistory();
+        Status = $"Undid replace in {n} file(s).";
+    }
+
+    /// <summary>Re-applies the last undone Replace-All across every file it touched.</summary>
+    [RelayCommand(CanExecute = nameof(CanRedo))]
+    private void Redo()
+    {
+        if (_redo.Count == 0) return;
+        var batch = _redo.Pop();
+        int n = ApplyEdits(batch.Select(e => (e.Path, e.NewText)));
+        _undo.Push(batch);
+        NotifyHistory();
+        Status = $"Redid replace in {n} file(s).";
+    }
+
+    // Writes each (path, text): the live editor buffer takes precedence (reflected + reparsed) and is
+    // persisted; otherwise the file is written on disk directly. Returns the number of files written.
+    private int ApplyEdits(IEnumerable<(string Path, string Text)> edits)
+    {
+        int fileCount = 0;
+        foreach (var (path, text) in edits)
+        {
             var openDoc = _documents.Documents.FirstOrDefault(d =>
                 string.Equals(d.FilePath, path, StringComparison.OrdinalIgnoreCase));
             try
             {
-                File.WriteAllText(path, newText);
-                openDoc?.SetText(newText, reparse: true);
+                File.WriteAllText(path, text);
+                openDoc?.SetText(text, reparse: true);
                 fileCount++;
-                total += count;
             }
             catch { /* skip files that fail to write (locked / read-only) */ }
         }
+        return fileCount;
+    }
 
-        Results = Array.Empty<SearchHit>();
-        Status = $"Replaced {total} occurrence(s) in {fileCount} file(s).";
+    private void NotifyHistory()
+    {
+        OnPropertyChanged(nameof(CanUndo));
+        OnPropertyChanged(nameof(CanRedo));
+        UndoCommand.NotifyCanExecuteChanged();
+        RedoCommand.NotifyCanExecuteChanged();
     }
 
     [RelayCommand]

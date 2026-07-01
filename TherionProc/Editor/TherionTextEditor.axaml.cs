@@ -2931,6 +2931,9 @@ public partial class TherionTextEditor : UserControl
 
     // ----- public menu surface (shell Edit/Search menus mirror the context menu, #11/#12) ----
 
+    /// <summary>The current editor selection (empty when nothing is selected); seeds Find/Replace.</summary>
+    public string SelectedText => _editor?.SelectedText ?? string.Empty;
+
     public void MenuCut() => CutSelection();
     public void MenuCopy() => CopySelection();
     public void MenuPaste() => _ = PasteAsync();
