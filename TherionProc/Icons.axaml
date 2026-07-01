@@ -52,4 +52,5 @@
     <StreamGeometry x:Key="Icon.FolderOutput">M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-6.99 10v-3H9v-2h4.01V8l3.49 4-3.49 4z</StreamGeometry>
     <StreamGeometry x:Key="Icon.Layout">M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z</StreamGeometry>
     <StreamGeometry x:Key="Icon.AccountTree">M22 11V3h-7v3H9V3H2v8h7V8h2v10h4v3h7v-8h-7v3h-2V8h2v3z</StreamGeometry>
+    <StreamGeometry x:Key="Icon.Spellcheck">M12.45 16h2.09L9.43 3H7.57L2.46 16h2.09l1.12-3h5.64l1.14 3zm-6.02-5L8.5 5.48 10.57 11H6.43zm15.16.59l-8.09 8.09L9.83 16l-1.41 1.41 3.09 3.09 9.5-9.5z</StreamGeometry>
 </ResourceDictionary>

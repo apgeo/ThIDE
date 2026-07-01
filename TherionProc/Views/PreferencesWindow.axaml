@@ -149,6 +149,10 @@
                               IsChecked="{Binding ShowRenamePreviewBeforeApply}" />
                     <CheckBox Content="{l:Loc Pref_FormatOnSave}"
                               IsChecked="{Binding FormatOnSave}" />
+                    <CheckBox Content="{l:Loc Pref_ValidateOnType}"
+                              IsChecked="{Binding ValidateOnType}" />
+                    <TextBlock Text="{l:Loc Pref_ValidateOnTypeHelp}"
+                               Foreground="Gray" FontSize="11" TextWrapping="Wrap" Margin="24,0,0,0" />
                 </StackPanel>
 
                 <!-- Editor Features (Section B / EDIT-*) -->

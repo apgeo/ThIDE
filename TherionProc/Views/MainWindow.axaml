@@ -472,6 +472,10 @@
                 <ToggleButton Classes="tool" IsChecked="{Binding WordWrap, Mode=TwoWay}" ToolTip.Tip="{l:Loc Tb_WordWrap}">
                     <PathIcon Data="{DynamicResource Icon.WordWrap}" />
                 </ToggleButton>
+                <!-- Live validate-on-type push-switch: re-validate the whole project from unsaved buffers as you type. -->
+                <ToggleButton Classes="tool" IsChecked="{Binding ValidateOnType, Mode=TwoWay}" ToolTip.Tip="{l:Loc Tb_ValidateOnType}">
+                    <PathIcon Data="{DynamicResource Icon.Spellcheck}" />
+                </ToggleButton>
                 <Button Classes="tool" Click="OnToggleFullScreen" ToolTip.Tip="{l:Loc Tb_FullScreen}">
                     <PathIcon Data="{DynamicResource Icon.FullScreen}" />
                 </Button>

@@ -144,6 +144,14 @@ public partial class MainWindowViewModel : ViewModelBase
         if (_settings is { } s) s.Save(s.Current with { EditorWordWrap = value });
     }
 
+    /// <summary>Validate-on-type toggle: re-validate the whole project from unsaved buffers as you type
+    /// (debounced), not just on save. Persisted; also editable in Preferences.</summary>
+    [ObservableProperty] private bool _validateOnType;
+    partial void OnValidateOnTypeChanged(bool value)
+    {
+        if (_settings is { } s && s.Current.ValidateOnType != value) s.Save(s.Current with { ValidateOnType = value });
+    }
+
     // ---- EDIT-13: whitespace / EOL / indent-guide render toggles (View menu) ----
     /// <summary>True when EDIT-13 is enabled (compile-time flag + runtime setting) — gates the View-menu items.</summary>
     public bool WhitespaceFeatureEnabled =>
@@ -473,6 +481,7 @@ public partial class MainWindowViewModel : ViewModelBase
         _settings = settings;
         _session = session;
         _wordWrap = settings?.Current.EditorWordWrap ?? false; // seed without persisting
+        _validateOnType = settings?.Current.ValidateOnType ?? false;   // seed without persisting
         _showWhitespace = settings?.Current.EditorShowWhitespace ?? false;   // EDIT-13 (seed, no persist)
         _showEndOfLine = settings?.Current.EditorShowEndOfLine ?? false;
         _showIndentGuides = settings?.Current.EditorShowIndentGuides ?? false;
@@ -532,6 +541,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 OnPropertyChanged(nameof(MapViewerEnabled));
                 OnPropertyChanged(nameof(Model3DViewerEnabled));
                 OnPropertyChanged(nameof(StructuralGeologyEnabled));   // STRUCT-01 menu gate
+                ValidateOnType = _settings.Current.ValidateOnType;     // keep the toolbar toggle in sync with Preferences
                 ConfigureAutoSave();   // QOL-09
             });
             ConfigureAutoSave();   // QOL-09 (apply persisted mode at startup)
@@ -542,6 +552,9 @@ public partial class MainWindowViewModel : ViewModelBase
         if (_session is not null)
         {
             _session.Changed += (_, _) => OnUiThread(Refresh);          // active config / graph (#7)
+            // ValidateOnType: a live buffer re-validation refreshes the Diagnostics panel from the new
+            // graph (project scope) without the full Refresh/tree rebuild that Changed drives.
+            _session.BuffersRevalidated += (_, _) => OnUiThread(RefreshDiagnostics);
             _session.CandidatesChanged += (_, _) => OnUiThread(Refresh);
             // PERF-02: mirror the background-indexing state for the status-bar indicator.
             _session.IndexingChanged += (_, _) => OnUiThread(() => IsIndexing = _session.IsIndexing);

@@ -44,6 +44,10 @@ public interface IWorkspaceSession : IAsyncDisposable
 
     /// <summary>Raised after the object graph (<see cref="Model"/>) is rebuilt.</summary>
     event EventHandler? Changed;
+    /// <summary>Raised after <see cref="RevalidateBuffersAsync"/> rebuilds the graph from unsaved buffers
+    /// (a lighter signal than <see cref="Changed"/>: it drives diagnostics/squiggles without the heavier
+    /// full-UI refresh such as rebuilding the workspace tree).</summary>
+    event EventHandler? BuffersRevalidated;
     /// <summary>Raised when <see cref="RootPath"/> changes.</summary>
     event EventHandler? RootChanged;
     /// <summary>Raised when the thconfig candidate list changes.</summary>
@@ -63,6 +67,13 @@ public interface IWorkspaceSession : IAsyncDisposable
     Task<bool> SetActiveThconfigAsync(string thconfigPath, CancellationToken ct = default);
     /// <summary>Establishes a workspace for a directly-opened file when none exists yet.</summary>
     Task EnsureCoversAsync(string filePath, CancellationToken ct = default);
+    /// <summary>
+    /// Live "validate on type": rebuilds the object graph with the given unsaved editor buffers overlaid
+    /// on the on-disk files (only files already in the graph are overlaid). Files previously overlaid but
+    /// no longer supplied here (saved / closed) are restored from disk. Raises
+    /// <see cref="BuffersRevalidated"/> rather than <see cref="Changed"/>.
+    /// </summary>
+    Task RevalidateBuffersAsync(IReadOnlyList<(string Path, string Text)> buffers, CancellationToken ct = default);
     /// <summary>Adds an open thconfig located outside the root to the candidate list (#3).</summary>
     void RegisterExternalThconfig(string thconfigPath);
     /// <summary>True when <paramref name="filePath"/> participates in the active object graph (#4).</summary>
@@ -101,6 +112,7 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
     }
 
     public event EventHandler? Changed;
+    public event EventHandler? BuffersRevalidated;
     public event EventHandler? RootChanged;
     public event EventHandler? CandidatesChanged;
     public event EventHandler<ExternalFileChange>? ExternalFileChanged;
@@ -280,6 +292,49 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
         _log?.Info($"Active thconfig: {full} ({model.PerFile.Count} .th file(s) loaded)");
         Raise();
         return true;
+    }
+
+    // Files currently overlaid with an unsaved buffer (so they can be restored from disk later).
+    private readonly HashSet<string> _bufferOverlaid = new(StringComparer.OrdinalIgnoreCase);
+
+    public async Task RevalidateBuffersAsync(IReadOnlyList<(string Path, string Text)> buffers, CancellationToken ct = default)
+    {
+        TherionWorkspace? ws;
+        lock (_gate) ws = _workspace;
+        if (ws is null) return;
+        if (buffers.Count == 0 && _bufferOverlaid.Count == 0) return;   // nothing dirty and no overlay to undo
+
+        SetIndexing(true);
+        try
+        {
+            WorkspaceSemanticModel model;
+            try
+            {
+                model = await Task.Run(() =>
+                {
+                    var loaded = new HashSet<string>(ws.LoadedFiles, StringComparer.OrdinalIgnoreCase);
+                    var current = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    foreach (var (path, _) in buffers) current.Add(TryFull(path));
+
+                    // Drop overlays no longer supplied (the buffer was saved or its tab closed).
+                    foreach (var prev in _bufferOverlaid.ToList())
+                        if (!current.Contains(prev)) { ws.ReloadFileFromDisk(prev); _bufferOverlaid.Remove(prev); }
+
+                    foreach (var (path, text) in buffers)
+                    {
+                        var full = TryFull(path);
+                        if (loaded.Contains(full)) { ws.UpdateFileFromText(full, text); _bufferOverlaid.Add(full); }
+                    }
+                    return ws.BuildSemanticModel();
+                }, ct).ConfigureAwait(false);
+            }
+            catch { return; }
+
+            lock (_gate) { if (!ReferenceEquals(_workspace, ws)) return; Model = model; }
+            UpdateSymbolIndex(model);
+            BuffersRevalidated?.Invoke(this, EventArgs.Empty);
+        }
+        finally { SetIndexing(false); }
     }
 
     public async Task EnsureCoversAsync(string filePath, CancellationToken ct = default)

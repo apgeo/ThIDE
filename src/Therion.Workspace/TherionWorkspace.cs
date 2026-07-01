@@ -131,9 +131,16 @@ public sealed class TherionWorkspace : IWorkspace
         if (!_options.DisableDiskCache && _cache.TryGet(key, out var cached))
             return cached;
 
-        var text = File.ReadAllText(path);
+        var result = ParseText(path, File.ReadAllText(path));
+        _cache.Set(key, result);
+        return result;
+    }
+
+    /// <summary>Parses <paramref name="text"/> as the file <paramref name="path"/> (by extension), without touching disk or the cache.</summary>
+    private static ParseResult<TherionFile> ParseText(string path, string text)
+    {
         var ext = Path.GetExtension(path).ToLowerInvariant();
-        ParseResult<TherionFile> result = ext switch
+        return ext switch
         {
             ".th2"      => new Th2Parser().Parse(path, text),
             ".thconfig" => new ThconfigParser().Parse(path, text),
@@ -141,9 +148,28 @@ public sealed class TherionWorkspace : IWorkspace
             ".th"       => new ThParser().Parse(path, text),
             _           => ProbeAndParse(path, text),
         };
+    }
 
-        _cache.Set(key, result);
-        return result;
+    /// <summary>
+    /// Overlays an in-memory buffer for an already-loaded file (live "validate on type"): the file's
+    /// parsed snapshot is replaced with the parse of <paramref name="text"/>, bypassing disk and the
+    /// cache, so the next <see cref="BuildSemanticModel"/> reflects the unsaved edits. Call
+    /// <see cref="ReloadFileFromDisk"/> to drop the overlay again.
+    /// </summary>
+    public void UpdateFileFromText(string path, string text)
+    {
+        var full = Path.GetFullPath(path);
+        var result = ParseText(full, text);
+        lock (_gate) _files[full] = result;
+    }
+
+    /// <summary>Re-parses <paramref name="path"/> from disk (cache-backed), undoing any buffer overlay.</summary>
+    public void ReloadFileFromDisk(string path)
+    {
+        var full = Path.GetFullPath(path);
+        if (!File.Exists(full)) return;
+        var result = ParseFile(full);
+        lock (_gate) _files[full] = result;
     }
 
     private static ParseResult<TherionFile> ProbeAndParse(string path, string text)

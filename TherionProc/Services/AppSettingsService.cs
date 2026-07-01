@@ -253,6 +253,13 @@ public sealed record AppSettings
     /// <summary>Run "Format Document" (EDIT-04) automatically on save.</summary>
     public bool EditorFormatOnSave { get; init; }
 
+    /// <summary>
+    /// Re-validate the whole project object graph from the unsaved editor buffers as you type
+    /// (debounced), instead of only on save. Off by default — it re-analyses the project on every
+    /// typing pause, which can be heavy on large projects.
+    /// </summary>
+    public bool ValidateOnType { get; init; }
+
     /// <summary>Show the code minimap (EDIT-07; View-menu toggle, gated by the EDIT-07 feature).</summary>
     public bool EditorShowMinimap { get; init; }
 

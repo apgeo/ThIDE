@@ -68,6 +68,7 @@ public partial class PreferencesViewModel : ObservableObject
     [ObservableProperty] private bool _highlightCurrentLine;
     [ObservableProperty] private bool _convertTabsToSpaces;
     [ObservableProperty] private bool _formatOnSave; // EDIT-04
+    [ObservableProperty] private bool _validateOnType; // live whole-project validation while typing
 
     // ---- workspace ----
     [ObservableProperty] private bool _autoReloadExternalChanges;
@@ -170,6 +171,7 @@ public partial class PreferencesViewModel : ObservableObject
         _highlightCurrentLine = s.HighlightCurrentLine;
         _convertTabsToSpaces = s.ConvertTabsToSpaces;
         _formatOnSave = s.EditorFormatOnSave;
+        _validateOnType = s.ValidateOnType;
         _autoReloadExternalChanges = s.AutoReloadExternalChanges;
         _autoReloadGraphOnExternalChange = s.AutoReloadGraphOnExternalChange;
         _quickOpenThconfigScope = s.QuickOpenSources.HasFlag(QuickOpenSources.ThconfigConnected)
@@ -320,6 +322,7 @@ public partial class PreferencesViewModel : ObservableObject
             HighlightCurrentLine = HighlightCurrentLine,
             ConvertTabsToSpaces = ConvertTabsToSpaces,
             EditorFormatOnSave = FormatOnSave,
+            ValidateOnType = ValidateOnType,
             AutoReloadExternalChanges = AutoReloadExternalChanges,
             AutoReloadGraphOnExternalChange = AutoReloadGraphOnExternalChange,
             QuickOpenSources = QuickOpenThconfigScope

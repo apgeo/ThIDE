@@ -198,6 +198,9 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
         // The graph changed (active config switched, or a tracked file changed on disk):
         // re-attach it to every open document and refresh orphan banners (#4).
         _session.Changed += (_, _) => { PropagateWorkspaceToDocuments(); Raise(); };
+        // ValidateOnType: a live buffer re-validation updates each doc's cross-file diagnostics/navigation
+        // without the heavier full refresh that Changed triggers (no workspace-tree rebuild on every keystroke).
+        _session.BuffersRevalidated += (_, _) => PropagateWorkspaceToDocuments();
         // A tracked file changed on disk while open → drive the editor reload banner (#6).
         _session.ExternalFileChanged += (_, e) => OnExternalFileChanged(e);
     }
@@ -290,6 +293,33 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
     {
         // Snapshot: this can run off a session-changed callback while documents open/close.
         foreach (var d in Documents.ToList()) { d.SetWorkspace(Workspace); UpdateMembership(d); }
+    }
+
+    // ---- ValidateOnType: live whole-project re-validation from unsaved buffers -------------------
+
+    private CancellationTokenSource? _validateOnTypeCts;
+
+    /// <summary>Debounced trigger: re-validate the graph against the current unsaved buffers.</summary>
+    private void ScheduleValidateOnType()
+    {
+        if (_settings?.Current.ValidateOnType != true) return;
+        _validateOnTypeCts?.Cancel();
+        var cts = _validateOnTypeCts = new CancellationTokenSource();
+        _ = RunValidateOnTypeAsync(cts.Token);
+    }
+
+    private async Task RunValidateOnTypeAsync(CancellationToken ct)
+    {
+        try { await Task.Delay(600, ct).ConfigureAwait(false); } catch { return; }
+        if (ct.IsCancellationRequested) return;
+
+        // Overlay every open, dirty, in-graph document; the session restores the rest from disk.
+        var buffers = Documents
+            .Where(d => d.IsDirty && _session.Covers(d.FilePath))
+            .Select(d => (d.FilePath, d.DocumentText))
+            .ToList();
+        try { await _session.RevalidateBuffersAsync(buffers, ct).ConfigureAwait(false); }
+        catch { /* best-effort live validation */ }
     }
 
     /// <summary>Flags a document's orphan banner: true when it isn't in the active graph (#4).</summary>
@@ -440,7 +470,11 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
         return doc;
     }
 
-    public void CloseDocument(FileDocumentViewModel document) => OnClosed(document);
+    public void CloseDocument(FileDocumentViewModel document)
+    {
+        OnClosed(document);
+        ScheduleValidateOnType();   // drop any buffer overlay for the closed doc (restore it from disk)
+    }
 
     public void Close()
     {
@@ -478,6 +512,9 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
     {
         var doc = new FileDocumentViewModel(path, text, new ViewModels.MeasurementsViewModel(), _commands, _settings);
         doc.Reparsed += (_, _) => { if (ReferenceEquals(doc, Active)) Raise(); };
+        // ValidateOnType: after a per-file re-parse, (debounced) re-validate the whole object graph
+        // against every unsaved buffer, so cross-file/project diagnostics track typing, not just saves.
+        doc.Reparsed += (_, _) => ScheduleValidateOnType();
         // TRUST-05: "Keep mine (save to disk)" — write the editor text to disk (overwrite the
         // external change or recreate a deleted file), suppressing the self-write watcher echo.
         doc.SaveToDiskRequested += async (_, _) => await OverwriteToDiskAsync(doc).ConfigureAwait(true);
