@@ -12,6 +12,7 @@ using System.Windows.Input;
 using Therion.Core;
 using Therion.Semantics;
 using TherionProc.Editor;
+using TherionProc.Resources;
 using TherionProc.Services;
 using TherionProc.ViewModels.QuickPick;
 
@@ -41,12 +42,15 @@ public sealed class CommandPaletteProvider
         _stationLimit = stationLimit > 0 ? stationLimit : int.MaxValue;
     }
 
+    // Localized string lookup (Strings.resx / .ro.resx).
+    private static string L(string key) => Tr.Get(key);
+
     public QuickPickViewModel CreatePalette(string initialText = "")
     {
         var commands = BuildCommands();
         return new QuickPickViewModel(
-            "Command Palette",
-            "Type a command…   (@ document symbol · # workspace symbol · :42 go to line)",
+            L("Cmd_Title"),
+            L("Cmd_Watermark"),
             text => Route(commands, text),
             initialText);
     }
@@ -64,8 +68,8 @@ public sealed class CommandPaletteProvider
 
     private static QuickPickItem GoToLineItem(int line) => new()
     {
-        Title = $"Go to line {line}",
-        Detail = "navigate",
+        Title = string.Format(L("Cmd_GoToLineFmt"), line),
+        Detail = L("Cmd_Cat_Navigate"),
         IconKey = "Icon.Search",
         Run = () => { if (TherionTextEditor.LastFocused is { } ed) ed.GoToLine(line); return Task.CompletedTask; },
     };
@@ -75,123 +79,123 @@ public sealed class CommandPaletteProvider
         var list = new List<QuickPickItem>();
 
         // ---- File ----
-        list.Add(VmCmd("File", "Open File…", _vm.OpenFileCommand, "Icon.File"));
-        list.Add(VmCmd("File", "Open thconfig…", _vm.OpenThconfigCommand, "Icon.Config"));
-        list.Add(VmCmd("File", "Open Folder…", _vm.OpenFolderCommand, "Icon.FolderOpen"));
-        list.Add(VmCmd("File", "Save", _vm.SaveCommand, "Icon.File"));
-        list.Add(Action("File", "Go to File…  (Ctrl+P)", () => { _vm.ShowQuickOpen(); return Task.CompletedTask; }, "Icon.Search"));
+        list.Add(VmCmd(L("Cmd_Cat_File"), L("Cmd_OpenFile"), _vm.OpenFileCommand, "Icon.File"));
+        list.Add(VmCmd(L("Cmd_Cat_File"), L("Cmd_OpenThconfig"), _vm.OpenThconfigCommand, "Icon.Config"));
+        list.Add(VmCmd(L("Cmd_Cat_File"), L("Cmd_OpenFolder"), _vm.OpenFolderCommand, "Icon.FolderOpen"));
+        list.Add(VmCmd(L("Cmd_Cat_File"), L("Cmd_Save"), _vm.SaveCommand, "Icon.File"));
+        list.Add(Action(L("Cmd_Cat_File"), L("Cmd_GoToFile"), () => { _vm.ShowQuickOpen(); return Task.CompletedTask; }, "Icon.Search"));
 
         // ---- Build ----
-        list.Add(VmCmd("Build", "Build current thconfig", _vm.Build.BuildCommand, "Icon.Cube"));
-        list.Add(VmCmd("Build", "Rebuild", _vm.Build.RebuildCommand, "Icon.Cube"));
-        list.Add(VmCmd("Build", "Cancel build", _vm.Build.CancelCommand, "Icon.Cube"));
-        list.Add(VmCmd("Build", "Open in Loch", _vm.Build.OpenInLochCommand, "Icon.Cube"));
-        list.Add(VmCmd("Build", "Open in Aven", _vm.Build.OpenInAvenCommand, "Icon.Cube"));
-        list.Add(VmCmd("Build", "Open output folder", _vm.Build.OpenLastOutputFolderCommand, "Icon.Folder"));
+        list.Add(VmCmd(L("Cmd_Cat_Build"), L("Cmd_BuildCurrent"), _vm.Build.BuildCommand, "Icon.Cube"));
+        list.Add(VmCmd(L("Cmd_Cat_Build"), L("Cmd_Rebuild"), _vm.Build.RebuildCommand, "Icon.Cube"));
+        list.Add(VmCmd(L("Cmd_Cat_Build"), L("Cmd_CancelBuild"), _vm.Build.CancelCommand, "Icon.Cube"));
+        list.Add(VmCmd(L("Cmd_Cat_Build"), L("Cmd_OpenLoch"), _vm.Build.OpenInLochCommand, "Icon.Cube"));
+        list.Add(VmCmd(L("Cmd_Cat_Build"), L("Cmd_OpenAven"), _vm.Build.OpenInAvenCommand, "Icon.Cube"));
+        list.Add(VmCmd(L("Cmd_Cat_Build"), L("Proj_OpenOutputFolder"), _vm.Build.OpenLastOutputFolderCommand, "Icon.Folder"));
         // BUILD-02/06: quick export + external round-trips.
-        list.Add(VmCmd("Build", "Quick Export…", _vm.Build.ShowQuickExportCommand, "Icon.Map"));
-        list.Add(VmCmd("Build", "Survex: dump3d (.3d → text)", _vm.Build.Dump3dCommand, "Icon.Cube"));
-        list.Add(VmCmd("Build", "Survex: extend (extended elevation)", _vm.Build.ExtendCommand, "Icon.Cube"));
-        list.Add(VmCmd("Build", "Therion: print version", _vm.Build.PrintTherionVersionCommand, "Icon.Info"));
-        list.Add(VmCmd("Build", "Therion: print environment", _vm.Build.PrintTherionEnvironmentCommand, "Icon.Info"));
+        list.Add(VmCmd(L("Cmd_Cat_Build"), L("Menu_Build_QuickExport"), _vm.Build.ShowQuickExportCommand, "Icon.Map"));
+        list.Add(VmCmd(L("Cmd_Cat_Build"), L("Cmd_Dump3d"), _vm.Build.Dump3dCommand, "Icon.Cube"));
+        list.Add(VmCmd(L("Cmd_Cat_Build"), L("Cmd_Extend"), _vm.Build.ExtendCommand, "Icon.Cube"));
+        list.Add(VmCmd(L("Cmd_Cat_Build"), L("Cmd_PrintVersion"), _vm.Build.PrintTherionVersionCommand, "Icon.Info"));
+        list.Add(VmCmd(L("Cmd_Cat_Build"), L("Cmd_PrintEnv"), _vm.Build.PrintTherionEnvironmentCommand, "Icon.Info"));
         // BUILD-01: each export target parsed from the active thconfig.
         foreach (var target in _vm.Build.ExportTargets)
-            list.Add(Action("Build", $"Build target: {target.Title}",
+            list.Add(Action(L("Cmd_Cat_Build"), string.Format(L("Cmd_BuildTargetFmt"), target.Title),
                 () => { target.BuildCommand.Execute(null); return Task.CompletedTask; }, "Icon.Cube"));
         if (_session is { Candidates.Count: > 0 })
-            list.Add(Action("Build", "Build a specific thconfig…", () => { PushThconfigBuild(); return Task.CompletedTask; }, "Icon.Config"));
+            list.Add(Action(L("Cmd_Cat_Build"), L("Cmd_BuildSpecific"), () => { PushThconfigBuild(); return Task.CompletedTask; }, "Icon.Config"));
 
         // ---- View / panels ----
-        list.Add(VmCmd("View", "Toggle Object Browser", _vm.ToggleObjectBrowserCommand, "Icon.Map"));
-        list.Add(VmCmd("View", "Toggle Workspace", _vm.ToggleWorkspaceExplorerCommand, "Icon.Folder"));
-        list.Add(VmCmd("View", "Toggle Diagnostics", _vm.ToggleDiagnosticsCommand, "Icon.Search"));
-        list.Add(VmCmd("View", "Toggle Outline", _vm.ToggleOutlineCommand, "Icon.Map"));
-        list.Add(VmCmd("View", "Toggle Project (Dashboard / Surveys / Audit)", _vm.ToggleProjectCommand, "Icon.NodeGraph"));
-        list.Add(VmCmd("View", "Toggle Log", _vm.ToggleLogCommand, "Icon.Search"));
+        list.Add(VmCmd(L("Cmd_Cat_View"), L("Cmd_ToggleObjectBrowser"), _vm.ToggleObjectBrowserCommand, "Icon.Map"));
+        list.Add(VmCmd(L("Cmd_Cat_View"), L("Cmd_ToggleWorkspace"), _vm.ToggleWorkspaceExplorerCommand, "Icon.Folder"));
+        list.Add(VmCmd(L("Cmd_Cat_View"), L("Cmd_ToggleDiagnostics"), _vm.ToggleDiagnosticsCommand, "Icon.Search"));
+        list.Add(VmCmd(L("Cmd_Cat_View"), L("Cmd_ToggleOutline"), _vm.ToggleOutlineCommand, "Icon.Map"));
+        list.Add(VmCmd(L("Cmd_Cat_View"), L("Cmd_ToggleProject"), _vm.ToggleProjectCommand, "Icon.NodeGraph"));
+        list.Add(VmCmd(L("Cmd_Cat_View"), L("Cmd_ToggleLog"), _vm.ToggleLogCommand, "Icon.Search"));
         if (_vm.LivePreviewEnabled)
-            list.Add(VmCmd("View", "Toggle Live Preview", _vm.ToggleLivePreviewCommand, "Icon.Map"));
+            list.Add(VmCmd(L("Cmd_Cat_View"), L("Cmd_ToggleLivePreview"), _vm.ToggleLivePreviewCommand, "Icon.Map"));
         if (_vm.MapViewerEnabled)
-            list.Add(VmCmd("View", "Toggle Map Viewer", _vm.ToggleMapViewerCommand, "Icon.Map"));
+            list.Add(VmCmd(L("Cmd_Cat_View"), L("Cmd_ToggleMapViewer"), _vm.ToggleMapViewerCommand, "Icon.Map"));
         if (_vm.Model3DViewerEnabled)
-            list.Add(VmCmd("View", "Toggle 3D Viewer", _vm.ToggleModel3DViewerCommand, "Icon.Cube"));
-        list.Add(VmCmd("View", "Split Editor (Float)", _vm.SplitEditorCommand, "Icon.File"));
-        list.Add(VmCmd("View", "Reset Layout", _vm.ResetLayoutCommand, "Icon.Folder"));
-        list.Add(VmCmd("View", "Float Active Document", _vm.FloatActiveDocumentCommand, "Icon.File"));
+            list.Add(VmCmd(L("Cmd_Cat_View"), L("Cmd_Toggle3D"), _vm.ToggleModel3DViewerCommand, "Icon.Cube"));
+        list.Add(VmCmd(L("Cmd_Cat_View"), L("Menu_View_SplitEditor"), _vm.SplitEditorCommand, "Icon.File"));
+        list.Add(VmCmd(L("Cmd_Cat_View"), L("Cmd_ResetLayout"), _vm.ResetLayoutCommand, "Icon.Folder"));
+        list.Add(VmCmd(L("Cmd_Cat_View"), L("Layout_FloatActive"), _vm.FloatActiveDocumentCommand, "Icon.File"));
 
         // ---- Navigation / search ----
-        list.Add(VmCmd("Go", "Back", _vm.GoBackCommand, "Icon.Search"));
-        list.Add(VmCmd("Go", "Forward", _vm.GoForwardCommand, "Icon.Search"));
-        list.Add(VmCmd("Search", "Find in Files", _vm.ShowFindInFilesCommand, "Icon.Search"));
-        list.Add(VmCmd("Search", "Replace in Files", _vm.ShowReplaceInFilesCommand, "Icon.Search"));
-        list.Add(VmCmd("Edit", "Rename Symbol", _vm.RenameSymbolCommand, "Icon.File"));
+        list.Add(VmCmd(L("Cmd_Cat_Go"), L("Cmd_Back"), _vm.GoBackCommand, "Icon.Search"));
+        list.Add(VmCmd(L("Cmd_Cat_Go"), L("Cmd_Forward"), _vm.GoForwardCommand, "Icon.Search"));
+        list.Add(VmCmd(L("Cmd_Cat_Search"), L("Search_Title"), _vm.ShowFindInFilesCommand, "Icon.Search"));
+        list.Add(VmCmd(L("Cmd_Cat_Search"), L("Replace_Title"), _vm.ShowReplaceInFilesCommand, "Icon.Search"));
+        list.Add(VmCmd(L("Cmd_Cat_Edit"), L("Cmd_RenameSymbol"), _vm.RenameSymbolCommand, "Icon.File"));
 
         // ---- Symbols / identifiers (pushed sub-steps; search like the doc terms) ----
-        list.Add(Action("Go", "Go to Symbol in Workspace…", () => { PushSymbolSearch(workspace: true); return Task.CompletedTask; }, "Icon.Map"));
-        list.Add(Action("Go", "Go to Symbol in Document…", () => { PushSymbolSearch(workspace: false); return Task.CompletedTask; }, "Icon.Map"));
-        list.Add(Editor("Go to Line…", ed => ed.MenuGoToLine()));
+        list.Add(Action(L("Cmd_Cat_Go"), L("Cmd_GoToSymbolWs"), () => { PushSymbolSearch(workspace: true); return Task.CompletedTask; }, "Icon.Map"));
+        list.Add(Action(L("Cmd_Cat_Go"), L("Cmd_GoToSymbolDoc"), () => { PushSymbolSearch(workspace: false); return Task.CompletedTask; }, "Icon.Map"));
+        list.Add(Editor(L("Cmd_GoToLine"), ed => ed.MenuGoToLine()));
 
         // ---- Editor view toggles ----
-        list.Add(Action("View", "Toggle Word Wrap", () => { _vm.WordWrap = !_vm.WordWrap; return Task.CompletedTask; }, "Icon.File"));
-        list.Add(Action("View", "Toggle Whitespace", () => { _vm.ShowWhitespace = !_vm.ShowWhitespace; return Task.CompletedTask; }, "Icon.File"));
-        list.Add(Action("View", "Toggle Minimap", () => { _vm.ShowMinimap = !_vm.ShowMinimap; return Task.CompletedTask; }, "Icon.File"));
-        list.Add(Action("View", "Toggle Indentation Guides", () => { _vm.ShowIndentGuides = !_vm.ShowIndentGuides; return Task.CompletedTask; }, "Icon.File"));
-        list.Add(Action("View", "Toggle End-of-Line Markers", () => { _vm.ShowEndOfLine = !_vm.ShowEndOfLine; return Task.CompletedTask; }, "Icon.File"));
+        list.Add(Action(L("Cmd_Cat_View"), L("Cmd_ToggleWordWrap"), () => { _vm.WordWrap = !_vm.WordWrap; return Task.CompletedTask; }, "Icon.File"));
+        list.Add(Action(L("Cmd_Cat_View"), L("Cmd_ToggleWhitespace"), () => { _vm.ShowWhitespace = !_vm.ShowWhitespace; return Task.CompletedTask; }, "Icon.File"));
+        list.Add(Action(L("Cmd_Cat_View"), L("Cmd_ToggleMinimap"), () => { _vm.ShowMinimap = !_vm.ShowMinimap; return Task.CompletedTask; }, "Icon.File"));
+        list.Add(Action(L("Cmd_Cat_View"), L("Cmd_ToggleIndent"), () => { _vm.ShowIndentGuides = !_vm.ShowIndentGuides; return Task.CompletedTask; }, "Icon.File"));
+        list.Add(Action(L("Cmd_Cat_View"), L("Cmd_ToggleEol"), () => { _vm.ShowEndOfLine = !_vm.ShowEndOfLine; return Task.CompletedTask; }, "Icon.File"));
 
         // ---- File extras ----
         if (_documents is not null)
-            list.Add(Action("File", "Reveal Active File in Workspace", () =>
+            list.Add(Action(L("Cmd_Cat_File"), L("Cmd_RevealActive"), () =>
             {
                 if (_documents.CurrentPath is { Length: > 0 } p) _documents.RequestSelectFileInWorkspace(p);
                 return Task.CompletedTask;
             }, "Icon.Folder"));
 
         // ---- Language ----
-        list.Add(VmCmd("Language", "Switch to English", _vm.SwitchToEnglishCommand, "Icon.Config"));
-        list.Add(VmCmd("Language", "Switch to Romanian", _vm.SwitchToRomanianCommand, "Icon.Config"));
+        list.Add(VmCmd(L("Cmd_Cat_Language"), L("Cmd_SwitchEnglish"), _vm.SwitchToEnglishCommand, "Icon.Config"));
+        list.Add(VmCmd(L("Cmd_Cat_Language"), L("Cmd_SwitchRomanian"), _vm.SwitchToRomanianCommand, "Icon.Config"));
 
         // ---- Editor actions (act on the focused editor) ----
-        list.Add(Editor("Cut", ed => ed.MenuCut()));
-        list.Add(Editor("Copy", ed => ed.MenuCopy()));
-        list.Add(Editor("Paste", ed => ed.MenuPaste()));
-        list.Add(Editor("Delete", ed => ed.MenuDelete()));
-        list.Add(Editor("Select All", ed => ed.MenuSelectAll()));
-        list.Add(Editor("UPPERCASE selection", ed => ed.MenuUpperCase()));
-        list.Add(Editor("lowercase selection", ed => ed.MenuLowerCase()));
-        list.Add(Editor("Toggle Comment", ed => ed.MenuToggleComment()));
-        list.Add(Editor("Fold All", ed => ed.MenuFoldAll()));
-        list.Add(Editor("Unfold All", ed => ed.MenuUnfoldAll()));
+        list.Add(Editor(L("Menu_Edit_Cut"), ed => ed.MenuCut()));
+        list.Add(Editor(L("Menu_Edit_Copy"), ed => ed.MenuCopy()));
+        list.Add(Editor(L("Menu_Edit_Paste"), ed => ed.MenuPaste()));
+        list.Add(Editor(L("Menu_Edit_Delete"), ed => ed.MenuDelete()));
+        list.Add(Editor(L("Menu_Edit_SelectAll"), ed => ed.MenuSelectAll()));
+        list.Add(Editor(L("Cmd_UpperSel"), ed => ed.MenuUpperCase()));
+        list.Add(Editor(L("Cmd_LowerSel"), ed => ed.MenuLowerCase()));
+        list.Add(Editor(L("Menu_Edit_ToggleComment"), ed => ed.MenuToggleComment()));
+        list.Add(Editor(L("Menu_Edit_FoldAll"), ed => ed.MenuFoldAll()));
+        list.Add(Editor(L("Menu_Edit_UnfoldAll"), ed => ed.MenuUnfoldAll()));
         // QOL-07: line operations.
-        list.Add(Editor("Duplicate Line(s)", ed => ed.DuplicateLines()));
-        list.Add(Editor("Move Line(s) Up", ed => ed.MoveLinesUp()));
-        list.Add(Editor("Move Line(s) Down", ed => ed.MoveLinesDown()));
-        list.Add(Editor("Sort Selected Lines", ed => ed.SortSelectedLines()));
+        list.Add(Editor(L("Ed_DuplicateLines"), ed => ed.DuplicateLines()));
+        list.Add(Editor(L("Ed_MoveLinesUp"), ed => ed.MoveLinesUp()));
+        list.Add(Editor(L("Ed_MoveLinesDown"), ed => ed.MoveLinesDown()));
+        list.Add(Editor(L("Ed_SortLines"), ed => ed.SortSelectedLines()));
         // QOL-08: insert helpers.
-        list.Add(Editor("Insert Today's Date", ed => ed.InsertDate()));
-        list.Add(Editor("Insert Team Member", ed => ed.InsertTeamMember()));
-        list.Add(Editor("Add Bookmark…", ed => ed.MenuAddBookmark()));
-        list.Add(Editor("Find", ed => ed.MenuFind()));
-        list.Add(Editor("Replace", ed => ed.MenuReplace()));
-        list.Add(Editor("Format Document", ed => ed.FormatDocument()));
-        list.Add(Editor("Quick Fix…  (Ctrl+.)", ed => ed.ShowQuickFixes()));
-        list.Add(Editor("Go to Matching Block", ed => ed.GoToMatchingBlock()));
-        list.Add(Editor("Peek Definition", ed => ed.PeekDefinition()));
-        list.Add(Editor("Step Into Included File", ed => ed.FollowIncludeUnderCaret()));
-        list.Add(Editor("Rename Symbol (editor)", ed => ed.StartRename()));
+        list.Add(Editor(L("Ed_InsertDate"), ed => ed.InsertDate()));
+        list.Add(Editor(L("Ed_InsertTeamMember"), ed => ed.InsertTeamMember()));
+        list.Add(Editor(L("Menu_Edit_AddBookmark"), ed => ed.MenuAddBookmark()));
+        list.Add(Editor(L("Cmd_Find"), ed => ed.MenuFind()));
+        list.Add(Editor(L("Cmd_Replace"), ed => ed.MenuReplace()));
+        list.Add(Editor(L("Cmd_FormatDoc"), ed => ed.FormatDocument()));
+        list.Add(Editor(L("Cmd_QuickFix"), ed => ed.ShowQuickFixes()));
+        list.Add(Editor(L("Cmd_GoToMatching"), ed => ed.GoToMatchingBlock()));
+        list.Add(Editor(L("Cmd_PeekDef"), ed => ed.PeekDefinition()));
+        list.Add(Editor(L("Cmd_StepInto"), ed => ed.FollowIncludeUnderCaret()));
+        list.Add(Editor(L("Cmd_RenameEditor"), ed => ed.StartRename()));
 
         // ---- Windows ----
-        list.Add(Action("Window", "Preferences…", () => { _vm.RaiseShowPreferences(null); return Task.CompletedTask; }, "Icon.Config"));
-        list.Add(Action("Window", "About", () => { _vm.RaiseShowAbout(); return Task.CompletedTask; }, "Icon.Config"));
-        list.Add(Action("Window", "Therion Book (documentation)", () => { _vm.RaiseShowThbook(); return Task.CompletedTask; }, "Icon.Map"));
-        list.Add(Action("Window", "Bookmarks", () => { _vm.RaiseShowBookmarks(); return Task.CompletedTask; }, "Icon.File"));
-        list.Add(Action("Window", "Relational Map", () => { _vm.RaiseShowRelationalMap(); return Task.CompletedTask; }, "Icon.Map"));
+        list.Add(Action(L("Cmd_Cat_Window"), L("Cmd_Preferences"), () => { _vm.RaiseShowPreferences(null); return Task.CompletedTask; }, "Icon.Config"));
+        list.Add(Action(L("Cmd_Cat_Window"), L("Cmd_About"), () => { _vm.RaiseShowAbout(); return Task.CompletedTask; }, "Icon.Config"));
+        list.Add(Action(L("Cmd_Cat_Window"), L("Cmd_TherionBook"), () => { _vm.RaiseShowThbook(); return Task.CompletedTask; }, "Icon.Map"));
+        list.Add(Action(L("Cmd_Cat_Window"), L("Book_Title"), () => { _vm.RaiseShowBookmarks(); return Task.CompletedTask; }, "Icon.File"));
+        list.Add(Action(L("Cmd_Cat_Window"), L("Tb_RelationalMap"), () => { _vm.RaiseShowRelationalMap(); return Task.CompletedTask; }, "Icon.Map"));
 
         // ---- Settings sections (open Preferences at that tab) ----
-        foreach (var (id, title) in SettingsSections)
-            list.Add(Action("Settings", $"Settings: {title}", () => { _vm.RaiseShowPreferences(id); return Task.CompletedTask; }, "Icon.Config"));
+        foreach (var (id, titleKey) in SettingsSections)
+            list.Add(Action(L("Cmd_Cat_Settings"), string.Format(L("Cmd_SettingsFmt"), L(titleKey)), () => { _vm.RaiseShowPreferences(id); return Task.CompletedTask; }, "Icon.Config"));
 
         // ---- Documentation: a parameterized command that pushes a focused term-search sub-step ----
         if (_docs is { IsAvailable: true })
-            list.Add(Action("Docs", "Search Documentation…", () => { PushDocSearch(); return Task.CompletedTask; }, "Icon.Map"));
+            list.Add(Action(L("Cmd_Cat_Docs"), L("Cmd_SearchDocs"), () => { PushDocSearch(); return Task.CompletedTask; }, "Icon.Map"));
 
         return list;
     }
@@ -206,14 +210,14 @@ public sealed class CommandPaletteProvider
             .Select(t => new QuickPickItem
             {
                 Title = t,
-                Detail = "documentation",
+                Detail = L("Cmd_DocDetail"),
                 IconKey = "Icon.Map",
                 NameLower = t.ToLowerInvariant(),
                 PathLower = "docs",
                 Run = () => { _docs!.Open(t); return Task.CompletedTask; },
             })
             .ToList();
-        _push(new QuickPickViewModel("Documentation", "Search a term…", text => Filter(terms, text)));
+        _push(new QuickPickViewModel(L("Cmd_DocsTitle"), L("Cmd_SearchTermWm"), text => Filter(terms, text)));
     }
 
     // Pushes a second step listing project identifiers (surveys / stations / scraps / maps);
@@ -222,9 +226,9 @@ public sealed class CommandPaletteProvider
     {
         var items = workspace ? (_wsSymbols ??= BuildSymbolItems(true)) : (_docSymbols ??= BuildSymbolItems(false));
         if (items.Count == 0)
-            items = new List<QuickPickItem> { new() { Title = "(no symbols — open and parse a project first)" } };
-        var title = workspace ? "Go to Symbol (workspace)" : "Go to Symbol (document)";
-        _push(new QuickPickViewModel(title, "Search surveys, stations, scraps, maps…", text => Filter(items, text)));
+            items = new List<QuickPickItem> { new() { Title = L("Cmd_NoSymbols") } };
+        var title = workspace ? L("Cmd_SymWsTitle") : L("Cmd_SymDocTitle");
+        _push(new QuickPickViewModel(title, L("Cmd_SymWm"), text => Filter(items, text)));
     }
 
     // Parameterized command: pick a thconfig from the workspace, activate it, and build.
@@ -248,7 +252,7 @@ public sealed class CommandPaletteProvider
                 },
             };
         }).ToList();
-        _push(new QuickPickViewModel("Build thconfig", "Pick a thconfig to build…", text => Filter(items, text)));
+        _push(new QuickPickViewModel(L("Cmd_BuildThTitle"), L("Cmd_BuildThWm"), text => Filter(items, text)));
     }
 
     private List<QuickPickItem> BuildSymbolItems(bool workspace)
@@ -301,12 +305,13 @@ public sealed class CommandPaletteProvider
         });
     }
 
-    private static readonly (string Id, string Title)[] SettingsSections =
+    // Title holds the Strings.resx key for the Preferences section (localized at display time).
+    private static readonly (string Id, string TitleKey)[] SettingsSections =
     {
-        ("general", "General"), ("theme", "Theme & Colors"), ("editor", "Editor"),
-        ("editorfeatures", "Editor Features"), ("performance", "Performance"),
-        ("workspace", "Workspace"), ("build", "Build & Output"), ("external", "External Tools"),
-        ("keyboard", "Keyboard Shortcuts"),
+        ("general", "Pref_General"), ("theme", "Pref_Theme"), ("editor", "Pref_Editor"),
+        ("editorfeatures", "Pref_EditorFeatures"), ("performance", "Pref_Performance"),
+        ("workspace", "Pref_Workspace"), ("build", "Pref_Build"), ("external", "Pref_External"),
+        ("keyboard", "Pref_Keyboard"),
     };
 
     // ---- item factories ----
@@ -334,7 +339,7 @@ public sealed class CommandPaletteProvider
     private static QuickPickItem Editor(string title, Action<TherionTextEditor> act) => new()
     {
         Title = title,
-        Detail = "Editor",
+        Detail = L("Cmd_Cat_Editor"),
         IconKey = "Icon.File",
         NameLower = title.ToLowerInvariant(),
         PathLower = "editor",
