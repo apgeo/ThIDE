@@ -362,4 +362,105 @@
   <data name="Status_OpenDiag" xml:space="preserve"><value>Deschide Diagnostice (F8: următor, Shift+F8: anterior)</value></data>
   <data name="Sw_OpenDocs" xml:space="preserve"><value>Documente deschise  —  Ctrl+Tab</value></data>
   <data name="Loading_Files" xml:space="preserve"><value>Se încarcă fișierele…</value></data>
+  <!-- Preferences window -->
+  <data name="Common_Ok" xml:space="preserve"><value>OK</value></data>
+  <data name="Common_Cancel" xml:space="preserve"><value>Anulează</value></data>
+  <data name="Pref_Title" xml:space="preserve"><value>Preferințe</value></data>
+  <data name="Pref_SearchWm" xml:space="preserve"><value>Caută în setări…</value></data>
+  <data name="Pref_ReopenSession" xml:space="preserve"><value>Redeschide fișierele din sesiunea anterioară la pornire</value></data>
+  <data name="Pref_Language" xml:space="preserve"><value>Limbă</value></data>
+  <data name="Pref_LanguageHelp" xml:space="preserve"><value>Limba se aplică imediat meniurilor și etichetelor.</value></data>
+  <data name="Pref_AutoSave" xml:space="preserve"><value>Salvare automată</value></data>
+  <data name="Pref_AutoSaveOff" xml:space="preserve"><value>Dezactivat</value></data>
+  <data name="Pref_AutoSaveDelay" xml:space="preserve"><value>După o întârziere</value></data>
+  <data name="Pref_AutoSaveFocus" xml:space="preserve"><value>La pierderea focalizării</value></data>
+  <data name="Pref_DelaySeconds" xml:space="preserve"><value>Întârziere (secunde)</value></data>
+  <data name="Pref_AutoSaveHelp" xml:space="preserve"><value>Fișierele modificate sunt scrise automat; întârzierea se aplică modului După-o-întârziere.</value></data>
+  <data name="Pref_Telemetry" xml:space="preserve"><value>Înregistrează utilizarea anonimă &amp; rapoartele de eroare (stocate local, niciodată trimise)</value></data>
+  <data name="Pref_TelemetryHelp" xml:space="preserve"><value>Dezactivat implicit. Când este activat, evenimentele și rapoartele de eroare sunt scrise în %AppData%/TherionProc/telemetry și nu părăsesc niciodată calculatorul dvs.</value></data>
+  <data name="Pref_AppTheme" xml:space="preserve"><value>Tema aplicației</value></data>
+  <data name="Pref_ThemeSystem" xml:space="preserve"><value>Implicit sistem</value></data>
+  <data name="Pref_ThemeLight" xml:space="preserve"><value>Luminoasă</value></data>
+  <data name="Pref_ThemeDark" xml:space="preserve"><value>Întunecată (odihnitoare pentru ochi)</value></data>
+  <data name="Pref_ThemeHelp" xml:space="preserve"><value>Tema întunecată adaptează atât culorile controalelor, cât și cele ale sintaxei editorului.</value></data>
+  <data name="Pref_CustomColors" xml:space="preserve"><value>Folosește culori de sintaxă personalizate (înlocuiește paleta temei)</value></data>
+  <data name="Pref_CustomColorsHelp" xml:space="preserve"><value>Introduceți valori hexazecimale #RRGGBB; mostra previzualizează fiecare culoare.</value></data>
+  <data name="Pref_SynKeyword" xml:space="preserve"><value>Cuvânt cheie</value></data>
+  <data name="Pref_SynIdentifier" xml:space="preserve"><value>Identificator</value></data>
+  <data name="Pref_SynNumber" xml:space="preserve"><value>Număr</value></data>
+  <data name="Pref_SynString" xml:space="preserve"><value>Șir</value></data>
+  <data name="Pref_SynComment" xml:space="preserve"><value>Comentariu</value></data>
+  <data name="Pref_SynOption" xml:space="preserve"><value>Opțiune</value></data>
+  <data name="Pref_SynPunctuation" xml:space="preserve"><value>Punctuație</value></data>
+  <data name="Pref_FontSize" xml:space="preserve"><value>Dimensiune font</value></data>
+  <data name="Pref_IndentSize" xml:space="preserve"><value>Dimensiune indentare</value></data>
+  <data name="Pref_ShowLineNumbers" xml:space="preserve"><value>Arată numerele de linie</value></data>
+  <data name="Pref_HighlightCurrentLine" xml:space="preserve"><value>Evidențiază linia curentă</value></data>
+  <data name="Pref_ConvertTabs" xml:space="preserve"><value>Convertește taburile în spații</value></data>
+  <data name="Pref_RenamePreview" xml:space="preserve"><value>Arată o previzualizare înainte de a aplica redenumirea unui simbol</value></data>
+  <data name="Pref_FormatOnSave" xml:space="preserve"><value>Formatează documentul la salvare (reindentare după imbricarea blocurilor)</value></data>
+  <data name="Pref_EditorFeatures" xml:space="preserve"><value>Funcții editor</value></data>
+  <data name="Pref_EditorFeaturesHelp" xml:space="preserve"><value>Activează sau dezactivează îmbunătățirile individuale ale editorului. O funcție estompată aici a fost dezactivată la compilare.</value></data>
+  <data name="Pref_PerfHelp1" xml:space="preserve"><value>Peste aceste limite, evidențierea sintaxei și funcțiile de hover sunt dezactivate.</value></data>
+  <data name="Pref_MaxHighlightLines" xml:space="preserve"><value>Linii maxime de evidențiere</value></data>
+  <data name="Pref_MaxHighlightKB" xml:space="preserve"><value>Dimensiune maximă de evidențiere (KB)</value></data>
+  <data name="Pref_PerfHelp2" xml:space="preserve"><value>Peste aceste limite, fișierul nu este analizat, iar identificatorii săi rămân în afara grafului de obiecte.</value></data>
+  <data name="Pref_MaxParseLines" xml:space="preserve"><value>Linii maxime de analiză</value></data>
+  <data name="Pref_MaxParseKB" xml:space="preserve"><value>Dimensiune maximă de analiză (KB)</value></data>
+  <data name="Pref_PerfHelp3" xml:space="preserve"><value>Limitează câte stații listează „Salt la simbol” / căutarea de stații (Ctrl+Shift+P), astfel încât peșterile foarte mari să rămână responsive.</value></data>
+  <data name="Pref_MaxStations" xml:space="preserve"><value>Stații maxime în căutare</value></data>
+  <data name="Pref_PerfHelp4" xml:space="preserve"><value>La pornire, fișierele din ultima sesiune sunt redeschise până la atingerea acestui buget de timp; restul sunt omise (înregistrate în panoul Jurnal) pentru ca proiectele mari să rămână lansabile. 0 = fără limită.</value></data>
+  <data name="Pref_StartupTimeout" xml:space="preserve"><value>Timp maxim de încărcare la pornire (secunde)</value></data>
+  <data name="Pref_ReloadExternal" xml:space="preserve"><value>Reîncarcă fișierele deschise modificate în afara editorului</value></data>
+  <data name="Pref_UpdateGraph" xml:space="preserve"><value>Actualizează graful de obiecte când fișierele se schimbă pe disc</value></data>
+  <data name="Pref_QuickOpenScope" xml:space="preserve"><value>Salt la fișier (Ctrl+P): caută doar fișierele conectate la thconfig-ul activ</value></data>
+  <data name="Pref_QuickOpenHelp" xml:space="preserve"><value>Când este dezactivat, Ctrl+P caută în fiecare fișier Therion din dosarul proiectului (istoricul este inclus întotdeauna).</value></data>
+  <data name="Pref_AfterBuildOpen" xml:space="preserve"><value>După o compilare reușită, deschide:</value></data>
+  <data name="Pref_OpenLox" xml:space="preserve"><value>.lox (model 3D Loch)</value></data>
+  <data name="Pref_Open3d" xml:space="preserve"><value>.3d (model Survex / Aven)</value></data>
+  <data name="Pref_OpenPdf" xml:space="preserve"><value>.pdf (export hartă)</value></data>
+  <data name="Pref_OpenNoneHelp" xml:space="preserve"><value>(lăsați toate nebifate pentru a nu deschide nimic)</value></data>
+  <data name="Pref_OpenAll" xml:space="preserve"><value>Deschide fiecare ieșire corespunzătoare (altfel doar prima)</value></data>
+  <data name="Pref_CompileOnSave" xml:space="preserve"><value>Compilează la salvare (recompilează proiectul la scurt timp după fiecare salvare)</value></data>
+  <data name="Pref_CompileOnSaveHelp" xml:space="preserve"><value>Compilare de fundal amânată; urmăriți indicatorul și panoul Jurnal. Dezactivat implicit.</value></data>
+  <data name="Pref_EnsureDirs" xml:space="preserve"><value>Creează dosarele de ieșire lipsă înainte de compilare</value></data>
+  <data name="Pref_EnsureDirsHelp" xml:space="preserve"><value>Verifică dosarul de ieșire al fiecărui export și îl creează recursiv dacă lipsește (altfel Therion eșuează la un dosar lipsă). O linie informativă este înregistrată când un dosar este creat. Activat implicit.</value></data>
+  <data name="Pref_Visualization" xml:space="preserve"><value>Vizualizare</value></data>
+  <data name="Pref_VisualizationHelp" xml:space="preserve"><value>Activează sau dezactivează funcțiile de previzualizare doar-citire. Dezactivarea uneia îi ascunde panoul și meniul (resetați aranjamentul sau reporniți pentru a elimina un panou deschis).</value></data>
+  <data name="Pref_Vis_LivePreview" xml:space="preserve"><value>Previzualizare live a liniei centrale (schiță plan/elevație din model, fără compilare) — VIS-02</value></data>
+  <data name="Pref_Vis_MapViewer" xml:space="preserve"><value>Vizualizator de hărți în aplicație (PNG / SVG / PDF) — VIS-05</value></data>
+  <data name="Pref_Vis_MapAuto" xml:space="preserve"><value>Afișează automat harta randată după o compilare — VIS-03</value></data>
+  <data name="Pref_Vis_Model3D" xml:space="preserve"><value>Vizualizator 3D încorporat (CaveView.js într-o vizualizare web nativă) — VIS-01</value></data>
+  <data name="Pref_Vis_Model3DAuto" xml:space="preserve"><value>Afișează automat modelul 3D (.lox / .3d) după o compilare — VIS-01</value></data>
+  <data name="Pref_Vis_Structural" xml:space="preserve"><value>Modul Geologie structurală (calculator de direcție/înclinare a planelor) — STRUCT-01</value></data>
+  <data name="Pref_SurveyAnalytics" xml:space="preserve"><value>Analiză topografică</value></data>
+  <data name="Pref_SurveyAnalyticsHelp" xml:space="preserve"><value>Dezactivați pe proiecte foarte mari pentru a omite procesarea suplimentară la fiecare reconstruire a grafului.</value></data>
+  <data name="Pref_Analytics_Project" xml:space="preserve"><value>Statistici de proiect, grafice, echipă, intrări &amp; calitatea datelor — DATA-01/02/05/06/08</value></data>
+  <data name="Pref_Analytics_ObjectBrowser" xml:space="preserve"><value>Filele de entități din Navigator obiecte (topografii, puncte fixe, echivalări, schițe, hărți, puncte, linii, suprafețe) — DATA-03</value></data>
+  <data name="Pref_Analytics_Todo" xml:space="preserve"><value>Scanare comentarii TODO / FIXME / QM — NOTE-01</value></data>
+  <data name="Pref_Analytics_Media" xml:space="preserve"><value>Scanare manager media (.xvi referențiate + orfane pe disc) — MEDIA-02/03</value></data>
+  <data name="Pref_Col_Tool" xml:space="preserve"><value>Unealtă</value></data>
+  <data name="Pref_Col_Detected" xml:space="preserve"><value>Detectat</value></data>
+  <data name="Pref_Col_Version" xml:space="preserve"><value>Versiune</value></data>
+  <data name="Pref_Col_Source" xml:space="preserve"><value>Sursă</value></data>
+  <data name="Pref_Col_Override" xml:space="preserve"><value>Suprascriere</value></data>
+  <data name="Pref_Col_Result" xml:space="preserve"><value>Rezultat</value></data>
+  <data name="Pref_Extensions" xml:space="preserve"><value>Extensii</value></data>
+  <data name="Pref_ScriptHooks" xml:space="preserve"><value>Activează cârlige de script (rulează o comandă la deschidere / salvare / compilare)</value></data>
+  <data name="Pref_ScriptHooksHelp" xml:space="preserve"><value>Folosiți {file} pentru calea fișierului (thconfig activ pentru compilare). Dezactivați pentru proiecte mari.</value></data>
+  <data name="Pref_OnOpen" xml:space="preserve"><value>La deschidere</value></data>
+  <data name="Pref_OnSave" xml:space="preserve"><value>La salvare</value></data>
+  <data name="Pref_OnBuild" xml:space="preserve"><value>La compilare</value></data>
+  <data name="Pref_CommandWm" xml:space="preserve"><value>(comandă)</value></data>
+  <data name="Pref_LoadPlugins" xml:space="preserve"><value>Încarcă pluginuri (reguli semantice personalizate din dosarul de pluginuri)</value></data>
+  <data name="Pref_LoadPluginsHelp" xml:space="preserve"><value>Puneți fișiere plugin .dll (tipuri care implementează ISemanticRule) în %AppData%/TherionProc/plugins. Încărcate la pornire; dezactivați pentru performanță. Modificările se aplică la repornire.</value></data>
+  <data name="Pref_CliHelp" xml:space="preserve"><value>CLI-ul fără interfață (therion-cli) și serverul LSP (therion-lsp) sunt executabile separate — vezi documentația.</value></data>
+  <data name="Pref_ResetAll" xml:space="preserve"><value>Resetează tot la valorile implicite</value></data>
+  <data name="Pref_KbHelp" xml:space="preserve"><value>Faceți clic pe un câmp de combinație și apăsați combinația de taste pentru a o atribui.</value></data>
+  <data name="Pref_Col_Command" xml:space="preserve"><value>Comandă</value></data>
+  <data name="Pref_Col_Gesture" xml:space="preserve"><value>Combinație</value></data>
+  <data name="Pref_Col_Default" xml:space="preserve"><value>Implicit</value></data>
+  <data name="Pref_PressKeysWm" xml:space="preserve"><value>apăsați taste…</value></data>
+  <data name="Pref_GestureTip" xml:space="preserve"><value>Faceți clic și apăsați o combinație de taste</value></data>
+  <data name="Pref_Reset" xml:space="preserve"><value>Resetează</value></data>
 </root>

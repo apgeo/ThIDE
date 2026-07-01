@@ -4,7 +4,7 @@
         xmlns:l="using:TherionProc.Resources"
         x:Class="TherionProc.Views.PreferencesWindow"
         x:CompileBindings="False"
-        Title="Preferences"
+        Title="{l:Loc Pref_Title}"
         Width="1080" Height="780"
         MinWidth="640" MinHeight="460"
         WindowStartupLocation="CenterOwner">
@@ -12,8 +12,8 @@
         <!-- Footer: OK / Cancel -->
         <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="0,1,0,0" Padding="12,8">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
-                <Button Content="Cancel" Click="OnCancel" MinWidth="80" />
-                <Button Content="OK" Click="OnOk" IsDefault="True" MinWidth="80" />
+                <Button Content="{l:Loc Common_Cancel}" Click="OnCancel" MinWidth="80" />
+                <Button Content="{l:Loc Common_Ok}" Click="OnOk" IsDefault="True" MinWidth="80" />
             </StackPanel>
         </Border>
 
@@ -22,7 +22,7 @@
                 Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}"
                 BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="0,0,1,0">
             <DockPanel Margin="8">
-                <TextBox DockPanel.Dock="Top" Watermark="Search settings…" Margin="0,0,0,8"
+                <TextBox DockPanel.Dock="Top" Watermark="{l:Loc Pref_SearchWm}" Margin="0,0,0,8"
                          Text="{Binding SearchQuery, Mode=TwoWay}" />
                 <ListBox ItemsSource="{Binding Sections}"
                          SelectedItem="{Binding SelectedSection, Mode=TwoWay}"
@@ -42,39 +42,39 @@
                 <!-- General -->
                 <StackPanel Spacing="10" IsVisible="{Binding IsGeneral}">
                     <TextBlock Text="{l:Loc Pref_General}" FontSize="16" FontWeight="Bold" />
-                    <CheckBox Content="Reopen files from last session on startup"
+                    <CheckBox Content="{l:Loc Pref_ReopenSession}"
                               IsChecked="{Binding RestoreSessionOnStartup}" />
                     <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,4,0,0">
-                        <TextBlock Text="Language" VerticalAlignment="Center" Width="100" />
+                        <TextBlock Text="{l:Loc Pref_Language}" VerticalAlignment="Center" Width="100" />
                         <ComboBox MinWidth="180" SelectedIndex="{Binding LanguageIndex, Mode=TwoWay}">
                             <ComboBoxItem>English</ComboBoxItem>
                             <ComboBoxItem>Română</ComboBoxItem>
                         </ComboBox>
                     </StackPanel>
-                    <TextBlock Text="Language applies immediately to menus and labels."
+                    <TextBlock Text="{l:Loc Pref_LanguageHelp}"
                                Foreground="Gray" FontSize="11" />
                     <Separator Margin="0,6" />
                     <!-- QOL-09: configurable auto-save. -->
                     <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,4,0,0">
-                        <TextBlock Text="Auto-save" VerticalAlignment="Center" Width="100" />
+                        <TextBlock Text="{l:Loc Pref_AutoSave}" VerticalAlignment="Center" Width="100" />
                         <ComboBox MinWidth="180" SelectedIndex="{Binding AutoSaveModeIndex, Mode=TwoWay}">
-                            <ComboBoxItem>Off</ComboBoxItem>
-                            <ComboBoxItem>After a delay</ComboBoxItem>
-                            <ComboBoxItem>On focus loss</ComboBoxItem>
+                            <ComboBoxItem Content="{l:Loc Pref_AutoSaveOff}" />
+                            <ComboBoxItem Content="{l:Loc Pref_AutoSaveDelay}" />
+                            <ComboBoxItem Content="{l:Loc Pref_AutoSaveFocus}" />
                         </ComboBox>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Spacing="10">
-                        <TextBlock Text="Delay (seconds)" VerticalAlignment="Center" Width="100" />
+                        <TextBlock Text="{l:Loc Pref_DelaySeconds}" VerticalAlignment="Center" Width="100" />
                         <NumericUpDown Minimum="5" Maximum="3600" Increment="5" MinWidth="120"
                                        Value="{Binding AutoSaveDelaySeconds, Mode=TwoWay}" />
                     </StackPanel>
-                    <TextBlock Text="Dirty files are written automatically; the delay applies to the After-a-delay mode."
+                    <TextBlock Text="{l:Loc Pref_AutoSaveHelp}"
                                Foreground="Gray" FontSize="11" />
                     <Separator Margin="0,6" />
                     <!-- REL-05: opt-in, local-only telemetry / crash reports. -->
-                    <CheckBox Content="Record anonymous usage &amp; crash reports (stored locally, never sent)"
+                    <CheckBox Content="{l:Loc Pref_Telemetry}"
                               IsChecked="{Binding TelemetryEnabled}" />
-                    <TextBlock Text="Off by default. When on, events and crash reports are written under %AppData%/TherionProc/telemetry and never leave your machine."
+                    <TextBlock Text="{l:Loc Pref_TelemetryHelp}"
                                Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
                 </StackPanel>
 
@@ -82,20 +82,20 @@
                 <StackPanel Spacing="10" IsVisible="{Binding IsTheme}">
                     <TextBlock Text="{l:Loc Pref_Theme}" FontSize="16" FontWeight="Bold" />
                     <StackPanel Orientation="Horizontal" Spacing="10">
-                        <TextBlock Text="App theme" VerticalAlignment="Center" Width="120" />
+                        <TextBlock Text="{l:Loc Pref_AppTheme}" VerticalAlignment="Center" Width="120" />
                         <ComboBox MinWidth="200" SelectedIndex="{Binding ThemeModeIndex, Mode=TwoWay}">
-                            <ComboBoxItem>System default</ComboBoxItem>
-                            <ComboBoxItem>Light</ComboBoxItem>
-                            <ComboBoxItem>Dark (easy on the eyes)</ComboBoxItem>
+                            <ComboBoxItem Content="{l:Loc Pref_ThemeSystem}" />
+                            <ComboBoxItem Content="{l:Loc Pref_ThemeLight}" />
+                            <ComboBoxItem Content="{l:Loc Pref_ThemeDark}" />
                         </ComboBox>
                     </StackPanel>
-                    <TextBlock Text="The Dark theme adapts both control and editor syntax colors."
+                    <TextBlock Text="{l:Loc Pref_ThemeHelp}"
                                Foreground="Gray" FontSize="11" />
 
                     <Separator Margin="0,6" />
-                    <CheckBox Content="Use custom syntax colors (overrides the theme palette)"
+                    <CheckBox Content="{l:Loc Pref_CustomColors}"
                               IsChecked="{Binding UseCustomSyntaxColors}" />
-                    <TextBlock Text="Enter #RRGGBB hex values; the swatch previews each color."
+                    <TextBlock Text="{l:Loc Pref_CustomColorsHelp}"
                                Foreground="Gray" FontSize="11" />
                     <Grid ColumnDefinitions="120,150,28" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto"
                           IsEnabled="{Binding UseCustomSyntaxColors}">
@@ -104,25 +104,25 @@
                             <Style Selector="TextBox.hex"><Setter Property="Margin" Value="0,0,8,6" /></Style>
                             <Style Selector="Border.swatch"><Setter Property="Width" Value="22" /><Setter Property="Height" Value="22" /><Setter Property="Margin" Value="0,0,0,6" /><Setter Property="BorderBrush" Value="Gray" /><Setter Property="BorderThickness" Value="1" /><Setter Property="CornerRadius" Value="3" /></Style>
                         </Grid.Styles>
-                        <TextBlock Grid.Row="0" Grid.Column="0" Classes="lbl" Text="Keyword" />
+                        <TextBlock Grid.Row="0" Grid.Column="0" Classes="lbl" Text="{l:Loc Pref_SynKeyword}" />
                         <TextBox    Grid.Row="0" Grid.Column="1" Classes="hex" Text="{Binding SyntaxKeywordColor}" />
                         <Border     Grid.Row="0" Grid.Column="2" Classes="swatch" Background="{Binding SyntaxKeywordColor, Converter={x:Static conv:HexColorToBrushConverter.Instance}}" />
-                        <TextBlock Grid.Row="1" Grid.Column="0" Classes="lbl" Text="Identifier" />
+                        <TextBlock Grid.Row="1" Grid.Column="0" Classes="lbl" Text="{l:Loc Pref_SynIdentifier}" />
                         <TextBox    Grid.Row="1" Grid.Column="1" Classes="hex" Text="{Binding SyntaxIdentifierColor}" />
                         <Border     Grid.Row="1" Grid.Column="2" Classes="swatch" Background="{Binding SyntaxIdentifierColor, Converter={x:Static conv:HexColorToBrushConverter.Instance}}" />
-                        <TextBlock Grid.Row="2" Grid.Column="0" Classes="lbl" Text="Number" />
+                        <TextBlock Grid.Row="2" Grid.Column="0" Classes="lbl" Text="{l:Loc Pref_SynNumber}" />
                         <TextBox    Grid.Row="2" Grid.Column="1" Classes="hex" Text="{Binding SyntaxNumberColor}" />
                         <Border     Grid.Row="2" Grid.Column="2" Classes="swatch" Background="{Binding SyntaxNumberColor, Converter={x:Static conv:HexColorToBrushConverter.Instance}}" />
-                        <TextBlock Grid.Row="3" Grid.Column="0" Classes="lbl" Text="String" />
+                        <TextBlock Grid.Row="3" Grid.Column="0" Classes="lbl" Text="{l:Loc Pref_SynString}" />
                         <TextBox    Grid.Row="3" Grid.Column="1" Classes="hex" Text="{Binding SyntaxStringColor}" />
                         <Border     Grid.Row="3" Grid.Column="2" Classes="swatch" Background="{Binding SyntaxStringColor, Converter={x:Static conv:HexColorToBrushConverter.Instance}}" />
-                        <TextBlock Grid.Row="4" Grid.Column="0" Classes="lbl" Text="Comment" />
+                        <TextBlock Grid.Row="4" Grid.Column="0" Classes="lbl" Text="{l:Loc Pref_SynComment}" />
                         <TextBox    Grid.Row="4" Grid.Column="1" Classes="hex" Text="{Binding SyntaxCommentColor}" />
                         <Border     Grid.Row="4" Grid.Column="2" Classes="swatch" Background="{Binding SyntaxCommentColor, Converter={x:Static conv:HexColorToBrushConverter.Instance}}" />
-                        <TextBlock Grid.Row="5" Grid.Column="0" Classes="lbl" Text="Option" />
+                        <TextBlock Grid.Row="5" Grid.Column="0" Classes="lbl" Text="{l:Loc Pref_SynOption}" />
                         <TextBox    Grid.Row="5" Grid.Column="1" Classes="hex" Text="{Binding SyntaxOptionColor}" />
                         <Border     Grid.Row="5" Grid.Column="2" Classes="swatch" Background="{Binding SyntaxOptionColor, Converter={x:Static conv:HexColorToBrushConverter.Instance}}" />
-                        <TextBlock Grid.Row="6" Grid.Column="0" Classes="lbl" Text="Punctuation" />
+                        <TextBlock Grid.Row="6" Grid.Column="0" Classes="lbl" Text="{l:Loc Pref_SynPunctuation}" />
                         <TextBox    Grid.Row="6" Grid.Column="1" Classes="hex" Text="{Binding SyntaxPunctuationColor}" />
                         <Border     Grid.Row="6" Grid.Column="2" Classes="swatch" Background="{Binding SyntaxPunctuationColor, Converter={x:Static conv:HexColorToBrushConverter.Instance}}" />
                     </Grid>
@@ -132,29 +132,29 @@
                 <StackPanel Spacing="10" IsVisible="{Binding IsEditor}">
                     <TextBlock Text="{l:Loc Pref_Editor}" FontSize="16" FontWeight="Bold" />
                     <Grid ColumnDefinitions="140,*" RowDefinitions="Auto,Auto">
-                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Font size"
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="{l:Loc Pref_FontSize}"
                                    VerticalAlignment="Center" Margin="0,0,8,6" />
                         <NumericUpDown Grid.Row="0" Grid.Column="1" Minimum="8" Maximum="32" Increment="1"
                                        Value="{Binding EditorFontSize}" Margin="0,0,0,6" MaxWidth="160"
                                        HorizontalAlignment="Left" />
-                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Indent size"
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="{l:Loc Pref_IndentSize}"
                                    VerticalAlignment="Center" Margin="0,0,8,0" />
                         <NumericUpDown Grid.Row="1" Grid.Column="1" Minimum="1" Maximum="8" Increment="1"
                                        Value="{Binding IndentationSize}" MaxWidth="160" HorizontalAlignment="Left" />
                     </Grid>
-                    <CheckBox Content="Show line numbers" IsChecked="{Binding ShowLineNumbers}" />
-                    <CheckBox Content="Highlight current line" IsChecked="{Binding HighlightCurrentLine}" />
-                    <CheckBox Content="Convert tabs to spaces" IsChecked="{Binding ConvertTabsToSpaces}" />
-                    <CheckBox Content="Show a preview before applying a symbol rename"
+                    <CheckBox Content="{l:Loc Pref_ShowLineNumbers}" IsChecked="{Binding ShowLineNumbers}" />
+                    <CheckBox Content="{l:Loc Pref_HighlightCurrentLine}" IsChecked="{Binding HighlightCurrentLine}" />
+                    <CheckBox Content="{l:Loc Pref_ConvertTabs}" IsChecked="{Binding ConvertTabsToSpaces}" />
+                    <CheckBox Content="{l:Loc Pref_RenamePreview}"
                               IsChecked="{Binding ShowRenamePreviewBeforeApply}" />
-                    <CheckBox Content="Format document on save (re-indent to block nesting)"
+                    <CheckBox Content="{l:Loc Pref_FormatOnSave}"
                               IsChecked="{Binding FormatOnSave}" />
                 </StackPanel>
 
                 <!-- Editor Features (Section B / EDIT-*) -->
                 <StackPanel Spacing="8" IsVisible="{Binding IsEditorFeatures}">
-                    <TextBlock Text="Editor Features" FontSize="16" FontWeight="Bold" />
-                    <TextBlock Text="Enable or disable individual editor enhancements. A feature greyed out here was switched off at build time."
+                    <TextBlock Text="{l:Loc Pref_EditorFeatures}" FontSize="16" FontWeight="Bold" />
+                    <TextBlock Text="{l:Loc Pref_EditorFeaturesHelp}"
                                Foreground="Gray" TextWrapping="Wrap" />
                     <!-- The feature list can be longer than the window; give it its own scroll so
                          every row stays reachable (#3). MaxHeight tracks the window height. -->
@@ -190,44 +190,44 @@
                 <!-- Performance / large-file guards (#10) -->
                 <StackPanel Spacing="10" IsVisible="{Binding IsPerformance}">
                     <TextBlock Text="{l:Loc Pref_Performance}" FontSize="16" FontWeight="Bold" />
-                    <TextBlock Text="Above these limits, syntax highlighting and hover features are disabled."
+                    <TextBlock Text="{l:Loc Pref_PerfHelp1}"
                                Foreground="Gray" TextWrapping="Wrap" />
                     <Grid ColumnDefinitions="200,*" RowDefinitions="Auto,Auto" Margin="0,0,0,4">
-                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Max highlight lines"
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="{l:Loc Pref_MaxHighlightLines}"
                                    VerticalAlignment="Center" Margin="0,0,8,6" />
                         <NumericUpDown Grid.Row="0" Grid.Column="1" Minimum="1000" Maximum="2000000" Increment="1000"
                                        Value="{Binding MaxHighlightLines}" Margin="0,0,0,6" MaxWidth="180"
                                        HorizontalAlignment="Left" />
-                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Max highlight size (KB)"
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="{l:Loc Pref_MaxHighlightKB}"
                                    VerticalAlignment="Center" Margin="0,0,8,0" />
                         <NumericUpDown Grid.Row="1" Grid.Column="1" Minimum="64" Maximum="1048576" Increment="128"
                                        Value="{Binding MaxHighlightKB}" MaxWidth="180" HorizontalAlignment="Left" />
                     </Grid>
-                    <TextBlock Text="Above these limits, the file is not parsed and its identifiers stay out of the object graph."
+                    <TextBlock Text="{l:Loc Pref_PerfHelp2}"
                                Foreground="Gray" TextWrapping="Wrap" />
                     <Grid ColumnDefinitions="200,*" RowDefinitions="Auto,Auto">
-                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Max parse lines"
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="{l:Loc Pref_MaxParseLines}"
                                    VerticalAlignment="Center" Margin="0,0,8,6" />
                         <NumericUpDown Grid.Row="0" Grid.Column="1" Minimum="1000" Maximum="2000000" Increment="1000"
                                        Value="{Binding MaxParseLines}" Margin="0,0,0,6" MaxWidth="180"
                                        HorizontalAlignment="Left" />
-                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Max parse size (KB)"
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="{l:Loc Pref_MaxParseKB}"
                                    VerticalAlignment="Center" Margin="0,0,8,0" />
                         <NumericUpDown Grid.Row="1" Grid.Column="1" Minimum="64" Maximum="1048576" Increment="128"
                                        Value="{Binding MaxParseKB}" MaxWidth="180" HorizontalAlignment="Left" />
                     </Grid>
-                    <TextBlock Text="Caps how many stations the &quot;Go to Symbol&quot; / station search (Ctrl+Shift+P) lists, so very large caves stay responsive."
+                    <TextBlock Text="{l:Loc Pref_PerfHelp3}"
                                Foreground="Gray" TextWrapping="Wrap" />
                     <Grid ColumnDefinitions="200,*" RowDefinitions="Auto">
-                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Max stations in search"
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="{l:Loc Pref_MaxStations}"
                                    VerticalAlignment="Center" Margin="0,0,8,0" />
                         <NumericUpDown Grid.Row="0" Grid.Column="1" Minimum="100" Maximum="1000000" Increment="500"
                                        Value="{Binding StationSearchLimit}" MaxWidth="180" HorizontalAlignment="Left" />
                     </Grid>
-                    <TextBlock Text="On startup, last-session files are reopened until this time budget is reached; the rest are skipped (logged in the Log panel) so big projects stay launchable. 0 = no limit."
+                    <TextBlock Text="{l:Loc Pref_PerfHelp4}"
                                Foreground="Gray" TextWrapping="Wrap" />
                     <Grid ColumnDefinitions="200,*" RowDefinitions="Auto">
-                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Startup load timeout (seconds)"
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="{l:Loc Pref_StartupTimeout}"
                                    VerticalAlignment="Center" Margin="0,0,8,0" />
                         <NumericUpDown Grid.Row="0" Grid.Column="1" Minimum="0" Maximum="600" Increment="5"
                                        Value="{Binding StartupLoadTimeoutSeconds}" MaxWidth="180" HorizontalAlignment="Left" />
@@ -237,68 +237,68 @@
                 <!-- Workspace -->
                 <StackPanel Spacing="10" IsVisible="{Binding IsWorkspace}">
                     <TextBlock Text="{l:Loc Pref_Workspace}" FontSize="16" FontWeight="Bold" />
-                    <CheckBox Content="Reload open files changed outside the editor"
+                    <CheckBox Content="{l:Loc Pref_ReloadExternal}"
                               IsChecked="{Binding AutoReloadExternalChanges}" />
-                    <CheckBox Content="Update the object graph when files change on disk"
+                    <CheckBox Content="{l:Loc Pref_UpdateGraph}"
                               IsChecked="{Binding AutoReloadGraphOnExternalChange}" />
                     <Separator Margin="0,6" />
-                    <CheckBox Content="Go to File (Ctrl+P): search only files connected to the active thconfig"
+                    <CheckBox Content="{l:Loc Pref_QuickOpenScope}"
                               IsChecked="{Binding QuickOpenThconfigScope}" />
-                    <TextBlock Text="When off, Ctrl+P searches every Therion file in the workspace folder (history is always included)."
+                    <TextBlock Text="{l:Loc Pref_QuickOpenHelp}"
                                Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
                 </StackPanel>
 
                 <!-- Build & Output -->
                 <StackPanel Spacing="10" IsVisible="{Binding IsBuild}">
                     <TextBlock Text="{l:Loc Pref_Build}" FontSize="16" FontWeight="Bold" />
-                    <TextBlock Text="After a successful build, open:" FontWeight="SemiBold" />
-                    <CheckBox Content=".lox (Loch 3D model)" IsChecked="{Binding OpenLoxAfterBuild}" />
-                    <CheckBox Content=".3d (Survex / Aven model)" IsChecked="{Binding Open3dAfterBuild}" />
-                    <CheckBox Content=".pdf (map export)" IsChecked="{Binding OpenPdfAfterBuild}" />
-                    <TextBlock Text="(leave all unchecked to open nothing)" Foreground="Gray" FontSize="11" />
-                    <CheckBox Content="Open every matching output (otherwise just the first)"
+                    <TextBlock Text="{l:Loc Pref_AfterBuildOpen}" FontWeight="SemiBold" />
+                    <CheckBox Content="{l:Loc Pref_OpenLox}" IsChecked="{Binding OpenLoxAfterBuild}" />
+                    <CheckBox Content="{l:Loc Pref_Open3d}" IsChecked="{Binding Open3dAfterBuild}" />
+                    <CheckBox Content="{l:Loc Pref_OpenPdf}" IsChecked="{Binding OpenPdfAfterBuild}" />
+                    <TextBlock Text="{l:Loc Pref_OpenNoneHelp}" Foreground="Gray" FontSize="11" />
+                    <CheckBox Content="{l:Loc Pref_OpenAll}"
                               IsChecked="{Binding OpenAllOutputsAfterBuild}" />
                     <Separator Margin="0,6" />
                     <!-- BUILD-07: compile-on-save (off by default). -->
-                    <CheckBox Content="Compile on save (rebuild the project a moment after each save)"
+                    <CheckBox Content="{l:Loc Pref_CompileOnSave}"
                               IsChecked="{Binding CompileOnSave}" />
-                    <TextBlock Text="Debounced background build; watch the spinner and the Log panel. Off by default."
+                    <TextBlock Text="{l:Loc Pref_CompileOnSaveHelp}"
                                Foreground="Gray" FontSize="11" />
                     <Separator Margin="0,6" />
-                    <CheckBox Content="Create missing output folders before compiling"
+                    <CheckBox Content="{l:Loc Pref_EnsureDirs}"
                               IsChecked="{Binding EnsureOutputDirectories}" />
-                    <TextBlock Text="Checks each export's output directory and creates it recursively if absent (Therion otherwise fails on a missing folder). An info line is logged when a folder is created. On by default."
+                    <TextBlock Text="{l:Loc Pref_EnsureDirsHelp}"
                                Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
                 </StackPanel>
 
                 <!-- Visualization (VIS-*): per-feature enable/disable. -->
                 <StackPanel Spacing="10" IsVisible="{Binding IsVisualization}">
-                    <TextBlock Text="Visualization" FontSize="16" FontWeight="Bold" />
-                    <TextBlock Text="Enable or disable the read-only preview features. Disabling one hides its panel and menu (reset the layout or restart to remove an open panel)."
+                    <TextBlock Text="{l:Loc Pref_Visualization}" FontSize="16" FontWeight="Bold" />
+                    <TextBlock Text="{l:Loc Pref_VisualizationHelp}"
                                Foreground="Gray" TextWrapping="Wrap" />
-                    <CheckBox Content="Live centreline preview (plan/elevation sketch from the model, no compile) — VIS-02"
+                    <CheckBox Content="{l:Loc Pref_Vis_LivePreview}"
                               IsChecked="{Binding EnableLivePreview}" />
-                    <CheckBox Content="In-app map viewer (PNG / SVG / PDF) — VIS-05"
+                    <CheckBox Content="{l:Loc Pref_Vis_MapViewer}"
                               IsChecked="{Binding EnableInAppViewer}" />
-                    <CheckBox Content="Auto-show the rendered map after a build — VIS-03"
+                    <CheckBox Content="{l:Loc Pref_Vis_MapAuto}"
                               IsChecked="{Binding EnableMapAutoPreview}" />
-                    <CheckBox Content="Embedded 3D model viewer (CaveView.js in a native web view) — VIS-01"
+                    <CheckBox Content="{l:Loc Pref_Vis_Model3D}"
                               IsChecked="{Binding EnableModel3DViewer}" />
-                    <CheckBox Content="Auto-show the 3D model (.lox / .3d) after a build — VIS-01"
+                    <CheckBox Content="{l:Loc Pref_Vis_Model3DAuto}"
                               IsChecked="{Binding EnableModel3DAutoPreview}" />
-                    <CheckBox Content="Structural Geology module (plane strike/dip calculator) — STRUCT-01"
+                    <CheckBox Content="{l:Loc Pref_Vis_Structural}"
                               IsChecked="{Binding EnableStructuralGeology}" />
 
-                    <TextBlock Text="Survey analytics" FontWeight="SemiBold" Margin="0,8,0,0" />
-                    <TextBlock Text="Disable on very large projects to skip the extra processing on each graph rebuild."
+                    <TextBlock Text="{l:Loc Pref_SurveyAnalytics}" FontWeight="SemiBold" Margin="0,8,0,0" />
+                    <TextBlock Text="{l:Loc Pref_SurveyAnalyticsHelp}"
                                Foreground="Gray" TextWrapping="Wrap" />
-                    <CheckBox Content="Project statistics, charts, team, entrances &amp; data-quality — DATA-01/02/05/06/08"
+                    <CheckBox Content="{l:Loc Pref_Analytics_Project}"
                               IsChecked="{Binding EnableProjectAnalytics}" />
-                    <CheckBox Content="Object Browser entity tabs (surveys, fixes, equates, scraps, maps, points, lines, areas) — DATA-03"
+                    <CheckBox Content="{l:Loc Pref_Analytics_ObjectBrowser}"
                               IsChecked="{Binding EnableObjectBrowserEntities}" />
-                    <CheckBox Content="TODO / FIXME / QM comment scan — NOTE-01"
+                    <CheckBox Content="{l:Loc Pref_Analytics_Todo}"
                               IsChecked="{Binding EnableTodoScan}" />
-                    <CheckBox Content="Media manager scan (referenced .xvi + on-disk orphans) — MEDIA-02/03"
+                    <CheckBox Content="{l:Loc Pref_Analytics_Media}"
                               IsChecked="{Binding EnableMediaScan}" />
                 </StackPanel>
 
@@ -307,7 +307,7 @@
                     <TextBlock DockPanel.Dock="Top" Text="{l:Loc Pref_External}"
                                FontSize="16" FontWeight="Bold" Margin="0,0,0,8" />
                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="10" Margin="0,0,0,8">
-                        <Button Content="Refresh" Command="{Binding ExternalTools.RefreshCommand}" />
+                        <Button Content="{l:Loc Common_Refresh}" Command="{Binding ExternalTools.RefreshCommand}" />
                         <TextBlock VerticalAlignment="Center" Foreground="Gray"
                                    Text="{Binding ExternalTools.Status}" />
                     </StackPanel>
@@ -316,51 +316,51 @@
                               GridLinesVisibility="Horizontal"
                               CanUserResizeColumns="True" AutoGenerateColumns="False">
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Tool"     Binding="{Binding ToolId}"  Width="Auto" MinWidth="80" IsReadOnly="True" />
-                            <DataGridTextColumn Header="Detected" Binding="{Binding Path}"    Width="*"   MinWidth="160" IsReadOnly="True" />
-                            <DataGridTextColumn Header="Version"  Binding="{Binding Version}" Width="Auto" MinWidth="80" IsReadOnly="True" />
-                            <DataGridTextColumn Header="Source"   Binding="{Binding Source}"  Width="Auto" MinWidth="70" IsReadOnly="True" />
-                            <DataGridTextColumn Header="Override" Binding="{Binding OverridePath, Mode=TwoWay}" Width="Auto" MinWidth="160" />
+                            <DataGridTextColumn Header="{l:Loc Pref_Col_Tool}"     Binding="{Binding ToolId}"  Width="Auto" MinWidth="80" IsReadOnly="True" />
+                            <DataGridTextColumn Header="{l:Loc Pref_Col_Detected}" Binding="{Binding Path}"    Width="*"   MinWidth="160" IsReadOnly="True" />
+                            <DataGridTextColumn Header="{l:Loc Pref_Col_Version}"  Binding="{Binding Version}" Width="Auto" MinWidth="80" IsReadOnly="True" />
+                            <DataGridTextColumn Header="{l:Loc Pref_Col_Source}"   Binding="{Binding Source}"  Width="Auto" MinWidth="70" IsReadOnly="True" />
+                            <DataGridTextColumn Header="{l:Loc Pref_Col_Override}" Binding="{Binding OverridePath, Mode=TwoWay}" Width="Auto" MinWidth="160" />
                             <DataGridTemplateColumn Header="" Width="Auto">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <Button Content="Test" Command="{Binding TestCommand}" Margin="2" />
+                                        <Button Content="{l:Loc Common_Test}" Command="{Binding TestCommand}" Margin="2" />
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-                            <DataGridTextColumn Header="Result"   Binding="{Binding TestResult}" Width="110" IsReadOnly="True" />
+                            <DataGridTextColumn Header="{l:Loc Pref_Col_Result}"   Binding="{Binding TestResult}" Width="110" IsReadOnly="True" />
                         </DataGrid.Columns>
                     </DataGrid>
                 </DockPanel>
 
                 <!-- Extensions (EXT-03 hooks, EXT-04 plugins) -->
                 <StackPanel Spacing="10" IsVisible="{Binding IsExtensions}">
-                    <TextBlock Text="Extensions" FontSize="16" FontWeight="Bold" />
+                    <TextBlock Text="{l:Loc Pref_Extensions}" FontSize="16" FontWeight="Bold" />
 
                     <!-- EXT-03: scripting / macro hooks. -->
-                    <CheckBox Content="Enable script hooks (run a command on open / save / build)"
+                    <CheckBox Content="{l:Loc Pref_ScriptHooks}"
                               IsChecked="{Binding EnableScriptHooks}" />
-                    <TextBlock Text="Use {file} for the file path (active thconfig for build). Disable for big projects."
+                    <TextBlock Text="{l:Loc Pref_ScriptHooksHelp}"
                                Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
                     <Grid ColumnDefinitions="110,*" RowDefinitions="Auto,Auto,Auto" Margin="0,2,0,0"
                           IsEnabled="{Binding EnableScriptHooks}">
-                        <TextBlock Grid.Row="0" Grid.Column="0" Text="On open" VerticalAlignment="Center" />
-                        <TextBox   Grid.Row="0" Grid.Column="1" Text="{Binding HookOnOpen}" Watermark="(command)" Margin="0,0,0,4" />
-                        <TextBlock Grid.Row="1" Grid.Column="0" Text="On save" VerticalAlignment="Center" />
-                        <TextBox   Grid.Row="1" Grid.Column="1" Text="{Binding HookOnSave}" Watermark="(command)" Margin="0,0,0,4" />
-                        <TextBlock Grid.Row="2" Grid.Column="0" Text="On build" VerticalAlignment="Center" />
-                        <TextBox   Grid.Row="2" Grid.Column="1" Text="{Binding HookOnBuild}" Watermark="(command)" />
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="{l:Loc Pref_OnOpen}" VerticalAlignment="Center" />
+                        <TextBox   Grid.Row="0" Grid.Column="1" Text="{Binding HookOnOpen}" Watermark="{l:Loc Pref_CommandWm}" Margin="0,0,0,4" />
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="{l:Loc Pref_OnSave}" VerticalAlignment="Center" />
+                        <TextBox   Grid.Row="1" Grid.Column="1" Text="{Binding HookOnSave}" Watermark="{l:Loc Pref_CommandWm}" Margin="0,0,0,4" />
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="{l:Loc Pref_OnBuild}" VerticalAlignment="Center" />
+                        <TextBox   Grid.Row="2" Grid.Column="1" Text="{Binding HookOnBuild}" Watermark="{l:Loc Pref_CommandWm}" />
                     </Grid>
 
                     <Separator Margin="0,6" />
                     <!-- EXT-04: plugin assemblies. -->
-                    <CheckBox Content="Load plugins (custom semantic rules from the plugins folder)"
+                    <CheckBox Content="{l:Loc Pref_LoadPlugins}"
                               IsChecked="{Binding EnablePlugins}" />
-                    <TextBlock Text="Drop plugin .dll files (types implementing ISemanticRule) in %AppData%/TherionProc/plugins. Loaded at startup; disable for performance. Changes apply on restart."
+                    <TextBlock Text="{l:Loc Pref_LoadPluginsHelp}"
                                Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
 
                     <Separator Margin="0,6" />
-                    <TextBlock Text="The headless CLI (therion-cli) and the LSP server (therion-lsp) are separate executables — see docs."
+                    <TextBlock Text="{l:Loc Pref_CliHelp}"
                                Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
                 </StackPanel>
 
@@ -369,32 +369,32 @@
                     <TextBlock DockPanel.Dock="Top" Text="{l:Loc Pref_Keyboard}"
                                FontSize="16" FontWeight="Bold" Margin="0,0,0,8" />
                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="10" Margin="0,0,0,8">
-                        <Button Content="Reset all to defaults" Command="{Binding Keyboard.ResetAllCommand}" />
+                        <Button Content="{l:Loc Pref_ResetAll}" Command="{Binding Keyboard.ResetAllCommand}" />
                         <TextBlock VerticalAlignment="Center" Foreground="Gray" FontSize="11"
-                                   Text="Click a gesture field and press the key combination to assign it." />
+                                   Text="{l:Loc Pref_KbHelp}" />
                     </StackPanel>
                     <DataGrid ItemsSource="{Binding Keyboard.Rows}"
                               x:CompileBindings="False" VerticalAlignment="Top"
                               GridLinesVisibility="Horizontal" Height="440"
                               CanUserResizeColumns="True" AutoGenerateColumns="False">
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Command" Binding="{Binding CommandId}" Width="Auto" MinWidth="120" MaxWidth="260" IsReadOnly="True" />
+                            <DataGridTextColumn Header="{l:Loc Pref_Col_Command}" Binding="{Binding CommandId}" Width="Auto" MinWidth="120" MaxWidth="260" IsReadOnly="True" />
                             <!-- Capture box: focus it and press a chord to record the gesture (#11). -->
-                            <DataGridTemplateColumn Header="Gesture" Width="*" MinWidth="160">
+                            <DataGridTemplateColumn Header="{l:Loc Pref_Col_Gesture}" Width="*" MinWidth="160">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <TextBox Text="{Binding Gesture}" IsReadOnly="True"
-                                                 Watermark="press keys…" Margin="2"
+                                                 Watermark="{l:Loc Pref_PressKeysWm}" Margin="2"
                                                  KeyDown="OnGestureKeyDown"
-                                                 ToolTip.Tip="Click and press a key combination" />
+                                                 ToolTip.Tip="{l:Loc Pref_GestureTip}" />
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-                            <DataGridTextColumn Header="Default" Binding="{Binding DefaultGesture}" Width="Auto" MinWidth="90" IsReadOnly="True" />
+                            <DataGridTextColumn Header="{l:Loc Pref_Col_Default}" Binding="{Binding DefaultGesture}" Width="Auto" MinWidth="90" IsReadOnly="True" />
                             <DataGridTemplateColumn Header="" Width="Auto">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <Button Content="Reset" Command="{Binding ResetToDefaultCommand}" Margin="2" />
+                                        <Button Content="{l:Loc Pref_Reset}" Command="{Binding ResetToDefaultCommand}" Margin="2" />
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
