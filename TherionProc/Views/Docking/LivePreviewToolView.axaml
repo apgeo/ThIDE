@@ -3,6 +3,7 @@
              xmlns:vm="using:TherionProc.ViewModels.Docking"
              xmlns:views="using:TherionProc.Views"
              xmlns:conv="using:TherionProc.Converters"
+             xmlns:l="using:TherionProc.Resources"
              x:Class="TherionProc.Views.Docking.LivePreviewToolView"
              x:CompileBindings="False"
              x:DataType="vm:LivePreviewToolViewModel">
@@ -14,79 +15,79 @@
         <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="6,3">
             <WrapPanel Orientation="Horizontal">
                 <!-- View: plan, or a projected profile along a bearing (radio-style push buttons). -->
-                <TextBlock Text="View:" VerticalAlignment="Center" FontSize="11" Foreground="Gray" Margin="0,0,4,0" />
-                <ToggleButton Content="Plan" Command="{Binding Preview.SetViewModeCommand}" CommandParameter="plan"
+                <TextBlock Text="{l:Loc M3D_View}" VerticalAlignment="Center" FontSize="11" Foreground="Gray" Margin="0,0,4,0" />
+                <ToggleButton Content="{l:Loc M3D_Plan}" Command="{Binding Preview.SetViewModeCommand}" CommandParameter="plan"
                               IsChecked="{Binding Preview.ViewMode, Mode=OneWay, Converter={StaticResource ColorEquals}, ConverterParameter=plan}"
-                              ToolTip.Tip="Plan view (looking down — north up)" FontSize="11" Padding="8,2" Margin="0,0,6,2" />
+                              ToolTip.Tip="{l:Loc Live_PlanTip}" FontSize="11" Padding="8,2" Margin="0,0,6,2" />
                 <!-- Projected profile: one button per cardinal bearing (the section extends along it). -->
                 <ToggleButton Content="N" Command="{Binding Preview.SetViewModeCommand}" CommandParameter="north"
                               IsChecked="{Binding Preview.ViewMode, Mode=OneWay, Converter={StaticResource ColorEquals}, ConverterParameter=north}"
-                              ToolTip.Tip="Projected profile along north (0°)" FontSize="11" Padding="8,2" Margin="0,0,2,2" />
+                              ToolTip.Tip="{l:Loc Live_ProfN}" FontSize="11" Padding="8,2" Margin="0,0,2,2" />
                 <ToggleButton Content="E" Command="{Binding Preview.SetViewModeCommand}" CommandParameter="east"
                               IsChecked="{Binding Preview.ViewMode, Mode=OneWay, Converter={StaticResource ColorEquals}, ConverterParameter=east}"
-                              ToolTip.Tip="Projected profile along east (90°) — classic east-vs-up elevation" FontSize="11" Padding="8,2" Margin="0,0,2,2" />
+                              ToolTip.Tip="{l:Loc Live_ProfE}" FontSize="11" Padding="8,2" Margin="0,0,2,2" />
                 <ToggleButton Content="S" Command="{Binding Preview.SetViewModeCommand}" CommandParameter="south"
                               IsChecked="{Binding Preview.ViewMode, Mode=OneWay, Converter={StaticResource ColorEquals}, ConverterParameter=south}"
-                              ToolTip.Tip="Projected profile along south (180°)" FontSize="11" Padding="8,2" Margin="0,0,2,2" />
+                              ToolTip.Tip="{l:Loc Live_ProfS}" FontSize="11" Padding="8,2" Margin="0,0,2,2" />
                 <ToggleButton Content="W" Command="{Binding Preview.SetViewModeCommand}" CommandParameter="west"
                               IsChecked="{Binding Preview.ViewMode, Mode=OneWay, Converter={StaticResource ColorEquals}, ConverterParameter=west}"
-                              ToolTip.Tip="Projected profile along west (270°)" FontSize="11" Padding="8,2" Margin="0,0,2,2" />
-                <ToggleButton Content="Custom" Command="{Binding Preview.SetViewModeCommand}" CommandParameter="custom"
+                              ToolTip.Tip="{l:Loc Live_ProfW}" FontSize="11" Padding="8,2" Margin="0,0,2,2" />
+                <ToggleButton Content="{l:Loc Live_Custom}" Command="{Binding Preview.SetViewModeCommand}" CommandParameter="custom"
                               IsChecked="{Binding Preview.ViewMode, Mode=OneWay, Converter={StaticResource ColorEquals}, ConverterParameter=custom}"
-                              ToolTip.Tip="Projected profile along a custom bearing (use the slider)" FontSize="11" Padding="8,2" Margin="0,0,4,2" />
+                              ToolTip.Tip="{l:Loc Live_CustomTip}" FontSize="11" Padding="8,2" Margin="0,0,4,2" />
                 <!-- Custom-bearing slider (0–359°): live-updates the projection as it moves. -->
                 <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" Margin="0,0,6,2"
                             IsVisible="{Binding Preview.IsCustomProfile}">
                     <Slider Width="130" Minimum="0" Maximum="359" VerticalAlignment="Center"
                             Value="{Binding Preview.CustomAzimuth, Mode=TwoWay}"
-                            ToolTip.Tip="Projection bearing (0–359°)" />
+                            ToolTip.Tip="{l:Loc Live_BearingTip}" />
                     <TextBlock Text="{Binding Preview.CustomAzimuth, StringFormat='{}{0:0}°'}"
                                VerticalAlignment="Center" FontSize="11" Foreground="Gray" MinWidth="30" />
                 </StackPanel>
-                <Button Content="↻ Refresh" Command="{Binding Preview.RefreshCommand}" FontSize="11" Padding="8,2" Margin="0,0,6,2" />
+                <Button Content="{l:Loc Common_RefreshGlyph}" Command="{Binding Preview.RefreshCommand}" FontSize="11" Padding="8,2" Margin="0,0,6,2" />
 
                 <Separator Width="1" Margin="3,2" Background="Gray" />
 
                 <!-- Splays: show + draw mode (faded lines vs edge points only). -->
-                <ToggleButton Content="Splays" IsChecked="{Binding Preview.ShowSplays, Mode=TwoWay}"
-                              ToolTip.Tip="Show splay (wall) shots" FontSize="11" Padding="6,2" Margin="0,0,2,2" />
-                <ToggleButton Content="as lines" IsChecked="{Binding Preview.SplaysAsLines, Mode=TwoWay}"
+                <ToggleButton Content="{l:Loc M3D_Splays}" IsChecked="{Binding Preview.ShowSplays, Mode=TwoWay}"
+                              ToolTip.Tip="{l:Loc Live_SplaysTip}" FontSize="11" Padding="6,2" Margin="0,0,2,2" />
+                <ToggleButton Content="{l:Loc Live_AsLines}" IsChecked="{Binding Preview.SplaysAsLines, Mode=TwoWay}"
                               IsEnabled="{Binding Preview.ShowSplays}"
-                              ToolTip.Tip="On: faded lines · Off: only the far edge points" FontSize="11" Padding="6,2" Margin="0,0,6,2" />
+                              ToolTip.Tip="{l:Loc Live_AsLinesTip}" FontSize="11" Padding="6,2" Margin="0,0,6,2" />
 
                 <Separator Width="1" Margin="3,2" Background="Gray" />
 
                 <!-- Debug overlays: station labels + provenance colouring. -->
-                <ToggleButton Content="Labels" IsChecked="{Binding Preview.ShowStationLabels, Mode=TwoWay}"
-                              ToolTip.Tip="Show a name label at each station" FontSize="11" Padding="6,2" Margin="0,0,2,2" />
+                <ToggleButton Content="{l:Loc M3D_Labels}" IsChecked="{Binding Preview.ShowStationLabels, Mode=TwoWay}"
+                              ToolTip.Tip="{l:Loc Live_LabelsTip}" FontSize="11" Padding="6,2" Margin="0,0,2,2" />
                 <ToggleButton Content="survey.station" IsChecked="{Binding Preview.ShowSurveyNames, Mode=TwoWay}"
-                              ToolTip.Tip="Qualify each station label with its survey (survey.station)" FontSize="11" Padding="6,2" Margin="0,0,2,2" />
-                <ToggleButton Content="Stations" IsChecked="{Binding Preview.ShowStationSymbols, Mode=TwoWay}"
-                              ToolTip.Tip="Show the small dot at each station" FontSize="11" Padding="6,2" Margin="0,0,2,2" />
-                <ToggleButton Content="Junctions" IsChecked="{Binding Preview.ShowJunctions, Mode=TwoWay}"
-                              ToolTip.Tip="Show clickable equate junctions (where surveys are stitched together)"
+                              ToolTip.Tip="{l:Loc Live_SurveyStationTip}" FontSize="11" Padding="6,2" Margin="0,0,2,2" />
+                <ToggleButton Content="{l:Loc Browser_Tab_Stations}" IsChecked="{Binding Preview.ShowStationSymbols, Mode=TwoWay}"
+                              ToolTip.Tip="{l:Loc Live_StationsTip}" FontSize="11" Padding="6,2" Margin="0,0,2,2" />
+                <ToggleButton Content="{l:Loc Live_Junctions}" IsChecked="{Binding Preview.ShowJunctions, Mode=TwoWay}"
+                              ToolTip.Tip="{l:Loc Live_JunctionsTip}"
                               FontSize="11" Padding="6,2" Margin="0,0,2,2" />
-                <ToggleButton Content="Legend" IsChecked="{Binding Preview.ShowLegend, Mode=TwoWay}"
-                              ToolTip.Tip="Show the legend / visibility list (hover a row to locate that group)"
+                <ToggleButton Content="{l:Loc Live_Legend}" IsChecked="{Binding Preview.ShowLegend, Mode=TwoWay}"
+                              ToolTip.Tip="{l:Loc Live_LegendTip}"
                               FontSize="11" Padding="6,2" Margin="0,0,2,2" />
-                <ToggleButton Content="Separate" IsChecked="{Binding Preview.SeparateComponents, Mode=TwoWay}"
-                              ToolTip.Tip="Spread disconnected pieces into a grid instead of stacking them at the origin"
+                <ToggleButton Content="{l:Loc Live_Separate}" IsChecked="{Binding Preview.SeparateComponents, Mode=TwoWay}"
+                              ToolTip.Tip="{l:Loc Live_SeparateTip}"
                               FontSize="11" Padding="6,2" Margin="0,0,6,2" />
 
                 <Separator Width="1" Margin="3,2" Background="Gray" />
 
                 <!-- Colour legs by data origin (also buckets the legend / visibility groups). -->
-                <TextBlock Text="Color:" VerticalAlignment="Center" FontSize="11" Foreground="Gray" Margin="0,0,4,0" />
-                <ToggleButton Content="None" Command="{Binding Preview.SetColorModeCommand}" CommandParameter="none" FontSize="11" Padding="6,2" Margin="0,0,2,2"
+                <TextBlock Text="{l:Loc Live_Color}" VerticalAlignment="Center" FontSize="11" Foreground="Gray" Margin="0,0,4,0" />
+                <ToggleButton Content="{l:Loc Live_None}" Command="{Binding Preview.SetColorModeCommand}" CommandParameter="none" FontSize="11" Padding="6,2" Margin="0,0,2,2"
                               IsChecked="{Binding Preview.ColorMode, Mode=OneWay, Converter={StaticResource ColorEquals}, ConverterParameter=none}" />
-                <ToggleButton Content="Survey" Command="{Binding Preview.SetColorModeCommand}" CommandParameter="survey" FontSize="11" Padding="6,2" Margin="0,0,2,2"
-                              ToolTip.Tip="A distinct colour per survey (groups the legend by survey)"
+                <ToggleButton Content="{l:Loc Domain_Survey}" Command="{Binding Preview.SetColorModeCommand}" CommandParameter="survey" FontSize="11" Padding="6,2" Margin="0,0,2,2"
+                              ToolTip.Tip="{l:Loc Live_ColSurveyTip}"
                               IsChecked="{Binding Preview.ColorMode, Mode=OneWay, Converter={StaticResource ColorEquals}, ConverterParameter=survey}" />
-                <ToggleButton Content="File" Command="{Binding Preview.SetColorModeCommand}" CommandParameter="file" FontSize="11" Padding="6,2" Margin="0,0,2,2"
-                              ToolTip.Tip="A distinct colour per source .th file (groups the legend by file)"
+                <ToggleButton Content="{l:Loc Common_File}" Command="{Binding Preview.SetColorModeCommand}" CommandParameter="file" FontSize="11" Padding="6,2" Margin="0,0,2,2"
+                              ToolTip.Tip="{l:Loc Live_ColFileTip}"
                               IsChecked="{Binding Preview.ColorMode, Mode=OneWay, Converter={StaticResource ColorEquals}, ConverterParameter=file}" />
-                <ToggleButton Content="Component" Command="{Binding Preview.SetColorModeCommand}" CommandParameter="component" FontSize="11" Padding="6,2" Margin="0,0,6,2"
-                              ToolTip.Tip="A distinct colour per disconnected piece (reveals surveys stacked at the origin)"
+                <ToggleButton Content="{l:Loc Live_Component}" Command="{Binding Preview.SetColorModeCommand}" CommandParameter="component" FontSize="11" Padding="6,2" Margin="0,0,6,2"
+                              ToolTip.Tip="{l:Loc Live_ComponentTip}"
                               IsChecked="{Binding Preview.ColorMode, Mode=OneWay, Converter={StaticResource ColorEquals}, ConverterParameter=component}" />
 
                 <TextBlock Text="{Binding Preview.Status}" Foreground="Gray" VerticalAlignment="Center"
@@ -122,17 +123,17 @@
                     </MultiBinding>
                 </Border.IsVisible>
                 <DockPanel MaxWidth="220">
-                    <TextBlock DockPanel.Dock="Top" Text="Groups" FontWeight="SemiBold" FontSize="11"
+                    <TextBlock DockPanel.Dock="Top" Text="{l:Loc Live_Groups}" FontWeight="SemiBold" FontSize="11"
                                Foreground="#EEEEEE" Margin="0,0,0,3" />
                     <UniformGrid DockPanel.Dock="Top" Columns="4" Margin="0,0,0,4">
-                        <Button Content="all" Command="{Binding Preview.ShowAllGroupsCommand}" FontSize="10" Padding="4,0" Margin="0,0,2,0"
-                                ToolTip.Tip="Check all groups" />
-                        <Button Content="none" Command="{Binding Preview.HideAllGroupsCommand}" FontSize="10" Padding="4,0" Margin="0,0,2,0"
-                                ToolTip.Tip="Uncheck all groups" />
-                        <Button Content="invert" Command="{Binding Preview.InvertGroupsCommand}" FontSize="10" Padding="4,0" Margin="0,0,2,0"
-                                ToolTip.Tip="Invert the selection" />
-                        <Button Content="main" Command="{Binding Preview.ShowOnlyMainCommand}" FontSize="10" Padding="4,0"
-                                ToolTip.Tip="Show only the largest group" />
+                        <Button Content="{l:Loc Live_All}" Command="{Binding Preview.ShowAllGroupsCommand}" FontSize="10" Padding="4,0" Margin="0,0,2,0"
+                                ToolTip.Tip="{l:Loc Live_AllTip}" />
+                        <Button Content="{l:Loc Live_NoneBtn}" Command="{Binding Preview.HideAllGroupsCommand}" FontSize="10" Padding="4,0" Margin="0,0,2,0"
+                                ToolTip.Tip="{l:Loc Live_NoneTip}" />
+                        <Button Content="{l:Loc Live_Invert}" Command="{Binding Preview.InvertGroupsCommand}" FontSize="10" Padding="4,0" Margin="0,0,2,0"
+                                ToolTip.Tip="{l:Loc Live_InvertTip}" />
+                        <Button Content="{l:Loc Live_Main}" Command="{Binding Preview.ShowOnlyMainCommand}" FontSize="10" Padding="4,0"
+                                ToolTip.Tip="{l:Loc Live_MainTip}" />
                     </UniformGrid>
                     <ScrollViewer x:Name="GroupScroller" MaxHeight="260" HorizontalScrollBarVisibility="Disabled"
                                   VerticalScrollBarVisibility="Visible" AllowAutoHide="False">
@@ -141,7 +142,7 @@
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Grid ColumnDefinitions="Auto,Auto,*" Margin="0,1" Background="Transparent"
-                                          ToolTip.Tip="Hover to locate · tick to show/hide">
+                                          ToolTip.Tip="{l:Loc Live_GroupRowTip}">
                                         <CheckBox Grid.Column="0" IsChecked="{Binding IsVisible, Mode=TwoWay}"
                                                   MinWidth="0" Padding="0" Margin="0,0,4,0" VerticalAlignment="Center" />
                                         <Border Grid.Column="1" Width="11" Height="11" CornerRadius="2"

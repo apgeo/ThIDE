@@ -463,4 +463,177 @@
   <data name="Pref_PressKeysWm" xml:space="preserve"><value>press keys…</value></data>
   <data name="Pref_GestureTip" xml:space="preserve"><value>Click and press a key combination</value></data>
   <data name="Pref_Reset" xml:space="preserve"><value>Reset</value></data>
+  <!-- Shared (group 5) -->
+  <data name="Common_Filter" xml:space="preserve"><value>Filter…</value></data>
+  <data name="Common_OpenEllipsis" xml:space="preserve"><value>Open…</value></data>
+  <data name="Common_OpenExternally" xml:space="preserve"><value>Open externally</value></data>
+  <data name="Common_ClearOutput" xml:space="preserve"><value>Clear Output</value></data>
+  <data name="Common_RefreshGlyph" xml:space="preserve"><value>↻ Refresh</value></data>
+  <data name="Col_Path" xml:space="preserve"><value>Path</value></data>
+  <!-- Diagnostics tool -->
+  <data name="Diag_ProjectScopeTip" xml:space="preserve"><value>Show diagnostics from all thconfig project files (requires workspace)</value></data>
+  <data name="Diag_Col_Code" xml:space="preserve"><value>Code</value></data>
+  <data name="Diag_Col_Severity" xml:space="preserve"><value>Severity</value></data>
+  <data name="Diag_Col_Message" xml:space="preserve"><value>Message</value></data>
+  <data name="Diag_Errors" xml:space="preserve"><value>Errors</value></data>
+  <data name="Diag_Warnings" xml:space="preserve"><value>Warnings</value></data>
+  <data name="Diag_Info" xml:space="preserve"><value>Info</value></data>
+  <data name="Diag_ReferencesOnly" xml:space="preserve"><value>References only</value></data>
+  <data name="Diag_ReferencesTip" xml:space="preserve"><value>Show only dangling/unresolved reference diagnostics (DIAG-06)</value></data>
+  <data name="Diag_ClearSuppressions" xml:space="preserve"><value>Clear suppressions</value></data>
+  <data name="Diag_Explain" xml:space="preserve"><value>Explain (open docs)</value></data>
+  <data name="Diag_Suppress" xml:space="preserve"><value>Suppress this code</value></data>
+  <data name="Diag_OpenDocs" xml:space="preserve"><value>Open docs ↗</value></data>
+  <!-- Compiler output tool -->
+  <data name="Comp_TabOutput" xml:space="preserve"><value>Output</value></data>
+  <data name="Comp_TabRaw" xml:space="preserve"><value>Raw</value></data>
+  <data name="Comp_OpenFile" xml:space="preserve"><value>Open this file</value></data>
+  <data name="Comp_OpenLog" xml:space="preserve"><value>Open log</value></data>
+  <data name="Comp_OpenLogTip" xml:space="preserve"><value>Open the Therion log file in the editor</value></data>
+  <data name="Comp_TimeColTip" xml:space="preserve"><value>Time column display</value></data>
+  <data name="Comp_TimeLast" xml:space="preserve"><value>Since last line</value></data>
+  <data name="Comp_TimeStamp" xml:space="preserve"><value>Timestamp</value></data>
+  <data name="Comp_TimeStart" xml:space="preserve"><value>Since build start</value></data>
+  <!-- Log tool -->
+  <data name="Log_Level" xml:space="preserve"><value>Level:</value></data>
+  <data name="Log_LevelTip" xml:space="preserve"><value>Minimum level shown for new entries (does not re-filter older ones)</value></data>
+  <!-- XVI tool -->
+  <data name="Xvi_Col_Path" xml:space="preserve"><value>XVI</value></data>
+  <data name="Xvi_Col_Sketch" xml:space="preserve"><value>Sketch</value></data>
+  <data name="Xvi_Col_Grid" xml:space="preserve"><value>Grid</value></data>
+  <!-- Outline tool -->
+  <data name="Outline_Filter" xml:space="preserve"><value>Filter outline…</value></data>
+  <data name="Outline_IncludeStations" xml:space="preserve"><value>Include stations in the outline</value></data>
+  <data name="Outline_Empty" xml:space="preserve"><value>No survey/scrap structure in this file.</value></data>
+  <!-- Map viewer tool -->
+  <data name="MapV_Fit100" xml:space="preserve"><value>Fit 100%</value></data>
+  <!-- 3D model viewer tool -->
+  <data name="M3D_Model" xml:space="preserve"><value>Model:</value></data>
+  <data name="M3D_ModelTip" xml:space="preserve"><value>Models generated (or detected) from the active thconfig</value></data>
+  <data name="M3D_OpenTip" xml:space="preserve"><value>Open a .lox / .3d model file</value></data>
+  <data name="M3D_FullScreen" xml:space="preserve"><value>⛶ Full screen</value></data>
+  <data name="M3D_ExitFullScreen" xml:space="preserve"><value>⤢ Exit full screen</value></data>
+  <data name="M3D_ResetView" xml:space="preserve"><value>⟲ Reset view</value></data>
+  <data name="M3D_ResetViewTip" xml:space="preserve"><value>Re-frame the model</value></data>
+  <data name="M3D_Defaults" xml:space="preserve"><value>↺ Defaults</value></data>
+  <data name="M3D_DefaultsTip" xml:space="preserve"><value>Reset all switches to their default values</value></data>
+  <data name="M3D_DevToolsTip" xml:space="preserve"><value>Open the web engine's developer tools (or F12 / right-click ▸ Inspect)</value></data>
+  <data name="M3D_View" xml:space="preserve"><value>View:</value></data>
+  <data name="M3D_Plan" xml:space="preserve"><value>Plan</value></data>
+  <data name="M3D_ProfileN" xml:space="preserve"><value>Profile — north</value></data>
+  <data name="M3D_ProfileE" xml:space="preserve"><value>Profile — east</value></data>
+  <data name="M3D_ProfileS" xml:space="preserve"><value>Profile — south</value></data>
+  <data name="M3D_ProfileW" xml:space="preserve"><value>Profile — west</value></data>
+  <data name="M3D_Perspective" xml:space="preserve"><value>Perspective</value></data>
+  <data name="M3D_Orthographic" xml:space="preserve"><value>Orthographic</value></data>
+  <data name="M3D_Walls" xml:space="preserve"><value>Walls</value></data>
+  <data name="M3D_Splays" xml:space="preserve"><value>Splays</value></data>
+  <data name="M3D_Surface" xml:space="preserve"><value>Surface</value></data>
+  <data name="M3D_Labels" xml:space="preserve"><value>Labels</value></data>
+  <data name="M3D_Names" xml:space="preserve"><value>Names</value></data>
+  <data name="M3D_Box" xml:space="preserve"><value>Box</value></data>
+  <data name="M3D_BoxTip" xml:space="preserve"><value>Bounding box</value></data>
+  <data name="M3D_AutoRotate" xml:space="preserve"><value>Auto-rotate</value></data>
+  <data name="M3D_Light" xml:space="preserve"><value>Light</value></data>
+  <data name="M3D_LightTip" xml:space="preserve"><value>Directional light</value></data>
+  <data name="M3D_Hud" xml:space="preserve"><value>HUD</value></data>
+  <data name="M3D_HudTip" xml:space="preserve"><value>CaveView heads-up display</value></data>
+  <data name="M3D_Menu" xml:space="preserve"><value>Menu</value></data>
+  <data name="M3D_MenuTip" xml:space="preserve"><value>CaveView's own sidebar menu</value></data>
+  <data name="M3D_ColorBy" xml:space="preserve"><value>Color by:</value></data>
+  <data name="M3D_Height" xml:space="preserve"><value>Height</value></data>
+  <data name="M3D_Inclination" xml:space="preserve"><value>Inclination</value></data>
+  <data name="M3D_Plain" xml:space="preserve"><value>Plain</value></data>
+  <data name="M3D_Unavailable" xml:space="preserve"><value>3D model viewer unavailable</value></data>
+  <data name="M3D_OpenModelExternal" xml:space="preserve"><value>Open model externally (Loch / Aven)</value></data>
+  <!-- Live preview tool -->
+  <data name="Live_PlanTip" xml:space="preserve"><value>Plan view (looking down — north up)</value></data>
+  <data name="Live_ProfN" xml:space="preserve"><value>Projected profile along north (0°)</value></data>
+  <data name="Live_ProfE" xml:space="preserve"><value>Projected profile along east (90°) — classic east-vs-up elevation</value></data>
+  <data name="Live_ProfS" xml:space="preserve"><value>Projected profile along south (180°)</value></data>
+  <data name="Live_ProfW" xml:space="preserve"><value>Projected profile along west (270°)</value></data>
+  <data name="Live_Custom" xml:space="preserve"><value>Custom</value></data>
+  <data name="Live_CustomTip" xml:space="preserve"><value>Projected profile along a custom bearing (use the slider)</value></data>
+  <data name="Live_BearingTip" xml:space="preserve"><value>Projection bearing (0–359°)</value></data>
+  <data name="Live_SplaysTip" xml:space="preserve"><value>Show splay (wall) shots</value></data>
+  <data name="Live_AsLines" xml:space="preserve"><value>as lines</value></data>
+  <data name="Live_AsLinesTip" xml:space="preserve"><value>On: faded lines · Off: only the far edge points</value></data>
+  <data name="Live_LabelsTip" xml:space="preserve"><value>Show a name label at each station</value></data>
+  <data name="Live_SurveyStationTip" xml:space="preserve"><value>Qualify each station label with its survey (survey.station)</value></data>
+  <data name="Live_StationsTip" xml:space="preserve"><value>Show the small dot at each station</value></data>
+  <data name="Live_Junctions" xml:space="preserve"><value>Junctions</value></data>
+  <data name="Live_JunctionsTip" xml:space="preserve"><value>Show clickable equate junctions (where surveys are stitched together)</value></data>
+  <data name="Live_Legend" xml:space="preserve"><value>Legend</value></data>
+  <data name="Live_LegendTip" xml:space="preserve"><value>Show the legend / visibility list (hover a row to locate that group)</value></data>
+  <data name="Live_Separate" xml:space="preserve"><value>Separate</value></data>
+  <data name="Live_SeparateTip" xml:space="preserve"><value>Spread disconnected pieces into a grid instead of stacking them at the origin</value></data>
+  <data name="Live_Color" xml:space="preserve"><value>Color:</value></data>
+  <data name="Live_None" xml:space="preserve"><value>None</value></data>
+  <data name="Live_ColSurveyTip" xml:space="preserve"><value>A distinct colour per survey (groups the legend by survey)</value></data>
+  <data name="Live_ColFileTip" xml:space="preserve"><value>A distinct colour per source .th file (groups the legend by file)</value></data>
+  <data name="Live_Component" xml:space="preserve"><value>Component</value></data>
+  <data name="Live_ComponentTip" xml:space="preserve"><value>A distinct colour per disconnected piece (reveals surveys stacked at the origin)</value></data>
+  <data name="Live_Groups" xml:space="preserve"><value>Groups</value></data>
+  <data name="Live_All" xml:space="preserve"><value>all</value></data>
+  <data name="Live_AllTip" xml:space="preserve"><value>Check all groups</value></data>
+  <data name="Live_NoneBtn" xml:space="preserve"><value>none</value></data>
+  <data name="Live_NoneTip" xml:space="preserve"><value>Uncheck all groups</value></data>
+  <data name="Live_Invert" xml:space="preserve"><value>invert</value></data>
+  <data name="Live_InvertTip" xml:space="preserve"><value>Invert the selection</value></data>
+  <data name="Live_Main" xml:space="preserve"><value>main</value></data>
+  <data name="Live_MainTip" xml:space="preserve"><value>Show only the largest group</value></data>
+  <data name="Live_GroupRowTip" xml:space="preserve"><value>Hover to locate · tick to show/hide</value></data>
+  <!-- Generated files tool -->
+  <data name="Gen_StaleBanner" xml:space="preserve"><value>⚠ Some outputs are out of date — a project input changed since the last build. Rebuild to refresh.</value></data>
+  <data name="Gen_View3D" xml:space="preserve"><value>View in internal 3D viewer</value></data>
+  <data name="Gen_Col_FileName" xml:space="preserve"><value>File Name</value></data>
+  <data name="Gen_Col_AutoOpen" xml:space="preserve"><value>Auto-open</value></data>
+  <data name="Gen_AutoOpenTip" xml:space="preserve"><value>Auto-open after build — ▣ default (use settings) · ✓ always · ✗ never</value></data>
+  <data name="Gen_Col_Actions" xml:space="preserve"><value>Actions</value></data>
+  <data name="Gen_Col_State" xml:space="preserve"><value>State</value></data>
+  <data name="Gen_Col_Size" xml:space="preserve"><value>Size</value></data>
+  <data name="Gen_Col_Modified" xml:space="preserve"><value>Modified</value></data>
+  <data name="Gen_Open3DExtTip" xml:space="preserve"><value>Open in external 3D viewer (Loch / Aven)</value></data>
+  <data name="Gen_GoToDefTip" xml:space="preserve"><value>Go to definition in the thconfig</value></data>
+  <!-- File document view (editor + measurements) -->
+  <data name="File_ParseAnyway" xml:space="preserve"><value>Parse anyway</value></data>
+  <data name="File_SettingsBtn" xml:space="preserve"><value>Settings…</value></data>
+  <data name="File_HighlightAnyway" xml:space="preserve"><value>Highlight anyway</value></data>
+  <data name="File_Compare" xml:space="preserve"><value>Compare</value></data>
+  <data name="File_KeepMineSave" xml:space="preserve"><value>Keep mine (save)</value></data>
+  <data name="File_Dismiss" xml:space="preserve"><value>Dismiss</value></data>
+  <data name="File_DiscardReload" xml:space="preserve"><value>Discard &amp; reload</value></data>
+  <data name="File_KeepMine" xml:space="preserve"><value>Keep mine</value></data>
+  <data name="File_ConfirmDiscard" xml:space="preserve"><value>Reloading will discard your unsaved changes. Continue?</value></data>
+  <data name="File_TabSource" xml:space="preserve"><value>Source</value></data>
+  <data name="File_TabMeasurements" xml:space="preserve"><value>Measurements</value></data>
+  <data name="File_NoMeasurements" xml:space="preserve"><value>No measurements found in this file.</value></data>
+  <data name="File_FilterLabel" xml:space="preserve"><value>Filter:</value></data>
+  <data name="File_ShotsFilterWm" xml:space="preserve"><value>from / to / survey / flags / comment</value></data>
+  <data name="File_GroupBy" xml:space="preserve"><value>Group by:</value></data>
+  <data name="File_Cols" xml:space="preserve"><value>Cols ▾</value></data>
+  <data name="File_Col_Surf" xml:space="preserve"><value>Surf</value></data>
+  <data name="File_Col_Dup" xml:space="preserve"><value>Dup</value></data>
+  <data name="File_Col_Splay" xml:space="preserve"><value>Splay</value></data>
+  <data name="File_Col_Approx" xml:space="preserve"><value>Approx</value></data>
+  <data name="File_RunOf" xml:space="preserve"><value> of </value></data>
+  <data name="File_RunShown" xml:space="preserve"><value> shown</value></data>
+  <data name="File_RunStations" xml:space="preserve"><value> stations</value></data>
+  <data name="File_GoToDeclFrom" xml:space="preserve"><value>Go to Declaration of 'From'</value></data>
+  <data name="File_GoToDeclTo" xml:space="preserve"><value>Go to Declaration of 'To'</value></data>
+  <data name="File_ShowFrom3D" xml:space="preserve"><value>Show 'From' in 3D View</value></data>
+  <data name="File_ShowTo3D" xml:space="preserve"><value>Show 'To' in 3D View</value></data>
+  <data name="File_RenameFrom" xml:space="preserve"><value>Rename 'From' Station…</value></data>
+  <data name="File_RenameTo" xml:space="preserve"><value>Rename 'To' Station…</value></data>
+  <data name="File_StationsFilterWm" xml:space="preserve"><value>name / survey / kind</value></data>
+  <data name="File_GoToDecl" xml:space="preserve"><value>Go to Declaration</value></data>
+  <data name="File_ShowIn3D" xml:space="preserve"><value>Show in 3D View</value></data>
+  <data name="File_RenameStation" xml:space="preserve"><value>Rename Station…</value></data>
+  <data name="File_SetActiveTip" xml:space="preserve"><value>Set this file as the active thconfig (project configuration)</value></data>
+  <data name="File_SetWorkingDirTip" xml:space="preserve"><value>Set this file's folder as the working directory and make it the active thconfig</value></data>
+  <data name="File_MapiahTip" xml:space="preserve"><value>Open this sketch in the Mapiah editor (changes reload automatically)</value></data>
+  <data name="File_EditMapiah" xml:space="preserve"><value>Edit with Mapiah</value></data>
+  <data name="File_SwitchOpenTip" xml:space="preserve"><value>Switch to an open file</value></data>
+  <data name="File_SelectWorkspaceTip" xml:space="preserve"><value>Select this file in the Workspace</value></data>
+  <data name="File_ActionsTip" xml:space="preserve"><value>File actions</value></data>
 </root>

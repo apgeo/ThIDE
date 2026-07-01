@@ -1,14 +1,15 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:TherionProc.ViewModels.Docking"
+             xmlns:l="using:TherionProc.Resources"
              x:Class="TherionProc.Views.Docking.MapViewerToolView"
              x:CompileBindings="False"
              x:DataType="vm:MapViewerToolViewModel">
     <DockPanel>
         <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="6,3">
             <StackPanel Orientation="Horizontal" Spacing="6">
-                <Button Content="Open…" Click="OnOpen" FontSize="11" Padding="8,2" />
-                <Button Content="Open externally" Command="{Binding Map.OpenExternallyCommand}"
+                <Button Content="{l:Loc Common_OpenEllipsis}" Click="OnOpen" FontSize="11" Padding="8,2" />
+                <Button Content="{l:Loc Common_OpenExternally}" Command="{Binding Map.OpenExternallyCommand}"
                         IsEnabled="{Binding Map.HasFile}" FontSize="11" Padding="8,2" />
                 <Separator Width="1" Margin="3,2" Background="Gray" />
                 <Button Content="◀" Command="{Binding Map.PrevPageCommand}"
@@ -19,9 +20,9 @@
                         IsVisible="{Binding Map.HasMultiplePages}" FontSize="11" Padding="6,2" />
                 <Separator Width="1" Margin="3,2" Background="Gray" />
                 <Button Content="–" Command="{Binding Map.ZoomOutCommand}" FontSize="11" Padding="8,2" />
-                <Button Content="Fit 100%" Command="{Binding Map.ZoomResetCommand}" FontSize="11" Padding="6,2" />
+                <Button Content="{l:Loc MapV_Fit100}" Command="{Binding Map.ZoomResetCommand}" FontSize="11" Padding="6,2" />
                 <Button Content="+" Command="{Binding Map.ZoomInCommand}" FontSize="11" Padding="8,2" />
-                <Button Content="↻ Refresh" Command="{Binding Map.RefreshCommand}" FontSize="11" Padding="6,2" />
+                <Button Content="{l:Loc Common_RefreshGlyph}" Command="{Binding Map.RefreshCommand}" FontSize="11" Padding="6,2" />
             </StackPanel>
         </Border>
 

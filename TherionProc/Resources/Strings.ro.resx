@@ -463,4 +463,177 @@
   <data name="Pref_PressKeysWm" xml:space="preserve"><value>apăsați taste…</value></data>
   <data name="Pref_GestureTip" xml:space="preserve"><value>Faceți clic și apăsați o combinație de taste</value></data>
   <data name="Pref_Reset" xml:space="preserve"><value>Resetează</value></data>
+  <!-- Shared (group 5) -->
+  <data name="Common_Filter" xml:space="preserve"><value>Filtrează…</value></data>
+  <data name="Common_OpenEllipsis" xml:space="preserve"><value>Deschide…</value></data>
+  <data name="Common_OpenExternally" xml:space="preserve"><value>Deschide extern</value></data>
+  <data name="Common_ClearOutput" xml:space="preserve"><value>Golește ieșirea</value></data>
+  <data name="Common_RefreshGlyph" xml:space="preserve"><value>↻ Reîmprospătează</value></data>
+  <data name="Col_Path" xml:space="preserve"><value>Cale</value></data>
+  <!-- Diagnostics tool -->
+  <data name="Diag_ProjectScopeTip" xml:space="preserve"><value>Arată diagnosticele din toate fișierele de proiect thconfig (necesită spațiu de lucru)</value></data>
+  <data name="Diag_Col_Code" xml:space="preserve"><value>Cod</value></data>
+  <data name="Diag_Col_Severity" xml:space="preserve"><value>Severitate</value></data>
+  <data name="Diag_Col_Message" xml:space="preserve"><value>Mesaj</value></data>
+  <data name="Diag_Errors" xml:space="preserve"><value>Erori</value></data>
+  <data name="Diag_Warnings" xml:space="preserve"><value>Avertismente</value></data>
+  <data name="Diag_Info" xml:space="preserve"><value>Informații</value></data>
+  <data name="Diag_ReferencesOnly" xml:space="preserve"><value>Doar referințe</value></data>
+  <data name="Diag_ReferencesTip" xml:space="preserve"><value>Arată doar diagnosticele de referințe nerezolvate (DIAG-06)</value></data>
+  <data name="Diag_ClearSuppressions" xml:space="preserve"><value>Șterge suprimările</value></data>
+  <data name="Diag_Explain" xml:space="preserve"><value>Explică (deschide documentația)</value></data>
+  <data name="Diag_Suppress" xml:space="preserve"><value>Suprimă acest cod</value></data>
+  <data name="Diag_OpenDocs" xml:space="preserve"><value>Deschide documentația ↗</value></data>
+  <!-- Compiler output tool -->
+  <data name="Comp_TabOutput" xml:space="preserve"><value>Ieșire</value></data>
+  <data name="Comp_TabRaw" xml:space="preserve"><value>Brut</value></data>
+  <data name="Comp_OpenFile" xml:space="preserve"><value>Deschide acest fișier</value></data>
+  <data name="Comp_OpenLog" xml:space="preserve"><value>Deschide jurnalul</value></data>
+  <data name="Comp_OpenLogTip" xml:space="preserve"><value>Deschide fișierul jurnal Therion în editor</value></data>
+  <data name="Comp_TimeColTip" xml:space="preserve"><value>Afișarea coloanei de timp</value></data>
+  <data name="Comp_TimeLast" xml:space="preserve"><value>De la ultima linie</value></data>
+  <data name="Comp_TimeStamp" xml:space="preserve"><value>Marcaj temporal</value></data>
+  <data name="Comp_TimeStart" xml:space="preserve"><value>De la începutul compilării</value></data>
+  <!-- Log tool -->
+  <data name="Log_Level" xml:space="preserve"><value>Nivel:</value></data>
+  <data name="Log_LevelTip" xml:space="preserve"><value>Nivelul minim afișat pentru intrările noi (nu refiltrează intrările vechi)</value></data>
+  <!-- XVI tool -->
+  <data name="Xvi_Col_Path" xml:space="preserve"><value>XVI</value></data>
+  <data name="Xvi_Col_Sketch" xml:space="preserve"><value>Schiță</value></data>
+  <data name="Xvi_Col_Grid" xml:space="preserve"><value>Grilă</value></data>
+  <!-- Outline tool -->
+  <data name="Outline_Filter" xml:space="preserve"><value>Filtrează conturul…</value></data>
+  <data name="Outline_IncludeStations" xml:space="preserve"><value>Include stațiile în contur</value></data>
+  <data name="Outline_Empty" xml:space="preserve"><value>Nicio structură de topografie/schiță în acest fișier.</value></data>
+  <!-- Map viewer tool -->
+  <data name="MapV_Fit100" xml:space="preserve"><value>Încadrează 100%</value></data>
+  <!-- 3D model viewer tool -->
+  <data name="M3D_Model" xml:space="preserve"><value>Model:</value></data>
+  <data name="M3D_ModelTip" xml:space="preserve"><value>Modele generate (sau detectate) din thconfig-ul activ</value></data>
+  <data name="M3D_OpenTip" xml:space="preserve"><value>Deschide un fișier model .lox / .3d</value></data>
+  <data name="M3D_FullScreen" xml:space="preserve"><value>⛶ Ecran complet</value></data>
+  <data name="M3D_ExitFullScreen" xml:space="preserve"><value>⤢ Ieși din ecran complet</value></data>
+  <data name="M3D_ResetView" xml:space="preserve"><value>⟲ Resetează vederea</value></data>
+  <data name="M3D_ResetViewTip" xml:space="preserve"><value>Reîncadrează modelul</value></data>
+  <data name="M3D_Defaults" xml:space="preserve"><value>↺ Implicite</value></data>
+  <data name="M3D_DefaultsTip" xml:space="preserve"><value>Resetează toate comutatoarele la valorile implicite</value></data>
+  <data name="M3D_DevToolsTip" xml:space="preserve"><value>Deschide uneltele de dezvoltare ale motorului web (sau F12 / clic dreapta ▸ Inspectare)</value></data>
+  <data name="M3D_View" xml:space="preserve"><value>Vedere:</value></data>
+  <data name="M3D_Plan" xml:space="preserve"><value>Plan</value></data>
+  <data name="M3D_ProfileN" xml:space="preserve"><value>Profil — nord</value></data>
+  <data name="M3D_ProfileE" xml:space="preserve"><value>Profil — est</value></data>
+  <data name="M3D_ProfileS" xml:space="preserve"><value>Profil — sud</value></data>
+  <data name="M3D_ProfileW" xml:space="preserve"><value>Profil — vest</value></data>
+  <data name="M3D_Perspective" xml:space="preserve"><value>Perspectivă</value></data>
+  <data name="M3D_Orthographic" xml:space="preserve"><value>Ortografică</value></data>
+  <data name="M3D_Walls" xml:space="preserve"><value>Pereți</value></data>
+  <data name="M3D_Splays" xml:space="preserve"><value>Radiale</value></data>
+  <data name="M3D_Surface" xml:space="preserve"><value>Suprafață</value></data>
+  <data name="M3D_Labels" xml:space="preserve"><value>Etichete</value></data>
+  <data name="M3D_Names" xml:space="preserve"><value>Nume</value></data>
+  <data name="M3D_Box" xml:space="preserve"><value>Cutie</value></data>
+  <data name="M3D_BoxTip" xml:space="preserve"><value>Cutie de încadrare</value></data>
+  <data name="M3D_AutoRotate" xml:space="preserve"><value>Rotire automată</value></data>
+  <data name="M3D_Light" xml:space="preserve"><value>Lumină</value></data>
+  <data name="M3D_LightTip" xml:space="preserve"><value>Lumină direcțională</value></data>
+  <data name="M3D_Hud" xml:space="preserve"><value>HUD</value></data>
+  <data name="M3D_HudTip" xml:space="preserve"><value>Afișaj HUD CaveView</value></data>
+  <data name="M3D_Menu" xml:space="preserve"><value>Meniu</value></data>
+  <data name="M3D_MenuTip" xml:space="preserve"><value>Meniul lateral propriu CaveView</value></data>
+  <data name="M3D_ColorBy" xml:space="preserve"><value>Colorează după:</value></data>
+  <data name="M3D_Height" xml:space="preserve"><value>Înălțime</value></data>
+  <data name="M3D_Inclination" xml:space="preserve"><value>Înclinare</value></data>
+  <data name="M3D_Plain" xml:space="preserve"><value>Simplu</value></data>
+  <data name="M3D_Unavailable" xml:space="preserve"><value>Vizualizatorul de model 3D indisponibil</value></data>
+  <data name="M3D_OpenModelExternal" xml:space="preserve"><value>Deschide modelul extern (Loch / Aven)</value></data>
+  <!-- Live preview tool -->
+  <data name="Live_PlanTip" xml:space="preserve"><value>Vedere în plan (privire de sus — nord în sus)</value></data>
+  <data name="Live_ProfN" xml:space="preserve"><value>Profil proiectat de-a lungul nordului (0°)</value></data>
+  <data name="Live_ProfE" xml:space="preserve"><value>Profil proiectat de-a lungul estului (90°) — elevație clasică est-sus</value></data>
+  <data name="Live_ProfS" xml:space="preserve"><value>Profil proiectat de-a lungul sudului (180°)</value></data>
+  <data name="Live_ProfW" xml:space="preserve"><value>Profil proiectat de-a lungul vestului (270°)</value></data>
+  <data name="Live_Custom" xml:space="preserve"><value>Personalizat</value></data>
+  <data name="Live_CustomTip" xml:space="preserve"><value>Profil proiectat de-a lungul unui azimut personalizat (folosiți cursorul)</value></data>
+  <data name="Live_BearingTip" xml:space="preserve"><value>Azimutul proiecției (0–359°)</value></data>
+  <data name="Live_SplaysTip" xml:space="preserve"><value>Arată vizările radiale (de perete)</value></data>
+  <data name="Live_AsLines" xml:space="preserve"><value>ca linii</value></data>
+  <data name="Live_AsLinesTip" xml:space="preserve"><value>Activat: linii estompate · Dezactivat: doar punctele marginale îndepărtate</value></data>
+  <data name="Live_LabelsTip" xml:space="preserve"><value>Arată o etichetă cu nume la fiecare stație</value></data>
+  <data name="Live_SurveyStationTip" xml:space="preserve"><value>Califică fiecare etichetă de stație cu topografia sa (survey.station)</value></data>
+  <data name="Live_StationsTip" xml:space="preserve"><value>Arată punctul mic la fiecare stație</value></data>
+  <data name="Live_Junctions" xml:space="preserve"><value>Joncțiuni</value></data>
+  <data name="Live_JunctionsTip" xml:space="preserve"><value>Arată joncțiunile de echivalare pe care se poate face clic (unde topografiile sunt îmbinate)</value></data>
+  <data name="Live_Legend" xml:space="preserve"><value>Legendă</value></data>
+  <data name="Live_LegendTip" xml:space="preserve"><value>Arată legenda / lista de vizibilitate (treceți cu mouse-ul peste un rând pentru a localiza grupul)</value></data>
+  <data name="Live_Separate" xml:space="preserve"><value>Separă</value></data>
+  <data name="Live_SeparateTip" xml:space="preserve"><value>Distribuie piesele deconectate într-o grilă în loc să le stivuiască la origine</value></data>
+  <data name="Live_Color" xml:space="preserve"><value>Culoare:</value></data>
+  <data name="Live_None" xml:space="preserve"><value>Niciuna</value></data>
+  <data name="Live_ColSurveyTip" xml:space="preserve"><value>O culoare distinctă per topografie (grupează legenda după topografie)</value></data>
+  <data name="Live_ColFileTip" xml:space="preserve"><value>O culoare distinctă per fișier sursă .th (grupează legenda după fișier)</value></data>
+  <data name="Live_Component" xml:space="preserve"><value>Componentă</value></data>
+  <data name="Live_ComponentTip" xml:space="preserve"><value>O culoare distinctă per piesă deconectată (dezvăluie topografiile stivuite la origine)</value></data>
+  <data name="Live_Groups" xml:space="preserve"><value>Grupuri</value></data>
+  <data name="Live_All" xml:space="preserve"><value>toate</value></data>
+  <data name="Live_AllTip" xml:space="preserve"><value>Bifează toate grupurile</value></data>
+  <data name="Live_NoneBtn" xml:space="preserve"><value>niciunul</value></data>
+  <data name="Live_NoneTip" xml:space="preserve"><value>Debifează toate grupurile</value></data>
+  <data name="Live_Invert" xml:space="preserve"><value>inversează</value></data>
+  <data name="Live_InvertTip" xml:space="preserve"><value>Inversează selecția</value></data>
+  <data name="Live_Main" xml:space="preserve"><value>principal</value></data>
+  <data name="Live_MainTip" xml:space="preserve"><value>Arată doar cel mai mare grup</value></data>
+  <data name="Live_GroupRowTip" xml:space="preserve"><value>Treceți cu mouse-ul pentru a localiza · bifați pentru a afișa/ascunde</value></data>
+  <!-- Generated files tool -->
+  <data name="Gen_StaleBanner" xml:space="preserve"><value>⚠ Unele ieșiri sunt învechite — o intrare a proiectului s-a schimbat de la ultima compilare. Recompilați pentru a reîmprospăta.</value></data>
+  <data name="Gen_View3D" xml:space="preserve"><value>Vizualizează în vizualizatorul 3D intern</value></data>
+  <data name="Gen_Col_FileName" xml:space="preserve"><value>Nume fișier</value></data>
+  <data name="Gen_Col_AutoOpen" xml:space="preserve"><value>Deschidere automată</value></data>
+  <data name="Gen_AutoOpenTip" xml:space="preserve"><value>Deschidere automată după compilare — ▣ implicit (folosește setările) · ✓ întotdeauna · ✗ niciodată</value></data>
+  <data name="Gen_Col_Actions" xml:space="preserve"><value>Acțiuni</value></data>
+  <data name="Gen_Col_State" xml:space="preserve"><value>Stare</value></data>
+  <data name="Gen_Col_Size" xml:space="preserve"><value>Dimensiune</value></data>
+  <data name="Gen_Col_Modified" xml:space="preserve"><value>Modificat</value></data>
+  <data name="Gen_Open3DExtTip" xml:space="preserve"><value>Deschide în vizualizatorul 3D extern (Loch / Aven)</value></data>
+  <data name="Gen_GoToDefTip" xml:space="preserve"><value>Salt la definiție în thconfig</value></data>
+  <!-- File document view (editor + measurements) -->
+  <data name="File_ParseAnyway" xml:space="preserve"><value>Analizează oricum</value></data>
+  <data name="File_SettingsBtn" xml:space="preserve"><value>Setări…</value></data>
+  <data name="File_HighlightAnyway" xml:space="preserve"><value>Evidențiază oricum</value></data>
+  <data name="File_Compare" xml:space="preserve"><value>Compară</value></data>
+  <data name="File_KeepMineSave" xml:space="preserve"><value>Păstrează versiunea mea (salvează)</value></data>
+  <data name="File_Dismiss" xml:space="preserve"><value>Închide</value></data>
+  <data name="File_DiscardReload" xml:space="preserve"><value>Renunță &amp; reîncarcă</value></data>
+  <data name="File_KeepMine" xml:space="preserve"><value>Păstrează versiunea mea</value></data>
+  <data name="File_ConfirmDiscard" xml:space="preserve"><value>Reîncărcarea va renunța la modificările nesalvate. Continuați?</value></data>
+  <data name="File_TabSource" xml:space="preserve"><value>Sursă</value></data>
+  <data name="File_TabMeasurements" xml:space="preserve"><value>Măsurători</value></data>
+  <data name="File_NoMeasurements" xml:space="preserve"><value>Nicio măsurătoare găsită în acest fișier.</value></data>
+  <data name="File_FilterLabel" xml:space="preserve"><value>Filtru:</value></data>
+  <data name="File_ShotsFilterWm" xml:space="preserve"><value>de la / până la / topografie / indicatori / comentariu</value></data>
+  <data name="File_GroupBy" xml:space="preserve"><value>Grupează după:</value></data>
+  <data name="File_Cols" xml:space="preserve"><value>Coloane ▾</value></data>
+  <data name="File_Col_Surf" xml:space="preserve"><value>Supr.</value></data>
+  <data name="File_Col_Dup" xml:space="preserve"><value>Dupl.</value></data>
+  <data name="File_Col_Splay" xml:space="preserve"><value>Radial</value></data>
+  <data name="File_Col_Approx" xml:space="preserve"><value>Aprox.</value></data>
+  <data name="File_RunOf" xml:space="preserve"><value> din </value></data>
+  <data name="File_RunShown" xml:space="preserve"><value> afișate</value></data>
+  <data name="File_RunStations" xml:space="preserve"><value> stații</value></data>
+  <data name="File_GoToDeclFrom" xml:space="preserve"><value>Salt la declarația stației „De la”</value></data>
+  <data name="File_GoToDeclTo" xml:space="preserve"><value>Salt la declarația stației „Până la”</value></data>
+  <data name="File_ShowFrom3D" xml:space="preserve"><value>Arată „De la” în vizualizarea 3D</value></data>
+  <data name="File_ShowTo3D" xml:space="preserve"><value>Arată „Până la” în vizualizarea 3D</value></data>
+  <data name="File_RenameFrom" xml:space="preserve"><value>Redenumește stația „De la”…</value></data>
+  <data name="File_RenameTo" xml:space="preserve"><value>Redenumește stația „Până la”…</value></data>
+  <data name="File_StationsFilterWm" xml:space="preserve"><value>nume / topografie / tip</value></data>
+  <data name="File_GoToDecl" xml:space="preserve"><value>Salt la declarație</value></data>
+  <data name="File_ShowIn3D" xml:space="preserve"><value>Arată în vizualizarea 3D</value></data>
+  <data name="File_RenameStation" xml:space="preserve"><value>Redenumește stația…</value></data>
+  <data name="File_SetActiveTip" xml:space="preserve"><value>Setează acest fișier ca thconfig activ (configurația proiectului)</value></data>
+  <data name="File_SetWorkingDirTip" xml:space="preserve"><value>Setează dosarul acestui fișier ca director de lucru și fă-l thconfig activ</value></data>
+  <data name="File_MapiahTip" xml:space="preserve"><value>Deschide această schiță în editorul Mapiah (modificările se reîncarcă automat)</value></data>
+  <data name="File_EditMapiah" xml:space="preserve"><value>Editează cu Mapiah</value></data>
+  <data name="File_SwitchOpenTip" xml:space="preserve"><value>Comută la un fișier deschis</value></data>
+  <data name="File_SelectWorkspaceTip" xml:space="preserve"><value>Selectează acest fișier în spațiul de lucru</value></data>
+  <data name="File_ActionsTip" xml:space="preserve"><value>Acțiuni fișier</value></data>
 </root>

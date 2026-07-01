@@ -360,7 +360,7 @@ public partial class FileDocumentView : UserControl
     private void OnCopyShotCell(object? sender, RoutedEventArgs e)
     {
         if (ShotGridSelectedRow() is not { } row) return;
-        var text = GetShotCellValue(row, ShotGridCurrentColumn());
+        var text = GetShotCellValue(row, this.FindControl<DataGrid>("ShotsGrid"));
         if (text is null) return;
         CopyToClipboard(text);
     }
@@ -395,24 +395,26 @@ public partial class FileDocumentView : UserControl
         TryDocuments()?.RequestRenameSymbol(row.ToShort, ReferenceKind.Station);
     }
 
-    private static string? GetShotCellValue(MeasurementRow row, DataGridColumn? col)
+    // Headers are localized via {l:Loc}, so map the current cell by its (stable) column index
+    // instead of the translated header text. Order MUST match the ShotsGrid columns in XAML.
+    private static string? GetShotCellValue(MeasurementRow row, DataGrid? grid)
     {
-        if (col is null) return null;
-        return col.Header?.ToString() switch
+        if (grid?.CurrentColumn is not { } col) return null;
+        return grid.Columns.IndexOf(col) switch
         {
-            "Survey"  => row.Survey,
-            "From"    => row.From,
-            "To"      => row.To,
-            "Length"  => row.Length?.ToString(),
-            "Compass" => row.Compass?.ToString(),
-            "Clino"   => row.Clino?.ToString(),
-            "Surf"    => row.Surface     ? "1" : "0",
-            "Dup"     => row.Duplicate   ? "1" : "0",
-            "Splay"   => row.Splay       ? "1" : "0",
-            "Approx"  => row.Approximate ? "1" : "0",
-            "Comment" => row.Comment,
-            "Line"    => row.Line.ToString(),
-            _         => null,
+            0  => row.Survey,
+            1  => row.From,
+            2  => row.To,
+            3  => row.Length?.ToString(),
+            4  => row.Compass?.ToString(),
+            5  => row.Clino?.ToString(),
+            6  => row.Surface     ? "1" : "0",
+            7  => row.Duplicate   ? "1" : "0",
+            8  => row.Splay       ? "1" : "0",
+            9  => row.Approximate ? "1" : "0",
+            10 => row.Comment,
+            11 => row.Line.ToString(),
+            _  => null,
         };
     }
 
@@ -434,7 +436,7 @@ public partial class FileDocumentView : UserControl
     private void OnCopyStationCell(object? sender, RoutedEventArgs e)
     {
         if (StationGridSelectedRow() is not { } row) return;
-        var text = GetStationCellValue(row, StationGridCurrentColumn());
+        var text = GetStationCellValue(row, this.FindControl<DataGrid>("StationsGrid"));
         if (text is null) return;
         CopyToClipboard(text);
     }
@@ -473,16 +475,17 @@ public partial class FileDocumentView : UserControl
         if (ShotGridSelectedRow() is { } row) TryDocuments()?.RequestShowInModel3D(row.ToFull);
     }
 
-    private static string? GetStationCellValue(StationMeasurementRow row, DataGridColumn? col)
+    // Column index instead of translated header text. Order MUST match the StationsGrid columns.
+    private static string? GetStationCellValue(StationMeasurementRow row, DataGrid? grid)
     {
-        if (col is null) return null;
-        return col.Header?.ToString() switch
+        if (grid?.CurrentColumn is not { } col) return null;
+        return grid.Columns.IndexOf(col) switch
         {
-            "Station" => row.Name,
-            "Survey"  => row.Survey,
-            "Kind"    => row.Kind,
-            "Line"    => row.Line.ToString(),
-            _         => null,
+            0 => row.Name,
+            1 => row.Survey,
+            2 => row.Kind,
+            3 => row.Line.ToString(),
+            _ => null,
         };
     }
 

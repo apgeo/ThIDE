@@ -129,11 +129,16 @@ public partial class GeneratedFilesToolView : UserControl
             SetColumnVisible(header, cb.IsChecked == true);
     }
 
-    private void SetColumnVisible(string header, bool visible)
+    // Stable, language-independent column keys in XAML column order — headers are localized via
+    // {l:Loc}, so we identify a column by its key (the CheckBox Tag), not the translated header.
+    private static readonly string[] ColOrder =
+        { "Kind", "File Name", "Auto-open", "Actions", "State", "Path", "Size", "Modified" };
+
+    private void SetColumnVisible(string key, bool visible)
     {
-        var col = this.FindControl<DataGrid>("Grid")?.Columns
-            .FirstOrDefault(c => string.Equals(c.Header?.ToString(), header, System.StringComparison.Ordinal));
-        if (col is not null) col.IsVisible = visible;
+        if (this.FindControl<DataGrid>("Grid") is not { } grid) return;
+        int idx = System.Array.IndexOf(ColOrder, key);
+        if (idx >= 0 && idx < grid.Columns.Count) grid.Columns[idx].IsVisible = visible;
     }
 
     private void OnFitColumns(object? sender, RoutedEventArgs e)

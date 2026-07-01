@@ -13,9 +13,10 @@
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <TextBlock Text="{Binding Diagnostics.Selected.Code}" FontWeight="SemiBold" FontSize="11"
                                VerticalAlignment="Center" />
-                    <Button Content="Open docs ↗" FontSize="11" Padding="6,1"
+                    <Button FontSize="11" Padding="6,1"
                             Command="{Binding Diagnostics.OpenDocsCommand}"
-                            IsVisible="{Binding Diagnostics.HasDocLink}" />
+                            IsVisible="{Binding Diagnostics.HasDocLink}"
+                            Content="{l:Loc Diag_OpenDocs}" />
                 </StackPanel>
                 <TextBlock Text="{Binding Diagnostics.SelectedExplanation}" TextWrapping="Wrap" FontSize="12" />
                 <Border Background="#22808080" CornerRadius="3" Padding="6,3"
@@ -29,7 +30,7 @@
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="4,2" Spacing="6">
             <ToggleButton Content="{l:Loc Diag_ProjectScope}"
                           IsChecked="{Binding Diagnostics.ShowProjectScope, Mode=TwoWay}"
-                          ToolTip.Tip="Show diagnostics from all thconfig project files (requires workspace)"
+                          ToolTip.Tip="{l:Loc Diag_ProjectScopeTip}"
                           Padding="6,2" FontSize="11" />
             <!-- Roll-up of warnings/errors and the number of affected files (#3). -->
             <TextBlock Text="{Binding Diagnostics.SummaryText}" VerticalAlignment="Center"
@@ -39,31 +40,31 @@
                 <Button.Flyout>
                     <Flyout>
                         <StackPanel Spacing="2" Margin="8">
-                            <CheckBox Content="Code"      Tag="Code"      IsChecked="True"  Click="OnToggleColumn" />
-                            <CheckBox Content="Severity"  Tag="Severity"  IsChecked="True"  Click="OnToggleColumn" />
-                            <CheckBox Content="Message"   Tag="Message"   IsChecked="True"  Click="OnToggleColumn" />
-                            <CheckBox Content="File"      Tag="File"      IsChecked="True"  Click="OnToggleColumn" />
-                            <CheckBox Content="Path"      Tag="Path"      IsChecked="False" Click="OnToggleColumn" />
-                            <CheckBox Content="Line"      Tag="Line"      IsChecked="True"  Click="OnToggleColumn" />
+                            <CheckBox Content="{l:Loc Diag_Col_Code}"      Tag="Code"      IsChecked="True"  Click="OnToggleColumn" />
+                            <CheckBox Content="{l:Loc Diag_Col_Severity}"  Tag="Severity"  IsChecked="True"  Click="OnToggleColumn" />
+                            <CheckBox Content="{l:Loc Diag_Col_Message}"   Tag="Message"   IsChecked="True"  Click="OnToggleColumn" />
+                            <CheckBox Content="{l:Loc Common_File}"      Tag="File"      IsChecked="True"  Click="OnToggleColumn" />
+                            <CheckBox Content="{l:Loc Col_Path}"      Tag="Path"      IsChecked="False" Click="OnToggleColumn" />
+                            <CheckBox Content="{l:Loc Browser_Col_Line}"      Tag="Line"      IsChecked="True"  Click="OnToggleColumn" />
                         </StackPanel>
                     </Flyout>
                 </Button.Flyout>
             </Button>
             <Button Content="{l:Loc Common_Fit}" Padding="6,2" FontSize="11" Click="OnFitColumns"
-                    ToolTip.Tip="Fit all columns to their content" />
+                    ToolTip.Tip="{l:Loc Common_FitAll}" />
         </StackPanel>
 
         <!-- DIAG-07: search + severity/category filters + suppression. -->
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="4,0,4,3" Spacing="6">
-            <TextBox Width="180" Watermark="Filter…" FontSize="11" Padding="4,1"
+            <TextBox Width="180" Watermark="{l:Loc Common_Filter}" FontSize="11" Padding="4,1"
                      Text="{Binding Diagnostics.SearchText, Mode=TwoWay}" />
-            <ToggleButton Content="Errors"   IsChecked="{Binding Diagnostics.ShowErrors, Mode=TwoWay}"   Padding="6,2" FontSize="11" />
-            <ToggleButton Content="Warnings" IsChecked="{Binding Diagnostics.ShowWarnings, Mode=TwoWay}" Padding="6,2" FontSize="11" />
-            <ToggleButton Content="Info"     IsChecked="{Binding Diagnostics.ShowInfos, Mode=TwoWay}"    Padding="6,2" FontSize="11" />
-            <ToggleButton Content="References only" IsChecked="{Binding Diagnostics.OnlyReferences, Mode=TwoWay}"
-                          ToolTip.Tip="Show only dangling/unresolved reference diagnostics (DIAG-06)"
+            <ToggleButton Content="{l:Loc Diag_Errors}"   IsChecked="{Binding Diagnostics.ShowErrors, Mode=TwoWay}"   Padding="6,2" FontSize="11" />
+            <ToggleButton Content="{l:Loc Diag_Warnings}" IsChecked="{Binding Diagnostics.ShowWarnings, Mode=TwoWay}" Padding="6,2" FontSize="11" />
+            <ToggleButton Content="{l:Loc Diag_Info}"     IsChecked="{Binding Diagnostics.ShowInfos, Mode=TwoWay}"    Padding="6,2" FontSize="11" />
+            <ToggleButton Content="{l:Loc Diag_ReferencesOnly}" IsChecked="{Binding Diagnostics.OnlyReferences, Mode=TwoWay}"
+                          ToolTip.Tip="{l:Loc Diag_ReferencesTip}"
                           Padding="6,2" FontSize="11" />
-            <Button Content="Clear suppressions" Padding="6,2" FontSize="11"
+            <Button Content="{l:Loc Diag_ClearSuppressions}" Padding="6,2" FontSize="11"
                     Command="{Binding Diagnostics.ClearSuppressionsCommand}"
                     IsVisible="{Binding Diagnostics.HasSuppressions}" />
         </StackPanel>
@@ -80,17 +81,17 @@
                     <MenuItem Header="{l:Loc Common_Copy}" Click="OnCopyRow" />
                     <MenuItem Header="{l:Loc Common_CopyAll}" Click="OnCopyAll" />
                     <Separator />
-                    <MenuItem Header="Explain (open docs)" Command="{Binding Diagnostics.OpenDocsCommand}"
+                    <MenuItem Header="{l:Loc Diag_Explain}" Command="{Binding Diagnostics.OpenDocsCommand}"
                               IsVisible="{Binding Diagnostics.HasDocLink}" />
-                    <MenuItem Header="Suppress this code" Command="{Binding Diagnostics.SuppressSelectedCodeCommand}" />
+                    <MenuItem Header="{l:Loc Diag_Suppress}" Command="{Binding Diagnostics.SuppressSelectedCodeCommand}" />
                 </ContextMenu>
             </DataGrid.ContextMenu>
             <!-- Columns auto-size to fit their header + content; Message takes the remaining
                  space and the long File path is capped with a hover tooltip (#5). -->
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Code"     Binding="{Binding Code}"     Width="Auto" MinWidth="70" />
-                <DataGridTextColumn Header="Severity" Binding="{Binding Severity}" Width="Auto" MinWidth="70" />
-                <DataGridTemplateColumn Header="Message" Width="*" MinWidth="160">
+                <DataGridTextColumn Header="{l:Loc Diag_Col_Code}"     Binding="{Binding Code}"     Width="Auto" MinWidth="70" />
+                <DataGridTextColumn Header="{l:Loc Diag_Col_Severity}" Binding="{Binding Severity}" Width="Auto" MinWidth="70" />
+                <DataGridTemplateColumn Header="{l:Loc Diag_Col_Message}" Width="*" MinWidth="160">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <TextBlock Text="{Binding Message}" VerticalAlignment="Center" Padding="4,0"
@@ -99,7 +100,7 @@
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
                 <!-- File name only (shown by default, #3). -->
-                <DataGridTemplateColumn Header="File" Width="Auto">
+                <DataGridTemplateColumn Header="{l:Loc Common_File}" Width="Auto">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <TextBlock Text="{Binding FileName}" VerticalAlignment="Center" Padding="4,0"
@@ -108,8 +109,8 @@
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
                 <!-- Full path (hidden by default; shown in full, not trimmed, #3). -->
-                <DataGridTextColumn Header="Path" Binding="{Binding File}" Width="Auto" />
-                <DataGridTextColumn Header="Line"     Binding="{Binding Line}"     Width="Auto" MinWidth="48" />
+                <DataGridTextColumn Header="{l:Loc Col_Path}" Binding="{Binding File}" Width="Auto" />
+                <DataGridTextColumn Header="{l:Loc Browser_Col_Line}"     Binding="{Binding Line}"     Width="Auto" MinWidth="48" />
             </DataGrid.Columns>
         </DataGrid>
     </DockPanel>

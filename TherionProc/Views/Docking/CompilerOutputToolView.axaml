@@ -1,12 +1,13 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:TherionProc.ViewModels.Docking"
+             xmlns:l="using:TherionProc.Resources"
              x:Class="TherionProc.Views.Docking.CompilerOutputToolView"
              x:DataType="vm:CompilerOutputToolViewModel">
     <Grid>
     <TabControl>
         <!-- Parsed view: per-line classification with time + severity icon + colored text. -->
-        <TabItem Header="Output">
+        <TabItem Header="{l:Loc Comp_TabOutput}">
             <DataGrid x:Name="Grid"
                       ItemsSource="{Binding Build.Output}"
                       SelectedItem="{Binding Build.SelectedOutput, Mode=TwoWay}"
@@ -19,11 +20,11 @@
                       FontSize="11">
                 <DataGrid.ContextMenu>
                     <ContextMenu>
-                        <MenuItem Header="Copy" Click="OnCopyLine" />
-                        <MenuItem Header="Copy All" Click="OnCopyAll" />
-                        <MenuItem Header="Select All" Click="OnSelectAll" />
+                        <MenuItem Header="{l:Loc Common_Copy}" Click="OnCopyLine" />
+                        <MenuItem Header="{l:Loc Common_CopyAll}" Click="OnCopyAll" />
+                        <MenuItem Header="{l:Loc Common_SelectAll}" Click="OnSelectAll" />
                         <Separator />
-                        <MenuItem Header="Clear Output" Command="{Binding Build.ClearOutputCommand}" />
+                        <MenuItem Header="{l:Loc Common_ClearOutput}" Command="{Binding Build.ClearOutputCommand}" />
                     </ContextMenu>
                 </DataGrid.ContextMenu>
                 <DataGrid.Columns>
@@ -64,7 +65,7 @@
                                     <TextBlock Text="{Binding MessagePath}" Foreground="#3B82F6" FontStretch="Condensed"
                                                TextDecorations="Underline" Cursor="Hand" IsVisible="{Binding HasLink}"
                                                Tag="{Binding}" PointerPressed="OnOutputPathPressed"
-                                               ToolTip.Tip="Open this file" />
+                                               ToolTip.Tip="{l:Loc Comp_OpenFile}" />
                                     <TextBlock Text="{Binding MessageSuffix}" Foreground="{Binding TextBrush}"
                                                FontWeight="{Binding Weight}" FontStretch="Condensed" />
                                 </StackPanel>
@@ -76,18 +77,18 @@
         </TabItem>
 
         <!-- Raw view: verbatim stdout/stderr, selectable + copyable, warnings/errors colored. -->
-        <TabItem Header="Raw">
+        <TabItem Header="{l:Loc Comp_TabRaw}">
             <ScrollViewer x:Name="RawScroll" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
                 <SelectableTextBlock x:Name="RawText"
                                      FontFamily="Consolas,Cascadia Mono,Courier New,monospace"
                                      FontSize="11" Padding="6" TextWrapping="NoWrap">
                     <SelectableTextBlock.ContextMenu>
                         <ContextMenu>
-                            <MenuItem Header="Copy" Click="OnRawCopy" />
-                            <MenuItem Header="Copy All" Click="OnRawCopyAll" />
-                            <MenuItem Header="Select All" Click="OnRawSelectAll" />
+                            <MenuItem Header="{l:Loc Common_Copy}" Click="OnRawCopy" />
+                            <MenuItem Header="{l:Loc Common_CopyAll}" Click="OnRawCopyAll" />
+                            <MenuItem Header="{l:Loc Common_SelectAll}" Click="OnRawSelectAll" />
                             <Separator />
-                            <MenuItem Header="Clear Output" Command="{Binding Build.ClearOutputCommand}" />
+                            <MenuItem Header="{l:Loc Common_ClearOutput}" Command="{Binding Build.ClearOutputCommand}" />
                         </ContextMenu>
                     </SelectableTextBlock.ContextMenu>
                 </SelectableTextBlock>
@@ -101,10 +102,10 @@
         <!-- Open the Therion log produced by the last build, in the editor (#3). -->
         <Button FontSize="11" Padding="6,2" Click="OnOpenLog"
                 IsVisible="{Binding Build.HasLog}"
-                ToolTip.Tip="Open the Therion log file in the editor">
+                ToolTip.Tip="{l:Loc Comp_OpenLogTip}">
             <StackPanel Orientation="Horizontal" Spacing="4">
                 <PathIcon Data="{DynamicResource Icon.File}" Width="11" Height="11" />
-                <TextBlock Text="Open log" VerticalAlignment="Center" />
+                <TextBlock Text="{l:Loc Comp_OpenLog}" VerticalAlignment="Center" />
             </StackPanel>
         </Button>
         <!-- Watch icon in front of the time-mode dropdown (#12). -->
@@ -112,10 +113,10 @@
                   Foreground="Gray" VerticalAlignment="Center" />
         <ComboBox MinWidth="120" FontSize="11" Padding="6,2"
                   SelectedIndex="{Binding Build.TimeColumnModeIndex, Mode=TwoWay}"
-                  ToolTip.Tip="Time column display">
-            <ComboBoxItem>Since last line</ComboBoxItem>
-            <ComboBoxItem>Timestamp</ComboBoxItem>
-            <ComboBoxItem>Since build start</ComboBoxItem>
+                  ToolTip.Tip="{l:Loc Comp_TimeColTip}">
+            <ComboBoxItem Content="{l:Loc Comp_TimeLast}" />
+            <ComboBoxItem Content="{l:Loc Comp_TimeStamp}" />
+            <ComboBoxItem Content="{l:Loc Comp_TimeStart}" />
         </ComboBox>
     </StackPanel>
     </Grid>

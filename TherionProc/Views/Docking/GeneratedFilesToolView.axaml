@@ -10,27 +10,27 @@
         <!-- BUILD-03: stale-output banner (an input changed since the last build). -->
         <Border DockPanel.Dock="Top" Background="#33E65100" Padding="8,4"
                 IsVisible="{Binding Build.HasStaleArtifacts}">
-            <TextBlock Text="⚠ Some outputs are out of date — a project input changed since the last build. Rebuild to refresh."
+            <TextBlock Text="{l:Loc Gen_StaleBanner}"
                        Foreground="#E65100" FontSize="11" TextWrapping="Wrap" />
         </Border>
         <!-- Column visibility + fit controls (#4). -->
         <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="6,3">
             <StackPanel Orientation="Horizontal" Spacing="6">
-                <Button Content="{l:Loc Common_Columns}" Padding="6,2" FontSize="11" ToolTip.Tip="Show or hide columns">
+                <Button Content="{l:Loc Common_Columns}" Padding="6,2" FontSize="11" ToolTip.Tip="{l:Loc Common_ShowHideColumns}">
                     <Button.Flyout>
                         <Flyout>
                             <StackPanel Spacing="2" Margin="8">
-                                <CheckBox Content="Kind"      Tag="Kind"      IsChecked="True"  Click="OnToggleColumn" />
-                                <CheckBox Content="File Name" Tag="File Name" IsChecked="True"  Click="OnToggleColumn" />
-                                <CheckBox Content="Path"      Tag="Path"      IsChecked="False" Click="OnToggleColumn" />
-                                <CheckBox Content="Size"      Tag="Size"      IsChecked="True"  Click="OnToggleColumn" />
-                                <CheckBox Content="Modified"  Tag="Modified"  IsChecked="True"  Click="OnToggleColumn" />
+                                <CheckBox Content="{l:Loc Browser_Col_Kind}"      Tag="Kind"      IsChecked="True"  Click="OnToggleColumn" />
+                                <CheckBox Content="{l:Loc Gen_Col_FileName}" Tag="File Name" IsChecked="True"  Click="OnToggleColumn" />
+                                <CheckBox Content="{l:Loc Col_Path}"      Tag="Path"      IsChecked="False" Click="OnToggleColumn" />
+                                <CheckBox Content="{l:Loc Gen_Col_Size}"      Tag="Size"      IsChecked="True"  Click="OnToggleColumn" />
+                                <CheckBox Content="{l:Loc Gen_Col_Modified}"  Tag="Modified"  IsChecked="True"  Click="OnToggleColumn" />
                             </StackPanel>
                         </Flyout>
                     </Button.Flyout>
                 </Button>
                 <Button Content="{l:Loc Common_Fit}" Padding="6,2" FontSize="11" Click="OnFitColumns"
-                        ToolTip.Tip="Fit all columns to their content" />
+                        ToolTip.Tip="{l:Loc Common_FitAll}" />
             </StackPanel>
         </Border>
 
@@ -44,7 +44,7 @@
             <DataGrid.ContextMenu>
                 <ContextMenu Opening="OnArtifactContextOpening">
                     <MenuItem Header="{l:Loc Common_Open}" Click="OnOpenArtifact" />
-                    <MenuItem x:Name="View3DMenuItem" Header="View in internal 3D viewer" Click="OnViewArtifactIn3D" />
+                    <MenuItem x:Name="View3DMenuItem" Header="{l:Loc Gen_View3D}" Click="OnViewArtifactIn3D" />
                     <MenuItem Header="{l:Loc Gen_Reveal}" Click="OnRevealArtifact" />
                     <Separator />
                     <MenuItem Header="{l:Loc Gen_GoToDef}" Click="OnGoToArtifactDefinition" />
@@ -52,7 +52,7 @@
             </DataGrid.ContextMenu>
             <DataGrid.Columns>
                 <!-- Kind with a per-type icon (#4). -->
-                <DataGridTemplateColumn Header="Kind" Width="Auto">
+                <DataGridTemplateColumn Header="{l:Loc Browser_Col_Kind}" Width="Auto">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <StackPanel Orientation="Horizontal" Spacing="6" Margin="4,0" VerticalAlignment="Center">
@@ -63,19 +63,19 @@
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
-                <DataGridTextColumn Header="File Name" Binding="{Binding FileName}" Width="Auto" />
+                <DataGridTextColumn Header="{l:Loc Gen_Col_FileName}" Binding="{Binding FileName}" Width="Auto" />
                 <!-- #7: per-file auto-open override (3-state: default / always / never). -->
-                <DataGridTemplateColumn Header="Auto-open" Width="Auto">
+                <DataGridTemplateColumn Header="{l:Loc Gen_Col_AutoOpen}" Width="Auto">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <CheckBox IsThreeState="True" IsChecked="{Binding AutoOpen, Mode=TwoWay}"
                                       Click="OnAutoOpenToggled" HorizontalAlignment="Center" Margin="4,0"
-                                      ToolTip.Tip="Auto-open after build — ▣ default (use settings) · ✓ always · ✗ never" />
+                                      ToolTip.Tip="{l:Loc Gen_AutoOpenTip}" />
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
                 <!-- #1/#8: per-row actions (external 3D, internal 3D, reveal, go to definition). -->
-                <DataGridTemplateColumn Header="Actions" Width="Auto">
+                <DataGridTemplateColumn Header="{l:Loc Gen_Col_Actions}" Width="Auto">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <!-- Fixed-size slots so every row's buttons line up; the two 3D actions are
@@ -84,23 +84,23 @@
                                 <Panel Width="22" Height="20">
                                     <Button Click="OnRowOpenExternal3D" IsVisible="{Binding CanView3D}"
                                             Width="22" Height="20" Padding="0" Background="Transparent" BorderThickness="0"
-                                            ToolTip.Tip="Open in external 3D viewer (Loch / Aven)">
+                                            ToolTip.Tip="{l:Loc Gen_Open3DExtTip}">
                                         <PathIcon Data="{DynamicResource Icon.Cube}" Width="13" Height="13" />
                                     </Button>
                                 </Panel>
                                 <Panel Width="22" Height="20">
                                     <Button Click="OnRowOpenInternal3D" IsVisible="{Binding CanView3D}"
                                             Width="22" Height="20" Padding="0" Background="Transparent" BorderThickness="0"
-                                            ToolTip.Tip="View in internal 3D viewer">
+                                            ToolTip.Tip="{l:Loc Gen_View3D}">
                                         <PathIcon Data="{DynamicResource Icon.Eye}" Width="13" Height="13" />
                                     </Button>
                                 </Panel>
                                 <Button Click="OnRowReveal" Width="22" Height="20" Padding="0" Background="Transparent" BorderThickness="0"
-                                        ToolTip.Tip="Reveal in file manager">
+                                        ToolTip.Tip="{l:Loc Gen_Reveal}">
                                     <PathIcon Data="{DynamicResource Icon.FolderOpen}" Width="13" Height="13" />
                                 </Button>
                                 <Button Click="OnRowGoToDef" Width="22" Height="20" Padding="0" Background="Transparent" BorderThickness="0"
-                                        ToolTip.Tip="Go to definition in the thconfig">
+                                        ToolTip.Tip="{l:Loc Gen_GoToDefTip}">
                                     <PathIcon Data="{DynamicResource Icon.Search}" Width="13" Height="13" />
                                 </Button>
                             </StackPanel>
@@ -108,10 +108,10 @@
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
                 <!-- BUILD-03: current / stale state. -->
-                <DataGridTextColumn Header="State" Binding="{Binding StateText}" Width="Auto" />
-                <DataGridTextColumn Header="Path" Binding="{Binding Path}" Width="*" />
-                <DataGridTextColumn Header="Size" Binding="{Binding SizeDisplay}" Width="Auto" />
-                <DataGridTextColumn Header="Modified" Binding="{Binding ModifiedDisplay}" Width="Auto" />
+                <DataGridTextColumn Header="{l:Loc Gen_Col_State}" Binding="{Binding StateText}" Width="Auto" />
+                <DataGridTextColumn Header="{l:Loc Col_Path}" Binding="{Binding Path}" Width="*" />
+                <DataGridTextColumn Header="{l:Loc Gen_Col_Size}" Binding="{Binding SizeDisplay}" Width="Auto" />
+                <DataGridTextColumn Header="{l:Loc Gen_Col_Modified}" Binding="{Binding ModifiedDisplay}" Width="Auto" />
             </DataGrid.Columns>
         </DataGrid>
     </DockPanel>
