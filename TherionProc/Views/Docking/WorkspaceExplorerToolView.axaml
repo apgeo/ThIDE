@@ -29,7 +29,7 @@
                             x:CompileBindings="False"
                             Command="{Binding Explorer.OpenSelectedThconfigCommand}"
                             ToolTip.Tip="Open the selected thconfig in the editor">
-                        <PathIcon Data="{DynamicResource Icon.FolderOpen}" Width="13" Height="13" />
+                        <PathIcon Data="{DynamicResource Icon.File}" Width="13" Height="13" />
                     </Button>
                     <ComboBox HorizontalAlignment="Stretch" FontSize="11" x:CompileBindings="False"
                               ToolTip.Tip="Active configuration (drives the object graph)"
