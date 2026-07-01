@@ -507,6 +507,8 @@
   <data name="Outline_IncludeStations" xml:space="preserve"><value>Include stations in the outline</value></data>
   <data name="Outline_Empty" xml:space="preserve"><value>No survey/scrap structure in this file.</value></data>
   <!-- Map viewer tool -->
+  <data name="MapV_FitWindow" xml:space="preserve"><value>Fit page</value></data>
+  <data name="MapV_FitWindowTip" xml:space="preserve"><value>Fit the page to the window</value></data>
   <data name="MapV_Fit100" xml:space="preserve"><value>Fit 100%</value></data>
   <!-- 3D model viewer tool -->
   <data name="M3D_Model" xml:space="preserve"><value>Model:</value></data>

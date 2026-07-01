@@ -507,6 +507,8 @@
   <data name="Outline_IncludeStations" xml:space="preserve"><value>Include stațiile în contur</value></data>
   <data name="Outline_Empty" xml:space="preserve"><value>Nicio structură de topografie/schiță în acest fișier.</value></data>
   <!-- Map viewer tool -->
+  <data name="MapV_FitWindow" xml:space="preserve"><value>Încadrează pagina</value></data>
+  <data name="MapV_FitWindowTip" xml:space="preserve"><value>Încadrează pagina în fereastră</value></data>
   <data name="MapV_Fit100" xml:space="preserve"><value>Încadrează 100%</value></data>
   <!-- 3D model viewer tool -->
   <data name="M3D_Model" xml:space="preserve"><value>Model:</value></data>

@@ -22,6 +22,8 @@
                 <Button Content="–" Command="{Binding Map.ZoomOutCommand}" FontSize="11" Padding="8,2" />
                 <Button Content="{l:Loc MapV_Fit100}" Command="{Binding Map.ZoomResetCommand}" FontSize="11" Padding="6,2" />
                 <Button Content="+" Command="{Binding Map.ZoomInCommand}" FontSize="11" Padding="8,2" />
+                <Button Content="{l:Loc MapV_FitWindow}" ToolTip.Tip="{l:Loc MapV_FitWindowTip}"
+                        Click="OnFitPage" IsEnabled="{Binding Map.HasImage}" FontSize="11" Padding="6,2" />
                 <Button Content="{l:Loc Common_RefreshGlyph}" Command="{Binding Map.RefreshCommand}" FontSize="11" Padding="6,2" />
             </StackPanel>
         </Border>
