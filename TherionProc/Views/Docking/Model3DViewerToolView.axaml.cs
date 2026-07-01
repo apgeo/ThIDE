@@ -97,11 +97,11 @@ public partial class Model3DViewerToolView : UserControl
         if (top is null || _vm is null) return;
         var files = await top.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = "Open 3D model",
+            Title = TherionProc.Resources.Tr.Get("Pick_Open3D"),
             AllowMultiple = false,
             FileTypeFilter = new[]
             {
-                new FilePickerFileType("3D models (.lox / .3d)")
+                new FilePickerFileType(TherionProc.Resources.Tr.Get("Pick_3DFilter"))
                 {
                     Patterns = new[] { "*.lox", "*.3d" },
                 },

@@ -28,7 +28,7 @@ public sealed class AvaloniaStoragePicker : IStoragePicker
             AllowMultiple = false,
             FileTypeFilter = new[]
             {
-                new FilePickerFileType("Therion files")
+                new FilePickerFileType(TherionProc.Resources.Tr.Get("Pick_TherionFiles"))
                 {
                     Patterns = new[] { "*.th", "*.th2", "*.thconfig", "*.thc", "*.xvi", "thconfig" },
                 },
@@ -49,7 +49,7 @@ public sealed class AvaloniaStoragePicker : IStoragePicker
             AllowMultiple = false,
             FileTypeFilter = new[]
             {
-                new FilePickerFileType("Therion configuration")
+                new FilePickerFileType(TherionProc.Resources.Tr.Get("Pick_TherionConfig"))
                 {
                     Patterns = new[] { "*.thconfig", "*.thc", "thconfig" },
                 },

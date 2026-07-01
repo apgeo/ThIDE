@@ -348,11 +348,11 @@ public partial class MainWindow : Window
     // Go-to-File typed a directory path: confirm, then load it as the active workspace (#3).
     private async System.Threading.Tasks.Task ConfirmLoadFolderAsync(MainWindowViewModel vm, string path)
     {
-        var ok = new Button { Content = "Open", IsDefault = true, MinWidth = 80 };
-        var cancel = new Button { Content = "Cancel", IsCancel = true, MinWidth = 80 };
+        var ok = new Button { Content = TherionProc.Resources.Tr.Get("Ctx_Open"), IsDefault = true, MinWidth = 80 };
+        var cancel = new Button { Content = TherionProc.Resources.Tr.Get("Common_Cancel"), IsCancel = true, MinWidth = 80 };
         var dialog = new Window
         {
-            Title = "Load folder as workspace?",
+            Title = TherionProc.Resources.Tr.Get("Dlg_LoadFolderTitle"),
             Width = 460,
             SizeToContent = SizeToContent.Height,
             CanResize = false,
@@ -363,7 +363,7 @@ public partial class MainWindow : Window
                 Spacing = 12,
                 Children =
                 {
-                    new TextBlock { Text = $"Open this folder as the active workspace?\n\n{path}", TextWrapping = Avalonia.Media.TextWrapping.Wrap },
+                    new TextBlock { Text = TherionProc.Resources.Tr.Get("Dlg_LoadFolderMsg") + "\n\n" + path, TextWrapping = Avalonia.Media.TextWrapping.Wrap },
                     new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 8,
                         HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right, Children = { cancel, ok } },
                 },

@@ -165,7 +165,7 @@ public partial class WorkspaceExplorerToolView : UserControl
         if (Ctx()?.FullPath is not { } raw) return;
         if (Service<IWorkspaceSession>() is not { } session)
         {
-            await ShowWarning("Set active thconfig", "No workspace session is available.").ConfigureAwait(true);
+            await ShowWarning(TherionProc.Resources.Tr.Get("Dlg_SetActiveTitle"), TherionProc.Resources.Tr.Get("Dlg_NoWorkspace")).ConfigureAwait(true);
             return;
         }
 
@@ -174,11 +174,11 @@ public partial class WorkspaceExplorerToolView : UserControl
         // reason on failure rather than a single generic message (#2/#8).
         string path;
         try { path = System.IO.Path.GetFullPath(raw); }
-        catch { await ShowWarning("Set active thconfig", $"Invalid path:\n{raw}").ConfigureAwait(true); return; }
+        catch { await ShowWarning(TherionProc.Resources.Tr.Get("Dlg_SetActiveTitle"), TherionProc.Resources.Tr.Get("Dlg_InvalidPath") + "\n" + raw).ConfigureAwait(true); return; }
 
         if (!System.IO.File.Exists(path))
         {
-            await ShowWarning("Set active thconfig", $"The file no longer exists:\n{path}").ConfigureAwait(true);
+            await ShowWarning(TherionProc.Resources.Tr.Get("Dlg_SetActiveTitle"), TherionProc.Resources.Tr.Get("Dlg_FileGone") + "\n" + path).ConfigureAwait(true);
             return;
         }
 
@@ -188,8 +188,8 @@ public partial class WorkspaceExplorerToolView : UserControl
         catch (Exception ex) { ok = false; error = ex.Message; }
 
         if (!ok)
-            await ShowWarning("Set active thconfig",
-                error ?? $"\"{System.IO.Path.GetFileName(path)}\" could not be read as a Therion configuration.")
+            await ShowWarning(TherionProc.Resources.Tr.Get("Dlg_SetActiveTitle"),
+                error ?? string.Format(TherionProc.Resources.Tr.Get("Dlg_NotThconfigFmt"), System.IO.Path.GetFileName(path)))
                 .ConfigureAwait(true);
     }
 

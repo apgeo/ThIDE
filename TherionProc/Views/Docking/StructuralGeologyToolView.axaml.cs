@@ -281,10 +281,10 @@ public partial class StructuralGeologyToolView : UserControl
             if (top is null) return;
             var file = await top.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
-                Title = "Export CSV",
+                Title = TherionProc.Resources.Tr.Get("Pick_ExportCsv"),
                 SuggestedFileName = suggestedName,
                 DefaultExtension = "csv",
-                FileTypeChoices = new[] { new FilePickerFileType("CSV file") { Patterns = new[] { "*.csv" } } },
+                FileTypeChoices = new[] { new FilePickerFileType(TherionProc.Resources.Tr.Get("Pick_CsvFile")) { Patterns = new[] { "*.csv" } } },
             });
             if (file is null) return;
             if (file.TryGetLocalPath() is { } path) await File.WriteAllTextAsync(path, csv);
@@ -322,10 +322,10 @@ public partial class StructuralGeologyToolView : UserControl
             if (top is null) return;
             var file = await top.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
-                Title = "Export plot image",
+                Title = TherionProc.Resources.Tr.Get("Pick_ExportImage"),
                 SuggestedFileName = "structural-plot.png",
                 DefaultExtension = "png",
-                FileTypeChoices = new[] { new FilePickerFileType("PNG image") { Patterns = new[] { "*.png" } } },
+                FileTypeChoices = new[] { new FilePickerFileType(TherionProc.Resources.Tr.Get("Pick_PngImage")) { Patterns = new[] { "*.png" } } },
             });
             if (file is null) return;
             if (file.TryGetLocalPath() is { } path) await File.WriteAllBytesAsync(path, bytes);

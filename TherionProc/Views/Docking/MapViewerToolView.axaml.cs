@@ -17,11 +17,11 @@ public partial class MapViewerToolView : UserControl
         if (top is null || DataContext is not MapViewerToolViewModel vm) return;
         var files = await top.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = "Open map",
+            Title = TherionProc.Resources.Tr.Get("Pick_OpenMap"),
             AllowMultiple = false,
             FileTypeFilter = new[]
             {
-                new FilePickerFileType("Maps (PDF / SVG / image)")
+                new FilePickerFileType(TherionProc.Resources.Tr.Get("Pick_MapsFilter"))
                 {
                     Patterns = new[] { "*.pdf", "*.svg", "*.png", "*.jpg", "*.jpeg", "*.bmp" },
                 },
