@@ -5,6 +5,7 @@
 using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Runtime.CompilerServices;
 using Therion.Core;
 using Therion.Processing.Abstractions;
 using Therion.Syntax;
@@ -85,6 +86,17 @@ public sealed class WorkspaceSemanticModel
         ImmutableArray<(string, string)>.Empty,
         ImmutableArray<Diagnostic>.Empty);
 
+    // Per-file bind cache (Group G1). Binding is a pure function of a file's parse tree, and a file
+    // that hasn't been re-parsed keeps the same ParseResult instance — so we key the cache on that
+    // instance's identity and reuse its SemanticModel across workspace rebuilds instead of re-binding
+    // every file on every change. A re-parse yields a new ParseResult (cache miss → re-bind); dropped
+    // files evict automatically (weak keys). ConditionalWeakTable uses reference identity, not the
+    // record's value equality, which is exactly what we want here.
+    private static readonly ConditionalWeakTable<ParseResult<TherionFile>, SemanticModel> BindCache = new();
+
+    private static SemanticModel BindCached(ParseResult<TherionFile> parse)
+        => BindCache.GetValue(parse, static p => new SemanticBinder().Bind(p.Value!));
+
     /// <summary>
     /// Build a workspace-level snapshot from raw <see cref="ParseResult{TherionFile}"/>
     /// per file plus their parsed XVI counterparts.
@@ -94,7 +106,6 @@ public sealed class WorkspaceSemanticModel
         IReadOnlyCollection<XviFile> xviFiles,
         System.Func<string, bool>? fileExists = null)
     {
-        var binder = new SemanticBinder();
         var perFile = new Dictionary<string, SemanticModel>(System.StringComparer.OrdinalIgnoreCase);
         var allDiags = ImmutableArray.CreateBuilder<Diagnostic>();
         var graphEdges = ImmutableArray.CreateBuilder<(string, string)>();
@@ -112,7 +123,7 @@ public sealed class WorkspaceSemanticModel
             // Bind per-file semantics (.th only � others have no station model yet).
             if (path.EndsWith(".th", System.StringComparison.OrdinalIgnoreCase))
             {
-                var model = binder.Bind(parse.Value);
+                var model = BindCached(parse);
                 perFile[path] = model;
                 allDiags.AddRange(model.Diagnostics);
             }
