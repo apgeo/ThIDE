@@ -280,6 +280,9 @@
                               IsChecked="{Binding EnableLivePreview}" />
                     <CheckBox Content="{l:Loc Pref_Vis_MapViewer}"
                               IsChecked="{Binding EnableInAppViewer}" />
+                    <CheckBox Content="{l:Loc Pref_Vis_PdfInternal}" Margin="20,0,0,0"
+                              IsEnabled="{Binding EnableInAppViewer}"
+                              IsChecked="{Binding OpenPdfInternal}" />
                     <CheckBox Content="{l:Loc Pref_Vis_MapAuto}"
                               IsChecked="{Binding EnableMapAutoPreview}" />
                     <CheckBox Content="{l:Loc Pref_Vis_Model3D}"

@@ -959,10 +959,21 @@ public partial class BuildViewModel : ViewModelBase
         return new CompilerOutputRow(text, severity, null, OutputRowKind.Normal, now, delta, now - _buildStart, TimeColumnMode);
     }
 
+    /// <summary>Raised to view an artifact in the in-app map viewer (VIS-05) instead of externally.</summary>
+    public event EventHandler<string>? ViewMapRequested;
+
     [RelayCommand]
     private void OpenArtifact(ArtifactRow? row)
     {
         if (row is null) return;
+        // Open a clicked PDF in the in-app map viewer when the option is on (default) and the viewer is
+        // enabled; everything else — and PDFs when the option is off — opens in the external default app.
+        if (HasExt(row.Path, ".pdf")
+            && _settings?.Current is { OpenPdfInInternalViewer: true, EnableInAppViewer: true })
+        {
+            ViewMapRequested?.Invoke(this, row.Path);
+            return;
+        }
         _shell.Open(row.Path);
     }
 

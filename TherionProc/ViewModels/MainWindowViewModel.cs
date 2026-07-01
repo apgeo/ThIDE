@@ -617,6 +617,12 @@ public partial class MainWindowViewModel : ViewModelBase
             _factory.ShowTool(Model3DViewerTool);
             Model3DViewerTool.Viewer.LoadModel(path);
         });
+        // VIS-05: open a clicked PDF in the in-app map viewer (BuildViewModel gates this on the setting).
+        Build.ViewMapRequested += (_, path) => OnUiThread(() =>
+        {
+            Activate(MapViewerTool);
+            MapViewerTool.Map.Load(path);
+        });
         // #3: the "N artifact(s)" status link surfaces + flashes the Generated Files panel.
         Build.ShowOutputsRequested += (_, _) => OnUiThread(() =>
         {

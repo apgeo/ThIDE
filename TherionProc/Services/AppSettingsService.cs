@@ -159,6 +159,8 @@ public sealed record AppSettings
     public bool EnableMapAutoPreview { get; init; } = true;
     /// <summary>VIS-05: the in-app PNG/SVG/PDF map viewer.</summary>
     public bool EnableInAppViewer { get; init; } = true;
+    /// <summary>Open a clicked PDF output in the in-app map viewer instead of the external app. On by default.</summary>
+    public bool OpenPdfInInternalViewer { get; init; } = true;
     /// <summary>VIS-01: the embedded 3D model viewer (CaveView.js in a NativeWebView). Off by default.</summary>
     public bool EnableModel3DViewer { get; init; }
     /// <summary>VIS-01: auto-load the newest .lox/.3d into the 3D viewer after a build.</summary>

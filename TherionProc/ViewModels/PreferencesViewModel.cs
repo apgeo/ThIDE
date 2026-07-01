@@ -94,6 +94,7 @@ public partial class PreferencesViewModel : ObservableObject
     [ObservableProperty] private bool _enableLivePreview;
     [ObservableProperty] private bool _enableMapAutoPreview;
     [ObservableProperty] private bool _enableInAppViewer;
+    [ObservableProperty] private bool _openPdfInternal;         // open clicked PDFs in the in-app viewer
     [ObservableProperty] private bool _enableModel3DViewer;     // VIS-01 (off by default)
     [ObservableProperty] private bool _enableModel3DAutoPreview;
     [ObservableProperty] private bool _enableStructuralGeology;  // STRUCT-01 (off by default)
@@ -184,6 +185,7 @@ public partial class PreferencesViewModel : ObservableObject
         _enableLivePreview = s.EnableLivePreview;
         _enableMapAutoPreview = s.EnableMapAutoPreview;
         _enableInAppViewer = s.EnableInAppViewer;
+        _openPdfInternal = s.OpenPdfInInternalViewer;
         _enableModel3DViewer = s.EnableModel3DViewer;
         _enableStructuralGeology = s.EnableStructuralGeology;
         _enableModel3DAutoPreview = s.EnableModel3DAutoPreview;
@@ -334,6 +336,7 @@ public partial class PreferencesViewModel : ObservableObject
             EnableLivePreview = EnableLivePreview,
             EnableMapAutoPreview = EnableMapAutoPreview,
             EnableInAppViewer = EnableInAppViewer,
+            OpenPdfInInternalViewer = OpenPdfInternal,
             EnableModel3DViewer = EnableModel3DViewer,
             EnableStructuralGeology = EnableStructuralGeology,
             EnableModel3DAutoPreview = EnableModel3DAutoPreview,
