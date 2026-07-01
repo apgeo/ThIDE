@@ -286,6 +286,8 @@
                               IsChecked="{Binding EnableModel3DViewer}" />
                     <CheckBox Content="Auto-show the 3D model (.lox / .3d) after a build — VIS-01"
                               IsChecked="{Binding EnableModel3DAutoPreview}" />
+                    <CheckBox Content="Structural Geology module (plane strike/dip calculator) — STRUCT-01"
+                              IsChecked="{Binding EnableStructuralGeology}" />
 
                     <TextBlock Text="Survey analytics" FontWeight="SemiBold" Margin="0,8,0,0" />
                     <TextBlock Text="Disable on very large projects to skip the extra processing on each graph rebuild."

@@ -175,6 +175,15 @@ public sealed class Model3DViewerToolViewModel : ToolViewModelBase
         : base("Model3DViewer", "3D Viewer", lang) => Viewer = viewer;
 }
 
+/// <summary>STRUCT-01: structural-geology module (plane strike/dip calculator). Off by default.</summary>
+public sealed class StructuralGeologyToolViewModel : ToolViewModelBase
+{
+    [JsonIgnore] public StructuralGeologyViewModel Structural { get; }
+    public StructuralGeologyToolViewModel() : base("StructuralGeology", "Structural Geology") => Structural = null!;
+    public StructuralGeologyToolViewModel(StructuralGeologyViewModel structural, ILanguageService? lang = null)
+        : base("StructuralGeology", "Structural Geology", lang) => Structural = structural;
+}
+
 public sealed class XviToolViewModel : ToolViewModelBase
 {
     [JsonIgnore] public XviReferencesViewModel Xvi { get; }

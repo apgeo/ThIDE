@@ -1,0 +1,319 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:TherionProc.ViewModels.Docking"
+             xmlns:vm2="using:TherionProc.ViewModels"
+             xmlns:conv="using:TherionProc.Converters"
+             x:Class="TherionProc.Views.Docking.StructuralGeologyToolView"
+             x:DataType="vm:StructuralGeologyToolViewModel">
+
+    <!-- STRUCT-01 — plane strike/dip calculator. Tabbed wizard: Detect → Measurements → Planes → Plot.
+         Bindings are relative to the tool VM; the content VM is reached via the `Structural.` prefix. -->
+    <UserControl.Resources>
+        <!-- Cosmetic: show enum options (grouping / splay policy / declination source) as spaced text. -->
+        <conv:EnumLabelConverter x:Key="EnumLabel" />
+        <!-- #10: measurements grouped by station; each group header carries a master checkbox that
+             checks/unchecks the whole station. The header DataContext is the collection-view group;
+             its Key is the StructuralPlaneRow (we group by the PlaneRow property). -->
+        <ControlTheme x:Key="StationGroupHeaderTheme" TargetType="DataGridRowGroupHeader">
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}"
+                            BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="0,0,0,1"
+                            Padding="6,3">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <CheckBox IsChecked="{ReflectionBinding Key.IncludeAllChecked, Mode=TwoWay}"
+                                      ToolTip.Tip="Check/uncheck all measurements from this station" />
+                            <TextBlock Text="{ReflectionBinding Key.Name}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            <TextBlock Text="{ReflectionBinding ItemCount, StringFormat='({0})'}" Foreground="Gray" VerticalAlignment="Center" FontSize="11" />
+                        </StackPanel>
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </ControlTheme>
+    </UserControl.Resources>
+
+    <DockPanel>
+        <!-- Top bar: scope + refresh + status (left), wizard prev/next (right). Shared across tabs. -->
+        <Border DockPanel.Dock="Top" Padding="8,5" Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}">
+            <DockPanel>
+                <!-- #6: hide (not disable) the nav buttons on the first/last tab, keeping their space. -->
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                    <Panel Width="64">
+                        <Button Content="◀ Prev" Command="{Binding Structural.GoPrevCommand}" Padding="8,2" FontSize="11"
+                                IsVisible="{Binding Structural.CanGoPrev}" ToolTip.Tip="Previous step" />
+                    </Panel>
+                    <Panel Width="64">
+                        <Button Content="Next ▶" Command="{Binding Structural.GoNextCommand}" Padding="8,2" FontSize="11"
+                                IsVisible="{Binding Structural.CanGoNext}" ToolTip.Tip="Next step" />
+                    </Panel>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <TextBlock Text="Scope:" VerticalAlignment="Center" FontSize="11" Foreground="Gray" />
+                    <RadioButton Content="Active file" GroupName="scope" FontSize="11"
+                                 IsChecked="{Binding !Structural.ProjectScope}" />
+                    <RadioButton Content="Whole project" GroupName="scope" FontSize="11"
+                                 IsChecked="{Binding Structural.ProjectScope}" />
+                    <Button Content="Detect ↻" Command="{Binding Structural.RefreshCommand}" Padding="8,2" FontSize="11" />
+                    <TextBlock Text="{Binding Structural.Status}" VerticalAlignment="Center"
+                               FontSize="11" Foreground="Gray" TextWrapping="NoWrap" />
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <TabControl Name="Wizard" SelectedIndex="{Binding Structural.SelectedTab}" Padding="6"
+                    SelectionChanged="OnTabChanged">
+
+            <!-- 1 · Detect -->
+            <TabItem Header="1 · Detect">
+                <ScrollViewer>
+                    <StackPanel Margin="6" Spacing="10" MaxWidth="560" HorizontalAlignment="Left">
+
+                        <TextBlock Text="Detection signals" FontWeight="SemiBold" />
+                        <TextBlock Text="A shot is structural if it matches any enabled signal. Tune these to your survey's convention."
+                                   Foreground="Gray" TextWrapping="Wrap" FontSize="11" />
+
+                        <CheckBox Content="From-station name contains keyword(s)" IsChecked="{Binding Structural.UseNameKeyword}" />
+                        <TextBox Text="{Binding Structural.NameKeywords}" Watermark="geo" Margin="22,0,0,0"
+                                 IsEnabled="{Binding Structural.UseNameKeyword}" />
+
+                        <CheckBox Content="Shot comment contains marker(s)" IsChecked="{Binding Structural.MatchComment}" />
+                        <TextBox Text="{Binding Structural.CommentMarkers}" Watermark="plane, geo" Margin="22,0,0,0"
+                                 IsEnabled="{Binding Structural.MatchComment}" />
+
+                        <CheckBox Content="From/To station carries flag(s)" IsChecked="{Binding Structural.MatchStationFlag}" />
+                        <TextBox Text="{Binding Structural.StationFlags}" Watermark="e.g. geo" Margin="22,0,0,0"
+                                 IsEnabled="{Binding Structural.MatchStationFlag}" />
+
+                        <TextBlock Text="Grouping &amp; points" FontWeight="SemiBold" Margin="0,8,0,0" />
+
+                        <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto" RowSpacing="6">
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Group a plane by" VerticalAlignment="Center" FontSize="12" />
+                            <ComboBox Grid.Row="0" Grid.Column="1" HorizontalAlignment="Stretch"
+                                      ItemsSource="{Binding Structural.GroupingModes}"
+                                      SelectedItem="{Binding Structural.Grouping}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate><TextBlock Text="{Binding Converter={StaticResource EnumLabel}}" /></DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Splay shots" VerticalAlignment="Center" FontSize="12" />
+                            <ComboBox Grid.Row="1" Grid.Column="1" HorizontalAlignment="Stretch"
+                                      ItemsSource="{Binding Structural.SplayPolicies}"
+                                      SelectedItem="{Binding Structural.Splays}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate><TextBlock Text="{Binding Converter={StaticResource EnumLabel}}" /></DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </Grid>
+
+                        <CheckBox Content="Include the from-station (origin) point in the fit"
+                                  IsChecked="{Binding Structural.IncludeOriginPoint}" />
+                        <TextBlock Text="Use only when the station itself lies on the measured plane — watch the RMS column."
+                                   Foreground="Gray" TextWrapping="Wrap" FontSize="11" Margin="22,0,0,0" />
+
+                        <TextBlock Text="Magnetic declination" FontWeight="SemiBold" Margin="0,8,0,0" />
+                        <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto" RowSpacing="6">
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Source" VerticalAlignment="Center" FontSize="12" />
+                            <ComboBox Grid.Row="0" Grid.Column="1" HorizontalAlignment="Stretch"
+                                      ItemsSource="{Binding Structural.DeclinationSources}"
+                                      SelectedItem="{Binding Structural.DeclinationSource}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate><TextBlock Text="{Binding Converter={StaticResource EnumLabel}}" /></DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Value (° east +)" VerticalAlignment="Center" FontSize="12"
+                                       IsVisible="{Binding Structural.DeclinationIsManual}" />
+                            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Structural.DeclinationDegrees}"
+                                     IsVisible="{Binding Structural.DeclinationIsManual}" Watermark="0.0" />
+                        </Grid>
+                        <TextBlock Text="Adds to strike / dip-direction (true north); dip is unaffected. Off by default to avoid double-counting a survey's own declination."
+                                   Foreground="Gray" TextWrapping="Wrap" FontSize="11" />
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- 2 · Measurements -->
+            <TabItem Header="2 · Measurements">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="4" Margin="2,2,2,4">
+                        <Button Command="{Binding Structural.CheckAllCommand}" Padding="6,2" FontSize="12"
+                                ToolTip.Tip="Check all measurements">☑ All</Button>
+                        <Button Command="{Binding Structural.CheckNoneCommand}" Padding="6,2" FontSize="12"
+                                ToolTip.Tip="Uncheck all measurements">☐ None</Button>
+                        <Button Command="{Binding Structural.InvertSelectionCommand}" Padding="6,2" FontSize="12"
+                                ToolTip.Tip="Invert selection">⇄ Invert</Button>
+                        <CheckBox Content="Group by station" Margin="10,0,0,0" FontSize="11" VerticalAlignment="Center"
+                                  IsChecked="{Binding Structural.GroupByStation}" />
+                        <!-- Full station name toggle (identical behaviour to the .th editor's measurements tab). -->
+                        <ToggleButton Padding="6,3" VerticalAlignment="Center" Margin="6,0,0,0"
+                                      ToolTip.Tip="Show full station name (survey.station) instead of the station only"
+                                      IsChecked="{Binding Structural.ShowFullStationName, Mode=TwoWay}">
+                            <PathIcon Data="{DynamicResource Icon.NodeGraph}" Width="14" Height="14" />
+                        </ToggleButton>
+                        <Button Content="Columns ▾" Padding="6,2" FontSize="11" ToolTip.Tip="Show or hide columns">
+                            <Button.Flyout>
+                                <Flyout Placement="Bottom">
+                                    <StackPanel Name="MeasColumnsPanel" Spacing="2">
+                                        <CheckBox Content="Use"     Tag="Use"     Click="OnToggleMeasColumn" />
+                                        <CheckBox Content="Plane"    Tag="Plane"   Click="OnToggleMeasColumn" />
+                                        <CheckBox Content="Kind"     Tag="Kind"    Click="OnToggleMeasColumn" />
+                                        <CheckBox Content="From"     Tag="From"    Click="OnToggleMeasColumn" />
+                                        <CheckBox Content="To"       Tag="To"      Click="OnToggleMeasColumn" />
+                                        <CheckBox Content="Length"   Tag="Length"  Click="OnToggleMeasColumn" />
+                                        <CheckBox Content="Azimuth"  Tag="Azimuth" Click="OnToggleMeasColumn" />
+                                        <CheckBox Content="Clino"    Tag="Clino"   Click="OnToggleMeasColumn" />
+                                        <CheckBox Content="Comment"  Tag="Comment" Click="OnToggleMeasColumn" />
+                                        <CheckBox Content="File"     Tag="File"    Click="OnToggleMeasColumn" />
+                                        <CheckBox Content="Line"     Tag="Line"    Click="OnToggleMeasColumn" />
+                                    </StackPanel>
+                                </Flyout>
+                            </Button.Flyout>
+                        </Button>
+                        <Button Content="Fit" Padding="6,2" FontSize="11" Click="OnFitMeasColumns" ToolTip.Tip="Auto-size columns to content" />
+                        <Button Content="Export CSV…" Padding="6,2" FontSize="11" Click="OnExportMeasCsv"
+                                ToolTip.Tip="Export the measurements grid to a CSV file" />
+                    </StackPanel>
+                    <TextBlock DockPanel.Dock="Top" Margin="2,2,2,6" FontSize="11" Foreground="Gray" TextWrapping="Wrap"
+                               Text="Tick the points to include in each plane fit. Toggling recomputes that plane live. Double-click a row to jump to its source." />
+                    <!-- ItemsSource (a grouped DataGridCollectionView) is set in code-behind so grouping can toggle. -->
+                    <DataGrid Name="MeasurementsGrid"
+                              IsReadOnly="False" CanUserSortColumns="True" CanUserResizeColumns="True"
+                              SelectionMode="Extended"
+                              GridLinesVisibility="Horizontal" DoubleTapped="OnMeasurementDoubleTapped"
+                              RowGroupTheme="{StaticResource StationGroupHeaderTheme}">
+                        <DataGrid.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="Copy Value" Click="OnCopyMeasValue" />
+                                <MenuItem Header="Copy Row" Click="OnCopyMeasRow" />
+                                <MenuItem Header="Copy Formatted Data" Click="OnCopyMeasFormatted" />
+                            </ContextMenu>
+                        </DataGrid.ContextMenu>
+                        <!-- ReflectionBinding: ItemsSource is a (non-generic) grouped view set in code-behind,
+                             so columns resolve against the row item at runtime, not the UserControl's x:DataType. -->
+                        <DataGrid.Columns>
+                            <DataGridCheckBoxColumn Header="Use" Binding="{ReflectionBinding Include}" Width="Auto" MinWidth="40" />
+                            <DataGridTextColumn Header="Plane" Binding="{ReflectionBinding Plane}" IsReadOnly="True" Width="Auto" />
+                            <DataGridTextColumn Header="Kind" Binding="{ReflectionBinding Kind}" IsReadOnly="True" Width="Auto" />
+                            <DataGridTextColumn Header="From" Binding="{ReflectionBinding From}" IsReadOnly="True" Width="Auto" />
+                            <DataGridTextColumn Header="To" Binding="{ReflectionBinding To}" IsReadOnly="True" Width="Auto" />
+                            <DataGridTextColumn Header="Length" Binding="{ReflectionBinding Length}" IsReadOnly="True" Width="Auto" />
+                            <DataGridTextColumn Header="Azimuth" Binding="{ReflectionBinding Compass}" IsReadOnly="True" Width="Auto" />
+                            <DataGridTextColumn Header="Clino" Binding="{ReflectionBinding Clino}" IsReadOnly="True" Width="Auto" />
+                            <!-- Comment clipped to ~25 chars (full text in the tooltip); keeps Fit from ballooning. -->
+                            <DataGridTemplateColumn Header="Comment" IsReadOnly="True" Width="Auto">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{ReflectionBinding CommentShort}" VerticalAlignment="Center"
+                                                   Padding="4,0" ToolTip.Tip="{ReflectionBinding Comment}" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="File" Binding="{ReflectionBinding File}" IsReadOnly="True" Width="Auto" />
+                            <DataGridTextColumn Header="Line" Binding="{ReflectionBinding Line}" IsReadOnly="True" Width="Auto" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </TabItem>
+
+            <!-- 3 · Resulted planes -->
+            <TabItem Header="3 · Resulted planes">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="4" Margin="2,2,2,4">
+                        <!-- Plot visibility bulk toggles (mirror the measurements grid's All/None/Invert). -->
+                        <TextBlock Text="Visible:" VerticalAlignment="Center" FontSize="11" Foreground="Gray" Margin="0,0,2,0" />
+                        <Button Content="☑ All" Command="{Binding Structural.ShowAllPlanesCommand}" Padding="6,2" FontSize="12"
+                                ToolTip.Tip="Show every plane in the 3D plot" />
+                        <Button Content="☐ None" Command="{Binding Structural.HideAllPlanesCommand}" Padding="6,2" FontSize="12"
+                                ToolTip.Tip="Hide every plane" />
+                        <Button Content="⇄ Invert" Command="{Binding Structural.InvertPlaneVisibilityCommand}" Padding="6,2" FontSize="12"
+                                ToolTip.Tip="Invert plane visibility" />
+                        <Border Width="1" Margin="6,2" Background="Gray" />
+                        <Button Content="Columns ▾" Padding="6,2" FontSize="11" ToolTip.Tip="Show or hide columns">
+                            <Button.Flyout>
+                                <Flyout Placement="Bottom">
+                                    <StackPanel Name="PlaneColumnsPanel" Spacing="2">
+                                        <CheckBox Content="Plane"      Tag="Plane"      Click="OnTogglePlaneColumn" />
+                                        <CheckBox Content="Dip °"       Tag="Dip °"      Click="OnTogglePlaneColumn" />
+                                        <CheckBox Content="Strike °"    Tag="Strike °"   Click="OnTogglePlaneColumn" />
+                                        <CheckBox Content="Dip dir °"   Tag="Dip dir °"  Click="OnTogglePlaneColumn" />
+                                        <CheckBox Content="North ref"   Tag="North ref"  Click="OnTogglePlaneColumn" />
+                                        <CheckBox Content="Points"      Tag="Points"     Click="OnTogglePlaneColumn" />
+                                        <CheckBox Content="RMS"         Tag="RMS"        Click="OnTogglePlaneColumn" />
+                                        <CheckBox Content="File"        Tag="File"       Click="OnTogglePlaneColumn" />
+                                        <CheckBox Content="Line"        Tag="Line"       Click="OnTogglePlaneColumn" />
+                                    </StackPanel>
+                                </Flyout>
+                            </Button.Flyout>
+                        </Button>
+                        <Button Content="Fit" Padding="6,2" FontSize="11" Click="OnFitPlaneColumns" ToolTip.Tip="Auto-size columns to content" />
+                        <Button Content="Export CSV…" Padding="6,2" FontSize="11" Click="OnExportPlanesCsv"
+                                ToolTip.Tip="Export the resulted-planes grid to a CSV file" />
+                    </StackPanel>
+                    <DataGrid Name="PlanesGrid" ItemsSource="{Binding Structural.Planes}"
+                              SelectedItem="{Binding Structural.SelectedPlane}"
+                              IsReadOnly="True" CanUserSortColumns="True" CanUserResizeColumns="True"
+                              SelectionMode="Extended"
+                              GridLinesVisibility="Horizontal" DoubleTapped="OnPlaneDoubleTapped">
+                        <DataGrid.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="Copy Value" Click="OnCopyPlaneValue" />
+                                <MenuItem Header="Copy Row" Click="OnCopyPlaneRow" />
+                                <MenuItem Header="Copy Formatted Data" Click="OnCopyPlaneFormatted" />
+                            </ContextMenu>
+                        </DataGrid.ContextMenu>
+                        <DataGrid.Columns>
+                            <!-- Checkbox works even though the grid is read-only (template control, not a cell editor). -->
+                            <DataGridTemplateColumn Header="Visible" Width="Auto">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <CheckBox IsChecked="{Binding Visible, Mode=TwoWay}" HorizontalAlignment="Center"
+                                                  ToolTip.Tip="Show this plane's disc in the 3D plot" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="Plane" Binding="{Binding Name}" Width="Auto" />
+                            <DataGridTextColumn Header="Dip °" Binding="{Binding Dip}" Width="Auto" />
+                            <DataGridTextColumn Header="Strike °" Binding="{Binding Strike}" Width="Auto" />
+                            <DataGridTextColumn Header="Dip dir °" Binding="{Binding DipDirection}" Width="Auto" />
+                            <DataGridTextColumn Header="North ref" Binding="{Binding Declination}" Width="Auto" />
+                            <DataGridTextColumn Header="Points" Binding="{Binding Points}" Width="Auto" />
+                            <DataGridTextColumn Header="RMS" Binding="{Binding Quality}" Width="Auto" />
+                            <DataGridTextColumn Header="File" Binding="{Binding File}" Width="Auto" />
+                            <DataGridTextColumn Header="Line" Binding="{Binding Line}" Width="Auto" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </TabItem>
+
+            <!-- 4 · Plot -->
+            <TabItem Header="4 · 3D plot">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="2">
+                        <Button Content="Fit view" Click="OnFitView" Padding="8,2" FontSize="11" />
+                        <Button Content="Export image…" Click="OnExportImage" Padding="8,2" FontSize="11"
+                                ToolTip.Tip="Save the current view as a PNG" />
+                        <TextBlock Text="Disc size:" VerticalAlignment="Center" FontSize="11" Foreground="Gray" />
+                        <ComboBox ItemsSource="{Binding Structural.DiscScales}"
+                                  SelectedItem="{Binding Structural.DiscScale}" FontSize="11" MinWidth="64"
+                                  ToolTip.Tip="Enlarge the plane discs (they are tiny next to the cave)">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate><TextBlock Text="{Binding StringFormat='{}{0}×'}" /></DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                        <CheckBox Content="White background" FontSize="11" VerticalAlignment="Center"
+                                  IsChecked="{Binding Structural.WhiteBackground}" />
+                    </StackPanel>
+                    <Panel>
+                        <Panel Name="PlotHost" />
+                        <Border Name="PlotFallback" IsVisible="False"
+                                Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}">
+                            <TextBlock VerticalAlignment="Center" HorizontalAlignment="Center" TextWrapping="Wrap"
+                                       Margin="24" Foreground="Gray" TextAlignment="Center"
+                                       Text="The 3D plot needs the bundled three.js assets and a system web engine (WebView2 / WebKit)." />
+                        </Border>
+                    </Panel>
+                </DockPanel>
+            </TabItem>
+        </TabControl>
+    </DockPanel>
+</UserControl>

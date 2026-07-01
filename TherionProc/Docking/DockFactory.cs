@@ -51,6 +51,7 @@ public sealed class DockFactory : Factory
     private readonly LivePreviewToolViewModel _livePreview;
     private readonly MapViewerToolViewModel _mapViewer;
     private readonly Model3DViewerToolViewModel _model3dViewer;
+    private readonly StructuralGeologyToolViewModel _structuralGeology;
     private readonly TherionProc.Services.IAppSettingsService? _appSettings;
     private readonly SettingsToolViewModel _settings;
 
@@ -72,6 +73,7 @@ public sealed class DockFactory : Factory
         LivePreviewToolViewModel livePreview,
         MapViewerToolViewModel mapViewer,
         Model3DViewerToolViewModel model3dViewer,
+        StructuralGeologyToolViewModel structuralGeology,
         SettingsToolViewModel settings,
         TherionProc.Services.ILayoutService? layoutState = null,
         TherionProc.Services.IAppSettingsService? appSettings = null,
@@ -89,6 +91,7 @@ public sealed class DockFactory : Factory
         _livePreview = livePreview;
         _mapViewer = mapViewer;
         _model3dViewer = model3dViewer;
+        _structuralGeology = structuralGeology;
         _appSettings = appSettings;
         _settings = settings;
         _layoutState = layoutState;
@@ -126,6 +129,23 @@ public sealed class DockFactory : Factory
         {
             if (!ContainsRef(_rootDock, tool) && FindDockById<IToolDock>(_rootDock, "RightTools") is { } right)
                 AddDockable(right, tool);
+            SetActiveDockable(tool);
+            SetFocusedDockable(_rootDock, tool);
+            BringHostWindowToFront(tool);
+        }
+        catch { /* best-effort show */ }
+    }
+
+    /// <summary>
+    /// Activates a tool in the central document well (like the Object Browser), adding it there on
+    /// demand if it isn't in the layout yet. Used for the big-panel Structural Geology view (STRUCT-01).
+    /// </summary>
+    public void ShowToolInDocuments(IDockable tool)
+    {
+        if (_rootDock is null || _documentDock is null) return;
+        try
+        {
+            if (!ContainsRef(_rootDock, tool)) AddDockable(_documentDock, tool);
             SetActiveDockable(tool);
             SetFocusedDockable(_rootDock, tool);
             BringHostWindowToFront(tool);
@@ -360,6 +380,7 @@ public sealed class DockFactory : Factory
         if (s.EnableLivePreview) list.Add(_livePreview);
         if (s.EnableInAppViewer) list.Add(_mapViewer);
         if (s.EnableModel3DViewer) list.Add(_model3dViewer);   // VIS-01 (off by default)
+        // STRUCT-01 opens in the central document well on demand (ShowToolInDocuments), not the rail.
         return list.ToArray();
     }
 
@@ -461,6 +482,7 @@ public sealed class DockFactory : Factory
         ["LivePreview"]    = _livePreview,
         ["MapViewer"]      = _mapViewer,
         ["Model3DViewer"]  = _model3dViewer,
+        ["StructuralGeology"] = _structuralGeology,
         ["Settings"]       = _settings,
     };
 
@@ -782,6 +804,7 @@ public sealed class DockFactory : Factory
             ["LivePreview"]    = () => _livePreview,
             ["MapViewer"]      = () => _mapViewer,
             ["Model3DViewer"]  = () => _model3dViewer,
+            ["StructuralGeology"] = () => _structuralGeology,
             ["Settings"]       = () => _settings,
         };
 

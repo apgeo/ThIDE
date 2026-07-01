@@ -175,6 +175,7 @@ internal static class AppServices
         services.AddSingleton<IScriptHookService, ScriptHookService>();       // EXT-03 scripting/macro hooks
         services.AddSingleton<IMapRenderService, MapRenderService>();   // VIS-03/05 in-app rendering
         services.AddSingleton<ICaveview3DAssetHost, Caveview3DAssetHost>(); // VIS-01 loopback asset server
+        services.AddSingleton<IStructuralPlotAssetHost, StructuralPlotAssetHost>(); // STRUCT-01 plot loopback server
         services.AddSingleton<IStationSourceResolver, StationSourceResolver>(); // VIS-01 label → .th span
 
         // Shared content ViewModels — singletons so the same instance flows to both
@@ -199,6 +200,7 @@ internal static class AppServices
         services.AddSingleton<LivePreviewViewModel>();        // VIS-02 live centreline preview
         services.AddSingleton<MapViewerViewModel>();          // VIS-03/05 in-app map viewer
         services.AddSingleton<Model3DViewerViewModel>();      // VIS-01 embedded 3D model viewer
+        services.AddSingleton<StructuralGeologyViewModel>();  // STRUCT-01 plane strike/dip calculator
         services.AddSingleton<SettingsViewModel>();
         services.AddSingleton<KeyboardShortcutsViewModel>();
         services.AddSingleton<SearchViewModel>();
@@ -217,6 +219,7 @@ internal static class AppServices
         services.AddSingleton<ViewModels.Docking.LivePreviewToolViewModel>(); // VIS-02
         services.AddSingleton<ViewModels.Docking.MapViewerToolViewModel>();   // VIS-03/05
         services.AddSingleton<ViewModels.Docking.Model3DViewerToolViewModel>(); // VIS-01
+        services.AddSingleton<ViewModels.Docking.StructuralGeologyToolViewModel>(); // STRUCT-01
         services.AddSingleton<ViewModels.Docking.SettingsToolViewModel>();
         services.AddSingleton<Docking.DockFactory>();
 

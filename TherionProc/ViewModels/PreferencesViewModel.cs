@@ -96,6 +96,7 @@ public partial class PreferencesViewModel : ObservableObject
     [ObservableProperty] private bool _enableInAppViewer;
     [ObservableProperty] private bool _enableModel3DViewer;     // VIS-01 (off by default)
     [ObservableProperty] private bool _enableModel3DAutoPreview;
+    [ObservableProperty] private bool _enableStructuralGeology;  // STRUCT-01 (off by default)
     [ObservableProperty] private bool _enableProjectAnalytics;       // DATA-01/02/05/06/08
     [ObservableProperty] private bool _enableObjectBrowserEntities;  // DATA-03
     [ObservableProperty] private bool _enableTodoScan;               // NOTE-01
@@ -180,6 +181,7 @@ public partial class PreferencesViewModel : ObservableObject
         _enableMapAutoPreview = s.EnableMapAutoPreview;
         _enableInAppViewer = s.EnableInAppViewer;
         _enableModel3DViewer = s.EnableModel3DViewer;
+        _enableStructuralGeology = s.EnableStructuralGeology;
         _enableModel3DAutoPreview = s.EnableModel3DAutoPreview;
         _enableProjectAnalytics = s.EnableProjectAnalytics;
         _enableObjectBrowserEntities = s.EnableObjectBrowserEntities;
@@ -324,6 +326,7 @@ public partial class PreferencesViewModel : ObservableObject
             EnableMapAutoPreview = EnableMapAutoPreview,
             EnableInAppViewer = EnableInAppViewer,
             EnableModel3DViewer = EnableModel3DViewer,
+            EnableStructuralGeology = EnableStructuralGeology,
             EnableModel3DAutoPreview = EnableModel3DAutoPreview,
             EnableProjectAnalytics = EnableProjectAnalytics,
             EnableObjectBrowserEntities = EnableObjectBrowserEntities,

@@ -77,6 +77,7 @@ public partial class MainWindowViewModel : ViewModelBase
     public LivePreviewToolViewModel LivePreviewTool { get; } // VIS-02
     public MapViewerToolViewModel MapViewerTool { get; }     // VIS-03/05
     public Model3DViewerToolViewModel Model3DViewerTool { get; }  // VIS-01
+    public StructuralGeologyToolViewModel StructuralGeologyTool { get; }  // STRUCT-01
     public SettingsToolViewModel SettingsTool { get; }
 
     /// <summary>PROJ-08: clickable breadcrumb of the @-qualified name at the caret (status bar).</summary>
@@ -414,6 +415,7 @@ public partial class MainWindowViewModel : ViewModelBase
         LivePreviewToolViewModel livePreviewTool,
         MapViewerToolViewModel mapViewerTool,
         Model3DViewerToolViewModel model3dViewerTool,
+        StructuralGeologyToolViewModel structuralGeologyTool,
         SettingsToolViewModel settingsTool,
         IModelEditService? editService = null,
         ILayoutService? layout = null,
@@ -464,6 +466,7 @@ public partial class MainWindowViewModel : ViewModelBase
         LivePreviewTool = livePreviewTool;
         MapViewerTool = mapViewerTool;
         Model3DViewerTool = model3dViewerTool;
+        StructuralGeologyTool = structuralGeologyTool;
         SettingsTool = settingsTool;
         Breadcrumb = new BreadcrumbViewModel(_documents);   // PROJ-08
 
@@ -484,6 +487,9 @@ public partial class MainWindowViewModel : ViewModelBase
             // default export-model output (even if stale).
             else if (e.Dockable is Docking.Model3DViewerToolViewModel m3d)
                 OnUiThread(m3d.Viewer.OnPanelActivated);
+            // STRUCT-01: run the structural analysis the first time its panel is shown.
+            else if (e.Dockable is Docking.StructuralGeologyToolViewModel sg)
+                OnUiThread(sg.Structural.OnPanelActivated);
         };
         _factory.DockableClosed += (_, e) =>
         {
@@ -499,6 +505,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 OnPropertyChanged(nameof(LivePreviewEnabled));   // VIS-01/02/05 menu gates
                 OnPropertyChanged(nameof(MapViewerEnabled));
                 OnPropertyChanged(nameof(Model3DViewerEnabled));
+                OnPropertyChanged(nameof(StructuralGeologyEnabled));   // STRUCT-01 menu gate
                 ConfigureAutoSave();   // QOL-09
             });
             ConfigureAutoSave();   // QOL-09 (apply persisted mode at startup)
@@ -524,6 +531,8 @@ public partial class MainWindowViewModel : ViewModelBase
         ObjectBrowser.ShotEditRequested += async (_, e) => await ApplyShotEditAsync(e).ConfigureAwait(true);
         WorkspaceExplorer.OpenRequested += async (_, node) => await OpenNodeAsync(node).ConfigureAwait(true);
         WorkspaceExplorer.NavigateRequested += (_, span) => NavigateTo(span);
+        // STRUCT-01: double-click a measurement / plane → jump to its source span.
+        StructuralGeologyTool.Structural.NavigateRequested += (_, span) => NavigateTo(span);
         // VIS-01: "Show in 3D" from a station/survey context menu → reveal it in the embedded viewer.
         _documents.ShowInModel3DRequested += (_, name) => OnUiThread(() =>
         {
@@ -617,6 +626,7 @@ public partial class MainWindowViewModel : ViewModelBase
         new LivePreviewToolViewModel(new LivePreviewViewModel()),
         new MapViewerToolViewModel(new MapViewerViewModel()),
         new Model3DViewerToolViewModel(new Model3DViewerViewModel()),
+        new StructuralGeologyToolViewModel(new StructuralGeologyViewModel()),
         new SettingsToolViewModel(new SettingsViewModel(), new KeyboardShortcutsViewModel()))
     {
         // Designer-only.
@@ -635,6 +645,7 @@ public partial class MainWindowViewModel : ViewModelBase
         new LivePreviewToolViewModel(new LivePreviewViewModel()),
         new MapViewerToolViewModel(new MapViewerViewModel()),
         new Model3DViewerToolViewModel(new Model3DViewerViewModel()),
+        new StructuralGeologyToolViewModel(new StructuralGeologyViewModel()),
         new SettingsToolViewModel(new SettingsViewModel(), new KeyboardShortcutsViewModel()));
 
     /// <summary>Wires the storage picker once the View is attached to a TopLevel.</summary>
@@ -1140,12 +1151,14 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand] private void ToggleLivePreview()       => Activate(LivePreviewTool); // VIS-02
     [RelayCommand] private void ToggleMapViewer()         => Activate(MapViewerTool);    // VIS-05
     [RelayCommand] private void ToggleModel3DViewer()     => _factory.ShowTool(Model3DViewerTool); // VIS-01 (may be off-by-default → add on demand)
+    [RelayCommand] private void ToggleStructuralGeology() => _factory.ShowToolInDocuments(StructuralGeologyTool); // STRUCT-01 (big central panel, on demand)
     [RelayCommand] private void ToggleSettings()          => Activate(SettingsTool);
 
     /// <summary>VIS-01/02/05 gates — drive the View-menu entries (hidden when the feature is off).</summary>
     public bool LivePreviewEnabled => _settings?.Current.EnableLivePreview ?? true;
     public bool MapViewerEnabled   => _settings?.Current.EnableInAppViewer ?? true;
     public bool Model3DViewerEnabled => _settings?.Current.EnableModel3DViewer ?? false;
+    public bool StructuralGeologyEnabled => _settings?.Current.EnableStructuralGeology ?? false;
 
     /// <summary>EDIT-09 gate (compile-time flag + runtime setting) — drives the Outline menu/toolbar entry.</summary>
     public bool OutlineFeatureEnabled =>
