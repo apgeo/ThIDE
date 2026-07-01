@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Phase 0 performance baseline harness (docs/perf-optimization-plan.md).
+    BenchmarkDotNet must run in Release; see Program.cs for the run commands.
+    Kept out of the test runner (plain Exe, no IsTestProject) so the test runner skips it.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>Therion.Benchmarks</RootNamespace>
+    <!-- Keep AssemblyName == project name; BenchmarkDotNet's generated toolchain locates the
+         output exe by the .csproj name and fails to build if they differ. -->
+    <IsPackable>false</IsPackable>
+    <!-- BenchmarkDotNet needs optimized IL even in local Debug-style invocations. -->
+    <Optimize>true</Optimize>
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" Version="0.14.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Therion.Core\Therion.Core.csproj" />
+    <ProjectReference Include="..\..\src\Therion.Syntax\Therion.Syntax.csproj" />
+    <ProjectReference Include="..\..\src\Therion.Semantics\Therion.Semantics.csproj" />
+    <ProjectReference Include="..\..\src\Therion.Workspace\Therion.Workspace.csproj" />
+    <ProjectReference Include="..\..\src\Therion.Processing.Abstractions\Therion.Processing.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

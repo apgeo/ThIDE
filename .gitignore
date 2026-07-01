@@ -120,6 +120,9 @@ ipch/
 # MSBuild Binary and Structured Log
 *.binlog
 
+# BenchmarkDotNet generated results (run outputs, not source)
+BenchmarkDotNet.Artifacts/
+
 # Publish / deployment
 publish/
 *.[Pp]ublish.xml
