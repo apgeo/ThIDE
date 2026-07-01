@@ -37,6 +37,28 @@ public readonly record struct QualifiedName
     public static QualifiedName Of(params string[] parts) =>
         new(ImmutableArray.Create(parts));
 
+    /// <summary>
+    /// Qualified name of a station <paramref name="name"/> declared in survey <paramref name="scope"/>.
+    /// The station name is kept <b>whole</b> — it is never split on '.', because Therion station names
+    /// may legitimately contain dots (e.g. <c>N32.11</c>). Survey hierarchy comes only from the scope
+    /// (and, elsewhere, the <c>@</c> notation via <see cref="StationRef"/>), never from dots inside a
+    /// station token. Prefer this over <see cref="Parse"/> whenever the trailing component is a raw
+    /// station token.
+    /// </summary>
+    public static QualifiedName OfStation(ImmutableArray<string> scope, string name) =>
+        scope.IsDefaultOrEmpty
+            ? new QualifiedName(ImmutableArray.Create(name))
+            : new QualifiedName(scope.Add(name));
+
+    /// <summary>
+    /// Parses a dotted <c>survey.survey.station</c> string by splitting on '.'.
+    /// <para>
+    /// WARNING: this splits on <em>every</em> '.', so it must not be used to qualify a raw station
+    /// token that may itself contain a dot (e.g. <c>N32.11</c>) — use <see cref="OfStation"/> for
+    /// that. Safe for survey paths and known dotted names without dotted station components (internal
+    /// round-trips, tests).
+    /// </para>
+    /// </summary>
     public static QualifiedName Parse(string dotted)
     {
         if (string.IsNullOrEmpty(dotted))
