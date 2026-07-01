@@ -69,7 +69,11 @@ public enum StationPointKind { Station, Entrance, Fix, Junction, Lead }
 /// </summary>
 public sealed record StationPoint(
     double X, double Y, string Name, StationPointKind Kind, SourceSpan Span,
-    string Info, string Survey, string File, int Component);
+    string Info, string Survey, string File, int Component)
+{
+    /// <summary>Multi-line detail (full name + survey, date, file, leading comments) for the corner box.</summary>
+    public string Detail { get; init; } = string.Empty;
+}
 
 /// <summary>LEAD-02: a lead plotted at a station's world position, coloured by kind, click→source.</summary>
 public sealed record LeadMarker(double X, double Y, string Location, LeadKind Kind, SourceSpan Span, int Component = 0);
@@ -79,6 +83,8 @@ public sealed record EquateMarker(double X, double Y, string Label, SourceSpan S
 {
     /// <summary>Pre-formatted hover line for the junction.</summary>
     public string Info { get; init; } = string.Empty;
+    /// <summary>Multi-line detail (per-station name/date/file, the equate's source file, leading comments).</summary>
+    public string Detail { get; init; } = string.Empty;
     /// <summary>The surveys this equate connects (so it can be hidden when all of them are hidden).</summary>
     public ImmutableArray<string> Surveys { get; init; } = ImmutableArray<string>.Empty;
     /// <summary>The file the equate command lives in (used for file-grouped visibility).</summary>
@@ -610,6 +616,28 @@ public sealed partial class LivePreviewViewModel : ObservableObject
         return JoinComment(collected);
     }
 
+    /// <summary>
+    /// The contiguous <c>#</c> comment block immediately above <paramref name="line1Based"/> in a file,
+    /// one entry per comment line, top-to-bottom. Stops at a blank line or any non-comment line (i.e.
+    /// another command) — matching "all comments without an empty line between or another command".
+    /// </summary>
+    private IReadOnlyList<string> LeadingCommentLines(string? path, int line1Based)
+    {
+        var lines = FileLinesFor(path);
+        var outp = new List<string>();
+        if (lines is null) return outp;
+        int idx = line1Based - 1;   // 0-based index of the target line
+        if (idx <= 0 || idx > lines.Length) return outp;
+        for (int i = idx - 1; i >= 0; i--)
+        {
+            var t = lines[i].Trim();
+            if (t.StartsWith('#')) outp.Add(StripComment(t));
+            else break;   // blank line or another command ends the block
+        }
+        outp.Reverse();
+        return outp;
+    }
+
     private static string StripComment(string trimmed) => trimmed.TrimStart('#').Trim();
 
     private static string? JoinComment(List<string> parts)
@@ -885,7 +913,10 @@ public sealed partial class LivePreviewViewModel : ObservableObject
                 var info = BuildPointInfo(st, kind);
                 if (SurveyMeta(survey) is { } meta) info += " · " + meta;
                 byRep[rep] = new StationPoint(p.X, p.Y, st.Name.ToString(), kind, st.DeclarationSpan,
-                    info, survey, st.DeclarationSpan.FilePath ?? string.Empty, comp);
+                    info, survey, st.DeclarationSpan.FilePath ?? string.Empty, comp)
+                {
+                    Detail = BuildStationDetail(st, kind, survey),
+                };
             }
         return byRep.Values.ToList();
     }
@@ -920,6 +951,35 @@ public sealed partial class LivePreviewViewModel : ObservableObject
         return string.IsNullOrEmpty(st.Comment) ? head : $"{head} — {st.Comment}";
     }
 
+    /// <summary>
+    /// The multi-line detail shown in the bottom-left info box when a station is hovered (Task 6.1):
+    /// full name (with survey), fix coordinates / flags where relevant, the survey's date, the source
+    /// file name, then any contiguous comment lines directly above the station's declaration.
+    /// </summary>
+    private string BuildStationDetail(StationSymbol st, StationPointKind kind, string survey)
+    {
+        var lines = new List<string> { st.Name.ToString() };   // full station name with survey
+
+        if (kind == StationPointKind.Fix && st.FixX is { } x && st.FixY is { } y)
+            lines.Add($"{Num(x)}, {Num(y)}" + (st.FixZ is { } z ? $", {Num(z)}" : string.Empty) +
+                      (string.IsNullOrEmpty(st.Cs) ? string.Empty : $" ({st.Cs})"));
+
+        if (!st.Flags.IsDefaultOrEmpty)
+        {
+            var extra = string.Join(", ", st.Flags.Where(f => !string.Equals(f, "entrance", StringComparison.OrdinalIgnoreCase)));
+            if (extra.Length > 0) lines.Add("[" + extra + "]");
+        }
+
+        if (_surveyByName.TryGetValue(survey, out var sv) && !sv.Dates.IsDefaultOrEmpty && sv.Dates.Length > 0)
+            lines.Add(string.Join(", ", sv.Dates));
+        if (!string.IsNullOrEmpty(st.DeclarationSpan.FilePath))
+            lines.Add(Path.GetFileName(st.DeclarationSpan.FilePath));
+
+        foreach (var c in LeadingCommentLines(st.DeclarationSpan.FilePath, st.DeclarationSpan.Start.Line)) lines.Add(c);
+        if (!string.IsNullOrEmpty(st.Comment)) lines.Add(st.Comment);
+        return string.Join("\n", lines);
+    }
+
     // ---- markers ----------------------------------------------------------
 
     // LEAD-02: project each lead whose location is a centreline station into the sketch's frame.
@@ -950,6 +1010,19 @@ public sealed partial class LivePreviewViewModel : ObservableObject
         var byLast = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var key in p2d.Keys) byLast.TryAdd(LastComponent(key), key);
 
+        // Station lookup so each equated token can resolve to its declaring station (for the per-station
+        // name/date/file detail lines, Task 6.1).
+        var stationLookup = new Dictionary<QualifiedName, StationSymbol>();
+        foreach (var model in models)
+            foreach (var st in model.Stations.Values) stationLookup.TryAdd(st.Name, st);
+        var known = new HashSet<QualifiedName>(stationLookup.Keys);
+        StationSymbol? Resolve(string tok)
+        {
+            if (SafeParse(tok) is not { } qn) return null;
+            if (stationLookup.TryGetValue(qn, out var s0)) return s0;
+            return ResolveAgainstKnown(tok, known) is { } r && stationLookup.TryGetValue(r, out var s1) ? s1 : null;
+        }
+
         var markers = new List<EquateMarker>();
         foreach (var model in models)
             foreach (var rec in model.EquateRecords)
@@ -965,11 +1038,37 @@ public sealed partial class LivePreviewViewModel : ObservableObject
                 markers.Add(new EquateMarker(p.X, p.Y, label, rec.Span, comp)
                 {
                     Info = info,
+                    Detail = BuildEquateDetail(tokens, rec.Span, Resolve),
                     Surveys = surveys,
                     File = rec.Span.FilePath ?? string.Empty,
                 });
             }
         return markers;
+    }
+
+    /// <summary>
+    /// The multi-line detail shown in the bottom-left info box when an equate junction is hovered
+    /// (Task 6.1): one line per equated station (full name with survey · date · file), then the
+    /// equate command's own source file, then any contiguous comment lines directly above it.
+    /// </summary>
+    private string BuildEquateDetail(IReadOnlyList<string> tokens, SourceSpan equateSpan, Func<string, StationSymbol?> resolve)
+    {
+        var lines = new List<string>();
+        foreach (var tok in tokens)
+        {
+            if (resolve(tok) is not { } st) { lines.Add(tok); continue; }
+            var survey = SurveyOf(st.Name);
+            var parts = new List<string> { st.Name.ToString() };   // full name with survey
+            if (_surveyByName.TryGetValue(survey, out var sv) && !sv.Dates.IsDefaultOrEmpty && sv.Dates.Length > 0)
+                parts.Add(string.Join(", ", sv.Dates));
+            if (!string.IsNullOrEmpty(st.DeclarationSpan.FilePath))
+                parts.Add(Path.GetFileName(st.DeclarationSpan.FilePath));
+            lines.Add(string.Join(" · ", parts));
+        }
+        if (!string.IsNullOrEmpty(equateSpan.FilePath))
+            lines.Add("equate: " + Path.GetFileName(equateSpan.FilePath));
+        foreach (var c in LeadingCommentLines(equateSpan.FilePath, equateSpan.Start.Line)) lines.Add(c);
+        return string.Join("\n", lines);
     }
 
     /// <summary>The distinct surveys an equate's station tokens belong to.</summary>

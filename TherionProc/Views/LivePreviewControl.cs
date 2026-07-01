@@ -249,7 +249,9 @@ public sealed class LivePreviewControl : Control
     private (double MinX, double MinY, double MaxX, double MaxY)? _lastBounds; // for "same scene" detection (#1)
 
     // Hover state (the point under the cursor) + the pointer position the tooltip follows.
-    private (Point Screen, string Info, double Radius)? _hover;
+    // Near = the compact label drawn at the cursor (station name only); Detail = the multi-line block
+    // drawn in the bottom-left corner.
+    private (Point Screen, string Near, string Detail, double Radius)? _hover;
     private Point _hoverPointer;
 
     // Group highlight (from the legend overlay): which group, its world rect, and its info line.
@@ -469,13 +471,15 @@ public sealed class LivePreviewControl : Control
         // Info readouts, last so they sit above everything.
         if (!string.IsNullOrEmpty(_highlightInfo))
         {
-            DrawInfoBox(ctx, new Point(8, size.Height - 24), _highlightInfo!, size, clampCorner: true);
+            DrawCornerInfoBox(ctx, _highlightInfo!, size);
         }
         else if (_hover is { } h)
         {
             ctx.DrawEllipse(null, HoverRing, h.Screen, h.Radius, h.Radius);
-            DrawInfoBox(ctx, new Point(_hoverPointer.X + 14, _hoverPointer.Y + 14), h.Info, size, clampCorner: false);
-            DrawInfoBox(ctx, new Point(8, size.Height - 24), h.Info, size, clampCorner: true);
+            // Near the cursor: just the compact label (station name, no survey) — Task 6.1.
+            DrawInfoBox(ctx, new Point(_hoverPointer.X + 14, _hoverPointer.Y + 14), h.Near, size, clampCorner: false);
+            // Bottom-left: the full multi-line detail.
+            DrawCornerInfoBox(ctx, h.Detail, size);
         }
     }
 
@@ -553,6 +557,45 @@ public sealed class LivePreviewControl : Control
         }
         ctx.FillRectangle(InfoBack, new Rect(x, y, w, h), 4);
         ctx.DrawText(ft, new Point(x + 6, y + 3));
+    }
+
+    // A multi-line info box pinned to the bottom-left corner, growing upward. Each '\n'-separated line
+    // is drawn on its own row; the whole block is truncated per-line to roughly the control width so a
+    // long comment can't run off the edge (Task 6.1).
+    private void DrawCornerInfoBox(DrawingContext ctx, string text, Size size)
+    {
+        if (string.IsNullOrEmpty(text)) return;
+        int maxChars = Math.Max(20, (int)((size.Width - 20) / 6.6));
+        var rows = text.Split('\n');
+        var fts = new List<FormattedText>(rows.Length);
+        double w = 0;
+        foreach (var raw in rows)
+        {
+            var line = raw.Length > maxChars ? raw[..(maxChars - 1)] + "…" : raw;
+            var ft = Label(line, 11.5, InfoText);
+            w = Math.Max(w, ft.Width);
+            fts.Add(ft);
+        }
+        double lineH = fts.Count > 0 ? fts[0].Height : 14;
+        double boxW = w + 12, boxH = lineH * fts.Count + 6;
+        double x = 8, y = Math.Max(4, size.Height - 8 - boxH);
+        ctx.FillRectangle(InfoBack, new Rect(x, y, boxW, boxH), 4);
+        double ty = y + 3;
+        foreach (var ft in fts) { ctx.DrawText(ft, new Point(x + 6, ty)); ty += lineH; }
+    }
+
+    // "a.0 = b.0" → "0 = 0" (station point-names only, no survey) for the compact near-cursor tooltip.
+    private static string ShortJunction(string label)
+    {
+        var parts = label.Split(" = ", StringSplitOptions.None);
+        for (int i = 0; i < parts.Length; i++)
+        {
+            var t = parts[i].Trim();
+            int at = t.IndexOf('@'); if (at >= 0) t = t[..at];
+            int dot = t.LastIndexOf('.'); if (dot >= 0 && dot < t.Length - 1) t = t[(dot + 1)..];
+            parts[i] = t;
+        }
+        return string.Join(" = ", parts);
     }
 
     private static IPen PenFor(SketchSegment s, string mode, Dictionary<uint, IPen> cache, double thickness, bool darken)
@@ -691,17 +734,22 @@ public sealed class LivePreviewControl : Control
 
     // The hoverable point nearest the cursor (stations / entrances / fixes / junctions / leads /
     // splay ends), within a small pixel threshold; null when nothing is close.
-    private (Point Screen, string Info, double Radius)? FindHover(Point m, Size size)
+    private (Point Screen, string Near, string Detail, double Radius)? FindHover(Point m, Size size)
     {
         double best = 12;
-        (Point Screen, string Info, double Radius)? hit = null;
+        (Point Screen, string Near, string Detail, double Radius)? hit = null;
 
         if (StationPoints is { } pts)
             foreach (var pt in pts)
             {
                 var s = ToScreen(pt.X, pt.Y, size);
                 double d = Distance(m, s);
-                if (d < best) { best = d; hit = (s, pt.Info, HoverRadius(pt.Kind)); }
+                if (d < best)
+                {
+                    best = d;
+                    var detail = string.IsNullOrEmpty(pt.Detail) ? pt.Info : pt.Detail;
+                    hit = (s, ShortName(pt.Name), detail, HoverRadius(pt.Kind));   // near-cursor: station name only
+                }
             }
 
         if (ShowJunctions && EquateMarkers is { } js)
@@ -709,7 +757,13 @@ public sealed class LivePreviewControl : Control
             {
                 var s = ToScreen(j.X, j.Y, size);
                 double d = Distance(m, s);
-                if (d < best) { best = d; hit = (s, string.IsNullOrEmpty(j.Info) ? "Junction · " + j.Label : j.Info, JunctionRadius + 2); }
+                if (d < best)
+                {
+                    best = d;
+                    var detail = !string.IsNullOrEmpty(j.Detail) ? j.Detail
+                               : string.IsNullOrEmpty(j.Info) ? "Junction · " + j.Label : j.Info;
+                    hit = (s, ShortJunction(j.Label), detail, JunctionRadius + 2);
+                }
             }
 
         if (LeadMarkers is { } leads)
@@ -717,7 +771,7 @@ public sealed class LivePreviewControl : Control
             {
                 var s = ToScreen(l.X, l.Y, size);
                 double d = Distance(m, s);
-                if (d < best) { best = d; hit = (s, $"Lead · {l.Kind} · {l.Location}", 7); }
+                if (d < best) { best = d; hit = (s, l.Kind.ToString(), $"Lead · {l.Kind} · {l.Location}", 7); }
             }
 
         if (ShowSplays && Splays is { } splays && splays.Count <= MaxSplayHover)
@@ -725,7 +779,12 @@ public sealed class LivePreviewControl : Control
             {
                 var s = ToScreen(sp.X2, sp.Y2, size);
                 double d = Distance(m, s);
-                if (d < best) { best = d; hit = (s, string.IsNullOrEmpty(sp.Info) ? "Splay · from " + sp.Station : sp.Info, 5); }
+                if (d < best)
+                {
+                    best = d;
+                    var detail = string.IsNullOrEmpty(sp.Info) ? "Splay · from " + sp.Station : sp.Info;
+                    hit = (s, "from " + ShortName(sp.Station), detail, 5);
+                }
             }
 
         return hit;
