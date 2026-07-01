@@ -110,7 +110,7 @@ public sealed class ProjectToolViewModel : ToolViewModelBase
     /// <summary>MEDIA-02/03 background-scan / media manager.</summary>
     [JsonIgnore] public MediaManagerViewModel MediaManager { get; }
 
-    public ProjectToolViewModel() : base("Project", "Project")
+    public ProjectToolViewModel() : base("Project", "Tool_Project")
     {
         Dashboard = null!;
         Surveys = null!;
@@ -126,7 +126,7 @@ public sealed class ProjectToolViewModel : ToolViewModelBase
         ProjectAuditViewModel audit, DataAnalyticsViewModel analytics, LeadsViewModel leads,
         TodoScanViewModel todos, ProjectMetadataViewModel metadata, MediaManagerViewModel mediaManager,
         ILanguageService? lang = null)
-        : base("Project", "Project", lang)
+        : base("Project", "Tool_Project", lang)
     {
         Dashboard = dashboard;
         Surveys = surveys;
