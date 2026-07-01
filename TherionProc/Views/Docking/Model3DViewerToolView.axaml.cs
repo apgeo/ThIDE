@@ -26,6 +26,7 @@ public partial class Model3DViewerToolView : UserControl
     private NativeWebView? _web;
     private Model3DViewerViewModel? _vm;
     private bool _eventsWired;
+    private bool _reFitQueued;   // coalesces bursts of size changes into a single canvas re-fit
     private Window? _fsWindow;   // borderless full-screen host for the whole panel
 
     public Model3DViewerToolView() => InitializeComponent();
@@ -64,6 +65,17 @@ public partial class Model3DViewerToolView : UserControl
             // (the {type:"console"} bridge message). The engine's own inspector is also available where
             // supported (WebView2: right-click ▸ Inspect / F12), so no extra wiring is needed here (#2).
             WebHost.Children.Add(_web);
+            // Keep the native control (and thus CaveView's WebGL canvas) glued to the panel size. The
+            // native child doesn't always follow an Avalonia-side layout change on its own; when it lags,
+            // the page stays at its original size and the cave no longer fills the pane — the same failure
+            // that made growing the panel and going full screen leave it small (#5). Pin the control to
+            // the host bounds on every size change and re-fit the canvas once the new size settles.
+            WebHost.SizeChanged += OnWebHostSizeChanged;
+            if (WebHost.Bounds is { Width: > 0, Height: > 0 } b0)
+            {
+                _web.Width = b0.Width;
+                _web.Height = b0.Height;
+            }
             _web.WebMessageReceived += OnWebMessage;
             _vm.ScriptRequested += OnScriptRequested;
             _vm.DevToolsRequested += OnDevToolsRequested;
@@ -141,6 +153,30 @@ public partial class Model3DViewerToolView : UserControl
         // The native control's new size isn't applied synchronously after a reparent, so CaveView's
         // canvas can keep the old size — nudge it a few times as the new layout settles (#2).
         ScheduleResizeKicks();
+    }
+
+    // The panel (or the full-screen window) changed size: pin the native control to the new bounds so
+    // it actually resizes, then re-fit the CaveView canvas to it (#5).
+    private void OnWebHostSizeChanged(object? sender, SizeChangedEventArgs e)
+    {
+        if (_web is null) return;
+        _web.Width = e.NewSize.Width;
+        _web.Height = e.NewSize.Height;
+        ScheduleReFit();
+    }
+
+    // Re-fit the WebGL canvas once the current burst of layout changes has settled. Coalesced so a
+    // drag of the dock splitter doesn't fire a script call on every intermediate size.
+    private void ScheduleReFit()
+    {
+        if (_web is null || _reFitQueued) return;
+        _reFitQueued = true;
+        Dispatcher.UIThread.Post(async () =>
+        {
+            await Task.Delay(50);
+            _reFitQueued = false;
+            try { if (_web is not null) await _web.InvokeScript("cvResize()"); } catch { /* best-effort */ }
+        });
     }
 
     // Re-fit the WebGL canvas after the panel has been reparented (full screen in/out).
