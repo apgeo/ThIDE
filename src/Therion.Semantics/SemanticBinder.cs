@@ -529,27 +529,35 @@ public sealed class SemanticBinder
     // ---- resolution ------------------------------------------------------
 
     /// <summary>
-    /// Builds a qualified name for a token relative to the current survey scope.
-    /// If the token contains '.', it's treated as an absolute (top-down) reference.
+    /// Builds a qualified name for a locally-declared station <paramref name="token"/> relative to
+    /// the current survey <paramref name="scope"/>. The token is a station name and is kept whole —
+    /// a '.' inside it is a literal character (e.g. <c>N32.11</c>), not a survey separator. Therion
+    /// expresses cross-survey references with the <c>@</c> notation (handled by <see cref="StationRef"/>),
+    /// not by dotted station tokens.
     /// </summary>
     private static QualifiedName QualifyLocal(string token, ImmutableArray<string> scope)
-    {
-        if (token.Contains('.'))
-            return QualifiedName.Parse(token);
-        if (scope.IsEmpty)
-            return QualifiedName.Of(token);
-        return new QualifiedName(scope.Add(token));
-    }
+        => QualifiedName.OfStation(scope, token);
 
     /// <summary>
-    /// Therion-style ancestor lookup: try local scope first, then walk outward.
+    /// Therion-style ancestor lookup: try the reference in the local scope first, then walk outward.
+    /// Station names may contain '.', so the <b>whole</b> token is tried first (so <c>N32.11</c> is
+    /// not split); only if that resolves nowhere do we fall back to the legacy top-down dotted-path
+    /// interpretation (<c>survey.survey.station</c>), which keeps any such reference working.
     /// </summary>
     private static QualifiedName? TryResolveRef(
         string raw, ImmutableArray<string> scope,
         IReadOnlyCollection<QualifiedName> known)
     {
-        var parts = raw.Split('.');
-        // 1. local scope candidate
+        // Primary: treat `raw` as one whole station name (dots are literal).
+        if (TryResolveWith(new[] { raw }, scope, known) is { } whole) return whole;
+        // Fallback: the raw carried '.' and did not resolve whole — try the dotted-path split.
+        return raw.Contains('.') ? TryResolveWith(raw.Split('.'), scope, known) : null;
+    }
+
+    /// <summary>Walks the scope from innermost to root, testing <paramref name="parts"/> appended at each depth.</summary>
+    private static QualifiedName? TryResolveWith(
+        string[] parts, ImmutableArray<string> scope, IReadOnlyCollection<QualifiedName> known)
+    {
         for (int depth = scope.Length; depth >= 0; depth--)
         {
             var candidate = ImmutableArray.CreateRange(scope, 0, depth, x => x).AddRange(parts);
