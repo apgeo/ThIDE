@@ -1382,20 +1382,41 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             // Merge workspace-level diagnostics with current-file parser/semantic ones
             // so the user sees both graph-level warnings and local parse errors.
+            //
+            // The active file is special: its saved workspace/per-file diagnostics are dropped and
+            // replaced by the LIVE editor-buffer set below, so the panel tracks typing exactly like the
+            // squiggles do — instantly, and regardless of the validate-on-type setting (which only
+            // governs the *rest* of the project's live re-analysis).
+            var activePath = _documents.CurrentPath;
             var merged = System.Collections.Immutable.ImmutableArray.CreateBuilder<Therion.Core.Diagnostic>();
-            merged.AddRange(ws.Diagnostics);
-            // Also include per-file semantic diagnostics from every loaded file.
-            foreach (var model in ws.PerFile.Values)
-                merged.AddRange(model.Diagnostics);
+            merged.AddRange(ws.Diagnostics.Where(d => !IsActiveFile(d.Span.FilePath, activePath)));
+            // Also include per-file semantic diagnostics from every loaded file except the active one.
+            foreach (var (path, model) in ws.PerFile)
+                if (!IsActiveFile(path, activePath))
+                    merged.AddRange(model.Diagnostics);
             // LANG-13: run the (config-driven) semantic rules over the workspace and include their
             // diagnostics. Cached per workspace snapshot so repeated refreshes don't re-run them.
             merged.AddRange(RuleDiagnostics(ws));
             // DIAG-02..06: project-wide correctness analysis (loops, blunders, fore/back,
             // collisions, dangling includes). Cached per workspace snapshot like the rules.
             merged.AddRange(ProjectAnalysisDiagnostics(ws));
+            // The active file's live parse/semantic/equate diagnostics (same set as its squiggles).
+            merged.AddRange(_documents.CurrentDiagnostics);
             return merged.ToImmutable();
         }
         return _documents.CurrentDiagnostics;
+    }
+
+    /// <summary>True when <paramref name="path"/> is the active document (path-normalized).</summary>
+    private static bool IsActiveFile(string? path, string? activePath)
+    {
+        if (string.IsNullOrEmpty(path) || string.IsNullOrEmpty(activePath)) return false;
+        try
+        {
+            return string.Equals(System.IO.Path.GetFullPath(path), System.IO.Path.GetFullPath(activePath),
+                StringComparison.OrdinalIgnoreCase);
+        }
+        catch { return string.Equals(path, activePath, StringComparison.OrdinalIgnoreCase); }
     }
 
     private WorkspaceSemanticModel? _projDiagWorkspace;
