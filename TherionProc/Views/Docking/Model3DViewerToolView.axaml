@@ -12,12 +12,10 @@
     <!-- OuterHost holds RootContent; RootContent is reparented into a borderless window for full screen. -->
     <Panel x:Name="OuterHost">
         <DockPanel x:Name="RootContent">
-            <!-- Control bar (mirrors the speosilex.ro reference viewer). Kept to a single row that
-                 scrolls horizontally on narrow panes, so the 3D view below always gets the full
-                 remaining panel height instead of being squeezed by a wrapping toolbar. -->
+            <!-- Control bar (mirrors the speosilex.ro reference viewer); reflows onto further rows on
+                 narrow panes so every button stays visible (like the Live Preview toolbar). -->
             <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="6,4">
-                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
-                <StackPanel Orientation="Horizontal">
+                <WrapPanel Orientation="Horizontal">
                     <!-- Model dropdown: every model produced by the active thconfig's export-model commands. -->
                     <TextBlock Text="Model:" VerticalAlignment="Center" FontSize="11" Foreground="Gray" Margin="0,0,4,0" />
                     <ComboBox MinWidth="200" FontSize="11" Margin="0,0,6,2"
@@ -87,8 +85,7 @@
                                   IsChecked="{Binding Viewer.ShadingMode, Mode=OneWay, Converter={StaticResource ShadingEquals}, ConverterParameter=inclination}" />
                     <ToggleButton Content="Plain"       Command="{Binding Viewer.SetShadingCommand}" CommandParameter="single"      FontSize="11" Padding="6,2" Margin="0,0,2,2"
                                   IsChecked="{Binding Viewer.ShadingMode, Mode=OneWay, Converter={StaticResource ShadingEquals}, ConverterParameter=single}" />
-                </StackPanel>
-                </ScrollViewer>
+                </WrapPanel>
             </Border>
 
             <!-- Bottom: an old-model notice (amber, when present) over the status line. -->
