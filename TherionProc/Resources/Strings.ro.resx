@@ -187,4 +187,81 @@
   <data name="Struct_DiscSizeTip" xml:space="preserve"><value>Mărește discurile planelor (sunt minuscule lângă peșteră)</value></data>
   <data name="Struct_WhiteBackground" xml:space="preserve"><value>Fundal alb</value></data>
   <data name="Struct_PlotFallback" xml:space="preserve"><value>Graficul 3D necesită resursele three.js incluse și un motor web de sistem (WebView2 / WebKit).</value></data>
+  <!-- Shared column headers (Project / Object Browser / other grids) -->
+  <data name="Col_Name" xml:space="preserve"><value>Nume</value></data>
+  <data name="Col_Title" xml:space="preserve"><value>Titlu</value></data>
+  <data name="Col_Parent" xml:space="preserve"><value>Părinte</value></data>
+  <data name="Col_Station" xml:space="preserve"><value>Stație</value></data>
+  <data name="Col_Coordinates" xml:space="preserve"><value>Coordonate</value></data>
+  <data name="Col_Crs" xml:space="preserve"><value>CRS</value></data>
+  <data name="Col_Location" xml:space="preserve"><value>Locație</value></data>
+  <data name="Col_Type" xml:space="preserve"><value>Tip</value></data>
+  <data name="Col_Id" xml:space="preserve"><value>Id</value></data>
+  <data name="Col_Projection" xml:space="preserve"><value>Proiecție</value></data>
+  <data name="Col_Members" xml:space="preserve"><value>Membri</value></data>
+  <data name="Col_Status" xml:space="preserve"><value>Stare</value></data>
+  <data name="Col_Description" xml:space="preserve"><value>Descriere</value></data>
+  <data name="Col_Tag" xml:space="preserve"><value>Etichetă</value></data>
+  <data name="Col_Text" xml:space="preserve"><value>Text</value></data>
+  <data name="Col_Metric" xml:space="preserve"><value>Metrică</value></data>
+  <data name="Col_Count" xml:space="preserve"><value>Număr</value></data>
+  <data name="Col_Person" xml:space="preserve"><value>Persoană</value></data>
+  <data name="Col_Date" xml:space="preserve"><value>Dată</value></data>
+  <data name="Col_Resolution" xml:space="preserve"><value>Rezoluție</value></data>
+  <data name="Col_Georef" xml:space="preserve"><value>Georef.</value></data>
+  <data name="Col_Sketch" xml:space="preserve"><value>Schiță (.xvi)</value></data>
+  <data name="Col_Scraps" xml:space="preserve"><value>Schițe</value></data>
+  <data name="Col_Region" xml:space="preserve"><value>Regiune</value></data>
+  <data name="Col_License" xml:space="preserve"><value>Licență</value></data>
+  <data name="Col_Notes" xml:space="preserve"><value>Note</value></data>
+  <data name="Col_DeclSource" xml:space="preserve"><value>Sursa declinației</value></data>
+  <!-- Project tool (PROJ / DATA / LEAD / NOTE / MEDIA tabs) -->
+  <data name="Proj_Tab_Dashboard" xml:space="preserve"><value>Tablou de bord</value></data>
+  <data name="Proj_Tab_Surveys" xml:space="preserve"><value>Topografii</value></data>
+  <data name="Proj_Tab_Statistics" xml:space="preserve"><value>Statistici</value></data>
+  <data name="Proj_Tab_Charts" xml:space="preserve"><value>Grafice</value></data>
+  <data name="Proj_Tab_Team" xml:space="preserve"><value>Echipă</value></data>
+  <data name="Proj_Tab_Entrances" xml:space="preserve"><value>Intrări</value></data>
+  <data name="Proj_Tab_Quality" xml:space="preserve"><value>Calitate</value></data>
+  <data name="Proj_Tab_Audit" xml:space="preserve"><value>Audit</value></data>
+  <data name="Proj_Tab_Leads" xml:space="preserve"><value>Piste</value></data>
+  <data name="Proj_Tab_Todos" xml:space="preserve"><value>Sarcini (TODO)</value></data>
+  <data name="Proj_Tab_Metadata" xml:space="preserve"><value>Metadate</value></data>
+  <data name="Proj_Tab_Media" xml:space="preserve"><value>Media</value></data>
+  <data name="Proj_Dash_EntryConfig" xml:space="preserve"><value>Configurație de intrare</value></data>
+  <data name="Proj_Dash_Files" xml:space="preserve"><value>Fișiere</value></data>
+  <data name="Proj_Dash_TotalLength" xml:space="preserve"><value>Lungime totală</value></data>
+  <data name="Proj_Dash_Depth" xml:space="preserve"><value>Adâncime</value></data>
+  <data name="Proj_Dash_LastBuild" xml:space="preserve"><value>Ultima compilare</value></data>
+  <data name="Proj_QuickActions" xml:space="preserve"><value>Acțiuni rapide</value></data>
+  <data name="Proj_Build" xml:space="preserve"><value>Compilează</value></data>
+  <data name="Proj_OpenOutputFolder" xml:space="preserve"><value>Deschide dosarul de ieșire</value></data>
+  <data name="Proj_NoSurveys" xml:space="preserve"><value>Încă nu există topografii în proiect.</value></data>
+  <data name="Proj_Chart_LengthBySurvey" xml:space="preserve"><value>Lungime pe topografie (primele 30)</value></data>
+  <data name="Proj_Chart_LengthByDate" xml:space="preserve"><value>Lungime pe dată</value></data>
+  <data name="Proj_CopyTeamCsv" xml:space="preserve"><value>Copiază echipa (CSV)</value></data>
+  <data name="Proj_Trips" xml:space="preserve"><value>Ieșiri (după dată)</value></data>
+  <data name="Proj_CopyCsv" xml:space="preserve"><value>Copiază (CSV)</value></data>
+  <data name="Proj_Rescan" xml:space="preserve"><value>Rescanează</value></data>
+  <data name="Proj_Audit_Orphans" xml:space="preserve"><value>Fișiere orfane (inaccesibile din orice punct de intrare)</value></data>
+  <data name="Proj_Audit_Scraps" xml:space="preserve"><value>Schițe nereferențiate (în nicio hartă)</value></data>
+  <data name="Proj_Audit_Maps" xml:space="preserve"><value>Hărți neexportate (declarate dar neselectate)</value></data>
+  <data name="Proj_Lead_Checked" xml:space="preserve"><value>Verificat</value></data>
+  <data name="Proj_Lead_Pushed" xml:space="preserve"><value>Explorat</value></data>
+  <data name="Proj_Lead_Dead" xml:space="preserve"><value>Mort</value></data>
+  <data name="Proj_Lead_Open" xml:space="preserve"><value>Deschis</value></data>
+  <data name="Proj_CopyMarkdown" xml:space="preserve"><value>Copiază ca Markdown</value></data>
+  <data name="Proj_Meta_Intro" xml:space="preserve"><value>Metadate proiect (stocate într-un fișier separat, nu în sursa .th).</value></data>
+  <data name="Proj_Save" xml:space="preserve"><value>Salvează</value></data>
+  <data name="Proj_Reload" xml:space="preserve"><value>Reîncarcă</value></data>
+  <!-- Object Browser entity tabs (DATA-03) -->
+  <data name="OB_Tab_Fixes" xml:space="preserve"><value>Puncte fixe</value></data>
+  <data name="OB_Tab_Equates" xml:space="preserve"><value>Echivalări</value></data>
+  <data name="OB_Tab_Maps" xml:space="preserve"><value>Hărți</value></data>
+  <data name="OB_Tab_Scraps" xml:space="preserve"><value>Schițe</value></data>
+  <data name="OB_Tab_Points" xml:space="preserve"><value>Puncte</value></data>
+  <data name="OB_Tab_Lines" xml:space="preserve"><value>Linii</value></data>
+  <data name="OB_Tab_Areas" xml:space="preserve"><value>Suprafețe</value></data>
+  <data name="OB_Col_Equate" xml:space="preserve"><value>Echivalare</value></data>
+  <data name="OB_CopyQName" xml:space="preserve"><value>Copiază numele calificat</value></data>
 </root>

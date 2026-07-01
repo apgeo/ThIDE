@@ -187,4 +187,81 @@
   <data name="Struct_DiscSizeTip" xml:space="preserve"><value>Enlarge the plane discs (they are tiny next to the cave)</value></data>
   <data name="Struct_WhiteBackground" xml:space="preserve"><value>White background</value></data>
   <data name="Struct_PlotFallback" xml:space="preserve"><value>The 3D plot needs the bundled three.js assets and a system web engine (WebView2 / WebKit).</value></data>
+  <!-- Shared column headers (Project / Object Browser / other grids) -->
+  <data name="Col_Name" xml:space="preserve"><value>Name</value></data>
+  <data name="Col_Title" xml:space="preserve"><value>Title</value></data>
+  <data name="Col_Parent" xml:space="preserve"><value>Parent</value></data>
+  <data name="Col_Station" xml:space="preserve"><value>Station</value></data>
+  <data name="Col_Coordinates" xml:space="preserve"><value>Coordinates</value></data>
+  <data name="Col_Crs" xml:space="preserve"><value>CRS</value></data>
+  <data name="Col_Location" xml:space="preserve"><value>Location</value></data>
+  <data name="Col_Type" xml:space="preserve"><value>Type</value></data>
+  <data name="Col_Id" xml:space="preserve"><value>Id</value></data>
+  <data name="Col_Projection" xml:space="preserve"><value>Projection</value></data>
+  <data name="Col_Members" xml:space="preserve"><value>Members</value></data>
+  <data name="Col_Status" xml:space="preserve"><value>Status</value></data>
+  <data name="Col_Description" xml:space="preserve"><value>Description</value></data>
+  <data name="Col_Tag" xml:space="preserve"><value>Tag</value></data>
+  <data name="Col_Text" xml:space="preserve"><value>Text</value></data>
+  <data name="Col_Metric" xml:space="preserve"><value>Metric</value></data>
+  <data name="Col_Count" xml:space="preserve"><value>Count</value></data>
+  <data name="Col_Person" xml:space="preserve"><value>Person</value></data>
+  <data name="Col_Date" xml:space="preserve"><value>Date</value></data>
+  <data name="Col_Resolution" xml:space="preserve"><value>Resolution</value></data>
+  <data name="Col_Georef" xml:space="preserve"><value>Georef</value></data>
+  <data name="Col_Sketch" xml:space="preserve"><value>Sketch (.xvi)</value></data>
+  <data name="Col_Scraps" xml:space="preserve"><value>Scraps</value></data>
+  <data name="Col_Region" xml:space="preserve"><value>Region</value></data>
+  <data name="Col_License" xml:space="preserve"><value>License</value></data>
+  <data name="Col_Notes" xml:space="preserve"><value>Notes</value></data>
+  <data name="Col_DeclSource" xml:space="preserve"><value>Declination source</value></data>
+  <!-- Project tool (PROJ / DATA / LEAD / NOTE / MEDIA tabs) -->
+  <data name="Proj_Tab_Dashboard" xml:space="preserve"><value>Dashboard</value></data>
+  <data name="Proj_Tab_Surveys" xml:space="preserve"><value>Surveys</value></data>
+  <data name="Proj_Tab_Statistics" xml:space="preserve"><value>Statistics</value></data>
+  <data name="Proj_Tab_Charts" xml:space="preserve"><value>Charts</value></data>
+  <data name="Proj_Tab_Team" xml:space="preserve"><value>Team</value></data>
+  <data name="Proj_Tab_Entrances" xml:space="preserve"><value>Entrances</value></data>
+  <data name="Proj_Tab_Quality" xml:space="preserve"><value>Quality</value></data>
+  <data name="Proj_Tab_Audit" xml:space="preserve"><value>Audit</value></data>
+  <data name="Proj_Tab_Leads" xml:space="preserve"><value>Leads</value></data>
+  <data name="Proj_Tab_Todos" xml:space="preserve"><value>TODOs</value></data>
+  <data name="Proj_Tab_Metadata" xml:space="preserve"><value>Metadata</value></data>
+  <data name="Proj_Tab_Media" xml:space="preserve"><value>Media</value></data>
+  <data name="Proj_Dash_EntryConfig" xml:space="preserve"><value>Entry config</value></data>
+  <data name="Proj_Dash_Files" xml:space="preserve"><value>Files</value></data>
+  <data name="Proj_Dash_TotalLength" xml:space="preserve"><value>Total length</value></data>
+  <data name="Proj_Dash_Depth" xml:space="preserve"><value>Depth</value></data>
+  <data name="Proj_Dash_LastBuild" xml:space="preserve"><value>Last build</value></data>
+  <data name="Proj_QuickActions" xml:space="preserve"><value>Quick actions</value></data>
+  <data name="Proj_Build" xml:space="preserve"><value>Build</value></data>
+  <data name="Proj_OpenOutputFolder" xml:space="preserve"><value>Open output folder</value></data>
+  <data name="Proj_NoSurveys" xml:space="preserve"><value>No surveys in the project yet.</value></data>
+  <data name="Proj_Chart_LengthBySurvey" xml:space="preserve"><value>Length by survey (top 30)</value></data>
+  <data name="Proj_Chart_LengthByDate" xml:space="preserve"><value>Length by date</value></data>
+  <data name="Proj_CopyTeamCsv" xml:space="preserve"><value>Copy team (CSV)</value></data>
+  <data name="Proj_Trips" xml:space="preserve"><value>Trips (by date)</value></data>
+  <data name="Proj_CopyCsv" xml:space="preserve"><value>Copy (CSV)</value></data>
+  <data name="Proj_Rescan" xml:space="preserve"><value>Re-scan</value></data>
+  <data name="Proj_Audit_Orphans" xml:space="preserve"><value>Orphan files (not reachable from any entry point)</value></data>
+  <data name="Proj_Audit_Scraps" xml:space="preserve"><value>Unreferenced scraps (not in any map)</value></data>
+  <data name="Proj_Audit_Maps" xml:space="preserve"><value>Unexported maps (declared but not selected)</value></data>
+  <data name="Proj_Lead_Checked" xml:space="preserve"><value>Checked</value></data>
+  <data name="Proj_Lead_Pushed" xml:space="preserve"><value>Pushed</value></data>
+  <data name="Proj_Lead_Dead" xml:space="preserve"><value>Dead</value></data>
+  <data name="Proj_Lead_Open" xml:space="preserve"><value>Open</value></data>
+  <data name="Proj_CopyMarkdown" xml:space="preserve"><value>Copy as Markdown</value></data>
+  <data name="Proj_Meta_Intro" xml:space="preserve"><value>Project metadata (stored in a sidecar, not in the .th source).</value></data>
+  <data name="Proj_Save" xml:space="preserve"><value>Save</value></data>
+  <data name="Proj_Reload" xml:space="preserve"><value>Reload</value></data>
+  <!-- Object Browser entity tabs (DATA-03) -->
+  <data name="OB_Tab_Fixes" xml:space="preserve"><value>Fixes</value></data>
+  <data name="OB_Tab_Equates" xml:space="preserve"><value>Equates</value></data>
+  <data name="OB_Tab_Maps" xml:space="preserve"><value>Maps</value></data>
+  <data name="OB_Tab_Scraps" xml:space="preserve"><value>Scraps</value></data>
+  <data name="OB_Tab_Points" xml:space="preserve"><value>Points</value></data>
+  <data name="OB_Tab_Lines" xml:space="preserve"><value>Lines</value></data>
+  <data name="OB_Tab_Areas" xml:space="preserve"><value>Areas</value></data>
+  <data name="OB_Col_Equate" xml:space="preserve"><value>Equate</value></data>
+  <data name="OB_CopyQName" xml:space="preserve"><value>Copy Qualified Name</value></data>
 </root>

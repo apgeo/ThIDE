@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:TherionProc.ViewModels.Docking"
+             xmlns:l="using:TherionProc.Resources"
              x:Class="TherionProc.Views.Docking.ProjectToolView"
              x:CompileBindings="False"
              x:DataType="vm:ProjectToolViewModel">
@@ -26,50 +27,50 @@
 
     <TabControl>
         <!-- PROJ-07 — Dashboard -->
-        <TabItem Header="Dashboard">
+        <TabItem Header="{l:Loc Proj_Tab_Dashboard}">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel Margin="12" Spacing="4">
                     <TextBlock Text="{Binding Dashboard.ProjectName}" FontSize="18" FontWeight="Bold" />
                     <Grid ColumnDefinitions="130,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" Margin="0,8,0,0">
-                        <TextBlock Grid.Row="0" Grid.Column="0" Classes="k" Text="Entry config" />
+                        <TextBlock Grid.Row="0" Grid.Column="0" Classes="k" Text="{l:Loc Proj_Dash_EntryConfig}" />
                         <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Dashboard.EntryConfig}" TextTrimming="CharacterEllipsis" />
-                        <TextBlock Grid.Row="1" Grid.Column="0" Classes="k" Text="Files" />
+                        <TextBlock Grid.Row="1" Grid.Column="0" Classes="k" Text="{l:Loc Proj_Dash_Files}" />
                         <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Dashboard.FileSummary}" />
-                        <TextBlock Grid.Row="2" Grid.Column="0" Classes="k" Text="Surveys" />
+                        <TextBlock Grid.Row="2" Grid.Column="0" Classes="k" Text="{l:Loc Proj_Tab_Surveys}" />
                         <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Dashboard.SurveySummary}" />
-                        <TextBlock Grid.Row="3" Grid.Column="0" Classes="k" Text="Stations" />
+                        <TextBlock Grid.Row="3" Grid.Column="0" Classes="k" Text="{l:Loc Browser_Tab_Stations}" />
                         <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Dashboard.StationsText}" />
-                        <TextBlock Grid.Row="4" Grid.Column="0" Classes="k" Text="Total length" />
+                        <TextBlock Grid.Row="4" Grid.Column="0" Classes="k" Text="{l:Loc Proj_Dash_TotalLength}" />
                         <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding Dashboard.LengthText}" FontWeight="SemiBold" />
-                        <TextBlock Grid.Row="5" Grid.Column="0" Classes="k" Text="Depth" />
+                        <TextBlock Grid.Row="5" Grid.Column="0" Classes="k" Text="{l:Loc Proj_Dash_Depth}" />
                         <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding Dashboard.DepthText}" />
-                        <TextBlock Grid.Row="6" Grid.Column="0" Classes="k" Text="Entrances" />
+                        <TextBlock Grid.Row="6" Grid.Column="0" Classes="k" Text="{l:Loc Proj_Tab_Entrances}" />
                         <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding Dashboard.EntrancesText}" />
-                        <TextBlock Grid.Row="7" Grid.Column="0" Classes="k" Text="Diagnostics" />
+                        <TextBlock Grid.Row="7" Grid.Column="0" Classes="k" Text="{l:Loc Tool_Diagnostics}" />
                         <TextBlock Grid.Row="7" Grid.Column="1" Text="{Binding Dashboard.DiagnosticsText}" />
                     </Grid>
 
                     <Border Height="1" Background="{DynamicResource ControlStrokeColorDefaultBrush}" Margin="0,12" />
                     <StackPanel Orientation="Horizontal" Spacing="6">
-                        <TextBlock Classes="k" Text="Last build" VerticalAlignment="Center" />
+                        <TextBlock Classes="k" Text="{l:Loc Proj_Dash_LastBuild}" VerticalAlignment="Center" />
                         <TextBlock Text="{Binding Dashboard.BuildStatus}" VerticalAlignment="Center" />
                     </StackPanel>
 
-                    <TextBlock Classes="h" Text="Quick actions" />
+                    <TextBlock Classes="h" Text="{l:Loc Proj_QuickActions}" />
                     <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Button Content="Build" Command="{Binding Dashboard.Build.BuildCommand}" />
-                        <Button Content="Open output folder" Command="{Binding Dashboard.Build.OpenLastOutputFolderCommand}" />
-                        <Button Content="Refresh" Command="{Binding Dashboard.RefreshCommand}" />
+                        <Button Content="{l:Loc Proj_Build}" Command="{Binding Dashboard.Build.BuildCommand}" />
+                        <Button Content="{l:Loc Proj_OpenOutputFolder}" Command="{Binding Dashboard.Build.OpenLastOutputFolderCommand}" />
+                        <Button Content="{l:Loc Common_Refresh}" Command="{Binding Dashboard.RefreshCommand}" />
                     </StackPanel>
                 </StackPanel>
             </ScrollViewer>
         </TabItem>
 
         <!-- PROJ-03 — Survey tree -->
-        <TabItem Header="Surveys">
+        <TabItem Header="{l:Loc Proj_Tab_Surveys}">
             <DockPanel>
                 <TextBlock DockPanel.Dock="Top" Margin="8,6" Foreground="Gray"
-                           Text="No surveys in the project yet."
+                           Text="{l:Loc Proj_NoSurveys}"
                            IsVisible="{Binding Surveys.IsEmpty}" />
                 <TreeView ItemsSource="{Binding Surveys.Roots}"
                           SelectedItem="{Binding Surveys.Selected, Mode=TwoWay}">
@@ -88,11 +89,11 @@
         </TabItem>
 
         <!-- DATA-01 — Statistics -->
-        <TabItem Header="Statistics">
+        <TabItem Header="{l:Loc Proj_Tab_Statistics}">
             <DockPanel>
                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="8,6">
-                    <Button Content="Refresh" Command="{Binding Analytics.RefreshCommand}" />
-                    <Button Content="Copy" Command="{Binding Analytics.CopyStatisticsCommand}" />
+                    <Button Content="{l:Loc Common_Refresh}" Command="{Binding Analytics.RefreshCommand}" />
+                    <Button Content="{l:Loc Common_Copy}" Command="{Binding Analytics.CopyStatisticsCommand}" />
                     <TextBlock Text="{Binding Analytics.Summary}" Foreground="Gray" VerticalAlignment="Center"
                                TextTrimming="CharacterEllipsis" />
                 </StackPanel>
@@ -107,10 +108,10 @@
         </TabItem>
 
         <!-- DATA-02 — Charts -->
-        <TabItem Header="Charts">
+        <TabItem Header="{l:Loc Proj_Tab_Charts}">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel Margin="10" Spacing="2">
-                    <TextBlock Classes="h" Text="Length by survey (top 30)" />
+                    <TextBlock Classes="h" Text="{l:Loc Proj_Chart_LengthBySurvey}" />
                     <ItemsControl ItemsSource="{Binding Analytics.LengthBySurvey}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
@@ -123,7 +124,7 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
-                    <TextBlock Classes="h" Text="Length by date" />
+                    <TextBlock Classes="h" Text="{l:Loc Proj_Chart_LengthByDate}" />
                     <ItemsControl ItemsSource="{Binding Analytics.LengthByDate}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
@@ -141,27 +142,27 @@
         </TabItem>
 
         <!-- DATA-05 — Team & trips -->
-        <TabItem Header="Team">
+        <TabItem Header="{l:Loc Proj_Tab_Team}">
             <DockPanel>
                 <Button DockPanel.Dock="Top" HorizontalAlignment="Left" Margin="8,6"
-                        Content="Copy team (CSV)" Command="{Binding Analytics.CopyTeamCommand}" />
+                        Content="{l:Loc Proj_CopyTeamCsv}" Command="{Binding Analytics.CopyTeamCommand}" />
                 <Grid RowDefinitions="*,Auto,*">
                     <DataGrid Grid.Row="0" ItemsSource="{Binding Analytics.Team}" IsReadOnly="True"
                               GridLinesVisibility="Horizontal" AutoGenerateColumns="False">
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Person" Binding="{Binding Name}" Width="*" />
-                            <DataGridTextColumn Header="Surveys" Binding="{Binding Surveys}" Width="80" />
-                            <DataGridTextColumn Header="Length" Binding="{Binding Length}" Width="100" />
+                            <DataGridTextColumn Header="{l:Loc Col_Person}" Binding="{Binding Name}" Width="*" />
+                            <DataGridTextColumn Header="{l:Loc Proj_Tab_Surveys}" Binding="{Binding Surveys}" Width="80" />
+                            <DataGridTextColumn Header="{l:Loc Browser_Col_Length}" Binding="{Binding Length}" Width="100" />
                         </DataGrid.Columns>
                     </DataGrid>
-                    <TextBlock Grid.Row="1" Classes="h" Text="Trips (by date)" Margin="8,6,0,3" />
+                    <TextBlock Grid.Row="1" Classes="h" Text="{l:Loc Proj_Trips}" Margin="8,6,0,3" />
                     <DataGrid Grid.Row="2" ItemsSource="{Binding Analytics.Trips}" IsReadOnly="True"
                               GridLinesVisibility="Horizontal" AutoGenerateColumns="False">
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Date" Binding="{Binding Date}" Width="120" />
-                            <DataGridTextColumn Header="Surveys" Binding="{Binding Surveys}" Width="80" />
-                            <DataGridTextColumn Header="Length" Binding="{Binding Length}" Width="100" />
-                            <DataGridTextColumn Header="Members" Binding="{Binding Members}" Width="*" />
+                            <DataGridTextColumn Header="{l:Loc Col_Date}" Binding="{Binding Date}" Width="120" />
+                            <DataGridTextColumn Header="{l:Loc Proj_Tab_Surveys}" Binding="{Binding Surveys}" Width="80" />
+                            <DataGridTextColumn Header="{l:Loc Browser_Col_Length}" Binding="{Binding Length}" Width="100" />
+                            <DataGridTextColumn Header="{l:Loc Col_Members}" Binding="{Binding Members}" Width="*" />
                         </DataGrid.Columns>
                     </DataGrid>
                 </Grid>
@@ -169,45 +170,45 @@
         </TabItem>
 
         <!-- DATA-06 — Entrances & fixed points -->
-        <TabItem Header="Entrances">
+        <TabItem Header="{l:Loc Proj_Tab_Entrances}">
             <DockPanel>
                 <Button DockPanel.Dock="Top" HorizontalAlignment="Left" Margin="8,6"
-                        Content="Copy (CSV)" Command="{Binding Analytics.CopyFixedPointsCommand}" />
+                        Content="{l:Loc Proj_CopyCsv}" Command="{Binding Analytics.CopyFixedPointsCommand}" />
                 <DataGrid ItemsSource="{Binding Analytics.FixedPoints}" IsReadOnly="True"
                           GridLinesVisibility="Horizontal" CanUserSortColumns="True" AutoGenerateColumns="False">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Station" Binding="{Binding Station}" Width="*" />
-                        <DataGridTextColumn Header="Kind" Binding="{Binding Kind}" Width="120" />
-                        <DataGridTextColumn Header="Coordinates" Binding="{Binding Coordinates}" Width="220" />
-                        <DataGridTextColumn Header="CRS" Binding="{Binding Cs}" Width="90" />
-                        <DataGridTextColumn Header="Location" Binding="{Binding Location}" Width="160" />
+                        <DataGridTextColumn Header="{l:Loc Col_Station}" Binding="{Binding Station}" Width="*" />
+                        <DataGridTextColumn Header="{l:Loc Browser_Col_Kind}" Binding="{Binding Kind}" Width="120" />
+                        <DataGridTextColumn Header="{l:Loc Col_Coordinates}" Binding="{Binding Coordinates}" Width="220" />
+                        <DataGridTextColumn Header="{l:Loc Col_Crs}" Binding="{Binding Cs}" Width="90" />
+                        <DataGridTextColumn Header="{l:Loc Col_Location}" Binding="{Binding Location}" Width="160" />
                     </DataGrid.Columns>
                 </DataGrid>
             </DockPanel>
         </TabItem>
 
         <!-- DATA-08 — Data quality -->
-        <TabItem Header="Quality">
+        <TabItem Header="{l:Loc Proj_Tab_Quality}">
             <DataGrid ItemsSource="{Binding Analytics.Quality}" IsReadOnly="True"
                       GridLinesVisibility="Horizontal" AutoGenerateColumns="False">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Metric" Binding="{Binding Metric}" Width="*" />
-                    <DataGridTextColumn Header="Count" Binding="{Binding Count}" Width="100" />
+                    <DataGridTextColumn Header="{l:Loc Col_Metric}" Binding="{Binding Metric}" Width="*" />
+                    <DataGridTextColumn Header="{l:Loc Col_Count}" Binding="{Binding Count}" Width="100" />
                 </DataGrid.Columns>
             </DataGrid>
         </TabItem>
 
         <!-- PROJ-02 — Orphan / dead-file audit -->
-        <TabItem Header="Audit">
+        <TabItem Header="{l:Loc Proj_Tab_Audit}">
             <DockPanel>
                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="8,6">
-                    <Button Content="Re-scan" Command="{Binding Audit.RefreshCommand}" />
+                    <Button Content="{l:Loc Proj_Rescan}" Command="{Binding Audit.RefreshCommand}" />
                     <TextBlock Text="{Binding Audit.Summary}" Foreground="Gray" VerticalAlignment="Center"
                                TextTrimming="CharacterEllipsis" />
                 </StackPanel>
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="8,0,8,8">
-                        <TextBlock Classes="h" Text="Orphan files (not reachable from any entry point)" />
+                        <TextBlock Classes="h" Text="{l:Loc Proj_Audit_Orphans}" />
                         <ItemsControl ItemsSource="{Binding Audit.OrphanFiles}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
@@ -223,7 +224,7 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
 
-                        <TextBlock Classes="h" Text="Unreferenced scraps (not in any map)" />
+                        <TextBlock Classes="h" Text="{l:Loc Proj_Audit_Scraps}" />
                         <ItemsControl ItemsSource="{Binding Audit.UnreferencedScraps}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
@@ -239,7 +240,7 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
 
-                        <TextBlock Classes="h" Text="Unexported maps (declared but not selected)" />
+                        <TextBlock Classes="h" Text="{l:Loc Proj_Audit_Maps}" />
                         <ItemsControl ItemsSource="{Binding Audit.UnexportedMaps}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
@@ -260,87 +261,87 @@
         </TabItem>
 
         <!-- LEAD-01/03/05 — exploration leads register -->
-        <TabItem Header="Leads">
+        <TabItem Header="{l:Loc Proj_Tab_Leads}">
             <DockPanel>
                 <WrapPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="8,6" VerticalAlignment="Center">
-                    <Button Content="Re-scan" Command="{Binding Leads.RefreshCommand}" Margin="0,0,6,0" />
-                    <Button Content="Go to source" Command="{Binding Leads.OpenCommand}"
+                    <Button Content="{l:Loc Proj_Rescan}" Command="{Binding Leads.RefreshCommand}" Margin="0,0,6,0" />
+                    <Button Content="{l:Loc Common_GoToSource}" Command="{Binding Leads.OpenCommand}"
                             CommandParameter="{Binding #LeadsGrid.SelectedItem}" Margin="0,0,6,0" />
-                    <Button Content="Checked" Command="{Binding Leads.MarkCheckedCommand}"
+                    <Button Content="{l:Loc Proj_Lead_Checked}" Command="{Binding Leads.MarkCheckedCommand}"
                             CommandParameter="{Binding #LeadsGrid.SelectedItem}" Margin="0,0,6,0" />
-                    <Button Content="Pushed" Command="{Binding Leads.MarkPushedCommand}"
+                    <Button Content="{l:Loc Proj_Lead_Pushed}" Command="{Binding Leads.MarkPushedCommand}"
                             CommandParameter="{Binding #LeadsGrid.SelectedItem}" Margin="0,0,6,0" />
-                    <Button Content="Dead" Command="{Binding Leads.MarkDeadCommand}"
+                    <Button Content="{l:Loc Proj_Lead_Dead}" Command="{Binding Leads.MarkDeadCommand}"
                             CommandParameter="{Binding #LeadsGrid.SelectedItem}" Margin="0,0,6,0" />
-                    <Button Content="Open" Command="{Binding Leads.MarkOpenCommand}"
+                    <Button Content="{l:Loc Proj_Lead_Open}" Command="{Binding Leads.MarkOpenCommand}"
                             CommandParameter="{Binding #LeadsGrid.SelectedItem}" Margin="0,0,6,0" />
-                    <Button Content="Copy as Markdown" Command="{Binding Leads.CopyAsMarkdownCommand}" Margin="0,0,12,0" />
+                    <Button Content="{l:Loc Proj_CopyMarkdown}" Command="{Binding Leads.CopyAsMarkdownCommand}" Margin="0,0,12,0" />
                     <TextBlock Text="{Binding Leads.Summary}" Foreground="Gray" VerticalAlignment="Center" />
                 </WrapPanel>
                 <DataGrid x:Name="LeadsGrid" ItemsSource="{Binding Leads.Leads}" IsReadOnly="True"
                           GridLinesVisibility="Horizontal" CanUserResizeColumns="True"
                           CanUserSortColumns="True" AutoGenerateColumns="False">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Location" Binding="{Binding Location}" Width="*" />
-                        <DataGridTextColumn Header="Kind" Binding="{Binding Kind}" Width="150" />
-                        <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="90" />
-                        <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="2*" />
-                        <DataGridTextColumn Header="File" Binding="{Binding File}" Width="140" />
-                        <DataGridTextColumn Header="Line" Binding="{Binding Line}" Width="60" />
+                        <DataGridTextColumn Header="{l:Loc Col_Location}" Binding="{Binding Location}" Width="*" />
+                        <DataGridTextColumn Header="{l:Loc Browser_Col_Kind}" Binding="{Binding Kind}" Width="150" />
+                        <DataGridTextColumn Header="{l:Loc Col_Status}" Binding="{Binding Status}" Width="90" />
+                        <DataGridTextColumn Header="{l:Loc Col_Description}" Binding="{Binding Description}" Width="2*" />
+                        <DataGridTextColumn Header="{l:Loc Common_File}" Binding="{Binding File}" Width="140" />
+                        <DataGridTextColumn Header="{l:Loc Browser_Col_Line}" Binding="{Binding Line}" Width="60" />
                     </DataGrid.Columns>
                 </DataGrid>
             </DockPanel>
         </TabItem>
 
         <!-- NOTE-01 — TODO / FIXME / QM aggregator -->
-        <TabItem Header="TODOs">
+        <TabItem Header="{l:Loc Proj_Tab_Todos}">
             <DockPanel>
                 <WrapPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="8,6" VerticalAlignment="Center">
-                    <Button Content="Re-scan" Command="{Binding Todos.RefreshCommand}" Margin="0,0,6,0" />
-                    <Button Content="Go to source" Command="{Binding Todos.OpenCommand}"
+                    <Button Content="{l:Loc Proj_Rescan}" Command="{Binding Todos.RefreshCommand}" Margin="0,0,6,0" />
+                    <Button Content="{l:Loc Common_GoToSource}" Command="{Binding Todos.OpenCommand}"
                             CommandParameter="{Binding #TodosGrid.SelectedItem}" Margin="0,0,6,0" />
-                    <Button Content="Copy as Markdown" Command="{Binding Todos.CopyAsMarkdownCommand}" Margin="0,0,12,0" />
+                    <Button Content="{l:Loc Proj_CopyMarkdown}" Command="{Binding Todos.CopyAsMarkdownCommand}" Margin="0,0,12,0" />
                     <TextBlock Text="{Binding Todos.Summary}" Foreground="Gray" VerticalAlignment="Center" />
                 </WrapPanel>
                 <DataGrid x:Name="TodosGrid" ItemsSource="{Binding Todos.Todos}" IsReadOnly="True"
                           GridLinesVisibility="Horizontal" CanUserResizeColumns="True"
                           CanUserSortColumns="True" AutoGenerateColumns="False">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Tag" Binding="{Binding Tag}" Width="90" />
-                        <DataGridTextColumn Header="Text" Binding="{Binding Text}" Width="*" />
-                        <DataGridTextColumn Header="File" Binding="{Binding File}" Width="160" />
-                        <DataGridTextColumn Header="Line" Binding="{Binding Line}" Width="60" />
+                        <DataGridTextColumn Header="{l:Loc Col_Tag}" Binding="{Binding Tag}" Width="90" />
+                        <DataGridTextColumn Header="{l:Loc Col_Text}" Binding="{Binding Text}" Width="*" />
+                        <DataGridTextColumn Header="{l:Loc Common_File}" Binding="{Binding File}" Width="160" />
+                        <DataGridTextColumn Header="{l:Loc Browser_Col_Line}" Binding="{Binding Line}" Width="60" />
                     </DataGrid.Columns>
                 </DataGrid>
             </DockPanel>
         </TabItem>
 
         <!-- NOTE-04 — project metadata editor -->
-        <TabItem Header="Metadata">
+        <TabItem Header="{l:Loc Proj_Tab_Metadata}">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel Margin="10" Spacing="8" MaxWidth="560" HorizontalAlignment="Left">
-                    <TextBlock Text="Project metadata (stored in a sidecar, not in the .th source)."
+                    <TextBlock Text="{l:Loc Proj_Meta_Intro}"
                                Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
                     <Grid ColumnDefinitions="130,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto"
                           IsEnabled="{Binding Metadata.HasProject}">
-                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Name" VerticalAlignment="Center" />
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="{l:Loc Col_Name}" VerticalAlignment="Center" />
                         <TextBox   Grid.Row="0" Grid.Column="1" Text="{Binding Metadata.Name}" Margin="0,0,0,4" />
-                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Region" VerticalAlignment="Center" />
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="{l:Loc Col_Region}" VerticalAlignment="Center" />
                         <TextBox   Grid.Row="1" Grid.Column="1" Text="{Binding Metadata.Region}" Margin="0,0,0,4" />
-                        <TextBlock Grid.Row="2" Grid.Column="0" Text="CRS" VerticalAlignment="Center" />
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="{l:Loc Col_Crs}" VerticalAlignment="Center" />
                         <TextBox   Grid.Row="2" Grid.Column="1" Text="{Binding Metadata.Crs}" Watermark="e.g. EPSG:3844" Margin="0,0,0,4" />
-                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Declination source" VerticalAlignment="Center" />
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="{l:Loc Col_DeclSource}" VerticalAlignment="Center" />
                         <TextBox   Grid.Row="3" Grid.Column="1" Text="{Binding Metadata.DeclinationSource}" Margin="0,0,0,4" />
-                        <TextBlock Grid.Row="4" Grid.Column="0" Text="License" VerticalAlignment="Center" />
+                        <TextBlock Grid.Row="4" Grid.Column="0" Text="{l:Loc Col_License}" VerticalAlignment="Center" />
                         <TextBox   Grid.Row="4" Grid.Column="1" Text="{Binding Metadata.License}" />
                     </Grid>
-                    <TextBlock Text="Notes" />
+                    <TextBlock Text="{l:Loc Col_Notes}" />
                     <TextBox Text="{Binding Metadata.Notes}" AcceptsReturn="True" TextWrapping="Wrap"
                              MinHeight="80" IsEnabled="{Binding Metadata.HasProject}" />
                     <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Button Content="Save" Command="{Binding Metadata.SaveCommand}"
+                        <Button Content="{l:Loc Proj_Save}" Command="{Binding Metadata.SaveCommand}"
                                 IsEnabled="{Binding Metadata.HasProject}" />
-                        <Button Content="Reload" Command="{Binding Metadata.ReloadCommand}" />
+                        <Button Content="{l:Loc Proj_Reload}" Command="{Binding Metadata.ReloadCommand}" />
                         <TextBlock Text="{Binding Metadata.Status}" Foreground="Gray" VerticalAlignment="Center" />
                     </StackPanel>
                 </StackPanel>
@@ -348,11 +349,11 @@
         </TabItem>
 
         <!-- MEDIA-02/03 — background-scan / media manager -->
-        <TabItem Header="Media">
+        <TabItem Header="{l:Loc Proj_Tab_Media}">
             <DockPanel>
                 <WrapPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="8,6" VerticalAlignment="Center">
-                    <Button Content="Re-scan" Command="{Binding MediaManager.RefreshCommand}" Margin="0,0,6,0" />
-                    <Button Content="Reveal in file manager" Command="{Binding MediaManager.RevealCommand}"
+                    <Button Content="{l:Loc Proj_Rescan}" Command="{Binding MediaManager.RefreshCommand}" Margin="0,0,6,0" />
+                    <Button Content="{l:Loc Gen_Reveal}" Command="{Binding MediaManager.RevealCommand}"
                             CommandParameter="{Binding #MediaGrid.SelectedItem}" Margin="0,0,12,0" />
                     <TextBlock Text="{Binding MediaManager.Summary}" Foreground="Gray" VerticalAlignment="Center" />
                 </WrapPanel>
@@ -360,12 +361,12 @@
                           GridLinesVisibility="Horizontal" CanUserResizeColumns="True"
                           CanUserSortColumns="True" AutoGenerateColumns="False">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="File" Binding="{Binding FileName}" Width="*" />
-                        <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="70" />
-                        <DataGridTextColumn Header="Status" Binding="{Binding StatusText}" Width="90" />
-                        <DataGridTextColumn Header="Resolution" Binding="{Binding Resolution}" Width="120" />
-                        <DataGridTextColumn Header="Georef" Binding="{Binding Georef}" Width="70" />
-                        <DataGridTextColumn Header="Scraps" Binding="{Binding ReferencingScraps}" Width="70" />
+                        <DataGridTextColumn Header="{l:Loc Common_File}" Binding="{Binding FileName}" Width="*" />
+                        <DataGridTextColumn Header="{l:Loc Col_Type}" Binding="{Binding Type}" Width="70" />
+                        <DataGridTextColumn Header="{l:Loc Col_Status}" Binding="{Binding StatusText}" Width="90" />
+                        <DataGridTextColumn Header="{l:Loc Col_Resolution}" Binding="{Binding Resolution}" Width="120" />
+                        <DataGridTextColumn Header="{l:Loc Col_Georef}" Binding="{Binding Georef}" Width="70" />
+                        <DataGridTextColumn Header="{l:Loc Col_Scraps}" Binding="{Binding ReferencingScraps}" Width="70" />
                     </DataGrid.Columns>
                 </DataGrid>
             </DockPanel>
