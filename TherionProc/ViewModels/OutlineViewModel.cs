@@ -1,4 +1,4 @@
-// EDIT-09 — document outline / symbol tree. Builds a live nested tree of the active document's
+// document outline / symbol tree. Builds a live nested tree of the active document's
 // block structure (survey → centreline → scrap → line/area, plus map/group/surface/layout) from
 // its text, with click-to-navigate and a filter box. Tracks the active document via IDocumentService.
 
@@ -177,7 +177,9 @@ public sealed partial class OutlineViewModel : ObservableObject
     {
         if (node is null || _documents is null || string.IsNullOrEmpty(_currentFile)) return;
         var loc = new SourceLocation(node.Line, 1);
-        _ = _documents.NavigateToSpanAsync(new SourceSpan(_currentFile!, loc, loc, 0, 0));
+        // Length must be > 0: NavigateToSpanAsync and ScrollTo both ignore IsEmpty (zero-length)
+        // spans, which is why the double-click previously did nothing. Start.Line drives the jump.
+        _ = _documents.NavigateToSpanAsync(new SourceSpan(_currentFile!, loc, loc, 0, 1));
     }
 
     private static List<OutlineNode> Prune(List<OutlineNode> nodes, string filter)
