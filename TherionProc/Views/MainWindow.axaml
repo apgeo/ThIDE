@@ -357,6 +357,59 @@
                     <PathIcon Data="{DynamicResource Icon.NodeGraph}" />
                 </Button>
                 <Separator Width="1" Margin="4,2" Background="Gray" />
+                <!-- Tools group: import / export / report / scaffold / calculators (mirrors the Tools menu). -->
+                <Button Classes="tool" ToolTip.Tip="Import survey / DEM / GPX">
+                    <PathIcon Data="{DynamicResource Icon.FolderOpen}" />
+                    <Button.Flyout>
+                        <MenuFlyout>
+                            <MenuItem Header="Import survey (Survex / Compass)…" Command="{Binding ImportSurveyCommand}" />
+                            <MenuItem Header="Import DEM as surface (.asc)…" Command="{Binding ImportDemSurfaceCommand}" />
+                            <MenuItem Header="Import GPX waypoints (→ fix)…" Command="{Binding ImportGpxCommand}" />
+                        </MenuFlyout>
+                    </Button.Flyout>
+                </Button>
+                <Button Classes="tool" ToolTip.Tip="Export entrances / data tables">
+                    <PathIcon Data="{DynamicResource Icon.Map}" />
+                    <Button.Flyout>
+                        <MenuFlyout>
+                            <MenuItem Header="Entrances / fixed points">
+                                <MenuItem Header="KML…"     Command="{Binding ExportGisCommand}" CommandParameter="kml" />
+                                <MenuItem Header="GeoJSON…" Command="{Binding ExportGisCommand}" CommandParameter="geojson" />
+                                <MenuItem Header="GPX…"     Command="{Binding ExportGisCommand}" CommandParameter="gpx" />
+                                <MenuItem Header="CSV…"     Command="{Binding ExportGisCommand}" CommandParameter="csv" />
+                            </MenuItem>
+                            <MenuItem Header="Station table">
+                                <MenuItem Header="CSV…"      Command="{Binding ExportTableCommand}" CommandParameter="stations|csv" />
+                                <MenuItem Header="Markdown…" Command="{Binding ExportTableCommand}" CommandParameter="stations|markdown" />
+                                <MenuItem Header="HTML…"     Command="{Binding ExportTableCommand}" CommandParameter="stations|html" />
+                                <MenuItem Header="LaTeX…"    Command="{Binding ExportTableCommand}" CommandParameter="stations|latex" />
+                            </MenuItem>
+                            <MenuItem Header="Shot table">
+                                <MenuItem Header="CSV…"      Command="{Binding ExportTableCommand}" CommandParameter="shots|csv" />
+                                <MenuItem Header="Markdown…" Command="{Binding ExportTableCommand}" CommandParameter="shots|markdown" />
+                                <MenuItem Header="HTML…"     Command="{Binding ExportTableCommand}" CommandParameter="shots|html" />
+                                <MenuItem Header="LaTeX…"    Command="{Binding ExportTableCommand}" CommandParameter="shots|latex" />
+                            </MenuItem>
+                        </MenuFlyout>
+                    </Button.Flyout>
+                </Button>
+                <Button Classes="tool" Command="{Binding GenerateReportCommand}" ToolTip.Tip="Generate survey report (HTML)">
+                    <PathIcon Data="{DynamicResource Icon.Th}" />
+                </Button>
+                <Button Classes="tool" Command="{Binding NewScrapScaffoldCommand}" ToolTip.Tip="New scrap (.th2)">
+                    <PathIcon Data="{DynamicResource Icon.Th2}" />
+                </Button>
+                <Button Classes="tool" ToolTip.Tip="Calculators">
+                    <PathIcon Data="{DynamicResource Icon.Timer}" />
+                    <Button.Flyout>
+                        <MenuFlyout>
+                            <MenuItem Header="Unit converter…" Click="OnUnitConverter" />
+                            <MenuItem Header="Coordinate converter…" Click="OnCoordinateConverter" />
+                            <MenuItem Header="Declination calculator…" Click="OnDeclinationCalculator" />
+                        </MenuFlyout>
+                    </Button.Flyout>
+                </Button>
+                <Separator Width="1" Margin="4,2" Background="Gray" />
                 <!-- Compile / Stop moved to the end of the toolbar (#1). -->
                 <Button Classes="tool" Command="{Binding Build.OpenInLochCommand}"
                         IsEnabled="{Binding Build.HasLoxArtifact}" ToolTip.Tip="Open in Loch (F9)">
@@ -365,6 +418,13 @@
                 <Button Classes="tool" Command="{Binding Build.OpenInAvenCommand}"
                         IsEnabled="{Binding Build.HasAvenArtifact}" ToolTip.Tip="Open in Aven (F10)">
                     <PathIcon Data="{DynamicResource Icon.Eye}" />
+                </Button>
+                <!-- BUILD-02: composed quick export + open the last output folder. -->
+                <Button Classes="tool" Command="{Binding Build.ShowQuickExportCommand}" ToolTip.Tip="Quick Export…">
+                    <PathIcon Data="{DynamicResource Icon.Swap}" />
+                </Button>
+                <Button Classes="tool" Command="{Binding Build.OpenLastOutputFolderCommand}" ToolTip.Tip="Open output folder">
+                    <PathIcon Data="{DynamicResource Icon.Folder}" />
                 </Button>
                 <Separator Width="1" Margin="4,2" Background="Gray" />
                 <!-- View group: focus the main tool panels (#11/#14). -->
@@ -376,6 +436,36 @@
                 </Button>
                 <Button Classes="tool" Command="{Binding ToggleDiagnosticsCommand}" ToolTip.Tip="Diagnostics">
                     <PathIcon Data="{DynamicResource Icon.Warning}" />
+                </Button>
+                <Button Classes="tool" Command="{Binding ToggleProjectCommand}" ToolTip.Tip="Project (Dashboard / Surveys / Audit)">
+                    <PathIcon Data="{DynamicResource Icon.Survey}" />
+                </Button>
+                <Button Classes="tool" Command="{Binding ToggleLogCommand}" ToolTip.Tip="Log">
+                    <PathIcon Data="{DynamicResource Icon.Info}" />
+                </Button>
+                <Button Classes="tool" Command="{Binding ToggleOutlineCommand}" ToolTip.Tip="Outline"
+                        IsVisible="{Binding OutlineFeatureEnabled}">
+                    <PathIcon Data="{DynamicResource Icon.Sort}" />
+                </Button>
+                <Button Classes="tool" Click="OnRelationalMapClick" ToolTip.Tip="Relational Map">
+                    <PathIcon Data="{DynamicResource Icon.NodeGraph}" />
+                </Button>
+                <!-- Viewer panels, each gated by its feature setting (mirrors the View menu). -->
+                <Button Classes="tool" Command="{Binding ToggleLivePreviewCommand}" ToolTip.Tip="Live Preview"
+                        IsVisible="{Binding LivePreviewEnabled}">
+                    <PathIcon Data="{DynamicResource Icon.Eye}" />
+                </Button>
+                <Button Classes="tool" Command="{Binding ToggleMapViewerCommand}" ToolTip.Tip="Map Viewer"
+                        IsVisible="{Binding MapViewerEnabled}">
+                    <PathIcon Data="{DynamicResource Icon.Map}" />
+                </Button>
+                <Button Classes="tool" Command="{Binding ToggleModel3DViewerCommand}" ToolTip.Tip="3D Viewer"
+                        IsVisible="{Binding Model3DViewerEnabled}">
+                    <PathIcon Data="{DynamicResource Icon.Cube}" />
+                </Button>
+                <Button Classes="tool" Command="{Binding ToggleStructuralGeologyCommand}" ToolTip.Tip="Structural Geology"
+                        IsVisible="{Binding StructuralGeologyEnabled}">
+                    <PathIcon Data="{DynamicResource Icon.Scrap}" />
                 </Button>
                 <Separator Width="1" Margin="4,2" Background="Gray" />
                 <ToggleButton Classes="tool" IsChecked="{Binding WordWrap, Mode=TwoWay}" ToolTip.Tip="Word wrap">
