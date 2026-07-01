@@ -255,16 +255,35 @@ public partial class MainWindowViewModel : ViewModelBase
     /// <summary>Overlay state for the Ctrl+Tab document switcher (bound in MainWindow.axaml).</summary>
     public DocumentSwitcherViewModel DocumentSwitcher { get; } = new();
 
-    private readonly List<FileDocumentViewModel> _mru = new();
+    private readonly List<IDockable> _mru = new();
     private int _switcherIndex;
 
-    /// <summary>Moves the active document to the front of the most-recently-used list.</summary>
-    private void TouchMru()
+    /// <summary>Moves a dockable (document or central tool panel) to the front of the MRU list.</summary>
+    private void TouchMru(IDockable? dockable)
     {
-        if (_documents.Active is not { } active) return;
-        _mru.Remove(active);
-        _mru.Insert(0, active);
+        if (dockable is null) return;
+        _mru.Remove(dockable);
+        _mru.Insert(0, dockable);
     }
+
+    /// <summary>
+    /// Everything the Ctrl+Tab switcher can cycle: the open file documents plus any non-file panels
+    /// docked in the central document well (Object Browser, Structural Geology, …). Side-rail tools
+    /// are intentionally excluded. De-duplicated by reference (a file doc is in both sources).
+    /// </summary>
+    private List<IDockable> SwitchableDockables()
+    {
+        var result = new List<IDockable>();
+        void Add(IDockable? d) { if (d is not null && !result.Contains(d)) result.Add(d); }
+        if (_factory.DocumentDock?.VisibleDockables is { } central)
+            foreach (var d in central) Add(d);
+        foreach (var d in _documents.Documents) Add(d);
+        return result;
+    }
+
+    private DocumentSwitcherItem MakeSwitcherItem(IDockable d) => d is FileDocumentViewModel doc
+        ? new DocumentSwitcherItem(doc, doc.Title, FolderOf(doc.FilePath), "Icon.File")
+        : new DocumentSwitcherItem(d, d.Title ?? string.Empty, string.Empty, "Icon.Layout");
 
     /// <summary>
     /// Opens the switcher (first Ctrl+Tab) or advances the highlighted entry (subsequent Tabs while
@@ -273,21 +292,21 @@ public partial class MainWindowViewModel : ViewModelBase
     /// </summary>
     public void ShowOrAdvanceDocumentSwitcher(bool forward)
     {
-        var open = _documents.Documents;
-        if (open.Count < 2) return;
+        var switchable = SwitchableDockables();
+        if (switchable.Count < 2) return;
 
         if (!DocumentSwitcher.IsOpen)
         {
-            // Refresh MRU: drop closed docs, append any open ones not seen yet.
-            _mru.RemoveAll(d => !open.Contains(d));
-            foreach (var d in open) if (!_mru.Contains(d)) _mru.Add(d);
-            var ordered = _mru.Where(open.Contains).ToList();
+            // Refresh MRU: drop gone entries, append any newly-present ones.
+            _mru.RemoveAll(d => !switchable.Contains(d));
+            foreach (var d in switchable) if (!_mru.Contains(d)) _mru.Add(d);
+            var ordered = _mru.Where(switchable.Contains).ToList();
 
             DocumentSwitcher.Items.Clear();
             foreach (var d in ordered)
-                DocumentSwitcher.Items.Add(new DocumentSwitcherItem(d, d.Title, FolderOf(d.FilePath)));
+                DocumentSwitcher.Items.Add(MakeSwitcherItem(d));
 
-            // Index 0 is the current document; start on the previous (forward) or last (backward).
+            // Index 0 is the current item; start on the previous (forward) or last (backward).
             _switcherIndex = forward ? 1 : DocumentSwitcher.Items.Count - 1;
             DocumentSwitcher.IsOpen = true;
         }
@@ -312,8 +331,14 @@ public partial class MainWindowViewModel : ViewModelBase
         DocumentSwitcher.IsOpen = false;
         if (_switcherIndex >= 0 && _switcherIndex < DocumentSwitcher.Items.Count)
         {
-            var target = DocumentSwitcher.Items[_switcherIndex].Document;
-            OnUiThread(() => _factory.OpenDocument(target));
+            var target = DocumentSwitcher.Items[_switcherIndex].Dockable;
+            OnUiThread(() =>
+            {
+                // Documents route through OpenDocument (handles floated/placeholder cases); central
+                // tool panels are already in the dock, so just make them active.
+                if (target is FileDocumentViewModel doc) _factory.OpenDocument(doc);
+                else _factory.SetActiveDockable(target);
+            });
         }
         DocumentSwitcher.Items.Clear();
     }
@@ -478,10 +503,11 @@ public partial class MainWindowViewModel : ViewModelBase
         // the document to the dock — which mutates UI-bound VisibleDockables — must be
         // marshalled to the UI thread.
         _documents.OpenInDockRequested += (_, doc) => OnUiThread(() => _factory.OpenDocument(doc));
-        // Track most-recently-used documents for the Ctrl+Tab switcher (#2).
-        _documents.ActiveDocumentChanged += (_, _) => OnUiThread(TouchMru);
+        // Track most-recently-used documents/panels for the Ctrl+Tab switcher (#2).
+        _documents.ActiveDocumentChanged += (_, _) => OnUiThread(() => TouchMru(_documents.Active));
         _factory.ActiveDockableChanged += (_, e) =>
         {
+            OnUiThread(() => TouchMru(e.Dockable));   // MRU covers central tool panels too, not just files
             if (e.Dockable is FileDocumentViewModel doc) _documents.SetActive(doc);
             // VIS-01: when the 3D Viewer pane is shown, refresh its model list and auto-open the
             // default export-model output (even if stale).

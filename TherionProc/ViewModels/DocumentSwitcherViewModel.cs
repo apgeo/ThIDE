@@ -1,26 +1,31 @@
-// Ctrl+Tab document switcher (#2). A small MRU overlay listing the open editor documents,
-// shown while Ctrl is held: each Tab advances the selection, Ctrl-release activates it. Driven
-// from the window (focus-agnostic) by MainWindowViewModel; this type only holds the overlay state.
+// Ctrl+Tab switcher (#2). A small MRU overlay listing the things the central document well can show —
+// the open editor documents AND any non-file tool panels docked there (Object Browser, Structural
+// Geology, …). Shown while Ctrl is held: each Tab advances the selection, Ctrl-release activates it.
+// Driven from the window (focus-agnostic) by MainWindowViewModel; this type only holds overlay state.
 
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
-using TherionProc.ViewModels.Docking;
+using Dock.Model.Core;
 
 namespace TherionProc.ViewModels;
 
-/// <summary>One row in the Ctrl+Tab switcher overlay.</summary>
+/// <summary>One row in the Ctrl+Tab switcher overlay (a file document or a central tool panel).</summary>
 public sealed partial class DocumentSwitcherItem : ObservableObject
 {
-    public DocumentSwitcherItem(FileDocumentViewModel document, string title, string detail)
+    public DocumentSwitcherItem(IDockable dockable, string title, string detail, string iconKey)
     {
-        Document = document;
+        Dockable = dockable;
         Title = title;
         Detail = detail;
+        IconKey = iconKey;
     }
 
-    public FileDocumentViewModel Document { get; }
+    /// <summary>The dockable this row activates when picked.</summary>
+    public IDockable Dockable { get; }
     public string Title { get; }
     public string Detail { get; }
+    /// <summary>DynamicResource geometry key for the row glyph (file vs. panel).</summary>
+    public string IconKey { get; }
 
     /// <summary>Highlighted row (the one Ctrl-release will activate).</summary>
     [ObservableProperty] private bool _isSelected;

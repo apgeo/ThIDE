@@ -791,7 +791,8 @@
                                     <Border Classes="swItem" Classes.selected="{Binding IsSelected}"
                                             CornerRadius="4" Padding="8,5" Margin="0,1">
                                         <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                            <PathIcon Data="{DynamicResource Icon.File}" Width="14" Height="14" />
+                                            <PathIcon Width="14" Height="14"
+                                                      Data="{Binding IconKey, Converter={x:Static conv:ResourceKeyToGeometryConverter.Instance}}" />
                                             <TextBlock Text="{Binding Title}" VerticalAlignment="Center" />
                                             <TextBlock Text="{Binding Detail}" Foreground="Gray" FontSize="11"
                                                        VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
