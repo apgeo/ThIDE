@@ -246,6 +246,20 @@ public class LivePreviewLayoutTests
         Assert.Equal((3.0, -5.0), LivePreviewViewModel.ProjectVector(v, isElevation: true));  // profile: east vs up
     }
 
+    [Theory]
+    // A profile's horizontal axis is the distance along the projection bearing; up is unchanged.
+    [InlineData(0, 4)]    // north bearing → north component (N=4)
+    [InlineData(90, 3)]   // east bearing  → east component  (E=3); the default elevation
+    [InlineData(180, -4)] // south bearing → mirror of north
+    [InlineData(270, -3)] // west bearing  → mirror of east
+    public void ProjectVector_profile_extends_along_the_given_bearing(double azimuth, double expectedX)
+    {
+        var v = (E: 3.0, N: 4.0, Z: 5.0);
+        var (x, y) = LivePreviewViewModel.ProjectVector(v, isElevation: true, azimuthDeg: azimuth);
+        Assert.Equal(expectedX, x, 6);
+        Assert.Equal(-5.0, y, 6);   // up axis is independent of the bearing
+    }
+
     [Fact]
     public void SplayEndpoint_offsets_origin_by_the_projected_splay_vector()
     {

@@ -140,11 +140,27 @@ public sealed partial class LivePreviewViewModel : ObservableObject
     [ObservableProperty] private IReadOnlyList<SplaySegment> _fullSplays = Array.Empty<SplaySegment>();
     [ObservableProperty] private IReadOnlyList<LeadMarker> _leadMarkers = Array.Empty<LeadMarker>();      // LEAD-02
     [ObservableProperty] private IReadOnlyList<EquateMarker> _equateMarkers = Array.Empty<EquateMarker>();
-    [ObservableProperty] private bool _isElevation;
     [ObservableProperty] private string _status = "No centreline yet.";
 
-    /// <summary>True in plan view (mirrors !<see cref="IsElevation"/>); drives the north-arrow + Plan button.</summary>
-    public bool IsPlan => !IsElevation;
+    // ---- view / projection ------------------------------------------------
+    /// <summary>Active view: <c>plan</c>, or a projected profile (<c>north</c>/<c>east</c>/<c>south</c>/
+    /// <c>west</c>/<c>custom</c>). Profiles differ only by the bearing the section is projected along.</summary>
+    [ObservableProperty] private string _viewMode = "plan";
+    /// <summary>The projection bearing (0–359°) used when <see cref="ViewMode"/> is <c>custom</c>.</summary>
+    [ObservableProperty] private double _customAzimuth = 90;
+
+    /// <summary>True in plan view; drives the north-arrow + Plan button.</summary>
+    public bool IsPlan => ViewMode == "plan";
+    /// <summary>True in any projected-profile view (mirrors !<see cref="IsPlan"/>); kept for the status line.</summary>
+    public bool IsElevation => ViewMode != "plan";
+    /// <summary>True only for the custom-bearing profile; reveals the angle slider.</summary>
+    public bool IsCustomProfile => ViewMode == "custom";
+    /// <summary>The effective projection bearing (degrees) for the active profile. Plan ignores it.</summary>
+    public double ProfileAzimuth => ViewMode switch
+    {
+        "north" => 0, "east" => 90, "south" => 180, "west" => 270,
+        "custom" => CustomAzimuth, _ => 90,
+    };
 
     // ---- splays (wall shots) ----
     /// <summary>Show splays at all (off by default — they roughly triple the line count).</summary>
@@ -201,7 +217,19 @@ public sealed partial class LivePreviewViewModel : ObservableObject
         Rebuild();
     }
 
-    partial void OnIsElevationChanged(bool value) { OnPropertyChanged(nameof(IsPlan)); Rebuild(); }
+    partial void OnViewModeChanged(string value)
+    {
+        OnPropertyChanged(nameof(IsPlan));
+        OnPropertyChanged(nameof(IsElevation));
+        OnPropertyChanged(nameof(IsCustomProfile));
+        OnPropertyChanged(nameof(ProfileAzimuth));
+        Rebuild();
+    }
+    // Live-update the custom profile as the angle slider moves (no effect in the preset views).
+    partial void OnCustomAzimuthChanged(double value)
+    {
+        if (ViewMode == "custom") { OnPropertyChanged(nameof(ProfileAzimuth)); Rebuild(); }
+    }
     partial void OnSeparateComponentsChanged(bool value) => Rebuild();
     partial void OnShowSplaysChanged(bool value) => ApplyVisibility();   // status line shows the splay count
     // Switching the colour mode re-buckets the visibility groups (survey ⇄ file ⇄ component).
@@ -213,8 +241,16 @@ public sealed partial class LivePreviewViewModel : ObservableObject
     }
 
     [RelayCommand] private void Refresh() => Rebuild();
-    [RelayCommand] private void SetPlanMode() => IsElevation = false;
-    [RelayCommand] private void SetProfileMode() => IsElevation = true;
+
+    /// <summary>Switches the view: <c>plan</c>, or a profile bearing (north/east/south/west/custom).</summary>
+    [RelayCommand]
+    private void SetViewMode(string? mode)
+    {
+        if (string.IsNullOrEmpty(mode)) return;
+        ViewMode = mode;
+        // Re-raise so the radio-style buttons refresh their pushed state even when re-clicked.
+        OnPropertyChanged(nameof(ViewMode));
+    }
 
     /// <summary>Sets the leg-colouring mode (mirrors the 3D viewer's Color-by buttons).</summary>
     [RelayCommand]
@@ -411,7 +447,7 @@ public sealed partial class LivePreviewViewModel : ObservableObject
             return;
         }
 
-        Status = $"{(IsElevation ? "Profile" : "Plan")} · {segs.Count} legs · {surveys} survey(s) · {files} file(s)" +
+        Status = $"{(IsElevation ? $"Profile {ProfileAzimuth:0}°" : "Plan")} · {segs.Count} legs · {surveys} survey(s) · {files} file(s)" +
                  (ShowSplays && splays.Count > 0 ? $" · {splays.Count} splay(s)" : string.Empty) +
                  (Groups.Count > 1 ? $" · {Groups.Count(g => g.IsVisible)}/{Groups.Count} groups" : string.Empty) +
                  (EquateMarkers.Count > 0 ? $" · {EquateMarkers.Count} junction(s)" : string.Empty) +
@@ -744,16 +780,25 @@ public sealed partial class LivePreviewViewModel : ObservableObject
         return (horiz * Math.Sin(c), horiz * Math.Cos(c), s.Length.Value * Math.Sin(cl));
     }
 
-    /// <summary>Linear projection of a world vector/delta into the current 2-D view plane. Pure.</summary>
-    public static (double X, double Y) ProjectVector((double E, double N, double Z) v, bool isElevation)
-        => isElevation ? (v.E, -v.Z)   // east vs up
-                       : (v.E, -v.N);  // east vs north (north up)
+    /// <summary>
+    /// Linear projection of a world vector/delta into the current 2-D view plane. In plan it is
+    /// east-vs-north (north up). In a profile it is the horizontal distance along the projection
+    /// bearing (<paramref name="azimuthDeg"/>) vs up — so the section "extends" along that bearing.
+    /// The default 90° keeps the classic east-vs-up elevation. Pure.
+    /// </summary>
+    public static (double X, double Y) ProjectVector(
+        (double E, double N, double Z) v, bool isElevation, double azimuthDeg = 90)
+    {
+        if (!isElevation) return (v.E, -v.N);   // plan: east vs north (north up)
+        double a = azimuthDeg * Math.PI / 180.0;
+        return (v.E * Math.Sin(a) + v.N * Math.Cos(a), -v.Z);   // distance along the bearing vs up
+    }
 
     /// <summary>The projected far ("wall") point of a splay: its origin plus the projected vector. Pure.</summary>
     public static (double X, double Y) SplayEndpoint(
-        (double X, double Y) origin, (double E, double N, double Z) vector, bool isElevation)
+        (double X, double Y) origin, (double E, double N, double Z) vector, bool isElevation, double azimuthDeg = 90)
     {
-        var d = ProjectVector(vector, isElevation);
+        var d = ProjectVector(vector, isElevation, azimuthDeg);
         return (origin.X + d.X, origin.Y + d.Y);
     }
 
@@ -771,7 +816,7 @@ public sealed partial class LivePreviewViewModel : ObservableObject
         {
             if ((shot.Flags & ShotFlags.Splay) == 0) continue;
             if (shot.Length is null || shot.Compass is null || shot.Clino is null) continue;
-            var d = ProjectVector(ShotVector(shot), IsElevation);   // project the leg vector as a delta
+            var d = ProjectVector(ShotVector(shot), IsElevation, ProfileAzimuth);   // project the leg vector as a delta
 
             var fromRep = equates.Find(shot.From).ToString();
             var toRep = equates.Find(shot.To).ToString();
@@ -1036,7 +1081,7 @@ public sealed partial class LivePreviewViewModel : ObservableObject
 
     // ---- layout -----------------------------------------------------------
 
-    private (double X, double Y) Project((double E, double N, double Z) p) => ProjectVector(p, IsElevation);
+    private (double X, double Y) Project((double E, double N, double Z) p) => ProjectVector(p, IsElevation, ProfileAzimuth);
 
     /// <summary>
     /// Relative spanning-tree layout: BFS each component from an arbitrary root at the origin,
