@@ -346,21 +346,21 @@
                 <Separator Width="1" Margin="4,2" Background="Gray" />
                 <!-- Go-to group: quick-open, command palette, and symbol search (workspace / document). -->
                 <Button Classes="tool" Click="OnGoToFile" ToolTip.Tip="{l:Loc Tb_GoToFile}">
-                    <PathIcon Data="{DynamicResource Icon.File}" />
+                    <PathIcon Data="{DynamicResource Icon.FileSearch}" />
                 </Button>
                 <Button Classes="tool" Click="OnGoToAction" ToolTip.Tip="{l:Loc Tb_GoToAction}">
-                    <PathIcon Data="{DynamicResource Icon.Config}" />
+                    <PathIcon Data="{DynamicResource Icon.Code}" />
                 </Button>
                 <Button Classes="tool" Click="OnGoToSymbolWorkspace" ToolTip.Tip="{l:Loc Tb_GoToSymbolWs}">
-                    <PathIcon Data="{DynamicResource Icon.Map}" />
+                    <PathIcon Data="{DynamicResource Icon.ManageSearch}" />
                 </Button>
                 <Button Classes="tool" Click="OnGoToSymbolDocument" ToolTip.Tip="{l:Loc Tb_GoToSymbolDoc}">
-                    <PathIcon Data="{DynamicResource Icon.NodeGraph}" />
+                    <PathIcon Data="{DynamicResource Icon.At}" />
                 </Button>
                 <Separator Width="1" Margin="4,2" Background="Gray" />
                 <!-- Tools group: import / export / report / scaffold / calculators (mirrors the Tools menu). -->
                 <Button Classes="tool" ToolTip.Tip="{l:Loc Tb_Import}">
-                    <PathIcon Data="{DynamicResource Icon.FolderOpen}" />
+                    <PathIcon Data="{DynamicResource Icon.Import}" />
                     <Button.Flyout>
                         <MenuFlyout>
                             <MenuItem Header="{l:Loc Menu_Tools_ImportSurvey}" Command="{Binding ImportSurveyCommand}" />
@@ -370,7 +370,7 @@
                     </Button.Flyout>
                 </Button>
                 <Button Classes="tool" ToolTip.Tip="{l:Loc Tb_Export}">
-                    <PathIcon Data="{DynamicResource Icon.Map}" />
+                    <PathIcon Data="{DynamicResource Icon.Export}" />
                     <Button.Flyout>
                         <MenuFlyout>
                             <MenuItem Header="{l:Loc Menu_Tools_EntrancesFixed}">
@@ -414,18 +414,18 @@
                 <!-- Compile / Stop moved to the end of the toolbar (#1). -->
                 <Button Classes="tool" Command="{Binding Build.OpenInLochCommand}"
                         IsEnabled="{Binding Build.HasLoxArtifact}" ToolTip.Tip="{l:Loc Tb_OpenLoch}">
-                    <PathIcon Data="{DynamicResource Icon.Cube}" />
+                    <PathIcon Data="{DynamicResource Icon.External}" />
                 </Button>
                 <Button Classes="tool" Command="{Binding Build.OpenInAvenCommand}"
                         IsEnabled="{Binding Build.HasAvenArtifact}" ToolTip.Tip="{l:Loc Tb_OpenAven}">
-                    <PathIcon Data="{DynamicResource Icon.Eye}" />
+                    <PathIcon Data="{DynamicResource Icon.Terrain}" />
                 </Button>
                 <!-- BUILD-02: composed quick export + open the last output folder. -->
                 <Button Classes="tool" Command="{Binding Build.ShowQuickExportCommand}" ToolTip.Tip="{l:Loc Menu_Build_QuickExport}">
                     <PathIcon Data="{DynamicResource Icon.Swap}" />
                 </Button>
                 <Button Classes="tool" Command="{Binding Build.OpenLastOutputFolderCommand}" ToolTip.Tip="{l:Loc Proj_OpenOutputFolder}">
-                    <PathIcon Data="{DynamicResource Icon.Folder}" />
+                    <PathIcon Data="{DynamicResource Icon.FolderOutput}" />
                 </Button>
                 <Separator Width="1" Margin="4,2" Background="Gray" />
                 <!-- View group: focus the main tool panels (#11/#14). -->
@@ -449,7 +449,7 @@
                     <PathIcon Data="{DynamicResource Icon.Sort}" />
                 </Button>
                 <Button Classes="tool" Click="OnRelationalMapClick" ToolTip.Tip="{l:Loc Tb_RelationalMap}">
-                    <PathIcon Data="{DynamicResource Icon.NodeGraph}" />
+                    <PathIcon Data="{DynamicResource Icon.AccountTree}" />
                 </Button>
                 <!-- Viewer panels, each gated by its feature setting (mirrors the View menu). -->
                 <Button Classes="tool" Command="{Binding ToggleLivePreviewCommand}" ToolTip.Tip="{l:Loc Menu_View_LivePreview}"
@@ -477,7 +477,7 @@
                 </Button>
                 <!-- Layout controls (#16): float active document, reset to the default arrangement. -->
                 <Button Classes="tool" ToolTip.Tip="{l:Loc Tb_Layout}">
-                    <PathIcon Data="{DynamicResource Icon.Swap}" />
+                    <PathIcon Data="{DynamicResource Icon.Layout}" />
                     <Button.Flyout>
                         <MenuFlyout>
                             <MenuItem Header="{l:Loc Layout_FloatActive}"
