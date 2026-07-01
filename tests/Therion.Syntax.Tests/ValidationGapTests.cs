@@ -176,4 +176,52 @@ public class ValidationGapTests
         // Outside a centreline a bare token is still TH0010 (unchanged), never TH0037.
         Assert.True(Has(Th("zx"), DiagnosticCodes.UnknownCommand) &&
                     !Has(Th("zx"), DiagnosticCodes.MalformedDataRow));
+
+    // ---- Part B: per-command parameter validation ----
+
+    [Theory]
+    [InlineData("infer bogus on")]
+    [InlineData("infer plumbs maybe")]
+    [InlineData("infer plumbs")]
+    public void Invalid_infer_spec_is_flagged(string src) =>
+        Assert.True(Has(Th(src), DiagnosticCodes.InvalidInferSpec));
+
+    [Theory]
+    [InlineData("infer plumbs on")]
+    [InlineData("infer equates off")]
+    public void Valid_infer_spec_is_ok(string src) =>
+        Assert.False(Has(Th(src), DiagnosticCodes.InvalidInferSpec));
+
+    [Fact]
+    public void Declination_without_a_number_is_flagged() =>   // the `Inc` template case
+        Assert.True(Has(Th("declination Inc degrees"), DiagnosticCodes.MalformedDeclination));
+
+    [Theory]
+    [InlineData("declination 0.00 degrees")]
+    [InlineData("declination -")]                              // reset
+    [InlineData("declination")]                                // reset
+    public void Valid_declination_is_ok(string src) =>
+        Assert.False(Has(Th(src), DiagnosticCodes.MalformedDeclination));
+
+    [Theory]
+    [InlineData("sd length metres")]                           // no value
+    [InlineData("sd 0.05 metres")]                             // no quantity
+    public void Malformed_sd_is_flagged(string src) =>
+        Assert.True(Has(Th(src), DiagnosticCodes.MalformedSd));
+
+    [Fact]
+    public void Valid_sd_is_ok() =>
+        Assert.False(Has(Th("sd length 0.05 metres"), DiagnosticCodes.MalformedSd));
+
+    [Theory]
+    [InlineData("grid-angle x")]
+    [InlineData("vthreshold")]
+    public void Non_numeric_measurement_is_flagged(string src) =>
+        Assert.True(Has(Th(src), DiagnosticCodes.MalformedMeasurement));
+
+    [Theory]
+    [InlineData("grid-angle 3.5 degrees")]
+    [InlineData("vthreshold 90 deg")]
+    public void Valid_measurement_is_ok(string src) =>
+        Assert.False(Has(Th(src), DiagnosticCodes.MalformedMeasurement));
 }

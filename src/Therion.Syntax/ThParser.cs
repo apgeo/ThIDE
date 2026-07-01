@@ -171,17 +171,17 @@ public sealed class ThParser
             "units"                        => ParseUnits(line, options, diagnostics),
             "calibrate"                    => ParseCalibrate(line, options, diagnostics),
             "declination"                  => ParseDeclination(line, options, diagnostics),
-            "grid-angle"                   => ParseGridAngle(line),
-            "sd"                           => ParseSd(line),
+            "grid-angle"                   => ParseGridAngle(line, options, diagnostics),
+            "sd"                           => ParseSd(line, options, diagnostics),
             "grade"                        => ParseGrade(line, lines, ref cursor),
-            "infer"                        => ParseInfer(line),
+            "infer"                        => ParseInfer(line, options, diagnostics),
             "mark"                         => ParseMark(line, options, diagnostics),
             "station"                      => ParseStation(line, options, diagnostics),
             "cs"                           => ParseCs(line, options, diagnostics),
             "extend"                       => ParseExtend(line, options, diagnostics),
             "break"                        => new BreakCommand(line.Span),
             "walls"                        => new WallsCommand(line.Span, JoinFrom(line, 1)),
-            "vthreshold"                   => ParseVThreshold(line),
+            "vthreshold"                   => ParseVThreshold(line, options, diagnostics),
             "station-names"                => ParseStationNames(line),
             "instrument"                   => ParseInstrument(line),
             "explo-date"                   => new ExploDateCommand(line.Span, JoinFrom(line, 1)),
@@ -680,20 +680,35 @@ public sealed class ThParser
             if (LooksNumeric(tok)) { numericCount++; value ??= TryDouble(tok); }
             else if (MeasurementUnits.TryAngle(tok) is not null) unit = tok;
         }
+        // Any non-reset declination must carry at least one number — a single value (simple form) or
+        // several (a dated auto-interpolation list). No number at all (e.g. a `Inc` placeholder) is
+        // malformed.
+        if (numericCount == 0)
+            diagnostics.Add(Diagnostic.Create(
+                DiagnosticCodes.MalformedDeclination,
+                options.Mode == ParserMode.Strict ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
+                "'declination' requires a numeric value (or a dated list, or '-' to disable).", line.Span));
         // A single numeric + unit is the simple form; multiple numerics ⇒ dated list (keep value=null).
         if (numericCount != 1) value = null;
         return new DeclinationCommand(line.Span, value, unit, IsReset: false, raw);
     }
 
-    private static GridAngleCommand ParseGridAngle(LogicalLine line)
+    private static GridAngleCommand ParseGridAngle(
+        LogicalLine line, ParserOptions options, ImmutableArray<Diagnostic>.Builder diagnostics)
     {
         double? value = line.Tokens.Length > 1 ? TryDouble(line.Tokens[1].Text) : null;
         string? unit = line.Tokens.Length > 2 ? line.Tokens[2].Text : null;
+        if (line.Tokens.Length <= 1 || value is null)
+            diagnostics.Add(Diagnostic.Create(
+                DiagnosticCodes.MalformedMeasurement,
+                options.Mode == ParserMode.Strict ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
+                "'grid-angle' requires a numeric value.", line.Span));
         return new GridAngleCommand(line.Span, value, unit);
     }
 
-    /// <summary><c>sd &lt;quantity list&gt; &lt;value&gt; &lt;units&gt;</c>.</summary>
-    private static SdCommand ParseSd(LogicalLine line)
+    /// <summary><c>sd &lt;quantity list&gt; &lt;value&gt; &lt;units&gt;</c> (thbook §"sd").</summary>
+    private static SdCommand ParseSd(
+        LogicalLine line, ParserOptions options, ImmutableArray<Diagnostic>.Builder diagnostics)
     {
         var quantities = ImmutableArray.CreateBuilder<string>();
         double? value = null;
@@ -705,6 +720,12 @@ public sealed class ThParser
             else if (value is not null && MeasurementUnits.IsUnit(t)) unit = t;
             else quantities.Add(t);
         }
+        // `sd` needs at least one quantity, a numeric standard-deviation value, and a unit.
+        if (quantities.Count == 0 || value is null || unit is null)
+            diagnostics.Add(Diagnostic.Create(
+                DiagnosticCodes.MalformedSd,
+                options.Mode == ParserMode.Strict ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
+                "'sd' expects '<quantity…> <value> <unit>' (e.g. 'sd length 0.05 metres').", line.Span));
         return new SdCommand(line.Span, quantities.ToImmutable(), value, unit, JoinFrom(line, 1));
     }
 
@@ -779,11 +800,23 @@ public sealed class ThParser
     }
 
     /// <summary><c>infer &lt;what&gt; &lt;on/off&gt;</c>.</summary>
-    private static InferCommand ParseInfer(LogicalLine line)
+    private static InferCommand ParseInfer(
+        LogicalLine line, ParserOptions options, ImmutableArray<Diagnostic>.Builder diagnostics)
     {
         var what = line.Tokens.Length > 1 ? line.Tokens[1].Text : string.Empty;
-        bool on = line.Tokens.Length > 2 &&
-                  string.Equals(line.Tokens[2].Text, "on", StringComparison.OrdinalIgnoreCase);
+        var state = line.Tokens.Length > 2 ? line.Tokens[2].Text : string.Empty;
+        bool on = string.Equals(state, "on", StringComparison.OrdinalIgnoreCase);
+
+        // `infer <plumbs|equates> <on|off>` (thbook §"infer").
+        bool whatOk = string.Equals(what, "plumbs", StringComparison.OrdinalIgnoreCase) ||
+                      string.Equals(what, "equates", StringComparison.OrdinalIgnoreCase);
+        bool stateOk = string.Equals(state, "on", StringComparison.OrdinalIgnoreCase) ||
+                       string.Equals(state, "off", StringComparison.OrdinalIgnoreCase);
+        if (!whatOk || !stateOk)
+            diagnostics.Add(Diagnostic.Create(
+                DiagnosticCodes.InvalidInferSpec,
+                options.Mode == ParserMode.Strict ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
+                "'infer' expects '<plumbs|equates> <on|off>'.", line.Span));
         return new InferCommand(line.Span, what, on);
     }
 
@@ -884,10 +917,16 @@ public sealed class ThParser
         return new ExtendCommand(line.Span, spec, TokensFrom(line, 2));
     }
 
-    private static VThresholdCommand ParseVThreshold(LogicalLine line)
+    private static VThresholdCommand ParseVThreshold(
+        LogicalLine line, ParserOptions options, ImmutableArray<Diagnostic>.Builder diagnostics)
     {
         double? value = line.Tokens.Length > 1 ? TryDouble(line.Tokens[1].Text) : null;
         string? unit = line.Tokens.Length > 2 ? line.Tokens[2].Text : null;
+        if (line.Tokens.Length <= 1 || value is null)
+            diagnostics.Add(Diagnostic.Create(
+                DiagnosticCodes.MalformedMeasurement,
+                options.Mode == ParserMode.Strict ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
+                "'vthreshold' requires a numeric value.", line.Span));
         return new VThresholdCommand(line.Span, value, unit);
     }
 

@@ -25,9 +25,13 @@ public static class DiagnosticCodes
     public const string MissingFromTo            = "TH0036";  // no from/to/station to bind shots
 
     // -- centreline metadata commands (LANG-04/03) ------------------------
+    public const string MalformedSd              = "TH0038";  // sd needs <quantity> <value> <unit>
+    public const string MalformedMeasurement     = "TH0039";  // grid-angle/vthreshold need a numeric value
     public const string MalformedUnits           = "TH0040";
     public const string MalformedCalibrate       = "TH0041";
+    public const string MalformedDeclination     = "TH0042";  // declination needs a numeric value / list / '-'
     public const string UnknownCoordinateSystem  = "TH0043";
+    public const string InvalidInferSpec         = "TH0056";  // infer <plumbs|equates> <on|off>
 
     // -- identifiers / block matching -------------------------------------
     public const string IllegalIdentifier        = "TH0050";  // char outside keyword/ext-keyword
