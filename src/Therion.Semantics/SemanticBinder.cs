@@ -61,8 +61,28 @@ public sealed class SemanticBinder
             Scraps = scraps,
             Maps = maps,
             InputCoordinateSystem = ctx.InputCs,
+            Declination = ctx.Declination,
             EquateRecords = ctx.EquateRecords.ToImmutable(),
             UnresolvedEquateRefs = ctx.UnresolvedEquateRefs.ToImmutable(),
+        };
+    }
+
+    /// <summary>
+    /// A single-value <c>declination</c> command's value in degrees (east positive), or null for the
+    /// reset / dated-list / value-less forms. Grad/mil/minute units are converted to degrees (STRUCT-01).
+    /// </summary>
+    private static double? DeclinationToDegrees(DeclinationCommand decl)
+    {
+        if (decl.IsReset || decl.SingleValue is not { } v) return null;
+        var unit = string.IsNullOrWhiteSpace(decl.Unit)
+            ? AngleUnit.Degree
+            : MeasurementUnits.TryAngle(decl.Unit) ?? AngleUnit.Degree;
+        return unit switch
+        {
+            AngleUnit.Grad => v * 0.9,                 // 400 grad = 360°
+            AngleUnit.Mil => v * 360.0 / 6400.0,       // 6400 mil = 360°
+            AngleUnit.Minute => v / 60.0,
+            _ => v,                                     // Degree (and any non-azimuth unit) → degrees
         };
     }
 
@@ -147,6 +167,9 @@ public sealed class SemanticBinder
                 case CsCommand cs:
                     ctx.InputCs ??= cs.System;
                     ctx.CurrentCs = cs.System;
+                    break;
+                case DeclinationCommand decl:
+                    ctx.Declination ??= DeclinationToDegrees(decl);
                     break;
             }
             pendingComment = null;
@@ -589,5 +612,7 @@ public sealed class SemanticBinder
         public string? InputCs { get; set; }
         /// <summary>The <c>cs</c> in force at the current point of the walk (for fix coords; DATA-06).</summary>
         public string? CurrentCs { get; set; }
+        /// <summary>First single-value <c>declination</c> in the file, in degrees east-positive (STRUCT-01).</summary>
+        public double? Declination { get; set; }
     }
 }

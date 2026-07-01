@@ -27,11 +27,39 @@ public class SemanticBinderTests
         return new SemanticBinder().Bind(parse.Value);
     }
 
+    private static SemanticModel BindText(string text)
+        => new SemanticBinder().Bind(new ThParser().Parse("decl.th", text).Value);
+
     [Fact]
     public void Cave_corpus_binds_with_no_semantic_errors()
     {
         var model = BindFile(LoadCorpusCave());
         Assert.DoesNotContain(model.Diagnostics, d => d.Severity == Core.DiagnosticSeverity.Error);
+    }
+
+    // STRUCT-01 — the survey `declination` value is surfaced (degrees, east positive).
+    [Fact]
+    public void Declination_singleValueDegrees_isSurfaced()
+    {
+        var model = BindText(
+            "survey s\n centerline\n  declination 3.5 degrees\n  data normal from to length compass clino\n  a b 5 0 0\n endcenterline\nendsurvey\n");
+        Assert.Equal(3.5, model.Declination!.Value, 6);
+    }
+
+    [Fact]
+    public void Declination_grads_areConvertedToDegrees()
+    {
+        var model = BindText(
+            "survey s\n centerline\n  declination 100 grads\n  data normal from to length compass clino\n  a b 5 0 0\n endcenterline\nendsurvey\n");
+        Assert.Equal(90.0, model.Declination!.Value, 6);   // 100 grad = 90°
+    }
+
+    [Fact]
+    public void Declination_absent_isNull()
+    {
+        var model = BindText(
+            "survey s\n centerline\n  data normal from to length compass clino\n  a b 5 0 0\n endcenterline\nendsurvey\n");
+        Assert.Null(model.Declination);
     }
 
     [Fact]
