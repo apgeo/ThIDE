@@ -273,6 +273,13 @@ public partial class TherionTextEditor : UserControl
             DetachedFromVisualTree += (_, _) => _settings.Changed -= OnAppSettingsChanged;
         }
 
+        // Rebuild the right-click menu when the UI language changes: its item headers are resolved
+        // once via Tr.Get at build time, so without this the editor context menu would stay in the
+        // previous language after a switch.
+        TherionProc.Resources.LocProxy.Instance.PropertyChanged += OnUiLanguageChanged;
+        DetachedFromVisualTree += (_, _) =>
+            TherionProc.Resources.LocProxy.Instance.PropertyChanged -= OnUiLanguageChanged;
+
         _colorizer = new TherionColorizer();
         _colorizer.SetVariant(IsDark() ? TherionColorizer.Variant.Dark : TherionColorizer.Variant.Light);
         editor.TextArea.TextView.LineTransformers.Add(_colorizer);
@@ -360,6 +367,15 @@ public partial class TherionTextEditor : UserControl
     {
         if (_editor is not null) ApplyAppSettings(_editor);
         UpdateBreadcrumb(); // EDIT-08 may have been toggled
+    }
+
+    // The UI language changed: rebuild the context menu so its item headers pick up the new language
+    // (they are baked in once at build time). Visibility of the feature-gated items is refreshed on
+    // menu open, so pointing the fields at the freshly-built items is enough.
+    private void OnUiLanguageChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (_editor is not null)
+            Avalonia.Threading.Dispatcher.UIThread.Post(() => _editor.TextArea.ContextMenu = BuildContextMenu());
     }
 
     // Applies the user's editor preferences (font, line numbers, indentation, …).
@@ -2883,7 +2899,7 @@ public partial class TherionTextEditor : UserControl
         menu.Items.Add(new Separator());
         // QOL-07: line operations.
         menu.Items.Add(MakeItem(L("Ed_DuplicateLines"),   DuplicateLines));
-        menu.Items.Add(MakeItem("Move Line(s) Up",        MoveLinesUp));
+        menu.Items.Add(MakeItem(L("Ed_MoveLinesUp"),      MoveLinesUp));
         menu.Items.Add(MakeItem(L("Ed_MoveLinesDown"),    MoveLinesDown));
         menu.Items.Add(MakeItem(L("Ed_SortLines"),        SortSelectedLines));
         menu.Items.Add(new Separator());

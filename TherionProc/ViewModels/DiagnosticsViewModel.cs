@@ -77,19 +77,27 @@ public partial class DiagnosticsViewModel : ViewModelBase
     [ObservableProperty] private int _filesWithIssues;
 
     public DiagnosticsViewModel() { } // design-time
-    public DiagnosticsViewModel(IThbookDocumentationService? docs) => _docs = docs;
+    public DiagnosticsViewModel(IThbookDocumentationService? docs, ILanguageService? language = null)
+    {
+        _docs = docs;
+        // The roll-up is composed from localized fragments read on each get, so re-raise it when the
+        // UI language changes and it re-renders live in the new language.
+        if (language is not null) language.LanguageChanged += (_, _) => OnPropertyChanged(nameof(SummaryText));
+    }
+
+    private static string T(string key) => TherionProc.Resources.Tr.Get(key);
 
     /// <summary>Human-readable roll-up shown beside the scope toggle (#3).</summary>
     public string SummaryText
     {
         get
         {
-            if (ErrorCount == 0 && WarningCount == 0) return "No warnings or errors";
-            string warns = $"{WarningCount} warning{(WarningCount == 1 ? "" : "s")}";
-            string errs = $"{ErrorCount} error{(ErrorCount == 1 ? "" : "s")}";
-            string files = $"{FilesWithIssues} file{(FilesWithIssues == 1 ? "" : "s")}";
-            string suff = SuppressedCount > 0 ? $"  ·  {SuppressedCount} code(s) suppressed" : "";
-            return $"{warns} and {errs} in {files}{suff}";
+            if (ErrorCount == 0 && WarningCount == 0) return T("Diag_SummaryNone");
+            string warns = string.Format(T(WarningCount == 1 ? "Diag_SummaryWarn1" : "Diag_SummaryWarnN"), WarningCount);
+            string errs = string.Format(T(ErrorCount == 1 ? "Diag_SummaryErr1" : "Diag_SummaryErrN"), ErrorCount);
+            string files = string.Format(T(FilesWithIssues == 1 ? "Diag_SummaryFile1" : "Diag_SummaryFileN"), FilesWithIssues);
+            string suff = SuppressedCount > 0 ? string.Format(T("Diag_SummarySuppressedFmt"), SuppressedCount) : "";
+            return string.Format(T("Diag_SummaryFmt"), warns, errs, files) + suff;
         }
     }
 

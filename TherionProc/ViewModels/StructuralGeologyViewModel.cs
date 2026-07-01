@@ -51,13 +51,17 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
         IDocumentService documents,
         IWorkspaceSession? session = null,
         IStructuralPlotAssetHost? plotHost = null,
-        IAppSettingsService? settings = null)
+        IAppSettingsService? settings = null,
+        ILanguageService? language = null)
     {
         _documents = documents;
         _session = session;
         _plotHost = plotHost;
         _settings = settings;
         if (_documents is not null) _documents.DocumentChanged += (_, _) => { if (_activated) Rerun(); };
+        // Re-run the analysis when the UI language changes so the status line and the localized row
+        // labels (Kind, declination note, invalid-plane reason) re-render in the new language.
+        if (language is not null) language.LanguageChanged += (_, _) => { if (_activated) Rerun(); };
         if (_settings is not null)
         {
             _persistTimer = new Avalonia.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(600) };
@@ -271,7 +275,7 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
         if (model is null || model.Shots.IsDefaultOrEmpty)
         {
             _delta = 0;
-            Status = "No centreline data in scope. Open a survey (.th) with measurements.";
+            Status = TherionProc.Resources.Tr.Get("Struct_StatusNoData");
             return;
         }
 
@@ -301,14 +305,16 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
             Planes.Add(planeRow);
         }
 
+        var deltaText = _delta.ToString("+0.0;-0.0", System.Globalization.CultureInfo.CurrentCulture);
         var declNote = result.Declination.Effective switch
         {
-            DeclinationSource.Manual => $" · declination {_delta:+0.0;-0.0}° → true N",
-            DeclinationSource.SurveyDeclared => $" · declination {_delta:+0.0;-0.0}° (survey)",
-            DeclinationSource.WmmAuto => $" · declination {_delta:+0.0;-0.0}° (WMM)",
+            DeclinationSource.Manual => string.Format(TherionProc.Resources.Tr.Get("Struct_DeclManual"), deltaText),
+            DeclinationSource.SurveyDeclared => string.Format(TherionProc.Resources.Tr.Get("Struct_DeclSurvey"), deltaText),
+            DeclinationSource.WmmAuto => string.Format(TherionProc.Resources.Tr.Get("Struct_DeclWmm"), deltaText),
             _ => result.Declination.Note is { } n ? $" · {n}" : "",
         };
-        Status = $"{Planes.Count} plane(s) from {Measurements.Count(m => !m.IsOrigin)} measurement(s).{declNote}";
+        Status = string.Format(TherionProc.Resources.Tr.Get("Struct_StatusFmt"),
+            Planes.Count, Measurements.Count(m => !m.IsOrigin), declNote);
         PushPlot();
     }
 
@@ -630,7 +636,9 @@ public sealed partial class StructuralMeasurementRow : ObservableObject
     public string Length => Measurement.Length?.ToString("0.##") ?? "";
     public string Compass => Measurement.Compass?.ToString("0.#") ?? "";
     public string Clino => Measurement.Clino?.ToString("0.#") ?? "";
-    public string Kind => Measurement.IsOrigin ? "origin" : Measurement.IsSplay ? "splay" : "leg";
+    public string Kind => Measurement.IsOrigin ? TherionProc.Resources.Tr.Get("Struct_KindOrigin")
+        : Measurement.IsSplay ? TherionProc.Resources.Tr.Get("Struct_KindSplay")
+        : TherionProc.Resources.Tr.Get("Struct_KindLeg");
     public bool IsOrigin => Measurement.IsOrigin;
     public string Comment => Measurement.Comment ?? "";
     /// <summary>Comment clipped to a compact grid width (full text is shown in the cell tooltip).</summary>
@@ -708,7 +716,7 @@ public sealed partial class StructuralPlaneRow : ObservableObject
     public string Declination => !Plane.IsValid ? "—"
         : Plane.DeclinationApplied != 0 ? $"{Plane.DeclinationApplied:+0.0;-0.0}° (true N)" : "magnetic";
     public string Points => Plane.PointCount.ToString();
-    public string Quality => Plane.IsValid ? Plane.RmsResidual.ToString("0.###") + " m" : (Plane.ErrorReason ?? "invalid");
+    public string Quality => Plane.IsValid ? Plane.RmsResidual.ToString("0.###") + " m" : (Plane.ErrorReason ?? TherionProc.Resources.Tr.Get("Struct_Invalid"));
     public bool IsValid => Plane.IsValid;
     public string File => string.IsNullOrEmpty(Batch.SourceFile) ? "" : Path.GetFileName(Batch.SourceFile);
     public int Line => Rows.FirstOrDefault(r => !r.IsOrigin)?.Line ?? 0;
