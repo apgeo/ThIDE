@@ -1,4 +1,4 @@
-// TH2-04 — new-scrap scaffolding. Generates a minimal `.th2` stub (encoding + scrap…endscrap),
+// new-scrap scaffolding. Generates a minimal `.th2` stub (encoding + scrap…endscrap),
 // optionally wired to an underlying `.xvi` sketch, plus the `input` line to add to the survey's
 // `.th`. Pure string output; the caller writes/opens the files.
 

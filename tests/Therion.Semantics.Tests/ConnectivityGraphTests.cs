@@ -1,4 +1,4 @@
-// LANG-06 — connectivity graph: components, reachability, entrances, fixed points, dead-ends.
+// connectivity graph: components, reachability, entrances, fixed points, dead-ends.
 
 using System.Linq;
 using Therion.Semantics;

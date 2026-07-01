@@ -1,4 +1,4 @@
-// LANG-04/05/03 — typed centreline metadata commands + data-style awareness.
+// typed centreline metadata commands + data-style awareness.
 // Validates that units / calibrate / declination / cs / station / mark / extend etc. are parsed
 // as real commands (not mis-parsed as data rows) and that the data-style validation behaves.
 // thbook v6.4.0 §"centreline".
@@ -154,7 +154,7 @@ public class CentrelineCommandTests
         Assert.Contains("BCRA5", cl.Children.OfType<GradeCommand>().Single().Grades);
     }
 
-    // ---- data-style validation (LANG-05) -------------------------------------
+    // ---- data-style validation -------------------------------------
 
     [Fact]
     public void Unknown_data_style_warns()

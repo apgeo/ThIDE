@@ -43,7 +43,7 @@ public interface IDocumentService
     FileDocumentViewModel OpenTextDocument(string displayPath, string text);
     void CloseDocument(FileDocumentViewModel document);
 
-    // ---- recently-closed tabs (UX-10, VSCode Ctrl+Shift+T) ----
+    // ---- recently-closed tabs (VSCode Ctrl+Shift+T) ----
     /// <summary>True when there is at least one closed tab that can be reopened.</summary>
     bool HasRecentlyClosed { get; }
     /// <summary>Reopens the most-recently-closed file that still exists and isn't already open.
@@ -61,7 +61,7 @@ public interface IDocumentService
     event EventHandler? DocumentChanged;
 
     Task OpenFileAsync(string absolutePath, CancellationToken ct = default);
-    /// <summary>TRUST-03: opens a file bypassing the binary/huge-file guard (the "Open anyway" path).</summary>
+    /// <summary>opens a file bypassing the binary/huge-file guard (the "Open anyway" path).</summary>
     Task ForceOpenFileAsync(string absolutePath, CancellationToken ct = default);
     Task OpenFolderAsync(string folderPath, CancellationToken ct = default);
     /// <summary>
@@ -76,7 +76,7 @@ public interface IDocumentService
     /// <summary>Opens the file a span lives in (if needed) and scrolls/flashes the editor to it.</summary>
     Task NavigateToSpanAsync(Therion.Core.SourceSpan span, CancellationToken ct = default);
     Task WriteCurrentTextAsync(string newText, CancellationToken ct = default);
-    /// <summary>QOL-09: persists a specific document's current text to disk (auto-save).</summary>
+    /// <summary>persists a specific document's current text to disk (auto-save).</summary>
     Task SaveDocumentAsync(FileDocumentViewModel document, CancellationToken ct = default);
     void Close();
 
@@ -113,7 +113,7 @@ public interface IDocumentService
     void RequestRenameSymbol(string raw, Therion.Processing.Abstractions.ReferenceKind kind);
     event EventHandler<(string Raw, Therion.Processing.Abstractions.ReferenceKind Kind)>? RenameSymbolRequested;
 
-    /// <summary>Asks the shell to reveal a station/survey (by full dotted name) in the embedded 3D viewer (VIS-01).</summary>
+    /// <summary>Asks the shell to reveal a station/survey (by full dotted name) in the embedded 3D viewer.</summary>
     void RequestShowInModel3D(string fullName);
     event EventHandler<string>? ShowInModel3DRequested;
 }
@@ -124,10 +124,10 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
     private readonly IWorkspaceSession _session;
     private readonly IAppSettingsService? _settings;
     private readonly ICommandRegistry? _commands;
-    private readonly INotificationService? _notifications;   // UX-07 (file-changed-on-disk toast)
-    private readonly IScriptHookService? _hooks;             // EXT-03 (on-open / on-save hooks)
+    private readonly INotificationService? _notifications;   // (file-changed-on-disk toast)
+    private readonly IScriptHookService? _hooks;             // (on-open / on-save hooks)
 
-    // UX-10: stack of recently-closed file paths (most-recent last) for Ctrl+Shift+T.
+    // stack of recently-closed file paths (most-recent last) for Ctrl+Shift+T.
     private readonly System.Collections.Generic.List<string> _recentlyClosed = new();
     private const int MaxRecentlyClosed = 25;
 
@@ -222,7 +222,7 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
             return;
         }
 
-        // TRUST-03: don't load a binary blob or a huge file into the text editor (it would hang /
+        // don't load a binary blob or a huge file into the text editor (it would hang /
         // show garbage). Offer "Open anyway" via a notification instead of silently doing it.
         if (!force && FileGuard.ShouldBlockTextOpen(full) is { } reason)
         {
@@ -243,7 +243,7 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
 
         OpenInDockRequested?.Invoke(this, doc);
         SetActive(doc);
-        _hooks?.Run(ScriptHookEvent.Open, full);   // EXT-03
+        _hooks?.Run(ScriptHookEvent.Open, full);
     }
 
     public async Task OpenFolderAsync(string folderPath, CancellationToken ct = default)
@@ -337,7 +337,7 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
         bool autoReload = _settings?.Current.AutoReloadExternalChanges ?? true;
         doc.NotifyExternalChange(change.TimeUtc.ToLocalTime(), change.Deleted, autoReload);
 
-        // UX-07: surface the on-disk change as a toast/bell entry. A clean file that is being
+        // surface the on-disk change as a toast/bell entry. A clean file that is being
         // silently auto-reloaded raises no toast (the editor already flashes its info banner);
         // only conflicts (unsaved edits) and deletions are worth a notification.
         var name = Path.GetFileName(change.Path);
@@ -485,7 +485,7 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
     public async Task WriteCurrentTextAsync(string newText, CancellationToken ct = default)
     {
         if (Active is not { } doc) return;
-        // EDIT-14: trim trailing whitespace + ensure a final newline on save. Idempotent, so a
+        // trim trailing whitespace + ensure a final newline on save. Idempotent, so a
         // loaded editor that already cleaned itself in place (caret-preserving) makes this a no-op.
         newText = EditorTextCleanup.ApplyOnSave(newText, _settings?.Current);
         if (File.Exists(doc.FilePath))
@@ -493,7 +493,7 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
             // Mark the path so the watcher doesn't treat our own save as an external edit (#6).
             _session.SuppressSelfWrite(doc.FilePath);
             await File.WriteAllTextAsync(doc.FilePath, newText, ct).ConfigureAwait(true);
-            _hooks?.Run(ScriptHookEvent.Save, doc.FilePath);   // EXT-03
+            _hooks?.Run(ScriptHookEvent.Save, doc.FilePath);
         }
         doc.SetText(newText, reparse: true);
     }
@@ -501,7 +501,7 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
     public async Task SaveDocumentAsync(FileDocumentViewModel document, CancellationToken ct = default)
     {
         if (document is null || string.IsNullOrEmpty(document.FilePath) || !File.Exists(document.FilePath)) return;
-        // EDIT-14 cleanup, then write — suppressing the watcher so our own save isn't flagged external (#6).
+        // cleanup, then write — suppressing the watcher so our own save isn't flagged external (#6).
         var newText = EditorTextCleanup.ApplyOnSave(document.DocumentText, _settings?.Current);
         _session.SuppressSelfWrite(document.FilePath);
         await File.WriteAllTextAsync(document.FilePath, newText, ct).ConfigureAwait(true);
@@ -515,7 +515,7 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
         // ValidateOnType: after a per-file re-parse, (debounced) re-validate the whole object graph
         // against every unsaved buffer, so cross-file/project diagnostics track typing, not just saves.
         doc.Reparsed += (_, _) => ScheduleValidateOnType();
-        // TRUST-05: "Keep mine (save to disk)" — write the editor text to disk (overwrite the
+        // "Keep mine (save to disk)" — write the editor text to disk (overwrite the
         // external change or recreate a deleted file), suppressing the self-write watcher echo.
         doc.SaveToDiskRequested += async (_, _) => await OverwriteToDiskAsync(doc).ConfigureAwait(true);
         return doc;
@@ -589,14 +589,14 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
         OnUiSync(() => removed = Documents.Remove(doc));
         if (removed)
         {
-            RecordRecentlyClosed(doc.FilePath);   // UX-10: enable Ctrl+Shift+T reopen
+            RecordRecentlyClosed(doc.FilePath);   // enable Ctrl+Shift+T reopen
             doc.Dispose(); // stop its debounced re-parse timer
             if (ReferenceEquals(Active, doc))
                 SetActive(Documents.LastOrDefault());
         }
     }
 
-    // ---- recently-closed tabs (UX-10) ---------------------------------------
+    // ---- recently-closed tabs ---------------------------------------
 
     /// <summary>Pushes a just-closed file onto the reopen stack (de-duplicated, capped).</summary>
     private void RecordRecentlyClosed(string path)

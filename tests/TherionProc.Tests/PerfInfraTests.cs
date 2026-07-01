@@ -4,10 +4,10 @@ using TherionProc.Services;
 
 namespace TherionProc.Tests;
 
-// PERF-03 (persistent symbol index) + PERF-05 (string interner) infrastructure.
+// (persistent symbol index) + (string interner) infrastructure.
 public class PerfInfraTests
 {
-    // ---- PERF-05: StringInterner ----
+    // ---- : StringInterner ----
 
     [Fact]
     public void Interner_returns_same_instance_for_equal_strings()
@@ -43,7 +43,7 @@ public class PerfInfraTests
         Assert.Equal(2, interner.Count);
     }
 
-    // ---- PERF-03: WorkspaceSymbolIndexStore ----
+    // ---- : WorkspaceSymbolIndexStore ----
 
     [Fact]
     public void Symbol_index_round_trips_through_disk()

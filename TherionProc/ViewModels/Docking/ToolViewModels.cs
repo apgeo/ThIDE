@@ -86,28 +86,28 @@ public sealed class GeneratedFilesToolViewModel : ToolViewModelBase
 
 public sealed class OutlineToolViewModel : ToolViewModelBase
 {
-    // EDIT-09: titleKey "Outline" has no resx entry, so Tr.Get falls back to "Outline".
+    // titleKey "Outline" has no resx entry, so Tr.Get falls back to "Outline".
     [JsonIgnore] public OutlineViewModel Outline { get; }
     public OutlineToolViewModel() : base("Outline", "Outline") => Outline = null!;
     public OutlineToolViewModel(OutlineViewModel outline, ILanguageService? lang = null)
         : base("Outline", "Outline", lang) => Outline = outline;
 }
 
-/// <summary>PROJ-02/03/07: a single "Project" pane with Dashboard / Surveys / Audit tabs.</summary>
+/// <summary>a single "Project" pane with Dashboard / Surveys / Audit tabs.</summary>
 public sealed class ProjectToolViewModel : ToolViewModelBase
 {
     [JsonIgnore] public ProjectDashboardViewModel Dashboard { get; }
     [JsonIgnore] public SurveyTreeViewModel Surveys { get; }
     [JsonIgnore] public ProjectAuditViewModel Audit { get; }
-    /// <summary>DATA-01/02/05/06/08 analytics tabs.</summary>
+    /// <summary>analytics tabs.</summary>
     [JsonIgnore] public DataAnalyticsViewModel Analytics { get; }
-    /// <summary>LEAD-01/03/05 exploration leads register.</summary>
+    /// <summary>exploration leads register.</summary>
     [JsonIgnore] public LeadsViewModel Leads { get; }
-    /// <summary>NOTE-01 TODO/FIXME/QM aggregator.</summary>
+    /// <summary>TODO/FIXME/QM aggregator.</summary>
     [JsonIgnore] public TodoScanViewModel Todos { get; }
-    /// <summary>NOTE-04 project metadata editor.</summary>
+    /// <summary>project metadata editor.</summary>
     [JsonIgnore] public ProjectMetadataViewModel Metadata { get; }
-    /// <summary>MEDIA-02/03 background-scan / media manager.</summary>
+    /// <summary>background-scan / media manager.</summary>
     [JsonIgnore] public MediaManagerViewModel MediaManager { get; }
 
     public ProjectToolViewModel() : base("Project", "Tool_Project")
@@ -148,7 +148,7 @@ public sealed class LogToolViewModel : ToolViewModelBase
         : base("Log", "Log", lang) => Log = log;
 }
 
-/// <summary>VIS-02: live centreline preview (plan/elevation sketch).</summary>
+/// <summary>live centreline preview (plan/elevation sketch).</summary>
 public sealed class LivePreviewToolViewModel : ToolViewModelBase
 {
     [JsonIgnore] public LivePreviewViewModel Preview { get; }
@@ -157,7 +157,7 @@ public sealed class LivePreviewToolViewModel : ToolViewModelBase
         : base("LivePreview", "Live Preview", lang) => Preview = preview;
 }
 
-/// <summary>VIS-03/05: in-app map viewer (PNG/SVG/PDF).</summary>
+/// <summary>in-app map viewer (PNG/SVG/PDF).</summary>
 public sealed class MapViewerToolViewModel : ToolViewModelBase
 {
     [JsonIgnore] public MapViewerViewModel Map { get; }
@@ -166,7 +166,7 @@ public sealed class MapViewerToolViewModel : ToolViewModelBase
         : base("MapViewer", "Map Viewer", lang) => Map = map;
 }
 
-/// <summary>VIS-01: embedded 3D model viewer (CaveView.js in a NativeWebView).</summary>
+/// <summary>embedded 3D model viewer (CaveView.js in a NativeWebView).</summary>
 public sealed class Model3DViewerToolViewModel : ToolViewModelBase
 {
     [JsonIgnore] public Model3DViewerViewModel Viewer { get; }
@@ -175,7 +175,7 @@ public sealed class Model3DViewerToolViewModel : ToolViewModelBase
         : base("Model3DViewer", "3D Viewer", lang) => Viewer = viewer;
 }
 
-/// <summary>STRUCT-01: structural-geology module (plane strike/dip calculator). Off by default.</summary>
+/// <summary>structural-geology module (plane strike/dip calculator). Off by default.</summary>
 public sealed class StructuralGeologyToolViewModel : ToolViewModelBase
 {
     [JsonIgnore] public StructuralGeologyViewModel Structural { get; }

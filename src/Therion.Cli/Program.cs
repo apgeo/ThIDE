@@ -1,4 +1,4 @@
-// EXT-01 — headless CLI parity. Commands reuse the same parser / semantic / workspace engines as
+// headless CLI parity. Commands reuse the same parser / semantic / workspace engines as
 // the GUI so CI can validate, lint, format, stat, graph dependencies and export without a desktop.
 
 using System.Text.Json;
@@ -87,7 +87,7 @@ static int Validate(string path)
     if (file is null) return 2;
 
     // For .th files also run the semantic binder so cross-cutting checks (data-row arity,
-    // unresolved stations, …) surface from the CLI too (EXT-01 parity).
+    // unresolved stations, …) surface from the CLI too (parity).
     var all = diagnostics;
     var ext = Path.GetExtension(Path.GetFullPath(path)).ToLowerInvariant();
     if (ext is ".th")
@@ -108,7 +108,7 @@ static int Validate(string path)
     return 0;
 }
 
-// EXT-01: project-wide lint — per-file semantic diagnostics + cross-file correctness analysis
+// project-wide lint — per-file semantic diagnostics + cross-file correctness analysis
 // (loop closure, blunders, fore/back, collisions, dangling refs) over the whole include graph.
 static async System.Threading.Tasks.Task<int> Lint(string path)
 {
@@ -132,7 +132,7 @@ static async System.Threading.Tasks.Task<int> Lint(string path)
     return errors > 0 ? 1 : 0;
 }
 
-// EXT-01: format a single file by re-emitting its AST through TherionWriter.
+// format a single file by re-emitting its AST through TherionWriter.
 static int Format(string path, string[] args)
 {
     var (file, _) = ParseAny(path);
@@ -147,7 +147,7 @@ static int Format(string path, string[] args)
     return 0;
 }
 
-// EXT-01: project statistics (length, station/shot/survey counts, vertical range, entrances).
+// project statistics (length, station/shot/survey counts, vertical range, entrances).
 static async System.Threading.Tasks.Task<int> Stats(string path)
 {
     var ws = await LoadWorkspaceAsync(path);
@@ -163,7 +163,7 @@ static async System.Threading.Tasks.Task<int> Stats(string path)
     return 0;
 }
 
-// EXT-01: include/dependency graph (thconfig → source → input). Text or Graphviz DOT.
+// include/dependency graph (thconfig → source → input). Text or Graphviz DOT.
 static async System.Threading.Tasks.Task<int> Deps(string path, string[] args)
 {
     var ws = await LoadWorkspaceAsync(path);
@@ -186,7 +186,7 @@ static async System.Threading.Tasks.Task<int> Deps(string path, string[] args)
     return 0;
 }
 
-// EXT-01: export entrances / fixed points to KML / GeoJSON / GPX / CSV.
+// export entrances / fixed points to KML / GeoJSON / GPX / CSV.
 static async System.Threading.Tasks.Task<int> Gis(string path, string[] args)
 {
     var ws = await LoadWorkspaceAsync(path);
@@ -266,7 +266,7 @@ static async System.Threading.Tasks.Task<WorkspaceSemanticModel?> LoadWorkspaceA
 static bool HasFlag(string[] args, string flag) =>
     Array.Exists(args, a => string.Equals(a, flag, StringComparison.OrdinalIgnoreCase));
 
-// STRUCT-01 — fit geological planes (strike/dip) from structural shots, headless (proves the
+// fit geological planes (strike/dip) from structural shots, headless (proves the
 // Therion.Structural core is UI-independent).
 static int Structural(string path, string[] args)
 {

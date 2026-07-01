@@ -1,4 +1,4 @@
-// DIAG-02/03/04/05/06 — project-wide correctness diagnostics computed from a bound
+// project-wide correctness diagnostics computed from a bound
 // WorkspaceSemanticModel. These are "preview-quality" checks from our own model (not a full
 // Therion/Survex adjustment): loop misclosure, blunder/outlier shots, foresight/backsight
 // consistency, cross-file naming collisions, and dangling include targets. Angles are assumed to
@@ -38,7 +38,7 @@ public sealed class ProjectDiagnosticOptions
     public static ProjectDiagnosticOptions Default { get; } = new();
 }
 
-/// <summary>Workspace-level correctness analysis (DIAG-02..06).</summary>
+/// <summary>Workspace-level correctness analysis.</summary>
 public static class ProjectDiagnostics
 {
     private readonly record struct Vec3(double E, double N, double Z)
@@ -64,7 +64,7 @@ public static class ProjectDiagnostics
         return diags.ToImmutable();
     }
 
-    // ---- DIAG-05: cross-file naming collisions (surveys / maps) -------------------------------
+    // ---- : cross-file naming collisions (surveys / maps) -------------------------------
     // Per the spec note, station names are unique only *per survey*, so reusing a station name in
     // different surveys is fine and is never flagged. Surveys and maps, however, should be unique.
 
@@ -95,7 +95,7 @@ public static class ProjectDiagnostics
         }
     }
 
-    // ---- DIAG-03 / DIAG-04: per-shot blunder + foresight/backsight checks --------------------
+    // ---- / : per-shot blunder + foresight/backsight checks --------------------
 
     private static void ShotChecks(WorkspaceSemanticModel ws, ProjectDiagnosticOptions o,
         ImmutableArray<Diagnostic>.Builder diags)
@@ -151,7 +151,7 @@ public static class ProjectDiagnostics
         }
     }
 
-    // ---- DIAG-02: loop-closure misclosure ----------------------------------------------------
+    // ---- : loop-closure misclosure ----------------------------------------------------
 
     private static void LoopClosure(WorkspaceSemanticModel ws, ProjectDiagnosticOptions o,
         ImmutableArray<Diagnostic>.Builder diags)
@@ -262,7 +262,7 @@ public static class ProjectDiagnostics
         return total;
     }
 
-    // ---- DIAG-06: dangling include targets ---------------------------------------------------
+    // ---- : dangling include targets ---------------------------------------------------
 
     private static void DanglingIncludes(WorkspaceSemanticModel ws, Func<string, bool> fileExists,
         ImmutableArray<Diagnostic>.Builder diags)

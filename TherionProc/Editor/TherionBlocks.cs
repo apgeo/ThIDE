@@ -1,6 +1,6 @@
 // Shared Therion block-structure analysis (survey…endsurvey, scrap…endscrap, line…endline, …).
 // Pure text analysis so it runs on every debounced change. Reused by the matching-terminator
-// (EDIT-15), smart-Enter (EDIT-16), document-outline (EDIT-09) and sticky-scroll (EDIT-08) features.
+//, smart-Enter, document-outline and sticky-scroll features.
 
 using System;
 using System.Collections.Generic;

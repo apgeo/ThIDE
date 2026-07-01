@@ -1,4 +1,4 @@
-// EDIT-03 — code snippets / templates. Tab-expandable (and completion-listed) templates for the
+// code snippets / templates. Tab-expandable (and completion-listed) templates for the
 // common Therion blocks. Built-in defaults can be extended/overridden by a user-editable file at
 // %AppData%/TherionProc/snippets.json (XDG fallback on POSIX): an array of {trigger, description,
 // template}. Templates use \n for line breaks and $0 to mark the final caret position.

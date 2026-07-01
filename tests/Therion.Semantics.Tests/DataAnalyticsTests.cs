@@ -1,4 +1,4 @@
-// DATA-01/02/05/06/08 — analytics over a small workspace built from .th source.
+// analytics over a small workspace built from .th source.
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;

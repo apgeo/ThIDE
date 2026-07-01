@@ -1,4 +1,4 @@
-// VIS-01 — host view for the embedded 3D model viewer. Owns the NativeWebView control
+// host view for the embedded 3D model viewer. Owns the NativeWebView control
 // (created imperatively so the VM stays unit-testable and the control can be wired up
 // lazily, only when the feature-flagged tool is actually shown). Bridges the control to
 // Model3DViewerViewModel: WebMessageReceived → OnWebMessage (JS→C#), ScriptRequested →

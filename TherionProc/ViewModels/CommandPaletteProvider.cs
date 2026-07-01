@@ -92,13 +92,13 @@ public sealed class CommandPaletteProvider
         list.Add(VmCmd(L("Cmd_Cat_Build"), L("Cmd_OpenLoch"), _vm.Build.OpenInLochCommand, "Icon.Cube"));
         list.Add(VmCmd(L("Cmd_Cat_Build"), L("Cmd_OpenAven"), _vm.Build.OpenInAvenCommand, "Icon.Cube"));
         list.Add(VmCmd(L("Cmd_Cat_Build"), L("Proj_OpenOutputFolder"), _vm.Build.OpenLastOutputFolderCommand, "Icon.Folder"));
-        // BUILD-02/06: quick export + external round-trips.
+        // quick export + external round-trips.
         list.Add(VmCmd(L("Cmd_Cat_Build"), L("Menu_Build_QuickExport"), _vm.Build.ShowQuickExportCommand, "Icon.Map"));
         list.Add(VmCmd(L("Cmd_Cat_Build"), L("Cmd_Dump3d"), _vm.Build.Dump3dCommand, "Icon.Cube"));
         list.Add(VmCmd(L("Cmd_Cat_Build"), L("Cmd_Extend"), _vm.Build.ExtendCommand, "Icon.Cube"));
         list.Add(VmCmd(L("Cmd_Cat_Build"), L("Cmd_PrintVersion"), _vm.Build.PrintTherionVersionCommand, "Icon.Info"));
         list.Add(VmCmd(L("Cmd_Cat_Build"), L("Cmd_PrintEnv"), _vm.Build.PrintTherionEnvironmentCommand, "Icon.Info"));
-        // BUILD-01: each export target parsed from the active thconfig.
+        // each export target parsed from the active thconfig.
         foreach (var target in _vm.Build.ExportTargets)
             list.Add(Action(L("Cmd_Cat_Build"), string.Format(L("Cmd_BuildTargetFmt"), target.Title),
                 () => { target.BuildCommand.Execute(null); return Task.CompletedTask; }, "Icon.Cube"));
@@ -164,12 +164,12 @@ public sealed class CommandPaletteProvider
         list.Add(Editor(L("Menu_Edit_ToggleComment"), ed => ed.MenuToggleComment()));
         list.Add(Editor(L("Menu_Edit_FoldAll"), ed => ed.MenuFoldAll()));
         list.Add(Editor(L("Menu_Edit_UnfoldAll"), ed => ed.MenuUnfoldAll()));
-        // QOL-07: line operations.
+        // line operations.
         list.Add(Editor(L("Ed_DuplicateLines"), ed => ed.DuplicateLines()));
         list.Add(Editor(L("Ed_MoveLinesUp"), ed => ed.MoveLinesUp()));
         list.Add(Editor(L("Ed_MoveLinesDown"), ed => ed.MoveLinesDown()));
         list.Add(Editor(L("Ed_SortLines"), ed => ed.SortSelectedLines()));
-        // QOL-08: insert helpers.
+        // insert helpers.
         list.Add(Editor(L("Ed_InsertDate"), ed => ed.InsertDate()));
         list.Add(Editor(L("Ed_InsertTeamMember"), ed => ed.InsertTeamMember()));
         list.Add(Editor(L("Menu_Edit_AddBookmark"), ed => ed.MenuAddBookmark()));
@@ -269,7 +269,7 @@ public sealed class CommandPaletteProvider
             int n = 0;
             foreach (var kv in ws.StationsByQn) { AddSymbol(list, kv.Key, kv.Value.DeclarationSpan, "station"); if (++n >= _stationLimit) break; }
         }
-        // PERF-03: the live graph isn't built yet (or is being rebuilt) → fall back to the
+        // the live graph isn't built yet (or is being rebuilt) → fall back to the
         // persisted symbol index so workspace symbol search still works instantly on reopen.
         else if (workspace && _session?.SymbolIndex is { Symbols.Count: > 0 } idx)
         {

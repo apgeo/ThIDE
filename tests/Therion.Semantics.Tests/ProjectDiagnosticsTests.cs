@@ -1,4 +1,4 @@
-// DIAG-02/03/04/05 — project-wide correctness diagnostics.
+// project-wide correctness diagnostics.
 
 using System;
 using System.Collections.Generic;

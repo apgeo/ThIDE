@@ -1,4 +1,4 @@
-// LANG-13 — user rule configuration. A small JSON document (stored in app settings) lets users
+// user rule configuration. A small JSON document (stored in app settings) lets users
 // turn built-in rules off and declare naming-convention lints without code. Lives in the semantics
 // library (no UI dependency) so the CLI and any host can apply the same config.
 

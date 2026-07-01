@@ -1,4 +1,4 @@
-// EXT-05 — the LSP server's core: turn Therion source into LSP diagnostics. Pure and host-agnostic
+// the LSP server's core: turn Therion source into LSP diagnostics. Pure and host-agnostic
 // (no stdio), so it is unit-testable and reused by the JSON-RPC loop in Program.cs.
 
 using System;

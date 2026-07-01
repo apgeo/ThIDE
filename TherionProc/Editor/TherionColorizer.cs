@@ -86,7 +86,7 @@ public sealed class TherionColorizer : DocumentColorizingTransformer
     }
 
     /// <summary>
-    /// Per-line embedded-language regions (LANG-02), 1-based. Lines mapped to
+    /// Per-line embedded-language regions, 1-based. Lines mapped to
     /// <see cref="EmbeddedRegion.MetaPost"/> / <see cref="EmbeddedRegion.Tex"/> are highlighted with
     /// the embedded-language lexers; <see cref="EmbeddedRegion.LayoutOption"/> lines use the
     /// layout-aware classifier; <see cref="EmbeddedRegion.None"/> lines are left unhighlighted
@@ -95,7 +95,7 @@ public sealed class TherionColorizer : DocumentColorizingTransformer
     public void SetLineRegions(IReadOnlyDictionary<int, EmbeddedRegion>? regions) =>
         _regions = regions is { Count: > 0 } ? regions : null;
 
-    // PERF-04: skip syntax highlighting on pathologically long lines (e.g. a single huge
+    // skip syntax highlighting on pathologically long lines (e.g. a single huge
     // surface/data row). Tokenizing + per-token ChangeLinePart on a multi-thousand-char line
     // stalls scrolling, and caching the whole line as a dictionary key wastes memory. Such a
     // line renders as plain text instead.
@@ -103,13 +103,13 @@ public sealed class TherionColorizer : DocumentColorizingTransformer
 
     protected override void ColorizeLine(DocumentLine line)
     {
-        // Resolve the line's embedded-language region (LANG-02). Absent ⇒ ordinary Therion line.
+        // Resolve the line's embedded-language region. Absent ⇒ ordinary Therion line.
         EmbeddedRegion? region = null;
         if (_regions is not null && _regions.TryGetValue(line.LineNumber, out var r)) region = r;
         if (region == EmbeddedRegion.None) return; // opaque body (e.g. lookup) — leave unhighlighted
 
         var doc = CurrentContext.Document;
-        if (line.Length > MaxHighlightLineLength) return;   // PERF-04
+        if (line.Length > MaxHighlightLineLength) return;
         var lineText = doc.GetText(line);
         if (string.IsNullOrEmpty(lineText)) return;
 

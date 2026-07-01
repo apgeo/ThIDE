@@ -1,5 +1,5 @@
-// STRUCT-01 Phase 4 — loopback asset host for the structural-geology 3D plot (three.js in a
-// NativeWebView). Independent of the VIS-01 CaveView host (own asset root, own random port, own
+// Phase 4 — loopback asset host for the structural-geology 3D plot (three.js in a
+// NativeWebView). Independent of the CaveView host (own asset root, own random port, own
 // lifecycle) so the two viewers can never interfere. Serves only static avares assets
 // (viewer.html + lib/three.min.js + structural.js); the plane/cave-line data is pushed into the page
 // via InvokeScript, so there is no model-staging endpoint here.

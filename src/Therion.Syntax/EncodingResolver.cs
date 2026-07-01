@@ -29,7 +29,7 @@ public static class EncodingResolver
 
     /// <summary>
     /// Decode <paramref name="bytes"/> honoring an embedded directive. A leading byte-order mark
-    /// (UTF-8 / UTF-16) is detected and stripped so it never leaks into the first token (LANG-11).
+    /// (UTF-8 / UTF-16) is detected and stripped so it never leaks into the first token.
     /// </summary>
     public static string Decode(byte[] bytes)
     {

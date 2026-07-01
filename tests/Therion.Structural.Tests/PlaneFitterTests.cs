@@ -1,4 +1,4 @@
-// STRUCT-01 Phase 1 — locks the plane-fit math against analytically known planes BEFORE any UI work.
+// Phase 1 — locks the plane-fit math against analytically known planes BEFORE any UI work.
 // Covers horizontal/vertical/steep/arbitrary orientations, degenerate input, noise, count-independence
 // and the declination azimuth offset.
 

@@ -1,4 +1,4 @@
-// LANG-02 (embedded code) — MetaPostLexer highlighting tests, driven off the real corpus
+// (embedded code) — MetaPostLexer highlighting tests, driven off the real corpus
 // metapost lines (tests/Corpus/Synthetic/project/Vladusca.thconfig).
 
 using System.Linq;

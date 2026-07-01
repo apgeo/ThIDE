@@ -1,13 +1,13 @@
-// LEAD-01 / LEAD-05 — exploration leads register.
+// exploration leads register.
 //
 // Mines every unexplored "lead" the project expresses, from four sources:
 //   • station `continuation` flags                 (LeadKind.ContinuationFlag)
 //   • station comment conventions (# QM / lead / ?) (LeadKind.CommentMarker)
 //   • `.th2` continuation / question points         (LeadKind.Th2Point)
-//   • topological dead-ends not otherwise marked    (LeadKind.DeadEnd, LEAD-05)
+// • topological dead-ends not otherwise marked (LeadKind.DeadEnd)
 //
 // Pure analysis over a WorkspaceSemanticModel — the UI (Leads tab) and any map overlay consume the
-// resulting list, and lifecycle status (LEAD-03) is layered on top by the app.
+// resulting list, and lifecycle status is layered on top by the app.
 
 using System;
 using System.Collections.Generic;
@@ -79,7 +79,7 @@ public static class LeadAnalysis
             leads.Add(new Lead(o.ScrapId, LeadKind.Th2Point, o.Type, o.Span));
         }
 
-        // 4 — LEAD-05: topological dead-ends the surveyor didn't mark as a continuation.
+        // 4 — : topological dead-ends the surveyor didn't mark as a continuation.
         try
         {
             var graph = ConnectivityGraph.Build(workspace);

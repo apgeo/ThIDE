@@ -21,7 +21,7 @@ public partial class MainWindow : Window
     private IKeyboardShortcutService? _shortcuts;
     private ILayoutService? _layout;
     private IGlobalHotkeyService? _globalHotkey;
-    private ICrashRecoveryService? _crashRecovery;   // PERF-06
+    private ICrashRecoveryService? _crashRecovery;
 
     // System-wide build hotkey (Ctrl+Alt+B): triggers a compile even when the app isn't
     // focused, marshalled onto the UI thread (#3). No-op on platforms without support.
@@ -61,7 +61,7 @@ public partial class MainWindow : Window
                 vm.ShowThbookRequested      += (_, _) => OnOpenThbook(this, new Avalonia.Interactivity.RoutedEventArgs());
                 vm.ShowBookmarksRequested   += (_, _) => OnBookmarksClick(this, new Avalonia.Interactivity.RoutedEventArgs());
                 vm.ShowRelationalMapRequested += (_, _) => OnRelationalMapClick(this, new Avalonia.Interactivity.RoutedEventArgs());
-                vm.Build.QuickExportRequested += (_, _) => _ = ShowQuickExportAsync(vm); // BUILD-02
+                vm.Build.QuickExportRequested += (_, _) => _ = ShowQuickExportAsync(vm);
                 BuildRecentMenu(vm);
                 BuildRecentDirectoriesMenu(vm);
                 // The layout rendered without crashing — clear the crash sentinel so the next
@@ -71,9 +71,9 @@ public partial class MainWindow : Window
                     Avalonia.Threading.DispatcherPriority.Background);
                 StartAutosave();
                 AttachGlobalHotkey(vm);
-                AttachNotifications(vm);                 // UX-07 toast layer
-                OpenStartupFileArgs(vm);                 // UX-09 "open with" / file association
-                // QOL-06: mirror the active editor's selection stats into the status bar.
+                AttachNotifications(vm);                 // toast layer
+                OpenStartupFileArgs(vm);                 // "open with" / file association
+                // mirror the active editor's selection stats into the status bar.
                 TherionProc.Editor.TherionTextEditor.SelectionStatsChanged += (_, s) =>
                     Avalonia.Threading.Dispatcher.UIThread.Post(() => vm.SetSelectionStats(s.Chars, s.Lines));
             }
@@ -84,7 +84,7 @@ public partial class MainWindow : Window
                     docs.FindReferencesRequested += (_, term) => ShowFindReferences(term);
                     docs.RenameSymbolRequested += (_, args) => _ = HandleRenameSymbolAsync(args.Raw, args.Kind);
                 }
-                _crashRecovery = AppServices.Provider.GetService<ICrashRecoveryService>();   // PERF-06
+                _crashRecovery = AppServices.Provider.GetService<ICrashRecoveryService>();
             }
             catch { /* design-time / no container */ }
         };
@@ -92,11 +92,11 @@ public partial class MainWindow : Window
         // Persist when focus leaves the app — covers a debugger stop that never fires Closing.
         Deactivated += (_, _) =>
         {
-            (DataContext as MainWindowViewModel)?.AutoSaveOnFocusLoss();   // QOL-09
+            (DataContext as MainWindowViewModel)?.AutoSaveOnFocusLoss();
             PersistAll();
             PersistRecoveryBuffers();
         };
-        // A clean close clears the crash sentinel + recovery buffers (PERF-06) so the next launch
+        // A clean close clears the crash sentinel + recovery buffers so the next launch
         // doesn't enter safe mode or offer stale recovery.
         Closing += (_, _) =>
         {
@@ -129,7 +129,7 @@ public partial class MainWindow : Window
         if (this.FindControl<MenuItem>("RecentMenu") is not { } menu) return;
         var items = new List<Control>();
 
-        // QOL-05: pinned files first, in their own group; each can be unpinned.
+        // pinned files first, in their own group; each can be unpinned.
         var pinned = vm.PinnedRecentFiles;
         if (pinned.Count > 0)
         {
@@ -168,7 +168,7 @@ public partial class MainWindow : Window
         menu.ItemsSource = items;
     }
 
-    // QOL-05: a recent/pinned file entry — opens on click; right-click pins or unpins it.
+    // a recent/pinned file entry — opens on click; right-click pins or unpins it.
     private static MenuItem RecentItem(MainWindowViewModel vm, string path, bool isPinned)
     {
         var item = new MenuItem
@@ -439,12 +439,12 @@ public partial class MainWindow : Window
                 (DataContext as MainWindowViewModel)?.ShowCommandPalette();
                 e.Handled = true;
                 break;
-            // UX-10: reopen the most-recently-closed tab (VSCode Ctrl+Shift+T).
+            // reopen the most-recently-closed tab (VSCode Ctrl+Shift+T).
             case Key.T when e.KeyModifiers == (KeyModifiers.Control | KeyModifiers.Shift):
                 (DataContext as MainWindowViewModel)?.ReopenClosedTabCommand.Execute(null);
                 e.Handled = true;
                 break;
-            // DIAG-07: F8 / Shift+F8 jump to the next / previous diagnostic.
+            // F8 / Shift+F8 jump to the next / previous diagnostic.
             case Key.F8:
                 (DataContext as MainWindowViewModel)?.Diagnostics.GoToAdjacent((e.KeyModifiers & KeyModifiers.Shift) == 0);
                 e.Handled = true;
@@ -452,7 +452,7 @@ public partial class MainWindow : Window
         }
     }
 
-    // ----- quick export dialog (BUILD-02) --------------------------------
+    // ----- quick export dialog --------------------------------
     private async System.Threading.Tasks.Task ShowQuickExportAsync(MainWindowViewModel vm)
     {
         var dialog = new QuickExportWindow();
@@ -678,7 +678,7 @@ public partial class MainWindow : Window
         vm.SearchCommand.Execute(null);
     }
 
-    // ----- notifications / toast center (UX-07) --------------------------
+    // ----- notifications / toast center --------------------------
 
     private Avalonia.Controls.Notifications.WindowNotificationManager? _notificationManager;
 
@@ -714,7 +714,7 @@ public partial class MainWindow : Window
             n.Title, n.Message, type, expiration, onClick: n.Action));
     }
 
-    // ----- "open with" / file association (UX-09) ------------------------
+    // ----- "open with" / file association ------------------------
 
     private void OpenStartupFileArgs(MainWindowViewModel vm)
     {
@@ -751,11 +751,11 @@ public partial class MainWindow : Window
             if (string.IsNullOrEmpty(path)) continue;
             var ext = Path.GetExtension(path);
             if (OpenableExtensions.Contains(ext)) _ = docs.OpenFileAsync(path);
-            else if (ImageExtensions.Contains(ext)) ScaffoldScrapForImage(path, docs);   // MEDIA-05
+            else if (ImageExtensions.Contains(ext)) ScaffoldScrapForImage(path, docs);
         }
     }
 
-    // MEDIA-05 — dropping a scan image scaffolds a .th2 scrap wired to it (Therion's scrap
+    // dropping a scan image scaffolds a .th2 scrap wired to it (Therion's scrap
     // `-sketch <image>`), opens it, and copies the `input` line for the survey's .th.
     private static readonly HashSet<string> ImageExtensions = new(StringComparer.OrdinalIgnoreCase)
         { ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".tif", ".tiff", ".xvi" };
@@ -881,7 +881,7 @@ public partial class MainWindow : Window
         _autosaveTimer.Start();
     }
 
-    /// <summary>PERF-06: writes the currently-dirty editor buffers to the crash-recovery folder.</summary>
+    /// <summary>writes the currently-dirty editor buffers to the crash-recovery folder.</summary>
     private void PersistRecoveryBuffers()
     {
         if (_crashRecovery is null) return;

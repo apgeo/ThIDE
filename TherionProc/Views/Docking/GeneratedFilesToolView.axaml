@@ -7,7 +7,7 @@
              x:DataType="vm:GeneratedFilesToolViewModel">
     <Grid>
     <DockPanel>
-        <!-- BUILD-03: stale-output banner (an input changed since the last build). -->
+        <!-- stale-output banner (an input changed since the last build). -->
         <Border DockPanel.Dock="Top" Background="#33E65100" Padding="8,4"
                 IsVisible="{Binding Build.HasStaleArtifacts}">
             <TextBlock Text="{l:Loc Gen_StaleBanner}"
@@ -107,7 +107,7 @@
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
-                <!-- BUILD-03: current / stale state. -->
+                <!-- current / stale state. -->
                 <DataGridTextColumn Header="{l:Loc Gen_Col_State}" Binding="{Binding StateText}" Width="Auto" />
                 <DataGridTextColumn Header="{l:Loc Col_Path}" Binding="{Binding Path}" Width="*" />
                 <DataGridTextColumn Header="{l:Loc Gen_Col_Size}" Binding="{Binding SizeDisplay}" Width="Auto" SortMemberPath="SizeBytes" />

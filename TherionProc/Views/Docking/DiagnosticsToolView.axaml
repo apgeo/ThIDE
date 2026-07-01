@@ -5,7 +5,7 @@
              x:Class="TherionProc.Views.Docking.DiagnosticsToolView"
              x:DataType="vm:DiagnosticsToolViewModel">
     <DockPanel>
-        <!-- DIAG-09: explanation pane for the selected diagnostic (thbook link + example fix). -->
+        <!-- explanation pane for the selected diagnostic (thbook link + example fix). -->
         <Border DockPanel.Dock="Bottom" BorderBrush="Gray" BorderThickness="0,1,0,0" Padding="8,5"
                 IsVisible="{Binding Diagnostics.HasExplanation}"
                 Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}">
@@ -54,7 +54,7 @@
                     ToolTip.Tip="{l:Loc Common_FitAll}" />
         </StackPanel>
 
-        <!-- DIAG-07: search + severity/category filters + suppression. -->
+        <!-- search + severity/category filters + suppression. -->
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="4,0,4,3" Spacing="6">
             <TextBox Width="180" Watermark="{l:Loc Common_Filter}" FontSize="11" Padding="4,1"
                      Text="{Binding Diagnostics.SearchText, Mode=TwoWay}" />

@@ -17,13 +17,12 @@ namespace TherionProc.ViewModels;
 public sealed record PreferenceSection(string Id, string Title, string Keywords);
 
 /// <summary>
-/// One row in the "Editor Features" Preferences section — a per-feature runtime toggle (EDIT-*).
+/// One row in the "Editor Features" Preferences section — a per-feature runtime toggle.
 /// A feature compiled out via <see cref="EditorFeatureFlags"/> shows disabled and forced off.
 /// </summary>
 public sealed partial class EditorFeatureToggle : ObservableObject
 {
     public EditorFeature Feature { get; }
-    public string Code { get; }
     public string Title { get; }
     public string Description { get; }
     /// <summary>False when the compile-time master constant removed this feature (row is disabled).</summary>
@@ -34,7 +33,6 @@ public sealed partial class EditorFeatureToggle : ObservableObject
     public EditorFeatureToggle(EditorFeatureInfo info, bool enabled)
     {
         Feature = info.Feature;
-        Code = info.Code;
         Title = info.Title;
         Description = info.Description;
         IsCompiledIn = EditorFeatureFlags.Compiled(info.Feature);
@@ -49,10 +47,10 @@ public partial class PreferencesViewModel : ObservableObject
 
     // ---- general ----
     [ObservableProperty] private bool _restoreSessionOnStartup;
-    /// <summary>REL-05: opt-in local-only telemetry / crash reports.</summary>
+    /// <summary>opt-in local-only telemetry / crash reports.</summary>
     [ObservableProperty] private bool _telemetryEnabled;
 
-    // ---- extensions (EXT-03 hooks, EXT-04 plugins) ----
+    // ---- extensions (hooks, plugins) ----
     [ObservableProperty] private bool _enableScriptHooks;
     [ObservableProperty] private string _hookOnOpen = string.Empty;
     [ObservableProperty] private string _hookOnSave = string.Empty;
@@ -67,7 +65,7 @@ public partial class PreferencesViewModel : ObservableObject
     [ObservableProperty] private bool _showLineNumbers;
     [ObservableProperty] private bool _highlightCurrentLine;
     [ObservableProperty] private bool _convertTabsToSpaces;
-    [ObservableProperty] private bool _formatOnSave; // EDIT-04
+    [ObservableProperty] private bool _formatOnSave;
     [ObservableProperty] private bool _validateOnType; // live whole-project validation while typing
 
     // ---- workspace ----
@@ -86,23 +84,23 @@ public partial class PreferencesViewModel : ObservableObject
     /// <summary>Ensure (and recursively create) each export's output directory before compiling.</summary>
     [ObservableProperty] private bool _ensureOutputDirectories;
 
-    // ---- auto-save (QOL-09) ----
+    // ---- auto-save ----
     /// <summary>Auto-save mode index: 0 = Off, 1 = After delay, 2 = On focus loss.</summary>
     [ObservableProperty] private int _autoSaveModeIndex;
     [ObservableProperty] private int _autoSaveDelaySeconds;
 
-    // ---- visualization (VIS-*) ----
+    // ---- visualization ----
     [ObservableProperty] private bool _enableLivePreview;
     [ObservableProperty] private bool _enableMapAutoPreview;
     [ObservableProperty] private bool _enableInAppViewer;
     [ObservableProperty] private bool _openPdfInternal;         // open clicked PDFs in the in-app viewer
-    [ObservableProperty] private bool _enableModel3DViewer;     // VIS-01 (off by default)
+    [ObservableProperty] private bool _enableModel3DViewer;     // (off by default)
     [ObservableProperty] private bool _enableModel3DAutoPreview;
-    [ObservableProperty] private bool _enableStructuralGeology;  // STRUCT-01 (off by default)
-    [ObservableProperty] private bool _enableProjectAnalytics;       // DATA-01/02/05/06/08
-    [ObservableProperty] private bool _enableObjectBrowserEntities;  // DATA-03
-    [ObservableProperty] private bool _enableTodoScan;               // NOTE-01
-    [ObservableProperty] private bool _enableMediaScan;              // MEDIA-02/03
+    [ObservableProperty] private bool _enableStructuralGeology;  // (off by default)
+    [ObservableProperty] private bool _enableProjectAnalytics;
+    [ObservableProperty] private bool _enableObjectBrowserEntities;
+    [ObservableProperty] private bool _enableTodoScan;
+    [ObservableProperty] private bool _enableMediaScan;
 
     // ---- editor behaviour ----
     [ObservableProperty] private bool _showRenamePreviewBeforeApply;
@@ -127,7 +125,7 @@ public partial class PreferencesViewModel : ObservableObject
     [ObservableProperty] private int _stationSearchLimit;
     [ObservableProperty] private int _startupLoadTimeoutSeconds;
 
-    // ---- editor features (Section B / EDIT-*) ----
+    // ---- editor features ----
     /// <summary>Per-feature runtime toggles shown in the "Editor Features" section.</summary>
     public ObservableCollection<EditorFeatureToggle> EditorFeatureRows { get; } = new();
 

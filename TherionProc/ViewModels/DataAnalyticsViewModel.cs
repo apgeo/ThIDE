@@ -1,4 +1,4 @@
-// DATA-01/02/05/06/08 — survey-domain analytics view-model. Reads the workspace semantic model
+// survey-domain analytics view-model. Reads the workspace semantic model
 // (via IDocumentService) and the project-analytics feature toggle (via IAppSettingsService),
 // projecting DataAnalytics results into bind-friendly rows. Heavy work is gated by the setting so
 // big projects can turn it off (DATA performance switch).
@@ -31,13 +31,13 @@ public sealed partial class DataAnalyticsViewModel : ObservableObject
     private readonly IDocumentService? _documents;
     private readonly IAppSettingsService? _settings;
 
-    public ObservableCollection<StatLine> Statistics { get; } = new();          // DATA-01
-    public ObservableCollection<ChartBar> LengthBySurvey { get; } = new();      // DATA-02
-    public ObservableCollection<ChartBar> LengthByDate { get; } = new();        // DATA-02
-    public ObservableCollection<TeamRow> Team { get; } = new();                 // DATA-05
-    public ObservableCollection<TripRow> Trips { get; } = new();                // DATA-05
-    public ObservableCollection<FixedRow> FixedPoints { get; } = new();         // DATA-06
-    public ObservableCollection<QualityRow> Quality { get; } = new();           // DATA-08
+    public ObservableCollection<StatLine> Statistics { get; } = new();
+    public ObservableCollection<ChartBar> LengthBySurvey { get; } = new();
+    public ObservableCollection<ChartBar> LengthByDate { get; } = new();
+    public ObservableCollection<TeamRow> Team { get; } = new();
+    public ObservableCollection<TripRow> Trips { get; } = new();
+    public ObservableCollection<FixedRow> FixedPoints { get; } = new();
+    public ObservableCollection<QualityRow> Quality { get; } = new();
 
     [ObservableProperty] private bool _isEnabled = true;
     [ObservableProperty] private string _summary = "—";

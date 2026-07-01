@@ -35,28 +35,28 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly ILayoutService? _layout;
     private readonly IAppSettingsService? _settings;
     private readonly ILogService? _log;   // #3 in-app activity log
-    private readonly INotificationService _notifications;   // UX-07 toast/bell center
-    private readonly ICrashRecoveryService? _crashRecovery; // PERF-06 safe-mode + buffer recovery
-    private readonly IScriptHookService? _hooks;            // EXT-03 on-build hook
+    private readonly INotificationService _notifications;   // toast/bell center
+    private readonly ICrashRecoveryService? _crashRecovery; // safe-mode + buffer recovery
+    private readonly IScriptHookService? _hooks;            // on-build hook
     private readonly IWorkspaceSession? _session;
     private readonly DockFactory _factory;
     private IStoragePicker? _picker;
 
     public ILayoutService? LayoutService => _layout;
 
-    /// <summary>UX-07: the notification hub — bound by the toolbar bell flyout and the toast layer.</summary>
+    /// <summary>the notification hub — bound by the toolbar bell flyout and the toast layer.</summary>
     public INotificationService Notifications => _notifications;
 
-    /// <summary>UX-07: unread notification count for the toolbar bell badge.</summary>
+    /// <summary>unread notification count for the toolbar bell badge.</summary>
     [ObservableProperty] private int _unreadNotifications;
-    /// <summary>UX-07: true when there are unread notifications (drives the badge visibility).</summary>
+    /// <summary>true when there are unread notifications (drives the badge visibility).</summary>
     [ObservableProperty] private bool _hasUnreadNotifications;
-    /// <summary>UX-07: true when the notification history has any entries (drives the empty-state text).</summary>
+    /// <summary>true when the notification history has any entries (drives the empty-state text).</summary>
     [ObservableProperty] private bool _hasNotificationHistory;
 
-    /// <summary>UX-07: clears the notification history (bound to the bell flyout "Clear" button).</summary>
+    /// <summary>clears the notification history (bound to the bell flyout "Clear" button).</summary>
     [RelayCommand] private void ClearNotifications() => _notifications.Clear();
-    /// <summary>UX-07: resets the unread badge (called when the bell flyout is opened).</summary>
+    /// <summary>resets the unread badge (called when the bell flyout is opened).</summary>
     public void MarkNotificationsRead() => _notifications.MarkAllRead();
 
     // Dock layout bound by MainWindow.axaml (swappable so "reset layout" can rebuild it, #16).
@@ -72,15 +72,15 @@ public partial class MainWindowViewModel : ViewModelBase
     public GeneratedFilesToolViewModel GeneratedFilesTool { get; }
     public XviToolViewModel XviTool { get; }
     public OutlineToolViewModel OutlineTool { get; }
-    public ProjectToolViewModel ProjectTool { get; }   // PROJ-02/03/07
+    public ProjectToolViewModel ProjectTool { get; }
     public LogToolViewModel LogTool { get; }           // #3 activity log
-    public LivePreviewToolViewModel LivePreviewTool { get; } // VIS-02
-    public MapViewerToolViewModel MapViewerTool { get; }     // VIS-03/05
-    public Model3DViewerToolViewModel Model3DViewerTool { get; }  // VIS-01
-    public StructuralGeologyToolViewModel StructuralGeologyTool { get; }  // STRUCT-01
+    public LivePreviewToolViewModel LivePreviewTool { get; }
+    public MapViewerToolViewModel MapViewerTool { get; }
+    public Model3DViewerToolViewModel Model3DViewerTool { get; }
+    public StructuralGeologyToolViewModel StructuralGeologyTool { get; }
     public SettingsToolViewModel SettingsTool { get; }
 
-    /// <summary>PROJ-08: clickable breadcrumb of the @-qualified name at the caret (status bar).</summary>
+    /// <summary>clickable breadcrumb of the @-qualified name at the caret (status bar).</summary>
     public BreadcrumbViewModel Breadcrumb { get; }
 
     // Convenience accessors so menu/toolbar/keyboard bindings stay stable.
@@ -97,7 +97,7 @@ public partial class MainWindowViewModel : ViewModelBase
     /// startup loading spinner overlay (#14).</summary>
     [ObservableProperty] private bool _isLoading;
 
-    /// <summary>PERF-02: true while the cross-file object graph is being (re)built off-thread —
+    /// <summary>true while the cross-file object graph is being (re)built off-thread —
     /// drives the status-bar "Indexing…" indicator.</summary>
     [ObservableProperty] private bool _isIndexing;
 
@@ -114,13 +114,13 @@ public partial class MainWindowViewModel : ViewModelBase
     /// <summary>Interpreted file type + parsed/not-parsed, shown on the status bar (#5).</summary>
     [ObservableProperty] private string _statusFileType = string.Empty;
 
-    // ----- QOL-06: selection stats -------------------------------------------
+    // ----- : selection stats -------------------------------------------
     /// <summary>True when the active editor has a non-empty selection (shows the selection group).</summary>
     [ObservableProperty] private bool _hasSelection;
     [ObservableProperty] private int _selectionChars;
     [ObservableProperty] private int _selectionLines;
 
-    /// <summary>Updates the status-bar selection counters (QOL-06).</summary>
+    /// <summary>Updates the status-bar selection counters.</summary>
     public void SetSelectionStats(int chars, int lines)
     {
         HasSelection = chars > 0;
@@ -152,8 +152,8 @@ public partial class MainWindowViewModel : ViewModelBase
         if (_settings is { } s && s.Current.ValidateOnType != value) s.Save(s.Current with { ValidateOnType = value });
     }
 
-    // ---- EDIT-13: whitespace / EOL / indent-guide render toggles (View menu) ----
-    /// <summary>True when EDIT-13 is enabled (compile-time flag + runtime setting) — gates the View-menu items.</summary>
+    // ---- : whitespace / EOL / indent-guide render toggles (View menu) ----
+    /// <summary>True when is enabled (compile-time flag + runtime setting) — gates the View-menu items.</summary>
     public bool WhitespaceFeatureEnabled =>
         EditorFeatureFlags.IsEnabled(EditorFeature.WhitespaceGuides, _settings?.Current);
 
@@ -175,8 +175,8 @@ public partial class MainWindowViewModel : ViewModelBase
         if (_settings is { } s) s.Save(s.Current with { EditorShowIndentGuides = value });
     }
 
-    // ---- EDIT-07: minimap toggle (View menu) ----
-    /// <summary>EDIT-07 gate (compile-time flag + runtime setting).</summary>
+    // ---- : minimap toggle (View menu) ----
+    /// <summary>gate (compile-time flag + runtime setting).</summary>
     public bool MinimapFeatureEnabled =>
         EditorFeatureFlags.IsEnabled(EditorFeature.Minimap, _settings?.Current);
 
@@ -186,8 +186,8 @@ public partial class MainWindowViewModel : ViewModelBase
         if (_settings is { } s) s.Save(s.Current with { EditorShowMinimap = value });
     }
 
-    // ---- EDIT-11: split editor (side-by-side via a float window) ----
-    /// <summary>EDIT-11 gate (compile-time flag + runtime setting).</summary>
+    // ---- : split editor (side-by-side via a float window) ----
+    /// <summary>gate (compile-time flag + runtime setting).</summary>
     public bool SplitFeatureEnabled =>
         EditorFeatureFlags.IsEnabled(EditorFeature.SplitView, _settings?.Current);
 
@@ -482,10 +482,10 @@ public partial class MainWindowViewModel : ViewModelBase
         _session = session;
         _wordWrap = settings?.Current.EditorWordWrap ?? false; // seed without persisting
         _validateOnType = settings?.Current.ValidateOnType ?? false;   // seed without persisting
-        _showWhitespace = settings?.Current.EditorShowWhitespace ?? false;   // EDIT-13 (seed, no persist)
+        _showWhitespace = settings?.Current.EditorShowWhitespace ?? false;   // (seed, no persist)
         _showEndOfLine = settings?.Current.EditorShowEndOfLine ?? false;
         _showIndentGuides = settings?.Current.EditorShowIndentGuides ?? false;
-        _showMinimap = settings?.Current.EditorShowMinimap ?? false;          // EDIT-07 (seed, no persist)
+        _showMinimap = settings?.Current.EditorShowMinimap ?? false;          // (seed, no persist)
         _factory = factory;
 
         WorkspaceTool = workspaceTool;
@@ -502,7 +502,7 @@ public partial class MainWindowViewModel : ViewModelBase
         Model3DViewerTool = model3dViewerTool;
         StructuralGeologyTool = structuralGeologyTool;
         SettingsTool = settingsTool;
-        Breadcrumb = new BreadcrumbViewModel(_documents);   // PROJ-08
+        Breadcrumb = new BreadcrumbViewModel(_documents);
 
         Layout = _factory.CreateLayout();
         _factory.InitLayout(Layout);
@@ -518,11 +518,11 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             OnUiThread(() => TouchMru(e.Dockable));   // MRU covers central tool panels too, not just files
             if (e.Dockable is FileDocumentViewModel doc) _documents.SetActive(doc);
-            // VIS-01: when the 3D Viewer pane is shown, refresh its model list and auto-open the
+            // when the 3D Viewer pane is shown, refresh its model list and auto-open the
             // default export-model output (even if stale).
             else if (e.Dockable is Docking.Model3DViewerToolViewModel m3d)
                 OnUiThread(m3d.Viewer.OnPanelActivated);
-            // STRUCT-01: run the structural analysis the first time its panel is shown.
+            // run the structural analysis the first time its panel is shown.
             else if (e.Dockable is Docking.StructuralGeologyToolViewModel sg)
                 OnUiThread(sg.Structural.OnPanelActivated);
         };
@@ -537,14 +537,14 @@ public partial class MainWindowViewModel : ViewModelBase
             _settings.Changed += (_, _) => OnUiThread(() =>
             {
                 RecentFilesChanged?.Invoke(this, EventArgs.Empty);
-                OnPropertyChanged(nameof(LivePreviewEnabled));   // VIS-01/02/05 menu gates
+                OnPropertyChanged(nameof(LivePreviewEnabled));   // menu gates
                 OnPropertyChanged(nameof(MapViewerEnabled));
                 OnPropertyChanged(nameof(Model3DViewerEnabled));
-                OnPropertyChanged(nameof(StructuralGeologyEnabled));   // STRUCT-01 menu gate
+                OnPropertyChanged(nameof(StructuralGeologyEnabled));   // menu gate
                 ValidateOnType = _settings.Current.ValidateOnType;     // keep the toolbar toggle in sync with Preferences
-                ConfigureAutoSave();   // QOL-09
+                ConfigureAutoSave();
             });
-            ConfigureAutoSave();   // QOL-09 (apply persisted mode at startup)
+            ConfigureAutoSave();   // (apply persisted mode at startup)
             // Apply the persisted UI language at startup (#9).
             var lang = _settings.Current.UiLanguage;
             if (!string.IsNullOrEmpty(lang)) _language.SetLanguage(lang);
@@ -556,7 +556,7 @@ public partial class MainWindowViewModel : ViewModelBase
             // graph (project scope) without the full Refresh/tree rebuild that Changed drives.
             _session.BuffersRevalidated += (_, _) => OnUiThread(RefreshDiagnostics);
             _session.CandidatesChanged += (_, _) => OnUiThread(Refresh);
-            // PERF-02: mirror the background-indexing state for the status-bar indicator.
+            // mirror the background-indexing state for the status-bar indicator.
             _session.IndexingChanged += (_, _) => OnUiThread(() => IsIndexing = _session.IsIndexing);
         }
         _documents.DocumentChanged += (_, _) => RefreshActiveTools();
@@ -570,9 +570,9 @@ public partial class MainWindowViewModel : ViewModelBase
         ObjectBrowser.ShotEditRequested += async (_, e) => await ApplyShotEditAsync(e).ConfigureAwait(true);
         WorkspaceExplorer.OpenRequested += async (_, node) => await OpenNodeAsync(node).ConfigureAwait(true);
         WorkspaceExplorer.NavigateRequested += (_, span) => NavigateTo(span);
-        // STRUCT-01: double-click a measurement / plane → jump to its source span.
+        // double-click a measurement / plane → jump to its source span.
         StructuralGeologyTool.Structural.NavigateRequested += (_, span) => NavigateTo(span);
-        // VIS-01: "Show in 3D" from a station/survey context menu → reveal it in the embedded viewer.
+        // "Show in 3D" from a station/survey context menu → reveal it in the embedded viewer.
         _documents.ShowInModel3DRequested += (_, name) => OnUiThread(() =>
         {
             if (!Model3DViewerEnabled) return;
@@ -588,7 +588,7 @@ public partial class MainWindowViewModel : ViewModelBase
             combined.AddRange(diags);
             Diagnostics.Load(combined.ToImmutable());
         };
-        // UX-07: toast the build result with a one-click "Show output" action. The result flags
+        // toast the build result with a one-click "Show output" action. The result flags
         // are set on BuildViewModel before CompileCompleted fires, so they are current here.
         Build.CompileCompleted += (_, _) => OnUiThread(() =>
         {
@@ -606,19 +606,19 @@ public partial class MainWindowViewModel : ViewModelBase
                     Tr.Get("Notif_BuildFailMsg"), Tr.Get("Notif_ShowOutput"), ShowOutput);
             }
         });
-        // VIS-03: after a build, auto-load the newest rendered map into the in-app viewer.
+        // after a build, auto-load the newest rendered map into the in-app viewer.
         Build.CompileCompleted += (_, _) =>
         {
             if (_settings?.Current is { EnableMapAutoPreview: true, EnableInAppViewer: true })
                 OnUiThread(() => MapViewerTool.Map.ShowLatest(Build.Artifacts.Select(a => a.Path)));
         };
-        // VIS-01: after a build, auto-load the newest .lox/.3d into the embedded 3D viewer.
+        // after a build, auto-load the newest .lox/.3d into the embedded 3D viewer.
         Build.CompileCompleted += (_, _) =>
         {
             if (_settings?.Current is { EnableModel3DAutoPreview: true, EnableModel3DViewer: true })
                 OnUiThread(() => Model3DViewerTool.Viewer.ShowLatest(Build.Artifacts));
         };
-        // VIS-01: Generated Files → "View in internal 3D viewer".
+        // Generated Files → "View in internal 3D viewer".
         Build.View3DRequested += (_, path) => OnUiThread(() =>
         {
             if (!Model3DViewerEnabled)
@@ -630,7 +630,7 @@ public partial class MainWindowViewModel : ViewModelBase
             _factory.ShowTool(Model3DViewerTool);
             Model3DViewerTool.Viewer.LoadModel(path);
         });
-        // VIS-05: open a clicked PDF in the in-app map viewer (BuildViewModel gates this on the setting).
+        // open a clicked PDF in the in-app map viewer (BuildViewModel gates this on the setting).
         Build.ViewMapRequested += (_, path) => OnUiThread(() =>
         {
             Activate(MapViewerTool);
@@ -647,7 +647,7 @@ public partial class MainWindowViewModel : ViewModelBase
         Build.NavigateRequested += (_, span) => NavigateTo(span);
         // Surface the Compiler Output panel when a build starts (#2).
         Build.BuildStarted += (_, _) => OnUiThread(() => _factory.ShowCompilerOutput());
-        // EXT-03: run the on-build script hook (active thconfig as {file}).
+        // run the on-build script hook (active thconfig as {file}).
         Build.BuildStarted += (_, _) => _hooks?.Run(ScriptHookEvent.Build, _session?.ActiveThconfig?.FullPath);
 
         Refresh();
@@ -743,7 +743,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 try
                 {
                     await _documents.OpenFileAsync(path).ConfigureAwait(true); loaded++;
-                    // QOL-10: restore the caret offset so the tab reopens where it was left.
+                    // restore the caret offset so the tab reopens where it was left.
                     if (s?.SessionCaretOffsets is { } carets && carets.TryGetValue(path, out var off) && off > 0 &&
                         _documents.Documents.FirstOrDefault(d => string.Equals(d.FilePath, path, StringComparison.OrdinalIgnoreCase)) is { } reopened)
                         reopened.SavedCaretOffset = off;
@@ -763,10 +763,10 @@ public partial class MainWindowViewModel : ViewModelBase
             () => _factory.RemoveUnresolvedPlaceholders(),
             Avalonia.Threading.DispatcherPriority.Background);
 
-        // UX-05: re-create the floated tool/document windows from the last session. Posted at
+        // re-create the floated tool/document windows from the last session. Posted at
         // Background priority AFTER the placeholder removal above (same priority = FIFO), so the
         // restored documents already exist and can be resolved by id and floated.
-        // PERF-06: SAFE MODE — after a crash, skip the float-window restore so a bad saved layout
+        // SAFE MODE — after a crash, skip the float-window restore so a bad saved layout
         // can't bring the app down on relaunch.
         if (_crashRecovery is not { PreviousRunCrashed: true })
             Avalonia.Threading.Dispatcher.UIThread.Post(
@@ -775,11 +775,11 @@ public partial class MainWindowViewModel : ViewModelBase
         else
             _log?.Warning("Started in safe mode after an unclean shutdown — floated-window layout was not restored.");
 
-        // PERF-06: offer to recover unsaved buffers left by a crashed run.
+        // offer to recover unsaved buffers left by a crashed run.
         OfferCrashRecovery();
     }
 
-    /// <summary>PERF-06: if a crashed run left unsaved buffers, surface a recovery notification.</summary>
+    /// <summary>if a crashed run left unsaved buffers, surface a recovery notification.</summary>
     private void OfferCrashRecovery()
     {
         if (_crashRecovery is null) return;
@@ -822,7 +822,7 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         if (_settings is null) return;
         var paths = new System.Collections.Generic.List<string>();
-        // QOL-10: also remember each tab's caret offset so it restores where the user left off.
+        // also remember each tab's caret offset so it restores where the user left off.
         var carets = new System.Collections.Generic.Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         foreach (var doc in _documents.Documents)
         {
@@ -848,12 +848,12 @@ public partial class MainWindowViewModel : ViewModelBase
     public event EventHandler? RecentFilesChanged;
     /// <summary>Recently-opened files, most-recent first (persisted across launches, #8).</summary>
     public IReadOnlyList<string> RecentFiles => _settings?.Current.RecentFiles ?? Array.Empty<string>();
-    /// <summary>Pinned recent files (QOL-05).</summary>
+    /// <summary>Pinned recent files.</summary>
     public IReadOnlyList<string> PinnedRecentFiles => _settings?.Current.PinnedRecentFiles ?? Array.Empty<string>();
     /// <summary>Recently-opened working directories, most-recent first (File ▸ Recent Directories).</summary>
     public IReadOnlyList<string> RecentDirectories => _settings?.Current.RecentDirectories ?? Array.Empty<string>();
 
-    /// <summary>QOL-05: pin a recent file so it stays at the top and survives "Clear Recent".</summary>
+    /// <summary>pin a recent file so it stays at the top and survives "Clear Recent".</summary>
     [RelayCommand]
     private void PinRecent(string? path)
     {
@@ -864,7 +864,7 @@ public partial class MainWindowViewModel : ViewModelBase
         _settings.Save(s with { PinnedRecentFiles = pinned });
     }
 
-    /// <summary>QOL-05: unpin a previously-pinned recent file.</summary>
+    /// <summary>unpin a previously-pinned recent file.</summary>
     [RelayCommand]
     private void UnpinRecent(string? path)
     {
@@ -875,7 +875,7 @@ public partial class MainWindowViewModel : ViewModelBase
         _settings.Save(s with { PinnedRecentFiles = pinned });
     }
 
-    /// <summary>QOL-05: clears the (unpinned) recent-files list.</summary>
+    /// <summary>clears the (unpinned) recent-files list.</summary>
     [RelayCommand]
     private void ClearRecent()
     {
@@ -901,7 +901,7 @@ public partial class MainWindowViewModel : ViewModelBase
         _settings.Save(_settings.Current with { RecentDirectories = Array.Empty<string>() });
     }
 
-    /// <summary>UX-10: reopen the most-recently-closed tab (Ctrl+Shift+T).</summary>
+    /// <summary>reopen the most-recently-closed tab (Ctrl+Shift+T).</summary>
     [RelayCommand]
     private async Task ReopenClosedTab()
     {
@@ -965,9 +965,9 @@ public partial class MainWindowViewModel : ViewModelBase
         catch (Exception ex) { StatusText = ex.Message; }
     }
 
-    // ───────── Tools: import / GIS export / surface / scaffold (IMP-01, GIS-01/03, TH2-04) ─────────
+    // ───────── Tools: import / GIS export / surface / scaffold ─────────
 
-    /// <summary>IMP-01: import a Survex (.svx) or Compass (.dat) file → a new .th.</summary>
+    /// <summary>import a Survex (.svx) or Compass (.dat) file → a new .th.</summary>
     [RelayCommand]
     private async Task ImportSurvey()
     {
@@ -993,7 +993,7 @@ public partial class MainWindowViewModel : ViewModelBase
         catch (Exception ex) { StatusText = ex.Message; _log?.Warning($"Import failed: {ex.Message}"); _notifications.Error(Tr.Get("Notif_ImportFailed"), ex.Message); }
     }
 
-    /// <summary>GIS-01: export entrances / fixed points in the project CRS. Format via CommandParameter.</summary>
+    /// <summary>export entrances / fixed points in the project CRS. Format via CommandParameter.</summary>
     [RelayCommand]
     private async Task ExportGis(string? format)
     {
@@ -1019,7 +1019,7 @@ public partial class MainWindowViewModel : ViewModelBase
         catch (Exception ex) { StatusText = ex.Message; _log?.Warning($"GIS export failed: {ex.Message}"); _notifications.Error(Tr.Get("Notif_GisExportFailed"), ex.Message); }
     }
 
-    /// <summary>PUB-02: export the stations or shots table to CSV / Markdown / HTML / LaTeX.
+    /// <summary>export the stations or shots table to CSV / Markdown / HTML / LaTeX.
     /// CommandParameter is "&lt;which&gt;|&lt;format&gt;", e.g. "shots|html".</summary>
     [RelayCommand]
     private async Task ExportTable(string? spec)
@@ -1053,7 +1053,7 @@ public partial class MainWindowViewModel : ViewModelBase
         catch (Exception ex) { StatusText = ex.Message; _log?.Warning($"Table export failed: {ex.Message}"); _notifications.Error(Tr.Get("Notif_TableExportFailed"), ex.Message); }
     }
 
-    /// <summary>MEDIA-04: import GPX waypoints/track points → a Therion survey of fixed stations.</summary>
+    /// <summary>import GPX waypoints/track points → a Therion survey of fixed stations.</summary>
     [RelayCommand]
     private async Task ImportGpx()
     {
@@ -1073,7 +1073,7 @@ public partial class MainWindowViewModel : ViewModelBase
         catch (Exception ex) { StatusText = ex.Message; _log?.Warning($"GPX import failed: {ex.Message}"); _notifications.Error(Tr.Get("Notif_GpxImportFailed"), ex.Message); }
     }
 
-    /// <summary>PUB-01: generate a one-click HTML survey report and open it.</summary>
+    /// <summary>generate a one-click HTML survey report and open it.</summary>
     [RelayCommand]
     private async Task GenerateReport()
     {
@@ -1103,7 +1103,7 @@ public partial class MainWindowViewModel : ViewModelBase
         "<style>body{font-family:sans-serif}table{border-collapse:collapse}th,td{border:1px solid #ccc;padding:3px 8px;text-align:left}</style>\n" +
         $"</head><body>\n<h2>{System.Net.WebUtility.HtmlEncode(title)}</h2>\n{bodyHtml}</body></html>\n";
 
-    /// <summary>GIS-03: convert an ESRI ASCII grid (.asc) into a Therion surface .th.</summary>
+    /// <summary>convert an ESRI ASCII grid (.asc) into a Therion surface .th.</summary>
     [RelayCommand]
     private async Task ImportDemSurface()
     {
@@ -1124,7 +1124,7 @@ public partial class MainWindowViewModel : ViewModelBase
         catch (Exception ex) { StatusText = ex.Message; _log?.Warning($"DEM import failed: {ex.Message}"); _notifications.Error(Tr.Get("Notif_DemImportFailed"), ex.Message); }
     }
 
-    /// <summary>TH2-04: scaffold a new .th2 scrap stub; the scrap id is taken from the chosen filename.</summary>
+    /// <summary>scaffold a new .th2 scrap stub; the scrap id is taken from the chosen filename.</summary>
     [RelayCommand]
     private async Task NewScrapScaffold()
     {
@@ -1189,22 +1189,22 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand] private void ToggleWorkspaceExplorer() => Activate(WorkspaceTool);
     [RelayCommand] private void ToggleDiagnostics()       => Activate(DiagnosticsTool);
     [RelayCommand] private void ToggleObjectBrowser()     => Activate(ObjectBrowserTool);
-    [RelayCommand] private void ToggleOutline()           => Activate(OutlineTool); // EDIT-09
-    [RelayCommand] private void ToggleProject()           => Activate(ProjectTool); // PROJ-02/03/07
+    [RelayCommand] private void ToggleOutline()           => Activate(OutlineTool);
+    [RelayCommand] private void ToggleProject()           => Activate(ProjectTool);
     [RelayCommand] private void ToggleLog()               => Activate(LogTool);      // #3
-    [RelayCommand] private void ToggleLivePreview()       => Activate(LivePreviewTool); // VIS-02
-    [RelayCommand] private void ToggleMapViewer()         => Activate(MapViewerTool);    // VIS-05
-    [RelayCommand] private void ToggleModel3DViewer()     => _factory.ShowTool(Model3DViewerTool); // VIS-01 (may be off-by-default → add on demand)
-    [RelayCommand] private void ToggleStructuralGeology() => _factory.ShowToolInDocuments(StructuralGeologyTool); // STRUCT-01 (big central panel, on demand)
+    [RelayCommand] private void ToggleLivePreview()       => Activate(LivePreviewTool);
+    [RelayCommand] private void ToggleMapViewer()         => Activate(MapViewerTool);
+    [RelayCommand] private void ToggleModel3DViewer()     => _factory.ShowTool(Model3DViewerTool); // (may be off-by-default → add on demand)
+    [RelayCommand] private void ToggleStructuralGeology() => _factory.ShowToolInDocuments(StructuralGeologyTool); // (big central panel, on demand)
     [RelayCommand] private void ToggleSettings()          => Activate(SettingsTool);
 
-    /// <summary>VIS-01/02/05 gates — drive the View-menu entries (hidden when the feature is off).</summary>
+    /// <summary>gates — drive the View-menu entries (hidden when the feature is off).</summary>
     public bool LivePreviewEnabled => _settings?.Current.EnableLivePreview ?? true;
     public bool MapViewerEnabled   => _settings?.Current.EnableInAppViewer ?? true;
     public bool Model3DViewerEnabled => _settings?.Current.EnableModel3DViewer ?? false;
     public bool StructuralGeologyEnabled => _settings?.Current.EnableStructuralGeology ?? false;
 
-    /// <summary>EDIT-09 gate (compile-time flag + runtime setting) — drives the Outline menu/toolbar entry.</summary>
+    /// <summary>gate (compile-time flag + runtime setting) — drives the Outline menu/toolbar entry.</summary>
     public bool OutlineFeatureEnabled =>
         EditorFeatureFlags.IsEnabled(EditorFeature.Outline, _settings?.Current);
 
@@ -1225,15 +1225,15 @@ public partial class MainWindowViewModel : ViewModelBase
         if (_documents.Active is not { } doc) return;
         try
         {
-            doc.RequestSaveCleanup(); // EDIT-14: in-place trim/final-newline (caret-preserving) before write
+            doc.RequestSaveCleanup(); // in-place trim/final-newline (caret-preserving) before write
             await _documents.WriteCurrentTextAsync(doc.DocumentText).ConfigureAwait(true);
             StatusText = $"Saved {doc.FilePath}";
-            TriggerCompileOnSave(); // BUILD-07
+            TriggerCompileOnSave();
         }
         catch (Exception ex) { StatusText = ex.Message; }
     }
 
-    // ---- auto-save (QOL-09) -------------------------------------------------
+    // ---- auto-save -------------------------------------------------
     private Avalonia.Threading.DispatcherTimer? _autoSaveTimer;
 
     /// <summary>Applies the current auto-save setting: starts/stops the periodic timer.</summary>
@@ -1257,7 +1257,7 @@ public partial class MainWindowViewModel : ViewModelBase
         return t;
     }
 
-    /// <summary>QOL-09: persists every dirty document with a real on-disk path.</summary>
+    /// <summary>persists every dirty document with a real on-disk path.</summary>
     public async Task SaveAllDirtyAsync()
     {
         foreach (var doc in _documents.Documents.ToList())
@@ -1268,7 +1268,7 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
-    /// <summary>QOL-09: auto-saves on focus loss when that mode is selected (called by the view).</summary>
+    /// <summary>auto-saves on focus loss when that mode is selected (called by the view).</summary>
     public void AutoSaveOnFocusLoss()
     {
         if (_settings?.Current.AutoSave == AutoSaveMode.OnFocusLoss) _ = SaveAllDirtyAsync();
@@ -1276,7 +1276,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private System.Threading.CancellationTokenSource? _autoBuildCts;
 
-    /// <summary>BUILD-07: debounced background (re)build after a save, when the setting is on.</summary>
+    /// <summary>debounced background (re)build after a save, when the setting is on.</summary>
     private async void TriggerCompileOnSave()
     {
         if (_settings?.Current.CompileOnSave != true) return;
@@ -1394,10 +1394,10 @@ public partial class MainWindowViewModel : ViewModelBase
             foreach (var (path, model) in ws.PerFile)
                 if (!IsActiveFile(path, activePath))
                     merged.AddRange(model.Diagnostics);
-            // LANG-13: run the (config-driven) semantic rules over the workspace and include their
+            // run the (config-driven) semantic rules over the workspace and include their
             // diagnostics. Cached per workspace snapshot so repeated refreshes don't re-run them.
             merged.AddRange(RuleDiagnostics(ws));
-            // DIAG-02..06: project-wide correctness analysis (loops, blunders, fore/back,
+            // project-wide correctness analysis (loops, blunders, fore/back,
             // collisions, dangling includes). Cached per workspace snapshot like the rules.
             merged.AddRange(ProjectAnalysisDiagnostics(ws));
             // The active file's live parse/semantic/equate diagnostics (same set as its squiggles).
@@ -1422,7 +1422,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private WorkspaceSemanticModel? _projDiagWorkspace;
     private System.Collections.Immutable.ImmutableArray<Therion.Core.Diagnostic> _projDiagCache;
 
-    /// <summary>Runs the workspace correctness analysis (DIAG-02..06), cached per snapshot.</summary>
+    /// <summary>Runs the workspace correctness analysis, cached per snapshot.</summary>
     private System.Collections.Immutable.ImmutableArray<Therion.Core.Diagnostic> ProjectAnalysisDiagnostics(
         WorkspaceSemanticModel ws)
     {
@@ -1433,7 +1433,7 @@ public partial class MainWindowViewModel : ViewModelBase
         return _projDiagCache;
     }
 
-    /// <summary>Runs the semantic rule runner over <paramref name="ws"/>, caching by snapshot (LANG-13).</summary>
+    /// <summary>Runs the semantic rule runner over <paramref name="ws"/>, caching by snapshot.</summary>
     private System.Collections.Immutable.ImmutableArray<Therion.Core.Diagnostic> RuleDiagnostics(
         WorkspaceSemanticModel ws)
     {
@@ -1486,7 +1486,7 @@ public partial class MainWindowViewModel : ViewModelBase
         StatusCaretLine = span.Start.Line;
         StatusCaretCol = span.Start.Column;
         StatusCaretPos = span.StartOffset;
-        Breadcrumb.Update(_documents.Active?.DocumentText, span.StartOffset);   // PROJ-08
+        Breadcrumb.Update(_documents.Active?.DocumentText, span.StartOffset);
     }
 
     private static int CountLines(string text)

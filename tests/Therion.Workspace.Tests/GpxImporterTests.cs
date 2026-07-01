@@ -2,7 +2,7 @@ using Therion.Workspace.Import;
 
 namespace Therion.Workspace.Tests;
 
-// MEDIA-04 — GPX → Therion fixed-station import.
+// GPX → Therion fixed-station import.
 public class GpxImporterTests
 {
     private const string Gpx =

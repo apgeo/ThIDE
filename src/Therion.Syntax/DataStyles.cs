@@ -1,4 +1,4 @@
-// LANG-05 — data-style awareness. thbook v6.4.0 §"centreline" (data command), p.21.
+// data-style awareness. thbook v6.4.0 §"centreline" (data command), p.21.
 // Therion source-of-truth: therion/src/thdataobject.cxx / thdata.cxx (style + reading tables).
 //
 // The `data <style> <reading order>` command declares the column grammar for the data rows

@@ -41,14 +41,14 @@ public partial class FileDocumentView : UserControl
             editor.HoverTargetChanged += OnHoverTargetChanged;
             editor.FindReferencesRequested += OnFindReferencesRequested;
             editor.RenameSymbolRequested += OnRenameSymbolRequested;
-            editor.StepOutRequested += OnStepOutRequested; // EDIT-17
+            editor.StepOutRequested += OnStepOutRequested;
         }
     }
 
     private void OnFindReferencesRequested(object? sender, string term)
         => TryDocuments()?.RequestFindReferences(term);
 
-    // EDIT-17: step back out of an included file to whoever opened it (reuses the nav history).
+    // step back out of an included file to whoever opened it (reuses the nav history).
     private void OnStepOutRequested(object? sender, EventArgs e)
         => _ = TryDocuments()?.GoBackAsync();
 
@@ -140,7 +140,7 @@ public partial class FileDocumentView : UserControl
         // highlighted-term navigation (Shift+F12 cycling), per #1. Pointer clicks are
         // recorded even for short moves so back/forward tracks all visited points (#8).
         var ed = sender as TherionTextEditor;
-        // QOL-04: find-next moves from the search panel are excluded from the trail too.
+        // find-next moves from the search panel are excluded from the trail too.
         bool termNav = (ed?.IsTermNavigating ?? false) || (ed?.LastCaretMoveFromSearch ?? false);
         bool fromPointer = ed?.LastCaretMoveFromPointer ?? false;
         TryDocuments()?.ReportCaret(span, termNav, fromPointer);
@@ -194,7 +194,7 @@ public partial class FileDocumentView : UserControl
         }
     }
 
-    // TRUST-05: "Compare" on the external-change banner → read-only disk-vs-editor diff.
+    // "Compare" on the external-change banner → read-only disk-vs-editor diff.
     private void OnCompareExternalRequested(object? sender, string diskText)
     {
         if (_vm is null || TopLevel.GetTopLevel(this) is not Window owner) return;
@@ -227,7 +227,7 @@ public partial class FileDocumentView : UserControl
         _vm?.ClearPendingScroll();
     }
 
-    // EDIT-14: clean the document in place before the shell writes it, so the caret is preserved.
+    // clean the document in place before the shell writes it, so the caret is preserved.
     private void OnSaveCleanupRequested(object? sender, EventArgs e)
         => this.FindControl<TherionTextEditor>("Editor")?.ApplySaveCleanup();
 
@@ -447,7 +447,7 @@ public partial class FileDocumentView : UserControl
         TryDocuments()?.RequestRenameSymbol(row.ShortName, ReferenceKind.Station);
     }
 
-    // VIS-01: reveal the selected station/shot endpoint in the embedded 3D viewer.
+    // reveal the selected station/shot endpoint in the embedded 3D viewer.
     private void OnShowStationIn3D(object? sender, RoutedEventArgs e)
     {
         if (StationGridSelectedRow() is { } row) TryDocuments()?.RequestShowInModel3D(row.FullName);

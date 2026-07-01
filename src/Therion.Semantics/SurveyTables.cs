@@ -1,6 +1,6 @@
-// PUB-02 — station / shot data tables as plain (headers, rows) for export to CSV / Markdown /
+// station / shot data tables as plain (headers, rows) for export to CSV / Markdown /
 // HTML / LaTeX. Pure projection of a WorkspaceSemanticModel; the formatting lives in the app's
-// DataExport. Reused by the PUB-01 report generator.
+// DataExport. Reused by the report generator.
 
 using System.Collections.Generic;
 using System.Globalization;

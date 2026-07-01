@@ -1,4 +1,4 @@
-// GIS-01 — minimal coordinate transforms needed to export survey points to lon/lat formats
+// minimal coordinate transforms needed to export survey points to lon/lat formats
 // (KML / GPX). We don't ship a full proj library, so we cover the cases that matter for caving:
 //   - lat-long / long-lat (WGS84): pass-through with the right axis order.
 //   - UTM<zone>[N|S] and EPSG:326xx/327xx (WGS84 UTM): closed-form inverse projection.
@@ -15,7 +15,7 @@ namespace Therion.Syntax;
 /// <summary>Lon/lat (WGS84, degrees) result of a coordinate transform.</summary>
 public readonly record struct LonLat(double Lon, double Lat);
 
-/// <summary>Best-effort coordinate transforms to WGS84 lon/lat for GIS export (GIS-01).</summary>
+/// <summary>Best-effort coordinate transforms to WGS84 lon/lat for GIS export.</summary>
 public static class CoordinateTransform
 {
     private const double A = 6378137.0;                 // WGS84 semi-major axis

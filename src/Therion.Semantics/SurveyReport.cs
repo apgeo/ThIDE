@@ -1,6 +1,6 @@
-// PUB-01 — one-click survey report. Builds a self-contained HTML report from the workspace model
+// one-click survey report. Builds a self-contained HTML report from the workspace model
 // (project summary + statistics, length-by-survey, team, trips, station list), reusing the
-// DATA-* analytics. Pure (no UI deps) so it's testable and reusable by the CLI; the app saves the
+// analytics. Pure (no UI deps) so it's testable and reusable by the CLI; the app saves the
 // string and opens it (print-to-PDF covers the PDF case).
 
 using System;

@@ -1,4 +1,4 @@
-// STRUCT-01 Phase 2 — pure centreline solve: world positions + cave legs, splays excluded.
+// Phase 2 — pure centreline solve: world positions + cave legs, splays excluded.
 
 using Therion.Semantics;
 using Therion.Structural;

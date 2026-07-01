@@ -1,4 +1,4 @@
-// LANG-04 — units & declination model. thbook v6.4.0 §"centreline" (units/calibrate/sd), p.20.
+// units & declination model. thbook v6.4.0 §"centreline" (units/calibrate/sd), p.20.
 // Therion source-of-truth: therion/src/thunits.cxx (unit name table).
 //
 // Maps the quantity keywords (length, compass, clino, …) and the unit names (meter, degrees,

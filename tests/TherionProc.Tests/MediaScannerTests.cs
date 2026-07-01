@@ -8,7 +8,7 @@ using TherionProc.Services;
 
 namespace TherionProc.Tests;
 
-// MEDIA-02 — the referenced-scan pass of the media manager.
+// the referenced-scan pass of the media manager.
 public class MediaScannerTests
 {
     [Fact]

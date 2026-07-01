@@ -2,7 +2,7 @@ using TherionProc.Services;
 
 namespace TherionProc.Tests;
 
-// UX-07: the notification model carried by the toast + bell center.
+// the notification model carried by the toast + bell center.
 public class NotificationTests
 {
     [Fact]

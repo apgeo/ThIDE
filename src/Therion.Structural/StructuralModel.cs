@@ -1,4 +1,4 @@
-// STRUCT-01 Phase 2 — domain records + options for structural-geology detection/extraction.
+// Phase 2 — domain records + options for structural-geology detection/extraction.
 //
 // These consume the existing object graph (ShotSymbol/StationSymbol/SemanticModel) and feed the
 // pure PlaneFitter. Selection state (which measurements are included) lives in the UI; the core only

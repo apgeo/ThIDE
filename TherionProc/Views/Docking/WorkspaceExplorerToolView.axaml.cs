@@ -72,7 +72,7 @@ public partial class WorkspaceExplorerToolView : UserControl
         ex.ActivateCommand.Execute(node);
     }
 
-    // ----- QOL-11: drag a file node into the editor to insert an input/source line ----
+    // ----- : drag a file node into the editor to insert an input/source line ----
 
     private WorkspaceTreeNode? _dragNode;
     private PointerPressedEventArgs? _dragPress;
@@ -239,7 +239,7 @@ public partial class WorkspaceExplorerToolView : UserControl
         if (Ctx()?.FullPath is not { } path) return;
         if (TopLevel.GetTopLevel(this) is not Window owner) return;
 
-        // TRUST-04: confirm before deleting. The message states whether it's undoable (trash) or
+        // confirm before deleting. The message states whether it's undoable (trash) or
         // permanent, so the user knows the stakes.
         var fileOps = Service<IFileOperations>();
         var label = fileOps?.DeleteActionLabel ?? "Delete";

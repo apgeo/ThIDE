@@ -1,4 +1,4 @@
-// STRUCT-01 Phase 2 — the headless facade: SemanticModel + options → detected batches, fitted planes,
+// Phase 2 — the headless facade: SemanticModel + options → detected batches, fitted planes,
 // cave legs and the resolved declination. The UI and a future CLI both drive this; the UI additionally
 // calls Recompute() when the user toggles which measurements / splays / origin are included.
 

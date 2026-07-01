@@ -4,7 +4,7 @@ using Therion.Syntax;
 
 namespace Therion.Semantics.Tests;
 
-// PUB-01 — the HTML survey report generator.
+// the HTML survey report generator.
 public class SurveyReportTests
 {
     private static WorkspaceSemanticModel Build(string src, string path = "cave.th")

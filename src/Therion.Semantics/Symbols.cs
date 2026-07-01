@@ -24,19 +24,19 @@ public sealed record StationSymbol(
     StationDeclarationKind Kind,
     ImmutableArray<SourceSpan> References)
 {
-    /// <summary>The station's <c>station &lt;name&gt; "comment"</c> text, if declared (LANG-04).</summary>
+    /// <summary>The station's <c>station &lt;name&gt; "comment"</c> text, if declared.</summary>
     public string? Comment { get; init; }
 
     /// <summary>
     /// Station flags from a <c>station … &lt;flags&gt;</c> command (entrance, continuation, sink,
-    /// spring, doline, dig, arch, overhang, …). Feeds entrance/leads features (LANG-06).
+    /// spring, doline, dig, arch, overhang, …). Feeds entrance/leads features.
     /// </summary>
     public ImmutableArray<string> Flags { get; init; } = ImmutableArray<string>.Empty;
 
     /// <summary>The <c>mark</c> type assigned to this station (fixed / painted / temporary), if any.</summary>
     public string? MarkType { get; init; }
 
-    /// <summary>Fixed coordinates from a <c>fix</c> command (DATA-06), in the active input <see cref="Cs"/>.</summary>
+    /// <summary>Fixed coordinates from a <c>fix</c> command, in the active input <see cref="Cs"/>.</summary>
     public double? FixX { get; init; }
     public double? FixY { get; init; }
     public double? FixZ { get; init; }
@@ -68,14 +68,14 @@ public sealed record SurveySymbol(
     /// <summary>The survey's <c>-title "..."</c>, if declared.</summary>
     public string? Title { get; init; }
 
-    /// <summary>Team member names from <c>team</c> commands directly in this survey (DATA-05).</summary>
+    /// <summary>Team member names from <c>team</c> commands directly in this survey.</summary>
     public ImmutableArray<string> Team { get; init; } = ImmutableArray<string>.Empty;
 
-    /// <summary>Dates from <c>date</c> commands directly in this survey (DATA-05/08; raw text).</summary>
+    /// <summary>Dates from <c>date</c> commands directly in this survey (raw text).</summary>
     public ImmutableArray<string> Dates { get; init; } = ImmutableArray<string>.Empty;
 }
 
-/// <summary>An <c>equate</c> relationship: the stations declared equivalent and its source span (DATA-03).</summary>
+/// <summary>An <c>equate</c> relationship: the stations declared equivalent and its source span.</summary>
 public sealed record EquateRecord(
     ImmutableArray<string> Stations,
     SourceSpan Span);
@@ -89,7 +89,7 @@ public sealed record EquateRecord(
 public sealed record EquateRef(string Raw, SourceSpan Span, string? Hint = null);
 
 /// <summary>
-/// A summary of a <c>.th2</c> drawing object (point/line/area) for the Object Browser (DATA-03):
+/// A summary of a <c>.th2</c> drawing object (point/line/area) for the Object Browser:
 /// its kind, type[:subtype], enclosing scrap and source location.
 /// </summary>
 public sealed record Th2ObjectRecord(
@@ -161,7 +161,7 @@ public sealed record MapSymbol(
     /// <summary>The map's <c>-projection</c> (plan / extended / elevation / none), if declared.</summary>
     public string? Projection { get; init; }
 
-    /// <summary>Ids of the scraps / sub-maps composed by this map's body (LANG-08).</summary>
+    /// <summary>Ids of the scraps / sub-maps composed by this map's body.</summary>
     public ImmutableArray<string> Members { get; init; } = ImmutableArray<string>.Empty;
 }
 

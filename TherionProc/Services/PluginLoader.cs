@@ -1,4 +1,4 @@
-// EXT-04 — plugin / extension surface.
+// plugin / extension surface.
 //
 // A minimal but real extension point: external assemblies dropped into the plugins folder are
 // scanned for public types implementing Therion.Semantics.ISemanticRule (the existing rule

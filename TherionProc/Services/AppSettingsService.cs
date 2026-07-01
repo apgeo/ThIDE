@@ -32,7 +32,7 @@ public enum QuickOpenSources
     ThconfigConnected = 4,    // only files that participate in the active thconfig's object graph
 }
 
-/// <summary>QOL-09: when the editor auto-saves dirty files.</summary>
+/// <summary>when the editor auto-saves dirty files.</summary>
 public enum AutoSaveMode
 {
     Off = 0,
@@ -57,11 +57,11 @@ public sealed record AppSettings
     public bool RestoreSessionOnStartup { get; init; } = true;
     /// <summary>Absolute paths of files open at last shutdown (most-recent active last).</summary>
     public IReadOnlyList<string> LastSessionFiles { get; init; } = Array.Empty<string>();
-    /// <summary>QOL-10: last caret offset per open file, restored when the tab reopens.</summary>
+    /// <summary>last caret offset per open file, restored when the tab reopens.</summary>
     public IReadOnlyDictionary<string, int> SessionCaretOffsets { get; init; } = new Dictionary<string, int>();
     /// <summary>Recently-opened files, most-recent first; grouped per type in the menu (#8).</summary>
     public IReadOnlyList<string> RecentFiles { get; init; } = Array.Empty<string>();
-    /// <summary>Pinned recent files (QOL-05): shown in their own group and never cleared by "Clear Recent".</summary>
+    /// <summary>Pinned recent files: shown in their own group and never cleared by "Clear Recent".</summary>
     public IReadOnlyList<string> PinnedRecentFiles { get; init; } = Array.Empty<string>();
     /// <summary>Recently-opened working directories (workspace roots), most-recent first; listed in
     /// the File ▸ Recent Directories submenu.</summary>
@@ -84,7 +84,7 @@ public sealed record AppSettings
     /// <summary>Rebuild the object graph when a tracked file changes on disk (#5b).</summary>
     public bool AutoReloadGraphOnExternalChange { get; init; } = true;
 
-    // ---- scripting / macro hooks (EXT-03) ----
+    // ---- scripting / macro hooks ----
     /// <summary>Run the configured hook commands on open/save/build. Adds processing time, so it
     /// can be turned off for big projects (default on, but hooks only fire when commands are set).</summary>
     public bool EnableScriptHooks { get; init; } = true;
@@ -95,12 +95,12 @@ public sealed record AppSettings
     /// <summary>Shell command run when a build starts (<c>{file}</c> = active thconfig), or null.</summary>
     public string? HookOnBuild { get; init; }
 
-    // ---- plugins (EXT-04) ----
+    // ---- plugins ----
     /// <summary>Load external plugin assemblies (custom semantic rules) from the plugins folder.
     /// Plugin rules run during analysis, so this can be disabled for performance (default on).</summary>
     public bool EnablePlugins { get; init; } = true;
 
-    // ---- telemetry (REL-05) ----
+    // ---- telemetry ----
     /// <summary>Opt-in: record anonymous usage events + crash reports to LOCAL files only. Off by default.</summary>
     public bool TelemetryEnabled { get; init; }
 
@@ -140,49 +140,49 @@ public sealed record AppSettings
     /// </summary>
     public IReadOnlyDictionary<string, bool> AutoOpenOverrides { get; init; } =
         new Dictionary<string, bool>();
-    /// <summary>BUILD-07: automatically (re)build the active project a short moment after each save. Off by default.</summary>
+    /// <summary>automatically (re)build the active project a short moment after each save. Off by default.</summary>
     public bool CompileOnSave { get; init; }
     /// <summary>Before compiling, ensure each export's output directory exists, creating it
     /// recursively when missing (Therion otherwise fails on a non-existent output folder). On by default.</summary>
     public bool EnsureOutputDirectories { get; init; } = true;
 
-    // ---- auto-save (QOL-09) ----
+    // ---- auto-save ----
     /// <summary>When the editor auto-saves dirty files (off / after a delay / on focus loss).</summary>
     public AutoSaveMode AutoSave { get; init; } = AutoSaveMode.Off;
     /// <summary>Interval (seconds) for the AfterDelay auto-save mode.</summary>
     public int AutoSaveDelaySeconds { get; init; } = 30;
 
-    // ---- visualization features (VIS-*) ----
-    /// <summary>VIS-02: the live centreline preview (plan/elevation sketch from our model).</summary>
+    // ---- visualization features ----
+    /// <summary>the live centreline preview (plan/elevation sketch from our model).</summary>
     public bool EnableLivePreview { get; init; } = true;
-    /// <summary>VIS-03: auto-load the latest rendered map output into the viewer after a build.</summary>
+    /// <summary>auto-load the latest rendered map output into the viewer after a build.</summary>
     public bool EnableMapAutoPreview { get; init; } = true;
-    /// <summary>VIS-05: the in-app PNG/SVG/PDF map viewer.</summary>
+    /// <summary>the in-app PNG/SVG/PDF map viewer.</summary>
     public bool EnableInAppViewer { get; init; } = true;
     /// <summary>Open a clicked PDF output in the in-app map viewer instead of the external app. On by default.</summary>
     public bool OpenPdfInInternalViewer { get; init; } = true;
-    /// <summary>VIS-01: the embedded 3D model viewer (CaveView.js in a NativeWebView). Off by default.</summary>
+    /// <summary>the embedded 3D model viewer (CaveView.js in a NativeWebView). Off by default.</summary>
     public bool EnableModel3DViewer { get; init; }
-    /// <summary>VIS-01: auto-load the newest .lox/.3d into the 3D viewer after a build.</summary>
+    /// <summary>auto-load the newest .lox/.3d into the 3D viewer after a build.</summary>
     public bool EnableModel3DAutoPreview { get; init; } = true;
-    /// <summary>VIS-01: last-used 3D color-by shading mode (height / survey / length / inclination / single).</summary>
+    /// <summary>last-used 3D color-by shading mode (height / survey / length / inclination / single).</summary>
     public string Model3DShadingMode { get; init; } = "height";
-    /// <summary>STRUCT-01: the structural-geology module (plane strike/dip calculator). On by default.</summary>
+    /// <summary>the structural-geology module (plane strike/dip calculator). On by default.</summary>
     public bool EnableStructuralGeology { get; init; } = true;
-    /// <summary>STRUCT-01: persisted panel state (detection/declination options, columns, plot prefs) as JSON.</summary>
+    /// <summary>persisted panel state (detection/declination options, columns, plot prefs) as JSON.</summary>
     public string StructuralGeologySettings { get; init; } = "";
 
-    // ---- survey-domain analytics (DATA-*) — disable on huge projects for performance ----
-    /// <summary>DATA-01/02/05/06/08: compute the project statistics / charts / team / entrances /
+    // ---- survey-domain analytics — disable on huge projects for performance ----
+    /// <summary>compute the project statistics / charts / team / entrances /
     /// data-quality analytics. Adds processing time on every graph rebuild.</summary>
     public bool EnableProjectAnalytics { get; init; } = true;
-    /// <summary>DATA-03: populate the extra Object Browser entity tabs (surveys, fixes, equates,
+    /// <summary>populate the extra Object Browser entity tabs (surveys, fixes, equates,
     /// scraps, maps, points, lines, areas). Walks the whole model on each load.</summary>
     public bool EnableObjectBrowserEntities { get; init; } = true;
-    /// <summary>NOTE-01: scan every project file's comments for TODO/FIXME/QM tags. Reads all files
+    /// <summary>scan every project file's comments for TODO/FIXME/QM tags. Reads all files
     /// on each graph rebuild, so it can be disabled for big projects (default on).</summary>
     public bool EnableTodoScan { get; init; } = true;
-    /// <summary>MEDIA-02/03: populate the Media manager (referenced .xvi scans + an on-disk orphan
+    /// <summary>populate the Media manager (referenced .xvi scans + an on-disk orphan
     /// scan). Walks the project folder, so it can be disabled for big projects (default on).</summary>
     public bool EnableMediaScan { get; init; } = true;
 
@@ -238,11 +238,11 @@ public sealed record AppSettings
     public int IndentationSize { get; init; } = 2;
     public bool EditorWordWrap { get; init; }
 
-    // ---- editor features (Section B / EDIT-*) ----
-    /// <summary>Per-feature runtime toggles for the EDIT-* editor features (default: all on).</summary>
+    // ---- editor features ----
+    /// <summary>Per-feature runtime toggles for the editor features (default: all on).</summary>
     public EditorFeatureSettings EditorFeatures { get; init; } = new();
 
-    // ---- whitespace rendering (EDIT-13; View-menu toggles, gated by the EDIT-13 feature) ----
+    // ---- whitespace rendering (View-menu toggles, gated by the feature) ----
     /// <summary>Render spaces (·) and tabs (→) in the editor.</summary>
     public bool EditorShowWhitespace { get; init; }
     /// <summary>Render an end-of-line marker (¶) at each line break.</summary>
@@ -250,7 +250,7 @@ public sealed record AppSettings
     /// <summary>Draw vertical indentation guide lines.</summary>
     public bool EditorShowIndentGuides { get; init; }
 
-    /// <summary>Run "Format Document" (EDIT-04) automatically on save.</summary>
+    /// <summary>Run "Format Document" automatically on save.</summary>
     public bool EditorFormatOnSave { get; init; }
 
     /// <summary>
@@ -260,7 +260,7 @@ public sealed record AppSettings
     /// </summary>
     public bool ValidateOnType { get; init; }
 
-    /// <summary>Show the code minimap (EDIT-07; View-menu toggle, gated by the EDIT-07 feature).</summary>
+    /// <summary>Show the code minimap (View-menu toggle, gated by the feature).</summary>
     public bool EditorShowMinimap { get; init; }
 
     // ---- quick open (Ctrl+P go-to-file) ----

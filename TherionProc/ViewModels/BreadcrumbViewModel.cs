@@ -1,4 +1,4 @@
-// PROJ-08 — breadcrumb of the @-qualified name at the caret. Splits the station/survey reference
+// breadcrumb of the @-qualified name at the caret. Splits the station/survey reference
 // under the cursor (e.g. cave.upper.u1 or u1@cave.upper) into clickable components; clicking a
 // component navigates to that survey (the prefix) or station (the leaf). Shown in the status bar.
 

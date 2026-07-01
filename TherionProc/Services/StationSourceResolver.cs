@@ -1,4 +1,4 @@
-// VIS-01 (Phase 3) — maps a compiled-model station/survey label back to its `.th` source span.
+// (Phase 3) — maps a compiled-model station/survey label back to its `.th` source span.
 //
 // CaveView reports a picked station by its full top-down dotted path (outer.inner.point), which
 // is exactly the form the semantic binder keys QualifiedName / StationsByQn by — so most picks

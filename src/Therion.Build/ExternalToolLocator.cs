@@ -16,9 +16,9 @@ public sealed class ExternalToolLocator : IExternalToolLocator
     public const string Aven = "aven";
     /// <summary>The Mapiah .th2 sketch editor (a Flutter desktop app the user installs separately).</summary>
     public const string Mapiah = "mapiah";
-    /// <summary>Survex <c>dump3d</c> — dumps a .3d model to text (BUILD-06).</summary>
+    /// <summary>Survex <c>dump3d</c> — dumps a .3d model to text.</summary>
     public const string Dump3d = "dump3d";
-    /// <summary>Survex <c>extend</c> — makes an extended elevation from a .3d (BUILD-06).</summary>
+    /// <summary>Survex <c>extend</c> — makes an extended elevation from a .3d.</summary>
     public const string Extend = "extend";
 
     // GUI viewers/editors: invoking `<exe> --version` actually pops their window open, so

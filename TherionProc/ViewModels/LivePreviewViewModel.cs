@@ -1,4 +1,4 @@
-// VIS-02 — live centreline preview. Plots the parsed centreline (from our own model, no Therion
+// live centreline preview. Plots the parsed centreline (from our own model, no Therion
 // compile) as a quick plan or projected-profile sketch that refreshes as you edit. Positions are a
 // relative spanning-tree layout from shot length/compass/clino; click a leg/point to jump to source.
 //
@@ -75,7 +75,7 @@ public sealed record StationPoint(
     public string Detail { get; init; } = string.Empty;
 }
 
-/// <summary>LEAD-02: a lead plotted at a station's world position, coloured by kind, click→source.</summary>
+/// <summary>a lead plotted at a station's world position, coloured by kind, click→source.</summary>
 public sealed record LeadMarker(double X, double Y, string Location, LeadKind Kind, SourceSpan Span, int Component = 0);
 
 /// <summary>An <c>equate</c> junction plotted at the merged station's position; click→the equate command.</summary>
@@ -144,7 +144,7 @@ public sealed partial class LivePreviewViewModel : ObservableObject
     // The full (unfiltered) scene the control consults to draw a hovered group even when it's hidden.
     [ObservableProperty] private IReadOnlyList<SketchSegment> _fullSegments = Array.Empty<SketchSegment>();
     [ObservableProperty] private IReadOnlyList<SplaySegment> _fullSplays = Array.Empty<SplaySegment>();
-    [ObservableProperty] private IReadOnlyList<LeadMarker> _leadMarkers = Array.Empty<LeadMarker>();      // LEAD-02
+    [ObservableProperty] private IReadOnlyList<LeadMarker> _leadMarkers = Array.Empty<LeadMarker>();
     [ObservableProperty] private IReadOnlyList<EquateMarker> _equateMarkers = Array.Empty<EquateMarker>();
     [ObservableProperty] private string _status = "No centreline yet.";
 
@@ -368,7 +368,7 @@ public sealed partial class LivePreviewViewModel : ObservableObject
         _allSegments = segs;
         _allSplays = BuildSplays(shots, equates, p2d, layout.Components);
         _allStationPoints = BuildStationPoints(models, equates, p2d, layout.Components);
-        _allLeads = BuildLeadMarkers(p2d, equates, layout.Components);              // LEAD-02
+        _allLeads = BuildLeadMarkers(p2d, equates, layout.Components);
         _allEquates = BuildEquateMarkers(models, equates, p2d, layout.Components);  // junctions
         _componentCountTotal = layout.ComponentCount;
         FullSegments = _allSegments;
@@ -982,7 +982,7 @@ public sealed partial class LivePreviewViewModel : ObservableObject
 
     // ---- markers ----------------------------------------------------------
 
-    // LEAD-02: project each lead whose location is a centreline station into the sketch's frame.
+    // project each lead whose location is a centreline station into the sketch's frame.
     private IReadOnlyList<LeadMarker> BuildLeadMarkers(
         IReadOnlyDictionary<string, (double X, double Y)> p2d, EquateGraph equates,
         IReadOnlyDictionary<string, int> components)

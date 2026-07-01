@@ -9,7 +9,7 @@ using TherionProc.Services;
 
 namespace TherionProc.Tests;
 
-// UX-10: the recently-closed-tab stack that backs Ctrl+Shift+T / "Reopen Closed Tab".
+// the recently-closed-tab stack that backs Ctrl+Shift+T / "Reopen Closed Tab".
 public class TabManagementTests
 {
     private sealed class StubResolver : IProjectEntryPointResolver

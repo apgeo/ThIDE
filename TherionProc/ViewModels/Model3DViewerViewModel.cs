@@ -1,4 +1,4 @@
-// VIS-01 — content view-model for the embedded 3D model viewer (CaveView.js in a NativeWebView).
+// content view-model for the embedded 3D model viewer (CaveView.js in a NativeWebView).
 //
 // Owns the model/shading state and the C#↔JS protocol; the View owns the NativeWebView control
 // and bridges it: it subscribes to NavigateRequested/ScriptRequested (C#→JS) and forwards the
@@ -196,7 +196,7 @@ public sealed partial class Model3DViewerViewModel : ObservableObject
         !string.IsNullOrEmpty(a) && !string.IsNullOrEmpty(b) &&
         string.Equals(Path.GetFullPath(a), Path.GetFullPath(b), StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>VIS-03 parallel: load the newest 3D model from a build (.lox preferred, then .3d).</summary>
+    /// <summary>parallel: load the newest 3D model from a build (.lox preferred, then .3d).</summary>
     public void ShowLatest(IEnumerable<ArtifactRow> artifacts)
     {
         if (PickBestModel(artifacts) is not { } best) return;

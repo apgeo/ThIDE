@@ -1,4 +1,4 @@
-// VIS-01 (Phase 3) — mapping a compiled-model station/survey label back to its `.th` source span.
+// (Phase 3) — mapping a compiled-model station/survey label back to its `.th` source span.
 // Builds a real WorkspaceSemanticModel from .th source and checks the resolver's exact-QN,
 // point@survey, survey, bare-name and not-found cases.
 

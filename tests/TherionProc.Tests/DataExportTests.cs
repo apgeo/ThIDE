@@ -1,4 +1,4 @@
-// DATA-09 — CSV / Markdown table export.
+// CSV / Markdown table export.
 using System.Collections.Generic;
 using TherionProc.Services;
 using Xunit;
@@ -35,7 +35,6 @@ public class DataExportTests
         Assert.Contains("x\\|y", md);
     }
 
-    // PUB-02
 
     [Fact]
     public void Html_escapes_cells_and_renders_table()

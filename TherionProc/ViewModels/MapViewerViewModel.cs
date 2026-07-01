@@ -1,5 +1,5 @@
-// VIS-05 — in-app map viewer (PNG/SVG/PDF). Renders via IMapRenderService into an Avalonia bitmap
-// shown in a zoomable/scrollable view; PDF gets page navigation. VIS-03 reuses it: ShowLatest()
+// in-app map viewer (PNG/SVG/PDF). Renders via IMapRenderService into an Avalonia bitmap
+// shown in a zoomable/scrollable view; PDF gets page navigation. reuses it: ShowLatest()
 // loads the newest renderable build artifact after a compile.
 
 using System;
@@ -72,7 +72,7 @@ public sealed partial class MapViewerViewModel : ObservableObject
         OnPropertyChanged(nameof(PageLabel));
     }
 
-    /// <summary>VIS-03: load the most recently written renderable map artifact from a build.</summary>
+    /// <summary>load the most recently written renderable map artifact from a build.</summary>
     public void ShowLatest(IEnumerable<string> artifactPaths)
     {
         if (_render is null) return;

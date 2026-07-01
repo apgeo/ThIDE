@@ -25,14 +25,14 @@ public sealed record StationRow(string QualifiedName, string Kind, string Survey
     public int NavLine => Line;
 }
 
-/// <summary>A row that can navigate to source (TH2-03 click-to-source).</summary>
+/// <summary>A row that can navigate to source (click-to-source).</summary>
 public interface IBrowserNavRow
 {
     string? NavFile { get; }
     int NavLine { get; }
 }
 
-// DATA-03 / TH2-03 — entity rows for the additional Object Browser tabs. Each carries its
+// entity rows for the additional Object Browser tabs. Each carries its
 // declaration <see cref="SourceSpan"/> so a double-click can jump to source.
 public sealed record SurveyEntityRow(string Name, string Title, string Parent, SourceSpan Span) : IBrowserNavRow
 {
@@ -157,7 +157,7 @@ public partial class ObjectBrowserViewModel : ViewModelBase
     [ObservableProperty]
     private int _shotCount;
 
-    // DATA-03 — entity collections for the additional tabs.
+    // entity collections for the additional tabs.
     [ObservableProperty] private IReadOnlyList<SurveyEntityRow> _surveys = System.Array.Empty<SurveyEntityRow>();
     [ObservableProperty] private IReadOnlyList<FixEntityRow> _fixes = System.Array.Empty<FixEntityRow>();
     [ObservableProperty] private IReadOnlyList<EquateEntityRow> _equates = System.Array.Empty<EquateEntityRow>();
@@ -196,7 +196,7 @@ public partial class ObjectBrowserViewModel : ViewModelBase
 
     private bool EntitiesEnabled => _settings?.Current.EnableObjectBrowserEntities ?? true;
 
-    /// <summary>TH2-03: jump to a row's declaration in source.</summary>
+    /// <summary>jump to a row's declaration in source.</summary>
     public void NavigateTo(IBrowserNavRow? row)
     {
         if (row is null || string.IsNullOrEmpty(row.NavFile) || _documents is null) return;
@@ -205,7 +205,7 @@ public partial class ObjectBrowserViewModel : ViewModelBase
         _ = _documents.NavigateToSpanAsync(span);
     }
 
-    // ----- QOL-12: identifier actions from any object grid row --------------
+    // ----- : identifier actions from any object grid row --------------
 
     /// <summary>The identifier and reference-kind for a row, or (null, null) when it has none.</summary>
     private static (string? Name, Therion.Processing.Abstractions.ReferenceKind? Kind) NameAndKind(IBrowserNavRow? row) => row switch
@@ -220,21 +220,21 @@ public partial class ObjectBrowserViewModel : ViewModelBase
     /// <summary>True when a row carries a renamable identifier (station/survey) — gates the menu item.</summary>
     public static bool CanRename(IBrowserNavRow? row) => NameAndKind(row).Kind is not null;
 
-    /// <summary>QOL-12: find every reference to the row's identifier across the project.</summary>
+    /// <summary>find every reference to the row's identifier across the project.</summary>
     public void FindReferences(IBrowserNavRow? row)
     {
         var (name, _) = NameAndKind(row);
         if (!string.IsNullOrEmpty(name)) _documents?.RequestFindReferences(name!);
     }
 
-    /// <summary>QOL-12: start a project-wide rename of the row's identifier (station/survey only).</summary>
+    /// <summary>start a project-wide rename of the row's identifier (station/survey only).</summary>
     public void RenameSymbol(IBrowserNavRow? row)
     {
         var (name, kind) = NameAndKind(row);
         if (!string.IsNullOrEmpty(name) && kind is { } k) _documents?.RequestRenameSymbol(name!, k);
     }
 
-    /// <summary>QOL-12: copy the row's qualified identifier to the clipboard.</summary>
+    /// <summary>copy the row's qualified identifier to the clipboard.</summary>
     public void CopyQualifiedName(IBrowserNavRow? row)
     {
         var (name, _) = NameAndKind(row);
@@ -336,7 +336,7 @@ public partial class ObjectBrowserViewModel : ViewModelBase
 
     private void OnRowEdit(object? sender, ShotEditEventArgs e) => ShotEditRequested?.Invoke(this, e);
 
-    // ---- DATA-03: entity tabs --------------------------------------------
+    // ---- : entity tabs --------------------------------------------
 
     private static string Coords(StationSymbol s) =>
         s.FixX is not null && s.FixY is not null
@@ -381,7 +381,7 @@ public partial class ObjectBrowserViewModel : ViewModelBase
             .Select(m => new MapEntityRow(m.Id, m.Title ?? string.Empty, m.Projection ?? string.Empty,
                 m.Members.Length, m.DeclarationSpan))
             .OrderBy(r => r.Id, System.StringComparer.Ordinal).ToList();
-        // TH2-02: which .xvi each scrap traces — from the .th2 → .xvi file-graph edges.
+        // which .xvi each scrap traces — from the .th2 → .xvi file-graph edges.
         var sketchByTh2 = BuildSketchMap(ws);
         Scraps = ws.ScrapsById.Values
             .Select(s => new ScrapEntityRow(s.Id,
@@ -394,7 +394,7 @@ public partial class ObjectBrowserViewModel : ViewModelBase
         Areas  = ws.Th2Objects.Where(o => o.Kind == "area").Select(Row).ToList();
     }
 
-    // Maps each .th2 file to the comma-joined .xvi file names it sketches (TH2-02 scrap→xvi).
+    // Maps each .th2 file to the comma-joined .xvi file names it sketches (scrap→xvi).
     private static Dictionary<string, string> BuildSketchMap(WorkspaceSemanticModel ws)
     {
         var byTh2 = new Dictionary<string, HashSet<string>>(System.StringComparer.OrdinalIgnoreCase);

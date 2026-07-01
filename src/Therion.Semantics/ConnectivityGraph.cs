@@ -1,7 +1,7 @@
-// LANG-06 — the equate / fix / station connectivity graph as a first-class, queryable model.
+// the equate / fix / station connectivity graph as a first-class, queryable model.
 // Built on top of a bound SemanticModel: nodes are equate-merged stations, edges are non-splay
-// shots. Powers statistics (DATA-01), disconnection diagnostics, dead-end/lead detection
-// (LEAD-05), and is reused by the relational map.
+// shots. Powers statistics, disconnection diagnostics, dead-end/lead detection
+//, and is reused by the relational map.
 
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -42,7 +42,7 @@ public sealed class ConnectivityGraph
 
     /// <summary>
     /// Dead-end nodes: degree ≤ 1 and not an entrance or fixed point. Strong candidates for
-    /// unsurveyed leads when not already flagged <c>continuation</c> (LEAD-05).
+    /// unsurveyed leads when not already flagged <c>continuation</c>.
     /// </summary>
     public ImmutableArray<QualifiedName> DeadEnds { get; }
 

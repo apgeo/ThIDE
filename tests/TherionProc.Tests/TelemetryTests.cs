@@ -4,7 +4,7 @@ using TherionProc.Services;
 
 namespace TherionProc.Tests;
 
-// REL-05: telemetry/crash reporting is opt-in and writes only local files.
+// telemetry/crash reporting is opt-in and writes only local files.
 public class TelemetryTests
 {
     [Fact]

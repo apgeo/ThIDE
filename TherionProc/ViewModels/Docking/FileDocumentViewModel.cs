@@ -33,7 +33,7 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
     private readonly IAppSettingsService? _settings;
     private bool _disposed;
 
-    /// <summary>Cancels the previous in-flight background parse when a newer reparse starts (LANG-12).</summary>
+    /// <summary>Cancels the previous in-flight background parse when a newer reparse starts.</summary>
     private CancellationTokenSource? _parseCts;
 
     private string _documentText = string.Empty;
@@ -53,7 +53,7 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
 
     /// <summary>
     /// Raised just before a save so the editor view can clean the document in place
-    /// (EDIT-14: trim trailing whitespace + final newline) while preserving the caret.
+    /// (: trim trailing whitespace + final newline) while preserving the caret.
     /// </summary>
     public event EventHandler? SaveCleanupRequested;
 
@@ -194,14 +194,14 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
     private void UpdateTitle()
     {
         // Prefix the dirty marker so it can't be clipped when the tab text hits the
-        // header's right edge (#12); the leading dot is always visible. A pinned tab (UX-10)
+        // header's right edge (#12); the leading dot is always visible. A pinned tab
         // gets a leading pin glyph so it reads as "kept open".
         var name = System.IO.Path.GetFileName(FilePath);
         var prefix = IsPinned ? "📌 " : string.Empty;
         Title = prefix + (_isDirty ? "● " + name : name);
     }
 
-    // ----- tab pinning (UX-10) ----------------------------------------------
+    // ----- tab pinning ----------------------------------------------
     // A pinned document is excluded from the bulk "close others / right / all" actions and is
     // marked with a pin glyph. It can still be closed individually (and unpinned). Pure model
     // state — no Dock auto-hide rail involved (that is Dock's own "pin", which we don't use here).
@@ -392,7 +392,7 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
             return;
         }
 
-        // LANG-12: run the (potentially expensive) parse + semantic bind on a background thread so
+        // run the (potentially expensive) parse + semantic bind on a background thread so
         // typing never blocks the UI. A snapshot of the text is captured; a fresh cancellation
         // token supersedes any in-flight parse so only the latest result is applied.
         var snapshot = _documentText;
@@ -442,7 +442,7 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
         foreach (var k in TokenClassifier.Keywords) set.Add(k);
         if (model is not null)
         {
-            // PERF-05: station/survey names (and their shared leaf segments) repeat heavily across
+            // station/survey names (and their shared leaf segments) repeat heavily across
             // every open document — intern them so the per-document completion lists share instances.
             var interner = Therion.Core.StringInterner.Shared;
             foreach (var s in model.Stations.Values)
@@ -463,7 +463,7 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
     [RelayCommand] private void CopyFullPath() => SetClipboard(FilePath);
     [RelayCommand] private void CopyRelativePath() => SetClipboard(RelativePathToProjectRoot());
 
-    /// <summary>QOL-01: reveal this document's file in the OS file manager.</summary>
+    /// <summary>reveal this document's file in the OS file manager.</summary>
     [RelayCommand]
     private void RevealInFileManager()
     {
@@ -473,7 +473,7 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
     [RelayCommand] private void FloatTab() => Factory?.FloatDockable(this);
     [RelayCommand] private void CloseTab() => Factory?.CloseDockable(this);
 
-    // ----- bulk tab close (UX-10) -------------------------------------------
+    // ----- bulk tab close -------------------------------------------
     // Operate on this tab's sibling documents within the same dock (the central well or a float
     // window), honouring the pin flag. Driven from the document tab context menu.
 
@@ -623,7 +623,7 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
     [RelayCommand]
     private void DismissExternal() => ClearExternalBanner();
 
-    /// <summary>TRUST-05: keep the editor's version by writing it to disk (overwrites the external
+    /// <summary>keep the editor's version by writing it to disk (overwrites the external
     /// change, or recreates a deleted file). The document service performs the actual save.</summary>
     [RelayCommand]
     private void OverwriteExternal()
@@ -635,7 +635,7 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
     /// <summary>Raised when the user chooses "Keep mine (save to disk)" on the external-change banner.</summary>
     public event EventHandler? SaveToDiskRequested;
 
-    /// <summary>TRUST-05: show a read-only side-by-side comparison of the on-disk vs editor text.</summary>
+    /// <summary>show a read-only side-by-side comparison of the on-disk vs editor text.</summary>
     [RelayCommand]
     private void CompareExternal()
     {

@@ -2,7 +2,7 @@ using Therion.Core;
 
 namespace TherionProc.Tests;
 
-// UTIL-04 — bidirectional unit conversions used by the converter palette.
+// bidirectional unit conversions used by the converter palette.
 public class UnitConvertTests
 {
     private static readonly UnitConverter C = UnitConverter.Instance;

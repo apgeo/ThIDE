@@ -1,4 +1,4 @@
-// UTIL-01 — WGS84 lat/long ↔ UTM conversion (Snyder transverse-Mercator series, USGS PP-1395).
+// WGS84 lat/long ↔ UTM conversion (Snyder transverse-Mercator series, USGS PP-1395).
 // Pure + unit-testable; the UI uses it to turn a pasted coordinate into a Therion `fix` line.
 
 using System;

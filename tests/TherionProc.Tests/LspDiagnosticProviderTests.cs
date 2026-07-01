@@ -3,7 +3,7 @@ using Therion.Lsp;
 
 namespace TherionProc.Tests;
 
-// EXT-05 — the LSP server's diagnostic provider maps Therion diagnostics to the LSP shape.
+// the LSP server's diagnostic provider maps Therion diagnostics to the LSP shape.
 public class LspDiagnosticProviderTests
 {
     [Fact]

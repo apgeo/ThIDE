@@ -1,4 +1,4 @@
-// LANG-05 (extended) — unit tests for the per-reading data-value validator.
+// (extended) — unit tests for the per-reading data-value validator.
 
 using Therion.Core;
 using Therion.Syntax;

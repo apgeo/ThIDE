@@ -1,4 +1,4 @@
-// DATA-01/02/05/06/08 — survey-domain analytics over a WorkspaceSemanticModel.
+// survey-domain analytics over a WorkspaceSemanticModel.
 // Pure aggregation (no UI / no disk), unit-testable, reused by the dashboard, data-quality,
 // team and entrances views. Lengths/depths/extents are "preview-quality": computed from our own
 // model (shot length / compass / clino), not from a full Therion/Survex adjustment. Angles are
@@ -11,9 +11,9 @@ using System.Linq;
 
 namespace Therion.Semantics;
 
-// ---- DATA-01 -----------------------------------------------------------------
+// ---- -----------------------------------------------------------------
 
-/// <summary>Headline + breakdown metrics for the statistics panel (DATA-01).</summary>
+/// <summary>Headline + breakdown metrics for the statistics panel.</summary>
 public sealed record DetailedTotals(
     int Surveys, int Stations, int Shots,
     int SplayShots, int DuplicateShots, int SurfaceShots,
@@ -23,29 +23,29 @@ public sealed record DetailedTotals(
     double EastWestExtent, double NorthSouthExtent,
     int Entrances, int FixedPoints);
 
-// ---- DATA-02 -----------------------------------------------------------------
+// ---- -----------------------------------------------------------------
 
-/// <summary>One bar/point of a length series (by survey or by date) (DATA-02).</summary>
+/// <summary>One bar/point of a length series (by survey or by date).</summary>
 public sealed record LengthBucket(string Key, double Length, int Shots);
 
-// ---- DATA-05 -----------------------------------------------------------------
+// ---- -----------------------------------------------------------------
 
-/// <summary>Per-person surveying totals across the project (DATA-05).</summary>
+/// <summary>Per-person surveying totals across the project.</summary>
 public sealed record TeamMemberStat(string Name, int Surveys, double Length);
 
-/// <summary>Per-date (trip) totals across the project (DATA-05).</summary>
+/// <summary>Per-date (trip) totals across the project.</summary>
 public sealed record TripStat(string Date, int Surveys, double Length, ImmutableArray<string> Members);
 
-// ---- DATA-06 -----------------------------------------------------------------
+// ---- -----------------------------------------------------------------
 
-/// <summary>A fixed point or entrance with its coordinates and CRS (DATA-06).</summary>
+/// <summary>A fixed point or entrance with its coordinates and CRS.</summary>
 public sealed record FixedPointRow(
     string Station, double? X, double? Y, double? Z, string Cs,
     bool IsEntrance, bool IsFixed, string File, int Line);
 
-// ---- DATA-08 -----------------------------------------------------------------
+// ---- -----------------------------------------------------------------
 
-/// <summary>Data-quality counts for the dashboard (DATA-08).</summary>
+/// <summary>Data-quality counts for the dashboard.</summary>
 public sealed record DataQualityReport(
     int TotalShots, int ZeroLength, int MissingLength, int MissingCompass, int MissingClino,
     int NoBacksight, int NoLrud, int SteepLegs, int SplayShots, int DuplicateShots,
@@ -56,7 +56,7 @@ public static class DataAnalytics
 {
     private const double DegToRad = Math.PI / 180.0;
 
-    // ===== DATA-01: detailed totals ==========================================
+    // ===== : detailed totals ==========================================
 
     public static DetailedTotals ComputeDetailedTotals(WorkspaceSemanticModel model)
     {
@@ -146,7 +146,7 @@ public static class DataAnalytics
         return (maxZ - minZ, hi, lo, maxX - minX, maxY - minY);
     }
 
-    // ===== DATA-02: length series ============================================
+    // ===== : length series ============================================
 
     /// <summary>Surveyed length per survey (direct, splays/duplicates excluded), longest first.</summary>
     public static IReadOnlyList<LengthBucket> LengthBySurvey(WorkspaceSemanticModel model)
@@ -187,7 +187,7 @@ public static class DataAnalytics
             .ToList();
     }
 
-    // ===== DATA-05: team / trip ==============================================
+    // ===== : team / trip ==============================================
 
     public static IReadOnlyList<TeamMemberStat> TeamMembers(WorkspaceSemanticModel model)
     {
@@ -230,7 +230,7 @@ public static class DataAnalytics
             .ToList();
     }
 
-    // ===== DATA-06: entrances & fixed points =================================
+    // ===== : entrances & fixed points =================================
 
     public static IReadOnlyList<FixedPointRow> FixedPoints(WorkspaceSemanticModel model)
     {
@@ -248,7 +248,7 @@ public static class DataAnalytics
             .ToList();
     }
 
-    // ===== DATA-08: data quality =============================================
+    // ===== : data quality =============================================
 
     public static DataQualityReport DataQuality(WorkspaceSemanticModel model)
     {

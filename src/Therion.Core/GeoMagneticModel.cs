@@ -1,4 +1,4 @@
-// UTIL-02 — World Magnetic Model / IGRF spherical-harmonic synthesis for magnetic declination.
+// World Magnetic Model / IGRF spherical-harmonic synthesis for magnetic declination.
 //
 // The math is standard (Schmidt semi-normalised associated Legendre functions over a geodetic →
 // geocentric converted position). Coefficients come from a NOAA WMM.COF-format file (public domain,

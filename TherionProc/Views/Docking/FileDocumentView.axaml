@@ -54,7 +54,7 @@
                 <!-- Stage 1: changed-on-disk prompt. -->
                 <DockPanel IsVisible="{Binding !ConfirmDiscardPending}">
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
-                        <!-- TRUST-05: reload (use disk) / compare / keep-mine-to-disk / dismiss. -->
+                        <!-- reload (use disk) / compare / keep-mine-to-disk / dismiss. -->
                         <Button Content="{l:Loc Proj_Reload}" Padding="8,2" Command="{Binding ReloadExternalCommand}"
                                 IsVisible="{Binding !ExternalDeleted}" />
                         <Button Content="{l:Loc File_Compare}" Padding="8,2" Command="{Binding CompareExternalCommand}"

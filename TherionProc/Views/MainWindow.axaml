@@ -32,7 +32,7 @@
             <!-- Fade tint by file type (.th/.th2/.thconfig), task 2. -->
             <Setter Property="Background" Value="{Binding TabBrush}" />
         </Style>
-        <!-- UX-10: tab-management context menu on document tabs (pin / close others / close right /
+        <!-- tab-management context menu on document tabs (pin / close others / close right /
              reopen). Reflection-bound (the tab item's DataContext is the FileDocumentViewModel,
              not the window VM). Scoped to DocumentTabStripItem so tool tabs are unaffected. -->
         <Style Selector="dock|DocumentTabStripItem">
@@ -104,7 +104,7 @@
             <Setter Property="Height" Value="17" />
         </Style>
 
-        <!-- PROJ-08: flat link-style segments for the @-qualified-name breadcrumb. -->
+        <!-- flat link-style segments for the @-qualified-name breadcrumb. -->
         <Style Selector="Button.crumb">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
@@ -130,7 +130,7 @@
                 <MenuItem x:Name="RecentMenu" Header="{Binding MenuFileRecent}" />
                 <!-- Recent working directories, rebuilt in code-behind. -->
                 <MenuItem x:Name="RecentDirectoriesMenu" Header="{Binding MenuFileRecentDirectories}" />
-                <!-- UX-10: reopen the most-recently-closed tab. -->
+                <!-- reopen the most-recently-closed tab. -->
                 <MenuItem Header="{l:Loc Menu_File_ReopenTab}" InputGesture="Ctrl+Shift+T"
                           Command="{Binding ReopenClosedTabCommand}" />
                 <Separator />
@@ -155,7 +155,7 @@
                 <MenuItem Header="{l:Loc Menu_View_Structural}" Command="{Binding ToggleStructuralGeologyCommand}"
                           IsVisible="{Binding StructuralGeologyEnabled}" />
                 <MenuItem Header="{Binding MenuViewDiagnostics}" Command="{Binding ToggleDiagnosticsCommand}" />
-                <!-- EDIT-09: document outline (hidden when the feature is disabled). -->
+                <!-- document outline (hidden when the feature is disabled). -->
                 <MenuItem Header="{l:Loc Menu_View_Outline}" Command="{Binding ToggleOutlineCommand}"
                           IsVisible="{Binding OutlineFeatureEnabled}" />
                 <Separator />
@@ -164,7 +164,7 @@
                 <MenuItem Header="{Binding MenuViewStrictParser}"
                           ToggleType="CheckBox"
                           IsChecked="{Binding StrictParserMode, Mode=TwoWay}" />
-                <!-- EDIT-13: whitespace/EOL/indent-guide render toggles (hidden when the feature is off). -->
+                <!-- whitespace/EOL/indent-guide render toggles (hidden when the feature is off). -->
                 <Separator IsVisible="{Binding WhitespaceFeatureEnabled}" />
                 <MenuItem Header="{l:Loc Menu_View_Whitespace}" IsVisible="{Binding WhitespaceFeatureEnabled}">
                     <MenuItem Header="{l:Loc Menu_View_ShowSpacesTabs}" ToggleType="CheckBox"
@@ -174,11 +174,11 @@
                     <MenuItem Header="{l:Loc Menu_View_ShowIndentGuides}" ToggleType="CheckBox"
                               IsChecked="{Binding ShowIndentGuides, Mode=TwoWay}" />
                 </MenuItem>
-                <!-- EDIT-07: minimap toggle (hidden when the feature is off). -->
+                <!-- minimap toggle (hidden when the feature is off). -->
                 <MenuItem Header="{l:Loc Menu_View_ShowMinimap}" ToggleType="CheckBox"
                           IsChecked="{Binding ShowMinimap, Mode=TwoWay}"
                           IsVisible="{Binding MinimapFeatureEnabled}" />
-                <!-- EDIT-11: open the active document side-by-side in a float window. -->
+                <!-- open the active document side-by-side in a float window. -->
                 <Separator IsVisible="{Binding SplitFeatureEnabled}" />
                 <MenuItem Header="{l:Loc Menu_View_SplitEditor}" Command="{Binding SplitEditorCommand}"
                           IsVisible="{Binding SplitFeatureEnabled}" />
@@ -215,7 +215,7 @@
                 <Separator />
                 <MenuItem Header="{Binding MenuSearchBookmarks}"    Click="OnBookmarksClick" />
             </MenuItem>
-            <!-- Tools: import / GIS export / surface / scaffold (IMP-01, GIS-01/03, TH2-04) -->
+            <!-- Tools: import / GIS export / surface / scaffold -->
             <MenuItem Header="{l:Loc Menu_Tools}">
                 <MenuItem Header="{l:Loc Menu_Tools_ImportSurvey}" Command="{Binding ImportSurveyCommand}" />
                 <MenuItem Header="{l:Loc Menu_Tools_ImportDem}" Command="{Binding ImportDemSurfaceCommand}" />
@@ -227,7 +227,7 @@
                     <MenuItem Header="GPX…"      Command="{Binding ExportGisCommand}" CommandParameter="gpx" />
                     <MenuItem Header="CSV…"      Command="{Binding ExportGisCommand}" CommandParameter="csv" />
                 </MenuItem>
-                <!-- PUB-02: station / shot data tables. -->
+                <!-- station / shot data tables. -->
                 <MenuItem Header="{l:Loc Menu_Tools_ExportTable}">
                     <MenuItem Header="{l:Loc Browser_Tab_Stations}">
                         <MenuItem Header="CSV…"      Command="{Binding ExportTableCommand}" CommandParameter="stations|csv" />
@@ -242,12 +242,12 @@
                         <MenuItem Header="LaTeX…"    Command="{Binding ExportTableCommand}" CommandParameter="shots|latex" />
                     </MenuItem>
                 </MenuItem>
-                <!-- PUB-01: one-click survey report. -->
+                <!-- one-click survey report. -->
                 <MenuItem Header="{l:Loc Menu_Tools_GenReport}" Command="{Binding GenerateReportCommand}" />
                 <Separator />
                 <MenuItem Header="{l:Loc Menu_Tools_NewScrap}" Command="{Binding NewScrapScaffoldCommand}" />
                 <Separator />
-                <!-- UTIL-* calculators. -->
+                <!-- calculators. -->
                 <MenuItem Header="{l:Loc Menu_Tools_Calculators}">
                     <MenuItem Header="{l:Loc Menu_Tools_UnitConverter}" Click="OnUnitConverter" />
                     <MenuItem Header="{l:Loc Menu_Tools_CoordConverter}" Click="OnCoordinateConverter" />
@@ -258,7 +258,7 @@
                 <MenuItem Header="{Binding MenuBuildBuild}"     InputGesture="F5"       Command="{Binding Build.BuildCommand}" />
                 <MenuItem Header="{Binding MenuBuildCancel}"    InputGesture="Shift+F5" Command="{Binding Build.CancelCommand}" />
                 <Separator />
-                <!-- BUILD-01: run a single export target from the active thconfig. -->
+                <!-- run a single export target from the active thconfig. -->
                 <MenuItem Header="{l:Loc Menu_Build_Target}" IsEnabled="{Binding Build.HasExportTargets}"
                           ItemsSource="{Binding Build.ExportTargets}">
                     <MenuItem.ItemContainerTheme>
@@ -269,12 +269,12 @@
                         </ControlTheme>
                     </MenuItem.ItemContainerTheme>
                 </MenuItem>
-                <!-- BUILD-02: composed quick export. -->
+                <!-- composed quick export. -->
                 <MenuItem Header="{l:Loc Menu_Build_QuickExport}" Command="{Binding Build.ShowQuickExportCommand}" />
                 <Separator />
                 <MenuItem Header="{Binding MenuBuildOpenLoch}"  InputGesture="F9"  Command="{Binding Build.OpenInLochCommand}" />
                 <MenuItem Header="{Binding MenuBuildOpenAven}"  InputGesture="F10" Command="{Binding Build.OpenInAvenCommand}" />
-                <!-- BUILD-06: external round-trips. -->
+                <!-- external round-trips. -->
                 <MenuItem Header="{l:Loc Menu_Build_SurvexTools}" IsEnabled="{Binding Build.HasAvenArtifact}">
                     <MenuItem Header="{l:Loc Menu_Build_Dump3d}" Command="{Binding Build.Dump3dCommand}" />
                     <MenuItem Header="{l:Loc Menu_Build_Extend}" Command="{Binding Build.ExtendCommand}" />
@@ -420,7 +420,7 @@
                         IsEnabled="{Binding Build.HasAvenArtifact}" ToolTip.Tip="{l:Loc Tb_OpenAven}">
                     <PathIcon Data="{DynamicResource Icon.Terrain}" />
                 </Button>
-                <!-- BUILD-02: composed quick export + open the last output folder. -->
+                <!-- composed quick export + open the last output folder. -->
                 <Button Classes="tool" Command="{Binding Build.ShowQuickExportCommand}" ToolTip.Tip="{l:Loc Menu_Build_QuickExport}">
                     <PathIcon Data="{DynamicResource Icon.Swap}" />
                 </Button>
@@ -493,7 +493,7 @@
                     </Button.Flyout>
                 </Button>
                 <Separator Width="1" Margin="4,2" Background="Gray" />
-                <!-- UX-07: notification center bell + unread badge + history flyout. -->
+                <!-- notification center bell + unread badge + history flyout. -->
                 <Button Classes="tool" Click="OnNotificationsClick" ToolTip.Tip="{l:Loc Tb_Notifications}">
                     <Panel>
                         <PathIcon Data="{DynamicResource Icon.Bell}" />
@@ -577,7 +577,7 @@
                     <TextBlock Text=")" Foreground="Gray" VerticalAlignment="Center"
                                IsVisible="{Binding Build.HasArtifactLink}" />
                 </StackPanel>
-                <!-- BUILD-05: stage label + stepped progress, shown alongside the spinner. -->
+                <!-- stage label + stepped progress, shown alongside the spinner. -->
                 <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="10,0,0,0"
                             IsVisible="{Binding Build.IsBuilding}">
                     <TextBlock Text="{Binding Build.CurrentPhase}" Foreground="#2E7D32" FontSize="11"
@@ -615,7 +615,7 @@
                           IsVisible="{Binding Build.IsBuilding}"
                           ToolTip.Tip="{l:Loc Status_BuildInProgress}" />
 
-                <!-- PERF-02: background-indexing indicator (object graph being (re)built off-thread). -->
+                <!-- background-indexing indicator (object graph being (re)built off-thread). -->
                 <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="4" Margin="8,0,0,0"
                             VerticalAlignment="Center" IsVisible="{Binding IsIndexing}"
                             ToolTip.Tip="{l:Loc Status_BuildingGraph}">
@@ -643,7 +643,7 @@
                                IsVisible="{Binding Build.LastBuildHasWarnings}" />
                 </StackPanel>
 
-                <!-- DIAG-07: clickable problems badge — opens the Diagnostics panel (F8 cycles). -->
+                <!-- clickable problems badge — opens the Diagnostics panel (F8 cycles). -->
                 <Button DockPanel.Dock="Left" Background="Transparent" BorderThickness="0" Padding="6,0"
                         Margin="8,0,0,0" Command="{Binding ToggleDiagnosticsCommand}" Cursor="Hand"
                         IsVisible="{Binding Diagnostics.HasProblems}"
@@ -656,7 +656,7 @@
                     </StackPanel>
                 </Button>
 
-                <!-- PROJ-08: clickable @-qualified-name breadcrumb of the token under the caret. -->
+                <!-- clickable @-qualified-name breadcrumb of the token under the caret. -->
                 <ItemsControl DockPanel.Dock="Left" Margin="12,0,0,0" VerticalAlignment="Center"
                               x:CompileBindings="False"
                               IsVisible="{Binding Breadcrumb.HasBreadcrumb}"
@@ -719,7 +719,7 @@
                     <StackPanel Classes="statusGroup" Orientation="Horizontal" Spacing="3">
                         <TextBlock Text="{l:Loc Status_Pos}" /><TextBlock Text="{Binding StatusCaretPos}" />
                     </StackPanel>
-                    <!-- QOL-06: selection stats (chars / lines), shown only with an active selection. -->
+                    <!-- selection stats (chars / lines), shown only with an active selection. -->
                     <Border Classes="statusSep" IsVisible="{Binding HasSelection}" />
                     <StackPanel Classes="statusGroup" Orientation="Horizontal" Spacing="3"
                                 IsVisible="{Binding HasSelection}">

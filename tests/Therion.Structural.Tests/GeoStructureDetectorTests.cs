@@ -1,4 +1,4 @@
-// STRUCT-01 Phase 2 — detection: each signal, grouping modes, splay policy, synthetic origin row.
+// Phase 2 — detection: each signal, grouping modes, splay policy, synthetic origin row.
 
 using System.Linq;
 using Therion.Semantics;

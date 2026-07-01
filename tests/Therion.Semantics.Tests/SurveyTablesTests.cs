@@ -5,7 +5,7 @@ using Therion.Syntax;
 
 namespace Therion.Semantics.Tests;
 
-// PUB-02 — station / shot tables projected from the workspace model.
+// station / shot tables projected from the workspace model.
 public class SurveyTablesTests
 {
     private static WorkspaceSemanticModel Build(string src, string path = "cave.th")

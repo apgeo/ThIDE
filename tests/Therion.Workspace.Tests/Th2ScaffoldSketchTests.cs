@@ -2,7 +2,7 @@ using Therion.Workspace.Import;
 
 namespace Therion.Workspace.Tests;
 
-// MEDIA-05 — the scrap scaffold generated when an image is dropped wires the scan via -sketch.
+// the scrap scaffold generated when an image is dropped wires the scan via -sketch.
 public class Th2ScaffoldSketchTests
 {
     [Fact]

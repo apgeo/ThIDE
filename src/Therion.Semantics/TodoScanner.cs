@@ -1,4 +1,4 @@
-// NOTE-01 — TODO / FIXME / QM aggregator. Scans Therion source comments (everything after a `#`)
+// TODO / FIXME / QM aggregator. Scans Therion source comments (everything after a `#`)
 // for tag words and returns a navigable list. Purely syntactic (no model), so it runs over any
 // text and is unit-testable; the app aggregates across all project files into a "TODOs" panel.
 

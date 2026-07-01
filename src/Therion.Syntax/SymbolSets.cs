@@ -1,4 +1,4 @@
-// LANG-09 — symbol-set / legend model. thbook v6.4.0 §"layout" (symbol-set / symbol-hide /
+// symbol-set / legend model. thbook v6.4.0 §"layout" (symbol-set / symbol-hide /
 // symbol-show / symbol-assign). Therion source-of-truth: therion/src/thsymbolset.cxx + thsymbol*.
 //
 // `symbol-set <std>` chooses a built-in symbol standard; `symbol-hide/show/assign <kind> <symbol>`

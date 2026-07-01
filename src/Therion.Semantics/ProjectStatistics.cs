@@ -1,4 +1,4 @@
-// PROJ-03 / PROJ-07 / PROJ-02 — project-wide analytics over a WorkspaceSemanticModel.
+// project-wide analytics over a WorkspaceSemanticModel.
 // Pure aggregation (no UI / no disk) so it is unit-testable and reused by the survey-tree,
 // dashboard and audit tools. Lengths/depths are "preview-quality": computed from our own model
 // (shot length / clino), not from a full Therion/Survex adjustment.
@@ -23,7 +23,7 @@ public sealed record SurveyTreeNode(string Name, string FullName, SourceSpan Dec
     public List<SurveyTreeNode> Children { get; } = new();
 }
 
-/// <summary>Headline project metrics for the dashboard (PROJ-07).</summary>
+/// <summary>Headline project metrics for the dashboard.</summary>
 public sealed record ProjectTotals(
     int SurveyCount,
     int StationCount,
@@ -145,7 +145,7 @@ public static class ProjectStatistics
             fixedPts);
     }
 
-    /// <summary>Scraps (.th2) whose id is not composed by any <c>map</c> body (PROJ-02 / LANG-08).</summary>
+    /// <summary>Scraps (.th2) whose id is not composed by any <c>map</c> body (/ ).</summary>
     public static IReadOnlyList<string> UnreferencedScraps(WorkspaceSemanticModel model)
     {
         if (model.ScrapsById.Count == 0) return Array.Empty<string>();

@@ -1,9 +1,9 @@
-// LANG-02 / LANG-03 — typed .thconfig command model. thbook v6.4.0 §"Processing data" pp.50-63.
+// typed .thconfig command model. thbook v6.4.0 §"Processing data" pp.50-63.
 // Therion source-of-truth: therion/src/thconfig.cxx + thlayout.cxx.
 //
 // `source`/`input`/`load` are deliberately *not* retyped here — they stay UnknownCommand /
 // InputCommand so SourceGraph's project-traversal keeps working unchanged. These nodes cover the
-// commands that drive layout (LANG-02), the output coordinate system (LANG-03), and exports.
+// commands that drive layout, the output coordinate system, and exports.
 
 using System.Collections.Immutable;
 using Therion.Core;
@@ -18,7 +18,7 @@ public sealed record SelectCommand(
     bool IsUnselect) : TherionCommand(Span, "select");
 
 /// <summary>
-/// <c>export &lt;what&gt; [-fmt &lt;format&gt;] [-output &lt;path&gt;] …</c>. Drives BUILD-01 export presets.
+/// <c>export &lt;what&gt; [-fmt &lt;format&gt;] [-output &lt;path&gt;] …</c>. Drives export presets.
 /// </summary>
 public sealed record ExportCommand(
     SourceSpan Span,
@@ -39,9 +39,9 @@ public sealed record MapsCommand(
     bool IsOffset) : TherionCommand(Span, "maps");
 
 /// <summary>
-/// <c>layout &lt;id&gt; [OPTIONS] … endlayout</c> (LANG-02). The body's simple <c>key value</c>
+/// <c>layout &lt;id&gt; [OPTIONS] … endlayout</c>. The body's simple <c>key value</c>
 /// lines are captured as <see cref="Options"/>; embedded <c>code &lt;lang&gt; … endcode</c> blocks
-/// (metapost / tex / postprocess) are skipped opaquely (LANG-10) and listed in <see cref="CodeBlocks"/>.
+/// (metapost / tex / postprocess) are skipped opaquely and listed in <see cref="CodeBlocks"/>.
 /// </summary>
 public sealed record LayoutCommand(
     SourceSpan Span,
@@ -54,13 +54,13 @@ public sealed record LayoutCommand(
     /// <summary>The <c>copy &lt;id&gt;</c> base layout this one inherits from, if any.</summary>
     public string? CopyFrom { get; init; }
 
-    /// <summary>The layout's <c>cs &lt;system&gt;</c> (location CRS for origin/grid), if set (LANG-03).</summary>
+    /// <summary>The layout's <c>cs &lt;system&gt;</c> (location CRS for origin/grid), if set.</summary>
     public string? CoordinateSystem { get; init; }
 
-    /// <summary>The <c>symbol-set &lt;standard&gt;</c> chosen by this layout, if any (LANG-09).</summary>
+    /// <summary>The <c>symbol-set &lt;standard&gt;</c> chosen by this layout, if any.</summary>
     public string? SymbolSet { get; init; }
 
-    /// <summary>The <c>symbol-hide/show/assign/colour</c> directives in this layout (LANG-09).</summary>
+    /// <summary>The <c>symbol-hide/show/assign/colour</c> directives in this layout.</summary>
     public ImmutableArray<LayoutSymbolDirective> SymbolDirectives { get; init; } =
         ImmutableArray<LayoutSymbolDirective>.Empty;
 }

@@ -1,4 +1,4 @@
-// REL-02 — corpus regression tests over the bundled real/sample projects.
+// corpus regression tests over the bundled real/sample projects.
 //
 // SyntheticCorpusTests already asserts each file parses error-free. These add the *aggregate*
 // regression guards the roadmap calls for: the corpus hasn't shrunk away, the whole corpus parses

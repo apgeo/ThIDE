@@ -1,4 +1,4 @@
-// STRUCT-01 Phase 2 — end-to-end facade: detect → fit → declination, plus Recompute on a subset and
+// Phase 2 — end-to-end facade: detect → fit → declination, plus Recompute on a subset and
 // the effect of including the (off-plane) origin point.
 
 using System.Collections.Generic;

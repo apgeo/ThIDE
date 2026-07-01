@@ -1,4 +1,4 @@
-// LANG-02 (embedded code) — TexLexer highlighting tests, driven off the real corpus tex-map lines
+// (embedded code) — TexLexer highlighting tests, driven off the real corpus tex-map lines
 // (tests/Corpus/Synthetic/project/Vladusca.thconfig).
 
 using System.Linq;

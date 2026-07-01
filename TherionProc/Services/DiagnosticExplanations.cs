@@ -1,4 +1,4 @@
-// DIAG-09 — "explain this error". Maps a diagnostic code to a short plain-language explanation,
+// "explain this error". Maps a diagnostic code to a short plain-language explanation,
 // an example fix, and a thbook term to open the relevant manual page. Keyed by the stable code
 // strings from Therion.Syntax.DiagnosticCodes / Therion.Semantics.SemanticDiagnosticCodes.
 

@@ -1,4 +1,4 @@
-// STRUCT-01 Phase 2 test helpers — build SemanticModels directly from synthetic shots/stations
+// Phase 2 test helpers — build SemanticModels directly from synthetic shots/stations
 // (no parser dependency), plus polar/planar generators shared across the detection/analysis tests.
 
 using System;

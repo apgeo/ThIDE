@@ -2,7 +2,7 @@ using TherionProc.Services;
 
 namespace TherionProc.Tests;
 
-// NOTE-04 — the project metadata sidecar store.
+// the project metadata sidecar store.
 public class ProjectMetadataStoreTests
 {
     [Fact]

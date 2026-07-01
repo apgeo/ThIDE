@@ -1,4 +1,4 @@
-// STRUCT-01 — total-least-squares (PCA) best-fit plane + strike/dip, with a Jacobi 3×3 eigensolver.
+// total-least-squares (PCA) best-fit plane + strike/dip, with a Jacobi 3×3 eigensolver.
 //
 // The fit minimises orthogonal distance to the plane (unlike the original z = a·x + b·y + c normal
 // equations, which break for vertical/steep planes). N points collapse into a fixed symmetric 3×3

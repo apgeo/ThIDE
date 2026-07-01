@@ -1,4 +1,4 @@
-// TRUST-04 — a minimal OK/Cancel confirmation for destructive operations (delete, overwrite).
+// a minimal OK/Cancel confirmation for destructive operations (delete, overwrite).
 // Returns true only when the user explicitly confirms.
 
 using System.Threading.Tasks;

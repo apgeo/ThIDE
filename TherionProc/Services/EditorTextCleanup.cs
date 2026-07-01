@@ -1,4 +1,4 @@
-// EDIT-14 — trailing-whitespace trim + final-newline normalisation applied on save.
+// trailing-whitespace trim + final-newline normalisation applied on save.
 // Text-level (idempotent) cleanup used as the save funnel's fallback; the editor also applies
 // the same rules in place (caret-preserving) when a view is loaded.
 
@@ -10,7 +10,7 @@ namespace TherionProc.Services;
 public static class EditorTextCleanup
 {
     /// <summary>
-    /// Applies the on-save cleanup when EDIT-14 is enabled (both the compile-time flag and the
+    /// Applies the on-save cleanup when is enabled (both the compile-time flag and the
     /// user setting); otherwise returns <paramref name="text"/> unchanged.
     /// </summary>
     public static string ApplyOnSave(string text, AppSettings? settings) =>

@@ -1,4 +1,4 @@
-// PROJ-03 (survey tree), PROJ-07 (dashboard) and PROJ-02 (orphan/dead-file audit) content
+// (survey tree), (dashboard) and (orphan/dead-file audit) content
 // view-models. All read the shared WorkspaceSemanticModel (via IWorkspaceSession) and refresh
 // when the object graph is rebuilt; click-to-source goes through IDocumentService.
 
@@ -31,7 +31,7 @@ internal static class ProjectFormat
     }
 }
 
-// ───────────────────────────── PROJ-03 — survey tree ─────────────────────────────
+// ───────────────────────────── — survey tree ─────────────────────────────
 
 /// <summary>One node in the logical survey-hierarchy tree (with rolled-up counts).</summary>
 public sealed class SurveyTreeItem
@@ -94,7 +94,7 @@ public sealed partial class SurveyTreeViewModel : ObservableObject
     }
 }
 
-// ───────────────────────────── PROJ-07 — dashboard ─────────────────────────────
+// ───────────────────────────── — dashboard ─────────────────────────────
 
 public sealed partial class ProjectDashboardViewModel : ObservableObject
 {
@@ -190,7 +190,7 @@ public sealed partial class ProjectDashboardViewModel : ObservableObject
     }
 }
 
-// ───────────────────────────── PROJ-02 — orphan / dead-file audit ─────────────────────────────
+// ───────────────────────────── — orphan / dead-file audit ─────────────────────────────
 
 /// <summary>One audit finding (orphan file / unreferenced scrap / unexported map).</summary>
 public sealed class AuditItem
@@ -329,7 +329,7 @@ public sealed partial class ProjectAuditViewModel : ObservableObject
     }
 }
 
-// ───────────────────────────── LEAD-01/03/05 — leads register ─────────────────────────────
+// ───────────────────────────── — leads register ─────────────────────────────
 
 /// <summary>One row in the Leads register: a lead plus its (sidecar) lifecycle status.</summary>
 public sealed partial class LeadRow : ObservableObject
@@ -343,11 +343,11 @@ public sealed partial class LeadRow : ObservableObject
     public string File => System.IO.Path.GetFileName(Lead.Span.FilePath ?? string.Empty);
     public int Line => Lead.Span.Start.Line;
 
-    /// <summary>Lifecycle status: open / checked / pushed / dead (LEAD-03).</summary>
+    /// <summary>Lifecycle status: open / checked / pushed / dead.</summary>
     [ObservableProperty] private string _status;
 }
 
-/// <summary>LEAD-01/05: the exploration-leads register, with LEAD-03 lifecycle status.</summary>
+/// <summary>the exploration-leads register, with lifecycle status.</summary>
 public sealed partial class LeadsViewModel : ObservableObject
 {
     private readonly IWorkspaceSession? _session;
@@ -383,7 +383,7 @@ public sealed partial class LeadsViewModel : ObservableObject
     [RelayCommand] private void MarkPushed(LeadRow? row) => SetStatus(row, "pushed");
     [RelayCommand] private void MarkDead(LeadRow? row) => SetStatus(row, "dead");
 
-    /// <summary>LEAD-04 lite: copy the leads list as a Markdown table for a trip sheet.</summary>
+    /// <summary>lite: copy the leads list as a Markdown table for a trip sheet.</summary>
     [RelayCommand]
     private void CopyAsMarkdown()
     {
@@ -425,12 +425,12 @@ public sealed partial class LeadsViewModel : ObservableObject
     }
 }
 
-// ───────────────────────────── NOTE-01 — TODO / FIXME / QM aggregator ─────────────────────────────
+// ───────────────────────────── — TODO / FIXME / QM aggregator ─────────────────────────────
 
 /// <summary>One scanned comment tag (TODO/FIXME/QM/…) with its location.</summary>
 public sealed record TodoRow(string Tag, string Text, string File, int Line, SourceSpan Span);
 
-/// <summary>NOTE-01: aggregates TODO/FIXME/QM comment tags across all project files.</summary>
+/// <summary>aggregates TODO/FIXME/QM comment tags across all project files.</summary>
 public sealed partial class TodoScanViewModel : ObservableObject
 {
     private readonly IWorkspaceSession? _session;
@@ -518,9 +518,9 @@ public sealed partial class TodoScanViewModel : ObservableObject
     }
 }
 
-// ───────────────────────────── NOTE-04 — project metadata editor ─────────────────────────────
+// ───────────────────────────── — project metadata editor ─────────────────────────────
 
-/// <summary>NOTE-04: a form for project-level metadata, persisted in a per-root sidecar.</summary>
+/// <summary>a form for project-level metadata, persisted in a per-root sidecar.</summary>
 public sealed partial class ProjectMetadataViewModel : ObservableObject
 {
     private readonly IWorkspaceSession? _session;
@@ -582,9 +582,9 @@ public sealed partial class ProjectMetadataViewModel : ObservableObject
     private void Touch() { if (!_loading && HasProject) Status = "Unsaved changes."; }
 }
 
-// ───────────────────────────── MEDIA-02/03 — background-scan / media manager ─────────────────────────────
+// ───────────────────────────── — background-scan / media manager ─────────────────────────────
 
-/// <summary>MEDIA-02/03: lists the project's scan assets (referenced .xvi + on-disk orphans) with
+/// <summary>lists the project's scan assets (referenced .xvi + on-disk orphans) with
 /// status (referenced / missing / orphan), resolution and referencing-scrap counts.</summary>
 public sealed partial class MediaManagerViewModel : ObservableObject
 {
@@ -624,7 +624,7 @@ public sealed partial class MediaManagerViewModel : ObservableObject
         if (_settings is { Current.EnableMediaScan: false }) { Summary = "Media scan disabled (Preferences ▸ Performance)."; return; }
 
         foreach (var m in MediaScanner.ScanReferenced(_documents?.Workspace)) Media.Add(m);
-        // MEDIA-03: asset health — present-but-unreferenced media on disk.
+        // asset health — present-but-unreferenced media on disk.
         foreach (var m in MediaScanner.ScanOrphans(_documents?.Workspace, _session?.RootPath)) Media.Add(m);
         UpdateSummary();
     }

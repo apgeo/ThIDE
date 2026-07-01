@@ -1,5 +1,5 @@
-// BUILD-01/02 — derive a temporary thconfig from the active one. Therion compiles a whole
-// thconfig, so to run a single export (BUILD-01) or a composed quick-export (BUILD-02) we copy the
+// derive a temporary thconfig from the active one. Therion compiles a whole
+// thconfig, so to run a single export or a composed quick-export we copy the
 // active thconfig (keeping its source/select/cs/layout context) and comment the export lines we
 // don't want, optionally appending a new export block. The temp file is written in the project
 // folder so relative source paths still resolve, then deleted after the build.

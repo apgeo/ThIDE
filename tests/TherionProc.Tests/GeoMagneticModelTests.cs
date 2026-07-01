@@ -2,7 +2,7 @@ using Therion.Core;
 
 namespace TherionProc.Tests;
 
-// UTIL-02 — geomagnetic synthesis. Validated with controlled coefficient sets whose declination is
+// geomagnetic synthesis. Validated with controlled coefficient sets whose declination is
 // analytically known (no external reference data needed).
 public class GeoMagneticModelTests
 {

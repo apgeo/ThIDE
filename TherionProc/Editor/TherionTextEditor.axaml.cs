@@ -83,11 +83,11 @@ public partial class TherionTextEditor : UserControl
     public bool LastCaretMoveFromPointer { get; private set; }
     private bool _caretFromPointer;
 
-    /// <summary>QOL-04: true when the latest caret move was driven by the in-editor search panel
+    /// <summary>true when the latest caret move was driven by the in-editor search panel
     /// (find next/previous), which must not pollute the back/forward navigation history.</summary>
     public bool LastCaretMoveFromSearch { get; private set; }
 
-    /// <summary>QOL-11: in-process drag format carrying a file path from the Workspace Explorer;
+    /// <summary>in-process drag format carrying a file path from the Workspace Explorer;
     /// dropping it on the editor inserts an <c>input</c>/<c>source</c> line for that file.</summary>
     public static readonly Avalonia.Input.DataFormat<string> InsertPathFormat =
         Avalonia.Input.DataFormat.CreateInProcessFormat<string>("therionproc-insert-path");
@@ -149,14 +149,14 @@ public partial class TherionTextEditor : UserControl
     private Point _infoPointer;
     private bool _pointerOverPopup;   // pointer is currently inside the hover popup (#5)
     private FoldingManager? _foldingManager;
-    private MatchingBlockRenderer? _matchRenderer;        // EDIT-15: matching block opener/closer highlight
-    private ColorAdornmentRenderer? _colorAdorn;          // EDIT-12: inline color swatches
-    private MinimapControl? _minimap;                     // EDIT-07: code minimap
-    private Dictionary<int, int> _blockPairs = new();     // EDIT-15/16: opener↔closer line pairs
-    private MenuItem? _matchMenuItem;                     // EDIT-15: context-menu item (visibility gated)
-    private MenuItem? _stepIntoMenuItem;                  // EDIT-17: context-menu item (visibility gated)
-    private MenuItem? _formatMenuItem;                    // EDIT-04: context-menu item (visibility gated)
-    private MenuItem? _peekMenuItem;                      // EDIT-10: context-menu item (visibility gated)
+    private MatchingBlockRenderer? _matchRenderer;        // matching block opener/closer highlight
+    private ColorAdornmentRenderer? _colorAdorn;          // inline color swatches
+    private MinimapControl? _minimap;                     // code minimap
+    private Dictionary<int, int> _blockPairs = new();     // opener↔closer line pairs
+    private MenuItem? _matchMenuItem;                     // context-menu item (visibility gated)
+    private MenuItem? _stepIntoMenuItem;                  // context-menu item (visibility gated)
+    private MenuItem? _formatMenuItem;                    // context-menu item (visibility gated)
+    private MenuItem? _peekMenuItem;                      // context-menu item (visibility gated)
     private MenuItem? _open3dMenuItem;                    // #5: "Open in 3D" (shown for station/survey refs)
     private string? _open3dName;                          // the station/survey under the right-click
     private CompletionWindow? _completionWindow;
@@ -217,7 +217,7 @@ public partial class TherionTextEditor : UserControl
             // runs ahead of the ContextMenu's own bubbling open handler), like a typical editor.
             _editor.TextArea.AddHandler(InputElement.ContextRequestedEvent, OnEditorContextRequested,
                 RoutingStrategies.Tunnel);
-            // Tunnel KeyDown runs before AvaloniaEdit inserts a newline, so Smart Enter (EDIT-16)
+            // Tunnel KeyDown runs before AvaloniaEdit inserts a newline, so Smart Enter
             // can intercept Return and substitute a block-aware insertion.
             _editor.TextArea.AddHandler(InputElement.KeyDownEvent, OnTextAreaPreviewKeyDown,
                 RoutingStrategies.Tunnel);
@@ -295,18 +295,18 @@ public partial class TherionTextEditor : UserControl
         _occurrences = new OccurrenceHighlightRenderer(editor.TextArea.TextView);
         editor.TextArea.TextView.BackgroundRenderers.Add(_occurrences);
         editor.TextArea.Caret.PositionChanged += OnCaretPositionChanged;
-        editor.TextArea.SelectionChanged += OnSelectionChanged;   // QOL-06 status-bar selection stats
+        editor.TextArea.SelectionChanged += OnSelectionChanged;   // status-bar selection stats
 
-        // QOL-11: accept a file dragged from the Workspace Explorer → insert an input/source line.
+        // accept a file dragged from the Workspace Explorer → insert an input/source line.
         DragDrop.SetAllowDrop(editor, true);
         editor.AddHandler(DragDrop.DragOverEvent, OnEditorDragOver);
         editor.AddHandler(DragDrop.DropEvent, OnEditorDrop);
 
-        // EDIT-15: highlight the matching opener/closer of the block keyword under the caret.
+        // highlight the matching opener/closer of the block keyword under the caret.
         _matchRenderer = new MatchingBlockRenderer();
         editor.TextArea.TextView.BackgroundRenderers.Add(_matchRenderer);
 
-        // EDIT-12: draw a colour swatch next to colour values.
+        // draw a colour swatch next to colour values.
         _colorAdorn = new ColorAdornmentRenderer
         {
             Enabled = EditorFeatureFlags.IsEnabled(EditorFeature.ColorAdornments,
@@ -346,10 +346,10 @@ public partial class TherionTextEditor : UserControl
         {
             _overviewRuler = new DiagnosticOverviewRuler(editor);
             Grid.SetColumn(_overviewRuler, 1);
-            Grid.SetRow(_overviewRuler, 1); // EDIT-08 added a breadcrumb row at the top
+            Grid.SetRow(_overviewRuler, 1); // added a breadcrumb row at the top
             root.Children.Add(_overviewRuler);
 
-            // EDIT-07: code minimap in the rightmost column (hidden until enabled).
+            // code minimap in the rightmost column (hidden until enabled).
             _minimap = new MinimapControl(editor) { IsVisible = false };
             Grid.SetColumn(_minimap, 2);
             Grid.SetRow(_minimap, 1);
@@ -366,7 +366,7 @@ public partial class TherionTextEditor : UserControl
     private void OnAppSettingsChanged(object? sender, EventArgs e)
     {
         if (_editor is not null) ApplyAppSettings(_editor);
-        UpdateBreadcrumb(); // EDIT-08 may have been toggled
+        UpdateBreadcrumb(); // may have been toggled
     }
 
     // The UI language changed: rebuild the context menu so its item headers pick up the new language
@@ -389,28 +389,28 @@ public partial class TherionTextEditor : UserControl
         editor.Options.IndentationSize = Math.Max(1, s.IndentationSize);
         editor.WordWrap = s.EditorWordWrap; // #7
 
-        // EDIT-13: whitespace / EOL / indent-guide rendering, gated by the feature flag.
+        // whitespace / EOL / indent-guide rendering, gated by the feature flag.
         bool wsFeature = EditorFeatureFlags.IsEnabled(EditorFeature.WhitespaceGuides, s);
         editor.Options.ShowSpaces = wsFeature && s.EditorShowWhitespace;
         editor.Options.ShowTabs = wsFeature && s.EditorShowWhitespace;
         editor.Options.ShowEndOfLine = wsFeature && s.EditorShowEndOfLine;
         ApplyIndentGuides(editor, wsFeature && s.EditorShowIndentGuides, Math.Max(1, s.IndentationSize));
 
-        // EDIT-12: toggle the colour swatches with the feature flag.
+        // toggle the colour swatches with the feature flag.
         if (_colorAdorn is not null)
         {
             _colorAdorn.Enabled = EditorFeatureFlags.IsEnabled(EditorFeature.ColorAdornments, s);
             editor.TextArea.TextView.InvalidateVisual();
         }
 
-        // EDIT-07: show the minimap when enabled (feature flag + View-menu toggle).
+        // show the minimap when enabled (feature flag + View-menu toggle).
         if (_minimap is not null)
             _minimap.IsVisible = EditorFeatureFlags.IsEnabled(EditorFeature.Minimap, s) && s.EditorShowMinimap;
     }
 
     private IndentGuideRenderer? _indentGuides;
 
-    // Adds/removes the indent-guide background renderer to match the EDIT-13 toggle.
+    // Adds/removes the indent-guide background renderer to match the toggle.
     private void ApplyIndentGuides(TextEditor editor, bool enabled, int indentSize)
     {
         var renderers = editor.TextArea.TextView.BackgroundRenderers;
@@ -428,14 +428,14 @@ public partial class TherionTextEditor : UserControl
     }
 
     /// <summary>
-    /// EDIT-14: trims trailing whitespace on every line and ensures a final newline, editing the
+    /// trims trailing whitespace on every line and ensures a final newline, editing the
     /// document in place so the caret position is preserved. No-op unless the feature is enabled.
     /// </summary>
     public void ApplySaveCleanup()
     {
         if (_editor is null) return;
 
-        // EDIT-04: optional format-on-save (runs before the trim; itself gated on the EDIT-04 flag).
+        // optional format-on-save (runs before the trim; itself gated on the flag).
         if (CurrentSettings.EditorFormatOnSave) FormatDocument();
 
         if (!EditorFeatureFlags.IsEnabled(EditorFeature.TrimTrailingOnSave,
@@ -494,7 +494,7 @@ public partial class TherionTextEditor : UserControl
         _overviewRuler?.InvalidateVisual();
     }
 
-    // EDIT-15/16: cache the opener↔closer line pairs whenever the text changes (cheap, line-based),
+    // cache the opener↔closer line pairs whenever the text changes (cheap, line-based),
     // but only while one of the consuming features is active.
     private void UpdateBlockPairs()
     {
@@ -525,7 +525,7 @@ public partial class TherionTextEditor : UserControl
         return ext is ".thconfig" or ".thc" or ".th";
     }
 
-    // LANG-02: classify each line's embedded-language region (Therion layout option / MetaPost / TeX)
+    // classify each line's embedded-language region (Therion layout option / MetaPost / TeX)
     // so the colorizer highlights layout bodies with the right lexer instead of blanking them.
     private void UpdateThconfigDecorations()
     {
@@ -697,22 +697,22 @@ public partial class TherionTextEditor : UserControl
             StartRename();
             e.Handled = true;
         }
-        else if (ctrl && e.Key == Key.OemCloseBrackets) // EDIT-15: go to matching survey↔endsurvey
+        else if (ctrl && e.Key == Key.OemCloseBrackets) // go to matching survey↔endsurvey
         {
             GoToMatchingBlock();
             e.Handled = true;
         }
-        else if (alt && e.Key == Key.Down && GatedReadingNav()) // EDIT-17: step into the include under the caret
+        else if (alt && e.Key == Key.Down && GatedReadingNav()) // step into the include under the caret
         {
             FollowIncludeUnderCaret();
             e.Handled = true;
         }
-        else if (alt && e.Key == Key.Up && GatedReadingNav()) // EDIT-17: step back to the including file
+        else if (alt && e.Key == Key.Up && GatedReadingNav()) // step back to the including file
         {
             StepOutRequested?.Invoke(this, EventArgs.Empty);
             e.Handled = true;
         }
-        else if (alt && e.Key == Key.F12) // EDIT-10: peek definition inline
+        else if (alt && e.Key == Key.F12) // peek definition inline
         {
             PeekDefinition();
             e.Handled = true;
@@ -742,19 +742,19 @@ public partial class TherionTextEditor : UserControl
             ToggleLineComment();
             e.Handled = true;
         }
-        else if (shift && alt && e.Key == Key.F) // EDIT-04: Format Document
+        else if (shift && alt && e.Key == Key.F) // Format Document
         {
             FormatDocument();
             e.Handled = true;
         }
-        else if (ctrl && e.Key == Key.OemPeriod) // DIAG-01: quick-fixes / code actions
+        else if (ctrl && e.Key == Key.OemPeriod) // quick-fixes / code actions
         {
             ShowQuickFixes();
             e.Handled = true;
         }
     }
 
-    /// <summary>DIAG-01: builds line-scoped quick-fixes for the caret and shows them in a flyout.</summary>
+    /// <summary>builds line-scoped quick-fixes for the caret and shows them in a flyout.</summary>
     public void ShowQuickFixes()
     {
         if (_editor?.Document is not { } doc) return;
@@ -777,9 +777,9 @@ public partial class TherionTextEditor : UserControl
         flyout.ShowAt(_editor.TextArea, showAtPointer: false);
     }
 
-    // ----- EDIT-15 / 16 / 17: block matching, smart Enter, reading-order navigation -----
+    // ----- / 16 / 17: block matching, smart Enter, reading-order navigation -----
 
-    /// <summary>Raised when the user steps back out of an included file (Alt+Up, EDIT-17).</summary>
+    /// <summary>Raised when the user steps back out of an included file (Alt+Up).</summary>
     public event EventHandler? StepOutRequested;
 
     private AppSettings CurrentSettings => (_settings ?? TryGetSettings())?.Current ?? AppSettings.Default;
@@ -787,7 +787,7 @@ public partial class TherionTextEditor : UserControl
     private bool GatedReadingNav() =>
         EditorFeatureFlags.IsEnabled(EditorFeature.ReadingOrderNav, CurrentSettings);
 
-    // Tunnel-phase handler: lets Smart Enter (EDIT-16) and Tab snippet expansion (EDIT-03)
+    // Tunnel-phase handler: lets Smart Enter and Tab snippet expansion
     // preempt AvaloniaEdit's default newline / indent.
     private void OnTextAreaPreviewKeyDown(object? sender, KeyEventArgs e)
     {
@@ -799,7 +799,7 @@ public partial class TherionTextEditor : UserControl
     }
 
     /// <summary>
-    /// EDIT-03: if the word immediately before the caret is a snippet trigger, replace it with the
+    /// if the word immediately before the caret is a snippet trigger, replace it with the
     /// expanded template (continuation lines indented, caret at the <c>$0</c> marker).
     /// </summary>
     private bool TryExpandSnippet()
@@ -820,7 +820,7 @@ public partial class TherionTextEditor : UserControl
     }
 
     /// <summary>
-    /// EDIT-16: when Enter is pressed at the end of an as-yet-unclosed block opener
+    /// when Enter is pressed at the end of an as-yet-unclosed block opener
     /// (<c>survey foo</c>), insert an indented body line plus the matching <c>endX</c>, leaving the
     /// caret on the indented line. Returns false to fall through to the normal newline + auto-indent.
     /// </summary>
@@ -853,7 +853,7 @@ public partial class TherionTextEditor : UserControl
         return s.ConvertTabsToSpaces ? new string(' ', Math.Max(1, s.IndentationSize)) : "\t";
     }
 
-    /// <summary>EDIT-04: re-indents the whole document to its block nesting (caret-preserving).</summary>
+    /// <summary>re-indents the whole document to its block nesting (caret-preserving).</summary>
     public void FormatDocument()
     {
         if (_editor is null) return;
@@ -861,7 +861,7 @@ public partial class TherionTextEditor : UserControl
         TherionFormatter.Reindent(_editor.Document, IndentUnit());
     }
 
-    /// <summary>EDIT-15: jumps the caret to the matching opener/closer of the block keyword line.</summary>
+    /// <summary>jumps the caret to the matching opener/closer of the block keyword line.</summary>
     public void GoToMatchingBlock()
     {
         if (_editor is null) return;
@@ -878,7 +878,7 @@ public partial class TherionTextEditor : UserControl
         _editor.Focus();
     }
 
-    // EDIT-15: keep the matching-pair highlight in sync with the caret.
+    // keep the matching-pair highlight in sync with the caret.
     private void UpdateMatchingBlockHighlight()
     {
         if (_editor is null || _matchRenderer is null) return;
@@ -909,7 +909,7 @@ public partial class TherionTextEditor : UserControl
         return (line.Offset + lead, len);
     }
 
-    /// <summary>EDIT-17: opens the file referenced by the input/load/source command on the caret line.</summary>
+    /// <summary>opens the file referenced by the input/load/source command on the caret line.</summary>
     public void FollowIncludeUnderCaret()
     {
         if (_editor is null) return;
@@ -927,7 +927,7 @@ public partial class TherionTextEditor : UserControl
         if (ResolvePathLinkAt(line.Offset + argCol) is { } link) OpenLink(link);
     }
 
-    /// <summary>EDIT-15: faint highlight of the matching block opener/closer keyword pair.</summary>
+    /// <summary>faint highlight of the matching block opener/closer keyword pair.</summary>
     private sealed class MatchingBlockRenderer : IBackgroundRenderer
     {
         private static readonly IBrush Fill = new SolidColorBrush(Color.FromArgb(0x40, 0x4C, 0xAF, 0x50));
@@ -987,7 +987,7 @@ public partial class TherionTextEditor : UserControl
 
     // ----- autocomplete --------------------------------------------------
 
-    // EDIT-01: a completion item's semantic kind (drives the glyph + description).
+    // a completion item's semantic kind (drives the glyph + description).
     private enum CompletionKind { Command, Flag, DataStyle, DataField, Type, Station, Identifier, Snippet }
 
     private readonly record struct CompletionCandidate(
@@ -1029,7 +1029,7 @@ public partial class TherionTextEditor : UserControl
             window.CompletionList.CompletionData.Add(new TherionCompletionData(c, rich));
         window.Closed += (_, _) => _completionWindow = null;
         _completionWindow = window;
-        HideSignatureHelp(); // EDIT-02: don't overlap the completion popup
+        HideSignatureHelp(); // don't overlap the completion popup
         window.Show();
     }
 
@@ -1041,7 +1041,7 @@ public partial class TherionTextEditor : UserControl
         var before = _editor.Document.GetText(line.Offset, wordStart - line.Offset);
         var tokens = before.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
 
-        // First word on the line → command keywords (+ snippet triggers when EDIT-03 is on).
+        // First word on the line → command keywords (+ snippet triggers when is on).
         if (tokens.Length == 0)
             return FirstWordCandidates();
 
@@ -1095,7 +1095,7 @@ public partial class TherionTextEditor : UserControl
     private bool IsTh2() =>
         CurrentFilePath is { } p && p.EndsWith(".th2", StringComparison.OrdinalIgnoreCase);
 
-    // ----- EDIT-02: parameter / signature help -----------------------------
+    // ----- : parameter / signature help -----------------------------
 
     private Avalonia.Controls.Primitives.Popup? _sigPopup;
     private string? _sigKey;
@@ -1235,7 +1235,7 @@ public partial class TherionTextEditor : UserControl
         }
     }
 
-    // ----- EDIT-08: breadcrumb bar (enclosing survey/centreline/scrap path) -----
+    // ----- : breadcrumb bar (enclosing survey/centreline/scrap path) -----
 
     private void UpdateBreadcrumb()
     {
@@ -1302,11 +1302,11 @@ public partial class TherionTextEditor : UserControl
         return parts.Length >= 2 && !parts[1].StartsWith('-') ? $"{type} {parts[1]}" : type;
     }
 
-    // ----- EDIT-10: peek definition (inline popup) -------------------------
+    // ----- : peek definition (inline popup) -------------------------
 
     private Avalonia.Controls.Primitives.Popup? _peekPopup;
 
-    /// <summary>EDIT-10: shows the definition of the symbol under the caret inline, without navigating.</summary>
+    /// <summary>shows the definition of the symbol under the caret inline, without navigating.</summary>
     public void PeekDefinition()
     {
         if (_editor is null || Navigation is null) return;
@@ -1932,7 +1932,7 @@ public partial class TherionTextEditor : UserControl
 
     // ----- occurrence highlight + caret reporting ------------------------
 
-    /// <summary>QOL-06: raised by the focused editor with the current selection's character and
+    /// <summary>raised by the focused editor with the current selection's character and
     /// line counts (0,0 when the selection is empty). The shell shows these in the status bar.</summary>
     public static event EventHandler<(int Chars, int Lines)>? SelectionStatsChanged;
 
@@ -1955,11 +1955,11 @@ public partial class TherionTextEditor : UserControl
         if (_occurrences?.SetWord(SelectedOrCaretWord()) == true)
             _editor.TextArea.TextView.InvalidateVisual();
 
-        // EDIT-15: highlight the matching block opener/closer when the caret sits on a block keyword.
+        // highlight the matching block opener/closer when the caret sits on a block keyword.
         UpdateMatchingBlockHighlight();
-        // EDIT-02: track the active parameter as the caret moves across a command/data row.
+        // track the active parameter as the caret moves across a command/data row.
         UpdateSignatureHelp();
-        // EDIT-08: refresh the enclosing-block breadcrumb. EDIT-10: dismiss any open peek.
+        // refresh the enclosing-block breadcrumb. : dismiss any open peek.
         UpdateBreadcrumb();
         HidePeek();
 
@@ -1969,7 +1969,7 @@ public partial class TherionTextEditor : UserControl
         {
             LastCaretMoveFromPointer = _caretFromPointer;
             _caretFromPointer = false;
-            LastCaretMoveFromSearch = IsSearchPanelFocused();   // QOL-04
+            LastCaretMoveFromSearch = IsSearchPanelFocused();
             var loc = _editor.Document.GetLocation(_editor.CaretOffset);
             CaretMoved?.Invoke(this, new SourceSpan(
                 CurrentFilePath!, new SourceLocation(loc.Line, loc.Column),
@@ -2039,7 +2039,7 @@ public partial class TherionTextEditor : UserControl
     private void OnEditorContextRequested(object? sender, ContextRequestedEventArgs e)
     {
         if (_editor is null) return;
-        // EDIT-15 / EDIT-17: refresh the gated items' visibility for the current settings.
+        // refresh the gated items' visibility for the current settings.
         var fs = CurrentSettings;
         if (_matchMenuItem is not null)
             _matchMenuItem.IsVisible = EditorFeatureFlags.IsEnabled(EditorFeature.MatchTerminator, fs);
@@ -2557,8 +2557,8 @@ public partial class TherionTextEditor : UserControl
         return text.Substring(start, i - start);
     }
 
-    // EDIT-01: a completion item that shows a per-kind glyph + a documentation/detail tooltip
-    // (when rich), and — for snippet triggers (EDIT-03) — expands its template on accept.
+    // a completion item that shows a per-kind glyph + a documentation/detail tooltip
+    // (when rich), and — for snippet triggers — expands its template on accept.
     private sealed class TherionCompletionData : ICompletionData
     {
         private readonly CompletionKind _kind;
@@ -2732,7 +2732,7 @@ public partial class TherionTextEditor : UserControl
     }
 
     /// <summary>
-    /// EDIT-13: draws faint dashed vertical guides at each indentation stop on the visible lines,
+    /// draws faint dashed vertical guides at each indentation stop on the visible lines,
     /// making nested survey / centreline / scrap blocks easier to scan.
     /// </summary>
     private sealed class IndentGuideRenderer : IBackgroundRenderer
@@ -2786,7 +2786,7 @@ public partial class TherionTextEditor : UserControl
         }
     }
 
-    /// <summary>EDIT-12: draws a small colour swatch beside layout <c>color</c> values and <c>#hex</c> literals.</summary>
+    /// <summary>draws a small colour swatch beside layout <c>color</c> values and <c>#hex</c> literals.</summary>
     private sealed class ColorAdornmentRenderer : IBackgroundRenderer
     {
         private static readonly IPen SwatchPen = new Pen(new SolidColorBrush(Color.FromArgb(0xAA, 0x80, 0x80, 0x80)), 1);
@@ -2897,13 +2897,13 @@ public partial class TherionTextEditor : UserControl
         menu.Items.Add(new Separator());
         menu.Items.Add(MakeItem(L("Ed_ToggleComment"),    ToggleLineComment));
         menu.Items.Add(new Separator());
-        // QOL-07: line operations.
+        // line operations.
         menu.Items.Add(MakeItem(L("Ed_DuplicateLines"),   DuplicateLines));
         menu.Items.Add(MakeItem(L("Ed_MoveLinesUp"),      MoveLinesUp));
         menu.Items.Add(MakeItem(L("Ed_MoveLinesDown"),    MoveLinesDown));
         menu.Items.Add(MakeItem(L("Ed_SortLines"),        SortSelectedLines));
         menu.Items.Add(new Separator());
-        // QOL-08: insert helpers.
+        // insert helpers.
         menu.Items.Add(MakeItem(L("Ed_InsertDate"),       InsertDate));
         menu.Items.Add(MakeItem(L("Ed_InsertTeamMember"), InsertTeamMember));
         menu.Items.Add(new Separator());
@@ -2912,7 +2912,7 @@ public partial class TherionTextEditor : UserControl
         _open3dMenuItem = MakeItem(L("Ed_OpenIn3D"), () => { if (_open3dName is { } n) OpenInModel3D(n); });
         menu.Items.Add(_open3dMenuItem);
         menu.Items.Add(new Separator());
-        // EDIT-15 / EDIT-17: shown only when their feature is enabled (refreshed on menu open).
+        // shown only when their feature is enabled (refreshed on menu open).
         _matchMenuItem = MakeItem(L("Ed_GoToMatching"), GoToMatchingBlock);
         _stepIntoMenuItem = MakeItem(L("Ed_StepInto"), FollowIncludeUnderCaret);
         _formatMenuItem = MakeItem(L("Ed_FormatDoc"), FormatDocument);
@@ -2958,7 +2958,7 @@ public partial class TherionTextEditor : UserControl
     /// <summary>Opens the Go-to-Line dialog (command palette, #4).</summary>
     public void MenuGoToLine() => ShowGoToLine();
 
-    // ----- QOL-11: drop a workspace file → insert an input/source line ----
+    // ----- : drop a workspace file → insert an input/source line ----
 
     private void OnEditorDragOver(object? sender, DragEventArgs e)
     {
@@ -3009,7 +3009,7 @@ public partial class TherionTextEditor : UserControl
         catch { return System.IO.Path.GetFileName(path); }
     }
 
-    /// <summary>QOL-04: true when keyboard focus is inside the in-editor search panel (so its
+    /// <summary>true when keyboard focus is inside the in-editor search panel (so its
     /// find-next caret moves can be kept out of the navigation history).</summary>
     private bool IsSearchPanelFocused()
     {
@@ -3054,7 +3054,7 @@ public partial class TherionTextEditor : UserControl
         _editor?.TextArea.TextView.Redraw();
     }
 
-    // ----- line operations (QOL-07) --------------------------------------
+    // ----- line operations --------------------------------------
     // Duplicate, move up/down and sort the selected lines (or the caret line). Useful for
     // hand-editing centreline `data` blocks. Lines in the affected region are rejoined with the
     // document's newline (Therion files use a uniform EOL).
@@ -3137,7 +3137,7 @@ public partial class TherionTextEditor : UserControl
         return (doc.GetLineByOffset(s), doc.GetLineByOffset(e));
     }
 
-    // ----- insert helpers (QOL-08) ---------------------------------------
+    // ----- insert helpers ---------------------------------------
 
     /// <summary>Inserts today's date in Therion's <c>yyyy.mm.dd</c> format at the caret.</summary>
     public void InsertDate()
@@ -3388,7 +3388,7 @@ public partial class TherionTextEditor : UserControl
 
         private void OnVisualLinesChanged(object? sender, EventArgs e) => InvalidateVisual();
 
-        // QOL-03: right-click a bookmark in the gutter to remove it.
+        // right-click a bookmark in the gutter to remove it.
         protected override void OnPointerPressed(PointerPressedEventArgs e)
         {
             base.OnPointerPressed(e);

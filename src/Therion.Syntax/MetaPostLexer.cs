@@ -1,4 +1,4 @@
-// LANG-02 (embedded code) — highlighting-grade MetaPost lexer.
+// (embedded code) — highlighting-grade MetaPost lexer.
 //
 // Therion `layout` bodies embed MetaPost inside `code metapost … endcode` (thbook §"layout",
 // Therion source thmpost.cxx). There is no mature reusable .NET MetaPost parser — the reference

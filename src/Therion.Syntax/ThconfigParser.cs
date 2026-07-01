@@ -103,7 +103,7 @@ public sealed class ThconfigParser
                         break;
                     }
 
-                    // `layout … endlayout` is now parsed into a typed LayoutCommand (LANG-02),
+                    // `layout … endlayout` is now parsed into a typed LayoutCommand,
                     // skipping embedded `code … endcode` blocks opaquely. A header-only `layout id`
                     // with no matching endlayout is treated as a single line (no body consumed).
                     if (string.Equals(keyword, "layout", StringComparison.OrdinalIgnoreCase))
@@ -298,7 +298,7 @@ public sealed class ThconfigParser
     }
 
     /// <summary>
-    /// Parses a <c>layout &lt;id&gt; [opts] … endlayout</c> block (LANG-02). When no matching
+    /// Parses a <c>layout &lt;id&gt; [opts] … endlayout</c> block. When no matching
     /// <c>endlayout</c> exists the layout is treated as a single header line (no body consumed),
     /// matching the previous lenient behaviour. <paramref name="next"/> is where parsing resumes.
     /// </summary>

@@ -1,4 +1,4 @@
-// IMP-01 — Compass (.dat) → Therion (.th) importer. A Compass .dat file holds one or more survey
+// Compass (.dat) → Therion (.th) importer. A Compass .dat file holds one or more survey
 // blocks (separated by a form-feed), each with a small header (name/date/team/declination) and shot
 // rows "FROM TO LENGTH BEARING INC LEFT UP DOWN RIGHT [flags] [comment]". Compass defaults to feet +
 // degrees; LRUD uses -9999/-999 for "not measured" (mapped to Therion's '-'). Pure string→string.

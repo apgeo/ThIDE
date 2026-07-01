@@ -25,7 +25,7 @@ namespace TherionProc.ViewModels;
 
 public enum OutputRowKind { Command, Normal, Summary }
 
-/// <summary>Coarse Therion build stage parsed from its output (BUILD-05). Monotonic: only advances.</summary>
+/// <summary>Coarse Therion build stage parsed from its output. Monotonic: only advances.</summary>
 public enum BuildPhase { Idle, Starting, Reading, Processing, Exporting }
 
 /// <summary>How the leading time column is rendered for every output row (#4).</summary>
@@ -171,7 +171,7 @@ public sealed class CompilerOutputRow : CommunityToolkit.Mvvm.ComponentModel.Obs
 }
 public sealed record ArtifactRow(string Path, string Kind, long SizeBytes, DateTimeOffset LastWriteUtc)
 {
-    /// <summary>True when a project input is newer than this output (BUILD-03).</summary>
+    /// <summary>True when a project input is newer than this output.</summary>
     public bool IsStale { get; init; }
     /// <summary>True for .lox/.3d outputs that can be shown in a 3D viewer (drives the row's 3D buttons).</summary>
     public bool CanView3D =>
@@ -201,7 +201,7 @@ public sealed record ArtifactRow(string Path, string Kind, long SizeBytes, DateT
     };
 }
 
-/// <summary>A runnable export target parsed from the active thconfig (BUILD-01).</summary>
+/// <summary>A runnable export target parsed from the active thconfig.</summary>
 public sealed class BuildTarget
 {
     public string Title { get; }
@@ -267,7 +267,7 @@ public partial class BuildViewModel : ViewModelBase
     // Any status change drops a stale artifact link; the success path re-sets it immediately after.
     partial void OnStatusChanged(string value) => StatusArtifactCount = string.Empty;
 
-    // ---- build phases (BUILD-05): a stage label + stepped progress, alongside the spinner ----
+    // ---- build phases: a stage label + stepped progress, alongside the spinner ----
     [ObservableProperty] private BuildPhase _phase;
     [ObservableProperty] private string _currentPhase = string.Empty;
     [ObservableProperty] private double _phaseProgress;
@@ -307,7 +307,7 @@ public partial class BuildViewModel : ViewModelBase
     [ObservableProperty] private IReadOnlyList<ArtifactRow> _artifacts = Array.Empty<ArtifactRow>();
     [ObservableProperty] private bool _hasLoxArtifact;
     [ObservableProperty] private bool _hasAvenArtifact;
-    /// <summary>True when at least one output is older than a project input (BUILD-03).</summary>
+    /// <summary>True when at least one output is older than a project input.</summary>
     [ObservableProperty] private bool _hasStaleArtifacts;
     [ObservableProperty] private CompilerOutputRow? _selectedOutput;
     [ObservableProperty] private ArtifactRow? _selectedArtifact;
@@ -376,7 +376,7 @@ public partial class BuildViewModel : ViewModelBase
     }
 
     private readonly ILogService? _log;
-    private readonly INotificationService? _notifications;   // UX-07 (tool-not-found toast)
+    private readonly INotificationService? _notifications;   // (tool-not-found toast)
 
     public BuildViewModel() : this(
         new NullCompiler(), new CompileGate(), new ShellOpener(),
@@ -420,7 +420,7 @@ public partial class BuildViewModel : ViewModelBase
 
     /// <summary>
     /// Runs Therion on <paramref name="entry"/> (which may be a generated temporary thconfig for
-    /// BUILD-01/02). <paramref name="tempThconfig"/>, when set, is deleted after the build.
+    /// ). <paramref name="tempThconfig"/>, when set, is deleted after the build.
     /// </summary>
     public async Task RunBuildAsync(string entry, string? tempThconfig = null, string? label = null)
     {
@@ -432,7 +432,7 @@ public partial class BuildViewModel : ViewModelBase
         Status = "Compiling…";           // clear the previous "succeeded/failed" label (#3)
         StatusArtifactCount = string.Empty;
         HasLog = false; LogFilePath = null;           // clear the previous build's log (#3)
-        SetPhase(BuildPhase.Starting);                // BUILD-05
+        SetPhase(BuildPhase.Starting);
         _log?.Info($"Build started: {label ?? entry}");
         BuildStarted?.Invoke(this, EventArgs.Empty);  // surface the Compiler Output panel (#2)
         ClearOutputState();
@@ -503,7 +503,7 @@ public partial class BuildViewModel : ViewModelBase
             IsBuilding = false;
             _cts?.Dispose();
             _cts = null;
-            SetPhase(BuildPhase.Idle); // BUILD-05: clear the phase indicator
+            SetPhase(BuildPhase.Idle); // clear the phase indicator
             if (!string.IsNullOrEmpty(tempThconfig))
                 try { File.Delete(tempThconfig); } catch { /* best-effort temp cleanup */ }
         }
@@ -807,9 +807,9 @@ public partial class BuildViewModel : ViewModelBase
         if (!string.IsNullOrEmpty(dir)) _shell.Open(dir);
     }
 
-    // ---- BUILD-01: export targets parsed from the active thconfig ----
+    // ---- : export targets parsed from the active thconfig ----
 
-    /// <summary>The active thconfig's export commands, each runnable on its own (BUILD-01).</summary>
+    /// <summary>The active thconfig's export commands, each runnable on its own.</summary>
     [ObservableProperty] private IReadOnlyList<BuildTarget> _exportTargets = Array.Empty<BuildTarget>();
     /// <summary>True when the active thconfig declares at least one export target.</summary>
     [ObservableProperty] private bool _hasExportTargets;
@@ -830,7 +830,7 @@ public partial class BuildViewModel : ViewModelBase
         catch { ExportTargets = Array.Empty<BuildTarget>(); HasExportTargets = false; }
     }
 
-    /// <summary>BUILD-01: builds a derived thconfig that keeps only <paramref name="info"/>'s export.</summary>
+    /// <summary>builds a derived thconfig that keeps only <paramref name="info"/>'s export.</summary>
     private async Task BuildSingleExportAsync(string cfg, ExportTargetInfo info)
     {
         try
@@ -843,7 +843,7 @@ public partial class BuildViewModel : ViewModelBase
         catch (Exception ex) { Status = ex.Message; _log?.Error("Target build error: " + ex.Message); }
     }
 
-    /// <summary>BUILD-02: runs a composed quick-export (writes a temp thconfig, builds, opens the result).</summary>
+    /// <summary>runs a composed quick-export (writes a temp thconfig, builds, opens the result).</summary>
     public async Task RunQuickExportAsync(string exportBlock, string outputFileName)
     {
         var cfg = _session?.ActiveThconfig?.FullPath ?? ResolveBuildEntry();
@@ -861,11 +861,11 @@ public partial class BuildViewModel : ViewModelBase
         catch (Exception ex) { Status = ex.Message; _log?.Error("Quick export error: " + ex.Message); }
     }
 
-    /// <summary>Raised when the user asks for the Quick Export dialog (BUILD-02); the shell shows it.</summary>
+    /// <summary>Raised when the user asks for the Quick Export dialog; the shell shows it.</summary>
     public event EventHandler? QuickExportRequested;
     [RelayCommand] private void ShowQuickExport() => QuickExportRequested?.Invoke(this, EventArgs.Empty);
 
-    // ---- BUILD-06: external round-trips (survex tools on .3d + therion --print-*) ----
+    // ---- : external round-trips (survex tools on .3d + therion --print-*) ----
 
     /// <summary>survex <c>dump3d</c> on the emitted .3d; output streams into the Compiler Output panel.</summary>
     [RelayCommand]
@@ -896,7 +896,7 @@ public partial class BuildViewModel : ViewModelBase
 
     /// <summary>
     /// Runs an external tool with raw args and streams its stdout/stderr into the Compiler Output
-    /// panel. Returns true on exit code 0. Used for the BUILD-06 round-trips (not the main compile).
+    /// panel. Returns true on exit code 0. Used for the round-trips (not the main compile).
     /// </summary>
     private async Task<bool> RunExternalAsync(string toolId, string args, string label, string? workDir)
     {
@@ -907,7 +907,7 @@ public partial class BuildViewModel : ViewModelBase
             Status = $"{toolId} not found.";
             _log?.Warning($"{toolId} not found on PATH or in External Tools settings.");
             _notifications?.Warning(TherionProc.Resources.Tr.Get("Notif_ToolNotFoundTitle"),
-                string.Format(TherionProc.Resources.Tr.Get("Notif_ToolNotFoundMsg"), toolId));   // UX-07
+                string.Format(TherionProc.Resources.Tr.Get("Notif_ToolNotFoundMsg"), toolId));
             return false;
         }
 
@@ -959,7 +959,7 @@ public partial class BuildViewModel : ViewModelBase
         return new CompilerOutputRow(text, severity, null, OutputRowKind.Normal, now, delta, now - _buildStart, TimeColumnMode);
     }
 
-    /// <summary>Raised to view an artifact in the in-app map viewer (VIS-05) instead of externally.</summary>
+    /// <summary>Raised to view an artifact in the in-app map viewer instead of externally.</summary>
     public event EventHandler<string>? ViewMapRequested;
 
     [RelayCommand]
@@ -984,7 +984,7 @@ public partial class BuildViewModel : ViewModelBase
         _shell.RevealInFileManager(row.Path);
     }
 
-    /// <summary>Raised when the user asks to view an artifact in the embedded 3D viewer (VIS-01).</summary>
+    /// <summary>Raised when the user asks to view an artifact in the embedded 3D viewer.</summary>
     public event EventHandler<string>? View3DRequested;
 
     /// <summary>Generated Files → "View in internal 3D viewer": only .lox/.3d are viewable.</summary>
@@ -1002,7 +1002,7 @@ public partial class BuildViewModel : ViewModelBase
 
     private void UpdateArtifacts(ImmutableArray<OutputArtifact> artifacts)
     {
-        // BUILD-03: an output is "stale" if any project input is newer than it.
+        // an output is "stale" if any project input is newer than it.
         var newest = NewestInputUtc();
         var overrides = _settings?.Current.AutoOpenOverrides;
         var rows = artifacts
@@ -1020,7 +1020,7 @@ public partial class BuildViewModel : ViewModelBase
         HasStaleArtifacts = rows.Any(a => a.IsStale);
     }
 
-    /// <summary>Newest last-write time across the project's source files (BUILD-03 stale check).</summary>
+    /// <summary>Newest last-write time across the project's source files (stale check).</summary>
     private DateTimeOffset? NewestInputUtc()
     {
         var files = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -1049,7 +1049,7 @@ public partial class BuildViewModel : ViewModelBase
     private static bool HasExt(string path, string ext) =>
         string.Equals(Path.GetExtension(path), ext, StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>BUILD-03: surface a warning before opening an out-of-date output.</summary>
+    /// <summary>surface a warning before opening an out-of-date output.</summary>
     private void WarnIfStale(ArtifactRow row)
     {
         if (!row.IsStale) return;

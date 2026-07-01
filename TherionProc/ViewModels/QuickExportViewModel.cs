@@ -1,4 +1,4 @@
-// BUILD-02 — Quick Export preset dialog VM. Composes a Therion export block (model vs map, format,
+// Quick Export preset dialog VM. Composes a Therion export block (model vs map, format,
 // projection, optional survey selection + scale) that the build pipeline appends to a temporary
 // thconfig. Pure string building, so the composition is unit-testable.
 

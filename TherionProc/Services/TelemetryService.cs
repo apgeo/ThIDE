@@ -1,4 +1,4 @@
-// REL-05 — opt-in, privacy-respecting crash reporting & anonymous usage telemetry.
+// opt-in, privacy-respecting crash reporting & anonymous usage telemetry.
 //
 // Default OFF. When the user opts in (Preferences ▸ General), usage events and crash reports are
 // written to LOCAL files only — under %AppData%/TherionProc/telemetry — and never sent anywhere.

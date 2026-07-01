@@ -1,4 +1,4 @@
-// LANG-02 (embedded code) — LayoutRegionScanner tests. Mirrors the real corpus layout block
+// (embedded code) — LayoutRegionScanner tests. Mirrors the real corpus layout block
 // (tests/Corpus/Synthetic/project/Vladusca.thconfig), including the greedy `code metapost` with no
 // `endcode` that swallows a later `scale 1 100` into the metapost block.
 

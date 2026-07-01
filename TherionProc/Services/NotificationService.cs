@@ -1,4 +1,4 @@
-// UX-07 — Notifications / toast center.
+// Notifications / toast center.
 //
 // A small app-wide hub for transient background events (build done, file changed on disk,
 // tool not found, import/export failures). Components post an AppNotification; the View

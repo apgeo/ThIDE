@@ -1,4 +1,4 @@
-// LANG-07 — .th2 point/line/area symbol-type registry. thbook v6.4.0 §"point"/"line"/"area".
+// .th2 point/line/area symbol-type registry. thbook v6.4.0 §"point"/"line"/"area".
 // Therion source-of-truth: therion/thsymbolsets.cxx + the *.cxx type tables.
 //
 // Used to (a) validate object types (lenient — unknown built-in types warn) and (b) drive editor

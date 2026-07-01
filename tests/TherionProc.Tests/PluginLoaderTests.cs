@@ -5,7 +5,7 @@ using TherionProc.Services;
 
 namespace TherionProc.Tests;
 
-// EXT-04 — the plugin loader discovers ISemanticRule implementations in external assemblies.
+// the plugin loader discovers ISemanticRule implementations in external assemblies.
 public class PluginLoaderTests
 {
     [Fact]

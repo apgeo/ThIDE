@@ -1,4 +1,4 @@
-// PERF-06 — crash resilience.
+// crash resilience.
 //
 // Two safety nets for an unclean exit (hard crash, killed from the debugger, power loss):
 //   1. A run "sentinel" file written at launch and deleted on a clean shutdown. If it is still

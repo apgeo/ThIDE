@@ -1,4 +1,4 @@
-// LANG-13 — pluggable user rules: enable/disable in the runner + configurable naming-convention
+// pluggable user rules: enable/disable in the runner + configurable naming-convention
 // lints + JSON config loading.
 
 using System.Collections.Frozen;

@@ -1,5 +1,5 @@
-// LANG-09 — symbol-set / symbol-hide/show model.
-// LANG-10 — layout + `code … endcode` recognized in .th files too (not just .thconfig).
+// symbol-set / symbol-hide/show model.
+// layout + `code … endcode` recognized in .th files too (not just .thconfig).
 
 using System.Linq;
 using Therion.Core;
@@ -37,7 +37,7 @@ public class LayoutSymbolsTests
         Assert.False(SymbolSets.IsKnownStandard("nonsense"));
     }
 
-    // ---- LANG-10: layout + code blocks inside a .th file ----
+    // ---- : layout + code blocks inside a .th file ----
 
     [Fact]
     public void Layout_block_in_th_file_is_consumed_without_unknown_command_warnings()

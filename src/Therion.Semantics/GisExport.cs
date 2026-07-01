@@ -1,4 +1,4 @@
-// GIS-01 — export survey entrances / fixed points to GIS formats in the project CRS.
+// export survey entrances / fixed points to GIS formats in the project CRS.
 // CSV and GeoJSON carry the raw coordinates + the CRS (so any GIS can reproject); GPX and KML
 // require WGS84 lon/lat, so points are reprojected via CoordinateTransform and points whose CRS
 // we can't convert are skipped. Pure (string output); the caller writes the file.
@@ -21,7 +21,7 @@ public static class GisExport
 {
     private static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
 
-    /// <summary>The entrances + fixed points of <paramref name="model"/> as export points (GIS-01/06).</summary>
+    /// <summary>The entrances + fixed points of <paramref name="model"/> as export points.</summary>
     public static IReadOnlyList<GisPoint> CollectPoints(WorkspaceSemanticModel model) =>
         DataAnalytics.FixedPoints(model)
             .Select(f => new GisPoint(f.Station, f.X, f.Y, f.Z, f.Cs,

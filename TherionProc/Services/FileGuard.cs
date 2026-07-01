@@ -1,4 +1,4 @@
-// TRUST-03 — guard against accidentally loading a binary blob or a pathologically huge file into
+// guard against accidentally loading a binary blob or a pathologically huge file into
 // the text editor (which would show garbage or hang the UI). Pure + testable: returns a reason
 // string when a file should NOT be opened as text, or null when it's fine. The caller offers an
 // explicit "Open anyway" path.

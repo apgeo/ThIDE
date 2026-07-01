@@ -119,7 +119,7 @@ public sealed class DockFactory : Factory
 
     /// <summary>
     /// Activates a tool, first adding it to the right tool-rail if it isn't in the layout yet.
-    /// Lets feature-flagged tools (e.g. the VIS-01 3D viewer, off by default) appear the moment
+    /// Lets feature-flagged tools (e.g. the 3D viewer, off by default) appear the moment
     /// they're enabled, without requiring a layout reset.
     /// </summary>
     public void ShowTool(IDockable tool)
@@ -138,7 +138,7 @@ public sealed class DockFactory : Factory
 
     /// <summary>
     /// Activates a tool in the central document well (like the Object Browser), adding it there on
-    /// demand if it isn't in the layout yet. Used for the big-panel Structural Geology view (STRUCT-01).
+    /// demand if it isn't in the layout yet. Used for the big-panel Structural Geology view.
     /// </summary>
     public void ShowToolInDocuments(IDockable tool)
     {
@@ -214,13 +214,13 @@ public sealed class DockFactory : Factory
             CenterProportion = Prop("CenterColumn", baseState.CenterProportion),
             BottomActiveTab = Active("BottomTools") ?? baseState.BottomActiveTab,
             RightActiveTab = Active("RightTools") ?? baseState.RightActiveTab,
-            // UX-05: capture floated windows — but never before they were restored, or an
+            // capture floated windows — but never before they were restored, or an
             // autosave that fires mid-startup (big project) would clobber the saved set.
             FloatWindows = _floatsRestored ? CaptureFloatWindows() : baseState.FloatWindows,
         };
     }
 
-    // ---- floated-window persistence (UX-05) -----------------------------------
+    // ---- floated-window persistence -----------------------------------
     // The dock TREE is rebuilt fresh each launch (a deserialized Dock 12 tree won't render), so
     // floated tool/document windows are persisted on their own and re-created at runtime by
     // re-floating the live dockables — the same operation a manual tear-off performs, which
@@ -376,7 +376,7 @@ public sealed class DockFactory : Factory
         VisibleDockables = CreateList<IDockable>(),
     };
 
-    /// <summary>The right-rail tools, gated by their feature settings (VIS-02/05).</summary>
+    /// <summary>The right-rail tools, gated by their feature settings.</summary>
     private IDockable[] RightToolset()
     {
         var list = new System.Collections.Generic.List<IDockable>();
@@ -386,8 +386,8 @@ public sealed class DockFactory : Factory
         var s = _appSettings?.Current ?? TherionProc.Services.AppSettings.Default;
         if (s.EnableLivePreview) list.Add(_livePreview);
         if (s.EnableInAppViewer) list.Add(_mapViewer);
-        if (s.EnableModel3DViewer) list.Add(_model3dViewer);   // VIS-01 (off by default)
-        // STRUCT-01 opens in the central document well on demand (ShowToolInDocuments), not the rail.
+        if (s.EnableModel3DViewer) list.Add(_model3dViewer);   // (off by default)
+        // opens in the central document well on demand (ShowToolInDocuments), not the rail.
         return list.ToArray();
     }
 
@@ -411,7 +411,7 @@ public sealed class DockFactory : Factory
             Title = "LeftTools",
             Alignment = Alignment.Left,
             Proportion = st.LeftProportion,
-            // Workspace explorer + the PROJ-02/03/07 "Project" pane (dashboard / surveys / audit).
+            // Workspace explorer + the "Project" pane (dashboard / surveys / audit).
             VisibleDockables = CreateList<IDockable>(_workspace, _project),
             ActiveDockable = _workspace,
         };
@@ -427,8 +427,8 @@ public sealed class DockFactory : Factory
         };
 
         // Object Browser moved to the central well (#10); External Tools/Settings moved into
-        // the Preferences window (#13). The right rail holds the EDIT-09 document outline and the
-        // VIS-02/05 preview panels (each gated by its setting), plus the XVI references panel when
+        // the Preferences window (#13). The right rail holds the document outline and the
+        // preview panels (each gated by its setting), plus the XVI references panel when
         // ShowXviPanel is on. Its active tab is the first tool actually present.
         var rightToolset = RightToolset();
         var rightTools = new ToolDock

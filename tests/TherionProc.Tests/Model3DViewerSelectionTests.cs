@@ -1,4 +1,4 @@
-// VIS-01 — artifact selection for the 3D viewer: .lox is preferred over .3d, the newest of a
+// artifact selection for the 3D viewer: .lox is preferred over .3d, the newest of a
 // kind wins, staleness is carried through, and an empty set yields nothing.
 
 using System;

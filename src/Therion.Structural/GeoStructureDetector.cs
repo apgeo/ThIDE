@@ -1,4 +1,4 @@
-// STRUCT-01 Phase 2 — finds structural-measurement shots in the object graph and groups them into
+// Phase 2 — finds structural-measurement shots in the object graph and groups them into
 // candidate planes. Multi-signal (name keyword / comment marker / station flag), configurable grouping,
 // splay policy, and the synthetic origin row (decisions 1 & 5). Pure: consumes a SemanticModel + a
 // CenterlineSolution (for world positions); produces batches the facade then fits.

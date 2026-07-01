@@ -1,4 +1,4 @@
-// PROJ-03 / PROJ-07 / PROJ-02 — project analytics (survey tree, totals, unreferenced scraps).
+// project analytics (survey tree, totals, unreferenced scraps).
 
 using System;
 using System.Collections.Generic;

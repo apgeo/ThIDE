@@ -1,4 +1,4 @@
-// STRUCT-01 Phase 2 — resolves a single magnetic declination δ from the user's preference + supplied
+// Phase 2 — resolves a single magnetic declination δ from the user's preference + supplied
 // inputs. Pure: the caller pre-computes the survey-declared value (from the AST) and the WMM-auto value
 // (from GeoMagneticModel + the fix point + survey date); this just picks per the chosen source and
 // degrades gracefully (→ δ = 0 with a note) when the requested value isn't available.

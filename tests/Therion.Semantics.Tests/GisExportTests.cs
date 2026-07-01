@@ -1,4 +1,4 @@
-// GIS-01 — CRS-aware export + UTM/WGS84 inverse transform.
+// CRS-aware export + UTM/WGS84 inverse transform.
 using System.Collections.Generic;
 using Therion.Semantics;
 using Therion.Syntax;

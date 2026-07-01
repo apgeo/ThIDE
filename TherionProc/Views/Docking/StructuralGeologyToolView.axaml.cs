@@ -1,4 +1,4 @@
-// STRUCT-01 — code-behind for the Structural Geology dock tool. View glue:
+// code-behind for the Structural Geology dock tool. View glue:
 //   • double-click a measurement / plane row → navigate to its source span;
 //   • measurements grid grouped by station (DataGridCollectionView) with a per-station header checkbox;
 //   • column show/hide + fit, persisted via the VM;

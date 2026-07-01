@@ -52,7 +52,7 @@ public partial class GeneratedFilesToolView : UserControl
     private void OnArtifactDoubleTapped(object? sender, RoutedEventArgs e) => OpenSelected();
     private void OnOpenArtifact(object? sender, RoutedEventArgs e) => OpenSelected();
 
-    // VIS-01: open the selected .lox/.3d artifact in the embedded 3D viewer.
+    // open the selected .lox/.3d artifact in the embedded 3D viewer.
     private void OnViewArtifactIn3D(object? sender, RoutedEventArgs e)
     {
         if (DataContext is GeneratedFilesToolViewModel vm && vm.Build.SelectedArtifact is { } row)

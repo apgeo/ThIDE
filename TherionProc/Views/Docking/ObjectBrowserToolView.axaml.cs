@@ -10,10 +10,10 @@ public partial class ObjectBrowserToolView : UserControl
 {
     public ObjectBrowserToolView() => InitializeComponent();
 
-    // The grid the context menu was opened on (its SelectedItem is the target row, QOL-12).
+    // The grid the context menu was opened on (its SelectedItem is the target row).
     private DataGrid? _ctxGrid;
 
-    // TH2-03: double-click a row in any entity grid → jump to its source declaration.
+    // double-click a row in any entity grid → jump to its source declaration.
     private void OnRowDoubleTapped(object? sender, TappedEventArgs e)
     {
         if (sender is DataGrid { SelectedItem: IBrowserNavRow row } &&
@@ -21,7 +21,7 @@ public partial class ObjectBrowserToolView : UserControl
             vm.Browser.NavigateTo(row);
     }
 
-    // QOL-12: remember which grid was right-clicked so the menu handlers know the target row.
+    // remember which grid was right-clicked so the menu handlers know the target row.
     private void OnGridContextRequested(object? sender, ContextRequestedEventArgs e)
         => _ctxGrid = sender as DataGrid;
 

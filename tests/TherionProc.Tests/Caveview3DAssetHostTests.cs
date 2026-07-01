@@ -1,4 +1,4 @@
-// VIS-01 — pure-logic tests for the 3D viewer asset host: MIME mapping, request→asset routing
+// pure-logic tests for the 3D viewer asset host: MIME mapping, request→asset routing
 // (incl. traversal rejection), free-port selection, and model staging. The HTTP listener itself
 // and the avares asset reads need the Avalonia platform, so they're exercised at runtime.
 

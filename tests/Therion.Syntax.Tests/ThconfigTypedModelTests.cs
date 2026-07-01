@@ -1,4 +1,4 @@
-// LANG-02 / LANG-03 — typed .thconfig model: layout (with options + opaque code blocks),
+// typed .thconfig model: layout (with options + opaque code blocks),
 // cs (output CRS), select/unselect, export (-fmt/-output), maps, and the source…endsource block.
 // Also covers the line-continuation-with-trailing-whitespace tokenizer fix.
 

@@ -1,4 +1,4 @@
-// STRUCT-01 — minimal 3-D vector for the structural-geology core.
+// minimal 3-D vector for the structural-geology core.
 //
 // Frame: E(ast), N(orth), Z(up) — the same geographically-correct convention the Live Preview uses
 // (E = horiz·sin(compass), N = horiz·cos(compass), Z = len·sin(clino)). Distances in metres.

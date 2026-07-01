@@ -35,18 +35,18 @@ public sealed class SemanticModel : ISymbolIndex
         FrozenDictionary<string, MapSymbol>.Empty;
 
     /// <summary>
-    /// The input coordinate system declared via <c>cs &lt;system&gt;</c> in this file, if any (LANG-03).
+    /// The input coordinate system declared via <c>cs &lt;system&gt;</c> in this file, if any.
     /// </summary>
     public string? InputCoordinateSystem { get; init; }
 
     /// <summary>
     /// The survey's magnetic declination in degrees (east positive) from a single-value
-    /// <c>declination</c> command, if any (STRUCT-01). Null when absent, reset, or a dated list.
+    /// <c>declination</c> command, if any. Null when absent, reset, or a dated list.
     /// Used to correct structural strike/dip to true north.
     /// </summary>
     public double? Declination { get; init; }
 
-    /// <summary><c>equate</c> relationships declared in this file (DATA-03).</summary>
+    /// <summary><c>equate</c> relationships declared in this file.</summary>
     public ImmutableArray<EquateRecord> EquateRecords { get; init; } = ImmutableArray<EquateRecord>.Empty;
 
     /// <summary>

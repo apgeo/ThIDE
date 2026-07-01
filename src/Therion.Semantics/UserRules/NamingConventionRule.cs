@@ -1,4 +1,4 @@
-// LANG-13 — user-authored semantic rules. A configurable naming-convention lint: the user supplies
+// user-authored semantic rules. A configurable naming-convention lint: the user supplies
 // regex patterns that station / survey / scrap / map names must (or must not) match, and the rule
 // emits diagnostics for violations. Specs are loaded from settings (see SemanticRuleConfig), so
 // users can add lints without writing code.
@@ -26,7 +26,7 @@ public sealed record NamingConventionSpec(
     bool Forbid = false,
     string? Message = null);
 
-/// <summary>A configurable rule that enforces user-supplied naming conventions (LANG-13).</summary>
+/// <summary>A configurable rule that enforces user-supplied naming conventions.</summary>
 public sealed class NamingConventionRule : ISemanticRule
 {
     private readonly ImmutableArray<(NamingConventionSpec Spec, Regex? Rx)> _specs;

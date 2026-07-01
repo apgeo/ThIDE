@@ -1,4 +1,4 @@
-// STRUCT-01 Phase 3 — content view-model for the Structural Geology dock tool.
+// Phase 3 — content view-model for the Structural Geology dock tool.
 //
 // Drives the tab wizard (Detect → Measurements → Resulted Planes → Plot). Pulls the active file's
 // (or whole project's) SemanticModel from IDocumentService, runs the pure Therion.Structural pipeline

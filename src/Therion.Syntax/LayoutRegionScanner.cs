@@ -1,4 +1,4 @@
-// LANG-02 (embedded code) — per-line region classification for a Therion document's layout blocks.
+// (embedded code) — per-line region classification for a Therion document's layout blocks.
 //
 // The editor colorizer needs to know, line by line, which language a line is written in so it can
 // pick the right lexer: a Therion `layout` option line, embedded MetaPost (`code metapost`), or

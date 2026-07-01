@@ -1,4 +1,4 @@
-// IMP-01 — Survex (.svx) → Therion (.th) importer. Survex's data model is very close to Therion's
+// Survex (.svx) → Therion (.th) importer. Survex's data model is very close to Therion's
 // (begin/end ≈ survey, *fix/*equate/*data map almost 1:1), so this produces a faithful, readable
 // .th scaffold. Pure string→string; the caller writes the file. Not every Survex command is
 // supported — unknown `*commands` are passed through as comments so nothing is silently lost.

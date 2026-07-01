@@ -1,4 +1,4 @@
-// NOTE-04 — project metadata editor. High-level project info (name, region, CRS, declination
+// project metadata editor. High-level project info (name, region, CRS, declination
 // source, license, notes) kept in a per-root JSON sidecar — not written into the Therion source —
 // so editing is instant and never risks the survey data. Keyed by workspace root, mirroring
 // LeadStatusStore.

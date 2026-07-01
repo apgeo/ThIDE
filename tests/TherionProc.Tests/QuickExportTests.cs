@@ -1,4 +1,4 @@
-// BUILD-01/02 — derived-thconfig generation + quick-export block composition.
+// derived-thconfig generation + quick-export block composition.
 
 using System.Linq;
 using TherionProc.Services;

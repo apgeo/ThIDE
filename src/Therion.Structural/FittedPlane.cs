@@ -1,4 +1,4 @@
-// STRUCT-01 — result of a best-fit plane through a batch of structural measurement points.
+// result of a best-fit plane through a batch of structural measurement points.
 //
 // Angles in degrees; azimuths in [0, 360) measured clockwise from north. Strike/dip are derived from
 // the plane normal (see PlaneFitter). Magnetic declination, when applied, is a pure azimuth offset on

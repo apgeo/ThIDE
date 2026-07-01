@@ -1,4 +1,4 @@
-// LANG-07 — .th2 deep model: typed point/line/area options, inline subtypes, type validation.
+// .th2 deep model: typed point/line/area options, inline subtypes, type validation.
 
 using System.Linq;
 using Therion.Core;

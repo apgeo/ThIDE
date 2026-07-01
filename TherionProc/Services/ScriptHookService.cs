@@ -1,4 +1,4 @@
-// EXT-03 — scripting / macro hooks. Runs a user-configured shell command on key events
+// scripting / macro hooks. Runs a user-configured shell command on key events
 // (file opened, file saved, build started). Off-by-feature when EnableScriptHooks is false or no
 // command is configured. Commands run detached and best-effort — a failing hook never blocks the
 // app. `{file}` in the command is substituted with the relevant path.

@@ -4,7 +4,7 @@ using TherionProc.Services;
 
 namespace TherionProc.Tests;
 
-// UX-05: the floated-window persistence contract — float windows (bounds + dockable ids) must
+// the floated-window persistence contract — float windows (bounds + dockable ids) must
 // round-trip through layout.json so they can be re-created at next launch.
 public class LayoutFloatWindowsTests
 {

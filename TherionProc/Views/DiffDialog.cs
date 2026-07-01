@@ -1,4 +1,4 @@
-// TRUST-05 — a read-only side-by-side comparison (e.g. on-disk vs in-editor) so the user can see
+// a read-only side-by-side comparison (e.g. on-disk vs in-editor) so the user can see
 // what an external change did before deciding to reload, keep, or overwrite. Not a 3-way merge —
 // it's a quick visual diff with changed lines highlighted.
 

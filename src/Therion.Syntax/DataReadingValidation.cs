@@ -1,4 +1,4 @@
-// LANG-05 (extended) — per-value validation of centreline data rows. thbook v6.4.0 §"centreline"
+// (extended) — per-value validation of centreline data rows. thbook v6.4.0 §"centreline"
 // (data command), p.21; Survex manual §"data" for the reading semantics.
 //
 // The `data <style> <reading order>` command declares, column by column, what each value in the

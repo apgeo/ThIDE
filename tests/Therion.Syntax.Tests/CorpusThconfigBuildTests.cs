@@ -1,4 +1,4 @@
-// REL-02 (corpus) — "thconfig build" regression: for every .thconfig in the corpus, walk its
+// (corpus) — "thconfig build" regression: for every .thconfig in the corpus, walk its
 // cross-file SOURCE GRAPH (source/input/load, recursing into survey/centreline blocks) the way
 // TherionWorkspace loads a project, parse every reachable file, and assert the assembled project
 // parses without error diagnostics.

@@ -1,4 +1,4 @@
-// LANG-03 — coordinate-system (cs) awareness. thbook v6.4.0 §"cs" / appendix "Coordinate systems".
+// coordinate-system (cs) awareness. thbook v6.4.0 §"cs" / appendix "Coordinate systems".
 // Therion source-of-truth: therion/src/thcs.cxx + thcsdata.tcl (the proj/EPSG table).
 //
 // `cs <system>` may appear inside a centreline (input CRS for fixed coords) and in a .thconfig

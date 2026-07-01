@@ -1,8 +1,8 @@
-// MEDIA-02 — background-scan / media manager.
+// background-scan / media manager.
 //
 // Builds a list of the project's scan assets: the .xvi files referenced by scraps, with grid /
 // georeferencing info and how many scraps trace each. Flags any referenced file that is missing on
-// disk. MEDIA-03 extends this with a disk scan for present-but-unreferenced (orphan) media.
+// disk. extends this with a disk scan for present-but-unreferenced (orphan) media.
 //
 // Walks the project, so the app gates it behind the EnableMediaScan setting.
 
@@ -46,7 +46,7 @@ public static class MediaScanner
     private static readonly string[] RasterExtensions =
         { ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".tif", ".tiff" };
 
-    /// <summary>MEDIA-03: media files on disk under <paramref name="root"/> not referenced by any
+    /// <summary>media files on disk under <paramref name="root"/> not referenced by any
     /// scrap — likely stray scans. Raster dimensions are read from the file header when available.</summary>
     public static List<MediaItem> ScanOrphans(WorkspaceSemanticModel? workspace, string? root)
     {

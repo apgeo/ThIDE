@@ -1,4 +1,4 @@
-// LANG-02 / LANG-09 / LANG-10 — shared parser for a `layout … endlayout` body.
+// shared parser for a `layout … endlayout` body.
 // Layout blocks appear both in .thconfig/.thc/.thl (ThconfigParser) and, in some projects, inside
 // .th files that are `input`-ed (ThParser). This single body walker is reused by both so the typed
 // model (options, copy/cs, symbol-set/directives) and the opaque `code … endcode` handling agree.
@@ -40,7 +40,7 @@ public static class LayoutBodyParser
             if (insideCode)
             {
                 if (string.Equals(key, "endcode", StringComparison.OrdinalIgnoreCase)) insideCode = false;
-                continue; // skip code-block bodies opaquely (LANG-10)
+                continue; // skip code-block bodies opaquely
             }
             if (string.Equals(key, "code", StringComparison.OrdinalIgnoreCase))
             {

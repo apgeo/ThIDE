@@ -1,4 +1,4 @@
-// STRUCT-01 Phase 2 — pure centreline geometry: world station positions + the cave main-line.
+// Phase 2 — pure centreline geometry: world station positions + the cave main-line.
 //
 // Replicates the spanning-tree solve from LivePreviewViewModel.ComputeLayout (same polar→cartesian
 // convention) but free of Avalonia/UI types, so the core lib can co-locate fitted planes with the

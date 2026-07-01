@@ -26,7 +26,7 @@ public static class TherionSemanticsHostingExtensions
     }
 
     /// <summary>
-    /// Registers the rule runner honouring a user <see cref="SemanticRuleConfig"/> (LANG-13): the
+    /// Registers the rule runner honouring a user <see cref="SemanticRuleConfig"/>: the
     /// config's disabled-rule ids are filtered out of the runner, and any naming-convention specs
     /// are registered as a <see cref="UserRules.NamingConventionRule"/>.
     /// </summary>

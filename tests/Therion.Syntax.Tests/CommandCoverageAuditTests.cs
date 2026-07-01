@@ -1,4 +1,4 @@
-// LANG-01 — command-coverage audit. Guards that the centreline/survey commands we advertise
+// command-coverage audit. Guards that the centreline/survey commands we advertise
 // (and the thbook documents) are actually recognized by the parser, so none silently fall back
 // to UnknownCommand / TH0010. If a new keyword is added to the editor vocabulary without a parser
 // path, this test fails.

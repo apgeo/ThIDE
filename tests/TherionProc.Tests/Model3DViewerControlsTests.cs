@@ -1,4 +1,4 @@
-// 3D viewer (VIS-01 extensions) — pure logic for the model dropdown and the "generated" notice:
+// 3D viewer (extensions) — pure logic for the model dropdown and the "generated" notice:
 //   * BuildModelOptions: only viewable (.lox/.3d) `export model` outputs, in source order, with
 //     relative-path resolution, existence flagging, detected-file append, and de-duplication.
 //   * GeneratedNoticeFor: the "Recompile for a fresh model" notice only for non-today files.

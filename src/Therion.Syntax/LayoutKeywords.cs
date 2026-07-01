@@ -1,4 +1,4 @@
-// LANG-02 — layout option keyword registry. thbook v6.4.0 §"layout" pp.53-60.
+// layout option keyword registry. thbook v6.4.0 §"layout" pp.53-60.
 // Therion source-of-truth: therion/src/thlayout.cxx.
 //
 // Used for editor completion inside a `layout … endlayout` body and to recognize the

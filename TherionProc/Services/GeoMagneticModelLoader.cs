@@ -1,5 +1,5 @@
-// STRUCT-01 Phase 3b — locates and loads the default World Magnetic Model (WMM.COF) the same way the
-// UTIL-02 Declination calculator does: %AppData%/TherionProc, then next to the app, then Assets/. The
+// Phase 3b — locates and loads the default World Magnetic Model (WMM.COF) the same way the
+// Declination calculator does: %AppData%/TherionProc, then next to the app, then Assets/. The
 // .COF is a public-domain NOAA download the user supplies; absence is expected and handled gracefully.
 
 using System;

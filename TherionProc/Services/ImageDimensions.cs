@@ -1,4 +1,4 @@
-// MEDIA-03 — read raster image pixel dimensions from the file header only (no full decode), so the
+// read raster image pixel dimensions from the file header only (no full decode), so the
 // media manager can show a resolution for orphan scans cheaply. Supports PNG / GIF / BMP / JPEG.
 
 using System;

@@ -103,7 +103,7 @@ public static class TokenClassifier
     }
 
     /// <summary>
-    /// Classify a single <em>layout body</em> line (LANG-02). Used only for lines a
+    /// Classify a single <em>layout body</em> line. Used only for lines a
     /// <see cref="LayoutRegionScanner"/> marked <see cref="EmbeddedRegion.LayoutOption"/>: the leading
     /// bare word is the option key (highlighted as a keyword when it is a known layout option, e.g.
     /// <c>scale</c>, <c>legend</c>, <c>symbol-hide</c>), and the rest classify by token kind. This is

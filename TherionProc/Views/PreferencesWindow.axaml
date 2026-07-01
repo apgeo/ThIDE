@@ -54,7 +54,7 @@
                     <TextBlock Text="{l:Loc Pref_LanguageHelp}"
                                Foreground="Gray" FontSize="11" />
                     <Separator Margin="0,6" />
-                    <!-- QOL-09: configurable auto-save. -->
+                    <!-- configurable auto-save. -->
                     <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,4,0,0">
                         <TextBlock Text="{l:Loc Pref_AutoSave}" VerticalAlignment="Center" Width="100" />
                         <ComboBox MinWidth="180" SelectedIndex="{Binding AutoSaveModeIndex, Mode=TwoWay}">
@@ -71,7 +71,7 @@
                     <TextBlock Text="{l:Loc Pref_AutoSaveHelp}"
                                Foreground="Gray" FontSize="11" />
                     <Separator Margin="0,6" />
-                    <!-- REL-05: opt-in, local-only telemetry / crash reports. -->
+                    <!-- opt-in, local-only telemetry / crash reports. -->
                     <CheckBox Content="{l:Loc Pref_Telemetry}"
                               IsChecked="{Binding TelemetryEnabled}" />
                     <TextBlock Text="{l:Loc Pref_TelemetryHelp}"
@@ -155,7 +155,7 @@
                                Foreground="Gray" FontSize="11" TextWrapping="Wrap" Margin="24,0,0,0" />
                 </StackPanel>
 
-                <!-- Editor Features (Section B / EDIT-*) -->
+                <!-- Editor Features -->
                 <StackPanel Spacing="8" IsVisible="{Binding IsEditorFeatures}">
                     <TextBlock Text="{l:Loc Pref_EditorFeatures}" FontSize="16" FontWeight="Bold" />
                     <TextBlock Text="{l:Loc Pref_EditorFeaturesHelp}"
@@ -176,10 +176,6 @@
                                                   IsEnabled="{Binding IsCompiledIn}" />
                                         <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="8">
                                             <TextBlock Text="{Binding Title}" FontWeight="SemiBold" />
-                                            <Border Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}"
-                                                    CornerRadius="3" Padding="5,1" VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding Code}" FontSize="10" Foreground="Gray" />
-                                            </Border>
                                         </StackPanel>
                                         <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Description}"
                                                    Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
@@ -263,7 +259,7 @@
                     <CheckBox Content="{l:Loc Pref_OpenAll}"
                               IsChecked="{Binding OpenAllOutputsAfterBuild}" />
                     <Separator Margin="0,6" />
-                    <!-- BUILD-07: compile-on-save (off by default). -->
+                    <!-- compile-on-save (off by default). -->
                     <CheckBox Content="{l:Loc Pref_CompileOnSave}"
                               IsChecked="{Binding CompileOnSave}" />
                     <TextBlock Text="{l:Loc Pref_CompileOnSaveHelp}"
@@ -275,7 +271,7 @@
                                Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
                 </StackPanel>
 
-                <!-- Visualization (VIS-*): per-feature enable/disable. -->
+                <!-- Visualization: per-feature enable/disable. -->
                 <StackPanel Spacing="10" IsVisible="{Binding IsVisualization}">
                     <TextBlock Text="{l:Loc Pref_Visualization}" FontSize="16" FontWeight="Bold" />
                     <TextBlock Text="{l:Loc Pref_VisualizationHelp}"
@@ -340,11 +336,11 @@
                     </DataGrid>
                 </DockPanel>
 
-                <!-- Extensions (EXT-03 hooks, EXT-04 plugins) -->
+                <!-- Extensions (hooks, plugins) -->
                 <StackPanel Spacing="10" IsVisible="{Binding IsExtensions}">
                     <TextBlock Text="{l:Loc Pref_Extensions}" FontSize="16" FontWeight="Bold" />
 
-                    <!-- EXT-03: scripting / macro hooks. -->
+                    <!-- scripting / macro hooks. -->
                     <CheckBox Content="{l:Loc Pref_ScriptHooks}"
                               IsChecked="{Binding EnableScriptHooks}" />
                     <TextBlock Text="{l:Loc Pref_ScriptHooksHelp}"
@@ -360,7 +356,7 @@
                     </Grid>
 
                     <Separator Margin="0,6" />
-                    <!-- EXT-04: plugin assemblies. -->
+                    <!-- plugin assemblies. -->
                     <CheckBox Content="{l:Loc Pref_LoadPlugins}"
                               IsChecked="{Binding EnablePlugins}" />
                     <TextBlock Text="{l:Loc Pref_LoadPluginsHelp}"

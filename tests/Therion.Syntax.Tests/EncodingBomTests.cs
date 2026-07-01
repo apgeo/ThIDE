@@ -1,4 +1,4 @@
-// LANG-11 — encoding directive + BOM handling. A leading BOM must be stripped so the first
+// encoding directive + BOM handling. A leading BOM must be stripped so the first
 // command parses correctly, and a declared `encoding` must round-trip non-ASCII content.
 
 using System.Linq;

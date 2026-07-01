@@ -2,7 +2,7 @@ using System.Linq;
 
 namespace Therion.Semantics.Tests;
 
-// NOTE-01 — comment tag aggregator.
+// comment tag aggregator.
 public class TodoScannerTests
 {
     [Fact]

@@ -1,4 +1,4 @@
-// VIS-02 — custom-drawn centreline sketch. Auto-fits the world segments into the control, with
+// custom-drawn centreline sketch. Auto-fits the world segments into the control, with
 // drag-to-pan, wheel-to-zoom, and click-a-leg/point to raise SegmentActivated (the VM navigates).
 //
 // Beyond the legs it draws splays (faded wall lines or just their edge points), highlights the
@@ -133,7 +133,7 @@ public sealed class LivePreviewControl : Control
         set => SetValue(StationPointsProperty, value);
     }
 
-    // LEAD-02: lead markers overlaid on the sketch.
+    // lead markers overlaid on the sketch.
     public static readonly StyledProperty<IReadOnlyList<LeadMarker>?> LeadMarkersProperty =
         AvaloniaProperty.Register<LivePreviewControl, IReadOnlyList<LeadMarker>?>(nameof(LeadMarkers));
 
@@ -447,7 +447,7 @@ public sealed class LivePreviewControl : Control
 
         if (ShowLabels) DrawStationLabels(ctx, segs, size);
 
-        // LEAD-02: lead markers on top, coloured by kind.
+        // lead markers on top, coloured by kind.
         if (LeadMarkers is { } leads)
             foreach (var m in leads)
                 ctx.DrawEllipse(MarkerBrush(m.Kind), MarkerOutline, ToScreen(m.X, m.Y, size), 4.5, 4.5);
@@ -816,7 +816,7 @@ public sealed class LivePreviewControl : Control
             if (jSpan is { } js) { SegmentActivated?.Invoke(this, js); return; }
         }
 
-        // LEAD-02: a click near a lead marker navigates to that lead (markers sit on top).
+        // a click near a lead marker navigates to that lead (markers sit on top).
         if (LeadMarkers is { } leads)
         {
             double bestMarker = 9.0;

@@ -157,7 +157,7 @@ public sealed class ThParser
             "surface"                      => ParseSurface(line, lines, ref cursor, diagnostics, options),
             "scan"                         => ParseScan(line, lines, ref cursor, diagnostics, options),
             "map"                          => ParseMap(line, lines, ref cursor, diagnostics, options),
-            // layout … endlayout can appear in `.th` files that are input-ed (LANG-02/10).
+            // layout … endlayout can appear in `.th` files that are input-ed.
             "layout"                       => ParseLayout(line, lines, ref cursor, diagnostics, options),
             "data"                         => ParseData(line, options, diagnostics),
             "flags"                        => ParseFlags(line, options, diagnostics),
@@ -167,7 +167,7 @@ public sealed class ThParser
             "input" or "load"              => ParseInput(line, diagnostics),
             "team"                         => ParseTeam(line),
             "date"                         => ParseDate(line),
-            // ---- centreline / survey metadata commands (LANG-04/05/03) ----
+            // ---- centreline / survey metadata commands ----
             "units"                        => ParseUnits(line, options, diagnostics),
             "calibrate"                    => ParseCalibrate(line, options, diagnostics),
             "declination"                  => ParseDeclination(line, options, diagnostics),
@@ -327,7 +327,7 @@ public sealed class ThParser
 
         bool terminated = false;
         var lastSpan = line.Span;
-        // LANG-08: capture the scrap / sub-map references on the body lines (each line's first
+        // capture the scrap / sub-map references on the body lines (each line's first
         // token is the member id; any trailing tokens are placement offsets / comments).
         var members = ImmutableArray.CreateBuilder<MapMemberRef>();
         while (cursor < lines.Length)
@@ -385,7 +385,7 @@ public sealed class ThParser
     /// <summary>
     /// Parses a <c>layout &lt;id&gt; ... endlayout</c> block in a <c>.th</c> file (some projects keep
     /// layouts in input-ed <c>.th</c> files). Reuses <see cref="LayoutBodyParser"/> so the typed
-    /// model + opaque <c>code … endcode</c> handling match the <c>.thconfig</c> path (LANG-02/10).
+    /// model + opaque <c>code … endcode</c> handling match the <c>.thconfig</c> path.
     /// </summary>
     private LayoutCommand ParseLayout(
         LogicalLine line,
@@ -553,7 +553,7 @@ public sealed class ThParser
             fields.Add(line.Tokens[i].Text);
         var fieldList = fields.ToImmutable();
 
-        // LANG-05: validate the style name + each reading keyword. Lenient by default.
+        // validate the style name + each reading keyword. Lenient by default.
         var warn = options.Mode == ParserMode.Strict ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning;
         if (DataStyles.ParseStyle(style) == DataStyle.Unknown)
         {
@@ -589,7 +589,7 @@ public sealed class ThParser
         return new DataCommand(line.Span, style, fieldList);
     }
 
-    // ===== centreline metadata command parsers (LANG-04/05/03) ============
+    // ===== centreline metadata command parsers ============
 
     private static ImmutableArray<string> TokensFrom(LogicalLine line, int fromIndex)
     {
@@ -865,7 +865,7 @@ public sealed class ThParser
         return new StationCommand(line.Span, station, comment, flags.ToImmutable());
     }
 
-    /// <summary><c>cs &lt;coordinate system&gt;</c> + validation (LANG-03).</summary>
+    /// <summary><c>cs &lt;coordinate system&gt;</c> + validation.</summary>
     private CsCommand ParseCs(
         LogicalLine line, ParserOptions options, ImmutableArray<Diagnostic>.Builder diagnostics)
     {

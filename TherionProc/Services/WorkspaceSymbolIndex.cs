@@ -1,7 +1,7 @@
-// PERF-03 — persistent workspace symbol index.
+// persistent workspace symbol index.
 //
 // The disk parse cache (IDiskParseCache) already makes reopening individual files fast, but the
-// cross-file semantic model still has to be rebuilt (now in the background, PERF-02) before
+// cross-file semantic model still has to be rebuilt (now in the background) before
 // symbol search ("Go to Symbol in Workspace", Ctrl+Shift+P #) has anything to show. This index
 // persists a flat snapshot of the project's symbols (surveys / scraps / maps / stations + their
 // declaration spans) to disk, keyed by workspace root, so symbol search is available *instantly*
@@ -55,7 +55,7 @@ public sealed class WorkspaceSymbolIndexStore : IWorkspaceSymbolIndexStore
 {
     private readonly string _dir;
     private readonly ILogger? _logger;
-    // PERF-05: file paths + kinds repeat across thousands of station symbols — intern them so the
+    // file paths + kinds repeat across thousands of station symbols — intern them so the
     // in-memory index holds one instance each instead of one per symbol.
     private readonly StringInterner _interner = new();
 

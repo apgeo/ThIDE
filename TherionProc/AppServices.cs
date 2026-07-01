@@ -27,7 +27,7 @@ internal static class AppServices
 
     /// <summary>
     /// Loads the optional user semantic-rule config from <c>%AppData%/TherionProc/rules.json</c>
-    /// (XDG fallback on POSIX). Returns an empty config when the file is absent or invalid (LANG-13).
+    /// (XDG fallback on POSIX). Returns an empty config when the file is absent or invalid.
     /// </summary>
     private static SemanticRuleConfig LoadRuleConfig()
     {
@@ -46,7 +46,7 @@ internal static class AppServices
         }
     }
 
-    /// <summary>Reads persisted settings before the container is built (EXT-04 plugin gate).</summary>
+    /// <summary>Reads persisted settings before the container is built (plugin gate).</summary>
     private static AppSettings LoadInitialSettings()
     {
         try { return new AppSettingsService().Current; }
@@ -100,13 +100,13 @@ internal static class AppServices
         });
 
         // Semantics (�5 / �M6) � uses AddTherionSemantics() so rule plugins flow in via ISemanticRule.
-        // LANG-13: a user rules.json (next to settings.json) can disable built-in rules and add
+        // a user rules.json (next to settings.json) can disable built-in rules and add
         // naming-convention lints. Missing/invalid config falls back to the default (all rules on).
         var ruleConfig = LoadRuleConfig();
         services.AddTherionSemantics(ruleConfig);
         services.AddTherionBuiltinSemanticRules();
 
-        // EXT-04: load external plugin semantic rules from the plugins folder (gated by the
+        // load external plugin semantic rules from the plugins folder (gated by the
         // EnablePlugins setting, default on; disable for big projects). Registered as ISemanticRule
         // singletons so the rule runner resolves them alongside the built-ins.
         if (LoadInitialSettings().EnablePlugins)
@@ -168,15 +168,15 @@ internal static class AppServices
         // Application preferences + session restore.
         services.AddSingleton<IAppSettingsService, AppSettingsService>();
         services.AddSingleton<ILogService, LogService>();   // #3 in-app activity log
-        services.AddSingleton<INotificationService, NotificationService>();   // UX-07 toast/bell center
-        services.AddSingleton<ICrashRecoveryService, CrashRecoveryService>(); // PERF-06 safe-mode + buffer recovery
-        services.AddSingleton<IWorkspaceSymbolIndexStore, WorkspaceSymbolIndexStore>(); // PERF-03 persistent symbol index
-        services.AddSingleton<ITelemetryService, LocalTelemetryService>();    // REL-05 opt-in local telemetry/crash reports
-        services.AddSingleton<IScriptHookService, ScriptHookService>();       // EXT-03 scripting/macro hooks
-        services.AddSingleton<IMapRenderService, MapRenderService>();   // VIS-03/05 in-app rendering
-        services.AddSingleton<ICaveview3DAssetHost, Caveview3DAssetHost>(); // VIS-01 loopback asset server
-        services.AddSingleton<IStructuralPlotAssetHost, StructuralPlotAssetHost>(); // STRUCT-01 plot loopback server
-        services.AddSingleton<IStationSourceResolver, StationSourceResolver>(); // VIS-01 label → .th span
+        services.AddSingleton<INotificationService, NotificationService>();   // toast/bell center
+        services.AddSingleton<ICrashRecoveryService, CrashRecoveryService>(); // safe-mode + buffer recovery
+        services.AddSingleton<IWorkspaceSymbolIndexStore, WorkspaceSymbolIndexStore>(); // persistent symbol index
+        services.AddSingleton<ITelemetryService, LocalTelemetryService>();    // opt-in local telemetry/crash reports
+        services.AddSingleton<IScriptHookService, ScriptHookService>();       // scripting/macro hooks
+        services.AddSingleton<IMapRenderService, MapRenderService>();   // in-app rendering
+        services.AddSingleton<ICaveview3DAssetHost, Caveview3DAssetHost>(); // loopback asset server
+        services.AddSingleton<IStructuralPlotAssetHost, StructuralPlotAssetHost>(); // plot loopback server
+        services.AddSingleton<IStationSourceResolver, StationSourceResolver>(); // label → .th span
         services.AddSingleton<IFileAssociationService>(_ => FileAssociationServiceFactory.Create()); // Task 5: OS file associations
 
         // Shared content ViewModels — singletons so the same instance flows to both
@@ -186,22 +186,22 @@ internal static class AppServices
         services.AddSingleton<BuildViewModel>();
         services.AddSingleton<WorkspaceExplorerViewModel>();
         services.AddSingleton<XviReferencesViewModel>();
-        services.AddSingleton<OutlineViewModel>();   // EDIT-09 document outline content VM
-        services.AddSingleton<SurveyTreeViewModel>();         // PROJ-03 logical survey tree
-        services.AddSingleton<ProjectDashboardViewModel>();   // PROJ-07 project dashboard
-        services.AddSingleton<ProjectAuditViewModel>();       // PROJ-02 orphan/dead-file audit
-        services.AddSingleton<DataAnalyticsViewModel>();      // DATA-01/02/05/06/08 analytics
-        services.AddSingleton<ILeadStatusStore, LeadStatusStore>();   // LEAD-03 lifecycle status
-        services.AddSingleton<LeadsViewModel>();              // LEAD-01/03/05 leads register
-        services.AddSingleton<TodoScanViewModel>();           // NOTE-01 TODO/FIXME/QM aggregator
-        services.AddSingleton<IProjectMetadataStore, ProjectMetadataStore>(); // NOTE-04 metadata sidecar
-        services.AddSingleton<ProjectMetadataViewModel>();    // NOTE-04 project metadata editor
-        services.AddSingleton<MediaManagerViewModel>();       // MEDIA-02/03 media manager
+        services.AddSingleton<OutlineViewModel>();   // document outline content VM
+        services.AddSingleton<SurveyTreeViewModel>();         // logical survey tree
+        services.AddSingleton<ProjectDashboardViewModel>();   // project dashboard
+        services.AddSingleton<ProjectAuditViewModel>();       // orphan/dead-file audit
+        services.AddSingleton<DataAnalyticsViewModel>();      // analytics
+        services.AddSingleton<ILeadStatusStore, LeadStatusStore>();   // lifecycle status
+        services.AddSingleton<LeadsViewModel>();              // leads register
+        services.AddSingleton<TodoScanViewModel>();           // TODO/FIXME/QM aggregator
+        services.AddSingleton<IProjectMetadataStore, ProjectMetadataStore>(); // metadata sidecar
+        services.AddSingleton<ProjectMetadataViewModel>();    // project metadata editor
+        services.AddSingleton<MediaManagerViewModel>();       // media manager
         services.AddSingleton<LogViewModel>();                // #3 activity log content VM
-        services.AddSingleton<LivePreviewViewModel>();        // VIS-02 live centreline preview
-        services.AddSingleton<MapViewerViewModel>();          // VIS-03/05 in-app map viewer
-        services.AddSingleton<Model3DViewerViewModel>();      // VIS-01 embedded 3D model viewer
-        services.AddSingleton<StructuralGeologyViewModel>();  // STRUCT-01 plane strike/dip calculator
+        services.AddSingleton<LivePreviewViewModel>();        // live centreline preview
+        services.AddSingleton<MapViewerViewModel>();          // in-app map viewer
+        services.AddSingleton<Model3DViewerViewModel>();      // embedded 3D model viewer
+        services.AddSingleton<StructuralGeologyViewModel>();  // plane strike/dip calculator
         services.AddSingleton<SettingsViewModel>();
         services.AddSingleton<FileAssociationsViewModel>();   // Task 5: Preferences ▸ File Associations tab
         services.AddSingleton<KeyboardShortcutsViewModel>();
@@ -216,18 +216,18 @@ internal static class AppServices
         services.AddSingleton<ViewModels.Docking.GeneratedFilesToolViewModel>();
         services.AddSingleton<ViewModels.Docking.XviToolViewModel>();
         services.AddSingleton<ViewModels.Docking.OutlineToolViewModel>();
-        services.AddSingleton<ViewModels.Docking.ProjectToolViewModel>();   // PROJ-02/03/07
+        services.AddSingleton<ViewModels.Docking.ProjectToolViewModel>();
         services.AddSingleton<ViewModels.Docking.LogToolViewModel>();       // #3
-        services.AddSingleton<ViewModels.Docking.LivePreviewToolViewModel>(); // VIS-02
-        services.AddSingleton<ViewModels.Docking.MapViewerToolViewModel>();   // VIS-03/05
-        services.AddSingleton<ViewModels.Docking.Model3DViewerToolViewModel>(); // VIS-01
-        services.AddSingleton<ViewModels.Docking.StructuralGeologyToolViewModel>(); // STRUCT-01
+        services.AddSingleton<ViewModels.Docking.LivePreviewToolViewModel>();
+        services.AddSingleton<ViewModels.Docking.MapViewerToolViewModel>();
+        services.AddSingleton<ViewModels.Docking.Model3DViewerToolViewModel>();
+        services.AddSingleton<ViewModels.Docking.StructuralGeologyToolViewModel>();
         services.AddSingleton<ViewModels.Docking.SettingsToolViewModel>();
         services.AddSingleton<Docking.DockFactory>();
 
         services.AddTransient<MainWindowViewModel>();
 
-        // REL-06: fail-fast DI validation. ValidateScopes catches captive/scoped-from-root misuse;
+        // fail-fast DI validation. ValidateScopes catches captive/scoped-from-root misuse;
         // we then eagerly resolve the critical singletons so a missing/broken registration throws
         // at startup with a clear stack rather than NRE-ing deep in the UI later. (We deliberately
         // don't use ValidateOnBuild — it would also construct the transient MainWindowViewModel,
@@ -238,7 +238,7 @@ internal static class AppServices
     }
 
     /// <summary>
-    /// REL-06: eagerly resolves the services/tool view-models the shell can't run without, so a
+    /// eagerly resolves the services/tool view-models the shell can't run without, so a
     /// composition error surfaces immediately at startup. The DockFactory pulls in every dockable
     /// tool VM, and the document/workspace/build services cover the rest of the graph.
     /// </summary>

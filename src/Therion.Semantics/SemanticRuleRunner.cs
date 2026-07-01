@@ -13,7 +13,7 @@ public interface ISemanticRuleRunner
     ImmutableArray<Diagnostic> Run(WorkspaceSemanticModel workspace);
 }
 
-/// <summary>Runtime options for the rule runner: which rules are switched off (LANG-13).</summary>
+/// <summary>Runtime options for the rule runner: which rules are switched off.</summary>
 public sealed class SemanticRuleOptions
 {
     public ImmutableHashSet<string> DisabledRuleIds { get; init; } =
@@ -33,7 +33,7 @@ public sealed class SemanticRuleRunner : ISemanticRuleRunner
 
     /// <summary>
     /// Constructs a runner that skips any rule whose <see cref="ISemanticRule.Id"/> is listed in
-    /// <paramref name="options"/>.<see cref="SemanticRuleOptions.DisabledRuleIds"/> (LANG-13).
+    /// <paramref name="options"/>.<see cref="SemanticRuleOptions.DisabledRuleIds"/>.
     /// </summary>
     public SemanticRuleRunner(IEnumerable<ISemanticRule> rules, SemanticRuleOptions? options)
     {

@@ -1,4 +1,4 @@
-// LANG-02 — TokenClassifier.ClassifyLayoutLine: option keys highlight as keywords, without
+// TokenClassifier.ClassifyLayoutLine: option keys highlight as keywords, without
 // polluting the global keyword set (the global Classify must NOT treat `scale` as a keyword).
 
 using System.Linq;

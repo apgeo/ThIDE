@@ -1,4 +1,4 @@
-// MEDIA-04 — import GPX waypoints / track points into a Therion survey of `fix` stations.
+// import GPX waypoints / track points into a Therion survey of `fix` stations.
 // GPX coordinates are WGS84 lat/long, so the generated block declares `cs lat-long` and emits
 // `fix <name> <lon> <lat> <ele>` (Therion's lon-lat order). Pure + unit-testable.
 

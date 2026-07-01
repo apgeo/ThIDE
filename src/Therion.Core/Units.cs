@@ -77,7 +77,7 @@ public sealed class UnitConverter : IUnitConverter
         _ => throw new ArgumentOutOfRangeException(nameof(angle)),
     };
 
-    // UTIL-04 — inverse + cross-unit conversions for the unit-converter palette.
+    // inverse + cross-unit conversions for the unit-converter palette.
 
     /// <summary>Converts canonical metres back into <paramref name="unit"/>.</summary>
     public double FromMetres(double metres, LengthUnit unit) => unit switch

@@ -1,4 +1,4 @@
-// LANG-07 — typed .th2 object options. thbook v6.4.0 §"point"/"line"/"area" pp.25-32.
+// typed .th2 object options. thbook v6.4.0 §"point"/"line"/"area" pp.25-32.
 // Therion source-of-truth: therion/src/thpoint.cxx / thline.cxx / tharea.cxx.
 //
 // point/line/area objects carry `-option value…` settings (-id, -subtype, -orientation, -scale,

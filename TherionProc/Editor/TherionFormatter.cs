@@ -1,4 +1,4 @@
-// EDIT-04 — conservative "Format Document". Re-indents each line to its block-nesting depth
+// conservative "Format Document". Re-indents each line to its block-nesting depth
 // (survey/centreline/scrap/…) and trims trailing whitespace, editing the document in place
 // (bottom-up) so the caret is preserved. Lines inside opaque layout/lookup bodies (metapost/tex)
 // are left verbatim. Purely structural — it never reorders or drops content, so it can't corrupt

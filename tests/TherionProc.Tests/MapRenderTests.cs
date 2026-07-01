@@ -1,4 +1,4 @@
-// VIS-05 — format dispatch for the in-app renderer (the actual rasterization needs the Avalonia
+// format dispatch for the in-app renderer (the actual rasterization needs the Avalonia
 // platform + native libs and is verified at runtime).
 
 using TherionProc.Services;

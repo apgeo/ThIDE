@@ -65,7 +65,7 @@ public sealed class WorkspaceSemanticModel
     public FrozenDictionary<string, ScrapObjectSymbol> ScrapObjectsById { get; init; } =
         FrozenDictionary<string, ScrapObjectSymbol>.Empty;
 
-    /// <summary>All <c>.th2</c> point/line/area objects (for the Object Browser; DATA-03).</summary>
+    /// <summary>All <c>.th2</c> point/line/area objects (for the Object Browser).</summary>
     public ImmutableArray<Th2ObjectRecord> Th2Objects { get; init; } = ImmutableArray<Th2ObjectRecord>.Empty;
 
     public WorkspaceSemanticModel(

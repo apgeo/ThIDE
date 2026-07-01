@@ -57,7 +57,7 @@ public sealed record LayoutState
     /// <summary>Id of the active tab in the right tool dock.</summary>
     public string? RightActiveTab { get; init; }
 
-    // ---- floated tool/document windows (UX-05) ----
+    // ---- floated tool/document windows ----
     // The dock TREE itself is rebuilt fresh each launch (a deserialized Dock.Avalonia 12 tree
     // does not render), so float windows are persisted SEPARATELY and re-created at runtime by
     // re-floating the live dockables (the same code path the user's tear-off uses, which renders
@@ -68,7 +68,7 @@ public sealed record LayoutState
 }
 
 /// <summary>A persisted floating window: its bounds plus the ids of the dockables it contained
-/// (tool singleton ids, or document file paths). Restored by re-floating those dockables (UX-05).</summary>
+/// (tool singleton ids, or document file paths). Restored by re-floating those dockables.</summary>
 public sealed record FloatWindowState
 {
     public double X { get; init; }

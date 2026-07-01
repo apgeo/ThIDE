@@ -1,4 +1,4 @@
-// UTIL-01 — coordinate converter: WGS84 lat/long ↔ UTM, with one-click "copy as Therion fix line".
+// coordinate converter: WGS84 lat/long ↔ UTM, with one-click "copy as Therion fix line".
 // Paste a GPS coordinate, get a `fix` line (+ the `cs` to declare) ready for the centreline.
 
 using System;

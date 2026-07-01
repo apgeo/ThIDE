@@ -1,4 +1,4 @@
-// UTIL-02 — magnetic declination calculator. Computes declination for a lat/long + date using a
+// magnetic declination calculator. Computes declination for a lat/long + date using a
 // World Magnetic Model (WMM.COF). The model file is user-supplied (public-domain NOAA download) and
 // looked up in %AppData%/TherionProc or next to the app; a "Load model…" button picks one manually.
 

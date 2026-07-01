@@ -1,4 +1,4 @@
-// DIAG-01 — editor quick-fixes / code actions (Ctrl+.). Computes line-scoped fixes for the caret
+// editor quick-fixes / code actions (Ctrl+.). Computes line-scoped fixes for the caret
 // line from the active diagnostics + the line text: rename to a suggested station ("did you mean"),
 // insert a missing block terminator, create a missing input/source file, insert a cs line, and
 // comment out an unknown command. Line/text-based so it never depends on fragile token spans.

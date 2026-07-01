@@ -1,4 +1,4 @@
-// GIS-03 — surface / DEM helper. Converts an ESRI ASCII grid (.asc) into a Therion
+// surface / DEM helper. Converts an ESRI ASCII grid (.asc) into a Therion
 // `surface … grid … endsurface` block, and scaffolds an empty surface block. Pure string→string.
 //
 // ESRI ASCII rows run north→south (top row first); Therion's `grid` data run south→north from the
@@ -16,7 +16,7 @@ public static class SurfaceFromDem
 {
     private static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
 
-    /// <summary>Generates an empty <c>surface … grid … endsurface</c> stub to fill in (GIS-03).</summary>
+    /// <summary>Generates an empty <c>surface … grid … endsurface</c> stub to fill in.</summary>
     public static string Scaffold(double x0 = 0, double y0 = 0, double dx = 10, double dy = 10,
         int cols = 10, int rows = 10)
     {

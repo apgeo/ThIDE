@@ -1,4 +1,4 @@
-// UTIL-04 — a quick unit-converter palette: length (m/ft/cm/km/in/yd) and angle
+// a quick unit-converter palette: length (m/ft/cm/km/in/yd) and angle
 // (degrees/grads/mils/percent-slope/minutes). Live result; "Copy result" for pasting into data.
 
 using System;

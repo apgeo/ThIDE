@@ -26,7 +26,7 @@ public sealed record SketchReference(
     double X,
     double Y) : TherionNode(Span);
 
-/// <summary><c>point &lt;x&gt; &lt;y&gt; &lt;type&gt; [options...]</c> (LANG-07).</summary>
+/// <summary><c>point &lt;x&gt; &lt;y&gt; &lt;type&gt; [options...]</c>.</summary>
 public sealed record PointObject(
     SourceSpan Span,
     double X,
@@ -57,7 +57,7 @@ public readonly record struct LineVertex(SourceSpan Span, double X, double Y, st
     public Th2OptionList Options { get; init; } = Th2OptionList.Empty;
 }
 
-/// <summary><c>line &lt;type&gt; ... endline</c> block (LANG-07).</summary>
+/// <summary><c>line &lt;type&gt; ... endline</c> block.</summary>
 public sealed record LineObject(
     SourceSpan Span,
     string LineType,
@@ -75,7 +75,7 @@ public sealed record LineObject(
     public string? Close => Options.Close;
 }
 
-/// <summary><c>area &lt;type&gt; ... endarea</c> block. Body lists border lines (LANG-07).</summary>
+/// <summary><c>area &lt;type&gt; ... endarea</c> block. Body lists border lines.</summary>
 public sealed record AreaObject(
     SourceSpan Span,
     string AreaType,

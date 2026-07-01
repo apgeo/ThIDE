@@ -1,4 +1,4 @@
-// VIS-01 — asset host for the embedded 3D viewer (CaveView.js in a NativeWebView).
+// asset host for the embedded 3D viewer (CaveView.js in a NativeWebView).
 //
 // CaveView fetch()es its model from `surveyDirectory` over a *real* HTTP origin, so a
 // file:// page is CORS-blocked (plan risk R1). This service serves the vendored CaveView.js

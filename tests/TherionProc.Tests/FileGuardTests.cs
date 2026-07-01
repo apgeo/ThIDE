@@ -4,7 +4,7 @@ using TherionProc.Services;
 
 namespace TherionProc.Tests;
 
-// TRUST-03 — binary/huge-file open guard.
+// binary/huge-file open guard.
 public class FileGuardTests
 {
     [Fact]

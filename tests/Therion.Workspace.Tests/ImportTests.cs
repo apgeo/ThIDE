@@ -1,4 +1,4 @@
-// IMP-01 (Survex/Compass) + GIS-03 (DEM→surface) — converters produce valid Therion that parses
+// (Survex/Compass) + (DEM→surface) — converters produce valid Therion that parses
 // cleanly and carries the expected structure.
 using System.Linq;
 using Therion.Core;

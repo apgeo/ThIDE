@@ -1,4 +1,4 @@
-// LANG-08 — map…endmap body parsing: member ids + projection.
+// map…endmap body parsing: member ids + projection.
 
 using System.Linq;
 using Therion.Syntax;

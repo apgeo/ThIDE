@@ -1,4 +1,4 @@
-// EDIT-07 — a lightweight document minimap. Renders one thin bar per source line (width ∝ line
+// a lightweight document minimap. Renders one thin bar per source line (width ∝ line
 // length, colour by content: comment / block header / normal), a translucent viewport box for the
 // visible region, and click/drag to scroll. Deliberately simple (no scaled text glyphs) so it stays
 // cheap even on large files (lines are sampled above a threshold).

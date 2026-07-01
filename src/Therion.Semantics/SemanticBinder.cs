@@ -69,7 +69,7 @@ public sealed class SemanticBinder
 
     /// <summary>
     /// A single-value <c>declination</c> command's value in degrees (east positive), or null for the
-    /// reset / dated-list / value-less forms. Grad/mil/minute units are converted to degrees (STRUCT-01).
+    /// reset / dated-list / value-less forms. Grad/mil/minute units are converted to degrees.
     /// </summary>
     private static double? DeclinationToDegrees(DeclinationCommand decl)
     {
@@ -98,12 +98,12 @@ public sealed class SemanticBinder
         // Flags are stateful within a centreline body, and a comment line directly
         // above a data row binds to that row. Both are tracked across this child list.
         var activeFlags = ShotFlags.None;
-        // Active angle units for compass/clino (LANG-05 value validation). A `units` command
+        // Active angle units for compass/clino (value validation). A `units` command
         // earlier in this body switches degrees↔grads↔… for the range checks that follow.
         var compassUnit = AngleUnit.Degree;
         var clinoUnit = AngleUnit.Degree;
         TrivialComment? pendingComment = null;
-        // The survey these direct children belong to (team/date attach here; DATA-05).
+        // The survey these direct children belong to (team/date attach here).
         QualifiedName? currentSurvey = scope.IsEmpty ? null : new QualifiedName(scope);
         foreach (var node in children)
         {
@@ -178,7 +178,7 @@ public sealed class SemanticBinder
 
     /// <summary>
     /// Binds a <c>station &lt;name&gt; "comment" [flags]</c> command: attaches the comment + flags
-    /// to the (possibly implicitly declared) station. Does not create a shot (LANG-04/06).
+    /// to the (possibly implicitly declared) station. Does not create a shot.
     /// </summary>
     private static void BindStationCommand(StationCommand st, BindContext ctx, ImmutableArray<string> scope)
     {
@@ -195,14 +195,14 @@ public sealed class SemanticBinder
         ctx.Equates.Add(qn);
     }
 
-    /// <summary>Appends a team member to the enclosing survey (DATA-05).</summary>
+    /// <summary>Appends a team member to the enclosing survey.</summary>
     private static void AppendSurveyTeam(BindContext ctx, QualifiedName survey, string name)
     {
         if (ctx.Surveys.TryGetValue(survey, out var sv))
             ctx.Surveys[survey] = sv with { Team = sv.Team.Add(name) };
     }
 
-    /// <summary>Appends a survey date to the enclosing survey (DATA-05/08).</summary>
+    /// <summary>Appends a survey date to the enclosing survey.</summary>
     private static void AppendSurveyDate(BindContext ctx, QualifiedName survey, string date)
     {
         if (ctx.Surveys.TryGetValue(survey, out var sv))
@@ -282,7 +282,7 @@ public sealed class SemanticBinder
         WalkChildren(scrap.Children, ctx, scope, dataFields: null);
     }
 
-    /// <summary>Records a <c>map &lt;id&gt;</c> declaration (first one wins per id), with members (LANG-08).</summary>
+    /// <summary>Records a <c>map &lt;id&gt;</c> declaration (first one wins per id), with members.</summary>
     private static void BindMap(MapCommand map, BindContext ctx)
     {
         if (string.IsNullOrEmpty(map.Id) || ctx.Maps.ContainsKey(map.Id)) return;
@@ -402,7 +402,7 @@ public sealed class SemanticBinder
     }
 
     /// <summary>
-    /// LANG-05: warns when a data row supplies the wrong number of columns for its declared
+    /// warns when a data row supplies the wrong number of columns for its declared
     /// reading order. Skipped for interleaved / <c>ignoreall</c> styles (expected == -1).
     /// </summary>
     private static void ValidateRowArity(DataRow row, DataCommand data, BindContext ctx)
@@ -419,7 +419,7 @@ public sealed class SemanticBinder
     }
 
     /// <summary>
-    /// LANG-05: validates each value of a data row against the reading declared for its column —
+    /// validates each value of a data row against the reading declared for its column —
     /// that a number column actually holds a number, and that compass/clino/length values fall in
     /// range. Only runs on fully-determined fixed-arity rows (not interleaved / <c>ignoreall</c>),
     /// so the value↔reading mapping is unambiguous.
@@ -616,11 +616,11 @@ public sealed class SemanticBinder
         public ImmutableArray<EquateRecord>.Builder EquateRecords { get; } = ImmutableArray.CreateBuilder<EquateRecord>();
         /// <summary>Equate references unresolved in this file (re-checked at the workspace level).</summary>
         public ImmutableArray<EquateRef>.Builder UnresolvedEquateRefs { get; } = ImmutableArray.CreateBuilder<EquateRef>();
-        /// <summary>First <c>cs</c> declared in the file (input coordinate system), if any (LANG-03).</summary>
+        /// <summary>First <c>cs</c> declared in the file (input coordinate system), if any.</summary>
         public string? InputCs { get; set; }
-        /// <summary>The <c>cs</c> in force at the current point of the walk (for fix coords; DATA-06).</summary>
+        /// <summary>The <c>cs</c> in force at the current point of the walk (for fix coords).</summary>
         public string? CurrentCs { get; set; }
-        /// <summary>First single-value <c>declination</c> in the file, in degrees east-positive (STRUCT-01).</summary>
+        /// <summary>First single-value <c>declination</c> in the file, in degrees east-positive.</summary>
         public double? Declination { get; set; }
     }
 }

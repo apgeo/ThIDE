@@ -1,4 +1,4 @@
-// REL-03 — golden / snapshot round-trip tests for TherionWriter.
+// golden / snapshot round-trip tests for TherionWriter.
 //
 // Rather than committing brittle golden-string files, these assert the writer's two strongest
 // guarantees: (1) round-trip stability — writing a re-parsed AST is byte-identical to the first

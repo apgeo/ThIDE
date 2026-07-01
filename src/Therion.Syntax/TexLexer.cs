@@ -1,4 +1,4 @@
-// LANG-02 (embedded code) — highlighting-grade TeX lexer.
+// (embedded code) — highlighting-grade TeX lexer.
 //
 // Therion `layout` bodies embed TeX inside `code tex-map … endcode` and `code tex-atlas … endcode`
 // (thbook §"layout"). These are TeX/LaTeX, NOT MetaPost — a different language — so they get their

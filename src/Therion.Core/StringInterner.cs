@@ -1,4 +1,4 @@
-// PERF-05 — string interning for big projects.
+// string interning for big projects.
 //
 // Large surveys repeat the same strings thousands of times: survey-name prefixes, file paths,
 // symbol kinds, flags. Holding a separate string instance for each wastes managed heap. This is

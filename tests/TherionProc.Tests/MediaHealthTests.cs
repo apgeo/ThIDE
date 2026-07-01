@@ -4,7 +4,7 @@ using TherionProc.Services;
 
 namespace TherionProc.Tests;
 
-// MEDIA-03 — orphan (present-but-unreferenced) media detection + image-header dimensions.
+// orphan (present-but-unreferenced) media detection + image-header dimensions.
 public class MediaHealthTests
 {
     [Fact]

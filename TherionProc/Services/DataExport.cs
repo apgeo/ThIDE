@@ -1,4 +1,4 @@
-// DATA-09 — export any tabular data view to CSV or a Markdown table (string builders only;
+// export any tabular data view to CSV or a Markdown table (string builders only;
 // clipboard/file writing is the caller's concern). Pure + unit-testable.
 
 using System.Collections.Generic;
@@ -32,7 +32,7 @@ public static class DataExport
         return sb.ToString();
     }
 
-    /// <summary>An HTML <c>&lt;table&gt;</c> fragment (cells HTML-escaped). PUB-02.</summary>
+    /// <summary>An HTML <c>&lt;table&gt;</c> fragment (cells HTML-escaped). .</summary>
     public static string ToHtml(IReadOnlyList<string> headers, IEnumerable<IReadOnlyList<string>> rows)
     {
         var sb = new StringBuilder();
@@ -52,7 +52,7 @@ public static class DataExport
         return sb.ToString();
     }
 
-    /// <summary>A LaTeX <c>tabular</c> environment (cells escaped for LaTeX). PUB-02.</summary>
+    /// <summary>A LaTeX <c>tabular</c> environment (cells escaped for LaTeX). .</summary>
     public static string ToLatex(IReadOnlyList<string> headers, IEnumerable<IReadOnlyList<string>> rows)
     {
         var sb = new StringBuilder();

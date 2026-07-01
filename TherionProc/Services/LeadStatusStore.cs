@@ -1,6 +1,6 @@
-// LEAD-03 — lead lifecycle status, persisted in a local sidecar.
+// lead lifecycle status, persisted in a local sidecar.
 //
-// The leads register (LEAD-01) is derived fresh from the source each time; the user's triage
+// The leads register is derived fresh from the source each time; the user's triage
 // decisions (open → checked → pushed → dead) are layered on top here. We keep them in a per-root
 // JSON sidecar rather than rewriting the Therion source, so marking a lead is instant, reversible,
 // and never risks corrupting survey data. Keyed by the lead's location (station QN / scrap id).

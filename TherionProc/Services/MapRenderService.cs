@@ -1,4 +1,4 @@
-// VIS-03/05 — in-app rasterization of generated map outputs to an Avalonia bitmap.
+// in-app rasterization of generated map outputs to an Avalonia bitmap.
 //   * PNG/JPG/BMP : native Avalonia Bitmap.
 //   * SVG         : Svg.Skia core renders the picture → PNG bytes → Avalonia Bitmap.
 //   * PDF         : Docnet.Core (bundled PDFium) renders a page → BGRA bytes → WriteableBitmap.

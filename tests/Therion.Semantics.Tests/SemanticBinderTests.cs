@@ -37,7 +37,7 @@ public class SemanticBinderTests
         Assert.DoesNotContain(model.Diagnostics, d => d.Severity == Core.DiagnosticSeverity.Error);
     }
 
-    // STRUCT-01 — the survey `declination` value is surfaced (degrees, east positive).
+    // the survey `declination` value is surfaced (degrees, east positive).
     [Fact]
     public void Declination_singleValueDegrees_isSurfaced()
     {

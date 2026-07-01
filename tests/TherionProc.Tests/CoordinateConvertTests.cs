@@ -2,7 +2,7 @@ using Therion.Core;
 
 namespace TherionProc.Tests;
 
-// UTIL-01 — lat/long ↔ UTM conversion.
+// lat/long ↔ UTM conversion.
 public class CoordinateConvertTests
 {
     [Fact]

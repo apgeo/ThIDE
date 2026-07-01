@@ -10,7 +10,7 @@
                       ContextRequested="OnGridContextRequested"
                       IsReadOnly="True" GridLinesVisibility="Horizontal"
                       CanUserResizeColumns="True" CanUserSortColumns="True" AutoGenerateColumns="False">
-                <!-- QOL-12: identifier actions. -->
+                <!-- identifier actions. -->
                 <DataGrid.ContextMenu>
                     <ContextMenu>
                         <MenuItem Header="{l:Loc Common_GoToDefinition}" Click="OnCtxNavigate" />
@@ -42,12 +42,12 @@
                 </DataGrid.Columns>
             </DataGrid>
         </TabItem>
-        <!-- DATA-03 — entity tabs -->
+        <!-- entity tabs -->
         <TabItem Header="{l:Loc Proj_Tab_Surveys}">
             <DataGrid ItemsSource="{Binding Browser.Surveys}" DoubleTapped="OnRowDoubleTapped"
                       ContextRequested="OnGridContextRequested" IsReadOnly="True" GridLinesVisibility="Horizontal"
                       CanUserResizeColumns="True" CanUserSortColumns="True" AutoGenerateColumns="False">
-                <!-- QOL-12: identifier actions. -->
+                <!-- identifier actions. -->
                 <DataGrid.ContextMenu>
                     <ContextMenu>
                         <MenuItem Header="{l:Loc Common_GoToDefinition}" Click="OnCtxNavigate" />

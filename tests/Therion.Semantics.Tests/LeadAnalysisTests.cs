@@ -5,7 +5,7 @@ using Therion.Syntax;
 
 namespace Therion.Semantics.Tests;
 
-// LEAD-01 / LEAD-05 — the exploration-leads register.
+// the exploration-leads register.
 public class LeadAnalysisTests
 {
     private static WorkspaceSemanticModel Build(string src, string path = "cave.th")

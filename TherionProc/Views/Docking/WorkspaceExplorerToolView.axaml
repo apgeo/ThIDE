@@ -104,7 +104,7 @@
                   ItemsSource="{Binding Explorer.Roots}"
                   SelectedItem="{Binding Explorer.Selected, Mode=TwoWay}"
                   ContextRequested="OnTreeContextRequested">
-            <!-- PERF-01: virtualize the tree so a 200+ file / many-station hierarchy only
+            <!-- virtualize the tree so a 200+ file / many-station hierarchy only
                  realizes the visible rows. -->
             <TreeView.ItemsPanel>
                 <ItemsPanelTemplate>

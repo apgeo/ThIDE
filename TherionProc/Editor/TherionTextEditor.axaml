@@ -3,7 +3,7 @@
              xmlns:ae="https://github.com/avaloniaui/avaloniaedit"
              x:Class="TherionProc.Editor.TherionTextEditor">
     <Grid x:Name="Root" ColumnDefinitions="*,Auto,Auto" RowDefinitions="Auto,*">
-        <!-- EDIT-08: breadcrumb bar (enclosing survey/centreline/scrap path); shown from code-behind. -->
+        <!-- breadcrumb bar (enclosing survey/centreline/scrap path); shown from code-behind. -->
         <Border x:Name="BreadcrumbBar" Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
                 IsVisible="False" Padding="6,1"
                 Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}"

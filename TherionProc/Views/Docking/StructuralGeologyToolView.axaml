@@ -7,7 +7,7 @@
              x:Class="TherionProc.Views.Docking.StructuralGeologyToolView"
              x:DataType="vm:StructuralGeologyToolViewModel">
 
-    <!-- STRUCT-01 — plane strike/dip calculator. Tabbed wizard: Detect → Measurements → Planes → Plot.
+    <!-- plane strike/dip calculator. Tabbed wizard: Detect → Measurements → Planes → Plot.
          Bindings are relative to the tool VM; the content VM is reached via the `Structural.` prefix. -->
     <UserControl.Resources>
         <!-- Cosmetic: show enum options (grouping / splay policy / declination source) as spaced text. -->

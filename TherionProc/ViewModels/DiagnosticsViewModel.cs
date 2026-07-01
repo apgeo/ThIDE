@@ -1,7 +1,7 @@
 // Implementation Plan §7.3 — Diagnostics panel ViewModel.
 // Aggregates parser + semantic + compile diagnostics into a single list for the Diagnostics tool
-// window. DIAG-07 adds search, severity/category filtering, per-code suppression and F8
-// next/prev navigation; DIAG-09 surfaces a plain-language explanation + thbook link per code.
+// window. adds search, severity/category filtering, per-code suppression and F8
+// next/prev navigation; surfaces a plain-language explanation + thbook link per code.
 
 using System;
 using System.Collections.Generic;
@@ -33,7 +33,7 @@ public sealed record DiagnosticRow(
 
 public partial class DiagnosticsViewModel : ViewModelBase
 {
-    // Reference-resolution codes (DIAG-06): the "References" category filter narrows to these.
+    // Reference-resolution codes: the "References" category filter narrows to these.
     private static readonly HashSet<string> ReferenceCodes = new(StringComparer.Ordinal)
     {
         "TH_SEM_001", "TH_SEM_003", "TH_SEM_014", "TH_WS_001",
@@ -49,7 +49,7 @@ public partial class DiagnosticsViewModel : ViewModelBase
     [ObservableProperty] private DiagnosticRow? _selected;
     [ObservableProperty] private bool _showProjectScope;
 
-    // ---- DIAG-07 filters ----
+    // ---- filters ----
     [ObservableProperty] private string _searchText = string.Empty;
     [ObservableProperty] private bool _showErrors = true;
     [ObservableProperty] private bool _showWarnings = true;
@@ -60,12 +60,12 @@ public partial class DiagnosticsViewModel : ViewModelBase
     public bool HasSuppressions => SuppressedCount > 0;
     partial void OnSuppressedCountChanged(int value) => OnPropertyChanged(nameof(HasSuppressions));
 
-    /// <summary>True when there is at least one error or warning (drives the status-bar badge, DIAG-07).</summary>
+    /// <summary>True when there is at least one error or warning (drives the status-bar badge).</summary>
     public bool HasProblems => ErrorCount > 0 || WarningCount > 0;
     partial void OnErrorCountChanged(int value) => OnPropertyChanged(nameof(HasProblems));
     partial void OnWarningCountChanged(int value) => OnPropertyChanged(nameof(HasProblems));
 
-    // ---- DIAG-09 explanation of the selected diagnostic ----
+    // ---- explanation of the selected diagnostic ----
     [ObservableProperty] private string _selectedExplanation = string.Empty;
     [ObservableProperty] private string _selectedExample = string.Empty;
     [ObservableProperty] private bool _hasExplanation;
@@ -184,7 +184,7 @@ public partial class DiagnosticsViewModel : ViewModelBase
         NavigateRequested?.Invoke(this, row);
     }
 
-    /// <summary>DIAG-07: hide every diagnostic sharing the selected row's code for this session.</summary>
+    /// <summary>hide every diagnostic sharing the selected row's code for this session.</summary>
     [RelayCommand]
     private void SuppressSelectedCode()
     {
@@ -199,7 +199,7 @@ public partial class DiagnosticsViewModel : ViewModelBase
         ApplyFilter();
     }
 
-    /// <summary>DIAG-09: open the thbook page for the selected diagnostic's topic.</summary>
+    /// <summary>open the thbook page for the selected diagnostic's topic.</summary>
     [RelayCommand]
     private void OpenDocs()
     {

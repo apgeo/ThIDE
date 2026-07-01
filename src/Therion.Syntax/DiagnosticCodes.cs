@@ -18,13 +18,13 @@ public static class DiagnosticCodes
     public const string MalformedEquate          = "TH0031";
     public const string MalformedData            = "TH0032";
 
-    // -- data style / reading-order validation (LANG-05) ------------------
+    // -- data style / reading-order validation ------------------
     public const string UnknownDataStyle         = "TH0033";
     public const string UnknownDataReading       = "TH0034";
     public const string MalformedDataRow         = "TH0037";  // centreline shot line with <2 columns
     public const string MissingFromTo            = "TH0036";  // no from/to/station to bind shots
 
-    // -- centreline metadata commands (LANG-04/03) ------------------------
+    // -- centreline metadata commands ------------------------
     public const string MalformedSd              = "TH0038";  // sd needs <quantity> <value> <unit>
     public const string MalformedMeasurement     = "TH0039";  // grid-angle/vthreshold need a numeric value
     public const string MalformedUnits           = "TH0040";

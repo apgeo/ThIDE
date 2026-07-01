@@ -12,7 +12,7 @@ namespace TherionProc;
 public partial class App : Application
 {
     /// <summary>
-    /// UX-09: file paths passed on the command line (OS "Open with TherionProc" / double-click of an
+    /// file paths passed on the command line (OS "Open with TherionProc" / double-click of an
     /// associated .th/.thconfig). Captured at startup and opened by <see cref="MainWindow"/> once it
     /// is shown. Empty when launched without file arguments.
     /// </summary>
@@ -39,11 +39,11 @@ public partial class App : Application
 
         var services = AppServices.Build();
 
-        // PERF-06: record that we're running (and detect a leftover sentinel from a crashed run,
+        // record that we're running (and detect a leftover sentinel from a crashed run,
         // which puts the app in safe mode) before any layout/session restore happens.
         services.GetRequiredService<Services.ICrashRecoveryService>().MarkRunning();
 
-        // REL-05: opt-in (off by default) anonymous, local-only usage telemetry.
+        // opt-in (off by default) anonymous, local-only usage telemetry.
         services.GetService<Services.ITelemetryService>()?.TrackEvent("app.start");
 
         // Apply the persisted theme (mode + custom syntax colors) before the window shows (#2).
@@ -51,7 +51,7 @@ public partial class App : Application
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            // UX-09: stash any file paths passed on the command line so MainWindow can open them
+            // stash any file paths passed on the command line so MainWindow can open them
             // after it has shown (covers OS file association + "Open with TherionProc").
             StartupFileArgs = ParseFileArgs(desktop.Args);
 
@@ -67,7 +67,7 @@ public partial class App : Application
         base.OnFrameworkInitializationCompleted();
     }
 
-    // UX-09: keep only arguments that look like real, openable Therion file paths (skip option
+    // keep only arguments that look like real, openable Therion file paths (skip option
     // flags and non-existent paths). Extensions mirror MainWindow.OpenableExtensions.
     private static System.Collections.Generic.IReadOnlyList<string> ParseFileArgs(string[]? args)
     {
@@ -85,7 +85,7 @@ public partial class App : Application
     private static void OnDispatcherUnhandledException(object? sender, DispatcherUnhandledExceptionEventArgs e)
     {
         if (IsBenignDockHoverError(e.Exception)) { e.Handled = true; return; }
-        // REL-05: write a local crash report if the user opted in (no-op otherwise). Handling is
+        // write a local crash report if the user opted in (no-op otherwise). Handling is
         // unchanged — we only record.
         try { AppServices.Provider.GetService<Services.ITelemetryService>()?.ReportException(e.Exception, "dispatcher-unhandled"); }
         catch { /* never let reporting mask the original failure */ }

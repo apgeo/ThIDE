@@ -145,7 +145,7 @@ public sealed record JoinCommand(
 /// references; it is not Therion command syntax, so the parser consumes it opaquely
 /// rather than sub-parsing it. Only the map <see cref="Id"/> is a declaration the
 /// symbol model needs (references into the body are resolved from raw editor text).
-/// <see cref="Members"/> are the resolved id references on the body lines (LANG-08).
+/// <see cref="Members"/> are the resolved id references on the body lines.
 /// </summary>
 public sealed record MapCommand(
     SourceSpan Span,
@@ -153,18 +153,18 @@ public sealed record MapCommand(
     string OptionsRaw,
     bool IsTerminated) : TherionCommand(Span, "map")
 {
-    /// <summary>Scrap / sub-map ids referenced in the map body, each with its source span (LANG-08).</summary>
+    /// <summary>Scrap / sub-map ids referenced in the map body, each with its source span.</summary>
     public ImmutableArray<MapMemberRef> Members { get; init; } = ImmutableArray<MapMemberRef>.Empty;
 
     /// <summary>The <c>-projection</c> value (plan / extended / elevation / none), if declared.</summary>
     public string? Projection { get; init; }
 }
 
-/// <summary>A scrap or sub-map reference inside a <c>map ... endmap</c> body (LANG-08).</summary>
+/// <summary>A scrap or sub-map reference inside a <c>map ... endmap</c> body.</summary>
 public readonly record struct MapMemberRef(SourceSpan Span, string Id);
 
 // =====================================================================================
-// Centreline / survey metadata commands (LANG-04, LANG-05, LANG-03, LANG-06). thbook
+// Centreline / survey metadata commands. thbook
 // v6.4.0 §"centreline" pp.17-22. These previously fell through to UnknownCommand or, worse,
 // were mis-parsed as DataRows inside a centreline (polluting the station model with fake
 // stations like "extend"/"mark"). Modeling them removes that pollution and feeds the units /

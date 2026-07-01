@@ -1,4 +1,4 @@
-// LANG-04/05/06 — semantic effects of the typed centreline commands:
+// semantic effects of the typed centreline commands:
 //   * station flags/comments bind to the station symbol;
 //   * metadata commands no longer pollute the station model (no fake "extend"/"mark" stations);
 //   * data-row arity validation is accurate (no false positives on coalesced station names);
@@ -145,7 +145,7 @@ public class CentrelineSemanticsTests
         Assert.DoesNotContain(model.Diagnostics, d => d.Code == SemanticDiagnosticCodes.DataRowArity);
     }
 
-    // ---- LANG-05 (extended): per-value validation of data rows -----------------------------
+    // ---- (extended): per-value validation of data rows -----------------------------
 
     [Fact]
     public void Non_numeric_measurement_values_are_flagged_as_errors_naming_the_reading()
