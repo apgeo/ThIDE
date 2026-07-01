@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(TherionLibraryTargetFrameworks)</TargetFrameworks>
+  </PropertyGroup>
+
+  <!--
+    STRUCT-01 — reusable structural-geology core (plane strike/dip from cave-survey shots).
+    Pure: no UI, no web, no external numeric dependency. Depends on Therion.Semantics for the
+    shot/station object graph it consumes (ShotSymbol/StationSymbol) in the detection/extraction
+    layer; the PlaneFitter math core itself is dependency-free.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\Therion.Core\Therion.Core.csproj" />
+    <ProjectReference Include="..\Therion.Semantics\Therion.Semantics.csproj" />
+  </ItemGroup>
+
+</Project>
