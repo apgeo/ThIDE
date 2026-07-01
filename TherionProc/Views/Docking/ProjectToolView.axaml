@@ -265,8 +265,6 @@
             <DockPanel>
                 <WrapPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="8,6" VerticalAlignment="Center">
                     <Button Content="{l:Loc Proj_Rescan}" Command="{Binding Leads.RefreshCommand}" Margin="0,0,6,0" />
-                    <Button Content="{l:Loc Common_GoToSource}" Command="{Binding Leads.OpenCommand}"
-                            CommandParameter="{Binding #LeadsGrid.SelectedItem}" Margin="0,0,6,0" />
                     <Button Content="{l:Loc Proj_Lead_Checked}" Command="{Binding Leads.MarkCheckedCommand}"
                             CommandParameter="{Binding #LeadsGrid.SelectedItem}" Margin="0,0,6,0" />
                     <Button Content="{l:Loc Proj_Lead_Pushed}" Command="{Binding Leads.MarkPushedCommand}"
@@ -280,7 +278,8 @@
                 </WrapPanel>
                 <DataGrid x:Name="LeadsGrid" ItemsSource="{Binding Leads.Leads}" IsReadOnly="True"
                           GridLinesVisibility="Horizontal" CanUserResizeColumns="True"
-                          CanUserSortColumns="True" AutoGenerateColumns="False">
+                          CanUserSortColumns="True" AutoGenerateColumns="False"
+                          DoubleTapped="OnLeadsRowDoubleTapped">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="{l:Loc Col_Location}" Binding="{Binding Location}" Width="*" />
                         <DataGridTextColumn Header="{l:Loc Browser_Col_Kind}" Binding="{Binding Kind}" Width="150" />
@@ -298,14 +297,13 @@
             <DockPanel>
                 <WrapPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="8,6" VerticalAlignment="Center">
                     <Button Content="{l:Loc Proj_Rescan}" Command="{Binding Todos.RefreshCommand}" Margin="0,0,6,0" />
-                    <Button Content="{l:Loc Common_GoToSource}" Command="{Binding Todos.OpenCommand}"
-                            CommandParameter="{Binding #TodosGrid.SelectedItem}" Margin="0,0,6,0" />
                     <Button Content="{l:Loc Proj_CopyMarkdown}" Command="{Binding Todos.CopyAsMarkdownCommand}" Margin="0,0,12,0" />
                     <TextBlock Text="{Binding Todos.Summary}" Foreground="Gray" VerticalAlignment="Center" />
                 </WrapPanel>
                 <DataGrid x:Name="TodosGrid" ItemsSource="{Binding Todos.Todos}" IsReadOnly="True"
                           GridLinesVisibility="Horizontal" CanUserResizeColumns="True"
-                          CanUserSortColumns="True" AutoGenerateColumns="False">
+                          CanUserSortColumns="True" AutoGenerateColumns="False"
+                          DoubleTapped="OnTodosRowDoubleTapped">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="{l:Loc Col_Tag}" Binding="{Binding Tag}" Width="90" />
                         <DataGridTextColumn Header="{l:Loc Col_Text}" Binding="{Binding Text}" Width="*" />
