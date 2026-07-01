@@ -792,17 +792,19 @@ public partial class MainWindow : Window
         KeyboardShortcutsViewModel? keyboard = null;
         ILanguageService? language = null;
         SettingsViewModel? externalTools = null;
+        FileAssociationsViewModel? associations = null;
         try
         {
             settings = AppServices.Provider.GetService<IAppSettingsService>();
             keyboard = AppServices.Provider.GetService<KeyboardShortcutsViewModel>();
             language = AppServices.Provider.GetService<ILanguageService>();
             externalTools = AppServices.Provider.GetService<SettingsViewModel>();
+            associations = AppServices.Provider.GetService<FileAssociationsViewModel>();
         }
         catch { /* design-time / no container */ }
         if (settings is null) return;
 
-        var vm = new PreferencesViewModel(settings, keyboard, language, externalTools);
+        var vm = new PreferencesViewModel(settings, keyboard, language, externalTools, associations);
         if (!string.IsNullOrEmpty(section)) vm.SelectSectionById(section!);
         await new PreferencesWindow { DataContext = vm }.ShowDialog(this);
     }

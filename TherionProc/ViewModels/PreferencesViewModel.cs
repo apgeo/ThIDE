@@ -135,6 +135,9 @@ public partial class PreferencesViewModel : ObservableObject
     // ---- external tools (moved here from the dockable Settings panel, #13) ----
     public SettingsViewModel? ExternalTools { get; }
 
+    // ---- file associations (Task 5) ----
+    public FileAssociationsViewModel? Associations { get; }
+
     // ---- sections + search ----------------------------------------------
     private readonly List<PreferenceSection> _allSections;
     [ObservableProperty] private ObservableCollection<PreferenceSection> _sections;
@@ -143,12 +146,13 @@ public partial class PreferencesViewModel : ObservableObject
 
     public PreferencesViewModel(IAppSettingsService settings,
         KeyboardShortcutsViewModel? keyboard = null, ILanguageService? language = null,
-        SettingsViewModel? externalTools = null)
+        SettingsViewModel? externalTools = null, FileAssociationsViewModel? associations = null)
     {
         _settings = settings;
         _language = language;
         Keyboard = keyboard;
         ExternalTools = externalTools;
+        Associations = associations;
 
         var s = settings.Current;
         _restoreSessionOnStartup = s.RestoreSessionOnStartup;
@@ -219,6 +223,7 @@ public partial class PreferencesViewModel : ObservableObject
             new("build",    Resources.Tr.Get("Pref_Build"),       "build output open lox 3d pdf survex aven loch compile on save"),
             new("visualization", "Visualization",                 "preview map viewer pdf svg png live centreline plan elevation render"),
             new("external", Resources.Tr.Get("Pref_External"),    "therion loch aven survex path detect tool executable"),
+            new("associations", Resources.Tr.Get("Pref_Associations"), "file association open with default extension .th .th2 thconfig register associate double click"),
             new("extensions", "Extensions",                       "extension plugin hook script macro on save build open command run lsp cli enable disable performance"),
             new("keyboard", Resources.Tr.Get("Pref_Keyboard"),    "key binding gesture shortcut hotkey command"),
         };
@@ -238,11 +243,14 @@ public partial class PreferencesViewModel : ObservableObject
     public bool IsBuild       => SelectedSection?.Id == "build";
     public bool IsVisualization => SelectedSection?.Id == "visualization";
     public bool IsExternal    => SelectedSection?.Id == "external";
+    public bool IsAssociations => SelectedSection?.Id == "associations";
     public bool IsExtensions  => SelectedSection?.Id == "extensions";
     public bool IsKeyboard    => SelectedSection?.Id == "keyboard";
 
     partial void OnSelectedSectionChanged(PreferenceSection? value)
     {
+        // Re-read the live association status each time the tab is shown (it can change externally).
+        if (value?.Id == "associations") Associations?.RefreshCommand.Execute(null);
         OnPropertyChanged(nameof(IsGeneral));
         OnPropertyChanged(nameof(IsTheme));
         OnPropertyChanged(nameof(IsEditor));
@@ -252,6 +260,7 @@ public partial class PreferencesViewModel : ObservableObject
         OnPropertyChanged(nameof(IsBuild));
         OnPropertyChanged(nameof(IsVisualization));
         OnPropertyChanged(nameof(IsExternal));
+        OnPropertyChanged(nameof(IsAssociations));
         OnPropertyChanged(nameof(IsExtensions));
         OnPropertyChanged(nameof(IsKeyboard));
     }

@@ -177,6 +177,7 @@ internal static class AppServices
         services.AddSingleton<ICaveview3DAssetHost, Caveview3DAssetHost>(); // VIS-01 loopback asset server
         services.AddSingleton<IStructuralPlotAssetHost, StructuralPlotAssetHost>(); // STRUCT-01 plot loopback server
         services.AddSingleton<IStationSourceResolver, StationSourceResolver>(); // VIS-01 label → .th span
+        services.AddSingleton<IFileAssociationService>(_ => FileAssociationServiceFactory.Create()); // Task 5: OS file associations
 
         // Shared content ViewModels — singletons so the same instance flows to both
         // the dockable tool wrapper (shown in the UI) and the shell (event wiring).
@@ -202,6 +203,7 @@ internal static class AppServices
         services.AddSingleton<Model3DViewerViewModel>();      // VIS-01 embedded 3D model viewer
         services.AddSingleton<StructuralGeologyViewModel>();  // STRUCT-01 plane strike/dip calculator
         services.AddSingleton<SettingsViewModel>();
+        services.AddSingleton<FileAssociationsViewModel>();   // Task 5: Preferences ▸ File Associations tab
         services.AddSingleton<KeyboardShortcutsViewModel>();
         services.AddSingleton<SearchViewModel>();
         services.AddSingleton<ReplaceInFilesViewModel>();

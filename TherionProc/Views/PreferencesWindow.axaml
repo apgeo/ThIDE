@@ -401,6 +401,47 @@
                         </DataGrid.Columns>
                     </DataGrid>
                 </DockPanel>
+
+                <!-- File Associations (Task 5): user-triggered, per-type register/remove. -->
+                <DockPanel IsVisible="{Binding IsAssociations}" VerticalAlignment="Top">
+                    <TextBlock DockPanel.Dock="Top" Text="{l:Loc Pref_Associations}"
+                               FontSize="16" FontWeight="Bold" Margin="0,0,0,8" />
+                    <TextBlock DockPanel.Dock="Top" Text="{l:Loc Assoc_Intro}"
+                               Foreground="Gray" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,6" />
+                    <TextBlock DockPanel.Dock="Top" Text="{Binding Associations.PlatformNote}"
+                               Foreground="Gray" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,10" />
+                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8"
+                                IsEnabled="{Binding Associations.IsSupported}">
+                        <Button Content="{l:Loc Assoc_AssociateAll}" Command="{Binding Associations.AssociateAllCommand}" />
+                        <Button Content="{l:Loc Assoc_RemoveAll}" Command="{Binding Associations.UnassociateAllCommand}" />
+                        <Button Content="{l:Loc Common_Refresh}" Command="{Binding Associations.RefreshCommand}" />
+                        <TextBlock VerticalAlignment="Center" Foreground="Gray"
+                                   Text="{Binding Associations.Status}" />
+                    </StackPanel>
+                    <DataGrid ItemsSource="{Binding Associations.Rows}"
+                              x:CompileBindings="False" Height="420" VerticalAlignment="Top"
+                              IsEnabled="{Binding Associations.IsSupported}"
+                              GridLinesVisibility="Horizontal"
+                              CanUserResizeColumns="True" AutoGenerateColumns="False">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="{l:Loc Assoc_Col_Type}"   Binding="{Binding Extension}"   Width="Auto" MinWidth="90"  IsReadOnly="True" />
+                            <DataGridTextColumn Header="{l:Loc Assoc_Col_Desc}"   Binding="{Binding Description}" Width="*"    MinWidth="160" IsReadOnly="True" />
+                            <DataGridTextColumn Header="{l:Loc Assoc_Col_Status}" Binding="{Binding StatusText}"  Width="Auto" MinWidth="190" IsReadOnly="True" />
+                            <DataGridTemplateColumn Header="" Width="Auto">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                            <Button Content="{l:Loc Assoc_Associate}" Command="{Binding AssociateCommand}"
+                                                    IsEnabled="{Binding CanManage}" Margin="2" />
+                                            <Button Content="{l:Loc Assoc_Remove}" Command="{Binding UnassociateCommand}"
+                                                    IsVisible="{Binding IsAssociated}" Margin="2" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
             </Panel>
         </ScrollViewer>
     </DockPanel>

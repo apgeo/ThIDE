@@ -46,6 +46,8 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="8.0.1" />
     <PackageReference Include="Microsoft.Extensions.Localization" Version="8.0.10" />
     <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.2" />
+    <!-- Task 5: per-user file-type associations on Windows (HKCU registry). Called only on Windows. -->
+    <PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
     <!-- VIS-03/05: in-app map rendering. SVG rasterized via Svg.Skia core (Avalonia-agnostic);
          PDF via Docnet.Core (bundled PDFium → raw bitmap, no SkiaSharp version conflict). -->
     <PackageReference Include="Svg.Skia" Version="3.0.4" />
