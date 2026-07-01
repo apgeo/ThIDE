@@ -152,4 +152,28 @@ public class ValidationGapTests
     public void Known_layout_options_are_ok() =>
         Assert.False(Has(Cfg("layout l1\nscale 1 100\nsymbol-color point wall blue\nendlayout"),
             DiagnosticCodes.UnknownLayoutOption));
+
+    // ---- centreline single-column "data row" = stray/typo'd command (TH0037) ----
+
+    [Fact]
+    public void Single_token_line_in_centreline_is_flagged() =>
+        Assert.True(Has(Th("centreline\n zx\nendcentreline"), DiagnosticCodes.MalformedDataRow));
+
+    [Fact]
+    public void Single_token_line_in_centreline_with_trailing_comment_is_flagged() =>
+        // The exact reported shape: a bare token followed by an inline comment.
+        Assert.True(Has(Th("centreline\n zx #@note\nendcentreline"), DiagnosticCodes.MalformedDataRow));
+
+    [Theory]
+    [InlineData("centreline\n1 2\nendcentreline")]                       // 2-col short/newline format
+    [InlineData("centreline\ndata normal from to length compass clino\n0 1 5.0 90 0\nendcentreline")]
+    [InlineData("centreline\ndata diving station depth newline tape backcompass\n0 7.3\n12 60\nendcentreline")]
+    public void Multi_column_data_rows_are_not_flagged(string src) =>
+        Assert.False(Has(Th(src), DiagnosticCodes.MalformedDataRow));
+
+    [Fact]
+    public void Top_level_stray_token_stays_unknown_command_not_a_data_row() =>
+        // Outside a centreline a bare token is still TH0010 (unchanged), never TH0037.
+        Assert.True(Has(Th("zx"), DiagnosticCodes.UnknownCommand) &&
+                    !Has(Th("zx"), DiagnosticCodes.MalformedDataRow));
 }

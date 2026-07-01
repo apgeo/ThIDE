@@ -241,6 +241,18 @@ public sealed class ThParser
              string.Equals(parentBlock, "centerline", StringComparison.OrdinalIgnoreCase)))
         {
             var (values, valueSpans) = CoalesceValues(line);
+            // A single bare token can't be a survey shot in ANY Therion data format (even the default
+            // `normal` needs from+to, and the shortest formats still need ≥2 columns). So a 1-column
+            // "row" is really a stray/typo'd command (e.g. `zx`) that the centreline data-row fallback
+            // would otherwise swallow silently. Corpus-verified safe: across 2362 .th files / ~830k
+            // rows the ONLY 1-column rows are genuine errors — deeper arity checks aren't done here
+            // because `data … newline …` formats legitimately produce short continuation lines.
+            if (values.Length < 2)
+                diagnostics.Add(Diagnostic.Create(
+                    DiagnosticCodes.MalformedDataRow,
+                    options.Mode == ParserMode.Strict ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
+                    $"'{line.Keyword}' is not a valid centreline command or data row (a survey shot needs at least two columns).",
+                    line.Head.Span));
             return new DataRow(line.Span, values,
                 TrailingComment: CleanComment(line.TrailingComment?.Text))
             {

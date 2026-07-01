@@ -17,6 +17,7 @@
 | `TH0032` | Warning | Malformed `data` (needs at least a style name). | `ThParser` |
 | `TH0033` | lenient | Unknown data style `<style>`. | `ThParser` |
 | `TH0034` | lenient | Unknown data reading `<keyword>`. | `ThParser` |
+| `TH0037` | lenient | Single-column line in a centreline (`<tok>`): not a valid command or survey shot. | `ThParser` |
 | `TH0040` | lenient | Malformed `units` (unknown quantity / missing unit). | `ThParser` |
 | `TH0041` | lenient | Malformed `calibrate` (missing zero-error). | `ThParser` |
 | `TH0043` | lenient | Unknown coordinate system `<cs>`. | `ThParser`, `ThconfigParser` |

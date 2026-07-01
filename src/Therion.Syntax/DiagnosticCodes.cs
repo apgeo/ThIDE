@@ -21,6 +21,7 @@ public static class DiagnosticCodes
     // -- data style / reading-order validation (LANG-05) ------------------
     public const string UnknownDataStyle         = "TH0033";
     public const string UnknownDataReading       = "TH0034";
+    public const string MalformedDataRow         = "TH0037";  // centreline shot line with <2 columns
     public const string MissingFromTo            = "TH0036";  // no from/to/station to bind shots
 
     // -- centreline metadata commands (LANG-04/03) ------------------------
