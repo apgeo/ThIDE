@@ -194,7 +194,7 @@
                                     <DataGridTextColumn Header="{l:Loc File_Col_Splay}"   Binding="{Binding Splay}"       Width="58" IsReadOnly="True" />
                                     <DataGridTextColumn Header="{l:Loc File_Col_Approx}"  Binding="{Binding Approximate}" Width="68" IsReadOnly="True" />
                                     <!-- Comment: trimmed with ellipsis; full text on hover. -->
-                                    <DataGridTemplateColumn Header="{l:Loc Common_Comment}" Width="*" MaxWidth="380" IsReadOnly="True">
+                                    <DataGridTemplateColumn Header="{l:Loc Common_Comment}" Width="*" MaxWidth="380" IsReadOnly="True" SortMemberPath="Comment">
                                         <DataGridTemplateColumn.CellTemplate>
                                             <DataTemplate>
                                                 <TextBlock Text="{Binding Comment}"

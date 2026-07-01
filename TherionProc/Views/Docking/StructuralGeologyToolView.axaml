@@ -202,7 +202,7 @@
                             <DataGridTextColumn Header="{l:Loc Struct_Col_Azimuth}" Binding="{ReflectionBinding Compass}" IsReadOnly="True" Width="Auto" />
                             <DataGridTextColumn Header="{l:Loc Browser_Col_Clino}" Binding="{ReflectionBinding Clino}" IsReadOnly="True" Width="Auto" />
                             <!-- Comment clipped to ~25 chars (full text in the tooltip); keeps Fit from ballooning. -->
-                            <DataGridTemplateColumn Header="{l:Loc Common_Comment}" IsReadOnly="True" Width="Auto">
+                            <DataGridTemplateColumn Header="{l:Loc Common_Comment}" IsReadOnly="True" Width="Auto" SortMemberPath="Comment">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="{ReflectionBinding CommentShort}" VerticalAlignment="Center"

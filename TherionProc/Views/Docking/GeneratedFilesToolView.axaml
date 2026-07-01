@@ -52,7 +52,7 @@
             </DataGrid.ContextMenu>
             <DataGrid.Columns>
                 <!-- Kind with a per-type icon (#4). -->
-                <DataGridTemplateColumn Header="{l:Loc Browser_Col_Kind}" Width="Auto">
+                <DataGridTemplateColumn Header="{l:Loc Browser_Col_Kind}" Width="Auto" SortMemberPath="Kind">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <StackPanel Orientation="Horizontal" Spacing="6" Margin="4,0" VerticalAlignment="Center">
@@ -110,8 +110,8 @@
                 <!-- BUILD-03: current / stale state. -->
                 <DataGridTextColumn Header="{l:Loc Gen_Col_State}" Binding="{Binding StateText}" Width="Auto" />
                 <DataGridTextColumn Header="{l:Loc Col_Path}" Binding="{Binding Path}" Width="*" />
-                <DataGridTextColumn Header="{l:Loc Gen_Col_Size}" Binding="{Binding SizeDisplay}" Width="Auto" />
-                <DataGridTextColumn Header="{l:Loc Gen_Col_Modified}" Binding="{Binding ModifiedDisplay}" Width="Auto" />
+                <DataGridTextColumn Header="{l:Loc Gen_Col_Size}" Binding="{Binding SizeDisplay}" Width="Auto" SortMemberPath="SizeBytes" />
+                <DataGridTextColumn Header="{l:Loc Gen_Col_Modified}" Binding="{Binding ModifiedDisplay}" Width="Auto" SortMemberPath="LastWriteUtc" />
             </DataGrid.Columns>
         </DataGrid>
     </DockPanel>

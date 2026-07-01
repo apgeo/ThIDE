@@ -148,7 +148,7 @@
                         Content="{l:Loc Proj_CopyTeamCsv}" Command="{Binding Analytics.CopyTeamCommand}" />
                 <Grid RowDefinitions="*,Auto,*">
                     <DataGrid Grid.Row="0" ItemsSource="{Binding Analytics.Team}" IsReadOnly="True"
-                              GridLinesVisibility="Horizontal" AutoGenerateColumns="False">
+                              GridLinesVisibility="Horizontal" CanUserSortColumns="True" AutoGenerateColumns="False">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="{l:Loc Col_Person}" Binding="{Binding Name}" Width="*" />
                             <DataGridTextColumn Header="{l:Loc Proj_Tab_Surveys}" Binding="{Binding Surveys}" Width="80" />
@@ -157,7 +157,7 @@
                     </DataGrid>
                     <TextBlock Grid.Row="1" Classes="h" Text="{l:Loc Proj_Trips}" Margin="8,6,0,3" />
                     <DataGrid Grid.Row="2" ItemsSource="{Binding Analytics.Trips}" IsReadOnly="True"
-                              GridLinesVisibility="Horizontal" AutoGenerateColumns="False">
+                              GridLinesVisibility="Horizontal" CanUserSortColumns="True" AutoGenerateColumns="False">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="{l:Loc Col_Date}" Binding="{Binding Date}" Width="120" />
                             <DataGridTextColumn Header="{l:Loc Proj_Tab_Surveys}" Binding="{Binding Surveys}" Width="80" />
@@ -190,7 +190,7 @@
         <!-- DATA-08 — Data quality -->
         <TabItem Header="{l:Loc Proj_Tab_Quality}">
             <DataGrid ItemsSource="{Binding Analytics.Quality}" IsReadOnly="True"
-                      GridLinesVisibility="Horizontal" AutoGenerateColumns="False">
+                      GridLinesVisibility="Horizontal" CanUserSortColumns="True" AutoGenerateColumns="False">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="{l:Loc Col_Metric}" Binding="{Binding Metric}" Width="*" />
                     <DataGridTextColumn Header="{l:Loc Col_Count}" Binding="{Binding Count}" Width="100" />

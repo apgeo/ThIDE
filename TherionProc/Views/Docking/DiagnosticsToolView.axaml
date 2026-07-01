@@ -91,7 +91,7 @@
             <DataGrid.Columns>
                 <DataGridTextColumn Header="{l:Loc Diag_Col_Code}"     Binding="{Binding Code}"     Width="Auto" MinWidth="70" />
                 <DataGridTextColumn Header="{l:Loc Diag_Col_Severity}" Binding="{Binding Severity}" Width="Auto" MinWidth="70" />
-                <DataGridTemplateColumn Header="{l:Loc Diag_Col_Message}" Width="*" MinWidth="160">
+                <DataGridTemplateColumn Header="{l:Loc Diag_Col_Message}" Width="*" MinWidth="160" SortMemberPath="Message">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <TextBlock Text="{Binding Message}" VerticalAlignment="Center" Padding="4,0"
@@ -100,7 +100,7 @@
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
                 <!-- File name only (shown by default, #3). -->
-                <DataGridTemplateColumn Header="{l:Loc Common_File}" Width="Auto">
+                <DataGridTemplateColumn Header="{l:Loc Common_File}" Width="Auto" SortMemberPath="FileName">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <TextBlock Text="{Binding FileName}" VerticalAlignment="Center" Padding="4,0"

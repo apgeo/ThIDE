@@ -314,7 +314,7 @@
                     <DataGrid ItemsSource="{Binding ExternalTools.Tools}"
                               x:CompileBindings="False" Height="440" VerticalAlignment="Top"
                               GridLinesVisibility="Horizontal"
-                              CanUserResizeColumns="True" AutoGenerateColumns="False">
+                              CanUserResizeColumns="True" CanUserSortColumns="True" AutoGenerateColumns="False">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="{l:Loc Pref_Col_Tool}"     Binding="{Binding ToolId}"  Width="Auto" MinWidth="80" IsReadOnly="True" />
                             <DataGridTextColumn Header="{l:Loc Pref_Col_Detected}" Binding="{Binding Path}"    Width="*"   MinWidth="160" IsReadOnly="True" />
@@ -376,7 +376,7 @@
                     <DataGrid ItemsSource="{Binding Keyboard.Rows}"
                               x:CompileBindings="False" VerticalAlignment="Top"
                               GridLinesVisibility="Horizontal" Height="440"
-                              CanUserResizeColumns="True" AutoGenerateColumns="False">
+                              CanUserResizeColumns="True" CanUserSortColumns="True" AutoGenerateColumns="False">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="{l:Loc Pref_Col_Command}" Binding="{Binding CommandId}" Width="Auto" MinWidth="120" MaxWidth="260" IsReadOnly="True" />
                             <!-- Capture box: focus it and press a chord to record the gesture (#11). -->
