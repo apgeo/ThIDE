@@ -144,11 +144,11 @@
   <data name="Struct_DetectionSignals" xml:space="preserve"><value>Semnale de detectare</value></data>
   <data name="Struct_DetectionHelp" xml:space="preserve"><value>O vizare este structurală dacă se potrivește cu orice semnal activat. Ajustați-le conform convenției topografiei dvs.</value></data>
   <data name="Struct_FromNameKeyword" xml:space="preserve"><value>Numele stației de plecare conține cuvânt(e)-cheie</value></data>
-  <data name="Struct_CommentMarker" xml:space="preserve"><value>Comentariul vizării conține marcaj(e)</value></data>
+  <data name="Struct_CommentMarker" xml:space="preserve"><value>Comentariul vizei conține marcaj(e)</value></data>
   <data name="Struct_StationFlag" xml:space="preserve"><value>Stația de la/până la poartă indicator(i)</value></data>
   <data name="Struct_GroupingPoints" xml:space="preserve"><value>Grupare &amp; puncte</value></data>
   <data name="Struct_GroupPlaneBy" xml:space="preserve"><value>Grupează un plan după</value></data>
-  <data name="Struct_SplayShots" xml:space="preserve"><value>Vizări radiale (splay)</value></data>
+  <data name="Struct_SplayShots" xml:space="preserve"><value>Radieri</value></data>
   <data name="Struct_IncludeOrigin" xml:space="preserve"><value>Include punctul stației de plecare (origine) în ajustare</value></data>
   <data name="Struct_IncludeOriginHelp" xml:space="preserve"><value>Folosiți doar când stația însăși se află pe planul măsurat — urmăriți coloana RMS.</value></data>
   <data name="Struct_MagDeclination" xml:space="preserve"><value>Declinație magnetică</value></data>
@@ -294,7 +294,7 @@
   <data name="Menu_Tools_DeclinationCalc" xml:space="preserve"><value>Calculator de declinație…</value></data>
   <data name="Menu_Tools_EntrancesFixed" xml:space="preserve"><value>Intrări / puncte fixe</value></data>
   <data name="Menu_Tools_StationTable" xml:space="preserve"><value>Tabel stații</value></data>
-  <data name="Menu_Tools_ShotTable" xml:space="preserve"><value>Tabel vizări</value></data>
+  <data name="Menu_Tools_ShotTable" xml:space="preserve"><value>Tabel radieri</value></data>
   <data name="Menu_Build_Target" xml:space="preserve"><value>Compilează ținta</value></data>
   <data name="Menu_Build_QuickExport" xml:space="preserve"><value>Export rapid…</value></data>
   <data name="Menu_Build_SurvexTools" xml:space="preserve"><value>Unelte Survex (.3d)</value></data>
@@ -555,7 +555,7 @@
   <data name="Live_Custom" xml:space="preserve"><value>Personalizat</value></data>
   <data name="Live_CustomTip" xml:space="preserve"><value>Profil proiectat de-a lungul unui azimut personalizat (folosiți cursorul)</value></data>
   <data name="Live_BearingTip" xml:space="preserve"><value>Azimutul proiecției (0–359°)</value></data>
-  <data name="Live_SplaysTip" xml:space="preserve"><value>Arată vizările radiale (de perete)</value></data>
+  <data name="Live_SplaysTip" xml:space="preserve"><value>Arată radierile</value></data>
   <data name="Live_AsLines" xml:space="preserve"><value>ca linii</value></data>
   <data name="Live_AsLinesTip" xml:space="preserve"><value>Activat: linii estompate · Dezactivat: doar punctele marginale îndepărtate</value></data>
   <data name="Live_LabelsTip" xml:space="preserve"><value>Arată o etichetă cu nume la fiecare stație</value></data>
@@ -679,4 +679,31 @@
   <data name="QExport_SurveyWm" xml:space="preserve"><value>ex. cave.upper (gol = tot proiectul)</value></data>
   <data name="QExport_Scale" xml:space="preserve"><value>Scară 1:</value></data>
   <data name="QExport_OutputName" xml:space="preserve"><value>Nume ieșire</value></data>
+  <!-- Editor context menu / dialogs / hover cards -->
+  <data name="Ed_ToggleComment" xml:space="preserve"><value>Comutare comentariu  Ctrl+/</value></data>
+  <data name="Ed_DuplicateLines" xml:space="preserve"><value>Duplică linia (liniile)</value></data>
+  <data name="Ed_MoveLinesUp" xml:space="preserve"><value>Mută linia (liniile) în sus</value></data>
+  <data name="Ed_MoveLinesDown" xml:space="preserve"><value>Mută linia (liniile) în jos</value></data>
+  <data name="Ed_SortLines" xml:space="preserve"><value>Sortează liniile selectate</value></data>
+  <data name="Ed_InsertDate" xml:space="preserve"><value>Inserează data de azi</value></data>
+  <data name="Ed_InsertTeamMember" xml:space="preserve"><value>Inserează membru echipă</value></data>
+  <data name="Ed_RenameSymbol" xml:space="preserve"><value>Redenumește simbolul…  F2</value></data>
+  <data name="Ed_OpenIn3D" xml:space="preserve"><value>Deschide în 3D</value></data>
+  <data name="Ed_GoToMatching" xml:space="preserve"><value>Salt la blocul pereche  Ctrl+]</value></data>
+  <data name="Ed_StepInto" xml:space="preserve"><value>Intră în fișierul inclus  Alt+↓</value></data>
+  <data name="Ed_FormatDoc" xml:space="preserve"><value>Formatează documentul  Shift+Alt+F</value></data>
+  <data name="Ed_PeekDef" xml:space="preserve"><value>Vezi definiția  Alt+F12</value></data>
+  <data name="Ed_NoQuickFixes" xml:space="preserve"><value>Nicio remediere rapidă aici</value></data>
+  <data name="Ed_GoToLineTitle" xml:space="preserve"><value>Salt la linie</value></data>
+  <data name="Ed_LineNumberWm" xml:space="preserve"><value>Număr linie</value></data>
+  <data name="Ed_AddBookmarkTitle" xml:space="preserve"><value>Adaugă semn de carte</value></data>
+  <data name="Ed_BookmarkTitleWm" xml:space="preserve"><value>Titlu semn de carte (opțional)</value></data>
+  <data name="Ed_AddBtn" xml:space="preserve"><value>Adaugă</value></data>
+  <data name="Ed_GoToDefinition" xml:space="preserve"><value>Salt la definiție</value></data>
+  <data name="Ed_FindAllRefs" xml:space="preserve"><value>Găsește toate referințele</value></data>
+  <data name="Ed_RenameDots" xml:space="preserve"><value>Redenumește…</value></data>
+  <data name="Ed_Documentation" xml:space="preserve"><value>Documentație ↗</value></data>
+  <data name="Ed_OpenArrow" xml:space="preserve"><value>Deschide ↗</value></data>
+  <data name="Ed_OpenDefaultApp" xml:space="preserve"><value>Deschide în aplicația implicită</value></data>
+  <data name="Ed_OpenFile" xml:space="preserve"><value>Deschide fișierul</value></data>
 </root>

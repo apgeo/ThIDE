@@ -746,7 +746,7 @@ public partial class TherionTextEditor : UserControl
         var flyout = new Avalonia.Controls.MenuFlyout { Placement = Avalonia.Controls.PlacementMode.Bottom };
         if (fixes.Count == 0)
         {
-            flyout.Items.Add(new Avalonia.Controls.MenuItem { Header = "No quick-fixes here", IsEnabled = false });
+            flyout.Items.Add(new Avalonia.Controls.MenuItem { Header = L("Ed_NoQuickFixes"), IsEnabled = false });
         }
         else
         {
@@ -1326,7 +1326,7 @@ public partial class TherionTextEditor : UserControl
             Text = $"{System.IO.Path.GetFileName(span.FilePath)} : {span.Start.Line}  —  {symbol}",
             FontWeight = FontWeight.Bold, VerticalAlignment = VerticalAlignment.Center,
         });
-        var openBtn = new Button { Content = "Open ↗", Padding = new Thickness(6, 1), FontSize = 11 };
+        var openBtn = new Button { Content = L("Ed_OpenArrow"), Padding = new Thickness(6, 1), FontSize = 11 };
         openBtn.Click += (_, _) => { HidePeek(); NavigateToSpan(span); };
         header.Children.Add(openBtn);
 
@@ -1459,10 +1459,10 @@ public partial class TherionTextEditor : UserControl
         if (_editor is null) return;
         if (TopLevel.GetTopLevel(this) is not Window owner) return;
 
-        var box = new TextBox { PlaceholderText = "Line number", Width = 200 };
+        var box = new TextBox { PlaceholderText = L("Ed_LineNumberWm"), Width = 200 };
         var dialog = new Window
         {
-            Title = "Go to Line",
+            Title = L("Ed_GoToLineTitle"),
             Width = 240,
             Height = 96,
             CanResize = false,
@@ -1785,7 +1785,7 @@ public partial class TherionTextEditor : UserControl
         var panel = new StackPanel { Spacing = 6 };
         panel.Children.Add(new TextBlock { Text = command, FontWeight = FontWeight.Bold, FontSize = 14 });
         panel.Children.Add(new TextBlock { Text = CommandDocs[command], TextWrapping = TextWrapping.Wrap });
-        var doc = new Button { Content = "Documentation ↗", Padding = new Thickness(6, 2), HorizontalAlignment = HorizontalAlignment.Left };
+        var doc = new Button { Content = L("Ed_Documentation"), Padding = new Thickness(6, 2), HorizontalAlignment = HorizontalAlignment.Left };
         doc.Click += (_, _) => { OpenDocumentation(command); HideHoverInfo(); };
         panel.Children.Add(doc);
         return panel;
@@ -1855,11 +1855,11 @@ public partial class TherionTextEditor : UserControl
         }
 
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
-        var go = new Button { Content = "Go to definition", Padding = new Thickness(6, 2) };
+        var go = new Button { Content = L("Ed_GoToDefinition"), Padding = new Thickness(6, 2) };
         go.Click += (_, _) => { NavigateToSpan(where); HideHoverInfo(); };
-        var refs = new Button { Content = "Find all references", Padding = new Thickness(6, 2) };
+        var refs = new Button { Content = L("Ed_FindAllRefs"), Padding = new Thickness(6, 2) };
         refs.Click += (_, _) => { FindReferencesRequested?.Invoke(this, StationRef.Parse(raw).PointWithoutMark); HideHoverInfo(); };
-        var renameBtn = new Button { Content = "Rename…", Padding = new Thickness(6, 2) };
+        var renameBtn = new Button { Content = L("Ed_RenameDots"), Padding = new Thickness(6, 2) };
         renameBtn.Click += (_, _) => { HideHoverInfo(); StartRename(); };
         actions.Children.Add(go);
         actions.Children.Add(refs);
@@ -1868,7 +1868,7 @@ public partial class TherionTextEditor : UserControl
         // "Open in 3D" — only for stations/surveys, and only when a 3D model is available.
         if (Model3DAvailableFor(info.Kind))
         {
-            var open3d = new Button { Content = "Open in 3D", Padding = new Thickness(6, 2) };
+            var open3d = new Button { Content = L("Ed_OpenIn3D"), Padding = new Thickness(6, 2) };
             open3d.Click += (_, _) => OpenInModel3D(raw);
             actions.Children.Add(open3d);
         }
@@ -1877,7 +1877,7 @@ public partial class TherionTextEditor : UserControl
         // shown only when a page mapping exists for it (info.Kind is "station"/"survey"/…).
         if (info.Kind is { Length: > 0 } docTerm && TryDocs() is { } svc && svc.TryGetPage(docTerm, out _))
         {
-            var docBtn = new Button { Content = "Documentation ↗", Padding = new Thickness(6, 2) };
+            var docBtn = new Button { Content = L("Ed_Documentation"), Padding = new Thickness(6, 2) };
             docBtn.Click += (_, _) => { OpenDocumentation(docTerm); HideHoverInfo(); };
             actions.Children.Add(docBtn);
         }
@@ -1897,7 +1897,7 @@ public partial class TherionTextEditor : UserControl
         });
         var open = new Button
         {
-            Content = link.ShellOpen ? "Open in default app" : "Open file",
+            Content = link.ShellOpen ? L("Ed_OpenDefaultApp") : L("Ed_OpenFile"),
             Padding = new Thickness(6, 2),
             HorizontalAlignment = HorizontalAlignment.Left,
             IsEnabled = link.ResolvedExisting is not null,
@@ -2869,47 +2869,47 @@ public partial class TherionTextEditor : UserControl
     private ContextMenu BuildContextMenu()
     {
         var menu = new ContextMenu();
-        menu.Items.Add(MakeItem("Cut",                    CutSelection));
-        menu.Items.Add(MakeItem("Copy",                   CopySelection));
-        menu.Items.Add(MakeItem("Paste",                  () => _ = PasteAsync()));
-        menu.Items.Add(MakeItem("Delete",                 DeleteSelection));
+        menu.Items.Add(MakeItem(L("Menu_Edit_Cut"),       CutSelection));
+        menu.Items.Add(MakeItem(L("Menu_Edit_Copy"),      CopySelection));
+        menu.Items.Add(MakeItem(L("Menu_Edit_Paste"),     () => _ = PasteAsync()));
+        menu.Items.Add(MakeItem(L("Menu_Edit_Delete"),    DeleteSelection));
         menu.Items.Add(new Separator());
-        menu.Items.Add(MakeItem("Select All",             () => _editor?.SelectAll()));
+        menu.Items.Add(MakeItem(L("Menu_Edit_SelectAll"), () => _editor?.SelectAll()));
         menu.Items.Add(new Separator());
-        menu.Items.Add(MakeItem("UPPERCASE",              () => ApplyCase(upper: true)));
-        menu.Items.Add(MakeItem("lowercase",              () => ApplyCase(upper: false)));
+        menu.Items.Add(MakeItem(L("Menu_Edit_Upper"),     () => ApplyCase(upper: true)));
+        menu.Items.Add(MakeItem(L("Menu_Edit_Lower"),     () => ApplyCase(upper: false)));
         menu.Items.Add(new Separator());
-        menu.Items.Add(MakeItem("Toggle Comment  Ctrl+/", ToggleLineComment));
+        menu.Items.Add(MakeItem(L("Ed_ToggleComment"),    ToggleLineComment));
         menu.Items.Add(new Separator());
         // QOL-07: line operations.
-        menu.Items.Add(MakeItem("Duplicate Line(s)",      DuplicateLines));
+        menu.Items.Add(MakeItem(L("Ed_DuplicateLines"),   DuplicateLines));
         menu.Items.Add(MakeItem("Move Line(s) Up",        MoveLinesUp));
-        menu.Items.Add(MakeItem("Move Line(s) Down",      MoveLinesDown));
-        menu.Items.Add(MakeItem("Sort Selected Lines",    SortSelectedLines));
+        menu.Items.Add(MakeItem(L("Ed_MoveLinesDown"),    MoveLinesDown));
+        menu.Items.Add(MakeItem(L("Ed_SortLines"),        SortSelectedLines));
         menu.Items.Add(new Separator());
         // QOL-08: insert helpers.
-        menu.Items.Add(MakeItem("Insert Today's Date",    InsertDate));
-        menu.Items.Add(MakeItem("Insert Team Member",     InsertTeamMember));
+        menu.Items.Add(MakeItem(L("Ed_InsertDate"),       InsertDate));
+        menu.Items.Add(MakeItem(L("Ed_InsertTeamMember"), InsertTeamMember));
         menu.Items.Add(new Separator());
-        menu.Items.Add(MakeItem("Rename Symbol…  F2",    StartRename));
+        menu.Items.Add(MakeItem(L("Ed_RenameSymbol"),     StartRename));
         // #5: shown only when right-clicking a station/survey reference and the 3D viewer has a model.
-        _open3dMenuItem = MakeItem("Open in 3D", () => { if (_open3dName is { } n) OpenInModel3D(n); });
+        _open3dMenuItem = MakeItem(L("Ed_OpenIn3D"), () => { if (_open3dName is { } n) OpenInModel3D(n); });
         menu.Items.Add(_open3dMenuItem);
         menu.Items.Add(new Separator());
         // EDIT-15 / EDIT-17: shown only when their feature is enabled (refreshed on menu open).
-        _matchMenuItem = MakeItem("Go to Matching Block  Ctrl+]", GoToMatchingBlock);
-        _stepIntoMenuItem = MakeItem("Step Into Included File  Alt+↓", FollowIncludeUnderCaret);
-        _formatMenuItem = MakeItem("Format Document  Shift+Alt+F", FormatDocument);
-        _peekMenuItem = MakeItem("Peek Definition  Alt+F12", PeekDefinition);
+        _matchMenuItem = MakeItem(L("Ed_GoToMatching"), GoToMatchingBlock);
+        _stepIntoMenuItem = MakeItem(L("Ed_StepInto"), FollowIncludeUnderCaret);
+        _formatMenuItem = MakeItem(L("Ed_FormatDoc"), FormatDocument);
+        _peekMenuItem = MakeItem(L("Ed_PeekDef"), PeekDefinition);
         menu.Items.Add(_matchMenuItem);
         menu.Items.Add(_stepIntoMenuItem);
         menu.Items.Add(_peekMenuItem);
         menu.Items.Add(_formatMenuItem);
         menu.Items.Add(new Separator());
-        menu.Items.Add(MakeItem("Fold All",               () => SetAllFoldings(folded: true)));
-        menu.Items.Add(MakeItem("Unfold All",             () => SetAllFoldings(folded: false)));
+        menu.Items.Add(MakeItem(L("Menu_Edit_FoldAll"),   () => SetAllFoldings(folded: true)));
+        menu.Items.Add(MakeItem(L("Menu_Edit_UnfoldAll"), () => SetAllFoldings(folded: false)));
         menu.Items.Add(new Separator());
-        menu.Items.Add(MakeItem("Add Bookmark…",     () => _ = AddBookmarkAsync()));
+        menu.Items.Add(MakeItem(L("Menu_Edit_AddBookmark"), () => _ = AddBookmarkAsync()));
         return menu;
     }
 
@@ -3161,6 +3161,9 @@ public partial class TherionTextEditor : UserControl
         return (line.Offset, includeDelimiter ? line.TotalLength : line.Length);
     }
 
+    // Localized string lookup (Strings.resx / .ro.resx) for code-built menus & dialogs.
+    private static string L(string key) => TherionProc.Resources.Tr.Get(key);
+
     private static MenuItem MakeItem(string header, Action onClick)
     {
         var item = new MenuItem { Header = header };
@@ -3244,11 +3247,11 @@ public partial class TherionTextEditor : UserControl
         if (_editor is null || string.IsNullOrEmpty(CurrentFilePath)) return;
         int line = _editor.Document.GetLineByOffset(_editor.CaretOffset).LineNumber;
 
-        var box = new TextBox { PlaceholderText = "Bookmark title (optional)", Width = 280, Margin = new Thickness(0, 0, 0, 4) };
-        var ok = new Button { Content = "Add", IsDefault = true, HorizontalAlignment = HorizontalAlignment.Right };
+        var box = new TextBox { PlaceholderText = L("Ed_BookmarkTitleWm"), Width = 280, Margin = new Thickness(0, 0, 0, 4) };
+        var ok = new Button { Content = L("Ed_AddBtn"), IsDefault = true, HorizontalAlignment = HorizontalAlignment.Right };
         var dialog = new Window
         {
-            Title = "Add Bookmark",
+            Title = L("Ed_AddBookmarkTitle"),
             Width = 320,
             SizeToContent = SizeToContent.Height,
             CanResize = false,

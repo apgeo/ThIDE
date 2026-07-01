@@ -679,4 +679,31 @@
   <data name="QExport_SurveyWm" xml:space="preserve"><value>e.g. cave.upper (blank = whole project)</value></data>
   <data name="QExport_Scale" xml:space="preserve"><value>Scale 1:</value></data>
   <data name="QExport_OutputName" xml:space="preserve"><value>Output name</value></data>
+  <!-- Editor context menu / dialogs / hover cards -->
+  <data name="Ed_ToggleComment" xml:space="preserve"><value>Toggle Comment  Ctrl+/</value></data>
+  <data name="Ed_DuplicateLines" xml:space="preserve"><value>Duplicate Line(s)</value></data>
+  <data name="Ed_MoveLinesUp" xml:space="preserve"><value>Move Line(s) Up</value></data>
+  <data name="Ed_MoveLinesDown" xml:space="preserve"><value>Move Line(s) Down</value></data>
+  <data name="Ed_SortLines" xml:space="preserve"><value>Sort Selected Lines</value></data>
+  <data name="Ed_InsertDate" xml:space="preserve"><value>Insert Today's Date</value></data>
+  <data name="Ed_InsertTeamMember" xml:space="preserve"><value>Insert Team Member</value></data>
+  <data name="Ed_RenameSymbol" xml:space="preserve"><value>Rename Symbol…  F2</value></data>
+  <data name="Ed_OpenIn3D" xml:space="preserve"><value>Open in 3D</value></data>
+  <data name="Ed_GoToMatching" xml:space="preserve"><value>Go to Matching Block  Ctrl+]</value></data>
+  <data name="Ed_StepInto" xml:space="preserve"><value>Step Into Included File  Alt+↓</value></data>
+  <data name="Ed_FormatDoc" xml:space="preserve"><value>Format Document  Shift+Alt+F</value></data>
+  <data name="Ed_PeekDef" xml:space="preserve"><value>Peek Definition  Alt+F12</value></data>
+  <data name="Ed_NoQuickFixes" xml:space="preserve"><value>No quick-fixes here</value></data>
+  <data name="Ed_GoToLineTitle" xml:space="preserve"><value>Go to Line</value></data>
+  <data name="Ed_LineNumberWm" xml:space="preserve"><value>Line number</value></data>
+  <data name="Ed_AddBookmarkTitle" xml:space="preserve"><value>Add Bookmark</value></data>
+  <data name="Ed_BookmarkTitleWm" xml:space="preserve"><value>Bookmark title (optional)</value></data>
+  <data name="Ed_AddBtn" xml:space="preserve"><value>Add</value></data>
+  <data name="Ed_GoToDefinition" xml:space="preserve"><value>Go to definition</value></data>
+  <data name="Ed_FindAllRefs" xml:space="preserve"><value>Find all references</value></data>
+  <data name="Ed_RenameDots" xml:space="preserve"><value>Rename…</value></data>
+  <data name="Ed_Documentation" xml:space="preserve"><value>Documentation ↗</value></data>
+  <data name="Ed_OpenArrow" xml:space="preserve"><value>Open ↗</value></data>
+  <data name="Ed_OpenDefaultApp" xml:space="preserve"><value>Open in default app</value></data>
+  <data name="Ed_OpenFile" xml:space="preserve"><value>Open file</value></data>
 </root>
