@@ -30,7 +30,26 @@ public partial class StructuralGeologyToolView : UserControl
     private bool _inited;
     private DataGridCollectionView? _measView;
 
+    // Stable, language-independent column keys in the exact XAML column order. Headers are localized
+    // via {l:Loc}, so we can no longer identify a column by its (translated) header text — these
+    // keys drive column show/hide, persistence and Copy-Value instead, and stay the persisted keys.
+    private static readonly string[] MeasColOrder =
+        { "Use", "Plane", "Kind", "From", "To", "Length", "Azimuth", "Clino", "Comment", "File", "Line" };
+    private static readonly string[] PlaneColOrder =
+        { "Visible", "Plane", "Dip °", "Strike °", "Dip dir °", "North ref", "Points", "RMS", "File", "Line" };
+    private readonly System.Collections.Generic.Dictionary<DataGridColumn, string> _measColKey = new();
+    private readonly System.Collections.Generic.Dictionary<DataGridColumn, string> _planeColKey = new();
+
     public StructuralGeologyToolView() => InitializeComponent();
+
+    private static void BuildKeyMap(DataGrid? grid, string[] order,
+        System.Collections.Generic.Dictionary<DataGridColumn, string> map)
+    {
+        map.Clear();
+        if (grid is null) return;
+        for (int i = 0; i < grid.Columns.Count && i < order.Length; i++)
+            map[grid.Columns[i]] = order[i];
+    }
 
     private StructuralGeologyViewModel? Vm => (DataContext as StructuralGeologyToolViewModel)?.Structural;
 
@@ -54,8 +73,10 @@ public partial class StructuralGeologyToolView : UserControl
         _inited = true;
 
         SetupGrouping();
-        ApplyColumns(MeasurementsGrid, _vm.MeasurementColumns, MeasColumnsPanel);
-        ApplyColumns(PlanesGrid, _vm.PlaneColumns, PlaneColumnsPanel);
+        BuildKeyMap(MeasurementsGrid, MeasColOrder, _measColKey);
+        BuildKeyMap(PlanesGrid, PlaneColOrder, _planeColKey);
+        ApplyColumns(MeasurementsGrid, _vm.MeasurementColumns, MeasColumnsPanel, _measColKey);
+        ApplyColumns(PlanesGrid, _vm.PlaneColumns, PlaneColumnsPanel, _planeColKey);
 
         _vm.GroupingChanged += (_, _) => SetupGrouping();
         _vm.PlotImageReady += OnPlotImageReady;
@@ -91,11 +112,12 @@ public partial class StructuralGeologyToolView : UserControl
 
     // ---- column visibility + fit (#2) ----------------------------------------------------------
 
-    private static void ApplyColumns(DataGrid? grid, System.Collections.Generic.Dictionary<string, bool> vis, Panel? panel)
+    private static void ApplyColumns(DataGrid? grid, System.Collections.Generic.Dictionary<string, bool> vis, Panel? panel,
+        System.Collections.Generic.Dictionary<DataGridColumn, string> keyMap)
     {
         if (grid is null) return;
         foreach (var c in grid.Columns)
-            if (c.Header?.ToString() is { } h)
+            if (keyMap.TryGetValue(c, out var h))
                 c.IsVisible = !vis.TryGetValue(h, out var v) || v;     // default: visible
         if (panel is null) return;
         foreach (var cb in panel.Children.OfType<CheckBox>())
@@ -103,14 +125,15 @@ public partial class StructuralGeologyToolView : UserControl
                 cb.IsChecked = !vis.TryGetValue(h, out var v) || v;
     }
 
-    private void OnToggleMeasColumn(object? sender, RoutedEventArgs e) => ToggleColumn(sender, MeasurementsGrid, _vm?.MeasurementColumns);
-    private void OnTogglePlaneColumn(object? sender, RoutedEventArgs e) => ToggleColumn(sender, PlanesGrid, _vm?.PlaneColumns);
+    private void OnToggleMeasColumn(object? sender, RoutedEventArgs e) => ToggleColumn(sender, MeasurementsGrid, _vm?.MeasurementColumns, _measColKey);
+    private void OnTogglePlaneColumn(object? sender, RoutedEventArgs e) => ToggleColumn(sender, PlanesGrid, _vm?.PlaneColumns, _planeColKey);
 
-    private void ToggleColumn(object? sender, DataGrid? grid, System.Collections.Generic.Dictionary<string, bool>? dict)
+    private void ToggleColumn(object? sender, DataGrid? grid, System.Collections.Generic.Dictionary<string, bool>? dict,
+        System.Collections.Generic.Dictionary<DataGridColumn, string> keyMap)
     {
         if (sender is not CheckBox { Tag: string header } cb || grid is null) return;
         bool visible = cb.IsChecked == true;
-        var col = grid.Columns.FirstOrDefault(c => string.Equals(c.Header?.ToString(), header, StringComparison.Ordinal));
+        var col = keyMap.FirstOrDefault(kv => string.Equals(kv.Value, header, StringComparison.Ordinal)).Key;
         if (col is not null) col.IsVisible = visible;
         if (dict is not null) { dict[header] = visible; _vm?.Persist(); }
     }
@@ -196,7 +219,8 @@ public partial class StructuralGeologyToolView : UserControl
         return sb.ToString().TrimEnd();
     }
 
-    private static string? MeasCell(StructuralMeasurementRow r, DataGridColumn? col) => col?.Header?.ToString() switch
+    private string? MeasCell(StructuralMeasurementRow r, DataGridColumn? col) =>
+        (col is not null && _measColKey.TryGetValue(col, out var key) ? key : null) switch
     {
         "Use"     => r.Include ? "yes" : "no",
         "Plane"   => r.Plane,
@@ -212,7 +236,8 @@ public partial class StructuralGeologyToolView : UserControl
         _         => null,
     };
 
-    private static string? PlaneCell(StructuralPlaneRow p, DataGridColumn? col) => col?.Header?.ToString() switch
+    private string? PlaneCell(StructuralPlaneRow p, DataGridColumn? col) =>
+        (col is not null && _planeColKey.TryGetValue(col, out var key) ? key : null) switch
     {
         "Visible"   => p.Visible ? "yes" : "no",
         "Plane"     => p.Name,

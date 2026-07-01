@@ -106,4 +106,85 @@
   <data name="Pref_Build" xml:space="preserve"><value>Build &amp; Output</value></data>
   <data name="Pref_External" xml:space="preserve"><value>External Tools</value></data>
   <data name="Pref_Keyboard" xml:space="preserve"><value>Keyboard Shortcuts</value></data>
+  <!-- Shared / common UI strings -->
+  <data name="Common_ShowHideColumns" xml:space="preserve"><value>Show or hide columns</value></data>
+  <data name="Common_AutoSize" xml:space="preserve"><value>Auto-size columns to content</value></data>
+  <data name="Common_FitAll" xml:space="preserve"><value>Fit all columns to their content</value></data>
+  <data name="Common_FitPlain" xml:space="preserve"><value>Fit</value></data>
+  <data name="Common_ExportCsv" xml:space="preserve"><value>Export CSV…</value></data>
+  <data name="Common_CopyValue" xml:space="preserve"><value>Copy Value</value></data>
+  <data name="Common_CopyRow" xml:space="preserve"><value>Copy Row</value></data>
+  <data name="Common_CopyCell" xml:space="preserve"><value>Copy Cell</value></data>
+  <data name="Common_CopyFormatted" xml:space="preserve"><value>Copy Formatted Data</value></data>
+  <data name="Common_Comment" xml:space="preserve"><value>Comment</value></data>
+  <data name="Common_File" xml:space="preserve"><value>File</value></data>
+  <data name="Common_Refresh" xml:space="preserve"><value>Refresh</value></data>
+  <data name="Common_Clear" xml:space="preserve"><value>Clear</value></data>
+  <data name="Common_Test" xml:space="preserve"><value>Test</value></data>
+  <data name="Common_FullStationName" xml:space="preserve"><value>Show full station name (survey.station) instead of the station only</value></data>
+  <data name="Common_SelectAll" xml:space="preserve"><value>Select All</value></data>
+  <data name="Common_GoToSource" xml:space="preserve"><value>Go to Source</value></data>
+  <data name="Common_GoToDefinition" xml:space="preserve"><value>Go to Definition</value></data>
+  <data name="Common_FindReferences" xml:space="preserve"><value>Find References</value></data>
+  <data name="Common_RenameSymbol" xml:space="preserve"><value>Rename Symbol…</value></data>
+  <!-- Structural Geology (STRUCT-01) -->
+  <data name="Struct_CheckAllStation" xml:space="preserve"><value>Check/uncheck all measurements from this station</value></data>
+  <data name="Struct_Prev" xml:space="preserve"><value>◀ Prev</value></data>
+  <data name="Struct_PrevTip" xml:space="preserve"><value>Previous step</value></data>
+  <data name="Struct_Next" xml:space="preserve"><value>Next ▶</value></data>
+  <data name="Struct_NextTip" xml:space="preserve"><value>Next step</value></data>
+  <data name="Struct_Scope" xml:space="preserve"><value>Scope:</value></data>
+  <data name="Struct_ActiveFile" xml:space="preserve"><value>Active file</value></data>
+  <data name="Struct_WholeProject" xml:space="preserve"><value>Whole project</value></data>
+  <data name="Struct_Detect" xml:space="preserve"><value>Detect ↻</value></data>
+  <data name="Struct_Tab1" xml:space="preserve"><value>1 · Detect</value></data>
+  <data name="Struct_Tab2" xml:space="preserve"><value>2 · Measurements</value></data>
+  <data name="Struct_Tab3" xml:space="preserve"><value>3 · Resulted planes</value></data>
+  <data name="Struct_Tab4" xml:space="preserve"><value>4 · 3D plot</value></data>
+  <data name="Struct_DetectionSignals" xml:space="preserve"><value>Detection signals</value></data>
+  <data name="Struct_DetectionHelp" xml:space="preserve"><value>A shot is structural if it matches any enabled signal. Tune these to your survey's convention.</value></data>
+  <data name="Struct_FromNameKeyword" xml:space="preserve"><value>From-station name contains keyword(s)</value></data>
+  <data name="Struct_CommentMarker" xml:space="preserve"><value>Shot comment contains marker(s)</value></data>
+  <data name="Struct_StationFlag" xml:space="preserve"><value>From/To station carries flag(s)</value></data>
+  <data name="Struct_GroupingPoints" xml:space="preserve"><value>Grouping &amp; points</value></data>
+  <data name="Struct_GroupPlaneBy" xml:space="preserve"><value>Group a plane by</value></data>
+  <data name="Struct_SplayShots" xml:space="preserve"><value>Splay shots</value></data>
+  <data name="Struct_IncludeOrigin" xml:space="preserve"><value>Include the from-station (origin) point in the fit</value></data>
+  <data name="Struct_IncludeOriginHelp" xml:space="preserve"><value>Use only when the station itself lies on the measured plane — watch the RMS column.</value></data>
+  <data name="Struct_MagDeclination" xml:space="preserve"><value>Magnetic declination</value></data>
+  <data name="Struct_Source" xml:space="preserve"><value>Source</value></data>
+  <data name="Struct_ValueEast" xml:space="preserve"><value>Value (° east +)</value></data>
+  <data name="Struct_DeclinationHelp" xml:space="preserve"><value>Adds to strike / dip-direction (true north); dip is unaffected. Off by default to avoid double-counting a survey's own declination.</value></data>
+  <data name="Struct_CheckAll" xml:space="preserve"><value>Check all measurements</value></data>
+  <data name="Struct_All" xml:space="preserve"><value>☑ All</value></data>
+  <data name="Struct_CheckNone" xml:space="preserve"><value>Uncheck all measurements</value></data>
+  <data name="Struct_NoneBtn" xml:space="preserve"><value>☐ None</value></data>
+  <data name="Struct_InvertSel" xml:space="preserve"><value>Invert selection</value></data>
+  <data name="Struct_Invert" xml:space="preserve"><value>⇄ Invert</value></data>
+  <data name="Struct_GroupByStation" xml:space="preserve"><value>Group by station</value></data>
+  <data name="Struct_ExportMeasTip" xml:space="preserve"><value>Export the measurements grid to a CSV file</value></data>
+  <data name="Struct_MeasHelp" xml:space="preserve"><value>Tick the points to include in each plane fit. Toggling recomputes that plane live. Double-click a row to jump to its source.</value></data>
+  <data name="Struct_Col_Use" xml:space="preserve"><value>Use</value></data>
+  <data name="Struct_Col_Plane" xml:space="preserve"><value>Plane</value></data>
+  <data name="Struct_Col_Azimuth" xml:space="preserve"><value>Azimuth</value></data>
+  <data name="Struct_VisibleLabel" xml:space="preserve"><value>Visible:</value></data>
+  <data name="Struct_ShowAllPlanes" xml:space="preserve"><value>Show every plane in the 3D plot</value></data>
+  <data name="Struct_HideAllPlanes" xml:space="preserve"><value>Hide every plane</value></data>
+  <data name="Struct_InvertPlanes" xml:space="preserve"><value>Invert plane visibility</value></data>
+  <data name="Struct_ExportPlanesTip" xml:space="preserve"><value>Export the resulted-planes grid to a CSV file</value></data>
+  <data name="Struct_Col_Visible" xml:space="preserve"><value>Visible</value></data>
+  <data name="Struct_PlaneDiscTip" xml:space="preserve"><value>Show this plane's disc in the 3D plot</value></data>
+  <data name="Struct_Col_Dip" xml:space="preserve"><value>Dip °</value></data>
+  <data name="Struct_Col_Strike" xml:space="preserve"><value>Strike °</value></data>
+  <data name="Struct_Col_DipDir" xml:space="preserve"><value>Dip dir °</value></data>
+  <data name="Struct_Col_NorthRef" xml:space="preserve"><value>North ref</value></data>
+  <data name="Struct_Col_Points" xml:space="preserve"><value>Points</value></data>
+  <data name="Struct_Col_Rms" xml:space="preserve"><value>RMS</value></data>
+  <data name="Struct_FitView" xml:space="preserve"><value>Fit view</value></data>
+  <data name="Struct_ExportImage" xml:space="preserve"><value>Export image…</value></data>
+  <data name="Struct_ExportImageTip" xml:space="preserve"><value>Save the current view as a PNG</value></data>
+  <data name="Struct_DiscSize" xml:space="preserve"><value>Disc size:</value></data>
+  <data name="Struct_DiscSizeTip" xml:space="preserve"><value>Enlarge the plane discs (they are tiny next to the cave)</value></data>
+  <data name="Struct_WhiteBackground" xml:space="preserve"><value>White background</value></data>
+  <data name="Struct_PlotFallback" xml:space="preserve"><value>The 3D plot needs the bundled three.js assets and a system web engine (WebView2 / WebKit).</value></data>
 </root>
