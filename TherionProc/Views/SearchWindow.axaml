@@ -2,37 +2,38 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:TherionProc.ViewModels"
         xmlns:ae="using:AvaloniaEdit"
+        xmlns:l="using:TherionProc.Resources"
         x:Class="TherionProc.Views.SearchWindow"
         x:DataType="vm:SearchViewModel"
         Width="600" Height="640"
         WindowStartupLocation="CenterOwner"
-        Title="Find in Files">
+        Title="{l:Loc Search_Title}">
     <DockPanel Margin="10">
         <StackPanel DockPanel.Dock="Top" Spacing="6">
             <!-- Editable query with a persistent MRU dropdown of past 50 searches (#10). -->
-            <AutoCompleteBox x:Name="QueryBox" Watermark="Search…"
+            <AutoCompleteBox x:Name="QueryBox" Watermark="{l:Loc Search_Wm}"
                              Text="{Binding Query, Mode=TwoWay}"
                              ItemsSource="{Binding RecentQueries}"
                              FilterMode="ContainsOrdinal" MinimumPrefixLength="0" />
 
             <StackPanel Orientation="Horizontal" Spacing="12">
-                <CheckBox Content="Match case"  IsChecked="{Binding MatchCase, Mode=TwoWay}" />
-                <CheckBox Content="Whole word"  IsChecked="{Binding WholeWord, Mode=TwoWay}" />
-                <CheckBox Content="Regex"       IsChecked="{Binding UseRegex, Mode=TwoWay}" />
+                <CheckBox Content="{l:Loc Search_MatchCase}"  IsChecked="{Binding MatchCase, Mode=TwoWay}" />
+                <CheckBox Content="{l:Loc Search_WholeWord}"  IsChecked="{Binding WholeWord, Mode=TwoWay}" />
+                <CheckBox Content="{l:Loc Search_Regex}"       IsChecked="{Binding UseRegex, Mode=TwoWay}" />
             </StackPanel>
 
             <StackPanel Orientation="Horizontal" Spacing="8">
-                <TextBlock Text="Look in:" VerticalAlignment="Center" />
+                <TextBlock Text="{l:Loc Search_LookIn}" VerticalAlignment="Center" />
                 <ComboBox MinWidth="120" ItemsSource="{Binding Scopes}"
                           SelectedItem="{Binding Scope, Mode=TwoWay}" />
-                <Button Content="Find All" Command="{Binding SearchCommand}" IsDefault="True" />
+                <Button Content="{l:Loc Search_FindAll}" Command="{Binding SearchCommand}" IsDefault="True" />
             </StackPanel>
 
             <Grid ColumnDefinitions="Auto,*,Auto,160" RowDefinitions="Auto"
                   IsVisible="{Binding IsDirectoryScope}">
-                <TextBlock Grid.Column="0" Text="Directory:" VerticalAlignment="Center" Margin="0,0,8,0" />
+                <TextBlock Grid.Column="0" Text="{l:Loc Search_Directory}" VerticalAlignment="Center" Margin="0,0,8,0" />
                 <TextBox  Grid.Column="1" Text="{Binding Directory, Mode=TwoWay}" />
-                <TextBlock Grid.Column="2" Text="Mask:" VerticalAlignment="Center" Margin="8,0,8,0" />
+                <TextBlock Grid.Column="2" Text="{l:Loc Search_Mask}" VerticalAlignment="Center" Margin="8,0,8,0" />
                 <TextBox  Grid.Column="3" Text="{Binding FileMask, Mode=TwoWay}" />
             </Grid>
 

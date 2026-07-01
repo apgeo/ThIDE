@@ -636,4 +636,47 @@
   <data name="File_SwitchOpenTip" xml:space="preserve"><value>Comută la un fișier deschis</value></data>
   <data name="File_SelectWorkspaceTip" xml:space="preserve"><value>Selectează acest fișier în spațiul de lucru</value></data>
   <data name="File_ActionsTip" xml:space="preserve"><value>Acțiuni fișier</value></data>
+  <!-- Search / Replace windows -->
+  <data name="Search_Title" xml:space="preserve"><value>Caută în fișiere</value></data>
+  <data name="Replace_Title" xml:space="preserve"><value>Înlocuiește în fișiere</value></data>
+  <data name="Search_Wm" xml:space="preserve"><value>Caută…</value></data>
+  <data name="Replace_FindWm" xml:space="preserve"><value>Caută ce…</value></data>
+  <data name="Replace_WithWm" xml:space="preserve"><value>Înlocuiește cu…</value></data>
+  <data name="Search_MatchCase" xml:space="preserve"><value>Potrivește majuscule</value></data>
+  <data name="Search_WholeWord" xml:space="preserve"><value>Cuvânt întreg</value></data>
+  <data name="Search_Regex" xml:space="preserve"><value>Regex</value></data>
+  <data name="Search_LookIn" xml:space="preserve"><value>Caută în:</value></data>
+  <data name="Search_FindAll" xml:space="preserve"><value>Găsește tot</value></data>
+  <data name="Replace_ReplaceAll" xml:space="preserve"><value>Înlocuiește tot</value></data>
+  <data name="Search_Directory" xml:space="preserve"><value>Director:</value></data>
+  <data name="Search_Mask" xml:space="preserve"><value>Mască:</value></data>
+  <!-- Bookmarks window -->
+  <data name="Book_Title" xml:space="preserve"><value>Semne de carte</value></data>
+  <data name="Book_GoTo" xml:space="preserve"><value>Salt la</value></data>
+  <data name="Book_Created" xml:space="preserve"><value>Creat</value></data>
+  <!-- Relational map -->
+  <data name="RelMap_IncludeFiles" xml:space="preserve"><value>Include fișiere</value></data>
+  <data name="RelMap_IncludeFilesTip" xml:space="preserve"><value>Arată și fișierele gazdă thconfig / .th / .th2 ca noduri</value></data>
+  <data name="RelMap_RefreshTip" xml:space="preserve"><value>Reconstruiește diagrama din proiectul curent</value></data>
+  <data name="RelMap_LayoutTip" xml:space="preserve"><value>Aranjamentul diagramei</value></data>
+  <data name="RelMap_SizeByLevel" xml:space="preserve"><value>Dimensiune după nivel</value></data>
+  <data name="RelMap_SizeByLevelTip" xml:space="preserve"><value>Noduri mai mari lângă rădăcină, frunze mai mici — se potrivește mai bine proiectelor mari</value></data>
+  <data name="RelMap_ZoomOut" xml:space="preserve"><value>Micșorează (Ctrl+derulare)</value></data>
+  <data name="RelMap_ResetZoom" xml:space="preserve"><value>Resetează zoomul</value></data>
+  <data name="RelMap_ZoomIn" xml:space="preserve"><value>Mărește (Ctrl+derulare)</value></data>
+  <data name="RelMap_Fit" xml:space="preserve"><value>Încadrează</value></data>
+  <data name="RelMap_FitTip" xml:space="preserve"><value>Încadrează întreaga diagramă în vedere</value></data>
+  <data name="RelMap_Survey" xml:space="preserve"><value>topografie</value></data>
+  <data name="RelMap_Map" xml:space="preserve"><value>hartă</value></data>
+  <data name="RelMap_Scrap" xml:space="preserve"><value>schiță</value></data>
+  <data name="RelMap_Hint" xml:space="preserve"><value>Trageți nodurile pentru a le rearanja · dublu-clic pe un nod pentru a-i deschide definiția · treceți cu mouse-ul peste o legătură pentru a o vedea, dublu-clic pe legătură pentru a sări la locul unde este definită relația.</value></data>
+  <!-- Quick export window -->
+  <data name="QExport_Title" xml:space="preserve"><value>Export rapid</value></data>
+  <data name="QExport_Export" xml:space="preserve"><value>Exportă</value></data>
+  <data name="QExport_Intro" xml:space="preserve"><value>Compune un export unic. Un thconfig temporar este generat din proiectul activ, compilat, iar rezultatul deschis.</value></data>
+  <data name="QExport_Format" xml:space="preserve"><value>Format</value></data>
+  <data name="QExport_SurveyOpt" xml:space="preserve"><value>Topografie (opțional)</value></data>
+  <data name="QExport_SurveyWm" xml:space="preserve"><value>ex. cave.upper (gol = tot proiectul)</value></data>
+  <data name="QExport_Scale" xml:space="preserve"><value>Scară 1:</value></data>
+  <data name="QExport_OutputName" xml:space="preserve"><value>Nume ieșire</value></data>
 </root>

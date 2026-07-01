@@ -1,39 +1,40 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:TherionProc.ViewModels"
+        xmlns:l="using:TherionProc.Resources"
         x:Class="TherionProc.Views.QuickExportWindow"
         x:DataType="vm:QuickExportViewModel"
         x:CompileBindings="False"
-        Title="Quick Export" Width="440" SizeToContent="Height"
+        Title="{l:Loc QExport_Title}" Width="440" SizeToContent="Height"
         WindowStartupLocation="CenterOwner" CanResize="False">
     <DockPanel Margin="16">
         <Border DockPanel.Dock="Bottom" Margin="0,14,0,0">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
-                <Button Content="Cancel" Click="OnCancel" MinWidth="80" />
-                <Button Content="Export" Click="OnExport" IsDefault="True" MinWidth="80" />
+                <Button Content="{l:Loc Common_Cancel}" Click="OnCancel" MinWidth="80" />
+                <Button Content="{l:Loc QExport_Export}" Click="OnExport" IsDefault="True" MinWidth="80" />
             </StackPanel>
         </Border>
 
         <StackPanel Spacing="10">
-            <TextBlock Text="Compose a one-off export. A temporary thconfig is generated from the active project, built, and the result opened."
+            <TextBlock Text="{l:Loc QExport_Intro}"
                        Foreground="Gray" TextWrapping="Wrap" FontSize="11" />
 
             <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="8">
-                <TextBlock Grid.Row="0" Grid.Column="0" Text="Format" VerticalAlignment="Center" />
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="{l:Loc QExport_Format}" VerticalAlignment="Center" />
                 <ComboBox Grid.Row="0" Grid.Column="1" ItemsSource="{Binding Formats}"
                           SelectedItem="{Binding SelectedFormat, Mode=TwoWay}" HorizontalAlignment="Stretch" />
 
-                <TextBlock Grid.Row="1" Grid.Column="0" Text="Projection" VerticalAlignment="Center"
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="{l:Loc Col_Projection}" VerticalAlignment="Center"
                            IsVisible="{Binding IsMap}" />
                 <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding Projections}"
                           SelectedItem="{Binding SelectedProjection, Mode=TwoWay}"
                           IsVisible="{Binding IsMap}" HorizontalAlignment="Stretch" />
 
-                <TextBlock Grid.Row="2" Grid.Column="0" Text="Survey (optional)" VerticalAlignment="Center" />
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="{l:Loc QExport_SurveyOpt}" VerticalAlignment="Center" />
                 <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Survey, Mode=TwoWay}"
-                         Watermark="e.g. cave.upper (blank = whole project)" />
+                         Watermark="{l:Loc QExport_SurveyWm}" />
 
-                <TextBlock Grid.Row="3" Grid.Column="0" Text="Scale 1:" VerticalAlignment="Center"
+                <TextBlock Grid.Row="3" Grid.Column="0" Text="{l:Loc QExport_Scale}" VerticalAlignment="Center"
                            IsVisible="{Binding IsMap}" />
                 <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Spacing="8"
                             IsVisible="{Binding IsMap}">
@@ -42,7 +43,7 @@
                                    Increment="100" Width="140" IsEnabled="{Binding UseScale}" />
                 </StackPanel>
 
-                <TextBlock Grid.Row="4" Grid.Column="0" Text="Output name" VerticalAlignment="Center" />
+                <TextBlock Grid.Row="4" Grid.Column="0" Text="{l:Loc QExport_OutputName}" VerticalAlignment="Center" />
                 <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding OutputName, Mode=TwoWay}"
                          Watermark="quick-export" />
             </Grid>
