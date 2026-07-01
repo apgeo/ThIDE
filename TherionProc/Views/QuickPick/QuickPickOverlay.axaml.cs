@@ -56,6 +56,8 @@ public partial class QuickPickOverlay : UserControl
         {
             case Key.Down: Vm.MoveDown(); e.Handled = true; break;
             case Key.Up:   Vm.MoveUp();   e.Handled = true; break;
+            case Key.PageDown: Vm.MovePageDown(); e.Handled = true; break;
+            case Key.PageUp:   Vm.MovePageUp();   e.Handled = true; break;
             case Key.Enter: Vm.Accept();  e.Handled = true; break;
             case Key.Escape: Vm.Close();  e.Handled = true; break;
         }

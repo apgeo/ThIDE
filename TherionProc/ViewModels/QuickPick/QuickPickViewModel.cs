@@ -78,6 +78,23 @@ public partial class QuickPickViewModel : ObservableObject
         Selected = Results[Math.Max(i - 1, 0)];
     }
 
+    /// <summary>Rows the PageUp/PageDown keys jump by (roughly one visible page of the list).</summary>
+    private const int PageSize = 10;
+
+    public void MovePageDown()
+    {
+        if (Results.Count == 0) return;
+        int i = Selected is null ? -1 : Results.IndexOf(Selected);
+        Selected = Results[Math.Min(i + PageSize, Results.Count - 1)];
+    }
+
+    public void MovePageUp()
+    {
+        if (Results.Count == 0) return;
+        int i = Selected is null ? Results.Count : Results.IndexOf(Selected);
+        Selected = Results[Math.Max(i - PageSize, 0)];
+    }
+
     /// <summary>Accepts the selected item: closes the overlay, then runs its action.</summary>
     public void Accept()
     {
