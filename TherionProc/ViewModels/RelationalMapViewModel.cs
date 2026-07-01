@@ -18,6 +18,10 @@ using TherionProc.Services;
 namespace TherionProc.ViewModels;
 
 /// <summary>Available arrangements for the relational diagram.</summary>
+// Note: 'Nested' (the containment/treemap layout) is disabled — it does not display correctly
+// (boxes overlap and often render blank at real project sizes). The enum value is kept only so the
+// commented-out NestedLayout implementation below still refers to a valid name; it is no longer
+// offered in LayoutOptions.
 public enum RelationalLayoutKind { TreeVertical, TreeHorizontal, LayeredColumns, Nested }
 
 /// <summary>A selectable layout option (display name + kind) for the toolbar combo.</summary>
@@ -142,7 +146,7 @@ public partial class RelationalMapViewModel : ViewModelBase
         new RelationalLayoutOption("Tree ▽ (branches by area)", RelationalLayoutKind.TreeVertical),
         new RelationalLayoutOption("Tree ▷ (left-to-right)",     RelationalLayoutKind.TreeHorizontal),
         new RelationalLayoutOption("Layered columns",            RelationalLayoutKind.LayeredColumns),
-        new RelationalLayoutOption("Nested (containment)",       RelationalLayoutKind.Nested),
+        // "Nested (containment)" removed — the treemap layout does not display properly (see NestedLayout).
     };
 
     [ObservableProperty] private RelationalLayoutOption _selectedLayout;
@@ -199,12 +203,8 @@ public partial class RelationalMapViewModel : ViewModelBase
 
         ApplyLayout(nodes, edges);
 
-        // In the nested layout, draw shallower (bigger) boxes first so children render on top.
-        var ordered = SelectedLayout?.Kind == RelationalLayoutKind.Nested
-            ? nodes.OrderBy(n => n.Depth).ToList()
-            : nodes;
         Nodes.Clear();
-        foreach (var n in ordered) Nodes.Add(n);
+        foreach (var n in nodes) Nodes.Add(n);
         Edges = edges;
 
         Status = nodes.Count == 0
@@ -219,12 +219,6 @@ public partial class RelationalMapViewModel : ViewModelBase
     {
         if (Nodes.Count == 0) return;
         ApplyLayout(Nodes.ToList(), Edges);
-        if (SelectedLayout?.Kind == RelationalLayoutKind.Nested)
-        {
-            var sorted = Nodes.OrderBy(n => n.Depth).ToList();
-            Nodes.Clear();
-            foreach (var n in sorted) Nodes.Add(n);
-        }
         GraphChanged?.Invoke(this, EventArgs.Empty);
     }
 
@@ -248,17 +242,13 @@ public partial class RelationalMapViewModel : ViewModelBase
     {
         if (nodes.Count == 0) { CanvasWidth = 400; CanvasHeight = 300; ShowEdges = true; return; }
         var kind = SelectedLayout?.Kind ?? RelationalLayoutKind.TreeVertical;
-        ShowEdges = kind != RelationalLayoutKind.Nested;
+        ShowEdges = true;   // the only edge-less layout (Nested) is disabled
 
-        // Reset to the natural size before each layout (level sizing / nesting may have changed it).
+        // Reset to the natural size before each layout (level sizing may have changed it).
         foreach (var n in nodes) { n.Nested = false; n.Width = 168; n.Height = n.BaseHeight; }
 
-        if (kind == RelationalLayoutKind.Nested)
-        {
-            NestedLayout(nodes, edges);
-            FitCanvas(nodes);
-            return;
-        }
+        // Nested (containment) layout is disabled — it does not display properly. See NestedLayout below.
+        // if (kind == RelationalLayoutKind.Nested) { NestedLayout(nodes, edges); FitCanvas(nodes); return; }
 
         ComputeDepths(nodes, edges);
         if (SizeByLevel) ApplyLevelSizing(nodes);
@@ -308,6 +298,12 @@ public partial class RelationalMapViewModel : ViewModelBase
 
     // Nested-containment ("embedded") layout: the root box contains its children, which contain
     // theirs, recursively — a slice-and-dice treemap weighted by subtree size.
+    //
+    // DISABLED (#2): this layout does not display properly — the containment boxes overlap and the
+    // diagram frequently renders blank at real project sizes. It is excluded from LayoutOptions and
+    // its call site in ApplyLayout is commented out. The implementation is kept (compiled out) below
+    // so it can be revisited/fixed later rather than lost.
+#if false
     private void NestedLayout(List<RelationalNode> nodes, IReadOnlyList<RelationalEdge> edges)
     {
         var outAdj = nodes.ToDictionary(n => n.Id, _ => new List<string>(), StringComparer.Ordinal);
@@ -377,6 +373,7 @@ public partial class RelationalMapViewModel : ViewModelBase
             off += w + pad;
         }
     }
+#endif
 
     // Spanning-tree layout: each branch gets its own contiguous band (parent centred over its
     // children) so sibling subtrees don't overlap and cross-links are minimised.

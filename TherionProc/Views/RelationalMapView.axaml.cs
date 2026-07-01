@@ -7,6 +7,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
+using Avalonia.Threading;
 using Avalonia.VisualTree;
 using TherionProc.ViewModels;
 
@@ -53,6 +54,14 @@ public partial class RelationalMapView : UserControl
         if (vpW <= 0 || vpH <= 0 || _vm.CanvasWidth <= 0 || _vm.CanvasHeight <= 0) return;
         double z = Math.Min(vpW / _vm.CanvasWidth, vpH / _vm.CanvasHeight);
         _vm.Zoom = Math.Clamp(z * 0.97, 0.15, 4.0);
+        // Changing the zoom re-lays-out the scaled diagram, but the ScrollViewer keeps its previous
+        // offset — which now points past the shrunken content, leaving the pane blank (#3). Snap back
+        // to the top-left once the new (smaller) extent has been measured so the diagram is in view.
+        Dispatcher.UIThread.Post(() =>
+        {
+            sv.Offset = new Vector(0, 0);
+            InvalidateEdges();
+        }, DispatcherPriority.Loaded);
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)
