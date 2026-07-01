@@ -78,17 +78,18 @@ public static class EditorFeatureFlags
     /// <summary>
     /// The effective state of <paramref name="feature"/>: enabled only when both the compile-time
     /// constant and the user's runtime setting allow it. A null <paramref name="settings"/> falls
-    /// back to defaults (all on).
+    /// back to defaults (all on except SignatureHelp).
     /// </summary>
     public static bool IsEnabled(EditorFeature feature, AppSettings? settings) =>
         Compiled(feature) && (settings ?? AppSettings.Default).EditorFeatures.IsEnabled(feature);
 }
 
-/// <summary>Per-feature runtime toggles, persisted inside <see cref="AppSettings"/> (default: all on).</summary>
+/// <summary>Per-feature runtime toggles, persisted inside <see cref="AppSettings"/> (default: all on except SignatureHelp).</summary>
 public sealed record EditorFeatureSettings
 {
     public bool RichCompletion     { get; init; } = true;
-    public bool SignatureHelp      { get; init; } = true;
+    // EDIT-02: off by default — the inline signature/parameter hint is opt-in (Preferences ▸ Editor).
+    public bool SignatureHelp      { get; init; } = false;
     public bool Snippets           { get; init; } = true;
     public bool FormatDocument     { get; init; } = true;
     public bool Minimap            { get; init; } = true;
