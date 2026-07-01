@@ -15,6 +15,19 @@ public partial class PreferencesWindow : Window
 
     private void InitializeComponent() => AvaloniaXamlLoader.Load(this);
 
+    // Esc closes the window (Cancel). A child that consumes Esc first — e.g. the gesture-capture
+    // field, which uses it to clear a binding — marks the event Handled, so it won't close then.
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        if (e.Key == Key.Escape && !e.Handled)
+        {
+            Close();
+            e.Handled = true;
+            return;
+        }
+        base.OnKeyDown(e);
+    }
+
     private void OnOk(object? sender, RoutedEventArgs e)
     {
         (DataContext as PreferencesViewModel)?.Apply();
