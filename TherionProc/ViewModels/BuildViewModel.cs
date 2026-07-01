@@ -906,8 +906,8 @@ public partial class BuildViewModel : ViewModelBase
         {
             Status = $"{toolId} not found.";
             _log?.Warning($"{toolId} not found on PATH or in External Tools settings.");
-            _notifications?.Warning("Tool not found",
-                $"'{toolId}' was not found on PATH or in Settings ▸ External Tools.");   // UX-07
+            _notifications?.Warning(TherionProc.Resources.Tr.Get("Notif_ToolNotFoundTitle"),
+                string.Format(TherionProc.Resources.Tr.Get("Notif_ToolNotFoundMsg"), toolId));   // UX-07
             return false;
         }
 

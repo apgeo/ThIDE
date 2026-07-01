@@ -94,7 +94,7 @@ public partial class FileDocumentView : UserControl
                         ? $"Working directory is now {Path.GetDirectoryName(path)}, with {name} as the active thconfig."
                         : $"{name} is now the active thconfig.");
             else
-                TryNotifications()?.Warning("Could not activate thconfig", $"{name} could not be loaded.");
+                TryNotifications()?.Warning(TherionProc.Resources.Tr.Get("Notif_ActivateFailTitle"), string.Format(TherionProc.Resources.Tr.Get("Notif_ActivateFailMsg"), name));
         }
         catch { /* best-effort — design-time / no container / load failure */ }
     }

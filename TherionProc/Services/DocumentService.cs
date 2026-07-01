@@ -205,8 +205,8 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
         // show garbage). Offer "Open anyway" via a notification instead of silently doing it.
         if (!force && FileGuard.ShouldBlockTextOpen(full) is { } reason)
         {
-            _notifications?.Warning("Not opened as text",
-                $"{Path.GetFileName(full)}: {reason}", "Open anyway", () => _ = ForceOpenFileAsync(full));
+            _notifications?.Warning(TherionProc.Resources.Tr.Get("Notif_NotTextTitle"),
+                $"{Path.GetFileName(full)}: {reason}", TherionProc.Resources.Tr.Get("Notif_OpenAnyway"), () => _ = ForceOpenFileAsync(full));
             return;
         }
 
@@ -262,9 +262,9 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
         // only conflicts (unsaved edits) and deletions are worth a notification.
         var name = Path.GetFileName(change.Path);
         if (change.Deleted)
-            _notifications?.Warning("File deleted", $"{name} was deleted on disk.");
+            _notifications?.Warning(TherionProc.Resources.Tr.Get("Notif_FileDeletedTitle"), string.Format(TherionProc.Resources.Tr.Get("Notif_FileDeletedMsg"), name));
         else if (doc.IsDirty || !autoReload)
-            _notifications?.Info("File changed on disk", $"{name} was modified outside the editor.");
+            _notifications?.Info(TherionProc.Resources.Tr.Get("Notif_FileChangedTitle"), string.Format(TherionProc.Resources.Tr.Get("Notif_FileChangedMsg"), name));
     }
 
     // ---- navigation history -------------------------------------------------

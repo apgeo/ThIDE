@@ -841,4 +841,52 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Cmd_SymWm" xml:space="preserve"><value>Search surveys, stations, scraps, maps…</value></data>
   <data name="Cmd_BuildThTitle" xml:space="preserve"><value>Build thconfig</value></data>
   <data name="Cmd_BuildThWm" xml:space="preserve"><value>Pick a thconfig to build…</value></data>
+  <!-- Toast notifications -->
+  <data name="Notif_BuildOkTitle" xml:space="preserve"><value>Build succeeded</value></data>
+  <data name="Notif_BuildArtifacts" xml:space="preserve"><value>{0} artifact(s)</value></data>
+  <data name="Notif_BuildWarnings" xml:space="preserve"><value>, {0} warning(s).</value></data>
+  <data name="Notif_ShowOutput" xml:space="preserve"><value>Show output</value></data>
+  <data name="Notif_BuildFailTitle" xml:space="preserve"><value>Build failed</value></data>
+  <data name="Notif_BuildFailMsg" xml:space="preserve"><value>The compilation reported errors.</value></data>
+  <data name="Notif_3DDisabledTitle" xml:space="preserve"><value>3D viewer disabled</value></data>
+  <data name="Notif_3DDisabledMsg" xml:space="preserve"><value>Enable the embedded 3D model viewer in Preferences ▸ Build / Visualization.</value></data>
+  <data name="Notif_RecoveredTitle" xml:space="preserve"><value>Unsaved changes recovered</value></data>
+  <data name="Notif_RecoveredMsg" xml:space="preserve"><value>{0} file(s) had unsaved changes when the app last closed unexpectedly.</value></data>
+  <data name="Notif_Restore" xml:space="preserve"><value>Restore</value></data>
+  <data name="Notif_ImportFailed" xml:space="preserve"><value>Import failed</value></data>
+  <data name="Notif_GisExportFailed" xml:space="preserve"><value>GIS export failed</value></data>
+  <data name="Notif_TableExportFailed" xml:space="preserve"><value>Table export failed</value></data>
+  <data name="Notif_GpxImportFailed" xml:space="preserve"><value>GPX import failed</value></data>
+  <data name="Notif_ReportFailed" xml:space="preserve"><value>Report failed</value></data>
+  <data name="Notif_DemImportFailed" xml:space="preserve"><value>DEM import failed</value></data>
+  <data name="Notif_ScaffoldFailed" xml:space="preserve"><value>Scaffold failed</value></data>
+  <data name="Notif_ToolNotFoundTitle" xml:space="preserve"><value>Tool not found</value></data>
+  <data name="Notif_ToolNotFoundMsg" xml:space="preserve"><value>'{0}' was not found on PATH or in Settings ▸ External Tools.</value></data>
+  <data name="Notif_ActivateFailTitle" xml:space="preserve"><value>Could not activate thconfig</value></data>
+  <data name="Notif_ActivateFailMsg" xml:space="preserve"><value>{0} could not be loaded.</value></data>
+  <data name="Notif_NotTextTitle" xml:space="preserve"><value>Not opened as text</value></data>
+  <data name="Notif_OpenAnyway" xml:space="preserve"><value>Open anyway</value></data>
+  <data name="Notif_FileDeletedTitle" xml:space="preserve"><value>File deleted</value></data>
+  <data name="Notif_FileDeletedMsg" xml:space="preserve"><value>{0} was deleted on disk.</value></data>
+  <data name="Notif_FileChangedTitle" xml:space="preserve"><value>File changed on disk</value></data>
+  <data name="Notif_FileChangedMsg" xml:space="preserve"><value>{0} was modified outside the editor.</value></data>
+  <!-- File pickers -->
+  <data name="Pick_ExportCsv" xml:space="preserve"><value>Export CSV</value></data>
+  <data name="Pick_CsvFile" xml:space="preserve"><value>CSV file</value></data>
+  <data name="Pick_ExportImage" xml:space="preserve"><value>Export plot image</value></data>
+  <data name="Pick_PngImage" xml:space="preserve"><value>PNG image</value></data>
+  <data name="Pick_OpenMap" xml:space="preserve"><value>Open map</value></data>
+  <data name="Pick_MapsFilter" xml:space="preserve"><value>Maps (PDF / SVG / image)</value></data>
+  <data name="Pick_Open3D" xml:space="preserve"><value>Open 3D model</value></data>
+  <data name="Pick_3DFilter" xml:space="preserve"><value>3D models (.lox / .3d)</value></data>
+  <data name="Pick_TherionFiles" xml:space="preserve"><value>Therion files</value></data>
+  <data name="Pick_TherionConfig" xml:space="preserve"><value>Therion configuration</value></data>
+  <!-- Confirm / warning dialogs -->
+  <data name="Dlg_LoadFolderTitle" xml:space="preserve"><value>Load folder as workspace?</value></data>
+  <data name="Dlg_LoadFolderMsg" xml:space="preserve"><value>Open this folder as the active workspace?</value></data>
+  <data name="Dlg_SetActiveTitle" xml:space="preserve"><value>Set active thconfig</value></data>
+  <data name="Dlg_NoWorkspace" xml:space="preserve"><value>No workspace session is available.</value></data>
+  <data name="Dlg_InvalidPath" xml:space="preserve"><value>Invalid path:</value></data>
+  <data name="Dlg_FileGone" xml:space="preserve"><value>The file no longer exists:</value></data>
+  <data name="Dlg_NotThconfigFmt" xml:space="preserve"><value>"{0}" could not be read as a Therion configuration.</value></data>
 </root>

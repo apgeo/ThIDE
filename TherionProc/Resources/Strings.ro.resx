@@ -841,4 +841,52 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Cmd_SymWm" xml:space="preserve"><value>Caută topografii, stații, schițe, hărți…</value></data>
   <data name="Cmd_BuildThTitle" xml:space="preserve"><value>Compilează thconfig</value></data>
   <data name="Cmd_BuildThWm" xml:space="preserve"><value>Alegeți un thconfig de compilat…</value></data>
+  <!-- Toast notifications -->
+  <data name="Notif_BuildOkTitle" xml:space="preserve"><value>Compilare reușită</value></data>
+  <data name="Notif_BuildArtifacts" xml:space="preserve"><value>{0} artefact(e)</value></data>
+  <data name="Notif_BuildWarnings" xml:space="preserve"><value>, {0} avertisment(e).</value></data>
+  <data name="Notif_ShowOutput" xml:space="preserve"><value>Arată ieșirea</value></data>
+  <data name="Notif_BuildFailTitle" xml:space="preserve"><value>Compilare eșuată</value></data>
+  <data name="Notif_BuildFailMsg" xml:space="preserve"><value>Compilarea a raportat erori.</value></data>
+  <data name="Notif_3DDisabledTitle" xml:space="preserve"><value>Vizualizator 3D dezactivat</value></data>
+  <data name="Notif_3DDisabledMsg" xml:space="preserve"><value>Activați vizualizatorul 3D încorporat în Preferințe ▸ Compilare / Vizualizare.</value></data>
+  <data name="Notif_RecoveredTitle" xml:space="preserve"><value>Modificări nesalvate recuperate</value></data>
+  <data name="Notif_RecoveredMsg" xml:space="preserve"><value>{0} fișier(e) aveau modificări nesalvate când aplicația s-a închis ultima dată neașteptat.</value></data>
+  <data name="Notif_Restore" xml:space="preserve"><value>Restaurează</value></data>
+  <data name="Notif_ImportFailed" xml:space="preserve"><value>Import eșuat</value></data>
+  <data name="Notif_GisExportFailed" xml:space="preserve"><value>Export GIS eșuat</value></data>
+  <data name="Notif_TableExportFailed" xml:space="preserve"><value>Export tabel eșuat</value></data>
+  <data name="Notif_GpxImportFailed" xml:space="preserve"><value>Import GPX eșuat</value></data>
+  <data name="Notif_ReportFailed" xml:space="preserve"><value>Raport eșuat</value></data>
+  <data name="Notif_DemImportFailed" xml:space="preserve"><value>Import DEM eșuat</value></data>
+  <data name="Notif_ScaffoldFailed" xml:space="preserve"><value>Generarea scheletului a eșuat</value></data>
+  <data name="Notif_ToolNotFoundTitle" xml:space="preserve"><value>Unealtă negăsită</value></data>
+  <data name="Notif_ToolNotFoundMsg" xml:space="preserve"><value>„{0}” nu a fost găsit în PATH sau în Setări ▸ Unelte externe.</value></data>
+  <data name="Notif_ActivateFailTitle" xml:space="preserve"><value>Nu s-a putut activa thconfig</value></data>
+  <data name="Notif_ActivateFailMsg" xml:space="preserve"><value>{0} nu a putut fi încărcat.</value></data>
+  <data name="Notif_NotTextTitle" xml:space="preserve"><value>Nu a fost deschis ca text</value></data>
+  <data name="Notif_OpenAnyway" xml:space="preserve"><value>Deschide oricum</value></data>
+  <data name="Notif_FileDeletedTitle" xml:space="preserve"><value>Fișier șters</value></data>
+  <data name="Notif_FileDeletedMsg" xml:space="preserve"><value>{0} a fost șters de pe disc.</value></data>
+  <data name="Notif_FileChangedTitle" xml:space="preserve"><value>Fișier modificat pe disc</value></data>
+  <data name="Notif_FileChangedMsg" xml:space="preserve"><value>{0} a fost modificat în afara editorului.</value></data>
+  <!-- File pickers -->
+  <data name="Pick_ExportCsv" xml:space="preserve"><value>Exportă CSV</value></data>
+  <data name="Pick_CsvFile" xml:space="preserve"><value>Fișier CSV</value></data>
+  <data name="Pick_ExportImage" xml:space="preserve"><value>Exportă imaginea graficului</value></data>
+  <data name="Pick_PngImage" xml:space="preserve"><value>Imagine PNG</value></data>
+  <data name="Pick_OpenMap" xml:space="preserve"><value>Deschide hartă</value></data>
+  <data name="Pick_MapsFilter" xml:space="preserve"><value>Hărți (PDF / SVG / imagine)</value></data>
+  <data name="Pick_Open3D" xml:space="preserve"><value>Deschide model 3D</value></data>
+  <data name="Pick_3DFilter" xml:space="preserve"><value>Modele 3D (.lox / .3d)</value></data>
+  <data name="Pick_TherionFiles" xml:space="preserve"><value>Fișiere Therion</value></data>
+  <data name="Pick_TherionConfig" xml:space="preserve"><value>Configurație Therion</value></data>
+  <!-- Confirm / warning dialogs -->
+  <data name="Dlg_LoadFolderTitle" xml:space="preserve"><value>Încarcă dosarul ca spațiu de lucru?</value></data>
+  <data name="Dlg_LoadFolderMsg" xml:space="preserve"><value>Deschideți acest dosar ca spațiu de lucru activ?</value></data>
+  <data name="Dlg_SetActiveTitle" xml:space="preserve"><value>Setează thconfig activ</value></data>
+  <data name="Dlg_NoWorkspace" xml:space="preserve"><value>Nu este disponibilă nicio sesiune de spațiu de lucru.</value></data>
+  <data name="Dlg_InvalidPath" xml:space="preserve"><value>Cale nevalidă:</value></data>
+  <data name="Dlg_FileGone" xml:space="preserve"><value>Fișierul nu mai există:</value></data>
+  <data name="Dlg_NotThconfigFmt" xml:space="preserve"><value>„{0}” nu a putut fi citit ca o configurație Therion.</value></data>
 </root>

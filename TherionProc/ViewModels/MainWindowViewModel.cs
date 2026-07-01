@@ -557,14 +557,14 @@ public partial class MainWindowViewModel : ViewModelBase
             if (Build.LastBuildSucceeded)
             {
                 var warn = Build.LastBuildWarningCount;
-                _notifications.Success("Build succeeded",
-                    $"{Build.Artifacts.Count} artifact(s)" + (warn > 0 ? $", {warn} warning(s)." : "."),
-                    "Show output", ShowOutput);
+                _notifications.Success(Tr.Get("Notif_BuildOkTitle"),
+                    string.Format(Tr.Get("Notif_BuildArtifacts"), Build.Artifacts.Count) + (warn > 0 ? string.Format(Tr.Get("Notif_BuildWarnings"), warn) : "."),
+                    Tr.Get("Notif_ShowOutput"), ShowOutput);
             }
             else
             {
-                _notifications.Error("Build failed",
-                    "The compilation reported errors.", "Show output", ShowOutput);
+                _notifications.Error(Tr.Get("Notif_BuildFailTitle"),
+                    Tr.Get("Notif_BuildFailMsg"), Tr.Get("Notif_ShowOutput"), ShowOutput);
             }
         });
         // VIS-03: after a build, auto-load the newest rendered map into the in-app viewer.
@@ -584,8 +584,8 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             if (!Model3DViewerEnabled)
             {
-                _notifications.Info("3D viewer disabled",
-                    "Enable the embedded 3D model viewer in Preferences ▸ Build / Visualization.");
+                _notifications.Info(Tr.Get("Notif_3DDisabledTitle"),
+                    Tr.Get("Notif_3DDisabledMsg"));
                 return;
             }
             _factory.ShowTool(Model3DViewerTool);
@@ -741,9 +741,9 @@ public partial class MainWindowViewModel : ViewModelBase
         var recoverable = _crashRecovery.GetRecoverable();
         if (recoverable.Count == 0) return;
         OnUiThread(() => _notifications.Warning(
-            "Unsaved changes recovered",
-            $"{recoverable.Count} file(s) had unsaved changes when the app last closed unexpectedly.",
-            "Restore", () => _ = RecoverBuffersAsync(recoverable)));
+            Tr.Get("Notif_RecoveredTitle"),
+            string.Format(Tr.Get("Notif_RecoveredMsg"), recoverable.Count),
+            Tr.Get("Notif_Restore"), () => _ = RecoverBuffersAsync(recoverable)));
     }
 
     private async Task RecoverBuffersAsync(System.Collections.Generic.IReadOnlyList<RecoveredBuffer> buffers)
@@ -946,7 +946,7 @@ public partial class MainWindowViewModel : ViewModelBase
             await _documents.OpenFileAsync(outPath).ConfigureAwait(true);
             StatusText = $"Imported {System.IO.Path.GetFileName(src)} → {System.IO.Path.GetFileName(outPath)}";
         }
-        catch (Exception ex) { StatusText = ex.Message; _log?.Warning($"Import failed: {ex.Message}"); _notifications.Error("Import failed", ex.Message); }
+        catch (Exception ex) { StatusText = ex.Message; _log?.Warning($"Import failed: {ex.Message}"); _notifications.Error(Tr.Get("Notif_ImportFailed"), ex.Message); }
     }
 
     /// <summary>GIS-01: export entrances / fixed points in the project CRS. Format via CommandParameter.</summary>
@@ -972,7 +972,7 @@ public partial class MainWindowViewModel : ViewModelBase
             System.IO.File.WriteAllText(outPath, text);
             StatusText = $"Exported {GisExport.CollectPoints(model).Count} point(s) → {System.IO.Path.GetFileName(outPath)}";
         }
-        catch (Exception ex) { StatusText = ex.Message; _log?.Warning($"GIS export failed: {ex.Message}"); _notifications.Error("GIS export failed", ex.Message); }
+        catch (Exception ex) { StatusText = ex.Message; _log?.Warning($"GIS export failed: {ex.Message}"); _notifications.Error(Tr.Get("Notif_GisExportFailed"), ex.Message); }
     }
 
     /// <summary>PUB-02: export the stations or shots table to CSV / Markdown / HTML / LaTeX.
@@ -1006,7 +1006,7 @@ public partial class MainWindowViewModel : ViewModelBase
             System.IO.File.WriteAllText(outPath, text);
             StatusText = $"Exported {rows.Count} {which} row(s) → {System.IO.Path.GetFileName(outPath)}";
         }
-        catch (Exception ex) { StatusText = ex.Message; _log?.Warning($"Table export failed: {ex.Message}"); _notifications.Error("Table export failed", ex.Message); }
+        catch (Exception ex) { StatusText = ex.Message; _log?.Warning($"Table export failed: {ex.Message}"); _notifications.Error(Tr.Get("Notif_TableExportFailed"), ex.Message); }
     }
 
     /// <summary>MEDIA-04: import GPX waypoints/track points → a Therion survey of fixed stations.</summary>
@@ -1026,7 +1026,7 @@ public partial class MainWindowViewModel : ViewModelBase
             await _documents.OpenFileAsync(outPath).ConfigureAwait(true);
             StatusText = $"Imported GPX → {System.IO.Path.GetFileName(outPath)}";
         }
-        catch (Exception ex) { StatusText = ex.Message; _log?.Warning($"GPX import failed: {ex.Message}"); _notifications.Error("GPX import failed", ex.Message); }
+        catch (Exception ex) { StatusText = ex.Message; _log?.Warning($"GPX import failed: {ex.Message}"); _notifications.Error(Tr.Get("Notif_GpxImportFailed"), ex.Message); }
     }
 
     /// <summary>PUB-01: generate a one-click HTML survey report and open it.</summary>
@@ -1050,7 +1050,7 @@ public partial class MainWindowViewModel : ViewModelBase
             try { (AppServices.Provider.GetService(typeof(Therion.Build.IShellOpener)) as Therion.Build.IShellOpener)?.Open(outPath); }
             catch { /* opening is best-effort */ }
         }
-        catch (Exception ex) { StatusText = ex.Message; _log?.Warning($"Report failed: {ex.Message}"); _notifications.Error("Report failed", ex.Message); }
+        catch (Exception ex) { StatusText = ex.Message; _log?.Warning($"Report failed: {ex.Message}"); _notifications.Error(Tr.Get("Notif_ReportFailed"), ex.Message); }
     }
 
     /// <summary>Wraps an HTML table fragment in a minimal standalone document.</summary>
@@ -1077,7 +1077,7 @@ public partial class MainWindowViewModel : ViewModelBase
             await _documents.OpenFileAsync(outPath).ConfigureAwait(true);
             StatusText = $"Generated surface from {System.IO.Path.GetFileName(src)}";
         }
-        catch (Exception ex) { StatusText = ex.Message; _log?.Warning($"DEM import failed: {ex.Message}"); _notifications.Error("DEM import failed", ex.Message); }
+        catch (Exception ex) { StatusText = ex.Message; _log?.Warning($"DEM import failed: {ex.Message}"); _notifications.Error(Tr.Get("Notif_DemImportFailed"), ex.Message); }
     }
 
     /// <summary>TH2-04: scaffold a new .th2 scrap stub; the scrap id is taken from the chosen filename.</summary>
@@ -1096,7 +1096,7 @@ public partial class MainWindowViewModel : ViewModelBase
             ClipboardHelper.SetText(inputLine);
             StatusText = $"Created scrap '{id}'. Copied '{inputLine}' to clipboard — paste it into your .th.";
         }
-        catch (Exception ex) { StatusText = ex.Message; _log?.Warning($"Scaffold failed: {ex.Message}"); _notifications.Error("Scaffold failed", ex.Message); }
+        catch (Exception ex) { StatusText = ex.Message; _log?.Warning($"Scaffold failed: {ex.Message}"); _notifications.Error(Tr.Get("Notif_ScaffoldFailed"), ex.Message); }
     }
 
     [RelayCommand]
