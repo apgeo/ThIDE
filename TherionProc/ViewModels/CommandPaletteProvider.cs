@@ -247,7 +247,8 @@ public sealed class CommandPaletteProvider
                 PathLower = c.FullPath.ToLowerInvariant(),
                 Run = async () =>
                 {
-                    await _session.SetActiveThconfigAsync(c.FullPath).ConfigureAwait(true);
+                    if (_documents is not null)
+                        await _documents.ActivateThconfigAsync(c.FullPath).ConfigureAwait(true);
                     if (_vm.Build.BuildCommand.CanExecute(null)) _vm.Build.BuildCommand.Execute(null);
                 },
             };

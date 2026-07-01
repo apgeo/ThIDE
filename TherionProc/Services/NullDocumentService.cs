@@ -50,6 +50,7 @@ internal sealed class NullDocumentService : IDocumentService
     public Task OpenFileAsync(string absolutePath, CancellationToken ct = default) => Task.CompletedTask;
     public Task ForceOpenFileAsync(string absolutePath, CancellationToken ct = default) => Task.CompletedTask;
     public Task OpenFolderAsync(string folderPath, CancellationToken ct = default) => Task.CompletedTask;
+    public Task<bool> ActivateThconfigAsync(string thconfigPath, ThconfigActivation options = default, CancellationToken ct = default) => Task.FromResult(false);
     public Task NavigateToSpanAsync(Therion.Core.SourceSpan span, CancellationToken ct = default) => Task.CompletedTask;
     public Task WriteCurrentTextAsync(string newText, CancellationToken ct = default) => Task.CompletedTask;
     public Task SaveDocumentAsync(FileDocumentViewModel document, CancellationToken ct = default) => Task.CompletedTask;

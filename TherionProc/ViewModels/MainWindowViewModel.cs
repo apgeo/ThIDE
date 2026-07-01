@@ -899,9 +899,8 @@ public partial class MainWindowViewModel : ViewModelBase
         if (string.IsNullOrEmpty(path)) return;
         try
         {
-            await _documents.OpenFileAsync(path).ConfigureAwait(true);
-            // Make the opened thconfig the active project configuration.
-            if (_session is not null) await _session.SetActiveThconfigAsync(path).ConfigureAwait(true);
+            // Open the thconfig and make it the active project configuration in one step.
+            await _documents.ActivateThconfigAsync(path, new ThconfigActivation(OpenInEditor: true)).ConfigureAwait(true);
             StatusText = path;
         }
         catch (Exception ex) { StatusText = ex.Message; }

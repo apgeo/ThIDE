@@ -73,28 +73,16 @@ public partial class FileDocumentView : UserControl
     }
 
     // Switches the workspace's active thconfig (and optionally its working-directory root) to this
-    // file. The session raises Changed, so the build pipeline, object graph and orphan banners all
+    // file, through the single IDocumentService entry point. The session raises Changed, so the build
+    // pipeline, object graph, orphan banners, window title and workspace-explorer selection all
     // re-target without any extra wiring here.
     private static async System.Threading.Tasks.Task ActivateThconfigAsync(string path, bool setWorkingDir)
     {
-        if (TrySession() is not { } session) return;
-        var name = Path.GetFileName(path);
+        if (TryDocuments() is not { } documents) return;
         try
         {
-            if (setWorkingDir)
-            {
-                var dir = Path.GetDirectoryName(Path.GetFullPath(path));
-                if (!string.IsNullOrEmpty(dir)) await session.SetRootAsync(dir).ConfigureAwait(true);
-            }
-            var ok = await session.SetActiveThconfigAsync(path).ConfigureAwait(true);
-            if (ok)
-                TryNotifications()?.Info(
-                    setWorkingDir ? "Working directory set" : "Active thconfig set",
-                    setWorkingDir
-                        ? $"Working directory is now {Path.GetDirectoryName(path)}, with {name} as the active thconfig."
-                        : $"{name} is now the active thconfig.");
-            else
-                TryNotifications()?.Warning(TherionProc.Resources.Tr.Get("Notif_ActivateFailTitle"), string.Format(TherionProc.Resources.Tr.Get("Notif_ActivateFailMsg"), name));
+            await documents.ActivateThconfigAsync(path,
+                new ThconfigActivation(SetWorkingDirectory: setWorkingDir, Notify: true)).ConfigureAwait(true);
         }
         catch { /* best-effort — design-time / no container / load failure */ }
     }

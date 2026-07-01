@@ -163,7 +163,7 @@ public partial class WorkspaceExplorerToolView : UserControl
     private async void OnCtxSetActiveThconfig(object? sender, RoutedEventArgs e)
     {
         if (Ctx()?.FullPath is not { } raw) return;
-        if (Service<IWorkspaceSession>() is not { } session)
+        if (Service<IDocumentService>() is not { } documents)
         {
             await ShowWarning(TherionProc.Resources.Tr.Get("Dlg_SetActiveTitle"), TherionProc.Resources.Tr.Get("Dlg_NoWorkspace")).ConfigureAwait(true);
             return;
@@ -184,7 +184,7 @@ public partial class WorkspaceExplorerToolView : UserControl
 
         bool ok;
         string? error = null;
-        try { ok = await session.SetActiveThconfigAsync(path).ConfigureAwait(true); }
+        try { ok = await documents.ActivateThconfigAsync(path).ConfigureAwait(true); }
         catch (Exception ex) { ok = false; error = ex.Message; }
 
         if (!ok)

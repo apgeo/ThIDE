@@ -20,6 +20,15 @@ using TherionProc.ViewModels.Docking;
 
 namespace TherionProc.Services;
 
+/// <summary>
+/// Options for <see cref="IDocumentService.ActivateThconfigAsync"/> — the single entry point that all
+/// "set the current thconfig" UI paths funnel through, so their side effects stay consistent.
+/// </summary>
+public readonly record struct ThconfigActivation(
+    bool SetWorkingDirectory = false,
+    bool OpenInEditor = false,
+    bool Notify = false);
+
 public interface IDocumentService
 {
     // ---- Multi-document (MDI) ----
@@ -55,6 +64,15 @@ public interface IDocumentService
     /// <summary>TRUST-03: opens a file bypassing the binary/huge-file guard (the "Open anyway" path).</summary>
     Task ForceOpenFileAsync(string absolutePath, CancellationToken ct = default);
     Task OpenFolderAsync(string folderPath, CancellationToken ct = default);
+    /// <summary>
+    /// The single entry point for making a thconfig the active project configuration. Optionally sets
+    /// its folder as the workspace root and/or opens it in the editor, and (when asked) shows a toast.
+    /// The session's Changed event then re-targets the whole UI (dropdown, orphan banners, window
+    /// title, workspace-explorer selection, build pipeline). Returns false when the file is missing or
+    /// fails to load. All the scattered "set active thconfig" call sites route through this so their
+    /// behaviour and UI propagation are identical (only the options differ).
+    /// </summary>
+    Task<bool> ActivateThconfigAsync(string thconfigPath, ThconfigActivation options = default, CancellationToken ct = default);
     /// <summary>Opens the file a span lives in (if needed) and scrolls/flashes the editor to it.</summary>
     Task NavigateToSpanAsync(Therion.Core.SourceSpan span, CancellationToken ct = default);
     Task WriteCurrentTextAsync(string newText, CancellationToken ct = default);
@@ -234,6 +252,38 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
         await _session.SetRootAsync(folderPath, ct).ConfigureAwait(false);
         if (_session.ActiveThconfig is { } active && File.Exists(active.FullPath))
             await OpenFileAsync(active.FullPath, ct).ConfigureAwait(false);
+    }
+
+    public async Task<bool> ActivateThconfigAsync(string thconfigPath, ThconfigActivation options = default, CancellationToken ct = default)
+    {
+        if (string.IsNullOrEmpty(thconfigPath)) return false;
+        string full;
+        try { full = Path.GetFullPath(thconfigPath); } catch { return false; }
+
+        if (options.SetWorkingDirectory)
+        {
+            var dir = Path.GetDirectoryName(full);
+            if (!string.IsNullOrEmpty(dir)) await _session.SetRootAsync(dir, ct).ConfigureAwait(false);
+        }
+
+        var ok = await _session.SetActiveThconfigAsync(full, ct).ConfigureAwait(false);
+        if (!ok)
+        {
+            if (options.Notify)
+                _notifications?.Warning(TherionProc.Resources.Tr.Get("Notif_ActivateFailTitle"),
+                    string.Format(TherionProc.Resources.Tr.Get("Notif_ActivateFailMsg"), Path.GetFileName(full)));
+            return false;
+        }
+
+        if (options.OpenInEditor) await OpenFileAsync(full, ct).ConfigureAwait(false);
+
+        if (options.Notify)
+            _notifications?.Info(
+                options.SetWorkingDirectory ? "Working directory set" : "Active thconfig set",
+                options.SetWorkingDirectory
+                    ? $"Working directory is now {Path.GetDirectoryName(full)}, with {Path.GetFileName(full)} as the active thconfig."
+                    : $"{Path.GetFileName(full)} is now the active thconfig.");
+        return true;
     }
 
     private void PropagateWorkspaceToDocuments()

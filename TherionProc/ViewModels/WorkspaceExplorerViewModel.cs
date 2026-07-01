@@ -184,8 +184,10 @@ public partial class WorkspaceExplorerViewModel : ViewModelBase
     [ObservableProperty] private ThconfigCandidate? _selectedThconfig;
     partial void OnSelectedThconfigChanged(ThconfigCandidate? value)
     {
-        if (_syncingThconfig || _session is null || value is null) return;
-        _ = _session.SetActiveThconfigAsync(value.FullPath);
+        // Ignore selection writes we make ourselves while mirroring the session (_syncingThconfig),
+        // so this only fires for a real user pick. Route through the one activation entry point.
+        if (_syncingThconfig || value is null) return;
+        _ = _documents.ActivateThconfigAsync(value.FullPath);
     }
 
     /// <summary>Formatted path of the active thconfig, shown in the panel header (#8).</summary>
@@ -237,7 +239,11 @@ public partial class WorkspaceExplorerViewModel : ViewModelBase
             _loadingSettings = false;
         }
 
-        _documents.DocumentChanged += (_, _) => { Refresh(); MaybeRevealActive(); };
+        // Marshal to the UI thread: DocumentChanged can be raised on a background thread (it fires
+        // through DocumentService's session-changed handler, which runs after SetActiveThconfigAsync's
+        // off-thread continuation). Refresh() rebuilds the UI-bound tree, so running it off-thread would
+        // throw and abort the rest of the change propagation — leaving the dropdown/selection stale.
+        _documents.DocumentChanged += (_, _) => OnUi(() => { Refresh(); MaybeRevealActive(); });
         _documents.RevealInWorkspaceRequested += (_, target) =>
             { if (RevealOnHover) OnUi(() => HighlightTarget(target)); };
         // Editor "reveal in workspace" button (#1): force file view and select the node.
@@ -247,7 +253,7 @@ public partial class WorkspaceExplorerViewModel : ViewModelBase
         {
             _session.CandidatesChanged += (_, _) => OnUi(SyncCandidates);
             _session.RootChanged += (_, _) => OnUi(() => { SyncCandidates(); Invalidate(); Refresh(); });
-            _session.Changed += (_, _) => OnUi(() => { SyncCandidates(); Refresh(); });
+            _session.Changed += (_, _) => OnUi(() => { SyncCandidates(); Refresh(); RevealActiveThconfigIfChanged(); });
             _session.FileSystemChanged += (_, _) => OnUi(() => { if (IsFileExplorerView) { Invalidate(); Refresh(); } });
             _session.ExternalFileChanged += (_, e) => OnUi(() =>
                 WorkspaceBanner =
@@ -269,7 +275,16 @@ public partial class WorkspaceExplorerViewModel : ViewModelBase
         _syncingThconfig = true;
         try
         {
-            ThconfigCandidates = new ObservableCollection<ThconfigCandidate>(_session.Candidates);
+            // Only replace the collection when the candidate set actually changed. Assigning a new
+            // ObservableCollection makes the bound ComboBox drop its selection (it resets SelectedItem
+            // to null asynchronously and writes that back), so an externally-set active thconfig — from
+            // the file button, context menu or command palette — wouldn't show up in the dropdown. When
+            // the list is unchanged (the common "same candidates, different active" case) we keep the
+            // collection and just move the selection, which the ComboBox honours reliably.
+            var incoming = _session.Candidates;
+            if (!SameCandidatePaths(ThconfigCandidates, incoming))
+                ThconfigCandidates = new ObservableCollection<ThconfigCandidate>(incoming);
+
             var active = _session.ActiveThconfig;
             SelectedThconfig = active is null
                 ? null
@@ -278,6 +293,27 @@ public partial class WorkspaceExplorerViewModel : ViewModelBase
             ActiveThconfigDisplay = active?.DisplayPath ?? string.Empty;
         }
         finally { _syncingThconfig = false; }
+    }
+
+    private static bool SameCandidatePaths(IReadOnlyList<ThconfigCandidate> a, IReadOnlyList<ThconfigCandidate> b)
+    {
+        if (a.Count != b.Count) return false;
+        for (int i = 0; i < a.Count; i++)
+            if (!string.Equals(a[i].FullPath, b[i].FullPath, StringComparison.OrdinalIgnoreCase)) return false;
+        return true;
+    }
+
+    // When the active thconfig changes (via any path), select its node in the tree so the explorer
+    // visibly tracks "the current project configuration". Guarded so a mere graph rebuild (e.g. an
+    // edit) doesn't keep re-selecting/expanding while the user browses elsewhere.
+    private string? _lastRevealedActiveThconfig;
+    private void RevealActiveThconfigIfChanged()
+    {
+        var active = _session?.ActiveThconfig?.FullPath;
+        if (string.IsNullOrEmpty(active)) return;
+        if (string.Equals(active, _lastRevealedActiveThconfig, StringComparison.OrdinalIgnoreCase)) return;
+        _lastRevealedActiveThconfig = active;
+        RevealFile(active);
     }
 
     /// <summary>Forces the next <see cref="Refresh"/> to rebuild (after a toggle/mode change).</summary>
