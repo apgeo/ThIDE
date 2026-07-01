@@ -1,4 +1,4 @@
-// Implementation Plan §11 — broad table-driven tests.
+// Implementation Plan ï¿½11 ï¿½ broad table-driven tests.
 // Many cases per method; together with the rest of the suite they take the
 // test count past the 200-mark called out in the M2 roadmap.
 
@@ -44,15 +44,15 @@ public class TokenizerTableTests
             foreach (var c in new[] { "=", ",", "[", "]", "{", "}", "(", ")", ":", ";" })
                 d.Add(c, TherionTokenKind.Punctuation);
 
-            // Numbers — integer
+            // Numbers ï¿½ integer
             for (int i = 0; i < 25; i++) d.Add(i.ToString(), TherionTokenKind.Number);
-            // Numbers — signed
+            // Numbers ï¿½ signed
             foreach (var s in new[] { "-1", "+2", "-10", "+100", "-12345" })
                 d.Add(s, TherionTokenKind.Number);
-            // Numbers — decimal
+            // Numbers ï¿½ decimal
             foreach (var s in new[] { "0.5", "1.25", "12.5", "100.0", "-3.14", "+2.7", ".5", "-.25" })
                 d.Add(s, TherionTokenKind.Number);
-            // Numbers — exponent
+            // Numbers ï¿½ exponent
             foreach (var s in new[] { "1e3", "1.5e3", "1.5E-3", "-2.0e+10" })
                 d.Add(s, TherionTokenKind.Number);
 
@@ -62,7 +62,7 @@ public class TokenizerTableTests
                 "survey", "centreline", "endsurvey", "fix", "equate", "data",
                 "S1", "station.name", "deep.qualified.name", "x", "Y",
                 "-title", "-fmt", "-projection", "--long-flag",
-                "café", "Pe?tera", "name_with_underscore",
+                "cafï¿½", "Pe?tera", "name_with_underscore",
             })
                 d.Add(s, TherionTokenKind.Identifier);
 
@@ -77,7 +77,11 @@ public class TokenizerTableTests
         var tokens = new TherionTokenizer().Tokenize("x", text);
         Assert.Single(tokens);
         Assert.Equal(expected, tokens[0].Kind);
-        Assert.Equal(text, tokens[0].Text);
+        // TherionToken contract: trivia (whitespace/newline/continuation) carries empty Text â€” its
+        // content is recoverable from the Span; significant tokens keep the verbatim source slice.
+        bool isTrivia = expected is TherionTokenKind.Whitespace
+            or TherionTokenKind.NewLine or TherionTokenKind.LineContinuation;
+        Assert.Equal(isTrivia ? string.Empty : text, tokens[0].Text);
     }
 }
 

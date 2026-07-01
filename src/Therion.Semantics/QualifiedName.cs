@@ -1,4 +1,4 @@
-// Implementation Plan §5.1 — qualified station/survey names.
+// Implementation Plan ï¿½5.1 ï¿½ qualified station/survey names.
 // Therion uses top-down dotted paths (e.g., "cave.upper.u1") where the leftmost
 // component is the outermost survey and the rightmost component is the station.
 
@@ -44,7 +44,29 @@ public readonly record struct QualifiedName
         return new QualifiedName(ImmutableArray.Create(dotted.Split('.')));
     }
 
-    public override string ToString() => string.Join('.', Parts);
+    // Builds "p0.p1.â€¦.pn" directly. `string.Join('.', Parts)` boxes the ImmutableArray into
+    // IEnumerable<string> and allocates an enumerator on every call; ToString is on the hot path
+    // for building the workspace reference indexes (one per station) and graph sort keys, so we
+    // compose the string in one allocation via string.Create instead.
+    public override string ToString()
+    {
+        var parts = Parts;
+        if (parts.Length == 1) return parts[0];   // no separator, no new allocation
+
+        int length = parts.Length - 1;            // the '.' separators
+        for (int i = 0; i < parts.Length; i++) length += parts[i].Length;
+
+        return string.Create(length, parts, static (span, p) =>
+        {
+            int pos = 0;
+            for (int i = 0; i < p.Length; i++)
+            {
+                if (i > 0) span[pos++] = '.';
+                p[i].AsSpan().CopyTo(span[pos..]);
+                pos += p[i].Length;
+            }
+        });
+    }
 
     public bool Equals(QualifiedName other)
     {

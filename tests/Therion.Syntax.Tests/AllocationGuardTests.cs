@@ -48,9 +48,9 @@ public class AllocationGuardTests
         var tokenizer = new TherionTokenizer();
         long bytes = Measure("Tokenize(5000)", () => tokenizer.Tokenize("perf.th", text));
 
-        // BASELINE 2026-07-01 (pre-optimization): 10.04 MB. Ceiling = baseline + ~30%.
-        // Ratchet DOWN as Group A (no trivia text / lazy token text) lands.
-        const long Budget = 14L * 1024 * 1024;
+        // 2026-07-01: pre-opt 10.04 MB -> presize+newline literals 9.02 MB -> A2 (empty trivia text) 8.37 MB.
+        // Ceiling ~= current + ~20%. Ratchet DOWN as Groups B/C land.
+        const long Budget = 10L * 1024 * 1024;
         Assert.True(bytes < Budget, $"Tokenize(5000) allocated {bytes:N0} bytes, budget {Budget:N0}.");
     }
 
@@ -60,9 +60,9 @@ public class AllocationGuardTests
         var text = Centreline(5_000);
         long bytes = Measure("Parse(5000)", () => new ThParser().Parse("perf.th", text));
 
-        // BASELINE 2026-07-01 (pre-optimization): 18.47 MB. Ceiling = baseline + ~30%.
-        // Ratchet DOWN as Groups A/B/C (tokenizer, logical-line slices, keyword dispatch) land.
-        const long Budget = 25L * 1024 * 1024;
+        // 2026-07-01: pre-opt 18.47 MB -> tokenizer presize+literals 17.44 MB -> A2 (empty trivia text) 16.80 MB.
+        // Ceiling ~= current + ~20%. Ratchet DOWN as Groups B/C (logical-line slices, keyword dispatch) land.
+        const long Budget = 20L * 1024 * 1024;
         Assert.True(bytes < Budget, $"Parse(5000) allocated {bytes:N0} bytes, budget {Budget:N0}.");
     }
 }

@@ -18,6 +18,9 @@ public sealed class ConnectivityGraph
 {
     private readonly EquateGraph _equates;
     private readonly Dictionary<QualifiedName, HashSet<QualifiedName>> _adjacency;
+    // Node → connected-component index, computed once at build time so AreConnected is an O(1)
+    // lookup instead of a fresh BFS per call.
+    private readonly Dictionary<QualifiedName, int> _componentOf;
 
     /// <summary>Total number of distinct (equate-merged) station nodes.</summary>
     public int NodeCount { get; }
@@ -46,6 +49,7 @@ public sealed class ConnectivityGraph
     private ConnectivityGraph(
         EquateGraph equates,
         Dictionary<QualifiedName, HashSet<QualifiedName>> adjacency,
+        Dictionary<QualifiedName, int> componentOf,
         ImmutableArray<QualifiedName> entrances,
         ImmutableArray<QualifiedName> fixedStations,
         ImmutableArray<ImmutableArray<QualifiedName>> components,
@@ -54,6 +58,7 @@ public sealed class ConnectivityGraph
     {
         _equates = equates;
         _adjacency = adjacency;
+        _componentOf = componentOf;
         NodeCount = adjacency.Count;
         EdgeCount = edgeCount;
         Entrances = entrances;
@@ -74,22 +79,10 @@ public sealed class ConnectivityGraph
     {
         var ra = _equates.Find(a);
         var rb = _equates.Find(b);
-        if (!_adjacency.ContainsKey(ra) || !_adjacency.ContainsKey(rb)) return false;
-        if (ra.Equals(rb)) return true;
-
-        var seen = new HashSet<QualifiedName> { ra };
-        var queue = new Queue<QualifiedName>();
-        queue.Enqueue(ra);
-        while (queue.Count > 0)
-        {
-            var cur = queue.Dequeue();
-            foreach (var next in _adjacency[cur])
-            {
-                if (next.Equals(rb)) return true;
-                if (seen.Add(next)) queue.Enqueue(next);
-            }
-        }
-        return false;
+        // O(1): two nodes are reachable iff they share a connected-component id (computed at build).
+        return _componentOf.TryGetValue(ra, out var ca)
+            && _componentOf.TryGetValue(rb, out var cb)
+            && ca == cb;
     }
 
     /// <summary>Builds the connectivity graph for a single bound file.</summary>
@@ -158,13 +151,19 @@ public sealed class ConnectivityGraph
 
         var components = ComputeComponents(adjacency);
 
+        // Index every node by its component so AreConnected is O(1) (each node is in exactly one).
+        var componentOf = new Dictionary<QualifiedName, int>(adjacency.Count);
+        for (int ci = 0; ci < components.Length; ci++)
+            foreach (var node in components[ci])
+                componentOf[node] = ci;
+
         var deadEnds = ImmutableArray.CreateBuilder<QualifiedName>();
         foreach (var (node, neighbours) in adjacency)
             if (neighbours.Count <= 1 && !entrances.Contains(node) && !fixedStations.Contains(node))
                 deadEnds.Add(node);
 
         return new ConnectivityGraph(
-            equates, adjacency,
+            equates, adjacency, componentOf,
             entrances.OrderBy(n => n.ToString(), System.StringComparer.Ordinal).ToImmutableArray(),
             fixedStations.OrderBy(n => n.ToString(), System.StringComparer.Ordinal).ToImmutableArray(),
             components,
@@ -189,8 +188,14 @@ public sealed class ConnectivityGraph
                 foreach (var next in adjacency[cur])
                     if (seen.Add(next)) { members.Add(next); queue.Enqueue(next); }
             }
-            members.Sort((a, b) => System.StringComparer.Ordinal.Compare(a.ToString(), b.ToString()));
-            components.Add(members.ToImmutableArray());
+            // Sort by dotted name, materializing each key once (Schwartzian) instead of calling
+            // ToString twice per comparison — that was O(n log n) string allocations per component.
+            var keyed = new (string Key, QualifiedName Node)[members.Count];
+            for (int i = 0; i < members.Count; i++) keyed[i] = (members[i].ToString(), members[i]);
+            System.Array.Sort(keyed, static (x, y) => string.CompareOrdinal(x.Key, y.Key));
+            var sorted = ImmutableArray.CreateBuilder<QualifiedName>(keyed.Length);
+            foreach (var (_, node) in keyed) sorted.Add(node);
+            components.Add(sorted.ToImmutable());
         }
         // Largest component first — usually the main cave.
         return components.OrderByDescending(c => c.Length).ToImmutableArray();

@@ -15,7 +15,17 @@ using Therion.Core;
 
 namespace Therion.Syntax;
 
-/// <summary>A single lexical token with its absolute <see cref="SourceSpan"/> and the verbatim text.</summary>
+/// <summary>
+/// A single lexical token with its absolute <see cref="SourceSpan"/> and its text.
+/// <para>
+/// <b>Text contract:</b> significant tokens (identifiers, numbers, strings, punctuation, comments)
+/// carry their <em>verbatim</em> source slice. <em>Trivia</em> tokens — <see cref="TherionTokenKind
+/// .Whitespace"/>, <see cref="TherionTokenKind.NewLine"/> and <see cref="TherionTokenKind
+/// .LineContinuation"/> — carry <see cref="string.Empty"/>: their content is uniquely determined by
+/// the <see cref="Span"/> (and recoverable from the source), and materializing it would allocate a
+/// string per token for text no consumer reads. Use the <see cref="Span"/> if you need trivia text.
+/// </para>
+/// </summary>
 public readonly record struct TherionToken(TherionTokenKind Kind, SourceSpan Span, string Text)
 {
     public override string ToString() => $"{Kind}('{Text}') @ {Span}";
@@ -31,7 +41,9 @@ public sealed class TherionTokenizer
     /// <summary>Tokenize <paramref name="text"/> into a flat token list.</summary>
     public ImmutableArray<TherionToken> Tokenize(string filePath, string text)
     {
-        var builder = ImmutableArray.CreateBuilder<TherionToken>();
+        // Pre-size to a rough token estimate (~1 token / 4 chars) to avoid repeated doubling+copy of
+        // the growing builder. Over-estimates are trimmed by ToImmutable; under-estimates just grow.
+        var builder = ImmutableArray.CreateBuilder<TherionToken>(Math.Max(16, text.Length / 4));
 
         int pos = 0;
         int line = 1;
@@ -55,10 +67,13 @@ public sealed class TherionTokenizer
                 else
                     pos += 1;
 
+                // Trivia (whitespace / newline / continuation) carries empty Text — see the contract
+                // note on TherionToken. Its content is fully recoverable from the Span; skipping the
+                // Substring removes the bulk of the tokenizer's per-token allocations.
                 builder.Add(new TherionToken(
                     TherionTokenKind.NewLine,
                     MakeSpan(filePath, startLine, startCol, line, col, startPos, pos - startPos),
-                    text.Substring(startPos, pos - startPos)));
+                    string.Empty));
 
                 bool wasSurfaceHeader = LineFirstSignificantIs(builder, lineStartIdx, "surface");
                 line++;
@@ -94,7 +109,7 @@ public sealed class TherionTokenizer
                     builder.Add(new TherionToken(
                         TherionTokenKind.LineContinuation,
                         MakeSpan(filePath, startLine, startCol, line, col, startPos, pos - startPos),
-                        text.Substring(startPos, pos - startPos)));
+                        string.Empty));   // trivia carries empty Text (recoverable from Span)
 
                     line++;
                     col = 1;
@@ -116,7 +131,7 @@ public sealed class TherionTokenizer
                 builder.Add(new TherionToken(
                     TherionTokenKind.Whitespace,
                     MakeSpan(filePath, startLine, startCol, line, col, startPos, pos - startPos),
-                    text.Substring(startPos, pos - startPos)));
+                    string.Empty));   // trivia carries empty Text (recoverable from Span)
                 continue;
             }
 

@@ -67,4 +67,52 @@ public class AllocationGuardTests
         const long Budget = 115L * 1024 * 1024;
         Assert.True(bytes < Budget, $"ParseAndBind(20000) allocated {bytes:N0} bytes, budget {Budget:N0}.");
     }
+
+    [Fact]
+    public void Build_connectivity_graph_5000_allocation_within_budget()
+    {
+        var model = new SemanticBinder().Bind(new ThParser().Parse("big.th", Centreline(5_000)).Value!);
+        long bytes = Measure("BuildGraph(5000)", () => ConnectivityGraph.Build(model));
+
+        // Group I: Schwartzian sort key (one ToString/node) cut this from ~13.4 MB to ~2.5 MB;
+        // Group H (cheaper QualifiedName.ToString) trimmed it to ~2.2 MB. Ceiling ~= current + ~35%.
+        const long Budget = 3L * 1024 * 1024;
+        Assert.True(bytes < Budget, $"BuildGraph(5000) allocated {bytes:N0} bytes, budget {Budget:N0}.");
+    }
+
+    [Fact]
+    public void AreConnected_is_allocation_free()
+    {
+        var model = new SemanticBinder().Bind(new ThParser().Parse("big.th", Centreline(5_000)).Value!);
+        var graph = ConnectivityGraph.Build(model);
+        var a = QualifiedName.Parse("big.s0");
+        var b = QualifiedName.Parse("big.s5000");
+
+        // Group I: O(1) component-id compare, no per-call BFS/HashSet/Queue. 10k calls must stay
+        // essentially allocation-free (was ~315 KB *per call*).
+        long bytes = Measure("AreConnected x10000", () =>
+        {
+            for (int i = 0; i < 10_000; i++) graph.AreConnected(a, b);
+        });
+        Assert.True(bytes < 64 * 1024, $"AreConnected x10000 allocated {bytes:N0} bytes (expected ~0).");
+    }
+
+    [Fact]
+    public void Build_workspace_model_index_allocation_within_budget()
+    {
+        var files = new System.Collections.Generic.Dictionary<string, ParseResult<TherionFile>>(
+            StringComparer.OrdinalIgnoreCase);
+        for (int f = 0; f < 10; f++)
+            files[$"f{f}.th"] = new ThParser().Parse($"f{f}.th", Centreline(500));
+
+        // G1's bind cache reuses per-file models across the warmup calls, so the measured call is
+        // dominated by the cross-file index build (Group H cheapened its per-station key ToStrings;
+        // the remaining floor is the FrozenDictionary construction that a future G2 would target).
+        long bytes = Measure("BuildWorkspaceModel(10x500)",
+            () => WorkspaceSemanticModel.Build(files, System.Array.Empty<XviFile>()));
+
+        // Post G1+H baseline ~2.6 MB. Ceiling ~= current + ~35%.
+        const long Budget = 4L * 1024 * 1024;
+        Assert.True(bytes < Budget, $"BuildWorkspaceModel(10x500) allocated {bytes:N0} bytes, budget {Budget:N0}.");
+    }
 }
