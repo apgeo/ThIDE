@@ -41,6 +41,16 @@ public static class ThSchema
     private static readonly ImmutableHashSet<string> ReadingNames =
         ImmutableHashSet.CreateRange(StringComparer.OrdinalIgnoreCase, DataStyles.ReadingKeywords);
 
+    // NOTE: every table must be declared BEFORE Commands (static field initialization order).
+    /// <summary>Map/scrap projection base types (thdb2dprj.h:55 thtt_2dproj).</summary>
+    public static readonly ImmutableHashSet<string> ProjectionTypes =
+        ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, "plan", "elevation", "extended", "none");
+
+    private static readonly ImmutableHashSet<string> ImportFormats =
+        ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, "3d", "plt", "xyz");
+    private static readonly ImmutableHashSet<string> ImportSurveys =
+        ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, "create", "use", "ignore");
+
     /// <summary>All .th command schemas, keyed for <see cref="SchemaRegistry"/>.</summary>
     public static readonly ImmutableArray<CommandSchema> Commands = Arr(
         // ---- blocks ---------------------------------------------------------------
@@ -137,7 +147,38 @@ public static class ThSchema
             P("from", V(SchemaValueKind.StationRef), required: false),
             P("to", V(SchemaValueKind.StationRef), required: false),
             P("before", V(SchemaValueKind.StationRef), required: false)),
-        CL("station-names", P("prefix", ValueSpec.Id()), P("suffix", ValueSpec.Id())));
+        CL("station-names", P("prefix", ValueSpec.Id()), P("suffix", ValueSpec.Id())),
+
+        // ---- shared .th blocks / commands (B4, spec §6.7) ---------------------------
+        Cmd("map", "map", Ctx(SchemaContext.ThTopLevel, SchemaContext.Survey),
+                P("id", ValueSpec.Id(IdentifierCharset.Keyword)))
+            with
+            {
+                Terminator = "endmap",
+                Options = Arr(
+                    Opt("projection", P("type", ValueSpec.Free)) with { Aliases = Arr("proj") },
+                    Opt("survey", P("id", V(SchemaValueKind.ObjectRef))),
+                    Opt("title", P("title", ValueSpec.String))),
+                Inherits = Arr(DataObjectOptions),
+                SourceRef = "thmap.h:56 thtt_map_opt + thdb2dprj.h:55",
+            },
+        Cmd("import", "import", Ctx(SchemaContext.ThTopLevel, SchemaContext.Survey, SchemaContext.Centreline),
+                P("file", ValueSpec.Free))
+            with
+            {
+                Options = Arr(
+                    Opt("fmt", P("format", Enum(ImportFormats))) with { Aliases = Arr("format") },
+                    Opt("surveys", P("mode", Enum(ImportSurveys))),
+                    Opt("filter", P("spec", ValueSpec.Free)),
+                    Opt("calibrate", P("spec", ValueSpec.Free))),
+                SourceRef = "thimport.h:52,74,94",
+            },
+        Cmd("require", "shared", Ctx(SchemaContext.ThTopLevel, SchemaContext.Survey, SchemaContext.Thconfig),
+                P("version", ValueSpec.Free))
+            with { SourceRef = "book ch02 §require" },
+        Cmd("revise", "shared", Ctx(SchemaContext.ThTopLevel, SchemaContext.Survey),
+                P("id", V(SchemaValueKind.ObjectRef)))
+            with { SourceRef = "book ch02 §revise", Notes = "block form endrevise unmodeled (no corpus usage)" });
 
     // ---- helpers -------------------------------------------------------------------
 

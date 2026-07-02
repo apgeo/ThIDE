@@ -100,11 +100,11 @@ public static class SchemaValidator
         ImmutableArray<Diagnostic>.Builder diagnostics,
         ParserMode mode)
     {
-        // A1: only UnknownCommand exposes its raw argument text generically.
-        // FUTURE(C batches): typed nodes provide schema-aware argument accessors.
+        // Only UnknownCommand exposes its raw argument text generically; typed nodes are
+        // validated by their per-node rules (ThCentrelineRules / Th2*Rules).
         if (cmd is not UnknownCommand unknown) return;
 
-        var args = SplitArguments(unknown.RawArguments, schema);
+        var (args, opts) = SplitCommandLine(unknown.RawArguments, schema);
 
         if (options.IsCategoryEnabled(ValidationCategories.Arity))
             CheckArity(args.Count, schema, cmd.Span, diagnostics);
@@ -112,6 +112,44 @@ public static class SchemaValidator
         int n = Math.Min(args.Count, schema.Positional.Length);
         for (int i = 0; i < n; i++)
             CheckValue(args[i], schema.Positional[i], cmd.Span, options, diagnostics, mode);
+
+        if (!options.IsCategoryEnabled(ValidationCategories.Options)) return;
+        foreach (var (name, firstValue) in opts)
+        {
+            var spec = FindOption(schema, name);
+            if (spec is null)
+            {
+                diagnostics.Add(Diagnostic.Create(
+                    DiagnosticCodes.OptionNotValidInContext,
+                    mode == ParserMode.Strict ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
+                    $"Unknown option '-{name}' for '{schema.Keyword}'.", cmd.Span));
+            }
+            else if (spec.Values.Length > 0 && firstValue is not null)
+            {
+                CheckValue(firstValue, spec.Values[0], cmd.Span, options, diagnostics, mode);
+            }
+        }
+    }
+
+    /// <summary>Resolves an option by name/alias, searching the command's own options
+    /// and its inherited option sets.</summary>
+    private static OptionSpec? FindOption(CommandSchema schema, string name)
+    {
+        static OptionSpec? Scan(ImmutableArray<OptionSpec> opts, string name)
+        {
+            foreach (var o in opts)
+            {
+                if (string.Equals(o.Name, name, StringComparison.OrdinalIgnoreCase)) return o;
+                foreach (var a in o.Aliases)
+                    if (string.Equals(a, name, StringComparison.OrdinalIgnoreCase)) return o;
+            }
+            return null;
+        }
+
+        if (Scan(schema.Options, name) is { } own) return own;
+        foreach (var set in schema.Inherits)
+            if (Scan(set.Options, name) is { } inherited) return inherited;
+        return null;
     }
 
     private static void CheckArity(
@@ -252,9 +290,22 @@ public static class SchemaValidator
     /// <c>"quoted strings"</c> and <c>[bracketed groups]</c>. Stops at the first token that
     /// names a schema option (<c>-option</c>) — negative numbers are NOT treated as options.
     /// </summary>
-    public static List<string> SplitArguments(string raw, CommandSchema schema)
+    public static List<string> SplitArguments(string raw, CommandSchema schema) =>
+        SplitCommandLine(raw, schema).Positional;
+
+    /// <summary>
+    /// Splits a raw argument string into positional tokens plus the <c>-option value</c> tail
+    /// (each option paired with its first value, if any).
+    /// </summary>
+    public static (List<string> Positional, List<(string Name, string? FirstValue)> Options)
+        SplitCommandLine(string raw, CommandSchema schema)
     {
-        var result = new List<string>();
+        var positional = new List<string>();
+        var opts = new List<(string, string?)>();
+        bool inOptions = false;
+        string? currentOption = null;
+        bool currentHasValue = false;
+
         int i = 0;
         while (i < raw.Length)
         {
@@ -282,17 +333,37 @@ public static class SchemaValidator
                 token = raw[start..i];
             }
 
-            // An option name ends the positional list (the option tail is validated by the
-            // Options category — C batches). `-12.5` and special values (`-Inf`) stay positional.
-            if (token.Length > 1 && token[0] == '-' && !char.IsDigit(token[1]) && token[1] != '.' &&
+            // A dash-word is an option name (Therion lexing): declared or not. Negative
+            // numbers and special values (`-Inf`) stay positional; identifiers can't
+            // legally start with '-' (spec §2.2), so this doesn't eat positionals.
+            bool isOptionName =
+                token.Length > 1 && token[0] == '-' && !char.IsDigit(token[1]) && token[1] != '.' &&
                 !SpecialValues.Contains(token) &&
-                (IsDeclaredOption(schema, token.AsSpan(1)) ||
-                 (schema.Options.Length == 0 && LooksLikeOption(token))))
-                break;
+                (IsDeclaredOption(schema, token.AsSpan(1)) || LooksLikeOption(token));
 
-            result.Add(token);
+            if (isOptionName)
+            {
+                if (currentOption is not null && !currentHasValue) opts.Add((currentOption, null));
+                currentOption = token[1..];
+                currentHasValue = false;
+                inOptions = true;
+            }
+            else if (inOptions)
+            {
+                if (currentOption is not null && !currentHasValue)
+                {
+                    opts.Add((currentOption, token));
+                    currentHasValue = true;
+                }
+                // further values of the same option: kept out of scope for now
+            }
+            else
+            {
+                positional.Add(token);
+            }
         }
-        return result;
+        if (currentOption is not null && !currentHasValue) opts.Add((currentOption, null));
+        return (positional, opts);
 
         static bool IsDeclaredOption(CommandSchema schema, ReadOnlySpan<char> name)
         {
@@ -302,12 +373,19 @@ public static class SchemaValidator
                 foreach (var alias in opt.Aliases)
                     if (name.Equals(alias, StringComparison.OrdinalIgnoreCase)) return true;
             }
+            foreach (var set in schema.Inherits)
+                foreach (var opt in set.Options)
+                {
+                    if (name.Equals(opt.Name, StringComparison.OrdinalIgnoreCase)) return true;
+                    foreach (var alias in opt.Aliases)
+                        if (name.Equals(alias, StringComparison.OrdinalIgnoreCase)) return true;
+                }
             return false;
         }
 
         static bool LooksLikeOption(string token)
         {
-            // Heuristic for schemas with no options declared yet: `-title` style tokens
+            // Heuristic when the schema declares no/unknown options: `-title` style tokens
             // (letters only after the dash) are treated as options, not positionals.
             for (int k = 1; k < token.Length; k++)
                 if (!char.IsLetter(token[k]) && token[k] != '-') return false;

@@ -26,6 +26,26 @@ internal static class ThCentrelineRules
         ImmutableArray<Diagnostic>.Builder diagnostics,
         ParserMode mode)
     {
+        // map is its own toggle section (spec §6.7); everything below is "centreline".
+        if (cmd is MapCommand map)
+        {
+            if (options.IsSectionEnabled("map") &&
+                options.IsCategoryEnabled(ValidationCategories.Enums) &&
+                map.Projection is { Length: > 0 } proj &&
+                proj[0] != '[')   // bracketed form `[elevation <angle> [deg]]` — content not modeled here
+            {
+                // `type[:index]` — the base must be a known projection (thdb2dprj.h:55).
+                int colon = proj.IndexOf(':');
+                var baseProj = colon < 0 ? proj : proj[..colon];
+                if (!ThSchema.ProjectionTypes.Contains(baseProj))
+                    diagnostics.Add(Diagnostic.Create(
+                        DiagnosticCodes.ValueTypeMismatch, Lenient(mode),
+                        $"'{proj}' is not a valid projection (plan, elevation, extended, none).",
+                        map.Span));
+            }
+            return;
+        }
+
         if (!options.IsSectionEnabled(Section)) return;
 
         switch (cmd)
