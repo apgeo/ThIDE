@@ -90,6 +90,12 @@ internal static class ThCentrelineRules
             case StationCommand st:
                 ValidateStationFlags(st, options, diagnostics, mode);
                 break;
+            case DateCommand date:
+                CheckDate(date.Value, "date", date.Span, options, diagnostics, mode);
+                break;
+            case ExploDateCommand exploDate:
+                CheckDate(exploDate.Value, "explo-date", exploDate.Span, options, diagnostics, mode);
+                break;
             case UnitsCommand units:
                 CheckQuantityClasses(units.Quantities, unitsSet: true, "units", units.Span,
                     options, diagnostics, mode);
@@ -221,6 +227,19 @@ internal static class ThCentrelineRules
                     "'explored' requires the 'continuation' flag to be set first.",
                     st.Span));
         }
+    }
+
+    private static void CheckDate(
+        string value, string command, SourceSpan span,
+        SchemaValidationOptions options,
+        ImmutableArray<Diagnostic>.Builder diagnostics, ParserMode mode)
+    {
+        if (!options.IsCategoryEnabled(ValidationCategories.ValueTypes)) return;
+        if (TherionDates.Check(value) is { } error)
+            diagnostics.Add(Diagnostic.Create(
+                DiagnosticCodes.ValueTypeMismatch, Lenient(mode),
+                $"Invalid '{command}' value: {error} (expected YYYY[.MM[.DD[@HH[:MM[:SS]]]]] or an interval).",
+                span));
     }
 
     private static void CheckQuantityClasses(

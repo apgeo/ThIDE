@@ -72,6 +72,7 @@ public static class SchemaValidator
             // Typed centreline nodes carry parsed arguments — rule checks live per node type
             // (spec §5.2/§5.3), independent of the keyword registry.
             ThCentrelineRules.Validate(cmd, options, diagnostics, mode);
+            TypedOptionRules.Validate(cmd, options, diagnostics, mode);
 
             if (node is BlockCommand block)
                 ValidateChildren(block.Children, ChildContext(context, block.Keyword),
@@ -133,7 +134,7 @@ public static class SchemaValidator
 
     /// <summary>Resolves an option by name/alias, searching the command's own options
     /// and its inherited option sets.</summary>
-    private static OptionSpec? FindOption(CommandSchema schema, string name)
+    internal static OptionSpec? FindOption(CommandSchema schema, string name)
     {
         static OptionSpec? Scan(ImmutableArray<OptionSpec> opts, string name)
         {
@@ -172,7 +173,7 @@ public static class SchemaValidator
         }
     }
 
-    private static void CheckValue(
+    internal static void CheckValue(
         string token, ParamSpec param, SourceSpan span,
         SchemaValidationOptions options,
         ImmutableArray<Diagnostic>.Builder diagnostics,
