@@ -57,6 +57,13 @@ public static class DiagnosticCodes
     public const string InvalidSpecialValue      = "TH0068";  // not a number nor -,.,NaN,Inf,up,down
     public const string ValueOutOfRange          = "TH0069";  // numeric value outside schema range
 
+    // -- data <style> <readings> order validation (spec §5.3, thdata.cxx set_data_data) --
+    public const string InvalidReadingForStyle   = "TH0070";  // reading not valid for the data style
+    public const string DuplicateReading         = "TH0071";  // reading listed twice
+    public const string IncompleteDataOrder      = "TH0072";  // "not all data for given style"
+    public const string InvalidNewlinePosition   = "TH0073";  // newline first/last in the order
+    public const string InterleavedMix           = "TH0074";  // station mixed with from/to
+
     // -- XVI (Therion `set XVI*` Tcl export format) -----------------------
     public const string XviUnknownVariable       = "TH_XVI_001";  // unknown `set XVI…` variable
     public const string XviUnexpectedStatement   = "TH_XVI_002";  // non-`set` top-level content

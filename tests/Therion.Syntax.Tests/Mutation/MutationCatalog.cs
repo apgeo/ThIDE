@@ -72,6 +72,43 @@ public static class MutationCatalog
                 MutationTier.Tier1, DiagnosticCodes.UnknownExportFormat,
                 (src, _) => ReplaceOnce(src, "export map -fmt pdf", "export map -fmt sql"))),
 
+            // --- Tier 1: C1 centreline rules (spec §5.2/§5.3) --------------------------
+            ("th", new SyntaxMutation(
+                "th-style-reading-mismatch", "switch style to diving → gradient invalid for style",
+                MutationTier.Tier1, DiagnosticCodes.InvalidReadingForStyle,
+                (src, _) => ReplaceOnce(src, "data normal from", "data diving from"))),
+
+            ("th", new SyntaxMutation(
+                "th-duplicate-reading", "duplicate the length column (tape ≡ length)",
+                MutationTier.Tier1, DiagnosticCodes.DuplicateReading,
+                (src, _) => ReplaceOnce(src, "to length compass", "to length tape compass"))),
+
+            ("th", new SyntaxMutation(
+                "th-book-only-team-role", "add the book-only 'explorer' role (compiler rejects)",
+                MutationTier.Tier1, DiagnosticCodes.ValueTypeMismatch,
+                (src, _) => ReplaceOnce(src, "team \"John Doe\"", "team \"John Doe\" explorer"))),
+
+            ("th", new SyntaxMutation(
+                "th-fix-nonpositive-sd", "append a zero std deviation to fix (must be > 0)",
+                MutationTier.Tier1, DiagnosticCodes.ValueOutOfRange,
+                (src, _) => ReplaceOnce(src, "fix 1 500 600 700", "fix 1 500 600 700 0"))),
+
+            ("th", new SyntaxMutation(
+                "th-direct-fixed-station-flag", "set the fixed station flag directly",
+                MutationTier.Tier1, DiagnosticCodes.InvalidStationFlag,
+                (src, _) => ReplaceOnce(src, "\"junction\" continuation", "\"junction\" fixed"))),
+
+            ("th", new SyntaxMutation(
+                "th-extend-too-many-stations", "extend with 4 station arguments (max 3)",
+                MutationTier.Tier1, DiagnosticCodes.TooManyArguments,
+                (src, _) => ReplaceOnce(src, "extend left", "extend left 1 2 3 4"))),
+
+            ("th", new SyntaxMutation(
+                "th-declination-without-units", "numeric declination requires angular units",
+                MutationTier.Tier1, DiagnosticCodes.MalformedDeclination,
+                (src, _) => ReplaceOnce(src, "units length metres",
+                    "units length metres\n    declination 3"))),
+
             // --- Tier 2: probably invalid (random, position-seeded) --------------------
             ("th", new SyntaxMutation(
                 "th-random-digit-corruption", "replace one random digit with 'x'",

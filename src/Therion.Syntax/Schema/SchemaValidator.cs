@@ -33,7 +33,7 @@ public static class SchemaValidator
         ImmutableArray<Diagnostic>.Builder diagnostics,
         ParserMode mode = ParserMode.Lenient)
     {
-        if (!options.Enabled || registry.Count == 0) return;
+        if (!options.Enabled) return;
         ValidateChildren(file.Children, rootContext, options, registry, diagnostics, mode);
     }
 
@@ -54,6 +54,10 @@ public static class SchemaValidator
             {
                 ValidateCommand(cmd, schema, options, diagnostics, mode);
             }
+
+            // Typed centreline nodes carry parsed arguments — rule checks live per node type
+            // (spec §5.2/§5.3), independent of the keyword registry.
+            ThCentrelineRules.Validate(cmd, options, diagnostics, mode);
 
             if (node is BlockCommand block)
                 ValidateChildren(block.Children, ChildContext(context, block.Keyword),

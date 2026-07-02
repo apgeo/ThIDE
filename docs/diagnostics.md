@@ -64,7 +64,22 @@ see `.claude/therion-syntax/PLAN.md`. Toggleable per category/section via
 | `TH0066` | Warning | _(reserved)_ Option not valid for this command/type. | `SchemaValidator` |
 | `TH0067` | Info | Right keyword, wrong case (Therion matches case-sensitively). | `SchemaValidator` |
 | `TH0068` | Warning | Not a number nor a special value (`-` `.` NaN Inf up down). | `SchemaValidator` |
-| `TH0069` | Warning | Numeric value outside the schema's range. | `SchemaValidator` |
+| `TH0069` | Warning | Numeric value outside the schema's range (vthreshold 0–90, fix sd > 0, …). | `SchemaValidator`, `ThCentrelineRules` |
+
+`ThCentrelineRules` (typed centreline nodes; section `centreline`) also emits: `TH0064` (fix > 7
+args, extend > 3 stations, > 22 readings), `TH0065` (unknown team role / instrument quantity,
+sd/units length↔angle class mix), `TH0042` (numeric declination without units), `TH0055`
+(direct `fixed` flag; `explored` without `continuation`).
+
+### `data <style> <readings>` order validation (`ThCentrelineRules`, lenient)
+
+| Code | Severity | Message | Source |
+|---|---|---|---|
+| `TH0070` | lenient | Reading not valid for the data style (e.g. `gradient` outside `normal`). | `DataStyles.ValidateOrder` |
+| `TH0071` | lenient | Reading listed twice (aliases count: `tape` ≡ `length`). | `DataStyles.ValidateOrder` |
+| `TH0072` | lenient | "Not all data for given style" — required readings absent. | `DataStyles.ValidateOrder` |
+| `TH0073` | lenient | `newline` cannot be the first or last reading. | `DataStyles.ValidateOrder` |
+| `TH0074` | lenient | `station` mixed with `from`/`to`, or interleaved reading after `newline`. | `DataStyles.ValidateOrder` |
 
 ## Semantics (`TH_SEM_xxx`)
 

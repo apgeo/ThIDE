@@ -104,4 +104,66 @@ public static class CommandVocabulary
         return double.TryParse(t, NumberStyles.Float, CultureInfo.InvariantCulture, out var pct)
                && pct is >= 0 and <= 200;
     }
+
+    // =====================================================================================
+    // Quantity/role keyword sets (B1, spec §5.2) — subsets of thtt_dataleg_comp that each
+    // centreline command accepts (thdata.cxx: team/instrument switches, set_data_sd/units).
+    // =====================================================================================
+
+    /// <summary><c>team &lt;person&gt; &lt;role&gt;…</c> — valid role keywords (thdata.cxx:380).
+    /// The book also documents <c>explorer</c>, but the compiler rejects it (⚠ src≠book).</summary>
+    public static readonly ImmutableHashSet<string> TeamRoles =
+        ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase,
+            "altitude", "dz", "length", "tape", "count", "counter",
+            "bearing", "compass", "gradient", "clino",
+            "backlength", "backtape", "backbearing", "backcompass", "backgradient", "backclino",
+            "notes", "notebook", "assistant", "dog", "insts", "instruments",
+            "pictures", "pics", "depth", "station", "position", "gps",
+            "dimensions", "up", "ceiling", "down", "floor", "left", "right");
+
+    /// <summary><c>instrument &lt;quantity&gt;… &lt;description&gt;</c> — valid quantities
+    /// (thdata.cxx:885; TeamRoles minus altitude/dimensions).</summary>
+    public static readonly ImmutableHashSet<string> InstrumentQuantities =
+        ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase,
+            "station", "length", "tape", "bearing", "compass", "gradient", "clino",
+            "backlength", "backtape", "backbearing", "backcompass", "backgradient", "backclino",
+            "depth", "count", "counter", "notes", "notebook", "pictures", "pics",
+            "position", "gps", "insts", "instruments", "assistant", "dog",
+            "up", "ceiling", "down", "floor", "left", "right");
+
+    /// <summary><c>sd</c> length-class quantities (set_data_sd; incompatible with angle-class).</summary>
+    public static readonly ImmutableHashSet<string> SdLengthQuantities =
+        ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase,
+            "length", "tape", "count", "counter", "depth",
+            "x", "easting", "dx", "y", "northing", "dy", "z", "altitude", "position", "gps");
+
+    /// <summary><c>sd</c>/<c>units</c> angle-class quantities.</summary>
+    public static readonly ImmutableHashSet<string> SdAngleQuantities =
+        ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase,
+            "bearing", "compass", "gradient", "clino");
+
+    /// <summary><c>units</c> length-class quantities (set_data_units; sd set + depthchange + dims).</summary>
+    public static readonly ImmutableHashSet<string> UnitsLengthQuantities =
+        SdLengthQuantities.Union(new[]
+            { "depthchange", "dimensions", "up", "ceiling", "down", "floor", "left", "right" });
+
+    /// <summary>
+    /// Classifies a quantity list for <c>sd</c>/<c>units</c>: quantities must all be length-class
+    /// or all angle-class ("incompatible quantity"). Returns the offending token, or null when
+    /// consistent / unknown-only (unknown names are reported elsewhere).
+    /// </summary>
+    public static string? FindIncompatibleQuantity(
+        System.Collections.Generic.IReadOnlyList<string> quantities, bool unitsSet)
+    {
+        var lengths = unitsSet ? UnitsLengthQuantities : SdLengthQuantities;
+        int cls = 0; // 0 unknown, 1 length, 2 angle
+        foreach (var q in quantities)
+        {
+            int c = lengths.Contains(q) ? 1 : SdAngleQuantities.Contains(q) ? 2 : 0;
+            if (c == 0) continue;
+            if (cls == 0) cls = c;
+            else if (cls != c) return q;
+        }
+        return null;
+    }
 }
