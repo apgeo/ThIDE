@@ -21,8 +21,9 @@ public static class ThconfigSchema
         ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, "line", "linear", "plaquette", "point");
 
     public static readonly ImmutableArray<CommandSchema> Commands = Arr(
-        // system <command…> — free command line, at least something to run.
-        Cfg("system", P("command", ValueSpec.Free, repeated: true)),
+        // system <command> — exactly ONE argument ("single system command expected",
+        // thconfig.cxx TT_SYSTEM); multi-word commands must be quoted.
+        Cfg("system", P("command", ValueSpec.Free)),
         Cfg("language", P("code", ValueSpec.Free)) with { Aliases = Arr("lang") },
         Cfg("log", P("type", ValueSpec.OfEnum(LogTypes))),
         Cfg("scrap-sort", P("switch", V(SchemaValueKind.Bool))),
@@ -30,8 +31,12 @@ public static class ThconfigSchema
         Cfg("sketch-colors", P("count", V(SchemaValueKind.Int))),
         Cfg("setup3d", P("value", ValueSpec.Number)),
         Cfg("maps-offset", P("switch", V(SchemaValueKind.Bool))),
-        // text <language> <original> <translation…> — reassigns output strings (book ch03 §text).
-        Cfg("text", P("language", ValueSpec.Free), P("text", ValueSpec.Free, repeated: true)),
+        // text <language> <original> <translation> — exactly THREE arguments ("invalid text
+        // syntax -- should be: text <language> <text> <translation>", thconfig.cxx TT_TEXT).
+        Cfg("text",
+            P("language", ValueSpec.Free),
+            P("original", ValueSpec.Free),
+            P("translation", ValueSpec.Free)),
         // encoding/input/require are reader-level (thinput.cxx) but appear in thconfig files too.
         Cfg("encoding", P("name", ValueSpec.Free)));
 

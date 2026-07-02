@@ -46,6 +46,10 @@ internal static class Th2LineRules
         if (!Th2Symbols.IsKnownLineType(line.LineType)) return;   // TH2_005 already reported
 
         bool isPit = Eq(baseType, "pit") || Eq(baseType, "pitch");
+        // wall:pit may be declared on the header OR switched mid-line by a body `subtype pit`
+        // (Therion applies options sequentially, so either position legalizes -height).
+        bool isWallPit = Eq(baseType, "wall") &&
+            (Eq(line.Subtype ?? "", "pit") || AnyVertexSubtype(line, "pit"));
 
         // ---- subtype matrix (TH2_008) --------------------------------------------------
         if (options.IsCategoryEnabled(ValidationCategories.Enums))
@@ -99,7 +103,7 @@ internal static class Th2LineRules
                     case "text" when !Eq(baseType, "label"):
                         Flag(diagnostics, mode, span, $"-text is only valid on label lines, not '{baseType}'.");
                         break;
-                    case "height" when !(isPit || (Eq(baseType, "wall") && Eq(line.Subtype ?? "", "pit"))):
+                    case "height" when !(isPit || isWallPit):
                         Flag(diagnostics, mode, span, $"-height is only valid on pit lines (or wall:pit), not '{baseType}'.");
                         break;
                     case "outline":
@@ -148,6 +152,13 @@ internal static class Th2LineRules
         foreach (var o in line.Options.Options) yield return (o, o.Span);
         foreach (var v in line.Vertices)
             foreach (var o in v.Options.Options) yield return (o, o.Span);
+    }
+
+    private static bool AnyVertexSubtype(LineObject line, string subtype)
+    {
+        foreach (var v in line.Vertices)
+            if (Eq(v.Options.Subtype ?? "", subtype)) return true;
+        return false;
     }
 
     private static void EnumValue(

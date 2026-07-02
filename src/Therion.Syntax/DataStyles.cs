@@ -57,7 +57,7 @@ public static class DataStyles
             "counter", "fromcount", "tocount", "count", "fromcounter", "tocounter",
             "northing", "easting", "altitude",
             "up", "ceiling", "down", "floor", "left", "right",
-            "dx", "dy", "dz", "x", "y", "z", "position",
+            "dx", "dy", "dz", "x", "y", "z", "position", "gps",
             "newline", "direction", "ignore", "ignoreall");
 
     /// <summary>Readings that do not consume a value column (interleaved/markers).</summary>
@@ -127,7 +127,7 @@ public static class DataStyles
         NewlinePosition,
         /// <summary>Style-required readings absent ("not all data for given style").</summary>
         Incomplete,
-        /// <summary>More than 22 readings (THDATA_MAX_ITEMS).</summary>
+        /// <summary>More than 21 readings (THDATA_MAX_ITEMS counts the style token too).</summary>
         TooManyReadings,
     }
 
@@ -135,7 +135,9 @@ public static class DataStyles
     /// reading's position in the list (-1 for order-wide problems).</summary>
     public readonly record struct OrderProblem(OrderProblemKind Kind, int Index, string Message);
 
-    private const int MaxItems = 22; // THDATA_MAX_ITEMS
+    // THDATA_MAX_ITEMS is 22, but thdata.cxx:1048 compares `nargs > THDATA_MAX_ITEMS` where
+    // nargs INCLUDES the style token — so at most 21 readings may follow `data <style>`.
+    private const int MaxReadings = 21;
 
     /// <summary>Maps reading aliases onto the canonical name (thtt_dataleg_comp value groups).</summary>
     public static string CanonicalReading(string reading) => reading.ToLowerInvariant() switch
@@ -154,6 +156,7 @@ public static class DataStyles
         "dx" => "easting",
         "dy" => "northing",
         "dz" => "altitude",
+        "gps" => "position",
         var c => c,
     };
 
@@ -169,9 +172,9 @@ public static class DataStyles
         if (style == DataStyle.Topofil) style = DataStyle.Normal; // alias (thtt_datatype)
 
         var problems = ImmutableArray.CreateBuilder<OrderProblem>();
-        if (readings.Length > MaxItems)
+        if (readings.Length > MaxReadings)
             problems.Add(new(OrderProblemKind.TooManyReadings, -1,
-                $"Too many readings ({readings.Length}); Therion allows at most {MaxItems}."));
+                $"Too many readings ({readings.Length}); Therion allows at most {MaxReadings}."));
 
         var seen = new HashSet<string>(StringComparer.Ordinal);
         bool station = false, from = false, to = false, newline = false;
@@ -248,9 +251,35 @@ public static class DataStyles
             problems.Add(new(OrderProblemKind.Incomplete, -1,
                 $"Not all data for the '{style.ToString().ToLowerInvariant()}' style: missing {missing}."));
 
+        // Interleaved orders (station + newline): non-interleaved readings must come AFTER
+        // the newline (thdata.cxx:1551 second pass — "non-interleaved data before newline").
+        if (station && newline)
+        {
+            for (int i = 0; i < readings.Length; i++)
+            {
+                var canon = CanonicalReading(readings[i]);
+                if (canon == "newline") break;
+                if (NonInterleavedReadings.Contains(canon))
+                    problems.Add(new(OrderProblemKind.InterleavedMix, i,
+                        $"Non-interleaved reading '{readings[i]}' cannot appear before 'newline' in interleaved data."));
+            }
+        }
+
         // from/to|station presence is the parser's TH0036 (ThParser.ParseData) — not re-checked here.
         return problems.ToImmutable();
     }
+
+    /// <summary>
+    /// thdata.cxx:1551 second-pass list (canonical names): readings that carry per-shot data and
+    /// therefore belong after <c>newline</c> in interleaved orders. <c>from</c>/<c>to</c> are in
+    /// the source list too but can never coexist with <c>station</c> (the mix rule fires first),
+    /// so they are omitted here to avoid double-flagging.
+    /// </summary>
+    private static readonly ImmutableHashSet<string> NonInterleavedReadings =
+        ImmutableHashSet.Create(StringComparer.Ordinal,
+            "direction", "length", "backlength", "bearing", "backbearing",
+            "gradient", "backgradient", "fromcount", "tocount", "fromdepth", "todepth",
+            "depthchange", "northing", "easting", "altitude", "x", "y", "z");
 
     /// <summary>Per-style reading validity (thdata.cxx set_data_data switch; canonical names).</summary>
     private static bool IsReadingValidForStyle(string canon, DataStyle style) => canon switch

@@ -52,6 +52,23 @@ public class Th2LineRulesTests
     public void Invalid_line_subtypes_are_flagged(string head) =>
         Assert.True(Has(Parse($"{head}\n 1 2\n 3 4\nendline"), DiagnosticCodes.Th2UnknownSubtype));
 
+    // REVIEW F11: wall:pit may be declared mid-line (`subtype pit` body option); -height is
+    // then legal exactly as with a header subtype.
+    [Theory]
+    [InlineData("line wall:pit -height 5")]
+    [InlineData("line wall\n 1 2\n subtype pit\n 3 4\n height 5\nendline")]
+    public void Wall_pit_height_is_ok_wherever_the_subtype_is_declared(string body)
+    {
+        var d = Parse(body.Contains("endline") ? body : $"{body}\n 1 2\n 3 4\nendline");
+        Assert.False(Has(d, DiagnosticCodes.OptionNotValidInContext),
+            string.Join("; ", d.Select(x => $"{x.Code}:{x.Message}")));
+    }
+
+    [Fact]
+    public void Height_on_plain_wall_is_flagged() =>
+        Assert.True(Has(Parse("line wall -height 5\n 1 2\n 3 4\nendline"),
+            DiagnosticCodes.OptionNotValidInContext));
+
     // ---- per-type option validity (TH0066) ----------------------------------------------------
 
     [Theory]

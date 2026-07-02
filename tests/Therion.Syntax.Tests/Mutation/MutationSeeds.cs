@@ -41,6 +41,7 @@ public static class MutationSeeds
 
     public const string Thconfig = """
         source main.th
+        log extend
         layout base
           scale 1 500
         endlayout

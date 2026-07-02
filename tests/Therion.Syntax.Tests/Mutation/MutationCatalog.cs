@@ -143,6 +143,31 @@ public static class MutationCatalog
                 (src, _) => ReplaceOnce(src, "scrap s1 -projection plan",
                     "scrap s1 -projection plan -flip diagonal"))),
 
+            // --- Tier 1: review-fix batch (REVIEW.md F1–F5) ------------------------------
+            ("thconfig", new SyntaxMutation(
+                "thconfig-enum-case-mismatch", "right keyword, wrong case (Therion is case-sensitive)",
+                MutationTier.Tier1, DiagnosticCodes.KeywordCaseMismatch,
+                (src, _) => ReplaceOnce(src, "log extend", "log Extend"))),
+
+            ("th", new SyntaxMutation(
+                "th-too-many-readings", "pad the order to 22 readings (max 21 — style counts into THDATA_MAX_ITEMS)",
+                MutationTier.Tier1, DiagnosticCodes.TooManyArguments,
+                (src, _) => ReplaceOnce(src, "data normal from to length compass clino",
+                    "data normal from to length compass clino" +
+                    string.Concat(System.Linq.Enumerable.Repeat(" ignore", 17))))),
+
+            ("th", new SyntaxMutation(
+                "th-noninterleaved-before-newline", "shot reading before newline in interleaved data",
+                MutationTier.Tier1, DiagnosticCodes.InterleavedMix,
+                (src, _) => ReplaceOnce(src, "data normal from to length compass clino",
+                    "data normal station length newline compass clino"))),
+
+            ("thconfig", new SyntaxMutation(
+                "thconfig-text-two-args", "text needs exactly <language> <text> <translation>",
+                MutationTier.Tier1, DiagnosticCodes.MissingRequiredArgument,
+                (src, _) => ReplaceOnce(src, "select main",
+                    "select main\ntext sk \"Cave\""))),
+
             // --- Tier 2: probably invalid (random, position-seeded) --------------------
             ("th", new SyntaxMutation(
                 "th-random-digit-corruption", "replace one random digit with 'x'",

@@ -127,9 +127,10 @@ public static class ThSchema
             P("station", V(SchemaValueKind.StationRef)),
             P("x", V(SchemaValueKind.Coord)), P("y", V(SchemaValueKind.Coord)),
             P("z", ValueSpec.Number),
-            P("sd-1", new ValueSpec(SchemaValueKind.Number, Range: new NumericRange(0, null)), required: false),
-            P("sd-2", new ValueSpec(SchemaValueKind.Number, Range: new NumericRange(0, null)), required: false),
-            P("sd-3", new ValueSpec(SchemaValueKind.Number, Range: new NumericRange(0, null)), required: false)),
+            // src: "standard deviation must be positive" — strictly > 0 (set_data_fix).
+            P("sd-1", new ValueSpec(SchemaValueKind.Number, Range: NumericRange.Positive), required: false),
+            P("sd-2", new ValueSpec(SchemaValueKind.Number, Range: NumericRange.Positive), required: false),
+            P("sd-3", new ValueSpec(SchemaValueKind.Number, Range: NumericRange.Positive), required: false)),
         CL("equate",
             P("station", V(SchemaValueKind.StationRef)),
             P("station-2", V(SchemaValueKind.StationRef)),

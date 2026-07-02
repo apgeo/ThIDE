@@ -19,7 +19,9 @@ namespace Therion.Syntax.Schema;
 public static class SchemaValidator
 {
     /// <summary>Special values Therion accepts where a reading may be missing/unbounded
-    /// (thparse.h thtt_special_val — exact spellings, case-sensitive).</summary>
+    /// (thparse.h thtt_special_val — exact spellings, case-sensitive). Deliberately a SUBSET:
+    /// the source table also has <c>all</c>/<c>off</c>, which are only meaningful in specific
+    /// contexts (e.g. layout <c>survey-level</c>) and are handled there, not as generic specials.</summary>
     public static readonly ImmutableHashSet<string> SpecialValues =
         ImmutableHashSet.Create(StringComparer.Ordinal,
             "-", ".", "nan", "NAN", "NaN", "Inf", "inf", "INF",
@@ -110,9 +112,8 @@ public static class SchemaValidator
         if (options.IsCategoryEnabled(ValidationCategories.Arity))
             CheckArity(args.Count, schema, cmd.Span, diagnostics);
 
-        int n = Math.Min(args.Count, schema.Positional.Length);
-        for (int i = 0; i < n; i++)
-            CheckValue(args[i], schema.Positional[i], cmd.Span, options, diagnostics, mode);
+        foreach (var (argIndex, param) in MapPositionals(args.Count, schema.Positional))
+            CheckValue(args[argIndex], param, cmd.Span, options, diagnostics, mode);
 
         if (!options.IsCategoryEnabled(ValidationCategories.Options)) return;
         foreach (var (name, firstValue) in opts)
@@ -130,6 +131,45 @@ public static class SchemaValidator
                 CheckValue(firstValue, spec.Values[0], cmd.Span, options, diagnostics, mode);
             }
         }
+    }
+
+    /// <summary>
+    /// Pairs each positional argument index with the <see cref="ParamSpec"/> it belongs to.
+    /// Honours one <see cref="ParamSpec.Repeated"/> parameter: params before it map from the
+    /// left, params after it map from the right (Therion parses greedy tails, e.g.
+    /// <c>mark &lt;station&gt;… &lt;type&gt;</c> where the TYPE is always the LAST argument),
+    /// and the repeated param absorbs the middle. When any param after the repeated one is
+    /// optional the tail alignment is ambiguous (e.g. <c>units &lt;qty&gt;… [factor] unit</c>) —
+    /// only the head is mapped then, so no value is ever checked against the wrong spec.
+    /// </summary>
+    public static IEnumerable<(int ArgIndex, ParamSpec Param)> MapPositionals(
+        int argCount, ImmutableArray<ParamSpec> positional)
+    {
+        int rep = -1;
+        for (int i = 0; i < positional.Length; i++)
+            if (positional[i].Repeated) { rep = i; break; }
+
+        if (rep < 0)
+        {
+            int n = Math.Min(argCount, positional.Length);
+            for (int i = 0; i < n; i++) yield return (i, positional[i]);
+            yield break;
+        }
+
+        int head = Math.Min(rep, argCount);
+        for (int i = 0; i < head; i++) yield return (i, positional[i]);
+
+        bool tailReliable = true;
+        for (int i = rep + 1; i < positional.Length; i++)
+            if (!positional[i].Required) { tailReliable = false; break; }
+        if (!tailReliable) yield break;
+
+        int tail = positional.Length - rep - 1;
+        int tailStart = Math.Max(argCount - tail, head);
+        for (int i = tailStart; i < argCount; i++)
+            yield return (i, positional[rep + 1 + (i - tailStart)]);
+        for (int i = head; i < tailStart; i++)
+            yield return (i, positional[rep]);
     }
 
     /// <summary>Resolves an option by name/alias, searching the command's own options
@@ -200,13 +240,14 @@ public static class SchemaValidator
                 {
                     diagnostics.Add(Diagnostic.Create(
                         DiagnosticCodes.ValueOutOfRange, DiagnosticSeverity.Warning,
-                        $"<{param.Name}> value {value} is outside [{range.Min?.ToString(CultureInfo.InvariantCulture) ?? "-∞"}, {range.Max?.ToString(CultureInfo.InvariantCulture) ?? "∞"}].",
+                        $"<{param.Name}> value {value.ToString(CultureInfo.InvariantCulture)} is outside {range}.",
                         span));
                 }
                 return;
 
             case SchemaValueKind.Enum when spec.Enum is { } table:
-                CheckEnum(token, table, param.Name, span, options, diagnostics, mode);
+                CheckEnum(token, table, param.Name, span, options, diagnostics, mode,
+                    warnOnCaseMismatch: spec.CaseSensitive);
                 return;
 
             case SchemaValueKind.Bool:
@@ -247,21 +288,27 @@ public static class SchemaValidator
         string token, ImmutableHashSet<string> table, string paramName, SourceSpan span,
         SchemaValidationOptions options,
         ImmutableArray<Diagnostic>.Builder diagnostics,
-        ParserMode mode)
+        ParserMode mode,
+        bool warnOnCaseMismatch = true)
     {
         if (!options.IsCategoryEnabled(ValidationCategories.Enums)) return;
-        if (table.Contains(token)) return; // exact (tables are built ordinal — Therion matches case-sensitively)
 
-        // Case-insensitive rescue: right word, wrong case → the lighter case diagnostic.
+        // Most of our tables are OrdinalIgnoreCase, so Contains() alone would swallow wrong-case
+        // spellings that Therion's thmatch_token rejects (spec §2.1). TryGetValue hands back the
+        // STORED spelling, letting us confirm the exact case behind the insensitive hit.
+        if (table.TryGetValue(token, out var stored))
+        {
+            if (!string.Equals(stored, token, StringComparison.Ordinal))
+                ReportCaseMismatch(token, stored, span, options, diagnostics, warnOnCaseMismatch);
+            return;
+        }
+
+        // Ordinal tables (Bool/OnOffAuto) miss on wrong case — rescue by scanning.
         foreach (var entry in table)
         {
             if (string.Equals(entry, token, StringComparison.OrdinalIgnoreCase))
             {
-                if (options.IsCategoryEnabled(ValidationCategories.CaseSensitivity))
-                    diagnostics.Add(Diagnostic.Create(
-                        DiagnosticCodes.KeywordCaseMismatch, DiagnosticSeverity.Info,
-                        $"'{token}' should be spelled '{entry}' (Therion keywords are case-sensitive).",
-                        span));
+                ReportCaseMismatch(token, entry, span, options, diagnostics, warnOnCaseMismatch);
                 return;
             }
         }
@@ -270,6 +317,22 @@ public static class SchemaValidator
             DiagnosticCodes.ValueTypeMismatch,
             mode == ParserMode.Strict ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
             $"'{token}' is not a valid value for <{paramName}>.", span));
+    }
+
+    private static void ReportCaseMismatch(
+        string token, string stored, SourceSpan span,
+        SchemaValidationOptions options,
+        ImmutableArray<Diagnostic>.Builder diagnostics,
+        bool warnOnCaseMismatch)
+    {
+        // warnOnCaseMismatch = false marks tables Therion matches with thcasematch_token
+        // (genuinely case-insensitive), where a differing spelling is not a defect.
+        if (!warnOnCaseMismatch || !options.IsCategoryEnabled(ValidationCategories.CaseSensitivity))
+            return;
+        diagnostics.Add(Diagnostic.Create(
+            DiagnosticCodes.KeywordCaseMismatch, DiagnosticSeverity.Info,
+            $"'{token}' should be spelled '{stored}' (Therion keywords are case-sensitive).",
+            span));
     }
 
     private static NumericRange? DefaultRange(SchemaValueKind kind) => kind switch

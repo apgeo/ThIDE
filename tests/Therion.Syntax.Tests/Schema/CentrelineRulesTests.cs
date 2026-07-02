@@ -77,6 +77,47 @@ public class CentrelineRulesTests
         Assert.True(Has(Parse("data normal from to length compass"),
             DiagnosticCodes.IncompleteDataOrder));
 
+    // REVIEW F3: non-interleaved readings must come AFTER newline in interleaved orders
+    // (thdata.cxx:1551 "non-interleaved data before newline").
+    [Fact]
+    public void Noninterleaved_reading_before_newline_is_flagged() =>
+        Assert.True(Has(Parse("data normal station length newline bearing gradient"),
+            DiagnosticCodes.InterleavedMix));
+
+    [Fact]
+    public void Interleaved_order_with_data_after_newline_is_ok() =>
+        Assert.False(Has(Parse("data normal station newline length bearing gradient"),
+            DiagnosticCodes.InterleavedMix));
+
+    // REVIEW F2: THDATA_MAX_ITEMS(22) counts the style token — at most 21 readings.
+    [Fact]
+    public void Twenty_two_readings_are_flagged()
+    {
+        var order = "data normal from to length compass clino" + string.Concat(
+            System.Linq.Enumerable.Repeat(" ignore", 17));   // 5 + 17 = 22 readings
+        Assert.True(Has(Parse(order), DiagnosticCodes.TooManyArguments));
+    }
+
+    [Fact]
+    public void Twenty_one_readings_are_ok()
+    {
+        var order = "data normal from to length compass clino" + string.Concat(
+            System.Linq.Enumerable.Repeat(" ignore", 16));   // 5 + 16 = 21 readings
+        Assert.False(Has(Parse(order), DiagnosticCodes.TooManyArguments));
+    }
+
+    // REVIEW F8: `gps` ≡ `position` (thtt_dataleg_comp) — a quantity keyword, never a data
+    // reading; both spellings take the same invalid-for-style route (no TH0034).
+    [Theory]
+    [InlineData("data normal from to gps length compass clino")]
+    [InlineData("data normal from to position length compass clino")]
+    public void Position_and_its_gps_alias_are_invalid_readings(string dataLine)
+    {
+        var diags = Parse(dataLine);
+        Assert.True(Has(diags, DiagnosticCodes.InvalidReadingForStyle), Dump(diags));
+        Assert.False(Has(diags, DiagnosticCodes.UnknownDataReading), Dump(diags));
+    }
+
     // ---- fix arity + std deviations (spec §5.2: 4–7 args, sds > 0) --------------------
 
     [Theory]

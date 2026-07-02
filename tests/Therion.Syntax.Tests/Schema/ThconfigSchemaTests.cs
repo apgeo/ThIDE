@@ -52,6 +52,40 @@ public class ThconfigSchemaTests
         Assert.False(Has(Parse("language en # slo not yet supported"),
             DiagnosticCodes.TooManyArguments));
 
+    // ---- exact arities from thconfig.cxx (REVIEW F4/F5) ------------------------------------
+
+    [Fact]
+    public void System_takes_exactly_one_argument()   // "single system command expected"
+    {
+        Assert.True(Has(Parse("system convert map.png"), DiagnosticCodes.TooManyArguments));
+        Assert.False(Has(Parse("system \"convert map.png\""), DiagnosticCodes.TooManyArguments));
+    }
+
+    [Theory]
+    [InlineData("text sk \"Cave\"", DiagnosticCodes.MissingRequiredArgument)]
+    [InlineData("text sk \"Cave\" \"Jaskyna\" extra", DiagnosticCodes.TooManyArguments)]
+    public void Text_takes_exactly_three_arguments(string line, string code) =>
+        Assert.True(Has(Parse(line), code));   // "should be: text <language> <text> <translation>"
+
+    [Fact]
+    public void Text_with_three_arguments_is_ok()
+    {
+        var d = Parse("text sk \"Cave\" \"Jaskyna\"");
+        Assert.False(Has(d, DiagnosticCodes.MissingRequiredArgument), Dump(d));
+        Assert.False(Has(d, DiagnosticCodes.TooManyArguments), Dump(d));
+    }
+
+    // ---- keyword case (REVIEW F1: TH0067 must fire through OrdinalIgnoreCase tables) ---------
+
+    [Fact]
+    public void Wrong_case_enum_value_is_info_case_mismatch()
+    {
+        var d = Parse("log EXTEND");
+        var mismatch = d.Single(x => x.Code.Value == DiagnosticCodes.KeywordCaseMismatch);
+        Assert.Equal(DiagnosticSeverity.Info, mismatch.Severity);
+        Assert.False(Has(d, DiagnosticCodes.ValueTypeMismatch), Dump(d));
+    }
+
     // ---- corrected export formats (spec §7 / thexp*.h tables) ---------------------------------
 
     [Theory]

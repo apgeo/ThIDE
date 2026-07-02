@@ -72,33 +72,52 @@ public enum IdentifierCharset
     Index,
 }
 
-/// <summary>An inclusive numeric range constraint.</summary>
-public sealed record NumericRange(double? Min, double? Max)
+/// <summary>A numeric range constraint; bounds are inclusive unless marked exclusive.</summary>
+public sealed record NumericRange(
+    double? Min, double? Max, bool MinExclusive = false, bool MaxExclusive = false)
 {
     public static readonly NumericRange NonNegative = new(0, null);
-    public static readonly NumericRange Angle = new(0, 360);
+    /// <summary>[0, 360) — Therion's orientation check is strictly &lt; 360 (thpoint.cxx).</summary>
+    public static readonly NumericRange Angle = new(0, 360, MaxExclusive: true);
     public static readonly NumericRange Clino = new(-90, 90);
     public static readonly NumericRange Percent = new(0, 200);
+    /// <summary>(0, ∞) — e.g. fix standard deviations ("standard deviation must be positive").</summary>
+    public static readonly NumericRange Positive = new(0, null, MinExclusive: true);
 
-    public bool Contains(double v) => (Min is not { } lo || v >= lo) && (Max is not { } hi || v <= hi);
+    public bool Contains(double v) =>
+        (Min is not { } lo || (MinExclusive ? v > lo : v >= lo)) &&
+        (Max is not { } hi || (MaxExclusive ? v < hi : v <= hi));
+
+    /// <summary>Human-readable interval, e.g. <c>[0, 360)</c>.</summary>
+    public override string ToString()
+    {
+        var lo = Min?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "-∞";
+        var hi = Max?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "∞";
+        return $"{(MinExclusive ? '(' : '[')}{lo}, {hi}{(MaxExclusive ? ')' : ']')}";
+    }
 }
 
 /// <summary>
 /// Full description of one accepted value: its kind plus the applicable
 /// enum table / charset / range refinement.
 /// </summary>
+/// <param name="CaseSensitive">
+/// Whether Therion matches this enum table case-sensitively (<c>thmatch_token</c> — the norm,
+/// spec §2.1), making a wrong-case spelling worth a TH0067 Info. Set <c>false</c> only for the
+/// few tables matched with <c>thcasematch_token</c>, where case genuinely does not matter.
+/// </param>
 public sealed record ValueSpec(
     SchemaValueKind Kind,
     ImmutableHashSet<string>? Enum = null,
     IdentifierCharset? Charset = null,
     NumericRange? Range = null,
-    bool CaseSensitive = false)
+    bool CaseSensitive = true)
 {
     public static readonly ValueSpec Free = new(SchemaValueKind.Free);
     public static readonly ValueSpec Number = new(SchemaValueKind.Number);
     public static readonly ValueSpec String = new(SchemaValueKind.String);
 
-    public static ValueSpec OfEnum(ImmutableHashSet<string> table, bool caseSensitive = false) =>
+    public static ValueSpec OfEnum(ImmutableHashSet<string> table, bool caseSensitive = true) =>
         new(SchemaValueKind.Enum, Enum: table, CaseSensitive: caseSensitive);
 
     public static ValueSpec Id(IdentifierCharset charset = IdentifierCharset.ExtKeyword) =>

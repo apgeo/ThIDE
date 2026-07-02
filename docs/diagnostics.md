@@ -62,14 +62,15 @@ see `.claude/therion-syntax/PLAN.md`. Toggleable per category/section via
 | `TH0064` | Warning | Command has more arguments than allowed. | `SchemaValidator` |
 | `TH0065` | lenient | Argument/option value fails its declared type or enum. | `SchemaValidator` |
 | `TH0066` | lenient | Option not valid for this object type (e.g. `-text` on a non-label point; per-type matrix from thpoint.cxx). | `Th2PointRules` |
-| `TH0067` | Info | Right keyword, wrong case (Therion matches case-sensitively). | `SchemaValidator` |
+| `TH0067` | Info | Right keyword, wrong case (Therion's `thmatch_token` is case-sensitive). Fires for every schema enum table — the stored spelling is recovered even through our case-insensitive lookups; tables Therion matches with `thcasematch_token` opt out via `ValueSpec.CaseSensitive = false`. | `SchemaValidator` |
 | `TH0068` | Warning | Not a number nor a special value (`-` `.` NaN Inf up down). | `SchemaValidator` |
 | `TH0069` | Warning | Numeric value outside the schema's range (vthreshold 0–90, fix sd > 0, …). | `SchemaValidator`, `ThCentrelineRules` |
 
 `ThCentrelineRules` (typed centreline nodes; section `centreline`) also emits: `TH0064` (fix > 7
-args, extend > 3 stations, > 22 readings), `TH0065` (unknown team role / instrument quantity,
-sd/units length↔angle class mix), `TH0042` (numeric declination without units), `TH0055`
-(direct `fixed` flag; `explored` without `continuation`).
+args, extend > 3 stations, > 21 readings — `THDATA_MAX_ITEMS` is 22 but counts the style token),
+`TH0065` (unknown team role / instrument quantity, sd/units length↔angle class mix), `TH0042`
+(numeric declination without units), `TH0055` (direct `fixed` flag; `explored` without
+`continuation`).
 
 ### `data <style> <readings>` order validation (`ThCentrelineRules`, lenient)
 
@@ -79,7 +80,7 @@ sd/units length↔angle class mix), `TH0042` (numeric declination without units)
 | `TH0071` | lenient | Reading listed twice (aliases count: `tape` ≡ `length`). | `DataStyles.ValidateOrder` |
 | `TH0072` | lenient | "Not all data for given style" — required readings absent. | `DataStyles.ValidateOrder` |
 | `TH0073` | lenient | `newline` cannot be the first or last reading. | `DataStyles.ValidateOrder` |
-| `TH0074` | lenient | `station` mixed with `from`/`to`, or interleaved reading after `newline`. | `DataStyles.ValidateOrder` |
+| `TH0074` | lenient | `station` mixed with `from`/`to`; interleaved reading after `newline`; or a non-interleaved (shot) reading before `newline` in interleaved data. | `DataStyles.ValidateOrder` |
 
 ## Semantics (`TH_SEM_xxx`)
 
