@@ -120,6 +120,29 @@ public static class MutationCatalog
                 MutationTier.Tier1, DiagnosticCodes.OptionNotValidInContext,
                 (src, _) => ReplaceOnce(src, "station -name 1", "station -name 1 -orientation 90"))),
 
+            // --- Tier 1: C5–C7 rules (thconfig/layout/export/date) ----------------------
+            ("th", new SyntaxMutation(
+                "th-invalid-date-month", "month 13 in the survey date",
+                MutationTier.Tier1, DiagnosticCodes.ValueTypeMismatch,
+                (src, _) => ReplaceOnce(src, "date 2020.01.02", "date 2020.13.02"))),
+
+            ("thconfig", new SyntaxMutation(
+                "thconfig-invalid-layout-value", "grid takes bottom/off/top only",
+                MutationTier.Tier1, DiagnosticCodes.ValueTypeMismatch,
+                (src, _) => ReplaceOnce(src, "scale 1 500", "grid sideways"))),
+
+            ("thconfig", new SyntaxMutation(
+                "thconfig-invalid-wall-source", "-wall-source takes centreline/maps/scans/splays/all",
+                MutationTier.Tier1, DiagnosticCodes.ValueTypeMismatch,
+                (src, _) => ReplaceOnce(src, "export model -fmt loch",
+                    "export model -fmt loch -wall-source everything"))),
+
+            ("th2", new SyntaxMutation(
+                "th2-invalid-scrap-flip", "-flip takes none/horizontal/vertical",
+                MutationTier.Tier1, DiagnosticCodes.ValueTypeMismatch,
+                (src, _) => ReplaceOnce(src, "scrap s1 -projection plan",
+                    "scrap s1 -projection plan -flip diagonal"))),
+
             // --- Tier 2: probably invalid (random, position-seeded) --------------------
             ("th", new SyntaxMutation(
                 "th-random-digit-corruption", "replace one random digit with 'x'",

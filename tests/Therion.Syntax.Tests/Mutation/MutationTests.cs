@@ -57,4 +57,37 @@ public class MutationTests
                 $"({seedDiags.Length} → {mutantDiags.Length}).");
         }
     }
+
+    // D2 (user aim: tests with validation parts disabled): with the master switch off, NO
+    // schema-pass diagnostic may appear on any mutant — proving the pass is fully skippable.
+    private static readonly string[] SchemaPassCodes =
+    {
+        DiagnosticCodes.MissingRequiredArgument, DiagnosticCodes.TooManyArguments,
+        DiagnosticCodes.ValueTypeMismatch, DiagnosticCodes.OptionNotValidInContext,
+        DiagnosticCodes.KeywordCaseMismatch, DiagnosticCodes.InvalidSpecialValue,
+        DiagnosticCodes.ValueOutOfRange,
+        DiagnosticCodes.InvalidReadingForStyle, DiagnosticCodes.DuplicateReading,
+        DiagnosticCodes.IncompleteDataOrder, DiagnosticCodes.InvalidNewlinePosition,
+        DiagnosticCodes.InterleavedMix, DiagnosticCodes.Th2UnknownSubtype,
+    };
+
+    [Theory]
+    [MemberData(nameof(MutationCatalog.Cases), MemberType = typeof(MutationCatalog))]
+    public void Schema_pass_is_fully_skippable(string seedId, string mutationId)
+    {
+        var (ext, seedText) = MutationSeeds.ById[seedId];
+        var mutation = MutationCatalog.Get(mutationId);
+        var mutated = mutation.Apply(seedText, RngFor(seedId, mutationId));
+        if (mutated is null) return;
+
+        var off = new ParserOptions(Validation: Therion.Syntax.Schema.SchemaValidationOptions.Off);
+        var diags = ext switch
+        {
+            ".th" => new ThParser().Parse("/mut/a.th", mutated, off).Diagnostics,
+            ".th2" => new Th2Parser().Parse("/mut/a.th2", mutated, off).Diagnostics,
+            _ => new ThconfigParser().Parse("/mut/a.thconfig", mutated, off).Diagnostics,
+        };
+        foreach (var d in diags)
+            Assert.DoesNotContain(d.Code.Value, SchemaPassCodes);
+    }
 }
