@@ -48,6 +48,15 @@ public static class DiagnosticCodes
     public const string UnknownExportFormat      = "TH0061";  // export … -fmt invalid for <type>
     public const string UnknownLayoutOption      = "TH0062";  // layout body option key
 
+    // -- schema-driven validation (SchemaValidator, syntax-coverage effort) --
+    public const string MissingRequiredArgument  = "TH0063";  // fewer args than schema MinArgs
+    public const string TooManyArguments         = "TH0064";  // more args than schema MaxArgs
+    public const string ValueTypeMismatch        = "TH0065";  // arg/option value fails its ValueSpec
+    public const string OptionNotValidInContext  = "TH0066";  // option not valid for command/type
+    public const string KeywordCaseMismatch      = "TH0067";  // right keyword, wrong case
+    public const string InvalidSpecialValue      = "TH0068";  // not a number nor -,.,NaN,Inf,up,down
+    public const string ValueOutOfRange          = "TH0069";  // numeric value outside schema range
+
     // -- XVI (Therion `set XVI*` Tcl export format) -----------------------
     public const string XviUnknownVariable       = "TH_XVI_001";  // unknown `set XVI…` variable
     public const string XviUnexpectedStatement   = "TH_XVI_002";  // non-`set` top-level content

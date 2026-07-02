@@ -1,4 +1,4 @@
-// Implementation Plan §4.2 (Parser modes), Decision #2.
+// Implementation Plan ï¿½4.2 (Parser modes), Decision #2.
 
 namespace Therion.Syntax;
 
@@ -19,7 +19,12 @@ public enum ParserMode
 public sealed record ParserOptions(
     ParserMode Mode = ParserMode.Lenient,
     Therion.Core.TherionSyntaxVersion? Version = null,
-    bool PreserveTrivia = true)
+    bool PreserveTrivia = true,
+    Schema.SchemaValidationOptions? Validation = null)
 {
     public static ParserOptions Default { get; } = new();
+
+    /// <summary>Effective schema-validation toggles (defaults to everything enabled).</summary>
+    public Schema.SchemaValidationOptions EffectiveValidation =>
+        Validation ?? Schema.SchemaValidationOptions.Default;
 }

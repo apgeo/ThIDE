@@ -50,6 +50,22 @@
 | `TH0061` | lenient | `-fmt` value invalid for the export type. | `ThconfigParser` |
 | `TH0062` | lenient | Unknown layout option key. | `LayoutBodyParser` (`.th` + `.thconfig`) |
 
+### Schema-driven validation (`SchemaValidator`, syntax-coverage effort)
+
+Emitted by the declarative schema pass (`Therion.Syntax/Schema/`); populated incrementally —
+see `.claude/therion-syntax/PLAN.md`. Toggleable per category/section via
+`ParserOptions.Validation` (`SchemaValidationOptions`); perf notes in `.claude/therion-syntax/PERF.md`.
+
+| Code | Severity | Message | Source |
+|---|---|---|---|
+| `TH0063` | Error | Command has fewer arguments than required. | `SchemaValidator` |
+| `TH0064` | Warning | Command has more arguments than allowed. | `SchemaValidator` |
+| `TH0065` | lenient | Argument/option value fails its declared type or enum. | `SchemaValidator` |
+| `TH0066` | Warning | _(reserved)_ Option not valid for this command/type. | `SchemaValidator` |
+| `TH0067` | Info | Right keyword, wrong case (Therion matches case-sensitively). | `SchemaValidator` |
+| `TH0068` | Warning | Not a number nor a special value (`-` `.` NaN Inf up down). | `SchemaValidator` |
+| `TH0069` | Warning | Numeric value outside the schema's range. | `SchemaValidator` |
+
 ## Semantics (`TH_SEM_xxx`)
 
 | Code | Severity | Message | Source |

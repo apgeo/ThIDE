@@ -51,6 +51,9 @@ public sealed class ThParser
         var file = new TherionFile(fileSpan, filePath, children,
             options.Version ?? TherionSyntaxVersion.Default);
 
+        Schema.SchemaValidator.Validate(file, Schema.SchemaContext.ThTopLevel,
+            options.EffectiveValidation, Schema.SchemaRegistry.Default, diagnostics, options.Mode);
+
         return new ParseResult<TherionFile>(file, diagnostics.ToImmutable());
     }
 

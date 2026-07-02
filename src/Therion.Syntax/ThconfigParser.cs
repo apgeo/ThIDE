@@ -165,6 +165,9 @@ public sealed class ThconfigParser
             children.ToImmutable(),
             options.Version ?? TherionSyntaxVersion.Default);
 
+        Schema.SchemaValidator.Validate(file, Schema.SchemaContext.Thconfig,
+            options.EffectiveValidation, Schema.SchemaRegistry.Default, diagnostics, options.Mode);
+
         return new ParseResult<TherionFile>(file, diagnostics.ToImmutable());
     }
 
