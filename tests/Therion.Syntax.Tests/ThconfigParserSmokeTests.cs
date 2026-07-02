@@ -11,7 +11,7 @@ public class ThconfigParserSmokeTests
             # sample project
             source cave.th
             layout default
-            export model -fmt lox -o cave.lox
+            export model -fmt loch -o cave.lox
             """;
 
         var parser = new ThconfigParser();

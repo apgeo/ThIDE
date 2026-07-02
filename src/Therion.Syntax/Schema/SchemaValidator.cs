@@ -333,6 +333,10 @@ public static class SchemaValidator
                 token = raw[start..i];
             }
 
+            // Raw argument text may keep a trailing `# comment` (round-trip fidelity) —
+            // everything from an unquoted '#' on is not arguments.
+            if (token[0] == '#') break;
+
             // A dash-word is an option name (Therion lexing): declared or not. Negative
             // numbers and special values (`-Inf`) stay positional; identifiers can't
             // legally start with '-' (spec §2.2), so this doesn't eat positionals.

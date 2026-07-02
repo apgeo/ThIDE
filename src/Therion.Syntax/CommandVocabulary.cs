@@ -50,15 +50,19 @@ public static class CommandVocabulary
     /// <summary>True if <paramref name="t"/> is a valid <c>export</c> type.</summary>
     public static bool IsExportType(string t) => ExportTypes.Contains(t);
 
-    // Per-type `-fmt` values (thbook §export + the loch/lox and esri/shp aliases Therion accepts).
+    // Per-type `-fmt` values — exactly the Therion 6.4 source tables (B5-verified):
+    // thexpmodel.h:127, thexpmap.h:113, thexptable.h:89, thexpdb.h:76. The previous lists
+    // had phantom lox/plt/wrl (compiler rejects them) and missed th2/shapefile(s)/text.
     private static readonly ImmutableHashSet<string> ModelFormats =
         ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase,
-            "loch", "lox", "compass", "plt", "survex", "3d", "dxf", "esri", "shp", "vrml", "wrl", "3dmf", "kml");
+            "3d", "3dmf", "compass", "dxf", "esri", "kml", "loch",
+            "shapefile", "shapefiles", "shp", "survex", "vrml");
     private static readonly ImmutableHashSet<string> MapFormats =
         ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase,
-            "pdf", "svg", "xhtml", "survex", "dxf", "esri", "shp", "kml", "xvi", "bbox");
+            "bbox", "dxf", "esri", "kml", "pdf", "shapefile", "shapefiles", "shp",
+            "survex", "svg", "th2", "xhtml", "xvi");
     private static readonly ImmutableHashSet<string> ListFormats =
-        ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, "html", "txt", "kml", "dbf");
+        ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, "dbf", "html", "kml", "text", "txt");
     private static readonly ImmutableHashSet<string> DatabaseFormats =
         ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, "sql", "csv");
 
