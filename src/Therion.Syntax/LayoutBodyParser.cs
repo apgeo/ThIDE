@@ -51,13 +51,16 @@ public static class LayoutBodyParser
             if (string.Equals(key, "endcode", StringComparison.OrdinalIgnoreCase)) continue;
 
             var value = bl.Tokens.Length > 1 ? JoinTokenText(bl.Tokens, 1) : string.Empty;
-            optionsB.Add(new LayoutOption(bl.Span, key, value));
+            var option = new LayoutOption(bl.Span, key, value);
+            optionsB.Add(option);
 
             if (diagnostics is not null && !LayoutKeywords.IsKnown(key))
                 diagnostics.Add(Diagnostic.Create(
                     DiagnosticCodes.UnknownLayoutOption,
                     (options?.Mode == ParserMode.Strict) ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
                     $"Unknown layout option '{key}'.", bl.Head.Span));
+            else if (diagnostics is not null)
+                Schema.LayoutValueRules.Check(option, diagnostics, options);   // C6, spec §8
 
             if (string.Equals(key, "copy", StringComparison.OrdinalIgnoreCase) && bl.Tokens.Length > 1)
                 copyFrom = bl.Tokens[1].Text;

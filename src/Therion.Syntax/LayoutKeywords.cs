@@ -13,22 +13,33 @@ namespace Therion.Syntax;
 /// <summary>Known <c>layout</c> body option keywords.</summary>
 public static class LayoutKeywords
 {
-    /// <summary>The recognized layout option keys (for completion + light validation).</summary>
+    /// <summary>
+    /// The recognized layout option keys — exactly thlayout.h:478 `thtt_layout_opt[]`
+    /// (B6-verified; the previous list missed survey-level/geospatial/color-profile and had
+    /// phantom gradient/lang) + the structural `cs` sub-key our LayoutCommand decodes.
+    /// </summary>
     public static readonly ImmutableHashSet<string> All =
         ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase,
-            "scale", "base-scale", "size", "origin", "origin-label", "overlap", "rotate",
-            "grid", "grid-size", "grid-origin", "grid-coords", "page-grid",
-            "legend", "legend-columns", "legend-width", "colour-legend", "color-legend",
-            "symbol-set", "symbol-hide", "symbol-show", "symbol-assign", "symbol-colour", "symbol-color",
-            "color", "colour", "color-model", "colour-model", "opacity", "transparency",
-            "surface", "surface-opacity", "sketches", "layers",
+            "base-scale", "code", "endcode",
+            "color", "colour", "color-legend", "colour-legend",
+            "color-model", "colour-model", "color-profile", "colour-profile",
+            "copy", "debug",
+            "doc-author", "doc-keywords", "doc-subject", "doc-title",
+            "exclude-pages", "fonts-setup", "geospatial",
+            "grid", "grid-coords", "grid-origin", "grid-size",
+            "language", "layers",
+            "legend", "legend-columns", "legend-width",
             "map-comment", "map-header", "map-header-bg", "map-image",
-            "min-symbol-scale", "nav-factor", "nav-size", "fonts-setup",
-            "page-setup", "page-numbers", "own-pages", "exclude-pages", "title-pages",
-            "copy", "cs", "north", "code", "endcode",
-            "doc-author", "doc-title", "doc-subject", "doc-keywords",
-            "debug", "language", "lang", "statistics", "smooth-shading", "scale-bar",
-            "gradient", "grid-size", "units");
+            "min-symbol-scale", "nav-factor", "nav-size", "north",
+            "opacity", "origin", "origin-label", "overlap", "own-pages",
+            "page-grid", "page-numbers", "page-setup",
+            "rotate", "scale", "scale-bar", "size", "sketches", "smooth-shading",
+            "statistics", "surface", "surface-opacity", "survey-level",
+            "symbol-assign", "symbol-color", "symbol-colour", "symbol-hide",
+            "symbol-set", "symbol-show",
+            "title-pages", "transparency", "units",
+            // structural sub-key decoded by LayoutCommand (cs inside layout, book ch03 §cs)
+            "cs");
 
     // FUTURE (deep per-option value validation — deliberately out of scope, see
     // docs/layout-and-embedded-code.md): today an option's *key* is validated (IsKnown) but its
