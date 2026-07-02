@@ -37,9 +37,10 @@ public sealed class SchemaRegistry
 
     /// <summary>
     /// The built-in Therion 6.4 grammar. Populated incrementally by the C batches
-    /// (see .claude/therion-syntax/PLAN.md §6); empty in A1.
+    /// (see .claude/therion-syntax/PLAN.md §6): C1.2 = .th survey/centreline (ThSchema).
     /// </summary>
-    public static SchemaRegistry Default { get; } = new(Array.Empty<CommandSchema>());
+    public static SchemaRegistry Default { get; } = new(
+        ThSchema.Commands, new[] { ThSchema.DataObjectOptions });
 
     public int Count => _byContextKeyword.Count;
 

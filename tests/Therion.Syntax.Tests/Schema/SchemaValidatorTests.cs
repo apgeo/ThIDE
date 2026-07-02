@@ -44,9 +44,19 @@ public class SchemaValidatorTests
     }
 
     [Fact]
-    public void Default_registry_is_empty_so_pass_is_noop()
+    public void Default_registry_holds_the_th_grammar_and_stays_silent_on_valid_input()
     {
-        Assert.Equal(0, SchemaRegistry.Default.Count);
+        // C1.2: the registry carries the spec §5 survey/centreline schemas…
+        Assert.True(SchemaRegistry.Default.Count > 25);
+        Assert.True(SchemaRegistry.Default.TryGet(SchemaContext.Centreline, "data", out var data));
+        Assert.Equal(2, data.MinArgs);
+        Assert.Null(data.MaxArgs); // trailing repeated reading
+        Assert.True(SchemaRegistry.Default.TryGet(SchemaContext.Survey, "centerline", out _)); // alias
+        Assert.True(SchemaRegistry.Default.TryGet(SchemaContext.Centreline, "fix", out var fix));
+        Assert.Equal(4, fix.MinArgs);
+        Assert.Equal(7, fix.MaxArgs);
+
+        // …and an unregistered keyword still validates to nothing.
         var diags = Validate("frobnicate", SchemaRegistry.Default);
         Assert.Empty(diags);
     }
