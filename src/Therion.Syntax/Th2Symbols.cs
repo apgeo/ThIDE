@@ -47,18 +47,26 @@ public static class Th2Symbols
             "paleo-material", "photo", "root", "seed-germination", "sink", "spring", "tree-trunk",
             "vegetable-debris", "water-drip", "water-flow");
 
+    // Exactly thline.h:212 thtt_line_types (B3-verified; `pitch` ≡ pit alias). The previous list
+    // missed 11 real types — the corpus's TH2_005 warnings were our gap, not user symbols.
     public static readonly ImmutableHashSet<string> LineTypes =
         ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase,
-            "wall", "border", "water-flow", "contour", "ceiling-step", "floor-step", "pit", "slope",
-            "rock-edge", "rock-border", "arrow", "section", "label", "gradient", "chimney",
-            "overhang", "ceiling-meander", "floor-meander", "flowstone", "rope", "via-ferrata",
-            "survey", "abyss-entrance", "fault", "water", "moonmilk", "dripline", "joint", "wall-calcite");
+            "abyss-entrance", "arrow", "border", "ceiling-meander", "ceiling-step", "chimney",
+            "contour", "dripline", "fault", "fixed-ladder", "floor-meander", "floor-step",
+            "flowstone", "gradient", "handrail", "joint", "label", "low-ceiling", "map-connection",
+            "moonmilk", "overhang", "pit", "pit-chimney", "pitch", "rimstone-dam", "rimstone-pool",
+            "rock-border", "rock-edge", "rope", "rope-ladder", "section", "slope", "steps",
+            "survey", "via-ferrata", "walkway", "wall", "water-flow",
+            // kept for corpus tolerance (not in the 6.4 table; older/aliased usage)
+            "water", "wall-calcite");
 
+    // Exactly tharea.h:91 thtt_area_types (B3-verified). `pillars`/`pillars-with-curtains` are
+    // point-only types and were removed; `dimensions` was missing.
     public static readonly ImmutableHashSet<string> AreaTypes =
         ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase,
-            "water", "sump", "sand", "debris", "blocks", "flowstone", "moonmilk", "snow", "ice",
-            "clay", "pebbles", "bedrock", "mudcrack", "pillar", "pillar-with-curtains", "pillars",
-            "pillars-with-curtains", "stalactite", "stalactite-stalagmite", "stalagmite");
+            "bedrock", "blocks", "clay", "debris", "dimensions", "flowstone", "ice", "moonmilk",
+            "mudcrack", "pebbles", "pillar", "pillar-with-curtains", "sand", "snow", "stalactite",
+            "stalactite-stalagmite", "stalagmite", "sump", "water");
 
     /// <summary>Splits a type into its base type and inline subtype (<c>wall:blocks</c> → wall / blocks).</summary>
     public static (string Base, string? Subtype) SplitType(string type)
@@ -94,12 +102,14 @@ public static class Th2Symbols
     /// </summary>
     public static readonly ImmutableHashSet<string> ObjectOptions =
         ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase,
-            // common
+            // common (th2ddataobject + point)
             "id", "subtype", "orientation", "orient", "scale", "place", "clip", "visibility",
-            "context", "align", "text", "value", "name", "from", "scrap", "explored", "dist", "attr",
-            // line / line-data
-            "reverse", "close", "outline", "mark", "head", "direction", "smooth", "adjust",
-            "altitude", "l-size", "size", "gradient", "border", "rebound", "clip-radius",
+            "visible", "context", "align", "text", "value", "name", "from", "scrap", "explored",
+            "dist", "attr",
+            // line / line-data (thline.h:90 thtt_line_opt — B3-verified; the previous list had
+            // phantom `rebound`/`clip-radius` and missed anchors/rebelays/r-size/height)
+            "adjust", "altitude", "anchors", "border", "close", "direction", "gradient", "head",
+            "height", "l-size", "mark", "outline", "r-size", "rebelays", "reverse", "size", "smooth",
             // misc accepted forms
             "station", "extend");
 

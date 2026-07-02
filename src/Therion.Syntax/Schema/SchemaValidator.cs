@@ -48,10 +48,17 @@ public static class SchemaValidator
         foreach (var node in children)
         {
             // .th2 objects are not TherionCommands — they get their own rule dispatch.
-            if (node is PointObject point)
+            switch (node)
             {
-                Th2PointRules.Validate(point, options, diagnostics, mode);
-                continue;
+                case PointObject point:
+                    Th2PointRules.Validate(point, options, diagnostics, mode);
+                    continue;
+                case LineObject line:
+                    Th2LineRules.ValidateLine(line, options, diagnostics, mode);
+                    continue;
+                case AreaObject area:
+                    Th2LineRules.ValidateArea(area, options, diagnostics, mode);
+                    continue;
             }
 
             if (node is not TherionCommand cmd) continue;
