@@ -23,6 +23,7 @@ public sealed class XviParser
         var stations = ImmutableArray.CreateBuilder<XviStation>();
         var shots = ImmutableArray.CreateBuilder<XviShot>();
         var sketchLines = ImmutableArray.CreateBuilder<XviSketchLine>();
+        var images = ImmutableArray.CreateBuilder<string>();
         XviGrid? grid = null;
 
         var lenient = options.Mode == ParserMode.Strict
@@ -75,6 +76,12 @@ public sealed class XviParser
                             shots.Add(new XviShot(a, b, c, d));
                     }
                     break;
+                case "XVIimages":
+                    // Background sketch bitmaps written by therion's exporter (thexpmap.cxx; B7).
+                    // Kept as raw records — image payloads are not needed for validation.
+                    foreach (var rec in BraceRecords(st.Body))
+                        images.Add(rec);
+                    break;
                 case "XVIsketchlines":
                     foreach (var rec in BraceRecords(st.Body))
                     {
@@ -90,7 +97,7 @@ public sealed class XviParser
                     // Unknown `set` variable — lenient warning (some exporters add extra vars).
                     diags.Add(Diagnostic.Create(DiagnosticCodes.XviUnknownVariable, lenient,
                         $"Unknown XVI variable '{st.Name}'.", st.Span,
-                        hint: "Expected XVIgrids, XVIstations, XVIshots, XVIsketchlines or XVIgrid."));
+                        hint: "Expected XVIgrids, XVIstations, XVIshots, XVIsketchlines, XVIimages or XVIgrid."));
                     break;
             }
         }
@@ -107,7 +114,8 @@ public sealed class XviParser
 
         var file = new XviFile(fileSpan, filePath, gridSpacing, gridUnits,
             stations.ToImmutable(), shots.ToImmutable(), sketchLines.ToImmutable(),
-            grid, leadingComments);
+            grid, leadingComments)
+        { Images = images.ToImmutable() };
         return new ParseResult<XviFile>(file, diags.ToImmutable());
     }
 

@@ -44,4 +44,11 @@ public sealed record XviFile(
     ImmutableArray<XviShot> Shots,
     ImmutableArray<XviSketchLine> SketchLines,
     XviGrid? Grid,
-    ImmutableArray<TrivialComment> LeadingComments) : TherionNode(Span);
+    ImmutableArray<TrivialComment> LeadingComments) : TherionNode(Span)
+{
+    /// <summary>
+    /// Raw <c>XVIimages</c> records (background sketch bitmaps written by therion's exporter —
+    /// thexpmap.cxx; B7). Kept verbatim: each record is one brace-group's inner text.
+    /// </summary>
+    public ImmutableArray<string> Images { get; init; } = ImmutableArray<string>.Empty;
+}

@@ -31,24 +31,36 @@ public static class MeasurementUnits
     private static readonly Dictionary<string, LengthUnit> LengthNames =
         new(StringComparer.OrdinalIgnoreCase)
         {
+            // Exactly thtflength.h:38 thtt_tfunits_length (B7-verified) + tolerated extras.
             ["meter"] = LengthUnit.Metre, ["meters"] = LengthUnit.Metre,
             ["metre"] = LengthUnit.Metre, ["metres"] = LengthUnit.Metre, ["m"] = LengthUnit.Metre,
-            ["centimeter"] = LengthUnit.Centimetre, ["centimetre"] = LengthUnit.Centimetre, ["cm"] = LengthUnit.Centimetre,
-            ["millimeter"] = LengthUnit.Millimetre, ["millimetre"] = LengthUnit.Millimetre, ["mm"] = LengthUnit.Millimetre,
-            ["kilometer"] = LengthUnit.Kilometre, ["kilometre"] = LengthUnit.Kilometre, ["km"] = LengthUnit.Kilometre,
+            ["metric"] = LengthUnit.Metre,                     // src alias — was missing
+            ["centimeter"] = LengthUnit.Centimetre, ["centimeters"] = LengthUnit.Centimetre,
+            ["centimetre"] = LengthUnit.Centimetre, ["centimetres"] = LengthUnit.Centimetre,
+            ["cm"] = LengthUnit.Centimetre,
+            ["millimeter"] = LengthUnit.Millimetre, ["millimeters"] = LengthUnit.Millimetre,
+            ["millimetre"] = LengthUnit.Millimetre, ["millimetres"] = LengthUnit.Millimetre,
+            ["mm"] = LengthUnit.Millimetre,
             ["inch"] = LengthUnit.Inch, ["inches"] = LengthUnit.Inch, ["in"] = LengthUnit.Inch,
-            ["foot"] = LengthUnit.Foot, ["feet"] = LengthUnit.Foot, ["ft"] = LengthUnit.Foot,
+            ["foot"] = LengthUnit.Foot, ["feet"] = LengthUnit.Foot, ["feets"] = LengthUnit.Foot,
+            ["ft"] = LengthUnit.Foot,
             ["yard"] = LengthUnit.Yard, ["yards"] = LengthUnit.Yard, ["yd"] = LengthUnit.Yard,
+            // tolerated beyond the src table (not valid for the Therion compiler):
+            ["kilometer"] = LengthUnit.Kilometre, ["kilometre"] = LengthUnit.Kilometre, ["km"] = LengthUnit.Kilometre,
         };
 
     private static readonly Dictionary<string, AngleUnit> AngleNames =
         new(StringComparer.OrdinalIgnoreCase)
         {
+            // Exactly thtfangle.h:38 thtt_tfunits_angle (B7-verified) + tolerated extras.
             ["degree"] = AngleUnit.Degree, ["degrees"] = AngleUnit.Degree, ["deg"] = AngleUnit.Degree,
-            ["grad"] = AngleUnit.Grad, ["grads"] = AngleUnit.Grad, ["grades"] = AngleUnit.Grad, ["gon"] = AngleUnit.Grad,
+            ["grad"] = AngleUnit.Grad, ["grads"] = AngleUnit.Grad,
             ["mil"] = AngleUnit.Mil, ["mils"] = AngleUnit.Mil,
+            ["min"] = AngleUnit.Minute,                        // src alias — was missing
             ["minute"] = AngleUnit.Minute, ["minutes"] = AngleUnit.Minute,
             ["percent"] = AngleUnit.PercentSlope, ["percentage"] = AngleUnit.PercentSlope,
+            // tolerated beyond the src table:
+            ["grades"] = AngleUnit.Grad, ["gon"] = AngleUnit.Grad,
         };
 
     /// <summary>All recognized unit names (length + angle), for editor completion.</summary>
