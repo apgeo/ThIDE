@@ -109,6 +109,17 @@ public static class MutationCatalog
                 (src, _) => ReplaceOnce(src, "units length metres",
                     "units length metres\n    declination 3"))),
 
+            // --- Tier 1: C2 .th2 point rules (spec §6.3) --------------------------------
+            ("th2", new SyntaxMutation(
+                "th2-invalid-subtype", "give the station point a water-flow subtype",
+                MutationTier.Tier1, DiagnosticCodes.Th2UnknownSubtype,
+                (src, _) => ReplaceOnce(src, "point 100 200 station", "point 100 200 station:permanent"))),
+
+            ("th2", new SyntaxMutation(
+                "th2-orientation-on-station", "-orientation is not valid with type station",
+                MutationTier.Tier1, DiagnosticCodes.OptionNotValidInContext,
+                (src, _) => ReplaceOnce(src, "station -name 1", "station -name 1 -orientation 90"))),
+
             // --- Tier 2: probably invalid (random, position-seeded) --------------------
             ("th", new SyntaxMutation(
                 "th-random-digit-corruption", "replace one random digit with 'x'",

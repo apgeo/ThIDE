@@ -61,7 +61,7 @@ see `.claude/therion-syntax/PLAN.md`. Toggleable per category/section via
 | `TH0063` | Error | Command has fewer arguments than required. | `SchemaValidator` |
 | `TH0064` | Warning | Command has more arguments than allowed. | `SchemaValidator` |
 | `TH0065` | lenient | Argument/option value fails its declared type or enum. | `SchemaValidator` |
-| `TH0066` | Warning | _(reserved)_ Option not valid for this command/type. | `SchemaValidator` |
+| `TH0066` | lenient | Option not valid for this object type (e.g. `-text` on a non-label point; per-type matrix from thpoint.cxx). | `Th2PointRules` |
 | `TH0067` | Info | Right keyword, wrong case (Therion matches case-sensitively). | `SchemaValidator` |
 | `TH0068` | Warning | Not a number nor a special value (`-` `.` NaN Inf up down). | `SchemaValidator` |
 | `TH0069` | Warning | Numeric value outside the schema's range (vthreshold 0–90, fix sd > 0, …). | `SchemaValidator`, `ThCentrelineRules` |
@@ -125,7 +125,7 @@ Semantic layer (`Therion.Semantics`):
 | `TH2_004` | lenient | Unknown point type `<type>`. | `Th2Parser` |
 | `TH2_005` | lenient | Unknown line type `<type>`. | `Th2Parser` |
 | `TH2_006` | lenient | Unknown area type `<type>`. | `Th2Parser` |
-| `TH2_008` | lenient | _(reserved)_ Unknown point/line/area subtype. | `Th2Parser` |
+| `TH2_008` | lenient | Invalid subtype for the point type (only station/air-draught/water-flow/u: take subtypes; per-type value matrix from thpoint.cxx). | `Th2PointRules` |
 | `TH2_009` | lenient | Unknown `-option` on a point/line/area object. | `Th2Parser` |
 | `TH2_010` | lenient | `scrap` block is missing `endscrap`. | `Th2Parser` |
 

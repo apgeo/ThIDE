@@ -30,7 +30,7 @@ public static class Th2Symbols
             "disc-pillar", "disc-stalactite", "disc-stalagmite", "disc-pillars", "disc-stalactites",
             "disc-stalagmites", "disk", "flowstone", "flute", "gypsum-flower", "gypsum",
             "helictites", "helictite", "karren", "moonmilk", "pendant", "pillar-with-curtains",
-            "pillars-with-curtains", "pillar", "popcorn", "raft-cone", "rimstone-dam", "rimstone-pool",
+            "pillars-with-curtains", "pillar", "pillars", "popcorn", "raft-cone", "rimstone-dam", "rimstone-pool",
             "scallop", "soda-straw", "stalactite-stalagmite", "stalactites-stalagmites", "stalactite",
             "stalactites", "stalagmite", "stalagmites", "volcano", "wall-calcite",
             // equipment

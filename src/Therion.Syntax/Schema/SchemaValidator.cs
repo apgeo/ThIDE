@@ -47,6 +47,13 @@ public static class SchemaValidator
     {
         foreach (var node in children)
         {
+            // .th2 objects are not TherionCommands — they get their own rule dispatch.
+            if (node is PointObject point)
+            {
+                Th2PointRules.Validate(point, options, diagnostics, mode);
+                continue;
+            }
+
             if (node is not TherionCommand cmd) continue;
 
             if (registry.TryGet(context, cmd.Keyword, out var schema) &&
