@@ -18,19 +18,24 @@ public static class CommandVocabulary
         ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase,
             "surface", "duplicate", "splay", "approximate", "approx");
 
-    /// <summary><c>mark &lt;type&gt;</c> — station mark types (thbook §centreline/mark).</summary>
+    /// <summary>
+    /// <c>mark &lt;type&gt;</c> — station mark types. Therion source of truth
+    /// (thdataleg.h `thtt_datamark[]`): fixed, natural, painted, temp, temporary.
+    /// </summary>
     public static readonly ImmutableHashSet<string> MarkTypes =
         ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase,
-            "fixed", "painted", "temporary");
+            "fixed", "natural", "painted", "temp", "temporary");
 
     /// <summary>
-    /// <c>station … &lt;flags&gt;</c> — station flag keywords (thbook §centreline/station).
-    /// <c>air-draught</c> may carry an inline <c>:winter</c>/<c>:summer</c> qualifier.
+    /// <c>station … &lt;flags&gt;</c> — station flag keywords. Therion source of truth
+    /// (thdataleg.h `thtt_datasflag[]`). <c>air-draught</c> may carry an inline
+    /// <c>:winter</c>/<c>:summer</c> qualifier. <c>fixed</c> is a valid flag keyword but only
+    /// in the <c>not fixed</c> form (Therion: "you can not set fixed station flag directly").
     /// </summary>
     public static readonly ImmutableHashSet<string> StationFlags =
         ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase,
             "entrance", "continuation", "air-draught", "sink", "spring",
-            "doline", "dig", "arch", "overhang");
+            "doline", "dig", "arch", "overhang", "fixed");
 
     /// <summary><c>extend &lt;spec&gt;</c> — keyword forms (a 0–200 percentage is also valid).</summary>
     public static readonly ImmutableHashSet<string> ExtendSpecs =

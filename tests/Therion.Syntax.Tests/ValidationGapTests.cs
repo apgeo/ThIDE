@@ -90,6 +90,14 @@ public class ValidationGapTests
         Assert.True(Has(Th("survey a\ncentreline\nmark 1 2 bogus\nendcentreline\nendsurvey"),
             DiagnosticCodes.InvalidMarkType));
 
+    [Theory]
+    [InlineData("mark 1 natural")]   // B1: thtt_datamark has natural + temp — we used to reject them
+    [InlineData("mark 1 temp")]
+    [InlineData("mark 1 temporary")]
+    public void Valid_mark_types_are_ok(string mk) =>
+        Assert.False(Has(Th($"survey a\ncentreline\n{mk}\nendcentreline\nendsurvey"),
+            DiagnosticCodes.InvalidMarkType));
+
     [Fact]
     public void Unknown_extend_spec_is_flagged() =>
         Assert.True(Has(Th("survey a\ncentreline\nextend sideways\nendcentreline\nendsurvey"),
@@ -111,6 +119,7 @@ public class ValidationGapTests
     [InlineData("station 1 \"pit\" continuation attr code \"V\"")]
     [InlineData("station 2 \"\" entrance")]
     [InlineData("station 3 \"c\" air-draught:winter")]
+    [InlineData("station 4 \"\" not fixed")]   // B1: thtt_datasflag has fixed (not-fixed form)
     public void Valid_station_flags_are_ok(string st) =>
         Assert.False(Has(Th($"survey a\ncentreline\n{st}\nendcentreline\nendsurvey"),
             DiagnosticCodes.InvalidStationFlag));
