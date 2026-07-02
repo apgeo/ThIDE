@@ -66,7 +66,8 @@ public sealed partial class OutlineViewModel : ObservableObject
     public OutlineViewModel(IDocumentService documents)
     {
         _documents = documents;
-        _documents.ActiveDocumentChanged += (_, _) => Rebuild();
+        // DocumentChanged alone is enough: SetActive always raises it right after
+        // ActiveDocumentChanged, so subscribing to both rebuilt the outline twice per tab switch.
         _documents.DocumentChanged += (_, _) => Rebuild();
         Rebuild();
     }

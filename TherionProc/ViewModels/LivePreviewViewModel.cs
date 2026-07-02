@@ -218,8 +218,9 @@ public sealed partial class LivePreviewViewModel : ObservableObject
     {
         _documents = documents;
         _session = session;
+        // DocumentChanged alone is enough: SetActive always raises it right after
+        // ActiveDocumentChanged, so subscribing to both rebuilt the preview twice per tab switch.
         _documents.DocumentChanged += (_, _) => OnUi(Rebuild);
-        _documents.ActiveDocumentChanged += (_, _) => OnUi(Rebuild);
         Rebuild();
     }
 

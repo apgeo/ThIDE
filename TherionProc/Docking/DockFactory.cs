@@ -831,31 +831,43 @@ public sealed class DockFactory : Factory
     /// (and active state) the tab had when the layout was saved; otherwise the tab is added to
     /// the central document well.
     /// </summary>
-    public void OpenDocument(FileDocumentViewModel document)
+    public void OpenDocument(FileDocumentViewModel document, bool activate = true)
     {
         if (_rootDock is null || _documentDock is null) return;
 
         // Already open anywhere (main well, a split dock, or a float window) → just activate.
         if (FindRealDocumentById(_rootDock, document.Id) is { } existing)
         {
+            if (!activate) return;
             SetActiveDockable(existing);
             SetFocusedDockable(_rootDock, existing);
             return;
         }
 
         // A restore placeholder is holding this file's slot → swap the live document in.
+        // activate:false (batch session restore) still swaps and keeps the well's active tab
+        // valid, but doesn't steal global focus — only the batch's last file is activated, so
+        // N restored tabs don't each materialize an editor view in turn.
         if (FindPlaceholderSlot(_rootDock, document.Id) is { } slot && slot.Dock.VisibleDockables is { } slotList)
         {
             InitDockable(document, slot.Dock);
             slotList[slot.Index] = document;
             if (ReferenceEquals(slot.Dock.ActiveDockable, slot.Placeholder))
                 slot.Dock.ActiveDockable = document;
+            if (!activate) return;
             SetActiveDockable(document);
             SetFocusedDockable(_rootDock, document);
             return;
         }
 
         AddDockable(_documentDock, document);
+        if (!activate)
+        {
+            // A well needs an active tab to render its strip; adopt the first batch tab
+            // without focusing the ones that follow.
+            _documentDock.ActiveDockable ??= document;
+            return;
+        }
         SetActiveDockable(document);
         SetFocusedDockable(_rootDock, document);
     }

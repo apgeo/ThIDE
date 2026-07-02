@@ -49,6 +49,13 @@ internal sealed class NullDocumentService : IDocumentService
 
     public Task OpenFileAsync(string absolutePath, CancellationToken ct = default) => Task.CompletedTask;
     public Task ForceOpenFileAsync(string absolutePath, CancellationToken ct = default) => Task.CompletedTask;
+    public bool IsBatchOpenActive => false;
+    public IDisposable BeginBatchOpen() => NullScope.Instance;
+    private sealed class NullScope : IDisposable
+    {
+        public static readonly NullScope Instance = new();
+        public void Dispose() { }
+    }
     public Task OpenFolderAsync(string folderPath, CancellationToken ct = default) => Task.CompletedTask;
     public Task<bool> ActivateThconfigAsync(string thconfigPath, ThconfigActivation options = default, CancellationToken ct = default) => Task.FromResult(false);
     public Task NavigateToSpanAsync(Therion.Core.SourceSpan span, CancellationToken ct = default) => Task.CompletedTask;

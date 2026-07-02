@@ -63,6 +63,18 @@ public interface IDocumentService
     Task OpenFileAsync(string absolutePath, CancellationToken ct = default);
     /// <summary>opens a file bypassing the binary/huge-file guard (the "Open anyway" path).</summary>
     Task ForceOpenFileAsync(string absolutePath, CancellationToken ct = default);
+
+    /// <summary>
+    /// Enters batch-open mode (session restore): while the returned scope is alive,
+    /// <see cref="OpenFileAsync"/> creates tabs but skips the per-file activation — so the
+    /// <see cref="ActiveDocumentChanged"/>/<see cref="DocumentChanged"/> fan-out to every tool
+    /// panel and the per-file recent-list settings write don't run N times. Disposing the scope
+    /// activates the last opened document once and saves the recent list in a single write.
+    /// </summary>
+    IDisposable BeginBatchOpen();
+    /// <summary>True while a <see cref="BeginBatchOpen"/> scope is active. The dock host uses this
+    /// to add restored tabs without focusing (and thus materializing an editor for) each one in turn.</summary>
+    bool IsBatchOpenActive { get; }
     Task OpenFolderAsync(string folderPath, CancellationToken ct = default);
     /// <summary>
     /// The single entry point for making a thconfig the active project configuration. Optionally sets
@@ -208,15 +220,62 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
     public Task OpenFileAsync(string absolutePath, CancellationToken ct = default) => OpenFileAsync(absolutePath, force: false, ct);
     public Task ForceOpenFileAsync(string absolutePath, CancellationToken ct = default) => OpenFileAsync(absolutePath, force: true, ct);
 
+    // ---- batch open (session restore) --------------------------------------
+    // Restoring N files used to cost N activations: each one re-ran the whole
+    // DocumentChanged tool fan-out (live preview, outline, explorer, analytics, …) on the UI
+    // thread, and each per-file RecordRecent settings save re-parsed every already-open
+    // document via IAppSettingsService.Changed — an O(N²) reopen. In batch mode the loop only
+    // creates tabs; activation, the tool refresh, and the recents write happen once at the end.
+    private int _batchOpenDepth;
+    private FileDocumentViewModel? _batchLastOpened;
+    private readonly System.Collections.Generic.List<string> _batchRecents = new();
+
+    public bool IsBatchOpenActive => _batchOpenDepth > 0;
+
+    public IDisposable BeginBatchOpen()
+    {
+        _batchOpenDepth++;
+        return new BatchOpenScope(this);
+    }
+
+    private void EndBatchOpen()
+    {
+        if (_batchOpenDepth == 0 || --_batchOpenDepth > 0) return;
+
+        if (_batchRecents.Count > 0)
+        {
+            RecordRecentMany(_batchRecents);
+            _batchRecents.Clear();
+        }
+
+        var last = _batchLastOpened;
+        _batchLastOpened = null;
+        if (last is null) return;
+        // Activate first: the dock's ActiveDockableChanged echo then finds Active already set
+        // and no-ops, so the whole batch costs exactly one ActiveDocumentChanged/DocumentChanged.
+        if (ReferenceEquals(Active, last)) Raise();   // SetActive would no-op; tools still need one refresh for the batch
+        else SetActive(last);
+        OpenInDockRequested?.Invoke(this, last);
+    }
+
+    private sealed class BatchOpenScope : IDisposable
+    {
+        private DocumentService? _owner;
+        public BatchOpenScope(DocumentService owner) => _owner = owner;
+        public void Dispose() { _owner?.EndBatchOpen(); _owner = null; }
+    }
+
     private async Task OpenFileAsync(string absolutePath, bool force, CancellationToken ct = default)
     {
         if (string.IsNullOrEmpty(absolutePath)) return;
         var full = Path.GetFullPath(absolutePath);
         if (!File.Exists(full)) return;
 
-        RecordRecent(full);
+        if (IsBatchOpenActive) _batchRecents.Add(full);
+        else RecordRecent(full);
         if (FindOpen(full) is { } already)
         {
+            if (IsBatchOpenActive) { _batchLastOpened = already; return; }
             OpenInDockRequested?.Invoke(this, already);
             SetActive(already);
             return;
@@ -241,8 +300,11 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
         doc.SetWorkspace(Workspace);
         UpdateMembership(doc);
 
+        // Batch mode still creates the tab (the dock adds it unfocused) but defers activation —
+        // and with it the per-file tool fan-out — to the end of the batch.
         OpenInDockRequested?.Invoke(this, doc);
-        SetActive(doc);
+        if (IsBatchOpenActive) _batchLastOpened = doc;
+        else SetActive(doc);
         _hooks?.Run(ScriptHookEvent.Open, full);
     }
 
@@ -547,6 +609,21 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
         try { _settings.Save(current with { RecentFiles = list }); } catch { /* best-effort */ }
     }
 
+    /// <summary>Promotes a batch of just-opened files with a single settings save (same result as
+    /// sequential <see cref="RecordRecent"/> calls: the last-opened file ends up first).</summary>
+    private void RecordRecentMany(System.Collections.Generic.IReadOnlyList<string> fullPaths)
+    {
+        if (_settings is null || fullPaths.Count == 0) return;
+        var current = _settings.Current;
+        var list = new System.Collections.Generic.List<string>(current.RecentFiles.Count + fullPaths.Count);
+        for (int i = fullPaths.Count - 1; i >= 0; i--)
+            if (!list.Contains(fullPaths[i], StringComparer.OrdinalIgnoreCase)) list.Add(fullPaths[i]);
+        foreach (var p in current.RecentFiles)
+            if (!list.Contains(p, StringComparer.OrdinalIgnoreCase)) list.Add(p);
+        if (list.Count > MaxRecentFiles) list.RemoveRange(MaxRecentFiles, list.Count - MaxRecentFiles);
+        try { _settings.Save(current with { RecentFiles = list }); } catch { /* best-effort */ }
+    }
+
     private FileDocumentViewModel? FindOpen(string path) =>
         Documents.FirstOrDefault(d =>
             string.Equals(d.FilePath, path, StringComparison.OrdinalIgnoreCase) ||
@@ -567,9 +644,14 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
     // can fire off the UI thread. Several subscribers mutate UI-bound state directly, which
     // raised "the calling thread cannot access this object". Marshal the notifications onto the
     // UI thread at the source so every subscriber is safe (#6).
+    // In the app these marshal to the UI thread. In a headless unit-test process no dispatcher
+    // loop is running (Application.Current is null — the app sets it before DI spins up), so
+    // Invoke would deadlock the test and Post would silently drop the callback; run inline there.
+    private static bool NoUiLoop => Avalonia.Application.Current is null;
+
     private static void OnUi(Action action)
     {
-        if (Avalonia.Threading.Dispatcher.UIThread.CheckAccess()) action();
+        if (NoUiLoop || Avalonia.Threading.Dispatcher.UIThread.CheckAccess()) action();
         else Avalonia.Threading.Dispatcher.UIThread.Post(action);
     }
 
@@ -579,7 +661,7 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
     // modified" enumeration crashes in any consumer iterating Documents (e.g. TodoScanViewModel).
     private static void OnUiSync(Action action)
     {
-        if (Avalonia.Threading.Dispatcher.UIThread.CheckAccess()) action();
+        if (NoUiLoop || Avalonia.Threading.Dispatcher.UIThread.CheckAccess()) action();
         else Avalonia.Threading.Dispatcher.UIThread.Invoke(action);
     }
 

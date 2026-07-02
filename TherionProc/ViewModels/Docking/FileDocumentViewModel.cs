@@ -102,13 +102,27 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
         TabBrush = TabBrushForExtension(System.IO.Path.GetExtension(filePath));
 
         // Re-evaluate the large-file guards when their thresholds change in Preferences (#10).
-        if (_settings is not null) _settings.Changed += OnSettingsChanged;
+        if (_settings is not null) { _guardLimits = GuardLimits(); _settings.Changed += OnSettingsChanged; }
 
         SetText(text, reparse: true);
     }
 
+    // Settings are saved for many unrelated reasons (recent files, layout, MRU…); only the
+    // large-file limits affect this document's parse, so gate the reparse on those — otherwise
+    // every settings save re-parses every open document (quadratic during session restore).
+    private (int, int, int, int) _guardLimits;
+
+    private (int, int, int, int) GuardLimits()
+    {
+        var s = _settings?.Current;
+        return s is null ? default : (s.MaxHighlightLines, s.MaxHighlightKB, s.MaxParseLines, s.MaxParseKB);
+    }
+
     private void OnSettingsChanged(object? sender, EventArgs e)
     {
+        var limits = GuardLimits();
+        if (limits == _guardLimits) return;
+        _guardLimits = limits;
         if (Dispatcher.UIThread.CheckAccess()) Reparse();
         else Dispatcher.UIThread.Post(Reparse);
     }

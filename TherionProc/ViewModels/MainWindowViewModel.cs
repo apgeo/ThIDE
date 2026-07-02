@@ -511,13 +511,21 @@ public partial class MainWindowViewModel : ViewModelBase
         // OpenFileAsync resumes on a thread-pool thread (ConfigureAwait(false)), so adding
         // the document to the dock — which mutates UI-bound VisibleDockables — must be
         // marshalled to the UI thread.
-        _documents.OpenInDockRequested += (_, doc) => OnUiThread(() => _factory.OpenDocument(doc));
+        // The batch flag is read at raise time (not inside the posted lambda) so a batch-opened
+        // tab is never retroactively activated once the batch has already ended.
+        _documents.OpenInDockRequested += (_, doc) =>
+        {
+            bool activate = !_documents.IsBatchOpenActive;
+            OnUiThread(() => _factory.OpenDocument(doc, activate));
+        };
         // Track most-recently-used documents/panels for the Ctrl+Tab switcher (#2).
         _documents.ActiveDocumentChanged += (_, _) => OnUiThread(() => TouchMru(_documents.Active));
         _factory.ActiveDockableChanged += (_, e) =>
         {
             OnUiThread(() => TouchMru(e.Dockable));   // MRU covers central tool panels too, not just files
-            if (e.Dockable is FileDocumentViewModel doc) _documents.SetActive(doc);
+            // during batch restore a well adopting its first tab must not trigger the
+            // per-document tool fan-out; the batch scope activates once at the end.
+            if (e.Dockable is FileDocumentViewModel doc && !_documents.IsBatchOpenActive) _documents.SetActive(doc);
             // when the 3D Viewer pane is shown, refresh its model list and auto-open the
             // default export-model output (even if stale).
             else if (e.Dockable is Docking.Model3DViewerToolViewModel m3d)
@@ -725,30 +733,36 @@ public partial class MainWindowViewModel : ViewModelBase
 
             // Reopen last-session files, but stop once the configured time budget is exceeded so a
             // huge project stays launchable; the remaining files can be opened manually (#1).
+            // The whole loop runs as ONE batch: tabs are created without being activated, so the
+            // per-document tool fan-out (live preview, outline, explorer, analytics, …) and the
+            // recent-files settings write happen once at the end instead of once per file.
             int timeoutSec = s?.StartupLoadTimeoutSeconds ?? 20;
             var pending = files.Where(System.IO.File.Exists).ToList();
             var sw = System.Diagnostics.Stopwatch.StartNew();
             int loaded = 0;
-            foreach (var path in pending)
+            using (_documents.BeginBatchOpen())
             {
-                if (timeoutSec > 0 && sw.Elapsed.TotalSeconds > timeoutSec)
+                foreach (var path in pending)
                 {
-                    _log?.Warning(
-                        $"Startup file loading exceeded {timeoutSec}s — skipped {pending.Count - loaded} remaining " +
-                        $"file(s). Open them manually, or raise the limit in Preferences ▸ Performance.");
-                    break;
+                    if (timeoutSec > 0 && sw.Elapsed.TotalSeconds > timeoutSec)
+                    {
+                        _log?.Warning(
+                            $"Startup file loading exceeded {timeoutSec}s — skipped {pending.Count - loaded} remaining " +
+                            $"file(s). Open them manually, or raise the limit in Preferences ▸ Performance.");
+                        break;
+                    }
+                    // Each open swaps the file into its saved tab slot (dock/float/order) when a
+                    // restore placeholder is holding it; otherwise it lands in the main well.
+                    try
+                    {
+                        await _documents.OpenFileAsync(path).ConfigureAwait(true); loaded++;
+                        // restore the caret offset so the tab reopens where it was left.
+                        if (s?.SessionCaretOffsets is { } carets && carets.TryGetValue(path, out var off) && off > 0 &&
+                            _documents.Documents.FirstOrDefault(d => string.Equals(d.FilePath, path, StringComparison.OrdinalIgnoreCase)) is { } reopened)
+                            reopened.SavedCaretOffset = off;
+                    }
+                    catch (Exception ex) { _log?.Warning($"Failed to load '{path}': {ex.Message}"); }
                 }
-                // Each open swaps the file into its saved tab slot (dock/float/order) when a
-                // restore placeholder is holding it; otherwise it lands in the main well.
-                try
-                {
-                    await _documents.OpenFileAsync(path).ConfigureAwait(true); loaded++;
-                    // restore the caret offset so the tab reopens where it was left.
-                    if (s?.SessionCaretOffsets is { } carets && carets.TryGetValue(path, out var off) && off > 0 &&
-                        _documents.Documents.FirstOrDefault(d => string.Equals(d.FilePath, path, StringComparison.OrdinalIgnoreCase)) is { } reopened)
-                        reopened.SavedCaretOffset = off;
-                }
-                catch (Exception ex) { _log?.Warning($"Failed to load '{path}': {ex.Message}"); }
             }
             if (loaded > 0) _log?.Info($"Restored {loaded} file(s) from the last session.");
         }
