@@ -50,6 +50,12 @@ public sealed class SemanticModel : ISymbolIndex
     public ImmutableArray<EquateRecord> EquateRecords { get; init; } = ImmutableArray<EquateRecord>.Empty;
 
     /// <summary>
+    /// Token-level symbol occurrence index (rename / find-refs / highlight substrate).
+    /// See <c>.claude/symbol-occurrence-index-design.md</c>. Currently populated for stations.
+    /// </summary>
+    public OccurrenceIndex Occurrences { get; init; } = OccurrenceIndex.Empty;
+
+    /// <summary>
     /// <c>equate</c> references this file couldn't resolve on its own (cross-file / <c>@</c> targets).
     /// The workspace re-validates these with cross-file visibility (<see cref="WorkspaceSemanticModel
     /// .ValidateEquateReferences"/>); use <see cref="UnresolvedEquateDiagnostics"/> only when no

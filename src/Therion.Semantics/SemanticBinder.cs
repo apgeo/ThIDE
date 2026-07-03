@@ -16,9 +16,14 @@ namespace Therion.Semantics;
 /// <summary>Stateless binder � call <see cref="Bind"/> to produce a <see cref="SemanticModel"/>.</summary>
 public sealed class SemanticBinder
 {
-    public SemanticModel Bind(TherionFile file)
+    /// <param name="buildOccurrences">
+    /// When true (default) the token-level <see cref="OccurrenceIndex"/> is built (needed for rename /
+    /// find-refs / highlight). Batch/analytics binds that never need it can pass false to skip the
+    /// per-occurrence allocation.
+    /// </param>
+    public SemanticModel Bind(TherionFile file, bool buildOccurrences = true)
     {
-        var ctx = new BindContext();
+        var ctx = new BindContext { BuildOccurrences = buildOccurrences };
         WalkChildren(file.Children, ctx, scope: ImmutableArray<string>.Empty,
             dataFields: null);
 
@@ -41,6 +46,7 @@ public sealed class SemanticBinder
                 }
                 var st = ctx.Stations[resolved.Value];
                 ctx.Stations[resolved.Value] = st with { References = st.References.Add(span) };
+                AddStationOccurrence(ctx, resolved.Value, span, raw, OccurrenceRole.Reference);
                 ctx.Equates.Add(resolved.Value);
                 if (firstResolved is null) firstResolved = resolved;
                 else ctx.Equates.Union(firstResolved.Value, resolved.Value);
@@ -64,6 +70,7 @@ public sealed class SemanticBinder
             Declination = ctx.Declination,
             EquateRecords = ctx.EquateRecords.ToImmutable(),
             UnresolvedEquateRefs = ctx.UnresolvedEquateRefs.ToImmutable(),
+            Occurrences = buildOccurrences ? new OccurrenceIndex(ctx.Occurrences) : OccurrenceIndex.Empty,
         };
     }
 
@@ -184,6 +191,7 @@ public sealed class SemanticBinder
     {
         if (string.IsNullOrEmpty(st.Station)) return;
         var qn = QualifyLocal(st.Station, scope);
+        AddStationOccurrence(ctx, qn, st.StationSpan, st.Station, OccurrenceRole.Declaration);
         var existing = ctx.Stations.TryGetValue(qn, out var s)
             ? s
             : new StationSymbol(qn, st.Span, StationDeclarationKind.Shot, ImmutableArray<SourceSpan>.Empty);
@@ -213,13 +221,16 @@ public sealed class SemanticBinder
     private static void BindMark(MarkCommand mk, BindContext ctx, ImmutableArray<string> scope)
     {
         if (string.IsNullOrEmpty(mk.MarkType)) return;
-        foreach (var raw in mk.Stations)
+        for (int i = 0; i < mk.Stations.Length; i++)
         {
+            var raw = mk.Stations[i];
             var qn = QualifyLocal(raw, scope);
             if (!ctx.Stations.TryGetValue(qn, out var s))
                 s = new StationSymbol(qn, mk.Span, StationDeclarationKind.Shot, ImmutableArray<SourceSpan>.Empty);
             ctx.Stations[qn] = s with { MarkType = mk.MarkType };
             ctx.Equates.Add(qn);
+            var span = i < mk.StationSpans.Length ? mk.StationSpans[i] : default;
+            AddStationOccurrence(ctx, qn, span, raw, OccurrenceRole.Reference);
         }
     }
 
@@ -362,6 +373,7 @@ public sealed class SemanticBinder
     private void BindFix(StationFix fix, BindContext ctx, ImmutableArray<string> scope)
     {
         var qn = QualifyLocal(fix.Station, scope);
+        AddStationOccurrence(ctx, qn, fix.StationSpan, fix.Station, OccurrenceRole.Declaration);
         if (ctx.Stations.TryGetValue(qn, out var existing))
         {
             if (existing.Kind == StationDeclarationKind.Fix)
@@ -392,8 +404,13 @@ public sealed class SemanticBinder
     private void BindEquate(EquateCommand eq, BindContext ctx, ImmutableArray<string> scope)
     {
         var group = new List<(string Raw, SourceSpan Span, ImmutableArray<string> Scope)>(eq.Stations.Length);
-        foreach (var raw in eq.Stations)
-            group.Add((raw, eq.Span, scope));
+        for (int i = 0; i < eq.Stations.Length; i++)
+        {
+            // Use the per-member token span (falling back to the whole-command span) so rename /
+            // find-refs can target the individual equate member, not the whole line.
+            var span = i < eq.StationSpans.Length ? eq.StationSpans[i] : eq.Span;
+            group.Add((eq.Stations[i], span, scope));
+        }
         if (group.Count > 0)
         {
             ctx.EquateGroups.Add(group);
@@ -484,6 +501,15 @@ public sealed class SemanticBinder
         if (!fromSplay) DeclareImplicit(ctx, from, row.Span);
         if (!toSplay)   DeclareImplicit(ctx, to,   row.Span);
 
+        // Token-level occurrences (rename / find-refs) — the row's per-value spans, not row.Span.
+        if (!row.ValueSpans.IsDefaultOrEmpty)
+        {
+            if (!fromSplay && fromIdx < row.ValueSpans.Length)
+                AddStationOccurrence(ctx, from, row.ValueSpans[fromIdx], fromRaw, OccurrenceRole.Reference);
+            if (!toSplay && toIdx < row.ValueSpans.Length)
+                AddStationOccurrence(ctx, to, row.ValueSpans[toIdx], toRaw, OccurrenceRole.Reference);
+        }
+
         var effectiveFlags = fromSplay || toSplay ? flags | ShotFlags.Splay : flags;
 
         double? length = TryGet(row, data, "length");
@@ -500,6 +526,30 @@ public sealed class SemanticBinder
 
     /// <summary>A '.' (feature) or '-' (wall) endpoint marks the shot as a splay, not a station.</summary>
     private static bool IsSplayMarker(string token) => token is "." or "-";
+
+    /// <summary>
+    /// Records a token-level station occurrence (rename / find-refs substrate). The span is narrowed
+    /// to the point-name part (before <c>@</c> or <c>:</c>) so rename rewrites only the name.
+    /// </summary>
+    private static void AddStationOccurrence(
+        BindContext ctx, QualifiedName qn, SourceSpan tokenSpan, string raw,
+        OccurrenceRole role, ResolutionStatus status = ResolutionStatus.Resolved)
+    {
+        if (!ctx.BuildOccurrences || tokenSpan.IsEmpty) return;
+        ctx.Occurrences.Add(new SymbolOccurrence(
+            NarrowToPoint(tokenSpan, raw), new SymbolId(SymbolKind.Station, qn), role, status));
+    }
+
+    /// <summary>Narrows a station token span to the point-name part (before <c>@</c>/<c>:</c>).</summary>
+    private static SourceSpan NarrowToPoint(SourceSpan span, string raw)
+    {
+        int cut = raw.Length;
+        int at = raw.IndexOf('@'); if (at >= 0 && at < cut) cut = at;
+        int colon = raw.IndexOf(':'); if (colon >= 0 && colon < cut) cut = colon;
+        if (cut <= 0 || cut >= span.Length) return span;
+        return new SourceSpan(span.FilePath, span.Start,
+            new SourceLocation(span.Start.Line, span.Start.Column + cut), span.StartOffset, cut);
+    }
 
     private static void DeclareImplicit(BindContext ctx, QualifiedName qn, SourceSpan span)
     {
@@ -614,6 +664,10 @@ public sealed class SemanticBinder
         public ImmutableArray<Diagnostic>.Builder Diagnostics { get; } = ImmutableArray.CreateBuilder<Diagnostic>();
         public List<List<(string Raw, SourceSpan Span, ImmutableArray<string> Scope)>> EquateGroups { get; } = new();
         public ImmutableArray<EquateRecord>.Builder EquateRecords { get; } = ImmutableArray.CreateBuilder<EquateRecord>();
+        /// <summary>Token-level symbol occurrences (rename / find-refs substrate). LANG occurrence index.</summary>
+        public List<SymbolOccurrence> Occurrences { get; } = new();
+        /// <summary>Whether to record occurrences at all (off for batch/perf-sensitive binds).</summary>
+        public bool BuildOccurrences { get; init; } = true;
         /// <summary>Equate references unresolved in this file (re-checked at the workspace level).</summary>
         public ImmutableArray<EquateRef>.Builder UnresolvedEquateRefs { get; } = ImmutableArray.CreateBuilder<EquateRef>();
         /// <summary>First <c>cs</c> declared in the file (input coordinate system), if any.</summary>

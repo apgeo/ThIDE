@@ -107,7 +107,11 @@ public sealed record StationFix(
     double X,
     double Y,
     double Z,
-    string OptionsRaw) : TherionCommand(Span, "fix");
+    string OptionsRaw) : TherionCommand(Span, "fix")
+{
+    /// <summary>Token span of <see cref="Station"/> (for token-level rename); empty if not captured.</summary>
+    public SourceSpan StationSpan { get; init; }
+}
 
 /// <summary><c>equate &lt;station&gt; &lt;station&gt; [...]</c>.</summary>
 public sealed record EquateCommand(
@@ -249,7 +253,11 @@ public sealed record InferCommand(
 public sealed record MarkCommand(
     SourceSpan Span,
     ImmutableArray<string> Stations,
-    string MarkType) : TherionCommand(Span, "mark");
+    string MarkType) : TherionCommand(Span, "mark")
+{
+    /// <summary>Token span of each entry in <see cref="Stations"/> (parallel; empty if not captured).</summary>
+    public ImmutableArray<SourceSpan> StationSpans { get; init; } = ImmutableArray<SourceSpan>.Empty;
+}
 
 /// <summary>
 /// <c>station &lt;station&gt; &lt;comment&gt; [&lt;flags&gt;]</c> — station comment + flags
@@ -259,7 +267,11 @@ public sealed record StationCommand(
     SourceSpan Span,
     string Station,
     string? Comment,
-    ImmutableArray<string> Flags) : TherionCommand(Span, "station");
+    ImmutableArray<string> Flags) : TherionCommand(Span, "station")
+{
+    /// <summary>Token span of <see cref="Station"/> (for token-level rename); empty if not captured.</summary>
+    public SourceSpan StationSpan { get; init; }
+}
 
 /// <summary><c>cs &lt;coordinate system&gt;</c> — valid in a centreline and in <c>.thconfig</c>.</summary>
 public sealed record CsCommand(

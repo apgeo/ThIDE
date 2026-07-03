@@ -44,7 +44,9 @@ public class AllocationGuardTests
     public void Bind_20000_legs_allocation_within_budget()
     {
         var parsed = new ThParser().Parse("big.th", Centreline(20_000)).Value!;
-        long bytes = Measure("Bind(20000)", () => new SemanticBinder().Bind(parsed));
+        // Core-bind cost only: the interactive OccurrenceIndex (rename/find-refs) is opt-out and
+        // scales with occurrences (~2/shot); this batch scenario doesn't need it.
+        long bytes = Measure("Bind(20000)", () => new SemanticBinder().Bind(parsed, buildOccurrences: false));
 
         // BASELINE 2026-07-01 (pre-optimization): 14.84 MB. Ceiling = baseline + ~30%.
         // Ratchet DOWN as Groups D/E (QualifiedName hash cache, per-column classify cache) land.

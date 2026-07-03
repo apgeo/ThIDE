@@ -835,8 +835,16 @@ public sealed class ThParser
                 $"Unknown mark type '{markType}'.", line.Tokens[^1].Span,
                 hint: "Expected: fixed, painted or temporary."));
         var stations = ImmutableArray.CreateBuilder<string>();
-        for (int i = 1; i < line.Tokens.Length - 1; i++) stations.Add(line.Tokens[i].Text);
-        return new MarkCommand(line.Span, stations.ToImmutable(), markType);
+        var stationSpans = ImmutableArray.CreateBuilder<SourceSpan>();
+        for (int i = 1; i < line.Tokens.Length - 1; i++)
+        {
+            stations.Add(line.Tokens[i].Text);
+            stationSpans.Add(line.Tokens[i].Span);
+        }
+        return new MarkCommand(line.Span, stations.ToImmutable(), markType)
+        {
+            StationSpans = stationSpans.ToImmutable(),
+        };
     }
 
     /// <summary><c>station &lt;station&gt; &lt;comment&gt; [&lt;flags&gt;]</c>.</summary>
@@ -865,7 +873,10 @@ public sealed class ThParser
                     $"Unknown station flag '{t}'.", i < spans.Length ? spans[i] : line.Span,
                     hint: "Expected entrance/continuation/air-draught/sink/spring/doline/dig/arch/overhang."));
         }
-        return new StationCommand(line.Span, station, comment, flags.ToImmutable());
+        return new StationCommand(line.Span, station, comment, flags.ToImmutable())
+        {
+            StationSpan = spans.Length > 1 ? spans[1] : default,
+        };
     }
 
     /// <summary><c>cs &lt;coordinate system&gt;</c> + validation.</summary>
@@ -991,7 +1002,10 @@ public sealed class ThParser
                 "'fix' requires station and x y z coordinates.",
                 line.Span));
             return new StationFix(line.Span,
-                values.Length > 1 ? values[1] : string.Empty, 0, 0, 0, string.Empty);
+                values.Length > 1 ? values[1] : string.Empty, 0, 0, 0, string.Empty)
+            {
+                StationSpan = spans.Length > 1 ? spans[1] : default,
+            };
         }
 
         var sev = options.Mode == ParserMode.Strict ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning;
@@ -1010,7 +1024,7 @@ public sealed class ThParser
             for (int i = 5; i < values.Length; i++) { if (i > 5) sb.Append(' '); sb.Append(values[i]); }
             opts = sb.ToString();
         }
-        return new StationFix(line.Span, station, x, y, z, opts);
+        return new StationFix(line.Span, station, x, y, z, opts) { StationSpan = spans[1] };
     }
 
     /// <summary>Flags a <c>fix</c> coordinate that is neither a plain number nor a deg:min:sec form.</summary>
