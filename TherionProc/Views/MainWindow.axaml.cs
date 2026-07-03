@@ -571,13 +571,19 @@ public partial class MainWindow : Window
             ?? CollectRenameChanges(workspace, nav, raw, kind, oldName, targetSpan.Value);
         if (changes.Count == 0) return;
 
+        // The graph-driven rename deliberately skips comments. Offer an opt-in pass that also renames
+        // the name where it appears inside `# …` comments (classic "replace in comments too").
+        var commentChanges = CollectCommentRenameChanges(workspace, oldName, changes);
+
         if (settings?.Current.ShowRenamePreviewBeforeApply == true)
         {
             _renamePreviewWindow?.Close();
-            _renamePreviewWindow = new RenamePreviewWindow(changes, oldName, newName);
-            _renamePreviewWindow.Closed += (_, _) => _renamePreviewWindow = null;
-            var apply = await _renamePreviewWindow.ShowDialog<bool>(this);
+            var win = new RenamePreviewWindow(changes, commentChanges, oldName, newName);
+            _renamePreviewWindow = win;
+            win.Closed += (_, _) => _renamePreviewWindow = null;
+            var apply = await win.ShowDialog<bool>(this);
             if (!apply) return;
+            if (win.IncludeComments) changes = MergeRenameChanges(changes, commentChanges);
         }
 
         await ApplyRenameChangesAsync(changes, newName, docs!);
@@ -615,6 +621,59 @@ public partial class MainWindow : Window
         return edits
             .Select(e => new RenameFileChanges(e.FilePath, e.FileText, e.Spans.ToList()))
             .ToList();
+    }
+
+    /// <summary>
+    /// Whole-word occurrences of <paramref name="oldName"/> that live inside <c>#</c> comments (which
+    /// the symbol rename skips), across the workspace's .th files — for the opt-in "rename in comments
+    /// too" pass. Excludes any span already covered by the symbol rename.
+    /// </summary>
+    private static List<RenameFileChanges> CollectCommentRenameChanges(
+        Therion.Semantics.WorkspaceSemanticModel workspace, string oldName, List<RenameFileChanges> symbolChanges)
+    {
+        var known = symbolChanges.ToDictionary(c => c.FilePath,
+            c => new HashSet<int>(c.Hits.Select(h => h.Start)), StringComparer.OrdinalIgnoreCase);
+        var tokenizer = new Therion.Syntax.TherionTokenizer();
+        var result = new List<RenameFileChanges>();
+        foreach (var path in workspace.PerFile.Keys)
+        {
+            string text;
+            try { text = File.ReadAllText(path); } catch { continue; }
+            known.TryGetValue(path, out var seen);
+
+            var hits = new List<(int Start, int Length)>();
+            foreach (var t in tokenizer.Tokenize(path, text))
+            {
+                if (t.Kind != Therion.Syntax.TherionTokenKind.LineComment) continue;
+                int cs = t.Span.StartOffset, ce = cs + t.Span.Length, idx = cs;
+                while ((idx = text.IndexOf(oldName, idx, StringComparison.Ordinal)) >= 0 && idx < ce)
+                {
+                    int start = idx; idx += oldName.Length;
+                    bool bl = start == 0 || !IsRefChar(text[start - 1]);
+                    bool br = start + oldName.Length >= text.Length || !IsRefChar(text[start + oldName.Length]);
+                    if (bl && br && (seen is null || !seen.Contains(start))) hits.Add((start, oldName.Length));
+                }
+            }
+            if (hits.Count > 0) result.Add(new RenameFileChanges(path, text, hits));
+        }
+        return result;
+    }
+
+    /// <summary>Merges two change sets by file (dedup + order hits), so both passes apply cleanly.</summary>
+    private static List<RenameFileChanges> MergeRenameChanges(
+        List<RenameFileChanges> a, IReadOnlyList<RenameFileChanges> b)
+    {
+        var byPath = a.ToDictionary(c => c.FilePath, StringComparer.OrdinalIgnoreCase);
+        foreach (var c in b)
+        {
+            if (byPath.TryGetValue(c.FilePath, out var existing))
+                byPath[c.FilePath] = existing with
+                {
+                    Hits = existing.Hits.Concat(c.Hits).Distinct().OrderBy(h => h.Start).ToList(),
+                };
+            else byPath[c.FilePath] = c;
+        }
+        return byPath.Values.ToList();
     }
 
     /// <summary>Scans every workspace file for ref tokens resolving to the same declaration span.</summary>

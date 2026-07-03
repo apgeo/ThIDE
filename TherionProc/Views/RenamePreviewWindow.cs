@@ -12,8 +12,18 @@ namespace TherionProc.Views;
 
 internal sealed class RenamePreviewWindow : Window
 {
+    /// <summary>True when the user opted to also rename occurrences inside comments.</summary>
+    public bool IncludeComments { get; private set; }
+
     internal RenamePreviewWindow(
         IReadOnlyList<RenameFileChanges> changes,
+        string oldName,
+        string newName)
+        : this(changes, System.Array.Empty<RenameFileChanges>(), oldName, newName) { }
+
+    internal RenamePreviewWindow(
+        IReadOnlyList<RenameFileChanges> changes,
+        IReadOnlyList<RenameFileChanges> commentChanges,
         string oldName,
         string newName)
     {
@@ -44,6 +54,41 @@ internal sealed class RenamePreviewWindow : Window
             tree.Items.Add(fileItem);
         }
 
+        int commentCount = 0;
+        foreach (var fc in commentChanges) commentCount += fc.Hits.Count;
+        if (commentCount > 0)
+        {
+            var group = new TreeViewItem { Header = $"In comments  ({commentCount})", IsExpanded = false };
+            foreach (var fc in commentChanges)
+            {
+                var fileItem = new TreeViewItem
+                {
+                    Header = $"{Path.GetFileName(fc.FilePath)}  ({fc.Hits.Count})",
+                    IsExpanded = false,
+                };
+                ToolTip.SetTip(fileItem, fc.FilePath);
+                foreach (var (start, _) in fc.Hits)
+                {
+                    var (line, col) = OffsetToLineCol(fc.FileText, start);
+                    fileItem.Items.Add(new TreeViewItem
+                    {
+                        Header = $"Line {line}, Col {col}:  {GetLineText(fc.FileText, start).Trim()}",
+                    });
+                }
+                group.Items.Add(fileItem);
+            }
+            tree.Items.Add(group);
+        }
+
+        var commentsCheck = new CheckBox
+        {
+            Content = $"Also rename {commentCount} occurrence{(commentCount == 1 ? "" : "s")} in comments",
+            IsChecked = false,
+            IsVisible = commentCount > 0,
+            Margin = new Thickness(0, 0, 0, 8),
+        };
+        commentsCheck.IsCheckedChanged += (_, _) => IncludeComments = commentsCheck.IsChecked == true;
+
         var summary = new TextBlock
         {
             Margin = new Thickness(0, 0, 0, 8),
@@ -63,14 +108,15 @@ internal sealed class RenamePreviewWindow : Window
             Children = { cancelBtn, applyBtn },
         };
 
-        DockPanel.SetDock(summary,  Avalonia.Controls.Dock.Top);
-        DockPanel.SetDock(buttons,  Avalonia.Controls.Dock.Bottom);
+        DockPanel.SetDock(summary,       Avalonia.Controls.Dock.Top);
+        DockPanel.SetDock(commentsCheck, Avalonia.Controls.Dock.Bottom);
+        DockPanel.SetDock(buttons,       Avalonia.Controls.Dock.Bottom);
 
         Content = new DockPanel
         {
             Margin = new Thickness(12),
             LastChildFill = true,
-            Children = { summary, buttons, tree },
+            Children = { summary, buttons, commentsCheck, tree },
         };
     }
 
