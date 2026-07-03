@@ -42,6 +42,32 @@ public class WorkspaceOccurrenceTests
     }
 
     [Fact]
+    public void Rename_plan_edits_cover_all_occurrences_across_files_and_slice_to_the_name()
+    {
+        var bText = """
+            survey svb
+              centreline
+                data normal from to length compass clino
+                1 2 1.0 0 0
+              endcentreline
+            endsurvey
+            """;
+        var aText = "equate 1@svb 2@svb\n";
+        var ws = Build(("/p/B.th", bText), ("/p/A.th", aText));
+        var texts = new Dictionary<string, string> { ["/p/B.th"] = bText, ["/p/A.th"] = aText };
+
+        var decl = ws.ResolveStationSymbol("1@svb")!.DeclarationSpan;
+        var edits = StationRenamePlan.Compute(ws, decl, p => texts.TryGetValue(p, out var t) ? t : null);
+
+        // Both files are edited; every edited span still slices to exactly "1" (never "2", never "1@svb").
+        Assert.Contains(edits, e => e.FilePath.EndsWith("B.th"));
+        Assert.Contains(edits, e => e.FilePath.EndsWith("A.th"));
+        var all = edits.SelectMany(e => e.Spans.Select(s => e.FileText.Substring(s.Start, s.Length))).ToList();
+        Assert.NotEmpty(all);
+        Assert.All(all, s => Assert.Equal("1", s));
+    }
+
+    [Fact]
     public void ResolveStationSymbol_maps_an_at_ref_to_its_declaration_identity()
     {
         var ws = Build(("/p/B.th", """

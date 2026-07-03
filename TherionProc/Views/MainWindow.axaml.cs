@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
@@ -557,8 +558,19 @@ public partial class MainWindow : Window
             $"New name for '{oldName}':", oldName).ShowAsync(this);
         if (string.IsNullOrWhiteSpace(newName) || newName.Trim() == oldName) return;
         newName = newName.Trim();
+        if (Therion.Syntax.TherionIdentifiers.FirstIllegalChar(newName) is { } badChar)
+        {
+            await new MessageDialog("Rename Symbol",
+                $"'{newName}' is not a valid Therion name — it contains '{badChar}'.").ShowAsync(this);
+            return;
+        }
 
-        var changes = CollectRenameChanges(workspace, nav, raw, kind, oldName, targetSpan.Value);
+        // Stations rename via the true symbol occurrence index (scope-correct, @-aware, comment-free);
+        // survey/scrap/map still use the legacy text-scan until they get an occurrence index.
+        var changes = kind == Therion.Processing.Abstractions.ReferenceKind.Station
+            ? (CollectStationRenameChanges(workspace, targetSpan.Value)
+               ?? CollectRenameChanges(workspace, nav, raw, kind, oldName, targetSpan.Value))
+            : CollectRenameChanges(workspace, nav, raw, kind, oldName, targetSpan.Value);
         if (changes.Count == 0) return;
 
         if (settings?.Current.ShowRenamePreviewBeforeApply == true)
@@ -571,6 +583,22 @@ public partial class MainWindow : Window
         }
 
         await ApplyRenameChangesAsync(changes, newName, docs!);
+    }
+
+    /// <summary>
+    /// True rename for a station: replaces exactly the token-level occurrences the semantic
+    /// occurrence index attributes to the clicked station (scope-correct, <c>@</c>-aware, comment-free,
+    /// cross-file). Returns null when the target isn't a resolvable station (caller falls back).
+    /// </summary>
+    private static List<RenameFileChanges>? CollectStationRenameChanges(
+        Therion.Semantics.WorkspaceSemanticModel workspace, Therion.Core.SourceSpan targetSpan)
+    {
+        var edits = Therion.Semantics.StationRenamePlan.Compute(workspace, targetSpan,
+            path => { try { return System.IO.File.ReadAllText(path); } catch { return null; } });
+        if (edits.Count == 0) return null;
+        return edits
+            .Select(e => new RenameFileChanges(e.FilePath, e.FileText, e.Spans.ToList()))
+            .ToList();
     }
 
     /// <summary>Scans every workspace file for ref tokens resolving to the same declaration span.</summary>

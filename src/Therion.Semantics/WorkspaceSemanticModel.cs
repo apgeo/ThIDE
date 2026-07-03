@@ -81,6 +81,27 @@ public sealed class WorkspaceSemanticModel
     public ImmutableArray<SymbolOccurrence> FindOccurrences(SymbolId symbol) =>
         StationOccurrences.TryGetValue(symbol, out var list) ? list : ImmutableArray<SymbolOccurrence>.Empty;
 
+    /// <summary>
+    /// The <see cref="StationSymbol"/> declared at <paramref name="declarationSpan"/> (as returned by
+    /// go-to-definition), or null. Used by rename to turn a clicked token into a symbol identity.
+    /// </summary>
+    public StationSymbol? FindStationByDeclaration(SourceSpan declarationSpan)
+    {
+        if (declarationSpan.IsEmpty) return null;
+        bool Match(StationSymbol s) =>
+            s.DeclarationSpan.StartOffset == declarationSpan.StartOffset &&
+            string.Equals(s.DeclarationSpan.FilePath, declarationSpan.FilePath, System.StringComparison.OrdinalIgnoreCase);
+
+        if (PerFile.TryGetValue(declarationSpan.FilePath, out var m))
+            foreach (var s in m.Stations.Values)
+                if (Match(s)) return s;
+        // FilePath may differ in case/normalization — fall back to a full scan.
+        foreach (var model in PerFile.Values)
+            foreach (var s in model.Stations.Values)
+                if (Match(s)) return s;
+        return null;
+    }
+
     /// <summary>Resolves a station reference to its declaring <see cref="StationSymbol"/> (its identity).</summary>
     public StationSymbol? ResolveStationSymbol(string raw)
     {
