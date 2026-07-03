@@ -107,6 +107,24 @@ public class OccurrenceIndexTests
     }
 
     [Fact]
+    public void Default_normal_format_binds_rows_with_no_data_command()
+    {
+        // Therion's default `normal` format: a centreline with no `data` command still has shots,
+        // so rename / occurrences work on the many real files that rely on the default.
+        var m = Bind("""
+            survey a
+              centreline
+                1 2 1.0 0 0
+                2 3 1.0 0 0
+              endcentreline
+            endsurvey
+            """);
+        Assert.NotEmpty(m.Shots);
+        var two = new SymbolId(SymbolKind.Station, QualifiedName.Of("a", "2"));
+        Assert.Equal(2, m.Occurrences.Of(two).Length);   // `to` of row 1 + `from` of row 2
+    }
+
+    [Fact]
     public void At_offset_maps_a_caret_to_its_symbol()
     {
         var src = $$"""

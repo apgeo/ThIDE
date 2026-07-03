@@ -196,6 +196,10 @@ public sealed class ThParser
             // §"import"). The target is a compiled binary we don't parse, so it is NOT a source-graph
             // edge — recognized here only so it isn't flagged as an unknown command.
             "import"                       => new UnknownCommand(line.Span, line.Keyword, JoinFrom(line, 1)),
+            // Survey/centreline metadata (thbook §"survey"); TopoDroid emits these inside a centreline.
+            // Recognized (no binding semantics) so they aren't mis-read as data rows / unknown commands.
+            "author" or "copyright" or "title"
+                                           => new UnknownCommand(line.Span, line.Keyword, JoinFrom(line, 1)),
             // `comment … endcomment` — a multi-line comment block (consumed opaquely, see below).
             "comment"                      => ParseCommentBlock(line, lines, ref cursor),
             _ => ParseViaRegistryOrFallback(line, parentBlock, options, filePath, diagnostics),

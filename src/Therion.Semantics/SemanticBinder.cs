@@ -16,6 +16,11 @@ namespace Therion.Semantics;
 /// <summary>Stateless binder � call <see cref="Bind"/> to produce a <see cref="SemanticModel"/>.</summary>
 public sealed class SemanticBinder
 {
+    /// <summary>Therion's implicit reading order when a centreline declares no <c>data</c> command.</summary>
+    private static readonly DataCommand DefaultNormalData = new(
+        SourceSpan.None, "normal",
+        ImmutableArray.Create("from", "to", "length", "compass", "clino"));
+
     /// <param name="buildOccurrences">
     /// When true (default) the token-level <see cref="OccurrenceIndex"/> is built (needed for rename /
     /// find-refs / highlight). Batch/analytics binds that never need it can pass false to skip the
@@ -152,11 +157,16 @@ public sealed class SemanticBinder
                 case DataCommand d:
                     currentFields = d;
                     break;
-                case DataRow row when currentFields is not null:
-                    ValidateRowArity(row, currentFields, ctx);
-                    ValidateRowValues(row, currentFields, ctx, compassUnit, clinoUnit);
+                case DataRow row:
+                    // A centreline with no `data` command uses Therion's default reading order
+                    // `normal from to length compass clino` (thbook §"data"). Without this the rows
+                    // wouldn't bind at all — no shots, no station occurrences — on the many real
+                    // files that rely on the default.
+                    var fields = currentFields ?? DefaultNormalData;
+                    ValidateRowArity(row, fields, ctx);
+                    ValidateRowValues(row, fields, ctx, compassUnit, clinoUnit);
                     var leading = AdjacentLeadingComment(pendingComment, row);
-                    BindShot(row, currentFields, ctx, scope, activeFlags,
+                    BindShot(row, fields, ctx, scope, activeFlags,
                         CombineComments(leading, row.TrailingComment));
                     break;
                 case ScrapBlock scrap:
