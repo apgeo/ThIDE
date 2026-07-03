@@ -63,9 +63,12 @@ internal sealed class MinimapControl : Control
             dc.FillRectangle(brush, new Rect(3, y, barW, rowH));
         }
 
-        // Viewport box for the visible region.
+        // Viewport box for the visible region. VisualLines throws VisualLinesInvalidException if
+        // accessed while invalid (e.g. during a compositor paint triggered by the completion popup,
+        // before the TextView has re-laid out). Skip the box this frame; VisualLinesChanged
+        // re-invalidates us once the lines are valid again.
         var view = _editor.TextArea.TextView;
-        if (view.VisualLines.Count > 0)
+        if (view is { VisualLinesValid: true } && view.VisualLines.Count > 0)
         {
             int top = view.VisualLines[0].FirstDocumentLine.LineNumber;
             int bot = view.VisualLines[^1].LastDocumentLine.LineNumber;
