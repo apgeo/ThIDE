@@ -633,7 +633,6 @@ public partial class MainWindow : Window
     {
         var known = symbolChanges.ToDictionary(c => c.FilePath,
             c => new HashSet<int>(c.Hits.Select(h => h.Start)), StringComparer.OrdinalIgnoreCase);
-        var tokenizer = new Therion.Syntax.TherionTokenizer();
         var result = new List<RenameFileChanges>();
         foreach (var path in workspace.PerFile.Keys)
         {
@@ -641,19 +640,7 @@ public partial class MainWindow : Window
             try { text = File.ReadAllText(path); } catch { continue; }
             known.TryGetValue(path, out var seen);
 
-            var hits = new List<(int Start, int Length)>();
-            foreach (var t in tokenizer.Tokenize(path, text))
-            {
-                if (t.Kind != Therion.Syntax.TherionTokenKind.LineComment) continue;
-                int cs = t.Span.StartOffset, ce = cs + t.Span.Length, idx = cs;
-                while ((idx = text.IndexOf(oldName, idx, StringComparison.Ordinal)) >= 0 && idx < ce)
-                {
-                    int start = idx; idx += oldName.Length;
-                    bool bl = start == 0 || !IsRefChar(text[start - 1]);
-                    bool br = start + oldName.Length >= text.Length || !IsRefChar(text[start + oldName.Length]);
-                    if (bl && br && (seen is null || !seen.Contains(start))) hits.Add((start, oldName.Length));
-                }
-            }
+            var hits = Therion.Semantics.CommentOccurrences.Find(text, oldName, seen).ToList();
             if (hits.Count > 0) result.Add(new RenameFileChanges(path, text, hits));
         }
         return result;
