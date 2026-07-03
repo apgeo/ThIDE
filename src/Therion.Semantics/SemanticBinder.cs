@@ -547,18 +547,7 @@ public sealed class SemanticBinder
     {
         if (!ctx.BuildOccurrences || tokenSpan.IsEmpty) return;
         ctx.Occurrences.Add(new SymbolOccurrence(
-            NarrowToPoint(tokenSpan, raw), new SymbolId(SymbolKind.Station, qn), role, status));
-    }
-
-    /// <summary>Narrows a station token span to the point-name part (before <c>@</c>/<c>:</c>).</summary>
-    private static SourceSpan NarrowToPoint(SourceSpan span, string raw)
-    {
-        int cut = raw.Length;
-        int at = raw.IndexOf('@'); if (at >= 0 && at < cut) cut = at;
-        int colon = raw.IndexOf(':'); if (colon >= 0 && colon < cut) cut = colon;
-        if (cut <= 0 || cut >= span.Length) return span;
-        return new SourceSpan(span.FilePath, span.Start,
-            new SourceLocation(span.Start.Line, span.Start.Column + cut), span.StartOffset, cut);
+            StationTokenSpans.NarrowToPoint(tokenSpan, raw), new SymbolId(SymbolKind.Station, qn), role, status));
     }
 
     private static void DeclareImplicit(BindContext ctx, QualifiedName qn, SourceSpan span)

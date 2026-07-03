@@ -29,6 +29,24 @@ public readonly record struct SymbolId(SymbolKind Kind, QualifiedName Name)
     public override string ToString() => $"{Kind}:{Name}";
 }
 
+/// <summary>Helpers for turning a station reference token into a rename-ready span.</summary>
+public static class StationTokenSpans
+{
+    /// <summary>
+    /// Narrows a station token span to the point-name part — the text before <c>@</c> (survey path)
+    /// or <c>:</c> (join mark) — so a rename rewrites only the name, not the qualifier.
+    /// </summary>
+    public static SourceSpan NarrowToPoint(SourceSpan span, string raw)
+    {
+        int cut = raw.Length;
+        int at = raw.IndexOf('@'); if (at >= 0 && at < cut) cut = at;
+        int colon = raw.IndexOf(':'); if (colon >= 0 && colon < cut) cut = colon;
+        if (cut <= 0 || cut >= span.Length) return span;
+        return new SourceSpan(span.FilePath, span.Start,
+            new SourceLocation(span.Start.Line, span.Start.Column + cut), span.StartOffset, cut);
+    }
+}
+
 /// <summary>One identifier token bound to a symbol. <see cref="Span"/> is token-precise and, for a
 /// <c>point@survey</c> token, is narrowed to the <b>point</b> sub-span (so rename rewrites only the
 /// name).</summary>

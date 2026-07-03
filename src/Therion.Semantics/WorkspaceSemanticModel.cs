@@ -68,6 +68,29 @@ public sealed class WorkspaceSemanticModel
     /// <summary>All <c>.th2</c> point/line/area objects (for the Object Browser).</summary>
     public ImmutableArray<Th2ObjectRecord> Th2Objects { get; init; } = ImmutableArray<Th2ObjectRecord>.Empty;
 
+    /// <summary>
+    /// Workspace-wide token-level station occurrences (rename / find-refs substrate): every per-file
+    /// <see cref="SemanticModel.Occurrences"/> merged, plus cross-file <c>@</c>-equate references
+    /// (unresolved per-file) finalized to their declaring station. Keyed by the station's
+    /// <see cref="SymbolId"/>. See <c>.claude/symbol-occurrence-index-design.md</c>.
+    /// </summary>
+    public FrozenDictionary<SymbolId, ImmutableArray<SymbolOccurrence>> StationOccurrences { get; init; } =
+        FrozenDictionary<SymbolId, ImmutableArray<SymbolOccurrence>>.Empty;
+
+    /// <summary>Every occurrence of <paramref name="symbol"/> across the workspace (stable order).</summary>
+    public ImmutableArray<SymbolOccurrence> FindOccurrences(SymbolId symbol) =>
+        StationOccurrences.TryGetValue(symbol, out var list) ? list : ImmutableArray<SymbolOccurrence>.Empty;
+
+    /// <summary>Resolves a station reference to its declaring <see cref="StationSymbol"/> (its identity).</summary>
+    public StationSymbol? ResolveStationSymbol(string raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return null;
+        var r = StationRef.Parse(raw.Trim());
+        if (r.SurveyLastName is { } sl &&
+            StationsBySurveyAndPoint.TryGetValue(SurveyPointKey(sl, r.Point), out var byKey)) return byKey;
+        return StationsByQn.TryGetValue(r.StationQuery, out var byQn) ? byQn : null;
+    }
+
     public WorkspaceSemanticModel(
         FrozenDictionary<string, SemanticModel> perFile,
         XviIndex xvi,
@@ -154,7 +177,48 @@ public sealed class WorkspaceSemanticModel
             ScrapsById = idx.ScrapsById,
             ScrapObjectsById = idx.ScrapObjectsById,
             Th2Objects = idx.Th2Objects,
+            StationOccurrences = BuildStationOccurrences(frozenPerFile, idx),
         };
+    }
+
+    /// <summary>
+    /// Merges every file's per-file station occurrences and finalizes cross-file <c>@</c>-equate
+    /// references (which the per-file binder left unresolved) against the workspace station indexes,
+    /// so a rename / find-refs sees a symbol's occurrences across the whole project.
+    /// </summary>
+    private static FrozenDictionary<SymbolId, ImmutableArray<SymbolOccurrence>> BuildStationOccurrences(
+        FrozenDictionary<string, SemanticModel> perFile, ReferenceIndexes idx)
+    {
+        var occ = new Dictionary<SymbolId, ImmutableArray<SymbolOccurrence>.Builder>();
+        void Add(SymbolOccurrence o)
+        {
+            if (!occ.TryGetValue(o.Symbol, out var b))
+                occ[o.Symbol] = b = ImmutableArray.CreateBuilder<SymbolOccurrence>();
+            b.Add(o);
+        }
+
+        foreach (var model in perFile.Values)
+        {
+            foreach (var o in model.Occurrences.All) Add(o);   // per-file (already resolved)
+
+            // Cross-file @-equate refs: resolve to the declaring station's identity (same QN the
+            // declaring file indexed it under) so the link isn't orphaned by a rename.
+            foreach (var uref in model.UnresolvedEquateRefs)
+            {
+                var r = StationRef.Parse(uref.Raw.Trim());
+                StationSymbol? sym =
+                    r.SurveyLastName is { } sl &&
+                    idx.StationsBySurveyAndPoint.TryGetValue(SurveyPointKey(sl, r.Point), out var a) ? a
+                    : idx.StationsByQn.TryGetValue(r.StationQuery, out var b2) ? b2
+                    : null;
+                if (sym is { } s)
+                    Add(new SymbolOccurrence(
+                        StationTokenSpans.NarrowToPoint(uref.Span, uref.Raw),
+                        new SymbolId(SymbolKind.Station, s.Name), OccurrenceRole.Reference));
+            }
+        }
+
+        return occ.ToFrozenDictionary(k => k.Key, v => v.Value.ToImmutable());
     }
 
     /// <summary>
