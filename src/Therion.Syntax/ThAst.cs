@@ -112,7 +112,14 @@ public sealed record StationFix(
 /// <summary><c>equate &lt;station&gt; &lt;station&gt; [...]</c>.</summary>
 public sealed record EquateCommand(
     SourceSpan Span,
-    ImmutableArray<string> Stations) : TherionCommand(Span, "equate");
+    ImmutableArray<string> Stations) : TherionCommand(Span, "equate")
+{
+    /// <summary>
+    /// Source span of each entry in <see cref="Stations"/> (parallel array; empty when not captured).
+    /// Needed for token-level symbol rename — the command <see cref="Span"/> covers the whole line.
+    /// </summary>
+    public ImmutableArray<SourceSpan> StationSpans { get; init; } = ImmutableArray<SourceSpan>.Empty;
+}
 
 /// <summary><c>input &lt;path&gt;</c> (in <c>.th</c>) � pulls another source file in.</summary>
 public sealed record InputCommand(

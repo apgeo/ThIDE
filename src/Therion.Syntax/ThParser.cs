@@ -1047,8 +1047,13 @@ public sealed class ThParser
         }
 
         var b = ImmutableArray.CreateBuilder<string>();
-        for (int i = 1; i < line.Tokens.Length; i++) b.Add(line.Tokens[i].Text);
-        return new EquateCommand(line.Span, b.ToImmutable());
+        var spans = ImmutableArray.CreateBuilder<SourceSpan>();
+        for (int i = 1; i < line.Tokens.Length; i++)
+        {
+            b.Add(line.Tokens[i].Text);
+            spans.Add(line.Tokens[i].Span);
+        }
+        return new EquateCommand(line.Span, b.ToImmutable()) { StationSpans = spans.ToImmutable() };
     }
 
     /// <summary>Parses <c>join a b [...] [-opt val]</c>: leading non-option tokens are targets.</summary>
