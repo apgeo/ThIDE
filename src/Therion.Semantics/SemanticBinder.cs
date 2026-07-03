@@ -360,6 +360,7 @@ public sealed class SemanticBinder
         if (string.IsNullOrEmpty(sv.Name)) return;
         var newScope = scope.Add(sv.Name);
         var qn = new QualifiedName(newScope);
+        AddOccurrence(ctx, new SymbolId(SymbolKind.Survey, qn), sv.NameSpan, OccurrenceRole.Declaration);
         var parent = scope.IsEmpty ? (QualifiedName?)null : new QualifiedName(scope);
 
         ctx.Surveys[qn] = new SurveySymbol(qn, sv.Span, parent,
@@ -541,13 +542,25 @@ public sealed class SemanticBinder
     /// Records a token-level station occurrence (rename / find-refs substrate). The span is narrowed
     /// to the point-name part (before <c>@</c> or <c>:</c>) so rename rewrites only the name.
     /// </summary>
+    private static void AddOccurrence(
+        BindContext ctx, SymbolId symbol, SourceSpan span,
+        OccurrenceRole role, ResolutionStatus status = ResolutionStatus.Resolved)
+    {
+        if (!ctx.BuildOccurrences || span.IsEmpty) return;
+        ctx.Occurrences.Add(new SymbolOccurrence(span, symbol, role, status));
+    }
+
     private static void AddStationOccurrence(
         BindContext ctx, QualifiedName qn, SourceSpan tokenSpan, string raw,
         OccurrenceRole role, ResolutionStatus status = ResolutionStatus.Resolved)
     {
-        if (!ctx.BuildOccurrences || tokenSpan.IsEmpty) return;
-        ctx.Occurrences.Add(new SymbolOccurrence(
-            StationTokenSpans.NarrowToPoint(tokenSpan, raw), new SymbolId(SymbolKind.Station, qn), role, status));
+        if (tokenSpan.IsEmpty) return;
+        AddOccurrence(ctx, new SymbolId(SymbolKind.Station, qn),
+            StationTokenSpans.NarrowToPoint(tokenSpan, raw), role, status);
+        // A point@survey token also references each survey component — emit those too (rename surveys).
+        if (ctx.BuildOccurrences && raw.IndexOf('@') >= 0)
+            foreach (var (sid, sp) in SurveyRefDecomposer.Decompose(raw, tokenSpan, qn))
+                AddOccurrence(ctx, sid, sp, OccurrenceRole.Reference, status);
     }
 
     private static void DeclareImplicit(BindContext ctx, QualifiedName qn, SourceSpan span)

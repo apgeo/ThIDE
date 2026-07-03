@@ -565,12 +565,10 @@ public partial class MainWindow : Window
             return;
         }
 
-        // Stations rename via the true symbol occurrence index (scope-correct, @-aware, comment-free);
-        // survey/scrap/map still use the legacy text-scan until they get an occurrence index.
-        var changes = kind == Therion.Processing.Abstractions.ReferenceKind.Station
-            ? (CollectStationRenameChanges(workspace, targetSpan.Value)
-               ?? CollectRenameChanges(workspace, nav, raw, kind, oldName, targetSpan.Value))
-            : CollectRenameChanges(workspace, nav, raw, kind, oldName, targetSpan.Value);
+        // Stations & surveys rename via the true symbol occurrence index (scope-correct, @-aware,
+        // comment-free, cross-file); scrap/map still use the legacy text-scan until they get an index.
+        var changes = CollectSymbolRenameChanges(workspace, kind, targetSpan.Value)
+            ?? CollectRenameChanges(workspace, nav, raw, kind, oldName, targetSpan.Value);
         if (changes.Count == 0) return;
 
         if (settings?.Current.ShowRenamePreviewBeforeApply == true)
@@ -590,10 +588,28 @@ public partial class MainWindow : Window
     /// occurrence index attributes to the clicked station (scope-correct, <c>@</c>-aware, comment-free,
     /// cross-file). Returns null when the target isn't a resolvable station (caller falls back).
     /// </summary>
-    private static List<RenameFileChanges>? CollectStationRenameChanges(
-        Therion.Semantics.WorkspaceSemanticModel workspace, Therion.Core.SourceSpan targetSpan)
+    private static List<RenameFileChanges>? CollectSymbolRenameChanges(
+        Therion.Semantics.WorkspaceSemanticModel workspace,
+        Therion.Processing.Abstractions.ReferenceKind kind, Therion.Core.SourceSpan targetSpan)
     {
-        var edits = Therion.Semantics.StationRenamePlan.Compute(workspace, targetSpan,
+        // Resolve the clicked declaration to a symbol identity + its current name token.
+        Therion.Semantics.SymbolId symbol;
+        string name;
+        if (kind == Therion.Processing.Abstractions.ReferenceKind.Station)
+        {
+            if (workspace.FindStationByDeclaration(targetSpan) is not { } st) return null;
+            symbol = new Therion.Semantics.SymbolId(Therion.Semantics.SymbolKind.Station, st.Name);
+            name = st.Name.Last;
+        }
+        else if (kind == Therion.Processing.Abstractions.ReferenceKind.Survey)
+        {
+            if (workspace.FindSurveyByDeclaration(targetSpan) is not { } sv) return null;
+            symbol = new Therion.Semantics.SymbolId(Therion.Semantics.SymbolKind.Survey, sv.Name);
+            name = sv.Name.Last;
+        }
+        else return null;   // scrap/map: not indexed yet — caller falls back to the text-scan
+
+        var edits = Therion.Semantics.SymbolRenamePlan.Compute(workspace, symbol, name,
             path => { try { return System.IO.File.ReadAllText(path); } catch { return null; } });
         if (edits.Count == 0) return null;
         return edits

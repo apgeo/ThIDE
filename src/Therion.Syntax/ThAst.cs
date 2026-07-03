@@ -23,7 +23,11 @@ public sealed record SurveyCommand(
     string Name,
     string OptionsRaw,
     ImmutableArray<TherionNode> Children,
-    bool IsTerminated) : BlockCommand(Span, "survey", Children, IsTerminated);
+    bool IsTerminated) : BlockCommand(Span, "survey", Children, IsTerminated)
+{
+    /// <summary>Token span of the survey <see cref="Name"/> on the header (for rename); empty if absent.</summary>
+    public SourceSpan NameSpan { get; init; }
+}
 
 /// <summary><c>centreline</c> / <c>centerline</c> block.</summary>
 public sealed record CentrelineCommand(

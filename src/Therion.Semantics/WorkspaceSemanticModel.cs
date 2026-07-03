@@ -102,6 +102,18 @@ public sealed class WorkspaceSemanticModel
         return null;
     }
 
+    /// <summary>The <see cref="SurveySymbol"/> declared at <paramref name="declarationSpan"/>, or null.</summary>
+    public SurveySymbol? FindSurveyByDeclaration(SourceSpan declarationSpan)
+    {
+        if (declarationSpan.IsEmpty) return null;
+        foreach (var model in PerFile.Values)
+            foreach (var sv in model.Surveys.Values)
+                if (sv.DeclarationSpan.StartOffset == declarationSpan.StartOffset &&
+                    string.Equals(sv.DeclarationSpan.FilePath, declarationSpan.FilePath, System.StringComparison.OrdinalIgnoreCase))
+                    return sv;
+        return null;
+    }
+
     /// <summary>Resolves a station reference to its declaring <see cref="StationSymbol"/> (its identity).</summary>
     public StationSymbol? ResolveStationSymbol(string raw)
     {
@@ -233,9 +245,14 @@ public sealed class WorkspaceSemanticModel
                     : idx.StationsByQn.TryGetValue(r.StationQuery, out var b2) ? b2
                     : null;
                 if (sym is { } s)
+                {
                     Add(new SymbolOccurrence(
                         StationTokenSpans.NarrowToPoint(uref.Span, uref.Raw),
                         new SymbolId(SymbolKind.Station, s.Name), OccurrenceRole.Reference));
+                    // ...and the survey components of the cross-file @-path.
+                    foreach (var (sid, sp) in SurveyRefDecomposer.Decompose(uref.Raw, uref.Span, s.Name))
+                        Add(new SymbolOccurrence(sp, sid, OccurrenceRole.Reference));
+                }
             }
         }
 

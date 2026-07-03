@@ -29,6 +29,44 @@ public readonly record struct SymbolId(SymbolKind Kind, QualifiedName Name)
     public override string ToString() => $"{Kind}:{Name}";
 }
 
+/// <summary>Decomposes a <c>point@survey.path</c> token into per-survey-component occurrences.</summary>
+public static class SurveyRefDecomposer
+{
+    /// <summary>
+    /// Yields each survey component's identity + token sub-span in a <c>point@inner.outer</c> ref,
+    /// using the resolved station QN (top-down, last part = point) to name each component. Source
+    /// components after <c>@</c> run innermost→outermost; a component is yielded only when its text
+    /// matches the resolved survey path, so a rename never rewrites the wrong survey.
+    /// </summary>
+    public static IEnumerable<(SymbolId Survey, SourceSpan Span)> Decompose(
+        string raw, SourceSpan fullSpan, QualifiedName stationQn)
+    {
+        int at = raw.IndexOf('@');
+        if (at < 0 || at + 1 >= raw.Length) yield break;
+        var comps = raw[(at + 1)..].Split('.');   // innermost survey first
+
+        QualifiedName? survey = stationQn.HasParent ? stationQn.Parent() : null;
+        int pos = 0;
+        foreach (var comp in comps)
+        {
+            if (survey is not { } s) yield break;   // ran out of survey path
+            if (string.Equals(comp, s.Last, System.StringComparison.Ordinal))
+            {
+                int startOffset = fullSpan.StartOffset + at + 1 + pos;
+                int startCol = fullSpan.Start.Column + at + 1 + pos;
+                yield return (
+                    new SymbolId(SymbolKind.Survey, s),
+                    new SourceSpan(fullSpan.FilePath,
+                        new SourceLocation(fullSpan.Start.Line, startCol),
+                        new SourceLocation(fullSpan.Start.Line, startCol + comp.Length),
+                        startOffset, comp.Length));
+            }
+            survey = s.HasParent ? s.Parent() : null;
+            pos += comp.Length + 1;
+        }
+    }
+}
+
 /// <summary>Helpers for turning a station reference token into a rename-ready span.</summary>
 public static class StationTokenSpans
 {

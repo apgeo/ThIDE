@@ -293,7 +293,10 @@ public sealed class ThParser
         bool terminated = cursor <= lines.Length &&
                           (inner.Length == 0 ||
                            lines.Length > 0 && cursor - 1 < lines.Length); // best-effort marker
-        return new SurveyCommand(fullSpan, name ?? string.Empty, rest, inner, terminated);
+        return new SurveyCommand(fullSpan, name ?? string.Empty, rest, inner, terminated)
+        {
+            NameSpan = line.Tokens.Length > 1 ? line.Tokens[1].Span : default,
+        };
     }
 
     private CentrelineCommand ParseCentreline(

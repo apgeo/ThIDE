@@ -56,8 +56,9 @@ public class WorkspaceOccurrenceTests
         var ws = Build(("/p/B.th", bText), ("/p/A.th", aText));
         var texts = new Dictionary<string, string> { ["/p/B.th"] = bText, ["/p/A.th"] = aText };
 
-        var decl = ws.ResolveStationSymbol("1@svb")!.DeclarationSpan;
-        var edits = StationRenamePlan.Compute(ws, decl, p => texts.TryGetValue(p, out var t) ? t : null);
+        var st = ws.ResolveStationSymbol("1@svb")!;
+        var edits = SymbolRenamePlan.Compute(ws, new SymbolId(SymbolKind.Station, st.Name), st.Name.Last,
+            p => texts.TryGetValue(p, out var t) ? t : null);
 
         // Both files are edited; every edited span still slices to exactly "1" (never "2", never "1@svb").
         Assert.Contains(edits, e => e.FilePath.EndsWith("B.th"));
