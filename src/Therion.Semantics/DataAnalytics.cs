@@ -41,7 +41,7 @@ public sealed record TripStat(string Date, int Surveys, double Length, Immutable
 /// <summary>A fixed point or entrance with its coordinates and CRS.</summary>
 public sealed record FixedPointRow(
     string Station, double? X, double? Y, double? Z, string Cs,
-    bool IsEntrance, bool IsFixed, string File, int Line);
+    bool IsEntrance, bool IsFixed, string File, int Line, Therion.Core.SourceSpan Span);
 
 // ---- -----------------------------------------------------------------
 
@@ -241,7 +241,8 @@ public static class DataAnalytics
             if (!isFixed && !st.IsEntrance) continue;
             rows.Add(new FixedPointRow(
                 st.Name.ToString(), st.FixX, st.FixY, st.FixZ, st.Cs ?? string.Empty,
-                st.IsEntrance, isFixed, st.DeclarationSpan.FilePath, st.DeclarationSpan.Start.Line));
+                st.IsEntrance, isFixed, st.DeclarationSpan.FilePath, st.DeclarationSpan.Start.Line,
+                st.DeclarationSpan));
         }
         return rows
             .OrderByDescending(r => r.IsFixed).ThenBy(r => r.Station, StringComparer.Ordinal)

@@ -23,7 +23,8 @@ public sealed record ChartBar(string Label, string Value, double Fraction)
 }
 public sealed record TeamRow(string Name, int Surveys, string Length);
 public sealed record TripRow(string Date, int Surveys, string Length, string Members);
-public sealed record FixedRow(string Station, string Kind, string Coordinates, string Cs, string Location);
+public sealed record FixedRow(string Station, string Kind, string Coordinates, string Cs, string Location,
+    Therion.Core.SourceSpan Span);
 public sealed record QualityRow(string Metric, int Count);
 
 public sealed partial class DataAnalyticsViewModel : ObservableObject
@@ -62,6 +63,13 @@ public sealed partial class DataAnalyticsViewModel : ObservableObject
     [RelayCommand] private void CopyTeam() =>
         ClipboardHelper.SetText(DataExport.ToCsv(new[] { "Name", "Surveys", "Length" },
             Team.Select(t => (IReadOnlyList<string>)new[] { t.Name, t.Surveys.ToString(), t.Length })));
+
+    /// <summary>Jump to an entrance / fixed-point's declaration (double-click in the Entrances grid).</summary>
+    [RelayCommand]
+    private void OpenFixedPoint(FixedRow? row)
+    {
+        if (row is { Span: { IsEmpty: false } span }) _ = _documents?.NavigateToSpanAsync(span);
+    }
 
     [RelayCommand] private void CopyFixedPoints() =>
         ClipboardHelper.SetText(DataExport.ToCsv(new[] { "Station", "Kind", "Coordinates", "CRS", "Location" },
@@ -153,7 +161,7 @@ public sealed partial class DataAnalyticsViewModel : ObservableObject
                 _ => "",
             };
             FixedPoints.Add(new FixedRow(f.Station, kind, coords, f.Cs,
-                $"{System.IO.Path.GetFileName(f.File)}:{f.Line}"));
+                $"{System.IO.Path.GetFileName(f.File)}:{f.Line}", f.Span));
         }
     }
 

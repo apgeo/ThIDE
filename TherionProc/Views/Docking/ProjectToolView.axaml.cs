@@ -26,4 +26,12 @@ public partial class ProjectToolView : UserControl
             (e.Source as Visual)?.FindAncestorOfType<DataGridRow>()?.DataContext is TodoRow row)
             vm.Todos.OpenCommand.Execute(row);
     }
+
+    // Double-click an entrance / fixed-point row to jump to its declaration.
+    private void OnEntrancesRowDoubleTapped(object? sender, TappedEventArgs e)
+    {
+        if (DataContext is ProjectToolViewModel vm &&
+            (e.Source as Visual)?.FindAncestorOfType<DataGridRow>()?.DataContext is FixedRow row)
+            vm.Analytics.OpenFixedPointCommand.Execute(row);
+    }
 }
