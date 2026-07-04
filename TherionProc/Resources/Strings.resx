@@ -937,7 +937,7 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Tb_ValidateOnType" xml:space="preserve"><value>Validate on type — re-check the file and whole project as you type (not just on save)</value></data>
   <data name="Pref_ValidateOnType" xml:space="preserve"><value>Validate on type (file + whole project)</value></data>
   <data name="Pref_ValidateOnTypeHelp" xml:space="preserve"><value>Re-validate the whole object graph from the unsaved editor buffers on a short typing pause, instead of only on save. Off by default — it re-analyses the project on every pause, which can be heavy on large projects.</value></data>
-  <data name="Tb_DoubleClickNav" xml:space="preserve"><value>Double-click to go to definition — a single click just places the caret</value></data>
+  <data name="Tb_DoubleClickNav" xml:space="preserve"><value>Double-click to go to definition — a single click just places the caret (CTRL + click also available for navigattion to definition in this mode).</value></data>
   <data name="Pref_DoubleClickNav" xml:space="preserve"><value>Require a double-click to go to definition</value></data>
   <data name="Pref_DoubleClickNavHelp" xml:space="preserve"><value>When on, a single click on an identifier just places the caret (so you can edit it); a double-click jumps to its declaration. When off, a single click navigates like a hyperlink. Ctrl+click always navigates.</value></data>
   <data name="Common_Undo" xml:space="preserve"><value>Undo</value></data>

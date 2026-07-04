@@ -446,6 +446,9 @@
   <data name="Pref_Analytics_ObjectBrowser" xml:space="preserve"><value>Filele de entități din Navigator obiecte (topografii, puncte fixe, echivalări, schițe, hărți, puncte, linii, suprafețe) — DATA-03</value></data>
   <data name="Pref_Analytics_Todo" xml:space="preserve"><value>Scanare comentarii TODO / FIXME / QM — NOTE-01</value></data>
   <data name="Pref_Analytics_Media" xml:space="preserve"><value>Scanare manager media (.xvi referențiate + orfane pe disc) — MEDIA-02/03</value></data>
+  <data name="Pref_Diagnostics" xml:space="preserve"><value>Diagnostice</value></data>
+  <data name="Pref_Diag_LocalFixGrounds" xml:space="preserve"><value>Un fix local (fără cs) ancorează o topografie deconectată</value></data>
+  <data name="Pref_Diag_LocalFixGroundsHelp" xml:space="preserve"><value>Când este dezactivat (implicit), o porțiune deconectată ancorată doar printr-un fix simplu (ex. fix 0 0 0 fără sistem de coordonate) este totuși semnalată. Activați pentru a considera orice fix ca ancorare și a suprima avertizarea „topografie deconectată” (TH_SEM_015) pentru acele porțiuni.</value></data>
   <data name="Pref_Col_Tool" xml:space="preserve"><value>Unealtă</value></data>
   <data name="Pref_Col_Detected" xml:space="preserve"><value>Detectat</value></data>
   <data name="Pref_Col_Version" xml:space="preserve"><value>Versiune</value></data>
