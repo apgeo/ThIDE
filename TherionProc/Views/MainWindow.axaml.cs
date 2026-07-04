@@ -584,8 +584,11 @@ public partial class MainWindow : Window
             // The graph-driven rename deliberately skips comments. Offer an opt-in pass that also renames
             // the name where it appears inside `# …` comments (classic "replace in comments too").
             var commentChanges = CollectCommentRenameChanges(workspace, docs!.Active, oldName, changes);
-            // ...and a second opt-in that renames every OTHER station/survey sharing this name across
-            // surveys/files (the blunt "replace all occurrences" the scope-correct rename intentionally avoids).
+            // ...an opt-in that follows equate links to same-named stations in other surveys (keeps the
+            // equated point connected)...
+            var equateLinkedChanges = CollectEquateLinkedChanges(workspace, docs!.Active, kind, oldName, targetSpan.Value, changes);
+            // ...and the blunt opt-in that renames every OTHER station/survey sharing this name across
+            // surveys/files (the "replace all occurrences" the scope-correct rename intentionally avoids).
             var sameNameChanges = CollectSameNameChanges(workspace, docs!.Active, kind, oldName, changes);
 
             if (settings?.Current.ShowRenamePreviewBeforeApply == true)
@@ -600,7 +603,8 @@ public partial class MainWindow : Window
                     static () => { }, Avalonia.Threading.DispatcherPriority.Background);
 
                 _renamePreviewWindow?.Close();
-                var win = new RenamePreviewWindow(changes, sameNameChanges, commentChanges, oldName, newName);
+                var win = new RenamePreviewWindow(changes, equateLinkedChanges, sameNameChanges, commentChanges,
+                    oldName, newName, span => docs!.NavigateToSpanAsync(span));
                 _renamePreviewWindow = win;
                 win.Closed += (_, _) => _renamePreviewWindow = null;
 
@@ -610,6 +614,7 @@ public partial class MainWindow : Window
 
                 var apply = await win.ShowDialog<bool>(this);
                 if (!apply) return;
+                if (win.IncludeEquateLinked) changes = MergeRenameChanges(changes, equateLinkedChanges);
                 if (win.IncludeSameName) changes = MergeRenameChanges(changes, sameNameChanges);
                 if (win.IncludeComments) changes = MergeRenameChanges(changes, commentChanges);
             }
@@ -719,12 +724,75 @@ public partial class MainWindow : Window
         ViewModels.Docking.FileDocumentViewModel? active,
         Therion.Processing.Abstractions.ReferenceKind kind, string oldName, List<RenameFileChanges> already)
     {
+        // Every station (and survey, when applicable) sharing the last name — workspace-wide plus the
+        // active document's own (it may be outside the workspace). The target's own occurrences drop out
+        // via the covered-span filter in BuildSymbolChanges.
+        var symbols = new HashSet<Therion.Semantics.SymbolId>();
+        if (WantsStation(kind) && workspace.StationsByLastName.TryGetValue(oldName, out var sts))
+            foreach (var s in sts) symbols.Add(new Therion.Semantics.SymbolId(Therion.Semantics.SymbolKind.Station, s.Name));
+        if (WantsSurvey(kind) && workspace.SurveysByLastName.TryGetValue(oldName, out var svs))
+            foreach (var s in svs) symbols.Add(new Therion.Semantics.SymbolId(Therion.Semantics.SymbolKind.Survey, s.Name));
+        if (active?.Semantics is { } m)
+        {
+            if (WantsStation(kind))
+                foreach (var s in m.Stations.Values)
+                    if (s.Name.Last == oldName) symbols.Add(new Therion.Semantics.SymbolId(Therion.Semantics.SymbolKind.Station, s.Name));
+            if (WantsSurvey(kind))
+                foreach (var s in m.Surveys.Values)
+                    if (s.Name.Last == oldName) symbols.Add(new Therion.Semantics.SymbolId(Therion.Semantics.SymbolKind.Survey, s.Name));
+        }
+        return BuildSymbolChanges(workspace, active, symbols, oldName, already);
+    }
+
+    /// <summary>
+    /// Opt-in pass: rename the stations that an <c>equate</c> declares to be the same physical point as the
+    /// target and that share its name in a different survey (e.g. <c>b.1</c> for <c>a.1</c> given
+    /// <c>equate 1@a 1@b</c>) — following equate links across surveys/files so the connection isn't broken.
+    /// Narrower than <see cref="CollectSameNameChanges"/> (only equate-linked stations, not every namesake).
+    /// Works no matter where the rename was launched (equate line or an ordinary station occurrence).
+    /// </summary>
+    private static List<RenameFileChanges> CollectEquateLinkedChanges(
+        Therion.Semantics.WorkspaceSemanticModel workspace,
+        ViewModels.Docking.FileDocumentViewModel? active,
+        Therion.Processing.Abstractions.ReferenceKind kind, string oldName,
+        Therion.Core.SourceSpan targetSpan, List<RenameFileChanges> already)
+    {
+        if (!WantsStation(kind)) return new();
+
+        // The target station's qualified name (workspace first, then the active file's own model).
+        Therion.Semantics.QualifiedName? targetQn = workspace.FindStationByDeclaration(targetSpan)?.Name;
+        if (targetQn is null && active?.Semantics is { } m)
+            foreach (var s in m.Stations.Values)
+                if (s.DeclarationSpan.StartOffset == targetSpan.StartOffset &&
+                    string.Equals(s.DeclarationSpan.FilePath, targetSpan.FilePath, System.StringComparison.OrdinalIgnoreCase))
+                { targetQn = s.Name; break; }
+        if (targetQn is null) return new();
+
+        var linked = workspace.EquatedSameNameStations(targetQn.Value);
+        if (linked.IsEmpty) return new();
+
+        var symbols = new HashSet<Therion.Semantics.SymbolId>();
+        foreach (var qn in linked) symbols.Add(new Therion.Semantics.SymbolId(Therion.Semantics.SymbolKind.Station, qn));
+        return BuildSymbolChanges(workspace, active, symbols, oldName, already);
+    }
+
+    /// <summary>
+    /// Computes the merged, per-file rename edits for an explicit set of <paramref name="symbols"/> from the
+    /// occurrence index (workspace + active document), dropping any span already covered by
+    /// <paramref name="already"/>. The active document is read from its live buffer so spans stay aligned
+    /// even when it is unsaved / not part of the workspace.
+    /// </summary>
+    private static List<RenameFileChanges> BuildSymbolChanges(
+        Therion.Semantics.WorkspaceSemanticModel workspace,
+        ViewModels.Docking.FileDocumentViewModel? active,
+        IReadOnlyCollection<Therion.Semantics.SymbolId> symbols, string oldName, List<RenameFileChanges> already)
+    {
+        if (symbols.Count == 0) return new();
+
         var covered = already.ToDictionary(c => c.FilePath,
             c => new HashSet<int>(c.Hits.Select(h => h.Start)), StringComparer.OrdinalIgnoreCase);
         var byPath = new Dictionary<string, RenameFileChanges>(StringComparer.OrdinalIgnoreCase);
 
-        // Read the active document from its live buffer (so spans align even when unsaved / standalone),
-        // every other file from disk.
         string? Read(string p) =>
             active?.FilePath is { Length: > 0 } ap &&
             string.Equals(p, ap, System.StringComparison.OrdinalIgnoreCase) &&
@@ -742,32 +810,15 @@ public partial class MainWindow : Window
                 : new RenameFileChanges(filePath, fileText, add.Distinct().OrderBy(h => h.Start).ToList());
         }
 
-        // Workspace: every station (and survey, when applicable) sharing the last name — the target's own
-        // occurrences drop out via the `covered` filter, leaving only the same-named symbols elsewhere.
-        var symbols = new List<Therion.Semantics.SymbolId>();
-        if (WantsStation(kind) && workspace.StationsByLastName.TryGetValue(oldName, out var sts))
-            foreach (var s in sts) symbols.Add(new Therion.Semantics.SymbolId(Therion.Semantics.SymbolKind.Station, s.Name));
-        if (WantsSurvey(kind) && workspace.SurveysByLastName.TryGetValue(oldName, out var svs))
-            foreach (var s in svs) symbols.Add(new Therion.Semantics.SymbolId(Therion.Semantics.SymbolKind.Survey, s.Name));
         foreach (var sym in symbols)
+        {
             foreach (var e in Therion.Semantics.SymbolRenamePlan.Compute(workspace, sym, oldName, Read))
                 AddEdit(e.FilePath, e.FileText, e.Spans);
-
-        // Active document's own same-named symbols (it may not be part of the workspace model).
-        if (active?.Semantics is { } m && active.FilePath is { Length: > 0 } ap2 && Read(ap2) is { } atext)
-        {
-            var localSyms = new List<Therion.Semantics.SymbolId>();
-            if (WantsStation(kind))
-                localSyms.AddRange(m.Stations.Values.Where(s => s.Name.Last == oldName)
-                    .Select(s => new Therion.Semantics.SymbolId(Therion.Semantics.SymbolKind.Station, s.Name)));
-            if (WantsSurvey(kind))
-                localSyms.AddRange(m.Surveys.Values.Where(s => s.Name.Last == oldName)
-                    .Select(s => new Therion.Semantics.SymbolId(Therion.Semantics.SymbolKind.Survey, s.Name)));
-            foreach (var sym in localSyms)
-                if (Therion.Semantics.SymbolRenamePlan.ComputeForFile(m.Occurrences, sym, oldName, ap2, atext) is { } e)
-                    AddEdit(e.FilePath, e.FileText, e.Spans);
+            // Active document (may be outside the workspace occurrence index).
+            if (active?.Semantics is { } m && active.FilePath is { Length: > 0 } ap && Read(ap) is { } t &&
+                Therion.Semantics.SymbolRenamePlan.ComputeForFile(m.Occurrences, sym, oldName, ap, t) is { } le)
+                AddEdit(le.FilePath, le.FileText, le.Spans);
         }
-
         return byPath.Values.ToList();
     }
 
