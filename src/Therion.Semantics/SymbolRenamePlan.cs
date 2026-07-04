@@ -51,4 +51,25 @@ public static class SymbolRenamePlan
         }
         return result;
     }
+
+    /// <summary>
+    /// Single-file edits for renaming <paramref name="symbol"/> from one file's own occurrence index —
+    /// the fallback for a file that isn't part of the loaded workspace model (a standalone <c>.th</c>, or
+    /// one opened without its project). Same stale-drift guard as the workspace overload: only spans that
+    /// still slice to <paramref name="expectedName"/> in <paramref name="text"/> are returned. Null when
+    /// the symbol has no surviving occurrence.
+    /// </summary>
+    public static RenameFileEdits? ComputeForFile(
+        OccurrenceIndex occurrences, SymbolId symbol, string expectedName, string filePath, string text)
+    {
+        var spans = occurrences.Of(symbol)
+            .Select(o => (Start: o.Span.StartOffset, Length: o.Span.Length))
+            .Where(h => h.Start >= 0 && h.Start + h.Length <= text.Length &&
+                        string.Equals(text.Substring(h.Start, h.Length), expectedName, StringComparison.Ordinal))
+            .Distinct()
+            .OrderBy(h => h.Start)
+            .Select(h => (h.Start, h.Length))
+            .ToList();
+        return spans.Count == 0 ? null : new RenameFileEdits(filePath, text, spans);
+    }
 }

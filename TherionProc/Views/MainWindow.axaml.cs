@@ -569,8 +569,11 @@ public partial class MainWindow : Window
         {
             // Stations & surveys rename via the true symbol occurrence index (scope-correct, @-aware,
             // comment-free, cross-file); scrap/map still use the legacy text-scan until they get an index.
+            // When the edited file isn't part of the loaded workspace model (a standalone .th, or one
+            // opened without its project), fall back to the active document's own occurrence index.
             var changes = CollectSymbolRenameChanges(workspace, kind, targetSpan.Value)
-                ?? CollectRenameChanges(workspace, nav, raw, kind, oldName, targetSpan.Value);
+                ?? CollectActiveFileRenameChanges(docs!.Active, kind, targetSpan.Value)
+                ?? CollectRenameChanges(workspace, docs!.Active, nav, raw, kind, oldName, targetSpan.Value);
             if (changes.Count == 0)
             {
                 await new MessageDialog("Rename Symbol",
@@ -580,7 +583,7 @@ public partial class MainWindow : Window
 
             // The graph-driven rename deliberately skips comments. Offer an opt-in pass that also renames
             // the name where it appears inside `# …` comments (classic "replace in comments too").
-            var commentChanges = CollectCommentRenameChanges(workspace, oldName, changes);
+            var commentChanges = CollectCommentRenameChanges(workspace, docs!.Active, oldName, changes);
 
             if (settings?.Current.ShowRenamePreviewBeforeApply == true)
             {
@@ -640,24 +643,84 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
+    /// Single-file rename via the <b>active document's own</b> occurrence index — the fallback for when
+    /// the edited file isn't in the loaded workspace model (a standalone <c>.th</c>, or one opened
+    /// without its project, so <see cref="Therion.Semantics.WorkspaceSemanticModel.PerFile"/> doesn't
+    /// cover it). Uses the live editor text so spans stay aligned even when the buffer is unsaved.
+    /// Returns null when the active file has no matching station/survey declared at the target.
+    /// </summary>
+    private static List<RenameFileChanges>? CollectActiveFileRenameChanges(
+        ViewModels.Docking.FileDocumentViewModel? active,
+        Therion.Processing.Abstractions.ReferenceKind kind, Therion.Core.SourceSpan targetSpan)
+    {
+        if (active?.Semantics is not { } model) return null;
+        var path = active.FilePath;
+        var text = active.DocumentText;
+        if (string.IsNullOrEmpty(path) || string.IsNullOrEmpty(text)) return null;
+        // The occurrence index only covers this file, so the declaration must live here.
+        if (!string.Equals(targetSpan.FilePath, path, System.StringComparison.OrdinalIgnoreCase)) return null;
+
+        // Resolve the clicked declaration to a symbol identity within this file (mirrors the workspace path).
+        Therion.Semantics.SymbolId symbol;
+        string name;
+        if (kind == Therion.Processing.Abstractions.ReferenceKind.Station)
+        {
+            var st = model.Stations.Values.FirstOrDefault(s =>
+                s.DeclarationSpan.StartOffset == targetSpan.StartOffset &&
+                string.Equals(s.DeclarationSpan.FilePath, path, System.StringComparison.OrdinalIgnoreCase));
+            if (st is null) return null;
+            symbol = new Therion.Semantics.SymbolId(Therion.Semantics.SymbolKind.Station, st.Name);
+            name = st.Name.Last;
+        }
+        else if (kind == Therion.Processing.Abstractions.ReferenceKind.Survey)
+        {
+            var sv = model.Surveys.Values.FirstOrDefault(s =>
+                s.DeclarationSpan.StartOffset == targetSpan.StartOffset &&
+                string.Equals(s.DeclarationSpan.FilePath, path, System.StringComparison.OrdinalIgnoreCase));
+            if (sv is null) return null;
+            symbol = new Therion.Semantics.SymbolId(Therion.Semantics.SymbolKind.Survey, sv.Name);
+            name = sv.Name.Last;
+        }
+        else return null;   // scrap/map: not indexed yet — caller falls back to the text-scan
+
+        if (Therion.Semantics.SymbolRenamePlan.ComputeForFile(model.Occurrences, symbol, name, path, text)
+            is not { } edit) return null;
+        return new List<RenameFileChanges> { new(edit.FilePath, edit.FileText, edit.Spans.ToList()) };
+    }
+
+    /// <summary>
     /// Whole-word occurrences of <paramref name="oldName"/> that live inside <c>#</c> comments (which
     /// the symbol rename skips), across the workspace's .th files — for the opt-in "rename in comments
     /// too" pass. Excludes any span already covered by the symbol rename.
     /// </summary>
     private static List<RenameFileChanges> CollectCommentRenameChanges(
-        Therion.Semantics.WorkspaceSemanticModel workspace, string oldName, List<RenameFileChanges> symbolChanges)
+        Therion.Semantics.WorkspaceSemanticModel workspace,
+        ViewModels.Docking.FileDocumentViewModel? active,
+        string oldName, List<RenameFileChanges> symbolChanges)
     {
         var known = symbolChanges.ToDictionary(c => c.FilePath,
             c => new HashSet<int>(c.Hits.Select(h => h.Start)), StringComparer.OrdinalIgnoreCase);
         var result = new List<RenameFileChanges>();
-        foreach (var path in workspace.PerFile.Keys)
-        {
-            string text;
-            try { text = File.ReadAllText(path); } catch { continue; }
-            known.TryGetValue(path, out var seen);
+        var seenPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
+        void Scan(string path, string text)
+        {
+            if (!seenPaths.Add(path)) return;
+            known.TryGetValue(path, out var seen);
             var hits = Therion.Semantics.CommentOccurrences.Find(text, oldName, seen).ToList();
             if (hits.Count > 0) result.Add(new RenameFileChanges(path, text, hits));
+        }
+
+        // Active document first, from its live buffer (may be standalone / unsaved).
+        if (active?.FilePath is { Length: > 0 } activePath && active.DocumentText is { Length: > 0 } activeText)
+            Scan(activePath, activeText);
+
+        foreach (var path in workspace.PerFile.Keys)
+        {
+            if (seenPaths.Contains(path)) continue;
+            string text;
+            try { text = File.ReadAllText(path); } catch { continue; }
+            Scan(path, text);
         }
         return result;
     }
@@ -679,9 +742,14 @@ public partial class MainWindow : Window
         return byPath.Values.ToList();
     }
 
-    /// <summary>Scans every workspace file for ref tokens resolving to the same declaration span.</summary>
+    /// <summary>
+    /// Scans every workspace file (plus the active document, so a standalone file not in the workspace
+    /// is still covered) for ref tokens resolving to the same declaration span. The last-resort path for
+    /// scrap/map renames, which don't yet have an occurrence index.
+    /// </summary>
     private static List<RenameFileChanges> CollectRenameChanges(
         Therion.Semantics.WorkspaceSemanticModel workspace,
+        ViewModels.Docking.FileDocumentViewModel? active,
         Therion.Processing.Abstractions.ISymbolNavigationService nav,
         string raw,
         Therion.Processing.Abstractions.ReferenceKind kind,
@@ -689,8 +757,20 @@ public partial class MainWindow : Window
         Therion.Core.SourceSpan targetSpan)
     {
         var result = new List<RenameFileChanges>();
+        var seenPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        // The active document may not be part of the loaded workspace; scan its live (possibly-unsaved)
+        // text first so its spans align with what the user sees.
+        if (active?.FilePath is { Length: > 0 } activePath && active.DocumentText is { Length: > 0 } activeText)
+        {
+            var activeHits = FindRenameHitsInText(activeText, oldName, nav, kind, targetSpan);
+            if (activeHits.Count > 0) result.Add(new RenameFileChanges(activePath, activeText, activeHits));
+            seenPaths.Add(activePath);
+        }
+
         foreach (var filePath in workspace.PerFile.Keys)
         {
+            if (!seenPaths.Add(filePath)) continue;   // already handled as the active doc
             string text;
             try { text = System.IO.File.ReadAllText(filePath); }
             catch { continue; }
