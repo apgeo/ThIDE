@@ -1,11 +1,12 @@
 // Preview window for symbol rename (#1). Shows a collapsible tree of all proposed text changes
-// (file nodes → change subitems) before applying. Returns true when the user clicks Apply, false
-// on Cancel. Three opt-in expansions are offered, each a checkbox + a "?" help flyout:
+// (section header → file nodes → change entries) before applying. Returns true when the user clicks
+// Apply, false on Cancel. Three opt-in expansions are offered, each a checkbox + a "?" help flyout:
 //   1. rename equate-linked same-named stations in other surveys (keep the equated point connected),
 //   2. rename every same-named station/survey elsewhere (≈ replace-all),
 //   3. rename inside comments.
-// Entries that will actually be replaced under the current checkbox combination are tinted pale blue
-// (the base changes always are); clicking an entry navigates to its file/line without closing this window.
+// Entries + their section/file headers that will be replaced under the current checkbox combination are
+// tinted pale blue (the base changes always are). Checking a section reveals it (collapses the base rows
+// so its now-blue header is in view). Clicking an entry navigates to its file/line, keeping this window open.
 
 using System;
 using System.Collections.Generic;
@@ -34,8 +35,12 @@ internal sealed class RenamePreviewWindow : Window
 
     // Pale blue tint (translucent so it reads on both light and dark themes) for "will be replaced".
     private static readonly IBrush HighlightBrush = new SolidColorBrush(Color.FromArgb(0x40, 0x21, 0x96, 0xF3));
+    private static readonly IBrush SectionText   = new SolidColorBrush(Color.FromRgb(0x1E, 0x88, 0xE5));
+    private static readonly IBrush SectionRule   = new SolidColorBrush(Color.FromArgb(0x66, 0x90, 0x90, 0x90));
 
     private readonly Func<SourceSpan, Task>? _navigate;
+    private readonly List<TreeViewItem> _baseFileNodes = new();
+    private readonly List<TreeViewItem> _sectionNodes = new();
 
     private const string EquateHelp =
         "Stations in different surveys can be declared to be the same physical point with an \"equate\" " +
@@ -85,34 +90,31 @@ internal sealed class RenamePreviewWindow : Window
 
         // Base changes — always applied, so always tinted.
         var baseTint = new List<Border>();
-        foreach (var fc in changes) AddFileNode(tree, fc, baseTint);
+        foreach (var fc in changes) _baseFileNodes.Add(AddFileNode(tree, fc, baseTint));
         SetTint(baseTint, true);
 
-        var equateTint = new List<Border>();
-        int equateCount = AddGroup(tree, equateLinkedChanges, "Equate-linked stations (same name, other surveys)", equateTint);
-        var sameTint = new List<Border>();
-        int sameCount = AddGroup(tree, sameNameChanges, "Same-named symbols in other surveys / files", sameTint);
-        var commentTint = new List<Border>();
-        int commentCount = AddGroup(tree, commentChanges, "In comments", commentTint);
+        var equate  = AddGroup(tree, equateLinkedChanges, "Equate-linked stations (same name, other surveys)");
+        var same    = AddGroup(tree, sameNameChanges, "Same-named symbols in other surveys / files");
+        var comment = AddGroup(tree, commentChanges, "In comments");
 
         // ---- opt-in checkboxes (equate-linked first, then replace-all, then comments) ----
         var equateCheck = new CheckBox
         {
-            Content = $"Also rename {equateCount} equate-linked station{(equateCount == 1 ? "" : "s")} (same name, other surveys)",
+            Content = $"Also rename {equate.Count} equate-linked station{(equate.Count == 1 ? "" : "s")} (same name, other surveys)",
         };
-        equateCheck.IsCheckedChanged += (_, _) => { IncludeEquateLinked = equateCheck.IsChecked == true; SetTint(equateTint, IncludeEquateLinked); };
+        equateCheck.IsCheckedChanged += (_, _) => Toggle(equate, IncludeEquateLinked = equateCheck.IsChecked == true);
 
         var sameCheck = new CheckBox
         {
-            Content = $"Also rename {sameCount} same-named occurrence{(sameCount == 1 ? "" : "s")} in other surveys / files",
+            Content = $"Also rename {same.Count} same-named occurrence{(same.Count == 1 ? "" : "s")} in other surveys / files",
         };
-        sameCheck.IsCheckedChanged += (_, _) => { IncludeSameName = sameCheck.IsChecked == true; SetTint(sameTint, IncludeSameName); };
+        sameCheck.IsCheckedChanged += (_, _) => Toggle(same, IncludeSameName = sameCheck.IsChecked == true);
 
         var commentCheck = new CheckBox
         {
-            Content = $"Also rename {commentCount} occurrence{(commentCount == 1 ? "" : "s")} in comments",
+            Content = $"Also rename {comment.Count} occurrence{(comment.Count == 1 ? "" : "s")} in comments",
         };
-        commentCheck.IsCheckedChanged += (_, _) => { IncludeComments = commentCheck.IsChecked == true; SetTint(commentTint, IncludeComments); };
+        commentCheck.IsCheckedChanged += (_, _) => Toggle(comment, IncludeComments = commentCheck.IsChecked == true);
 
         var checks = new StackPanel
         {
@@ -120,9 +122,9 @@ internal sealed class RenamePreviewWindow : Window
             Margin = new Thickness(0, 0, 0, 8),
             Children =
             {
-                MakeCheckRow(equateCheck, equateCount > 0, EquateHelp),
-                MakeCheckRow(sameCheck, sameCount > 0, SameNameHelp),
-                MakeCheckRow(commentCheck, commentCount > 0, CommentsHelp),
+                MakeCheckRow(equateCheck, equate.Count > 0, EquateHelp),
+                MakeCheckRow(sameCheck, same.Count > 0, SameNameHelp),
+                MakeCheckRow(commentCheck, comment.Count > 0, CommentsHelp),
             },
         };
 
@@ -157,14 +159,30 @@ internal sealed class RenamePreviewWindow : Window
         };
     }
 
-    /// <summary>Builds a file node with one leaf per hit; leaves navigate on click and are tint-tracked.</summary>
-    private void AddFileNode(ItemsControl parent, RenameFileChanges fc, List<Border> tint)
+    private sealed record Section(TreeViewItem? Node, List<Border> Tint, int Count);
+
+    // Tint a whole section (header + files + entries) and, when turning on, reveal it: collapse the base
+    // rows (the bulky "top ones") and bring the now-blue section header into view.
+    private void Toggle(Section section, bool on)
     {
-        var fileItem = new TreeViewItem
+        SetTint(section.Tint, on);
+        if (section.Node is not { } node) return;
+        if (on)
         {
-            Header = $"{Path.GetFileName(fc.FilePath)}  ({fc.Hits.Count} change{(fc.Hits.Count == 1 ? "" : "s")})",
-            IsExpanded = true,
-        };
+            foreach (var b in _baseFileNodes) b.IsExpanded = false;
+            foreach (var s in _sectionNodes) s.IsExpanded = ReferenceEquals(s, node);
+            node.BringIntoView();
+        }
+        else node.IsExpanded = false;
+    }
+
+    /// <summary>Builds a file node with one leaf per hit; leaves navigate on click and are tint-tracked.</summary>
+    private TreeViewItem AddFileNode(ItemsControl parent, RenameFileChanges fc, List<Border> tint)
+    {
+        var header = MakeHeaderBorder($"{Path.GetFileName(fc.FilePath)}  ({fc.Hits.Count} change{(fc.Hits.Count == 1 ? "" : "s")})",
+            FontWeight.SemiBold, null, null);
+        tint.Add(header);
+        var fileItem = new TreeViewItem { Header = header, IsExpanded = true };
         ToolTip.SetTip(fileItem, fc.FilePath);
         foreach (var (start, length) in fc.Hits)
         {
@@ -184,18 +202,38 @@ internal sealed class RenamePreviewWindow : Window
             fileItem.Items.Add(leaf);
         }
         parent.Items.Add(fileItem);
+        return fileItem;
     }
 
-    /// <summary>Adds a collapsed group node (file children) for an opt-in change set; returns its hit count.</summary>
-    private int AddGroup(TreeView tree, IReadOnlyList<RenameFileChanges> group, string label, List<Border> tint)
+    /// <summary>Adds a collapsed, visually-distinct section node for an opt-in change set.</summary>
+    private Section AddGroup(TreeView tree, IReadOnlyList<RenameFileChanges> group, string label)
     {
+        var tint = new List<Border>();
         int count = group.Sum(fc => fc.Hits.Count);
-        if (count == 0) return 0;
+        if (count == 0) return new Section(null, tint, 0);
 
-        var node = new TreeViewItem { Header = $"{label}  ({count})", IsExpanded = false };
+        var header = MakeHeaderBorder($"{label}   ({count})", FontWeight.Bold, SectionText, SectionRule);
+        tint.Add(header);
+        var node = new TreeViewItem { Header = header, IsExpanded = false };
         foreach (var fc in group) AddFileNode(node, fc, tint);
         tree.Items.Add(node);
-        return count;
+        _sectionNodes.Add(node);
+        return new Section(node, tint, count);
+    }
+
+    // A tintable header row: bold (+ optional accent colour and a bottom rule for section headers).
+    private static Border MakeHeaderBorder(string text, FontWeight weight, IBrush? foreground, IBrush? rule)
+    {
+        var tb = new TextBlock { Text = text, FontWeight = weight };
+        if (foreground is not null) tb.Foreground = foreground;
+        return new Border
+        {
+            Padding = new Thickness(3, rule is null ? 0 : 2),
+            CornerRadius = new CornerRadius(2),
+            BorderBrush = rule,
+            BorderThickness = rule is null ? default : new Thickness(0, 0, 0, 1),
+            Child = tb,
+        };
     }
 
     // A checkbox + a "?" help button whose flyout explains the option (keeps the label short).
