@@ -95,6 +95,11 @@
   <data name="Common_Copy" xml:space="preserve"><value>Copy</value></data>
   <data name="Common_CopyAll" xml:space="preserve"><value>Copy All</value></data>
   <data name="Common_Open" xml:space="preserve"><value>Open</value></data>
+  <data name="Grid_Copy" xml:space="preserve"><value>Copy</value></data>
+  <data name="Grid_CopyRow" xml:space="preserve"><value>Copy row</value></data>
+  <data name="Grid_CopyRowFormatted" xml:space="preserve"><value>Copy row (formatted)</value></data>
+  <data name="Grid_CopyAll" xml:space="preserve"><value>Copy all</value></data>
+  <data name="Grid_CopyAllFormatted" xml:space="preserve"><value>Copy all (formatted)</value></data>
   <data name="Diag_ProjectScope" xml:space="preserve"><value>Project scope</value></data>
   <data name="Gen_Reveal" xml:space="preserve"><value>Reveal in File Manager</value></data>
   <data name="Gen_GoToDef" xml:space="preserve"><value>Go to Definition in thconfig</value></data>
@@ -250,6 +255,7 @@
   <data name="Proj_Lead_Pushed" xml:space="preserve"><value>Pushed</value></data>
   <data name="Proj_Lead_Dead" xml:space="preserve"><value>Dead</value></data>
   <data name="Proj_Lead_Open" xml:space="preserve"><value>Open</value></data>
+  <data name="Proj_Lead_ShowAll" xml:space="preserve"><value>Show all passage ends</value></data>
   <data name="Proj_CopyMarkdown" xml:space="preserve"><value>Copy as Markdown</value></data>
   <data name="Proj_Meta_Intro" xml:space="preserve"><value>Project metadata (stored in a sidecar, not in the .th source).</value></data>
   <data name="Proj_Save" xml:space="preserve"><value>Save</value></data>

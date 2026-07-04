@@ -95,6 +95,11 @@
   <data name="Common_Copy" xml:space="preserve"><value>Copiaz&#x103;</value></data>
   <data name="Common_CopyAll" xml:space="preserve"><value>Copiaz&#x103; tot</value></data>
   <data name="Common_Open" xml:space="preserve"><value>Deschide</value></data>
+  <data name="Grid_Copy" xml:space="preserve"><value>Copiaz&#x103;</value></data>
+  <data name="Grid_CopyRow" xml:space="preserve"><value>Copiaz&#x103; r&#xE2;ndul</value></data>
+  <data name="Grid_CopyRowFormatted" xml:space="preserve"><value>Copiaz&#x103; r&#xE2;ndul (formatat)</value></data>
+  <data name="Grid_CopyAll" xml:space="preserve"><value>Copiaz&#x103; tot</value></data>
+  <data name="Grid_CopyAllFormatted" xml:space="preserve"><value>Copiaz&#x103; tot (formatat)</value></data>
   <data name="Diag_ProjectScope" xml:space="preserve"><value>Domeniu proiect</value></data>
   <data name="Gen_Reveal" xml:space="preserve"><value>Afi&#x219;eaz&#x103; &#xEE;n managerul de fi&#x219;iere</value></data>
   <data name="Gen_GoToDef" xml:space="preserve"><value>Salt la defini&#x21B;ie &#xEE;n thconfig</value></data>
@@ -250,6 +255,7 @@
   <data name="Proj_Lead_Pushed" xml:space="preserve"><value>Explorat</value></data>
   <data name="Proj_Lead_Dead" xml:space="preserve"><value>Mort</value></data>
   <data name="Proj_Lead_Open" xml:space="preserve"><value>Deschis</value></data>
+  <data name="Proj_Lead_ShowAll" xml:space="preserve"><value>Arat&#x103; toate pistele deschise</value></data>
   <data name="Proj_CopyMarkdown" xml:space="preserve"><value>Copiază ca Markdown</value></data>
   <data name="Proj_Meta_Intro" xml:space="preserve"><value>Metadate proiect (stocate într-un fișier separat, nu în sursa .th).</value></data>
   <data name="Proj_Save" xml:space="preserve"><value>Salvează</value></data>

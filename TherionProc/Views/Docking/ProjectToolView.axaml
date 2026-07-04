@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:TherionProc.ViewModels.Docking"
              xmlns:l="using:TherionProc.Resources"
+             xmlns:local="using:TherionProc.Views.Docking"
              x:Class="TherionProc.Views.Docking.ProjectToolView"
              x:CompileBindings="False"
              x:DataType="vm:ProjectToolViewModel">
@@ -98,6 +99,7 @@
                                TextTrimming="CharacterEllipsis" />
                 </StackPanel>
                 <DataGrid ItemsSource="{Binding Analytics.Statistics}" IsReadOnly="True"
+                          local:DataGridCopy.Enable="True"
                           GridLinesVisibility="Horizontal" AutoGenerateColumns="False" HeadersVisibility="None">
                     <DataGrid.Columns>
                         <DataGridTextColumn Binding="{Binding Label}" Width="220" />
@@ -148,6 +150,7 @@
                         Content="{l:Loc Proj_CopyTeamCsv}" Command="{Binding Analytics.CopyTeamCommand}" />
                 <Grid RowDefinitions="*,Auto,*">
                     <DataGrid Grid.Row="0" ItemsSource="{Binding Analytics.Team}" IsReadOnly="True"
+                              local:DataGridCopy.Enable="True"
                               GridLinesVisibility="Horizontal" CanUserSortColumns="True" AutoGenerateColumns="False">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="{l:Loc Col_Person}" Binding="{Binding Name}" Width="*" />
@@ -157,6 +160,7 @@
                     </DataGrid>
                     <TextBlock Grid.Row="1" Classes="h" Text="{l:Loc Proj_Trips}" Margin="8,6,0,3" />
                     <DataGrid Grid.Row="2" ItemsSource="{Binding Analytics.Trips}" IsReadOnly="True"
+                              local:DataGridCopy.Enable="True"
                               GridLinesVisibility="Horizontal" CanUserSortColumns="True" AutoGenerateColumns="False">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="{l:Loc Col_Date}" Binding="{Binding Date}" Width="120" />
@@ -174,8 +178,10 @@
             <DockPanel>
                 <Button DockPanel.Dock="Top" HorizontalAlignment="Left" Margin="8,6"
                         Content="{l:Loc Proj_CopyCsv}" Command="{Binding Analytics.CopyFixedPointsCommand}" />
-                <DataGrid ItemsSource="{Binding Analytics.FixedPoints}" IsReadOnly="True"
-                          GridLinesVisibility="Horizontal" CanUserSortColumns="True" AutoGenerateColumns="False">
+                <DataGrid x:Name="EntrancesGrid" ItemsSource="{Binding Analytics.FixedPoints}" IsReadOnly="True"
+                          local:DataGridCopy.Enable="True"
+                          GridLinesVisibility="Horizontal" CanUserSortColumns="True" AutoGenerateColumns="False"
+                          DoubleTapped="OnEntrancesRowDoubleTapped">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="{l:Loc Col_Station}" Binding="{Binding Station}" Width="*" />
                         <DataGridTextColumn Header="{l:Loc Browser_Col_Kind}" Binding="{Binding Kind}" Width="120" />
@@ -190,6 +196,7 @@
         <!-- Data quality -->
         <TabItem Header="{l:Loc Proj_Tab_Quality}">
             <DataGrid ItemsSource="{Binding Analytics.Quality}" IsReadOnly="True"
+                      local:DataGridCopy.Enable="True"
                       GridLinesVisibility="Horizontal" CanUserSortColumns="True" AutoGenerateColumns="False">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="{l:Loc Col_Metric}" Binding="{Binding Metric}" Width="*" />
@@ -265,18 +272,15 @@
             <DockPanel>
                 <WrapPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="8,6" VerticalAlignment="Center">
                     <Button Content="{l:Loc Proj_Rescan}" Command="{Binding Leads.RefreshCommand}" Margin="0,0,6,0" />
-                    <Button Content="{l:Loc Proj_Lead_Checked}" Command="{Binding Leads.MarkCheckedCommand}"
-                            CommandParameter="{Binding #LeadsGrid.SelectedItem}" Margin="0,0,6,0" />
-                    <Button Content="{l:Loc Proj_Lead_Pushed}" Command="{Binding Leads.MarkPushedCommand}"
-                            CommandParameter="{Binding #LeadsGrid.SelectedItem}" Margin="0,0,6,0" />
-                    <Button Content="{l:Loc Proj_Lead_Dead}" Command="{Binding Leads.MarkDeadCommand}"
-                            CommandParameter="{Binding #LeadsGrid.SelectedItem}" Margin="0,0,6,0" />
-                    <Button Content="{l:Loc Proj_Lead_Open}" Command="{Binding Leads.MarkOpenCommand}"
-                            CommandParameter="{Binding #LeadsGrid.SelectedItem}" Margin="0,0,6,0" />
                     <Button Content="{l:Loc Proj_CopyMarkdown}" Command="{Binding Leads.CopyAsMarkdownCommand}" Margin="0,0,12,0" />
+                    <!-- Off by default: show only explicit station-flag leads; flip on to include the
+                         heuristic "open leads" (comments, sketch points, dead-ends). -->
+                    <ToggleSwitch Content="{l:Loc Proj_Lead_ShowAll}" IsChecked="{Binding Leads.ShowAllLeads, Mode=TwoWay}"
+                                  Margin="0,0,12,0" VerticalAlignment="Center" />
                     <TextBlock Text="{Binding Leads.Summary}" Foreground="Gray" VerticalAlignment="Center" />
                 </WrapPanel>
                 <DataGrid x:Name="LeadsGrid" ItemsSource="{Binding Leads.Leads}" IsReadOnly="True"
+                          local:DataGridCopy.Enable="True"
                           GridLinesVisibility="Horizontal" CanUserResizeColumns="True"
                           CanUserSortColumns="True" AutoGenerateColumns="False"
                           DoubleTapped="OnLeadsRowDoubleTapped">
@@ -301,6 +305,7 @@
                     <TextBlock Text="{Binding Todos.Summary}" Foreground="Gray" VerticalAlignment="Center" />
                 </WrapPanel>
                 <DataGrid x:Name="TodosGrid" ItemsSource="{Binding Todos.Todos}" IsReadOnly="True"
+                          local:DataGridCopy.Enable="True"
                           GridLinesVisibility="Horizontal" CanUserResizeColumns="True"
                           CanUserSortColumns="True" AutoGenerateColumns="False"
                           DoubleTapped="OnTodosRowDoubleTapped">
@@ -314,8 +319,8 @@
             </DockPanel>
         </TabItem>
 
-        <!-- project metadata editor -->
-        <TabItem Header="{l:Loc Proj_Tab_Metadata}">
+        <!-- project metadata editor (hidden behind OverviewFeatures.ShowMetadataTab until it round-trips to source) -->
+        <TabItem Header="{l:Loc Proj_Tab_Metadata}" IsVisible="{x:Static local:OverviewFeatures.ShowMetadataTab}">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel Margin="10" Spacing="8" MaxWidth="560" HorizontalAlignment="Left">
                     <TextBlock Text="{l:Loc Proj_Meta_Intro}"
@@ -346,8 +351,8 @@
             </ScrollViewer>
         </TabItem>
 
-        <!-- background-scan / media manager -->
-        <TabItem Header="{l:Loc Proj_Tab_Media}">
+        <!-- background-scan / media manager (hidden behind OverviewFeatures.ShowMediaTab until the asset workflow is complete) -->
+        <TabItem Header="{l:Loc Proj_Tab_Media}" IsVisible="{x:Static local:OverviewFeatures.ShowMediaTab}">
             <DockPanel>
                 <WrapPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="8,6" VerticalAlignment="Center">
                     <Button Content="{l:Loc Proj_Rescan}" Command="{Binding MediaManager.RefreshCommand}" Margin="0,0,6,0" />
@@ -356,6 +361,7 @@
                     <TextBlock Text="{Binding MediaManager.Summary}" Foreground="Gray" VerticalAlignment="Center" />
                 </WrapPanel>
                 <DataGrid x:Name="MediaGrid" ItemsSource="{Binding MediaManager.Media}" IsReadOnly="True"
+                          local:DataGridCopy.Enable="True"
                           GridLinesVisibility="Horizontal" CanUserResizeColumns="True"
                           CanUserSortColumns="True" AutoGenerateColumns="False">
                     <DataGrid.Columns>
