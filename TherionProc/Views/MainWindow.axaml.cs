@@ -614,9 +614,9 @@ public partial class MainWindow : Window
 
                 var apply = await win.ShowDialog<bool>(this);
                 if (!apply) return;
-                if (win.IncludeEquateLinked) changes = MergeRenameChanges(changes, equateLinkedChanges);
-                if (win.IncludeSameName) changes = MergeRenameChanges(changes, sameNameChanges);
-                if (win.IncludeComments) changes = MergeRenameChanges(changes, commentChanges);
+                // The window owns which optional occurrences are selected (whole groups in the classic
+                // layout, or individually cherry-picked in the checkable-list layout).
+                changes = MergeRenameChanges(changes, win.AppliedOptionalChanges());
             }
 
             await ApplyRenameChangesAsync(changes, newName, docs!);
