@@ -97,6 +97,7 @@ args, extend > 3 stations, > 21 readings — `THDATA_MAX_ITEMS` is 22 but counts
 | `TH_SEM_012` | Warning/Info | Blunder/outlier shot (DIAG-03). | `ProjectDiagnostics` |
 | `TH_SEM_013` | Warning | Foresight/backsight disagreement (DIAG-04). | `ProjectDiagnostics` |
 | `TH_SEM_014` | Warning | Dangling include: an `input`/`source` target not found (DIAG-06). | `ProjectDiagnostics` |
+| `TH_SEM_015` | Warning | A connected piece of survey is neither joined to the main network nor georeferenced by a `fix` — it floats (source files + its two end stations are named). | `ProjectDiagnostics` |
 | `TH_SEM_NAMING` | configurable | User naming-convention lint violated (LANG-13). | `NamingConventionRule` |
 
 ## XVI format (`set XVI*` Tcl export)

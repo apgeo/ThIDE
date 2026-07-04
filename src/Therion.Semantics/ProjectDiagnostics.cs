@@ -28,12 +28,16 @@ public sealed class ProjectDiagnosticOptions
     public double ForeBackClinoToleranceDeg { get; init; } = 2.5;
     /// <summary>Cap on the number of loop-misclosure diagnostics emitted (worst first).</summary>
     public int MaxLoopsReported { get; init; } = 100;
+    /// <summary>Cap on the number of disconnected-piece diagnostics emitted (largest first).</summary>
+    public int MaxDisconnectedReported { get; init; } = 100;
 
     public bool EnableLoopClosure { get; init; } = true;
     public bool EnableBlunders { get; init; } = true;
     public bool EnableForeBack { get; init; } = true;
     public bool EnableDuplicates { get; init; } = true;
     public bool EnableDangling { get; init; } = true;
+    /// <summary>Flag disconnected, ungrounded survey pieces (floating mainlines).</summary>
+    public bool EnableDisconnection { get; init; } = true;
 
     public static ProjectDiagnosticOptions Default { get; } = new();
 }
@@ -59,6 +63,7 @@ public static class ProjectDiagnostics
         if (o.EnableDuplicates) DuplicateDeclarations(workspace, diags);
         if (o.EnableBlunders || o.EnableForeBack) ShotChecks(workspace, o, diags);
         if (o.EnableLoopClosure) LoopClosure(workspace, o, diags);
+        if (o.EnableDisconnection) Disconnection(workspace, o, diags);
         if (o.EnableDangling && fileExists is not null) DanglingIncludes(workspace, fileExists, diags);
 
         return diags.ToImmutable();
@@ -260,6 +265,245 @@ public static class ProjectDiagnostics
             a = parent[a]; b = parent[b];
         }
         return total;
+    }
+
+    // ---- : disconnected (ungrounded) survey pieces ------------------------------------
+    // The whole project should form ONE connected network, or several pieces each independently
+    // georeferenced by a `fix` under a coordinate system. A piece that is neither joined to the main
+    // network (by a shared or `equate`d station) nor anchored to absolute coordinates has no defined
+    // position relative to the rest of the cave — it "floats". We report each such piece with the
+    // files it spans and its two farthest-apart stations. The largest piece is treated as the main
+    // network / reference frame and is never reported; a piece holding a georeferenced `fix` is exempt
+    // (a bare `fix 0 0 0` with no `cs` is only a local placeholder and does NOT ground the piece).
+
+    private static void Disconnection(WorkspaceSemanticModel ws, ProjectDiagnosticOptions o,
+        ImmutableArray<Diagnostic>.Builder diags)
+    {
+        // Equate union-find over station names, merging BOTH the per-file equate classes AND cross-file
+        // `@`-equates (resolved through the workspace), so a cave stitched together across files is seen
+        // as a single piece rather than wrongly reported as many disconnected ones.
+        var equates = new EquateGraph();
+        foreach (var model in ws.PerFile.Values)
+            foreach (var group in model.Equates.Groups())
+                for (int i = 1; i < group.Length; i++) equates.Union(group[0], group[i]);
+        foreach (var model in ws.PerFile.Values)
+            foreach (var rec in model.EquateRecords)
+            {
+                QualifiedName? first = null;
+                foreach (var raw in rec.Stations)
+                {
+                    if (ResolveEquateMember(ws, model, raw) is not { } qn) continue;
+                    if (first is null) first = qn;
+                    else equates.Union(first.Value, qn);
+                }
+            }
+
+        // Nodes = equate-merged stations; index each rep's declaring files + grounded state, and keep a
+        // station-name → symbol map for the navigable diagnostic anchor.
+        var adjacency = new Dictionary<QualifiedName, HashSet<QualifiedName>>();
+        var symbolByName = new Dictionary<QualifiedName, StationSymbol>();
+        var filesByRep = new Dictionary<QualifiedName, HashSet<string>>();
+        var groundedReps = new HashSet<QualifiedName>();
+
+        HashSet<QualifiedName> Adj(QualifiedName n) =>
+            adjacency.TryGetValue(n, out var s) ? s : adjacency[n] = new HashSet<QualifiedName>();
+        HashSet<string> Files(QualifiedName rep) =>
+            filesByRep.TryGetValue(rep, out var s) ? s : filesByRep[rep] = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var model in ws.PerFile.Values)
+            foreach (var st in model.Stations.Values)
+            {
+                var rep = equates.Find(st.Name);
+                Adj(rep);
+                symbolByName.TryAdd(st.Name, st);
+                if (!string.IsNullOrEmpty(st.DeclarationSpan.FilePath))
+                    Files(rep).Add(st.DeclarationSpan.FilePath);
+                // A georeferenced fix (one made under a `cs`) grounds the piece to absolute coordinates;
+                // a bare `fix` with no coordinate system is only a local placeholder and does not.
+                if (st.Kind == StationDeclarationKind.Fix && !string.IsNullOrWhiteSpace(st.Cs))
+                    groundedReps.Add(rep);
+            }
+
+        // Edges from non-splay legs (splays reach wall points, not the survey skeleton).
+        foreach (var model in ws.PerFile.Values)
+            foreach (var shot in model.Shots)
+            {
+                if ((shot.Flags & ShotFlags.Splay) != 0) continue;
+                var a = equates.Find(shot.From);
+                var b = equates.Find(shot.To);
+                if (a.Equals(b)) continue;
+                Adj(a).Add(b);
+                Adj(b).Add(a);
+            }
+
+        // Connected components over the merged graph.
+        var seen = new HashSet<QualifiedName>();
+        var components = new List<List<QualifiedName>>();
+        foreach (var startNode in adjacency.Keys)
+        {
+            if (!seen.Add(startNode)) continue;
+            var members = new List<QualifiedName> { startNode };
+            var queue = new Queue<QualifiedName>();
+            queue.Enqueue(startNode);
+            while (queue.Count > 0)
+            {
+                var cur = queue.Dequeue();
+                foreach (var next in adjacency[cur])
+                    if (seen.Add(next)) { members.Add(next); queue.Enqueue(next); }
+            }
+            components.Add(members);
+        }
+        if (components.Count <= 1) return;   // fully connected — nothing floats.
+
+        // Largest first (ties: smallest member name). The largest piece is the reference frame.
+        components.Sort(static (x, y) =>
+        {
+            int bySize = y.Count.CompareTo(x.Count);
+            return bySize != 0 ? bySize : string.CompareOrdinal(MinName(x), MinName(y));
+        });
+
+        // Report every non-main piece that is a real mainline (≥1 leg ⇒ ≥2 merged nodes) and is not
+        // grounded by a georeferenced fix. Largest first, capped.
+        int reported = 0;
+        for (int ci = 1; ci < components.Count && reported < o.MaxDisconnectedReported; ci++)
+        {
+            var comp = components[ci];
+            if (comp.Count < 2) continue;                                // lone station — not a mainline
+            bool grounded = false;
+            foreach (var n in comp) if (groundedReps.Contains(n)) { grounded = true; break; }
+            if (grounded) continue;
+
+            reported++;
+            EmitDisconnected(comp, adjacency, symbolByName, filesByRep, diags);
+        }
+    }
+
+    private static string MinName(List<QualifiedName> c)
+    {
+        string min = c[0].ToString();
+        for (int i = 1; i < c.Count; i++)
+        {
+            var s = c[i].ToString();
+            if (string.CompareOrdinal(s, min) < 0) min = s;
+        }
+        return min;
+    }
+
+    private static void EmitDisconnected(
+        List<QualifiedName> comp,
+        Dictionary<QualifiedName, HashSet<QualifiedName>> adjacency,
+        Dictionary<QualifiedName, StationSymbol> symbolByName,
+        Dictionary<QualifiedName, HashSet<string>> filesByRep,
+        ImmutableArray<Diagnostic>.Builder diags)
+    {
+        var memberSet = new HashSet<QualifiedName>(comp);
+
+        // Two farthest-apart stations (graph diameter via double BFS) = the piece's natural ends.
+        // Seed from the smallest name so the endpoints are deterministic.
+        var seed = comp[0];
+        foreach (var n in comp)
+            if (string.CompareOrdinal(n.ToString(), seed.ToString()) < 0) seed = n;
+        var p = FarthestNode(seed, memberSet, adjacency);
+        var q = FarthestNode(p, memberSet, adjacency);
+        var (startRep, endRep) = string.CompareOrdinal(p.ToString(), q.ToString()) <= 0 ? (p, q) : (q, p);
+
+        // Files the piece spans (basenames, sorted).
+        var files = new SortedSet<string>(StringComparer.Ordinal);
+        foreach (var n in comp)
+            if (filesByRep.TryGetValue(n, out var fs))
+                foreach (var f in fs) files.Add(System.IO.Path.GetFileName(f));
+
+        // Legs inside the piece (each undirected edge counted once).
+        int legs = 0;
+        foreach (var n in comp)
+            if (adjacency.TryGetValue(n, out var nb)) legs += nb.Count;
+        legs /= 2;
+
+        var span = SpanFor(startRep, comp, symbolByName);
+
+        diags.Add(Diagnostic.Create(
+            SemanticDiagnosticCodes.DisconnectedSurvey,
+            DiagnosticSeverity.Warning,
+            $"Disconnected survey: this piece ({comp.Count} stations, {legs} leg{(legs == 1 ? "" : "s")}; " +
+            $"{FormatFiles(files)}) is not connected to the rest of the survey and is not georeferenced by a " +
+            $"fix. It runs from station '{startRep}' to '{endRep}'. Join it with an 'equate' to an adjacent " +
+            $"station, or anchor it with a 'fix' under a 'cs'.",
+            span));
+    }
+
+    /// <summary>The farthest node from <paramref name="src"/> within <paramref name="allowed"/> (BFS by hops).</summary>
+    private static QualifiedName FarthestNode(QualifiedName src, HashSet<QualifiedName> allowed,
+        Dictionary<QualifiedName, HashSet<QualifiedName>> adjacency)
+    {
+        var dist = new Dictionary<QualifiedName, int> { [src] = 0 };
+        var queue = new Queue<QualifiedName>();
+        queue.Enqueue(src);
+        var best = src; int bestD = 0;
+        while (queue.Count > 0)
+        {
+            var u = queue.Dequeue();
+            foreach (var v in adjacency[u])
+            {
+                if (!allowed.Contains(v) || dist.ContainsKey(v)) continue;
+                int dv = dist[u] + 1;
+                dist[v] = dv;
+                // Break distance ties by smallest name so the chosen end is deterministic.
+                if (dv > bestD || (dv == bestD && string.CompareOrdinal(v.ToString(), best.ToString()) < 0))
+                { bestD = dv; best = v; }
+                queue.Enqueue(v);
+            }
+        }
+        return best;
+    }
+
+    /// <summary>Declaration span of <paramref name="preferred"/> (else any member) for a navigable anchor.</summary>
+    private static SourceSpan SpanFor(QualifiedName preferred, List<QualifiedName> comp,
+        Dictionary<QualifiedName, StationSymbol> symbolByName)
+    {
+        if (symbolByName.TryGetValue(preferred, out var s) && !s.DeclarationSpan.IsEmpty)
+            return s.DeclarationSpan;
+        foreach (var n in comp)
+            if (symbolByName.TryGetValue(n, out var s2) && !s2.DeclarationSpan.IsEmpty)
+                return s2.DeclarationSpan;
+        return SourceSpan.None;
+    }
+
+    private static string FormatFiles(SortedSet<string> files)
+    {
+        if (files.Count == 0) return "unknown file";
+        const int max = 4;
+        return files.Count <= max
+            ? string.Join(", ", files)
+            : string.Join(", ", files.Take(max)) + $", +{files.Count - max} more";
+    }
+
+    /// <summary>
+    /// Resolves an <c>equate</c> member (as written in source) to the canonical station name it refers
+    /// to, spanning files: cross-file / <c>@</c>-qualified / full-dotted names via the workspace resolver,
+    /// then a bare or relative name against its own file (exact, else a unique last-name match).
+    /// </summary>
+    private static QualifiedName? ResolveEquateMember(WorkspaceSemanticModel ws, SemanticModel model, string raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return null;
+        raw = raw.Trim();
+        if (ws.ResolveStationSymbol(raw) is { } sym) return sym.Name;
+
+        var r = StationRef.Parse(raw);
+        if (!r.HasSurvey)
+        {
+            var direct = QualifiedName.Of(r.Point);
+            if (model.Stations.ContainsKey(direct)) return direct;
+        }
+        // A unique last-name match inside this one file (station names are effectively unique per
+        // survey; requiring uniqueness avoids guessing across surveys that reuse a name).
+        QualifiedName? unique = null;
+        foreach (var name in model.Stations.Keys)
+            if (string.Equals(name.Last, r.Point, StringComparison.Ordinal))
+            {
+                if (unique is not null) return null;
+                unique = name;
+            }
+        return unique;
     }
 
     // ---- : dangling include targets ---------------------------------------------------

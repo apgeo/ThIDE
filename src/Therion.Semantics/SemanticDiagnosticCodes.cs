@@ -30,6 +30,12 @@ public static class SemanticDiagnosticCodes
     public const string ForeBackMismatch     = "TH_SEM_013";
     /// <summary>A dangling reference: an <c>input</c>/<c>source</c> target that can't be resolved.</summary>
     public const string DanglingReference    = "TH_SEM_014";
+    /// <summary>
+    /// A connected piece of survey (legs/stations) that is neither joined to the main network (by a
+    /// shared or <c>equate</c>d station) nor georeferenced by an absolute <c>fix</c> — it "floats"
+    /// with no defined position relative to the rest of the cave.
+    /// </summary>
+    public const string DisconnectedSurvey   = "TH_SEM_015";
 
     // XVI semantic code: a `-sketch` target referenced from a .th2 scrap doesn't exist on disk.
     // (Syntax-layer XVI codes live in Therion.Syntax.DiagnosticCodes as TH_XVI_001..004.)
