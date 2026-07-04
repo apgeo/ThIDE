@@ -4,6 +4,9 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Embeds the icon into the published Windows exe so the taskbar, Explorer and the
+         installer-created shortcuts show it. Also copied loosely by the installers (see /build). -->
+    <ApplicationIcon>Assets\avalonia-logo.ico</ApplicationIcon>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <!-- Application shell license. Reusable libraries under src/ are MPL-2.0; see /LICENSING.md. -->
     <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
