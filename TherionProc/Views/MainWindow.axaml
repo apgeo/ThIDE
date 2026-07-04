@@ -476,6 +476,10 @@
                 <ToggleButton Classes="tool" IsChecked="{Binding ValidateOnType, Mode=TwoWay}" ToolTip.Tip="{l:Loc Tb_ValidateOnType}">
                     <PathIcon Data="{DynamicResource Icon.Spellcheck}" />
                 </ToggleButton>
+                <!-- Push-switch: require a double-click (not a single click) to go to an identifier's declaration. -->
+                <ToggleButton Classes="tool" IsChecked="{Binding RequireDoubleClickToNavigate, Mode=TwoWay}" ToolTip.Tip="{l:Loc Tb_DoubleClickNav}">
+                    <PathIcon Data="{DynamicResource Icon.ClickNavigate}" />
+                </ToggleButton>
                 <Button Classes="tool" Click="OnToggleFullScreen" ToolTip.Tip="{l:Loc Tb_FullScreen}">
                     <PathIcon Data="{DynamicResource Icon.FullScreen}" />
                 </Button>

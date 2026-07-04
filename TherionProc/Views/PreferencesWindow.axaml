@@ -153,6 +153,10 @@
                               IsChecked="{Binding ValidateOnType}" />
                     <TextBlock Text="{l:Loc Pref_ValidateOnTypeHelp}"
                                Foreground="Gray" FontSize="11" TextWrapping="Wrap" Margin="24,0,0,0" />
+                    <CheckBox Content="{l:Loc Pref_DoubleClickNav}"
+                              IsChecked="{Binding RequireDoubleClickToNavigate}" />
+                    <TextBlock Text="{l:Loc Pref_DoubleClickNavHelp}"
+                               Foreground="Gray" FontSize="11" TextWrapping="Wrap" Margin="24,0,0,0" />
                 </StackPanel>
 
                 <!-- Editor Features -->

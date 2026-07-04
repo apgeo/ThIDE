@@ -937,6 +937,9 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Tb_ValidateOnType" xml:space="preserve"><value>Validează la tastare — reverifică fișierul și întregul proiect în timp ce tastați (nu doar la salvare)</value></data>
   <data name="Pref_ValidateOnType" xml:space="preserve"><value>Validează la tastare (fișier + întregul proiect)</value></data>
   <data name="Pref_ValidateOnTypeHelp" xml:space="preserve"><value>Revalidează întregul graf de obiecte din conținutul nesalvat al editorului la o scurtă pauză de tastare, nu doar la salvare. Dezactivat implicit — reanalizează proiectul la fiecare pauză, ceea ce poate fi costisitor pentru proiecte mari.</value></data>
+  <data name="Tb_DoubleClickNav" xml:space="preserve"><value>Dublu-clic pentru a merge la definiție — un singur clic doar plasează cursorul</value></data>
+  <data name="Pref_DoubleClickNav" xml:space="preserve"><value>Necesită dublu-clic pentru a merge la definiție</value></data>
+  <data name="Pref_DoubleClickNavHelp" xml:space="preserve"><value>Când este activat, un singur clic pe un identificator doar plasează cursorul (ca să îl puteți edita); un dublu-clic sare la declarația sa. Când este dezactivat, un singur clic navighează ca un hyperlink. Ctrl+clic navighează întotdeauna.</value></data>
   <data name="Common_Undo" xml:space="preserve"><value>Anulează</value></data>
   <data name="Common_Redo" xml:space="preserve"><value>Refă</value></data>
   <data name="Replace_UndoTip" xml:space="preserve"><value>Anulează ultima operație Înlocuiește tot în toate fișierele modificate</value></data>

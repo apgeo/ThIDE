@@ -237,6 +237,12 @@ public sealed record AppSettings
     public bool ConvertTabsToSpaces { get; init; } = true;
     public int IndentationSize { get; init; } = 2;
     public bool EditorWordWrap { get; init; }
+    /// <summary>
+    /// When true, navigating to an identifier's declaration requires a double-click; a single
+    /// click just places the caret (normal text-editing). When false (default), a single click on
+    /// a navigable token jumps to its declaration like a hyperlink. Ctrl+click always navigates.
+    /// </summary>
+    public bool RequireDoubleClickToNavigate { get; init; }
 
     // ---- editor features ----
     /// <summary>Per-feature runtime toggles for the editor features (default: all on).</summary>

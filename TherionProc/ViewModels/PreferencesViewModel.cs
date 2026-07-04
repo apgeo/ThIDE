@@ -67,6 +67,7 @@ public partial class PreferencesViewModel : ObservableObject
     [ObservableProperty] private bool _convertTabsToSpaces;
     [ObservableProperty] private bool _formatOnSave;
     [ObservableProperty] private bool _validateOnType; // live whole-project validation while typing
+    [ObservableProperty] private bool _requireDoubleClickToNavigate; // single click just places the caret
 
     // ---- workspace ----
     [ObservableProperty] private bool _autoReloadExternalChanges;
@@ -170,6 +171,7 @@ public partial class PreferencesViewModel : ObservableObject
         _convertTabsToSpaces = s.ConvertTabsToSpaces;
         _formatOnSave = s.EditorFormatOnSave;
         _validateOnType = s.ValidateOnType;
+        _requireDoubleClickToNavigate = s.RequireDoubleClickToNavigate;
         _autoReloadExternalChanges = s.AutoReloadExternalChanges;
         _autoReloadGraphOnExternalChange = s.AutoReloadGraphOnExternalChange;
         _quickOpenThconfigScope = s.QuickOpenSources.HasFlag(QuickOpenSources.ThconfigConnected)
@@ -321,6 +323,7 @@ public partial class PreferencesViewModel : ObservableObject
             ConvertTabsToSpaces = ConvertTabsToSpaces,
             EditorFormatOnSave = FormatOnSave,
             ValidateOnType = ValidateOnType,
+            RequireDoubleClickToNavigate = RequireDoubleClickToNavigate,
             AutoReloadExternalChanges = AutoReloadExternalChanges,
             AutoReloadGraphOnExternalChange = AutoReloadGraphOnExternalChange,
             QuickOpenSources = QuickOpenThconfigScope

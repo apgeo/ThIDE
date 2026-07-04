@@ -1565,7 +1565,12 @@ public partial class TherionTextEditor : UserControl
 
         // Hyperlink affordance: underline + hand cursor over a navigable token (only
         // when the pointer is genuinely over the glyphs, not anywhere on the line).
-        UpdateHoverLink(view, visualPos);
+        // In double-click-to-navigate mode a plain hover shows the normal text cursor — the
+        // link affordance only appears with Ctrl held (Ctrl+click still jumps), so the editor
+        // reads as a normal text field.
+        bool ctrlHeld = (e.KeyModifiers & KeyModifiers.Control) != 0;
+        bool suppressLinkAffordance = CurrentSettings.RequireDoubleClickToNavigate && !ctrlHeld;
+        UpdateHoverLink(view, visualPos, suppressLinkAffordance);
 
         var pos = view.GetPositionFloor(visualPos);
         if (pos is null) { ClearHover(); return; }
@@ -1652,7 +1657,9 @@ public partial class TherionTextEditor : UserControl
             BorderBrush = Brushes.Gray,
             BorderThickness = new Thickness(1),
             Padding = new Thickness(10, 8),
-            MaxWidth = 460,
+            // Grow to fit the content (wider cards when there's more to show), capped so a long
+            // description still wraps rather than sprawling across the whole window.
+            MaxWidth = 620,
             Child = content,
         };
         // Enter/exit MUST be wired on the popup content (the Border), not the Popup control:
@@ -1870,13 +1877,15 @@ public partial class TherionTextEditor : UserControl
             panel.Children.Add(link);
         }
 
-        var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
-        var go = new Button { Content = L("Ed_GoToDefinition"), Padding = new Thickness(6, 2) };
-        go.Click += (_, _) => { NavigateToSpan(where); HideHoverInfo(); };
-        var refs = new Button { Content = L("Ed_FindAllRefs"), Padding = new Thickness(6, 2) };
-        refs.Click += (_, _) => { FindReferencesRequested?.Invoke(this, StationRef.Parse(raw).PointWithoutMark); HideHoverInfo(); };
-        var renameBtn = new Button { Content = L("Ed_RenameDots"), Padding = new Thickness(6, 2) };
-        renameBtn.Click += (_, _) =>
+        // Icon-only action buttons (labels carried as tooltips) so every action stays visible
+        // however many there are, and a WrapPanel so any overflow wraps to a new row instead of
+        // being clipped off the edge of the card (#).
+        var actions = new WrapPanel { Orientation = Orientation.Horizontal };
+        actions.Children.Add(IconAction("Icon.GoToDefinition", "Ed_GoToDefinition",
+            () => { NavigateToSpan(where); HideHoverInfo(); }));
+        actions.Children.Add(IconAction("Icon.ManageSearch", "Ed_FindAllRefs",
+            () => { FindReferencesRequested?.Invoke(this, StationRef.Parse(raw).PointWithoutMark); HideHoverInfo(); }));
+        actions.Children.Add(IconAction("Icon.Rename", "Ed_RenameDots", () =>
         {
             HideHoverInfo();
             // Rename opens a modal dialog. Closing this hover popup (which hosts the button handling the
@@ -1884,30 +1893,49 @@ public partial class TherionTextEditor : UserControl
             // click reaches the torn-down popup ("PlatformImpl is null") and the dialog chain stalls. Defer
             // the rename to a Background-priority tick so the popup teardown + click fully drain first.
             Avalonia.Threading.Dispatcher.UIThread.Post(StartRename, Avalonia.Threading.DispatcherPriority.Background);
-        };
-        actions.Children.Add(go);
-        actions.Children.Add(refs);
-        actions.Children.Add(renameBtn);
+        }));
 
         // "Open in 3D" — only for stations/surveys, and only when a 3D model is available.
         if (Model3DAvailableFor(info.Kind))
-        {
-            var open3d = new Button { Content = L("Ed_OpenIn3D"), Padding = new Thickness(6, 2) };
-            open3d.Click += (_, _) => OpenInModel3D(raw);
-            actions.Children.Add(open3d);
-        }
+            actions.Children.Add(IconAction("Icon.Cube", "Ed_OpenIn3D", () => OpenInModel3D(raw)));
 
         // Documentation button: links to the thbook page for this reference kind (#6),
         // shown only when a page mapping exists for it (info.Kind is "station"/"survey"/…).
         if (info.Kind is { Length: > 0 } docTerm && TryDocs() is { } svc && svc.TryGetPage(docTerm, out _))
-        {
-            var docBtn = new Button { Content = L("Ed_Documentation"), Padding = new Thickness(6, 2) };
-            docBtn.Click += (_, _) => { OpenDocumentation(docTerm); HideHoverInfo(); };
-            actions.Children.Add(docBtn);
-        }
+            actions.Children.Add(IconAction("Icon.Help", "Ed_Documentation",
+                () => { OpenDocumentation(docTerm); HideHoverInfo(); }));
 
         panel.Children.Add(actions);
         return panel;
+    }
+
+    /// <summary>
+    /// Builds a compact icon-only button for the hover card. The human-readable label
+    /// (<paramref name="tooltipKey"/>) is shown as a tooltip so the action row stays narrow and
+    /// every action fits — the card widens to fit its content rather than clipping buttons.
+    /// </summary>
+    private Button IconAction(string iconKey, string tooltipKey, Action onClick)
+    {
+        var btn = new Button
+        {
+            Padding = new Thickness(6, 4),
+            // Right + bottom gaps so a row of actions is evenly spaced and any wrapped
+            // second row (WrapPanel) keeps clear of the first.
+            Margin = new Thickness(0, 0, 6, 6),
+            Content = MakeIcon(iconKey),
+        };
+        ToolTip.SetTip(btn, L(tooltipKey));
+        btn.Click += (_, _) => onClick();
+        return btn;
+    }
+
+    /// <summary>A 16×16 <see cref="PathIcon"/> from a merged <c>Icon.*</c> geometry resource.</summary>
+    private Control MakeIcon(string resourceKey)
+    {
+        var icon = new PathIcon { Width = 16, Height = 16 };
+        if (this.TryFindResource(resourceKey, out var res) && res is Geometry geom)
+            icon.Data = geom;
+        return icon;
     }
 
     private Control BuildFileInfo(PathLink link)
@@ -2105,6 +2133,11 @@ public partial class TherionTextEditor : UserControl
         bool ctrl = (e.KeyModifiers & KeyModifiers.Control) != 0;
         if (!leftButton && !ctrl) return;
 
+        // When "require double-click to navigate" is on, a plain single left-click just places the
+        // caret (normal text editing, so the user can put the cursor inside an identifier to edit
+        // it); navigation waits for the second click. Ctrl+click always jumps on the first click.
+        if (CurrentSettings.RequireDoubleClickToNavigate && !ctrl && e.ClickCount < 2) return;
+
         // Path hyperlink (input/load/source open in-editor; export output via the OS).
         if (ResolvePathLinkAt(off) is { } link &&
             PointerWithinRange(view, link.Start, link.Start + link.Length, visualPos.X))
@@ -2145,11 +2178,11 @@ public partial class TherionTextEditor : UserControl
         return loc is null ? null : _editor.Document.GetOffset(loc.Value.Location);
     }
 
-    private void UpdateHoverLink(TextView view, Point visualPos)
+    private void UpdateHoverLink(TextView view, Point visualPos, bool suppress = false)
     {
         if (_editor is null || _hyperlinkColorizer is null) return;
         bool changed;
-        if (HoverLinkAt(visualPos) is { } link)
+        if (!suppress && HoverLinkAt(visualPos) is { } link)
         {
             changed = _hyperlinkColorizer.SetLink(link.Start, link.Length);
             view.Cursor = _handCursor;

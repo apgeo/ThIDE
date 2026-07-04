@@ -152,6 +152,15 @@ public partial class MainWindowViewModel : ViewModelBase
         if (_settings is { } s && s.Current.ValidateOnType != value) s.Save(s.Current with { ValidateOnType = value });
     }
 
+    /// <summary>Require a double-click (not a single click) to jump to an identifier's declaration
+    /// (#): a single click just places the caret. Persisted; also editable in Preferences.</summary>
+    [ObservableProperty] private bool _requireDoubleClickToNavigate;
+    partial void OnRequireDoubleClickToNavigateChanged(bool value)
+    {
+        if (_settings is { } s && s.Current.RequireDoubleClickToNavigate != value)
+            s.Save(s.Current with { RequireDoubleClickToNavigate = value });
+    }
+
     // ---- : whitespace / EOL / indent-guide render toggles (View menu) ----
     /// <summary>True when is enabled (compile-time flag + runtime setting) — gates the View-menu items.</summary>
     public bool WhitespaceFeatureEnabled =>
@@ -482,6 +491,7 @@ public partial class MainWindowViewModel : ViewModelBase
         _session = session;
         _wordWrap = settings?.Current.EditorWordWrap ?? false; // seed without persisting
         _validateOnType = settings?.Current.ValidateOnType ?? false;   // seed without persisting
+        _requireDoubleClickToNavigate = settings?.Current.RequireDoubleClickToNavigate ?? false;   // (seed, no persist)
         _showWhitespace = settings?.Current.EditorShowWhitespace ?? false;   // (seed, no persist)
         _showEndOfLine = settings?.Current.EditorShowEndOfLine ?? false;
         _showIndentGuides = settings?.Current.EditorShowIndentGuides ?? false;
@@ -550,6 +560,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 OnPropertyChanged(nameof(Model3DViewerEnabled));
                 OnPropertyChanged(nameof(StructuralGeologyEnabled));   // menu gate
                 ValidateOnType = _settings.Current.ValidateOnType;     // keep the toolbar toggle in sync with Preferences
+                RequireDoubleClickToNavigate = _settings.Current.RequireDoubleClickToNavigate;   // (Preferences ↔ toolbar)
                 ConfigureAutoSave();
             });
             ConfigureAutoSave();   // (apply persisted mode at startup)
