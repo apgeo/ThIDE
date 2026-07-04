@@ -34,6 +34,15 @@ public class TodoScannerTests
     }
 
     [Fact]
+    public void Text_holds_only_what_follows_the_tag()
+    {
+        // The tag word and any ':'/'-' separator are dropped; the leading '#' too.
+        Assert.Equal("fix this", TodoScanner.Scan("a.th", "x 1 2 # TODO: fix this\n")[0].Text);
+        Assert.Equal("resurvey entrance", TodoScanner.Scan("a.th", "  # FIXME - resurvey entrance\n")[0].Text);
+        Assert.Equal("3 going up", TodoScanner.Scan("a.th", "endcentreline # QM 3 going up\n")[0].Text);
+    }
+
+    [Fact]
     public void Plain_comments_and_code_are_ignored()
     {
         // No tag → no items; "todo" must be a whole word, not part of another token.

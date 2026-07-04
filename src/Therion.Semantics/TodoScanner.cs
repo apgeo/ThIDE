@@ -10,7 +10,7 @@ using Therion.Core;
 
 namespace Therion.Semantics;
 
-/// <summary>One tagged comment: its tag, the comment text, and where it is.</summary>
+/// <summary>One tagged comment: its tag, the text following the tag, and where it is.</summary>
 public sealed record TodoItem(string Tag, string Text, SourceSpan Span);
 
 public static class TodoScanner
@@ -42,7 +42,10 @@ public static class TodoScanner
                         new SourceLocation(line, col),
                         new SourceLocation(line, col + match.Length),
                         startOffset, match.Length);
-                    items.Add(new TodoItem(match.Value.ToUpperInvariant(), comment.TrimStart('#', ' ').Trim(), span));
+                    // Text is only what follows the tag word (drops the leading `#`, the tag and any
+                    // `:`/`-` separator), so "# TODO: fix this" surfaces as "fix this".
+                    var body = comment[(match.Index + match.Length)..].TrimStart(' ', '\t', ':', '-').Trim();
+                    items.Add(new TodoItem(match.Value.ToUpperInvariant(), body, span));
                 }
             }
             offset += rawLine.Length + 1;   // + the '\n' consumed by the split
