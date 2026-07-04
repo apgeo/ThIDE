@@ -584,6 +584,9 @@ public partial class MainWindow : Window
             // The graph-driven rename deliberately skips comments. Offer an opt-in pass that also renames
             // the name where it appears inside `# …` comments (classic "replace in comments too").
             var commentChanges = CollectCommentRenameChanges(workspace, docs!.Active, oldName, changes);
+            // ...and a second opt-in that renames every OTHER station/survey sharing this name across
+            // surveys/files (the blunt "replace all occurrences" the scope-correct rename intentionally avoids).
+            var sameNameChanges = CollectSameNameChanges(workspace, docs!.Active, kind, oldName, changes);
 
             if (settings?.Current.ShowRenamePreviewBeforeApply == true)
             {
@@ -591,11 +594,12 @@ public partial class MainWindow : Window
                 // the next modal, otherwise Avalonia can log "PlatformImpl is null" and drop the show.
                 await System.Threading.Tasks.Task.Yield();
                 _renamePreviewWindow?.Close();
-                var win = new RenamePreviewWindow(changes, commentChanges, oldName, newName);
+                var win = new RenamePreviewWindow(changes, sameNameChanges, commentChanges, oldName, newName);
                 _renamePreviewWindow = win;
                 win.Closed += (_, _) => _renamePreviewWindow = null;
                 var apply = await win.ShowDialog<bool>(this);
                 if (!apply) return;
+                if (win.IncludeSameName) changes = MergeRenameChanges(changes, sameNameChanges);
                 if (win.IncludeComments) changes = MergeRenameChanges(changes, commentChanges);
             }
 
@@ -691,6 +695,75 @@ public partial class MainWindow : Window
         k is Therion.Processing.Abstractions.ReferenceKind.Station or Therion.Processing.Abstractions.ReferenceKind.Any;
     private static bool WantsSurvey(Therion.Processing.Abstractions.ReferenceKind k) =>
         k is Therion.Processing.Abstractions.ReferenceKind.Survey or Therion.Processing.Abstractions.ReferenceKind.Any;
+
+    /// <summary>
+    /// The blunt opt-in pass: rename <b>every other</b> station/survey that shares this name, regardless of
+    /// which survey or file it lives in (≈ "replace all string occurrences"). Built from the occurrence
+    /// index — for each same-last-named symbol it computes that symbol's own scope-correct edits, then
+    /// merges them, dropping any span already covered by the true rename. Covers workspace files and the
+    /// active document (which may be outside the workspace). Empty when no other same-named symbol exists.
+    /// </summary>
+    private static List<RenameFileChanges> CollectSameNameChanges(
+        Therion.Semantics.WorkspaceSemanticModel workspace,
+        ViewModels.Docking.FileDocumentViewModel? active,
+        Therion.Processing.Abstractions.ReferenceKind kind, string oldName, List<RenameFileChanges> already)
+    {
+        var covered = already.ToDictionary(c => c.FilePath,
+            c => new HashSet<int>(c.Hits.Select(h => h.Start)), StringComparer.OrdinalIgnoreCase);
+        var byPath = new Dictionary<string, RenameFileChanges>(StringComparer.OrdinalIgnoreCase);
+
+        // Read the active document from its live buffer (so spans align even when unsaved / standalone),
+        // every other file from disk.
+        string? Read(string p) =>
+            active?.FilePath is { Length: > 0 } ap &&
+            string.Equals(p, ap, System.StringComparison.OrdinalIgnoreCase) &&
+            active.DocumentText is { Length: > 0 } at
+                ? at
+                : (System.IO.File.Exists(p) ? SafeReadAllText(p) : null);
+
+        void AddEdit(string filePath, string fileText, IEnumerable<(int Start, int Length)> spans)
+        {
+            covered.TryGetValue(filePath, out var cov);
+            var add = spans.Where(s => cov is null || !cov.Contains(s.Start)).ToList();
+            if (add.Count == 0) return;
+            byPath[filePath] = byPath.TryGetValue(filePath, out var ex)
+                ? ex with { Hits = ex.Hits.Concat(add).Distinct().OrderBy(h => h.Start).ToList() }
+                : new RenameFileChanges(filePath, fileText, add.Distinct().OrderBy(h => h.Start).ToList());
+        }
+
+        // Workspace: every station (and survey, when applicable) sharing the last name — the target's own
+        // occurrences drop out via the `covered` filter, leaving only the same-named symbols elsewhere.
+        var symbols = new List<Therion.Semantics.SymbolId>();
+        if (WantsStation(kind) && workspace.StationsByLastName.TryGetValue(oldName, out var sts))
+            foreach (var s in sts) symbols.Add(new Therion.Semantics.SymbolId(Therion.Semantics.SymbolKind.Station, s.Name));
+        if (WantsSurvey(kind) && workspace.SurveysByLastName.TryGetValue(oldName, out var svs))
+            foreach (var s in svs) symbols.Add(new Therion.Semantics.SymbolId(Therion.Semantics.SymbolKind.Survey, s.Name));
+        foreach (var sym in symbols)
+            foreach (var e in Therion.Semantics.SymbolRenamePlan.Compute(workspace, sym, oldName, Read))
+                AddEdit(e.FilePath, e.FileText, e.Spans);
+
+        // Active document's own same-named symbols (it may not be part of the workspace model).
+        if (active?.Semantics is { } m && active.FilePath is { Length: > 0 } ap2 && Read(ap2) is { } atext)
+        {
+            var localSyms = new List<Therion.Semantics.SymbolId>();
+            if (WantsStation(kind))
+                localSyms.AddRange(m.Stations.Values.Where(s => s.Name.Last == oldName)
+                    .Select(s => new Therion.Semantics.SymbolId(Therion.Semantics.SymbolKind.Station, s.Name)));
+            if (WantsSurvey(kind))
+                localSyms.AddRange(m.Surveys.Values.Where(s => s.Name.Last == oldName)
+                    .Select(s => new Therion.Semantics.SymbolId(Therion.Semantics.SymbolKind.Survey, s.Name)));
+            foreach (var sym in localSyms)
+                if (Therion.Semantics.SymbolRenamePlan.ComputeForFile(m.Occurrences, sym, oldName, ap2, atext) is { } e)
+                    AddEdit(e.FilePath, e.FileText, e.Spans);
+        }
+
+        return byPath.Values.ToList();
+    }
+
+    private static string? SafeReadAllText(string path)
+    {
+        try { return System.IO.File.ReadAllText(path); } catch { return null; }
+    }
 
     /// <summary>
     /// Whole-word occurrences of <paramref name="oldName"/> that live inside <c>#</c> comments (which

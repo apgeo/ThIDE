@@ -1,6 +1,7 @@
 // I2b — workspace-tier occurrence merge + cross-file @-equate finalization.
 // See .claude/symbol-occurrence-index-design.md.
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Therion.Core;
 using Therion.Semantics;
@@ -102,6 +103,42 @@ public class WorkspaceOccurrenceTests
         Assert.All(edits, e => Assert.EndsWith("ps3.th", e.FilePath));
         Assert.DoesNotContain(edits, e => e.FilePath.EndsWith("ps6.th"));
         Assert.Equal(2, edits.Single().Spans.Count);   // the two D20 tokens in file 1
+    }
+
+    [Fact]
+    public void Same_last_name_index_lets_the_replace_all_optin_reach_every_survey()
+    {
+        // The blunt "also rename same-named stations" opt-in iterates StationsByLastName[name] and computes
+        // each symbol's edits; the union must cover BOTH surveys/files (unlike the scope-correct default).
+        var f1 = """
+            survey SV-ps3a
+              centreline
+                data normal from to length compass clino
+                D19 D20 1.0 0 0
+              endcentreline
+            endsurvey
+            """;
+        var f2 = """
+            survey SV-ps6d
+              centreline
+                data normal from to length compass clino
+                D19 D20 1.0 0 0
+              endcentreline
+            endsurvey
+            """;
+        var ws = Build(("/p/ps3.th", f1), ("/p/ps6.th", f2));
+        var texts = new Dictionary<string, string> { ["/p/ps3.th"] = f1, ["/p/ps6.th"] = f2 };
+
+        Assert.Equal(2, ws.StationsByLastName["D20"].Length);   // both surveys' D20 are indexed under the name
+
+        var files = new HashSet<string>();
+        foreach (var st in ws.StationsByLastName["D20"])
+            foreach (var e in SymbolRenamePlan.Compute(ws, new SymbolId(SymbolKind.Station, st.Name), "D20",
+                         p => texts.TryGetValue(p, out var t) ? t : null))
+                files.Add(Path.GetFileName(e.FilePath));
+
+        Assert.Contains("ps3.th", files);
+        Assert.Contains("ps6.th", files);
     }
 
     [Fact]
