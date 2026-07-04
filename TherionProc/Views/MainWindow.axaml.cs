@@ -565,28 +565,44 @@ public partial class MainWindow : Window
             return;
         }
 
-        // Stations & surveys rename via the true symbol occurrence index (scope-correct, @-aware,
-        // comment-free, cross-file); scrap/map still use the legacy text-scan until they get an index.
-        var changes = CollectSymbolRenameChanges(workspace, kind, targetSpan.Value)
-            ?? CollectRenameChanges(workspace, nav, raw, kind, oldName, targetSpan.Value);
-        if (changes.Count == 0) return;
-
-        // The graph-driven rename deliberately skips comments. Offer an opt-in pass that also renames
-        // the name where it appears inside `# …` comments (classic "replace in comments too").
-        var commentChanges = CollectCommentRenameChanges(workspace, oldName, changes);
-
-        if (settings?.Current.ShowRenamePreviewBeforeApply == true)
+        try
         {
-            _renamePreviewWindow?.Close();
-            var win = new RenamePreviewWindow(changes, commentChanges, oldName, newName);
-            _renamePreviewWindow = win;
-            win.Closed += (_, _) => _renamePreviewWindow = null;
-            var apply = await win.ShowDialog<bool>(this);
-            if (!apply) return;
-            if (win.IncludeComments) changes = MergeRenameChanges(changes, commentChanges);
-        }
+            // Stations & surveys rename via the true symbol occurrence index (scope-correct, @-aware,
+            // comment-free, cross-file); scrap/map still use the legacy text-scan until they get an index.
+            var changes = CollectSymbolRenameChanges(workspace, kind, targetSpan.Value)
+                ?? CollectRenameChanges(workspace, nav, raw, kind, oldName, targetSpan.Value);
+            if (changes.Count == 0)
+            {
+                await new MessageDialog("Rename Symbol",
+                    $"No occurrences of '{oldName}' were found in the workspace to rename.").ShowAsync(this);
+                return;
+            }
 
-        await ApplyRenameChangesAsync(changes, newName, docs!);
+            // The graph-driven rename deliberately skips comments. Offer an opt-in pass that also renames
+            // the name where it appears inside `# …` comments (classic "replace in comments too").
+            var commentChanges = CollectCommentRenameChanges(workspace, oldName, changes);
+
+            if (settings?.Current.ShowRenamePreviewBeforeApply == true)
+            {
+                // Let the input dialog's close + its pending click events fully drain before opening
+                // the next modal, otherwise Avalonia can log "PlatformImpl is null" and drop the show.
+                await System.Threading.Tasks.Task.Yield();
+                _renamePreviewWindow?.Close();
+                var win = new RenamePreviewWindow(changes, commentChanges, oldName, newName);
+                _renamePreviewWindow = win;
+                win.Closed += (_, _) => _renamePreviewWindow = null;
+                var apply = await win.ShowDialog<bool>(this);
+                if (!apply) return;
+                if (win.IncludeComments) changes = MergeRenameChanges(changes, commentChanges);
+            }
+
+            await ApplyRenameChangesAsync(changes, newName, docs!);
+        }
+        catch (System.Exception ex)
+        {
+            // Never let the rename fail silently (it runs fire-and-forget from the editor event).
+            await new MessageDialog("Rename Symbol failed", ex.ToString()).ShowAsync(this);
+        }
     }
 
     /// <summary>
