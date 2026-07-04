@@ -617,22 +617,23 @@ public partial class MainWindow : Window
         Therion.Semantics.WorkspaceSemanticModel workspace,
         Therion.Processing.Abstractions.ReferenceKind kind, Therion.Core.SourceSpan targetSpan)
     {
-        // Resolve the clicked declaration to a symbol identity + its current name token.
+        // Resolve the clicked declaration to a symbol identity + its current name token. A plain
+        // station/survey token arrives as ReferenceKind.Any (the editor only narrows to Survey/Map/
+        // ScrapObject for @-paths and select/join lines), so Any must try station then survey — else the
+        // rename wrongly drops to the name-based text-scan and crosses survey/file boundaries.
         Therion.Semantics.SymbolId symbol;
         string name;
-        if (kind == Therion.Processing.Abstractions.ReferenceKind.Station)
+        if (WantsStation(kind) && workspace.FindStationByDeclaration(targetSpan) is { } st)
         {
-            if (workspace.FindStationByDeclaration(targetSpan) is not { } st) return null;
             symbol = new Therion.Semantics.SymbolId(Therion.Semantics.SymbolKind.Station, st.Name);
             name = st.Name.Last;
         }
-        else if (kind == Therion.Processing.Abstractions.ReferenceKind.Survey)
+        else if (WantsSurvey(kind) && workspace.FindSurveyByDeclaration(targetSpan) is { } sv)
         {
-            if (workspace.FindSurveyByDeclaration(targetSpan) is not { } sv) return null;
             symbol = new Therion.Semantics.SymbolId(Therion.Semantics.SymbolKind.Survey, sv.Name);
             name = sv.Name.Last;
         }
-        else return null;   // scrap/map: not indexed yet — caller falls back to the text-scan
+        else return null;   // scrap/map (or unresolved): caller falls back to the text-scan
 
         var edits = Therion.Semantics.SymbolRenamePlan.Compute(workspace, symbol, name,
             path => { try { return System.IO.File.ReadAllText(path); } catch { return null; } });
@@ -660,33 +661,36 @@ public partial class MainWindow : Window
         // The occurrence index only covers this file, so the declaration must live here.
         if (!string.Equals(targetSpan.FilePath, path, System.StringComparison.OrdinalIgnoreCase)) return null;
 
-        // Resolve the clicked declaration to a symbol identity within this file (mirrors the workspace path).
+        // Resolve the clicked declaration to a symbol identity within this file (mirrors the workspace
+        // path). Any ⇒ try station then survey (a plain token arrives as Any — see CollectSymbolRenameChanges).
+        bool Match(Therion.Core.SourceSpan d) =>
+            d.StartOffset == targetSpan.StartOffset &&
+            string.Equals(d.FilePath, path, System.StringComparison.OrdinalIgnoreCase);
+
         Therion.Semantics.SymbolId symbol;
         string name;
-        if (kind == Therion.Processing.Abstractions.ReferenceKind.Station)
+        if (WantsStation(kind) && model.Stations.Values.FirstOrDefault(s => Match(s.DeclarationSpan)) is { } st)
         {
-            var st = model.Stations.Values.FirstOrDefault(s =>
-                s.DeclarationSpan.StartOffset == targetSpan.StartOffset &&
-                string.Equals(s.DeclarationSpan.FilePath, path, System.StringComparison.OrdinalIgnoreCase));
-            if (st is null) return null;
             symbol = new Therion.Semantics.SymbolId(Therion.Semantics.SymbolKind.Station, st.Name);
             name = st.Name.Last;
         }
-        else if (kind == Therion.Processing.Abstractions.ReferenceKind.Survey)
+        else if (WantsSurvey(kind) && model.Surveys.Values.FirstOrDefault(s => Match(s.DeclarationSpan)) is { } sv)
         {
-            var sv = model.Surveys.Values.FirstOrDefault(s =>
-                s.DeclarationSpan.StartOffset == targetSpan.StartOffset &&
-                string.Equals(s.DeclarationSpan.FilePath, path, System.StringComparison.OrdinalIgnoreCase));
-            if (sv is null) return null;
             symbol = new Therion.Semantics.SymbolId(Therion.Semantics.SymbolKind.Survey, sv.Name);
             name = sv.Name.Last;
         }
-        else return null;   // scrap/map: not indexed yet — caller falls back to the text-scan
+        else return null;   // scrap/map (or unresolved): caller falls back to the text-scan
 
         if (Therion.Semantics.SymbolRenamePlan.ComputeForFile(model.Occurrences, symbol, name, path, text)
             is not { } edit) return null;
         return new List<RenameFileChanges> { new(edit.FilePath, edit.FileText, edit.Spans.ToList()) };
     }
+
+    // A plain station/survey token reaches rename as ReferenceKind.Any; both must be tried for it.
+    private static bool WantsStation(Therion.Processing.Abstractions.ReferenceKind k) =>
+        k is Therion.Processing.Abstractions.ReferenceKind.Station or Therion.Processing.Abstractions.ReferenceKind.Any;
+    private static bool WantsSurvey(Therion.Processing.Abstractions.ReferenceKind k) =>
+        k is Therion.Processing.Abstractions.ReferenceKind.Survey or Therion.Processing.Abstractions.ReferenceKind.Any;
 
     /// <summary>
     /// Whole-word occurrences of <paramref name="oldName"/> that live inside <c>#</c> comments (which

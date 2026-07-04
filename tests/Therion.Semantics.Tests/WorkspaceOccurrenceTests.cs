@@ -69,6 +69,42 @@ public class WorkspaceOccurrenceTests
     }
 
     [Fact]
+    public void Rename_does_not_cross_into_a_same_named_station_in_a_different_survey_and_file()
+    {
+        // Regression: renaming "D20" in survey SV-ps3a (file 1) must NOT touch the unrelated "D20"
+        // in survey SV-ps6d (file 2). They share a last name but are distinct symbols by qualified name.
+        var f1 = """
+            survey SV-ps3a
+              centreline
+                data normal from to length compass clino
+                D19 D20 1.0 0 0
+                D20 D21 1.0 0 0
+              endcentreline
+            endsurvey
+            """;
+        var f2 = """
+            survey SV-ps6d
+              centreline
+                data normal from to length compass clino
+                D19 D20 1.0 0 0
+                D20 D21 1.0 0 0
+              endcentreline
+            endsurvey
+            """;
+        var ws = Build(("/p/ps3.th", f1), ("/p/ps6.th", f2));
+        var texts = new Dictionary<string, string> { ["/p/ps3.th"] = f1, ["/p/ps6.th"] = f2 };
+
+        var sym = new SymbolId(SymbolKind.Station, QualifiedName.Of("SV-ps3a", "D20"));
+        var edits = SymbolRenamePlan.Compute(ws, sym, "D20",
+            p => texts.TryGetValue(p, out var t) ? t : null);
+
+        // Only file 1 is edited; file 2's identically-named station is never touched.
+        Assert.All(edits, e => Assert.EndsWith("ps3.th", e.FilePath));
+        Assert.DoesNotContain(edits, e => e.FilePath.EndsWith("ps6.th"));
+        Assert.Equal(2, edits.Single().Spans.Count);   // the two D20 tokens in file 1
+    }
+
+    [Fact]
     public void ResolveStationSymbol_maps_an_at_ref_to_its_declaration_identity()
     {
         var ws = Build(("/p/B.th", """
