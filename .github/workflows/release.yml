@@ -1,6 +1,7 @@
 # REL-04 — release channel: build self-contained per-OS artifacts and publish them to a
-# GitHub Release when a v* tag is pushed. Code signing / notarization is a separate, secrets-gated
-# step (see docs/release.md) and is intentionally not wired here.
+# GitHub Release when a v* tag is pushed. Windows and Linux also get a native installer
+# (setup.exe via Inno Setup, .deb via dpkg-deb — see /build and docs/release.md). Code signing /
+# notarization is a separate, secrets-gated step (see docs/release.md) and is intentionally not wired here.
 name: Release
 
 on:
@@ -31,10 +32,44 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
+      # Derive the package version from the tag (v0.3.0 -> 0.3.0); default for workflow_dispatch.
+      # bash is available on all three runners.
+      - name: Compute version
+        id: ver
+        shell: bash
+        run: |
+          REF="${GITHUB_REF_NAME:-}"
+          if [[ "$REF" == v* ]]; then VER="${REF#v}"; else VER="0.0.0"; fi
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+
       - name: Publish (self-contained)
         run: >
           dotnet publish TherionProc/TherionProc.csproj -m:1 -c Release -r ${{ matrix.rid }}
           --self-contained true -p:PublishSingleFile=true -o publish/${{ matrix.rid }}
+
+      # --- Native installers (Windows + Linux) ---
+
+      - name: Build Windows installer (Inno Setup)
+        if: matrix.rid == 'win-x64'
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress -y
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" `
+            "/DMyAppVersion=${{ steps.ver.outputs.version }}" `
+            "/DSourceDir=$PWD\publish\win-x64" `
+            "/O$PWD" `
+            build\windows\TherionProc.iss
+
+      - name: Build Linux installers (.deb + AppImage)
+        if: matrix.rid == 'linux-x64'
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y icoutils
+          bash build/linux/build-deb.sh      publish/linux-x64 "${{ steps.ver.outputs.version }}" "$PWD"
+          bash build/linux/build-appimage.sh publish/linux-x64 "${{ steps.ver.outputs.version }}" "$PWD"
+
+      # --- Portable archives (all platforms) ---
 
       - name: Archive (Windows)
         if: runner.os == 'Windows'
@@ -52,6 +87,9 @@ jobs:
           path: |
             TherionProc-${{ matrix.rid }}.zip
             TherionProc-${{ matrix.rid }}.tar.gz
+            TherionProc-Setup-*.exe
+            therionproc_*_amd64.deb
+            TherionProc-*-x86_64.AppImage
           if-no-files-found: ignore
 
       - name: Attach to GitHub Release (tags only)
@@ -61,4 +99,7 @@ jobs:
           files: |
             TherionProc-${{ matrix.rid }}.zip
             TherionProc-${{ matrix.rid }}.tar.gz
+            TherionProc-Setup-*.exe
+            therionproc_*_amd64.deb
+            TherionProc-*-x86_64.AppImage
           fail_on_unmatched_files: false
