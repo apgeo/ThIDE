@@ -1876,7 +1876,15 @@ public partial class TherionTextEditor : UserControl
         var refs = new Button { Content = L("Ed_FindAllRefs"), Padding = new Thickness(6, 2) };
         refs.Click += (_, _) => { FindReferencesRequested?.Invoke(this, StationRef.Parse(raw).PointWithoutMark); HideHoverInfo(); };
         var renameBtn = new Button { Content = L("Ed_RenameDots"), Padding = new Thickness(6, 2) };
-        renameBtn.Click += (_, _) => { HideHoverInfo(); StartRename(); };
+        renameBtn.Click += (_, _) =>
+        {
+            HideHoverInfo();
+            // Rename opens a modal dialog. Closing this hover popup (which hosts the button handling the
+            // click) and opening the modal in the same input turn corrupts pointer routing — the leftover
+            // click reaches the torn-down popup ("PlatformImpl is null") and the dialog chain stalls. Defer
+            // the rename to a Background-priority tick so the popup teardown + click fully drain first.
+            Avalonia.Threading.Dispatcher.UIThread.Post(StartRename, Avalonia.Threading.DispatcherPriority.Background);
+        };
         actions.Children.Add(go);
         actions.Children.Add(refs);
         actions.Children.Add(renameBtn);
