@@ -45,6 +45,49 @@ public class LeadAnalysisTests
     }
 
     [Fact]
+    public void Dig_and_air_draught_flags_become_station_flag_leads_with_the_flag_in_the_label()
+    {
+        const string src = """
+            survey cave
+              centreline
+                data normal from to length compass clino
+                  1 2 10 0 0
+                  2 3 10 0 0
+                station 2 "" dig
+                station 3 "" air-draught:winter
+              endcentreline
+            endsurvey
+            """;
+
+        var leads = LeadAnalysis.Analyze(Build(src));
+
+        Assert.Contains(leads, l => l.Kind == LeadKind.StationFlag && l.FlagLabel == "dig" && l.IsStationFlag);
+        // The :winter qualifier collapses to the "air-draught" head for display.
+        Assert.Contains(leads, l => l.Kind == LeadKind.StationFlag && l.FlagLabel == "air-draught");
+    }
+
+    [Fact]
+    public void Not_prefix_cancels_a_flag_so_it_is_not_a_lead()
+    {
+        // `not continuation` removes the flag → station 2 must not surface as a flag lead.
+        const string src = """
+            survey cave
+              centreline
+                data normal from to length compass clino
+                  1 2 10 0 0
+                  2 3 10 0 0
+                station 2 "" continuation
+                station 2 "" not continuation
+              endcentreline
+            endsurvey
+            """;
+
+        var leads = LeadAnalysis.Analyze(Build(src));
+
+        Assert.DoesNotContain(leads, l => l.IsStationFlag && l.Location == "2");
+    }
+
+    [Fact]
     public void No_leads_for_a_fully_closed_loop()
     {
         // A triangle 1-2-3-1: every node has degree 2, none flagged → no dead-ends, no leads.

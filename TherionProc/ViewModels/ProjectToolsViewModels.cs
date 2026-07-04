@@ -356,8 +356,17 @@ public sealed partial class LeadsViewModel : ObservableObject
 
     public ObservableCollection<LeadRow> Leads { get; } = new();
 
+    // Full analyzed set; the visible Leads collection is filtered from it by ShowAllLeads.
+    private ImmutableArray<Lead> _all = ImmutableArray<Lead>.Empty;
+
     [ObservableProperty] private bool _isClean;
     [ObservableProperty] private string _summary = "—";
+
+    /// <summary>Off by default: show only explicit station-flag leads (continuation / dig /
+    /// air-draught). When on, the heuristic "open leads" (comments, sketch points, dead-ends) join in.</summary>
+    [ObservableProperty] private bool _showAllLeads;
+
+    partial void OnShowAllLeadsChanged(bool value) => ApplyFilter();
 
     public LeadsViewModel() { } // design-time
 
@@ -405,10 +414,17 @@ public sealed partial class LeadsViewModel : ObservableObject
 
     private void Rebuild()
     {
+        _all = LeadAnalysis.Analyze(_documents?.Workspace);
+        ApplyFilter();
+    }
+
+    // Rebuild the visible collection from the analyzed set, honouring the ShowAllLeads switch.
+    private void ApplyFilter()
+    {
         Leads.Clear();
-        var model = _documents?.Workspace;
-        foreach (var lead in LeadAnalysis.Analyze(model))
+        foreach (var lead in _all)
         {
+            if (!ShowAllLeads && !lead.IsStationFlag) continue; // default: flagged leads only
             var st = _status?.Get(_session?.RootPath, lead.Location) ?? LeadStatusStore.Open;
             Leads.Add(new LeadRow(lead, st));
         }
@@ -418,10 +434,13 @@ public sealed partial class LeadsViewModel : ObservableObject
     private void UpdateSummary()
     {
         IsClean = Leads.Count == 0;
-        int open = Leads.Count(l => string.Equals(l.Status, LeadStatusStore.Open, StringComparison.OrdinalIgnoreCase));
-        Summary = IsClean
+        int flagged = _all.Count(l => l.IsStationFlag);
+        int heuristic = _all.Length - flagged;
+        Summary = _all.Length == 0
             ? "No leads detected."
-            : $"{Leads.Count} lead(s) · {open} open";
+            : ShowAllLeads
+                ? $"{Leads.Count} lead(s) · {flagged} flagged · {heuristic} other"
+                : $"{Leads.Count} flagged lead(s)" + (heuristic > 0 ? $" · {heuristic} more via “show all”" : "");
     }
 }
 

@@ -227,6 +227,7 @@ public sealed class LivePreviewControl : Control
     private static IBrush MarkerBrush(LeadKind kind) => kind switch
     {
         LeadKind.ContinuationFlag => new ImmutableSolidColorBrush(Color.FromRgb(0xE6, 0x51, 0x00)), // orange
+        LeadKind.StationFlag      => new ImmutableSolidColorBrush(Color.FromRgb(0x00, 0x83, 0x8F)), // teal (dig / air-draught)
         LeadKind.CommentMarker    => new ImmutableSolidColorBrush(Color.FromRgb(0x2E, 0x7D, 0x32)), // green
         LeadKind.Th2Point         => new ImmutableSolidColorBrush(Color.FromRgb(0x6A, 0x1B, 0x9A)), // purple
         _                         => new ImmutableSolidColorBrush(Color.FromRgb(0xC6, 0x28, 0x28)), // dead-end red
