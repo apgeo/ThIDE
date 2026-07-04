@@ -142,6 +142,43 @@ public class WorkspaceOccurrenceTests
     }
 
     [Fact]
+    public void EquatedSameNameStations_follows_equate_links_to_same_named_stations_in_other_surveys()
+    {
+        // a.1 and b.1 are declared the same point via `equate 1@a 1@b`; a.2/b.2 via a second equate.
+        // c.1 shares the name but is NOT equated, so it must be excluded.
+        var src = """
+            survey a
+              centreline
+                data normal from to length compass clino
+                1 2 1.0 0 0
+              endcentreline
+            endsurvey
+            survey b
+              centreline
+                data normal from to length compass clino
+                1 2 1.0 0 0
+              endcentreline
+            endsurvey
+            survey c
+              centreline
+                data normal from to length compass clino
+                1 2 1.0 0 0
+              endcentreline
+            endsurvey
+            equate 1@a 1@b
+            equate 2@a 2@b
+            """;
+        var ws = Build(("/p/x.th", src));
+
+        var linked = ws.EquatedSameNameStations(QualifiedName.Of("a", "1"));
+
+        Assert.Contains(QualifiedName.Of("b", "1"), linked);        // equated + same name
+        Assert.DoesNotContain(QualifiedName.Of("a", "1"), linked);  // never the target itself
+        Assert.DoesNotContain(QualifiedName.Of("b", "2"), linked);  // equated but different name
+        Assert.DoesNotContain(QualifiedName.Of("c", "1"), linked);  // same name but not equated
+    }
+
+    [Fact]
     public void ResolveStationSymbol_maps_an_at_ref_to_its_declaration_identity()
     {
         var ws = Build(("/p/B.th", """

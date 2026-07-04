@@ -124,6 +124,39 @@ public sealed class WorkspaceSemanticModel
         return StationsByQn.TryGetValue(r.StationQuery, out var byQn) ? byQn : null;
     }
 
+    /// <summary>
+    /// The stations declared the same physical point as <paramref name="target"/> by an <c>equate</c>
+    /// command — following equate links across surveys and files — that also share its last name but
+    /// live in a different survey (e.g. <c>b.1</c> for <c>a.1</c> given <c>equate 1@a 1@b</c>). Powers
+    /// rename's opt-in "also rename equate-linked same-named stations". Empty when none.
+    /// </summary>
+    public ImmutableArray<QualifiedName> EquatedSameNameStations(QualifiedName target)
+    {
+        var eq = new EquateGraph();
+        foreach (var model in PerFile.Values)
+            foreach (var rec in model.EquateRecords)
+            {
+                QualifiedName? first = null;
+                foreach (var raw in rec.Stations)
+                {
+                    if (ResolveStationSymbol(raw) is not { } s) continue;
+                    eq.Add(s.Name);
+                    if (first is null) first = s.Name; else eq.Union(first.Value, s.Name);
+                }
+            }
+
+        foreach (var group in eq.Groups())
+        {
+            if (!group.Contains(target)) continue;
+            var b = ImmutableArray.CreateBuilder<QualifiedName>();
+            foreach (var qn in group)
+                if (!qn.Equals(target) && string.Equals(qn.Last, target.Last, System.StringComparison.Ordinal))
+                    b.Add(qn);
+            return b.ToImmutable();
+        }
+        return ImmutableArray<QualifiedName>.Empty;
+    }
+
     public WorkspaceSemanticModel(
         FrozenDictionary<string, SemanticModel> perFile,
         XviIndex xvi,
