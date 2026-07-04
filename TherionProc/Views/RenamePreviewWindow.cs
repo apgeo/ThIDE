@@ -20,7 +20,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Documents;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Therion.Core;
@@ -39,9 +41,10 @@ internal sealed class RenamePreviewWindow : Window
     public bool IncludeComments => _comment.Included;
 
     // Pale blue tint (translucent so it reads on both light and dark themes) for "will be replaced".
+    // Blue is reserved for that meaning — headers are made distinct with weight + a rule, not colour.
     private static readonly IBrush HighlightBrush = new SolidColorBrush(Color.FromArgb(0x40, 0x21, 0x96, 0xF3));
-    private static readonly IBrush SectionText   = new SolidColorBrush(Color.FromRgb(0x1E, 0x88, 0xE5));
     private static readonly IBrush SectionRule   = new SolidColorBrush(Color.FromArgb(0x66, 0x90, 0x90, 0x90));
+    private static readonly IBrush DimText       = new SolidColorBrush(Color.FromArgb(0x99, 0x88, 0x88, 0x88));
 
     private readonly Func<SourceSpan, Task>? _navigate;
     private readonly IReadOnlyList<RenameFileChanges> _changes;
@@ -50,6 +53,8 @@ internal sealed class RenamePreviewWindow : Window
 
     private PreviewLayout _layout = PreviewLayout.ChecksBelow;
     private bool _suppress;                     // guards programmatic checkbox updates from re-entering handlers
+    private bool _opened;                        // window shown → safe to auto-grow to fit
+    private double _maxHeight = 900;             // clamp for auto-grow (set from the screen on open)
     private readonly Border _treeHost = new();
     private readonly Border _checksHost = new();
     private readonly List<TreeViewItem> _baseFileNodes = new();
@@ -101,8 +106,10 @@ internal sealed class RenamePreviewWindow : Window
         Title = $"Rename '{oldName}' → '{newName}'";
         Width = 600;
         Height = 540;
+        MinHeight = 320;
         CanResize = true;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        Opened += OnOpened;
 
         var summary = new TextBlock
         {
@@ -156,6 +163,33 @@ internal sealed class RenamePreviewWindow : Window
         Rebuild();
     }
 
+    private void OnOpened(object? sender, EventArgs e)
+    {
+        if (Screens is { } screens && (screens.ScreenFromWindow(this) ?? screens.Primary) is { Scaling: > 0 } s)
+            _maxHeight = s.WorkingArea.Height / s.Scaling * 0.8;
+        _opened = true;
+        GrowToFit();
+    }
+
+    // Grow the window (never shrink, capped at 80% of the screen) so expanded sections stay visible
+    // without scrolling — the list can need much more room once the selected sections are unfolded.
+    private void GrowToFit()
+    {
+        if (!_opened) return;
+        int rows = 0;
+        foreach (var fc in _changes) rows += 1 + fc.Hits.Count;   // base is always expanded
+        foreach (var g in _groups)
+        {
+            if (g.Count == 0) continue;
+            rows += 1;                                            // section header
+            if (g.Node is { IsExpanded: true })
+                foreach (var fc in g.Source) rows += 1 + fc.Hits.Count;
+        }
+        const double rowHeight = 22, chrome = 200;                // top bar + checks + buttons + margins
+        double target = Math.Min(_maxHeight, rows * rowHeight + chrome);
+        if (target > Height) Height = target;
+    }
+
     /// <summary>The optional changes to actually apply, given the current selection (both layouts).</summary>
     public List<RenameFileChanges> AppliedOptionalChanges()
     {
@@ -203,6 +237,8 @@ internal sealed class RenamePreviewWindow : Window
             _checksHost.Child = null;
             _checksHost.IsVisible = false;
         }
+
+        GrowToFit();
     }
 
     private StackPanel BuildBottomChecks()
@@ -250,24 +286,28 @@ internal sealed class RenamePreviewWindow : Window
             {
                 IsThreeState = true,
                 VerticalAlignment = VerticalAlignment.Center,
-                Content = new TextBlock { Text = $"{g.Label}   ({g.Count})", FontWeight = FontWeight.Bold, Foreground = SectionText },
+                Content = SectionHeaderText(g.Label, g.Count),
             };
+            IsolatePointer(groupCheck);   // keep clicks from reaching the TreeViewItem (select/expand)
             g.GroupCheck = groupCheck;
             var group = g;
             groupCheck.IsCheckedChanged += (_, _) =>
             {
                 if (_suppress) return;
-                // User cycles a tri-state to checked/unchecked; treat null as "check all".
-                bool on = groupCheck.IsChecked != false;
-                group.SetAll(on);
-                RefreshGroupVisuals(group);
+                // The header box is tri-state only to *display* "some selected"; a user click must plainly
+                // toggle the whole group (a three-state control would otherwise cycle into indeterminate and
+                // never uncheck). Decide from the model's pre-click state, not the control's new value.
+                bool wasAllIncluded = group.Excluded.Count == 0;
+                group.SetAll(!wasAllIncluded);
+                RefreshGroupVisuals(group);   // re-stamps the tri-state box (suppressed) to match
+                GrowToFit();
             };
             headerContent = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4,
                 Children = { groupCheck, HelpButton(g.Help) } };
         }
         else
         {
-            headerContent = new TextBlock { Text = $"{g.Label}   ({g.Count})", FontWeight = FontWeight.Bold, Foreground = SectionText };
+            headerContent = SectionHeaderText(g.Label, g.Count);
         }
 
         var headerBorder = new Border
@@ -282,6 +322,7 @@ internal sealed class RenamePreviewWindow : Window
         g.Tint.Add(headerBorder);
 
         var node = new TreeViewItem { Header = headerBorder, IsExpanded = checkable && g.Included };
+        node.PropertyChanged += (_, e) => { if (e.Property == TreeViewItem.IsExpandedProperty) GrowToFit(); };
         g.Node = node;
         foreach (var fc in g.Source) AddFileNode(node, fc, g.Tint, group: g);
         tree.Items.Add(node);
@@ -313,8 +354,7 @@ internal sealed class RenamePreviewWindow : Window
             var lineText = GetLineText(fc.FileText, start).Trim();
             var span = BuildSpan(fc.FilePath, fc.FileText, start, length);
 
-            var text = new TextBlock { Text = $"Line {line}, Col {col}:  {lineText}", VerticalAlignment = VerticalAlignment.Center };
-            text.Tapped += (_, e) => { e.Handled = true; if (_navigate is { } nav) _ = nav(span); };
+            var text = EntryText(line, col, lineText);
 
             Control content = text;
             var key = (fc.FilePath, start);
@@ -322,6 +362,7 @@ internal sealed class RenamePreviewWindow : Window
             if (checkable)
             {
                 leafCheck = new CheckBox { IsChecked = !group!.Excluded.Contains(key), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 4, 0) };
+                IsolatePointer(leafCheck);   // let the checkbox toggle reliably, not the row's selection
                 content = new StackPanel { Orientation = Orientation.Horizontal, Children = { leafCheck, text } };
             }
 
@@ -346,7 +387,9 @@ internal sealed class RenamePreviewWindow : Window
                 TintBorder(border, lc.IsChecked == true);
             }
 
+            // Double-click the row to jump to that file/line (keeps this window open).
             var leaf = new TreeViewItem { Header = border };
+            leaf.DoubleTapped += (_, e) => { e.Handled = true; if (_navigate is { } nav) _ = nav(span); };
             fileItem.Items.Add(leaf);
         }
         parent.Items.Add(fileItem);
@@ -389,6 +432,30 @@ internal sealed class RenamePreviewWindow : Window
 
     private static Control MakeCheckRow(CheckBox check, string help)
         => new StackPanel { Orientation = Orientation.Horizontal, Children = { check, HelpButton(help) } };
+
+    // A section header: bold label + a dim count (distinct from rows by weight + a rule, not colour —
+    // blue is reserved for the "will be replaced" tint).
+    private static TextBlock SectionHeaderText(string label, int count)
+    {
+        var tb = new TextBlock { VerticalAlignment = VerticalAlignment.Center };
+        tb.Inlines!.Add(new Run(label) { FontWeight = FontWeight.Bold });
+        tb.Inlines.Add(new Run($"   ({count})") { Foreground = DimText });
+        return tb;
+    }
+
+    // A change entry: a dim, smaller "line/col" prefix followed by the actual source line (emphasised).
+    private static TextBlock EntryText(int line, int col, string lineText)
+    {
+        var tb = new TextBlock { VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
+        tb.Inlines!.Add(new Run($"L{line}:C{col}   ") { Foreground = DimText, FontSize = 11 });
+        tb.Inlines.Add(new Run(lineText));
+        return tb;
+    }
+
+    // Stop a control's pointer-press from bubbling to the TreeViewItem, so clicking a checkbox toggles it
+    // reliably (and repeatedly) instead of the row swallowing the click for selection / expand-collapse.
+    private static void IsolatePointer(Control c) =>
+        c.AddHandler(InputElement.PointerPressedEvent, (_, e) => e.Handled = true, RoutingStrategies.Bubble);
 
     private static Button HelpButton(string help)
     {
