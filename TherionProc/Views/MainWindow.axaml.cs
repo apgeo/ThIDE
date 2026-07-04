@@ -590,13 +590,24 @@ public partial class MainWindow : Window
 
             if (settings?.Current.ShowRenamePreviewBeforeApply == true)
             {
-                // Let the input dialog's close + its pending click events fully drain before opening
-                // the next modal, otherwise Avalonia can log "PlatformImpl is null" and drop the show.
-                await System.Threading.Tasks.Task.Yield();
+                // The input dialog closed from a click/Enter. Before opening the next modal, let that event
+                // — and everything else queued on the UI thread — fully drain by awaiting a no-op posted at
+                // Background priority (which runs only after all pending Input-priority events). A single
+                // Task.Yield isn't enough: leftover input reaches the torn-down dialog ("PlatformImpl is
+                // null, couldn't handle input") and the preview silently never shows (seen with equate
+                // renames, often triggered from the hover popup which adds another teardown to the queue).
+                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(
+                    static () => { }, Avalonia.Threading.DispatcherPriority.Background);
+
                 _renamePreviewWindow?.Close();
                 var win = new RenamePreviewWindow(changes, sameNameChanges, commentChanges, oldName, newName);
                 _renamePreviewWindow = win;
                 win.Closed += (_, _) => _renamePreviewWindow = null;
+
+                // Make sure the preview is the top, focused, activated window (the just-closed input dialog
+                // can otherwise leave activation on the main window, which reads as "nothing happened").
+                win.Opened += (_, _) => { win.Activate(); win.Focus(); };
+
                 var apply = await win.ShowDialog<bool>(this);
                 if (!apply) return;
                 if (win.IncludeSameName) changes = MergeRenameChanges(changes, sameNameChanges);
