@@ -10,7 +10,8 @@ using Therion.Syntax;
 namespace TherionProc.Services;
 
 /// <summary>An export command found in a thconfig (with its source line range).</summary>
-public sealed record ExportTargetInfo(string Title, string? Format, string? Output, int StartLine, int EndLine);
+public sealed record ExportTargetInfo(
+    string Title, string? Format, string? Output, int StartLine, int EndLine, string ExportType = "");
 
 public static class ThconfigExportEditor
 {
@@ -29,7 +30,7 @@ public static class ThconfigExportEditor
             var title = "export " + ec.ExportType
                 + (string.IsNullOrEmpty(ec.Format) ? string.Empty : $"  -fmt {ec.Format}")
                 + (string.IsNullOrEmpty(ec.Output) ? string.Empty : $"  →  {ec.Output}");
-            list.Add(new ExportTargetInfo(title, ec.Format, ec.Output, ec.Span.Start.Line, ec.Span.End.Line));
+            list.Add(new ExportTargetInfo(title, ec.Format, ec.Output, ec.Span.Start.Line, ec.Span.End.Line, ec.ExportType));
         }
         return list;
     }
