@@ -328,6 +328,20 @@ public partial class BuildViewModel : ViewModelBase
     /// <summary>Number of warnings from the last build.</summary>
     [ObservableProperty] private int _lastBuildWarningCount;
 
+    /// <summary>
+    /// The error text from the last failed build (the error line(s) Therion reported), kept as state
+    /// until the next compilation. Empty after a successful build or before any build. Surfaced in the
+    /// toolbar status tooltip, the activity log, and the project dashboard.
+    /// </summary>
+    [ObservableProperty] private string _lastError = string.Empty;
+    /// <summary>True when <see cref="LastError"/> holds a non-empty error to show.</summary>
+    public bool HasLastError => _lastError.Length > 0;
+    partial void OnLastErrorChanged(string value) => OnPropertyChanged(nameof(HasLastError));
+
+    // Error lines collected during the running build (reset at each build start), used to compose
+    // LastError. Mirrors CompilerOutputRow.IsError, so "average loop error" and warnings are excluded.
+    private readonly List<string> _buildErrorLines = new();
+
     /// <summary>Raised when a compiler-output row with a span is activated.</summary>
     public event System.EventHandler<Therion.Core.SourceSpan>? NavigateRequested;
 
@@ -427,10 +441,16 @@ public partial class BuildViewModel : ViewModelBase
         using var lease = _gate.TryAcquire();
         if (lease is null) { Status = "A compilation is already in progress."; return; }
 
+        // Before compiling, make sure the involved unsaved files are on disk (Therion reads from
+        // disk). Auto-save when configured, otherwise ask (naming the files). Cancel aborts.
+        if (!await EnsureInvolvedFilesSavedAsync(entry).ConfigureAwait(true)) return;
+
         IsBuilding = true;
         HasBuildResult = false;          // clear the previous success/error status-bar icon
         Status = "Compiling…";           // clear the previous "succeeded/failed" label (#3)
         StatusArtifactCount = string.Empty;
+        LastError = string.Empty;        // the last error is state only until the next compilation
+        _buildErrorLines.Clear();
         HasLog = false; LogFilePath = null;           // clear the previous build's log (#3)
         SetPhase(BuildPhase.Starting);
         _log?.Info($"Build started: {label ?? entry}");
@@ -469,19 +489,29 @@ public partial class BuildViewModel : ViewModelBase
             // #3: on success the "N artifact(s)" count is shown as a separate clickable link.
             if (ok)
             {
+                LastError = string.Empty;
                 Status = result.Artifacts.Length > 0 ? "Compilation succeeded" : "Compilation succeeded (no outputs).";
                 StatusArtifactCount = result.Artifacts.Length > 0 ? $"{result.Artifacts.Length} artifact(s)" : string.Empty;
             }
             else
             {
-                Status = $"Compilation failed (exit {result.ExitCode}).";
+                // Keep the last few error lines (the last one is usually the real error); the toolbar
+                // label shows the first line, the tooltip/log/dashboard show the full text.
+                LastError = _buildErrorLines.Count == 0
+                    ? string.Empty
+                    : string.Join(Environment.NewLine, _buildErrorLines.TakeLast(6));
+                var shortErr = FirstLine(LastError);
+                Status = shortErr.Length > 0
+                    ? $"Compilation failed (exit {result.ExitCode}): {shortErr}"
+                    : $"Compilation failed (exit {result.ExitCode}).";
                 StatusArtifactCount = string.Empty;
             }
             _log?.Log(
                 ok ? (warnCount > 0 ? LogVerbosity.Warning : LogVerbosity.Info) : LogVerbosity.Error,
                 ok
                     ? $"Build succeeded: {result.Artifacts.Length} artifact(s)" + (warnCount > 0 ? $", {warnCount} warning(s)" : "")
-                    : $"Build failed (exit {result.ExitCode}, {warnCount} warning(s)).");
+                    : $"Build failed (exit {result.ExitCode}, {warnCount} warning(s))."
+                      + (LastError.Length > 0 ? $" Error: {LastError.Replace(Environment.NewLine, " ⏎ ")}" : ""));
             CompileCompleted?.Invoke(this, result.Diagnostics);
             if (ok) AutoOpenOutputs(result.Artifacts);
         }
@@ -507,6 +537,67 @@ public partial class BuildViewModel : ViewModelBase
             if (!string.IsNullOrEmpty(tempThconfig))
                 try { File.Delete(tempThconfig); } catch { /* best-effort temp cleanup */ }
         }
+    }
+
+    /// <summary>
+    /// Ensures the unsaved files that take part in this build are on disk before Therion runs (it
+    /// reads from disk, not the editor buffers). Auto-saves when <c>AutoSaveBeforeCompile</c> is on;
+    /// otherwise prompts (naming the files) with Save / Compile without saving / Cancel. Returns
+    /// <c>false</c> only when the user cancels — the build should then not run.
+    /// </summary>
+    private async Task<bool> EnsureInvolvedFilesSavedAsync(string entry)
+    {
+        string entryFull; try { entryFull = Path.GetFullPath(entry); } catch { entryFull = entry; }
+        var dirty = _documents.Documents
+            .Where(d => d.IsDirty && !string.IsNullOrEmpty(d.FilePath) && File.Exists(d.FilePath))
+            .Where(d => (_session?.Covers(d.FilePath) ?? false)
+                        || string.Equals(SafeFull(d.FilePath), entryFull, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        if (dirty.Count == 0) return true;
+
+        if (_settings?.Current.AutoSaveBeforeCompile == true)
+        {
+            foreach (var d in dirty) await _documents.SaveDocumentAsync(d).ConfigureAwait(true);
+            _log?.Info($"Auto-saved {dirty.Count} unsaved file(s) before compiling.");
+            return true;
+        }
+
+        var list = string.Join(Environment.NewLine, dirty.Select(d => "  • " + Path.GetFileName(d.FilePath)));
+        var choice = await Views.SaveBeforeBuildDialog.ShowOverMainAsync(
+            TherionProc.Resources.Tr.Get("Build_SavePromptTitle"),
+            string.Format(TherionProc.Resources.Tr.Get("Build_SavePromptMsg"), dirty.Count) + Environment.NewLine + Environment.NewLine + list,
+            TherionProc.Resources.Tr.Get("Build_SaveAndCompile"),
+            TherionProc.Resources.Tr.Get("Build_CompileWithoutSaving"),
+            TherionProc.Resources.Tr.Get("Common_Cancel"),
+            noWindowResult: Views.SaveBeforeBuildChoice.DontSave).ConfigureAwait(true);
+
+        switch (choice)
+        {
+            case Views.SaveBeforeBuildChoice.Save:
+                foreach (var d in dirty) await _documents.SaveDocumentAsync(d).ConfigureAwait(true);
+                _log?.Info($"Saved {dirty.Count} file(s) before compiling.");
+                return true;
+            case Views.SaveBeforeBuildChoice.DontSave:
+                return true;
+            default:
+                Status = "Compilation cancelled — unsaved changes.";
+                return false;
+        }
+    }
+
+    private static string SafeFull(string p) { try { return Path.GetFullPath(p); } catch { return p; } }
+
+    /// <summary>The first non-empty line of <paramref name="text"/>, trimmed and capped for a one-line label.</summary>
+    private static string FirstLine(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return string.Empty;
+        foreach (var raw in text.Split('\n'))
+        {
+            var line = raw.Trim();
+            if (line.Length == 0) continue;
+            return line.Length > 160 ? line[..159] + "…" : line;
+        }
+        return string.Empty;
     }
 
     private CompilerOutputRow MakeRow(CompilerOutputLine line)
@@ -618,6 +709,9 @@ public partial class BuildViewModel : ViewModelBase
         Output = _outputBuffer.ToArray();   // immutable swap for binding
         _rawBuffer.AppendLine(row.Text);
         RawOutput = _rawBuffer.ToString();
+        // Capture the real error lines (same rule the red highlight uses) to compose LastError.
+        if (row.Kind == OutputRowKind.Normal && row.IsError && !string.IsNullOrWhiteSpace(row.Text))
+            _buildErrorLines.Add(row.Text.Trim());
         OutputRowAdded?.Invoke(this, row);
     }
 
