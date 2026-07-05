@@ -120,6 +120,10 @@ ipch/
 # MSBuild Binary and Structured Log
 *.binlog
 
+# Auto-incrementing local build number (see build/version.props). Per-machine counter,
+# not committed.
+build/build-number.txt
+
 # BenchmarkDotNet generated results (run outputs, not source)
 BenchmarkDotNet.Artifacts/
 
@@ -172,6 +176,12 @@ Desktop.ini
 
 # Claude Code local (machine-specific) settings — keep shared .claude/ config tracked
 .claude/*
+
+# AI-agent guidance kept private for now. Real content lives in .claude/CLAUDE.md
+# (already private via the rule above); these root files just @-import / point to it.
+# To make the guidance public later, delete the two lines below and commit.
+/CLAUDE.md
+/AGENTS.md
 
 tests/Corpus/sample_projects/*
 # Local-only quarantined corpus (downloaded, never committed)
