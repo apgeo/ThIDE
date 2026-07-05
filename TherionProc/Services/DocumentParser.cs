@@ -104,6 +104,8 @@ public static class DocumentParser
         var diags = ImmutableArray.CreateBuilder<Diagnostic>();
         diags.AddRange(parsed.Diagnostics);
         if (semantics is not null) diags.AddRange(semantics.Diagnostics);
+        // Application directives (`#@region`…) live in comments — scan for their warnings.
+        diags.AddRange(Therion.Syntax.Directives.DirectiveScanner.Scan(text, filePath).Diagnostics);
 
         return new ParsedDocument(parsed.Value, semantics, navigation, diags.ToImmutable());
     }

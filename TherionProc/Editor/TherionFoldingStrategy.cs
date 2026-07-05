@@ -12,6 +12,7 @@ using System;
 using System.Collections.Generic;
 using AvaloniaEdit.Document;
 using AvaloniaEdit.Folding;
+using Therion.Syntax.Directives;
 
 namespace TherionProc.Editor;
 
@@ -46,6 +47,16 @@ internal static class TherionFoldingStrategy
                 if (end > start.Offset)
                     result.Add(new NewFolding(start.Offset, end) { Name = start.Name });
             }
+        }
+
+        // Application `#@region … #@endregion` blocks fold independently of Therion blocks.
+        foreach (var region in DirectiveScanner.Scan(document.Text).FoldableRegions())
+        {
+            if (region.EndOffset > region.StartOffset)
+                result.Add(new NewFolding(region.StartOffset, region.EndOffset)
+                {
+                    Name = string.IsNullOrEmpty(region.Title) ? "#@region" : region.Title,
+                });
         }
 
         // FoldingManager requires foldings ordered by start offset.
