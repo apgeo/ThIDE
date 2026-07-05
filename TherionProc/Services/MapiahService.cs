@@ -53,25 +53,47 @@ public sealed class MapiahService : IMapiahService
         if (string.IsNullOrEmpty(exe))
             return new MapiahLaunchResult(MapiahLaunchStatus.NotInstalled);
 
-        // Always pass an absolute path so a sandboxed (flatpak) Mapiah can resolve it.
         var file = System.IO.Path.GetFullPath(th2Path);
+        var workDir = System.IO.Path.GetDirectoryName(file);
+        var fileName = System.IO.Path.GetFileName(file);
 
-        // Pass the .th2 as the first argument so Mapiah opens it directly. UseShellExecute is false
-        // so we don't pop a console and so the wrapper/flatpak launcher receives argv.
-        if (TryStart(new ProcessStartInfo(exe, $"\"{file}\"") { UseShellExecute = false }, out var err))
+        // Root cause of Mapiah's spurious "Error reading XVI file … not found" for sketches in a
+        // folder with a space (e.g. "…\th2 de la gabi\…"): Mapiah mishandles the space-containing
+        // path it is given, so it can't resolve the sketch's relative XVI/scan references. Launch it
+        // with the working directory set to the sketch's own folder and pass just the (space-free)
+        // FILE NAME as the argument — no space-containing path is passed at all, and Mapiah resolves
+        // the .th2 and its relative references against that folder. Args go through ArgumentList so
+        // .NET escapes them correctly per platform (never a hand-quoted string).
+        if (!string.IsNullOrEmpty(workDir) &&
+            TryStart(WithArgs(new ProcessStartInfo(exe), workDir, fileName), out var err))
             return new MapiahLaunchResult(MapiahLaunchStatus.Launched, exe);
 
-        // Fallback 1: a flatpak wrapper whose filename is the app id → `flatpak run <id> <file>`.
+        // Fallback for a folder we couldn't split: pass the absolute path (still via ArgumentList).
+        if (TryStart(WithArgs(new ProcessStartInfo(exe), workDir, file), out err))
+            return new MapiahLaunchResult(MapiahLaunchStatus.Launched, exe);
+
+        // Fallback: a flatpak wrapper whose filename is the app id → `flatpak run <id> <file>`. A
+        // sandboxed Mapiah needs the absolute path (its cwd is inside the sandbox).
         if (FlatpakAppId(exe) is { } appId &&
-            TryStart(new ProcessStartInfo("flatpak", $"run {appId} \"{file}\"") { UseShellExecute = false }, out _))
+            TryStart(WithArgs(new ProcessStartInfo("flatpak"), workDir, "run", appId, file), out _))
             return new MapiahLaunchResult(MapiahLaunchStatus.Launched, exe);
 
-        // Fallback 2: launch Mapiah without the file so the user can open it manually.
+        // Fallback: launch Mapiah without the file so the user can open it manually.
         if (TryStart(new ProcessStartInfo(exe) { UseShellExecute = false }, out _))
             return new MapiahLaunchResult(MapiahLaunchStatus.Launched, exe,
                 "Opened Mapiah, but could not pass the file — open it manually.");
 
         return new MapiahLaunchResult(MapiahLaunchStatus.LaunchFailed, exe, err);
+    }
+
+    /// <summary>A no-shell start info running in <paramref name="workDir"/> with each of
+    /// <paramref name="args"/> passed as a separate, properly-escaped argument.</summary>
+    private static ProcessStartInfo WithArgs(ProcessStartInfo psi, string? workDir, params string[] args)
+    {
+        psi.UseShellExecute = false;
+        foreach (var a in args) psi.ArgumentList.Add(a);
+        if (!string.IsNullOrEmpty(workDir)) psi.WorkingDirectory = workDir;
+        return psi;
     }
 
     private static bool TryStart(ProcessStartInfo psi, out string? error)
