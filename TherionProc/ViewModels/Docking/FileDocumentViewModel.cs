@@ -306,7 +306,50 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
     private void ApplyWorkspace()
     {
         UpdateNavigation();
+        UpdateParentFiles();
         Diagnostics = CombineDiagnostics();
+    }
+
+    // ----- parent-file navigation (the files that include/reference this one) -----
+
+    /// <summary>
+    /// Full paths of the files that pull this one into the active project's object graph via
+    /// <c>input</c> / <c>load</c> / <c>source</c>. Usually one — the enclosing <c>.th</c> or the
+    /// project's <c>.thconfig</c> — but a file can be included from several places. Empty for a
+    /// root file (e.g. the top-level thconfig), which gates the "go to parent" editor button.
+    /// </summary>
+    public IReadOnlyList<string> ParentFiles { get; private set; } = Array.Empty<string>();
+
+    /// <summary>True when <see cref="ParentFiles"/> has at least one entry (drives the button's visibility).</summary>
+    [ObservableProperty] private bool _hasParentFile;
+
+    private void UpdateParentFiles()
+    {
+        var parents = ComputeParentFiles(_workspace, FilePath);
+        ParentFiles = parents;
+        HasParentFile = parents.Count > 0;
+    }
+
+    /// <summary>
+    /// The distinct files whose object-graph edge points at <paramref name="filePath"/> (i.e. that
+    /// include it), in a stable order. A self-loop is ignored. Pure, so it is unit-testable.
+    /// </summary>
+    internal static IReadOnlyList<string> ComputeParentFiles(WorkspaceSemanticModel? workspace, string filePath)
+    {
+        if (workspace is null || string.IsNullOrEmpty(filePath)) return Array.Empty<string>();
+        string self;
+        try { self = System.IO.Path.GetFullPath(filePath); } catch { self = filePath; }
+
+        var result = new List<string>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (from, to) in workspace.FileGraphEdges)
+        {
+            if (!string.Equals(to, self, StringComparison.OrdinalIgnoreCase)) continue;
+            if (string.Equals(from, self, StringComparison.OrdinalIgnoreCase)) continue; // ignore self-loop
+            if (seen.Add(from)) result.Add(from);
+        }
+        result.Sort(StringComparer.OrdinalIgnoreCase);
+        return result;
     }
 
     private void UpdateNavigation()

@@ -60,6 +60,36 @@ public partial class FileDocumentView : UserControl
             TryDocuments()?.RequestSelectFileInWorkspace(path);
     }
 
+    // Go to the parent / including file. Opens it (if not already open) and switches to it. When
+    // several files include this one, a flyout lets the user pick which parent to open.
+    private void OnGoToParentFile(object? sender, RoutedEventArgs e)
+    {
+        if (_vm is null || TryDocuments() is not { } docs) return;
+        var parents = _vm.ParentFiles;
+        if (parents.Count == 0) return;
+        if (parents.Count == 1 || sender is not Button button)
+        {
+            _ = docs.OpenFileAsync(parents[0]);
+            return;
+        }
+
+        var flyout = new MenuFlyout();
+        var items = new System.Collections.Generic.List<Control>();
+        foreach (var parent in parents)
+        {
+            var path = parent;
+            var item = new MenuItem
+            {
+                Header = System.IO.Path.GetFileName(path),
+                [ToolTip.TipProperty] = path,
+            };
+            item.Click += (_, _) => _ = docs.OpenFileAsync(path);
+            items.Add(item);
+        }
+        flyout.ItemsSource = items;
+        flyout.ShowAt(button);
+    }
+
     // thconfig actions (#1): make this thconfig the active project configuration.
     private void OnSetActiveThconfig(object? sender, RoutedEventArgs e)
     {
