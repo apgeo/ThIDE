@@ -40,12 +40,14 @@ public class ThParserSmokeTests
     [Fact]
     public void Parses_semicomplex_survey_with_centreline_and_data_1()
     {
-        //todo: refactor so that input file is no depended on absolute path and refactor so that there is a more isoltaed approach to loading a file for unit tests - apparentely there is an automatic test picking this up - Corpus_file_parses_without_errors(string path) ; so maybe no need to refactor, nor to use this unit test
-        const string filePath = "C:\\Users\\Z\\source\\repos\\TherionProc\\tests\\Corpus\\Synthetic\\project\\av_cerbul_de_aur.th";
-        string text = File.ReadAllText(filePath);
+        // Resolve the committed corpus file relative to the test assembly so this runs on any
+        // machine/CI checkout (the whole synthetic corpus is also swept by SyntheticCorpusTests).
+        var filePath = LocateSyntheticCorpusFile(Path.Combine("project", "av_cerbul_de_aur.th"));
+        Assert.True(filePath is not null, "Could not locate tests/Corpus/Synthetic/project/av_cerbul_de_aur.th");
+        string text = EncodingResolver.ReadAllText(filePath!);
 
         var parser = new ThParser();
-        var r = parser.Parse(filePath, text);
+        var r = parser.Parse(filePath!, text);
 
         Assert.NotNull(r.Value);
         Assert.False(r.HasErrors);
@@ -56,6 +58,20 @@ public class ThParserSmokeTests
         var cl = survey.Children.OfType<CentrelineCommand>().Single();
         Assert.Contains(cl.Children, c => c is DataCommand);
         Assert.Contains(cl.Children, c => c is DateCommand);
+    }
+
+    // Walk up from the test assembly to find a file under tests/Corpus/Synthetic (mirrors
+    // SyntheticCorpusTests.LocateCorpusRoot) so tests don't depend on an absolute checkout path.
+    private static string? LocateSyntheticCorpusFile(string relativeToSynthetic)
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null)
+        {
+            var candidate = Path.Combine(dir.FullName, "tests", "Corpus", "Synthetic", relativeToSynthetic);
+            if (File.Exists(candidate)) return candidate;
+            dir = dir.Parent;
+        }
+        return null;
     }
 
     [Fact]

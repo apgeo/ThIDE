@@ -40,13 +40,13 @@ public class EncodingResolverTests
     [Fact]
     public void Honors_iso_8859_1_encoding_directive()
     {
-        // "café" in ISO-8859-1: 'é' = 0xE9
+        // "caf\u00E9" in ISO-8859-1: '\u00E9' = 0xE9
         var iso = System.Text.Encoding.GetEncoding("iso-8859-1");
         var source = "encoding iso-8859-1\n# caf\u00E9\nsurvey test\nendsurvey\n";
         var bytes = iso.GetBytes(source);
 
         var decoded = EncodingResolver.Decode(bytes);
-        Assert.Contains("café", decoded);
+        Assert.Contains("caf\u00E9", decoded);
     }
 }
 

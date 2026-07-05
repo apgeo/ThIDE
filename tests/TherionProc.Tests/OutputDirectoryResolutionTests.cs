@@ -2,6 +2,8 @@
 // build working dir) are what BuildViewModel ensures exist before Therion runs. These cover the path
 // resolution; directory creation itself is a thin Directory.CreateDirectory wrapper around the result.
 
+using System;
+using System.IO;
 using System.Linq;
 using TherionProc.ViewModels;
 using Xunit;
@@ -10,14 +12,16 @@ namespace TherionProc.Tests;
 
 public class OutputDirectoryResolutionTests
 {
-    private const string WorkDir = @"C:\proj";
+    // Root the work dir per-OS: a C:\ path isn't rooted on *nix, so Path.GetFullPath would resolve it
+    // against the test's cwd and the assertions would drift with the checkout location.
+    private static readonly string WorkDir = OperatingSystem.IsWindows() ? @"C:\proj" : "/proj";
 
     [Fact]
     public void Relative_output_subfolder_resolves_against_the_work_dir()
     {
         var dirs = BuildViewModel.ResolveExportOutputDirectories(
             "export model -o output/cave.lox\n", WorkDir);
-        Assert.Equal(new[] { @"C:\proj\output" }, dirs);
+        Assert.Equal(new[] { Path.Combine(WorkDir, "output") }, dirs);
     }
 
     [Fact]
@@ -25,7 +29,7 @@ public class OutputDirectoryResolutionTests
     {
         var dirs = BuildViewModel.ResolveExportOutputDirectories(
             "export map -o exports/maps/plan.pdf\n", WorkDir);
-        Assert.Equal(new[] { @"C:\proj\exports\maps" }, dirs);
+        Assert.Equal(new[] { Path.Combine(WorkDir, "exports", "maps") }, dirs);
     }
 
     [Fact]
@@ -33,15 +37,17 @@ public class OutputDirectoryResolutionTests
     {
         var dirs = BuildViewModel.ResolveExportOutputDirectories(
             "export model -o cave.lox\n", WorkDir);
-        Assert.Equal(new[] { @"C:\proj" }, dirs);
+        Assert.Equal(new[] { WorkDir }, dirs);
     }
 
     [Fact]
     public void Rooted_output_path_keeps_its_own_directory()
     {
+        var rooted = OperatingSystem.IsWindows() ? "C:/abs/out/m.lox" : "/abs/out/m.lox";
+        var expected = OperatingSystem.IsWindows() ? @"C:\abs\out" : "/abs/out";
         var dirs = BuildViewModel.ResolveExportOutputDirectories(
-            "export model -o C:/abs/out/m.lox\n", WorkDir);
-        Assert.Equal(new[] { @"C:\abs\out" }, dirs);
+            $"export model -o {rooted}\n", WorkDir);
+        Assert.Equal(new[] { expected }, dirs);
     }
 
     [Fact]
@@ -49,7 +55,7 @@ public class OutputDirectoryResolutionTests
     {
         var dirs = BuildViewModel.ResolveExportOutputDirectories(
             "export model -o out/a.lox\nexport map -o out/b.pdf\n", WorkDir);
-        Assert.Equal(new[] { @"C:\proj\out" }, dirs);
+        Assert.Equal(new[] { Path.Combine(WorkDir, "out") }, dirs);
     }
 
     [Fact]
@@ -65,6 +71,6 @@ public class OutputDirectoryResolutionTests
     {
         var dirs = BuildViewModel.ResolveExportOutputDirectories(
             "export model -o models/cave.lox\nexport map -o maps/plan.pdf\n", WorkDir);
-        Assert.Equal(new[] { @"C:\proj\models", @"C:\proj\maps" }, dirs.ToArray());
+        Assert.Equal(new[] { Path.Combine(WorkDir, "models"), Path.Combine(WorkDir, "maps") }, dirs.ToArray());
     }
 }

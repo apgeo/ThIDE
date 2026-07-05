@@ -62,8 +62,12 @@ public class AutoOpenOverrideTests
     [Fact]
     public void Override_match_is_case_insensitive_and_path_normalized()
     {
-        var paths = new[] { @"C:\p\sub\..\a.lox" };
-        var overrides = new Dictionary<string, bool> { [@"c:\P\A.LOX"] = false };
-        Assert.Empty(Resolve(paths, lox: true, all: true, overrides: overrides));
+        // Root per-OS so Path.GetFullPath collapses the "sub\.." segment on every platform; the
+        // upper-cased override key proves the lookup folds case (a C:\ path isn't rooted on *nix).
+        var root = System.OperatingSystem.IsWindows() ? @"C:\p" : "/p";
+        var artifact = System.IO.Path.Combine(root, "sub", "..", "a.lox");
+        var overrideKey = System.IO.Path.Combine(root.ToUpperInvariant(), "A.LOX");
+        var overrides = new Dictionary<string, bool> { [overrideKey] = false };
+        Assert.Empty(Resolve(new[] { artifact }, lox: true, all: true, overrides: overrides));
     }
 }

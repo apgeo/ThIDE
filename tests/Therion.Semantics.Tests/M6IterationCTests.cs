@@ -1,4 +1,4 @@
-// M6 #4 / #7 / #8 — focused tests for the latest iteration.
+// M6 #4 / #7 / #8 - focused tests for the latest iteration.
 
 using System.Collections.Frozen;
 using System.Collections.Immutable;
@@ -40,17 +40,19 @@ public class M6IterationCTests
     public void WorkspaceNavigation_resolves_input_file_by_basename()
     {
         var wsm = WorkspaceSemanticModel.Empty;
-        // Manufacture a workspace model with a single per-file entry.
+        // Manufacture a workspace model with a single per-file entry. Root the path per-OS so
+        // Path.GetFileName yields the basename on every platform (a C:\ path isn't rooted on *nix).
+        var file = Path.Combine(System.OperatingSystem.IsWindows() ? @"C:\proj" : "/proj", "cave.th");
         var perFile = new System.Collections.Generic.Dictionary<string, SemanticModel>(System.StringComparer.OrdinalIgnoreCase)
         {
-            [@"C:\proj\cave.th"] = SemanticModel.Empty,
+            [file] = SemanticModel.Empty,
         }.ToFrozenDictionary(System.StringComparer.OrdinalIgnoreCase);
         var ws = new WorkspaceSemanticModel(perFile, XviIndex.Empty,
             ImmutableArray<(string, string)>.Empty, ImmutableArray<Diagnostic>.Empty);
         var nav = new WorkspaceSymbolNavigationService(ws);
         var span = nav.GoToDefinition("cave.th");
         Assert.NotNull(span);
-        Assert.Equal(@"C:\proj\cave.th", span!.Value.FilePath);
+        Assert.Equal(file, span!.Value.FilePath);
     }
 
     // ---- #8 inline editing ----------------------------------------------
