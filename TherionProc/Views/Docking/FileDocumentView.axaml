@@ -291,9 +291,17 @@
         <!-- File-actions, overlaid on the tab-strip row (no extra height, #7). -->
         <StackPanel HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,1,6,0"
                     Orientation="Horizontal" Spacing="2">
+            <!-- Fold / unfold all recognised blocks (#2): two-state icon, kept in sync with the
+                 editor's Fold All / Unfold All actions. -->
+            <Button x:Name="FoldToggleButton" Padding="6,2" Background="Transparent" BorderThickness="0"
+                    FontSize="12" Click="OnToggleFoldAll" ToolTip.Tip="{l:Loc Menu_Edit_FoldAll}">
+                <PathIcon x:Name="FoldToggleIcon" Data="{DynamicResource Icon.UnfoldLess}" Width="14" Height="14" />
+            </Button>
+
             <!-- thconfig actions (#1): only for .thconfig/.thc project files. -->
-            <!-- Make this thconfig the active project configuration (build/graph reference). -->
-            <Button Padding="6,2" Background="Transparent" BorderThickness="0" FontSize="12"
+            <!-- Make this thconfig the active project configuration (build/graph reference). Disabled
+                 when this file is already the active thconfig (#3). -->
+            <Button x:Name="SetActiveThconfigButton" Padding="6,2" Background="Transparent" BorderThickness="0" FontSize="12"
                     IsVisible="{Binding IsThconfigFile}" Click="OnSetActiveThconfig"
                     ToolTip.Tip="{l:Loc File_SetActiveTip}">
                 <PathIcon Data="{DynamicResource Icon.Config}" Width="14" Height="14" />

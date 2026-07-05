@@ -518,6 +518,7 @@ public partial class TherionTextEditor : UserControl
         if (_editor?.Document is null || _foldingManager is null) return;
         var foldings = TherionFoldingStrategy.CreateFoldings(_editor.Document);
         _foldingManager.UpdateFoldings(foldings, -1);
+        FoldStateChanged?.Invoke(this, EventArgs.Empty);
     }
 
     // Files that can contain a `layout … endlayout` block (where embedded MetaPost/TeX live).
@@ -3222,7 +3223,38 @@ public partial class TherionTextEditor : UserControl
         foreach (var folding in _foldingManager.AllFoldings)
             folding.IsFolded = folded;
         _editor?.TextArea.TextView.Redraw();
+        FoldStateChanged?.Invoke(this, EventArgs.Empty);
     }
+
+    /// <summary>Raised when the fold state changes (Fold All / Unfold All, or a re-fold after edit),
+    /// so a toolbar toggle can keep its two-state icon in sync (#2).</summary>
+    public event EventHandler? FoldStateChanged;
+
+    /// <summary>True when the document has at least one foldable region.</summary>
+    public bool HasFoldings
+    {
+        get
+        {
+            if (_foldingManager is null) return false;
+            foreach (var _ in _foldingManager.AllFoldings) return true;
+            return false;
+        }
+    }
+
+    /// <summary>True when every foldable region is currently collapsed (and there is at least one).</summary>
+    public bool AllFolded
+    {
+        get
+        {
+            if (_foldingManager is null) return false;
+            bool any = false;
+            foreach (var f in _foldingManager.AllFoldings) { any = true; if (!f.IsFolded) return false; }
+            return any;
+        }
+    }
+
+    /// <summary>Toggles between fold-all and unfold-all based on the current state (#2).</summary>
+    public void ToggleFoldAll() => SetAllFoldings(!AllFolded);
 
     // ----- line operations --------------------------------------
     // Duplicate, move up/down and sort the selected lines (or the caret line). Useful for

@@ -30,8 +30,11 @@ public partial class FileDocumentView : UserControl
         {
             RestoreViewState();
             ApplyColumnVisibility();
+            SubscribeThconfigSession();      // #3: keep the "set active thconfig" button state current
+            UpdateThconfigButtonState();
+            UpdateFoldToggleIcon();          // #2: initial fold-toggle icon
         };
-        DetachedFromVisualTree += (_, _) => DisposeMapiahWatcher();
+        DetachedFromVisualTree += (_, _) => { DisposeMapiahWatcher(); UnsubscribeThconfigSession(); };
         if (this.FindControl<TherionTextEditor>("Editor") is { } editor)
         {
             editor.OpenFileRequested += OnOpenFileRequested;
@@ -42,7 +45,71 @@ public partial class FileDocumentView : UserControl
             editor.FindReferencesRequested += OnFindReferencesRequested;
             editor.RenameSymbolRequested += OnRenameSymbolRequested;
             editor.StepOutRequested += OnStepOutRequested;
+            editor.FoldStateChanged += OnFoldStateChanged;   // #2
         }
+    }
+
+    // ---- #2: fold / unfold all toggle button ----------------------------------
+
+    private void OnToggleFoldAll(object? sender, RoutedEventArgs e)
+        => this.FindControl<TherionTextEditor>("Editor")?.ToggleFoldAll();
+
+    private void OnFoldStateChanged(object? sender, EventArgs e)
+        => Avalonia.Threading.Dispatcher.UIThread.Post(UpdateFoldToggleIcon);
+
+    // Swaps the button's icon + tooltip to reflect whether everything is folded (offer "unfold")
+    // or not (offer "fold"); disabled when the document has no foldable regions.
+    private void UpdateFoldToggleIcon()
+    {
+        var editor = this.FindControl<TherionTextEditor>("Editor");
+        var btn = this.FindControl<Button>("FoldToggleButton");
+        var icon = this.FindControl<PathIcon>("FoldToggleIcon");
+        if (editor is null || btn is null || icon is null) return;
+
+        btn.IsEnabled = editor.HasFoldings;
+        bool allFolded = editor.AllFolded;
+        var key = allFolded ? "Icon.UnfoldMore" : "Icon.UnfoldLess";
+        if (this.TryFindResource(key, out var res) && res is Avalonia.Media.Geometry g) icon.Data = g;
+        ToolTip.SetTip(btn, TherionProc.Resources.Tr.Get(allFolded ? "Menu_Edit_UnfoldAll" : "Menu_Edit_FoldAll"));
+    }
+
+    // ---- #3: enable "set active thconfig" only when it isn't already active ----
+
+    private IWorkspaceSession? _thconfigSession;
+
+    private void SubscribeThconfigSession()
+    {
+        if (_thconfigSession is not null) return;
+        _thconfigSession = TrySession();
+        if (_thconfigSession is not null) _thconfigSession.Changed += OnThconfigSessionChanged;
+    }
+
+    private void UnsubscribeThconfigSession()
+    {
+        if (_thconfigSession is null) return;
+        _thconfigSession.Changed -= OnThconfigSessionChanged;
+        _thconfigSession = null;
+    }
+
+    private void OnThconfigSessionChanged(object? sender, EventArgs e)
+        => Avalonia.Threading.Dispatcher.UIThread.Post(UpdateThconfigButtonState);
+
+    private void UpdateThconfigButtonState()
+    {
+        if (this.FindControl<Button>("SetActiveThconfigButton") is not { } btn) return;
+        btn.IsEnabled = _vm is { IsThconfigFile: true } vm && !IsActiveThconfig(vm.FilePath);
+    }
+
+    private static bool IsActiveThconfig(string filePath)
+    {
+        var active = TrySession()?.ActiveThconfig?.FullPath;
+        if (string.IsNullOrEmpty(active) || string.IsNullOrEmpty(filePath)) return false;
+        try
+        {
+            return string.Equals(System.IO.Path.GetFullPath(active), System.IO.Path.GetFullPath(filePath),
+                StringComparison.OrdinalIgnoreCase);
+        }
+        catch { return string.Equals(active, filePath, StringComparison.OrdinalIgnoreCase); }
     }
 
     private void OnFindReferencesRequested(object? sender, string term)
@@ -222,6 +289,8 @@ public partial class FileDocumentView : UserControl
             if (_vm.Measurements is { } mvm)
                 mvm.PropertyChanged += OnMeasurementsPropertyChanged;
         }
+        UpdateThconfigButtonState();   // #3: reflect whether the new document is the active thconfig
+        UpdateFoldToggleIcon();        // #2: reset the fold-toggle icon for the new document
     }
 
     // "Compare" on the external-change banner → read-only disk-vs-editor diff.
