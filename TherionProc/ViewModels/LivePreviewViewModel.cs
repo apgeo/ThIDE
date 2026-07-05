@@ -168,6 +168,25 @@ public sealed partial class LivePreviewViewModel : ObservableObject
         "custom" => CustomAzimuth, _ => 90,
     };
 
+    /// <summary>
+    /// Caption shown in the drawing-area corner: "Plan view" in plan, else "Projected profile view
+    /// (N/E/S/W)" for a cardinal profile, or "Projected profile view (toward &lt;az&gt;°)" for the
+    /// custom-bearing profile. Localized and relocalizes live on a language switch.
+    /// </summary>
+    public string ViewLabel => ViewMode switch
+    {
+        "plan"   => TherionProc.Resources.Tr.Get("Live_ViewPlan"),
+        "custom" => string.Format(TherionProc.Resources.Tr.Get("Live_ViewProfile"),
+                        string.Format(TherionProc.Resources.Tr.Get("Live_ViewToward"),
+                            System.Math.Round(ProfileAzimuth))),
+        _        => string.Format(TherionProc.Resources.Tr.Get("Live_ViewProfile"), CardinalLetter(ViewMode)),
+    };
+
+    private static string CardinalLetter(string mode) => mode switch
+    {
+        "north" => "N", "east" => "E", "south" => "S", "west" => "W", _ => mode,
+    };
+
     // ---- splays (wall shots) ----
     /// <summary>Show splays at all (off by default — they roughly triple the line count).</summary>
     [ObservableProperty] private bool _showSplays;
@@ -221,6 +240,8 @@ public sealed partial class LivePreviewViewModel : ObservableObject
         // DocumentChanged alone is enough: SetActive always raises it right after
         // ActiveDocumentChanged, so subscribing to both rebuilt the preview twice per tab switch.
         _documents.DocumentChanged += (_, _) => OnUi(Rebuild);
+        // Relocalize the drawing-area caption (ViewLabel) live when the UI language switches.
+        TherionProc.Resources.LocProxy.Instance.PropertyChanged += (_, _) => OnPropertyChanged(nameof(ViewLabel));
         Rebuild();
     }
 
@@ -230,12 +251,18 @@ public sealed partial class LivePreviewViewModel : ObservableObject
         OnPropertyChanged(nameof(IsElevation));
         OnPropertyChanged(nameof(IsCustomProfile));
         OnPropertyChanged(nameof(ProfileAzimuth));
+        OnPropertyChanged(nameof(ViewLabel));
         Rebuild();
     }
     // Live-update the custom profile as the angle slider moves (no effect in the preset views).
     partial void OnCustomAzimuthChanged(double value)
     {
-        if (ViewMode == "custom") { OnPropertyChanged(nameof(ProfileAzimuth)); Rebuild(); }
+        if (ViewMode == "custom")
+        {
+            OnPropertyChanged(nameof(ProfileAzimuth));
+            OnPropertyChanged(nameof(ViewLabel));
+            Rebuild();
+        }
     }
     partial void OnSeparateComponentsChanged(bool value) => Rebuild();
     partial void OnShowSplaysChanged(bool value) => ApplyVisibility();   // status line shows the splay count
@@ -1131,24 +1158,31 @@ public sealed partial class LivePreviewViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Resolves an equate token to a known station. Exact match first; then an input-nesting
-    /// fallback — the per-file binder doesn't prefix a child survey with the parent's scope, so a
-    /// fully-qualified token (<c>cave.a.0</c>) may not match the child's per-file name (<c>a.0</c>).
-    /// Accepts a known station whose name is a suffix of the token, but only when it's unambiguous.
+    /// Resolves an equate token to a known station, trying each candidate interpretation
+    /// (<see cref="ParseCandidates"/>) most-specific first. For each: an exact match, then an
+    /// input-nesting fallback — the per-file binder doesn't prefix a child survey with the parent's
+    /// scope, so a fully-qualified token (<c>cave.a.0</c>) may not match the child's per-file name
+    /// (<c>a.0</c>); accept a known station whose name is a suffix of the token, but only when
+    /// unambiguous. Trying candidates in turn lets a dotted token resolve both as a literal
+    /// station name (<c>N32.23</c>) and, failing that, as a dotted survey path (<c>cave.a.1</c>).
     /// </summary>
     private static QualifiedName? ResolveAgainstKnown(string raw, HashSet<QualifiedName> known)
     {
-        if (SafeParse(raw) is not { } qn) return null;
-        if (known.Contains(qn)) return qn;
-
-        QualifiedName? match = null;
-        foreach (var k in known)
+        foreach (var qn in ParseCandidates(raw))
         {
-            if (!IsSuffix(qn.Parts, k.Parts)) continue;
-            if (match is not null) return null;   // ambiguous → don't guess
-            match = k;
+            if (known.Contains(qn)) return qn;
+
+            QualifiedName? match = null;
+            bool ambiguous = false;
+            foreach (var k in known)
+            {
+                if (!IsSuffix(qn.Parts, k.Parts)) continue;
+                if (match is not null) { ambiguous = true; break; }   // ambiguous for this candidate
+                match = k;
+            }
+            if (!ambiguous && match is { } m) return m;
         }
-        return match;
+        return null;
     }
 
     /// <summary>True when <paramref name="tail"/> is a (non-empty) trailing slice of <paramref name="full"/>.</summary>
@@ -1160,13 +1194,47 @@ public sealed partial class LivePreviewViewModel : ObservableObject
         return true;
     }
 
-    /// <summary>Parses a station token (dotted or <c>point@survey</c>) to a top-down qualified name.</summary>
+    /// <summary>
+    /// The primary qualified-name interpretation of a station token (the first of
+    /// <see cref="ParseCandidates"/>): the point kept <b>whole</b> (its dots are literal — Therion
+    /// station names like <c>N32.23</c> are legal), qualified by any <c>@survey</c> path.
+    /// </summary>
     private static QualifiedName? SafeParse(string raw)
     {
+        foreach (var qn in ParseCandidates(raw)) return qn;
+        return null;
+    }
+
+    /// <summary>
+    /// Candidate qualified names for a station token, most-specific first:
+    /// <list type="number">
+    /// <item>the point kept whole (dots literal), qualified by any <c>@survey</c> path — this is the
+    /// form the binder stores via <see cref="QualifiedName.OfStation"/>, so <c>N32.23@a</c> and a
+    /// dotted-name station <c>N32.23</c> match;</item>
+    /// <item>for a bare token containing '.', the legacy dotted survey-path split
+    /// (<c>cave.a.1</c> → survey <c>cave.a</c> + station <c>1</c>), so fully-qualified references
+    /// still resolve.</item>
+    /// </list>
+    /// (Using only <see cref="QualifiedName.Parse"/> — which splits every dot — would wrongly turn the
+    /// station <c>N32.23</c> into survey <c>N32</c> + station <c>23</c> and never match the binder.)
+    /// </summary>
+    private static IEnumerable<QualifiedName> ParseCandidates(string raw)
+    {
         raw = raw?.Trim() ?? string.Empty;
-        if (raw.Length == 0) return null;
-        try { return QualifiedName.Parse(raw.Contains('@') ? StationRef.Parse(raw).StationQuery : raw); }
-        catch { return null; }
+        if (raw.Length == 0) yield break;
+
+        QualifiedName? whole = null, split = null;
+        try
+        {
+            var r = StationRef.Parse(raw);
+            whole = QualifiedName.OfStation(r.SurveyPathTopDown, r.Point);
+            // Only a bare (no-@) dotted token is ambiguous between a literal name and a survey path.
+            if (!r.HasSurvey && raw.Contains('.')) split = QualifiedName.Parse(raw);
+        }
+        catch { yield break; }
+
+        if (whole is { } w) yield return w;
+        if (split is { } s && !s.Equals(whole)) yield return s;
     }
 
     /// <summary>The last (point) component of a station token, ignoring any <c>@survey</c> suffix.</summary>

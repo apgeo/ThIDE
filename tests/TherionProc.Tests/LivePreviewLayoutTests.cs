@@ -162,6 +162,45 @@ public class LivePreviewLayoutTests
     }
 
     [Fact]
+    public void Equate_on_dotted_station_names_merges_surveys()
+    {
+        // Therion station names may contain literal dots (e.g. N32.23). The equate resolver must keep
+        // the point name whole; splitting it (survey N32 + station 23) never matches the binder's
+        // whole-name station, so the surveys would stay separate overlapping components.
+        var parsed = new Dictionary<string, ParseResult<TherionFile>>
+        {
+            ["/proj/a.th"] = new ThParser().Parse("/proj/a.th", """
+                survey a
+                  centreline
+                    data normal from to length compass clino
+                    N32.22 N32.23 10 90 0
+                  endcentreline
+                endsurvey
+                """),
+            ["/proj/b.th"] = new ThParser().Parse("/proj/b.th", """
+                survey b
+                  centreline
+                    data normal from to length compass clino
+                    N32.23 N32.24 10 0 0
+                  endcentreline
+                  equate N32.23@a N32.23@b
+                endsurvey
+                """),
+        };
+        var ws = WorkspaceSemanticModel.Build(parsed, Array.Empty<XviFile>(), _ => false);
+        var models = ws.PerFile.Values.ToList();
+        var shots = models.SelectMany(m => m.Shots).ToList();
+
+        var equates = LivePreviewViewModel.BuildEquateGraph(models);
+        var layout = LivePreviewViewModel.ComputeLayout(shots, equates);
+
+        Assert.Equal(1, layout.ComponentCount);   // both surveys merged via the dotted-name equate
+        var a = models.SelectMany(m => m.Stations.Keys).First(q => q.ToString() == "a.N32.23");
+        var b = models.SelectMany(m => m.Stations.Keys).First(q => q.ToString() == "b.N32.23");
+        Assert.Equal(equates.Find(a).ToString(), equates.Find(b).ToString());
+    }
+
+    [Fact]
     public void AnchorByFixes_places_fixed_components_in_a_shared_frame()
     {
         var pos = new Dictionary<string, (double E, double N, double Z)>

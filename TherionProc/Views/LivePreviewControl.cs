@@ -70,8 +70,13 @@ public sealed class LivePreviewControl : Control
     private static readonly IPen NorthPen =
         new ImmutablePen(new ImmutableSolidColorBrush(Color.FromArgb(0xDD, 0x21, 0x21, 0x21)), 1.6);
 
-    // Beyond this many distinct stations, labels would be unreadable and slow — suppress them.
-    private const int MaxLabelStations = 1500;
+    // Upper bound on labels actually drawn per frame (safety net; screen-cell thinning below usually
+    // keeps the count far lower). Labels are culled to the viewport and thinned by density, so this is
+    // a per-frame draw budget — NOT a "hide everything past N stations" gate.
+    private const int MaxLabelsDrawn = 800;
+    // Screen-space footprint reserved per label so they don't overlap: one label per cell, thinning
+    // dense clusters when zoomed out and revealing more as you zoom in.
+    private const double LabelCellW = 58, LabelCellH = 16;
     // Above this many splays, skip per-move hover hit-testing on them (still drawn).
     private const int MaxSplayHover = 4000;
 
@@ -636,7 +641,10 @@ public sealed class LivePreviewControl : Control
         _           => survey,   // "none" buckets like survey for emphasis purposes
     };
 
-    // De-duplicate stations (an endpoint is shared by many legs) and label each once.
+    // De-duplicate stations (an endpoint is shared by many legs) and label each once, culled to the
+    // viewport and thinned by screen density: at most one label per screen cell, so a huge cave shows
+    // a readable scatter when zoomed out and reveals more detail as you zoom in — instead of the old
+    // all-or-nothing global cap that hid every label once a project passed ~1500 stations.
     private void DrawStationLabels(DrawingContext ctx, IReadOnlyList<SketchSegment> segs, Size size)
     {
         var seen = new Dictionary<string, (double X, double Y)>(StringComparer.Ordinal);
@@ -644,16 +652,25 @@ public sealed class LivePreviewControl : Control
         {
             seen.TryAdd(s.FromName, (s.X1, s.Y1));
             seen.TryAdd(s.ToName, (s.X2, s.Y2));
-            if (seen.Count > MaxLabelStations) return;   // too dense to be useful
         }
         bool qualify = ShowSurveyNames;
+        const double margin = 40;   // also label stations whose anchor is just off the edge
+        var occupied = new HashSet<long>();
+        int drawn = 0;
         foreach (var (name, w) in seen)
         {
+            if (drawn >= MaxLabelsDrawn) break;
             var p = ToScreen(w.X, w.Y, size);
+            if (p.X < -margin || p.Y < -margin || p.X > size.Width + margin || p.Y > size.Height + margin)
+                continue;   // off-screen at the current pan/zoom
+            // Screen-cell key (offset by margin so it's always non-negative).
+            long cx = (long)((p.X + margin) / LabelCellW), cy = (long)((p.Y + margin) / LabelCellH);
+            if (!occupied.Add((cx << 32) | cy)) continue;   // a label already occupies this screen cell
             var text = Label(qualify ? name : ShortName(name), 10, LabelText);
             var origin = new Point(p.X + 3, p.Y - text.Height / 2);
             ctx.FillRectangle(LabelHalo, new Rect(origin.X - 1, origin.Y, text.Width + 2, text.Height));
             ctx.DrawText(text, origin);
+            drawn++;
         }
     }
 

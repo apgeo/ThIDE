@@ -112,6 +112,15 @@
                                       ShowNorthArrow="{Binding Preview.IsPlan}"
                                       ColorMode="{Binding Preview.ColorMode}" />
 
+            <!-- Drawing-area caption (top-right): "Plan view" / "Projected profile view (N/E/S/W)" /
+                 "… (toward <az>°)". Click-through so it never blocks the sketch. -->
+            <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8"
+                    Background="#E62B2B2B" CornerRadius="4" Padding="7,3" IsHitTestVisible="False"
+                    BoxShadow="0 1 4 0 #40000000">
+                <TextBlock Text="{Binding Preview.ViewLabel}" FontSize="11" FontWeight="SemiBold"
+                           Foreground="#EEEEEE" />
+            </Border>
+
             <!-- Interactive legend = the per-survey/file/component visibility list. Hover a row to
                  frame that group in the sketch. Shown only when enabled and there's >1 group. -->
             <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8"
