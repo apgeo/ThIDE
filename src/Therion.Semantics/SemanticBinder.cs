@@ -523,9 +523,7 @@ public sealed class SemanticBinder
 
         var effectiveFlags = fromSplay || toSplay ? flags | ShotFlags.Splay : flags;
 
-        double? length = TryGet(row, data, "length");
-        double? compass = TryGet(row, data, "compass");
-        double? clino = TryGet(row, data, "clino");
+        var (length, compass, clino) = ExtractMeasurements(row, data);
         ctx.Shots.Add(new ShotSymbol(from, to, length, compass, clino, row.Span)
         {
             SourceRow = row,
@@ -533,6 +531,35 @@ public sealed class SemanticBinder
             Flags = effectiveFlags,
             Comment = comment,
         });
+    }
+
+    /// <summary>
+    /// Reads a shot's distance / bearing / inclination, honouring Therion's field synonyms and
+    /// backsight variants (not just the literal <c>length</c>/<c>compass</c>/<c>clino</c>):
+    /// <list type="bullet">
+    /// <item><c>length</c> ≡ <c>tape</c> (and <c>backtape</c>/<c>backlength</c>);</item>
+    /// <item><c>compass</c> ≡ <c>bearing</c>; a backsight <c>backcompass</c>/<c>backbearing</c> is
+    /// reduced to its foresight equivalent (± 180°);</item>
+    /// <item><c>clino</c> ≡ <c>gradient</c>; a backsight <c>backclino</c>/<c>backgradient</c> is negated.</item>
+    /// </list>
+    /// Foresight readings win when both are present. Without this, backsight-only or <c>tape</c>-based
+    /// legs (very common in real projects) bind with null measurements, which drops them from the
+    /// centreline layout and undercounts survey-length statistics.
+    /// </summary>
+    private static (double? Length, double? Compass, double? Clino) ExtractMeasurements(DataRow row, DataCommand data)
+    {
+        double? length = TryGet(row, data, "length") ?? TryGet(row, data, "tape")
+                      ?? TryGet(row, data, "backtape") ?? TryGet(row, data, "backlength");
+
+        double? compass = TryGet(row, data, "compass") ?? TryGet(row, data, "bearing");
+        if (compass is null && (TryGet(row, data, "backcompass") ?? TryGet(row, data, "backbearing")) is { } backCompass)
+            compass = (backCompass + 180.0) % 360.0;
+
+        double? clino = TryGet(row, data, "clino") ?? TryGet(row, data, "gradient");
+        if (clino is null && (TryGet(row, data, "backclino") ?? TryGet(row, data, "backgradient")) is { } backClino)
+            clino = -backClino;
+
+        return (length, compass, clino);
     }
 
     /// <summary>A '.' (feature) or '-' (wall) endpoint marks the shot as a splay, not a station.</summary>
