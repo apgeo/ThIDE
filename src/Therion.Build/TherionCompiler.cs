@@ -53,6 +53,12 @@ public sealed class TherionCompiler : ITherionCompiler
             WorkingDirectory = workDir,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
+            // We own stdin so we can close it: Therion (notably the Windows build) ends an errored
+            // run with a "Press ENTER to exit!" prompt and blocks on a stdin read. With no console
+            // attached that read would never return, so therion.exe never exits and WaitForExitAsync
+            // would hang forever, leaving the app stuck "Compiling…". Closing stdin makes that read
+            // hit EOF immediately so the process terminates and we detect it (#3).
+            RedirectStandardInput = true,
             UseShellExecute = false,
             CreateNoWindow = true,
         };
@@ -71,6 +77,10 @@ public sealed class TherionCompiler : ITherionCompiler
                     SourceSpan.None));
                 return new CompileResult(-1, diags.ToImmutable(), ImmutableArray<OutputArtifact>.Empty);
             }
+
+            // Signal EOF on stdin right away so any interactive pause ("Press ENTER to exit!")
+            // returns instead of blocking. Therion reads its input from files, never stdin.
+            try { proc.StandardInput.Close(); } catch { /* stdin already gone — fine */ }
 
             // Drain stdout/stderr on tasks we own. Process.WaitForExitAsync would otherwise wait
             // for the redirected pipes to reach EOF as well — but Therion shells out to child
