@@ -70,6 +70,10 @@ public static class DiagnosticCodes
     public const string XviUnterminatedBlock     = "TH_XVI_003";  // `{` without matching `}`
     public const string XviMalformedGrid         = "TH_XVI_004";  // XVIgrid not 8 numeric values
 
+    // -- ThIDE application directives (`#@…` comments) --------------------
+    public const string DirectiveUnclosedRegion     = "THIDE_DIR_001";  // #@region without #@endregion
+    public const string DirectiveUnmatchedEndRegion = "THIDE_DIR_002";  // #@endregion without #@region
+
     // -- .th2 drawing format ----------------------------------------------
     public const string Th2MalformedPoint        = "TH2_001";
     public const string Th2MalformedLine         = "TH2_002";

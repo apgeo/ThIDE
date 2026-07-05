@@ -131,6 +131,16 @@ Semantic layer (`Therion.Semantics`):
 | `TH2_009` | lenient | Unknown `-option` on a point/line/area object. | `Th2Parser` |
 | `TH2_010` | lenient | `scrap` block is missing `endscrap`. | `Th2Parser` |
 
+## Application directives (`THIDE_DIR_xxx`)
+
+ThIDE-only extensions written inside Therion comments (`#@…`) — invisible to Therion.
+Produced by `DirectiveScanner` and surfaced through `DocumentParser`.
+
+| Code | Severity | Message | Source |
+|---|---|---|---|
+| `THIDE_DIR_001` | Warning | `#@region` is missing its `#@endregion`. | `DirectiveScanner` |
+| `THIDE_DIR_002` | Warning | `#@endregion` has no matching `#@region`. | `DirectiveScanner` |
+
 ## Workspace (`TH_WS_xxx`)
 
 | Code | Severity | Message | Source |
