@@ -999,6 +999,12 @@ public partial class MainWindow : Window
         string newName,
         IDocumentService docs)
     {
+        // The rename is an app-initiated write, so suppress the file-watcher for each file (like a
+        // normal Save) and update any open buffer in place — instead of a "reloaded from disk"
+        // banner/toast, which was misleading for a change the app made itself (#1).
+        Services.IWorkspaceSession? session = null;
+        try { session = AppServices.Provider.GetService<Services.IWorkspaceSession>(); } catch { /* design-time */ }
+
         foreach (var fc in changes)
         {
             var sorted = new System.Collections.Generic.List<(int, int)>(fc.Hits);
@@ -1009,16 +1015,22 @@ public partial class MainWindow : Window
                 sb.Remove(start, length).Insert(start, newName);
 
             var newText = sb.ToString();
+            session?.SuppressSelfWrite(fc.FilePath);
             try { await System.IO.File.WriteAllTextAsync(fc.FilePath, newText); }
             catch { continue; }
 
             foreach (var doc in docs.Documents)
             {
-                if (string.Equals(doc.FilePath, fc.FilePath, System.StringComparison.OrdinalIgnoreCase))
-                {
+                if (!string.Equals(doc.FilePath, fc.FilePath, System.StringComparison.OrdinalIgnoreCase)) continue;
+
+                // The active file's new text already incorporates its unsaved edits, so update it
+                // silently. Any OTHER tab with unsaved edits keeps the conflict banner so those
+                // edits aren't discarded; a clean tab just reflects the rename silently.
+                if (!ReferenceEquals(doc, docs.Active) && doc.IsDirty)
                     doc.NotifyExternalChange(System.DateTime.Now, deleted: false, autoReload: true);
-                    break;
-                }
+                else
+                    doc.SetText(newText, reparse: true);
+                break;
             }
         }
     }
