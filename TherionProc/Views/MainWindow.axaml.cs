@@ -554,23 +554,11 @@ public partial class MainWindow : Window
             : stRef.PointWithoutMark;
         if (string.IsNullOrEmpty(oldName)) return;
 
-        var newName = await new InputDialog("Rename Symbol",
-            $"New name for '{oldName}':", oldName).ShowAsync(this);
-        if (string.IsNullOrWhiteSpace(newName) || newName.Trim() == oldName) return;
-        newName = newName.Trim();
-        if (Therion.Syntax.TherionIdentifiers.FirstIllegalChar(newName) is { } badChar)
-        {
-            await new MessageDialog("Rename Symbol",
-                $"'{newName}' is not a valid Therion name — it contains '{badChar}'.").ShowAsync(this);
-            return;
-        }
-
         try
         {
-            // Stations & surveys rename via the true symbol occurrence index (scope-correct, @-aware,
-            // comment-free, cross-file); scrap/map still use the legacy text-scan until they get an index.
-            // When the edited file isn't part of the loaded workspace model (a standalone .th, or one
-            // opened without its project), fall back to the active document's own occurrence index.
+            // Find every occurrence up-front — both to apply and to choose the workflow. Stations & surveys
+            // rename via the true occurrence index (scope-correct, @-aware, cross-file); scrap/map use the
+            // text-scan; a standalone file falls back to the active document's own index.
             var changes = CollectSymbolRenameChanges(workspace, kind, targetSpan.Value)
                 ?? CollectActiveFileRenameChanges(docs!.Active, kind, targetSpan.Value)
                 ?? CollectRenameChanges(workspace, docs!.Active, nav, raw, kind, oldName, targetSpan.Value);
@@ -581,51 +569,102 @@ public partial class MainWindow : Window
                 return;
             }
 
-            // The graph-driven rename deliberately skips comments. Offer an opt-in pass that also renames
-            // the name where it appears inside `# …` comments (classic "replace in comments too").
+            // Opt-in expansions surfaced only in the occurrences preview.
             var commentChanges = CollectCommentRenameChanges(workspace, docs!.Active, oldName, changes);
-            // ...an opt-in that follows equate links to same-named stations in other surveys (keeps the
-            // equated point connected)...
             var equateLinkedChanges = CollectEquateLinkedChanges(workspace, docs!.Active, kind, oldName, targetSpan.Value, changes);
-            // ...and the blunt opt-in that renames every OTHER station/survey sharing this name across
-            // surveys/files (the "replace all occurrences" the scope-correct rename intentionally avoids).
             var sameNameChanges = CollectSameNameChanges(workspace, docs!.Active, kind, oldName, changes);
 
-            if (settings?.Current.ShowRenamePreviewBeforeApply == true)
+            // "Complex" = the rename reaches beyond this file, or there are other-survey namesakes / equate
+            // links to weigh. Complex renames always open the occurrences preview (with its own name field).
+            // A simple, single-file rename is applied straight from the input dialog, which still offers a
+            // "See occurrences" button to open the preview on demand.
+            var activePath = docs!.Active?.FilePath;
+            bool crossFile = changes.Any(c => activePath is null ||
+                !string.Equals(c.FilePath, activePath, StringComparison.OrdinalIgnoreCase));
+            bool otherSurvey = equateLinkedChanges.Count > 0 || sameNameChanges.Count > 0;
+            bool complex = crossFile || otherSurvey || settings?.Current.ShowRenamePreviewBeforeApply == true;
+
+            string newName;
+            List<RenameFileChanges> optional;
+
+            if (!complex)
             {
-                // The input dialog closed from a click/Enter. Before opening the next modal, let that event
-                // — and everything else queued on the UI thread — fully drain by awaiting a no-op posted at
-                // Background priority (which runs only after all pending Input-priority events). A single
-                // Task.Yield isn't enough: leftover input reaches the torn-down dialog ("PlatformImpl is
-                // null, couldn't handle input") and the preview silently never shows (seen with equate
-                // renames, often triggered from the hover popup which adds another teardown to the queue).
-                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(
-                    static () => { }, Avalonia.Threading.DispatcherPriority.Background);
+                var dlg = new InputDialog("Rename Symbol",
+                    string.Format(TherionProc.Resources.Tr.Get("Rename_NewNameFor"), oldName), oldName,
+                    seeOccurrencesText: TherionProc.Resources.Tr.Get("Rename_SeeOccurrences"));
+                var entered = await dlg.ShowAsync(this);
+                if (string.IsNullOrWhiteSpace(entered)) return;
+                newName = entered.Trim();
+                if (newName == oldName) return;
+                if (InvalidName(newName) is { } bad1) { await ShowInvalidNameAsync(newName, bad1); return; }
 
-                _renamePreviewWindow?.Close();
-                var win = new RenamePreviewWindow(changes, equateLinkedChanges, sameNameChanges, commentChanges,
-                    oldName, newName, span => docs!.NavigateToSpanAsync(span));
-                _renamePreviewWindow = win;
-                win.Closed += (_, _) => _renamePreviewWindow = null;
-
-                // Make sure the preview is the top, focused, activated window (the just-closed input dialog
-                // can otherwise leave activation on the main window, which reads as "nothing happened").
-                win.Opened += (_, _) => { win.Activate(); win.Focus(); };
-
-                var apply = await win.ShowDialog<bool>(this);
-                if (!apply) return;
-                // The window owns which optional occurrences are selected (whole groups in the classic
-                // layout, or individually cherry-picked in the checkable-list layout).
-                changes = MergeRenameChanges(changes, win.AppliedOptionalChanges());
+                if (!dlg.SeeOccurrencesRequested)
+                {
+                    await ApplyRenameChangesAsync(changes, newName, docs!);   // simple path: apply directly
+                    return;
+                }
+                // "See occurrences" → open the preview with the entered name pre-filled.
+                var res = await ShowRenamePreviewAsync(docs!, changes, equateLinkedChanges, sameNameChanges,
+                    commentChanges, oldName, newName, focusName: false);
+                if (!res.Apply) return;
+                newName = res.NewName; optional = res.Optional;
+            }
+            else
+            {
+                // No separate input dialog — the preview carries the (focused) name field itself.
+                var res = await ShowRenamePreviewAsync(docs!, changes, equateLinkedChanges, sameNameChanges,
+                    commentChanges, oldName, oldName, focusName: true);
+                if (!res.Apply) return;
+                newName = res.NewName; optional = res.Optional;
             }
 
-            await ApplyRenameChangesAsync(changes, newName, docs!);
+            if (string.IsNullOrWhiteSpace(newName) || newName == oldName) return;
+            if (InvalidName(newName) is { } bad2) { await ShowInvalidNameAsync(newName, bad2); return; }
+
+            await ApplyRenameChangesAsync(MergeRenameChanges(changes, optional), newName, docs!);
         }
         catch (System.Exception ex)
         {
             // Never let the rename fail silently (it runs fire-and-forget from the editor event).
             await new MessageDialog("Rename Symbol failed", ex.ToString()).ShowAsync(this);
         }
+    }
+
+    private static char? InvalidName(string name) => Therion.Syntax.TherionIdentifiers.FirstIllegalChar(name);
+
+    private System.Threading.Tasks.Task ShowInvalidNameAsync(string name, char bad) =>
+        new MessageDialog("Rename Symbol",
+            $"'{name}' is not a valid Therion name — it contains '{bad}'.").ShowAsync(this);
+
+    /// <summary>
+    /// Opens the occurrences preview (draining pending input first so the modal hand-off is reliable) and
+    /// returns the user's decision, the name they settled on, and the optional occurrences they selected.
+    /// </summary>
+    private async System.Threading.Tasks.Task<(bool Apply, string NewName, List<RenameFileChanges> Optional)>
+        ShowRenamePreviewAsync(
+            IDocumentService docs,
+            List<RenameFileChanges> changes,
+            List<RenameFileChanges> equateLinkedChanges,
+            List<RenameFileChanges> sameNameChanges,
+            List<RenameFileChanges> commentChanges,
+            string oldName, string initialName, bool focusName)
+    {
+        // Let any pending input (e.g. the input dialog's closing click) drain before opening this modal,
+        // otherwise Avalonia routes it to the torn-down dialog ("PlatformImpl is null") and it never shows.
+        await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(
+            static () => { }, Avalonia.Threading.DispatcherPriority.Background);
+
+        _renamePreviewWindow?.Close();
+        var win = new RenamePreviewWindow(changes, equateLinkedChanges, sameNameChanges, commentChanges,
+            oldName, initialName, focusName, span => docs.NavigateToSpanAsync(span));
+        _renamePreviewWindow = win;
+        win.Closed += (_, _) => _renamePreviewWindow = null;
+        // Ensure the preview comes up focused/activated (the just-closed input dialog can otherwise leave
+        // activation on the main window, which reads as "nothing happened").
+        win.Opened += (_, _) => { win.Activate(); win.Focus(); };
+
+        var apply = await win.ShowDialog<bool>(this);
+        return (apply, win.ResultNewName, win.AppliedOptionalChanges());
     }
 
     /// <summary>
@@ -1242,6 +1281,10 @@ public partial class MainWindow : Window
         try { _shortcuts = AppServices.Provider.GetService<IKeyboardShortcutService>(); }
         catch { _shortcuts = null; }
         if (_shortcuts is null) return;
+
+        // Feed the reactive tooltip source so {l:Tip} toolbar tooltips show — and live-update —
+        // the current gesture for each action.
+        TherionProc.Resources.TipProxy.Instance.Attach(_shortcuts);
 
         void Rebuild() => RebuildKeyBindings(vm, _shortcuts);
         _shortcuts.GesturesChanged += (_, _) => Avalonia.Threading.Dispatcher.UIThread.Post(Rebuild);

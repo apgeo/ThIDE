@@ -26,6 +26,7 @@ using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Therion.Core;
+using TherionProc.Resources;
 
 namespace TherionProc.Views;
 
@@ -50,11 +51,24 @@ internal sealed class RenamePreviewWindow : Window
     private readonly IReadOnlyList<RenameFileChanges> _changes;
     private readonly OptionGroup _equate, _same, _comment;
     private readonly OptionGroup[] _groups;
+    private readonly string _oldName;
+    private readonly bool _focusName;
+    private TextBox _nameBox = null!;
+    private Button _applyBtn = null!;
 
-    private PreviewLayout _layout = PreviewLayout.ChecksBelow;
+    /// <summary>The new name the user typed (trimmed). The window carries its own name field so the
+    /// complex-rename path can start straight here without a separate input dialog.</summary>
+    public string ResultNewName => (_nameBox.Text ?? string.Empty).Trim();
+
+    // The "Checkboxes below" layout is retained in source but DISABLED from the UI (the checkable list
+    // won the comparison for now). Kept behind this fixed value — and reachable only if flipped here — for
+    // testing / a possible future redesign; remove the ChecksBelow branches when the decision is final.
+    private readonly PreviewLayout _layout = PreviewLayout.CheckableList;
     private bool _suppress;                     // guards programmatic checkbox updates from re-entering handlers
     private bool _opened;                        // window shown → safe to auto-grow to fit
     private double _maxHeight = 900;             // clamp for auto-grow (set from the screen on open)
+    private double _scaling = 1;                 // screen scaling (physical px per DIP)
+    private PixelRect _workingArea;              // screen working area (physical px) for centring/clamping
     private readonly Border _treeHost = new();
     private readonly Border _checksHost = new();
     private readonly List<TreeViewItem> _baseFileNodes = new();
@@ -93,17 +107,19 @@ internal sealed class RenamePreviewWindow : Window
         IReadOnlyList<RenameFileChanges> sameNameChanges,
         IReadOnlyList<RenameFileChanges> commentChanges,
         string oldName,
-        string newName,
+        string initialName,
+        bool focusNameField = true,
         Func<SourceSpan, Task>? navigate = null)
     {
         _navigate = navigate;
         _changes = changes;
+        _oldName = oldName;
+        _focusName = focusNameField;
         _equate  = new OptionGroup("Equate-linked stations (same name, other surveys)", equateLinkedChanges, EquateHelp);
         _same    = new OptionGroup("Same-named symbols in other surveys / files", sameNameChanges, SameNameHelp);
         _comment = new OptionGroup("In comments", commentChanges, CommentsHelp);
         _groups  = new[] { _equate, _same, _comment };
 
-        Title = $"Rename '{oldName}' → '{newName}'";
         Width = 600;
         Height = 540;
         MinHeight = 320;
@@ -111,41 +127,39 @@ internal sealed class RenamePreviewWindow : Window
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         Opened += OnOpened;
 
+        // Name field at the top (the complex-rename path opens straight here with no separate input dialog).
+        var nameLabel = new TextBlock
+        {
+            Text = string.Format(Tr.Get("Rename_NewNameFor"), oldName),
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 8, 0),
+        };
+        _nameBox = new TextBox { Text = initialName };
+        _nameBox.TextChanged += (_, _) => UpdateNameDependent();
+        var nameRow = new DockPanel();
+        DockPanel.SetDock(nameLabel, Avalonia.Controls.Dock.Left);
+        nameRow.Children.Add(nameLabel);
+        nameRow.Children.Add(_nameBox);
+
         var summary = new TextBlock
         {
             VerticalAlignment = VerticalAlignment.Center,
             TextWrapping = TextWrapping.Wrap,
-            Text = BuildSummary(changes, oldName, newName),
+            Foreground = DimText,
+            Text = BuildSummary(changes),
         };
-        var layoutBox = new ComboBox
-        {
-            ItemsSource = new[] { "Checkboxes below", "Checkable list" },
-            SelectedIndex = 0,
-            VerticalAlignment = VerticalAlignment.Center,
-        };
-        ToolTip.SetTip(layoutBox, "Switch the preview layout to compare the two designs.");
-        layoutBox.SelectionChanged += (_, _) =>
-        {
-            _layout = layoutBox.SelectedIndex == 1 ? PreviewLayout.CheckableList : PreviewLayout.ChecksBelow;
-            Rebuild();
-        };
-        var topBar = new DockPanel { Margin = new Thickness(0, 0, 0, 8) };
-        var layoutRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6,
-            Children = { new TextBlock { Text = "Layout:", VerticalAlignment = VerticalAlignment.Center }, layoutBox } };
-        DockPanel.SetDock(layoutRow, Avalonia.Controls.Dock.Right);
-        topBar.Children.Add(layoutRow);
-        topBar.Children.Add(summary);
+        var topBar = new StackPanel { Spacing = 6, Margin = new Thickness(0, 0, 0, 8), Children = { nameRow, summary } };
 
-        var applyBtn  = new Button { Content = "Apply",  IsDefault = true, MinWidth = 80 };
-        var cancelBtn = new Button { Content = "Cancel", IsCancel = true, MinWidth = 80 };
-        applyBtn.Click  += (_, _) => Close(true);
+        _applyBtn     = new Button { Content = Tr.Get("Common_Apply"),  IsDefault = true, MinWidth = 80 };
+        var cancelBtn = new Button { Content = Tr.Get("Common_Cancel"), IsCancel = true, MinWidth = 80 };
+        _applyBtn.Click += (_, _) => Close(true);
         cancelBtn.Click += (_, _) => Close(false);
         var buttons = new StackPanel
         {
             Orientation = Orientation.Horizontal,
             HorizontalAlignment = HorizontalAlignment.Right,
             Spacing = 8,
-            Children = { cancelBtn, applyBtn },
+            Children = { cancelBtn, _applyBtn },
         };
 
         _checksHost.Margin = new Thickness(0, 8, 0, 0);
@@ -160,14 +174,28 @@ internal sealed class RenamePreviewWindow : Window
             Children = { topBar, buttons, _checksHost, _treeHost },
         };
 
+        UpdateNameDependent();
         Rebuild();
+    }
+
+    // Keep the title and the Apply button's enabled state in sync with the typed name.
+    private void UpdateNameDependent()
+    {
+        var nn = ResultNewName;
+        Title = string.Format(Tr.Get("Rename_TitleFormat"), _oldName, nn);
+        if (_applyBtn is not null) _applyBtn.IsEnabled = nn.Length > 0 && nn != _oldName;
     }
 
     private void OnOpened(object? sender, EventArgs e)
     {
         if (Screens is { } screens && (screens.ScreenFromWindow(this) ?? screens.Primary) is { Scaling: > 0 } s)
-            _maxHeight = s.WorkingArea.Height / s.Scaling * 0.8;
+        {
+            _scaling = s.Scaling;
+            _workingArea = s.WorkingArea;
+            _maxHeight = _workingArea.Height / _scaling * 0.8;
+        }
         _opened = true;
+        if (_focusName) { _nameBox.Focus(); _nameBox.SelectAll(); }
         GrowToFit();
     }
 
@@ -187,7 +215,17 @@ internal sealed class RenamePreviewWindow : Window
         }
         const double rowHeight = 22, chrome = 200;                // top bar + checks + buttons + margins
         double target = Math.Min(_maxHeight, rows * rowHeight + chrome);
-        if (target > Height) Height = target;
+        if (target > Height) { Height = target; RecenterVertically(); }
+    }
+
+    // Re-centre the (now taller) window vertically on its screen, clamped so the bottom never runs off it.
+    private void RecenterVertically()
+    {
+        if (_workingArea.Height <= 0 || _scaling <= 0) return;
+        int physicalHeight = (int)(Height * _scaling);
+        int y = _workingArea.Y + (_workingArea.Height - physicalHeight) / 2;
+        y = Math.Clamp(y, _workingArea.Y, _workingArea.Y + Math.Max(0, _workingArea.Height - physicalHeight));
+        Position = new PixelPoint(Position.X, y);
     }
 
     /// <summary>The optional changes to actually apply, given the current selection (both layouts).</summary>
@@ -488,11 +526,11 @@ internal sealed class RenamePreviewWindow : Window
         return new SourceSpan(filePath, new SourceLocation(line, col), new SourceLocation(eline, ecol), start, length);
     }
 
-    private static string BuildSummary(IReadOnlyList<RenameFileChanges> changes, string oldName, string newName)
+    private static string BuildSummary(IReadOnlyList<RenameFileChanges> changes)
     {
         int total = 0;
         foreach (var fc in changes) total += fc.Hits.Count;
-        return $"Rename '{oldName}' → '{newName}': {total} occurrence{(total == 1 ? "" : "s")} across {changes.Count} file{(changes.Count == 1 ? "" : "s")}. Click an entry to jump to it.";
+        return string.Format(Tr.Get("Rename_PreviewSummary"), total, changes.Count);
     }
 
     private static (int Line, int Col) OffsetToLineCol(string text, int offset)
