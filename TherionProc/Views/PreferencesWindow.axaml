@@ -293,6 +293,9 @@
                               IsChecked="{Binding OpenPdfInternal}" />
                     <CheckBox Content="{l:Loc Pref_Vis_MapAuto}"
                               IsChecked="{Binding EnableMapAutoPreview}" />
+                    <CheckBox Content="{l:Loc Pref_Vis_MapShowOnLoad}" Margin="20,0,0,0"
+                              IsEnabled="{Binding EnableInAppViewer}"
+                              IsChecked="{Binding AutoShowFirstMapOnLoad}" />
                     <CheckBox Content="{l:Loc Pref_Vis_Model3D}"
                               IsChecked="{Binding EnableModel3DViewer}" />
                     <CheckBox Content="{l:Loc Pref_Vis_Model3DAuto}"

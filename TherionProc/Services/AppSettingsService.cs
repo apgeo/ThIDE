@@ -160,6 +160,14 @@ public sealed record AppSettings
     public bool EnableLivePreview { get; init; } = true;
     /// <summary>auto-load the latest rendered map output into the viewer after a build.</summary>
     public bool EnableMapAutoPreview { get; init; } = true;
+    /// <summary>
+    /// On workspace/thconfig load (including app start), auto-show the first compatible map output
+    /// (from the active thconfig's <c>export map</c> commands) in the in-app viewer: first PDF, else
+    /// the first other viewable file; a per-file "auto-open" override in Generated Files wins. Only
+    /// takes effect when the in-app viewer is enabled — it never opens the external app on load. Off
+    /// by default.
+    /// </summary>
+    public bool AutoShowFirstMapOnLoad { get; init; }
     /// <summary>the in-app PNG/SVG/PDF map viewer.</summary>
     public bool EnableInAppViewer { get; init; } = true;
     /// <summary>Open a clicked PDF output in the in-app map viewer instead of the external app. On by default.</summary>
