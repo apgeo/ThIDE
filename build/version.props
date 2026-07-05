@@ -1,0 +1,55 @@
+<Project>
+
+  <!--
+    Versioning for the TherionProc app shell — SemVer 2.0 for the human/package version,
+    plus a per-build counter carried in the Win32 FileVersion.
+
+      * Version / PackageVersion / InformationalVersion → SemVer (e.g. 0.2.0, 0.2.0-beta.1).
+        Composed from VersionPrefix (MAJOR.MINOR.PATCH) and an optional VersionSuffix (the
+        pre-release label). This is what NuGet, GitHub releases and Help > About use.
+      * AssemblyVersion → MAJOR.MINOR.PATCH.0, numeric only (no pre-release labels allowed);
+        drives assembly binding / InternalsVisibleTo.
+      * FileVersion → MAJOR.MINOR.PATCH.BUILD, where BUILD is the auto-incrementing counter
+        (see IncrementTherionBuildNumber in TherionProc.csproj). Numeric only.
+
+    Local build counter: build-number.txt is a machine-local, git-ignored integer. A fresh
+    clone with no file falls back to TherionBuildNumberSeed.
+
+    Releases / CI: pass the version from the pushed git tag instead of the local knobs — MSBuild
+    global properties (-p:) override the defaults below, so the shipped binaries carry the tag's
+    SemVer. See .github/workflows/release.yml:
+        dotnet publish ... -p:VersionPrefix=0.3.0 -p:VersionSuffix=beta.1 \
+                           -p:TherionBuildNumber=0 -p:TherionAutoIncrementBuild=false
+    (A bare -p:Version=0.3.0-beta.1 also works and wins over everything.)
+  -->
+  <PropertyGroup>
+    <!-- SemVer MAJOR.MINOR.PATCH — bump these deliberately for a release. -->
+    <TherionVersionMajor>0</TherionVersionMajor>
+    <TherionVersionMinor>2</TherionVersionMinor>
+    <TherionVersionPatch>0</TherionVersionPatch>
+    <!-- Pre-release label per SemVer: alpha, beta, beta.1, rc.1 … empty ⇒ a stable release. -->
+    <TherionPrerelease></TherionPrerelease>
+
+    <!-- Per-build counter → FileVersion's 4th field. Seed used when build-number.txt is absent. -->
+    <TherionBuildNumberSeed>250</TherionBuildNumberSeed>
+    <TherionBuildNumberFile>$(MSBuildThisFileDirectory)build-number.txt</TherionBuildNumberFile>
+    <TherionBuildNumber Condition="Exists('$(TherionBuildNumberFile)')">$([System.Text.RegularExpressions.Regex]::Replace($([System.IO.File]::ReadAllText('$(TherionBuildNumberFile)')), '[^0-9]', ''))</TherionBuildNumber>
+    <TherionBuildNumber Condition="'$(TherionBuildNumber)' == ''">$(TherionBuildNumberSeed)</TherionBuildNumber>
+
+    <!-- Base version + pre-release. A CI-provided -p:VersionPrefix / -p:VersionSuffix (or a global
+         -p:Version) wins over these, because MSBuild global properties override project ones. -->
+    <VersionPrefix Condition="'$(VersionPrefix)' == ''">$(TherionVersionMajor).$(TherionVersionMinor).$(TherionVersionPatch)</VersionPrefix>
+    <VersionSuffix Condition="'$(VersionSuffix)' == '' and '$(TherionPrerelease)' != ''">$(TherionPrerelease)</VersionSuffix>
+
+    <!-- The SemVer string, mirrored into InformationalVersion with build metadata for About. -->
+    <_TherionSemVer>$(VersionPrefix)</_TherionSemVer>
+    <_TherionSemVer Condition="'$(VersionSuffix)' != ''">$(VersionPrefix)-$(VersionSuffix)</_TherionSemVer>
+
+    <AssemblyVersion>$(VersionPrefix).0</AssemblyVersion>
+    <FileVersion>$(VersionPrefix).$(TherionBuildNumber)</FileVersion>
+    <InformationalVersion Condition="'$(InformationalVersion)' == ''">$(_TherionSemVer)+build.$(TherionBuildNumber)</InformationalVersion>
+    <!-- Keep InformationalVersion exactly as set (don't let SourceLink append its own +<sha>). -->
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+  </PropertyGroup>
+
+</Project>

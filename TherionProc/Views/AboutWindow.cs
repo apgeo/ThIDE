@@ -22,7 +22,7 @@ public sealed class AboutWindow : Window
         CanResize = false;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
 
-        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0";
+        var version = ResolveDisplayVersion();
 
         var title = new TextBlock { Text = "TherionProc", FontSize = 22, FontWeight = FontWeight.Bold };
         var ver = new TextBlock { Text = Tr.Get("About_VersionPrefix") + version, Foreground = Brushes.Gray };
@@ -53,5 +53,35 @@ public sealed class AboutWindow : Window
         };
 
         KeyDown += (_, e) => { if (e.Key == Key.Escape) Close(); };
+    }
+
+    // The SemVer display version. Prefers the informational version (e.g. "0.2.0-beta.1+build.250"),
+    // then the file version, then the assembly version. The build-number metadata is reformatted as
+    // a friendly "(build N)" suffix (and dropped for release builds, where N is 0).
+    private static string ResolveDisplayVersion()
+    {
+        var asm = Assembly.GetExecutingAssembly();
+        var info = asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+        if (!string.IsNullOrWhiteSpace(info)) return FormatInformationalVersion(info);
+        var file = asm.GetCustomAttribute<AssemblyFileVersionAttribute>()?.Version;
+        if (!string.IsNullOrWhiteSpace(file)) return file;
+        return asm.GetName().Version?.ToString() ?? "0.0.0";
+    }
+
+    // "0.2.0-beta.1+build.250" → "0.2.0-beta.1 (build 250)"; a "+build.0" or other "+<meta>" is
+    // dropped so a tagged release shows a clean SemVer.
+    private static string FormatInformationalVersion(string info)
+    {
+        int plus = info.IndexOf('+');
+        if (plus < 0) return info;
+        var core = info[..plus];
+        var meta = info[(plus + 1)..];
+        const string buildPrefix = "build.";
+        if (meta.StartsWith(buildPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            var n = meta[buildPrefix.Length..];
+            if (n.Length > 0 && n != "0") return $"{core} (build {n})";
+        }
+        return core;
     }
 }

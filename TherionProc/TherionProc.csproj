@@ -1,4 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Classic Major.Minor.Build versioning; the build number auto-increments on each build
+       (see the IncrementTherionBuildNumber target below). -->
+  <Import Project="..\build\version.props" />
+
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
@@ -74,4 +78,18 @@
   <ItemGroup>
     <EmbeddedResource Update="Resources\Strings.ro.resx" />
   </ItemGroup>
+
+  <!-- Auto-increment the persisted build number after each real compile. Runs only for actual
+       builds (not IDE design-time builds); the just-compiled exe carries $(TherionBuildNumber),
+       and the counter is advanced so the next build gets the following number. Opt out with
+       -p:TherionAutoIncrementBuild=false for a reproducible / CI build. -->
+  <Target Name="IncrementTherionBuildNumber" AfterTargets="CoreCompile"
+          Condition="'$(DesignTimeBuild)' != 'true' and '$(BuildingProject)' == 'true' and '$(TherionAutoIncrementBuild)' != 'false'">
+    <PropertyGroup>
+      <_TherionNextBuildNumber>$([MSBuild]::Add($(TherionBuildNumber), 1))</_TherionNextBuildNumber>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(TherionBuildNumberFile)" Lines="$(_TherionNextBuildNumber)" Overwrite="true" />
+    <Message Importance="normal"
+             Text="TherionProc built as $(Version); build number advanced to $(_TherionNextBuildNumber) for the next build." />
+  </Target>
 </Project>

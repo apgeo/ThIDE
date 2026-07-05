@@ -32,20 +32,28 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
-      # Derive the package version from the tag (v0.3.0 -> 0.3.0); default for workflow_dispatch.
-      # bash is available on all three runners.
+      # Derive the SemVer from the tag (v0.3.0 -> 0.3.0, v0.3.0-beta.1 -> 0.3.0 + beta.1);
+      # default for workflow_dispatch. bash is available on all three runners.
       - name: Compute version
         id: ver
         shell: bash
         run: |
           REF="${GITHUB_REF_NAME:-}"
           if [[ "$REF" == v* ]]; then VER="${REF#v}"; else VER="0.0.0"; fi
-          echo "version=$VER" >> "$GITHUB_OUTPUT"
+          PREFIX="${VER%%-*}"                                  # MAJOR.MINOR.PATCH
+          if [[ "$VER" == *-* ]]; then SUFFIX="${VER#*-}"; else SUFFIX=""; fi  # pre-release label
+          echo "version=$VER"   >> "$GITHUB_OUTPUT"
+          echo "prefix=$PREFIX" >> "$GITHUB_OUTPUT"
+          echo "suffix=$SUFFIX" >> "$GITHUB_OUTPUT"
 
+      # Feed the tag's version into the build so the shipped binaries' embedded
+      # SemVer / FileVersion match the release (freezing the local build counter).
       - name: Publish (self-contained)
         run: >
           dotnet publish TherionProc/TherionProc.csproj -m:1 -c Release -r ${{ matrix.rid }}
           --self-contained true -p:PublishSingleFile=true -o publish/${{ matrix.rid }}
+          -p:VersionPrefix=${{ steps.ver.outputs.prefix }} -p:VersionSuffix=${{ steps.ver.outputs.suffix }}
+          -p:TherionBuildNumber=0 -p:TherionAutoIncrementBuild=false
 
       # --- Native installers (Windows + Linux) ---
 
@@ -96,6 +104,8 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
+          # A pre-release tag (v0.3.0-beta.1) is flagged as a GitHub pre-release.
+          prerelease: ${{ steps.ver.outputs.suffix != '' }}
           files: |
             TherionProc-${{ matrix.rid }}.zip
             TherionProc-${{ matrix.rid }}.tar.gz
