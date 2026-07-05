@@ -314,41 +314,41 @@
                 </Button>
                 <Separator Width="1" Margin="4,2" Background="Gray" />
                 <!-- Navigation group -->
-                <Button Classes="tool" Command="{Binding GoBackCommand}" ToolTip.Tip="{l:Loc Tb_Back}">
+                <Button Classes="tool" Command="{Binding GoBackCommand}" ToolTip.Tip="{l:Tip Tb_Back}">
                     <PathIcon Data="{DynamicResource Icon.Back}" />
                 </Button>
-                <Button Classes="tool" Command="{Binding GoForwardCommand}" ToolTip.Tip="{l:Loc Tb_Forward}">
+                <Button Classes="tool" Command="{Binding GoForwardCommand}" ToolTip.Tip="{l:Tip Tb_Forward}">
                     <PathIcon Data="{DynamicResource Icon.Forward}" />
                 </Button>
                 <Separator Width="1" Margin="4,2" Background="Gray" />
-                <Button Classes="tool" Command="{Binding SaveCommand}" ToolTip.Tip="{l:Loc Tb_Save}">
+                <Button Classes="tool" Command="{Binding SaveCommand}" ToolTip.Tip="{l:Tip Tb_Save}">
                     <PathIcon Data="{DynamicResource Icon.Save}" />
                 </Button>
                 <Separator Width="1" Margin="4,2" Background="Gray" />
                 <!-- Edit group: enabled only when a file is open/focused (#11). -->
-                <Button Classes="tool" Click="OnEditCut" IsEnabled="{Binding HasStatusFile}" ToolTip.Tip="{l:Loc Tb_Cut}">
+                <Button Classes="tool" Click="OnEditCut" IsEnabled="{Binding HasStatusFile}" ToolTip.Tip="{l:Tip Tb_Cut}">
                     <PathIcon Data="{DynamicResource Icon.Cut}" />
                 </Button>
-                <Button Classes="tool" Click="OnEditCopy" IsEnabled="{Binding HasStatusFile}" ToolTip.Tip="{l:Loc Tb_Copy}">
+                <Button Classes="tool" Click="OnEditCopy" IsEnabled="{Binding HasStatusFile}" ToolTip.Tip="{l:Tip Tb_Copy}">
                     <PathIcon Data="{DynamicResource Icon.Copy}" />
                 </Button>
-                <Button Classes="tool" Click="OnEditPaste" IsEnabled="{Binding HasStatusFile}" ToolTip.Tip="{l:Loc Tb_Paste}">
+                <Button Classes="tool" Click="OnEditPaste" IsEnabled="{Binding HasStatusFile}" ToolTip.Tip="{l:Tip Tb_Paste}">
                     <PathIcon Data="{DynamicResource Icon.Paste}" />
                 </Button>
                 <Separator Width="1" Margin="4,2" Background="Gray" />
                 <!-- Search group -->
-                <Button Classes="tool" Click="OnSearchClick" ToolTip.Tip="{l:Loc Tb_FindInFiles}">
+                <Button Classes="tool" Click="OnSearchClick" ToolTip.Tip="{l:Tip Tb_FindInFiles}">
                     <PathIcon Data="{DynamicResource Icon.Search}" />
                 </Button>
-                <Button Classes="tool" Command="{Binding RenameSymbolCommand}" IsEnabled="{Binding HasStatusFile}" ToolTip.Tip="{l:Loc Tb_RenameSymbol}">
+                <Button Classes="tool" Command="{Binding RenameSymbolCommand}" IsEnabled="{Binding HasStatusFile}" ToolTip.Tip="{l:Tip Tb_RenameSymbol}">
                     <PathIcon Data="{DynamicResource Icon.Rename}" />
                 </Button>
                 <Separator Width="1" Margin="4,2" Background="Gray" />
                 <!-- Go-to group: quick-open, command palette, and symbol search (workspace / document). -->
-                <Button Classes="tool" Click="OnGoToFile" ToolTip.Tip="{l:Loc Tb_GoToFile}">
+                <Button Classes="tool" Click="OnGoToFile" ToolTip.Tip="{l:Tip Tb_GoToFile}">
                     <PathIcon Data="{DynamicResource Icon.FileSearch}" />
                 </Button>
-                <Button Classes="tool" Click="OnGoToAction" ToolTip.Tip="{l:Loc Tb_GoToAction}">
+                <Button Classes="tool" Click="OnGoToAction" ToolTip.Tip="{l:Tip Tb_GoToAction}">
                     <PathIcon Data="{DynamicResource Icon.Code}" />
                 </Button>
                 <Button Classes="tool" Click="OnGoToSymbolWorkspace" ToolTip.Tip="{l:Loc Tb_GoToSymbolWs}">
@@ -413,11 +413,11 @@
                 <Separator Width="1" Margin="4,2" Background="Gray" />
                 <!-- Compile / Stop moved to the end of the toolbar (#1). -->
                 <Button Classes="tool" Command="{Binding Build.OpenInLochCommand}"
-                        IsEnabled="{Binding Build.HasLoxArtifact}" ToolTip.Tip="{l:Loc Tb_OpenLoch}">
+                        IsEnabled="{Binding Build.HasLoxArtifact}" ToolTip.Tip="{l:Tip Tb_OpenLoch}">
                     <PathIcon Data="{DynamicResource Icon.External}" />
                 </Button>
                 <Button Classes="tool" Command="{Binding Build.OpenInAvenCommand}"
-                        IsEnabled="{Binding Build.HasAvenArtifact}" ToolTip.Tip="{l:Loc Tb_OpenAven}">
+                        IsEnabled="{Binding Build.HasAvenArtifact}" ToolTip.Tip="{l:Tip Tb_OpenAven}">
                     <PathIcon Data="{DynamicResource Icon.Terrain}" />
                 </Button>
                 <!-- composed quick export + open the last output folder. -->
@@ -432,10 +432,10 @@
                 <Button Classes="tool" Command="{Binding ToggleObjectBrowserCommand}" ToolTip.Tip="{l:Loc Tool_ObjectBrowser}">
                     <PathIcon Data="{DynamicResource Icon.NodeGraph}" />
                 </Button>
-                <Button Classes="tool" Command="{Binding ToggleWorkspaceExplorerCommand}" ToolTip.Tip="{l:Loc Menu_View_Workspace}">
+                <Button Classes="tool" Command="{Binding ToggleWorkspaceExplorerCommand}" ToolTip.Tip="{l:Tip Menu_View_Workspace}">
                     <PathIcon Data="{DynamicResource Icon.Folder}" />
                 </Button>
-                <Button Classes="tool" Command="{Binding ToggleDiagnosticsCommand}" ToolTip.Tip="{l:Loc Tool_Diagnostics}">
+                <Button Classes="tool" Command="{Binding ToggleDiagnosticsCommand}" ToolTip.Tip="{l:Tip Tool_Diagnostics}">
                     <PathIcon Data="{DynamicResource Icon.Warning}" />
                 </Button>
                 <Button Classes="tool" Command="{Binding ToggleProjectCommand}" ToolTip.Tip="{l:Loc Menu_View_Project}">
@@ -480,7 +480,7 @@
                 <ToggleButton Classes="tool" IsChecked="{Binding RequireDoubleClickToNavigate, Mode=TwoWay}" ToolTip.Tip="{l:Loc Tb_DoubleClickNav}">
                     <PathIcon Data="{DynamicResource Icon.ClickNavigate}" />
                 </ToggleButton>
-                <Button Classes="tool" Click="OnToggleFullScreen" ToolTip.Tip="{l:Loc Tb_FullScreen}">
+                <Button Classes="tool" Click="OnToggleFullScreen" ToolTip.Tip="{l:Tip Tb_FullScreen}">
                     <PathIcon Data="{DynamicResource Icon.FullScreen}" />
                 </Button>
                 <!-- Layout controls (#16): float active document, reset to the default arrangement. -->
@@ -558,20 +558,23 @@
                 <Border CornerRadius="6" Padding="2,0" Margin="2,0" VerticalAlignment="Center"
                         Classes.compiling="{Binding Build.IsBuilding}">
                     <StackPanel Orientation="Horizontal">
-                        <Button Classes="tool" Command="{Binding Build.BuildCommand}" ToolTip.Tip="{l:Loc Tb_Compile}">
+                        <Button Classes="tool" Command="{Binding Build.BuildCommand}" ToolTip.Tip="{l:Tip Tb_Compile}">
                             <PathIcon Data="{DynamicResource Icon.Build}" Foreground="#2E7D32"
                                       Classes.buildPulse="{Binding Build.IsBuilding}" />
                         </Button>
                         <!-- Stop is hidden while idle and only appears during a compilation (#6). -->
                         <Button Classes="tool" Command="{Binding Build.CancelCommand}"
-                                IsVisible="{Binding Build.IsBuilding}" ToolTip.Tip="{l:Loc Tb_CancelCompile}">
+                                IsVisible="{Binding Build.IsBuilding}" ToolTip.Tip="{l:Tip Tb_CancelCompile}">
                             <PathIcon Data="{DynamicResource Icon.Stop}" Foreground="#C62828" />
                         </Button>
                     </StackPanel>
                 </Border>
-                <!-- #3: status text + a clickable "N artifact(s)" link (success only). -->
+                <!-- #3: status text + a clickable "N artifact(s)" link (success only). The status shows
+                     the last error inline on failure; the full error is on the hover tooltip. -->
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
-                    <TextBlock Text="{Binding Build.Status}" Foreground="Gray" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding Build.Status}" VerticalAlignment="Center" Foreground="Gray"
+                               MaxWidth="520" TextTrimming="CharacterEllipsis"
+                               ToolTip.Tip="{Binding Build.LastError}" />
                     <TextBlock Text=" (" Foreground="Gray" VerticalAlignment="Center"
                                IsVisible="{Binding Build.HasArtifactLink}" />
                     <Button Classes="crumb" Content="{Binding Build.StatusArtifactCount}"
