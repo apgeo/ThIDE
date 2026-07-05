@@ -18,8 +18,20 @@ public sealed class LocProxy : INotifyPropertyChanged
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    /// <summary>Re-evaluates every {l:Loc} binding; call after the UI language changes.
-    /// An empty property name means "all properties changed", which Avalonia honours for the
-    /// indexer binding regardless of how the indexer's change name is spelled.</summary>
-    public void Invalidate() => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(string.Empty));
+    // The .NET convention for "the indexer's values changed" (WPF's Binding.IndexerName). Avalonia's
+    // reflection indexer binding node re-reads on this exact name; an empty/"all" property name is
+    // NOT reliably honoured for indexer paths (Avalonia 12), which left already-loaded {l:Loc} panel
+    // content stuck in the previous language after a switch even though the dock titles (updated
+    // imperatively on LanguageChanged) did change.
+    private static readonly PropertyChangedEventArgs IndexerChanged = new("Item[]");
+    private static readonly PropertyChangedEventArgs AllChanged = new(string.Empty);
+
+    /// <summary>Re-evaluates every {l:Loc} binding; call after the UI language changes.</summary>
+    public void Invalidate()
+    {
+        var handler = PropertyChanged;
+        if (handler is null) return;
+        handler(this, IndexerChanged);   // the signal Avalonia's indexer binding actually listens for
+        handler(this, AllChanged);       // belt-and-suspenders for any plain-property listeners
+    }
 }

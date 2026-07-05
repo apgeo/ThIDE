@@ -230,7 +230,7 @@
   <data name="Proj_Tab_Quality" xml:space="preserve"><value>Calitate</value></data>
   <data name="Proj_Tab_Audit" xml:space="preserve"><value>Audit</value></data>
   <data name="Proj_Tab_Leads" xml:space="preserve"><value>Piste</value></data>
-  <data name="Proj_Tab_Todos" xml:space="preserve"><value>Sarcini (TODO)</value></data>
+  <data name="Proj_Tab_Todos" xml:space="preserve"><value>Sarcini (todo)</value></data>
   <data name="Proj_Tab_Metadata" xml:space="preserve"><value>Metadate</value></data>
   <data name="Proj_Tab_Media" xml:space="preserve"><value>Media</value></data>
   <data name="Proj_Dash_EntryConfig" xml:space="preserve"><value>Configurație de intrare</value></data>
@@ -248,7 +248,11 @@
   <data name="Proj_Trips" xml:space="preserve"><value>Ieșiri (după dată)</value></data>
   <data name="Proj_CopyCsv" xml:space="preserve"><value>Copiază (CSV)</value></data>
   <data name="Proj_Rescan" xml:space="preserve"><value>Rescanează</value></data>
-  <data name="Proj_Audit_Orphans" xml:space="preserve"><value>Fișiere orfane (inaccesibile din orice punct de intrare)</value></data>
+  <data name="Proj_Audit_Calculate" xml:space="preserve"><value>Calculează</value></data>
+  <data name="Proj_Audit_Recalculate" xml:space="preserve"><value>Recalculează</value></data>
+  <data name="Proj_Audit_Calculating" xml:space="preserve"><value>Se calculează…</value></data>
+  <data name="Proj_Audit_NotCalculated" xml:space="preserve"><value>Apasă Calculează pentru a căuta și afișa fișierele orfane, schițele nereferențiate și hărțile neexportate.</value></data>
+  <data name="Proj_Audit_Orphans" xml:space="preserve"><value>Fișiere orfane (nelegate de niciun thconfig din acest spațiu de lucru)</value></data>
   <data name="Proj_Audit_Scraps" xml:space="preserve"><value>Schițe nereferențiate (în nicio hartă)</value></data>
   <data name="Proj_Audit_Maps" xml:space="preserve"><value>Hărți neexportate (declarate dar neselectate)</value></data>
   <data name="Proj_Lead_Checked" xml:space="preserve"><value>Verificat</value></data>
@@ -276,7 +280,8 @@
   <data name="Menu_View_Project" xml:space="preserve"><value>Prezentare generală (Tablou de bord / Topografii / Audit)</value></data>
   <data name="Tool_Project" xml:space="preserve"><value>Prezentare generală</value></data>
   <data name="Menu_View_Log" xml:space="preserve"><value>Jurnal</value></data>
-  <data name="Menu_View_LivePreview" xml:space="preserve"><value>Previzualizare live</value></data>
+  <data name="Menu_View_LivePreview" xml:space="preserve"><value>Previzualizare principală</value></data>
+  <data name="Tool_LivePreview" xml:space="preserve"><value>Previzualizare principală</value></data>
   <data name="Menu_View_MapViewer" xml:space="preserve"><value>Vizualizator hărți</value></data>
   <data name="Menu_View_Model3D" xml:space="preserve"><value>Vizualizator 3D</value></data>
   <data name="Menu_View_Structural" xml:space="preserve"><value>Geologie structurală</value></data>
@@ -334,19 +339,19 @@
   <data name="Tb_GoToFile" xml:space="preserve"><value>Salt la fișier (Ctrl+P)</value></data>
   <data name="Tb_GoToAction" xml:space="preserve"><value>Salt la acțiune — Paletă de comenzi (Ctrl+Shift+P)</value></data>
   <data name="Tb_GoToSymbolWs" xml:space="preserve"><value>Salt la simbol în spațiul de lucru</value></data>
-  <data name="Tb_GoToSymbolDoc" xml:space="preserve"><value>Salt la simbol în document</value></data>
+  <data name="Tb_GoToSymbolDoc" xml:space="preserve"><value>Salt la simbol în acest document</value></data>
   <data name="Tb_Import" xml:space="preserve"><value>Importă topografie / DEM / GPX</value></data>
   <data name="Tb_Export" xml:space="preserve"><value>Exportă intrări / tabele de date</value></data>
   <data name="Tb_GenReport" xml:space="preserve"><value>Generează raport topografic (HTML)</value></data>
   <data name="Tb_NewScrap" xml:space="preserve"><value>Schiță nouă (.th2)</value></data>
-  <data name="Tb_OpenLoch" xml:space="preserve"><value>Deschide în Loch (F9)</value></data>
-  <data name="Tb_OpenAven" xml:space="preserve"><value>Deschide în Aven (F10)</value></data>
+  <data name="Tb_OpenLoch" xml:space="preserve"><value>Deschide în Loch</value></data>
+  <data name="Tb_OpenAven" xml:space="preserve"><value>Deschide în Aven</value></data>
   <data name="Tb_WordWrap" xml:space="preserve"><value>Încadrare text</value></data>
-  <data name="Tb_FullScreen" xml:space="preserve"><value>Ecran complet (F11)</value></data>
+  <data name="Tb_FullScreen" xml:space="preserve"><value>Ecran complet</value></data>
   <data name="Tb_Layout" xml:space="preserve"><value>Aranjament</value></data>
   <data name="Tb_Notifications" xml:space="preserve"><value>Notificări</value></data>
-  <data name="Tb_Compile" xml:space="preserve"><value>Compilează (F5)</value></data>
-  <data name="Tb_CancelCompile" xml:space="preserve"><value>Anulează compilarea (Shift+F5)</value></data>
+  <data name="Tb_Compile" xml:space="preserve"><value>Compilează</value></data>
+  <data name="Tb_CancelCompile" xml:space="preserve"><value>Anulează compilarea</value></data>
   <data name="Tb_RelationalMap" xml:space="preserve"><value>Hartă relațională</value></data>
   <data name="Tb_ShowOutputs" xml:space="preserve"><value>Afișează Fișiere generate și prima comandă „export model”</value></data>
   <data name="Layout_FloatActive" xml:space="preserve"><value>Desprinde documentul activ</value></data>
@@ -372,6 +377,17 @@
   <!-- Preferences window -->
   <data name="Common_Ok" xml:space="preserve"><value>OK</value></data>
   <data name="Common_Cancel" xml:space="preserve"><value>Anulează</value></data>
+  <data name="Common_On" xml:space="preserve"><value>Activat</value></data>
+  <data name="Common_Off" xml:space="preserve"><value>Dezactivat</value></data>
+  <data name="Build_SavePromptTitle" xml:space="preserve"><value>Modificări nesalvate</value></data>
+  <data name="Build_SavePromptMsg" xml:space="preserve"><value>{0} fișier(e) implicate în această compilare au modificări nesalvate:</value></data>
+  <data name="Build_SaveAndCompile" xml:space="preserve"><value>Salvează și compilează</value></data>
+  <data name="Build_CompileWithoutSaving" xml:space="preserve"><value>Compilează fără salvare</value></data>
+  <data name="Common_Apply" xml:space="preserve"><value>Aplică</value></data>
+  <data name="Rename_TitleFormat" xml:space="preserve"><value>Redenumire '{0}' → '{1}'</value></data>
+  <data name="Rename_NewNameFor" xml:space="preserve"><value>Nume nou pentru '{0}':</value></data>
+  <data name="Rename_PreviewSummary" xml:space="preserve"><value>{0} apariție(i) în {1} fișier(e). Dublu-clic pe o intrare pentru a naviga la ea.</value></data>
+  <data name="Rename_SeeOccurrences" xml:space="preserve"><value>Vezi aparițiile…</value></data>
   <data name="Pref_Title" xml:space="preserve"><value>Preferințe</value></data>
   <data name="Pref_SearchWm" xml:space="preserve"><value>Caută în setări…</value></data>
   <data name="Pref_ReopenSession" xml:space="preserve"><value>Redeschide fișierele din sesiunea anterioară la pornire</value></data>
@@ -432,9 +448,13 @@
   <data name="Pref_CompileOnSaveHelp" xml:space="preserve"><value>Compilare de fundal amânată; urmăriți indicatorul și panoul Jurnal. Dezactivat implicit.</value></data>
   <data name="Pref_EnsureDirs" xml:space="preserve"><value>Creează dosarele de ieșire lipsă înainte de compilare</value></data>
   <data name="Pref_EnsureDirsHelp" xml:space="preserve"><value>Verifică dosarul de ieșire al fiecărui export și îl creează recursiv dacă lipsește (altfel Therion eșuează la un dosar lipsă). O linie informativă este înregistrată când un dosar este creat. Activat implicit.</value></data>
+  <data name="Pref_AutoSaveBeforeCompile" xml:space="preserve"><value>Salvează automat fișierele modificate înainte de compilare</value></data>
+  <data name="Pref_AutoSaveBeforeCompileHelp" xml:space="preserve"><value>Când este dezactivat, compilarea întreabă mai întâi dacă să salveze fișierele nesalvate implicate (numindu-le). Când este activat, ele sunt salvate automat, fără întrebare. Dezactivat implicit.</value></data>
+  <data name="Pref_AutoRecalcLeads" xml:space="preserve"><value>Recalculează registrul de indicii pe măsură ce tastați</value></data>
+  <data name="Pref_AutoRecalcLeadsHelp" xml:space="preserve"><value>Reîmprospătează registrul Proiect ▸ Indicii în timp real din conținutul nesalvat al editorului (cu temporizare), nu doar la salvare. Activat implicit — dezactivați pentru proiecte foarte mari. Butonul Rescanează funcționează întotdeauna.</value></data>
   <data name="Pref_Visualization" xml:space="preserve"><value>Vizualizare</value></data>
   <data name="Pref_VisualizationHelp" xml:space="preserve"><value>Activează sau dezactivează funcțiile de previzualizare doar-citire. Dezactivarea uneia îi ascunde panoul și meniul (resetați aranjamentul sau reporniți pentru a elimina un panou deschis).</value></data>
-  <data name="Pref_Vis_LivePreview" xml:space="preserve"><value>Previzualizare live a liniei centrale (schiță plan/elevație din model, fără compilare) — VIS-02</value></data>
+  <data name="Pref_Vis_LivePreview" xml:space="preserve"><value>Previzualizare principală a liniei centrale (schiță plan/elevație din model, fără compilare) — VIS-02</value></data>
   <data name="Pref_Vis_MapViewer" xml:space="preserve"><value>Vizualizator de hărți în aplicație (PNG / SVG / PDF) — VIS-05</value></data>
   <data name="Pref_Vis_MapAuto" xml:space="preserve"><value>Afișează automat harta randată după o compilare — VIS-03</value></data>
   <data name="Pref_Vis_Model3D" xml:space="preserve"><value>Vizualizator 3D încorporat (CaveView.js într-o vizualizare web nativă) — VIS-01</value></data>
@@ -560,6 +580,9 @@
   <data name="M3D_OpenModelExternal" xml:space="preserve"><value>Deschide modelul extern (Loch / Aven)</value></data>
   <!-- Live preview tool -->
   <data name="Live_PlanTip" xml:space="preserve"><value>Vedere în plan (privire de sus — nord în sus)</value></data>
+  <data name="Live_ViewPlan" xml:space="preserve"><value>Vedere în plan</value></data>
+  <data name="Live_ViewProfile" xml:space="preserve"><value>Vedere profil proiectat ({0})</value></data>
+  <data name="Live_ViewToward" xml:space="preserve"><value>spre {0}°</value></data>
   <data name="Live_ProfN" xml:space="preserve"><value>Profil proiectat de-a lungul nordului (0°)</value></data>
   <data name="Live_ProfE" xml:space="preserve"><value>Profil proiectat de-a lungul estului (90°) — elevație clasică est-sus</value></data>
   <data name="Live_ProfS" xml:space="preserve"><value>Profil proiectat de-a lungul sudului (180°)</value></data>
@@ -647,6 +670,8 @@
   <data name="File_EditMapiah" xml:space="preserve"><value>Editează cu Mapiah</value></data>
   <data name="File_SwitchOpenTip" xml:space="preserve"><value>Comută la un fișier deschis</value></data>
   <data name="File_SelectWorkspaceTip" xml:space="preserve"><value>Selectează acest fișier în spațiul de lucru</value></data>
+  <data name="File_GoToParentTip" xml:space="preserve"><value>Mergi la fișierul părinte (fișierul care îl include pe acesta)</value></data>
+  <data name="File_GoToParentMany" xml:space="preserve"><value>Acest fișier este inclus de mai multe fișiere:</value></data>
   <data name="File_ActionsTip" xml:space="preserve"><value>Acțiuni fișier</value></data>
   <!-- Search / Replace windows -->
   <data name="Search_Title" xml:space="preserve"><value>Caută în fișiere</value></data>
@@ -712,6 +737,8 @@
   <data name="Ed_BookmarkTitleWm" xml:space="preserve"><value>Titlu semn de carte (opțional)</value></data>
   <data name="Ed_AddBtn" xml:space="preserve"><value>Adaugă</value></data>
   <data name="Ed_GoToDefinition" xml:space="preserve"><value>Salt la definiție</value></data>
+  <data name="Ed_GoToEquate" xml:space="preserve"><value>Salt la equate</value></data>
+  <data name="Ed_GoToAggregation" xml:space="preserve"><value>Salt la harta care îl agregă</value></data>
   <data name="Ed_FindAllRefs" xml:space="preserve"><value>Găsește toate referințele</value></data>
   <data name="Ed_RenameDots" xml:space="preserve"><value>Redenumește…</value></data>
   <data name="Ed_Documentation" xml:space="preserve"><value>Documentație ↗</value></data>
@@ -812,7 +839,7 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Cmd_ToggleOutline" xml:space="preserve"><value>Comută Conturul</value></data>
   <data name="Cmd_ToggleProject" xml:space="preserve"><value>Comută Proiectul (Tablou de bord / Topografii / Audit)</value></data>
   <data name="Cmd_ToggleLog" xml:space="preserve"><value>Comută Jurnalul</value></data>
-  <data name="Cmd_ToggleLivePreview" xml:space="preserve"><value>Comută Previzualizarea live</value></data>
+  <data name="Cmd_ToggleLivePreview" xml:space="preserve"><value>Comută Previzualizarea principală</value></data>
   <data name="Cmd_ToggleMapViewer" xml:space="preserve"><value>Comută Vizualizatorul de hărți</value></data>
   <data name="Cmd_Toggle3D" xml:space="preserve"><value>Comută Vizualizatorul 3D</value></data>
   <data name="Cmd_ResetLayout" xml:space="preserve"><value>Resetează aranjamentul</value></data>
@@ -940,7 +967,7 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Tb_ValidateOnType" xml:space="preserve"><value>Validează la tastare — reverifică fișierul și întregul proiect în timp ce tastați (nu doar la salvare)</value></data>
   <data name="Pref_ValidateOnType" xml:space="preserve"><value>Validează la tastare (fișier + întregul proiect)</value></data>
   <data name="Pref_ValidateOnTypeHelp" xml:space="preserve"><value>Revalidează întregul graf de obiecte din conținutul nesalvat al editorului la o scurtă pauză de tastare, nu doar la salvare. Dezactivat implicit — reanalizează proiectul la fiecare pauză, ceea ce poate fi costisitor pentru proiecte mari.</value></data>
-  <data name="Tb_DoubleClickNav" xml:space="preserve"><value>Dublu-clic pentru a merge la definiție — un singur clic doar plasează cursorul</value></data>
+  <data name="Tb_DoubleClickNav" xml:space="preserve"><value>Dublu-clic pentru a merge la definiție — un singur clic doar plasează cursorul (sau CTRL + clic pentru navigare cu un singur clic)</value></data>
   <data name="Pref_DoubleClickNav" xml:space="preserve"><value>Necesită dublu-clic pentru a merge la definiție</value></data>
   <data name="Pref_DoubleClickNavHelp" xml:space="preserve"><value>Când este activat, un singur clic pe un identificator doar plasează cursorul (ca să îl puteți edita); un dublu-clic sare la declarația sa. Când este dezactivat, un singur clic navighează ca un hyperlink. Ctrl+clic navighează întotdeauna.</value></data>
   <data name="Common_Undo" xml:space="preserve"><value>Anulează</value></data>
