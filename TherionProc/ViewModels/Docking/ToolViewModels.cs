@@ -166,6 +166,16 @@ public sealed class MapViewerToolViewModel : ToolViewModelBase
     public MapViewerToolViewModel() : base("MapViewer", "Map Viewer") => Map = null!;
     public MapViewerToolViewModel(MapViewerViewModel map, ILanguageService? lang = null)
         : base("MapViewer", "Map Viewer", lang) => Map = map;
+
+    // Window-control requests (#7); the shell (MainWindowViewModel) handles them via the DockFactory
+    // so the logic works whether the panel is docked or already floating.
+    public event System.EventHandler? FullScreenRequested;
+    public event System.EventHandler? FloatOtherScreenRequested;
+    public event System.EventHandler? MoveToCenterRequested;
+
+    public void RequestFullScreen() => FullScreenRequested?.Invoke(this, System.EventArgs.Empty);
+    public void RequestFloatOtherScreen() => FloatOtherScreenRequested?.Invoke(this, System.EventArgs.Empty);
+    public void RequestMoveToCenter() => MoveToCenterRequested?.Invoke(this, System.EventArgs.Empty);
 }
 
 /// <summary>embedded 3D model viewer (CaveView.js in a NativeWebView).</summary>

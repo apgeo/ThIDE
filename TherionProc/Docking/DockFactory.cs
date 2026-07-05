@@ -168,6 +168,73 @@ public sealed class DockFactory : Factory
         }
     }
 
+    // ---- map-viewer window controls (#7) ------------------------------------
+
+    /// <summary>The float host window currently containing <paramref name="tool"/>, or null if docked.</summary>
+    private Avalonia.Controls.Window? HostWindowOf(IDockable tool)
+    {
+        if (_rootDock?.Windows is not { } windows) return null;
+        foreach (var w in windows)
+            if (w.Layout is { } layout && ContainsRef(layout, tool) && w.Host is Avalonia.Controls.Window win)
+                return win;
+        return null;
+    }
+
+    /// <summary>Ensures <paramref name="tool"/> is torn off into its own float window; returns it.</summary>
+    private Avalonia.Controls.Window? EnsureFloating(IDockable tool)
+    {
+        var win = HostWindowOf(tool);
+        if (win is not null) return win;
+        try { FloatDockable(tool); } catch { return null; }
+        return HostWindowOf(tool);
+    }
+
+    /// <summary>Toggles a full-screen float window for <paramref name="tool"/> (#7).</summary>
+    public void ToggleToolFullScreen(IDockable tool)
+    {
+        var win = EnsureFloating(tool);
+        if (win is null) return;
+        win.WindowState = win.WindowState == Avalonia.Controls.WindowState.FullScreen
+            ? Avalonia.Controls.WindowState.Normal
+            : Avalonia.Controls.WindowState.FullScreen;
+        win.Activate();
+    }
+
+    /// <summary>
+    /// Floats <paramref name="tool"/> onto a different monitor and maximizes it there (#7). Returns
+    /// false when only one screen is available (the caller can notify the user).
+    /// </summary>
+    public bool FloatToolOnOtherScreen(IDockable tool)
+    {
+        var win = EnsureFloating(tool);
+        if (win?.Screens is not { } screens || screens.ScreenCount < 2) return false;
+        var current = screens.ScreenFromWindow(win) ?? screens.Primary;
+        var other = screens.All.FirstOrDefault(s => !ReferenceEquals(s, current)) ?? screens.All.FirstOrDefault();
+        if (other is null) return false;
+        // Normalize first, drop the window onto the target screen, then maximize on it.
+        win.WindowState = Avalonia.Controls.WindowState.Normal;
+        win.Position = other.WorkingArea.Position;
+        win.WindowState = Avalonia.Controls.WindowState.Maximized;
+        win.Activate();
+        return true;
+    }
+
+    /// <summary>Moves <paramref name="tool"/> into the central document well if it isn't already there (#7).</summary>
+    public void MoveToolToDocuments(IDockable tool)
+    {
+        if (_rootDock is null || _documentDock is null) return;
+        try
+        {
+            if (ReferenceEquals(tool.Owner, _documentDock)) { SetActiveDockable(tool); return; }
+            if (ContainsRef(_rootDock, tool) || HostWindowOf(tool) is not null)
+                RemoveDockable(tool, collapse: false);
+            AddDockable(_documentDock, tool);
+            SetActiveDockable(tool);
+            SetFocusedDockable(_rootDock, tool);
+        }
+        catch { /* best-effort move */ }
+    }
+
     // Dock-tree persistence is DISABLED: Dock.Avalonia 12 does not render content for a
     // deserialized-and-reswapped layout tree — the tab strips appear but the content controls
     // never instantiate their views, leaving every panel blank. Building the default layout

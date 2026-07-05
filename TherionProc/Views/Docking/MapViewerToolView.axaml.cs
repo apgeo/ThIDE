@@ -1,15 +1,37 @@
+using System;
 using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
+using Avalonia.Threading;
+using TherionProc.ViewModels;
 using TherionProc.ViewModels.Docking;
 
 namespace TherionProc.Views.Docking;
 
 public partial class MapViewerToolView : UserControl
 {
-    public MapViewerToolView() => InitializeComponent();
+    private MapViewerViewModel? _map;
+
+    public MapViewerToolView()
+    {
+        InitializeComponent();
+        DataContextChanged += OnDataContextChanged;
+    }
+
+    // Rewire the ImageLoaded subscription whenever the bound VM changes so a freshly rendered
+    // page auto-fits to the window (#4/#6).
+    private void OnDataContextChanged(object? sender, EventArgs e)
+    {
+        if (_map is not null) _map.ImageLoaded -= OnImageLoaded;
+        _map = (DataContext as MapViewerToolViewModel)?.Map;
+        if (_map is not null) _map.ImageLoaded += OnImageLoaded;
+    }
+
+    // A new image arrived: shrink-to-fit once layout has run (viewport size is known then).
+    private void OnImageLoaded(object? sender, EventArgs e) =>
+        Dispatcher.UIThread.Post(() => FitToViewport(shrinkOnly: true), DispatcherPriority.Loaded);
 
     private async void OnOpen(object? sender, RoutedEventArgs e)
     {
@@ -30,10 +52,25 @@ public partial class MapViewerToolView : UserControl
         if (files.FirstOrDefault()?.TryGetLocalPath() is { } path) vm.Map.Load(path);
     }
 
-    // Fit the current page to the visible viewport: scale so the whole image fits, minus the
-    // 12px margin around it on each side. Uses the bitmap's DIP size (what the Image shows at
-    // Stretch="None"), which the LayoutTransform then scales by Zoom.
-    private void OnFitPage(object? sender, RoutedEventArgs e)
+    // Window controls (#7): forwarded to the shell, which drives the DockFactory so they work
+    // whether the panel is docked or already floating.
+    private void OnFullScreen(object? sender, RoutedEventArgs e) =>
+        (DataContext as MapViewerToolViewModel)?.RequestFullScreen();
+
+    private void OnFloatOtherScreen(object? sender, RoutedEventArgs e) =>
+        (DataContext as MapViewerToolViewModel)?.RequestFloatOtherScreen();
+
+    private void OnMoveToCenter(object? sender, RoutedEventArgs e) =>
+        (DataContext as MapViewerToolViewModel)?.RequestMoveToCenter();
+
+    // "Fit" button (#4): shrink the page so it fits the visible viewport, keeping aspect ratio,
+    // but never enlarge past 100%. Same routine drives the auto-fit on open.
+    private void OnFit(object? sender, RoutedEventArgs e) => FitToViewport(shrinkOnly: true);
+
+    // Scale so the whole image fits, minus the 12px margin around it on each side. Uses the
+    // bitmap's DIP size (what the Image shows at Stretch="None"), which the LayoutTransform then
+    // scales by Zoom. With shrinkOnly, the result is capped at 1.0 so a small map is not blown up.
+    private void FitToViewport(bool shrinkOnly)
     {
         if (DataContext is not MapViewerToolViewModel vm || vm.Map.Image is not { } bmp) return;
         var scroll = this.FindControl<ScrollViewer>("Scroll");
@@ -44,6 +81,7 @@ public partial class MapViewerToolView : UserControl
         var size = bmp.Size;
         if (availW <= 0 || availH <= 0 || size.Width <= 0 || size.Height <= 0) return;
         double fit = System.Math.Min(availW / size.Width, availH / size.Height);
+        if (shrinkOnly) fit = System.Math.Min(1.0, fit);
         vm.Map.Zoom = System.Math.Clamp(System.Math.Round(fit, 3), 0.1, 8.0);
     }
 
