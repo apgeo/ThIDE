@@ -132,7 +132,7 @@
   <data name="Common_GoToDefinition" xml:space="preserve"><value>Go to Definition</value></data>
   <data name="Common_FindReferences" xml:space="preserve"><value>Find References</value></data>
   <data name="Common_RenameSymbol" xml:space="preserve"><value>Rename Symbol…</value></data>
-  <!-- Structural Geology (STRUCT-01) -->
+  <!-- Structural Geology -->
   <data name="Struct_CheckAllStation" xml:space="preserve"><value>Check/uncheck all measurements from this station</value></data>
   <data name="Struct_Prev" xml:space="preserve"><value>◀ Prev</value></data>
   <data name="Struct_PrevTip" xml:space="preserve"><value>Previous step</value></data>
@@ -264,7 +264,7 @@
   <data name="Proj_Meta_Intro" xml:space="preserve"><value>Workspace metadata (stored in a sidecar, not in the .th source).</value></data>
   <data name="Proj_Save" xml:space="preserve"><value>Save</value></data>
   <data name="Proj_Reload" xml:space="preserve"><value>Reload</value></data>
-  <!-- Object Browser entity tabs (DATA-03) -->
+  <!-- Object Browser entity tabs-->
   <data name="OB_Tab_Fixes" xml:space="preserve"><value>Fixes</value></data>
   <data name="OB_Tab_Equates" xml:space="preserve"><value>Equates</value></data>
   <data name="OB_Tab_Maps" xml:space="preserve"><value>Maps</value></data>
@@ -454,17 +454,17 @@
   <data name="Pref_AutoRecalcLeadsHelp" xml:space="preserve"><value>Refreshes the Workspace ▸ Leads register live from the unsaved editor buffers (debounced), not only on save. On by default — turn off on very large workspaces. The Rescan button always works.</value></data>
   <data name="Pref_Visualization" xml:space="preserve"><value>Visualization</value></data>
   <data name="Pref_VisualizationHelp" xml:space="preserve"><value>Enable or disable the read-only preview features. Disabling one hides its panel and menu (reset the layout or restart to remove an open panel).</value></data>
-  <data name="Pref_Vis_LivePreview" xml:space="preserve"><value>Mainline centreline preview (plan/elevation sketch from the model, no compile) — VIS-02</value></data>
-  <data name="Pref_Vis_MapViewer" xml:space="preserve"><value>In-app map viewer (PNG / SVG / PDF) — VIS-05</value></data>
-  <data name="Pref_Vis_MapAuto" xml:space="preserve"><value>Auto-show the rendered map after a build — VIS-03</value></data>
-  <data name="Pref_Vis_Model3D" xml:space="preserve"><value>Embedded 3D model viewer (CaveView.js in a native web view) — VIS-01</value></data>
-  <data name="Pref_Vis_Model3DAuto" xml:space="preserve"><value>Auto-show the 3D model (.lox / .3d) after a build — VIS-01</value></data>
-  <data name="Pref_Vis_Structural" xml:space="preserve"><value>Structural Geology module (plane strike/dip calculator) — STRUCT-01</value></data>
+  <data name="Pref_Vis_LivePreview" xml:space="preserve"><value>Mainline centreline preview (plan/elevation sketch from the model, no compile)</value></data>
+  <data name="Pref_Vis_MapViewer" xml:space="preserve"><value>In-app map viewer (PNG / SVG / PDF)</value></data>
+  <data name="Pref_Vis_MapAuto" xml:space="preserve"><value>Auto-show the rendered map after a build</value></data>
+  <data name="Pref_Vis_Model3D" xml:space="preserve"><value>Embedded 3D model viewer (CaveView.js in a native web view)</value></data>
+  <data name="Pref_Vis_Model3DAuto" xml:space="preserve"><value>Auto-show the 3D model (.lox / .3d) after a build</value></data>
+  <data name="Pref_Vis_Structural" xml:space="preserve"><value>Structural Geology module (plane strike/dip calculator)</value></data>
   <data name="Pref_SurveyAnalytics" xml:space="preserve"><value>Survey analytics</value></data>
   <data name="Pref_SurveyAnalyticsHelp" xml:space="preserve"><value>Disable on very large workspaces to skip the extra processing on each graph rebuild.</value></data>
   <data name="Pref_Analytics_Project" xml:space="preserve"><value>Statistics, charts, team, entrances &amp; data-quality</value></data>
-  <data name="Pref_Analytics_ObjectBrowser" xml:space="preserve"><value>Object Browser entity tabs (surveys, fixes, equates, scraps, maps, points, lines, areas) — DATA-03</value></data>
-  <data name="Pref_Analytics_Todo" xml:space="preserve"><value>TODO / FIXME / QM comment scan — NOTE-01</value></data>
+  <data name="Pref_Analytics_ObjectBrowser" xml:space="preserve"><value>Object Browser entity tabs (surveys, fixes, equates, scraps, maps, points, lines, areas)</value></data>
+  <data name="Pref_Analytics_Todo" xml:space="preserve"><value>TODO / FIXME / QM comment scan</value></data>
   <data name="Pref_Analytics_Media" xml:space="preserve"><value>Media manager scan (referenced .xvi + on-disk orphans)</value></data>
   <data name="Pref_Diagnostics" xml:space="preserve"><value>Diagnostics</value></data>
   <data name="Pref_Diag_LocalFixGrounds" xml:space="preserve"><value>Treat a local fix (no cs) as grounding a disconnected survey</value></data>

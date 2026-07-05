@@ -132,7 +132,7 @@
   <data name="Common_GoToDefinition" xml:space="preserve"><value>Salt la definiție</value></data>
   <data name="Common_FindReferences" xml:space="preserve"><value>Găsește referințe</value></data>
   <data name="Common_RenameSymbol" xml:space="preserve"><value>Redenumește simbolul…</value></data>
-  <!-- Structural Geology (STRUCT-01) -->
+  <!-- Structural Geology -->
   <data name="Struct_CheckAllStation" xml:space="preserve"><value>Bifează/debifează toate măsurătorile din această stație</value></data>
   <data name="Struct_Prev" xml:space="preserve"><value>◀ Înapoi</value></data>
   <data name="Struct_PrevTip" xml:space="preserve"><value>Pasul anterior</value></data>
@@ -264,7 +264,7 @@
   <data name="Proj_Meta_Intro" xml:space="preserve"><value>Metadate proiect (stocate într-un fișier separat, nu în sursa .th).</value></data>
   <data name="Proj_Save" xml:space="preserve"><value>Salvează</value></data>
   <data name="Proj_Reload" xml:space="preserve"><value>Reîncarcă</value></data>
-  <!-- Object Browser entity tabs (DATA-03) -->
+  <!-- Object Browser entity tabs -->
   <data name="OB_Tab_Fixes" xml:space="preserve"><value>Puncte fixe</value></data>
   <data name="OB_Tab_Equates" xml:space="preserve"><value>Echivalări</value></data>
   <data name="OB_Tab_Maps" xml:space="preserve"><value>Hărți</value></data>
@@ -454,18 +454,18 @@
   <data name="Pref_AutoRecalcLeadsHelp" xml:space="preserve"><value>Reîmprospătează registrul Proiect ▸ Indicii în timp real din conținutul nesalvat al editorului (cu temporizare), nu doar la salvare. Activat implicit — dezactivați pentru proiecte foarte mari. Butonul Rescanează funcționează întotdeauna.</value></data>
   <data name="Pref_Visualization" xml:space="preserve"><value>Vizualizare</value></data>
   <data name="Pref_VisualizationHelp" xml:space="preserve"><value>Activează sau dezactivează funcțiile de previzualizare doar-citire. Dezactivarea uneia îi ascunde panoul și meniul (resetați aranjamentul sau reporniți pentru a elimina un panou deschis).</value></data>
-  <data name="Pref_Vis_LivePreview" xml:space="preserve"><value>Previzualizare principală a liniei centrale (schiță plan/elevație din model, fără compilare) — VIS-02</value></data>
-  <data name="Pref_Vis_MapViewer" xml:space="preserve"><value>Vizualizator de hărți în aplicație (PNG / SVG / PDF) — VIS-05</value></data>
-  <data name="Pref_Vis_MapAuto" xml:space="preserve"><value>Afișează automat harta randată după o compilare — VIS-03</value></data>
-  <data name="Pref_Vis_Model3D" xml:space="preserve"><value>Vizualizator 3D încorporat (CaveView.js într-o vizualizare web nativă) — VIS-01</value></data>
-  <data name="Pref_Vis_Model3DAuto" xml:space="preserve"><value>Afișează automat modelul 3D (.lox / .3d) după o compilare — VIS-01</value></data>
-  <data name="Pref_Vis_Structural" xml:space="preserve"><value>Modul Geologie structurală (calculator de direcție/înclinare a planelor) — STRUCT-01</value></data>
+  <data name="Pref_Vis_LivePreview" xml:space="preserve"><value>Previzualizare principală a liniei centrale (schiță plan/elevație din model, fără compilare)</value></data>
+  <data name="Pref_Vis_MapViewer" xml:space="preserve"><value>Vizualizator de hărți în aplicație (PNG / SVG / PDF)</value></data>
+  <data name="Pref_Vis_MapAuto" xml:space="preserve"><value>Afișează automat harta randată după o compilare</value></data>
+  <data name="Pref_Vis_Model3D" xml:space="preserve"><value>Vizualizator 3D încorporat (CaveView.js într-o vizualizare web nativă)</value></data>
+  <data name="Pref_Vis_Model3DAuto" xml:space="preserve"><value>Afișează automat modelul 3D (.lox / .3d) după o compilare</value></data>
+  <data name="Pref_Vis_Structural" xml:space="preserve"><value>Modul Geologie structurală (calculator de direcție/înclinare a planelor)</value></data>
   <data name="Pref_SurveyAnalytics" xml:space="preserve"><value>Analiză topografică</value></data>
   <data name="Pref_SurveyAnalyticsHelp" xml:space="preserve"><value>Dezactivați pe proiecte foarte mari pentru a omite procesarea suplimentară la fiecare reconstruire a grafului.</value></data>
-  <data name="Pref_Analytics_Project" xml:space="preserve"><value>Statistici de proiect, grafice, echipă, intrări &amp; calitatea datelor — DATA-01/02/05/06/08</value></data>
-  <data name="Pref_Analytics_ObjectBrowser" xml:space="preserve"><value>Filele de entități din Navigator obiecte (topografii, puncte fixe, echivalări, schițe, hărți, puncte, linii, suprafețe) — DATA-03</value></data>
-  <data name="Pref_Analytics_Todo" xml:space="preserve"><value>Scanare comentarii TODO / FIXME / QM — NOTE-01</value></data>
-  <data name="Pref_Analytics_Media" xml:space="preserve"><value>Scanare manager media (.xvi referențiate + orfane pe disc) — MEDIA-02/03</value></data>
+  <data name="Pref_Analytics_Project" xml:space="preserve"><value>Statistici de proiect, grafice, echipă, intrări &amp; calitatea datelor</value></data>
+  <data name="Pref_Analytics_ObjectBrowser" xml:space="preserve"><value>Filele de entități din Navigator obiecte (topografii, puncte fixe, echivalări, schițe, hărți, puncte, linii, suprafețe)</value></data>
+  <data name="Pref_Analytics_Todo" xml:space="preserve"><value>Scanare comentarii TODO / FIXME / QM</value></data>
+  <data name="Pref_Analytics_Media" xml:space="preserve"><value>Scanare manager media (.xvi referențiate + orfane pe disc)</value></data>
   <data name="Pref_Diagnostics" xml:space="preserve"><value>Diagnostice</value></data>
   <data name="Pref_Diag_LocalFixGrounds" xml:space="preserve"><value>Un fix local (fără cs) ancorează o topografie deconectată</value></data>
   <data name="Pref_Diag_LocalFixGroundsHelp" xml:space="preserve"><value>Când este dezactivat (implicit), o porțiune deconectată ancorată doar printr-un fix simplu (ex. fix 0 0 0 fără sistem de coordonate) este totuși semnalată. Activați pentru a considera orice fix ca ancorare și a suprima avertizarea „topografie deconectată” (TH_SEM_015) pentru acele porțiuni.</value></data>
