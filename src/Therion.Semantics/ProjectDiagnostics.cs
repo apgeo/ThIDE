@@ -38,6 +38,12 @@ public sealed class ProjectDiagnosticOptions
     public bool EnableDangling { get; init; } = true;
     /// <summary>Flag disconnected, ungrounded survey pieces (floating mainlines).</summary>
     public bool EnableDisconnection { get; init; } = true;
+    /// <summary>
+    /// When true, a bare <c>fix</c> (one made without a <c>cs</c>) also grounds a piece and so
+    /// suppresses its disconnection warning. Off by default: a local <c>fix 0 0 0</c> is only a
+    /// placeholder origin, not an absolute anchor, so by default it does not exempt the piece.
+    /// </summary>
+    public bool LocalFixGrounds { get; init; }
 
     public static ProjectDiagnosticOptions Default { get; } = new();
 }
@@ -319,8 +325,10 @@ public static class ProjectDiagnostics
                 if (!string.IsNullOrEmpty(st.DeclarationSpan.FilePath))
                     Files(rep).Add(st.DeclarationSpan.FilePath);
                 // A georeferenced fix (one made under a `cs`) grounds the piece to absolute coordinates;
-                // a bare `fix` with no coordinate system is only a local placeholder and does not.
-                if (st.Kind == StationDeclarationKind.Fix && !string.IsNullOrWhiteSpace(st.Cs))
+                // a bare `fix` with no coordinate system is only a local placeholder — it grounds the
+                // piece only when the caller opts in via LocalFixGrounds.
+                if (st.Kind == StationDeclarationKind.Fix &&
+                    (o.LocalFixGrounds || !string.IsNullOrWhiteSpace(st.Cs)))
                     groundedReps.Add(rep);
             }
 

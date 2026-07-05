@@ -23,6 +23,9 @@ public class ProjectDiagnosticsTests
     private static bool Has(WorkspaceSemanticModel ws, string code) =>
         ProjectDiagnostics.Analyze(ws).Any(d => d.Code == code);
 
+    private static bool Has(WorkspaceSemanticModel ws, string code, ProjectDiagnosticOptions options) =>
+        ProjectDiagnostics.Analyze(ws, options).Any(d => d.Code == code);
+
     private static Therion.Core.Diagnostic[] OfCode(WorkspaceSemanticModel ws, string code) =>
         ProjectDiagnostics.Analyze(ws).Where(d => d.Code == code).ToArray();
 
@@ -240,26 +243,36 @@ public class ProjectDiagnosticsTests
     [Fact]
     public void Local_fix_without_a_cs_does_not_ground_a_detached_piece()
     {
-        // A bare `fix` (no `cs`) is only a local placeholder — the detached piece still floats.
-        var ws = Ws(("/p/a.th", """
-            survey a
-              centreline
-                data normal from to length compass clino
-                1 2 5 0 0
-                2 3 5 0 0
-                3 4 5 0 0
-              endcentreline
-            endsurvey
-            survey b
-              centreline
-                fix 10 0 0 0
-                data normal from to length compass clino
-                10 11 5 0 0
-              endcentreline
-            endsurvey
-            """));
-        Assert.True(Has(ws, SemanticDiagnosticCodes.DisconnectedSurvey));
+        // By default a bare `fix` (no `cs`) is only a local placeholder — the detached piece still floats.
+        Assert.True(Has(LocalFixWs(), SemanticDiagnosticCodes.DisconnectedSurvey));
     }
+
+    [Fact]
+    public void Local_fix_grounds_a_detached_piece_when_the_option_is_enabled()
+    {
+        // With LocalFixGrounds on, a bare `fix` counts as grounding and suppresses the warning.
+        var opts = new ProjectDiagnosticOptions { LocalFixGrounds = true };
+        Assert.False(Has(LocalFixWs(), SemanticDiagnosticCodes.DisconnectedSurvey, opts));
+    }
+
+    // A main piece plus a detached piece 'b' anchored ONLY by a bare `fix` (no cs).
+    private static WorkspaceSemanticModel LocalFixWs() => Ws(("/p/a.th", """
+        survey a
+          centreline
+            data normal from to length compass clino
+            1 2 5 0 0
+            2 3 5 0 0
+            3 4 5 0 0
+          endcentreline
+        endsurvey
+        survey b
+          centreline
+            fix 10 0 0 0
+            data normal from to length compass clino
+            10 11 5 0 0
+          endcentreline
+        endsurvey
+        """));
 
     [Fact]
     public void Lone_fixed_reference_station_is_not_reported_as_a_mainline()

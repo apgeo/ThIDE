@@ -8,12 +8,15 @@ using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Therion.Core;
 using Therion.Semantics;
 using Therion.Syntax;
+using TherionProc.Resources;
 using TherionProc.Services;
 
 namespace TherionProc.ViewModels;
@@ -147,25 +150,52 @@ public sealed partial class ProjectDashboardViewModel : ObservableObject
             EntrancesText = $"{t.EntranceCount} entrances · {t.FixedCount} fixed points";
             int errors = model.Diagnostics.Count(d => d.Severity == DiagnosticSeverity.Error);
             int warnings = model.Diagnostics.Count(d => d.Severity == DiagnosticSeverity.Warning);
-            DiagnosticsText = errors == 0 && warnings == 0 ? "No diagnostics" : $"{errors} errors · {warnings} warnings";
+            _semanticDiagnostics = errors == 0 && warnings == 0 ? "No diagnostics" : $"{errors} errors · {warnings} warnings";
         }
         else
         {
-            SurveySummary = StationsText = LengthText = DepthText = EntrancesText = DiagnosticsText = "—";
+            SurveySummary = StationsText = LengthText = DepthText = EntrancesText = "—";
+            _semanticDiagnostics = "—";
         }
         UpdateBuildStatus();
     }
 
+    // The semantic-diagnostics portion of DiagnosticsText; the last build error (if any) is appended
+    // in ComposeDiagnostics so both the model diagnostics and the compiler error are visible.
+    private string _semanticDiagnostics = "—";
+
     private void UpdateBuildStatus()
     {
+        var err = Build?.LastError ?? string.Empty;
         if (Build is not { HasBuildResult: true })
-        {
             BuildStatus = "Never built this session";
-            return;
+        else if (Build.LastBuildSucceeded)
+            BuildStatus = Build.LastBuildHasWarnings
+                ? $"Last build succeeded ({Build.LastBuildWarningCount} warnings)"
+                : "Last build succeeded";
+        else
+            BuildStatus = err.Length > 0 ? $"Last build failed — {FirstLine(err)}" : "Last build failed";
+        ComposeDiagnostics();
+    }
+
+    private void ComposeDiagnostics()
+    {
+        var err = Build?.LastError ?? string.Empty;
+        DiagnosticsText = Build is { HasBuildResult: true, LastBuildSucceeded: false } && err.Length > 0
+            ? $"{_semanticDiagnostics} · last build error: {FirstLine(err)}"
+            : _semanticDiagnostics;
+    }
+
+    /// <summary>The first non-empty line of a multi-line error, capped for a one-line dashboard field.</summary>
+    private static string FirstLine(string text)
+    {
+        foreach (var raw in text.Split('\n'))
+        {
+            var line = raw.Trim();
+            if (line.Length == 0) continue;
+            return line.Length > 140 ? line[..139] + "…" : line;
         }
-        BuildStatus = Build.LastBuildSucceeded
-            ? Build.LastBuildHasWarnings ? $"Last build succeeded ({Build.LastBuildWarningCount} warnings)" : "Last build succeeded"
-            : "Last build failed";
+        return string.Empty;
     }
 
     private static string CountFiles(string? root)
@@ -205,13 +235,21 @@ public sealed partial class ProjectAuditViewModel : ObservableObject
 {
     private readonly IWorkspaceSession? _session;
     private readonly IDocumentService? _documents;
+    private CancellationTokenSource? _cts;
 
     public ObservableCollection<AuditItem> OrphanFiles { get; } = new();
     public ObservableCollection<AuditItem> UnreferencedScraps { get; } = new();
     public ObservableCollection<AuditItem> UnexportedMaps { get; } = new();
 
     [ObservableProperty] private bool _isClean;
-    [ObservableProperty] private string _summary = "—";
+    [ObservableProperty] private string _summary = string.Empty;
+
+    /// <summary>False until the audit has been run for the current project — gates the result
+    /// lists behind a placeholder and flips the button label Calculate → Recalculate.</summary>
+    [ObservableProperty] private bool _hasCalculated;
+
+    /// <summary>True while the audit runs on a background thread (disables the button).</summary>
+    [ObservableProperty] private bool _isCalculating;
 
     public ProjectAuditViewModel() { } // design-time
 
@@ -219,12 +257,14 @@ public sealed partial class ProjectAuditViewModel : ObservableObject
     {
         _session = session;
         _documents = documents;
-        _session.Changed += (_, _) => ProjectFormat.OnUi(Rebuild);
-        _session.FileSystemChanged += (_, _) => ProjectFormat.OnUi(Rebuild);
-        Rebuild();
+        // Deliberately *not* computed on load / workspace change / thconfig switch: the orphan scan
+        // walks a source graph for every thconfig in the directory, which is too heavy to run
+        // eagerly. We only reset to the "click Calculate" placeholder on structural changes so stale
+        // results from another project (or a previous entry config) never linger silently.
+        _session.RootChanged += (_, _) => ProjectFormat.OnUi(ResetToPlaceholder);
+        _session.Changed += (_, _) => ProjectFormat.OnUi(ResetToPlaceholder);
+        ResetToPlaceholder();
     }
-
-    [RelayCommand] private void Refresh() => Rebuild();
 
     [RelayCommand]
     private void Open(AuditItem? item)
@@ -234,26 +274,62 @@ public sealed partial class ProjectAuditViewModel : ObservableObject
         else if (!string.IsNullOrEmpty(item.FilePath)) _ = _documents?.OpenFileAsync(item.FilePath);
     }
 
-    private void Rebuild()
+    /// <summary>
+    /// Runs the (expensive) audit on demand, off the UI thread. See the class remarks for why it is
+    /// not automatic. Supersedes any in-flight run and no-ops if the project changes mid-scan.
+    /// </summary>
+    [RelayCommand]
+    private async Task Calculate()
     {
+        if (_session is null) return;
+
+        _cts?.Cancel();
+        _cts?.Dispose();
+        var cts = _cts = new CancellationTokenSource();
+        var ct = cts.Token;
+
+        IsCalculating = true;
+        Summary = Tr.Get("Proj_Audit_Calculating");
+
+        var model = _documents?.Workspace;
+        var root = _session.RootPath;
+        var entryPoints = CollectEntryPoints();
+        var activeThconfig = _session.ActiveThconfig?.FullPath;
+
+        try
+        {
+            var result = await Task.Run(
+                () => Compute(model, root, entryPoints, activeThconfig, ct), ct);
+            if (ct.IsCancellationRequested || !ReferenceEquals(_cts, cts)) return;
+
+            Replace(OrphanFiles, result.Orphans);
+            Replace(UnreferencedScraps, result.Scraps);
+            Replace(UnexportedMaps, result.Maps);
+            HasCalculated = true;
+            UpdateSummary();
+        }
+        catch (OperationCanceledException) { /* superseded or project changed */ }
+        finally
+        {
+            if (ReferenceEquals(_cts, cts)) IsCalculating = false;
+        }
+    }
+
+    // Wipes results back to the not-yet-calculated state (cheap) and cancels any running scan.
+    private void ResetToPlaceholder()
+    {
+        _cts?.Cancel();
         OrphanFiles.Clear();
         UnreferencedScraps.Clear();
         UnexportedMaps.Clear();
+        HasCalculated = false;
+        IsCalculating = false;
+        IsClean = false;
+        Summary = string.Empty;
+    }
 
-        var model = _documents?.Workspace;
-        FindOrphanFiles(model);
-        if (model is not null)
-        {
-            foreach (var id in ProjectStatistics.UnreferencedScraps(model))
-                UnreferencedScraps.Add(new AuditItem
-                {
-                    Title = id,
-                    Detail = "scrap not composed by any map",
-                    Span = model.ScrapsById.TryGetValue(id, out var s) ? s.DeclarationSpan : null,
-                });
-            FindUnexportedMaps(model);
-        }
-
+    private void UpdateSummary()
+    {
         int total = OrphanFiles.Count + UnreferencedScraps.Count + UnexportedMaps.Count;
         IsClean = total == 0;
         Summary = IsClean
@@ -261,44 +337,92 @@ public sealed partial class ProjectAuditViewModel : ObservableObject
             : $"{OrphanFiles.Count} orphan file(s) · {UnreferencedScraps.Count} unreferenced scrap(s) · {UnexportedMaps.Count} unexported map(s)";
     }
 
-    // Therion files on disk under the root not reachable from the active entry point's include graph.
-    private void FindOrphanFiles(WorkspaceSemanticModel? model)
+    // The thconfigs whose include graphs define what is "reachable": every thconfig under the root
+    // plus the active one (which may live outside the root). A file bound to *any* of these is not
+    // an orphan — the key correction over the old "active entry only" definition.
+    private IReadOnlyList<string> CollectEntryPoints()
     {
-        var root = _session?.RootPath;
-        if (string.IsNullOrEmpty(root) || !Directory.Exists(root)) return;
+        var list = new List<string>();
+        if (_session is null) return list;
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var c in _session.Candidates)
+            if (!c.IsExternal && seen.Add(c.FullPath)) list.Add(c.FullPath);
+        if (_session.ActiveThconfig is { } a && seen.Add(a.FullPath)) list.Add(a.FullPath);
+        return list;
+    }
 
-        var reachable = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var c in _session!.Candidates) reachable.Add(Path.GetFullPath(c.FullPath));
+    private static void Replace(ObservableCollection<AuditItem> target, List<AuditItem> items)
+    {
+        target.Clear();
+        foreach (var i in items) target.Add(i);
+    }
+
+    // ---- pure computation (background thread) --------------------------------
+
+    private sealed record AuditResult(List<AuditItem> Orphans, List<AuditItem> Scraps, List<AuditItem> Maps);
+
+    private static AuditResult Compute(WorkspaceSemanticModel? model, string? root,
+        IReadOnlyList<string> entryPoints, string? activeThconfig, CancellationToken ct)
+    {
+        var orphans = FindOrphanFiles(root, entryPoints, ct);
+        var scraps = new List<AuditItem>();
+        var maps = new List<AuditItem>();
         if (model is not null)
-            foreach (var (from, to) in model.FileGraphEdges) { reachable.Add(from); reachable.Add(to); }
+        {
+            foreach (var id in ProjectStatistics.UnreferencedScraps(model))
+            {
+                ct.ThrowIfCancellationRequested();
+                scraps.Add(new AuditItem
+                {
+                    Title = id,
+                    Detail = "scrap not composed by any map",
+                    Span = model.ScrapsById.TryGetValue(id, out var s) ? s.DeclarationSpan : null,
+                });
+            }
+            maps.AddRange(FindUnexportedMaps(model, activeThconfig, ct));
+        }
+        return new AuditResult(orphans, scraps, maps);
+    }
+
+    // Therion files on disk under the root bound to *no* thconfig in the workspace — reachable from
+    // none of their source/input graphs, not merely absent from the active entry point's graph.
+    private static List<AuditItem> FindOrphanFiles(string? root, IReadOnlyList<string> entryPoints, CancellationToken ct)
+    {
+        var list = new List<AuditItem>();
+        if (string.IsNullOrEmpty(root) || !Directory.Exists(root)) return list;
+
+        var reachable = WorkspaceReachability.ReachableFrom(entryPoints, ct);
 
         try
         {
             var opts = new EnumerationOptions { RecurseSubdirectories = true, MaxRecursionDepth = 6, IgnoreInaccessible = true };
             foreach (var f in Directory.EnumerateFiles(root, "*.*", opts))
             {
+                ct.ThrowIfCancellationRequested();
                 var ext = Path.GetExtension(f).ToLowerInvariant();
                 if (ext is not (".th" or ".th2")) continue;
                 var full = Path.GetFullPath(f);
                 if (reachable.Contains(full)) continue;
-                OrphanFiles.Add(new AuditItem
+                list.Add(new AuditItem
                 {
                     Title = Path.GetFileName(f),
                     Detail = Path.GetDirectoryName(f) ?? string.Empty,
                     FilePath = full,
                 });
-                if (OrphanFiles.Count >= 500) break; // guard pathological trees
+                if (list.Count >= 500) break; // guard pathological trees
             }
         }
+        catch (OperationCanceledException) { throw; }
         catch { /* best effort */ }
+        return list;
     }
 
     // Declared maps not picked by any `select` in the active thconfig (only when selects exist).
-    private void FindUnexportedMaps(WorkspaceSemanticModel model)
+    private static List<AuditItem> FindUnexportedMaps(WorkspaceSemanticModel model, string? entry, CancellationToken ct)
     {
-        if (model.MapsById.Count == 0) return;
-        var entry = _session?.ActiveThconfig?.FullPath;
-        if (string.IsNullOrEmpty(entry) || !File.Exists(entry)) return;
+        var list = new List<AuditItem>();
+        if (model.MapsById.Count == 0) return list;
+        if (string.IsNullOrEmpty(entry) || !File.Exists(entry)) return list;
 
         var selected = new HashSet<string>(StringComparer.Ordinal);
         try
@@ -309,17 +433,21 @@ public sealed partial class ProjectAuditViewModel : ObservableObject
                     if (node is SelectCommand { IsUnselect: false } sel && !string.IsNullOrEmpty(sel.Object))
                         selected.Add(MapIdOf(sel.Object));
         }
-        catch { return; }
-        if (selected.Count == 0) return; // nothing selected explicitly → don't flag everything
+        catch { return list; }
+        if (selected.Count == 0) return list; // nothing selected explicitly → don't flag everything
 
         foreach (var (id, map) in model.MapsById)
+        {
+            ct.ThrowIfCancellationRequested();
             if (!selected.Contains(id))
-                UnexportedMaps.Add(new AuditItem
+                list.Add(new AuditItem
                 {
                     Title = id,
                     Detail = "map declared but not selected for export",
                     Span = map.DeclarationSpan,
                 });
+        }
+        return list;
     }
 
     private static string MapIdOf(string selectObject)
@@ -353,6 +481,7 @@ public sealed partial class LeadsViewModel : ObservableObject
     private readonly IWorkspaceSession? _session;
     private readonly IDocumentService? _documents;
     private readonly ILeadStatusStore? _status;
+    private readonly IAppSettingsService? _settings;
 
     public ObservableCollection<LeadRow> Leads { get; } = new();
 
@@ -370,12 +499,21 @@ public sealed partial class LeadsViewModel : ObservableObject
 
     public LeadsViewModel() { } // design-time
 
-    public LeadsViewModel(IWorkspaceSession session, IDocumentService documents, ILeadStatusStore status)
+    public LeadsViewModel(IWorkspaceSession session, IDocumentService documents, ILeadStatusStore status,
+        IAppSettingsService? settings = null)
     {
         _session = session;
         _documents = documents;
         _status = status;
+        _settings = settings;
         _session.Changed += (_, _) => ProjectFormat.OnUi(Rebuild);
+        // Live recalc: when the graph is rebuilt from unsaved buffers as you type (debounced by the
+        // document service), refresh the register too — gated by the AutoRecalcLeads setting so it can
+        // be turned off on very large projects. The Rescan button (Refresh) always rebuilds regardless.
+        _session.BuffersRevalidated += (_, _) =>
+        {
+            if (_settings?.Current.AutoRecalcLeads ?? true) ProjectFormat.OnUi(Rebuild);
+        };
         Rebuild();
     }
 

@@ -205,16 +205,25 @@
             </DataGrid>
         </TabItem>
 
-        <!-- Orphan / dead-file audit -->
+        <!-- Orphan / dead-file audit — computed on demand (the orphan scan walks every thconfig's
+             source graph, so it is gated behind an explicit Calculate button, never run eagerly). -->
         <TabItem Header="{l:Loc Proj_Tab_Audit}">
             <DockPanel>
                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="8,6">
-                    <Button Content="{l:Loc Proj_Rescan}" Command="{Binding Audit.RefreshCommand}" />
+                    <Button Content="{l:Loc Proj_Audit_Calculate}" Command="{Binding Audit.CalculateCommand}"
+                            IsVisible="{Binding !Audit.HasCalculated}" IsEnabled="{Binding !Audit.IsCalculating}" />
+                    <Button Content="{l:Loc Proj_Audit_Recalculate}" Command="{Binding Audit.CalculateCommand}"
+                            IsVisible="{Binding Audit.HasCalculated}" IsEnabled="{Binding !Audit.IsCalculating}" />
                     <TextBlock Text="{Binding Audit.Summary}" Foreground="Gray" VerticalAlignment="Center"
                                TextTrimming="CharacterEllipsis" />
                 </StackPanel>
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="8,0,8,8">
+                        <!-- Shown until the user runs the audit for the first time / after a reset. -->
+                        <TextBlock Text="{l:Loc Proj_Audit_NotCalculated}" Foreground="Gray"
+                                   TextWrapping="Wrap" Margin="0,10,0,0"
+                                   IsVisible="{Binding !Audit.HasCalculated}" />
+                        <StackPanel IsVisible="{Binding Audit.HasCalculated}">
                         <TextBlock Classes="h" Text="{l:Loc Proj_Audit_Orphans}" />
                         <ItemsControl ItemsSource="{Binding Audit.OrphanFiles}">
                             <ItemsControl.ItemTemplate>
@@ -262,6 +271,7 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
+                        </StackPanel>
                     </StackPanel>
                 </ScrollViewer>
             </DockPanel>
@@ -276,6 +286,7 @@
                     <!-- Off by default: show only explicit station-flag leads; flip on to include the
                          heuristic "open leads" (comments, sketch points, dead-ends). -->
                     <ToggleSwitch Content="{l:Loc Proj_Lead_ShowAll}" IsChecked="{Binding Leads.ShowAllLeads, Mode=TwoWay}"
+                                  OnContent="{l:Loc Common_On}" OffContent="{l:Loc Common_Off}"
                                   Margin="0,0,12,0" VerticalAlignment="Center" />
                     <TextBlock Text="{Binding Leads.Summary}" Foreground="Gray" VerticalAlignment="Center" />
                 </WrapPanel>

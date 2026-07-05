@@ -145,6 +145,9 @@ public sealed record AppSettings
     /// <summary>Before compiling, ensure each export's output directory exists, creating it
     /// recursively when missing (Therion otherwise fails on a non-existent output folder). On by default.</summary>
     public bool EnsureOutputDirectories { get; init; } = true;
+    /// <summary>Before compiling, save any unsaved project files automatically instead of prompting.
+    /// Off by default — when off, the build prompts to save the involved unsaved files first.</summary>
+    public bool AutoSaveBeforeCompile { get; init; }
 
     // ---- auto-save ----
     /// <summary>When the editor auto-saves dirty files (off / after a delay / on focus loss).</summary>
@@ -161,8 +164,8 @@ public sealed record AppSettings
     public bool EnableInAppViewer { get; init; } = true;
     /// <summary>Open a clicked PDF output in the in-app map viewer instead of the external app. On by default.</summary>
     public bool OpenPdfInInternalViewer { get; init; } = true;
-    /// <summary>the embedded 3D model viewer (CaveView.js in a NativeWebView). Off by default.</summary>
-    public bool EnableModel3DViewer { get; init; }
+    /// <summary>the embedded 3D model viewer (CaveView.js in a NativeWebView). On by default.</summary>
+    public bool EnableModel3DViewer { get; init; } = true;
     /// <summary>auto-load the newest .lox/.3d into the 3D viewer after a build.</summary>
     public bool EnableModel3DAutoPreview { get; init; } = true;
     /// <summary>last-used 3D color-by shading mode (height / survey / length / inclination / single).</summary>
@@ -185,6 +188,19 @@ public sealed record AppSettings
     /// <summary>populate the Media manager (referenced .xvi scans + an on-disk orphan
     /// scan). Walks the project folder, so it can be disabled for big projects (default on).</summary>
     public bool EnableMediaScan { get; init; } = true;
+    /// <summary>Recompute the exploration-leads register live from the unsaved editor buffers as you
+    /// type (debounced), not only on save. On by default; turn off on very large projects — it
+    /// re-analyses the project on each typing pause. The Leads panel's Rescan button always works.</summary>
+    public bool AutoRecalcLeads { get; init; } = true;
+
+    // ---- diagnostics behaviour ----
+    /// <summary>
+    /// When true, a bare <c>fix</c> (no <c>cs</c>) counts as grounding a disconnected survey piece,
+    /// suppressing its "disconnected survey" warning (TH_SEM_015). Off by default: by default only a
+    /// georeferenced fix exempts a piece, so a piece anchored solely by a local <c>fix 0 0 0</c> is
+    /// still flagged as floating.
+    /// </summary>
+    public bool LocalFixGroundsDisconnected { get; init; }
 
     // ---- large-file guards (#10) ----
     /// <summary>Skip syntax highlighting + hover features above this line count.</summary>
@@ -238,11 +254,12 @@ public sealed record AppSettings
     public int IndentationSize { get; init; } = 2;
     public bool EditorWordWrap { get; init; }
     /// <summary>
-    /// When true, navigating to an identifier's declaration requires a double-click; a single
-    /// click just places the caret (normal text-editing). When false (default), a single click on
-    /// a navigable token jumps to its declaration like a hyperlink. Ctrl+click always navigates.
+    /// When true (default), navigating to an identifier's declaration requires a double-click; a
+    /// single click just places the caret (normal text-editing). When false, a single click on a
+    /// navigable token jumps to its declaration like a hyperlink. Ctrl+click always navigates, and
+    /// navigable identifiers are underlined on hover in either mode.
     /// </summary>
-    public bool RequireDoubleClickToNavigate { get; init; }
+    public bool RequireDoubleClickToNavigate { get; init; } = true;
 
     // ---- editor features ----
     /// <summary>Per-feature runtime toggles for the editor features (default: all on).</summary>

@@ -273,6 +273,10 @@
                               IsChecked="{Binding EnsureOutputDirectories}" />
                     <TextBlock Text="{l:Loc Pref_EnsureDirsHelp}"
                                Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
+                    <CheckBox Content="{l:Loc Pref_AutoSaveBeforeCompile}"
+                              IsChecked="{Binding AutoSaveBeforeCompile}" />
+                    <TextBlock Text="{l:Loc Pref_AutoSaveBeforeCompileHelp}"
+                               Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
                 </StackPanel>
 
                 <!-- Visualization: per-feature enable/disable. -->
@@ -307,6 +311,16 @@
                               IsChecked="{Binding EnableTodoScan}" />
                     <CheckBox Content="{l:Loc Pref_Analytics_Media}"
                               IsChecked="{Binding EnableMediaScan}" />
+                    <CheckBox Content="{l:Loc Pref_AutoRecalcLeads}"
+                              IsChecked="{Binding AutoRecalcLeads}" />
+                    <TextBlock Text="{l:Loc Pref_AutoRecalcLeadsHelp}"
+                               Foreground="Gray" FontSize="11" TextWrapping="Wrap" Margin="24,0,0,0" />
+
+                    <TextBlock Text="{l:Loc Pref_Diagnostics}" FontWeight="SemiBold" Margin="0,8,0,0" />
+                    <CheckBox Content="{l:Loc Pref_Diag_LocalFixGrounds}"
+                              IsChecked="{Binding LocalFixGroundsDisconnected}" />
+                    <TextBlock Text="{l:Loc Pref_Diag_LocalFixGroundsHelp}"
+                               Foreground="Gray" TextWrapping="Wrap" Margin="20,0,0,0" />
                 </StackPanel>
 
                 <!-- External Tools (moved here from the dockable Settings panel, #13) -->

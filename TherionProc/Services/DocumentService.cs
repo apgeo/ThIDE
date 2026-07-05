@@ -361,10 +361,13 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
 
     private CancellationTokenSource? _validateOnTypeCts;
 
-    /// <summary>Debounced trigger: re-validate the graph against the current unsaved buffers.</summary>
+    /// <summary>Debounced trigger: re-validate the graph against the current unsaved buffers.
+    /// Runs when either "validate on type" or "auto-recalc leads" is on — both need the graph rebuilt
+    /// from the live buffers; the resulting <c>BuffersRevalidated</c> refreshes diagnostics and leads.</summary>
     private void ScheduleValidateOnType()
     {
-        if (_settings?.Current.ValidateOnType != true) return;
+        var s = _settings?.Current;
+        if (s is null || (!s.ValidateOnType && !s.AutoRecalcLeads)) return;
         _validateOnTypeCts?.Cancel();
         var cts = _validateOnTypeCts = new CancellationTokenSource();
         _ = RunValidateOnTypeAsync(cts.Token);

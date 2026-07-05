@@ -561,6 +561,10 @@ public partial class MainWindowViewModel : ViewModelBase
                 OnPropertyChanged(nameof(StructuralGeologyEnabled));   // menu gate
                 ValidateOnType = _settings.Current.ValidateOnType;     // keep the toolbar toggle in sync with Preferences
                 RequireDoubleClickToNavigate = _settings.Current.RequireDoubleClickToNavigate;   // (Preferences ↔ toolbar)
+                // A diagnostics-behaviour change (e.g. local-fix grounding) must re-run the project
+                // analysis even though the workspace snapshot is unchanged — invalidate its cache.
+                _projDiagWorkspace = null;
+                RefreshDiagnostics();
                 ConfigureAutoSave();
             });
             ConfigureAutoSave();   // (apply persisted mode at startup)
@@ -1226,7 +1230,7 @@ public partial class MainWindowViewModel : ViewModelBase
     /// <summary>gates — drive the View-menu entries (hidden when the feature is off).</summary>
     public bool LivePreviewEnabled => _settings?.Current.EnableLivePreview ?? true;
     public bool MapViewerEnabled   => _settings?.Current.EnableInAppViewer ?? true;
-    public bool Model3DViewerEnabled => _settings?.Current.EnableModel3DViewer ?? false;
+    public bool Model3DViewerEnabled => _settings?.Current.EnableModel3DViewer ?? true;
     public bool StructuralGeologyEnabled => _settings?.Current.EnableStructuralGeology ?? false;
 
     /// <summary>gate (compile-time flag + runtime setting) — drives the Outline menu/toolbar entry.</summary>
@@ -1452,7 +1456,10 @@ public partial class MainWindowViewModel : ViewModelBase
         WorkspaceSemanticModel ws)
     {
         if (ReferenceEquals(_projDiagWorkspace, ws) && !_projDiagCache.IsDefault) return _projDiagCache;
-        try { _projDiagCache = Therion.Semantics.ProjectDiagnostics.Analyze(ws, null, System.IO.File.Exists); }
+        var opts = _settings?.Current is { } s
+            ? new Therion.Semantics.ProjectDiagnosticOptions { LocalFixGrounds = s.LocalFixGroundsDisconnected }
+            : null;
+        try { _projDiagCache = Therion.Semantics.ProjectDiagnostics.Analyze(ws, opts, System.IO.File.Exists); }
         catch { _projDiagCache = System.Collections.Immutable.ImmutableArray<Therion.Core.Diagnostic>.Empty; }
         _projDiagWorkspace = ws;
         return _projDiagCache;

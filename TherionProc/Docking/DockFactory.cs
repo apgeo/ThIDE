@@ -386,7 +386,7 @@ public sealed class DockFactory : Factory
         var s = _appSettings?.Current ?? TherionProc.Services.AppSettings.Default;
         if (s.EnableLivePreview) list.Add(_livePreview);
         if (s.EnableInAppViewer) list.Add(_mapViewer);
-        if (s.EnableModel3DViewer) list.Add(_model3dViewer);   // (off by default)
+        if (s.EnableModel3DViewer) list.Add(_model3dViewer);   // (on by default)
         // opens in the central document well on demand (ShowToolInDocuments), not the rail.
         return list.ToArray();
     }

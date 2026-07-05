@@ -84,6 +84,8 @@ public partial class PreferencesViewModel : ObservableObject
     [ObservableProperty] private bool _compileOnSave;
     /// <summary>Ensure (and recursively create) each export's output directory before compiling.</summary>
     [ObservableProperty] private bool _ensureOutputDirectories;
+    /// <summary>Save modified files automatically before compiling (otherwise prompt).</summary>
+    [ObservableProperty] private bool _autoSaveBeforeCompile;
 
     // ---- auto-save ----
     /// <summary>Auto-save mode index: 0 = Off, 1 = After delay, 2 = On focus loss.</summary>
@@ -102,6 +104,9 @@ public partial class PreferencesViewModel : ObservableObject
     [ObservableProperty] private bool _enableObjectBrowserEntities;
     [ObservableProperty] private bool _enableTodoScan;
     [ObservableProperty] private bool _enableMediaScan;
+    /// <summary>Recompute the Leads register live from the unsaved buffers as you type.</summary>
+    [ObservableProperty] private bool _autoRecalcLeads;
+    [ObservableProperty] private bool _localFixGroundsDisconnected;  // bare fix (no cs) suppresses TH_SEM_015
 
     // ---- editor behaviour ----
     [ObservableProperty] private bool _showRenamePreviewBeforeApply;
@@ -182,6 +187,7 @@ public partial class PreferencesViewModel : ObservableObject
         _openAllOutputsAfterBuild = s.OpenAllOutputsAfterBuild;
         _compileOnSave = s.CompileOnSave;
         _ensureOutputDirectories = s.EnsureOutputDirectories;
+        _autoSaveBeforeCompile = s.AutoSaveBeforeCompile;
         _autoSaveModeIndex = (int)s.AutoSave;
         _autoSaveDelaySeconds = s.AutoSaveDelaySeconds;
         _enableLivePreview = s.EnableLivePreview;
@@ -195,6 +201,8 @@ public partial class PreferencesViewModel : ObservableObject
         _enableObjectBrowserEntities = s.EnableObjectBrowserEntities;
         _enableTodoScan = s.EnableTodoScan;
         _enableMediaScan = s.EnableMediaScan;
+        _autoRecalcLeads = s.AutoRecalcLeads;
+        _localFixGroundsDisconnected = s.LocalFixGroundsDisconnected;
         _showRenamePreviewBeforeApply = s.ShowRenamePreviewBeforeApply;
         _maxHighlightLines = s.MaxHighlightLines;
         _maxHighlightKB = s.MaxHighlightKB;
@@ -335,6 +343,7 @@ public partial class PreferencesViewModel : ObservableObject
             OpenAllOutputsAfterBuild = OpenAllOutputsAfterBuild,
             CompileOnSave = CompileOnSave,
             EnsureOutputDirectories = EnsureOutputDirectories,
+            AutoSaveBeforeCompile = AutoSaveBeforeCompile,
             AutoSave = (AutoSaveMode)Math.Clamp(AutoSaveModeIndex, 0, 2),
             AutoSaveDelaySeconds = Math.Max(5, AutoSaveDelaySeconds),
             EnableLivePreview = EnableLivePreview,
@@ -348,6 +357,8 @@ public partial class PreferencesViewModel : ObservableObject
             EnableObjectBrowserEntities = EnableObjectBrowserEntities,
             EnableTodoScan = EnableTodoScan,
             EnableMediaScan = EnableMediaScan,
+            AutoRecalcLeads = AutoRecalcLeads,
+            LocalFixGroundsDisconnected = LocalFixGroundsDisconnected,
             ShowRenamePreviewBeforeApply = ShowRenamePreviewBeforeApply,
             MaxHighlightLines = MaxHighlightLines,
             MaxHighlightKB = MaxHighlightKB,
