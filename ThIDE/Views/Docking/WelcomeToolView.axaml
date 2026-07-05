@@ -1,0 +1,217 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ThIDE.ViewModels.Docking"
+             xmlns:l="using:ThIDE.Resources"
+             x:Class="ThIDE.Views.Docking.WelcomeToolView"
+             x:CompileBindings="False"
+             x:DataType="vm:WelcomeToolViewModel">
+    <UserControl.Styles>
+        <Style Selector="TextBlock.section">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="Gray" />
+            <Setter Property="Margin" Value="4,0,0,3" />
+        </Style>
+        <Style Selector="TextBlock.empty">
+            <Setter Property="Foreground" Value="#80808080" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontStyle" Value="Italic" />
+            <Setter Property="Margin" Value="10,2,0,0" />
+        </Style>
+
+        <!-- icon+text action link -->
+        <Style Selector="Button.link">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="8,7" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Button.link:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#22808080" />
+        </Style>
+
+        <!-- compact recent-list row -->
+        <Style Selector="Button.recent">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="CornerRadius" Value="5" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Button.recent:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#22808080" />
+        </Style>
+    </UserControl.Styles>
+
+    <ScrollViewer Background="#0A808080" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <Grid HorizontalAlignment="Center" MaxWidth="940" Margin="30,26"
+              RowDefinitions="Auto,Auto,Auto,Auto">
+
+            <!-- Header -->
+            <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="12" Margin="0,0,0,20">
+                <PathIcon Data="{DynamicResource Icon.Map}" Width="36" Height="36" Foreground="#1565C0"
+                          VerticalAlignment="Center" />
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Welcome.AppTitle}" FontSize="26" FontWeight="Bold" />
+                    <TextBlock Text="{Binding Welcome.AppVersion}" Foreground="Gray" FontSize="12" />
+                </StackPanel>
+            </StackPanel>
+
+            <!-- Body: Start/Learn (left) + Recent (right) -->
+            <Grid Grid.Row="1" ColumnDefinitions="*,36,1.25*">
+                <StackPanel Grid.Column="0" Spacing="4">
+                    <TextBlock Classes="section" Text="{l:Loc Welcome_Start}" />
+                    <Button Classes="link" Command="{Binding Welcome.NewFileCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <PathIcon Data="{DynamicResource Icon.File}" Width="16" Height="16" Foreground="#1565C0" />
+                            <TextBlock Text="{l:Loc Welcome_NewFile}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="link" Command="{Binding Welcome.OpenFileCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <PathIcon Data="{DynamicResource Icon.FolderOpen}" Width="16" Height="16" Foreground="#1565C0" />
+                            <TextBlock Text="{l:Loc Welcome_OpenFile}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="link" Command="{Binding Welcome.OpenFolderCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <PathIcon Data="{DynamicResource Icon.Folder}" Width="16" Height="16" Foreground="#1565C0" />
+                            <TextBlock Text="{l:Loc Welcome_OpenFolder}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+
+                    <TextBlock Classes="section" Text="{l:Loc Welcome_Learn}" Margin="4,16,0,3" />
+                    <Button Classes="link" Command="{Binding Welcome.OpenThbookCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <PathIcon Data="{DynamicResource Icon.Help}" Width="16" Height="16" Foreground="#1565C0" />
+                            <TextBlock Text="{l:Loc Welcome_ThBook}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2" Spacing="16">
+                    <!-- Recent thconfig -->
+                    <StackPanel Spacing="2">
+                        <TextBlock Classes="section" Text="{l:Loc Welcome_RecentThconfig}" />
+                        <ItemsControl ItemsSource="{Binding Welcome.RecentThconfigs}"
+                                      IsVisible="{Binding Welcome.HasRecentThconfigs}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Classes="recent" ToolTip.Tip="{Binding FullPath}"
+                                            Command="{Binding $parent[ItemsControl].DataContext.Welcome.OpenRecentThconfigCommand}"
+                                            CommandParameter="{Binding}">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <PathIcon Data="{DynamicResource Icon.Config}" Width="14" Height="14"
+                                                      Foreground="#2E7D32" VerticalAlignment="Center" />
+                                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                                            <TextBlock Text="{Binding Detail}" Foreground="Gray" FontSize="11"
+                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock Classes="empty" Text="{l:Loc Welcome_NoRecent}"
+                                   IsVisible="{Binding !Welcome.HasRecentThconfigs}" />
+                    </StackPanel>
+
+                    <!-- Recent workspace directories -->
+                    <StackPanel Spacing="2">
+                        <TextBlock Classes="section" Text="{l:Loc Welcome_RecentWorkspaces}" />
+                        <ItemsControl ItemsSource="{Binding Welcome.RecentWorkspaces}"
+                                      IsVisible="{Binding Welcome.HasRecentWorkspaces}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Classes="recent" ToolTip.Tip="{Binding FullPath}"
+                                            Command="{Binding $parent[ItemsControl].DataContext.Welcome.OpenRecentWorkspaceCommand}"
+                                            CommandParameter="{Binding}">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <PathIcon Data="{DynamicResource Icon.Folder}" Width="14" Height="14"
+                                                      Foreground="#E65100" VerticalAlignment="Center" />
+                                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                                            <TextBlock Text="{Binding Detail}" Foreground="Gray" FontSize="11"
+                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock Classes="empty" Text="{l:Loc Welcome_NoRecent}"
+                                   IsVisible="{Binding !Welcome.HasRecentWorkspaces}" />
+                    </StackPanel>
+
+                    <!-- Recent files (any type, excluding thconfig) -->
+                    <StackPanel Spacing="2">
+                        <TextBlock Classes="section" Text="{l:Loc Welcome_RecentFiles}" />
+                        <ItemsControl ItemsSource="{Binding Welcome.RecentFiles}"
+                                      IsVisible="{Binding Welcome.HasRecentFiles}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Classes="recent" ToolTip.Tip="{Binding FullPath}"
+                                            Command="{Binding $parent[ItemsControl].DataContext.Welcome.OpenRecentFileCommand}"
+                                            CommandParameter="{Binding}">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <PathIcon Data="{DynamicResource Icon.File}" Width="14" Height="14"
+                                                      Foreground="Gray" VerticalAlignment="Center" />
+                                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                                            <TextBlock Text="{Binding Detail}" Foreground="Gray" FontSize="11"
+                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock Classes="empty" Text="{l:Loc Welcome_NoRecent}"
+                                   IsVisible="{Binding !Welcome.HasRecentFiles}" />
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+
+            <!-- External tools status + settings shortcut -->
+            <Border Grid.Row="2" Margin="0,24,0,0" Padding="14,10" CornerRadius="8"
+                    BorderBrush="#33808080" BorderThickness="1" Background="#0F808080">
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Padding="6" VerticalAlignment="Center"
+                            Background="Transparent" BorderThickness="0" Cursor="Hand"
+                            Command="{Binding Welcome.OpenExternalToolsSettingsCommand}"
+                            ToolTip.Tip="{l:Loc Welcome_OpenToolSettings}">
+                        <PathIcon Data="{DynamicResource Icon.Config}" Width="16" Height="16" />
+                    </Button>
+                    <StackPanel Spacing="8">
+                        <TextBlock Classes="section" Text="{l:Loc Welcome_ExternalTools}" />
+                        <ItemsControl ItemsSource="{Binding Welcome.Tools}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,22,0" VerticalAlignment="Center">
+                                        <Panel Width="16" Height="16" VerticalAlignment="Center">
+                                            <PathIcon Data="{DynamicResource Icon.CheckCircle}" Width="16" Height="16"
+                                                      Foreground="#2E7D32" IsVisible="{Binding Detected}" />
+                                            <PathIcon Data="{DynamicResource Icon.ErrorCircle}" Width="16" Height="16"
+                                                      Foreground="#C62828" IsVisible="{Binding !Detected}" />
+                                        </Panel>
+                                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                                        <TextBlock Text="{Binding StatusText}" Foreground="Gray" FontSize="11"
+                                                   VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <!-- Show-on-startup -->
+            <CheckBox Grid.Row="3" Margin="0,16,2,0" HorizontalAlignment="Right" FontSize="12"
+                      Content="{l:Loc Welcome_ShowOnStartup}"
+                      IsChecked="{Binding Welcome.ShowOnStartup, Mode=TwoWay}" />
+        </Grid>
+    </ScrollViewer>
+</UserControl>
