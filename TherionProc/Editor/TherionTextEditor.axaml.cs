@@ -159,6 +159,10 @@ public partial class TherionTextEditor : UserControl
     private MenuItem? _peekMenuItem;                      // context-menu item (visibility gated)
     private MenuItem? _open3dMenuItem;                    // #5: "Open in 3D" (shown for station/survey refs)
     private string? _open3dName;                          // the station/survey under the right-click
+    private MenuItem? _gotoEquateMenuItem;               // "Go to equate" (shown for equated stations/surveys)
+    private MenuItem? _gotoAggregationMenuItem;          // "Go to aggregating map" (shown for composed scraps/maps)
+    private System.Collections.Immutable.ImmutableArray<AggregationReference> _ctxAggregations =
+        System.Collections.Immutable.ImmutableArray<AggregationReference>.Empty;   // targets for the right-clicked token
     private CompletionWindow? _completionWindow;
     private Diagnostic? _hoverDiagnostic;
     private IAppSettingsService? _settings;
@@ -1564,13 +1568,10 @@ public partial class TherionTextEditor : UserControl
         var visualPos = e.GetPosition(view) + view.ScrollOffset;
 
         // Hyperlink affordance: underline + hand cursor over a navigable token (only
-        // when the pointer is genuinely over the glyphs, not anywhere on the line).
-        // In double-click-to-navigate mode a plain hover shows the normal text cursor — the
-        // link affordance only appears with Ctrl held (Ctrl+click still jumps), so the editor
-        // reads as a normal text field.
-        bool ctrlHeld = (e.KeyModifiers & KeyModifiers.Control) != 0;
-        bool suppressLinkAffordance = CurrentSettings.RequireDoubleClickToNavigate && !ctrlHeld;
-        UpdateHoverLink(view, visualPos, suppressLinkAffordance);
+        // when the pointer is genuinely over the glyphs, not anywhere on the line). Shown in both
+        // single- and double-click navigation modes — a navigable identifier always reads as a link
+        // on hover, exactly as if Ctrl were held; only the click that follows differs by mode.
+        UpdateHoverLink(view, visualPos);
 
         var pos = view.GetPositionFloor(visualPos);
         if (pos is null) { ClearHover(); return; }
@@ -1645,7 +1646,7 @@ public partial class TherionTextEditor : UserControl
             HoverCommandWord(off) is { } cmd ? BuildCommandInfo(cmd) :
             RefTokenUnderPointer(_infoPointer) is { } tok &&
                 Navigation?.Describe(tok.Raw, ChooseReferenceKind((tok.Start, tok.Length, tok.Raw), tok.Offset)) is { } info
-                ? BuildIdentifierInfo(tok.Raw, info) :
+                ? BuildIdentifierInfo(tok.Raw, info, tok.Offset) :
             ResolvePathLinkAt(off) is { } link ? BuildFileInfo(link) : null;
 
         if (content is null) { CancelHoverInfo(); return; }
@@ -1808,8 +1809,9 @@ public partial class TherionTextEditor : UserControl
         var panel = new StackPanel { Spacing = 6 };
         panel.Children.Add(new TextBlock { Text = command, FontWeight = FontWeight.Bold, FontSize = 14 });
         panel.Children.Add(new TextBlock { Text = CommandDocs[command], TextWrapping = TextWrapping.Wrap });
-        var doc = new Button { Content = L("Ed_Documentation"), Padding = new Thickness(6, 2), HorizontalAlignment = HorizontalAlignment.Left };
-        doc.Click += (_, _) => { OpenDocumentation(command); HideHoverInfo(); };
+        var doc = IconAction("Icon.Help", "Ed_Documentation",
+            () => { OpenDocumentation(command); HideHoverInfo(); });
+        doc.HorizontalAlignment = HorizontalAlignment.Left;
         panel.Children.Add(doc);
         return panel;
     }
@@ -1857,10 +1859,10 @@ public partial class TherionTextEditor : UserControl
         OpenExternalRequested?.Invoke(this, ThbookUrl);
     }
 
-    private Control BuildIdentifierInfo(string raw, ReferenceInfo info)
+    private Control BuildIdentifierInfo(string raw, ReferenceInfo info, int tokenOffset)
     {
         var panel = new StackPanel { Spacing = 6 };
-        panel.Children.Add(new TextBlock { Text = raw, FontWeight = FontWeight.Bold, FontSize = 14 });
+        panel.Children.Add(MakeCardTitle(raw, info.Declaration, tokenOffset));
         panel.Children.Add(new TextBlock { Text = $"{info.Kind}", Foreground = Brushes.Gray });
 
         var where = info.Declaration;
@@ -1905,6 +1907,18 @@ public partial class TherionTextEditor : UserControl
             actions.Children.Add(IconAction("Icon.Help", "Ed_Documentation",
                 () => { OpenDocumentation(docTerm); HideHoverInfo(); }));
 
+        // "Go to equate" (a station/survey tied to others by an equate) and "Go to aggregating map"
+        // (a scrap / sub-map composed by a map). Only when the token is aggregated elsewhere — the
+        // equate/map the caret is already on is filtered out. Jumps to the first place; extra places
+        // are written to the activity log (a chooser window is a tracked TODO on FindAggregations).
+        var aggregations = AggregationsAt(tokenOffset);
+        if (aggregations.Any(a => a.Kind == "equate"))
+            actions.Children.Add(IconAction("Icon.Equate", "Ed_GoToEquate",
+                () => { GoToAggregations(aggregations, "equate", L("Ed_GoToEquate")); HideHoverInfo(); }));
+        if (aggregations.Any(a => a.Kind == "map"))
+            actions.Children.Add(IconAction("Icon.Layers", "Ed_GoToAggregation",
+                () => { GoToAggregations(aggregations, "map", L("Ed_GoToAggregation")); HideHoverInfo(); }));
+
         panel.Children.Add(actions);
         return panel;
     }
@@ -1938,23 +1952,115 @@ public partial class TherionTextEditor : UserControl
         return icon;
     }
 
+    /// <summary>
+    /// The hover-card title (the symbol's own name). Rendered as a hyperlink that jumps to
+    /// <paramref name="target"/> on click — unless you're already standing on the declaration
+    /// (<paramref name="tokenOffset"/> inside <paramref name="target"/>), in which case it stays a
+    /// plain bold heading (there's nowhere to jump to).
+    /// </summary>
+    private Control MakeCardTitle(string text, SourceSpan target, int tokenOffset)
+    {
+        var title = new TextBlock { Text = text, FontWeight = FontWeight.Bold, FontSize = 14 };
+        if (!target.IsEmpty && !IsAtSpan(target, tokenOffset))
+        {
+            title.Foreground = Brushes.SteelBlue;
+            title.Cursor = _handCursor;
+            title.TextDecorations = TextDecorations.Underline;
+            title.PointerPressed += (_, _) => { NavigateToSpan(target); HideHoverInfo(); };
+        }
+        return title;
+    }
+
+    /// <summary>True when <paramref name="offset"/> lies inside <paramref name="span"/> in the current file.</summary>
+    private bool IsAtSpan(SourceSpan span, int offset) =>
+        !span.IsEmpty &&
+        string.Equals(span.FilePath, CurrentFilePath, StringComparison.OrdinalIgnoreCase) &&
+        offset >= span.StartOffset && offset < span.StartOffset + span.Length;
+
+    /// <summary>
+    /// The aggregation targets (equate / map commands) for the reference token at
+    /// <paramref name="offset"/>, with the command the caret is already inside removed — so
+    /// "Go to equate" never points at the very equate you're standing on (per spec). Empty when
+    /// the token is not part of any equate / map aggregation.
+    /// </summary>
+    private System.Collections.Immutable.ImmutableArray<AggregationReference> AggregationsAt(int offset)
+    {
+        var empty = System.Collections.Immutable.ImmutableArray<AggregationReference>.Empty;
+        if (_editor is null || Navigation is null) return empty;
+        if (ExtractRefToken(_editor.Text, offset) is not { } tok) return empty;
+
+        var all = Navigation.FindAggregations(tok.Raw, ChooseReferenceKind(tok, offset));
+        if (all.IsDefaultOrEmpty) return empty;
+
+        var b = System.Collections.Immutable.ImmutableArray.CreateBuilder<AggregationReference>();
+        foreach (var a in all)
+        {
+            // Skip the command the caret is already inside (same file, span covers the token) so the
+            // action never navigates to where you already are (EquateRecord.Span covers the whole line).
+            if (string.Equals(a.Span.FilePath, CurrentFilePath, StringComparison.OrdinalIgnoreCase) &&
+                offset >= a.Span.StartOffset && offset < a.Span.StartOffset + a.Span.Length)
+                continue;
+            b.Add(a);
+        }
+        return b.ToImmutable();
+    }
+
+    /// <summary>
+    /// Navigates to the first aggregation of <paramref name="kind"/> in <paramref name="all"/> and,
+    /// when more than one exists, writes an activity-log entry naming the place navigated to and
+    /// listing the others (the eventual chooser window is tracked as a TODO on
+    /// <see cref="ISymbolNavigationService.FindAggregations"/>).
+    /// </summary>
+    private void GoToAggregations(
+        System.Collections.Immutable.ImmutableArray<AggregationReference> all, string kind, string actionLabel)
+    {
+        if (all.IsDefaultOrEmpty) return;
+        var targets = all.Where(a => a.Kind == kind).ToArray();
+        if (targets.Length == 0) return;
+
+        NavigateToSpan(targets[0].Span);
+
+        if (TryLog() is not { } log) return;
+        static string Loc(SourceSpan s) => $"{System.IO.Path.GetFileName(s.FilePath)}:{s.Start.Line}";
+        if (targets.Length == 1)
+            log.Info($"{actionLabel} → {Loc(targets[0].Span)}.");
+        else
+            log.Info($"{actionLabel} → navigated to the first of {targets.Length} places ({Loc(targets[0].Span)}); " +
+                     $"others: {string.Join(", ", targets.Skip(1).Select(t => Loc(t.Span)))}.");
+    }
+
+    private static ILogService? TryLog()
+    {
+        try { return AppServices.Provider.GetService<ILogService>(); }
+        catch { return null; }   // design-time / no container
+    }
+
     private Control BuildFileInfo(PathLink link)
     {
         var panel = new StackPanel { Spacing = 6 };
-        panel.Children.Add(new TextBlock { Text = link.Raw, FontWeight = FontWeight.Bold, FontSize = 14 });
+
+        // Title: a hyperlink that opens the file (like "go to definition" for a path); plain when
+        // the file can't be resolved, so there's nowhere to open.
+        var title = new TextBlock { Text = link.Raw, FontWeight = FontWeight.Bold, FontSize = 14 };
+        if (link.ResolvedExisting is not null)
+        {
+            title.Foreground = Brushes.SteelBlue;
+            title.Cursor = _handCursor;
+            title.TextDecorations = TextDecorations.Underline;
+            title.PointerPressed += (_, _) => { OpenLink(link); HideHoverInfo(); };
+        }
+        panel.Children.Add(title);
+
         panel.Children.Add(new TextBlock
         {
             Text = link.ResolvedExisting is null ? "file (not found)" : "file",
             Foreground = Brushes.Gray,
         });
-        var open = new Button
-        {
-            Content = link.ShellOpen ? L("Ed_OpenDefaultApp") : L("Ed_OpenFile"),
-            Padding = new Thickness(6, 2),
-            HorizontalAlignment = HorizontalAlignment.Left,
-            IsEnabled = link.ResolvedExisting is not null,
-        };
-        open.Click += (_, _) => { OpenLink(link); HideHoverInfo(); };
+        var open = IconAction(link.ShellOpen ? "Icon.External" : "Icon.FolderOpen",
+            link.ShellOpen ? "Ed_OpenDefaultApp" : "Ed_OpenFile",
+            () => { OpenLink(link); HideHoverInfo(); });
+        open.HorizontalAlignment = HorizontalAlignment.Left;
+        open.IsEnabled = link.ResolvedExisting is not null;
         panel.Children.Add(open);
         return panel;
     }
@@ -2087,6 +2193,9 @@ public partial class TherionTextEditor : UserControl
             _peekMenuItem.IsVisible = EditorFeatureFlags.IsEnabled(EditorFeature.PeekDefinition, fs) && Navigation is not null;
         if (_open3dMenuItem is not null) _open3dMenuItem.IsVisible = false;   // hidden unless on a station/survey
         _open3dName = null;
+        if (_gotoEquateMenuItem is not null) _gotoEquateMenuItem.IsVisible = false;
+        if (_gotoAggregationMenuItem is not null) _gotoAggregationMenuItem.IsVisible = false;
+        _ctxAggregations = System.Collections.Immutable.ImmutableArray<AggregationReference>.Empty;
 
         var view = _editor.TextArea.TextView;
         // Keyboard-invoked menus (Menu key) carry no pointer position — leave the caret put.
@@ -2094,6 +2203,7 @@ public partial class TherionTextEditor : UserControl
         if (FloorOffset(p + view.ScrollOffset) is not { } off) return;
 
         UpdateOpen3dMenuItem(p + view.ScrollOffset);
+        UpdateAggregationMenuItems(off);
 
         // Right-clicking inside an existing selection keeps it (so Cut/Copy act on the
         // selection); clicking elsewhere moves the caret there and clears any selection.
@@ -2103,6 +2213,17 @@ public partial class TherionTextEditor : UserControl
             if (off >= selStart && off <= selStart + _editor.SelectionLength) return;
         }
         _editor.Select(off, 0);
+    }
+
+    // Populates the "Go to equate" / "Go to aggregating map" items for the right-clicked token
+    // and shows each only when a matching aggregation exists (with the current one filtered out).
+    private void UpdateAggregationMenuItems(int offset)
+    {
+        _ctxAggregations = AggregationsAt(offset);
+        if (_gotoEquateMenuItem is not null)
+            _gotoEquateMenuItem.IsVisible = _ctxAggregations.Any(a => a.Kind == "equate");
+        if (_gotoAggregationMenuItem is not null)
+            _gotoAggregationMenuItem.IsVisible = _ctxAggregations.Any(a => a.Kind == "map");
     }
 
     // #5: enable the "Open in 3D" item when the token under the pointer is a station/survey
@@ -2178,11 +2299,11 @@ public partial class TherionTextEditor : UserControl
         return loc is null ? null : _editor.Document.GetOffset(loc.Value.Location);
     }
 
-    private void UpdateHoverLink(TextView view, Point visualPos, bool suppress = false)
+    private void UpdateHoverLink(TextView view, Point visualPos)
     {
         if (_editor is null || _hyperlinkColorizer is null) return;
         bool changed;
-        if (!suppress && HoverLinkAt(visualPos) is { } link)
+        if (HoverLinkAt(visualPos) is { } link)
         {
             changed = _hyperlinkColorizer.SetLink(link.Start, link.Length);
             view.Cursor = _handCursor;
@@ -2958,10 +3079,18 @@ public partial class TherionTextEditor : UserControl
         _stepIntoMenuItem = MakeItem(L("Ed_StepInto"), FollowIncludeUnderCaret);
         _formatMenuItem = MakeItem(L("Ed_FormatDoc"), FormatDocument);
         _peekMenuItem = MakeItem(L("Ed_PeekDef"), PeekDefinition);
+        // "Go to equate" / "Go to aggregating map": shown only when the right-clicked token is
+        // aggregated elsewhere (populated per-invocation in OnEditorContextRequested).
+        _gotoEquateMenuItem = MakeItem(L("Ed_GoToEquate"),
+            () => GoToAggregations(_ctxAggregations, "equate", L("Ed_GoToEquate")));
+        _gotoAggregationMenuItem = MakeItem(L("Ed_GoToAggregation"),
+            () => GoToAggregations(_ctxAggregations, "map", L("Ed_GoToAggregation")));
         menu.Items.Add(_matchMenuItem);
         menu.Items.Add(_stepIntoMenuItem);
         menu.Items.Add(_peekMenuItem);
         menu.Items.Add(_formatMenuItem);
+        menu.Items.Add(_gotoEquateMenuItem);
+        menu.Items.Add(_gotoAggregationMenuItem);
         menu.Items.Add(new Separator());
         menu.Items.Add(MakeItem(L("Menu_Edit_FoldAll"),   () => SetAllFoldings(folded: true)));
         menu.Items.Add(MakeItem(L("Menu_Edit_UnfoldAll"), () => SetAllFoldings(folded: false)));

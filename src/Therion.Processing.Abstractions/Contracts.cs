@@ -85,6 +85,15 @@ public enum ReferenceKind
 public sealed record ReferenceInfo(string Kind, SourceSpan Declaration);
 
 /// <summary>
+/// A place where a symbol is <em>aggregated</em>, for the editor's "go to aggregation" navigation:
+/// an <c>equate</c> command that ties a station/survey to other stations, or a <c>map</c> command
+/// that composes a scrap / sub-map. <see cref="Kind"/> is <c>"equate"</c> or <c>"map"</c>.
+/// </summary>
+/// <param name="Kind">Aggregation kind: <c>"equate"</c> (stations/surveys) or <c>"map"</c> (scraps/sub-maps).</param>
+/// <param name="Span">Source span of the aggregating command.</param>
+public sealed record AggregationReference(string Kind, SourceSpan Span);
+
+/// <summary>
 /// UI-facing navigation service (Implementation Plan �7.3): the backing model
 /// for Go to Definition (F12) and Find All References (Shift+F12).
 /// </summary>
@@ -116,6 +125,21 @@ public interface ISymbolNavigationService
 
     /// <summary>Returns all reference spans of <paramref name="qualifiedName"/> (may be empty).</summary>
     ImmutableArray<SourceSpan> FindReferences(string qualifiedName);
+
+    /// <summary>
+    /// Places where <paramref name="reference"/> is aggregated: the <c>equate</c> commands that
+    /// reference a station/survey, or the <c>map</c> commands that compose a scrap / sub-map.
+    /// Ordered by discovery; empty when there are none. Default implementation returns nothing —
+    /// only the workspace-aware service scans equates/maps across files.
+    /// </summary>
+    /// <remarks>
+    /// TODO(nav-choose-reference): when several aggregations exist, the editor currently jumps to
+    /// the first and logs the rest. Surface a chooser — a dedicated "find all references" / pick-a-
+    /// target window — so the user can select which occurrence to open. See the future-features plan
+    /// (.claude/feature-roadmap-ideas.md → NAV-choose-reference).
+    /// </remarks>
+    ImmutableArray<AggregationReference> FindAggregations(string reference, ReferenceKind kind) =>
+        ImmutableArray<AggregationReference>.Empty;
 }
 
 /// <summary>Locates installed Therion / Loch / Aven executables (�9bis.1).</summary>
