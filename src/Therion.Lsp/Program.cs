@@ -1,4 +1,4 @@
-// therion-lsp: a minimal Language Server exposing TherionProc's parser/semantics to any
+// therion-lsp: a minimal Language Server exposing ThIDE's parser/semantics to any
 // LSP client (VSCode/Neovim/…). Speaks JSON-RPC over stdio (Content-Length framed) and publishes
 // diagnostics on open/change. Hover/definition can be layered on later; diagnostics are the core.
 

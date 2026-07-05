@@ -1,12 +1,12 @@
 # Licensing
 
-TherionProc is **dual-licensed** so the reusable parts can be embedded widely
+ThIDE is **dual-licensed** so the reusable parts can be embedded widely
 while the assembled application stays copyleft.
 
 | Component | Location | License |
 |-----------|----------|---------|
 | Reusable libraries (parser, semantics, workspace, build, LSP, CLI, …) | `src/**` | **MPL-2.0** |
-| Application shell | `TherionProc/**` | **GPL-3.0-or-later** |
+| Application shell | `ThIDE/**` | **GPL-3.0-or-later** |
 | Test projects (not distributed) | `tests/**` | not shipped; follow the project they exercise |
 
 Each library directory carries its own `LICENSE` (MPL-2.0). The repository-root
@@ -33,7 +33,7 @@ AGPL-3.0 work.
 
 ## Relationship to Therion (no GPL propagation)
 
-TherionProc does **not** link or embed Therion's source:
+ThIDE does **not** link or embed Therion's source:
 
 - The parsers under `src/Therion.Syntax` (and the other `src/` libraries) are an
   independent C# implementation of the Therion *file formats* — formats are not

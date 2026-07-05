@@ -1,0 +1,123 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ThIDE.ViewModels.Docking"
+             xmlns:l="using:ThIDE.Resources"
+             x:Class="ThIDE.Views.Docking.CompilerOutputToolView"
+             x:DataType="vm:CompilerOutputToolViewModel">
+    <Grid>
+    <TabControl>
+        <!-- Parsed view: per-line classification with time + severity icon + colored text. -->
+        <TabItem Header="{l:Loc Comp_TabOutput}">
+            <DataGrid x:Name="Grid"
+                      ItemsSource="{Binding Build.Output}"
+                      SelectedItem="{Binding Build.SelectedOutput, Mode=TwoWay}"
+                      x:CompileBindings="False"
+                      IsReadOnly="True" GridLinesVisibility="None"
+                      RowHeight="16"
+                      CanUserResizeColumns="True" AutoGenerateColumns="False"
+                      HeadersVisibility="None" DoubleTapped="OnRowDoubleTapped"
+                      FontFamily="Consolas,Cascadia Mono,Courier New,monospace"
+                      FontSize="11">
+                <DataGrid.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="{l:Loc Common_Copy}" Click="OnCopyLine" />
+                        <MenuItem Header="{l:Loc Common_CopyAll}" Click="OnCopyAll" />
+                        <MenuItem Header="{l:Loc Common_SelectAll}" Click="OnSelectAll" />
+                        <Separator />
+                        <MenuItem Header="{l:Loc Common_ClearOutput}" Command="{Binding Build.ClearOutputCommand}" />
+                    </ContextMenu>
+                </DataGrid.ContextMenu>
+                <DataGrid.Columns>
+                    <!-- Time: since-last / wall-clock / since-start, per the mode switch (#4). Sized to fit. -->
+                    <DataGridTemplateColumn Width="86">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding TimeDisplay}" Foreground="{Binding TimeBrushValue}"
+                                           VerticalAlignment="Center" Margin="4,0" TextAlignment="Right" />
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <!-- Severity icon: info=gray, warning=amber, error=red, success=green (#4). -->
+                    <DataGridTemplateColumn Width="22">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Panel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                    <PathIcon Data="{DynamicResource Icon.Info}" Width="11" Height="11"
+                                              Foreground="#9E9E9E" IsVisible="{Binding ShowInfoIcon}" />
+                                    <PathIcon Data="{DynamicResource Icon.Warning}" Width="12" Height="12"
+                                              Foreground="#F9A825" IsVisible="{Binding ShowWarnIcon}" />
+                                    <PathIcon Data="{DynamicResource Icon.ErrorCircle}" Width="12" Height="12"
+                                              Foreground="#C62828" IsVisible="{Binding ShowErrorIcon}" />
+                                    <PathIcon Data="{DynamicResource Icon.CheckCircle}" Width="12" Height="12"
+                                              Foreground="#2E7D32" IsVisible="{Binding ShowSuccessIcon}" />
+                                </Panel>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <!-- Message: red for errors, amber for warnings, bold for command/summary.
+                         Any detected file path is drawn as a blue, clickable link (#1). -->
+                    <DataGridTemplateColumn Width="Auto">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="2,0,12,0">
+                                    <TextBlock Text="{Binding MessagePrefix}" Foreground="{Binding TextBrush}"
+                                               FontWeight="{Binding Weight}" FontStretch="Condensed" />
+                                    <TextBlock Text="{Binding MessagePath}" Foreground="#3B82F6" FontStretch="Condensed"
+                                               TextDecorations="Underline" Cursor="Hand" IsVisible="{Binding HasLink}"
+                                               Tag="{Binding}" PointerPressed="OnOutputPathPressed"
+                                               ToolTip.Tip="{l:Loc Comp_OpenFile}" />
+                                    <TextBlock Text="{Binding MessageSuffix}" Foreground="{Binding TextBrush}"
+                                               FontWeight="{Binding Weight}" FontStretch="Condensed" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+        </TabItem>
+
+        <!-- Raw view: verbatim stdout/stderr, selectable + copyable, warnings/errors colored. -->
+        <TabItem Header="{l:Loc Comp_TabRaw}">
+            <ScrollViewer x:Name="RawScroll" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+                <SelectableTextBlock x:Name="RawText"
+                                     FontFamily="Consolas,Cascadia Mono,Courier New,monospace"
+                                     FontSize="11" Padding="6" TextWrapping="NoWrap">
+                    <SelectableTextBlock.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="{l:Loc Common_Copy}" Click="OnRawCopy" />
+                            <MenuItem Header="{l:Loc Common_CopyAll}" Click="OnRawCopyAll" />
+                            <MenuItem Header="{l:Loc Common_SelectAll}" Click="OnRawSelectAll" />
+                            <Separator />
+                            <MenuItem Header="{l:Loc Common_ClearOutput}" Command="{Binding Build.ClearOutputCommand}" />
+                        </ContextMenu>
+                    </SelectableTextBlock.ContextMenu>
+                </SelectableTextBlock>
+            </ScrollViewer>
+        </TabItem>
+    </TabControl>
+
+    <!-- Top-right controls overlaid above the tab strip: open-log button (#3) + time mode (#4). -->
+    <StackPanel HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,2,8,0"
+                Orientation="Horizontal" Spacing="6">
+        <!-- Open the Therion log produced by the last build, in the editor (#3). -->
+        <Button FontSize="11" Padding="6,2" Click="OnOpenLog"
+                IsVisible="{Binding Build.HasLog}"
+                ToolTip.Tip="{l:Loc Comp_OpenLogTip}">
+            <StackPanel Orientation="Horizontal" Spacing="4">
+                <PathIcon Data="{DynamicResource Icon.File}" Width="11" Height="11" />
+                <TextBlock Text="{l:Loc Comp_OpenLog}" VerticalAlignment="Center" />
+            </StackPanel>
+        </Button>
+        <!-- Watch icon in front of the time-mode dropdown (#12). -->
+        <PathIcon Data="{DynamicResource Icon.Timer}" Width="13" Height="13"
+                  Foreground="Gray" VerticalAlignment="Center" />
+        <ComboBox MinWidth="120" FontSize="11" Padding="6,2"
+                  SelectedIndex="{Binding Build.TimeColumnModeIndex, Mode=TwoWay}"
+                  ToolTip.Tip="{l:Loc Comp_TimeColTip}">
+            <ComboBoxItem Content="{l:Loc Comp_TimeLast}" />
+            <ComboBoxItem Content="{l:Loc Comp_TimeStamp}" />
+            <ComboBoxItem Content="{l:Loc Comp_TimeStart}" />
+        </ComboBox>
+    </StackPanel>
+    </Grid>
+</UserControl>

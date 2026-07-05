@@ -1,0 +1,34 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:services="using:ThIDE.Services"
+        xmlns:l="using:ThIDE.Resources"
+        x:Class="ThIDE.Views.BookmarksWindow"
+        Title="{l:Loc Book_Title}"
+        Width="700" Height="340"
+        WindowStartupLocation="CenterOwner"
+        CanResize="True">
+    <DockPanel>
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="6"
+                    Margin="8,6">
+            <Button x:Name="DeleteBtn" Content="{l:Loc Ctx_Delete}" Padding="10,3" Click="OnDeleteClick" />
+            <Button x:Name="NavigateBtn" Content="{l:Loc Book_GoTo}" Padding="10,3" Click="OnNavigateClick" />
+        </StackPanel>
+        <DataGrid x:Name="Grid"
+                  x:DataType="services:BookmarkEntry"
+                  IsReadOnly="True"
+                  GridLinesVisibility="Horizontal"
+                  CanUserSortColumns="True"
+                  CanUserResizeColumns="True"
+                  SelectionMode="Single"
+                  AutoGenerateColumns="False"
+                  DoubleTapped="OnDoubleTapped">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="{l:Loc Common_File}" Binding="{Binding FileName}" Width="140" />
+                <DataGridTextColumn Header="{l:Loc Browser_Col_Line}" Binding="{Binding Line}" Width="50" />
+                <DataGridTextColumn Header="{l:Loc Col_Title}" Binding="{Binding DisplayTitle}" Width="*" />
+                <DataGridTextColumn Header="{l:Loc Book_Created}" Width="130"
+                    Binding="{Binding CreatedAt, StringFormat={}{0:yyyy-MM-dd HH:mm}}" />
+            </DataGrid.Columns>
+        </DataGrid>
+    </DockPanel>
+</Window>

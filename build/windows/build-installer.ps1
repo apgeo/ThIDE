@@ -1,10 +1,10 @@
 <#
 .SYNOPSIS
-  Publish TherionProc (self-contained, single-file, win-x64) and wrap it in a setup.exe with Inno Setup.
+  Publish ThIDE (self-contained, single-file, win-x64) and wrap it in a setup.exe with Inno Setup.
 
 .DESCRIPTION
   Local counterpart to the "Build Windows installer" step in .github/workflows/release.yml.
-  Produces publish/win-x64/ and then build/windows/Output/TherionProc-Setup-<Version>.exe.
+  Produces publish/win-x64/ and then build/windows/Output/ThIDE-Setup-<Version>.exe.
 
   Requires Inno Setup 6 (ISCC.exe). Install it once with:  choco install innosetup -y
   If ISCC isn't on PATH the script probes the default Program Files locations.
@@ -27,9 +27,9 @@ $ErrorActionPreference = "Stop"
 
 # Repo root = two levels up from this script (build/windows/).
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
-$Project  = Join-Path $RepoRoot "TherionProc\TherionProc.csproj"
+$Project  = Join-Path $RepoRoot "ThIDE\ThIDE.csproj"
 $PublishDir = Join-Path $RepoRoot "publish\win-x64"
-$Iss = Join-Path $PSScriptRoot "TherionProc.iss"
+$Iss = Join-Path $PSScriptRoot "ThIDE.iss"
 $OutDir = Join-Path $PSScriptRoot "Output"
 
 function Find-ISCC {
@@ -58,7 +58,7 @@ if (-not $SkipPublish) {
   if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed ($LASTEXITCODE)." }
 }
 
-if (-not (Test-Path (Join-Path $PublishDir "TherionProc.exe"))) {
+if (-not (Test-Path (Join-Path $PublishDir "ThIDE.exe"))) {
   throw "Publish output not found at $PublishDir. Run without -SkipPublish first."
 }
 
@@ -66,5 +66,5 @@ Write-Host "==> Building installer with $iscc ..." -ForegroundColor Cyan
 & $iscc "/DMyAppVersion=$Version" "/DSourceDir=$PublishDir" "/O$OutDir" $Iss
 if ($LASTEXITCODE -ne 0) { throw "ISCC failed ($LASTEXITCODE)." }
 
-$setup = Join-Path $OutDir "TherionProc-Setup-$Version.exe"
+$setup = Join-Path $OutDir "ThIDE-Setup-$Version.exe"
 Write-Host "==> Done: $setup" -ForegroundColor Green

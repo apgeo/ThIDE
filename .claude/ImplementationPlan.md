@@ -18,7 +18,7 @@ The system is split into **fully decoupled** layers. The lower layers have **no 
 
 ```
 +--------------------------------------------------------------+
-|  TherionProc                 (Avalonia UI — desktop app)     |
+|  ThIDE                 (Avalonia UI — desktop app)     |
 |  - Views / ViewModels / DI composition root                  |
 +----------------------↑---------------------------------------+
                        | (interfaces only)
@@ -56,12 +56,12 @@ The system is split into **fully decoupled** layers. The lower layers have **no 
 | `Therion.Build` | `net8.0` | Wraps the installed Therion toolchain: discovery, compilation, output parsing, artifact collection, viewer launching. UI-agnostic. |
 | `Therion.Processing.Abstractions` | `net8.0` | Public interfaces (`ITherionParser`, `IWorkspace`, `ISymbolIndex`, `ITherionCompiler`, …) for consumers. |
 | `Therion.Cli` *(optional, later)* | `net8.0` | Headless validation / dump tool. Useful for smoke tests and CI. |
-| `TherionProc` (existing) | `net8.0` | Avalonia desktop UI. Depends only on `*.Abstractions` + DI registration of concrete impls. |
+| `ThIDE` (existing) | `net8.0` | Avalonia desktop UI. Depends only on `*.Abstractions` + DI registration of concrete impls. |
 | `Therion.Syntax.Tests` | `net8.0` | xUnit tests, including corpus tests against public Therion sample repos. |
 | `Therion.Semantics.Tests` | `net8.0` | xUnit. |
 | `Therion.Workspace.Tests` | `net8.0` | xUnit. |
 
-> **Rule:** `TherionProc` only references `*.Abstractions` projects + the composition root wires concrete implementations. This guarantees decoupling and enables reuse from a future Minimal API.
+> **Rule:** `ThIDE` only references `*.Abstractions` projects + the composition root wires concrete implementations. This guarantees decoupling and enables reuse from a future Minimal API.
 
 ---
 
@@ -214,9 +214,9 @@ Whole-file reparse is the unit of work (confirmed). The point of the cache is to
 Two-level cache:
 
 1. **In-memory** keyed by `(absolutePath, length, lastWriteUtc, contentHashOptional)` → `ParseResult`.
-2. **On-disk** under `%LocalAppData%/TherionProc/cache/` (Windows) / `~/.cache/therionproc/` (Linux) / `~/Library/Caches/TherionProc/` (macOS), using a compact binary format (**MessagePack**).
+2. **On-disk** under `%LocalAppData%/ThIDE/cache/` (Windows) / `~/.cache/thide/` (Linux) / `~/Library/Caches/ThIDE/` (macOS), using a compact binary format (**MessagePack**).
    - **Production / normal debugging:** disk cache **on** by default.
-   - **Deep parser/semantic debugging:** disk cache can be **skipped** via `--no-cache` CLI flag, `TherionWorkspaceOptions.DisableDiskCache = true`, or env var `THERIONPROC_NO_CACHE=1`. In-memory cache can be flushed via `IWorkspace.InvalidateAll()`.
+   - **Deep parser/semantic debugging:** disk cache can be **skipped** via `--no-cache` CLI flag, `TherionWorkspaceOptions.DisableDiskCache = true`, or env var `THIDE_NO_CACHE=1`. In-memory cache can be flushed via `IWorkspace.InvalidateAll()`.
    - Each cache entry stores the `TherionSyntaxVersion` it was produced with → mismatching versions invalidate automatically.
 
 Invalidation:
@@ -296,13 +296,13 @@ The sniffer is conservative (returns `Likely | Unlikely | Unknown`) and never th
 Per-workspace settings (parser mode, canonical units, cache toggle, UI language, Therion executable paths, layout, …) live in **both** locations, with sidecar overriding profile:
 
 1. **Sidecar** `.thp.json` next to the entry-point file — **default write target**, version-controlled with the project.
-2. **User profile** (`%AppData%/TherionProc/settings.json` etc., per OS) — global defaults.
+2. **User profile** (`%AppData%/ThIDE/settings.json` etc., per OS) — global defaults.
 
 Merge order at load: defaults → user profile → sidecar → CLI flags / env vars (highest).
 
 ---
 
-## 7. UI layer (`TherionProc`, Avalonia 11)
+## 7. UI layer (`ThIDE`, Avalonia 11)
 
 ### 7.1 Composition
 
@@ -314,7 +314,7 @@ Merge order at load: defaults → user profile → sidecar → CLI flags / env v
 
 Per requirement, cross-platform third-party widgets are acceptable when they beat stock. We adopt **Dock.Avalonia** for the shell: full VS-style **tabbed + dockable + floating** layout, works on Windows / Linux / macOS, actively maintained.
 
-- Layout state is persisted per workspace (`%AppData%/TherionProc/layout.json`).
+- Layout state is persisted per workspace (`%AppData%/ThIDE/layout.json`).
 - Each "document" implements `IDocumentViewModel` (host-agnostic) so we can swap docking implementations later without rewriting VMs.
 - Tool windows (Workspace Explorer, Diagnostics, Object Browser, Properties) are `IToolViewModel`.
 
@@ -356,7 +356,7 @@ Selecting an object → activates the file tab → scrolls editor to `SourceSpan
 - **Diagnostic codes** (`TH0007`) stay culture-invariant; only the message text is localized. Tests assert against codes, not messages.
 - Two resource scopes:
   - `Therion.Core.Resources` — diagnostic messages (reused by CLI and any future API).
-  - `TherionProc.Resources` — UI labels.
+  - `ThIDE.Resources` — UI labels.
 - Runtime language switch via a `LanguageService` that sets `CultureInfo.CurrentUICulture` and raises a change event; bindings update through MVVM.
 - Number / date formatting follows the UI culture; **coordinate / measurement display** always uses invariant numeric formatting (decimal point) regardless of UI culture, to match Therion files.
 
@@ -560,7 +560,7 @@ Per your priority on **excellent syntax error reports**:
 - `Therion.Core` primitives (`SourceSpan`, `Diagnostic`, `Unit`, `IUnitConverter`, `Result<T>`).
 - Lexer + minimal `.thconfig` parser.
 - `ParserOptions` (lenient/strict) plumbed.
-- DI wiring in `TherionProc`; **Dock.Avalonia** shell with Workspace Explorer + empty document host.
+- DI wiring in `ThIDE`; **Dock.Avalonia** shell with Workspace Explorer + empty document host.
 - i18n scaffolding: `Strings.resx` (en) + `Strings.ro.resx`, language switch in menu.
 - `ILogger` wired with Console + Debug + File providers.
 
@@ -599,7 +599,7 @@ Per your priority on **excellent syntax error reports**:
 - `--no-cache` / env var / option to skip for debugging.
 - Incremental rebuild on file change (per-file reparse; untouched files served from cache).
 
-> **M5 status (snapshot):** ✅ **in-memory + JSON disk tier + watcher + workspace loader + workspace semantic model complete.** `Therion.Workspace` ships `IParseCache` + `InMemoryParseCache`, **`IDiskParseCache` + `JsonDiskParseCache`** (XDG/LocalAppData/Caches-aware, schema-versioned, source-text fingerprint, best-effort writes), **`TieredParseCache`** (L1 in-memory + L2 disk with auto-promotion), `DebouncedFileWatcher` (250 ms, matches Decision #24), `TherionWorkspace : IWorkspace` (BFS-walks `source`/`input`/`load`, watches dirs, atomic re-parse on change, `WorkspaceChanged` event). New `TherionWorkspace.BuildSemanticModel()` instincproduces a `WorkspaceSemanticModel` (per-file `SemanticModel` + workspace-wide `XviIndex` + merged FileGraph edges). `WorkspaceOptions.FromEnvironment()` honors `THERIONPROC_NO_CACHE`; disabling drops the L2 tier only. MessagePack on-disk format remains a follow-up swap behind `IDiskParseCache` (no new package dependency).
+> **M5 status (snapshot):** ✅ **in-memory + JSON disk tier + watcher + workspace loader + workspace semantic model complete.** `Therion.Workspace` ships `IParseCache` + `InMemoryParseCache`, **`IDiskParseCache` + `JsonDiskParseCache`** (XDG/LocalAppData/Caches-aware, schema-versioned, source-text fingerprint, best-effort writes), **`TieredParseCache`** (L1 in-memory + L2 disk with auto-promotion), `DebouncedFileWatcher` (250 ms, matches Decision #24), `TherionWorkspace : IWorkspace` (BFS-walks `source`/`input`/`load`, watches dirs, atomic re-parse on change, `WorkspaceChanged` event). New `TherionWorkspace.BuildSemanticModel()` instincproduces a `WorkspaceSemanticModel` (per-file `SemanticModel` + workspace-wide `XviIndex` + merged FileGraph edges). `WorkspaceOptions.FromEnvironment()` honors `THIDE_NO_CACHE`; disabling drops the L2 tier only. MessagePack on-disk format remains a follow-up swap behind `IDiskParseCache` (no new package dependency).
 
 ### M5b — Therion compilation & viewers (parallel; see §9bis)
 - `Therion.Build` library: `IExternalToolLocator`, `ITherionCompiler`, `IOutputArtifactCollector`.
@@ -631,10 +631,10 @@ Per your priority on **excellent syntax error reports**:
 > **Cumulative: 301 tests passing** (244 syntax + 27 semantics + 20 workspace + 10 build).
 >
 > **What remains for M6:**
-> 1. ~~**Dock.Avalonia shell** (D13)~~ — **Partially resolved.** Interim dockable shell shipped: `MainWindow` now uses `GridSplitter`-based resizable left/bottom panes; new `ILayoutService` + `JsonLayoutService` persists pane sizes, pane visibility, and window bounds to `%AppData%/TherionProc/layout.json` (XDG fallback); new `MainWindowViewModel.ToggleWorkspaceExplorerCommand` / `ToggleDiagnosticsCommand` plug into `ShellCommandIds.ToggleWorkspaceExplorer` / `ToggleDiagnostics` shortcuts so the *Settings → Keyboard* page can bind them. The actual **Dock.Avalonia package swap** is now a post-M6 follow-up (item B'); the `ILayoutService` abstraction was designed so an `IFactory.LoadLayout` / `SaveLayout` adapter can replace `JsonLayoutService` without touching consumers.
+> 1. ~~**Dock.Avalonia shell** (D13)~~ — **Partially resolved.** Interim dockable shell shipped: `MainWindow` now uses `GridSplitter`-based resizable left/bottom panes; new `ILayoutService` + `JsonLayoutService` persists pane sizes, pane visibility, and window bounds to `%AppData%/ThIDE/layout.json` (XDG fallback); new `MainWindowViewModel.ToggleWorkspaceExplorerCommand` / `ToggleDiagnosticsCommand` plug into `ShellCommandIds.ToggleWorkspaceExplorer` / `ToggleDiagnostics` shortcuts so the *Settings → Keyboard* page can bind them. The actual **Dock.Avalonia package swap** is now a post-M6 follow-up (item B'); the `ILayoutService` abstraction was designed so an `IFactory.LoadLayout` / `SaveLayout` adapter can replace `JsonLayoutService` without touching consumers.
 > 2. ~~**Diagnostic squiggles in the editor** (D5/D17)~~ — **Resolved.** `DiagnosticSquiggleRenderer : IBackgroundRenderer` paints severity-colored wavy underlines over the `KnownLayer.Selection` layer; bound via new `Diagnostics` + `CurrentFilePath` styled properties on `TherionTextEditor`; `MainWindowViewModel.CurrentDiagnostics` pushes the merged parser + semantic + compile set.
-> 3. ~~**`IKeyboardShortcutService` + Settings → Keyboard page** (Decision #29)~~ — **Resolved.** New `IKeyboardShortcutService` contract + `ShellCommandIds` catalog in `Therion.Processing.Abstractions`; `JsonKeyboardShortcutService` persists a delta map to `%AppData%/TherionProc/keyboard.json`; *Settings → Keyboard* sub-tab exposes one inline-editable row per command with per-row Reset + Reset-all. `MainWindow` rebuilds `KeyBindings` from the service on load and on every `GesturesChanged`.
-> 4. ~~**Settings → External Tools page** (§9bis.5)~~ — **Resolved.** New `IExternalToolPathOverrides` contract + `JsonExternalToolPathOverrides` (persists to `%AppData%/TherionProc/external-tools.json`). `ExternalToolLocator` gained an overrides-aware ctor (override → well-known → PATH) and now sniffs version via `<tool> --version` with a 5 s timeout. *Settings → External Tools* sub-tab exposes editable `Override` paths + per-row **Test** button + live `Result` column.
+> 3. ~~**`IKeyboardShortcutService` + Settings → Keyboard page** (Decision #29)~~ — **Resolved.** New `IKeyboardShortcutService` contract + `ShellCommandIds` catalog in `Therion.Processing.Abstractions`; `JsonKeyboardShortcutService` persists a delta map to `%AppData%/ThIDE/keyboard.json`; *Settings → Keyboard* sub-tab exposes one inline-editable row per command with per-row Reset + Reset-all. `MainWindow` rebuilds `KeyBindings` from the service on load and on every `GesturesChanged`.
+> 4. ~~**Settings → External Tools page** (§9bis.5)~~ — **Resolved.** New `IExternalToolPathOverrides` contract + `JsonExternalToolPathOverrides` (persists to `%AppData%/ThIDE/external-tools.json`). `ExternalToolLocator` gained an overrides-aware ctor (override → well-known → PATH) and now sniffs version via `<tool> --version` with a 5 s timeout. *Settings → External Tools* sub-tab exposes editable `Override` paths + per-row **Test** button + live `Result` column.
 > 5. ~~**Click-to-navigate** from Diagnostics and Compiler Output rows back into the editor~~ — **Resolved.** New `TherionTextEditor.ScrollTo(SourceSpan)`; `MainWindow` wires `DiagnosticsGrid.DoubleTapped` → `Diagnostics.NavigateCommand` → `MainWindowViewModel.NavigateToSpanRequested` → `editor.ScrollTo`. **Compiler Output rows now propagate `CompilerOutputLine.Span` through `CompilerOutputRow` and `Build.NavigateRequested`** so double-click jumps to the offending line via the same path.
 > 6. **Built-in `ICommandHandler` / `ISemanticRule` registrations** — DI extensions exist but ship with empty registries.
 > 7. ~~**Expanded go-to-def** beyond stations + surveys~~ — **Resolved.** `SemanticModel` now carries a `Scraps` index (populated by `SemanticBinder` from every `ScrapBlock`); `SemanticModel.TryResolve` falls back to scrap-id lookup. `WorkspaceSymbolNavigationService.GoToDefinition` additionally matches file paths (full path or basename, case-insensitive) against every loaded `PerFile` entry so `input foo.th` / `source foo.thconfig` references resolve to the file's top.
@@ -720,13 +720,13 @@ Recorded during the post-M6 audit so the plan stays honest. None of these block 
 | D16 | §9bis.4 | *Open in Loch* / *Open in Aven* toolbar buttons described but not yet on the main window. | **Resolved.** Top-of-window toolbar exposes both quick-action buttons; enabled state is driven by `BuildViewModel.HasLoxArtifact` / `HasAvenArtifact`, and the Build menu mirrors the same commands with `F9` / `F10` key bindings. |
 | D17 | §7.3 | Diagnostic squiggles + diagnostics panel still unimplemented (already noted as D5). | **Resolved.** Diagnostics panel ships (DataGrid tab driven by `DiagnosticsViewModel`) **and** squiggle adornments via `DiagnosticSquiggleRenderer : IBackgroundRenderer` over the editor; `MainWindowViewModel.CurrentDiagnostics` is the merged source. |
 | D18 | §4.4 / §5.3 | DI extension methods `AddTherionCommands()` / `AddTherionSemantics()` previously missing (paired backlog of D3 + D4). | **Resolved.** Both extension methods now ship in their respective libraries; `Therion.Syntax` and `Therion.Semantics` depend on `Microsoft.Extensions.DependencyInjection.Abstractions`. Built-in handler / rule registrations are tracked separately as M6 follow-up #6. |
-| D19 | §9bis.5a | `IKeyboardShortcutService` described as a configurable map; current shell wires hard-coded `KeyBinding`s. | **Resolved.** `IKeyboardShortcutService` ships in `Therion.Processing.Abstractions` with `ShellCommandIds`; `JsonKeyboardShortcutService` persists a delta map to `%AppData%/TherionProc/keyboard.json`. `MainWindow.RebuildKeyBindings()` rebuilds `Window.KeyBindings` from the service on load and on `GesturesChanged`, and *Settings → Keyboard* edits gestures inline. |
+| D19 | §9bis.5a | `IKeyboardShortcutService` described as a configurable map; current shell wires hard-coded `KeyBinding`s. | **Resolved.** `IKeyboardShortcutService` ships in `Therion.Processing.Abstractions` with `ShellCommandIds`; `JsonKeyboardShortcutService` persists a delta map to `%AppData%/ThIDE/keyboard.json`. `MainWindow.RebuildKeyBindings()` rebuilds `Window.KeyBindings` from the service on load and on `GesturesChanged`, and *Settings → Keyboard* edits gestures inline. |
 | D20 | §7.3 | Diagnostics / Compiler Output rows should be click-to-navigate. | **Resolved.** Both grids now double-click-navigate: `DiagnosticsViewModel.NavigateRequested` and `BuildViewModel.NavigateRequested` (driven by `CompilerOutputLine.Span` extracted by `HeuristicTherionOutputParser`) are forwarded through `MainWindowViewModel.NavigateToSpanRequested` to `TherionTextEditor.ScrollTo(SourceSpan)`. |
 | D21 | §5.3 / M6 #6 | DI extensions for semantic rules ship empty. | **Partially resolved.** New `AddTherionBuiltinSemanticRules()` extension registers the first stock rule (`OrphanFixedStationRule`, `TH_SEM_004`). Handler-side built-ins remain blocked by D1. |
 | D22 | §4.4 / Post-M6 A | `ICommandHandler` plugins had no parser-side dispatch path. | **Resolved.** `ThParser` now takes an optional `ICommandRegistry`; any keyword not in the built-in switch goes through the registry before the `UnknownCommand` fallback. Handler exceptions surface as `TH0012 PluginHandlerFailed` diagnostics so a misbehaving plugin can't crash a parse. `DocumentService` consumes the registry from DI. Three new tests in `CommandRegistryDispatchTests` cover the dispatch + exception + no-registry paths. Block-level handler dispatch (cursor + block terminator integration) remains a future refinement. |
-| D23 | §13 / Post-M6 B' | Dock.Avalonia migration risk. | **Phase 1 resolved.** `Dock.Avalonia 12.0.0.2` + `Dock.Model.Mvvm 12.0.0.2` added to `TherionProc.csproj` — compatibility with Avalonia 12.0.3 proven; 295 tests still pass. Active shell remains the interim `GridSplitter` + `ILayoutService`; the `DockFactory` adapter that replaces `JsonLayoutService` is the remaining phase-2 work. |
+| D23 | §13 / Post-M6 B' | Dock.Avalonia migration risk. | **Phase 1 resolved.** `Dock.Avalonia 12.0.0.2` + `Dock.Model.Mvvm 12.0.0.2` added to `ThIDE.csproj` — compatibility with Avalonia 12.0.3 proven; 295 tests still pass. Active shell remains the interim `GridSplitter` + `ILayoutService`; the `DockFactory` adapter that replaces `JsonLayoutService` is the remaining phase-2 work. |
 | D24 | §13 M7 / Post-M6 C | .NET 10 readiness. | **Resolved (scaffolding).** New `TherionLibraryTargetFrameworks` MSBuild property in `Directory.Build.props` — defaults to `net8.0`; pass `-p:TherionMultiTargetNet10=true` (or set the same-named env var) to multi-target `net8.0;net10.0`. All seven libraries (`Therion.Core` / `Processing.Abstractions` / `Syntax` / `Semantics` / `Workspace` / `Build`) now consume the shared property; apps + tests stay net8.0-only. Smoke-built `Therion.Core` produces both `net8.0` and `net10.0` assemblies with zero warnings. New-API audit deferred until net10.0 is the day-to-day target. |
-| D25 | §4.5 / D2 / Post-M6 D | Disk parse cache was JSON-only and on-by-default. | **Resolved.** New `MessagePackDiskParseCache` (LZ4-compressed) implements `IDiskParseCache` with the same envelope shape as `JsonDiskParseCache`; selection happens at the composition root via new `WorkspaceOptions.DiskCacheFormat` (`Json` │ `MessagePack`, default `MessagePack`). **Disk cache now defaults to disabled** (`WorkspaceOptions.DisableDiskCache = true`) to keep first-run startup deterministic; opt-in via env var `THERIONPROC_DISK_CACHE=1` (or by constructing `WorkspaceOptions` with `DisableDiskCache = false`). Disable wins over enable when both are set. `THERIONPROC_DISK_CACHE_FORMAT=json|msgpack` selects the backend. `AppServices` returns `NullDiskParseCache.Instance` when disabled so the L1-only path is allocation-free. Five new tests (4 MessagePack + updated env tests) cover all paths. |
+| D25 | §4.5 / D2 / Post-M6 D | Disk parse cache was JSON-only and on-by-default. | **Resolved.** New `MessagePackDiskParseCache` (LZ4-compressed) implements `IDiskParseCache` with the same envelope shape as `JsonDiskParseCache`; selection happens at the composition root via new `WorkspaceOptions.DiskCacheFormat` (`Json` │ `MessagePack`, default `MessagePack`). **Disk cache now defaults to disabled** (`WorkspaceOptions.DisableDiskCache = true`) to keep first-run startup deterministic; opt-in via env var `THIDE_DISK_CACHE=1` (or by constructing `WorkspaceOptions` with `DisableDiskCache = false`). Disable wins over enable when both are set. `THIDE_DISK_CACHE_FORMAT=json|msgpack` selects the backend. `AppServices` returns `NullDiskParseCache.Instance` when disabled so the L1-only path is allocation-free. Five new tests (4 MessagePack + updated env tests) cover all paths. |
 
 *End of plan.*
 89

@@ -1,0 +1,11 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ThIDE.ViewModels"
+        xmlns:views="using:ThIDE.Views"
+        xmlns:l="using:ThIDE.Resources"
+        x:Class="ThIDE.Views.RelationalMapWindow"
+        x:DataType="vm:RelationalMapViewModel"
+        Width="1000" Height="700"
+        Title="{l:Loc Tb_RelationalMap}">
+    <views:RelationalMapView />
+</Window>

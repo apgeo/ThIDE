@@ -1,7 +1,7 @@
 <Project>
 
   <!--
-    Versioning for the TherionProc app shell — SemVer 2.0 for the human/package version,
+    Versioning for the ThIDE app shell — SemVer 2.0 for the human/package version,
     plus a per-build counter carried in the Win32 FileVersion.
 
       * Version / PackageVersion / InformationalVersion → SemVer (e.g. 0.2.0, 0.2.0-beta.1).
@@ -10,7 +10,7 @@
       * AssemblyVersion → MAJOR.MINOR.PATCH.0, numeric only (no pre-release labels allowed);
         drives assembly binding / InternalsVisibleTo.
       * FileVersion → MAJOR.MINOR.PATCH.BUILD, where BUILD is the auto-incrementing counter
-        (see IncrementTherionBuildNumber in TherionProc.csproj). Numeric only.
+        (see IncrementTherionBuildNumber in ThIDE.csproj). Numeric only.
 
     Local build counter: build-number.txt is a machine-local, git-ignored integer. A fresh
     clone with no file falls back to TherionBuildNumberSeed.

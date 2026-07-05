@@ -1,4 +1,4 @@
-# TherionProc
+# ThIDE
 
 A cross-platform desktop **workbench / IDE for [Therion](https://therion.speleo.sk/) cave-survey projects** — modern editor tooling, a cross-file semantic model, survey analytics, syntax checking / highlighting for the `.th` / `.th2` / `.thconfig` / `.xvi` file formats, Therion compile integration, and 3D view of resulted models.
 
@@ -8,7 +8,7 @@ A cross-platform desktop **workbench / IDE for [Therion](https://therion.speleo.
 ![License](https://img.shields.io/badge/license-MPL--2.0%20(libs)%20%2F%20GPL--3.0--or--later%20(app)-blue)
 ![Therion](https://img.shields.io/badge/Therion-v6.4.0-2E7D32)
 
-> TherionProc is an independent IDE that *understands* the Therion languages and *drives* the Therion toolchain — it does not replace it. The core libraries are a C# implementation of the Therion file **formats**; the actual cave compilation is delegated to your installed `therion` binary. TherionProc is not affiliated with or endorsed by the Therion project.
+> ThIDE is an independent IDE that *understands* the Therion languages and *drives* the Therion toolchain — it does not replace it. The core libraries are a C# implementation of the Therion file **formats**; the actual cave compilation is delegated to your installed `therion` binary. ThIDE is not affiliated with or endorsed by the Therion project.
 
 ---
 
@@ -41,23 +41,23 @@ The application is in an alpha development stage: there are known bugs to be fix
 ### Build
 
 ```sh
-git clone <your-fork-url> TherionProc
-cd TherionProc
-dotnet restore TherionProc.sln
+git clone <your-fork-url> ThIDE
+cd ThIDE
+dotnet restore ThIDE.sln
 # -m:1 is required: the full solution OOMs MSBuild under parallel builds.
-dotnet build TherionProc.sln -m:1 -c Release
+dotnet build ThIDE.sln -m:1 -c Release
 ```
 
 ### Run the app
 
 ```sh
-dotnet run --project TherionProc
+dotnet run --project ThIDE
 ```
 
 ### Test
 
 ```sh
-dotnet test TherionProc.sln -m:1 -c Release
+dotnet test ThIDE.sln -m:1 -c Release
 ```
 
 > The CI matrix builds and tests on Windows, Linux, and macOS — see [.github/workflows/ci.yml](.github/workflows/ci.yml).
@@ -84,7 +84,7 @@ Contributions are welcome — just open a pull request. See [CONTRIBUTING.md](CO
 
 ## License
 
-TherionProc is dual-licensed: **Reusable libraries** (`src/**`) — **MPL-2.0**;  The IDE **Application** (`TherionProc/**`) — **GPL-3.0-or-later** . Full texts live in each project's `LICENSE` file (libraries) and the repository-root [LICENSE](LICENSE) (app). Further notes on licensing in [LICENSING.md](LICENSING.md).
+ThIDE is dual-licensed: **Reusable libraries** (`src/**`) — **MPL-2.0**;  The IDE **Application** (`ThIDE/**`) — **GPL-3.0-or-later** . Full texts live in each project's `LICENSE` file (libraries) and the repository-root [LICENSE](LICENSE) (app). Further notes on licensing in [LICENSING.md](LICENSING.md).
 
 ---
 
@@ -94,4 +94,4 @@ TherionProc is dual-licensed: **Reusable libraries** (`src/**`) — **MPL-2.0**;
 - The **[Survex](https://github.com/ojwb/survex/)** project, [survex.com](https://survex.com/) .
 - **[CaveView.js](https://github.com/aardgoose/CaveView.js)** — the embedded 3D model renderer.
 - **[Mapiah](https://github.com/rsevero/mapiah)** project, [flathub](https://flathub.org/en/apps/io.github.rsevero.mapiah) — the .th2 visual map / scrap editor.
-- **[Avalonia](https://avaloniaui.net/)**, **[AvaloniaEdit](https://github.com/AvaloniaUI/AvaloniaEdit)**, **[Dock.Avalonia](https://github.com/wieslawsoltes/Dock)**, **[CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet)**, **[Superpower](https://github.com/datalust/superpower)**, **Svg.Skia**, and **Docnet** — some of the libraries TherionProc is built on.
+- **[Avalonia](https://avaloniaui.net/)**, **[AvaloniaEdit](https://github.com/AvaloniaUI/AvaloniaEdit)**, **[Dock.Avalonia](https://github.com/wieslawsoltes/Dock)**, **[CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet)**, **[Superpower](https://github.com/datalust/superpower)**, **Svg.Skia**, and **Docnet** — some of the libraries ThIDE is built on.

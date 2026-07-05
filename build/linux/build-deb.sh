@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
 #
-# Build a Debian package (.deb) from a self-contained linux-x64 publish of TherionProc.
+# Build a Debian package (.deb) from a self-contained linux-x64 publish of ThIDE.
 #
 # The .deb is the Linux counterpart to the Windows setup.exe: it installs the app under
-# /opt/therionproc, drops a launcher on PATH, adds an application-menu entry with an icon, and
-# registers the Therion file types (mirroring TherionProc.Services.FileAssociationCatalog, kept in
+# /opt/thide, drops a launcher on PATH, adds an application-menu entry with an icon, and
+# registers the Therion file types (mirroring ThIDE.Services.FileAssociationCatalog, kept in
 # sync by InstallerAssociationConsistencyTests). Install with `apt install ./file.deb`; remove with
-# `apt remove therionproc`.
+# `apt remove thide`.
 #
 # Usage:
 #   build/linux/build-deb.sh <publish-dir> <version> [out-dir]
 #
 # Example:
-#   dotnet publish TherionProc/TherionProc.csproj -m:1 -c Release -r linux-x64 \
+#   dotnet publish ThIDE/ThIDE.csproj -m:1 -c Release -r linux-x64 \
 #       --self-contained true -p:PublishSingleFile=true -o publish/linux-x64
 #   build/linux/build-deb.sh publish/linux-x64 0.3.0
 #
@@ -30,15 +30,15 @@ if [[ -z "$PUBLISH_DIR" || ! -d "$PUBLISH_DIR" ]]; then
   echo "usage: $0 <publish-dir> <version> [out-dir]" >&2
   exit 1
 fi
-if [[ ! -f "$PUBLISH_DIR/TherionProc" ]]; then
-  echo "error: '$PUBLISH_DIR/TherionProc' (the published apphost) not found" >&2
+if [[ ! -f "$PUBLISH_DIR/ThIDE" ]]; then
+  echo "error: '$PUBLISH_DIR/ThIDE' (the published apphost) not found" >&2
   exit 1
 fi
 
 # Resolve the repo root from this script's location so relative asset paths work from anywhere.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-ICO="$REPO_ROOT/TherionProc/Assets/avalonia-logo.ico"
+ICO="$REPO_ROOT/ThIDE/Assets/thide.ico"
 
 # The Therion file types, mirroring FileAssociationCatalog.Types ("ext|description").
 EXTS=(
@@ -53,24 +53,24 @@ EXTS=(
 PKG="$(mktemp -d)"
 trap 'rm -rf "$PKG"' EXIT
 
-APPDIR="$PKG/opt/therionproc"
+APPDIR="$PKG/opt/thide"
 BINDIR="$PKG/usr/bin"
 DESKTOPDIR="$PKG/usr/share/applications"
 ICONDIR="$PKG/usr/share/icons/hicolor/256x256/apps"
 MIMEDIR="$PKG/usr/share/mime/packages"
-DOCDIR="$PKG/usr/share/doc/therionproc"
+DOCDIR="$PKG/usr/share/doc/thide"
 mkdir -p "$APPDIR" "$BINDIR" "$DESKTOPDIR" "$ICONDIR" "$MIMEDIR" "$DOCDIR" "$PKG/DEBIAN"
 
-echo "==> Staging published files -> /opt/therionproc"
+echo "==> Staging published files -> /opt/thide"
 cp -a "$PUBLISH_DIR/." "$APPDIR/"
-chmod 0755 "$APPDIR/TherionProc"
+chmod 0755 "$APPDIR/ThIDE"
 
 # Launcher on PATH.
-cat > "$BINDIR/therionproc" <<'EOF'
+cat > "$BINDIR/thide" <<'EOF'
 #!/bin/sh
-exec /opt/therionproc/TherionProc "$@"
+exec /opt/thide/ThIDE "$@"
 EOF
-chmod 0755 "$BINDIR/therionproc"
+chmod 0755 "$BINDIR/thide"
 
 # Build the MimeType list + shared-mime-info package.
 MIME_LIST=""
@@ -87,24 +87,24 @@ MIME_LIST=""
     echo "  </mime-type>"
   done
   echo '</mime-info>'
-} > "$MIMEDIR/therionproc.xml"
+} > "$MIMEDIR/thide.xml"
 
 # Desktop entry (mirrors the app's runtime one; Exec/Icon resolve via PATH + icon theme).
-cat > "$DESKTOPDIR/therionproc.desktop" <<EOF
+cat > "$DESKTOPDIR/thide.desktop" <<EOF
 [Desktop Entry]
 Type=Application
-Name=TherionProc
+Name=ThIDE
 Comment=Therion survey editor
-Exec=therionproc %F
-TryExec=therionproc
-Icon=therionproc
+Exec=thide %F
+TryExec=thide
+Icon=thide
 Terminal=false
 Categories=Science;Education;Utility;
 MimeType=$MIME_LIST
 EOF
 
 # Menu icon: extract the largest frame from the .ico if a converter is available.
-PNG="$ICONDIR/therionproc.png"
+PNG="$ICONDIR/thide.png"
 if command -v icotool >/dev/null 2>&1; then
   tmpico="$(mktemp -d)"
   icotool -x -o "$tmpico" "$ICO" >/dev/null 2>&1 || true
@@ -127,18 +127,18 @@ cp "$REPO_ROOT/LICENSE" "$DOCDIR/copyright"
 # Debian control metadata. Installed-Size is in KiB.
 INSTALLED_KB="$(du -ks "$PKG" | cut -f1)"
 cat > "$PKG/DEBIAN/control" <<EOF
-Package: therionproc
+Package: thide
 Version: $VERSION
 Section: science
 Priority: optional
 Architecture: amd64
-Maintainer: TherionProc <noreply@example.com>
+Maintainer: ThIDE <noreply@example.com>
 Installed-Size: $INSTALLED_KB
 Depends: libc6, libgcc-s1, libstdc++6, zlib1g
 Recommends: libx11-6, libice6, libsm6, libfontconfig1, libgl1, libwebkit2gtk-4.1-0
-Homepage: https://github.com/apgeo/TherionProc
+Homepage: https://github.com/apgeo/ThIDE
 Description: Therion survey editor and processor
- TherionProc is a cross-platform editor for Therion cave-survey source: syntax
+ ThIDE is a cross-platform editor for Therion cave-survey source: syntax
  intelligence, live preview, 2D/3D map rendering, data analytics and more.
  This package bundles a self-contained .NET runtime, so no system .NET is required.
 EOF
@@ -163,7 +163,7 @@ EOF
 chmod 0755 "$PKG/DEBIAN/postinst" "$PKG/DEBIAN/postrm"
 
 mkdir -p "$OUT_DIR"
-DEB="$OUT_DIR/therionproc_${VERSION}_amd64.deb"
+DEB="$OUT_DIR/thide_${VERSION}_amd64.deb"
 echo "==> Building $DEB"
 dpkg-deb --build --root-owner-group "$PKG" "$DEB"
 echo "==> Done: $DEB"

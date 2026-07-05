@@ -1,6 +1,6 @@
-# TherionProc documentation
+# ThIDE documentation
 
-Guides and reference for TherionProc. See the [project README](../README.md) for the overview and quick start.
+Guides and reference for ThIDE. See the [project README](../README.md) for the overview and quick start.
 
 ## Guides
 

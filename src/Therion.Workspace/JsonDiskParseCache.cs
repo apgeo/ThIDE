@@ -35,15 +35,15 @@ public sealed class JsonDiskParseCache : IDiskParseCache
     {
         if (OperatingSystem.IsWindows())
             return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "TherionProc", "cache");
+                "ThIDE", "cache");
         if (OperatingSystem.IsMacOS())
             return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                "Library", "Caches", "TherionProc");
+                "Library", "Caches", "ThIDE");
         // Linux + others: XDG default.
         var xdg = Environment.GetEnvironmentVariable("XDG_CACHE_HOME");
-        if (!string.IsNullOrEmpty(xdg)) return Path.Combine(xdg, "therionproc");
+        if (!string.IsNullOrEmpty(xdg)) return Path.Combine(xdg, "thide");
         return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-            ".cache", "therionproc");
+            ".cache", "thide");
     }
 
     public bool TryGet(ParseCacheKey key, out ParseResult<TherionFile> result)

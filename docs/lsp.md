@@ -1,6 +1,6 @@
 # Language Server (EXT-05)
 
-`therion-lsp` exposes TherionProc's parser + semantics as a [Language Server](https://microsoft.github.io/language-server-protocol/),
+`therion-lsp` exposes ThIDE's parser + semantics as a [Language Server](https://microsoft.github.io/language-server-protocol/),
 so any LSP client (VSCode, Neovim, Helix, Emacs/eglot, …) gets Therion diagnostics in its own editor.
 
 It speaks JSON-RPC over **stdio** and currently publishes **diagnostics** on open/change

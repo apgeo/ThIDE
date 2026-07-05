@@ -1,0 +1,185 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ThIDE.ViewModels.Docking"
+             xmlns:vmw="using:ThIDE.ViewModels"
+             xmlns:conv="using:ThIDE.Converters"
+             xmlns:l="using:ThIDE.Resources"
+             x:Class="ThIDE.Views.Docking.WorkspaceExplorerToolView"
+             x:DataType="vm:WorkspaceExplorerToolViewModel">
+    <DockPanel>
+        <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="8,5">
+            <StackPanel Spacing="5">
+                <!-- View-mode switch (#5): relational object graph vs. file explorer. -->
+                <StackPanel Orientation="Horizontal" Spacing="0">
+                    <ToggleButton Padding="6,3" ToolTip.Tip="Relational object-graph view"
+                                  IsChecked="{Binding Explorer.IsRelationalView, Mode=OneWay}"
+                                  Command="{Binding Explorer.SwitchToRelationalCommand}">
+                        <PathIcon Data="{DynamicResource Icon.Cube}" Width="14" Height="14" />
+                    </ToggleButton>
+                    <ToggleButton Padding="6,3" ToolTip.Tip="File-explorer view"
+                                  IsChecked="{Binding Explorer.IsFileExplorerView, Mode=OneWay}"
+                                  Command="{Binding Explorer.SwitchToFileExplorerCommand}">
+                        <PathIcon Data="{DynamicResource Icon.Folder}" Width="14" Height="14" />
+                    </ToggleButton>
+                </StackPanel>
+
+                <!-- Active thconfig dropdown (#3) + its formatted path (#8) + open button (#6). -->
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Padding="5,3" Margin="4,0,0,0" VerticalAlignment="Center"
+                            x:CompileBindings="False"
+                            Command="{Binding Explorer.OpenSelectedThconfigCommand}"
+                            ToolTip.Tip="Open the selected thconfig in the editor">
+                        <PathIcon Data="{DynamicResource Icon.File}" Width="13" Height="13" />
+                    </Button>
+                    <ComboBox HorizontalAlignment="Stretch" FontSize="11" x:CompileBindings="False"
+                              ToolTip.Tip="Active configuration (drives the object graph)"
+                              ItemsSource="{Binding Explorer.ThconfigCandidates}"
+                              SelectedItem="{Binding Explorer.SelectedThconfig, Mode=TwoWay}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding DisplayPath}" ToolTip.Tip="{Binding FullPath}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </DockPanel>
+
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                    <!-- Show file nodes in the relational view (#5a); hidden in file-explorer mode. -->
+                    <ToggleButton Padding="5,3" VerticalAlignment="Center"
+                                  ToolTip.Tip="Show file nodes in the object graph"
+                                  IsVisible="{Binding Explorer.IsRelationalView}"
+                                  IsChecked="{Binding Explorer.ShowFilesInModel, Mode=TwoWay}">
+                        <PathIcon Data="{DynamicResource Icon.File}" Width="14" Height="14" />
+                    </ToggleButton>
+                    <ToggleButton Padding="5,3" VerticalAlignment="Center"
+                                  ToolTip.Tip="Highlight workspace item when hovering a link in the editor"
+                                  IsChecked="{Binding Explorer.RevealOnHover, Mode=TwoWay}">
+                        <PathIcon Data="{DynamicResource Icon.Eye}" Width="14" Height="14" />
+                    </ToggleButton>
+                    <ToggleButton Padding="5,3" VerticalAlignment="Center"
+                                  ToolTip.Tip="Highlight the active file in the workspace when switching tabs"
+                                  IsChecked="{Binding Explorer.RevealOnTabSwitch, Mode=TwoWay}">
+                        <PathIcon Data="{DynamicResource Icon.Swap}" Width="14" Height="14" />
+                    </ToggleButton>
+
+                    <!-- Sort files/folders (file-explorer view only), Windows-Explorer style (#15). -->
+                    <Button Padding="5,3" VerticalAlignment="Center" x:CompileBindings="False"
+                            ToolTip.Tip="Sort by"
+                            IsVisible="{Binding Explorer.IsFileExplorerView}">
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <PathIcon Data="{DynamicResource Icon.Sort}" Width="14" Height="14" />
+                            <TextBlock Text="{Binding Explorer.SortModeLabel}" FontSize="11" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <Button.Flyout>
+                            <MenuFlyout>
+                                <MenuItem Header="Name" Command="{Binding Explorer.SortByNameCommand}" />
+                                <MenuItem Header="Date modified" Command="{Binding Explorer.SortByModifiedCommand}" />
+                                <MenuItem Header="Type" Command="{Binding Explorer.SortByTypeCommand}" />
+                                <MenuItem Header="Size" Command="{Binding Explorer.SortBySizeCommand}" />
+                                <MenuItem Header="Date created" Command="{Binding Explorer.SortByCreatedCommand}" />
+                                <Separator />
+                                <MenuItem Header="Ascending" Command="{Binding Explorer.SortAscendingCmdCommand}" />
+                                <MenuItem Header="Descending" Command="{Binding Explorer.SortDescendingCmdCommand}" />
+                            </MenuFlyout>
+                        </Button.Flyout>
+                    </Button>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- File-modified-outside-editor banner (#5b). -->
+        <Border DockPanel.Dock="Top" Background="#E3F2FD" Padding="8,4"
+                IsVisible="{Binding Explorer.WorkspaceBanner, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+            <DockPanel>
+                <Button DockPanel.Dock="Right" Content="&#x2715;" Padding="6,0"
+                        Background="Transparent" BorderThickness="0" Foreground="#0D47A1"
+                        Command="{Binding Explorer.DismissWorkspaceBannerCommand}" />
+                <TextBlock Text="{Binding Explorer.WorkspaceBanner}" Foreground="#0D47A1"
+                           VerticalAlignment="Center" TextWrapping="Wrap" FontSize="11" />
+            </DockPanel>
+        </Border>
+
+        <TreeView x:Name="Tree" x:CompileBindings="False"
+                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                  ItemsSource="{Binding Explorer.Roots}"
+                  SelectedItem="{Binding Explorer.Selected, Mode=TwoWay}"
+                  ContextRequested="OnTreeContextRequested">
+            <!-- virtualize the tree so a 200+ file / many-station hierarchy only
+                 realizes the visible rows. -->
+            <TreeView.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <VirtualizingStackPanel />
+                </ItemsPanelTemplate>
+            </TreeView.ItemsPanel>
+            <TreeView.Styles>
+                <!-- Honor each node's default-expansion state. -->
+                <Style Selector="TreeViewItem">
+                    <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                </Style>
+                <!-- Files in the active thconfig graph: blue + bold so they stand out, and
+                     readable on both light and dark themes (#1/#9). Other names inherit the
+                     themed default foreground instead of a hard-coded black (#1). -->
+                <Style Selector="TextBlock.graphFile">
+                    <Setter Property="Foreground" Value="#3B82F6" />
+                    <Setter Property="FontWeight" Value="SemiBold" />
+                </Style>
+            </TreeView.Styles>
+            <TreeView.ItemTemplate>
+                <TreeDataTemplate ItemsSource="{Binding Children}">
+                    <!-- Border carries the yellow hover-highlight (#4) and the hover tooltip (#2).
+                         Double-tap is handled HERE (on the content row, a child of the TreeViewItem)
+                         rather than on the TreeView, so e.Handled is set before the event bubbles up
+                         to the TreeViewItem's expand-on-double-tap — the row opens/navigates and the
+                         node no longer folds/unfolds; only the chevron arrow toggles expansion (#5). -->
+                    <Border Background="{Binding RowBackground}" CornerRadius="2" Padding="2,0"
+                            DoubleTapped="OnNodeDoubleTapped"
+                            PointerPressed="OnNodePointerPressed" PointerMoved="OnNodePointerMoved">
+                        <Border.ContextMenu>
+                            <ContextMenu Opening="OnContextMenuOpening">
+                                <MenuItem Header="{l:Loc Ctx_Open}" Click="OnCtxOpen" />
+                                <MenuItem Header="{l:Loc Ctx_Reveal}" Click="OnCtxReveal" />
+                                <!-- Only shown for .thconfig nodes (toggled in OnContextMenuOpening, #7). -->
+                                <MenuItem Header="{l:Loc Ctx_SetActive}" Tag="setactive"
+                                          Click="OnCtxSetActiveThconfig" />
+                                <Separator />
+                                <MenuItem Header="{l:Loc Ctx_NewFile}" Click="OnCtxNewFile" />
+                                <MenuItem Header="{l:Loc Ctx_NewFolder}" Click="OnCtxNewFolder" />
+                                <!-- Shown on every OS; header is set per-platform in OnContextMenuOpening. -->
+                                <MenuItem Header="{l:Loc Ctx_Delete}" Tag="delete" Click="OnCtxDelete" />
+                                <Separator />
+                                <MenuItem Header="{l:Loc Ctx_CopyFull}" Click="OnCtxCopyFull" />
+                                <MenuItem Header="{l:Loc Ctx_CopyRel}" Click="OnCtxCopyRel" />
+                                <Separator />
+                                <MenuItem Header="{l:Loc Ctx_Refresh}" Click="OnCtxRefresh" />
+                                <!-- Visible only where a native shell menu exists (INativeContextMenuService). -->
+                                <MenuItem Header="{l:Loc Ctx_ShellMore}" Tag="nativemenu" Click="OnCtxShellMenu" />
+                            </ContextMenu>
+                        </Border.ContextMenu>
+                        <ToolTip.Tip>
+                            <StackPanel MaxWidth="600">
+                                <TextBlock Text="{Binding TooltipTitle}" TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding LastModifiedText}" Foreground="Gray" FontSize="11"
+                                           IsVisible="{Binding LastModifiedText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                            </StackPanel>
+                        </ToolTip.Tip>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <!-- Native shell icon (file-explorer view) with a glyph fallback. -->
+                            <Image Source="{Binding ShellIcon}" Width="16" Height="16" VerticalAlignment="Center"
+                                   IsVisible="{Binding ShellIcon, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                            <PathIcon Data="{Binding Kind, Converter={x:Static conv:KindToIconConverter.Instance}}"
+                                      Foreground="{Binding IconBrush}" Width="14" Height="14" VerticalAlignment="Center"
+                                      IsVisible="{Binding ShellIcon, Converter={x:Static ObjectConverters.IsNull}}" />
+                            <!-- Blue + bold name = file is part of the active thconfig graph (#1/#9);
+                                 other names inherit the themed foreground (visible on dark, #1). -->
+                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
+                                       Classes.graphFile="{Binding InActiveGraph}"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding Detail}" Foreground="Gray" FontStyle="Italic"
+                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                    </Border>
+                </TreeDataTemplate>
+            </TreeView.ItemTemplate>
+        </TreeView>
+    </DockPanel>
+</UserControl>

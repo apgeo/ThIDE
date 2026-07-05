@@ -1,6 +1,6 @@
 # Plugins (EXT-04)
 
-TherionProc loads external **semantic-rule** plugins at startup, so you can add custom diagnostics
+ThIDE loads external **semantic-rule** plugins at startup, so you can add custom diagnostics
 without rebuilding the app.
 
 ## Writing a plugin
@@ -33,8 +33,8 @@ Requirements for discovery:
 Drop the compiled `*.dll` into:
 
 ```
-%AppData%/TherionProc/plugins      (Windows)
-~/.config/TherionProc/plugins      (Linux/macOS, XDG fallback)
+%AppData%/ThIDE/plugins      (Windows)
+~/.config/ThIDE/plugins      (Linux/macOS, XDG fallback)
 ```
 
 Plugins are scanned at startup and their rules run alongside the built-ins (results appear in the

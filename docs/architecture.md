@@ -6,7 +6,7 @@ The codebase is split into **fully decoupled** layers. The lower layers have **n
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  TherionProc                  Avalonia desktop app (UI)       │
+│  ThIDE                  Avalonia desktop app (UI)       │
 │  Views / ViewModels / DI composition root                     │
 └───────────────────────────▲──────────────────────────────────┘
                             │ (interfaces only)
@@ -30,7 +30,7 @@ The codebase is split into **fully decoupled** layers. The lower layers have **n
 | [src/Therion.Processing.Abstractions](../src/Therion.Processing.Abstractions) | library | Public interfaces consumed by the UI and other hosts. |
 | [src/Therion.Cli](../src/Therion.Cli) | tool (`therion-cli`) | Headless validation / lint / format / stats / deps / GIS. |
 | [src/Therion.Lsp](../src/Therion.Lsp) | tool (`therion-lsp`) | Language Server (diagnostics over stdio). |
-| [TherionProc](../TherionProc) | app | Avalonia 12 desktop UI (MVVM, CommunityToolkit.Mvvm). |
+| [ThIDE](../ThIDE) | app | Avalonia 12 desktop UI (MVVM, CommunityToolkit.Mvvm). |
 | `tests/**` | tests | xUnit suites, including a corpus of real-world Therion projects. |
 
 **Stack:** .NET 8 (LTS) · Avalonia 12 · Superpower (parsing) · Dock.Avalonia (docking) · CaveView.js (3D) · Svg.Skia / Docnet (map & PDF rendering). Therion is pinned to **v6.4.0** in [TherionVersion.json](../TherionVersion.json).

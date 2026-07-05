@@ -25,11 +25,11 @@ jobs:
           dotnet-version: 8.0.x
 
       - name: Restore
-        run: dotnet restore TherionProc.sln
+        run: dotnet restore ThIDE.sln
 
       # -m:1 mirrors the known-good local build (the solution OOMs MSBuild under parallel build).
       - name: Build
-        run: dotnet build TherionProc.sln -m:1 --no-restore -c Release
+        run: dotnet build ThIDE.sln -m:1 --no-restore -c Release
 
       - name: Test
-        run: dotnet test TherionProc.sln -m:1 --no-build -c Release --verbosity normal
+        run: dotnet test ThIDE.sln -m:1 --no-build -c Release --verbosity normal

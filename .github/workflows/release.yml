@@ -50,7 +50,7 @@ jobs:
       # SemVer / FileVersion match the release (freezing the local build counter).
       - name: Publish (self-contained)
         run: >
-          dotnet publish TherionProc/TherionProc.csproj -m:1 -c Release -r ${{ matrix.rid }}
+          dotnet publish ThIDE/ThIDE.csproj -m:1 -c Release -r ${{ matrix.rid }}
           --self-contained true -p:PublishSingleFile=true -o publish/${{ matrix.rid }}
           -p:VersionPrefix=${{ steps.ver.outputs.prefix }} -p:VersionSuffix=${{ steps.ver.outputs.suffix }}
           -p:TherionBuildNumber=0 -p:TherionAutoIncrementBuild=false
@@ -66,7 +66,7 @@ jobs:
             "/DMyAppVersion=${{ steps.ver.outputs.version }}" `
             "/DSourceDir=$PWD\publish\win-x64" `
             "/O$PWD" `
-            build\windows\TherionProc.iss
+            build\windows\ThIDE.iss
 
       - name: Build Linux installers (.deb + AppImage)
         if: matrix.rid == 'linux-x64'
@@ -82,22 +82,22 @@ jobs:
       - name: Archive (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
-        run: Compress-Archive -Path publish/${{ matrix.rid }}/* -DestinationPath TherionProc-${{ matrix.rid }}.zip
+        run: Compress-Archive -Path publish/${{ matrix.rid }}/* -DestinationPath ThIDE-${{ matrix.rid }}.zip
 
       - name: Archive (Unix)
         if: runner.os != 'Windows'
-        run: tar -czf TherionProc-${{ matrix.rid }}.tar.gz -C publish/${{ matrix.rid }} .
+        run: tar -czf ThIDE-${{ matrix.rid }}.tar.gz -C publish/${{ matrix.rid }} .
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: TherionProc-${{ matrix.rid }}
+          name: ThIDE-${{ matrix.rid }}
           path: |
-            TherionProc-${{ matrix.rid }}.zip
-            TherionProc-${{ matrix.rid }}.tar.gz
-            TherionProc-Setup-*.exe
-            therionproc_*_amd64.deb
-            TherionProc-*-x86_64.AppImage
+            ThIDE-${{ matrix.rid }}.zip
+            ThIDE-${{ matrix.rid }}.tar.gz
+            ThIDE-Setup-*.exe
+            thide_*_amd64.deb
+            ThIDE-*-x86_64.AppImage
           if-no-files-found: ignore
 
       - name: Attach to GitHub Release (tags only)
@@ -107,9 +107,9 @@ jobs:
           # A pre-release tag (v0.3.0-beta.1) is flagged as a GitHub pre-release.
           prerelease: ${{ steps.ver.outputs.suffix != '' }}
           files: |
-            TherionProc-${{ matrix.rid }}.zip
-            TherionProc-${{ matrix.rid }}.tar.gz
-            TherionProc-Setup-*.exe
-            therionproc_*_amd64.deb
-            TherionProc-*-x86_64.AppImage
+            ThIDE-${{ matrix.rid }}.zip
+            ThIDE-${{ matrix.rid }}.tar.gz
+            ThIDE-Setup-*.exe
+            thide_*_amd64.deb
+            ThIDE-*-x86_64.AppImage
           fail_on_unmatched_files: false

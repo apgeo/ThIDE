@@ -1,4 +1,4 @@
-// TherionProc application directives — an editor/UX layer that lives INSIDE Therion
+// ThIDE application directives — an editor/UX layer that lives INSIDE Therion
 // comments (`#@…`), so it is fully forward/backward compatible with Therion syntax
 // (Therion sees only a comment). Directives are the rough equivalent of preprocessor /
 // pragma directives; the first consumer is the collapsible `#@region … #@endregion`

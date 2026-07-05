@@ -1,10 +1,10 @@
 # Embedded 3D Model Viewer (VIS-01)
 
-TherionProc can render a compiled cave model (`.lox` / `.3d`) in a dockable **3D Viewer** pane —
+ThIDE can render a compiled cave model (`.lox` / `.3d`) in a dockable **3D Viewer** pane —
 rotate / pan / zoom, color-by overlays, and **station picking that jumps back to the `.th` source**.
 
 The renderer is [CaveView.js](https://github.com/aardgoose/CaveView.js) (MIT), vendored under
-`TherionProc/Assets/caveview/` and hosted inside Avalonia 12's **`NativeWebView`**. The web view uses
+`ThIDE/Assets/caveview/` and hosted inside Avalonia 12's **`NativeWebView`**. The web view uses
 each OS's *native* engine (WebView2 on Windows, WKWebView on macOS, WebKitGTK/WPE on Linux) — there is
 **no bundled Chromium**.
 

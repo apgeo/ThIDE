@@ -51,7 +51,7 @@ single source of truth for "which language is this line?":
 | `None` | opaque bodies (e.g. `lookup`) | not highlighted |
 | _absent_ | ordinary Therion lines (incl. `layout`/`endlayout`) | `TokenClassifier.Classify` |
 
-[`TherionColorizer`](../TherionProc/Editor/TherionColorizer.cs) receives the map via
+[`TherionColorizer`](../ThIDE/Editor/TherionColorizer.cs) receives the map via
 `SetLineRegions` and dispatches per line; all lexers emit the shared `ClassifiedSpan` /
 `TokenClassification` stream, so they render through the same palette (and the same HTML-report /
 CLI paths) with no new colours.

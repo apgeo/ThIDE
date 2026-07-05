@@ -1,4 +1,4 @@
-# Releasing TherionProc (REL-04)
+# Releasing ThIDE (REL-04)
 
 ## Release channel
 
@@ -26,14 +26,14 @@ Linux (the tooling and local build scripts live in [`/build`](../build/README.md
 
 | Platform | Artifact | Built with |
 |----------|----------|------------|
-| Windows  | `TherionProc-Setup-<ver>.exe` | Inno Setup (`build/windows/TherionProc.iss`) |
-| Linux    | `therionproc_<ver>_amd64.deb` | `dpkg-deb` (`build/linux/build-deb.sh`) |
-| Linux    | `TherionProc-<ver>-x86_64.AppImage` | `appimagetool` (`build/linux/build-appimage.sh`) |
-| macOS    | `TherionProc-osx-arm64.tar.gz` (portable — no installer yet) | — |
+| Windows  | `ThIDE-Setup-<ver>.exe` | Inno Setup (`build/windows/ThIDE.iss`) |
+| Linux    | `thide_<ver>_amd64.deb` | `dpkg-deb` (`build/linux/build-deb.sh`) |
+| Linux    | `ThIDE-<ver>-x86_64.AppImage` | `appimagetool` (`build/linux/build-appimage.sh`) |
+| macOS    | `ThIDE-osx-arm64.tar.gz` (portable — no installer yet) | — |
 
 The installers wrap the self-contained publish (no system .NET needed), create a menu shortcut, and
 register the Therion file types (`.th .th2 .thconfig .thc .thl .xvi`). The `.deb` and the Windows
-setup uninstall cleanly (Add/Remove Programs; `apt remove therionproc`); the **AppImage** is a
+setup uninstall cleanly (Add/Remove Programs; `apt remove thide`); the **AppImage** is a
 portable, install-free single executable for users who don't want a system package. The registered
 file types are kept in sync with the app's `FileAssociationCatalog` by
 `InstallerAssociationConsistencyTests`. Version is derived from the `v*` tag. To build one by hand,
@@ -44,7 +44,7 @@ see [build/README.md](../build/README.md).
 Signing requires certificates that must live in CI secrets, so it is intentionally **not** wired
 into the workflow above. Add it per platform when certs are available:
 
-- **Windows** — Authenticode sign the published `.exe` **and** the generated `TherionProc-Setup-*.exe`
+- **Windows** — Authenticode sign the published `.exe` **and** the generated `ThIDE-Setup-*.exe`
   with `signtool` using a code-signing cert (`AzureSignTool` works well with a cert in Key Vault). Sign
   the app exe before running Inno Setup, then sign the resulting installer.
 - **macOS** — sign with a Developer ID Application cert (`codesign --deep --options runtime`), then

@@ -94,7 +94,7 @@ public static class GisExport
     {
         var sb = new StringBuilder();
         sb.AppendLine("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
-        sb.AppendLine("<gpx version=\"1.1\" creator=\"TherionProc\" xmlns=\"http://www.topografix.com/GPX/1/1\">");
+        sb.AppendLine("<gpx version=\"1.1\" creator=\"ThIDE\" xmlns=\"http://www.topografix.com/GPX/1/1\">");
         foreach (var p in points)
         {
             if (p.X is not { } x || p.Y is not { } y) continue;

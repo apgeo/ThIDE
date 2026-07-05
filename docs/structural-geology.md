@@ -62,7 +62,7 @@ its plane.
 
 ## Magnetic declination & WMM
 
-*WMM auto* needs a public-domain NOAA **`WMM.COF`** model file placed in `%AppData%/TherionProc/` (or
+*WMM auto* needs a public-domain NOAA **`WMM.COF`** model file placed in `%AppData%/ThIDE/` (or
 next to the app). It also needs a `fix`ed station in a convertible coordinate system (UTM / lat-long) and
 a survey `date`. When any of these is missing the panel falls back with a note; use *manual* declination
 (the value the Declination calculator or Therion reports) instead.

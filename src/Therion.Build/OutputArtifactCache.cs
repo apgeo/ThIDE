@@ -35,14 +35,14 @@ public sealed class JsonOutputArtifactCache : IOutputArtifactCache
     {
         if (OperatingSystem.IsWindows())
             return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "TherionProc", "artifacts");
+                "ThIDE", "artifacts");
         if (OperatingSystem.IsMacOS())
             return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                "Library", "Caches", "TherionProc", "artifacts");
+                "Library", "Caches", "ThIDE", "artifacts");
         var xdg = Environment.GetEnvironmentVariable("XDG_CACHE_HOME");
         var basePath = !string.IsNullOrEmpty(xdg)
-            ? Path.Combine(xdg, "therionproc")
-            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".cache", "therionproc");
+            ? Path.Combine(xdg, "thide")
+            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".cache", "thide");
         return Path.Combine(basePath, "artifacts");
     }
 

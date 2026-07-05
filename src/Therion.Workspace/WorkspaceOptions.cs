@@ -46,19 +46,19 @@ public sealed record WorkspaceOptions
     /// Mirrors Decision #8 / Plan §4.5. Kept for back-compat; redundant now that
     /// disk cache defaults to disabled.
     /// </summary>
-    public const string DisableDiskCacheEnvVar = "THERIONPROC_NO_CACHE";
+    public const string DisableDiskCacheEnvVar = "THIDE_NO_CACHE";
 
     /// <summary>
     /// Environment variable that opts in to disk caching (Post-M6 D). Set to a
     /// non-empty value other than <c>"0"</c> to enable.
     /// </summary>
-    public const string EnableDiskCacheEnvVar = "THERIONPROC_DISK_CACHE";
+    public const string EnableDiskCacheEnvVar = "THIDE_DISK_CACHE";
 
     /// <summary>
     /// Environment variable selecting the disk-cache backend. Accepts
     /// <c>"json"</c> or <c>"messagepack"</c> (case-insensitive).
     /// </summary>
-    public const string DiskCacheFormatEnvVar = "THERIONPROC_DISK_CACHE_FORMAT";
+    public const string DiskCacheFormatEnvVar = "THIDE_DISK_CACHE_FORMAT";
 
     /// <summary>
     /// Materializes options from defaults + environment variables. Honors

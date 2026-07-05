@@ -12,7 +12,7 @@
     <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
     <Deterministic>true</Deterministic>
     <NeutralLanguage>en</NeutralLanguage>
-    <Product>TherionProc</Product>
+    <Product>ThIDE</Product>
   </PropertyGroup>
 
   <!--
@@ -21,7 +21,7 @@
     `TherionLibraryTargetFrameworks` property. Default is single-target net8.0
     so day-to-day builds stay unchanged; pass `-p:TherionMultiTargetNet10=true`
     (or set the env var of the same name) to also produce net10.0 binaries.
-    Apps (TherionProc, Therion.Cli) and tests stay net8.0-only.
+    Apps (ThIDE, Therion.Cli) and tests stay net8.0-only.
   -->
   <PropertyGroup>
     <TherionMultiTargetNet10 Condition="'$(TherionMultiTargetNet10)' == ''">false</TherionMultiTargetNet10>

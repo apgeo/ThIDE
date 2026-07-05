@@ -1,0 +1,362 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ThIDE.ViewModels.Docking"
+             xmlns:ed="using:ThIDE.Editor"
+             xmlns:l="using:ThIDE.Resources"
+             x:Class="ThIDE.Views.Docking.FileDocumentView"
+             x:DataType="vm:FileDocumentViewModel">
+
+    <DockPanel>
+    <StackPanel DockPanel.Dock="Top">
+        <!-- Orphan banner (#4): file not part of the active project's object graph. -->
+        <Border Background="#E3F2FD" Padding="10,5" IsVisible="{Binding IsOrphan}">
+            <TextBlock Text="{Binding OrphanBannerText}" Foreground="#0D47A1"
+                       TextWrapping="Wrap" VerticalAlignment="Center" />
+        </Border>
+
+        <!-- Large-file guards (#10): parsing/highlighting disabled banners. -->
+        <Border Background="#FFF3E0" Padding="10,5" IsVisible="{Binding ParsingSuppressed}">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
+                    <Button Content="{l:Loc File_ParseAnyway}" Padding="8,2" Command="{Binding ForceParseCommand}" />
+                    <Button Content="{l:Loc File_SettingsBtn}" Padding="8,2" Command="{Binding OpenLimitSettingsCommand}" />
+                </StackPanel>
+                <TextBlock Text="{Binding ParseBannerText}" Foreground="#E65100"
+                           VerticalAlignment="Center" TextWrapping="Wrap" />
+            </DockPanel>
+        </Border>
+        <Border Background="#FFF8E1" Padding="10,5"
+                IsVisible="{Binding HighlightingSuppressed}">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
+                    <Button Content="{l:Loc File_HighlightAnyway}" Padding="8,2" Command="{Binding ForceHighlightCommand}" />
+                    <Button Content="{l:Loc File_SettingsBtn}" Padding="8,2" Command="{Binding OpenLimitSettingsCommand}" />
+                </StackPanel>
+                <TextBlock Text="{Binding HighlightBannerText}" Foreground="#8D6E00"
+                           VerticalAlignment="Center" TextWrapping="Wrap" />
+            </DockPanel>
+        </Border>
+
+        <!-- Transient info banner (#6): silent reload-from-disk notice. -->
+        <Border Background="#E3F2FD" Padding="10,5"
+                IsVisible="{Binding InfoBanner, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+            <DockPanel>
+                <Button DockPanel.Dock="Right" Content="&#x2715;" Padding="6,1"
+                        Background="Transparent" BorderThickness="0" Foreground="#0D47A1"
+                        Command="{Binding DismissInfoCommand}" />
+                <TextBlock Text="{Binding InfoBanner}" Foreground="#0D47A1" VerticalAlignment="Center" />
+            </DockPanel>
+        </Border>
+
+        <!-- External-change banner (#6): on-disk change while we have unsaved edits. -->
+        <Border Background="#D32F2F" Padding="10,5" IsVisible="{Binding ExternalChangePending}">
+            <Grid>
+                <!-- Stage 1: changed-on-disk prompt. -->
+                <DockPanel IsVisible="{Binding !ConfirmDiscardPending}">
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
+                        <!-- reload (use disk) / compare / keep-mine-to-disk / dismiss. -->
+                        <Button Content="{l:Loc Proj_Reload}" Padding="8,2" Command="{Binding ReloadExternalCommand}"
+                                IsVisible="{Binding !ExternalDeleted}" />
+                        <Button Content="{l:Loc File_Compare}" Padding="8,2" Command="{Binding CompareExternalCommand}"
+                                IsVisible="{Binding !ExternalDeleted}" />
+                        <Button Content="{l:Loc File_KeepMineSave}" Padding="8,2" Command="{Binding OverwriteExternalCommand}" />
+                        <Button Content="{l:Loc File_Dismiss}" Padding="8,2" Command="{Binding DismissExternalCommand}" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding ExternalChangeText}" Foreground="White"
+                               VerticalAlignment="Center" TextWrapping="Wrap" />
+                </DockPanel>
+                <!-- Stage 2: discard-unsaved-changes confirmation. -->
+                <DockPanel IsVisible="{Binding ConfirmDiscardPending}">
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
+                        <Button Content="{l:Loc File_DiscardReload}" Padding="8,2"
+                                Command="{Binding ConfirmDiscardReloadCommand}" />
+                        <Button Content="{l:Loc File_KeepMine}" Padding="8,2" Command="{Binding DismissExternalCommand}" />
+                    </StackPanel>
+                    <TextBlock Foreground="White" VerticalAlignment="Center" TextWrapping="Wrap"
+                               Text="{l:Loc File_ConfirmDiscard}" />
+                </DockPanel>
+            </Grid>
+        </Border>
+    </StackPanel>
+
+    <Grid>
+    <TabControl x:Name="DocumentTabControl">
+        <TabItem Header="{l:Loc File_TabSource}">
+            <ed:TherionTextEditor x:Name="Editor"
+                                  Text="{Binding DocumentText, Mode=TwoWay}"
+                                  Navigation="{Binding Navigation}"
+                                  Diagnostics="{Binding Diagnostics}"
+                                  CompletionTerms="{Binding CompletionTerms}"
+                                  HighlightingEnabled="{Binding !HighlightingSuppressed}"
+                                  CurrentFilePath="{Binding FilePath}" />
+        </TabItem>
+        <!-- Measurements tab: shown only for .th files (#4). -->
+        <TabItem Header="{l:Loc File_TabMeasurements}" IsVisible="{Binding IsThFile}">
+            <DockPanel>
+                <!-- Empty-state banner (#4): a .th file that declares no shots/stations. -->
+                <Border DockPanel.Dock="Top" Background="#FFF3E0" Padding="10,6"
+                        IsVisible="{Binding !Measurements.HasAnyData}">
+                    <TextBlock Text="{l:Loc File_NoMeasurements}" Foreground="#E65100"
+                               VerticalAlignment="Center" TextWrapping="Wrap" />
+                </Border>
+
+                <!-- Shots + Stations sub-panels, both scoped to this file only (#7). -->
+                <TabControl IsVisible="{Binding Measurements.HasAnyData}">
+                    <TabItem Header="{l:Loc Browser_Tab_Shots}">
+                        <DockPanel>
+                            <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="6,4">
+                                <WrapPanel Orientation="Horizontal">
+                                    <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,8,0">
+                                        <TextBlock Text="{l:Loc File_FilterLabel}" VerticalAlignment="Center" />
+                                        <TextBox Width="180"
+                                                 Text="{Binding Measurements.FilterText, Mode=TwoWay}"
+                                                 Watermark="{l:Loc File_ShotsFilterWm}" />
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,8,0">
+                                        <TextBlock Text="{l:Loc File_GroupBy}" VerticalAlignment="Center" />
+                                        <ComboBox MinWidth="100"
+                                                  ItemsSource="{Binding Measurements.GroupByOptions}"
+                                                  SelectedItem="{Binding Measurements.GroupBy, Mode=TwoWay}" />
+                                    </StackPanel>
+                                    <!-- Full station name toggle (#5). -->
+                                    <ToggleButton Padding="6,3" VerticalAlignment="Center" Margin="0,0,4,0"
+                                                  ToolTip.Tip="{l:Loc Common_FullStationName}"
+                                                  IsChecked="{Binding Measurements.ShowFullStationName, Mode=TwoWay}">
+                                        <PathIcon Data="{DynamicResource Icon.NodeGraph}" Width="14" Height="14" />
+                                    </ToggleButton>
+                                    <!-- Auto-fit button. -->
+                                    <Button x:Name="ShotsFitBtn" Content="{l:Loc Common_Fit}" Padding="6,3" VerticalAlignment="Center"
+                                            Margin="0,0,4,0" ToolTip.Tip="{l:Loc Common_FitAll}"
+                                            Click="OnFitShotsColumns" />
+                                    <!-- Column visibility flyout. -->
+                                    <Button Content="{l:Loc File_Cols}" Padding="6,3" VerticalAlignment="Center"
+                                            Margin="0,0,8,0" ToolTip.Tip="{l:Loc Common_ShowHideColumns}">
+                                        <Button.Flyout>
+                                            <Flyout>
+                                                <StackPanel Spacing="2" Margin="8">
+                                                    <CheckBox Content="{l:Loc Browser_Col_Survey}"  IsChecked="{Binding Measurements.ShotsColSurvey,    Mode=TwoWay}" />
+                                                    <CheckBox Content="{l:Loc Browser_Col_From}"    IsChecked="{Binding Measurements.ShotsColFrom,       Mode=TwoWay}" />
+                                                    <CheckBox Content="{l:Loc Browser_Col_To}"      IsChecked="{Binding Measurements.ShotsColTo,         Mode=TwoWay}" />
+                                                    <CheckBox Content="{l:Loc Browser_Col_Length}"  IsChecked="{Binding Measurements.ShotsColLength,     Mode=TwoWay}" />
+                                                    <CheckBox Content="{l:Loc Browser_Col_Compass}" IsChecked="{Binding Measurements.ShotsColCompass,    Mode=TwoWay}" />
+                                                    <CheckBox Content="{l:Loc Browser_Col_Clino}"   IsChecked="{Binding Measurements.ShotsColClino,      Mode=TwoWay}" />
+                                                    <Separator Margin="0,4" />
+                                                    <CheckBox Content="{l:Loc File_Col_Surf}"    IsChecked="{Binding Measurements.ShotsColSurface,    Mode=TwoWay}" />
+                                                    <CheckBox Content="{l:Loc File_Col_Dup}"     IsChecked="{Binding Measurements.ShotsColDuplicate,  Mode=TwoWay}" />
+                                                    <CheckBox Content="{l:Loc File_Col_Splay}"   IsChecked="{Binding Measurements.ShotsColSplay,      Mode=TwoWay}" />
+                                                    <CheckBox Content="{l:Loc File_Col_Approx}"  IsChecked="{Binding Measurements.ShotsColApproximate,Mode=TwoWay}" />
+                                                    <Separator Margin="0,4" />
+                                                    <CheckBox Content="{l:Loc Common_Comment}" IsChecked="{Binding Measurements.ShotsColComment,    Mode=TwoWay}" />
+                                                    <CheckBox Content="{l:Loc Browser_Col_Line}"    IsChecked="{Binding Measurements.ShotsColLine,       Mode=TwoWay}" />
+                                                </StackPanel>
+                                            </Flyout>
+                                        </Button.Flyout>
+                                    </Button>
+                                    <TextBlock VerticalAlignment="Center" Foreground="Gray">
+                                        <Run Text="{Binding Measurements.Count}" /><Run Text="{l:Loc File_RunOf}" /><Run Text="{Binding Measurements.TotalCount}" /><Run Text="{l:Loc File_RunShown}" />
+                                    </TextBlock>
+                                </WrapPanel>
+                            </Border>
+                            <!-- Editable shots grid (#6): Length/Compass/Clino are TwoWay-bound. -->
+                            <DataGrid x:Name="ShotsGrid"
+                                      ItemsSource="{Binding Measurements.View}"
+                                      x:CompileBindings="False"
+                                      GridLinesVisibility="All"
+                                      CanUserSortColumns="True" CanUserResizeColumns="True"
+                                      CanUserReorderColumns="True" AutoGenerateColumns="False">
+                                <DataGrid.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="{l:Loc Common_CopyRow}"  Click="OnCopyShotRow" />
+                                        <MenuItem Header="{l:Loc Common_CopyCell}" Click="OnCopyShotCell" />
+                                        <Separator />
+                                        <MenuItem Header="{l:Loc Common_GoToSource}"                Click="OnGoToShotSource" />
+                                        <MenuItem Header="{l:Loc File_GoToDeclFrom}" Click="OnGoToShotDefFrom" />
+                                        <MenuItem Header="{l:Loc File_GoToDeclTo}"   Click="OnGoToShotDefTo" />
+                                        <Separator />
+                                        <MenuItem Header="{l:Loc File_ShowFrom3D}" Click="OnShowShotFromIn3D" />
+                                        <MenuItem Header="{l:Loc File_ShowTo3D}"   Click="OnShowShotToIn3D" />
+                                        <Separator />
+                                        <MenuItem Header="{l:Loc File_RenameFrom}" Click="OnRenameFromStation" />
+                                        <MenuItem Header="{l:Loc File_RenameTo}"   Click="OnRenameToStation" />
+                                    </ContextMenu>
+                                </DataGrid.ContextMenu>
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="{l:Loc Browser_Col_Survey}"  Binding="{Binding Survey}"  Width="130" IsReadOnly="True" />
+                                    <DataGridTextColumn Header="{l:Loc Browser_Col_From}"    Binding="{Binding From}"    Width="110" IsReadOnly="True"
+                                                        FontWeight="Bold" Foreground="#1565C0" />
+                                    <DataGridTextColumn Header="{l:Loc Browser_Col_To}"      Binding="{Binding To}"      Width="110" IsReadOnly="True"
+                                                        FontWeight="Bold" Foreground="#1565C0" />
+                                    <DataGridTextColumn Header="{l:Loc Browser_Col_Length}"  Binding="{Binding Length,  Mode=TwoWay}" Width="72"  />
+                                    <DataGridTextColumn Header="{l:Loc Browser_Col_Compass}" Binding="{Binding Compass, Mode=TwoWay}" Width="82"  />
+                                    <DataGridTextColumn Header="{l:Loc Browser_Col_Clino}"   Binding="{Binding Clino,   Mode=TwoWay}" Width="72"  />
+                                    <DataGridTextColumn Header="{l:Loc File_Col_Surf}"    Binding="{Binding Surface}"     Width="50" IsReadOnly="True" />
+                                    <DataGridTextColumn Header="{l:Loc File_Col_Dup}"     Binding="{Binding Duplicate}"   Width="50" IsReadOnly="True" />
+                                    <DataGridTextColumn Header="{l:Loc File_Col_Splay}"   Binding="{Binding Splay}"       Width="58" IsReadOnly="True" />
+                                    <DataGridTextColumn Header="{l:Loc File_Col_Approx}"  Binding="{Binding Approximate}" Width="68" IsReadOnly="True" />
+                                    <!-- Comment: trimmed with ellipsis; full text on hover. -->
+                                    <DataGridTemplateColumn Header="{l:Loc Common_Comment}" Width="*" MaxWidth="380" IsReadOnly="True" SortMemberPath="Comment">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Comment}"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           VerticalAlignment="Center"
+                                                           Padding="4,0"
+                                                           ToolTip.Tip="{Binding Comment}" />
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                    <DataGridTextColumn Header="{l:Loc Browser_Col_Line}"    Binding="{Binding Line}"    Width="62" IsReadOnly="True" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </DockPanel>
+                    </TabItem>
+                    <TabItem Header="{l:Loc Browser_Tab_Stations}">
+                        <DockPanel>
+                            <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="6,4">
+                                <WrapPanel Orientation="Horizontal">
+                                    <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,8,0">
+                                        <TextBlock Text="{l:Loc File_FilterLabel}" VerticalAlignment="Center" />
+                                        <TextBox Width="180"
+                                                 Text="{Binding Measurements.StationsFilterText, Mode=TwoWay}"
+                                                 Watermark="{l:Loc File_StationsFilterWm}" />
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,8,0">
+                                        <TextBlock Text="{l:Loc File_GroupBy}" VerticalAlignment="Center" />
+                                        <ComboBox MinWidth="100"
+                                                  ItemsSource="{Binding Measurements.StationsGroupByOptions}"
+                                                  SelectedItem="{Binding Measurements.StationsGroupBy, Mode=TwoWay}" />
+                                    </StackPanel>
+                                    <!-- Full station name toggle. -->
+                                    <ToggleButton Padding="6,3" VerticalAlignment="Center" Margin="0,0,4,0"
+                                                  ToolTip.Tip="{l:Loc Common_FullStationName}"
+                                                  IsChecked="{Binding Measurements.ShowFullStationName, Mode=TwoWay}">
+                                        <PathIcon Data="{DynamicResource Icon.NodeGraph}" Width="14" Height="14" />
+                                    </ToggleButton>
+                                    <!-- Auto-fit button. -->
+                                    <Button Content="{l:Loc Common_Fit}" Padding="6,3" VerticalAlignment="Center"
+                                            Margin="0,0,4,0" ToolTip.Tip="{l:Loc Common_FitAll}"
+                                            Click="OnFitStationsColumns" />
+                                    <!-- Column visibility flyout. -->
+                                    <Button Content="{l:Loc File_Cols}" Padding="6,3" VerticalAlignment="Center"
+                                            Margin="0,0,8,0" ToolTip.Tip="{l:Loc Common_ShowHideColumns}">
+                                        <Button.Flyout>
+                                            <Flyout>
+                                                <StackPanel Spacing="2" Margin="8">
+                                                    <CheckBox Content="{l:Loc Browser_Col_Survey}" IsChecked="{Binding Measurements.StationsColSurvey, Mode=TwoWay}" />
+                                                    <CheckBox Content="{l:Loc Browser_Col_Kind}"   IsChecked="{Binding Measurements.StationsColKind,   Mode=TwoWay}" />
+                                                    <CheckBox Content="{l:Loc Browser_Col_Line}"   IsChecked="{Binding Measurements.StationsColLine,   Mode=TwoWay}" />
+                                                </StackPanel>
+                                            </Flyout>
+                                        </Button.Flyout>
+                                    </Button>
+                                    <TextBlock VerticalAlignment="Center" Foreground="Gray">
+                                        <Run Text="{Binding Measurements.StationsCount}" /><Run Text="{l:Loc File_RunOf}" /><Run Text="{Binding Measurements.StationsTotalCount}" /><Run Text="{l:Loc File_RunStations}" />
+                                    </TextBlock>
+                                </WrapPanel>
+                            </Border>
+                            <DataGrid x:Name="StationsGrid"
+                                      ItemsSource="{Binding Measurements.StationsView}"
+                                      x:CompileBindings="False"
+                                      IsReadOnly="True" GridLinesVisibility="Horizontal"
+                                      CanUserSortColumns="True" CanUserResizeColumns="True"
+                                      AutoGenerateColumns="False">
+                                <DataGrid.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="{l:Loc Common_CopyRow}"  Click="OnCopyStationRow" />
+                                        <MenuItem Header="{l:Loc Common_CopyCell}" Click="OnCopyStationCell" />
+                                        <Separator />
+                                        <MenuItem Header="{l:Loc Common_GoToSource}"   Click="OnGoToStationSource" />
+                                        <MenuItem Header="{l:Loc File_GoToDecl}" Click="OnGoToStationDeclaration" />
+                                        <Separator />
+                                        <MenuItem Header="{l:Loc File_ShowIn3D}" Click="OnShowStationIn3D" />
+                                        <Separator />
+                                        <MenuItem Header="{l:Loc File_RenameStation}" Click="OnRenameStation" />
+                                    </ContextMenu>
+                                </DataGrid.ContextMenu>
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="{l:Loc Col_Station}" Binding="{Binding Name}"   Width="*"
+                                                        FontWeight="Bold" Foreground="#1565C0" />
+                                    <DataGridTextColumn Header="{l:Loc Browser_Col_Survey}"  Binding="{Binding Survey}" Width="160" />
+                                    <DataGridTextColumn Header="{l:Loc Browser_Col_Kind}"    Binding="{Binding Kind}"   Width="110" />
+                                    <DataGridTextColumn Header="{l:Loc Browser_Col_Line}"    Binding="{Binding Line}"   Width="62"  />
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </DockPanel>
+                    </TabItem>
+                </TabControl>
+            </DockPanel>
+        </TabItem>
+    </TabControl>
+
+        <!-- File-actions, overlaid on the tab-strip row (no extra height, #7). -->
+        <StackPanel HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,1,6,0"
+                    Orientation="Horizontal" Spacing="2">
+            <!-- Fold / unfold all recognised blocks (#2): two-state icon, kept in sync with the
+                 editor's Fold All / Unfold All actions. -->
+            <Button x:Name="FoldToggleButton" Padding="6,2" Background="Transparent" BorderThickness="0"
+                    FontSize="12" Click="OnToggleFoldAll" ToolTip.Tip="{l:Loc Menu_Edit_FoldAll}">
+                <PathIcon x:Name="FoldToggleIcon" Data="{DynamicResource Icon.UnfoldLess}" Width="14" Height="14" />
+            </Button>
+
+            <!-- thconfig actions (#1): only for .thconfig/.thc project files. -->
+            <!-- Make this thconfig the active project configuration (build/graph reference). Disabled
+                 when this file is already the active thconfig (#3). -->
+            <Button x:Name="SetActiveThconfigButton" Padding="6,2" Background="Transparent" BorderThickness="0" FontSize="12"
+                    IsVisible="{Binding IsThconfigFile}" Click="OnSetActiveThconfig"
+                    ToolTip.Tip="{l:Loc File_SetActiveTip}">
+                <PathIcon Data="{DynamicResource Icon.Config}" Width="14" Height="14" />
+            </Button>
+            <!-- Set this file's folder as the working directory AND make it the active thconfig. -->
+            <Button Padding="6,2" Background="Transparent" BorderThickness="0" FontSize="12"
+                    IsVisible="{Binding IsThconfigFile}" Click="OnSetWorkingDirectory"
+                    ToolTip.Tip="{l:Loc File_SetWorkingDirTip}">
+                <PathIcon Data="{DynamicResource Icon.FolderOpen}" Width="14" Height="14" />
+            </Button>
+
+            <!-- Edit-with-Mapiah: only for .th2 sketches. Launches the external Mapiah editor;
+                 saved changes reload back into this tab automatically. -->
+            <Button Padding="6,2" FontSize="12" Click="OnEditWithMapiah"
+                    IsVisible="{Binding IsTh2File}"
+                    ToolTip.Tip="{l:Loc File_MapiahTip}">
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                    <PathIcon Data="{DynamicResource Icon.NodeGraph}" Width="13" Height="13" />
+                    <TextBlock Text="{l:Loc File_EditMapiah}" VerticalAlignment="Center" />
+                </StackPanel>
+            </Button>
+
+            <!-- Go to the parent / including file: shown only when another file references this one
+                 in the object graph (a non-root file). Opens the parent if needed, then switches to it. -->
+            <Button Padding="6,2" Background="Transparent" BorderThickness="0" FontSize="12"
+                    IsVisible="{Binding HasParentFile}" Click="OnGoToParentFile"
+                    ToolTip.Tip="{l:Loc File_GoToParentTip}">
+                <PathIcon Data="{DynamicResource Icon.ParentFile}" Width="14" Height="14" />
+            </Button>
+
+            <!-- Open-files dropdown (#15): jump to any open document. -->
+            <Button Padding="6,2" Background="Transparent" BorderThickness="0" FontSize="12"
+                    Content="&#x25BE;" Click="OnShowOpenFiles"
+                    ToolTip.Tip="{l:Loc File_SwitchOpenTip}">
+                <Button.Flyout>
+                    <MenuFlyout />
+                </Button.Flyout>
+            </Button>
+
+            <!-- Reveal this file in the Workspace tree (#1): switches to file view and selects it. -->
+            <Button Padding="6,2" Background="Transparent" BorderThickness="0" FontSize="13"
+                    Content="&#x1F50D;" Click="OnSelectInWorkspace"
+                    ToolTip.Tip="{l:Loc File_SelectWorkspaceTip}" />
+
+            <Button Padding="6,2" Background="Transparent" BorderThickness="0" FontSize="14"
+                    Content="&#x22EF;" ToolTip.Tip="{l:Loc File_ActionsTip}">
+                <Button.Flyout>
+                    <MenuFlyout>
+                        <MenuItem Header="{l:Loc Ctx_CopyName}" Command="{Binding CopyFileNameCommand}" />
+                        <MenuItem Header="{l:Loc Ctx_CopyRel}" Command="{Binding CopyRelativePathCommand}" />
+                        <MenuItem Header="{l:Loc Ctx_CopyFull}" Command="{Binding CopyFullPathCommand}" />
+                    </MenuFlyout>
+                </Button.Flyout>
+            </Button>
+        </StackPanel>
+    </Grid>
+    </DockPanel>
+</UserControl>

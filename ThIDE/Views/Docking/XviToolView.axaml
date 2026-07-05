@@ -1,0 +1,19 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ThIDE.ViewModels.Docking"
+             xmlns:l="using:ThIDE.Resources"
+             x:Class="ThIDE.Views.Docking.XviToolView"
+             x:DataType="vm:XviToolViewModel">
+    <DataGrid ItemsSource="{Binding Xvi.Rows}"
+              IsReadOnly="True" GridLinesVisibility="Horizontal"
+              CanUserResizeColumns="True" CanUserSortColumns="True" AutoGenerateColumns="False">
+        <DataGrid.Columns>
+            <DataGridTextColumn Header="{l:Loc Xvi_Col_Path}"      Binding="{Binding XviPath}"   Width="*" />
+            <DataGridTextColumn Header="{l:Loc Browser_Tab_Stations}" Binding="{Binding Stations}"  Width="80" />
+            <DataGridTextColumn Header="{l:Loc Browser_Tab_Shots}"    Binding="{Binding Shots}"     Width="70" />
+            <DataGridTextColumn Header="{l:Loc Xvi_Col_Sketch}"   Binding="{Binding SketchLines}" Width="70" />
+            <DataGridTextColumn Header="{l:Loc Xvi_Col_Grid}"     Binding="{Binding Grid}"      Width="80" />
+            <DataGridTextColumn Header="{l:Loc Col_Scraps}"   Binding="{Binding ReferencingScraps}"  Width="80" />
+        </DataGrid.Columns>
+    </DataGrid>
+</UserControl>

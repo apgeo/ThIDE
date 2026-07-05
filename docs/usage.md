@@ -4,7 +4,7 @@
 
 ## External tools
 
-TherionProc invokes these as **separate processes** (configurable under **Settings → External Tools**); none are bundled or linked:
+ThIDE invokes these as **separate processes** (configurable under **Settings → External Tools**); none are bundled or linked:
 
 | Tool | Used for | Notes |
 |---|---|---|
@@ -12,7 +12,7 @@ TherionProc invokes these as **separate processes** (configurable under **Settin
 | **Loch / Aven** | External 3D / 2D viewers | Launched on compiled output. |
 | **Mapiah** | Editing `.th2` sketches | Launches the `.th2` and auto-reloads on save. |
 
-Because Therion (and Loch/Aven/Mapiah) are launched at arm's length over the command line, TherionProc does not link their GPL code — see [LICENSING.md](../LICENSING.md).
+Because Therion (and Loch/Aven/Mapiah) are launched at arm's length over the command line, ThIDE does not link their GPL code — see [LICENSING.md](../LICENSING.md).
 
 ## Command-line tools
 
@@ -37,7 +37,7 @@ See [lsp.md](lsp.md) for client configuration.
 
 ## Configuration & data locations
 
-User settings and per-project state live under your platform's application-data folder (`%AppData%/TherionProc` on Windows, the XDG/`~/Library` equivalents elsewhere), including:
+User settings and per-project state live under your platform's application-data folder (`%AppData%/ThIDE` on Windows, the XDG/`~/Library` equivalents elsewhere), including:
 
 - preferences, keyboard shortcuts, theme, and language;
 - the persistent symbol index, parse cache, and crash-recovery buffers;

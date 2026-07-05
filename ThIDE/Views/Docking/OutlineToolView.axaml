@@ -1,0 +1,44 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ThIDE.ViewModels.Docking"
+             xmlns:l="using:ThIDE.Resources"
+             x:Class="ThIDE.Views.Docking.OutlineToolView"
+             x:CompileBindings="False"
+             x:DataType="vm:OutlineToolViewModel">
+    <DockPanel>
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="4">
+            <TextBox Grid.Column="0" Watermark="{l:Loc Outline_Filter}"
+                     Text="{Binding Outline.Filter, Mode=TwoWay}" />
+            <!-- #1: include survey stations in the tree (off by default). -->
+            <ToggleButton Grid.Column="1" Margin="4,0,0,0" Padding="5"
+                          IsChecked="{Binding Outline.IncludeStations, Mode=TwoWay}"
+                          ToolTip.Tip="{l:Loc Outline_IncludeStations}">
+                <PathIcon Data="{DynamicResource Icon.Survey}" Width="15" Height="15" />
+            </ToggleButton>
+        </Grid>
+        <TextBlock DockPanel.Dock="Top" Margin="8,6" Foreground="Gray"
+                   Text="{l:Loc Outline_Empty}"
+                   IsVisible="{Binding Outline.IsEmpty}" />
+        <!-- #1: single click folds/unfolds, double click navigates (handled in code-behind). -->
+        <TreeView ItemsSource="{Binding Outline.Roots}"
+                  SelectedItem="{Binding Outline.SelectedNode, Mode=TwoWay}"
+                  Tapped="OnTreeTapped" DoubleTapped="OnTreeDoubleTapped">
+            <TreeView.Styles>
+                <!-- #1: all nodes expanded by default. -->
+                <Style Selector="TreeViewItem">
+                    <Setter Property="IsExpanded" Value="True" />
+                </Style>
+            </TreeView.Styles>
+            <TreeView.ItemTemplate>
+                <TreeDataTemplate ItemsSource="{Binding Children}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Text="{Binding Glyph}" Width="14" TextAlignment="Center" />
+                        <TextBlock Text="{Binding Title}" />
+                        <TextBlock Text="{Binding Line, StringFormat=':{0}'}"
+                                   Foreground="Gray" FontSize="10" VerticalAlignment="Center" />
+                    </StackPanel>
+                </TreeDataTemplate>
+            </TreeView.ItemTemplate>
+        </TreeView>
+    </DockPanel>
+</UserControl>

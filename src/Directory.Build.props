@@ -4,7 +4,7 @@
     Licensing for the reusable libraries. Every project under src/ is licensed
     under the Mozilla Public License 2.0 (file-level copyleft), so it can be
     embedded in closed-source or differently-licensed tools while changes to the
-    MPL-covered files flow back. The application shell (TherionProc) is
+    MPL-covered files flow back. The application shell (ThIDE) is
     GPL-3.0-or-later. See /LICENSING.md for the rationale.
 
     The sources are deliberately NOT marked "Incompatible With Secondary
