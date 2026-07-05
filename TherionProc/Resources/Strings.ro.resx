@@ -388,7 +388,7 @@
   <data name="Rename_NewNameFor" xml:space="preserve"><value>Nume nou pentru '{0}':</value></data>
   <data name="Rename_PreviewSummary" xml:space="preserve"><value>{0} apariție(i) în {1} fișier(e). Dublu-clic pe o intrare pentru a naviga la ea.</value></data>
   <data name="Rename_SeeOccurrences" xml:space="preserve"><value>Vezi aparițiile…</value></data>
-  <data name="Pref_Title" xml:space="preserve"><value>Preferințe</value></data>
+  <data name="Pref_Title" xml:space="preserve"><value>Setări</value></data>
   <data name="Pref_SearchWm" xml:space="preserve"><value>Caută în setări…</value></data>
   <data name="Pref_ReopenSession" xml:space="preserve"><value>Redeschide fișierele din sesiunea anterioară la pornire</value></data>
   <data name="Pref_Language" xml:space="preserve"><value>Limbă</value></data>
@@ -457,6 +457,7 @@
   <data name="Pref_Vis_LivePreview" xml:space="preserve"><value>Previzualizare principală a liniei centrale (schiță plan/elevație din model, fără compilare)</value></data>
   <data name="Pref_Vis_MapViewer" xml:space="preserve"><value>Vizualizator de hărți în aplicație (PNG / SVG / PDF)</value></data>
   <data name="Pref_Vis_MapAuto" xml:space="preserve"><value>Afișează automat harta randată după o compilare</value></data>
+  <data name="Pref_Vis_MapShowOnLoad" xml:space="preserve"><value>Afișează automat prima hartă la deschiderea spațiului de lucru</value></data>
   <data name="Pref_Vis_Model3D" xml:space="preserve"><value>Vizualizator 3D încorporat (CaveView.js într-o vizualizare web nativă)</value></data>
   <data name="Pref_Vis_Model3DAuto" xml:space="preserve"><value>Afișează automat modelul 3D (.lox / .3d) după o compilare</value></data>
   <data name="Pref_Vis_Structural" xml:space="preserve"><value>Modul Geologie structurală (calculator de direcție/înclinare a planelor)</value></data>
@@ -536,9 +537,15 @@
   <data name="Outline_IncludeStations" xml:space="preserve"><value>Include stațiile în contur</value></data>
   <data name="Outline_Empty" xml:space="preserve"><value>Nicio structură de topografie/schiță în acest fișier.</value></data>
   <!-- Map viewer tool -->
-  <data name="MapV_FitWindow" xml:space="preserve"><value>Încadrează pagina</value></data>
-  <data name="MapV_FitWindowTip" xml:space="preserve"><value>Încadrează pagina în fereastră</value></data>
-  <data name="MapV_Fit100" xml:space="preserve"><value>Încadrează 100%</value></data>
+  <data name="MapV_FitWindow" xml:space="preserve"><value>Încadrează</value></data>
+  <data name="MapV_FitWindowTip" xml:space="preserve"><value>Micșorează pentru a încăpea în fereastră (nu depășește 100%)</value></data>
+  <data name="MapV_Fit100" xml:space="preserve"><value>100%</value></data>
+  <data name="MapV_OutputsTip" xml:space="preserve"><value>Fișiere de hartă compatibile din thconfig-ul activ (export map)</value></data>
+  <data name="MapV_FullScreenTip" xml:space="preserve"><value>Ecran complet</value></data>
+  <data name="MapV_FloatScreenTip" xml:space="preserve"><value>Desprinde pe alt monitor și maximizează</value></data>
+  <data name="MapV_MoveCenterTip" xml:space="preserve"><value>Mută în panoul central</value></data>
+  <data name="MapV_OneScreenTitle" xml:space="preserve"><value>Un singur monitor</value></data>
+  <data name="MapV_OneScreenMsg" xml:space="preserve"><value>Este disponibil un singur monitor, deci nu există alt ecran pe care să muți panoul.</value></data>
   <!-- 3D model viewer tool -->
   <data name="M3D_Model" xml:space="preserve"><value>Model:</value></data>
   <data name="M3D_ModelTip" xml:space="preserve"><value>Modele generate (sau detectate) din thconfig-ul activ</value></data>

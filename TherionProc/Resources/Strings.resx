@@ -388,7 +388,7 @@
   <data name="Rename_NewNameFor" xml:space="preserve"><value>New name for '{0}':</value></data>
   <data name="Rename_PreviewSummary" xml:space="preserve"><value>{0} occurrence(s) across {1} file(s). Double-click an entry to jump to it.</value></data>
   <data name="Rename_SeeOccurrences" xml:space="preserve"><value>See occurrences…</value></data>
-  <data name="Pref_Title" xml:space="preserve"><value>Preferences</value></data>
+  <data name="Pref_Title" xml:space="preserve"><value>Settings</value></data>
   <data name="Pref_SearchWm" xml:space="preserve"><value>Search settings…</value></data>
   <data name="Pref_ReopenSession" xml:space="preserve"><value>Reopen files from last session on startup</value></data>
   <data name="Pref_Language" xml:space="preserve"><value>Language</value></data>
@@ -457,6 +457,7 @@
   <data name="Pref_Vis_LivePreview" xml:space="preserve"><value>Mainline centreline preview (plan/elevation sketch from the model, no compile)</value></data>
   <data name="Pref_Vis_MapViewer" xml:space="preserve"><value>In-app map viewer (PNG / SVG / PDF)</value></data>
   <data name="Pref_Vis_MapAuto" xml:space="preserve"><value>Auto-show the rendered map after a build</value></data>
+  <data name="Pref_Vis_MapShowOnLoad" xml:space="preserve"><value>Auto-show first map on workspace load</value></data>
   <data name="Pref_Vis_Model3D" xml:space="preserve"><value>Embedded 3D model viewer (CaveView.js in a native web view)</value></data>
   <data name="Pref_Vis_Model3DAuto" xml:space="preserve"><value>Auto-show the 3D model (.lox / .3d) after a build</value></data>
   <data name="Pref_Vis_Structural" xml:space="preserve"><value>Structural Geology module (plane strike/dip calculator)</value></data>
@@ -465,7 +466,7 @@
   <data name="Pref_Analytics_Project" xml:space="preserve"><value>Statistics, charts, team, entrances &amp; data-quality</value></data>
   <data name="Pref_Analytics_ObjectBrowser" xml:space="preserve"><value>Object Browser entity tabs (surveys, fixes, equates, scraps, maps, points, lines, areas)</value></data>
   <data name="Pref_Analytics_Todo" xml:space="preserve"><value>TODO / FIXME / QM comment scan</value></data>
-  <data name="Pref_Analytics_Media" xml:space="preserve"><value>Media manager scan (referenced .xvi + on-disk orphans)</value></data>
+  <data name="Pref_Analytics_Media" xml:space="preserve"><value>Media file scan (referenced .xvi + on-disk orphans)</value></data>
   <data name="Pref_Diagnostics" xml:space="preserve"><value>Diagnostics</value></data>
   <data name="Pref_Diag_LocalFixGrounds" xml:space="preserve"><value>Treat a local fix (no cs) as grounding a disconnected survey</value></data>
   <data name="Pref_Diag_LocalFixGroundsHelp" xml:space="preserve"><value>When off (default), a disconnected piece anchored only by a bare fix (e.g. fix 0 0 0 with no coordinate system) is still warned about. Turn on to treat any fix as grounding and suppress the "disconnected survey" warning (TH_SEM_015) for those pieces.</value></data>
@@ -536,9 +537,15 @@
   <data name="Outline_IncludeStations" xml:space="preserve"><value>Include stations in the outline</value></data>
   <data name="Outline_Empty" xml:space="preserve"><value>No survey/scrap structure in this file.</value></data>
   <!-- Map viewer tool -->
-  <data name="MapV_FitWindow" xml:space="preserve"><value>Fit page</value></data>
-  <data name="MapV_FitWindowTip" xml:space="preserve"><value>Fit the page to the window</value></data>
-  <data name="MapV_Fit100" xml:space="preserve"><value>Fit 100%</value></data>
+  <data name="MapV_FitWindow" xml:space="preserve"><value>Fit</value></data>
+  <data name="MapV_FitWindowTip" xml:space="preserve"><value>Shrink to fit the window (never enlarges past 100%)</value></data>
+  <data name="MapV_Fit100" xml:space="preserve"><value>100%</value></data>
+  <data name="MapV_OutputsTip" xml:space="preserve"><value>Compatible map outputs from the active thconfig (export map)</value></data>
+  <data name="MapV_FullScreenTip" xml:space="preserve"><value>Full screen</value></data>
+  <data name="MapV_FloatScreenTip" xml:space="preserve"><value>Float on another monitor and maximize</value></data>
+  <data name="MapV_MoveCenterTip" xml:space="preserve"><value>Move to the central panel</value></data>
+  <data name="MapV_OneScreenTitle" xml:space="preserve"><value>Single monitor</value></data>
+  <data name="MapV_OneScreenMsg" xml:space="preserve"><value>Only one monitor is available, so there is no other screen to move the panel to.</value></data>
   <!-- 3D model viewer tool -->
   <data name="M3D_Model" xml:space="preserve"><value>Model:</value></data>
   <data name="M3D_ModelTip" xml:space="preserve"><value>Models generated (or detected) from the active thconfig</value></data>
