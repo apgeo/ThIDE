@@ -140,7 +140,7 @@
   <data name="Struct_NextTip" xml:space="preserve"><value>Next step</value></data>
   <data name="Struct_Scope" xml:space="preserve"><value>Scope:</value></data>
   <data name="Struct_ActiveFile" xml:space="preserve"><value>Active file</value></data>
-  <data name="Struct_WholeProject" xml:space="preserve"><value>Whole project</value></data>
+  <data name="Struct_WholeProject" xml:space="preserve"><value>Whole workspace</value></data>
   <data name="Struct_Detect" xml:space="preserve"><value>Detect ↻</value></data>
   <data name="Struct_Tab1" xml:space="preserve"><value>1 · Detect</value></data>
   <data name="Struct_Tab2" xml:space="preserve"><value>2 · Measurements</value></data>
@@ -241,7 +241,7 @@
   <data name="Proj_QuickActions" xml:space="preserve"><value>Quick actions</value></data>
   <data name="Proj_Build" xml:space="preserve"><value>Build</value></data>
   <data name="Proj_OpenOutputFolder" xml:space="preserve"><value>Open output folder</value></data>
-  <data name="Proj_NoSurveys" xml:space="preserve"><value>No surveys in the project yet.</value></data>
+  <data name="Proj_NoSurveys" xml:space="preserve"><value>No surveys in the workspace yet.</value></data>
   <data name="Proj_Chart_LengthBySurvey" xml:space="preserve"><value>Length by survey (top 30)</value></data>
   <data name="Proj_Chart_LengthByDate" xml:space="preserve"><value>Length by date</value></data>
   <data name="Proj_CopyTeamCsv" xml:space="preserve"><value>Copy team (CSV)</value></data>
@@ -261,7 +261,7 @@
   <data name="Proj_Lead_Open" xml:space="preserve"><value>Open</value></data>
   <data name="Proj_Lead_ShowAll" xml:space="preserve"><value>Show all passage ends</value></data>
   <data name="Proj_CopyMarkdown" xml:space="preserve"><value>Copy as Markdown</value></data>
-  <data name="Proj_Meta_Intro" xml:space="preserve"><value>Project metadata (stored in a sidecar, not in the .th source).</value></data>
+  <data name="Proj_Meta_Intro" xml:space="preserve"><value>Workspace metadata (stored in a sidecar, not in the .th source).</value></data>
   <data name="Proj_Save" xml:space="preserve"><value>Save</value></data>
   <data name="Proj_Reload" xml:space="preserve"><value>Reload</value></data>
   <!-- Object Browser entity tabs (DATA-03) -->
@@ -368,7 +368,7 @@
   <data name="Status_Ln" xml:space="preserve"><value>ln</value></data>
   <data name="Status_Indexing" xml:space="preserve"><value>Indexing…</value></data>
   <data name="Status_BuildInProgress" xml:space="preserve"><value>Build in progress…</value></data>
-  <data name="Status_BuildingGraph" xml:space="preserve"><value>Building the project object graph…</value></data>
+  <data name="Status_BuildingGraph" xml:space="preserve"><value>Building the thconfig object graph…</value></data>
   <data name="Status_LastBuildOk" xml:space="preserve"><value>Last build succeeded</value></data>
   <data name="Status_LastBuildFail" xml:space="preserve"><value>Last build failed</value></data>
   <data name="Status_OpenDiag" xml:space="preserve"><value>Open Diagnostics (F8: next, Shift+F8: previous)</value></data>
@@ -477,7 +477,7 @@
   <data name="Pref_Col_Result" xml:space="preserve"><value>Result</value></data>
   <data name="Pref_Extensions" xml:space="preserve"><value>Extensions</value></data>
   <data name="Pref_ScriptHooks" xml:space="preserve"><value>Enable script hooks (run a command on open / save / build)</value></data>
-  <data name="Pref_ScriptHooksHelp" xml:space="preserve"><value>Use {file} for the file path (active thconfig for build). Disable for big projects.</value></data>
+  <data name="Pref_ScriptHooksHelp" xml:space="preserve"><value>Use {file} for the file path (active thconfig for build). Disable for big workspaces.</value></data>
   <data name="Pref_OnOpen" xml:space="preserve"><value>On open</value></data>
   <data name="Pref_OnSave" xml:space="preserve"><value>On save</value></data>
   <data name="Pref_OnBuild" xml:space="preserve"><value>On build</value></data>
@@ -501,7 +501,7 @@
   <data name="Common_RefreshGlyph" xml:space="preserve"><value>↻ Refresh</value></data>
   <data name="Col_Path" xml:space="preserve"><value>Path</value></data>
   <!-- Diagnostics tool -->
-  <data name="Diag_ProjectScopeTip" xml:space="preserve"><value>Show diagnostics from all thconfig project files (requires workspace)</value></data>
+  <data name="Diag_ProjectScopeTip" xml:space="preserve"><value>Show diagnostics from all thconfig workspace files (requires workspace)</value></data>
   <data name="Diag_Col_Code" xml:space="preserve"><value>Code</value></data>
   <data name="Diag_Col_Severity" xml:space="preserve"><value>Severity</value></data>
   <data name="Diag_Col_Message" xml:space="preserve"><value>Message</value></data>
@@ -584,7 +584,7 @@
   <data name="Live_ViewProfile" xml:space="preserve"><value>Projected profile view ({0})</value></data>
   <data name="Live_ViewToward" xml:space="preserve"><value>toward {0}°</value></data>
   <data name="Live_ProfN" xml:space="preserve"><value>Projected profile along north (0°)</value></data>
-  <data name="Live_ProfE" xml:space="preserve"><value>Projected profile along east (90°) — classic east-vs-up elevation</value></data>
+  <data name="Live_ProfE" xml:space="preserve"><value>Projected profile along east (90°) — classic east oriented, elevation projected profile</value></data>
   <data name="Live_ProfS" xml:space="preserve"><value>Projected profile along south (180°)</value></data>
   <data name="Live_ProfW" xml:space="preserve"><value>Projected profile along west (270°)</value></data>
   <data name="Live_Custom" xml:space="preserve"><value>Custom</value></data>
@@ -619,7 +619,7 @@
   <data name="Live_MainTip" xml:space="preserve"><value>Show only the largest group</value></data>
   <data name="Live_GroupRowTip" xml:space="preserve"><value>Hover to locate · tick to show/hide</value></data>
   <!-- Generated files tool -->
-  <data name="Gen_StaleBanner" xml:space="preserve"><value>⚠ Some outputs are out of date — a project input changed since the last build. Rebuild to refresh.</value></data>
+  <data name="Gen_StaleBanner" xml:space="preserve"><value>⚠ Some outputs are out of date — a workspace input changed since the last build. Rebuild to refresh.</value></data>
   <data name="Gen_View3D" xml:space="preserve"><value>View in internal 3D viewer</value></data>
   <data name="Gen_Col_FileName" xml:space="preserve"><value>File Name</value></data>
   <data name="Gen_Col_AutoOpen" xml:space="preserve"><value>Auto-open</value></data>
@@ -664,7 +664,7 @@
   <data name="File_GoToDecl" xml:space="preserve"><value>Go to Declaration</value></data>
   <data name="File_ShowIn3D" xml:space="preserve"><value>Show in 3D View</value></data>
   <data name="File_RenameStation" xml:space="preserve"><value>Rename Station…</value></data>
-  <data name="File_SetActiveTip" xml:space="preserve"><value>Set this file as the active thconfig (project configuration)</value></data>
+  <data name="File_SetActiveTip" xml:space="preserve"><value>Set this file as the active thconfig (workspace configuration)</value></data>
   <data name="File_SetWorkingDirTip" xml:space="preserve"><value>Set this file's folder as the working directory and make it the active thconfig</value></data>
   <data name="File_MapiahTip" xml:space="preserve"><value>Open this sketch in the Mapiah editor (changes reload automatically)</value></data>
   <data name="File_EditMapiah" xml:space="preserve"><value>Edit with Mapiah</value></data>
@@ -694,10 +694,10 @@
   <!-- Relational map -->
   <data name="RelMap_IncludeFiles" xml:space="preserve"><value>Include files</value></data>
   <data name="RelMap_IncludeFilesTip" xml:space="preserve"><value>Show the host thconfig / .th / .th2 files as nodes too</value></data>
-  <data name="RelMap_RefreshTip" xml:space="preserve"><value>Rebuild the diagram from the current project</value></data>
+  <data name="RelMap_RefreshTip" xml:space="preserve"><value>Rebuild the diagram from the current workspace</value></data>
   <data name="RelMap_LayoutTip" xml:space="preserve"><value>Diagram arrangement</value></data>
   <data name="RelMap_SizeByLevel" xml:space="preserve"><value>Size by level</value></data>
-  <data name="RelMap_SizeByLevelTip" xml:space="preserve"><value>Bigger nodes near the root, smaller leaves — fits large projects better</value></data>
+  <data name="RelMap_SizeByLevelTip" xml:space="preserve"><value>Bigger nodes near the root, smaller leaves — fits large workspaces better</value></data>
   <data name="RelMap_ZoomOut" xml:space="preserve"><value>Zoom out (Ctrl+scroll)</value></data>
   <data name="RelMap_ResetZoom" xml:space="preserve"><value>Reset zoom</value></data>
   <data name="RelMap_ZoomIn" xml:space="preserve"><value>Zoom in (Ctrl+scroll)</value></data>
@@ -710,10 +710,10 @@
   <!-- Quick export window -->
   <data name="QExport_Title" xml:space="preserve"><value>Quick Export</value></data>
   <data name="QExport_Export" xml:space="preserve"><value>Export</value></data>
-  <data name="QExport_Intro" xml:space="preserve"><value>Compose a one-off export. A temporary thconfig is generated from the active project, built, and the result opened.</value></data>
+  <data name="QExport_Intro" xml:space="preserve"><value>Compose a one-off export. A temporary thconfig is generated from the active workspace, built, and the result opened.</value></data>
   <data name="QExport_Format" xml:space="preserve"><value>Format</value></data>
   <data name="QExport_SurveyOpt" xml:space="preserve"><value>Survey (optional)</value></data>
-  <data name="QExport_SurveyWm" xml:space="preserve"><value>e.g. cave.upper (blank = whole project)</value></data>
+  <data name="QExport_SurveyWm" xml:space="preserve"><value>e.g. cave.upper (blank = whole workspace)</value></data>
   <data name="QExport_Scale" xml:space="preserve"><value>Scale 1:</value></data>
   <data name="QExport_OutputName" xml:space="preserve"><value>Output name</value></data>
   <!-- Editor context menu / dialogs / hover cards -->
@@ -837,7 +837,7 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Cmd_ToggleWorkspace" xml:space="preserve"><value>Toggle Workspace</value></data>
   <data name="Cmd_ToggleDiagnostics" xml:space="preserve"><value>Toggle Diagnostics</value></data>
   <data name="Cmd_ToggleOutline" xml:space="preserve"><value>Toggle Outline</value></data>
-  <data name="Cmd_ToggleProject" xml:space="preserve"><value>Toggle Project (Dashboard / Surveys / Audit)</value></data>
+  <data name="Cmd_ToggleProject" xml:space="preserve"><value>Toggle Workspace (Dashboard / Surveys / Audit)</value></data>
   <data name="Cmd_ToggleLog" xml:space="preserve"><value>Toggle Log</value></data>
   <data name="Cmd_ToggleLivePreview" xml:space="preserve"><value>Toggle Mainline Preview</value></data>
   <data name="Cmd_ToggleMapViewer" xml:space="preserve"><value>Toggle Map Viewer</value></data>
@@ -874,7 +874,7 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Cmd_DocsTitle" xml:space="preserve"><value>Documentation</value></data>
   <data name="Cmd_SearchTermWm" xml:space="preserve"><value>Search a term…</value></data>
   <data name="Cmd_DocDetail" xml:space="preserve"><value>documentation</value></data>
-  <data name="Cmd_NoSymbols" xml:space="preserve"><value>(no symbols — open and parse a project first)</value></data>
+  <data name="Cmd_NoSymbols" xml:space="preserve"><value>(no symbols — open and parse a thconfig/workspace first)</value></data>
   <data name="Cmd_SymWsTitle" xml:space="preserve"><value>Go to Symbol (workspace)</value></data>
   <data name="Cmd_SymDocTitle" xml:space="preserve"><value>Go to Symbol (document)</value></data>
   <data name="Cmd_SymWm" xml:space="preserve"><value>Search surveys, stations, scraps, maps…</value></data>
@@ -964,9 +964,9 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Assoc_StateUnknown" xml:space="preserve"><value>Unknown</value></data>
   <data name="Assoc_MsgBulkFmt" xml:space="preserve"><value>Done — {0} of {1} file types updated.</value></data>
   <data name="Pref_Vis_PdfInternal" xml:space="preserve"><value>Open clicked PDFs in the in-app viewer</value></data>
-  <data name="Tb_ValidateOnType" xml:space="preserve"><value>Validate on type — re-check the file and whole project as you type (not just on save)</value></data>
-  <data name="Pref_ValidateOnType" xml:space="preserve"><value>Validate on type (file + whole project)</value></data>
-  <data name="Pref_ValidateOnTypeHelp" xml:space="preserve"><value>Re-validate the whole object graph from the unsaved editor buffers on a short typing pause, instead of only on save. Off by default — it re-analyses the project on every pause, which can be heavy on large projects.</value></data>
+  <data name="Tb_ValidateOnType" xml:space="preserve"><value>Validate on type — re-check the file and whole thconfig file-tree as you type (not just on save)</value></data>
+  <data name="Pref_ValidateOnType" xml:space="preserve"><value>Validate on type (file + whole thconfig file-tree)</value></data>
+  <data name="Pref_ValidateOnTypeHelp" xml:space="preserve"><value>Re-validate the whole object graph from the unsaved editor buffers on a short typing pause, instead of only on save. Off by default — it re-analyses the thconfig file-tree on every pause, which can be heavy on large workspaces.</value></data>
   <data name="Tb_DoubleClickNav" xml:space="preserve"><value>Double-click to go to definition — a single click just places the caret (CTRL + click also available for navigation to definition in this mode).</value></data>
   <data name="Pref_DoubleClickNav" xml:space="preserve"><value>Require a double-click to go to definition (or CTRL + click for single-click navigation behaviour)</value></data>
   <data name="Pref_DoubleClickNavHelp" xml:space="preserve"><value>When on, a single click on an identifier just places the caret (so you can edit it); a double-click jumps to its declaration. When off, a single click navigates like a hyperlink. Ctrl+click always navigates.</value></data>
