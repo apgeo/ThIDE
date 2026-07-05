@@ -685,6 +685,34 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
 
+                <!-- #1: clickable directory-segment breadcrumb of the active file's full path. Each
+                     directory reveals + shows that folder in the Workspace Explorer; the file name is
+                     plain text. Capped in width so the right-side metrics always fit. -->
+                <ItemsControl DockPanel.Dock="Left" Margin="12,0,0,0" VerticalAlignment="Center"
+                              x:CompileBindings="False" ClipToBounds="True"
+                              IsVisible="{Binding HasStatusPath}"
+                              ItemsSource="{Binding StatusPathCrumbs}"
+                              MaxWidth="{Binding $parent[Window].Bounds.Width, Converter={x:Static conv:RatioConverter.Instance}, ConverterParameter=0.5}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal">
+                                <Button Classes="crumb" Content="{Binding Name}"
+                                        IsVisible="{Binding IsClickable}"
+                                        Command="{Binding $parent[ItemsControl].DataContext.NavigatePathSegmentCommand}"
+                                        CommandParameter="{Binding}"
+                                        ToolTip.Tip="{Binding Directory}" />
+                                <TextBlock Text="{Binding Name}" Foreground="Gray" FontSize="11"
+                                           VerticalAlignment="Center" IsVisible="{Binding !IsClickable}" />
+                                <TextBlock Text="›" Foreground="Gray" Margin="2,0" VerticalAlignment="Center"
+                                           IsVisible="{Binding !IsLast}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="0"
                             IsVisible="{Binding HasStatusFile}">
                     <StackPanel.Styles>
@@ -701,12 +729,6 @@
                         </Style>
                     </StackPanel.Styles>
 
-                    <TextBlock Text="{Binding StatusFilePath}" Foreground="Gray" FontSize="11"
-                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
-                               ToolTip.Tip="{Binding StatusFilePath}"
-                               MaxWidth="{Binding $parent[Window].Bounds.Width, Converter={x:Static conv:RatioConverter.Instance}, ConverterParameter=0.65}" />
-
-                    <Border Classes="statusSep" />
                     <StackPanel Classes="statusGroup" Orientation="Horizontal" Spacing="3">
                         <TextBlock Text="{l:Loc Status_Length}" /><TextBlock Text="{Binding StatusLength}" />
                     </StackPanel>

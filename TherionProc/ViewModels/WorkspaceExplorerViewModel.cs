@@ -722,6 +722,18 @@ public partial class WorkspaceExplorerViewModel : ViewModelBase
         if (ExpandToFile(filePath) is { } node) Selected = node;
     }
 
+    /// <summary>
+    /// Switches to file-explorer view and selects/expands to the folder (or file) at
+    /// <paramref name="path"/> — used by the status-bar path breadcrumb (#1). No-op when the path
+    /// is outside the current workspace root.
+    /// </summary>
+    public void RevealPath(string? path)
+    {
+        if (string.IsNullOrEmpty(path)) return;
+        if (!IsFileExplorerView) ViewMode = WorkspaceViewMode.FileExplorer; // rebuilds the tree
+        if (ExpandToFile(path) is { } node) Selected = node;
+    }
+
     /// <summary>Selects the file's node, expanding to it; works in both view modes (#4/#9).</summary>
     public void RevealFile(string? filePath)
     {

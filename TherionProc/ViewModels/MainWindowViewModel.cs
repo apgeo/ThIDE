@@ -22,6 +22,16 @@ using TherionProc.ViewModels.Docking;
 
 namespace TherionProc.ViewModels;
 
+/// <summary>
+/// One clickable segment of the status-bar file-path breadcrumb (#1). Directory segments carry the
+/// full directory path to reveal; the trailing file-name segment has a null <see cref="Directory"/>
+/// (rendered as plain text).
+/// </summary>
+public sealed record PathCrumb(string Name, string? Directory, bool IsLast)
+{
+    public bool IsClickable => Directory is not null;
+}
+
 public partial class MainWindowViewModel : ViewModelBase
 {
     private readonly IStringLocalizer<Strings> _l;
@@ -105,6 +115,16 @@ public partial class MainWindowViewModel : ViewModelBase
     /// <summary>True when a real text file is active — shows the file-info status groups.</summary>
     [ObservableProperty] private bool _hasStatusFile;
     [ObservableProperty] private string _statusFilePath = string.Empty;
+
+    /// <summary>Clickable directory-segment breadcrumb of the active file's full path (#1).</summary>
+    private IReadOnlyList<PathCrumb> _statusPathCrumbs = Array.Empty<PathCrumb>();
+    public IReadOnlyList<PathCrumb> StatusPathCrumbs
+    {
+        get => _statusPathCrumbs;
+        private set { _statusPathCrumbs = value; OnPropertyChanged(); OnPropertyChanged(nameof(HasStatusPath)); }
+    }
+    public bool HasStatusPath => StatusPathCrumbs.Count > 0;
+
     [ObservableProperty] private int _statusLength;
     [ObservableProperty] private int _statusLines;
     [ObservableProperty] private int _statusCaretLine = 1;
@@ -629,9 +649,11 @@ public partial class MainWindowViewModel : ViewModelBase
                     Tr.Get("Notif_BuildFailMsg"), Tr.Get("Notif_ShowOutput"), ShowOutput);
             }
         });
-        // after a build, auto-load the newest rendered map into the in-app viewer.
+        // after a build, refresh the map viewer's compatible-output list (new files on disk, #2)
+        // and auto-load the newest rendered map into the in-app viewer.
         Build.CompileCompleted += (_, _) =>
         {
+            OnUiThread(() => MapViewerTool.Map.RefreshOutputs());
             if (_settings?.Current is { EnableMapAutoPreview: true, EnableInAppViewer: true })
                 OnUiThread(() => MapViewerTool.Map.ShowLatest(Build.Artifacts.Select(a => a.Path)));
         };
@@ -659,6 +681,14 @@ public partial class MainWindowViewModel : ViewModelBase
             Activate(MapViewerTool);
             MapViewerTool.Map.Load(path);
         });
+        // Map viewer window controls (#7): full-screen / float-to-other-monitor / move-to-center.
+        MapViewerTool.FullScreenRequested += (_, _) => OnUiThread(() => _factory.ToggleToolFullScreen(MapViewerTool));
+        MapViewerTool.FloatOtherScreenRequested += (_, _) => OnUiThread(() =>
+        {
+            if (!_factory.FloatToolOnOtherScreen(MapViewerTool))
+                _notifications.Info(Tr.Get("MapV_OneScreenTitle"), Tr.Get("MapV_OneScreenMsg"));
+        });
+        MapViewerTool.MoveToCenterRequested += (_, _) => OnUiThread(() => _factory.MoveToolToDocuments(MapViewerTool));
         // #3: the "N artifact(s)" status link surfaces + flashes the Generated Files panel.
         Build.ShowOutputsRequested += (_, _) => OnUiThread(() =>
         {
@@ -1496,11 +1526,13 @@ public partial class MainWindowViewModel : ViewModelBase
         if (doc is null || string.IsNullOrEmpty(doc.FilePath))
         {
             HasStatusFile = false;
+            StatusPathCrumbs = Array.Empty<PathCrumb>();
             return;
         }
 
         HasStatusFile = true;
         StatusFilePath = doc.FilePath;
+        StatusPathCrumbs = BuildPathCrumbs(doc.FilePath);
         var text = doc.DocumentText;
         StatusLength = text.Length;
         StatusLines = CountLines(text);
@@ -1508,6 +1540,49 @@ public partial class MainWindowViewModel : ViewModelBase
         StatusFileType = string.IsNullOrEmpty(doc.InterpretedTypeText)
             ? string.Empty
             : doc.InterpretedTypeText + (doc.IsParsed ? " · parsed" : " · not parsed");
+    }
+
+    /// <summary>
+    /// Clicking a directory segment of the status-bar path breadcrumb (#1): reveal that folder in
+    /// the Workspace Explorer, switching it to the file-explorer view and surfacing the panel.
+    /// </summary>
+    [RelayCommand]
+    private void NavigatePathSegment(PathCrumb? crumb)
+    {
+        if (crumb?.Directory is not { } dir) return;
+        Activate(WorkspaceTool);            // surface/focus the Workspace Explorer panel
+        WorkspaceExplorer.RevealPath(dir);  // switch to file-explorer view + select the folder node
+    }
+
+    /// <summary>Splits a full file path into breadcrumb segments (root-first); the file name is last.</summary>
+    private static IReadOnlyList<PathCrumb> BuildPathCrumbs(string fullPath)
+    {
+        if (string.IsNullOrEmpty(fullPath)) return Array.Empty<PathCrumb>();
+        var file = System.IO.Path.GetFileName(fullPath);
+
+        var dirs = new List<string>();
+        var cur = System.IO.Path.GetDirectoryName(fullPath);
+        while (!string.IsNullOrEmpty(cur))
+        {
+            dirs.Add(cur);
+            var parent = System.IO.Path.GetDirectoryName(cur);
+            if (string.IsNullOrEmpty(parent) || string.Equals(parent, cur, StringComparison.Ordinal)) break;
+            cur = parent;
+        }
+        dirs.Reverse();   // root-first
+
+        var list = new List<PathCrumb>(dirs.Count + 1);
+        foreach (var d in dirs)
+        {
+            var name = System.IO.Path.GetFileName(d);
+            if (string.IsNullOrEmpty(name)) // a root like "C:\" or "/" — show the trimmed root token
+                name = d.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
+            if (string.IsNullOrEmpty(name)) name = d;
+            list.Add(new PathCrumb(name, d, IsLast: false));
+        }
+        if (!string.IsNullOrEmpty(file)) list.Add(new PathCrumb(file, Directory: null, IsLast: true));
+        else if (list.Count > 0) list[^1] = list[^1] with { IsLast = true };
+        return list;
     }
 
     /// <summary>Updates the caret line/column/offset on the status bar (#10).</summary>
