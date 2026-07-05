@@ -402,6 +402,7 @@ public partial class MainWindowViewModel : ViewModelBase
     public string MenuHelp           => L("Menu_Help",                   "_Help");
     public string MenuHelpThbook     => L("Menu_Help_Thbook",            "Therion _Book");
     public string MenuHelpAbout      => L("Menu_Help_About",             "_About TherionProc");
+    public string MenuHelpDebugInfo  => L("Menu_Help_DebugInfo",         "Debug _Info");
     public string MenuFileExit       => L("Menu_File_Exit",              "E_xit");
     public string MenuView           => L("Menu_View",                   "_View");
     public string MenuViewLanguage   => L("Menu_View_Language",          "_Language");
@@ -1630,6 +1631,7 @@ public partial class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(MenuHelp));
         OnPropertyChanged(nameof(MenuHelpThbook));
         OnPropertyChanged(nameof(MenuHelpAbout));
+        OnPropertyChanged(nameof(MenuHelpDebugInfo));
         OnPropertyChanged(nameof(MenuFileOpenFolder));
         OnPropertyChanged(nameof(MenuFileExit));
         OnPropertyChanged(nameof(MenuView));

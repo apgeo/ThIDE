@@ -266,6 +266,10 @@ public partial class MainWindow : Window
         await new AboutWindow(thbook).ShowDialog(this);
     }
 
+    // Help ▸ Debug Info (#2): a copyable diagnostic report for issue reports.
+    private async void OnDebugInfoClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        => await new DebugInfoWindow().ShowDialog(this);
+
     // Help ▸ Therion Book: open the bundled thbook PDF at page 1 (#1).
     private void OnOpenThbook(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {

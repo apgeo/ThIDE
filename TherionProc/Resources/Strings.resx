@@ -13,6 +13,7 @@
   <data name="Menu_Help" xml:space="preserve"><value>_Help</value></data>
   <data name="Menu_Help_Thbook" xml:space="preserve"><value>Therion _Book</value></data>
   <data name="Menu_Help_About" xml:space="preserve"><value>_About TherionProc</value></data>
+  <data name="Menu_Help_DebugInfo" xml:space="preserve"><value>Debug _Info</value></data>
   <data name="Menu_File_Exit" xml:space="preserve"><value>E_xit</value></data>
   <data name="Menu_File_Recent" xml:space="preserve"><value>Recent _Files</value></data>
   <data name="Menu_View" xml:space="preserve"><value>_View</value></data>
@@ -801,6 +802,17 @@
   <data name="About_Blurb" xml:space="preserve"><value>An editor and build environment for Therion cave-survey projects.
 Targets Therion v6.4.0 (thbook bundled).</value></data>
   <data name="About_OpenBook" xml:space="preserve"><value>Open Therion Book</value></data>
+  <data name="About_GitHub" xml:space="preserve"><value>Repository</value></data>
+  <data name="About_Bundled" xml:space="preserve"><value>Bundled components</value></data>
+  <data name="About_ExternalTools" xml:space="preserve"><value>External tools</value></data>
+  <data name="About_System" xml:space="preserve"><value>System</value></data>
+  <data name="About_CopyInfo" xml:space="preserve"><value>Copy info</value></data>
+  <data name="About_Checking" xml:space="preserve"><value>checking…</value></data>
+  <data name="About_Detected" xml:space="preserve"><value>detected</value></data>
+  <data name="About_NotDetected" xml:space="preserve"><value>not detected</value></data>
+  <data name="Debug_Title" xml:space="preserve"><value>Debug Info</value></data>
+  <data name="Debug_Collecting" xml:space="preserve"><value>Collecting diagnostic information…</value></data>
+  <data name="Common_CopyToClipboard" xml:space="preserve"><value>Copy to clipboard</value></data>
   <data name="Mapiah_Title" xml:space="preserve"><value>Mapiah not found</value></data>
   <data name="Mapiah_Message" xml:space="preserve"><value>The Mapiah sketch editor could not be found on this computer.
 

@@ -801,6 +801,17 @@
   <data name="About_Blurb" xml:space="preserve"><value>Un editor și mediu de compilare pentru proiecte de topografie a peșterilor Therion.
 Vizează Therion v6.4.0 (thbook inclus).</value></data>
   <data name="About_OpenBook" xml:space="preserve"><value>Deschide Cartea Therion</value></data>
+  <data name="About_GitHub" xml:space="preserve"><value>Depozit</value></data>
+  <data name="About_Bundled" xml:space="preserve"><value>Componente incluse</value></data>
+  <data name="About_ExternalTools" xml:space="preserve"><value>Instrumente externe</value></data>
+  <data name="About_System" xml:space="preserve"><value>Sistem</value></data>
+  <data name="About_CopyInfo" xml:space="preserve"><value>Copiază informațiile</value></data>
+  <data name="About_Checking" xml:space="preserve"><value>se verifică…</value></data>
+  <data name="About_Detected" xml:space="preserve"><value>detectat</value></data>
+  <data name="About_NotDetected" xml:space="preserve"><value>nedetectat</value></data>
+  <data name="Debug_Title" xml:space="preserve"><value>Informații de depanare</value></data>
+  <data name="Debug_Collecting" xml:space="preserve"><value>Se colectează informațiile de diagnosticare…</value></data>
+  <data name="Common_CopyToClipboard" xml:space="preserve"><value>Copiază în clipboard</value></data>
   <data name="Mapiah_Title" xml:space="preserve"><value>Mapiah nu a fost găsit</value></data>
   <data name="Mapiah_Message" xml:space="preserve"><value>Editorul de schițe Mapiah nu a putut fi găsit pe acest calculator.
 
