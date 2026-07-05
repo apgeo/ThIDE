@@ -130,13 +130,19 @@ public sealed class ExternalToolLocator : IExternalToolLocator
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-            var pf = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
-            yield return Path.Combine(pf, "Therion", toolId + ".exe");
-            yield return Path.Combine(pf, toolId, toolId + ".exe");
+            // Look under both Program Files roots (a 64-bit host, or a 32-bit installer like
+            // Survex, may land the exe in either), across the vendor sub-folders that bundle these
+            // tools: "Therion" (therion/loch), "Survex" (aven/dump3d/extend — installs to
+            // "Program Files (x86)\Survex"), and a folder named after the tool itself. Only paths
+            // that actually exist are used by the caller, so listing all combinations is cheap.
+            foreach (var root in ProgramFilesRoots())
+                foreach (var vendor in new[] { "Therion", "Survex", toolId })
+                    yield return Path.Combine(root, vendor, toolId + ".exe");
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
             yield return "/Applications/Therion.app/Contents/MacOS/" + toolId;
+            yield return "/Applications/Survex.app/Contents/MacOS/" + toolId;
             yield return "/usr/local/bin/" + toolId;
             yield return "/opt/homebrew/bin/" + toolId;
         }
@@ -144,6 +150,17 @@ public sealed class ExternalToolLocator : IExternalToolLocator
         {
             yield return "/usr/bin/" + toolId;
             yield return "/usr/local/bin/" + toolId;
+        }
+    }
+
+    /// <summary>Distinct Program Files roots on Windows (64-bit + the x86 root), most-specific first.</summary>
+    private static IEnumerable<string> ProgramFilesRoots()
+    {
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var f in new[] { Environment.SpecialFolder.ProgramFiles, Environment.SpecialFolder.ProgramFilesX86 })
+        {
+            var root = Environment.GetFolderPath(f);
+            if (!string.IsNullOrEmpty(root) && seen.Add(root)) yield return root;
         }
     }
 
