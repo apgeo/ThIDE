@@ -256,14 +256,12 @@ public partial class MainWindowViewModel : ViewModelBase
     public event EventHandler<string?>? ShowPreferencesRequested;
     public event EventHandler? ShowAboutRequested;
     public event EventHandler? ShowThbookRequested;
-    public event EventHandler? ShowUserGuideRequested;
     public event EventHandler? ShowBookmarksRequested;
     public event EventHandler? ShowRelationalMapRequested;
 
     public void RaiseShowPreferences(string? section) => ShowPreferencesRequested?.Invoke(this, section);
     public void RaiseShowAbout() => ShowAboutRequested?.Invoke(this, EventArgs.Empty);
     public void RaiseShowThbook() => ShowThbookRequested?.Invoke(this, EventArgs.Empty);
-    public void RaiseShowUserGuide() => ShowUserGuideRequested?.Invoke(this, EventArgs.Empty);
     public void RaiseShowBookmarks() => ShowBookmarksRequested?.Invoke(this, EventArgs.Empty);
     public void RaiseShowRelationalMap() => ShowRelationalMapRequested?.Invoke(this, EventArgs.Empty);
 
@@ -693,14 +691,12 @@ public partial class MainWindowViewModel : ViewModelBase
             Activate(MapViewerTool);
             MapViewerTool.Map.Load(path);
         });
-        // Map viewer window controls (#7): full-screen / float-to-other-monitor / move-to-center.
-        MapViewerTool.FullScreenRequested += (_, _) => OnUiThread(() => _factory.ToggleToolFullScreen(MapViewerTool));
-        MapViewerTool.FloatOtherScreenRequested += (_, _) => OnUiThread(() =>
-        {
-            if (!_factory.FloatToolOnOtherScreen(MapViewerTool))
-                _notifications.Info(Tr.Get("MapV_OneScreenTitle"), Tr.Get("MapV_OneScreenMsg"));
-        });
-        MapViewerTool.MoveToCenterRequested += (_, _) => OnUiThread(() => _factory.MoveToolToDocuments(MapViewerTool));
+        // Panel window controls (#7): full-screen / float-to-other-monitor / move-to-center. Shared by
+        // the reusable PanelWindowControls component across every panel that hosts it.
+        foreach (var tool in new ViewModels.Docking.ToolViewModelBase[]
+                 { MapViewerTool, Model3DViewerTool, LivePreviewTool, OutlineTool,
+                   ProjectTool, ObjectBrowserTool, StructuralGeologyTool })
+            WireWindowControls(tool);
         // Welcome start-page actions: the picker-based ones reuse the shell commands; the tools
         // shortcut opens Settings ▸ External Tools via the existing preferences-at-section event.
         WelcomeTool.Welcome.NewFileRequested += (_, _) => _ = NewFileAsync();
@@ -714,7 +710,10 @@ public partial class MainWindowViewModel : ViewModelBase
             GeneratedFilesTool.Flash();
         });
         Diagnostics.NavigateRequested += (_, row) => NavigateTo(row.Span);
-        Diagnostics.ScopeChanged += (_, _) => RefreshDiagnostics();
+        // Restore the persisted workspace-scope choice BEFORE subscribing, so applying it here doesn't
+        // write settings back on every launch; thereafter each toggle refreshes and persists the choice.
+        if (_settings is not null) Diagnostics.ShowProjectScope = _settings.Current.DiagnosticsWorkspaceScope;
+        Diagnostics.ScopeChanged += (_, _) => { PersistDiagnosticsScope(); RefreshDiagnostics(); };
         Build.NavigateRequested += (_, span) => NavigateTo(span);
         // Surface the Compiler Output panel when a build starts (#2).
         Build.BuildStarted += (_, _) => OnUiThread(() => _factory.ShowCompilerOutput());
@@ -1306,6 +1305,23 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand] private void ToggleSettings()          => Activate(SettingsTool);
     [RelayCommand] private void ShowWelcome()             => _factory.ShowToolInDocuments(WelcomeTool); // Help ▸ Welcome
 
+    // Help ▸ User Guide: open the bundled guide PDF in the in-app PDF viewer (the Map Viewer) when it
+    // is enabled — mirroring how a clicked build PDF opens (Build.ViewMapRequested). Falls back to the
+    // OS viewer / on-disk Markdown / online docs when no PDF is bundled or the in-app viewer is off.
+    [RelayCommand]
+    private void OpenUserGuide()
+    {
+        if (ThIDE.AppServices.Provider.GetService(typeof(IUserGuideService)) is not IUserGuideService svc) return;
+        var pdf = svc.TryGetBundledPdfPath();
+        if (pdf is not null && _settings?.Current.EnableInAppViewer == true)
+        {
+            Activate(MapViewerTool);
+            MapViewerTool.Map.Load(pdf);
+            return;
+        }
+        svc.OpenExternally();
+    }
+
     /// <summary>gates — drive the View-menu entries (hidden when the feature is off).</summary>
     public bool LivePreviewEnabled => _settings?.Current.EnableLivePreview ?? true;
     public bool MapViewerEnabled   => _settings?.Current.EnableInAppViewer ?? true;
@@ -1486,7 +1502,12 @@ public partial class MainWindowViewModel : ViewModelBase
     /// <summary>Returns the diagnostics source based on the current scope toggle.</summary>
     private System.Collections.Immutable.ImmutableArray<Therion.Core.Diagnostic> DiagnosticsSource()
     {
-        if (Diagnostics.ShowProjectScope && _documents.Workspace is { } ws && !ws.Diagnostics.IsDefaultOrEmpty)
+        // NOTE: do NOT gate this on `ws.Diagnostics` being non-empty. Those are only the per-file
+        // parse/bind/xvi diagnostics; the project-wide analysis below (loop closure, blunders, and the
+        // mainline-disconnection warning TH_SEM_015) is computed separately and is frequently the ONLY
+        // thing to report on an otherwise cleanly-parsed project that has merely been split into
+        // disconnected pieces. Requiring a pre-existing per-file diagnostic silently suppressed it.
+        if (Diagnostics.ShowProjectScope && _documents.Workspace is { } ws)
         {
             // Merge workspace-level diagnostics with current-file parser/semantic ones
             // so the user sees both graph-level warnings and local parse errors.
@@ -1554,6 +1575,32 @@ public partial class MainWindowViewModel : ViewModelBase
         catch { _ruleDiagCache = System.Collections.Immutable.ImmutableArray<Therion.Core.Diagnostic>.Empty; }
         _ruleDiagWorkspace = ws;
         return _ruleDiagCache;
+    }
+
+    /// <summary>
+    /// Wires a tool's shared window-control requests (raised by the PanelWindowControls component) to
+    /// the DockFactory, so full-screen / float-on-other-monitor / move-to-centre work whether the panel
+    /// is docked or floating. One place handles every panel; the DockFactory acts on the tool itself.
+    /// </summary>
+    private void WireWindowControls(ViewModels.Docking.ToolViewModelBase tool)
+    {
+        tool.FullScreenRequested += (_, _) => OnUiThread(() => _factory.ToggleToolFullScreen(tool));
+        tool.FloatOtherScreenRequested += (_, _) => OnUiThread(() =>
+        {
+            if (!_factory.FloatToolOnOtherScreen(tool))
+                _notifications.Info(Tr.Get("MapV_OneScreenTitle"), Tr.Get("MapV_OneScreenMsg"));
+        });
+        tool.MoveToCenterRequested += (_, _) => OnUiThread(() => _factory.MoveToolToDocuments(tool));
+    }
+
+    /// <summary>Persists the Diagnostics panel's workspace-scope toggle so it's remembered next launch.</summary>
+    private void PersistDiagnosticsScope()
+    {
+        if (_settings is null) return;
+        var cur = _settings.Current;
+        if (cur.DiagnosticsWorkspaceScope == Diagnostics.ShowProjectScope) return;
+        try { _settings.Save(cur with { DiagnosticsWorkspaceScope = Diagnostics.ShowProjectScope }); }
+        catch { /* best-effort persistence */ }
     }
 
     private void RefreshDiagnostics()
