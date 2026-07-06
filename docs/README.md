@@ -2,6 +2,11 @@
 
 Guides and reference for ThIDE. See the [project README](../README.md) for the overview and quick start.
 
+> **New to ThIDE, or a caver rather than a developer?** Start with the
+> **[User Guide](user-guide/README.md)** — a task-oriented, wiki-style manual that walks through the
+> concepts, workflows, and every feature from an end-user perspective. The pages below are the
+> reference/appendix it links into.
+
 ## Guides
 
 - **[Features](features.md)** — the complete feature reference.

@@ -68,6 +68,7 @@ dotnet test ThIDE.sln -m:1 -c Release
 
 Full documentation hosted in the [`docs/`](docs/README.md) folder:
 
+- **[User Guide](docs/user-guide/README.md)** — task-oriented manual for cavers/end users.
 - **[Features](docs/features.md)** — the complete feature reference.
 - **[Architecture](docs/architecture.md)** — layer design, project layout, and reusing the libraries.
 - **[Usage](docs/usage.md)** — external tools, the command-line tools, and configuration & data locations.
