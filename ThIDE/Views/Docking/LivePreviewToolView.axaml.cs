@@ -15,10 +15,17 @@ public partial class LivePreviewToolView : UserControl
         InitializeComponent();
         _sketch = this.FindControl<LivePreviewControl>("Sketch");
         if (_sketch is not null)
+        {
             _sketch.SegmentActivated += (_, span) =>
             {
                 if (DataContext is LivePreviewToolViewModel vm) vm.Preview.Activate(span);
             };
+            // Clicking a structural-plane line selects that plane in the Structural Geology grid.
+            _sketch.PlaneActivated += (_, line) =>
+            {
+                if (DataContext is LivePreviewToolViewModel vm) vm.Preview.ActivatePlane(line);
+            };
+        }
 
         // Hovering a legend row frames that survey/file/component in the sketch (zooming out to it).
         // Handlers live on the scroller so the always-on scrollbar / right margin don't clear the

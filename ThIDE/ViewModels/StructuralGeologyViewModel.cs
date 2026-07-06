@@ -29,6 +29,7 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
     private readonly IWorkspaceSession? _session;
     private readonly IStructuralPlotAssetHost? _plotHost;
     private readonly IAppSettingsService? _settings;
+    private readonly LivePreviewViewModel? _preview;
 
     private const int TabCount = 4;
 
@@ -39,6 +40,7 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
     private double _delta;         // resolved declination applied to every plane
     private bool _plotReady;       // the three.js page reported {type:"ready"}
     private ImmutableArray<(Vec3 A, Vec3 B)> _caveLegs = ImmutableArray<(Vec3, Vec3)>.Empty;
+    private ImmutableArray<(Vec3 A, Vec3 B)> _caveSplays = ImmutableArray<(Vec3, Vec3)>.Empty;
     private Avalonia.Threading.DispatcherTimer? _persistTimer;
 
     /// <summary>Per-grid column visibility (header → shown). Persisted; applied by the view on attach.</summary>
@@ -52,12 +54,18 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
         IWorkspaceSession? session = null,
         IStructuralPlotAssetHost? plotHost = null,
         IAppSettingsService? settings = null,
-        ILanguageService? language = null)
+        ILanguageService? language = null,
+        LivePreviewViewModel? preview = null)
     {
         _documents = documents;
         _session = session;
         _plotHost = plotHost;
         _settings = settings;
+        _preview = preview;
+        // Clicking a plane line in the Mainline Preview selects the matching resulted-planes row.
+        if (_preview is not null)
+            _preview.StructuralPlaneActivated += (_, name) =>
+                SelectedPlane = Planes.FirstOrDefault(p => p.Name == name) ?? SelectedPlane;
         if (_documents is not null) _documents.DocumentChanged += (_, _) => { if (_activated) Rerun(); };
         // Re-run the analysis when the UI language changes so the status line and the localized row
         // labels (Kind, declination note, invalid-plane reason) re-render in the new language.
@@ -103,6 +111,13 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
     [ObservableProperty] private double _discScale = 1;
     public double[] DiscScales { get; } = { 1, 5, 10, 20, 50 };
     [ObservableProperty] private bool _whiteBackground;   // #4: white vs. dark plot background
+    // 3D plot: show the splay (wall) shots, off by default; and optionally render them in a faded
+    // colour blended toward the background so they read as subtle context on white or dark.
+    [ObservableProperty] private bool _plotSplays;
+    [ObservableProperty] private bool _fadedSplays;
+
+    // Overlay the visible resulted planes on the Mainline Preview (push button in the planes grid).
+    [ObservableProperty] private bool _showPlanesInPreview;
 
     // results
     public ObservableCollection<StructuralMeasurementRow> Measurements { get; } = new();
@@ -179,6 +194,11 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
 
     partial void OnDiscScaleChanged(double value) { PushPlot(); Persist(); }
     partial void OnWhiteBackgroundChanged(bool value) { PushBackground(); Persist(); }
+    partial void OnPlotSplaysChanged(bool value) { PushPlot(); Persist(); }
+    partial void OnFadedSplaysChanged(bool value) { PushPlot(); Persist(); }
+    partial void OnShowPlanesInPreviewChanged(bool value) { PushPreview(); Persist(); }
+    // Selection sync: highlight the selected plane's line in the Mainline Preview overlay.
+    partial void OnSelectedPlaneChanged(StructuralPlaneRow? value) => PushPreview();
 
     /// <summary>Raised when group-by-station toggles so the view can rebuild the grid's grouped view.</summary>
     public event EventHandler? GroupingChanged;
@@ -217,6 +237,7 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
         foreach (var p in Planes) p.Visible = select(p);
         _bulk = false;
         PushPlot();
+        PushPreview();
     }
 
     /// <summary>A single plane's "Visible" checkbox toggled — re-push the plot (unless in a bulk op).</summary>
@@ -224,6 +245,7 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
     {
         if (_bulk) return;
         PushPlot();
+        PushPreview();
     }
 
     /// <summary>
@@ -238,6 +260,7 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
         _bulk = false;
         RecomputePlane(plane);
         PushPlot();
+        PushPreview();
     }
 
     /// <summary>Recompute one batch's plane after the user toggled a single measurement's inclusion.</summary>
@@ -246,6 +269,7 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
         if (_bulk) return;   // a bulk op recomputes once at the end
         RecomputePlane(row);
         PushPlot();
+        PushPreview();
     }
 
     private void RecomputePlane(StructuralPlaneRow row)
@@ -259,6 +283,7 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
     {
         foreach (var p in Planes) RecomputePlane(p);
         PushPlot();
+        PushPreview();
     }
 
     // ---- analysis --------------------------------------------------------------------------------
@@ -276,6 +301,7 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
         {
             _delta = 0;
             Status = ThIDE.Resources.Tr.Get("Struct_StatusNoData");
+            PushPreview();   // clear any stale overlay lines
             return;
         }
 
@@ -289,6 +315,7 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
         var result = StructuralAnalysis.Analyze(model, options);
         _delta = result.Declination.Delta;
         _caveLegs = result.CaveLegs;
+        _caveSplays = result.CaveSplays;
 
         for (int i = 0; i < result.Batches.Length; i++)
         {
@@ -316,6 +343,37 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
         Status = string.Format(ThIDE.Resources.Tr.Get("Struct_StatusFmt"),
             Planes.Count, Measurements.Count(m => !m.IsOrigin), declNote);
         PushPlot();
+        PushPreview();
+    }
+
+    // ---- Mainline Preview overlay (planes as strike / apparent-dip lines) -------------------------
+
+    /// <summary>
+    /// Pushes the visible, valid resulted planes to the Mainline Preview as overlay lines — or
+    /// clears them when the push button is off. Each plane is anchored at its batch's from-station;
+    /// the label carries the grid's strike/dip values, and the grid-selected row rides along so the
+    /// preview can highlight its line.
+    /// </summary>
+    private void PushPreview()
+    {
+        if (_preview is null) return;
+        if (!ShowPlanesInPreview)
+        {
+            _preview.SetStructuralPlanes(Array.Empty<StructuralPlaneOverlay>());
+            return;
+        }
+        var list = new List<StructuralPlaneOverlay>(Planes.Count);
+        foreach (var row in Planes)
+        {
+            if (!row.Plane.IsValid || !row.Visible) continue;
+            if (row.Rows.FirstOrDefault(r => !r.IsOrigin)?.Measurement.From is not { } anchor) continue;
+            list.Add(new StructuralPlaneOverlay(
+                row.Name,
+                $"{row.Plane.Strike:0}/{row.Plane.Dip:0}°",
+                row.Plane.Strike, row.Plane.Dip, row.Plane.DeclinationApplied,
+                anchor, ReferenceEquals(row, SelectedPlane)));
+        }
+        _preview.SetStructuralPlanes(list);
     }
 
     // ---- 3D plot (three.js in a NativeWebView) ---------------------------------------------------
@@ -374,16 +432,26 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
         PlotScriptRequested?.Invoke(this, $"stRender({BuildPlotJson()})");
     }
 
+    /// <summary>Flattens world-space segments to the [x,y,z, x,y,z, …] array three.js draws as LineSegments.</summary>
+    private static double[] FlattenSegments(ImmutableArray<(Vec3 A, Vec3 B)> segs)
+    {
+        var arr = new double[segs.Length * 6];
+        for (int i = 0; i < segs.Length; i++)
+        {
+            var (a, b) = segs[i];
+            int o = i * 6;
+            arr[o] = a.E; arr[o + 1] = a.N; arr[o + 2] = a.Z;
+            arr[o + 3] = b.E; arr[o + 4] = b.N; arr[o + 5] = b.Z;
+        }
+        return arr;
+    }
+
     private string BuildPlotJson()
     {
-        var legs = new double[_caveLegs.Length * 6];
-        for (int i = 0; i < _caveLegs.Length; i++)
-        {
-            var (a, b) = _caveLegs[i];
-            int o = i * 6;
-            legs[o] = a.E; legs[o + 1] = a.N; legs[o + 2] = a.Z;
-            legs[o + 3] = b.E; legs[o + 4] = b.N; legs[o + 5] = b.Z;
-        }
+        var legs = FlattenSegments(_caveLegs);
+        // Splays only travel to the plot when the toggle is on; the fade flag lets the JS blend their
+        // colour toward the current background so they stay subtle.
+        var splays = PlotSplays ? FlattenSegments(_caveSplays) : System.Array.Empty<double>();
 
         var planes = new List<PlotPlaneDto>(Planes.Count);
         foreach (var row in Planes)
@@ -398,7 +466,7 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
                 true));
         }
 
-        return JsonSerializer.Serialize(new PlotDto(legs, planes.ToArray()), PlotJsonOptions);
+        return JsonSerializer.Serialize(new PlotDto(legs, splays, FadedSplays, planes.ToArray()), PlotJsonOptions);
     }
 
     // Disc radius = farthest included point from the fitted centroid (in the fit frame).
@@ -419,7 +487,7 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
         new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
     private sealed record PlotPlaneDto(string Name, double[] Centroid, double[] Normal, double Radius, bool Valid);
-    private sealed record PlotDto(double[] Legs, PlotPlaneDto[] Planes);
+    private sealed record PlotDto(double[] Legs, double[] Splays, bool SplayFade, PlotPlaneDto[] Planes);
 
     // ---- tabular export (CSV / formatted copy) ---------------------------------------------------
 
@@ -474,6 +542,9 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
                 DeclinationDegrees = s.DeclinationDegrees;
                 DiscScale = s.DiscScale <= 0 ? 1 : s.DiscScale;
                 WhiteBackground = s.WhiteBackground;
+                PlotSplays = s.PlotSplays;
+                FadedSplays = s.FadedSplays;
+                ShowPlanesInPreview = s.ShowPlanesInPreview;
                 SelectedTab = Math.Clamp(s.SelectedTab, 0, TabCount - 1);
                 if (s.MeasColumns is { } mc) MeasurementColumns = mc;
                 if (s.PlaneColumns is { } pc) PlaneColumns = pc;
@@ -499,7 +570,7 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
             ProjectScope, GroupByStation, UseNameKeyword, NameKeywords, MatchComment, CommentMarkers,
             MatchStationFlag, StationFlags, Grouping, Splays, IncludeOriginPoint, DeclinationSource,
             DeclinationDegrees, DiscScale, WhiteBackground, SelectedTab, MeasurementColumns, PlaneColumns,
-            ShowFullStationName);
+            ShowFullStationName, ShowPlanesInPreview, PlotSplays, FadedSplays);
         try { _settings.Save(_settings.Current with { StructuralGeologySettings = JsonSerializer.Serialize(state) }); }
         catch { /* best-effort persistence */ }
     }
@@ -509,7 +580,8 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
         string CommentMarkers, bool MatchStationFlag, string StationFlags, GroupingMode Grouping, SplayPolicy Splays,
         bool IncludeOriginPoint, DeclinationSource DeclinationSource, double DeclinationDegrees, double DiscScale,
         bool WhiteBackground, int SelectedTab, Dictionary<string, bool> MeasColumns, Dictionary<string, bool> PlaneColumns,
-        bool ShowFullStationName = false);
+        bool ShowFullStationName = false, bool ShowPlanesInPreview = false,
+        bool PlotSplays = false, bool FadedSplays = false);
 
     private DetectionOptions BuildDetectionOptions() => new()
     {

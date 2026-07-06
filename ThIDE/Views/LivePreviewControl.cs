@@ -70,6 +70,17 @@ public sealed class LivePreviewControl : Control
     private static readonly IPen NorthPen =
         new ImmutablePen(new ImmutableSolidColorBrush(Color.FromArgb(0xDD, 0x21, 0x21, 0x21)), 1.6);
 
+    // Structural-geology plane traces: thick crimson lines with a strike/dip label at one end;
+    // the plane selected in the Structural grid is drawn wider in the highlight orange.
+    private static readonly IPen PlanePen =
+        new ImmutablePen(new ImmutableSolidColorBrush(Color.FromArgb(0xD9, 0xAD, 0x14, 0x57)), 3.2);
+    private static readonly IPen PlaneSelectedPen =
+        new ImmutablePen(new ImmutableSolidColorBrush(Color.FromRgb(0xFF, 0x6D, 0x00)), 5.0);
+    private static readonly IBrush PlaneLabelBrush =
+        new ImmutableSolidColorBrush(Color.FromRgb(0xAD, 0x14, 0x57));
+    private static readonly IBrush PlaneSelectedLabelBrush =
+        new ImmutableSolidColorBrush(Color.FromRgb(0xE6, 0x51, 0x00));
+
     // Upper bound on labels actually drawn per frame (safety net; screen-cell thinning below usually
     // keeps the count far lower). Labels are culled to the viewport and thinned by density, so this is
     // a per-frame draw budget — NOT a "hide everything past N stations" gate.
@@ -156,6 +167,16 @@ public sealed class LivePreviewControl : Control
     {
         get => GetValue(EquateMarkersProperty);
         set => SetValue(EquateMarkersProperty, value);
+    }
+
+    // Structural-geology plane traces (thick clickable lines with a strike/dip end label).
+    public static readonly StyledProperty<IReadOnlyList<PlaneOverlayLine>?> PlaneLinesProperty =
+        AvaloniaProperty.Register<LivePreviewControl, IReadOnlyList<PlaneOverlayLine>?>(nameof(PlaneLines));
+
+    public IReadOnlyList<PlaneOverlayLine>? PlaneLines
+    {
+        get => GetValue(PlaneLinesProperty);
+        set => SetValue(PlaneLinesProperty, value);
     }
 
     /// <summary>Show the equate-junction markers (on by default).</summary>
@@ -247,6 +268,9 @@ public sealed class LivePreviewControl : Control
     /// <summary>Raised when the user clicks (without dragging) near a leg / point.</summary>
     public event EventHandler<SourceSpan>? SegmentActivated;
 
+    /// <summary>Raised when the user clicks (without dragging) near a structural-plane line.</summary>
+    public event EventHandler<PlaneOverlayLine>? PlaneActivated;
+
     private double _zoom = 1.0;
     private double _panX, _panY;
     private double _eff, _cx, _cy; // last render transform (world→screen), for hit-testing
@@ -274,8 +298,8 @@ public sealed class LivePreviewControl : Control
     {
         AffectsRender<LivePreviewControl>(
             SegmentsProperty, SplaysProperty, SplaysAsLinesProperty, StationPointsProperty,
-            LeadMarkersProperty, EquateMarkersProperty, ShowJunctionsProperty, ShowSplaysProperty,
-            ShowStationSymbolsProperty, ShowLabelsProperty, ShowSurveyNamesProperty,
+            LeadMarkersProperty, EquateMarkersProperty, PlaneLinesProperty, ShowJunctionsProperty,
+            ShowSplaysProperty, ShowStationSymbolsProperty, ShowLabelsProperty, ShowSurveyNamesProperty,
             ShowNorthArrowProperty, ColorModeProperty);
     }
 
@@ -453,6 +477,9 @@ public sealed class LivePreviewControl : Control
 
         if (ShowLabels) DrawStationLabels(ctx, segs, size);
 
+        // Structural-geology plane traces above the centreline (thick, so they read as an overlay).
+        if (PlaneLines is { Count: > 0 } planes) DrawPlaneLines(ctx, planes, size);
+
         // lead markers on top, coloured by kind.
         if (LeadMarkers is { } leads)
             foreach (var m in leads)
@@ -527,6 +554,25 @@ public sealed class LivePreviewControl : Control
             double x1 = Math.Max(a.X, b.X) + 6, y1 = Math.Max(a.Y, b.Y) + 6;
             ctx.DrawRectangle(HighlightFill, HighlightPen, new Rect(x0, y0, x1 - x0, y1 - y0), 3, 3);
         }
+    }
+
+    // Thick plane traces; the grid-selected one is drawn last (wider + orange) so it sits on top.
+    // The strike/dip label rides the (X2,Y2) end with the usual halo so it stays legible.
+    private void DrawPlaneLines(DrawingContext ctx, IReadOnlyList<PlaneOverlayLine> planes, Size size)
+    {
+        foreach (var pl in planes) if (!pl.IsSelected) DrawPlaneLine(ctx, pl, size);
+        foreach (var pl in planes) if (pl.IsSelected) DrawPlaneLine(ctx, pl, size);
+    }
+
+    private void DrawPlaneLine(DrawingContext ctx, PlaneOverlayLine pl, Size size)
+    {
+        var a = ToScreen(pl.X1, pl.Y1, size);
+        var b = ToScreen(pl.X2, pl.Y2, size);
+        ctx.DrawLine(pl.IsSelected ? PlaneSelectedPen : PlanePen, a, b);
+        var ft = Label(pl.Label, 11, pl.IsSelected ? PlaneSelectedLabelBrush : PlaneLabelBrush);
+        var origin = new Point(b.X + 4, b.Y - ft.Height / 2);
+        ctx.FillRectangle(LabelHalo, new Rect(origin.X - 1, origin.Y, ft.Width + 2, ft.Height));
+        ctx.DrawText(ft, origin);
     }
 
     private void DrawNorthArrow(DrawingContext ctx, Size size)
@@ -858,6 +904,20 @@ public sealed class LivePreviewControl : Control
                 if (d < bestP) { bestP = d; pSpan = pt.Span; }
             }
             if (pSpan is { } ps) { SegmentActivated?.Invoke(this, ps); return; }
+        }
+
+        // Structural-plane traces → select the matching plane row in the Structural Geology grid.
+        // They're drawn above the legs, so they also win the click over them.
+        if (PlaneLines is { } planeLines)
+        {
+            double bestPlane = 8.0;
+            PlaneOverlayLine? hitPlane = null;
+            foreach (var pl in planeLines)
+            {
+                var d = DistanceToSegment(click, ToScreen(pl.X1, pl.Y1, size), ToScreen(pl.X2, pl.Y2, size));
+                if (d < bestPlane) { bestPlane = d; hitPlane = pl; }
+            }
+            if (hitPlane is { } hp) { PlaneActivated?.Invoke(this, hp); return; }
         }
 
         // Splays (the line or its far point, per the draw mode) → their data row.

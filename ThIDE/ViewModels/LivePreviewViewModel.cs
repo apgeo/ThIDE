@@ -127,6 +127,23 @@ public sealed partial class GroupVisibility : ObservableObject
     partial void OnIsVisibleChanged(bool value) => _onChanged?.Invoke(this);
 }
 
+/// <summary>
+/// A resulted structural-geology plane pushed by the Structural Geology panel: identity, the
+/// pre-formatted strike/dip label, the fit's (true-north) azimuths with the declination that was
+/// applied to them, the station the plane is anchored at, and whether its grid row is selected.
+/// </summary>
+public sealed record StructuralPlaneOverlay(
+    string Name, string Label, double StrikeDeg, double DipDeg, double DeclinationApplied,
+    QualifiedName Anchor, bool IsSelected);
+
+/// <summary>
+/// A projected structural-plane line for the control: a thick clickable line through the plane's
+/// anchor station, with the strike/dip label drawn at the (X2,Y2) end. Click→the Structural
+/// Geology panel selects the matching plane row; IsSelected mirrors that grid's selection back.
+/// </summary>
+public sealed record PlaneOverlayLine(
+    double X1, double Y1, double X2, double Y2, string Name, string Label, bool IsSelected);
+
 /// <summary>Raw spanning-tree layout: a position per (equate-merged) station, its component, and the count.</summary>
 public sealed record SketchLayout(
     Dictionary<string, (double E, double N, double Z)> Positions,
@@ -146,6 +163,8 @@ public sealed partial class LivePreviewViewModel : ObservableObject
     [ObservableProperty] private IReadOnlyList<SplaySegment> _fullSplays = Array.Empty<SplaySegment>();
     [ObservableProperty] private IReadOnlyList<LeadMarker> _leadMarkers = Array.Empty<LeadMarker>();
     [ObservableProperty] private IReadOnlyList<EquateMarker> _equateMarkers = Array.Empty<EquateMarker>();
+    /// <summary>Structural-plane traces overlaid on the sketch (pushed by the Structural panel).</summary>
+    [ObservableProperty] private IReadOnlyList<PlaneOverlayLine> _planeLines = Array.Empty<PlaneOverlayLine>();
     [ObservableProperty] private string _status = "No centreline yet.";
 
     // ---- view / projection ------------------------------------------------
@@ -228,6 +247,11 @@ public sealed partial class LivePreviewViewModel : ObservableObject
     private Dictionary<string, SurveySymbol> _surveyByName = new(StringComparer.Ordinal);
     // Remembers each group's show/hide choice across rebuilds, keyed by "dimension\0signature".
     private readonly Dictionary<string, bool> _visibilityByKey = new(StringComparer.Ordinal);
+    // Structural-geology overlay: the planes pushed by the Structural Geology panel, plus the layout
+    // lookups (projected station positions + equate graph) kept from the last rebuild to anchor them.
+    private IReadOnlyList<StructuralPlaneOverlay> _structuralPlanes = Array.Empty<StructuralPlaneOverlay>();
+    private Dictionary<string, (double X, double Y)> _planePositions = new(StringComparer.Ordinal);
+    private EquateGraph? _planeEquates;
     // Caches source lines per file (with last-write stamp) for survey/file leading-comment extraction.
     private readonly Dictionary<string, (DateTime Stamp, string[] Lines)> _fileLines = new(StringComparer.OrdinalIgnoreCase);
     private bool _suppressApply;
@@ -240,6 +264,13 @@ public sealed partial class LivePreviewViewModel : ObservableObject
         // DocumentChanged alone is enough: SetActive always raises it right after
         // ActiveDocumentChanged, so subscribing to both rebuilt the preview twice per tab switch.
         _documents.DocumentChanged += (_, _) => OnUi(Rebuild);
+        // ValidateOnType: the preview is built from the WORKSPACE model (ws.PerFile), not the active
+        // doc's own reparse. A live edit only reaches that model when the session re-validates the
+        // unsaved buffers (debounced) and raises BuffersRevalidated — DocumentChanged fires earlier,
+        // off the reparse, and reads the stale pre-revalidation graph. Without this the preview only
+        // caught up on save. Rebuild here so on-type edits refresh the sketch when the graph does.
+        if (_session is not null)
+            _session.BuffersRevalidated += (_, _) => OnUi(Rebuild);
         // Relocalize the drawing-area caption (ViewLabel) live when the UI language switches.
         ThIDE.Resources.LocProxy.Instance.PropertyChanged += (_, _) => OnPropertyChanged(nameof(ViewLabel));
         Rebuild();
@@ -332,6 +363,19 @@ public sealed partial class LivePreviewViewModel : ObservableObject
             _ = _documents?.NavigateToSpanAsync(span);
     }
 
+    /// <summary>Raised with the plane's name when a structural-plane line is clicked (grid selects it).</summary>
+    public event EventHandler<string>? StructuralPlaneActivated;
+
+    /// <summary>Called by the view when a structural-plane overlay line is clicked.</summary>
+    public void ActivatePlane(PlaneOverlayLine line) => StructuralPlaneActivated?.Invoke(this, line.Name);
+
+    /// <summary>Replaces the structural-plane overlay set (pushed by the Structural Geology panel).</summary>
+    public void SetStructuralPlanes(IReadOnlyList<StructuralPlaneOverlay> planes)
+    {
+        _structuralPlanes = planes;
+        RebuildPlaneOverlay();
+    }
+
     private void Rebuild()
     {
         var (shots, models) = Gather();
@@ -344,6 +388,9 @@ public sealed partial class LivePreviewViewModel : ObservableObject
             _allLeads = Array.Empty<LeadMarker>();
             _allEquates = Array.Empty<EquateMarker>();
             _componentCountTotal = 0;
+            _planePositions = new Dictionary<string, (double X, double Y)>(StringComparer.Ordinal);
+            _planeEquates = null;
+            PlaneLines = Array.Empty<PlaneOverlayLine>();
             Groups.Clear();
             OnPropertyChanged(nameof(HasGroups));
             Segments = Array.Empty<SketchSegment>();
@@ -399,11 +446,85 @@ public sealed partial class LivePreviewViewModel : ObservableObject
         _allLeads = BuildLeadMarkers(p2d, equates, layout.Components);
         _allEquates = BuildEquateMarkers(models, equates, p2d, layout.Components);  // junctions
         _componentCountTotal = layout.ComponentCount;
+        _planePositions = p2d;
+        _planeEquates = equates;
         FullSegments = _allSegments;
         FullSplays = _allSplays;
 
         BuildGroups();
         ApplyVisibility();
+        RebuildPlaneOverlay();
+    }
+
+    // ---- structural-plane overlay ------------------------------------------
+
+    /// <summary>
+    /// Projects each pushed structural plane into the current view as a line through its anchor
+    /// station: the strike line in plan, the apparent-dip trace in a profile. Line length ≈ the
+    /// cave's largest extent (the scene-bounds diagonal — rough by design) so the plane reads
+    /// across the whole sketch. The sketch's frame is magnetic north (raw compass), so any applied
+    /// declination is removed from the plane azimuth before projecting; the label keeps the grid's
+    /// (true-north) values.
+    /// </summary>
+    private void RebuildPlaneOverlay()
+    {
+        if (_structuralPlanes.Count == 0 || _allSegments.Count == 0 || _planePositions.Count == 0)
+        {
+            PlaneLines = Array.Empty<PlaneOverlayLine>();
+            return;
+        }
+
+        double minX = double.MaxValue, minY = double.MaxValue, maxX = double.MinValue, maxY = double.MinValue;
+        foreach (var s in _allSegments)
+        {
+            minX = Math.Min(minX, Math.Min(s.X1, s.X2)); maxX = Math.Max(maxX, Math.Max(s.X1, s.X2));
+            minY = Math.Min(minY, Math.Min(s.Y1, s.Y2)); maxY = Math.Max(maxY, Math.Max(s.Y1, s.Y2));
+        }
+        double half = Math.Sqrt((maxX - minX) * (maxX - minX) + (maxY - minY) * (maxY - minY)) / 2;
+        if (half < 1e-6) half = 5;
+
+        var lines = new List<PlaneOverlayLine>(_structuralPlanes.Count);
+        foreach (var p in _structuralPlanes)
+        {
+            var rep = _planeEquates is { } eq ? eq.Find(p.Anchor).ToString() : p.Anchor.ToString();
+            if (!_planePositions.TryGetValue(rep, out var at) &&
+                !_planePositions.TryGetValue(p.Anchor.ToString(), out at))
+                continue;   // anchor station isn't in the drawn scene (e.g. thconfig-scoped out)
+
+            var (dx, dy) = PlaneTraceDirection(p.StrikeDeg - p.DeclinationApplied, p.DipDeg, IsElevation, ProfileAzimuth);
+            lines.Add(new PlaneOverlayLine(
+                at.X - dx * half, at.Y - dy * half, at.X + dx * half, at.Y + dy * half,
+                p.Name, p.Label, p.IsSelected));
+        }
+        PlaneLines = lines;
+    }
+
+    /// <summary>
+    /// The unit 2-D direction of a plane's trace in the current view. In plan it is the strike
+    /// line; in a profile it is the plane's intersection with the vertical section plane (the
+    /// apparent-dip trace), so a plane dipping along the view bearing draws at its apparent dip
+    /// and a vertical plane draws vertical. Built from the upward plane normal, so a 90° dip needs
+    /// no special case; a horizontal plane (no trace) falls back to the strike azimuth. Pure.
+    /// </summary>
+    public static (double X, double Y) PlaneTraceDirection(
+        double strikeDeg, double dipDeg, bool isElevation, double azimuthDeg = 90)
+    {
+        double dd = (strikeDeg + 90) * Math.PI / 180.0;   // dip direction (right-hand rule)
+        double dip = dipDeg * Math.PI / 180.0;
+        var n = (E: Math.Sin(dd) * Math.Sin(dip), N: Math.Cos(dd) * Math.Sin(dip), Z: Math.Cos(dip));
+        // Normal of the viewing plane: vertical (plan) or horizontal across the section bearing.
+        double a = azimuthDeg * Math.PI / 180.0;
+        var m = isElevation ? (E: Math.Cos(a), N: -Math.Sin(a), Z: 0.0) : (E: 0.0, N: 0.0, Z: 1.0);
+        // Trace = the intersection direction of the geological and viewing planes (n × m).
+        var t = (E: n.N * m.Z - n.Z * m.N, N: n.Z * m.E - n.E * m.Z, Z: n.E * m.N - n.N * m.E);
+        if (Math.Sqrt(t.E * t.E + t.N * t.N + t.Z * t.Z) < 1e-9)
+        {
+            double s = strikeDeg * Math.PI / 180.0;       // horizontal plane: use the strike azimuth
+            t = (Math.Sin(s), Math.Cos(s), 0.0);
+        }
+        var d = ProjectVector(t, isElevation, azimuthDeg);
+        double len = Math.Sqrt(d.X * d.X + d.Y * d.Y);
+        return len < 1e-9 ? (1, 0) : (d.X / len, d.Y / len);
     }
 
     // ---- per-group visibility ---------------------------------------------
