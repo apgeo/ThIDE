@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:ThIDE.ViewModels.Docking"
              xmlns:vm2="using:ThIDE.ViewModels"
+             xmlns:docking="using:ThIDE.Views.Docking"
              xmlns:conv="using:ThIDE.Converters"
              xmlns:l="using:ThIDE.Resources"
              x:Class="ThIDE.Views.Docking.StructuralGeologyToolView"
@@ -37,6 +38,8 @@
         <!-- Top bar: scope + refresh + status (left), wizard prev/next (right). Shared across tabs. -->
         <Border DockPanel.Dock="Top" Padding="8,5" Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}">
             <DockPanel>
+                <!-- Shared panel window controls at the far right. -->
+                <docking:PanelWindowControls DockPanel.Dock="Right" VerticalAlignment="Center" Margin="6,0,0,0" />
                 <!-- #6: hide (not disable) the nav buttons on the first/last tab, keeping their space. -->
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                     <Panel Width="64">
@@ -229,6 +232,10 @@
                                 ToolTip.Tip="{l:Loc Struct_HideAllPlanes}" />
                         <Button Content="{l:Loc Struct_Invert}" Command="{Binding Structural.InvertPlaneVisibilityCommand}" Padding="6,2" FontSize="12"
                                 ToolTip.Tip="{l:Loc Struct_InvertPlanes}" />
+                        <!-- Push button: overlay the visible planes on the Mainline Preview as strike/dip lines. -->
+                        <ToggleButton Content="{l:Loc Struct_ShowInPreview}" Padding="6,2" FontSize="12"
+                                      IsChecked="{Binding Structural.ShowPlanesInPreview, Mode=TwoWay}"
+                                      ToolTip.Tip="{l:Loc Struct_ShowInPreviewTip}" />
                         <Border Width="1" Margin="6,2" Background="Gray" />
                         <Button Content="{l:Loc Common_Columns}" Padding="6,2" FontSize="11" ToolTip.Tip="{l:Loc Common_ShowHideColumns}">
                             <Button.Flyout>
@@ -305,6 +312,11 @@
                         </ComboBox>
                         <CheckBox Content="{l:Loc Struct_WhiteBackground}" FontSize="11" VerticalAlignment="Center"
                                   IsChecked="{Binding Structural.WhiteBackground}" />
+                        <CheckBox Content="{l:Loc Struct_ShowSplays}" FontSize="11" VerticalAlignment="Center"
+                                  IsChecked="{Binding Structural.PlotSplays}" ToolTip.Tip="{l:Loc Struct_ShowSplaysTip}" />
+                        <CheckBox Content="{l:Loc Struct_FadedSplays}" FontSize="11" VerticalAlignment="Center"
+                                  IsChecked="{Binding Structural.FadedSplays}" IsEnabled="{Binding Structural.PlotSplays}"
+                                  ToolTip.Tip="{l:Loc Struct_FadedSplaysTip}" />
                     </StackPanel>
                     <Panel>
                         <Panel Name="PlotHost" />

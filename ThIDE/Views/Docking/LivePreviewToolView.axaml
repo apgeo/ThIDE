@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:ThIDE.ViewModels.Docking"
              xmlns:views="using:ThIDE.Views"
+             xmlns:docking="using:ThIDE.Views.Docking"
              xmlns:conv="using:ThIDE.Converters"
              xmlns:l="using:ThIDE.Resources"
              x:Class="ThIDE.Views.Docking.LivePreviewToolView"
@@ -13,6 +14,8 @@
     </UserControl.Resources>
     <DockPanel>
         <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="6,3">
+          <DockPanel>
+            <docking:PanelWindowControls DockPanel.Dock="Right" VerticalAlignment="Top" Margin="6,0,0,0" />
             <WrapPanel Orientation="Horizontal">
                 <!-- View: plan, or a projected profile along a bearing (radio-style push buttons). -->
                 <TextBlock Text="{l:Loc M3D_View}" VerticalAlignment="Center" FontSize="11" Foreground="Gray" Margin="0,0,4,0" />
@@ -93,6 +96,7 @@
                 <TextBlock Text="{Binding Preview.Status}" Foreground="Gray" VerticalAlignment="Center"
                            FontSize="11" TextTrimming="CharacterEllipsis" />
             </WrapPanel>
+          </DockPanel>
         </Border>
 
         <Grid>
@@ -104,6 +108,7 @@
                                       StationPoints="{Binding Preview.StationPoints}"
                                       LeadMarkers="{Binding Preview.LeadMarkers}"
                                       EquateMarkers="{Binding Preview.EquateMarkers}"
+                                      PlaneLines="{Binding Preview.PlaneLines}"
                                       ShowJunctions="{Binding Preview.ShowJunctions}"
                                       ShowSplays="{Binding Preview.ShowSplays}"
                                       ShowStationSymbols="{Binding Preview.ShowStationSymbols}"
