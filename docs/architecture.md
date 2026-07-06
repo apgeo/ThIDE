@@ -6,17 +6,17 @@ The codebase is split into **fully decoupled** layers. The lower layers have **n
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  ThIDE                  Avalonia desktop app (UI)       │
-│  Views / ViewModels / DI composition root                     │
+│  ThIDE                  Avalonia desktop app (UI)            │
+│  Views / ViewModels / DI composition root                    │
 └───────────────────────────▲──────────────────────────────────┘
                             │ (interfaces only)
 ┌──────────────────────────────────────────────────────────────┐
-│  Therion.Workspace           in-memory project / session      │
-│  Therion.Build               drives the Therion toolchain     │
-│  Therion.Semantics           cross-file model + indexes       │
-│  Therion.Syntax              per-file lexer/parser + AST       │
-│  Therion.Core                primitives (SourceSpan, …)        │
-│  Therion.Processing.Abstractions   public interfaces          │
+│  Therion.Workspace           in-memory project / session     │
+│  Therion.Build               drives the Therion toolchain    │
+│  Therion.Semantics           cross-file model + indexes      │
+│  Therion.Syntax              per-file lexer/parser + AST     │
+│  Therion.Core                primitives (SourceSpan, …)      │
+│  Therion.Processing.Abstractions   public interfaces         │
 └──────────────────────────────────────────────────────────────┘
 ```
 
