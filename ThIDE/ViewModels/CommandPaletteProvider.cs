@@ -194,7 +194,9 @@ public sealed class CommandPaletteProvider
         foreach (var (id, titleKey) in SettingsSections)
             list.Add(Action(L("Cmd_Cat_Settings"), string.Format(L("Cmd_SettingsFmt"), L(titleKey)), () => { _vm.RaiseShowPreferences(id); return Task.CompletedTask; }, "Icon.Config"));
 
-        // ---- Documentation: a parameterized command that pushes a focused term-search sub-step ----
+        // ---- Documentation ----
+        list.Add(Action(L("Cmd_Cat_Docs"), L("Cmd_UserGuide"), () => { _vm.RaiseShowUserGuide(); return Task.CompletedTask; }, "Icon.File"));
+        // a parameterized command that pushes a focused term-search sub-step
         if (_docs is { IsAvailable: true })
             list.Add(Action(L("Cmd_Cat_Docs"), L("Cmd_SearchDocs"), () => { PushDocSearch(); return Task.CompletedTask; }, "Icon.Map"));
 

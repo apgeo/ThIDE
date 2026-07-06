@@ -12,6 +12,7 @@
   <data name="Menu_Settings" xml:space="preserve"><value>_Settings</value></data>
   <data name="Menu_Help" xml:space="preserve"><value>_Help</value></data>
   <data name="Menu_Help_Thbook" xml:space="preserve"><value>Therion _Book</value></data>
+  <data name="Menu_Help_UserGuide" xml:space="preserve"><value>_User Guide</value></data>
   <data name="Menu_Help_About" xml:space="preserve"><value>_About ThIDE</value></data>
   <data name="Menu_Help_DebugInfo" xml:space="preserve"><value>Debug _Info</value></data>
   <data name="Menu_Help_Welcome" xml:space="preserve"><value>_Welcome</value></data>
@@ -908,6 +909,7 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Cmd_Preferences" xml:space="preserve"><value>Preferences…</value></data>
   <data name="Cmd_About" xml:space="preserve"><value>About</value></data>
   <data name="Cmd_TherionBook" xml:space="preserve"><value>Therion Book (documentation)</value></data>
+  <data name="Cmd_UserGuide" xml:space="preserve"><value>User Guide</value></data>
   <data name="Cmd_SettingsFmt" xml:space="preserve"><value>Settings: {0}</value></data>
   <data name="Cmd_SearchDocs" xml:space="preserve"><value>Search Documentation…</value></data>
   <data name="Cmd_DocsTitle" xml:space="preserve"><value>Documentation</value></data>

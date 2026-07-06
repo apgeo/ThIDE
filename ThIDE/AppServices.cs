@@ -159,6 +159,10 @@ internal static class AppServices
         services.AddSingleton<IPdfPageOpener, PdfPageOpener>();
         services.AddSingleton<IThbookDocumentationService, ThbookDocumentationService>();
 
+        // ThIDE User Guide (Help ▸ User Guide) — opens the bundled PDF (built by
+        // build/build-user-guide.ps1), falling back to the on-disk Markdown or the online docs.
+        services.AddSingleton<IUserGuideService, UserGuideService>();
+
         // Keyboard shortcuts (�9bis.5a / Decision #29).
         services.AddSingleton<IKeyboardShortcutService, JsonKeyboardShortcutService>();
 

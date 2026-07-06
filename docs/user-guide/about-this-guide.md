@@ -32,22 +32,33 @@ and the same Markdown can also be served in a future in-app Help panel.
 | Multi-output | One source → PDF (for shipping), HTML (for a website), or in-app Markdown. |
 | Consistent with the repo | The rest of `docs/` is already Markdown. |
 
-### Suggested PDF build
+### Building the PDF
 
-Generate the shipping PDF from these Markdown files with a converter that preserves internal links
-and a bookmark outline, e.g. [Pandoc](https://pandoc.org/):
+A build script collates these pages (in filename order) and runs [Pandoc](https://pandoc.org/) into a
+single PDF with a bookmark outline and a table of contents:
 
 ```sh
-pandoc docs/user-guide/README.md docs/user-guide/0*.md docs/user-guide/1*.md \
-       docs/user-guide/2*.md docs/user-guide/about-this-guide.md \
-       --toc --toc-depth=2 -V documentclass=report \
-       -o ThIDE-User-Guide.pdf
+# Windows
+pwsh build/build-user-guide.ps1
+# Linux / macOS
+build/build-user-guide.sh
+# No PDF engine installed? Produce a self-contained HTML instead:
+pwsh build/build-user-guide.ps1 -Format html      #  (or:  FORMAT=html build/build-user-guide.sh)
 ```
 
-(Order the inputs by filename so the numbered pages come out in reading order.) A CI step can drop
-the resulting PDF into the app's bundled assets so **Help → User Guide** always ships the current
-manual. This build is intentionally *not* wired up yet — it is a recommendation for the first
-release that adds an in-app help entry.
+The default output is `ThIDE/Assets/ThIDE-User-Guide.pdf`, which the app bundles automatically via its
+globbed `<AvaloniaResource Include="Assets\**" />` and opens from **Help → User Guide** (see
+[`UserGuideService`](../../ThIDE/Services/UserGuideService.cs)). **Requirements:** `pandoc` always, plus
+a PDF engine (a TeX distribution such as MiKTeX/TeX Live, or `wkhtmltopdf`) for the PDF format.
+
+The generated PDF is a **build artifact** — it is `.gitignore`d, not committed, and produced by
+CI/release before packaging. When it is absent (e.g. a plain dev build), **Help → User Guide** falls
+back to opening this Markdown source on disk, then the online docs, so the menu item always works.
+
+> **First-iteration limitation:** in the merged PDF, the cross-page `.md` links become the bookmark
+> outline / TOC entries rather than clickable inline links; the inline links resolve as-is in the
+> Markdown and HTML outputs. Improving inline-link resolution in the PDF (via a Pandoc filter) is a
+> good follow-up.
 
 ## Page conventions
 

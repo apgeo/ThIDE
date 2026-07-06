@@ -14,6 +14,7 @@
   <data name="Menu_Settings" xml:space="preserve"><value>_Set&#x103;ri</value></data>
   <data name="Menu_Help" xml:space="preserve"><value>_Ajutor</value></data>
   <data name="Menu_Help_Thbook" xml:space="preserve"><value>_Cartea Therion</value></data>
+  <data name="Menu_Help_UserGuide" xml:space="preserve"><value>_Ghid de utilizare</value></data>
   <data name="Menu_Help_About" xml:space="preserve"><value>_Despre ThIDE</value></data>
   <data name="Menu_Help_DebugInfo" xml:space="preserve"><value>_Informații de depanare</value></data>
   <data name="Menu_Help_Welcome" xml:space="preserve"><value>_Bun venit</value></data>
@@ -908,6 +909,7 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Cmd_Preferences" xml:space="preserve"><value>Preferințe…</value></data>
   <data name="Cmd_About" xml:space="preserve"><value>Despre</value></data>
   <data name="Cmd_TherionBook" xml:space="preserve"><value>Cartea Therion (documentație)</value></data>
+  <data name="Cmd_UserGuide" xml:space="preserve"><value>Ghid de utilizare</value></data>
   <data name="Cmd_SettingsFmt" xml:space="preserve"><value>Setări: {0}</value></data>
   <data name="Cmd_SearchDocs" xml:space="preserve"><value>Caută în documentație…</value></data>
   <data name="Cmd_DocsTitle" xml:space="preserve"><value>Documentație</value></data>

@@ -60,6 +60,7 @@ public partial class MainWindow : Window
                 vm.ShowPreferencesRequested += (_, section) => _ = OpenPreferences(section);
                 vm.ShowAboutRequested       += (_, _) => OnAboutClick(this, new Avalonia.Interactivity.RoutedEventArgs());
                 vm.ShowThbookRequested      += (_, _) => OnOpenThbook(this, new Avalonia.Interactivity.RoutedEventArgs());
+                vm.ShowUserGuideRequested   += (_, _) => OnOpenUserGuide(this, new Avalonia.Interactivity.RoutedEventArgs());
                 vm.ShowBookmarksRequested   += (_, _) => OnBookmarksClick(this, new Avalonia.Interactivity.RoutedEventArgs());
                 vm.ShowRelationalMapRequested += (_, _) => OnRelationalMapClick(this, new Avalonia.Interactivity.RoutedEventArgs());
                 vm.Build.QuickExportRequested += (_, _) => _ = ShowQuickExportAsync(vm);
@@ -274,6 +275,12 @@ public partial class MainWindow : Window
     private void OnOpenThbook(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         try { AppServices.Provider.GetService<IThbookDocumentationService>()?.OpenAtPage(1); } catch { }
+    }
+
+    // Help ▸ User Guide: open the bundled ThIDE User Guide PDF (or its Markdown/online fallback).
+    private void OnOpenUserGuide(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        try { AppServices.Provider.GetService<IUserGuideService>()?.Open(); } catch { }
     }
 
     private void OnRelationalMapClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)

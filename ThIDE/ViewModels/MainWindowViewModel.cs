@@ -256,12 +256,14 @@ public partial class MainWindowViewModel : ViewModelBase
     public event EventHandler<string?>? ShowPreferencesRequested;
     public event EventHandler? ShowAboutRequested;
     public event EventHandler? ShowThbookRequested;
+    public event EventHandler? ShowUserGuideRequested;
     public event EventHandler? ShowBookmarksRequested;
     public event EventHandler? ShowRelationalMapRequested;
 
     public void RaiseShowPreferences(string? section) => ShowPreferencesRequested?.Invoke(this, section);
     public void RaiseShowAbout() => ShowAboutRequested?.Invoke(this, EventArgs.Empty);
     public void RaiseShowThbook() => ShowThbookRequested?.Invoke(this, EventArgs.Empty);
+    public void RaiseShowUserGuide() => ShowUserGuideRequested?.Invoke(this, EventArgs.Empty);
     public void RaiseShowBookmarks() => ShowBookmarksRequested?.Invoke(this, EventArgs.Empty);
     public void RaiseShowRelationalMap() => ShowRelationalMapRequested?.Invoke(this, EventArgs.Empty);
 
@@ -402,6 +404,7 @@ public partial class MainWindowViewModel : ViewModelBase
     public string MenuSettings       => L("Menu_Settings",               "_Settings");
     public string MenuHelp           => L("Menu_Help",                   "_Help");
     public string MenuHelpThbook     => L("Menu_Help_Thbook",            "Therion _Book");
+    public string MenuHelpUserGuide  => L("Menu_Help_UserGuide",         "_User Guide");
     public string MenuHelpAbout      => L("Menu_Help_About",             "_About ThIDE");
     public string MenuHelpDebugInfo  => L("Menu_Help_DebugInfo",         "Debug _Info");
     public string MenuHelpWelcome    => L("Menu_Help_Welcome",           "_Welcome");
@@ -1675,6 +1678,7 @@ public partial class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(MenuSettings));
         OnPropertyChanged(nameof(MenuHelp));
         OnPropertyChanged(nameof(MenuHelpThbook));
+        OnPropertyChanged(nameof(MenuHelpUserGuide));
         OnPropertyChanged(nameof(MenuHelpAbout));
         OnPropertyChanged(nameof(MenuHelpDebugInfo));
         OnPropertyChanged(nameof(MenuHelpWelcome));
