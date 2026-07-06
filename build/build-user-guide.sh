@@ -38,15 +38,29 @@ mkdir -p "$(dirname "$output")"
 
 echo "Building $output from ${#pages[@]} pages..."
 
-common=(--from=gfm --standalone --toc --toc-depth=2 --metadata "title=ThIDE User Guide" "--resource-path=$guide")
+# Ordered page basenames (matching the input order) for the link-rewriting Lua filter, which
+# turns cross-page .md links into internal anchors and other repo links into GitHub URLs.
+names=()
+for f in "${pages[@]}"; do names+=("$(basename "$f" .md)"); done
+GUIDE_PAGES="$(IFS=,; printf '%s' "${names[*]}")"
+export GUIDE_PAGES
+
+common=(--from=gfm --standalone --toc --toc-depth=2 --metadata "title=ThIDE User Guide" \
+        "--resource-path=$guide" "--lua-filter=$script_dir/user-guide-links.lua")
+
+# Optional extra pandoc args (CI can pass a broad Unicode font via -V mainfont=...).
+read -ra extra <<< "${PANDOC_EXTRA:-}"
 
 if [ "$FORMAT" = "html" ]; then
     pandoc "${pages[@]}" "${common[@]}" --embed-resources -o "$output"
 else
-    pandoc "${pages[@]}" "${common[@]}" --number-sections \
-        -V documentclass=report -V geometry:margin=1in -V colorlinks=true \
-        -o "$output" \
-        || { echo "pandoc failed — PDF needs a PDF engine (TeX/wkhtmltopdf); or run with FORMAT=html."; exit 1; }
+    # xelatex: the guide uses Unicode glyphs (arrows, box symbols) that pdflatex cannot typeset.
+    # colorlinks colors real hyperlinks; toccolor=black keeps the table of contents plain (not red).
+    pandoc "${pages[@]}" "${common[@]}" --number-sections --pdf-engine=xelatex \
+        -V documentclass=report -V geometry:margin=1in \
+        -V colorlinks=true -V toccolor=black \
+        "${extra[@]}" -o "$output" \
+        || { echo "pandoc failed — PDF needs a Unicode TeX engine (xelatex) or wkhtmltopdf; or run with FORMAT=html."; exit 1; }
 fi
 
 echo "OK: $output"

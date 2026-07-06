@@ -47,18 +47,27 @@ pwsh build/build-user-guide.ps1 -Format html      #  (or:  FORMAT=html build/bui
 ```
 
 The default output is `ThIDE/Assets/ThIDE-User-Guide.pdf`, which the app bundles automatically via its
-globbed `<AvaloniaResource Include="Assets\**" />` and opens from **Help → User Guide** (see
-[`UserGuideService`](../../ThIDE/Services/UserGuideService.cs)). **Requirements:** `pandoc` always, plus
-a PDF engine (a TeX distribution such as MiKTeX/TeX Live, or `wkhtmltopdf`) for the PDF format.
+globbed `<AvaloniaResource Include="Assets\**" />`. **Help → User Guide** then opens it **in the app's
+own PDF viewer** (the [Map Viewer](11-viewers.md#map-viewer)) when that viewer is enabled, else in the
+OS default viewer — see [`UserGuideService`](../../ThIDE/Services/UserGuideService.cs) and the
+`OpenUserGuide` command in `MainWindowViewModel`.
 
-The generated PDF is a **build artifact** — it is `.gitignore`d, not committed, and produced by
-CI/release before packaging. When it is absent (e.g. a plain dev build), **Help → User Guide** falls
-back to opening this Markdown source on disk, then the online docs, so the menu item always works.
+**Requirements:** `pandoc` always, plus **`xelatex`** for the PDF format — a TeX distribution
+(MiKTeX / TeX Live, with `texlive-xetex`). xelatex is needed because the guide uses Unicode glyphs
+(arrows, box symbols) that `pdflatex` cannot typeset. No TeX? Use `-Format html`.
 
-> **First-iteration limitation:** in the merged PDF, the cross-page `.md` links become the bookmark
-> outline / TOC entries rather than clickable inline links; the inline links resolve as-is in the
-> Markdown and HTML outputs. Improving inline-link resolution in the PDF (via a Pandoc filter) is a
-> good follow-up.
+The generated PDF is a **build artifact** — it is `.gitignore`d, not committed. The release workflow
+([.github/workflows/release.yml](../../.github/workflows/release.yml)) builds it once in a `guide`
+job, **attaches it to the GitHub Release** as a standalone download, and hands it to the per-OS
+`publish` jobs which drop it into `ThIDE/Assets` before `dotnet publish` so it ships inside every
+package. When the PDF is absent (e.g. a plain local dev build), **Help → User Guide** falls back to
+opening this Markdown source on disk, then the online docs, so the menu item always works.
+
+**Cross-page links** are fixed up when the pages are merged, by a Pandoc Lua filter
+([`build/user-guide-links.lua`](../../build/user-guide-links.lua)): a link to another guide page
+jumps within the document, and a link to any other repo file (a reference doc, a source file) opens
+its copy on GitHub in a browser. One known limitation: a link to a *specific sub-section* of another
+guide page currently jumps to that page's top — mapping every sub-anchor is a possible follow-up.
 
 ## Page conventions
 

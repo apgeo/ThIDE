@@ -15,8 +15,19 @@ namespace ThIDE.Services;
 
 public interface IUserGuideService
 {
-    /// <summary>Opens the user guide (bundled PDF, local Markdown, or online docs — in that order).</summary>
-    bool Open();
+    /// <summary>
+    /// Returns the on-disk path to the bundled user-guide PDF (extracting it from app assets on
+    /// first use), or <c>null</c> when no PDF was shipped in this build. Callers load it into the
+    /// in-app PDF viewer.
+    /// </summary>
+    string? TryGetBundledPdfPath();
+
+    /// <summary>
+    /// Opens the guide without the in-app viewer: the bundled PDF in the OS default viewer if
+    /// present, else the on-disk Markdown source, else the online docs. Returns false if nothing
+    /// could be opened.
+    /// </summary>
+    bool OpenExternally();
 }
 
 public sealed class UserGuideService : IUserGuideService
@@ -37,9 +48,11 @@ public sealed class UserGuideService : IUserGuideService
         _shell = shell;
     }
 
-    public bool Open()
+    public string? TryGetBundledPdfPath() => EnsurePdf();
+
+    public bool OpenExternally()
     {
-        // 1. The shipping path: a bundled PDF with a navigable outline.
+        // 1. The shipping path: the bundled PDF in the OS default viewer.
         var pdf = EnsurePdf();
         if (pdf is not null && _pdf.OpenAt(pdf, 1)) return true;
 

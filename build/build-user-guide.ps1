@@ -61,6 +61,10 @@ if (-not $Output) {
 }
 New-Item -ItemType Directory -Force -Path (Split-Path -Parent $Output) | Out-Null
 
+# Ordered page basenames (matching the input order) for the link-rewriting Lua filter, which
+# turns cross-page .md links into internal anchors and other repo links into GitHub URLs.
+$env:GUIDE_PAGES = (($pages | ForEach-Object { [System.IO.Path]::GetFileNameWithoutExtension($_) }) -join ',')
+
 $common = @(
     '--from=gfm'
     '--standalone'
@@ -68,7 +72,12 @@ $common = @(
     '--toc-depth=2'
     '--metadata', 'title=ThIDE User Guide'
     "--resource-path=$guide"
+    "--lua-filter=$(Join-Path $PSScriptRoot 'user-guide-links.lua')"
 )
+
+# Optional extra pandoc args (e.g. CI supplies a broad Unicode font via -V mainfont=...).
+$extra = @()
+if ($env:PANDOC_EXTRA) { $extra = $env:PANDOC_EXTRA -split '\s+' | Where-Object { $_ } }
 
 Write-Host "Building $Output from $($pages.Count) pages..." -ForegroundColor Cyan
 
@@ -78,15 +87,19 @@ if ($Format -eq 'html') {
 }
 else {
     # LaTeX PDFs get a clickable bookmark outline (hyperref) from the section headings.
-    & pandoc @pages @common '--number-sections' `
+    # xelatex is used because the guide contains Unicode glyphs (arrows, box symbols) that
+    # pdflatex cannot typeset. colorlinks colors real hyperlinks; toccolor=black keeps the
+    # table of contents plain (not red).
+    & pandoc @pages @common '--number-sections' '--pdf-engine=xelatex' `
         '-V' 'documentclass=report' `
         '-V' 'geometry:margin=1in' `
         '-V' 'colorlinks=true' `
-        '-o' $Output
+        '-V' 'toccolor=black' `
+        @extra '-o' $Output
 }
 
 if ($LASTEXITCODE -ne 0) {
-    Write-Error "pandoc failed (exit $LASTEXITCODE). For PDF you need a PDF engine (TeX or wkhtmltopdf); or run with -Format html."
+    Write-Error "pandoc failed (exit $LASTEXITCODE). For PDF you need a Unicode TeX engine (xelatex, e.g. MiKTeX/TeX Live) or wkhtmltopdf; or run with -Format html."
 }
 
 $size = [math]::Round((Get-Item $Output).Length / 1KB, 1)

@@ -10,8 +10,44 @@ on:
   workflow_dispatch:
 
 jobs:
+  # Build the User Guide once (docs/user-guide/*.md -> a single navigable PDF) so it can be both
+  # bundled into every OS package (Help ▸ User Guide) and attached to the Release as a download.
+  guide:
+    name: user guide (pdf)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # pandoc + XeLaTeX: xelatex is required because the guide contains Unicode glyphs
+      # (arrows, box symbols) that pdflatex cannot typeset.
+      - name: Install pandoc + XeLaTeX
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            pandoc texlive-xetex texlive-fonts-recommended \
+            texlive-latex-recommended texlive-latex-extra lmodern
+
+      - name: Build the User Guide PDF
+        run: bash build/build-user-guide.sh
+
+      - name: Upload the PDF (workflow artifact for the publish jobs)
+        uses: actions/upload-artifact@v4
+        with:
+          name: user-guide-pdf
+          path: ThIDE/Assets/ThIDE-User-Guide.pdf
+          if-no-files-found: error
+
+      - name: Attach the guide to the GitHub Release (tags only)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          files: ThIDE/Assets/ThIDE-User-Guide.pdf
+          fail_on_unmatched_files: false
+
   publish:
     name: publish (${{ matrix.rid }})
+    needs: guide
     strategy:
       fail-fast: false
       matrix:
@@ -31,6 +67,14 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
+
+      # Drop the pre-built User Guide PDF into the app assets so the globbed
+      # <AvaloniaResource Include="Assets\**" /> bundles it and Help ▸ User Guide can open it in-app.
+      - name: Bundle the User Guide PDF
+        uses: actions/download-artifact@v4
+        with:
+          name: user-guide-pdf
+          path: ThIDE/Assets
 
       # Derive the SemVer from the tag (v0.3.0 -> 0.3.0, v0.3.0-beta.1 -> 0.3.0 + beta.1);
       # default for workflow_dispatch. bash is available on all three runners.
@@ -98,6 +142,7 @@ jobs:
             ThIDE-Setup-*.exe
             thide_*_amd64.deb
             ThIDE-*-x86_64.AppImage
+            ThIDE/Assets/ThIDE-User-Guide.pdf
           if-no-files-found: ignore
 
       - name: Attach to GitHub Release (tags only)
