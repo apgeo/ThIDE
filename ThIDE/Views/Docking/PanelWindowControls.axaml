@@ -1,0 +1,21 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="using:ThIDE.Resources"
+             x:Class="ThIDE.Views.Docking.PanelWindowControls">
+    <!-- Reusable panel window controls: full screen · float on another monitor · move to centre.
+         Add or change a button HERE and every panel that hosts this control updates at once. -->
+    <StackPanel Orientation="Horizontal" Spacing="1" VerticalAlignment="Center">
+        <Button Click="OnFullScreen" Width="26" Height="22" Padding="0"
+                Background="Transparent" BorderThickness="0" ToolTip.Tip="{l:Loc Panel_FullScreenTip}">
+            <PathIcon Data="{DynamicResource Icon.FullScreen}" Width="14" Height="14" />
+        </Button>
+        <Button Click="OnFloatOtherScreen" Width="26" Height="22" Padding="0"
+                Background="Transparent" BorderThickness="0" ToolTip.Tip="{l:Loc Panel_FloatScreenTip}">
+            <PathIcon Data="{DynamicResource Icon.External}" Width="14" Height="14" />
+        </Button>
+        <Button Click="OnMoveToCenter" Width="26" Height="22" Padding="0"
+                Background="Transparent" BorderThickness="0" ToolTip.Tip="{l:Loc Panel_MoveCenterTip}">
+            <PathIcon Data="{DynamicResource Icon.Layout}" Width="14" Height="14" />
+        </Button>
+    </StackPanel>
+</UserControl>

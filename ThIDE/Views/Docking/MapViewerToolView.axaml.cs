@@ -52,16 +52,7 @@ public partial class MapViewerToolView : UserControl
         if (files.FirstOrDefault()?.TryGetLocalPath() is { } path) vm.Map.Load(path);
     }
 
-    // Window controls (#7): forwarded to the shell, which drives the DockFactory so they work
-    // whether the panel is docked or already floating.
-    private void OnFullScreen(object? sender, RoutedEventArgs e) =>
-        (DataContext as MapViewerToolViewModel)?.RequestFullScreen();
-
-    private void OnFloatOtherScreen(object? sender, RoutedEventArgs e) =>
-        (DataContext as MapViewerToolViewModel)?.RequestFloatOtherScreen();
-
-    private void OnMoveToCenter(object? sender, RoutedEventArgs e) =>
-        (DataContext as MapViewerToolViewModel)?.RequestMoveToCenter();
+    // Window controls (#7) now live in the shared PanelWindowControls component.
 
     // "Fit" button (#4): shrink the page so it fits the visible viewport, keeping aspect ratio,
     // but never enlarge past 100%. Same routine drives the auto-fit on open.

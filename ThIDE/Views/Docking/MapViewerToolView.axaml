@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:ThIDE.ViewModels.Docking"
+             xmlns:docking="using:ThIDE.Views.Docking"
              xmlns:l="using:ThIDE.Resources"
              x:Class="ThIDE.Views.Docking.MapViewerToolView"
              x:CompileBindings="False"
@@ -20,21 +21,8 @@
     <DockPanel>
         <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="6,3">
           <DockPanel>
-            <!-- Window controls, pinned to the right (#7). -->
-            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="1" VerticalAlignment="Center">
-                <Button Click="OnFullScreen" Width="26" Height="22" Padding="0"
-                        Background="Transparent" BorderThickness="0" ToolTip.Tip="{l:Loc MapV_FullScreenTip}">
-                    <PathIcon Data="{DynamicResource Icon.FullScreen}" Width="14" Height="14" />
-                </Button>
-                <Button Click="OnFloatOtherScreen" Width="26" Height="22" Padding="0"
-                        Background="Transparent" BorderThickness="0" ToolTip.Tip="{l:Loc MapV_FloatScreenTip}">
-                    <PathIcon Data="{DynamicResource Icon.External}" Width="14" Height="14" />
-                </Button>
-                <Button Click="OnMoveToCenter" Width="26" Height="22" Padding="0"
-                        Background="Transparent" BorderThickness="0" ToolTip.Tip="{l:Loc MapV_MoveCenterTip}">
-                    <PathIcon Data="{DynamicResource Icon.Layout}" Width="14" Height="14" />
-                </Button>
-            </StackPanel>
+            <!-- Window controls, pinned to the right (#7) — shared reusable component. -->
+            <docking:PanelWindowControls DockPanel.Dock="Right" />
 
             <StackPanel Orientation="Horizontal" Spacing="6">
                 <Button Content="{l:Loc Common_OpenEllipsis}" Click="OnOpen" FontSize="11" Padding="8,2" />

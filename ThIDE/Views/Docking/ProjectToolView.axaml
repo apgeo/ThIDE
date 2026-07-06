@@ -26,6 +26,7 @@
         </Style>
     </UserControl.Styles>
 
+  <Grid>
     <TabControl>
         <!-- Dashboard -->
         <TabItem Header="{l:Loc Proj_Tab_Dashboard}">
@@ -387,4 +388,7 @@
             </DockPanel>
         </TabItem>
     </TabControl>
+    <!-- Shared window controls overlaid in the empty top-right of the tab strip. -->
+    <local:PanelWindowControls HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,2,4,0" />
+  </Grid>
 </UserControl>

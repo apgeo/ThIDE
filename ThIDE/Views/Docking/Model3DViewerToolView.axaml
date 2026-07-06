@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:ThIDE.ViewModels.Docking"
+             xmlns:docking="using:ThIDE.Views.Docking"
              xmlns:cnv="using:Avalonia.Data.Converters"
              xmlns:conv="using:ThIDE.Converters"
              xmlns:l="using:ThIDE.Resources"
@@ -16,6 +17,8 @@
             <!-- Control bar (mirrors the speosilex.ro reference viewer); reflows onto further rows on
                  narrow panes so every button stays visible (like the Live Preview toolbar). -->
             <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="6,4">
+              <DockPanel>
+                <docking:PanelWindowControls DockPanel.Dock="Right" VerticalAlignment="Top" Margin="6,0,0,0" />
                 <WrapPanel Orientation="Horizontal">
                     <!-- Model dropdown: every model produced by the active thconfig's export-model commands. -->
                     <TextBlock Text="{l:Loc M3D_Model}" VerticalAlignment="Center" FontSize="11" Foreground="Gray" Margin="0,0,4,0" />
@@ -87,6 +90,7 @@
                     <ToggleButton Content="{l:Loc M3D_Plain}"       Command="{Binding Viewer.SetShadingCommand}" CommandParameter="single"      FontSize="11" Padding="6,2" Margin="0,0,2,2"
                                   IsChecked="{Binding Viewer.ShadingMode, Mode=OneWay, Converter={StaticResource ShadingEquals}, ConverterParameter=single}" />
                 </WrapPanel>
+              </DockPanel>
             </Border>
 
             <!-- Bottom: an old-model notice (amber, when present) over the status line. -->
