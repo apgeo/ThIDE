@@ -6,6 +6,7 @@ using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Therion.Processing.Abstractions;
@@ -60,7 +61,6 @@ public partial class MainWindow : Window
                 vm.ShowPreferencesRequested += (_, section) => _ = OpenPreferences(section);
                 vm.ShowAboutRequested       += (_, _) => OnAboutClick(this, new Avalonia.Interactivity.RoutedEventArgs());
                 vm.ShowThbookRequested      += (_, _) => OnOpenThbook(this, new Avalonia.Interactivity.RoutedEventArgs());
-                vm.ShowUserGuideRequested   += (_, _) => OnOpenUserGuide(this, new Avalonia.Interactivity.RoutedEventArgs());
                 vm.ShowBookmarksRequested   += (_, _) => OnBookmarksClick(this, new Avalonia.Interactivity.RoutedEventArgs());
                 vm.ShowRelationalMapRequested += (_, _) => OnRelationalMapClick(this, new Avalonia.Interactivity.RoutedEventArgs());
                 vm.Build.QuickExportRequested += (_, _) => _ = ShowQuickExportAsync(vm);
@@ -170,8 +170,14 @@ public partial class MainWindow : Window
         menu.ItemsSource = items;
     }
 
+    // Closes the top menu after a recent-file/directory item is chosen. The open commands run
+    // asynchronously, which suppresses the menu's normal click-to-close, leaving it open as though
+    // the click did nothing.
+    private void CloseMainMenu(object? sender, RoutedEventArgs e) =>
+        this.FindControl<Menu>("MainMenu")?.Close();
+
     // a recent/pinned file entry — opens on click; right-click pins or unpins it.
-    private static MenuItem RecentItem(MainWindowViewModel vm, string path, bool isPinned)
+    private MenuItem RecentItem(MainWindowViewModel vm, string path, bool isPinned)
     {
         var item = new MenuItem
         {
@@ -180,6 +186,9 @@ public partial class MainWindow : Window
             CommandParameter = path,
             [ToolTip.TipProperty] = path,
         };
+        // The open command runs async, so the menu doesn't auto-close on click and lingers open as
+        // if nothing happened; close it explicitly once the item is invoked.
+        item.Click += CloseMainMenu;
         var toggle = new MenuItem
         {
             Header = isPinned ? "Unpin" : "Pin",
@@ -204,13 +213,15 @@ public partial class MainWindow : Window
 
         foreach (var dir in vm.RecentDirectories)
         {
-            items.Add(new MenuItem
+            var item = new MenuItem
             {
                 Header = RecentDirectoryLabel(dir),
                 Command = vm.OpenRecentDirectoryCommand,
                 CommandParameter = dir,
                 [ToolTip.TipProperty] = dir,
-            });
+            };
+            item.Click += CloseMainMenu;   // async open → close the lingering menu explicitly
+            items.Add(item);
         }
 
         if (items.Count == 0)
@@ -275,12 +286,6 @@ public partial class MainWindow : Window
     private void OnOpenThbook(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         try { AppServices.Provider.GetService<IThbookDocumentationService>()?.OpenAtPage(1); } catch { }
-    }
-
-    // Help ▸ User Guide: open the bundled ThIDE User Guide PDF (or its Markdown/online fallback).
-    private void OnOpenUserGuide(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        try { AppServices.Provider.GetService<IUserGuideService>()?.Open(); } catch { }
     }
 
     private void OnRelationalMapClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
