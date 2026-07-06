@@ -225,48 +225,78 @@ public partial class Model3DViewerToolView : UserControl
             OuterHost.Children.Add(RootContent);
     }
 
-    // ---- #5: best-effort "show DevTools" for the underlying web engine ----
+    // ---- #5: "show DevTools" for the underlying web engine ----
 
     private void OnDevToolsRequested(object? sender, EventArgs e)
     {
-        // The vendored NativeWebView exposes no public DevTools API, so reach the platform control's
-        // CoreWebView2 (WebView2) reflectively and open its inspector. Where that isn't reachable
-        // (or on other engines), fall back to the standard F12 / right-click ▸ Inspect hint.
-        if (_web is not null && InvokeOpenDevTools(_web, 0, new HashSet<object>(ReferenceEqualityComparer.Instance)))
-            return;
+        // NativeWebView exposes no public DevTools API, but on Windows/WebView2 the CoreWebView2 is
+        // reachable through the known internal chain (verified against Avalonia.Controls.WebView 12.0.1):
+        //   NativeWebView._controlHostImplTcs.Task.Result  (INativeWebViewControlImpl)
+        //     .TryGetAdapter()                             (WebView2BaseAdapter on Windows)
+        //     .TryGetWebView2()                            (ICoreWebView2)
+        //     .OpenDevToolsWindow()
+        // Anything missing (not-yet-initialised, or a non-WebView2 engine) → the F12 / Inspect hint.
+        if (TryOpenNativeDevTools()) return;
         if (_vm is not null)
-            _vm.Status = "Developer tools: right-click the 3D view ▸ Inspect, or press F12. JS logs are in the Log panel.";
+            _vm.Status = "Developer tools: right-click the 3D view ▸ Inspect, or press F12. JS logs are also in the Log panel.";
     }
 
-    private static bool InvokeOpenDevTools(object? obj, int depth, HashSet<object> seen)
+    private bool TryOpenNativeDevTools()
     {
-        if (obj is null || depth > 4 || !seen.Add(obj)) return false;
-        var type = obj.GetType();
-        var open = type.GetMethod("OpenDevToolsWindow", BindingFlags.Public | BindingFlags.Instance,
-            null, Type.EmptyTypes, null);
-        if (open is not null) { try { open.Invoke(obj, null); return true; } catch { } }
+        if (_web is null) return false;
+        try
+        {
+            const BindingFlags Inst = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
 
-        const BindingFlags Flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
-        foreach (var p in type.GetProperties(Flags))
-        {
-            if (p.GetIndexParameters().Length > 0 || !LooksLikeWebMember(p.Name)) continue;
-            object? val = null; try { val = p.GetValue(obj); } catch { }
-            if (InvokeOpenDevTools(val, depth + 1, seen)) return true;
+            // 1. NativeWebView._controlHostImplTcs → Task → Result (the platform control host).
+            var tcs = _web.GetType().GetField("_controlHostImplTcs", Inst)?.GetValue(_web);
+            if (tcs?.GetType().GetProperty("Task")?.GetValue(tcs) is not Task { IsCompletedSuccessfully: true } task)
+                return false;
+            var impl = task.GetType().GetProperty("Result")?.GetValue(task);
+            if (impl is null) return false;
+
+            // 2. The WebView2 adapter: prefer the ready-completion TCS (the adapter itself), and fall
+            //    back to TryGetAdapter(). Either can be null until the page's WebView2 core is created.
+            var adapter = FindMethod(impl.GetType(), "TryGetAdapter")?.Invoke(impl, null)
+                          ?? TaskResult(GetField(impl, "_webViewReadyCompletion"));
+            if (adapter is null) return false;
+
+            // 3. adapter.TryGetWebView2() → ICoreWebView2. NOTE: TryGetWebView2 is a *non-public* method
+            //    declared on the base WebView2BaseAdapter, so a public-only GetMethod misses it — walk
+            //    the hierarchy with NonPublic (this was the bug: getCore/core came back null).
+            var getCore = FindMethod(adapter.GetType(), "TryGetWebView2");
+            var core = getCore?.Invoke(adapter, null);
+            if (core is null || getCore is null) return false;
+
+            // 4. Invoke OpenDevToolsWindow() via the declared ICoreWebView2 interface (COM dispatch).
+            var open = getCore.ReturnType.GetMethod("OpenDevToolsWindow", Type.EmptyTypes)
+                       ?? core.GetType().GetMethod("OpenDevToolsWindow", Type.EmptyTypes);
+            if (open is null) return false;
+            open.Invoke(core, null);
+            return true;
         }
-        foreach (var f in type.GetFields(Flags))
-        {
-            if (!LooksLikeWebMember(f.Name)) continue;
-            object? val = null; try { val = f.GetValue(obj); } catch { }
-            if (InvokeOpenDevTools(val, depth + 1, seen)) return true;
-        }
-        return false;
+        catch { return false; }
     }
 
-    private static bool LooksLikeWebMember(string n) =>
-        n.Contains("web", StringComparison.OrdinalIgnoreCase) ||
-        n.Contains("core", StringComparison.OrdinalIgnoreCase) ||
-        n.Contains("platform", StringComparison.OrdinalIgnoreCase) ||
-        n.Contains("impl", StringComparison.OrdinalIgnoreCase) ||
-        n.Contains("native", StringComparison.OrdinalIgnoreCase) ||
-        n.Contains("controller", StringComparison.OrdinalIgnoreCase);
+    // GetMethod misses inherited non-public methods, so walk the base chain matching declared-only.
+    private static MethodInfo? FindMethod(Type? t, string name)
+    {
+        const BindingFlags F = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly;
+        for (; t is not null; t = t.BaseType)
+        {
+            var m = t.GetMethod(name, F, binder: null, Type.EmptyTypes, modifiers: null);
+            if (m is not null) return m;
+        }
+        return null;
+    }
+
+    private static object? GetField(object obj, string name) =>
+        obj.GetType().GetField(name, BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(obj);
+
+    private static object? TaskResult(object? tcsOrTask)
+    {
+        var task = (tcsOrTask?.GetType().GetProperty("Task")?.GetValue(tcsOrTask) ?? tcsOrTask) as Task;
+        if (task is null || !task.IsCompletedSuccessfully) return null;
+        return task.GetType().GetProperty("Result")?.GetValue(task);
+    }
 }
