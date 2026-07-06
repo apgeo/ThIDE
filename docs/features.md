@@ -11,6 +11,7 @@
 
 ## Editing & navigation
 - AvaloniaEdit-based editor: bracket/quote auto-pairing, bookmarks, caret back/forward history, comment & case toggles, go-to-definition flash, line operations, insert-date/team.
+- **Code folding** of Therion blocks and of collapsible **`#@region … #@endregion`** blocks — an application-directive layer that lives inside Therion comments (invisible to Therion). *Enclose in Region* (`Ctrl+Shift+R`) wraps a selection. See [directives.md](directives.md).
 - **Workspace Explorer** (nested source/input tree), **Object Browser** (stations / shots / scraps / maps / XVI references and entity tables), and an **Outline** of centrelines and their stations.
 - **Command palette** (`Ctrl+Shift+P`), quick-open, and go-to-symbol.
 - **Relational Map** — an interactive diagram of object relationships (surveys, scraps, maps).
@@ -19,6 +20,7 @@
 ## Build & visualization
 - **Therion compile pipeline** with live output, cancel, and clickable diagnostics; a **Generated Files** panel with per-output actions and auto-open overrides.
 - **Live 2D preview** of centrelines — equate-merged and fix-anchored, color-by survey/file/component, with clickable junction markers and per-component visibility.
+- **Map Viewer** — an in-app renderer for compiled **PNG / SVG / PDF** maps (zoom, fit-to-window, PDF page navigation, full-screen/float). It lists the active thconfig's `export map` outputs in a picker and can auto-show the first map after a build.
 - **Embedded 3D viewer** — renders compiled `.lox` / `.3d` models via [CaveView.js](https://github.com/aardgoose/CaveView.js) inside a native web view (no bundled Chromium); orientation/camera/feature toggles, color-by overlays, full-screen, and **click-a-station → jump to `.th` source**. See [3d-viewer.md](3d-viewer.md).
 - **Loch / Aven** launchers and **thbook** PDF page lookup.
 
@@ -39,7 +41,7 @@
 - Coordinate converter, unit converter, and a **magnetic declination** calculator (WMM/IGRF spherical-harmonic synthesis).
 
 ## IDE shell, performance & reliability
-- VS-style **dockable** shell with layout and floating-window persistence; toast **notifications** with a history bell; tab pin / close-others / reopen-closed; auto-save; pinned & clearable recents.
+- VS-style **dockable** shell with layout and floating-window persistence; a **Welcome** start page (new/open, recent thconfigs/workspaces/files, external-tool links); toast **notifications** with a history bell; tab pin / close-others / reopen-closed; auto-save; pinned & clearable recents.
 - Tree virtualization, background indexing, a **persistent symbol index**, large-file guards, and string interning for big projects.
 - **Crash recovery** / safe mode with autosaved dirty buffers; opt-in, **local-only** telemetry (off by default).
 - Many heavier features are **toggleable** (Preferences ▸ Performance / Extensions / Visualization) so large projects stay responsive.

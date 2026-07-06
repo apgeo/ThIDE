@@ -14,6 +14,7 @@ Guides and reference for ThIDE. See the [project README](../README.md) for the o
 |---|---|
 | Embedded 3D viewer | [3d-viewer.md](3d-viewer.md) |
 | Diagnostics & codes | [diagnostics.md](diagnostics.md) |
+| Application directives (`#@region`) | [directives.md](directives.md) |
 | `layout` / embedded code blocks | [layout-and-embedded-code.md](layout-and-embedded-code.md) |
 | Language Server (LSP) | [lsp.md](lsp.md) |
 | Semantic-rule plugins | [plugins.md](plugins.md) |
