@@ -1,4 +1,4 @@
-# Releasing ThIDE (REL-04)
+# Releasing ThIDE
 
 ## Release channel
 

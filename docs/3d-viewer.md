@@ -1,4 +1,4 @@
-# Embedded 3D Model Viewer (VIS-01)
+# Embedded 3D Model Viewer
 
 ThIDE can render a compiled cave model (`.lox` / `.3d`) in a dockable **3D Viewer** pane —
 rotate / pan / zoom, color-by overlays, and **station picking that jumps back to the `.th` source**.
