@@ -103,7 +103,11 @@ public sealed partial class Model3DViewerViewModel : ObservableObject
         _settings = settings;
         _session = session;
         if (_settings?.Current.Model3DShadingMode is { Length: > 0 } m) _shadingMode = m;
-        if (_session is not null) _session.Changed += (_, _) => OnSessionChanged();
+        // Marshal to the UI thread: the session raises Changed on a background thread (its graph
+        // rebuild runs under Task.Run/ConfigureAwait(false)), and OnSessionChanged mutates the
+        // UI-bound Models collection — doing that off-thread throws "the calling thread cannot
+        // access this object". Every other session subscriber marshals; keep this one consistent.
+        if (_session is not null) _session.Changed += (_, _) => ProjectFormat.OnUi(OnSessionChanged);
         RefreshModels();
     }
 

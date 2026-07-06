@@ -385,7 +385,10 @@ public partial class BuildViewModel : ViewModelBase
         _log = log;
         _notifications = notifications;
         _documents.DocumentChanged += (_, _) => { RestoreLastArtifacts(); RefreshExportTargets(); };
-        if (_session is not null) _session.Changed += (_, _) => RefreshExportTargets();
+        // Marshal to the UI thread: Changed is raised on a background thread (the session rebuilds
+        // the graph under Task.Run/ConfigureAwait(false)) and RefreshExportTargets writes UI-bound
+        // state — running it off-thread throws "the calling thread cannot access this object".
+        if (_session is not null) _session.Changed += (_, _) => ProjectFormat.OnUi(RefreshExportTargets);
         RefreshExportTargets();
     }
 
