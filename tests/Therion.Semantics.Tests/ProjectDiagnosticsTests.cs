@@ -290,4 +290,45 @@ public class ProjectDiagnosticsTests
             """));
         Assert.False(Has(ws, SemanticDiagnosticCodes.DisconnectedSurvey));
     }
+
+    // Reproduces the reported scenario: a green, fully-connected mainline that the user breaks by
+    // deleting shots in the middle (equivalently: removing a joining `equate` / an input file), so
+    // the survey splits into two pieces and the smaller one floats. The analysis must flag it — the
+    // warning appearing (or not) in the panel is then purely a UI wiring concern, not an algorithm gap.
+    [Fact]
+    public void Deleting_shots_that_split_a_connected_mainline_flags_the_floating_piece()
+    {
+        // Green: one connected chain 1-2-3-4-5 (single component ⇒ no disconnection warning).
+        var connected = Ws(("/p/cave.th", """
+            survey cave
+              centreline
+                data normal from to length compass clino
+                1 2 5 0 0
+                2 3 5 90 0
+                3 4 5 90 0
+                4 5 5 90 0
+              endcentreline
+            endsurvey
+            """));
+        Assert.False(Has(connected, SemanticDiagnosticCodes.DisconnectedSurvey));
+
+        // Break it: delete the 3→4 leg. Now {1,2,3} and {4,5} are two disconnected pieces; the
+        // smaller, ungrounded one must be reported (the largest is treated as the reference frame).
+        var broken = Ws(("/p/cave.th", """
+            survey cave
+              centreline
+                data normal from to length compass clino
+                1 2 5 0 0
+                2 3 5 90 0
+                4 5 5 90 0
+              endcentreline
+            endsurvey
+            """));
+        var d = OfCode(broken, SemanticDiagnosticCodes.DisconnectedSurvey);
+        Assert.Single(d);
+        Assert.Equal(Therion.Core.DiagnosticSeverity.Warning, d[0].Severity);
+        Assert.False(d[0].Span.IsEmpty);                 // navigable anchor for the panel
+        Assert.Contains("cave.4", d[0].Message);
+        Assert.Contains("cave.5", d[0].Message);
+    }
 }
