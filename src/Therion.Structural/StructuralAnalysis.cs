@@ -22,7 +22,7 @@ public static class StructuralAnalysis
         foreach (var batch in batches)
             planes.Add(Recompute(batch, batch.DefaultIncluded(), decl.Delta));
 
-        return new AnalysisResult(batches, planes.ToImmutable(), solution.CaveLegs, decl);
+        return new AnalysisResult(batches, planes.ToImmutable(), solution.CaveLegs, solution.CaveSplays, decl);
     }
 
     /// <summary>

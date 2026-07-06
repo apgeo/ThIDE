@@ -165,4 +165,5 @@ public sealed record AnalysisResult(
     ImmutableArray<StructuralBatch> Batches,
     ImmutableArray<FittedPlane> Planes,
     ImmutableArray<(Vec3 A, Vec3 B)> CaveLegs,
+    ImmutableArray<(Vec3 A, Vec3 B)> CaveSplays,
     DeclinationResolution Declination);

@@ -20,16 +20,23 @@ public sealed class CenterlineSolution
 
     internal CenterlineSolution(
         IReadOnlyDictionary<QualifiedName, Vec3> positions, EquateGraph? equates,
-        ImmutableArray<(Vec3 A, Vec3 B)> legs, int componentCount)
+        ImmutableArray<(Vec3 A, Vec3 B)> legs, ImmutableArray<(Vec3 A, Vec3 B)> splays, int componentCount)
     {
         _positions = positions;
         _equates = equates;
         CaveLegs = legs;
+        CaveSplays = splays;
         ComponentCount = componentCount;
     }
 
     /// <summary>The centreline legs (non-splay shots with full data) as world-space segments.</summary>
     public ImmutableArray<(Vec3 A, Vec3 B)> CaveLegs { get; }
+
+    /// <summary>
+    /// The splay (wall) shots as world-space segments: each runs from its placed station to that
+    /// station plus the splay vector. Only splays whose station endpoint is positioned are included.
+    /// </summary>
+    public ImmutableArray<(Vec3 A, Vec3 B)> CaveSplays { get; }
 
     /// <summary>Number of disconnected components in the network.</summary>
     public int ComponentCount { get; }
@@ -109,6 +116,18 @@ public static class CenterlineGeometry
             if (pos.TryGetValue(from, out var a) && pos.TryGetValue(to, out var b))
                 legs.Add((a, b));
 
-        return new CenterlineSolution(pos, equates, legs.ToImmutable(), components);
+        // Splays: each runs from its placed station to that station + the splay vector (or − the vector
+        // when only the far/"wall" endpoint happens to be the placed node), mirroring the main preview.
+        var splays = ImmutableArray.CreateBuilder<(Vec3 A, Vec3 B)>();
+        foreach (var s in shots)
+        {
+            if ((s.Flags & ShotFlags.Splay) == 0) continue;
+            if (s.Length is not { } len || s.Compass is not { } c || s.Clino is not { } cl) continue;
+            var v = ShotVector(len, c, cl);
+            if (pos.TryGetValue(Rep(s.From), out var a)) splays.Add((a, a + v));
+            else if (pos.TryGetValue(Rep(s.To), out var b)) splays.Add((b, b + (v * -1.0)));
+        }
+
+        return new CenterlineSolution(pos, equates, legs.ToImmutable(), splays.ToImmutable(), components);
     }
 }

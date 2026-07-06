@@ -42,6 +42,9 @@
 
     var renderer, scene, camera, raycaster;
     var planeGroup, lineGroup, pickables = [];
+    var splayMaterial = null;      // kept so stSetBackground can re-blend faded splays live
+    var splayFadeActive = false;   // whether the current splays use the background-blended colour
+    var MAINLINE = 0x888888;       // main-line grey; splays follow it unless faded
     var gizmoScene, gizmoCam;     // corner compass/vertical reference (N/E/S/W + Up), synced to the view
     var target = new THREE.Vector3(0, 0, 0);
     var sph = { r: 50, theta: 0.9, phi: 1.0 };  // azimuth around Z, polar from +Z
@@ -274,7 +277,25 @@
                 var pos = new Float32Array(legs);
                 var geo = new THREE.BufferGeometry();
                 geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-                lineGroup.add(new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: 0x888888 })));
+                lineGroup.add(new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: MAINLINE })));
+                box.expandByObject(lineGroup); has = true;
+            }
+
+            // Splays (wall shots): drawn only when supplied. They follow the main-line grey, or a faded
+            // colour blended toward the background so they recede on white or dark; the material is kept
+            // so stSetBackground can re-blend it when the user flips the background.
+            splayMaterial = null;
+            splayFadeActive = !!data.splayFade;
+            var splays = data.splays || [];
+            if (splays.length >= 6) {
+                var spos = new Float32Array(splays);
+                var sgeo = new THREE.BufferGeometry();
+                sgeo.setAttribute("position", new THREE.BufferAttribute(spos, 3));
+                splayMaterial = new THREE.LineBasicMaterial({
+                    color: splayFadeActive ? fadedSplayColor() : MAINLINE,
+                    transparent: true, opacity: splayFadeActive ? 0.5 : 0.8
+                });
+                lineGroup.add(new THREE.LineSegments(sgeo, splayMaterial));
                 box.expandByObject(lineGroup); has = true;
             }
 
@@ -313,6 +334,13 @@
         } catch (e) { post({ type: "console", level: "error", message: "stRender failed: " + e }); }
     };
 
+    // A subtle splay colour: the main-line grey blended most of the way toward the current background,
+    // so splays read as faint context on either a white or a dark scene.
+    function fadedSplayColor() {
+        try { return new THREE.Color(MAINLINE).lerp(new THREE.Color(bgColor), 0.6).getHex(); }
+        catch (e) { return MAINLINE; }
+    }
+
     function fit(box) {
         if (box.isEmpty()) return;
         var center = box.getCenter(new THREE.Vector3());
@@ -328,6 +356,8 @@
         try {
             bgColor = (typeof hex === "string") ? new THREE.Color(hex).getHex() : hex;
             if (scene) scene.background = new THREE.Color(bgColor);
+            // Re-blend faded splays so they stay subtle against the new background (no re-render needed).
+            if (splayMaterial && splayFadeActive) splayMaterial.color.setHex(fadedSplayColor());
         } catch (e) { /* ignore */ }
     };
 
