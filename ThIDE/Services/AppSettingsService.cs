@@ -212,6 +212,13 @@ public sealed record AppSettings
     /// </summary>
     public bool LocalFixGroundsDisconnected { get; init; }
 
+    /// <summary>
+    /// Whether the Diagnostics panel shows project/workspace-wide diagnostics (all thconfig files +
+    /// the cross-file analysis such as loop closure and the disconnected-survey warning) rather than
+    /// only the active file's. On by default, and the panel's toggle persists here across sessions.
+    /// </summary>
+    public bool DiagnosticsWorkspaceScope { get; init; } = true;
+
     // ---- large-file guards (#10) ----
     /// <summary>Skip syntax highlighting + hover features above this line count.</summary>
     public int MaxHighlightLines { get; init; } = 25000;
