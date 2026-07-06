@@ -195,6 +195,8 @@
   <data name="Struct_ShowAllPlanes" xml:space="preserve"><value>Show every plane in the 3D plot</value></data>
   <data name="Struct_HideAllPlanes" xml:space="preserve"><value>Hide every plane</value></data>
   <data name="Struct_InvertPlanes" xml:space="preserve"><value>Invert plane visibility</value></data>
+  <data name="Struct_ShowInPreview" xml:space="preserve"><value>Show in preview</value></data>
+  <data name="Struct_ShowInPreviewTip" xml:space="preserve"><value>Overlay the visible resulted planes on the Mainline Preview as thick strike/dip lines; click a line there to select its plane here</value></data>
   <data name="Struct_ExportPlanesTip" xml:space="preserve"><value>Export the resulted-planes grid to a CSV file</value></data>
   <data name="Struct_Col_Visible" xml:space="preserve"><value>Visible</value></data>
   <data name="Struct_PlaneDiscTip" xml:space="preserve"><value>Show this plane's disc in the 3D plot</value></data>
@@ -210,6 +212,10 @@
   <data name="Struct_DiscSize" xml:space="preserve"><value>Disc size:</value></data>
   <data name="Struct_DiscSizeTip" xml:space="preserve"><value>Enlarge the plane discs (they are tiny next to the cave)</value></data>
   <data name="Struct_WhiteBackground" xml:space="preserve"><value>White background</value></data>
+  <data name="Struct_ShowSplays" xml:space="preserve"><value>Splays</value></data>
+  <data name="Struct_ShowSplaysTip" xml:space="preserve"><value>Show the splay (wall) shots in the 3D plot</value></data>
+  <data name="Struct_FadedSplays" xml:space="preserve"><value>Faded</value></data>
+  <data name="Struct_FadedSplaysTip" xml:space="preserve"><value>Draw the splays in a faded colour blended toward the background so they stay subtle</value></data>
   <data name="Struct_PlotFallback" xml:space="preserve"><value>The 3D plot needs the bundled three.js assets and a system web engine (WebView2 / WebKit).</value></data>
   <!-- Shared column headers (Project / Object Browser / other grids) -->
   <data name="Col_Name" xml:space="preserve"><value>Name</value></data>
@@ -560,9 +566,9 @@
   <data name="MapV_FitWindowTip" xml:space="preserve"><value>Shrink to fit the window (never enlarges past 100%)</value></data>
   <data name="MapV_Fit100" xml:space="preserve"><value>100%</value></data>
   <data name="MapV_OutputsTip" xml:space="preserve"><value>Compatible map outputs from the active thconfig (export map)</value></data>
-  <data name="MapV_FullScreenTip" xml:space="preserve"><value>Full screen</value></data>
-  <data name="MapV_FloatScreenTip" xml:space="preserve"><value>Float on another monitor and maximize</value></data>
-  <data name="MapV_MoveCenterTip" xml:space="preserve"><value>Move to the central panel</value></data>
+  <data name="Panel_FullScreenTip" xml:space="preserve"><value>Full screen</value></data>
+  <data name="Panel_FloatScreenTip" xml:space="preserve"><value>Float on another monitor and maximize</value></data>
+  <data name="Panel_MoveCenterTip" xml:space="preserve"><value>Move to the central panel</value></data>
   <data name="MapV_OneScreenTitle" xml:space="preserve"><value>Single monitor</value></data>
   <data name="MapV_OneScreenMsg" xml:space="preserve"><value>Only one monitor is available, so there is no other screen to move the panel to.</value></data>
   <!-- 3D model viewer tool -->

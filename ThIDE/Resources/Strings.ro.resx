@@ -195,6 +195,8 @@
   <data name="Struct_ShowAllPlanes" xml:space="preserve"><value>Afișează toate planele în graficul 3D</value></data>
   <data name="Struct_HideAllPlanes" xml:space="preserve"><value>Ascunde toate planele</value></data>
   <data name="Struct_InvertPlanes" xml:space="preserve"><value>Inversează vizibilitatea planelor</value></data>
+  <data name="Struct_ShowInPreview" xml:space="preserve"><value>Arată în previzualizare</value></data>
+  <data name="Struct_ShowInPreviewTip" xml:space="preserve"><value>Suprapune planele rezultate vizibile peste Previzualizarea principală ca linii groase direcție/înclinare; clic pe o linie acolo selectează planul aici</value></data>
   <data name="Struct_ExportPlanesTip" xml:space="preserve"><value>Exportă grila planelor rezultate într-un fișier CSV</value></data>
   <data name="Struct_Col_Visible" xml:space="preserve"><value>Vizibil</value></data>
   <data name="Struct_PlaneDiscTip" xml:space="preserve"><value>Afișează discul acestui plan în graficul 3D</value></data>
@@ -210,6 +212,10 @@
   <data name="Struct_DiscSize" xml:space="preserve"><value>Dimensiune disc:</value></data>
   <data name="Struct_DiscSizeTip" xml:space="preserve"><value>Mărește discurile planelor (sunt minuscule lângă peșteră)</value></data>
   <data name="Struct_WhiteBackground" xml:space="preserve"><value>Fundal alb</value></data>
+  <data name="Struct_ShowSplays" xml:space="preserve"><value>Splays</value></data>
+  <data name="Struct_ShowSplaysTip" xml:space="preserve"><value>Afișează firele de tragere (splays) în graficul 3D</value></data>
+  <data name="Struct_FadedSplays" xml:space="preserve"><value>Estompat</value></data>
+  <data name="Struct_FadedSplaysTip" xml:space="preserve"><value>Desenează splays într-o culoare estompată, apropiată de fundal, ca să rămână discrete</value></data>
   <data name="Struct_PlotFallback" xml:space="preserve"><value>Graficul 3D necesită resursele three.js incluse și un motor web de sistem (WebView2 / WebKit).</value></data>
   <!-- Shared column headers (Project / Object Browser / other grids) -->
   <data name="Col_Name" xml:space="preserve"><value>Nume</value></data>
@@ -560,9 +566,9 @@
   <data name="MapV_FitWindowTip" xml:space="preserve"><value>Micșorează pentru a încăpea în fereastră (nu depășește 100%)</value></data>
   <data name="MapV_Fit100" xml:space="preserve"><value>100%</value></data>
   <data name="MapV_OutputsTip" xml:space="preserve"><value>Fișiere de hartă compatibile din thconfig-ul activ (export map)</value></data>
-  <data name="MapV_FullScreenTip" xml:space="preserve"><value>Ecran complet</value></data>
-  <data name="MapV_FloatScreenTip" xml:space="preserve"><value>Desprinde pe alt monitor și maximizează</value></data>
-  <data name="MapV_MoveCenterTip" xml:space="preserve"><value>Mută în panoul central</value></data>
+  <data name="Panel_FullScreenTip" xml:space="preserve"><value>Ecran complet</value></data>
+  <data name="Panel_FloatScreenTip" xml:space="preserve"><value>Desprinde pe alt monitor și maximizează</value></data>
+  <data name="Panel_MoveCenterTip" xml:space="preserve"><value>Mută în panoul central</value></data>
   <data name="MapV_OneScreenTitle" xml:space="preserve"><value>Un singur monitor</value></data>
   <data name="MapV_OneScreenMsg" xml:space="preserve"><value>Este disponibil un singur monitor, deci nu există alt ecran pe care să muți panoul.</value></data>
   <!-- 3D model viewer tool -->
