@@ -15,7 +15,7 @@
   <data name="Menu_Help_UserGuide" xml:space="preserve"><value>_User Guide</value></data>
   <data name="Menu_Help_About" xml:space="preserve"><value>_About ThIDE</value></data>
   <data name="Menu_Help_DebugInfo" xml:space="preserve"><value>Debug _Info</value></data>
-  <data name="Menu_Help_Welcome" xml:space="preserve"><value>_Welcome</value></data>
+  <data name="Menu_View_Welcome" xml:space="preserve"><value>_Welcome</value></data>
   <data name="Tool_Welcome" xml:space="preserve"><value>Welcome</value></data>
   <data name="Welcome_Start" xml:space="preserve"><value>Start</value></data>
   <data name="Welcome_NewFile" xml:space="preserve"><value>New File</value></data>

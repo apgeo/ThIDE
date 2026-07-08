@@ -406,9 +406,9 @@ public partial class MainWindowViewModel : ViewModelBase
     public string MenuHelpUserGuide  => L("Menu_Help_UserGuide",         "_User Guide");
     public string MenuHelpAbout      => L("Menu_Help_About",             "_About ThIDE");
     public string MenuHelpDebugInfo  => L("Menu_Help_DebugInfo",         "Debug _Info");
-    public string MenuHelpWelcome    => L("Menu_Help_Welcome",           "_Welcome");
     public string MenuFileExit       => L("Menu_File_Exit",              "E_xit");
     public string MenuView           => L("Menu_View",                   "_View");
+    public string MenuViewWelcome    => L("Menu_View_Welcome",           "_Welcome");
     public string MenuViewLanguage   => L("Menu_View_Language",          "_Language");
     public string MenuViewLanguageEn => L("Menu_View_Language_English",  "English");
     public string MenuViewLanguageRo => L("Menu_View_Language_Romanian", "Română");
@@ -1319,7 +1319,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand] private void ToggleModel3DViewer()     => _factory.ShowTool(Model3DViewerTool); // (may be off-by-default → add on demand)
     [RelayCommand] private void ToggleStructuralGeology() => _factory.ShowToolInDocuments(StructuralGeologyTool); // (big central panel, on demand)
     [RelayCommand] private void ToggleSettings()          => Activate(SettingsTool);
-    [RelayCommand] private void ShowWelcome()             => _factory.ShowToolInDocuments(WelcomeTool); // Help ▸ Welcome
+    [RelayCommand] private void ShowWelcome()             => _factory.ShowToolInDocuments(WelcomeTool); // View ▸ Welcome
 
     // Help ▸ User Guide: open the bundled guide PDF in the in-app PDF viewer (the Map Viewer) when it
     // is enabled — mirroring how a clicked build PDF opens (Build.ViewMapRequested). Falls back to the
@@ -1769,10 +1769,10 @@ public partial class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(MenuHelpUserGuide));
         OnPropertyChanged(nameof(MenuHelpAbout));
         OnPropertyChanged(nameof(MenuHelpDebugInfo));
-        OnPropertyChanged(nameof(MenuHelpWelcome));
         OnPropertyChanged(nameof(MenuFileOpenFolder));
         OnPropertyChanged(nameof(MenuFileExit));
         OnPropertyChanged(nameof(MenuView));
+        OnPropertyChanged(nameof(MenuViewWelcome));
         OnPropertyChanged(nameof(MenuViewLanguage));
         OnPropertyChanged(nameof(MenuViewLanguageEn));
         OnPropertyChanged(nameof(MenuViewLanguageRo));
