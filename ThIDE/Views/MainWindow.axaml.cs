@@ -576,7 +576,7 @@ public partial class MainWindow : Window
             // Find every occurrence up-front — both to apply and to choose the workflow. Stations & surveys
             // rename via the true occurrence index (scope-correct, @-aware, cross-file); scrap/map use the
             // text-scan; a standalone file falls back to the active document's own index.
-            var changes = CollectSymbolRenameChanges(workspace, kind, targetSpan.Value)
+            var changes = CollectSymbolRenameChanges(workspace, docs!.Active, kind, targetSpan.Value)
                 ?? CollectActiveFileRenameChanges(docs!.Active, kind, targetSpan.Value)
                 ?? CollectRenameChanges(workspace, docs!.Active, nav, raw, kind, oldName, targetSpan.Value);
             if (changes.Count == 0)
@@ -691,6 +691,7 @@ public partial class MainWindow : Window
     /// </summary>
     private static List<RenameFileChanges>? CollectSymbolRenameChanges(
         Therion.Semantics.WorkspaceSemanticModel workspace,
+        ViewModels.Docking.FileDocumentViewModel? active,
         Therion.Processing.Abstractions.ReferenceKind kind, Therion.Core.SourceSpan targetSpan)
     {
         // Resolve the clicked declaration to a symbol identity + its current name token. A plain
@@ -711,8 +712,15 @@ public partial class MainWindow : Window
         }
         else return null;   // scrap/map (or unresolved): caller falls back to the text-scan
 
+        // The active document's spans must come from its live (possibly-unsaved) buffer — the apply
+        // step writes FileText back and updates the open buffer in place, so disk text here would
+        // clobber unsaved edits (and the stale-drift guard would silently drop the file's spans).
         var edits = Therion.Semantics.SymbolRenamePlan.Compute(workspace, symbol, name,
-            path => { try { return System.IO.File.ReadAllText(path); } catch { return null; } });
+            path => active?.FilePath is { Length: > 0 } ap &&
+                    string.Equals(path, ap, System.StringComparison.OrdinalIgnoreCase) &&
+                    active.DocumentText is { Length: > 0 } at
+                ? at
+                : SafeReadAllText(path));
         if (edits.Count == 0) return null;
         return edits
             .Select(e => new RenameFileChanges(e.FilePath, e.FileText, e.Spans.ToList()))
