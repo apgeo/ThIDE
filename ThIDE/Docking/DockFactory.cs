@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Dock.Avalonia.Controls;
 using Dock.Model.Controls;
@@ -106,6 +107,43 @@ public sealed class DockFactory : Factory
 
     /// <summary>The central document well; <see cref="OpenDocument"/> adds tabs here.</summary>
     public DocumentDock? DocumentDock => _documentDock;
+
+    // ---- unsaved-changes guard on close --------------------------------------
+    // Closing a modified document is intercepted: OnDockableClosing cancels the close and an async
+    // prompt (wired by the shell via DocumentCloseGuard) offers Save / Don't save / Cancel, then
+    // re-issues the close if the user agreed. Covers the tab X, the bulk "close others/all/right"
+    // actions and any programmatic CloseDockable — they all funnel through OnDockableClosing.
+
+    /// <summary>Shell-supplied prompt for a dirty document; returns true to proceed with the close.</summary>
+    public Func<FileDocumentViewModel, Task<bool>>? DocumentCloseGuard { get; set; }
+
+    // Documents whose close the user has already confirmed (self-clearing: consumed on re-close).
+    private readonly HashSet<FileDocumentViewModel> _closeConfirmed = new();
+    // Documents whose save-prompt is currently open, so a second click on the tab's X while the
+    // dialog is up doesn't stack another prompt.
+    private readonly HashSet<FileDocumentViewModel> _closePromptInFlight = new();
+
+    public override bool OnDockableClosing(IDockable? dockable)
+    {
+        if (dockable is FileDocumentViewModel doc && DocumentCloseGuard is { } guard
+            && doc.IsDirty && !_closeConfirmed.Remove(doc))
+        {
+            if (_closePromptInFlight.Add(doc)) _ = ConfirmThenCloseAsync(doc, guard);
+            return false;   // cancel now; the async flow re-issues the close if the user agrees
+        }
+        return base.OnDockableClosing(dockable);
+    }
+
+    private async Task ConfirmThenCloseAsync(FileDocumentViewModel doc, Func<FileDocumentViewModel, Task<bool>> guard)
+    {
+        bool proceed;
+        try { proceed = await guard(doc).ConfigureAwait(true); }
+        catch { proceed = true; }   // never trap a tab open on a prompt failure
+        finally { _closePromptInFlight.Remove(doc); }
+        if (!proceed) return;
+        _closeConfirmed.Add(doc);
+        try { CloseDockable(doc); } catch { /* best-effort re-close */ }
+    }
 
     /// <summary>
     /// Activates the Compiler Output tool: selects its tab in whatever dock holds it and, if it

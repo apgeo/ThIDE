@@ -1059,4 +1059,8 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Struct_Type_Fault" xml:space="preserve"><value>Fault</value></data>
   <data name="Struct_Type_Bedding" xml:space="preserve"><value>Bedding plane</value></data>
   <data name="Struct_Type_Joint" xml:space="preserve"><value>Joint</value></data>
+  <data name="Close_SavePromptTitle" xml:space="preserve"><value>Unsaved changes</value></data>
+  <data name="Close_SavePromptMsg" xml:space="preserve"><value>Do you want to save the changes you made to "{0}" before closing it?</value></data>
+  <data name="Close_Save" xml:space="preserve"><value>Save</value></data>
+  <data name="Close_DontSave" xml:space="preserve"><value>Don't save</value></data>
 </root>

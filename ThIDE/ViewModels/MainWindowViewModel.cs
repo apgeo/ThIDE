@@ -581,6 +581,8 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             if (e.Dockable is FileDocumentViewModel doc) _documents.CloseDocument(doc);
         };
+        // Prompt to save a modified document before its tab closes (Save / Don't save / Cancel).
+        _factory.DocumentCloseGuard = PromptSaveBeforeCloseAsync;
 
         _language.LanguageChanged += (_, _) => Refresh();
         if (_settings is not null)
@@ -1369,6 +1371,31 @@ public partial class MainWindowViewModel : ViewModelBase
             TriggerCompileOnSave();
         }
         catch (Exception ex) { StatusText = ex.Message; }
+    }
+
+    /// <summary>
+    /// Close guard for a modified document (wired into the DockFactory): asks Save / Don't save /
+    /// Cancel. Returns true to let the tab close (after saving when chosen), false to keep it open.
+    /// </summary>
+    private async Task<bool> PromptSaveBeforeCloseAsync(FileDocumentViewModel doc)
+    {
+        var choice = await Views.SaveBeforeBuildDialog.ShowOverMainAsync(
+            Tr.Get("Close_SavePromptTitle"),
+            string.Format(Tr.Get("Close_SavePromptMsg"), System.IO.Path.GetFileName(doc.FilePath)),
+            Tr.Get("Close_Save"), Tr.Get("Close_DontSave"), Tr.Get("Common_Cancel"),
+            noWindowResult: Views.SaveBeforeBuildChoice.DontSave).ConfigureAwait(true);
+
+        switch (choice)
+        {
+            case Views.SaveBeforeBuildChoice.Save:
+                try { await _documents.SaveDocumentAsync(doc).ConfigureAwait(true); }
+                catch (Exception ex) { StatusText = ex.Message; return false; }   // save failed → keep the tab open
+                return true;
+            case Views.SaveBeforeBuildChoice.DontSave:
+                return true;
+            default:
+                return false;   // Cancel → keep the tab open
+        }
     }
 
     // ---- auto-save -------------------------------------------------

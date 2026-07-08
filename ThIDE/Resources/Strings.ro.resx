@@ -1059,4 +1059,8 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Struct_Type_Fault" xml:space="preserve"><value>Falie</value></data>
   <data name="Struct_Type_Bedding" xml:space="preserve"><value>Plan de stratificație</value></data>
   <data name="Struct_Type_Joint" xml:space="preserve"><value>Diaclază</value></data>
+  <data name="Close_SavePromptTitle" xml:space="preserve"><value>Modificări nesalvate</value></data>
+  <data name="Close_SavePromptMsg" xml:space="preserve"><value>Doriți să salvați modificările făcute în „{0}” înainte de a-l închide?</value></data>
+  <data name="Close_Save" xml:space="preserve"><value>Salvează</value></data>
+  <data name="Close_DontSave" xml:space="preserve"><value>Nu salva</value></data>
 </root>
