@@ -118,14 +118,50 @@ public partial class CompilerOutputToolView : UserControl
         rt.Inlines.Add(new LineBreak());
     }
 
-    // Open the file detected in a compiler-output line and jump to its error line (#1).
+    // Open the file detected in a compiler-output line with a single left-click (#1): source files
+    // jump to their error line in the editor, artifacts open in a viewer / the OS default app. A
+    // right-click falls through to the link's context menu.
     private void OnOutputPathPressed(object? sender, PointerPressedEventArgs e)
     {
+        if (!e.GetCurrentPoint(sender as Control).Properties.IsLeftButtonPressed) return;
         if (sender is Control { Tag: CompilerOutputRow row }) { NavigateOutput(row); e.Handled = true; }
     }
 
     private void NavigateOutput(CompilerOutputRow row) =>
         (DataContext as CompilerOutputToolViewModel)?.Build.NavigateOutputCommand.Execute(row);
+
+    // ---- output-link context menu (#1) -------------------------------------
+
+    private static CompilerOutputRow? RowOf(object? sender) =>
+        (sender as Control)?.DataContext as CompilerOutputRow;
+
+    private void OnLinkOpen(object? sender, RoutedEventArgs e)
+    {
+        if (RowOf(sender) is { } row) NavigateOutput(row);
+    }
+
+    private void OnLinkOpenInApp(object? sender, RoutedEventArgs e)
+    {
+        if (RowOf(sender) is { } row)
+            (DataContext as CompilerOutputToolViewModel)?.Build.OpenOutputInAppCommand.Execute(row);
+    }
+
+    private void OnLinkOpenExternal(object? sender, RoutedEventArgs e)
+    {
+        if (RowOf(sender) is { } row)
+            (DataContext as CompilerOutputToolViewModel)?.Build.OpenOutputExternallyCommand.Execute(row);
+    }
+
+    private void OnLinkReveal(object? sender, RoutedEventArgs e)
+    {
+        if (RowOf(sender) is { } row)
+            (DataContext as CompilerOutputToolViewModel)?.Build.RevealOutputCommand.Execute(row);
+    }
+
+    private void OnLinkCopyPath(object? sender, RoutedEventArgs e)
+    {
+        if (RowOf(sender)?.LinkPath is { Length: > 0 } path) Copy(path);
+    }
 
     private void RebuildRaw()
     {

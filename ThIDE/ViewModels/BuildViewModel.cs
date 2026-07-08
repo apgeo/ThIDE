@@ -95,6 +95,12 @@ public sealed class CompilerOutputRow : CommunityToolkit.Mvvm.ComponentModel.Obs
     public string MessageSuffix { get; } = string.Empty;
     /// <summary>True when a navigable file path was detected in this line.</summary>
     public bool HasLink => MessagePath.Length > 0 && Span is { } s && !string.IsNullOrEmpty(s.FilePath);
+    /// <summary>The resolved (absolute, when possible) path this row links to, or empty (#1).</summary>
+    public string LinkPath => Span is { } s ? s.FilePath : string.Empty;
+    /// <summary>True when the linked file is viewable in an in-app viewer (3D model or PDF map), so the
+    /// "Open in application viewer" context-menu item is enabled (#1).</summary>
+    public bool CanOpenInAppViewer =>
+        System.IO.Path.GetExtension(LinkPath).ToLowerInvariant() is ".lox" or ".3d" or ".pdf";
 
     public CompilerOutputRow(string text, string severity, SourceSpan? span,
         OutputRowKind kind, DateTimeOffset timestamp, TimeSpan delta, TimeSpan sinceStart,
@@ -345,20 +351,109 @@ public partial class BuildViewModel : ViewModelBase
     /// <summary>Raised when a compiler-output row with a span is activated.</summary>
     public event System.EventHandler<Therion.Core.SourceSpan>? NavigateRequested;
 
+    /// <summary>
+    /// Extensions we open in the editor (Therion source + logs). Everything else detected as a link in
+    /// the compiler output is a generated artifact: it opens in a viewer or the OS default app, never
+    /// as binary text in the editor (#1).
+    /// </summary>
+    private static readonly HashSet<string> EditableSourceExtensions = new(StringComparer.OrdinalIgnoreCase)
+    { ".th", ".th2", ".thc", ".thconfig", ".xvi", ".log", ".tlx" };
+
+    /// <summary>
+    /// Single-click action for a file link in the compiler output (#1). Source files (and the
+    /// configuration file) open in the editor at the reported line; generated artifacts open in the
+    /// appropriate viewer or the OS default app per the viewer settings — not as binary text.
+    /// </summary>
     [RelayCommand]
     private void NavigateOutput(CompilerOutputRow? row)
     {
-        // Output-link spans carry a file + line but a zero length (so IsEmpty is true); navigate
-        // whenever there's a file path rather than gating on IsEmpty, else the links never fire (#3).
-        if (row?.Span is { } span && !string.IsNullOrEmpty(span.FilePath))
+        if (row?.Span is not { } span || string.IsNullOrEmpty(span.FilePath)) return;
+        if (EditableSourceExtensions.Contains(Path.GetExtension(span.FilePath)))
         {
-            // NavigateToSpanAsync ignores IsEmpty (zero-length) spans, so a click on a compiler-
-            // output link was silently dropped. Give the span a minimal extent — exactly as the
-            // back/forward history does for its zero-length caret stops — so the jump happens (#4).
-            if (span.IsEmpty) span = span with { Length = 1 };
-            NavigateRequested?.Invoke(this, span);
+            OpenInEditor(span);
+            return;
+        }
+        OpenArtifactByPath(span.FilePath, forceInternal: null);
+    }
+
+    /// <summary>Opens a source-file span in the editor, jumping to its reported line (#1).</summary>
+    private void OpenInEditor(SourceSpan span)
+    {
+        // Output-link spans carry a file + line but a zero length (so IsEmpty is true). NavigateToSpanAsync
+        // ignores zero-length spans, so give the caret stop a minimal extent — exactly as the back/forward
+        // history does — else the jump is silently dropped (#3/#4).
+        if (span.IsEmpty) span = span with { Length = 1 };
+        NavigateRequested?.Invoke(this, span);
+    }
+
+    /// <summary>
+    /// Opens a generated artifact by path (#1). <c>.lox</c>/<c>.3d</c> open in the embedded 3D viewer
+    /// when that's enabled (else the external Loch/Aven tool, else the OS default app); <c>.pdf</c> opens
+    /// in the in-app map viewer when that option is on (else the OS default); anything else opens with the
+    /// OS default app. <paramref name="forceInternal"/> overrides the setting for the context-menu actions:
+    /// <c>true</c> forces the in-app viewer (when the type supports one), <c>false</c> forces external/OS.
+    /// </summary>
+    private void OpenArtifactByPath(string path, bool? forceInternal)
+    {
+        if (string.IsNullOrEmpty(path)) return;
+        if (!File.Exists(path)) { Status = $"File not found: {path}"; return; }
+
+        var ext = Path.GetExtension(path).ToLowerInvariant();
+
+        // 3D models → embedded viewer / external tool / OS default.
+        if (ext is ".lox" or ".3d")
+        {
+            bool useInternal = forceInternal
+                ?? (_settings?.Current is { Open3dInInternalViewer: true, EnableModel3DViewer: true });
+            if (useInternal) { View3DRequested?.Invoke(this, path); return; }
+            _ = OpenInExternalViewerByPathAsync(path);
+            return;
+        }
+
+        // PDF → in-app map viewer / OS default.
+        if (ext == ".pdf")
+        {
+            bool useInternal = forceInternal
+                ?? (_settings?.Current is { OpenPdfInInternalViewer: true, EnableInAppViewer: true });
+            if (useInternal) { ViewMapRequested?.Invoke(this, path); return; }
+            _shell.Open(path);
+            return;
+        }
+
+        // Everything else → OS default application.
+        _shell.Open(path);
+    }
+
+    /// <summary>Context-menu "Open in application viewer": force the embedded 3D / map viewer (#1).</summary>
+    [RelayCommand]
+    private void OpenOutputInApp(CompilerOutputRow? row)
+    {
+        if (LinkPathOf(row) is { } path) OpenArtifactByPath(path, forceInternal: true);
+    }
+
+    /// <summary>Context-menu "Open in external viewer": force the external tool / OS default app (#1).</summary>
+    [RelayCommand]
+    private void OpenOutputExternally(CompilerOutputRow? row)
+    {
+        if (LinkPathOf(row) is { } path)
+        {
+            // Source files have no external "viewer" — just open them in the OS default app.
+            if (EditableSourceExtensions.Contains(Path.GetExtension(path)) && File.Exists(path))
+                _shell.Open(path);
+            else
+                OpenArtifactByPath(path, forceInternal: false);
         }
     }
+
+    /// <summary>Context-menu "Reveal in File Manager" for a compiler-output link (#1).</summary>
+    [RelayCommand]
+    private void RevealOutput(CompilerOutputRow? row)
+    {
+        if (LinkPathOf(row) is { } path) _shell.RevealInFileManager(path);
+    }
+
+    private static string? LinkPathOf(CompilerOutputRow? row) =>
+        row?.Span is { } s && !string.IsNullOrEmpty(s.FilePath) ? s.FilePath : null;
 
     private readonly List<CompilerOutputRow> _outputBuffer = new();
 
@@ -810,18 +905,24 @@ public partial class BuildViewModel : ViewModelBase
     {
         if (row is null) return;
         WarnIfStale(row);
-        string toolId = HasExt(row.Path, ".lox") ? ExternalToolLocator.Loch
-            : HasExt(row.Path, ".3d") ? ExternalToolLocator.Aven : string.Empty;
+        await OpenInExternalViewerByPathAsync(row.Path).ConfigureAwait(true);
+    }
+
+    /// <summary>Opens a .lox in Loch / a .3d in Aven, falling back to the OS default app (#1).</summary>
+    private async Task OpenInExternalViewerByPathAsync(string path)
+    {
+        string toolId = HasExt(path, ".lox") ? ExternalToolLocator.Loch
+            : HasExt(path, ".3d") ? ExternalToolLocator.Aven : string.Empty;
         if (toolId.Length > 0 && await _locator.FindAsync(toolId).ConfigureAwait(true) is { } tool)
         {
             try
             {
-                Process.Start(new ProcessStartInfo(tool.Path, $"\"{row.Path}\"") { UseShellExecute = false });
+                Process.Start(new ProcessStartInfo(tool.Path, $"\"{path}\"") { UseShellExecute = false });
                 return;
             }
             catch { /* fall through to shell-open */ }
         }
-        _shell.Open(row.Path);
+        _shell.Open(path);
     }
 
     /// <summary>Finds a Therion log (.log/.tlx) written during this build, for the open-log button (#3).</summary>

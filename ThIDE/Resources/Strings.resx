@@ -547,6 +547,11 @@
   <data name="Comp_TabOutput" xml:space="preserve"><value>Output</value></data>
   <data name="Comp_TabRaw" xml:space="preserve"><value>Raw</value></data>
   <data name="Comp_OpenFile" xml:space="preserve"><value>Open this file</value></data>
+  <data name="Comp_LinkOpen" xml:space="preserve"><value>Open</value></data>
+  <data name="Comp_LinkOpenInApp" xml:space="preserve"><value>Open in Application Viewer</value></data>
+  <data name="Comp_LinkOpenExternal" xml:space="preserve"><value>Open in External Application</value></data>
+  <data name="Comp_LinkReveal" xml:space="preserve"><value>Reveal in File Manager</value></data>
+  <data name="Comp_LinkCopyPath" xml:space="preserve"><value>Copy Path</value></data>
   <data name="Comp_OpenLog" xml:space="preserve"><value>Open log</value></data>
   <data name="Comp_OpenLogTip" xml:space="preserve"><value>Open the Therion log file in the editor</value></data>
   <data name="Comp_TimeColTip" xml:space="preserve"><value>Time column display</value></data>

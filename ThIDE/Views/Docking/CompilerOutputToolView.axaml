@@ -65,7 +65,19 @@
                                     <TextBlock Text="{Binding MessagePath}" Foreground="#3B82F6" FontStretch="Condensed"
                                                TextDecorations="Underline" Cursor="Hand" IsVisible="{Binding HasLink}"
                                                Tag="{Binding}" PointerPressed="OnOutputPathPressed"
-                                               ToolTip.Tip="{l:Loc Comp_OpenFile}" />
+                                               ToolTip.Tip="{l:Loc Comp_OpenFile}">
+                                        <TextBlock.ContextMenu>
+                                            <ContextMenu>
+                                                <MenuItem Header="{l:Loc Comp_LinkOpen}" Click="OnLinkOpen" />
+                                                <MenuItem Header="{l:Loc Comp_LinkOpenInApp}" Click="OnLinkOpenInApp"
+                                                          IsEnabled="{Binding CanOpenInAppViewer}" />
+                                                <MenuItem Header="{l:Loc Comp_LinkOpenExternal}" Click="OnLinkOpenExternal" />
+                                                <Separator />
+                                                <MenuItem Header="{l:Loc Comp_LinkReveal}" Click="OnLinkReveal" />
+                                                <MenuItem Header="{l:Loc Comp_LinkCopyPath}" Click="OnLinkCopyPath" />
+                                            </ContextMenu>
+                                        </TextBlock.ContextMenu>
+                                    </TextBlock>
                                     <TextBlock Text="{Binding MessageSuffix}" Foreground="{Binding TextBrush}"
                                                FontWeight="{Binding Weight}" FontStretch="Condensed" />
                                 </StackPanel>

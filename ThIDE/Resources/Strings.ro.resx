@@ -547,6 +547,11 @@
   <data name="Comp_TabOutput" xml:space="preserve"><value>Ieșire</value></data>
   <data name="Comp_TabRaw" xml:space="preserve"><value>Brut</value></data>
   <data name="Comp_OpenFile" xml:space="preserve"><value>Deschide acest fișier</value></data>
+  <data name="Comp_LinkOpen" xml:space="preserve"><value>Deschide</value></data>
+  <data name="Comp_LinkOpenInApp" xml:space="preserve"><value>Deschide în vizualizatorul aplicației</value></data>
+  <data name="Comp_LinkOpenExternal" xml:space="preserve"><value>Deschide în aplicația externă</value></data>
+  <data name="Comp_LinkReveal" xml:space="preserve"><value>Afișează în managerul de fișiere</value></data>
+  <data name="Comp_LinkCopyPath" xml:space="preserve"><value>Copiază calea</value></data>
   <data name="Comp_OpenLog" xml:space="preserve"><value>Deschide jurnalul</value></data>
   <data name="Comp_OpenLogTip" xml:space="preserve"><value>Deschide fișierul jurnal Therion în editor</value></data>
   <data name="Comp_TimeColTip" xml:space="preserve"><value>Afișarea coloanei de timp</value></data>
