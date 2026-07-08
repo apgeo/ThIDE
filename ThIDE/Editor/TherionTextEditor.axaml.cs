@@ -370,8 +370,17 @@ public partial class TherionTextEditor : UserControl
 
     private void OnAppSettingsChanged(object? sender, EventArgs e)
     {
-        if (_editor is not null) ApplyAppSettings(_editor);
-        UpdateBreadcrumb(); // may have been toggled
+        // IAppSettingsService.Save can be raised off the UI thread — notably the workspace session
+        // persists the active-thconfig choice (RememberActiveForRoot) from the background continuation
+        // that follows its Task.Run graph build. ApplyAppSettings / UpdateBreadcrumb touch this editor
+        // control, so marshal to the UI thread (mirroring OnUiLanguageChanged). Without this, the first
+        // "Set as Active thconfig" for a root crashed with "the calling thread cannot access this object
+        // because a different thread owns it" (the second click no-ops the save, which is why it worked).
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            if (_editor is not null) ApplyAppSettings(_editor);
+            UpdateBreadcrumb(); // may have been toggled
+        });
     }
 
     // The UI language changed: rebuild the context menu so its item headers pick up the new language
@@ -1882,7 +1891,7 @@ public partial class TherionTextEditor : UserControl
                 Cursor = _handCursor,
                 TextDecorations = TextDecorations.Underline,
             };
-            link.PointerPressed += (_, _) => { NavigateToSpan(where); HideHoverInfo(); };
+            link.PointerPressed += (_, _) => PostHoverAction(() => { NavigateToSpan(where); HideHoverInfo(); });
             panel.Children.Add(link);
         }
 
@@ -1894,14 +1903,11 @@ public partial class TherionTextEditor : UserControl
             () => { NavigateToSpan(where); HideHoverInfo(); }));
         actions.Children.Add(IconAction("Icon.ManageSearch", "Ed_FindAllRefs",
             () => { FindReferencesRequested?.Invoke(this, StationRef.Parse(raw).PointWithoutMark); HideHoverInfo(); }));
+        // Teardown + modal ordering is handled by IconAction's deferral (see PostHoverAction).
         actions.Children.Add(IconAction("Icon.Rename", "Ed_RenameDots", () =>
         {
             HideHoverInfo();
-            // Rename opens a modal dialog. Closing this hover popup (which hosts the button handling the
-            // click) and opening the modal in the same input turn corrupts pointer routing — the leftover
-            // click reaches the torn-down popup ("PlatformImpl is null") and the dialog chain stalls. Defer
-            // the rename to a Background-priority tick so the popup teardown + click fully drain first.
-            Avalonia.Threading.Dispatcher.UIThread.Post(StartRename, Avalonia.Threading.DispatcherPriority.Background);
+            StartRename();
         }));
 
         // "Open in 3D" — only for stations/surveys, and only when a 3D model is available.
@@ -1946,9 +1952,20 @@ public partial class TherionTextEditor : UserControl
             Content = MakeIcon(iconKey),
         };
         ToolTip.SetTip(btn, L(tooltipKey));
-        btn.Click += (_, _) => onClick();
+        btn.Click += (_, _) => PostHoverAction(onClick);
         return btn;
     }
+
+    /// <summary>
+    /// Runs a hover-card action on a Background-priority dispatcher tick instead of inside the
+    /// pointer event that triggered it. Every action closes the hover popup; tearing the PopupRoot
+    /// down while the click/press that hit it is still routing leaves the rest of the gesture with
+    /// no window to deliver to — Avalonia logs "PlatformImpl is null, couldn't handle input" and,
+    /// when the action opens a modal (rename), the dialog chain can stall. Deferring lets the
+    /// gesture drain fully before the popup goes away.
+    /// </summary>
+    private static void PostHoverAction(Action action) =>
+        Avalonia.Threading.Dispatcher.UIThread.Post(action, Avalonia.Threading.DispatcherPriority.Background);
 
     /// <summary>A 16×16 <see cref="PathIcon"/> from a merged <c>Icon.*</c> geometry resource.</summary>
     private Control MakeIcon(string resourceKey)
@@ -1973,7 +1990,7 @@ public partial class TherionTextEditor : UserControl
             title.Foreground = Brushes.SteelBlue;
             title.Cursor = _handCursor;
             title.TextDecorations = TextDecorations.Underline;
-            title.PointerPressed += (_, _) => { NavigateToSpan(target); HideHoverInfo(); };
+            title.PointerPressed += (_, _) => PostHoverAction(() => { NavigateToSpan(target); HideHoverInfo(); });
         }
         return title;
     }
@@ -2054,7 +2071,7 @@ public partial class TherionTextEditor : UserControl
             title.Foreground = Brushes.SteelBlue;
             title.Cursor = _handCursor;
             title.TextDecorations = TextDecorations.Underline;
-            title.PointerPressed += (_, _) => { OpenLink(link); HideHoverInfo(); };
+            title.PointerPressed += (_, _) => PostHoverAction(() => { OpenLink(link); HideHoverInfo(); });
         }
         panel.Children.Add(title);
 
