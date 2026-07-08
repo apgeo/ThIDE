@@ -228,6 +228,7 @@ internal static class AppServices
         services.AddSingleton<ViewModels.Docking.MapViewerToolViewModel>();
         services.AddSingleton<ViewModels.Docking.Model3DViewerToolViewModel>();
         services.AddSingleton<ViewModels.Docking.StructuralGeologyToolViewModel>();
+        services.AddSingleton<ViewModels.Docking.StructuralPlotToolViewModel>();
         services.AddSingleton<ViewModels.Docking.SettingsToolViewModel>();
         services.AddSingleton<Docking.DockFactory>();
 

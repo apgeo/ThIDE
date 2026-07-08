@@ -38,8 +38,10 @@
         <!-- Top bar: scope + refresh + status (left), wizard prev/next (right). Shared across tabs. -->
         <Border DockPanel.Dock="Top" Padding="8,5" Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}">
             <DockPanel>
-                <!-- Shared panel window controls at the far right. -->
-                <docking:PanelWindowControls DockPanel.Dock="Right" VerticalAlignment="Center" Margin="6,0,0,0" />
+                <!-- Shared panel window controls at the far right, stacked vertically to minimize
+                     the horizontal space they take from the top bar. -->
+                <docking:PanelWindowControls DockPanel.Dock="Right" Orientation="Vertical"
+                                             VerticalAlignment="Center" Margin="4,0,0,0" />
                 <!-- #6: hide (not disable) the nav buttons on the first/last tab, keeping their space. -->
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                     <Panel Width="64">
@@ -242,6 +244,7 @@
                                 <Flyout Placement="Bottom">
                                     <StackPanel Name="PlaneColumnsPanel" Spacing="2">
                                         <CheckBox Content="{l:Loc Struct_Col_Plane}"    Tag="Plane"      Click="OnTogglePlaneColumn" />
+                                        <CheckBox Content="{l:Loc Struct_Col_Type}"     Tag="Type"       Click="OnTogglePlaneColumn" />
                                         <CheckBox Content="{l:Loc Struct_Col_Dip}"      Tag="Dip °"      Click="OnTogglePlaneColumn" />
                                         <CheckBox Content="{l:Loc Struct_Col_Strike}"   Tag="Strike °"   Click="OnTogglePlaneColumn" />
                                         <CheckBox Content="{l:Loc Struct_Col_DipDir}"   Tag="Dip dir °"  Click="OnTogglePlaneColumn" />
@@ -265,6 +268,9 @@
                               GridLinesVisibility="Horizontal" DoubleTapped="OnPlaneDoubleTapped">
                         <DataGrid.ContextMenu>
                             <ContextMenu>
+                                <MenuItem Header="{l:Loc Struct_HighlightInPreview}" Click="OnHighlightPlaneInPreview" />
+                                <MenuItem Header="{l:Loc Common_GoToSource}" Click="OnGoToPlaneSource" />
+                                <Separator />
                                 <MenuItem Header="{l:Loc Common_CopyValue}" Click="OnCopyPlaneValue" />
                                 <MenuItem Header="{l:Loc Common_CopyRow}" Click="OnCopyPlaneRow" />
                                 <MenuItem Header="{l:Loc Common_CopyFormatted}" Click="OnCopyPlaneFormatted" />
@@ -282,6 +288,19 @@
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
                             <DataGridTextColumn Header="{l:Loc Struct_Col_Plane}" Binding="{Binding Name}" Width="Auto" />
+                            <!-- Editable free-text with predefined suggestions (Fault / Bedding plane / Joint);
+                                 drives the per-type colouring of the plane line in the Mainline Preview. -->
+                            <DataGridTemplateColumn Header="{l:Loc Struct_Col_Type}" Width="Auto" MinWidth="120">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <AutoCompleteBox Text="{Binding Type, Mode=TwoWay}"
+                                                         ItemsSource="{Binding TypeSuggestions}"
+                                                         FilterMode="Contains" MinimumPrefixLength="0"
+                                                         Watermark="{l:Loc Struct_TypeWatermark}"
+                                                         Padding="2" Margin="1" VerticalAlignment="Center" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                             <DataGridTextColumn Header="{l:Loc Struct_Col_Dip}" Binding="{Binding Dip}" Width="Auto" />
                             <DataGridTextColumn Header="{l:Loc Struct_Col_Strike}" Binding="{Binding Strike}" Width="Auto" />
                             <DataGridTextColumn Header="{l:Loc Struct_Col_DipDir}" Binding="{Binding DipDirection}" Width="Auto" />
@@ -295,8 +314,8 @@
                 </DockPanel>
             </TabItem>
 
-            <!-- 4 · Plot -->
-            <TabItem Header="{l:Loc Struct_Tab4}">
+            <!-- 4 · Plot (hidden once popped out into its own panel; see PopOutPlot) -->
+            <TabItem Header="{l:Loc Struct_Tab4}" IsVisible="{Binding !Structural.PlotPoppedOut}">
                 <DockPanel>
                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="2">
                         <Button Content="{l:Loc Struct_FitView}" Click="OnFitView" Padding="8,2" FontSize="11" />
@@ -317,6 +336,13 @@
                         <CheckBox Content="{l:Loc Struct_FadedSplays}" FontSize="11" VerticalAlignment="Center"
                                   IsChecked="{Binding Structural.FadedSplays}" IsEnabled="{Binding Structural.PlotSplays}"
                                   ToolTip.Tip="{l:Loc Struct_FadedSplaysTip}" />
+                        <Border Width="1" Margin="6,2" Background="Gray" />
+                        <!-- Mirrors the Resulted Planes tab's push button (same bound property). -->
+                        <ToggleButton Content="{l:Loc Struct_ShowInPreview}" Padding="6,2" FontSize="12"
+                                      IsChecked="{Binding Structural.ShowPlanesInPreview, Mode=TwoWay}"
+                                      ToolTip.Tip="{l:Loc Struct_ShowInPreviewTip}" />
+                        <Button Content="{l:Loc Struct_PopOutPlot}" Command="{Binding Structural.PopOutPlotCommand}"
+                                Padding="8,2" FontSize="11" ToolTip.Tip="{l:Loc Struct_PopOutPlotTip}" />
                     </StackPanel>
                     <Panel>
                         <Panel Name="PlotHost" />

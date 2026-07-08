@@ -64,8 +64,12 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
         _preview = preview;
         // Clicking a plane line in the Mainline Preview selects the matching resulted-planes row.
         if (_preview is not null)
+        {
             _preview.StructuralPlaneActivated += (_, name) =>
                 SelectedPlane = Planes.FirstOrDefault(p => p.Name == name) ?? SelectedPlane;
+            // Lets the Mainline Preview panel host its own "Show Structure Planes" button.
+            _preview.AttachStructural(this);
+        }
         if (_documents is not null) _documents.DocumentChanged += (_, _) => { if (_activated) Rerun(); };
         // Re-run the analysis when the UI language changes so the status line and the localized row
         // labels (Kind, declination note, invalid-plane reason) re-render in the new language.
@@ -174,14 +178,50 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
         if (!span.IsEmpty) NavigateRequested?.Invoke(this, span);
     }
 
+    /// <summary>
+    /// Context-menu action: highlights <paramref name="plane"/>'s line in the Mainline Preview even
+    /// if "Show in Mainline Map Preview" is currently off — turns that toggle on (activating it
+    /// everywhere it's mirrored) and selects the plane, exactly as if the row had been clicked.
+    /// </summary>
+    public void HighlightInPreview(StructuralPlaneRow plane)
+    {
+        SelectedPlane = plane;
+        ShowPlanesInPreview = true;
+    }
+
     // ---- wizard tab navigation -------------------------------------------------------------------
 
     [RelayCommand(CanExecute = nameof(CanGoPrev))] private void GoPrev() => SelectedTab = Math.Max(0, SelectedTab - 1);
-    [RelayCommand(CanExecute = nameof(CanGoNext))] private void GoNext() => SelectedTab = Math.Min(TabCount - 1, SelectedTab + 1);
+    [RelayCommand(CanExecute = nameof(CanGoNext))] private void GoNext() => SelectedTab = Math.Min(EffectiveTabCount - 1, SelectedTab + 1);
 
     /// <summary>Public so the view can hide (not just disable) the buttons on the first/last tab (#6).</summary>
     public bool CanGoPrev => SelectedTab > 0;
-    public bool CanGoNext => SelectedTab < TabCount - 1;
+    public bool CanGoNext => SelectedTab < EffectiveTabCount - 1;
+
+    // When the 3D Plot has been popped out into its own panel, the Plot tab is hidden and the
+    // Resulted Planes tab becomes the last one for the Prev/Next wizard buttons.
+    private int EffectiveTabCount => PlotPoppedOut ? TabCount - 1 : TabCount;
+
+    /// <summary>True once the 3D Plot has been moved into its own dockable/floatable panel (in-memory
+    /// only — like the Structural Geology panel itself, it doesn't auto-reopen across restarts).</summary>
+    [ObservableProperty] private bool _plotPoppedOut;
+
+    /// <summary>Raised when the user pops the 3D Plot out; the shell shows/activates its own panel.</summary>
+    public event EventHandler? PlotPopOutRequested;
+
+    [RelayCommand]
+    private void PopOutPlot()
+    {
+        PlotPoppedOut = true;
+        PlotPopOutRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    partial void OnPlotPoppedOutChanged(bool value)
+    {
+        if (value && SelectedTab == TabCount - 1) SelectedTab = TabCount - 2;
+        OnPropertyChanged(nameof(CanGoNext));
+        GoNextCommand.NotifyCanExecuteChanged();
+    }
 
     partial void OnSelectedTabChanged(int value)
     {
@@ -197,8 +237,9 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
     partial void OnPlotSplaysChanged(bool value) { PushPlot(); Persist(); }
     partial void OnFadedSplaysChanged(bool value) { PushPlot(); Persist(); }
     partial void OnShowPlanesInPreviewChanged(bool value) { PushPreview(); Persist(); }
-    // Selection sync: highlight the selected plane's line in the Mainline Preview overlay.
-    partial void OnSelectedPlaneChanged(StructuralPlaneRow? value) => PushPreview();
+    // Selection sync: highlight the selected plane's line in the Mainline Preview overlay, and its
+    // disc in the 3D plot, no matter which of the three views (grid / preview / plot) picked it.
+    partial void OnSelectedPlaneChanged(StructuralPlaneRow? value) { PushPreview(); PushPlot(); }
 
     /// <summary>Raised when group-by-station toggles so the view can rebuild the grid's grouped view.</summary>
     public event EventHandler? GroupingChanged;
@@ -247,6 +288,17 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
         PushPlot();
         PushPreview();
     }
+
+    /// <summary>Predefined plane-type suggestions (localized); custom values are also allowed.</summary>
+    public static IReadOnlyList<string> PlaneTypeSuggestions => new[]
+    {
+        ThIDE.Resources.Tr.Get("Struct_Type_Fault"),
+        ThIDE.Resources.Tr.Get("Struct_Type_Bedding"),
+        ThIDE.Resources.Tr.Get("Struct_Type_Joint"),
+    };
+
+    /// <summary>A plane's Type cell was edited — recolour its Mainline Preview line.</summary>
+    public void OnPlaneTypeChanged() { if (!_bulk) PushPreview(); }
 
     /// <summary>
     /// Check/uncheck every real measurement of one station (its plane batch) in one go. The synthetic
@@ -371,7 +423,7 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
                 row.Name,
                 $"{row.Plane.Strike:0}/{row.Plane.Dip:0}°",
                 row.Plane.Strike, row.Plane.Dip, row.Plane.DeclinationApplied,
-                anchor, ReferenceEquals(row, SelectedPlane)));
+                anchor, ReferenceEquals(row, SelectedPlane), row.Type));
         }
         _preview.SetStructuralPlanes(list);
     }
@@ -463,7 +515,8 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
                 new[] { plane.Centroid.E, plane.Centroid.N, plane.Centroid.Z },
                 new[] { plane.Normal.E, plane.Normal.N, plane.Normal.Z },
                 DiscRadius(row, plane.Centroid) * DiscScale,
-                true));
+                true,
+                ReferenceEquals(row, SelectedPlane)));
         }
 
         return JsonSerializer.Serialize(new PlotDto(legs, splays, FadedSplays, planes.ToArray()), PlotJsonOptions);
@@ -486,7 +539,7 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
     private static readonly JsonSerializerOptions PlotJsonOptions =
         new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
-    private sealed record PlotPlaneDto(string Name, double[] Centroid, double[] Normal, double Radius, bool Valid);
+    private sealed record PlotPlaneDto(string Name, double[] Centroid, double[] Normal, double Radius, bool Valid, bool Selected);
     private sealed record PlotDto(double[] Legs, double[] Splays, bool SplayFade, PlotPlaneDto[] Planes);
 
     // ---- tabular export (CSV / formatted copy) ---------------------------------------------------
@@ -506,10 +559,10 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
     /// <summary>Column headers + string rows for the resulted-planes grid.</summary>
     public (IReadOnlyList<string> Headers, IReadOnlyList<IReadOnlyList<string>> Rows) PlanesTable()
     {
-        var headers = new[] { "Plane", "Dip °", "Strike °", "Dip dir °", "North ref", "Points", "RMS", "Visible", "File", "Line" };
+        var headers = new[] { "Plane", "Type", "Dip °", "Strike °", "Dip dir °", "North ref", "Points", "RMS", "Visible", "File", "Line" };
         var rows = Planes.Select(p => (IReadOnlyList<string>)new[]
         {
-            p.Name, p.Dip, p.Strike, p.DipDirection, p.Declination, p.Points, p.Quality,
+            p.Name, p.Type, p.Dip, p.Strike, p.DipDirection, p.Declination, p.Points, p.Quality,
             p.Visible ? "yes" : "no", p.File, p.Line.ToString(),
         }).ToList();
         return (headers, rows);
@@ -738,6 +791,14 @@ public sealed partial class StructuralPlaneRow : ObservableObject
     /// <summary>Whether this plane's disc is drawn in the 3D plot (checkbox in the resulted-planes grid).</summary>
     [ObservableProperty] private bool _visible = true;
 
+    /// <summary>User-assigned plane type (Fault / Bedding plane / Joint, or a custom value). Drives the
+    /// per-type colouring of the plane's line in the Mainline Preview. Editable free text with the
+    /// predefined values offered as suggestions.</summary>
+    [ObservableProperty] private string _type = string.Empty;
+
+    /// <summary>Predefined plane types offered in the grid's Type cell (custom values are also allowed).</summary>
+    public IReadOnlyList<string> TypeSuggestions => StructuralGeologyViewModel.PlaneTypeSuggestions;
+
     public StructuralPlaneRow(StructuralGeologyViewModel owner, StructuralBatch batch, FittedPlane plane)
     {
         _owner = owner;
@@ -746,6 +807,7 @@ public sealed partial class StructuralPlaneRow : ObservableObject
     }
 
     partial void OnVisibleChanged(bool value) => _owner.OnPlaneVisibilityChanged();
+    partial void OnTypeChanged(string value) => _owner.OnPlaneTypeChanged();
 
     public void UpdatePlane(FittedPlane plane) => Plane = plane;
 

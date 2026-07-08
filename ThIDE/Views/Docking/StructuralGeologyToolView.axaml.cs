@@ -36,7 +36,7 @@ public partial class StructuralGeologyToolView : UserControl
     private static readonly string[] MeasColOrder =
         { "Use", "Plane", "Kind", "From", "To", "Length", "Azimuth", "Clino", "Comment", "File", "Line" };
     private static readonly string[] PlaneColOrder =
-        { "Visible", "Plane", "Dip °", "Strike °", "Dip dir °", "North ref", "Points", "RMS", "File", "Line" };
+        { "Visible", "Plane", "Type", "Dip °", "Strike °", "Dip dir °", "North ref", "Points", "RMS", "File", "Line" };
     private readonly System.Collections.Generic.Dictionary<DataGridColumn, string> _measColKey = new();
     private readonly System.Collections.Generic.Dictionary<DataGridColumn, string> _planeColKey = new();
 
@@ -80,6 +80,13 @@ public partial class StructuralGeologyToolView : UserControl
 
         _vm.GroupingChanged += (_, _) => SetupGrouping();
         _vm.PlotImageReady += OnPlotImageReady;
+        // Once the plot pops out into its own panel, this tab's WebView must go away — otherwise
+        // two NativeWebViews would both be wired to the same PlotScriptRequested bridge.
+        _vm.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(StructuralGeologyViewModel.PlotPoppedOut) && _vm.PlotPoppedOut)
+                TeardownPlot();
+        };
     }
 
     // ---- measurements grouping (#10) -----------------------------------------------------------
@@ -108,6 +115,18 @@ public partial class StructuralGeologyToolView : UserControl
     {
         if (sender is DataGrid { SelectedItem: StructuralPlaneRow plane })
             Vm?.Navigate(plane.Span);
+    }
+
+    // ---- resulted-planes context menu: highlight in preview / go to source ---------------------
+
+    private void OnHighlightPlaneInPreview(object? sender, RoutedEventArgs e)
+    {
+        if (PlanesGrid?.SelectedItem is StructuralPlaneRow plane) Vm?.HighlightInPreview(plane);
+    }
+
+    private void OnGoToPlaneSource(object? sender, RoutedEventArgs e)
+    {
+        if (PlanesGrid?.SelectedItem is StructuralPlaneRow plane) Vm?.Navigate(plane.Span);
     }
 
     // ---- column visibility + fit (#2) ----------------------------------------------------------
@@ -156,9 +175,9 @@ public partial class StructuralGeologyToolView : UserControl
         { r.Plane, r.Kind, r.From, r.To, r.Length, r.Compass, r.Clino, r.Include ? "yes" : "no", r.Comment, r.File, r.Line.ToString() };
 
     private static readonly string[] PlaneHeaders =
-        { "Plane", "Dip °", "Strike °", "Dip dir °", "North ref", "Points", "RMS", "Visible", "File", "Line" };
+        { "Plane", "Type", "Dip °", "Strike °", "Dip dir °", "North ref", "Points", "RMS", "Visible", "File", "Line" };
     private static string[] PlaneValues(StructuralPlaneRow p) => new[]
-        { p.Name, p.Dip, p.Strike, p.DipDirection, p.Declination, p.Points, p.Quality, p.Visible ? "yes" : "no", p.File, p.Line.ToString() };
+        { p.Name, p.Type, p.Dip, p.Strike, p.DipDirection, p.Declination, p.Points, p.Quality, p.Visible ? "yes" : "no", p.File, p.Line.ToString() };
 
     private void OnCopyMeasValue(object? sender, RoutedEventArgs e)
     {
@@ -241,6 +260,7 @@ public partial class StructuralGeologyToolView : UserControl
     {
         "Visible"   => p.Visible ? "yes" : "no",
         "Plane"     => p.Name,
+        "Type"      => p.Type,
         "Dip °"     => p.Dip,
         "Strike °"  => p.Strike,
         "Dip dir °" => p.DipDirection,
@@ -339,10 +359,14 @@ public partial class StructuralGeologyToolView : UserControl
     {
         if (_plot is not null || Vm is null || PlotHost is null) return;
         if (!Vm.IsPlotAvailable) { ShowFallback(); return; }
+        // Missing native engine (e.g. no webkit2gtk on Linux) fails asynchronously, not in the
+        // ctor — probe first so the fallback shows instead of a dead empty box.
+        if (WebViewSupport.DescribeMissingEngine() is not null) { ShowFallback(); return; }
 
         try
         {
             _plot = new NativeWebView();
+            WebViewSupport.ConfigureWebView(_plot); // before attach — EnvironmentRequested fires then
             PlotHost.Children.Add(_plot);
             _plot.WebMessageReceived += OnPlotMessage;
             if (!_plotWired) { Vm.PlotScriptRequested += OnPlotScript; _plotWired = true; }
@@ -360,6 +384,18 @@ public partial class StructuralGeologyToolView : UserControl
     private void ShowFallback()
     {
         if (PlotFallback is not null) PlotFallback.IsVisible = true;
+    }
+
+    // Tears down this tab's WebView + bridge subscriptions once the plot has popped out into its
+    // own panel (StructuralPlotToolView), so exactly one WebView is ever wired to the VM at a time.
+    private void TeardownPlot()
+    {
+        if (_plot is null) return;
+        if (_vm is not null) _vm.PlotScriptRequested -= OnPlotScript;
+        _plotWired = false;
+        _plot.WebMessageReceived -= OnPlotMessage;
+        PlotHost?.Children.Clear();
+        _plot = null;
     }
 
     private void OnPlotMessage(object? sender, WebMessageReceivedEventArgs e)

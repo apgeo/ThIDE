@@ -1,0 +1,56 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ThIDE.ViewModels.Docking"
+             xmlns:docking="using:ThIDE.Views.Docking"
+             xmlns:l="using:ThIDE.Resources"
+             x:Class="ThIDE.Views.Docking.StructuralPlotToolView"
+             x:DataType="vm:StructuralPlotToolViewModel">
+
+    <!-- The Structural Geology panel's 3D Plot tab, popped out into its own dockable/floatable
+         panel (see StructuralGeologyViewModel.PopOutPlotCommand). Wraps the SAME content VM as the
+         Structural Geology tool, so plane data / disc size / selection stay live-synced with the
+         Resulted Planes tab; deliberately has none of the wizard's top bar (scope/detect/status/
+         Prev/Next) — only the in-tab plot toolbar. -->
+    <DockPanel>
+        <Border DockPanel.Dock="Top" Padding="8,5" Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}">
+            <DockPanel>
+                <docking:PanelWindowControls DockPanel.Dock="Right" VerticalAlignment="Center" Margin="4,0,0,0" />
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <Button Content="{l:Loc Struct_FitView}" Click="OnFitView" Padding="8,2" FontSize="11" />
+                    <Button Content="{l:Loc Struct_ExportImage}" Click="OnExportImage" Padding="8,2" FontSize="11"
+                            ToolTip.Tip="{l:Loc Struct_ExportImageTip}" />
+                    <TextBlock Text="{l:Loc Struct_DiscSize}" VerticalAlignment="Center" FontSize="11" Foreground="Gray" />
+                    <ComboBox ItemsSource="{Binding Structural.DiscScales}"
+                              SelectedItem="{Binding Structural.DiscScale}" FontSize="11" MinWidth="64"
+                              ToolTip.Tip="{l:Loc Struct_DiscSizeTip}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate><TextBlock Text="{Binding StringFormat='{}{0}×'}" /></DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <CheckBox Content="{l:Loc Struct_WhiteBackground}" FontSize="11" VerticalAlignment="Center"
+                              IsChecked="{Binding Structural.WhiteBackground}" />
+                    <CheckBox Content="{l:Loc Struct_ShowSplays}" FontSize="11" VerticalAlignment="Center"
+                              IsChecked="{Binding Structural.PlotSplays}" ToolTip.Tip="{l:Loc Struct_ShowSplaysTip}" />
+                    <CheckBox Content="{l:Loc Struct_FadedSplays}" FontSize="11" VerticalAlignment="Center"
+                              IsChecked="{Binding Structural.FadedSplays}" IsEnabled="{Binding Structural.PlotSplays}"
+                              ToolTip.Tip="{l:Loc Struct_FadedSplaysTip}" />
+                    <Border Width="1" Margin="6,2" Background="Gray" />
+                    <!-- Mirrors the Structural Geology panel's "Show in Mainline Map Preview" toggles. -->
+                    <ToggleButton Content="{l:Loc Struct_ShowInPreview}" Padding="6,2" FontSize="12"
+                                  IsChecked="{Binding Structural.ShowPlanesInPreview, Mode=TwoWay}"
+                                  ToolTip.Tip="{l:Loc Struct_ShowInPreviewTip}" />
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <Panel>
+            <Panel Name="PlotHost" />
+            <Border Name="PlotFallback" IsVisible="False"
+                    Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}">
+                <TextBlock VerticalAlignment="Center" HorizontalAlignment="Center" TextWrapping="Wrap"
+                           Margin="24" Foreground="Gray" TextAlignment="Center"
+                           Text="{l:Loc Struct_PlotFallback}" />
+            </Border>
+        </Panel>
+    </DockPanel>
+</UserControl>

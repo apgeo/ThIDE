@@ -301,30 +301,45 @@
 
             // Planes as oriented translucent discs (+ a normal stub).
             var zaxis = new THREE.Vector3(0, 0, 1);
+            var HIGHLIGHT = 0xffd600;   // bright rim/normal colour for the selected plane
             (data.planes || []).forEach(function (p, i) {
                 if (!p.valid) return;
                 var c = new THREE.Vector3(p.centroid[0], p.centroid[1], p.centroid[2]);
                 var n = new THREE.Vector3(p.normal[0], p.normal[1], p.normal[2]).normalize();
                 var radius = Math.max(0.25, p.radius || 1);
                 var color = new THREE.Color(p.color || PALETTE[i % PALETTE.length]);
+                var selected = !!p.selected;
 
+                // Selected plane: denser fill, brighter/thicker rim, drawn on top — bold and
+                // distinct regardless of which view (grid / preview / plot) picked it.
                 var disc = new THREE.Mesh(
                     new THREE.CircleGeometry(radius, 48),
-                    new THREE.MeshLambertMaterial({ color: color, transparent: true, opacity: 0.45, side: THREE.DoubleSide, depthWrite: false }));
+                    new THREE.MeshLambertMaterial({
+                        color: color, transparent: true, opacity: selected ? 0.8 : 0.45,
+                        side: THREE.DoubleSide, depthWrite: false, depthTest: !selected
+                    }));
                 disc.quaternion.setFromUnitVectors(zaxis, n);
                 disc.position.copy(c);
                 disc.userData.name = p.name;
+                if (selected) disc.renderOrder = 10;
                 planeGroup.add(disc);
                 pickables.push(disc);
 
                 var ring = new THREE.Mesh(
-                    new THREE.RingGeometry(radius * 0.98, radius, 48),
-                    new THREE.MeshBasicMaterial({ color: color, side: THREE.DoubleSide }));
+                    new THREE.RingGeometry(selected ? radius * 0.9 : radius * 0.98, radius, 48),
+                    new THREE.MeshBasicMaterial({
+                        color: selected ? HIGHLIGHT : color, side: THREE.DoubleSide, depthTest: !selected
+                    }));
                 ring.quaternion.copy(disc.quaternion); ring.position.copy(c);
+                if (selected) ring.renderOrder = 11;
                 planeGroup.add(ring);
 
                 var nl = new THREE.BufferGeometry().setFromPoints([c, c.clone().addScaledVector(n, radius * 0.8)]);
-                planeGroup.add(new THREE.Line(nl, new THREE.LineBasicMaterial({ color: color })));
+                var normalLine = new THREE.Line(nl, new THREE.LineBasicMaterial({
+                    color: selected ? HIGHLIGHT : color, linewidth: selected ? 3 : 1
+                }));
+                if (selected) normalLine.renderOrder = 11;
+                planeGroup.add(normalLine);
 
                 box.expandByPoint(c); has = true;
             });

@@ -564,12 +564,31 @@ public sealed class LivePreviewControl : Control
         foreach (var pl in planes) if (pl.IsSelected) DrawPlaneLine(ctx, pl, size);
     }
 
+    // Per-(plane-)type pen + label-brush cache, so every distinct user type gets its own stable
+    // colour from the shared palette (untyped planes keep the default crimson).
+    private readonly Dictionary<string, (IPen Pen, IBrush Label)> _planeTypeStyle = new(StringComparer.Ordinal);
+
+    private (IPen Pen, IBrush Label) PlaneTypeStyle(string type)
+    {
+        if (_planeTypeStyle.TryGetValue(type, out var st)) return st;
+        var color = SketchColors.ForKey(type);
+        var pen = new ImmutablePen(new ImmutableSolidColorBrush(Color.FromArgb(0xD9, color.R, color.G, color.B)), 3.2);
+        var label = new ImmutableSolidColorBrush(color);
+        return _planeTypeStyle[type] = (pen, label);
+    }
+
     private void DrawPlaneLine(DrawingContext ctx, PlaneOverlayLine pl, Size size)
     {
         var a = ToScreen(pl.X1, pl.Y1, size);
         var b = ToScreen(pl.X2, pl.Y2, size);
-        ctx.DrawLine(pl.IsSelected ? PlaneSelectedPen : PlanePen, a, b);
-        var ft = Label(pl.Label, 11, pl.IsSelected ? PlaneSelectedLabelBrush : PlaneLabelBrush);
+        // Selected wins (bright orange, widest); otherwise a typed plane takes its per-type colour and
+        // an untyped one the default crimson.
+        IPen pen; IBrush labelBrush;
+        if (pl.IsSelected) { pen = PlaneSelectedPen; labelBrush = PlaneSelectedLabelBrush; }
+        else if (!string.IsNullOrEmpty(pl.Type)) { var st = PlaneTypeStyle(pl.Type); pen = st.Pen; labelBrush = st.Label; }
+        else { pen = PlanePen; labelBrush = PlaneLabelBrush; }
+        ctx.DrawLine(pen, a, b);
+        var ft = Label(pl.Label, 11, labelBrush);
         var origin = new Point(b.X + 4, b.Y - ft.Height / 2);
         ctx.FillRectangle(LabelHalo, new Rect(origin.X - 1, origin.Y, ft.Width + 2, ft.Height));
         ctx.DrawText(ft, origin);
@@ -577,7 +596,10 @@ public sealed class LivePreviewControl : Control
 
     private void DrawNorthArrow(DrawingContext ctx, Size size)
     {
-        double cx = size.Width - 24, top = 14, bottom = 40;
+        // Drop the arrow below the top-right "Plan / Projected profile view" caption (≈ one label
+        // height) so the two no longer overlap.
+        const double captionDrop = 22;
+        double cx = size.Width - 24, top = 14 + captionDrop, bottom = 40 + captionDrop;
         ctx.DrawLine(NorthPen, new Point(cx, bottom), new Point(cx, top + 4));
         var head = new StreamGeometry();
         using (var g = head.Open())

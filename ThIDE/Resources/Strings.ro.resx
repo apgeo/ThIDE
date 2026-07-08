@@ -195,8 +195,12 @@
   <data name="Struct_ShowAllPlanes" xml:space="preserve"><value>Afișează toate planele în graficul 3D</value></data>
   <data name="Struct_HideAllPlanes" xml:space="preserve"><value>Ascunde toate planele</value></data>
   <data name="Struct_InvertPlanes" xml:space="preserve"><value>Inversează vizibilitatea planelor</value></data>
-  <data name="Struct_ShowInPreview" xml:space="preserve"><value>Arată în previzualizare</value></data>
+  <data name="Struct_ShowInPreview" xml:space="preserve"><value>Arată în previzualizarea hărții principale</value></data>
   <data name="Struct_ShowInPreviewTip" xml:space="preserve"><value>Suprapune planele rezultate vizibile peste Previzualizarea principală ca linii groase direcție/înclinare; clic pe o linie acolo selectează planul aici</value></data>
+  <data name="Struct_HighlightInPreview" xml:space="preserve"><value>Evidențiază în previzualizarea principală</value></data>
+  <data name="Struct_PopOutPlot" xml:space="preserve"><value>Scoate în panou separat</value></data>
+  <data name="Struct_PopOutPlotTip" xml:space="preserve"><value>Mută graficul 3D într-un panou propriu, care poate fi andocat sau plutitor</value></data>
+  <data name="Struct_PlotPanelTitle" xml:space="preserve"><value>Grafic 3D structural</value></data>
   <data name="Struct_ExportPlanesTip" xml:space="preserve"><value>Exportă grila planelor rezultate într-un fișier CSV</value></data>
   <data name="Struct_Col_Visible" xml:space="preserve"><value>Vizibil</value></data>
   <data name="Struct_PlaneDiscTip" xml:space="preserve"><value>Afișează discul acestui plan în graficul 3D</value></data>
@@ -638,6 +642,8 @@
   <data name="Live_StationsTip" xml:space="preserve"><value>Arată punctul mic la fiecare stație</value></data>
   <data name="Live_Junctions" xml:space="preserve"><value>Joncțiuni</value></data>
   <data name="Live_JunctionsTip" xml:space="preserve"><value>Arată joncțiunile de echivalare pe care se poate face clic (unde topografiile sunt îmbinate)</value></data>
+  <data name="Live_ShowStructurePlanes" xml:space="preserve"><value>Arată planele structurale</value></data>
+  <data name="Live_ClickToHighlightHint" xml:space="preserve"><value>Faceți clic pe orice linie pentru a o evidenția.</value></data>
   <data name="Live_Legend" xml:space="preserve"><value>Legendă</value></data>
   <data name="Live_LegendTip" xml:space="preserve"><value>Arată legenda / lista de vizibilitate (treceți cu mouse-ul peste un rând pentru a localiza grupul)</value></data>
   <data name="Live_Separate" xml:space="preserve"><value>Separă</value></data>
@@ -1029,4 +1035,9 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Common_Redo" xml:space="preserve"><value>Refă</value></data>
   <data name="Replace_UndoTip" xml:space="preserve"><value>Anulează ultima operație Înlocuiește tot în toate fișierele modificate</value></data>
   <data name="Replace_RedoTip" xml:space="preserve"><value>Reaplică ultima operație Înlocuiește tot anulată în toate fișierele</value></data>
+  <data name="Struct_Col_Type" xml:space="preserve"><value>Tip</value></data>
+  <data name="Struct_TypeWatermark" xml:space="preserve"><value>tip…</value></data>
+  <data name="Struct_Type_Fault" xml:space="preserve"><value>Falie</value></data>
+  <data name="Struct_Type_Bedding" xml:space="preserve"><value>Plan de stratificație</value></data>
+  <data name="Struct_Type_Joint" xml:space="preserve"><value>Diaclază</value></data>
 </root>

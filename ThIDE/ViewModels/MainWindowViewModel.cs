@@ -89,6 +89,7 @@ public partial class MainWindowViewModel : ViewModelBase
     public MapViewerToolViewModel MapViewerTool { get; }
     public Model3DViewerToolViewModel Model3DViewerTool { get; }
     public StructuralGeologyToolViewModel StructuralGeologyTool { get; }
+    public StructuralPlotToolViewModel StructuralPlotTool { get; }
     public SettingsToolViewModel SettingsTool { get; }
 
     /// <summary>clickable breadcrumb of the @-qualified name at the caret (status bar).</summary>
@@ -484,6 +485,7 @@ public partial class MainWindowViewModel : ViewModelBase
         MapViewerToolViewModel mapViewerTool,
         Model3DViewerToolViewModel model3dViewerTool,
         StructuralGeologyToolViewModel structuralGeologyTool,
+        StructuralPlotToolViewModel structuralPlotTool,
         SettingsToolViewModel settingsTool,
         IModelEditService? editService = null,
         ILayoutService? layout = null,
@@ -538,6 +540,7 @@ public partial class MainWindowViewModel : ViewModelBase
         MapViewerTool = mapViewerTool;
         Model3DViewerTool = model3dViewerTool;
         StructuralGeologyTool = structuralGeologyTool;
+        StructuralPlotTool = structuralPlotTool;
         SettingsTool = settingsTool;
         Breadcrumb = new BreadcrumbViewModel(_documents);
 
@@ -632,6 +635,8 @@ public partial class MainWindowViewModel : ViewModelBase
         WorkspaceExplorer.NavigateRequested += (_, span) => NavigateTo(span);
         // double-click a measurement / plane → jump to its source span.
         StructuralGeologyTool.Structural.NavigateRequested += (_, span) => NavigateTo(span);
+        // "Pop out to panel" on the 3D Plot tab → surface its own dockable/floatable panel.
+        StructuralGeologyTool.Structural.PlotPopOutRequested += (_, _) => _factory.ShowToolInDocuments(StructuralPlotTool);
         // "Show in 3D" from a station/survey context menu → reveal it in the embedded viewer.
         _documents.ShowInModel3DRequested += (_, name) => OnUiThread(() =>
         {
@@ -750,6 +755,7 @@ public partial class MainWindowViewModel : ViewModelBase
         new MapViewerToolViewModel(new MapViewerViewModel()),
         new Model3DViewerToolViewModel(new Model3DViewerViewModel()),
         new StructuralGeologyToolViewModel(new StructuralGeologyViewModel()),
+        new StructuralPlotToolViewModel(new StructuralGeologyViewModel()),
         new SettingsToolViewModel(new SettingsViewModel(), new KeyboardShortcutsViewModel()))
     {
         // Designer-only.
@@ -770,6 +776,7 @@ public partial class MainWindowViewModel : ViewModelBase
         new MapViewerToolViewModel(new MapViewerViewModel()),
         new Model3DViewerToolViewModel(new Model3DViewerViewModel()),
         new StructuralGeologyToolViewModel(new StructuralGeologyViewModel()),
+        new StructuralPlotToolViewModel(new StructuralGeologyViewModel()),
         new SettingsToolViewModel(new SettingsViewModel(), new KeyboardShortcutsViewModel()));
 
     /// <summary>Wires the storage picker once the View is attached to a TopLevel.</summary>

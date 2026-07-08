@@ -53,6 +53,7 @@ public sealed class DockFactory : Factory
     private readonly MapViewerToolViewModel _mapViewer;
     private readonly Model3DViewerToolViewModel _model3dViewer;
     private readonly StructuralGeologyToolViewModel _structuralGeology;
+    private readonly StructuralPlotToolViewModel _structuralPlot;
     private readonly ThIDE.Services.IAppSettingsService? _appSettings;
     private readonly SettingsToolViewModel _settings;
 
@@ -76,6 +77,7 @@ public sealed class DockFactory : Factory
         MapViewerToolViewModel mapViewer,
         Model3DViewerToolViewModel model3dViewer,
         StructuralGeologyToolViewModel structuralGeology,
+        StructuralPlotToolViewModel structuralPlot,
         SettingsToolViewModel settings,
         ThIDE.Services.ILayoutService? layoutState = null,
         ThIDE.Services.IAppSettingsService? appSettings = null,
@@ -95,6 +97,7 @@ public sealed class DockFactory : Factory
         _mapViewer = mapViewer;
         _model3dViewer = model3dViewer;
         _structuralGeology = structuralGeology;
+        _structuralPlot = structuralPlot;
         _appSettings = appSettings;
         _settings = settings;
         _layoutState = layoutState;
@@ -563,6 +566,7 @@ public sealed class DockFactory : Factory
         ["MapViewer"]      = _mapViewer,
         ["Model3DViewer"]  = _model3dViewer,
         ["StructuralGeology"] = _structuralGeology,
+        ["StructuralPlot"] = _structuralPlot,
         ["Settings"]       = _settings,
     };
 
@@ -886,6 +890,7 @@ public sealed class DockFactory : Factory
             ["MapViewer"]      = () => _mapViewer,
             ["Model3DViewer"]  = () => _model3dViewer,
             ["StructuralGeology"] = () => _structuralGeology,
+            ["StructuralPlot"] = () => _structuralPlot,
             ["Settings"]       = () => _settings,
         };
 

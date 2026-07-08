@@ -195,8 +195,12 @@
   <data name="Struct_ShowAllPlanes" xml:space="preserve"><value>Show every plane in the 3D plot</value></data>
   <data name="Struct_HideAllPlanes" xml:space="preserve"><value>Hide every plane</value></data>
   <data name="Struct_InvertPlanes" xml:space="preserve"><value>Invert plane visibility</value></data>
-  <data name="Struct_ShowInPreview" xml:space="preserve"><value>Show in preview</value></data>
+  <data name="Struct_ShowInPreview" xml:space="preserve"><value>Show in Mainline Map</value></data>
   <data name="Struct_ShowInPreviewTip" xml:space="preserve"><value>Overlay the visible resulted planes on the Mainline Preview as thick strike/dip lines; click a line there to select its plane here</value></data>
+  <data name="Struct_HighlightInPreview" xml:space="preserve"><value>Highlight in Mainline Preview</value></data>
+  <data name="Struct_PopOutPlot" xml:space="preserve"><value>Pop out to panel</value></data>
+  <data name="Struct_PopOutPlotTip" xml:space="preserve"><value>Move the 3D plot into its own dockable/floatable panel</value></data>
+  <data name="Struct_PlotPanelTitle" xml:space="preserve"><value>Structural 3D Plot</value></data>
   <data name="Struct_ExportPlanesTip" xml:space="preserve"><value>Export the resulted-planes grid to a CSV file</value></data>
   <data name="Struct_Col_Visible" xml:space="preserve"><value>Visible</value></data>
   <data name="Struct_PlaneDiscTip" xml:space="preserve"><value>Show this plane's disc in the 3D plot</value></data>
@@ -638,6 +642,8 @@
   <data name="Live_StationsTip" xml:space="preserve"><value>Show the small dot at each station</value></data>
   <data name="Live_Junctions" xml:space="preserve"><value>Junctions</value></data>
   <data name="Live_JunctionsTip" xml:space="preserve"><value>Show clickable equate junctions (where surveys are stitched together)</value></data>
+  <data name="Live_ShowStructurePlanes" xml:space="preserve"><value>Struct. planes</value></data>
+  <data name="Live_ClickToHighlightHint" xml:space="preserve"><value>Click on any line to highlight it.</value></data>
   <data name="Live_Legend" xml:space="preserve"><value>Legend</value></data>
   <data name="Live_LegendTip" xml:space="preserve"><value>Show the legend / visibility list (hover a row to locate that group)</value></data>
   <data name="Live_Separate" xml:space="preserve"><value>Separate</value></data>
@@ -1029,4 +1035,9 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Common_Redo" xml:space="preserve"><value>Redo</value></data>
   <data name="Replace_UndoTip" xml:space="preserve"><value>Undo the last Replace All across every file it changed</value></data>
   <data name="Replace_RedoTip" xml:space="preserve"><value>Re-apply the last undone Replace All across every file</value></data>
+  <data name="Struct_Col_Type" xml:space="preserve"><value>Type</value></data>
+  <data name="Struct_TypeWatermark" xml:space="preserve"><value>type…</value></data>
+  <data name="Struct_Type_Fault" xml:space="preserve"><value>Fault</value></data>
+  <data name="Struct_Type_Bedding" xml:space="preserve"><value>Bedding plane</value></data>
+  <data name="Struct_Type_Joint" xml:space="preserve"><value>Joint</value></data>
 </root>

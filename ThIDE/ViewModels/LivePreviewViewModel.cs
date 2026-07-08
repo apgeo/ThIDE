@@ -134,7 +134,7 @@ public sealed partial class GroupVisibility : ObservableObject
 /// </summary>
 public sealed record StructuralPlaneOverlay(
     string Name, string Label, double StrikeDeg, double DipDeg, double DeclinationApplied,
-    QualifiedName Anchor, bool IsSelected);
+    QualifiedName Anchor, bool IsSelected, string Type = "");
 
 /// <summary>
 /// A projected structural-plane line for the control: a thick clickable line through the plane's
@@ -142,7 +142,7 @@ public sealed record StructuralPlaneOverlay(
 /// Geology panel selects the matching plane row; IsSelected mirrors that grid's selection back.
 /// </summary>
 public sealed record PlaneOverlayLine(
-    double X1, double Y1, double X2, double Y2, string Name, string Label, bool IsSelected);
+    double X1, double Y1, double X2, double Y2, string Name, string Label, bool IsSelected, string Type = "");
 
 /// <summary>Raw spanning-tree layout: a position per (equate-merged) station, its component, and the count.</summary>
 public sealed record SketchLayout(
@@ -252,6 +252,9 @@ public sealed partial class LivePreviewViewModel : ObservableObject
     private IReadOnlyList<StructuralPlaneOverlay> _structuralPlanes = Array.Empty<StructuralPlaneOverlay>();
     private Dictionary<string, (double X, double Y)> _planePositions = new(StringComparer.Ordinal);
     private EquateGraph? _planeEquates;
+    // Back-reference so the Mainline Preview panel can host its own copy of the Structural Geology
+    // panel's "show planes in preview" toggle (see ShowPlanesInPreview / AttachStructural below).
+    private StructuralGeologyViewModel? _structural;
     // Caches source lines per file (with last-write stamp) for survey/file leading-comment extraction.
     private readonly Dictionary<string, (DateTime Stamp, string[] Lines)> _fileLines = new(StringComparer.OrdinalIgnoreCase);
     private bool _suppressApply;
@@ -376,6 +379,29 @@ public sealed partial class LivePreviewViewModel : ObservableObject
         RebuildPlaneOverlay();
     }
 
+    /// <summary>
+    /// Wired once by the Structural Geology view-model so the Mainline Preview panel can carry its
+    /// own "Show Structure Planes" button that toggles the very same state (renamed on this panel;
+    /// see the Structural Geology panel's "Show in Mainline Map Preview" buttons).
+    /// </summary>
+    internal void AttachStructural(StructuralGeologyViewModel structural)
+    {
+        _structural = structural;
+        _structural.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(StructuralGeologyViewModel.ShowPlanesInPreview))
+                OnPropertyChanged(nameof(ShowPlanesInPreview));
+        };
+    }
+
+    /// <summary>Proxies <see cref="StructuralGeologyViewModel.ShowPlanesInPreview"/> so this panel's
+    /// own toggle button stays in perfect sync with the Structural Geology panel's copies.</summary>
+    public bool ShowPlanesInPreview
+    {
+        get => _structural?.ShowPlanesInPreview ?? false;
+        set { if (_structural is not null) _structural.ShowPlanesInPreview = value; }
+    }
+
     private void Rebuild()
     {
         var (shots, models) = Gather();
@@ -494,7 +520,7 @@ public sealed partial class LivePreviewViewModel : ObservableObject
             var (dx, dy) = PlaneTraceDirection(p.StrikeDeg - p.DeclinationApplied, p.DipDeg, IsElevation, ProfileAzimuth);
             lines.Add(new PlaneOverlayLine(
                 at.X - dx * half, at.Y - dy * half, at.X + dx * half, at.Y + dy * half,
-                p.Name, p.Label, p.IsSelected));
+                p.Name, p.Label, p.IsSelected, p.Type));
         }
         PlaneLines = lines;
     }

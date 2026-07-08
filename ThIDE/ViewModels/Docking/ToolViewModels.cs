@@ -207,6 +207,17 @@ public sealed class StructuralGeologyToolViewModel : ToolViewModelBase
         : base("StructuralGeology", "Structural Geology", lang) => Structural = structural;
 }
 
+/// <summary>The 3D Plot popped out of the Structural Geology wizard into its own dockable/floatable
+/// panel (see <see cref="StructuralGeologyViewModel.PopOutPlotCommand"/>). Wraps the SAME content
+/// VM as <see cref="StructuralGeologyToolViewModel"/> — no state is duplicated.</summary>
+public sealed class StructuralPlotToolViewModel : ToolViewModelBase
+{
+    [JsonIgnore] public StructuralGeologyViewModel Structural { get; }
+    public StructuralPlotToolViewModel() : base("StructuralPlot", "Struct_PlotPanelTitle") => Structural = null!;
+    public StructuralPlotToolViewModel(StructuralGeologyViewModel structural, ILanguageService? lang = null)
+        : base("StructuralPlot", "Struct_PlotPanelTitle", lang) => Structural = structural;
+}
+
 public sealed class XviToolViewModel : ToolViewModelBase
 {
     [JsonIgnore] public XviReferencesViewModel Xvi { get; }

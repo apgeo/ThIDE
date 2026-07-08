@@ -15,7 +15,8 @@
     <DockPanel>
         <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="6,3">
           <DockPanel>
-            <docking:PanelWindowControls DockPanel.Dock="Right" VerticalAlignment="Top" Margin="6,0,0,0" />
+            <docking:PanelWindowControls DockPanel.Dock="Right" Orientation="Vertical"
+                                         VerticalAlignment="Top" Margin="4,0,0,0" />
             <WrapPanel Orientation="Horizontal">
                 <!-- View: plan, or a projected profile along a bearing (radio-style push buttons). -->
                 <TextBlock Text="{l:Loc M3D_View}" VerticalAlignment="Center" FontSize="11" Foreground="Gray" Margin="0,0,4,0" />
@@ -79,6 +80,13 @@
 
                 <Separator Width="1" Margin="3,2" Background="Gray" />
 
+                <!-- Mirrors the Structural Geology panel's "Show in Mainline Map Preview" toggles
+                     (same bound state, renamed here per the Mainline Preview's own terminology). -->
+                <ToggleButton Content="{l:Loc Live_ShowStructurePlanes}" IsChecked="{Binding Preview.ShowPlanesInPreview, Mode=TwoWay}"
+                              ToolTip.Tip="{l:Loc Struct_ShowInPreviewTip}" FontSize="11" Padding="6,2" Margin="0,0,6,2" />
+
+                <Separator Width="1" Margin="3,2" Background="Gray" />
+
                 <!-- Colour legs by data origin (also buckets the legend / visibility groups). -->
                 <TextBlock Text="{l:Loc Live_Color}" VerticalAlignment="Center" FontSize="11" Foreground="Gray" Margin="0,0,4,0" />
                 <ToggleButton Content="{l:Loc Live_None}" Command="{Binding Preview.SetColorModeCommand}" CommandParameter="none" FontSize="11" Padding="6,2" Margin="0,0,2,2"
@@ -126,6 +134,14 @@
                            Foreground="#EEEEEE" />
             </Border>
 
+            <!-- Shown only while the structural-plane overlay is on: hints that the lines are clickable. -->
+            <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="8"
+                    Background="#E62B2B2B" CornerRadius="4" Padding="7,3" IsHitTestVisible="False"
+                    BoxShadow="0 1 4 0 #40000000" IsVisible="{Binding Preview.ShowPlanesInPreview}">
+                <TextBlock Text="{l:Loc Live_ClickToHighlightHint}" FontSize="11" FontWeight="SemiBold"
+                           Foreground="#EEEEEE" />
+            </Border>
+
             <!-- Interactive legend = the per-survey/file/component visibility list. Hover a row to
                  frame that group in the sketch. Shown only when enabled and there's >1 group. -->
             <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8"
@@ -140,6 +156,26 @@
                     <TextBlock DockPanel.Dock="Top" Text="{l:Loc Live_Groups}" FontWeight="SemiBold" FontSize="11"
                                Foreground="#EEEEEE" Margin="0,0,0,3" />
                     <UniformGrid DockPanel.Dock="Top" Columns="4" Margin="0,0,0,4">
+                        <!-- The overlay backdrop is dark (#2B2B2B); give these buttons a light,
+                             contrasting fill + text so they don't disappear into it. -->
+                        <UniformGrid.Styles>
+                            <Style Selector="Button">
+                                <Setter Property="Foreground" Value="#F0F0F0" />
+                                <Setter Property="Background" Value="#5A5A5A" />
+                                <Setter Property="BorderBrush" Value="#8A8A8A" />
+                                <Setter Property="BorderThickness" Value="1" />
+                            </Style>
+                            <Style Selector="Button /template/ ContentPresenter#PART_ContentPresenter">
+                                <Setter Property="Background" Value="#5A5A5A" />
+                                <Setter Property="BorderBrush" Value="#8A8A8A" />
+                                <Setter Property="Foreground" Value="#F0F0F0" />
+                            </Style>
+                            <Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+                                <Setter Property="Background" Value="#767676" />
+                                <Setter Property="BorderBrush" Value="#AFAFAF" />
+                                <Setter Property="Foreground" Value="#FFFFFF" />
+                            </Style>
+                        </UniformGrid.Styles>
                         <Button Content="{l:Loc Live_All}" Command="{Binding Preview.ShowAllGroupsCommand}" FontSize="10" Padding="4,0" Margin="0,0,2,0"
                                 ToolTip.Tip="{l:Loc Live_AllTip}" />
                         <Button Content="{l:Loc Live_NoneBtn}" Command="{Binding Preview.HideAllGroupsCommand}" FontSize="10" Padding="4,0" Margin="0,0,2,0"
