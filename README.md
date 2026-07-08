@@ -24,7 +24,7 @@ A cross-platform desktop **workbench / IDE for [Therion](https://therion.speleo.
 - **Extensible & scriptable** — a headless CLI, an editor-agnostic **LSP** server, script hooks, and a semantic-rule plugin loader.
 - **Cross-platform** (Windows / macOS / Linux), localized in **English and Romanian** (additions are welcome).
 
-A complete feature reference: **[docs/features.md](docs/features.md)**.
+A complete feature reference: **[docs/features.md](docs/features.md)**. A quick view in: **[docs/screenshots.md](docs/screenshots.md)**.
 
 ---
 The application is in an alpha development stage: there are known bugs to be fixed, UI evolves, features are tested to varying degrees, and testing on Linux and macOS was sparse.
