@@ -145,6 +145,17 @@ public sealed partial class Model3DViewerViewModel : ObservableObject
 
     partial void OnIsEngineAvailableChanged(bool value) => OnPropertyChanged(nameof(ShowFallback));
 
+    /// <summary>
+    /// The View is about to (re)navigate the web control to a full page — the URL-testing button,
+    /// away to an external site or back to the viewer page. Drops the ready handshake and
+    /// re-stages the current model so the next viewer page load re-shows it on its 'ready'.
+    /// </summary>
+    public void PrepareViewerReload()
+    {
+        _viewerReady = false;
+        _pendingModelName = CurrentModelPath is { } p ? _host?.StageModel(p) : null;
+    }
+
     /// <summary>Loads (stages + displays) a specific .lox/.3d model file.</summary>
     public void LoadModel(string path)
     {
@@ -437,20 +448,30 @@ public sealed partial class Model3DViewerViewModel : ObservableObject
     {
         if (!_started) EnsureStarted();
         RefreshModels();
-        if (!HasModel && Models.FirstOrDefault(m => m.Exists) is { } first)
-            LoadModel(first.Path);
+        OpenDefaultModel();
     }
 
     /// <summary>
-    /// #4: a workspace/thconfig switch unloads the current model first, then re-applies the normal
-    /// default-load rules (so an open panel jumps to the new project's default model).
+    /// #4: a workspace/thconfig switch unloads the previous project's model first, then opens the new
+    /// project's default model. This runs even before the panel has been shown — <see cref="LoadModel"/>
+    /// only stages the model then (exactly like the after-build auto-preview), so it appears the moment
+    /// the 3D Viewer is opened, and replaces the old model immediately when the panel is already visible.
     /// </summary>
     private void OnSessionChanged()
     {
         UnloadCurrentModel();
         RefreshModels();
-        if (_started && Models.FirstOrDefault(m => m.Exists) is { } first)
-            LoadModel(first.Path);
+        OpenDefaultModel();
+    }
+
+    /// <summary>Opens the first existing model in the populated list when nothing is loaded yet.
+    /// Skipped when the 3D viewer is disabled or its assets are missing (the panel can't be shown,
+    /// so there is no point staging a — possibly large — model file).</summary>
+    private void OpenDefaultModel()
+    {
+        if (HasModel || !IsAvailable) return;
+        if (_settings?.Current.EnableModel3DViewer == false) return;
+        if (Models.FirstOrDefault(m => m.Exists) is { } first) LoadModel(first.Path);
     }
 
     /// <summary>Clears the displayed model + its state (without touching the control toggles).</summary>

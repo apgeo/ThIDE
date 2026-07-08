@@ -99,6 +99,7 @@ public partial class PreferencesViewModel : ObservableObject
     [ObservableProperty] private bool _autoShowFirstMapOnLoad;
     [ObservableProperty] private bool _enableInAppViewer;
     [ObservableProperty] private bool _openPdfInternal;         // open clicked PDFs in the in-app viewer
+    [ObservableProperty] private bool _open3dInternal;          // open clicked .lox/.3d in the embedded 3D viewer
     [ObservableProperty] private bool _enableModel3DViewer;     // (off by default)
     [ObservableProperty] private bool _enableModel3DAutoPreview;
     [ObservableProperty] private bool _enableStructuralGeology;  // (off by default)
@@ -109,6 +110,12 @@ public partial class PreferencesViewModel : ObservableObject
     /// <summary>Recompute the Leads register live from the unsaved buffers as you type.</summary>
     [ObservableProperty] private bool _autoRecalcLeads;
     [ObservableProperty] private bool _localFixGroundsDisconnected;  // bare fix (no cs) suppresses TH_SEM_015
+
+    // ---- debug: embedded web view workarounds (restart to apply) ----
+    [ObservableProperty] private bool _webViewDisableDmabufRenderer;
+    [ObservableProperty] private bool _webViewDisableCompositing;
+    [ObservableProperty] private bool _webViewExperimentalOffscreen;
+    [ObservableProperty] private bool _webViewEnableDevTools;
 
     // ---- editor behaviour ----
     [ObservableProperty] private bool _showRenamePreviewBeforeApply;
@@ -198,6 +205,7 @@ public partial class PreferencesViewModel : ObservableObject
         _autoShowFirstMapOnLoad = s.AutoShowFirstMapOnLoad;
         _enableInAppViewer = s.EnableInAppViewer;
         _openPdfInternal = s.OpenPdfInInternalViewer;
+        _open3dInternal = s.Open3dInInternalViewer;
         _enableModel3DViewer = s.EnableModel3DViewer;
         _enableStructuralGeology = s.EnableStructuralGeology;
         _enableModel3DAutoPreview = s.EnableModel3DAutoPreview;
@@ -207,6 +215,10 @@ public partial class PreferencesViewModel : ObservableObject
         _enableMediaScan = s.EnableMediaScan;
         _autoRecalcLeads = s.AutoRecalcLeads;
         _localFixGroundsDisconnected = s.LocalFixGroundsDisconnected;
+        _webViewDisableDmabufRenderer = s.WebViewDisableDmabufRenderer;
+        _webViewDisableCompositing = s.WebViewDisableCompositing;
+        _webViewExperimentalOffscreen = s.WebViewExperimentalOffscreen;
+        _webViewEnableDevTools = s.WebViewEnableDevTools;
         _showRenamePreviewBeforeApply = s.ShowRenamePreviewBeforeApply;
         _maxHighlightLines = s.MaxHighlightLines;
         _maxHighlightKB = s.MaxHighlightKB;
@@ -241,6 +253,7 @@ public partial class PreferencesViewModel : ObservableObject
             new("external", Resources.Tr.Get("Pref_External"),    "therion loch aven survex path detect tool executable"),
             new("associations", Resources.Tr.Get("Pref_Associations"), "file association open with default extension .th .th2 thconfig register associate double click"),
             new("extensions", "Extensions",                       "extension plugin hook script macro on save build open command run lsp cli enable disable performance"),
+            new("debug",    Resources.Tr.Get("Pref_Debug"),       "debug webview webkit linux dmabuf compositing renderer blank white black box 3d viewer devtools inspector offscreen wayland nvidia"),
             new("keyboard", Resources.Tr.Get("Pref_Keyboard"),    "key binding gesture shortcut hotkey command"),
         };
         _sections = new ObservableCollection<PreferenceSection>(_allSections);
@@ -261,6 +274,7 @@ public partial class PreferencesViewModel : ObservableObject
     public bool IsExternal    => SelectedSection?.Id == "external";
     public bool IsAssociations => SelectedSection?.Id == "associations";
     public bool IsExtensions  => SelectedSection?.Id == "extensions";
+    public bool IsDebug       => SelectedSection?.Id == "debug";
     public bool IsKeyboard    => SelectedSection?.Id == "keyboard";
 
     partial void OnSelectedSectionChanged(PreferenceSection? value)
@@ -278,6 +292,7 @@ public partial class PreferencesViewModel : ObservableObject
         OnPropertyChanged(nameof(IsExternal));
         OnPropertyChanged(nameof(IsAssociations));
         OnPropertyChanged(nameof(IsExtensions));
+        OnPropertyChanged(nameof(IsDebug));
         OnPropertyChanged(nameof(IsKeyboard));
     }
 
@@ -356,6 +371,7 @@ public partial class PreferencesViewModel : ObservableObject
             AutoShowFirstMapOnLoad = AutoShowFirstMapOnLoad,
             EnableInAppViewer = EnableInAppViewer,
             OpenPdfInInternalViewer = OpenPdfInternal,
+            Open3dInInternalViewer = Open3dInternal,
             EnableModel3DViewer = EnableModel3DViewer,
             EnableStructuralGeology = EnableStructuralGeology,
             EnableModel3DAutoPreview = EnableModel3DAutoPreview,
@@ -365,6 +381,10 @@ public partial class PreferencesViewModel : ObservableObject
             EnableMediaScan = EnableMediaScan,
             AutoRecalcLeads = AutoRecalcLeads,
             LocalFixGroundsDisconnected = LocalFixGroundsDisconnected,
+            WebViewDisableDmabufRenderer = WebViewDisableDmabufRenderer,
+            WebViewDisableCompositing = WebViewDisableCompositing,
+            WebViewExperimentalOffscreen = WebViewExperimentalOffscreen,
+            WebViewEnableDevTools = WebViewEnableDevTools,
             ShowRenamePreviewBeforeApply = ShowRenamePreviewBeforeApply,
             MaxHighlightLines = MaxHighlightLines,
             MaxHighlightKB = MaxHighlightKB,

@@ -300,6 +300,9 @@
                               IsChecked="{Binding AutoShowFirstMapOnLoad}" />
                     <CheckBox Content="{l:Loc Pref_Vis_Model3D}"
                               IsChecked="{Binding EnableModel3DViewer}" />
+                    <CheckBox Content="{l:Loc Pref_Vis_Model3DInternal}" Margin="20,0,0,0"
+                              IsEnabled="{Binding EnableModel3DViewer}"
+                              IsChecked="{Binding Open3dInternal}" />
                     <CheckBox Content="{l:Loc Pref_Vis_Model3DAuto}"
                               IsChecked="{Binding EnableModel3DAutoPreview}" />
                     <CheckBox Content="{l:Loc Pref_Vis_Structural}"
@@ -388,6 +391,33 @@
                     <Separator Margin="0,6" />
                     <TextBlock Text="{l:Loc Pref_CliHelp}"
                                Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
+                </StackPanel>
+
+                <!-- Debug: low-level embedded-web-view workarounds (restart to apply). -->
+                <StackPanel Spacing="10" IsVisible="{Binding IsDebug}">
+                    <TextBlock Text="{l:Loc Pref_Debug}" FontSize="16" FontWeight="Bold" />
+                    <TextBlock Text="{l:Loc Pref_DebugHelp}"
+                               Foreground="Gray" TextWrapping="Wrap" />
+
+                    <TextBlock Text="{l:Loc Pref_DebugWebViewLinux}" FontWeight="SemiBold" Margin="0,8,0,0" />
+                    <CheckBox Content="{l:Loc Pref_DbgDisableDmabuf}"
+                              IsChecked="{Binding WebViewDisableDmabufRenderer}" />
+                    <TextBlock Text="{l:Loc Pref_DbgDisableDmabufHelp}"
+                               Foreground="Gray" FontSize="11" TextWrapping="Wrap" Margin="24,0,0,0" />
+                    <CheckBox Content="{l:Loc Pref_DbgDisableCompositing}"
+                              IsChecked="{Binding WebViewDisableCompositing}" />
+                    <TextBlock Text="{l:Loc Pref_DbgDisableCompositingHelp}"
+                               Foreground="Gray" FontSize="11" TextWrapping="Wrap" Margin="24,0,0,0" />
+                    <CheckBox Content="{l:Loc Pref_DbgOffscreen}"
+                              IsChecked="{Binding WebViewExperimentalOffscreen}" />
+                    <TextBlock Text="{l:Loc Pref_DbgOffscreenHelp}"
+                               Foreground="Gray" FontSize="11" TextWrapping="Wrap" Margin="24,0,0,0" />
+
+                    <Separator Margin="0,6" />
+                    <CheckBox Content="{l:Loc Pref_DbgDevTools}"
+                              IsChecked="{Binding WebViewEnableDevTools}" />
+                    <TextBlock Text="{l:Loc Pref_DbgDevToolsHelp}"
+                               Foreground="Gray" FontSize="11" TextWrapping="Wrap" Margin="24,0,0,0" />
                 </StackPanel>
 
                 <!-- Keyboard Shortcuts -->

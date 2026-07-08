@@ -129,6 +129,17 @@
   <data name="Pref_Workspace" xml:space="preserve"><value>Workspace</value></data>
   <data name="Pref_Build" xml:space="preserve"><value>Build &amp; Output</value></data>
   <data name="Pref_External" xml:space="preserve"><value>External Tools</value></data>
+  <data name="Pref_Debug" xml:space="preserve"><value>Debug</value></data>
+  <data name="Pref_DebugHelp" xml:space="preserve"><value>Low-level switches for the embedded web views (3D viewer, structural plots). Changes take effect after restarting ThIDE.</value></data>
+  <data name="Pref_DebugWebViewLinux" xml:space="preserve"><value>Embedded web engine (Linux / WebKitGTK)</value></data>
+  <data name="Pref_DbgDisableDmabuf" xml:space="preserve"><value>Disable DMA-BUF renderer</value></data>
+  <data name="Pref_DbgDisableDmabufHelp" xml:space="preserve"><value>Works around a blank (white/black) web panel on many Linux systems (NVIDIA drivers, Wayland). Linux only; on by default. Ignored when WEBKIT_DISABLE_DMABUF_RENDERER is already set externally.</value></data>
+  <data name="Pref_DbgDisableCompositing" xml:space="preserve"><value>Disable accelerated compositing (last resort)</value></data>
+  <data name="Pref_DbgDisableCompositingHelp" xml:space="preserve"><value>Forces software rendering when the panel is still blank. Disables WebGL, so the 3D viewer cannot render — intended for the 2D structural plots. Linux only; off by default.</value></data>
+  <data name="Pref_DbgOffscreen" xml:space="preserve"><value>Experimental offscreen web view</value></data>
+  <data name="Pref_DbgOffscreenHelp" xml:space="preserve"><value>Renders web content through the app compositor instead of embedding a native window. May fix embedding problems, may affect input handling. Linux only; off by default.</value></data>
+  <data name="Pref_DbgDevTools" xml:space="preserve"><value>Enable web developer tools</value></data>
+  <data name="Pref_DbgDevToolsHelp" xml:space="preserve"><value>Allows opening the engine’s inspector/DevTools from the 3D viewer panel and via right-click ▸ Inspect. All platforms; on by default.</value></data>
   <data name="Pref_Keyboard" xml:space="preserve"><value>Keyboard Shortcuts</value></data>
   <!-- Shared / common UI strings -->
   <data name="Common_ShowHideColumns" xml:space="preserve"><value>Show or hide columns</value></data>
@@ -594,6 +605,11 @@
   <data name="M3D_Defaults" xml:space="preserve"><value>↺ Defaults</value></data>
   <data name="M3D_DefaultsTip" xml:space="preserve"><value>Reset all switches to their default values</value></data>
   <data name="M3D_DevToolsTip" xml:space="preserve"><value>Open the web engine's developer tools (or F12 / right-click ▸ Inspect)</value></data>
+  <data name="M3D_OpenUrlTip" xml:space="preserve"><value>Open a web address in the embedded viewer (testing)</value></data>
+  <data name="M3D_OpenUrlTitle" xml:space="preserve"><value>Open web page</value></data>
+  <data name="M3D_OpenUrlPrompt" xml:space="preserve"><value>Web address (http/https)</value></data>
+  <data name="M3D_OpenUrlInvalid" xml:space="preserve"><value>Enter a valid http:// or https:// address.</value></data>
+  <data name="M3D_OpenUrlStatus" xml:space="preserve"><value>Showing an external page — press 🌐 again and OK to return to the 3D viewer.</value></data>
   <data name="M3D_View" xml:space="preserve"><value>View:</value></data>
   <data name="M3D_Plan" xml:space="preserve"><value>Plan</value></data>
   <data name="M3D_ProfileN" xml:space="preserve"><value>Profile — north</value></data>
@@ -979,6 +995,8 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Pick_MapsFilter" xml:space="preserve"><value>Maps (PDF / SVG / image)</value></data>
   <data name="Pick_Open3D" xml:space="preserve"><value>Open 3D model</value></data>
   <data name="Pick_3DFilter" xml:space="preserve"><value>3D models (.lox / .3d)</value></data>
+  <data name="Viewer3D_DevToolsHint" xml:space="preserve"><value>Developer tools: right-click the 3D view ▸ Inspect, or press F12. JS logs are also in the Log panel.</value></data>
+  <data name="WebView_LinuxEngineMissing" xml:space="preserve"><value>The embedded web engine (WebKitGTK) is not installed. Install the webkit2gtk package (Ubuntu/Debian: libwebkit2gtk-4.1-0), then restart ThIDE.</value></data>
   <data name="Pick_TherionFiles" xml:space="preserve"><value>Therion files</value></data>
   <data name="Pick_TherionConfig" xml:space="preserve"><value>Therion configuration</value></data>
   <!-- Confirm / warning dialogs -->
@@ -1025,6 +1043,7 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Assoc_StateUnknown" xml:space="preserve"><value>Unknown</value></data>
   <data name="Assoc_MsgBulkFmt" xml:space="preserve"><value>Done — {0} of {1} file types updated.</value></data>
   <data name="Pref_Vis_PdfInternal" xml:space="preserve"><value>Open clicked PDFs in the in-app viewer</value></data>
+  <data name="Pref_Vis_Model3DInternal" xml:space="preserve"><value>Open clicked .lox / .3d models in the built-in 3D viewer</value></data>
   <data name="Tb_ValidateOnType" xml:space="preserve"><value>Validate on type — re-check the file and whole thconfig file-tree as you type (not just on save)</value></data>
   <data name="Pref_ValidateOnType" xml:space="preserve"><value>Validate on type (file + whole thconfig file-tree)</value></data>
   <data name="Pref_ValidateOnTypeHelp" xml:space="preserve"><value>Re-validate the whole object graph from the unsaved editor buffers on a short typing pause, instead of only on save. Off by default — it re-analyses the thconfig file-tree on every pause, which can be heavy on large workspaces.</value></data>

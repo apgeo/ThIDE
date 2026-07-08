@@ -174,6 +174,8 @@ public sealed record AppSettings
     public bool EnableInAppViewer { get; init; } = true;
     /// <summary>Open a clicked PDF output in the in-app map viewer instead of the external app. On by default.</summary>
     public bool OpenPdfInInternalViewer { get; init; } = true;
+    /// <summary>Open a clicked .lox/.3d output in the embedded 3D viewer instead of the external tool. On by default.</summary>
+    public bool Open3dInInternalViewer { get; init; } = true;
     /// <summary>the embedded 3D model viewer (CaveView.js in a NativeWebView). On by default.</summary>
     public bool EnableModel3DViewer { get; init; } = true;
     /// <summary>auto-load the newest .lox/.3d into the 3D viewer after a build.</summary>
@@ -184,6 +186,21 @@ public sealed record AppSettings
     public bool EnableStructuralGeology { get; init; } = true;
     /// <summary>persisted panel state (detection/declination options, columns, plot prefs) as JSON.</summary>
     public string StructuralGeologySettings { get; init; } = "";
+
+    // ---- web view debug switches (Preferences ▸ Debug; applied at startup, restart to change) ----
+    /// <summary>Linux: set WEBKIT_DISABLE_DMABUF_RENDERER=1 so WebKitGTK doesn't render the
+    /// embedded web views blank (NVIDIA / Wayland). On by default; an externally-set value of the
+    /// environment variable always wins.</summary>
+    public bool WebViewDisableDmabufRenderer { get; init; } = true;
+    /// <summary>Linux, last resort: set WEBKIT_DISABLE_COMPOSITING_MODE=1 (software rendering).
+    /// Disables WebGL, so the 3D viewer cannot render — for the 2D plots only. Off by default.</summary>
+    public bool WebViewDisableCompositing { get; init; }
+    /// <summary>Linux: use the control's experimental offscreen mode (renders through the app
+    /// compositor instead of embedding a native X11 window). Off by default.</summary>
+    public bool WebViewExperimentalOffscreen { get; init; }
+    /// <summary>allow opening the web engine's inspector/DevTools (3D viewer panel button,
+    /// right-click ▸ Inspect, F12). On by default.</summary>
+    public bool WebViewEnableDevTools { get; init; } = true;
 
     // ---- survey-domain analytics — disable on huge projects for performance ----
     /// <summary>compute the project statistics / charts / team / entrances /

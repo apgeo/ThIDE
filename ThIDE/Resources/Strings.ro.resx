@@ -129,6 +129,17 @@
   <data name="Pref_Workspace" xml:space="preserve"><value>Proiect</value></data>
   <data name="Pref_Build" xml:space="preserve"><value>Compilare &amp; ie&#x219;ire</value></data>
   <data name="Pref_External" xml:space="preserve"><value>Unelte externe</value></data>
+  <data name="Pref_Debug" xml:space="preserve"><value>Depanare</value></data>
+  <data name="Pref_DebugHelp" xml:space="preserve"><value>Comutatoare de nivel scăzut pentru vizualizările web încorporate (vizualizatorul 3D, diagramele structurale). Modificările se aplică după repornirea ThIDE.</value></data>
+  <data name="Pref_DebugWebViewLinux" xml:space="preserve"><value>Motor web încorporat (Linux / WebKitGTK)</value></data>
+  <data name="Pref_DbgDisableDmabuf" xml:space="preserve"><value>Dezactivează redarea DMA-BUF</value></data>
+  <data name="Pref_DbgDisableDmabufHelp" xml:space="preserve"><value>Ocolește un panou web gol (alb/negru) pe multe sisteme Linux (drivere NVIDIA, Wayland). Doar Linux; activat implicit. Ignorat când WEBKIT_DISABLE_DMABUF_RENDERER este deja setat extern.</value></data>
+  <data name="Pref_DbgDisableCompositing" xml:space="preserve"><value>Dezactivează compunerea accelerată (ultimă soluție)</value></data>
+  <data name="Pref_DbgDisableCompositingHelp" xml:space="preserve"><value>Forțează redarea software când panoul rămâne gol. Dezactivează WebGL, deci vizualizatorul 3D nu poate reda — destinat diagramelor structurale 2D. Doar Linux; dezactivat implicit.</value></data>
+  <data name="Pref_DbgOffscreen" xml:space="preserve"><value>Vizualizare web offscreen (experimental)</value></data>
+  <data name="Pref_DbgOffscreenHelp" xml:space="preserve"><value>Redă conținutul web prin compozitorul aplicației în loc să încorporeze o fereastră nativă. Poate rezolva probleme de încorporare, poate afecta interacțiunea. Doar Linux; dezactivat implicit.</value></data>
+  <data name="Pref_DbgDevTools" xml:space="preserve"><value>Activează instrumentele de dezvoltare web</value></data>
+  <data name="Pref_DbgDevToolsHelp" xml:space="preserve"><value>Permite deschiderea inspectorului/DevTools din panoul 3D și prin clic dreapta ▸ Inspectează. Toate platformele; activat implicit.</value></data>
   <data name="Pref_Keyboard" xml:space="preserve"><value>Scurt&#x103;turi tastatur&#x103;</value></data>
   <!-- Shared / common UI strings -->
   <data name="Common_ShowHideColumns" xml:space="preserve"><value>Afișează sau ascunde coloane</value></data>
@@ -594,6 +605,11 @@
   <data name="M3D_Defaults" xml:space="preserve"><value>↺ Implicite</value></data>
   <data name="M3D_DefaultsTip" xml:space="preserve"><value>Resetează toate comutatoarele la valorile implicite</value></data>
   <data name="M3D_DevToolsTip" xml:space="preserve"><value>Deschide uneltele de dezvoltare ale motorului web (sau F12 / clic dreapta ▸ Inspectare)</value></data>
+  <data name="M3D_OpenUrlTip" xml:space="preserve"><value>Deschide o adresă web în vizualizatorul încorporat (testare)</value></data>
+  <data name="M3D_OpenUrlTitle" xml:space="preserve"><value>Deschide pagină web</value></data>
+  <data name="M3D_OpenUrlPrompt" xml:space="preserve"><value>Adresă web (http/https)</value></data>
+  <data name="M3D_OpenUrlInvalid" xml:space="preserve"><value>Introduceți o adresă http:// sau https:// validă.</value></data>
+  <data name="M3D_OpenUrlStatus" xml:space="preserve"><value>Se afișează o pagină externă — apăsați 🌐 din nou și OK pentru a reveni la vizualizatorul 3D.</value></data>
   <data name="M3D_View" xml:space="preserve"><value>Vedere:</value></data>
   <data name="M3D_Plan" xml:space="preserve"><value>Plan</value></data>
   <data name="M3D_ProfileN" xml:space="preserve"><value>Profil — nord</value></data>
@@ -979,6 +995,8 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Pick_MapsFilter" xml:space="preserve"><value>Hărți (PDF / SVG / imagine)</value></data>
   <data name="Pick_Open3D" xml:space="preserve"><value>Deschide model 3D</value></data>
   <data name="Pick_3DFilter" xml:space="preserve"><value>Modele 3D (.lox / .3d)</value></data>
+  <data name="Viewer3D_DevToolsHint" xml:space="preserve"><value>Instrumente de dezvoltare: clic dreapta pe vizualizarea 3D ▸ Inspectează, sau tasta F12. Jurnalele JS apar și în panoul Jurnal.</value></data>
+  <data name="WebView_LinuxEngineMissing" xml:space="preserve"><value>Motorul web încorporat (WebKitGTK) nu este instalat. Instalați pachetul webkit2gtk (Ubuntu/Debian: libwebkit2gtk-4.1-0), apoi reporniți ThIDE.</value></data>
   <data name="Pick_TherionFiles" xml:space="preserve"><value>Fișiere Therion</value></data>
   <data name="Pick_TherionConfig" xml:space="preserve"><value>Configurație Therion</value></data>
   <!-- Confirm / warning dialogs -->
@@ -1025,6 +1043,7 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Assoc_StateUnknown" xml:space="preserve"><value>Necunoscut</value></data>
   <data name="Assoc_MsgBulkFmt" xml:space="preserve"><value>Gata — {0} din {1} tipuri actualizate.</value></data>
   <data name="Pref_Vis_PdfInternal" xml:space="preserve"><value>Deschide PDF-urile pe care faceți clic în vizualizatorul intern</value></data>
+  <data name="Pref_Vis_Model3DInternal" xml:space="preserve"><value>Deschide modelele .lox / .3d pe care faceți clic în vizualizatorul 3D integrat</value></data>
   <data name="Tb_ValidateOnType" xml:space="preserve"><value>Validează la tastare — reverifică fișierul și întregul proiect în timp ce tastați (nu doar la salvare)</value></data>
   <data name="Pref_ValidateOnType" xml:space="preserve"><value>Validează la tastare (fișier + întregul proiect)</value></data>
   <data name="Pref_ValidateOnTypeHelp" xml:space="preserve"><value>Revalidează întregul graf de obiecte din conținutul nesalvat al editorului la o scurtă pauză de tastare, nu doar la salvare. Dezactivat implicit — reanalizează proiectul la fiecare pauză, ceea ce poate fi costisitor pentru proiecte mari.</value></data>

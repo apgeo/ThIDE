@@ -18,7 +18,8 @@
                  narrow panes so every button stays visible (like the Live Preview toolbar). -->
             <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="6,4">
               <DockPanel>
-                <docking:PanelWindowControls DockPanel.Dock="Right" VerticalAlignment="Top" Margin="6,0,0,0" />
+                <docking:PanelWindowControls DockPanel.Dock="Right" Orientation="Vertical"
+                                             VerticalAlignment="Top" Margin="4,0,0,0" />
                 <WrapPanel Orientation="Horizontal">
                     <!-- Model dropdown: every model produced by the active thconfig's export-model commands. -->
                     <TextBlock Text="{l:Loc M3D_Model}" VerticalAlignment="Center" FontSize="11" Foreground="Gray" Margin="0,0,4,0" />
@@ -41,6 +42,10 @@
                     <Button Content="{l:Loc Common_RefreshGlyph}" Command="{Binding Viewer.RefreshCommand}" FontSize="11" Padding="6,2" Margin="0,0,2,2" />
                     <Button Content="DevTools" Command="{Binding Viewer.OpenDevToolsCommand}" FontSize="11" Padding="6,2" Margin="0,0,2,2"
                             ToolTip.Tip="{l:Loc M3D_DevToolsTip}" />
+                    <!-- Testing aid: navigate the embedded engine to an arbitrary page (e.g. to check
+                         the Linux web-view workarounds render at all). -->
+                    <Button Content="🌐" Click="OnOpenUrl" FontSize="11" Padding="6,2" Margin="0,0,2,2"
+                            ToolTip.Tip="{l:Loc M3D_OpenUrlTip}" />
                     <Button Content="{l:Loc Common_OpenExternally}" Command="{Binding Viewer.OpenExternallyCommand}"
                             IsEnabled="{Binding Viewer.HasModel}" FontSize="11" Padding="8,2" Margin="0,0,6,2" />
 

@@ -7,7 +7,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -16,6 +15,7 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
+using ThIDE.Services;
 using ThIDE.ViewModels;
 using ThIDE.ViewModels.Docking;
 
@@ -25,7 +25,7 @@ public partial class Model3DViewerToolView : UserControl
 {
     private NativeWebView? _web;
     private Model3DViewerViewModel? _vm;
-    private bool _eventsWired;
+    private bool _vmWired;       // guards against double-subscribing the singleton VM's events
     private bool _reFitQueued;   // coalesces bursts of size changes into a single canvas re-fit
     private Window? _fsWindow;   // borderless full-screen host for the whole panel
 
@@ -37,33 +37,55 @@ public partial class Model3DViewerToolView : UserControl
         TryInitialize();
     }
 
+    // Dock recreates/re-parents tool views while the ViewModel stays a singleton. If every view
+    // instance left its handlers on the VM they'd accumulate — one click firing on all past views
+    // (e.g. three DevTools windows) and those views never getting GC'd. Drop this view's
+    // subscriptions when it leaves the tree; OnAttachedToVisualTree re-wires the current one.
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+        UnwireVm();
+    }
+
     protected override void OnDataContextChanged(EventArgs e)
     {
         base.OnDataContextChanged(e);
         TryInitialize();
     }
 
-    // Create + wire the web control exactly once (the singleton VM persists across tab switches).
+    // Create the web control once per view instance and keep exactly one set of VM subscriptions
+    // (the singleton VM persists across tab switches; see OnDetachedFromVisualTree).
     private void TryInitialize()
     {
         if (DataContext is not Model3DViewerToolViewModel tool || tool.Viewer is null) return;
         _vm = tool.Viewer;
 
-        // Full-screen works even when the engine/assets are missing (the fallback panel goes
-        // full-screen too), so wire it before the availability gate — but only once.
-        if (!_eventsWired) { _vm.FullscreenRequested += OnFullscreenRequested; _eventsWired = true; }
+        // Wire the VM events before the availability gate: full-screen (and the DevTools hint) work
+        // even when the engine/assets are missing. WireVm is idempotent, so the two entry points
+        // (attach + data-context) don't double-subscribe.
+        WireVm();
 
         if (_web is not null) return;
 
         // Assets missing → leave the fallback panel visible; don't instantiate the engine.
         if (!_vm.IsAvailable) { _vm.EnsureStarted(); return; }
 
+        // Missing native engine (e.g. no webkit2gtk on Linux) never throws from the ctor — the
+        // adapter initialises asynchronously and just leaves a dead empty box — so probe first.
+        if (WebViewSupport.DescribeMissingEngine() is { } missingEngine)
+        {
+            _vm.SetEngineUnavailable(missingEngine);
+            return;
+        }
+
         try
         {
             _web = new NativeWebView();
             // JS console output + uncaught errors are forwarded to the in-app Log panel by viewer.html
-            // (the {type:"console"} bridge message). The engine's own inspector is also available where
-            // supported (WebView2: right-click ▸ Inspect / F12), so no extra wiring is needed here (#2).
+            // (the {type:"console"} bridge message). The engine's own inspector is opened through
+            // WebViewSupport (WebView2 DevTools window / WebKit inspector); the hook below applies
+            // the Debug switches (DevTools, offscreen) and must land before the control attaches.
+            WebViewSupport.ConfigureWebView(_web);
             WebHost.Children.Add(_web);
             // Keep the native control (and thus CaveView's WebGL canvas) glued to the panel size. The
             // native child doesn't always follow an Avalonia-side layout change on its own; when it lags,
@@ -77,8 +99,6 @@ public partial class Model3DViewerToolView : UserControl
                 _web.Height = b0.Height;
             }
             _web.WebMessageReceived += OnWebMessage;
-            _vm.ScriptRequested += OnScriptRequested;
-            _vm.DevToolsRequested += OnDevToolsRequested;
 
             var url = _vm.EnsureStarted();
             if (url is not null) _web.Source = new Uri(url);
@@ -89,6 +109,26 @@ public partial class Model3DViewerToolView : UserControl
             // No native web engine (e.g. missing WebView2 runtime / WebKitGTK) → graceful fallback.
             _vm.SetEngineUnavailable("The system web engine (WebView2 / WebKit) could not be initialised: " + ex.Message);
         }
+    }
+
+    // Subscribe this view to the singleton VM's C#→JS / full-screen / DevTools events, exactly once.
+    // Idempotent so the attach + data-context entry points can both call it.
+    private void WireVm()
+    {
+        if (_vm is null || _vmWired) return;
+        _vm.FullscreenRequested += OnFullscreenRequested;
+        _vm.ScriptRequested += OnScriptRequested;
+        _vm.DevToolsRequested += OnDevToolsRequested;
+        _vmWired = true;
+    }
+
+    private void UnwireVm()
+    {
+        if (_vm is null || !_vmWired) return;
+        _vm.FullscreenRequested -= OnFullscreenRequested;
+        _vm.ScriptRequested -= OnScriptRequested;
+        _vm.DevToolsRequested -= OnDevToolsRequested;
+        _vmWired = false;
     }
 
     private void OnWebMessage(object? sender, WebMessageReceivedEventArgs e)
@@ -120,6 +160,37 @@ public partial class Model3DViewerToolView : UserControl
             },
         });
         if (files.FirstOrDefault()?.TryGetLocalPath() is { } path) _vm.LoadModel(path);
+    }
+
+    // ---- URL test: navigate the embedded engine to an arbitrary page ----
+
+    // Testing aid (e.g. for the Linux web-view workarounds): navigate the web control to any
+    // http(s) page to check the engine renders at all. The dialog pre-fills the viewer's own
+    // address, so pressing 🌐 again and OK returns to the 3D viewer (the VM re-sends the model
+    // on the page's next 'ready' message).
+    private async void OnOpenUrl(object? sender, RoutedEventArgs e)
+    {
+        if (_web is null || _vm is null || TopLevel.GetTopLevel(this) is not Window owner) return;
+        var home = _vm.EnsureStarted();
+        var input = await new InputDialog(
+            ThIDE.Resources.Tr.Get("M3D_OpenUrlTitle"),
+            ThIDE.Resources.Tr.Get("M3D_OpenUrlPrompt"),
+            home ?? "https://").ShowAsync(owner);
+        if (string.IsNullOrWhiteSpace(input) || _web is null || _vm is null) return;
+
+        var url = input.Trim();
+        if (!url.Contains("://", StringComparison.Ordinal)) url = "https://" + url;
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
+            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        {
+            _vm.Status = ThIDE.Resources.Tr.Get("M3D_OpenUrlInvalid");
+            return;
+        }
+
+        _vm.PrepareViewerReload();
+        _web.Source = uri;
+        var goingHome = home is not null && string.Equals(url, home, StringComparison.OrdinalIgnoreCase);
+        if (!goingHome) _vm.Status = ThIDE.Resources.Tr.Get("M3D_OpenUrlStatus");
     }
 
     // ---- full screen: reparent the whole panel into a borderless full-screen window ----
@@ -229,74 +300,10 @@ public partial class Model3DViewerToolView : UserControl
 
     private void OnDevToolsRequested(object? sender, EventArgs e)
     {
-        // NativeWebView exposes no public DevTools API, but on Windows/WebView2 the CoreWebView2 is
-        // reachable through the known internal chain (verified against Avalonia.Controls.WebView 12.0.1):
-        //   NativeWebView._controlHostImplTcs.Task.Result  (INativeWebViewControlImpl)
-        //     .TryGetAdapter()                             (WebView2BaseAdapter on Windows)
-        //     .TryGetWebView2()                            (ICoreWebView2)
-        //     .OpenDevToolsWindow()
-        // Anything missing (not-yet-initialised, or a non-WebView2 engine) → the F12 / Inspect hint.
-        if (TryOpenNativeDevTools()) return;
+        // WebView2 DevTools window on Windows, WebKit inspector on Linux; not-yet-initialised
+        // or an engine without a programmatic entry point → the Inspect / F12 hint.
+        if (_web is not null && WebViewSupport.TryOpenDevTools(_web)) return;
         if (_vm is not null)
-            _vm.Status = "Developer tools: right-click the 3D view ▸ Inspect, or press F12. JS logs are also in the Log panel.";
-    }
-
-    private bool TryOpenNativeDevTools()
-    {
-        if (_web is null) return false;
-        try
-        {
-            const BindingFlags Inst = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
-
-            // 1. NativeWebView._controlHostImplTcs → Task → Result (the platform control host).
-            var tcs = _web.GetType().GetField("_controlHostImplTcs", Inst)?.GetValue(_web);
-            if (tcs?.GetType().GetProperty("Task")?.GetValue(tcs) is not Task { IsCompletedSuccessfully: true } task)
-                return false;
-            var impl = task.GetType().GetProperty("Result")?.GetValue(task);
-            if (impl is null) return false;
-
-            // 2. The WebView2 adapter: prefer the ready-completion TCS (the adapter itself), and fall
-            //    back to TryGetAdapter(). Either can be null until the page's WebView2 core is created.
-            var adapter = FindMethod(impl.GetType(), "TryGetAdapter")?.Invoke(impl, null)
-                          ?? TaskResult(GetField(impl, "_webViewReadyCompletion"));
-            if (adapter is null) return false;
-
-            // 3. adapter.TryGetWebView2() → ICoreWebView2. NOTE: TryGetWebView2 is a *non-public* method
-            //    declared on the base WebView2BaseAdapter, so a public-only GetMethod misses it — walk
-            //    the hierarchy with NonPublic (this was the bug: getCore/core came back null).
-            var getCore = FindMethod(adapter.GetType(), "TryGetWebView2");
-            var core = getCore?.Invoke(adapter, null);
-            if (core is null || getCore is null) return false;
-
-            // 4. Invoke OpenDevToolsWindow() via the declared ICoreWebView2 interface (COM dispatch).
-            var open = getCore.ReturnType.GetMethod("OpenDevToolsWindow", Type.EmptyTypes)
-                       ?? core.GetType().GetMethod("OpenDevToolsWindow", Type.EmptyTypes);
-            if (open is null) return false;
-            open.Invoke(core, null);
-            return true;
-        }
-        catch { return false; }
-    }
-
-    // GetMethod misses inherited non-public methods, so walk the base chain matching declared-only.
-    private static MethodInfo? FindMethod(Type? t, string name)
-    {
-        const BindingFlags F = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly;
-        for (; t is not null; t = t.BaseType)
-        {
-            var m = t.GetMethod(name, F, binder: null, Type.EmptyTypes, modifiers: null);
-            if (m is not null) return m;
-        }
-        return null;
-    }
-
-    private static object? GetField(object obj, string name) =>
-        obj.GetType().GetField(name, BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(obj);
-
-    private static object? TaskResult(object? tcsOrTask)
-    {
-        var task = (tcsOrTask?.GetType().GetProperty("Task")?.GetValue(tcsOrTask) ?? tcsOrTask) as Task;
-        if (task is null || !task.IsCompletedSuccessfully) return null;
-        return task.GetType().GetProperty("Result")?.GetValue(task);
+            _vm.Status = ThIDE.Resources.Tr.Get("Viewer3D_DevToolsHint");
     }
 }
