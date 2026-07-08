@@ -259,48 +259,26 @@ public static class DataAnalytics
             foreach (var shot in perFile.Shots)
             {
                 total++;
-                if ((shot.Flags & ShotFlags.Splay) != 0) splay++;
-                if ((shot.Flags & ShotFlags.Duplicate) != 0) dup++;
-                if (shot.Length is { } l && l == 0) zero++;
-                if (shot.Length is null) noLen++;
-                if (shot.Compass is null && (shot.Flags & ShotFlags.Splay) == 0) noComp++;
-                if (shot.Clino is null && (shot.Flags & ShotFlags.Splay) == 0) noClino++;
-                if (shot.Clino is { } c && Math.Abs(c) >= 80 && Math.Abs(c) < 90) steep++;
-                var fields = shot.FieldDefinition?.Fields ?? ImmutableArray<string>.Empty;
-                if (!HasBacksight(fields)) noBack++;
-                if (!HasLrud(fields)) noLrud++;
+                if (DataQualityChecks.IsSplay(shot)) splay++;
+                if (DataQualityChecks.IsDuplicate(shot)) dup++;
+                if (DataQualityChecks.IsZeroLength(shot)) zero++;
+                if (DataQualityChecks.IsMissingLength(shot)) noLen++;
+                if (DataQualityChecks.IsMissingCompass(shot)) noComp++;
+                if (DataQualityChecks.IsMissingClino(shot)) noClino++;
+                if (DataQualityChecks.IsSteep(shot)) steep++;
+                if (DataQualityChecks.HasNoBacksight(shot)) noBack++;
+                if (DataQualityChecks.HasNoLrud(shot)) noLrud++;
             }
 
         int undated = 0, teamless = 0;
         foreach (var sv in model.SurveysByFullName.Values)
         {
-            if (sv.Dates.IsDefaultOrEmpty) undated++;
-            if (sv.Team.IsDefaultOrEmpty) teamless++;
+            if (DataQualityChecks.IsUndated(sv)) undated++;
+            if (DataQualityChecks.IsTeamless(sv)) teamless++;
         }
 
         return new DataQualityReport(total, zero, noLen, noComp, noClino, noBack, noLrud,
             steep, splay, dup, undated, teamless);
-    }
-
-    private static bool HasBacksight(ImmutableArray<string> fields)
-    {
-        foreach (var f in fields)
-            if (f.StartsWith("back", StringComparison.OrdinalIgnoreCase)) return true;
-        return false;
-    }
-
-    private static bool HasLrud(ImmutableArray<string> fields)
-    {
-        bool l = false, r = false, u = false, d = false;
-        foreach (var f in fields)
-            switch (f.ToLowerInvariant())
-            {
-                case "left": l = true; break;
-                case "right": r = true; break;
-                case "up" or "ceiling": u = true; break;
-                case "down" or "floor": d = true; break;
-            }
-        return l && r && u && d;
     }
 
     // ===== shared helpers ====================================================
@@ -346,5 +324,50 @@ public static class DataAnalytics
         if (at > 0) s = s[..at];
         s = s.Replace(" ", string.Empty).Replace("\t", string.Empty);
         return s.Length == 0 ? "(undated)" : s;
+    }
+}
+
+/// <summary>
+/// Row-level data-quality predicates over a single shot or survey. Shared by the dashboard counts
+/// (<see cref="DataAnalytics.DataQuality"/>) and the Object Browser drill-down filters, so a metric's
+/// count and the rows it filters to always describe the same set.
+/// </summary>
+public static class DataQualityChecks
+{
+    public static bool IsSplay(ShotSymbol s) => (s.Flags & ShotFlags.Splay) != 0;
+    public static bool IsDuplicate(ShotSymbol s) => (s.Flags & ShotFlags.Duplicate) != 0;
+    public static bool IsZeroLength(ShotSymbol s) => s.Length is { } l && l == 0;
+    public static bool IsMissingLength(ShotSymbol s) => s.Length is null;
+    public static bool IsMissingCompass(ShotSymbol s) => s.Compass is null && !IsSplay(s);
+    public static bool IsMissingClino(ShotSymbol s) => s.Clino is null && !IsSplay(s);
+    public static bool IsSteep(ShotSymbol s) => s.Clino is { } c && Math.Abs(c) >= 80 && Math.Abs(c) < 90;
+    public static bool HasNoBacksight(ShotSymbol s) => !HasBacksight(Fields(s));
+    public static bool HasNoLrud(ShotSymbol s) => !HasLrud(Fields(s));
+
+    public static bool IsUndated(SurveySymbol s) => s.Dates.IsDefaultOrEmpty;
+    public static bool IsTeamless(SurveySymbol s) => s.Team.IsDefaultOrEmpty;
+
+    private static ImmutableArray<string> Fields(ShotSymbol s) =>
+        s.FieldDefinition?.Fields ?? ImmutableArray<string>.Empty;
+
+    private static bool HasBacksight(ImmutableArray<string> fields)
+    {
+        foreach (var f in fields)
+            if (f.StartsWith("back", StringComparison.OrdinalIgnoreCase)) return true;
+        return false;
+    }
+
+    private static bool HasLrud(ImmutableArray<string> fields)
+    {
+        bool l = false, r = false, u = false, d = false;
+        foreach (var f in fields)
+            switch (f.ToLowerInvariant())
+            {
+                case "left": l = true; break;
+                case "right": r = true; break;
+                case "up" or "ceiling": u = true; break;
+                case "down" or "floor": d = true; break;
+            }
+        return l && r && u && d;
     }
 }
