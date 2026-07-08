@@ -26,12 +26,12 @@
     <!-- SemVer MAJOR.MINOR.PATCH — bump these deliberately for a release. -->
     <TherionVersionMajor>0</TherionVersionMajor>
     <TherionVersionMinor>2</TherionVersionMinor>
-    <TherionVersionPatch>0</TherionVersionPatch>
+    <TherionVersionPatch>1</TherionVersionPatch>
     <!-- Pre-release label per SemVer: alpha, beta, beta.1, rc.1 … empty ⇒ a stable release. -->
-    <TherionPrerelease></TherionPrerelease>
+    <TherionPrerelease>alpha.1</TherionPrerelease>
 
     <!-- Per-build counter → FileVersion's 4th field. Seed used when build-number.txt is absent. -->
-    <TherionBuildNumberSeed>250</TherionBuildNumberSeed>
+    <TherionBuildNumberSeed>0</TherionBuildNumberSeed>
     <TherionBuildNumberFile>$(MSBuildThisFileDirectory)build-number.txt</TherionBuildNumberFile>
     <TherionBuildNumber Condition="Exists('$(TherionBuildNumberFile)')">$([System.Text.RegularExpressions.Regex]::Replace($([System.IO.File]::ReadAllText('$(TherionBuildNumberFile)')), '[^0-9]', ''))</TherionBuildNumber>
     <TherionBuildNumber Condition="'$(TherionBuildNumber)' == ''">$(TherionBuildNumberSeed)</TherionBuildNumber>
