@@ -90,3 +90,10 @@ The logic lives in the dependency-free **`Therion.Structural`** library (detecti
 plane fit, and declination), consuming the shared `ShotSymbol` / `SemanticModel` object graph. It has no
 UI or web dependency, so it can be embedded in other tools or automation. Entry point:
 `StructuralAnalysis.Analyze(semanticModel, options)`.
+
+## Screenshots
+[![Alt Text](./screenshots/low-resolution/thide_geostruct_overview_lr.jpeg)](./screenshots/thide_geostruct_overview.jpeg)
+
+[![Alt Text](./screenshots/low-resolution/thide_geostruct_1_lr.jpeg)](./screenshots/thide_geostruct_1.jpeg)
+[![Alt Text](./screenshots/low-resolution/thide_geostruct_2_lr.jpeg)](./screenshots/thide_geostruct_2.jpeg)
+[![Alt Text](./screenshots/low-resolution/thide_geostruct_3_lr.jpeg)](./screenshots/thide_geostruct_3.jpeg)
