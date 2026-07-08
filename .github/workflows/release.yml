@@ -40,11 +40,46 @@ jobs:
           path: ThIDE/Assets/ThIDE-User-Guide.pdf
           if-no-files-found: error
 
-      - name: Attach the guide to the GitHub Release (tags only)
+      # The Release body: a templated download table built from the deterministic release-asset URLs
+      # (github.com/<owner>/<repo>/releases/download/<tag>/<file>). Portable archives are named by RID
+      # (version-less: ThIDE-win-x64.zip); installers embed the version (ThIDE-Setup-<ver>.exe).
+      - name: Compose the download table (tags only)
+        id: notes
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: |
+          TAG="$GITHUB_REF_NAME"
+          VER="${TAG#v}"                                   # strip leading v -> version for filenames
+          BASE="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}"
+          {
+            echo 'body<<NOTES_EOF'
+            echo '## Downloads'
+            echo ''
+            echo '| Platform | Download |'
+            echo '|----------|----------|'
+            echo "| **Windows** — installer | [ThIDE-Setup-${VER}.exe](${BASE}/ThIDE-Setup-${VER}.exe) |"
+            echo "| Windows — portable (.zip) | [ThIDE-win-x64.zip](${BASE}/ThIDE-win-x64.zip) |"
+            echo "| **Linux** — Debian/Ubuntu (.deb) | [thide_${VER}_amd64.deb](${BASE}/thide_${VER}_amd64.deb) |"
+            echo "| Linux — AppImage | [ThIDE-${VER}-x86_64.AppImage](${BASE}/ThIDE-${VER}-x86_64.AppImage) |"
+            echo "| Linux — portable (.tar.gz) | [ThIDE-linux-x64.tar.gz](${BASE}/ThIDE-linux-x64.tar.gz) |"
+            echo "| **macOS** (Apple Silicon) — portable | [ThIDE-osx-arm64.tar.gz](${BASE}/ThIDE-osx-arm64.tar.gz) |"
+            echo "| User Guide (PDF) | [ThIDE-User-Guide.pdf](${BASE}/ThIDE-User-Guide.pdf) |"
+            echo ''
+            echo '_Self-contained builds — no system .NET runtime required. The full asset list is in the **Assets** section below._'
+            echo 'NOTES_EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      # This is the job that *creates* the Release (it runs before the publish matrix), so the body +
+      # generate_release_notes live here — both only take effect at creation. GitHub prepends our
+      # download table to the auto-generated "What's Changed". The publish matrix then only attaches
+      # files (no body), leaving this intact.
+      - name: Create the Release with notes + attach the guide (tags only)
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           prerelease: ${{ contains(github.ref_name, '-') }}
+          body: ${{ steps.notes.outputs.body }}
+          generate_release_notes: true
           files: ThIDE/Assets/ThIDE-User-Guide.pdf
           fail_on_unmatched_files: false
 
@@ -148,6 +183,9 @@ jobs:
             ThIDE/Assets/ThIDE-User-Guide.pdf
           if-no-files-found: ignore
 
+      # Attaches this leg's archives/installers to the Release the `guide` job already created.
+      # Deliberately sets NO `body` here: the notes/download-table are owned by the guide job, and
+      # this step runs 3x in parallel — setting a body here would race and clobber those notes.
       - name: Attach to GitHub Release (tags only)
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
