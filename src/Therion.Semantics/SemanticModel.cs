@@ -56,10 +56,11 @@ public sealed class SemanticModel : ISymbolIndex
     public OccurrenceIndex Occurrences { get; init; } = OccurrenceIndex.Empty;
 
     /// <summary>
-    /// <c>equate</c> references this file couldn't resolve on its own (cross-file / <c>@</c> targets).
+    /// Station references this file couldn't resolve on its own (cross-file / <c>@</c> targets):
+    /// <c>equate</c> members plus <c>@</c>-qualified <c>fix</c>/<c>station</c>/<c>mark</c> tokens.
     /// The workspace re-validates these with cross-file visibility (<see cref="WorkspaceSemanticModel
-    /// .ValidateEquateReferences"/>); use <see cref="UnresolvedEquateDiagnostics"/> only when no
-    /// workspace is available (a standalone file).
+    /// .ValidateEquateReferences"/>) and finalizes them into the workspace occurrence index; use
+    /// <see cref="UnresolvedEquateDiagnostics"/> only when no workspace is available (a standalone file).
     /// </summary>
     public ImmutableArray<EquateRef> UnresolvedEquateRefs { get; init; } = ImmutableArray<EquateRef>.Empty;
 

@@ -202,6 +202,7 @@ public sealed class SemanticBinder
         if (string.IsNullOrEmpty(st.Station)) return;
         var qn = QualifyLocal(st.Station, scope);
         AddStationOccurrence(ctx, qn, st.StationSpan, st.Station, OccurrenceRole.Declaration);
+        RecordAtQualifiedStationRef(ctx, st.Station, st.StationSpan);
         var existing = ctx.Stations.TryGetValue(qn, out var s)
             ? s
             : new StationSymbol(qn, st.Span, StationDeclarationKind.Shot, ImmutableArray<SourceSpan>.Empty);
@@ -241,7 +242,22 @@ public sealed class SemanticBinder
             ctx.Equates.Add(qn);
             var span = i < mk.StationSpans.Length ? mk.StationSpans[i] : default;
             AddStationOccurrence(ctx, qn, span, raw, OccurrenceRole.Reference);
+            RecordAtQualifiedStationRef(ctx, raw, span);
         }
+    }
+
+    /// <summary>
+    /// Defers an <c>@</c>-qualified <c>fix</c>/<c>station</c>/<c>mark</c> token to the workspace
+    /// tier, exactly like a cross-file equate member. The per-file walk cannot resolve <c>@</c> at
+    /// all (it qualifies the raw token into a scope-local name), so without this the workspace
+    /// occurrence index never attributes these tokens to the declaring station and a rename misses
+    /// them (the grind.th shape: a root file whose centreline is all <c>fix X@sub</c> /
+    /// <c>station X@sub</c> lines).
+    /// </summary>
+    private static void RecordAtQualifiedStationRef(BindContext ctx, string raw, SourceSpan span)
+    {
+        if (span.IsEmpty || raw.IndexOf('@') < 0) return;
+        ctx.UnresolvedEquateRefs.Add(new EquateRef(raw, span));
     }
 
     /// <summary>Folds a <c>flags [not] name...</c> token list into the active flag set.</summary>
@@ -385,6 +401,7 @@ public sealed class SemanticBinder
     {
         var qn = QualifyLocal(fix.Station, scope);
         AddStationOccurrence(ctx, qn, fix.StationSpan, fix.Station, OccurrenceRole.Declaration);
+        RecordAtQualifiedStationRef(ctx, fix.Station, fix.StationSpan);
         if (ctx.Stations.TryGetValue(qn, out var existing))
         {
             if (existing.Kind == StationDeclarationKind.Fix)

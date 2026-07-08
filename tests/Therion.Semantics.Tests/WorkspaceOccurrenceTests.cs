@@ -43,6 +43,74 @@ public class WorkspaceOccurrenceTests
     }
 
     [Fact]
+    public void Cross_file_at_fix_and_station_command_refs_merge_with_the_declaring_file()
+    {
+        // grind.th shape: the root file references child-file stations via `fix X@survey` and
+        // `station X@survey "..."` (not just equate). Those tokens must be attributed to the real
+        // declaring station, or a rename launched from / reaching into the root file misses them.
+        var ws = Build(
+            ("/p/B.th", """
+                survey svb
+                  centreline
+                    data normal from to length compass clino
+                    G0 G1 1.0 0 0
+                  endcentreline
+                endsurvey
+                """),
+            ("/p/A.th", """
+                survey root
+                  centreline
+                    fix G0@svb 45.5 25.2 0
+                    station G0@svb "entrance"
+                  endcentreline
+                endsurvey
+                """));
+
+        var occ = ws.FindOccurrences(new SymbolId(SymbolKind.Station, QualifiedName.Of("svb", "G0")));
+        Assert.Contains(occ, o => o.Span.FilePath.EndsWith("B.th"));   // shot in the declaring file
+        // Both A.th refs (fix line + station line), narrowed to the point name "G0" (length 2).
+        var inA = occ.Where(o => o.Span.FilePath.EndsWith("A.th")).ToList();
+        Assert.Equal(2, inA.Count);
+        Assert.All(inA, o => Assert.Equal(2, o.Span.Length));
+
+        // ...and the @-path survey component on those lines counts as a survey occurrence.
+        var svbOcc = ws.FindOccurrences(new SymbolId(SymbolKind.Survey, QualifiedName.Of("svb")));
+        Assert.Equal(2, svbOcc.Count(o => o.Span.FilePath.EndsWith("A.th")));
+    }
+
+    [Fact]
+    public void Rename_plan_covers_fix_and_station_command_refs_in_the_referencing_file()
+    {
+        var bText = """
+            survey svb
+              centreline
+                data normal from to length compass clino
+                G0 G1 1.0 0 0
+              endcentreline
+            endsurvey
+            """;
+        var aText = """
+            survey root
+              centreline
+                fix G0@svb 45.5 25.2 0
+                station G0@svb "entrance"
+              endcentreline
+            endsurvey
+            """;
+        var ws = Build(("/p/B.th", bText), ("/p/A.th", aText));
+        var texts = new Dictionary<string, string> { ["/p/B.th"] = bText, ["/p/A.th"] = aText };
+
+        var st = ws.ResolveStationSymbol("G0@svb")!;
+        var edits = SymbolRenamePlan.Compute(ws, new SymbolId(SymbolKind.Station, st.Name), st.Name.Last,
+            p => texts.TryGetValue(p, out var t) ? t : null);
+
+        var inA = edits.SingleOrDefault(e => e.FilePath.EndsWith("A.th"));
+        Assert.NotEqual(default, inA);
+        Assert.Equal(2, inA.Spans.Count);   // the fix ref and the station ref
+        Assert.All(inA.Spans, s => Assert.Equal("G0", inA.FileText.Substring(s.Start, s.Length)));
+    }
+
+    [Fact]
     public void Rename_plan_edits_cover_all_occurrences_across_files_and_slice_to_the_name()
     {
         var bText = """
