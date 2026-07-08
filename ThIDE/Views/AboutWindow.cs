@@ -35,6 +35,7 @@ public sealed class AboutWindow : Window
         var blurb = new TextBlock { TextWrapping = TextWrapping.Wrap, Text = Tr.Get("About_Blurb") };
 
         var repoRow = LabeledLink(Tr.Get("About_GitHub"), "github.com/apgeo/ThIDE", AppEnvironmentInfo.RepositoryUrl);
+        var projectByRow = LabeledLink(Tr.Get("About_ProjectByPrefix"), "SpeoSilex", "https://speosilex.ro/");
 
         // Bundled components.
         var bundledHeader = Header(Tr.Get("About_Bundled"));
@@ -86,7 +87,7 @@ public sealed class AboutWindow : Window
                 Spacing = 10,
                 Children =
                 {
-                    title, ver, blurb, repoRow,
+                    title, ver, blurb, repoRow, projectByRow,
                     bundledHeader, caveRow,
                     toolsHeader, toolsPanel,
                     sysHeader, sysPanel,

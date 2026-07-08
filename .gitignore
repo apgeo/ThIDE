@@ -194,3 +194,4 @@ build/windows/Output/
 # Generated user-guide bundle (built by build/build-user-guide.* into the app assets)
 ThIDE/Assets/ThIDE-User-Guide.pdf
 ThIDE/Assets/ThIDE-User-Guide.html
+ThIDE.code-workspace

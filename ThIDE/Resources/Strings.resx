@@ -859,6 +859,7 @@
 Targets Therion v6.4.0 (thbook bundled).</value></data>
   <data name="About_OpenBook" xml:space="preserve"><value>Open Therion Book</value></data>
   <data name="About_GitHub" xml:space="preserve"><value>Repository</value></data>
+  <data name="About_ProjectByPrefix" xml:space="preserve"><value>A project by</value></data>
   <data name="About_Bundled" xml:space="preserve"><value>Bundled components</value></data>
   <data name="About_ExternalTools" xml:space="preserve"><value>External tools</value></data>
   <data name="About_System" xml:space="preserve"><value>System</value></data>
