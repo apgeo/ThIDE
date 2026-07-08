@@ -14,7 +14,7 @@
     <!-- OuterHost holds RootContent; RootContent is reparented into a borderless window for full screen. -->
     <Panel x:Name="OuterHost">
         <DockPanel x:Name="RootContent">
-            <!-- Control bar (mirrors the speosilex.ro reference viewer); reflows onto further rows on
+            <!-- Control bar (mirrors the maintainer link reference viewer); reflows onto further rows on
                  narrow panes so every button stays visible (like the Live Preview toolbar). -->
             <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="6,4">
               <DockPanel>

@@ -5,13 +5,13 @@
   <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
   <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
   <data name="AppTitle" xml:space="preserve"><value>ThIDE</value></data>
-  <data name="Menu_File" xml:space="preserve"><value>_Fi&#x219;ier</value></data>
-  <data name="Menu_File_OpenFile" xml:space="preserve"><value>_Deschide fi&#x219;ier...</value></data>
+  <data name="Menu_File" xml:space="preserve"><value>_Fișier</value></data>
+  <data name="Menu_File_OpenFile" xml:space="preserve"><value>_Deschide fișier...</value></data>
   <data name="Menu_File_OpenThconfig" xml:space="preserve"><value>Deschide _thconfig...</value></data>
   <data name="Menu_File_OpenFolder" xml:space="preserve"><value>Deschide d_osar...</value></data>
-  <data name="Menu_File_Exit" xml:space="preserve"><value>_Ie&#x219;ire</value></data>
-  <data name="Menu_File_Recent" xml:space="preserve"><value>Fi&#x219;iere _recente</value></data>
-  <data name="Menu_Settings" xml:space="preserve"><value>_Set&#x103;ri</value></data>
+  <data name="Menu_File_Exit" xml:space="preserve"><value>_Ieșire</value></data>
+  <data name="Menu_File_Recent" xml:space="preserve"><value>Fișiere _recente</value></data>
+  <data name="Menu_Settings" xml:space="preserve"><value>_Setări</value></data>
   <data name="Menu_Help" xml:space="preserve"><value>_Ajutor</value></data>
   <data name="Menu_Help_Thbook" xml:space="preserve"><value>_Cartea Therion</value></data>
   <data name="Menu_Help_UserGuide" xml:space="preserve"><value>_Ghid de utilizare</value></data>
@@ -34,100 +34,100 @@
   <data name="Welcome_ShowOnStartup" xml:space="preserve"><value>Afișează această pagină la pornire</value></data>
   <data name="Pref_ShowWelcome" xml:space="preserve"><value>Afișează pagina de bun venit la pornire</value></data>
   <data name="Menu_View_ObjectBrowser" xml:space="preserve"><value>Navigator obiecte</value></data>
-  <data name="Menu_View_Workspace" xml:space="preserve"><value>Spa&#x21B;iu de lucru</value></data>
+  <data name="Menu_View_Workspace" xml:space="preserve"><value>Spațiu de lucru</value></data>
   <data name="Menu_View_Diagnostics" xml:space="preserve"><value>Diagnostice</value></data>
-  <data name="Menu_View_RelationalMap" xml:space="preserve"><value>Hart&#x103; rela&#x21B;ional&#x103;…</value></data>
+  <data name="Menu_View_RelationalMap" xml:space="preserve"><value>Hartă relațională…</value></data>
   <data name="Menu_View_StrictParser" xml:space="preserve"><value>Mod parser strict</value></data>
   <data name="Menu_Edit" xml:space="preserve"><value>_Editare</value></data>
-  <data name="Menu_Edit_Cut" xml:space="preserve"><value>Decupeaz&#x103;</value></data>
-  <data name="Menu_Edit_Copy" xml:space="preserve"><value>Copiaz&#x103;</value></data>
-  <data name="Menu_Edit_Paste" xml:space="preserve"><value>Lipe&#x219;te</value></data>
-  <data name="Menu_Edit_Delete" xml:space="preserve"><value>&#x218;terge</value></data>
-  <data name="Menu_Edit_SelectAll" xml:space="preserve"><value>Selecteaz&#x103; tot</value></data>
+  <data name="Menu_Edit_Cut" xml:space="preserve"><value>Decupează</value></data>
+  <data name="Menu_Edit_Copy" xml:space="preserve"><value>Copiază</value></data>
+  <data name="Menu_Edit_Paste" xml:space="preserve"><value>Lipește</value></data>
+  <data name="Menu_Edit_Delete" xml:space="preserve"><value>Șterge</value></data>
+  <data name="Menu_Edit_SelectAll" xml:space="preserve"><value>Selectează tot</value></data>
   <data name="Menu_Edit_Upper" xml:space="preserve"><value>MAJUSCULE</value></data>
   <data name="Menu_Edit_Lower" xml:space="preserve"><value>minuscule</value></data>
   <data name="Menu_Edit_ToggleComment" xml:space="preserve"><value>Comutare comentariu</value></data>
   <data name="Menu_Edit_EncloseRegion" xml:space="preserve"><value>Include în regiune</value></data>
-  <data name="Menu_Edit_FoldAll" xml:space="preserve"><value>Plieaz&#x103; tot</value></data>
-  <data name="Menu_Edit_UnfoldAll" xml:space="preserve"><value>Deplieaz&#x103; tot</value></data>
-  <data name="Menu_Edit_AddBookmark" xml:space="preserve"><value>Adaug&#x103; semn de carte…</value></data>
-  <data name="Menu_Search" xml:space="preserve"><value>_C&#x103;utare</value></data>
-  <data name="Menu_Search_Find" xml:space="preserve"><value>_Caut&#x103;</value></data>
-  <data name="Menu_Search_Replace" xml:space="preserve"><value>În_locuie&#x219;te</value></data>
-  <data name="Menu_Search_FindInFiles" xml:space="preserve"><value>Caut&#x103; în fi&#x219;iere…</value></data>
-  <data name="Menu_Search_ReplaceInFiles" xml:space="preserve"><value>Înlocuie&#x219;te în fi&#x219;iere…</value></data>
+  <data name="Menu_Edit_FoldAll" xml:space="preserve"><value>Pliază tot</value></data>
+  <data name="Menu_Edit_UnfoldAll" xml:space="preserve"><value>Depliază tot</value></data>
+  <data name="Menu_Edit_AddBookmark" xml:space="preserve"><value>Adaugă semn de carte…</value></data>
+  <data name="Menu_Search" xml:space="preserve"><value>_Căutare</value></data>
+  <data name="Menu_Search_Find" xml:space="preserve"><value>_Caută</value></data>
+  <data name="Menu_Search_Replace" xml:space="preserve"><value>În_locuiește</value></data>
+  <data name="Menu_Search_FindInFiles" xml:space="preserve"><value>Caută în fișiere…</value></data>
+  <data name="Menu_Search_ReplaceInFiles" xml:space="preserve"><value>Înlocuiește în fișiere…</value></data>
   <data name="Menu_Search_GoTo" xml:space="preserve"><value>_Salt la linie…</value></data>
   <data name="Menu_Search_Bookmarks" xml:space="preserve"><value>_Semne de carte…</value></data>
   <data name="Menu_Build_OpenLoch" xml:space="preserve"><value>Deschide în _Loch</value></data>
   <data name="Menu_Build_OpenAven" xml:space="preserve"><value>Deschide în _Aven</value></data>
-  <data name="Menu_Build_OpenOutputFolder" xml:space="preserve"><value>Deschide ultimul d_osar de ie&#x219;ire</value></data>
+  <data name="Menu_Build_OpenOutputFolder" xml:space="preserve"><value>Deschide ultimul dosar de ieșire</value></data>
   <data name="Menu_View" xml:space="preserve"><value>_Vizualizare</value></data>
-  <data name="Menu_View_Language" xml:space="preserve"><value>_Limb&#x103;</value></data>
+  <data name="Menu_View_Language" xml:space="preserve"><value>_Limbă</value></data>
   <data name="Menu_View_Language_English" xml:space="preserve"><value>English</value></data>
-  <data name="Menu_View_Language_Romanian" xml:space="preserve"><value>Rom&#xE2;n&#x103;</value></data>
+  <data name="Menu_View_Language_Romanian" xml:space="preserve"><value>Română</value></data>
   <data name="Menu_Build" xml:space="preserve"><value>_Compilare</value></data>
-  <data name="Menu_Build_Build" xml:space="preserve"><value>_Compileaz&#x103;</value></data>
-  <data name="Menu_Build_Rebuild" xml:space="preserve"><value>_Recompileaz&#x103;</value></data>
-  <data name="Menu_Build_Cancel" xml:space="preserve"><value>_Anuleaz&#x103;</value></data>
+  <data name="Menu_Build_Build" xml:space="preserve"><value>_Compilează</value></data>
+  <data name="Menu_Build_Rebuild" xml:space="preserve"><value>_Recompilează</value></data>
+  <data name="Menu_Build_Cancel" xml:space="preserve"><value>_Anulează</value></data>
   <data name="Tool_WorkspaceExplorer" xml:space="preserve"><value>Explorator proiect</value></data>
   <data name="Tool_Diagnostics" xml:space="preserve"><value>Diagnostice</value></data>
   <data name="Tool_ObjectBrowser" xml:space="preserve"><value>Navigator obiecte</value></data>
-  <data name="Tool_CompilerOutput" xml:space="preserve"><value>Ie&#x219;ire compilator</value></data>
-  <data name="Tool_GeneratedFiles" xml:space="preserve"><value>Fi&#x219;iere generate</value></data>
-  <data name="Welcome_Title" xml:space="preserve"><value>Bine a&#x21B;i venit la ThIDE</value></data>
-  <data name="Welcome_Message" xml:space="preserve"><value>Deschide&#x21B;i un fi&#x219;ier de configurare Therion sau un dosar pentru a &#xEE;ncepe.</value></data>
-  <data name="Domain_Station" xml:space="preserve"><value>Sta&#x21B;ie</value></data>
+  <data name="Tool_CompilerOutput" xml:space="preserve"><value>Ieșire compilator</value></data>
+  <data name="Tool_GeneratedFiles" xml:space="preserve"><value>Fișiere generate</value></data>
+  <data name="Welcome_Title" xml:space="preserve"><value>Bine ați venit la ThIDE</value></data>
+  <data name="Welcome_Message" xml:space="preserve"><value>Deschideți un fișier de configurare Therion sau un dosar pentru a începe.</value></data>
+  <data name="Domain_Station" xml:space="preserve"><value>Stație</value></data>
   <data name="Domain_Survey" xml:space="preserve"><value>Topografie</value></data>
   <data name="Domain_Shot" xml:space="preserve"><value>Măsurare</value></data>
-  <data name="Domain_Scrap" xml:space="preserve"><value>Schi&#x21B;&#x103;</value></data>
+  <data name="Domain_Scrap" xml:space="preserve"><value>Schiță</value></data>
   <data name="Domain_Fix" xml:space="preserve"><value>Punct fix</value></data>
   <data name="Domain_Equate" xml:space="preserve"><value>Echivalare</value></data>
-  <data name="Domain_Map" xml:space="preserve"><value>Hart&#x103;</value></data>
-  <data name="Domain_Cave" xml:space="preserve"><value>Pe&#x219;ter&#x103;</value></data>
+  <data name="Domain_Map" xml:space="preserve"><value>Hartă</value></data>
+  <data name="Domain_Cave" xml:space="preserve"><value>Peșteră</value></data>
   <data name="Domain_Passage" xml:space="preserve"><value>Galerie</value></data>
   <data name="Domain_Entrance" xml:space="preserve"><value>Intrare</value></data>
-  <data name="Browser_Tab_Stations" xml:space="preserve"><value>Sta&#x21B;ii</value></data>
-  <data name="Browser_Tab_Shots" xml:space="preserve"><value>Viz&#x103;ri</value></data>
+  <data name="Browser_Tab_Stations" xml:space="preserve"><value>Stații</value></data>
+  <data name="Browser_Tab_Shots" xml:space="preserve"><value>Vizări</value></data>
   <data name="Browser_Col_QualifiedName" xml:space="preserve"><value>Nume calificat</value></data>
   <data name="Browser_Col_Kind" xml:space="preserve"><value>Tip</value></data>
   <data name="Browser_Col_Survey" xml:space="preserve"><value>Topografie</value></data>
   <data name="Browser_Col_Line" xml:space="preserve"><value>Linie</value></data>
   <data name="Browser_Col_From" xml:space="preserve"><value>De la</value></data>
-  <data name="Browser_Col_To" xml:space="preserve"><value>P&#xE2;n&#x103; la</value></data>
+  <data name="Browser_Col_To" xml:space="preserve"><value>Până la</value></data>
   <data name="Browser_Col_Length" xml:space="preserve"><value>Lungime</value></data>
   <data name="Browser_Col_Compass" xml:space="preserve"><value>Azimut</value></data>
-  <data name="Browser_Col_Clino" xml:space="preserve"><value>&#xCE;nclinare</value></data>
+  <data name="Browser_Col_Clino" xml:space="preserve"><value>Înclinare</value></data>
   <data name="Tool_Xvi" xml:space="preserve"><value>XVI</value></data>
-  <data name="Tool_Settings" xml:space="preserve"><value>Set&#x103;ri</value></data>
+  <data name="Tool_Settings" xml:space="preserve"><value>Setări</value></data>
   <data name="Ctx_Open" xml:space="preserve"><value>Deschide</value></data>
-  <data name="Ctx_Reveal" xml:space="preserve"><value>Afi&#x219;eaz&#x103; &#xEE;n Explorator fi&#x219;iere</value></data>
-  <data name="Ctx_SetActive" xml:space="preserve"><value>Seteaz&#x103; ca thconfig activ al proiectului</value></data>
-  <data name="Ctx_NewFile" xml:space="preserve"><value>Fi&#x219;ier nou…</value></data>
+  <data name="Ctx_Reveal" xml:space="preserve"><value>Afișează în Explorator fișiere</value></data>
+  <data name="Ctx_SetActive" xml:space="preserve"><value>Setează ca thconfig activ al proiectului</value></data>
+  <data name="Ctx_NewFile" xml:space="preserve"><value>Fișier nou…</value></data>
   <data name="Ctx_NewFolder" xml:space="preserve"><value>Folder nou…</value></data>
-  <data name="Ctx_Delete" xml:space="preserve"><value>&#x218;terge</value></data>
-  <data name="Ctx_CopyFull" xml:space="preserve"><value>Copiaz&#x103; calea complet&#x103;</value></data>
-  <data name="Ctx_CopyRel" xml:space="preserve"><value>Copiaz&#x103; calea relativ&#x103;</value></data>
-  <data name="Ctx_Refresh" xml:space="preserve"><value>Re&#xEE;mprosp&#x103;teaz&#x103;</value></data>
-  <data name="Ctx_ShellMore" xml:space="preserve"><value>Mai multe op&#x21B;iuni (shell Windows)…</value></data>
+  <data name="Ctx_Delete" xml:space="preserve"><value>Șterge</value></data>
+  <data name="Ctx_CopyFull" xml:space="preserve"><value>Copiază calea completă</value></data>
+  <data name="Ctx_CopyRel" xml:space="preserve"><value>Copiază calea relativă</value></data>
+  <data name="Ctx_Refresh" xml:space="preserve"><value>Reîmprospătează</value></data>
+  <data name="Ctx_ShellMore" xml:space="preserve"><value>Mai multe opțiuni (shell Windows)…</value></data>
   <data name="Common_Columns" xml:space="preserve"><value>Coloane ▾</value></data>
-  <data name="Common_Fit" xml:space="preserve"><value>↔ Potrive&#x219;te</value></data>
-  <data name="Common_Copy" xml:space="preserve"><value>Copiaz&#x103;</value></data>
-  <data name="Common_CopyAll" xml:space="preserve"><value>Copiaz&#x103; tot</value></data>
+  <data name="Common_Fit" xml:space="preserve"><value>↔ Potrivește</value></data>
+  <data name="Common_Copy" xml:space="preserve"><value>Copiază</value></data>
+  <data name="Common_CopyAll" xml:space="preserve"><value>Copiază tot</value></data>
   <data name="Common_Open" xml:space="preserve"><value>Deschide</value></data>
-  <data name="Grid_Copy" xml:space="preserve"><value>Copiaz&#x103;</value></data>
-  <data name="Grid_CopyRow" xml:space="preserve"><value>Copiaz&#x103; r&#xE2;ndul</value></data>
-  <data name="Grid_CopyRowFormatted" xml:space="preserve"><value>Copiaz&#x103; r&#xE2;ndul (formatat)</value></data>
-  <data name="Grid_CopyAll" xml:space="preserve"><value>Copiaz&#x103; tot</value></data>
-  <data name="Grid_CopyAllFormatted" xml:space="preserve"><value>Copiaz&#x103; tot (formatat)</value></data>
+  <data name="Grid_Copy" xml:space="preserve"><value>Copiază</value></data>
+  <data name="Grid_CopyRow" xml:space="preserve"><value>Copiază rândul</value></data>
+  <data name="Grid_CopyRowFormatted" xml:space="preserve"><value>Copiază rândul (formatat)</value></data>
+  <data name="Grid_CopyAll" xml:space="preserve"><value>Copiază tot</value></data>
+  <data name="Grid_CopyAllFormatted" xml:space="preserve"><value>Copiază tot (formatat)</value></data>
   <data name="Diag_ProjectScope" xml:space="preserve"><value>Domeniu proiect</value></data>
-  <data name="Gen_Reveal" xml:space="preserve"><value>Afi&#x219;eaz&#x103; &#xEE;n managerul de fi&#x219;iere</value></data>
-  <data name="Gen_GoToDef" xml:space="preserve"><value>Salt la defini&#x21B;ie &#xEE;n thconfig</value></data>
+  <data name="Gen_Reveal" xml:space="preserve"><value>Afișează în managerul de fișiere</value></data>
+  <data name="Gen_GoToDef" xml:space="preserve"><value>Salt la definiție în thconfig</value></data>
   <data name="Pref_General" xml:space="preserve"><value>General</value></data>
-  <data name="Pref_Theme" xml:space="preserve"><value>Tem&#x103; &amp; culori</value></data>
+  <data name="Pref_Theme" xml:space="preserve"><value>Temă &amp; culori</value></data>
   <data name="Pref_Editor" xml:space="preserve"><value>Editor</value></data>
-  <data name="Pref_Performance" xml:space="preserve"><value>Performan&#x21B;&#x103;</value></data>
+  <data name="Pref_Performance" xml:space="preserve"><value>Performanță</value></data>
   <data name="Pref_Workspace" xml:space="preserve"><value>Proiect</value></data>
-  <data name="Pref_Build" xml:space="preserve"><value>Compilare &amp; ie&#x219;ire</value></data>
+  <data name="Pref_Build" xml:space="preserve"><value>Compilare &amp; ieșire</value></data>
   <data name="Pref_External" xml:space="preserve"><value>Unelte externe</value></data>
   <data name="Pref_Debug" xml:space="preserve"><value>Depanare</value></data>
   <data name="Pref_DebugHelp" xml:space="preserve"><value>Comutatoare de nivel scăzut pentru vizualizările web încorporate (vizualizatorul 3D, diagramele structurale). Modificările se aplică după repornirea ThIDE.</value></data>
@@ -140,7 +140,7 @@
   <data name="Pref_DbgOffscreenHelp" xml:space="preserve"><value>Redă conținutul web prin compozitorul aplicației în loc să încorporeze o fereastră nativă. Poate rezolva probleme de încorporare, poate afecta interacțiunea. Doar Linux; dezactivat implicit.</value></data>
   <data name="Pref_DbgDevTools" xml:space="preserve"><value>Activează instrumentele de dezvoltare web</value></data>
   <data name="Pref_DbgDevToolsHelp" xml:space="preserve"><value>Permite deschiderea inspectorului/DevTools din panoul 3D și prin clic dreapta ▸ Inspectează. Toate platformele; activat implicit.</value></data>
-  <data name="Pref_Keyboard" xml:space="preserve"><value>Scurt&#x103;turi tastatur&#x103;</value></data>
+  <data name="Pref_Keyboard" xml:space="preserve"><value>Scurtături tastatură</value></data>
   <!-- Shared / common UI strings -->
   <data name="Common_ShowHideColumns" xml:space="preserve"><value>Afișează sau ascunde coloane</value></data>
   <data name="Common_AutoSize" xml:space="preserve"><value>Dimensionează automat coloanele după conținut</value></data>

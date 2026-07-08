@@ -38,7 +38,7 @@ public sealed partial class Model3DViewerViewModel : ObservableObject
     /// <summary>False when the OS web engine (WebView2 / WebKit) is missing — drives the fallback panel.</summary>
     [ObservableProperty] private bool _isEngineAvailable = true;
 
-    // ---- external control bar state (mirrors the speosilex.ro reference viewer) ----
+    // ---- external control bar state (mirrors the project maintainer link reference viewer) ----
     [ObservableProperty] private bool _wallsOn = true;          // walls visible by default
     [ObservableProperty] private bool _splaysOn;
     [ObservableProperty] private bool _surfaceOn;
