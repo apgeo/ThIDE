@@ -21,8 +21,10 @@
     <DockPanel>
         <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="6,3">
           <DockPanel>
-            <!-- Window controls, pinned to the right (#7) — shared reusable component. -->
-            <docking:PanelWindowControls DockPanel.Dock="Right" />
+            <!-- Window controls, pinned to the right (#7) — shared reusable component. Vertical to
+                 minimize the horizontal space it takes from the toolbar row. -->
+            <docking:PanelWindowControls DockPanel.Dock="Right" Orientation="Vertical"
+                                         VerticalAlignment="Center" Margin="4,0,0,0" />
 
             <StackPanel Orientation="Horizontal" Spacing="6">
                 <Button Content="{l:Loc Common_OpenEllipsis}" Click="OnOpen" FontSize="11" Padding="8,2" />

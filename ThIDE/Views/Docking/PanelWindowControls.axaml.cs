@@ -1,5 +1,7 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Layout;
 using ThIDE.ViewModels.Docking;
 
 namespace ThIDE.Views.Docking;
@@ -13,6 +15,17 @@ namespace ThIDE.Views.Docking;
 /// </summary>
 public partial class PanelWindowControls : UserControl
 {
+    /// <summary>Stack the three buttons horizontally (default) or vertically — set to
+    /// <see cref="Orientation.Vertical"/> on panels where horizontal toolbar space is tight.</summary>
+    public static readonly StyledProperty<Orientation> OrientationProperty =
+        AvaloniaProperty.Register<PanelWindowControls, Orientation>(nameof(Orientation));
+
+    public Orientation Orientation
+    {
+        get => GetValue(OrientationProperty);
+        set => SetValue(OrientationProperty, value);
+    }
+
     public PanelWindowControls() => InitializeComponent();
 
     private ToolViewModelBase? Tool => DataContext as ToolViewModelBase;

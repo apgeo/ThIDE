@@ -1,21 +1,30 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:l="using:ThIDE.Resources"
-             x:Class="ThIDE.Views.Docking.PanelWindowControls">
+             x:Class="ThIDE.Views.Docking.PanelWindowControls"
+             x:Name="Root"
+             Padding="0" Margin="0"
+             HorizontalAlignment="Right" HorizontalContentAlignment="Right">
     <!-- Reusable panel window controls: full screen · float on another monitor · move to centre.
-         Add or change a button HERE and every panel that hosts this control updates at once. -->
-    <StackPanel Orientation="Horizontal" Spacing="1" VerticalAlignment="Center">
-        <Button Click="OnFullScreen" Width="26" Height="22" Padding="0"
+         Add or change a button HERE and every panel that hosts this control updates at once.
+         Clustered hard to the right with no inter-button gap and no component padding, so the
+         three read as one tight group hugging the panel's right edge. Buttons are sized at ~65%
+         of the original 26×22/14 icon size. Orientation defaults to Horizontal; set it to Vertical
+         (the Orientation property below) to stack the three into a single column instead, for
+         panels where horizontal toolbar space is tight. -->
+    <StackPanel Orientation="{Binding Orientation, ElementName=Root}" Spacing="0"
+                HorizontalAlignment="Right" VerticalAlignment="Center">
+        <Button Click="OnFullScreen" Width="17" Height="14" Padding="0"
                 Background="Transparent" BorderThickness="0" ToolTip.Tip="{l:Loc Panel_FullScreenTip}">
-            <PathIcon Data="{DynamicResource Icon.FullScreen}" Width="14" Height="14" />
+            <PathIcon Data="{DynamicResource Icon.FullScreen}" Width="9" Height="9" />
         </Button>
-        <Button Click="OnFloatOtherScreen" Width="26" Height="22" Padding="0"
+        <Button Click="OnFloatOtherScreen" Width="17" Height="14" Padding="0"
                 Background="Transparent" BorderThickness="0" ToolTip.Tip="{l:Loc Panel_FloatScreenTip}">
-            <PathIcon Data="{DynamicResource Icon.External}" Width="14" Height="14" />
+            <PathIcon Data="{DynamicResource Icon.External}" Width="9" Height="9" />
         </Button>
-        <Button Click="OnMoveToCenter" Width="26" Height="22" Padding="0"
+        <Button Click="OnMoveToCenter" Width="17" Height="14" Padding="0"
                 Background="Transparent" BorderThickness="0" ToolTip.Tip="{l:Loc Panel_MoveCenterTip}">
-            <PathIcon Data="{DynamicResource Icon.Layout}" Width="14" Height="14" />
+            <PathIcon Data="{DynamicResource Icon.Layout}" Width="9" Height="9" />
         </Button>
     </StackPanel>
 </UserControl>
