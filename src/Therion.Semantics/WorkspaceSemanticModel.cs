@@ -416,9 +416,9 @@ public sealed class WorkspaceSemanticModel
         return null;
     }
 
-    /// <summary>Composite key for <see cref="StationsBySurveyAndPoint"/> (space-joined; names contain no spaces).</summary>
+    /// <summary>Composite key for <see cref="StationsBySurveyAndPoint"/> (NUL-joined — '\0' can't appear in names).</summary>
     internal static string SurveyPointKey(string surveyLastName, string point)
-        => string.Concat(surveyLastName, " ", point);
+        => string.Concat(surveyLastName, "\0", point);
 
     private static void CollectSourceEdges(
         string parentPath, TherionFile file,
