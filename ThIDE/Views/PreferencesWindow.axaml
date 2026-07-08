@@ -5,7 +5,7 @@
         x:Class="ThIDE.Views.PreferencesWindow"
         x:CompileBindings="False"
         Title="{l:Loc Pref_Title}"
-        Width="1080" Height="780"
+        Width="1080" Height="858"
         MinWidth="640" MinHeight="460"
         WindowStartupLocation="CenterOwner">
     <DockPanel>
@@ -36,8 +36,10 @@
             </DockPanel>
         </Border>
 
-        <!-- Right pane: the selected section's settings. -->
-        <ScrollViewer Padding="18" VerticalScrollBarVisibility="Auto">
+        <!-- Right pane: the selected section's settings. Horizontal scrolling is disabled so every
+             section (notably the Keyboard Shortcuts / File Associations grids) is constrained to the
+             pane width and its star columns fit to the available width instead of overflowing. -->
+        <ScrollViewer Padding="18" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
             <Panel>
                 <!-- General -->
                 <StackPanel Spacing="10" IsVisible="{Binding IsGeneral}">
@@ -433,10 +435,13 @@
                               x:CompileBindings="False" VerticalAlignment="Top"
                               GridLinesVisibility="Horizontal" Height="440"
                               CanUserResizeColumns="True" CanUserSortColumns="True" AutoGenerateColumns="False">
+                        <!-- Columns fit the available width: Command takes the slack (*) so the last
+                             column stays on-screen, and the Gesture capture box is a bounded width
+                             (~a third of its former full-width size) instead of eating the whole row. -->
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="{l:Loc Pref_Col_Command}" Binding="{Binding CommandId}" Width="Auto" MinWidth="120" MaxWidth="260" IsReadOnly="True" />
+                            <DataGridTextColumn Header="{l:Loc Pref_Col_Command}" Binding="{Binding CommandId}" Width="*" MinWidth="140" IsReadOnly="True" />
                             <!-- Capture box: focus it and press a chord to record the gesture (#11). -->
-                            <DataGridTemplateColumn Header="{l:Loc Pref_Col_Gesture}" Width="*" MinWidth="160">
+                            <DataGridTemplateColumn Header="{l:Loc Pref_Col_Gesture}" Width="180" MinWidth="140">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <TextBox Text="{Binding Gesture}" IsReadOnly="True"
@@ -479,10 +484,13 @@
                               IsEnabled="{Binding Associations.IsSupported}"
                               GridLinesVisibility="Horizontal"
                               CanUserResizeColumns="True" AutoGenerateColumns="False">
+                        <!-- Columns fit the available width: the Description is a bounded width (~60%
+                             of its former full-width size) and Status takes the slack (*) so the last
+                             column (the Associate/Remove buttons) stays on-screen. -->
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="{l:Loc Assoc_Col_Type}"   Binding="{Binding Extension}"   Width="Auto" MinWidth="90"  IsReadOnly="True" />
-                            <DataGridTextColumn Header="{l:Loc Assoc_Col_Desc}"   Binding="{Binding Description}" Width="*"    MinWidth="160" IsReadOnly="True" />
-                            <DataGridTextColumn Header="{l:Loc Assoc_Col_Status}" Binding="{Binding StatusText}"  Width="Auto" MinWidth="190" IsReadOnly="True" />
+                            <DataGridTextColumn Header="{l:Loc Assoc_Col_Desc}"   Binding="{Binding Description}" Width="220"  MinWidth="140" IsReadOnly="True" />
+                            <DataGridTextColumn Header="{l:Loc Assoc_Col_Status}" Binding="{Binding StatusText}"  Width="*"    MinWidth="190" IsReadOnly="True" />
                             <DataGridTemplateColumn Header="" Width="Auto">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
