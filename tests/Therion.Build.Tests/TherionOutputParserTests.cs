@@ -49,4 +49,70 @@ public class TherionOutputParserTests
         Assert.Null(result.Span);
         Assert.Null(result.Symbol);
     }
+
+    [Fact]
+    public void Captures_full_thconfig_extension_not_just_dot_th()
+    {
+        // The ".thconfig" extension must be captured whole — the old regex matched only ".th",
+        // producing a link to a non-existent "cave.th" (#1).
+        var result = _parser.Classify("configuration file: cave.thconfig", isStderr: false);
+        Assert.NotNull(result.Span);
+        Assert.Equal("cave.thconfig", result.Span!.Value.FilePath);
+    }
+
+    [Fact]
+    public void Captures_full_3dmf_extension_not_just_dot_3d()
+    {
+        var result = _parser.Classify("writing cave.3dmf ... done", isStderr: false);
+        Assert.NotNull(result.Span);
+        Assert.Equal("cave.3dmf", result.Span!.Value.FilePath);
+    }
+
+    [Theory]
+    [InlineData("writing output/cave.dlp ... done", "output/cave.dlp")]
+    [InlineData("writing cave.drml ... done", "cave.drml")]
+    [InlineData("writing cave.kml ... done", "cave.kml")]
+    [InlineData("writing outputs/model.lox ... done", "outputs/model.lox")]
+    [InlineData(@"writing C:\caves\cave.dxf ... done", @"C:\caves\cave.dxf")]
+    public void Detects_output_artifact_paths_of_various_extensions(string line, string expected)
+    {
+        var result = _parser.Classify(line, isStderr: false);
+        Assert.NotNull(result.Span);
+        Assert.Equal(expected, result.Span!.Value.FilePath);
+    }
+
+    [Fact]
+    public void Captures_absolute_path_with_spaces_and_mixed_separators()
+    {
+        // "<label> file: <path>" lines print the path as the whole remainder — it must be captured
+        // in full even with a space ("Program Files") and mixed \ and / separators (#1).
+        const string line = @"initialization file: C:\Program Files\Therion/therion.ini";
+        var result = _parser.Classify(line, isStderr: false);
+        Assert.NotNull(result.Span);
+        Assert.Equal(@"C:\Program Files\Therion/therion.ini", result.Span!.Value.FilePath);
+    }
+
+    [Fact]
+    public void Captures_spaced_configuration_file_path()
+    {
+        const string line = @"configuration file: C:\My Caves\proj 1\cave.thconfig";
+        var result = _parser.Classify(line, isStderr: false);
+        Assert.NotNull(result.Span);
+        Assert.Equal(@"C:\My Caves\proj 1\cave.thconfig", result.Span!.Value.FilePath);
+    }
+
+    [Fact]
+    public void Does_not_hyperlink_a_dotted_survey_name()
+    {
+        // A fully-qualified survey/station name is not a file: no separator and an unknown extension.
+        var result = _parser.Classify("removed 2 duplicate shots in main.upper", isStderr: false);
+        Assert.Null(result.Span);
+    }
+
+    [Fact]
+    public void Does_not_hyperlink_a_decimal_number()
+    {
+        var result = _parser.Classify("average loop error is 0.42 percent", isStderr: false);
+        Assert.Null(result.Span);
+    }
 }
