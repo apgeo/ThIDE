@@ -25,7 +25,8 @@ public sealed record TeamRow(string Name, int Surveys, string Length);
 public sealed record TripRow(string Date, int Surveys, string Length, string Members);
 public sealed record FixedRow(string Station, string Kind, string Coordinates, string Cs, string Location,
     Therion.Core.SourceSpan Span);
-public sealed record QualityRow(string Metric, int Count);
+/// <summary>One data-quality metric. <see cref="Filter"/> drills into the matching rows in the Object Browser.</summary>
+public sealed record QualityRow(string Metric, int Count, BrowserFilter? Filter = null);
 
 public sealed partial class DataAnalyticsViewModel : ObservableObject
 {
@@ -168,18 +169,35 @@ public sealed partial class DataAnalyticsViewModel : ObservableObject
     private void BuildQuality(WorkspaceSemanticModel model)
     {
         var q = DataAnalytics.DataQuality(model);
-        Quality.Add(new("Total legs", q.TotalShots));
-        Quality.Add(new("Zero-length legs", q.ZeroLength));
-        Quality.Add(new("Legs missing length", q.MissingLength));
-        Quality.Add(new("Legs missing compass", q.MissingCompass));
-        Quality.Add(new("Legs missing clino", q.MissingClino));
-        Quality.Add(new("Legs without backsight style", q.NoBacksight));
-        Quality.Add(new("Legs without LRUD", q.NoLrud));
-        Quality.Add(new("Steep legs (80–90°)", q.SteepLegs));
-        Quality.Add(new("Splay shots", q.SplayShots));
-        Quality.Add(new("Duplicate shots", q.DuplicateShots));
-        Quality.Add(new("Undated surveys", q.UndatedSurveys));
-        Quality.Add(new("Surveys without team", q.TeamlessSurveys));
+        // Each metric carries a drill-down filter that reproduces its count in the Object Browser:
+        // the same predicate the count is computed from, so the two never diverge.
+        Quality.Add(Q("Total legs", q.TotalShots, BrowserTab.Shots, _ => true));
+        Quality.Add(Q("Zero-length legs", q.ZeroLength, BrowserTab.Shots, Shot(DataQualityChecks.IsZeroLength)));
+        Quality.Add(Q("Legs missing length", q.MissingLength, BrowserTab.Shots, Shot(DataQualityChecks.IsMissingLength)));
+        Quality.Add(Q("Legs missing compass", q.MissingCompass, BrowserTab.Shots, Shot(DataQualityChecks.IsMissingCompass)));
+        Quality.Add(Q("Legs missing clino", q.MissingClino, BrowserTab.Shots, Shot(DataQualityChecks.IsMissingClino)));
+        Quality.Add(Q("Legs without backsight style", q.NoBacksight, BrowserTab.Shots, Shot(DataQualityChecks.HasNoBacksight)));
+        Quality.Add(Q("Legs without LRUD", q.NoLrud, BrowserTab.Shots, Shot(DataQualityChecks.HasNoLrud)));
+        Quality.Add(Q("Steep legs (80–90°)", q.SteepLegs, BrowserTab.Shots, Shot(DataQualityChecks.IsSteep)));
+        Quality.Add(Q("Splay shots", q.SplayShots, BrowserTab.Shots, Shot(DataQualityChecks.IsSplay)));
+        Quality.Add(Q("Duplicate shots", q.DuplicateShots, BrowserTab.Shots, Shot(DataQualityChecks.IsDuplicate)));
+        Quality.Add(Q("Undated surveys", q.UndatedSurveys, BrowserTab.Surveys, Survey(DataQualityChecks.IsUndated)));
+        Quality.Add(Q("Surveys without team", q.TeamlessSurveys, BrowserTab.Surveys, Survey(DataQualityChecks.IsTeamless)));
+
+        static QualityRow Q(string metric, int count, BrowserTab tab, Func<object, bool> predicate) =>
+            new(metric, count, new BrowserFilter(tab, metric, predicate));
+        static Func<object, bool> Shot(Func<ShotSymbol, bool> p) => o => o is ShotRow { Source: { } s } && p(s);
+        static Func<object, bool> Survey(Func<SurveySymbol, bool> p) => o => o is SurveyEntityRow { Source: { } s } && p(s);
+    }
+
+    /// <summary>Raised when a Quality metric is clicked — carries the Object Browser drill-down filter.</summary>
+    public event EventHandler<BrowserFilter>? QualityDrilldownRequested;
+
+    /// <summary>Click handler for a Quality metric hyperlink: routes its filter to the Object Browser.</summary>
+    [RelayCommand]
+    private void ShowQuality(QualityRow? row)
+    {
+        if (row?.Filter is { } filter) QualityDrilldownRequested?.Invoke(this, filter);
     }
 
     private static string Fmt(double? v) =>

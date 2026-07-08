@@ -34,7 +34,8 @@ public interface IBrowserNavRow
 
 // entity rows for the additional Object Browser tabs. Each carries its
 // declaration <see cref="SourceSpan"/> so a double-click can jump to source.
-public sealed record SurveyEntityRow(string Name, string Title, string Parent, SourceSpan Span) : IBrowserNavRow
+public sealed record SurveyEntityRow(string Name, string Title, string Parent, SourceSpan Span,
+    SurveySymbol? Source = null) : IBrowserNavRow
 {
     public string File => System.IO.Path.GetFileName(Span.FilePath ?? string.Empty);
     public int Line => Span.Start.Line;
@@ -93,13 +94,15 @@ public sealed partial class ShotRow : ObservableObject
     /// <summary>Backing AST nodes; null for the sample/designer rows.</summary>
     public DataRow? SourceRow { get; }
     public DataCommand? FieldDefinition { get; }
+    /// <summary>The semantic shot this row projects; used by drill-down filters (null for sample rows).</summary>
+    public ShotSymbol? Source { get; }
 
     [ObservableProperty] private double? _length;
     [ObservableProperty] private double? _compass;
     [ObservableProperty] private double? _clino;
 
     public ShotRow(string from, string to, double? length, double? compass, double? clino, int line,
-        DataRow? sourceRow = null, DataCommand? fieldDefinition = null)
+        DataRow? sourceRow = null, DataCommand? fieldDefinition = null, ShotSymbol? source = null)
     {
         From = from;
         To = to;
@@ -109,6 +112,7 @@ public sealed partial class ShotRow : ObservableObject
         Line = line;
         SourceRow = sourceRow;
         FieldDefinition = fieldDefinition;
+        Source = source;
     }
 
     partial void OnLengthChanged(double? value)  { Raise("length",  value); }
@@ -166,6 +170,60 @@ public partial class ObjectBrowserViewModel : ViewModelBase
     [ObservableProperty] private IReadOnlyList<Th2EntityRow> _points = System.Array.Empty<Th2EntityRow>();
     [ObservableProperty] private IReadOnlyList<Th2EntityRow> _lines = System.Array.Empty<Th2EntityRow>();
     [ObservableProperty] private IReadOnlyList<Th2EntityRow> _areas = System.Array.Empty<Th2EntityRow>();
+
+    // ---- per-tab filtering (free-text box + optional custom subset filter) ----
+    // One BrowserTabFilter per tab, in tab-strip order (== BrowserTab). The View binds each grid to
+    // <Tab>Filter.Items and the shared filter bar to ActiveFilter.
+    public BrowserTabFilter StationsFilter { get; } = new(BrowserTab.Stations);
+    public BrowserTabFilter ShotsFilter    { get; } = new(BrowserTab.Shots);
+    public BrowserTabFilter SurveysFilter  { get; } = new(BrowserTab.Surveys);
+    public BrowserTabFilter FixesFilter    { get; } = new(BrowserTab.Fixes);
+    public BrowserTabFilter EquatesFilter  { get; } = new(BrowserTab.Equates);
+    public BrowserTabFilter MapsFilter     { get; } = new(BrowserTab.Maps);
+    public BrowserTabFilter ScrapsFilter   { get; } = new(BrowserTab.Scraps);
+    public BrowserTabFilter PointsFilter   { get; } = new(BrowserTab.Points);
+    public BrowserTabFilter LinesFilter    { get; } = new(BrowserTab.Lines);
+    public BrowserTabFilter AreasFilter    { get; } = new(BrowserTab.Areas);
+
+    private BrowserTabFilter[]? _filters;
+    private BrowserTabFilter[] Filters => _filters ??= new[]
+    {
+        StationsFilter, ShotsFilter, SurveysFilter, FixesFilter, EquatesFilter,
+        MapsFilter, ScrapsFilter, PointsFilter, LinesFilter, AreasFilter,
+    };
+
+    /// <summary>Bound to the TabControl's selected index; also drives <see cref="ActiveFilter"/>.</summary>
+    [ObservableProperty] private int _selectedTabIndex;
+
+    /// <summary>The filter for the currently selected tab (what the shared filter bar edits).</summary>
+    public BrowserTabFilter ActiveFilter => Filters[System.Math.Clamp(SelectedTabIndex, 0, Filters.Length - 1)];
+
+    partial void OnSelectedTabIndexChanged(int value) => OnPropertyChanged(nameof(ActiveFilter));
+
+    // Keep each tab filter's backing rows in sync as the browser reloads (the filters survive reload).
+    partial void OnStationsChanged(IReadOnlyList<StationRow> value) => StationsFilter.SetSource(value);
+    partial void OnShotsChanged(IReadOnlyList<ShotRow> value) => ShotsFilter.SetSource(value);
+    partial void OnSurveysChanged(IReadOnlyList<SurveyEntityRow> value) => SurveysFilter.SetSource(value);
+    partial void OnFixesChanged(IReadOnlyList<FixEntityRow> value) => FixesFilter.SetSource(value);
+    partial void OnEquatesChanged(IReadOnlyList<EquateEntityRow> value) => EquatesFilter.SetSource(value);
+    partial void OnMapsChanged(IReadOnlyList<MapEntityRow> value) => MapsFilter.SetSource(value);
+    partial void OnScrapsChanged(IReadOnlyList<ScrapEntityRow> value) => ScrapsFilter.SetSource(value);
+    partial void OnPointsChanged(IReadOnlyList<Th2EntityRow> value) => PointsFilter.SetSource(value);
+    partial void OnLinesChanged(IReadOnlyList<Th2EntityRow> value) => LinesFilter.SetSource(value);
+    partial void OnAreasChanged(IReadOnlyList<Th2EntityRow> value) => AreasFilter.SetSource(value);
+
+    /// <summary>
+    /// Applies a custom subset filter (e.g. an Overview ▸ Quality drill-down): switches to the target
+    /// tab and restricts it to the predicate's rows with a labelled chip. Generic, so any caller can
+    /// push any arbitrary subset of a tab's rows.
+    /// </summary>
+    public void ApplyFilter(BrowserFilter filter)
+    {
+        if (filter is null) return;
+        int idx = System.Math.Clamp((int)filter.Tab, 0, Filters.Length - 1);
+        SelectedTabIndex = idx;
+        Filters[idx].ApplyCustom(filter.Label, filter.Predicate);
+    }
 
     // Localized labels � bound directly so language switch refreshes headers.
     public string TabStations => L("Browser_Tab_Stations", "Stations");
@@ -279,7 +337,7 @@ public partial class ObjectBrowserViewModel : ViewModelBase
         foreach (var s in model.Shots)
         {
             var row = new ShotRow(s.From.ToString(), s.To.ToString(), s.Length, s.Compass, s.Clino,
-                s.Span.Start.Line, s.SourceRow, s.FieldDefinition);
+                s.Span.Start.Line, s.SourceRow, s.FieldDefinition, s);
             row.EditRequested += OnRowEdit;
             shots.Add(row);
         }
@@ -319,7 +377,7 @@ public partial class ObjectBrowserViewModel : ViewModelBase
             foreach (var s in model.Shots)
             {
                 var row = new ShotRow(s.From.ToString(), s.To.ToString(), s.Length, s.Compass, s.Clino,
-                    s.Span.Start.Line, s.SourceRow, s.FieldDefinition);
+                    s.Span.Start.Line, s.SourceRow, s.FieldDefinition, s);
                 row.EditRequested += OnRowEdit;
                 shots.Add(row);
             }
@@ -348,7 +406,7 @@ public partial class ObjectBrowserViewModel : ViewModelBase
         if (!EntitiesEnabled) { ClearEntities(); return; }
         Surveys = model.Surveys.Values
             .Select(sv => new SurveyEntityRow(sv.Name.ToString(), sv.Title ?? string.Empty,
-                sv.Name.HasParent ? sv.Name.Parent().ToString() : string.Empty, sv.DeclarationSpan))
+                sv.Name.HasParent ? sv.Name.Parent().ToString() : string.Empty, sv.DeclarationSpan, sv))
             .OrderBy(r => r.Name, System.StringComparer.Ordinal).ToList();
         Fixes = model.Stations.Values.Where(s => s.Kind == StationDeclarationKind.Fix)
             .Select(s => new FixEntityRow(s.Name.ToString(), Coords(s), s.Cs ?? string.Empty, s.DeclarationSpan))
@@ -370,7 +428,7 @@ public partial class ObjectBrowserViewModel : ViewModelBase
         if (!EntitiesEnabled) { ClearEntities(); return; }
         Surveys = ws.SurveysByFullName.Values
             .Select(sv => new SurveyEntityRow(sv.Name.ToString(), sv.Title ?? string.Empty,
-                sv.Name.HasParent ? sv.Name.Parent().ToString() : string.Empty, sv.DeclarationSpan))
+                sv.Name.HasParent ? sv.Name.Parent().ToString() : string.Empty, sv.DeclarationSpan, sv))
             .OrderBy(r => r.Name, System.StringComparer.Ordinal).ToList();
         Fixes = ws.StationsByQn.Values.Where(s => s.Kind == StationDeclarationKind.Fix)
             .Select(s => new FixEntityRow(s.Name.ToString(), Coords(s), s.Cs ?? string.Empty, s.DeclarationSpan))

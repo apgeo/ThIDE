@@ -299,6 +299,9 @@
   <data name="OB_Tab_Areas" xml:space="preserve"><value>Areas</value></data>
   <data name="OB_Col_Equate" xml:space="preserve"><value>Equate</value></data>
   <data name="OB_CopyQName" xml:space="preserve"><value>Copy Qualified Name</value></data>
+  <data name="OB_FilterWatermark" xml:space="preserve"><value>Filter…</value></data>
+  <data name="OB_ClearFilter" xml:space="preserve"><value>Clear filter</value></data>
+  <data name="Quality_ShowInBrowser" xml:space="preserve"><value>Show these in the Object Browser</value></data>
   <!-- Main window: extra menus -->
   <data name="Menu_File_ReopenTab" xml:space="preserve"><value>Reopen Closed Tab</value></data>
   <data name="Menu_File_RecentDirectories" xml:space="preserve"><value>Recent _Directories</value></data>

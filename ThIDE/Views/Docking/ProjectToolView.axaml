@@ -24,6 +24,15 @@
             <Setter Property="Foreground" Value="Gray" />
             <Setter Property="Width" Value="130" />
         </Style>
+        <!-- Always-visible hyperlink (the inner TextBlock inherits this Foreground and is underlined). -->
+        <Style Selector="Button.link">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="6,1" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Foreground" Value="#3B82F6" />
+        </Style>
     </UserControl.Styles>
 
   <Grid>
@@ -194,16 +203,25 @@
             </DockPanel>
         </TabItem>
 
-        <!-- Data quality -->
+        <!-- Data quality — each count is a hyperlink that drills into the matching rows in the Object Browser. -->
         <TabItem Header="{l:Loc Proj_Tab_Quality}">
-            <DataGrid ItemsSource="{Binding Analytics.Quality}" IsReadOnly="True"
-                      local:DataGridCopy.Enable="True"
-                      GridLinesVisibility="Horizontal" CanUserSortColumns="True" AutoGenerateColumns="False">
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="{l:Loc Col_Metric}" Binding="{Binding Metric}" Width="*" />
-                    <DataGridTextColumn Header="{l:Loc Col_Count}" Binding="{Binding Count}" Width="100" />
-                </DataGrid.Columns>
-            </DataGrid>
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding Analytics.Quality}" Margin="12,8">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid ColumnDefinitions="*,Auto" Margin="0,3">
+                                <TextBlock Grid.Column="0" Text="{Binding Metric}" VerticalAlignment="Center" />
+                                <Button Grid.Column="1" Classes="link" HorizontalAlignment="Right"
+                                        Command="{Binding $parent[ItemsControl].DataContext.Analytics.ShowQualityCommand}"
+                                        CommandParameter="{Binding}"
+                                        ToolTip.Tip="{l:Loc Quality_ShowInBrowser}">
+                                    <TextBlock Text="{Binding Count}" TextDecorations="Underline" />
+                                </Button>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
         </TabItem>
 
         <!-- Orphan / dead-file audit — computed on demand (the orphan scan walks every thconfig's
@@ -388,7 +406,5 @@
             </DockPanel>
         </TabItem>
     </TabControl>
-    <!-- Shared window controls overlaid in the empty top-right of the tab strip. -->
-    <local:PanelWindowControls HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,2,4,0" />
   </Grid>
 </UserControl>

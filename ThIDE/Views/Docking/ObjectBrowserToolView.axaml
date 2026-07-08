@@ -4,11 +4,33 @@
              xmlns:docking="using:ThIDE.Views.Docking"
              xmlns:l="using:ThIDE.Resources"
              x:Class="ThIDE.Views.Docking.ObjectBrowserToolView"
+             x:CompileBindings="False"
              x:DataType="vm:ObjectBrowserToolViewModel">
-  <Grid>
-    <TabControl>
+  <DockPanel>
+    <!-- Shared filter bar: edits the currently selected tab's filter (each tab keeps its own state).
+         When a drill-down (custom subset) filter is active, a labelled chip + Clear button appear. -->
+    <Border DockPanel.Dock="Top" Padding="6,4"
+            BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
+      <DockPanel LastChildFill="True">
+        <Border DockPanel.Dock="Right" IsVisible="{Binding Browser.ActiveFilter.HasCustomFilter}"
+                Margin="8,0,0,0" Padding="8,1" CornerRadius="10" VerticalAlignment="Center"
+                Background="#203B82F6" BorderBrush="#3B82F6" BorderThickness="1">
+          <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+            <TextBlock Text="{Binding Browser.ActiveFilter.CustomLabel}" VerticalAlignment="Center" FontSize="12" />
+            <Button Content="✕" Command="{Binding Browser.ActiveFilter.ClearCustomFilterCommand}"
+                    Padding="4,0" MinWidth="0" MinHeight="0" Background="Transparent" BorderThickness="0"
+                    Cursor="Hand" ToolTip.Tip="{l:Loc OB_ClearFilter}" />
+          </StackPanel>
+        </Border>
+        <TextBox Text="{Binding Browser.ActiveFilter.Text, Mode=TwoWay}"
+                 Watermark="{l:Loc OB_FilterWatermark}" VerticalAlignment="Center" />
+      </DockPanel>
+    </Border>
+
+    <Grid>
+      <TabControl SelectedIndex="{Binding Browser.SelectedTabIndex, Mode=TwoWay}">
         <TabItem Header="{Binding Browser.TabStations}">
-            <DataGrid ItemsSource="{Binding Browser.Stations}" DoubleTapped="OnRowDoubleTapped"
+            <DataGrid ItemsSource="{Binding Browser.StationsFilter.Items}" DoubleTapped="OnRowDoubleTapped"
                       ContextRequested="OnGridContextRequested"
                       IsReadOnly="True" GridLinesVisibility="Horizontal"
                       CanUserResizeColumns="True" CanUserSortColumns="True" AutoGenerateColumns="False">
@@ -24,14 +46,13 @@
                 </DataGrid.ContextMenu>
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="{l:Loc Browser_Col_QualifiedName}" Binding="{Binding QualifiedName}" Width="*" />
-                    <DataGridTextColumn Header="{l:Loc Browser_Col_Kind}"   Binding="{Binding Kind}"   Width="100" />
                     <DataGridTextColumn Header="{l:Loc Browser_Col_Survey}" Binding="{Binding Survey}" Width="160" />
                     <DataGridTextColumn Header="{l:Loc Browser_Col_Line}"   Binding="{Binding Line}"   Width="60"  />
                 </DataGrid.Columns>
             </DataGrid>
         </TabItem>
         <TabItem Header="{Binding Browser.TabShots}">
-            <DataGrid ItemsSource="{Binding Browser.Shots}"
+            <DataGrid ItemsSource="{Binding Browser.ShotsFilter.Items}"
                       GridLinesVisibility="Horizontal"
                       CanUserResizeColumns="True" CanUserSortColumns="True" AutoGenerateColumns="False">
                 <DataGrid.Columns>
@@ -46,7 +67,7 @@
         </TabItem>
         <!-- entity tabs -->
         <TabItem Header="{l:Loc Proj_Tab_Surveys}">
-            <DataGrid ItemsSource="{Binding Browser.Surveys}" DoubleTapped="OnRowDoubleTapped"
+            <DataGrid ItemsSource="{Binding Browser.SurveysFilter.Items}" DoubleTapped="OnRowDoubleTapped"
                       ContextRequested="OnGridContextRequested" IsReadOnly="True" GridLinesVisibility="Horizontal"
                       CanUserResizeColumns="True" CanUserSortColumns="True" AutoGenerateColumns="False">
                 <!-- identifier actions. -->
@@ -69,7 +90,7 @@
             </DataGrid>
         </TabItem>
         <TabItem Header="{l:Loc OB_Tab_Fixes}">
-            <DataGrid ItemsSource="{Binding Browser.Fixes}" DoubleTapped="OnRowDoubleTapped" IsReadOnly="True" GridLinesVisibility="Horizontal"
+            <DataGrid ItemsSource="{Binding Browser.FixesFilter.Items}" DoubleTapped="OnRowDoubleTapped" IsReadOnly="True" GridLinesVisibility="Horizontal"
                       CanUserResizeColumns="True" CanUserSortColumns="True" AutoGenerateColumns="False">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="{l:Loc Col_Station}" Binding="{Binding Station}" Width="*" />
@@ -81,7 +102,7 @@
             </DataGrid>
         </TabItem>
         <TabItem Header="{l:Loc OB_Tab_Equates}">
-            <DataGrid ItemsSource="{Binding Browser.Equates}" DoubleTapped="OnRowDoubleTapped" IsReadOnly="True" GridLinesVisibility="Horizontal"
+            <DataGrid ItemsSource="{Binding Browser.EquatesFilter.Items}" DoubleTapped="OnRowDoubleTapped" IsReadOnly="True" GridLinesVisibility="Horizontal"
                       CanUserResizeColumns="True" CanUserSortColumns="True" AutoGenerateColumns="False">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="{l:Loc OB_Col_Equate}" Binding="{Binding Stations}" Width="*" />
@@ -91,7 +112,7 @@
             </DataGrid>
         </TabItem>
         <TabItem Header="{l:Loc OB_Tab_Maps}">
-            <DataGrid ItemsSource="{Binding Browser.Maps}" DoubleTapped="OnRowDoubleTapped" IsReadOnly="True" GridLinesVisibility="Horizontal"
+            <DataGrid ItemsSource="{Binding Browser.MapsFilter.Items}" DoubleTapped="OnRowDoubleTapped" IsReadOnly="True" GridLinesVisibility="Horizontal"
                       CanUserResizeColumns="True" CanUserSortColumns="True" AutoGenerateColumns="False">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="{l:Loc Col_Id}" Binding="{Binding Id}" Width="*" />
@@ -104,7 +125,7 @@
             </DataGrid>
         </TabItem>
         <TabItem Header="{l:Loc OB_Tab_Scraps}">
-            <DataGrid ItemsSource="{Binding Browser.Scraps}" DoubleTapped="OnRowDoubleTapped" IsReadOnly="True" GridLinesVisibility="Horizontal"
+            <DataGrid ItemsSource="{Binding Browser.ScrapsFilter.Items}" DoubleTapped="OnRowDoubleTapped" IsReadOnly="True" GridLinesVisibility="Horizontal"
                       CanUserResizeColumns="True" CanUserSortColumns="True" AutoGenerateColumns="False">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="{l:Loc Col_Id}" Binding="{Binding Id}" Width="*" />
@@ -115,7 +136,7 @@
             </DataGrid>
         </TabItem>
         <TabItem Header="{l:Loc OB_Tab_Points}">
-            <DataGrid ItemsSource="{Binding Browser.Points}" DoubleTapped="OnRowDoubleTapped" IsReadOnly="True" GridLinesVisibility="Horizontal"
+            <DataGrid ItemsSource="{Binding Browser.PointsFilter.Items}" DoubleTapped="OnRowDoubleTapped" IsReadOnly="True" GridLinesVisibility="Horizontal"
                       CanUserResizeColumns="True" CanUserSortColumns="True" AutoGenerateColumns="False">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="{l:Loc Col_Type}" Binding="{Binding Type}" Width="*" />
@@ -126,7 +147,7 @@
             </DataGrid>
         </TabItem>
         <TabItem Header="{l:Loc OB_Tab_Lines}">
-            <DataGrid ItemsSource="{Binding Browser.Lines}" DoubleTapped="OnRowDoubleTapped" IsReadOnly="True" GridLinesVisibility="Horizontal"
+            <DataGrid ItemsSource="{Binding Browser.LinesFilter.Items}" DoubleTapped="OnRowDoubleTapped" IsReadOnly="True" GridLinesVisibility="Horizontal"
                       CanUserResizeColumns="True" CanUserSortColumns="True" AutoGenerateColumns="False">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="{l:Loc Col_Type}" Binding="{Binding Type}" Width="*" />
@@ -137,7 +158,7 @@
             </DataGrid>
         </TabItem>
         <TabItem Header="{l:Loc OB_Tab_Areas}">
-            <DataGrid ItemsSource="{Binding Browser.Areas}" DoubleTapped="OnRowDoubleTapped" IsReadOnly="True" GridLinesVisibility="Horizontal"
+            <DataGrid ItemsSource="{Binding Browser.AreasFilter.Items}" DoubleTapped="OnRowDoubleTapped" IsReadOnly="True" GridLinesVisibility="Horizontal"
                       CanUserResizeColumns="True" CanUserSortColumns="True" AutoGenerateColumns="False">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="{l:Loc Col_Type}" Binding="{Binding Type}" Width="*" />
@@ -147,8 +168,9 @@
                 </DataGrid.Columns>
             </DataGrid>
         </TabItem>
-    </TabControl>
-    <!-- Shared window controls overlaid in the empty top-right of the tab strip. -->
-    <docking:PanelWindowControls HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,2,4,0" />
-  </Grid>
+      </TabControl>
+      <!-- Shared window controls overlaid in the empty top-right of the tab strip. -->
+      <docking:PanelWindowControls HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,1,1,0" />
+    </Grid>
+  </DockPanel>
 </UserControl>

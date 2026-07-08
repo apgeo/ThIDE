@@ -621,6 +621,13 @@ public partial class MainWindowViewModel : ViewModelBase
             GoForwardCommand.NotifyCanExecuteChanged();
         });
         ObjectBrowser.ShotEditRequested += async (_, e) => await ApplyShotEditAsync(e).ConfigureAwait(true);
+        // Overview ▸ Quality drill-down: clicking a metric count surfaces the Object Browser and
+        // restricts the matching tab to that metric's rows (a labelled, clearable subset filter).
+        ProjectTool.Analytics.QualityDrilldownRequested += (_, filter) => OnUiThread(() =>
+        {
+            _factory.ShowTool(ObjectBrowserTool);
+            ObjectBrowser.ApplyFilter(filter);
+        });
         WorkspaceExplorer.OpenRequested += async (_, node) => await OpenNodeAsync(node).ConfigureAwait(true);
         WorkspaceExplorer.NavigateRequested += (_, span) => NavigateTo(span);
         // double-click a measurement / plane → jump to its source span.

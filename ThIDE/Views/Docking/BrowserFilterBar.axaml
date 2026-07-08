@@ -1,0 +1,24 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ThIDE.ViewModels"
+             xmlns:l="using:ThIDE.Resources"
+             x:Class="ThIDE.Views.Docking.BrowserFilterBar"
+             x:DataType="vm:BrowserTabFilter">
+  <!-- One tab's filter row: a free-text box (matches across all fields) plus, when a drill-down
+       subset filter is active, a labelled chip with a Clear button. Bound to a BrowserTabFilter. -->
+  <Border Padding="4,3" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
+    <DockPanel LastChildFill="True">
+      <Border DockPanel.Dock="Right" IsVisible="{Binding HasCustomFilter}"
+              Margin="6,0,0,0" Padding="8,1" CornerRadius="10" VerticalAlignment="Center"
+              Background="#203B82F6" BorderBrush="#3B82F6" BorderThickness="1">
+        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+          <TextBlock Text="{Binding CustomLabel}" VerticalAlignment="Center" FontSize="12" />
+          <Button Content="✕" Command="{Binding ClearCustomFilterCommand}"
+                  Padding="4,0" MinWidth="0" MinHeight="0" Background="Transparent" BorderThickness="0"
+                  Cursor="Hand" ToolTip.Tip="{l:Loc OB_ClearFilter}" />
+        </StackPanel>
+      </Border>
+      <TextBox Text="{Binding Text, Mode=TwoWay}" Watermark="{l:Loc OB_FilterWatermark}" VerticalAlignment="Center" />
+    </DockPanel>
+  </Border>
+</UserControl>
