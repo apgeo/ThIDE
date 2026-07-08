@@ -1,6 +1,6 @@
 # ThIDE
 
-A cross-platform desktop **workbench / IDE for [Therion](https://therion.speleo.sk/) cave-survey projects** — modern editor tooling, a cross-file semantic model, survey analytics, syntax checking / highlighting for the `.th` / `.th2` / `.thconfig` / `.xvi` file formats, Therion compile integration, and 3D view of resulted models.
+A cross-platform desktop **workbench / IDE for [Therion](https://therion.speleo.sk/) cave-survey projects** — modern editor tooling, a cross-file semantic model, survey analytics, syntax checking / highlighting for the `.th` / `.th2` / `.thconfig` / `.xvi` file formats, Therion compile integration, and 3D view of resulted models. Download from [release page](github.com/apgeo/ThIDE/releases/). 
 
 ![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet&logoColor=white)
 ![UI](https://img.shields.io/badge/UI-Avalonia%2012-7B61FF)
