@@ -9,6 +9,9 @@ on:
     tags: ['v*']
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   # Build the User Guide once (docs/user-guide/*.md -> a single navigable PDF) so it can be both
   # bundled into every OS package (Help ▸ User Guide) and attached to the Release as a download.
