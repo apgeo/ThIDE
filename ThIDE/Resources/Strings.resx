@@ -403,6 +403,7 @@
   <data name="Layout_Reset" xml:space="preserve"><value>Reset to Default Layout</value></data>
   <data name="Notif_Empty" xml:space="preserve"><value>No notifications yet.</value></data>
   <!-- Status bar -->
+  <data name="Status_OpenFolderFailed" xml:space="preserve"><value>Could not open '{0}' in the file manager.</value></data>
   <data name="Status_Length" xml:space="preserve"><value>Length:</value></data>
   <data name="Status_Lines" xml:space="preserve"><value>Lines:</value></data>
   <data name="Status_Line" xml:space="preserve"><value>Line:</value></data>

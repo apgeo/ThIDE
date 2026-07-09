@@ -742,14 +742,17 @@
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
                             <StackPanel Orientation="Horizontal">
-                                <Button Classes="crumb" Content="{Binding Name}"
+                                <!-- Padding/Margin tightened over the shared .crumb style: a full path
+                                     has many segments, and the default gaps made it read as a list of
+                                     words rather than one path. -->
+                                <Button Classes="crumb" Content="{Binding Name}" Padding="1,0"
                                         IsVisible="{Binding IsClickable}"
                                         Command="{Binding $parent[ItemsControl].DataContext.NavigatePathSegmentCommand}"
                                         CommandParameter="{Binding}"
                                         ToolTip.Tip="{Binding Directory}" />
                                 <TextBlock Text="{Binding Name}" Foreground="Gray" FontSize="11"
                                            VerticalAlignment="Center" IsVisible="{Binding !IsClickable}" />
-                                <TextBlock Text="›" Foreground="Gray" Margin="2,0" VerticalAlignment="Center"
+                                <TextBlock Text="›" Foreground="Gray" Margin="0" VerticalAlignment="Center"
                                            IsVisible="{Binding !IsLast}" />
                             </StackPanel>
                         </DataTemplate>

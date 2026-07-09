@@ -12,6 +12,7 @@ using CommunityToolkit.Mvvm.Input;
 using Dock.Model.Controls;
 using Dock.Model.Core;
 using Microsoft.Extensions.Localization;
+using Therion.Build;
 using Therion.Semantics;
 using Therion.Syntax;
 using Therion.Workspace.Import;
@@ -49,6 +50,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly ICrashRecoveryService? _crashRecovery; // safe-mode + buffer recovery
     private readonly IScriptHookService? _hooks;            // on-build hook
     private readonly IWorkspaceSession? _session;
+    private readonly IShellOpener? _shell;
     private readonly DockFactory _factory;
     private IStoragePicker? _picker;
 
@@ -500,8 +502,10 @@ public partial class MainWindowViewModel : ViewModelBase
         ILogService? log = null,
         INotificationService? notifications = null,
         ICrashRecoveryService? crashRecovery = null,
-        IScriptHookService? hooks = null)
+        IScriptHookService? hooks = null,
+        IShellOpener? shell = null)
     {
+        _shell = shell;
         _log = log;
         _crashRecovery = crashRecovery;
         _hooks = hooks;
@@ -1759,15 +1763,36 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// Clicking a directory segment of the status-bar path breadcrumb (#1): reveal that folder in
-    /// the Workspace Explorer, switching it to the file-explorer view and surfacing the panel.
+    /// Clicking a directory segment of the status-bar path breadcrumb (#1). Inside the workspace the
+    /// folder is revealed in the Workspace Explorer (surfacing the panel first); above the root — the
+    /// drive and the ancestors the explorer cannot show — it opens in the OS file manager instead of
+    /// silently doing nothing.
     /// </summary>
     [RelayCommand]
     private void NavigatePathSegment(PathCrumb? crumb)
     {
         if (crumb?.Directory is not { } dir) return;
-        Activate(WorkspaceTool);            // surface/focus the Workspace Explorer panel
-        WorkspaceExplorer.RevealPath(dir);  // switch to file-explorer view + select the folder node
+        if (IsUnderWorkspaceRoot(dir))
+        {
+            Activate(WorkspaceTool);            // surface/focus the Workspace Explorer panel
+            WorkspaceExplorer.RevealPath(dir);  // switch to file-explorer view + select the folder node
+        }
+        else if (_shell?.Open(dir) is not true)
+        {
+            StatusText = string.Format(Tr.Get("Status_OpenFolderFailed"), dir);
+        }
+    }
+
+    /// <summary>True when <paramref name="dir"/> is the workspace root or lives inside it.</summary>
+    private bool IsUnderWorkspaceRoot(string dir)
+    {
+        if (_session?.RootPath is not { } root) return false;
+        try
+        {
+            var rel = System.IO.Path.GetRelativePath(root, System.IO.Path.GetFullPath(dir));
+            return !rel.StartsWith("..", StringComparison.Ordinal) && !System.IO.Path.IsPathRooted(rel);
+        }
+        catch { return false; }
     }
 
     /// <summary>Splits a full file path into breadcrumb segments (root-first); the file name is last.</summary>

@@ -403,6 +403,7 @@
   <data name="Layout_Reset" xml:space="preserve"><value>Resetează la aranjamentul implicit</value></data>
   <data name="Notif_Empty" xml:space="preserve"><value>Nicio notificare încă.</value></data>
   <!-- Status bar -->
+  <data name="Status_OpenFolderFailed" xml:space="preserve"><value>Nu s-a putut deschide „{0}” în managerul de fișiere.</value></data>
   <data name="Status_Length" xml:space="preserve"><value>Lungime:</value></data>
   <data name="Status_Lines" xml:space="preserve"><value>Linii:</value></data>
   <data name="Status_Line" xml:space="preserve"><value>Linie:</value></data>
