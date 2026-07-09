@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(TherionLibraryTargetFrameworks)</TargetFrameworks>
+  </PropertyGroup>
+
+  <!--
+    MCP tool catalog (see .claude/mcp-integration/). Deliberately UI-free: this library is
+    shared by the headless stdio host (Therion.Mcp.Server) and, later, an in-app HTTP host.
+    Ring-R3 (UI) behaviour goes through IUiBridge, never through an Avalonia reference.
+    SDK pinned to 1.4.x per D-003 — the protocol and the SDK both still rev.
+  -->
+  <ItemGroup>
+    <PackageReference Include="ModelContextProtocol" Version="1.4.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Therion.Core\Therion.Core.csproj" />
+    <ProjectReference Include="..\Therion.Syntax\Therion.Syntax.csproj" />
+    <ProjectReference Include="..\Therion.Semantics\Therion.Semantics.csproj" />
+    <ProjectReference Include="..\Therion.Workspace\Therion.Workspace.csproj" />
+    <ProjectReference Include="..\Therion.Structural\Therion.Structural.csproj" />
+    <ProjectReference Include="..\Therion.Build\Therion.Build.csproj" />
+    <ProjectReference Include="..\Therion.Processing.Abstractions\Therion.Processing.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>
