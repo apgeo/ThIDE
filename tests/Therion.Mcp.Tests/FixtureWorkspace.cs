@@ -44,6 +44,27 @@ internal sealed class FixtureWorkspace : IDisposable
         return new FixtureWorkspace(root, thconfig);
     }
 
+    /// <summary>
+    /// A project that lints dirty: a bad length value in a data row, and an <c>input</c> pointing at
+    /// a file that isn't there. Both the per-file pass and the cross-file pass have something to say.
+    /// </summary>
+    public static FixtureWorkspace CreateBroken()
+    {
+        var fixture = Create();
+
+        File.WriteAllText(fixture.PathTo("caves", "upper.th"), """
+            survey upper
+              input nowhere.th
+              centreline
+                data normal from to length compass clino
+                1 2 abc 90 0
+              endcentreline
+            endsurvey
+            """);
+
+        return fixture;
+    }
+
     /// <summary>Absolute path inside the fixture, from workspace-relative segments.</summary>
     public string PathTo(params string[] segments) => Path.Combine([Root, .. segments]);
 

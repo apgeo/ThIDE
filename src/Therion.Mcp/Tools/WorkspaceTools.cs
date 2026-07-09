@@ -100,7 +100,7 @@ public sealed class WorkspaceTools(WorkspaceHost host)
         int limit = 0,
         CancellationToken ct = default)
     {
-        var (snapshot, error) = await TryGetAsync(ct);
+        var (snapshot, error) = await host.TryGetSnapshotAsync(ct);
         if (error is not null) return ToolResult<FileList>.Failure(error);
 
         IEnumerable<string> absolute = orphansOnly
@@ -141,7 +141,7 @@ public sealed class WorkspaceTools(WorkspaceHost host)
         int maxBytes = 0,
         CancellationToken ct = default)
     {
-        var (snapshot, error) = await TryGetAsync(ct);
+        var (snapshot, error) = await host.TryGetSnapshotAsync(ct);
         if (error is not null) return ToolResult<FileContent>.Failure(error);
 
         if (!WorkspacePaths.TryResolve(snapshot!.Root, path, out var full, out var reason))
@@ -183,23 +183,6 @@ public sealed class WorkspaceTools(WorkspaceHost host)
             LineCount: taken,
             TotalLines: lines.Length,
             Truncated: truncated));
-    }
-
-    /// <summary>Loads on demand, translating the two load failures into wire errors.</summary>
-    private async Task<(WorkspaceSnapshot? Snapshot, ToolError? Error)> TryGetAsync(CancellationToken ct)
-    {
-        try
-        {
-            return (await host.GetAsync(ct), null);
-        }
-        catch (WorkspaceNotLoadedException ex)
-        {
-            return (null, new ToolError(ToolErrorCodes.WorkspaceNotLoaded, ex.Message));
-        }
-        catch (WorkspaceLoadException ex)
-        {
-            return (null, new ToolError(ToolErrorCodes.WorkspaceLoadFailed, ex.Message));
-        }
     }
 
     private static WorkspaceInfo Describe(WorkspaceSnapshot snapshot) => new(

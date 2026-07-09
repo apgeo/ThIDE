@@ -12,6 +12,7 @@ public static class ToolErrorCodes
     public const string FileNotFound = "file_not_found";
     public const string InvalidArgument = "invalid_argument";
     public const string ReadFailed = "read_failed";
+    public const string UnknownDiagnosticCode = "unknown_diagnostic_code";
 }
 
 /// <summary>
