@@ -90,6 +90,59 @@
                                   HighlightingEnabled="{Binding !HighlightingSuppressed}"
                                   CurrentFilePath="{Binding FilePath}" />
         </TabItem>
+        <!-- Log tab: shown only when the file's content is Therion compiler output. -->
+        <TabItem Header="{l:Loc Log_Tab}" IsVisible="{Binding IsLogFile}">
+            <DockPanel DataContext="{Binding LogSummary}" x:DataType="vm:LogSummaryViewModel">
+                <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="8,6">
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Padding="8,3" Content="{l:Loc Log_CopyAll}"
+                                Command="{Binding CopyAllCommand}" ToolTip.Tip="{l:Loc Log_CopyAllTip}" />
+                        <Border Background="{Binding OutcomeBrush}" CornerRadius="3" Padding="8,2"
+                                HorizontalAlignment="Left" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding OutcomeText}" Foreground="White" FontWeight="Bold" />
+                        </Border>
+                    </DockPanel>
+                </Border>
+
+                <ScrollViewer>
+                    <ItemsControl ItemsSource="{Binding Sections}" Margin="8">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:LogSectionViewModel">
+                                <StackPanel Margin="0,0,0,14">
+                                    <DockPanel Margin="0,0,0,4">
+                                        <Button DockPanel.Dock="Right" Padding="6,1" FontSize="11"
+                                                Background="Transparent" BorderThickness="0"
+                                                Content="{l:Loc Log_CopySection}"
+                                                Command="{Binding CopySectionCommand}" />
+                                        <TextBlock Text="{Binding Title}" FontWeight="Bold" FontSize="13"
+                                                   VerticalAlignment="Center" />
+                                    </DockPanel>
+                                    <ItemsControl ItemsSource="{Binding Fields}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:LogFieldViewModel">
+                                                <Grid ColumnDefinitions="220,*,Auto" Margin="0,1">
+                                                    <TextBlock Grid.Column="0" Text="{Binding Label}" Foreground="Gray"
+                                                               TextTrimming="CharacterEllipsis" Margin="0,0,8,0"
+                                                               VerticalAlignment="Center" ToolTip.Tip="{Binding Label}" />
+                                                    <SelectableTextBlock Grid.Column="1" Text="{Binding Value}"
+                                                                         TextWrapping="Wrap" VerticalAlignment="Center"
+                                                                         ToolTip.Tip="{Binding Tooltip}" />
+                                                    <Button Grid.Column="2" Padding="5,1" FontSize="11"
+                                                            Background="Transparent" BorderThickness="0"
+                                                            Content="{l:Loc Log_Copy}" Command="{Binding CopyCommand}"
+                                                            ToolTip.Tip="{Binding CopyText}" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DockPanel>
+        </TabItem>
+
         <!-- Measurements tab: shown only for .th files (#4). -->
         <TabItem Header="{l:Loc File_TabMeasurements}" IsVisible="{Binding IsThFile}">
             <DockPanel>

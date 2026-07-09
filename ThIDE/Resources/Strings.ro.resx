@@ -1092,4 +1092,61 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Close_SavePromptMsg" xml:space="preserve"><value>Doriți să salvați modificările făcute în „{0}” înainte de a-l închide?</value></data>
   <data name="Close_Save" xml:space="preserve"><value>Salvează</value></data>
   <data name="Close_DontSave" xml:space="preserve"><value>Nu salva</value></data>
+  <data name="Log_Tab" xml:space="preserve"><value>Jurnal</value></data>
+  <data name="Log_CopyAll" xml:space="preserve"><value>Copiază tot</value></data>
+  <data name="Log_CopyAllTip" xml:space="preserve"><value>Copiază în clipboard toate câmpurile extrase</value></data>
+  <data name="Log_CopySection" xml:space="preserve"><value>Copiază secțiunea</value></data>
+  <data name="Log_Copy" xml:space="preserve"><value>Copiază</value></data>
+  <data name="Log_Section_Summary" xml:space="preserve"><value>Sumar</value></data>
+  <data name="Log_Section_Versions" xml:space="preserve"><value>Versiuni</value></data>
+  <data name="Log_Section_Inputs" xml:space="preserve"><value>Fișiere de intrare</value></data>
+  <data name="Log_Section_Coordinates" xml:space="preserve"><value>Sistem de coordonate</value></data>
+  <data name="Log_Section_Statistics" xml:space="preserve"><value>Statistici topografice</value></data>
+  <data name="Log_Section_LoopErrors" xml:space="preserve"><value>Erori de buclă</value></data>
+  <data name="Log_Section_Outputs" xml:space="preserve"><value>Fișiere generate</value></data>
+  <data name="Log_Section_Stages" xml:space="preserve"><value>Etape de procesare</value></data>
+  <data name="Log_Section_Diagnostics" xml:space="preserve"><value>Erori și avertismente</value></data>
+  <data name="Log_Outcome" xml:space="preserve"><value>Rezultat</value></data>
+  <data name="Log_Outcome_Success" xml:space="preserve"><value>Compilare reușită</value></data>
+  <data name="Log_Outcome_Warnings" xml:space="preserve"><value>Compilare cu avertismente</value></data>
+  <data name="Log_Outcome_Failed" xml:space="preserve"><value>Compilare eșuată</value></data>
+  <data name="Log_CompilationTime" xml:space="preserve"><value>Durata compilării</value></data>
+  <data name="Log_ErrorCount" xml:space="preserve"><value>Erori</value></data>
+  <data name="Log_WarningCount" xml:space="preserve"><value>Avertismente</value></data>
+  <data name="Log_IncompleteStage" xml:space="preserve"><value>Oprit la</value></data>
+  <data name="Log_TherionVersion" xml:space="preserve"><value>Versiune Therion</value></data>
+  <data name="Log_ReleaseDate" xml:space="preserve"><value>Data lansării</value></data>
+  <data name="Log_Proj" xml:space="preserve"><value>Proj</value></data>
+  <data name="Log_ProjMismatch" xml:space="preserve"><value>{0} (compilat cu {1})</value></data>
+  <data name="Log_Survex" xml:space="preserve"><value>Survex (cavern)</value></data>
+  <data name="Log_Library" xml:space="preserve"><value>Bibliotecă</value></data>
+  <data name="Log_ConfigFile" xml:space="preserve"><value>Fișier de configurare</value></data>
+  <data name="Log_InitFile" xml:space="preserve"><value>Fișier de inițializare</value></data>
+  <data name="Log_Encoding" xml:space="preserve"><value>Codificare</value></data>
+  <data name="Log_OutputCs" xml:space="preserve"><value>Sistem de coordonate de ieșire</value></data>
+  <data name="Log_MeridianConvergence" xml:space="preserve"><value>Convergența meridianelor</value></data>
+  <data name="Log_AreaOfUse" xml:space="preserve"><value>Zonă de utilizare</value></data>
+  <data name="Log_Declination" xml:space="preserve"><value>Declinație</value></data>
+  <data name="Log_Accuracy" xml:space="preserve"><value>acuratețe</value></data>
+  <data name="Log_Stations" xml:space="preserve"><value>Stații</value></data>
+  <data name="Log_StationsShort" xml:space="preserve"><value>stații</value></data>
+  <data name="Log_Shots" xml:space="preserve"><value>Vize</value></data>
+  <data name="Log_Loops" xml:space="preserve"><value>Bucle</value></data>
+  <data name="Log_Components" xml:space="preserve"><value>Componente conexe</value></data>
+  <data name="Log_NoControlPoints" xml:space="preserve"><value>Fără puncte de control (originea fixată automat)</value></data>
+  <data name="Log_TotalLength" xml:space="preserve"><value>Lungime totală</value></data>
+  <data name="Log_AdjustedLength" xml:space="preserve"><value>Lungime totală (ajustată)</value></data>
+  <data name="Log_PlanLength" xml:space="preserve"><value>Lungime în plan</value></data>
+  <data name="Log_VerticalLength" xml:space="preserve"><value>Lungime verticală</value></data>
+  <data name="Log_VerticalRange" xml:space="preserve"><value>Amplitudine verticală</value></data>
+  <data name="Log_NsRange" xml:space="preserve"><value>Amplitudine nord-sud</value></data>
+  <data name="Log_EwRange" xml:space="preserve"><value>Amplitudine est-vest</value></data>
+  <data name="Log_AverageLoopError" xml:space="preserve"><value>Eroare medie de buclă</value></data>
+  <data name="Log_Done" xml:space="preserve"><value>finalizat</value></data>
+  <data name="Log_NotCompleted" xml:space="preserve"><value>nefinalizat</value></data>
+  <data name="Log_Yes" xml:space="preserve"><value>da</value></data>
+  <data name="Log_Sev_Error" xml:space="preserve"><value>Eroare</value></data>
+  <data name="Log_Sev_Warning" xml:space="preserve"><value>Avertisment</value></data>
+  <data name="Log_Sev_Hint" xml:space="preserve"><value>Sugestie</value></data>
+  <data name="Log_Sev_Info" xml:space="preserve"><value>Informație</value></data>
 </root>

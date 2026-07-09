@@ -68,6 +68,16 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
     public bool IsThFile =>
         string.Equals(System.IO.Path.GetExtension(FilePath), ".th", StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// True when this file's content is Therion compiler output — gates the "Log" tab. Content-
+    /// sniffed rather than extension-keyed, so an unrelated .log gets no tab and a therion.log
+    /// saved under another name still gets one.
+    /// </summary>
+    [ObservableProperty] private bool _isLogFile;
+
+    /// <summary>The parsed therion.log, or null when this isn't one. Rebuilt on every reparse.</summary>
+    [ObservableProperty] private LogSummaryViewModel? _logSummary;
+
     /// <summary>True for .th2 sketch files — gates the "Edit with Mapiah" button.</summary>
     public bool IsTh2File =>
         string.Equals(System.IO.Path.GetExtension(FilePath), ".th2", StringComparison.OrdinalIgnoreCase);
@@ -388,6 +398,10 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
 
         if (!parseable)
         {
+            // Therion compiler output gets its own structured summary tab (the head-scan is cheap;
+            // the full parse runs off the UI thread because a log can be very long).
+            bool isLog = Therion.Build.TherionLogParser.LooksLikeTherionLog(FilePath, _documentText);
+
             void ApplyText()
             {
                 if (_disposed) return;
@@ -401,10 +415,14 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
                 IsParsed = false;
                 HighlightingSuppressed = false;
                 ParsingSuppressed = false;
+                IsLogFile = isLog;
+                if (!isLog) LogSummary = null;
                 Reparsed?.Invoke(this, EventArgs.Empty);
             }
             if (Dispatcher.UIThread.CheckAccess()) ApplyText();
             else Dispatcher.UIThread.Post(ApplyText);
+
+            if (isLog) RebuildLogSummary(_documentText);
             return;
         }
 
@@ -438,6 +456,8 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
                 CompletionTerms = BuildCompletionTerms(null);
                 InterpretedTypeText = typeText;
                 IsParsed = false;
+                IsLogFile = false;
+                LogSummary = null;
                 ParsingSuppressed = true;
                 ParseBannerText = $"Parsing is disabled — {reason}.";
                 HighlightingSuppressed = suppressHighlight;
@@ -470,6 +490,8 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
             if (parsed.Semantics is { } model) Measurements.Load(model);
             InterpretedTypeText = typeText;
             IsParsed = true;
+            IsLogFile = false;
+            LogSummary = null;
             ParsingSuppressed = false;
             ParseBannerText = string.Empty;
             HighlightingSuppressed = suppressHighlight;
@@ -483,6 +505,24 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
             if (token.IsCancellationRequested) return;
             Dispatcher.UIThread.Post(() => Apply(parsed));
         }, token);
+    }
+
+    /// <summary>Monotonic guard so a slow log parse can't overwrite a newer one's result.</summary>
+    private int _logSummaryVersion;
+
+    /// <summary>Re-parses the therion.log off the UI thread and swaps in the fresh summary.</summary>
+    private void RebuildLogSummary(string snapshot)
+    {
+        int version = ++_logSummaryVersion;
+        Task.Run(() =>
+        {
+            var summary = LogSummaryViewModel.Build(Therion.Build.TherionLogParser.Parse(snapshot));
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (_disposed || version != _logSummaryVersion) return;
+                LogSummary = summary;
+            });
+        });
     }
 
     private static string HighlightReason(AppSettings? s, int lines, int kb)
@@ -586,12 +626,7 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
         catch { return System.IO.Path.GetFileName(FilePath); }
     }
 
-    private static void SetClipboard(string text)
-    {
-        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop
-            && desktop.MainWindow?.Clipboard is { } clipboard)
-            _ = clipboard.SetTextAsync(text);
-    }
+    private static void SetClipboard(string text) => ClipboardHelper.SetText(text);
 
     // ----- banners: orphan (#4) + external-change reload (#6) ----------------
 

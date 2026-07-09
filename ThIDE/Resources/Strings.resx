@@ -1092,4 +1092,61 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Close_SavePromptMsg" xml:space="preserve"><value>Do you want to save the changes you made to "{0}" before closing it?</value></data>
   <data name="Close_Save" xml:space="preserve"><value>Save</value></data>
   <data name="Close_DontSave" xml:space="preserve"><value>Don't save</value></data>
+  <data name="Log_Tab" xml:space="preserve"><value>Log</value></data>
+  <data name="Log_CopyAll" xml:space="preserve"><value>Copy all</value></data>
+  <data name="Log_CopyAllTip" xml:space="preserve"><value>Copy every extracted field to the clipboard</value></data>
+  <data name="Log_CopySection" xml:space="preserve"><value>Copy section</value></data>
+  <data name="Log_Copy" xml:space="preserve"><value>Copy</value></data>
+  <data name="Log_Section_Summary" xml:space="preserve"><value>Summary</value></data>
+  <data name="Log_Section_Versions" xml:space="preserve"><value>Versions</value></data>
+  <data name="Log_Section_Inputs" xml:space="preserve"><value>Input files</value></data>
+  <data name="Log_Section_Coordinates" xml:space="preserve"><value>Coordinate system</value></data>
+  <data name="Log_Section_Statistics" xml:space="preserve"><value>Survey statistics</value></data>
+  <data name="Log_Section_LoopErrors" xml:space="preserve"><value>Loop errors</value></data>
+  <data name="Log_Section_Outputs" xml:space="preserve"><value>Output files</value></data>
+  <data name="Log_Section_Stages" xml:space="preserve"><value>Processing stages</value></data>
+  <data name="Log_Section_Diagnostics" xml:space="preserve"><value>Errors and warnings</value></data>
+  <data name="Log_Outcome" xml:space="preserve"><value>Outcome</value></data>
+  <data name="Log_Outcome_Success" xml:space="preserve"><value>Compiled successfully</value></data>
+  <data name="Log_Outcome_Warnings" xml:space="preserve"><value>Compiled with warnings</value></data>
+  <data name="Log_Outcome_Failed" xml:space="preserve"><value>Compilation failed</value></data>
+  <data name="Log_CompilationTime" xml:space="preserve"><value>Compilation time</value></data>
+  <data name="Log_ErrorCount" xml:space="preserve"><value>Errors</value></data>
+  <data name="Log_WarningCount" xml:space="preserve"><value>Warnings</value></data>
+  <data name="Log_IncompleteStage" xml:space="preserve"><value>Stopped at</value></data>
+  <data name="Log_TherionVersion" xml:space="preserve"><value>Therion version</value></data>
+  <data name="Log_ReleaseDate" xml:space="preserve"><value>Release date</value></data>
+  <data name="Log_Proj" xml:space="preserve"><value>Proj</value></data>
+  <data name="Log_ProjMismatch" xml:space="preserve"><value>{0} (compiled against {1})</value></data>
+  <data name="Log_Survex" xml:space="preserve"><value>Survex (cavern)</value></data>
+  <data name="Log_Library" xml:space="preserve"><value>Library</value></data>
+  <data name="Log_ConfigFile" xml:space="preserve"><value>Configuration file</value></data>
+  <data name="Log_InitFile" xml:space="preserve"><value>Initialization file</value></data>
+  <data name="Log_Encoding" xml:space="preserve"><value>Encoding</value></data>
+  <data name="Log_OutputCs" xml:space="preserve"><value>Output coordinate system</value></data>
+  <data name="Log_MeridianConvergence" xml:space="preserve"><value>Meridian convergence</value></data>
+  <data name="Log_AreaOfUse" xml:space="preserve"><value>Area of use</value></data>
+  <data name="Log_Declination" xml:space="preserve"><value>Declination</value></data>
+  <data name="Log_Accuracy" xml:space="preserve"><value>accuracy</value></data>
+  <data name="Log_Stations" xml:space="preserve"><value>Stations</value></data>
+  <data name="Log_StationsShort" xml:space="preserve"><value>stations</value></data>
+  <data name="Log_Shots" xml:space="preserve"><value>Shots</value></data>
+  <data name="Log_Loops" xml:space="preserve"><value>Loops</value></data>
+  <data name="Log_Components" xml:space="preserve"><value>Connected components</value></data>
+  <data name="Log_NoControlPoints" xml:space="preserve"><value>No control points (origin fixed automatically)</value></data>
+  <data name="Log_TotalLength" xml:space="preserve"><value>Total length</value></data>
+  <data name="Log_AdjustedLength" xml:space="preserve"><value>Total length (adjusted)</value></data>
+  <data name="Log_PlanLength" xml:space="preserve"><value>Plan length</value></data>
+  <data name="Log_VerticalLength" xml:space="preserve"><value>Vertical length</value></data>
+  <data name="Log_VerticalRange" xml:space="preserve"><value>Vertical range</value></data>
+  <data name="Log_NsRange" xml:space="preserve"><value>North-South range</value></data>
+  <data name="Log_EwRange" xml:space="preserve"><value>East-West range</value></data>
+  <data name="Log_AverageLoopError" xml:space="preserve"><value>Average loop error</value></data>
+  <data name="Log_Done" xml:space="preserve"><value>done</value></data>
+  <data name="Log_NotCompleted" xml:space="preserve"><value>not completed</value></data>
+  <data name="Log_Yes" xml:space="preserve"><value>yes</value></data>
+  <data name="Log_Sev_Error" xml:space="preserve"><value>Error</value></data>
+  <data name="Log_Sev_Warning" xml:space="preserve"><value>Warning</value></data>
+  <data name="Log_Sev_Hint" xml:space="preserve"><value>Hint</value></data>
+  <data name="Log_Sev_Info" xml:space="preserve"><value>Info</value></data>
 </root>
