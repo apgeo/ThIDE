@@ -100,6 +100,7 @@ public partial class MainWindow : Window
                 {
                     docs.FindReferencesRequested += (_, term) => ShowFindReferences(term);
                     docs.RenameSymbolRequested += (_, args) => _ = HandleRenameSymbolAsync(args.Raw, args.Kind);
+                    docs.FindAllReferencesRequested += (_, args) => _ = HandleFindAllReferencesAsync(args.Raw, args.Kind);
                 }
                 _crashRecovery = AppServices.Provider.GetService<ICrashRecoveryService>();
             }
@@ -547,6 +548,36 @@ public partial class MainWindow : Window
 
     private RenamePreviewWindow? _renamePreviewWindow;
 
+    /// <summary>
+    /// Find All References (#7): resolves the token to a symbol and lists every occurrence the index
+    /// attributes to it (scope-correct, @-aware, cross-file) — the read-only half of true rename.
+    /// </summary>
+    private async System.Threading.Tasks.Task HandleFindAllReferencesAsync(
+        string raw, Therion.Processing.Abstractions.ReferenceKind kind)
+    {
+        IDocumentService? docs;
+        try { docs = AppServices.Provider.GetService<IDocumentService>(); }
+        catch { return; }
+        if (docs?.Workspace is not { } workspace) return;
+
+        var references = Therion.Semantics.SymbolReferences.FindAll(workspace, raw, kind);
+        if (references.Count == 0)
+        {
+            await new MessageDialog(ThIDE.Resources.Tr.Get("Refs_Title"),
+                string.Format(ThIDE.Resources.Tr.Get("Refs_None"), raw)).ShowAsync(this);
+            return;
+        }
+
+        // Non-modal, and only one at a time: a second search replaces the list rather than stacking windows.
+        _referencesWindow?.Close();
+        var win = new ReferencesWindow(raw, references, docs);
+        _referencesWindow = win;
+        win.Closed += (_, _) => _referencesWindow = null;
+        win.Show(this);
+    }
+
+    private ReferencesWindow? _referencesWindow;
+
     private async System.Threading.Tasks.Task HandleRenameSymbolAsync(
         string raw, Therion.Processing.Abstractions.ReferenceKind kind)
     {
@@ -695,23 +726,12 @@ public partial class MainWindow : Window
         ViewModels.Docking.FileDocumentViewModel? active,
         Therion.Processing.Abstractions.ReferenceKind kind, Therion.Core.SourceSpan targetSpan)
     {
-        // Resolve the clicked declaration to a symbol identity + its current name token. A plain
-        // station/survey token arrives as ReferenceKind.Any (the editor only narrows to Survey/Map/
-        // ScrapObject for @-paths and select/join lines), so Any must try station then survey — else the
-        // rename wrongly drops to the name-based text-scan and crosses survey/file boundaries.
-        Therion.Semantics.SymbolId symbol;
-        string name;
-        if (WantsStation(kind) && workspace.FindStationByDeclaration(targetSpan) is { } st)
-        {
-            symbol = new Therion.Semantics.SymbolId(Therion.Semantics.SymbolKind.Station, st.Name);
-            name = st.Name.Last;
-        }
-        else if (WantsSurvey(kind) && workspace.FindSurveyByDeclaration(targetSpan) is { } sv)
-        {
-            symbol = new Therion.Semantics.SymbolId(Therion.Semantics.SymbolKind.Survey, sv.Name);
-            name = sv.Name.Last;
-        }
-        else return null;   // scrap/map (or unresolved): caller falls back to the text-scan
+        // Resolve the clicked declaration to a symbol identity + its current name token; shared with
+        // Find All References, which needs exactly the same resolution.
+        if (Therion.Semantics.SymbolReferences.ResolveDeclaration(workspace, kind, targetSpan)
+            is not { } resolved)
+            return null;   // scrap/map (or unresolved): caller falls back to the text-scan
+        var (symbol, name) = resolved;
 
         // The active document's spans must come from its live (possibly-unsaved) buffer — the apply
         // step writes FileText back and updates the open buffer in place, so disk text here would

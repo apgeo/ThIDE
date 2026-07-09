@@ -98,6 +98,10 @@ public partial class TherionTextEditor : UserControl
     /// <summary>Raised when the user requests a symbol rename (F2 / context menu / hover overlay).</summary>
     public event EventHandler<(string Raw, ReferenceKind Kind)>? RenameSymbolRequested;
 
+    /// <summary>Raised when the user asks for every reference to the symbol at the caret (#7). Unlike
+    /// <see cref="FindReferencesRequested"/> (a name-based text search) this is symbol-scoped.</summary>
+    public event EventHandler<(string Raw, ReferenceKind Kind)>? FindAllReferencesRequested;
+
     private const string ThbookUrl = "https://therion.speleo.sk/wiki/start";
 
     // Short descriptions for the hover overlay on command keywords (#4).
@@ -1485,11 +1489,22 @@ public partial class TherionTextEditor : UserControl
     /// <summary>Fires <see cref="RenameSymbolRequested"/> for the ref token at the caret.</summary>
     public void StartRename()
     {
-        if (_editor is null) return;
+        if (RefTokenAtCaret() is { } t) RenameSymbolRequested?.Invoke(this, t);
+    }
+
+    /// <summary>Fires <see cref="FindAllReferencesRequested"/> for the ref token at the caret.</summary>
+    public void StartFindAllReferences()
+    {
+        if (RefTokenAtCaret() is { } t) FindAllReferencesRequested?.Invoke(this, t);
+    }
+
+    /// <summary>The station/survey reference token under the caret, with the kind it should resolve as.</summary>
+    private (string Raw, ReferenceKind Kind)? RefTokenAtCaret()
+    {
+        if (_editor is null) return null;
         var tok = ExtractRefToken(_editor.Text, _editor.CaretOffset);
-        if (tok is not { } t || string.IsNullOrEmpty(t.Raw)) return;
-        var kind = ChooseReferenceKind(t, _editor.CaretOffset);
-        RenameSymbolRequested?.Invoke(this, (t.Raw, kind));
+        if (tok is not { } t || string.IsNullOrEmpty(t.Raw)) return null;
+        return (t.Raw, ChooseReferenceKind(t, _editor.CaretOffset));
     }
 
     // ----- find references / go to line / toggle comment -----------------
@@ -3144,6 +3159,7 @@ public partial class TherionTextEditor : UserControl
         menu.Items.Add(MakeItem(L("Ed_InsertTeamMember"), InsertTeamMember));
         menu.Items.Add(new Separator());
         menu.Items.Add(MakeItem(L("Ed_RenameSymbol"),     StartRename));
+        menu.Items.Add(MakeItem(L("Ed_FindAllRefs"),      StartFindAllReferences));
         // #5: shown only when right-clicking a station/survey reference and the 3D viewer has a model.
         _open3dMenuItem = MakeItem(L("Ed_OpenIn3D"), () => { if (_open3dName is { } n) OpenInModel3D(n); });
         menu.Items.Add(_open3dMenuItem);

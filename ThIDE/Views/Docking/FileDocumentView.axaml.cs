@@ -44,6 +44,7 @@ public partial class FileDocumentView : UserControl
             editor.HoverTargetChanged += OnHoverTargetChanged;
             editor.FindReferencesRequested += OnFindReferencesRequested;
             editor.RenameSymbolRequested += OnRenameSymbolRequested;
+            editor.FindAllReferencesRequested += OnFindAllReferencesRequested;
             editor.StepOutRequested += OnStepOutRequested;
             editor.FoldStateChanged += OnFoldStateChanged;   // #2
         }
@@ -186,6 +187,9 @@ public partial class FileDocumentView : UserControl
 
     private void OnRenameSymbolRequested(object? sender, (string Raw, Therion.Processing.Abstractions.ReferenceKind Kind) args)
         => TryDocuments()?.RequestRenameSymbol(args.Raw, args.Kind);
+
+    private void OnFindAllReferencesRequested(object? sender, (string Raw, Therion.Processing.Abstractions.ReferenceKind Kind) args)
+        => TryDocuments()?.RequestFindAllReferences(args.Raw, args.Kind);
 
     // Ask the Workspace Explorer to reveal the hovered link's target (gated by its toggle, #8).
     private void OnHoverTargetChanged(object? sender, SourceSpan? target)

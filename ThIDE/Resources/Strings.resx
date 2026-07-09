@@ -796,6 +796,15 @@
   <data name="Ed_InsertDate" xml:space="preserve"><value>Insert Today's Date</value></data>
   <data name="Ed_InsertTeamMember" xml:space="preserve"><value>Insert Team Member</value></data>
   <data name="Ed_RenameSymbol" xml:space="preserve"><value>Rename Symbol…  F2</value></data>
+  <data name="Ed_FindAllRefs" xml:space="preserve"><value>Find All References</value></data>
+  <data name="Refs_Title" xml:space="preserve"><value>Find All References</value></data>
+  <data name="Refs_Header" xml:space="preserve"><value>'{0}' — {1} occurrence(s) in {2} file(s)</value></data>
+  <data name="Refs_None" xml:space="preserve"><value>No references to '{0}' were found in the workspace.</value></data>
+  <data name="Refs_GoTo" xml:space="preserve"><value>Go to</value></data>
+  <data name="Refs_Col_Kind" xml:space="preserve"><value>Kind</value></data>
+  <data name="Refs_Col_Text" xml:space="preserve"><value>Line text</value></data>
+  <data name="Refs_Kind_Declaration" xml:space="preserve"><value>Declaration</value></data>
+  <data name="Refs_Kind_Reference" xml:space="preserve"><value>Reference</value></data>
   <data name="Ed_OpenIn3D" xml:space="preserve"><value>Open in 3D</value></data>
   <data name="Ed_GoToMatching" xml:space="preserve"><value>Go to Matching Block  Ctrl+]</value></data>
   <data name="Ed_StepInto" xml:space="preserve"><value>Step Into Included File  Alt+↓</value></data>

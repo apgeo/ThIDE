@@ -796,6 +796,15 @@
   <data name="Ed_InsertDate" xml:space="preserve"><value>Inserează data de azi</value></data>
   <data name="Ed_InsertTeamMember" xml:space="preserve"><value>Inserează membru echipă</value></data>
   <data name="Ed_RenameSymbol" xml:space="preserve"><value>Redenumește simbolul…  F2</value></data>
+  <data name="Ed_FindAllRefs" xml:space="preserve"><value>Găsește toate referințele</value></data>
+  <data name="Refs_Title" xml:space="preserve"><value>Toate referințele</value></data>
+  <data name="Refs_Header" xml:space="preserve"><value>„{0}” — {1} apariții în {2} fișier(e)</value></data>
+  <data name="Refs_None" xml:space="preserve"><value>Nu s-au găsit referințe la „{0}” în spațiul de lucru.</value></data>
+  <data name="Refs_GoTo" xml:space="preserve"><value>Mergi la</value></data>
+  <data name="Refs_Col_Kind" xml:space="preserve"><value>Tip</value></data>
+  <data name="Refs_Col_Text" xml:space="preserve"><value>Textul liniei</value></data>
+  <data name="Refs_Kind_Declaration" xml:space="preserve"><value>Declarație</value></data>
+  <data name="Refs_Kind_Reference" xml:space="preserve"><value>Referință</value></data>
   <data name="Ed_OpenIn3D" xml:space="preserve"><value>Deschide în 3D</value></data>
   <data name="Ed_GoToMatching" xml:space="preserve"><value>Salt la blocul pereche  Ctrl+]</value></data>
   <data name="Ed_StepInto" xml:space="preserve"><value>Intră în fișierul inclus  Alt+↓</value></data>
