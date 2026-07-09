@@ -4,6 +4,7 @@
 using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.IO;
+using System.Linq;
 using Therion.Core;
 using Therion.Semantics;
 using ThIDE.ViewModels.Docking;
@@ -17,7 +18,7 @@ public class ParentFileNavigationTests
     private static WorkspaceSemanticModel WorkspaceWith(params (string From, string To)[] edges) =>
         new(FrozenDictionary<string, SemanticModel>.Empty,
             XviIndex.Empty,
-            edges.ToImmutableArray(),
+            edges.Select(e => new FileGraphEdge(e.From, e.To, SourceSpan.None)).ToImmutableArray(),
             ImmutableArray<Diagnostic>.Empty);
 
     private static string Full(string relative) => Path.GetFullPath(relative);

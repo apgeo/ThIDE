@@ -376,7 +376,7 @@ public partial class WorkspaceExplorerViewModel : ViewModelBase
         var children = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
         var allNodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var hasIncoming = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var (from, to) in ws.FileGraphEdges)
+        foreach (var (from, to, _) in ws.FileGraphEdges)
         {
             allNodes.Add(from);
             allNodes.Add(to);

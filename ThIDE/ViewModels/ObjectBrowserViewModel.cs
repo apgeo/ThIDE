@@ -456,7 +456,7 @@ public partial class ObjectBrowserViewModel : ViewModelBase
     private static Dictionary<string, string> BuildSketchMap(WorkspaceSemanticModel ws)
     {
         var byTh2 = new Dictionary<string, HashSet<string>>(System.StringComparer.OrdinalIgnoreCase);
-        foreach (var (from, to) in ws.FileGraphEdges)
+        foreach (var (from, to, _) in ws.FileGraphEdges)
         {
             if (!to.EndsWith(".xvi", System.StringComparison.OrdinalIgnoreCase)) continue;
             if (!byTh2.TryGetValue(from, out var set))

@@ -519,19 +519,30 @@ public static class ProjectDiagnostics
     private static void DanglingIncludes(WorkspaceSemanticModel ws, Func<string, bool> fileExists,
         ImmutableArray<Diagnostic>.Builder diags)
     {
+        // Deduplicate per (including file, target): the same missing file referenced from two places
+        // is two problems, and each `source`/`input` line deserves its own squiggle.
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var (from, to) in ws.FileGraphEdges)
+        foreach (var (from, to, site) in ws.FileGraphEdges)
         {
-            if (string.IsNullOrEmpty(to) || !seen.Add(to)) continue;
+            if (string.IsNullOrEmpty(to) || !seen.Add(from + "\0" + to)) continue;
             if (fileExists(to)) continue;
-            // Point the diagnostic at the top of the including file (navigable in the panel).
-            var loc = new SourceLocation(1, 1);
             diags.Add(Diagnostic.Create(
                 SemanticDiagnosticCodes.DanglingReference,
                 DiagnosticSeverity.Warning,
-                $"Dangling include: '{to}' (referenced by {System.IO.Path.GetFileName(from)}) was not found.",
-                new SourceSpan(from, loc, loc, 0, 0)));
+                $"File not found: '{to}', referenced by {System.IO.Path.GetFileName(from)}.",
+                SiteOrTopOf(from, site)));
         }
+    }
+
+    /// <summary>
+    /// The span of the <c>source</c>/<c>input</c> command, or a one-character span at the top of the
+    /// including file for an edge that carries none. Never returns an empty span: consumers treat
+    /// <see cref="SourceSpan.IsEmpty"/> as "not navigable" and would refuse to jump to it.
+    /// </summary>
+    private static SourceSpan SiteOrTopOf(string from, SourceSpan site)
+    {
+        if (!site.IsEmpty) return site;
+        return new SourceSpan(from, new SourceLocation(1, 1), new SourceLocation(1, 2), 0, 1);
     }
 
     // ---- helpers -----------------------------------------------------------------------------

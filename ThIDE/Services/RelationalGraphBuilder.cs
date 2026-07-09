@@ -113,7 +113,7 @@ public static class RelationalGraphBuilder
         // Gather every file that participates: graph edges, per-file models, the active
         // thconfig, and any object declaration site.
         var files = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var (from, to) in model.FileGraphEdges) { files.Add(from); files.Add(to); }
+        foreach (var (from, to, _) in model.FileGraphEdges) { files.Add(from); files.Add(to); }
         foreach (var p in model.PerFile.Keys) files.Add(p);
         if (!string.IsNullOrEmpty(activeThconfig)) files.Add(Full(activeThconfig));
         foreach (var sv in surveysByName.Values) AddFileOf(files, sv.DeclarationSpan);
@@ -125,7 +125,7 @@ public static class RelationalGraphBuilder
 
         // file → file (inclusion). The link span targets the included file (line 1) so
         // clicking it opens that file.
-        foreach (var (from, to) in model.FileGraphEdges)
+        foreach (var (from, to, _) in model.FileGraphEdges)
         {
             var fromId = FilePrefix + from;
             var toId = FilePrefix + to;
@@ -217,7 +217,7 @@ public static class RelationalGraphBuilder
         }
 
         // File inclusion becomes a relation between the host objects: rep(parent) → rep(child).
-        foreach (var (from, to) in model.FileGraphEdges)
+        foreach (var (from, to, _) in model.FileGraphEdges)
         {
             var parent = Rep(Full(from)).FirstOrDefault();
             if (parent is null) continue; // e.g. a thconfig hosts nothing → child reps become roots

@@ -48,7 +48,7 @@ public class M6IterationCTests
             [file] = SemanticModel.Empty,
         }.ToFrozenDictionary(System.StringComparer.OrdinalIgnoreCase);
         var ws = new WorkspaceSemanticModel(perFile, XviIndex.Empty,
-            ImmutableArray<(string, string)>.Empty, ImmutableArray<Diagnostic>.Empty);
+            ImmutableArray<FileGraphEdge>.Empty, ImmutableArray<Diagnostic>.Empty);
         var nav = new WorkspaceSymbolNavigationService(ws);
         var span = nav.GoToDefinition("cave.th");
         Assert.NotNull(span);

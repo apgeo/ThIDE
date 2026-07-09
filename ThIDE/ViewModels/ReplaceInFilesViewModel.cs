@@ -292,7 +292,7 @@ public sealed partial class ReplaceInFilesViewModel : ViewModelBase
         if (_documents.Workspace is { } ws)
         {
             foreach (var p in ws.PerFile.Keys) set.Add(p);
-            foreach (var (from, to) in ws.FileGraphEdges) { set.Add(from); set.Add(to); }
+            foreach (var (from, to, _) in ws.FileGraphEdges) { set.Add(from); set.Add(to); }
         }
         foreach (var d in _documents.Documents)
             if (!string.IsNullOrEmpty(d.FilePath)) set.Add(d.FilePath);

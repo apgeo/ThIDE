@@ -663,7 +663,7 @@ public sealed partial class TodoScanViewModel : ObservableObject
         if (_documents?.Workspace is { } ws)
         {
             foreach (var p in ws.PerFile.Keys) if (seen.Add(p)) yield return p;
-            foreach (var (from, to) in ws.FileGraphEdges)
+            foreach (var (from, to, _) in ws.FileGraphEdges)
             {
                 if (seen.Add(from)) yield return from;
                 if (seen.Add(to)) yield return to;

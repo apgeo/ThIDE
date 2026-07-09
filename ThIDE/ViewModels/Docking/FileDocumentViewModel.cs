@@ -352,7 +352,7 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
 
         var result = new List<string>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var (from, to) in workspace.FileGraphEdges)
+        foreach (var (from, to, _) in workspace.FileGraphEdges)
         {
             if (!string.Equals(to, self, StringComparison.OrdinalIgnoreCase)) continue;
             if (string.Equals(from, self, StringComparison.OrdinalIgnoreCase)) continue; // ignore self-loop

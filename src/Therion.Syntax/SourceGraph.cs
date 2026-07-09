@@ -11,6 +11,8 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
+using System.Linq;
+using Therion.Core;
 
 namespace Therion.Syntax;
 
@@ -23,6 +25,15 @@ public static class SourceGraph
 {
     /// <summary>Raw dependency path tokens (verbatim, as written) found anywhere in the tree.</summary>
     public static IEnumerable<string> DependencyTokens(TherionFile file)
+        => DependencyTokenSites(file).Select(t => t.Token);
+
+    /// <summary>
+    /// Raw dependency path tokens paired with the span of the <c>source</c>/<c>input</c>/<c>load</c>
+    /// command that declares them, so a caller can point a diagnostic at the offending line. A
+    /// multi-argument <c>source a.th b.th</c> yields one site per token, all sharing the command's
+    /// span: the raw argument text carries no per-token offsets.
+    /// </summary>
+    public static IEnumerable<(string Token, SourceSpan Span)> DependencyTokenSites(TherionFile file)
     {
         foreach (var node in Descendants(file.Children))
         {
@@ -30,12 +41,12 @@ public static class SourceGraph
             {
                 // .th `input`/`load` (typed) — often nested inside a survey block.
                 case InputCommand input when !string.IsNullOrWhiteSpace(input.Path):
-                    yield return input.Path;
+                    yield return (input.Path, input.Span);
                     break;
                 // .thconfig `source`/`input`/`load` (raw).
                 case UnknownCommand cmd when IsSourceLike(cmd.Keyword):
                     foreach (var token in SplitArgs(cmd.RawArguments))
-                        yield return token;
+                        yield return (token, cmd.Span);
                     break;
             }
         }
@@ -49,9 +60,17 @@ public static class SourceGraph
     /// resolve on every platform.
     /// </summary>
     public static IEnumerable<string> Dependencies(TherionFile file, string? parentPath = null)
+        => DependencySites(file, parentPath).Select(d => d.Path);
+
+    /// <summary>
+    /// <see cref="Dependencies"/> with the span of the command that pulls each file in — what a
+    /// "file not found" diagnostic needs to underline the right line rather than the top of the file.
+    /// </summary>
+    public static IEnumerable<(string Path, SourceSpan Span)> DependencySites(
+        TherionFile file, string? parentPath = null)
     {
         var dir = Path.GetDirectoryName(parentPath ?? file.Path) ?? string.Empty;
-        foreach (var token in DependencyTokens(file))
+        foreach (var (token, span) in DependencyTokenSites(file))
         {
             var rel = token.Replace('\\', '/').Replace('/', Path.DirectorySeparatorChar);
             string full;
@@ -61,7 +80,7 @@ public static class SourceGraph
                 full = Path.GetFullPath(combined);
             }
             catch { continue; } // malformed path token — skip rather than throw.
-            yield return full;
+            yield return (full, span);
         }
     }
 

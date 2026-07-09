@@ -855,7 +855,7 @@ public sealed partial class LivePreviewViewModel : ObservableObject
     }
 
     /// <summary>BFS the file-dependency edges (thconfig→source→input…) from <paramref name="root"/>.</summary>
-    private static HashSet<string> ReachableFiles(string root, ImmutableArray<(string From, string To)> edges)
+    private static HashSet<string> ReachableFiles(string root, ImmutableArray<Therion.Semantics.FileGraphEdge> edges)
     {
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { SafeFull(root) };
         var queue = new Queue<string>();
@@ -863,7 +863,7 @@ public sealed partial class LivePreviewViewModel : ObservableObject
         while (queue.Count > 0)
         {
             var cur = queue.Dequeue();
-            foreach (var (from, to) in edges)
+            foreach (var (from, to, _) in edges)
                 if (string.Equals(SafeFull(from), cur, StringComparison.OrdinalIgnoreCase) && seen.Add(SafeFull(to)))
                     queue.Enqueue(SafeFull(to));
         }

@@ -172,13 +172,13 @@ static async System.Threading.Tasks.Task<int> Deps(string path, string[] args)
     if (HasFlag(args, "--dot"))
     {
         Console.WriteLine("digraph deps {");
-        foreach (var (from, to) in ws.FileGraphEdges)
+        foreach (var (from, to, _) in ws.FileGraphEdges)
             Console.WriteLine($"  \"{Path.GetFileName(from)}\" -> \"{Path.GetFileName(to)}\";");
         Console.WriteLine("}");
     }
     else
     {
-        foreach (var (from, to) in ws.FileGraphEdges)
+        foreach (var (from, to, _) in ws.FileGraphEdges)
             Console.WriteLine($"{Path.GetFileName(from)} -> {Path.GetFileName(to)}");
         Console.Error.WriteLine();
         Console.Error.WriteLine($"{ws.FileGraphEdges.Length} edge(s).");

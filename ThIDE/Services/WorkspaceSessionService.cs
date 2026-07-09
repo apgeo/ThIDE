@@ -393,7 +393,7 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
         if (model is null || string.IsNullOrEmpty(filePath)) return false;
         var full = TryFull(filePath);
         if (model.PerFile.ContainsKey(full)) return true;
-        foreach (var (from, to) in model.FileGraphEdges)
+        foreach (var (from, to, _) in model.FileGraphEdges)
             if (string.Equals(from, full, StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(to, full, StringComparison.OrdinalIgnoreCase)) return true;
         // The active thconfig itself is part of the graph even when it sources nothing.

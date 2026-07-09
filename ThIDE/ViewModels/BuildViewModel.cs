@@ -1225,7 +1225,7 @@ public partial class BuildViewModel : ViewModelBase
         if (_session?.Model is { } model)
         {
             foreach (var k in model.PerFile.Keys) files.Add(k);
-            foreach (var (from, to) in model.FileGraphEdges) { files.Add(from); files.Add(to); }
+            foreach (var (from, to, _) in model.FileGraphEdges) { files.Add(from); files.Add(to); }
         }
         if (_session?.ActiveThconfig?.FullPath is { } cfg) files.Add(cfg);
 

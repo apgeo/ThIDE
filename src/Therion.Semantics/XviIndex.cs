@@ -23,13 +23,13 @@ public sealed class XviIndex
 {
     public FrozenDictionary<string, XviSymbol> ByPath { get; }
     public ImmutableArray<Diagnostic> Diagnostics { get; }
-    /// <summary>Directed edges <c>(from .th2 path) ? (to .xvi path)</c>.</summary>
-    public ImmutableArray<(string From, string To)> FileGraphEdges { get; }
+    /// <summary>Directed edges <c>(from .th2 path) ? (to .xvi path)</c>, with the sketch's span.</summary>
+    public ImmutableArray<FileGraphEdge> FileGraphEdges { get; }
 
     public XviIndex(
         FrozenDictionary<string, XviSymbol> byPath,
         ImmutableArray<Diagnostic> diagnostics,
-        ImmutableArray<(string From, string To)> edges)
+        ImmutableArray<FileGraphEdge> edges)
     {
         ByPath = byPath;
         Diagnostics = diagnostics;
@@ -39,7 +39,7 @@ public sealed class XviIndex
     public static XviIndex Empty { get; } = new(
         FrozenDictionary<string, XviSymbol>.Empty,
         ImmutableArray<Diagnostic>.Empty,
-        ImmutableArray<(string, string)>.Empty);
+        ImmutableArray<FileGraphEdge>.Empty);
 
     /// <summary>
     /// Build an index from a collection of parsed XVI files plus the set of
@@ -55,7 +55,7 @@ public sealed class XviIndex
     {
         fileExists ??= File.Exists;
         var diags = ImmutableArray.CreateBuilder<Diagnostic>();
-        var edges = ImmutableArray.CreateBuilder<(string, string)>();
+        var edges = ImmutableArray.CreateBuilder<FileGraphEdge>();
         var byPath = new Dictionary<string, XviSymbol>(StringComparer.OrdinalIgnoreCase);
         var refsByXvi = new Dictionary<string, ImmutableArray<SourceSpan>.Builder>(StringComparer.OrdinalIgnoreCase);
 
@@ -68,7 +68,7 @@ public sealed class XviIndex
                 {
                     var th2Dir = Path.GetDirectoryName(th2.Path) ?? string.Empty;
                     var resolved = ResolveRelative(th2Dir, sk.XviPath);
-                    edges.Add((th2.Path, resolved));
+                    edges.Add(new FileGraphEdge(th2.Path, resolved, sk.Span));
                     if (!refsByXvi.TryGetValue(resolved, out var list))
                         refsByXvi[resolved] = list = ImmutableArray.CreateBuilder<SourceSpan>();
                     list.Add(sk.Span);

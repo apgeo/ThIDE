@@ -21,7 +21,7 @@ public class UserRulesTests
             new System.Collections.Generic.Dictionary<string, SemanticModel> { ["/p/a.th"] = model }
                 .ToFrozenDictionary(),
             XviIndex.Empty,
-            ImmutableArray<(string, string)>.Empty,
+            ImmutableArray<FileGraphEdge>.Empty,
             ImmutableArray<Diagnostic>.Empty);
     }
 

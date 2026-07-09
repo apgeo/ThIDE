@@ -52,7 +52,8 @@ file can't reveal:
 - **Duplicate fixes**, **data rows** whose column count or values don't fit the reading order.
 - **Loop misclosure** beyond tolerance, **blunder/outlier** shots, **foresight/backsight**
   disagreement.
-- **Dangling includes** — an `input`/`source` target that isn't on disk.
+- **File not found** — an `input`/`source` target that isn't on disk. Clicking the warning jumps to
+  the line that names it.
 - **Disconnected survey** (`TH_SEM_015`) — a piece of the cave that is neither joined to the main
   network nor georeferenced by a `fix`, so it *floats*. Both end stations and the source files are
   named so you can find and stitch it.

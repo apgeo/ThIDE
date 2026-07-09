@@ -13,6 +13,13 @@ using Therion.Syntax;
 namespace Therion.Semantics;
 
 /// <summary>
+/// One cross-file inclusion: <paramref name="From"/> pulls in <paramref name="To"/> at
+/// <paramref name="Site"/> — the span of the <c>source</c> / <c>input</c> / <c>sketch</c> command
+/// that names it. The site is what lets a "file not found" diagnostic underline the real line.
+/// </summary>
+public readonly record struct FileGraphEdge(string From, string To, SourceSpan Site);
+
+/// <summary>
 /// Cross-file semantic snapshot for an entire workspace.
 /// Aggregates per-file <see cref="SemanticModel"/> instances and the
 /// workspace-wide <see cref="XviIndex"/> + FileGraph edges.
@@ -22,7 +29,7 @@ public sealed class WorkspaceSemanticModel
     public FrozenDictionary<string, SemanticModel> PerFile { get; }
     public XviIndex Xvi { get; }
     /// <summary>All cross-file edges (`.thconfig source`, `.th input`/`load`, `.th2 sketch`).</summary>
-    public ImmutableArray<(string From, string To)> FileGraphEdges { get; }
+    public ImmutableArray<FileGraphEdge> FileGraphEdges { get; }
     public ImmutableArray<Diagnostic> Diagnostics { get; }
 
     // ---- cross-file reference indexes (Plan: @-notation resolution) ----------
@@ -160,7 +167,7 @@ public sealed class WorkspaceSemanticModel
     public WorkspaceSemanticModel(
         FrozenDictionary<string, SemanticModel> perFile,
         XviIndex xvi,
-        ImmutableArray<(string From, string To)> edges,
+        ImmutableArray<FileGraphEdge> edges,
         ImmutableArray<Diagnostic> diagnostics)
     {
         PerFile = perFile;
@@ -172,7 +179,7 @@ public sealed class WorkspaceSemanticModel
     public static WorkspaceSemanticModel Empty { get; } = new(
         FrozenDictionary<string, SemanticModel>.Empty,
         XviIndex.Empty,
-        ImmutableArray<(string, string)>.Empty,
+        ImmutableArray<FileGraphEdge>.Empty,
         ImmutableArray<Diagnostic>.Empty);
 
     // Per-file bind cache (Group G1). Binding is a pure function of a file's parse tree, and a file
@@ -197,7 +204,7 @@ public sealed class WorkspaceSemanticModel
     {
         var perFile = new Dictionary<string, SemanticModel>(System.StringComparer.OrdinalIgnoreCase);
         var allDiags = ImmutableArray.CreateBuilder<Diagnostic>();
-        var graphEdges = ImmutableArray.CreateBuilder<(string, string)>();
+        var graphEdges = ImmutableArray.CreateBuilder<FileGraphEdge>();
         var th2Files = new List<TherionFile>();
 
         foreach (var (path, parse) in parsedFiles)
@@ -398,7 +405,7 @@ public sealed class WorkspaceSemanticModel
         if (string.IsNullOrEmpty(stationName) || string.IsNullOrEmpty(sketchPath)) return null;
         var full = System.IO.Path.GetFullPath(sketchPath);
 
-        foreach (var (from, to) in FileGraphEdges)
+        foreach (var (from, to, _) in FileGraphEdges)
         {
             if (!string.Equals(to, full, System.StringComparison.OrdinalIgnoreCase)) continue;
             if (!PerFile.TryGetValue(from, out var model)) continue;
@@ -422,9 +429,9 @@ public sealed class WorkspaceSemanticModel
 
     private static void CollectSourceEdges(
         string parentPath, TherionFile file,
-        ImmutableArray<(string, string)>.Builder edges)
+        ImmutableArray<FileGraphEdge>.Builder edges)
     {
-        foreach (var dep in SourceGraph.Dependencies(file, parentPath))
-            edges.Add((parentPath, dep));
+        foreach (var (dep, site) in SourceGraph.DependencySites(file, parentPath))
+            edges.Add(new FileGraphEdge(parentPath, dep, site));
     }
 }
