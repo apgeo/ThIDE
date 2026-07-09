@@ -6,9 +6,27 @@
     <!-- Near-transparent backdrop captures clicks outside the box to dismiss it. -->
     <Grid x:Name="Backdrop" Background="#01000000">
         <Border Width="660" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,64,0,0"
-                Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}"
-                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1"
+                Background="{DynamicResource QpBoxBg}"
+                BorderBrush="{DynamicResource QpBoxBorder}" BorderThickness="1"
                 CornerRadius="6" BoxShadow="0 8 24 0 #50000000" x:Name="Box">
+            <!-- Explicit, opaque, theme-aware brushes: the WinUI names (SolidBackgroundFillColor*,
+                 ControlStrokeColor*) are NOT defined by Avalonia 12's FluentTheme, so they resolve to
+                 nothing and leave the box see-through over the dock. Same workaround as the Ctrl+Tab
+                 switcher box in MainWindow.axaml. -->
+            <Border.Resources>
+                <ResourceDictionary>
+                    <ResourceDictionary.ThemeDictionaries>
+                        <ResourceDictionary x:Key="Light">
+                            <SolidColorBrush x:Key="QpBoxBg" Color="#FFF3F3F3" />
+                            <SolidColorBrush x:Key="QpBoxBorder" Color="#FFB4B4B4" />
+                        </ResourceDictionary>
+                        <ResourceDictionary x:Key="Dark">
+                            <SolidColorBrush x:Key="QpBoxBg" Color="#FF2B2B2D" />
+                            <SolidColorBrush x:Key="QpBoxBorder" Color="#FF555558" />
+                        </ResourceDictionary>
+                    </ResourceDictionary.ThemeDictionaries>
+                </ResourceDictionary>
+            </Border.Resources>
             <DockPanel Margin="6">
                 <TextBlock DockPanel.Dock="Top" Text="{Binding Title}" Foreground="Gray"
                            FontSize="11" Margin="4,2,4,4" />
