@@ -215,16 +215,22 @@ public interface IKeyboardShortcutService
     event EventHandler? GesturesChanged;
 }
 
-/// <summary>Catalog of well-known command identifiers used by <see cref="IKeyboardShortcutService"/>.</summary>
+/// <summary>
+/// Catalog of well-known command identifiers used by <see cref="IKeyboardShortcutService"/>.
+/// <para>
+/// Two scopes exist. <em>Shell</em> commands are bound as <c>Window.KeyBindings</c> and fire
+/// wherever focus is. <em>Editor</em> commands are caret-scoped: the focused editor matches the
+/// configured gesture itself, so they only fire with an editor focused.
+/// </para>
+/// </summary>
 public static class ShellCommandIds
 {
+    // ---- Shell scope (Window.KeyBindings) ----
     public const string Build              = "Build";
     public const string Rebuild            = "Rebuild";
     public const string CancelBuild        = "CancelBuild";
     public const string OpenInLoch         = "OpenInLoch";
     public const string OpenInAven         = "OpenInAven";
-    public const string GoToDefinition     = "GoToDefinition";
-    public const string FindReferences     = "FindReferences";
     public const string ToggleWorkspaceExplorer = "ToggleWorkspaceExplorer";
     public const string ToggleDiagnostics  = "ToggleDiagnostics";
     public const string Save               = "Save";
@@ -232,6 +238,50 @@ public static class ShellCommandIds
     public const string GoForward          = "GoForward";
     public const string FindInFiles        = "FindInFiles";
     public const string ReplaceInFiles     = "ReplaceInFiles";
+    public const string QuickOpen          = "QuickOpen";
+    public const string CommandPalette     = "CommandPalette";
+    public const string ReopenClosedTab    = "ReopenClosedTab";
+    public const string ToggleFullScreen   = "ToggleFullScreen";
+    public const string NextProblem        = "NextProblem";
+    public const string PreviousProblem    = "PreviousProblem";
+    public const string NewFile            = "NewFile";
+    public const string OpenFile           = "OpenFile";
+    public const string OpenFolder         = "OpenFolder";
+    public const string OpenThconfig       = "OpenThconfig";
+    public const string ToggleObjectBrowser     = "ToggleObjectBrowser";
+    public const string ToggleOutline           = "ToggleOutline";
+    public const string ToggleProject           = "ToggleProject";
+    public const string ToggleLog               = "ToggleLog";
+    public const string ToggleLivePreview       = "ToggleLivePreview";
+    public const string ToggleMapViewer         = "ToggleMapViewer";
+    public const string ToggleModel3DViewer     = "ToggleModel3DViewer";
+    public const string ToggleStructuralGeology = "ToggleStructuralGeology";
+    public const string SplitEditor        = "SplitEditor";
+    public const string ResetLayout        = "ResetLayout";
+    public const string FloatActiveDocument = "FloatActiveDocument";
+    public const string QuickExport        = "QuickExport";
+    public const string OpenOutputFolder   = "OpenOutputFolder";
+    public const string ToggleWordWrap     = "ToggleWordWrap";
+    public const string NewScrapScaffold   = "NewScrapScaffold";
+    public const string GenerateReport     = "GenerateReport";
+
+    // ---- Editor scope (matched by the focused TherionTextEditor) ----
+    public const string GoToDefinition     = "GoToDefinition";
+    public const string FindReferences     = "FindReferences";
     public const string RenameSymbol       = "RenameSymbol";
+    public const string PeekDefinition     = "PeekDefinition";
+    public const string GoToMatchingBlock  = "GoToMatchingBlock";
+    public const string StepIntoInclude    = "StepIntoInclude";
+    public const string StepOutInclude     = "StepOutInclude";
+    public const string TriggerCompletion  = "TriggerCompletion";
+    public const string GoToLine           = "GoToLine";
+    public const string ToggleComment      = "ToggleComment";
+    public const string FormatDocument     = "FormatDocument";
+    public const string EncloseInRegion    = "EncloseInRegion";
+    public const string QuickFixes         = "QuickFixes";
+    public const string DuplicateLines     = "DuplicateLines";
+    public const string MoveLinesUp        = "MoveLinesUp";
+    public const string MoveLinesDown      = "MoveLinesDown";
+    public const string SortLines          = "SortLines";
 }
 
