@@ -216,6 +216,18 @@
                 <Separator IsVisible="{Binding SplitFeatureEnabled}" />
                 <MenuItem Header="{l:Loc Menu_View_SplitEditor}" InputGesture="{l:Gesture SplitEditor}" Command="{Binding SplitEditorCommand}"
                           IsVisible="{Binding SplitFeatureEnabled}" />
+                <!-- full-layout save/load/reset + built-in arrangements (rebuilt, never
+                     deserialized — a deserialized Dock 12 tree doesn't render). -->
+                <Separator />
+                <MenuItem Header="{l:Loc Menu_View_Layout}">
+                    <MenuItem Header="{l:Loc Menu_View_Layout_Save}" Command="{Binding SaveLayoutAsCommand}" />
+                    <MenuItem Header="{l:Loc Menu_View_Layout_Load}" Command="{Binding LoadLayoutFromFileCommand}" />
+                    <MenuItem Header="{l:Loc Menu_View_Layout_RestoreDefault}" Command="{Binding ResetLayoutCommand}" />
+                    <Separator />
+                    <MenuItem Header="{l:Loc Menu_View_Layout_Split2}" Command="{Binding ApplySplitLayout2Command}" />
+                    <MenuItem Header="{l:Loc Menu_View_Layout_Split3}" Command="{Binding ApplySplitLayout3Command}" />
+                    <MenuItem Header="{l:Loc Menu_View_Layout_MultiMonitor}" Command="{Binding ApplyMultiMonitorLayoutCommand}" />
+                </MenuItem>
             </MenuItem>
             <!-- Edit menu mirrors the editor's right-click menu; enabled when a file is open (#11). -->
             <MenuItem Header="{Binding MenuEdit}" IsEnabled="{Binding HasStatusFile}">
@@ -533,6 +545,11 @@
                         <MenuFlyout>
                             <MenuItem Header="{l:Loc Layout_FloatActive}"
                                       Command="{Binding FloatActiveDocumentCommand}" />
+                            <Separator />
+                            <MenuItem Header="{l:Loc Menu_View_Layout_Save}"
+                                      Command="{Binding SaveLayoutAsCommand}" />
+                            <MenuItem Header="{l:Loc Menu_View_Layout_Load}"
+                                      Command="{Binding LoadLayoutFromFileCommand}" />
                             <Separator />
                             <MenuItem Header="{l:Loc Layout_Reset}"
                                       Command="{Binding ResetLayoutCommand}" />

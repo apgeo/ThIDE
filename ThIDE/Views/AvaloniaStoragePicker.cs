@@ -86,4 +86,37 @@ public sealed class AvaloniaStoragePicker : IStoragePicker
         });
         return file?.TryGetLocalPath();
     }
+
+    private static FilePickerFileType LayoutFileType => new(ThIDE.Resources.Tr.Get("Pick_LayoutFiles"))
+    {
+        Patterns = new[] { "*" + ThIDE.Services.LayoutProfileFile.Extension },
+    };
+
+    public async Task<string?> PickOpenLayoutAsync(string title)
+    {
+        var sp = _topLevel.StorageProvider;
+        if (sp is null) return null;
+        var files = await sp.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = title,
+            AllowMultiple = false,
+            FileTypeFilter = new[] { LayoutFileType, FilePickerFileTypes.All },
+        });
+        if (files is null || files.Count == 0) return null;
+        return files[0].TryGetLocalPath();
+    }
+
+    public async Task<string?> PickSaveLayoutAsync(string title, string suggestedName)
+    {
+        var sp = _topLevel.StorageProvider;
+        if (sp is null) return null;
+        var file = await sp.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = title,
+            SuggestedFileName = suggestedName,
+            DefaultExtension = ThIDE.Services.LayoutProfileFile.Extension.TrimStart('.'),
+            FileTypeChoices = new[] { LayoutFileType },
+        });
+        return file?.TryGetLocalPath();
+    }
 }

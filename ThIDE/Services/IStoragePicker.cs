@@ -20,4 +20,10 @@ public interface IStoragePicker
 
     /// <summary>Show a "Save File" dialog. Returns the chosen absolute path, or null if cancelled.</summary>
     Task<string?> PickSaveFileAsync(string title, string suggestedName);
+
+    /// <summary>Show an "Open File" dialog filtered to saved layout files (*.thlayout).</summary>
+    Task<string?> PickOpenLayoutAsync(string title);
+
+    /// <summary>Show a "Save File" dialog filtered to saved layout files (*.thlayout).</summary>
+    Task<string?> PickSaveLayoutAsync(string title, string suggestedName);
 }

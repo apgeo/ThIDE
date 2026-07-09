@@ -293,10 +293,291 @@ public sealed class DockFactory : Factory
     private const bool ShowXviPanel = false;
 
     public override IRootDock CreateLayout() =>
-        (PersistDockLayout ? TryLoadLayout() : null) ?? BuildDefaultLayout();
+        (PersistDockLayout ? TryLoadLayout() : null) ?? TryBuildFromSavedProfile() ?? BuildDefaultLayout();
 
     /// <summary>Builds a fresh default layout for the "reset layout" command (#16).</summary>
     public IRootDock ResetToDefault() => BuildDefaultLayout();
+
+    // ---- full-layout persistence via the declarative profile -----------------
+    // The dock tree is never deserialized (a deserialized Dock 12 tree doesn't render);
+    // instead the autosaved LayoutState carries a LayoutProfile — a plain description of
+    // which tool sits in which dock section — and the tree is REBUILT from it here, using
+    // the same programmatic construction as BuildDefaultLayout (which renders correctly).
+
+    /// <summary>Rebuilds the dock tree described by the autosaved profile; null → default.
+    /// Guarded by the crash sentinel: if the previous profile apply died mid-render, the
+    /// profile is skipped once and the next autosave overwrites it with a healthy one.</summary>
+    private IRootDock? TryBuildFromSavedProfile()
+    {
+        try
+        {
+            if (_layoutState?.Current.Profile is not { } profile) return null;
+            if (File.Exists(LoadSentinelPath))
+            {
+                TryDelete(LoadSentinelPath);
+                return null;
+            }
+            TryWrite(LoadSentinelPath, string.Empty);
+            return BuildFromProfile(profile);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Saved layout profile could not be applied; using the default layout.");
+            TryDelete(LoadSentinelPath);
+            return null;
+        }
+    }
+
+    /// <summary>Closes every torn-off float window (host + model). Used before swapping in a
+    /// rebuilt layout so the old tree's OS windows don't linger. The dockables themselves are
+    /// live singletons and survive — the new tree re-docks (or re-floats) them.</summary>
+    public void CloseAllFloatWindows()
+    {
+        if (_rootDock?.Windows is not { } windows) return;
+        foreach (var w in windows.ToList())
+        {
+            try { w.Exit(); } catch { /* host may already be gone */ }
+            try { RemoveWindow(w); } catch { /* may have been removed by Exit */ }
+        }
+    }
+
+    /// <summary>Tool ids that exist AND are enabled by their feature settings.</summary>
+    public IReadOnlySet<string> AvailableToolIds()
+    {
+        var set = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var id in ToolSingletonsById().Keys)
+            if (IsToolAvailable(id))
+                set.Add(id);
+        return set;
+    }
+
+    /// <summary>Mirrors the feature gates the default layout applies (see RightToolset).</summary>
+    private bool IsToolAvailable(string id)
+    {
+        var s = _appSettings?.Current ?? ThIDE.Services.AppSettings.Default;
+        return id switch
+        {
+            "Xvi" => ShowXviPanel,
+            "Outline" => ThIDE.Services.EditorFeatureFlags.IsEnabled(ThIDE.Services.EditorFeature.Outline, s),
+            "LivePreview" => s.EnableLivePreview,
+            "MapViewer" => s.EnableInAppViewer,
+            "Model3DViewer" => s.EnableModel3DViewer,
+            "StructuralGeology" or "StructuralPlot" => s.EnableStructuralGeology,
+            _ => true,
+        };
+    }
+
+    // Tools the default layout shows: they must stay reachable even when a profile (saved
+    // by an older version, or hand-edited) doesn't mention them — matching today's behavior
+    // where every launch rebuilds the default set.
+    private static readonly string[] DefaultDockToolIds =
+    {
+        "Workspace", "Project", "ObjectBrowser",
+        "Diagnostics", "CompilerOutput", "GeneratedFiles", "Log",
+        "Xvi", "Outline", "LivePreview", "MapViewer", "Model3DViewer",
+    };
+
+    /// <summary>Which region a tool calls home when the profile doesn't place it.</summary>
+    private static string HomeRegion(string id) => id switch
+    {
+        "Workspace" or "Project" => "left",
+        "Diagnostics" or "CompilerOutput" or "GeneratedFiles" or "Log" => "bottom",
+        "ObjectBrowser" => "center",
+        _ => "right",
+    };
+
+    // A section being assembled: live tools, the selected tab and its share of the rail.
+    private sealed record BuiltSection(List<IDockable> Tools, IDockable? Active, double Proportion);
+
+    /// <summary>Resolves a profile's section list to live tool singletons, dropping unknown /
+    /// disabled / already-placed ids and empty sections.</summary>
+    private List<BuiltSection> MaterializeSections(
+        IEnumerable<ThIDE.Services.DockSectionState> sections,
+        Dictionary<string, IDockable> map, HashSet<string> placed)
+    {
+        var result = new List<BuiltSection>();
+        foreach (var s in sections)
+        {
+            var tools = new List<IDockable>();
+            IDockable? active = null;
+            foreach (var id in s.Tools)
+            {
+                if (!map.TryGetValue(id, out var tool) || !IsToolAvailable(id) || !placed.Add(id)) continue;
+                tools.Add(tool);
+                if (string.Equals(id, s.ActiveTool, StringComparison.Ordinal)) active = tool;
+            }
+            if (tools.Count > 0) result.Add(new BuiltSection(tools, active, s.Proportion));
+        }
+        return result;
+    }
+
+    private ToolDock MakeToolDock(string id, Alignment alignment, BuiltSection s, double proportion) => new()
+    {
+        Id = id,
+        Title = id,
+        Alignment = alignment,
+        Proportion = proportion > 0 ? proportion : double.NaN,
+        VisibleDockables = CreateList<IDockable>(s.Tools.ToArray()),
+        ActiveDockable = s.Active ?? s.Tools.FirstOrDefault(),
+    };
+
+    /// <summary>Builds one docking region: a single ToolDock, or a stack of them separated by
+    /// splitters when the profile divides the region into several sections. The first section
+    /// keeps the canonical id ("LeftTools"/"RightTools"/"BottomTools") because other features
+    /// look docks up by those ids.</summary>
+    private IDockable BuildRegion(
+        List<BuiltSection> sections, string baseId, Alignment alignment,
+        double regionProportion, Orientation stack)
+    {
+        if (sections.Count == 0)
+            return new ToolDock
+            {
+                Id = baseId,
+                Title = baseId,
+                Alignment = alignment,
+                Proportion = regionProportion,
+                VisibleDockables = CreateList<IDockable>(),
+            };
+        if (sections.Count == 1)
+            return MakeToolDock(baseId, alignment, sections[0], regionProportion);
+
+        var children = CreateList<IDockable>();
+        for (int i = 0; i < sections.Count; i++)
+        {
+            if (i > 0) children.Add(new ProportionalDockSplitter());
+            var share = sections[i].Proportion > 0 ? sections[i].Proportion : 1.0 / sections.Count;
+            children.Add(MakeToolDock(i == 0 ? baseId : baseId + (i + 1), alignment, sections[i], share));
+        }
+        return new ProportionalDock
+        {
+            Id = baseId + "Rail",
+            Orientation = stack,
+            Proportion = regionProportion,
+            VisibleDockables = children,
+        };
+    }
+
+    /// <summary>
+    /// Builds a renderable dock tree from a declarative profile: left/right rails (possibly
+    /// split into stacked sections), bottom sections, tools docked in the document well.
+    /// Tools referenced by the profile's float list are docked into their home region first —
+    /// <see cref="RestoreFloatWindows"/> then tears them off, the same live operation a manual
+    /// tear-off performs (which is what renders correctly in Dock 12).
+    /// </summary>
+    public IRootDock BuildFromProfile(ThIDE.Services.LayoutProfile p)
+    {
+        var map = ToolSingletonsById();
+        var placed = new HashSet<string>(StringComparer.Ordinal);
+
+        var leftSections = MaterializeSections(p.LeftSections, map, placed);
+        var rightSections = MaterializeSections(p.RightSections, map, placed);
+        var bottomSections = MaterializeSections(p.BottomSections, map, placed);
+
+        var centerTools = new List<IDockable>();
+        IDockable? centerActive = null;
+        foreach (var id in p.CenterTools)
+        {
+            if (!map.TryGetValue(id, out var tool) || !IsToolAvailable(id) || !placed.Add(id)) continue;
+            centerTools.Add(tool);
+            if (string.Equals(id, p.CenterActiveTool, StringComparison.Ordinal)) centerActive = tool;
+        }
+
+        // Default tools the profile doesn't place + tools its float windows need: append each
+        // to its home region so nothing becomes unreachable and every float can be re-created.
+        var needed = new List<string>(DefaultDockToolIds);
+        foreach (var w in p.FloatWindows)
+            foreach (var id in w.DockableIds)
+                if (map.ContainsKey(id) && !needed.Contains(id))
+                    needed.Add(id);
+        foreach (var id in needed)
+        {
+            if (placed.Contains(id) || !map.TryGetValue(id, out var tool) || !IsToolAvailable(id)) continue;
+            placed.Add(id);
+            switch (HomeRegion(id))
+            {
+                case "left": AppendToRegion(leftSections, tool); break;
+                case "bottom": AppendToRegion(bottomSections, tool); break;
+                case "center": centerTools.Add(tool); break;
+                default: AppendToRegion(rightSections, tool); break;
+            }
+        }
+
+        double leftProp = p.LeftProportion > 0 ? p.LeftProportion : 0.18;
+        double rightProp = p.RightProportion > 0 ? p.RightProportion : 0.22;
+        double bottomProp = p.BottomProportion > 0 ? p.BottomProportion : 0.28;
+        double centerProp = p.CenterProportion > 0 ? p.CenterProportion : 0.60;
+
+        var documentDock = NewDocumentDock();
+        _documentDock = documentDock;
+        documentDock.VisibleDockables = CreateList<IDockable>(centerTools.ToArray());
+        documentDock.ActiveDockable = centerActive ?? centerTools.FirstOrDefault();
+
+        var leftNode = BuildRegion(leftSections, "LeftTools", Alignment.Left, leftProp, Orientation.Vertical);
+        var rightNode = BuildRegion(rightSections, "RightTools", Alignment.Right, rightProp, Orientation.Vertical);
+        var bottomNode = BuildRegion(bottomSections, "BottomTools", Alignment.Bottom, bottomProp, Orientation.Horizontal);
+
+        var centerColumn = new ProportionalDock
+        {
+            Id = "CenterColumn",
+            Orientation = Orientation.Vertical,
+            Proportion = centerProp,
+            VisibleDockables = CreateList<IDockable>(
+                documentDock,
+                new ProportionalDockSplitter(),
+                bottomNode),
+        };
+
+        var mainRow = new ProportionalDock
+        {
+            Id = "MainRow",
+            Orientation = Orientation.Horizontal,
+            VisibleDockables = CreateList<IDockable>(
+                leftNode,
+                new ProportionalDockSplitter(),
+                centerColumn,
+                new ProportionalDockSplitter(),
+                rightNode),
+        };
+
+        var root = CreateRootDock();
+        root.Id = "Root";
+        root.Title = "Root";
+        root.IsCollapsable = false;
+        root.VisibleDockables = CreateList<IDockable>(mainRow);
+        root.ActiveDockable = mainRow;
+        root.DefaultDockable = mainRow;
+        _rootDock = root;
+        return root;
+    }
+
+    private static void AppendToRegion(List<BuiltSection> sections, IDockable tool)
+    {
+        if (sections.Count == 0)
+            sections.Add(new BuiltSection(new List<IDockable> { tool }, tool, 0));
+        else
+            sections[^1].Tools.Add(tool);
+    }
+
+    private ThIDE.Services.LayoutProfile? _lastCapturedProfile;
+    private string? _lastCapturedProfileJson;
+
+    /// <summary>Snapshots the live layout (docked arrangement + float windows) as a profile.
+    /// Returns a cached instance when nothing changed so the autosave dedup keeps working.</summary>
+    public ThIDE.Services.LayoutProfile CaptureProfile()
+    {
+        var known = ToolSingletonsById();
+        var profile = _rootDock is null
+            ? new ThIDE.Services.LayoutProfile()
+            : ThIDE.Services.LayoutProfileCapture.Capture(_rootDock, id => known.ContainsKey(id));
+        profile = profile with { FloatWindows = CaptureFloatWindows() };
+        // Records holding lists compare by reference, so dedup via the serialized form.
+        var json = System.Text.Json.JsonSerializer.Serialize(profile);
+        if (_lastCapturedProfile is not null &&
+            string.Equals(json, _lastCapturedProfileJson, StringComparison.Ordinal))
+            return _lastCapturedProfile;
+        _lastCapturedProfileJson = json;
+        return _lastCapturedProfile = profile;
+    }
 
     private IDockable BottomTabById(string? id) => id switch
     {
@@ -328,6 +609,10 @@ public sealed class DockFactory : Factory
             // capture floated windows — but never before they were restored, or an
             // autosave that fires mid-startup (big project) would clobber the saved set.
             FloatWindows = _floatsRestored ? CaptureFloatWindows() : baseState.FloatWindows,
+            // full docked arrangement — same guard: before the floats are restored the tree
+            // still holds the floated tools docked in their home regions, which must not
+            // overwrite the real saved profile.
+            Profile = _floatsRestored ? CaptureProfile() : baseState.Profile,
         };
     }
 
@@ -356,9 +641,14 @@ public sealed class DockFactory : Factory
                 if (ids.Count == 0) continue;
 
                 double x = w.X, y = w.Y, width = w.Width, height = w.Height;
+                bool maximized = false;
                 if (w.Host is Avalonia.Controls.Window win)
                 {
-                    try { x = win.Position.X; y = win.Position.Y; width = win.Width; height = win.Height; }
+                    try
+                    {
+                        x = win.Position.X; y = win.Position.Y; width = win.Width; height = win.Height;
+                        maximized = win.WindowState == Avalonia.Controls.WindowState.Maximized;
+                    }
                     catch { /* window not realized — fall back to the model bounds */ }
                 }
                 list.Add(new ThIDE.Services.FloatWindowState
@@ -367,6 +657,7 @@ public sealed class DockFactory : Factory
                     Y = y,
                     Width = width > 0 ? width : 700,
                     Height = height > 0 ? height : 500,
+                    Maximized = maximized,
                     DockableIds = ids,
                 });
             }
@@ -384,6 +675,7 @@ public sealed class DockFactory : Factory
         {
             var x = a[i]; var y = b[i];
             if (x.X != y.X || x.Y != y.Y || x.Width != y.Width || x.Height != y.Height) return false;
+            if (x.Maximized != y.Maximized) return false;
             if (x.DockableIds.Count != y.DockableIds.Count) return false;
             for (int j = 0; j < x.DockableIds.Count; j++)
                 if (!string.Equals(x.DockableIds[j], y.DockableIds[j], StringComparison.Ordinal)) return false;
@@ -470,6 +762,10 @@ public sealed class DockFactory : Factory
                     win.Position = new Avalonia.PixelPoint((int)st.X, (int)st.Y);
                     win.Width = st.Width;
                     win.Height = st.Height;
+                    // Position first, THEN maximize — so the window fills the monitor it was
+                    // dropped on (the multi-monitor preset relies on this ordering).
+                    if (st.Maximized)
+                        win.WindowState = Avalonia.Controls.WindowState.Maximized;
                 }
                 catch { /* host not realized yet — model bounds above still apply */ }
             }

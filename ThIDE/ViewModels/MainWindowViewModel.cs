@@ -1367,6 +1367,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private void ResetLayout()
     {
+        _factory.CloseAllFloatWindows();   // the old tree's torn-off windows must not linger
         var layout = _factory.ResetToDefault();
         _factory.InitLayout(layout);
         Layout = layout;
@@ -1374,6 +1375,102 @@ public partial class MainWindowViewModel : ViewModelBase
         foreach (var doc in _documents.Documents.ToList())
             _factory.OpenDocument(doc);
         if (_documents.Active is { } active) _factory.OpenDocument(active);
+    }
+
+    // ---- View ▸ Layout: save / load / presets --------------------------------
+    // All of these go through the same rebuild pipeline: construct a fresh tree from a
+    // declarative LayoutProfile (which renders, unlike a deserialized Dock 12 tree), swap it
+    // in, re-open the live documents, then re-create the float windows with live tear-offs.
+
+    /// <summary>Swaps in the layout described by <paramref name="profile"/>.</summary>
+    private void ApplyLayoutProfile(LayoutProfile profile)
+    {
+        _factory.CloseAllFloatWindows();
+        var layout = _factory.BuildFromProfile(profile);
+        _factory.InitLayout(layout);
+        Layout = layout;
+        foreach (var doc in _documents.Documents.ToList())
+            _factory.OpenDocument(doc, activate: false);
+        if (_documents.Active is { } active) _factory.OpenDocument(active);
+        // Tear the profile's floated tools/documents off their home docks (live operation).
+        _factory.RestoreFloatWindows(profile.FloatWindows);
+    }
+
+    /// <summary>View ▸ Layout ▸ Save Layout… — snapshots the full arrangement to a *.thlayout file.</summary>
+    [RelayCommand]
+    private async Task SaveLayoutAsAsync()
+    {
+        if (_picker is null) return;
+        var path = await _picker.PickSaveLayoutAsync(
+            Tr.Get("Pick_SaveLayoutTitle"), "my-layout" + LayoutProfileFile.Extension);
+        if (string.IsNullOrEmpty(path)) return;
+        try
+        {
+            LayoutProfileFile.Save(path!, _factory.CaptureProfile());
+            _notifications.Success(Tr.Get("Notif_LayoutSavedTitle"), path!);
+        }
+        catch (Exception ex)
+        {
+            _notifications.Error(Tr.Get("Notif_LayoutSaveFailed"), ex.Message);
+        }
+    }
+
+    /// <summary>View ▸ Layout ▸ Load Layout… — applies a previously saved *.thlayout file.</summary>
+    [RelayCommand]
+    private async Task LoadLayoutFromFileAsync()
+    {
+        if (_picker is null) return;
+        var path = await _picker.PickOpenLayoutAsync(Tr.Get("Pick_LoadLayoutTitle"));
+        if (string.IsNullOrEmpty(path)) return;
+        if (LayoutProfileFile.TryLoad(path!) is { } profile)
+            ApplyLayoutProfile(profile);
+        else
+            _notifications.Error(Tr.Get("Notif_LayoutLoadFailed"), path!);
+    }
+
+    /// <summary>View ▸ Layout ▸ Split Side Panels in 2/3 — more panels visible at once.</summary>
+    [RelayCommand]
+    private void ApplySplitLayout2() => ApplyLayoutProfile(
+        LayoutPresets.SplitSideRails(_factory.AvailableToolIds(), 2));
+
+    [RelayCommand]
+    private void ApplySplitLayout3() => ApplyLayoutProfile(
+        LayoutPresets.SplitSideRails(_factory.AvailableToolIds(), 3));
+
+    /// <summary>View ▸ Layout ▸ Spread Panels Across Monitors — floats the preview panels
+    /// maximized onto monitors 2 (and 3 when present); notifies when only one monitor exists.</summary>
+    [RelayCommand]
+    private void ApplyMultiMonitorLayout()
+    {
+        var profile = LayoutPresets.MultiMonitor(CurrentScreens(), _factory.AvailableToolIds());
+        if (profile is null)
+        {
+            _notifications.Warning(
+                Tr.Get("Notif_LayoutMultiMonitorTitle"), Tr.Get("Notif_LayoutNeedsTwoMonitors"));
+            return;
+        }
+        ApplyLayoutProfile(profile);
+    }
+
+    /// <summary>Monitor working areas, primary first — position in physical pixels, size in
+    /// logical units (what float windows take), remaining screens ordered left→right.</summary>
+    private static IReadOnlyList<ScreenRect> CurrentScreens()
+    {
+        var window = (Avalonia.Application.Current?.ApplicationLifetime as
+            Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)?.MainWindow;
+        if (window?.Screens is not { } screens || screens.ScreenCount == 0)
+            return Array.Empty<ScreenRect>();
+        var all = screens.All;
+        var primary = screens.Primary ?? all[0];
+        var ordered = new List<Avalonia.Platform.Screen> { primary };
+        ordered.AddRange(all.Where(s => !ReferenceEquals(s, primary)).OrderBy(s => s.WorkingArea.X));
+        return ordered.Select(s =>
+        {
+            double scale = s.Scaling > 0 ? s.Scaling : 1.0;
+            return new ScreenRect(
+                s.WorkingArea.X, s.WorkingArea.Y,
+                s.WorkingArea.Width / scale, s.WorkingArea.Height / scale);
+        }).ToList();
     }
 
     /// <summary>Tears the active document off into its own floating window.</summary>

@@ -339,6 +339,21 @@
   <data name="Menu_View_ShowIndentGuides" xml:space="preserve"><value>Arată ghidajele de indentare</value></data>
   <data name="Menu_View_ShowMinimap" xml:space="preserve"><value>Arată minimapa</value></data>
   <data name="Menu_View_SplitEditor" xml:space="preserve"><value>Împarte editorul (fereastră)</value></data>
+  <data name="Menu_View_Layout" xml:space="preserve"><value>Aspect</value></data>
+  <data name="Menu_View_Layout_Save" xml:space="preserve"><value>Salvează aspectul…</value></data>
+  <data name="Menu_View_Layout_Load" xml:space="preserve"><value>Încarcă aspectul…</value></data>
+  <data name="Menu_View_Layout_RestoreDefault" xml:space="preserve"><value>Restaurează aspectul implicit</value></data>
+  <data name="Menu_View_Layout_Split2" xml:space="preserve"><value>Împarte panourile laterale în 2</value></data>
+  <data name="Menu_View_Layout_Split3" xml:space="preserve"><value>Împarte panourile laterale în 3</value></data>
+  <data name="Menu_View_Layout_MultiMonitor" xml:space="preserve"><value>Distribuie panourile pe monitoare</value></data>
+  <data name="Pick_LayoutFiles" xml:space="preserve"><value>Fișiere de aspect</value></data>
+  <data name="Pick_SaveLayoutTitle" xml:space="preserve"><value>Salvează aspectul ca</value></data>
+  <data name="Pick_LoadLayoutTitle" xml:space="preserve"><value>Încarcă aspect</value></data>
+  <data name="Notif_LayoutSavedTitle" xml:space="preserve"><value>Aspect salvat</value></data>
+  <data name="Notif_LayoutSaveFailed" xml:space="preserve"><value>Aspectul nu a putut fi salvat</value></data>
+  <data name="Notif_LayoutLoadFailed" xml:space="preserve"><value>Aspectul nu a putut fi încărcat</value></data>
+  <data name="Notif_LayoutMultiMonitorTitle" xml:space="preserve"><value>Aspect multi-monitor</value></data>
+  <data name="Notif_LayoutNeedsTwoMonitors" xml:space="preserve"><value>Acest aspect necesită cel puțin două monitoare (și un panou de previzualizare activat).</value></data>
   <data name="Menu_Tools" xml:space="preserve"><value>Unelte</value></data>
   <data name="Menu_Tools_ImportSurvey" xml:space="preserve"><value>Importă topografie (Survex / Compass)…</value></data>
   <data name="Menu_Tools_ImportDem" xml:space="preserve"><value>Importă DEM ca suprafață (.asc)…</value></data>

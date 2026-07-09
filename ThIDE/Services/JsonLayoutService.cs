@@ -64,6 +64,13 @@ public sealed record LayoutState
     // correctly). Each entry records a window's bounds + the ids of the dockables it held.
     public IReadOnlyList<FloatWindowState> FloatWindows { get; init; } = Array.Empty<FloatWindowState>();
 
+    // ---- full dock arrangement (declarative) ----
+    // The complete docked-tool arrangement (rail sections, tab order, active tabs, splits)
+    // captured continuously by the autosave. Restored at startup by REBUILDING the tree from
+    // it (DockFactory.BuildFromProfile) — never by deserializing a Dock tree. Null on a
+    // legacy layout.json → the fresh default layout with the proportions above.
+    public LayoutProfile? Profile { get; init; }
+
     public static LayoutState Default { get; } = new();
 }
 
@@ -75,6 +82,8 @@ public sealed record FloatWindowState
     public double Y { get; init; }
     public double Width { get; init; } = 700;
     public double Height { get; init; } = 500;
+    /// <summary>Maximize the window after positioning it (used to fill a target monitor).</summary>
+    public bool Maximized { get; init; }
     public IReadOnlyList<string> DockableIds { get; init; } = Array.Empty<string>();
 }
 

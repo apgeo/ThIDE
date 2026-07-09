@@ -339,6 +339,21 @@
   <data name="Menu_View_ShowIndentGuides" xml:space="preserve"><value>Show Indentation Guides</value></data>
   <data name="Menu_View_ShowMinimap" xml:space="preserve"><value>Show Minimap</value></data>
   <data name="Menu_View_SplitEditor" xml:space="preserve"><value>Split Editor (Float)</value></data>
+  <data name="Menu_View_Layout" xml:space="preserve"><value>Layout</value></data>
+  <data name="Menu_View_Layout_Save" xml:space="preserve"><value>Save Layout…</value></data>
+  <data name="Menu_View_Layout_Load" xml:space="preserve"><value>Load Layout…</value></data>
+  <data name="Menu_View_Layout_RestoreDefault" xml:space="preserve"><value>Restore Default Layout</value></data>
+  <data name="Menu_View_Layout_Split2" xml:space="preserve"><value>Split Side Panels in 2</value></data>
+  <data name="Menu_View_Layout_Split3" xml:space="preserve"><value>Split Side Panels in 3</value></data>
+  <data name="Menu_View_Layout_MultiMonitor" xml:space="preserve"><value>Spread Panels Across Monitors</value></data>
+  <data name="Pick_LayoutFiles" xml:space="preserve"><value>Layout files</value></data>
+  <data name="Pick_SaveLayoutTitle" xml:space="preserve"><value>Save layout as</value></data>
+  <data name="Pick_LoadLayoutTitle" xml:space="preserve"><value>Load layout</value></data>
+  <data name="Notif_LayoutSavedTitle" xml:space="preserve"><value>Layout saved</value></data>
+  <data name="Notif_LayoutSaveFailed" xml:space="preserve"><value>Could not save layout</value></data>
+  <data name="Notif_LayoutLoadFailed" xml:space="preserve"><value>Could not load layout</value></data>
+  <data name="Notif_LayoutMultiMonitorTitle" xml:space="preserve"><value>Multi-monitor layout</value></data>
+  <data name="Notif_LayoutNeedsTwoMonitors" xml:space="preserve"><value>This layout needs at least two monitors (and an enabled preview panel).</value></data>
   <data name="Menu_Tools" xml:space="preserve"><value>Tools</value></data>
   <data name="Menu_Tools_ImportSurvey" xml:space="preserve"><value>Import survey (Survex / Compass)…</value></data>
   <data name="Menu_Tools_ImportDem" xml:space="preserve"><value>Import DEM as surface (.asc)…</value></data>
