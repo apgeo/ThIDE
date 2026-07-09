@@ -1001,6 +1001,8 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Notif_DemImportFailed" xml:space="preserve"><value>DEM import failed</value></data>
   <data name="Notif_ScaffoldFailed" xml:space="preserve"><value>Scaffold failed</value></data>
   <data name="Notif_ScaffoldOkTitle" xml:space="preserve"><value>Project scaffolded</value></data>
+  <data name="Notif_UnstuckTitle" xml:space="preserve"><value>Window unlocked</value></data>
+  <data name="Notif_UnstuckBody" xml:space="preserve"><value>The window was left disabled by a dialog that had already closed, so it stopped responding to clicks. It has been re-enabled; the details are in the log.</value></data>
   <data name="Notif_ScaffoldOverwritesSource" xml:space="preserve"><value>The target folder is the survey's own folder, so the generated wrapper would overwrite '{0}'. Pick a different folder.</value></data>
   <data name="Scaffold_Title" xml:space="preserve"><value>Scaffold Therion project from survey</value></data>
   <data name="Scaffold_Intro" xml:space="preserve"><value>Builds a compilable project around a bare (e.g. TopoDroid-exported) survey .th: creates the folder tree, copies the survey into th/, and writes a wrapper .th plus a thconfig with the exports you choose.</value></data>

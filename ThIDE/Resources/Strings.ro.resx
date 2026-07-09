@@ -1001,6 +1001,8 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Notif_DemImportFailed" xml:space="preserve"><value>Import DEM eșuat</value></data>
   <data name="Notif_ScaffoldFailed" xml:space="preserve"><value>Generarea scheletului a eșuat</value></data>
   <data name="Notif_ScaffoldOkTitle" xml:space="preserve"><value>Proiect generat</value></data>
+  <data name="Notif_UnstuckTitle" xml:space="preserve"><value>Fereastră deblocată</value></data>
+  <data name="Notif_UnstuckBody" xml:space="preserve"><value>Fereastra a rămas dezactivată de un dialog deja închis și nu mai răspundea la clicuri. A fost reactivată; detaliile sunt în jurnal.</value></data>
   <data name="Notif_ScaffoldOverwritesSource" xml:space="preserve"><value>Folderul țintă este chiar folderul carnetului, așa că fișierul generat ar suprascrie „{0}”. Alege alt folder.</value></data>
   <data name="Scaffold_Title" xml:space="preserve"><value>Generează proiect Therion din tur</value></data>
   <data name="Scaffold_Intro" xml:space="preserve"><value>Construiește un proiect compilabil în jurul unui fișier de tur .th simplu (de ex. exportat din TopoDroid): creează structura de foldere, copiază turul în th/ și scrie un fișier .th de legătură plus un thconfig cu exporturile alese.</value></data>

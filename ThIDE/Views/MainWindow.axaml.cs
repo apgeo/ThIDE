@@ -89,6 +89,7 @@ public partial class MainWindow : Window
                 StartAutosave();
                 AttachGlobalHotkey(vm);
                 AttachNotifications(vm);                 // toast layer
+                StartModalDesyncWatchdog();              // un-freeze a window left disabled by a modal
                 OpenStartupFileArgs(vm);                 // "open with" / file association
                 // mirror the active editor's selection stats into the status bar.
                 ThIDE.Editor.TherionTextEditor.SelectionStatsChanged += (_, s) =>
@@ -122,6 +123,7 @@ public partial class MainWindow : Window
             PersistAll();
             _crashRecovery?.MarkCleanShutdown();
             _globalHotkey?.Dispose();
+            _modalWatchdog?.Dispose();
         };
 
         // Drag-and-drop file open (#17).
@@ -547,6 +549,22 @@ public partial class MainWindow : Window
     private void TriggerRenameSymbol() => ActiveEditor?.StartRename();
 
     private RenamePreviewWindow? _renamePreviewWindow;
+
+    private ModalDesyncWatchdog? _modalWatchdog;
+
+    // Watches for the window being left disabled by a modal that has already gone (see the watchdog's
+    // remarks): the app repaints but ignores every click, which reads as a permanent freeze.
+    private void StartModalDesyncWatchdog()
+    {
+        try
+        {
+            _modalWatchdog = new ModalDesyncWatchdog(this,
+                AppServices.Provider.GetService<ILogService>(),
+                AppServices.Provider.GetService<INotificationService>());
+            _modalWatchdog.Start();
+        }
+        catch { /* design-time / no container */ }
+    }
 
     /// <summary>
     /// Find All References (#7): resolves the token to a symbol and lists every occurrence the index
