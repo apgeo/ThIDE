@@ -11,6 +11,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Therion.Core;
 using Therion.Processing.Abstractions;
+using Therion.Semantics;
 using ThIDE.Services;
 
 namespace ThIDE.ViewModels;

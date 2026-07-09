@@ -1,10 +1,15 @@
 // "explain this error". Maps a diagnostic code to a short plain-language explanation,
 // an example fix, and a thbook term to open the relevant manual page. Keyed by the stable code
 // strings from Therion.Syntax.DiagnosticCodes / Therion.Semantics.SemanticDiagnosticCodes.
+//
+// Lives here, not in the app, because `explain_diagnostic` must answer with no UI loaded
+// (.claude/mcp-integration/DECISIONS.md D-009). The table is pure data: it holds no UI types and
+// no state, and coverage of the code catalogs is deliberately partial — an unexplained code is a
+// clean miss, not an error.
 
 using System.Collections.Generic;
 
-namespace ThIDE.Services;
+namespace Therion.Semantics;
 
 /// <summary>Explanation + example fix + thbook term for a diagnostic code.</summary>
 public sealed record DiagnosticExplanation(string Summary, string? Example = null, string? DocTerm = null);
