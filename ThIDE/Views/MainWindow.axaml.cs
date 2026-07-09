@@ -65,6 +65,18 @@ public partial class MainWindow : Window
                 vm.ShowThbookRequested      += (_, _) => OnOpenThbook(this, new Avalonia.Interactivity.RoutedEventArgs());
                 vm.ShowBookmarksRequested   += (_, _) => OnBookmarksClick(this, new Avalonia.Interactivity.RoutedEventArgs());
                 vm.ShowRelationalMapRequested += (_, _) => OnRelationalMapClick(this, new Avalonia.Interactivity.RoutedEventArgs());
+                // Command-palette entries for the Tools calculators + Help ▸ Debug Info (window-hosted).
+                vm.ShowToolWindowRequested += (_, key) =>
+                {
+                    var args = new Avalonia.Interactivity.RoutedEventArgs();
+                    switch (key)
+                    {
+                        case "unit": OnUnitConverter(this, args); break;
+                        case "coord": OnCoordinateConverter(this, args); break;
+                        case "declination": OnDeclinationCalculator(this, args); break;
+                        case "debuginfo": OnDebugInfoClick(this, args); break;
+                    }
+                };
                 vm.Build.QuickExportRequested += (_, _) => _ = ShowQuickExportAsync(vm);
                 vm.ScaffoldProjectRequested += (_, mode) => _ = ShowScaffoldProjectAsync(vm, mode);
                 BuildRecentMenu(vm);

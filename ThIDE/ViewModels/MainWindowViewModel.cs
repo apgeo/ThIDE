@@ -259,12 +259,16 @@ public partial class MainWindowViewModel : ViewModelBase
     public event EventHandler? ShowThbookRequested;
     public event EventHandler? ShowBookmarksRequested;
     public event EventHandler? ShowRelationalMapRequested;
+    // Opens a code-behind-hosted tool window from the command palette. Key: "unit" / "coord" /
+    // "declination" (calculators) or "debuginfo".
+    public event EventHandler<string>? ShowToolWindowRequested;
 
     public void RaiseShowPreferences(string? section) => ShowPreferencesRequested?.Invoke(this, section);
     public void RaiseShowAbout() => ShowAboutRequested?.Invoke(this, EventArgs.Empty);
     public void RaiseShowThbook() => ShowThbookRequested?.Invoke(this, EventArgs.Empty);
     public void RaiseShowBookmarks() => ShowBookmarksRequested?.Invoke(this, EventArgs.Empty);
     public void RaiseShowRelationalMap() => ShowRelationalMapRequested?.Invoke(this, EventArgs.Empty);
+    public void RaiseShowToolWindow(string key) => ShowToolWindowRequested?.Invoke(this, key);
 
     /// <summary>Opens the Command palette (Ctrl+Shift+P, #4).</summary>
     public void ShowCommandPalette() => OpenCommandPalette(string.Empty);

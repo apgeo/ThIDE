@@ -79,11 +79,16 @@ public sealed class CommandPaletteProvider
         var list = new List<QuickPickItem>();
 
         // ---- File ----
+        list.Add(VmCmd(L("Cmd_Cat_File"), L("Welcome_NewFile"), _vm.NewFileCommand, "Icon.File"));
         list.Add(VmCmd(L("Cmd_Cat_File"), L("Cmd_OpenFile"), _vm.OpenFileCommand, "Icon.File"));
         list.Add(VmCmd(L("Cmd_Cat_File"), L("Cmd_OpenThconfig"), _vm.OpenThconfigCommand, "Icon.Config"));
         list.Add(VmCmd(L("Cmd_Cat_File"), L("Cmd_OpenFolder"), _vm.OpenFolderCommand, "Icon.FolderOpen"));
         list.Add(VmCmd(L("Cmd_Cat_File"), L("Cmd_Save"), _vm.SaveCommand, "Icon.File"));
         list.Add(Action(L("Cmd_Cat_File"), L("Cmd_GoToFile"), () => { _vm.ShowQuickOpen(); return Task.CompletedTask; }, "Icon.Search"));
+        list.Add(VmCmd(L("Cmd_Cat_File"), L("Menu_File_ReopenTab"), _vm.ReopenClosedTabCommand, "Icon.File"));
+        list.Add(VmCmd(L("Cmd_Cat_File"), L("Cmd_ClearRecent"), _vm.ClearRecentCommand, "Icon.Folder"));
+        list.Add(VmCmd(L("Cmd_Cat_File"), L("Cmd_ClearRecentDirs"), _vm.ClearRecentDirectoriesCommand, "Icon.Folder"));
+        list.Add(VmCmd(L("Cmd_Cat_File"), L("Cmd_Exit"), _vm.ExitCommand, "Icon.File"));
 
         // ---- Build ----
         list.Add(VmCmd(L("Cmd_Cat_Build"), L("Cmd_BuildCurrent"), _vm.Build.BuildCommand, "Icon.Cube"));
@@ -104,6 +109,26 @@ public sealed class CommandPaletteProvider
                 () => { target.BuildCommand.Execute(null); return Task.CompletedTask; }, "Icon.Cube"));
         if (_session is { Candidates.Count: > 0 })
             list.Add(Action(L("Cmd_Cat_Build"), L("Cmd_BuildSpecific"), () => { PushThconfigBuild(); return Task.CompletedTask; }, "Icon.Config"));
+
+        // ---- Tools (import / export / report / scaffold / calculators — mirrors the Tools menu) ----
+        var tools = L("Cmd_Cat_Tools");
+        list.Add(VmCmd(tools, L("Menu_Tools_ImportSurvey"), _vm.ImportSurveyCommand, "Icon.Import"));
+        list.Add(VmCmd(tools, L("Menu_Tools_ImportDem"), _vm.ImportDemSurfaceCommand, "Icon.Import"));
+        list.Add(VmCmd(tools, L("Menu_Tools_ImportGpx"), _vm.ImportGpxCommand, "Icon.Import"));
+        list.Add(ParamCmd(tools, L("Menu_Tools_ScaffoldProject"), _vm.ScaffoldProjectCommand, null, "Icon.Config"));
+        list.Add(ParamCmd(tools, L("Menu_Tools_ScaffoldActive"), _vm.ScaffoldProjectCommand, "active", "Icon.Config"));
+        // Export entrances / fixed points — one flat, searchable item per format.
+        foreach (var fmt in new[] { "kml", "geojson", "gpx", "csv" })
+            list.Add(ParamCmd(tools, $"{L("Menu_Tools_ExportEntrances")} — {FormatLabel(fmt)}", _vm.ExportGisCommand, fmt, "Icon.Export"));
+        // Export station / shot data tables (kind × format).
+        foreach (var (kindKey, kind) in new[] { ("Browser_Tab_Stations", "stations"), ("Browser_Tab_Shots", "shots") })
+            foreach (var fmt in new[] { "csv", "markdown", "html", "latex" })
+                list.Add(ParamCmd(tools, $"{L("Menu_Tools_ExportTable")}: {L(kindKey)} — {FormatLabel(fmt)}", _vm.ExportTableCommand, $"{kind}|{fmt}", "Icon.Export"));
+        list.Add(VmCmd(tools, L("Menu_Tools_GenReport"), _vm.GenerateReportCommand, "Icon.Th"));
+        list.Add(VmCmd(tools, L("Menu_Tools_NewScrap"), _vm.NewScrapScaffoldCommand, "Icon.Th2"));
+        list.Add(Action(tools, L("Menu_Tools_UnitConverter"), () => { _vm.RaiseShowToolWindow("unit"); return Task.CompletedTask; }, "Icon.Timer"));
+        list.Add(Action(tools, L("Menu_Tools_CoordConverter"), () => { _vm.RaiseShowToolWindow("coord"); return Task.CompletedTask; }, "Icon.Timer"));
+        list.Add(Action(tools, L("Menu_Tools_DeclinationCalc"), () => { _vm.RaiseShowToolWindow("declination"); return Task.CompletedTask; }, "Icon.Timer"));
 
         // ---- View / panels ----
         list.Add(VmCmd(L("Cmd_Cat_View"), L("Cmd_ToggleObjectBrowser"), _vm.ToggleObjectBrowserCommand, "Icon.Map"));
@@ -184,11 +209,14 @@ public sealed class CommandPaletteProvider
         list.Add(Editor(L("Cmd_RenameEditor"), ed => ed.StartRename()));
 
         // ---- Windows ----
+        list.Add(VmCmd(L("Cmd_Cat_Window"), L("Cmd_Welcome"), _vm.ShowWelcomeCommand, "Icon.Info"));
         list.Add(Action(L("Cmd_Cat_Window"), L("Cmd_Preferences"), () => { _vm.RaiseShowPreferences(null); return Task.CompletedTask; }, "Icon.Config"));
         list.Add(Action(L("Cmd_Cat_Window"), L("Cmd_About"), () => { _vm.RaiseShowAbout(); return Task.CompletedTask; }, "Icon.Config"));
         list.Add(Action(L("Cmd_Cat_Window"), L("Cmd_TherionBook"), () => { _vm.RaiseShowThbook(); return Task.CompletedTask; }, "Icon.Map"));
         list.Add(Action(L("Cmd_Cat_Window"), L("Book_Title"), () => { _vm.RaiseShowBookmarks(); return Task.CompletedTask; }, "Icon.File"));
         list.Add(Action(L("Cmd_Cat_Window"), L("Tb_RelationalMap"), () => { _vm.RaiseShowRelationalMap(); return Task.CompletedTask; }, "Icon.Map"));
+        list.Add(Action(L("Cmd_Cat_Window"), L("Cmd_DebugInfo"), () => { _vm.RaiseShowToolWindow("debuginfo"); return Task.CompletedTask; }, "Icon.Info"));
+        list.Add(VmCmd(L("Cmd_Cat_Window"), L("Cmd_ClearNotifications"), _vm.ClearNotificationsCommand, "Icon.Bell"));
 
         // ---- Settings sections (open Preferences at that tab) ----
         foreach (var (id, titleKey) in SettingsSections)
@@ -328,6 +356,25 @@ public sealed class CommandPaletteProvider
         NameLower = title.ToLowerInvariant(),
         PathLower = category.ToLowerInvariant(),
         Run = () => { if (command.CanExecute(null)) command.Execute(null); return Task.CompletedTask; },
+    };
+
+    // VmCmd variant that carries a CommandParameter (export format / table spec).
+    private static QuickPickItem ParamCmd(string category, string title, ICommand command, object? param, string iconKey) => new()
+    {
+        Title = title,
+        Detail = category,
+        IconKey = iconKey,
+        NameLower = title.ToLowerInvariant(),
+        PathLower = category.ToLowerInvariant(),
+        Run = () => { if (command.CanExecute(param)) command.Execute(param); return Task.CompletedTask; },
+    };
+
+    // Pretty display label for an export format token.
+    private static string FormatLabel(string fmt) => fmt switch
+    {
+        "csv" => "CSV", "markdown" => "Markdown", "html" => "HTML", "latex" => "LaTeX",
+        "kml" => "KML", "geojson" => "GeoJSON", "gpx" => "GPX",
+        _ => fmt.ToUpperInvariant(),
     };
 
     private static QuickPickItem Action(string category, string title, Func<Task> run, string iconKey) => new()

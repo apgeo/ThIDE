@@ -894,6 +894,13 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Cmd_Cat_Settings" xml:space="preserve"><value>Setări</value></data>
   <data name="Cmd_Cat_Docs" xml:space="preserve"><value>Documentație</value></data>
   <data name="Cmd_Cat_Editor" xml:space="preserve"><value>Editor</value></data>
+  <data name="Cmd_Cat_Tools" xml:space="preserve"><value>Unelte</value></data>
+  <data name="Cmd_ClearRecent" xml:space="preserve"><value>Golește fișierele recente</value></data>
+  <data name="Cmd_ClearRecentDirs" xml:space="preserve"><value>Golește folderele recente</value></data>
+  <data name="Cmd_Exit" xml:space="preserve"><value>Ieșire</value></data>
+  <data name="Cmd_Welcome" xml:space="preserve"><value>Bun venit (pagină de start)</value></data>
+  <data name="Cmd_DebugInfo" xml:space="preserve"><value>Informații de depanare</value></data>
+  <data name="Cmd_ClearNotifications" xml:space="preserve"><value>Golește notificările</value></data>
   <data name="Cmd_OpenFile" xml:space="preserve"><value>Deschide fișier…</value></data>
   <data name="Cmd_OpenThconfig" xml:space="preserve"><value>Deschide thconfig…</value></data>
   <data name="Cmd_OpenFolder" xml:space="preserve"><value>Deschide dosar…</value></data>

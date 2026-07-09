@@ -894,6 +894,13 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Cmd_Cat_Settings" xml:space="preserve"><value>Settings</value></data>
   <data name="Cmd_Cat_Docs" xml:space="preserve"><value>Docs</value></data>
   <data name="Cmd_Cat_Editor" xml:space="preserve"><value>Editor</value></data>
+  <data name="Cmd_Cat_Tools" xml:space="preserve"><value>Tools</value></data>
+  <data name="Cmd_ClearRecent" xml:space="preserve"><value>Clear Recent Files</value></data>
+  <data name="Cmd_ClearRecentDirs" xml:space="preserve"><value>Clear Recent Folders</value></data>
+  <data name="Cmd_Exit" xml:space="preserve"><value>Exit</value></data>
+  <data name="Cmd_Welcome" xml:space="preserve"><value>Welcome (Start Page)</value></data>
+  <data name="Cmd_DebugInfo" xml:space="preserve"><value>Debug Info</value></data>
+  <data name="Cmd_ClearNotifications" xml:space="preserve"><value>Clear Notifications</value></data>
   <data name="Cmd_OpenFile" xml:space="preserve"><value>Open File…</value></data>
   <data name="Cmd_OpenThconfig" xml:space="preserve"><value>Open thconfig…</value></data>
   <data name="Cmd_OpenFolder" xml:space="preserve"><value>Open Folder…</value></data>
