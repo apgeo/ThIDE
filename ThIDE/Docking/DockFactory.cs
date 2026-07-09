@@ -940,6 +940,23 @@ public sealed class DockFactory : Factory
         base.InitLayout(layout);
     }
 
+    private System.Windows.Input.ICommand? _activateDockableCommand;
+
+    /// <summary>
+    /// Brings a tab to the front — bound from the tab strip's "switch to an open tab" flyout, whose
+    /// bindings are reflection-based, so it needs a real ICommand rather than a method binding.
+    /// </summary>
+    public System.Windows.Input.ICommand ActivateDockableCommand =>
+        _activateDockableCommand ??= new CommunityToolkit.Mvvm.Input.RelayCommand<IDockable>(ActivateDockable);
+
+    /// <summary>Selects <paramref name="dockable"/> in its own dock and gives it focus.</summary>
+    public void ActivateDockable(IDockable? dockable)
+    {
+        if (dockable is null || _rootDock is null) return;
+        SetActiveDockable(dockable);
+        SetFocusedDockable(_rootDock, dockable);
+    }
+
     /// <summary>
     /// Adds (or re-activates) a document tab. If a restore placeholder is holding this file's
     /// slot it is swapped out in place — preserving which dock / float window / tab position

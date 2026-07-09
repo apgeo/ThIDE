@@ -184,33 +184,6 @@ public partial class FileDocumentView : UserControl
         catch { /* best-effort — design-time / no container / load failure */ }
     }
 
-    // Open-files dropdown (#15): populate the flyout with every open document; clicking one
-    // re-activates its tab.
-    private void OnShowOpenFiles(object? sender, RoutedEventArgs e)
-    {
-        if (sender is not Button { Flyout: MenuFlyout flyout }) return;
-        if (TryDocuments() is not { } docs) return;
-
-        var items = new System.Collections.Generic.List<Control>();
-        foreach (var doc in docs.Documents)
-        {
-            var path = doc.FilePath;
-            var item = new MenuItem
-            {
-                Header = System.IO.Path.GetFileName(path),
-                [ToolTip.TipProperty] = path,
-                Icon = ReferenceEquals(doc, docs.Active)
-                    ? new TextBlock { Text = "•" } // bullet marks the active document
-                    : null,
-            };
-            item.Click += (_, _) => _ = docs.OpenFileAsync(path);
-            items.Add(item);
-        }
-        if (items.Count == 0)
-            items.Add(new MenuItem { Header = "(no open files)", IsEnabled = false });
-        flyout.ItemsSource = items;
-    }
-
     private void OnRenameSymbolRequested(object? sender, (string Raw, Therion.Processing.Abstractions.ReferenceKind Kind) args)
         => TryDocuments()?.RequestRenameSymbol(args.Raw, args.Kind);
 
