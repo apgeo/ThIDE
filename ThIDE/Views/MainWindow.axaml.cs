@@ -1283,7 +1283,8 @@ public partial class MainWindow : Window
         try
         {
             // Fold in the live dock pane sizes + active tabs before saving (#17).
-            var current = _layout.Current;
+            var persisted = _layout.Current;
+            var current = persisted;
             if ((DataContext as MainWindowViewModel)?.Factory is { } factory)
                 current = factory.CaptureLayoutState(current);
             // Only capture bounds while in the Normal state — when maximized/fullscreen the
@@ -1299,7 +1300,12 @@ public partial class MainWindow : Window
                     WindowState = (int)WindowState.Normal,
                 }
                 : current with { WindowState = (int)WindowState };
-            if (next == current) return; // value-equal record — nothing to write
+            // Dedup against the PERSISTED state, not the freshly-captured one — comparing to
+            // `current` swallowed every dock-only change (pane sizes, floats, profile): with an
+            // unmoved/maximized window `next` always equaled it, so nothing was ever written.
+            // The capture caches (floats/profile return the same instance when unchanged) keep
+            // this value comparison cheap and stable across ticks.
+            if (next == persisted) return; // value-equal record — nothing to write
             _layout.Save(next);
         }
         catch { /* best-effort */ }
