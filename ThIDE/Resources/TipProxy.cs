@@ -38,17 +38,18 @@ public sealed class TipProxy : INotifyPropertyChanged
         ["Tb_CancelCompile"]    = ShellCommandIds.CancelBuild,
         ["Menu_View_Workspace"] = ShellCommandIds.ToggleWorkspaceExplorer,
         ["Tool_Diagnostics"]    = ShellCommandIds.ToggleDiagnostics,
+        ["Tb_GoToFile"]         = ShellCommandIds.QuickOpen,
+        ["Tb_GoToAction"]       = ShellCommandIds.CommandPalette,
+        ["Tb_FullScreen"]       = ShellCommandIds.ToggleFullScreen,
     };
 
-    // Toolbar tooltip loc-key → fixed shell chord (handled in code, not user-remappable).
+    // Toolbar tooltip loc-key → fixed chord. Only genuinely non-remappable ones belong here: these
+    // are AvaloniaEdit's own clipboard bindings, not gestures the shortcut service dispatches.
     private static readonly Dictionary<string, string> FixedByKey = new(StringComparer.Ordinal)
     {
-        ["Tb_Cut"]        = "Ctrl+X",
-        ["Tb_Copy"]       = "Ctrl+C",
-        ["Tb_Paste"]      = "Ctrl+V",
-        ["Tb_GoToFile"]   = "Ctrl+P",
-        ["Tb_GoToAction"] = "Ctrl+Shift+P",
-        ["Tb_FullScreen"] = "F11",
+        ["Tb_Cut"]   = "Ctrl+X",
+        ["Tb_Copy"]  = "Ctrl+C",
+        ["Tb_Paste"] = "Ctrl+V",
     };
 
     /// <summary>Wires the configurable shortcut service and relays its change notifications.</summary>
