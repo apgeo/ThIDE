@@ -16,6 +16,7 @@ using CommunityToolkit.Mvvm.Input;
 using Therion.Core;
 using Therion.Semantics;
 using Therion.Syntax;
+using Therion.Workspace;
 using ThIDE.Resources;
 using ThIDE.Services;
 

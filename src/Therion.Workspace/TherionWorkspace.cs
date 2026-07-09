@@ -137,7 +137,8 @@ public sealed class TherionWorkspace : IWorkspace
     }
 
     /// <summary>Parses <paramref name="text"/> as the file <paramref name="path"/> (by extension), without touching disk or the cache.</summary>
-    private static ParseResult<TherionFile> ParseText(string path, string text)
+    /// <remarks>Internal so <see cref="WorkspaceReachability"/> walks the graph with the very dispatch the loader uses.</remarks>
+    internal static ParseResult<TherionFile> ParseText(string path, string text)
     {
         var ext = Path.GetExtension(path).ToLowerInvariant();
         return ext switch
