@@ -81,6 +81,11 @@ public sealed record AppSettings
     /// </summary>
     public IReadOnlyDictionary<string, string> LastThconfigByRoot { get; init; } =
         new Dictionary<string, string>();
+    /// <summary>
+    /// Directories the Overview ▸ Audit orphan scan ignores (full paths). Entries for other projects
+    /// simply never match the current root, so one flat list serves every workspace.
+    /// </summary>
+    public IReadOnlyList<string> AuditExcludedDirectories { get; init; } = Array.Empty<string>();
     /// <summary>Reload an open editor when its file changes on disk (clean files only; #6).</summary>
     public bool AutoReloadExternalChanges { get; init; } = true;
     /// <summary>Rebuild the object graph when a tracked file changes on disk (#5b).</summary>

@@ -293,6 +293,10 @@
   <data name="Proj_Audit_Calculating" xml:space="preserve"><value>Calculating…</value></data>
   <data name="Proj_Audit_NotCalculated" xml:space="preserve"><value>Click Calculate to search and show orphan files, unreferenced scraps and unexported maps.</value></data>
   <data name="Proj_Audit_Orphans" xml:space="preserve"><value>Orphan files (not bound to any thconfig in this workspace)</value></data>
+  <data name="Proj_Audit_Exclusions" xml:space="preserve"><value>Excluded folders</value></data>
+  <data name="Proj_Audit_AddExclusion" xml:space="preserve"><value>Exclude folder…</value></data>
+  <data name="Proj_Audit_AddExclusionTip" xml:space="preserve"><value>Pick a folder whose files the orphan scan should ignore (backups, archives, scratch work).</value></data>
+  <data name="Proj_Audit_RemoveExclusion" xml:space="preserve"><value>Stop excluding this folder</value></data>
   <data name="Proj_Audit_Scraps" xml:space="preserve"><value>Unreferenced scraps (not in any map)</value></data>
   <data name="Proj_Audit_Maps" xml:space="preserve"><value>Unexported maps (declared but not selected)</value></data>
   <data name="Proj_Lead_Checked" xml:space="preserve"><value>Checked</value></data>

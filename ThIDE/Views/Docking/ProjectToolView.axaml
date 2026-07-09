@@ -233,8 +233,31 @@
                             IsVisible="{Binding !Audit.HasCalculated}" IsEnabled="{Binding !Audit.IsCalculating}" />
                     <Button Content="{l:Loc Proj_Audit_Recalculate}" Command="{Binding Audit.CalculateCommand}"
                             IsVisible="{Binding Audit.HasCalculated}" IsEnabled="{Binding !Audit.IsCalculating}" />
+                    <Button Content="{l:Loc Proj_Audit_AddExclusion}" Click="OnAddAuditExclusion"
+                            ToolTip.Tip="{l:Loc Proj_Audit_AddExclusionTip}" />
                     <TextBlock Text="{Binding Audit.Summary}" Foreground="Gray" VerticalAlignment="Center"
                                TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+
+                <!-- Excluded directories: the orphan scan skips anything beneath them. -->
+                <StackPanel DockPanel.Dock="Top" Margin="8,0,8,4"
+                            IsVisible="{Binding Audit.HasExclusions}">
+                    <TextBlock Classes="h" Text="{l:Loc Proj_Audit_Exclusions}" />
+                    <ItemsControl ItemsSource="{Binding Audit.ExcludedDirectories}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <Button Content="&#x2715;" Padding="4,0" FontSize="11"
+                                            Background="Transparent" BorderThickness="0"
+                                            ToolTip.Tip="{l:Loc Proj_Audit_RemoveExclusion}"
+                                            Command="{Binding $parent[ItemsControl].DataContext.Audit.RemoveExclusionCommand}"
+                                            CommandParameter="{Binding}" />
+                                    <TextBlock Text="{Binding}" Foreground="Gray" FontSize="11"
+                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                 </StackPanel>
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="8,0,8,8">

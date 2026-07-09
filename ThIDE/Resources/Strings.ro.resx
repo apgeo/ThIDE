@@ -293,6 +293,10 @@
   <data name="Proj_Audit_Calculating" xml:space="preserve"><value>Se calculează…</value></data>
   <data name="Proj_Audit_NotCalculated" xml:space="preserve"><value>Apasă Calculează pentru a căuta și afișa fișierele orfane, schițele nereferențiate și hărțile neexportate.</value></data>
   <data name="Proj_Audit_Orphans" xml:space="preserve"><value>Fișiere orfane (nelegate de niciun thconfig din acest spațiu de lucru)</value></data>
+  <data name="Proj_Audit_Exclusions" xml:space="preserve"><value>Foldere excluse</value></data>
+  <data name="Proj_Audit_AddExclusion" xml:space="preserve"><value>Exclude folder…</value></data>
+  <data name="Proj_Audit_AddExclusionTip" xml:space="preserve"><value>Alege un folder ale cărui fișiere să fie ignorate de scanarea de orfani (copii de siguranță, arhive, lucru temporar).</value></data>
+  <data name="Proj_Audit_RemoveExclusion" xml:space="preserve"><value>Nu mai exclude acest folder</value></data>
   <data name="Proj_Audit_Scraps" xml:space="preserve"><value>Schițe nereferențiate (în nicio hartă)</value></data>
   <data name="Proj_Audit_Maps" xml:space="preserve"><value>Hărți neexportate (declarate dar neselectate)</value></data>
   <data name="Proj_Lead_Checked" xml:space="preserve"><value>Verificat</value></data>

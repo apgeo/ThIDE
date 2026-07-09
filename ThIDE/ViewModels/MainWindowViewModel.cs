@@ -1772,7 +1772,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private void NavigatePathSegment(PathCrumb? crumb)
     {
         if (crumb?.Directory is not { } dir) return;
-        if (IsUnderWorkspaceRoot(dir))
+        if (PathScope.IsUnder(dir, _session?.RootPath))
         {
             Activate(WorkspaceTool);            // surface/focus the Workspace Explorer panel
             WorkspaceExplorer.RevealPath(dir);  // switch to file-explorer view + select the folder node
@@ -1781,18 +1781,6 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             StatusText = string.Format(Tr.Get("Status_OpenFolderFailed"), dir);
         }
-    }
-
-    /// <summary>True when <paramref name="dir"/> is the workspace root or lives inside it.</summary>
-    private bool IsUnderWorkspaceRoot(string dir)
-    {
-        if (_session?.RootPath is not { } root) return false;
-        try
-        {
-            var rel = System.IO.Path.GetRelativePath(root, System.IO.Path.GetFullPath(dir));
-            return !rel.StartsWith("..", StringComparison.Ordinal) && !System.IO.Path.IsPathRooted(rel);
-        }
-        catch { return false; }
     }
 
     /// <summary>Splits a full file path into breadcrumb segments (root-first); the file name is last.</summary>

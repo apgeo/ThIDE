@@ -235,6 +235,7 @@ public sealed partial class ProjectAuditViewModel : ObservableObject
 {
     private readonly IWorkspaceSession? _session;
     private readonly IDocumentService? _documents;
+    private readonly IAppSettingsService? _settings;
     private CancellationTokenSource? _cts;
 
     public ObservableCollection<AuditItem> OrphanFiles { get; } = new();
@@ -251,12 +252,24 @@ public sealed partial class ProjectAuditViewModel : ObservableObject
     /// <summary>True while the audit runs on a background thread (disables the button).</summary>
     [ObservableProperty] private bool _isCalculating;
 
+    /// <summary>Directories the orphan scan ignores. Persisted; shared across projects (an entry for
+    /// another root simply never matches).</summary>
+    public ObservableCollection<string> ExcludedDirectories { get; } = new();
+
+    /// <summary>Drives the visibility of the exclusion list (an empty list stays out of the way).</summary>
+    [ObservableProperty] private bool _hasExclusions;
+
     public ProjectAuditViewModel() { } // design-time
 
-    public ProjectAuditViewModel(IWorkspaceSession session, IDocumentService documents)
+    public ProjectAuditViewModel(IWorkspaceSession session, IDocumentService documents,
+        IAppSettingsService? settings = null)
     {
         _session = session;
         _documents = documents;
+        _settings = settings;
+        foreach (var d in settings?.Current.AuditExcludedDirectories ?? (IReadOnlyList<string>)Array.Empty<string>())
+            ExcludedDirectories.Add(d);
+        HasExclusions = ExcludedDirectories.Count > 0;
         // Deliberately *not* computed on load / workspace change / thconfig switch: the orphan scan
         // walks a source graph for every thconfig in the directory, which is too heavy to run
         // eagerly. We only reset to the "click Calculate" placeholder on structural changes so stale
@@ -264,6 +277,33 @@ public sealed partial class ProjectAuditViewModel : ObservableObject
         _session.RootChanged += (_, _) => ProjectFormat.OnUi(ResetToPlaceholder);
         _session.Changed += (_, _) => ProjectFormat.OnUi(ResetToPlaceholder);
         ResetToPlaceholder();
+    }
+
+    /// <summary>Adds a directory to the exclusion list (no duplicates) and persists it.</summary>
+    public void AddExclusion(string? directory)
+    {
+        if (string.IsNullOrWhiteSpace(directory)) return;
+        var full = Path.GetFullPath(directory.Trim());
+        if (ExcludedDirectories.Any(d => string.Equals(d, full, StringComparison.OrdinalIgnoreCase))) return;
+        ExcludedDirectories.Add(full);
+        PersistExclusions();
+        ResetToPlaceholder();   // the previous results were computed without this exclusion
+    }
+
+    [RelayCommand]
+    private void RemoveExclusion(string? directory)
+    {
+        if (directory is null || !ExcludedDirectories.Remove(directory)) return;
+        PersistExclusions();
+        ResetToPlaceholder();
+    }
+
+    private void PersistExclusions()
+    {
+        HasExclusions = ExcludedDirectories.Count > 0;
+        if (_settings is null) return;
+        try { _settings.Save(_settings.Current with { AuditExcludedDirectories = ExcludedDirectories.ToArray() }); }
+        catch { /* best-effort persistence */ }
     }
 
     [RelayCommand]
@@ -295,11 +335,12 @@ public sealed partial class ProjectAuditViewModel : ObservableObject
         var root = _session.RootPath;
         var entryPoints = CollectEntryPoints();
         var activeThconfig = _session.ActiveThconfig?.FullPath;
+        var excluded = ExcludedDirectories.ToArray();   // snapshot: the scan runs off the UI thread
 
         try
         {
             var result = await Task.Run(
-                () => Compute(model, root, entryPoints, activeThconfig, ct), ct);
+                () => Compute(model, root, entryPoints, activeThconfig, excluded, ct), ct);
             if (ct.IsCancellationRequested || !ReferenceEquals(_cts, cts)) return;
 
             Replace(OrphanFiles, result.Orphans);
@@ -362,9 +403,10 @@ public sealed partial class ProjectAuditViewModel : ObservableObject
     private sealed record AuditResult(List<AuditItem> Orphans, List<AuditItem> Scraps, List<AuditItem> Maps);
 
     private static AuditResult Compute(WorkspaceSemanticModel? model, string? root,
-        IReadOnlyList<string> entryPoints, string? activeThconfig, CancellationToken ct)
+        IReadOnlyList<string> entryPoints, string? activeThconfig,
+        IReadOnlyList<string> excludedDirectories, CancellationToken ct)
     {
-        var orphans = FindOrphanFiles(root, entryPoints, ct);
+        var orphans = FindOrphanFiles(root, entryPoints, excludedDirectories, ct);
         var scraps = new List<AuditItem>();
         var maps = new List<AuditItem>();
         if (model is not null)
@@ -386,7 +428,9 @@ public sealed partial class ProjectAuditViewModel : ObservableObject
 
     // Therion files on disk under the root bound to *no* thconfig in the workspace — reachable from
     // none of their source/input graphs, not merely absent from the active entry point's graph.
-    private static List<AuditItem> FindOrphanFiles(string? root, IReadOnlyList<string> entryPoints, CancellationToken ct)
+    // Files under a user-excluded directory are skipped entirely (backups, archives, scratch dirs).
+    private static List<AuditItem> FindOrphanFiles(string? root, IReadOnlyList<string> entryPoints,
+        IReadOnlyList<string> excludedDirectories, CancellationToken ct)
     {
         var list = new List<AuditItem>();
         if (string.IsNullOrEmpty(root) || !Directory.Exists(root)) return list;
@@ -403,6 +447,7 @@ public sealed partial class ProjectAuditViewModel : ObservableObject
                 if (ext is not (".th" or ".th2")) continue;
                 var full = Path.GetFullPath(f);
                 if (reachable.Contains(full)) continue;
+                if (IsExcluded(full, excludedDirectories)) continue;
                 list.Add(new AuditItem
                 {
                     Title = Path.GetFileName(f),
@@ -415,6 +460,14 @@ public sealed partial class ProjectAuditViewModel : ObservableObject
         catch (OperationCanceledException) { throw; }
         catch { /* best effort */ }
         return list;
+    }
+
+    /// <summary>True when <paramref name="file"/> sits inside any excluded directory.</summary>
+    internal static bool IsExcluded(string file, IReadOnlyList<string> excludedDirectories)
+    {
+        for (var i = 0; i < excludedDirectories.Count; i++)
+            if (PathScope.IsUnder(file, excludedDirectories[i])) return true;
+        return false;
     }
 
     // Declared maps not picked by any `select` in the active thconfig (only when selects exist).

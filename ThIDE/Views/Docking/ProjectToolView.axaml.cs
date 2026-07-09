@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
 using ThIDE.ViewModels;
 using ThIDE.ViewModels.Docking;
@@ -33,5 +34,21 @@ public partial class ProjectToolView : UserControl
         if (DataContext is ProjectToolViewModel vm &&
             (e.Source as Visual)?.FindAncestorOfType<DataGridRow>()?.DataContext is FixedRow row)
             vm.Analytics.OpenFixedPointCommand.Execute(row);
+    }
+
+    // Pick a directory for the audit's orphan scan to ignore. The picker hangs off the TopLevel, so
+    // it lives here rather than in the view-model.
+    private async void OnAddAuditExclusion(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (DataContext is not ProjectToolViewModel vm) return;
+        if (TopLevel.GetTopLevel(this)?.StorageProvider is not { } storage) return;
+
+        var folders = await storage.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = ThIDE.Resources.Tr.Get("Proj_Audit_AddExclusion"),
+            AllowMultiple = false,
+        });
+        if (folders.Count > 0 && folders[0].TryGetLocalPath() is { } path)
+            vm.Audit.AddExclusion(path);
     }
 }
