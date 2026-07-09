@@ -132,6 +132,23 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
     public async Task SetRootAsync(string rootDir, CancellationToken ct = default)
     {
         if (string.IsNullOrEmpty(rootDir) || !Directory.Exists(rootDir)) return;
+        await AdoptRootAsync(rootDir).ConfigureAwait(false);
+
+        // Pick the thconfig to activate as the reference graph (task 1).
+        var chosen = ChooseInitialThconfig(RootPath!);
+        if (chosen is not null)
+            await SetActiveThconfigAsync(chosen, ct).ConfigureAwait(false);
+        else
+            Raise(); // empty root with no thconfig: notify so the UI clears the old graph
+    }
+
+    /// <summary>
+    /// Re-roots the session at <paramref name="rootDir"/> — reset, watch, rescan — but leaves the
+    /// active thconfig unset. <see cref="SetRootAsync"/> is this plus the auto-pick;
+    /// <see cref="SetActiveThconfigAsync"/> uses it to follow a config into its own directory.
+    /// </summary>
+    private async Task AdoptRootAsync(string rootDir)
+    {
         var full = Path.GetFullPath(rootDir);
 
         // Switching to a *different* root must not carry the previous directory's state: drop
@@ -153,13 +170,6 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
 
         WatchRoot(full);
         RescanCandidates();
-
-        // Pick the thconfig to activate as the reference graph (task 1).
-        var chosen = ChooseInitialThconfig(full);
-        if (chosen is not null)
-            await SetActiveThconfigAsync(chosen, ct).ConfigureAwait(false);
-        else
-            Raise(); // empty root with no thconfig: notify so the UI clears the old graph
     }
 
     /// <summary>
@@ -281,12 +291,20 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
         SetIndexing(true);
         try { model = await Task.Run(() => ws.BuildSemanticModel(), ct).ConfigureAwait(false); }
         finally { SetIndexing(false); }
+
+        // The active thconfig *is* the project, so the workspace root follows it: activating one
+        // from outside the current root (dropdown, scaffold, Open thconfig) re-roots the session at
+        // its directory rather than leaving the explorer pointed at an unrelated tree. Done after the
+        // graph is built — a failed load leaves the session where it was — and before the graph is
+        // published, so RootChanged still precedes Changed as everywhere else.
+        if (RootPath is null || !IsUnderRoot(full))
+            if (Path.GetDirectoryName(full) is { Length: > 0 } dir)
+                await AdoptRootAsync(dir).ConfigureAwait(false);
+
         var old = SwapWorkspace(ws, model, full);
         UpdateSymbolIndex(model);
         if (old is not null) await old.DisposeAsync().ConfigureAwait(false);
 
-        // The active config (and its directory) may not be in the candidate list yet.
-        if (RootPath is null) { RootPath = Path.GetDirectoryName(full); RootChanged?.Invoke(this, EventArgs.Empty); WatchRoot(RootPath); }
         EnsureCandidate(full);
         RememberActiveForRoot();
         _log?.Info($"Active thconfig: {full} ({model.PerFile.Count} .th file(s) loaded)");
