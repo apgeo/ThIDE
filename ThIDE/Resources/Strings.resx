@@ -339,6 +339,8 @@
   <data name="Menu_Tools_ImportSurvey" xml:space="preserve"><value>Import survey (Survex / Compass)…</value></data>
   <data name="Menu_Tools_ImportDem" xml:space="preserve"><value>Import DEM as surface (.asc)…</value></data>
   <data name="Menu_Tools_ImportGpx" xml:space="preserve"><value>Import GPX waypoints (→ fix)…</value></data>
+  <data name="Menu_Tools_ScaffoldProject" xml:space="preserve"><value>Scaffold project from survey…</value></data>
+  <data name="Menu_Tools_ScaffoldActive" xml:space="preserve"><value>Scaffold project from active file</value></data>
   <data name="Menu_Tools_ExportEntrances" xml:space="preserve"><value>Export entrances / fixed points</value></data>
   <data name="Menu_Tools_ExportTable" xml:space="preserve"><value>Export data table</value></data>
   <data name="Menu_Tools_GenReport" xml:space="preserve"><value>Generate survey report (HTML)…</value></data>
@@ -977,6 +979,32 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Notif_ReportFailed" xml:space="preserve"><value>Report failed</value></data>
   <data name="Notif_DemImportFailed" xml:space="preserve"><value>DEM import failed</value></data>
   <data name="Notif_ScaffoldFailed" xml:space="preserve"><value>Scaffold failed</value></data>
+  <data name="Notif_ScaffoldOkTitle" xml:space="preserve"><value>Project scaffolded</value></data>
+  <data name="Scaffold_Title" xml:space="preserve"><value>Scaffold Therion project from survey</value></data>
+  <data name="Scaffold_Intro" xml:space="preserve"><value>Builds a compilable project around a bare (e.g. TopoDroid-exported) survey .th: creates the folder tree, copies the survey into th/, and writes a wrapper .th plus a thconfig with the exports you choose.</value></data>
+  <data name="Scaffold_ProjectName" xml:space="preserve"><value>Project name</value></data>
+  <data name="Scaffold_SurveyTitle" xml:space="preserve"><value>Title</value></data>
+  <data name="Scaffold_SourceSurvey" xml:space="preserve"><value>Survey name (inner)</value></data>
+  <data name="Scaffold_SourceFile" xml:space="preserve"><value>Source file (→ th/)</value></data>
+  <data name="Scaffold_Geo" xml:space="preserve"><value>Georeferencing (optional)</value></data>
+  <data name="Scaffold_GeoHint" xml:space="preserve"><value>Needed for KML / shapefile / GIS export. Coordinate order follows the coordinate system — for lat-long it is latitude then longitude. Leave blank to emit a commented template instead.</value></data>
+  <data name="Scaffold_Entrance" xml:space="preserve"><value>Entrance station</value></data>
+  <data name="Scaffold_EntranceWm" xml:space="preserve"><value>e.g. 25</value></data>
+  <data name="Scaffold_Cs" xml:space="preserve"><value>Coordinate system</value></data>
+  <data name="Scaffold_Coord1" xml:space="preserve"><value>Latitude / coord 1</value></data>
+  <data name="Scaffold_Coord1Wm" xml:space="preserve"><value>e.g. 45.55973</value></data>
+  <data name="Scaffold_Coord2" xml:space="preserve"><value>Longitude / coord 2</value></data>
+  <data name="Scaffold_Coord2Wm" xml:space="preserve"><value>e.g. 25.52367</value></data>
+  <data name="Scaffold_Altitude" xml:space="preserve"><value>Altitude (m)</value></data>
+  <data name="Scaffold_Layout" xml:space="preserve"><value>Layout &amp; project tree</value></data>
+  <data name="Scaffold_IncludeLayout" xml:space="preserve"><value>Include a layout block (scale / legend)</value></data>
+  <data name="Scaffold_Scale" xml:space="preserve"><value>Map scale</value></data>
+  <data name="Scaffold_Legend" xml:space="preserve"><value>Show legend</value></data>
+  <data name="Scaffold_GraphicsDir" xml:space="preserve"><value>Create a graphics folder</value></data>
+  <data name="Scaffold_Exports" xml:space="preserve"><value>Export targets</value></data>
+  <data name="Scaffold_Create" xml:space="preserve"><value>Create project</value></data>
+  <data name="Scaffold_PickSource" xml:space="preserve"><value>Choose a survey .th file (e.g. from TopoDroid)</value></data>
+  <data name="Scaffold_PickTarget" xml:space="preserve"><value>Choose the project folder</value></data>
   <data name="Notif_ToolNotFoundTitle" xml:space="preserve"><value>Tool not found</value></data>
   <data name="Notif_ToolNotFoundMsg" xml:space="preserve"><value>'{0}' was not found on PATH or in Settings ▸ External Tools.</value></data>
   <data name="Notif_ActivateFailTitle" xml:space="preserve"><value>Could not activate thconfig</value></data>

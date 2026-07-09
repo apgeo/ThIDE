@@ -223,6 +223,8 @@
                 <MenuItem Header="{l:Loc Menu_Tools_ImportSurvey}" Command="{Binding ImportSurveyCommand}" />
                 <MenuItem Header="{l:Loc Menu_Tools_ImportDem}" Command="{Binding ImportDemSurfaceCommand}" />
                 <MenuItem Header="{l:Loc Menu_Tools_ImportGpx}" Command="{Binding ImportGpxCommand}" />
+                <MenuItem Header="{l:Loc Menu_Tools_ScaffoldProject}" Command="{Binding ScaffoldProjectCommand}" />
+                <MenuItem Header="{l:Loc Menu_Tools_ScaffoldActive}" Command="{Binding ScaffoldProjectCommand}" CommandParameter="active" />
                 <Separator />
                 <MenuItem Header="{l:Loc Menu_Tools_ExportEntrances}">
                     <MenuItem Header="KML…"      Command="{Binding ExportGisCommand}" CommandParameter="kml" />

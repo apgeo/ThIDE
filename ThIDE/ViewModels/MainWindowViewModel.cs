@@ -1265,6 +1265,56 @@ public partial class MainWindowViewModel : ViewModelBase
         catch (Exception ex) { StatusText = ex.Message; _log?.Warning($"Scaffold failed: {ex.Message}"); _notifications.Error(Tr.Get("Notif_ScaffoldFailed"), ex.Message); }
     }
 
+    /// <summary>Raised to run the "scaffold project from survey" flow in the view (it owns the dialog +
+    /// pickers). The argument is a mode: "active" to seed from the open editor file, else prompt for one.</summary>
+    public event EventHandler<string?>? ScaffoldProjectRequested;
+
+    /// <summary>Build a compilable Therion project (dirs + wrapper .th + thconfig) around a bare survey .th.</summary>
+    [RelayCommand]
+    private void ScaffoldProject(string? mode) => ScaffoldProjectRequested?.Invoke(this, mode);
+
+    /// <summary>The picker the scaffold flow uses to prompt for the source survey and target folder.</summary>
+    public IStoragePicker? StoragePicker => _picker;
+
+    /// <summary>The active editor file path, or null when nothing is open.</summary>
+    public string? ActiveDocumentPath => _documents.Active?.FilePath;
+
+    /// <summary>Materialises a scaffold plan on disk (create dirs, copy the source survey, write the
+    /// wrapper .th + thconfig) and opens the thconfig. Returns false and reports on failure.</summary>
+    public async Task<bool> RunScaffoldAsync(
+        Therion.Workspace.Import.ScaffoldOptions options, string sourcePath, string targetRoot)
+    {
+        try
+        {
+            var plan = Therion.Workspace.Import.TopodroidProjectScaffold.BuildPlan(options);
+
+            foreach (var dir in plan.Directories)
+                System.IO.Directory.CreateDirectory(System.IO.Path.Combine(targetRoot, dir));
+
+            var sourceDest = System.IO.Path.GetFullPath(
+                System.IO.Path.Combine(targetRoot, plan.SourceCopyRelativePath));
+            System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(sourceDest)!);
+            // Guard against copying a file onto itself (e.g. scaffolding around a file already in place).
+            if (!string.Equals(System.IO.Path.GetFullPath(sourcePath), sourceDest, StringComparison.OrdinalIgnoreCase))
+                System.IO.File.Copy(sourcePath, sourceDest, overwrite: true);
+
+            foreach (var f in plan.Files)
+                System.IO.File.WriteAllText(System.IO.Path.Combine(targetRoot, f.RelativePath), f.Content);
+
+            var thconfigPath = System.IO.Path.Combine(targetRoot, plan.ThconfigRelativePath);
+            await _documents.OpenFileAsync(thconfigPath).ConfigureAwait(true);
+            StatusText = $"Scaffolded project → {thconfigPath}";
+            _notifications.Success(Tr.Get("Notif_ScaffoldOkTitle"), thconfigPath);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            StatusText = ex.Message; _log?.Warning($"Scaffold failed: {ex.Message}");
+            _notifications.Error(Tr.Get("Notif_ScaffoldFailed"), ex.Message);
+            return false;
+        }
+    }
+
     [RelayCommand]
     private void Exit()
     {

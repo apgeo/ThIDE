@@ -64,6 +64,7 @@ public partial class MainWindow : Window
                 vm.ShowBookmarksRequested   += (_, _) => OnBookmarksClick(this, new Avalonia.Interactivity.RoutedEventArgs());
                 vm.ShowRelationalMapRequested += (_, _) => OnRelationalMapClick(this, new Avalonia.Interactivity.RoutedEventArgs());
                 vm.Build.QuickExportRequested += (_, _) => _ = ShowQuickExportAsync(vm);
+                vm.ScaffoldProjectRequested += (_, mode) => _ = ShowScaffoldProjectAsync(vm, mode);
                 BuildRecentMenu(vm);
                 BuildRecentDirectoriesMenu(vm);
                 // The layout rendered without crashing — clear the crash sentinel so the next
@@ -478,6 +479,35 @@ public partial class MainWindow : Window
         if (!dialog.Confirmed) return;
         var m = dialog.Model;
         await vm.Build.RunQuickExportAsync(m.ComposeBlock(), m.OutputFileName);
+    }
+
+    // ----- scaffold Therion project from a bare TopoDroid survey .th ------
+    private async System.Threading.Tasks.Task ShowScaffoldProjectAsync(MainWindowViewModel vm, string? mode)
+    {
+        if (vm.StoragePicker is not { } picker) return;
+
+        // Seed from the active editor when asked and it's a .th; otherwise prompt for a survey file.
+        string? source = null;
+        if (string.Equals(mode, "active", StringComparison.OrdinalIgnoreCase)
+            && vm.ActiveDocumentPath is { } active
+            && active.EndsWith(".th", StringComparison.OrdinalIgnoreCase))
+            source = active;
+        source ??= await picker.PickOpenFileAsync(ThIDE.Resources.Tr.Get("Scaffold_PickSource"));
+        if (string.IsNullOrEmpty(source)) return;
+
+        string text;
+        try { text = File.ReadAllText(source); }
+        catch (Exception ex) { vm.StatusText = ex.Message; return; }
+
+        var model = ScaffoldProjectViewModel.FromSource(source, text);
+        var dialog = new ScaffoldProjectWindow(model);
+        await dialog.ShowDialog(this);
+        if (!dialog.Confirmed) return;
+
+        var root = await picker.PickOpenFolderAsync(ThIDE.Resources.Tr.Get("Scaffold_PickTarget"));
+        if (string.IsNullOrEmpty(root)) return;
+
+        await vm.RunScaffoldAsync(model.BuildOptions(), source, root);
     }
 
     // ----- global search window (#3) -------------------------------------

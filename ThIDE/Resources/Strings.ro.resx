@@ -339,6 +339,8 @@
   <data name="Menu_Tools_ImportSurvey" xml:space="preserve"><value>Importă topografie (Survex / Compass)…</value></data>
   <data name="Menu_Tools_ImportDem" xml:space="preserve"><value>Importă DEM ca suprafață (.asc)…</value></data>
   <data name="Menu_Tools_ImportGpx" xml:space="preserve"><value>Importă puncte GPX (→ fix)…</value></data>
+  <data name="Menu_Tools_ScaffoldProject" xml:space="preserve"><value>Generează proiect din tur…</value></data>
+  <data name="Menu_Tools_ScaffoldActive" xml:space="preserve"><value>Generează proiect din fișierul activ</value></data>
   <data name="Menu_Tools_ExportEntrances" xml:space="preserve"><value>Exportă intrări / puncte fixe</value></data>
   <data name="Menu_Tools_ExportTable" xml:space="preserve"><value>Exportă tabel de date</value></data>
   <data name="Menu_Tools_GenReport" xml:space="preserve"><value>Generează raport topografic (HTML)…</value></data>
@@ -977,6 +979,32 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Notif_ReportFailed" xml:space="preserve"><value>Raport eșuat</value></data>
   <data name="Notif_DemImportFailed" xml:space="preserve"><value>Import DEM eșuat</value></data>
   <data name="Notif_ScaffoldFailed" xml:space="preserve"><value>Generarea scheletului a eșuat</value></data>
+  <data name="Notif_ScaffoldOkTitle" xml:space="preserve"><value>Proiect generat</value></data>
+  <data name="Scaffold_Title" xml:space="preserve"><value>Generează proiect Therion din tur</value></data>
+  <data name="Scaffold_Intro" xml:space="preserve"><value>Construiește un proiect compilabil în jurul unui fișier de tur .th simplu (de ex. exportat din TopoDroid): creează structura de foldere, copiază turul în th/ și scrie un fișier .th de legătură plus un thconfig cu exporturile alese.</value></data>
+  <data name="Scaffold_ProjectName" xml:space="preserve"><value>Nume proiect</value></data>
+  <data name="Scaffold_SurveyTitle" xml:space="preserve"><value>Titlu</value></data>
+  <data name="Scaffold_SourceSurvey" xml:space="preserve"><value>Nume tur (interior)</value></data>
+  <data name="Scaffold_SourceFile" xml:space="preserve"><value>Fișier sursă (→ th/)</value></data>
+  <data name="Scaffold_Geo" xml:space="preserve"><value>Georeferențiere (opțional)</value></data>
+  <data name="Scaffold_GeoHint" xml:space="preserve"><value>Necesară pentru export KML / shapefile / GIS. Ordinea coordonatelor urmează sistemul de coordonate — pentru lat-long este latitudine apoi longitudine. Lasă gol pentru a genera un șablon comentat.</value></data>
+  <data name="Scaffold_Entrance" xml:space="preserve"><value>Stație intrare</value></data>
+  <data name="Scaffold_EntranceWm" xml:space="preserve"><value>de ex. 25</value></data>
+  <data name="Scaffold_Cs" xml:space="preserve"><value>Sistem de coordonate</value></data>
+  <data name="Scaffold_Coord1" xml:space="preserve"><value>Latitudine / coord 1</value></data>
+  <data name="Scaffold_Coord1Wm" xml:space="preserve"><value>de ex. 45.55973</value></data>
+  <data name="Scaffold_Coord2" xml:space="preserve"><value>Longitudine / coord 2</value></data>
+  <data name="Scaffold_Coord2Wm" xml:space="preserve"><value>de ex. 25.52367</value></data>
+  <data name="Scaffold_Altitude" xml:space="preserve"><value>Altitudine (m)</value></data>
+  <data name="Scaffold_Layout" xml:space="preserve"><value>Layout și structură proiect</value></data>
+  <data name="Scaffold_IncludeLayout" xml:space="preserve"><value>Include un bloc layout (scară / legendă)</value></data>
+  <data name="Scaffold_Scale" xml:space="preserve"><value>Scară hartă</value></data>
+  <data name="Scaffold_Legend" xml:space="preserve"><value>Afișează legenda</value></data>
+  <data name="Scaffold_GraphicsDir" xml:space="preserve"><value>Creează un folder pentru grafică</value></data>
+  <data name="Scaffold_Exports" xml:space="preserve"><value>Ținte de export</value></data>
+  <data name="Scaffold_Create" xml:space="preserve"><value>Creează proiect</value></data>
+  <data name="Scaffold_PickSource" xml:space="preserve"><value>Alege un fișier de tur .th (de ex. din TopoDroid)</value></data>
+  <data name="Scaffold_PickTarget" xml:space="preserve"><value>Alege folderul proiectului</value></data>
   <data name="Notif_ToolNotFoundTitle" xml:space="preserve"><value>Unealtă negăsită</value></data>
   <data name="Notif_ToolNotFoundMsg" xml:space="preserve"><value>„{0}” nu a fost găsit în PATH sau în Setări ▸ Unelte externe.</value></data>
   <data name="Notif_ActivateFailTitle" xml:space="preserve"><value>Nu s-a putut activa thconfig</value></data>
