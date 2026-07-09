@@ -1296,6 +1296,20 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             var plan = Therion.Workspace.Import.TopodroidProjectScaffold.BuildPlan(options);
 
+            // Scaffolding into the survey's own directory would write the wrapper .th straight over
+            // the survey (same base name), destroying the shots. Refuse before touching the disk.
+            var clashes = Therion.Workspace.Import.TopodroidProjectScaffold
+                .ConflictsWithSource(plan, targetRoot, sourcePath);
+            if (clashes.Count > 0)
+            {
+                var msg = string.Format(Tr.Get("Notif_ScaffoldOverwritesSource"),
+                    System.IO.Path.GetFileName(sourcePath));
+                StatusText = msg;
+                _log?.Warning($"Scaffold refused: {msg}");
+                _notifications.Error(Tr.Get("Notif_ScaffoldFailed"), msg);
+                return false;
+            }
+
             foreach (var dir in plan.Directories)
                 System.IO.Directory.CreateDirectory(System.IO.Path.Combine(targetRoot, dir));
 

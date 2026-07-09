@@ -10,6 +10,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -217,6 +218,25 @@ public static class TopodroidProjectScaffold
         };
         var sourceCopy = o.SourceDir + "/" + o.SourceFileName;
         return new ScaffoldPlan(dirs, files, sourceCopy, thconfigName);
+    }
+
+    /// <summary>
+    /// Generated files whose destination under <paramref name="targetRoot"/> is the source survey
+    /// itself. Scaffolding into the survey's own directory makes the wrapper <c>&lt;project&gt;.th</c>
+    /// land on <paramref name="sourcePath"/> — the survey is derived from that name — which would
+    /// replace the survey data with a handful of `input` lines. Callers must refuse the plan when
+    /// this returns anything.
+    /// </summary>
+    public static IReadOnlyList<string> ConflictsWithSource(ScaffoldPlan plan, string targetRoot, string sourcePath)
+    {
+        var source = Path.GetFullPath(sourcePath);
+        var hits = new List<string>();
+        foreach (var f in plan.Files)
+        {
+            var dest = Path.GetFullPath(Path.Combine(targetRoot, f.RelativePath));
+            if (string.Equals(dest, source, StringComparison.OrdinalIgnoreCase)) hits.Add(f.RelativePath);
+        }
+        return hits;
     }
 
     private static void AppendSection(StringBuilder sb, string header, IReadOnlyList<string> lines)

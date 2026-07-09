@@ -1,3 +1,4 @@
+using System.IO;
 using System.Linq;
 using Therion.Workspace.Import;
 
@@ -125,5 +126,28 @@ public class TopodroidProjectScaffoldTests
     {
         var th = TopodroidProjectScaffold.BuildConnectionTh(SampleOptions() with { ProjectName = "my cave!" });
         Assert.Contains("survey my_cave_", th);   // spaces/punctuation → underscores
+    }
+
+    // Scaffolding into the survey's own folder aims the wrapper `<project>.th` at the survey itself
+    // (the project name is derived from its file name), so writing it would destroy the shots.
+    [Fact]
+    public void Scaffolding_into_the_sources_own_folder_conflicts_with_the_source()
+    {
+        var plan = TopodroidProjectScaffold.BuildPlan(SampleOptions());
+        var root = Path.Combine(Path.GetTempPath(), "cave");
+        var source = Path.Combine(root, "av_cerbul_de_aur.th");
+
+        Assert.Equal(new[] { "av_cerbul_de_aur.th" },
+            TopodroidProjectScaffold.ConflictsWithSource(plan, root, source));
+    }
+
+    [Fact]
+    public void Scaffolding_into_a_separate_folder_has_no_conflict()
+    {
+        var plan = TopodroidProjectScaffold.BuildPlan(SampleOptions());
+        var root = Path.Combine(Path.GetTempPath(), "project");
+        var source = Path.Combine(Path.GetTempPath(), "topodroid", "av_cerbul_de_aur.th");
+
+        Assert.Empty(TopodroidProjectScaffold.ConflictsWithSource(plan, root, source));
     }
 }
