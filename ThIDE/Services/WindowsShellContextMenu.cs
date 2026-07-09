@@ -161,7 +161,11 @@ internal static class WindowsShellContextMenu
         [PreserveSig] int CompareIDs();
         [PreserveSig] int CreateViewObject();
         [PreserveSig] int GetAttributesOf();
-        [PreserveSig] int GetUIObjectOf(IntPtr hwndOwner, uint cidl, [In] IntPtr[] apidl,
+        // apidl MUST be LPArray: arrays in a COM interface default to SAFEARRAY (unlike
+        // P/Invoke, where LPArray is the default), which the shell reads as a PIDL and
+        // dereferences -> AccessViolationException.
+        [PreserveSig] int GetUIObjectOf(IntPtr hwndOwner, uint cidl,
+            [In, MarshalAs(UnmanagedType.LPArray)] IntPtr[] apidl,
             ref Guid riid, IntPtr rgfReserved, out IntPtr ppv);
         [PreserveSig] int GetDisplayNameOf();
         [PreserveSig] int SetNameOf();

@@ -278,10 +278,9 @@ public partial class WorkspaceExplorerToolView : UserControl
         var hwnd = TopLevel.GetTopLevel(this)?.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
         if (hwnd == IntPtr.Zero) return;
 
-        // Defer the native shell menu until AFTER Avalonia's own ContextMenu has fully closed.
-        // Running the shell's modal TrackPopupMenuEx loop synchronously from inside this click
-        // handler re-enters the popup that is still tearing down, corrupting shell state and
-        // raising an AccessViolationException (item #13). Posting it breaks that re-entrancy.
+        // Defer the native shell menu until AFTER Avalonia's own ContextMenu has fully closed:
+        // TrackPopupMenuEx runs a nested modal loop, which must not start while the popup that
+        // raised this click is still tearing down.
         var nativeMenu = Service<INativeContextMenuService>();
         Avalonia.Threading.Dispatcher.UIThread.Post(
             () => nativeMenu?.TryShow(hwnd, path),
