@@ -22,6 +22,7 @@ public sealed record ToolResult<T>
 
     public static ToolResult<T> Success(T data) => new() { Ok = true, Data = data };
 
-    public static ToolResult<T> Failure(string code, string message) =>
-        new() { Ok = false, Error = new ToolError(code, message) };
+    public static ToolResult<T> Failure(string code, string message) => Failure(new ToolError(code, message));
+
+    public static ToolResult<T> Failure(ToolError error) => new() { Ok = false, Error = error };
 }
