@@ -1043,6 +1043,10 @@ public partial class MainWindowViewModel : ViewModelBase
         catch (Exception ex) { StatusText = ex.Message; }
     }
 
+    /// <summary>Command-palette / Welcome "New File" entry.</summary>
+    [RelayCommand]
+    private Task NewFile() => NewFileAsync();
+
     /// <summary>Welcome page "New File": pick a save location, create the empty file, open it.</summary>
     private async Task NewFileAsync()
     {
@@ -1408,6 +1412,13 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand] private void ShowFindInFiles()    => ShowFindInFilesRequested?.Invoke(this, EventArgs.Empty);
     [RelayCommand] private void ShowReplaceInFiles() => ShowReplaceInFilesRequested?.Invoke(this, EventArgs.Empty);
     [RelayCommand] private void RenameSymbol()       => RenameSymbolRequested?.Invoke(this, EventArgs.Empty);
+
+    // Command wrappers so these actions can be bound from Settings ▸ Keyboard (Decision #29).
+    [RelayCommand] private void QuickOpen()       => ShowQuickOpen();
+    [RelayCommand] private void CommandPalette()  => ShowCommandPalette();
+    [RelayCommand] private void NextProblem()     => Diagnostics.GoToAdjacent(true);
+    [RelayCommand] private void PreviousProblem() => Diagnostics.GoToAdjacent(false);
+    [RelayCommand] private void ToggleWordWrap()  => WordWrap = !WordWrap;
 
     [RelayCommand]
     private async Task Save()

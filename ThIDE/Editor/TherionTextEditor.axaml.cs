@@ -167,6 +167,11 @@ public partial class TherionTextEditor : UserControl
     private CompletionWindow? _completionWindow;
     private Diagnostic? _hoverDiagnostic;
     private IAppSettingsService? _settings;
+    // Caret-scoped actions are user-rebindable (Settings ▸ Keyboard). Gestures are resolved from
+    // the shortcut service and cached here, refreshed whenever the user edits the map.
+    private IKeyboardShortcutService? _shortcuts;
+    private IReadOnlyList<(KeyGesture Gesture, Func<TherionTextEditor, bool> Run)> _editorGestures =
+        Array.Empty<(KeyGesture, Func<TherionTextEditor, bool>)>();
     private readonly Cursor _handCursor = new(StandardCursorType.Hand);
 
     private IReadOnlyList<Diagnostic> _boundDiagnostics = Array.Empty<Diagnostic>();
@@ -278,6 +283,16 @@ public partial class TherionTextEditor : UserControl
             DetachedFromVisualTree += (_, _) => _settings.Changed -= OnAppSettingsChanged;
         }
 
+        // Caret-scoped gestures (go-to-definition, toggle comment, …) come from the shortcut
+        // service so Settings ▸ Keyboard edits take effect here, where these actions live.
+        _shortcuts = TryGetShortcuts();
+        RefreshEditorGestures();
+        if (_shortcuts is not null)
+        {
+            _shortcuts.GesturesChanged += OnShortcutsChanged;
+            DetachedFromVisualTree += (_, _) => _shortcuts.GesturesChanged -= OnShortcutsChanged;
+        }
+
         // Rebuild the right-click menu when the UI language changes: its item headers are resolved
         // once via Tr.Get at build time, so without this the editor context menu would stay in the
         // previous language after a switch.
@@ -366,6 +381,91 @@ public partial class TherionTextEditor : UserControl
     {
         try { return AppServices.Provider.GetService<IAppSettingsService>(); }
         catch { return null; } // design-time / no container
+    }
+
+    private static IKeyboardShortcutService? TryGetShortcuts()
+    {
+        try { return AppServices.Provider.GetService<IKeyboardShortcutService>(); }
+        catch { return null; } // design-time / no container
+    }
+
+    private static readonly string[] NoAliases = Array.Empty<string>();
+
+    /// <summary>
+    /// Every caret-scoped action the editor binds a key to, with its factory-default gesture.
+    /// <c>Run</c> returns false when the action declines to handle the key (a feature gate is off),
+    /// which lets the keystroke fall through to AvaloniaEdit's default behaviour.
+    /// <c>Aliases</c> are extra gestures that only apply while the binding is at its default.
+    /// </summary>
+    private static readonly (string Id, string Default, string[] Aliases, Func<TherionTextEditor, bool> Run)[]
+        EditorBindings =
+    {
+        (ShellCommandIds.GoToDefinition, "F12", NoAliases,
+            ed => { ed.TryNavigateAt(ed._editor!.CaretOffset); return true; }),
+        (ShellCommandIds.FindReferences, "Shift+F12", NoAliases,
+            ed => { ed.FindReferencesAt(ed._editor!.CaretOffset); return true; }),
+        (ShellCommandIds.RenameSymbol, "F2", NoAliases,
+            ed => { ed.StartRename(); return true; }),
+        (ShellCommandIds.PeekDefinition, "Alt+F12", NoAliases,
+            ed => { ed.PeekDefinition(); return true; }),
+        (ShellCommandIds.GoToMatchingBlock, "Ctrl+OemCloseBrackets", NoAliases,
+            ed => { ed.GoToMatchingBlock(); return true; }),
+        // Reading-order navigation is feature-gated; when off, Alt+Up/Down must still move the caret.
+        (ShellCommandIds.StepIntoInclude, "Alt+Down", NoAliases,
+            ed => { if (!ed.GatedReadingNav()) return false; ed.FollowIncludeUnderCaret(); return true; }),
+        (ShellCommandIds.StepOutInclude, "Alt+Up", NoAliases,
+            ed => { if (!ed.GatedReadingNav()) return false; ed.StepOutRequested?.Invoke(ed, EventArgs.Empty); return true; }),
+        (ShellCommandIds.TriggerCompletion, "Ctrl+Space", NoAliases,
+            ed => { ed.ShowCompletion(explicitTrigger: true); return true; }),
+        (ShellCommandIds.GoToLine, "Ctrl+G", NoAliases,
+            ed => { ed.ShowGoToLine(); return true; }),
+        // Ctrl+/ on the main row; the numpad divide key is an alias for the same action.
+        (ShellCommandIds.ToggleComment, "Ctrl+OemQuestion", new[] { "Ctrl+Divide" },
+            ed => { ed.ToggleLineComment(); return true; }),
+        (ShellCommandIds.FormatDocument, "Shift+Alt+F", NoAliases,
+            ed => { ed.FormatDocument(); return true; }),
+        (ShellCommandIds.EncloseInRegion, "Ctrl+Shift+R", NoAliases,
+            ed => { ed.MenuEncloseInRegion(); return true; }),
+        (ShellCommandIds.QuickFixes, "Ctrl+OemPeriod", NoAliases,
+            ed => { ed.ShowQuickFixes(); return true; }),
+        // Line operations ship unbound — assignable from Settings ▸ Keyboard.
+        (ShellCommandIds.DuplicateLines, "", NoAliases,
+            ed => { ed.DuplicateLines(); return true; }),
+        (ShellCommandIds.MoveLinesUp, "", NoAliases,
+            ed => { ed.MoveLinesUp(); return true; }),
+        (ShellCommandIds.MoveLinesDown, "", NoAliases,
+            ed => { ed.MoveLinesDown(); return true; }),
+        (ShellCommandIds.SortLines, "", NoAliases,
+            ed => { ed.SortSelectedLines(); return true; }),
+    };
+
+    private void OnShortcutsChanged(object? sender, EventArgs e) => RefreshEditorGestures();
+
+    private void RefreshEditorGestures()
+    {
+        var list = new List<(KeyGesture, Func<TherionTextEditor, bool>)>(EditorBindings.Length + 1);
+        foreach (var b in EditorBindings)
+        {
+            var text = ResolveGestureText(b.Id, b.Default);
+            if (TryParseGesture(text) is { } g) list.Add((g, b.Run));
+            if (!string.Equals(text, b.Default, StringComparison.OrdinalIgnoreCase)) continue;
+            foreach (var alias in b.Aliases)
+                if (TryParseGesture(alias) is { } ag) list.Add((ag, b.Run));
+        }
+        _editorGestures = list;
+    }
+
+    // The user's configured gesture, or the factory default when no service is available
+    // (design-time / tests). An empty string means the user explicitly unbound the action.
+    private string ResolveGestureText(string id, string fallback) =>
+        _shortcuts is null ? fallback
+        : _shortcuts.Gestures.TryGetValue(id, out var g) ? g
+        : fallback;
+
+    private static KeyGesture? TryParseGesture(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return null;
+        try { return KeyGesture.Parse(text); } catch { return null; }
     }
 
     private void OnAppSettingsChanged(object? sender, EventArgs e)
@@ -700,77 +800,18 @@ public partial class TherionTextEditor : UserControl
         _editor.TextArea.TextView.Redraw();
     }
 
+    // Every caret-scoped gesture is resolved from IKeyboardShortcutService (see EditorBindings),
+    // so all of them are rebindable in Settings ▸ Keyboard. Gestures match modifiers exactly, so
+    // F12 / Shift+F12 / Alt+F12 never collide and the scan order doesn't matter.
     private void OnEditorKeyDown(object? sender, KeyEventArgs e)
     {
         if (_editor is null) return;
-        bool ctrl = (e.KeyModifiers & KeyModifiers.Control) != 0;
-        bool shift = (e.KeyModifiers & KeyModifiers.Shift) != 0;
-        bool alt = (e.KeyModifiers & KeyModifiers.Alt) != 0;
-
-        if (e.Key == Key.F2)
+        foreach (var (gesture, run) in _editorGestures)
         {
-            StartRename();
+            if (!gesture.Matches(e)) continue;
+            if (!run(this)) continue;   // declined (feature gate off) → let the key through
             e.Handled = true;
-        }
-        else if (ctrl && e.Key == Key.OemCloseBrackets) // go to matching survey↔endsurvey
-        {
-            GoToMatchingBlock();
-            e.Handled = true;
-        }
-        else if (alt && e.Key == Key.Down && GatedReadingNav()) // step into the include under the caret
-        {
-            FollowIncludeUnderCaret();
-            e.Handled = true;
-        }
-        else if (alt && e.Key == Key.Up && GatedReadingNav()) // step back to the including file
-        {
-            StepOutRequested?.Invoke(this, EventArgs.Empty);
-            e.Handled = true;
-        }
-        else if (alt && e.Key == Key.F12) // peek definition inline
-        {
-            PeekDefinition();
-            e.Handled = true;
-        }
-        else if (e.Key == Key.F12 && shift)
-        {
-            FindReferencesAt(_editor.CaretOffset);
-            e.Handled = true;
-        }
-        else if (e.Key == Key.F12)
-        {
-            TryNavigateAt(_editor.CaretOffset);
-            e.Handled = true;
-        }
-        else if (e.Key == Key.Space && ctrl)
-        {
-            ShowCompletion(explicitTrigger: true);
-            e.Handled = true;
-        }
-        else if (e.Key == Key.G && ctrl)
-        {
-            ShowGoToLine();
-            e.Handled = true;
-        }
-        else if (ctrl && (e.Key == Key.OemQuestion || e.Key == Key.Divide))
-        {
-            ToggleLineComment();
-            e.Handled = true;
-        }
-        else if (shift && alt && e.Key == Key.F) // Format Document
-        {
-            FormatDocument();
-            e.Handled = true;
-        }
-        else if (ctrl && shift && e.Key == Key.R) // Enclose in region
-        {
-            MenuEncloseInRegion();
-            e.Handled = true;
-        }
-        else if (ctrl && e.Key == Key.OemPeriod) // quick-fixes / code actions
-        {
-            ShowQuickFixes();
-            e.Handled = true;
+            return;
         }
     }
 

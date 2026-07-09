@@ -123,16 +123,18 @@
     <DockPanel>
         <Menu x:Name="MainMenu" DockPanel.Dock="Top">
             <MenuItem Header="{Binding MenuFile}">
-                <MenuItem Header="{Binding MenuFileOpenFile}"   Command="{Binding OpenFileCommand}" />
-                <MenuItem Header="{Binding MenuFileOpenThconfig}" Command="{Binding OpenThconfigCommand}" />
-                <MenuItem Header="{Binding MenuFileOpenFolder}" Command="{Binding OpenFolderCommand}" />
+                <!-- InputGesture is bound via {l:Gesture <ShellCommandId>} so a remap in
+                     Settings ▸ Keyboard relabels the menu; unbound commands render no chord. -->
+                <MenuItem Header="{Binding MenuFileOpenFile}" InputGesture="{l:Gesture OpenFile}" Command="{Binding OpenFileCommand}" />
+                <MenuItem Header="{Binding MenuFileOpenThconfig}" InputGesture="{l:Gesture OpenThconfig}" Command="{Binding OpenThconfigCommand}" />
+                <MenuItem Header="{Binding MenuFileOpenFolder}" InputGesture="{l:Gesture OpenFolder}" Command="{Binding OpenFolderCommand}" />
                 <Separator />
                 <!-- Recent files, grouped per type (8 each), rebuilt in code-behind (#8). -->
                 <MenuItem x:Name="RecentMenu" Header="{Binding MenuFileRecent}" />
                 <!-- Recent working directories, rebuilt in code-behind. -->
                 <MenuItem x:Name="RecentDirectoriesMenu" Header="{Binding MenuFileRecentDirectories}" />
                 <!-- reopen the most-recently-closed tab. -->
-                <MenuItem Header="{l:Loc Menu_File_ReopenTab}" InputGesture="Ctrl+Shift+T"
+                <MenuItem Header="{l:Loc Menu_File_ReopenTab}" InputGesture="{l:Gesture ReopenClosedTab}"
                           Command="{Binding ReopenClosedTabCommand}" />
                 <Separator />
                 <MenuItem Header="{Binding MenuFileExit}" Command="{Binding ExitCommand}" />
@@ -144,21 +146,21 @@
                 </MenuItem>
                 <Separator />
                 <MenuItem Header="{Binding MenuViewWelcome}" Command="{Binding ShowWelcomeCommand}" />
-                <MenuItem Header="{Binding MenuViewObjectBrowser}" Command="{Binding ToggleObjectBrowserCommand}" />
-                <MenuItem Header="{Binding MenuViewWorkspace}" Command="{Binding ToggleWorkspaceExplorerCommand}" />
-                <MenuItem Header="{l:Loc Menu_View_Project}" Command="{Binding ToggleProjectCommand}" />
-                <MenuItem Header="{l:Loc Menu_View_Log}" Command="{Binding ToggleLogCommand}" />
-                <MenuItem Header="{l:Loc Menu_View_LivePreview}" Command="{Binding ToggleLivePreviewCommand}"
+                <MenuItem Header="{Binding MenuViewObjectBrowser}" InputGesture="{l:Gesture ToggleObjectBrowser}" Command="{Binding ToggleObjectBrowserCommand}" />
+                <MenuItem Header="{Binding MenuViewWorkspace}" InputGesture="{l:Gesture ToggleWorkspaceExplorer}" Command="{Binding ToggleWorkspaceExplorerCommand}" />
+                <MenuItem Header="{l:Loc Menu_View_Project}" InputGesture="{l:Gesture ToggleProject}" Command="{Binding ToggleProjectCommand}" />
+                <MenuItem Header="{l:Loc Menu_View_Log}" InputGesture="{l:Gesture ToggleLog}" Command="{Binding ToggleLogCommand}" />
+                <MenuItem Header="{l:Loc Menu_View_LivePreview}" InputGesture="{l:Gesture ToggleLivePreview}" Command="{Binding ToggleLivePreviewCommand}"
                           IsVisible="{Binding LivePreviewEnabled}" />
-                <MenuItem Header="{l:Loc Menu_View_MapViewer}" Command="{Binding ToggleMapViewerCommand}"
+                <MenuItem Header="{l:Loc Menu_View_MapViewer}" InputGesture="{l:Gesture ToggleMapViewer}" Command="{Binding ToggleMapViewerCommand}"
                           IsVisible="{Binding MapViewerEnabled}" />
-                <MenuItem Header="{l:Loc Menu_View_Model3D}" Command="{Binding ToggleModel3DViewerCommand}"
+                <MenuItem Header="{l:Loc Menu_View_Model3D}" InputGesture="{l:Gesture ToggleModel3DViewer}" Command="{Binding ToggleModel3DViewerCommand}"
                           IsVisible="{Binding Model3DViewerEnabled}" />
-                <MenuItem Header="{l:Loc Menu_View_Structural}" Command="{Binding ToggleStructuralGeologyCommand}"
+                <MenuItem Header="{l:Loc Menu_View_Structural}" InputGesture="{l:Gesture ToggleStructuralGeology}" Command="{Binding ToggleStructuralGeologyCommand}"
                           IsVisible="{Binding StructuralGeologyEnabled}" />
-                <MenuItem Header="{Binding MenuViewDiagnostics}" Command="{Binding ToggleDiagnosticsCommand}" />
+                <MenuItem Header="{Binding MenuViewDiagnostics}" InputGesture="{l:Gesture ToggleDiagnostics}" Command="{Binding ToggleDiagnosticsCommand}" />
                 <!-- document outline (hidden when the feature is disabled). -->
-                <MenuItem Header="{l:Loc Menu_View_Outline}" Command="{Binding ToggleOutlineCommand}"
+                <MenuItem Header="{l:Loc Menu_View_Outline}" InputGesture="{l:Gesture ToggleOutline}" Command="{Binding ToggleOutlineCommand}"
                           IsVisible="{Binding OutlineFeatureEnabled}" />
                 <Separator />
                 <MenuItem Header="{Binding MenuViewRelationalMap}" Click="OnRelationalMapClick" />
@@ -182,11 +184,13 @@
                           IsVisible="{Binding MinimapFeatureEnabled}" />
                 <!-- open the active document side-by-side in a float window. -->
                 <Separator IsVisible="{Binding SplitFeatureEnabled}" />
-                <MenuItem Header="{l:Loc Menu_View_SplitEditor}" Command="{Binding SplitEditorCommand}"
+                <MenuItem Header="{l:Loc Menu_View_SplitEditor}" InputGesture="{l:Gesture SplitEditor}" Command="{Binding SplitEditorCommand}"
                           IsVisible="{Binding SplitFeatureEnabled}" />
             </MenuItem>
             <!-- Edit menu mirrors the editor's right-click menu; enabled when a file is open (#11). -->
             <MenuItem Header="{Binding MenuEdit}" IsEnabled="{Binding HasStatusFile}">
+                <!-- Clipboard chords stay literal: they are AvaloniaEdit's own bindings, not gestures
+                     dispatched by IKeyboardShortcutService, so they are not remappable. -->
                 <MenuItem Header="{Binding MenuEditCut}"        InputGesture="Ctrl+X" Click="OnEditCut" />
                 <MenuItem Header="{Binding MenuEditCopy}"       InputGesture="Ctrl+C" Click="OnEditCopy" />
                 <MenuItem Header="{Binding MenuEditPaste}"      InputGesture="Ctrl+V" Click="OnEditPaste" />
@@ -197,8 +201,8 @@
                 <MenuItem Header="{Binding MenuEditUpper}"  Click="OnEditUpper" />
                 <MenuItem Header="{Binding MenuEditLower}"  Click="OnEditLower" />
                 <Separator />
-                <MenuItem Header="{Binding MenuEditToggleComment}" InputGesture="Ctrl+OemQuestion" Click="OnEditToggleComment" />
-                <MenuItem Header="{Binding MenuEditEncloseRegion}" InputGesture="Ctrl+Shift+R" Click="OnEditEncloseRegion" />
+                <MenuItem Header="{Binding MenuEditToggleComment}" InputGesture="{l:Gesture ToggleComment}" Click="OnEditToggleComment" />
+                <MenuItem Header="{Binding MenuEditEncloseRegion}" InputGesture="{l:Gesture EncloseInRegion}" Click="OnEditEncloseRegion" />
                 <Separator />
                 <MenuItem Header="{Binding MenuEditFoldAll}"   Click="OnEditFoldAll" />
                 <MenuItem Header="{Binding MenuEditUnfoldAll}" Click="OnEditUnfoldAll" />
@@ -208,13 +212,14 @@
 
             <!-- Search menu (#12). Find/Replace act on the focused editor; the rest are global. -->
             <MenuItem Header="{Binding MenuSearch}">
+                <!-- Ctrl+F / Ctrl+H are AvaloniaEdit SearchPanel bindings — literal, not remappable. -->
                 <MenuItem Header="{Binding MenuSearchFind}"            InputGesture="Ctrl+F" Click="OnSearchFind" IsEnabled="{Binding HasStatusFile}" />
                 <MenuItem Header="{Binding MenuSearchReplace}"         InputGesture="Ctrl+H" Click="OnSearchReplace" IsEnabled="{Binding HasStatusFile}" />
                 <Separator />
-                <MenuItem Header="{Binding MenuSearchFindInFiles}"    InputGesture="Ctrl+Shift+F" Click="OnSearchFindInFiles" />
-                <MenuItem Header="{Binding MenuSearchReplaceInFiles}" InputGesture="Ctrl+Shift+H" Click="OnSearchReplaceInFiles" />
+                <MenuItem Header="{Binding MenuSearchFindInFiles}"    InputGesture="{l:Gesture FindInFiles}" Click="OnSearchFindInFiles" />
+                <MenuItem Header="{Binding MenuSearchReplaceInFiles}" InputGesture="{l:Gesture ReplaceInFiles}" Click="OnSearchReplaceInFiles" />
                 <Separator />
-                <MenuItem Header="{Binding MenuSearchGoTo}"     InputGesture="Ctrl+G" Click="OnSearchGoTo" IsEnabled="{Binding HasStatusFile}" />
+                <MenuItem Header="{Binding MenuSearchGoTo}"     InputGesture="{l:Gesture GoToLine}" Click="OnSearchGoTo" IsEnabled="{Binding HasStatusFile}" />
                 <Separator />
                 <MenuItem Header="{Binding MenuSearchBookmarks}"    Click="OnBookmarksClick" />
             </MenuItem>
@@ -248,9 +253,9 @@
                     </MenuItem>
                 </MenuItem>
                 <!-- one-click survey report. -->
-                <MenuItem Header="{l:Loc Menu_Tools_GenReport}" Command="{Binding GenerateReportCommand}" />
+                <MenuItem Header="{l:Loc Menu_Tools_GenReport}" InputGesture="{l:Gesture GenerateReport}" Command="{Binding GenerateReportCommand}" />
                 <Separator />
-                <MenuItem Header="{l:Loc Menu_Tools_NewScrap}" Command="{Binding NewScrapScaffoldCommand}" />
+                <MenuItem Header="{l:Loc Menu_Tools_NewScrap}" InputGesture="{l:Gesture NewScrapScaffold}" Command="{Binding NewScrapScaffoldCommand}" />
                 <Separator />
                 <!-- calculators. -->
                 <MenuItem Header="{l:Loc Menu_Tools_Calculators}">
@@ -260,8 +265,8 @@
                 </MenuItem>
             </MenuItem>
             <MenuItem Header="{Binding MenuBuild}">
-                <MenuItem Header="{Binding MenuBuildBuild}"     InputGesture="F5"       Command="{Binding Build.BuildCommand}" />
-                <MenuItem Header="{Binding MenuBuildCancel}"    InputGesture="Shift+F5" Command="{Binding Build.CancelCommand}" />
+                <MenuItem Header="{Binding MenuBuildBuild}"     InputGesture="{l:Gesture Build}"       Command="{Binding Build.BuildCommand}" />
+                <MenuItem Header="{Binding MenuBuildCancel}"    InputGesture="{l:Gesture CancelBuild}" Command="{Binding Build.CancelCommand}" />
                 <Separator />
                 <!-- run a single export target from the active thconfig. -->
                 <MenuItem Header="{l:Loc Menu_Build_Target}" IsEnabled="{Binding Build.HasExportTargets}"
@@ -275,10 +280,10 @@
                     </MenuItem.ItemContainerTheme>
                 </MenuItem>
                 <!-- composed quick export. -->
-                <MenuItem Header="{l:Loc Menu_Build_QuickExport}" Command="{Binding Build.ShowQuickExportCommand}" />
+                <MenuItem Header="{l:Loc Menu_Build_QuickExport}" InputGesture="{l:Gesture QuickExport}" Command="{Binding Build.ShowQuickExportCommand}" />
                 <Separator />
-                <MenuItem Header="{Binding MenuBuildOpenLoch}"  InputGesture="F9"  Command="{Binding Build.OpenInLochCommand}" />
-                <MenuItem Header="{Binding MenuBuildOpenAven}"  InputGesture="F10" Command="{Binding Build.OpenInAvenCommand}" />
+                <MenuItem Header="{Binding MenuBuildOpenLoch}"  InputGesture="{l:Gesture OpenInLoch}" Command="{Binding Build.OpenInLochCommand}" />
+                <MenuItem Header="{Binding MenuBuildOpenAven}"  InputGesture="{l:Gesture OpenInAven}" Command="{Binding Build.OpenInAvenCommand}" />
                 <!-- external round-trips. -->
                 <MenuItem Header="{l:Loc Menu_Build_SurvexTools}" IsEnabled="{Binding Build.HasAvenArtifact}">
                     <MenuItem Header="{l:Loc Menu_Build_Dump3d}" Command="{Binding Build.Dump3dCommand}" />
@@ -289,7 +294,7 @@
                     <MenuItem Header="{l:Loc Menu_Build_PrintEnv}" Command="{Binding Build.PrintTherionEnvironmentCommand}" />
                 </MenuItem>
                 <Separator />
-                <MenuItem Header="{Binding MenuBuildOpenOutputFolder}" Command="{Binding Build.OpenLastOutputFolderCommand}" />
+                <MenuItem Header="{Binding MenuBuildOpenOutputFolder}" InputGesture="{l:Gesture OpenOutputFolder}" Command="{Binding Build.OpenLastOutputFolderCommand}" />
             </MenuItem>
             <!-- Settings: a top-level entry (renamed from File ▸ Preferences) that opens the
                  Preferences window directly (#7). -->
@@ -373,6 +378,7 @@
                             <MenuItem Header="{l:Loc Menu_Tools_ImportSurvey}" Command="{Binding ImportSurveyCommand}" />
                             <MenuItem Header="{l:Loc Menu_Tools_ImportDem}" Command="{Binding ImportDemSurfaceCommand}" />
                             <MenuItem Header="{l:Loc Menu_Tools_ImportGpx}" Command="{Binding ImportGpxCommand}" />
+                            <MenuItem Header="{l:Loc Menu_Tools_ScaffoldProject}" Command="{Binding ScaffoldProjectCommand}" />
                         </MenuFlyout>
                     </Button.Flyout>
                 </Button>

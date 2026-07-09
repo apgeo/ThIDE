@@ -21,6 +21,8 @@ public partial class MainWindow : Window
         { ".th", ".th2", ".thconfig", ".thc", "" };
 
     private IKeyboardShortcutService? _shortcuts;
+    // Full screen is a view-only concern (WindowState), so it has no ViewModel command to bind.
+    private ICommand? _toggleFullScreenCommand;
     private ILayoutService? _layout;
     private IGlobalHotkeyService? _globalHotkey;
     private ICrashRecoveryService? _crashRecovery;
@@ -424,52 +426,9 @@ public partial class MainWindow : Window
             (DataContext as MainWindowViewModel)?.CommitDocumentSwitcher();
     }
 
-    protected override void OnKeyDown(KeyEventArgs e)
-    {
-        base.OnKeyDown(e);
-        if (e.Handled) return;
-        switch (e.Key)
-        {
-            case Key.F11:
-                ToggleFullScreen();
-                e.Handled = true;
-                break;
-            case Key.Left when e.KeyModifiers == KeyModifiers.Alt:
-                (DataContext as MainWindowViewModel)?.GoBackCommand.Execute(null);
-                e.Handled = true;
-                break;
-            case Key.Right when e.KeyModifiers == KeyModifiers.Alt:
-                (DataContext as MainWindowViewModel)?.GoForwardCommand.Execute(null);
-                e.Handled = true;
-                break;
-            case Key.S when e.KeyModifiers == KeyModifiers.Control:
-                (DataContext as MainWindowViewModel)?.SaveCommand.Execute(null);
-                e.Handled = true;
-                break;
-            case Key.F when e.KeyModifiers == (KeyModifiers.Control | KeyModifiers.Shift):
-                ShowSearch();
-                e.Handled = true;
-                break;
-            case Key.P when e.KeyModifiers == KeyModifiers.Control:
-                (DataContext as MainWindowViewModel)?.ShowQuickOpen();
-                e.Handled = true;
-                break;
-            case Key.P when e.KeyModifiers == (KeyModifiers.Control | KeyModifiers.Shift):
-                (DataContext as MainWindowViewModel)?.ShowCommandPalette();
-                e.Handled = true;
-                break;
-            // reopen the most-recently-closed tab (VSCode Ctrl+Shift+T).
-            case Key.T when e.KeyModifiers == (KeyModifiers.Control | KeyModifiers.Shift):
-                (DataContext as MainWindowViewModel)?.ReopenClosedTabCommand.Execute(null);
-                e.Handled = true;
-                break;
-            // F8 / Shift+F8 jump to the next / previous diagnostic.
-            case Key.F8:
-                (DataContext as MainWindowViewModel)?.Diagnostics.GoToAdjacent((e.KeyModifiers & KeyModifiers.Shift) == 0);
-                e.Handled = true;
-                break;
-        }
-    }
+    // No hardcoded shell gestures: every one of them is a Window.KeyBinding rebuilt from
+    // IKeyboardShortcutService (see RebuildKeyBindings), so all are rebindable in
+    // Settings ▸ Keyboard. base.OnKeyDown evaluates those bindings.
 
     // ----- quick export dialog --------------------------------
     private async System.Threading.Tasks.Task ShowQuickExportAsync(MainWindowViewModel vm)
@@ -1350,8 +1309,9 @@ public partial class MainWindow : Window
         if (_shortcuts is null) return;
 
         // Feed the reactive tooltip source so {l:Tip} toolbar tooltips show — and live-update —
-        // the current gesture for each action.
+        // the current gesture for each action, and the same for {l:Gesture} menu InputGestures.
         ThIDE.Resources.TipProxy.Instance.Attach(_shortcuts);
+        ThIDE.Resources.GestureProxy.Instance.Attach(_shortcuts);
 
         void Rebuild() => RebuildKeyBindings(vm, _shortcuts);
         _shortcuts.GesturesChanged += (_, _) => Avalonia.Threading.Dispatcher.UIThread.Post(Rebuild);
@@ -1364,6 +1324,11 @@ public partial class MainWindow : Window
 
     private void RebuildKeyBindings(MainWindowViewModel vm, IKeyboardShortcutService shortcuts)
     {
+        // Shell-scoped commands only. Caret-scoped editor actions (go-to-definition, toggle
+        // comment, …) are matched by the focused TherionTextEditor against the same service.
+        // RenameSymbol appears in both: the editor wins when focused, this binding covers the
+        // case where a tool panel has focus.
+        _toggleFullScreenCommand ??= new CommunityToolkit.Mvvm.Input.RelayCommand(ToggleFullScreen);
         var commandMap = new Dictionary<string, ICommand?>(StringComparer.Ordinal)
         {
             [ShellCommandIds.Build]                    = vm.Build.BuildCommand,
@@ -1379,6 +1344,32 @@ public partial class MainWindow : Window
             [ShellCommandIds.FindInFiles]              = vm.ShowFindInFilesCommand,
             [ShellCommandIds.ReplaceInFiles]           = vm.ShowReplaceInFilesCommand,
             [ShellCommandIds.RenameSymbol]             = vm.RenameSymbolCommand,
+            [ShellCommandIds.QuickOpen]                = vm.QuickOpenCommand,
+            [ShellCommandIds.CommandPalette]           = vm.CommandPaletteCommand,
+            [ShellCommandIds.ReopenClosedTab]          = vm.ReopenClosedTabCommand,
+            [ShellCommandIds.ToggleFullScreen]         = _toggleFullScreenCommand,
+            [ShellCommandIds.NextProblem]              = vm.NextProblemCommand,
+            [ShellCommandIds.PreviousProblem]          = vm.PreviousProblemCommand,
+            [ShellCommandIds.NewFile]                  = vm.NewFileCommand,
+            [ShellCommandIds.OpenFile]                 = vm.OpenFileCommand,
+            [ShellCommandIds.OpenFolder]               = vm.OpenFolderCommand,
+            [ShellCommandIds.OpenThconfig]             = vm.OpenThconfigCommand,
+            [ShellCommandIds.ToggleObjectBrowser]      = vm.ToggleObjectBrowserCommand,
+            [ShellCommandIds.ToggleOutline]            = vm.ToggleOutlineCommand,
+            [ShellCommandIds.ToggleProject]            = vm.ToggleProjectCommand,
+            [ShellCommandIds.ToggleLog]                = vm.ToggleLogCommand,
+            [ShellCommandIds.ToggleLivePreview]        = vm.ToggleLivePreviewCommand,
+            [ShellCommandIds.ToggleMapViewer]          = vm.ToggleMapViewerCommand,
+            [ShellCommandIds.ToggleModel3DViewer]      = vm.ToggleModel3DViewerCommand,
+            [ShellCommandIds.ToggleStructuralGeology]  = vm.ToggleStructuralGeologyCommand,
+            [ShellCommandIds.SplitEditor]              = vm.SplitEditorCommand,
+            [ShellCommandIds.ResetLayout]              = vm.ResetLayoutCommand,
+            [ShellCommandIds.FloatActiveDocument]      = vm.FloatActiveDocumentCommand,
+            [ShellCommandIds.QuickExport]              = vm.Build.ShowQuickExportCommand,
+            [ShellCommandIds.OpenOutputFolder]         = vm.Build.OpenLastOutputFolderCommand,
+            [ShellCommandIds.ToggleWordWrap]           = vm.ToggleWordWrapCommand,
+            [ShellCommandIds.NewScrapScaffold]         = vm.NewScrapScaffoldCommand,
+            [ShellCommandIds.GenerateReport]           = vm.GenerateReportCommand,
         };
 
         KeyBindings.Clear();
