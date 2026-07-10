@@ -32,6 +32,9 @@ public static class ToolErrorCodes
     /// <summary>The requested new name is already taken in the same scope.</summary>
     public const string NameCollision = "name_collision";
 
+    /// <summary>The file does not parse, so its tree cannot be re-emitted without losing text.</summary>
+    public const string ParseErrors = "parse_errors";
+
     /// <summary>
     /// The target is open in the IDE with unsaved changes, so writing disk would fork the user's state.
     /// Only the in-app host can raise this (Q-01, resolved at T-03.6); the headless server cannot know.

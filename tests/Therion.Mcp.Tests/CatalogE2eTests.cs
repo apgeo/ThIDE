@@ -45,6 +45,7 @@ public class CatalogE2eTests
     private static readonly string[] MutatingTools =
     [
         "rename_symbol",
+        "format_file",
     ];
 
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(120);
