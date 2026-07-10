@@ -93,6 +93,44 @@ internal sealed class FixtureWorkspace : IDisposable
         return fixture;
     }
 
+    /// <summary>
+    /// Two surveys that never touch: <c>upper</c> is georeferenced by a <c>fix</c> under a <c>cs</c>,
+    /// <c>island</c> is neither joined nor grounded. That second piece is exactly what TH_SEM_015
+    /// calls floating.
+    /// </summary>
+    public static FixtureWorkspace CreateDisconnected()
+    {
+        var fixture = Create();
+
+        File.WriteAllText(fixture.Thconfig, """
+            source caves/upper.th
+            source caves/island.th
+            """);
+
+        File.WriteAllText(fixture.PathTo("caves", "upper.th"), """
+            survey upper
+              cs UTM33
+              fix 1 400000 5000000 800
+              centreline
+                data normal from to length compass clino
+                1 2 10.0 90 0
+                2 3 12.5 100 -5
+              endcentreline
+            endsurvey
+            """);
+
+        File.WriteAllText(fixture.PathTo("caves", "island.th"), """
+            survey island
+              centreline
+                data normal from to length compass clino
+                x y 7.0 45 0
+              endcentreline
+            endsurvey
+            """);
+
+        return fixture;
+    }
+
     /// <summary>Absolute path inside the fixture, from workspace-relative segments.</summary>
     public string PathTo(params string[] segments) => Path.Combine([Root, .. segments]);
 
