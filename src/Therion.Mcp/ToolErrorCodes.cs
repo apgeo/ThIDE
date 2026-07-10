@@ -13,6 +13,7 @@ public static class ToolErrorCodes
     public const string InvalidArgument = "invalid_argument";
     public const string ReadFailed = "read_failed";
     public const string UnknownDiagnosticCode = "unknown_diagnostic_code";
+    public const string SymbolNotFound = "symbol_not_found";
 }
 
 /// <summary>

@@ -15,6 +15,12 @@ var builder = Host.CreateApplicationBuilder(args);
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole(o => o.LogToStandardErrorThreshold = LogLevel.Trace);
 
+// The SDK narrates every tool call at Information, and the host shows our stderr to the user, so
+// quiet it down. SetMinimumLevel would win over configuration, hence the check: setting
+// Logging__LogLevel__Default=Information still turns the narration back on for a debugging session.
+if (builder.Configuration["Logging:LogLevel:Default"] is null)
+    builder.Logging.SetMinimumLevel(LogLevel.Warning);
+
 builder.Services
     .AddMcpServer(o => o.ServerInfo = new() { Name = "therion-mcp", Version = ServerVersion() })
     .WithStdioServerTransport()

@@ -65,6 +65,34 @@ internal sealed class FixtureWorkspace : IDisposable
         return fixture;
     }
 
+    /// <summary>
+    /// Two surveys in two files, tied together by a cross-file <c>equate</c> using Therion's
+    /// <c>@</c> notation — the case that separates real workspace-wide navigation from per-file
+    /// navigation.
+    /// </summary>
+    public static FixtureWorkspace CreateLinked()
+    {
+        var fixture = Create();
+
+        File.WriteAllText(fixture.Thconfig, """
+            source caves/upper.th
+            source caves/lower.th
+            """);
+
+        File.WriteAllText(fixture.PathTo("caves", "lower.th"), """
+            survey lower
+              centreline
+                data normal from to length compass clino
+                a b 5.0 0 0
+              endcentreline
+            endsurvey
+
+            equate 1@upper a@lower
+            """);
+
+        return fixture;
+    }
+
     /// <summary>Absolute path inside the fixture, from workspace-relative segments.</summary>
     public string PathTo(params string[] segments) => Path.Combine([Root, .. segments]);
 
