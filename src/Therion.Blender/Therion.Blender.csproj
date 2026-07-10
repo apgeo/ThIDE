@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(TherionLibraryTargetFrameworks)</TargetFrameworks>
+  </PropertyGroup>
+
+  <!--
+    BLEND module (BA-B1 scaffold) — turns Therion 3D cave models (.lox/.3d) into
+    Blender-renderable presentations: parse → CaveModel → geometry stage → PLY + scene
+    meta → generated Blender Python script → headless render.
+
+    Pure logic library per .claude/CLAUDE.md: no UI, no Avalonia, no file I/O in the core
+    types. Deterministic + unit-testable. Direct project reference from the app shell
+    (like Therion.Structural); no abstraction layer until a 2nd consumer appears (D-05).
+
+    Intentionally dependency-free at scaffold time (D-20 isolation): the .lox/.3d parser
+    (BA-B2) defines its own CaveModel; project references are added per-batch when a real
+    need appears. Mesh writers (PLY/STL/OBJ/glb) are hand-rolled here (D-06) — no Assimp.
+
+    Design docs: .claude/blender-animation/ (private). IDs BA-xx.
+  -->
+
+</Project>
