@@ -47,9 +47,12 @@ public static class GpxImporter
         {
             var name = p.Name;
             while (!used.Add(name)) name = $"{p.Name}_{++dup}";   // keep station names unique
+            // Under `cs lat-long` Therion reads the first coordinate as the latitude — see
+            // CoordinateTransform.TryToWgs84, which maps (x, y) to (lat, long) for that system.
+            // Emitting them the other way round moves every entrance to another continent.
             sb.Append("    fix ").Append(name).Append(' ')
-              .Append(p.Lon.ToString("0.#######", CultureInfo.InvariantCulture)).Append(' ')
               .Append(p.Lat.ToString("0.#######", CultureInfo.InvariantCulture)).Append(' ')
+              .Append(p.Lon.ToString("0.#######", CultureInfo.InvariantCulture)).Append(' ')
               .Append((p.Elevation ?? 0).ToString("0.##", CultureInfo.InvariantCulture)).AppendLine();
         }
         sb.AppendLine("  endcentreline");

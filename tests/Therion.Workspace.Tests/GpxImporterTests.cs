@@ -1,3 +1,4 @@
+using System.Linq;
 using Therion.Workspace.Import;
 
 namespace Therion.Workspace.Tests;
@@ -30,12 +31,30 @@ public class GpxImporterTests
         var th = GpxImporter.ToTherion(Gpx, "trip1");
         Assert.Contains("survey trip1", th);
         Assert.Contains("cs lat-long", th);
-        // Therion lon-lat order: 8 before 46.5.
-        Assert.Contains("fix Entrance_A 8 46.5 1850", th);
+        Assert.Contains("fix Entrance_A 46.5 8 1850", th);   // cs lat-long: latitude first
         Assert.Contains("endsurvey", th);
     }
 
     [Fact]
     public void Invalid_xml_yields_no_waypoints()
         => Assert.Empty(GpxImporter.Parse("not xml"));
+
+    /// <summary>
+    /// The import writes a `fix` under `cs lat-long`, and the GIS export reads one back. If the two
+    /// disagree about axis order, a waypoint in the Swiss Alps is exported somewhere off Somalia.
+    /// </summary>
+    [Fact]
+    public void A_waypoint_survives_the_round_trip_to_wgs84()
+    {
+        var th = GpxImporter.ToTherion(Gpx);
+
+        var fix = th.Split('\n').First(l => l.Contains("fix Entrance_A"));
+        var parts = fix.Split(' ', System.StringSplitOptions.RemoveEmptyEntries);
+        double x = double.Parse(parts[2], System.Globalization.CultureInfo.InvariantCulture);
+        double y = double.Parse(parts[3], System.Globalization.CultureInfo.InvariantCulture);
+
+        Assert.True(Therion.Syntax.CoordinateTransform.TryToWgs84("lat-long", x, y, out var wgs84));
+        Assert.Equal(46.5, wgs84.Lat, 7);
+        Assert.Equal(8.0, wgs84.Lon, 7);
+    }
 }
