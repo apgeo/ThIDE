@@ -37,7 +37,7 @@ public sealed record FileContent(
 
 /// <summary>Ring R1 — discovering and reading the workspace. Every path parameter is jailed to the root.</summary>
 [McpServerToolType]
-public sealed class WorkspaceTools(WorkspaceHost host)
+public sealed class WorkspaceTools(IWorkspaceHost host)
 {
     private static readonly string[] TherionFileExtensions = [".th", ".th2"];
 
@@ -106,7 +106,7 @@ public sealed class WorkspaceTools(WorkspaceHost host)
 
         IEnumerable<string> absolute = orphansOnly
             ? FindOrphans(snapshot!.Root, ct)
-            : snapshot!.Workspace.LoadedFiles;
+            : snapshot!.LoadedFiles;
 
         if (!string.IsNullOrWhiteSpace(extension))
         {
@@ -216,7 +216,7 @@ public sealed class WorkspaceTools(WorkspaceHost host)
         Loaded: true,
         Root: snapshot.Root,
         EntryPoint: WorkspacePaths.ToRelative(snapshot.Root, snapshot.EntryPointPath),
-        FileCount: snapshot.Workspace.LoadedFiles.Length,
+        FileCount: snapshot.LoadedFiles.Count,
         EntryPointCandidates: ThconfigDiscovery.Scan(snapshot.Root, new ThconfigSniffer())
             .Select(p => WorkspacePaths.ToRelative(snapshot.Root, p))
             .OrderBy(p => p, StringComparer.Ordinal)

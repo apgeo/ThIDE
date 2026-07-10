@@ -26,7 +26,7 @@ public sealed record LeadList(IReadOnlyList<LeadDto> Leads, int Total, int Offse
 
 /// <summary>Ring R1 — what the surveyors left for themselves to finish.</summary>
 [McpServerToolType]
-public sealed class AggregatorTools(WorkspaceHost host, Therion.Workspace.ILeadStatusStore leadStatus)
+public sealed class AggregatorTools(IWorkspaceHost host, Therion.Workspace.ILeadStatusStore leadStatus)
 {
     [McpServerTool(Name = "list_todos", Title = "List TODOs", ReadOnly = true, Idempotent = true)]
     [Description("TODO, FIXME, HACK, NOTE and QM (question mark) markers left in the project's "
@@ -45,7 +45,7 @@ public sealed class AggregatorTools(WorkspaceHost host, Therion.Workspace.ILeadS
         if (error is not null) return ToolResult<TodoList>.Failure(error);
 
         var todos = new List<TodoDto>();
-        foreach (var file in snapshot!.Workspace.LoadedFiles)
+        foreach (var file in snapshot!.LoadedFiles)
         {
             ct.ThrowIfCancellationRequested();
 

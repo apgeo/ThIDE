@@ -38,7 +38,7 @@ public sealed record AggregationDto(string Kind, Location Location);
 /// answers a model gets and the answers a caver sees cannot drift apart.
 /// </summary>
 [McpServerToolType]
-public sealed class SymbolTools(WorkspaceHost host)
+public sealed class SymbolTools(IWorkspaceHost host)
 {
     /// <summary>Wire names for the symbol kinds, matched case-insensitively.</summary>
     private static readonly string[] SymbolKinds = ["station", "survey", "map", "scrap", "scrapObject"];

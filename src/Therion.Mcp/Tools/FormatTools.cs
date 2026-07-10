@@ -18,7 +18,7 @@ public sealed record FormatResult(
 
 /// <summary>Ring R2 — re-emitting a file from its parse tree.</summary>
 [McpServerToolType]
-public sealed class FormatTools(WorkspaceHost host, MutationEngine mutations)
+public sealed class FormatTools(IWorkspaceHost host, MutationEngine mutations)
 {
     /// <summary>Enough of the errors to act on without burying the message.</summary>
     private const int MaxReportedErrors = 5;
@@ -49,7 +49,7 @@ public sealed class FormatTools(WorkspaceHost host, MutationEngine mutations)
         if (!WorkspacePaths.TryResolve(snapshot!.Root, path, out var full, out var reason))
             return ToolResult<FormatResult>.Failure(ToolErrorCodes.PathOutsideWorkspace, reason);
 
-        if (snapshot.Workspace.TryGetFile(full) is null)
+        if (!snapshot.LoadedFiles.Contains(full, StringComparer.OrdinalIgnoreCase))
             return ToolResult<FormatResult>.Failure(ToolErrorCodes.FileNotFound,
                 $"'{path}' is not a parsed file in the loaded project. Call list_files to see what is.");
 

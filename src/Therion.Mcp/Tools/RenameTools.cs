@@ -18,7 +18,7 @@ public sealed record RenameResult(
 
 /// <summary>Ring R2 — renaming a station or a survey everywhere it is written.</summary>
 [McpServerToolType]
-public sealed class RenameTools(WorkspaceHost host, MutationEngine mutations)
+public sealed class RenameTools(IWorkspaceHost host, MutationEngine mutations)
 {
     /// <summary>
     /// A rename rewrites one name token. These characters make a name into a path or a reference, so

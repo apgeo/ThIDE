@@ -62,7 +62,7 @@ if (builder.Configuration["Logging:LogLevel:Default"] is null)
 // Registered before AddTherionMcpTools, whose TryAddSingleton then leaves it alone. The workspace
 // opens lazily on the first tool call that needs it, so startup stays fast.
 if (workspacePath is not null)
-    builder.Services.AddSingleton(new WorkspaceHost(workspacePath));
+    builder.Services.AddSingleton<IWorkspaceHost>(new WorkspaceHost(workspacePath));
 
 builder.Services
     .AddMcpServer(o => o.ServerInfo = new() { Name = "therion-mcp", Version = ServerVersion() })

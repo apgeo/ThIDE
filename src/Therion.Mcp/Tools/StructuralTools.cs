@@ -35,7 +35,7 @@ public sealed record StructuralResult(
 
 /// <summary>Ring R1 — fitting geological planes (strike/dip) to shots aimed at bedding and joints.</summary>
 [McpServerToolType]
-public sealed class StructuralTools(WorkspaceHost host)
+public sealed class StructuralTools(IWorkspaceHost host)
 {
     [McpServerTool(Name = "structural_analysis", Title = "Structural analysis", ReadOnly = true, Idempotent = true)]
     [Description("Fits geological planes to structural shots in one .th file, reporting strike, dip "

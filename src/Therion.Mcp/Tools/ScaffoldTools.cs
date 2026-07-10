@@ -20,7 +20,7 @@ public sealed record ProjectScaffoldResult(
 
 /// <summary>Ring R2 — creating the files a new sketch or a new project needs.</summary>
 [McpServerToolType]
-public sealed class ScaffoldTools(WorkspaceHost host, MutationEngine mutations)
+public sealed class ScaffoldTools(IWorkspaceHost host, MutationEngine mutations)
 {
     private static readonly string[] Projections = ["plan", "elevation", "extended", "none"];
 

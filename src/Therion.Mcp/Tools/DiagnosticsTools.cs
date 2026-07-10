@@ -48,7 +48,7 @@ public sealed record DiagnosticExplanationDto(string Code, string Summary, strin
 
 /// <summary>Ring R1 — what is wrong with this project, and what does that mean.</summary>
 [McpServerToolType]
-public sealed class DiagnosticsTools(WorkspaceHost host)
+public sealed class DiagnosticsTools(IWorkspaceHost host)
 {
     /// <summary>Prefixes a model can expect from this server, for the unknown-code message.</summary>
     private static readonly string[] KnownCodePrefixes = ["TH0", "TH_SEM_", "TH_XVI_", "TH_WS_"];

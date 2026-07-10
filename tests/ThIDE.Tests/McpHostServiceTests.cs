@@ -44,7 +44,7 @@ public class McpHostServiceTests
         var locator = new ExternalToolLocator();
         return new McpHostService(
             settings, new LogService(), new UiBridge(),
-            locator, new TherionCompiler(locator), session: null, discoveryPath);
+            locator, new TherionCompiler(locator), session: null, buffers: null, discoveryPath);
     }
 
     private static async Task WaitUntilAsync(Func<bool> condition, TimeSpan timeout)

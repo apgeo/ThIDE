@@ -7,9 +7,14 @@ using Therion.Workspace;
 
 namespace Therion.Mcp;
 
-/// <summary>An immutable view of the loaded workspace, safe to hand to a tool after the gate is released.</summary>
+/// <summary>
+/// An immutable view of the loaded workspace, safe to hand to a tool and read from any thread after the
+/// gate is released. Carries the file list as a captured array rather than the mutable
+/// <c>TherionWorkspace</c>, so the in-app host can snapshot a live, concurrently-mutated session without a
+/// cross-thread read race (T-03.2).
+/// </summary>
 public sealed record WorkspaceSnapshot(
-    TherionWorkspace Workspace,
+    IReadOnlyList<string> LoadedFiles,
     WorkspaceSemanticModel Model,
     string Root,
     string EntryPointPath);
@@ -19,7 +24,33 @@ public sealed class WorkspaceNotLoadedException() : Exception(
     "No workspace is loaded. Call load_workspace with a .thconfig or .th path first, "
     + "or start the server with --workspace.");
 
-public sealed class WorkspaceHost : IAsyncDisposable
+/// <summary>
+/// The workspace a set of MCP tools answers questions about. The headless hosts use the disk-backed
+/// <see cref="WorkspaceHost"/> (one <c>TherionWorkspace</c> the server owns); the in-app host supplies a
+/// live implementation backed by the running IDE's session and its unsaved editor buffers (T-03.2).
+/// </summary>
+public interface IWorkspaceHost
+{
+    /// <summary>True when a workspace is available (a model has been built).</summary>
+    bool IsLoaded { get; }
+
+    /// <summary>Workspace root directory, or <c>null</c> when nothing is loaded.</summary>
+    string? Root { get; }
+
+    /// <summary>Absolute path of the loaded entry point, or <c>null</c> when nothing is loaded.</summary>
+    string? EntryPointPath { get; }
+
+    /// <summary>The current snapshot. Throws <see cref="WorkspaceNotLoadedException"/> when nothing is loaded.</summary>
+    ValueTask<WorkspaceSnapshot> GetAsync(CancellationToken ct = default);
+
+    /// <summary>Opens (or rebinds to) a workspace at an entry point or project folder.</summary>
+    ValueTask<WorkspaceSnapshot> LoadAsync(string pathOrFolder, CancellationToken ct = default);
+
+    /// <summary>Re-reads the current workspace, picking up changes made since the last snapshot.</summary>
+    ValueTask<WorkspaceSnapshot> ReloadAsync(CancellationToken ct = default);
+}
+
+public sealed class WorkspaceHost : IWorkspaceHost, IAsyncDisposable
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly string? _initialPath;
@@ -122,7 +153,7 @@ public sealed class WorkspaceHost : IAsyncDisposable
     /// <summary>Caller must hold the gate.</summary>
     private WorkspaceSnapshot? Snapshot() =>
         _workspace is not null && _model is not null && _root is not null && _entryPointPath is not null
-            ? new WorkspaceSnapshot(_workspace, _model, _root, _entryPointPath)
+            ? new WorkspaceSnapshot(_workspace.LoadedFiles, _model, _root, _entryPointPath)
             : null;
 
     public async ValueTask DisposeAsync()

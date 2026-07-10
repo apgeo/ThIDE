@@ -147,6 +147,8 @@ internal static class AppServices
 
         // Active-document host (�7.3).
         services.AddSingleton<IDocumentService, DocumentService>();
+        // Same instance, narrow view: the in-app MCP host reads unsaved buffers through this (T-03.2).
+        services.AddSingleton<IUnsavedBufferProvider>(sp => (IUnsavedBufferProvider)sp.GetRequiredService<IDocumentService>());
 
         // Quick-open (Ctrl+P go-to-file) data source (#3).
         services.AddSingleton<QuickOpenProvider>();

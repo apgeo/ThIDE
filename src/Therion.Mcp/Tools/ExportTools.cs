@@ -28,7 +28,7 @@ public sealed record ExportResult(
 
 /// <summary>Ring R2 — turning the model into something another program, or a person, can read.</summary>
 [McpServerToolType]
-public sealed class ExportTools(WorkspaceHost host, MutationEngine mutations)
+public sealed class ExportTools(IWorkspaceHost host, MutationEngine mutations)
 {
     // These replace an existing file when asked to — an export is regenerated on purpose — so unlike
     // the scaffolds they really can destroy something.

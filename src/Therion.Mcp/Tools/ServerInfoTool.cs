@@ -23,7 +23,7 @@ public sealed record ServerInfo(
 /// and tells a host which flavour of the server it just connected to (headless vs in-app).
 /// </summary>
 [McpServerToolType]
-public sealed class ServerInfoTool(WorkspaceHost host, IUiBridge uiBridge)
+public sealed class ServerInfoTool(IWorkspaceHost host, IUiBridge uiBridge)
 {
     [McpServerTool(Name = "server_info", Title = "Server info", ReadOnly = true, Idempotent = true)]
     [Description("Identity of this Therion MCP server: its version, the Therion syntax version it "

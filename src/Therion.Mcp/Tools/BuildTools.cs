@@ -28,7 +28,7 @@ public sealed record BuildResult(
 
 /// <summary>Ring R2 — running the real Therion compiler over the project.</summary>
 [McpServerToolType]
-public sealed class BuildTools(WorkspaceHost host, ITherionCompiler compiler)
+public sealed class BuildTools(IWorkspaceHost host, ITherionCompiler compiler)
 {
     /// <summary>Therion's own code for "I could not find the executable".</summary>
     private const string ToolMissing = "TH_BUILD_001";

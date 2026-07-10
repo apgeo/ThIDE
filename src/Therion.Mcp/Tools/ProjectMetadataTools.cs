@@ -21,7 +21,7 @@ public sealed record ProjectMetadataDto(
 /// profile can offer one without the other (D-031).
 /// </summary>
 [McpServerToolType]
-public sealed class ProjectMetadataTools(WorkspaceHost host, IProjectMetadataStore metadata)
+public sealed class ProjectMetadataTools(IWorkspaceHost host, IProjectMetadataStore metadata)
 {
     [McpServerTool(Name = "project_metadata_get", Title = "Get project metadata",
         ReadOnly = true, Idempotent = true)]

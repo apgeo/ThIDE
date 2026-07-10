@@ -93,7 +93,7 @@ public sealed record StationList(IReadOnlyList<StationDto> Stations, int Total, 
 
 /// <summary>Ring R1 — the shape of the cave and the shape of the project.</summary>
 [McpServerToolType]
-public sealed class GraphTools(WorkspaceHost host)
+public sealed class GraphTools(IWorkspaceHost host)
 {
     /// <summary>Enough member names to identify a piece in the source without dumping a whole cave.</summary>
     private const int SampleStationsPerComponent = 5;

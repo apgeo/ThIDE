@@ -63,6 +63,7 @@ public sealed class McpHostService : IMcpHostService
     private readonly IExternalToolLocator _toolLocator;
     private readonly ITherionCompiler _compiler;
     private readonly IWorkspaceSession? _session;
+    private readonly IUnsavedBufferProvider? _buffers;
 
     // Serializes start/stop transitions so a fast toggle or a settings change mid-start can't race.
     private readonly SemaphoreSlim _gate = new(1, 1);
@@ -87,8 +88,9 @@ public sealed class McpHostService : IMcpHostService
         IUiBridge uiBridge,
         IExternalToolLocator toolLocator,
         ITherionCompiler compiler,
-        IWorkspaceSession? session = null)
-        : this(settings, log, uiBridge, toolLocator, compiler, session, DiscoveryFilePath()) { }
+        IWorkspaceSession? session = null,
+        IUnsavedBufferProvider? buffers = null)
+        : this(settings, log, uiBridge, toolLocator, compiler, session, buffers, DiscoveryFilePath()) { }
 
     // Test seam (InternalsVisibleTo ThIDE.Tests): a discovery path under a temp dir keeps a test run
     // from writing or deleting the developer's real %AppData%/ThIDE/mcp-endpoint.json. Not seen by DI,
@@ -100,6 +102,7 @@ public sealed class McpHostService : IMcpHostService
         IExternalToolLocator toolLocator,
         ITherionCompiler compiler,
         IWorkspaceSession? session,
+        IUnsavedBufferProvider? buffers,
         string discoveryPath)
     {
         _settings = settings;
@@ -108,6 +111,7 @@ public sealed class McpHostService : IMcpHostService
         _toolLocator = toolLocator;
         _compiler = compiler;
         _session = session;
+        _buffers = buffers;
         _discoveryPath = discoveryPath;
         _settings.Changed += OnSettingsChanged;
     }
@@ -191,10 +195,15 @@ public sealed class McpHostService : IMcpHostService
             builder.Services.AddSingleton(_toolLocator);
             builder.Services.AddSingleton(_compiler);
 
-            // A workspace seeded from what the IDE currently has open (live-buffer binding is T-03.2).
-            // A factory, so the child container disposes it when the host stops.
-            var seed = SeedWorkspacePath();
-            builder.Services.AddSingleton(_ => new WorkspaceHost(seed));
+            // The workspace tools read the running IDE (T-03.2): the live session model with unsaved
+            // buffers overlaid, marshalled onto the UI thread. Registered as an instance the child
+            // container won't dispose (it wraps app-owned services). Without a session (a test of the
+            // host shell itself) fall back to a disk-backed host seeded from the current root.
+            if (_session is not null && _buffers is not null)
+                builder.Services.AddSingleton<IWorkspaceHost>(
+                    new LiveWorkspaceHost(_session, _buffers, _uiBridge));
+            else
+                builder.Services.AddSingleton<IWorkspaceHost>(_ => new WorkspaceHost(SeedWorkspacePath()));
 
             builder.Services
                 .AddMcpServer(o => o.ServerInfo = new() { Name = "therion-mcp (in-app)", Version = Version })

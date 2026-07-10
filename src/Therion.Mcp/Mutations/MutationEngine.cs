@@ -12,7 +12,7 @@ using Therion.Semantics;
 
 namespace Therion.Mcp.Mutations;
 
-public sealed class MutationEngine(WorkspaceHost host)
+public sealed class MutationEngine(IWorkspaceHost host)
 {
     /// <summary>Preview lines returned per file before the rest are elided.</summary>
     private const int MaxPreviewLinesPerFile = 20;

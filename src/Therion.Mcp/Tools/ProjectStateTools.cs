@@ -12,7 +12,7 @@ public sealed record LeadStatusResult(string Location, string Status);
 /// source. Both live in the same per-root JSON sidecars the IDE reads, so a change here shows up there.
 /// </summary>
 [McpServerToolType]
-public sealed class ProjectStateTools(WorkspaceHost host, IProjectMetadataStore metadata, ILeadStatusStore leads)
+public sealed class ProjectStateTools(IWorkspaceHost host, IProjectMetadataStore metadata, ILeadStatusStore leads)
 {
     /// <summary>The lifecycle a lead moves through. Anything else is refused.</summary>
     private static readonly string[] LeadStatuses = [LeadStatusStore.Open, "checked", "pushed", "dead"];

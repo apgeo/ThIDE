@@ -8,7 +8,7 @@ internal static class WorkspaceHostExtensions
     /// just ends its turn.
     /// </summary>
     public static async Task<(WorkspaceSnapshot? Snapshot, ToolError? Error)> TryGetSnapshotAsync(
-        this WorkspaceHost host, CancellationToken ct)
+        this IWorkspaceHost host, CancellationToken ct)
     {
         try
         {

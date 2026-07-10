@@ -29,7 +29,7 @@ public sealed record ImportResult(
 
 /// <summary>Ring R2 — translating another program's survey file into Therion.</summary>
 [McpServerToolType]
-public sealed class ImportTools(WorkspaceHost host, MutationEngine mutations)
+public sealed class ImportTools(IWorkspaceHost host, MutationEngine mutations)
 {
     /// <summary>Extension → format. Anything else needs the caller to say which format it is.</summary>
     private static readonly Dictionary<string, ImportFormat> ByExtension = new(StringComparer.OrdinalIgnoreCase)

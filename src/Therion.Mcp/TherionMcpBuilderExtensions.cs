@@ -72,7 +72,9 @@ public static class TherionMcpBuilderExtensions
 
         bool hasUi = builder.Services.Any(d => d.ServiceType == typeof(IUiBridge));
         builder.Services.TryAddSingleton<IUiBridge>(NullUiBridge.Instance);
-        builder.Services.TryAddSingleton(_ => new WorkspaceHost());
+        // The in-app host registers a live IWorkspaceHost (backed by the running session) beforehand; a
+        // headless host gets the disk-backed default here. Either way tools depend only on the interface.
+        builder.Services.TryAddSingleton<IWorkspaceHost>(_ => new WorkspaceHost());
         builder.Services.TryAddSingleton<MutationEngine>();
 
         // The same per-root sidecars the IDE reads: a lead the model marks pushed is one the caver
