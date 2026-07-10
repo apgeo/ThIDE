@@ -15,6 +15,25 @@ public static class ToolErrorCodes
     public const string UnknownDiagnosticCode = "unknown_diagnostic_code";
     public const string SymbolNotFound = "symbol_not_found";
     public const string ModelUnavailable = "model_unavailable";
+
+    // ---- mutations (T-02.1) --------------------------------------------------------------------
+
+    /// <summary>A planned edit no longer matches the text it was planned against. Re-plan.</summary>
+    public const string StalePlan = "stale_plan";
+
+    /// <summary>The caller's <c>expectedSha256</c> does not match the file on disk.</summary>
+    public const string FileChanged = "file_changed";
+
+    /// <summary>A create step would overwrite something. Nothing is ever overwritten by a create.</summary>
+    public const string FileExists = "file_exists";
+
+    public const string WriteFailed = "write_failed";
+
+    /// <summary>
+    /// The target is open in the IDE with unsaved changes, so writing disk would fork the user's state.
+    /// Only the in-app host can raise this (Q-01, resolved at T-03.6); the headless server cannot know.
+    /// </summary>
+    public const string FileDirty = "file_dirty";
 }
 
 /// <summary>

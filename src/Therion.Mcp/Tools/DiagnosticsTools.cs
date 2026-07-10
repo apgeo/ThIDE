@@ -17,7 +17,22 @@ public sealed record DiagnosticDto(
     string? File,
     int Line,
     int Column,
-    string? Hint);
+    string? Hint)
+{
+    /// <summary>The wire form of a diagnostic, with its location made workspace-relative.</summary>
+    public static DiagnosticDto From(Diagnostic diagnostic, string root)
+    {
+        bool located = !string.IsNullOrEmpty(diagnostic.Span.FilePath);
+        return new DiagnosticDto(
+            Code: diagnostic.Code.Value,
+            Severity: diagnostic.Severity.ToString().ToLowerInvariant(),
+            Message: diagnostic.Message,
+            File: located ? WorkspacePaths.ToRelative(root, diagnostic.Span.FilePath) : null,
+            Line: located ? diagnostic.Span.Start.Line : 0,
+            Column: located ? diagnostic.Span.Start.Column : 0,
+            Hint: diagnostic.Hint);
+    }
+}
 
 /// <param name="Total">Diagnostics matching the filters, before paging.</param>
 public sealed record DiagnosticList(
@@ -87,7 +102,7 @@ public sealed class DiagnosticsTools(WorkspaceHost host)
 
         int start = Math.Clamp(offset, 0, ordered.Count);
         var page = ordered.Skip(start).Take(ToolLimits.ClampLimit(limit))
-            .Select(d => ToDto(d, snapshot!.Root))
+            .Select(d => DiagnosticDto.From(d, snapshot!.Root))
             .ToList();
 
         return ToolResult<DiagnosticList>.Success(new DiagnosticList(
@@ -133,19 +148,6 @@ public sealed class DiagnosticsTools(WorkspaceHost host)
         catch { /* keep what we have */ }
 
         return all;
-    }
-
-    private static DiagnosticDto ToDto(Diagnostic d, string root)
-    {
-        bool located = !string.IsNullOrEmpty(d.Span.FilePath);
-        return new DiagnosticDto(
-            Code: d.Code.Value,
-            Severity: d.Severity.ToString().ToLowerInvariant(),
-            Message: d.Message,
-            File: located ? WorkspacePaths.ToRelative(root, d.Span.FilePath) : null,
-            Line: located ? d.Span.Start.Line : 0,
-            Column: located ? d.Span.Start.Column : 0,
-            Hint: d.Hint);
     }
 
     private static bool PathMatches(string diagnosticPath, string resolvedFile) =>
