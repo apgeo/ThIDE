@@ -131,7 +131,10 @@ public sealed class TherionWorkspace : IWorkspace
         if (!_options.DisableDiskCache && _cache.TryGet(key, out var cached))
             return cached;
 
-        var result = ParseText(path, File.ReadAllText(path));
+        // EncodingResolver, not File.ReadAllText: a .th may declare `encoding iso-8859-1`, and reading
+        // it as UTF-8 turns every accented survey name into a replacement character — which then
+        // reaches the semantic model, the rename index, and anything that writes the file back out.
+        var result = ParseText(path, EncodingResolver.ReadAllText(path));
         _cache.Set(key, result);
         return result;
     }
