@@ -4,45 +4,18 @@ using Therion.Workspace;
 
 namespace Therion.Mcp.Tools;
 
-/// <summary>
-/// The project's own notes, kept in a sidecar rather than in the survey source. Empty strings mean
-/// "not set" — this is a record of what a caver chose to write down, not a schema.
-/// </summary>
-public sealed record ProjectMetadataDto(
-    string Name,
-    string Region,
-    string Crs,
-    string DeclinationSource,
-    string License,
-    string Notes);
-
 /// <param name="Status">open, checked, pushed, or dead.</param>
 public sealed record LeadStatusResult(string Location, string Status);
 
 /// <summary>
-/// Ring R2 — the decisions a caver records about a project, which never belong in the survey source.
-/// Both live in the same per-root JSON sidecars the IDE reads, so a change here shows up there.
+/// Ring R2 — writing the decisions a caver records about a project, which never belong in the survey
+/// source. Both live in the same per-root JSON sidecars the IDE reads, so a change here shows up there.
 /// </summary>
 [McpServerToolType]
 public sealed class ProjectStateTools(WorkspaceHost host, IProjectMetadataStore metadata, ILeadStatusStore leads)
 {
     /// <summary>The lifecycle a lead moves through. Anything else is refused.</summary>
     private static readonly string[] LeadStatuses = [LeadStatusStore.Open, "checked", "pushed", "dead"];
-
-    [McpServerTool(Name = "project_metadata_get", Title = "Get project metadata",
-        ReadOnly = true, Idempotent = true)]
-    [Description("The project's recorded name, region, coordinate system, declination source, licence "
-               + "and notes. These live in a sidecar beside the IDE's own settings, never in the "
-               + "survey files. Fields nobody has filled in come back empty.")]
-    public async Task<ToolResult<ProjectMetadataDto>> GetProjectMetadata(CancellationToken ct = default)
-    {
-        var (snapshot, error) = await host.TryGetSnapshotAsync(ct);
-        if (error is not null) return ToolResult<ProjectMetadataDto>.Failure(error);
-
-        var stored = metadata.Load(snapshot!.Root);
-        return ToolResult<ProjectMetadataDto>.Success(new ProjectMetadataDto(
-            stored.Name, stored.Region, stored.Crs, stored.DeclinationSource, stored.License, stored.Notes));
-    }
 
     // Overwrites a sidecar the user may have edited in the IDE, hence destructive. Idempotent: the
     // same call twice leaves the same file.

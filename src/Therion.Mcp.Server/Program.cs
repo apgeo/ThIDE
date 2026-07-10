@@ -28,6 +28,17 @@ if (workspacePath is { Length: 0 })
     return 2;
 }
 
+var profile = McpProfile.Full;
+if (GetOption(args, "--profile") is { } requested)
+{
+    if (!Enum.GetNames<McpProfile>().Any(n => n.Equals(requested, StringComparison.OrdinalIgnoreCase)))
+    {
+        Console.Error.WriteLine($"error: unknown profile '{requested}'. Use data or full.");
+        return 2;
+    }
+    profile = Enum.Parse<McpProfile>(requested, ignoreCase: true);
+}
+
 // Fail at startup rather than answering `workspace_not_loaded` to every call for the rest of the
 // session: a typo in an mcp.json is otherwise near-invisible.
 if (workspacePath is not null && !File.Exists(workspacePath) && !Directory.Exists(workspacePath))
@@ -56,7 +67,7 @@ if (workspacePath is not null)
 builder.Services
     .AddMcpServer(o => o.ServerInfo = new() { Name = "therion-mcp", Version = ServerVersion() })
     .WithStdioServerTransport()
-    .AddTherionMcpTools();
+    .AddTherionMcpTools(profile);
 
 await builder.Build().RunAsync();
 return 0;
@@ -69,11 +80,13 @@ static void PrintHelp()
     Console.WriteLine("to it over stdio. Running it by hand does nothing useful.");
     Console.WriteLine();
     Console.WriteLine("Usage:");
-    Console.WriteLine("  therion-mcp [--workspace <path>]");
+    Console.WriteLine("  therion-mcp [--workspace <path>] [--profile data|full]");
     Console.WriteLine();
     Console.WriteLine("Options:");
     Console.WriteLine("  --workspace <path>   Open this .thconfig, .th, or project folder up front.");
     Console.WriteLine("                       Without it, the model must call load_workspace first.");
+    Console.WriteLine("  --profile <name>     data = read-only tools only; full (default) = everything,");
+    Console.WriteLine("                       including the ones that write files and run Therion.");
     Console.WriteLine("  --version            Print the server version.");
     Console.WriteLine("  -h, --help           Show this help.");
     Console.WriteLine();

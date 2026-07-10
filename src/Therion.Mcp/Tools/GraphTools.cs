@@ -35,6 +35,7 @@ public sealed record GraphComponent(
 /// How many pieces are adrift. This is the count TH_SEM_015 reports, so it excludes the main piece
 /// and lone unconnected stations.
 /// </param>
+/// <param name="Truncated">More components exist than are listed; the counts above are complete.</param>
 public sealed record SurveyGraph(
     int Stations,
     int Legs,
@@ -44,10 +45,12 @@ public sealed record SurveyGraph(
     int FixedStations,
     int ComponentCount,
     int FloatingComponents,
-    IReadOnlyList<GraphComponent> Components);
+    IReadOnlyList<GraphComponent> Components,
+    bool Truncated);
 
 public sealed record SurveyBreakdown(string Survey, int Stations, int Shots, double Length);
 
+/// <param name="Truncated">More surveys exist than are broken down; the totals above are complete.</param>
 public sealed record SurveyStats(
     int Surveys,
     int Stations,
@@ -56,14 +59,22 @@ public sealed record SurveyStats(
     double VerticalRange,
     int Entrances,
     int FixedPoints,
-    IReadOnlyList<SurveyBreakdown> BySurvey);
+    IReadOnlyList<SurveyBreakdown> BySurvey,
+    bool Truncated);
 
 /// <param name="From">The including file, workspace-relative.</param>
 /// <param name="To">The file it pulls in via source/input/load.</param>
 public sealed record DependencyEdge(string From, string To);
 
-/// <param name="Dot">Graphviz source, present only when the caller asked for it.</param>
-public sealed record DependencyGraph(IReadOnlyList<DependencyEdge> Edges, string? Dot);
+/// <param name="Dot">Graphviz source of the whole graph, present only when the caller asked for it.</param>
+/// <param name="DotTruncated">The Graphviz source was longer than the byte budget and was cut.</param>
+public sealed record DependencyGraph(
+    IReadOnlyList<DependencyEdge> Edges,
+    int Total,
+    int Offset,
+    bool Truncated,
+    string? Dot,
+    bool DotTruncated);
 
 /// <param name="Name">Fully-qualified station name.</param>
 /// <param name="Kind">How the station was declared: shot, station, fix, or equate.</param>
@@ -93,7 +104,10 @@ public sealed class GraphTools(WorkspaceHost host)
                + "A piece that is adrift (not the main one, not fixed under a coordinate system, and "
                + "more than a lone station) is 'floating', the problem TH_SEM_015 reports. Equates "
                + "are merged, including the @-equates that join files, so these are real pieces.")]
-    public async Task<ToolResult<SurveyGraph>> GetSurveyGraph(CancellationToken ct = default)
+    public async Task<ToolResult<SurveyGraph>> GetSurveyGraph(
+        [Description("Maximum components to list; capped at 2000, defaults to 200. The counts are always complete.")]
+        int limit = 0,
+        CancellationToken ct = default)
     {
         var (snapshot, error) = await host.TryGetSnapshotAsync(ct);
         if (error is not null) return ToolResult<SurveyGraph>.Failure(error);
@@ -130,6 +144,8 @@ public sealed class GraphTools(WorkspaceHost host)
                 SampleStations: members.Take(SampleStationsPerComponent).Select(m => m.ToString()).ToList()));
         }
 
+        int take = ToolLimits.ClampLimit(limit);
+
         return ToolResult<SurveyGraph>.Success(new SurveyGraph(
             Stations: graph.NodeCount,
             Legs: graph.EdgeCount,
@@ -139,7 +155,8 @@ public sealed class GraphTools(WorkspaceHost host)
             FixedStations: graph.FixedStations.Length,
             ComponentCount: components.Count,
             FloatingComponents: components.Count(c => c.Floating),
-            Components: components));
+            Components: components.Take(take).ToList(),
+            Truncated: components.Count > take));
     }
 
     /// <summary>The ordinally-smallest member name, the diagnostic's tiebreaker between equal-sized pieces.</summary>
@@ -158,7 +175,10 @@ public sealed class GraphTools(WorkspaceHost host)
     [Description("Project totals — surveys, stations, shots, surveyed length in metres, vertical "
                + "range, entrances, fixed points — plus the same length and counts per survey. "
                + "These are the numbers 'therion-cli stats' prints.")]
-    public async Task<ToolResult<SurveyStats>> GetSurveyStats(CancellationToken ct = default)
+    public async Task<ToolResult<SurveyStats>> GetSurveyStats(
+        [Description("Maximum surveys to break down; capped at 2000, defaults to 200. The totals are always complete.")]
+        int limit = 0,
+        CancellationToken ct = default)
     {
         var (snapshot, error) = await host.TryGetSnapshotAsync(ct);
         if (error is not null) return ToolResult<SurveyStats>.Failure(error);
@@ -169,6 +189,8 @@ public sealed class GraphTools(WorkspaceHost host)
         var bySurvey = new List<SurveyBreakdown>();
         foreach (var root in ProjectStatistics.BuildSurveyTree(model)) Flatten(root, bySurvey);
 
+        int take = ToolLimits.ClampLimit(limit);
+
         return ToolResult<SurveyStats>.Success(new SurveyStats(
             Surveys: totals.SurveyCount,
             Stations: totals.StationCount,
@@ -177,7 +199,8 @@ public sealed class GraphTools(WorkspaceHost host)
             VerticalRange: Round(totals.VerticalRange),
             Entrances: totals.EntranceCount,
             FixedPoints: totals.FixedCount,
-            BySurvey: bySurvey.OrderBy(s => s.Survey, StringComparer.Ordinal).ToList()));
+            BySurvey: bySurvey.OrderBy(s => s.Survey, StringComparer.Ordinal).Take(take).ToList(),
+            Truncated: bySurvey.Count > take));
     }
 
     [McpServerTool(Name = "deps_graph", Title = "Dependency graph", ReadOnly = true, Idempotent = true)]
@@ -186,12 +209,18 @@ public sealed class GraphTools(WorkspaceHost host)
     public async Task<ToolResult<DependencyGraph>> GetDepsGraph(
         [Description("Also return the graph as Graphviz DOT text.")]
         bool dot = false,
+        [Description("Number of edges to skip, for paging.")]
+        int offset = 0,
+        [Description("Maximum edges to return; capped at 2000, defaults to 200.")]
+        int limit = 0,
+        [Description("Byte budget for the Graphviz text; capped at 1000000, defaults to 100000.")]
+        int maxBytes = 0,
         CancellationToken ct = default)
     {
         var (snapshot, error) = await host.TryGetSnapshotAsync(ct);
         if (error is not null) return ToolResult<DependencyGraph>.Failure(error);
 
-        var edges = snapshot!.Model.FileGraphEdges
+        var all = snapshot!.Model.FileGraphEdges
             .Select(e => new DependencyEdge(
                 WorkspacePaths.ToRelative(snapshot.Root, e.From),
                 WorkspacePaths.ToRelative(snapshot.Root, e.To)))
@@ -199,7 +228,22 @@ public sealed class GraphTools(WorkspaceHost host)
             .ThenBy(e => e.To, StringComparer.Ordinal)
             .ToList();
 
-        return ToolResult<DependencyGraph>.Success(new DependencyGraph(edges, dot ? ToDot(edges) : null));
+        int start = Math.Clamp(offset, 0, all.Count);
+        var page = all.Skip(start).Take(ToolLimits.ClampLimit(limit)).ToList();
+
+        // The Graphviz text describes the whole graph, not the page: a subgraph of an include tree is
+        // not a graph anyone wants to render.
+        string? dotText = null;
+        bool dotTruncated = false;
+        if (dot)
+        {
+            var full = ToDot(all);
+            dotText = ToolLimits.Utf8Prefix(full, ToolLimits.ClampBytes(maxBytes));
+            dotTruncated = dotText.Length < full.Length;
+        }
+
+        return ToolResult<DependencyGraph>.Success(new DependencyGraph(
+            page, all.Count, start, Truncated: start + page.Count < all.Count, dotText, dotTruncated));
     }
 
     [McpServerTool(Name = "list_stations", Title = "List stations", ReadOnly = true, Idempotent = true)]

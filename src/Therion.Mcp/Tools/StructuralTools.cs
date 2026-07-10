@@ -23,8 +23,12 @@ public sealed record FittedPlaneDto(
 /// <param name="DeclinationApplied">
 /// Degrees added to every azimuth. 0 means the azimuths are magnetic-north; non-zero means true-north.
 /// </param>
+/// <param name="Total">Planes fitted, before paging.</param>
 public sealed record StructuralResult(
     IReadOnlyList<FittedPlaneDto> Planes,
+    int Total,
+    int Offset,
+    bool Truncated,
     double DeclinationApplied,
     string DeclinationSource,
     string? DeclinationNote);
@@ -46,6 +50,10 @@ public sealed class StructuralTools(WorkspaceHost host)
         string? keyword = null,
         [Description("'survey' to use the file's own declination command, or a number of degrees east. Omit for none.")]
         string? declination = null,
+        [Description("Number of planes to skip, for paging.")]
+        int offset = 0,
+        [Description("Maximum planes to return; capped at 2000, defaults to 200.")]
+        int limit = 0,
         CancellationToken ct = default)
     {
         var (snapshot, error) = await host.TryGetSnapshotAsync(ct);
@@ -92,8 +100,14 @@ public sealed class StructuralTools(WorkspaceHost host)
                 ErrorReason: plane.ErrorReason));
         }
 
+        int start = Math.Clamp(offset, 0, planes.Count);
+        var page = planes.Skip(start).Take(ToolLimits.ClampLimit(limit)).ToList();
+
         return ToolResult<StructuralResult>.Success(new StructuralResult(
-            Planes: planes,
+            Planes: page,
+            Total: planes.Count,
+            Offset: start,
+            Truncated: start + page.Count < planes.Count,
             DeclinationApplied: Round(result.Declination.Delta),
             DeclinationSource: result.Declination.Effective.ToString().ToLowerInvariant(),
             DeclinationNote: result.Declination.Note));

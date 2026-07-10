@@ -36,6 +36,9 @@ public sealed class BuildTools(WorkspaceHost host, ITherionCompiler compiler)
     /// <summary>Enough of the log to see what happened without spending the caller's context on it.</summary>
     private const int MaxOutputLines = 60;
 
+    /// <summary>A single compiler line is normally short; a pathological one must not blow the budget.</summary>
+    private const int MaxOutputLineBytes = 2_000;
+
     // No dry run: producing the artifacts is the whole point. destructiveHint because Therion writes
     // over yesterday's outputs.
     [McpServerTool(Name = "run_build", Title = "Run Therion",
@@ -126,7 +129,7 @@ public sealed class BuildTools(WorkspaceHost host, ITherionCompiler compiler)
 
         var interesting = said
             .Where(l => l.Severity is DiagnosticSeverity.Warning or DiagnosticSeverity.Error)
-            .Select(l => l.Text)
+            .Select(l => ToolLimits.Utf8Prefix(l.Text, MaxOutputLineBytes))
             .ToList();
 
         if (interesting.Count >= MaxOutputLines)
@@ -134,7 +137,7 @@ public sealed class BuildTools(WorkspaceHost host, ITherionCompiler compiler)
 
         var tail = said
             .Where(l => l.Severity is not (DiagnosticSeverity.Warning or DiagnosticSeverity.Error))
-            .Select(l => l.Text)
+            .Select(l => ToolLimits.Utf8Prefix(l.Text, MaxOutputLineBytes))
             .TakeLast(MaxOutputLines - interesting.Count)
             .ToList();
 

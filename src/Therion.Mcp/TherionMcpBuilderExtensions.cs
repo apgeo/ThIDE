@@ -5,14 +5,27 @@ using Therion.Mcp.Tools;
 
 namespace Therion.Mcp;
 
+/// <summary>How much of the catalog a host is allowed to see.</summary>
+public enum McpProfile
+{
+    /// <summary>Read-only. Nothing in this profile can change a file, a sidecar, or run a program.</summary>
+    Data,
+
+    /// <summary>Everything: reads, mutations, exports, and the compiler. The default.</summary>
+    Full,
+}
+
 /// <summary>
 /// The single registration entry point both hosts share, so the tool catalog cannot drift between
 /// the headless stdio server and the in-app HTTP server.
 /// </summary>
 public static class TherionMcpBuilderExtensions
 {
-    /// <summary>Rings R1 and R2 — everything that works without a UI.</summary>
-    private static readonly Type[] HeadlessToolTypes =
+    /// <summary>
+    /// Ring R1. Every tool here is annotated <c>readOnlyHint</c>, and the <c>data</c> profile is
+    /// exactly this list — so the profile boundary and the annotations cannot disagree.
+    /// </summary>
+    private static readonly Type[] ReadOnlyToolTypes =
     [
         typeof(ServerInfoTool),
         typeof(WorkspaceTools),
@@ -22,6 +35,12 @@ public static class TherionMcpBuilderExtensions
         typeof(AggregatorTools),
         typeof(StructuralTools),
         typeof(CalculatorTools),
+        typeof(ProjectMetadataTools),
+    ];
+
+    /// <summary>Ring R2 — writes files, writes sidecars, or runs the compiler.</summary>
+    private static readonly Type[] MutatingToolTypes =
+    [
         typeof(RenameTools),
         typeof(FormatTools),
         typeof(ScaffoldTools),
@@ -42,7 +61,12 @@ public static class TherionMcpBuilderExtensions
     /// <see cref="WorkspaceHost"/> beforehand; otherwise an empty one is created and the model must
     /// call <c>load_workspace</c>.
     /// </summary>
-    public static IMcpServerBuilder AddTherionMcpTools(this IMcpServerBuilder builder)
+    /// <param name="profile">
+    /// <see cref="McpProfile.Data"/> registers only the read-only tools. A model cannot be talked into
+    /// using a tool that was never registered, which is a stronger guarantee than a confirmation prompt.
+    /// </param>
+    public static IMcpServerBuilder AddTherionMcpTools(
+        this IMcpServerBuilder builder, McpProfile profile = McpProfile.Full)
     {
         ArgumentNullException.ThrowIfNull(builder);
 
@@ -65,8 +89,13 @@ public static class TherionMcpBuilderExtensions
         // The named argument is load-bearing: a bare WithTools(someTypeArray) binds to the generic
         // WithTools<TToolType>(target) overload with TToolType = Type[], which registers nothing and
         // fails only later, as a missing tools/list capability.
-        builder.WithTools(toolTypes: HeadlessToolTypes);
-        if (hasUi && UiToolTypes.Length > 0) builder.WithTools(toolTypes: UiToolTypes);
+        builder.WithTools(toolTypes: ReadOnlyToolTypes);
+
+        if (profile is McpProfile.Full)
+        {
+            builder.WithTools(toolTypes: MutatingToolTypes);
+            if (hasUi && UiToolTypes.Length > 0) builder.WithTools(toolTypes: UiToolTypes);
+        }
 
         return builder;
     }

@@ -164,10 +164,28 @@ public class ProjectStateToolsTests
     private static string Status(ToolResult<LeadList> result, string station) =>
         result.Data!.Leads.Single(l => l.Station == station).Status;
 
-    private static ProjectStateTools Tools(WorkspaceHost host, string sidecar) =>
-        new(host, new ProjectMetadataStore(sidecar), new LeadStatusStore(sidecar));
+    /// <summary>Reading and writing metadata live in separate tool types so the data profile can split them.</summary>
+    private sealed record Pair(ProjectMetadataTools Read, ProjectStateTools Write)
+    {
+        public Task<ToolResult<ProjectMetadataDto>> GetProjectMetadata() => Read.GetProjectMetadata();
 
-    private static async Task<ProjectStateTools> LoadedAsync(FixtureWorkspace fixture, string sidecar)
+        public Task<ToolResult<ProjectMetadataDto>> SetProjectMetadata(
+            string? name = null, string? region = null, string? crs = null,
+            string? declinationSource = null, string? license = null, string? notes = null) =>
+            Write.SetProjectMetadata(name, region, crs, declinationSource, license, notes);
+
+        public Task<ToolResult<LeadStatusResult>> SetLeadStatus(string location, string status) =>
+            Write.SetLeadStatus(location, status);
+    }
+
+    private static Pair Tools(WorkspaceHost host, string sidecar)
+    {
+        var metadata = new ProjectMetadataStore(sidecar);
+        return new Pair(new ProjectMetadataTools(host, metadata),
+                        new ProjectStateTools(host, metadata, new LeadStatusStore(sidecar)));
+    }
+
+    private static async Task<Pair> LoadedAsync(FixtureWorkspace fixture, string sidecar)
     {
         var host = new WorkspaceHost();
         await host.LoadAsync(fixture.Thconfig);
