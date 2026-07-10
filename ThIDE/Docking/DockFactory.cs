@@ -194,27 +194,24 @@ public sealed class DockFactory : Factory
     }
 
     /// <summary>
-    /// Titles of the tool panes currently in the layout — docked or floating (i.e. open, not closed).
-    /// Read by the in-app MCP host's get_ui_state (T-03.3). Must run on the UI thread (touches the dock
-    /// model). Granularity is "open", not "focused tab": a tool in a background tab still counts.
+    /// Stable ids of the tool panes currently in the layout — docked or floating (i.e. open, not closed).
+    /// Read by the in-app MCP host's get_ui_state (T-03.3). Returns the same vocabulary
+    /// <see cref="ShowToolById"/> / <see cref="AvailableToolIds"/> speak (the English ids, not the localized
+    /// titles) so an agent can feed a pane straight from get_ui_state into focus_tool. Must run on the UI
+    /// thread. Granularity is "open", not "focused tab": a tool in a background tab still counts.
     /// </summary>
-    public System.Collections.Generic.IReadOnlyList<string> OpenToolTitles()
+    public System.Collections.Generic.IReadOnlyList<string> OpenToolIds()
     {
         var open = new System.Collections.Generic.List<string>();
         if (_rootDock is null) return open;
 
-        var tools = new IDockable[]
-        {
-            _welcome, _workspace, _objectBrowser, _diagnostics, _compilerOutput, _generatedFiles,
-            _xvi, _outline, _project, _log, _livePreview, _mapViewer, _model3dViewer,
-            _structuralGeology, _structuralPlot, _settings,
-        };
-        foreach (var t in tools)
+        // Iterate the single canonical id→tool roster so a newly-added tool can't drift out of this list.
+        foreach (var (id, tool) in ToolSingletonsById())
         {
             try
             {
-                if (ContainsRef(_rootDock, t) || HostWindowOf(t) is not null)
-                    open.Add(t.Title ?? t.Id ?? "?");
+                if (ContainsRef(_rootDock, tool) || HostWindowOf(tool) is not null)
+                    open.Add(id);
             }
             catch { /* best-effort */ }
         }

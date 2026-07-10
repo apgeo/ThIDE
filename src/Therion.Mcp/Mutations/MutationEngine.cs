@@ -63,6 +63,15 @@ public sealed class MutationEngine(IWorkspaceHost host)
             return ToolResult<MutationResult>.Success(
                 new MutationResult(true, prepared.Select(p => p.Describe(root)).ToList(), [], 0, 0));
 
+        // In-app safety (a stopgap until the T-03.6 dirty-file policy): an EditFile splices offsets — taken
+        // from the caller's snapshot — into the file's *disk* bytes. When that file is open in the IDE with
+        // unsaved edits, the disk bytes are not what the offsets were computed against, so a write could land
+        // on the wrong span. Refuse rather than corrupt it. DirtyFiles is empty for the headless host.
+        if (FirstDirtyEdit(prepared, snapshot.DirtyFiles) is { } dirtyPath)
+            return ToolResult<MutationResult>.Failure(ToolErrorCodes.FileDirty,
+                $"'{WorkspacePaths.ToRelative(root, dirtyPath)}' is open in the IDE with unsaved changes, so it "
+                + "cannot be edited safely right now. Ask the user to save (or close) it, then retry.");
+
         var before = CountSeverities(DiagnosticsFor(snapshot, prepared.Select(p => p.Change.AbsolutePath)));
 
         if (Commit(prepared, root) is { } writeFailure)
@@ -78,10 +87,12 @@ public sealed class MutationEngine(IWorkspaceHost host)
         {
             reloaded = await host.ReloadAsync(ct);
         }
-        catch (Exception ex) when (ex is Workspace.WorkspaceLoadException or IOException or UnauthorizedAccessException)
+        catch (Exception ex) when (ex is Workspace.WorkspaceLoadException or WorkspaceNotLoadedException
+                                      or IOException or UnauthorizedAccessException)
         {
             // The write already happened. Reporting a failure here would tell the caller its edit was
             // rejected, which is worse than telling it the edit landed but could not be re-checked.
+            // WorkspaceNotLoadedException covers the in-app host if the user closes the project mid-write.
             return ToolResult<MutationResult>.Success(new MutationResult(
                 DryRun: false, Files: files, Diagnostics: [], NewErrors: 0, NewWarnings: 0,
                 LintSkipped: true,
@@ -142,6 +153,21 @@ public sealed class MutationEngine(IWorkspaceHost host)
                 return WorkspacePaths.ToRelative(root, committed[i].Change.AbsolutePath);
             }
         }
+        return null;
+    }
+
+    /// <summary>
+    /// The absolute path of the first offset-<see cref="EditFile"/> whose target is open with unsaved edits,
+    /// or null. Only offset edits are at risk; creates/copies/whole-file writes don't splice into existing
+    /// disk bytes. <paramref name="dirtyFiles"/> is empty on the headless host, so this is a no-op there.
+    /// </summary>
+    private static string? FirstDirtyEdit(List<PreparedChange> prepared, IReadOnlyCollection<string> dirtyFiles)
+    {
+        if (dirtyFiles.Count == 0) return null;
+        var dirty = new HashSet<string>(dirtyFiles.Select(WorkspacePaths.Canonicalize), PathComparer);
+        foreach (var p in prepared)
+            if (p.Change is EditFile && dirty.Contains(WorkspacePaths.Canonicalize(p.Change.AbsolutePath)))
+                return p.Change.AbsolutePath;
         return null;
     }
 

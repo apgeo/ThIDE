@@ -636,7 +636,9 @@ public partial class MainWindowViewModel : ViewModelBase
             // persisted setting says so (subsequent toggles are driven by the host's own settings watch).
             IsMcpListening = _mcpHost.IsListening;
             _mcpHost.StateChanged += (_, _) => OnUiThread(() => IsMcpListening = _mcpHost.IsListening);
-            _ = _mcpHost.ApplySettingAsync();
+            // Off the UI thread: the first apply, if the setting is on, builds the Kestrel host and binds
+            // the socket, which must not run inline on the dispatcher and freeze startup (code review).
+            _ = System.Threading.Tasks.Task.Run(() => _mcpHost.ApplySettingAsync());
         }
         _documents.DocumentChanged += (_, _) => RefreshActiveTools();
         _documents.DocumentChanged += (_, _) => OnUiThread(UpdateFileStatus);   // status bar (#10)

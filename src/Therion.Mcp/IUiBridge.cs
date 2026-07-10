@@ -9,7 +9,7 @@ namespace Therion.Mcp;
 /// <param name="CaretLine">1-based caret line in the focused editor (0 when no editor is focused).</param>
 /// <param name="CaretColumn">1-based caret column in the focused editor (0 when none).</param>
 /// <param name="SelectionLength">Characters selected in the focused editor (0 for none).</param>
-/// <param name="VisiblePanes">Titles of the tool panes currently open in the dock (docked or floating).</param>
+/// <param name="VisiblePanes">Ids of the tool panes currently open in the dock (docked or floating) — the same ids <c>focus_tool</c> takes.</param>
 /// <param name="UnsavedDocuments">Absolute paths of open documents with unsaved changes.</param>
 /// <param name="FollowAgent">Whether "follow the agent" is on — R3 <em>actions</em> are enabled (T-03.5).</param>
 public sealed record UiState(

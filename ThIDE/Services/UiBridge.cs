@@ -84,7 +84,7 @@ public sealed class UiBridge : IUiBridge
             .Where(d => d.IsDirty && !string.IsNullOrEmpty(d.FilePath))
             .Select(d => d.FilePath)
             .ToList() ?? new List<string>();
-        var panes = _dock?.OpenToolTitles() ?? (IReadOnlyList<string>)Array.Empty<string>();
+        var panes = _dock?.OpenToolIds() ?? (IReadOnlyList<string>)Array.Empty<string>();
 
         return new UiState(
             ActiveDocument: string.IsNullOrEmpty(activeDoc) ? null : activeDoc,

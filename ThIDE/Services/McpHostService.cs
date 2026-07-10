@@ -53,6 +53,13 @@ public interface IMcpHostService : IAsyncDisposable
 
     /// <summary>Stop the listener and remove the discovery file (idempotent) — for a clean shutdown.</summary>
     Task StopAsync();
+
+    /// <summary>
+    /// Non-blocking shutdown for the window's Closing handler: removes the discovery file synchronously
+    /// (so no host reconnects to a dying port) and starts the async listener stop without blocking the UI
+    /// thread. Blocking here can deadlock the graceful drain against an in-flight UI-marshalling request.
+    /// </summary>
+    void RequestShutdown();
 }
 
 public sealed class McpHostService : IMcpHostService
@@ -161,15 +168,27 @@ public sealed class McpHostService : IMcpHostService
         }
     }
 
+    public void RequestShutdown()
+    {
+        // Remove the endpoint file at once so nothing reconnects to a port that's about to die, then let
+        // the async stop drain on the thread pool. The process is exiting, so the OS reclaims the socket
+        // even if StopAsync doesn't finish; blocking the UI thread here would risk a drain deadlock.
+        TryDeleteDiscoveryFile();
+        _ = Task.Run(StopAsync);
+    }
+
     // ---- lifecycle (caller holds the gate) -------------------------------------------------
 
     private async Task StartCoreAsync(CancellationToken ct)
     {
-        int port = FindFreeLoopbackPort();
-        string token = GenerateToken();
-
+        // Declared before the try so a failed start can dispose the WebApplication it built: _app is only
+        // assigned after StartAsync succeeds, so the catch cannot rely on it (code review, 2026-07-11).
+        WebApplication? app = null;
         try
         {
+            int port = FindFreeLoopbackPort();
+            string token = GenerateToken();
+
             // Empty Args so the Avalonia command line (opened file paths) can't reconfigure the host;
             // an explicit content root avoids surprises from the process working directory.
             var builder = WebApplication.CreateSlimBuilder(new WebApplicationOptions
@@ -196,12 +215,13 @@ public sealed class McpHostService : IMcpHostService
             builder.Services.AddSingleton(_compiler);
 
             // The workspace tools read the running IDE (T-03.2): the live session model with unsaved
-            // buffers overlaid, marshalled onto the UI thread. Registered as an instance the child
-            // container won't dispose (it wraps app-owned services). Without a session (a test of the
-            // host shell itself) fall back to a disk-backed host seeded from the current root.
-            if (_session is not null && _buffers is not null)
-                builder.Services.AddSingleton<IWorkspaceHost>(
-                    new LiveWorkspaceHost(_session, _buffers, _uiBridge));
+            // buffers overlaid, marshalled onto the UI thread. A fresh host per server start, registered as
+            // a factory so the child container disposes it (releasing its semaphore) when the host stops.
+            // Without a session (a test of the host shell itself) fall back to a disk-backed host.
+            var session = _session;
+            var buffers = _buffers;
+            if (session is not null && buffers is not null)
+                builder.Services.AddSingleton<IWorkspaceHost>(_ => new LiveWorkspaceHost(session, buffers, _uiBridge));
             else
                 builder.Services.AddSingleton<IWorkspaceHost>(_ => new WorkspaceHost(SeedWorkspacePath()));
 
@@ -210,7 +230,7 @@ public sealed class McpHostService : IMcpHostService
                 .WithHttpTransport()
                 .AddTherionMcpTools(McpProfile.Full);
 
-            var app = builder.Build();
+            app = builder.Build();
 
             // Loopback is not a trust boundary on a shared machine, so every request must carry the token
             // (02 §B.6.1). This runs before the mapped MCP endpoints.
@@ -238,7 +258,11 @@ public sealed class McpHostService : IMcpHostService
             // A failed start must never crash the IDE; leave the flag on so the user can retry after
             // fixing the cause (e.g. a missing ASP.NET Core runtime, or the port being taken).
             _log.Error($"MCP server failed to start: {ex.Message}");
-            await SafeDisposeAppAsync().ConfigureAwait(false);
+            if (app is not null)
+            {
+                try { await app.StopAsync().ConfigureAwait(false); } catch { /* may never have started */ }
+                try { await app.DisposeAsync().ConfigureAwait(false); } catch { /* best effort */ }
+            }
             _app = null;
             _port = null;
         }
@@ -280,8 +304,9 @@ public sealed class McpHostService : IMcpHostService
 
     private void OnSettingsChanged(object? sender, EventArgs e)
     {
-        // settings.Changed is synchronous; drive the (async) start/stop off the caller's thread.
-        _ = ApplyFromEventAsync();
+        // settings.Changed fires synchronously on the UI thread (Preferences ▸ Apply). Task.Run so the
+        // start path — which builds Kestrel and binds the socket — never runs inline on the dispatcher.
+        _ = Task.Run(ApplyFromEventAsync);
     }
 
     private async Task ApplyFromEventAsync()
@@ -326,6 +351,11 @@ public sealed class McpHostService : IMcpHostService
             var dir = Path.GetDirectoryName(_discoveryPath);
             if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
             File.WriteAllText(_discoveryPath, JsonSerializer.Serialize(info, DiscoveryJson));
+            // The file holds the bearer token in cleartext. %AppData% is user-scoped on Windows, but the
+            // POSIX ~/.config fallback is created world-readable under a normal umask — so lock it to the
+            // owner, or any local user could read the token and drive the server (code review, 2026-07-11).
+            if (!OperatingSystem.IsWindows())
+                File.SetUnixFileMode(_discoveryPath, UnixFileMode.UserRead | UnixFileMode.UserWrite);
         }
         catch (Exception ex)
         {
@@ -340,12 +370,6 @@ public sealed class McpHostService : IMcpHostService
             if (File.Exists(_discoveryPath)) File.Delete(_discoveryPath);
         }
         catch { /* best effort */ }
-    }
-
-    private async Task SafeDisposeAppAsync()
-    {
-        if (_app is null) return;
-        try { await _app.DisposeAsync().ConfigureAwait(false); } catch { /* best effort */ }
     }
 
     public async ValueTask DisposeAsync()

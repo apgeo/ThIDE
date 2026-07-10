@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Therion.Mcp;
+using Therion.Mcp.Mutations;
 using Therion.Mcp.Tools;
 using ThIDE.Services;
 using Xunit;
@@ -102,6 +103,62 @@ public class LiveWorkspaceHostTests
                 Assert.NotNull(snap.Model);
             }));
             await Task.WhenAll(tasks);   // reaching here without an exception is the assertion
+        }
+        finally
+        {
+            await session.DisposeAsync();
+            dir.Dispose();
+        }
+    }
+
+    // Regression (code review #3): the in-app LoadedFiles must include the .thconfig entry point and any
+    // .th2 the project loads — not just the .th files. Before the fix it came from model.PerFile.Keys,
+    // which holds only .th, so list_files/format_file/workspace_info silently dropped the rest.
+    [Fact]
+    public async Task List_files_includes_the_thconfig_and_th2_not_just_th()
+    {
+        var dir = new TempDir();
+        dir.Write("cave.th", "input scrap.th2\n" + ValidCave);
+        dir.Write("scrap.th2", "encoding utf-8\nscrap s1 -projection plan\nendscrap\n");
+        var cfg = dir.Write("cave.thconfig", "source cave.th\n");
+        var session = new WorkspaceSessionService(new StubSniffer(), new FakeSettings());
+        try
+        {
+            await session.SetRootAsync(dir.Path);
+            Assert.True(await session.SetActiveThconfigAsync(cfg));
+
+            var host = new LiveWorkspaceHost(session, new FakeBuffers([]), new InlineUiBridge());
+            var files = await new WorkspaceTools(host).ListFiles();
+
+            Assert.True(files.Ok);
+            Assert.Contains(files.Data!.Files, f => f.EndsWith(".thconfig", StringComparison.Ordinal));
+            Assert.Contains(files.Data.Files, f => f.EndsWith(".th2", StringComparison.Ordinal));
+        }
+        finally
+        {
+            await session.DisposeAsync();
+            dir.Dispose();
+        }
+    }
+
+    // Regression (code review #2): an offset edit to a file open with unsaved changes would splice the
+    // buffer's offsets into the disk bytes — so the in-app mutation path refuses it with file_dirty
+    // rather than risk corrupting it (the T-03.6 dirty-file policy will supersede this).
+    [Fact]
+    public async Task Editing_an_open_dirty_file_is_refused_with_file_dirty()
+    {
+        var (session, cavePath, dir) = await LoadFixtureAsync();
+        try
+        {
+            // cave.th is open with an unsaved edit (still-valid text so the model builds).
+            var dirtyText = ValidCave.Replace("10.0", "11.0", StringComparison.Ordinal);
+            var host = new LiveWorkspaceHost(session, new FakeBuffers([(cavePath, dirtyText)]), new InlineUiBridge());
+
+            var rename = new RenameTools(host, new MutationEngine(host));
+            var result = await rename.RenameSymbol("test", "test2", kind: "survey", dryRun: false);
+
+            Assert.False(result.Ok);
+            Assert.Equal(ToolErrorCodes.FileDirty, result.Error!.Code);
         }
         finally
         {

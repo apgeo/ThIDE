@@ -13,7 +13,7 @@ using Therion.Mcp;
 namespace ThIDE.Services;
 
 /// <summary>An <see cref="IWorkspaceHost"/> backed by the live <see cref="IWorkspaceSession"/>.</summary>
-public sealed class LiveWorkspaceHost : IWorkspaceHost
+public sealed class LiveWorkspaceHost : IWorkspaceHost, IDisposable
 {
     private readonly IWorkspaceSession _session;
     private readonly IUnsavedBufferProvider _buffers;
@@ -49,10 +49,12 @@ public sealed class LiveWorkspaceHost : IWorkspaceHost
                 var model = _session.Model ?? throw new WorkspaceNotLoadedException();
                 var root = _session.RootPath ?? throw new WorkspaceNotLoadedException();
                 var entry = _session.ActiveThconfig?.FullPath ?? root;
-                // Capture the file list as an array here, on the UI thread, so the snapshot stays immutable
-                // and safe to read after we leave the dispatcher.
-                var files = model.PerFile.Keys.ToArray();
-                return new WorkspaceSnapshot(files, model, root, entry);
+                // Capture, on the UI thread, an immutable snapshot safe to read after we leave the dispatcher.
+                // LoadedFiles comes from the session's workspace (all extensions), NOT model.PerFile.Keys —
+                // which holds only .th, so it would drop the .thconfig entry and every .th2 (code review).
+                var files = (_session.LoadedFiles ?? (IReadOnlyList<string>)model.PerFile.Keys.ToArray()).ToArray();
+                var dirty = buffers.Select(b => b.Path).ToArray();
+                return new WorkspaceSnapshot(files, model, root, entry, dirty);
             }).ConfigureAwait(false);
         }
         finally
@@ -73,4 +75,7 @@ public sealed class LiveWorkspaceHost : IWorkspaceHost
 
     /// <summary>Re-reads the live session (there is no separate on-disk copy to reload).</summary>
     public ValueTask<WorkspaceSnapshot> ReloadAsync(CancellationToken ct = default) => GetAsync(ct);
+
+    /// <summary>A fresh host is built on each server start; the child DI container disposes it on stop.</summary>
+    public void Dispose() => _gate.Dispose();
 }

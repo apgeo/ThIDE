@@ -13,11 +13,17 @@ namespace Therion.Mcp;
 /// <c>TherionWorkspace</c>, so the in-app host can snapshot a live, concurrently-mutated session without a
 /// cross-thread read race (T-03.2).
 /// </summary>
+/// <param name="DirtyFiles">
+/// Absolute paths of files that are open in the IDE with unsaved edits (empty for the headless host).
+/// A by-offset edit to one of these would splice buffer offsets into disk bytes, so the mutation engine
+/// refuses it with <c>file_dirty</c> until the dirty-file policy lands (T-03.6).
+/// </param>
 public sealed record WorkspaceSnapshot(
     IReadOnlyList<string> LoadedFiles,
     WorkspaceSemanticModel Model,
     string Root,
-    string EntryPointPath);
+    string EntryPointPath,
+    IReadOnlyCollection<string> DirtyFiles);
 
 /// <summary>Raised when a tool needs the workspace and none has been loaded.</summary>
 public sealed class WorkspaceNotLoadedException() : Exception(
@@ -153,7 +159,7 @@ public sealed class WorkspaceHost : IWorkspaceHost, IAsyncDisposable
     /// <summary>Caller must hold the gate.</summary>
     private WorkspaceSnapshot? Snapshot() =>
         _workspace is not null && _model is not null && _root is not null && _entryPointPath is not null
-            ? new WorkspaceSnapshot(_workspace.LoadedFiles, _model, _root, _entryPointPath)
+            ? new WorkspaceSnapshot(_workspace.LoadedFiles, _model, _root, _entryPointPath, DirtyFiles: [])
             : null;
 
     public async ValueTask DisposeAsync()
