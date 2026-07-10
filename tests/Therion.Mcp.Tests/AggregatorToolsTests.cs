@@ -1,4 +1,5 @@
 using Therion.Mcp.Tools;
+using Therion.Workspace;
 
 namespace Therion.Mcp.Tests;
 
@@ -8,7 +9,7 @@ public class AggregatorToolsTests
     public async Task Aggregators_need_a_workspace()
     {
         await using var host = new WorkspaceHost();
-        var tools = new AggregatorTools(host);
+        var tools = new AggregatorTools(host, new LeadStatusStore(SidecarDir.New()));
 
         Assert.Equal(ToolErrorCodes.WorkspaceNotLoaded, (await tools.ListTodos()).Error!.Code);
         Assert.Equal(ToolErrorCodes.WorkspaceNotLoaded, (await tools.ListLeads()).Error!.Code);
@@ -99,6 +100,6 @@ public class AggregatorToolsTests
     {
         var host = new WorkspaceHost();
         await host.LoadAsync(fixture.Thconfig);
-        return new AggregatorTools(host);
+        return new AggregatorTools(host, new LeadStatusStore(SidecarDir.New()));
     }
 }

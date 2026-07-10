@@ -29,6 +29,7 @@ public class CatalogE2eTests
         ("list_stations", null),
         ("list_todos", null),
         ("list_leads", null),
+        ("project_metadata_get", null),
         ("structural_analysis", new() { ["file"] = "caves/upper.th" }),
         ("convert_units", new() { ["value"] = 100.0, ["from"] = "foot", ["to"] = "metre" }),
         ("convert_coordinates", new() { ["latitude"] = 46.77, ["longitude"] = 22.83 }),
@@ -49,6 +50,11 @@ public class CatalogE2eTests
         "scaffold_th2",
         "scaffold_topodroid_project",
         "import_survey",
+        "export_gis",
+        "export_tables",
+        "generate_report",
+        "project_metadata_set",
+        "set_lead_status",
     ];
 
     /// <summary>
@@ -56,7 +62,12 @@ public class CatalogE2eTests
     /// change they make is a create, and a create whose target exists fails the plan — so annotating
     /// them destructive would train a host to ask for a confirmation it does not need.
     /// </summary>
-    private static readonly string[] DestructiveTools = ["rename_symbol", "format_file"];
+    private static readonly string[] DestructiveTools =
+    [
+        "rename_symbol", "format_file",
+        "export_gis", "export_tables", "generate_report",   // replace an existing artifact
+        "project_metadata_set",                             // overwrites a sidecar the user may have edited
+    ];
 
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(120);
 

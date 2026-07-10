@@ -21,6 +21,13 @@ public sealed record EditFile(string AbsolutePath, IReadOnlyList<TextEdit> Edits
 /// <summary>Write a file that does not exist. Never overwrites: an existing target fails the plan.</summary>
 public sealed record CreateFile(string AbsolutePath, string Content) : FileChange(AbsolutePath);
 
+/// <summary>
+/// Write a file, replacing it if it exists. For generated artifacts — an export, a report — that a
+/// caller regenerates on purpose. Always UTF-8: an export is not Therion source and carries no
+/// <c>encoding</c> directive to honour. Rolled back to its previous bytes on failure.
+/// </summary>
+public sealed record WriteFile(string AbsolutePath, string Content) : FileChange(AbsolutePath);
+
 /// <summary>Create a directory. Existing ones are left alone and are not rolled back.</summary>
 public sealed record CreateDirectory(string AbsolutePath) : FileChange(AbsolutePath);
 

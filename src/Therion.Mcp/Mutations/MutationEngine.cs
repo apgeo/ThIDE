@@ -174,6 +174,12 @@ public sealed class MutationEngine(WorkspaceHost host)
                         $"'{relative}' already exists. Nothing was written; delete or rename it first."));
                 return (PreparedChange.ForCreate(create), null);
 
+            case WriteFile:
+                if (Directory.Exists(change.AbsolutePath))
+                    return (null, new ToolError(ToolErrorCodes.FileExists,
+                        $"'{relative}' is a directory."));
+                return (PreparedChange.ForWrite((WriteFile)change), null);
+
             case CreateDirectory directory:
                 if (File.Exists(directory.AbsolutePath))
                     return (null, new ToolError(ToolErrorCodes.FileExists,
@@ -283,7 +289,12 @@ public sealed class MutationEngine(WorkspaceHost host)
         private string? _newDigest;
         private bool _createdDirectory;
 
+        /// <summary>Whether the target already existed when the plan was prepared, for an honest action label.</summary>
+        private bool _replaced;
+
         public static PreparedChange ForCreate(CreateFile create) => new(create, null, create.Content);
+        public static PreparedChange ForWrite(WriteFile write) =>
+            new(write, null, write.Content) { _replaced = File.Exists(write.AbsolutePath) };
         public static PreparedChange ForDirectory(CreateDirectory directory) => new(directory, null, "");
         public static PreparedChange ForCopy(CopyFile copy) => new(copy, null, "");
 
@@ -308,6 +319,18 @@ public sealed class MutationEngine(WorkspaceHost host)
 
                 case CreateFile:
                     SourceFileIo.Create(Change.AbsolutePath, NewText);
+                    break;
+
+                case WriteFile:
+                    if (_replaced)
+                    {
+                        _originalBytes = File.ReadAllBytes(Change.AbsolutePath);
+                        SourceFileIo.WriteOver(Change.AbsolutePath, System.Text.Encoding.UTF8.GetBytes(NewText));
+                    }
+                    else
+                    {
+                        SourceFileIo.Create(Change.AbsolutePath, NewText);
+                    }
                     break;
 
                 default:
@@ -351,6 +374,9 @@ public sealed class MutationEngine(WorkspaceHost host)
 
                 case CreateFile:
                     return new FileChangeDto(relative, "create", 1, sha256, [], false);
+
+                case WriteFile:
+                    return new FileChangeDto(relative, _replaced ? "replace" : "create", 1, sha256, [], false);
 
                 default:
                     var edits = ((EditFile)Change).Edits;

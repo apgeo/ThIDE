@@ -26,6 +26,8 @@ public static class TherionMcpBuilderExtensions
         typeof(FormatTools),
         typeof(ScaffoldTools),
         typeof(ImportTools),
+        typeof(ExportTools),
+        typeof(ProjectStateTools),
     ];
 
     /// <summary>Ring R3 — registered only when the caller supplied a real <see cref="IUiBridge"/>.</summary>
@@ -47,6 +49,11 @@ public static class TherionMcpBuilderExtensions
         builder.Services.TryAddSingleton<IUiBridge>(NullUiBridge.Instance);
         builder.Services.TryAddSingleton(_ => new WorkspaceHost());
         builder.Services.TryAddSingleton<MutationEngine>();
+
+        // The same per-root sidecars the IDE reads: a lead the model marks pushed is one the caver
+        // sees marked pushed (D-027). A host with its own instances registers them first.
+        builder.Services.TryAddSingleton<Workspace.IProjectMetadataStore>(_ => new Workspace.ProjectMetadataStore());
+        builder.Services.TryAddSingleton<Workspace.ILeadStatusStore>(_ => new Workspace.LeadStatusStore());
 
         // The named argument is load-bearing: a bare WithTools(someTypeArray) binds to the generic
         // WithTools<TToolType>(target) overload with TToolType = Type[], which registers nothing and

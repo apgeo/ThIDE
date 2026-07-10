@@ -41,6 +41,9 @@ public static class ToolErrorCodes
     /// <summary>The source file could not be read as the survey format it claims to be.</summary>
     public const string ImportFailed = "import_failed";
 
+    /// <summary>The project holds nothing of the kind the export would contain.</summary>
+    public const string NothingToExport = "nothing_to_export";
+
     /// <summary>
     /// The target is open in the IDE with unsaved changes, so writing disk would fork the user's state.
     /// Only the in-app host can raise this (Q-01, resolved at T-03.6); the headless server cannot know.
