@@ -4,6 +4,12 @@
     <TargetFrameworks>$(TherionLibraryTargetFrameworks)</TargetFrameworks>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- Tests exercise a few internal geometry helpers (cross-section framing, model
+         translation) directly. -->
+    <InternalsVisibleTo Include="Therion.Blender.Tests" />
+  </ItemGroup>
+
   <!--
     BLEND module (BA-B1 scaffold) — turns Therion 3D cave models (.lox/.3d) into
     Blender-renderable presentations: parse → CaveModel → geometry stage → PLY + scene
