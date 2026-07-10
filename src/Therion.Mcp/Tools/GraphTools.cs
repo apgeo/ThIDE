@@ -9,8 +9,15 @@ namespace Therion.Mcp.Tools;
 /// <param name="Length">Summed length of the piece's non-splay legs, in metres.</param>
 /// <param name="Grounded">
 /// True when some station in the piece is fixed under a coordinate system, i.e. the piece knows
-/// where on Earth it is. An ungrounded piece that is also the only one is fine; an ungrounded piece
-/// alongside others is what TH_SEM_015 reports as floating.
+/// where on Earth it is.
+/// </param>
+/// <param name="IsMain">
+/// The piece with the most stations. It is the reference frame everything else is measured against,
+/// so it is never floating even when nothing georeferences it.
+/// </param>
+/// <param name="Floating">
+/// This piece is adrift: not the main one, not grounded, and big enough to be a real passage rather
+/// than a stray station. These are the pieces TH_SEM_015 reports.
 /// </param>
 /// <param name="SampleStations">A few member names, so the caller can find the piece in the source.</param>
 public sealed record GraphComponent(
@@ -18,10 +25,16 @@ public sealed record GraphComponent(
     double Length,
     bool Grounded,
     bool HasEntrance,
+    bool IsMain,
+    bool Floating,
     IReadOnlyList<string> SampleStations);
 
 /// <param name="Junctions">Stations where three or more legs meet.</param>
 /// <param name="DeadEnds">Degree ≤ 1 and neither an entrance nor fixed — candidate unsurveyed leads.</param>
+/// <param name="FloatingComponents">
+/// How many pieces are adrift. This is the count TH_SEM_015 reports, so it excludes the main piece
+/// and lone unconnected stations.
+/// </param>
 public sealed record SurveyGraph(
     int Stations,
     int Legs,
@@ -77,9 +90,9 @@ public sealed class GraphTools(WorkspaceHost host)
     [McpServerTool(Name = "survey_graph", Title = "Survey graph", ReadOnly = true, Idempotent = true)]
     [Description("The connectivity of the cave: how many stations and legs, where the junctions and "
                + "dead ends are, and — most usefully — whether it is one connected piece or several. "
-               + "A piece that is both disconnected and not fixed under a coordinate system is "
-               + "'floating', which is the problem TH_SEM_015 reports. Equates are merged, including "
-               + "the @-equates that join files, so the pieces counted here are real pieces.")]
+               + "A piece that is adrift (not the main one, not fixed under a coordinate system, and "
+               + "more than a lone station) is 'floating', the problem TH_SEM_015 reports. Equates "
+               + "are merged, including the @-equates that join files, so these are real pieces.")]
     public async Task<ToolResult<SurveyGraph>> GetSurveyGraph(CancellationToken ct = default)
     {
         var (snapshot, error) = await host.TryGetSnapshotAsync(ct);
@@ -92,20 +105,30 @@ public sealed class GraphTools(WorkspaceHost host)
         var entrances = graph.Entrances.ToHashSet();
         var lengthByComponent = LengthByComponent(model, graph);
 
-        var components = new List<GraphComponent>(graph.Components.Length);
-        for (int i = 0; i < graph.Components.Length; i++)
+        // Largest first, ties broken by the smallest member name — the same order the disconnection
+        // diagnostic uses to pick the main piece, so "main" means the same thing in both.
+        var ordered = Enumerable.Range(0, graph.Components.Length)
+            .OrderByDescending(i => graph.Components[i].Length)
+            .ThenBy(i => SmallestName(graph.Components[i]), StringComparer.Ordinal)
+            .ToList();
+
+        var components = new List<GraphComponent>(ordered.Count);
+        for (int rank = 0; rank < ordered.Count; rank++)
         {
-            var members = graph.Components[i];
+            var members = graph.Components[ordered[rank]];
+            bool isMain = rank == 0;
+            bool isGrounded = members.Any(grounded.Contains);
+
             components.Add(new GraphComponent(
                 Stations: members.Length,
-                Length: Round(lengthByComponent.TryGetValue(i, out var l) ? l : 0),
-                Grounded: members.Any(grounded.Contains),
+                Length: Round(lengthByComponent.TryGetValue(ordered[rank], out var l) ? l : 0),
+                Grounded: isGrounded,
                 HasEntrance: members.Any(entrances.Contains),
+                IsMain: isMain,
+                // A lone station adrift is a stray, not a lost passage; the diagnostic ignores it too.
+                Floating: !isMain && !isGrounded && members.Length >= 2,
                 SampleStations: members.Take(SampleStationsPerComponent).Select(m => m.ToString()).ToList()));
         }
-
-        // A lone ungrounded cave is normal — nobody georeferenced it. Floating means *also* detached.
-        int floating = components.Count > 1 ? components.Count(c => !c.Grounded) : 0;
 
         return ToolResult<SurveyGraph>.Success(new SurveyGraph(
             Stations: graph.NodeCount,
@@ -115,8 +138,20 @@ public sealed class GraphTools(WorkspaceHost host)
             Entrances: graph.Entrances.Length,
             FixedStations: graph.FixedStations.Length,
             ComponentCount: components.Count,
-            FloatingComponents: floating,
-            Components: components.OrderByDescending(c => c.Stations).ToList()));
+            FloatingComponents: components.Count(c => c.Floating),
+            Components: components));
+    }
+
+    /// <summary>The ordinally-smallest member name, the diagnostic's tiebreaker between equal-sized pieces.</summary>
+    private static string SmallestName(System.Collections.Immutable.ImmutableArray<QualifiedName> members)
+    {
+        string smallest = members[0].ToString();
+        for (int i = 1; i < members.Length; i++)
+        {
+            var candidate = members[i].ToString();
+            if (string.CompareOrdinal(candidate, smallest) < 0) smallest = candidate;
+        }
+        return smallest;
     }
 
     [McpServerTool(Name = "survey_stats", Title = "Survey statistics", ReadOnly = true, Idempotent = true)]

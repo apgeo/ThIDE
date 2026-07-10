@@ -1,5 +1,3 @@
-using System.Text.Json;
-using ModelContextProtocol.Protocol;
 using Therion.Mcp.Tools;
 
 namespace Therion.Mcp.Tests;
@@ -7,39 +5,31 @@ namespace Therion.Mcp.Tests;
 public class ServerInfoToolTests
 {
     [Fact]
-    public void Reports_no_ui_bridge_when_headless()
+    public async Task Reports_no_ui_bridge_and_no_workspace_when_headless_and_idle()
     {
-        var result = ServerInfoTool.GetServerInfo(NullUiBridge.Instance);
+        await using var host = new WorkspaceHost();
+
+        var result = new ServerInfoTool(host, NullUiBridge.Instance).GetServerInfo();
 
         Assert.True(result.Ok);
-        Assert.NotNull(result.Data);
-        Assert.Equal("therion-mcp", result.Data.Name);
+        Assert.Equal("therion-mcp", result.Data!.Name);
         Assert.Equal("6.4.0", result.Data.SyntaxVersion);
         Assert.False(result.Data.UiBridge);
+        Assert.False(result.Data.WorkspaceLoaded);
+        Assert.Null(result.Data.WorkspaceRoot);
     }
 
     [Fact]
-    public async Task Stdio_host_serves_the_tool_catalog_and_server_info()
+    public async Task Reports_the_workspace_once_one_is_open()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(90));
-        await using var client = await ServerHost.ConnectAsync(cts.Token);
+        using var fixture = FixtureWorkspace.Create();
+        await using var host = new WorkspaceHost();
+        await host.LoadAsync(fixture.Thconfig);
 
-        Assert.Equal("therion-mcp", client.ServerInfo.Name);
+        var result = new ServerInfoTool(host, NullUiBridge.Instance).GetServerInfo();
 
-        var tools = await client.ListToolsAsync(cancellationToken: cts.Token);
-        var serverInfo = Assert.Single(tools, t => t.Name == "server_info");
-        Assert.False(string.IsNullOrWhiteSpace(serverInfo.Description));
-
-        var call = await client.CallToolAsync("server_info", cancellationToken: cts.Token);
-        Assert.NotEqual(true, call.IsError);
-
-        var payload = JsonDocument.Parse(SoleTextBlock(call)).RootElement;
-        Assert.True(payload.GetProperty("ok").GetBoolean());
-
-        var data = payload.GetProperty("data");
-        Assert.Equal("therion-mcp", data.GetProperty("name").GetString());
-        Assert.Equal("6.4.0", data.GetProperty("syntaxVersion").GetString());
-        Assert.False(data.GetProperty("uiBridge").GetBoolean());
+        Assert.True(result.Data!.WorkspaceLoaded);
+        Assert.Equal(fixture.Root, result.Data.WorkspaceRoot);
     }
 
     /// <summary>Ring R3 has no place in a headless host — the null bridge must keep it unregistered.</summary>
@@ -53,7 +43,4 @@ public class ServerInfoToolTests
 
         Assert.DoesNotContain(tools, t => t.Name is "open_file" or "run_command" or "get_ui_state");
     }
-
-    private static string SoleTextBlock(CallToolResult result) =>
-        Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
 }

@@ -17,7 +17,8 @@ internal static class ServerHost
             .First(a => a.Key == "TherionMcpServerDll").Value
         ?? throw new InvalidOperationException("TherionMcpServerDll assembly metadata is missing.");
 
-    public static async Task<McpClient> ConnectAsync(CancellationToken ct = default)
+    /// <param name="serverArgs">Arguments after the assembly path, e.g. <c>--workspace</c> and a path.</param>
+    public static async Task<McpClient> ConnectAsync(CancellationToken ct = default, params string[] serverArgs)
     {
         Assert.True(File.Exists(ServerDll), $"Server not built at {ServerDll}. Build the solution first.");
 
@@ -25,7 +26,7 @@ internal static class ServerHost
         {
             Name = "therion-mcp (test)",
             Command = "dotnet",
-            Arguments = [ServerDll],
+            Arguments = [ServerDll, .. serverArgs],
             // Surface server-side crashes in the test output instead of a silent handshake timeout.
             StandardErrorLines = line => Console.Error.WriteLine($"[therion-mcp] {line}"),
         });

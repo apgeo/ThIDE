@@ -32,24 +32,64 @@ public class GraphToolsTests
     }
 
     /// <summary>
-    /// The pieces survey_graph counts must be the pieces TH_SEM_015 counts. The disconnected fixture
-    /// has one grounded piece and one floating one; the diagnostic fires exactly once.
+    /// The pieces survey_graph calls floating must be the pieces TH_SEM_015 reports. The disconnected
+    /// fixture has one grounded piece and one adrift; the diagnostic fires exactly once.
     /// </summary>
     [Fact]
-    public async Task Survey_graph_components_agree_with_the_disconnection_diagnostic()
+    public async Task Floating_components_agree_with_the_disconnection_diagnostic()
     {
         using var fixture = FixtureWorkspace.CreateDisconnected();
         var host = new WorkspaceHost();
         var snapshot = await host.LoadAsync(fixture.Thconfig);
 
         var graph = (await new GraphTools(host).GetSurveyGraph()).Data!;
-        var disconnections = ProjectDiagnostics.Analyze(snapshot.Model, null, File.Exists)
-            .Where(d => d.Code.Value == SemanticDiagnosticCodes.DisconnectedSurvey)
-            .ToList();
 
         Assert.Equal(2, graph.ComponentCount);
         Assert.Equal(1, graph.FloatingComponents);
-        Assert.Equal(graph.FloatingComponents, disconnections.Count);
+        Assert.Equal(DisconnectionCount(snapshot.Model), graph.FloatingComponents);
+    }
+
+    /// <summary>
+    /// A station connected to nothing is a stray, not a lost passage. TH_SEM_015 skips components of
+    /// fewer than two stations, and so must the tool — on a real 395-file project this was the
+    /// difference between "one floating piece" and "none".
+    /// </summary>
+    [Fact]
+    public async Task A_lone_unconnected_station_is_not_floating()
+    {
+        using var fixture = FixtureWorkspace.CreateDisconnected();
+        File.AppendAllText(fixture.Thconfig, "\nsource caves/stray.th\n");
+        File.WriteAllText(fixture.PathTo("caves", "stray.th"), """
+            survey stray
+              fix lonely 0 0 0
+            endsurvey
+            """);
+
+        var host = new WorkspaceHost();
+        var snapshot = await host.LoadAsync(fixture.Thconfig);
+        var graph = (await new GraphTools(host).GetSurveyGraph()).Data!;
+
+        Assert.Equal(3, graph.ComponentCount);
+        Assert.Equal(1, graph.FloatingComponents);
+        Assert.Equal(DisconnectionCount(snapshot.Model), graph.FloatingComponents);
+
+        var stray = Assert.Single(graph.Components, c => c.SampleStations.Contains("stray.lonely"));
+        Assert.False(stray.Floating);
+    }
+
+    /// <summary>The biggest piece is the frame everything else is measured against; it never floats.</summary>
+    [Fact]
+    public async Task The_main_component_is_the_largest_and_is_never_floating()
+    {
+        using var fixture = FixtureWorkspace.CreateDisconnected();
+        var tools = await LoadedToolsAsync(fixture);
+
+        var result = await tools.GetSurveyGraph();
+
+        var main = Assert.Single(result.Data!.Components, c => c.IsMain);
+        Assert.Equal(result.Data.Components.Max(c => c.Stations), main.Stations);
+        Assert.False(main.Floating);
+        Assert.Same(main, result.Data.Components[0]);
     }
 
     [Fact]
@@ -63,10 +103,14 @@ public class GraphToolsTests
         var grounded = Assert.Single(result.Data!.Components, c => c.Grounded);
         Assert.Contains("upper.1", grounded.SampleStations);
 
-        var floating = Assert.Single(result.Data.Components, c => !c.Grounded);
+        var floating = Assert.Single(result.Data.Components, c => c.Floating);
         Assert.Contains("island.x", floating.SampleStations);
         Assert.Equal(2, floating.Stations);
     }
+
+    private static int DisconnectionCount(WorkspaceSemanticModel model) =>
+        ProjectDiagnostics.Analyze(model, null, File.Exists)
+            .Count(d => d.Code.Value == SemanticDiagnosticCodes.DisconnectedSurvey);
 
     /// <summary>Component lengths must partition the project's surveyed length, not double-count it.</summary>
     [Fact]
