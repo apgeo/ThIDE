@@ -38,6 +38,9 @@ public static class ToolErrorCodes
     /// <summary>The file does not parse, so its tree cannot be re-emitted without losing text.</summary>
     public const string ParseErrors = "parse_errors";
 
+    /// <summary>The source file could not be read as the survey format it claims to be.</summary>
+    public const string ImportFailed = "import_failed";
+
     /// <summary>
     /// The target is open in the IDE with unsaved changes, so writing disk would fork the user's state.
     /// Only the in-app host can raise this (Q-01, resolved at T-03.6); the headless server cannot know.
@@ -70,4 +73,24 @@ public static class ToolLimits
     /// <summary>Clamps a caller-supplied byte budget; non-positive means "use the default".</summary>
     public static int ClampBytes(int maxBytes) =>
         maxBytes <= 0 ? DefaultMaxBytes : Math.Min(maxBytes, HardMaxBytes);
+
+    /// <summary>
+    /// The longest prefix of <paramref name="text"/> that fits in <paramref name="budget"/> UTF-8
+    /// bytes, never splitting a surrogate pair — half an emoji is not text.
+    /// </summary>
+    public static string Utf8Prefix(string text, int budget)
+    {
+        if (System.Text.Encoding.UTF8.GetByteCount(text) <= budget) return text;
+
+        int bytes = 0, i = 0;
+        while (i < text.Length)
+        {
+            int width = char.IsHighSurrogate(text[i]) && i + 1 < text.Length ? 2 : 1;
+            int cost = System.Text.Encoding.UTF8.GetByteCount(text.AsSpan(i, width));
+            if (bytes + cost > budget) break;
+            bytes += cost;
+            i += width;
+        }
+        return text[..i];
+    }
 }

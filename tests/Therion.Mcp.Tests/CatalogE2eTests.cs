@@ -48,6 +48,7 @@ public class CatalogE2eTests
         "format_file",
         "scaffold_th2",
         "scaffold_topodroid_project",
+        "import_survey",
     ];
 
     /// <summary>

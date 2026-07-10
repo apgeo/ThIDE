@@ -180,7 +180,7 @@ public sealed class WorkspaceTools(WorkspaceHost host)
                 // could never read past a single over-long line. Give it a byte-safe prefix instead.
                 if (taken > 0) break;
 
-                text.Append(Utf8Prefix(line, budget));
+                text.Append(ToolLimits.Utf8Prefix(line, budget));
                 cutMidLine = true;
                 taken = 1;
                 break;
@@ -210,24 +210,6 @@ public sealed class WorkspaceTools(WorkspaceHost host)
         var normalized = text.ReplaceLineEndings("\n");
         if (normalized.EndsWith('\n')) normalized = normalized[..^1];
         return normalized.Length == 0 ? [] : normalized.Split('\n');
-    }
-
-    /// <summary>
-    /// The longest prefix of <paramref name="line"/> that fits in <paramref name="budget"/> UTF-8 bytes,
-    /// never splitting a surrogate pair — half an emoji is not text.
-    /// </summary>
-    private static string Utf8Prefix(string line, int budget)
-    {
-        int bytes = 0, i = 0;
-        while (i < line.Length)
-        {
-            int width = char.IsHighSurrogate(line[i]) && i + 1 < line.Length ? 2 : 1;
-            int cost = Encoding.UTF8.GetByteCount(line.AsSpan(i, width));
-            if (bytes + cost > budget) break;
-            bytes += cost;
-            i += width;
-        }
-        return line[..i];
     }
 
     private static WorkspaceInfo Describe(WorkspaceSnapshot snapshot) => new(
