@@ -26,6 +26,7 @@ public partial class MainWindow : Window
     private ILayoutService? _layout;
     private IGlobalHotkeyService? _globalHotkey;
     private ICrashRecoveryService? _crashRecovery;
+    private IMcpHostService? _mcpHost;
 
     // System-wide build hotkey (Ctrl+Alt+B): triggers a compile even when the app isn't
     // focused, marshalled onto the UI thread (#3). No-op on platforms without support.
@@ -104,6 +105,7 @@ public partial class MainWindow : Window
                     docs.FindAllReferencesRequested += (_, args) => _ = HandleFindAllReferencesAsync(args.Raw, args.Kind);
                 }
                 _crashRecovery = AppServices.Provider.GetService<ICrashRecoveryService>();
+                _mcpHost = AppServices.Provider.GetService<IMcpHostService>();
             }
             catch { /* design-time / no container */ }
         };
@@ -124,6 +126,9 @@ public partial class MainWindow : Window
             _crashRecovery?.MarkCleanShutdown();
             _globalHotkey?.Dispose();
             _modalWatchdog?.Dispose();
+            // Stop the MCP listener and remove the discovery file so a host can't reconnect to a dead
+            // port after we exit. Bounded so a stuck stop can't hang the close; the process dies anyway.
+            try { _mcpHost?.StopAsync().Wait(TimeSpan.FromSeconds(2)); } catch { /* exiting */ }
         };
 
         // Drag-and-drop file open (#17).

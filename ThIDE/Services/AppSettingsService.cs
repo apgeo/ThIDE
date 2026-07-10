@@ -107,6 +107,15 @@ public sealed record AppSettings
     /// Plugin rules run during analysis, so this can be disabled for performance (default on).</summary>
     public bool EnablePlugins { get; init; } = true;
 
+    // ---- MCP in-app server ----
+    /// <summary>
+    /// Run the in-app Model Context Protocol server: a loopback HTTP endpoint (127.0.0.1, random port,
+    /// bearer token) that lets a local LLM host reach the running IDE's project tools. Off by default —
+    /// it starts a Kestrel listener, so it stays a deliberate opt-in for both security and startup cost
+    /// (same perf-conscious precedent as <see cref="EnableScriptHooks"/>/<see cref="EnablePlugins"/>).
+    /// </summary>
+    public bool EnableMcpServer { get; init; }
+
     // ---- telemetry ----
     /// <summary>Opt-in: record anonymous usage events + crash reports to LOCAL files only. Off by default.</summary>
     public bool TelemetryEnabled { get; init; }

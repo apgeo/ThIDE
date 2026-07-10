@@ -50,6 +50,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly ICrashRecoveryService? _crashRecovery; // safe-mode + buffer recovery
     private readonly IScriptHookService? _hooks;            // on-build hook
     private readonly IWorkspaceSession? _session;
+    private readonly IMcpHostService? _mcpHost;   // in-app MCP server (status-bar indicator + startup apply)
     private readonly IShellOpener? _shell;
     private readonly DockFactory _factory;
     private IStoragePicker? _picker;
@@ -114,6 +115,8 @@ public partial class MainWindowViewModel : ViewModelBase
     /// <summary>true while the cross-file object graph is being (re)built off-thread —
     /// drives the status-bar "Indexing…" indicator.</summary>
     [ObservableProperty] private bool _isIndexing;
+    /// <summary>True while the in-app MCP server is listening (drives the status-bar indicator).</summary>
+    [ObservableProperty] private bool _isMcpListening;
 
     // ----- status bar: open-file metrics (#10) -------------------------------
     /// <summary>True when a real text file is active — shows the file-info status groups.</summary>
@@ -503,9 +506,11 @@ public partial class MainWindowViewModel : ViewModelBase
         INotificationService? notifications = null,
         ICrashRecoveryService? crashRecovery = null,
         IScriptHookService? hooks = null,
-        IShellOpener? shell = null)
+        IShellOpener? shell = null,
+        IMcpHostService? mcpHost = null)
     {
         _shell = shell;
+        _mcpHost = mcpHost;
         _log = log;
         _crashRecovery = crashRecovery;
         _hooks = hooks;
@@ -624,6 +629,14 @@ public partial class MainWindowViewModel : ViewModelBase
             _session.CandidatesChanged += (_, _) => OnUiThread(Refresh);
             // mirror the background-indexing state for the status-bar indicator.
             _session.IndexingChanged += (_, _) => OnUiThread(() => IsIndexing = _session.IsIndexing);
+        }
+        if (_mcpHost is not null)
+        {
+            // Reflect the in-app MCP server's listening state in the status bar, and start it now if the
+            // persisted setting says so (subsequent toggles are driven by the host's own settings watch).
+            IsMcpListening = _mcpHost.IsListening;
+            _mcpHost.StateChanged += (_, _) => OnUiThread(() => IsMcpListening = _mcpHost.IsListening);
+            _ = _mcpHost.ApplySettingAsync();
         }
         _documents.DocumentChanged += (_, _) => RefreshActiveTools();
         _documents.DocumentChanged += (_, _) => OnUiThread(UpdateFileStatus);   // status bar (#10)

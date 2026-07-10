@@ -391,6 +391,13 @@
                                Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
 
                     <Separator Margin="0,6" />
+                    <!-- MCP in-app server (loopback HTTP + token) for local LLM hosts. -->
+                    <CheckBox Content="{l:Loc Pref_McpServer}"
+                              IsChecked="{Binding EnableMcpServer}" />
+                    <TextBlock Text="{l:Loc Pref_McpServerHelp}"
+                               Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
+
+                    <Separator Margin="0,6" />
                     <TextBlock Text="{l:Loc Pref_CliHelp}"
                                Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
                 </StackPanel>

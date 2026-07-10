@@ -57,6 +57,8 @@ public partial class PreferencesViewModel : ObservableObject
     [ObservableProperty] private string _hookOnSave = string.Empty;
     [ObservableProperty] private string _hookOnBuild = string.Empty;
     [ObservableProperty] private bool _enablePlugins;
+    /// <summary>Run the in-app MCP server (loopback HTTP + token) so a local LLM host can reach the IDE.</summary>
+    [ObservableProperty] private bool _enableMcpServer;
     /// <summary>0 = English, 1 = Romanian (#9 selector lives in Preferences, #11).</summary>
     [ObservableProperty] private int _languageIndex;
 
@@ -178,6 +180,7 @@ public partial class PreferencesViewModel : ObservableObject
         _hookOnSave = s.HookOnSave ?? string.Empty;
         _hookOnBuild = s.HookOnBuild ?? string.Empty;
         _enablePlugins = s.EnablePlugins;
+        _enableMcpServer = s.EnableMcpServer;
         _languageIndex = string.Equals(s.UiLanguage, "ro", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
         _editorFontSize = s.EditorFontSize;
         _indentationSize = s.IndentationSize;
@@ -252,7 +255,7 @@ public partial class PreferencesViewModel : ObservableObject
             new("visualization", "Visualization",                 "preview map viewer pdf svg png live centreline plan elevation render"),
             new("external", Resources.Tr.Get("Pref_External"),    "therion loch aven survex path detect tool executable"),
             new("associations", Resources.Tr.Get("Pref_Associations"), "file association open with default extension .th .th2 thconfig register associate double click"),
-            new("extensions", "Extensions",                       "extension plugin hook script macro on save build open command run lsp cli enable disable performance"),
+            new("extensions", "Extensions",                       "extension plugin hook script macro on save build open command run lsp cli enable disable performance mcp model context protocol server llm ai agent local token loopback"),
             new("debug",    Resources.Tr.Get("Pref_Debug"),       "debug webview webkit linux dmabuf compositing renderer blank white black box 3d viewer devtools inspector offscreen wayland nvidia"),
             new("keyboard", Resources.Tr.Get("Pref_Keyboard"),    "key binding gesture shortcut hotkey command"),
         };
@@ -343,6 +346,7 @@ public partial class PreferencesViewModel : ObservableObject
             HookOnSave = NullIfBlank(HookOnSave),
             HookOnBuild = NullIfBlank(HookOnBuild),
             EnablePlugins = EnablePlugins,
+            EnableMcpServer = EnableMcpServer,
             UiLanguage = code,
             EditorFontSize = EditorFontSize,
             IndentationSize = IndentationSize,

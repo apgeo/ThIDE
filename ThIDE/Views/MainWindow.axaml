@@ -691,6 +691,16 @@
                     <TextBlock Text="{l:Loc Status_Indexing}" Foreground="Gray" FontSize="11" VerticalAlignment="Center" />
                 </StackPanel>
 
+                <!-- in-app MCP server indicator: shown while the loopback AI-tools listener is up. The
+                     "MCP" acronym stays literal (like LSP/CLI); the tooltip is localized. -->
+                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="4" Margin="8,0,0,0"
+                            VerticalAlignment="Center" IsVisible="{Binding IsMcpListening}"
+                            ToolTip.Tip="{l:Loc Status_McpListening}">
+                    <PathIcon Data="{DynamicResource Icon.Code}" Width="12" Height="12"
+                              Foreground="#2E7D32" VerticalAlignment="Center" />
+                    <TextBlock Text="MCP" Foreground="#2E7D32" FontSize="11" VerticalAlignment="Center" />
+                </StackPanel>
+
                 <!-- Build result indicator: green check / red X + optional warning count (#7). -->
                 <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="3" Margin="6,0,0,0"
                             IsVisible="{Binding Build.HasBuildResult}" VerticalAlignment="Center">

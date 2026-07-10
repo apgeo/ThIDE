@@ -434,6 +434,7 @@
   <data name="Status_Indexing" xml:space="preserve"><value>Indexare…</value></data>
   <data name="Status_BuildInProgress" xml:space="preserve"><value>Compilare în curs…</value></data>
   <data name="Status_BuildingGraph" xml:space="preserve"><value>Se construiește graful de obiecte al proiectului…</value></data>
+  <data name="Status_McpListening" xml:space="preserve"><value>Serverul de unelte AI (MCP) ascultă pe loopback — un asistent AI local poate accesa acest proiect</value></data>
   <data name="Status_LastBuildOk" xml:space="preserve"><value>Ultima compilare a reușit</value></data>
   <data name="Status_LastBuildFail" xml:space="preserve"><value>Ultima compilare a eșuat</value></data>
   <data name="Status_OpenDiag" xml:space="preserve"><value>Deschide Diagnostice (F8: următor, Shift+F8: anterior)</value></data>
@@ -550,6 +551,8 @@
   <data name="Pref_CommandWm" xml:space="preserve"><value>(comandă)</value></data>
   <data name="Pref_LoadPlugins" xml:space="preserve"><value>Încarcă pluginuri (reguli semantice personalizate din dosarul de pluginuri)</value></data>
   <data name="Pref_LoadPluginsHelp" xml:space="preserve"><value>Puneți fișiere plugin .dll (tipuri care implementează ISemanticRule) în %AppData%/ThIDE/plugins. Încărcate la pornire; dezactivați pentru performanță. Modificările se aplică la repornire.</value></data>
+  <data name="Pref_McpServer" xml:space="preserve"><value>Activează serverul de unelte AI din aplicație (MCP)</value></data>
+  <data name="Pref_McpServerHelp" xml:space="preserve"><value>Permite unui asistent AI local să acceseze acest proiect prin Model Context Protocol. Ascultă pe 127.0.0.1 (doar loopback) pe un port aleatoriu, protejat cu un token; portul și tokenul sunt scrise în %AppData%/ThIDE/mcp-endpoint.json. Dezactivat implicit — vezi docs/mcp-host-setup.md.</value></data>
   <data name="Pref_CliHelp" xml:space="preserve"><value>CLI-ul fără interfață (therion-cli) și serverul LSP (therion-lsp) sunt executabile separate — vezi documentația.</value></data>
   <data name="Pref_ResetAll" xml:space="preserve"><value>Resetează tot la valorile implicite</value></data>
   <data name="Pref_KbHelp" xml:space="preserve"><value>Faceți clic pe un câmp de combinație și apăsați combinația de taste pentru a o atribui.</value></data>
