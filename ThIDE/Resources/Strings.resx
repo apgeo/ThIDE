@@ -435,6 +435,7 @@
   <data name="Status_BuildInProgress" xml:space="preserve"><value>Build in progress…</value></data>
   <data name="Status_BuildingGraph" xml:space="preserve"><value>Building the thconfig object graph…</value></data>
   <data name="Status_McpListening" xml:space="preserve"><value>AI tools server (MCP) is listening on loopback — a local AI assistant can reach this project</value></data>
+  <data name="Mcp_ToastTitle" xml:space="preserve"><value>AI assistant</value></data>
   <data name="Status_LastBuildOk" xml:space="preserve"><value>Last build succeeded</value></data>
   <data name="Status_LastBuildFail" xml:space="preserve"><value>Last build failed</value></data>
   <data name="Status_OpenDiag" xml:space="preserve"><value>Open Diagnostics (F8: next, Shift+F8: previous)</value></data>

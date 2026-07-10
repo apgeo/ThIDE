@@ -28,6 +28,11 @@ public sealed record UiState(
 /// <param name="Dirty">True when the buffer has unsaved changes.</param>
 public sealed record OpenDocumentInfo(string Path, bool Active, bool Dirty);
 
+/// <summary>The result of a ring-R3 UI action (T-03.4).</summary>
+/// <param name="Ok">True when the action did its thing.</param>
+/// <param name="Message">A short human-readable note — what happened, or why it couldn't.</param>
+public sealed record UiActionResult(bool Ok, string Message);
+
 /// <summary>
 /// Ring-R3 seam and UI-thread marshaller: the only way an MCP tool (or the in-app
 /// <see cref="IWorkspaceHost"/>) may reach the running IDE. The headless stdio host registers
@@ -50,11 +55,34 @@ public interface IUiBridge
     /// </summary>
     Task<T> InvokeAsync<T>(Func<Task<T>> func);
 
+    /// <summary>
+    /// True when "follow the agent" is on — the R3 <em>action</em> tools may drive the UI. Read tools
+    /// ignore it. False on a UI-less host.
+    /// </summary>
+    bool FollowAgent { get; }
+
     /// <summary>The current UI snapshot, or null when there is no window to read (headless / pre-startup).</summary>
     Task<UiState?> GetUiStateAsync();
 
     /// <summary>The open editor documents, most-recently-active order not guaranteed. Empty when no UI.</summary>
     Task<IReadOnlyList<OpenDocumentInfo>> GetOpenDocumentsAsync();
+
+    // ---- ring-R3 actions (T-03.4). Each drives the running IDE on the UI thread. ------------------
+
+    /// <summary>Opens <paramref name="absolutePath"/> in the editor (raising its tab), optionally at <paramref name="line"/> (1-based).</summary>
+    Task<UiActionResult> OpenFileAsync(string absolutePath, int? line);
+
+    /// <summary>Ensures the tool pane with id <paramref name="toolId"/> is visible and focused.</summary>
+    Task<UiActionResult> FocusToolAsync(string toolId);
+
+    /// <summary>Navigates the editor to the declaration of <paramref name="qualifiedName"/> (a station or survey).</summary>
+    Task<UiActionResult> GotoSymbolAsync(string qualifiedName);
+
+    /// <summary>Reveals <paramref name="station"/> in the embedded 3D model viewer.</summary>
+    Task<UiActionResult> ShowInThreeDAsync(string station);
+
+    /// <summary>Shows a toast notification (the host supplies a localized title). <paramref name="kind"/> is info/success/warning/error.</summary>
+    Task<UiActionResult> ShowToastAsync(string message, string kind);
 }
 
 /// <summary>Null-object bridge for hosts with no UI. R3 tools are never registered alongside it.</summary>
@@ -69,8 +97,17 @@ public sealed class NullUiBridge : IUiBridge
     /// <summary>No dispatcher exists, so the delegate runs inline. (The in-app host never uses this bridge.)</summary>
     public Task<T> InvokeAsync<T>(Func<Task<T>> func) => func();
 
+    public bool FollowAgent => false;
+
     public Task<UiState?> GetUiStateAsync() => Task.FromResult<UiState?>(null);
 
     public Task<IReadOnlyList<OpenDocumentInfo>> GetOpenDocumentsAsync() =>
         Task.FromResult<IReadOnlyList<OpenDocumentInfo>>([]);
+
+    private static Task<UiActionResult> NoUi() => Task.FromResult(new UiActionResult(false, "No UI."));
+    public Task<UiActionResult> OpenFileAsync(string absolutePath, int? line) => NoUi();
+    public Task<UiActionResult> FocusToolAsync(string toolId) => NoUi();
+    public Task<UiActionResult> GotoSymbolAsync(string qualifiedName) => NoUi();
+    public Task<UiActionResult> ShowInThreeDAsync(string station) => NoUi();
+    public Task<UiActionResult> ShowToastAsync(string message, string kind) => NoUi();
 }

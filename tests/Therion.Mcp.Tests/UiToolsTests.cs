@@ -16,12 +16,19 @@ public class UiToolsTests
     private sealed class FakeUiBridge : IUiBridge
     {
         public bool IsAvailable { get; init; }
+        public bool FollowAgent { get; init; } = true;
         public UiState? State { get; init; }
         public IReadOnlyList<OpenDocumentInfo> Docs { get; init; } = [];
 
         public Task<T> InvokeAsync<T>(Func<Task<T>> func) => func();
         public Task<UiState?> GetUiStateAsync() => Task.FromResult(State);
         public Task<IReadOnlyList<OpenDocumentInfo>> GetOpenDocumentsAsync() => Task.FromResult(Docs);
+        private static Task<UiActionResult> Ok() => Task.FromResult(new UiActionResult(true, ""));
+        public Task<UiActionResult> OpenFileAsync(string absolutePath, int? line) => Ok();
+        public Task<UiActionResult> FocusToolAsync(string toolId) => Ok();
+        public Task<UiActionResult> GotoSymbolAsync(string qualifiedName) => Ok();
+        public Task<UiActionResult> ShowInThreeDAsync(string station) => Ok();
+        public Task<UiActionResult> ShowToastAsync(string message, string kind) => Ok();
     }
 
     [Fact]

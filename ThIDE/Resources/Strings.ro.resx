@@ -435,6 +435,7 @@
   <data name="Status_BuildInProgress" xml:space="preserve"><value>Compilare în curs…</value></data>
   <data name="Status_BuildingGraph" xml:space="preserve"><value>Se construiește graful de obiecte al proiectului…</value></data>
   <data name="Status_McpListening" xml:space="preserve"><value>Serverul de unelte AI (MCP) ascultă pe loopback — un asistent AI local poate accesa acest proiect</value></data>
+  <data name="Mcp_ToastTitle" xml:space="preserve"><value>Asistent AI</value></data>
   <data name="Status_LastBuildOk" xml:space="preserve"><value>Ultima compilare a reușit</value></data>
   <data name="Status_LastBuildFail" xml:space="preserve"><value>Ultima compilare a eșuat</value></data>
   <data name="Status_OpenDiag" xml:space="preserve"><value>Deschide Diagnostice (F8: următor, Shift+F8: anterior)</value></data>

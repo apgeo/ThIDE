@@ -56,10 +56,16 @@ public static class ToolErrorCodes
     /// </summary>
     public const string FileDirty = "file_dirty";
 
-    // ---- ring R3 (in-app UI, T-03.3) -----------------------------------------------------------
+    // ---- ring R3 (in-app UI, T-03.3 / T-03.4) --------------------------------------------------
 
     /// <summary>The IDE UI cannot be reached — no main window yet, or the host is headless.</summary>
     public const string UiUnavailable = "ui_unavailable";
+
+    /// <summary>"Follow the agent" is off, so the UI-action tools are declined by the user's choice.</summary>
+    public const string UiControlDisabled = "ui_control_disabled";
+
+    /// <summary>A UI action ran but could not do its thing (unknown tool id, symbol not found, …).</summary>
+    public const string UiActionFailed = "ui_action_failed";
 }
 
 /// <summary>

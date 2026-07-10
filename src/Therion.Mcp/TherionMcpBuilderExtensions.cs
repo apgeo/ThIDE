@@ -54,6 +54,7 @@ public static class TherionMcpBuilderExtensions
     private static readonly Type[] UiToolTypes =
     [
         typeof(UiTools),
+        typeof(ActionTools),
     ];
 
     /// <summary>

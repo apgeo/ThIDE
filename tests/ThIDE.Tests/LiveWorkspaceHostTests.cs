@@ -21,10 +21,17 @@ public class LiveWorkspaceHostTests
     private sealed class InlineUiBridge : IUiBridge
     {
         public bool IsAvailable => true;
+        public bool FollowAgent => true;
         public Task<T> InvokeAsync<T>(Func<Task<T>> func) => func();
         public Task<UiState?> GetUiStateAsync() => Task.FromResult<UiState?>(null);
         public Task<IReadOnlyList<OpenDocumentInfo>> GetOpenDocumentsAsync() =>
             Task.FromResult<IReadOnlyList<OpenDocumentInfo>>([]);
+        private static Task<UiActionResult> Ok() => Task.FromResult(new UiActionResult(true, ""));
+        public Task<UiActionResult> OpenFileAsync(string absolutePath, int? line) => Ok();
+        public Task<UiActionResult> FocusToolAsync(string toolId) => Ok();
+        public Task<UiActionResult> GotoSymbolAsync(string qualifiedName) => Ok();
+        public Task<UiActionResult> ShowInThreeDAsync(string station) => Ok();
+        public Task<UiActionResult> ShowToastAsync(string message, string kind) => Ok();
     }
 
     // Hands the live host a fixed set of "unsaved" buffers instead of the real document list.

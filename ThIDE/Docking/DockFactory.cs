@@ -181,6 +181,19 @@ public sealed class DockFactory : Factory
     }
 
     /// <summary>
+    /// Ensures the tool with id <paramref name="id"/> is visible and focused, adding it to the layout if
+    /// needed. For the in-app MCP host's focus_tool (T-03.4). Returns false for an unknown or
+    /// feature-disabled id (see <see cref="AvailableToolIds"/>). Must run on the UI thread.
+    /// </summary>
+    public bool ShowToolById(string id)
+    {
+        if (string.IsNullOrEmpty(id) || !IsToolAvailable(id)) return false;
+        if (!ToolSingletonsById().TryGetValue(id, out var tool)) return false;
+        ShowTool(tool);
+        return true;
+    }
+
+    /// <summary>
     /// Titles of the tool panes currently in the layout — docked or floating (i.e. open, not closed).
     /// Read by the in-app MCP host's get_ui_state (T-03.3). Must run on the UI thread (touches the dock
     /// model). Granularity is "open", not "focused tab": a tool in a background tab still counts.
