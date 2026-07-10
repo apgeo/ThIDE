@@ -29,6 +29,9 @@ public static class ToolErrorCodes
 
     public const string WriteFailed = "write_failed";
 
+    /// <summary>The requested new name is already taken in the same scope.</summary>
+    public const string NameCollision = "name_collision";
+
     /// <summary>
     /// The target is open in the IDE with unsaved changes, so writing disk would fork the user's state.
     /// Only the in-app host can raise this (Q-01, resolved at T-03.6); the headless server cannot know.

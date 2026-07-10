@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Therion.Mcp.Mutations;
 using Therion.Mcp.Tools;
 
 namespace Therion.Mcp;
@@ -21,6 +22,7 @@ public static class TherionMcpBuilderExtensions
         typeof(AggregatorTools),
         typeof(StructuralTools),
         typeof(CalculatorTools),
+        typeof(RenameTools),
     ];
 
     /// <summary>Ring R3 — registered only when the caller supplied a real <see cref="IUiBridge"/>.</summary>
@@ -41,6 +43,7 @@ public static class TherionMcpBuilderExtensions
         bool hasUi = builder.Services.Any(d => d.ServiceType == typeof(IUiBridge));
         builder.Services.TryAddSingleton<IUiBridge>(NullUiBridge.Instance);
         builder.Services.TryAddSingleton(_ => new WorkspaceHost());
+        builder.Services.TryAddSingleton<MutationEngine>();
 
         // The named argument is load-bearing: a bare WithTools(someTypeArray) binds to the generic
         // WithTools<TToolType>(target) overload with TToolType = Type[], which registers nothing and

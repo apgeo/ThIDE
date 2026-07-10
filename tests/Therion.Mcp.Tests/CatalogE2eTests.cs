@@ -34,6 +34,19 @@ public class CatalogE2eTests
         ("convert_coordinates", new() { ["latitude"] = 46.77, ["longitude"] = 22.83 }),
     ];
 
+    /// <summary>Read-only tools the happy-path sweep above cannot exercise.</summary>
+    private static readonly string[] UnsweptReadOnlyTools =
+    [
+        "get_declination",   // needs a WMM.COF that does not ship
+        "load_workspace",    // would replace the fixture the sweep runs against
+    ];
+
+    /// <summary>Tools that can write. Every one of these must be annotated destructive, not read-only.</summary>
+    private static readonly string[] MutatingTools =
+    [
+        "rename_symbol",
+    ];
+
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(120);
 
     [Fact]
@@ -56,24 +69,27 @@ public class CatalogE2eTests
 
     /// <summary>The catalog the model sees must be exactly the catalog we think we registered.</summary>
     [Fact]
-    public async Task Tool_list_is_the_twenty_read_only_tools()
+    public async Task Tool_list_is_exactly_the_registered_catalog()
     {
         using var cts = new CancellationTokenSource(Timeout);
         await using var client = await ServerHost.ConnectAsync(cts.Token);
 
         var names = (await client.ListToolsAsync(cancellationToken: cts.Token)).Select(t => t.Name).ToHashSet();
 
-        // The two the happy-path sweep cannot exercise: get_declination needs a WMM.COF that does not
-        // ship, and load_workspace would replace the fixture the sweep is running against.
-        Assert.Equal(ReadOnlyCatalog.Length + 2, names.Count);
-        Assert.Contains("get_declination", names);
-        Assert.Contains("load_workspace", names);
-        foreach (var (tool, _) in ReadOnlyCatalog) Assert.Contains(tool, names);
+        var expected = ReadOnlyCatalog.Select(c => c.Tool)
+            .Concat(UnsweptReadOnlyTools)
+            .Concat(MutatingTools)
+            .ToHashSet();
+
+        Assert.Equal(expected, names);
     }
 
-    /// <summary>Every tool is described, annotated read-only, and takes a schema — this is what a model reads.</summary>
+    /// <summary>
+    /// Every tool is described and carries a schema, and its annotations tell the truth about whether
+    /// it can write. A host decides when to ask the user for confirmation from exactly these bits.
+    /// </summary>
     [Fact]
-    public async Task Every_tool_is_described_and_annotated_read_only()
+    public async Task Every_tool_is_described_and_annotated_honestly()
     {
         using var cts = new CancellationTokenSource(Timeout);
         await using var client = await ServerHost.ConnectAsync(cts.Token);
@@ -81,9 +97,40 @@ public class CatalogE2eTests
         foreach (var tool in await client.ListToolsAsync(cancellationToken: cts.Token))
         {
             Assert.False(string.IsNullOrWhiteSpace(tool.Description), $"{tool.Name} has no description.");
-            Assert.True(tool.ProtocolTool.Annotations?.ReadOnlyHint, $"{tool.Name} is not annotated readOnlyHint.");
             Assert.Equal(JsonValueKind.Object, tool.JsonSchema.ValueKind);
+
+            var annotations = tool.ProtocolTool.Annotations;
+            Assert.NotNull(annotations);
+
+            if (MutatingTools.Contains(tool.Name))
+            {
+                Assert.False(annotations.ReadOnlyHint, $"{tool.Name} writes but is annotated readOnlyHint.");
+                Assert.True(annotations.DestructiveHint, $"{tool.Name} writes but is not annotated destructiveHint.");
+            }
+            else
+            {
+                Assert.True(annotations.ReadOnlyHint, $"{tool.Name} is not annotated readOnlyHint.");
+            }
         }
+    }
+
+    /// <summary>The safety default has to hold over the wire, not just in a handler unit test.</summary>
+    [Fact]
+    public async Task A_mutating_tool_called_without_dry_run_still_writes_nothing()
+    {
+        using var fixture = FixtureWorkspace.CreateLinked();
+        using var cts = new CancellationTokenSource(Timeout);
+        await using var client = await ServerHost.ConnectAsync(cts.Token, "--workspace", fixture.Thconfig);
+        var before = File.ReadAllText(fixture.PathTo("caves", "upper.th"));
+
+        var call = await client.CallToolAsync("rename_symbol",
+            new Dictionary<string, object?> { ["name"] = "upper", ["newName"] = "haut", ["kind"] = "survey" },
+            cancellationToken: cts.Token);
+
+        var payload = JsonDocument.Parse(SoleTextBlock(call)).RootElement;
+        Assert.True(payload.GetProperty("ok").GetBoolean(), payload.ToString());
+        Assert.True(payload.GetProperty("data").GetProperty("mutation").GetProperty("dryRun").GetBoolean());
+        Assert.Equal(before, File.ReadAllText(fixture.PathTo("caves", "upper.th")));
     }
 
     [Fact]
