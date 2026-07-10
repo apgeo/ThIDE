@@ -46,12 +46,15 @@ public class ScaffoldSmokeTests
     }
 
     [Fact]
-    public void CaveModel_ScaffoldContainerConstructs()
+    public void CaveModel_DefaultsToEmptyCollections()
     {
-        var model = new CaveModel { SourcePath = "cave.lox", SourceFormat = "loch" };
+        var model = new CaveModel { SourcePath = "cave.lox", SourceFormat = CaveSourceFormat.Lox };
 
         Assert.Equal("cave.lox", model.SourcePath);
-        Assert.Equal("loch", model.SourceFormat);
+        Assert.Equal(CaveSourceFormat.Lox, model.SourceFormat);
+        Assert.Empty(model.Stations);
+        Assert.Empty(model.Shots);
+        Assert.False(model.HasWalls);
     }
 
     [Fact]
