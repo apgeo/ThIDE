@@ -49,9 +49,10 @@ public sealed class MutationEngine(WorkspaceHost host)
         var prepared = new List<PreparedChange>(plan.Changes.Count);
         foreach (var change in plan.Changes)
         {
-            if (!WorkspacePaths.IsInside(root, change.AbsolutePath))
-                return ToolResult<MutationResult>.Failure(ToolErrorCodes.PathOutsideWorkspace,
-                    $"'{WorkspacePaths.ToRelative(root, change.AbsolutePath)}' is outside the workspace.");
+            foreach (var path in PathsOf(change))
+                if (!WorkspacePaths.IsInside(root, path))
+                    return ToolResult<MutationResult>.Failure(ToolErrorCodes.PathOutsideWorkspace,
+                        $"'{WorkspacePaths.ToRelative(root, path)}' is outside the workspace.");
 
             var (preparedChange, failure) = Prepare(change, root, expectedSha256);
             if (failure is not null) return ToolResult<MutationResult>.Failure(failure);
@@ -147,12 +148,18 @@ public sealed class MutationEngine(WorkspaceHost host)
     /// <summary>The first path a plan changes twice, or null. Two edits to one file would fight over its offsets.</summary>
     private static string? DuplicatePath(MutationPlan plan)
     {
-        var comparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
-        var seen = new HashSet<string>(comparer);
+        var seen = new HashSet<string>(PathComparer);
         foreach (var change in plan.Changes)
             if (!seen.Add(change.AbsolutePath)) return change.AbsolutePath;
         return null;
     }
+
+    /// <summary>Every path a change touches — a copy reads one file and writes another, and both must be jailed.</summary>
+    private static IEnumerable<string> PathsOf(FileChange change) => change switch
+    {
+        CopyFile copy => [copy.AbsolutePath, copy.SourceAbsolutePath],
+        _ => [change.AbsolutePath],
+    };
 
     private static (PreparedChange? Prepared, ToolError? Failure) Prepare(
         FileChange change, string root, IReadOnlyDictionary<string, string>? expectedSha256)
@@ -166,6 +173,21 @@ public sealed class MutationEngine(WorkspaceHost host)
                     return (null, new ToolError(ToolErrorCodes.FileExists,
                         $"'{relative}' already exists. Nothing was written; delete or rename it first."));
                 return (PreparedChange.ForCreate(create), null);
+
+            case CreateDirectory directory:
+                if (File.Exists(directory.AbsolutePath))
+                    return (null, new ToolError(ToolErrorCodes.FileExists,
+                        $"'{relative}' is a file, so it cannot also be a directory."));
+                return (PreparedChange.ForDirectory(directory), null);
+
+            case CopyFile copy:
+                if (!File.Exists(copy.SourceAbsolutePath))
+                    return (null, new ToolError(ToolErrorCodes.FileNotFound,
+                        $"No such file to copy: {WorkspacePaths.ToRelative(root, copy.SourceAbsolutePath)}"));
+                if (File.Exists(copy.AbsolutePath) || Directory.Exists(copy.AbsolutePath))
+                    return (null, new ToolError(ToolErrorCodes.FileExists,
+                        $"'{relative}' already exists. Nothing was written; delete or rename it first."));
+                return (PreparedChange.ForCopy(copy), null);
 
             case EditFile edit:
                 if (!File.Exists(edit.AbsolutePath))
@@ -259,29 +281,53 @@ public sealed class MutationEngine(WorkspaceHost host)
     {
         private byte[]? _originalBytes;
         private string? _newDigest;
+        private bool _createdDirectory;
 
         public static PreparedChange ForCreate(CreateFile create) => new(create, null, create.Content);
+        public static PreparedChange ForDirectory(CreateDirectory directory) => new(directory, null, "");
+        public static PreparedChange ForCopy(CopyFile copy) => new(copy, null, "");
 
         public static PreparedChange ForEdit(EditFile edit, SourceFile source, string newText) =>
             new(edit, source, newText);
 
         public void Write()
         {
-            if (Source is null)
+            switch (Change)
             {
-                SourceFileIo.Create(Change.AbsolutePath, NewText);
+                case CreateDirectory:
+                    // Only a directory we brought into being may be removed on rollback.
+                    _createdDirectory = !Directory.Exists(Change.AbsolutePath);
+                    Directory.CreateDirectory(Change.AbsolutePath);
+                    return;
+
+                case CopyFile copy:
+                    var parent = Path.GetDirectoryName(copy.AbsolutePath);
+                    if (!string.IsNullOrEmpty(parent)) Directory.CreateDirectory(parent);
+                    File.Copy(copy.SourceAbsolutePath, copy.AbsolutePath, overwrite: false);
+                    break;
+
+                case CreateFile:
+                    SourceFileIo.Create(Change.AbsolutePath, NewText);
+                    break;
+
+                default:
+                    _originalBytes = File.ReadAllBytes(Change.AbsolutePath);
+                    SourceFileIo.Write(Source!, NewText);
+                    break;
             }
-            else
-            {
-                _originalBytes = File.ReadAllBytes(Change.AbsolutePath);
-                SourceFileIo.Write(Source, NewText);
-            }
+
             _newDigest = SourceFileIo.DigestOf(Change.AbsolutePath);
         }
 
         /// <summary>Restores what <see cref="Write"/> replaced: the original bytes, or nothing at all.</summary>
         public void Undo()
         {
+            if (Change is CreateDirectory)
+            {
+                if (_createdDirectory) Directory.Delete(Change.AbsolutePath, recursive: false);
+                return;
+            }
+
             if (_originalBytes is { } original) SourceFileIo.WriteOver(Change.AbsolutePath, original);
             else File.Delete(Change.AbsolutePath);
         }
@@ -295,12 +341,22 @@ public sealed class MutationEngine(WorkspaceHost host)
         {
             var relative = WorkspacePaths.ToRelative(root, Change.AbsolutePath);
 
-            if (Source is null)
-                return new FileChangeDto(relative, "create", 1, sha256, [], false);
+            switch (Change)
+            {
+                case CreateDirectory:
+                    return new FileChangeDto(relative, "createDirectory", 0, null, [], false);
 
-            var edits = ((EditFile)Change).Edits;
-            var preview = Preview.Build(Source.Text, edits, MaxPreviewLinesPerFile);
-            return new FileChangeDto(relative, "edit", edits.Count, sha256, preview.Lines, preview.Truncated);
+                case CopyFile copy:
+                    return new FileChangeDto(relative, "copy", 1, sha256, [], false);
+
+                case CreateFile:
+                    return new FileChangeDto(relative, "create", 1, sha256, [], false);
+
+                default:
+                    var edits = ((EditFile)Change).Edits;
+                    var preview = Preview.Build(Source!.Text, edits, MaxPreviewLinesPerFile);
+                    return new FileChangeDto(relative, "edit", edits.Count, sha256, preview.Lines, preview.Truncated);
+            }
         }
     }
 }

@@ -41,12 +41,21 @@ public class CatalogE2eTests
         "load_workspace",    // would replace the fixture the sweep runs against
     ];
 
-    /// <summary>Tools that can write. Every one of these must be annotated destructive, not read-only.</summary>
+    /// <summary>Tools that can write. None of these may be annotated read-only.</summary>
     private static readonly string[] MutatingTools =
     [
         "rename_symbol",
         "format_file",
+        "scaffold_th2",
+        "scaffold_topodroid_project",
     ];
+
+    /// <summary>
+    /// The writing tools that can change something that already exists. The scaffolds cannot — every
+    /// change they make is a create, and a create whose target exists fails the plan — so annotating
+    /// them destructive would train a host to ask for a confirmation it does not need.
+    /// </summary>
+    private static readonly string[] DestructiveTools = ["rename_symbol", "format_file"];
 
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(120);
 
@@ -106,7 +115,7 @@ public class CatalogE2eTests
             if (MutatingTools.Contains(tool.Name))
             {
                 Assert.False(annotations.ReadOnlyHint, $"{tool.Name} writes but is annotated readOnlyHint.");
-                Assert.True(annotations.DestructiveHint, $"{tool.Name} writes but is not annotated destructiveHint.");
+                Assert.Equal(DestructiveTools.Contains(tool.Name), annotations.DestructiveHint);
             }
             else
             {

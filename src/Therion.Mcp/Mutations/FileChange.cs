@@ -21,6 +21,15 @@ public sealed record EditFile(string AbsolutePath, IReadOnlyList<TextEdit> Edits
 /// <summary>Write a file that does not exist. Never overwrites: an existing target fails the plan.</summary>
 public sealed record CreateFile(string AbsolutePath, string Content) : FileChange(AbsolutePath);
 
+/// <summary>Create a directory. Existing ones are left alone and are not rolled back.</summary>
+public sealed record CreateDirectory(string AbsolutePath) : FileChange(AbsolutePath);
+
+/// <summary>
+/// Copy a file byte for byte. Not read-then-write: a survey declaring <c>encoding iso-8859-1</c>
+/// re-encoded as UTF-8 leaves the directive lying about the bytes (D-020).
+/// </summary>
+public sealed record CopyFile(string AbsolutePath, string SourceAbsolutePath) : FileChange(AbsolutePath);
+
 /// <summary>
 /// A whole mutation, one or more files at a time. Tools build this; <see cref="MutationEngine"/>
 /// validates, previews and applies it.
