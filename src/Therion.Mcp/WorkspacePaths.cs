@@ -105,7 +105,12 @@ public static class WorkspacePaths
     /// yet (an apply-step's target file) are appended unresolved, so the check still binds them to
     /// the real location of the directory that will hold them.
     /// </summary>
-    private static string Canonicalize(string path)
+    /// <remarks>
+    /// Public because everything that compares two paths — the jail, the workspace root, the
+    /// diagnostics filter — has to compare them in the same form. Mixing a resolved path with an
+    /// unresolved one silently makes every comparison false.
+    /// </remarks>
+    public static string Canonicalize(string path)
     {
         var full = Path.GetFullPath(path);
 

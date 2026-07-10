@@ -141,6 +141,49 @@ public class FormatToolsTests
         Assert.Contains("Bédeilhac", Encoding.Latin1.GetString(bytes));
     }
 
+    /// <summary>
+    /// format_file re-emits a file from its parse tree. If it used the tree the workspace parsed at
+    /// load time, an edit made on disk since would be silently overwritten by the older content.
+    /// </summary>
+    [Fact]
+    public async Task Formatting_a_file_edited_since_load_keeps_the_edit()
+    {
+        using var fixture = FixtureWorkspace.Create();
+        var tools = await LoadedToolsAsync(fixture);
+        var target = fixture.PathTo("caves", "upper.th");
+
+        File.WriteAllText(target, """
+            survey upper
+              centreline
+                data normal from to length compass clino
+                1 2 10.0 90 0
+                2 3 12.5 100 -5
+                3 4 99.0 180 0
+              endcentreline
+            endsurvey
+            """);
+
+        var result = await tools.FormatFile("caves/upper.th", write: true);
+
+        Assert.True(result.Ok, result.Error?.Message);
+        var written = File.ReadAllText(target);
+        Assert.Contains("3 4 99.0 180 0", written);   // the shot added after load survived
+    }
+
+    /// <summary>The same, without writing: the returned text must describe the file as it is now.</summary>
+    [Fact]
+    public async Task Formatted_text_reflects_the_current_file_not_the_loaded_tree()
+    {
+        using var fixture = FixtureWorkspace.Create();
+        var tools = await LoadedToolsAsync(fixture);
+
+        File.WriteAllText(fixture.PathTo("caves", "upper.th"), "survey renamed_on_disk\nendsurvey\n");
+
+        var result = await tools.FormatFile("caves/upper.th");
+
+        Assert.Contains("survey renamed_on_disk", result.Data!.Text);
+    }
+
     [Fact]
     public async Task A_stale_sha256_refuses_the_write()
     {

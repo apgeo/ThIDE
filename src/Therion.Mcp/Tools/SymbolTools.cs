@@ -212,10 +212,8 @@ public sealed class SymbolTools(WorkspaceHost host)
     }
 
     private static bool TryParseKind(string value, out ReferenceKind kind) =>
-        Enum.TryParse(value, ignoreCase: true, out kind)
-        && Enum.IsDefined(kind)
-        && !char.IsAsciiDigit(value.TrimStart().FirstOrDefault());
+        ToolEnums.TryParse(value, out kind);
 
     private static string UnknownKindMessage(string kind) =>
-        $"Unknown kind '{kind}'. Use one of: {string.Join(", ", Enum.GetNames<ReferenceKind>().Select(n => n.ToLowerInvariant()))}.";
+        $"Unknown kind '{kind}'. Use one of: {ToolEnums.Names<ReferenceKind>()}.";
 }

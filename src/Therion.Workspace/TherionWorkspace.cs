@@ -140,8 +140,12 @@ public sealed class TherionWorkspace : IWorkspace
     }
 
     /// <summary>Parses <paramref name="text"/> as the file <paramref name="path"/> (by extension), without touching disk or the cache.</summary>
-    /// <remarks>Internal so <see cref="WorkspaceReachability"/> walks the graph with the very dispatch the loader uses.</remarks>
-    internal static ParseResult<TherionFile> ParseText(string path, string text)
+    /// <remarks>
+    /// Public so callers that must work from the file's *current* text — rather than the snapshot the
+    /// workspace parsed at load time — get the very dispatch the loader uses. Anything that re-emits a
+    /// file (formatting) has to do this, or it rewrites the file from a stale tree.
+    /// </remarks>
+    public static ParseResult<TherionFile> ParseText(string path, string text)
     {
         var ext = Path.GetExtension(path).ToLowerInvariant();
         return ext switch

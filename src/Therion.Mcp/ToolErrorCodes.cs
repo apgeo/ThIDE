@@ -29,6 +29,9 @@ public static class ToolErrorCodes
 
     public const string WriteFailed = "write_failed";
 
+    /// <summary>The new text holds a character the file's declared encoding cannot represent.</summary>
+    public const string UnrepresentableCharacter = "unrepresentable_character";
+
     /// <summary>The requested new name is already taken in the same scope.</summary>
     public const string NameCollision = "name_collision";
 

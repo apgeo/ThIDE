@@ -28,7 +28,6 @@ public sealed class WorkspaceHost : IAsyncDisposable
     private WorkspaceSemanticModel? _model;
     private string? _root;
     private string? _entryPointPath;
-    private bool _triedInitialLoad;
 
     /// <param name="initialWorkspacePath">
     /// Entry point (or folder) to open lazily on first use — the server's <c>--workspace</c> argument.
@@ -53,11 +52,11 @@ public sealed class WorkspaceHost : IAsyncDisposable
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            if (_model is null && _initialPath is not null && !_triedInitialLoad)
-            {
-                _triedInitialLoad = true;
+            // Retried on every call rather than once: a --workspace that fails to open must keep saying
+            // *why* it failed. Remembering "we tried" turns an actionable "two entry-point candidates"
+            // into "no workspace is loaded — start the server with --workspace", which it did.
+            if (_model is null && _initialPath is not null)
                 await LoadCoreAsync(_initialPath, ct).ConfigureAwait(false);
-            }
 
             return Snapshot() ?? throw new WorkspaceNotLoadedException();
         }
@@ -74,7 +73,6 @@ public sealed class WorkspaceHost : IAsyncDisposable
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            _triedInitialLoad = true;
             await LoadCoreAsync(pathOrFolder, ct).ConfigureAwait(false);
             return Snapshot()!;
         }
@@ -103,7 +101,14 @@ public sealed class WorkspaceHost : IAsyncDisposable
     /// <summary>Caller must hold the gate.</summary>
     private async ValueTask LoadCoreAsync(string pathOrFolder, CancellationToken ct)
     {
-        var opened = await WorkspaceLoader.OpenAsync(pathOrFolder, cancellationToken: ct).ConfigureAwait(false);
+        // Resolve symlinks up front so the root, every path the jail hands back, and every FilePath the
+        // model carries are all in the same canonical form. Otherwise a workspace opened through a
+        // symlinked directory compares unequal to itself, and both the jail and the diagnostics filter
+        // silently answer "no".
+        var entryPoint = WorkspacePaths.Canonicalize(
+            await WorkspaceLoader.ResolveEntryPointAsync(pathOrFolder, cancellationToken: ct).ConfigureAwait(false));
+
+        var opened = await WorkspaceLoader.OpenAsync(entryPoint, cancellationToken: ct).ConfigureAwait(false);
 
         var previous = _workspace;
         _workspace = opened;

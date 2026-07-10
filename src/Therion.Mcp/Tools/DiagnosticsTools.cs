@@ -150,14 +150,15 @@ public sealed class DiagnosticsTools(WorkspaceHost host)
         return all;
     }
 
+    /// <summary>
+    /// Both sides are canonicalized: `resolvedFile` came through the jail, which resolves symlinks, and
+    /// a diagnostic's FilePath has not. Comparing one form against the other silently matches nothing.
+    /// </summary>
     private static bool PathMatches(string diagnosticPath, string resolvedFile) =>
         !string.IsNullOrEmpty(diagnosticPath)
-        && Path.GetFullPath(diagnosticPath).Equals(resolvedFile,
+        && WorkspacePaths.Canonicalize(diagnosticPath).Equals(resolvedFile,
             OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
 
-    /// <summary>Rejects numeric input: Enum.TryParse happily accepts "3" as Error.</summary>
     private static bool TryParseSeverity(string value, out DiagnosticSeverity severity) =>
-        Enum.TryParse(value, ignoreCase: true, out severity)
-        && Enum.IsDefined(severity)
-        && !char.IsAsciiDigit(value.TrimStart().FirstOrDefault());
+        ToolEnums.TryParse(value, out severity);
 }

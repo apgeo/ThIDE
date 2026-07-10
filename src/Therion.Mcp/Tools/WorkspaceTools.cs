@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Text;
 using ModelContextProtocol.Server;
 using Therion.Syntax;
 using Therion.Workspace;
@@ -153,7 +154,7 @@ public sealed class WorkspaceTools(WorkspaceHost host)
         string[] lines;
         try
         {
-            lines = EncodingResolver.ReadAllText(full).ReplaceLineEndings("\n").Split('\n');
+            lines = SplitLines(EncodingResolver.ReadAllText(full));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -165,17 +166,32 @@ public sealed class WorkspaceTools(WorkspaceHost host)
         int wanted = limit <= 0 ? lines.Length - start : Math.Min(limit, lines.Length - start);
 
         var text = new System.Text.StringBuilder();
-        int taken = 0;
+        int used = 0, taken = 0;
+        bool cutMidLine = false;
+
         for (; taken < wanted; taken++)
         {
             var line = lines[start + taken];
-            // +1 for the newline this line will contribute once joined.
-            if (text.Length + line.Length + 1 > budget) break;
+            int cost = Encoding.UTF8.GetByteCount(line) + 1;   // +1 for the newline once joined
+
+            if (used + cost > budget)
+            {
+                // Never return zero lines: a caller advancing by lineCount would make no progress and
+                // could never read past a single over-long line. Give it a byte-safe prefix instead.
+                if (taken > 0) break;
+
+                text.Append(Utf8Prefix(line, budget));
+                cutMidLine = true;
+                taken = 1;
+                break;
+            }
+
             if (taken > 0) text.Append('\n');
             text.Append(line);
+            used += cost;
         }
 
-        bool truncated = start + taken < lines.Length;
+        bool truncated = cutMidLine || start + taken < lines.Length;
         return ToolResult<FileContent>.Success(new FileContent(
             Path: WorkspacePaths.ToRelative(snapshot.Root, full),
             Text: text.ToString(),
@@ -183,6 +199,35 @@ public sealed class WorkspaceTools(WorkspaceHost host)
             LineCount: taken,
             TotalLines: lines.Length,
             Truncated: truncated));
+    }
+
+    /// <summary>
+    /// The file's lines. A trailing newline terminates the last line; it does not begin an empty one,
+    /// so `a\nb\n` is two lines, not three.
+    /// </summary>
+    private static string[] SplitLines(string text)
+    {
+        var normalized = text.ReplaceLineEndings("\n");
+        if (normalized.EndsWith('\n')) normalized = normalized[..^1];
+        return normalized.Length == 0 ? [] : normalized.Split('\n');
+    }
+
+    /// <summary>
+    /// The longest prefix of <paramref name="line"/> that fits in <paramref name="budget"/> UTF-8 bytes,
+    /// never splitting a surrogate pair — half an emoji is not text.
+    /// </summary>
+    private static string Utf8Prefix(string line, int budget)
+    {
+        int bytes = 0, i = 0;
+        while (i < line.Length)
+        {
+            int width = char.IsHighSurrogate(line[i]) && i + 1 < line.Length ? 2 : 1;
+            int cost = Encoding.UTF8.GetByteCount(line.AsSpan(i, width));
+            if (bytes + cost > budget) break;
+            bytes += cost;
+            i += width;
+        }
+        return line[..i];
     }
 
     private static WorkspaceInfo Describe(WorkspaceSnapshot snapshot) => new(

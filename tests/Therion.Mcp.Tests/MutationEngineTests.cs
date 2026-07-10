@@ -251,9 +251,9 @@ public class MutationEngineTests
         Assert.False(File.Exists(missing));
     }
 
-    /// <summary>One bad file must not leave the other half-written.</summary>
+    /// <summary>A plan that names one file twice would have its second change silently win.</summary>
     [Fact]
-    public async Task A_plan_that_would_fail_halfway_writes_nothing_at_all()
+    public async Task A_plan_that_changes_one_file_twice_is_refused()
     {
         using var fixture = FixtureWorkspace.Create();
         var (engine, _) = await EngineAsync(fixture);
@@ -262,13 +262,109 @@ public class MutationEngineTests
 
         var plan = new MutationPlan([
             new EditFile(good, [new TextEdit(original.IndexOf("upper", StringComparison.Ordinal), 5, "upper", "lower")]),
-            new CreateFile(good, "clobbered"),   // fails: already exists
+            new CreateFile(good, "clobbered"),
         ]);
 
         var result = await engine.ApplyAsync(plan, dryRun: false);
 
-        Assert.Equal(ToolErrorCodes.FileExists, result.Error!.Code);
+        Assert.Equal(ToolErrorCodes.InvalidArgument, result.Error!.Code);
         Assert.Equal(original, File.ReadAllText(good));
+    }
+
+    /// <summary>
+    /// Validation cannot catch every write failure — a disk fills, a file locks. When the second write
+    /// of a plan fails, the first must be undone, or the caller is left with a workspace nobody planned.
+    /// </summary>
+    [Fact]
+    public async Task A_write_that_fails_halfway_rolls_the_earlier_writes_back()
+    {
+        using var fixture = FixtureWorkspace.Create();
+        var (engine, _) = await EngineAsync(fixture);
+        var edited = fixture.PathTo("caves", "upper.th");
+        var original = File.ReadAllText(edited);
+
+        // The create's parent directory is an existing *file*, so Directory.CreateDirectory throws —
+        // after the edit above it has already been committed.
+        var doomed = fixture.PathTo("caves", "abandoned.th", "child.th");
+
+        var plan = new MutationPlan([
+            new EditFile(edited, [new TextEdit(original.IndexOf("upper", StringComparison.Ordinal), 5, "upper", "lower")]),
+            new CreateFile(doomed, "survey c\nendsurvey\n"),
+        ]);
+
+        var result = await engine.ApplyAsync(plan, dryRun: false);
+
+        Assert.Equal(ToolErrorCodes.WriteFailed, result.Error!.Code);
+        Assert.Contains("restored", result.Error.Message);
+        Assert.Equal(original, File.ReadAllText(edited));
+        Assert.False(File.Exists(doomed));
+    }
+
+    /// <summary>A rollback must restore the exact bytes, encoding and all.</summary>
+    [Fact]
+    public async Task Rollback_restores_the_original_bytes_of_a_latin1_file()
+    {
+        using var fixture = FixtureWorkspace.Create();
+        var latin1 = fixture.PathTo("caves", "grotte.th");
+        File.WriteAllText(latin1, "encoding iso-8859-1\nsurvey grotte\n# Bédeilhac\nendsurvey\n", Encoding.Latin1);
+        File.AppendAllText(fixture.Thconfig, "\nsource caves/grotte.th\n");
+
+        var (engine, _) = await EngineAsync(fixture);
+        var originalBytes = File.ReadAllBytes(latin1);
+        var text = File.ReadAllText(latin1, Encoding.Latin1);
+
+        var plan = new MutationPlan([
+            new EditFile(latin1, [new TextEdit(text.IndexOf("grotte", StringComparison.Ordinal), 6, "grotte", "gouffre")]),
+            new CreateFile(fixture.PathTo("caves", "abandoned.th", "child.th"), "x"),   // throws
+        ]);
+
+        var result = await engine.ApplyAsync(plan, dryRun: false);
+
+        Assert.False(result.Ok);
+        Assert.Equal(originalBytes, File.ReadAllBytes(latin1));
+    }
+
+    /// <summary>Silently writing '?' for a character the file's encoding cannot hold is data loss.</summary>
+    [Fact]
+    public async Task A_character_the_declared_encoding_cannot_hold_stops_the_write()
+    {
+        using var fixture = FixtureWorkspace.Create();
+        var latin1 = fixture.PathTo("caves", "grotte.th");
+        File.WriteAllText(latin1, "encoding iso-8859-1\nsurvey grotte\nendsurvey\n", Encoding.Latin1);
+        File.AppendAllText(fixture.Thconfig, "\nsource caves/grotte.th\n");
+
+        var (engine, _) = await EngineAsync(fixture);
+        var text = File.ReadAllText(latin1, Encoding.Latin1);
+        var originalBytes = File.ReadAllBytes(latin1);
+
+        // 'ș' (U+0219) is Romanian Latin-2; iso-8859-1 has no such byte.
+        var plan = new MutationPlan([
+            new EditFile(latin1, [new TextEdit(text.IndexOf("grotte", StringComparison.Ordinal), 6, "grotte", "Peștera")])]);
+
+        var result = await engine.ApplyAsync(plan, dryRun: false);
+
+        Assert.Equal(ToolErrorCodes.UnrepresentableCharacter, result.Error!.Code);
+        Assert.Contains("U+0219", result.Error.Message);
+        Assert.Equal(originalBytes, File.ReadAllBytes(latin1));
+    }
+
+    /// <summary>The digest a successful write reports must describe the file it just produced.</summary>
+    [Fact]
+    public async Task The_sha256_reported_after_a_write_chains_into_the_next_one()
+    {
+        using var fixture = FixtureWorkspace.Create();
+        var (engine, _) = await EngineAsync(fixture);
+        var target = fixture.PathTo("caves", "upper.th");
+
+        var first = await engine.ApplyAsync(RenameSurvey(target, "upper", "lower"), dryRun: false);
+        var sha = first.Data!.Files[0].Sha256!;
+
+        var second = await engine.ApplyAsync(
+            RenameSurvey(target, "lower", "middle"), dryRun: false,
+            expectedSha256: new Dictionary<string, string> { ["caves/upper.th"] = sha });
+
+        Assert.True(second.Ok, second.Error?.Message);
+        Assert.Contains("survey middle", File.ReadAllText(target));
     }
 
     [Theory]

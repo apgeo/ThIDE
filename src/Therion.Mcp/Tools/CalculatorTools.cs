@@ -38,14 +38,14 @@ public sealed class CalculatorTools
         [Description("Unit to convert it to, e.g. 'metre' or 'degree'.")]
         string to)
     {
-        if (TryParse<LengthUnit>(from, out var fromLength) && TryParse<LengthUnit>(to, out var toLength))
+        if (ToolEnums.TryParse<LengthUnit>(from, out var fromLength) && ToolEnums.TryParse<LengthUnit>(to, out var toLength))
             return Converted(value, from, to, UnitConverter.Instance.ConvertLength(value, fromLength, toLength));
 
-        if (TryParse<AngleUnit>(from, out var fromAngle) && TryParse<AngleUnit>(to, out var toAngle))
+        if (ToolEnums.TryParse<AngleUnit>(from, out var fromAngle) && ToolEnums.TryParse<AngleUnit>(to, out var toAngle))
             return Converted(value, from, to, UnitConverter.Instance.ConvertAngle(value, fromAngle, toAngle));
 
         return ToolResult<UnitConversion>.Failure(ToolErrorCodes.InvalidArgument,
-            $"Cannot convert '{from}' to '{to}'. Lengths: {Names<LengthUnit>()}. Angles: {Names<AngleUnit>()}.");
+            $"Cannot convert '{from}' to '{to}'. Lengths: {ToolEnums.Names<LengthUnit>()}. Angles: {ToolEnums.Names<AngleUnit>()}.");
     }
 
     [McpServerTool(Name = "convert_coordinates", Title = "Convert coordinates", ReadOnly = true, Idempotent = true)]
@@ -141,12 +141,4 @@ public sealed class CalculatorTools
     private static ToolResult<UnitConversion> Converted(double value, string from, string to, double result) =>
         ToolResult<UnitConversion>.Success(new UnitConversion(value, from, to, result));
 
-    /// <summary>Rejects numeric input: Enum.TryParse would happily read "3" as the third member.</summary>
-    private static bool TryParse<TEnum>(string value, out TEnum parsed) where TEnum : struct, Enum =>
-        Enum.TryParse(value, ignoreCase: true, out parsed)
-        && Enum.IsDefined(parsed)
-        && !char.IsAsciiDigit(value.TrimStart().FirstOrDefault());
-
-    private static string Names<TEnum>() where TEnum : struct, Enum =>
-        string.Join(", ", Enum.GetNames<TEnum>().Select(n => char.ToLowerInvariant(n[0]) + n[1..]));
 }

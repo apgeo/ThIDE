@@ -170,6 +170,58 @@ public class WorkspaceToolsTests
         Assert.True(result.Data.Truncated);
     }
 
+    /// <summary>
+    /// A line longer than the byte budget used to return zero lines, so a caller advancing by
+    /// lineCount never moved and the file could not be read at all.
+    /// </summary>
+    [Fact]
+    public async Task Read_file_always_returns_at_least_one_line()
+    {
+        using var fixture = FixtureWorkspace.Create();
+        File.WriteAllText(fixture.PathTo("caves", "upper.th"), new string('x', 500) + "\nsurvey upper\nendsurvey\n");
+        var tools = await LoadedToolsAsync(fixture);
+
+        var result = await tools.ReadFile("caves/upper.th", maxBytes: 10);
+
+        Assert.True(result.Ok);
+        Assert.Equal(1, result.Data!.LineCount);
+        Assert.True(result.Data.Truncated);
+        Assert.Equal(10, result.Data.Text.Length);
+    }
+
+    /// <summary>The budget is bytes, and a UTF-8 accented character costs two of them.</summary>
+    [Fact]
+    public async Task Read_file_counts_bytes_not_characters()
+    {
+        using var fixture = FixtureWorkspace.Create();
+        File.WriteAllText(fixture.PathTo("caves", "upper.th"), "ééééé\nsurvey upper\nendsurvey\n");
+        var tools = await LoadedToolsAsync(fixture);
+
+        // 5 accented chars = 10 UTF-8 bytes; +1 for the newline exceeds a budget of 10.
+        var result = await tools.ReadFile("caves/upper.th", maxBytes: 10);
+
+        Assert.True(result.Ok);
+        Assert.Equal(1, result.Data!.LineCount);
+        Assert.Equal(5, result.Data.Text.Length);
+        Assert.Equal(10, System.Text.Encoding.UTF8.GetByteCount(result.Data.Text));
+    }
+
+    /// <summary>A trailing newline terminates the last line; it does not begin an empty one.</summary>
+    [Fact]
+    public async Task Read_file_does_not_invent_a_trailing_empty_line()
+    {
+        using var fixture = FixtureWorkspace.Create();
+        File.WriteAllText(fixture.PathTo("caves", "upper.th"), "survey upper\nendsurvey\n");
+        var tools = await LoadedToolsAsync(fixture);
+
+        var result = await tools.ReadFile("caves/upper.th");
+
+        Assert.Equal(2, result.Data!.TotalLines);
+        Assert.Equal(2, result.Data.LineCount);
+        Assert.Equal("survey upper\nendsurvey", result.Data.Text);
+        Assert.False(result.Data.Truncated);
+    }
+
     [Fact]
     public async Task Read_file_refuses_to_leave_the_workspace()
     {

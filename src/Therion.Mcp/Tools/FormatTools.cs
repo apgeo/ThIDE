@@ -3,6 +3,7 @@ using ModelContextProtocol.Server;
 using Therion.Core;
 using Therion.Mcp.Mutations;
 using Therion.Syntax;
+using Therion.Workspace;
 
 namespace Therion.Mcp.Tools;
 
@@ -48,14 +49,9 @@ public sealed class FormatTools(WorkspaceHost host, MutationEngine mutations)
         if (!WorkspacePaths.TryResolve(snapshot!.Root, path, out var full, out var reason))
             return ToolResult<FormatResult>.Failure(ToolErrorCodes.PathOutsideWorkspace, reason);
 
-        if (snapshot.Workspace.TryGetFile(full) is not { } parsed || parsed.Value is null)
+        if (snapshot.Workspace.TryGetFile(full) is null)
             return ToolResult<FormatResult>.Failure(ToolErrorCodes.FileNotFound,
                 $"'{path}' is not a parsed file in the loaded project. Call list_files to see what is.");
-
-        if (Describe(parsed.Diagnostics, snapshot.Root) is { } errors)
-            return ToolResult<FormatResult>.Failure(ToolErrorCodes.ParseErrors, errors);
-
-        var formatted = new TherionWriter().Write(parsed.Value);
 
         SourceFile current;
         try { current = SourceFileIo.Read(full); }
@@ -63,6 +59,19 @@ public sealed class FormatTools(WorkspaceHost host, MutationEngine mutations)
         {
             return ToolResult<FormatResult>.Failure(ToolErrorCodes.ReadFailed, ex.Message);
         }
+
+        // Re-parse the file as it stands *now*, not the tree the workspace parsed when it loaded.
+        // Re-emitting a stale tree over the current text silently discards whatever changed on disk
+        // since — and the plan's whole-file text-slice guard cannot notice, because the text it
+        // expects is the very text it just read.
+        var parsed = TherionWorkspace.ParseText(full, current.Text);
+        if (parsed.Value is null)
+            return ToolResult<FormatResult>.Failure(ToolErrorCodes.ParseErrors, $"'{path}' could not be parsed.");
+
+        if (Describe(parsed.Diagnostics, snapshot.Root) is { } errors)
+            return ToolResult<FormatResult>.Failure(ToolErrorCodes.ParseErrors, errors);
+
+        var formatted = new TherionWriter().Write(parsed.Value);
 
         bool changed = !string.Equals(current.Text, formatted, StringComparison.Ordinal);
 

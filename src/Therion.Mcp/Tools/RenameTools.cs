@@ -157,9 +157,8 @@ public sealed class RenameTools(WorkspaceHost host, MutationEngine mutations)
     }
 
     private static bool TryParseKind(string value, out ReferenceKind kind) =>
-        Enum.TryParse(value, ignoreCase: true, out kind)
-        && kind is ReferenceKind.Any or ReferenceKind.Station or ReferenceKind.Survey
-        && !char.IsAsciiDigit(value.TrimStart().FirstOrDefault());
+        ToolEnums.TryParse(value, out kind)
+        && kind is ReferenceKind.Any or ReferenceKind.Station or ReferenceKind.Survey;
 
     private static ToolResult<RenameResult> Failure(string code, string message) =>
         ToolResult<RenameResult>.Failure(code, message);
