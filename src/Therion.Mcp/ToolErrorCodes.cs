@@ -55,6 +55,11 @@ public static class ToolErrorCodes
     /// Only the in-app host can raise this (Q-01, resolved at T-03.6); the headless server cannot know.
     /// </summary>
     public const string FileDirty = "file_dirty";
+
+    // ---- ring R3 (in-app UI, T-03.3) -----------------------------------------------------------
+
+    /// <summary>The IDE UI cannot be reached — no main window yet, or the host is headless.</summary>
+    public const string UiUnavailable = "ui_unavailable";
 }
 
 /// <summary>

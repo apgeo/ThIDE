@@ -51,7 +51,10 @@ public static class TherionMcpBuilderExtensions
     ];
 
     /// <summary>Ring R3 — registered only when the caller supplied a real <see cref="IUiBridge"/>.</summary>
-    private static readonly Type[] UiToolTypes = [];
+    private static readonly Type[] UiToolTypes =
+    [
+        typeof(UiTools),
+    ];
 
     /// <summary>
     /// Registers the Therion tool catalog on an MCP server builder. Call <em>after</em> registering

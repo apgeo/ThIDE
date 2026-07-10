@@ -22,6 +22,9 @@ public class LiveWorkspaceHostTests
     {
         public bool IsAvailable => true;
         public Task<T> InvokeAsync<T>(Func<Task<T>> func) => func();
+        public Task<UiState?> GetUiStateAsync() => Task.FromResult<UiState?>(null);
+        public Task<IReadOnlyList<OpenDocumentInfo>> GetOpenDocumentsAsync() =>
+            Task.FromResult<IReadOnlyList<OpenDocumentInfo>>([]);
     }
 
     // Hands the live host a fixed set of "unsaved" buffers instead of the real document list.

@@ -116,6 +116,14 @@ public sealed record AppSettings
     /// </summary>
     public bool EnableMcpServer { get; init; }
 
+    /// <summary>
+    /// "Follow the agent": whether the in-app MCP server's ring-R3 <em>action</em> tools (open a file,
+    /// focus a pane, run a command…) may drive the UI. On by default. Read-only tools (get_ui_state,
+    /// get_diagnostics…) ignore it. The Preferences toggle and the cross-R3 enforcement land in T-03.5;
+    /// this field exists now so get_ui_state can report the state (T-03.3).
+    /// </summary>
+    public bool McpFollowAgent { get; init; } = true;
+
     // ---- telemetry ----
     /// <summary>Opt-in: record anonymous usage events + crash reports to LOCAL files only. Off by default.</summary>
     public bool TelemetryEnabled { get; init; }

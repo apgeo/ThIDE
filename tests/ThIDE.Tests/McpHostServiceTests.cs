@@ -95,8 +95,8 @@ public class McpHostServiceTests
         Assert.NotEqual(HttpStatusCode.Unauthorized, (await http.SendAsync(ok)).StatusCode);
 
         // A real MCP client, over HTTP + the bearer token, handshakes and lists the catalog — the
-        // acceptance smoke, automated. R3 tools aren't registered yet (T-03.3+), so the in-app host
-        // exposes the same Full R1+R2 set as the stdio host.
+        // acceptance smoke, automated. The in-app host also exposes ring R3 (a real UiBridge is present),
+        // so the catalog is a superset of the stdio host's.
         var transport = new HttpClientTransport(new HttpClientTransportOptions
         {
             Endpoint = new Uri(info.Url),
@@ -109,6 +109,7 @@ public class McpHostServiceTests
             var tools = await client.ListToolsAsync();
             Assert.Contains(tools, t => t.Name == "server_info");   // R1
             Assert.Contains(tools, t => t.Name == "rename_symbol"); // R2 (Full profile)
+            Assert.Contains(tools, t => t.Name == "get_ui_state");  // R3 (in-app only — T-03.3)
         }
 
         // Turn it off: the listener and its discovery file are both gone.

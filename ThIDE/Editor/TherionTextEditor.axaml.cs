@@ -3305,6 +3305,9 @@ public partial class TherionTextEditor : UserControl
 
     public int CurrentLine => _editor?.TextArea.Caret.Line ?? 1;
 
+    /// <summary>1-based caret column in this editor (used by the in-app MCP get_ui_state, T-03.3).</summary>
+    public int CurrentColumn => _editor?.TextArea.Caret.Column ?? 1;
+
     // Collapses/expands every foldable region in the document (#8).
     private void SetAllFoldings(bool folded)
     {

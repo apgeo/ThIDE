@@ -181,6 +181,34 @@ public sealed class DockFactory : Factory
     }
 
     /// <summary>
+    /// Titles of the tool panes currently in the layout — docked or floating (i.e. open, not closed).
+    /// Read by the in-app MCP host's get_ui_state (T-03.3). Must run on the UI thread (touches the dock
+    /// model). Granularity is "open", not "focused tab": a tool in a background tab still counts.
+    /// </summary>
+    public System.Collections.Generic.IReadOnlyList<string> OpenToolTitles()
+    {
+        var open = new System.Collections.Generic.List<string>();
+        if (_rootDock is null) return open;
+
+        var tools = new IDockable[]
+        {
+            _welcome, _workspace, _objectBrowser, _diagnostics, _compilerOutput, _generatedFiles,
+            _xvi, _outline, _project, _log, _livePreview, _mapViewer, _model3dViewer,
+            _structuralGeology, _structuralPlot, _settings,
+        };
+        foreach (var t in tools)
+        {
+            try
+            {
+                if (ContainsRef(_rootDock, t) || HostWindowOf(t) is not null)
+                    open.Add(t.Title ?? t.Id ?? "?");
+            }
+            catch { /* best-effort */ }
+        }
+        return open;
+    }
+
+    /// <summary>
     /// Activates a tool in the central document well (like the Object Browser), adding it there on
     /// demand if it isn't in the layout yet. Used for the big-panel Structural Geology view.
     /// </summary>
