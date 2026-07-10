@@ -242,19 +242,12 @@ public sealed class GraphTools(WorkspaceHost host)
     }
 
     /// <summary>
-    /// Equate representatives of stations fixed under a coordinate system. A bare <c>fix</c> with no
-    /// <c>cs</c> is a local placeholder, not a position on Earth, so it does not ground a piece —
-    /// the same rule TH_SEM_015 applies.
+    /// Equate representatives of the stations a georeferenced <c>fix</c> anchors — the same set, and
+    /// the same <c>@</c>-resolution, that TH_SEM_015 uses. A bare <c>fix</c> with no <c>cs</c> is a
+    /// local placeholder, not a position on Earth, and does not ground anything.
     /// </summary>
-    private static HashSet<QualifiedName> GroundedRepresentatives(WorkspaceSemanticModel model, ConnectivityGraph graph)
-    {
-        var grounded = new HashSet<QualifiedName>();
-        foreach (var file in model.PerFile.Values)
-            foreach (var station in file.Stations.Values)
-                if (station.Kind == StationDeclarationKind.Fix && !string.IsNullOrWhiteSpace(station.Cs))
-                    grounded.Add(graph.Representative(station.Name));
-        return grounded;
-    }
+    private static HashSet<QualifiedName> GroundedRepresentatives(WorkspaceSemanticModel model, ConnectivityGraph graph) =>
+        WorkspaceEquates.GroundedStations(model).Select(graph.Representative).ToHashSet();
 
     /// <summary>Surveyed length of each component, from the non-splay legs whose endpoints it contains.</summary>
     private static Dictionary<int, double> LengthByComponent(WorkspaceSemanticModel model, ConnectivityGraph graph)

@@ -309,13 +309,13 @@ public static class ProjectDiagnostics
                 symbolByName.TryAdd(st.Name, st);
                 if (!string.IsNullOrEmpty(st.DeclarationSpan.FilePath))
                     Files(rep).Add(st.DeclarationSpan.FilePath);
-                // A georeferenced fix (one made under a `cs`) grounds the piece to absolute coordinates;
-                // a bare `fix` with no coordinate system is only a local placeholder — it grounds the
-                // piece only when the caller opts in via LocalFixGrounds.
-                if (st.Kind == StationDeclarationKind.Fix &&
-                    (o.LocalFixGrounds || !string.IsNullOrWhiteSpace(st.Cs)))
-                    groundedReps.Add(rep);
             }
+
+        // A georeferenced fix grounds the piece it anchors. Resolved through the workspace, because a
+        // wrapper survey fixes a station that lives in another file (`fix 1@partA`) and the per-file
+        // binder cannot see through the `@`.
+        foreach (var grounded in WorkspaceEquates.GroundedStations(ws, o.LocalFixGrounds))
+            groundedReps.Add(equates.Find(grounded));
 
         // Edges from non-splay legs (splays reach wall points, not the survey skeleton).
         foreach (var model in ws.PerFile.Values)

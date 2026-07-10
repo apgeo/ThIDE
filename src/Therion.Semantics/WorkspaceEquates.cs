@@ -43,6 +43,34 @@ public static class WorkspaceEquates
     }
 
     /// <summary>
+    /// The stations a georeferenced <c>fix</c> anchors to absolute coordinates.
+    /// </summary>
+    /// <param name="localFixGrounds">
+    /// Treat a bare <c>fix</c> with no <c>cs</c> as grounding. Off by default: without a coordinate
+    /// system such a fix is a local placeholder, not a position on Earth.
+    /// </param>
+    /// <remarks>
+    /// A wrapper survey typically fixes a station it does not contain — <c>fix 1@partA …</c> — and the
+    /// per-file binder cannot resolve that <c>@</c> because <c>partA</c> lives in another file. It
+    /// therefore records a station literally named <c>wrapper.1@partA</c>. Resolving it here is what
+    /// stops a georeferenced cave from being reported as ungrounded (and floating).
+    /// </remarks>
+    public static IEnumerable<QualifiedName> GroundedStations(
+        WorkspaceSemanticModel workspace, bool localFixGrounds = false)
+    {
+        foreach (var model in workspace.PerFile.Values)
+            foreach (var station in model.Stations.Values)
+            {
+                if (station.Kind != StationDeclarationKind.Fix) continue;
+                if (!localFixGrounds && string.IsNullOrWhiteSpace(station.Cs)) continue;
+
+                yield return station.Name.Last.Contains('@')
+                    ? ResolveMember(workspace, model, station.Name.Last) ?? station.Name
+                    : station.Name;
+            }
+    }
+
+    /// <summary>
     /// Resolves one <c>equate</c> member token (<c>0</c>, <c>0@part</c>, <c>cave.part.0</c>) to the
     /// station it names, or <c>null</c> when it names nothing resolvable.
     /// </summary>
