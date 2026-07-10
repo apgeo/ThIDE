@@ -55,6 +55,7 @@ public class CatalogE2eTests
         "generate_report",
         "project_metadata_set",
         "set_lead_status",
+        "run_build",
     ];
 
     /// <summary>
@@ -67,6 +68,7 @@ public class CatalogE2eTests
         "rename_symbol", "format_file",
         "export_gis", "export_tables", "generate_report",   // replace an existing artifact
         "project_metadata_set",                             // overwrites a sidecar the user may have edited
+        "run_build",                                        // Therion writes over yesterday's outputs
     ];
 
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(120);

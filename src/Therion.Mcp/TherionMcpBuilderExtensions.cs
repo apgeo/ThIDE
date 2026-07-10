@@ -28,6 +28,7 @@ public static class TherionMcpBuilderExtensions
         typeof(ImportTools),
         typeof(ExportTools),
         typeof(ProjectStateTools),
+        typeof(BuildTools),
     ];
 
     /// <summary>Ring R3 — registered only when the caller supplied a real <see cref="IUiBridge"/>.</summary>
@@ -54,6 +55,12 @@ public static class TherionMcpBuilderExtensions
         // sees marked pushed (D-027). A host with its own instances registers them first.
         builder.Services.TryAddSingleton<Workspace.IProjectMetadataStore>(_ => new Workspace.ProjectMetadataStore());
         builder.Services.TryAddSingleton<Workspace.ILeadStatusStore>(_ => new Workspace.LeadStatusStore());
+
+        // The real compiler, found on PATH or in the usual places. A test — or the in-app host, which
+        // has the user's configured override — registers its own first.
+        builder.Services.TryAddSingleton<Processing.Abstractions.IExternalToolLocator>(_ => new Build.ExternalToolLocator());
+        builder.Services.TryAddSingleton<Processing.Abstractions.ITherionCompiler>(sp =>
+            new Build.TherionCompiler(sp.GetRequiredService<Processing.Abstractions.IExternalToolLocator>()));
 
         // The named argument is load-bearing: a bare WithTools(someTypeArray) binds to the generic
         // WithTools<TToolType>(target) overload with TToolType = Type[], which registers nothing and

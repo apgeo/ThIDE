@@ -44,6 +44,12 @@ public static class ToolErrorCodes
     /// <summary>The project holds nothing of the kind the export would contain.</summary>
     public const string NothingToExport = "nothing_to_export";
 
+    /// <summary>An external tool (the Therion compiler) is not installed or cannot be found.</summary>
+    public const string ToolNotFound = "tool_not_found";
+
+    /// <summary>The compiler could not be run at all — not "it reported errors", which is a success.</summary>
+    public const string BuildFailed = "build_failed";
+
     /// <summary>
     /// The target is open in the IDE with unsaved changes, so writing disk would fork the user's state.
     /// Only the in-app host can raise this (Q-01, resolved at T-03.6); the headless server cannot know.
