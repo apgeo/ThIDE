@@ -94,15 +94,28 @@ public sealed class ConnectivityGraph
     /// Cross-file <c>@</c> equates are not merged here (only the per-file equate classes are);
     /// shots and same-file equates from all files are combined.
     /// </summary>
-    public static ConnectivityGraph Build(WorkspaceSemanticModel workspace)
+    public static ConnectivityGraph Build(WorkspaceSemanticModel workspace) =>
+        Build(workspace, mergeCrossFileEquates: false);
+
+    /// <summary>
+    /// As <see cref="Build(WorkspaceSemanticModel)"/>, but when <paramref name="mergeCrossFileEquates"/>
+    /// is set the <c>@</c>-equates that stitch a cave together across files are merged as well, so
+    /// <see cref="Components"/> counts the pieces a caver would count. That is what
+    /// <c>ProjectDiagnostics</c>' disconnection check (TH_SEM_015) means by a "piece"; anything
+    /// reporting components to a user should say so the same way.
+    /// </summary>
+    public static ConnectivityGraph Build(WorkspaceSemanticModel workspace, bool mergeCrossFileEquates)
     {
         var stations = new List<StationSymbol>();
         var shots = ImmutableArray.CreateBuilder<ShotSymbol>();
-        var equates = new EquateGraph();
+
+        var equates = mergeCrossFileEquates ? WorkspaceEquates.Build(workspace) : new EquateGraph();
         foreach (var model in workspace.PerFile.Values)
         {
             stations.AddRange(model.Stations.Values);
             shots.AddRange(model.Shots);
+            if (mergeCrossFileEquates) continue;   // already unioned, cross-file included
+
             foreach (var group in model.Equates.Groups())
                 for (int i = 1; i < group.Length; i++)
                     equates.Union(group[0], group[i]);

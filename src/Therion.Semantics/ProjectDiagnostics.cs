@@ -285,24 +285,9 @@ public static class ProjectDiagnostics
     private static void Disconnection(WorkspaceSemanticModel ws, ProjectDiagnosticOptions o,
         ImmutableArray<Diagnostic>.Builder diags)
     {
-        // Equate union-find over station names, merging BOTH the per-file equate classes AND cross-file
-        // `@`-equates (resolved through the workspace), so a cave stitched together across files is seen
-        // as a single piece rather than wrongly reported as many disconnected ones.
-        var equates = new EquateGraph();
-        foreach (var model in ws.PerFile.Values)
-            foreach (var group in model.Equates.Groups())
-                for (int i = 1; i < group.Length; i++) equates.Union(group[0], group[i]);
-        foreach (var model in ws.PerFile.Values)
-            foreach (var rec in model.EquateRecords)
-            {
-                QualifiedName? first = null;
-                foreach (var raw in rec.Stations)
-                {
-                    if (ResolveEquateMember(ws, model, raw) is not { } qn) continue;
-                    if (first is null) first = qn;
-                    else equates.Union(first.Value, qn);
-                }
-            }
+        // Node identity comes from the shared workspace equate classes — per-file *and* cross-file
+        // `@`-equates — so a cave stitched together across files is one piece, not many.
+        var equates = WorkspaceEquates.Build(ws);
 
         // Nodes = equate-merged stations; index each rep's declaring files + grounded state, and keep a
         // station-name → symbol map for the navigable diagnostic anchor.
@@ -483,35 +468,6 @@ public static class ProjectDiagnostics
         return files.Count <= max
             ? string.Join(", ", files)
             : string.Join(", ", files.Take(max)) + $", +{files.Count - max} more";
-    }
-
-    /// <summary>
-    /// Resolves an <c>equate</c> member (as written in source) to the canonical station name it refers
-    /// to, spanning files: cross-file / <c>@</c>-qualified / full-dotted names via the workspace resolver,
-    /// then a bare or relative name against its own file (exact, else a unique last-name match).
-    /// </summary>
-    private static QualifiedName? ResolveEquateMember(WorkspaceSemanticModel ws, SemanticModel model, string raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw)) return null;
-        raw = raw.Trim();
-        if (ws.ResolveStationSymbol(raw) is { } sym) return sym.Name;
-
-        var r = StationRef.Parse(raw);
-        if (!r.HasSurvey)
-        {
-            var direct = QualifiedName.Of(r.Point);
-            if (model.Stations.ContainsKey(direct)) return direct;
-        }
-        // A unique last-name match inside this one file (station names are effectively unique per
-        // survey; requiring uniqueness avoids guessing across surveys that reuse a name).
-        QualifiedName? unique = null;
-        foreach (var name in model.Stations.Keys)
-            if (string.Equals(name.Last, r.Point, StringComparison.Ordinal))
-            {
-                if (unique is not null) return null;
-                unique = name;
-            }
-        return unique;
     }
 
     // ---- : dangling include targets ---------------------------------------------------
