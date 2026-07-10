@@ -1,12 +1,15 @@
-// export any tabular data view to CSV or a Markdown table (string builders only;
-// clipboard/file writing is the caller's concern). Pure + unit-testable.
+// Render a header + rows of strings as CSV, Markdown, HTML or LaTeX. String builders only;
+// clipboard and file writing are the caller's concern. Pure + unit-testable.
+//
+// Lives beside SurveyTables, which projects a WorkspaceSemanticModel into headers+rows and whose own
+// header comment used to say "the formatting lives in the app's DataExport". It doesn't any more:
+// the MCP export tools need the same formatters with no UI loaded.
 
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Avalonia.Input.Platform;
 
-namespace ThIDE.Services;
+namespace Therion.Semantics;
 
 /// <summary>Renders a header + rows of strings as CSV or a GitHub-flavoured Markdown table.</summary>
 public static class DataExport
@@ -97,15 +100,4 @@ public static class DataExport
     private static string MdCell(string? value) =>
         (value ?? string.Empty).Replace("\\", "\\\\").Replace("|", "\\|")
             .Replace("\r", string.Empty).Replace("\n", "<br>");
-}
-
-/// <summary>Sets text on the desktop clipboard via the main window (no-op in headless tests).</summary>
-public static class ClipboardHelper
-{
-    public static void SetText(string text)
-    {
-        if (Avalonia.Application.Current?.ApplicationLifetime is
-            Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime life)
-            _ = life.MainWindow?.Clipboard?.SetTextAsync(text);
-    }
 }

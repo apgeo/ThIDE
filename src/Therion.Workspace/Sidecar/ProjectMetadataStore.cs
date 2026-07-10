@@ -1,16 +1,16 @@
-// project metadata editor. High-level project info (name, region, CRS, declination
-// source, license, notes) kept in a per-root JSON sidecar — not written into the Therion source —
-// so editing is instant and never risks the survey data. Keyed by workspace root, mirroring
-// LeadStatusStore.
+// Project metadata: name, region, CRS, declination source, licence, notes. Kept in a per-root JSON
+// sidecar — never written into the Therion source — so editing is instant and cannot risk survey data.
+// See ProjectSidecar for where the file lives.
+//
+// Lib-side rather than app-side because the MCP server reads and writes the same sidecar the IDE does
+// (DECISIONS D-027): a lead the model marks pushed is a lead the caver sees marked pushed.
 
 using System;
 using System.IO;
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 
-namespace ThIDE.Services;
+namespace Therion.Workspace;
 
 /// <summary>A project's high-level metadata (sidecar, NOT in the .th source).</summary>
 public sealed record ProjectMetadata
@@ -79,20 +79,7 @@ public sealed class ProjectMetadataStore : IProjectMetadataStore
         }
     }
 
-    private static string? Key(string? root)
-    {
-        if (string.IsNullOrEmpty(root)) return null;
-        string norm;
-        try { norm = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root)).ToLowerInvariant(); }
-        catch { norm = root.ToLowerInvariant(); }
-        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(norm)))[..16];
-    }
+    private static string? Key(string? root) => ProjectSidecar.KeyFor(root);
 
-    private static string DefaultDir()
-    {
-        var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        if (string.IsNullOrEmpty(appData))
-            appData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config");
-        return Path.Combine(appData, "ThIDE", "metadata");
-    }
+    private static string DefaultDir() => ProjectSidecar.DirectoryFor("metadata");
 }

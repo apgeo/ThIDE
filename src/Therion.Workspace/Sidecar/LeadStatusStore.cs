@@ -8,12 +8,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 
-namespace ThIDE.Services;
+namespace Therion.Workspace;
 
 public interface ILeadStatusStore
 {
@@ -96,20 +94,7 @@ public sealed class LeadStatusStore : ILeadStatusStore
         catch (Exception ex) { _logger?.LogWarning(ex, "Failed to save lead statuses."); }
     }
 
-    private static string? Key(string? root)
-    {
-        if (string.IsNullOrEmpty(root)) return null;
-        string norm;
-        try { norm = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root)).ToLowerInvariant(); }
-        catch { norm = root.ToLowerInvariant(); }
-        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(norm)))[..16];
-    }
+    private static string? Key(string? root) => ProjectSidecar.KeyFor(root);
 
-    private static string DefaultDir()
-    {
-        var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        if (string.IsNullOrEmpty(appData))
-            appData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config");
-        return Path.Combine(appData, "ThIDE", "leads");
-    }
+    private static string DefaultDir() => ProjectSidecar.DirectoryFor("leads");
 }

@@ -1,6 +1,6 @@
-using ThIDE.Services;
+using Therion.Workspace;
 
-namespace ThIDE.Tests;
+namespace Therion.Workspace.Tests;
 
 // the project metadata sidecar store.
 public class ProjectMetadataStoreTests

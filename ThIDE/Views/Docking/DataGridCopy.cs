@@ -23,6 +23,7 @@ using Avalonia.Interactivity;
 using Avalonia.VisualTree;
 using ThIDE.Resources;
 using ThIDE.Services;
+using Therion.Semantics;
 
 namespace ThIDE.Views.Docking;
 

@@ -1,9 +1,9 @@
 // CSV / Markdown table export.
 using System.Collections.Generic;
-using ThIDE.Services;
+using Therion.Semantics;
 using Xunit;
 
-namespace ThIDE.Tests;
+namespace Therion.Semantics.Tests;
 
 public class DataExportTests
 {
