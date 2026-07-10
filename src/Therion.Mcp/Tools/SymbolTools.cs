@@ -6,9 +6,6 @@ using Therion.Semantics;
 
 namespace Therion.Mcp.Tools;
 
-/// <summary>A place in the project. Line and column are 1-based, as the editor and diagnostics report them.</summary>
-public sealed record Location(string File, int Line, int Column, int EndLine, int EndColumn);
-
 /// <param name="Kind">station, survey, map, scrap, or scrapObject.</param>
 /// <param name="Name">Fully-qualified, dot-separated for stations and surveys; a bare id otherwise.</param>
 /// <param name="Detail">Whatever distinguishes this symbol at a glance — a title, flags, how it was declared.</param>
@@ -106,7 +103,7 @@ public sealed class SymbolTools(WorkspaceHost host)
         if (error is not null) return ToolResult<Location>.Failure(error);
 
         var navigation = new WorkspaceSymbolNavigationService(snapshot!.Model);
-        if (navigation.GoToDefinition(name, referenceKind) is not { } span || ToLocation(span, snapshot.Root) is not { } location)
+        if (navigation.GoToDefinition(name, referenceKind) is not { } span || Location.From(span, snapshot.Root) is not { } location)
             return ToolResult<Location>.Failure(ToolErrorCodes.SymbolNotFound,
                 $"Nothing named '{name}' is declared in this project. Try list_symbols to see what is.");
 
@@ -143,18 +140,18 @@ public sealed class SymbolTools(WorkspaceHost host)
         var navigation = new WorkspaceSymbolNavigationService(snapshot!.Model);
 
         var definition = navigation.GoToDefinition(name, referenceKind) is { } span
-            ? ToLocation(span, snapshot.Root)
+            ? Location.From(span, snapshot.Root)
             : null;
 
         // SymbolReferences.FindAll is what the editor's Shift+F12 calls: it resolves the token to a
         // symbol identity first, so occurrences are scope-correct rather than textual matches.
         var all = SymbolReferences.FindAll(snapshot.Model, name, referenceKind)
-            .Select(r => ToLocation(r.Span, snapshot.Root) is { } l ? new ReferenceDto(l, r.IsDeclaration) : null)
+            .Select(r => Location.From(r.Span, snapshot.Root) is { } l ? new ReferenceDto(l, r.IsDeclaration) : null)
             .OfType<ReferenceDto>()
             .ToList();
 
         var aggregations = navigation.FindAggregations(name, referenceKind)
-            .Select(a => ToLocation(a.Span, snapshot.Root) is { } l ? new AggregationDto(a.Kind, l) : null)
+            .Select(a => Location.From(a.Span, snapshot.Root) is { } l ? new AggregationDto(a.Kind, l) : null)
             .OfType<AggregationDto>()
             .ToList();
 
@@ -185,23 +182,23 @@ public sealed class SymbolTools(WorkspaceHost host)
 
         if (Wanted("survey"))
             foreach (var s in model.SurveysByFullName.Values)
-                yield return new SymbolDto("survey", s.Name.ToString(), ToLocation(s.DeclarationSpan, root), s.Title);
+                yield return new SymbolDto("survey", s.Name.ToString(), Location.From(s.DeclarationSpan, root), s.Title);
 
         if (Wanted("station"))
             foreach (var s in model.StationsByQn.Values)
-                yield return new SymbolDto("station", s.Name.ToString(), ToLocation(s.DeclarationSpan, root), DescribeStation(s));
+                yield return new SymbolDto("station", s.Name.ToString(), Location.From(s.DeclarationSpan, root), DescribeStation(s));
 
         if (Wanted("map"))
             foreach (var m in model.MapsById.Values)
-                yield return new SymbolDto("map", m.Id, ToLocation(m.DeclarationSpan, root), m.Title);
+                yield return new SymbolDto("map", m.Id, Location.From(m.DeclarationSpan, root), m.Title);
 
         if (Wanted("scrap"))
             foreach (var s in model.ScrapsById.Values)
-                yield return new SymbolDto("scrap", s.Id, ToLocation(s.DeclarationSpan, root), null);
+                yield return new SymbolDto("scrap", s.Id, Location.From(s.DeclarationSpan, root), null);
 
         if (Wanted("scrapObject"))
             foreach (var o in model.ScrapObjectsById.Values)
-                yield return new SymbolDto("scrapObject", o.Id, ToLocation(o.DeclarationSpan, root),
+                yield return new SymbolDto("scrapObject", o.Id, Location.From(o.DeclarationSpan, root),
                     string.IsNullOrEmpty(o.ScrapId) ? null : $"in scrap {o.ScrapId}");
     }
 
@@ -213,14 +210,6 @@ public sealed class SymbolTools(WorkspaceHost host)
         if (station.Cs is { Length: > 0 } cs) parts.Add($"cs {cs}");
         return string.Join(", ", parts);
     }
-
-    private static Location? ToLocation(SourceSpan span, string root) =>
-        string.IsNullOrEmpty(span.FilePath)
-            ? null
-            : new Location(
-                WorkspacePaths.ToRelative(root, span.FilePath),
-                span.Start.Line, span.Start.Column,
-                span.End.Line, span.End.Column);
 
     private static bool TryParseKind(string value, out ReferenceKind kind) =>
         Enum.TryParse(value, ignoreCase: true, out kind)

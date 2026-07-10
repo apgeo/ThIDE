@@ -254,12 +254,7 @@ public sealed class GraphTools(WorkspaceHost host)
         Y: station.FixY,
         Z: station.FixZ,
         Cs: station.Cs,
-        Declaration: string.IsNullOrEmpty(station.DeclarationSpan.FilePath)
-            ? null
-            : new Location(
-                WorkspacePaths.ToRelative(root, station.DeclarationSpan.FilePath),
-                station.DeclarationSpan.Start.Line, station.DeclarationSpan.Start.Column,
-                station.DeclarationSpan.End.Line, station.DeclarationSpan.End.Column));
+        Declaration: Location.From(station.DeclarationSpan, root));
 
     private static string ToDot(IReadOnlyList<DependencyEdge> edges)
     {

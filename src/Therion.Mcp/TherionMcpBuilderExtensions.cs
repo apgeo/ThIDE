@@ -18,6 +18,9 @@ public static class TherionMcpBuilderExtensions
         typeof(DiagnosticsTools),
         typeof(SymbolTools),
         typeof(GraphTools),
+        typeof(AggregatorTools),
+        typeof(StructuralTools),
+        typeof(CalculatorTools),
     ];
 
     /// <summary>Ring R3 — registered only when the caller supplied a real <see cref="IUiBridge"/>.</summary>

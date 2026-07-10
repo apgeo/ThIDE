@@ -131,6 +131,31 @@ internal sealed class FixtureWorkspace : IDisposable
         return fixture;
     }
 
+    /// <summary>
+    /// A survey with a QM marker, a station flagged <c>continuation</c>, and three shots off a
+    /// <c>geo1</c> station — enough for a plane fit, a lead and a todo.
+    /// </summary>
+    public static FixtureWorkspace CreateAnnotated()
+    {
+        var fixture = Create();
+
+        File.WriteAllText(fixture.PathTo("caves", "upper.th"), """
+            survey upper
+              centreline
+                data normal from to length compass clino
+                1 2 10.0 90 0
+                # QM: does this continue past the sump?
+                geo1 p1 2.0 0 0
+                geo1 p2 2.0 90 0
+                geo1 p3 2.0 45 30
+              endcentreline
+              station 2 "airy passage" continuation
+            endsurvey
+            """);
+
+        return fixture;
+    }
+
     /// <summary>Absolute path inside the fixture, from workspace-relative segments.</summary>
     public string PathTo(params string[] segments) => Path.Combine([Root, .. segments]);
 

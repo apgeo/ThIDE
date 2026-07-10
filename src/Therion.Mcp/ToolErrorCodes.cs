@@ -14,6 +14,7 @@ public static class ToolErrorCodes
     public const string ReadFailed = "read_failed";
     public const string UnknownDiagnosticCode = "unknown_diagnostic_code";
     public const string SymbolNotFound = "symbol_not_found";
+    public const string ModelUnavailable = "model_unavailable";
 }
 
 /// <summary>
