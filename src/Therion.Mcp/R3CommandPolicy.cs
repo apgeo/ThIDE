@@ -48,9 +48,7 @@ public static class R3CommandPolicy
         new(ShellCommandIds.CancelBuild,         "Cancel the running build",        "Build",    R3CommandGate.Allowed, R3CommandScope.Shell),
         new(ShellCommandIds.OpenInLoch,          "Open the model in Loch",          "Build",    R3CommandGate.Allowed, R3CommandScope.Shell),
         new(ShellCommandIds.OpenInAven,          "Open the model in Aven",          "Build",    R3CommandGate.Allowed, R3CommandScope.Shell),
-        new(ShellCommandIds.QuickExport,         "Quick export",                    "Build",    R3CommandGate.Allowed, R3CommandScope.Shell),
         new(ShellCommandIds.OpenOutputFolder,    "Open the output folder",          "Build",    R3CommandGate.Allowed, R3CommandScope.Shell),
-        new(ShellCommandIds.GenerateReport,      "Generate an HTML report",         "Tools",    R3CommandGate.Allowed, R3CommandScope.Shell),
         new(ShellCommandIds.ToggleWorkspaceExplorer, "Toggle the Workspace panel",  "View",     R3CommandGate.Allowed, R3CommandScope.Shell),
         new(ShellCommandIds.ToggleDiagnostics,   "Toggle the Diagnostics panel",    "View",     R3CommandGate.Allowed, R3CommandScope.Shell),
         new(ShellCommandIds.ToggleObjectBrowser, "Toggle the Object Browser",       "View",     R3CommandGate.Allowed, R3CommandScope.Shell),
@@ -73,12 +71,10 @@ public static class R3CommandPolicy
         new(ShellCommandIds.QuickOpen,           "Open the Go to File picker",      "Navigate", R3CommandGate.Allowed, R3CommandScope.Shell),
         new(ShellCommandIds.FindInFiles,         "Open Find in Files",              "Search",   R3CommandGate.Allowed, R3CommandScope.Shell),
         new(ShellCommandIds.ReplaceInFiles,      "Open Replace in Files",           "Search",   R3CommandGate.Allowed, R3CommandScope.Shell),
-        new(ShellCommandIds.NewFile,             "New file",                        "File",     R3CommandGate.Allowed, R3CommandScope.Shell),
         new(ShellCommandIds.ReopenClosedTab,     "Reopen the last closed tab",      "File",     R3CommandGate.Allowed, R3CommandScope.Shell),
 
         // ---- Shell scope: writes to the project → Gated (needs confirm:true) ----------------------
         new(ShellCommandIds.Save,                "Save the active file",            "File",     R3CommandGate.Gated,   R3CommandScope.Shell),
-        new(ShellCommandIds.NewScrapScaffold,    "Insert a new scrap scaffold",     "Edit",     R3CommandGate.Gated,   R3CommandScope.Shell),
         // Reachable from the shell (a tool panel has focus), but the R2 rename_symbol tool is preferred.
         new(ShellCommandIds.RenameSymbol,        "Rename the symbol under the caret", "Edit",   R3CommandGate.Gated,   R3CommandScope.Shell),
 
@@ -86,6 +82,14 @@ public static class R3CommandPolicy
         new(ShellCommandIds.OpenFile,            "Open a file…",                    "File",     R3CommandGate.Excluded, R3CommandScope.Shell),
         new(ShellCommandIds.OpenFolder,          "Open a folder…",                  "File",     R3CommandGate.Excluded, R3CommandScope.Shell),
         new(ShellCommandIds.OpenThconfig,        "Open a thconfig…",                "File",     R3CommandGate.Excluded, R3CommandScope.Shell),
+        // These pop an OS save dialog (PickSaveFileAsync) or a modal window (QuickExportWindow.ShowDialog):
+        // an agent that triggers one is stuck behind it with the owner window disabled — the scaffold-freeze
+        // class doc 03 §C.3 excludes dialogs to prevent. The R2 tools are the safe path: generate_report,
+        // scaffold_th2, export_gis/export_tables.
+        new(ShellCommandIds.NewFile,             "New file…",                       "File",     R3CommandGate.Excluded, R3CommandScope.Shell),
+        new(ShellCommandIds.GenerateReport,      "Generate an HTML report…",        "Tools",    R3CommandGate.Excluded, R3CommandScope.Shell),
+        new(ShellCommandIds.QuickExport,         "Quick export…",                   "Build",    R3CommandGate.Excluded, R3CommandScope.Shell),
+        new(ShellCommandIds.NewScrapScaffold,    "Insert a new scrap scaffold…",    "Edit",     R3CommandGate.Excluded, R3CommandScope.Shell),
         // An interactive picker overlay: pointless for an agent, which cannot fill it — use list_commands.
         new(ShellCommandIds.CommandPalette,      "Open the command palette",        "View",     R3CommandGate.Excluded, R3CommandScope.Shell),
 

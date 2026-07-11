@@ -1366,6 +1366,10 @@ public partial class MainWindow : Window
 
     private void AttachKeyboardShortcuts(MainWindowViewModel vm)
     {
+        // Independent of the keyboard service — connect the MCP bridge first, so the R3 command tools
+        // still work if the shortcut service is unavailable and we return early below.
+        ConnectMcpBridge(vm);
+
         try { _shortcuts = AppServices.Provider.GetService<IKeyboardShortcutService>(); }
         catch { _shortcuts = null; }
         if (_shortcuts is null) return;
@@ -1378,8 +1382,6 @@ public partial class MainWindow : Window
         void Rebuild() => RebuildKeyBindings(vm, _shortcuts);
         _shortcuts.GesturesChanged += (_, _) => Avalonia.Threading.Dispatcher.UIThread.Post(Rebuild);
         Rebuild();
-
-        ConnectMcpBridge(vm);
 
         vm.ShowFindInFilesRequested   += (_, _) => ShowSearch();
         vm.ShowReplaceInFilesRequested += (_, _) => ShowReplace();

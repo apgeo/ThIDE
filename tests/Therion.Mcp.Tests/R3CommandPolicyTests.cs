@@ -37,6 +37,28 @@ public class R3CommandPolicyTests
         Assert.Equal(known.Count, classified.Count);                        // exhaustive
     }
 
+    /// <summary>
+    /// The classification's whole point: a command that pops an OS save dialog (PickSaveFileAsync) or a
+    /// modal window (ShowDialog) must never be runnable, or run_command would strand an agent behind it
+    /// with the owner window disabled — the scaffold-freeze failure class (doc 03 §C.3). Verified against
+    /// the app; this guards a future edit from silently re-enabling one.
+    /// </summary>
+    [Fact]
+    public void Commands_that_open_a_dialog_are_never_runnable()
+    {
+        string[] dialogOpeners =
+        [
+            ShellCommandIds.OpenFile, ShellCommandIds.OpenFolder, ShellCommandIds.OpenThconfig,
+            ShellCommandIds.NewFile, ShellCommandIds.GenerateReport, ShellCommandIds.QuickExport,
+            ShellCommandIds.NewScrapScaffold,
+        ];
+
+        foreach (var id in dialogOpeners)
+            Assert.Equal(R3CommandGate.Excluded, R3CommandPolicy.Find(id)!.Gate);
+        Assert.All(dialogOpeners, id =>
+            Assert.DoesNotContain(R3CommandPolicy.RunnableCommands, c => c.Id == id));
+    }
+
     [Fact]
     public void Runnable_commands_exclude_excluded_and_editor_scope()
     {
