@@ -43,7 +43,10 @@ public static class ScriptGenerator
     /// <param name="framing">Model bounds + centerline for the camera engine (BA-B6). Only
     /// the <see cref="CameraTemplate.Static"/> template may omit it; every animated template
     /// needs it to precompute keyframes (D-16).</param>
-    public static string Generate(SceneSpec spec, ScriptAssets? assets = null, CameraFraming? framing = null)
+    /// <param name="meta">The scene metadata (stations/components/leads) the label engine
+    /// (BA-B8) draws from. Null ⇒ no 3-D labels (overlays that need no meta still emit).</param>
+    public static string Generate(
+        SceneSpec spec, ScriptAssets? assets = null, CameraFraming? framing = null, SceneMeta? meta = null)
     {
         ArgumentNullException.ThrowIfNull(spec);
         var errors = SceneSpecValidator.Validate(spec);
@@ -56,9 +59,10 @@ public static class ScriptGenerator
         if (spec.Source is { SelfContained: true, EmbedMesh: true } && assets?.PlyBytes is null)
             throw new ArgumentException("EmbedMesh needs ScriptAssets.PlyBytes.", nameof(assets));
 
-        // Camera keyframes are precomputed here (D-16). Static needs no framing; animated
-        // templates throw a clear ArgumentException when it is missing.
+        // Camera keyframes and label selection are precomputed here (D-16/R-13). Static
+        // needs no framing; animated templates throw a clear ArgumentException without it.
         var camera = CameraPlanner.Plan(spec, framing);
+        var labels = meta is not null ? LabelPlanner.Plan(spec, meta) : null;
 
         var w = new PyWriter();
         EmitHeader(w, spec);
@@ -69,6 +73,7 @@ public static class ScriptGenerator
         EmitMaterials(w, spec);
         EmitCamera(w, spec, camera);
         EmitLighting(w, spec);
+        EmitLabels(w, spec, labels);
         EmitEngine(w, spec);
         EmitOutput(w, spec, camera.FrameCount);
         EmitProgressHooks(w, camera.FrameCount);
@@ -336,6 +341,145 @@ public static class ScriptGenerator
                 throw new ArgumentOutOfRangeException(nameof(spec), l.Rig, "Unknown lighting rig.");
         }
         w.Blank();
+    }
+
+    private static void EmitLabels(PyWriter w, SceneSpec spec, LabelPlan? plan)
+    {
+        if (plan is null || plan.IsEmpty) return;
+
+        w.Line("# ---- labels & annotations (BA-B8) ----");
+        // A shared emissive material so labels read in dark caves.
+        w.Line($"_label_color = {Rgba(spec.Labels.Color)}");
+        w.Line("_lbl_mat = bpy.data.materials.new(\"LabelText\")");
+        w.Line("_lbl_mat.use_nodes = True");
+        w.Line("_lnt = _lbl_mat.node_tree");
+        w.Line("_lnt.nodes.clear()");
+        w.Line("_lemit = _lnt.nodes.new(\"ShaderNodeEmission\")");
+        w.Line("_lemit.inputs[\"Color\"].default_value = _label_color");
+        w.Line("_lemit.inputs[\"Strength\"].default_value = 1.5");
+        w.Line("_lout = _lnt.nodes.new(\"ShaderNodeOutputMaterial\")");
+        w.Line("_lnt.links.new(_lemit.outputs[\"Emission\"], _lout.inputs[\"Surface\"])");
+        w.Blank();
+        // A billboarded FONT-curve label (TRACK_TO the camera keeps it facing the viewer).
+        using (w.Block("def _thide_label(name, body, loc, size, bucket):"))
+        {
+            w.Line("_c = bpy.data.curves.new(name, type='FONT')");
+            w.Line("_c.body = body");
+            w.Line("_c.size = size");
+            w.Line("_c.align_x = 'CENTER'");
+            w.Line("_c.align_y = 'CENTER'");
+            w.Line("_o = bpy.data.objects.new(name, _c)");
+            w.Line("_o.data.materials.append(_lbl_mat)");
+            w.Line("_o.location = loc");
+            w.Line("scene.collection.objects.link(_o)");
+            w.Line("_cst = _o.constraints.new(type='TRACK_TO')");
+            w.Line("_cst.target = cam");
+            w.Line("_cst.track_axis = 'TRACK_Z'");
+            w.Line("_cst.up_axis = 'UP_Y'");
+            w.Line("bucket.append(_o)");
+            w.Line("return _o");
+        }
+        w.Blank();
+
+        EmitTextLabelGroup(w, "_station_labels", "STATION_LABELS", "stn", plan.Stations);
+        if (plan.StationsCapped)
+            w.Line($"thide(\"label-cap\", \"showing {plan.Stations.Count} of {plan.StationMatchCount} station labels\")");
+        EmitTextLabelGroup(w, "_component_labels", "COMPONENT_LABELS", "cmp", plan.Components);
+        EmitLeadMarkers(w, spec, plan.Leads);
+        w.Blank();
+    }
+
+    private static void EmitTextLabelGroup(
+        PyWriter w, string bucket, string table, string prefix, IReadOnlyList<LabelItem> items)
+    {
+        w.Line($"{bucket} = []");
+        if (items.Count == 0) return;
+        w.Line($"{table} = [");
+        using (w.Indented())
+        {
+            foreach (var item in items)
+                w.Line($"({PyWriter.Str(item.Text)}, {PyWriter.Num(item.Position.X)}, {PyWriter.Num(item.Position.Y)}, {PyWriter.Num(item.Position.Z)}, {PyWriter.Num(item.Size)}),");
+        }
+        w.Line("]");
+        using (w.Block($"for _i in {table}:"))
+            w.Line($"_thide_label({PyWriter.Str(prefix + ":")} + _i[0], _i[0], (_i[1], _i[2], _i[3]), _i[4], {bucket})");
+        w.Blank();
+    }
+
+    private static void EmitLeadMarkers(PyWriter w, SceneSpec spec, IReadOnlyList<LeadItem> leads)
+    {
+        w.Line("_lead_markers = []");
+        if (leads.Count == 0) return;
+
+        w.Line("_lead_mat = bpy.data.materials.new(\"LeadMarker\")");
+        w.Line("_lead_mat.use_nodes = True");
+        w.Line("_dnt = _lead_mat.node_tree");
+        w.Line("_dnt.nodes.clear()");
+        w.Line("_demit = _dnt.nodes.new(\"ShaderNodeEmission\")");
+        w.Line("_demit.inputs[\"Color\"].default_value = (1.0, 0.25, 0.1, 1.0)");
+        w.Line("_demit.inputs[\"Strength\"].default_value = 2.0");
+        w.Line("_dout = _dnt.nodes.new(\"ShaderNodeOutputMaterial\")");
+        w.Line("_dnt.links.new(_demit.outputs[\"Emission\"], _dout.inputs[\"Surface\"])");
+        w.Blank();
+        using (w.Block("def _thide_lead(name, loc, radius):"))
+        {
+            w.Line("bpy.ops.mesh.primitive_ico_sphere_add(radius=radius, subdivisions=2, location=loc)");
+            w.Line("_o = bpy.context.active_object");
+            w.Line("_o.name = name");
+            w.Line("_o.data.materials.append(_lead_mat)");
+            w.Line("_lead_markers.append(_o)");
+            w.Line("return _o");
+        }
+        if (spec.Labels.Leads.Pulse)
+        {
+            w.Blank();
+            using (w.Block("def _thide_pulse(obj):"))
+            {
+                w.Line("obj.scale = (1.0, 1.0, 1.0)");
+                w.Line("obj.keyframe_insert(data_path=\"scale\", frame=1)");
+                w.Line("obj.scale = (1.5, 1.5, 1.5)");
+                w.Line("obj.keyframe_insert(data_path=\"scale\", frame=15)");
+                w.Line("_ad = obj.animation_data");
+                using (w.Block("if not _ad or not _ad.action:"))
+                    w.Line("return");
+                w.Line("_curves = getattr(_ad.action, \"fcurves\", None) or []");
+                using (w.Block("if not _curves:"))
+                {
+                    // 4.4+ slotted actions: fcurves live under the active slot's channelbag.
+                    using (w.Block("try:"))
+                    {
+                        using (w.Block("for _layer in _ad.action.layers:"))
+                        using (w.Block("for _strip in _layer.strips:"))
+                        {
+                            w.Line("_bag = _strip.channelbag(_ad.action_slot)");
+                            using (w.Block("if _bag:"))
+                                w.Line("_curves = list(_bag.fcurves) + _curves");
+                        }
+                    }
+                    using (w.Block("except Exception:"))
+                        w.Line("_curves = []");
+                }
+                using (w.Block("for _fc in _curves:"))
+                    w.Line("_fc.modifiers.new(type='CYCLES')");
+            }
+        }
+        w.Blank();
+
+        w.Line("LEAD_MARKERS = [");
+        using (w.Indented())
+        {
+            foreach (var lead in leads)
+                w.Line($"({PyWriter.Str(lead.Text)}, {PyWriter.Num(lead.Position.X)}, {PyWriter.Num(lead.Position.Y)}, {PyWriter.Num(lead.Position.Z)}, {PyWriter.Num(lead.Radius)}, {PyWriter.Num(lead.TextSize)}),");
+        }
+        w.Line("]");
+        using (w.Block("for _d in LEAD_MARKERS:"))
+        {
+            w.Line("_dm = _thide_lead(\"lead:\" + _d[0], (_d[1], _d[2], _d[3]), _d[4])");
+            if (spec.Labels.Leads.Pulse)
+                w.Line("_thide_pulse(_dm)");
+            if (spec.Labels.Leads.ShowText)
+                w.Line("_thide_label(\"leadtxt:\" + _d[0], _d[0], (_d[1], _d[2], _d[3] + _d[4] * 2.0), _d[5], _lead_markers)");
+        }
     }
 
     private static void EmitWorldNodes(PyWriter w, out string backgroundNode)
