@@ -63,10 +63,11 @@ public sealed class MutationEngine(IWorkspaceHost host)
             return ToolResult<MutationResult>.Success(
                 new MutationResult(true, prepared.Select(p => p.Describe(root)).ToList(), [], 0, 0));
 
-        // In-app safety (a stopgap until the T-03.6 dirty-file policy): an EditFile splices offsets — taken
-        // from the caller's snapshot — into the file's *disk* bytes. When that file is open in the IDE with
-        // unsaved edits, the disk bytes are not what the offsets were computed against, so a write could land
-        // on the wrong span. Refuse rather than corrupt it. DirtyFiles is empty for the headless host.
+        // In-app dirty-file policy (Q-01, resolved at T-03.6 → D-039: refuse, don't route through buffers):
+        // an EditFile splices offsets — taken from the caller's snapshot — into the file's *disk* bytes.
+        // When that file is open in the IDE with unsaved edits, the disk bytes are not what the offsets were
+        // computed against, so a write could land on the wrong span *and* silently fork the user's buffer.
+        // Refuse rather than corrupt or fork. DirtyFiles is empty for the headless host.
         if (FirstDirtyEdit(prepared, snapshot.DirtyFiles) is { } dirtyPath)
             return ToolResult<MutationResult>.Failure(ToolErrorCodes.FileDirty,
                 $"'{WorkspacePaths.ToRelative(root, dirtyPath)}' is open in the IDE with unsaved changes, so it "

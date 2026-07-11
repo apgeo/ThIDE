@@ -15,8 +15,6 @@ using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
@@ -28,10 +26,6 @@ using Therion.Mcp;
 using Therion.Processing.Abstractions;
 
 namespace ThIDE.Services;
-
-/// <summary>Contents of the MCP discovery file (<c>%AppData%/ThIDE/mcp-endpoint.json</c>).</summary>
-/// <remarks>Fields are camelCase on the wire (D-012); a reader must tolerate a stale <c>pid</c>.</remarks>
-public sealed record McpEndpointInfo(int Port, string Token, int Pid, string StartedUtc, string Url);
 
 /// <summary>
 /// Owns the running IDE's loopback MCP listener. Starts and stops to follow the
@@ -82,13 +76,6 @@ public sealed class McpHostService : IMcpHostService
     private static readonly string Version =
         (typeof(McpHostService).Assembly.GetName().Version ?? new Version(0, 0, 0)).ToString();
 
-    private static readonly JsonSerializerOptions DiscoveryJson = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        DefaultIgnoreCondition = JsonIgnoreCondition.Never,
-        WriteIndented = true,
-    };
-
     public McpHostService(
         IAppSettingsService settings,
         ILogService log,
@@ -130,14 +117,7 @@ public sealed class McpHostService : IMcpHostService
     public event EventHandler? StateChanged;
 
     /// <summary>Absolute path of the discovery file a shim/host reads to find the endpoint.</summary>
-    public static string DiscoveryFilePath()
-    {
-        var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        if (string.IsNullOrEmpty(appData))
-            appData = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config");
-        return Path.Combine(appData, "ThIDE", "mcp-endpoint.json");
-    }
+    public static string DiscoveryFilePath() => McpEndpoint.DefaultPath();
 
     public async Task ApplySettingAsync(CancellationToken ct = default)
     {
@@ -344,13 +324,13 @@ public sealed class McpHostService : IMcpHostService
     {
         try
         {
-            var info = new McpEndpointInfo(
+            var info = new McpEndpoint(
                 port, token, Environment.ProcessId,
                 DateTimeOffset.UtcNow.ToString("o", CultureInfo.InvariantCulture),
                 $"http://127.0.0.1:{port}/");
             var dir = Path.GetDirectoryName(_discoveryPath);
             if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
-            File.WriteAllText(_discoveryPath, JsonSerializer.Serialize(info, DiscoveryJson));
+            File.WriteAllText(_discoveryPath, info.ToJson());
             // The file holds the bearer token in cleartext. %AppData% is user-scoped on Windows, but the
             // POSIX ~/.config fallback is created world-readable under a normal umask — so lock it to the
             // owner, or any local user could read the token and drive the server (code review, 2026-07-11).

@@ -16,7 +16,7 @@ namespace Therion.Mcp;
 /// <param name="DirtyFiles">
 /// Absolute paths of files that are open in the IDE with unsaved edits (empty for the headless host).
 /// A by-offset edit to one of these would splice buffer offsets into disk bytes, so the mutation engine
-/// refuses it with <c>file_dirty</c> until the dirty-file policy lands (T-03.6).
+/// refuses it with <c>file_dirty</c> (the dirty-file policy, Q-01 → D-039: refuse, don't fork the buffer).
 /// </param>
 public sealed record WorkspaceSnapshot(
     IReadOnlyList<string> LoadedFiles,

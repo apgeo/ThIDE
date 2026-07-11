@@ -1,8 +1,8 @@
 # MCP server (`therion-mcp`)
 
-> **Draft.** The headless server is complete: 21 read-only tools and 11 that write. Reaching the
-> *running* IDE — live buffers, opening files, driving panes — lands in a later batch, along with the
-> final version of this page.
+> **Draft.** The headless server (21 read-only tools + 11 that write) and the connection to the
+> *running* IDE (live buffers, opening files, driving panes) are both complete. The final polish of this
+> page — the model matrix and the caver-facing guide — lands with a later batch.
 
 `therion-mcp` exposes ThIDE's parser, semantics and workspace engines over the
 [Model Context Protocol](https://modelcontextprotocol.io), so an LLM can answer questions about a
@@ -103,6 +103,38 @@ Edit `mcp.json` (**Program ▸ Install ▸ Edit mcp.json**):
 Use an absolute path to the executable: LM Studio does not spawn it through a shell, so `~` and
 `PATH` lookups will not resolve.
 
+## Talking to the *running* ThIDE
+
+Everything above runs a **fresh, headless** copy of the engines against files on disk. If instead you
+want the assistant to see and drive the app you have open — the live editor buffers, the panes, the 3D
+viewer — point the same binary at the running IDE:
+
+```bash
+therion-mcp --connect
+```
+
+In this mode `therion-mcp` doesn't serve its own tools; it **bridges** your host's stdio to the server
+running *inside* ThIDE. That server is off by default — turn it on in **Preferences ▸ MCP** ("Enable the
+in-app AI tools server"). It listens on loopback only, behind a random bearer token, and writes both to a
+discovery file (`%AppData%/ThIDE/mcp-endpoint.json`, `~/.config/ThIDE/…` on Linux/macOS) that `--connect`
+reads automatically. Point it elsewhere with `therion-mcp --connect /path/to/mcp-endpoint.json`.
+
+Connected this way you get extra tools that only make sense against a live window — `get_ui_state`,
+`open_file`, `run_command`, `save_all`, and more — plus the reads now answer about your **unsaved** edits,
+not the last save. Whether the assistant may *act* on the UI (not just read it) is governed by the
+**"Follow the agent"** toggle next to that setting.
+
+```jsonc
+// LM Studio mcp.json — drive the running app instead of a headless copy
+{ "mcpServers": { "therion-live": {
+  "command": "/abs/path/to/therion-mcp",
+  "args": ["--connect"]
+} } }
+```
+
+If ThIDE isn't running with the server on, `--connect` exits at once with a message saying so, rather
+than hanging.
+
 ## What the model sees
 
 Every tool answers with the same envelope, so a model can branch on one field:
@@ -151,6 +183,13 @@ the configured override, then the usual install locations, then `PATH`.
 
 **A writing tool is missing from the list.** You started the server with `--profile data`. That is the
 profile doing its job.
+
+**`--connect` says "no running ThIDE MCP server found".** Either ThIDE isn't running, or the in-app
+server is off — turn on **Preferences ▸ MCP**. If the discovery file lives somewhere non-standard, pass
+its path: `therion-mcp --connect /path/to/mcp-endpoint.json`.
+
+**An edit tool returns `file_dirty` (in-app).** The file it would change is open in ThIDE with unsaved
+edits, so writing it would clobber or fork your work. Save (or close) that file, then retry.
 
 **Everything answers `workspace_not_loaded`.** The server was started without `--workspace`. Either
 add it, or have the model call `load_workspace` first.

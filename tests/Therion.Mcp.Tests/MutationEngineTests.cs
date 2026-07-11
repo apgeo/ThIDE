@@ -411,6 +411,45 @@ public class MutationEngineTests
         return new MutationPlan([new EditFile(path, [new TextEdit(start, from.Length, from, to)])]);
     }
 
+    // ---- dirty-file policy (Q-01 → D-039, T-03.6): refuse, never fork the buffer -----------------
+
+    [Fact]
+    public async Task An_edit_to_an_open_and_dirty_file_is_refused_without_forking_it()
+    {
+        using var fixture = FixtureWorkspace.Create();
+        var host = new WorkspaceHost();
+        await host.LoadAsync(fixture.Thconfig);
+        var target = fixture.PathTo("caves", "upper.th");
+        var original = File.ReadAllText(target);
+
+        // The file is open in the IDE with unsaved edits: the plan's offsets describe the disk bytes,
+        // which are no longer what the user sees. The engine must refuse, not write.
+        var engine = new MutationEngine(new DirtyHost(host, target));
+
+        var apply = await engine.ApplyAsync(RenameSurvey(target, "upper", "lower"), dryRun: false);
+
+        Assert.False(apply.Ok);
+        Assert.Equal(ToolErrorCodes.FileDirty, apply.Error!.Code);
+        Assert.Equal(original, File.ReadAllText(target));   // no silent state fork
+
+        // A dry run still previews — it never touches disk, so the dirty state can't fork anything.
+        Assert.True((await engine.ApplyAsync(RenameSurvey(target, "upper", "lower"), dryRun: true)).Ok);
+
+        await host.DisposeAsync();
+    }
+
+    /// <summary>Wraps a real host but reports one file as open-and-dirty, to exercise the file_dirty refusal.</summary>
+    private sealed class DirtyHost(IWorkspaceHost inner, string dirtyAbsolutePath) : IWorkspaceHost
+    {
+        public bool IsLoaded => inner.IsLoaded;
+        public string? Root => inner.Root;
+        public string? EntryPointPath => inner.EntryPointPath;
+        public async ValueTask<WorkspaceSnapshot> GetAsync(CancellationToken ct = default) =>
+            (await inner.GetAsync(ct)) with { DirtyFiles = [dirtyAbsolutePath] };
+        public ValueTask<WorkspaceSnapshot> LoadAsync(string p, CancellationToken ct = default) => inner.LoadAsync(p, ct);
+        public ValueTask<WorkspaceSnapshot> ReloadAsync(CancellationToken ct = default) => inner.ReloadAsync(ct);
+    }
+
     private static async Task<(MutationEngine Engine, WorkspaceHost Host)> EngineAsync(FixtureWorkspace fixture)
     {
         var host = new WorkspaceHost();

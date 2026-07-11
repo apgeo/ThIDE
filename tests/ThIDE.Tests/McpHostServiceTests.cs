@@ -13,11 +13,11 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Collections.Generic;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using ModelContextProtocol.Client;
 using Therion.Build;
+using Therion.Mcp;
 using ThIDE.Services;
 using Xunit;
 
@@ -25,9 +25,6 @@ namespace ThIDE.Tests;
 
 public class McpHostServiceTests
 {
-    private static readonly JsonSerializerOptions CamelCase =
-        new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
-
     /// <summary>An IAppSettingsService whose value and Changed event a test drives directly.</summary>
     private sealed class FakeSettings : IAppSettingsService
     {
@@ -73,7 +70,7 @@ public class McpHostServiceTests
         Assert.NotNull(host.Port);
         Assert.True(File.Exists(discoveryPath));
 
-        var info = JsonSerializer.Deserialize<McpEndpointInfo>(File.ReadAllText(discoveryPath), CamelCase)!;
+        var info = McpEndpoint.TryRead(discoveryPath)!;
         Assert.Equal(host.Port, info.Port);
         Assert.False(string.IsNullOrWhiteSpace(info.Token));
         Assert.Equal(Environment.ProcessId, info.Pid);
