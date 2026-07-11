@@ -30,6 +30,9 @@ public static class SceneSpecValidator
     public const int MinViewpoints = 2;
     public const double MinFStop = 0.5;
     public const double MaxFStop = 1_000;
+    public const double MaxLightStrength = 100;
+    public const double MaxProceduralScale = 10_000;
+    public const double MaxBumpStrength = 10;
 
     /// <summary>All problems with <paramref name="spec"/>; empty means valid.</summary>
     public static IReadOnlyList<SpecError> Validate(SceneSpec spec)
@@ -59,6 +62,22 @@ public static class SceneSpecValidator
         if (spec.Camera.Dof.FStop is < MinFStop or > MaxFStop || double.IsNaN(spec.Camera.Dof.FStop))
             Bad("camera.dof.fStop", $"Aperture f-stop must be within {MinFStop}–{MaxFStop}.");
         ValidateCameraTemplate(spec, Bad);
+
+        // ---- materials ----
+        if (spec.Materials.Roughness is < 0 or > 1 || double.IsNaN(spec.Materials.Roughness))
+            Bad("materials.roughness", "Roughness must be within 0–1.");
+        if (!(spec.Materials.ProceduralScale > 0) || spec.Materials.ProceduralScale > MaxProceduralScale)
+            Bad("materials.proceduralScale", $"Procedural scale must be within (0, {MaxProceduralScale}].");
+        if (spec.Materials.BumpStrength is < 0 or > MaxBumpStrength || double.IsNaN(spec.Materials.BumpStrength))
+            Bad("materials.bumpStrength", $"Bump strength must be within 0–{MaxBumpStrength}.");
+        if (!IsUnitColor(spec.Materials.BaseColor))
+            Bad("materials.baseColor", "Colour channels must be within 0–1.");
+
+        // ---- lighting ----
+        if (spec.Lighting.Strength is < 0 or > MaxLightStrength || double.IsNaN(spec.Lighting.Strength))
+            Bad("lighting.strength", $"Light strength must be within 0–{MaxLightStrength}.");
+        if (spec.Lighting.Rig == LightingRig.HdriFile && string.IsNullOrWhiteSpace(spec.Lighting.HdriPath))
+            Bad("lighting.hdriPath", "The HDRI rig needs a file path.");
 
         // ---- animation (only consumed by animated outputs, but keep it always sane
         //      so switching output kind never resurrects an invalid value) ----
@@ -91,6 +110,12 @@ public static class SceneSpecValidator
             Bad("output.baseName", "The base name must be a plain file name (no separators or reserved characters).");
 
         return errors;
+    }
+
+    private static bool IsUnitColor(ColorRgb c)
+    {
+        static bool Ok(double v) => !double.IsNaN(v) && v is >= 0 and <= 1;
+        return Ok(c.R) && Ok(c.G) && Ok(c.B);
     }
 
     private static void ValidateCameraTemplate(SceneSpec spec, Action<string, string> bad)

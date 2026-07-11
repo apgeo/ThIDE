@@ -177,6 +177,10 @@ public sealed record SceneSpec
 
     public EngineSpec Engine { get; init; } = new();
 
+    public MaterialsSpec Materials { get; init; } = new();
+
+    public LightingSpec Lighting { get; init; } = new();
+
     public CameraSpec Camera { get; init; } = new();
 
     public AnimationSpec Animation { get; init; } = new();
