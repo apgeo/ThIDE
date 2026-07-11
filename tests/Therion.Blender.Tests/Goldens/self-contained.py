@@ -11,7 +11,7 @@ import tempfile
 import bpy
 import mathutils
 
-SPEC_HASH = "1a6f260155881502aba5ae8f48c43840a902fd16eacaa7bb9c9e69d9a39dac44"
+SPEC_HASH = "c3cfeb4358887a103738d21cbba53d7c1b26bd517822c97e4a9a0861593cbc00"
 
 
 def thide(key, value):

@@ -79,6 +79,9 @@ public static class SceneSpecValidator
         if (spec.Lighting.Rig == LightingRig.HdriFile && string.IsNullOrWhiteSpace(spec.Lighting.HdriPath))
             Bad("lighting.hdriPath", "The HDRI rig needs a file path.");
 
+        // ---- labels ----
+        ValidateLabels(spec, Bad);
+
         // ---- animation (only consumed by animated outputs, but keep it always sane
         //      so switching output kind never resurrects an invalid value) ----
         if (spec.Animation.Fps is < MinFps or > MaxFps)
@@ -110,6 +113,54 @@ public static class SceneSpecValidator
             Bad("output.baseName", "The base name must be a plain file name (no separators or reserved characters).");
 
         return errors;
+    }
+
+    private static void ValidateLabels(SceneSpec spec, Action<string, string> bad)
+    {
+        var labels = spec.Labels;
+
+        var stations = labels.Stations;
+        if (stations.MaxCount < 1)
+            bad("labels.stations.maxCount", "The station label cap must be at least 1.");
+        if (!(stations.TextScale > 0) || double.IsNaN(stations.TextScale))
+            bad("labels.stations.textScale", "Station text scale must be positive.");
+        if (stations.Filter == StationFilter.Regex)
+        {
+            if (string.IsNullOrEmpty(stations.Pattern))
+                bad("labels.stations.pattern", "The regex station filter needs a pattern.");
+            else
+            {
+                try { _ = System.Text.RegularExpressions.Regex.Match("", stations.Pattern); }
+                catch (ArgumentException) { bad("labels.stations.pattern", "The station filter pattern is not a valid regex."); }
+            }
+        }
+        if (stations.Filter == StationFilter.DepthRange
+            && stations is { MinDepth: { } lo, MaxDepth: { } hi } && lo > hi)
+            bad("labels.stations.minDepth", "The depth range's minimum must not exceed its maximum.");
+
+        if (labels.Components.MinStationCount < 1)
+            bad("labels.components.minStationCount", "The component-label minimum station count must be at least 1.");
+        if (!(labels.Components.TextScale > 0) || double.IsNaN(labels.Components.TextScale))
+            bad("labels.components.textScale", "Component text scale must be positive.");
+
+        if (!(labels.Leads.MarkerScale > 0) || double.IsNaN(labels.Leads.MarkerScale))
+            bad("labels.leads.markerScale", "Lead marker scale must be positive.");
+
+        if (!IsUnitColor(labels.Color))
+            bad("labels.color", "Label colour channels must be within 0–1.");
+
+        for (int i = 0; i < labels.Events.Count; i++)
+        {
+            var e = labels.Events[i];
+            if (e.ShowFrame is { } sf && sf < 1)
+                bad($"labels.events[{i}].showFrame", "Show frame must be at least 1.");
+            if (e.HideFrame is { } hf && hf < 1)
+                bad($"labels.events[{i}].hideFrame", "Hide frame must be at least 1.");
+            if (e.ShowFrame is { } s2 && e.HideFrame is { } h2 && h2 < s2)
+                bad($"labels.events[{i}].hideFrame", "Hide frame must not precede show frame.");
+            if (!(e.FadeSeconds >= 0) || double.IsNaN(e.FadeSeconds))
+                bad($"labels.events[{i}].fadeSeconds", "Fade seconds must be non-negative.");
+        }
     }
 
     private static bool IsUnitColor(ColorRgb c)

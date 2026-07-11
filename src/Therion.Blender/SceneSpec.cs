@@ -183,6 +183,8 @@ public sealed record SceneSpec
 
     public CameraSpec Camera { get; init; } = new();
 
+    public LabelsSpec Labels { get; init; } = new();
+
     public AnimationSpec Animation { get; init; } = new();
 
     public OutputSpec Output { get; init; } = new();

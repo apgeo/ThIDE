@@ -93,7 +93,12 @@ public class SceneSpecTests
         var json = SceneSpecSerializer.Write(spec);
         var back = SceneSpecSerializer.Read(json);
 
-        Assert.Equal(spec, back); // records: deep value equality
+        // Re-serialize to compare: record equality is reference-based for the list members
+        // that later batches added (labels events, camera viewpoints), so JSON is the
+        // fidelity check. Scalars still get a direct value assert below.
+        Assert.Equal(json, SceneSpecSerializer.Write(back));
+        Assert.Equal(spec.Source, back.Source);
+        Assert.Equal(spec.Engine, back.Engine);
     }
 
     [Fact]
