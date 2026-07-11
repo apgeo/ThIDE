@@ -36,10 +36,14 @@ public static class ScriptGenerator
 {
     /// <summary>
     /// Generates the script. Throws <see cref="ArgumentException"/> when the spec fails
-    /// validation (same error surface as the UI/CLI) or when self-contained assets are
-    /// missing. Run with: <c>blender -b --factory-startup --python script.py</c>.
+    /// validation (same error surface as the UI/CLI), when self-contained assets are
+    /// missing, or when an animated camera template is used without
+    /// <paramref name="framing"/>. Run with: <c>blender -b --factory-startup --python script.py</c>.
     /// </summary>
-    public static string Generate(SceneSpec spec, ScriptAssets? assets = null)
+    /// <param name="framing">Model bounds + centerline for the camera engine (BA-B6). Only
+    /// the <see cref="CameraTemplate.Static"/> template may omit it; every animated template
+    /// needs it to precompute keyframes (D-16).</param>
+    public static string Generate(SceneSpec spec, ScriptAssets? assets = null, CameraFraming? framing = null)
     {
         ArgumentNullException.ThrowIfNull(spec);
         var errors = SceneSpecValidator.Validate(spec);
@@ -52,6 +56,10 @@ public static class ScriptGenerator
         if (spec.Source is { SelfContained: true, EmbedMesh: true } && assets?.PlyBytes is null)
             throw new ArgumentException("EmbedMesh needs ScriptAssets.PlyBytes.", nameof(assets));
 
+        // Camera keyframes are precomputed here (D-16). Static needs no framing; animated
+        // templates throw a clear ArgumentException when it is missing.
+        var camera = CameraPlanner.Plan(spec, framing);
+
         var w = new PyWriter();
         EmitHeader(w, spec);
         EmitPreamble(w, spec);
@@ -59,10 +67,10 @@ public static class ScriptGenerator
         EmitSceneReset(w, spec);
         EmitImport(w, spec);
         EmitBaselineLookdev(w);
-        EmitCamera(w, spec);
+        EmitCamera(w, spec, camera);
         EmitEngine(w, spec);
-        EmitOutput(w, spec);
-        EmitProgressHooks(w, spec);
+        EmitOutput(w, spec, camera.FrameCount);
+        EmitProgressHooks(w, camera.FrameCount);
         EmitRender(w, spec);
         return w.ToString();
     }
@@ -197,7 +205,17 @@ public static class ScriptGenerator
         w.Blank();
     }
 
-    private static void EmitCamera(PyWriter w, SceneSpec spec)
+    private static void EmitCamera(PyWriter w, SceneSpec spec, CameraPlan plan)
+    {
+        if (plan.IsStatic)
+        {
+            EmitStaticCamera(w, spec);
+            return;
+        }
+        EmitKeyframedCamera(w, spec, plan);
+    }
+
+    private static void EmitStaticCamera(PyWriter w, SceneSpec spec)
     {
         w.Line("# ---- camera: static auto-framed (replaced by the BA-B6 camera engine) ----");
         w.Line("cam_data = bpy.data.cameras.new(\"Camera\")");
@@ -216,6 +234,113 @@ public static class ScriptGenerator
         w.Line("cam.rotation_euler = (bounds_center - cam.location).to_track_quat('-Z', 'Y').to_euler()");
         w.Blank();
     }
+
+    private static void EmitKeyframedCamera(PyWriter w, SceneSpec spec, CameraPlan plan)
+    {
+        string mode = InterpolationMode(plan.Interpolation);
+        w.Line($"# ---- camera: {spec.Camera.Template.ToString().ToLowerInvariant()} (BA-B6 camera engine) ----");
+        w.Line("cam_data = bpy.data.cameras.new(\"Camera\")");
+        w.Line($"cam_data.lens = {PyWriter.Num(plan.FocalLength)}");
+        w.Line("cam_data.sensor_fit = 'HORIZONTAL'");
+        w.Line($"cam_data.sensor_width = {PyWriter.Num(CameraPlanner.SensorWidthMm)}");
+        w.Line($"cam_data.clip_start = {PyWriter.Num(plan.ClipStart)}");
+        w.Line($"cam_data.clip_end = {PyWriter.Num(plan.ClipEnd)}");
+        w.Line("cam = bpy.data.objects.new(\"Camera\", cam_data)");
+        w.Line("scene.collection.objects.link(cam)");
+        w.Line("scene.camera = cam");
+        w.Blank();
+        // A tracked empty gives every template a stable look-at with a level horizon
+        // (TRACK_TO keeps world +Z up) — that is the flythrough's roll damping for free.
+        w.Line("cam_target = bpy.data.objects.new(\"CameraTarget\", None)");
+        w.Line("scene.collection.objects.link(cam_target)");
+        w.Line("_track = cam.constraints.new(type='TRACK_TO')");
+        w.Line("_track.target = cam_target");
+        w.Line("_track.track_axis = 'TRACK_NEGATIVE_Z'");
+        w.Line("_track.up_axis = 'UP_Y'");
+        if (plan.DofEnabled)
+        {
+            w.Line("cam_data.dof.use_dof = True");
+            w.Line("cam_data.dof.focus_object = cam_target");
+            w.Line($"cam_data.dof.aperture_fstop = {PyWriter.Num(plan.DofFStop)}");
+        }
+        w.Blank();
+
+        // The keyframe table (D-16): frame, camera xyz, target xyz, and — when viewpoints
+        // set their own focal — the lens. No camera math runs in Python.
+        w.Line(plan.KeyframeFocal
+            ? "# CAM_KEYS: (frame, cam_x, cam_y, cam_z, tgt_x, tgt_y, tgt_z, focal_mm)"
+            : "# CAM_KEYS: (frame, cam_x, cam_y, cam_z, tgt_x, tgt_y, tgt_z)");
+        w.Line("CAM_KEYS = [");
+        using (w.Indented())
+        {
+            foreach (var k in plan.Keyframes)
+            {
+                string tuple =
+                    $"({PyWriter.Num(k.Frame)}, {PyWriter.Num(k.Location.X)}, {PyWriter.Num(k.Location.Y)}, {PyWriter.Num(k.Location.Z)}, " +
+                    $"{PyWriter.Num(k.Target.X)}, {PyWriter.Num(k.Target.Y)}, {PyWriter.Num(k.Target.Z)}";
+                if (plan.KeyframeFocal)
+                    tuple += $", {PyWriter.Num(k.FocalLength ?? plan.FocalLength)}";
+                w.Line(tuple + "),");
+            }
+        }
+        w.Line("]");
+        using (w.Block("for _k in CAM_KEYS:"))
+        {
+            w.Line("cam.location = (_k[1], _k[2], _k[3])");
+            w.Line("cam.keyframe_insert(data_path=\"location\", frame=_k[0])");
+            w.Line("cam_target.location = (_k[4], _k[5], _k[6])");
+            w.Line("cam_target.keyframe_insert(data_path=\"location\", frame=_k[0])");
+            if (plan.KeyframeFocal)
+            {
+                w.Line("cam_data.lens = _k[7]");
+                w.Line("cam_data.keyframe_insert(data_path=\"lens\", frame=_k[0])");
+            }
+        }
+        w.Blank();
+
+        // Set the keyframe interpolation robustly across the 4.2/4.3 action.fcurves API and
+        // the 4.4+ slotted-action layout — never let an API rename fail the render (R-07).
+        using (w.Block("def _thide_set_interp(idblock, mode):"))
+        {
+            w.Line("_ad = getattr(idblock, \"animation_data\", None)");
+            using (w.Block("if not _ad or not _ad.action:"))
+                w.Line("return");
+            w.Line("_curves = getattr(_ad.action, \"fcurves\", None)");
+            using (w.Block("if not _curves:"))
+            {
+                using (w.Block("try:"))
+                {
+                    w.Line("_slot = _ad.action_slot");
+                    w.Line("_curves = []");
+                    using (w.Block("for _layer in _ad.action.layers:"))
+                    using (w.Block("for _strip in _layer.strips:"))
+                    {
+                        w.Line("_bag = _strip.channelbag(_slot)");
+                        using (w.Block("if _bag:"))
+                            w.Line("_curves = list(_bag.fcurves) + _curves");
+                    }
+                }
+                using (w.Block("except Exception:"))
+                    w.Line("_curves = []");
+            }
+            using (w.Block("for _fc in _curves:"))
+            using (w.Block("for _kp in _fc.keyframe_points:"))
+                w.Line($"_kp.interpolation = {PyWriter.Str(mode)}");
+        }
+        w.Line("_thide_set_interp(cam, " + PyWriter.Str(mode) + ")");
+        w.Line("_thide_set_interp(cam_target, " + PyWriter.Str(mode) + ")");
+        if (plan.KeyframeFocal)
+            w.Line("_thide_set_interp(cam_data, " + PyWriter.Str(mode) + ")");
+        w.Blank();
+    }
+
+    private static string InterpolationMode(KeyInterpolation interpolation) => interpolation switch
+    {
+        KeyInterpolation.Bezier => "BEZIER",
+        KeyInterpolation.Linear => "LINEAR",
+        KeyInterpolation.Constant => "CONSTANT",
+        _ => throw new ArgumentOutOfRangeException(nameof(interpolation), interpolation, "Unknown interpolation."),
+    };
 
     private static void EmitEngine(PyWriter w, SceneSpec spec)
     {
@@ -319,9 +444,8 @@ public static class ScriptGenerator
         _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "Not a specific GPU backend."),
     };
 
-    private static void EmitOutput(PyWriter w, SceneSpec spec)
+    private static void EmitOutput(PyWriter w, SceneSpec spec, int frames)
     {
-        int frames = SceneSpecValidator.FrameCount(spec);
         w.Line("# ---- output ----");
         w.Line($"scene.render.resolution_x = {PyWriter.Num(spec.Output.Width)}");
         w.Line($"scene.render.resolution_y = {PyWriter.Num(spec.Output.Height)}");
@@ -374,9 +498,8 @@ public static class ScriptGenerator
         _ => throw new ArgumentOutOfRangeException(nameof(container), container, "Unknown container."),
     };
 
-    private static void EmitProgressHooks(PyWriter w, SceneSpec spec)
+    private static void EmitProgressHooks(PyWriter w, int frames)
     {
-        int frames = SceneSpecValidator.FrameCount(spec);
         w.Line("# ---- progress hooks (THIDE: tier-1 protocol, D-08) ----");
         w.Line($"FRAME_COUNT = {PyWriter.Num(frames)}");
         w.Blank();
