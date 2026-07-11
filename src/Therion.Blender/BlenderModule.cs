@@ -19,4 +19,7 @@ public static class BlenderModule
 
     /// <summary>Schema version of the <see cref="SceneSpec"/> preset JSON (emitter, BA-B5).</summary>
     public const int SceneSpecSchemaVersion = 1;
+
+    /// <summary>Schema version of the <see cref="RenderPreset"/> envelope (presets, BA-B9).</summary>
+    public const int PresetSchemaVersion = 1;
 }
