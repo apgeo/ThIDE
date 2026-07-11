@@ -73,7 +73,7 @@ public static class ScriptGenerator
         EmitMaterials(w, spec);
         EmitCamera(w, spec, camera);
         EmitLighting(w, spec);
-        EmitLabels(w, spec, labels);
+        EmitAnnotations(w, spec, labels);
         EmitEngine(w, spec);
         EmitOutput(w, spec, camera.FrameCount);
         EmitProgressHooks(w, camera.FrameCount);
@@ -343,11 +343,42 @@ public static class ScriptGenerator
         w.Blank();
     }
 
-    private static void EmitLabels(PyWriter w, SceneSpec spec, LabelPlan? plan)
+    private static void EmitAnnotations(PyWriter w, SceneSpec spec, LabelPlan? plan)
     {
-        if (plan is null || plan.IsEmpty) return;
+        bool hasLabels = plan is not null && !plan.IsEmpty;
+        bool hasOverlays = OverlaysActive(spec.Labels.Overlays);
+        bool hasEvents = spec.Labels.Events.Count > 0;
+        if (!hasLabels && !hasOverlays && !hasEvents) return;
 
         w.Line("# ---- labels & annotations (BA-B8) ----");
+        EmitLabelInfrastructure(w, spec);
+
+        // Buckets are always defined (even for hidden groups) so visibility events can key
+        // any of them.
+        w.Line("_station_labels = []");
+        w.Line("_component_labels = []");
+        w.Line("_lead_markers = []");
+        w.Line("_overlays = []");
+        w.Blank();
+
+        if (plan is not null)
+        {
+            EmitTextLabelGroup(w, "_station_labels", "STATION_LABELS", "stn", plan.Stations);
+            if (plan.StationsCapped)
+            {
+                w.Line($"thide(\"label-cap\", \"showing {plan.Stations.Count} of {plan.StationMatchCount} station labels\")");
+                w.Blank();
+            }
+            EmitTextLabelGroup(w, "_component_labels", "COMPONENT_LABELS", "cmp", plan.Components);
+            EmitLeadMarkers(w, spec, plan.Leads);
+        }
+        if (hasOverlays) EmitOverlays(w, spec);
+        if (hasEvents) EmitVisibilityEvents(w, spec);
+        w.Blank();
+    }
+
+    private static void EmitLabelInfrastructure(PyWriter w, SceneSpec spec)
+    {
         // A shared emissive material so labels read in dark caves.
         w.Line($"_label_color = {Rgba(spec.Labels.Color)}");
         w.Line("_lbl_mat = bpy.data.materials.new(\"LabelText\")");
@@ -380,20 +411,12 @@ public static class ScriptGenerator
             w.Line("return _o");
         }
         w.Blank();
-
-        EmitTextLabelGroup(w, "_station_labels", "STATION_LABELS", "stn", plan.Stations);
-        if (plan.StationsCapped)
-            w.Line($"thide(\"label-cap\", \"showing {plan.Stations.Count} of {plan.StationMatchCount} station labels\")");
-        EmitTextLabelGroup(w, "_component_labels", "COMPONENT_LABELS", "cmp", plan.Components);
-        EmitLeadMarkers(w, spec, plan.Leads);
-        w.Blank();
     }
 
     private static void EmitTextLabelGroup(
         PyWriter w, string bucket, string table, string prefix, IReadOnlyList<LabelItem> items)
     {
-        w.Line($"{bucket} = []");
-        if (items.Count == 0) return;
+        if (items.Count == 0) return; // bucket is already defined by EmitAnnotations
         w.Line($"{table} = [");
         using (w.Indented())
         {
@@ -408,8 +431,7 @@ public static class ScriptGenerator
 
     private static void EmitLeadMarkers(PyWriter w, SceneSpec spec, IReadOnlyList<LeadItem> leads)
     {
-        w.Line("_lead_markers = []");
-        if (leads.Count == 0) return;
+        if (leads.Count == 0) return; // bucket is already defined by EmitAnnotations
 
         w.Line("_lead_mat = bpy.data.materials.new(\"LeadMarker\")");
         w.Line("_lead_mat.use_nodes = True");
@@ -481,6 +503,157 @@ public static class ScriptGenerator
                 w.Line("_thide_label(\"leadtxt:\" + _d[0], _d[0], (_d[1], _d[2], _d[3] + _d[4] * 2.0), _d[5], _lead_markers)");
         }
     }
+
+    private static bool OverlaysActive(OverlaySpec o)
+        => !string.IsNullOrWhiteSpace(o.Title) || o.ScaleBar || o.NorthArrow || o.DepthLegend;
+
+    private static void EmitOverlays(PyWriter w, SceneSpec spec)
+    {
+        var o = spec.Labels.Overlays;
+        w.Line("# presentation overlays (camera HUD + world markers)");
+        // A flat, camera-parented HUD label (no billboard constraint — it rides the frame).
+        using (w.Block("def _thide_hud(name, body, loc, size):"))
+        {
+            w.Line("_c = bpy.data.curves.new(name, type='FONT')");
+            w.Line("_c.body = body");
+            w.Line("_c.size = size");
+            w.Line("_c.align_x = 'CENTER'");
+            w.Line("_c.align_y = 'CENTER'");
+            w.Line("_o = bpy.data.objects.new(name, _c)");
+            w.Line("_o.data.materials.append(_lbl_mat)");
+            w.Line("scene.collection.objects.link(_o)");
+            w.Line("_o.parent = cam");
+            w.Line("_o.location = loc");
+            w.Line("_overlays.append(_o)");
+            w.Line("return _o");
+        }
+        w.Blank();
+        // A round "nice" number ≥ v, for the scale bar length.
+        using (w.Block("def _thide_nice(v):"))
+        {
+            w.Line("_base = 10.0 ** math.floor(math.log10(max(v, 1.0)))");
+            using (w.Block("for _f in (1, 2, 5, 10):"))
+            using (w.Block("if _f * _base >= v:"))
+                w.Line("return _f * _base");
+            w.Line("return 10.0 * _base");
+        }
+        w.Blank();
+
+        if (!string.IsNullOrWhiteSpace(o.Title))
+            w.Line($"_thide_hud(\"overlay:title\", {PyWriter.Str(o.Title!.ReplaceLineEndings(" "))}, (0.0, -1.15, -3.0), 0.16)");
+
+        if (o.NorthArrow)
+        {
+            // A world-space arrow at the top of the model pointing +Y (north) — correct in 3-D.
+            w.Line("_north_r = bounds_radius * 0.05");
+            w.Line("_north_pos = (bounds_center.x, bounds_max.y + bounds_radius * 0.15, bounds_max.z)");
+            w.Line("bpy.ops.mesh.primitive_cone_add(radius1=_north_r, depth=_north_r * 3.0, location=_north_pos, rotation=(-math.pi / 2.0, 0.0, 0.0))");
+            w.Line("_na = bpy.context.active_object");
+            w.Line("_na.name = \"overlay:north\"");
+            w.Line("_na.data.materials.append(_lbl_mat)");
+            w.Line("_overlays.append(_na)");
+            w.Line("_thide_label(\"overlay:north-n\", \"N\", (bounds_center.x, bounds_max.y + bounds_radius * 0.28, bounds_max.z), _north_r * 3.0, _overlays)");
+        }
+
+        if (o.ScaleBar)
+        {
+            // A world-space ruler along +X at the model's lower front, a round length long.
+            w.Line("_bar_len = _thide_nice(bounds_radius)");
+            w.Line("bpy.ops.mesh.primitive_cube_add(size=1.0, location=(bounds_center.x, bounds_min.y, bounds_min.z))");
+            w.Line("_sb = bpy.context.active_object");
+            w.Line("_sb.name = \"overlay:scalebar\"");
+            w.Line("_sb.scale = (_bar_len / 2.0, bounds_radius * 0.01, bounds_radius * 0.01)");
+            w.Line("_sb.data.materials.append(_lbl_mat)");
+            w.Line("_overlays.append(_sb)");
+            w.Line("_thide_label(\"overlay:scalebar-txt\", str(int(_bar_len)) + \" m\", (bounds_center.x, bounds_min.y, bounds_min.z - bounds_radius * 0.06), bounds_radius * 0.04, _overlays)");
+        }
+
+        if (o.DepthLegend)
+        {
+            // A camera-parented column of the depth-ramp stops, warm (top) → cool (bottom).
+            var stops = Geometry.DepthRamp.GradientStops;
+            var colors = new List<string>(stops.Count);
+            foreach (var s in stops) colors.Add(Rgba(FromSrgb(s)));
+            w.Line($"_legend = [{string.Join(", ", colors)}]");
+            using (w.Block("for _idx, _col in enumerate(_legend):"))
+            {
+                w.Line("_lm = bpy.data.materials.new(\"LegendStop\")");
+                w.Line("_lm.use_nodes = True");
+                w.Line("_lmt = _lm.node_tree");
+                w.Line("_lmt.nodes.clear()");
+                w.Line("_le = _lmt.nodes.new(\"ShaderNodeEmission\")");
+                w.Line("_le.inputs[\"Color\"].default_value = _col");
+                w.Line("_lo = _lmt.nodes.new(\"ShaderNodeOutputMaterial\")");
+                w.Line("_lmt.links.new(_le.outputs[\"Emission\"], _lo.inputs[\"Surface\"])");
+                w.Line("bpy.ops.mesh.primitive_plane_add(size=1.0)");
+                w.Line("_lp = bpy.context.active_object");
+                w.Line("_lp.name = \"overlay:legend\" + str(_idx)");
+                w.Line("_lp.data.materials.append(_lm)");
+                w.Line("_lp.parent = cam");
+                w.Line("_lp.scale = (0.05, 0.05, 0.05)");
+                w.Line("_lp.location = (1.15, 0.5 - _idx * 0.13, -3.0)");
+                w.Line("_overlays.append(_lp)");
+            }
+        }
+        w.Blank();
+    }
+
+    private static void EmitVisibilityEvents(PyWriter w, SceneSpec spec)
+    {
+        w.Line("# visibility / fade events");
+        using (w.Block("def _thide_visibility(objs, show_frame, hide_frame, fade_frames):"))
+        using (w.Block("for _o in objs:"))
+        {
+            using (w.Block("if show_frame is not None:"))
+            {
+                w.Line("_o.hide_render = True");
+                w.Line("_o.hide_viewport = True");
+                w.Line("_o.keyframe_insert(data_path=\"hide_render\", frame=max(1, show_frame - 1))");
+                w.Line("_o.keyframe_insert(data_path=\"hide_viewport\", frame=max(1, show_frame - 1))");
+                w.Line("_o.hide_render = False");
+                w.Line("_o.hide_viewport = False");
+                w.Line("_o.keyframe_insert(data_path=\"hide_render\", frame=show_frame)");
+                w.Line("_o.keyframe_insert(data_path=\"hide_viewport\", frame=show_frame)");
+                using (w.Block("if fade_frames > 0:"))
+                {
+                    // Approximate an opacity fade with a grow-in (uniform for text + mesh).
+                    w.Line("_base = tuple(_o.scale)");
+                    w.Line("_o.scale = (_base[0] * 0.001, _base[1] * 0.001, _base[2] * 0.001)");
+                    w.Line("_o.keyframe_insert(data_path=\"scale\", frame=show_frame)");
+                    w.Line("_o.scale = _base");
+                    w.Line("_o.keyframe_insert(data_path=\"scale\", frame=show_frame + fade_frames)");
+                }
+            }
+            using (w.Block("if hide_frame is not None:"))
+            {
+                w.Line("_o.hide_render = False");
+                w.Line("_o.keyframe_insert(data_path=\"hide_render\", frame=max(1, hide_frame - 1))");
+                w.Line("_o.hide_render = True");
+                w.Line("_o.hide_viewport = True");
+                w.Line("_o.keyframe_insert(data_path=\"hide_render\", frame=hide_frame)");
+                w.Line("_o.keyframe_insert(data_path=\"hide_viewport\", frame=hide_frame)");
+            }
+        }
+        w.Blank();
+        foreach (var e in spec.Labels.Events)
+        {
+            string bucket = EventBucket(e.Target);
+            string show = e.ShowFrame?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "None";
+            string hide = e.HideFrame?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "None";
+            int fadeFrames = (int)Math.Round(spec.Animation.Fps * e.FadeSeconds);
+            w.Line($"_thide_visibility({bucket}, {show}, {hide}, {PyWriter.Num(fadeFrames)})");
+        }
+        w.Blank();
+    }
+
+    private static string EventBucket(VisibilityTarget target) => target switch
+    {
+        VisibilityTarget.StationLabels => "_station_labels",
+        VisibilityTarget.ComponentLabels => "_component_labels",
+        VisibilityTarget.LeadMarkers => "_lead_markers",
+        VisibilityTarget.Overlays => "_overlays",
+        _ => throw new ArgumentOutOfRangeException(nameof(target), target, "Unknown visibility target."),
+    };
 
     private static void EmitWorldNodes(PyWriter w, out string backgroundNode)
     {

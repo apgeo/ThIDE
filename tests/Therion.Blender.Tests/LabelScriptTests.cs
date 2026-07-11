@@ -60,6 +60,27 @@ public class LabelScriptTests
 
     private static string Generate() => ScriptGenerator.Generate(LabelledSpec(), assets: null, framing: null, meta: LabelledMeta());
 
+    // A spec exercising every overlay plus a fade-in/hide-out visibility event.
+    private static SceneSpec OverlaySpecScene() => LabelledSpec() with
+    {
+        Name = "Golden overlays",
+        Animation = new AnimationSpec { Fps = 12, DurationSeconds = 4 },
+        Labels = new LabelsSpec
+        {
+            Stations = new StationLabelSpec { Show = true, Filter = StationFilter.Entrances },
+            Leads = new LeadMarkerSpec { Show = true, Pulse = false },
+            Overlays = new OverlaySpec { Title = "Peștera de Aur", ScaleBar = true, NorthArrow = true, DepthLegend = true },
+            Events =
+            [
+                new VisibilityEvent { Target = VisibilityTarget.StationLabels, ShowFrame = 12, FadeSeconds = 1 },
+                new VisibilityEvent { Target = VisibilityTarget.LeadMarkers, HideFrame = 36 },
+            ],
+        },
+    };
+
+    private static string GenerateOverlays() =>
+        ScriptGenerator.Generate(OverlaySpecScene(), assets: null, framing: null, meta: LabelledMeta());
+
     [Fact]
     public void Golden_MatchesByteExactly()
     {
@@ -73,6 +94,44 @@ public class LabelScriptTests
         }
         Assert.True(File.Exists(goldenPath), $"Golden missing: {goldenPath} (seed with THIDE_UPDATE_GOLDENS=1).");
         Assert.Equal(File.ReadAllText(goldenPath).ReplaceLineEndings("\n"), script);
+    }
+
+    [Fact]
+    public void Golden_Overlays_MatchesByteExactly()
+    {
+        var script = GenerateOverlays();
+        var goldenPath = GoldenPath("labels-overlays.py");
+        if (Environment.GetEnvironmentVariable("THIDE_UPDATE_GOLDENS") == "1")
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(goldenPath)!);
+            File.WriteAllText(goldenPath, script, new UTF8Encoding(false));
+            return;
+        }
+        Assert.True(File.Exists(goldenPath), $"Golden missing: {goldenPath} (seed with THIDE_UPDATE_GOLDENS=1).");
+        Assert.Equal(File.ReadAllText(goldenPath).ReplaceLineEndings("\n"), script);
+    }
+
+    [Fact]
+    public void Overlays_And_Events_HaveTheExpectedStructure()
+    {
+        var script = GenerateOverlays();
+        Assert.Contains("def _thide_hud(", script);
+        Assert.Contains("_thide_hud(\"overlay:title\", \"Peștera de Aur\"", script);
+        Assert.Contains("bpy.ops.mesh.primitive_cone_add", script);       // north arrow
+        Assert.Contains("_bar_len = _thide_nice(bounds_radius)", script);  // scale bar
+        Assert.Contains("overlay:legend", script);                        // depth legend
+        Assert.Contains("def _thide_visibility(", script);
+        Assert.Contains("_thide_visibility(_station_labels, 12, None, 12)", script); // show@12, 1s fade @12fps
+        Assert.Contains("_thide_visibility(_lead_markers, None, 36, 0)", script);    // hard hide@36
+    }
+
+    [Fact]
+    public void Buckets_AreDefined_EvenForHiddenGroups()
+    {
+        // Components are off here, but an event/overlay run must still define its bucket.
+        var script = GenerateOverlays();
+        Assert.Contains("_component_labels = []", script);
+        Assert.Contains("_overlays = []", script);
     }
 
     [Fact]
@@ -139,20 +198,23 @@ public class LabelScriptTests
     {
         var python = FindPython();
         if (python is null) return;
-        var path = Path.Combine(Path.GetTempPath(), $"thide-labels-{Environment.ProcessId}.py");
-        File.WriteAllText(path, Generate(), new UTF8Encoding(false));
-        try
+        foreach (var (label, script) in new[] { ("labels", Generate()), ("overlays", GenerateOverlays()) })
         {
-            var psi = new ProcessStartInfo(python, $"-m py_compile \"{path}\"")
+            var path = Path.Combine(Path.GetTempPath(), $"thide-{label}-{Environment.ProcessId}.py");
+            File.WriteAllText(path, script, new UTF8Encoding(false));
+            try
             {
-                RedirectStandardError = true, RedirectStandardOutput = true, UseShellExecute = false,
-            };
-            using var process = Process.Start(psi)!;
-            string stderr = process.StandardError.ReadToEnd();
-            process.WaitForExit(30_000);
-            Assert.True(process.ExitCode == 0, $"py_compile failed: {stderr}");
+                var psi = new ProcessStartInfo(python, $"-m py_compile \"{path}\"")
+                {
+                    RedirectStandardError = true, RedirectStandardOutput = true, UseShellExecute = false,
+                };
+                using var process = Process.Start(psi)!;
+                string stderr = process.StandardError.ReadToEnd();
+                process.WaitForExit(30_000);
+                Assert.True(process.ExitCode == 0, $"py_compile failed for {label}: {stderr}");
+            }
+            finally { try { File.Delete(path); } catch { } }
         }
-        finally { try { File.Delete(path); } catch { } }
     }
 
     private static string? FindPython()
