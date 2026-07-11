@@ -66,8 +66,9 @@ public static class ScriptGenerator
         EmitEmbeddedAssets(w, spec, assets);
         EmitSceneReset(w, spec);
         EmitImport(w, spec);
-        EmitBaselineLookdev(w);
+        EmitMaterials(w, spec);
         EmitCamera(w, spec, camera);
+        EmitLighting(w, spec);
         EmitEngine(w, spec);
         EmitOutput(w, spec, camera.FrameCount);
         EmitProgressHooks(w, camera.FrameCount);
@@ -181,28 +182,186 @@ public static class ScriptGenerator
         w.Blank();
     }
 
-    private static void EmitBaselineLookdev(PyWriter w)
+    private static void EmitMaterials(PyWriter w, SceneSpec spec)
     {
-        w.Line("# ---- baseline material + light (replaced by the BA-B7 sections) ----");
+        var m = spec.Materials;
+        w.Line($"# ---- material: {m.Rock.ToString().ToLowerInvariant()} (BA-B7) ----");
         w.Line("mat = bpy.data.materials.new(\"CaveRock\")");
         w.Line("mat.use_nodes = True");
-        w.Line("_bsdf = next(n for n in mat.node_tree.nodes if n.type == 'BSDF_PRINCIPLED')");
-        w.Line("_bsdf.inputs[\"Roughness\"].default_value = 0.9");
-        using (w.Block("if model.data.color_attributes:"))
+        w.Line("_nt = mat.node_tree");
+        w.Line("_bsdf = next(n for n in _nt.nodes if n.type == 'BSDF_PRINCIPLED')");
+        w.Line($"_bsdf.inputs[\"Roughness\"].default_value = {PyWriter.Num(m.Roughness)}");
+        switch (m.Rock)
         {
-            // The converter writes depth-tint vertex colours; use them when present.
-            w.Line("_vc = mat.node_tree.nodes.new(\"ShaderNodeVertexColor\")");
-            w.Line("_vc.layer_name = model.data.color_attributes[0].name");
-            w.Line("mat.node_tree.links.new(_vc.outputs[\"Color\"], _bsdf.inputs[\"Base Color\"])");
+            case RockMaterial.Flat:
+                w.Line($"_bsdf.inputs[\"Base Color\"].default_value = {Rgba(m.BaseColor)}");
+                break;
+            case RockMaterial.Procedural:
+                EmitProceduralRock(w, m);
+                break;
+            case RockMaterial.DepthGradient:
+                EmitDepthGradientRock(w);
+                break;
+            case RockMaterial.PerSurvey:
+                EmitVertexColorRock(w, m);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(spec), m.Rock, "Unknown rock material.");
         }
         w.Line("model.data.materials.append(mat)");
         w.Blank();
-        w.Line("_sun = bpy.data.lights.new(\"Sun\", type='SUN')");
-        w.Line("_sun.energy = 3.0");
-        w.Line("sun = bpy.data.objects.new(\"Sun\", _sun)");
-        w.Line("scene.collection.objects.link(sun)");
-        w.Line("sun.rotation_euler = (0.9, 0.2, 0.6)");
+    }
+
+    private static void EmitProceduralRock(PyWriter w, MaterialsSpec m)
+    {
+        w.Line("_coord = _nt.nodes.new(\"ShaderNodeTexCoord\")");
+        w.Line("_noise = _nt.nodes.new(\"ShaderNodeTexNoise\")");
+        w.Line($"_noise.inputs[\"Scale\"].default_value = {PyWriter.Num(m.ProceduralScale)}");
+        w.Line("_nt.links.new(_coord.outputs[\"Object\"], _noise.inputs[\"Vector\"])");
+        w.Line("_ramp = _nt.nodes.new(\"ShaderNodeValToRGB\")");
+        w.Line($"_ramp.color_ramp.elements[0].color = {Rgba(Scale(m.BaseColor, 0.6))}");
+        w.Line($"_ramp.color_ramp.elements[1].color = {Rgba(Scale(m.BaseColor, 1.3))}");
+        w.Line("_nt.links.new(_noise.outputs[\"Fac\"], _ramp.inputs[\"Fac\"])");
+        w.Line("_nt.links.new(_ramp.outputs[\"Color\"], _bsdf.inputs[\"Base Color\"])");
+        w.Line("_bump = _nt.nodes.new(\"ShaderNodeBump\")");
+        w.Line($"_bump.inputs[\"Strength\"].default_value = {PyWriter.Num(m.BumpStrength)}");
+        w.Line("_nt.links.new(_noise.outputs[\"Fac\"], _bump.inputs[\"Height\"])");
+        w.Line("_nt.links.new(_bump.outputs[\"Normal\"], _bsdf.inputs[\"Normal\"])");
+    }
+
+    private static void EmitDepthGradientRock(PyWriter w)
+    {
+        // Position.Z → Map Range (over the runtime bounds) → ColorRamp (cave depth tint).
+        w.Line("_geo = _nt.nodes.new(\"ShaderNodeNewGeometry\")");
+        w.Line("_sep = _nt.nodes.new(\"ShaderNodeSeparateXYZ\")");
+        w.Line("_nt.links.new(_geo.outputs[\"Position\"], _sep.inputs[\"Vector\"])");
+        w.Line("_map = _nt.nodes.new(\"ShaderNodeMapRange\")");
+        w.Line("_map.inputs[\"From Min\"].default_value = bounds_min.z");
+        w.Line("_map.inputs[\"From Max\"].default_value = bounds_max.z");
+        w.Line("_nt.links.new(_sep.outputs[\"Z\"], _map.inputs[\"Value\"])");
+        w.Line("_ramp = _nt.nodes.new(\"ShaderNodeValToRGB\")");
+        w.Line("_cr = _ramp.color_ramp");
+        // Fac 0 = bottom of the cave, 1 = top; GradientStops is top→bottom, so reverse.
+        var stops = Geometry.DepthRamp.GradientStops;
+        int last = stops.Count - 1;
+        w.Line("_cr.elements[0].position = 0.0");
+        w.Line($"_cr.elements[0].color = {Rgba(FromSrgb(stops[last]))}"); // bottom
+        w.Line("_cr.elements[1].position = 1.0");
+        w.Line($"_cr.elements[1].color = {Rgba(FromSrgb(stops[0]))}");    // top
+        for (int i = 1; i < last; i++)
+        {
+            double position = (double)i / last;         // 0.25, 0.5, 0.75 for five stops
+            var color = FromSrgb(stops[last - i]);       // bottom→top order
+            w.Line($"_e = _cr.elements.new({PyWriter.Num(position)})");
+            w.Line($"_e.color = {Rgba(color)}");
+        }
+        w.Line("_nt.links.new(_map.outputs[\"Result\"], _ramp.inputs[\"Fac\"])");
+        w.Line("_nt.links.new(_ramp.outputs[\"Color\"], _bsdf.inputs[\"Base Color\"])");
+    }
+
+    private static void EmitVertexColorRock(PyWriter w, MaterialsSpec m)
+    {
+        using (w.Block("if model.data.color_attributes:"))
+        {
+            w.Line("_vc = _nt.nodes.new(\"ShaderNodeVertexColor\")");
+            w.Line("_vc.layer_name = model.data.color_attributes[0].name");
+            w.Line("_nt.links.new(_vc.outputs[\"Color\"], _bsdf.inputs[\"Base Color\"])");
+        }
+        using (w.Block("else:"))
+            w.Line($"_bsdf.inputs[\"Base Color\"].default_value = {Rgba(m.BaseColor)}");
+    }
+
+    private static void EmitLighting(PyWriter w, SceneSpec spec)
+    {
+        var l = spec.Lighting;
+        w.Line($"# ---- lighting: {l.Rig.ToString().ToLowerInvariant()} (BA-B7) ----");
+        w.Line($"_light_strength = {PyWriter.Num(l.Strength)}");
+        switch (l.Rig)
+        {
+            case LightingRig.Headlamp:
+                w.Line("_hl = bpy.data.lights.new(\"Headlamp\", type='AREA')");
+                w.Line("_hl.energy = 80.0 * _light_strength");
+                w.Line("_hl.size = max(0.5, bounds_radius * 0.15)");
+                w.Line("_hlo = bpy.data.objects.new(\"Headlamp\", _hl)");
+                w.Line("scene.collection.objects.link(_hlo)");
+                w.Line("_hlo.parent = cam"); // rides the camera, emits along its -Z view axis
+                w.Line("_hlo.location = (0.0, 0.0, 0.0)");
+                break;
+
+            case LightingRig.SunSky:
+                w.Line("_sun = bpy.data.lights.new(\"Sun\", type='SUN')");
+                w.Line("_sun.energy = 3.0 * _light_strength");
+                w.Line("_suno = bpy.data.objects.new(\"Sun\", _sun)");
+                w.Line("scene.collection.objects.link(_suno)");
+                w.Line("_suno.rotation_euler = (0.9, 0.2, 0.6)");
+                EmitWorldNodes(w, out string bg);
+                w.Line("_sky = _wnt.nodes.new(\"ShaderNodeTexSky\")");
+                w.Line("_sky.sky_type = 'NISHITA'");
+                w.Line($"_wnt.links.new(_sky.outputs[\"Color\"], {bg}.inputs[\"Color\"])");
+                w.Line($"{bg}.inputs[\"Strength\"].default_value = 0.5 * _light_strength");
+                break;
+
+            case LightingRig.ThreePoint:
+                using (w.Block("def _thide_sun(name, energy, rot):"))
+                {
+                    w.Line("_d = bpy.data.lights.new(name, type='SUN')");
+                    w.Line("_d.energy = energy * _light_strength");
+                    w.Line("_o = bpy.data.objects.new(name, _d)");
+                    w.Line("scene.collection.objects.link(_o)");
+                    w.Line("_o.rotation_euler = rot");
+                }
+                w.Line("_thide_sun(\"Key\", 4.0, (0.9, 0.1, 0.5))");
+                w.Line("_thide_sun(\"Fill\", 1.5, (1.1, -0.2, -0.8))");
+                w.Line("_thide_sun(\"Rim\", 3.0, (-0.6, 0.3, 2.3))");
+                break;
+
+            case LightingRig.HdriFile:
+                EmitWorldNodes(w, out string hbg);
+                w.Line($"HDRI_PATH = {PyWriter.Str(spec.Lighting.HdriPath ?? "")}");
+                using (w.Block("if os.path.exists(HDRI_PATH):"))
+                {
+                    w.Line("_env = _wnt.nodes.new(\"ShaderNodeTexEnvironment\")");
+                    w.Line("_env.image = bpy.data.images.load(HDRI_PATH)");
+                    w.Line($"_wnt.links.new(_env.outputs[\"Color\"], {hbg}.inputs[\"Color\"])");
+                    w.Line($"{hbg}.inputs[\"Strength\"].default_value = 1.0 * _light_strength");
+                }
+                using (w.Block("else:"))
+                {
+                    w.Line("thide(\"warning\", \"HDRI file not found: \" + HDRI_PATH)");
+                    w.Line($"{hbg}.inputs[\"Strength\"].default_value = 0.5");
+                }
+                break;
+
+            default:
+                throw new ArgumentOutOfRangeException(nameof(spec), l.Rig, "Unknown lighting rig.");
+        }
         w.Blank();
+    }
+
+    private static void EmitWorldNodes(PyWriter w, out string backgroundNode)
+    {
+        w.Line("world = bpy.data.worlds.new(\"CaveWorld\")");
+        w.Line("scene.world = world");
+        w.Line("world.use_nodes = True");
+        w.Line("_wnt = world.node_tree");
+        w.Line("_bg = next(n for n in _wnt.nodes if n.type == 'BACKGROUND')");
+        backgroundNode = "_bg";
+    }
+
+    private static string Rgba(ColorRgb c)
+        => $"({PyWriter.Num(c.R)}, {PyWriter.Num(c.G)}, {PyWriter.Num(c.B)}, 1.0)";
+
+    private static ColorRgb Scale(ColorRgb c, double factor) => new(
+        Math.Clamp(c.R * factor, 0, 1), Math.Clamp(c.G * factor, 0, 1), Math.Clamp(c.B * factor, 0, 1));
+
+    /// <summary>Converts an sRGB display colour (0–255) to the linear RGB Blender node
+    /// colours expect, so the shader gradient matches the intended palette.</summary>
+    private static ColorRgb FromSrgb(Geometry.CaveColor c) => new(SrgbToLinear(c.R), SrgbToLinear(c.G), SrgbToLinear(c.B));
+
+    private static double SrgbToLinear(byte channel)
+    {
+        double c = channel / 255.0;
+        return c <= 0.04045 ? c / 12.92 : Math.Pow((c + 0.055) / 1.055, 2.4);
     }
 
     private static void EmitCamera(PyWriter w, SceneSpec spec, CameraPlan plan)

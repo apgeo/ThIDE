@@ -53,22 +53,34 @@ bounds_max = mathutils.Vector((max(c[i] for c in _corners) for i in range(3)))
 bounds_center = (bounds_min + bounds_max) / 2
 bounds_radius = max((bounds_max - bounds_min).length / 2, 1.0)
 
-# ---- baseline material + light (replaced by the BA-B7 sections) ----
+# ---- material: depthgradient (BA-B7) ----
 mat = bpy.data.materials.new("CaveRock")
 mat.use_nodes = True
-_bsdf = next(n for n in mat.node_tree.nodes if n.type == 'BSDF_PRINCIPLED')
+_nt = mat.node_tree
+_bsdf = next(n for n in _nt.nodes if n.type == 'BSDF_PRINCIPLED')
 _bsdf.inputs["Roughness"].default_value = 0.9
-if model.data.color_attributes:
-    _vc = mat.node_tree.nodes.new("ShaderNodeVertexColor")
-    _vc.layer_name = model.data.color_attributes[0].name
-    mat.node_tree.links.new(_vc.outputs["Color"], _bsdf.inputs["Base Color"])
+_geo = _nt.nodes.new("ShaderNodeNewGeometry")
+_sep = _nt.nodes.new("ShaderNodeSeparateXYZ")
+_nt.links.new(_geo.outputs["Position"], _sep.inputs["Vector"])
+_map = _nt.nodes.new("ShaderNodeMapRange")
+_map.inputs["From Min"].default_value = bounds_min.z
+_map.inputs["From Max"].default_value = bounds_max.z
+_nt.links.new(_sep.outputs["Z"], _map.inputs["Value"])
+_ramp = _nt.nodes.new("ShaderNodeValToRGB")
+_cr = _ramp.color_ramp
+_cr.elements[0].position = 0.0
+_cr.elements[0].color = (0.018500220128379697, 0.03560131487502034, 0.13286832155381798, 1.0)
+_cr.elements[1].position = 1.0
+_cr.elements[1].color = (0.8879231178819663, 0.7454042095403874, 0.43415363617474895, 1.0)
+_e = _cr.elements.new(0.25)
+_e.color = (0.10702310297826761, 0.1559264637078274, 0.3419144249086609, 1.0)
+_e = _cr.elements.new(0.5)
+_e.color = (0.39157247774972326, 0.1559264637078274, 0.10224173308810132, 1.0)
+_e = _cr.elements.new(0.75)
+_e.color = (0.6938717612919899, 0.39157247774972326, 0.14995978981060856, 1.0)
+_nt.links.new(_map.outputs["Result"], _ramp.inputs["Fac"])
+_nt.links.new(_ramp.outputs["Color"], _bsdf.inputs["Base Color"])
 model.data.materials.append(mat)
-
-_sun = bpy.data.lights.new("Sun", type='SUN')
-_sun.energy = 3.0
-sun = bpy.data.objects.new("Sun", _sun)
-scene.collection.objects.link(sun)
-sun.rotation_euler = (0.9, 0.2, 0.6)
 
 # ---- camera: viewpoints (BA-B6 camera engine) ----
 cam_data = bpy.data.cameras.new("Camera")
@@ -128,6 +140,23 @@ def _thide_set_interp(idblock, mode):
 _thide_set_interp(cam, "BEZIER")
 _thide_set_interp(cam_target, "BEZIER")
 _thide_set_interp(cam_data, "BEZIER")
+
+# ---- lighting: sunsky (BA-B7) ----
+_light_strength = 1
+_sun = bpy.data.lights.new("Sun", type='SUN')
+_sun.energy = 3.0 * _light_strength
+_suno = bpy.data.objects.new("Sun", _sun)
+scene.collection.objects.link(_suno)
+_suno.rotation_euler = (0.9, 0.2, 0.6)
+world = bpy.data.worlds.new("CaveWorld")
+scene.world = world
+world.use_nodes = True
+_wnt = world.node_tree
+_bg = next(n for n in _wnt.nodes if n.type == 'BACKGROUND')
+_sky = _wnt.nodes.new("ShaderNodeTexSky")
+_sky.sky_type = 'NISHITA'
+_wnt.links.new(_sky.outputs["Color"], _bg.inputs["Color"])
+_bg.inputs["Strength"].default_value = 0.5 * _light_strength
 
 # ---- engine ----
 thide("phase", "engine")

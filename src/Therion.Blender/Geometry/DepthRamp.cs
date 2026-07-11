@@ -17,6 +17,11 @@ public static class DepthRamp
         new(0x25, 0x35, 0x66), // deep blue
     ];
 
+    /// <summary>The depth stops top → bottom (index 0 = cave top). The shader
+    /// depth-gradient material (BA-B7) reproduces these as a ColorRamp so it matches the
+    /// per-vertex tint palette.</summary>
+    public static IReadOnlyList<CaveColor> GradientStops => Stops;
+
     /// <summary>
     /// Colour for depth fraction <paramref name="t"/> in [0,1], where 1 = top of the
     /// cave (<c>maxZ</c>) and 0 = bottom (<c>minZ</c>). Out-of-range values clamp.
