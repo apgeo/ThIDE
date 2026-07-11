@@ -554,6 +554,8 @@
   <data name="Pref_LoadPluginsHelp" xml:space="preserve"><value>Drop plugin .dll files (types implementing ISemanticRule) in %AppData%/ThIDE/plugins. Loaded at startup; disable for performance. Changes apply on restart.</value></data>
   <data name="Pref_McpServer" xml:space="preserve"><value>Enable the in-app AI tools server (MCP)</value></data>
   <data name="Pref_McpServerHelp" xml:space="preserve"><value>Lets a local AI assistant reach this running project through the Model Context Protocol. Serves on 127.0.0.1 (loopback only) on a random port, protected by a bearer token; the port and token are written to %AppData%/ThIDE/mcp-endpoint.json. Off by default — see docs/mcp-host-setup.md.</value></data>
+  <data name="Pref_McpFollowAgent" xml:space="preserve"><value>Follow the agent (let AI tools drive the window)</value></data>
+  <data name="Pref_McpFollowAgentHelp" xml:space="preserve"><value>When on, the AI assistant may open files, focus panels, run commands, save, and change the layout in this window. When off, it can still read the project and answer questions, but cannot touch the UI. On by default.</value></data>
   <data name="Pref_CliHelp" xml:space="preserve"><value>The headless CLI (therion-cli) and the LSP server (therion-lsp) are separate executables — see docs.</value></data>
   <data name="Pref_ResetAll" xml:space="preserve"><value>Reset all to defaults</value></data>
   <data name="Pref_KbHelp" xml:space="preserve"><value>Click a gesture field and press the key combination to assign it.</value></data>

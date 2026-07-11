@@ -396,6 +396,12 @@
                               IsChecked="{Binding EnableMcpServer}" />
                     <TextBlock Text="{l:Loc Pref_McpServerHelp}"
                                Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
+                    <!-- Follow the agent: allow the MCP action tools to drive the UI. -->
+                    <CheckBox Content="{l:Loc Pref_McpFollowAgent}"
+                              IsChecked="{Binding McpFollowAgent}"
+                              IsEnabled="{Binding EnableMcpServer}" Margin="16,0,0,0" />
+                    <TextBlock Text="{l:Loc Pref_McpFollowAgentHelp}"
+                               Foreground="Gray" FontSize="11" TextWrapping="Wrap" Margin="16,0,0,0" />
 
                     <Separator Margin="0,6" />
                     <TextBlock Text="{l:Loc Pref_CliHelp}"

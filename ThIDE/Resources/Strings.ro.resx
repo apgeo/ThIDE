@@ -554,6 +554,8 @@
   <data name="Pref_LoadPluginsHelp" xml:space="preserve"><value>Puneți fișiere plugin .dll (tipuri care implementează ISemanticRule) în %AppData%/ThIDE/plugins. Încărcate la pornire; dezactivați pentru performanță. Modificările se aplică la repornire.</value></data>
   <data name="Pref_McpServer" xml:space="preserve"><value>Activează serverul de unelte AI din aplicație (MCP)</value></data>
   <data name="Pref_McpServerHelp" xml:space="preserve"><value>Permite unui asistent AI local să acceseze acest proiect prin Model Context Protocol. Ascultă pe 127.0.0.1 (doar loopback) pe un port aleatoriu, protejat cu un token; portul și tokenul sunt scrise în %AppData%/ThIDE/mcp-endpoint.json. Dezactivat implicit — vezi docs/mcp-host-setup.md.</value></data>
+  <data name="Pref_McpFollowAgent" xml:space="preserve"><value>Urmează agentul (permite uneltelor AI să controleze fereastra)</value></data>
+  <data name="Pref_McpFollowAgentHelp" xml:space="preserve"><value>Când este activ, asistentul AI poate deschide fișiere, focaliza panouri, rula comenzi, salva și schimba aspectul în această fereastră. Când este dezactivat, poate în continuare să citească proiectul și să răspundă la întrebări, dar nu poate atinge interfața. Activ implicit.</value></data>
   <data name="Pref_CliHelp" xml:space="preserve"><value>CLI-ul fără interfață (therion-cli) și serverul LSP (therion-lsp) sunt executabile separate — vezi documentația.</value></data>
   <data name="Pref_ResetAll" xml:space="preserve"><value>Resetează tot la valorile implicite</value></data>
   <data name="Pref_KbHelp" xml:space="preserve"><value>Faceți clic pe un câmp de combinație și apăsați combinația de taste pentru a o atribui.</value></data>

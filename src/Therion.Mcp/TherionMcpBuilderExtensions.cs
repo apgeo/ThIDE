@@ -55,6 +55,7 @@ public static class TherionMcpBuilderExtensions
     [
         typeof(UiTools),
         typeof(ActionTools),
+        typeof(CommandTools),
     ];
 
     /// <summary>

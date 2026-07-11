@@ -33,6 +33,15 @@ public sealed record OpenDocumentInfo(string Path, bool Active, bool Dirty);
 /// <param name="Message">A short human-readable note — what happened, or why it couldn't.</param>
 public sealed record UiActionResult(bool Ok, string Message);
 
+/// <summary>One whitelisted application setting (T-03.5).</summary>
+/// <param name="Key">Stable dotted key, e.g. <c>editor.wordWrap</c>.</param>
+/// <param name="Value">Its current value as a string (<c>true</c>/<c>false</c>, a number, or an enum token).</param>
+/// <param name="Type">One of <c>bool</c>, <c>number</c>, <c>enum</c>, <c>string</c> — how to read/write <see cref="Value"/>.</param>
+/// <param name="Description">A short English note on what the setting does.</param>
+/// <param name="Options">For a <c>bool</c>/<c>enum</c>, the accepted values; empty for free-form settings.</param>
+public sealed record McpSettingInfo(
+    string Key, string Value, string Type, string Description, IReadOnlyList<string> Options);
+
 /// <summary>
 /// Ring-R3 seam and UI-thread marshaller: the only way an MCP tool (or the in-app
 /// <see cref="IWorkspaceHost"/>) may reach the running IDE. The headless stdio host registers
@@ -83,6 +92,31 @@ public interface IUiBridge
 
     /// <summary>Shows a toast notification (the host supplies a localized title). <paramref name="kind"/> is info/success/warning/error.</summary>
     Task<UiActionResult> ShowToastAsync(string message, string kind);
+
+    // ---- guarded R3 actions (T-03.5). Default to "unsupported" so a UI-less or partial bridge (a test
+    //      fake, NullUiBridge) needs no boilerplate; the app bridge overrides each one. --------------
+
+    /// <summary>Runs the shell command with id <paramref name="commandId"/> (a <c>ShellCommandIds</c> token). The caller has already checked the allowlist.</summary>
+    Task<UiActionResult> RunCommandAsync(string commandId) => Unsupported();
+
+    /// <summary>Saves every open file that has unsaved changes.</summary>
+    Task<UiActionResult> SaveAllAsync() => Unsupported();
+
+    /// <summary>Applies a named layout preset: <c>default</c>, <c>split2</c>, <c>split3</c>, or <c>multi-monitor</c>.</summary>
+    Task<UiActionResult> SetLayoutAsync(string preset) => Unsupported();
+
+    /// <summary>The whitelisted settings and their current values. Empty when the host has no settings surface.</summary>
+    IReadOnlyList<McpSettingInfo> ListSettings() => [];
+
+    /// <summary>One whitelisted setting by key, or null when the key is not on the whitelist.</summary>
+    McpSettingInfo? GetSetting(string key) => null;
+
+    /// <summary>Sets a whitelisted setting from its string form; fails for an unknown key or an invalid value.</summary>
+    Task<UiActionResult> SetSettingAsync(string key, string value) => Unsupported();
+
+    /// <summary>The shared "this bridge can't do guarded R3" answer.</summary>
+    private static Task<UiActionResult> Unsupported() =>
+        Task.FromResult(new UiActionResult(false, "This host does not support guarded UI commands."));
 }
 
 /// <summary>Null-object bridge for hosts with no UI. R3 tools are never registered alongside it.</summary>

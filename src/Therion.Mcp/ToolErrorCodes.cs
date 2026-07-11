@@ -66,6 +66,14 @@ public static class ToolErrorCodes
 
     /// <summary>A UI action ran but could not do its thing (unknown tool id, symbol not found, …).</summary>
     public const string UiActionFailed = "ui_action_failed";
+
+    // ---- guarded R3 (run_command / settings, T-03.5) -------------------------------------------
+
+    /// <summary>The command is on the excluded list (opens an OS/modal dialog) and is never run.</summary>
+    public const string CommandExcluded = "command_excluded";
+
+    /// <summary>A gated command was called without <c>confirm:true</c>. Re-call with the confirmation.</summary>
+    public const string ConfirmationRequired = "confirmation_required";
 }
 
 /// <summary>

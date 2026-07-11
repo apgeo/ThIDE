@@ -59,6 +59,8 @@ public partial class PreferencesViewModel : ObservableObject
     [ObservableProperty] private bool _enablePlugins;
     /// <summary>Run the in-app MCP server (loopback HTTP + token) so a local LLM host can reach the IDE.</summary>
     [ObservableProperty] private bool _enableMcpServer;
+    /// <summary>"Follow the agent": let the MCP server's action tools drive the UI (open files, run commands…).</summary>
+    [ObservableProperty] private bool _mcpFollowAgent;
     /// <summary>0 = English, 1 = Romanian (#9 selector lives in Preferences, #11).</summary>
     [ObservableProperty] private int _languageIndex;
 
@@ -181,6 +183,7 @@ public partial class PreferencesViewModel : ObservableObject
         _hookOnBuild = s.HookOnBuild ?? string.Empty;
         _enablePlugins = s.EnablePlugins;
         _enableMcpServer = s.EnableMcpServer;
+        _mcpFollowAgent = s.McpFollowAgent;
         _languageIndex = string.Equals(s.UiLanguage, "ro", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
         _editorFontSize = s.EditorFontSize;
         _indentationSize = s.IndentationSize;
@@ -347,6 +350,7 @@ public partial class PreferencesViewModel : ObservableObject
             HookOnBuild = NullIfBlank(HookOnBuild),
             EnablePlugins = EnablePlugins,
             EnableMcpServer = EnableMcpServer,
+            McpFollowAgent = McpFollowAgent,
             UiLanguage = code,
             EditorFontSize = EditorFontSize,
             IndentationSize = IndentationSize,

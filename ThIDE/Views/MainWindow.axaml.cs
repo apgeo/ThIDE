@@ -1379,19 +1379,23 @@ public partial class MainWindow : Window
         _shortcuts.GesturesChanged += (_, _) => Avalonia.Threading.Dispatcher.UIThread.Post(Rebuild);
         Rebuild();
 
+        ConnectMcpBridge(vm);
+
         vm.ShowFindInFilesRequested   += (_, _) => ShowSearch();
         vm.ShowReplaceInFilesRequested += (_, _) => ShowReplace();
         vm.RenameSymbolRequested       += (_, _) => TriggerRenameSymbol();
     }
 
-    private void RebuildKeyBindings(MainWindowViewModel vm, IKeyboardShortcutService shortcuts)
+    /// <summary>
+    /// The shell-scoped id→command map. Built once (the command instances are stable) and shared by the
+    /// keyboard bindings and the MCP ring-R3 <c>run_command</c> tool (T-03.5), so both reach commands by
+    /// the same ids. Caret-scoped editor actions are matched by the focused editor, not listed here;
+    /// RenameSymbol appears in both — the editor wins when focused, this covers a focused tool panel.
+    /// </summary>
+    private Dictionary<string, ICommand?> BuildShellCommandMap(MainWindowViewModel vm)
     {
-        // Shell-scoped commands only. Caret-scoped editor actions (go-to-definition, toggle
-        // comment, …) are matched by the focused TherionTextEditor against the same service.
-        // RenameSymbol appears in both: the editor wins when focused, this binding covers the
-        // case where a tool panel has focus.
         _toggleFullScreenCommand ??= new CommunityToolkit.Mvvm.Input.RelayCommand(ToggleFullScreen);
-        var commandMap = new Dictionary<string, ICommand?>(StringComparer.Ordinal)
+        return new Dictionary<string, ICommand?>(StringComparer.Ordinal)
         {
             [ShellCommandIds.Build]                    = vm.Build.BuildCommand,
             [ShellCommandIds.Rebuild]                  = vm.Build.RebuildCommand,
@@ -1433,6 +1437,29 @@ public partial class MainWindow : Window
             [ShellCommandIds.NewScrapScaffold]         = vm.NewScrapScaffoldCommand,
             [ShellCommandIds.GenerateReport]           = vm.GenerateReportCommand,
         };
+    }
+
+    /// <summary>Connects the in-app MCP bridge to this shell so the guarded R3 tools drive real commands (T-03.5).</summary>
+    private void ConnectMcpBridge(MainWindowViewModel vm)
+    {
+        UiBridge? bridge;
+        try { bridge = AppServices.Provider.GetService<Therion.Mcp.IUiBridge>() as UiBridge; }
+        catch { bridge = null; }
+        if (bridge is null) return;
+
+        var layoutPresets = new Dictionary<string, ICommand?>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["default"]       = vm.ResetLayoutCommand,
+            ["split2"]        = vm.ApplySplitLayout2Command,
+            ["split3"]        = vm.ApplySplitLayout3Command,
+            ["multi-monitor"] = vm.ApplyMultiMonitorLayoutCommand,
+        };
+        bridge.ConnectShell(BuildShellCommandMap(vm), vm.SaveAllDirtyAsync, layoutPresets);
+    }
+
+    private void RebuildKeyBindings(MainWindowViewModel vm, IKeyboardShortcutService shortcuts)
+    {
+        var commandMap = BuildShellCommandMap(vm);
 
         KeyBindings.Clear();
         foreach (var (id, cmd) in commandMap)
