@@ -516,6 +516,14 @@ public static class ScriptGenerator
         w.Line($"scene.cycles.samples = {PyWriter.Num(spec.Engine.Samples)}");
         w.Line($"scene.cycles.use_denoising = {PyWriter.Bool(spec.Engine.Denoise)}");
         w.Line("scene.cycles.seed = SEED");
+        // Enclosed caves are GI-noisy — capping bounces trades a little global light for a
+        // much cleaner render at the same sample count (doc 03). Caustics off for the same.
+        w.Line("scene.cycles.max_bounces = 8");
+        w.Line("scene.cycles.diffuse_bounces = 3");
+        w.Line("scene.cycles.glossy_bounces = 3");
+        w.Line("scene.cycles.transmission_bounces = 4");
+        w.Line("scene.cycles.caustics_reflective = False");
+        w.Line("scene.cycles.caustics_refractive = False");
         w.Blank();
 
         if (spec.Engine.Gpu == GpuMode.CpuOnly)
@@ -589,6 +597,14 @@ public static class ScriptGenerator
         using (w.Block("else:"))
             w.Line("fail(\"no EEVEE engine is available in this Blender\")");
         w.Line($"scene.eevee.taa_render_samples = {PyWriter.Num(spec.Engine.Samples)}");
+        // AO + shadows for cave depth. Attribute names differ across EEVEE Legacy vs Next
+        // (4.2+), so probe each (R-07) — a missing one must not fail the render.
+        using (w.Block("if hasattr(scene.eevee, \"use_gtao\"):"))
+            w.Line("scene.eevee.use_gtao = True");
+        using (w.Block("if hasattr(scene.eevee, \"use_shadows\"):"))
+            w.Line("scene.eevee.use_shadows = True");
+        using (w.Block("if hasattr(scene.eevee, \"use_raytracing\"):"))
+            w.Line("scene.eevee.use_raytracing = True");
         w.Line("thide(\"device\", \"EEVEE\")");
         w.Blank();
     }

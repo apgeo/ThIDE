@@ -96,6 +96,26 @@ public class MaterialsScriptTests
         Assert.Contains("os.path.exists(HDRI_PATH)", script); // missing-file guard
     }
 
+    // ---- engine-specific tuning ----
+
+    [Fact]
+    public void Cycles_CapsBouncesForEnclosedCaves()
+    {
+        var script = ScriptGenerator.Generate(Spec()); // Cycles by default
+        Assert.Contains("scene.cycles.max_bounces = 8", script);
+        Assert.Contains("scene.cycles.caustics_reflective = False", script);
+    }
+
+    [Fact]
+    public void Eevee_EnablesAoAndShadows_BehindHasattrProbes()
+    {
+        var spec = SceneSpecTests.ValidSpec() with { Engine = SceneSpecTests.ValidSpec().Engine with { Kind = RenderEngineKind.Eevee } };
+        var script = ScriptGenerator.Generate(spec);
+        Assert.Contains("if hasattr(scene.eevee, \"use_gtao\"):", script);
+        Assert.Contains("scene.eevee.use_gtao = True", script);
+        Assert.DoesNotContain("scene.cycles.max_bounces", script); // no Cycles tuning under EEVEE
+    }
+
     [Fact]
     public void EmittedCombinations_CompileAsPython_WhenPythonAvailable()
     {

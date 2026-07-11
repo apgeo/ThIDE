@@ -179,6 +179,12 @@ scene.render.engine = 'CYCLES'
 scene.cycles.samples = 32
 scene.cycles.use_denoising = True
 scene.cycles.seed = SEED
+scene.cycles.max_bounces = 8
+scene.cycles.diffuse_bounces = 3
+scene.cycles.glossy_bounces = 3
+scene.cycles.transmission_bounces = 4
+scene.cycles.caustics_reflective = False
+scene.cycles.caustics_refractive = False
 
 scene.cycles.device = 'CPU'
 thide("device", "CPU")

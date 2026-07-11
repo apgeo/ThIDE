@@ -127,6 +127,12 @@ for _engine_id in ("BLENDER_EEVEE_NEXT", "BLENDER_EEVEE"):
 else:
     fail("no EEVEE engine is available in this Blender")
 scene.eevee.taa_render_samples = 32
+if hasattr(scene.eevee, "use_gtao"):
+    scene.eevee.use_gtao = True
+if hasattr(scene.eevee, "use_shadows"):
+    scene.eevee.use_shadows = True
+if hasattr(scene.eevee, "use_raytracing"):
+    scene.eevee.use_raytracing = True
 thide("device", "EEVEE")
 
 # ---- output ----
