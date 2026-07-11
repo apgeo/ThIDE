@@ -77,6 +77,44 @@ public sealed class KdTree
     /// <summary>The distance to the nearest stored point (positive infinity if empty).</summary>
     public double NearestDistance(CaveVector3 query) => Math.Sqrt(NearestDistanceSquared(query));
 
+    /// <summary>The nearest stored point to <paramref name="query"/>. Returns false for
+    /// an empty tree. Used by the flythrough camera to push the path off the wall.</summary>
+    public bool TryNearest(CaveVector3 query, out CaveVector3 nearest)
+    {
+        if (_count == 0) { nearest = default; return false; }
+        double best = double.PositiveInfinity;
+        int bestIndex = 0;
+        SearchNearest(0, _count, 0, query, ref best, ref bestIndex);
+        nearest = _points[_indices[bestIndex]];
+        return true;
+    }
+
+    private void SearchNearest(int lo, int hi, int depth, CaveVector3 query, ref double best, ref int bestIndex)
+    {
+        if (hi - lo <= 0) return;
+        int axis = depth % 3;
+        int mid = (lo + hi) / 2;
+        var node = _points[_indices[mid]];
+
+        double d2 = (node - query).LengthSquared;
+        if (d2 < best) { best = d2; bestIndex = mid; }
+
+        double diff = Axis(query, axis) - Axis(node, axis);
+        int nearLo, nearHi, farLo, farHi;
+        if (diff < 0)
+        {
+            nearLo = lo; nearHi = mid; farLo = mid + 1; farHi = hi;
+        }
+        else
+        {
+            nearLo = mid + 1; nearHi = hi; farLo = lo; farHi = mid;
+        }
+
+        SearchNearest(nearLo, nearHi, depth + 1, query, ref best, ref bestIndex);
+        if (diff * diff < best)
+            SearchNearest(farLo, farHi, depth + 1, query, ref best, ref bestIndex);
+    }
+
     private void Search(int lo, int hi, int depth, CaveVector3 query, ref double best)
     {
         if (hi - lo <= 0) return;
