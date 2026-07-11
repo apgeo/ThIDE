@@ -91,16 +91,40 @@ public sealed record EngineSpec
     public GpuMode Gpu { get; init; } = GpuMode.Auto;
 }
 
-/// <summary>The core's static auto-framed camera (replaced by the BA-B6 camera engine,
-/// which extends this record with templates/keyframes).</summary>
+/// <summary>Camera configuration (BA-B6). <see cref="Template"/> picks the motion; the
+/// matching per-template params object carries its knobs (null ⇒ template defaults). The
+/// core's <see cref="CameraTemplate.Static"/> camera uses only <see cref="FocalLength"/>
+/// and <see cref="AutoFramePadding"/> (runtime auto-framed, no keyframes).</summary>
 public sealed record CameraSpec
 {
-    /// <summary>Focal length in millimetres.</summary>
+    /// <summary>Which camera motion to generate (FR-04).</summary>
+    public CameraTemplate Template { get; init; } = CameraTemplate.Static;
+
+    /// <summary>Focal length in millimetres (the base focal; viewpoints may override).</summary>
     public double FocalLength { get; init; } = 35.0;
 
     /// <summary>Multiplier on the auto-framing distance (1 = model exactly fills the
     /// frame; larger backs the camera off).</summary>
     public double AutoFramePadding { get; init; } = 1.15;
+
+    /// <summary>Depth-of-field settings; focus tracks the look-at target.</summary>
+    public DepthOfFieldSpec Dof { get; init; } = new();
+
+    /// <summary>Turntable knobs (used when <see cref="Template"/> is
+    /// <see cref="CameraTemplate.Orbit"/>; null ⇒ defaults).</summary>
+    public OrbitParams? Orbit { get; init; }
+
+    /// <summary>Helical-descent knobs (<see cref="CameraTemplate.Helix"/>).</summary>
+    public HelixParams? Helix { get; init; }
+
+    /// <summary>Flythrough knobs (<see cref="CameraTemplate.Flythrough"/>).</summary>
+    public FlythroughParams? Flythrough { get; init; }
+
+    /// <summary>Viewpoint-sequence knobs (<see cref="CameraTemplate.Viewpoints"/>).</summary>
+    public ViewpointParams? Viewpoints { get; init; }
+
+    /// <summary>Still-set knobs (<see cref="CameraTemplate.StillSet"/>).</summary>
+    public StillSetParams? Stills { get; init; }
 }
 
 /// <summary>Timing for animated outputs (frame range = round(fps · duration)).</summary>

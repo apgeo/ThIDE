@@ -23,6 +23,13 @@ public static class SceneSpecValidator
     public const double MaxFocalLength = 1_200;
     public const double MinAutoFramePadding = 0.5;
     public const double MaxAutoFramePadding = 10;
+    public const double MaxRevolutions = 1_000;
+    public const double MaxTurns = 1_000;
+    public const double MaxScale = 1_000;
+    public const int MaxSmoothingIterations = 8;
+    public const int MinViewpoints = 2;
+    public const double MinFStop = 0.5;
+    public const double MaxFStop = 1_000;
 
     /// <summary>All problems with <paramref name="spec"/>; empty means valid.</summary>
     public static IReadOnlyList<SpecError> Validate(SceneSpec spec)
@@ -49,6 +56,9 @@ public static class SceneSpecValidator
             Bad("camera.focalLength", $"Focal length must be within {MinFocalLength}–{MaxFocalLength} mm.");
         if (spec.Camera.AutoFramePadding is < MinAutoFramePadding or > MaxAutoFramePadding || double.IsNaN(spec.Camera.AutoFramePadding))
             Bad("camera.autoFramePadding", $"Auto-frame padding must be within {MinAutoFramePadding}–{MaxAutoFramePadding}.");
+        if (spec.Camera.Dof.FStop is < MinFStop or > MaxFStop || double.IsNaN(spec.Camera.Dof.FStop))
+            Bad("camera.dof.fStop", $"Aperture f-stop must be within {MinFStop}–{MaxFStop}.");
+        ValidateCameraTemplate(spec, Bad);
 
         // ---- animation (only consumed by animated outputs, but keep it always sane
         //      so switching output kind never resurrects an invalid value) ----
@@ -83,11 +93,88 @@ public static class SceneSpecValidator
         return errors;
     }
 
-    /// <summary>The animated frame count the emitter uses: round(fps · duration), min 1
-    /// for a valid spec. (1 for stills.)</summary>
+    private static void ValidateCameraTemplate(SceneSpec spec, Action<string, string> bad)
+    {
+        static bool Ok(double v, double min, double max) => !double.IsNaN(v) && v >= min && v <= max;
+
+        switch (spec.Camera.Template)
+        {
+            case CameraTemplate.Static:
+                break;
+
+            case CameraTemplate.Orbit:
+                var orbit = spec.Camera.Orbit ?? new OrbitParams();
+                if (!Ok(orbit.Revolutions, double.Epsilon, MaxRevolutions))
+                    bad("camera.orbit.revolutions", $"Revolutions must be within (0, {MaxRevolutions}].");
+                if (!Ok(orbit.ElevationDegrees, -89, 89))
+                    bad("camera.orbit.elevationDegrees", "Elevation must be within -89–89 degrees.");
+                if (!Ok(orbit.RadiusScale, double.Epsilon, MaxScale))
+                    bad("camera.orbit.radiusScale", $"Radius scale must be within (0, {MaxScale}].");
+                break;
+
+            case CameraTemplate.Helix:
+                var helix = spec.Camera.Helix ?? new HelixParams();
+                if (!Ok(helix.Turns, double.Epsilon, MaxTurns))
+                    bad("camera.helix.turns", $"Turns must be within (0, {MaxTurns}].");
+                if (!Ok(helix.StartHeightFraction, 0, 1))
+                    bad("camera.helix.startHeightFraction", "Start height fraction must be within 0–1.");
+                if (!Ok(helix.EndHeightFraction, 0, 1))
+                    bad("camera.helix.endHeightFraction", "End height fraction must be within 0–1.");
+                if (!Ok(helix.RadiusScale, double.Epsilon, MaxScale))
+                    bad("camera.helix.radiusScale", $"Radius scale must be within (0, {MaxScale}].");
+                if (!Ok(helix.EndRadiusScale, double.Epsilon, MaxScale))
+                    bad("camera.helix.endRadiusScale", $"End radius scale must be within (0, {MaxScale}].");
+                break;
+
+            case CameraTemplate.Flythrough:
+                var fly = spec.Camera.Flythrough ?? new FlythroughParams();
+                if (!Ok(fly.LookAheadMeters, 0, 1_000_000))
+                    bad("camera.flythrough.lookAheadMeters", "Look-ahead must be a non-negative distance.");
+                if (!Ok(fly.ClearanceMeters, 0, 1_000_000))
+                    bad("camera.flythrough.clearanceMeters", "Clearance must be a non-negative distance.");
+                if (fly.SmoothingIterations is < 0 or > MaxSmoothingIterations)
+                    bad("camera.flythrough.smoothingIterations", $"Smoothing iterations must be within 0–{MaxSmoothingIterations}.");
+                break;
+
+            case CameraTemplate.Viewpoints:
+                var vps = spec.Camera.Viewpoints;
+                if (vps is null || vps.Viewpoints.Count < MinViewpoints)
+                {
+                    bad("camera.viewpoints.viewpoints", $"A viewpoint sequence needs at least {MinViewpoints} viewpoints.");
+                    break;
+                }
+                for (int i = 0; i < vps.Viewpoints.Count; i++)
+                {
+                    var vp = vps.Viewpoints[i];
+                    if (vp.FocalLength is { } f && (f < MinFocalLength || f > MaxFocalLength || double.IsNaN(f)))
+                        bad($"camera.viewpoints.viewpoints[{i}].focalLength", $"Focal length must be within {MinFocalLength}–{MaxFocalLength} mm.");
+                    if (!Ok(vp.HoldSeconds, 0, MaxDurationSeconds))
+                        bad($"camera.viewpoints.viewpoints[{i}].holdSeconds", "Hold must be a non-negative number of seconds.");
+                }
+                break;
+
+            case CameraTemplate.StillSet:
+                var stills = spec.Camera.Stills ?? new StillSetParams();
+                if (stills.Count < 1)
+                    bad("camera.stills.views", "A still set needs at least one view.");
+                if (spec.Output.Kind != OutputKind.FrameSequence)
+                    bad("output.kind", "A still set writes numbered frames; set the output kind to FrameSequence.");
+                break;
+
+            default:
+                bad("camera.template", $"Unknown camera template {spec.Camera.Template}.");
+                break;
+        }
+    }
+
+    /// <summary>The frame count the emitter renders: a still set renders one frame per
+    /// view; a single still renders one frame; every animated template renders
+    /// round(fps · duration). Min 1 for a valid spec.</summary>
     public static int FrameCount(SceneSpec spec)
     {
         ArgumentNullException.ThrowIfNull(spec);
+        if (spec.Camera.Template == CameraTemplate.StillSet)
+            return Math.Max(1, (spec.Camera.Stills ?? new StillSetParams()).Count);
         if (spec.Output.Kind == OutputKind.Still) return 1;
         return (int)Math.Round(spec.Animation.Fps * spec.Animation.DurationSeconds);
     }
