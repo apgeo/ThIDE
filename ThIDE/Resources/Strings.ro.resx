@@ -409,6 +409,7 @@
   <data name="Blender_UI_OpenLog" xml:space="preserve"><value>Deschide jurnalul</value></data>
   <data name="Blender_UI_OpenInBlender" xml:space="preserve"><value>Deschide în Blender…</value></data>
   <data name="Blender_UI_Jobs" xml:space="preserve"><value>Randări recente</value></data>
+  <data name="Blender_UI_CopyResult" xml:space="preserve"><value>Copiază calea rezultatului</value></data>
   <data name="Blender_Notify_OpenFolder" xml:space="preserve"><value>Deschide folderul</value></data>
   <data name="Blender_Notify_OpenLog" xml:space="preserve"><value>Deschide jurnalul</value></data>
   <data name="Blender_Status_OpenedInBlender" xml:space="preserve"><value>Deschis în Blender.</value></data>

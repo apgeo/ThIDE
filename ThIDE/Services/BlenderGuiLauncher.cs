@@ -38,6 +38,7 @@ public sealed class BlenderGuiLauncher : IBlenderGuiLauncher
             {
                 UseShellExecute = false,
                 CreateNoWindow = false,
+                WorkingDirectory = System.IO.Path.GetDirectoryName(scriptPath) ?? string.Empty,
             };
             psi.ArgumentList.Add("--python");
             psi.ArgumentList.Add(scriptPath);

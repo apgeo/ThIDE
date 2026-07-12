@@ -38,7 +38,7 @@ public class BlenderAnimationViewModelTests
             return Task.FromResult(Result);
         }
 
-        public Task<string> ExportScriptAsync(SceneSpec spec, RenderSource source, string outputDir, IProgress<RenderProgress>? progress = null, CancellationToken ct = default)
+        public Task<string> ExportScriptAsync(SceneSpec spec, RenderSource source, string outputDir, IProgress<RenderProgress>? progress = null, CancellationToken ct = default, bool interactive = false)
             => Task.FromResult(Path.Combine(outputDir, "render.py"));
     }
 

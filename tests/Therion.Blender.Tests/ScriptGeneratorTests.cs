@@ -85,6 +85,7 @@ public class ScriptGeneratorTests
     [InlineData("video")]
     [InlineData("still")]
     [InlineData("self-contained")]
+    [InlineData("interactive")]
     public void Golden_ScriptsMatchByteExactly(string which)
     {
         var script = GenerateByName(which);
@@ -227,6 +228,38 @@ public class ScriptGeneratorTests
         Assert.DoesNotContain("PLY_PATH = \"assets/model.ply\"", script); // imports the decoded temp file
     }
 
+    [Fact]
+    public void Interactive_BuildsSceneButSkipsOutputAndRender()
+    {
+        var render = ScriptGenerator.Generate(VideoSpec());
+        var interactive = ScriptGenerator.Generate(VideoSpec(), purpose: ScriptPurpose.Interactive);
+
+        // Same scene construction (model + camera) …
+        Assert.Contains("bpy.ops.wm.ply_import(filepath=PLY_PATH)", interactive);
+        Assert.Contains("scene.camera = cam", interactive);
+        // … but no output target, no progress hooks, and — crucially — no render call, so opening
+        // it in the GUI does not kick off a headless render (BA-B13).
+        Assert.DoesNotContain("bpy.ops.render.render", interactive);
+        Assert.DoesNotContain("image_settings.file_format", interactive);
+        Assert.DoesNotContain("thide(\"done\"", interactive);
+        // It frames the model through the render camera so the scene is visible on open.
+        Assert.Contains("view_perspective = 'CAMERA'", interactive);
+        Assert.Contains("thide(\"phase\", \"interactive\")", interactive);
+        // The render variant of course still renders.
+        Assert.Contains("bpy.ops.render.render(animation=True)", render);
+    }
+
+    [Fact]
+    public void Video_FallsBackToPngFrames_WhenBuildHasNoFfmpeg()
+    {
+        var script = ScriptGenerator.Generate(VideoSpec());
+        // Runtime probe rather than an unconditional assignment (R-07) — a build without the
+        // FFMPEG movie writer must degrade to PNG frames, not crash.
+        Assert.Contains("if 'FFMPEG' in _formats:", script);
+        Assert.Contains("_img.file_format = 'PNG'", script);
+        Assert.Contains("no FFMPEG video encoder", script);
+    }
+
     // ---- gating ----
 
     [Fact]
@@ -254,7 +287,7 @@ public class ScriptGeneratorTests
         var python = FindPython();
         if (python is null) return; // no Python on PATH — silently satisfied (documented)
 
-        foreach (var which in new[] { "video", "still", "self-contained" })
+        foreach (var which in new[] { "video", "still", "self-contained", "interactive" })
         {
             var script = GenerateByName(which);
             var path = Path.Combine(Path.GetTempPath(), $"thide-golden-{which}-{Environment.ProcessId}.py");
@@ -311,6 +344,7 @@ public class ScriptGeneratorTests
         "video" => ScriptGenerator.Generate(VideoSpec()),
         "still" => ScriptGenerator.Generate(StillSpec()),
         "self-contained" => GenerateSelfContained(),
+        "interactive" => ScriptGenerator.Generate(VideoSpec(), purpose: ScriptPurpose.Interactive),
         _ => throw new ArgumentOutOfRangeException(nameof(which)),
     };
 

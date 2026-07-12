@@ -409,6 +409,7 @@
   <data name="Blender_UI_OpenLog" xml:space="preserve"><value>Open log</value></data>
   <data name="Blender_UI_OpenInBlender" xml:space="preserve"><value>Open in Blender…</value></data>
   <data name="Blender_UI_Jobs" xml:space="preserve"><value>Recent renders</value></data>
+  <data name="Blender_UI_CopyResult" xml:space="preserve"><value>Copy result path</value></data>
   <data name="Blender_Notify_OpenFolder" xml:space="preserve"><value>Open folder</value></data>
   <data name="Blender_Notify_OpenLog" xml:space="preserve"><value>Open log</value></data>
   <data name="Blender_Status_OpenedInBlender" xml:space="preserve"><value>Opened in Blender.</value></data>

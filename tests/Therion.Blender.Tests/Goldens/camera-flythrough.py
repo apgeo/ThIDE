@@ -182,12 +182,20 @@ scene.frame_start = 1
 scene.frame_end = 8
 OUT_DIR = "out"
 os.makedirs(OUT_DIR, exist_ok=True)
-scene.render.image_settings.file_format = 'FFMPEG'
-scene.render.ffmpeg.format = "MPEG4"
-scene.render.ffmpeg.codec = "H264"
-scene.render.ffmpeg.constant_rate_factor = 'HIGH'
-scene.render.ffmpeg.audio_codec = 'NONE'
-scene.render.filepath = os.path.join(OUT_DIR, "golden-camera.mp4")
+_img = scene.render.image_settings
+_formats = _img.bl_rna.properties["file_format"].enum_items.keys()
+if 'FFMPEG' in _formats:
+    _img.file_format = 'FFMPEG'
+    scene.render.ffmpeg.format = "MPEG4"
+    scene.render.ffmpeg.codec = "H264"
+    scene.render.ffmpeg.constant_rate_factor = 'HIGH'
+    scene.render.ffmpeg.audio_codec = 'NONE'
+    scene.render.filepath = os.path.join(OUT_DIR, "golden-camera.mp4")
+else:
+    thide("warning", "This Blender build has no FFMPEG video encoder; rendering a PNG frame sequence instead of golden-camera.mp4.")
+    _img.file_format = 'PNG'
+    _img.color_mode = "RGB"
+    scene.render.filepath = os.path.join(OUT_DIR, "golden-camera_####")
 
 # ---- progress hooks (THIDE: tier-1 protocol, D-08) ----
 FRAME_COUNT = 8

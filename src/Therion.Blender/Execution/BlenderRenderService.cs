@@ -74,14 +74,15 @@ public sealed class BlenderRenderService : IBlenderRenderService
 
     public async Task<string> ExportScriptAsync(
         SceneSpec spec, RenderSource source, string outputDir,
-        IProgress<RenderProgress>? progress = null, CancellationToken ct = default)
+        IProgress<RenderProgress>? progress = null, CancellationToken ct = default, bool interactive = false)
     {
         ArgumentNullException.ThrowIfNull(spec);
         ArgumentNullException.ThrowIfNull(source);
         ArgumentException.ThrowIfNullOrWhiteSpace(outputDir);
 
         Directory.CreateDirectory(outputDir);
-        var (scriptPath, _, _) = await PrepareAsync(spec, source, outputDir, progress, ct).ConfigureAwait(false);
+        var purpose = interactive ? ScriptPurpose.Interactive : ScriptPurpose.Render;
+        var (scriptPath, _, _) = await PrepareAsync(spec, source, outputDir, progress, ct, purpose).ConfigureAwait(false);
         progress?.Report(new RenderProgress(RenderPhase.Done, "Script exported", 1.0));
         return scriptPath;
     }
@@ -90,7 +91,8 @@ public sealed class BlenderRenderService : IBlenderRenderService
     /// script, and write <c>render.py</c> there. Returns its path, the frame count, and the
     /// spec with its source/output pointed at the produced assets.</summary>
     private async Task<(string ScriptPath, int FrameCount, SceneSpec Spec)> PrepareAsync(
-        SceneSpec spec, RenderSource source, string assetDir, IProgress<RenderProgress>? progress, CancellationToken ct)
+        SceneSpec spec, RenderSource source, string assetDir, IProgress<RenderProgress>? progress, CancellationToken ct,
+        ScriptPurpose purpose = ScriptPurpose.Render)
     {
         ct.ThrowIfCancellationRequested();
         progress?.Report(new RenderProgress(RenderPhase.ConvertingGeometry, "Converting model"));
@@ -116,7 +118,7 @@ public sealed class BlenderRenderService : IBlenderRenderService
         var framing = CameraFraming.FromGeometry(conversion.Geometry);
         var assets = BuildAssets(effectiveSpec, conversion);
         string script = await Task.Run(
-            () => ScriptGenerator.Generate(effectiveSpec, assets, framing, conversion.Meta), ct).ConfigureAwait(false);
+            () => ScriptGenerator.Generate(effectiveSpec, assets, framing, conversion.Meta, purpose), ct).ConfigureAwait(false);
 
         string scriptPath = Path.Combine(assetDir, "render.py");
         await File.WriteAllTextAsync(scriptPath, script, Utf8NoBom, ct).ConfigureAwait(false);

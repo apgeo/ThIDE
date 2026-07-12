@@ -30,8 +30,12 @@ public class BlenderPanelB13Tests
         };
         public Task<RenderResult> RenderAsync(SceneSpec spec, RenderSource source, IProgress<RenderProgress>? p = null, CancellationToken ct = default)
             => Task.FromResult(Result);
-        public Task<string> ExportScriptAsync(SceneSpec spec, RenderSource source, string outputDir, IProgress<RenderProgress>? p = null, CancellationToken ct = default)
-            => Task.FromResult(System.IO.Path.Combine(outputDir, "render.py"));
+        public bool LastInteractive { get; private set; }
+        public Task<string> ExportScriptAsync(SceneSpec spec, RenderSource source, string outputDir, IProgress<RenderProgress>? p = null, CancellationToken ct = default, bool interactive = false)
+        {
+            LastInteractive = interactive;
+            return Task.FromResult(System.IO.Path.Combine(outputDir, "render.py"));
+        }
     }
 
     private sealed class FakeSources : IBlenderSourceProvider
@@ -124,13 +128,15 @@ public class BlenderPanelB13Tests
     public async Task OpenInBlenderGui_ExportsAndLaunches()
     {
         var gui = new FakeGui();
-        var vm = Vm(gui: gui);
+        var render = new FakeRender();
+        var vm = Vm(render: render, gui: gui);
 
         Assert.True(vm.OpenInBlenderGuiCommand.CanExecute(null));
         await vm.OpenInBlenderGuiCommand.ExecuteAsync(null);
 
         Assert.EndsWith("render.py", gui.Launched);
         Assert.False(vm.BlenderMissing);
+        Assert.True(render.LastInteractive); // GUI export must request the interactive (no-render) script
     }
 
     [Fact]
@@ -150,5 +156,15 @@ public class BlenderPanelB13Tests
     {
         var vm = Vm(gui: null); // no launcher injected
         Assert.False(vm.OpenInBlenderGuiCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void CopyJob_HandlesEntryAndNull()
+    {
+        var vm = Vm();
+        var entry = new JobHistoryEntry("cave", true, "Done", ["/out/cave.mp4"], "/out/job.log", System.TimeSpan.Zero);
+        // The clipboard is a headless no-op; the command must run cleanly for a real entry and null.
+        vm.CopyJobCommand.Execute(entry);
+        vm.CopyJobCommand.Execute(null);
     }
 }

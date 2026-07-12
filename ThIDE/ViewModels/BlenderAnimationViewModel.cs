@@ -431,6 +431,18 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         if (!string.IsNullOrWhiteSpace(path)) _shell?.Open(path);
     }
 
+    /// <summary>Copies a finished render's output path(s) to the clipboard (or its status when the
+    /// job produced no outputs), so the user can paste the result location elsewhere.</summary>
+    [RelayCommand]
+    private void CopyJob(JobHistoryEntry? entry)
+    {
+        if (entry is null) return;
+        string text = entry.Outputs.Count > 0
+            ? string.Join(Environment.NewLine, entry.Outputs)
+            : entry.Status;
+        ClipboardHelper.SetText(text);
+    }
+
     [RelayCommand(CanExecute = nameof(HasOutputs))]
     private void OpenOutputFolder()
     {
@@ -461,7 +473,7 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
             var dir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ThIDE", "blender-gui", System.Guid.NewGuid().ToString("N")[..8]);
             var progress = new Progress<RenderProgress>(OnProgress);
             var source = await _sources.AcquireAsync(BuildRequest()).ConfigureAwait(true);
-            var scriptPath = await _renderService.ExportScriptAsync(_spec, source, dir, progress).ConfigureAwait(true);
+            var scriptPath = await _renderService.ExportScriptAsync(_spec, source, dir, progress, interactive: true).ConfigureAwait(true);
             if (!_gui.Launch(scriptPath))
             {
                 BlenderMissing = true;

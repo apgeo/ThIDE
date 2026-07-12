@@ -57,11 +57,14 @@ public interface IBlenderRenderService
     /// <param name="outputDir">Destination folder for the script and assets.</param>
     /// <param name="progress">Receives progress ticks; may be <c>null</c>.</param>
     /// <param name="ct">Cancels generation cooperatively.</param>
+    /// <param name="interactive">When true, emit a GUI-inspection script (builds the scene, frames
+    /// the model, skips the output settings and final render) instead of the headless render script.</param>
     /// <returns>The absolute path of the written Blender Python script.</returns>
     Task<string> ExportScriptAsync(
         SceneSpec spec,
         RenderSource source,
         string outputDir,
         IProgress<RenderProgress>? progress = null,
-        CancellationToken ct = default);
+        CancellationToken ct = default,
+        bool interactive = false);
 }

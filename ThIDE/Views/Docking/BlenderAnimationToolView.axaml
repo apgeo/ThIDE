@@ -140,9 +140,14 @@
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vmm:JobHistoryEntry">
                         <DockPanel Margin="0,2,0,2">
+                            <Button DockPanel.Dock="Left" Content="&#x29C9;" Padding="4,0" FontSize="12"
+                                    Background="Transparent" BorderThickness="0" VerticalAlignment="Center"
+                                    ToolTip.Tip="{l:Loc Blender_UI_CopyResult}"
+                                    Command="{Binding $parent[ItemsControl].DataContext.Blender.CopyJobCommand}"
+                                    CommandParameter="{Binding}" />
                             <TextBlock DockPanel.Dock="Left" Text="{Binding Name}" FontWeight="SemiBold" Width="150"
-                                       TextTrimming="CharacterEllipsis" />
-                            <TextBlock Text="{Binding Status}" TextTrimming="CharacterEllipsis" />
+                                       TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding Status}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                         </DockPanel>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>

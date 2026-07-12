@@ -41,11 +41,22 @@ public static class OutputCollector
 
         return output.Kind switch
         {
-            OutputKind.Video => CollectGlob(dir, output.BaseName, ContainerExtension(output.Container), expected: 1),
+            OutputKind.Video => CollectVideoOrFrames(dir, output.BaseName, ContainerExtension(output.Container), frameCount),
             OutputKind.Still => CollectStill(dir, output.BaseName),
             OutputKind.FrameSequence => CollectGlob(dir, output.BaseName, ".png", expected: Math.Max(1, frameCount)),
             _ => OutputCollection.Empty,
         };
+    }
+
+    private static OutputCollection CollectVideoOrFrames(string dir, string baseName, string extension, int frameCount)
+    {
+        var video = CollectGlob(dir, baseName, extension, expected: 1);
+        if (video.HasOutputs) return video;
+        // A Blender build without an FFMPEG encoder falls back to a PNG frame sequence
+        // (ScriptGenerator.EmitVideoOutput); collect those so the render isn't reported as
+        // "wrote no output". The script also emits a THIDE: warning explaining the fallback.
+        var frames = CollectGlob(dir, baseName, ".png", expected: Math.Max(1, frameCount));
+        return frames.HasOutputs ? frames : video;
     }
 
     private static OutputCollection CollectStill(string dir, string baseName)

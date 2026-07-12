@@ -71,7 +71,7 @@ public class ScaffoldSmokeTests
         public Task<RenderResult> RenderAsync(SceneSpec spec, RenderSource source, IProgress<RenderProgress>? progress = null, CancellationToken ct = default)
             => Task.FromResult(new RenderResult());
 
-        public Task<string> ExportScriptAsync(SceneSpec spec, RenderSource source, string outputDir, IProgress<RenderProgress>? progress = null, CancellationToken ct = default)
+        public Task<string> ExportScriptAsync(SceneSpec spec, RenderSource source, string outputDir, IProgress<RenderProgress>? progress = null, CancellationToken ct = default, bool interactive = false)
             => Task.FromResult(System.IO.Path.Combine(outputDir, "render.py"));
     }
 }

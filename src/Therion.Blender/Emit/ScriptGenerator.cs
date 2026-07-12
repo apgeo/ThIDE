@@ -31,6 +31,15 @@ public sealed record ScriptAssets
     public byte[]? PlyBytes { get; init; }
 }
 
+/// <summary>What a generated script is for: a headless render, or an interactive scene the
+/// user opens in the Blender GUI to inspect/tweak (BA-B13). The interactive variant builds the
+/// same scene but skips the output settings and the final render call, and frames the model.</summary>
+public enum ScriptPurpose
+{
+    Render,
+    Interactive,
+}
+
 /// <summary>Compiles a validated <see cref="SceneSpec"/> into a Blender Python script.</summary>
 public static class ScriptGenerator
 {
@@ -45,8 +54,11 @@ public static class ScriptGenerator
     /// needs it to precompute keyframes (D-16).</param>
     /// <param name="meta">The scene metadata (stations/components/leads) the label engine
     /// (BA-B8) draws from. Null ⇒ no 3-D labels (overlays that need no meta still emit).</param>
+    /// <param name="purpose">Render (headless, default) or Interactive (GUI inspection —
+    /// builds the scene, skips output/render, frames the model through the camera).</param>
     public static string Generate(
-        SceneSpec spec, ScriptAssets? assets = null, CameraFraming? framing = null, SceneMeta? meta = null)
+        SceneSpec spec, ScriptAssets? assets = null, CameraFraming? framing = null, SceneMeta? meta = null,
+        ScriptPurpose purpose = ScriptPurpose.Render)
     {
         ArgumentNullException.ThrowIfNull(spec);
         var errors = SceneSpecValidator.Validate(spec);
@@ -75,9 +87,16 @@ public static class ScriptGenerator
         EmitLighting(w, spec);
         EmitAnnotations(w, spec, labels);
         EmitEngine(w, spec);
-        EmitOutput(w, spec, camera.FrameCount);
-        EmitProgressHooks(w, camera.FrameCount);
-        EmitRender(w, spec);
+        if (purpose == ScriptPurpose.Interactive)
+        {
+            EmitInteractive(w, spec, camera.FrameCount);
+        }
+        else
+        {
+            EmitOutput(w, spec, camera.FrameCount);
+            EmitProgressHooks(w, camera.FrameCount);
+            EmitRender(w, spec);
+        }
         return w.ToString();
     }
 
@@ -951,12 +970,7 @@ public static class ScriptGenerator
         switch (spec.Output.Kind)
         {
             case OutputKind.Video:
-                w.Line("scene.render.image_settings.file_format = 'FFMPEG'");
-                w.Line($"scene.render.ffmpeg.format = {PyWriter.Str(FfmpegContainer(spec.Output.Container))}");
-                w.Line($"scene.render.ffmpeg.codec = {PyWriter.Str(spec.Output.Container == VideoContainer.WebM ? "WEBM" : "H264")}");
-                w.Line("scene.render.ffmpeg.constant_rate_factor = 'HIGH'");
-                w.Line("scene.render.ffmpeg.audio_codec = 'NONE'");
-                w.Line($"scene.render.filepath = os.path.join(OUT_DIR, {PyWriter.Str(spec.Output.BaseName + ContainerExtension(spec.Output.Container))})");
+                EmitVideoOutput(w, spec);
                 break;
             case OutputKind.FrameSequence:
                 w.Line("scene.render.image_settings.file_format = 'PNG'");
@@ -972,6 +986,64 @@ public static class ScriptGenerator
                 throw new ArgumentOutOfRangeException(nameof(spec), spec.Output.Kind, "Unknown output kind.");
         }
         w.Blank();
+    }
+
+    private static void EmitVideoOutput(PyWriter w, SceneSpec spec)
+    {
+        // Video needs an FFMPEG-enabled Blender build. Not every build ships the FFMPEG movie
+        // writer (some platform/Store builds, and the enum has shifted across versions), so
+        // probe the format enum at runtime (R-07): if 'FFMPEG' is missing, fall back to a PNG
+        // frame sequence and warn — the user still gets renderable output instead of a crash.
+        string videoName = spec.Output.BaseName + ContainerExtension(spec.Output.Container);
+        w.Line("_img = scene.render.image_settings");
+        w.Line("_formats = _img.bl_rna.properties[\"file_format\"].enum_items.keys()");
+        using (w.Block("if 'FFMPEG' in _formats:"))
+        {
+            w.Line("_img.file_format = 'FFMPEG'");
+            w.Line($"scene.render.ffmpeg.format = {PyWriter.Str(FfmpegContainer(spec.Output.Container))}");
+            w.Line($"scene.render.ffmpeg.codec = {PyWriter.Str(spec.Output.Container == VideoContainer.WebM ? "WEBM" : "H264")}");
+            w.Line("scene.render.ffmpeg.constant_rate_factor = 'HIGH'");
+            w.Line("scene.render.ffmpeg.audio_codec = 'NONE'");
+            w.Line($"scene.render.filepath = os.path.join(OUT_DIR, {PyWriter.Str(videoName)})");
+        }
+        using (w.Block("else:"))
+        {
+            w.Line($"thide(\"warning\", {PyWriter.Str($"This Blender build has no FFMPEG video encoder; rendering a PNG frame sequence instead of {videoName}.")})");
+            w.Line("_img.file_format = 'PNG'");
+            w.Line($"_img.color_mode = {PyWriter.Str(spec.Engine.TransparentBackground ? "RGBA" : "RGB")}");
+            w.Line($"scene.render.filepath = os.path.join(OUT_DIR, {PyWriter.Str(spec.Output.BaseName + "_####")})");
+        }
+    }
+
+    /// <summary>Interactive epilogue (BA-B13 GUI mode): set the frame range and frame the model
+    /// through the render camera, but write no output and do not render — the user inspects the
+    /// built scene in Blender's GUI.</summary>
+    private static void EmitInteractive(PyWriter w, SceneSpec spec, int frames)
+    {
+        w.Line("# ---- interactive preview (opened from ThIDE — build the scene, skip rendering) ----");
+        w.Line($"scene.render.resolution_x = {PyWriter.Num(spec.Output.Width)}");
+        w.Line($"scene.render.resolution_y = {PyWriter.Num(spec.Output.Height)}");
+        w.Line("scene.render.resolution_percentage = 100");
+        w.Line($"scene.render.fps = {PyWriter.Num(spec.Animation.Fps)}");
+        w.Line("scene.frame_start = 1");
+        w.Line($"scene.frame_end = {PyWriter.Num(frames)}");
+        w.Line("scene.frame_set(1)");
+        w.Blank();
+        w.Line("model.select_set(True)");
+        using (w.Block("if bpy.context.view_layer is not None:"))
+            w.Line("bpy.context.view_layer.objects.active = model");
+        // Look through the render camera in every 3-D viewport so the scene is framed on open.
+        // Context/screen may not be ready at --python startup, so guard it (never fail the open).
+        using (w.Block("try:"))
+        {
+            using (w.Block("for _win in bpy.context.window_manager.windows:"))
+            using (w.Block("for _area in _win.screen.areas:"))
+            using (w.Block("if _area.type == 'VIEW_3D':"))
+                w.Line("_area.spaces.active.region_3d.view_perspective = 'CAMERA'");
+        }
+        using (w.Block("except Exception:"))
+            w.Line("pass");
+        w.Line("thide(\"phase\", \"interactive\")");
     }
 
     private static string FfmpegContainer(VideoContainer container) => container switch
