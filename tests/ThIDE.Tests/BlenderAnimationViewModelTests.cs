@@ -155,15 +155,17 @@ public class BlenderAnimationViewModelTests
     [Fact]
     public async Task Render_Failure_SurfacesTheError()
     {
+        // A generic (non-Blender-install) failure surfaces the service's own message verbatim.
+        // The BlenderNotFound/TooOld localized-message path is covered by BlenderPanelB13Tests.
         var svc = new FakeRenderService
         {
-            Result = new RenderResult { Succeeded = false, FailureKind = RenderFailureKind.BlenderNotFound, ErrorMessage = "No Blender" },
+            Result = new RenderResult { Succeeded = false, FailureKind = RenderFailureKind.ScriptError, ErrorMessage = "PLY import produced no object" },
         };
         var vm = WithSource(Vm(svc));
 
         await vm.RenderCommand.ExecuteAsync(null);
 
-        Assert.Equal("No Blender", vm.LastError);
+        Assert.Equal("PLY import produced no object", vm.LastError);
         Assert.Empty(vm.Outputs);
         Assert.False(vm.IsBusy);
     }

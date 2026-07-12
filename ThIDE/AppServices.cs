@@ -58,6 +58,13 @@ internal static class AppServices
     /// <summary>Root under which per-render job folders are created (temp).</summary>
     private static string BlenderJobRoot() => Path.Combine(Path.GetTempPath(), "ThIDE", "blender-jobs");
 
+    /// <summary>The user's Blender path override (Preferences), or null to auto-detect.</summary>
+    private static string? BlenderOverridePath(IServiceProvider sp)
+    {
+        var path = sp.GetRequiredService<Services.IAppSettingsService>().Current.BlenderPath;
+        return string.IsNullOrWhiteSpace(path) ? null : path;
+    }
+
     /// <summary>Reads persisted settings before the container is built (plugin gate).</summary>
     private static AppSettings LoadInitialSettings()
     {
@@ -257,7 +264,10 @@ internal static class AppServices
             new Therion.Blender.Execution.BlenderRenderService(
                 sp.GetRequiredService<Therion.Blender.Execution.BlenderLocator>(),
                 sp.GetRequiredService<Therion.Blender.Execution.BlenderRunner>(),
-                BlenderJobRoot()));
+                BlenderJobRoot(),
+                blenderOverridePath: BlenderOverridePath(sp)));
+        services.AddSingleton<IBlenderGuiLauncher>(sp =>
+            new BlenderGuiLauncher(sp.GetRequiredService<Therion.Blender.Execution.BlenderLocator>(), () => BlenderOverridePath(sp)));
         services.AddSingleton<BlenderAnimationViewModel>();
         services.AddSingleton<ViewModels.Docking.BlenderAnimationToolViewModel>();
 

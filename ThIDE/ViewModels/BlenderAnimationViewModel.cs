@@ -17,6 +17,7 @@ using CommunityToolkit.Mvvm.Input;
 using Therion.Blender;
 using Therion.Blender.Presets;
 using Therion.Blender.Sources;
+using Therion.Build;
 using ThIDE.Resources;
 using ThIDE.Services;
 
@@ -27,6 +28,10 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
     private readonly IBlenderRenderService? _renderService;
     private readonly IBlenderSourceProvider? _sources;
     private readonly PresetStore? _presetStore;
+    private readonly INotificationService? _notifications;
+    private readonly IShellOpener? _shell;
+    private readonly IBlenderGuiLauncher? _gui;
+    private string? _lastJobLogPath;
 
     private static readonly HashSet<string> KnobNames = new(StringComparer.Ordinal)
     {
@@ -45,17 +50,26 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
     public ObservableCollection<string> Outputs { get; } = [];
     public ObservableCollection<string> Warnings { get; } = [];
 
+    /// <summary>Most-recent-first history of finished render jobs (BA-B13).</summary>
+    public ObservableCollection<JobHistoryEntry> Jobs { get; } = [];
+
     /// <summary>Design-time constructor.</summary>
     public BlenderAnimationViewModel() : this(null, null, null) { }
 
     public BlenderAnimationViewModel(
         IBlenderRenderService? renderService,
         IBlenderSourceProvider? sources,
-        PresetStore? presetStore)
+        PresetStore? presetStore,
+        INotificationService? notifications = null,
+        IShellOpener? shell = null,
+        IBlenderGuiLauncher? gui = null)
     {
         _renderService = renderService;
         _sources = sources;
         _presetStore = presetStore;
+        _notifications = notifications;
+        _shell = shell;
+        _gui = gui;
 
         _spec = BuiltInPresets.OrbitShowcase().Spec;
         LoadPresets();
@@ -100,6 +114,10 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
     [ObservableProperty] private string _statusMessage = "";
     [ObservableProperty] private string? _device;
     [ObservableProperty] private string? _lastError;
+
+    /// <summary>True after a render failed because Blender is missing/too old — the view shows a
+    /// "set the path in Preferences" affordance instead of a raw error (NFR-05).</summary>
+    [ObservableProperty] private bool _blenderMissing;
 
     /// <summary>Frames the render will produce (still set ⇒ view count; else fps × duration).</summary>
     public int EstimatedFrameCount => SceneSpecValidator.FrameCount(_spec);
@@ -194,6 +212,7 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         OnPropertyChanged(nameof(CurrentSpec));
         RenderCommand.NotifyCanExecuteChanged();
         ExportScriptCommand.NotifyCanExecuteChanged();
+        OpenInBlenderGuiCommand.NotifyCanExecuteChanged();
     }
 
     private bool HasSource => UseExternalFile
@@ -362,18 +381,109 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
     private void ApplyResult(RenderResult result)
     {
         Device = result.Device;
+        _lastJobLogPath = result.JobLogPath;
+        BlenderMissing = result.FailureKind is RenderFailureKind.BlenderNotFound or RenderFailureKind.BlenderTooOld;
         foreach (var warning in result.Warnings) Warnings.Add(warning);
+
+        string jobName = string.IsNullOrWhiteSpace(BaseName) ? Tr.Get("Blender_Tool_Title") : BaseName;
         if (result.Succeeded)
         {
             foreach (var path in result.OutputPaths) Outputs.Add(path);
             StatusMessage = Tr.Get("Blender_Status_Done");
+            Jobs.Insert(0, new JobHistoryEntry(jobName, true, StatusMessage, [.. result.OutputPaths], result.JobLogPath, result.Duration));
+            _notifications?.Success(Tr.Get("Blender_Tool_Title"), Tr.Get("Blender_Status_Done"),
+                _shell is not null && result.OutputPaths.Length > 0 ? Tr.Get("Blender_Notify_OpenFolder") : null,
+                _shell is not null && result.OutputPaths.Length > 0 ? () => RevealOutput(result.OutputPaths[0]) : null);
         }
         else
         {
-            LastError = result.ErrorMessage;
+            LastError = FailureMessage(result);
             StatusMessage = Tr.Get("Blender_Status_Failed");
+            Jobs.Insert(0, new JobHistoryEntry(jobName, false, LastError ?? StatusMessage, [], result.JobLogPath, result.Duration));
+            _notifications?.Error(Tr.Get("Blender_Tool_Title"), LastError ?? StatusMessage,
+                result.JobLogPath is not null && _shell is not null ? Tr.Get("Blender_Notify_OpenLog") : null,
+                result.JobLogPath is not null && _shell is not null ? () => _shell.Open(result.JobLogPath) : null);
+        }
+        OpenOutputFolderCommand.NotifyCanExecuteChanged();
+        OpenJobLogCommand.NotifyCanExecuteChanged();
+    }
+
+    private static string FailureMessage(RenderResult result) => result.FailureKind switch
+    {
+        RenderFailureKind.BlenderNotFound => Tr.Get("Blender_Fail_NotFound"),
+        RenderFailureKind.BlenderTooOld => Tr.Get("Blender_Fail_TooOld"),
+        RenderFailureKind.DiskSpace => Tr.Get("Blender_Fail_DiskSpace"),
+        RenderFailureKind.Cancelled => Tr.Get("Blender_Status_Cancelled"),
+        _ => result.ErrorMessage ?? Tr.Get("Blender_Status_Failed"),
+    };
+
+    private void RevealOutput(string path)
+    {
+        if (_shell is null) return;
+        if (!_shell.RevealInFileManager(path)) _shell.Open(System.IO.Path.GetDirectoryName(path) ?? path);
+    }
+
+    // ---- BA-B13 open/inspect commands ----
+
+    [RelayCommand]
+    private void OpenOutput(string? path)
+    {
+        if (!string.IsNullOrWhiteSpace(path)) _shell?.Open(path);
+    }
+
+    [RelayCommand(CanExecute = nameof(HasOutputs))]
+    private void OpenOutputFolder()
+    {
+        if (Outputs.Count > 0) RevealOutput(Outputs[0]);
+    }
+
+    private bool HasOutputs => Outputs.Count > 0;
+
+    [RelayCommand(CanExecute = nameof(HasJobLog))]
+    private void OpenJobLog()
+    {
+        if (_lastJobLogPath is { } log) _shell?.Open(log);
+    }
+
+    private bool HasJobLog => _lastJobLogPath is not null && _shell is not null;
+
+    /// <summary>Exports the script to a temp folder and opens it in the interactive Blender GUI
+    /// so the user can inspect/tweak the scene (BA-B13).</summary>
+    [RelayCommand(CanExecute = nameof(CanOpenInBlender))]
+    private async Task OpenInBlenderGuiAsync()
+    {
+        if (_gui is null || _renderService is null || _sources is null) return;
+        LastError = null;
+        BlenderMissing = false;
+        IsBusy = true;
+        try
+        {
+            var dir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ThIDE", "blender-gui", System.Guid.NewGuid().ToString("N")[..8]);
+            var progress = new Progress<RenderProgress>(OnProgress);
+            var source = await _sources.AcquireAsync(BuildRequest()).ConfigureAwait(true);
+            var scriptPath = await _renderService.ExportScriptAsync(_spec, source, dir, progress).ConfigureAwait(true);
+            if (!_gui.Launch(scriptPath))
+            {
+                BlenderMissing = true;
+                LastError = Tr.Get("Blender_Fail_NotFound");
+            }
+            else
+            {
+                StatusMessage = Tr.Get("Blender_Status_OpenedInBlender");
+            }
+        }
+        catch (Exception ex)
+        {
+            LastError = ex.Message;
+        }
+        finally
+        {
+            IsBusy = false;
+            Revalidate();
         }
     }
+
+    private bool CanOpenInBlender => CanStart && _gui is not null;
 }
 
 /// <summary>A preset in the gallery strip (built-in or user).</summary>
@@ -381,3 +491,7 @@ public sealed record PresetItem(string Name, string? Description, bool BuiltIn, 
 
 /// <summary>A discovered workspace model artifact in the source dropdown.</summary>
 public sealed record ArtifactItem(string DisplayName, ModelArtifact Artifact);
+
+/// <summary>A finished render job in the panel's history (BA-B13).</summary>
+public sealed record JobHistoryEntry(
+    string Name, bool Succeeded, string Status, IReadOnlyList<string> Outputs, string? JobLogPath, System.TimeSpan Duration);

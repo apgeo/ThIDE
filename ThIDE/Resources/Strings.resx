@@ -405,6 +405,16 @@
   <data name="Blender_UI_Frames" xml:space="preserve"><value>Frames</value></data>
   <data name="Blender_UI_Blockers" xml:space="preserve"><value>Fix before rendering</value></data>
   <data name="Blender_UI_Outputs" xml:space="preserve"><value>Outputs</value></data>
+  <data name="Blender_UI_OpenFolder" xml:space="preserve"><value>Open folder</value></data>
+  <data name="Blender_UI_OpenLog" xml:space="preserve"><value>Open log</value></data>
+  <data name="Blender_UI_OpenInBlender" xml:space="preserve"><value>Open in Blender…</value></data>
+  <data name="Blender_UI_Jobs" xml:space="preserve"><value>Recent renders</value></data>
+  <data name="Blender_Notify_OpenFolder" xml:space="preserve"><value>Open folder</value></data>
+  <data name="Blender_Notify_OpenLog" xml:space="preserve"><value>Open log</value></data>
+  <data name="Blender_Status_OpenedInBlender" xml:space="preserve"><value>Opened in Blender.</value></data>
+  <data name="Blender_Fail_NotFound" xml:space="preserve"><value>Blender was not found. Set its path in Preferences ▸ External tools.</value></data>
+  <data name="Blender_Fail_TooOld" xml:space="preserve"><value>The installed Blender is too old — version 4.2 or newer is required.</value></data>
+  <data name="Blender_Fail_DiskSpace" xml:space="preserve"><value>Not enough free disk space for this render.</value></data>
   <data name="Menu_Tools_ImportDem" xml:space="preserve"><value>Import DEM as surface (.asc)…</value></data>
   <data name="Menu_Tools_ImportGpx" xml:space="preserve"><value>Import GPX waypoints (→ fix)…</value></data>
   <data name="Menu_Tools_ScaffoldProject" xml:space="preserve"><value>Scaffold project from survey…</value></data>

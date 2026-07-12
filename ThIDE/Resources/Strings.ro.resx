@@ -405,6 +405,16 @@
   <data name="Blender_UI_Frames" xml:space="preserve"><value>Cadre</value></data>
   <data name="Blender_UI_Blockers" xml:space="preserve"><value>De corectat înainte de randare</value></data>
   <data name="Blender_UI_Outputs" xml:space="preserve"><value>Rezultate</value></data>
+  <data name="Blender_UI_OpenFolder" xml:space="preserve"><value>Deschide folderul</value></data>
+  <data name="Blender_UI_OpenLog" xml:space="preserve"><value>Deschide jurnalul</value></data>
+  <data name="Blender_UI_OpenInBlender" xml:space="preserve"><value>Deschide în Blender…</value></data>
+  <data name="Blender_UI_Jobs" xml:space="preserve"><value>Randări recente</value></data>
+  <data name="Blender_Notify_OpenFolder" xml:space="preserve"><value>Deschide folderul</value></data>
+  <data name="Blender_Notify_OpenLog" xml:space="preserve"><value>Deschide jurnalul</value></data>
+  <data name="Blender_Status_OpenedInBlender" xml:space="preserve"><value>Deschis în Blender.</value></data>
+  <data name="Blender_Fail_NotFound" xml:space="preserve"><value>Blender nu a fost găsit. Setați calea în Preferințe ▸ Unelte externe.</value></data>
+  <data name="Blender_Fail_TooOld" xml:space="preserve"><value>Versiunea de Blender instalată este prea veche — necesită versiunea 4.2 sau mai nouă.</value></data>
+  <data name="Blender_Fail_DiskSpace" xml:space="preserve"><value>Spațiu insuficient pe disc pentru această randare.</value></data>
   <data name="Menu_Tools_ImportDem" xml:space="preserve"><value>Importă DEM ca suprafață (.asc)…</value></data>
   <data name="Menu_Tools_ImportGpx" xml:space="preserve"><value>Importă puncte GPX (→ fix)…</value></data>
   <data name="Menu_Tools_ScaffoldProject" xml:space="preserve"><value>Generează proiect din tur…</value></data>
