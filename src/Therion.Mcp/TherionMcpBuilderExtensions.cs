@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Therion.Mcp.Mutations;
+using Therion.Mcp.Resources;
 using Therion.Mcp.Tools;
 
 namespace Therion.Mcp;
@@ -58,6 +59,12 @@ public static class TherionMcpBuilderExtensions
         typeof(CommandTools),
     ];
 
+    /// <summary>Read-only MCP resources — a URI-addressable view of the R1 reads, in both profiles (T-04.1).</summary>
+    private static readonly Type[] ResourceTypes =
+    [
+        typeof(WorkspaceResources),
+    ];
+
     /// <summary>
     /// Registers the Therion tool catalog on an MCP server builder. Call <em>after</em> registering
     /// an <see cref="IUiBridge"/> if the host has a UI: the presence of one at this point is what
@@ -103,6 +110,15 @@ public static class TherionMcpBuilderExtensions
             builder.WithTools(toolTypes: MutatingToolTypes);
             if (hasUi && UiToolTypes.Length > 0) builder.WithTools(toolTypes: UiToolTypes);
         }
+
+        // Resources mirror the read-only tools, so they ship in both profiles. WorkspaceResources delegates
+        // to DiagnosticsTools/GraphTools, so those must be resolvable services: the SDK builds tool types by
+        // DI but doesn't register them as services, hence the explicit TryAddSingleton. Cast to
+        // IEnumerable<Type> so the call binds to WithResources(IEnumerable<Type>), not the generic overload
+        // (the same load-bearing detail as WithTools' named argument above).
+        builder.Services.TryAddSingleton<DiagnosticsTools>();
+        builder.Services.TryAddSingleton<GraphTools>();
+        builder.WithResources((IEnumerable<Type>)ResourceTypes);
 
         return builder;
     }
