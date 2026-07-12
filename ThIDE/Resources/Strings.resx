@@ -356,6 +356,22 @@
   <data name="Notif_LayoutNeedsTwoMonitors" xml:space="preserve"><value>This layout needs at least two monitors (and an enabled preview panel).</value></data>
   <data name="Menu_Tools" xml:space="preserve"><value>Tools</value></data>
   <data name="Menu_Tools_ImportSurvey" xml:space="preserve"><value>Import survey (Survex / Compass)…</value></data>
+  <data name="Menu_Tools_BlenderAnimation" xml:space="preserve"><value>Blender Animation…</value></data>
+  <data name="Blender_Tool_Title" xml:space="preserve"><value>Blender Animation</value></data>
+  <data name="Blender_Blocker_NoSource" xml:space="preserve"><value>Select a model source.</value></data>
+  <data name="Blender_Status_Acquiring" xml:space="preserve"><value>Acquiring source…</value></data>
+  <data name="Blender_Status_Cancelled" xml:space="preserve"><value>Cancelled.</value></data>
+  <data name="Blender_Status_Failed" xml:space="preserve"><value>Render failed.</value></data>
+  <data name="Blender_Status_Exporting" xml:space="preserve"><value>Exporting script…</value></data>
+  <data name="Blender_Status_Exported" xml:space="preserve"><value>Script exported.</value></data>
+  <data name="Blender_Status_Done" xml:space="preserve"><value>Render complete.</value></data>
+  <data name="Blender_Phase_Acquiring" xml:space="preserve"><value>Acquiring source…</value></data>
+  <data name="Blender_Phase_Converting" xml:space="preserve"><value>Converting model…</value></data>
+  <data name="Blender_Phase_Generating" xml:space="preserve"><value>Generating script…</value></data>
+  <data name="Blender_Phase_Rendering" xml:space="preserve"><value>Rendering</value></data>
+  <data name="Blender_Phase_Collecting" xml:space="preserve"><value>Collecting outputs…</value></data>
+  <data name="Blender_Phase_Done" xml:space="preserve"><value>Done</value></data>
+  <data name="Blender_Phase_Working" xml:space="preserve"><value>Working…</value></data>
   <data name="Menu_Tools_ImportDem" xml:space="preserve"><value>Import DEM as surface (.asc)…</value></data>
   <data name="Menu_Tools_ImportGpx" xml:space="preserve"><value>Import GPX waypoints (→ fix)…</value></data>
   <data name="Menu_Tools_ScaffoldProject" xml:space="preserve"><value>Scaffold project from survey…</value></data>

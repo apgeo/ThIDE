@@ -356,6 +356,22 @@
   <data name="Notif_LayoutNeedsTwoMonitors" xml:space="preserve"><value>Acest aspect necesită cel puțin două monitoare (și un panou de previzualizare activat).</value></data>
   <data name="Menu_Tools" xml:space="preserve"><value>Unelte</value></data>
   <data name="Menu_Tools_ImportSurvey" xml:space="preserve"><value>Importă topografie (Survex / Compass)…</value></data>
+  <data name="Menu_Tools_BlenderAnimation" xml:space="preserve"><value>Animație Blender…</value></data>
+  <data name="Blender_Tool_Title" xml:space="preserve"><value>Animație Blender</value></data>
+  <data name="Blender_Blocker_NoSource" xml:space="preserve"><value>Selectați o sursă de model.</value></data>
+  <data name="Blender_Status_Acquiring" xml:space="preserve"><value>Se obține sursa…</value></data>
+  <data name="Blender_Status_Cancelled" xml:space="preserve"><value>Anulat.</value></data>
+  <data name="Blender_Status_Failed" xml:space="preserve"><value>Randare eșuată.</value></data>
+  <data name="Blender_Status_Exporting" xml:space="preserve"><value>Se exportă scriptul…</value></data>
+  <data name="Blender_Status_Exported" xml:space="preserve"><value>Script exportat.</value></data>
+  <data name="Blender_Status_Done" xml:space="preserve"><value>Randare completă.</value></data>
+  <data name="Blender_Phase_Acquiring" xml:space="preserve"><value>Se obține sursa…</value></data>
+  <data name="Blender_Phase_Converting" xml:space="preserve"><value>Se convertește modelul…</value></data>
+  <data name="Blender_Phase_Generating" xml:space="preserve"><value>Se generează scriptul…</value></data>
+  <data name="Blender_Phase_Rendering" xml:space="preserve"><value>Se randează</value></data>
+  <data name="Blender_Phase_Collecting" xml:space="preserve"><value>Se colectează rezultatele…</value></data>
+  <data name="Blender_Phase_Done" xml:space="preserve"><value>Gata</value></data>
+  <data name="Blender_Phase_Working" xml:space="preserve"><value>Se lucrează…</value></data>
   <data name="Menu_Tools_ImportDem" xml:space="preserve"><value>Importă DEM ca suprafață (.asc)…</value></data>
   <data name="Menu_Tools_ImportGpx" xml:space="preserve"><value>Importă puncte GPX (→ fix)…</value></data>
   <data name="Menu_Tools_ScaffoldProject" xml:space="preserve"><value>Generează proiect din tur…</value></data>
