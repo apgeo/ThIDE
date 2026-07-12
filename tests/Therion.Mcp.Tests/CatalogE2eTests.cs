@@ -48,6 +48,7 @@ public class CatalogE2eTests
     [
         "rename_symbol",
         "format_file",
+        "edit_file",
         "scaffold_th2",
         "scaffold_topodroid_project",
         "import_survey",
@@ -66,7 +67,7 @@ public class CatalogE2eTests
     /// </summary>
     private static readonly string[] DestructiveTools =
     [
-        "rename_symbol", "format_file",
+        "rename_symbol", "format_file", "edit_file",
         "export_gis", "export_tables", "generate_report",   // replace an existing artifact
         "project_metadata_set",                             // overwrites a sidecar the user may have edited
         "run_build",                                        // Therion writes over yesterday's outputs

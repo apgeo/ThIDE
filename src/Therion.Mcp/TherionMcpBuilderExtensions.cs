@@ -46,6 +46,7 @@ public static class TherionMcpBuilderExtensions
     [
         typeof(RenameTools),
         typeof(FormatTools),
+        typeof(EditTools),
         typeof(ScaffoldTools),
         typeof(ImportTools),
         typeof(ExportTools),

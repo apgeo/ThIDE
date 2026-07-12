@@ -58,11 +58,14 @@ public sealed class EvalRunner(RunConfig config, OpenAiClient model)
 
     private async Task<McpClient> ConnectAsync(string workspaceDir, CancellationToken ct)
     {
+        // Point at the .thconfig explicitly, not the directory: each fixture also has a standalone-survey
+        // main.th, so a directory has two entry-point candidates and auto-load is ambiguous.
+        var entryPoint = Path.Combine(workspaceDir, "cave.thconfig");
         var transport = new StdioClientTransport(new StdioClientTransportOptions
         {
             Name = "therion-mcp (eval)",
             Command = "dotnet",
-            Arguments = [config.ServerDll, "--workspace", workspaceDir, "--profile", config.Profile],
+            Arguments = [config.ServerDll, "--workspace", entryPoint, "--profile", config.Profile],
             StandardErrorLines = _ => { },   // the server logs to stderr; keep it out of the eval output
         });
         return await McpClient.CreateAsync(transport, cancellationToken: ct);
