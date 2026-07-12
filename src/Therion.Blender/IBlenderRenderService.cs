@@ -14,8 +14,17 @@
 
 using System.Threading;
 using System.Threading.Tasks;
+using Therion.Blender.Sources;
 
 namespace Therion.Blender;
+
+/// <summary>The model to render and the workspace leads to annotate it with. The caller
+/// (UI/CLI) resolves the model itself — workspace artifact / external file / re-export — via
+/// the app-side source-acquisition adapters, then hands the result here.</summary>
+public sealed record RenderSource(ResolvedModelSource Model, IReadOnlyList<SourceLead> Leads)
+{
+    public RenderSource(ResolvedModelSource model) : this(model, []) { }
+}
 
 /// <summary>
 /// Orchestrates the convert → generate → render pipeline for the BLEND module. See
@@ -24,30 +33,34 @@ namespace Therion.Blender;
 public interface IBlenderRenderService
 {
     /// <summary>
-    /// Automated mode (FR-10b): acquire the source, convert it, generate the script, and run
+    /// Automated mode (FR-10b): convert the resolved source, generate the script, and run
     /// Blender headless, reporting progress and honoring cancellation, returning the collected
-    /// output products.
+    /// output products (or a typed failure — never throws for a render failure).
     /// </summary>
-    /// <param name="spec">The full render description (source selection included).</param>
+    /// <param name="spec">The render presentation (camera/materials/lighting/labels/output).</param>
+    /// <param name="source">The resolved model + leads to render.</param>
     /// <param name="progress">Receives progress ticks; may be <c>null</c>.</param>
     /// <param name="ct">Cancels the job (and tears down Blender) cooperatively.</param>
     Task<RenderResult> RenderAsync(
         SceneSpec spec,
+        RenderSource source,
         IProgress<RenderProgress>? progress = null,
         CancellationToken ct = default);
 
     /// <summary>
-    /// Export-only mode (FR-10a): acquire + convert + generate, writing the Blender Python
-    /// script and its assets (PLY + scene-meta, or a self-contained <c>.py</c>) into
-    /// <paramref name="outputDir"/> for the user to run manually. Does not launch Blender.
+    /// Export-only mode (FR-10a): convert + generate, writing the Blender Python script and its
+    /// assets (PLY + scene-meta, or a self-contained <c>.py</c>) into <paramref name="outputDir"/>
+    /// for the user to run manually. Does not launch Blender.
     /// </summary>
-    /// <param name="spec">The full render description (source selection included).</param>
+    /// <param name="spec">The render presentation.</param>
+    /// <param name="source">The resolved model + leads to convert.</param>
     /// <param name="outputDir">Destination folder for the script and assets.</param>
     /// <param name="progress">Receives progress ticks; may be <c>null</c>.</param>
     /// <param name="ct">Cancels generation cooperatively.</param>
     /// <returns>The absolute path of the written Blender Python script.</returns>
     Task<string> ExportScriptAsync(
         SceneSpec spec,
+        RenderSource source,
         string outputDir,
         IProgress<RenderProgress>? progress = null,
         CancellationToken ct = default);

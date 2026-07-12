@@ -58,6 +58,11 @@ public sealed record ConversionManifest
     public required BoundingBox WorldBounds { get; init; }
 }
 
+/// <summary>A conversion's manifest plus the in-memory geometry and metadata, for callers
+/// (the render service) that need the <see cref="GeometryResult"/> for camera framing and the
+/// <see cref="SceneMeta"/> for label planning without re-reading the written files.</summary>
+public sealed record ConversionResult(ConversionManifest Manifest, GeometryResult Geometry, SceneMeta Meta);
+
 /// <summary>Runs the whole Phase-1 conversion (source → Blender-ready assets).</summary>
 public sealed class CaveConversionPipeline
 {
@@ -79,6 +84,11 @@ public sealed class CaveConversionPipeline
 
     /// <summary>Converts an already-resolved source to assets on disk.</summary>
     public static ConversionManifest ConvertResolved(ResolvedModelSource source, ConversionOptions options)
+        => ConvertResolvedFull(source, options).Manifest;
+
+    /// <summary>Converts an already-resolved source to assets on disk and also returns the
+    /// in-memory geometry + metadata (for the render service's camera framing / labels).</summary>
+    public static ConversionResult ConvertResolvedFull(ResolvedModelSource source, ConversionOptions options)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(options);
@@ -108,7 +118,7 @@ public sealed class CaveConversionPipeline
         string metaPath = Path.Combine(options.OutputDirectory, options.SceneMetaFileName);
         SceneMetaWriter.WriteFile(meta, metaPath);
 
-        return new ConversionManifest
+        var manifest = new ConversionManifest
         {
             Source = source,
             ModelPath = modelPath,
@@ -122,6 +132,7 @@ public sealed class CaveConversionPipeline
             Offset = geometry.Offset,
             WorldBounds = geometry.OriginalBounds,
         };
+        return new ConversionResult(manifest, geometry, meta);
     }
 
     private static void WriteMesh(CaveMesh mesh, MeshFormat format, string path)
