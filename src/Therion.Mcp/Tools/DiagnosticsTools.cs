@@ -2,6 +2,7 @@ using System.ComponentModel;
 using ModelContextProtocol.Server;
 using Therion.Core;
 using Therion.Semantics;
+using Therion.Semantics.Thbook;
 
 namespace Therion.Mcp.Tools;
 
@@ -44,7 +45,9 @@ public sealed record DiagnosticList(
     int Warnings);
 
 /// <param name="DocTerm">A thbook term naming the manual section that covers this code.</param>
-public sealed record DiagnosticExplanationDto(string Code, string Summary, string? Example, string? DocTerm);
+/// <param name="ThbookCitation">Where <paramref name="DocTerm"/> is covered in the Therion Book, e.g. "Therion Book v6.4.0, p.34"; null when the term isn't indexed.</param>
+public sealed record DiagnosticExplanationDto(
+    string Code, string Summary, string? Example, string? DocTerm, string? ThbookCitation);
 
 /// <summary>Ring R1 — what is wrong with this project, and what does that mean.</summary>
 [McpServerToolType]
@@ -127,8 +130,11 @@ public sealed class DiagnosticsTools(IWorkspaceHost host)
 
         var trimmed = code.Trim();
         if (DiagnosticExplanations.For(trimmed) is { } explanation)
+        {
+            var citation = explanation.DocTerm is { } term ? ThbookIndex.Lookup(term)?.Citation : null;
             return ToolResult<DiagnosticExplanationDto>.Success(new DiagnosticExplanationDto(
-                trimmed, explanation.Summary, explanation.Example, explanation.DocTerm));
+                trimmed, explanation.Summary, explanation.Example, explanation.DocTerm, citation));
+        }
 
         return ToolResult<DiagnosticExplanationDto>.Failure(
             ToolErrorCodes.UnknownDiagnosticCode,

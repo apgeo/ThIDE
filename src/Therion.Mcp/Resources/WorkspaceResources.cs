@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using ModelContextProtocol.Server;
 using Therion.Mcp.Tools;
+using Therion.Semantics.Thbook;
 using Therion.Syntax;
 using Therion.Workspace;
 
@@ -62,6 +63,17 @@ public sealed class WorkspaceResources(IWorkspaceHost host, DiagnosticsTools dia
                + "as the survey_graph envelope.")]
     public async Task<string> SurveyGraph(CancellationToken ct = default) =>
         Serialize(await graph.GetSurveyGraph(ct: ct).ConfigureAwait(false));
+
+    // Needs no workspace — the thbook index is bundled. Returns a citation, not the page's text (Q-05c).
+    [McpServerResource(UriTemplate = "therion://thbook/{topic}", Name = "Therion Book page", MimeType = "application/json")]
+    [Description("Which page of the Therion Book covers a term — e.g. therion://thbook/equate → a citation. "
+               + "A citation, not the page text (the book is a PDF).")]
+    public string Thbook(
+        [Description("A Therion command or term, e.g. 'equate'.")] string topic) =>
+        JsonSerializer.Serialize(ThbookIndex.Lookup(topic) is { } entry
+            ? new { ok = true, data = entry }
+            : (object)new { ok = false, error = new { code = ToolErrorCodes.SymbolNotFound, message = $"'{topic}' is not in the Therion Book index." } },
+            Json);
 
     private static string Serialize<T>(ToolResult<T> result) => JsonSerializer.Serialize(result, Json);
 }

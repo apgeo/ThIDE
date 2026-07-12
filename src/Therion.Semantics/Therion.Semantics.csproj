@@ -9,6 +9,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Single source of the thbook term→page index (ThbookIndex); the app service reads the same copy. -->
+    <EmbeddedResource Include="Thbook\thbook-pages.json" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Therion.Core\Therion.Core.csproj" />
     <ProjectReference Include="..\Therion.Syntax\Therion.Syntax.csproj" />
     <ProjectReference Include="..\Therion.Processing.Abstractions\Therion.Processing.Abstractions.csproj" />

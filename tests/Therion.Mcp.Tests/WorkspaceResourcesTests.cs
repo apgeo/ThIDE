@@ -56,6 +56,20 @@ public class WorkspaceResourcesTests
     }
 
     [Fact]
+    public async Task The_thbook_resource_returns_a_citation_and_needs_no_workspace()
+    {
+        // No --workspace: the thbook index is bundled, so this resource answers on a bare server.
+        using var cts = new CancellationTokenSource(Timeout);
+        await using var client = await ServerHost.ConnectAsync(cts.Token);
+
+        var json = await ReadTextAsync(client, "therion://thbook/equate", cts.Token);
+
+        using var doc = JsonDocument.Parse(json);
+        Assert.True(doc.RootElement.GetProperty("ok").GetBoolean());
+        Assert.Equal(34, doc.RootElement.GetProperty("data").GetProperty("page").GetInt32());
+    }
+
+    [Fact]
     public async Task The_graph_resource_reports_the_cave_connectivity()
     {
         using var fixture = FixtureWorkspace.Create();

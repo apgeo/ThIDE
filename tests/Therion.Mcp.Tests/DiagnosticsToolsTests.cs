@@ -142,6 +142,19 @@ public class DiagnosticsToolsTests
         Assert.Equal("TH_SEM_015", result.Data!.Code);
         Assert.Contains("disconnected", result.Data.Summary, StringComparison.OrdinalIgnoreCase);
         Assert.Equal("equate", result.Data.DocTerm);
+        Assert.Equal("Therion Book v6.4.0, p.34", result.Data.ThbookCitation);   // docTerm → thbook (T-04.2)
+    }
+
+    [Fact]
+    public async Task Explain_diagnostic_omits_the_citation_when_the_term_is_not_in_the_book()
+    {
+        await using var host = new WorkspaceHost();
+
+        // TH0032's docTerm is "data", a real command that isn't in the page index → no citation.
+        var result = new DiagnosticsTools(host).ExplainDiagnostic("TH0032");
+
+        Assert.Equal("data", result.Data!.DocTerm);
+        Assert.Null(result.Data.ThbookCitation);
     }
 
     [Fact]

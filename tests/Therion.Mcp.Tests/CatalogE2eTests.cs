@@ -33,6 +33,7 @@ public class CatalogE2eTests
         ("structural_analysis", new() { ["file"] = "caves/upper.th" }),
         ("convert_units", new() { ["value"] = 100.0, ["from"] = "foot", ["to"] = "metre" }),
         ("convert_coordinates", new() { ["latitude"] = 46.77, ["longitude"] = 22.83 }),
+        ("search_thbook", new() { ["query"] = "equate" }),
     ];
 
     /// <summary>Read-only tools the happy-path sweep above cannot exercise.</summary>

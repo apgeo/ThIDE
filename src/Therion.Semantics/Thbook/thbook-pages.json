@@ -1,5 +1,5 @@
 {
-  "//": "Maps a Therion term/command to its page in the bundled thbook PDF. Editable: a copy is written to %AppData%/ThIDE/thbook-pages.json on first run; edit that file to override. Page numbers are physical PDF pages (1-based).",
+  "//": "Maps a Therion term/command to its page in the thbook PDF. Physical PDF pages (1-based). Single source of truth: the app (ThbookDocumentationService) and the MCP server (ThbookIndex) both read this; a user override may live at %AppData%/ThIDE/thbook-pages.json.",
   "edition": "v6.4.0",
   "pdf": "thbook-v6.4.0.pdf",
   "pages": {

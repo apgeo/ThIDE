@@ -37,6 +37,7 @@ public static class TherionMcpBuilderExtensions
         typeof(StructuralTools),
         typeof(CalculatorTools),
         typeof(ProjectMetadataTools),
+        typeof(ThbookTools),
     ];
 
     /// <summary>Ring R2 — writes files, writes sidecars, or runs the compiler.</summary>
