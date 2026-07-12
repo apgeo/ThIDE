@@ -42,6 +42,20 @@ public class WorkspaceResourcesTests
     }
 
     [Fact]
+    public async Task A_file_resource_reports_a_missing_file_as_an_envelope_not_a_throw()
+    {
+        using var fixture = FixtureWorkspace.Create();
+        using var cts = new CancellationTokenSource(Timeout);
+        await using var client = await ServerHost.ConnectAsync(cts.Token, "--workspace", fixture.Thconfig);
+
+        var json = await ReadTextAsync(client, "therion://file/caves/nope.th", cts.Token);
+
+        using var doc = JsonDocument.Parse(json);
+        Assert.False(doc.RootElement.GetProperty("ok").GetBoolean());
+        Assert.Equal("file_not_found", doc.RootElement.GetProperty("error").GetProperty("code").GetString());
+    }
+
+    [Fact]
     public async Task The_diagnostics_resource_is_the_get_diagnostics_envelope()
     {
         using var fixture = FixtureWorkspace.CreateBroken();

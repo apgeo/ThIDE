@@ -38,12 +38,9 @@ public static class ThbookIndex
         term is not null && Data.Pages.TryGetValue(term.Trim(), out var page) ? page : null;
 
     /// <summary>A citation for an exact term, or null when it is not indexed.</summary>
-    public static ThbookEntry? Lookup(string term)
-    {
-        if (term is null) return null;
-        var key = Data.Pages.Keys.FirstOrDefault(k => k.Equals(term.Trim(), System.StringComparison.OrdinalIgnoreCase));
-        return key is null ? null : Entry(key, Data.Pages[key]);
-    }
+    public static ThbookEntry? Lookup(string term) =>
+        // Pages is OrdinalIgnoreCase, so this is an O(1) lookup, not a key scan.
+        PageFor(term) is { } page ? Entry(term.Trim(), page) : null;
 
     /// <summary>
     /// Terms matching <paramref name="query"/> — an exact hit first, then substring matches either way —
@@ -67,24 +64,37 @@ public static class ThbookIndex
     private static ThbookEntry Entry(string term, int page) =>
         new(term, page, $"Therion Book {Data.Edition}, p.{page}");
 
+    // Runs once at static init. It must not throw: a missing/corrupt embedded index degrades to an empty
+    // index (search returns nothing, no citations, the app's thbook feature disables itself) rather than a
+    // TypeInitializationException that would break every consumer — the app service among them.
     private static (string, IReadOnlyDictionary<string, int>, string) Load()
     {
-        using var stream = typeof(ThbookIndex).Assembly.GetManifestResourceStream(ResourceName)
-            ?? throw new InvalidOperationException($"Embedded thbook index '{ResourceName}' is missing.");
-        using var reader = new StreamReader(stream);
-        var json = reader.ReadToEnd();
+        try
+        {
+            using var stream = typeof(ThbookIndex).Assembly.GetManifestResourceStream(ResourceName);
+            if (stream is null) return Empty;
+            using var reader = new StreamReader(stream);
+            var json = reader.ReadToEnd();
 
-        using var doc = JsonDocument.Parse(json);
-        var root = doc.RootElement;
-        var edition = root.TryGetProperty("edition", out var e) && e.ValueKind == JsonValueKind.String
-            ? e.GetString() ?? "" : "";
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+            var edition = root.TryGetProperty("edition", out var e) && e.ValueKind == JsonValueKind.String
+                ? e.GetString() ?? "" : "";
 
-        var pages = new Dictionary<string, int>(System.StringComparer.OrdinalIgnoreCase);
-        if (root.TryGetProperty("pages", out var p) && p.ValueKind == JsonValueKind.Object)
-            foreach (var entry in p.EnumerateObject())
-                if (entry.Value.ValueKind == JsonValueKind.Number && entry.Value.TryGetInt32(out var n))
-                    pages[entry.Name] = n;
+            var pages = new Dictionary<string, int>(System.StringComparer.OrdinalIgnoreCase);
+            if (root.TryGetProperty("pages", out var p) && p.ValueKind == JsonValueKind.Object)
+                foreach (var entry in p.EnumerateObject())
+                    if (entry.Value.ValueKind == JsonValueKind.Number && entry.Value.TryGetInt32(out var n))
+                        pages[entry.Name] = n;
 
-        return (edition, pages, json);
+            return (edition, pages, json);
+        }
+        catch (Exception ex) when (ex is IOException or JsonException)
+        {
+            return Empty;
+        }
     }
+
+    private static (string, IReadOnlyDictionary<string, int>, string) Empty =>
+        ("", new Dictionary<string, int>(System.StringComparer.OrdinalIgnoreCase), "{}");
 }
