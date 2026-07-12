@@ -99,7 +99,10 @@
             <ItemsControl ItemsSource="{Binding Blender.Blockers}" Foreground="#C05050" />
 
             <!-- actions -->
-            <TextBlock Text="{Binding Blender.EstimatedFrameCount, StringFormat='{}{0} frames'}" />
+            <DockPanel>
+                <TextBlock Text="{l:Loc Blender_UI_Frames}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding Blender.EstimatedFrameCount}" VerticalAlignment="Center" />
+            </DockPanel>
             <DockPanel>
                 <TextBlock Text="{l:Loc Blender_UI_ExportDir}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
                 <TextBox Text="{Binding Blender.ExportDirectory}" />
