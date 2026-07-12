@@ -1,0 +1,19 @@
+survey cave
+
+  survey a
+    centreline
+      data normal from to length compass clino
+      0 1 5.0 90 0
+      1 2 4.0 45 0
+    endcentreline
+  endsurvey
+
+  survey b
+    centreline
+      data normal from to length compass clino
+      0 1 5.0 90 0
+      1 2 4.0 45 0
+    endcentreline
+  endsurvey
+
+endsurvey

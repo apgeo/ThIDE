@@ -49,6 +49,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Therion.Mcp.Server", "src\T
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Therion.Mcp.Tests", "tests\Therion.Mcp.Tests\Therion.Mcp.Tests.csproj", "{E0666733-F52A-430F-B651-D18F386FC2B6}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Therion.Mcp.Evals", "src\Therion.Mcp.Evals\Therion.Mcp.Evals.csproj", "{84E0F0EE-B6DA-44DD-9D71-55DA4598EF2E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -299,6 +301,18 @@ Global
 		{E0666733-F52A-430F-B651-D18F386FC2B6}.Release|x64.Build.0 = Release|Any CPU
 		{E0666733-F52A-430F-B651-D18F386FC2B6}.Release|x86.ActiveCfg = Release|Any CPU
 		{E0666733-F52A-430F-B651-D18F386FC2B6}.Release|x86.Build.0 = Release|Any CPU
+		{84E0F0EE-B6DA-44DD-9D71-55DA4598EF2E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{84E0F0EE-B6DA-44DD-9D71-55DA4598EF2E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{84E0F0EE-B6DA-44DD-9D71-55DA4598EF2E}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{84E0F0EE-B6DA-44DD-9D71-55DA4598EF2E}.Debug|x64.Build.0 = Debug|Any CPU
+		{84E0F0EE-B6DA-44DD-9D71-55DA4598EF2E}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{84E0F0EE-B6DA-44DD-9D71-55DA4598EF2E}.Debug|x86.Build.0 = Debug|Any CPU
+		{84E0F0EE-B6DA-44DD-9D71-55DA4598EF2E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{84E0F0EE-B6DA-44DD-9D71-55DA4598EF2E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{84E0F0EE-B6DA-44DD-9D71-55DA4598EF2E}.Release|x64.ActiveCfg = Release|Any CPU
+		{84E0F0EE-B6DA-44DD-9D71-55DA4598EF2E}.Release|x64.Build.0 = Release|Any CPU
+		{84E0F0EE-B6DA-44DD-9D71-55DA4598EF2E}.Release|x86.ActiveCfg = Release|Any CPU
+		{84E0F0EE-B6DA-44DD-9D71-55DA4598EF2E}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -323,6 +337,7 @@ Global
 		{434ABD3C-21DC-4B5F-9B60-DF85629C9DCD} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{A6069C08-D0D0-404B-8829-7DE85CAEA514} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{E0666733-F52A-430F-B651-D18F386FC2B6} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{84E0F0EE-B6DA-44DD-9D71-55DA4598EF2E} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {C6CB19F0-06F7-4FF8-93B0-BF247D09D6A2}

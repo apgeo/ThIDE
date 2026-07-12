@@ -1,0 +1,2 @@
+source main.th
+export model -o cave.lox
