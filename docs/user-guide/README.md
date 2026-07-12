@@ -47,7 +47,7 @@ described in them). If Therion is new to you, keep the **Therion Book** open alo
 
 ### Configure & extend
 19. [Settings & preferences](19-settings-and-preferences.md)
-20. [Extensibility (CLI, LSP, plugins, hooks)](20-extensibility.md)
+20. [Extensibility (CLI, LSP, AI assistants, plugins, hooks)](20-extensibility.md)
 
 ### Reference
 21. [Keyboard shortcuts](21-keyboard-shortcuts.md)

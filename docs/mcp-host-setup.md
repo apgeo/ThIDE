@@ -16,7 +16,7 @@ ThIDE implements the **server**. The model lives in the host.
 
 ## What it can do
 
-**Twenty-one read-only tools.** Nothing here changes anything:
+**Twenty-two read-only tools.** Nothing here changes anything:
 
 | Area | Tools |
 |---|---|
@@ -26,6 +26,7 @@ ThIDE implements the **server**. The model lives in the host.
 | Survey | `survey_graph`, `survey_stats`, `deps_graph`, `list_stations` |
 | Field notes | `list_todos`, `list_leads` |
 | Calculation | `structural_analysis`, `convert_units`, `convert_coordinates`, `get_declination` |
+| Reference | `search_thbook` |
 
 **Eleven that write.** These are withheld entirely by the `data` profile:
 
@@ -41,6 +42,30 @@ ThIDE implements the **server**. The model lives in the host.
 create new ones — they refuse rather than overwrite. The exports replace their own output.
 `project_metadata_set` and `set_lead_status` write a sidecar the IDE shares, never a `.th`. `run_build`
 runs the real Therion compiler.
+
+## Resources and prompts
+
+Beyond tools, the server offers **resources** (data a host can attach as context by URI) and **prompts**
+(ready-made task templates a host lists by name). Both are read-only and available in either profile.
+
+Resources:
+
+| URI | What it is |
+|---|---|
+| `therion://file/{path}` | a project file's text (jailed, capped at 100 KB) |
+| `therion://diagnostics` | every diagnostic, as the `get_diagnostics` JSON |
+| `therion://stats` | project totals + per-survey breakdown |
+| `therion://graph/survey` | the cave's connectivity (pieces, junctions, dead-ends) |
+| `therion://thbook/{topic}` | which Therion Book page covers a term — a citation, not the page text |
+
+Prompts — pick one in your host to kick off a guided task: **`audit_workspace`**, **`fix_diagnostic`**
+(takes a diagnostic code), **`summarize_survey`**, **`prepare_release`**. Each just tells the model which
+tools to use, in order; they lead with the read-only tools, so they still do useful analysis under the
+`data` profile.
+
+> **On `search_thbook` and `therion://thbook`.** The Therion Book ships as a PDF, so these return a
+> *citation* — "Therion Book v6.4.0, p.34" — not the page's prose. They point the model (and you) at the
+> authoritative page; they don't reproduce it.
 
 ## Profiles
 
