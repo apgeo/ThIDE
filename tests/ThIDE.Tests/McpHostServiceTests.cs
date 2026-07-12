@@ -13,6 +13,8 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using ModelContextProtocol.Client;
@@ -48,6 +50,50 @@ public class McpHostServiceTests
     {
         var sw = Stopwatch.StartNew();
         while (!condition() && sw.Elapsed < timeout) await Task.Delay(50);
+    }
+
+    /// <summary>Path to the built <c>therion-mcp.dll</c>, injected by the csproj (the shim test spawns it).</summary>
+    private static string ServerDll =>
+        System.Reflection.Assembly.GetExecutingAssembly()
+            .GetCustomAttributes<System.Reflection.AssemblyMetadataAttribute>()
+            .First(a => a.Key == "TherionMcpServerDll").Value
+        ?? throw new InvalidOperationException("TherionMcpServerDll metadata is missing.");
+
+    /// <summary>
+    /// The owed T-03.6 smoke, automated: start the in-app host, then reach it through the
+    /// <c>therion-mcp --connect</c> shim over stdio (as a stdio-only host like LM Studio would). Seeing an
+    /// R3 tool (<c>get_ui_state</c>) through the shim proves the relay bridged stdio to the *live* HTTP host —
+    /// a headless server never exposes R3. No GUI needed: the host runs in-process.
+    /// </summary>
+    [Fact]
+    public async Task The_connect_shim_bridges_a_stdio_client_to_the_running_in_app_host()
+    {
+        var settings = new FakeSettings();
+        await using var host = NewHost(settings, out var discoveryPath);
+
+        settings.SetMcpEnabled(true);
+        await host.ApplySettingAsync();
+        await WaitUntilAsync(() => host.IsListening && File.Exists(discoveryPath), TimeSpan.FromSeconds(20));
+        Assert.True(host.IsListening, "the in-app host did not start");
+
+        var transport = new StdioClientTransport(new StdioClientTransportOptions
+        {
+            Name = "therion-mcp --connect (test)",
+            Command = "dotnet",
+            Arguments = [ServerDll, "--connect", discoveryPath],
+            StandardErrorLines = line => Console.Error.WriteLine($"[shim] {line}"),
+        });
+
+        await using (var client = await McpClient.CreateAsync(transport))
+        {
+            var tools = (await client.ListToolsAsync()).Select(t => t.Name).ToHashSet();
+            Assert.Contains("server_info", tools);    // R1
+            Assert.Contains("rename_symbol", tools);  // R2 (full profile)
+            Assert.Contains("get_ui_state", tools);   // R3 — only the in-app host has it, so the shim reached it
+        }
+
+        settings.SetMcpEnabled(false);
+        await host.StopAsync();
     }
 
     [Fact]
