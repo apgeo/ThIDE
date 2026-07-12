@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Therion.Mcp.Mutations;
+using Therion.Mcp.Prompts;
 using Therion.Mcp.Resources;
 using Therion.Mcp.Tools;
 
@@ -66,6 +67,12 @@ public static class TherionMcpBuilderExtensions
         typeof(WorkspaceResources),
     ];
 
+    /// <summary>MCP prompts — ready-made task templates, in both profiles (T-04.3).</summary>
+    private static readonly Type[] PromptTypes =
+    [
+        typeof(TherionPrompts),
+    ];
+
     /// <summary>
     /// Registers the Therion tool catalog on an MCP server builder. Call <em>after</em> registering
     /// an <see cref="IUiBridge"/> if the host has a UI: the presence of one at this point is what
@@ -120,6 +127,10 @@ public static class TherionMcpBuilderExtensions
         builder.Services.TryAddSingleton<DiagnosticsTools>();
         builder.Services.TryAddSingleton<GraphTools>();
         builder.WithResources((IEnumerable<Type>)ResourceTypes);
+
+        // Prompts are guidance text, safe in both profiles: each leads with read tools, so the data
+        // profile still gets useful analysis and the write steps degrade to advice.
+        builder.WithPrompts((IEnumerable<Type>)PromptTypes);
 
         return builder;
     }
