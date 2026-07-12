@@ -73,6 +73,7 @@
     <ProjectReference Include="..\src\Therion.Structural\Therion.Structural.csproj" />
     <ProjectReference Include="..\src\Therion.Workspace\Therion.Workspace.csproj" />
     <ProjectReference Include="..\src\Therion.Build\Therion.Build.csproj" />
+    <ProjectReference Include="..\src\Therion.Blender\Therion.Blender.csproj" />
   </ItemGroup>
 
   <ItemGroup>
