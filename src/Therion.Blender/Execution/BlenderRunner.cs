@@ -92,8 +92,9 @@ public sealed class BlenderRunner
             {
                 Succeeded = false,
                 FailureKind = RenderFailureKind.Crashed,
-                ErrorMessage = "Could not start Blender (a Microsoft Store install cannot be launched by its WindowsApps path — " +
-                               "use the blender.exe under %LOCALAPPDATA%\\Microsoft\\WindowsApps, or install Blender from blender.org): " + ex.Message,
+                ErrorMessage = "Could not start Blender. A Microsoft Store install can't be used headlessly — its executable is " +
+                               "access-restricted and its launcher returns no output — so install the standard Blender from " +
+                               "blender.org and set its path in Preferences ▸ External tools: " + ex.Message,
                 JobLogPath = null,
                 Duration = stopwatch.Elapsed,
             };
