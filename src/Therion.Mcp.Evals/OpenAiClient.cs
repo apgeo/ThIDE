@@ -119,7 +119,12 @@ public sealed class OpenAiClient(HttpClient http, string endpoint, string model)
         };
 
         using var response = await http.PostAsJsonAsync($"{endpoint.TrimEnd('/')}/chat/completions", body, ct);
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+        {
+            var detail = await response.Content.ReadAsStringAsync(ct);
+            if (detail.Length > 300) detail = detail[..300] + "…";
+            throw new InvalidOperationException($"endpoint returned {(int)response.StatusCode}: {detail}");
+        }
         return await response.Content.ReadFromJsonAsync<JsonNode>(ct);
     }
 

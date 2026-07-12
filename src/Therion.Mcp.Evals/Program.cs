@@ -54,7 +54,8 @@ int maxTurns = int.TryParse(Opt("--max-turns"), out var mt) ? mt : 12;
 using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
 if (apiKey is not null) http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
 
-var config = new RunConfig(endpoint, modelName, apiKey, serverDll, workspacesDir, maxTurns, Opt("--filter"));
+var profile = Opt("--profile") ?? "full";
+var config = new RunConfig(endpoint, modelName, apiKey, serverDll, workspacesDir, maxTurns, Opt("--filter"), profile);
 var runner = new EvalRunner(config, new OpenAiClient(http, endpoint, modelName));
 
 Console.WriteLine($"Evaluating {modelName} @ {endpoint} — spawning therion-mcp per case (full profile)…\n");
@@ -93,6 +94,7 @@ static void WriteOutputs(string path, IReadOnlyList<CaseRun> runs, string row)
         id = r.Case.Id, category = r.Case.Category.ToString(), passed = r.Passed, turns = r.Turns,
         tokens = r.Tokens, wallMs = (long)r.Wall.TotalMilliseconds, detail = r.Detail,
         calls = r.Calls.Select(c => new { c.Tool, c.SchemaValid, c.Ok }),
+        finalText = r.FinalText,
     });
     File.WriteAllText(Path.ChangeExtension(path, ".json"),
         JsonSerializer.Serialize(detail, new JsonSerializerOptions { WriteIndented = true }));
@@ -113,6 +115,7 @@ static void PrintHelp()
     Console.WriteLine("  --api-key <key>      Bearer token, if the endpoint needs one.");
     Console.WriteLine("  --server <path>      therion-mcp.dll to spawn (default: the built one).");
     Console.WriteLine("  --workspaces <dir>   Fixture workspaces dir (default: ./workspaces beside the exe).");
+    Console.WriteLine("  --profile <p>        Server profile the model sees: data (21 read-only) or full (default, 33).");
     Console.WriteLine("  --max-turns <n>      Tool-loop turn budget per case (default 12).");
     Console.WriteLine("  --filter <substr>    Run only cases whose id contains this.");
     Console.WriteLine("  --run-id <id>        Label for the MODEL-EVALS row (e.g. R-001).");

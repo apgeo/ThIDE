@@ -6,7 +6,8 @@ namespace Therion.Mcp.Evals;
 /// <param name="ServerDll">Path to <c>therion-mcp.dll</c> (run via <c>dotnet</c>), spawned per case over stdio.</param>
 /// <param name="WorkspacesDir">Directory holding the committed fixture workspaces.</param>
 public sealed record RunConfig(
-    string Endpoint, string Model, string? ApiKey, string ServerDll, string WorkspacesDir, int MaxTurns, string? Filter);
+    string Endpoint, string Model, string? ApiKey, string ServerDll, string WorkspacesDir,
+    int MaxTurns, string? Filter, string Profile);
 
 /// <summary>
 /// Runs the suite: for each case it takes a fresh working copy of the fixture (so a mutation never dirties
@@ -61,7 +62,7 @@ public sealed class EvalRunner(RunConfig config, OpenAiClient model)
         {
             Name = "therion-mcp (eval)",
             Command = "dotnet",
-            Arguments = [config.ServerDll, "--workspace", workspaceDir, "--profile", "full"],
+            Arguments = [config.ServerDll, "--workspace", workspaceDir, "--profile", config.Profile],
             StandardErrorLines = _ => { },   // the server logs to stderr; keep it out of the eval output
         });
         return await McpClient.CreateAsync(transport, cancellationToken: ct);

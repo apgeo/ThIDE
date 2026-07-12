@@ -38,9 +38,11 @@ public static class EvalSuite
             new LintClean()),
 
         // ---- stats / graph exact-number Q&A --------------------------------------------------------
-        new("qa-stations", Category.Qa, "valid",
-            "How many distinct stations are in this cave? Answer with just the number.",
-            new AnswerMatchesComputed("survey_graph", "/stations")),
+        // "distinct stations" is ambiguous — survey_graph merges equates (4), survey_stats counts raw
+        // declarations (5) — so a real run failed a reasonable answer. Legs is unambiguous (both agree).
+        new("qa-legs", Category.Qa, "valid",
+            "How many survey legs (shots) does this cave have? Answer with just the number.",
+            new AnswerMatchesComputed("survey_graph", "/legs")),
         new("qa-floating", Category.Qa, "disconnected",
             "How many disconnected (floating) survey components does this cave have? Answer with just the number.",
             new AnswerMatchesComputed("survey_graph", "/floatingComponents")),
