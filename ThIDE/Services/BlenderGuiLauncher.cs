@@ -43,9 +43,9 @@ public sealed class BlenderGuiLauncher : IBlenderGuiLauncher
             psi.ArgumentList.Add(scriptPath);
             return Process.Start(psi) is not null;
         }
-        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException or System.IO.IOException)
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException or System.IO.IOException or UnauthorizedAccessException)
         {
-            return false;
+            return false; // e.g. a Microsoft Store install that can't be launched by its raw WindowsApps path
         }
     }
 }

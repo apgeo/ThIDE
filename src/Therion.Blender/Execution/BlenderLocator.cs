@@ -34,10 +34,24 @@ public sealed class BlenderLocator
     /// </summary>
     public BlenderLocateResult Locate(string? overridePath = null)
     {
+        // An explicit user override wins. Probe it for the version, but if probing fails — a
+        // Microsoft Store install under WindowsApps resists `--version` / raw execution and access
+        // is denied — TRUST the user's explicit path anyway: the generated script's own runtime
+        // gate (bpy.app.version < 4.2) is the real guard, so we don't reject a path they chose.
+        if (!string.IsNullOrWhiteSpace(overridePath))
+        {
+            if (ProbeCached(overridePath) is { } probed)
+                return probed >= MinimumVersion
+                    ? new BlenderLocateResult(BlenderLocateStatus.Found, new BlenderInstallation(overridePath, probed))
+                    : new BlenderLocateResult(BlenderLocateStatus.TooOld, new BlenderInstallation(overridePath, probed),
+                        $"The Blender at {overridePath} is version {probed}, but {MinimumVersion} or newer is required.");
+            return new BlenderLocateResult(BlenderLocateStatus.Found, new BlenderInstallation(overridePath, MinimumVersion));
+        }
+
         BlenderInstallation? newestUsable = null;
         BlenderInstallation? newestTooOld = null;
 
-        foreach (var path in EnumerateCandidates(overridePath))
+        foreach (var path in EnumerateCandidates(null))
         {
             var version = ProbeCached(path);
             if (version is not { } v) continue;
@@ -60,7 +74,7 @@ public sealed class BlenderLocator
                 BlenderLocateStatus.TooOld, newestTooOld,
                 $"Found Blender {newestTooOld.Version} at {newestTooOld.Path}, but {MinimumVersion} or newer is required.");
         return new BlenderLocateResult(
-            BlenderLocateStatus.NotFound, null, "No Blender executable was found. Set its path in Preferences.");
+            BlenderLocateStatus.NotFound, null, "No Blender executable was found. Set its path in Preferences ▸ External tools.");
     }
 
     private BlenderVersion? ProbeCached(string path)
@@ -191,9 +205,12 @@ public sealed class ProcessBlenderProbe : IBlenderProbe
             }
             return BlenderVersion.TryParse(output, out var version) ? version : null;
         }
-        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException or IOException)
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception
+                                      or InvalidOperationException
+                                      or IOException
+                                      or UnauthorizedAccessException) // e.g. a Microsoft Store install under WindowsApps
         {
-            return null; // not executable / not present
+            return null; // not present / not runnable / access-denied
         }
     }
 }

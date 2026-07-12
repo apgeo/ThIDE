@@ -86,13 +86,14 @@ public sealed class BlenderRunner
         {
             process = _launcher.Start(blender.Path, args, job.WorkingDirectory);
         }
-        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException or IOException)
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException or IOException or UnauthorizedAccessException)
         {
             return new RenderResult
             {
                 Succeeded = false,
                 FailureKind = RenderFailureKind.Crashed,
-                ErrorMessage = "Could not start Blender: " + ex.Message,
+                ErrorMessage = "Could not start Blender (a Microsoft Store install cannot be launched by its WindowsApps path — " +
+                               "use the blender.exe under %LOCALAPPDATA%\\Microsoft\\WindowsApps, or install Blender from blender.org): " + ex.Message,
                 JobLogPath = null,
                 Duration = stopwatch.Elapsed,
             };

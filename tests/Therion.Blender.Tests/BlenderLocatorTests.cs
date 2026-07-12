@@ -82,6 +82,22 @@ public class BlenderLocatorTests
     }
 
     [Fact]
+    public void Override_ThatCannotBeProbed_IsTrusted()
+    {
+        // Simulates a Microsoft Store install under WindowsApps: --version can't run (access
+        // denied), so the version is unknown — but an explicit override is trusted rather than
+        // rejected as "not found" (the generated script's runtime gate is the real >= 4.2 guard).
+        var locator = Locator(new Dictionary<string, BlenderVersion>()); // probe resolves nothing
+        var storePath = @"C:\Program Files\WindowsApps\BlenderFoundation.Blender_5.1.2.0_x64__ppwjx1n5r4v9t\Blender\blender.exe";
+
+        var result = locator.Locate(overridePath: storePath);
+
+        Assert.Equal(BlenderLocateStatus.Found, result.Status);
+        Assert.Equal(storePath, result.Installation!.Path);
+        Assert.True(result.Installation.Version >= BlenderLocator.MinimumVersion);
+    }
+
+    [Fact]
     public void OnlyOldInstalls_ReportTooOld_WithDetail()
     {
         var locator = Locator(
