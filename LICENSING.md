@@ -38,7 +38,15 @@ ThIDE does **not** link or embed Therion's source:
 - The parsers under `src/Therion.Syntax` (and the other `src/` libraries) are an
   independent C# implementation of the Therion *file formats* — formats are not
   copyrightable.
-- Therion, Mapiah, `loch` and `aven` are invoked as **separate processes**
+- The `src/Therion.Blender` module's `.lox` (Therion loch) and `.3d` (Survex)
+  readers are likewise **original C# written from the format specifications**, not
+  ports: the `.3d` reader follows Survex's official `doc/3dformat.htm` specs and the
+  `.lox` reader the record/chunk layout facts in `lxFile.*`, with CaveView.js (MIT)
+  and Survex `img.c` consulted only as normative cross-checks — **no GPL code was
+  copied or transliterated** (keeps GPL out of the MPL-2.0 library; see the module's
+  reuse ledger and per-file attribution headers). Blender itself is **not** linked or
+  bundled — it is located and run as a separate process.
+- Therion, Mapiah, `loch`, `aven` and Blender are invoked as **separate processes**
   (arms-length `fork`/`exec` over command-line arguments and files), which does
   not create a derivative work under the GPL.
 

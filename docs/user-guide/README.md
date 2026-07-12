@@ -33,6 +33,7 @@ described in them). If Therion is new to you, keep the **Therion Book** open alo
 ### Build & visualize
 10. [Compiling & output](10-compiling-and-output.md)
 11. [The viewers: Map, 3D & Mainline preview](11-viewers.md)
+- [Blender animation renders](23-blender-animation.md)
 
 ### Analyze your survey
 12. [Object Browser & Outline](12-object-browser-and-outline.md)
