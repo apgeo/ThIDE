@@ -108,9 +108,10 @@
                 <TextBox Text="{Binding Blender.ExportDirectory}" />
             </DockPanel>
             <WrapPanel>
-                <Button Content="{l:Loc Blender_UI_Render}" Command="{Binding Blender.RenderCommand}" Margin="0,0,6,0" />
-                <Button Content="{l:Loc Blender_UI_Export}" Command="{Binding Blender.ExportScriptCommand}" Margin="0,0,6,0" />
-                <Button Content="{l:Loc Blender_UI_Cancel}" Command="{Binding Blender.CancelCommand}" IsVisible="{Binding Blender.IsBusy}" />
+                <Button Content="{l:Loc Blender_UI_Render}" Command="{Binding Blender.RenderCommand}" Margin="0,0,6,6" />
+                <Button Content="{l:Loc Blender_UI_Export}" Command="{Binding Blender.ExportScriptCommand}" Margin="0,0,6,6" />
+                <Button Content="{l:Loc Blender_UI_OpenInBlender}" Command="{Binding Blender.OpenInBlenderGuiCommand}" Margin="0,0,6,6" />
+                <Button Content="{l:Loc Blender_UI_Cancel}" Command="{Binding Blender.CancelCommand}" IsVisible="{Binding Blender.IsBusy}" Margin="0,0,6,6" />
             </WrapPanel>
 
             <!-- status + progress -->
@@ -120,11 +121,32 @@
             <TextBlock Text="{Binding Blender.Device}" IsVisible="{Binding Blender.Device, Converter={x:Static ObjectConverters.IsNotNull}}" />
             <TextBlock Text="{Binding Blender.LastError}" Foreground="#C05050" TextWrapping="Wrap"
                        IsVisible="{Binding Blender.LastError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            <!-- not-found affordance: point the user at Preferences -->
+            <TextBlock Text="{l:Loc Blender_Fail_NotFound}" Foreground="#C05050" TextWrapping="Wrap"
+                       FontStyle="Italic" IsVisible="{Binding Blender.BlenderMissing}" />
 
             <!-- outputs -->
             <TextBlock Text="{l:Loc Blender_UI_Outputs}" FontWeight="Bold" IsVisible="{Binding Blender.Outputs.Count}" />
             <ItemsControl ItemsSource="{Binding Blender.Outputs}" />
+            <WrapPanel IsVisible="{Binding Blender.Outputs.Count}">
+                <Button Content="{l:Loc Blender_UI_OpenFolder}" Command="{Binding Blender.OpenOutputFolderCommand}" Margin="0,4,6,0" />
+                <Button Content="{l:Loc Blender_UI_OpenLog}" Command="{Binding Blender.OpenJobLogCommand}" Margin="0,4,6,0" />
+            </WrapPanel>
             <ItemsControl ItemsSource="{Binding Blender.Warnings}" Foreground="#B08000" />
+
+            <!-- recent renders -->
+            <TextBlock Text="{l:Loc Blender_UI_Jobs}" FontWeight="Bold" IsVisible="{Binding Blender.Jobs.Count}" Margin="0,8,0,0" />
+            <ItemsControl ItemsSource="{Binding Blender.Jobs}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vmm:JobHistoryEntry">
+                        <DockPanel Margin="0,2,0,2">
+                            <TextBlock DockPanel.Dock="Left" Text="{Binding Name}" FontWeight="SemiBold" Width="150"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding Status}" TextTrimming="CharacterEllipsis" />
+                        </DockPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
 
         </StackPanel>
     </ScrollViewer>
