@@ -51,7 +51,7 @@ public static class BlenderVerb
         var runner = new BlenderRunner(new RealBlenderProcessLauncher());
         string? blenderOverride = Option(args, "--blender");
         string outDir = Option(args, "--out") ?? Directory.GetCurrentDirectory();
-        var service = new BlenderRenderService(locator, runner, outDir, geometry: null, blenderOverridePath: blenderOverride);
+        var service = new BlenderRenderService(locator, runner, outDir, geometry: null, blenderOverride: () => blenderOverride);
         var progress = new Progress<RenderProgress>(p => stderr.WriteLine($"[{p.Phase}] {p.Message}"));
 
         try

@@ -20,6 +20,8 @@ public sealed class ExternalToolLocator : IExternalToolLocator
     public const string Dump3d = "dump3d";
     /// <summary>Survex <c>extend</c> — makes an extended elevation from a .3d.</summary>
     public const string Extend = "extend";
+    /// <summary>Blender (≥ 4.2), used headless by the Blender Animation module to render.</summary>
+    public const string Blender = "blender";
 
     // GUI viewers/editors: invoking `<exe> --version` actually pops their window open, so
     // we detect them by path only and never spawn them for version sniffing.
@@ -128,6 +130,14 @@ public sealed class ExternalToolLocator : IExternalToolLocator
             yield break;
         }
 
+        // Blender installs under "Blender Foundation\Blender <X.Y>" (installer/Steam) or as a
+        // Microsoft Store package under WindowsApps — not the "Therion/Survex/<tool>" pattern below.
+        if (string.Equals(toolId, Blender, StringComparison.OrdinalIgnoreCase))
+        {
+            foreach (var p in BlenderCandidatePaths()) yield return p;
+            yield break;
+        }
+
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             // Look under both Program Files roots (a 64-bit host, or a 32-bit installer like
@@ -162,6 +172,54 @@ public sealed class ExternalToolLocator : IExternalToolLocator
             var root = Environment.GetFolderPath(f);
             if (!string.IsNullOrEmpty(root) && seen.Add(root)) yield return root;
         }
+    }
+
+    /// <summary>Blender install locations: the "Blender Foundation" installer/Steam folders and,
+    /// on Windows, the Microsoft Store package under WindowsApps (best-effort — that directory is
+    /// ACL-locked, so enumeration may fail; the exact path via a user override always works).</summary>
+    private static IEnumerable<string> BlenderCandidatePaths()
+    {
+        var found = new List<string>();
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            foreach (var root in ProgramFilesRoots())
+            {
+                // %ProgramFiles%\Blender Foundation\Blender <X.Y>\blender.exe (newest picked by the caller).
+                var foundation = Path.Combine(root, "Blender Foundation");
+                TryAddDirs(found, foundation, "Blender*", "blender.exe");
+                // Microsoft Store: %ProgramFiles%\WindowsApps\BlenderFoundation.Blender_*\Blender\blender.exe
+                TryAddDirs(found, Path.Combine(root, "WindowsApps"), "BlenderFoundation.Blender_*", Path.Combine("Blender", "blender.exe"));
+            }
+            // Store execution alias (on PATH-adjacent), if the package registered one.
+            var localApps = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            if (!string.IsNullOrEmpty(localApps))
+                found.Add(Path.Combine(localApps, "Microsoft", "WindowsApps", "blender.exe"));
+        }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+            found.Add("/Applications/Blender.app/Contents/MacOS/Blender");
+        }
+        else
+        {
+            found.Add("/usr/bin/blender");
+            found.Add("/usr/local/bin/blender");
+            found.Add("/snap/bin/blender");
+            found.Add("/var/lib/flatpak/exports/bin/org.blender.Blender");
+        }
+        return found;
+    }
+
+    /// <summary>Adds <c>&lt;dir&gt;/&lt;version-dir&gt;/&lt;leaf&gt;</c> for each subdirectory of
+    /// <paramref name="parent"/> matching <paramref name="pattern"/>. Silent on ACL/IO errors.</summary>
+    private static void TryAddDirs(List<string> into, string parent, string pattern, string leaf)
+    {
+        if (string.IsNullOrEmpty(parent) || !Directory.Exists(parent)) return;
+        try
+        {
+            foreach (var dir in Directory.EnumerateDirectories(parent, pattern))
+                into.Add(Path.Combine(dir, leaf));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { /* WindowsApps is ACL-locked */ }
     }
 
     private static IEnumerable<string> MapiahCandidatePaths()

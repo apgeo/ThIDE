@@ -117,14 +117,17 @@ public sealed class BlenderLocator
                      })
             {
                 if (string.IsNullOrEmpty(root)) continue;
-                var foundation = Path.Combine(root, "Blender Foundation");
-                if (!Directory.Exists(foundation)) continue;
-                IEnumerable<string> versionDirs;
-                try { versionDirs = Directory.EnumerateDirectories(foundation, "Blender*"); }
-                catch (IOException) { continue; }
-                foreach (var dir in versionDirs)
-                    yield return Path.Combine(dir, "blender.exe");
+                // Installer / Steam: %ProgramFiles%\Blender Foundation\Blender <X.Y>\blender.exe
+                foreach (var path in EnumerateVersionDirs(Path.Combine(root, "Blender Foundation"), "Blender*", "blender.exe"))
+                    yield return path;
+                // Microsoft Store: %ProgramFiles%\WindowsApps\BlenderFoundation.Blender_*\Blender\blender.exe
+                // (WindowsApps is ACL-locked so enumeration may fail — a user override then supplies the exact path).
+                foreach (var path in EnumerateVersionDirs(Path.Combine(root, "WindowsApps"), "BlenderFoundation.Blender_*", Path.Combine("Blender", "blender.exe")))
+                    yield return path;
             }
+            var localApps = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            if (!string.IsNullOrEmpty(localApps))
+                yield return Path.Combine(localApps, "Microsoft", "WindowsApps", "blender.exe"); // Store execution alias
         }
         else if (OperatingSystem.IsMacOS())
         {
@@ -136,6 +139,24 @@ public sealed class BlenderLocator
             yield return "/usr/local/bin/blender";
             yield return "/snap/bin/blender";
             yield return "/var/lib/flatpak/exports/bin/org.blender.Blender";
+        }
+    }
+
+    /// <summary><c>&lt;parent&gt;/&lt;version-dir&gt;/&lt;leaf&gt;</c> for each subdir of
+    /// <paramref name="parent"/> matching <paramref name="pattern"/>; empty on a missing/locked dir.</summary>
+    private static IEnumerable<string> EnumerateVersionDirs(string parent, string pattern, string leaf)
+    {
+        if (!Directory.Exists(parent)) return [];
+        try
+        {
+            var result = new List<string>();
+            foreach (var dir in Directory.EnumerateDirectories(parent, pattern))
+                result.Add(Path.Combine(dir, leaf));
+            return result;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return [];
         }
     }
 }

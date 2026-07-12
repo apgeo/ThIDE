@@ -191,8 +191,6 @@ public sealed record AppSettings
     public bool EnableStructuralGeology { get; init; } = true;
     /// <summary>the Blender Animation module (render presentations of the 3D model). On by default.</summary>
     public bool EnableBlenderAnimation { get; init; } = true;
-    /// <summary>explicit Blender executable path override (Preferences ▸ External tools); empty ⇒ auto-detect.</summary>
-    public string BlenderPath { get; init; } = "";
     /// <summary>persisted panel state (detection/declination options, columns, plot prefs) as JSON.</summary>
     public string StructuralGeologySettings { get; init; } = "";
 

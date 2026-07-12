@@ -21,19 +21,20 @@ public sealed class BlenderRenderService : IBlenderRenderService
     private readonly BlenderRunner _runner;
     private readonly string _jobRoot;
     private readonly GeometryOptions _geometry;
-    private readonly string? _blenderOverridePath;
+    private readonly Func<string?>? _blenderOverride;
 
     /// <param name="locator">Finds the Blender executable.</param>
     /// <param name="runner">Runs the generated script headless.</param>
     /// <param name="jobRootDirectory">Root under which per-render job folders are created.</param>
     /// <param name="geometry">Conversion geometry options (recenter, tubes, tint).</param>
-    /// <param name="blenderOverridePath">User's Blender path override (Preferences), if any.</param>
+    /// <param name="blenderOverride">User's Blender path override (Preferences) — read live on each
+    /// render, so a path set after startup takes effect without a restart.</param>
     public BlenderRenderService(
         BlenderLocator locator,
         BlenderRunner runner,
         string jobRootDirectory,
         GeometryOptions? geometry = null,
-        string? blenderOverridePath = null)
+        Func<string?>? blenderOverride = null)
     {
         ArgumentNullException.ThrowIfNull(locator);
         ArgumentNullException.ThrowIfNull(runner);
@@ -42,7 +43,7 @@ public sealed class BlenderRenderService : IBlenderRenderService
         _runner = runner;
         _jobRoot = jobRootDirectory;
         _geometry = geometry ?? new GeometryOptions();
-        _blenderOverridePath = blenderOverridePath;
+        _blenderOverride = blenderOverride;
     }
 
     public async Task<RenderResult> RenderAsync(
@@ -52,7 +53,7 @@ public sealed class BlenderRenderService : IBlenderRenderService
         ArgumentNullException.ThrowIfNull(source);
 
         // Locate Blender first so a missing/old install fails fast, before any conversion work.
-        var locate = _locator.Locate(_blenderOverridePath);
+        var locate = _locator.Locate(_blenderOverride?.Invoke());
         if (!locate.IsUsable)
             return new RenderResult
             {
