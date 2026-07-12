@@ -256,6 +256,7 @@ public static class ShellCommandIds
     public const string ToggleMapViewer         = "ToggleMapViewer";
     public const string ToggleModel3DViewer     = "ToggleModel3DViewer";
     public const string ToggleStructuralGeology = "ToggleStructuralGeology";
+    public const string ToggleBlenderAnimation  = "ToggleBlenderAnimation";
     public const string SplitEditor        = "SplitEditor";
     public const string ResetLayout        = "ResetLayout";
     public const string FloatActiveDocument = "FloatActiveDocument";

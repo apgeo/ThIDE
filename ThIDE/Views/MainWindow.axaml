@@ -299,6 +299,9 @@
                 <Separator />
                 <MenuItem Header="{l:Loc Menu_Tools_NewScrap}" InputGesture="{l:Gesture NewScrapScaffold}" Command="{Binding NewScrapScaffoldCommand}" />
                 <Separator />
+                <MenuItem Header="{l:Loc Menu_Tools_BlenderAnimation}" InputGesture="{l:Gesture ToggleBlenderAnimation}" Command="{Binding ToggleBlenderAnimationCommand}"
+                          IsVisible="{Binding BlenderAnimationEnabled}" />
+                <Separator />
                 <!-- calculators. -->
                 <MenuItem Header="{l:Loc Menu_Tools_Calculators}">
                     <MenuItem Header="{l:Loc Menu_Tools_UnitConverter}" Click="OnUnitConverter" />

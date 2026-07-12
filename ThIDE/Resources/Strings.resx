@@ -372,6 +372,39 @@
   <data name="Blender_Phase_Collecting" xml:space="preserve"><value>Collecting outputs…</value></data>
   <data name="Blender_Phase_Done" xml:space="preserve"><value>Done</value></data>
   <data name="Blender_Phase_Working" xml:space="preserve"><value>Working…</value></data>
+  <data name="Blender_UI_Preset" xml:space="preserve"><value>Preset</value></data>
+  <data name="Blender_UI_SavePreset" xml:space="preserve"><value>Save</value></data>
+  <data name="Blender_UI_DeletePreset" xml:space="preserve"><value>Delete</value></data>
+  <data name="Blender_UI_NewPresetName" xml:space="preserve"><value>New preset name…</value></data>
+  <data name="Blender_UI_Source" xml:space="preserve"><value>Source</value></data>
+  <data name="Blender_UI_UseExternalFile" xml:space="preserve"><value>Use an external file</value></data>
+  <data name="Blender_UI_ExternalFile" xml:space="preserve"><value>Model file path</value></data>
+  <data name="Blender_UI_WorkspaceArtifact" xml:space="preserve"><value>Workspace model</value></data>
+  <data name="Blender_UI_ReloadArtifacts" xml:space="preserve"><value>Refresh</value></data>
+  <data name="Blender_UI_Camera" xml:space="preserve"><value>Camera</value></data>
+  <data name="Blender_UI_Template" xml:space="preserve"><value>Template</value></data>
+  <data name="Blender_UI_Engine" xml:space="preserve"><value>Engine</value></data>
+  <data name="Blender_UI_Gpu" xml:space="preserve"><value>Device</value></data>
+  <data name="Blender_UI_Samples" xml:space="preserve"><value>Samples</value></data>
+  <data name="Blender_UI_Animation" xml:space="preserve"><value>Animation</value></data>
+  <data name="Blender_UI_Fps" xml:space="preserve"><value>Frames per second</value></data>
+  <data name="Blender_UI_Duration" xml:space="preserve"><value>Duration (seconds)</value></data>
+  <data name="Blender_UI_Output" xml:space="preserve"><value>Output</value></data>
+  <data name="Blender_UI_Container" xml:space="preserve"><value>Container</value></data>
+  <data name="Blender_UI_Width" xml:space="preserve"><value>Width</value></data>
+  <data name="Blender_UI_Height" xml:space="preserve"><value>Height</value></data>
+  <data name="Blender_UI_BaseName" xml:space="preserve"><value>File name</value></data>
+  <data name="Blender_UI_SelfContained" xml:space="preserve"><value>Self-contained script</value></data>
+  <data name="Blender_UI_Labels" xml:space="preserve"><value>Labels</value></data>
+  <data name="Blender_UI_StationLabels" xml:space="preserve"><value>Station labels</value></data>
+  <data name="Blender_UI_LeadMarkers" xml:space="preserve"><value>Lead markers</value></data>
+  <data name="Blender_UI_Render" xml:space="preserve"><value>Render</value></data>
+  <data name="Blender_UI_Export" xml:space="preserve"><value>Export script…</value></data>
+  <data name="Blender_UI_ExportDir" xml:space="preserve"><value>Export folder</value></data>
+  <data name="Blender_UI_Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Blender_UI_Frames" xml:space="preserve"><value>Frames</value></data>
+  <data name="Blender_UI_Blockers" xml:space="preserve"><value>Fix before rendering</value></data>
+  <data name="Blender_UI_Outputs" xml:space="preserve"><value>Outputs</value></data>
   <data name="Menu_Tools_ImportDem" xml:space="preserve"><value>Import DEM as surface (.asc)…</value></data>
   <data name="Menu_Tools_ImportGpx" xml:space="preserve"><value>Import GPX waypoints (→ fix)…</value></data>
   <data name="Menu_Tools_ScaffoldProject" xml:space="preserve"><value>Scaffold project from survey…</value></data>

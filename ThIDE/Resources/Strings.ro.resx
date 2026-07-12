@@ -372,6 +372,39 @@
   <data name="Blender_Phase_Collecting" xml:space="preserve"><value>Se colectează rezultatele…</value></data>
   <data name="Blender_Phase_Done" xml:space="preserve"><value>Gata</value></data>
   <data name="Blender_Phase_Working" xml:space="preserve"><value>Se lucrează…</value></data>
+  <data name="Blender_UI_Preset" xml:space="preserve"><value>Presetare</value></data>
+  <data name="Blender_UI_SavePreset" xml:space="preserve"><value>Salvează</value></data>
+  <data name="Blender_UI_DeletePreset" xml:space="preserve"><value>Șterge</value></data>
+  <data name="Blender_UI_NewPresetName" xml:space="preserve"><value>Nume presetare nouă…</value></data>
+  <data name="Blender_UI_Source" xml:space="preserve"><value>Sursă</value></data>
+  <data name="Blender_UI_UseExternalFile" xml:space="preserve"><value>Folosește un fișier extern</value></data>
+  <data name="Blender_UI_ExternalFile" xml:space="preserve"><value>Cale fișier model</value></data>
+  <data name="Blender_UI_WorkspaceArtifact" xml:space="preserve"><value>Model din proiect</value></data>
+  <data name="Blender_UI_ReloadArtifacts" xml:space="preserve"><value>Reîmprospătează</value></data>
+  <data name="Blender_UI_Camera" xml:space="preserve"><value>Cameră</value></data>
+  <data name="Blender_UI_Template" xml:space="preserve"><value>Șablon</value></data>
+  <data name="Blender_UI_Engine" xml:space="preserve"><value>Motor</value></data>
+  <data name="Blender_UI_Gpu" xml:space="preserve"><value>Dispozitiv</value></data>
+  <data name="Blender_UI_Samples" xml:space="preserve"><value>Eșantioane</value></data>
+  <data name="Blender_UI_Animation" xml:space="preserve"><value>Animație</value></data>
+  <data name="Blender_UI_Fps" xml:space="preserve"><value>Cadre pe secundă</value></data>
+  <data name="Blender_UI_Duration" xml:space="preserve"><value>Durată (secunde)</value></data>
+  <data name="Blender_UI_Output" xml:space="preserve"><value>Ieșire</value></data>
+  <data name="Blender_UI_Container" xml:space="preserve"><value>Container</value></data>
+  <data name="Blender_UI_Width" xml:space="preserve"><value>Lățime</value></data>
+  <data name="Blender_UI_Height" xml:space="preserve"><value>Înălțime</value></data>
+  <data name="Blender_UI_BaseName" xml:space="preserve"><value>Nume fișier</value></data>
+  <data name="Blender_UI_SelfContained" xml:space="preserve"><value>Script autonom</value></data>
+  <data name="Blender_UI_Labels" xml:space="preserve"><value>Etichete</value></data>
+  <data name="Blender_UI_StationLabels" xml:space="preserve"><value>Etichete stații</value></data>
+  <data name="Blender_UI_LeadMarkers" xml:space="preserve"><value>Marcaje continuări</value></data>
+  <data name="Blender_UI_Render" xml:space="preserve"><value>Randează</value></data>
+  <data name="Blender_UI_Export" xml:space="preserve"><value>Exportă scriptul…</value></data>
+  <data name="Blender_UI_ExportDir" xml:space="preserve"><value>Folder export</value></data>
+  <data name="Blender_UI_Cancel" xml:space="preserve"><value>Anulează</value></data>
+  <data name="Blender_UI_Frames" xml:space="preserve"><value>Cadre</value></data>
+  <data name="Blender_UI_Blockers" xml:space="preserve"><value>De corectat înainte de randare</value></data>
+  <data name="Blender_UI_Outputs" xml:space="preserve"><value>Rezultate</value></data>
   <data name="Menu_Tools_ImportDem" xml:space="preserve"><value>Importă DEM ca suprafață (.asc)…</value></data>
   <data name="Menu_Tools_ImportGpx" xml:space="preserve"><value>Importă puncte GPX (→ fix)…</value></data>
   <data name="Menu_Tools_ScaffoldProject" xml:space="preserve"><value>Generează proiect din tur…</value></data>

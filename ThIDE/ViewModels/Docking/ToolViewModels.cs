@@ -207,6 +207,15 @@ public sealed class StructuralGeologyToolViewModel : ToolViewModelBase
         : base("StructuralGeology", "Structural Geology", lang) => Structural = structural;
 }
 
+/// <summary>Blender Animation dock tool (BA-B12): renders presentations of the 3D model.</summary>
+public sealed class BlenderAnimationToolViewModel : ToolViewModelBase
+{
+    [JsonIgnore] public BlenderAnimationViewModel Blender { get; }
+    public BlenderAnimationToolViewModel() : base("BlenderAnimation", "Blender_Tool_Title") => Blender = null!;
+    public BlenderAnimationToolViewModel(BlenderAnimationViewModel blender, ILanguageService? lang = null)
+        : base("BlenderAnimation", "Blender_Tool_Title", lang) => Blender = blender;
+}
+
 /// <summary>The 3D Plot popped out of the Structural Geology wizard into its own dockable/floatable
 /// panel (see <see cref="StructuralGeologyViewModel.PopOutPlotCommand"/>). Wraps the SAME content
 /// VM as <see cref="StructuralGeologyToolViewModel"/> — no state is duplicated.</summary>

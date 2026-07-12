@@ -259,6 +259,7 @@ internal static class AppServices
                 sp.GetRequiredService<Therion.Blender.Execution.BlenderRunner>(),
                 BlenderJobRoot()));
         services.AddSingleton<BlenderAnimationViewModel>();
+        services.AddSingleton<ViewModels.Docking.BlenderAnimationToolViewModel>();
 
         services.AddSingleton<Docking.DockFactory>();
 

@@ -92,6 +92,7 @@ public partial class MainWindowViewModel : ViewModelBase
     public Model3DViewerToolViewModel Model3DViewerTool { get; }
     public StructuralGeologyToolViewModel StructuralGeologyTool { get; }
     public StructuralPlotToolViewModel StructuralPlotTool { get; }
+    public BlenderAnimationToolViewModel BlenderAnimationTool { get; }
     public SettingsToolViewModel SettingsTool { get; }
 
     /// <summary>clickable breadcrumb of the @-qualified name at the caret (status bar).</summary>
@@ -492,6 +493,7 @@ public partial class MainWindowViewModel : ViewModelBase
         Model3DViewerToolViewModel model3dViewerTool,
         StructuralGeologyToolViewModel structuralGeologyTool,
         StructuralPlotToolViewModel structuralPlotTool,
+        BlenderAnimationToolViewModel blenderAnimationTool,
         SettingsToolViewModel settingsTool,
         IModelEditService? editService = null,
         ILayoutService? layout = null,
@@ -549,6 +551,7 @@ public partial class MainWindowViewModel : ViewModelBase
         Model3DViewerTool = model3dViewerTool;
         StructuralGeologyTool = structuralGeologyTool;
         StructuralPlotTool = structuralPlotTool;
+        BlenderAnimationTool = blenderAnimationTool;
         SettingsTool = settingsTool;
         Breadcrumb = new BreadcrumbViewModel(_documents);
 
@@ -581,6 +584,9 @@ public partial class MainWindowViewModel : ViewModelBase
             // run the structural analysis the first time its panel is shown.
             else if (e.Dockable is Docking.StructuralGeologyToolViewModel sg)
                 OnUiThread(sg.Structural.OnPanelActivated);
+            // refresh the discovered model artifacts each time the Blender panel is shown.
+            else if (e.Dockable is Docking.BlenderAnimationToolViewModel ba)
+                OnUiThread(() => ba.Blender.ReloadArtifactsCommand.Execute(null));
             // refresh the welcome page's recents + tool detection each time it's shown.
             else if (e.Dockable is Docking.WelcomeToolViewModel wel)
                 OnUiThread(wel.Welcome.OnActivated);
@@ -602,6 +608,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 OnPropertyChanged(nameof(MapViewerEnabled));
                 OnPropertyChanged(nameof(Model3DViewerEnabled));
                 OnPropertyChanged(nameof(StructuralGeologyEnabled));   // menu gate
+                OnPropertyChanged(nameof(BlenderAnimationEnabled));    // menu gate
                 ValidateOnType = _settings.Current.ValidateOnType;     // keep the toolbar toggle in sync with Preferences
                 RequireDoubleClickToNavigate = _settings.Current.RequireDoubleClickToNavigate;   // (Preferences ↔ toolbar)
                 // A diagnostics-behaviour change (e.g. local-fix grounding) must re-run the project
@@ -766,6 +773,7 @@ public partial class MainWindowViewModel : ViewModelBase
         new Model3DViewerToolViewModel(new Model3DViewerViewModel()),
         new StructuralGeologyToolViewModel(new StructuralGeologyViewModel()),
         new StructuralPlotToolViewModel(new StructuralGeologyViewModel()),
+        new BlenderAnimationToolViewModel(new BlenderAnimationViewModel()),
         new SettingsToolViewModel(new SettingsViewModel(), new KeyboardShortcutsViewModel()))
     {
         // Designer-only.
@@ -787,6 +795,7 @@ public partial class MainWindowViewModel : ViewModelBase
         new Model3DViewerToolViewModel(new Model3DViewerViewModel()),
         new StructuralGeologyToolViewModel(new StructuralGeologyViewModel()),
         new StructuralPlotToolViewModel(new StructuralGeologyViewModel()),
+        new BlenderAnimationToolViewModel(new BlenderAnimationViewModel()),
         new SettingsToolViewModel(new SettingsViewModel(), new KeyboardShortcutsViewModel()));
 
     /// <summary>Wires the storage picker once the View is attached to a TopLevel.</summary>
@@ -1491,6 +1500,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand] private void ToggleMapViewer()         => Activate(MapViewerTool);
     [RelayCommand] private void ToggleModel3DViewer()     => _factory.ShowTool(Model3DViewerTool); // (may be off-by-default → add on demand)
     [RelayCommand] private void ToggleStructuralGeology() => _factory.ShowToolInDocuments(StructuralGeologyTool); // (big central panel, on demand)
+    [RelayCommand] private void ToggleBlenderAnimation()  => _factory.ShowToolInDocuments(BlenderAnimationTool);  // (big central panel, on demand)
     [RelayCommand] private void ToggleSettings()          => Activate(SettingsTool);
     [RelayCommand] private void ShowWelcome()             => _factory.ShowToolInDocuments(WelcomeTool); // View ▸ Welcome
 
@@ -1516,6 +1526,7 @@ public partial class MainWindowViewModel : ViewModelBase
     public bool MapViewerEnabled   => _settings?.Current.EnableInAppViewer ?? true;
     public bool Model3DViewerEnabled => _settings?.Current.EnableModel3DViewer ?? true;
     public bool StructuralGeologyEnabled => _settings?.Current.EnableStructuralGeology ?? false;
+    public bool BlenderAnimationEnabled => _settings?.Current.EnableBlenderAnimation ?? true;
 
     /// <summary>gate (compile-time flag + runtime setting) — drives the Outline menu/toolbar entry.</summary>
     public bool OutlineFeatureEnabled =>

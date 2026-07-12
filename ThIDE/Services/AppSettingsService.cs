@@ -189,6 +189,8 @@ public sealed record AppSettings
     public string Model3DShadingMode { get; init; } = "height";
     /// <summary>the structural-geology module (plane strike/dip calculator). On by default.</summary>
     public bool EnableStructuralGeology { get; init; } = true;
+    /// <summary>the Blender Animation module (render presentations of the 3D model). On by default.</summary>
+    public bool EnableBlenderAnimation { get; init; } = true;
     /// <summary>persisted panel state (detection/declination options, columns, plot prefs) as JSON.</summary>
     public string StructuralGeologySettings { get; init; } = "";
 
