@@ -29,6 +29,7 @@ switch (args[0])
     case "deps":          return await RequireArgAsync(args, a => Deps(a, args));
     case "gis":           return await RequireArgAsync(args, a => Gis(a, args));
     case "structural":    return RequireArg(args, a => Structural(a, args));
+    case "blender":       return await Therion.Cli.BlenderVerb.RunAsync(args, Console.Out, Console.Error);
 
     default:
         Console.Error.WriteLine($"error: unknown command '{args[0]}'. Use --help.");
@@ -48,6 +49,8 @@ static void PrintHelp()
     Console.WriteLine("  therion-cli gis <file|thconfig> [--format kml|geojson|gpx|csv] [--out <path>]");
     Console.WriteLine("  therion-cli structural <file.th> [--keyword geo] [--declination <deg>|survey] [--format table|csv]");
     Console.WriteLine("                                         Fit geological planes (strike/dip) from 'geo' shots.");
+    Console.WriteLine("  therion-cli blender <model.lox|.3d> [--preset \"<name>\" | --spec <spec.json>] [--out <dir>] [--export <dir>] [--blender <path>]");
+    Console.WriteLine("                                         Render (or --export) a Blender presentation of a 3D model, headless.");
     Console.WriteLine("  therion-cli dump-ast <file>            Print the parsed AST as JSON.");
     Console.WriteLine("  therion-cli list-stations <file>       List station references in a .th file.");
     Console.WriteLine("  therion-cli --version                  Print the pinned Therion syntax version.");

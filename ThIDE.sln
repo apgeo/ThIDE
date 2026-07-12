@@ -47,6 +47,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Therion.Blender", "src\Ther
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Therion.Blender.Tests", "tests\Therion.Blender.Tests\Therion.Blender.Tests.csproj", "{336F1A96-8642-4362-BC4D-8E95520DF618}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Therion.Cli.Tests", "tests\Therion.Cli.Tests\Therion.Cli.Tests.csproj", "{74FFE0CA-E712-4977-8B13-DB88F3C24A55}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -285,6 +287,18 @@ Global
 		{336F1A96-8642-4362-BC4D-8E95520DF618}.Release|x64.Build.0 = Release|Any CPU
 		{336F1A96-8642-4362-BC4D-8E95520DF618}.Release|x86.ActiveCfg = Release|Any CPU
 		{336F1A96-8642-4362-BC4D-8E95520DF618}.Release|x86.Build.0 = Release|Any CPU
+		{74FFE0CA-E712-4977-8B13-DB88F3C24A55}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{74FFE0CA-E712-4977-8B13-DB88F3C24A55}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{74FFE0CA-E712-4977-8B13-DB88F3C24A55}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{74FFE0CA-E712-4977-8B13-DB88F3C24A55}.Debug|x64.Build.0 = Debug|Any CPU
+		{74FFE0CA-E712-4977-8B13-DB88F3C24A55}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{74FFE0CA-E712-4977-8B13-DB88F3C24A55}.Debug|x86.Build.0 = Debug|Any CPU
+		{74FFE0CA-E712-4977-8B13-DB88F3C24A55}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{74FFE0CA-E712-4977-8B13-DB88F3C24A55}.Release|Any CPU.Build.0 = Release|Any CPU
+		{74FFE0CA-E712-4977-8B13-DB88F3C24A55}.Release|x64.ActiveCfg = Release|Any CPU
+		{74FFE0CA-E712-4977-8B13-DB88F3C24A55}.Release|x64.Build.0 = Release|Any CPU
+		{74FFE0CA-E712-4977-8B13-DB88F3C24A55}.Release|x86.ActiveCfg = Release|Any CPU
+		{74FFE0CA-E712-4977-8B13-DB88F3C24A55}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -308,6 +322,7 @@ Global
 		{0995568F-71CF-4A44-BDDE-BF3F47792B64} = {66320409-64EC-F7C5-3DEF-65E7510DAAD1}
 		{A2B5551E-F130-42DE-A95A-F3EBA27AED60} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{336F1A96-8642-4362-BC4D-8E95520DF618} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{74FFE0CA-E712-4977-8B13-DB88F3C24A55} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {C6CB19F0-06F7-4FF8-93B0-BF247D09D6A2}
