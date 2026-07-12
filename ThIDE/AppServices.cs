@@ -46,6 +46,18 @@ internal static class AppServices
         }
     }
 
+    /// <summary>User Blender-render presets directory (%AppData%/ThIDE/blender-presets).</summary>
+    private static string BlenderPresetsDirectory()
+    {
+        var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        if (string.IsNullOrEmpty(appData))
+            appData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config");
+        return Path.Combine(appData, "ThIDE", "blender-presets");
+    }
+
+    /// <summary>Root under which per-render job folders are created (temp).</summary>
+    private static string BlenderJobRoot() => Path.Combine(Path.GetTempPath(), "ThIDE", "blender-jobs");
+
     /// <summary>Reads persisted settings before the container is built (plugin gate).</summary>
     private static AppSettings LoadInitialSettings()
     {
@@ -230,6 +242,24 @@ internal static class AppServices
         services.AddSingleton<ViewModels.Docking.StructuralGeologyToolViewModel>();
         services.AddSingleton<ViewModels.Docking.StructuralPlotToolViewModel>();
         services.AddSingleton<ViewModels.Docking.SettingsToolViewModel>();
+
+        // Blender Animation module (BLEND) — locator + headless runner + render service (convert →
+        // generate → render), user preset store, and the workspace source provider. The dock tool
+        // wrapper + Tools-menu entry are added with the view.
+        services.AddSingleton(_ => new Therion.Blender.Execution.BlenderLocator(new Therion.Blender.Execution.ProcessBlenderProbe()));
+        services.AddSingleton(_ => new Therion.Blender.Execution.BlenderRunner(new Therion.Blender.Execution.RealBlenderProcessLauncher()));
+        services.AddSingleton(_ => new Therion.Blender.Presets.PresetStore(BlenderPresetsDirectory()));
+        services.AddSingleton<IBlenderSourceProvider>(sp =>
+            new BlenderSourceProvider(
+                () => sp.GetRequiredService<IWorkspaceSession>().RootPath,
+                sp.GetRequiredService<IOutputArtifactCollector>()));
+        services.AddSingleton<Therion.Blender.IBlenderRenderService>(sp =>
+            new Therion.Blender.Execution.BlenderRenderService(
+                sp.GetRequiredService<Therion.Blender.Execution.BlenderLocator>(),
+                sp.GetRequiredService<Therion.Blender.Execution.BlenderRunner>(),
+                BlenderJobRoot()));
+        services.AddSingleton<BlenderAnimationViewModel>();
+
         services.AddSingleton<Docking.DockFactory>();
 
         services.AddTransient<MainWindowViewModel>();
