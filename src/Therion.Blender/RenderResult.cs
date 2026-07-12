@@ -24,6 +24,8 @@ public enum RenderFailureKind
     Cancelled,
     /// <summary>The disk preflight estimated insufficient free space.</summary>
     DiskSpace,
+    /// <summary>Blender reported success but no output files were found on disk (BA-B11).</summary>
+    NoOutput,
 }
 
 /// <summary>Result of a render job.</summary>

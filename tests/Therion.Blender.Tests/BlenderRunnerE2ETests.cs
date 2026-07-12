@@ -1,7 +1,8 @@
-// E2E smoke (BA-B10) — real Blender, gated behind THIDE_BLENDER_E2E=1 so normal CI skips it
-// (no Blender on the box). Exercises the whole runner plumbing against a live Blender: locate
-// → launch headless → read the THIDE: lines it prints → classify → verify the still it wrote.
-// A hand-written 32×32 cube render (no PLY needed) keeps the smoke self-contained.
+// E2E smoke (BA-B10/B11) — real Blender, gated behind THIDE_BLENDER_E2E=1 so normal CI skips
+// it (no Blender on the box). Exercises the whole runner + output collector against a live
+// Blender: locate → launch headless → parse the THIDE: lines → collect + verify the files.
+// Hand-written cube renders (no PLY needed) keep the smoke self-contained; the value is
+// confirming Blender's real output filenames match OutputCollector's expectations.
 
 using Therion.Blender;
 using Therion.Blender.Execution;
@@ -13,10 +14,30 @@ public class BlenderRunnerE2ETests
     private static bool Enabled => Environment.GetEnvironmentVariable("THIDE_BLENDER_E2E") == "1";
 
     [Fact]
-    public async Task RealBlender_RendersAStill_AndTheRunnerReportsSuccess()
+    public async Task RealBlender_Renders2FrameVideo_AndTheCollectorFindsIt()
     {
         if (!Enabled) return; // opt-in only (documented)
+        await RunSmoke(
+            baseName: "clip",
+            output: new OutputSpec { Kind = OutputKind.Video, Container = VideoContainer.Mp4, Width = 64, Height = 64 },
+            frameCount: 2,
+            script: dir => VideoScript(Path.Combine(dir, "clip.mp4").Replace("\\", "/")));
+    }
 
+    [Fact]
+    public async Task RealBlender_Renders2StillSequence_AndTheCollectorFindsBoth()
+    {
+        if (!Enabled) return;
+        var result = await RunSmoke(
+            baseName: "shot",
+            output: new OutputSpec { Kind = OutputKind.FrameSequence, Width = 64, Height = 64 },
+            frameCount: 2,
+            script: dir => SequenceScript(Path.Combine(dir, "shot_").Replace("\\", "/")));
+        Assert.Equal(2, result.OutputPaths.Length);
+    }
+
+    private static async Task<RenderResult> RunSmoke(string baseName, OutputSpec output, int frameCount, Func<string, string> script)
+    {
         var locate = new BlenderLocator(new ProcessBlenderProbe()).Locate();
         Assert.True(locate.IsUsable, "THIDE_BLENDER_E2E=1 but no Blender >= 4.2 was located.");
 
@@ -24,19 +45,18 @@ public class BlenderRunnerE2ETests
         Directory.CreateDirectory(dir);
         try
         {
-            var outPath = Path.Combine(dir, "smoke.png").Replace("\\", "/");
             var scriptPath = Path.Combine(dir, "render.py");
-            await File.WriteAllTextAsync(scriptPath, SmokeScript(outPath));
+            await File.WriteAllTextAsync(scriptPath, script(dir));
 
             var runner = new BlenderRunner(new RealBlenderProcessLauncher());
-            var job = new RenderJob(scriptPath, dir, FrameCount: 1, Width: 32, Height: 32, OutputKind.Still);
+            var job = new RenderJob(scriptPath, dir, frameCount, output with { OutputDirectory = dir, BaseName = baseName });
             var result = await runner.RunAsync(locate.Installation!, job);
 
             Assert.True(result.Succeeded, $"Failed ({result.FailureKind}): {result.ErrorMessage}");
-            Assert.NotNull(result.Device);
-            Assert.True(File.Exists(outPath), "Blender did not write the still.");
-            Assert.True(new FileInfo(outPath).Length > 0);
+            Assert.NotEmpty(result.OutputPaths);
+            Assert.All(result.OutputPaths, p => Assert.True(new FileInfo(p).Length > 0));
             Assert.True(File.Exists(Path.Combine(dir, "job.log")));
+            return result;
         }
         finally
         {
@@ -44,31 +64,48 @@ public class BlenderRunnerE2ETests
         }
     }
 
-    private static string SmokeScript(string outPath) =>
-        $"""
+    private const string SceneSetup =
+        """
         import bpy
         print("THIDE:phase=scene", flush=True)
         bpy.ops.wm.read_factory_settings(use_empty=True)
         scene = bpy.context.scene
         bpy.ops.mesh.primitive_cube_add()
+        cube = bpy.context.active_object
+        cube.rotation_euler = (0.0, 0.0, 0.0); cube.keyframe_insert("rotation_euler", frame=1)
+        cube.rotation_euler = (0.0, 0.0, 0.6); cube.keyframe_insert("rotation_euler", frame=2)
         light_data = bpy.data.lights.new("L", type='SUN'); light = bpy.data.objects.new("L", light_data)
         scene.collection.objects.link(light); light.rotation_euler = (0.9, 0.2, 0.6)
         cam_data = bpy.data.cameras.new("C"); cam = bpy.data.objects.new("C", cam_data)
         scene.collection.objects.link(cam); scene.camera = cam
-        cam.location = (6.0, -6.0, 5.0)
-        cam.rotation_euler = (0.9, 0.0, 0.78)
+        cam.location = (6.0, -6.0, 5.0); cam.rotation_euler = (0.9, 0.0, 0.78)
+        scene.render.engine = 'CYCLES'; scene.cycles.device = 'CPU'; scene.cycles.samples = 1
+        scene.render.resolution_x = 64; scene.render.resolution_y = 64
+        scene.frame_start = 1; scene.frame_end = 2
+        bpy.app.handlers.render_write.append(lambda *a: print("THIDE:frame=" + str(scene.frame_current) + "/2", flush=True))
         print("THIDE:phase=render", flush=True)
-        scene.render.engine = 'CYCLES'
-        scene.cycles.device = 'CPU'
-        scene.cycles.samples = 1
         print("THIDE:device=CPU", flush=True)
-        scene.render.resolution_x = 32
-        scene.render.resolution_y = 32
-        scene.render.image_settings.file_format = 'PNG'
+        print("THIDE:frames=2", flush=True)
+        """;
+
+    private static string VideoScript(string outPath) =>
+        SceneSetup + "\n" +
+        $"""
+        scene.render.image_settings.file_format = 'FFMPEG'
+        scene.render.ffmpeg.format = 'MPEG4'
+        scene.render.ffmpeg.codec = 'H264'
         scene.render.filepath = {PyLiteral(outPath)}
-        print("THIDE:frame=1/1", flush=True)
-        bpy.ops.render.render(write_still=True)
+        bpy.ops.render.render(animation=True)
         print("THIDE:output=" + scene.render.filepath, flush=True)
+        print("THIDE:done=1", flush=True)
+        """;
+
+    private static string SequenceScript(string prefix) =>
+        SceneSetup + "\n" +
+        $"""
+        scene.render.image_settings.file_format = 'PNG'
+        scene.render.filepath = {PyLiteral(prefix + "####")}
+        bpy.ops.render.render(animation=True)
         print("THIDE:done=1", flush=True)
         """;
 

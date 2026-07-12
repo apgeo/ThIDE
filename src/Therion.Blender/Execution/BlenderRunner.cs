@@ -11,15 +11,13 @@ using System.Threading.Channels;
 
 namespace Therion.Blender.Execution;
 
-/// <summary>What to render: the generated script, its job folder, and the frame/output shape
-/// (for the progress total + the disk preflight).</summary>
+/// <summary>What to render: the generated script, its job folder, the expected frame count,
+/// and the output spec (drives the disk preflight and the output collection).</summary>
 public sealed record RenderJob(
     string ScriptPath,
     string WorkingDirectory,
     int FrameCount,
-    int Width,
-    int Height,
-    OutputKind OutputKind);
+    OutputSpec Output);
 
 /// <summary>A running Blender process: merged output lines, exit code, and a tree kill.</summary>
 public interface IBlenderProcess : IDisposable
@@ -68,7 +66,7 @@ public sealed class BlenderRunner
         var stopwatch = Stopwatch.StartNew();
 
         // Disk preflight: fail fast rather than mid-render (skipped when free space is unknown).
-        long estimate = DiskPreflight.EstimateBytes(job.FrameCount, job.Width, job.Height, job.OutputKind);
+        long estimate = DiskPreflight.EstimateBytes(job.FrameCount, job.Output.Width, job.Output.Height, job.Output.Kind);
         if (_freeSpaceProbe(job.WorkingDirectory) is { } free && !DiskPreflight.IsSufficient(estimate, free))
             return new RenderResult
             {
@@ -142,9 +140,9 @@ public sealed class BlenderRunner
         RenderProgressParser parser, bool cancelled, int exitCode, Queue<string> tail,
         string jobLogPath, RenderJob job, TimeSpan duration, IProgress<RenderProgress>? progress)
     {
-        var outputs = parser.OutputPath is { } path ? ImmutableArray.Create(path) : ImmutableArray<string>.Empty;
-        var warnings = parser.Warnings.ToArray();
+        var warnings = new List<string>(parser.Warnings);
         int frames = parser.FrameCount ?? job.FrameCount;
+        var outputs = ImmutableArray<string>.Empty;
 
         RenderFailureKind kind;
         string? error;
@@ -168,9 +166,23 @@ public sealed class BlenderRunner
         }
         else
         {
-            ok = true;
-            kind = RenderFailureKind.None;
-            error = null;
+            // Render finished — read back and verify the output files (BA-B11).
+            progress?.Report(new RenderProgress(RenderPhase.CollectingOutputs, "Collecting outputs", Device: parser.Device));
+            var collection = OutputCollector.Collect(job.Output, frames);
+            if (!collection.HasOutputs)
+            {
+                kind = RenderFailureKind.NoOutput;
+                error = "Blender reported success but wrote no output files." +
+                        (collection.Problem is { } p ? " " + p : "");
+            }
+            else
+            {
+                ok = true;
+                kind = RenderFailureKind.None;
+                error = null;
+                outputs = collection.Files.Select(f => f.Path).ToImmutableArray();
+                if (!collection.Verified && collection.Problem is { } problem) warnings.Add(problem);
+            }
         }
 
         progress?.Report(new RenderProgress(

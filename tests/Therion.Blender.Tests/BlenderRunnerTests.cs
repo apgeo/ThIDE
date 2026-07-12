@@ -17,8 +17,11 @@ public class BlenderRunnerTests : IDisposable
 
     private static readonly BlenderInstallation Blender = new("/opt/blender/blender", new BlenderVersion(4, 5, 0));
 
-    private RenderJob Job(int frames = 2, OutputKind kind = OutputKind.Video)
-        => new(Path.Combine(_dir, "render.py"), _dir, frames, 640, 480, kind);
+    private RenderJob Job(int frames = 2, OutputKind kind = OutputKind.Video, string baseName = "cave")
+        => new(Path.Combine(_dir, "render.py"), _dir, frames,
+            new OutputSpec { Kind = kind, Container = VideoContainer.Mp4, Width = 640, Height = 480, OutputDirectory = _dir, BaseName = baseName });
+
+    private void WriteOutput(string name, int bytes = 16) => File.WriteAllBytes(Path.Combine(_dir, name), new byte[bytes]);
 
     private sealed class FakeProcess(string[] lines, int exitCode, int delayMs = 0) : IBlenderProcess
     {
@@ -60,12 +63,13 @@ public class BlenderRunnerTests : IDisposable
     // ---- happy path ----
 
     [Fact]
-    public async Task Success_ReportsDoneDeviceAndOutput_AndWritesJobLog()
+    public async Task Success_ReportsDoneDeviceAndCollectsOutput_AndWritesJobLog()
     {
+        WriteOutput("cave.mp4"); // simulate the file Blender wrote
         var lines = new[]
         {
             "THIDE:phase=scene", "THIDE:phase=import", "THIDE:device=OPTIX",
-            "THIDE:frame=1/2", "THIDE:frame=2/2", "THIDE:output=/out/cave.mp4", "THIDE:done=1",
+            "THIDE:frame=1/2", "THIDE:frame=2/2", "THIDE:output=" + Path.Combine(_dir, "cave.mp4"), "THIDE:done=1",
         };
         var ticks = new List<RenderProgress>();
         var runner = Runner(() => new FakeProcess(lines, exitCode: 0));
@@ -75,9 +79,29 @@ public class BlenderRunnerTests : IDisposable
         Assert.True(result.Succeeded);
         Assert.Equal(RenderFailureKind.None, result.FailureKind);
         Assert.Equal("OPTIX", result.Device);
-        Assert.Equal("/out/cave.mp4", Assert.Single(result.OutputPaths));
+        Assert.Equal(Path.Combine(_dir, "cave.mp4"), Assert.Single(result.OutputPaths)); // from the collector
+        Assert.Contains(ticks, t => t.Phase == RenderPhase.CollectingOutputs);
         Assert.True(File.Exists(Path.Combine(_dir, "job.log")));
         Assert.Contains(File.ReadAllLines(Path.Combine(_dir, "job.log")), l => l == "THIDE:done=1");
+    }
+
+    [Fact]
+    public async Task DoneButNoFileOnDisk_IsNoOutput()
+    {
+        var runner = Runner(() => new FakeProcess(["THIDE:done=1"], 0)); // no file written
+        var result = await runner.RunAsync(Blender, Job(), null);
+        Assert.False(result.Succeeded);
+        Assert.Equal(RenderFailureKind.NoOutput, result.FailureKind);
+    }
+
+    [Fact]
+    public async Task FrameSequence_CollectsEveryFrame()
+    {
+        WriteOutput("seq_0001.png"); WriteOutput("seq_0002.png");
+        var runner = Runner(() => new FakeProcess(["THIDE:frame=1/2", "THIDE:frame=2/2", "THIDE:done=1"], 0));
+        var result = await runner.RunAsync(Blender, Job(frames: 2, kind: OutputKind.FrameSequence, baseName: "seq"), null);
+        Assert.True(result.Succeeded);
+        Assert.Equal(2, result.OutputPaths.Length);
     }
 
     [Fact]
@@ -148,6 +172,7 @@ public class BlenderRunnerTests : IDisposable
     [Fact]
     public async Task UnknownFreeSpace_ProceedsAnyway()
     {
+        WriteOutput("cave.mp4");
         var runner = new BlenderRunner(new FakeLauncher(() => new FakeProcess(["THIDE:done=1"], 0)), _ => null);
         var result = await runner.RunAsync(Blender, Job(), null);
         Assert.True(result.Succeeded);
