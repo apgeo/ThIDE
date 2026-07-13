@@ -21,6 +21,35 @@ def fail(message, code=64):
     sys.exit(code)
 
 
+def thide_enum(obj, prop, candidates):
+    for candidate in candidates:
+        try:
+            setattr(obj, prop, candidate)
+            return candidate
+        except TypeError:
+            continue
+    return None
+
+
+def thide_fcurves(idblock):
+    _ad = getattr(idblock, "animation_data", None)
+    if not _ad or not _ad.action:
+        return []
+    _curves = getattr(_ad.action, "fcurves", None)
+    if _curves:
+        return list(_curves)
+    _curves = []
+    try:
+        for _layer in _ad.action.layers:
+            for _strip in _layer.strips:
+                _bag = _strip.channelbag(_ad.action_slot)
+                if _bag:
+                    _curves = list(_bag.fcurves) + _curves
+    except Exception:
+        return []
+    return _curves
+
+
 thide("spec-hash", SPEC_HASH)
 thide("blender", ".".join(str(v) for v in bpy.app.version))
 if bpy.app.version < (4, 2, 0):
@@ -111,7 +140,8 @@ world.use_nodes = True
 _wnt = world.node_tree
 _bg = next(n for n in _wnt.nodes if n.type == 'BACKGROUND')
 _sky = _wnt.nodes.new("ShaderNodeTexSky")
-_sky.sky_type = 'NISHITA'
+# 4.x names the physical sky NISHITA; 5.x replaced it with the *_SCATTERING models.
+thide_enum(_sky, "sky_type", ("NISHITA", "MULTIPLE_SCATTERING", "SINGLE_SCATTERING"))
 _wnt.links.new(_sky.outputs["Color"], _bg.inputs["Color"])
 _bg.inputs["Strength"].default_value = 0.5 * _light_strength
 
@@ -185,20 +215,7 @@ def _thide_pulse(obj):
     obj.keyframe_insert(data_path="scale", frame=1)
     obj.scale = (1.5, 1.5, 1.5)
     obj.keyframe_insert(data_path="scale", frame=15)
-    _ad = obj.animation_data
-    if not _ad or not _ad.action:
-        return
-    _curves = getattr(_ad.action, "fcurves", None) or []
-    if not _curves:
-        try:
-            for _layer in _ad.action.layers:
-                for _strip in _layer.strips:
-                    _bag = _strip.channelbag(_ad.action_slot)
-                    if _bag:
-                        _curves = list(_bag.fcurves) + _curves
-        except Exception:
-            _curves = []
-    for _fc in _curves:
+    for _fc in thide_fcurves(obj):
         _fc.modifiers.new(type='CYCLES')
 
 LEAD_MARKERS = [
@@ -237,9 +254,9 @@ scene.frame_end = 300
 OUT_DIR = "out"
 os.makedirs(OUT_DIR, exist_ok=True)
 _img = scene.render.image_settings
-_formats = _img.bl_rna.properties["file_format"].enum_items.keys()
-if 'FFMPEG' in _formats:
-    _img.file_format = 'FFMPEG'
+if hasattr(_img, "media_type"):
+    thide_enum(_img, "media_type", ("VIDEO",))
+if thide_enum(_img, "file_format", ("FFMPEG",)) is not None:
     scene.render.ffmpeg.format = "MPEG4"
     scene.render.ffmpeg.codec = "H264"
     scene.render.ffmpeg.constant_rate_factor = 'HIGH'
@@ -247,6 +264,8 @@ if 'FFMPEG' in _formats:
     scene.render.filepath = os.path.join(OUT_DIR, "golden-labels.mp4")
 else:
     thide("warning", "This Blender build has no FFMPEG video encoder; rendering a PNG frame sequence instead of golden-labels.mp4.")
+    if hasattr(_img, "media_type"):
+        thide_enum(_img, "media_type", ("IMAGE",))
     _img.file_format = 'PNG'
     _img.color_mode = "RGB"
     scene.render.filepath = os.path.join(OUT_DIR, "golden-labels_####")

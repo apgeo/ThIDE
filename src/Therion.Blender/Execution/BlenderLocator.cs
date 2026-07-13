@@ -197,12 +197,17 @@ public sealed class ProcessBlenderProbe : IBlenderProbe
             psi.Environment["PYTHONIOENCODING"] = "utf-8";
             using var process = Process.Start(psi);
             if (process is null) return null;
-            string output = process.StandardOutput.ReadToEnd();
+            // Drain BOTH pipes asynchronously before waiting: a synchronous ReadToEnd blocks
+            // forever on an exe that never closes stdout, and an un-drained stderr deadlocks
+            // the child once its pipe buffer fills — either way the timeout would never fire.
+            var stdout = process.StandardOutput.ReadToEndAsync();
+            _ = process.StandardError.ReadToEndAsync();
             if (!process.WaitForExit(_timeoutMs))
             {
                 try { process.Kill(entireProcessTree: true); } catch { /* best effort */ }
                 return null;
             }
+            string output = stdout.GetAwaiter().GetResult();
             return BlenderVersion.TryParse(output, out var version) ? version : null;
         }
         catch (Exception ex) when (ex is System.ComponentModel.Win32Exception

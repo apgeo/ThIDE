@@ -146,7 +146,7 @@ public class CameraScriptGoldenTests
         Assert.Contains("_track.track_axis = 'TRACK_NEGATIVE_Z'", script);
         Assert.Contains("CAM_KEYS = [", script);
         Assert.Contains("cam.keyframe_insert(data_path=\"location\", frame=_k[0])", script);
-        Assert.Contains("_kp.interpolation = \"LINEAR\"", script);
+        Assert.Contains("_thide_set_interp(cam, \"LINEAR\")", script);
         Assert.Contains("scene.frame_end = 16", script); // 8 fps × 2 s
     }
 
@@ -155,7 +155,7 @@ public class CameraScriptGoldenTests
     {
         var script = Generate("still-set");
         Assert.Contains("scene.frame_end = 4", script);                 // Top/Front/Left/IsoNE
-        Assert.Contains("_kp.interpolation = \"CONSTANT\"", script);    // discrete shots
+        Assert.Contains("_thide_set_interp(cam, \"CONSTANT\")", script); // discrete shots
         Assert.Contains("scene.render.image_settings.file_format = 'PNG'", script);
         Assert.Contains("bpy.ops.render.render(animation=True)", script);
     }
@@ -167,7 +167,7 @@ public class CameraScriptGoldenTests
         Assert.Contains("cam_data.dof.use_dof = True", script);
         Assert.Contains("cam_data.dof.focus_object = cam_target", script);
         Assert.Contains("cam_data.keyframe_insert(data_path=\"lens\", frame=_k[0])", script);
-        Assert.Contains("_kp.interpolation = \"BEZIER\"", script);
+        Assert.Contains("_thide_set_interp(cam, \"BEZIER\")", script);
     }
 
     [Fact]

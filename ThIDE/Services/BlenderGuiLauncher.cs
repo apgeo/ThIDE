@@ -36,13 +36,44 @@ public sealed class BlenderGuiLauncher : IBlenderGuiLauncher
         {
             var psi = new ProcessStartInfo(located.Installation!.Path)
             {
+                // Blender's GUI has no visible console for a --python script, so a failed
+                // scene build looks like "nothing happened". Capture stdout/stderr into a
+                // log beside the script so the traceback is inspectable afterwards.
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
                 UseShellExecute = false,
                 CreateNoWindow = false,
                 WorkingDirectory = System.IO.Path.GetDirectoryName(scriptPath) ?? string.Empty,
             };
+            psi.Environment["PYTHONIOENCODING"] = "utf-8"; // non-ASCII station names (R-08)
+            // Same environment as the headless runner: user addons/startup files must not
+            // break the scene build (and Blender won't auto-save prefs over the user's own).
+            psi.ArgumentList.Add("--factory-startup");
             psi.ArgumentList.Add("--python");
             psi.ArgumentList.Add(scriptPath);
-            return Process.Start(psi) is not null;
+
+            var process = new Process { StartInfo = psi, EnableRaisingEvents = true };
+            var log = new StreamWriter(scriptPath + ".blender.log", append: false) { AutoFlush = true };
+            void Write(string? data)
+            {
+                if (data is null) return;
+                lock (log)
+                {
+                    try { log.WriteLine(data); }
+                    catch (ObjectDisposedException) { /* late line after exit */ }
+                }
+            }
+            process.OutputDataReceived += (_, e) => Write(e.Data);
+            process.ErrorDataReceived += (_, e) => Write(e.Data);
+            process.Exited += (_, _) =>
+            {
+                lock (log) { try { log.Dispose(); } catch (System.IO.IOException) { } }
+                process.Dispose();
+            };
+            process.Start();
+            process.BeginOutputReadLine();
+            process.BeginErrorReadLine();
+            return true;
         }
         catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException or System.IO.IOException or UnauthorizedAccessException)
         {

@@ -124,6 +124,40 @@ public class RenderProgressParserTests
         Assert.Null(tick.Value.Fraction);
     }
 
+    // ---- traceback capture ----
+
+    [Fact]
+    public void PythonTraceback_CapturesTheExceptionLine()
+    {
+        var parser = new RenderProgressParser();
+        Feed(parser,
+            "Traceback (most recent call last):",
+            "  File \"render.py\", line 107, in <module>",
+            "    _sky.sky_type = 'NISHITA'",
+            "TypeError: bpy_struct: item.attr = val: enum \"NISHITA\" not found",
+            "Error: script failed, file: 'render.py', exiting.");
+        Assert.Equal("TypeError: bpy_struct: item.attr = val: enum \"NISHITA\" not found", parser.PythonException);
+    }
+
+    [Fact]
+    public void PythonTraceback_KeepsTheFirstException_AcrossChainedTracebacks()
+    {
+        var parser = new RenderProgressParser();
+        Feed(parser,
+            "Traceback (most recent call last):", "  File a", "ValueError: root cause",
+            "During handling of the above exception, another exception occurred:",
+            "Traceback (most recent call last):", "  File b", "RuntimeError: secondary");
+        Assert.Equal("ValueError: root cause", parser.PythonException);
+    }
+
+    [Fact]
+    public void NativeFaultMidTraceback_IsNotAnException()
+    {
+        var parser = new RenderProgressParser();
+        Feed(parser, "Traceback (most recent call last):", "  File ...", "Segmentation fault");
+        Assert.Null(parser.PythonException); // stays a crash, not a ScriptError
+    }
+
     // ---- robustness ----
 
     [Theory]

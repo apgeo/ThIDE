@@ -78,7 +78,9 @@ public sealed class BlenderRunner
 
         progress?.Report(new RenderProgress(RenderPhase.Rendering, "Starting Blender…")); // tier-3 spinner
         string jobLogPath = Path.Combine(job.WorkingDirectory, "job.log");
-        var args = new[] { "-b", "--factory-startup", "--python", job.ScriptPath };
+        // --python-exit-code: an UNcaught Python exception (e.g. a Blender API rename the
+        // script's probes missed) otherwise exits 0 and looks like a silent no-output run.
+        var args = new[] { "-b", "--factory-startup", "--python-exit-code", "64", "--python", job.ScriptPath };
         var parser = new RenderProgressParser(job.FrameCount);
 
         IBlenderProcess process;
@@ -159,6 +161,13 @@ public sealed class BlenderRunner
         {
             kind = RenderFailureKind.ScriptError;
             error = scriptError;
+        }
+        else if (parser.PythonException is { } pythonException)
+        {
+            // An uncaught exception the script's own fail() never saw — surface the real
+            // Python error line instead of a generic "exited with code N".
+            kind = RenderFailureKind.ScriptError;
+            error = "The generated script failed in Blender: " + pythonException;
         }
         else if (!parser.Done || exitCode != 0)
         {

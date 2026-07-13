@@ -19,6 +19,7 @@ public sealed partial class RenderProgressParser
     private readonly int? _expectedFrameCount;
     private readonly List<string> _warnings = [];
     private int _lastNativeFrame = -1;
+    private bool _inTraceback;
 
     /// <param name="expectedFrameCount">Total frames the render should produce, so the tier-2
     /// native fallback can compute a fraction (tier 1 carries its own total).</param>
@@ -29,6 +30,10 @@ public sealed partial class RenderProgressParser
 
     /// <summary>The script's error message (<c>THIDE:error</c>), if it failed.</summary>
     public string? Error { get; private set; }
+
+    /// <summary>The first uncaught Python exception line (e.g. <c>TypeError: …</c>) captured
+    /// from a traceback in the output — failures the script's own <c>fail()</c> never saw.</summary>
+    public string? PythonException { get; private set; }
 
     /// <summary>The final output path the script reported (<c>THIDE:output</c>).</summary>
     public string? OutputPath { get; private set; }
@@ -59,6 +64,24 @@ public sealed partial class RenderProgressParser
         {
             SawStructured = true;
             return ParseStructured(line.AsSpan(idx + prefix.Length).Trim());
+        }
+        // Python traceback capture: frames are indented; the first non-indented line after
+        // "Traceback" is the exception itself (the first traceback = the root cause).
+        if (line.StartsWith("Traceback (most recent call last)", StringComparison.Ordinal))
+        {
+            _inTraceback = true;
+            return null;
+        }
+        if (_inTraceback)
+        {
+            if (line.Length > 0 && !char.IsWhiteSpace(line[0]))
+            {
+                // Only exception-shaped lines ("TypeError: …", bare "KeyboardInterrupt")
+                // count — a native "Segmentation fault" mid-traceback stays a crash.
+                _inTraceback = false;
+                if (PythonExceptionRegex().IsMatch(line)) PythonException ??= line.Trim();
+            }
+            return null;
         }
         return SawStructured ? null : ParseNative(line);
     }
@@ -137,4 +160,7 @@ public sealed partial class RenderProgressParser
 
     [GeneratedRegex(@"^Fra:(\d+)\b", RegexOptions.CultureInvariant)]
     private static partial Regex NativeFrameRegex();
+
+    [GeneratedRegex(@"^[A-Za-z_][A-Za-z0-9_.]*(:.*)?$", RegexOptions.CultureInvariant)]
+    private static partial Regex PythonExceptionRegex();
 }

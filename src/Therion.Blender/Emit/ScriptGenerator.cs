@@ -5,10 +5,12 @@
 // until BA-B6) → engine + GPU cascade → render/output settings → progress hooks →
 // render. Same spec (+ assets) ⇒ byte-identical script (NFR-03, golden-tested).
 //
-// Version adaptivity is RUNTIME probing inside the script (R-07): a bpy.app.version
-// gate, the EEVEE engine id probed by assignment (BLENDER_EEVEE_NEXT vs
-// BLENDER_EEVEE), and hasattr checks around the Cycles device-refresh API — never
-// C#-side Blender-version branching.
+// Version adaptivity is RUNTIME probing inside the script (R-07), never C#-side
+// Blender-version branching. The shared primitives live in the preamble: thide_enum
+// (assignment-probed enum values — rna enum_items can list values the build rejects,
+// e.g. 5.x FFMPEG before media_type=VIDEO, or the removed NISHITA sky) and
+// thide_fcurves (action.fcurves vs 4.4+ slotted-action channelbags); hasattr guards
+// cover renamed attributes (EEVEE flags, Cycles device refresh, media_type).
 //
 // THIDE: protocol (D-08, tier 1 — parsed by the BA-B10 runner):
 //   spec-hash=<sha256>  blender=<x.y.z>  phase=<scene|import|engine|render>
@@ -80,7 +82,7 @@ public static class ScriptGenerator
         EmitHeader(w, spec);
         EmitPreamble(w, spec);
         EmitEmbeddedAssets(w, spec, assets);
-        EmitSceneReset(w, spec);
+        EmitSceneReset(w, spec, purpose);
         EmitImport(w, spec);
         EmitMaterials(w, spec);
         EmitCamera(w, spec, camera);
@@ -139,6 +141,53 @@ public static class ScriptGenerator
         }
         w.Blank();
         w.Blank();
+        // The shared version-compat primitive (R-07): Blender renames enum values across
+        // releases, and rna enum_items can still LIST a value the current build/mode rejects
+        // on assignment (5.x file_format='FFMPEG' while media_type is IMAGE) — so the only
+        // trustworthy probe is the assignment itself.
+        using (w.Block("def thide_enum(obj, prop, candidates):"))
+        {
+            using (w.Block("for candidate in candidates:"))
+            {
+                using (w.Block("try:"))
+                {
+                    w.Line("setattr(obj, prop, candidate)");
+                    w.Line("return candidate");
+                }
+                using (w.Block("except TypeError:"))
+                    w.Line("continue");
+            }
+            w.Line("return None");
+        }
+        w.Blank();
+        w.Blank();
+        // fcurves live on the action directly (<= 4.3) or under the active slot's channelbag
+        // (4.4+ slotted actions) — probe both layouts (R-07).
+        using (w.Block("def thide_fcurves(idblock):"))
+        {
+            w.Line("_ad = getattr(idblock, \"animation_data\", None)");
+            using (w.Block("if not _ad or not _ad.action:"))
+                w.Line("return []");
+            w.Line("_curves = getattr(_ad.action, \"fcurves\", None)");
+            using (w.Block("if _curves:"))
+                w.Line("return list(_curves)");
+            w.Line("_curves = []");
+            using (w.Block("try:"))
+            {
+                using (w.Block("for _layer in _ad.action.layers:"))
+                using (w.Block("for _strip in _layer.strips:"))
+                {
+                    w.Line("_bag = _strip.channelbag(_ad.action_slot)");
+                    using (w.Block("if _bag:"))
+                        w.Line("_curves = list(_bag.fcurves) + _curves");
+                }
+            }
+            using (w.Block("except Exception:"))
+                w.Line("return []");
+            w.Line("return _curves");
+        }
+        w.Blank();
+        w.Blank();
         w.Line("thide(\"spec-hash\", SPEC_HASH)");
         w.Line("thide(\"blender\", \".\".join(str(v) for v in bpy.app.version))");
         using (w.Block("if bpy.app.version < (4, 2, 0):"))
@@ -161,11 +210,22 @@ public static class ScriptGenerator
         w.Blank();
     }
 
-    private static void EmitSceneReset(PyWriter w, SceneSpec spec)
+    private static void EmitSceneReset(PyWriter w, SceneSpec spec, ScriptPurpose purpose)
     {
         w.Line("# ---- scene reset ----");
         w.Line("thide(\"phase\", \"scene\")");
-        w.Line("bpy.ops.wm.read_factory_settings(use_empty=True)");
+        if (purpose == ScriptPurpose.Interactive)
+        {
+            // In the GUI, wm.read_factory_settings invalidates the operator context for the
+            // rest of a --python startup script (wm.ply_import's poll then fails), so purge
+            // the factory objects datablock-level instead — the GUI launcher already passes
+            // --factory-startup for a clean file.
+            w.Line("bpy.data.batch_remove(list(bpy.data.objects))");
+        }
+        else
+        {
+            w.Line("bpy.ops.wm.read_factory_settings(use_empty=True)");
+        }
         w.Line("scene = bpy.context.scene");
         w.Line("scene.unit_settings.system = 'METRIC'");
         w.Line("scene.unit_settings.scale_length = 1.0");
@@ -320,7 +380,8 @@ public static class ScriptGenerator
                 w.Line("_suno.rotation_euler = (0.9, 0.2, 0.6)");
                 EmitWorldNodes(w, out string bg);
                 w.Line("_sky = _wnt.nodes.new(\"ShaderNodeTexSky\")");
-                w.Line("_sky.sky_type = 'NISHITA'");
+                w.Line("# 4.x names the physical sky NISHITA; 5.x replaced it with the *_SCATTERING models.");
+                w.Line("thide_enum(_sky, \"sky_type\", (\"NISHITA\", \"MULTIPLE_SCATTERING\", \"SINGLE_SCATTERING\"))");
                 w.Line($"_wnt.links.new(_sky.outputs[\"Color\"], {bg}.inputs[\"Color\"])");
                 w.Line($"{bg}.inputs[\"Strength\"].default_value = 0.5 * _light_strength");
                 break;
@@ -480,27 +541,7 @@ public static class ScriptGenerator
                 w.Line("obj.keyframe_insert(data_path=\"scale\", frame=1)");
                 w.Line("obj.scale = (1.5, 1.5, 1.5)");
                 w.Line("obj.keyframe_insert(data_path=\"scale\", frame=15)");
-                w.Line("_ad = obj.animation_data");
-                using (w.Block("if not _ad or not _ad.action:"))
-                    w.Line("return");
-                w.Line("_curves = getattr(_ad.action, \"fcurves\", None) or []");
-                using (w.Block("if not _curves:"))
-                {
-                    // 4.4+ slotted actions: fcurves live under the active slot's channelbag.
-                    using (w.Block("try:"))
-                    {
-                        using (w.Block("for _layer in _ad.action.layers:"))
-                        using (w.Block("for _strip in _layer.strips:"))
-                        {
-                            w.Line("_bag = _strip.channelbag(_ad.action_slot)");
-                            using (w.Block("if _bag:"))
-                                w.Line("_curves = list(_bag.fcurves) + _curves");
-                        }
-                    }
-                    using (w.Block("except Exception:"))
-                        w.Line("_curves = []");
-                }
-                using (w.Block("for _fc in _curves:"))
+                using (w.Block("for _fc in thide_fcurves(obj):"))
                     w.Line("_fc.modifiers.new(type='CYCLES')");
             }
         }
@@ -794,33 +835,13 @@ public static class ScriptGenerator
         w.Blank();
 
         // Set the keyframe interpolation robustly across the 4.2/4.3 action.fcurves API and
-        // the 4.4+ slotted-action layout — never let an API rename fail the render (R-07).
+        // the 4.4+ slotted-action layout (thide_fcurves) — never let an API rename fail the
+        // render (R-07).
         using (w.Block("def _thide_set_interp(idblock, mode):"))
         {
-            w.Line("_ad = getattr(idblock, \"animation_data\", None)");
-            using (w.Block("if not _ad or not _ad.action:"))
-                w.Line("return");
-            w.Line("_curves = getattr(_ad.action, \"fcurves\", None)");
-            using (w.Block("if not _curves:"))
-            {
-                using (w.Block("try:"))
-                {
-                    w.Line("_slot = _ad.action_slot");
-                    w.Line("_curves = []");
-                    using (w.Block("for _layer in _ad.action.layers:"))
-                    using (w.Block("for _strip in _layer.strips:"))
-                    {
-                        w.Line("_bag = _strip.channelbag(_slot)");
-                        using (w.Block("if _bag:"))
-                            w.Line("_curves = list(_bag.fcurves) + _curves");
-                    }
-                }
-                using (w.Block("except Exception:"))
-                    w.Line("_curves = []");
-            }
-            using (w.Block("for _fc in _curves:"))
+            using (w.Block("for _fc in thide_fcurves(idblock):"))
             using (w.Block("for _kp in _fc.keyframe_points:"))
-                w.Line($"_kp.interpolation = {PyWriter.Str(mode)}");
+                w.Line("_kp.interpolation = mode");
         }
         w.Line("_thide_set_interp(cam, " + PyWriter.Str(mode) + ")");
         w.Line("_thide_set_interp(cam_target, " + PyWriter.Str(mode) + ")");
@@ -920,17 +941,7 @@ public static class ScriptGenerator
     {
         // EEVEE was renamed BLENDER_EEVEE_NEXT in 4.2; probe by assignment so a future
         // rename-back keeps working (R-04/R-07). Device config does not apply (D-09).
-        using (w.Block("for _engine_id in (\"BLENDER_EEVEE_NEXT\", \"BLENDER_EEVEE\"):"))
-        {
-            using (w.Block("try:"))
-            {
-                w.Line("scene.render.engine = _engine_id");
-                w.Line("break");
-            }
-            using (w.Block("except TypeError:"))
-                w.Line("continue");
-        }
-        using (w.Block("else:"))
+        using (w.Block("if thide_enum(scene.render, \"engine\", (\"BLENDER_EEVEE_NEXT\", \"BLENDER_EEVEE\")) is None:"))
             w.Line("fail(\"no EEVEE engine is available in this Blender\")");
         w.Line($"scene.eevee.taa_render_samples = {PyWriter.Num(spec.Engine.Samples)}");
         // AO + shadows for cave depth. Attribute names differ across EEVEE Legacy vs Next
@@ -991,15 +1002,16 @@ public static class ScriptGenerator
     private static void EmitVideoOutput(PyWriter w, SceneSpec spec)
     {
         // Video needs an FFMPEG-enabled Blender build. Not every build ships the FFMPEG movie
-        // writer (some platform/Store builds, and the enum has shifted across versions), so
-        // probe the format enum at runtime (R-07): if 'FFMPEG' is missing, fall back to a PNG
-        // frame sequence and warn — the user still gets renderable output instead of a crash.
+        // writer, and Blender 5.x additionally gates it behind image_settings.media_type —
+        // the rna enum still LISTS 'FFMPEG' there while assignment rejects it, so the only
+        // trustworthy probe is thide_enum's assignment (R-07). If FFMPEG doesn't stick, fall
+        // back to a PNG frame sequence and warn — renderable output instead of a crash.
         string videoName = spec.Output.BaseName + ContainerExtension(spec.Output.Container);
         w.Line("_img = scene.render.image_settings");
-        w.Line("_formats = _img.bl_rna.properties[\"file_format\"].enum_items.keys()");
-        using (w.Block("if 'FFMPEG' in _formats:"))
+        using (w.Block("if hasattr(_img, \"media_type\"):"))
+            w.Line("thide_enum(_img, \"media_type\", (\"VIDEO\",))");
+        using (w.Block("if thide_enum(_img, \"file_format\", (\"FFMPEG\",)) is not None:"))
         {
-            w.Line("_img.file_format = 'FFMPEG'");
             w.Line($"scene.render.ffmpeg.format = {PyWriter.Str(FfmpegContainer(spec.Output.Container))}");
             w.Line($"scene.render.ffmpeg.codec = {PyWriter.Str(spec.Output.Container == VideoContainer.WebM ? "WEBM" : "H264")}");
             w.Line("scene.render.ffmpeg.constant_rate_factor = 'HIGH'");
@@ -1009,6 +1021,8 @@ public static class ScriptGenerator
         using (w.Block("else:"))
         {
             w.Line($"thide(\"warning\", {PyWriter.Str($"This Blender build has no FFMPEG video encoder; rendering a PNG frame sequence instead of {videoName}.")})");
+            using (w.Block("if hasattr(_img, \"media_type\"):"))
+                w.Line("thide_enum(_img, \"media_type\", (\"IMAGE\",))"); // undo the VIDEO probe before PNG
             w.Line("_img.file_format = 'PNG'");
             w.Line($"_img.color_mode = {PyWriter.Str(spec.Engine.TransparentBackground ? "RGBA" : "RGB")}");
             w.Line($"scene.render.filepath = os.path.join(OUT_DIR, {PyWriter.Str(spec.Output.BaseName + "_####")})");

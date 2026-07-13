@@ -70,11 +70,12 @@ public class MaterialsScriptTests
     }
 
     [Fact]
-    public void SunSky_AddsASunAndNishitaWorld()
+    public void SunSky_AddsASunAndPhysicalSkyWorld()
     {
         var script = ScriptGenerator.Generate(Spec(lighting: new LightingSpec { Rig = LightingRig.SunSky }));
         Assert.Contains("_sun = bpy.data.lights.new(\"Sun\", type='SUN')", script);
-        Assert.Contains("_sky.sky_type = 'NISHITA'", script);
+        // Probed by assignment (R-07): 4.x NISHITA first, then the 5.x *_SCATTERING renames.
+        Assert.Contains("thide_enum(_sky, \"sky_type\", (\"NISHITA\", \"MULTIPLE_SCATTERING\", \"SINGLE_SCATTERING\"))", script);
     }
 
     [Fact]

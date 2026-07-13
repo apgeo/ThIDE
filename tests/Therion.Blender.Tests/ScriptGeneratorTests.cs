@@ -181,7 +181,7 @@ public class ScriptGeneratorTests
     public void Eevee_ProbesEngineIdByAssignment_AndSkipsDeviceConfig()
     {
         var script = ScriptGenerator.Generate(StillSpec());
-        Assert.Contains("for _engine_id in (\"BLENDER_EEVEE_NEXT\", \"BLENDER_EEVEE\"):", script);
+        Assert.Contains("if thide_enum(scene.render, \"engine\", (\"BLENDER_EEVEE_NEXT\", \"BLENDER_EEVEE\")) is None:", script);
         Assert.Contains("scene.eevee.taa_render_samples = 32", script);
         Assert.DoesNotContain("_gpu_cascade", script);
         Assert.DoesNotContain("cycles", script.Replace("# ", "")); // no cycles config for EEVEE
@@ -253,9 +253,11 @@ public class ScriptGeneratorTests
     public void Video_FallsBackToPngFrames_WhenBuildHasNoFfmpeg()
     {
         var script = ScriptGenerator.Generate(VideoSpec());
-        // Runtime probe rather than an unconditional assignment (R-07) — a build without the
+        // Probe by ASSIGNMENT rather than enum_items (R-07) — 5.x still lists FFMPEG there
+        // while rejecting the assignment until media_type is VIDEO; builds without the
         // FFMPEG movie writer must degrade to PNG frames, not crash.
-        Assert.Contains("if 'FFMPEG' in _formats:", script);
+        Assert.Contains("thide_enum(_img, \"media_type\", (\"VIDEO\",))", script);
+        Assert.Contains("if thide_enum(_img, \"file_format\", (\"FFMPEG\",)) is not None:", script);
         Assert.Contains("_img.file_format = 'PNG'", script);
         Assert.Contains("no FFMPEG video encoder", script);
     }

@@ -112,7 +112,9 @@ public class BlenderRunnerTests : IDisposable
         await runner.RunAsync(Blender, Job(), null);
 
         Assert.Equal(Blender.Path, launcher.Exe);
-        Assert.Equal(["-b", "--factory-startup", "--python", Path.Combine(_dir, "render.py")], launcher.Args);
+        Assert.Equal(
+            ["-b", "--factory-startup", "--python-exit-code", "64", "--python", Path.Combine(_dir, "render.py")],
+            launcher.Args);
     }
 
     // ---- failure taxonomy ----
@@ -131,6 +133,7 @@ public class BlenderRunnerTests : IDisposable
     [Fact]
     public async Task NonzeroExit_WithoutDone_IsACrash_WithTail()
     {
+        // A native fault mid-traceback is NOT an exception line — stays a crash, with tail.
         var lines = new[] { "Traceback (most recent call last):", "  File ...", "Segmentation fault" };
         var result = await Runner(() => new FakeProcess(lines, exitCode: 139)).RunAsync(Blender, Job(), null);
 
@@ -138,6 +141,27 @@ public class BlenderRunnerTests : IDisposable
         Assert.Equal(RenderFailureKind.Crashed, result.FailureKind);
         Assert.Contains("139", result.ErrorMessage);
         Assert.Contains("Segmentation fault", result.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task UncaughtPythonException_IsAScriptError_WithTheExceptionLine()
+    {
+        // An API rename the script's probes missed: no THIDE:error, just a traceback and
+        // (thanks to --python-exit-code) a nonzero exit — surfaced as a ScriptError.
+        var lines = new[]
+        {
+            "THIDE:phase=import",
+            "Traceback (most recent call last):",
+            "  File \"render.py\", line 107, in <module>",
+            "    _sky.sky_type = 'NISHITA'",
+            "TypeError: bpy_struct: item.attr = val: enum \"NISHITA\" not found",
+        };
+        var result = await Runner(() => new FakeProcess(lines, exitCode: 64)).RunAsync(Blender, Job(), null);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(RenderFailureKind.ScriptError, result.FailureKind);
+        Assert.Contains("TypeError", result.ErrorMessage);
+        Assert.Contains("NISHITA", result.ErrorMessage);
     }
 
     [Fact]
