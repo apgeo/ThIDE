@@ -1,9 +1,5 @@
-using System.Net.Http.Headers;
-using System.Net.Http.Json;
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using ModelContextProtocol.Client;
-using ModelContextProtocol.Protocol;
+using Therion.Assistant;
 
 namespace Therion.Mcp.Evals;
 
@@ -14,13 +10,11 @@ namespace Therion.Mcp.Evals;
 public sealed record Conversation(string FinalText, IReadOnlyList<ToolCallRecord> Calls, int Turns, int Tokens);
 
 /// <summary>
-/// A minimal OpenAI-compatible chat client + tool loop, deliberately dependency-free: LM Studio and Ollama
-/// both expose <c>POST {endpoint}/chat/completions</c> with the OpenAI <c>tools</c>/<c>tool_calls</c> shape,
-/// so we hand-roll the request rather than pull the OpenAI SDK into the tree. The MCP tools are advertised
-/// verbatim (their JSON schema is already JSON Schema); each tool_call the model makes is executed against
-/// the real MCP server and its result fed back. A call that names an unknown tool or sends unparseable
-/// arguments is recorded as <em>not schema-valid</em> — that is the call_validity signal, and it is how a
-/// hallucinated tool is caught.
+/// The harness's face of the chat loop. The loop itself lives in <c>Therion.Assistant</c>
+/// (<see cref="ChatEngine"/> — extracted at T-07.1 so the Assistant pane and this harness share
+/// one implementation, D-043); this adapter keeps the harness's fresh-conversation-per-case shape
+/// and its <see cref="ToolCallRecord"/> vocabulary for the grader. No approval hook: the eval runs
+/// unattended, which is the pre-extraction behaviour.
 /// </summary>
 public sealed class OpenAiClient(HttpClient http, string endpoint, string model)
 {
@@ -32,115 +26,14 @@ public sealed class OpenAiClient(HttpClient http, string endpoint, string model)
     public async Task<Conversation> RunAsync(
         McpClient mcp, IReadOnlyList<McpClientTool> tools, string prompt, int maxTurns, CancellationToken ct)
     {
-        var toolNames = tools.Select(t => t.Name).ToHashSet(StringComparer.Ordinal);
-        var toolSpec = new JsonArray(tools.Select(ToOpenAiTool).ToArray());
+        var engine = new ChatEngine(http, new ChatEngineOptions(endpoint, model) { MaxTurns = maxTurns });
+        var result = await engine.RunAsync(
+            new ChatSession(System), prompt, new McpToolCatalog(mcp, tools), callbacks: null, ct);
 
-        var messages = new JsonArray
-        {
-            Message("system", System),
-            Message("user", prompt),
-        };
-
-        var calls = new List<ToolCallRecord>();
-        int turns = 0, tokens = 0;
-
-        for (int i = 0; i <= maxTurns; i++)
-        {
-            var response = await CompleteAsync(messages, toolSpec, ct);
-            tokens += (int?)response?["usage"]?["total_tokens"] ?? 0;
-
-            var message = response?["choices"]?[0]?["message"];
-            if (message is null) return new Conversation("(no response from the endpoint)", calls, turns, tokens);
-
-            var toolCalls = message["tool_calls"] as JsonArray;
-            if (toolCalls is null || toolCalls.Count == 0)
-                return new Conversation((string?)message["content"] ?? "", calls, turns, tokens);
-
-            // Echo the assistant turn (with its tool_calls) before the tool results — the protocol requires it.
-            messages.Add(message.DeepClone());
-            turns++;
-
-            foreach (var call in toolCalls.OfType<JsonObject>())
-            {
-                var id = (string?)call["id"] ?? "";
-                var fn = call["function"];
-                var name = (string?)fn?["name"] ?? "";
-                var argsText = (string?)fn?["arguments"] ?? "{}";
-
-                var (content, record) = await ExecuteAsync(mcp, toolNames, name, argsText, ct);
-                calls.Add(record);
-                messages.Add(ToolResultMessage(id, content));
-            }
-        }
-
-        return new Conversation($"(gave up after {maxTurns} tool turns)", calls, turns, tokens);
+        return new Conversation(
+            result.FinalText,
+            result.Calls.Select(c => new ToolCallRecord(c.Tool, c.SchemaValid, c.Ok)).ToList(),
+            result.Turns,
+            result.Tokens);
     }
-
-    private async Task<(string Content, ToolCallRecord Record)> ExecuteAsync(
-        McpClient mcp, HashSet<string> known, string name, string argsText, CancellationToken ct)
-    {
-        if (!known.Contains(name))
-            return ($"Error: no such tool '{name}'.", new ToolCallRecord(name, SchemaValid: false, Ok: false));
-
-        Dictionary<string, object> args;
-        try
-        {
-            args = JsonSerializer.Deserialize<Dictionary<string, object>>(
-                string.IsNullOrWhiteSpace(argsText) ? "{}" : argsText) ?? new();
-        }
-        catch (JsonException)
-        {
-            return ("Error: arguments were not valid JSON.", new ToolCallRecord(name, SchemaValid: false, Ok: false));
-        }
-
-        try
-        {
-            var result = await mcp.CallToolAsync(name, args, cancellationToken: ct);
-            var text = string.Concat(result.Content.OfType<TextContentBlock>().Select(b => b.Text));
-            return (text.Length == 0 ? "(no content)" : text, new ToolCallRecord(name, SchemaValid: true, Ok: result.IsError != true));
-        }
-        catch (Exception ex)
-        {
-            // The call was well-formed (schema-valid) but the server rejected it — still counts as a valid call.
-            return ($"Error: {ex.Message}", new ToolCallRecord(name, SchemaValid: true, Ok: false));
-        }
-    }
-
-    private async Task<JsonNode?> CompleteAsync(JsonArray messages, JsonArray tools, CancellationToken ct)
-    {
-        var body = new JsonObject
-        {
-            ["model"] = model,
-            ["messages"] = messages.DeepClone(),
-            ["tools"] = tools.DeepClone(),
-            ["tool_choice"] = "auto",
-            ["temperature"] = 0,
-            ["stream"] = false,
-        };
-
-        using var response = await http.PostAsJsonAsync($"{endpoint.TrimEnd('/')}/chat/completions", body, ct);
-        if (!response.IsSuccessStatusCode)
-        {
-            var detail = await response.Content.ReadAsStringAsync(ct);
-            if (detail.Length > 300) detail = detail[..300] + "…";
-            throw new InvalidOperationException($"endpoint returned {(int)response.StatusCode}: {detail}");
-        }
-        return await response.Content.ReadFromJsonAsync<JsonNode>(ct);
-    }
-
-    private static JsonObject ToOpenAiTool(McpClientTool tool) => new()
-    {
-        ["type"] = "function",
-        ["function"] = new JsonObject
-        {
-            ["name"] = tool.Name,
-            ["description"] = tool.Description,
-            ["parameters"] = JsonNode.Parse(tool.JsonSchema.GetRawText()),
-        },
-    };
-
-    private static JsonObject Message(string role, string content) => new() { ["role"] = role, ["content"] = content };
-
-    private static JsonObject ToolResultMessage(string id, string content) =>
-        new() { ["role"] = "tool", ["tool_call_id"] = id, ["content"] = content };
 }

@@ -13,6 +13,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The shared OpenAI-compatible chat/tool loop (ChatEngine, D-043) — one loop, two consumers. -->
+    <ProjectReference Include="..\Therion.Assistant\Therion.Assistant.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- The server is spawned as a child process; build it first and record where its DLL lands.
          ReferenceOutputAssembly=false: we run it, we don't link it. Mirrors the test project. -->
     <ProjectReference Include="..\Therion.Mcp.Server\Therion.Mcp.Server.csproj"
