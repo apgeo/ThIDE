@@ -30,9 +30,10 @@ public sealed class UiBridge : IUiBridge
 {
     private readonly IDocumentService? _documents;
     private readonly IAppSettingsService? _settings;
-    private readonly DockFactory? _dock;
+    private readonly IServiceProvider? _services;
     private readonly INotificationService? _notifications;
     private readonly ILogService? _log;
+    private DockFactory? _dock;
 
     // Connected once by the shell after the window and view-model exist (ConnectShell). The guarded R3
     // command/save/layout tools drive the same commands the keyboard and menus do — no separate path.
@@ -43,16 +44,24 @@ public sealed class UiBridge : IUiBridge
     public UiBridge(
         IDocumentService? documents = null,
         IAppSettingsService? settings = null,
-        DockFactory? dock = null,
+        IServiceProvider? services = null,
         INotificationService? notifications = null,
         ILogService? log = null)
     {
         _documents = documents;
         _settings = settings;
-        _dock = dock;
+        _services = services;
         _notifications = notifications;
         _log = log;
     }
+
+    // DockFactory pulls in the Assistant tool VM, which reaches this class through
+    // IAssistantService -> IMcpHostService -> IUiBridge — resolving it as a constructor
+    // parameter would make the DI container see UiBridge -> DockFactory -> ... -> UiBridge and
+    // throw a circular-dependency error at startup. Resolving it lazily from the container on
+    // first actual use (well after the whole graph is built) sidesteps that without losing the
+    // dock access these R3 tools need.
+    private DockFactory? Dock => _dock ??= _services?.GetService(typeof(DockFactory)) as DockFactory;
 
     /// <summary>
     /// Wires the guarded R3 tools (T-03.5) to the running shell: the id→command map the keyboard uses,
@@ -109,7 +118,7 @@ public sealed class UiBridge : IUiBridge
             .Where(d => d.IsDirty && !string.IsNullOrEmpty(d.FilePath))
             .Select(d => d.FilePath)
             .ToList() ?? new List<string>();
-        var panes = _dock?.OpenToolIds() ?? (IReadOnlyList<string>)Array.Empty<string>();
+        var panes = Dock?.OpenToolIds() ?? (IReadOnlyList<string>)Array.Empty<string>();
 
         return new UiState(
             ActiveDocument: string.IsNullOrEmpty(activeDoc) ? null : activeDoc,
@@ -152,10 +161,11 @@ public sealed class UiBridge : IUiBridge
 
     public Task<UiActionResult> FocusToolAsync(string toolId) => InvokeAsync(() =>
     {
-        if (_dock is null) return Task.FromResult(new UiActionResult(false, "No dock."));
-        if (_dock.ShowToolById(toolId))
+        var dock = Dock;
+        if (dock is null) return Task.FromResult(new UiActionResult(false, "No dock."));
+        if (dock.ShowToolById(toolId))
             return Task.FromResult(new UiActionResult(true, $"Focused the {toolId} pane."));
-        var ids = string.Join(", ", _dock.AvailableToolIds().OrderBy(x => x, StringComparer.Ordinal));
+        var ids = string.Join(", ", dock.AvailableToolIds().OrderBy(x => x, StringComparer.Ordinal));
         return Task.FromResult(new UiActionResult(false, $"Unknown tool id '{toolId}'. Available: {ids}."));
     });
 
