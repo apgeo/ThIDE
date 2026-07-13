@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(TherionLibraryTargetFrameworks)</TargetFrameworks>
+  </PropertyGroup>
+
+  <!--
+    The in-app assistant's chat engine (D-043; .claude/mcp-integration/06-chat-panel.md): a
+    hand-rolled OpenAI-compatible completion + tool loop (per D-041) shared by the Assistant
+    pane and the eval harness. UI-free and host-agnostic: tools arrive through IToolCatalog;
+    the one MCP-aware type here is the McpToolCatalog adapter at the SDK edge (D-003).
+  -->
+  <ItemGroup>
+    <PackageReference Include="ModelContextProtocol" Version="1.4.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Test seam: the tests assert on the session transcript (e.g. the cancellation backfill),
+         which never goes over the wire, so request capture can't see it. -->
+    <InternalsVisibleTo Include="Therion.Assistant.Tests" />
+  </ItemGroup>
+
+</Project>
