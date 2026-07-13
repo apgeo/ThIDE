@@ -1,0 +1,135 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ThIDE.ViewModels"
+             xmlns:dvm="using:ThIDE.ViewModels.Docking"
+             xmlns:l="using:ThIDE.Resources"
+             x:Class="ThIDE.Views.Docking.AssistantToolView"
+             x:CompileBindings="False"
+             x:DataType="dvm:AssistantToolViewModel">
+    <DockPanel DataContext="{Binding Assistant}">
+
+        <!-- toolbar -->
+        <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="6,3">
+            <DockPanel>
+                <StackPanel Orientation="Horizontal" Spacing="8" DockPanel.Dock="Left">
+                    <Button Content="{l:Loc Assistant_NewChat}" Command="{Binding NewChatCommand}"
+                            Padding="10,2" FontSize="11" />
+                </StackPanel>
+                <TextBlock DockPanel.Dock="Right" Text="{Binding Status}" Foreground="Gray"
+                           FontSize="11" VerticalAlignment="Center" HorizontalAlignment="Right"
+                           TextTrimming="CharacterEllipsis" />
+            </DockPanel>
+        </Border>
+
+        <!-- input row -->
+        <Border DockPanel.Dock="Bottom" BorderBrush="Gray" BorderThickness="0,1,0,0" Padding="6">
+            <StackPanel Spacing="6">
+                <!-- "server off" affordance replaces nothing — it sits above the input so the
+                     user can enable and immediately resend. -->
+                <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding ServerOff}">
+                    <TextBlock Text="{l:Loc Assistant_ServerOff}" Foreground="Gray" FontSize="11"
+                               VerticalAlignment="Center" TextWrapping="Wrap" />
+                    <Button Content="{l:Loc Assistant_EnableServer}" Command="{Binding EnableServerCommand}"
+                            Padding="10,2" FontSize="11" />
+                </StackPanel>
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4" Margin="6,0,0,0">
+                        <Button Content="{l:Loc Assistant_Send}" Command="{Binding SendCommand}"
+                                Padding="12,4" />
+                        <Button Content="{l:Loc Assistant_Stop}" Command="{Binding StopCommand}"
+                                IsVisible="{Binding IsBusy}" Padding="12,4" />
+                    </StackPanel>
+                    <TextBox Text="{Binding Input, Mode=TwoWay}" Watermark="{l:Loc Assistant_InputWatermark}"
+                             AcceptsReturn="False" VerticalAlignment="Center"
+                             IsEnabled="{Binding !IsBusy}" KeyDown="OnInputKeyDown" />
+                </DockPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- transcript -->
+        <ScrollViewer x:Name="Transcript" VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding Items}" Margin="6">
+                <ItemsControl.DataTemplates>
+
+                    <DataTemplate DataType="vm:UserChatItem">
+                        <Border Background="#2A3B4D" CornerRadius="6" Padding="8,6" Margin="24,3,0,3"
+                                HorizontalAlignment="Right">
+                            <SelectableTextBlock Text="{Binding Text}" TextWrapping="Wrap" />
+                        </Border>
+                    </DataTemplate>
+
+                    <DataTemplate DataType="vm:AssistantChatItem">
+                        <Border Background="#33333f" CornerRadius="6" Padding="8,6" Margin="0,3,24,3"
+                                HorizontalAlignment="Left">
+                            <SelectableTextBlock Text="{Binding Text}" TextWrapping="Wrap" />
+                        </Border>
+                    </DataTemplate>
+
+                    <DataTemplate DataType="vm:NoteChatItem">
+                        <TextBlock Text="{Binding Text}" Foreground="Gray" FontSize="11"
+                                   FontStyle="Italic" TextWrapping="Wrap" Margin="4,3" />
+                    </DataTemplate>
+
+                    <DataTemplate DataType="vm:ToolCallChatItem">
+                        <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="4"
+                                Padding="8,5" Margin="0,3,24,3">
+                            <StackPanel Spacing="4">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <TextBlock Text="⚙" FontSize="11" VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding Tool}" FontWeight="SemiBold" FontSize="12" />
+                                    <TextBlock Text="{Binding State}" Foreground="Gray" FontSize="11"
+                                               VerticalAlignment="Center" />
+                                </StackPanel>
+                                <TextBlock Text="{Binding ArgumentsJson}" Foreground="Gray" FontSize="11"
+                                           FontFamily="Consolas,Menlo,monospace" TextWrapping="Wrap"
+                                           MaxLines="6" TextTrimming="CharacterEllipsis" />
+                                <!-- the Allow/Deny gate for tools that write (D-043) -->
+                                <StackPanel Orientation="Horizontal" Spacing="6"
+                                            IsVisible="{Binding IsWaitingApproval}">
+                                    <Button Content="{l:Loc Assistant_Allow}" Command="{Binding AllowCommand}"
+                                            Padding="12,2" FontSize="11" />
+                                    <Button Content="{l:Loc Assistant_Deny}" Command="{Binding DenyCommand}"
+                                            Padding="12,2" FontSize="11" />
+                                </StackPanel>
+
+                                <!-- navigable object list (list_symbols &c.): each row jumps to the
+                                     object's declaration. Scrolls in place when the list is long. -->
+                                <StackPanel Spacing="2" IsVisible="{Binding HasSymbols}">
+                                    <TextBlock Text="{Binding SymbolsHeader}" Foreground="Gray"
+                                               FontSize="11" Margin="0,2,0,0" />
+                                    <ScrollViewer MaxHeight="240" VerticalScrollBarVisibility="Auto">
+                                        <ItemsControl ItemsSource="{Binding Symbols}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Button Command="{Binding NavigateCommand}"
+                                                            Background="Transparent" BorderThickness="0"
+                                                            Padding="6,3" Cursor="Hand"
+                                                            HorizontalAlignment="Stretch"
+                                                            HorizontalContentAlignment="Left"
+                                                            ToolTip.Tip="{Binding QualifiedName}">
+                                                        <StackPanel>
+                                                            <TextBlock Text="{Binding Name}" FontSize="12" />
+                                                            <TextBlock Text="{Binding Subtitle}"
+                                                                       Foreground="Gray" FontSize="10" />
+                                                        </StackPanel>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+                                </StackPanel>
+
+                                <Expander Header="{l:Loc Assistant_Result}" FontSize="11"
+                                          IsVisible="{Binding ResultPreview, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                    <SelectableTextBlock Text="{Binding ResultPreview}" FontSize="11"
+                                                         FontFamily="Consolas,Menlo,monospace" TextWrapping="Wrap" />
+                                </Expander>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+
+                </ItemsControl.DataTemplates>
+            </ItemsControl>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

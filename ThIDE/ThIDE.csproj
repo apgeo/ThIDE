@@ -82,6 +82,8 @@
     <ProjectReference Include="..\src\Therion.Workspace\Therion.Workspace.csproj" />
     <ProjectReference Include="..\src\Therion.Build\Therion.Build.csproj" />
     <ProjectReference Include="..\src\Therion.Mcp\Therion.Mcp.csproj" />
+    <!-- Assistant pane (AI-07): the shared OpenAI-compatible chat/tool loop. -->
+    <ProjectReference Include="..\src\Therion.Assistant\Therion.Assistant.csproj" />
   </ItemGroup>
 
   <ItemGroup>

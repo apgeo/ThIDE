@@ -35,8 +35,12 @@ cave?"*, *"is it all one connected piece?"*, *"where is station 12 declared?"* �
 files into a chat window. It does this by speaking the **Model Context Protocol (MCP)**, the same way
 tools like Claude or a local model in **LM Studio** talk to their tools.
 
-Two ways to use it:
+Three ways to use it:
 
+- **The built-in Assistant panel (no setup beyond a local model).** **View → Assistant** opens a
+  chat inside ThIDE that talks to a local model served by **LM Studio** (or any OpenAI-compatible
+  endpoint — set it under **Preferences → MCP**). It answers from the live project, and every
+  change it proposes stops on an **Allow / Deny** card first — nothing is written until you allow it.
 - **Against files on disk (no ThIDE needed).** A small program, `therion-mcp`, runs ThIDE's engines
   headlessly. Your AI host (LM Studio, Claude Code, …) launches it and can then ask about a project
   folder. It reads your files; it can also format, scaffold, import/export, and run Therion — or, if

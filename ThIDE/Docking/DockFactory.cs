@@ -55,6 +55,7 @@ public sealed class DockFactory : Factory
     private readonly Model3DViewerToolViewModel _model3dViewer;
     private readonly StructuralGeologyToolViewModel _structuralGeology;
     private readonly StructuralPlotToolViewModel _structuralPlot;
+    private readonly AssistantToolViewModel _assistant;
     private readonly ThIDE.Services.IAppSettingsService? _appSettings;
     private readonly SettingsToolViewModel _settings;
 
@@ -79,6 +80,7 @@ public sealed class DockFactory : Factory
         Model3DViewerToolViewModel model3dViewer,
         StructuralGeologyToolViewModel structuralGeology,
         StructuralPlotToolViewModel structuralPlot,
+        AssistantToolViewModel assistant,
         SettingsToolViewModel settings,
         ThIDE.Services.ILayoutService? layoutState = null,
         ThIDE.Services.IAppSettingsService? appSettings = null,
@@ -99,6 +101,7 @@ public sealed class DockFactory : Factory
         _model3dViewer = model3dViewer;
         _structuralGeology = structuralGeology;
         _structuralPlot = structuralPlot;
+        _assistant = assistant;
         _appSettings = appSettings;
         _settings = settings;
         _layoutState = layoutState;
@@ -412,7 +415,7 @@ public sealed class DockFactory : Factory
     {
         "Workspace", "Project", "ObjectBrowser",
         "Diagnostics", "CompilerOutput", "GeneratedFiles", "Log",
-        "Xvi", "Outline", "LivePreview", "MapViewer", "Model3DViewer",
+        "Xvi", "Outline", "LivePreview", "MapViewer", "Model3DViewer", "Assistant",
     };
 
     /// <summary>Which region a tool calls home when the profile doesn't place it.</summary>
@@ -832,7 +835,8 @@ public sealed class DockFactory : Factory
         if (s.EnableLivePreview) list.Add(_livePreview);
         if (s.EnableInAppViewer) list.Add(_mapViewer);
         if (s.EnableModel3DViewer) list.Add(_model3dViewer);   // (on by default)
-        // opens in the central document well on demand (ShowToolInDocuments), not the rail.
+        list.Add(_assistant);   // AI-07: passive until used; shows an enable affordance when the server is off
+        // StructuralGeology opens in the central document well on demand (ShowToolInDocuments), not the rail.
         return list.ToArray();
     }
 
@@ -939,6 +943,7 @@ public sealed class DockFactory : Factory
         ["Model3DViewer"]  = _model3dViewer,
         ["StructuralGeology"] = _structuralGeology,
         ["StructuralPlot"] = _structuralPlot,
+        ["Assistant"]      = _assistant,
         ["Settings"]       = _settings,
     };
 
@@ -1263,6 +1268,7 @@ public sealed class DockFactory : Factory
             ["Model3DViewer"]  = () => _model3dViewer,
             ["StructuralGeology"] = () => _structuralGeology,
             ["StructuralPlot"] = () => _structuralPlot,
+            ["Assistant"]      = () => _assistant,
             ["Settings"]       = () => _settings,
         };
 

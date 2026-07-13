@@ -39,6 +39,12 @@ public interface IMcpHostService : IAsyncDisposable
     /// <summary>The bound loopback port while listening, else null.</summary>
     int? Port { get; }
 
+    /// <summary>
+    /// The live endpoint (port, token, URL) while listening, else null. The in-process way for the
+    /// Assistant pane to self-connect (D-043) — the discovery file stays what *external* shims read.
+    /// </summary>
+    McpEndpoint? Endpoint { get; }
+
     /// <summary>Raised (on an arbitrary thread) whenever <see cref="IsListening"/> changes.</summary>
     event EventHandler? StateChanged;
 
@@ -71,6 +77,7 @@ public sealed class McpHostService : IMcpHostService
     private readonly string _discoveryPath;
     private WebApplication? _app;
     private int? _port;
+    private McpEndpoint? _endpoint;
     private bool _disposed;
 
     private static readonly string Version =
@@ -113,6 +120,8 @@ public sealed class McpHostService : IMcpHostService
     public bool IsListening => _app is not null;
 
     public int? Port => _port;
+
+    public McpEndpoint? Endpoint => _endpoint;
 
     public event EventHandler? StateChanged;
 
@@ -229,7 +238,11 @@ public sealed class McpHostService : IMcpHostService
 
             _app = app;
             _port = port;
-            WriteDiscoveryFile(port, token);
+            _endpoint = new McpEndpoint(
+                port, token, Environment.ProcessId,
+                DateTimeOffset.UtcNow.ToString("o", CultureInfo.InvariantCulture),
+                $"http://127.0.0.1:{port}/");
+            WriteDiscoveryFile(_endpoint);
             _log.Info($"MCP server listening on http://127.0.0.1:{port}/ (bearer token required). "
                 + $"Endpoint written to {_discoveryPath}.");
         }
@@ -245,6 +258,7 @@ public sealed class McpHostService : IMcpHostService
             }
             _app = null;
             _port = null;
+            _endpoint = null;
         }
         RaiseStateChanged();
     }
@@ -254,6 +268,7 @@ public sealed class McpHostService : IMcpHostService
         var app = _app;
         _app = null;
         _port = null;
+        _endpoint = null;
         TryDeleteDiscoveryFile();
         if (app is not null)
         {
@@ -320,14 +335,10 @@ public sealed class McpHostService : IMcpHostService
         finally { probe.Stop(); }
     }
 
-    private void WriteDiscoveryFile(int port, string token)
+    private void WriteDiscoveryFile(McpEndpoint info)
     {
         try
         {
-            var info = new McpEndpoint(
-                port, token, Environment.ProcessId,
-                DateTimeOffset.UtcNow.ToString("o", CultureInfo.InvariantCulture),
-                $"http://127.0.0.1:{port}/");
             var dir = Path.GetDirectoryName(_discoveryPath);
             if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
             File.WriteAllText(_discoveryPath, info.ToJson());

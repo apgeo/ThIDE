@@ -93,6 +93,7 @@ public partial class MainWindowViewModel : ViewModelBase
     public Model3DViewerToolViewModel Model3DViewerTool { get; }
     public StructuralGeologyToolViewModel StructuralGeologyTool { get; }
     public StructuralPlotToolViewModel StructuralPlotTool { get; }
+    public AssistantToolViewModel AssistantTool { get; }   // AI-07 in-app assistant
     public SettingsToolViewModel SettingsTool { get; }
 
     /// <summary>clickable breadcrumb of the @-qualified name at the caret (status bar).</summary>
@@ -495,6 +496,7 @@ public partial class MainWindowViewModel : ViewModelBase
         Model3DViewerToolViewModel model3dViewerTool,
         StructuralGeologyToolViewModel structuralGeologyTool,
         StructuralPlotToolViewModel structuralPlotTool,
+        AssistantToolViewModel assistantTool,
         SettingsToolViewModel settingsTool,
         IModelEditService? editService = null,
         ILayoutService? layout = null,
@@ -554,6 +556,7 @@ public partial class MainWindowViewModel : ViewModelBase
         Model3DViewerTool = model3dViewerTool;
         StructuralGeologyTool = structuralGeologyTool;
         StructuralPlotTool = structuralPlotTool;
+        AssistantTool = assistantTool;
         SettingsTool = settingsTool;
         Breadcrumb = new BreadcrumbViewModel(_documents);
 
@@ -781,6 +784,7 @@ public partial class MainWindowViewModel : ViewModelBase
         new Model3DViewerToolViewModel(new Model3DViewerViewModel()),
         new StructuralGeologyToolViewModel(new StructuralGeologyViewModel()),
         new StructuralPlotToolViewModel(new StructuralGeologyViewModel()),
+        new AssistantToolViewModel(),
         new SettingsToolViewModel(new SettingsViewModel(), new KeyboardShortcutsViewModel()))
     {
         // Designer-only.
@@ -802,6 +806,7 @@ public partial class MainWindowViewModel : ViewModelBase
         new Model3DViewerToolViewModel(new Model3DViewerViewModel()),
         new StructuralGeologyToolViewModel(new StructuralGeologyViewModel()),
         new StructuralPlotToolViewModel(new StructuralGeologyViewModel()),
+        new AssistantToolViewModel(),
         new SettingsToolViewModel(new SettingsViewModel(), new KeyboardShortcutsViewModel()));
 
     /// <summary>Wires the storage picker once the View is attached to a TopLevel.</summary>
@@ -1504,6 +1509,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand] private void ToggleLog()               => Activate(LogTool);      // #3
     [RelayCommand] private void ToggleLivePreview()       => Activate(LivePreviewTool);
     [RelayCommand] private void ToggleMapViewer()         => Activate(MapViewerTool);
+    [RelayCommand] private void ToggleAssistant()         => _factory.ShowTool(AssistantTool);   // AI-07 (absent from layouts saved before it existed → add on demand)
     [RelayCommand] private void ToggleModel3DViewer()     => _factory.ShowTool(Model3DViewerTool); // (may be off-by-default → add on demand)
     [RelayCommand] private void ToggleStructuralGeology() => _factory.ShowToolInDocuments(StructuralGeologyTool); // (big central panel, on demand)
     [RelayCommand] private void ToggleSettings()          => Activate(SettingsTool);

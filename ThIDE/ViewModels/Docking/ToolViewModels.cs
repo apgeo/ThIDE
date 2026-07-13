@@ -226,6 +226,15 @@ public sealed class XviToolViewModel : ToolViewModelBase
         : base("Xvi", "Tool_Xvi", lang) => Xvi = xvi;
 }
 
+/// <summary>The in-app AI assistant chat pane (AI-07, D-043).</summary>
+public sealed class AssistantToolViewModel : ToolViewModelBase
+{
+    [JsonIgnore] public AssistantViewModel Assistant { get; }
+    public AssistantToolViewModel() : base("Assistant", "Tool_Assistant") => Assistant = null!;
+    public AssistantToolViewModel(AssistantViewModel assistant, ILanguageService? lang = null)
+        : base("Assistant", "Tool_Assistant", lang) => Assistant = assistant;
+}
+
 public sealed class SettingsToolViewModel : ToolViewModelBase
 {
     [JsonIgnore] public SettingsViewModel Settings { get; }

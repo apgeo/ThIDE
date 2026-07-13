@@ -126,6 +126,7 @@ Edit `mcp.json` (**Program ▸ Install ▸ Edit mcp.json**):
   }
 }
 ```
+LM Studio MCP Server config file path ex.: `C:\Users\Z\.lmstudio\mcp.json`
 
 Use an absolute path to the executable: LM Studio does not spawn it through a shell, so `~` and
 `PATH` lookups will not resolve.
@@ -161,6 +162,22 @@ not the last save. Whether the assistant may *act* on the UI (not just read it) 
 
 If ThIDE isn't running with the server on, `--connect` exits at once with a message saying so, rather
 than hanging.
+
+## The built-in Assistant panel
+
+You don't need an external host at all: **View ▸ Assistant** opens a chat panel inside ThIDE.
+It talks to a local OpenAI-compatible endpoint — LM Studio's server (`http://127.0.0.1:1234/v1`)
+by default; change the endpoint, model id and turn budget under **Preferences ▸ MCP**. Under the
+hood the panel is just another host: it connects to the same in-app tools server described above
+(it offers to enable it if off), so it sees the live project — unsaved buffers included — through
+exactly the same tools, with the same safety rails.
+
+Tools that only read run silently. Any tool that writes (an edit, a scaffold, an export, a build)
+pauses the conversation on an **Allow / Deny** card showing the exact call and its arguments —
+nothing touches a file until you allow it, and the server still previews before applying.
+
+In LM Studio, load the model and turn on **Developer ▸ Local Server** (default port 1234); the
+panel needs nothing else.
 
 ## What the model sees
 

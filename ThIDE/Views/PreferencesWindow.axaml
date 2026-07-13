@@ -403,6 +403,26 @@
                     <TextBlock Text="{l:Loc Pref_McpFollowAgentHelp}"
                                Foreground="Gray" FontSize="11" TextWrapping="Wrap" Margin="16,0,0,0" />
 
+                    <!-- Assistant pane (AI-07): the local OpenAI-compatible model the chat panel talks to. -->
+                    <TextBlock Text="{l:Loc Pref_Assistant}" FontWeight="SemiBold" Margin="0,8,0,0" />
+                    <TextBlock Text="{l:Loc Pref_AssistantHelp}"
+                               Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
+                    <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto" Margin="16,4,0,0">
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="{l:Loc Pref_AssistantEndpoint}"
+                                   VerticalAlignment="Center" Margin="0,0,8,4" />
+                        <TextBox   Grid.Row="0" Grid.Column="1" Text="{Binding AssistantEndpoint}"
+                                   Watermark="http://127.0.0.1:1234/v1" Margin="0,0,0,4" />
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="{l:Loc Pref_AssistantModel}"
+                                   VerticalAlignment="Center" Margin="0,0,8,4" />
+                        <TextBox   Grid.Row="1" Grid.Column="1" Text="{Binding AssistantModel}"
+                                   Watermark="qwen3-coder-30b-a3b-instruct" Margin="0,0,0,4" />
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="{l:Loc Pref_AssistantMaxTurns}"
+                                   VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <NumericUpDown Grid.Row="2" Grid.Column="1" Value="{Binding AssistantMaxTurns}"
+                                       Minimum="1" Maximum="50" Increment="1" FormatString="0"
+                                       HorizontalAlignment="Left" MinWidth="120" />
+                    </Grid>
+
                     <Separator Margin="0,6" />
                     <TextBlock Text="{l:Loc Pref_CliHelp}"
                                Foreground="Gray" FontSize="11" TextWrapping="Wrap" />

@@ -124,6 +124,14 @@ public sealed record AppSettings
     /// </summary>
     public bool McpFollowAgent { get; init; } = true;
 
+    // ---- in-app assistant panel (AI-07, D-043) ----
+    /// <summary>OpenAI-compatible base URL of the local inference runtime (LM Studio's default).</summary>
+    public string AssistantEndpoint { get; init; } = "http://127.0.0.1:1234/v1";
+    /// <summary>Model id the endpoint expects. Default is the R-001 eval winner.</summary>
+    public string AssistantModel { get; init; } = "qwen3-coder-30b-a3b-instruct";
+    /// <summary>Model↔tool round-trips per user turn before the assistant gives up.</summary>
+    public int AssistantMaxTurns { get; init; } = 10;
+
     // ---- telemetry ----
     /// <summary>Opt-in: record anonymous usage events + crash reports to LOCAL files only. Off by default.</summary>
     public bool TelemetryEnabled { get; init; }

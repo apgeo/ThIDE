@@ -1194,4 +1194,25 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Log_Sev_Warning" xml:space="preserve"><value>Avertisment</value></data>
   <data name="Log_Sev_Hint" xml:space="preserve"><value>Sugestie</value></data>
   <data name="Log_Sev_Info" xml:space="preserve"><value>Informație</value></data>
+  <data name="Tool_Assistant" xml:space="preserve"><value>Asistent</value></data>
+  <data name="Menu_View_Assistant" xml:space="preserve"><value>Asistent</value></data>
+  <data name="Assistant_InputWatermark" xml:space="preserve"><value>Întreabă despre proiectul deschis…</value></data>
+  <data name="Assistant_Send" xml:space="preserve"><value>Trimite</value></data>
+  <data name="Assistant_Stop" xml:space="preserve"><value>Oprește</value></data>
+  <data name="Assistant_NewChat" xml:space="preserve"><value>Conversație nouă</value></data>
+  <data name="Assistant_Allow" xml:space="preserve"><value>Permite</value></data>
+  <data name="Assistant_Deny" xml:space="preserve"><value>Refuză</value></data>
+  <data name="Assistant_Result" xml:space="preserve"><value>Rezultat</value></data>
+  <data name="Assistant_Objects" xml:space="preserve"><value>{0} obiecte — clic pentru a deschide</value></data>
+  <data name="Assistant_ServerOff" xml:space="preserve"><value>Serverul de instrumente AI din aplicație este oprit, deci asistentul nu are acces la proiect.</value></data>
+  <data name="Assistant_EnableServer" xml:space="preserve"><value>Pornește-l</value></data>
+  <data name="Assistant_ServerEnabled" xml:space="preserve"><value>Serverul de instrumente AI este acum pornit — retrimite mesajul.</value></data>
+  <data name="Assistant_ServerDown" xml:space="preserve"><value>Serverul de instrumente AI nu a pornit — vezi panoul Jurnal.</value></data>
+  <data name="Assistant_Stopped" xml:space="preserve"><value>Oprit.</value></data>
+  <data name="Assistant_Error" xml:space="preserve"><value>Asistentul a eșuat: {0}</value></data>
+  <data name="Pref_Assistant" xml:space="preserve"><value>Panoul Asistent</value></data>
+  <data name="Pref_AssistantHelp" xml:space="preserve"><value>Modelul local cu care vorbește panoul Asistent, ca endpoint compatibil OpenAI (implicit LM Studio). Panoul are nevoie și de serverul de instrumente AI de mai sus pentru a ajunge la proiect.</value></data>
+  <data name="Pref_AssistantEndpoint" xml:space="preserve"><value>Endpoint</value></data>
+  <data name="Pref_AssistantModel" xml:space="preserve"><value>Id model</value></data>
+  <data name="Pref_AssistantMaxTurns" xml:space="preserve"><value>Buget de tururi de instrumente</value></data>
 </root>

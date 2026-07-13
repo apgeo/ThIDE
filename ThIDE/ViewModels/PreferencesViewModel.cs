@@ -61,6 +61,10 @@ public partial class PreferencesViewModel : ObservableObject
     [ObservableProperty] private bool _enableMcpServer;
     /// <summary>"Follow the agent": let the MCP server's action tools drive the UI (open files, run commands…).</summary>
     [ObservableProperty] private bool _mcpFollowAgent;
+    // ---- Assistant pane (AI-07): the local model the chat panel talks to ----
+    [ObservableProperty] private string _assistantEndpoint = string.Empty;
+    [ObservableProperty] private string _assistantModel = string.Empty;
+    [ObservableProperty] private int _assistantMaxTurns;
     /// <summary>0 = English, 1 = Romanian (#9 selector lives in Preferences, #11).</summary>
     [ObservableProperty] private int _languageIndex;
 
@@ -184,6 +188,9 @@ public partial class PreferencesViewModel : ObservableObject
         _enablePlugins = s.EnablePlugins;
         _enableMcpServer = s.EnableMcpServer;
         _mcpFollowAgent = s.McpFollowAgent;
+        _assistantEndpoint = s.AssistantEndpoint;
+        _assistantModel = s.AssistantModel;
+        _assistantMaxTurns = s.AssistantMaxTurns;
         _languageIndex = string.Equals(s.UiLanguage, "ro", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
         _editorFontSize = s.EditorFontSize;
         _indentationSize = s.IndentationSize;
@@ -351,6 +358,12 @@ public partial class PreferencesViewModel : ObservableObject
             EnablePlugins = EnablePlugins,
             EnableMcpServer = EnableMcpServer,
             McpFollowAgent = McpFollowAgent,
+            // Assistant pane: blank fields fall back to the defaults rather than persisting "".
+            AssistantEndpoint = string.IsNullOrWhiteSpace(AssistantEndpoint)
+                ? AppSettings.Default.AssistantEndpoint : AssistantEndpoint.Trim(),
+            AssistantModel = string.IsNullOrWhiteSpace(AssistantModel)
+                ? AppSettings.Default.AssistantModel : AssistantModel.Trim(),
+            AssistantMaxTurns = Math.Clamp(AssistantMaxTurns, 1, 50),
             UiLanguage = code,
             EditorFontSize = EditorFontSize,
             IndentationSize = IndentationSize,

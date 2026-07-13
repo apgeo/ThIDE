@@ -183,6 +183,9 @@ internal static class AppServices
         // construct; the Kestrel listener only spins up when EnableMcpServer is on (ApplySettingAsync).
         services.AddSingleton<Therion.Mcp.IUiBridge, UiBridge>();
         services.AddSingleton<IMcpHostService, McpHostService>();
+        // Assistant pane (AI-07, D-043): the chat loop self-connects to the host above; both stay
+        // idle (no HTTP, no model) until the user actually sends a message.
+        services.AddSingleton<IAssistantService, AssistantService>();
         services.AddSingleton<IMapRenderService, MapRenderService>();   // in-app rendering
         services.AddSingleton<ICaveview3DAssetHost, Caveview3DAssetHost>(); // loopback asset server
         services.AddSingleton<IStructuralPlotAssetHost, StructuralPlotAssetHost>(); // plot loopback server
@@ -212,6 +215,7 @@ internal static class AppServices
         services.AddSingleton<MapViewerViewModel>();          // in-app map viewer
         services.AddSingleton<Model3DViewerViewModel>();      // embedded 3D model viewer
         services.AddSingleton<StructuralGeologyViewModel>();  // plane strike/dip calculator
+        services.AddSingleton<AssistantViewModel>();          // AI assistant chat content VM
         services.AddSingleton<SettingsViewModel>();
         services.AddSingleton<FileAssociationsViewModel>();   // Task 5: Preferences ▸ File Associations tab
         services.AddSingleton<KeyboardShortcutsViewModel>();
@@ -235,6 +239,7 @@ internal static class AppServices
         services.AddSingleton<ViewModels.Docking.Model3DViewerToolViewModel>();
         services.AddSingleton<ViewModels.Docking.StructuralGeologyToolViewModel>();
         services.AddSingleton<ViewModels.Docking.StructuralPlotToolViewModel>();
+        services.AddSingleton<ViewModels.Docking.AssistantToolViewModel>();
         services.AddSingleton<ViewModels.Docking.SettingsToolViewModel>();
         services.AddSingleton<Docking.DockFactory>();
 

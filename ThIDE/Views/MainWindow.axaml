@@ -180,6 +180,7 @@
                 <MenuItem Header="{Binding MenuViewWorkspace}" InputGesture="{l:Gesture ToggleWorkspaceExplorer}" Command="{Binding ToggleWorkspaceExplorerCommand}" />
                 <MenuItem Header="{l:Loc Menu_View_Project}" InputGesture="{l:Gesture ToggleProject}" Command="{Binding ToggleProjectCommand}" />
                 <MenuItem Header="{l:Loc Menu_View_Log}" InputGesture="{l:Gesture ToggleLog}" Command="{Binding ToggleLogCommand}" />
+                <MenuItem Header="{l:Loc Menu_View_Assistant}" Command="{Binding ToggleAssistantCommand}" />
                 <MenuItem Header="{l:Loc Menu_View_LivePreview}" InputGesture="{l:Gesture ToggleLivePreview}" Command="{Binding ToggleLivePreviewCommand}"
                           IsVisible="{Binding LivePreviewEnabled}" />
                 <MenuItem Header="{l:Loc Menu_View_MapViewer}" InputGesture="{l:Gesture ToggleMapViewer}" Command="{Binding ToggleMapViewerCommand}"
