@@ -135,6 +135,67 @@ public class AssistantViewModelTests
     }
 
     [Fact]
+    public async Task ToolResult_WithStationList_RendersClickableObjects()
+    {
+        // list_stations has its own DTO shape (stations[], nested declaration) — the generic reader
+        // must light it up just like list_symbols, which is the panel bug this covers.
+        const string result = """
+            {"ok":true,"data":{"stations":[
+              {"name":"GrindDrumAcoperisVerificare.71","kind":"shot","flags":[],"declaration":{"file":"date/G_drumuiri/x.th","line":367,"column":5,"endLine":367,"endColumn":29}},
+              {"name":"grind.G0","kind":"fix","flags":[],"declaration":{"file":"grind.th","line":169,"column":2,"endLine":169,"endColumn":48}}
+            ],"total":2,"offset":0,"truncated":false}}
+            """;
+        var assistant = new FakeAssistant((_, callbacks, _) =>
+        {
+            var info = new ToolCallInfo("list_stations", "{}", ReadOnly: true);
+            callbacks.OnUpdate!(new ToolCallStarted(info));
+            callbacks.OnUpdate!(new ToolCallFinished(info, Ok: true, result));
+            return Task.FromResult(new ChatResult("2 stations.", [new ChatToolCall("list_stations", true, true)], 1, 0));
+        });
+        var vm = NewVm(assistant);
+        vm.Input = "list stations";
+
+        await vm.SendCommand.ExecuteAsync(null);
+
+        var card = vm.Items.OfType<ToolCallChatItem>().Single();
+        Assert.True(card.HasSymbols);
+        Assert.Equal(2, card.Symbols.Count);
+        Assert.Equal("71", card.Symbols[0].Name);
+        Assert.Equal("shot · GrindDrumAcoperisVerificare", card.Symbols[0].Subtitle);
+        Assert.Equal("G0", card.Symbols[1].Name);
+        Assert.Equal("fix · grind", card.Symbols[1].Subtitle);
+    }
+
+    [Fact]
+    public async Task ToolResult_WithDiagnostics_RendersProseRowsWithFlatLocation()
+    {
+        // get_diagnostics carries its location flat (file/line/column on the item) and its label is
+        // prose (a message) — shown whole with a severity·file:line subtitle, not dot-split.
+        const string result = """
+            {"ok":true,"data":{"diagnostics":[
+              {"code":"TH0123","severity":"error","message":"Station a.b is not connected.","file":"date/x.th","line":5,"column":3,"hint":"equate it"}
+            ],"total":1,"offset":0,"truncated":false,"errors":1,"warnings":0}}
+            """;
+        var assistant = new FakeAssistant((_, callbacks, _) =>
+        {
+            var info = new ToolCallInfo("get_diagnostics", "{}", ReadOnly: true);
+            callbacks.OnUpdate!(new ToolCallStarted(info));
+            callbacks.OnUpdate!(new ToolCallFinished(info, Ok: true, result));
+            return Task.FromResult(new ChatResult("1 problem.", [new ChatToolCall("get_diagnostics", true, true)], 1, 0));
+        });
+        var vm = NewVm(assistant);
+        vm.Input = "any errors?";
+
+        await vm.SendCommand.ExecuteAsync(null);
+
+        var card = vm.Items.OfType<ToolCallChatItem>().Single();
+        Assert.True(card.HasSymbols);
+        var row = Assert.Single(card.Symbols);
+        Assert.Equal("Station a.b is not connected.", row.Name);   // prose, not split on the dot
+        Assert.Equal("error · date/x.th:5", row.Subtitle);
+    }
+
+    [Fact]
     public async Task ToolResult_WithReferenceList_RendersNavigableOccurrences()
     {
         // find_references: one object at many places — declaration, a plain reference, an equate.

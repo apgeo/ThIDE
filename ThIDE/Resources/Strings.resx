@@ -1203,6 +1203,7 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Assistant_Allow" xml:space="preserve"><value>Allow</value></data>
   <data name="Assistant_Deny" xml:space="preserve"><value>Deny</value></data>
   <data name="Assistant_Result" xml:space="preserve"><value>Result</value></data>
+  <data name="Assistant_RawJson" xml:space="preserve"><value>Raw JSON</value></data>
   <data name="Assistant_Objects" xml:space="preserve"><value>{0} objects — click to open</value></data>
   <data name="Assistant_ServerOff" xml:space="preserve"><value>The in-app AI tools server is off, so the assistant has no access to the project.</value></data>
   <data name="Assistant_EnableServer" xml:space="preserve"><value>Enable it</value></data>

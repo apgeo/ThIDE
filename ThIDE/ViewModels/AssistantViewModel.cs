@@ -96,17 +96,23 @@ public sealed partial class NavigableSymbolViewModel : ObservableObject
         _navigate = navigate;
     }
 
-    /// <summary>The bare object name (the survey prefix moves to <see cref="Subtitle"/>).</summary>
-    public string Name => _model.Leaf;
+    /// <summary>The row's primary text: the bare object name for a qualified symbol/station (the
+    /// survey prefix moves to <see cref="Subtitle"/>), or the whole prose label — truncated — for a
+    /// TODO/diagnostic.</summary>
+    public string Name => _model.FreeText ? Truncate(_model.Name, 100) : _model.Leaf;
 
     /// <summary>
     /// For an object list: kind plus the parent survey (or the declaring file when the name has no
-    /// parent). For an occurrence list (find_references), where every row is the same object: the
-    /// role — declaration / reference / equate / map — plus that occurrence's file:line.
+    /// parent). For a prose entry (TODO/diagnostic): kind plus the file:line. For an occurrence list
+    /// (find_references): the role — declaration / reference / equate / map — plus that file:line.
     /// </summary>
-    public string Subtitle => _model.Role is { } role
-        ? $"{role} · {_model.RelativeFile}:{_model.Line}"
+    public string Subtitle =>
+        _model.Role is { } role ? $"{role} · {_model.RelativeFile}:{_model.Line}"
+        : _model.FreeText ? $"{_model.Kind} · {_model.RelativeFile}:{_model.Line}"
         : $"{_model.Kind} · {_model.Parent ?? _model.RelativeFile}";
+
+    private static string Truncate(string text, int max) =>
+        text.Length <= max ? text : text[..max] + "…";
 
     /// <summary>The semantic kind (station, survey, map…), kept for later resolution.</summary>
     public string Kind => _model.Kind;

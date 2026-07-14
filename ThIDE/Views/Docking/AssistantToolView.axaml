@@ -119,8 +119,13 @@
                                     </ScrollViewer>
                                 </StackPanel>
 
-                                <Expander Header="{l:Loc Assistant_Result}" FontSize="11"
+                                <!-- raw JSON kept available but tucked behind a small, muted toggle
+                                     (collapsed by default) so the clickable list above is what reads. -->
+                                <Expander FontSize="10" Padding="0" Margin="0,2,0,0"
                                           IsVisible="{Binding ResultPreview, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                    <Expander.Header>
+                                        <TextBlock Text="{l:Loc Assistant_RawJson}" Foreground="Gray" FontSize="10" />
+                                    </Expander.Header>
                                     <SelectableTextBlock Text="{Binding ResultPreview}" FontSize="11"
                                                          FontFamily="Consolas,Menlo,monospace" TextWrapping="Wrap" />
                                 </Expander>
