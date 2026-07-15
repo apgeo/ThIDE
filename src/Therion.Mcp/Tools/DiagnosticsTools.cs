@@ -143,7 +143,9 @@ public sealed class DiagnosticsTools(IWorkspaceHost host)
     }
 
     /// <summary>Per-file parse/bind diagnostics plus the cross-file project analysis, exactly as `lint` does.</summary>
-    private static List<Diagnostic> Collect(WorkspaceSnapshot snapshot)
+    /// <summary>Every diagnostic for the snapshot — per-file plus the cross-file analysis (internal so
+    /// the context-card generator counts the same findings the tool and resource report).</summary>
+    internal static List<Diagnostic> Collect(WorkspaceSnapshot snapshot)
     {
         var all = new List<Diagnostic>();
         foreach (var model in snapshot.Model.PerFile.Values) all.AddRange(model.Diagnostics);

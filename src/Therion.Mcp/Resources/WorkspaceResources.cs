@@ -67,6 +67,27 @@ public sealed class WorkspaceResources(IWorkspaceHost host, DiagnosticsTools dia
     public async Task<string> SurveyGraph(CancellationToken ct = default) =>
         Serialize(await graph.GetSurveyGraph(limit: ToolLimits.MaxPageLimit, ct: ct).ConfigureAwait(false));
 
+    [McpServerResource(UriTemplate = "therion://context/card", Name = "Workspace context card", MimeType = "text/markdown")]
+    [Description("A compact, orienting digest of the open project (name, totals, top survey levels, "
+               + "diagnostics counts) — the same card the Assistant pane can inject as context, so a "
+               + "host gets parity by attaching this. Figures are a snapshot; verify with tools before "
+               + "acting. On error, an {ok:false,error} JSON envelope instead.")]
+    public async Task<string> ContextCardResource(CancellationToken ct = default)
+    {
+        var (snapshot, error) = await host.TryGetSnapshotAsync(ct).ConfigureAwait(false);
+        return error is not null ? Serialize(ToolResult<object>.Failure(error)) : ContextCard.Card(snapshot!);
+    }
+
+    [McpServerResource(UriTemplate = "therion://context/pack", Name = "Workspace context pack", MimeType = "text/markdown")]
+    [Description("A richer digest of the open project: the card plus the full survey tree, the file "
+               + "list, the top diagnostics, and the map/scrap inventory. Snapshot figures — verify "
+               + "with tools before acting. On error, an {ok:false,error} JSON envelope instead.")]
+    public async Task<string> ContextPackResource(CancellationToken ct = default)
+    {
+        var (snapshot, error) = await host.TryGetSnapshotAsync(ct).ConfigureAwait(false);
+        return error is not null ? Serialize(ToolResult<object>.Failure(error)) : ContextCard.Pack(snapshot!);
+    }
+
     // Needs no workspace — the thbook index is bundled. Returns a citation, not the page's text (Q-05c).
     [McpServerResource(UriTemplate = "therion://thbook/{topic}", Name = "Therion Book page", MimeType = "application/json")]
     [Description("Which page of the Therion Book covers a term — e.g. therion://thbook/equate → a citation. "
