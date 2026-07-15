@@ -20,6 +20,17 @@ public sealed class ChatSession
     /// <summary>Messages so far, system prompt included — a length signal for "new chat" nudges.</summary>
     public int Length => Messages.Count;
 
+    /// <summary>
+    /// Adds a second system message at the head of a fresh conversation — the workspace context
+    /// card (CD-02). Kept separate from the persona prompt so the cached persona stays stable and a
+    /// New-Chat refresh replaces only the card. No-op for blank text.
+    /// </summary>
+    public void AppendSystem(string text)
+    {
+        if (!string.IsNullOrWhiteSpace(text))
+            Messages.Add(ChatEngine.Message("system", text));
+    }
+
     /// <summary>The full history as JSON, for persisting the conversation across restarts.</summary>
     public string Serialize() => Messages.ToJsonString();
 

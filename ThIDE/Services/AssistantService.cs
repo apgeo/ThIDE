@@ -13,6 +13,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using ModelContextProtocol.Client;
+using ModelContextProtocol.Protocol;
 using Therion.Assistant;
 using ThIDE.Resources;
 
@@ -108,8 +109,9 @@ public sealed class AssistantService : IAssistantService
                 SynthesizeFinalAnswer = current.AssistantSynthesizeFinalAnswer,
                 Stream = current.AssistantStreaming,
             });
-            // Continue the restored conversation on the first turn after a restart.
-            _session ??= _restored ?? new ChatSession(SystemPrompt(current));
+            // Continue the restored conversation on the first turn after a restart; otherwise start a
+            // fresh one, seeding the workspace context card when the setting asks for it (CD-02).
+            _session ??= _restored ?? await NewSessionAsync(current, ct);
             _restored = null;
 
             var result = await engine.RunAsync(_session, userMessage, catalog, callbacks, ct);
@@ -211,6 +213,43 @@ public sealed class AssistantService : IAssistantService
                 + "paste raw JSON or repeat long lists — describe and highlight the relevant items instead. ";
 
         return prompt + "When you have the answer, reply directly and concisely.";
+    }
+
+    /// <summary>
+    /// A fresh conversation seeded with the persona prompt, plus — when <see cref="AppSettings.AssistantContextMode"/>
+    /// is Card or Pack — the workspace context digest as a second system message (CD-02). The digest is
+    /// read from the in-app server's <c>therion://context/*</c> resource, the same one external hosts
+    /// attach, so there is one generator behind both consumers. A failed read (or an error envelope,
+    /// e.g. no workspace loaded) is swallowed: context is a nice-to-have, never a reason a turn can't run.
+    /// </summary>
+    private async Task<ChatSession> NewSessionAsync(AppSettings settings, CancellationToken ct)
+    {
+        var session = new ChatSession(SystemPrompt(settings));
+        var uri = settings.AssistantContextMode switch
+        {
+            AssistantContextMode.Card => "therion://context/card",
+            AssistantContextMode.Pack => "therion://context/pack",
+            _ => null,
+        };
+        if (uri is null || _client is null) return session;
+
+        try
+        {
+            var result = await _client.ReadResourceAsync(uri, cancellationToken: ct).ConfigureAwait(false);
+            var text = string.Concat(result.Contents.OfType<TextResourceContents>().Select(c => c.Text));
+            // The card/pack is markdown starting with '#'; a leading '{' is the {ok:false,error} envelope
+            // the resource returns when there is no workspace — not context worth injecting.
+            if (!string.IsNullOrWhiteSpace(text) && !text.TrimStart().StartsWith('{'))
+            {
+                session.AppendSystem(text);
+                _log.Info($"[Assistant] injected {settings.AssistantContextMode} context ({text.Length} chars).");
+            }
+        }
+        catch (Exception ex)
+        {
+            _log.Warning($"[Assistant] context ({settings.AssistantContextMode}) unavailable: {ex.Message}");
+        }
+        return session;
     }
 
     // ---- conversation persistence -----------------------------------------------------------
