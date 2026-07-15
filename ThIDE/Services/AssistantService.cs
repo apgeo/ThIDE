@@ -212,6 +212,11 @@ public sealed class AssistantService : IAssistantService
                 + "stations, symbols, diagnostics, …) are already shown to the user in the panel, so do NOT "
                 + "paste raw JSON or repeat long lists — describe and highlight the relevant items instead. ";
 
+        if (settings.AssistantSuggestCodeBlocks)
+            prompt +=
+                "When you propose Therion source for the user to add or change, put it in a fenced code "
+                + "block (```therion … ```) so they can copy or insert it directly. ";
+
         return prompt + "When you have the answer, reply directly and concisely.";
     }
 

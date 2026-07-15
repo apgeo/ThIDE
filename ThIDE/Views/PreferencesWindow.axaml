@@ -429,6 +429,8 @@
                                   IsChecked="{Binding AssistantSynthesizeFinalAnswer}" />
                         <CheckBox Content="{l:Loc Pref_AssistantStreaming}"
                                   IsChecked="{Binding AssistantStreaming}" />
+                        <CheckBox Content="{l:Loc Pref_AssistantSuggestCodeBlocks}"
+                                  IsChecked="{Binding AssistantSuggestCodeBlocks}" />
                     </StackPanel>
                     <Grid ColumnDefinitions="Auto,*" Margin="16,6,0,0">
                         <TextBlock Grid.Column="0" Text="{l:Loc Pref_AssistantContextMode}"

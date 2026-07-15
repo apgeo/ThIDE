@@ -166,6 +166,12 @@ public sealed record AppSettings
     /// hosts get identical context from one generator.
     /// </summary>
     public AssistantContextMode AssistantContextMode { get; init; } = AssistantContextMode.None;
+    /// <summary>
+    /// Nudge the model, in the system prompt, to put any Therion source it proposes in a fenced code
+    /// block — so the pane can render it as a code card with Copy / Insert / Replace (CAP-03). On by
+    /// default; gated like the prose-summary clause.
+    /// </summary>
+    public bool AssistantSuggestCodeBlocks { get; init; } = true;
 
     // ---- telemetry ----
     /// <summary>Opt-in: record anonymous usage events + crash reports to LOCAL files only. Off by default.</summary>
