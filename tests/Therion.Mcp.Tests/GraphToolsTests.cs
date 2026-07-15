@@ -16,6 +16,55 @@ public class GraphToolsTests
         Assert.Equal(ToolErrorCodes.WorkspaceNotLoaded, (await tools.GetSurveyStats()).Error!.Code);
         Assert.Equal(ToolErrorCodes.WorkspaceNotLoaded, (await tools.GetDepsGraph()).Error!.Code);
         Assert.Equal(ToolErrorCodes.WorkspaceNotLoaded, (await tools.ListStations()).Error!.Code);
+        Assert.Equal(ToolErrorCodes.WorkspaceNotLoaded, (await tools.ListSurveyInfo()).Error!.Code);
+    }
+
+    [Fact]
+    public async Task Survey_info_reports_team_dates_and_extent()
+    {
+        using var fixture = FixtureWorkspace.CreateWithTeamAndDates();
+        var tools = await LoadedToolsAsync(fixture);
+
+        var result = await tools.ListSurveyInfo();
+
+        Assert.True(result.Ok);
+        Assert.Equal("approximate", result.Data!.PositionSource);
+        Assert.NotNull(result.Data.PositionCaveat);
+
+        var south = result.Data.Surveys.Single(s => s.Name == "cave.south");
+        Assert.Equal(new[] { "Ion Marin", "Ana Pop" }, south.Team);   // two team commands, in order
+        Assert.Equal("2004-06-01", south.DateFrom);                   // 2004.06 → the whole month
+        Assert.Equal("2004-06-30", south.DateTo);
+        Assert.NotNull(south.Extent);
+
+        var north = result.Data.Surveys.Single(s => s.Name == "cave.north");
+        Assert.Equal("2001-07-10", north.DateFrom);
+        Assert.Equal("2001-07-10", north.DateTo);
+    }
+
+    [Fact]
+    public async Task Survey_info_date_filter_matches_overlap_and_excludes_undated()
+    {
+        using var fixture = FixtureWorkspace.CreateWithTeamAndDates();
+        var tools = await LoadedToolsAsync(fixture);
+
+        var names = (await tools.ListSurveyInfo(dateFrom: "2004")).Data!.Surveys.Select(s => s.Name).ToList();
+
+        Assert.Contains("cave.south", names);       // June 2004 overlaps [2004-01-01, ∞)
+        Assert.DoesNotContain("cave.north", names);  // 2001, out of range
+        Assert.DoesNotContain("cave", names);        // undated parent → excluded when a date filter runs
+    }
+
+    [Fact]
+    public async Task Survey_info_rejects_a_bad_date_bound()
+    {
+        using var fixture = FixtureWorkspace.CreateWithTeamAndDates();
+        var tools = await LoadedToolsAsync(fixture);
+
+        var result = await tools.ListSurveyInfo(dateFrom: "not-a-date");
+
+        Assert.False(result.Ok);
+        Assert.Equal(ToolErrorCodes.InvalidArgument, result.Error!.Code);
     }
 
     [Fact]

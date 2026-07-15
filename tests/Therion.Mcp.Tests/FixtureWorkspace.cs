@@ -221,6 +221,46 @@ internal sealed class FixtureWorkspace : IDisposable
         return fixture;
     }
 
+    /// <summary>
+    /// A cave with two dated, teamed sub-surveys: 'north' surveyed by one person in 2001, 'south' by two
+    /// in June 2004. Simple horizontal geometry so each survey gets a spatial extent. Feeds
+    /// list_survey_info (team, date-range filter, extent).
+    /// </summary>
+    public static FixtureWorkspace CreateWithTeamAndDates()
+    {
+        var fixture = Create();
+
+        File.WriteAllText(fixture.Thconfig, """
+            source caves/dated.th
+            """);
+
+        File.WriteAllText(fixture.PathTo("caves", "dated.th"), """
+            survey cave
+              survey north
+                team "Ana Pop"
+                date 2001.07.10
+                centreline
+                  data normal from to length compass clino
+                  1 2 30 0 0
+                  2 3 30 0 0
+                endcentreline
+              endsurvey
+              survey south
+                team "Ion Marin"
+                team "Ana Pop"
+                date 2004.06
+                centreline
+                  data normal from to length compass clino
+                  1 2 30 180 0
+                  2 3 30 180 0
+                endcentreline
+              endsurvey
+            endsurvey
+            """);
+
+        return fixture;
+    }
+
     /// <summary>Absolute path inside the fixture, from workspace-relative segments.</summary>
     public string PathTo(params string[] segments) => Path.Combine([Root, .. segments]);
 

@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Globalization;
 using System.Text;
 using ModelContextProtocol.Server;
 using Therion.Semantics;
@@ -185,6 +186,41 @@ public sealed record EquateCandidates(
     bool Truncated,
     int ComparablePieces,
     string? Note);
+
+/// <summary>An approximate spatial extent of a survey, in its connected piece's local metre frame.</summary>
+/// <param name="Component">Which connected piece (survey_graph numbering); -1 when the survey's stations span several.</param>
+public sealed record SurveyExtent(
+    double MinEast, double MinNorth, double MinUp,
+    double MaxEast, double MaxNorth, double MaxUp,
+    double CentroidEast, double CentroidNorth, double CentroidUp,
+    int Component);
+
+/// <param name="Team">The surveyors (from the survey's <c>team</c> commands).</param>
+/// <param name="Dates">Raw date strings from the survey's <c>date</c> commands.</param>
+/// <param name="DateFrom">Earliest day any of <paramref name="Dates"/> covers (ISO yyyy-MM-dd), or null.</param>
+/// <param name="DateTo">Latest day any of <paramref name="Dates"/> covers, or null.</param>
+/// <param name="Extent">Approximate bbox+centroid of the survey's placed stations, or null when none are placed.</param>
+public sealed record SurveyInfoDto(
+    string Name,
+    string? Title,
+    IReadOnlyList<string> Team,
+    IReadOnlyList<string> Dates,
+    string? DateFrom,
+    string? DateTo,
+    int Stations,
+    double Length,
+    SurveyExtent? Extent,
+    Location? Declaration);
+
+/// <param name="PositionSource">"approximate" (dead-reckoning extents) or "none" (nothing placeable).</param>
+/// <param name="PositionCaveat">When extents are present: they're approximate and per-piece-local — a warning to repeat.</param>
+public sealed record SurveyInfoList(
+    IReadOnlyList<SurveyInfoDto> Surveys,
+    int Total,
+    int Offset,
+    bool Truncated,
+    string PositionSource,
+    string? PositionCaveat);
 
 /// <summary>Ring R1 — the shape of the cave and the shape of the project.</summary>
 [McpServerToolType]
@@ -408,6 +444,156 @@ public sealed class GraphTools(IWorkspaceHost host)
         position is { VerticalReliable: true } p
         && (minDepth is not { } lo || p.Depth >= lo)
         && (maxDepth is not { } hi || p.Depth <= hi);
+
+    [McpServerTool(Name = "list_survey_info", Title = "Survey info", ReadOnly = true, Idempotent = true)]
+    [Description("Per-survey metadata: title, team (the surveyors), the survey dates, station count and "
+               + "surveyed length — plus, for 'which part of the cave' questions, an approximate spatial "
+               + "extent (bounding box + centroid). Filter by a date range (dateFrom/dateTo as YYYY, "
+               + "YYYY.MM or YYYY.MM.DD — a survey matches when its dates OVERLAP the range) or a survey "
+               + "path. Team and dates come straight from the survey's team/date commands; undated "
+               + "surveys are excluded when a date filter is set.")]
+    public async Task<ToolResult<SurveyInfoList>> ListSurveyInfo(
+        [Description("Only surveys whose dates reach on/after this date (YYYY, YYYY.MM, or YYYY.MM.DD).")]
+        string? dateFrom = null,
+        [Description("Only surveys whose dates reach on/before this date.")]
+        string? dateTo = null,
+        [Description("Only this survey and those under it, e.g. 'cave.upper'.")]
+        string? surveyPrefix = null,
+        [Description("Number of entries to skip, for paging.")]
+        int offset = 0,
+        [Description("Maximum entries to return; capped at 2000, defaults to 200.")]
+        int limit = 0,
+        CancellationToken ct = default)
+    {
+        var (snapshot, error) = await host.TryGetSnapshotAsync(ct);
+        if (error is not null) return ToolResult<SurveyInfoList>.Failure(error);
+
+        // A bad date bound is a caller mistake, not a silent no-op.
+        DateOnly? from = null, to = null;
+        if (dateFrom is not null)
+        {
+            if (TherionDate.Parse(dateFrom) is not { } fi)
+                return ToolResult<SurveyInfoList>.Failure(ToolErrorCodes.InvalidArgument,
+                    $"Unparseable dateFrom '{dateFrom}'. Use YYYY, YYYY.MM, or YYYY.MM.DD.");
+            from = fi.Min;
+        }
+        if (dateTo is not null)
+        {
+            if (TherionDate.Parse(dateTo) is not { } ti)
+                return ToolResult<SurveyInfoList>.Failure(ToolErrorCodes.InvalidArgument,
+                    $"Unparseable dateTo '{dateTo}'. Use YYYY, YYYY.MM, or YYYY.MM.DD.");
+            to = ti.Max;
+        }
+        bool byDate = from is not null || to is not null;
+        var rangeFrom = from ?? DateOnly.MinValue;
+        var rangeTo = to ?? DateOnly.MaxValue;
+
+        var model = snapshot!.Model;
+        var positions = StationPositionEstimator.Get(model);
+        var extents = ComputeSurveyExtents(model, positions);
+
+        var treeInfo = new Dictionary<string, (int Stations, double Length)>(StringComparer.Ordinal);
+        foreach (var root in ProjectStatistics.BuildSurveyTree(model)) CollectTreeInfo(root, treeInfo);
+
+        var list = new List<SurveyInfoDto>();
+        foreach (var survey in model.SurveysByFullName.Values)
+        {
+            var name = survey.Name.ToString();
+            if (surveyPrefix is { Length: > 0 } p
+                && name != p && !name.StartsWith(p + ".", StringComparison.Ordinal)) continue;
+
+            var span = TherionDate.Span(survey.Dates);
+            if (byDate && (span is not { } sp || !sp.Overlaps(rangeFrom, rangeTo))) continue;
+
+            var (stations, length) = treeInfo.TryGetValue(name, out var ti) ? ti : (0, 0d);
+            list.Add(new SurveyInfoDto(
+                Name: name,
+                Title: survey.Title,
+                Team: survey.Team.IsDefaultOrEmpty ? Array.Empty<string>() : survey.Team,
+                Dates: survey.Dates.IsDefaultOrEmpty ? Array.Empty<string>() : survey.Dates,
+                DateFrom: span?.Min.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                DateTo: span?.Max.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                Stations: stations,
+                Length: Round(length),
+                Extent: extents.TryGetValue(name, out var ext) ? ext.ToExtent() : null,
+                Declaration: Location.From(survey.DeclarationSpan, snapshot.Root)));
+        }
+
+        list.Sort((a, b) => string.CompareOrdinal(a.Name, b.Name));
+        int start = Math.Clamp(offset, 0, list.Count);
+        var page = list.Skip(start).Take(ToolLimits.ClampLimit(limit)).ToList();
+
+        bool placed = positions.Positions.Count > 0;
+        return ToolResult<SurveyInfoList>.Success(new SurveyInfoList(
+            page, list.Count, start,
+            Truncated: start + page.Count < list.Count,
+            PositionSource: placed ? "approximate" : "none",
+            PositionCaveat: placed ? SurveyExtentCaveat : null));
+    }
+
+    private const string SurveyExtentCaveat =
+        "Spatial extent (bbox + centroid) is approximate (dead-reckoning, no loop closure) and given in "
+        + "each connected piece's own local metre frame — the origin is arbitrary and the axes are about "
+        + "magnetic north/east — so compare extents only between surveys in the SAME component. A "
+        + "component of -1 means the survey's stations span more than one piece.";
+
+    /// <summary>Rolled-up station count + length per survey (subtree totals), keyed by full name.</summary>
+    private static void CollectTreeInfo(SurveyTreeNode node, Dictionary<string, (int, double)> map)
+    {
+        map[node.FullName] = (node.Stations, node.Length);
+        foreach (var child in node.Children) CollectTreeInfo(child, map);
+    }
+
+    /// <summary>Accumulates each placed station's position into every enclosing survey, so a survey's
+    /// extent covers its whole subtree (matching the rolled-up station count).</summary>
+    private static Dictionary<string, ExtentAccum> ComputeSurveyExtents(WorkspaceSemanticModel model, PositionSet positions)
+    {
+        var surveyNames = new HashSet<string>(model.SurveysByFullName.Keys, StringComparer.Ordinal);
+        var acc = new Dictionary<string, ExtentAccum>(StringComparer.Ordinal);
+        foreach (var (qn, pos) in positions.Positions)
+        {
+            var cur = qn;
+            while (cur.HasParent)
+            {
+                cur = cur.Parent();
+                var name = cur.ToString();
+                if (!surveyNames.Contains(name)) continue;
+                if (!acc.TryGetValue(name, out var a)) acc[name] = a = new ExtentAccum();
+                a.Add(pos);
+            }
+        }
+        return acc;
+    }
+
+    private sealed class ExtentAccum
+    {
+        private int _count;
+        private double _sumX, _sumY, _sumZ;
+        private double _minX = double.MaxValue, _minY = double.MaxValue, _minZ = double.MaxValue;
+        private double _maxX = double.MinValue, _maxY = double.MinValue, _maxZ = double.MinValue;
+        private int _component = -1;
+        private bool _mixed;
+
+        public void Add(StationPosition p)
+        {
+            _count++;
+            _sumX += p.X; _sumY += p.Y; _sumZ += p.Z;
+            if (p.X < _minX) _minX = p.X;
+            if (p.Y < _minY) _minY = p.Y;
+            if (p.Z < _minZ) _minZ = p.Z;
+            if (p.X > _maxX) _maxX = p.X;
+            if (p.Y > _maxY) _maxY = p.Y;
+            if (p.Z > _maxZ) _maxZ = p.Z;
+            if (_component == -1) _component = p.ComponentId;
+            else if (_component != p.ComponentId) _mixed = true;
+        }
+
+        public SurveyExtent ToExtent() => new(
+            Round(_minX), Round(_minY), Round(_minZ),
+            Round(_maxX), Round(_maxY), Round(_maxZ),
+            Round(_sumX / _count), Round(_sumY / _count), Round(_sumZ / _count),
+            _mixed ? -1 : _component);
+    }
 
     [McpServerTool(Name = "query_legs", Title = "Query legs", ReadOnly = true, Idempotent = true)]
     [Description("Survey legs (the shots between stations) filtered by their bearing, inclination, "

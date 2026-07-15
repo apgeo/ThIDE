@@ -29,6 +29,7 @@ public class CatalogE2eTests
         ("list_stations", null),
         ("query_legs", null),
         ("find_equate_candidates", null),
+        ("list_survey_info", null),
         ("list_todos", null),
         ("list_leads", null),
         ("project_metadata_get", null),
