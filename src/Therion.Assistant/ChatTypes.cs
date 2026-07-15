@@ -28,6 +28,10 @@ public sealed record ChatEngineOptions(string Endpoint, string Model)
 /// <param name="ReadOnly">From the tool's descriptor; false for a name no descriptor matches.</param>
 public sealed record ToolCallInfo(string Tool, string ArgumentsJson, bool ReadOnly);
 
+/// <summary>A visible dialogue line restored from a saved conversation: the user's message or the
+/// assistant's written answer (tool calls are omitted — they are ephemeral receipts).</summary>
+public sealed record ConversationTurn(bool IsUser, string Text);
+
 /// <summary>A live-progress notification, for rendering a transcript while the loop runs.</summary>
 public abstract record ChatUpdate;
 

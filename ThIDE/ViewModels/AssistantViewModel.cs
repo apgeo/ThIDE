@@ -211,6 +211,12 @@ public sealed partial class AssistantViewModel : ObservableObject
     // The assistant bubble currently being streamed into, or null between turns (AI-08.2).
     private AssistantChatItem? _streaming;
 
+    // Sent user messages, oldest→newest, for Up/Down recall in the input box. _historyIndex points
+    // at the current position; == Count means "composing a new message" (holding _historyDraft).
+    private readonly List<string> _inputHistory = [];
+    private int _historyIndex;
+    private string _historyDraft = string.Empty;
+
     public AssistantViewModel(
         IAssistantService assistant,
         IAppSettingsService settings,
@@ -225,6 +231,25 @@ public sealed partial class AssistantViewModel : ObservableObject
         _session = session;
         _serverOff = !settings.Current.EnableMcpServer;
         _status = assistant.ModelLabel;
+        RestorePreviousConversation();
+    }
+
+    /// <summary>Redraws the previous session's dialogue and seeds the input-recall history.</summary>
+    private void RestorePreviousConversation()
+    {
+        foreach (var turn in _assistant.RestoredConversation())
+        {
+            if (turn.IsUser)
+            {
+                Items.Add(new UserChatItem(turn.Text));
+                _inputHistory.Add(turn.Text);
+            }
+            else
+            {
+                Items.Add(new AssistantChatItem(turn.Text));
+            }
+        }
+        _historyIndex = _inputHistory.Count;
     }
 
     private bool CanSend() => !IsBusy && !string.IsNullOrWhiteSpace(Input);
@@ -238,6 +263,10 @@ public sealed partial class AssistantViewModel : ObservableObject
         IsBusy = true;
         Activity = Tr.Get("Assistant_Thinking");
         _streaming = null;
+        // Record for Up/Down recall (skip a straight repeat of the last message), reset the cursor.
+        if (_inputHistory.Count == 0 || _inputHistory[^1] != text) _inputHistory.Add(text);
+        _historyIndex = _inputHistory.Count;
+        _historyDraft = string.Empty;
         Items.Add(new UserChatItem(text));
         _cts = new CancellationTokenSource();
         try
@@ -289,6 +318,32 @@ public sealed partial class AssistantViewModel : ObservableObject
         _assistant.NewConversation();
         Items.Clear();
         _cards.Clear();
+        _inputHistory.Clear();
+        _historyIndex = 0;
+        _historyDraft = string.Empty;
+    }
+
+    // ---- input-history recall (Up/Down in the message box) -----------------------------------
+
+    /// <summary>Recalls the previous sent message into the input (Up arrow at the box start).
+    /// Returns true when the input changed, so the view can move the caret to the end.</summary>
+    public bool RecallPreviousInput()
+    {
+        if (_historyIndex <= 0 || _inputHistory.Count == 0) return false;
+        if (_historyIndex == _inputHistory.Count) _historyDraft = Input;   // remember the in-progress draft
+        _historyIndex--;
+        Input = _inputHistory[_historyIndex];
+        return true;
+    }
+
+    /// <summary>Recalls the next sent message, or the saved draft past the newest (Down arrow at the
+    /// box end). Returns true when the input changed.</summary>
+    public bool RecallNextInput()
+    {
+        if (_historyIndex >= _inputHistory.Count) return false;
+        _historyIndex++;
+        Input = _historyIndex == _inputHistory.Count ? _historyDraft : _inputHistory[_historyIndex];
+        return true;
     }
 
     /// <summary>The "server is off" affordance: flip the setting, start the listener, let the user resend.</summary>

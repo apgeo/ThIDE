@@ -7,6 +7,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading;
@@ -43,15 +44,20 @@ public interface IAssistantService : IAsyncDisposable
     /// <summary>Drops the conversation history (and any cached tool connection stays).</summary>
     void NewConversation();
 
+    /// <summary>The visible dialogue persisted from a previous run, for the pane to redraw on
+    /// startup. Empty when there is nothing saved.</summary>
+    IReadOnlyList<ConversationTurn> RestoredConversation();
+
     /// <summary>"model @ endpoint", for the pane's status line.</summary>
     string ModelLabel { get; }
 }
 
-public sealed class AssistantService(
-    IAppSettingsService settings,
-    IMcpHostService host,
-    ILogService log) : IAssistantService
+public sealed class AssistantService : IAssistantService
 {
+    private readonly IAppSettingsService _settings;
+    private readonly IMcpHostService _host;
+    private readonly ILogService _log;
+
     // One HttpClient for the model endpoint's lifetime; generous timeout — a 30B model on CPU
     // offload can legitimately take minutes per completion (same budget as the eval harness).
     private readonly HttpClient _http = new() { Timeout = TimeSpan.FromMinutes(10) };
@@ -59,13 +65,33 @@ public sealed class AssistantService(
     // One turn at a time; the pane gates the UI, this gate is the backstop.
     private readonly SemaphoreSlim _turn = new(1, 1);
 
+    // Where the running conversation is mirrored so it survives a restart.
+    private readonly string _conversationPath;
+    // The conversation loaded from that file at construction, used to seed the first turn and to
+    // redraw the transcript; cleared once a New Chat or a fresh turn takes over.
+    private ChatSession? _restored;
+
     private McpClient? _client;
     private McpToolCatalog? _catalog;
     private string? _connectedToken;
     private ChatSession? _session;
     private bool _disposed;
 
-    public string ModelLabel => $"{settings.Current.AssistantModel} @ {settings.Current.AssistantEndpoint}";
+    public AssistantService(IAppSettingsService settings, IMcpHostService host, ILogService log)
+        : this(settings, host, log, DefaultConversationPath()) { }
+
+    // Test seam (InternalsVisibleTo ThIDE.Tests): a conversation file under a temp dir keeps a test
+    // from reading or writing the developer's real %AppData%/ThIDE conversation.
+    internal AssistantService(IAppSettingsService settings, IMcpHostService host, ILogService log, string conversationPath)
+    {
+        _settings = settings;
+        _host = host;
+        _log = log;
+        _conversationPath = conversationPath;
+        _restored = LoadConversation(conversationPath);
+    }
+
+    public string ModelLabel => $"{_settings.Current.AssistantModel} @ {_settings.Current.AssistantEndpoint}";
 
     public async Task<ChatResult> SendAsync(string userMessage, ChatCallbacks callbacks, CancellationToken ct)
     {
@@ -75,17 +101,20 @@ public sealed class AssistantService(
         try
         {
             var catalog = await EnsureConnectedAsync(ct);
-            var current = settings.Current;
+            var current = _settings.Current;
             var engine = new ChatEngine(_http, new ChatEngineOptions(current.AssistantEndpoint, current.AssistantModel)
             {
                 MaxTurns = current.AssistantMaxTurns,
                 SynthesizeFinalAnswer = current.AssistantSynthesizeFinalAnswer,
                 Stream = current.AssistantStreaming,
             });
-            _session ??= new ChatSession(SystemPrompt(current));
+            // Continue the restored conversation on the first turn after a restart.
+            _session ??= _restored ?? new ChatSession(SystemPrompt(current));
+            _restored = null;
 
             var result = await engine.RunAsync(_session, userMessage, catalog, callbacks, ct);
-            log.Info($"[Assistant] turn done: {result.Calls.Count} tool call(s), {result.Tokens} tokens.");
+            _log.Info($"[Assistant] turn done: {result.Calls.Count} tool call(s), {result.Tokens} tokens.");
+            SaveConversation();
             return result;
         }
         finally
@@ -94,7 +123,15 @@ public sealed class AssistantService(
         }
     }
 
-    public void NewConversation() => _session = null;
+    public IReadOnlyList<ConversationTurn> RestoredConversation() =>
+        _restored?.Dialogue() ?? Array.Empty<ConversationTurn>();
+
+    public void NewConversation()
+    {
+        _session = null;
+        _restored = null;
+        TryDeleteConversation();
+    }
 
     /// <summary>
     /// Self-connects to the in-app server (starting it when the setting is on but it hasn't come
@@ -102,12 +139,12 @@ public sealed class AssistantService(
     /// </summary>
     private async Task<McpToolCatalog> EnsureConnectedAsync(CancellationToken ct)
     {
-        if (!settings.Current.EnableMcpServer)
+        if (!_settings.Current.EnableMcpServer)
             throw new AssistantUnavailableException(AssistantUnavailableReason.ServerDisabled);
 
-        if (host.Endpoint is null)
-            await host.ApplySettingAsync(ct).ConfigureAwait(false);
-        var endpoint = host.Endpoint
+        if (_host.Endpoint is null)
+            await _host.ApplySettingAsync(ct).ConfigureAwait(false);
+        var endpoint = _host.Endpoint
             ?? throw new AssistantUnavailableException(AssistantUnavailableReason.ServerNotListening);
 
         if (_catalog is not null && _connectedToken == endpoint.Token) return _catalog;
@@ -128,7 +165,7 @@ public sealed class AssistantService(
             _catalog = new McpToolCatalog(client, tools);
             _client = client;
             _connectedToken = endpoint.Token;
-            log.Info($"[Assistant] connected to the in-app tools server ({tools.Count} tools).");
+            _log.Info($"[Assistant] connected to the in-app tools server ({tools.Count} tools).");
             return _catalog;
         }
         catch
@@ -174,6 +211,44 @@ public sealed class AssistantService(
                 + "paste raw JSON or repeat long lists — describe and highlight the relevant items instead. ";
 
         return prompt + "When you have the answer, reply directly and concisely.";
+    }
+
+    // ---- conversation persistence -----------------------------------------------------------
+
+    /// <summary>%AppData%/ThIDE/assistant-conversation.json (XDG fallback on POSIX).</summary>
+    private static string DefaultConversationPath()
+    {
+        var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        if (string.IsNullOrEmpty(appData))
+            appData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config");
+        return Path.Combine(appData, "ThIDE", "assistant-conversation.json");
+    }
+
+    private static ChatSession? LoadConversation(string path)
+    {
+        try { return File.Exists(path) ? ChatSession.Restore(File.ReadAllText(path)) : null; }
+        catch { return null; }
+    }
+
+    private void SaveConversation()
+    {
+        if (_session is null) return;
+        try
+        {
+            var dir = Path.GetDirectoryName(_conversationPath);
+            if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+            File.WriteAllText(_conversationPath, _session.Serialize());
+        }
+        catch (Exception ex)
+        {
+            _log.Warning($"[Assistant] could not persist the conversation: {ex.Message}");
+        }
+    }
+
+    private void TryDeleteConversation()
+    {
+        try { if (File.Exists(_conversationPath)) File.Delete(_conversationPath); }
+        catch { /* best effort */ }
     }
 
     public async ValueTask DisposeAsync()

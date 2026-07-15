@@ -4,6 +4,7 @@
 // server-unavailable affordances.
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -49,10 +50,12 @@ public class AssistantViewModelTests
         Func<string, ChatCallbacks, CancellationToken, Task<ChatResult>> onSend) : IAssistantService
     {
         public int NewConversationCalls { get; private set; }
+        public IReadOnlyList<ConversationTurn> Restored { get; init; } = Array.Empty<ConversationTurn>();
         public string ModelLabel => "test-model @ http://test/v1";
         public Task<ChatResult> SendAsync(string userMessage, ChatCallbacks callbacks, CancellationToken ct) =>
             onSend(userMessage, callbacks, ct);
         public void NewConversation() => NewConversationCalls++;
+        public IReadOnlyList<ConversationTurn> RestoredConversation() => Restored;
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 
@@ -477,6 +480,56 @@ public class AssistantViewModelTests
         Assert.True(settings.Current.EnableMcpServer);
         Assert.Equal(1, host.ApplyCalls);
         Assert.False(vm.ServerOff);
+    }
+
+    [Fact]
+    public void RestoredConversation_RedrawsTheTranscript_OnConstruction()
+    {
+        var assistant = new FakeAssistant((_, _, _) => Task.FromResult(new ChatResult("", [], 0, 0)))
+        {
+            Restored =
+            [
+                new ConversationTurn(IsUser: true, "how many stations?"),
+                new ConversationTurn(IsUser: false, "There are 4."),
+            ],
+        };
+        var vm = NewVm(assistant);
+
+        Assert.Collection(vm.Items,
+            i => Assert.Equal("how many stations?", Assert.IsType<UserChatItem>(i).Text),
+            i => Assert.Equal("There are 4.", Assert.IsType<AssistantChatItem>(i).Text));
+    }
+
+    [Fact]
+    public async Task InputHistory_UpAndDown_RecallSentMessages()
+    {
+        var assistant = new FakeAssistant((_, _, _) => Task.FromResult(new ChatResult("ok", [], 0, 0)));
+        var vm = NewVm(assistant);
+
+        vm.Input = "first"; await vm.SendCommand.ExecuteAsync(null);
+        vm.Input = "second"; await vm.SendCommand.ExecuteAsync(null);
+
+        // Compose a draft, then walk back through history and forward again to the draft.
+        vm.Input = "draft";
+        Assert.True(vm.RecallPreviousInput());  Assert.Equal("second", vm.Input);
+        Assert.True(vm.RecallPreviousInput());  Assert.Equal("first", vm.Input);
+        Assert.False(vm.RecallPreviousInput()); Assert.Equal("first", vm.Input);   // nothing older
+        Assert.True(vm.RecallNextInput());      Assert.Equal("second", vm.Input);
+        Assert.True(vm.RecallNextInput());      Assert.Equal("draft", vm.Input);   // back to the draft
+        Assert.False(vm.RecallNextInput());     Assert.Equal("draft", vm.Input);   // nothing newer
+    }
+
+    [Fact]
+    public void InputHistory_SeededFromRestoredUserMessages()
+    {
+        var assistant = new FakeAssistant((_, _, _) => Task.FromResult(new ChatResult("", [], 0, 0)))
+        {
+            Restored = [new ConversationTurn(IsUser: true, "old question"), new ConversationTurn(IsUser: false, "old answer")],
+        };
+        var vm = NewVm(assistant);
+
+        Assert.True(vm.RecallPreviousInput());
+        Assert.Equal("old question", vm.Input);   // the assistant answer is not part of input history
     }
 
     [Fact]

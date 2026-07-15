@@ -23,14 +23,26 @@ public partial class AssistantToolView : UserControl
         };
     }
 
-    /// <summary>Enter sends (the box is single-line; Shift+Enter is not a concern).</summary>
+    /// <summary>Enter sends; Up/Down at the box's start/end recall past messages.</summary>
     private void OnInputKeyDown(object? sender, KeyEventArgs e)
     {
-        if (e.Key != Key.Enter) return;
-        if (DataContext is AssistantToolViewModel { Assistant: { } vm } && vm.SendCommand.CanExecute(null))
+        if (DataContext is not AssistantToolViewModel { Assistant: { } vm }) return;
+
+        switch (e.Key)
         {
-            vm.SendCommand.Execute(null);
-            e.Handled = true;
+            case Key.Enter when vm.SendCommand.CanExecute(null):
+                vm.SendCommand.Execute(null);
+                e.Handled = true;
+                break;
+
+            // Recall only from the edge, so a caret mid-text still moves normally.
+            case Key.Up when sender is TextBox { CaretIndex: 0 } up:
+                if (vm.RecallPreviousInput()) { up.CaretIndex = vm.Input?.Length ?? 0; e.Handled = true; }
+                break;
+
+            case Key.Down when sender is TextBox down && down.CaretIndex >= (down.Text?.Length ?? 0):
+                if (vm.RecallNextInput()) { down.CaretIndex = vm.Input?.Length ?? 0; e.Handled = true; }
+                break;
         }
     }
 }
