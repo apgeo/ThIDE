@@ -11,7 +11,7 @@ public class TherionPromptsTests
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(120);
 
     [Fact]
-    public async Task All_four_prompts_are_advertised()
+    public async Task The_prompts_are_advertised()
     {
         using var cts = new CancellationTokenSource(Timeout);
         await using var client = await ServerHost.ConnectAsync(cts.Token);
@@ -22,6 +22,8 @@ public class TherionPromptsTests
         Assert.Contains("fix_diagnostic", names);
         Assert.Contains("summarize_survey", names);
         Assert.Contains("prepare_release", names);
+        Assert.Contains("plan_exploration", names);
+        Assert.Contains("summarize_history", names);
     }
 
     [Fact]

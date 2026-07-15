@@ -43,6 +43,24 @@ public static class TherionPrompts
         + "3. Call list_leads for the open leads.\n"
         + "4. Write a short summary: how big it is, how it's laid out, and what remains to push.";
 
+    [McpServerPrompt(Name = "plan_exploration", Title = "Plan what to explore next")]
+    [Description("Turn the project's open leads, dead-ends and depth into a prioritized push list.")]
+    public static string PlanExploration() =>
+        "Plan what to explore next in this cave. Be concise.\n"
+        + "1. Call list_leads (explicit ones first) for passages a surveyor marked to push.\n"
+        + "2. Call survey_graph for dead-ends (degree ≤ 1, not an entrance or fix) — candidate unsurveyed leads.\n"
+        + "3. If depth or direction matters, call list_stations with a depth filter or query_legs.\n"
+        + "4. Recommend a short, prioritized list of leads to push next: where each is (survey + station) and why.";
+
+    [McpServerPrompt(Name = "summarize_history", Title = "Summarize the survey history")]
+    [Description("A chronological expedition history from each survey's team and dates.")]
+    public static string SummarizeHistory() =>
+        "Write a short expedition-history narrative for this cave. Be concise.\n"
+        + "1. Call list_survey_info for each survey's team, dates, and length.\n"
+        + "2. Order the surveys by date and group them into years or seasons.\n"
+        + "3. Note who surveyed, when, and roughly how much length was added each period.\n"
+        + "4. Write a brief chronological summary. Some surveys may be undated — say so rather than guessing.";
+
     [McpServerPrompt(Name = "prepare_release", Title = "Check release readiness")]
     [Description("Check whether the project is ready to build and publish.")]
     public static string PrepareRelease() =>
