@@ -39,7 +39,8 @@ public sealed record NavigableSymbol(
     int EndLine,
     int EndColumn,
     string? Role = null,
-    bool FreeText = false)
+    bool FreeText = false,
+    bool IsPath = false)
 {
     /// <summary>The last dot-separated segment — the bare object name (e.g. <c>1</c> of <c>cave.upper.1</c>).</summary>
     public string Leaf
@@ -50,6 +51,28 @@ public sealed record NavigableSymbol(
             return dot > 0 && dot < Name.Length - 1 ? Name[(dot + 1)..] : Name;
         }
     }
+
+    /// <summary>For a file-path entry: the file name (after the last slash).</summary>
+    public string FileName
+    {
+        get
+        {
+            int slash = Name.LastIndexOfAny(PathSeparators);
+            return slash >= 0 && slash < Name.Length - 1 ? Name[(slash + 1)..] : Name;
+        }
+    }
+
+    /// <summary>For a file-path entry: the directory portion (before the last slash), or null at the root.</summary>
+    public string? Directory
+    {
+        get
+        {
+            int slash = Name.LastIndexOfAny(PathSeparators);
+            return slash > 0 ? Name[..slash] : null;
+        }
+    }
+
+    private static readonly char[] PathSeparators = { '/', '\\' };
 
     /// <summary>The qualifying prefix (the parent survey, typically), or null when the name is bare.</summary>
     public string? Parent
@@ -113,10 +136,20 @@ public static class AssistantSymbolList
         foreach (var prop in data.EnumerateObject())
         {
             if (prop.Value.ValueKind != JsonValueKind.Array) continue;
+            // A "files"/"paths" array is a list of workspace-relative paths (strings), not objects
+            // (list_files) — each becomes a clickable "open this file" row (AI-08.4).
+            bool pathArray = prop.Name is "files" or "paths";
             var kindFallback = Singular(prop.Name);
             var items = new List<NavigableSymbol>();
             foreach (var el in prop.Value.EnumerateArray())
-                if (TryReadNavigable(el, kindFallback) is { } n) items.Add(n);
+            {
+                if (pathArray && el.ValueKind == JsonValueKind.String)
+                {
+                    if (el.GetString() is { Length: > 0 } path)
+                        items.Add(new NavigableSymbol("file", path, null, path, 1, 1, 1, 1, IsPath: true));
+                }
+                else if (TryReadNavigable(el, kindFallback) is { } n) items.Add(n);
+            }
             if (items.Count > best.Count) best = items;
         }
         return best.Count == 0 ? Empty : best;

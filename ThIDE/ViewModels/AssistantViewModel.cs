@@ -136,18 +136,22 @@ public sealed partial class NavigableSymbolViewModel : ObservableObject
         _navigate = navigate;
     }
 
-    /// <summary>The row's primary text: the bare object name for a qualified symbol/station (the
-    /// survey prefix moves to <see cref="Subtitle"/>), or the whole prose label — truncated — for a
-    /// TODO/diagnostic.</summary>
-    public string Name => _model.FreeText ? Truncate(_model.Name, 100) : _model.Leaf;
+    /// <summary>The row's primary text: the file name for a path entry, the whole prose label —
+    /// truncated — for a TODO/diagnostic, or the bare object name for a qualified symbol/station (the
+    /// survey prefix moves to <see cref="Subtitle"/>).</summary>
+    public string Name =>
+        _model.IsPath ? _model.FileName
+        : _model.FreeText ? Truncate(_model.Name, 100)
+        : _model.Leaf;
 
     /// <summary>
-    /// For an object list: kind plus the parent survey (or the declaring file when the name has no
-    /// parent). For a prose entry (TODO/diagnostic): kind plus the file:line. For an occurrence list
-    /// (find_references): the role — declaration / reference / equate / map — plus that file:line.
+    /// For a file path: "file" plus its folder. For an object list: kind plus the parent survey (or
+    /// the declaring file when the name has no parent). For a prose entry (TODO/diagnostic): kind plus
+    /// file:line. For an occurrence list (find_references): the role plus that file:line.
     /// </summary>
     public string Subtitle =>
-        _model.Role is { } role ? $"{role} · {_model.RelativeFile}:{_model.Line}"
+        _model.IsPath ? (_model.Directory is { } dir ? $"{_model.Kind} · {dir}" : _model.Kind)
+        : _model.Role is { } role ? $"{role} · {_model.RelativeFile}:{_model.Line}"
         : _model.FreeText ? $"{_model.Kind} · {_model.RelativeFile}:{_model.Line}"
         : $"{_model.Kind} · {_model.Parent ?? _model.RelativeFile}";
 

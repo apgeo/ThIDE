@@ -234,6 +234,37 @@ public class AssistantViewModelTests
     }
 
     [Fact]
+    public async Task ToolResult_WithFilePaths_RendersClickableFileRows()
+    {
+        // list_files returns a plain string[] of workspace-relative paths (not objects) — each row
+        // should open the file, showing the file name up front and its folder as the subtitle.
+        const string result = """
+            {"ok":true,"data":{"files":["date/G_drumuiri/x.th","thconfig_grind.thconfig"],"total":2,"offset":0,"truncated":false}}
+            """;
+        var assistant = new FakeAssistant((_, callbacks, _) =>
+        {
+            var info = new ToolCallInfo("list_files", "{}", ReadOnly: true);
+            callbacks.OnUpdate!(new ToolCallStarted(info));
+            callbacks.OnUpdate!(new ToolCallFinished(info, Ok: true, result));
+            return Task.FromResult(new ChatResult("2 files.", [new ChatToolCall("list_files", true, true)], 1, 0));
+        });
+        var vm = NewVm(assistant);
+        vm.Input = "list files";
+
+        await vm.SendCommand.ExecuteAsync(null);
+
+        var card = vm.Items.OfType<ToolCallChatItem>().Single();
+        Assert.True(card.HasSymbols);
+        Assert.Equal(2, card.Symbols.Count);
+        Assert.Equal("x.th", card.Symbols[0].Name);
+        Assert.Equal("file · date/G_drumuiri", card.Symbols[0].Subtitle);
+        Assert.Equal("date/G_drumuiri/x.th", card.Symbols[0].QualifiedName);   // full path in the tooltip
+        // A root-level file has no folder, so the subtitle is just the kind.
+        Assert.Equal("thconfig_grind.thconfig", card.Symbols[1].Name);
+        Assert.Equal("file", card.Symbols[1].Subtitle);
+    }
+
+    [Fact]
     public async Task ToolResult_WithoutSymbolList_HasNoObjects()
     {
         var assistant = new FakeAssistant((_, callbacks, _) =>
