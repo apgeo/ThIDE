@@ -58,6 +58,28 @@ public static class EvalSuite
             new AnswerMatchesComputed("query_legs", "/total",
                 new Dictionary<string, object?> { ["direction"] = "NNW", ["minDepth"] = 200.0 })),
 
+        // ---- people, dates & quality (CAP-04) ------------------------------------------------------
+        // Q5 (who/when): count surveys whose dates fall in a range. The grader recomputes from the same
+        // date-overlap filter, so it checks the model set dateFrom/dateTo — not that it guessed a number.
+        new("qa-surveys-daterange", Category.Qa, "history",
+            "How many surveys in this cave were carried out between the years 2000 and 2003 (inclusive)? "
+            + "Answer with just the number.",
+            new AnswerMatchesComputed("list_survey_info", "/total",
+                new Dictionary<string, object?> { ["dateFrom"] = "2000", ["dateTo"] = "2003" })),
+        // Data quality (U-01): surveys with no recorded team — exact from data_quality_report.
+        new("qa-teamless", Category.Qa, "history",
+            "How many surveys in this project have no recorded team (surveyor)? Answer with just the number.",
+            new AnswerMatchesComputed("data_quality_report", "/teamlessSurveys")),
+        // Q6/7 (one surveyor): no team-size filter exists, so the model fetches team lists and computes
+        // team.Count == 1. Named check (Audit, not Qa) so qa_exact stays purely exact-number.
+        new("audit-one-surveyor", Category.Audit, "history",
+            "Which survey in this cave was carried out by only one surveyor? Name that survey.",
+            new AnswerContains("deeppart")),
+        // History narrative (U-05): a graceful chronological summary from team + dates.
+        new("audit-history", Category.Audit, "history",
+            "Summarize who surveyed this cave and in which years, in chronological order.",
+            new HandledGracefully()),
+
         // ---- formatting round-trip -----------------------------------------------------------------
         new("format-roundtrip", Category.Format, "valid",
             "Reformat main.th and write the changes to disk, then confirm the project still validates.",

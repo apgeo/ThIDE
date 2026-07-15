@@ -1,0 +1,39 @@
+survey cave
+
+  # entrance series: two surveyors, August 2000
+  survey entrance
+    team "Ana Pop"
+    team "Ion Marin"
+    date 2000.08.12
+    centreline
+      data normal from to length compass clino
+      0 1 20 0 0
+      1 2 20 0 0
+      station 0 "main entrance" entrance
+    endcentreline
+  endsurvey
+
+  # deep part: ONE surveyor (Ana Pop), July 2002
+  survey deeppart
+    team "Ana Pop"
+    date 2002.07.03
+    centreline
+      data normal from to length compass clino
+      0 1 25 90 -30
+      1 2 25 90 -30
+    endcentreline
+  endsurvey
+
+  # extension: three surveyors, May 2006
+  survey extension
+    team "Ion Marin"
+    team "Ana Pop"
+    team "Vlad Dima"
+    date 2006.05.20
+    centreline
+      data normal from to length compass clino
+      0 1 15 180 0
+    endcentreline
+  endsurvey
+
+endsurvey
