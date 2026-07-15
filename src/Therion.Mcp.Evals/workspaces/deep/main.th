@@ -1,0 +1,29 @@
+survey deep
+
+  centreline
+    data normal from to length compass clino
+    # A straight shaft, plumbed in 50 m steps: stations 0..14 sit at depths 0, 50, … 700.
+    0 1 50 0 -90
+    1 2 50 0 -90
+    2 3 50 0 -90
+    3 4 50 0 -90
+    4 5 50 0 -90
+    5 6 50 0 -90
+    6 7 50 0 -90
+    7 8 50 0 -90
+    8 9 50 0 -90
+    9 10 50 0 -90
+    10 11 50 0 -90
+    11 12 50 0 -90
+    12 13 50 0 -90
+    13 14 50 0 -90
+    # NNW-trending side legs. s1 hangs off station 2 (≈107 m deep, ABOVE 200 m); s2 and s3 hang
+    # off stations 6 and 9 (≈313 m and ≈461 m deep, BELOW 200 m). So "NNW legs entirely below
+    # 200 m" is exactly two, and the depth filter must exclude the shallow one.
+    2 s1 20 337.5 -20
+    6 s2 25 337 -30
+    9 s3 25 342 -25
+    station 0 "shaft-top entrance" entrance
+  endcentreline
+
+endsurvey

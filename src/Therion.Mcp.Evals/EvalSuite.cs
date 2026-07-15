@@ -46,6 +46,17 @@ public static class EvalSuite
         new("qa-floating", Category.Qa, "disconnected",
             "How many disconnected (floating) survey components does this cave have? Answer with just the number.",
             new AnswerMatchesComputed("survey_graph", "/floatingComponents")),
+        // Spatial (CAP-01): the grader recomputes the count from the same estimated positions, so the
+        // check can't be fooled — it verifies the model translated "deep"/"NNW below" into the filters.
+        new("qa-depth-band", Category.Qa, "deep",
+            "How many stations in this cave are between 500 and 550 metres deep? Answer with just the number.",
+            new AnswerMatchesComputed("list_stations", "/total",
+                new Dictionary<string, object?> { ["minDepth"] = 500.0, ["maxDepth"] = 550.0 })),
+        new("qa-legs-nnw-deep", Category.Qa, "deep",
+            "How many survey legs are oriented roughly NNW and lie entirely below 200 metres depth? "
+            + "Answer with just the number.",
+            new AnswerMatchesComputed("query_legs", "/total",
+                new Dictionary<string, object?> { ["direction"] = "NNW", ["minDepth"] = 200.0 })),
 
         // ---- formatting round-trip -----------------------------------------------------------------
         new("format-roundtrip", Category.Format, "valid",
@@ -71,6 +82,12 @@ public static class EvalSuite
         new("audit-full", Category.Audit, "disconnected",
             "Audit this project: check the diagnostics and the connectivity, then summarize the single most important issue.",
             new HandledGracefully()),
+        // Caveat propagation (CD-06): the position data carries an "approximate" warning; a careful
+        // answer repeats it. Not in Qa, so it doesn't dilute the exact-number metric.
+        new("audit-depth-caveat", Category.Audit, "deep",
+            "How deep is the deepest station in this cave, and how reliable is that figure? "
+            + "Mention any caveat about how the position was computed.",
+            new AnswerContains("approximate")),
 
         // ---- repair to lint-clean (repair_success@3) -----------------------------------------------
         new("repair-badnum", Category.Repair, "broken",
