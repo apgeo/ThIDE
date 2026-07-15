@@ -1209,6 +1209,10 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Assistant_Thinking" xml:space="preserve"><value>Se gândește…</value></data>
   <data name="Assistant_RunningTool" xml:space="preserve"><value>Rulează {0}…</value></data>
   <data name="Assistant_Writing" xml:space="preserve"><value>Scrie răspunsul…</value></data>
+  <data name="Assistant_ToolOk" xml:space="preserve"><value>gata</value></data>
+  <data name="Assistant_ToolFailed" xml:space="preserve"><value>eșuat</value></data>
+  <data name="Assistant_ToolDeclined" xml:space="preserve"><value>refuzat</value></data>
+  <data name="Assistant_ToolRunning" xml:space="preserve"><value>rulează…</value></data>
   <data name="Assistant_ServerOff" xml:space="preserve"><value>Serverul de instrumente AI din aplicație este oprit, deci asistentul nu are acces la proiect.</value></data>
   <data name="Assistant_EnableServer" xml:space="preserve"><value>Pornește-l</value></data>
   <data name="Assistant_ServerEnabled" xml:space="preserve"><value>Serverul de instrumente AI este acum pornit — retrimite mesajul.</value></data>

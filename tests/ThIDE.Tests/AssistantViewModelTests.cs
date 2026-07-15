@@ -254,6 +254,56 @@ public class AssistantViewModelTests
     }
 
     [Fact]
+    public async Task ReadOnlyToolCard_StartsCollapsed_WithAnObjectCountSummary()
+    {
+        const string result = """
+            {"ok":true,"data":{"stations":[
+              {"name":"a.1","kind":"shot","declaration":{"file":"x.th","line":1,"column":1,"endLine":1,"endColumn":3}},
+              {"name":"a.2","kind":"shot","declaration":{"file":"x.th","line":2,"column":1,"endLine":2,"endColumn":3}}
+            ]}}
+            """;
+        var assistant = new FakeAssistant((_, callbacks, _) =>
+        {
+            var info = new ToolCallInfo("list_stations", "{}", ReadOnly: true);
+            callbacks.OnUpdate!(new ToolCallStarted(info));
+            callbacks.OnUpdate!(new ToolCallFinished(info, Ok: true, result));
+            return Task.FromResult(new ChatResult("2 stations.", [new ChatToolCall("list_stations", true, true)], 1, 0));
+        });
+        var vm = NewVm(assistant);
+        vm.Input = "list";
+
+        await vm.SendCommand.ExecuteAsync(null);
+
+        var card = vm.Items.OfType<ToolCallChatItem>().Single();
+        Assert.True(card.ReadOnly);
+        Assert.False(card.IsExpanded);                       // read-only lookups fold away
+        Assert.Equal("2 objects — click to open", card.CollapsedSummary);
+    }
+
+    [Fact]
+    public async Task WritingToolCard_StartsExpanded_AndApprovalKeepsItOpen()
+    {
+        var assistant = new FakeAssistant(async (_, callbacks, ct) =>
+        {
+            var info = new ToolCallInfo("edit_file", """{"path":"a.th"}""", ReadOnly: false);
+            callbacks.OnUpdate!(new ToolCallStarted(info));
+            await callbacks.ApproveAsync!(info, ct);
+            callbacks.OnUpdate!(new ToolCallFinished(info, Ok: true, "edited"));
+            return new ChatResult("Done.", [new ChatToolCall("edit_file", true, true)], 1, 0);
+        });
+        var vm = NewVm(assistant);
+        vm.Input = "edit";
+
+        var send = vm.SendCommand.ExecuteAsync(null);
+        var card = vm.Items.OfType<ToolCallChatItem>().Single();
+        Assert.False(card.ReadOnly);
+        Assert.True(card.IsExpanded);   // writing tools stay open (preview + Allow/Deny must show)
+        card.AllowCommand.Execute(null);
+        await send;
+        Assert.True(card.IsExpanded);
+    }
+
+    [Fact]
     public async Task Streaming_GrowsOneBubbleInPlace_ThenFinalizes()
     {
         var assistant = new FakeAssistant((_, callbacks, _) =>

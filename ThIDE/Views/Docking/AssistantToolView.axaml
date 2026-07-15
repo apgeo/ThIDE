@@ -84,61 +84,79 @@
                         <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="4"
                                 Padding="8,5" Margin="0,3,24,3">
                             <StackPanel Spacing="4">
-                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <TextBlock Text="⚙" FontSize="11" VerticalAlignment="Center" />
-                                    <TextBlock Text="{Binding Tool}" FontWeight="SemiBold" FontSize="12" />
-                                    <TextBlock Text="{Binding State}" Foreground="Gray" FontSize="11"
-                                               VerticalAlignment="Center" />
-                                </StackPanel>
-                                <TextBlock Text="{Binding ArgumentsJson}" Foreground="Gray" FontSize="11"
-                                           FontFamily="Consolas,Menlo,monospace" TextWrapping="Wrap"
-                                           MaxLines="6" TextTrimming="CharacterEllipsis" />
-                                <!-- the Allow/Deny gate for tools that write (D-043) -->
-                                <StackPanel Orientation="Horizontal" Spacing="6"
-                                            IsVisible="{Binding IsWaitingApproval}">
-                                    <Button Content="{l:Loc Assistant_Allow}" Command="{Binding AllowCommand}"
-                                            Padding="12,2" FontSize="11" />
-                                    <Button Content="{l:Loc Assistant_Deny}" Command="{Binding DenyCommand}"
-                                            Padding="12,2" FontSize="11" />
-                                </StackPanel>
+                                <!-- header doubles as the expand/collapse toggle (AI-08.3): the whole
+                                     read-only card folds to this one line so the answer leads. -->
+                                <Button Command="{Binding ToggleExpandCommand}" Background="Transparent"
+                                        BorderThickness="0" Padding="0" Cursor="Hand"
+                                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Left">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <TextBlock Text="▾" FontSize="10" Foreground="Gray" VerticalAlignment="Center"
+                                                   IsVisible="{Binding IsExpanded}" />
+                                        <TextBlock Text="▸" FontSize="10" Foreground="Gray" VerticalAlignment="Center"
+                                                   IsVisible="{Binding !IsExpanded}" />
+                                        <TextBlock Text="⚙" FontSize="11" VerticalAlignment="Center" />
+                                        <TextBlock Text="{Binding Tool}" FontWeight="SemiBold" FontSize="12"
+                                                   VerticalAlignment="Center" />
+                                        <!-- collapsed: a compact result summary; expanded: the live state -->
+                                        <TextBlock Text="{Binding CollapsedSummary}" Foreground="Gray" FontSize="11"
+                                                   VerticalAlignment="Center" IsVisible="{Binding !IsExpanded}" />
+                                        <TextBlock Text="{Binding State}" Foreground="Gray" FontSize="11"
+                                                   VerticalAlignment="Center" IsVisible="{Binding IsExpanded}" />
+                                    </StackPanel>
+                                </Button>
 
-                                <!-- navigable object list (list_symbols &c.): each row jumps to the
-                                     object's declaration. Scrolls in place when the list is long. -->
-                                <StackPanel Spacing="2" IsVisible="{Binding HasSymbols}">
-                                    <TextBlock Text="{Binding SymbolsHeader}" Foreground="Gray"
-                                               FontSize="11" Margin="0,2,0,0" />
-                                    <ScrollViewer MaxHeight="240" VerticalScrollBarVisibility="Auto">
-                                        <ItemsControl ItemsSource="{Binding Symbols}">
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Button Command="{Binding NavigateCommand}"
-                                                            Background="Transparent" BorderThickness="0"
-                                                            Padding="6,3" Cursor="Hand"
-                                                            HorizontalAlignment="Stretch"
-                                                            HorizontalContentAlignment="Left"
-                                                            ToolTip.Tip="{Binding QualifiedName}">
-                                                        <StackPanel>
-                                                            <TextBlock Text="{Binding Name}" FontSize="12" />
-                                                            <TextBlock Text="{Binding Subtitle}"
-                                                                       Foreground="Gray" FontSize="10" />
-                                                        </StackPanel>
-                                                    </Button>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </ScrollViewer>
-                                </StackPanel>
+                                <!-- details, hidden when the card is collapsed -->
+                                <StackPanel Spacing="4" IsVisible="{Binding IsExpanded}">
+                                    <TextBlock Text="{Binding ArgumentsJson}" Foreground="Gray" FontSize="11"
+                                               FontFamily="Consolas,Menlo,monospace" TextWrapping="Wrap"
+                                               MaxLines="6" TextTrimming="CharacterEllipsis" />
+                                    <!-- the Allow/Deny gate for tools that write (D-043) -->
+                                    <StackPanel Orientation="Horizontal" Spacing="6"
+                                                IsVisible="{Binding IsWaitingApproval}">
+                                        <Button Content="{l:Loc Assistant_Allow}" Command="{Binding AllowCommand}"
+                                                Padding="12,2" FontSize="11" />
+                                        <Button Content="{l:Loc Assistant_Deny}" Command="{Binding DenyCommand}"
+                                                Padding="12,2" FontSize="11" />
+                                    </StackPanel>
 
-                                <!-- raw JSON kept available but tucked behind a small, muted toggle
-                                     (collapsed by default) so the clickable list above is what reads. -->
-                                <Expander FontSize="10" Padding="0" Margin="0,2,0,0"
-                                          IsVisible="{Binding ResultPreview, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-                                    <Expander.Header>
-                                        <TextBlock Text="{l:Loc Assistant_RawJson}" Foreground="Gray" FontSize="10" />
-                                    </Expander.Header>
-                                    <SelectableTextBlock Text="{Binding ResultPreview}" FontSize="11"
-                                                         FontFamily="Consolas,Menlo,monospace" TextWrapping="Wrap" />
-                                </Expander>
+                                    <!-- navigable object list (list_symbols &c.): each row jumps to the
+                                         object's declaration. Scrolls in place when the list is long. -->
+                                    <StackPanel Spacing="2" IsVisible="{Binding HasSymbols}">
+                                        <TextBlock Text="{Binding SymbolsHeader}" Foreground="Gray"
+                                                   FontSize="11" Margin="0,2,0,0" />
+                                        <ScrollViewer MaxHeight="240" VerticalScrollBarVisibility="Auto">
+                                            <ItemsControl ItemsSource="{Binding Symbols}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Button Command="{Binding NavigateCommand}"
+                                                                Background="Transparent" BorderThickness="0"
+                                                                Padding="6,3" Cursor="Hand"
+                                                                HorizontalAlignment="Stretch"
+                                                                HorizontalContentAlignment="Left"
+                                                                ToolTip.Tip="{Binding QualifiedName}">
+                                                            <StackPanel>
+                                                                <TextBlock Text="{Binding Name}" FontSize="12" />
+                                                                <TextBlock Text="{Binding Subtitle}"
+                                                                           Foreground="Gray" FontSize="10" />
+                                                            </StackPanel>
+                                                        </Button>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </ScrollViewer>
+                                    </StackPanel>
+
+                                    <!-- raw JSON kept available but tucked behind a small, muted toggle
+                                         (collapsed by default) so the clickable list above is what reads. -->
+                                    <Expander FontSize="10" Padding="0" Margin="0,2,0,0"
+                                              IsVisible="{Binding ResultPreview, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                        <Expander.Header>
+                                            <TextBlock Text="{l:Loc Assistant_RawJson}" Foreground="Gray" FontSize="10" />
+                                        </Expander.Header>
+                                        <SelectableTextBlock Text="{Binding ResultPreview}" FontSize="11"
+                                                             FontFamily="Consolas,Menlo,monospace" TextWrapping="Wrap" />
+                                    </Expander>
+                                </StackPanel>
                             </StackPanel>
                         </Border>
                     </DataTemplate>

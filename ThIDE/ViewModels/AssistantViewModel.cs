@@ -42,18 +42,36 @@ public sealed class NoteChatItem(string text) : ChatItemViewModel
 }
 
 /// <summary>One tool call: name + arguments, its state, and — while the engine is paused on the
-/// approval hook — the Allow/Deny buttons that complete <see cref="Decision"/>.</summary>
-public sealed partial class ToolCallChatItem(string tool, string argumentsJson) : ChatItemViewModel
+/// approval hook — the Allow/Deny buttons that complete <see cref="Decision"/>. Read-only calls
+/// collapse to a one-line summary so the prose answer leads the transcript (AI-08.3).</summary>
+public sealed partial class ToolCallChatItem : ChatItemViewModel
 {
-    public string Tool { get; } = tool;
-    public string ArgumentsJson { get; } = argumentsJson;
+    public ToolCallChatItem(string tool, string argumentsJson, bool readOnly = false)
+    {
+        Tool = tool;
+        ArgumentsJson = argumentsJson;
+        ReadOnly = readOnly;
+        // Writing tools (edit_file …) stay open — their preview and the Allow/Deny gate must be seen;
+        // read-only lookups start collapsed to a single line and expand on click.
+        _isExpanded = !readOnly;
+    }
+
+    public string Tool { get; }
+    public string ArgumentsJson { get; }
+
+    /// <summary>Read-only lookups collapse by default; writing tools do not.</summary>
+    public bool ReadOnly { get; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsWaitingApproval))]
     [NotifyPropertyChangedFor(nameof(IsRunning))]
+    [NotifyPropertyChangedFor(nameof(CollapsedSummary))]
     private ToolCallState _state = ToolCallState.Running;
 
     [ObservableProperty] private string _resultPreview = string.Empty;
+
+    /// <summary>Whether the card's details (arguments, object list, raw JSON) are shown (AI-08.3).</summary>
+    [ObservableProperty] private bool _isExpanded;
 
     /// <summary>Navigable objects parsed out of the result (list_symbols &amp; friends). Empty for
     /// tool results that carry no symbol list — those show only the raw <see cref="ResultPreview"/>.</summary>
@@ -65,6 +83,17 @@ public sealed partial class ToolCallChatItem(string tool, string argumentsJson) 
     public string SymbolsHeader =>
         HasSymbols ? string.Format(Tr.Get("Assistant_Objects"), Symbols.Count) : string.Empty;
 
+    /// <summary>The one-liner shown when collapsed: the object count if there is a list, else the state.</summary>
+    public string CollapsedSummary => HasSymbols
+        ? string.Format(Tr.Get("Assistant_Objects"), Symbols.Count)
+        : State switch
+        {
+            ToolCallState.Ok => Tr.Get("Assistant_ToolOk"),
+            ToolCallState.Failed => Tr.Get("Assistant_ToolFailed"),
+            ToolCallState.Declined => Tr.Get("Assistant_ToolDeclined"),
+            _ => Tr.Get("Assistant_ToolRunning"),
+        };
+
     /// <summary>Fills the navigable-object list (raises the derived flags). Called once, on finish.</summary>
     public void SetSymbols(IEnumerable<NavigableSymbolViewModel> symbols)
     {
@@ -72,13 +101,21 @@ public sealed partial class ToolCallChatItem(string tool, string argumentsJson) 
         foreach (var s in symbols) Symbols.Add(s);
         OnPropertyChanged(nameof(HasSymbols));
         OnPropertyChanged(nameof(SymbolsHeader));
+        OnPropertyChanged(nameof(CollapsedSummary));
     }
 
     public bool IsWaitingApproval => State == ToolCallState.WaitingApproval;
     public bool IsRunning => State == ToolCallState.Running;
 
+    // The Allow/Deny gate must be visible, so always open the card when it pauses for approval.
+    partial void OnStateChanged(ToolCallState value)
+    {
+        if (value == ToolCallState.WaitingApproval) IsExpanded = true;
+    }
+
     internal TaskCompletionSource<bool>? Decision { get; set; }
 
+    [RelayCommand] private void ToggleExpand() => IsExpanded = !IsExpanded;
     [RelayCommand] private void Allow() => Decision?.TrySetResult(true);
     [RelayCommand] private void Deny() => Decision?.TrySetResult(false);
 }
@@ -311,7 +348,7 @@ public sealed partial class AssistantViewModel : ObservableObject
         {
             case ToolCallStarted started:
                 Activity = string.Format(Tr.Get("Assistant_RunningTool"), started.Call.Tool);
-                var card = new ToolCallChatItem(started.Call.Tool, started.Call.ArgumentsJson);
+                var card = new ToolCallChatItem(started.Call.Tool, started.Call.ArgumentsJson, started.Call.ReadOnly);
                 _cards[started.Call] = card;
                 Items.Add(card);
                 break;
@@ -320,7 +357,7 @@ public sealed partial class AssistantViewModel : ObservableObject
                 // Screening misses (unknown tool, bad JSON) fire Finished without Started.
                 if (!_cards.TryGetValue(finished.Call, out var existing))
                 {
-                    existing = new ToolCallChatItem(finished.Call.Tool, finished.Call.ArgumentsJson);
+                    existing = new ToolCallChatItem(finished.Call.Tool, finished.Call.ArgumentsJson, finished.Call.ReadOnly);
                     _cards[finished.Call] = existing;
                     Items.Add(existing);
                 }
@@ -388,7 +425,7 @@ public sealed partial class AssistantViewModel : ObservableObject
             // The Started update was queued before this, so the card exists on the UI thread.
             if (!_cards.TryGetValue(call, out var card))
             {
-                card = new ToolCallChatItem(call.Tool, call.ArgumentsJson);
+                card = new ToolCallChatItem(call.Tool, call.ArgumentsJson, call.ReadOnly);
                 _cards[call] = card;
                 Items.Add(card);
             }

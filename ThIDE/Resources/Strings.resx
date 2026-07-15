@@ -1209,6 +1209,10 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Assistant_Thinking" xml:space="preserve"><value>Thinking…</value></data>
   <data name="Assistant_RunningTool" xml:space="preserve"><value>Running {0}…</value></data>
   <data name="Assistant_Writing" xml:space="preserve"><value>Writing the answer…</value></data>
+  <data name="Assistant_ToolOk" xml:space="preserve"><value>done</value></data>
+  <data name="Assistant_ToolFailed" xml:space="preserve"><value>failed</value></data>
+  <data name="Assistant_ToolDeclined" xml:space="preserve"><value>declined</value></data>
+  <data name="Assistant_ToolRunning" xml:space="preserve"><value>running…</value></data>
   <data name="Assistant_ServerOff" xml:space="preserve"><value>The in-app AI tools server is off, so the assistant has no access to the project.</value></data>
   <data name="Assistant_EnableServer" xml:space="preserve"><value>Enable it</value></data>
   <data name="Assistant_ServerEnabled" xml:space="preserve"><value>The AI tools server is now on — send your message again.</value></data>
