@@ -40,7 +40,9 @@ public static class Prober
         {
             Name = "therion-mcp (probe)",
             Command = "dotnet",
-            Arguments = [serverDll, "--workspace", workspaceDir, "--profile", "full"],
+            // Point at cave.thconfig explicitly (as EvalRunner does): a fixture can carry several
+            // thconfigs (question 8), which makes opening the bare directory ambiguous.
+            Arguments = [serverDll, "--workspace", Path.Combine(workspaceDir, "cave.thconfig"), "--profile", "full"],
             StandardErrorLines = _ => { },
         }), cancellationToken: ct);
 

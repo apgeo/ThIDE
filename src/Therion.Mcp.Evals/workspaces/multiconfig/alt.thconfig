@@ -1,0 +1,2 @@
+source main.th
+export model -fmt lox -o alt-model.lox

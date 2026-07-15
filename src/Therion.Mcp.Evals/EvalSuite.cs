@@ -99,6 +99,12 @@ public static class EvalSuite
         new("build-broken", Category.Build, "broken",
             "Build this project with run_build and tell me whether it succeeded.",
             new HandledGracefully()),
+        // Q8: two build configs — the model must load the named one, then build. Headless proxy for the
+        // in-app set_active_thconfig (an R3 action, exercised in host testing, not the headless harness).
+        new("build-multiconfig", Category.Build, "multiconfig",
+            "This project has two build configurations: cave.thconfig and alt.thconfig. Load the "
+            + "alt.thconfig configuration and start a build, then tell me what happened.",
+            new HandledGracefully()),
 
         // ---- multi-step audit (long session) -------------------------------------------------------
         new("audit-full", Category.Audit, "disconnected",
