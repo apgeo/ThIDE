@@ -13,6 +13,33 @@ public class AggregatorToolsTests
 
         Assert.Equal(ToolErrorCodes.WorkspaceNotLoaded, (await tools.ListTodos()).Error!.Code);
         Assert.Equal(ToolErrorCodes.WorkspaceNotLoaded, (await tools.ListLeads()).Error!.Code);
+        Assert.Equal(ToolErrorCodes.WorkspaceNotLoaded, (await tools.GetDataQualityReport()).Error!.Code);
+    }
+
+    [Fact]
+    public async Task Data_quality_counts_shots_and_flags_undated_teamless_surveys()
+    {
+        using var fixture = FixtureWorkspace.CreateWithTeamAndDates();
+        var tools = await LoadedToolsAsync(fixture);
+
+        var report = (await tools.GetDataQualityReport()).Data!;
+
+        Assert.Equal(4, report.TotalShots);          // two per sub-survey
+        Assert.Equal(1, report.UndatedSurveys);      // only the parent 'cave' has no date
+        Assert.Equal(1, report.TeamlessSurveys);     // and no team
+    }
+
+    [Fact]
+    public async Task Data_quality_scopes_to_a_survey_subtree()
+    {
+        using var fixture = FixtureWorkspace.CreateWithTeamAndDates();
+        var tools = await LoadedToolsAsync(fixture);
+
+        var report = (await tools.GetDataQualityReport(surveyPrefix: "cave.north")).Data!;
+
+        Assert.Equal(2, report.TotalShots);          // only cave.north's legs
+        Assert.Equal(0, report.UndatedSurveys);      // cave.north is dated + teamed
+        Assert.Equal(0, report.TeamlessSurveys);
     }
 
     [Fact]

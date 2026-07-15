@@ -28,6 +28,22 @@ public sealed record LeadList(IReadOnlyList<LeadDto> Leads, int Total, int Offse
 [McpServerToolType]
 public sealed class AggregatorTools(IWorkspaceHost host, Therion.Workspace.ILeadStatusStore leadStatus)
 {
+    [McpServerTool(Name = "data_quality_report", Title = "Data quality report", ReadOnly = true, Idempotent = true)]
+    [Description("Counts of common data-quality issues across the project: zero-length and missing-length "
+               + "legs, legs missing a compass or clino reading, very steep legs (|clino| 80–90°), splays "
+               + "and duplicates, legs without a backsight or LRUD, and surveys with no date or no team. "
+               + "Optionally scoped to a survey subtree. These are the same checks the IDE's data-quality "
+               + "dashboard shows — a fast triage of where the survey data needs attention.")]
+    public async Task<ToolResult<DataQualityReport>> GetDataQualityReport(
+        [Description("Only this survey and those under it, e.g. 'cave.upper'. Omit for the whole project.")]
+        string? surveyPrefix = null,
+        CancellationToken ct = default)
+    {
+        var (snapshot, error) = await host.TryGetSnapshotAsync(ct);
+        if (error is not null) return ToolResult<DataQualityReport>.Failure(error);
+        return ToolResult<DataQualityReport>.Success(DataAnalytics.DataQuality(snapshot!.Model, surveyPrefix));
+    }
+
     [McpServerTool(Name = "list_todos", Title = "List TODOs", ReadOnly = true, Idempotent = true)]
     [Description("TODO, FIXME, HACK, NOTE and QM (question mark) markers left in the project's "
                + "comments, with where each one is. QM is the caving convention for a question left "
