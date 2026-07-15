@@ -27,6 +27,8 @@ public class CatalogE2eTests
         ("survey_stats", null),
         ("deps_graph", new() { ["dot"] = true }),
         ("list_stations", null),
+        ("query_legs", null),
+        ("find_equate_candidates", null),
         ("list_todos", null),
         ("list_leads", null),
         ("project_metadata_get", null),

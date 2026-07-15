@@ -156,6 +156,71 @@ internal sealed class FixtureWorkspace : IDisposable
         return fixture;
     }
 
+    /// <summary>
+    /// A single deep cave with real vertical relief: an entrance at the top, two 50 m plumbs down, then
+    /// a 30 m horizontal leg. Depths are 0 / 50 / 100 / 100 — enough to exercise the depth filter and
+    /// the vertical-range statistics.
+    /// </summary>
+    public static FixtureWorkspace CreateVertical()
+    {
+        var fixture = Create();
+
+        File.WriteAllText(fixture.Thconfig, """
+            source caves/deep.th
+            """);
+
+        File.WriteAllText(fixture.PathTo("caves", "deep.th"), """
+            survey deep
+              centreline
+                data normal from to length compass clino
+                1 2 50 0 -90
+                2 3 50 0 -90
+                3 4 30 90 0
+                station 1 "the shaft top" entrance
+              endcentreline
+            endsurvey
+            """);
+
+        return fixture;
+    }
+
+    /// <summary>
+    /// Two disconnected surveys, each independently georeferenced in the same CS (UTM33), whose ends land
+    /// on the same absolute spot: a.1 and b.1 both resolve to (400050, 5000000, 1000). The two fixes are
+    /// 100 m apart, so only the coincident ends are close. A textbook missing equate.
+    /// </summary>
+    public static FixtureWorkspace CreateTwinGeoreferenced()
+    {
+        var fixture = Create();
+
+        File.WriteAllText(fixture.Thconfig, """
+            source caves/twin.th
+            """);
+
+        File.WriteAllText(fixture.PathTo("caves", "twin.th"), """
+            survey twin
+              survey a
+                centreline
+                  cs UTM33
+                  fix a0 400000 5000000 1000
+                  data normal from to length compass clino
+                  a0 a1 50 90 0
+                endcentreline
+              endsurvey
+              survey b
+                centreline
+                  cs UTM33
+                  fix b0 400100 5000000 1000
+                  data normal from to length compass clino
+                  b0 b1 50 270 0
+                endcentreline
+              endsurvey
+            endsurvey
+            """);
+
+        return fixture;
+    }
+
     /// <summary>Absolute path inside the fixture, from workspace-relative segments.</summary>
     public string PathTo(params string[] segments) => Path.Combine([Root, .. segments]);
 

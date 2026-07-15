@@ -239,6 +239,186 @@ public class GraphToolsTests
         Assert.Empty(result.Data!.Stations);
     }
 
+    [Fact]
+    public async Task List_stations_reports_estimated_depth_from_the_entrance()
+    {
+        using var fixture = FixtureWorkspace.CreateVertical();
+        var tools = await LoadedToolsAsync(fixture);
+
+        var result = await tools.ListStations();
+
+        Assert.Equal("approximate", result.Data!.PositionSource);
+        Assert.NotNull(result.Data.PositionCaveat);
+        double DepthOf(string name) =>
+            result.Data.Stations.Single(s => s.Name == name).Position!.Depth;
+        Assert.Equal(0.0, DepthOf("deep.1"), 3);
+        Assert.Equal(50.0, DepthOf("deep.2"), 3);
+        Assert.Equal(100.0, DepthOf("deep.3"), 3);
+        Assert.Equal(100.0, DepthOf("deep.4"), 3);
+        Assert.True(result.Data.Stations.Single(s => s.Name == "deep.3").Position!.VerticalReliable);
+    }
+
+    [Fact]
+    public async Task List_stations_filters_by_depth()
+    {
+        using var fixture = FixtureWorkspace.CreateVertical();
+        var tools = await LoadedToolsAsync(fixture);
+
+        var deep = await tools.ListStations(minDepth: 75);
+        var middle = await tools.ListStations(minDepth: 40, maxDepth: 60);
+
+        Assert.Equal(new[] { "deep.3", "deep.4" }, deep.Data!.Stations.Select(s => s.Name).ToArray());
+        Assert.Equal("deep.2", Assert.Single(middle.Data!.Stations).Name);
+    }
+
+    [Fact]
+    public async Task List_stations_reports_absolute_altitude_from_a_georeferenced_fix()
+    {
+        using var fixture = FixtureWorkspace.CreateDisconnected();
+        var tools = await LoadedToolsAsync(fixture);
+
+        var result = await tools.ListStations(surveyPrefix: "upper");
+
+        var fixedStation = result.Data!.Stations.Single(s => s.Name == "upper.1");
+        Assert.Equal(800.0, fixedStation.Position!.AbsoluteAltitude!.Value, 3);
+        // Horizontal fix coordinates are not folded into the local frame (metres, anchor-local).
+        Assert.Equal(0.0, fixedStation.Position.East, 3);
+    }
+
+    [Fact]
+    public async Task Query_legs_lists_every_leg_and_marks_bearings_magnetic()
+    {
+        using var fixture = FixtureWorkspace.CreateVertical();
+        var tools = await LoadedToolsAsync(fixture);
+
+        var result = await tools.QueryLegs();
+
+        Assert.Equal(3, result.Data!.Total);
+        Assert.True(result.Data.BearingsAreMagnetic);
+        Assert.Null(result.Data.PositionCaveat);   // no depth filter → no caveat
+    }
+
+    [Fact]
+    public async Task Query_legs_filters_by_compass_direction()
+    {
+        using var fixture = FixtureWorkspace.CreateVertical();
+        var tools = await LoadedToolsAsync(fixture);
+
+        var north = await tools.QueryLegs(direction: "N");
+        var east = await tools.QueryLegs(direction: "E");
+
+        Assert.Equal(2, north.Data!.Legs.Count);   // the two plumbs, bearing 0
+        Assert.All(north.Data.Legs, l => Assert.Equal(0.0, l.Bearing!.Value, 3));
+        Assert.Equal("deep.3", Assert.Single(east.Data!.Legs).From);
+    }
+
+    [Fact]
+    public async Task Query_legs_bearing_range_wraps_through_north()
+    {
+        using var fixture = FixtureWorkspace.CreateVertical();
+        var tools = await LoadedToolsAsync(fixture);
+
+        var result = await tools.QueryLegs(minBearing: 350, maxBearing: 10);
+
+        Assert.Equal(2, result.Data!.Legs.Count);   // bearing 0 falls in the wrapped band
+    }
+
+    [Fact]
+    public async Task Query_legs_filters_by_depth_band_and_carries_the_caveat()
+    {
+        using var fixture = FixtureWorkspace.CreateVertical();
+        var tools = await LoadedToolsAsync(fixture);
+
+        var result = await tools.QueryLegs(minDepth: 60);
+
+        var leg = Assert.Single(result.Data!.Legs);   // only deep.3→deep.4 lies entirely below 60 m
+        Assert.Equal("deep.3", leg.From);
+        Assert.Equal("deep.4", leg.To);
+        Assert.NotNull(result.Data.PositionCaveat);
+    }
+
+    [Fact]
+    public async Task Query_legs_filters_by_inclination()
+    {
+        using var fixture = FixtureWorkspace.CreateVertical();
+        var tools = await LoadedToolsAsync(fixture);
+
+        var descending = await tools.QueryLegs(maxClino: -45);
+
+        Assert.Equal(2, descending.Data!.Legs.Count);
+        Assert.All(descending.Data.Legs, l => Assert.True(l.Clino!.Value <= -45));
+    }
+
+    [Fact]
+    public async Task Query_legs_rejects_an_unknown_direction()
+    {
+        using var fixture = FixtureWorkspace.CreateVertical();
+        var tools = await LoadedToolsAsync(fixture);
+
+        var result = await tools.QueryLegs(direction: "sideways");
+
+        Assert.False(result.Ok);
+        Assert.Equal(ToolErrorCodes.InvalidArgument, result.Error!.Code);
+    }
+
+    [Fact]
+    public async Task Find_equate_candidates_flags_coincident_stations_in_different_pieces()
+    {
+        using var fixture = FixtureWorkspace.CreateTwinGeoreferenced();
+        var tools = await LoadedToolsAsync(fixture);
+
+        var result = await tools.FindEquateCandidates();
+
+        Assert.Equal(2, result.Data!.ComparablePieces);
+        var candidate = Assert.Single(result.Data.Candidates);
+        Assert.Equal("twin.a.a1", candidate.StationA);
+        Assert.Equal("twin.b.b1", candidate.StationB);
+        Assert.True(candidate.Distance < 0.5);           // they land on the same absolute point
+        Assert.NotEqual(candidate.ComponentA, candidate.ComponentB);
+        Assert.Equal("UTM33", candidate.CoordinateSystem);
+    }
+
+    [Fact]
+    public async Task Find_equate_candidates_respects_the_threshold()
+    {
+        using var fixture = FixtureWorkspace.CreateTwinGeoreferenced();
+        var tools = await LoadedToolsAsync(fixture);
+
+        // a1/b1 coincide (0 m); the next-closest cross pairs (a0↔b1, a1↔b0) are 50 m; a0↔b0 is 100 m.
+        var tiny = await tools.FindEquateCandidates(threshold: 0.5);
+        var wide = await tools.FindEquateCandidates(threshold: 60);
+
+        Assert.Single(tiny.Data!.Candidates);            // just the coincident pair
+        Assert.True(wide.Data!.Candidates.Count >= 2);   // the 50 m cross pairs come in too
+    }
+
+    [Fact]
+    public async Task Find_equate_candidates_needs_two_georeferenced_pieces()
+    {
+        // 'disconnected' has one georeferenced piece (upper, UTM33) and one ungrounded (island).
+        using var fixture = FixtureWorkspace.CreateDisconnected();
+        var tools = await LoadedToolsAsync(fixture);
+
+        var result = await tools.FindEquateCandidates();
+
+        Assert.True(result.Ok);
+        Assert.Empty(result.Data!.Candidates);
+        Assert.Equal(1, result.Data.ComparablePieces);
+        Assert.NotNull(result.Data.Note);
+    }
+
+    [Fact]
+    public async Task Find_equate_candidates_rejects_a_nonpositive_threshold()
+    {
+        using var fixture = FixtureWorkspace.CreateTwinGeoreferenced();
+        var tools = await LoadedToolsAsync(fixture);
+
+        var result = await tools.FindEquateCandidates(threshold: 0);
+
+        Assert.False(result.Ok);
+        Assert.Equal(ToolErrorCodes.InvalidArgument, result.Error!.Code);
+    }
+
     private static async Task<GraphTools> LoadedToolsAsync(FixtureWorkspace fixture)
     {
         var host = new WorkspaceHost();
