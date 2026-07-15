@@ -1,4 +1,5 @@
 using ModelContextProtocol.Client;
+using ModelContextProtocol.Protocol;
 using Therion.Assistant;
 
 namespace Therion.Mcp.Evals;
@@ -24,16 +25,46 @@ public sealed class OpenAiClient(HttpClient http, string endpoint, string model)
         + "directly and concisely.";
 
     public async Task<Conversation> RunAsync(
-        McpClient mcp, IReadOnlyList<McpClientTool> tools, string prompt, int maxTurns, CancellationToken ct)
+        McpClient mcp, IReadOnlyList<McpClientTool> tools, string prompt, int maxTurns, string contextMode, CancellationToken ct)
     {
         var engine = new ChatEngine(http, new ChatEngineOptions(endpoint, model) { MaxTurns = maxTurns });
-        var result = await engine.RunAsync(
-            new ChatSession(System), prompt, new McpToolCatalog(mcp, tools), callbacks: null, ct);
+        var session = new ChatSession(System);
+        await InjectContextAsync(session, mcp, contextMode, ct);
+
+        var result = await engine.RunAsync(session, prompt, new McpToolCatalog(mcp, tools), callbacks: null, ct);
 
         return new Conversation(
             result.FinalText,
             result.Calls.Select(c => new ToolCallRecord(c.Tool, c.SchemaValid, c.Ok)).ToList(),
             result.Turns,
             result.Tokens);
+    }
+
+    /// <summary>
+    /// Mirrors the Assistant pane (CD-02): for card/pack, read the matching <c>therion://context</c>
+    /// resource from the same server and add it as a second system message, so the A/B/C runs measure the
+    /// exact context the pane would inject. A failed read or the no-workspace error envelope is ignored.
+    /// </summary>
+    private static async Task InjectContextAsync(ChatSession session, McpClient mcp, string contextMode, CancellationToken ct)
+    {
+        var uri = contextMode switch
+        {
+            "card" => "therion://context/card",
+            "pack" => "therion://context/pack",
+            _ => null,
+        };
+        if (uri is null) return;
+
+        try
+        {
+            var result = await mcp.ReadResourceAsync(uri, cancellationToken: ct);
+            var text = string.Concat(result.Contents.OfType<TextResourceContents>().Select(c => c.Text));
+            if (!string.IsNullOrWhiteSpace(text) && !text.TrimStart().StartsWith('{'))
+                session.AppendSystem(text);
+        }
+        catch
+        {
+            // Context is a nice-to-have; a case never fails because the digest couldn't be read.
+        }
     }
 }

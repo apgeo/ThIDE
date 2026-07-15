@@ -7,7 +7,7 @@ namespace Therion.Mcp.Evals;
 /// <param name="WorkspacesDir">Directory holding the committed fixture workspaces.</param>
 public sealed record RunConfig(
     string Endpoint, string Model, string? ApiKey, string ServerDll, string WorkspacesDir,
-    int MaxTurns, string? Filter, string Profile);
+    int MaxTurns, string? Filter, string Profile, string ContextMode);
 
 /// <summary>
 /// Runs the suite: for each case it takes a fresh working copy of the fixture (so a mutation never dirties
@@ -39,7 +39,7 @@ public sealed class EvalRunner(RunConfig config, OpenAiClient model)
             await using var client = await ConnectAsync(workingCopy, ct);
             var tools = (await client.ListToolsAsync(cancellationToken: ct)).ToList();
 
-            var conversation = await model.RunAsync(client, tools, evalCase.Prompt, config.MaxTurns, ct);
+            var conversation = await model.RunAsync(client, tools, evalCase.Prompt, config.MaxTurns, config.ContextMode, ct);
             var input = new GradeInput(client, conversation.FinalText, conversation.Calls, workingCopy);
             var (passed, detail) = await Grader.GradeAsync(evalCase.Check, input, ct);
 

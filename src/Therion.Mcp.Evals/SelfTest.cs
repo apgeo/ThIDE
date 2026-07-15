@@ -55,6 +55,12 @@ public static class SelfTest
         var emptyCard = Scorecard.Compute([]);
         Check("empty run renders n/a", emptyCard.CallValidity is null && emptyCard.RepairAt3 is null);
 
+        // ---- schema-token estimator (CAP-02.3): deterministic ~4 chars/token ----
+        Check("token estimate: empty is 0", TokenEstimator.Estimate("") == 0 && TokenEstimator.Estimate(null) == 0);
+        Check("token estimate: ~4 chars/token, rounded up", TokenEstimator.Estimate("12345678") == 2 && TokenEstimator.Estimate("123") == 1);
+        Check("token estimate: tool = name + description + schema",
+            TokenEstimator.EstimateTool("abcd", "abcd", "abcd") == 3);
+
         return (ok, lines);
     }
 

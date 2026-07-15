@@ -34,13 +34,26 @@ therion-mcp-evals --model qwen3-coder-30b-a3b --endpoint http://localhost:1234/v
 Prints a per-case pass/fail line, the scorecard, and the MODEL-EVALS row; `--out` also writes
 `results/r-001.md` (the row) and `.json` (per-case detail). `--filter <substr>` runs a subset.
 
+### Context modes (A/B/C)
+
+`--context-mode none|card|pack` injects the workspace context digest (the `therion://context/*` resource,
+exactly what the Assistant pane sends) as a second system message. Run the suite once per mode on the same
+model and compare `task_success`, median turns, and median tokens; the mode is recorded in the row's notes.
+
+```sh
+for m in none card pack; do
+  therion-mcp-evals --model qwen3-coder-30b-a3b --context-mode $m --run-id R-00X-$m --out results/ctx-$m
+done
+```
+
 ## Verify without a model
 
 Both run in CI / on any machine, no GPU, no endpoint:
 
 ```sh
-therion-mcp-evals --self-test   # suite integrity (unique ids, every category, fixtures present) + scorecard math
-therion-mcp-evals --probe       # spawn the server on each fixture and print the ground truth the graders compute
+therion-mcp-evals --self-test     # suite integrity (unique ids, every category, fixtures present) + scorecard math
+therion-mcp-evals --probe         # spawn the server on each fixture and print the ground truth the graders compute
+therion-mcp-evals --schema-cost   # approximate tool-schema token cost per tool + total (add --profile data|full)
 ```
 
 `--probe` is how you confirm a new fixture actually parses and produces the diagnostics/graph its cases

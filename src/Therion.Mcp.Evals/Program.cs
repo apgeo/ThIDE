@@ -40,6 +40,13 @@ if (args.Contains("--probe"))
     return probeOk ? 0 : 1;
 }
 
+if (args.Contains("--schema-cost"))
+{
+    Console.WriteLine("Measuring tool-schema token cost (no model)…");
+    var costOk = await SchemaCost.RunAsync(serverDll, Opt("--profile") ?? "full", CancellationToken.None);
+    return costOk ? 0 : 1;
+}
+
 var modelName = Opt("--model");
 if (modelName is null)
 {
@@ -55,16 +62,27 @@ using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
 if (apiKey is not null) http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
 
 var profile = Opt("--profile") ?? "full";
-var config = new RunConfig(endpoint, modelName, apiKey, serverDll, workspacesDir, maxTurns, Opt("--filter"), profile);
+var contextMode = (Opt("--context-mode") ?? "none").ToLowerInvariant();
+if (contextMode is not ("none" or "card" or "pack"))
+{
+    Console.Error.WriteLine($"error: --context-mode must be none, card, or pack (got '{contextMode}').");
+    return 2;
+}
+
+var config = new RunConfig(endpoint, modelName, apiKey, serverDll, workspacesDir, maxTurns, Opt("--filter"), profile, contextMode);
 var runner = new EvalRunner(config, new OpenAiClient(http, endpoint, modelName));
 
-Console.WriteLine($"Evaluating {modelName} @ {endpoint} — spawning therion-mcp per case (full profile)…\n");
+Console.WriteLine($"Evaluating {modelName} @ {endpoint} — profile {profile}, context {contextMode}, spawning therion-mcp per case…\n");
 var runs = await runner.RunAsync(
     run => Console.WriteLine($"  [{(run.Passed ? "pass" : "FAIL")}] {run.Case.Id,-22} {run.Case.Category,-12} {run.Detail}"),
     CancellationToken.None);
 
 var scorecard = Scorecard.Compute(runs);
-var row = scorecard.ToMarkdownRow(Opt("--run-id") ?? "R-???", modelName, Opt("--notes") ?? "");
+// Record the context mode in the row so an A/B/C comparison is legible in MODEL-EVALS.
+var userNotes = Opt("--notes") ?? "";
+var notes = contextMode == "none" ? userNotes
+    : string.IsNullOrEmpty(userNotes) ? $"context={contextMode}" : $"context={contextMode}; {userNotes}";
+var row = scorecard.ToMarkdownRow(Opt("--run-id") ?? "R-???", modelName, notes);
 
 Console.WriteLine($"\nScorecard ({runs.Count(r => r.Passed)}/{runs.Count} passed):");
 Console.WriteLine(scorecard.ToConsole());
@@ -115,7 +133,8 @@ static void PrintHelp()
     Console.WriteLine("  --api-key <key>      Bearer token, if the endpoint needs one.");
     Console.WriteLine("  --server <path>      therion-mcp.dll to spawn (default: the built one).");
     Console.WriteLine("  --workspaces <dir>   Fixture workspaces dir (default: ./workspaces beside the exe).");
-    Console.WriteLine("  --profile <p>        Server profile the model sees: data (21 read-only) or full (default, 33).");
+    Console.WriteLine("  --profile <p>        Server profile the model sees: data (read-only) or full (default).");
+    Console.WriteLine("  --context-mode <m>   Workspace context injected as a 2nd system message: none (default), card, pack.");
     Console.WriteLine("  --max-turns <n>      Tool-loop turn budget per case (default 12).");
     Console.WriteLine("  --filter <substr>    Run only cases whose id contains this.");
     Console.WriteLine("  --run-id <id>        Label for the MODEL-EVALS row (e.g. R-001).");
@@ -123,4 +142,5 @@ static void PrintHelp()
     Console.WriteLine("  --out <path>         Write <path>.md (the row) and <path>.json (per-case detail).");
     Console.WriteLine("  --self-test          Validate the suite + scoring without a model, then exit.");
     Console.WriteLine("  --probe              Spawn the server on each fixture and print the ground truth, then exit.");
+    Console.WriteLine("  --schema-cost        Print approximate tool-schema token cost for the profile (no model), then exit.");
 }
