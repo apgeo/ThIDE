@@ -36,6 +36,40 @@ public sealed class ChatSessionTests
     }
 
     [Fact]
+    public async Task AppendSystem_AddsASecondSystemMessageCarriedIntoTheRequest()
+    {
+        var handler = new ScriptedHandler(FinalAnswer("Answer."));
+        var engine = Engine(handler);
+        var session = new ChatSession("persona");
+        session.AppendSystem("# workspace context card");
+
+        await engine.RunAsync(session, "q", Catalog());
+
+        var messages = handler.Requests[0]["messages"]!.AsArray();
+        Assert.Equal("system", (string?)messages[0]!["role"]);
+        Assert.Equal("persona", (string?)messages[0]!["content"]);
+        Assert.Equal("system", (string?)messages[1]!["role"]);
+        Assert.Equal("# workspace context card", (string?)messages[1]!["content"]);
+        Assert.Equal("user", (string?)messages[2]!["role"]);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task AppendSystem_IgnoresBlankText(string text)
+    {
+        var handler = new ScriptedHandler(FinalAnswer("Answer."));
+        var engine = Engine(handler);
+        var session = new ChatSession("persona");
+        session.AppendSystem(text);
+
+        await engine.RunAsync(session, "q", Catalog());
+
+        var roles = handler.Requests[0]["messages"]!.AsArray().Select(m => (string?)m!["role"]).ToArray();
+        Assert.Equal(["system", "user"], roles);
+    }
+
+    [Fact]
     public void Dialogue_KeepsUserAndAssistantText_DropsSystemAndToolPlumbing()
     {
         // A hand-built session: system, user, an assistant tool-call turn, its tool result, then the
