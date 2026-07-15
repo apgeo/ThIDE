@@ -47,8 +47,24 @@ public partial class FileDocumentView : UserControl
             editor.FindAllReferencesRequested += OnFindAllReferencesRequested;
             editor.StepOutRequested += OnStepOutRequested;
             editor.FoldStateChanged += OnFoldStateChanged;   // #2
+            editor.SelectionChanged += OnEditorSelectionChanged;   // CAP-03: track selection for snippet Replace
         }
     }
+
+    // Keep the VM's HasSelection current so the assistant's Replace-selection snippet action knows
+    // whether there is anything to replace (CAP-03).
+    private void OnEditorSelectionChanged(object? sender, EventArgs e)
+    {
+        if (_vm is not null && sender is TherionTextEditor ed) _vm.SetHasSelection(ed.HasSelection);
+    }
+
+    // The assistant asked to drop a code snippet into this document (CAP-03). Route through the editor
+    // so the edit goes onto the native undo stack and triggers the normal dirty/re-parse pipeline.
+    private void OnInsertAtCaretRequested(object? sender, string text) =>
+        this.FindControl<TherionTextEditor>("Editor")?.InsertSnippetAtCaret(text);
+
+    private void OnReplaceSelectionRequested(object? sender, string text) =>
+        this.FindControl<TherionTextEditor>("Editor")?.ReplaceSelectionWithSnippet(text);
 
     // ---- #2: fold / unfold all toggle button ----------------------------------
 
@@ -253,6 +269,8 @@ public partial class FileDocumentView : UserControl
             _vm.OpenLimitSettingsRequested -= OnOpenLimitSettings;
             _vm.SaveCleanupRequested -= OnSaveCleanupRequested;
             _vm.CompareExternalRequested -= OnCompareExternalRequested;
+            _vm.InsertAtCaretRequested -= OnInsertAtCaretRequested;
+            _vm.ReplaceSelectionRequested -= OnReplaceSelectionRequested;
         }
         DisposeMapiahWatcher(); // the watcher is tied to the previous document's file
         _vm = DataContext as FileDocumentViewModel;
@@ -262,6 +280,10 @@ public partial class FileDocumentView : UserControl
             _vm.OpenLimitSettingsRequested += OnOpenLimitSettings;
             _vm.SaveCleanupRequested += OnSaveCleanupRequested;
             _vm.CompareExternalRequested += OnCompareExternalRequested;
+            _vm.InsertAtCaretRequested += OnInsertAtCaretRequested;
+            _vm.ReplaceSelectionRequested += OnReplaceSelectionRequested;
+            // Seed the VM's selection state for the new document (the editor may already have one).
+            if (this.FindControl<TherionTextEditor>("Editor") is { } ed) _vm.SetHasSelection(ed.HasSelection);
             ApplyPendingScrollDeferred();
             if (_vm.Measurements is { } mvm)
                 mvm.PropertyChanged += OnMeasurementsPropertyChanged;

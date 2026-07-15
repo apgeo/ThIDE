@@ -146,7 +146,7 @@ public interface IDocumentService
     event EventHandler<string>? ShowInModel3DRequested;
 }
 
-public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, IAsyncDisposable
+public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, ISnippetEditor, IAsyncDisposable
 {
     private readonly IProjectEntryPointResolver _resolver;
     private readonly IWorkspaceSession _session;
@@ -413,6 +413,25 @@ public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, 
     /// in-app MCP host so an agent sees the editor's unsaved state, not the last save (T-03.2). Enumerates
     /// the UI-bound document list, so it must be called on the UI thread.
     /// </summary>
+    // ---- ISnippetEditor (assistant code-block actions, CAP-03) --------------
+    // The active document raises an event its editor view handles, so the insert/replace runs through
+    // the normal document pipeline: native undo, dirty tracking, and the existing re-parse/re-lint.
+
+    public SnippetOutcome InsertAtActiveCaret(string text)
+    {
+        if (Active is not { } doc) return SnippetOutcome.NoEditor;
+        doc.RequestInsertAtCaret(text);
+        return SnippetOutcome.Applied;
+    }
+
+    public SnippetOutcome ReplaceActiveSelection(string text)
+    {
+        if (Active is not { } doc) return SnippetOutcome.NoEditor;
+        if (!doc.HasSelection) return SnippetOutcome.NoSelection;
+        doc.RequestReplaceSelection(text);
+        return SnippetOutcome.Applied;
+    }
+
     public System.Collections.Generic.IReadOnlyList<(string Path, string Text)> DirtyBuffers() =>
         Documents
             .Where(d => d.IsDirty && !string.IsNullOrEmpty(d.FilePath) && _session.Covers(d.FilePath))

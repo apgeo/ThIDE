@@ -149,6 +149,8 @@ internal static class AppServices
         services.AddSingleton<IDocumentService, DocumentService>();
         // Same instance, narrow view: the in-app MCP host reads unsaved buffers through this (T-03.2).
         services.AddSingleton<IUnsavedBufferProvider>(sp => (IUnsavedBufferProvider)sp.GetRequiredService<IDocumentService>());
+        // Same instance, narrow view: the assistant pane drops code snippets into the active editor (CAP-03).
+        services.AddSingleton<ISnippetEditor>(sp => (ISnippetEditor)sp.GetRequiredService<IDocumentService>());
 
         // Quick-open (Ctrl+P go-to-file) data source (#3).
         services.AddSingleton<QuickOpenProvider>();
