@@ -254,6 +254,27 @@ public class AssistantViewModelTests
     }
 
     [Fact]
+    public async Task Streaming_GrowsOneBubbleInPlace_ThenFinalizes()
+    {
+        var assistant = new FakeAssistant((_, callbacks, _) =>
+        {
+            callbacks.OnUpdate!(new AssistantDelta("Hel", "Hel"));
+            callbacks.OnUpdate!(new AssistantDelta("lo.", "Hello."));
+            callbacks.OnUpdate!(new AssistantAnswered("Hello."));
+            return Task.FromResult(new ChatResult("Hello.", [], 0, 0));
+        });
+        var vm = NewVm(assistant);
+        vm.Input = "hi";
+
+        await vm.SendCommand.ExecuteAsync(null);
+
+        // Exactly one assistant bubble, carrying the assembled text — deltas grew it in place.
+        var bubble = Assert.Single(vm.Items.OfType<AssistantChatItem>());
+        Assert.Equal("Hello.", bubble.Text);
+        Assert.Empty(vm.Activity);   // cleared when the turn ends
+    }
+
+    [Fact]
     public async Task EmptyAnswer_RendersAPlaceholderNote_NotABlankBubble()
     {
         var assistant = new FakeAssistant((_, callbacks, _) =>

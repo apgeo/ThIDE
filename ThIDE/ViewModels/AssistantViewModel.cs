@@ -27,9 +27,12 @@ public sealed class UserChatItem(string text) : ChatItemViewModel
     public string Text { get; } = text;
 }
 
-public sealed class AssistantChatItem(string text) : ChatItemViewModel
+public sealed partial class AssistantChatItem : ChatItemViewModel
 {
-    public string Text { get; } = text;
+    public AssistantChatItem(string text) => _text = text;
+
+    /// <summary>Mutable so a streamed answer can grow in place as deltas arrive (AI-08.2).</summary>
+    [ObservableProperty] private string _text;
 }
 
 /// <summary>A grey status/error line in the transcript (stop notices, endpoint failures).</summary>
@@ -160,6 +163,13 @@ public sealed partial class AssistantViewModel : ObservableObject
 
     [ObservableProperty] private string _status = string.Empty;
 
+    /// <summary>Live one-line progress while a turn runs ("Thinking…", "Running list_stations…",
+    /// "Writing the answer…"); empty when idle (AI-08.2).</summary>
+    [ObservableProperty] private string _activity = string.Empty;
+
+    // The assistant bubble currently being streamed into, or null between turns (AI-08.2).
+    private AssistantChatItem? _streaming;
+
     public AssistantViewModel(
         IAssistantService assistant,
         IAppSettingsService settings,
@@ -185,6 +195,8 @@ public sealed partial class AssistantViewModel : ObservableObject
         var text = Input.Trim();
         Input = string.Empty;
         IsBusy = true;
+        Activity = Tr.Get("Assistant_Thinking");
+        _streaming = null;
         Items.Add(new UserChatItem(text));
         _cts = new CancellationTokenSource();
         try
@@ -221,6 +233,8 @@ public sealed partial class AssistantViewModel : ObservableObject
             _cts.Dispose();
             _cts = null;
             _cards.Clear();
+            _streaming = null;
+            Activity = string.Empty;
             IsBusy = false;
         }
     }
@@ -296,6 +310,7 @@ public sealed partial class AssistantViewModel : ObservableObject
         switch (update)
         {
             case ToolCallStarted started:
+                Activity = string.Format(Tr.Get("Assistant_RunningTool"), started.Call.Tool);
                 var card = new ToolCallChatItem(started.Call.Tool, started.Call.ArgumentsJson);
                 _cards[started.Call] = card;
                 Items.Add(card);
@@ -322,12 +337,44 @@ public sealed partial class AssistantViewModel : ObservableObject
                     existing.SetSymbols(BuildSymbolItems(symbols));
                 break;
 
-            case AssistantAnswered answered:
-                // A mute model (empty content, no synthesis) must not leave a blank bubble (AI-08.1).
-                if (string.IsNullOrWhiteSpace(answered.Text))
-                    Items.Add(new NoteChatItem(Tr.Get("Assistant_NoText")));
+            case AssistantDelta delta:
+                // Grow the streamed bubble in place, creating it on the first chunk (AI-08.2).
+                Activity = Tr.Get("Assistant_Writing");
+                if (_streaming is null)
+                {
+                    _streaming = new AssistantChatItem(delta.Text);
+                    Items.Add(_streaming);
+                }
                 else
+                {
+                    _streaming.Text = delta.Text;
+                }
+                break;
+
+            case AssistantAnswered answered:
+                // Finalize the streamed bubble if we have one; otherwise add the answer whole. A mute
+                // model (empty content, no synthesis) must never leave a blank bubble (AI-08.1).
+                if (_streaming is { } streaming)
+                {
+                    if (string.IsNullOrWhiteSpace(answered.Text))
+                    {
+                        Items.Remove(streaming);
+                        Items.Add(new NoteChatItem(Tr.Get("Assistant_NoText")));
+                    }
+                    else
+                    {
+                        streaming.Text = answered.Text;
+                    }
+                    _streaming = null;
+                }
+                else if (string.IsNullOrWhiteSpace(answered.Text))
+                {
+                    Items.Add(new NoteChatItem(Tr.Get("Assistant_NoText")));
+                }
+                else
+                {
                     Items.Add(new AssistantChatItem(answered.Text));
+                }
                 break;
         }
     });

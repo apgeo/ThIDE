@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
@@ -41,10 +42,9 @@ public sealed class ChatEngine(HttpClient http, ChatEngineOptions options)
 
         for (int i = 0; i <= options.MaxTurns; i++)
         {
-            var response = await CompleteAsync(session.Messages, toolSpec, ct);
-            tokens += (int?)response?["usage"]?["total_tokens"] ?? 0;
+            var (message, turnTokens) = await RequestAsync(session.Messages, toolSpec, ct, "auto", callbacks);
+            tokens += turnTokens;
 
-            var message = response?["choices"]?[0]?["message"];
             if (message is null)
                 return Finish("(no response from the endpoint)", calls, turns, tokens, callbacks);
 
@@ -56,7 +56,7 @@ public sealed class ChatEngine(HttpClient http, ChatEngineOptions options)
                 // so the user gets a written answer instead of a blank bubble (AI-08.1).
                 if (options.SynthesizeFinalAnswer && string.IsNullOrWhiteSpace(text))
                 {
-                    var (synth, synthTokens) = await SynthesizeAsync(session, toolSpec, ct);
+                    var (synth, synthTokens) = await SynthesizeAsync(session, toolSpec, callbacks, ct);
                     tokens += synthTokens;
                     if (!string.IsNullOrWhiteSpace(synth)) text = synth;
                 }
@@ -101,7 +101,7 @@ public sealed class ChatEngine(HttpClient http, ChatEngineOptions options)
         // tools already returned (AI-08.1).
         if (options.SynthesizeFinalAnswer)
         {
-            var (synth, synthTokens) = await SynthesizeAsync(session, toolSpec, ct);
+            var (synth, synthTokens) = await SynthesizeAsync(session, toolSpec, callbacks, ct);
             tokens += synthTokens;
             if (!string.IsNullOrWhiteSpace(synth))
             {
@@ -119,7 +119,7 @@ public sealed class ChatEngine(HttpClient http, ChatEngineOptions options)
     /// and the tokens it cost.
     /// </summary>
     private async Task<(string Text, int Tokens)> SynthesizeAsync(
-        ChatSession session, JsonArray toolSpec, CancellationToken ct)
+        ChatSession session, JsonArray toolSpec, ChatCallbacks? callbacks, CancellationToken ct)
     {
         var messages = session.Messages.DeepClone().AsArray();
         messages.Add(Message("user",
@@ -127,9 +127,8 @@ public sealed class ChatEngine(HttpClient http, ChatEngineOptions options)
             + "Reference the relevant items by name. Do not call any more tools and do not paste raw "
             + "JSON or repeat long lists — the detailed results are already shown to the user."));
 
-        var response = await CompleteAsync(messages, toolSpec, ct, toolChoice: "none");
-        var tokens = (int?)response?["usage"]?["total_tokens"] ?? 0;
-        var text = (string?)response?["choices"]?[0]?["message"]?["content"] ?? "";
+        var (message, tokens) = await RequestAsync(messages, toolSpec, ct, "none", callbacks);
+        var text = (string?)message?["content"] ?? "";
         return (text, tokens);
     }
 
@@ -236,6 +235,123 @@ public sealed class ChatEngine(HttpClient http, ChatEngineOptions options)
             throw new InvalidOperationException($"endpoint returned {(int)response.StatusCode}: {detail}");
         }
         return await response.Content.ReadFromJsonAsync<JsonNode>(ct);
+    }
+
+    /// <summary>
+    /// One completion, normalized to the assistant message node + its token cost, dispatching to the
+    /// streaming or one-shot path per <see cref="ChatEngineOptions.Stream"/>. Streaming surfaces text
+    /// as it arrives via <see cref="AssistantDelta"/> (AI-08.2).
+    /// </summary>
+    private async Task<(JsonNode? Message, int Tokens)> RequestAsync(
+        JsonArray messages, JsonArray tools, CancellationToken ct, string toolChoice, ChatCallbacks? callbacks)
+    {
+        if (options.Stream)
+            return await StreamAsync(messages, tools, ct, toolChoice, callbacks);
+
+        var response = await CompleteAsync(messages, tools, ct, toolChoice);
+        return (response?["choices"]?[0]?["message"], (int?)response?["usage"]?["total_tokens"] ?? 0);
+    }
+
+    /// <summary>
+    /// Streams a completion over SSE, emitting <see cref="AssistantDelta"/> per content chunk and
+    /// assembling the tool_calls (which arrive fragmented, one <c>arguments</c> slice at a time) back
+    /// into the same message shape the one-shot path returns, so the loop is agnostic to the transport.
+    /// </summary>
+    private async Task<(JsonNode? Message, int Tokens)> StreamAsync(
+        JsonArray messages, JsonArray tools, CancellationToken ct, string toolChoice, ChatCallbacks? callbacks)
+    {
+        var body = new JsonObject
+        {
+            ["model"] = options.Model,
+            ["messages"] = messages.DeepClone(),
+            ["temperature"] = options.Temperature,
+            ["stream"] = true,
+            // Ask for a usage total in the terminal chunk where the endpoint supports it (ignored else).
+            ["stream_options"] = new JsonObject { ["include_usage"] = true },
+        };
+        if (tools.Count > 0)
+        {
+            body["tools"] = tools.DeepClone();
+            body["tool_choice"] = toolChoice;
+        }
+
+        using var request = new HttpRequestMessage(
+            HttpMethod.Post, $"{options.Endpoint.TrimEnd('/')}/chat/completions")
+        {
+            Content = JsonContent.Create(body),
+        };
+        if (!string.IsNullOrEmpty(options.ApiKey))
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", options.ApiKey);
+
+        using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
+        if (!response.IsSuccessStatusCode)
+        {
+            var detail = await response.Content.ReadAsStringAsync(ct);
+            if (detail.Length > 300) detail = detail[..300] + "…";
+            throw new InvalidOperationException($"endpoint returned {(int)response.StatusCode}: {detail}");
+        }
+
+        await using var stream = await response.Content.ReadAsStreamAsync(ct);
+        using var reader = new StreamReader(stream);
+
+        var content = new StringBuilder();
+        var toolCalls = new SortedDictionary<int, (string Id, string Name, StringBuilder Args)>();
+        int tokens = 0;
+
+        while (await reader.ReadLineAsync(ct) is { } line)
+        {
+            if (!line.StartsWith("data:", StringComparison.Ordinal)) continue;
+            var data = line["data:".Length..].Trim();
+            if (data.Length == 0) continue;
+            if (data == "[DONE]") break;
+
+            JsonNode? chunk;
+            try { chunk = JsonNode.Parse(data); }
+            catch (JsonException) { continue; }
+
+            tokens = (int?)chunk?["usage"]?["total_tokens"] ?? tokens;
+
+            var delta = chunk?["choices"]?[0]?["delta"];
+            if (delta is null) continue;
+
+            if ((string?)delta["content"] is { Length: > 0 } piece)
+            {
+                content.Append(piece);
+                callbacks?.OnUpdate?.Invoke(new AssistantDelta(piece, content.ToString()));
+            }
+
+            if (delta["tool_calls"] is JsonArray deltaCalls)
+                foreach (var tc in deltaCalls.OfType<JsonObject>())
+                {
+                    int index = (int?)tc["index"] ?? 0;
+                    if (!toolCalls.TryGetValue(index, out var acc))
+                        acc = ("", "", new StringBuilder());
+                    if ((string?)tc["id"] is { Length: > 0 } id) acc.Id = id;
+                    if ((string?)tc["function"]?["name"] is { Length: > 0 } name) acc.Name = name;
+                    if ((string?)tc["function"]?["arguments"] is { } args) acc.Args.Append(args);
+                    toolCalls[index] = acc;
+                }
+        }
+
+        // Rebuild the non-streaming assistant message so the loop handles both paths identically.
+        var message = new JsonObject
+        {
+            ["role"] = "assistant",
+            ["content"] = content.Length == 0 ? null : content.ToString(),
+        };
+        if (toolCalls.Count > 0)
+        {
+            var arr = new JsonArray();
+            foreach (var (_, acc) in toolCalls)
+                arr.Add(new JsonObject
+                {
+                    ["id"] = acc.Id,
+                    ["type"] = "function",
+                    ["function"] = new JsonObject { ["name"] = acc.Name, ["arguments"] = acc.Args.ToString() },
+                });
+            message["tool_calls"] = arr;
+        }
+        return (message, tokens);
     }
 
     private static JsonObject ToOpenAiTool(ToolDescriptor tool) => new()

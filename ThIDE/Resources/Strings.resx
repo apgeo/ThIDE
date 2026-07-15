@@ -1206,6 +1206,9 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Assistant_RawJson" xml:space="preserve"><value>Raw JSON</value></data>
   <data name="Assistant_Objects" xml:space="preserve"><value>{0} objects — click to open</value></data>
   <data name="Assistant_NoText" xml:space="preserve"><value>(The assistant returned no text — see the tool results above.)</value></data>
+  <data name="Assistant_Thinking" xml:space="preserve"><value>Thinking…</value></data>
+  <data name="Assistant_RunningTool" xml:space="preserve"><value>Running {0}…</value></data>
+  <data name="Assistant_Writing" xml:space="preserve"><value>Writing the answer…</value></data>
   <data name="Assistant_ServerOff" xml:space="preserve"><value>The in-app AI tools server is off, so the assistant has no access to the project.</value></data>
   <data name="Assistant_EnableServer" xml:space="preserve"><value>Enable it</value></data>
   <data name="Assistant_ServerEnabled" xml:space="preserve"><value>The AI tools server is now on — send your message again.</value></data>

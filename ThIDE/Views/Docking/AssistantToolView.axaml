@@ -46,6 +46,16 @@
             </StackPanel>
         </Border>
 
+        <!-- progress indicator (AI-08.2): a live activity line while a turn runs, docked just above
+             the input so the newest transcript entry stays visible -->
+        <Border DockPanel.Dock="Bottom" IsVisible="{Binding IsBusy}" Padding="8,4" Background="#22808080">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <ProgressBar IsIndeterminate="True" Width="90" Height="4" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding Activity}" Foreground="Gray" FontSize="11"
+                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+        </Border>
+
         <!-- transcript -->
         <ScrollViewer x:Name="Transcript" VerticalScrollBarVisibility="Auto">
             <ItemsControl ItemsSource="{Binding Items}" Margin="6">

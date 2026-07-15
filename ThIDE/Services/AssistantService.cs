@@ -80,6 +80,7 @@ public sealed class AssistantService(
             {
                 MaxTurns = current.AssistantMaxTurns,
                 SynthesizeFinalAnswer = current.AssistantSynthesizeFinalAnswer,
+                Stream = current.AssistantStreaming,
             });
             _session ??= new ChatSession(SystemPrompt(current));
 

@@ -1206,6 +1206,9 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Assistant_RawJson" xml:space="preserve"><value>JSON brut</value></data>
   <data name="Assistant_Objects" xml:space="preserve"><value>{0} obiecte — clic pentru a deschide</value></data>
   <data name="Assistant_NoText" xml:space="preserve"><value>(Asistentul nu a returnat text — vezi rezultatele instrumentelor de mai sus.)</value></data>
+  <data name="Assistant_Thinking" xml:space="preserve"><value>Se gândește…</value></data>
+  <data name="Assistant_RunningTool" xml:space="preserve"><value>Rulează {0}…</value></data>
+  <data name="Assistant_Writing" xml:space="preserve"><value>Scrie răspunsul…</value></data>
   <data name="Assistant_ServerOff" xml:space="preserve"><value>Serverul de instrumente AI din aplicație este oprit, deci asistentul nu are acces la proiect.</value></data>
   <data name="Assistant_EnableServer" xml:space="preserve"><value>Pornește-l</value></data>
   <data name="Assistant_ServerEnabled" xml:space="preserve"><value>Serverul de instrumente AI este acum pornit — retrimite mesajul.</value></data>

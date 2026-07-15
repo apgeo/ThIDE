@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text;
 using System.Text.Json.Nodes;
 using Therion.Assistant;
 
@@ -231,6 +232,50 @@ public sealed class ChatEngineTests
         Assert.Equal(2, handler.Requests.Count); // no third (synthesis) request
     }
 
+    // ---- streaming (AI-08.2) ----------------------------------------------------------------
+
+    [Fact]
+    public async Task Streaming_EmitsDeltas_AssemblesText_AndCountsUsage()
+    {
+        var handler = new ScriptedHandler(Sse(
+            """{"choices":[{"delta":{"role":"assistant","content":"Hel"}}]}""",
+            """{"choices":[{"delta":{"content":"lo."}}]}""",
+            """{"choices":[{"delta":{},"finish_reason":"stop"}],"usage":{"total_tokens":9}}"""));
+        var updates = new List<ChatUpdate>();
+
+        var result = await Engine(handler, stream: true).RunAsync(
+            new ChatSession("s"), "hi", Catalog(), new ChatCallbacks { OnUpdate = updates.Add });
+
+        Assert.Equal("Hello.", result.FinalText);
+        Assert.Equal(9, result.Tokens);
+        Assert.True((bool?)handler.Requests[0]["stream"]);
+        var deltas = updates.OfType<AssistantDelta>().ToList();
+        Assert.Equal(2, deltas.Count);
+        Assert.Equal("Hel", deltas[0].Delta);
+        Assert.Equal("Hello.", deltas[^1].Text);
+        Assert.Equal("Hello.", Assert.IsType<AssistantAnswered>(updates[^1]).Text);
+    }
+
+    [Fact]
+    public async Task Streaming_AssemblesToolCalls_AcrossChunks_ThenExecutes()
+    {
+        var handler = new ScriptedHandler(
+            Sse(
+                """{"choices":[{"delta":{"tool_calls":[{"index":0,"id":"c1","type":"function","function":{"name":"survey_stats","arguments":""}}]}}]}""",
+                """{"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"limit\":"}}]}}]}""",
+                """{"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":"5}"}}]}}]}"""),
+            Sse("""{"choices":[{"delta":{"content":"Done."}}]}"""));
+        var catalog = Catalog(readOnlyTool("survey_stats", _ => new ToolOutcome("""{"ok":true}""", true)));
+
+        var result = await Engine(handler, stream: true).RunAsync(new ChatSession("s"), "stats", catalog);
+
+        Assert.Equal("Done.", result.FinalText);
+        var call = Assert.Single(result.Calls);
+        Assert.Equal(new ChatToolCall("survey_stats", SchemaValid: true, Ok: true), call);
+        var received = Assert.Single(catalog.Received);
+        Assert.Equal(5, ((System.Text.Json.JsonElement)received["limit"]!).GetInt32());
+    }
+
     // ---- approval gating -------------------------------------------------------------------
 
     [Fact]
@@ -355,12 +400,26 @@ public sealed class ChatEngineTests
 
     // ---- helpers ----------------------------------------------------------------------------
 
-    private static ChatEngine Engine(ScriptedHandler handler, int maxTurns = 8, bool synthesize = false) =>
+    private static ChatEngine Engine(
+        ScriptedHandler handler, int maxTurns = 8, bool synthesize = false, bool stream = false) =>
         new(new HttpClient(handler), new ChatEngineOptions("http://127.0.0.1:9/v1", "test-model")
         {
             MaxTurns = maxTurns,
             SynthesizeFinalAnswer = synthesize,
+            Stream = stream,
         });
+
+    /// <summary>A text/event-stream response body: one <c>data:</c> frame per chunk, then [DONE].</summary>
+    private static HttpResponseMessage Sse(params string[] chunks)
+    {
+        var sb = new StringBuilder();
+        foreach (var c in chunks) sb.Append("data: ").Append(c).Append("\n\n");
+        sb.Append("data: [DONE]\n\n");
+        return new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(sb.ToString(), Encoding.UTF8, "text/event-stream"),
+        };
+    }
 
     private static FakeCatalog Catalog(params FakeTool[] tools) => new(tools);
 
