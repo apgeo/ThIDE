@@ -189,6 +189,17 @@ public sealed class UiBridge : IUiBridge
         return Task.FromResult(new UiActionResult(true, $"Asked the 3D viewer to reveal {station}."));
     });
 
+    // CAP-05: switch the IDE's active build config. The MCP tool already validated the path is a real
+    // entry-point candidate; ActivateThconfigAsync re-targets the whole UI (dropdown, title, build).
+    public Task<UiActionResult> SetActiveThconfigAsync(string absolutePath) => InvokeAsync(async () =>
+    {
+        if (_documents is null) return new UiActionResult(false, "No document service.");
+        var ok = await _documents.ActivateThconfigAsync(absolutePath, new ThconfigActivation(Notify: true)).ConfigureAwait(true);
+        return ok
+            ? new UiActionResult(true, $"Active thconfig is now {Path.GetFileName(absolutePath)}.")
+            : new UiActionResult(false, $"Could not activate {Path.GetFileName(absolutePath)}.");
+    });
+
     public Task<UiActionResult> ShowToastAsync(string message, string kind) => InvokeAsync(() =>
     {
         if (_notifications is null) return Task.FromResult(new UiActionResult(false, "No notification service."));

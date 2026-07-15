@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using ModelContextProtocol.Server;
+using Therion.Workspace;
 
 namespace Therion.Mcp.Tools;
 
@@ -103,5 +104,33 @@ public sealed class ActionTools(IUiBridge bridge, IWorkspaceHost host)
     {
         if (Gate() is { } g) return ToolResult<ActionOk>.Failure(g);
         return Wrap(await bridge.ShowToastAsync(text, kind).ConfigureAwait(false));
+    }
+
+    [McpServerTool(Name = "set_active_thconfig", Title = "Set the active build config", Idempotent = true)]
+    [Description("Switches the IDE's active thconfig — the file 'run the build' compiles and the project "
+               + "the rest of the UI targets. Give a workspace-relative path to one of the project's "
+               + "thconfig files; call workspace_info for entryPointCandidates. Use this instead of "
+               + "run_build(entryPoint) so 'the current project' stays consistent and the output lands "
+               + "where the user expects. Honors 'follow the agent'.")]
+    public async Task<ToolResult<ActionOk>> SetActiveThconfig(
+        [Description("Workspace-relative path to a thconfig, e.g. 'caves/deep.thconfig'.")]
+        string path,
+        CancellationToken ct = default)
+    {
+        if (Gate() is { } g) return ToolResult<ActionOk>.Failure(g);
+        if (host.Root is not { } root)
+            return ToolResult<ActionOk>.Failure(ToolErrorCodes.WorkspaceNotLoaded, "No project is open in the IDE.");
+        if (!WorkspacePaths.TryResolve(root, path, out var full, out var reason))
+            return ToolResult<ActionOk>.Failure(ToolErrorCodes.PathOutsideWorkspace, reason);
+
+        // Only a real entry point may be activated — the same set workspace_info reports.
+        var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        bool isCandidate = ThconfigDiscovery.Scan(root, new ThconfigSniffer())
+            .Any(c => string.Equals(WorkspacePaths.Canonicalize(c), full, comparison));
+        if (!isCandidate)
+            return ToolResult<ActionOk>.Failure(ToolErrorCodes.InvalidArgument,
+                $"'{path}' is not one of this project's build entry points. Call workspace_info for entryPointCandidates.");
+
+        return Wrap(await bridge.SetActiveThconfigAsync(full).ConfigureAwait(false));
     }
 }

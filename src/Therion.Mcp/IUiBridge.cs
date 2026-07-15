@@ -105,6 +105,10 @@ public interface IUiBridge
     /// <summary>Applies a named layout preset: <c>default</c>, <c>split2</c>, <c>split3</c>, or <c>multi-monitor</c>.</summary>
     Task<UiActionResult> SetLayoutAsync(string preset) => Unsupported();
 
+    /// <summary>Makes <paramref name="absolutePath"/> the IDE's active thconfig (its build target). The
+    /// caller has already validated it is one of the project's entry-point candidates.</summary>
+    Task<UiActionResult> SetActiveThconfigAsync(string absolutePath) => Unsupported();
+
     /// <summary>The whitelisted settings and their current values. Empty when the host has no settings surface.</summary>
     IReadOnlyList<McpSettingInfo> ListSettings() => [];
 

@@ -37,6 +37,12 @@ public class ActionToolsTests
         public Task<UiActionResult> GotoSymbolAsync(string qualifiedName) => Task.FromResult(Result);
         public Task<UiActionResult> ShowInThreeDAsync(string station) => Task.FromResult(Result);
         public Task<UiActionResult> ShowToastAsync(string message, string kind) => Task.FromResult(Result);
+        public string? LastThconfig { get; private set; }
+        public Task<UiActionResult> SetActiveThconfigAsync(string absolutePath)
+        {
+            LastThconfig = absolutePath;
+            return Task.FromResult(Result);
+        }
     }
 
     private sealed class FakeHost : IWorkspaceHost
@@ -113,5 +119,42 @@ public class ActionToolsTests
         var r = await new ActionTools(new FakeBridge(), new FakeHost { Root = null }).ShowToast("done", "success");
         Assert.True(r.Ok);
         Assert.Equal("done", r.Data!.Message);
+    }
+
+    [Fact]
+    public async Task Set_active_thconfig_activates_a_real_entry_point_candidate()
+    {
+        using var fixture = FixtureWorkspace.Create();   // writes project.thconfig at the root
+        var bridge = new FakeBridge();
+        var tools = new ActionTools(bridge, new FakeHost { Root = fixture.Root });
+
+        var r = await tools.SetActiveThconfig("project.thconfig");
+
+        Assert.True(r.Ok);
+        Assert.NotNull(bridge.LastThconfig);
+        Assert.EndsWith("project.thconfig", bridge.LastThconfig);
+        Assert.True(Path.IsPathRooted(bridge.LastThconfig));   // resolved to an absolute path under root
+    }
+
+    [Fact]
+    public async Task Set_active_thconfig_rejects_a_path_that_is_not_a_candidate()
+    {
+        using var fixture = FixtureWorkspace.Create();
+        var bridge = new FakeBridge();
+        var tools = new ActionTools(bridge, new FakeHost { Root = fixture.Root });
+
+        // A real project file, but not a thconfig entry point.
+        var r = await tools.SetActiveThconfig("caves/upper.th");
+
+        Assert.False(r.Ok);
+        Assert.Equal(ToolErrorCodes.InvalidArgument, r.Error!.Code);
+        Assert.Null(bridge.LastThconfig);
+    }
+
+    [Fact]
+    public async Task Set_active_thconfig_honors_the_follow_agent_gate()
+    {
+        var r = await Tools(new FakeBridge { FollowAgent = false }).SetActiveThconfig("project.thconfig");
+        Assert.Equal(ToolErrorCodes.UiControlDisabled, r.Error!.Code);
     }
 }
