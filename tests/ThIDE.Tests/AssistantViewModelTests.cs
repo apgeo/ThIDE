@@ -254,6 +254,23 @@ public class AssistantViewModelTests
     }
 
     [Fact]
+    public async Task EmptyAnswer_RendersAPlaceholderNote_NotABlankBubble()
+    {
+        var assistant = new FakeAssistant((_, callbacks, _) =>
+        {
+            callbacks.OnUpdate!(new AssistantAnswered("   "));   // whitespace-only "answer"
+            return Task.FromResult(new ChatResult("", [], 0, 0));
+        });
+        var vm = NewVm(assistant);
+        vm.Input = "hi";
+
+        await vm.SendCommand.ExecuteAsync(null);
+
+        Assert.DoesNotContain(vm.Items, i => i is AssistantChatItem);
+        Assert.Contains(vm.Items, i => i is NoteChatItem);
+    }
+
+    [Fact]
     public async Task Send_WhenServerDisabled_ShowsTheEnableAffordance()
     {
         var assistant = new FakeAssistant((_, _, _) =>

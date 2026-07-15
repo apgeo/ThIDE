@@ -172,6 +172,65 @@ public sealed class ChatEngineTests
         Assert.Equal(3, result.Turns); // i = 0..maxTurns inclusive, matching the eval client
     }
 
+    // ---- forced synthesis turn (AI-08.1) ----------------------------------------------------
+
+    [Fact]
+    public async Task EmptyFinalContent_WithSynthesis_ForcesAToolFreeAnswerTurn()
+    {
+        // Tool call, then the model stops calling tools but returns empty content — synthesis must
+        // kick in and its text becomes the answer.
+        var handler = new ScriptedHandler(
+            ToolCallTurn(("c1", "list_stations", "{}")),
+            FinalAnswer(""),
+            FinalAnswer("Found 3 stations near the entrance."));
+        var catalog = Catalog(readOnlyTool("list_stations", _ => new ToolOutcome("""{"ok":true}""", true)));
+        var engine = Engine(handler, synthesize: true);
+        var session = new ChatSession("s");
+
+        var result = await engine.RunAsync(session, "which stations?", catalog);
+
+        Assert.Equal("Found 3 stations near the entrance.", result.FinalText);
+        // The synthesis request must forbid further tool calls.
+        Assert.Equal("none", (string?)handler.Requests[^1]["tool_choice"]);
+        // The ephemeral nudge must not be persisted: the session ends with the *answer*, and no
+        // user turn after the tool result carries the synthesis instruction.
+        Assert.Equal("assistant", (string?)session.Messages[^1]!["role"]);
+        Assert.Equal("Found 3 stations near the entrance.", (string?)session.Messages[^1]!["content"]);
+        Assert.DoesNotContain(session.Messages,
+            m => ((string?)m!["content"])?.Contains("Do not call any more tools") == true);
+    }
+
+    [Fact]
+    public async Task GiveUp_WithSynthesis_AnswersFromContextInstead()
+    {
+        var handler = new ScriptedHandler(
+            ToolCallTurn(("c1", "loop_tool", "{}")),
+            ToolCallTurn(("c2", "loop_tool", "{}")),
+            FinalAnswer("Here is what I found so far."));
+        var catalog = Catalog(readOnlyTool("loop_tool", _ => new ToolOutcome("again", true)));
+        var engine = Engine(handler, maxTurns: 1, synthesize: true);
+
+        var result = await engine.RunAsync(new ChatSession("s"), "go", catalog);
+
+        Assert.Equal("Here is what I found so far.", result.FinalText);
+        Assert.Equal("none", (string?)handler.Requests[^1]["tool_choice"]);
+    }
+
+    [Fact]
+    public async Task EmptyFinalContent_WithoutSynthesis_StaysBlank_AndMakesNoExtraCall()
+    {
+        var handler = new ScriptedHandler(
+            ToolCallTurn(("c1", "list_stations", "{}")),
+            FinalAnswer(""));
+        var catalog = Catalog(readOnlyTool("list_stations", _ => new ToolOutcome("""{"ok":true}""", true)));
+        var engine = Engine(handler); // synthesize defaults off
+
+        var result = await engine.RunAsync(new ChatSession("s"), "which?", catalog);
+
+        Assert.Equal("", result.FinalText);
+        Assert.Equal(2, handler.Requests.Count); // no third (synthesis) request
+    }
+
     // ---- approval gating -------------------------------------------------------------------
 
     [Fact]
@@ -296,10 +355,11 @@ public sealed class ChatEngineTests
 
     // ---- helpers ----------------------------------------------------------------------------
 
-    private static ChatEngine Engine(ScriptedHandler handler, int maxTurns = 8) =>
+    private static ChatEngine Engine(ScriptedHandler handler, int maxTurns = 8, bool synthesize = false) =>
         new(new HttpClient(handler), new ChatEngineOptions("http://127.0.0.1:9/v1", "test-model")
         {
             MaxTurns = maxTurns,
+            SynthesizeFinalAnswer = synthesize,
         });
 
     private static FakeCatalog Catalog(params FakeTool[] tools) => new(tools);

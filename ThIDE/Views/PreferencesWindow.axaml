@@ -422,6 +422,14 @@
                                        Minimum="1" Maximum="50" Increment="1" FormatString="0"
                                        HorizontalAlignment="Left" MinWidth="120" />
                     </Grid>
+                    <StackPanel Margin="16,4,0,0" Spacing="2">
+                        <CheckBox Content="{l:Loc Pref_AssistantProseSummary}"
+                                  IsChecked="{Binding AssistantRequireProseSummary}" />
+                        <CheckBox Content="{l:Loc Pref_AssistantSynthesize}"
+                                  IsChecked="{Binding AssistantSynthesizeFinalAnswer}" />
+                        <CheckBox Content="{l:Loc Pref_AssistantStreaming}"
+                                  IsChecked="{Binding AssistantStreaming}" />
+                    </StackPanel>
 
                     <Separator Margin="0,6" />
                     <TextBlock Text="{l:Loc Pref_CliHelp}"

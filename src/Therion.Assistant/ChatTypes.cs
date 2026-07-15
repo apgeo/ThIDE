@@ -9,6 +9,18 @@ public sealed record ChatEngineOptions(string Endpoint, string Model)
     public string? ApiKey { get; init; }
     public int MaxTurns { get; init; } = 10;
     public double Temperature { get; init; }
+
+    /// <summary>
+    /// When the model ends a run with no prose, or the turn budget is exhausted, do one extra
+    /// completion with <c>tool_choice:"none"</c> so it must answer in text from the tool results
+    /// already in context. Off by default so the eval harness stays deterministic; the pane turns it
+    /// on (AI-08.1).
+    /// </summary>
+    public bool SynthesizeFinalAnswer { get; init; }
+
+    /// <summary>Request server-sent-events streaming and surface partial text via
+    /// <see cref="AssistantDelta"/>. Off by default; the pane turns it on (AI-08.2).</summary>
+    public bool Stream { get; init; }
 }
 
 /// <param name="ArgumentsJson">The raw arguments string the model produced (pretty enough for a
@@ -25,6 +37,10 @@ public sealed record ToolCallStarted(ToolCallInfo Call) : ChatUpdate;
 /// <summary>The call finished (or was screened out / declined); <paramref name="Content"/> is what
 /// the model will see as the result.</summary>
 public sealed record ToolCallFinished(ToolCallInfo Call, bool Ok, string Content) : ChatUpdate;
+
+/// <summary>A chunk of assistant text arriving mid-stream (AI-08.2). <paramref name="Delta"/> is the
+/// new fragment; <paramref name="Text"/> is the answer so far. Only fired when streaming is on.</summary>
+public sealed record AssistantDelta(string Delta, string Text) : ChatUpdate;
 
 /// <summary>The model produced its final text for this run (including the gave-up notice).</summary>
 public sealed record AssistantAnswered(string Text) : ChatUpdate;

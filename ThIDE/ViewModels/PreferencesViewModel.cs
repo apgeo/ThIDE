@@ -65,6 +65,12 @@ public partial class PreferencesViewModel : ObservableObject
     [ObservableProperty] private string _assistantEndpoint = string.Empty;
     [ObservableProperty] private string _assistantModel = string.Empty;
     [ObservableProperty] private int _assistantMaxTurns;
+    /// <summary>Ask the model to answer in prose after tool use (AI-08.1).</summary>
+    [ObservableProperty] private bool _assistantRequireProseSummary;
+    /// <summary>Force a written answer when the model returns none / runs out of turns (AI-08.1).</summary>
+    [ObservableProperty] private bool _assistantSynthesizeFinalAnswer;
+    /// <summary>Stream the answer with a live progress indicator (AI-08.2).</summary>
+    [ObservableProperty] private bool _assistantStreaming;
     /// <summary>0 = English, 1 = Romanian (#9 selector lives in Preferences, #11).</summary>
     [ObservableProperty] private int _languageIndex;
 
@@ -191,6 +197,9 @@ public partial class PreferencesViewModel : ObservableObject
         _assistantEndpoint = s.AssistantEndpoint;
         _assistantModel = s.AssistantModel;
         _assistantMaxTurns = s.AssistantMaxTurns;
+        _assistantRequireProseSummary = s.AssistantRequireProseSummary;
+        _assistantSynthesizeFinalAnswer = s.AssistantSynthesizeFinalAnswer;
+        _assistantStreaming = s.AssistantStreaming;
         _languageIndex = string.Equals(s.UiLanguage, "ro", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
         _editorFontSize = s.EditorFontSize;
         _indentationSize = s.IndentationSize;
@@ -364,6 +373,9 @@ public partial class PreferencesViewModel : ObservableObject
             AssistantModel = string.IsNullOrWhiteSpace(AssistantModel)
                 ? AppSettings.Default.AssistantModel : AssistantModel.Trim(),
             AssistantMaxTurns = Math.Clamp(AssistantMaxTurns, 1, 50),
+            AssistantRequireProseSummary = AssistantRequireProseSummary,
+            AssistantSynthesizeFinalAnswer = AssistantSynthesizeFinalAnswer,
+            AssistantStreaming = AssistantStreaming,
             UiLanguage = code,
             EditorFontSize = EditorFontSize,
             IndentationSize = IndentationSize,

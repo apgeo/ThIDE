@@ -52,6 +52,14 @@ public sealed class ChatEngine(HttpClient http, ChatEngineOptions options)
             if (toolCalls is null || toolCalls.Count == 0)
             {
                 var text = (string?)message["content"] ?? "";
+                // Coder models often stop calling tools but return no prose. Force one tool-free turn
+                // so the user gets a written answer instead of a blank bubble (AI-08.1).
+                if (options.SynthesizeFinalAnswer && string.IsNullOrWhiteSpace(text))
+                {
+                    var (synth, synthTokens) = await SynthesizeAsync(session, toolSpec, ct);
+                    tokens += synthTokens;
+                    if (!string.IsNullOrWhiteSpace(synth)) text = synth;
+                }
                 session.Messages.Add(Message("assistant", text));
                 return Finish(text, calls, turns, tokens, callbacks);
             }
@@ -89,7 +97,40 @@ public sealed class ChatEngine(HttpClient http, ChatEngineOptions options)
             }
         }
 
+        // Out of turns. Rather than only reporting "(gave up …)", try to answer from whatever the
+        // tools already returned (AI-08.1).
+        if (options.SynthesizeFinalAnswer)
+        {
+            var (synth, synthTokens) = await SynthesizeAsync(session, toolSpec, ct);
+            tokens += synthTokens;
+            if (!string.IsNullOrWhiteSpace(synth))
+            {
+                session.Messages.Add(Message("assistant", synth));
+                return Finish(synth, calls, turns, tokens, callbacks);
+            }
+        }
         return Finish($"(gave up after {options.MaxTurns} tool turns)", calls, turns, tokens, callbacks);
+    }
+
+    /// <summary>
+    /// One tool-free completion (<c>tool_choice:"none"</c>) that forces the model to answer in plain
+    /// language from the tool results already in the session. The nudge message is ephemeral — it is
+    /// not persisted to <paramref name="session"/>, so it can't skew the next turn. Returns the text
+    /// and the tokens it cost.
+    /// </summary>
+    private async Task<(string Text, int Tokens)> SynthesizeAsync(
+        ChatSession session, JsonArray toolSpec, CancellationToken ct)
+    {
+        var messages = session.Messages.DeepClone().AsArray();
+        messages.Add(Message("user",
+            "Now answer the user in plain natural language, based on the tool results above. "
+            + "Reference the relevant items by name. Do not call any more tools and do not paste raw "
+            + "JSON or repeat long lists — the detailed results are already shown to the user."));
+
+        var response = await CompleteAsync(messages, toolSpec, ct, toolChoice: "none");
+        var tokens = (int?)response?["usage"]?["total_tokens"] ?? 0;
+        var text = (string?)response?["choices"]?[0]?["message"]?["content"] ?? "";
+        return (text, tokens);
     }
 
     private static ChatResult Finish(
@@ -163,7 +204,8 @@ public sealed class ChatEngine(HttpClient http, ChatEngineOptions options)
         return (error, new ChatToolCall(info.Tool, SchemaValid: false, Ok: false));
     }
 
-    private async Task<JsonNode?> CompleteAsync(JsonArray messages, JsonArray tools, CancellationToken ct)
+    private async Task<JsonNode?> CompleteAsync(
+        JsonArray messages, JsonArray tools, CancellationToken ct, string toolChoice = "auto")
     {
         var body = new JsonObject
         {
@@ -175,7 +217,7 @@ public sealed class ChatEngine(HttpClient http, ChatEngineOptions options)
         if (tools.Count > 0)
         {
             body["tools"] = tools.DeepClone();
-            body["tool_choice"] = "auto";
+            body["tool_choice"] = toolChoice;
         }
 
         using var request = new HttpRequestMessage(

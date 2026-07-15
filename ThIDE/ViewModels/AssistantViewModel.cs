@@ -323,7 +323,11 @@ public sealed partial class AssistantViewModel : ObservableObject
                 break;
 
             case AssistantAnswered answered:
-                Items.Add(new AssistantChatItem(answered.Text));
+                // A mute model (empty content, no synthesis) must not leave a blank bubble (AI-08.1).
+                if (string.IsNullOrWhiteSpace(answered.Text))
+                    Items.Add(new NoteChatItem(Tr.Get("Assistant_NoText")));
+                else
+                    Items.Add(new AssistantChatItem(answered.Text));
                 break;
         }
     });

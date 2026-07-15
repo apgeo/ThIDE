@@ -1205,6 +1205,7 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Assistant_Result" xml:space="preserve"><value>Result</value></data>
   <data name="Assistant_RawJson" xml:space="preserve"><value>Raw JSON</value></data>
   <data name="Assistant_Objects" xml:space="preserve"><value>{0} objects — click to open</value></data>
+  <data name="Assistant_NoText" xml:space="preserve"><value>(The assistant returned no text — see the tool results above.)</value></data>
   <data name="Assistant_ServerOff" xml:space="preserve"><value>The in-app AI tools server is off, so the assistant has no access to the project.</value></data>
   <data name="Assistant_EnableServer" xml:space="preserve"><value>Enable it</value></data>
   <data name="Assistant_ServerEnabled" xml:space="preserve"><value>The AI tools server is now on — send your message again.</value></data>
@@ -1216,4 +1217,7 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Pref_AssistantEndpoint" xml:space="preserve"><value>Endpoint</value></data>
   <data name="Pref_AssistantModel" xml:space="preserve"><value>Model id</value></data>
   <data name="Pref_AssistantMaxTurns" xml:space="preserve"><value>Tool-turn budget</value></data>
+  <data name="Pref_AssistantProseSummary" xml:space="preserve"><value>Answer in plain language after using tools (don't paste raw JSON)</value></data>
+  <data name="Pref_AssistantSynthesize" xml:space="preserve"><value>Always produce a written answer (even when the model returns none)</value></data>
+  <data name="Pref_AssistantStreaming" xml:space="preserve"><value>Stream the answer with a live progress indicator</value></data>
 </root>

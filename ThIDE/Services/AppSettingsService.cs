@@ -131,6 +131,19 @@ public sealed record AppSettings
     public string AssistantModel { get; init; } = "qwen3-coder-30b-a3b-instruct";
     /// <summary>Model↔tool round-trips per user turn before the assistant gives up.</summary>
     public int AssistantMaxTurns { get; init; } = 10;
+    /// <summary>
+    /// Ask the model, in the system prompt, to answer in natural language after using tools and to
+    /// not paste the raw JSON (the lists are already shown in the panel). On by default (AI-08.1).
+    /// </summary>
+    public bool AssistantRequireProseSummary { get; init; } = true;
+    /// <summary>
+    /// When the model finishes with no prose (empty content) or exhausts its turn budget, do one more
+    /// tool-free completion so the user still gets a written answer instead of a blank/"gave up" line.
+    /// On by default (AI-08.1).
+    /// </summary>
+    public bool AssistantSynthesizeFinalAnswer { get; init; } = true;
+    /// <summary>Stream the answer token-by-token with a live progress indicator. On by default (AI-08.2).</summary>
+    public bool AssistantStreaming { get; init; } = true;
 
     // ---- telemetry ----
     /// <summary>Opt-in: record anonymous usage events + crash reports to LOCAL files only. Off by default.</summary>

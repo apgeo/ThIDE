@@ -79,8 +79,9 @@ public sealed class AssistantService(
             var engine = new ChatEngine(_http, new ChatEngineOptions(current.AssistantEndpoint, current.AssistantModel)
             {
                 MaxTurns = current.AssistantMaxTurns,
+                SynthesizeFinalAnswer = current.AssistantSynthesizeFinalAnswer,
             });
-            _session ??= new ChatSession(SystemPrompt());
+            _session ??= new ChatSession(SystemPrompt(current));
 
             var result = await engine.RunAsync(_session, userMessage, catalog, callbacks, ct);
             log.Info($"[Assistant] turn done: {result.Calls.Count} tool call(s), {result.Tokens} tokens.");
@@ -152,14 +153,27 @@ public sealed class AssistantService(
     /// <summary>
     /// English on purpose (D-008: model-facing text is English; only rendered UI is localized).
     /// The dry-run sentence is the R-001 lesson: Qwen previewed an edit and declared victory, so
-    /// the prompt must spell out that a preview is not an applied change.
+    /// the prompt must spell out that a preview is not an applied change. The prose-summary clause
+    /// (AI-08.1, gated by <see cref="AppSettings.AssistantRequireProseSummary"/>) steers tool-happy
+    /// coder models toward answering in natural language instead of dumping JSON.
     /// </summary>
-    private static string SystemPrompt() =>
-        "You are the assistant built into ThIDE, an IDE for Therion cave-survey projects. "
-        + "Use the provided tools to inspect and modify the open project; do not guess or invent tools. "
-        + "Editing tools preview by default: a change is applied only when a call with dryRun:false "
-        + "succeeds — preview first, then apply, then report the result (including any new diagnostics). "
-        + "When you have the answer, reply directly and concisely.";
+    private static string SystemPrompt(AppSettings settings)
+    {
+        var prompt =
+            "You are the assistant built into ThIDE, an IDE for Therion cave-survey projects. "
+            + "Use the provided tools to inspect and modify the open project; do not guess or invent tools. "
+            + "Editing tools preview by default: a change is applied only when a call with dryRun:false "
+            + "succeeds — preview first, then apply, then report the result (including any new diagnostics). ";
+
+        if (settings.AssistantRequireProseSummary)
+            prompt +=
+                "After using tools, always reply to the user in clear natural language: summarize what you "
+                + "found or did and reference the relevant objects by name. The full tool results (lists of "
+                + "stations, symbols, diagnostics, …) are already shown to the user in the panel, so do NOT "
+                + "paste raw JSON or repeat long lists — describe and highlight the relevant items instead. ";
+
+        return prompt + "When you have the answer, reply directly and concisely.";
+    }
 
     public async ValueTask DisposeAsync()
     {

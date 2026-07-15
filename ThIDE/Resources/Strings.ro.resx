@@ -1205,6 +1205,7 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Assistant_Result" xml:space="preserve"><value>Rezultat</value></data>
   <data name="Assistant_RawJson" xml:space="preserve"><value>JSON brut</value></data>
   <data name="Assistant_Objects" xml:space="preserve"><value>{0} obiecte — clic pentru a deschide</value></data>
+  <data name="Assistant_NoText" xml:space="preserve"><value>(Asistentul nu a returnat text — vezi rezultatele instrumentelor de mai sus.)</value></data>
   <data name="Assistant_ServerOff" xml:space="preserve"><value>Serverul de instrumente AI din aplicație este oprit, deci asistentul nu are acces la proiect.</value></data>
   <data name="Assistant_EnableServer" xml:space="preserve"><value>Pornește-l</value></data>
   <data name="Assistant_ServerEnabled" xml:space="preserve"><value>Serverul de instrumente AI este acum pornit — retrimite mesajul.</value></data>
@@ -1216,4 +1217,7 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Pref_AssistantEndpoint" xml:space="preserve"><value>Endpoint</value></data>
   <data name="Pref_AssistantModel" xml:space="preserve"><value>Id model</value></data>
   <data name="Pref_AssistantMaxTurns" xml:space="preserve"><value>Buget de tururi de instrumente</value></data>
+  <data name="Pref_AssistantProseSummary" xml:space="preserve"><value>Răspunde în limbaj natural după folosirea instrumentelor (fără JSON brut)</value></data>
+  <data name="Pref_AssistantSynthesize" xml:space="preserve"><value>Produ întotdeauna un răspuns scris (chiar dacă modelul nu returnează unul)</value></data>
+  <data name="Pref_AssistantStreaming" xml:space="preserve"><value>Transmite răspunsul cu un indicator de progres în timp real</value></data>
 </root>
