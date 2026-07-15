@@ -80,6 +80,35 @@
                                    FontStyle="Italic" TextWrapping="Wrap" Margin="4,3" />
                     </DataTemplate>
 
+                    <!-- a fenced code block: monospace, scrollable in place, with snippet actions (CAP-03) -->
+                    <DataTemplate DataType="vm:CodeBlockChatItem">
+                        <Border Background="#1E1E24" BorderBrush="Gray" BorderThickness="1" CornerRadius="4"
+                                Padding="0" Margin="0,3,24,3">
+                            <DockPanel>
+                                <!-- header: language tag on the left, actions on the right -->
+                                <Border DockPanel.Dock="Top" Background="#2A2A33" Padding="8,4">
+                                    <DockPanel>
+                                        <TextBlock DockPanel.Dock="Left" Text="{Binding Language}" Foreground="Gray"
+                                                   FontSize="10" VerticalAlignment="Center"
+                                                   IsVisible="{Binding HasLanguage}" />
+                                        <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right">
+                                            <Button Content="{l:Loc Assistant_Copy}" Command="{Binding CopyCommand}"
+                                                    Padding="8,2" FontSize="11" />
+                                            <Button Content="{l:Loc Assistant_Insert}" Command="{Binding InsertCommand}"
+                                                    Padding="8,2" FontSize="11" />
+                                            <Button Content="{l:Loc Assistant_Replace}" Command="{Binding ReplaceCommand}"
+                                                    Padding="8,2" FontSize="11" />
+                                        </StackPanel>
+                                    </DockPanel>
+                                </Border>
+                                <ScrollViewer HorizontalScrollBarVisibility="Auto" MaxHeight="320" Padding="8,6">
+                                    <SelectableTextBlock Text="{Binding Code}"
+                                                         FontFamily="Consolas,Menlo,monospace" FontSize="12" />
+                                </ScrollViewer>
+                            </DockPanel>
+                        </Border>
+                    </DataTemplate>
+
                     <DataTemplate DataType="vm:ToolCallChatItem">
                         <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="4"
                                 Padding="8,5" Margin="0,3,24,3">

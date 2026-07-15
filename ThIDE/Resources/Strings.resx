@@ -1206,6 +1206,12 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Assistant_RawJson" xml:space="preserve"><value>Raw JSON</value></data>
   <data name="Assistant_Objects" xml:space="preserve"><value>{0} objects — click to open</value></data>
   <data name="Assistant_NoText" xml:space="preserve"><value>(The assistant returned no text — see the tool results above.)</value></data>
+  <data name="Assistant_Copy" xml:space="preserve"><value>Copy</value></data>
+  <data name="Assistant_Insert" xml:space="preserve"><value>Insert at caret</value></data>
+  <data name="Assistant_Replace" xml:space="preserve"><value>Replace selection</value></data>
+  <data name="Assistant_SnippetCopied" xml:space="preserve"><value>Copied to clipboard.</value></data>
+  <data name="Assistant_SnippetNoEditor" xml:space="preserve"><value>Open a file in the editor first to insert this snippet.</value></data>
+  <data name="Assistant_SnippetNoSelection" xml:space="preserve"><value>Select some text in the editor first to replace it.</value></data>
   <data name="Assistant_Thinking" xml:space="preserve"><value>Thinking…</value></data>
   <data name="Assistant_RunningTool" xml:space="preserve"><value>Running {0}…</value></data>
   <data name="Assistant_Writing" xml:space="preserve"><value>Writing the answer…</value></data>
@@ -1227,6 +1233,7 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Pref_AssistantProseSummary" xml:space="preserve"><value>Answer in plain language after using tools (don't paste raw JSON)</value></data>
   <data name="Pref_AssistantSynthesize" xml:space="preserve"><value>Always produce a written answer (even when the model returns none)</value></data>
   <data name="Pref_AssistantStreaming" xml:space="preserve"><value>Stream the answer with a live progress indicator</value></data>
+  <data name="Pref_AssistantSuggestCodeBlocks" xml:space="preserve"><value>Ask the model to put proposed Therion source in code blocks (Copy / Insert / Replace)</value></data>
   <data name="Pref_AssistantContextMode" xml:space="preserve"><value>Workspace context</value></data>
   <data name="Pref_AssistantContextModeHelp" xml:space="preserve"><value>How much of a project digest to give the model at the start of a new chat. None keeps it fully tool-driven; Card adds a short orienting summary; Pack adds a richer digest. Figures are a snapshot, so the model is told to verify with tools.</value></data>
   <data name="Pref_ContextModeNone" xml:space="preserve"><value>None (tools only)</value></data>

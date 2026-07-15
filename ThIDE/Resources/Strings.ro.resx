@@ -1206,6 +1206,12 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Assistant_RawJson" xml:space="preserve"><value>JSON brut</value></data>
   <data name="Assistant_Objects" xml:space="preserve"><value>{0} obiecte — clic pentru a deschide</value></data>
   <data name="Assistant_NoText" xml:space="preserve"><value>(Asistentul nu a returnat text — vezi rezultatele instrumentelor de mai sus.)</value></data>
+  <data name="Assistant_Copy" xml:space="preserve"><value>Copiază</value></data>
+  <data name="Assistant_Insert" xml:space="preserve"><value>Inserează la cursor</value></data>
+  <data name="Assistant_Replace" xml:space="preserve"><value>Înlocuiește selecția</value></data>
+  <data name="Assistant_SnippetCopied" xml:space="preserve"><value>Copiat în clipboard.</value></data>
+  <data name="Assistant_SnippetNoEditor" xml:space="preserve"><value>Deschide mai întâi un fișier în editor pentru a insera acest fragment.</value></data>
+  <data name="Assistant_SnippetNoSelection" xml:space="preserve"><value>Selectează mai întâi text în editor pentru a-l înlocui.</value></data>
   <data name="Assistant_Thinking" xml:space="preserve"><value>Se gândește…</value></data>
   <data name="Assistant_RunningTool" xml:space="preserve"><value>Rulează {0}…</value></data>
   <data name="Assistant_Writing" xml:space="preserve"><value>Scrie răspunsul…</value></data>
@@ -1227,6 +1233,7 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Pref_AssistantProseSummary" xml:space="preserve"><value>Răspunde în limbaj natural după folosirea instrumentelor (fără JSON brut)</value></data>
   <data name="Pref_AssistantSynthesize" xml:space="preserve"><value>Produ întotdeauna un răspuns scris (chiar dacă modelul nu returnează unul)</value></data>
   <data name="Pref_AssistantStreaming" xml:space="preserve"><value>Transmite răspunsul cu un indicator de progres în timp real</value></data>
+  <data name="Pref_AssistantSuggestCodeBlocks" xml:space="preserve"><value>Cere modelului să pună sursa Therion propusă în blocuri de cod (Copiază / Inserează / Înlocuiește)</value></data>
   <data name="Pref_AssistantContextMode" xml:space="preserve"><value>Context proiect</value></data>
   <data name="Pref_AssistantContextModeHelp" xml:space="preserve"><value>Cât de mult rezumat al proiectului să primească modelul la începutul unei conversații noi. „Niciunul” păstrează totul bazat pe unelte; „Fișă” adaugă un rezumat scurt de orientare; „Pachet” adaugă un rezumat mai bogat. Cifrele sunt un instantaneu, așa că modelul este instruit să verifice cu uneltele.</value></data>
   <data name="Pref_ContextModeNone" xml:space="preserve"><value>Niciunul (doar unelte)</value></data>

@@ -41,6 +41,37 @@ public sealed class NoteChatItem(string text) : ChatItemViewModel
     public string Text { get; } = text;
 }
 
+/// <summary>
+/// A fenced code block from the assistant's answer, rendered as a card with Copy / Insert-at-caret /
+/// Replace-selection (CAP-03). The three commands call back into the pane VM (which owns the clipboard,
+/// the editor seam, and note posting), passing this item so the handler has the code.
+/// </summary>
+public sealed partial class CodeBlockChatItem : ChatItemViewModel
+{
+    private readonly Action<CodeBlockChatItem> _copy;
+    private readonly Action<CodeBlockChatItem> _insert;
+    private readonly Action<CodeBlockChatItem> _replace;
+
+    public CodeBlockChatItem(string code, string language,
+        Action<CodeBlockChatItem> copy, Action<CodeBlockChatItem> insert, Action<CodeBlockChatItem> replace)
+    {
+        Code = code;
+        Language = language;
+        _copy = copy;
+        _insert = insert;
+        _replace = replace;
+    }
+
+    public string Code { get; }
+    /// <summary>The fence's info string (e.g. "therion"), or "" — shown as a small header tag.</summary>
+    public string Language { get; }
+    public bool HasLanguage => !string.IsNullOrEmpty(Language);
+
+    [RelayCommand] private void Copy() => _copy(this);
+    [RelayCommand] private void Insert() => _insert(this);
+    [RelayCommand] private void Replace() => _replace(this);
+}
+
 /// <summary>One tool call: name + arguments, its state, and — while the engine is paused on the
 /// approval hook — the Allow/Deny buttons that complete <see cref="Decision"/>. Read-only calls
 /// collapse to a one-line summary so the prose answer leads the transcript (AI-08.3).</summary>
@@ -181,6 +212,9 @@ public sealed partial class AssistantViewModel : ObservableObject
     // when absent, symbol lists still render but clicking them is a no-op.
     private readonly IDocumentService? _documents;
     private readonly IWorkspaceSession? _session;
+    // The editor seam for the code-block actions (Insert/Replace); null in the headless tests that
+    // don't exercise them. The app injects the DocumentService (which implements it).
+    private readonly ISnippetEditor? _snippets;
 
     // The engine hands the SAME ToolCallInfo instance to Started/Approve/Finished — reference
     // identity is the correlation key (value equality would collide on two identical calls).
@@ -222,13 +256,15 @@ public sealed partial class AssistantViewModel : ObservableObject
         IAppSettingsService settings,
         IMcpHostService host,
         IDocumentService? documents = null,
-        IWorkspaceSession? session = null)
+        IWorkspaceSession? session = null,
+        ISnippetEditor? snippets = null)
     {
         _assistant = assistant;
         _settings = settings;
         _host = host;
         _documents = documents;
         _session = session;
+        _snippets = snippets;
         _serverOff = !settings.Current.EnableMcpServer;
         _status = assistant.ModelLabel;
         RestorePreviousConversation();
@@ -246,10 +282,45 @@ public sealed partial class AssistantViewModel : ObservableObject
             }
             else
             {
-                Items.Add(new AssistantChatItem(turn.Text));
+                AddAssistantAnswer(turn.Text);
             }
         }
         _historyIndex = _inputHistory.Count;
+    }
+
+    /// <summary>
+    /// Renders a finalized assistant answer: prose runs as normal bubbles, fenced code blocks as code
+    /// cards with Copy / Insert / Replace (CAP-03). Plain-prose answers stay a single bubble as before.
+    /// </summary>
+    private void AddAssistantAnswer(string text)
+    {
+        foreach (var segment in AssistantCodeBlocks.Parse(text))
+            Items.Add(segment.IsCode
+                ? new CodeBlockChatItem(segment.Text, segment.Language, CopySnippet, InsertSnippet, ReplaceSnippet)
+                : new AssistantChatItem(segment.Text));
+    }
+
+    // ---- code-block actions (CAP-03) ---------------------------------------------------------
+
+    private void CopySnippet(CodeBlockChatItem item)
+    {
+        ClipboardHelper.SetText(item.Code);
+        Items.Add(new NoteChatItem(Tr.Get("Assistant_SnippetCopied")));
+    }
+
+    private void InsertSnippet(CodeBlockChatItem item)
+    {
+        if ((_snippets?.InsertAtActiveCaret(item.Code) ?? SnippetOutcome.NoEditor) == SnippetOutcome.NoEditor)
+            Items.Add(new NoteChatItem(Tr.Get("Assistant_SnippetNoEditor")));
+    }
+
+    private void ReplaceSnippet(CodeBlockChatItem item)
+    {
+        switch (_snippets?.ReplaceActiveSelection(item.Code) ?? SnippetOutcome.NoEditor)
+        {
+            case SnippetOutcome.NoEditor: Items.Add(new NoteChatItem(Tr.Get("Assistant_SnippetNoEditor"))); break;
+            case SnippetOutcome.NoSelection: Items.Add(new NoteChatItem(Tr.Get("Assistant_SnippetNoSelection"))); break;
+        }
     }
 
     private bool CanSend() => !IsBusy && !string.IsNullOrWhiteSpace(Input);
@@ -448,29 +519,18 @@ public sealed partial class AssistantViewModel : ObservableObject
                 break;
 
             case AssistantAnswered answered:
-                // Finalize the streamed bubble if we have one; otherwise add the answer whole. A mute
-                // model (empty content, no synthesis) must never leave a blank bubble (AI-08.1).
+                // Drop the streaming bubble (it showed the raw growing text) and re-render the finalized
+                // answer as prose + code cards (CAP-03 — parse on finalize, not per delta). A mute model
+                // (empty content, no synthesis) must never leave a blank bubble (AI-08.1).
                 if (_streaming is { } streaming)
                 {
-                    if (string.IsNullOrWhiteSpace(answered.Text))
-                    {
-                        Items.Remove(streaming);
-                        Items.Add(new NoteChatItem(Tr.Get("Assistant_NoText")));
-                    }
-                    else
-                    {
-                        streaming.Text = answered.Text;
-                    }
+                    Items.Remove(streaming);
                     _streaming = null;
                 }
-                else if (string.IsNullOrWhiteSpace(answered.Text))
-                {
+                if (string.IsNullOrWhiteSpace(answered.Text))
                     Items.Add(new NoteChatItem(Tr.Get("Assistant_NoText")));
-                }
                 else
-                {
-                    Items.Add(new AssistantChatItem(answered.Text));
-                }
+                    AddAssistantAnswer(answered.Text);
                 break;
         }
     });

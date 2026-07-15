@@ -59,10 +59,27 @@ public class AssistantViewModelTests
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 
-    private static AssistantViewModel NewVm(
-        IAssistantService assistant, FakeSettings? settings = null, FakeHost? host = null)
+    private sealed class FakeSnippetEditor : ISnippetEditor
     {
-        var vm = new AssistantViewModel(assistant, settings ?? new FakeSettings(), host ?? new FakeHost())
+        public SnippetOutcome InsertResult { get; set; } = SnippetOutcome.Applied;
+        public SnippetOutcome ReplaceResult { get; set; } = SnippetOutcome.Applied;
+        public string? InsertedText { get; private set; }
+        public string? ReplacedText { get; private set; }
+        public SnippetOutcome InsertAtActiveCaret(string text) { InsertedText = text; return InsertResult; }
+        public SnippetOutcome ReplaceActiveSelection(string text) { ReplacedText = text; return ReplaceResult; }
+    }
+
+    /// <summary>A scripted assistant that finalizes a single answer (used by the code-block tests).</summary>
+    private static FakeAssistant AnswerOf(string text) => new((_, callbacks, _) =>
+    {
+        callbacks.OnUpdate!(new AssistantAnswered(text));
+        return Task.FromResult(new ChatResult(text, Array.Empty<ChatToolCall>(), 0, 0));
+    });
+
+    private static AssistantViewModel NewVm(
+        IAssistantService assistant, FakeSettings? settings = null, FakeHost? host = null, ISnippetEditor? snippets = null)
+    {
+        var vm = new AssistantViewModel(assistant, settings ?? new FakeSettings(), host ?? new FakeHost(), snippets: snippets)
         {
             UiMarshalOverride = a => a(),
         };
@@ -530,6 +547,82 @@ public class AssistantViewModelTests
 
         Assert.True(vm.RecallPreviousInput());
         Assert.Equal("old question", vm.Input);   // the assistant answer is not part of input history
+    }
+
+    // ---- code-block actions (CAP-03) --------------------------------------------------------
+
+    [Fact]
+    public async Task Answer_WithFencedCode_RendersProseBubbleThenCodeCard()
+    {
+        var vm = NewVm(AnswerOf("Add this survey:\n```therion\nsurvey a\nendsurvey\n```"));
+        vm.Input = "make a survey";
+
+        await vm.SendCommand.ExecuteAsync(null);
+
+        Assert.Equal("Add this survey:", Assert.Single(vm.Items.OfType<AssistantChatItem>()).Text);
+        var code = Assert.Single(vm.Items.OfType<CodeBlockChatItem>());
+        Assert.Equal("therion", code.Language);
+        Assert.Equal("survey a\nendsurvey", code.Code);
+    }
+
+    [Fact]
+    public async Task CodeCard_Insert_AppliesThroughTheEditor_WithNoNote()
+    {
+        var snippets = new FakeSnippetEditor();
+        var vm = NewVm(AnswerOf("```\nx 1 2\n```"), snippets: snippets);
+        vm.Input = "x"; await vm.SendCommand.ExecuteAsync(null);
+
+        vm.Items.OfType<CodeBlockChatItem>().Single().InsertCommand.Execute(null);
+
+        Assert.Equal("x 1 2", snippets.InsertedText);
+        Assert.DoesNotContain(vm.Items, i => i is NoteChatItem);   // Applied → nothing to say
+    }
+
+    [Fact]
+    public async Task CodeCard_Insert_WithNoEditor_PostsANote()
+    {
+        var snippets = new FakeSnippetEditor { InsertResult = SnippetOutcome.NoEditor };
+        var vm = NewVm(AnswerOf("```\nx\n```"), snippets: snippets);
+        vm.Input = "x"; await vm.SendCommand.ExecuteAsync(null);
+
+        vm.Items.OfType<CodeBlockChatItem>().Single().InsertCommand.Execute(null);
+
+        Assert.Contains(vm.Items, i => i is NoteChatItem);
+    }
+
+    [Fact]
+    public async Task CodeCard_Insert_WithNoSnippetService_PostsANote()
+    {
+        var vm = NewVm(AnswerOf("```\nz\n```"));   // snippets null (headless VM without an editor seam)
+        vm.Input = "z"; await vm.SendCommand.ExecuteAsync(null);
+
+        vm.Items.OfType<CodeBlockChatItem>().Single().InsertCommand.Execute(null);
+
+        Assert.Contains(vm.Items, i => i is NoteChatItem);
+    }
+
+    [Fact]
+    public async Task CodeCard_Replace_WithNoSelection_PostsANote()
+    {
+        var snippets = new FakeSnippetEditor { ReplaceResult = SnippetOutcome.NoSelection };
+        var vm = NewVm(AnswerOf("```\ny\n```"), snippets: snippets);
+        vm.Input = "y"; await vm.SendCommand.ExecuteAsync(null);
+
+        vm.Items.OfType<CodeBlockChatItem>().Single().ReplaceCommand.Execute(null);
+
+        Assert.Equal("y", snippets.ReplacedText);
+        Assert.Contains(vm.Items, i => i is NoteChatItem);
+    }
+
+    [Fact]
+    public async Task CodeCard_Copy_PostsACopiedNote()
+    {
+        var vm = NewVm(AnswerOf("```\nc\n```"));
+        vm.Input = "c"; await vm.SendCommand.ExecuteAsync(null);
+
+        vm.Items.OfType<CodeBlockChatItem>().Single().CopyCommand.Execute(null);   // clipboard is a no-op headless
+
+        Assert.Contains(vm.Items, i => i is NoteChatItem);
     }
 
     [Fact]
