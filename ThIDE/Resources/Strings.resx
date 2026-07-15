@@ -1227,4 +1227,9 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Pref_AssistantProseSummary" xml:space="preserve"><value>Answer in plain language after using tools (don't paste raw JSON)</value></data>
   <data name="Pref_AssistantSynthesize" xml:space="preserve"><value>Always produce a written answer (even when the model returns none)</value></data>
   <data name="Pref_AssistantStreaming" xml:space="preserve"><value>Stream the answer with a live progress indicator</value></data>
+  <data name="Pref_AssistantContextMode" xml:space="preserve"><value>Workspace context</value></data>
+  <data name="Pref_AssistantContextModeHelp" xml:space="preserve"><value>How much of a project digest to give the model at the start of a new chat. None keeps it fully tool-driven; Card adds a short orienting summary; Pack adds a richer digest. Figures are a snapshot, so the model is told to verify with tools.</value></data>
+  <data name="Pref_ContextModeNone" xml:space="preserve"><value>None (tools only)</value></data>
+  <data name="Pref_ContextModeCard" xml:space="preserve"><value>Card (compact summary)</value></data>
+  <data name="Pref_ContextModePack" xml:space="preserve"><value>Pack (rich digest)</value></data>
 </root>

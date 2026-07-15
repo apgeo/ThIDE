@@ -71,6 +71,8 @@ public partial class PreferencesViewModel : ObservableObject
     [ObservableProperty] private bool _assistantSynthesizeFinalAnswer;
     /// <summary>Stream the answer with a live progress indicator (AI-08.2).</summary>
     [ObservableProperty] private bool _assistantStreaming;
+    /// <summary>Workspace context volunteered to the model: 0 = None, 1 = Card, 2 = Pack (CD-02).</summary>
+    [ObservableProperty] private int _assistantContextModeIndex;
     /// <summary>0 = English, 1 = Romanian (#9 selector lives in Preferences, #11).</summary>
     [ObservableProperty] private int _languageIndex;
 
@@ -200,6 +202,7 @@ public partial class PreferencesViewModel : ObservableObject
         _assistantRequireProseSummary = s.AssistantRequireProseSummary;
         _assistantSynthesizeFinalAnswer = s.AssistantSynthesizeFinalAnswer;
         _assistantStreaming = s.AssistantStreaming;
+        _assistantContextModeIndex = (int)s.AssistantContextMode;
         _languageIndex = string.Equals(s.UiLanguage, "ro", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
         _editorFontSize = s.EditorFontSize;
         _indentationSize = s.IndentationSize;
@@ -376,6 +379,7 @@ public partial class PreferencesViewModel : ObservableObject
             AssistantRequireProseSummary = AssistantRequireProseSummary,
             AssistantSynthesizeFinalAnswer = AssistantSynthesizeFinalAnswer,
             AssistantStreaming = AssistantStreaming,
+            AssistantContextMode = (AssistantContextMode)Math.Clamp(AssistantContextModeIndex, 0, 2),
             UiLanguage = code,
             EditorFontSize = EditorFontSize,
             IndentationSize = IndentationSize,

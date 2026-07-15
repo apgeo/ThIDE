@@ -1227,4 +1227,9 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Pref_AssistantProseSummary" xml:space="preserve"><value>Răspunde în limbaj natural după folosirea instrumentelor (fără JSON brut)</value></data>
   <data name="Pref_AssistantSynthesize" xml:space="preserve"><value>Produ întotdeauna un răspuns scris (chiar dacă modelul nu returnează unul)</value></data>
   <data name="Pref_AssistantStreaming" xml:space="preserve"><value>Transmite răspunsul cu un indicator de progres în timp real</value></data>
+  <data name="Pref_AssistantContextMode" xml:space="preserve"><value>Context proiect</value></data>
+  <data name="Pref_AssistantContextModeHelp" xml:space="preserve"><value>Cât de mult rezumat al proiectului să primească modelul la începutul unei conversații noi. „Niciunul” păstrează totul bazat pe unelte; „Fișă” adaugă un rezumat scurt de orientare; „Pachet” adaugă un rezumat mai bogat. Cifrele sunt un instantaneu, așa că modelul este instruit să verifice cu uneltele.</value></data>
+  <data name="Pref_ContextModeNone" xml:space="preserve"><value>Niciunul (doar unelte)</value></data>
+  <data name="Pref_ContextModeCard" xml:space="preserve"><value>Fișă (rezumat compact)</value></data>
+  <data name="Pref_ContextModePack" xml:space="preserve"><value>Pachet (rezumat bogat)</value></data>
 </root>

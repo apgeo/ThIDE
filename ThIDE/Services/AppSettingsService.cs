@@ -50,6 +50,21 @@ public enum WorkspaceSortMode
     Created = 4,
 }
 
+/// <summary>
+/// How much workspace context the Assistant pane volunteers to the model at conversation start,
+/// as a second system message. A research trade-off shipped as a bounded setting so the modes can
+/// be compared empirically; the whole semantic model is never sent (retrieval-by-tool wins).
+/// </summary>
+public enum AssistantContextMode
+{
+    /// <summary>Pull-based: system prompt + tools only. The default.</summary>
+    None = 0,
+    /// <summary>A compact orienting card (~300–600 tokens): totals, top survey levels, diagnostics counts.</summary>
+    Card = 1,
+    /// <summary>A richer digest (~2–6 KB): the card plus the full survey tree, file list, top diagnostics, inventory.</summary>
+    Pack = 2,
+}
+
 public sealed record AppSettings
 {
     // ---- session ----
@@ -144,6 +159,13 @@ public sealed record AppSettings
     public bool AssistantSynthesizeFinalAnswer { get; init; } = true;
     /// <summary>Stream the answer token-by-token with a live progress indicator. On by default (AI-08.2).</summary>
     public bool AssistantStreaming { get; init; } = true;
+    /// <summary>
+    /// How much workspace context the pane injects as a second system message at conversation start
+    /// (None / Card / Pack). Default None — fully pull-based, today's behaviour. Card/Pack read the
+    /// matching <c>therion://context/*</c> resource from the in-app server so the pane and external
+    /// hosts get identical context from one generator.
+    /// </summary>
+    public AssistantContextMode AssistantContextMode { get; init; } = AssistantContextMode.None;
 
     // ---- telemetry ----
     /// <summary>Opt-in: record anonymous usage events + crash reports to LOCAL files only. Off by default.</summary>
