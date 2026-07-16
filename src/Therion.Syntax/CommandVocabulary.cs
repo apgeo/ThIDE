@@ -69,22 +69,24 @@ public static class CommandVocabulary
         ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, "sql", "csv");
 
     /// <summary>
-    /// Output extensions whose <c>-fmt</c> keyword is <em>not</em> the extension: <c>.lox</c> is written
-    /// by <c>loch</c>, <c>.plt</c> by <c>compass</c>, <c>.wrl</c> by <c>vrml</c>. Every other format
-    /// writes the extension it is named after (<c>kml</c> → <c>.kml</c>), which needs no table.
+    /// Formats whose output extension is <em>not</em> the format's own name. Every other format writes
+    /// the extension it is named after (<c>kml</c> → <c>.kml</c>), which needs no table.
     /// </summary>
     /// <remarks>
-    /// This is exactly the set an earlier draft of <see cref="ModelFormats"/> carried as phantom
-    /// formats (see the note above it) — lox/plt/wrl — because the trap runs both ways: a file is
-    /// asked for by its extension ("export a .lox 3D model"), and the keyword guessed from that
-    /// extension is rejected by the compiler.
+    /// Note this is not a bijection, which is why one table drives both directions rather than two
+    /// tables that could disagree: <c>3d</c> and <c>survex</c> both write <c>.3d</c>. Going
+    /// extension → format, <c>.3d</c> therefore resolves to <c>3d</c> by name and never needs this
+    /// table; going format → extension, <c>survex</c> does.
+    /// lox/plt/wrl are exactly the phantom formats an earlier draft of <see cref="ModelFormats"/>
+    /// carried (see the note above it) — the same confusion from the other side.
     /// </remarks>
-    private static readonly ImmutableDictionary<string, string> FormatByForeignExtension =
+    private static readonly ImmutableDictionary<string, string> ExtensionByFormat =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            ["lox"] = "loch",
-            ["plt"] = "compass",
-            ["wrl"] = "vrml",
+            ["loch"] = "lox",
+            ["compass"] = "plt",
+            ["vrml"] = "wrl",
+            ["survex"] = "3d",
         }.ToImmutableDictionary(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
@@ -98,23 +100,48 @@ public static class CommandVocabulary
         if (ext.Length == 0) return null;
 
         var formats = ExportFormats(type);
-        if (FormatByForeignExtension.TryGetValue(ext, out var keyword) && formats.Contains(keyword))
-            return keyword;
 
-        // Otherwise the format is named after its extension — but only if it is valid for this type.
-        return formats.Contains(ext) ? ext : null;
+        // A format named after the extension wins: `.3d` is `-fmt 3d`, even though `survex` writes
+        // .3d too — answering with the name the caller already typed is the least surprising.
+        if (formats.Contains(ext)) return ext;
+
+        foreach (var (format, mapped) in ExtensionByFormat)
+            if (mapped.Equals(ext, StringComparison.OrdinalIgnoreCase) && formats.Contains(format))
+                return format;
+
+        return null;
     }
 
     /// <summary>
-    /// The extension → <c>-fmt</c> pairs that differ, for the formats export <paramref name="type"/>
-    /// accepts. Empty when none of them are a trap for this type, so help can stay silent.
+    /// The file extension <c>-fmt &lt;format&gt;</c> writes, dot included (<c>loch</c> → <c>.lox</c>,
+    /// <c>survex</c> → <c>.3d</c>). Formats not listed write the extension they are named after, so
+    /// callers never need a table of their own.
     /// </summary>
+    public static string ExtensionForExportFormat(string format)
+    {
+        var fmt = (format ?? string.Empty).Trim();
+        if (fmt.Length == 0) return string.Empty;
+
+        return ExtensionByFormat.TryGetValue(fmt, out var ext)
+            ? "." + ext
+            : "." + fmt.ToLowerInvariant();
+    }
+
+    /// <summary>
+    /// The extension → <c>-fmt</c> pairs export <paramref name="type"/> accepts where guessing the
+    /// keyword from the extension would <em>fail</em> — the ones worth warning about. Empty when the
+    /// type has no such trap, so help can stay silent instead of padding.
+    /// </summary>
+    /// <remarks>
+    /// <c>survex</c> → <c>.3d</c> is deliberately absent: a caller who guesses <c>3d</c> from
+    /// <c>.3d</c> is right, so saying otherwise would be noise.
+    /// </remarks>
     public static IEnumerable<KeyValuePair<string, string>> ForeignExportExtensions(string type)
     {
         var formats = ExportFormats(type);
-        foreach (var pair in FormatByForeignExtension)
-            if (formats.Contains(pair.Value))
-                yield return pair;
+        foreach (var (format, ext) in ExtensionByFormat)
+            if (formats.Contains(format) && !formats.Contains(ext))
+                yield return new KeyValuePair<string, string>(ext, format);
     }
 
     /// <summary>

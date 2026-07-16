@@ -67,15 +67,58 @@ public class ExportFormatExtensionTests
         }
     }
 
+    [Theory]
+    // The other direction: what file does this format write? Not the inverse of the above, because
+    // `3d` and `survex` both write .3d — so .3d resolves to `3d` by name, while `survex` still has
+    // to be told what it writes.
+    [InlineData("loch", ".lox")]
+    [InlineData("survex", ".3d")]
+    [InlineData("compass", ".plt")]
+    [InlineData("vrml", ".wrl")]
+    [InlineData("kml", ".kml")]     // named after its extension
+    [InlineData("3d", ".3d")]
+    public void A_format_reports_the_extension_it_writes(string fmt, string expected)
+    {
+        Assert.Equal(expected, CommandVocabulary.ExtensionForExportFormat(fmt));
+    }
+
+    [Fact]
+    public void The_two_directions_agree_wherever_a_format_is_asked_to_round_trip()
+    {
+        // Every model format's extension must resolve back to a format the compiler accepts for a
+        // model. It need not resolve to the SAME name (.3d resolves to `3d`, not `survex`) — but it
+        // must never resolve to nothing, or a caller could not get that file at all.
+        foreach (var fmt in CommandVocabulary.ExportFormats("model"))
+        {
+            var ext = CommandVocabulary.ExtensionForExportFormat(fmt);
+            var back = CommandVocabulary.ExportFormatForExtension("model", ext);
+            Assert.True(back is not null, $"{fmt} writes {ext}, which resolves to no format");
+            Assert.True(CommandVocabulary.IsExportFormat("model", back!), $"{ext} -> {back} is rejected");
+        }
+    }
+
     [Fact]
     public void The_trap_list_is_scoped_to_the_type_that_has_the_trap()
     {
+        // A trap is an extension whose obvious guess is NOT a valid format for that type.
         var model = CommandVocabulary.ForeignExportExtensions("model").ToList();
         Assert.Contains(model, p => p.Key == "lox" && p.Value == "loch");
+        Assert.Contains(model, p => p.Key == "plt" && p.Value == "compass");
+        Assert.Contains(model, p => p.Key == "wrl" && p.Value == "vrml");
+        // .3d is not a model trap: `3d` is itself a model format, so the guess works.
+        Assert.DoesNotContain(model, p => p.Key == "3d");
         Assert.Equal(3, model.Count);
 
-        // Nothing to warn about for a map, so help says nothing rather than padding.
-        Assert.Empty(CommandVocabulary.ForeignExportExtensions("map"));
+        // ...but it IS a map trap. `survex` is a map format while `3d` is not, so guessing `3d`
+        // from cave.3d fails for a map and succeeds for a model — which is exactly why the list is
+        // computed per type instead of being one global table of "confusing extensions".
+        var map = CommandVocabulary.ForeignExportExtensions("map").ToList();
+        var mapTrap = Assert.Single(map);
+        Assert.Equal("3d", mapTrap.Key);
+        Assert.Equal("survex", mapTrap.Value);
+        Assert.DoesNotContain(map, p => p.Key == "lox");   // .lox is a model, never a map
+
+        // Nothing to warn about here, so help says nothing rather than padding.
         Assert.Empty(CommandVocabulary.ForeignExportExtensions("database"));
     }
 

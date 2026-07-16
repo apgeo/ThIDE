@@ -65,11 +65,17 @@ public class SyntaxToolsTests
     }
 
     [Fact]
-    public void A_type_with_no_extension_trap_gets_no_note()
+    public void The_note_is_per_type_because_the_trap_is_per_type()
     {
-        // Every map format writes its own name, so there is nothing to warn about — padding help with
-        // an irrelevant caveat trains the reader to skip it.
-        Assert.Null(new SyntaxTools().DescribeCommand("export map").Data!.Notes);
+        // sql/csv write their own names, so there is nothing to warn about — padding help with an
+        // irrelevant caveat trains the reader to skip it.
+        Assert.Null(new SyntaxTools().DescribeCommand("export database").Data!.Notes);
+
+        // A map, though, has its own trap and not the model's: `survex` writes .3d and `3d` is not a
+        // map format, while .lox is not a map output at all.
+        var map = new SyntaxTools().DescribeCommand("export map").Data!;
+        Assert.Contains(".3d is written by -fmt survex", map.Notes);
+        Assert.DoesNotContain("loch", map.Notes);
     }
 
     [Fact]
