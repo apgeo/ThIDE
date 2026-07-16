@@ -1,0 +1,52 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ThIDE.ViewModels.Docking"
+             xmlns:docking="using:ThIDE.Views.Docking"
+             xmlns:v="using:ThIDE.Views"
+             xmlns:conv="using:ThIDE.Converters"
+             xmlns:l="using:ThIDE.Resources"
+             x:Class="ThIDE.Views.Docking.StructuralStereonetToolView"
+             x:DataType="vm:StructuralStereonetToolViewModel">
+
+    <!-- The Structural Geology panel's Stereonet tab, popped out into its own dockable/floatable
+         panel (see StructuralGeologyViewModel.PopOutStereonetCommand). Wraps the SAME content VM
+         as the Structural Geology tool, so plane data / options / selection stay live-synced with
+         the Resulted Planes tab; deliberately has none of the wizard's top bar — only the in-tab
+         stereonet toolbar. -->
+    <UserControl.Resources>
+        <conv:StereonetProjectionLabelConverter x:Key="NetProjLabel" />
+    </UserControl.Resources>
+
+    <DockPanel>
+        <Border DockPanel.Dock="Top" Padding="8,5" Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}">
+            <DockPanel>
+                <docking:PanelWindowControls DockPanel.Dock="Right" VerticalAlignment="Center" Margin="4,0,0,0" />
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <TextBlock Text="{l:Loc Struct_NetProjection}" VerticalAlignment="Center" FontSize="11" Foreground="Gray" />
+                    <ComboBox ItemsSource="{Binding Structural.NetProjections}"
+                              SelectedItem="{Binding Structural.NetProjection}" FontSize="11" MinWidth="150"
+                              ToolTip.Tip="{l:Loc Struct_NetProjectionTip}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate><TextBlock Text="{Binding Converter={StaticResource NetProjLabel}}" /></DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <CheckBox Content="{l:Loc Struct_NetPoles}" FontSize="11" VerticalAlignment="Center"
+                              IsChecked="{Binding Structural.NetShowPoles}" ToolTip.Tip="{l:Loc Struct_NetPolesTip}" />
+                    <CheckBox Content="{l:Loc Struct_NetMeasurements}" FontSize="11" VerticalAlignment="Center"
+                              IsChecked="{Binding Structural.NetShowMeasurements}" ToolTip.Tip="{l:Loc Struct_NetMeasurementsTip}" />
+                    <CheckBox Content="{l:Loc Struct_NetGrid}" FontSize="11" VerticalAlignment="Center"
+                              IsChecked="{Binding Structural.NetShowGrid}" ToolTip.Tip="{l:Loc Struct_NetGridTip}" />
+                    <CheckBox Content="{l:Loc Struct_NetLabels}" FontSize="11" VerticalAlignment="Center"
+                              IsChecked="{Binding Structural.NetShowLabels}" />
+                    <CheckBox Content="{l:Loc Struct_WhiteBackground}" FontSize="11" VerticalAlignment="Center"
+                              IsChecked="{Binding Structural.NetWhiteBackground}" />
+                    <Border Width="1" Margin="6,2" Background="Gray" />
+                    <Button Content="{l:Loc Struct_ExportImage}" Click="OnExportStereonet" Padding="8,2" FontSize="11"
+                            ToolTip.Tip="{l:Loc Struct_NetExportTip}" />
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <v:StereonetControl Name="NetControl" Model="{Binding Structural.StereonetModel}" />
+    </DockPanel>
+</UserControl>

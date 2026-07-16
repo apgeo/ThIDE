@@ -55,6 +55,7 @@ public sealed class DockFactory : Factory
     private readonly Model3DViewerToolViewModel _model3dViewer;
     private readonly StructuralGeologyToolViewModel _structuralGeology;
     private readonly StructuralPlotToolViewModel _structuralPlot;
+    private readonly StructuralStereonetToolViewModel _structuralStereonet;
     private readonly AssistantToolViewModel _assistant;
     private readonly BlenderAnimationToolViewModel _blenderAnimation;
     private readonly ThIDE.Services.IAppSettingsService? _appSettings;
@@ -81,6 +82,7 @@ public sealed class DockFactory : Factory
         Model3DViewerToolViewModel model3dViewer,
         StructuralGeologyToolViewModel structuralGeology,
         StructuralPlotToolViewModel structuralPlot,
+        StructuralStereonetToolViewModel structuralStereonet,
         AssistantToolViewModel assistant,
         BlenderAnimationToolViewModel blenderAnimation,
         SettingsToolViewModel settings,
@@ -103,6 +105,7 @@ public sealed class DockFactory : Factory
         _model3dViewer = model3dViewer;
         _structuralGeology = structuralGeology;
         _structuralPlot = structuralPlot;
+        _structuralStereonet = structuralStereonet;
         _assistant = assistant;
         _blenderAnimation = blenderAnimation;
         _appSettings = appSettings;
@@ -406,7 +409,7 @@ public sealed class DockFactory : Factory
             "LivePreview" => s.EnableLivePreview,
             "MapViewer" => s.EnableInAppViewer,
             "Model3DViewer" => s.EnableModel3DViewer,
-            "StructuralGeology" or "StructuralPlot" => s.EnableStructuralGeology,
+            "StructuralGeology" or "StructuralPlot" or "StructuralStereonet" => s.EnableStructuralGeology,
             "BlenderAnimation" => s.EnableBlenderAnimation,
             _ => true,
         };
@@ -947,6 +950,7 @@ public sealed class DockFactory : Factory
         ["Model3DViewer"]  = _model3dViewer,
         ["StructuralGeology"] = _structuralGeology,
         ["StructuralPlot"] = _structuralPlot,
+        ["StructuralStereonet"] = _structuralStereonet,
         ["Assistant"]      = _assistant,
         ["BlenderAnimation"] = _blenderAnimation,
         ["Settings"]       = _settings,
@@ -1273,6 +1277,7 @@ public sealed class DockFactory : Factory
             ["Model3DViewer"]  = () => _model3dViewer,
             ["StructuralGeology"] = () => _structuralGeology,
             ["StructuralPlot"] = () => _structuralPlot,
+            ["StructuralStereonet"] = () => _structuralStereonet,
             ["Assistant"]      = () => _assistant,
             ["BlenderAnimation"] = () => _blenderAnimation,
             ["Settings"]       = () => _settings,

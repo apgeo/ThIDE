@@ -319,6 +319,7 @@ public class LayoutProfileTests
         new XviToolViewModel(), new OutlineToolViewModel(), new ProjectToolViewModel(), new LogToolViewModel(),
         new LivePreviewToolViewModel(), new MapViewerToolViewModel(), new Model3DViewerToolViewModel(),
         new StructuralGeologyToolViewModel(), new StructuralPlotToolViewModel(),
+        new StructuralStereonetToolViewModel(),
         new AssistantToolViewModel(), new BlenderAnimationToolViewModel(),
         new SettingsToolViewModel());
 

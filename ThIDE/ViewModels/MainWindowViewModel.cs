@@ -93,6 +93,7 @@ public partial class MainWindowViewModel : ViewModelBase
     public Model3DViewerToolViewModel Model3DViewerTool { get; }
     public StructuralGeologyToolViewModel StructuralGeologyTool { get; }
     public StructuralPlotToolViewModel StructuralPlotTool { get; }
+    public StructuralStereonetToolViewModel StructuralStereonetTool { get; }
     public AssistantToolViewModel AssistantTool { get; }   // AI-07 in-app assistant
     public BlenderAnimationToolViewModel BlenderAnimationTool { get; }
     public SettingsToolViewModel SettingsTool { get; }
@@ -497,6 +498,7 @@ public partial class MainWindowViewModel : ViewModelBase
         Model3DViewerToolViewModel model3dViewerTool,
         StructuralGeologyToolViewModel structuralGeologyTool,
         StructuralPlotToolViewModel structuralPlotTool,
+        StructuralStereonetToolViewModel structuralStereonetTool,
         AssistantToolViewModel assistantTool,
         BlenderAnimationToolViewModel blenderAnimationTool,
         SettingsToolViewModel settingsTool,
@@ -558,6 +560,7 @@ public partial class MainWindowViewModel : ViewModelBase
         Model3DViewerTool = model3dViewerTool;
         StructuralGeologyTool = structuralGeologyTool;
         StructuralPlotTool = structuralPlotTool;
+        StructuralStereonetTool = structuralStereonetTool;
         AssistantTool = assistantTool;
         BlenderAnimationTool = blenderAnimationTool;
         SettingsTool = settingsTool;
@@ -672,6 +675,8 @@ public partial class MainWindowViewModel : ViewModelBase
         StructuralGeologyTool.Structural.NavigateRequested += (_, span) => NavigateTo(span);
         // "Pop out to panel" on the 3D Plot tab → surface its own dockable/floatable panel.
         StructuralGeologyTool.Structural.PlotPopOutRequested += (_, _) => _factory.ShowToolInDocuments(StructuralPlotTool);
+        // Same for the Stereonet tab.
+        StructuralGeologyTool.Structural.StereonetPopOutRequested += (_, _) => _factory.ShowToolInDocuments(StructuralStereonetTool);
         // "Show in 3D" from a station/survey context menu → reveal it in the embedded viewer.
         _documents.ShowInModel3DRequested += (_, name) => OnUiThread(() =>
         {
@@ -791,6 +796,7 @@ public partial class MainWindowViewModel : ViewModelBase
         new Model3DViewerToolViewModel(new Model3DViewerViewModel()),
         new StructuralGeologyToolViewModel(new StructuralGeologyViewModel()),
         new StructuralPlotToolViewModel(new StructuralGeologyViewModel()),
+        new StructuralStereonetToolViewModel(new StructuralGeologyViewModel()),
         new AssistantToolViewModel(),
         new BlenderAnimationToolViewModel(new BlenderAnimationViewModel()),
         new SettingsToolViewModel(new SettingsViewModel(), new KeyboardShortcutsViewModel()))
@@ -814,6 +820,7 @@ public partial class MainWindowViewModel : ViewModelBase
         new Model3DViewerToolViewModel(new Model3DViewerViewModel()),
         new StructuralGeologyToolViewModel(new StructuralGeologyViewModel()),
         new StructuralPlotToolViewModel(new StructuralGeologyViewModel()),
+        new StructuralStereonetToolViewModel(new StructuralGeologyViewModel()),
         new AssistantToolViewModel(),
         new BlenderAnimationToolViewModel(new BlenderAnimationViewModel()),
         new SettingsToolViewModel(new SettingsViewModel(), new KeyboardShortcutsViewModel()));

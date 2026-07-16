@@ -227,6 +227,17 @@ public sealed class StructuralPlotToolViewModel : ToolViewModelBase
         : base("StructuralPlot", "Struct_PlotPanelTitle", lang) => Structural = structural;
 }
 
+/// <summary>The Stereonet (Wulff/Schmidt) tab popped out of the Structural Geology wizard into its
+/// own dockable/floatable panel (see <see cref="StructuralGeologyViewModel.PopOutStereonetCommand"/>).
+/// Wraps the SAME content VM as <see cref="StructuralGeologyToolViewModel"/> — no state is duplicated.</summary>
+public sealed class StructuralStereonetToolViewModel : ToolViewModelBase
+{
+    [JsonIgnore] public StructuralGeologyViewModel Structural { get; }
+    public StructuralStereonetToolViewModel() : base("StructuralStereonet", "Struct_NetPanelTitle") => Structural = null!;
+    public StructuralStereonetToolViewModel(StructuralGeologyViewModel structural, ILanguageService? lang = null)
+        : base("StructuralStereonet", "Struct_NetPanelTitle", lang) => Structural = structural;
+}
+
 public sealed class XviToolViewModel : ToolViewModelBase
 {
     [JsonIgnore] public XviReferencesViewModel Xvi { get; }

@@ -17,7 +17,7 @@ public static class LayoutPresets
 {
     // Panels that benefit from their own monitor (rendered previews), in dispersal order.
     private static readonly string[] FloatCandidates =
-        { "LivePreview", "MapViewer", "Model3DViewer", "StructuralPlot" };
+        { "LivePreview", "MapViewer", "Model3DViewer", "StructuralPlot", "StructuralStereonet" };
 
     /// <summary>
     /// Splits the lateral docking areas into <paramref name="parts"/> (2 or 3) stacked
