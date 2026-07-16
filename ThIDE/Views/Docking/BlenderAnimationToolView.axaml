@@ -11,6 +11,15 @@
     <ScrollViewer>
         <StackPanel Margin="10" Spacing="8" MinWidth="320">
 
+            <!-- experimental / WIP banner -->
+            <Border Background="#33B08000" BorderBrush="#B08000" BorderThickness="1" CornerRadius="3" Padding="8,6">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Left" Text="&#x26A0;" FontSize="14" Margin="0,0,6,0"
+                               Foreground="#B08000" VerticalAlignment="Top" />
+                    <TextBlock Text="{l:Loc Blender_UI_Experimental}" TextWrapping="Wrap" />
+                </DockPanel>
+            </Border>
+
             <!-- preset strip -->
             <TextBlock Text="{l:Loc Blender_UI_Preset}" FontWeight="Bold" />
             <ComboBox HorizontalAlignment="Stretch"

@@ -372,6 +372,7 @@
   <data name="Blender_Phase_Collecting" xml:space="preserve"><value>Se colectează rezultatele…</value></data>
   <data name="Blender_Phase_Done" xml:space="preserve"><value>Gata</value></data>
   <data name="Blender_Phase_Working" xml:space="preserve"><value>Se lucrează…</value></data>
+  <data name="Blender_UI_Experimental" xml:space="preserve"><value>Experimental — acest modul este în lucru. Așteptați-vă la asperități și schimbări.</value></data>
   <data name="Blender_UI_Preset" xml:space="preserve"><value>Presetare</value></data>
   <data name="Blender_UI_SavePreset" xml:space="preserve"><value>Salvează</value></data>
   <data name="Blender_UI_DeletePreset" xml:space="preserve"><value>Șterge</value></data>

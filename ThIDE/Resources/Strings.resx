@@ -372,6 +372,7 @@
   <data name="Blender_Phase_Collecting" xml:space="preserve"><value>Collecting outputs…</value></data>
   <data name="Blender_Phase_Done" xml:space="preserve"><value>Done</value></data>
   <data name="Blender_Phase_Working" xml:space="preserve"><value>Working…</value></data>
+  <data name="Blender_UI_Experimental" xml:space="preserve"><value>Experimental — this module is a work in progress. Expect rough edges and changes.</value></data>
   <data name="Blender_UI_Preset" xml:space="preserve"><value>Preset</value></data>
   <data name="Blender_UI_SavePreset" xml:space="preserve"><value>Save</value></data>
   <data name="Blender_UI_DeletePreset" xml:space="preserve"><value>Delete</value></data>
