@@ -34,6 +34,8 @@
                     <CheckBox Content="{l:Loc Struct_FadedSplays}" FontSize="11" VerticalAlignment="Center"
                               IsChecked="{Binding Structural.FadedSplays}" IsEnabled="{Binding Structural.PlotSplays}"
                               ToolTip.Tip="{l:Loc Struct_FadedSplaysTip}" />
+                    <CheckBox Content="{l:Loc Struct_NetInPlot}" FontSize="11" VerticalAlignment="Center"
+                              IsChecked="{Binding Structural.NetInPlot}" ToolTip.Tip="{l:Loc Struct_NetInPlotTip}" />
                     <Border Width="1" Margin="6,2" Background="Gray" />
                     <!-- Mirrors the Structural Geology panel's "Show in Mainline Map Preview" toggles. -->
                     <ToggleButton Content="{l:Loc Struct_ShowInPreview}" Padding="6,2" FontSize="12"

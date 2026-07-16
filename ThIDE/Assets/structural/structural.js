@@ -46,6 +46,8 @@
     var splayFadeActive = false;   // whether the current splays use the background-blended colour
     var MAINLINE = 0x888888;       // main-line grey; splays follow it unless faded
     var gizmoScene, gizmoCam;     // corner compass/vertical reference (N/E/S/W + Up), synced to the view
+    var netScene, netCam, netGroup;   // bottom-left stereonet inset (lower-hemisphere bowl), camera-synced
+    var netShow = false;
     var target = new THREE.Vector3(0, 0, 0);
     var sph = { r: 50, theta: 0.9, phi: 1.0 };  // azimuth around Z, polar from +Z
 
@@ -172,6 +174,99 @@
         renderer.setScissorTest(false);
     }
 
+    // ---- corner stereonet inset (great-circle arcs on the lower unit hemisphere) ----------------
+    // Built lazily on the first stRender that carries net data; rebuilt from each render's arcs.
+    // The camera copies the main view's orientation (like the gizmo), so the "bowl" rotates in
+    // sync with the cave model.
+    function initNet() {
+        netScene = new THREE.Scene();
+        netCam = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
+        netCam.up.set(0, 0, 1);
+
+        var frame = new THREE.Group();
+        // Primitive (horizon) ring + faint depth rings at plunge 30°/60° to shape the bowl.
+        frame.add(netCircle(1.0, 0, 0x999999, 96, 0.85));
+        frame.add(netCircle(Math.cos(Math.PI / 6), -Math.sin(Math.PI / 6), 0x888888, 64, 0.3));
+        frame.add(netCircle(Math.cos(Math.PI / 3), -Math.sin(Math.PI / 3), 0x888888, 64, 0.3));
+        var n = makeLabel("N", "#51cf66"); n.position.set(0, 1.25, 0); frame.add(n);
+        var e = makeLabel("E", "#ff6b6b"); e.position.set(1.25, 0, 0); frame.add(e);
+        var s = makeLabel("S", "#2f9e44"); s.position.set(0, -1.25, 0); frame.add(s);
+        var w = makeLabel("W", "#c0392b"); w.position.set(-1.25, 0, 0); frame.add(w);
+        netScene.add(frame);
+
+        netGroup = new THREE.Group();
+        netScene.add(netGroup);
+    }
+
+    // A horizontal circle of the given radius at height z (the inset's reference rings).
+    function netCircle(radius, z, color, segments, opacity) {
+        var pts = [];
+        for (var i = 0; i <= segments; i++) {
+            var a = (i / segments) * Math.PI * 2;
+            pts.push(new THREE.Vector3(Math.cos(a) * radius, Math.sin(a) * radius, z));
+        }
+        var geo = new THREE.BufferGeometry().setFromPoints(pts);
+        return new THREE.Line(geo, new THREE.LineBasicMaterial({ color: color, transparent: true, opacity: opacity }));
+    }
+
+    // Rebuild the per-plane arcs/poles from stRender's `net` payload (already lower-hemisphere
+    // polylines in the same E/N/Up frame as the cave lines). Selected plane reads gold, like the
+    // selected disc's rim.
+    function updateNet(data) {
+        netShow = !!data.netShow;
+        if (!netScene) {
+            if (!netShow) return;
+            try { initNet(); } catch (e) { netScene = null; netShow = false; post({ type: "console", level: "error", message: "net init failed: " + e }); return; }
+        }
+        clearGroup(netGroup);
+        var HIGHLIGHT = "#ffd600";
+        (data.net || []).forEach(function (a, i) {
+            var css = a.selected ? HIGHLIGHT : (a.color || PALETTE[i % PALETTE.length]);
+            var raw = a.pts || [];
+            var pts = [];
+            for (var k = 0; k + 2 < raw.length; k += 3) pts.push(new THREE.Vector3(raw[k], raw[k + 1], raw[k + 2]));
+            if (pts.length >= 2) {
+                var geo = new THREE.BufferGeometry().setFromPoints(pts);
+                netGroup.add(new THREE.Line(geo, new THREE.LineBasicMaterial({ color: new THREE.Color(css) })));
+            }
+            if (a.pole && a.pole.length === 3) {
+                var sp = new THREE.Mesh(
+                    new THREE.SphereGeometry(a.selected ? 0.05 : 0.032, 10, 10),
+                    new THREE.MeshBasicMaterial({ color: new THREE.Color(css) }));
+                sp.position.set(a.pole[0], a.pole[1], a.pole[2]);
+                netGroup.add(sp);
+            }
+        });
+    }
+
+    // Renders the inset into a small bottom-left viewport, matching the main camera's orientation.
+    function renderNet() {
+        if (!netShow || !netScene) return;
+        try {
+            var host = document.getElementById("scene");
+            var W = host.clientWidth, H = host.clientHeight;
+            var size = Math.max(96, Math.min(190, Math.round(Math.min(W, H) * 0.30))), m = 8;
+
+            var dir = new THREE.Vector3().subVectors(camera.position, target);
+            if (dir.lengthSq() < 1e-9) dir.set(0, -1, 0.4);
+            dir.normalize();
+            netCam.position.copy(dir.multiplyScalar(3.8));
+            netCam.up.copy(camera.up);
+            netCam.lookAt(0, 0, 0);
+            netCam.updateProjectionMatrix();
+
+            renderer.clearDepth();
+            renderer.setScissorTest(true);
+            renderer.setScissor(m, m, size, size);
+            renderer.setViewport(m, m, size, size);
+            renderer.render(netScene, netCam);
+            renderer.setScissorTest(false);
+        } catch (e) {
+            netScene = null; netShow = false;
+            post({ type: "console", level: "error", message: "net render failed: " + e });
+        }
+    }
+
     function aspect() {
         var host = document.getElementById("scene");
         return Math.max(1e-3, host.clientWidth / Math.max(1, host.clientHeight));
@@ -194,6 +289,7 @@
         renderer.clear();                 // autoClear is off — clear the full frame ourselves
         renderer.render(scene, camera);
         renderGizmo();
+        renderNet();
     }
 
     function resize() {
@@ -259,6 +355,8 @@
     window.stClear = function () {
         if (planeGroup) clearGroup(planeGroup);
         if (lineGroup) clearGroup(lineGroup);
+        if (netGroup) clearGroup(netGroup);
+        netShow = false;
         pickables = [];
         document.getElementById("empty").classList.remove("hidden");
     };
@@ -344,6 +442,9 @@
                 box.expandByPoint(c); has = true;
             });
 
+            // Corner stereonet inset (camera-synced great-circle arcs).
+            updateNet(data);
+
             document.getElementById("empty").classList.toggle("hidden", has);
             if (has) fit(box);
         } catch (e) { post({ type: "console", level: "error", message: "stRender failed: " + e }); }
@@ -385,6 +486,7 @@
             renderer.clear();
             renderer.render(scene, camera);
             renderGizmo();
+            renderNet();
             post({ type: "image", data: renderer.domElement.toDataURL("image/png") });
         } catch (e) { post({ type: "console", level: "error", message: "export failed: " + e }); }
     };
