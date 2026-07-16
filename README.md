@@ -24,6 +24,8 @@ A cross-platform desktop **workbench / IDE for [Therion](https://therion.speleo.
 - **Import / export & GIS** — Survex, Compass, DEM, and GPX import; entrance/fix export to KML / GeoJSON / GPX / CSV.
 - **Extensible & scriptable** — a headless CLI, an editor-agnostic **LSP** server, script hooks, and a semantic-rule plugin loader.
 - **Cross-platform** (Windows / macOS / Linux), localized in **English and Romanian** (additions are welcome).
+- ⚠️ **[Blender animation renders](docs/user-guide/23-blender-animation.md)** *(experimental — work in progress)* — turn a compiled model into a fly-around video, helical descent, flythrough, or documentation stills, rendered headlessly by your own Blender install.
+- ⚠️ **[AI assistants over MCP](docs/user-guide/20-extensibility.md#ai-assistants-mcp)** *(experimental — work in progress)* — a built-in Assistant panel driven by a **local** model, and a `therion-mcp` server that lets an assistant answer questions about your project without you pasting files into a chat.
 
 A complete feature reference: **[docs/features.md](docs/features.md)**. A quick view in: **[docs/screenshots.md](docs/screenshots.md)**.
 

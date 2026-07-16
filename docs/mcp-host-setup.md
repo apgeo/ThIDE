@@ -1,5 +1,8 @@
 # MCP server (`therion-mcp`)
 
+> ⚠️ **Experimental — work in progress.** The MCP integration is young and still changing. Expect
+> rough edges, and settings or behaviour that move between releases.
+
 > **Draft.** The headless server (21 read-only tools + 11 that write) and the connection to the
 > *running* IDE (live buffers, opening files, driving panes) are both complete. The final polish of this
 > page — the model matrix and the caver-facing guide — lands with a later batch.

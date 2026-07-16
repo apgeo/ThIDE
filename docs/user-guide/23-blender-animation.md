@@ -1,5 +1,10 @@
 # Blender animation renders
 
+> [← Back to the User Guide home](README.md) · [🏠 ThIDE project home](../../README.md)
+
+> ⚠️ **Experimental — work in progress.** This module is young and still changing. Expect rough
+> edges, and settings or behaviour that move between releases.
+
 The **Blender Animation** panel turns the 3D model your project already produces into a
 presentation you can share: a fly-around video, a helical descent, a flythrough of the main
 passage, a set of documentation stills, or a top-down map pass. ThIDE converts the model to a

@@ -1260,6 +1260,7 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Assistant_InputWatermark" xml:space="preserve"><value>Întreabă despre proiectul deschis…</value></data>
   <data name="Assistant_Send" xml:space="preserve"><value>Trimite</value></data>
   <data name="Assistant_Stop" xml:space="preserve"><value>Oprește</value></data>
+  <data name="Assistant_Experimental" xml:space="preserve"><value>Experimental — acest modul este în lucru. Așteptați-vă la asperități și schimbări.</value></data>
   <data name="Assistant_NewChat" xml:space="preserve"><value>Conversație nouă</value></data>
   <data name="Assistant_Allow" xml:space="preserve"><value>Permite</value></data>
   <data name="Assistant_Deny" xml:space="preserve"><value>Refuză</value></data>

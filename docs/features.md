@@ -23,6 +23,7 @@
 - **Map Viewer** — an in-app renderer for compiled **PNG / SVG / PDF** maps (zoom, fit-to-window, PDF page navigation, full-screen/float). It lists the active thconfig's `export map` outputs in a picker and can auto-show the first map after a build.
 - **Embedded 3D viewer** — renders compiled `.lox` / `.3d` models via [CaveView.js](https://github.com/aardgoose/CaveView.js) inside a native web view (no bundled Chromium); orientation/camera/feature toggles, color-by overlays, full-screen, and **click-a-station → jump to `.th` source**. See [3d-viewer.md](3d-viewer.md).
 - **Loch / Aven** launchers and **thbook** PDF page lookup.
+- ⚠️ **Blender animation renders** *(experimental — work in progress)* — turn a compiled model into a fly-around video, helical descent, flythrough, stills, or a map pass: ThIDE meshes the model, writes a Blender Python script, and drives your own Blender install headlessly. See [user-guide/23-blender-animation.md](user-guide/23-blender-animation.md).
 
 ## Survey analytics & notes
 - Project statistics: length breakdown (surface / underground / duplicate / splay), vertical range with hi/lo stations, horizontal extent; length by survey and by date; team members & trips; fixed points; data-quality checks.
@@ -53,3 +54,4 @@
 - **`therion-cli`** — headless `validate` / `lint` / `format` / `stats` / `deps` / `gis` / `dump-ast` / `list-stations`. See [Usage](usage.md#command-line-tools).
 - **`therion-lsp`** — an editor-agnostic Language Server (diagnostics over stdio). See [lsp.md](lsp.md).
 - **Script hooks** (on open / save / build) and a **semantic-rule plugin loader** (`ISemanticRule` DLLs). See [plugins.md](plugins.md).
+- ⚠️ **AI assistants over MCP** *(experimental — work in progress)* — a built-in **Assistant** panel driven by a local model, plus `therion-mcp`, which exposes ThIDE's parser, semantics, and workspace engines over the [Model Context Protocol](https://modelcontextprotocol.io) so an assistant can answer questions about a project without you pasting files into a chat. Read-only by default, opt-in write tools behind an approval gate. See [mcp-host-setup.md](mcp-host-setup.md) and [user-guide/20-extensibility.md](user-guide/20-extensibility.md#ai-assistants-mcp).

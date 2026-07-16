@@ -8,6 +8,15 @@
              x:DataType="dvm:AssistantToolViewModel">
     <DockPanel DataContext="{Binding Assistant}">
 
+        <!-- experimental / WIP banner -->
+        <Border DockPanel.Dock="Top" Background="#33B08000" BorderBrush="#B08000" BorderThickness="0,0,0,1" Padding="8,5">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Left" Text="&#x26A0;" FontSize="12" Margin="0,0,6,0"
+                           Foreground="#B08000" VerticalAlignment="Top" />
+                <TextBlock Text="{l:Loc Assistant_Experimental}" FontSize="11" TextWrapping="Wrap" />
+            </DockPanel>
+        </Border>
+
         <!-- toolbar -->
         <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="6,3">
             <DockPanel>
