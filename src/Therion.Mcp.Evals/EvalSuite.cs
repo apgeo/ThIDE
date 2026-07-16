@@ -75,10 +75,29 @@ public static class EvalSuite
         new("audit-one-surveyor", Category.Audit, "history",
             "Which survey in this cave was carried out by only one surveyor? Name that survey.",
             new AnswerContains("deeppart")),
+        // U-13 (progress over time): metres surveyed in one year. The model must turn "in 2002" into
+        // dateFrom/dateTo and read the length back; the grader recomputes from the same filter, so it
+        // checks the translation rather than a number anyone hard-coded. One survey matches that year,
+        // which is what makes the ground truth a single server-computed value.
+        new("qa-year-length", Category.Qa, "history",
+            "How many metres of passage were surveyed in the year 2002? Answer with just the number.",
+            new AnswerMatchesComputed("list_survey_info", "/surveys/0/length",
+                new Dictionary<string, object?> { ["dateFrom"] = "2002", ["dateTo"] = "2002" })),
         // History narrative (U-05): a graceful chronological summary from team + dates.
         new("audit-history", Category.Audit, "history",
             "Summarize who surveyed this cave and in which years, in chronological order.",
             new HandledGracefully()),
+        // U-13 (progress over time), the arithmetic half: nothing totals length per person, so the
+        // model must find the trips Ion Marin was on (entrance 40 m, extension 15 m — not deeppart)
+        // and add them. 55 is reachable no other way: it is not the cave total (105), not any single
+        // survey (40/50/15), and not a pair anyone else was on. Asking "who surveyed the most?"
+        // instead would be fool-able — Ana Pop is on every trip, so her total IS the cave total, and
+        // a model that just read the rolled-up length would pass without doing the arithmetic.
+        // Audit, not Qa: qa_exact stays exact-numbers-from-the-server only.
+        new("audit-progress-by-surveyor", Category.Audit, "history",
+            "How many metres of this cave has Ion Marin surveyed in total, across every trip he was "
+            + "on? Show the trips you counted.",
+            new AnswerContains("55")),
 
         // ---- formatting round-trip -----------------------------------------------------------------
         new("format-roundtrip", Category.Format, "valid",
