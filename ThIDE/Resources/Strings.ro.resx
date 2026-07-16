@@ -356,6 +356,67 @@
   <data name="Notif_LayoutNeedsTwoMonitors" xml:space="preserve"><value>Acest aspect necesită cel puțin două monitoare (și un panou de previzualizare activat).</value></data>
   <data name="Menu_Tools" xml:space="preserve"><value>Unelte</value></data>
   <data name="Menu_Tools_ImportSurvey" xml:space="preserve"><value>Importă topografie (Survex / Compass)…</value></data>
+  <data name="Menu_Tools_BlenderAnimation" xml:space="preserve"><value>Animație Blender…</value></data>
+  <data name="Blender_Tool_Title" xml:space="preserve"><value>Animație Blender</value></data>
+  <data name="Blender_Blocker_NoSource" xml:space="preserve"><value>Selectați o sursă de model.</value></data>
+  <data name="Blender_Status_Acquiring" xml:space="preserve"><value>Se obține sursa…</value></data>
+  <data name="Blender_Status_Cancelled" xml:space="preserve"><value>Anulat.</value></data>
+  <data name="Blender_Status_Failed" xml:space="preserve"><value>Randare eșuată.</value></data>
+  <data name="Blender_Status_Exporting" xml:space="preserve"><value>Se exportă scriptul…</value></data>
+  <data name="Blender_Status_Exported" xml:space="preserve"><value>Script exportat.</value></data>
+  <data name="Blender_Status_Done" xml:space="preserve"><value>Randare completă.</value></data>
+  <data name="Blender_Phase_Acquiring" xml:space="preserve"><value>Se obține sursa…</value></data>
+  <data name="Blender_Phase_Converting" xml:space="preserve"><value>Se convertește modelul…</value></data>
+  <data name="Blender_Phase_Generating" xml:space="preserve"><value>Se generează scriptul…</value></data>
+  <data name="Blender_Phase_Rendering" xml:space="preserve"><value>Se randează</value></data>
+  <data name="Blender_Phase_Collecting" xml:space="preserve"><value>Se colectează rezultatele…</value></data>
+  <data name="Blender_Phase_Done" xml:space="preserve"><value>Gata</value></data>
+  <data name="Blender_Phase_Working" xml:space="preserve"><value>Se lucrează…</value></data>
+  <data name="Blender_UI_Experimental" xml:space="preserve"><value>Experimental — acest modul este în lucru. Așteptați-vă la asperități și schimbări.</value></data>
+  <data name="Blender_UI_Preset" xml:space="preserve"><value>Presetare</value></data>
+  <data name="Blender_UI_SavePreset" xml:space="preserve"><value>Salvează</value></data>
+  <data name="Blender_UI_DeletePreset" xml:space="preserve"><value>Șterge</value></data>
+  <data name="Blender_UI_NewPresetName" xml:space="preserve"><value>Nume presetare nouă…</value></data>
+  <data name="Blender_UI_Source" xml:space="preserve"><value>Sursă</value></data>
+  <data name="Blender_UI_UseExternalFile" xml:space="preserve"><value>Folosește un fișier extern</value></data>
+  <data name="Blender_UI_ExternalFile" xml:space="preserve"><value>Cale fișier model</value></data>
+  <data name="Blender_UI_WorkspaceArtifact" xml:space="preserve"><value>Model din proiect</value></data>
+  <data name="Blender_UI_ReloadArtifacts" xml:space="preserve"><value>Reîmprospătează</value></data>
+  <data name="Blender_UI_Camera" xml:space="preserve"><value>Cameră</value></data>
+  <data name="Blender_UI_Template" xml:space="preserve"><value>Șablon</value></data>
+  <data name="Blender_UI_Engine" xml:space="preserve"><value>Motor</value></data>
+  <data name="Blender_UI_Gpu" xml:space="preserve"><value>Dispozitiv</value></data>
+  <data name="Blender_UI_Samples" xml:space="preserve"><value>Eșantioane</value></data>
+  <data name="Blender_UI_Animation" xml:space="preserve"><value>Animație</value></data>
+  <data name="Blender_UI_Fps" xml:space="preserve"><value>Cadre pe secundă</value></data>
+  <data name="Blender_UI_Duration" xml:space="preserve"><value>Durată (secunde)</value></data>
+  <data name="Blender_UI_Output" xml:space="preserve"><value>Ieșire</value></data>
+  <data name="Blender_UI_Container" xml:space="preserve"><value>Container</value></data>
+  <data name="Blender_UI_Width" xml:space="preserve"><value>Lățime</value></data>
+  <data name="Blender_UI_Height" xml:space="preserve"><value>Înălțime</value></data>
+  <data name="Blender_UI_BaseName" xml:space="preserve"><value>Nume fișier</value></data>
+  <data name="Blender_UI_SelfContained" xml:space="preserve"><value>Script autonom</value></data>
+  <data name="Blender_UI_Labels" xml:space="preserve"><value>Etichete</value></data>
+  <data name="Blender_UI_StationLabels" xml:space="preserve"><value>Etichete stații</value></data>
+  <data name="Blender_UI_LeadMarkers" xml:space="preserve"><value>Marcaje continuări</value></data>
+  <data name="Blender_UI_Render" xml:space="preserve"><value>Randează</value></data>
+  <data name="Blender_UI_Export" xml:space="preserve"><value>Exportă scriptul…</value></data>
+  <data name="Blender_UI_ExportDir" xml:space="preserve"><value>Folder export</value></data>
+  <data name="Blender_UI_Cancel" xml:space="preserve"><value>Anulează</value></data>
+  <data name="Blender_UI_Frames" xml:space="preserve"><value>Cadre</value></data>
+  <data name="Blender_UI_Blockers" xml:space="preserve"><value>De corectat înainte de randare</value></data>
+  <data name="Blender_UI_Outputs" xml:space="preserve"><value>Rezultate</value></data>
+  <data name="Blender_UI_OpenFolder" xml:space="preserve"><value>Deschide folderul</value></data>
+  <data name="Blender_UI_OpenLog" xml:space="preserve"><value>Deschide jurnalul</value></data>
+  <data name="Blender_UI_OpenInBlender" xml:space="preserve"><value>Deschide în Blender…</value></data>
+  <data name="Blender_UI_Jobs" xml:space="preserve"><value>Randări recente</value></data>
+  <data name="Blender_UI_CopyResult" xml:space="preserve"><value>Copiază rezultatul</value></data>
+  <data name="Blender_Notify_OpenFolder" xml:space="preserve"><value>Deschide folderul</value></data>
+  <data name="Blender_Notify_OpenLog" xml:space="preserve"><value>Deschide jurnalul</value></data>
+  <data name="Blender_Status_OpenedInBlender" xml:space="preserve"><value>Deschis în Blender.</value></data>
+  <data name="Blender_Fail_NotFound" xml:space="preserve"><value>Blender nu a fost găsit. Setați calea în Preferințe ▸ Unelte externe.</value></data>
+  <data name="Blender_Fail_TooOld" xml:space="preserve"><value>Versiunea de Blender instalată este prea veche — necesită versiunea 4.2 sau mai nouă.</value></data>
+  <data name="Blender_Fail_DiskSpace" xml:space="preserve"><value>Spațiu insuficient pe disc pentru această randare.</value></data>
   <data name="Menu_Tools_ImportDem" xml:space="preserve"><value>Importă DEM ca suprafață (.asc)…</value></data>
   <data name="Menu_Tools_ImportGpx" xml:space="preserve"><value>Importă puncte GPX (→ fix)…</value></data>
   <data name="Menu_Tools_ScaffoldProject" xml:space="preserve"><value>Generează proiect din tur…</value></data>

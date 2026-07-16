@@ -1430,6 +1430,7 @@ public partial class MainWindow : Window
             [ShellCommandIds.ToggleMapViewer]          = vm.ToggleMapViewerCommand,
             [ShellCommandIds.ToggleModel3DViewer]      = vm.ToggleModel3DViewerCommand,
             [ShellCommandIds.ToggleStructuralGeology]  = vm.ToggleStructuralGeologyCommand,
+            [ShellCommandIds.ToggleBlenderAnimation]   = vm.ToggleBlenderAnimationCommand,
             [ShellCommandIds.SplitEditor]              = vm.SplitEditorCommand,
             [ShellCommandIds.ResetLayout]              = vm.ResetLayoutCommand,
             [ShellCommandIds.FloatActiveDocument]      = vm.FloatActiveDocumentCommand,

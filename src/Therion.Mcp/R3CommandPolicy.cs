@@ -59,6 +59,7 @@ public static class R3CommandPolicy
         new(ShellCommandIds.ToggleMapViewer,     "Toggle the Map Viewer panel",     "View",     R3CommandGate.Allowed, R3CommandScope.Shell),
         new(ShellCommandIds.ToggleModel3DViewer, "Toggle the 3D Model viewer",      "View",     R3CommandGate.Allowed, R3CommandScope.Shell),
         new(ShellCommandIds.ToggleStructuralGeology, "Toggle the Structural Geology panel", "View", R3CommandGate.Allowed, R3CommandScope.Shell),
+        new(ShellCommandIds.ToggleBlenderAnimation, "Toggle the Blender Animation panel", "View", R3CommandGate.Allowed, R3CommandScope.Shell),
         new(ShellCommandIds.SplitEditor,         "Split the editor",                "View",     R3CommandGate.Allowed, R3CommandScope.Shell),
         new(ShellCommandIds.ResetLayout,         "Reset the window layout",         "View",     R3CommandGate.Allowed, R3CommandScope.Shell),
         new(ShellCommandIds.FloatActiveDocument, "Float the active document",       "View",     R3CommandGate.Allowed, R3CommandScope.Shell),

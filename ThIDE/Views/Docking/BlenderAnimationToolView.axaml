@@ -1,0 +1,167 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ThIDE.ViewModels.Docking"
+             xmlns:vmm="using:ThIDE.ViewModels"
+             xmlns:l="using:ThIDE.Resources"
+             x:Class="ThIDE.Views.Docking.BlenderAnimationToolView"
+             x:DataType="vm:BlenderAnimationToolViewModel">
+
+    <!-- Blender Animation panel (BA-B12). Binds to the tool VM; the content VM is reached via
+         the `Blender.` prefix (compiled bindings). -->
+    <ScrollViewer>
+        <StackPanel Margin="10" Spacing="8" MinWidth="320">
+
+            <!-- experimental / WIP banner -->
+            <Border Background="#33B08000" BorderBrush="#B08000" BorderThickness="1" CornerRadius="3" Padding="8,6">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Left" Text="&#x26A0;" FontSize="14" Margin="0,0,6,0"
+                               Foreground="#B08000" VerticalAlignment="Top" />
+                    <TextBlock Text="{l:Loc Blender_UI_Experimental}" TextWrapping="Wrap" />
+                </DockPanel>
+            </Border>
+
+            <!-- preset strip -->
+            <TextBlock Text="{l:Loc Blender_UI_Preset}" FontWeight="Bold" />
+            <ComboBox HorizontalAlignment="Stretch"
+                      ItemsSource="{Binding Blender.Presets}"
+                      SelectedItem="{Binding Blender.SelectedPreset}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="vmm:PresetItem">
+                        <TextBlock Text="{Binding Name}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+            <DockPanel>
+                <Button DockPanel.Dock="Right" Content="{l:Loc Blender_UI_DeletePreset}" Command="{Binding Blender.DeletePresetCommand}" Margin="4,0,0,0" />
+                <Button DockPanel.Dock="Right" Content="{l:Loc Blender_UI_SavePreset}" Command="{Binding Blender.SavePresetCommand}" Margin="4,0,0,0" />
+                <TextBox Watermark="{l:Loc Blender_UI_NewPresetName}" Text="{Binding Blender.NewPresetName}" />
+            </DockPanel>
+
+            <Separator />
+
+            <!-- source -->
+            <TextBlock Text="{l:Loc Blender_UI_Source}" FontWeight="Bold" />
+            <CheckBox Content="{l:Loc Blender_UI_UseExternalFile}" IsChecked="{Binding Blender.UseExternalFile}" />
+            <TextBox Watermark="{l:Loc Blender_UI_ExternalFile}" Text="{Binding Blender.ExternalFilePath}"
+                     IsVisible="{Binding Blender.UseExternalFile}" />
+            <DockPanel IsVisible="{Binding !Blender.UseExternalFile}">
+                <Button DockPanel.Dock="Right" Content="{l:Loc Blender_UI_ReloadArtifacts}" Command="{Binding Blender.ReloadArtifactsCommand}" Margin="4,0,0,0" />
+                <ComboBox HorizontalAlignment="Stretch"
+                          ItemsSource="{Binding Blender.Artifacts}"
+                          SelectedItem="{Binding Blender.SelectedArtifact}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="vmm:ArtifactItem">
+                            <TextBlock Text="{Binding DisplayName}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+            </DockPanel>
+
+            <Separator />
+
+            <!-- camera + engine -->
+            <TextBlock Text="{l:Loc Blender_UI_Camera}" FontWeight="Bold" />
+            <DockPanel><TextBlock Text="{l:Loc Blender_UI_Template}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.CameraTemplates}" SelectedItem="{Binding Blender.CameraTemplate}" /></DockPanel>
+
+            <TextBlock Text="{l:Loc Blender_UI_Engine}" FontWeight="Bold" />
+            <DockPanel><TextBlock Text="{l:Loc Blender_UI_Engine}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.Engines}" SelectedItem="{Binding Blender.EngineKind}" /></DockPanel>
+            <DockPanel><TextBlock Text="{l:Loc Blender_UI_Gpu}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.GpuModes}" SelectedItem="{Binding Blender.Gpu}" /></DockPanel>
+            <DockPanel><TextBlock Text="{l:Loc Blender_UI_Samples}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                <TextBox Text="{Binding Blender.Samples}" /></DockPanel>
+
+            <!-- animation -->
+            <TextBlock Text="{l:Loc Blender_UI_Animation}" FontWeight="Bold" />
+            <DockPanel><TextBlock Text="{l:Loc Blender_UI_Fps}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                <TextBox Text="{Binding Blender.Fps}" /></DockPanel>
+            <DockPanel><TextBlock Text="{l:Loc Blender_UI_Duration}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                <TextBox Text="{Binding Blender.DurationSeconds}" /></DockPanel>
+
+            <Separator />
+
+            <!-- output -->
+            <TextBlock Text="{l:Loc Blender_UI_Output}" FontWeight="Bold" />
+            <DockPanel><TextBlock Text="{l:Loc Blender_UI_Output}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.OutputKinds}" SelectedItem="{Binding Blender.OutputKind}" /></DockPanel>
+            <DockPanel><TextBlock Text="{l:Loc Blender_UI_Container}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.Containers}" SelectedItem="{Binding Blender.Container}" /></DockPanel>
+            <DockPanel><TextBlock Text="{l:Loc Blender_UI_Width}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                <TextBox Text="{Binding Blender.Width}" /></DockPanel>
+            <DockPanel><TextBlock Text="{l:Loc Blender_UI_Height}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                <TextBox Text="{Binding Blender.Height}" /></DockPanel>
+            <DockPanel><TextBlock Text="{l:Loc Blender_UI_BaseName}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                <TextBox Text="{Binding Blender.BaseName}" /></DockPanel>
+            <CheckBox Content="{l:Loc Blender_UI_SelfContained}" IsChecked="{Binding Blender.SelfContained}" />
+
+            <!-- labels -->
+            <TextBlock Text="{l:Loc Blender_UI_Labels}" FontWeight="Bold" />
+            <CheckBox Content="{l:Loc Blender_UI_StationLabels}" IsChecked="{Binding Blender.ShowStationLabels}" />
+            <CheckBox Content="{l:Loc Blender_UI_LeadMarkers}" IsChecked="{Binding Blender.ShowLeadMarkers}" />
+
+            <Separator />
+
+            <!-- validation blockers -->
+            <TextBlock Text="{l:Loc Blender_UI_Blockers}" FontWeight="Bold"
+                       IsVisible="{Binding Blender.Blockers.Count}" />
+            <ItemsControl ItemsSource="{Binding Blender.Blockers}" Foreground="#C05050" />
+
+            <!-- actions -->
+            <DockPanel>
+                <TextBlock Text="{l:Loc Blender_UI_Frames}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding Blender.EstimatedFrameCount}" VerticalAlignment="Center" />
+            </DockPanel>
+            <DockPanel>
+                <TextBlock Text="{l:Loc Blender_UI_ExportDir}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                <TextBox Text="{Binding Blender.ExportDirectory}" />
+            </DockPanel>
+            <WrapPanel>
+                <Button Content="{l:Loc Blender_UI_Render}" Command="{Binding Blender.RenderCommand}" Margin="0,0,6,6" />
+                <Button Content="{l:Loc Blender_UI_Export}" Command="{Binding Blender.ExportScriptCommand}" Margin="0,0,6,6" />
+                <Button Content="{l:Loc Blender_UI_OpenInBlender}" Command="{Binding Blender.OpenInBlenderGuiCommand}" Margin="0,0,6,6" />
+                <Button Content="{l:Loc Blender_UI_Cancel}" Command="{Binding Blender.CancelCommand}" IsVisible="{Binding Blender.IsBusy}" Margin="0,0,6,6" />
+            </WrapPanel>
+
+            <!-- status + progress -->
+            <ProgressBar Minimum="0" Maximum="1" Value="{Binding Blender.ProgressFraction}"
+                         IsIndeterminate="{Binding Blender.IsIndeterminate}" IsVisible="{Binding Blender.IsBusy}" />
+            <TextBlock Text="{Binding Blender.StatusMessage}" />
+            <TextBlock Text="{Binding Blender.Device}" IsVisible="{Binding Blender.Device, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            <TextBlock Text="{Binding Blender.LastError}" Foreground="#C05050" TextWrapping="Wrap"
+                       IsVisible="{Binding Blender.LastError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            <!-- not-found affordance: point the user at Preferences -->
+            <TextBlock Text="{l:Loc Blender_Fail_NotFound}" Foreground="#C05050" TextWrapping="Wrap"
+                       FontStyle="Italic" IsVisible="{Binding Blender.BlenderMissing}" />
+
+            <!-- outputs -->
+            <TextBlock Text="{l:Loc Blender_UI_Outputs}" FontWeight="Bold" IsVisible="{Binding Blender.Outputs.Count}" />
+            <ItemsControl ItemsSource="{Binding Blender.Outputs}" />
+            <WrapPanel IsVisible="{Binding Blender.Outputs.Count}">
+                <Button Content="{l:Loc Blender_UI_OpenFolder}" Command="{Binding Blender.OpenOutputFolderCommand}" Margin="0,4,6,0" />
+                <Button Content="{l:Loc Blender_UI_OpenLog}" Command="{Binding Blender.OpenJobLogCommand}" Margin="0,4,6,0" />
+            </WrapPanel>
+            <ItemsControl ItemsSource="{Binding Blender.Warnings}" Foreground="#B08000" />
+
+            <!-- recent renders -->
+            <TextBlock Text="{l:Loc Blender_UI_Jobs}" FontWeight="Bold" IsVisible="{Binding Blender.Jobs.Count}" Margin="0,8,0,0" />
+            <ItemsControl ItemsSource="{Binding Blender.Jobs}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vmm:JobHistoryEntry">
+                        <DockPanel Margin="0,2,0,2">
+                            <Button DockPanel.Dock="Left" Content="&#x29C9;" Padding="4,0" FontSize="12"
+                                    Background="Transparent" BorderThickness="0" VerticalAlignment="Center"
+                                    ToolTip.Tip="{l:Loc Blender_UI_CopyResult}"
+                                    Command="{Binding $parent[ItemsControl].DataContext.Blender.CopyJobCommand}"
+                                    CommandParameter="{Binding}" />
+                            <TextBlock DockPanel.Dock="Left" Text="{Binding Name}" FontWeight="SemiBold" Width="150"
+                                       TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding Status}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                        </DockPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

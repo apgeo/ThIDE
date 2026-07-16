@@ -53,6 +53,7 @@ public sealed class JsonKeyboardShortcutService : IKeyboardShortcutService
             [ShellCommandIds.ToggleMapViewer]         = "",
             [ShellCommandIds.ToggleModel3DViewer]     = "",
             [ShellCommandIds.ToggleStructuralGeology] = "",
+            [ShellCommandIds.ToggleBlenderAnimation]  = "",
             [ShellCommandIds.SplitEditor]             = "",
             [ShellCommandIds.ResetLayout]             = "",
             [ShellCommandIds.FloatActiveDocument]     = "",

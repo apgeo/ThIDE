@@ -56,6 +56,7 @@ public sealed class DockFactory : Factory
     private readonly StructuralGeologyToolViewModel _structuralGeology;
     private readonly StructuralPlotToolViewModel _structuralPlot;
     private readonly AssistantToolViewModel _assistant;
+    private readonly BlenderAnimationToolViewModel _blenderAnimation;
     private readonly ThIDE.Services.IAppSettingsService? _appSettings;
     private readonly SettingsToolViewModel _settings;
 
@@ -81,6 +82,7 @@ public sealed class DockFactory : Factory
         StructuralGeologyToolViewModel structuralGeology,
         StructuralPlotToolViewModel structuralPlot,
         AssistantToolViewModel assistant,
+        BlenderAnimationToolViewModel blenderAnimation,
         SettingsToolViewModel settings,
         ThIDE.Services.ILayoutService? layoutState = null,
         ThIDE.Services.IAppSettingsService? appSettings = null,
@@ -102,6 +104,7 @@ public sealed class DockFactory : Factory
         _structuralGeology = structuralGeology;
         _structuralPlot = structuralPlot;
         _assistant = assistant;
+        _blenderAnimation = blenderAnimation;
         _appSettings = appSettings;
         _settings = settings;
         _layoutState = layoutState;
@@ -404,6 +407,7 @@ public sealed class DockFactory : Factory
             "MapViewer" => s.EnableInAppViewer,
             "Model3DViewer" => s.EnableModel3DViewer,
             "StructuralGeology" or "StructuralPlot" => s.EnableStructuralGeology,
+            "BlenderAnimation" => s.EnableBlenderAnimation,
             _ => true,
         };
     }
@@ -944,6 +948,7 @@ public sealed class DockFactory : Factory
         ["StructuralGeology"] = _structuralGeology,
         ["StructuralPlot"] = _structuralPlot,
         ["Assistant"]      = _assistant,
+        ["BlenderAnimation"] = _blenderAnimation,
         ["Settings"]       = _settings,
     };
 
@@ -1269,6 +1274,7 @@ public sealed class DockFactory : Factory
             ["StructuralGeology"] = () => _structuralGeology,
             ["StructuralPlot"] = () => _structuralPlot,
             ["Assistant"]      = () => _assistant,
+            ["BlenderAnimation"] = () => _blenderAnimation,
             ["Settings"]       = () => _settings,
         };
 

@@ -12,6 +12,7 @@
     <ProjectReference Include="..\Therion.Syntax\Therion.Syntax.csproj" />
     <ProjectReference Include="..\Therion.Structural\Therion.Structural.csproj" />
     <ProjectReference Include="..\Therion.Workspace\Therion.Workspace.csproj" />
+    <ProjectReference Include="..\Therion.Blender\Therion.Blender.csproj" />
   </ItemGroup>
 
 </Project>

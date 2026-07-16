@@ -91,7 +91,7 @@ public partial class SettingsViewModel : ViewModelBase
     private void BuildRows()
     {
         var rows = new List<ExternalToolRow>();
-        foreach (var id in new[] { ExternalToolLocator.Therion, ExternalToolLocator.Loch, ExternalToolLocator.Aven, ExternalToolLocator.Mapiah })
+        foreach (var id in new[] { ExternalToolLocator.Therion, ExternalToolLocator.Loch, ExternalToolLocator.Aven, ExternalToolLocator.Mapiah, ExternalToolLocator.Blender })
         {
             rows.Add(_overrides is null
                 ? new ExternalToolRow(id)
