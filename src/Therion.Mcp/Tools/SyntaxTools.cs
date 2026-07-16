@@ -192,8 +192,28 @@ public sealed class SyntaxTools
             Options: options,
             Variants: [],
             SourceRef: schema.SourceRef,
-            Notes: schema.Notes,
+            Notes: schema.Notes ?? ExtensionNote(exportType),
             ThbookCitation: ThbookIndex.Lookup(FirstWord(schema.Keyword))?.Citation);
+    }
+
+    /// <summary>
+    /// Says which <c>-fmt</c> writes which file, for the extensions that are not their own keyword.
+    /// A caller asks for the file it wants (".lox 3D model"), so the format has to be reachable from
+    /// the extension — otherwise the only route is a guess, and the guess is wrong.
+    /// </summary>
+    private static string? ExtensionNote(string? exportType)
+    {
+        if (exportType is null) return null;
+
+        var pairs = CommandVocabulary.ForeignExportExtensions(exportType)
+            .OrderBy(p => p.Key, StringComparer.Ordinal)
+            .Select(p => $".{p.Key} is written by -fmt {p.Value}")
+            .ToList();
+
+        return pairs.Count == 0
+            ? null
+            : $"-fmt names a format, not a file extension: {string.Join("; ", pairs)}. Every other "
+              + "format writes the extension it is named after.";
     }
 
     private static CommandOptionDoc Doc(OptionSpec option, string? exportType) =>

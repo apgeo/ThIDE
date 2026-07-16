@@ -53,6 +53,26 @@ public class SyntaxToolsTests
     }
 
     [Fact]
+    public void Export_model_says_which_fmt_writes_a_lox_file()
+    {
+        // The question is always asked by the file wanted ("a .lox 3D model"), so the answer has to be
+        // reachable from the extension — listing `loch` among twelve formats leaves the leap to a guess.
+        var doc = new SyntaxTools().DescribeCommand("export model").Data!;
+
+        Assert.NotNull(doc.Notes);
+        Assert.Contains(".lox is written by -fmt loch", doc.Notes);
+        Assert.Contains("not a file extension", doc.Notes);
+    }
+
+    [Fact]
+    public void A_type_with_no_extension_trap_gets_no_note()
+    {
+        // Every map format writes its own name, so there is nothing to warn about — padding help with
+        // an irrelevant caveat trains the reader to skip it.
+        Assert.Null(new SyntaxTools().DescribeCommand("export map").Data!.Notes);
+    }
+
+    [Fact]
     public void Export_options_are_per_type()
     {
         var model = new SyntaxTools().DescribeCommand("export model");
