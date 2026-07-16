@@ -10,7 +10,7 @@ fault, bedding plane, joint…) into **strike / dip** measurements, and plots th
 > [Settings → Visualization](19-settings-and-preferences.md#visualization). For the method and
 > maths, see the reference doc **[docs/structural-geology.md](../structural-geology.md)**.
 
-The panel is a **four-step workflow** across tabs:
+The panel is a **five-step workflow** across tabs:
 
 ## 1 · Detect
 
@@ -52,10 +52,35 @@ The planes drawn as **discs** in 3D against the cave.
 - **Fit view** re-frames; **Disc size** enlarges the discs (they're tiny next to a cave); **White
   background** for print/export.
 - **Export image…** saves the current view as a PNG.
+- **Stereonet inset** shows a small stereonet "bowl" in the corner that **rotates together with the
+  cave model** — each visible plane's great circle and pole, in the plane's plot colour.
+- **Pop out to panel** moves the plot into its own dockable/floatable panel.
 
 > The 3D plot needs the bundled three.js assets and a system web engine (WebView2 / WebKit) — the
 > same requirement as the [3D Viewer](11-viewers.md#3d-viewer). If unavailable, the tab shows a note
 > instead.
+
+## 5 · Stereonet
+
+A classic lower-hemisphere **stereographic projection** of the fitted planes — each plane as a
+**great circle** (and optionally its **pole**), on a 10° net. Rendered natively, so it works even
+where the 3D plot's web engine is unavailable.
+
+- **Projection** — **Wulff (equal-angle)**, the traditional net for angle work, or **Schmidt
+  (equal-area)**, standard for density/statistics.
+- **Poles** — plot each plane's pole point; **Measurements** — plot every included shot direction
+  as a small dot (colour-matched to its plane).
+- **Grid** / **Labels** / **White background** — presentation toggles; **Export image…** saves a
+  crisp PNG.
+- Hover the net for a live **trend/plunge readout** of the cursor position; **click a great circle
+  or pole** to select that plane — the selection is synced with the Resulted-planes grid, the 3D
+  plot and the Mainline Preview overlay.
+- **Pop out to panel** moves the stereonet into its own dockable/floatable panel (it can float on a
+  second monitor like the other preview panels).
+
+When a **magnetic declination** source is active, the stereonet plots the corrected (true-north)
+strike/dip — the same values shown in the Resulted-planes grid. The 3D-plot inset instead stays in
+the survey's own frame so it always matches the cave lines it rotates with.
 
 ---
 

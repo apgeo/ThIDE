@@ -18,7 +18,7 @@ regression). More points only improve the result — the solver cost is independ
 ## Enabling it
 
 It is **off by default**. Turn it on in **Preferences ▸ Build / Visualization ▸ “Structural Geology
-module”**, then open it from **View ▸ Structural Geology**. The panel is a four-step wizard you can move
+module”**, then open it from **View ▸ Structural Geology**. The panel is a five-step wizard you can move
 through freely; changing an earlier step updates everything downstream immediately.
 
 ### 1 · Detect
@@ -58,7 +58,20 @@ to jump to source.
 
 The included planes drawn as translucent oriented discs together with the cave main-line, so you can see
 each plane in its true position. Drag to rotate, wheel to zoom, right-drag to pan; click a disc to select
-its plane.
+its plane. An optional corner **stereonet inset** (a lower-hemisphere "bowl" carrying each plane's great
+circle and pole) rotates in sync with the model.
+
+### 5 · Stereonet
+
+A classic lower-hemisphere stereographic projection of the fitted planes — great circles plus optional
+**poles** and **raw shot directions**, over a 10° graticule. Two projections: **Wulff (equal-angle)**,
+`r = tan(45° − plunge/2)`, and **Schmidt (equal-area)**, `r = √2·sin(45° − plunge/2)`. Rendered natively
+(no web engine needed); hovering shows a live trend/plunge readout, clicking an arc or pole selects the
+plane everywhere, and the diagram exports to PNG. When a declination source is active the net shows the
+true-north strike/dip (the grid's values); the 3-D inset stays in the survey frame to match the cave.
+Both the plot and the stereonet can be **popped out** into their own dockable/floatable panels.
+
+The projection math lives in `Therion.Structural` (`Stereonet.*`) alongside the plane fit.
 
 ## Magnetic declination & WMM
 
@@ -94,6 +107,14 @@ UI or web dependency, so it can be embedded in other tools or automation. Entry 
 ## Screenshots
 [![Alt Text](./screenshots/low-resolution/thide_geostruct_overview_lr.jpeg)](./screenshots/thide_geostruct_overview.jpeg)
 
+
+[![Alt Text](./screenshots/low-resolution/thide_geostruct_4_lr.jpeg)](./screenshots/thide_geostruct_4.jpeg)
+
+
 [![Alt Text](./screenshots/low-resolution/thide_geostruct_1_lr.jpeg)](./screenshots/thide_geostruct_1.jpeg)
+
+
 [![Alt Text](./screenshots/low-resolution/thide_geostruct_2_lr.jpeg)](./screenshots/thide_geostruct_2.jpeg)
+
+
 [![Alt Text](./screenshots/low-resolution/thide_geostruct_3_lr.jpeg)](./screenshots/thide_geostruct_3.jpeg)
