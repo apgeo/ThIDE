@@ -32,6 +32,9 @@ public interface IWorkspaceSession : IAsyncDisposable
     IReadOnlyList<ThconfigCandidate> Candidates { get; }
     ThconfigCandidate? ActiveThconfig { get; }
     WorkspaceSemanticModel? Model { get; }
+    /// <summary>Every file the active workspace has loaded (all extensions), or null when none is open.
+    /// Unlike <see cref="WorkspaceSemanticModel.PerFile"/> (.th only) this includes the .thconfig and .th2.</summary>
+    IReadOnlyList<string>? LoadedFiles { get; }
 
     /// <summary>true while the object graph is being (re)built on a background thread.</summary>
     bool IsIndexing { get; }
@@ -88,6 +91,10 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
     private readonly IAppSettingsService? _settings;
     private readonly IWorkspaceSymbolIndexStore? _symbolIndexStore;
     private readonly object _gate = new();
+    // Serializes the buffer-overlay revalidation. Its mutation of the workspace + _bufferOverlaid runs
+    // on a threadpool thread; with two callers now (the editor's live validation AND the in-app MCP
+    // host) it must not run concurrently, or the plain HashSet/workspace tears (code review, 2026-07-11).
+    private readonly SemaphoreSlim _revalidateGate = new(1, 1);
 
     private TherionWorkspace? _workspace;
     private DebouncedFileWatcher? _rootWatcher;
@@ -98,6 +105,7 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
     public IReadOnlyList<ThconfigCandidate> Candidates { get; private set; } = Array.Empty<ThconfigCandidate>();
     public ThconfigCandidate? ActiveThconfig { get; private set; }
     public WorkspaceSemanticModel? Model { get; private set; }
+    public IReadOnlyList<string>? LoadedFiles => _workspace?.LoadedFiles;
 
     public bool IsIndexing { get; private set; }
     public event EventHandler? IndexingChanged;
@@ -320,39 +328,48 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
         TherionWorkspace? ws;
         lock (_gate) ws = _workspace;
         if (ws is null) return;
-        if (buffers.Count == 0 && _bufferOverlaid.Count == 0) return;   // nothing dirty and no overlay to undo
 
-        SetIndexing(true);
+        // Serialize with the app's own live validation: both this and the in-app MCP host drive this
+        // method, and its body mutates `ws` + the plain `_bufferOverlaid` HashSet on a threadpool thread
+        // with no lock. Running two of them at once tears that state (code review, 2026-07-11).
+        await _revalidateGate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            WorkspaceSemanticModel model;
+            if (buffers.Count == 0 && _bufferOverlaid.Count == 0) return;   // nothing dirty and no overlay to undo
+
+            SetIndexing(true);
             try
             {
-                model = await Task.Run(() =>
+                WorkspaceSemanticModel model;
+                try
                 {
-                    var loaded = new HashSet<string>(ws.LoadedFiles, StringComparer.OrdinalIgnoreCase);
-                    var current = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                    foreach (var (path, _) in buffers) current.Add(TryFull(path));
-
-                    // Drop overlays no longer supplied (the buffer was saved or its tab closed).
-                    foreach (var prev in _bufferOverlaid.ToList())
-                        if (!current.Contains(prev)) { ws.ReloadFileFromDisk(prev); _bufferOverlaid.Remove(prev); }
-
-                    foreach (var (path, text) in buffers)
+                    model = await Task.Run(() =>
                     {
-                        var full = TryFull(path);
-                        if (loaded.Contains(full)) { ws.UpdateFileFromText(full, text); _bufferOverlaid.Add(full); }
-                    }
-                    return ws.BuildSemanticModel();
-                }, ct).ConfigureAwait(false);
-            }
-            catch { return; }
+                        var loaded = new HashSet<string>(ws.LoadedFiles, StringComparer.OrdinalIgnoreCase);
+                        var current = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                        foreach (var (path, _) in buffers) current.Add(TryFull(path));
 
-            lock (_gate) { if (!ReferenceEquals(_workspace, ws)) return; Model = model; }
-            UpdateSymbolIndex(model);
-            BuffersRevalidated?.Invoke(this, EventArgs.Empty);
+                        // Drop overlays no longer supplied (the buffer was saved or its tab closed).
+                        foreach (var prev in _bufferOverlaid.ToList())
+                            if (!current.Contains(prev)) { ws.ReloadFileFromDisk(prev); _bufferOverlaid.Remove(prev); }
+
+                        foreach (var (path, text) in buffers)
+                        {
+                            var full = TryFull(path);
+                            if (loaded.Contains(full)) { ws.UpdateFileFromText(full, text); _bufferOverlaid.Add(full); }
+                        }
+                        return ws.BuildSemanticModel();
+                    }, ct).ConfigureAwait(false);
+                }
+                catch { return; }
+
+                lock (_gate) { if (!ReferenceEquals(_workspace, ws)) return; Model = model; }
+                UpdateSymbolIndex(model);
+                BuffersRevalidated?.Invoke(this, EventArgs.Empty);
+            }
+            finally { SetIndexing(false); }
         }
-        finally { SetIndexing(false); }
+        finally { _revalidateGate.Release(); }
     }
 
     public async Task EnsureCoversAsync(string filePath, CancellationToken ct = default)

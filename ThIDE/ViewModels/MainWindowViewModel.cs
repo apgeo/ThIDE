@@ -1,4 +1,4 @@
-// Main shell ViewModel. Hosts the Dock.Avalonia layout (VS-classic) and owns the
+﻿// Main shell ViewModel. Hosts the Dock.Avalonia layout (VS-classic) and owns the
 // menu/toolbar commands. Documents are multi-file (MDI) via IDocumentService;
 // the document-tracking tools (Object Browser, Diagnostics) follow the active doc.
 
@@ -50,6 +50,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly ICrashRecoveryService? _crashRecovery; // safe-mode + buffer recovery
     private readonly IScriptHookService? _hooks;            // on-build hook
     private readonly IWorkspaceSession? _session;
+    private readonly IMcpHostService? _mcpHost;   // in-app MCP server (status-bar indicator + startup apply)
     private readonly IShellOpener? _shell;
     private readonly DockFactory _factory;
     private IStoragePicker? _picker;
@@ -92,6 +93,7 @@ public partial class MainWindowViewModel : ViewModelBase
     public Model3DViewerToolViewModel Model3DViewerTool { get; }
     public StructuralGeologyToolViewModel StructuralGeologyTool { get; }
     public StructuralPlotToolViewModel StructuralPlotTool { get; }
+    public AssistantToolViewModel AssistantTool { get; }   // AI-07 in-app assistant
     public BlenderAnimationToolViewModel BlenderAnimationTool { get; }
     public SettingsToolViewModel SettingsTool { get; }
 
@@ -115,6 +117,8 @@ public partial class MainWindowViewModel : ViewModelBase
     /// <summary>true while the cross-file object graph is being (re)built off-thread —
     /// drives the status-bar "Indexing…" indicator.</summary>
     [ObservableProperty] private bool _isIndexing;
+    /// <summary>True while the in-app MCP server is listening (drives the status-bar indicator).</summary>
+    [ObservableProperty] private bool _isMcpListening;
 
     // ----- status bar: open-file metrics (#10) -------------------------------
     /// <summary>True when a real text file is active — shows the file-info status groups.</summary>
@@ -493,6 +497,7 @@ public partial class MainWindowViewModel : ViewModelBase
         Model3DViewerToolViewModel model3dViewerTool,
         StructuralGeologyToolViewModel structuralGeologyTool,
         StructuralPlotToolViewModel structuralPlotTool,
+        AssistantToolViewModel assistantTool,
         BlenderAnimationToolViewModel blenderAnimationTool,
         SettingsToolViewModel settingsTool,
         IModelEditService? editService = null,
@@ -505,9 +510,11 @@ public partial class MainWindowViewModel : ViewModelBase
         INotificationService? notifications = null,
         ICrashRecoveryService? crashRecovery = null,
         IScriptHookService? hooks = null,
-        IShellOpener? shell = null)
+        IShellOpener? shell = null,
+        IMcpHostService? mcpHost = null)
     {
         _shell = shell;
+        _mcpHost = mcpHost;
         _log = log;
         _crashRecovery = crashRecovery;
         _hooks = hooks;
@@ -551,6 +558,7 @@ public partial class MainWindowViewModel : ViewModelBase
         Model3DViewerTool = model3dViewerTool;
         StructuralGeologyTool = structuralGeologyTool;
         StructuralPlotTool = structuralPlotTool;
+        AssistantTool = assistantTool;
         BlenderAnimationTool = blenderAnimationTool;
         SettingsTool = settingsTool;
         Breadcrumb = new BreadcrumbViewModel(_documents);
@@ -631,6 +639,16 @@ public partial class MainWindowViewModel : ViewModelBase
             _session.CandidatesChanged += (_, _) => OnUiThread(Refresh);
             // mirror the background-indexing state for the status-bar indicator.
             _session.IndexingChanged += (_, _) => OnUiThread(() => IsIndexing = _session.IsIndexing);
+        }
+        if (_mcpHost is not null)
+        {
+            // Reflect the in-app MCP server's listening state in the status bar, and start it now if the
+            // persisted setting says so (subsequent toggles are driven by the host's own settings watch).
+            IsMcpListening = _mcpHost.IsListening;
+            _mcpHost.StateChanged += (_, _) => OnUiThread(() => IsMcpListening = _mcpHost.IsListening);
+            // Off the UI thread: the first apply, if the setting is on, builds the Kestrel host and binds
+            // the socket, which must not run inline on the dispatcher and freeze startup (code review).
+            _ = System.Threading.Tasks.Task.Run(() => _mcpHost.ApplySettingAsync());
         }
         _documents.DocumentChanged += (_, _) => RefreshActiveTools();
         _documents.DocumentChanged += (_, _) => OnUiThread(UpdateFileStatus);   // status bar (#10)
@@ -773,6 +791,7 @@ public partial class MainWindowViewModel : ViewModelBase
         new Model3DViewerToolViewModel(new Model3DViewerViewModel()),
         new StructuralGeologyToolViewModel(new StructuralGeologyViewModel()),
         new StructuralPlotToolViewModel(new StructuralGeologyViewModel()),
+        new AssistantToolViewModel(),
         new BlenderAnimationToolViewModel(new BlenderAnimationViewModel()),
         new SettingsToolViewModel(new SettingsViewModel(), new KeyboardShortcutsViewModel()))
     {
@@ -795,6 +814,7 @@ public partial class MainWindowViewModel : ViewModelBase
         new Model3DViewerToolViewModel(new Model3DViewerViewModel()),
         new StructuralGeologyToolViewModel(new StructuralGeologyViewModel()),
         new StructuralPlotToolViewModel(new StructuralGeologyViewModel()),
+        new AssistantToolViewModel(),
         new BlenderAnimationToolViewModel(new BlenderAnimationViewModel()),
         new SettingsToolViewModel(new SettingsViewModel(), new KeyboardShortcutsViewModel()));
 
@@ -1498,6 +1518,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand] private void ToggleLog()               => Activate(LogTool);      // #3
     [RelayCommand] private void ToggleLivePreview()       => Activate(LivePreviewTool);
     [RelayCommand] private void ToggleMapViewer()         => Activate(MapViewerTool);
+    [RelayCommand] private void ToggleAssistant()         => _factory.ShowTool(AssistantTool);   // AI-07 (absent from layouts saved before it existed → add on demand)
     [RelayCommand] private void ToggleModel3DViewer()     => _factory.ShowTool(Model3DViewerTool); // (may be off-by-default → add on demand)
     [RelayCommand] private void ToggleStructuralGeology() => _factory.ShowToolInDocuments(StructuralGeologyTool); // (big central panel, on demand)
     [RelayCommand] private void ToggleBlenderAnimation()  => _factory.ShowToolInDocuments(BlenderAnimationTool);  // (big central panel, on demand)

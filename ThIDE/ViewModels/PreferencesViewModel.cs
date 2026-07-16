@@ -57,6 +57,24 @@ public partial class PreferencesViewModel : ObservableObject
     [ObservableProperty] private string _hookOnSave = string.Empty;
     [ObservableProperty] private string _hookOnBuild = string.Empty;
     [ObservableProperty] private bool _enablePlugins;
+    /// <summary>Run the in-app MCP server (loopback HTTP + token) so a local LLM host can reach the IDE.</summary>
+    [ObservableProperty] private bool _enableMcpServer;
+    /// <summary>"Follow the agent": let the MCP server's action tools drive the UI (open files, run commands…).</summary>
+    [ObservableProperty] private bool _mcpFollowAgent;
+    // ---- Assistant pane (AI-07): the local model the chat panel talks to ----
+    [ObservableProperty] private string _assistantEndpoint = string.Empty;
+    [ObservableProperty] private string _assistantModel = string.Empty;
+    [ObservableProperty] private int _assistantMaxTurns;
+    /// <summary>Ask the model to answer in prose after tool use (AI-08.1).</summary>
+    [ObservableProperty] private bool _assistantRequireProseSummary;
+    /// <summary>Force a written answer when the model returns none / runs out of turns (AI-08.1).</summary>
+    [ObservableProperty] private bool _assistantSynthesizeFinalAnswer;
+    /// <summary>Stream the answer with a live progress indicator (AI-08.2).</summary>
+    [ObservableProperty] private bool _assistantStreaming;
+    /// <summary>Workspace context volunteered to the model: 0 = None, 1 = Card, 2 = Pack (CD-02).</summary>
+    [ObservableProperty] private int _assistantContextModeIndex;
+    /// <summary>Ask the model to put proposed Therion source in fenced code blocks (CAP-03).</summary>
+    [ObservableProperty] private bool _assistantSuggestCodeBlocks;
     /// <summary>0 = English, 1 = Romanian (#9 selector lives in Preferences, #11).</summary>
     [ObservableProperty] private int _languageIndex;
 
@@ -178,6 +196,16 @@ public partial class PreferencesViewModel : ObservableObject
         _hookOnSave = s.HookOnSave ?? string.Empty;
         _hookOnBuild = s.HookOnBuild ?? string.Empty;
         _enablePlugins = s.EnablePlugins;
+        _enableMcpServer = s.EnableMcpServer;
+        _mcpFollowAgent = s.McpFollowAgent;
+        _assistantEndpoint = s.AssistantEndpoint;
+        _assistantModel = s.AssistantModel;
+        _assistantMaxTurns = s.AssistantMaxTurns;
+        _assistantRequireProseSummary = s.AssistantRequireProseSummary;
+        _assistantSynthesizeFinalAnswer = s.AssistantSynthesizeFinalAnswer;
+        _assistantStreaming = s.AssistantStreaming;
+        _assistantContextModeIndex = (int)s.AssistantContextMode;
+        _assistantSuggestCodeBlocks = s.AssistantSuggestCodeBlocks;
         _languageIndex = string.Equals(s.UiLanguage, "ro", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
         _editorFontSize = s.EditorFontSize;
         _indentationSize = s.IndentationSize;
@@ -252,7 +280,7 @@ public partial class PreferencesViewModel : ObservableObject
             new("visualization", "Visualization",                 "preview map viewer pdf svg png live centreline plan elevation render"),
             new("external", Resources.Tr.Get("Pref_External"),    "therion loch aven survex path detect tool executable"),
             new("associations", Resources.Tr.Get("Pref_Associations"), "file association open with default extension .th .th2 thconfig register associate double click"),
-            new("extensions", "Extensions",                       "extension plugin hook script macro on save build open command run lsp cli enable disable performance"),
+            new("extensions", "Extensions",                       "extension plugin hook script macro on save build open command run lsp cli enable disable performance mcp model context protocol server llm ai agent local token loopback"),
             new("debug",    Resources.Tr.Get("Pref_Debug"),       "debug webview webkit linux dmabuf compositing renderer blank white black box 3d viewer devtools inspector offscreen wayland nvidia"),
             new("keyboard", Resources.Tr.Get("Pref_Keyboard"),    "key binding gesture shortcut hotkey command"),
         };
@@ -343,6 +371,19 @@ public partial class PreferencesViewModel : ObservableObject
             HookOnSave = NullIfBlank(HookOnSave),
             HookOnBuild = NullIfBlank(HookOnBuild),
             EnablePlugins = EnablePlugins,
+            EnableMcpServer = EnableMcpServer,
+            McpFollowAgent = McpFollowAgent,
+            // Assistant pane: blank fields fall back to the defaults rather than persisting "".
+            AssistantEndpoint = string.IsNullOrWhiteSpace(AssistantEndpoint)
+                ? AppSettings.Default.AssistantEndpoint : AssistantEndpoint.Trim(),
+            AssistantModel = string.IsNullOrWhiteSpace(AssistantModel)
+                ? AppSettings.Default.AssistantModel : AssistantModel.Trim(),
+            AssistantMaxTurns = Math.Clamp(AssistantMaxTurns, 1, 50),
+            AssistantRequireProseSummary = AssistantRequireProseSummary,
+            AssistantSynthesizeFinalAnswer = AssistantSynthesizeFinalAnswer,
+            AssistantStreaming = AssistantStreaming,
+            AssistantContextMode = (AssistantContextMode)Math.Clamp(AssistantContextModeIndex, 0, 2),
+            AssistantSuggestCodeBlocks = AssistantSuggestCodeBlocks,
             UiLanguage = code,
             EditorFontSize = EditorFontSize,
             IndentationSize = IndentationSize,

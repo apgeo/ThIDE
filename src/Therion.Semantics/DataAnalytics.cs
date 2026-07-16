@@ -251,13 +251,22 @@ public static class DataAnalytics
 
     // ===== : data quality =============================================
 
-    public static DataQualityReport DataQuality(WorkspaceSemanticModel model)
+    /// <param name="surveyPrefix">When set, only shots and surveys at or under this survey path are
+    /// counted (e.g. "cave.upper") — the rest of the project is ignored.</param>
+    public static DataQualityReport DataQuality(WorkspaceSemanticModel model, string? surveyPrefix = null)
     {
+        string? prefixDot = string.IsNullOrEmpty(surveyPrefix) ? null : surveyPrefix + ".";
+        bool ShotIn(ShotSymbol s) => prefixDot is null || s.From.ToString().StartsWith(prefixDot, StringComparison.Ordinal);
+        bool SurveyIn(SurveySymbol s) =>
+            surveyPrefix is not { Length: > 0 }
+            || s.Name.ToString() == surveyPrefix || s.Name.ToString().StartsWith(prefixDot!, StringComparison.Ordinal);
+
         int total = 0, zero = 0, noLen = 0, noComp = 0, noClino = 0, noBack = 0, noLrud = 0,
             steep = 0, splay = 0, dup = 0;
         foreach (var perFile in model.PerFile.Values)
             foreach (var shot in perFile.Shots)
             {
+                if (!ShotIn(shot)) continue;
                 total++;
                 if (DataQualityChecks.IsSplay(shot)) splay++;
                 if (DataQualityChecks.IsDuplicate(shot)) dup++;
@@ -273,6 +282,7 @@ public static class DataAnalytics
         int undated = 0, teamless = 0;
         foreach (var sv in model.SurveysByFullName.Values)
         {
+            if (!SurveyIn(sv)) continue;
             if (DataQualityChecks.IsUndated(sv)) undated++;
             if (DataQualityChecks.IsTeamless(sv)) teamless++;
         }

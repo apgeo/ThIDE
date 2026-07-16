@@ -495,6 +495,8 @@
   <data name="Status_Indexing" xml:space="preserve"><value>Indexing…</value></data>
   <data name="Status_BuildInProgress" xml:space="preserve"><value>Build in progress…</value></data>
   <data name="Status_BuildingGraph" xml:space="preserve"><value>Building the thconfig object graph…</value></data>
+  <data name="Status_McpListening" xml:space="preserve"><value>AI tools server (MCP) is listening on loopback — a local AI assistant can reach this project</value></data>
+  <data name="Mcp_ToastTitle" xml:space="preserve"><value>AI assistant</value></data>
   <data name="Status_LastBuildOk" xml:space="preserve"><value>Last build succeeded</value></data>
   <data name="Status_LastBuildFail" xml:space="preserve"><value>Last build failed</value></data>
   <data name="Status_OpenDiag" xml:space="preserve"><value>Open Diagnostics (F8: next, Shift+F8: previous)</value></data>
@@ -611,6 +613,10 @@
   <data name="Pref_CommandWm" xml:space="preserve"><value>(command)</value></data>
   <data name="Pref_LoadPlugins" xml:space="preserve"><value>Load plugins (custom semantic rules from the plugins folder)</value></data>
   <data name="Pref_LoadPluginsHelp" xml:space="preserve"><value>Drop plugin .dll files (types implementing ISemanticRule) in %AppData%/ThIDE/plugins. Loaded at startup; disable for performance. Changes apply on restart.</value></data>
+  <data name="Pref_McpServer" xml:space="preserve"><value>Enable the in-app AI tools server (MCP)</value></data>
+  <data name="Pref_McpServerHelp" xml:space="preserve"><value>Lets a local AI assistant reach this running project through the Model Context Protocol. Serves on 127.0.0.1 (loopback only) on a random port, protected by a bearer token; the port and token are written to %AppData%/ThIDE/mcp-endpoint.json. Off by default — see docs/mcp-host-setup.md.</value></data>
+  <data name="Pref_McpFollowAgent" xml:space="preserve"><value>Follow the agent (let AI tools drive the window)</value></data>
+  <data name="Pref_McpFollowAgentHelp" xml:space="preserve"><value>When on, the AI assistant may open files, focus panels, run commands, save, and change the layout in this window. When off, it can still read the project and answer questions, but cannot touch the UI. On by default.</value></data>
   <data name="Pref_CliHelp" xml:space="preserve"><value>The headless CLI (therion-cli) and the LSP server (therion-lsp) are separate executables — see docs.</value></data>
   <data name="Pref_ResetAll" xml:space="preserve"><value>Reset all to defaults</value></data>
   <data name="Pref_KbHelp" xml:space="preserve"><value>Click a gesture field and press the key combination to assign it.</value></data>
@@ -1249,4 +1255,49 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Log_Sev_Warning" xml:space="preserve"><value>Warning</value></data>
   <data name="Log_Sev_Hint" xml:space="preserve"><value>Hint</value></data>
   <data name="Log_Sev_Info" xml:space="preserve"><value>Info</value></data>
+  <data name="Tool_Assistant" xml:space="preserve"><value>Assistant</value></data>
+  <data name="Menu_View_Assistant" xml:space="preserve"><value>Assistant</value></data>
+  <data name="Assistant_InputWatermark" xml:space="preserve"><value>Ask about the open project…</value></data>
+  <data name="Assistant_Send" xml:space="preserve"><value>Send</value></data>
+  <data name="Assistant_Stop" xml:space="preserve"><value>Stop</value></data>
+  <data name="Assistant_NewChat" xml:space="preserve"><value>New chat</value></data>
+  <data name="Assistant_Allow" xml:space="preserve"><value>Allow</value></data>
+  <data name="Assistant_Deny" xml:space="preserve"><value>Deny</value></data>
+  <data name="Assistant_Result" xml:space="preserve"><value>Result</value></data>
+  <data name="Assistant_RawJson" xml:space="preserve"><value>Raw JSON</value></data>
+  <data name="Assistant_Objects" xml:space="preserve"><value>{0} objects — click to open</value></data>
+  <data name="Assistant_NoText" xml:space="preserve"><value>(The assistant returned no text — see the tool results above.)</value></data>
+  <data name="Assistant_Copy" xml:space="preserve"><value>Copy</value></data>
+  <data name="Assistant_Insert" xml:space="preserve"><value>Insert at caret</value></data>
+  <data name="Assistant_Replace" xml:space="preserve"><value>Replace selection</value></data>
+  <data name="Assistant_SnippetCopied" xml:space="preserve"><value>Copied to clipboard.</value></data>
+  <data name="Assistant_SnippetNoEditor" xml:space="preserve"><value>Open a file in the editor first to insert this snippet.</value></data>
+  <data name="Assistant_SnippetNoSelection" xml:space="preserve"><value>Select some text in the editor first to replace it.</value></data>
+  <data name="Assistant_Thinking" xml:space="preserve"><value>Thinking…</value></data>
+  <data name="Assistant_RunningTool" xml:space="preserve"><value>Running {0}…</value></data>
+  <data name="Assistant_Writing" xml:space="preserve"><value>Writing the answer…</value></data>
+  <data name="Assistant_ToolOk" xml:space="preserve"><value>done</value></data>
+  <data name="Assistant_ToolFailed" xml:space="preserve"><value>failed</value></data>
+  <data name="Assistant_ToolDeclined" xml:space="preserve"><value>declined</value></data>
+  <data name="Assistant_ToolRunning" xml:space="preserve"><value>running…</value></data>
+  <data name="Assistant_ServerOff" xml:space="preserve"><value>The in-app AI tools server is off, so the assistant has no access to the project.</value></data>
+  <data name="Assistant_EnableServer" xml:space="preserve"><value>Enable it</value></data>
+  <data name="Assistant_ServerEnabled" xml:space="preserve"><value>The AI tools server is now on — send your message again.</value></data>
+  <data name="Assistant_ServerDown" xml:space="preserve"><value>The AI tools server failed to start — see the Log panel.</value></data>
+  <data name="Assistant_Stopped" xml:space="preserve"><value>Stopped.</value></data>
+  <data name="Assistant_Error" xml:space="preserve"><value>The assistant failed: {0}</value></data>
+  <data name="Pref_Assistant" xml:space="preserve"><value>Assistant panel</value></data>
+  <data name="Pref_AssistantHelp" xml:space="preserve"><value>The local model the built-in Assistant panel talks to, as an OpenAI-compatible endpoint (LM Studio by default). The panel also needs the AI tools server above to reach the project.</value></data>
+  <data name="Pref_AssistantEndpoint" xml:space="preserve"><value>Endpoint</value></data>
+  <data name="Pref_AssistantModel" xml:space="preserve"><value>Model id</value></data>
+  <data name="Pref_AssistantMaxTurns" xml:space="preserve"><value>Tool-turn budget</value></data>
+  <data name="Pref_AssistantProseSummary" xml:space="preserve"><value>Answer in plain language after using tools (don't paste raw JSON)</value></data>
+  <data name="Pref_AssistantSynthesize" xml:space="preserve"><value>Always produce a written answer (even when the model returns none)</value></data>
+  <data name="Pref_AssistantStreaming" xml:space="preserve"><value>Stream the answer with a live progress indicator</value></data>
+  <data name="Pref_AssistantSuggestCodeBlocks" xml:space="preserve"><value>Ask the model to put proposed Therion source in code blocks (Copy / Insert / Replace)</value></data>
+  <data name="Pref_AssistantContextMode" xml:space="preserve"><value>Workspace context</value></data>
+  <data name="Pref_AssistantContextModeHelp" xml:space="preserve"><value>How much of a project digest to give the model at the start of a new chat. None keeps it fully tool-driven; Card adds a short orienting summary; Pack adds a richer digest. Figures are a snapshot, so the model is told to verify with tools.</value></data>
+  <data name="Pref_ContextModeNone" xml:space="preserve"><value>None (tools only)</value></data>
+  <data name="Pref_ContextModeCard" xml:space="preserve"><value>Card (compact summary)</value></data>
+  <data name="Pref_ContextModePack" xml:space="preserve"><value>Pack (rich digest)</value></data>
 </root>

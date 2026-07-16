@@ -10,6 +10,7 @@ using System.IO;
 using System.Text.Json;
 using Avalonia.Platform;
 using Therion.Build;
+using Therion.Semantics.Thbook;
 
 namespace ThIDE.Services;
 
@@ -30,7 +31,6 @@ public interface IThbookDocumentationService
 public sealed class ThbookDocumentationService : IThbookDocumentationService
 {
     private const string PdfAsset = "avares://ThIDE/Assets/thbook-v6.4.0.pdf";
-    private const string PagesAsset = "avares://ThIDE/Assets/thbook-pages.json";
 
     private readonly IPdfPageOpener _pdfOpener;
     private readonly Dictionary<string, int> _pages = new(StringComparer.OrdinalIgnoreCase);
@@ -68,12 +68,12 @@ public sealed class ThbookDocumentationService : IThbookDocumentationService
 
     private void LoadPageMap()
     {
-        // Prefer the user-editable override in app data; fall back to the embedded default.
-        // On first run, write the default to app data so it is easy for the user to edit.
+        // Prefer the user-editable override in app data; fall back to the lib-hosted default (ThbookIndex,
+        // the single source shared with the MCP server). On first run, write the default to app data so it
+        // is easy for the user to edit.
         var overridePath = AppDataPath("thbook-pages.json");
-        var json = TryRead(overridePath) ?? TryReadAsset(PagesAsset);
-        if (json is not null && !File.Exists(overridePath)) TryWrite(overridePath, json);
-        if (json is null) return;
+        var json = TryRead(overridePath) ?? ThbookIndex.DefaultJson;
+        if (!File.Exists(overridePath)) TryWrite(overridePath, json);
 
         try
         {
@@ -108,17 +108,6 @@ public sealed class ThbookDocumentationService : IThbookDocumentationService
             return target;
         }
         catch { _extractFailed = true; return null; }
-    }
-
-    private static string? TryReadAsset(string uri)
-    {
-        try
-        {
-            using var s = AssetLoader.Open(new Uri(uri));
-            using var r = new StreamReader(s);
-            return r.ReadToEnd();
-        }
-        catch { return null; }
     }
 
     private static string? TryRead(string path)

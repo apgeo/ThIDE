@@ -5,24 +5,39 @@
 using System.Collections.Generic;
 using System.Text;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Therion.Syntax;
 
 namespace ThIDE.ViewModels;
 
 public sealed partial class QuickExportViewModel : ObservableObject
 {
-    /// <summary>A selectable output format (model vs map, the Therion <c>-fmt</c> token, file extension).</summary>
-    public sealed record ExportFormat(string Display, bool IsMap, string Fmt, string Ext)
+    /// <summary>A selectable output format: model vs map, plus the Therion <c>-fmt</c> token.</summary>
+    public sealed record ExportFormat(string Display, bool IsMap, string Fmt)
     {
+        /// <summary>
+        /// The extension this format writes. Derived, not stored: the format→extension pairing is
+        /// Therion's, and it is only surprising where the two differ (<c>loch</c> writes <c>.lox</c>),
+        /// which is exactly where a second copy would drift.
+        /// </summary>
+        public string Ext => CommandVocabulary.ExtensionForExportFormat(Fmt);
+
+        /// <summary>The export type this format belongs to — what <c>-fmt</c> is validated against.</summary>
+        public string ExportType => IsMap ? "map" : "model";
+
         public override string ToString() => Display;
     }
 
+    /// <summary>
+    /// The presets offered in the dialog — a curated few, not every format Therion accepts. The
+    /// <c>Fmt</c> tokens are Therion's own, checked against <see cref="CommandVocabulary"/> by test.
+    /// </summary>
     public IReadOnlyList<ExportFormat> Formats { get; } = new[]
     {
-        new ExportFormat("PDF map", true, "pdf", ".pdf"),
-        new ExportFormat("SVG map", true, "svg", ".svg"),
-        new ExportFormat("Loch 3D model (.lox)", false, "loch", ".lox"),
-        new ExportFormat("Survex 3D model (.3d)", false, "survex", ".3d"),
-        new ExportFormat("KML model", false, "kml", ".kml"),
+        new ExportFormat("PDF map", true, "pdf"),
+        new ExportFormat("SVG map", true, "svg"),
+        new ExportFormat("Loch 3D model (.lox)", false, "loch"),
+        new ExportFormat("Survex 3D model (.3d)", false, "survex"),
+        new ExportFormat("KML model", false, "kml"),
     };
 
     public IReadOnlyList<string> Projections { get; } = new[] { "plan", "extended", "elevation" };

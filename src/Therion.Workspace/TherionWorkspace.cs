@@ -131,13 +131,21 @@ public sealed class TherionWorkspace : IWorkspace
         if (!_options.DisableDiskCache && _cache.TryGet(key, out var cached))
             return cached;
 
-        var result = ParseText(path, File.ReadAllText(path));
+        // EncodingResolver, not File.ReadAllText: a .th may declare `encoding iso-8859-1`, and reading
+        // it as UTF-8 turns every accented survey name into a replacement character — which then
+        // reaches the semantic model, the rename index, and anything that writes the file back out.
+        var result = ParseText(path, EncodingResolver.ReadAllText(path));
         _cache.Set(key, result);
         return result;
     }
 
     /// <summary>Parses <paramref name="text"/> as the file <paramref name="path"/> (by extension), without touching disk or the cache.</summary>
-    private static ParseResult<TherionFile> ParseText(string path, string text)
+    /// <remarks>
+    /// Public so callers that must work from the file's *current* text — rather than the snapshot the
+    /// workspace parsed at load time — get the very dispatch the loader uses. Anything that re-emits a
+    /// file (formatting) has to do this, or it rewrites the file from a stale tree.
+    /// </remarks>
+    public static ParseResult<TherionFile> ParseText(string path, string text)
     {
         var ext = Path.GetExtension(path).ToLowerInvariant();
         return ext switch

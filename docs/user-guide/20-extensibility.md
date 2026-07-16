@@ -1,4 +1,4 @@
-# 20. Extensibility (CLI, LSP, plugins, hooks)
+# 20. Extensibility (CLI, LSP, AI assistants, plugins, hooks)
 
 > [← Back to the User Guide home](README.md)
 
@@ -27,6 +27,38 @@ Also `dump-ast` and `list-stations`. Full command list and examples:
 An **editor-agnostic Language Server** that provides Therion diagnostics over stdio — point any
 LSP-capable editor (VS Code, Neovim, …) at it to get ThIDE's checks in your editor of choice. Setup
 and client configuration: **[docs/lsp.md](../lsp.md)**.
+
+## AI assistants (MCP)
+
+ThIDE can let a **local AI assistant** answer questions about your project — *"what's wrong with this
+cave?"*, *"is it all one connected piece?"*, *"where is station 12 declared?"* — without you pasting
+files into a chat window. It does this by speaking the **Model Context Protocol (MCP)**, the same way
+tools like Claude or a local model in **LM Studio** talk to their tools.
+
+Three ways to use it:
+
+- **The built-in Assistant panel (no setup beyond a local model).** **View → Assistant** opens a
+  chat inside ThIDE that talks to a local model served by **LM Studio** (or any OpenAI-compatible
+  endpoint — set it under **Preferences → MCP**). It answers from the live project, and every
+  change it proposes stops on an **Allow / Deny** card first — nothing is written until you allow it.
+- **Against files on disk (no ThIDE needed).** A small program, `therion-mcp`, runs ThIDE's engines
+  headlessly. Your AI host (LM Studio, Claude Code, …) launches it and can then ask about a project
+  folder. It reads your files; it can also format, scaffold, import/export, and run Therion — or, if
+  you prefer, be limited to **read-only** with a single switch.
+- **Against the app you have open.** Turn on **Preferences → MCP → "Enable the in-app AI tools
+  server"** and the *running* ThIDE offers the same abilities plus live ones: the assistant can see the
+  file you're editing (including unsaved changes), open a file, focus a panel, or reveal a station in
+  the 3D view. Whether it may *touch* the window — not just read it — is governed by the **"Follow the
+  agent"** checkbox next to that setting; turn it off to keep the assistant's hands off your layout
+  while still letting it answer questions.
+
+**Is it safe?** The in-app server listens only on your own machine (loopback), behind a random
+password, and is **off by default**. An assistant can never reach outside your project folder, and an
+edit to a file you're currently editing (with unsaved changes) is refused rather than allowed to clobber
+your work. If you're cautious, start it read-only.
+
+Setting up a specific AI host (LM Studio, Claude Code) is a few lines of configuration — see the
+step-by-step in **[docs/mcp-host-setup.md](../mcp-host-setup.md)**.
 
 ## Semantic-rule plugins
 

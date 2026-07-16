@@ -102,9 +102,12 @@ public sealed class CoordinateConverterWindow : Window
         if (int.TryParse(_zone.Text, out var zone) && zone is >= 1 and <= 60 &&
             TryD(_east.Text, out var e) && TryD(_north.Text, out var n))
         {
+            // `cs lat-long` takes the latitude first (CoordinateTransform.TryToWgs84 reads x as the
+            // latitude for that system). The copy-ready fix line must match, or it places the cave
+            // on another continent.
             var (la, lo) = CoordinateConverter.UtmToLatLon(new UtmCoordinate(zone, _hemi.SelectedIndex == 0, e, n));
-            _llOut.Text = $"Lat {la:0.0000000} · Lon {lo:0.0000000}   (cs lat-long → fix is lon lat alt)";
-            _llFix = $"cs lat-long\nfix {station} {lo:0.0000000} {la:0.0000000} {alt}";
+            _llOut.Text = $"Lat {la:0.0000000} · Lon {lo:0.0000000}   (cs lat-long → fix is lat lon alt)";
+            _llFix = $"cs lat-long\nfix {station} {la:0.0000000} {lo:0.0000000} {alt}";
         }
         else { _llOut.Text = "—"; _llFix = string.Empty; }
     }

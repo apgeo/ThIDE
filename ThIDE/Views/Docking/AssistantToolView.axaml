@@ -1,0 +1,197 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ThIDE.ViewModels"
+             xmlns:dvm="using:ThIDE.ViewModels.Docking"
+             xmlns:l="using:ThIDE.Resources"
+             x:Class="ThIDE.Views.Docking.AssistantToolView"
+             x:CompileBindings="False"
+             x:DataType="dvm:AssistantToolViewModel">
+    <DockPanel DataContext="{Binding Assistant}">
+
+        <!-- toolbar -->
+        <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="6,3">
+            <DockPanel>
+                <StackPanel Orientation="Horizontal" Spacing="8" DockPanel.Dock="Left">
+                    <Button Content="{l:Loc Assistant_NewChat}" Command="{Binding NewChatCommand}"
+                            Padding="10,2" FontSize="11" />
+                </StackPanel>
+                <TextBlock DockPanel.Dock="Right" Text="{Binding Status}" Foreground="Gray"
+                           FontSize="11" VerticalAlignment="Center" HorizontalAlignment="Right"
+                           TextTrimming="CharacterEllipsis" />
+            </DockPanel>
+        </Border>
+
+        <!-- input row -->
+        <Border DockPanel.Dock="Bottom" BorderBrush="Gray" BorderThickness="0,1,0,0" Padding="6">
+            <StackPanel Spacing="6">
+                <!-- "server off" affordance replaces nothing — it sits above the input so the
+                     user can enable and immediately resend. -->
+                <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding ServerOff}">
+                    <TextBlock Text="{l:Loc Assistant_ServerOff}" Foreground="Gray" FontSize="11"
+                               VerticalAlignment="Center" TextWrapping="Wrap" />
+                    <Button Content="{l:Loc Assistant_EnableServer}" Command="{Binding EnableServerCommand}"
+                            Padding="10,2" FontSize="11" />
+                </StackPanel>
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4" Margin="6,0,0,0">
+                        <Button Content="{l:Loc Assistant_Send}" Command="{Binding SendCommand}"
+                                Padding="12,4" />
+                        <Button Content="{l:Loc Assistant_Stop}" Command="{Binding StopCommand}"
+                                IsVisible="{Binding IsBusy}" Padding="12,4" />
+                    </StackPanel>
+                    <TextBox Text="{Binding Input, Mode=TwoWay}" Watermark="{l:Loc Assistant_InputWatermark}"
+                             AcceptsReturn="False" VerticalAlignment="Center"
+                             IsEnabled="{Binding !IsBusy}" KeyDown="OnInputKeyDown" />
+                </DockPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- progress indicator (AI-08.2): a live activity line while a turn runs, docked just above
+             the input so the newest transcript entry stays visible -->
+        <Border DockPanel.Dock="Bottom" IsVisible="{Binding IsBusy}" Padding="8,4" Background="#22808080">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <ProgressBar IsIndeterminate="True" Width="90" Height="4" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding Activity}" Foreground="Gray" FontSize="11"
+                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+        </Border>
+
+        <!-- transcript -->
+        <ScrollViewer x:Name="Transcript" VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding Items}" Margin="6">
+                <ItemsControl.DataTemplates>
+
+                    <DataTemplate DataType="vm:UserChatItem">
+                        <Border Background="#2A3B4D" CornerRadius="6" Padding="8,6" Margin="24,3,0,3"
+                                HorizontalAlignment="Right">
+                            <SelectableTextBlock Text="{Binding Text}" TextWrapping="Wrap" />
+                        </Border>
+                    </DataTemplate>
+
+                    <DataTemplate DataType="vm:AssistantChatItem">
+                        <Border Background="#33333f" CornerRadius="6" Padding="8,6" Margin="0,3,24,3"
+                                HorizontalAlignment="Left">
+                            <SelectableTextBlock Text="{Binding Text}" TextWrapping="Wrap" />
+                        </Border>
+                    </DataTemplate>
+
+                    <DataTemplate DataType="vm:NoteChatItem">
+                        <TextBlock Text="{Binding Text}" Foreground="Gray" FontSize="11"
+                                   FontStyle="Italic" TextWrapping="Wrap" Margin="4,3" />
+                    </DataTemplate>
+
+                    <!-- a fenced code block: monospace, scrollable in place, with snippet actions (CAP-03) -->
+                    <DataTemplate DataType="vm:CodeBlockChatItem">
+                        <Border Background="#1E1E24" BorderBrush="Gray" BorderThickness="1" CornerRadius="4"
+                                Padding="0" Margin="0,3,24,3">
+                            <DockPanel>
+                                <!-- header: language tag on the left, actions on the right -->
+                                <Border DockPanel.Dock="Top" Background="#2A2A33" Padding="8,4">
+                                    <DockPanel>
+                                        <TextBlock DockPanel.Dock="Left" Text="{Binding Language}" Foreground="Gray"
+                                                   FontSize="10" VerticalAlignment="Center"
+                                                   IsVisible="{Binding HasLanguage}" />
+                                        <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right">
+                                            <Button Content="{l:Loc Assistant_Copy}" Command="{Binding CopyCommand}"
+                                                    Padding="8,2" FontSize="11" />
+                                            <Button Content="{l:Loc Assistant_Insert}" Command="{Binding InsertCommand}"
+                                                    Padding="8,2" FontSize="11" />
+                                            <Button Content="{l:Loc Assistant_Replace}" Command="{Binding ReplaceCommand}"
+                                                    Padding="8,2" FontSize="11" />
+                                        </StackPanel>
+                                    </DockPanel>
+                                </Border>
+                                <ScrollViewer HorizontalScrollBarVisibility="Auto" MaxHeight="320" Padding="8,6">
+                                    <SelectableTextBlock Text="{Binding Code}"
+                                                         FontFamily="Consolas,Menlo,monospace" FontSize="12" />
+                                </ScrollViewer>
+                            </DockPanel>
+                        </Border>
+                    </DataTemplate>
+
+                    <DataTemplate DataType="vm:ToolCallChatItem">
+                        <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="4"
+                                Padding="8,5" Margin="0,3,24,3">
+                            <StackPanel Spacing="4">
+                                <!-- header doubles as the expand/collapse toggle (AI-08.3): the whole
+                                     read-only card folds to this one line so the answer leads. -->
+                                <Button Command="{Binding ToggleExpandCommand}" Background="Transparent"
+                                        BorderThickness="0" Padding="0" Cursor="Hand"
+                                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Left">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <TextBlock Text="▾" FontSize="10" Foreground="Gray" VerticalAlignment="Center"
+                                                   IsVisible="{Binding IsExpanded}" />
+                                        <TextBlock Text="▸" FontSize="10" Foreground="Gray" VerticalAlignment="Center"
+                                                   IsVisible="{Binding !IsExpanded}" />
+                                        <TextBlock Text="⚙" FontSize="11" VerticalAlignment="Center" />
+                                        <TextBlock Text="{Binding Tool}" FontWeight="SemiBold" FontSize="12"
+                                                   VerticalAlignment="Center" />
+                                        <!-- collapsed: a compact result summary; expanded: the live state -->
+                                        <TextBlock Text="{Binding CollapsedSummary}" Foreground="Gray" FontSize="11"
+                                                   VerticalAlignment="Center" IsVisible="{Binding !IsExpanded}" />
+                                        <TextBlock Text="{Binding State}" Foreground="Gray" FontSize="11"
+                                                   VerticalAlignment="Center" IsVisible="{Binding IsExpanded}" />
+                                    </StackPanel>
+                                </Button>
+
+                                <!-- details, hidden when the card is collapsed -->
+                                <StackPanel Spacing="4" IsVisible="{Binding IsExpanded}">
+                                    <TextBlock Text="{Binding ArgumentsJson}" Foreground="Gray" FontSize="11"
+                                               FontFamily="Consolas,Menlo,monospace" TextWrapping="Wrap"
+                                               MaxLines="6" TextTrimming="CharacterEllipsis" />
+                                    <!-- the Allow/Deny gate for tools that write (D-043) -->
+                                    <StackPanel Orientation="Horizontal" Spacing="6"
+                                                IsVisible="{Binding IsWaitingApproval}">
+                                        <Button Content="{l:Loc Assistant_Allow}" Command="{Binding AllowCommand}"
+                                                Padding="12,2" FontSize="11" />
+                                        <Button Content="{l:Loc Assistant_Deny}" Command="{Binding DenyCommand}"
+                                                Padding="12,2" FontSize="11" />
+                                    </StackPanel>
+
+                                    <!-- navigable object list (list_symbols &c.): each row jumps to the
+                                         object's declaration. Scrolls in place when the list is long. -->
+                                    <StackPanel Spacing="2" IsVisible="{Binding HasSymbols}">
+                                        <TextBlock Text="{Binding SymbolsHeader}" Foreground="Gray"
+                                                   FontSize="11" Margin="0,2,0,0" />
+                                        <ScrollViewer MaxHeight="240" VerticalScrollBarVisibility="Auto">
+                                            <ItemsControl ItemsSource="{Binding Symbols}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Button Command="{Binding NavigateCommand}"
+                                                                Background="Transparent" BorderThickness="0"
+                                                                Padding="6,3" Cursor="Hand"
+                                                                HorizontalAlignment="Stretch"
+                                                                HorizontalContentAlignment="Left"
+                                                                ToolTip.Tip="{Binding QualifiedName}">
+                                                            <StackPanel>
+                                                                <TextBlock Text="{Binding Name}" FontSize="12" />
+                                                                <TextBlock Text="{Binding Subtitle}"
+                                                                           Foreground="Gray" FontSize="10" />
+                                                            </StackPanel>
+                                                        </Button>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </ScrollViewer>
+                                    </StackPanel>
+
+                                    <!-- raw JSON kept available but tucked behind a small, muted toggle
+                                         (collapsed by default) so the clickable list above is what reads. -->
+                                    <Expander FontSize="10" Padding="0" Margin="0,2,0,0"
+                                              IsVisible="{Binding ResultPreview, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                        <Expander.Header>
+                                            <TextBlock Text="{l:Loc Assistant_RawJson}" Foreground="Gray" FontSize="10" />
+                                        </Expander.Header>
+                                        <SelectableTextBlock Text="{Binding ResultPreview}" FontSize="11"
+                                                             FontFamily="Consolas,Menlo,monospace" TextWrapping="Wrap" />
+                                    </Expander>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+
+                </ItemsControl.DataTemplates>
+            </ItemsControl>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

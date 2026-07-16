@@ -48,6 +48,21 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
     /// <summary>Raised when something wants the editor to scroll to a span (e.g. diagnostics).</summary>
     public event EventHandler<SourceSpan>? ScrollToSpanRequested;
 
+    /// <summary>Raised when the assistant asks to insert a snippet at the caret (CAP-03); the editor
+    /// view applies it through the normal document pipeline (native undo, dirty tracking, re-lint).</summary>
+    public event EventHandler<string>? InsertAtCaretRequested;
+
+    /// <summary>Raised when the assistant asks to replace the current selection with a snippet (CAP-03).</summary>
+    public event EventHandler<string>? ReplaceSelectionRequested;
+
+    public void RequestInsertAtCaret(string text) => InsertAtCaretRequested?.Invoke(this, text);
+    public void RequestReplaceSelection(string text) => ReplaceSelectionRequested?.Invoke(this, text);
+
+    /// <summary>Whether the editor currently has a non-empty selection (the view keeps this current
+    /// from the editor's SelectionChanged). Read by the pane to decide the Replace outcome.</summary>
+    public bool HasSelection { get; private set; }
+    public void SetHasSelection(bool value) => HasSelection = value;
+
     /// <summary>Raised after a re-parse so document-tracking tools can refresh.</summary>
     public event EventHandler? Reparsed;
 

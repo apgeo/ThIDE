@@ -495,6 +495,8 @@
   <data name="Status_Indexing" xml:space="preserve"><value>Indexare…</value></data>
   <data name="Status_BuildInProgress" xml:space="preserve"><value>Compilare în curs…</value></data>
   <data name="Status_BuildingGraph" xml:space="preserve"><value>Se construiește graful de obiecte al proiectului…</value></data>
+  <data name="Status_McpListening" xml:space="preserve"><value>Serverul de unelte AI (MCP) ascultă pe loopback — un asistent AI local poate accesa acest proiect</value></data>
+  <data name="Mcp_ToastTitle" xml:space="preserve"><value>Asistent AI</value></data>
   <data name="Status_LastBuildOk" xml:space="preserve"><value>Ultima compilare a reușit</value></data>
   <data name="Status_LastBuildFail" xml:space="preserve"><value>Ultima compilare a eșuat</value></data>
   <data name="Status_OpenDiag" xml:space="preserve"><value>Deschide Diagnostice (F8: următor, Shift+F8: anterior)</value></data>
@@ -611,6 +613,10 @@
   <data name="Pref_CommandWm" xml:space="preserve"><value>(comandă)</value></data>
   <data name="Pref_LoadPlugins" xml:space="preserve"><value>Încarcă pluginuri (reguli semantice personalizate din dosarul de pluginuri)</value></data>
   <data name="Pref_LoadPluginsHelp" xml:space="preserve"><value>Puneți fișiere plugin .dll (tipuri care implementează ISemanticRule) în %AppData%/ThIDE/plugins. Încărcate la pornire; dezactivați pentru performanță. Modificările se aplică la repornire.</value></data>
+  <data name="Pref_McpServer" xml:space="preserve"><value>Activează serverul de unelte AI din aplicație (MCP)</value></data>
+  <data name="Pref_McpServerHelp" xml:space="preserve"><value>Permite unui asistent AI local să acceseze acest proiect prin Model Context Protocol. Ascultă pe 127.0.0.1 (doar loopback) pe un port aleatoriu, protejat cu un token; portul și tokenul sunt scrise în %AppData%/ThIDE/mcp-endpoint.json. Dezactivat implicit — vezi docs/mcp-host-setup.md.</value></data>
+  <data name="Pref_McpFollowAgent" xml:space="preserve"><value>Urmează agentul (permite uneltelor AI să controleze fereastra)</value></data>
+  <data name="Pref_McpFollowAgentHelp" xml:space="preserve"><value>Când este activ, asistentul AI poate deschide fișiere, focaliza panouri, rula comenzi, salva și schimba aspectul în această fereastră. Când este dezactivat, poate în continuare să citească proiectul și să răspundă la întrebări, dar nu poate atinge interfața. Activ implicit.</value></data>
   <data name="Pref_CliHelp" xml:space="preserve"><value>CLI-ul fără interfață (therion-cli) și serverul LSP (therion-lsp) sunt executabile separate — vezi documentația.</value></data>
   <data name="Pref_ResetAll" xml:space="preserve"><value>Resetează tot la valorile implicite</value></data>
   <data name="Pref_KbHelp" xml:space="preserve"><value>Faceți clic pe un câmp de combinație și apăsați combinația de taste pentru a o atribui.</value></data>
@@ -1249,4 +1255,49 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Log_Sev_Warning" xml:space="preserve"><value>Avertisment</value></data>
   <data name="Log_Sev_Hint" xml:space="preserve"><value>Sugestie</value></data>
   <data name="Log_Sev_Info" xml:space="preserve"><value>Informație</value></data>
+  <data name="Tool_Assistant" xml:space="preserve"><value>Asistent</value></data>
+  <data name="Menu_View_Assistant" xml:space="preserve"><value>Asistent</value></data>
+  <data name="Assistant_InputWatermark" xml:space="preserve"><value>Întreabă despre proiectul deschis…</value></data>
+  <data name="Assistant_Send" xml:space="preserve"><value>Trimite</value></data>
+  <data name="Assistant_Stop" xml:space="preserve"><value>Oprește</value></data>
+  <data name="Assistant_NewChat" xml:space="preserve"><value>Conversație nouă</value></data>
+  <data name="Assistant_Allow" xml:space="preserve"><value>Permite</value></data>
+  <data name="Assistant_Deny" xml:space="preserve"><value>Refuză</value></data>
+  <data name="Assistant_Result" xml:space="preserve"><value>Rezultat</value></data>
+  <data name="Assistant_RawJson" xml:space="preserve"><value>JSON brut</value></data>
+  <data name="Assistant_Objects" xml:space="preserve"><value>{0} obiecte — clic pentru a deschide</value></data>
+  <data name="Assistant_NoText" xml:space="preserve"><value>(Asistentul nu a returnat text — vezi rezultatele instrumentelor de mai sus.)</value></data>
+  <data name="Assistant_Copy" xml:space="preserve"><value>Copiază</value></data>
+  <data name="Assistant_Insert" xml:space="preserve"><value>Inserează la cursor</value></data>
+  <data name="Assistant_Replace" xml:space="preserve"><value>Înlocuiește selecția</value></data>
+  <data name="Assistant_SnippetCopied" xml:space="preserve"><value>Copiat în clipboard.</value></data>
+  <data name="Assistant_SnippetNoEditor" xml:space="preserve"><value>Deschide mai întâi un fișier în editor pentru a insera acest fragment.</value></data>
+  <data name="Assistant_SnippetNoSelection" xml:space="preserve"><value>Selectează mai întâi text în editor pentru a-l înlocui.</value></data>
+  <data name="Assistant_Thinking" xml:space="preserve"><value>Se gândește…</value></data>
+  <data name="Assistant_RunningTool" xml:space="preserve"><value>Rulează {0}…</value></data>
+  <data name="Assistant_Writing" xml:space="preserve"><value>Scrie răspunsul…</value></data>
+  <data name="Assistant_ToolOk" xml:space="preserve"><value>gata</value></data>
+  <data name="Assistant_ToolFailed" xml:space="preserve"><value>eșuat</value></data>
+  <data name="Assistant_ToolDeclined" xml:space="preserve"><value>refuzat</value></data>
+  <data name="Assistant_ToolRunning" xml:space="preserve"><value>rulează…</value></data>
+  <data name="Assistant_ServerOff" xml:space="preserve"><value>Serverul de instrumente AI din aplicație este oprit, deci asistentul nu are acces la proiect.</value></data>
+  <data name="Assistant_EnableServer" xml:space="preserve"><value>Pornește-l</value></data>
+  <data name="Assistant_ServerEnabled" xml:space="preserve"><value>Serverul de instrumente AI este acum pornit — retrimite mesajul.</value></data>
+  <data name="Assistant_ServerDown" xml:space="preserve"><value>Serverul de instrumente AI nu a pornit — vezi panoul Jurnal.</value></data>
+  <data name="Assistant_Stopped" xml:space="preserve"><value>Oprit.</value></data>
+  <data name="Assistant_Error" xml:space="preserve"><value>Asistentul a eșuat: {0}</value></data>
+  <data name="Pref_Assistant" xml:space="preserve"><value>Panoul Asistent</value></data>
+  <data name="Pref_AssistantHelp" xml:space="preserve"><value>Modelul local cu care vorbește panoul Asistent, ca endpoint compatibil OpenAI (implicit LM Studio). Panoul are nevoie și de serverul de instrumente AI de mai sus pentru a ajunge la proiect.</value></data>
+  <data name="Pref_AssistantEndpoint" xml:space="preserve"><value>Endpoint</value></data>
+  <data name="Pref_AssistantModel" xml:space="preserve"><value>Id model</value></data>
+  <data name="Pref_AssistantMaxTurns" xml:space="preserve"><value>Buget de tururi de instrumente</value></data>
+  <data name="Pref_AssistantProseSummary" xml:space="preserve"><value>Răspunde în limbaj natural după folosirea instrumentelor (fără JSON brut)</value></data>
+  <data name="Pref_AssistantSynthesize" xml:space="preserve"><value>Produ întotdeauna un răspuns scris (chiar dacă modelul nu returnează unul)</value></data>
+  <data name="Pref_AssistantStreaming" xml:space="preserve"><value>Transmite răspunsul cu un indicator de progres în timp real</value></data>
+  <data name="Pref_AssistantSuggestCodeBlocks" xml:space="preserve"><value>Cere modelului să pună sursa Therion propusă în blocuri de cod (Copiază / Inserează / Înlocuiește)</value></data>
+  <data name="Pref_AssistantContextMode" xml:space="preserve"><value>Context proiect</value></data>
+  <data name="Pref_AssistantContextModeHelp" xml:space="preserve"><value>Cât de mult rezumat al proiectului să primească modelul la începutul unei conversații noi. „Niciunul” păstrează totul bazat pe unelte; „Fișă” adaugă un rezumat scurt de orientare; „Pachet” adaugă un rezumat mai bogat. Cifrele sunt un instantaneu, așa că modelul este instruit să verifice cu uneltele.</value></data>
+  <data name="Pref_ContextModeNone" xml:space="preserve"><value>Niciunul (doar unelte)</value></data>
+  <data name="Pref_ContextModeCard" xml:space="preserve"><value>Fișă (rezumat compact)</value></data>
+  <data name="Pref_ContextModePack" xml:space="preserve"><value>Pachet (rezumat bogat)</value></data>
 </root>

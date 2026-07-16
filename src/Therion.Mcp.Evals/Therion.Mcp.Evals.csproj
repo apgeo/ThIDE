@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>Therion.Mcp.Evals</RootNamespace>
+    <AssemblyName>therion-mcp-evals</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- MCP client (connects to the therion-mcp server and executes the model's tool calls). -->
+    <PackageReference Include="ModelContextProtocol" Version="1.4.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The shared OpenAI-compatible chat/tool loop (ChatEngine, D-043) — one loop, two consumers. -->
+    <ProjectReference Include="..\Therion.Assistant\Therion.Assistant.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The server is spawned as a child process; build it first and record where its DLL lands.
+         ReferenceOutputAssembly=false: we run it, we don't link it. Mirrors the test project. -->
+    <ProjectReference Include="..\Therion.Mcp.Server\Therion.Mcp.Server.csproj"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>TherionMcpServerDll</_Parameter1>
+      <_Parameter2>$(MSBuildThisFileDirectory)../Therion.Mcp.Server/bin/$(Configuration)/net8.0/therion-mcp.dll</_Parameter2>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Committed eval workspaces, copied next to the exe so runs are reproducible. -->
+    <None Include="workspaces/**/*" CopyToOutputDirectory="PreserveNewest" LinkBase="workspaces" />
+  </ItemGroup>
+
+</Project>

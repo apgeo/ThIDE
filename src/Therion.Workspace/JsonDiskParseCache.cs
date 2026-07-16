@@ -79,7 +79,10 @@ public sealed class JsonDiskParseCache : IDiskParseCache
     {
         try
         {
-            string text = File.Exists(key.AbsolutePath) ? File.ReadAllText(key.AbsolutePath) : string.Empty;
+            // EncodingResolver, not File.ReadAllText: the cached SourceText is re-parsed on a later
+            // session, so reading it as UTF-8 here would resurrect the mojibake TherionWorkspace.ParseFile
+            // was fixed to avoid (DECISIONS D-021) - silently, and only on a cache hit.
+            string text = File.Exists(key.AbsolutePath) ? EncodingResolver.ReadAllText(key.AbsolutePath) : string.Empty;
             var entry = new CacheEntry
             {
                 Schema = SchemaVersion,

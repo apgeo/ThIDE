@@ -50,6 +50,21 @@ public enum WorkspaceSortMode
     Created = 4,
 }
 
+/// <summary>
+/// How much workspace context the Assistant pane volunteers to the model at conversation start,
+/// as a second system message. A research trade-off shipped as a bounded setting so the modes can
+/// be compared empirically; the whole semantic model is never sent (retrieval-by-tool wins).
+/// </summary>
+public enum AssistantContextMode
+{
+    /// <summary>Pull-based: system prompt + tools only. The default.</summary>
+    None = 0,
+    /// <summary>A compact orienting card (~300–600 tokens): totals, top survey levels, diagnostics counts.</summary>
+    Card = 1,
+    /// <summary>A richer digest (~2–6 KB): the card plus the full survey tree, file list, top diagnostics, inventory.</summary>
+    Pack = 2,
+}
+
 public sealed record AppSettings
 {
     // ---- session ----
@@ -106,6 +121,57 @@ public sealed record AppSettings
     /// <summary>Load external plugin assemblies (custom semantic rules) from the plugins folder.
     /// Plugin rules run during analysis, so this can be disabled for performance (default on).</summary>
     public bool EnablePlugins { get; init; } = true;
+
+    // ---- MCP in-app server ----
+    /// <summary>
+    /// Run the in-app Model Context Protocol server: a loopback HTTP endpoint (127.0.0.1, random port,
+    /// bearer token) that lets a local LLM host reach the running IDE's project tools. Off by default —
+    /// it starts a Kestrel listener, so it stays a deliberate opt-in for both security and startup cost
+    /// (same perf-conscious precedent as <see cref="EnableScriptHooks"/>/<see cref="EnablePlugins"/>).
+    /// </summary>
+    public bool EnableMcpServer { get; init; }
+
+    /// <summary>
+    /// "Follow the agent": whether the in-app MCP server's ring-R3 <em>action</em> tools (open a file,
+    /// focus a pane, run a command…) may drive the UI. On by default. Read-only tools (get_ui_state,
+    /// get_diagnostics…) ignore it. The Preferences toggle and the cross-R3 enforcement land in T-03.5;
+    /// this field exists now so get_ui_state can report the state (T-03.3).
+    /// </summary>
+    public bool McpFollowAgent { get; init; } = true;
+
+    // ---- in-app assistant panel (AI-07, D-043) ----
+    /// <summary>OpenAI-compatible base URL of the local inference runtime (LM Studio's default).</summary>
+    public string AssistantEndpoint { get; init; } = "http://127.0.0.1:1234/v1";
+    /// <summary>Model id the endpoint expects. Default is the R-001 eval winner.</summary>
+    public string AssistantModel { get; init; } = "qwen3-coder-30b-a3b-instruct";
+    /// <summary>Model↔tool round-trips per user turn before the assistant gives up.</summary>
+    public int AssistantMaxTurns { get; init; } = 10;
+    /// <summary>
+    /// Ask the model, in the system prompt, to answer in natural language after using tools and to
+    /// not paste the raw JSON (the lists are already shown in the panel). On by default (AI-08.1).
+    /// </summary>
+    public bool AssistantRequireProseSummary { get; init; } = true;
+    /// <summary>
+    /// When the model finishes with no prose (empty content) or exhausts its turn budget, do one more
+    /// tool-free completion so the user still gets a written answer instead of a blank/"gave up" line.
+    /// On by default (AI-08.1).
+    /// </summary>
+    public bool AssistantSynthesizeFinalAnswer { get; init; } = true;
+    /// <summary>Stream the answer token-by-token with a live progress indicator. On by default (AI-08.2).</summary>
+    public bool AssistantStreaming { get; init; } = true;
+    /// <summary>
+    /// How much workspace context the pane injects as a second system message at conversation start
+    /// (None / Card / Pack). Default None — fully pull-based, today's behaviour. Card/Pack read the
+    /// matching <c>therion://context/*</c> resource from the in-app server so the pane and external
+    /// hosts get identical context from one generator.
+    /// </summary>
+    public AssistantContextMode AssistantContextMode { get; init; } = AssistantContextMode.None;
+    /// <summary>
+    /// Nudge the model, in the system prompt, to put any Therion source it proposes in a fenced code
+    /// block — so the pane can render it as a code card with Copy / Insert / Replace (CAP-03). On by
+    /// default; gated like the prose-summary clause.
+    /// </summary>
+    public bool AssistantSuggestCodeBlocks { get; init; } = true;
 
     // ---- telemetry ----
     /// <summary>Opt-in: record anonymous usage events + crash reports to LOCAL files only. Off by default.</summary>

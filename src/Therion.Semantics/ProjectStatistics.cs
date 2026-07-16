@@ -159,6 +159,67 @@ public static class ProjectStatistics
             .ToList();
     }
 
+    /// <summary>
+    /// Surveys that have shots of their own but no <c>.th2</c> drawing any of their stations — the
+    /// inverse of <see cref="UnreferencedScraps"/>: those are drawings no map composes, these are
+    /// centrelines nothing has drawn yet.
+    /// </summary>
+    /// <remarks>
+    /// A survey counts as drawn when any station attributed to it is referenced from a .th2 (a
+    /// <c>point … station -name</c>). Only surveys that directly own shots are reported: a parent
+    /// whose children are all drawn has nothing left to draw, and one whose children are not is
+    /// represented by those children, which is where the work actually is.
+    /// </remarks>
+    public static IReadOnlyList<string> UndrawnSurveys(WorkspaceSemanticModel model)
+    {
+        var nodeNames = new HashSet<string>(model.SurveysByFullName.Keys, StringComparer.Ordinal);
+        if (nodeNames.Count == 0) return Array.Empty<string>();
+
+        // A scrap ties itself to a centreline through `point … station -name <station>`; that name is
+        // the only link back to the survey being drawn.
+        var drawn = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var obj in model.Th2Objects)
+        {
+            if (obj.StationName is not { Length: > 0 } name) continue;
+            if (ResolveStation(model, name) is not { } station) continue;
+            if (SurveyOf(station.Name, nodeNames) is { } sv) drawn.Add(sv);
+        }
+
+        var withShots = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var perFile in model.PerFile.Values)
+            foreach (var shot in perFile.Shots)
+            {
+                if ((shot.Flags & ShotFlags.Splay) != 0) continue;   // a splay is not a passage to draw
+                if (SurveyOf(shot.From, nodeNames) is { } sv) withShots.Add(sv);
+            }
+
+        return withShots
+            .Where(sv => !drawn.Contains(sv))
+            .OrderBy(sv => sv, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    /// <summary>
+    /// The station a <c>.th2</c> <c>-name</c> points at. Mirrors the resolution order the workspace
+    /// index navigates with, so a drawing counts as drawn by the same rule ctrl-click follows:
+    /// <c>point@survey</c> first, then a fully-qualified name, then a bare (usually unique) one.
+    /// </summary>
+    private static StationSymbol? ResolveStation(WorkspaceSemanticModel model, string raw)
+    {
+        var r = StationRef.Parse(raw.Trim());
+
+        if (r.SurveyLastName is { } surveyLast
+            && model.StationsBySurveyAndPoint.TryGetValue(
+                WorkspaceSemanticModel.SurveyPointKey(surveyLast, r.Point), out var bySurvey))
+            return bySurvey;
+
+        if (model.StationsByQn.TryGetValue(r.StationQuery, out var byQn)) return byQn;
+
+        return model.StationsByLastName.TryGetValue(r.Point, out var byName) && !byName.IsEmpty
+            ? byName[0]
+            : null;
+    }
+
     /// <summary>The known survey a station belongs to: its parent path, walked up to the nearest node.</summary>
     private static string? SurveyOf(QualifiedName station, HashSet<string> nodeNames)
     {

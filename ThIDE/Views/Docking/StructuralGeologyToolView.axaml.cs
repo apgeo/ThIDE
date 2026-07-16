@@ -17,6 +17,7 @@ using Avalonia.Threading;
 using ThIDE.Services;
 using ThIDE.ViewModels;
 using ThIDE.ViewModels.Docking;
+using Therion.Semantics;
 
 namespace ThIDE.Views.Docking;
 

@@ -96,7 +96,15 @@ public sealed record Th2ObjectRecord(
     string Kind,      // "point" | "line" | "area"
     string Type,
     string ScrapId,
-    SourceSpan Span);
+    SourceSpan Span)
+{
+    /// <summary>
+    /// The <c>-name</c> of a <c>point … station</c> — the centreline station this drawing is tied to,
+    /// possibly <c>point@survey</c>-qualified. Null for every other object: it is the only link from a
+    /// scrap back to the survey it draws.
+    /// </summary>
+    public string? StationName { get; init; }
+}
 
 /// <summary>
 /// Centreline shot flags (Therion <c>flags surface|duplicate|splay|approximate</c>).

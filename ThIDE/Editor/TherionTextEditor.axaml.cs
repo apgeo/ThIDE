@@ -2158,8 +2158,16 @@ public partial class TherionTextEditor : UserControl
     /// line counts (0,0 when the selection is empty). The shell shows these in the status bar.</summary>
     public static event EventHandler<(int Chars, int Lines)>? SelectionStatsChanged;
 
+    /// <summary>Raised (per editor) whenever the selection changes, so the document view can track
+    /// whether a Replace-selection snippet action has anything to replace (CAP-03).</summary>
+    public event EventHandler? SelectionChanged;
+
+    /// <summary>True when there is a non-empty selection right now.</summary>
+    public bool HasSelection => _editor is { SelectionLength: > 0 };
+
     private void OnSelectionChanged(object? sender, EventArgs e)
     {
+        SelectionChanged?.Invoke(this, EventArgs.Empty);
         if (_editor is null) return;
         int chars = _editor.SelectionLength;
         if (chars <= 0) { SelectionStatsChanged?.Invoke(this, (0, 0)); return; }
@@ -2167,6 +2175,25 @@ public partial class TherionTextEditor : UserControl
         int lines = 1;
         foreach (var c in text) if (c == '\n') lines++;
         SelectionStatsChanged?.Invoke(this, (chars, lines));
+    }
+
+    /// <summary>Inserts a snippet at the caret through the document (native undo + the normal
+    /// text-changed pipeline: dirty tracking and re-parse/re-lint). CAP-03.</summary>
+    public void InsertSnippetAtCaret(string text)
+    {
+        if (_editor?.Document is not { } doc) return;
+        int offset = Math.Clamp(_editor.CaretOffset, 0, doc.TextLength);
+        doc.Insert(offset, text);
+        _editor.Focus();
+    }
+
+    /// <summary>Replaces the current selection with a snippet (native undo). No-op when nothing is
+    /// selected — the caller checked, but this stays safe if the selection cleared meanwhile. CAP-03.</summary>
+    public void ReplaceSelectionWithSnippet(string text)
+    {
+        if (_editor is not { SelectionLength: > 0 }) return;
+        _editor.SelectedText = text;
+        _editor.Focus();
     }
 
     private void OnCaretPositionChanged(object? sender, EventArgs e)
@@ -3304,6 +3331,9 @@ public partial class TherionTextEditor : UserControl
     public string EditorSelectedText => _editor?.SelectedText ?? string.Empty;
 
     public int CurrentLine => _editor?.TextArea.Caret.Line ?? 1;
+
+    /// <summary>1-based caret column in this editor (used by the in-app MCP get_ui_state, T-03.3).</summary>
+    public int CurrentColumn => _editor?.TextArea.Caret.Column ?? 1;
 
     // Collapses/expands every foldable region in the document (#8).
     private void SetAllFoldings(bool folded)

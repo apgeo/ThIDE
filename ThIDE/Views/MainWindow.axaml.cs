@@ -26,6 +26,7 @@ public partial class MainWindow : Window
     private ILayoutService? _layout;
     private IGlobalHotkeyService? _globalHotkey;
     private ICrashRecoveryService? _crashRecovery;
+    private IMcpHostService? _mcpHost;
 
     // System-wide build hotkey (Ctrl+Alt+B): triggers a compile even when the app isn't
     // focused, marshalled onto the UI thread (#3). No-op on platforms without support.
@@ -104,6 +105,7 @@ public partial class MainWindow : Window
                     docs.FindAllReferencesRequested += (_, args) => _ = HandleFindAllReferencesAsync(args.Raw, args.Kind);
                 }
                 _crashRecovery = AppServices.Provider.GetService<ICrashRecoveryService>();
+                _mcpHost = AppServices.Provider.GetService<IMcpHostService>();
             }
             catch { /* design-time / no container */ }
         };
@@ -124,6 +126,10 @@ public partial class MainWindow : Window
             _crashRecovery?.MarkCleanShutdown();
             _globalHotkey?.Dispose();
             _modalWatchdog?.Dispose();
+            // Remove the discovery file at once (no host should reconnect to a dying port) and stop the
+            // listener without blocking the UI thread — a blocking wait can deadlock Kestrel's drain
+            // against an in-flight request that is itself marshalling to this thread (code review).
+            try { _mcpHost?.RequestShutdown(); } catch { /* exiting */ }
         };
 
         // Drag-and-drop file open (#17).
@@ -1360,6 +1366,10 @@ public partial class MainWindow : Window
 
     private void AttachKeyboardShortcuts(MainWindowViewModel vm)
     {
+        // Independent of the keyboard service — connect the MCP bridge first, so the R3 command tools
+        // still work if the shortcut service is unavailable and we return early below.
+        ConnectMcpBridge(vm);
+
         try { _shortcuts = AppServices.Provider.GetService<IKeyboardShortcutService>(); }
         catch { _shortcuts = null; }
         if (_shortcuts is null) return;
@@ -1378,14 +1388,16 @@ public partial class MainWindow : Window
         vm.RenameSymbolRequested       += (_, _) => TriggerRenameSymbol();
     }
 
-    private void RebuildKeyBindings(MainWindowViewModel vm, IKeyboardShortcutService shortcuts)
+    /// <summary>
+    /// The shell-scoped id→command map. Built once (the command instances are stable) and shared by the
+    /// keyboard bindings and the MCP ring-R3 <c>run_command</c> tool (T-03.5), so both reach commands by
+    /// the same ids. Caret-scoped editor actions are matched by the focused editor, not listed here;
+    /// RenameSymbol appears in both — the editor wins when focused, this covers a focused tool panel.
+    /// </summary>
+    private Dictionary<string, ICommand?> BuildShellCommandMap(MainWindowViewModel vm)
     {
-        // Shell-scoped commands only. Caret-scoped editor actions (go-to-definition, toggle
-        // comment, …) are matched by the focused TherionTextEditor against the same service.
-        // RenameSymbol appears in both: the editor wins when focused, this binding covers the
-        // case where a tool panel has focus.
         _toggleFullScreenCommand ??= new CommunityToolkit.Mvvm.Input.RelayCommand(ToggleFullScreen);
-        var commandMap = new Dictionary<string, ICommand?>(StringComparer.Ordinal)
+        return new Dictionary<string, ICommand?>(StringComparer.Ordinal)
         {
             [ShellCommandIds.Build]                    = vm.Build.BuildCommand,
             [ShellCommandIds.Rebuild]                  = vm.Build.RebuildCommand,
@@ -1428,6 +1440,29 @@ public partial class MainWindow : Window
             [ShellCommandIds.NewScrapScaffold]         = vm.NewScrapScaffoldCommand,
             [ShellCommandIds.GenerateReport]           = vm.GenerateReportCommand,
         };
+    }
+
+    /// <summary>Connects the in-app MCP bridge to this shell so the guarded R3 tools drive real commands (T-03.5).</summary>
+    private void ConnectMcpBridge(MainWindowViewModel vm)
+    {
+        UiBridge? bridge;
+        try { bridge = AppServices.Provider.GetService<Therion.Mcp.IUiBridge>() as UiBridge; }
+        catch { bridge = null; }
+        if (bridge is null) return;
+
+        var layoutPresets = new Dictionary<string, ICommand?>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["default"]       = vm.ResetLayoutCommand,
+            ["split2"]        = vm.ApplySplitLayout2Command,
+            ["split3"]        = vm.ApplySplitLayout3Command,
+            ["multi-monitor"] = vm.ApplyMultiMonitorLayoutCommand,
+        };
+        bridge.ConnectShell(BuildShellCommandMap(vm), vm.SaveAllDirtyAsync, layoutPresets);
+    }
+
+    private void RebuildKeyBindings(MainWindowViewModel vm, IKeyboardShortcutService shortcuts)
+    {
+        var commandMap = BuildShellCommandMap(vm);
 
         KeyBindings.Clear();
         foreach (var (id, cmd) in commandMap)

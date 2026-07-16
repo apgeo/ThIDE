@@ -391,6 +391,61 @@
                                Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
 
                     <Separator Margin="0,6" />
+                    <!-- MCP in-app server (loopback HTTP + token) for local LLM hosts. -->
+                    <CheckBox Content="{l:Loc Pref_McpServer}"
+                              IsChecked="{Binding EnableMcpServer}" />
+                    <TextBlock Text="{l:Loc Pref_McpServerHelp}"
+                               Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
+                    <!-- Follow the agent: allow the MCP action tools to drive the UI. -->
+                    <CheckBox Content="{l:Loc Pref_McpFollowAgent}"
+                              IsChecked="{Binding McpFollowAgent}"
+                              IsEnabled="{Binding EnableMcpServer}" Margin="16,0,0,0" />
+                    <TextBlock Text="{l:Loc Pref_McpFollowAgentHelp}"
+                               Foreground="Gray" FontSize="11" TextWrapping="Wrap" Margin="16,0,0,0" />
+
+                    <!-- Assistant pane (AI-07): the local OpenAI-compatible model the chat panel talks to. -->
+                    <TextBlock Text="{l:Loc Pref_Assistant}" FontWeight="SemiBold" Margin="0,8,0,0" />
+                    <TextBlock Text="{l:Loc Pref_AssistantHelp}"
+                               Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
+                    <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto" Margin="16,4,0,0">
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="{l:Loc Pref_AssistantEndpoint}"
+                                   VerticalAlignment="Center" Margin="0,0,8,4" />
+                        <TextBox   Grid.Row="0" Grid.Column="1" Text="{Binding AssistantEndpoint}"
+                                   Watermark="http://127.0.0.1:1234/v1" Margin="0,0,0,4" />
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="{l:Loc Pref_AssistantModel}"
+                                   VerticalAlignment="Center" Margin="0,0,8,4" />
+                        <TextBox   Grid.Row="1" Grid.Column="1" Text="{Binding AssistantModel}"
+                                   Watermark="qwen3-coder-30b-a3b-instruct" Margin="0,0,0,4" />
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="{l:Loc Pref_AssistantMaxTurns}"
+                                   VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <NumericUpDown Grid.Row="2" Grid.Column="1" Value="{Binding AssistantMaxTurns}"
+                                       Minimum="1" Maximum="50" Increment="1" FormatString="0"
+                                       HorizontalAlignment="Left" MinWidth="120" />
+                    </Grid>
+                    <StackPanel Margin="16,4,0,0" Spacing="2">
+                        <CheckBox Content="{l:Loc Pref_AssistantProseSummary}"
+                                  IsChecked="{Binding AssistantRequireProseSummary}" />
+                        <CheckBox Content="{l:Loc Pref_AssistantSynthesize}"
+                                  IsChecked="{Binding AssistantSynthesizeFinalAnswer}" />
+                        <CheckBox Content="{l:Loc Pref_AssistantStreaming}"
+                                  IsChecked="{Binding AssistantStreaming}" />
+                        <CheckBox Content="{l:Loc Pref_AssistantSuggestCodeBlocks}"
+                                  IsChecked="{Binding AssistantSuggestCodeBlocks}" />
+                    </StackPanel>
+                    <Grid ColumnDefinitions="Auto,*" Margin="16,6,0,0">
+                        <TextBlock Grid.Column="0" Text="{l:Loc Pref_AssistantContextMode}"
+                                   VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <ComboBox Grid.Column="1" MinWidth="200" HorizontalAlignment="Left"
+                                  SelectedIndex="{Binding AssistantContextModeIndex, Mode=TwoWay}">
+                            <ComboBoxItem Content="{l:Loc Pref_ContextModeNone}" />
+                            <ComboBoxItem Content="{l:Loc Pref_ContextModeCard}" />
+                            <ComboBoxItem Content="{l:Loc Pref_ContextModePack}" />
+                        </ComboBox>
+                    </Grid>
+                    <TextBlock Text="{l:Loc Pref_AssistantContextModeHelp}" Margin="16,2,0,0"
+                               Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
+
+                    <Separator Margin="0,6" />
                     <TextBlock Text="{l:Loc Pref_CliHelp}"
                                Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
                 </StackPanel>

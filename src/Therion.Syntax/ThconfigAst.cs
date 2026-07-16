@@ -25,7 +25,7 @@ public sealed record ExportCommand(
     string ExportType,
     string OptionsRaw) : TherionCommand(Span, "export")
 {
-    /// <summary>The <c>-fmt</c> value (e.g. <c>lox</c>, <c>survex</c>, <c>kml</c>), if present.</summary>
+    /// <summary>The <c>-fmt</c> value (e.g. <c>loch</c>, <c>survex</c>, <c>kml</c>), if present.</summary>
     public string? Format { get; init; }
 
     /// <summary>The <c>-o</c>/<c>-output</c> path, if present.</summary>

@@ -47,12 +47,16 @@
     </PackageReference>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.1" />
     <PackageReference Include="Dock.Serializer.SystemTextJson" Version="12.0.0.2" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="8.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Localization" Version="8.0.10" />
-    <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.2" />
+    <!-- Microsoft.Extensions.* aligned to 10.0.7: the MCP SDK line (ModelContextProtocol.AspNetCore,
+         T-03.1) pulls these transitively at 10.0.7, and a mixed 8/10 graph fails restore (NU1605) or
+         splits concrete-8/abstractions-10 at runtime. 10.0.7 supports net8.0 and is what the stdio
+         host already runs on (D-013). -->
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.7" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.7" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.7" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.7" />
+    <PackageReference Include="Microsoft.Extensions.Localization" Version="10.0.7" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.7" />
     <!-- Task 5: per-user file-type associations on Windows (HKCU registry). Called only on Windows. -->
     <PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
     <!-- VIS-03/05: in-app map rendering. SVG rasterized via Svg.Skia core (Avalonia-agnostic);
@@ -63,6 +67,10 @@
          (WebView2 on Windows, WKWebView on macOS, WebKitGTK/WPE on Linux) — no bundled
          Chromium. Hosts the vendored CaveView.js dist (Assets/caveview/**). -->
     <PackageReference Include="Avalonia.Controls.WebView" Version="12.0.1" />
+    <!-- MCP in-app host (T-03.1): streamable-HTTP transport on loopback Kestrel, started only
+         when EnableMcpServer is on. Kestrel/ASP.NET Core references stay in the app project;
+         Therion.Mcp itself stays UI-free (02 §B.3). SDK line pinned 1.4.x per D-003. -->
+    <PackageReference Include="ModelContextProtocol.AspNetCore" Version="1.4.1" />
   </ItemGroup>
 
   <ItemGroup>
@@ -73,6 +81,9 @@
     <ProjectReference Include="..\src\Therion.Structural\Therion.Structural.csproj" />
     <ProjectReference Include="..\src\Therion.Workspace\Therion.Workspace.csproj" />
     <ProjectReference Include="..\src\Therion.Build\Therion.Build.csproj" />
+    <ProjectReference Include="..\src\Therion.Mcp\Therion.Mcp.csproj" />
+    <!-- Assistant pane (AI-07): the shared OpenAI-compatible chat/tool loop. -->
+    <ProjectReference Include="..\src\Therion.Assistant\Therion.Assistant.csproj" />
     <ProjectReference Include="..\src\Therion.Blender\Therion.Blender.csproj" />
   </ItemGroup>
 

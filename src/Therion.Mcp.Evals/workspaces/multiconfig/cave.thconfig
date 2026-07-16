@@ -1,0 +1,2 @@
+source main.th
+export map -o cave-map.pdf

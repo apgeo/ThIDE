@@ -55,6 +55,7 @@ public sealed class DockFactory : Factory
     private readonly Model3DViewerToolViewModel _model3dViewer;
     private readonly StructuralGeologyToolViewModel _structuralGeology;
     private readonly StructuralPlotToolViewModel _structuralPlot;
+    private readonly AssistantToolViewModel _assistant;
     private readonly BlenderAnimationToolViewModel _blenderAnimation;
     private readonly ThIDE.Services.IAppSettingsService? _appSettings;
     private readonly SettingsToolViewModel _settings;
@@ -80,6 +81,7 @@ public sealed class DockFactory : Factory
         Model3DViewerToolViewModel model3dViewer,
         StructuralGeologyToolViewModel structuralGeology,
         StructuralPlotToolViewModel structuralPlot,
+        AssistantToolViewModel assistant,
         BlenderAnimationToolViewModel blenderAnimation,
         SettingsToolViewModel settings,
         ThIDE.Services.ILayoutService? layoutState = null,
@@ -101,6 +103,7 @@ public sealed class DockFactory : Factory
         _model3dViewer = model3dViewer;
         _structuralGeology = structuralGeology;
         _structuralPlot = structuralPlot;
+        _assistant = assistant;
         _blenderAnimation = blenderAnimation;
         _appSettings = appSettings;
         _settings = settings;
@@ -181,6 +184,44 @@ public sealed class DockFactory : Factory
             BringHostWindowToFront(tool);
         }
         catch { /* best-effort show */ }
+    }
+
+    /// <summary>
+    /// Ensures the tool with id <paramref name="id"/> is visible and focused, adding it to the layout if
+    /// needed. For the in-app MCP host's focus_tool (T-03.4). Returns false for an unknown or
+    /// feature-disabled id (see <see cref="AvailableToolIds"/>). Must run on the UI thread.
+    /// </summary>
+    public bool ShowToolById(string id)
+    {
+        if (string.IsNullOrEmpty(id) || !IsToolAvailable(id)) return false;
+        if (!ToolSingletonsById().TryGetValue(id, out var tool)) return false;
+        ShowTool(tool);
+        return true;
+    }
+
+    /// <summary>
+    /// Stable ids of the tool panes currently in the layout — docked or floating (i.e. open, not closed).
+    /// Read by the in-app MCP host's get_ui_state (T-03.3). Returns the same vocabulary
+    /// <see cref="ShowToolById"/> / <see cref="AvailableToolIds"/> speak (the English ids, not the localized
+    /// titles) so an agent can feed a pane straight from get_ui_state into focus_tool. Must run on the UI
+    /// thread. Granularity is "open", not "focused tab": a tool in a background tab still counts.
+    /// </summary>
+    public System.Collections.Generic.IReadOnlyList<string> OpenToolIds()
+    {
+        var open = new System.Collections.Generic.List<string>();
+        if (_rootDock is null) return open;
+
+        // Iterate the single canonical id→tool roster so a newly-added tool can't drift out of this list.
+        foreach (var (id, tool) in ToolSingletonsById())
+        {
+            try
+            {
+                if (ContainsRef(_rootDock, tool) || HostWindowOf(tool) is not null)
+                    open.Add(id);
+            }
+            catch { /* best-effort */ }
+        }
+        return open;
     }
 
     /// <summary>
@@ -378,7 +419,7 @@ public sealed class DockFactory : Factory
     {
         "Workspace", "Project", "ObjectBrowser",
         "Diagnostics", "CompilerOutput", "GeneratedFiles", "Log",
-        "Xvi", "Outline", "LivePreview", "MapViewer", "Model3DViewer",
+        "Xvi", "Outline", "LivePreview", "MapViewer", "Model3DViewer", "Assistant",
     };
 
     /// <summary>Which region a tool calls home when the profile doesn't place it.</summary>
@@ -798,7 +839,8 @@ public sealed class DockFactory : Factory
         if (s.EnableLivePreview) list.Add(_livePreview);
         if (s.EnableInAppViewer) list.Add(_mapViewer);
         if (s.EnableModel3DViewer) list.Add(_model3dViewer);   // (on by default)
-        // opens in the central document well on demand (ShowToolInDocuments), not the rail.
+        list.Add(_assistant);   // AI-07: passive until used; shows an enable affordance when the server is off
+        // StructuralGeology opens in the central document well on demand (ShowToolInDocuments), not the rail.
         return list.ToArray();
     }
 
@@ -905,6 +947,7 @@ public sealed class DockFactory : Factory
         ["Model3DViewer"]  = _model3dViewer,
         ["StructuralGeology"] = _structuralGeology,
         ["StructuralPlot"] = _structuralPlot,
+        ["Assistant"]      = _assistant,
         ["BlenderAnimation"] = _blenderAnimation,
         ["Settings"]       = _settings,
     };
@@ -1230,6 +1273,7 @@ public sealed class DockFactory : Factory
             ["Model3DViewer"]  = () => _model3dViewer,
             ["StructuralGeology"] = () => _structuralGeology,
             ["StructuralPlot"] = () => _structuralPlot,
+            ["Assistant"]      = () => _assistant,
             ["BlenderAnimation"] = () => _blenderAnimation,
             ["Settings"]       = () => _settings,
         };

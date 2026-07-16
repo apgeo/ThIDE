@@ -1,0 +1,44 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageReference Include="xunit" Version="2.5.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Therion.Mcp\Therion.Mcp.csproj" />
+    <!--
+      Build order only: the e2e test spawns therion-mcp as a real child process rather than
+      linking it. ReferenceOutputAssembly=false keeps the exe out of the test's own closure.
+    -->
+    <ProjectReference Include="..\..\src\Therion.Mcp.Server\Therion.Mcp.Server.csproj"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <!--
+    Hand the test the server's build output. Forward slashes on purpose: MSBuild and the .NET
+    Path APIs accept them on every OS, backslashes do not (CLAUDE.md cross-platform rule).
+  -->
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>TherionMcpServerDll</_Parameter1>
+      <_Parameter2>$(MSBuildThisFileDirectory)../../src/Therion.Mcp.Server/bin/$(Configuration)/net8.0/therion-mcp.dll</_Parameter2>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+</Project>

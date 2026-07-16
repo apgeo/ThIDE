@@ -285,24 +285,9 @@ public static class ProjectDiagnostics
     private static void Disconnection(WorkspaceSemanticModel ws, ProjectDiagnosticOptions o,
         ImmutableArray<Diagnostic>.Builder diags)
     {
-        // Equate union-find over station names, merging BOTH the per-file equate classes AND cross-file
-        // `@`-equates (resolved through the workspace), so a cave stitched together across files is seen
-        // as a single piece rather than wrongly reported as many disconnected ones.
-        var equates = new EquateGraph();
-        foreach (var model in ws.PerFile.Values)
-            foreach (var group in model.Equates.Groups())
-                for (int i = 1; i < group.Length; i++) equates.Union(group[0], group[i]);
-        foreach (var model in ws.PerFile.Values)
-            foreach (var rec in model.EquateRecords)
-            {
-                QualifiedName? first = null;
-                foreach (var raw in rec.Stations)
-                {
-                    if (ResolveEquateMember(ws, model, raw) is not { } qn) continue;
-                    if (first is null) first = qn;
-                    else equates.Union(first.Value, qn);
-                }
-            }
+        // Node identity comes from the shared workspace equate classes — per-file *and* cross-file
+        // `@`-equates — so a cave stitched together across files is one piece, not many.
+        var equates = WorkspaceEquates.Build(ws);
 
         // Nodes = equate-merged stations; index each rep's declaring files + grounded state, and keep a
         // station-name → symbol map for the navigable diagnostic anchor.
@@ -324,13 +309,13 @@ public static class ProjectDiagnostics
                 symbolByName.TryAdd(st.Name, st);
                 if (!string.IsNullOrEmpty(st.DeclarationSpan.FilePath))
                     Files(rep).Add(st.DeclarationSpan.FilePath);
-                // A georeferenced fix (one made under a `cs`) grounds the piece to absolute coordinates;
-                // a bare `fix` with no coordinate system is only a local placeholder — it grounds the
-                // piece only when the caller opts in via LocalFixGrounds.
-                if (st.Kind == StationDeclarationKind.Fix &&
-                    (o.LocalFixGrounds || !string.IsNullOrWhiteSpace(st.Cs)))
-                    groundedReps.Add(rep);
             }
+
+        // A georeferenced fix grounds the piece it anchors. Resolved through the workspace, because a
+        // wrapper survey fixes a station that lives in another file (`fix 1@partA`) and the per-file
+        // binder cannot see through the `@`.
+        foreach (var grounded in WorkspaceEquates.GroundedStations(ws, o.LocalFixGrounds))
+            groundedReps.Add(equates.Find(grounded));
 
         // Edges from non-splay legs (splays reach wall points, not the survey skeleton).
         foreach (var model in ws.PerFile.Values)
@@ -483,35 +468,6 @@ public static class ProjectDiagnostics
         return files.Count <= max
             ? string.Join(", ", files)
             : string.Join(", ", files.Take(max)) + $", +{files.Count - max} more";
-    }
-
-    /// <summary>
-    /// Resolves an <c>equate</c> member (as written in source) to the canonical station name it refers
-    /// to, spanning files: cross-file / <c>@</c>-qualified / full-dotted names via the workspace resolver,
-    /// then a bare or relative name against its own file (exact, else a unique last-name match).
-    /// </summary>
-    private static QualifiedName? ResolveEquateMember(WorkspaceSemanticModel ws, SemanticModel model, string raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw)) return null;
-        raw = raw.Trim();
-        if (ws.ResolveStationSymbol(raw) is { } sym) return sym.Name;
-
-        var r = StationRef.Parse(raw);
-        if (!r.HasSurvey)
-        {
-            var direct = QualifiedName.Of(r.Point);
-            if (model.Stations.ContainsKey(direct)) return direct;
-        }
-        // A unique last-name match inside this one file (station names are effectively unique per
-        // survey; requiring uniqueness avoids guessing across surveys that reuse a name).
-        QualifiedName? unique = null;
-        foreach (var name in model.Stations.Keys)
-            if (string.Equals(name.Last, r.Point, StringComparison.Ordinal))
-            {
-                if (unique is not null) return null;
-                unique = name;
-            }
-        return unique;
     }
 
     // ---- : dangling include targets ---------------------------------------------------

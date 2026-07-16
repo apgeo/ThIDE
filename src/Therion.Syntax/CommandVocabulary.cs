@@ -61,24 +61,110 @@ public static class CommandVocabulary
         ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase,
             "bbox", "dxf", "esri", "kml", "pdf", "shapefile", "shapefiles", "shp",
             "survex", "svg", "th2", "xhtml", "xvi");
+    private static readonly ImmutableHashSet<string> AtlasFormats =
+        ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, "pdf");
     private static readonly ImmutableHashSet<string> ListFormats =
         ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, "dbf", "html", "kml", "text", "txt");
     private static readonly ImmutableHashSet<string> DatabaseFormats =
         ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, "sql", "csv");
 
     /// <summary>
+    /// Formats whose output extension is <em>not</em> the format's own name. Every other format writes
+    /// the extension it is named after (<c>kml</c> → <c>.kml</c>), which needs no table.
+    /// </summary>
+    /// <remarks>
+    /// Note this is not a bijection, which is why one table drives both directions rather than two
+    /// tables that could disagree: <c>3d</c> and <c>survex</c> both write <c>.3d</c>. Going
+    /// extension → format, <c>.3d</c> therefore resolves to <c>3d</c> by name and never needs this
+    /// table; going format → extension, <c>survex</c> does.
+    /// lox/plt/wrl are exactly the phantom formats an earlier draft of <see cref="ModelFormats"/>
+    /// carried (see the note above it) — the same confusion from the other side.
+    /// </remarks>
+    private static readonly ImmutableDictionary<string, string> ExtensionByFormat =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["loch"] = "lox",
+            ["compass"] = "plt",
+            ["vrml"] = "wrl",
+            ["survex"] = "3d",
+        }.ToImmutableDictionary(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// The <c>-fmt</c> value that makes export <paramref name="type"/> write
+    /// <paramref name="extension"/> (with or without the dot), or null when no valid format does.
+    /// Answers the question in the shape it gets asked — by the file wanted, not the keyword.
+    /// </summary>
+    public static string? ExportFormatForExtension(string type, string extension)
+    {
+        var ext = (extension ?? string.Empty).Trim().TrimStart('.');
+        if (ext.Length == 0) return null;
+
+        var formats = ExportFormats(type);
+
+        // A format named after the extension wins: `.3d` is `-fmt 3d`, even though `survex` writes
+        // .3d too — answering with the name the caller already typed is the least surprising.
+        if (formats.Contains(ext)) return ext;
+
+        foreach (var (format, mapped) in ExtensionByFormat)
+            if (mapped.Equals(ext, StringComparison.OrdinalIgnoreCase) && formats.Contains(format))
+                return format;
+
+        return null;
+    }
+
+    /// <summary>
+    /// The file extension <c>-fmt &lt;format&gt;</c> writes, dot included (<c>loch</c> → <c>.lox</c>,
+    /// <c>survex</c> → <c>.3d</c>). Formats not listed write the extension they are named after, so
+    /// callers never need a table of their own.
+    /// </summary>
+    public static string ExtensionForExportFormat(string format)
+    {
+        var fmt = (format ?? string.Empty).Trim();
+        if (fmt.Length == 0) return string.Empty;
+
+        return ExtensionByFormat.TryGetValue(fmt, out var ext)
+            ? "." + ext
+            : "." + fmt.ToLowerInvariant();
+    }
+
+    /// <summary>
+    /// The extension → <c>-fmt</c> pairs export <paramref name="type"/> accepts where guessing the
+    /// keyword from the extension would <em>fail</em> — the ones worth warning about. Empty when the
+    /// type has no such trap, so help can stay silent instead of padding.
+    /// </summary>
+    /// <remarks>
+    /// <c>survex</c> → <c>.3d</c> is deliberately absent: a caller who guesses <c>3d</c> from
+    /// <c>.3d</c> is right, so saying otherwise would be noise.
+    /// </remarks>
+    public static IEnumerable<KeyValuePair<string, string>> ForeignExportExtensions(string type)
+    {
+        var formats = ExportFormats(type);
+        foreach (var (format, ext) in ExtensionByFormat)
+            if (formats.Contains(format) && !formats.Contains(ext))
+                yield return new KeyValuePair<string, string>(ext, format);
+    }
+
+    /// <summary>
+    /// The <c>-fmt</c> values export <paramref name="type"/> accepts; empty for an unknown type.
+    /// Enumerable because syntax help has to list them, not just accept or reject one.
+    /// </summary>
+    public static ImmutableHashSet<string> ExportFormats(string type) =>
+        (type ?? string.Empty).ToLowerInvariant() switch
+        {
+            "model" => ModelFormats,
+            "map" => MapFormats,
+            "atlas" => AtlasFormats,
+            "cave-list" or "survey-list" or "continuation-list" => ListFormats,
+            "database" => DatabaseFormats,
+            _ => ImmutableHashSet<string>.Empty,
+        };
+
+    /// <summary>
     /// True if <paramref name="fmt"/> is a valid output format for export <paramref name="type"/>.
     /// Returns true for unknown types (the type is reported separately) so we never double-flag.
     /// </summary>
-    public static bool IsExportFormat(string type, string fmt) => type.ToLowerInvariant() switch
-    {
-        "model" => ModelFormats.Contains(fmt),
-        "map" => MapFormats.Contains(fmt),
-        "atlas" => string.Equals(fmt, "pdf", StringComparison.OrdinalIgnoreCase),
-        "cave-list" or "survey-list" or "continuation-list" => ListFormats.Contains(fmt),
-        "database" => DatabaseFormats.Contains(fmt),
-        _ => true,
-    };
+    public static bool IsExportFormat(string type, string fmt) =>
+        !IsExportType(type ?? string.Empty) || ExportFormats(type!).Contains(fmt);
 
     /// <summary>True if <paramref name="t"/> is a valid <c>flags</c> shot-flag (or the <c>not</c> prefix).</summary>
     public static bool IsShotFlag(string t) =>

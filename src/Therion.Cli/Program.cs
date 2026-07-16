@@ -250,13 +250,14 @@ static int ListStations(string path)
 }
 
 // Loads a project (a thconfig or a .th) into a workspace model, following the include graph.
+// The File.Exists guard stays here rather than leaning on WorkspaceLoader's own resolution: the CLI
+// takes a file, never a folder, and this keeps its two distinct error messages.
 static async System.Threading.Tasks.Task<WorkspaceSemanticModel?> LoadWorkspaceAsync(string path)
 {
     if (!File.Exists(path)) { Console.Error.WriteLine($"error: file not found: {path}"); return null; }
     try
     {
-        var ws = new TherionWorkspace();
-        await ws.LoadAsync(Path.GetFullPath(path));
+        var ws = await WorkspaceLoader.OpenAsync(path);
         return ws.BuildSemanticModel();
     }
     catch (Exception ex)

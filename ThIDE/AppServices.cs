@@ -169,6 +169,10 @@ internal static class AppServices
 
         // Active-document host (�7.3).
         services.AddSingleton<IDocumentService, DocumentService>();
+        // Same instance, narrow view: the in-app MCP host reads unsaved buffers through this (T-03.2).
+        services.AddSingleton<IUnsavedBufferProvider>(sp => (IUnsavedBufferProvider)sp.GetRequiredService<IDocumentService>());
+        // Same instance, narrow view: the assistant pane drops code snippets into the active editor (CAP-03).
+        services.AddSingleton<ISnippetEditor>(sp => (ISnippetEditor)sp.GetRequiredService<IDocumentService>());
 
         // Quick-open (Ctrl+P go-to-file) data source (#3).
         services.AddSingleton<QuickOpenProvider>();
@@ -199,6 +203,13 @@ internal static class AppServices
         services.AddSingleton<IWorkspaceSymbolIndexStore, WorkspaceSymbolIndexStore>(); // persistent symbol index
         services.AddSingleton<ITelemetryService, LocalTelemetryService>();    // opt-in local telemetry/crash reports
         services.AddSingleton<IScriptHookService, ScriptHookService>();       // scripting/macro hooks
+        // MCP in-app host (T-03.1): the ring-R3 UI seam + the loopback server. Both are cheap to
+        // construct; the Kestrel listener only spins up when EnableMcpServer is on (ApplySettingAsync).
+        services.AddSingleton<Therion.Mcp.IUiBridge, UiBridge>();
+        services.AddSingleton<IMcpHostService, McpHostService>();
+        // Assistant pane (AI-07, D-043): the chat loop self-connects to the host above; both stay
+        // idle (no HTTP, no model) until the user actually sends a message.
+        services.AddSingleton<IAssistantService, AssistantService>();
         services.AddSingleton<IMapRenderService, MapRenderService>();   // in-app rendering
         services.AddSingleton<ICaveview3DAssetHost, Caveview3DAssetHost>(); // loopback asset server
         services.AddSingleton<IStructuralPlotAssetHost, StructuralPlotAssetHost>(); // plot loopback server
@@ -228,6 +239,7 @@ internal static class AppServices
         services.AddSingleton<MapViewerViewModel>();          // in-app map viewer
         services.AddSingleton<Model3DViewerViewModel>();      // embedded 3D model viewer
         services.AddSingleton<StructuralGeologyViewModel>();  // plane strike/dip calculator
+        services.AddSingleton<AssistantViewModel>();          // AI assistant chat content VM
         services.AddSingleton<SettingsViewModel>();
         services.AddSingleton<FileAssociationsViewModel>();   // Task 5: Preferences ▸ File Associations tab
         services.AddSingleton<KeyboardShortcutsViewModel>();
@@ -251,6 +263,7 @@ internal static class AppServices
         services.AddSingleton<ViewModels.Docking.Model3DViewerToolViewModel>();
         services.AddSingleton<ViewModels.Docking.StructuralGeologyToolViewModel>();
         services.AddSingleton<ViewModels.Docking.StructuralPlotToolViewModel>();
+        services.AddSingleton<ViewModels.Docking.AssistantToolViewModel>();
         services.AddSingleton<ViewModels.Docking.SettingsToolViewModel>();
 
         // Blender Animation module (BLEND) — locator + headless runner + render service (convert →

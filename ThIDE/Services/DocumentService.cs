@@ -29,6 +29,18 @@ public readonly record struct ThconfigActivation(
     bool OpenInEditor = false,
     bool Notify = false);
 
+/// <summary>
+/// The open, dirty, in-graph editor buffers to overlay on their disk files for live analysis. A narrow
+/// seam so the in-app MCP host's <c>LiveWorkspaceHost</c> (T-03.2) can read unsaved edits without taking a
+/// dependency on the whole document service, and so it is trivial to fake in a test.
+/// </summary>
+public interface IUnsavedBufferProvider
+{
+    /// <summary>Path/text of every open document that is dirty and part of the active object graph.
+    /// Reads the UI-bound document list, so callers must be on the UI thread.</summary>
+    System.Collections.Generic.IReadOnlyList<(string Path, string Text)> DirtyBuffers();
+}
+
 public interface IDocumentService
 {
     // ---- Multi-document (MDI) ----
@@ -134,7 +146,7 @@ public interface IDocumentService
     event EventHandler<string>? ShowInModel3DRequested;
 }
 
-public sealed class DocumentService : IDocumentService, IAsyncDisposable
+public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, ISnippetEditor, IAsyncDisposable
 {
     private readonly IProjectEntryPointResolver _resolver;
     private readonly IWorkspaceSession _session;
@@ -391,13 +403,40 @@ public sealed class DocumentService : IDocumentService, IAsyncDisposable
         if (ct.IsCancellationRequested) return;
 
         // Overlay every open, dirty, in-graph document; the session restores the rest from disk.
-        var buffers = Documents
-            .Where(d => d.IsDirty && _session.Covers(d.FilePath))
-            .Select(d => (d.FilePath, d.DocumentText))
-            .ToList();
+        var buffers = DirtyBuffers();
         try { await _session.RevalidateBuffersAsync(buffers, ct).ConfigureAwait(false); }
         catch { /* best-effort live validation */ }
     }
+
+    /// <summary>
+    /// The open, dirty, in-graph buffers to overlay — the same set live validation uses. Also read by the
+    /// in-app MCP host so an agent sees the editor's unsaved state, not the last save (T-03.2). Enumerates
+    /// the UI-bound document list, so it must be called on the UI thread.
+    /// </summary>
+    // ---- ISnippetEditor (assistant code-block actions, CAP-03) --------------
+    // The active document raises an event its editor view handles, so the insert/replace runs through
+    // the normal document pipeline: native undo, dirty tracking, and the existing re-parse/re-lint.
+
+    public SnippetOutcome InsertAtActiveCaret(string text)
+    {
+        if (Active is not { } doc) return SnippetOutcome.NoEditor;
+        doc.RequestInsertAtCaret(text);
+        return SnippetOutcome.Applied;
+    }
+
+    public SnippetOutcome ReplaceActiveSelection(string text)
+    {
+        if (Active is not { } doc) return SnippetOutcome.NoEditor;
+        if (!doc.HasSelection) return SnippetOutcome.NoSelection;
+        doc.RequestReplaceSelection(text);
+        return SnippetOutcome.Applied;
+    }
+
+    public System.Collections.Generic.IReadOnlyList<(string Path, string Text)> DirtyBuffers() =>
+        Documents
+            .Where(d => d.IsDirty && !string.IsNullOrEmpty(d.FilePath) && _session.Covers(d.FilePath))
+            .Select(d => (d.FilePath, d.DocumentText))
+            .ToList();
 
     /// <summary>Flags a document's orphan banner: true when it isn't in the active graph (#4).</summary>
     private void UpdateMembership(FileDocumentViewModel doc)
