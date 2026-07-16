@@ -20,6 +20,11 @@ internal sealed class FixtureWorkspace : IDisposable
         var root = Path.Combine(Path.GetTempPath(), "thmcp_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(Path.Combine(root, "caves"));
 
+        // The product stores and reports roots canonically. macOS hands out /var/folders/… for the
+        // temp dir while /var is a symlink to /private/var, so an unresolved root here would compare
+        // false against every path the product produces — see WorkspacePaths.Canonicalize.
+        root = WorkspacePaths.Canonicalize(root);
+
         var thconfig = Path.Combine(root, "project.thconfig");
         File.WriteAllText(thconfig, """
             source caves/upper.th
