@@ -3,6 +3,7 @@
              xmlns:vm="using:ThIDE.ViewModels.Docking"
              xmlns:vm2="using:ThIDE.ViewModels"
              xmlns:docking="using:ThIDE.Views.Docking"
+             xmlns:v="using:ThIDE.Views"
              xmlns:conv="using:ThIDE.Converters"
              xmlns:l="using:ThIDE.Resources"
              x:Class="ThIDE.Views.Docking.StructuralGeologyToolView"
@@ -13,6 +14,8 @@
     <UserControl.Resources>
         <!-- Cosmetic: show enum options (grouping / splay policy / declination source) as spaced text. -->
         <conv:EnumLabelConverter x:Key="EnumLabel" />
+        <!-- Localized Wulff/Schmidt names for the stereonet projection combo. -->
+        <conv:StereonetProjectionLabelConverter x:Key="NetProjLabel" />
         <!-- #10: measurements grouped by station; each group header carries a master checkbox that
              checks/unchecks the whole station. The header DataContext is the collection-view group;
              its Key is the StructuralPlaneRow (we group by the PlaneRow property). -->
@@ -336,6 +339,8 @@
                         <CheckBox Content="{l:Loc Struct_FadedSplays}" FontSize="11" VerticalAlignment="Center"
                                   IsChecked="{Binding Structural.FadedSplays}" IsEnabled="{Binding Structural.PlotSplays}"
                                   ToolTip.Tip="{l:Loc Struct_FadedSplaysTip}" />
+                        <CheckBox Content="{l:Loc Struct_NetInPlot}" FontSize="11" VerticalAlignment="Center"
+                                  IsChecked="{Binding Structural.NetInPlot}" ToolTip.Tip="{l:Loc Struct_NetInPlotTip}" />
                         <Border Width="1" Margin="6,2" Background="Gray" />
                         <!-- Mirrors the Resulted Planes tab's push button (same bound property). -->
                         <ToggleButton Content="{l:Loc Struct_ShowInPreview}" Padding="6,2" FontSize="12"
@@ -353,6 +358,38 @@
                                        Text="{l:Loc Struct_PlotFallback}" />
                         </Border>
                     </Panel>
+                </DockPanel>
+            </TabItem>
+
+            <!-- 5 · Stereonet (Wulff / Schmidt; hidden once popped out — see PopOutStereonet) -->
+            <TabItem Header="{l:Loc Struct_Tab5}" IsVisible="{Binding !Structural.StereonetPoppedOut}">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="2">
+                        <TextBlock Text="{l:Loc Struct_NetProjection}" VerticalAlignment="Center" FontSize="11" Foreground="Gray" />
+                        <ComboBox ItemsSource="{Binding Structural.NetProjections}"
+                                  SelectedItem="{Binding Structural.NetProjection}" FontSize="11" MinWidth="150"
+                                  ToolTip.Tip="{l:Loc Struct_NetProjectionTip}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate><TextBlock Text="{Binding Converter={StaticResource NetProjLabel}}" /></DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                        <CheckBox Content="{l:Loc Struct_NetPoles}" FontSize="11" VerticalAlignment="Center"
+                                  IsChecked="{Binding Structural.NetShowPoles}" ToolTip.Tip="{l:Loc Struct_NetPolesTip}" />
+                        <CheckBox Content="{l:Loc Struct_NetMeasurements}" FontSize="11" VerticalAlignment="Center"
+                                  IsChecked="{Binding Structural.NetShowMeasurements}" ToolTip.Tip="{l:Loc Struct_NetMeasurementsTip}" />
+                        <CheckBox Content="{l:Loc Struct_NetGrid}" FontSize="11" VerticalAlignment="Center"
+                                  IsChecked="{Binding Structural.NetShowGrid}" ToolTip.Tip="{l:Loc Struct_NetGridTip}" />
+                        <CheckBox Content="{l:Loc Struct_NetLabels}" FontSize="11" VerticalAlignment="Center"
+                                  IsChecked="{Binding Structural.NetShowLabels}" />
+                        <CheckBox Content="{l:Loc Struct_WhiteBackground}" FontSize="11" VerticalAlignment="Center"
+                                  IsChecked="{Binding Structural.NetWhiteBackground}" />
+                        <Border Width="1" Margin="6,2" Background="Gray" />
+                        <Button Content="{l:Loc Struct_ExportImage}" Click="OnExportStereonet" Padding="8,2" FontSize="11"
+                                ToolTip.Tip="{l:Loc Struct_NetExportTip}" />
+                        <Button Content="{l:Loc Struct_PopOutNet}" Command="{Binding Structural.PopOutStereonetCommand}"
+                                Padding="8,2" FontSize="11" ToolTip.Tip="{l:Loc Struct_PopOutNetTip}" />
+                    </StackPanel>
+                    <v:StereonetControl Name="NetControl" Model="{Binding Structural.StereonetModel}" />
                 </DockPanel>
             </TabItem>
         </TabControl>

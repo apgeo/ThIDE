@@ -212,6 +212,25 @@
   <data name="Struct_PopOutPlot" xml:space="preserve"><value>Pop out to panel</value></data>
   <data name="Struct_PopOutPlotTip" xml:space="preserve"><value>Move the 3D plot into its own dockable/floatable panel</value></data>
   <data name="Struct_PlotPanelTitle" xml:space="preserve"><value>Structural 3D Plot</value></data>
+  <data name="Struct_Tab5" xml:space="preserve"><value>5 · Stereonet</value></data>
+  <data name="Struct_NetProjection" xml:space="preserve"><value>Projection</value></data>
+  <data name="Struct_NetProjectionTip" xml:space="preserve"><value>Stereographic projection: Wulff preserves angles, Schmidt preserves area</value></data>
+  <data name="Struct_ProjWulff" xml:space="preserve"><value>Wulff (equal-angle)</value></data>
+  <data name="Struct_ProjSchmidt" xml:space="preserve"><value>Schmidt (equal-area)</value></data>
+  <data name="Struct_NetPoles" xml:space="preserve"><value>Poles</value></data>
+  <data name="Struct_NetPolesTip" xml:space="preserve"><value>Plot each plane's pole (the direction perpendicular to the plane) as a point</value></data>
+  <data name="Struct_NetMeasurements" xml:space="preserve"><value>Measurements</value></data>
+  <data name="Struct_NetMeasurementsTip" xml:space="preserve"><value>Plot every included shot direction as a small point</value></data>
+  <data name="Struct_NetGrid" xml:space="preserve"><value>Grid</value></data>
+  <data name="Struct_NetGridTip" xml:space="preserve"><value>Show the 10° stereonet graticule</value></data>
+  <data name="Struct_NetLabels" xml:space="preserve"><value>Labels</value></data>
+  <data name="Struct_NetEmpty" xml:space="preserve"><value>No planes to plot yet — detect some measurements.</value></data>
+  <data name="Struct_NetExportTip" xml:space="preserve"><value>Save the stereonet as a PNG image</value></data>
+  <data name="Struct_PopOutNet" xml:space="preserve"><value>Pop out to panel</value></data>
+  <data name="Struct_PopOutNetTip" xml:space="preserve"><value>Move the stereonet into its own dockable/floatable panel</value></data>
+  <data name="Struct_NetPanelTitle" xml:space="preserve"><value>Stereonet</value></data>
+  <data name="Struct_NetInPlot" xml:space="preserve"><value>Stereonet inset</value></data>
+  <data name="Struct_NetInPlotTip" xml:space="preserve"><value>Show a stereonet in the corner of the 3D plot, rotating in sync with the cave model</value></data>
   <data name="Struct_ExportPlanesTip" xml:space="preserve"><value>Export the resulted-planes grid to a CSV file</value></data>
   <data name="Struct_Col_Visible" xml:space="preserve"><value>Visible</value></data>
   <data name="Struct_PlaneDiscTip" xml:space="preserve"><value>Show this plane's disc in the 3D plot</value></data>

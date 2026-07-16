@@ -81,6 +81,10 @@ public partial class StructuralGeologyToolView : UserControl
 
         _vm.GroupingChanged += (_, _) => SetupGrouping();
         _vm.PlotImageReady += OnPlotImageReady;
+        // Clicking a great circle / pole in the stereonet selects the plane row (same sync as the
+        // 3D plot's pick message).
+        if (NetControl is not null)
+            NetControl.PlaneActivated += (_, name) => _vm?.SelectPlaneByName(name);
         // Once the plot pops out into its own panel, this tab's WebView must go away — otherwise
         // two NativeWebViews would both be wired to the same PlotScriptRequested bridge.
         _vm.PropertyChanged += (_, e) =>
@@ -331,6 +335,11 @@ public partial class StructuralGeologyToolView : UserControl
     }
 
     private void OnExportImage(object? sender, RoutedEventArgs e) => Vm?.ExportPlotImageCommand.Execute(null);
+
+    private async void OnExportStereonet(object? sender, RoutedEventArgs e)
+    {
+        if (NetControl is not null) await NetControl.ExportPngAsync();
+    }
 
     private async void OnPlotImageReady(object? sender, string dataUrl)
     {

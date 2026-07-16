@@ -31,7 +31,17 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
     private readonly IAppSettingsService? _settings;
     private readonly LivePreviewViewModel? _preview;
 
-    private const int TabCount = 4;
+    private const int TabCount = 5;
+    private const int PlotTab = 3;      // the 3D plot tab (pop-out-able)
+    private const int NetTab = 4;       // the stereonet tab (pop-out-able)
+
+    /// <summary>Per-plane colours shared by the 3D plot discs, the stereonet arcs and the inset
+    /// (same hexes as the JS PALETTE previously hardcoded in structural.js).</summary>
+    internal static readonly string[] PlanePalette =
+    {
+        "#4FC3F7", "#FF8A65", "#AED581", "#BA68C8", "#FFD54F", "#4DB6AC", "#F06292", "#9575CD",
+        "#DCE775", "#64B5F6", "#FFB74D", "#81C784",
+    };
 
     private bool _activated;       // don't analyse until the panel is first shown
     private bool _suspend;         // batch option changes during a programmatic reset / settings load
@@ -123,6 +133,21 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
     // Overlay the visible resulted planes on the Mainline Preview (push button in the planes grid).
     [ObservableProperty] private bool _showPlanesInPreview;
 
+    // ---- stereonet (Wulff / Schmidt) options -------------------------------------------------
+    [ObservableProperty] private StereonetProjection _netProjection = StereonetProjection.EqualAngle;
+    [ObservableProperty] private bool _netShowPoles = true;         // poles to planes
+    [ObservableProperty] private bool _netShowMeasurements;         // raw shot directions as points
+    [ObservableProperty] private bool _netShowGrid = true;          // 10° graticule
+    [ObservableProperty] private bool _netShowLabels = true;        // plane-name labels on the arcs
+    [ObservableProperty] private bool _netWhiteBackground = true;   // classic paper look by default
+    [ObservableProperty] private bool _netInPlot = true;            // camera-synced inset in the 3D plot
+
+    /// <summary>The prepared, pre-projected stereonet scene the StereonetControl draws.</summary>
+    [ObservableProperty] private StereonetPlotModel? _stereonetModel;
+
+    public StereonetProjection[] NetProjections { get; } =
+        { StereonetProjection.EqualAngle, StereonetProjection.EqualArea };
+
     // results
     public ObservableCollection<StructuralMeasurementRow> Measurements { get; } = new();
     public ObservableCollection<StructuralPlaneRow> Planes { get; } = new();
@@ -190,24 +215,47 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
     }
 
     // ---- wizard tab navigation -------------------------------------------------------------------
+    // The Plot and Stereonet tabs can each be popped out into their own panel (hiding the tab), so
+    // Prev/Next walk to the nearest *visible* tab instead of just ±1.
 
-    [RelayCommand(CanExecute = nameof(CanGoPrev))] private void GoPrev() => SelectedTab = Math.Max(0, SelectedTab - 1);
-    [RelayCommand(CanExecute = nameof(CanGoNext))] private void GoNext() => SelectedTab = Math.Min(EffectiveTabCount - 1, SelectedTab + 1);
+    [RelayCommand(CanExecute = nameof(CanGoPrev))]
+    private void GoPrev() { int t = Step(SelectedTab, -1); if (t >= 0) SelectedTab = t; }
+
+    [RelayCommand(CanExecute = nameof(CanGoNext))]
+    private void GoNext() { int t = Step(SelectedTab, +1); if (t >= 0) SelectedTab = t; }
 
     /// <summary>Public so the view can hide (not just disable) the buttons on the first/last tab (#6).</summary>
-    public bool CanGoPrev => SelectedTab > 0;
-    public bool CanGoNext => SelectedTab < EffectiveTabCount - 1;
+    public bool CanGoPrev => Step(SelectedTab, -1) >= 0;
+    public bool CanGoNext => Step(SelectedTab, +1) >= 0;
 
-    // When the 3D Plot has been popped out into its own panel, the Plot tab is hidden and the
-    // Resulted Planes tab becomes the last one for the Prev/Next wizard buttons.
-    private int EffectiveTabCount => PlotPoppedOut ? TabCount - 1 : TabCount;
+    private bool TabVisible(int i) =>
+        i >= 0 && i < TabCount && i switch
+        {
+            PlotTab => !PlotPoppedOut,
+            NetTab => !StereonetPoppedOut,
+            _ => true,
+        };
+
+    /// <summary>Nearest visible tab from <paramref name="from"/> in direction ±1, or −1.</summary>
+    private int Step(int from, int dir)
+    {
+        for (int i = from + dir; i >= 0 && i < TabCount; i += dir)
+            if (TabVisible(i)) return i;
+        return -1;
+    }
 
     /// <summary>True once the 3D Plot has been moved into its own dockable/floatable panel (in-memory
     /// only — like the Structural Geology panel itself, it doesn't auto-reopen across restarts).</summary>
     [ObservableProperty] private bool _plotPoppedOut;
 
+    /// <summary>Same for the Stereonet tab.</summary>
+    [ObservableProperty] private bool _stereonetPoppedOut;
+
     /// <summary>Raised when the user pops the 3D Plot out; the shell shows/activates its own panel.</summary>
     public event EventHandler? PlotPopOutRequested;
+
+    /// <summary>Raised when the user pops the Stereonet out; the shell shows/activates its own panel.</summary>
+    public event EventHandler? StereonetPopOutRequested;
 
     [RelayCommand]
     private void PopOutPlot()
@@ -216,19 +264,36 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
         PlotPopOutRequested?.Invoke(this, EventArgs.Empty);
     }
 
-    partial void OnPlotPoppedOutChanged(bool value)
+    [RelayCommand]
+    private void PopOutStereonet()
     {
-        if (value && SelectedTab == TabCount - 1) SelectedTab = TabCount - 2;
-        OnPropertyChanged(nameof(CanGoNext));
-        GoNextCommand.NotifyCanExecuteChanged();
+        StereonetPoppedOut = true;
+        StereonetPopOutRequested?.Invoke(this, EventArgs.Empty);
     }
 
-    partial void OnSelectedTabChanged(int value)
+    partial void OnPlotPoppedOutChanged(bool value)
+    {
+        if (value && SelectedTab == PlotTab) SelectedTab = Step(PlotTab, -1);
+        RefreshNav();
+    }
+
+    partial void OnStereonetPoppedOutChanged(bool value)
+    {
+        if (value && SelectedTab == NetTab) SelectedTab = Step(NetTab, -1);
+        RefreshNav();
+    }
+
+    private void RefreshNav()
     {
         OnPropertyChanged(nameof(CanGoPrev));
         OnPropertyChanged(nameof(CanGoNext));
         GoPrevCommand.NotifyCanExecuteChanged();
         GoNextCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnSelectedTabChanged(int value)
+    {
+        RefreshNav();
         Persist();
     }
 
@@ -237,6 +302,15 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
     partial void OnPlotSplaysChanged(bool value) { PushPlot(); Persist(); }
     partial void OnFadedSplaysChanged(bool value) { PushPlot(); Persist(); }
     partial void OnShowPlanesInPreviewChanged(bool value) { PushPreview(); Persist(); }
+
+    // Stereonet options: rebuild the 2D net; the inset toggle re-pushes the 3D plot too.
+    partial void OnNetProjectionChanged(StereonetProjection value) { RebuildStereonet(); Persist(); }
+    partial void OnNetShowPolesChanged(bool value) { RebuildStereonet(); Persist(); }
+    partial void OnNetShowMeasurementsChanged(bool value) { RebuildStereonet(); Persist(); }
+    partial void OnNetShowGridChanged(bool value) { RebuildStereonet(); Persist(); }
+    partial void OnNetShowLabelsChanged(bool value) { RebuildStereonet(); Persist(); }
+    partial void OnNetWhiteBackgroundChanged(bool value) { RebuildStereonet(); Persist(); }
+    partial void OnNetInPlotChanged(bool value) { PushPlot(); Persist(); }
     // Selection sync: highlight the selected plane's line in the Mainline Preview overlay, and its
     // disc in the 3D plot, no matter which of the three views (grid / preview / plot) picked it.
     partial void OnSelectedPlaneChanged(StructuralPlaneRow? value) { PushPreview(); PushPlot(); }
@@ -354,6 +428,7 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
             _delta = 0;
             Status = ThIDE.Resources.Tr.Get("Struct_StatusNoData");
             PushPreview();   // clear any stale overlay lines
+            PushPlot();      // …and the stale 3D plot / stereonet
             return;
         }
 
@@ -371,7 +446,10 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
 
         for (int i = 0; i < result.Batches.Length; i++)
         {
-            var planeRow = new StructuralPlaneRow(this, result.Batches[i], result.Planes[i]);
+            var planeRow = new StructuralPlaneRow(this, result.Batches[i], result.Planes[i])
+            {
+                ColorHex = PlanePalette[i % PlanePalette.Length],
+            };
             foreach (var m in result.Batches[i].Measurements)
             {
                 var row = new StructuralMeasurementRow(this, planeRow, m);
@@ -480,8 +558,69 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
 
     private void PushPlot()
     {
+        // The 2D stereonet rides on the same triggers as the 3D plot but has no WebView gate.
+        RebuildStereonet();
         if (!_plotReady) return;
         PlotScriptRequested?.Invoke(this, $"stRender({BuildPlotJson()})");
+    }
+
+    // ---- stereonet (Wulff / Schmidt) ---------------------------------------------------------
+
+    /// <summary>Selects the plane row picked in the stereonet (arc/pole click) — same sync as the
+    /// 3D plot's pick message.</summary>
+    public void SelectPlaneByName(string name) =>
+        SelectedPlane = Planes.FirstOrDefault(p => p.Name == name) ?? SelectedPlane;
+
+    private static readonly Dictionary<StereonetProjection, StereonetGraticule> GraticuleCache = new();
+
+    private static StereonetGraticule CachedGraticule(StereonetProjection p)
+    {
+        lock (GraticuleCache)
+        {
+            if (!GraticuleCache.TryGetValue(p, out var g)) GraticuleCache[p] = g = Stereonet.Graticule(p);
+            return g;
+        }
+    }
+
+    /// <summary>
+    /// Rebuilds the immutable stereonet scene from the visible, valid planes. The 2D net plots the
+    /// declination-applied strike/dip (true north when a declination source is active — same values
+    /// as the grid columns); raw measurements get the same δ added to their azimuths.
+    /// </summary>
+    private void RebuildStereonet()
+    {
+        var proj = NetProjection;
+        var arcs = ImmutableArray.CreateBuilder<StereonetArc>();
+        var poles = ImmutableArray.CreateBuilder<StereonetMark>();
+        var meas = ImmutableArray.CreateBuilder<StereonetMark>();
+
+        foreach (var row in Planes)
+        {
+            if (!row.Plane.IsValid || !row.Visible) continue;
+            var color = Avalonia.Media.Color.Parse(row.ColorHex);
+            bool selected = ReferenceEquals(row, SelectedPlane);
+
+            arcs.Add(new StereonetArc(row.Name, $"{row.Plane.Strike:0}/{row.Plane.Dip:0}°",
+                Stereonet.GreatCircle(row.Plane.Strike, row.Plane.Dip, proj), color, selected));
+
+            if (NetShowPoles)
+            {
+                var (t, p) = Stereonet.PoleOfPlane(row.Plane.Strike, row.Plane.Dip);
+                poles.Add(new StereonetMark(row.Name, Stereonet.ProjectLine(t, p, proj), color, selected));
+            }
+
+            if (NetShowMeasurements)
+                foreach (var mr in row.Rows)
+                    if (mr.Include && !mr.IsOrigin &&
+                        mr.Measurement.Compass is { } compass && mr.Measurement.Clino is { } clino)
+                    {
+                        var (t, p) = Stereonet.ShotToLine(compass, clino, _delta);
+                        meas.Add(new StereonetMark(row.Name, Stereonet.ProjectLine(t, p, proj), color, selected));
+                    }
+        }
+
+        StereonetModel = new StereonetPlotModel(proj, NetShowGrid ? CachedGraticule(proj) : null,
+            arcs.ToImmutable(), poles.ToImmutable(), meas.ToImmutable(), NetShowLabels, NetWhiteBackground);
     }
 
     /// <summary>Flattens world-space segments to the [x,y,z, x,y,z, …] array three.js draws as LineSegments.</summary>
@@ -506,6 +645,7 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
         var splays = PlotSplays ? FlattenSegments(_caveSplays) : System.Array.Empty<double>();
 
         var planes = new List<PlotPlaneDto>(Planes.Count);
+        var netArcs = new List<NetArcDto>(Planes.Count);
         foreach (var row in Planes)
         {
             var plane = row.Plane;
@@ -516,10 +656,28 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
                 new[] { plane.Normal.E, plane.Normal.N, plane.Normal.Z },
                 DiscRadius(row, plane.Centroid) * DiscScale,
                 true,
-                ReferenceEquals(row, SelectedPlane)));
+                ReferenceEquals(row, SelectedPlane),
+                row.ColorHex));
+
+            // Inset stereonet arcs use the raw fitted normal — the same (survey) frame as the cave
+            // lines the inset rotates with, unlike the 2D net's declination-applied azimuths.
+            if (NetInPlot)
+            {
+                var arc3 = Stereonet.GreatCircle3D(plane.Normal, stepDeg: 6);
+                var pts = new double[arc3.Length * 3];
+                for (int i = 0; i < arc3.Length; i++)
+                {
+                    pts[i * 3] = arc3[i].E; pts[i * 3 + 1] = arc3[i].N; pts[i * 3 + 2] = arc3[i].Z;
+                }
+                var pole = (-1.0 * plane.Normal).Normalized();   // downward normal = lower-hemisphere pole
+                netArcs.Add(new NetArcDto(row.Name, row.ColorHex, ReferenceEquals(row, SelectedPlane),
+                    pts, new[] { pole.E, pole.N, pole.Z }));
+            }
         }
 
-        return JsonSerializer.Serialize(new PlotDto(legs, splays, FadedSplays, planes.ToArray()), PlotJsonOptions);
+        return JsonSerializer.Serialize(
+            new PlotDto(legs, splays, FadedSplays, planes.ToArray(), NetInPlot, netArcs.ToArray()),
+            PlotJsonOptions);
     }
 
     // Disc radius = farthest included point from the fitted centroid (in the fit frame).
@@ -539,8 +697,9 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
     private static readonly JsonSerializerOptions PlotJsonOptions =
         new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
-    private sealed record PlotPlaneDto(string Name, double[] Centroid, double[] Normal, double Radius, bool Valid, bool Selected);
-    private sealed record PlotDto(double[] Legs, double[] Splays, bool SplayFade, PlotPlaneDto[] Planes);
+    private sealed record PlotPlaneDto(string Name, double[] Centroid, double[] Normal, double Radius, bool Valid, bool Selected, string Color);
+    private sealed record NetArcDto(string Name, string Color, bool Selected, double[] Pts, double[] Pole);
+    private sealed record PlotDto(double[] Legs, double[] Splays, bool SplayFade, PlotPlaneDto[] Planes, bool NetShow, NetArcDto[] Net);
 
     // ---- tabular export (CSV / formatted copy) ---------------------------------------------------
 
@@ -598,6 +757,13 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
                 PlotSplays = s.PlotSplays;
                 FadedSplays = s.FadedSplays;
                 ShowPlanesInPreview = s.ShowPlanesInPreview;
+                NetProjection = s.NetProjection;
+                NetShowPoles = s.NetShowPoles;
+                NetShowMeasurements = s.NetShowMeasurements;
+                NetShowGrid = s.NetShowGrid;
+                NetShowLabels = s.NetShowLabels;
+                NetWhiteBackground = s.NetWhiteBackground;
+                NetInPlot = s.NetInPlot;
                 SelectedTab = Math.Clamp(s.SelectedTab, 0, TabCount - 1);
                 if (s.MeasColumns is { } mc) MeasurementColumns = mc;
                 if (s.PlaneColumns is { } pc) PlaneColumns = pc;
@@ -623,7 +789,9 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
             ProjectScope, GroupByStation, UseNameKeyword, NameKeywords, MatchComment, CommentMarkers,
             MatchStationFlag, StationFlags, Grouping, Splays, IncludeOriginPoint, DeclinationSource,
             DeclinationDegrees, DiscScale, WhiteBackground, SelectedTab, MeasurementColumns, PlaneColumns,
-            ShowFullStationName, ShowPlanesInPreview, PlotSplays, FadedSplays);
+            ShowFullStationName, ShowPlanesInPreview, PlotSplays, FadedSplays,
+            NetProjection, NetShowPoles, NetShowMeasurements, NetShowGrid, NetShowLabels,
+            NetWhiteBackground, NetInPlot);
         try { _settings.Save(_settings.Current with { StructuralGeologySettings = JsonSerializer.Serialize(state) }); }
         catch { /* best-effort persistence */ }
     }
@@ -634,7 +802,10 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
         bool IncludeOriginPoint, DeclinationSource DeclinationSource, double DeclinationDegrees, double DiscScale,
         bool WhiteBackground, int SelectedTab, Dictionary<string, bool> MeasColumns, Dictionary<string, bool> PlaneColumns,
         bool ShowFullStationName = false, bool ShowPlanesInPreview = false,
-        bool PlotSplays = false, bool FadedSplays = false);
+        bool PlotSplays = false, bool FadedSplays = false,
+        StereonetProjection NetProjection = StereonetProjection.EqualAngle, bool NetShowPoles = true,
+        bool NetShowMeasurements = false, bool NetShowGrid = true, bool NetShowLabels = true,
+        bool NetWhiteBackground = true, bool NetInPlot = true);
 
     private DetectionOptions BuildDetectionOptions() => new()
     {
@@ -791,6 +962,9 @@ public sealed partial class StructuralPlaneRow : ObservableObject
     /// <summary>Whether this plane's disc is drawn in the 3D plot (checkbox in the resulted-planes grid).</summary>
     [ObservableProperty] private bool _visible = true;
 
+    /// <summary>Stable palette colour shared by the 3D disc, the stereonet arc/pole and the inset.</summary>
+    public string ColorHex { get; init; } = StructuralGeologyViewModel.PlanePalette[0];
+
     /// <summary>User-assigned plane type (Fault / Bedding plane / Joint, or a custom value). Drives the
     /// per-type colouring of the plane's line in the Mainline Preview. Editable free text with the
     /// predefined values offered as suggestions.</summary>
@@ -856,3 +1030,23 @@ public sealed partial class StructuralPlaneRow : ObservableObject
     public int Line => Rows.FirstOrDefault(r => !r.IsOrigin)?.Line ?? 0;
     public SourceSpan Span => Rows.FirstOrDefault(r => !r.IsOrigin)?.Span ?? SourceSpan.None;
 }
+
+// ---- stereonet scene records (consumed by Views.StereonetControl) ----------------------------
+
+/// <summary>One plane's great circle on the net, pre-projected to unit-disc points.</summary>
+public sealed record StereonetArc(
+    string Name, string Label, System.Collections.Immutable.ImmutableArray<StereonetPoint> Points,
+    Avalonia.Media.Color Color, bool Selected);
+
+/// <summary>A point feature on the net (a pole or a raw measurement), pre-projected.</summary>
+public sealed record StereonetMark(string Name, StereonetPoint Point, Avalonia.Media.Color Color, bool Selected);
+
+/// <summary>Everything the stereonet control draws, prepared by the view-model.</summary>
+public sealed record StereonetPlotModel(
+    StereonetProjection Projection,
+    StereonetGraticule? Graticule,
+    System.Collections.Immutable.ImmutableArray<StereonetArc> Arcs,
+    System.Collections.Immutable.ImmutableArray<StereonetMark> Poles,
+    System.Collections.Immutable.ImmutableArray<StereonetMark> Measurements,
+    bool ShowLabels,
+    bool WhiteBackground);
