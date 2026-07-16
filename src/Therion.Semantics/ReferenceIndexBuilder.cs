@@ -98,7 +98,13 @@ internal static class ReferenceIndexBuilder
                     case PointObject p:
                         if (TryGetIdOption(p.OptionsRaw, out var pid))
                             objects.TryAdd(pid, new ScrapObjectSymbol(pid, p.Span, scrap.Id));
-                        th2Objects.Add(new Th2ObjectRecord("point", p.PointType, scrap.Id, p.Span));
+                        th2Objects.Add(new Th2ObjectRecord("point", p.PointType, scrap.Id, p.Span)
+                        {
+                            // BaseType so `station:fixed` still counts as a station tie.
+                            StationName = p.BaseType.Equals("station", StringComparison.OrdinalIgnoreCase)
+                                ? p.Options.Get("name")
+                                : null,
+                        });
                         break;
                     case LineObject l:
                         if (TryGetIdOption(l.OptionsRaw, out var lid))
