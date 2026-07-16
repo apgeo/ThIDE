@@ -55,6 +55,7 @@ public class CatalogE2eTests
         "rename_symbol",
         "format_file",
         "edit_file",
+        "add_map_members",
         "scaffold_th2",
         "scaffold_topodroid_project",
         "import_survey",

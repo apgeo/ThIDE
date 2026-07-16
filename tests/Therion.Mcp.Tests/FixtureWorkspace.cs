@@ -157,6 +157,51 @@ internal sealed class FixtureWorkspace : IDisposable
     }
 
     /// <summary>
+    /// Two .th2 scraps plus a .th holding a populated <c>map</c> and an empty one — the two shapes an
+    /// insertion into a map body has to handle. `spare-plan` is a scrap no map composes.
+    /// </summary>
+    public static FixtureWorkspace CreateWithMaps()
+    {
+        var fixture = Create();
+
+        File.WriteAllText(fixture.PathTo("project.thconfig"), """
+            source caves/upper.th
+            source caves/plan.th2
+            """);
+
+        File.WriteAllText(fixture.PathTo("caves", "plan.th2"), """
+            encoding utf-8
+            scrap upper-plan -projection plan
+              point 10 20 station -name 1
+            endscrap
+            scrap lower-plan -projection plan
+              point 30 40 station -name 2
+            endscrap
+            scrap spare-plan -projection plan
+              point 50 60 station -name 3
+            endscrap
+            """);
+
+        File.WriteAllText(fixture.PathTo("caves", "upper.th"), """
+            survey upper
+              centreline
+                data normal from to length compass clino
+                1 2 10.0 90 0
+              endcentreline
+
+              map cave-plan -projection plan
+                upper-plan
+              endmap
+
+              map empty-plan -projection plan
+              endmap
+            endsurvey
+            """);
+
+        return fixture;
+    }
+
+    /// <summary>
     /// A single deep cave with real vertical relief: an entrance at the top, two 50 m plumbs down, then
     /// a 30 m horizontal leg. Depths are 0 / 50 / 100 / 100 — enough to exercise the depth filter and
     /// the vertical-range statistics.
