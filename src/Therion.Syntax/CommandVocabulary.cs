@@ -69,6 +69,55 @@ public static class CommandVocabulary
         ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, "sql", "csv");
 
     /// <summary>
+    /// Output extensions whose <c>-fmt</c> keyword is <em>not</em> the extension: <c>.lox</c> is written
+    /// by <c>loch</c>, <c>.plt</c> by <c>compass</c>, <c>.wrl</c> by <c>vrml</c>. Every other format
+    /// writes the extension it is named after (<c>kml</c> → <c>.kml</c>), which needs no table.
+    /// </summary>
+    /// <remarks>
+    /// This is exactly the set an earlier draft of <see cref="ModelFormats"/> carried as phantom
+    /// formats (see the note above it) — lox/plt/wrl — because the trap runs both ways: a file is
+    /// asked for by its extension ("export a .lox 3D model"), and the keyword guessed from that
+    /// extension is rejected by the compiler.
+    /// </remarks>
+    private static readonly ImmutableDictionary<string, string> FormatByForeignExtension =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["lox"] = "loch",
+            ["plt"] = "compass",
+            ["wrl"] = "vrml",
+        }.ToImmutableDictionary(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// The <c>-fmt</c> value that makes export <paramref name="type"/> write
+    /// <paramref name="extension"/> (with or without the dot), or null when no valid format does.
+    /// Answers the question in the shape it gets asked — by the file wanted, not the keyword.
+    /// </summary>
+    public static string? ExportFormatForExtension(string type, string extension)
+    {
+        var ext = (extension ?? string.Empty).Trim().TrimStart('.');
+        if (ext.Length == 0) return null;
+
+        var formats = ExportFormats(type);
+        if (FormatByForeignExtension.TryGetValue(ext, out var keyword) && formats.Contains(keyword))
+            return keyword;
+
+        // Otherwise the format is named after its extension — but only if it is valid for this type.
+        return formats.Contains(ext) ? ext : null;
+    }
+
+    /// <summary>
+    /// The extension → <c>-fmt</c> pairs that differ, for the formats export <paramref name="type"/>
+    /// accepts. Empty when none of them are a trap for this type, so help can stay silent.
+    /// </summary>
+    public static IEnumerable<KeyValuePair<string, string>> ForeignExportExtensions(string type)
+    {
+        var formats = ExportFormats(type);
+        foreach (var pair in FormatByForeignExtension)
+            if (formats.Contains(pair.Value))
+                yield return pair;
+    }
+
+    /// <summary>
     /// The <c>-fmt</c> values export <paramref name="type"/> accepts; empty for an unknown type.
     /// Enumerable because syntax help has to list them, not just accept or reject one.
     /// </summary>
