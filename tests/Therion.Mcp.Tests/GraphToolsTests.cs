@@ -56,6 +56,62 @@ public class GraphToolsTests
     }
 
     [Fact]
+    public async Task Survey_info_totals_count_a_nested_survey_once()
+    {
+        // cave (120 m) contains north (60) and south (60). Every row's length is a subtree roll-up,
+        // so adding the rows up gives 240 — the double count these totals exist to prevent.
+        using var fixture = FixtureWorkspace.CreateWithTeamAndDates();
+        var tools = await LoadedToolsAsync(fixture);
+
+        var result = await tools.ListSurveyInfo();
+
+        Assert.True(result.Ok);
+        var data = result.Data!;
+        Assert.Equal(3, data.Total);                       // cave + north + south
+        Assert.Equal(240, data.Surveys.Sum(s => s.Length)); // what a naive caller would compute
+        Assert.Equal(120, data.TotalLength);                // what the cave actually is
+        Assert.Equal(6, data.TotalStations);
+    }
+
+    [Fact]
+    public async Task Survey_info_totals_cover_the_filtered_set_not_the_page()
+    {
+        using var fixture = FixtureWorkspace.CreateWithTeamAndDates();
+        var tools = await LoadedToolsAsync(fixture);
+
+        // One trip: the undated parent is filtered out, so north is the only (and topmost) match.
+        var oneYear = await tools.ListSurveyInfo(dateFrom: "2001", dateTo: "2001");
+        Assert.Equal(60, oneYear.Data!.TotalLength);
+        Assert.Equal(3, oneYear.Data.TotalStations);
+
+        // Both trips, no shared parent in the set: the totals add up across them.
+        var bothYears = await tools.ListSurveyInfo(dateFrom: "2001", dateTo: "2004");
+        Assert.Equal(2, bothYears.Data!.Total);
+        Assert.Equal(120, bothYears.Data.TotalLength);
+
+        // Paging must not change what the totals mean — they describe the match, not the slice.
+        var paged = await tools.ListSurveyInfo(dateFrom: "2001", dateTo: "2004", limit: 1);
+        Assert.Single(paged.Data!.Surveys);
+        Assert.True(paged.Data.Truncated);
+        Assert.Equal(2, paged.Data.Total);
+        Assert.Equal(120, paged.Data.TotalLength);
+    }
+
+    [Fact]
+    public async Task Survey_info_totals_are_zero_when_nothing_matches()
+    {
+        using var fixture = FixtureWorkspace.CreateWithTeamAndDates();
+        var tools = await LoadedToolsAsync(fixture);
+
+        var result = await tools.ListSurveyInfo(dateFrom: "1980", dateTo: "1981");
+
+        Assert.True(result.Ok);
+        Assert.Empty(result.Data!.Surveys);
+        Assert.Equal(0, result.Data.TotalLength);
+        Assert.Equal(0, result.Data.TotalStations);
+    }
+
+    [Fact]
     public async Task Survey_info_rejects_a_bad_date_bound()
     {
         using var fixture = FixtureWorkspace.CreateWithTeamAndDates();

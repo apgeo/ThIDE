@@ -76,13 +76,20 @@ public static class EvalSuite
             "Which survey in this cave was carried out by only one surveyor? Name that survey.",
             new AnswerContains("deeppart")),
         // U-13 (progress over time): metres surveyed in one year. The model must turn "in 2002" into
-        // dateFrom/dateTo and read the length back; the grader recomputes from the same filter, so it
-        // checks the translation rather than a number anyone hard-coded. One survey matches that year,
-        // which is what makes the ground truth a single server-computed value.
+        // dateFrom/dateTo and read totalLength back; the grader recomputes from the same filter, so it
+        // checks the translation rather than a number anyone hard-coded.
         new("qa-year-length", Category.Qa, "history",
             "How many metres of passage were surveyed in the year 2002? Answer with just the number.",
-            new AnswerMatchesComputed("list_survey_info", "/surveys/0/length",
+            new AnswerMatchesComputed("list_survey_info", "/totalLength",
                 new Dictionary<string, object?> { ["dateFrom"] = "2002", ["dateTo"] = "2002" })),
+        // A range spanning two trips (40 + 50). This is the case totalLength earns its place on: the
+        // rows cannot simply be added — each is a subtree roll-up — so a tool-side total is the only
+        // number that is right by construction rather than by the fixture happening to be flat.
+        new("qa-period-length", Category.Qa, "history",
+            "How many metres of passage were surveyed between 2000 and 2003 inclusive? Answer with "
+            + "just the number.",
+            new AnswerMatchesComputed("list_survey_info", "/totalLength",
+                new Dictionary<string, object?> { ["dateFrom"] = "2000", ["dateTo"] = "2003" })),
         // History narrative (U-05): a graceful chronological summary from team + dates.
         new("audit-history", Category.Audit, "history",
             "Summarize who surveyed this cave and in which years, in chronological order.",

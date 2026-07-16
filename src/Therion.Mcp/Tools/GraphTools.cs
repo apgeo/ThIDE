@@ -212,6 +212,12 @@ public sealed record SurveyInfoDto(
     SurveyExtent? Extent,
     Location? Declaration);
 
+/// <param name="TotalLength">
+/// Surveyed length across every survey that matched — the whole filtered set, not just this page.
+/// Nested surveys are counted once: each row's <c>length</c> is a subtree roll-up, so adding the rows
+/// up yourself would count a child inside its matched parent twice.
+/// </param>
+/// <param name="TotalStations">Distinct stations across the matched set, on the same basis.</param>
 /// <param name="PositionSource">"approximate" (dead-reckoning extents) or "none" (nothing placeable).</param>
 /// <param name="PositionCaveat">When extents are present: they're approximate and per-piece-local — a warning to repeat.</param>
 public sealed record SurveyInfoList(
@@ -219,6 +225,8 @@ public sealed record SurveyInfoList(
     int Total,
     int Offset,
     bool Truncated,
+    double TotalLength,
+    int TotalStations,
     string PositionSource,
     string? PositionCaveat);
 
@@ -451,7 +459,10 @@ public sealed class GraphTools(IWorkspaceHost host)
                + "extent (bounding box + centroid). Filter by a date range (dateFrom/dateTo as YYYY, "
                + "YYYY.MM or YYYY.MM.DD — a survey matches when its dates OVERLAP the range) or a survey "
                + "path. Team and dates come straight from the survey's team/date commands; undated "
-               + "surveys are excluded when a date filter is set.")]
+               + "surveys are excluded when a date filter is set. For 'how much was surveyed in year X' "
+               + "read totalLength/totalStations, which cover the whole filtered set and already count "
+               + "nested surveys once — do NOT add the rows up yourself, as each row's length is a "
+               + "subtree total and a child inside a matched parent would be counted twice.")]
     public async Task<ToolResult<SurveyInfoList>> ListSurveyInfo(
         [Description("Only surveys whose dates reach on/after this date (YYYY, YYYY.MM, or YYYY.MM.DD).")]
         string? dateFrom = null,
@@ -524,11 +535,43 @@ public sealed class GraphTools(IWorkspaceHost host)
         var page = list.Skip(start).Take(ToolLimits.ClampLimit(limit)).ToList();
 
         bool placed = positions.Positions.Count > 0;
+        var (totalStations, totalLength) = RollUpMatched(list);
         return ToolResult<SurveyInfoList>.Success(new SurveyInfoList(
             page, list.Count, start,
             Truncated: start + page.Count < list.Count,
+            TotalLength: Round(totalLength),
+            TotalStations: totalStations,
             PositionSource: placed ? "approximate" : "none",
             PositionCaveat: placed ? SurveyExtentCaveat : null));
+    }
+
+    /// <summary>
+    /// Length + stations across the matched set, counting nested surveys once. Each row's Length is a
+    /// subtree roll-up, so summing every row would count a child inside its matched parent twice — on a
+    /// three-trip cave that reads 210 m instead of 105. Only the topmost matches contribute; their
+    /// subtrees already include everything below them.
+    /// </summary>
+    private static (int Stations, double Length) RollUpMatched(List<SurveyInfoDto> matched)
+    {
+        var names = matched.Select(s => s.Name).ToHashSet(StringComparer.Ordinal);
+        int stations = 0;
+        double length = 0;
+
+        foreach (var survey in matched)
+        {
+            if (HasAncestorIn(survey.Name, names)) continue;
+            stations += survey.Stations;
+            length += survey.Length;
+        }
+        return (stations, length);
+    }
+
+    /// <summary>True when a dotted ancestor of <paramref name="name"/> is itself in <paramref name="names"/>.</summary>
+    private static bool HasAncestorIn(string name, HashSet<string> names)
+    {
+        for (int dot = name.IndexOf('.'); dot > 0; dot = name.IndexOf('.', dot + 1))
+            if (names.Contains(name[..dot])) return true;
+        return false;
     }
 
     private const string SurveyExtentCaveat =
