@@ -61,24 +61,34 @@ public static class CommandVocabulary
         ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase,
             "bbox", "dxf", "esri", "kml", "pdf", "shapefile", "shapefiles", "shp",
             "survex", "svg", "th2", "xhtml", "xvi");
+    private static readonly ImmutableHashSet<string> AtlasFormats =
+        ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, "pdf");
     private static readonly ImmutableHashSet<string> ListFormats =
         ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, "dbf", "html", "kml", "text", "txt");
     private static readonly ImmutableHashSet<string> DatabaseFormats =
         ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, "sql", "csv");
 
     /// <summary>
+    /// The <c>-fmt</c> values export <paramref name="type"/> accepts; empty for an unknown type.
+    /// Enumerable because syntax help has to list them, not just accept or reject one.
+    /// </summary>
+    public static ImmutableHashSet<string> ExportFormats(string type) =>
+        (type ?? string.Empty).ToLowerInvariant() switch
+        {
+            "model" => ModelFormats,
+            "map" => MapFormats,
+            "atlas" => AtlasFormats,
+            "cave-list" or "survey-list" or "continuation-list" => ListFormats,
+            "database" => DatabaseFormats,
+            _ => ImmutableHashSet<string>.Empty,
+        };
+
+    /// <summary>
     /// True if <paramref name="fmt"/> is a valid output format for export <paramref name="type"/>.
     /// Returns true for unknown types (the type is reported separately) so we never double-flag.
     /// </summary>
-    public static bool IsExportFormat(string type, string fmt) => type.ToLowerInvariant() switch
-    {
-        "model" => ModelFormats.Contains(fmt),
-        "map" => MapFormats.Contains(fmt),
-        "atlas" => string.Equals(fmt, "pdf", StringComparison.OrdinalIgnoreCase),
-        "cave-list" or "survey-list" or "continuation-list" => ListFormats.Contains(fmt),
-        "database" => DatabaseFormats.Contains(fmt),
-        _ => true,
-    };
+    public static bool IsExportFormat(string type, string fmt) =>
+        !IsExportType(type ?? string.Empty) || ExportFormats(type!).Contains(fmt);
 
     /// <summary>True if <paramref name="t"/> is a valid <c>flags</c> shot-flag (or the <c>not</c> prefix).</summary>
     public static bool IsShotFlag(string t) =>
