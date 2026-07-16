@@ -18,6 +18,7 @@ public class CatalogE2eTests
         ("workspace_info", null),
         ("list_files", null),
         ("read_file", new() { ["path"] = "caves/upper.th" }),
+        ("get_file_outline", new() { ["file"] = "caves/upper.th" }),
         ("get_diagnostics", null),
         ("explain_diagnostic", new() { ["code"] = "TH_SEM_015" }),
         ("list_symbols", null),
