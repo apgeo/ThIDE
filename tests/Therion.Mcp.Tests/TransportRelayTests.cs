@@ -69,7 +69,11 @@ public class TransportRelayTests
         await relay;   // returns rather than hanging
     }
 
-    private static async Task WaitUntilAsync(Func<bool> condition, int timeoutMs = 5000)
+    // The budget is a backstop against hanging, not a performance assertion: the loop returns the moment
+    // the relay has pumped, so a generous allowance costs nothing when passing. 5s was tight enough that a
+    // contended CI runner — where this suite's other in-memory tests stretched from milliseconds to seconds —
+    // failed it while Linux and macOS passed the same commit.
+    private static async Task WaitUntilAsync(Func<bool> condition, int timeoutMs = 30_000)
     {
         var sw = Stopwatch.StartNew();
         while (!condition() && sw.ElapsedMilliseconds < timeoutMs)
