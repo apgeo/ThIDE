@@ -1,0 +1,15 @@
+survey cave -title "Test Cave"
+
+  centreline
+    cs UTM33
+    fix 0 412000 5073000 1200
+    data normal from to length compass clino
+    0 1 5.0 90 0
+    1 2 4.0 45 -10
+  endcentreline
+
+  map cave-plan -projection plan
+    upper-plan
+  endmap
+
+endsurvey

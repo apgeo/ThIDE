@@ -51,6 +51,22 @@ public static class Grader
                 return (File.Exists(path), File.Exists(path) ? "file present" : $"missing file: {fe.RelativePath}");
             }
 
+            case FileContains fc:
+            {
+                var path = Path.Combine(input.WorkspaceDir, fc.RelativePath.Replace('/', Path.DirectorySeparatorChar));
+                if (!File.Exists(path)) return (false, $"missing file: {fc.RelativePath}");
+
+                string text;
+                try { text = await File.ReadAllTextAsync(path, ct); }
+                catch (IOException ex) { return (false, $"could not read {fc.RelativePath}: {ex.Message}"); }
+
+                var absent = fc.Tokens.Where(tok => !ContainsToken(text, tok)).ToList();
+                return (absent.Count == 0,
+                    absent.Count == 0
+                        ? $"{fc.RelativePath} holds all tokens"
+                        : $"{fc.RelativePath} missing: {string.Join(", ", absent)}");
+            }
+
             case HandledGracefully:
             {
                 bool inventedTool = input.Calls.Any(c => !c.SchemaValid);

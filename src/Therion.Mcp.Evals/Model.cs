@@ -39,6 +39,14 @@ public sealed record AnswerMatchesComputed(string Tool, string Pointer, IReadOnl
 public sealed record FileExists(string RelativePath) : Check;
 
 /// <summary>
+/// A file under the workspace holds every one of <paramref name="Tokens"/> (case-insensitive) after
+/// the run. The end-state check for an authoring task: what matters is what the source now says, which
+/// neither the model's prose nor a lint pass can establish — a thconfig lints clean without the export
+/// line the user asked for.
+/// </summary>
+public sealed record FileContains(string RelativePath, params string[] Tokens) : Check;
+
+/// <summary>
 /// The model neither invented a tool (no call rejected as unknown) nor produced an empty answer — the
 /// refusal/ambiguity case: it should say it can't, not hallucinate.
 /// </summary>

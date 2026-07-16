@@ -94,6 +94,29 @@ public static class EvalSuite
         new("export-tables", Category.Export, "valid",
             "Export the station table to a CSV file named stations.csv in the project.",
             new FileExists("stations.csv")),
+        // Q9 (CAP-06): thconfig authoring, not an export tool — the model must write the export line
+        // itself. The end state is what the file says: lint cannot judge it (a thconfig without the
+        // line the user asked for lints perfectly), and neither can the model's own prose.
+        new("author-export-model", Category.Export, "authoring",
+            "Make this project export a 3D model of the cave as a .lox file called cave.lox, by adding "
+            + "the right command to cave.thconfig. Apply the change.",
+            new FileContains("cave.thconfig", "export model", "cave.lox")),
+
+        // ---- command documentation (CAP-06) --------------------------------------------------------
+        // Q10: "show me documentation for command map". search_thbook could only cite a page number;
+        // describe_command has the real grammar. endmap is in no prompt, so quoting it means the model
+        // read the schema rather than recalling the command's shape.
+        new("explain-map-command", Category.Explain, "valid",
+            "Show me the documentation for the Therion command 'map': what arguments and options does "
+            + "it take, and how does the block end?",
+            new AnswerContains("endmap", "projection")),
+        // The `-fmt` trap, and the whole reason describe_command exists: a .lox file is written by
+        // `-fmt loch`; `lox` is not a format the compiler accepts, and is exactly what gets guessed
+        // from the file extension. Our own alt.thconfig fixture had `-fmt lox` in it until CAP-06.
+        new("explain-export-format", Category.Explain, "valid",
+            "Which -fmt value does Therion's 'export model' need in order to write a .lox 3D model "
+            + "file? Answer with just the format keyword.",
+            new AnswerContains("loch")),
 
         // ---- build and read errors -----------------------------------------------------------------
         new("build-broken", Category.Build, "broken",
@@ -116,6 +139,13 @@ public static class EvalSuite
             "How deep is the deepest station in this cave, and how reliable is that figure? "
             + "Mention any caveat about how the position was computed.",
             new AnswerContains("approximate")),
+
+        // Q11 (CAP-06): "include these in the current map" — add_map_members does it structurally, but
+        // edit_file would also pass, which is the point: the case measures whether the members land in
+        // the block, not which tool got them there.
+        new("author-map-members", Category.Format, "authoring",
+            "The map 'cave-plan' should also include the scrap 'lower-plan'. Add it and apply the change.",
+            new FileContains("main.th", "lower-plan")),
 
         // ---- repair to lint-clean (repair_success@3) -----------------------------------------------
         new("repair-badnum", Category.Repair, "broken",

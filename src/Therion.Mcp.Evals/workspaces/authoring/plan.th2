@@ -1,0 +1,10 @@
+encoding utf-8
+
+scrap upper-plan -projection plan
+  point 10 20 station -name 0@cave
+  point 30 40 station -name 1@cave
+endscrap
+
+scrap lower-plan -projection plan
+  point 50 60 station -name 2@cave
+endscrap
