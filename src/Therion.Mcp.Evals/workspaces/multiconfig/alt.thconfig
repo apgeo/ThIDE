@@ -1,2 +1,2 @@
 source main.th
-export model -fmt lox -o alt-model.lox
+export model -fmt loch -o alt-model.lox
