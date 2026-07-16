@@ -1,8 +1,8 @@
-# Blender animation renders
+# 23. Blender animation renders
 
-> [← Back to the User Guide home](README.md) · [🏠 ThIDE project home](../../README.md)
+> [← Back to the User Guide home](README.md) · [ThIDE project home](../../README.md)
 
-> ⚠️ **Experimental — work in progress.** This module is young and still changing. Expect rough
+> **Experimental — work in progress.** This module is young and still changing. Expect rough
 > edges, and settings or behaviour that move between releases.
 
 The **Blender Animation** panel turns the 3D model your project already produces into a
@@ -14,14 +14,14 @@ Blender's interface.
 
 > **You need Blender installed** — version **4.2 LTS or newer**. ThIDE finds it automatically
 > (Windows *Program Files*, the `PATH`, snap/flatpak on Linux, `/Applications` on macOS); if it
-> can't, point it at the executable in **Preferences ▸ External tools**. ThIDE does not bundle
+> can't, point it at the executable in **Preferences → External tools**. ThIDE does not bundle
 > Blender and never modifies your Blender install.
 
 ---
 
 ## Opening the panel
 
-**Tools ▸ Blender Animation…** opens the panel in the central area. Everything you set there
+**Tools → Blender Animation…** opens the panel in the central area. Everything you set there
 describes one *render job*; nothing runs until you press **Render**.
 
 ## The workflow, step by step
@@ -29,7 +29,7 @@ describes one *render job*; nothing runs until you press **Render**.
 1. **Pick a source.** By default the panel lists the `.lox`/`.3d` models discovered in your
    project's last build (newest first) — choose one from the dropdown. Or tick **Use an external
    file** and give a path to any `.lox` or `.3d`. If the dropdown is empty, build your project
-   first (**Build ▸ Compile**), or use an external file.
+   first (**Build → Compile**), or use an external file.
 
    > A `.lox` (Therion *loch*) model carries **walls**, so it renders as solid cave passage. A
    > `.3d` (Survex) model is centre-line only, so ThIDE synthesizes tubes from the LRUD data.
@@ -88,7 +88,7 @@ failure, `2` on a usage or spec error.
 
 ## Requirements & tips
 
-- **Blender ≥ 4.2** — older versions are rejected with a clear message.
+- **Blender 4.2 or newer** — older versions are rejected with a clear message.
 - **Cycles is the safe default.** EEVEE is faster but needs a graphics context, so it can fail on
   a display-less Linux box — the panel and CLI both fall back gracefully and tell you the device
   actually used.
@@ -101,7 +101,7 @@ failure, `2` on a usage or spec error.
 
 | Symptom | What to do |
 |---|---|
-| *"Blender was not found"* | Install Blender 4.2+, or set its path in **Preferences ▸ External tools**. |
+| *"Blender was not found"* | Install Blender 4.2+, or set its path in **Preferences → External tools**. |
 | *"…too old…"* | Update Blender to 4.2 or newer. |
 | The source dropdown is empty | Build the project first, or tick **Use an external file**. |
 | The render failed | Open the **job log** from the notification or the panel — it has Blender's full output. |

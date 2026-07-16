@@ -30,7 +30,7 @@ and client configuration: **[docs/lsp.md](../lsp.md)**.
 
 ## AI assistants (MCP)
 
-> ⚠️ **Experimental — work in progress.** The MCP integration and the Assistant panel are young and
+> **Experimental — work in progress.** The MCP integration and the Assistant panel are young and
 > still changing. Expect rough edges, and settings or behaviour that move between releases.
 
 ThIDE can let a **local AI assistant** answer questions about your project — *"what's wrong with this

@@ -37,9 +37,9 @@ document into a floating editor.
 | **File** | Open File / thconfig / Folder, Recent Files, Recent Directories, Reopen Closed Tab, Exit |
 | **Edit** | Cut/Copy/Paste, case toggles, Toggle Comment, Enclose in Region, Fold/Unfold All, Add Bookmark |
 | **Search** | Find, Replace, Find/Replace in Files, Go To Line, Bookmarks |
-| **View** | Toggle each panel (Object Browser, Workspace, Diagnostics, Overview, Log, Mainline Preview, Map Viewer, 3D Viewer, Structural Geology, Outline), Relational Map, whitespace/minimap toggles, Split Editor, **Language**, **Strict parser mode** |
+| **View** | Toggle each panel (Object Browser, Workspace, Diagnostics, Overview, Log, Mainline Preview, Map Viewer, 3D Viewer, Structural Geology, Outline, **Assistant**), Relational Map, whitespace/minimap toggles, Split Editor, **Language**, **Strict parser mode** |
 | **Compile** | Compile / Recompile / Cancel, Build target, Quick Export, Survex tools, Therion info, Open in Loch/Aven, Open last output folder |
-| **Tools** | Import (Survey/DEM/GPX), Export (entrances/table), Generate report, New scrap, Calculators |
+| **Tools** | Import (Survey/DEM/GPX), Export (entrances/table), Generate report, New scrap, Calculators, **Blender Animation** |
 | **Settings** | Opens the [Settings](19-settings-and-preferences.md) window |
 | **Help** | Therion Book, About ThIDE, Debug Info, Welcome |
 
@@ -53,8 +53,8 @@ generate report, new scrap, Open in Loch/Aven, word-wrap, full-screen, layout, *
 
 ## The panels (tool views)
 
-Every panel below is toggleable from the **View** menu and the Command Palette. Each has its own
-guide page:
+Every panel below is toggleable from the **View** menu and the Command Palette (the one exception is
+**Blender Animation**, which opens from the **Tools** menu). Each has its own guide page:
 
 | Panel | What it's for | Guide |
 |---|---|---|
@@ -71,6 +71,8 @@ guide page:
 | **Structural Geology** | Plane strike/dip calculator + 3D plot | [Structural geology](15-structural-geology.md) |
 | **Log** | Internal app log (indexing, background work, errors) | — |
 | **XVI** | Sketch (.xvi) references and their grids | [Object Browser & Outline](12-object-browser-and-outline.md) |
+| **Assistant** *(experimental)* | Chat with a **local** AI model about your project | [Extensibility](20-extensibility.md#ai-assistants-mcp) |
+| **Blender Animation** *(experimental)* | Render a video / stills of your cave via Blender | [Blender animation renders](23-blender-animation.md) |
 
 Some panels are **off by default** to keep large projects light (Map Viewer, 3D Viewer, Structural
 Geology, some analytics) — enable them under **Settings → Visualization / Survey analytics**. See

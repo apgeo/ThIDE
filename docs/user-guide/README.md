@@ -33,7 +33,8 @@ described in them). If Therion is new to you, keep the **Therion Book** open alo
 ### Build & visualize
 10. [Compiling & output](10-compiling-and-output.md)
 11. [The viewers: Map, 3D & Mainline preview](11-viewers.md)
-- [Blender animation renders](23-blender-animation.md)
+- [Blender animation renders](23-blender-animation.md) — *experimental, work in progress* (page 23,
+  at the end of this guide)
 
 ### Analyze your survey
 12. [Object Browser & Outline](12-object-browser-and-outline.md)
@@ -48,7 +49,8 @@ described in them). If Therion is new to you, keep the **Therion Book** open alo
 
 ### Configure & extend
 19. [Settings & preferences](19-settings-and-preferences.md)
-20. [Extensibility (CLI, LSP, AI assistants, plugins, hooks)](20-extensibility.md)
+20. [Extensibility (CLI, LSP, AI assistants, plugins, hooks)](20-extensibility.md) — includes the
+    *experimental* [Assistant panel & MCP integration](20-extensibility.md#ai-assistants-mcp)
 
 ### Reference
 21. [Keyboard shortcuts](21-keyboard-shortcuts.md)
