@@ -25,8 +25,8 @@
   <PropertyGroup>
     <!-- SemVer MAJOR.MINOR.PATCH — bump these deliberately for a release. -->
     <TherionVersionMajor>0</TherionVersionMajor>
-    <TherionVersionMinor>2</TherionVersionMinor>
-    <TherionVersionPatch>1</TherionVersionPatch>
+    <TherionVersionMinor>3</TherionVersionMinor>
+    <TherionVersionPatch>0</TherionVersionPatch>
     <!-- Pre-release label per SemVer: alpha, beta, beta.1, rc.1 … empty ⇒ a stable release. -->
     <TherionPrerelease>alpha.1</TherionPrerelease>
 
