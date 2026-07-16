@@ -157,8 +157,10 @@ internal sealed class FixtureWorkspace : IDisposable
     }
 
     /// <summary>
-    /// Two .th2 scraps plus a .th holding a populated <c>map</c> and an empty one — the two shapes an
-    /// insertion into a map body has to handle. `spare-plan` is a scrap no map composes.
+    /// Three .th2 scraps plus a .th holding a populated <c>map</c> and an empty one — the two shapes an
+    /// insertion into a map body has to handle. Both halves of drawing coverage are present too:
+    /// `spare-plan`/`lower-plan` are scraps no map composes, and survey `deep` has shots that no scrap
+    /// ties to (its stations are named distinctly so the tie cannot resolve by accident).
     /// </summary>
     public static FixtureWorkspace CreateWithMaps()
     {
@@ -195,6 +197,12 @@ internal sealed class FixtureWorkspace : IDisposable
 
               map empty-plan -projection plan
               endmap
+            endsurvey
+            survey deep
+              centreline
+                data normal from to length compass clino
+                d1 d2 15.0 45 -10
+              endcentreline
             endsurvey
             """);
 

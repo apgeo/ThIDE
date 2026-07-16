@@ -24,10 +24,79 @@ public sealed record LeadDto(
 
 public sealed record LeadList(IReadOnlyList<LeadDto> Leads, int Total, int Offset, bool Truncated);
 
+/// <param name="Id">The scrap's id.</param>
+/// <param name="Declaration">Where the scrap is declared, so the caller can go straight there.</param>
+public sealed record UnreferencedScrapDto(string Id, Location? Declaration);
+
+/// <param name="FullName">Dotted survey name, e.g. 'cave.upper'.</param>
+/// <param name="Shots">
+/// Non-splay legs in this survey and below — the rolled-up count the IDE's survey tree shows, so it
+/// can exceed what this survey itself owns when a drawn child sits under an undrawn parent.
+/// </param>
+public sealed record UndrawnSurveyDto(string FullName, string? Title, int Shots, Location? Declaration);
+
+/// <param name="UnreferencedScraps">Scraps drawn but composed by no map — work done that nothing shows.</param>
+/// <param name="UndrawnSurveys">Surveys with shots that no scrap draws — work still to do.</param>
+public sealed record DrawingStatus(
+    IReadOnlyList<UnreferencedScrapDto> UnreferencedScraps,
+    IReadOnlyList<UndrawnSurveyDto> UndrawnSurveys,
+    int ScrapCount,
+    int MapCount);
+
 /// <summary>Ring R1 — what the surveyors left for themselves to finish.</summary>
 [McpServerToolType]
 public sealed class AggregatorTools(IWorkspaceHost host, Therion.Workspace.ILeadStatusStore leadStatus)
 {
+    [McpServerTool(Name = "drawing_status", Title = "Drawing status", ReadOnly = true, Idempotent = true)]
+    [Description("How far the drawing has got, from both ends: scraps that exist but no 'map' composes "
+               + "(drawn work nothing shows), and surveys with shots that no scrap draws (work still to "
+               + "do). A survey counts as drawn when a scrap ties to one of its stations with a "
+               + "'point … station -name'; a survey with no shots is never listed, as there is nothing "
+               + "to draw. Use add_map_members to compose an unreferenced scrap into a map.")]
+    public async Task<ToolResult<DrawingStatus>> GetDrawingStatus(CancellationToken ct = default)
+    {
+        var (snapshot, error) = await host.TryGetSnapshotAsync(ct);
+        if (error is not null) return ToolResult<DrawingStatus>.Failure(error);
+
+        var model = snapshot!.Model;
+        var root = snapshot.Root;
+
+        var scraps = ProjectStatistics.UnreferencedScraps(model)
+            .Select(id => new UnreferencedScrapDto(
+                id,
+                model.ScrapsById.TryGetValue(id, out var s) ? Location.From(s.DeclarationSpan, root) : null))
+            .ToList();
+
+        // Shot counts come from the survey tree, so "how big is this job" is the same number the IDE
+        // shows for the survey. The tree rolls counts up, so read each survey's own node.
+        var shotsByName = new Dictionary<string, SurveyTreeNode>(StringComparer.Ordinal);
+        void Index(SurveyTreeNode node)
+        {
+            shotsByName[node.FullName] = node;
+            foreach (var child in node.Children) Index(child);
+        }
+        foreach (var rootNode in ProjectStatistics.BuildSurveyTree(model)) Index(rootNode);
+
+        var undrawn = ProjectStatistics.UndrawnSurveys(model)
+            .Select(name =>
+            {
+                var node = shotsByName.GetValueOrDefault(name);
+                var symbol = model.SurveysByFullName.GetValueOrDefault(name);
+                return new UndrawnSurveyDto(
+                    name,
+                    node?.Title ?? symbol?.Title,
+                    node?.Shots ?? 0,
+                    symbol is null ? null : Location.From(symbol.DeclarationSpan, root));
+            })
+            .ToList();
+
+        return ToolResult<DrawingStatus>.Success(new DrawingStatus(
+            UnreferencedScraps: scraps,
+            UndrawnSurveys: undrawn,
+            ScrapCount: model.ScrapsById.Count,
+            MapCount: model.MapsById.Count));
+    }
+
     [McpServerTool(Name = "data_quality_report", Title = "Data quality report", ReadOnly = true, Idempotent = true)]
     [Description("Counts of common data-quality issues across the project: zero-length and missing-length "
                + "legs, legs missing a compass or clino reading, very steep legs (|clino| 80–90°), splays "
