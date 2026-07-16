@@ -20,6 +20,7 @@ A cross-platform desktop **workbench / IDE for [Therion](https://therion.speleo.
 - **Map / scrap editing** of .th2 files is provided by integration of Mapiah.
 - **Live 2D centreline preview** and an **embedded 3D model viewer** (CaveView.js) with station-pick → jump-to-source.
 - **Survey analytics** — length breakdowns, vertical/horizontal extents, team rollups, fixed points, data-quality, and exploration **leads**.
+- **[Structural geology](docs/user-guide/15-structural-geology.md)** — turn shots taken along a fault, bedding plane, or joint into **strike / dip** measurements: detect them from station names, comments, or flags, fit planes with an RMS quality figure, optionally correct to true north, and plot the planes as discs in 3D.
 - **Import / export & GIS** — Survex, Compass, DEM, and GPX import; entrance/fix export to KML / GeoJSON / GPX / CSV.
 - **Extensible & scriptable** — a headless CLI, an editor-agnostic **LSP** server, script hooks, and a semantic-rule plugin loader.
 - **Cross-platform** (Windows / macOS / Linux), localized in **English and Romanian** (additions are welcome).

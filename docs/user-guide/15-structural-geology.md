@@ -1,6 +1,6 @@
 # 15. Structural geology
 
-> [← Back to the User Guide home](README.md)
+> [← Back to the User Guide home](README.md) · [🏠 ThIDE project home](../../README.md)
 
 The **Structural Geology** module turns groups of survey shots that lie on a geological plane (a
 fault, bedding plane, joint…) into **strike / dip** measurements, and plots the resulting planes in
