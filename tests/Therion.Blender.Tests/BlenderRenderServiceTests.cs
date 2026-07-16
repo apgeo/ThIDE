@@ -73,7 +73,7 @@ public class BlenderRenderServiceTests : IDisposable
 
     // ---- export mode (no Blender) ----
 
-    [Fact]
+    [CorpusFact]
     public async Task Export_WritesScriptAndSidecarAssets_ReferencingThem()
     {
         var service = Service(new FakeLauncher(_ => { }), Usable);
@@ -94,7 +94,7 @@ public class BlenderRenderServiceTests : IDisposable
         Assert.Contains(RenderPhase.GeneratingScript, phases);
     }
 
-    [Fact]
+    [CorpusFact]
     public async Task Export_SelfContained_EmbedsTheMeta()
     {
         var spec = OrbitVideoSpec() with { Source = new SourceSpec { SelfContained = true } };
@@ -106,7 +106,7 @@ public class BlenderRenderServiceTests : IDisposable
 
     // ---- render mode ----
 
-    [Fact]
+    [CorpusFact]
     public async Task Render_ConvertsGeneratesRunsAndCollects()
     {
         // The fake launcher writes the video into the job folder so the collector finds it.
@@ -124,7 +124,7 @@ public class BlenderRenderServiceTests : IDisposable
         Assert.Contains(RenderPhase.Done, phases);
     }
 
-    [Fact]
+    [CorpusFact]
     public async Task Render_BlenderNotFound_FailsFast_WithoutRunning()
     {
         bool launched = false;
@@ -137,7 +137,7 @@ public class BlenderRenderServiceTests : IDisposable
         Assert.False(launched);
     }
 
-    [Fact]
+    [CorpusFact]
     public async Task Render_BlenderTooOld_IsDistinct()
     {
         var service = Service(new FakeLauncher(_ => { }), version: new BlenderVersion(3, 6, 0));

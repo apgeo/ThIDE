@@ -15,18 +15,7 @@ public class BlenderVerbTests : IDisposable
     public BlenderVerbTests() => Directory.CreateDirectory(_dir);
     public void Dispose() { try { Directory.Delete(_dir, recursive: true); } catch { } }
 
-    private static string CorpusLox()
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null)
-        {
-            var candidate = Path.Combine(dir.FullName, "tests", "Corpus", "sample_projects", "av_cerbul_de_aur",
-                "therion", "rez", "av_cerbul_de_aur_20260505_v1.lox");
-            if (File.Exists(candidate)) return candidate;
-            dir = dir.Parent;
-        }
-        throw new InvalidOperationException("corpus av_cerbul .lox not found above the test output dir.");
-    }
+    private static string CorpusLox() => TestCorpus.AvCerbulLox();
 
     private static async Task<(int Code, string Out, string Err)> Run(params string[] args)
     {
@@ -38,7 +27,7 @@ public class BlenderVerbTests : IDisposable
 
     // ---- export smoke (no Blender) ----
 
-    [Fact]
+    [CorpusFact]
     public async Task Export_WritesScriptAndAssets()
     {
         var (code, stdout, _) = await Run("blender", CorpusLox(), "--preset", "Orbit showcase", "--export", _dir);
@@ -51,7 +40,7 @@ public class BlenderVerbTests : IDisposable
         Assert.Contains("CAM_KEYS", File.ReadAllText(Path.Combine(_dir, "render.py"))); // orbit ⇒ keyframed camera
     }
 
-    [Fact]
+    [CorpusFact]
     public async Task Export_DefaultsToOrbitShowcase_WhenNoPreset()
     {
         var (code, _, _) = await Run("blender", CorpusLox(), "--export", _dir);
@@ -60,7 +49,7 @@ public class BlenderVerbTests : IDisposable
         Assert.Contains("camera: orbit", script);
     }
 
-    [Fact]
+    [CorpusFact]
     public async Task Export_HonoursASpecFile()
     {
         // A minimal still-set spec routed through --spec.
@@ -107,7 +96,7 @@ public class BlenderVerbTests : IDisposable
         Assert.Contains("format", err);
     }
 
-    [Fact]
+    [CorpusFact]
     public async Task UnknownPreset_ListsTheOptions()
     {
         var (code, _, err) = await Run("blender", CorpusLox(), "--preset", "No Such Preset", "--export", _dir);
@@ -115,7 +104,7 @@ public class BlenderVerbTests : IDisposable
         Assert.Contains("Orbit showcase", err); // the error names the available presets
     }
 
-    [Fact]
+    [CorpusFact]
     public async Task BadSpecJson_IsUsageError()
     {
         var specPath = Path.Combine(_dir, "bad.json");

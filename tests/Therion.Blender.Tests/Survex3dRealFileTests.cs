@@ -9,7 +9,7 @@ namespace Therion.Blender.Tests;
 
 public class Survex3dRealFileTests
 {
-    [Fact]
+    [CorpusFact]
     public void AvCerbul_ParsesHeaderAndContent()
     {
         var model = Survex3dReader.ReadFile(TestCorpus.AvCerbul3d());

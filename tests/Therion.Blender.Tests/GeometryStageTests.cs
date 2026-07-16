@@ -158,7 +158,7 @@ public class GeometryStageTests
         Assert.Equal(result.Walls.Vertices.Count, result.Walls.VertexColors!.Count);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Stage_RealAvCerbulLox_ProducesNonEmptyWalls()
     {
         var model = LoxReader.ReadFile(TestCorpus.AvCerbulLox());
@@ -172,7 +172,7 @@ public class GeometryStageTests
         Assert.NotEqual(CaveVector3.Zero, result.Offset); // UTM coords were shifted
     }
 
-    [Fact]
+    [CorpusFact]
     public void Stage_Deterministic()
     {
         var model = LoxReader.ReadFile(TestCorpus.AvCerbulLox());

@@ -122,7 +122,7 @@ public class SceneMetaTests
         Assert.Equal(1005.0, doc.RootElement.GetProperty("offset").GetProperty("x").GetDouble());
     }
 
-    [Fact]
+    [CorpusFact]
     public void Build_RealAvCerbul_ProducesConsistentDocument()
     {
         var geometry = GeometryStage.Build(LoxReader.ReadFile(TestCorpus.AvCerbulLox()));

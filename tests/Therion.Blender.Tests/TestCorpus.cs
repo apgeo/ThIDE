@@ -1,6 +1,7 @@
-// Shared fixture helpers: locate the committed corpus (real .lox/.3d exports under
-// tests/Corpus) and deep-compare CaveModels (record equality alone won't do — records
-// holding IReadOnlyList members compare list references, not elements).
+// Shared fixture helpers: locate the real-world corpus (.lox/.3d exports under
+// tests/Corpus/sample_projects, which is gitignored — local-only, absent on CI) and
+// deep-compare CaveModels (record equality alone won't do — records holding
+// IReadOnlyList members compare list references, not elements).
 
 using Therion.Blender;
 
@@ -20,6 +21,19 @@ internal static class TestCorpus
             dir = dir.Parent;
         }
         return null;
+    }
+
+    /// <summary>Whether the gitignored real-world corpus is checked out here. False on CI, where
+    /// only tests/Corpus/Synthetic is committed — [CorpusFact] skips on that.</summary>
+    public static bool SampleProjectsAvailable => SampleProjectsRoot() is not null;
+
+    private static string? SampleProjectsRoot()
+    {
+        if (LocateCorpusRoot() is not { } root) return null;
+        var samples = Path.Combine(root, "sample_projects");
+        return Directory.Exists(samples) && Directory.EnumerateFileSystemEntries(samples).Any()
+            ? samples
+            : null;
     }
 
     public static string RequireCorpusFile(params string[] relativeParts)

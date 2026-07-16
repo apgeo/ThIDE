@@ -160,7 +160,7 @@ public class MeshWriterTests
         Assert.Equal(Write(), Write());
     }
 
-    [Fact]
+    [CorpusFact]
     public void RealAvCerbul_ConvertsToPlyWithWalls()
     {
         var result = GeometryStage.Build(Parsing.LoxReader.ReadFile(TestCorpus.AvCerbulLox()));

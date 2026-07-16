@@ -16,7 +16,7 @@ public class CrossFormatConsistencyTests
         LoxReader.ReadFile(TestCorpus.AvCerbulLox()),
         Survex3dReader.ReadFile(TestCorpus.AvCerbul3d()));
 
-    [Fact]
+    [CorpusFact]
     public void BoundingBoxes_Agree()
     {
         var (lox, svx) = LoadBoth();
@@ -28,7 +28,7 @@ public class CrossFormatConsistencyTests
         AssertClose(loxBounds.Max, svxBounds.Max);
     }
 
-    [Fact]
+    [CorpusFact]
     public void NamedSurvexStations_ExistInLoxAtTheSamePosition()
     {
         var (lox, svx) = LoadBoth();
@@ -46,7 +46,7 @@ public class CrossFormatConsistencyTests
             $"e.g. {unmatched.FirstOrDefault()?.Name} @ {unmatched.FirstOrDefault()?.Position}");
     }
 
-    [Fact]
+    [CorpusFact]
     public void EntranceStations_AgreeAcrossFormats()
     {
         var (lox, svx) = LoadBoth();
@@ -60,7 +60,7 @@ public class CrossFormatConsistencyTests
             Assert.Contains(loxEntrances, candidate => Distance(candidate, entrance) < CmTolerance);
     }
 
-    [Fact]
+    [CorpusFact]
     public void CenterlineLegs_AgreeAcrossFormats()
     {
         var (lox, svx) = LoadBoth();

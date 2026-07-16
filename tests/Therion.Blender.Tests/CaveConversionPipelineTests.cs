@@ -21,7 +21,7 @@ public class CaveConversionPipelineTests : IDisposable
 
     private static CaveConversionPipeline Pipeline() => new(new ModelSourceResolver());
 
-    [Fact]
+    [CorpusFact]
     public async Task RealAvCerbulLox_ConvertsToPlyWithWallsAndMeta()
     {
         var outDir = Path.Combine(_dir, "cerbul");
@@ -82,7 +82,7 @@ public class CaveConversionPipelineTests : IDisposable
         Assert.Equal("unpushed lead", lead.GetProperty("note").GetString());
     }
 
-    [Fact]
+    [CorpusFact]
     public async Task AdditionalFormats_AreWritten()
     {
         var options = new ConversionOptions
@@ -101,7 +101,7 @@ public class CaveConversionPipelineTests : IDisposable
         Assert.All(manifest.MeshPaths, p => Assert.True(File.Exists(p)));
     }
 
-    [Fact]
+    [CorpusFact]
     public async Task Conversion_IsDeterministic()
     {
         var request = ModelSourceRequest.ForExternalFile(TestCorpus.AvCerbulLox());

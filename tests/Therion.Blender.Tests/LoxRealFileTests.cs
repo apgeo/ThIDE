@@ -11,7 +11,7 @@ namespace Therion.Blender.Tests;
 
 public class LoxRealFileTests
 {
-    [Fact]
+    [CorpusFact]
     public void AvCerbul_ParsesWithAllRecordKinds()
     {
         var model = LoxReader.ReadFile(TestCorpus.AvCerbulLox());
@@ -40,7 +40,7 @@ public class LoxRealFileTests
         Assert.True(xs.Max() - xs.Min() > 1.0, "cave should span more than a metre");
     }
 
-    [Fact]
+    [CorpusFact]
     public void AvCerbul_RoundTripsExactly()
     {
         var first = LoxReader.ReadFile(TestCorpus.AvCerbulLox());
@@ -51,7 +51,7 @@ public class LoxRealFileTests
         TestCorpus.AssertModelsEqual(first, second);
     }
 
-    [Fact]
+    [CorpusFact]
     public void Grind_BigFile_ParsesCompletely()
     {
         var model = LoxReader.ReadFile(TestCorpus.GrindLox());

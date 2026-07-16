@@ -140,7 +140,7 @@ public class CorruptInputTests
         Assert.Contains("remain", ex.Message);
     }
 
-    [Fact]
+    [CorpusFact]
     public void FacadeDetection_RoutesBothRealFormats()
     {
         Assert.Equal(CaveSourceFormat.Lox,
