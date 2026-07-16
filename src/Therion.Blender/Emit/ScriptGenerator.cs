@@ -812,8 +812,8 @@ public static class ScriptGenerator
             foreach (var k in plan.Keyframes)
             {
                 string tuple =
-                    $"({PyWriter.Num(k.Frame)}, {PyWriter.Num(k.Location.X)}, {PyWriter.Num(k.Location.Y)}, {PyWriter.Num(k.Location.Z)}, " +
-                    $"{PyWriter.Num(k.Target.X)}, {PyWriter.Num(k.Target.Y)}, {PyWriter.Num(k.Target.Z)}";
+                    $"({PyWriter.Num(k.Frame)}, {Coord(k.Location.X)}, {Coord(k.Location.Y)}, {Coord(k.Location.Z)}, " +
+                    $"{Coord(k.Target.X)}, {Coord(k.Target.Y)}, {Coord(k.Target.Z)}";
                 if (plan.KeyframeFocal)
                     tuple += $", {PyWriter.Num(k.FocalLength ?? plan.FocalLength)}";
                 w.Line(tuple + "),");
@@ -849,6 +849,15 @@ public static class ScriptGenerator
             w.Line("_thide_set_interp(cam_data, " + PyWriter.Str(mode) + ")");
         w.Blank();
     }
+
+    /// <summary>
+    /// A camera coordinate, in metres, quantized to a micrometre before it becomes a literal.
+    /// The camera engine derives these through sin/cos, and .NET delegates those to each platform's
+    /// libm, which agree only to within an ulp — so the raw double makes the emitted script (and its
+    /// byte-exact golden) differ between Windows, Linux and macOS over ~1e-14 m. Rounding is exact
+    /// and platform-independent, and 1e-6 m is far below anything a cave survey can resolve.
+    /// </summary>
+    private static string Coord(double metres) => PyWriter.Num(Math.Round(metres, 6));
 
     private static string InterpolationMode(KeyInterpolation interpolation) => interpolation switch
     {
