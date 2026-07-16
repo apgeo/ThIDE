@@ -55,6 +55,24 @@ public static class SelfTest
         var emptyCard = Scorecard.Compute([]);
         Check("empty run renders n/a", emptyCard.CallValidity is null && emptyCard.RepairAt3 is null);
 
+        // ---- JSON pointer (Grader): array indices are what make per-item ground truth computable ----
+        using (var doc = System.Text.Json.JsonDocument.Parse(
+            """{"total":2,"surveys":[{"name":"a","length":40},{"name":"b","length":50}]}"""))
+        {
+            var root = doc.RootElement;
+            static string? Text(System.Text.Json.JsonElement? e) => e?.GetRawText();
+
+            Check("pointer: object property", Text(Grader.Resolve(root, "/total")) == "2");
+            Check("pointer: array index into object", Text(Grader.Resolve(root, "/surveys/1/length")) == "50");
+            Check("pointer: index past the end resolves to nothing",
+                Grader.Resolve(root, "/surveys/9/length") is null);
+            Check("pointer: non-numeric segment on an array resolves to nothing",
+                Grader.Resolve(root, "/surveys/first/length") is null);
+            // A negative index must not throw or wrap — "-1" is not an RFC 6901 index.
+            Check("pointer: negative index resolves to nothing", Grader.Resolve(root, "/surveys/-1") is null);
+            Check("pointer: unknown property resolves to nothing", Grader.Resolve(root, "/nope") is null);
+        }
+
         // ---- schema-token estimator (CAP-02.3): deterministic ~4 chars/token ----
         Check("token estimate: empty is 0", TokenEstimator.Estimate("") == 0 && TokenEstimator.Estimate(null) == 0);
         Check("token estimate: ~4 chars/token, rounded up", TokenEstimator.Estimate("12345678") == 2 && TokenEstimator.Estimate("123") == 1);

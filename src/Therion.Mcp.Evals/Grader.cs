@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
@@ -83,11 +84,11 @@ public static class Grader
     private static bool ContainsToken(string haystack, string token) =>
         !string.IsNullOrEmpty(token) && haystack.Contains(token, StringComparison.OrdinalIgnoreCase);
 
-    private static Dictionary<string, object> ToArgs(IReadOnlyDictionary<string, object?>? args) =>
+    internal static Dictionary<string, object> ToArgs(IReadOnlyDictionary<string, object?>? args) =>
         args is null ? new() : args.Where(kv => kv.Value is not null).ToDictionary(kv => kv.Key, kv => kv.Value!);
 
     /// <summary>Calls a tool and returns its <c>data</c> element (the envelope is <c>{ok,data}</c>).</summary>
-    private static async Task<JsonElement?> CallDataAsync(
+    internal static async Task<JsonElement?> CallDataAsync(
         McpClient client, string tool, Dictionary<string, object> args, CancellationToken ct)
     {
         var result = await client.CallToolAsync(tool, args, cancellationToken: ct);
@@ -109,15 +110,33 @@ public static class Grader
         return result.StructuredContent?.GetRawText();
     }
 
-    /// <summary>Minimal JSON Pointer (RFC 6901) resolution: "/a/b" walks object properties.</summary>
-    private static JsonElement? Resolve(JsonElement? root, string pointer)
+    /// <summary>
+    /// Minimal JSON Pointer (RFC 6901): "/a/b" walks object properties, and a numeric segment indexes
+    /// an array ("/surveys/0/length"). Arrays matter because per-item values are ground truth a grader
+    /// can compute — without them a per-survey number could only be hard-coded from the fixture, which
+    /// is the guessing AnswerMatchesComputed exists to avoid.
+    /// </summary>
+    internal static JsonElement? Resolve(JsonElement? root, string pointer)
     {
         if (root is not { } element) return null;
+
         foreach (var segment in pointer.Split('/', StringSplitOptions.RemoveEmptyEntries))
         {
-            if (element.ValueKind != JsonValueKind.Object || !element.TryGetProperty(segment, out var next))
-                return null;
-            element = next;
+            switch (element.ValueKind)
+            {
+                case JsonValueKind.Object when element.TryGetProperty(segment, out var next):
+                    element = next;
+                    break;
+
+                case JsonValueKind.Array
+                    when int.TryParse(segment, NumberStyles.None, CultureInfo.InvariantCulture, out var index)
+                        && index >= 0 && index < element.GetArrayLength():
+                    element = element[index];
+                    break;
+
+                default:
+                    return null;
+            }
         }
         return element;
     }

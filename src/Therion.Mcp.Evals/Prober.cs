@@ -25,11 +25,48 @@ public static class Prober
                 var stations = await NumberAsync(client, "survey_graph", new(), "stations", ct);
                 var floating = await NumberAsync(client, "survey_graph", new(), "floatingComponents", ct);
                 Console.WriteLine($"  {name,-14} errors={errors}  stations={stations}  floatingComponents={floating}");
+
+                ok &= await ProbeComputedChecksAsync(client, name, ct);
             }
             catch (Exception ex)
             {
                 ok = false;
                 Console.WriteLine($"  {name,-14} PROBE FAILED — {ex.Message}");
+            }
+        }
+        return ok;
+    }
+
+    /// <summary>
+    /// Resolves every <see cref="AnswerMatchesComputed"/> pointer for this fixture, exactly as the grader
+    /// will. A pointer that does not resolve makes its case unpassable — the model would be marked wrong
+    /// whatever it answered — and without this the mistake would only surface part-way through an
+    /// expensive run. Printing the value also lets a fixture author see the number the case demands.
+    /// </summary>
+    private static async Task<bool> ProbeComputedChecksAsync(McpClient client, string workspace, CancellationToken ct)
+    {
+        bool ok = true;
+        foreach (var c in EvalSuite.Cases.Where(c => c.Workspace == workspace && c.Check is AnswerMatchesComputed))
+        {
+            var check = (AnswerMatchesComputed)c.Check;
+            var label = $"{check.Tool}{check.Pointer}";
+            try
+            {
+                var data = await Grader.CallDataAsync(client, check.Tool, Grader.ToArgs(check.Args), ct);
+                if (Grader.Resolve(data, check.Pointer) is { } value)
+                {
+                    Console.WriteLine($"    {c.Id,-24} {label} = {value.GetRawText()}");
+                }
+                else
+                {
+                    ok = false;
+                    Console.WriteLine($"    {c.Id,-24} {label} — UNRESOLVED (the case can never pass)");
+                }
+            }
+            catch (Exception ex)
+            {
+                ok = false;
+                Console.WriteLine($"    {c.Id,-24} {label} — FAILED: {ex.Message}");
             }
         }
         return ok;
