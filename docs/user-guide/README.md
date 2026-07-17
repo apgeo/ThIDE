@@ -1,5 +1,13 @@
 # ThIDE User Guide
 
+<!-- Version stamp — the ThIDE release this guide's content was last checked against, NOT the date
+     the PDF was generated. Bump it whenever you update the guide (see about-this-guide.md), and
+     keep the "**For ThIDE <version>**" shape: build/build-user-guide.* parses this line to put the
+     version on the PDF/HTML title page. -->
+> **For ThIDE 0.3.0-alpha.1** — guide content last updated 2026-07-17.
+> Check **Help → About** for the version you are running; if yours is newer, some screens may have
+> moved.
+
 Welcome to the ThIDE user guide — a hands-on manual for cavers and surveyors who use
 **ThIDE** to write, check, build, and explore [Therion](https://therion.speleo.sk/) cave-survey
 projects.

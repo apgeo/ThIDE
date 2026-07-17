@@ -69,6 +69,32 @@ jumps within the document, and a link to any other repo file (a reference doc, a
 its copy on GitHub in a browser. One known limitation: a link to a *specific sub-section* of another
 guide page currently jumps to that page's top — mapping every sub-anchor is a possible follow-up.
 
+## The version stamp (update it whenever you touch the guide)
+
+The first page ([`README.md`](README.md)) carries a stamp naming **the ThIDE version this guide's
+content was last checked against**:
+
+```markdown
+> **For ThIDE 0.3.0-alpha.1** — guide content last updated 2026-07-17.
+```
+
+**This is a content fact, not a build fact.** It is deliberately *not* the version that happened to
+be in `build/version.props` when someone regenerated the PDF — a rebuild with no content change must
+not move it. It answers the reader's actual question: *"is this guide describing the app I'm
+running?"*
+
+Rules:
+
+- **Bump it when you update the guide's content** to match a newer app version — and only then. Use
+  the app's SemVer as **Help → About** reports it (`build/version.props`:
+  `TherionVersionMajor.Minor.Patch` + `TherionPrerelease`).
+- **Leave it alone** for edits that don't change what the guide describes (typos, wording, link
+  fixes) — the stamp says which app version the *content* tracks, not when the file was touched.
+- **Keep the `**For ThIDE <version>**` shape.** The build scripts parse that line and pass it to
+  Pandoc as the document `subtitle`, so the version also prints on the **PDF title page** (page 1)
+  and in the HTML build. Reword the rest of the line freely; keep that prefix. If the stamp goes
+  missing the build still succeeds — it warns and the title page just omits the version.
+
 ## Page conventions
 
 Keep new pages consistent with the existing ones:

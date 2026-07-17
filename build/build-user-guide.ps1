@@ -65,6 +65,20 @@ New-Item -ItemType Directory -Force -Path (Split-Path -Parent $Output) | Out-Nul
 # turns cross-page .md links into internal anchors and other repo links into GitHub URLs.
 $env:GUIDE_PAGES = (($pages | ForEach-Object { [System.IO.Path]::GetFileNameWithoutExtension($_) }) -join ',')
 
+# The version stamp is authored in README.md ("**For ThIDE x.y.z** — ...") and records the app
+# version the guide's content was last checked against — deliberately NOT the version or date of
+# this build. Lift it onto the title page so page 1 of the PDF says which ThIDE it describes.
+$stamp = $null
+if (Test-Path $readme) {
+    $stamp = Select-String -Path $readme -Pattern '^>\s*\*\*For ThIDE\b.*' -Encoding utf8 |
+             Select-Object -First 1 -ExpandProperty Line
+}
+if ($stamp) {
+    $stamp = ($stamp -replace '^>\s*', '' -replace '\*\*', '').Trim()
+} else {
+    Write-Warning "No '**For ThIDE <version>**' stamp found in $readme - the title page will not name a version."
+}
+
 $common = @(
     '--from=gfm'
     '--standalone'
@@ -74,6 +88,7 @@ $common = @(
     "--resource-path=$guide"
     "--lua-filter=$(Join-Path $PSScriptRoot 'user-guide-links.lua')"
 )
+if ($stamp) { $common += @('--metadata', "subtitle=$stamp") }
 
 # Optional extra pandoc args (e.g. CI supplies a broad Unicode font via -V mainfont=...).
 $extra = @()

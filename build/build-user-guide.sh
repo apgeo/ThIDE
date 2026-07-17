@@ -48,6 +48,20 @@ export GUIDE_PAGES
 common=(--from=gfm --standalone --toc --toc-depth=2 --metadata "title=ThIDE User Guide" \
         "--resource-path=$guide" "--lua-filter=$script_dir/user-guide-links.lua")
 
+# The version stamp is authored in README.md ("**For ThIDE x.y.z** — ...") and records the app
+# version the guide's content was last checked against — deliberately NOT the version or date of
+# this build. Lift it onto the title page so page 1 of the PDF says which ThIDE it describes.
+# (|| true: a missing stamp must warn, not abort the release build under `set -e`.)
+stamp=""
+if [ -f "$guide/README.md" ]; then
+    stamp="$(grep -m1 -E '^> *\*\*For ThIDE ' "$guide/README.md" | sed -e 's/^> *//' -e 's/\*\*//g' || true)"
+fi
+if [ -n "$stamp" ]; then
+    common+=(--metadata "subtitle=$stamp")
+else
+    echo "warning: no '**For ThIDE <version>**' stamp in README.md — the title page will not name a version." >&2
+fi
+
 # Optional extra pandoc args (CI can pass a broad Unicode font via -V mainfont=...).
 read -ra extra <<< "${PANDOC_EXTRA:-}"
 
