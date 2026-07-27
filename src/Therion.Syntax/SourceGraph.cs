@@ -57,7 +57,8 @@ public static class SourceGraph
     /// <paramref name="parentPath"/> (falling back to the file's own
     /// <see cref="TherionFile.Path"/>). Both <c>/</c> and <c>\</c> separators are
     /// normalized to the host separator so Windows-style <c>date\x.th</c> paths
-    /// resolve on every platform.
+    /// resolve on every platform. A token with no extension gets Therion's default
+    /// <c>.th</c> (so <c>input B</c> resolves to <c>B.th</c>); see <see cref="DependencySites"/>.
     /// </summary>
     public static IEnumerable<string> Dependencies(TherionFile file, string? parentPath = null)
         => DependencySites(file, parentPath).Select(d => d.Path);
@@ -77,12 +78,27 @@ public static class SourceGraph
             try
             {
                 var combined = Path.IsPathRooted(rel) ? rel : Path.Combine(dir, rel);
-                full = Path.GetFullPath(combined);
+                full = WithDefaultIncludeExtension(Path.GetFullPath(combined));
             }
             catch { continue; } // malformed path token — skip rather than throw.
             yield return (full, span);
         }
     }
+
+    /// <summary>
+    /// Applies Therion's default include extension: a target whose extension is omitted gets
+    /// <c>.th</c> (so <c>input B</c> resolves to <c>B.th</c> — ThBook: "Default extension is
+    /// `.th' and may be omitted"); a target that already carries an extension (<c>B.th</c>, a
+    /// <c>.th2</c> scrap) is returned unchanged, so there is never a double append. Therion itself
+    /// opens the literal name first and only falls back to <c>.th</c>/<c>.th2</c> when it is missing
+    /// on disk, but this lives in the pure syntax layer and must not stat the filesystem;
+    /// unconditional <c>.th</c> matches every idiomatic project (an extensionless survey file is not
+    /// standard Therion usage). Any code that resolves an include target OUTSIDE
+    /// <see cref="DependencySites"/> (e.g. a "create missing file" quick-fix) must route through this
+    /// so it agrees with the include graph.
+    /// </summary>
+    public static string WithDefaultIncludeExtension(string path)
+        => string.IsNullOrEmpty(Path.GetExtension(path)) ? path + ".th" : path;
 
     /// <summary>Depth-first enumeration of a node list, descending into every block body.</summary>
     private static IEnumerable<TherionNode> Descendants(ImmutableArray<TherionNode> nodes)

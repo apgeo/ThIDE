@@ -15,6 +15,7 @@ public class DanglingIncludeTests
 {
     private const string ThconfigPath = "/p/thconfig.thc";
     private const string SurveyPath = "/p/a.th";
+    private const string BPath = "/p/B.th";
 
     private static WorkspaceSemanticModel Ws(params (string Path, string Text)[] files)
     {
@@ -101,5 +102,30 @@ public class DanglingIncludeTests
     {
         var ws = Ws((ThconfigPath, "source a.th\n"), (SurveyPath, "survey s\nendsurvey\n"));
         Assert.Empty(Dangling(ws, SurveyPath));
+    }
+
+    // GitHub issue #1: `input B` with the extension omitted must resolve to the on-disk `B.th`
+    // (Therion's default include extension), so no false "File not found" warning fires.
+    [Fact]
+    public void An_input_with_the_extension_omitted_resolves_to_dot_th()
+    {
+        var ws = Ws(
+            (SurveyPath, "survey s\n  input B\nendsurvey\n"),
+            (BPath, "survey b\nendsurvey\n"));
+
+        Assert.Empty(Dangling(ws, SurveyPath, BPath));
+    }
+
+    // ...but the default extension must not blanket-suppress the diagnostic: when neither `B` nor
+    // `B.th` is on disk, the warning must still fire on the `input` line and name the `.th` target.
+    [Fact]
+    public void An_extensionless_input_with_no_dot_th_on_disk_still_warns()
+    {
+        var ws = Ws((SurveyPath, "survey s\n  input B\nendsurvey\n"));
+
+        var d = Assert.Single(Dangling(ws, SurveyPath));
+        Assert.Equal(SurveyPath, d.Span.FilePath);
+        Assert.Equal(2, d.Span.Start.Line);
+        Assert.Contains("B.th", d.Message, StringComparison.Ordinal);
     }
 }
