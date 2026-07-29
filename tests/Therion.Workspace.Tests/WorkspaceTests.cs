@@ -1,4 +1,4 @@
-// M5 � IParseCache + TherionWorkspace tests.
+// M5 � IParseCache + TherionWorkspace tests.
 
 using System.Collections.Immutable;
 using System.IO;
@@ -85,6 +85,51 @@ public class TherionWorkspaceTests
 
         Assert.Contains(ws.LoadedFiles, p =>
             string.Equals(p, Path.GetFullPath(th), StringComparison.OrdinalIgnoreCase));
+
+        Directory.Delete(dir, recursive: true);
+    }
+
+    // An extensionless `source B` reaches whichever candidate is on disk — `.th` preferred,
+    // `.th2` as the fallback the editor's ctrl-click has always used — so the BFS loads the
+    // same file the editor opens.
+    [Fact]
+    public async Task Load_follows_an_extensionless_include_to_its_th2_target()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "thp_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        var cfg = Path.Combine(dir, "thconfig");
+        var th2 = Path.Combine(dir, "cave.th2");
+        await File.WriteAllTextAsync(cfg, "source cave\n");
+        await File.WriteAllTextAsync(th2, "scrap s1\nendscrap\n");
+
+        await using var ws = new TherionWorkspace();
+        await ws.LoadAsync(cfg);
+
+        Assert.Contains(ws.LoadedFiles, p =>
+            string.Equals(p, Path.GetFullPath(th2), StringComparison.OrdinalIgnoreCase));
+
+        Directory.Delete(dir, recursive: true);
+    }
+
+    [Fact]
+    public async Task Load_prefers_the_default_th_over_a_th2_sibling()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "thp_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        var cfg = Path.Combine(dir, "thconfig");
+        var th  = Path.Combine(dir, "cave.th");
+        var th2 = Path.Combine(dir, "cave.th2");
+        await File.WriteAllTextAsync(cfg, "source cave\n");
+        await File.WriteAllTextAsync(th, "survey s\nendsurvey\n");
+        await File.WriteAllTextAsync(th2, "scrap s1\nendscrap\n");
+
+        await using var ws = new TherionWorkspace();
+        await ws.LoadAsync(cfg);
+
+        Assert.Contains(ws.LoadedFiles, p =>
+            string.Equals(p, Path.GetFullPath(th), StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(ws.LoadedFiles, p =>
+            string.Equals(p, Path.GetFullPath(th2), StringComparison.OrdinalIgnoreCase));
 
         Directory.Delete(dir, recursive: true);
     }

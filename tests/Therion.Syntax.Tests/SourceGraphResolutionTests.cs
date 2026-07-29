@@ -99,4 +99,90 @@ public class SourceGraphResolutionTests
         Assert.Contains("cave", SourceGraph.DependencyTokens(file));
         Assert.DoesNotContain("cave.th", SourceGraph.DependencyTokens(file));
     }
+
+    // ---- disk-aware resolution (the `exists` probe) --------------------------------------
+    // The editor's ctrl-click has always fallen back to an on-disk `B.th2`; these lock the
+    // include graph to the same candidate order — literal name, then `.th`, then `.th2`,
+    // Therion's own thinput open sequence — so the two can never disagree again.
+
+    private static List<string> ResolvedDeps(TherionFile file, string parentPath, string[] existing)
+    {
+        var set = existing.Select(Path.GetFullPath).ToHashSet(System.StringComparer.OrdinalIgnoreCase);
+        return SourceGraph.Dependencies(file, parentPath, set.Contains).Select(Path.GetFullPath).ToList();
+    }
+
+    [Fact]
+    public void Probe_resolves_an_extensionless_input_to_an_existing_th2()
+    {
+        var surveyPath = Full("proj", "a.th");
+        var dir = Path.GetDirectoryName(surveyPath)!;
+        var file = ParseTh(surveyPath, "survey s\n  input B\nendsurvey\n");
+
+        var deps = ResolvedDeps(file, surveyPath, new[] { Full(dir, "B.th2") });
+
+        Assert.Contains(Full(dir, "B.th2"), deps);
+        Assert.DoesNotContain(Full(dir, "B.th"), deps);
+    }
+
+    [Fact]
+    public void Probe_prefers_th_over_a_th2_sibling()
+    {
+        var surveyPath = Full("proj", "a.th");
+        var dir = Path.GetDirectoryName(surveyPath)!;
+        var file = ParseTh(surveyPath, "survey s\n  input B\nendsurvey\n");
+
+        var deps = ResolvedDeps(file, surveyPath, new[] { Full(dir, "B.th"), Full(dir, "B.th2") });
+
+        Assert.Contains(Full(dir, "B.th"), deps);
+        Assert.DoesNotContain(Full(dir, "B.th2"), deps);
+    }
+
+    [Fact]
+    public void Probe_prefers_the_literal_file_over_any_suffix()
+    {
+        // Therion opens the name as written before trying suffixes.
+        var surveyPath = Full("proj", "a.th");
+        var dir = Path.GetDirectoryName(surveyPath)!;
+        var file = ParseTh(surveyPath, "survey s\n  input B\nendsurvey\n");
+
+        var deps = ResolvedDeps(file, surveyPath, new[] { Full(dir, "B"), Full(dir, "B.th") });
+
+        Assert.Contains(Full(dir, "B"), deps);
+        Assert.DoesNotContain(Full(dir, "B.th"), deps);
+    }
+
+    [Fact]
+    public void Probe_never_falls_back_for_an_explicit_extension()
+    {
+        // `input B.th` names B.th; a B.th2 sibling must not satisfy it.
+        var surveyPath = Full("proj", "a.th");
+        var dir = Path.GetDirectoryName(surveyPath)!;
+        var file = ParseTh(surveyPath, "survey s\n  input B.th\nendsurvey\n");
+
+        var deps = ResolvedDeps(file, surveyPath, new[] { Full(dir, "B.th2") });
+
+        Assert.Contains(Full(dir, "B.th"), deps);
+        Assert.DoesNotContain(Full(dir, "B.th2"), deps);
+    }
+
+    [Fact]
+    public void Probe_defaults_to_th_when_no_candidate_exists()
+    {
+        // Diagnostics and the create-file quick-fix keep naming the canonical `.th` target.
+        var surveyPath = Full("proj", "a.th");
+        var dir = Path.GetDirectoryName(surveyPath)!;
+        var file = ParseTh(surveyPath, "survey s\n  input B\nendsurvey\n");
+
+        var deps = ResolvedDeps(file, surveyPath, System.Array.Empty<string>());
+
+        Assert.Contains(Full(dir, "B.th"), deps);
+    }
+
+    [Fact]
+    public void IncludeCandidates_orders_literal_then_th_then_th2()
+    {
+        Assert.Equal(new[] { "B", "B.th", "B.th2" }, SourceGraph.IncludeCandidates("B").ToArray());
+        Assert.Equal(new[] { "B.th" }, SourceGraph.IncludeCandidates("B.th").ToArray());
+        Assert.Equal(new[] { "plan.th2" }, SourceGraph.IncludeCandidates("plan.th2").ToArray());
+    }
 }

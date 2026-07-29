@@ -128,4 +128,32 @@ public class DanglingIncludeTests
         Assert.Equal(2, d.Span.Start.Line);
         Assert.Contains("B.th", d.Message, StringComparison.Ordinal);
     }
+
+    private const string BSketchPath = "/p/B.th2";
+
+    // Ctrl-click has always fallen back to an on-disk `B.th2`; the include graph resolves with
+    // the same candidate list, so the project must not contradict the editor with a false
+    // "File not found" for a sketch the extensionless `input` actually reaches.
+    [Fact]
+    public void An_extensionless_input_backed_by_a_th2_sketch_is_not_reported()
+    {
+        var ws = Ws(
+            (SurveyPath, "survey s\n  input B\nendsurvey\n"),
+            (BSketchPath, "# sketch\n"));
+
+        Assert.Empty(Dangling(ws, SurveyPath, BSketchPath));
+    }
+
+    // The fallback exists only for an omitted extension: an explicit `input B.th` names B.th,
+    // and a B.th2 sibling must not silence its warning.
+    [Fact]
+    public void An_explicit_th_input_is_not_satisfied_by_a_th2_sibling()
+    {
+        var ws = Ws(
+            (SurveyPath, "survey s\n  input B.th\nendsurvey\n"),
+            (BSketchPath, "# sketch\n"));
+
+        var d = Assert.Single(Dangling(ws, SurveyPath, BSketchPath));
+        Assert.Contains("B.th", d.Message, StringComparison.Ordinal);
+    }
 }

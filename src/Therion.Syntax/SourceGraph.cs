@@ -8,6 +8,7 @@
 //     these are usually nested *inside* `survey` / `centreline` blocks, so a
 //     top-level-only scan misses almost the entire project.
 
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
@@ -59,16 +60,22 @@ public static class SourceGraph
     /// normalized to the host separator so Windows-style <c>date\x.th</c> paths
     /// resolve on every platform. A token with no extension gets Therion's default
     /// <c>.th</c> (so <c>input B</c> resolves to <c>B.th</c>); see <see cref="DependencySites"/>.
+    /// Pass <paramref name="exists"/> to resolve against real files instead — see
+    /// <see cref="ResolveIncludePath"/>.
     /// </summary>
-    public static IEnumerable<string> Dependencies(TherionFile file, string? parentPath = null)
-        => DependencySites(file, parentPath).Select(d => d.Path);
+    public static IEnumerable<string> Dependencies(
+        TherionFile file, string? parentPath = null, Func<string, bool>? exists = null)
+        => DependencySites(file, parentPath, exists).Select(d => d.Path);
 
     /// <summary>
     /// <see cref="Dependencies"/> with the span of the command that pulls each file in — what a
     /// "file not found" diagnostic needs to underline the right line rather than the top of the file.
+    /// With no <paramref name="exists"/> probe an extensionless target unconditionally gets the
+    /// <c>.th</c> default; with one it is resolved like Therion resolves it (see
+    /// <see cref="ResolveIncludePath"/>), so <c>input B</c> can land on an on-disk <c>B.th2</c>.
     /// </summary>
     public static IEnumerable<(string Path, SourceSpan Span)> DependencySites(
-        TherionFile file, string? parentPath = null)
+        TherionFile file, string? parentPath = null, Func<string, bool>? exists = null)
     {
         var dir = Path.GetDirectoryName(parentPath ?? file.Path) ?? string.Empty;
         foreach (var (token, span) in DependencyTokenSites(file))
@@ -78,11 +85,46 @@ public static class SourceGraph
             try
             {
                 var combined = Path.IsPathRooted(rel) ? rel : Path.Combine(dir, rel);
-                full = WithDefaultIncludeExtension(Path.GetFullPath(combined));
+                var absolute = Path.GetFullPath(combined);
+                full = exists is null
+                    ? WithDefaultIncludeExtension(absolute)
+                    : ResolveIncludePath(absolute, exists);
             }
             catch { continue; } // malformed path token — skip rather than throw.
             yield return (full, span);
         }
+    }
+
+    /// <summary>
+    /// Ordered lookup candidates for an include target, mirroring Therion's own open sequence
+    /// (thinput tries the literal name first, then the <c>.th:.th2</c> suffix list set by
+    /// thdatareader): the path as written, then — only when it carries no extension — the
+    /// <c>.th</c> and <c>.th2</c> variants. The single definition of that order; every
+    /// filesystem-aware resolver (workspace BFS, reachability, editor ctrl-click) consumes it
+    /// so they can never disagree about which file an include names.
+    /// </summary>
+    public static IEnumerable<string> IncludeCandidates(string path)
+    {
+        yield return path;
+        if (string.IsNullOrEmpty(Path.GetExtension(path)))
+        {
+            yield return path + ".th";
+            yield return path + ".th2";
+        }
+    }
+
+    /// <summary>
+    /// Resolves an include target against an existence probe: the first
+    /// <see cref="IncludeCandidates"/> hit wins; when nothing exists the <c>.th</c>-defaulted
+    /// path is returned so diagnostics and create-file fixes still name the canonical target.
+    /// The probe keeps this layer free of file I/O — callers pass <c>File.Exists</c> (or a
+    /// loaded-file set) from where I/O is allowed.
+    /// </summary>
+    public static string ResolveIncludePath(string path, Func<string, bool> exists)
+    {
+        foreach (var candidate in IncludeCandidates(path))
+            if (exists(candidate)) return candidate;
+        return WithDefaultIncludeExtension(path);
     }
 
     /// <summary>
@@ -91,9 +133,9 @@ public static class SourceGraph
     /// `.th' and may be omitted"); a target that already carries an extension (<c>B.th</c>, a
     /// <c>.th2</c> scrap) is returned unchanged, so there is never a double append. Therion itself
     /// opens the literal name first and only falls back to <c>.th</c>/<c>.th2</c> when it is missing
-    /// on disk, but this lives in the pure syntax layer and must not stat the filesystem;
-    /// unconditional <c>.th</c> matches every idiomatic project (an extensionless survey file is not
-    /// standard Therion usage). Any code that resolves an include target OUTSIDE
+    /// on disk — that disk-aware behavior is <see cref="ResolveIncludePath"/>; this is the pure
+    /// no-probe default (unconditional <c>.th</c> matches every idiomatic project — an extensionless
+    /// survey file is not standard Therion usage). Any code that resolves an include target OUTSIDE
     /// <see cref="DependencySites"/> (e.g. a "create missing file" quick-fix) must route through this
     /// so it agrees with the include graph.
     /// </summary>

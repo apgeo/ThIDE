@@ -2747,18 +2747,13 @@ public partial class TherionTextEditor : UserControl
         catch { return null; }
     }
 
-    /// <summary>Returns the existing file for an absolute path, trying the implicit .th / .th2 extensions.</summary>
+    /// <summary>
+    /// Returns the existing file for an absolute path, trying Therion's implicit extensions in
+    /// <see cref="SourceGraph.IncludeCandidates"/> order — the same list the workspace include
+    /// graph resolves with, so ctrl-click and the project's file-not-found checks always agree.
+    /// </summary>
     private static string? FindExisting(string full)
-    {
-        if (File.Exists(full)) return full;
-        // Therion source paths often omit the .th / .th2 extension.
-        if (!Path.HasExtension(full))
-        {
-            if (File.Exists(full + ".th")) return full + ".th";
-            if (File.Exists(full + ".th2")) return full + ".th2";
-        }
-        return null;
-    }
+        => SourceGraph.IncludeCandidates(full).FirstOrDefault(File.Exists);
 
     // ----- diagnostics: merge parser diagnostics with missing-file warnings -----
 

@@ -51,7 +51,7 @@ public class CorpusThconfigBuildTests
                     parseErrors.Add($"{Path.GetRelativePath(root, path)}: {e.Code.Value} {e.Message}");
 
                 if (file is null) continue;
-                foreach (var dep in SourceGraph.Dependencies(file, path))
+                foreach (var dep in SourceGraph.Dependencies(file, path, File.Exists))
                     foreach (var candidate in Candidates(dep))
                         if (!visited.Contains(candidate)) queue.Enqueue(candidate);
             }
@@ -63,7 +63,8 @@ public class CorpusThconfigBuildTests
             string.Join("\n", parseErrors.Take(50)));
     }
 
-    // Therion source tokens may omit the extension (`input foo` → foo.th); try the common forms.
+    // Resolution already picks the on-disk .th/.th2 for an extensionless token; this widens the
+    // corpus walk to the extra form Therion's own suffix list doesn't cover (`.thconfig`).
     private static IEnumerable<string> Candidates(string dep)
     {
         yield return dep;

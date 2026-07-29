@@ -207,6 +207,22 @@ public sealed class WorkspaceSemanticModel
         var graphEdges = ImmutableArray.CreateBuilder<FileGraphEdge>();
         var th2Files = new List<TherionFile>();
 
+        // Include edges resolve against the files actually in this snapshot, so an extensionless
+        // `input B` lands on a loaded `B.th2` exactly like the (disk-aware) workspace BFS that
+        // loaded it — keeping the FileGraph and TH_SEM_014 in agreement with what got loaded,
+        // without this layer touching the filesystem. Deliberately NOT the `fileExists` parameter
+        // (that one is the XVI index's disk probe): every snapshot entry got here through a
+        // File.Exists-gated load, so "in the snapshot" already means "on disk" — and a target that
+        // is absent (never loaded, or typed just now) falls back to the plain `.th` default, exactly
+        // what this resolved to before. Keys are normalized because test snapshots use verbatim
+        // paths while SourceGraph yields full paths.
+        var loaded = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
+        foreach (var p in parsedFiles.Keys)
+        {
+            try { loaded.Add(System.IO.Path.GetFullPath(p)); }
+            catch { /* malformed snapshot key — unresolvable anyway */ }
+        }
+
         foreach (var (path, parse) in parsedFiles)
         {
             allDiags.AddRange(parse.Diagnostics);
@@ -225,7 +241,7 @@ public sealed class WorkspaceSemanticModel
             }
 
             // Source / input edges from .thconfig and .th files.
-            CollectSourceEdges(path, parse.Value, graphEdges);
+            CollectSourceEdges(path, parse.Value, loaded.Contains, graphEdges);
         }
 
         var xvi = XviIndex.Build(xviFiles, th2Files, fileExists);
@@ -429,9 +445,10 @@ public sealed class WorkspaceSemanticModel
 
     private static void CollectSourceEdges(
         string parentPath, TherionFile file,
+        System.Func<string, bool> loaded,
         ImmutableArray<FileGraphEdge>.Builder edges)
     {
-        foreach (var (dep, site) in SourceGraph.DependencySites(file, parentPath))
+        foreach (var (dep, site) in SourceGraph.DependencySites(file, parentPath, loaded))
             edges.Add(new FileGraphEdge(parentPath, dep, site));
     }
 }
