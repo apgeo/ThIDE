@@ -45,7 +45,7 @@ public static class WorkspaceReachability
             catch { continue; }
             if (file is null) continue;
 
-            foreach (var dep in SourceGraph.Dependencies(file, path))
+            foreach (var dep in SourceGraph.Dependencies(file, path, File.Exists))
                 if (!visited.Contains(dep)) queue.Enqueue(dep);
         }
         return visited;

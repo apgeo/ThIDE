@@ -193,7 +193,7 @@ public sealed class TherionWorkspace : IWorkspace
     private static IEnumerable<string> ExtractDependencies(string parentPath, TherionFile? file)
         => file is null
             ? System.Linq.Enumerable.Empty<string>()
-            : SourceGraph.Dependencies(file, parentPath);
+            : SourceGraph.Dependencies(file, parentPath, File.Exists);
 
     private void OnFileChanged(string path)
     {
