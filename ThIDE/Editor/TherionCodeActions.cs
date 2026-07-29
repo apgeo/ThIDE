@@ -10,6 +10,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using AvaloniaEdit.Document;
 using Therion.Core;
+using Therion.Syntax;
 
 namespace ThIDE.Editor;
 
@@ -161,9 +162,14 @@ public static class TherionCodeActions
         try
         {
             var rel = token.Replace('\\', '/').Replace('/', Path.DirectorySeparatorChar);
-            if (Path.IsPathRooted(rel)) return Path.GetFullPath(rel);
             var dir = string.IsNullOrEmpty(filePath) ? Environment.CurrentDirectory : Path.GetDirectoryName(filePath);
-            return Path.GetFullPath(Path.Combine(dir ?? string.Empty, rel));
+            var full = Path.IsPathRooted(rel)
+                ? Path.GetFullPath(rel)
+                : Path.GetFullPath(Path.Combine(dir ?? string.Empty, rel));
+            // Match the include graph: `input B` targets `B.th`, so the quick-fix creates `B.th` and
+            // actually clears the "File not found" the diagnostic reports (both resolve through
+            // SourceGraph.WithDefaultIncludeExtension — keep them in lockstep).
+            return SourceGraph.WithDefaultIncludeExtension(full);
         }
         catch { return null; }
     }
