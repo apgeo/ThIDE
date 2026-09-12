@@ -1,6 +1,6 @@
 // scene-meta.json v1 tests: content extraction, recenter/offset consistency, anonymous
 // station dropping, JSON round-trip, ro-RO culture invariance (R-08), and a real
-// av_cerbul .lox document.
+// av_bravo .lox document.
 
 using System.Globalization;
 using System.Text.Json;
@@ -123,9 +123,9 @@ public class SceneMetaTests
     }
 
     [CorpusFact]
-    public void Build_RealAvCerbul_ProducesConsistentDocument()
+    public void Build_RealAvBravo_ProducesConsistentDocument()
     {
-        var geometry = GeometryStage.Build(LoxReader.ReadFile(TestCorpus.AvCerbulLox()));
+        var geometry = GeometryStage.Build(LoxReader.ReadFile(TestCorpus.AvBravoLox()));
         var meta = SceneMeta.Build(geometry);
 
         Assert.Equal("lox", meta.Source.Format);

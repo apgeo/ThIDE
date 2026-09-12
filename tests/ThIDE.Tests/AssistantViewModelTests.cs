@@ -161,8 +161,8 @@ public class AssistantViewModelTests
         // must light it up just like list_symbols, which is the panel bug this covers.
         const string result = """
             {"ok":true,"data":{"stations":[
-              {"name":"GrindDrumAcoperisVerificare.71","kind":"shot","flags":[],"declaration":{"file":"date/G_drumuiri/x.th","line":367,"column":5,"endLine":367,"endColumn":29}},
-              {"name":"grind.G0","kind":"fix","flags":[],"declaration":{"file":"grind.th","line":169,"column":2,"endLine":169,"endColumn":48}}
+              {"name":"AlphaDrumAcoperisVerificare.71","kind":"shot","flags":[],"declaration":{"file":"date/G_drumuiri/x.th","line":367,"column":5,"endLine":367,"endColumn":29}},
+              {"name":"alpha.G0","kind":"fix","flags":[],"declaration":{"file":"alpha.th","line":169,"column":2,"endLine":169,"endColumn":48}}
             ],"total":2,"offset":0,"truncated":false}}
             """;
         var assistant = new FakeAssistant((_, callbacks, _) =>
@@ -181,9 +181,9 @@ public class AssistantViewModelTests
         Assert.True(card.HasSymbols);
         Assert.Equal(2, card.Symbols.Count);
         Assert.Equal("71", card.Symbols[0].Name);
-        Assert.Equal("shot · GrindDrumAcoperisVerificare", card.Symbols[0].Subtitle);
+        Assert.Equal("shot · AlphaDrumAcoperisVerificare", card.Symbols[0].Subtitle);
         Assert.Equal("G0", card.Symbols[1].Name);
-        Assert.Equal("fix · grind", card.Symbols[1].Subtitle);
+        Assert.Equal("fix · alpha", card.Symbols[1].Subtitle);
     }
 
     [Fact]
@@ -259,7 +259,7 @@ public class AssistantViewModelTests
         // list_files returns a plain string[] of workspace-relative paths (not objects) — each row
         // should open the file, showing the file name up front and its folder as the subtitle.
         const string result = """
-            {"ok":true,"data":{"files":["date/G_drumuiri/x.th","thconfig_grind.thconfig"],"total":2,"offset":0,"truncated":false}}
+            {"ok":true,"data":{"files":["date/G_drumuiri/x.th","thconfig_alpha.thconfig"],"total":2,"offset":0,"truncated":false}}
             """;
         var assistant = new FakeAssistant((_, callbacks, _) =>
         {
@@ -280,7 +280,7 @@ public class AssistantViewModelTests
         Assert.Equal("file · date/G_drumuiri", card.Symbols[0].Subtitle);
         Assert.Equal("date/G_drumuiri/x.th", card.Symbols[0].QualifiedName);   // full path in the tooltip
         // A root-level file has no folder, so the subtitle is just the kind.
-        Assert.Equal("thconfig_grind.thconfig", card.Symbols[1].Name);
+        Assert.Equal("thconfig_alpha.thconfig", card.Symbols[1].Name);
         Assert.Equal("file", card.Symbols[1].Subtitle);
     }
 

@@ -161,9 +161,9 @@ public class MeshWriterTests
     }
 
     [CorpusFact]
-    public void RealAvCerbul_ConvertsToPlyWithWalls()
+    public void RealAvBravo_ConvertsToPlyWithWalls()
     {
-        var result = GeometryStage.Build(Parsing.LoxReader.ReadFile(TestCorpus.AvCerbulLox()));
+        var result = GeometryStage.Build(Parsing.LoxReader.ReadFile(TestCorpus.AvBravoLox()));
         var bytes = PlyWriter.Write(result.Walls);
 
         var (vertices, colors, faces) = ReadPly(bytes);

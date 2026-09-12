@@ -15,7 +15,7 @@ public class BlenderVerbTests : IDisposable
     public BlenderVerbTests() => Directory.CreateDirectory(_dir);
     public void Dispose() { try { Directory.Delete(_dir, recursive: true); } catch { } }
 
-    private static string CorpusLox() => TestCorpus.AvCerbulLox();
+    private static string CorpusLox() => TestCorpus.AvBravoLox();
 
     private static async Task<(int Code, string Out, string Err)> Run(params string[] args)
     {

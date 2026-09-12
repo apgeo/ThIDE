@@ -1,5 +1,5 @@
 // End-to-end conversion pipeline tests — the G1 deliverable exercised on disk: the real
-// av_cerbul .lox converts to a PLY (with walls) + scene-meta.json; a synthetic .lox
+// av_bravo .lox converts to a PLY (with walls) + scene-meta.json; a synthetic .lox
 // drives the leads-enrichment path; additional formats and determinism are checked.
 
 using System.Text.Json;
@@ -22,10 +22,10 @@ public class CaveConversionPipelineTests : IDisposable
     private static CaveConversionPipeline Pipeline() => new(new ModelSourceResolver());
 
     [CorpusFact]
-    public async Task RealAvCerbulLox_ConvertsToPlyWithWallsAndMeta()
+    public async Task RealAvBravoLox_ConvertsToPlyWithWallsAndMeta()
     {
-        var outDir = Path.Combine(_dir, "cerbul");
-        var request = ModelSourceRequest.ForExternalFile(TestCorpus.AvCerbulLox());
+        var outDir = Path.Combine(_dir, "bravo");
+        var request = ModelSourceRequest.ForExternalFile(TestCorpus.AvBravoLox());
         var manifest = await Pipeline().ConvertAsync(request, new ConversionOptions { OutputDirectory = outDir });
 
         // Assets exist and are non-trivial.
@@ -91,7 +91,7 @@ public class CaveConversionPipelineTests : IDisposable
             AdditionalFormats = [MeshFormat.Stl, MeshFormat.Obj, MeshFormat.Glb],
         };
         var manifest = await Pipeline().ConvertAsync(
-            ModelSourceRequest.ForExternalFile(TestCorpus.AvCerbulLox()), options);
+            ModelSourceRequest.ForExternalFile(TestCorpus.AvBravoLox()), options);
 
         Assert.Equal(4, manifest.MeshPaths.Count); // ply + stl + obj + glb
         Assert.Contains(manifest.MeshPaths, p => p.EndsWith("model.ply", StringComparison.Ordinal));
@@ -104,7 +104,7 @@ public class CaveConversionPipelineTests : IDisposable
     [CorpusFact]
     public async Task Conversion_IsDeterministic()
     {
-        var request = ModelSourceRequest.ForExternalFile(TestCorpus.AvCerbulLox());
+        var request = ModelSourceRequest.ForExternalFile(TestCorpus.AvBravoLox());
         var a = await Pipeline().ConvertAsync(request, new ConversionOptions { OutputDirectory = Path.Combine(_dir, "a") });
         var b = await Pipeline().ConvertAsync(request, new ConversionOptions { OutputDirectory = Path.Combine(_dir, "b") });
 

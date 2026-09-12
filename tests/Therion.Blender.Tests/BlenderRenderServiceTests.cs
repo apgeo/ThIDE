@@ -1,5 +1,5 @@
 // Render-service tests (G3 capstone): the convert → generate → (run) chain end to end, using
-// the real av_cerbul .lox as the resolved source, a fake locator (a "usable" Blender), and a
+// the real av_bravo .lox as the resolved source, a fake locator (a "usable" Blender), and a
 // fake launcher (whose process writes the output file so collection succeeds). Export mode is
 // verified without any Blender.
 
@@ -19,7 +19,7 @@ public class BlenderRenderServiceTests : IDisposable
 
     private static RenderSource CorpusSource() => new(new ResolvedModelSource
     {
-        Path = TestCorpus.AvCerbulLox(),
+        Path = TestCorpus.AvBravoLox(),
         Format = CaveSourceFormat.Lox,
         Kind = ModelSourceKind.ExternalFile,
     });

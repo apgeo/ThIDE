@@ -2,7 +2,7 @@
 
 > Implementation Plan §11 (Testing) + Decision #6 (Sample corpora bundled).
 > Stand-in for the external repos (`therion samples/`, `jarvist/migovecsurveydata`,
-> `tr1813/migresurvey`, `iccaving/migovec-survey-data`, `apgeo/grind`) until
+> `tr1813/migresurvey`, `iccaving/migovec-survey-data`, `apgeo/alpha`) until
 > those are vendored under their own LICENSE.txt.
 
 Each `.th` / `.th2` / `.thconfig` file here is parsed by the corpus tests and is

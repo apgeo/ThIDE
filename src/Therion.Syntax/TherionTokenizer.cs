@@ -89,7 +89,7 @@ public sealed class TherionTokenizer
             // -- Line continuation: backslash + (optional trailing ws) + newline.
             // Therion tolerates whitespace between the '\' and the line break, so a line ending
             // in "\   " still continues. (A '\' followed by anything else — e.g. a Windows path
-            // separator "rez\grind" — is NOT a continuation and falls through to identifier.)
+            // separator "rez\alpha" — is NOT a continuation and falls through to identifier.)
             if (c == '\\')
             {
                 int look = pos + 1;

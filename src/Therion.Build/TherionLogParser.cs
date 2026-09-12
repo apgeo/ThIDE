@@ -186,7 +186,7 @@ public static class TherionLogParser
         @"^\s*(?<rel>-?[\d.]+)%\s+(?<abs>-?[\d.]+)m\s+(?<total>-?[\d.]+)m\s+(?<sts>\d+)\s+" +
         @"(?<x>-?[\d.]+)m\s+(?<y>-?[\d.]+)m\s+(?<z>-?[\d.]+)m\s+\[(?<stations>.*)\]\s*$", Opts);
 
-    // Transcription block: " 9> 623 : .@grind_intrare_0.grind -- 67156 : .@grind_term.grind"
+    // Transcription block: " 9> 623 : .@alpha_intrare_0.alpha -- 67156 : .@alpha_term.alpha"
     private static readonly Regex TranscriptionRx = new(@"(?<num>\d+)\s+:\s+(?<name>\S+)", Opts);
 
     // A banner line: "##### cavern log file #####".

@@ -1,5 +1,5 @@
 // The strongest BA-B2 correctness evidence: tests/Corpus carries the SAME Therion
-// export of av_cerbul_de_aur in both formats, so the two independent parsers must
+// export of av_bravo in both formats, so the two independent parsers must
 // reconstruct the same cave. .3d coordinates are centimetre-quantized s32 while .lox
 // keeps full doubles — geometric comparisons therefore use a 1 cm tolerance.
 
@@ -13,8 +13,8 @@ public class CrossFormatConsistencyTests
     private const double CmTolerance = 0.011; // half-cm rounding on either side + slack
 
     private static (CaveModel Lox, CaveModel Svx) LoadBoth() => (
-        LoxReader.ReadFile(TestCorpus.AvCerbulLox()),
-        Survex3dReader.ReadFile(TestCorpus.AvCerbul3d()));
+        LoxReader.ReadFile(TestCorpus.AvBravoLox()),
+        Survex3dReader.ReadFile(TestCorpus.AvBravo3d()));
 
     [CorpusFact]
     public void BoundingBoxes_Agree()

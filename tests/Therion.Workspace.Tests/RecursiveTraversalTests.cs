@@ -1,5 +1,5 @@
 // Phase 1 — recursive project traversal: `input` directives nested inside survey
-// blocks must be followed (the grind project links every date/*.th this way).
+// blocks must be followed (the alpha project links every date/*.th this way).
 
 using System.IO;
 using System.Linq;
@@ -44,7 +44,7 @@ public class RecursiveTraversalTests
         var main = Path.Combine(dir, "main.th");
         var child = Path.Combine(dir, "date", "leaf.th");
 
-        // Windows-style backslash path (as exported by TopoDroid / used in grind.th).
+        // Windows-style backslash path (as exported by TopoDroid / used in alpha.th).
         await File.WriteAllTextAsync(main, "survey s\n  input date\\leaf.th\nendsurvey\n");
         await File.WriteAllTextAsync(child, "survey leaf\nendsurvey\n");
 
@@ -57,15 +57,15 @@ public class RecursiveTraversalTests
         Directory.Delete(dir, recursive: true);
     }
 
-    // ---- grind corpus integration (skipped when the corpus isn't present) ----
+    // ---- alpha corpus integration (skipped when the corpus isn't present) ----
 
-    private static string? GrindThconfig()
+    private static string? AlphaThconfig()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
         while (dir is not null)
         {
             var candidate = Path.Combine(dir.FullName, "tests", "Corpus", "sample_projects",
-                "grind", "therion", "thconfig_grind2025.thconfig");
+                "alpha", "therion", "thconfig_alpha2025.thconfig");
             if (File.Exists(candidate)) return candidate;
             dir = dir.Parent;
         }
@@ -73,15 +73,15 @@ public class RecursiveTraversalTests
     }
 
     [Fact]
-    public async Task Grind_project_reaches_nested_date_files_and_resolves_cross_refs()
+    public async Task Alpha_project_reaches_nested_date_files_and_resolves_cross_refs()
     {
-        var cfg = GrindThconfig();
+        var cfg = AlphaThconfig();
         if (cfg is null) return; // corpus not checked out in this environment
 
         await using var ws = new TherionWorkspace();
         await ws.LoadAsync(cfg);
 
-        // Every `input date\...\*.th` nested in `survey grind` must be reached.
+        // Every `input date\...\*.th` nested in `survey alpha` must be reached.
         var dateFiles = ws.LoadedFiles
             .Where(p => p.Replace('\\', '/').Contains("/date/") &&
                         p.EndsWith(".th", StringComparison.OrdinalIgnoreCase))
@@ -89,18 +89,18 @@ public class RecursiveTraversalTests
         Assert.True(dateFiles.Count > 20,
             $"Expected many date/*.th files, found {dateFiles.Count}.");
         Assert.Contains(ws.LoadedFiles, p =>
-            p.EndsWith("grind_175_baza_niagara.th", StringComparison.OrdinalIgnoreCase));
+            p.EndsWith("alpha_175_baza_cascada.th", StringComparison.OrdinalIgnoreCase));
 
         var model = ws.BuildSemanticModel();
 
-        // Station ref `11@grind_175_baza_niagara` → station def in that file.
-        var station = model.ResolveReference("11@grind_175_baza_niagara", ReferenceKind.Station);
+        // Station ref `11@alpha_175_baza_cascada` → station def in that file.
+        var station = model.ResolveReference("11@alpha_175_baza_cascada", ReferenceKind.Station);
         Assert.NotNull(station);
-        Assert.EndsWith("grind_175_baza_niagara.th", station!.Value.FilePath);
+        Assert.EndsWith("alpha_175_baza_cascada.th", station!.Value.FilePath);
 
         // Survey ref → survey decl.
-        var survey = model.ResolveReference("grind_wg_superior_meandru", ReferenceKind.Survey);
+        var survey = model.ResolveReference("alpha_wg_superior_meandru", ReferenceKind.Survey);
         Assert.NotNull(survey);
-        Assert.EndsWith("grind_wg_superior_meandru.th", survey!.Value.FilePath);
+        Assert.EndsWith("alpha_wg_superior_meandru.th", survey!.Value.FilePath);
     }
 }

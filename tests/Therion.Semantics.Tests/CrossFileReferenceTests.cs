@@ -28,9 +28,9 @@ public class CrossFileReferenceTests
     public void Resolves_station_at_survey_to_first_definition_in_other_file()
     {
         var ws = Build(
-            ("/p/main.th", "survey grind\n  input baza.th\nendsurvey\n"),
+            ("/p/main.th", "survey alpha\n  input baza.th\nendsurvey\n"),
             ("/p/baza.th", """
-                survey grind_175_baza_niagara
+                survey alpha_175_baza_cascada
                   centreline
                     data normal from to length compass clino
                     0 1 1 0 0
@@ -39,7 +39,7 @@ public class CrossFileReferenceTests
                 endsurvey
                 """));
 
-        var span = ws.ResolveReference("11@grind_175_baza_niagara", ReferenceKind.Station);
+        var span = ws.ResolveReference("11@alpha_175_baza_cascada", ReferenceKind.Station);
 
         Assert.NotNull(span);
         Assert.EndsWith("baza.th", span!.Value.FilePath);
@@ -50,9 +50,9 @@ public class CrossFileReferenceTests
     [Fact]
     public void Resolves_bare_survey_name_to_survey_declaration()
     {
-        var ws = Build(("/p/m.th", "survey grind_wg_superior_meandru\nendsurvey\n"));
+        var ws = Build(("/p/m.th", "survey alpha_wg_superior_meandru\nendsurvey\n"));
 
-        var span = ws.ResolveReference("grind_wg_superior_meandru", ReferenceKind.Survey);
+        var span = ws.ResolveReference("alpha_wg_superior_meandru", ReferenceKind.Survey);
 
         Assert.NotNull(span);
         Assert.EndsWith("m.th", span!.Value.FilePath);
@@ -154,7 +154,7 @@ public class CrossFileReferenceTests
     public void Bare_station_name_resolves_via_navigation_service()
     {
         var ws = Build(("/p/m.th", """
-            survey grind
+            survey alpha
               centreline
                 data normal from to length compass clino
                 0 PCB2 1 0 0

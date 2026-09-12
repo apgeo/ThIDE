@@ -19,7 +19,7 @@ public class Survex3dReaderTests
     public void V8Header_ExtractsTitleCoordinateSystemSeparatorAndTimestamp()
     {
         var bytes = Survex3dFixtureBuilder
-            .V8("Peștera Cerbul", coordinateSystem: "EPSG:31700", separator: '.', datestamp: "@1371300355")
+            .V8("Peștera Bravo", coordinateSystem: "EPSG:31700", separator: '.', datestamp: "@1371300355")
             .V8Stop(styleAlreadyNormal: false)
             .Build();
 
@@ -27,7 +27,7 @@ public class Survex3dReaderTests
 
         Assert.Equal(CaveSourceFormat.Survex3d, model.SourceFormat);
         Assert.Equal(8, model.FormatVersion);
-        Assert.Equal("Peștera Cerbul", model.Title);
+        Assert.Equal("Peștera Bravo", model.Title);
         Assert.Equal("EPSG:31700", model.CoordinateSystem);
         Assert.Equal('.', model.SeparatorChar);
         Assert.Equal("@1371300355", model.Datestamp);

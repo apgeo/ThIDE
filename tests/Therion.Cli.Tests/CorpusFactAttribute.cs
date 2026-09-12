@@ -24,11 +24,11 @@ internal static class TestCorpus
     public static bool Available => SampleProjectsRoot() is not null;
 
     /// <summary>The small real-world .lox export used as the CLI export smoke input.</summary>
-    public static string AvCerbulLox()
+    public static string AvBravoLox()
     {
         var root = SampleProjectsRoot();
         Assert.True(root is not null, "tests/Corpus/sample_projects not found above the test output dir.");
-        var path = Path.Combine(root!, "av_cerbul_de_aur", "therion", "rez", "av_cerbul_de_aur_20260505_v1.lox");
+        var path = Path.Combine(root!, "av_bravo", "therion", "rez", "av_bravo_20260505_v1.lox");
         Assert.True(File.Exists(path), $"Expected corpus file missing: {path}");
         return path;
     }

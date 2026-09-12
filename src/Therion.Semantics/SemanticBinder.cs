@@ -251,7 +251,7 @@ public sealed class SemanticBinder
     /// tier, exactly like a cross-file equate member. The per-file walk cannot resolve <c>@</c> at
     /// all (it qualifies the raw token into a scope-local name), so without this the workspace
     /// occurrence index never attributes these tokens to the declaring station and a rename misses
-    /// them (the grind.th shape: a root file whose centreline is all <c>fix X@sub</c> /
+    /// them (the alpha.th shape: a root file whose centreline is all <c>fix X@sub</c> /
     /// <c>station X@sub</c> lines).
     /// </summary>
     private static void RecordAtQualifiedStationRef(BindContext ctx, string raw, SourceSpan span)

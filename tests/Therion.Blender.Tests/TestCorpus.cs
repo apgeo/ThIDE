@@ -47,15 +47,15 @@ internal static class TestCorpus
 
     /// <summary>The small real-world export that exists in BOTH formats (same cave,
     /// same Therion run) — the cross-format ground truth.</summary>
-    public static string AvCerbulLox()
-        => RequireCorpusFile("sample_projects", "av_cerbul_de_aur", "therion", "rez", "av_cerbul_de_aur_20260505_v1.lox");
+    public static string AvBravoLox()
+        => RequireCorpusFile("sample_projects", "av_bravo", "therion", "rez", "av_bravo_20260505_v1.lox");
 
-    public static string AvCerbul3d()
-        => RequireCorpusFile("sample_projects", "av_cerbul_de_aur", "therion", "rez", "av_cerbul_de_aur_20260505_v1.3d");
+    public static string AvBravo3d()
+        => RequireCorpusFile("sample_projects", "av_bravo", "therion", "rez", "av_bravo_20260505_v1.3d");
 
     /// <summary>The large (21 MB) real-world .lox used as the big-file smoke test.</summary>
-    public static string GrindLox()
-        => RequireCorpusFile("sample_projects", "grind", "therion", "rez", "grind2025_v1_aven.lox");
+    public static string AlphaLox()
+        => RequireCorpusFile("sample_projects", "alpha", "therion", "rez", "alpha2025_v1_aven.lox");
 
     public static void AssertModelsEqual(CaveModel expected, CaveModel actual)
     {

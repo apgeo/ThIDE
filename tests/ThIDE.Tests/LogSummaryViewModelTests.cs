@@ -9,7 +9,7 @@ public class LogSummaryViewModelTests
     private const string SuccessLog = """
 therion 6.3.3 (2025-01-06)
   - using Proj 9.4.1, compiled against 9.4.1
-configuration file: C:\caves\grind\thconfig.thconfig
+configuration file: C:\caves\alpha\thconfig.thconfig
 reading ... done
 output coordinate system: UTM35
 meridian convergence (deg): 1.2788
@@ -21,7 +21,7 @@ average loop error: 6.46%
  4> Survey contains 72267 survey stations, joined by 72283 shots.
  6> Total length of survey shots = 3134.02m (3129.85m adjusted)
 #################### end of cavern log file ####################
-writing rez\grind.lox ... done
+writing rez\alpha.lox ... done
 compilation time: 24 sec
 """;
 

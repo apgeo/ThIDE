@@ -11,7 +11,7 @@ public class TopodroidProjectScaffoldTests
         encoding utf-8
         # 2026.05.06 created by TopoDroid v 6.4.34
 
-        survey av_cerbul_de_aur_2025 -title "Avenul Cerbul de Aur" #-entrance 25@av_cerbul_de_aur
+        survey av_bravo_2025 -title "Avenul Bravo de Aur" #-entrance 25@av_bravo
 
           centerline
             date 2026.05.05
@@ -25,17 +25,17 @@ public class TopodroidProjectScaffoldTests
     public void Parse_sniffs_survey_name_title_and_commented_entrance_hint()
     {
         var info = TopodroidProjectScaffold.Parse(TopodroidSample);
-        Assert.Equal("av_cerbul_de_aur_2025", info.SurveyName);
-        Assert.Equal("Avenul Cerbul de Aur", info.Title);
+        Assert.Equal("av_bravo_2025", info.SurveyName);
+        Assert.Equal("Avenul Bravo de Aur", info.Title);
         Assert.Equal("25", info.EntranceHint);   // parsed even though the directive is commented out
     }
 
     private static ScaffoldOptions SampleOptions() => new()
     {
-        ProjectName = "av_cerbul_de_aur",
-        InnerSurveyName = "av_cerbul_de_aur_2025",
-        SourceFileName = "av_cerbul_de_aur.th",
-        Title = "Avenul Cerbul de Aur",
+        ProjectName = "av_bravo",
+        InnerSurveyName = "av_bravo_2025",
+        SourceFileName = "av_bravo.th",
+        Title = "Avenul Bravo de Aur",
         EntranceStation = "25",
         CoordinateSystem = "lat-long",
         FixC1 = "45.55972999",
@@ -57,10 +57,10 @@ public class TopodroidProjectScaffoldTests
     {
         var th = TopodroidProjectScaffold.BuildConnectionTh(SampleOptions());
 
-        Assert.Contains("survey av_cerbul_de_aur -title \"Avenul Cerbul de Aur\" -entrance 25@av_cerbul_de_aur_2025", th);
-        Assert.Contains("input th/av_cerbul_de_aur.th", th);   // forward slashes, cross-platform
+        Assert.Contains("survey av_bravo -title \"Avenul Bravo de Aur\" -entrance 25@av_bravo_2025", th);
+        Assert.Contains("input th/av_bravo.th", th);   // forward slashes, cross-platform
         Assert.Contains("cs lat-long", th);
-        Assert.Contains("fix 25@av_cerbul_de_aur_2025 45.55972999 25.52366911 0", th);
+        Assert.Contains("fix 25@av_bravo_2025 45.55972999 25.52366911 0", th);
         Assert.Contains("endcenterline", th);
         Assert.EndsWith("endsurvey\n", th);
     }
@@ -71,7 +71,7 @@ public class TopodroidProjectScaffoldTests
         var th = TopodroidProjectScaffold.BuildConnectionTh(SampleOptions() with { FixC1 = "", FixC2 = "" });
         Assert.DoesNotContain("\n    fix ", th);           // no live fix line
         Assert.Contains("# centerline", th);               // helpful template instead
-        Assert.Contains("#   fix STATION@av_cerbul_de_aur_2025", th);
+        Assert.Contains("#   fix STATION@av_bravo_2025", th);
     }
 
     [Fact]
@@ -79,16 +79,16 @@ public class TopodroidProjectScaffoldTests
     {
         var thc = TopodroidProjectScaffold.BuildThconfig(SampleOptions() with { Scale = 500, Legend = true });
 
-        Assert.Contains("source av_cerbul_de_aur.th", thc);
-        Assert.Contains("layout L_av_cerbul_de_aur", thc);
+        Assert.Contains("source av_bravo.th", thc);
+        Assert.Contains("layout L_av_bravo", thc);
         Assert.Contains("scale 1 500", thc);
         Assert.Contains("legend on", thc);
 
-        Assert.Contains("export model -fmt loch -o \"rez/av_cerbul_de_aur.lox\"", thc);
-        Assert.Contains("export model -fmt survex -o \"rez/av_cerbul_de_aur.3d\"", thc);
-        Assert.Contains("export model -fmt shp -wall-source splays -o \"rez/av_cerbul_de_aur.shp\"", thc);
-        Assert.Contains("export map -projection plan -fmt pdf -layout L_av_cerbul_de_aur -o \"rez/av_cerbul_de_aur-plan.pdf\"", thc);
-        Assert.Contains("export database -fmt sql -o \"rez/av_cerbul_de_aur.sql\"", thc);
+        Assert.Contains("export model -fmt loch -o \"rez/av_bravo.lox\"", thc);
+        Assert.Contains("export model -fmt survex -o \"rez/av_bravo.3d\"", thc);
+        Assert.Contains("export model -fmt shp -wall-source splays -o \"rez/av_bravo.shp\"", thc);
+        Assert.Contains("export map -projection plan -fmt pdf -layout L_av_bravo -o \"rez/av_bravo-plan.pdf\"", thc);
+        Assert.Contains("export database -fmt sql -o \"rez/av_bravo.sql\"", thc);
     }
 
     [Fact]
@@ -107,10 +107,10 @@ public class TopodroidProjectScaffoldTests
         Assert.Contains("th", plan.Directories);
         Assert.Contains("rez", plan.Directories);
         Assert.DoesNotContain("grafica", plan.Directories);   // graphics dir off by default
-        Assert.Equal("th/av_cerbul_de_aur.th", plan.SourceCopyRelativePath);
+        Assert.Equal("th/av_bravo.th", plan.SourceCopyRelativePath);
 
         Assert.Equal("thconfig.thc", plan.ThconfigRelativePath);
-        Assert.Contains(plan.Files, f => f.RelativePath == "av_cerbul_de_aur.th");
+        Assert.Contains(plan.Files, f => f.RelativePath == "av_bravo.th");
         Assert.Contains(plan.Files, f => f.RelativePath == "thconfig.thc");
     }
 
@@ -135,9 +135,9 @@ public class TopodroidProjectScaffoldTests
     {
         var plan = TopodroidProjectScaffold.BuildPlan(SampleOptions());
         var root = Path.Combine(Path.GetTempPath(), "cave");
-        var source = Path.Combine(root, "av_cerbul_de_aur.th");
+        var source = Path.Combine(root, "av_bravo.th");
 
-        Assert.Equal(new[] { "av_cerbul_de_aur.th" },
+        Assert.Equal(new[] { "av_bravo.th" },
             TopodroidProjectScaffold.ConflictsWithSource(plan, root, source));
     }
 
@@ -146,7 +146,7 @@ public class TopodroidProjectScaffoldTests
     {
         var plan = TopodroidProjectScaffold.BuildPlan(SampleOptions());
         var root = Path.Combine(Path.GetTempPath(), "project");
-        var source = Path.Combine(Path.GetTempPath(), "topodroid", "av_cerbul_de_aur.th");
+        var source = Path.Combine(Path.GetTempPath(), "topodroid", "av_bravo.th");
 
         Assert.Empty(TopodroidProjectScaffold.ConflictsWithSource(plan, root, source));
     }
