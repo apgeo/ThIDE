@@ -3,6 +3,7 @@
 // results into scene-meta.json's `leads` array (local coordinates, matching the mesh).
 // Unmatched leads (e.g. a lead on an anonymous/absent station) are dropped.
 
+using System.Diagnostics.CodeAnalysis;
 namespace Therion.Blender.Sources;
 
 /// <summary>Adds positioned leads to a <see cref="SceneMeta"/> document.</summary>
@@ -64,12 +65,12 @@ public static class LeadsEnricher
         Dictionary<string, SceneMetaVec> byName,
         Dictionary<string, SceneMetaVec> byNormalized,
         Dictionary<string, SceneMetaVec> byLastSegment,
-        out SceneMetaVec position)
+        [MaybeNullWhen(false)] out SceneMetaVec position)
     {
         if (byName.TryGetValue(station, out position)) return true;
         if (byNormalized.TryGetValue(Normalize(station, separator), out position)) return true;
         if (byLastSegment.TryGetValue(LastSegment(station, separator), out position)) return true;
-        position = default!;
+        position = null;
         return false;
     }
 
