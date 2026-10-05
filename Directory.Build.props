@@ -21,12 +21,15 @@
     `TherionLibraryTargetFrameworks` property. Default is single-target net8.0
     so day-to-day builds stay unchanged; pass `-p:TherionMultiTargetNet10=true`
     (or set the env var of the same name) to also produce net10.0 binaries.
-    Apps (ThIDE, Therion.Cli) and tests stay net8.0-only.
+    Apps (ThIDE, Therion.Cli) stay net8.0-only; the library test projects follow the
+    libraries through `TherionTestTargetFrameworks` so the net10.0 assemblies are tested too.
   -->
   <PropertyGroup>
     <TherionMultiTargetNet10 Condition="'$(TherionMultiTargetNet10)' == ''">false</TherionMultiTargetNet10>
     <TherionLibraryTargetFrameworks Condition="'$(TherionMultiTargetNet10)' == 'true'">net8.0;net10.0</TherionLibraryTargetFrameworks>
     <TherionLibraryTargetFrameworks Condition="'$(TherionLibraryTargetFrameworks)' == ''">net8.0</TherionLibraryTargetFrameworks>
+    <TherionTestTargetFrameworks Condition="'$(TherionMultiTargetNet10)' == 'true'">net8.0;net10.0</TherionTestTargetFrameworks>
+    <TherionTestTargetFrameworks Condition="'$(TherionTestTargetFrameworks)' == ''">net8.0</TherionTestTargetFrameworks>
   </PropertyGroup>
 
 </Project>
