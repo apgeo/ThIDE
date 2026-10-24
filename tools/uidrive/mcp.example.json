@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "thide-ui": {
+      "type": "http",
+      "url": "http://127.0.0.1:47800/",
+      "headersHelper": "python3 tools/uidrive/uidrive.py mcp-headers"
+    }
+  }
+}
