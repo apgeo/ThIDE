@@ -99,6 +99,7 @@ public sealed class TherionCompiler : ITherionCompiler
         var workDir = Path.GetDirectoryName(entryFull)!;
         var logPath = Path.GetFullPath(Path.Combine(workDir, options.LogFile ?? DefaultLogFileName));
         var startedAt = DateTimeOffset.UtcNow;
+        var logBefore = LogState.Of(logPath);
 
         var psi = new ProcessStartInfo
         {
@@ -175,7 +176,7 @@ public sealed class TherionCompiler : ITherionCompiler
         var artifacts = _artifacts.Collect(workDir, since: startedAt);
         return new CompileResult(SafeExitCode(proc), diags.ToImmutable(), artifacts)
         {
-            LogPath = WrittenSince(logPath, startedAt) ? logPath : null,
+            LogPath = LogState.Of(logPath).WrittenOver(logBefore) ? logPath : null,
         };
     }
 
@@ -222,9 +223,23 @@ public sealed class TherionCompiler : ITherionCompiler
         }
     }
 
-    private static bool WrittenSince(string path, DateTimeOffset since)
+    // Whether the run wrote the log is told by comparing the file with what was there before the
+    // start, not by comparing its time with the start time: on a file system with coarse
+    // timestamps (one or two seconds) a fresh log can carry a time before the start, and a
+    // leftover log from a run a moment earlier can carry one after it.
+    private readonly record struct LogState(bool Exists, long Length, DateTime WrittenUtc)
     {
-        try { return File.Exists(path) && File.GetLastWriteTimeUtc(path) >= since.UtcDateTime; }
-        catch { return false; }
+        public static LogState Of(string path)
+        {
+            try
+            {
+                var info = new FileInfo(path);
+                return info.Exists ? new LogState(true, info.Length, info.LastWriteTimeUtc) : default;
+            }
+            catch { return default; }
+        }
+
+        public bool WrittenOver(LogState before) =>
+            Exists && (!before.Exists || Length != before.Length || WrittenUtc != before.WrittenUtc);
     }
 }

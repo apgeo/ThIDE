@@ -97,20 +97,101 @@ public class TherionCompilerOptionsTests : IDisposable
         Assert.Equal("-q", Assert.Single(seen).ArgumentList[0]);
     }
 
-    [Fact]
-    public async Task The_seam_can_set_the_environment()
+    // Turns the compiler's start info into a shell running `script`, keeping its environment and
+    // redirections. Therion's arguments follow as the script's positional parameters ($1, $2 …).
+    private static ProcessStartInfo AsShell(ProcessStartInfo psi, string unixScript, string windowsScript)
     {
-        var seen = new List<ProcessStartInfo>();
+        var args = psi.ArgumentList.ToList();
+        psi.FileName = OperatingSystem.IsWindows() ? "cmd.exe" : "/bin/sh";
+        psi.ArgumentList.Clear();
+        if (OperatingSystem.IsWindows())
+        {
+            psi.ArgumentList.Add("/c");
+            psi.ArgumentList.Add(windowsScript);
+        }
+        else
+        {
+            psi.ArgumentList.Add("-c");
+            psi.ArgumentList.Add(unixScript);
+            psi.ArgumentList.Add("sh");
+        }
+        foreach (var a in args) psi.ArgumentList.Add(a);
+        return psi;
+    }
+
+    private sealed class Lines : IProgress<CompilerOutputLine>
+    {
+        public List<string> Seen { get; } = new();
+        public void Report(CompilerOutputLine value) { lock (Seen) Seen.Add(value.Text); }
+    }
+
+    [Fact]
+    public async Task The_seam_can_set_the_environment_of_the_started_process()
+    {
         var entry = Path.Combine(_dir, "thconfig");
         File.WriteAllText(entry, "");
         var options = new TherionCompileOptions
         {
-            ConfigureProcess = psi => { psi.Environment["TMPDIR"] = _dir; seen.Add(psi); return Capturing(new()).ConfigureProcess!(psi); },
+            ConfigureProcess = psi =>
+            {
+                psi.Environment["TMPDIR"] = _dir;
+                return AsShell(psi, "echo \"TMPDIR=$TMPDIR\"", "echo TMPDIR=%TMPDIR%");
+            },
         };
+        var lines = new Lines();
 
-        await new TherionCompiler(new FixedLocator()).CompileAsync(entry, options);
+        var result = await new TherionCompiler(new FixedLocator()).CompileAsync(entry, options, lines);
 
-        Assert.Equal(_dir, Assert.Single(seen).Environment["TMPDIR"]);
+        Assert.Equal(0, result.ExitCode);
+        Assert.Contains($"TMPDIR={_dir}", lines.Seen);
+    }
+
+    // `-l <path>` is the second and third argument when only LogFile is set.
+    private static TherionCompileOptions WritingLog(string unixScript, string windowsScript) => new()
+    {
+        LogFile = "run.log",
+        ConfigureProcess = psi => AsShell(psi, unixScript, windowsScript),
+    };
+
+    [Fact]
+    public async Task A_log_the_run_writes_is_named_in_the_result()
+    {
+        var entry = Path.Combine(_dir, "thconfig");
+        File.WriteAllText(entry, "");
+
+        var result = await new TherionCompiler(new FixedLocator())
+            .CompileAsync(entry, WritingLog("echo x > \"$2\"", $"echo x > \"{Path.Combine(_dir, "run.log")}\""));
+
+        Assert.Equal(Path.Combine(_dir, "run.log"), result.LogPath);
+    }
+
+    [Fact]
+    public async Task A_fresh_log_with_a_time_before_the_start_still_counts()
+    {
+        // A file system with coarse timestamps can give a just-written file a time before the start.
+        if (OperatingSystem.IsWindows()) return;
+        var entry = Path.Combine(_dir, "thconfig");
+        File.WriteAllText(entry, "");
+
+        var result = await new TherionCompiler(new FixedLocator())
+            .CompileAsync(entry, WritingLog("echo x > \"$2\" && touch -t 200001010000 \"$2\"", ""));
+
+        Assert.Equal(Path.Combine(_dir, "run.log"), result.LogPath);
+    }
+
+    [Fact]
+    public async Task A_leftover_log_the_run_did_not_touch_is_not_named()
+    {
+        var entry = Path.Combine(_dir, "thconfig");
+        File.WriteAllText(entry, "");
+        var log = Path.Combine(_dir, "run.log");
+        File.WriteAllText(log, "from an earlier run");
+        // Stamped after the start, as a coarse clock or a run a moment earlier can leave it.
+        File.SetLastWriteTimeUtc(log, DateTime.UtcNow.AddMinutes(5));
+
+        var result = await new TherionCompiler(new FixedLocator()).CompileAsync(entry, WritingLog("true", "rem"));
+
+        Assert.Null(result.LogPath);
     }
 }
 
