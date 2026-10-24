@@ -156,6 +156,7 @@ public static class TherionLogParser
     private static readonly Regex CompilationTimeRx = new(@"^compilation time:\s*(?<v>\d+)\s*sec", Opts);
 
     // "writing rez\cave.lox ... done" — the trailing "done" may land on a later line.
+    private static readonly Regex LoneDoneRx = new(@"^\s*\.*\s*done\s*$", Opts);
     private static readonly Regex WritingRx = new(@"^writing\s+(?<path>.+?)\s*\.\.\.\s*(?<done>done)?\s*$", Opts);
     // Any other "<stage> ... done" progress line.
     private static readonly Regex StageRx = new(@"^(?<name>[A-Za-z][^.]*?)\s*\.\.\.\s*(?<done>done)?\s*$", Opts);
@@ -347,7 +348,8 @@ public static class TherionLogParser
         }
 
         // A lone "done" completes the progress line that was left open ("writing x.lox ...").
-        if (line.Trim() == "done") { s.CompletePending(); return; }
+        // Therion may print progress dots before it (". done" after a model with scraps).
+        if (LoneDoneRx.IsMatch(line)) { s.CompletePending(); return; }
 
         if (WritingRx.Match(line) is { Success: true } w)
         {
