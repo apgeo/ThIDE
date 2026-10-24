@@ -1,0 +1,5 @@
+encoding utf-8
+# Invented test project for the end-to-end UI tests.
+source demo.th
+export model -o demo.lox
+export model -fmt survex -o demo.3d

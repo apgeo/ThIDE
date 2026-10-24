@@ -200,3 +200,10 @@ results/
 # `python -m py_compile` (the golden scripts' syntax check) drops bytecode next to the source.
 __pycache__/
 *.pyc
+
+# End-to-end UI test output (tests/run-ui-tests.sh)
+tests/ui-artifacts/
+tests/e2e-linux/artifacts/
+tests/ui-fixtures/**/therion.log
+tests/ui-fixtures/**/*.lox
+tests/ui-fixtures/**/*.3d
