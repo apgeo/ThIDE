@@ -167,7 +167,7 @@ public class ScaffoldToolsTests
         Assert.True(result.Ok, result.Error?.Message);
         var wrapper = File.ReadAllText(fixture.PathTo("meziad", "meziad.th"));
         Assert.Contains("survey meziad", wrapper);
-        Assert.Contains("input th/td.th", wrapper);
+        Assert.Contains("input \"th/td.th\"", wrapper);
 
         var thconfig = File.ReadAllText(fixture.PathTo("meziad", "thconfig.thc"));
         Assert.Contains("source meziad.th", thconfig);
