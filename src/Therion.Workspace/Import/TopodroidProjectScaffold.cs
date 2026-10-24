@@ -56,7 +56,11 @@ public sealed record ScaffoldOptions
     public string SourceFileName { get; init; } = "survey.th";
     public string Title { get; init; } = "";
 
-    // ── georeferencing (all optional; emitted only when a fix is supplied) ──
+    // ── georeferencing (all optional) ──
+    // The live centerline/cs/fix block is emitted only when both a fix (FixC1 + FixC2) and an
+    // entrance station (with InnerSurveyName) are known; callers fill EntranceStation from the
+    // option the user gave or from the entrance hint read out of the survey. A fix without a
+    // station is written as a commented block instead.
     public string EntranceStation { get; init; } = "";   // e.g. "25" → 25@InnerSurveyName
     public string CoordinateSystem { get; init; } = "lat-long";
     public string FixC1 { get; init; } = "";             // first coord in CS order (lat for lat-long)
@@ -173,15 +177,28 @@ public static class TopodroidProjectScaffold
 
         sb.Append("  input ").Append(o.SourceDir).Append('/').Append(o.SourceFileName).Append("\n\n");
 
-        if (o.HasFix)
+        // A fix needs a station to pin. Without a known entrance there is nothing truthful to write
+        // (a placeholder name makes Therion stop with "station does not exist"), so the block stays
+        // commented — with the coordinates filled in when they were given — for a person to finish.
+        var c3 = string.IsNullOrWhiteSpace(o.FixC3) ? "0" : o.FixC3.Trim();
+        if (o.HasFix && !string.IsNullOrEmpty(o.EntranceRef))
         {
             sb.Append("  centerline\n");
             sb.Append("    cs ").Append(o.CoordinateSystem).Append('\n');
-            var station = string.IsNullOrEmpty(o.EntranceRef) ? "STATION@" + o.InnerSurveyName : o.EntranceRef;
-            sb.Append("    fix ").Append(station).Append(' ')
+            sb.Append("    fix ").Append(o.EntranceRef).Append(' ')
               .Append(o.FixC1.Trim()).Append(' ').Append(o.FixC2.Trim()).Append(' ')
-              .Append(string.IsNullOrWhiteSpace(o.FixC3) ? "0" : o.FixC3.Trim()).Append('\n');
+              .Append(c3).Append('\n');
             sb.Append("  endcenterline\n\n");
+        }
+        else if (o.HasFix)
+        {
+            sb.Append("  # Coordinates were given but no entrance station is known, so there is no station\n");
+            sb.Append("  # to fix them to. Replace STATION with the entrance station's name and uncomment.\n");
+            sb.Append("  # centerline\n");
+            sb.Append("  #   cs ").Append(o.CoordinateSystem).Append('\n');
+            sb.Append("  #   fix STATION@").Append(o.InnerSurveyName).Append(' ')
+              .Append(o.FixC1.Trim()).Append(' ').Append(o.FixC2.Trim()).Append(' ').Append(c3).Append('\n');
+            sb.Append("  # endcenterline\n\n");
         }
         else
         {

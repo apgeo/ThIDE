@@ -233,4 +233,23 @@ public class TopodroidProjectScaffoldTests
 
         Assert.Contains("thconfig.thc", TopodroidProjectScaffold.ConflictsWithSources(plan, root, new[] { source }));
     }
+    // A fix with no station to pin used to emit a live `fix STATION@<inner>` that Therion rejects.
+    [Fact]
+    public void A_fix_without_an_entrance_station_stays_commented_with_its_coordinates()
+    {
+        var th = TopodroidProjectScaffold.BuildConnectionTh(SampleOptions() with { EntranceStation = "" });
+
+        Assert.DoesNotContain("\n  centerline", th);
+        Assert.DoesNotContain("\n    fix ", th);
+        Assert.Contains("#   fix STATION@av_bravo_2025 45.55972999 25.52366911 0", th);
+        Assert.Contains("no entrance station is known", th);
+        Assert.DoesNotContain("-entrance", th);
+    }
+
+    [Fact]
+    public void A_fix_without_an_inner_survey_name_stays_commented()
+    {
+        var th = TopodroidProjectScaffold.BuildConnectionTh(SampleOptions() with { InnerSurveyName = "" });
+        Assert.DoesNotContain("\n    fix ", th);
+    }
 }
