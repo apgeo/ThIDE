@@ -1,24 +1,21 @@
 using System.Diagnostics;
 using System.Text;
+using System.Text.RegularExpressions;
 using Therion.Build;
 using Therion.Workspace.Import;
 
 namespace Therion.Workspace.Tests;
 
-/// <summary>A fact that runs only where a Therion binary is installed; skipped otherwise.</summary>
+/// <summary>
+/// A fact that runs only where the compiler can find Therion; skipped otherwise. Asks the same
+/// locator the compiler uses, so the two never disagree about whether Therion is there.
+/// </summary>
 public sealed class TherionInstalledFactAttribute : FactAttribute
 {
     public TherionInstalledFactAttribute()
     {
-        if (FindTherion() is null) Skip = "Therion is not installed on this machine.";
-    }
-
-    internal static string? FindTherion()
-    {
-        var name = OperatingSystem.IsWindows() ? "therion.exe" : "therion";
-        var dirs = new List<string> { "/usr/bin", "/usr/local/bin" };
-        dirs.AddRange((Environment.GetEnvironmentVariable("PATH") ?? "").Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries));
-        return dirs.Select(d => Path.Combine(d, name)).FirstOrDefault(File.Exists);
+        var tool = new ExternalToolLocator().FindAsync(ExternalToolLocator.Therion).AsTask().GetAwaiter().GetResult();
+        if (tool is null) Skip = "Therion is not installed on this machine.";
     }
 }
 
@@ -128,10 +125,61 @@ public class TopodroidScaffoldCompileTests : IDisposable
         Assert.Empty(reconciliation.Missing);
         Assert.True(new FileInfo(Path.Combine(_root, "rez", "probe-plan.pdf")).Length > 0);
         Assert.Contains(result.Artifacts, a => a.Path.EndsWith("probe.sql", StringComparison.Ordinal));
+        // The maps would compile from the centreline alone; the scrap's selection line in the log
+        // shows the sketch was read through the survey's own input and drawn.
+        Assert.Matches(new Regex(@"^S .*\bs1p@invented\.probe\b", RegexOptions.Multiline), File.ReadAllText(result.LogPath!));
     }
 
     [TherionInstalledFact]
-    public async Task Survey_without_sketches_or_fix_still_draws_maps_and_reports_the_kml_missing()
+    public async Task A_title_with_quotes_survives_the_reader_and_the_wrapper()
+    {
+        var survey = InventedSurvey.Replace("-title \"Invented Test Cave\"", "-title \"a \"\"b\"\" c\"").Replace("{INPUTS}", "");
+        var header = TopodroidSurveyHeaderReader.Read(survey);
+        var options = new ScaffoldOptions
+        {
+            ProjectName = "probe",
+            InnerSurveyName = header.SurveyName,
+            SourceFileName = "invented.th",
+            Title = header.Title,
+            EntranceStation = header.EntranceStation,
+            Exports = ScaffoldExportPresets.Resolve(new[] { "lox", "plan-pdf" }),
+        };
+
+        var (result, reconciliation) = await ScaffoldAndCompileAsync(options, new Dictionary<string, string> { ["invented.th"] = survey });
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.True(reconciliation.AllProduced, $"missing: {string.Join(", ", reconciliation.Missing)}");
+    }
+
+    [TherionInstalledFact]
+    public async Task A_survey_with_its_own_fix_compiles_georeferenced_without_a_false_loop()
+    {
+        var survey = InventedSurvey
+            .Replace("    flags not duplicate", "    cs lat-long\n    fix 0 46.0000 24.0000 500\n    flags not duplicate")
+            .Replace("{INPUTS}", "");
+        var header = TopodroidSurveyHeaderReader.Read(survey);
+        Assert.True(header.HasFix);
+        var options = new ScaffoldOptions
+        {
+            ProjectName = "probe",
+            InnerSurveyName = header.SurveyName,
+            SourceFileName = "invented.th",
+            EntranceStation = header.EntranceStation,
+            SurveyHasFix = header.HasFix,
+            Exports = ScaffoldExportPresets.Resolve(new[] { "lox", "kml" }),
+        };
+
+        var (result, reconciliation) = await ScaffoldAndCompileAsync(options, new Dictionary<string, string> { ["invented.th"] = survey });
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.True(reconciliation.AllProduced, $"missing: {string.Join(", ", reconciliation.Missing)}");   // the KML needs the georeference
+        var log = File.ReadAllText(result.LogPath!);
+        Assert.DoesNotContain("average loop error", log);
+        Assert.DoesNotContain("already fixed", log);
+    }
+
+    [TherionInstalledFact]
+    public async Task Survey_without_sketches_and_coordinates_without_an_entrance_still_draws_maps_and_reports_the_kml_missing()
     {
         // A name with a space proves the wrapper's quoted input; no fix → the georeference block is
         // left commented, and Therion skips the KML ("data not georeferenced").
