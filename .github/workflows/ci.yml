@@ -33,3 +33,36 @@ jobs:
 
       - name: Test
         run: dotnet test ThIDE.sln -m:1 --no-build -c Release --verbosity normal
+
+  # End-to-end UI tests on a virtual display (tests/run-ui-tests.sh): the C# suite over the in-app
+  # automation server and the black-box AT-SPI suite. Non-blocking until it has a track record on
+  # hosted runners.
+  ui-tests:
+    name: UI tests (linux, xvfb)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Install display, accessibility and toolchain packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            xvfb xfwm4 dbus-x11 at-spi2-core xdotool \
+            python3-gi gir1.2-atspi-2.0 python3-pil python3-pytest \
+            libwebkit2gtk-4.1-0 therion survex
+
+      - name: Run UI tests
+        run: tests/run-ui-tests.sh all
+
+      - name: Upload UI test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-test-artifacts
+          path: tests/ui-artifacts/
