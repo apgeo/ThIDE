@@ -258,4 +258,28 @@ public class TopodroidProjectScaffoldTests
         var th = TopodroidProjectScaffold.BuildConnectionTh(SampleOptions() with { SourceFileName = "Avenul Bravo.th" });
         Assert.Contains("  input \"th/Avenul Bravo.th\"\n", th);
     }
+    [Fact]
+    public void Plan_names_the_output_each_export_writes_as_the_thconfig_does()
+    {
+        var options = SampleOptions();
+        var plan = TopodroidProjectScaffold.BuildPlan(options);
+        var thc = plan.Files.Single(f => f.RelativePath == plan.ThconfigRelativePath).Content;
+
+        Assert.Equal(options.Exports, plan.ExpectedOutputs.Select(o => o.Export));
+        Assert.Equal(new[]
+            {
+                "rez/av_bravo.lox", "rez/av_bravo.3d", "rez/av_bravo.kml",
+                "rez/av_bravo.shp", "rez/av_bravo-plan.pdf", "rez/av_bravo.sql",
+            },
+            plan.ExpectedOutputs.Select(o => o.RelativePath));
+        foreach (var o in plan.ExpectedOutputs)
+            Assert.Contains("-o \"" + o.RelativePath + "\"", thc);
+    }
+
+    [Fact]
+    public void Expected_outputs_follow_the_output_dir_and_base_name()
+    {
+        var outputs = TopodroidProjectScaffold.ExpectedOutputs(SampleOptions() with { OutputDir = "out", OutputBaseName = "x" });
+        Assert.Equal("out/x.lox", outputs[0].RelativePath);
+    }
 }

@@ -119,6 +119,14 @@ public sealed record ScaffoldFile(string RelativePath, string Content);
 public sealed record ScaffoldSourceCopy(string RelativePath, string SourceFileName);
 
 /// <summary>
+/// The file (or, for shapefile exports, the directory) one <see cref="ExportItem"/> makes Therion
+/// write — <paramref name="RelativePath"/> is relative to the project root (the compile's working
+/// directory) with forward slashes, exactly as it appears after <c>-o</c> in the thconfig and in
+/// Therion's log.
+/// </summary>
+public sealed record ScaffoldExpectedOutput(ExportItem Export, string RelativePath);
+
+/// <summary>
 /// Everything the caller needs to materialise the project: directories to create, text files to
 /// write, and where to place a copy of the source survey. All paths are project-root-relative and
 /// use forward slashes (Therion accepts them on every platform).
@@ -134,6 +142,14 @@ public sealed record ScaffoldPlan(
     /// followed by each sketch in the order given.
     /// </summary>
     public IReadOnlyList<ScaffoldSourceCopy> SourceCopies { get; init; } = Array.Empty<ScaffoldSourceCopy>();
+
+    /// <summary>
+    /// What the thconfig's exports will write, one entry per <see cref="ScaffoldOptions.Exports"/>
+    /// item in order. Reconcile it with the log's written outputs (Therion.Build's
+    /// <c>OutputReconciler</c> over <c>TherionLogSummary.OutputFiles</c>) to learn which were
+    /// produced and which are missing.
+    /// </summary>
+    public IReadOnlyList<ScaffoldExpectedOutput> ExpectedOutputs { get; init; } = Array.Empty<ScaffoldExpectedOutput>();
 }
 
 public static class TopodroidProjectScaffold
@@ -273,7 +289,20 @@ public static class TopodroidProjectScaffold
         var copies = new List<ScaffoldSourceCopy> { new(sourceCopy, o.SourceFileName) };
         foreach (var sketch in o.SketchFileNames)
             copies.Add(new ScaffoldSourceCopy(o.SourceDir + "/" + sketch, sketch));
-        return new ScaffoldPlan(dirs, files, sourceCopy, thconfigName) { SourceCopies = copies };
+        return new ScaffoldPlan(dirs, files, sourceCopy, thconfigName)
+        {
+            SourceCopies = copies,
+            ExpectedOutputs = ExpectedOutputs(o),
+        };
+    }
+
+    /// <summary>The output path each export writes, in the order of <see cref="ScaffoldOptions.Exports"/>.</summary>
+    public static IReadOnlyList<ScaffoldExpectedOutput> ExpectedOutputs(ScaffoldOptions o)
+    {
+        var list = new List<ScaffoldExpectedOutput>(o.Exports.Count);
+        foreach (var e in o.Exports)
+            list.Add(new ScaffoldExpectedOutput(e, OutputPath(e, o.EffectiveBaseName, o.OutputDir)));
+        return list;
     }
 
     // Copied names land in SourceDir as given, so a directory part ("../x", "a/b.th2") would place a
@@ -339,9 +368,12 @@ public static class TopodroidProjectScaffold
         if (!string.IsNullOrEmpty(e.Fmt)) sb.Append(" -fmt ").Append(e.Fmt);
         if (e.UseLayout && !string.IsNullOrEmpty(layoutName)) sb.Append(" -layout ").Append(layoutName);
         if (!string.IsNullOrEmpty(e.WallSource)) sb.Append(" -wall-source ").Append(e.WallSource);
-        sb.Append(" -o \"").Append(outDir).Append('/').Append(OutputName(e, baseName)).Append('"');
+        sb.Append(" -o \"").Append(OutputPath(e, baseName, outDir)).Append('"');
         return sb.ToString();
     }
+
+    private static string OutputPath(ExportItem e, string baseName, string outDir)
+        => outDir + "/" + OutputName(e, baseName);
 
     private static string OutputName(ExportItem e, string baseName)
     {
