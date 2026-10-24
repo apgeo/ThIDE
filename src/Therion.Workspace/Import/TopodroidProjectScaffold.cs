@@ -175,7 +175,8 @@ public static class TopodroidProjectScaffold
         if (!string.IsNullOrEmpty(o.EntranceRef)) sb.Append(" -entrance ").Append(o.EntranceRef);
         sb.Append("\n\n");
 
-        sb.Append("  input ").Append(o.SourceDir).Append('/').Append(o.SourceFileName).Append("\n\n");
+        // Quoted so a file name with spaces (TopoDroid names files after the survey title) stays one path.
+        sb.Append("  input \"").Append(o.SourceDir).Append('/').Append(o.SourceFileName).Append("\"\n\n");
 
         // A fix needs a station to pin. Without a known entrance there is nothing truthful to write
         // (a placeholder name makes Therion stop with "station does not exist"), so the block stays

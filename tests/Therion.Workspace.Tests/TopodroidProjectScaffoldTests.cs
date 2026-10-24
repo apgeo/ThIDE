@@ -58,7 +58,7 @@ public class TopodroidProjectScaffoldTests
         var th = TopodroidProjectScaffold.BuildConnectionTh(SampleOptions());
 
         Assert.Contains("survey av_bravo -title \"Avenul Bravo de Aur\" -entrance 25@av_bravo_2025", th);
-        Assert.Contains("input th/av_bravo.th", th);   // forward slashes, cross-platform
+        Assert.Contains("input \"th/av_bravo.th\"", th);   // quoted, forward slashes, cross-platform
         Assert.Contains("cs lat-long", th);
         Assert.Contains("fix 25@av_bravo_2025 45.55972999 25.52366911 0", th);
         Assert.Contains("endcenterline", th);
@@ -251,5 +251,11 @@ public class TopodroidProjectScaffoldTests
     {
         var th = TopodroidProjectScaffold.BuildConnectionTh(SampleOptions() with { InnerSurveyName = "" });
         Assert.DoesNotContain("\n    fix ", th);
+    }
+    [Fact]
+    public void Input_path_with_spaces_is_quoted()
+    {
+        var th = TopodroidProjectScaffold.BuildConnectionTh(SampleOptions() with { SourceFileName = "Avenul Bravo.th" });
+        Assert.Contains("  input \"th/Avenul Bravo.th\"\n", th);
     }
 }
