@@ -89,15 +89,26 @@ public sealed record ScaffoldOptions
     /// </summary>
     public IReadOnlyList<string> SketchFileNames { get; init; } = Array.Empty<string>();
 
+    /// <summary>
+    /// The survey already carries its own <c>fix</c> (<see cref="TopodroidSurveyHeader.HasFix"/>).
+    /// The wrapper then writes no georeference of its own, and coordinates given as well
+    /// (<see cref="FixC1"/>/<see cref="FixC2"/>) are refused: a second fix on another station bends
+    /// the survey into a false loop that Therion compiles without an error.
+    /// </summary>
+    public bool SurveyHasFix { get; init; }
+
     private string LayoutName => "L_" + Sanitize(ProjectName);
     internal string EffectiveLayoutName => LayoutName;
     internal string EffectiveBaseName => string.IsNullOrWhiteSpace(OutputBaseName) ? Sanitize(ProjectName) : OutputBaseName.Trim();
     internal bool HasFix => !string.IsNullOrWhiteSpace(FixC1) && !string.IsNullOrWhiteSpace(FixC2);
 
+    // A station in a survey nested inside the inner one ("5@sub") becomes 5@sub.<inner>.
     internal string EntranceRef =>
         string.IsNullOrWhiteSpace(EntranceStation) || string.IsNullOrWhiteSpace(InnerSurveyName)
             ? string.Empty
-            : $"{EntranceStation.Trim()}@{InnerSurveyName.Trim()}";
+            : EntranceStation.Contains('@')
+                ? $"{EntranceStation.Trim()}.{InnerSurveyName.Trim()}"
+                : $"{EntranceStation.Trim()}@{InnerSurveyName.Trim()}";
 
     internal static string Sanitize(string s)
     {
@@ -174,8 +185,9 @@ public static class TopodroidProjectScaffold
 
     private static string ExtractTitle(string surveyLine)
     {
-        var q = Regex.Match(surveyLine, "-title\\s+\"([^\"]*)\"");
-        if (q.Success) return q.Groups[1].Value;
+        // Inside a quoted string Therion writes a quote as "".
+        var q = Regex.Match(surveyLine, "-title\\s+\"((?:[^\"]|\"\")*)\"");
+        if (q.Success) return q.Groups[1].Value.Replace("\"\"", "\"");
         var bare = Regex.Match(surveyLine, @"-title\s+(\S+)");
         return bare.Success ? bare.Groups[1].Value : string.Empty;
     }
@@ -183,11 +195,12 @@ public static class TopodroidProjectScaffold
     /// <summary>The wrapper survey that inputs the TopoDroid file and (optionally) georeferences it.</summary>
     public static string BuildConnectionTh(ScaffoldOptions o)
     {
+        ValidateOptions(o);
         var sb = new StringBuilder();
         sb.Append("encoding ").Append(o.Encoding).Append("\n\n");
 
         sb.Append("survey ").Append(ScaffoldOptions.Sanitize(o.ProjectName));
-        if (!string.IsNullOrWhiteSpace(o.Title)) sb.Append(" -title \"").Append(o.Title.Trim()).Append('"');
+        if (!string.IsNullOrWhiteSpace(o.Title)) sb.Append(" -title \"").Append(o.Title.Trim().Replace("\"", "\"\"")).Append('"');
         if (!string.IsNullOrEmpty(o.EntranceRef)) sb.Append(" -entrance ").Append(o.EntranceRef);
         sb.Append("\n\n");
 
@@ -198,7 +211,11 @@ public static class TopodroidProjectScaffold
         // (a placeholder name makes Therion stop with "station does not exist"), so the block stays
         // commented — with the coordinates filled in when they were given — for a person to finish.
         var c3 = string.IsNullOrWhiteSpace(o.FixC3) ? "0" : o.FixC3.Trim();
-        if (o.HasFix && !string.IsNullOrEmpty(o.EntranceRef))
+        if (o.SurveyHasFix)
+        {
+            sb.Append("  # The survey is georeferenced by its own fix, so the wrapper adds none.\n\n");
+        }
+        else if (o.HasFix && !string.IsNullOrEmpty(o.EntranceRef))
         {
             sb.Append("  centerline\n");
             sb.Append("    cs ").Append(o.CoordinateSystem).Append('\n');
@@ -234,6 +251,7 @@ public static class TopodroidProjectScaffold
     /// <summary>The thconfig: source line, optional layout, and one line per chosen export.</summary>
     public static string BuildThconfig(ScaffoldOptions o)
     {
+        ValidateOptions(o);
         var sb = new StringBuilder();
         sb.Append("encoding ").Append(o.Encoding).Append('\n');
         sb.Append("source ").Append(ScaffoldOptions.Sanitize(o.ProjectName)).Append(".th\n\n");
@@ -269,12 +287,13 @@ public static class TopodroidProjectScaffold
 
     /// <summary>
     /// Builds the full plan (dirs + files + where to copy the survey and its sketches) for the caller
-    /// to execute. Throws <see cref="ArgumentException"/> when the survey or a sketch name has a
-    /// directory part, or when two of them would be copied to the same place.
+    /// to execute. Throws <see cref="ArgumentException"/> when an option would not make a sound
+    /// project (see <see cref="ValidateOptions"/>), when the survey or a sketch name has a directory
+    /// part, or when two of them would be copied to the same place.
     /// </summary>
     public static ScaffoldPlan BuildPlan(ScaffoldOptions o)
     {
-        ValidateCopyNames(o);
+        ValidateOptions(o);
         var dirs = new List<string> { o.SourceDir, o.OutputDir };
         if (o.CreateGraphicsDir) dirs.Add(o.GraphicsDir);
 
@@ -299,21 +318,105 @@ public static class TopodroidProjectScaffold
     /// <summary>The output path each export writes, in the order of <see cref="ScaffoldOptions.Exports"/>.</summary>
     public static IReadOnlyList<ScaffoldExpectedOutput> ExpectedOutputs(ScaffoldOptions o)
     {
+        ValidateOptions(o);
         var list = new List<ScaffoldExpectedOutput>(o.Exports.Count);
         foreach (var e in o.Exports)
             list.Add(new ScaffoldExpectedOutput(e, OutputPath(e, o.EffectiveBaseName, o.OutputDir)));
         return list;
     }
 
+    // Therion's keyword (survey names) and extended keyword (station names); a station reference
+    // may name the survey it is in, innermost first: 5@sub or 5@deeper.sub.
+    private const string Keyword = "[A-Za-z0-9_/][A-Za-z0-9_/-]*";
+    private const string ExtKeyword = "[A-Za-z0-9_/][A-Za-z0-9_/+*.,'-]*";
+    private static readonly Regex SurveyNameRx = new("^" + Keyword + "$", RegexOptions.CultureInvariant);
+    private static readonly Regex StationRefRx = new("^" + ExtKeyword + "(@" + Keyword + @"(\." + Keyword + ")*)?$", RegexOptions.CultureInvariant);
+    private static readonly Regex EncodingRx = new("^[A-Za-z0-9_-]+$", RegexOptions.CultureInvariant);
+    private static readonly Regex CoordinateSystemRx = new("^[A-Za-z0-9:._+-]+$", RegexOptions.CultureInvariant);
+    private static readonly Regex BaseNameRx = new("^[A-Za-z0-9_.-]+$", RegexOptions.CultureInvariant);
+    private static readonly Regex OptionTokenRx = new("^[A-Za-z0-9_-]*$", RegexOptions.CultureInvariant);
+    private static readonly Regex ExtensionRx = new("^[A-Za-z0-9_.-]*$", RegexOptions.CultureInvariant);
+
+    /// <summary>
+    /// Throws <see cref="ArgumentException"/> when an option cannot be written into the wrapper and
+    /// the thconfig as the plain value it is meant to be. Every value lands in a Therion command
+    /// line, and the thconfig is a script Therion runs (it has a <c>system</c> command), so a line
+    /// break in any of them, or a quote in a quoted one, would add a command of the caller's
+    /// choosing; a directory that climbs out (<c>..</c>) or is rooted would make Therion — and the
+    /// caller creating <see cref="ScaffoldPlan.Directories"/> — write outside the project. Values
+    /// are checked against what Therion accepts there rather than escaped, except the title, whose
+    /// quotes are written as Therion's <c>""</c>. Called by every builder here, so a server can rely
+    /// on it whichever it calls.
+    /// </summary>
+    public static void ValidateOptions(ScaffoldOptions o)
+    {
+        ArgumentNullException.ThrowIfNull(o);
+        void Fail(string what, string value) =>
+            throw new ArgumentException($"{what} '{value}' cannot be written into the project.", nameof(o));
+
+        foreach (var (what, value) in new[]
+                 {
+                     ("ProjectName", o.ProjectName), ("InnerSurveyName", o.InnerSurveyName), ("Title", o.Title),
+                     ("EntranceStation", o.EntranceStation), ("CoordinateSystem", o.CoordinateSystem),
+                     ("FixC1", o.FixC1), ("FixC2", o.FixC2), ("FixC3", o.FixC3), ("SourceDir", o.SourceDir),
+                     ("OutputDir", o.OutputDir), ("GraphicsDir", o.GraphicsDir), ("OutputBaseName", o.OutputBaseName),
+                     ("Encoding", o.Encoding),
+                 })
+            if (value is null || value.Any(char.IsControl)) Fail(what, value ?? "");
+
+        if (!EncodingRx.IsMatch(o.Encoding)) Fail("Encoding", o.Encoding);
+        if (!CoordinateSystemRx.IsMatch(o.CoordinateSystem.Trim())) Fail("CoordinateSystem", o.CoordinateSystem);
+        if (!string.IsNullOrWhiteSpace(o.InnerSurveyName) && !SurveyNameRx.IsMatch(o.InnerSurveyName.Trim()))
+            Fail("InnerSurveyName", o.InnerSurveyName);
+        if (!string.IsNullOrWhiteSpace(o.EntranceStation) && !StationRefRx.IsMatch(o.EntranceStation.Trim()))
+            Fail("EntranceStation", o.EntranceStation);
+        foreach (var (what, value) in new[] { ("FixC1", o.FixC1), ("FixC2", o.FixC2), ("FixC3", o.FixC3) })
+            if (!string.IsNullOrWhiteSpace(value)
+                && !double.TryParse(value.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out _))
+                Fail(what, value);
+
+        if (!IsProjectRelativeDir(o.SourceDir, allowDot: true)) Fail("SourceDir", o.SourceDir);
+        if (!IsProjectRelativeDir(o.OutputDir, allowDot: false)) Fail("OutputDir", o.OutputDir);
+        if (o.CreateGraphicsDir && !IsProjectRelativeDir(o.GraphicsDir, allowDot: false)) Fail("GraphicsDir", o.GraphicsDir);
+        if (!string.IsNullOrWhiteSpace(o.OutputBaseName)
+            && (!BaseNameRx.IsMatch(o.OutputBaseName.Trim()) || o.OutputBaseName.Trim() is "." or ".."))
+            Fail("OutputBaseName", o.OutputBaseName);
+
+        foreach (var e in o.Exports)
+        {
+            if (!OptionTokenRx.IsMatch(e.Fmt ?? "") || !OptionTokenRx.IsMatch(e.Projection ?? "")
+                || !OptionTokenRx.IsMatch(e.WallSource ?? "") || !ExtensionRx.IsMatch(e.Extension ?? ""))
+                Fail("Export", $"{e.Kind} {e.Fmt} {e.Projection} {e.WallSource} {e.Extension}");
+        }
+
+        if (o.SurveyHasFix && o.HasFix)
+            throw new ArgumentException(
+                "The survey is already georeferenced by its own fix; giving coordinates as well would add a second fix.",
+                nameof(o));
+
+        ValidateCopyNames(o);
+    }
+
+    // A directory under the project root: relative, forward slashes only, and no segment that is
+    // empty, '.', '..', or that could read as a drive (':') or end a quoted path ('"').
+    private static bool IsProjectRelativeDir(string dir, bool allowDot)
+    {
+        if (string.IsNullOrWhiteSpace(dir)) return false;
+        if (allowDot && dir == ".") return true;
+        if (Path.IsPathRooted(dir) || dir.IndexOfAny(new[] { '\\', ':', '"' }) >= 0) return false;
+        return dir.Split('/').All(s => s.Length > 0 && s is not "." and not ".." && s.Trim().Length == s.Length);
+    }
+
     // Copied names land in SourceDir as given, so a directory part ("../x", "a/b.th2") would place a
-    // file outside it, and two names differing only in case collide on a case-insensitive disk.
+    // file outside it, and two names differing only in case collide on a case-insensitive disk. The
+    // survey's name is written inside a quoted `input`, so a quote or a line break would end it.
     private static void ValidateCopyNames(ScaffoldOptions o)
     {
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var name in new[] { o.SourceFileName }.Concat(o.SketchFileNames))
         {
             if (string.IsNullOrWhiteSpace(name) || name is "." or ".."
-                || name.IndexOfAny(new[] { '/', '\\' }) >= 0 || name.Contains(':'))
+                || name.IndexOfAny(new[] { '/', '\\', '"' }) >= 0 || name.Contains(':') || name.Any(char.IsControl))
                 throw new ArgumentException($"'{name}' is not a bare file name.", nameof(o));
             if (!seen.Add(name))
                 throw new ArgumentException($"'{name}' is listed more than once.", nameof(o));
