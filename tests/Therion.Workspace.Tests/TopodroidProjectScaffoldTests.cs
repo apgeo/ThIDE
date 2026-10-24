@@ -150,4 +150,87 @@ public class TopodroidProjectScaffoldTests
 
         Assert.Empty(TopodroidProjectScaffold.ConflictsWithSource(plan, root, source));
     }
+    // Sketches are input by the survey itself (relative to it), so the plan copies them beside it.
+    [Fact]
+    public void Plan_copies_the_sketches_beside_the_survey()
+    {
+        var plan = TopodroidProjectScaffold.BuildPlan(SampleOptions() with
+        {
+            SketchFileNames = new[] { "av_bravo-1p.th2", "av_bravo-1s.th2" },
+        });
+
+        Assert.Equal(new[] { "th/av_bravo.th", "th/av_bravo-1p.th2", "th/av_bravo-1s.th2" },
+            plan.SourceCopies.Select(c => c.RelativePath));
+        Assert.Equal(new[] { "av_bravo.th", "av_bravo-1p.th2", "av_bravo-1s.th2" },
+            plan.SourceCopies.Select(c => c.SourceFileName));
+        Assert.Equal(plan.SourceCopyRelativePath, plan.SourceCopies[0].RelativePath);
+    }
+
+    [Fact]
+    public void Wrapper_and_thconfig_declare_nothing_for_the_sketches()
+    {
+        var withSketches = SampleOptions() with { SketchFileNames = new[] { "av_bravo-1p.th2" } };
+
+        Assert.DoesNotContain(".th2", TopodroidProjectScaffold.BuildConnectionTh(withSketches));
+        Assert.Equal(TopodroidProjectScaffold.BuildThconfig(SampleOptions()),
+            TopodroidProjectScaffold.BuildThconfig(withSketches));
+    }
+
+    [Fact]
+    public void Map_exports_are_kept_without_sketches()
+    {
+        var thc = TopodroidProjectScaffold.BuildThconfig(SampleOptions());   // no sketches at all
+        Assert.Contains("export map -projection plan", thc);
+    }
+
+    [Theory]
+    [InlineData("../evil.th2")]
+    [InlineData("sub/plan.th2")]
+    [InlineData("sub\\plan.th2")]
+    [InlineData("..")]
+    [InlineData("")]
+    public void Plan_refuses_a_sketch_name_with_a_directory_part(string name)
+    {
+        Assert.Throws<ArgumentException>(() =>
+            TopodroidProjectScaffold.BuildPlan(SampleOptions() with { SketchFileNames = new[] { name } }));
+    }
+
+    [Fact]
+    public void Plan_refuses_a_sketch_that_would_land_on_the_survey_copy()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            TopodroidProjectScaffold.BuildPlan(SampleOptions() with { SketchFileNames = new[] { "AV_BRAVO.th" } }));
+    }
+
+    [Fact]
+    public void A_sketch_in_the_target_folder_conflicts_with_a_generated_file()
+    {
+        // The project's wrapper is av_bravo.th; a sketch source sitting at <root>/av_bravo.th would be
+        // overwritten by it.
+        var plan = TopodroidProjectScaffold.BuildPlan(SampleOptions() with { SketchFileNames = new[] { "plan.th2" } });
+        var root = Path.Combine(Path.GetTempPath(), "project");
+        var sources = new[]
+        {
+            Path.Combine(Path.GetTempPath(), "topodroid", "av_bravo.th"),
+            Path.Combine(root, "av_bravo.th"),
+        };
+
+        Assert.Equal(new[] { "av_bravo.th" }, TopodroidProjectScaffold.ConflictsWithSources(plan, root, sources));
+    }
+
+    [Fact]
+    public void A_sketch_copy_landing_on_a_generated_file_conflicts()
+    {
+        // SourceDir "." puts the copies at the project root, where a sketch named like the thconfig
+        // would collide with it.
+        var plan = TopodroidProjectScaffold.BuildPlan(SampleOptions() with
+        {
+            SourceDir = ".",
+            SketchFileNames = new[] { "thconfig.thc" },
+        });
+        var root = Path.Combine(Path.GetTempPath(), "project");
+        var source = Path.Combine(Path.GetTempPath(), "topodroid", "av_bravo.th");
+
+        Assert.Contains("thconfig.thc", TopodroidProjectScaffold.ConflictsWithSources(plan, root, new[] { source }));
+    }
 }

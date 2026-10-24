@@ -5,12 +5,21 @@
 // (optionally) georeferences it, and a thconfig with the chosen `export` commands.
 //
 // Pure string/plan output — no file I/O here (that belongs to the caller, per the core-lib rules).
-// The caller creates the directories, copies the source survey into place, and writes each file.
+// The caller creates the directories, copies the source survey (and its sketches) into place, and
+// writes each file.
+//
+// Sketches (`.th2`) are copied beside the survey and are NOT input by the wrapper: a sketch's scraps
+// name stations in the survey's own namespace (`point … station -name 0`), so it has to be input
+// from inside that survey — which is what TopoDroid's export does (`input <plot>.th2` and the `map`
+// blocks after `endcenterline`). Therion resolves those `input` paths relative to the survey file,
+// so placing the sketches in the same directory is all the wrapper needs. Without sketches the map
+// exports still compile; they come out centreline-only.
 
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -69,6 +78,13 @@ public sealed record ScaffoldOptions
 
     public IReadOnlyList<ExportItem> Exports { get; init; } = Array.Empty<ExportItem>();
 
+    /// <summary>
+    /// Bare file names of the sketches (<c>.th2</c>) that belong to the survey. Each is copied into
+    /// <see cref="SourceDir"/> beside the survey under the same name, because the survey inputs them
+    /// by a path relative to itself. Names must not contain a directory part.
+    /// </summary>
+    public IReadOnlyList<string> SketchFileNames { get; init; } = Array.Empty<string>();
+
     private string LayoutName => "L_" + Sanitize(ProjectName);
     internal string EffectiveLayoutName => LayoutName;
     internal string EffectiveBaseName => string.IsNullOrWhiteSpace(OutputBaseName) ? Sanitize(ProjectName) : OutputBaseName.Trim();
@@ -92,6 +108,13 @@ public sealed record ScaffoldOptions
 public sealed record ScaffoldFile(string RelativePath, string Content);
 
 /// <summary>
+/// A file of the caller's to copy byte for byte into the project: <paramref name="SourceFileName"/>
+/// is the name the caller passed in <see cref="ScaffoldOptions"/> (the survey or one sketch), and
+/// <paramref name="RelativePath"/> is where it goes (project-root-relative, forward slashes).
+/// </summary>
+public sealed record ScaffoldSourceCopy(string RelativePath, string SourceFileName);
+
+/// <summary>
 /// Everything the caller needs to materialise the project: directories to create, text files to
 /// write, and where to place a copy of the source survey. All paths are project-root-relative and
 /// use forward slashes (Therion accepts them on every platform).
@@ -100,7 +123,14 @@ public sealed record ScaffoldPlan(
     IReadOnlyList<string> Directories,
     IReadOnlyList<ScaffoldFile> Files,
     string SourceCopyRelativePath,
-    string ThconfigRelativePath);
+    string ThconfigRelativePath)
+{
+    /// <summary>
+    /// Every file to copy in, the survey first (its destination is <see cref="SourceCopyRelativePath"/>)
+    /// followed by each sketch in the order given.
+    /// </summary>
+    public IReadOnlyList<ScaffoldSourceCopy> SourceCopies { get; init; } = Array.Empty<ScaffoldSourceCopy>();
+}
 
 public static class TopodroidProjectScaffold
 {
@@ -203,9 +233,14 @@ public static class TopodroidProjectScaffold
         return sb.ToString();
     }
 
-    /// <summary>Builds the full plan (dirs + files + where to copy the source) for the caller to execute.</summary>
+    /// <summary>
+    /// Builds the full plan (dirs + files + where to copy the survey and its sketches) for the caller
+    /// to execute. Throws <see cref="ArgumentException"/> when the survey or a sketch name has a
+    /// directory part, or when two of them would be copied to the same place.
+    /// </summary>
     public static ScaffoldPlan BuildPlan(ScaffoldOptions o)
     {
+        ValidateCopyNames(o);
         var dirs = new List<string> { o.SourceDir, o.OutputDir };
         if (o.CreateGraphicsDir) dirs.Add(o.GraphicsDir);
 
@@ -217,7 +252,25 @@ public static class TopodroidProjectScaffold
             new(thconfigName, BuildThconfig(o)),
         };
         var sourceCopy = o.SourceDir + "/" + o.SourceFileName;
-        return new ScaffoldPlan(dirs, files, sourceCopy, thconfigName);
+        var copies = new List<ScaffoldSourceCopy> { new(sourceCopy, o.SourceFileName) };
+        foreach (var sketch in o.SketchFileNames)
+            copies.Add(new ScaffoldSourceCopy(o.SourceDir + "/" + sketch, sketch));
+        return new ScaffoldPlan(dirs, files, sourceCopy, thconfigName) { SourceCopies = copies };
+    }
+
+    // Copied names land in SourceDir as given, so a directory part ("../x", "a/b.th2") would place a
+    // file outside it, and two names differing only in case collide on a case-insensitive disk.
+    private static void ValidateCopyNames(ScaffoldOptions o)
+    {
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var name in new[] { o.SourceFileName }.Concat(o.SketchFileNames))
+        {
+            if (string.IsNullOrWhiteSpace(name) || name is "." or ".."
+                || name.IndexOfAny(new[] { '/', '\\' }) >= 0 || name.Contains(':'))
+                throw new ArgumentException($"'{name}' is not a bare file name.", nameof(o));
+            if (!seen.Add(name))
+                throw new ArgumentException($"'{name}' is listed more than once.", nameof(o));
+        }
     }
 
     /// <summary>
@@ -228,13 +281,25 @@ public static class TopodroidProjectScaffold
     /// this returns anything.
     /// </summary>
     public static IReadOnlyList<string> ConflictsWithSource(ScaffoldPlan plan, string targetRoot, string sourcePath)
+        => ConflictsWithSources(plan, targetRoot, new[] { sourcePath });
+
+    /// <summary>
+    /// Like <see cref="ConflictsWithSource"/> for the survey and its sketches together: the generated
+    /// files whose destination is one of <paramref name="sourcePaths"/>, plus the generated files a
+    /// copied survey or sketch would land on. Callers must refuse the plan when this returns anything.
+    /// </summary>
+    public static IReadOnlyList<string> ConflictsWithSources(ScaffoldPlan plan, string targetRoot, IEnumerable<string> sourcePaths)
     {
-        var source = Path.GetFullPath(sourcePath);
+        var sources = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var p in sourcePaths) sources.Add(Path.GetFullPath(p));
+        var copies = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var c in plan.SourceCopies) copies.Add(Path.GetFullPath(Path.Combine(targetRoot, c.RelativePath)));
+
         var hits = new List<string>();
         foreach (var f in plan.Files)
         {
             var dest = Path.GetFullPath(Path.Combine(targetRoot, f.RelativePath));
-            if (string.Equals(dest, source, StringComparison.OrdinalIgnoreCase)) hits.Add(f.RelativePath);
+            if (sources.Contains(dest) || copies.Contains(dest)) hits.Add(f.RelativePath);
         }
         return hits;
     }
