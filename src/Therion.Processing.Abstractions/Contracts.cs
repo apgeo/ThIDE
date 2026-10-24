@@ -186,7 +186,11 @@ public sealed record CompilerOutputLine(string Text, DiagnosticSeverity Severity
 public sealed record CompileResult(
     int ExitCode,
     ImmutableArray<Diagnostic> Diagnostics,
-    ImmutableArray<OutputArtifact> Artifacts);
+    ImmutableArray<OutputArtifact> Artifacts)
+{
+    /// <summary>Full path of the log file this compile wrote, or null when none was written.</summary>
+    public string? LogPath { get; init; }
+}
 
 public sealed record OutputArtifact(string Path, string Kind, long SizeBytes, DateTimeOffset LastWriteUtc);
 

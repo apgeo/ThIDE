@@ -10,27 +10,77 @@ using Therion.Processing.Abstractions;
 
 namespace Therion.Build;
 
+/// <summary>
+/// How <see cref="TherionCompiler"/> runs Therion. The defaults reproduce a plain
+/// <c>therion &lt;entry&gt;</c> started in the entry file's directory.
+/// </summary>
+public sealed record TherionCompileOptions
+{
+    public static TherionCompileOptions Default { get; } = new();
+
+    /// <summary>
+    /// Passed as <c>-l &lt;path&gt;</c> so the log goes to a known file. A relative path is resolved
+    /// against the entry file's directory (the working directory). Null leaves Therion's default,
+    /// <c>therion.log</c> in the working directory.
+    /// </summary>
+    public string? LogFile { get; init; }
+
+    /// <summary>Passes <c>-q</c>: Therion prints less to stdout (its TeX/MetaPost children are not silenced).</summary>
+    public bool Quiet { get; init; }
+
+    /// <summary>
+    /// A last say over the process before it starts: receives the fully built start info (Therion's
+    /// path as <c>FileName</c>, its arguments in <c>ArgumentList</c>, the working directory, the
+    /// stream redirections) and returns the one to start — for example a sandbox launcher as
+    /// <c>FileName</c> with Therion's command after its own arguments, limits applied by a wrapper
+    /// command, or <c>TMPDIR</c> pointed into the project. Keep the redirections: output is read
+    /// from stdout/stderr and stdin is closed at once. Artefacts are still collected from the entry
+    /// file's directory on this side.
+    /// </summary>
+    public Func<ProcessStartInfo, ProcessStartInfo>? ConfigureProcess { get; init; }
+}
+
 public sealed class TherionCompiler : ITherionCompiler
 {
+    /// <summary>The log file Therion writes in its working directory when no <c>-l</c> is given.</summary>
+    public const string DefaultLogFileName = "therion.log";
+
     private readonly IExternalToolLocator _locator;
     private readonly ITherionOutputParser _outputParser;
     private readonly IOutputArtifactCollector _artifacts;
+    private readonly TherionCompileOptions _defaults;
 
     public TherionCompiler(
         IExternalToolLocator locator,
         ITherionOutputParser? outputParser = null,
-        IOutputArtifactCollector? artifacts = null)
+        IOutputArtifactCollector? artifacts = null,
+        TherionCompileOptions? defaults = null)
     {
         _locator = locator;
         _outputParser = outputParser ?? new HeuristicTherionOutputParser();
         _artifacts = artifacts ?? new OutputArtifactCollector();
+        _defaults = defaults ?? TherionCompileOptions.Default;
     }
 
-    public async ValueTask<CompileResult> CompileAsync(
+    /// <summary>Compiles with the options given to the constructor (or the defaults).</summary>
+    public ValueTask<CompileResult> CompileAsync(
         string entryPointPath,
         IProgress<CompilerOutputLine>? progress = null,
         CancellationToken cancellationToken = default)
+        => CompileAsync(entryPointPath, _defaults, progress, cancellationToken);
+
+    /// <summary>
+    /// Compiles <paramref name="entryPointPath"/> (resolved to a full path; Therion runs in its
+    /// directory) with <paramref name="options"/>. Cancelling kills the process tree and throws.
+    /// The result's <see cref="CompileResult.LogPath"/> names the log when one was written.
+    /// </summary>
+    public async ValueTask<CompileResult> CompileAsync(
+        string entryPointPath,
+        TherionCompileOptions options,
+        IProgress<CompilerOutputLine>? progress = null,
+        CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(options);
         var diags = ImmutableArray.CreateBuilder<Diagnostic>();
         var tool = await _locator.FindAsync(ExternalToolLocator.Therion, cancellationToken).ConfigureAwait(false);
         if (tool is null)
@@ -43,13 +93,16 @@ public sealed class TherionCompiler : ITherionCompiler
             return new CompileResult(-1, diags.ToImmutable(), ImmutableArray<OutputArtifact>.Empty);
         }
 
-        var workDir = Path.GetDirectoryName(Path.GetFullPath(entryPointPath))!;
+        // A relative entry would be resolved twice — once here for the working directory and again
+        // by Therion inside it — so Therion gets the full path.
+        var entryFull = Path.GetFullPath(entryPointPath);
+        var workDir = Path.GetDirectoryName(entryFull)!;
+        var logPath = Path.GetFullPath(Path.Combine(workDir, options.LogFile ?? DefaultLogFileName));
         var startedAt = DateTimeOffset.UtcNow;
 
         var psi = new ProcessStartInfo
         {
             FileName = tool.Path,
-            Arguments = QuoteIfNeeded(entryPointPath),
             WorkingDirectory = workDir,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
@@ -62,6 +115,11 @@ public sealed class TherionCompiler : ITherionCompiler
             UseShellExecute = false,
             CreateNoWindow = true,
         };
+        if (options.Quiet) psi.ArgumentList.Add("-q");
+        if (options.LogFile is not null) { psi.ArgumentList.Add("-l"); psi.ArgumentList.Add(logPath); }
+        psi.ArgumentList.Add(entryFull);
+        if (options.ConfigureProcess is { } configure)
+            psi = configure(psi) ?? throw new InvalidOperationException("ConfigureProcess returned no start info.");
 
         using var proc = new Process { StartInfo = psi, EnableRaisingEvents = true };
         var diagLock = new object();
@@ -115,7 +173,10 @@ public sealed class TherionCompiler : ITherionCompiler
         }
 
         var artifacts = _artifacts.Collect(workDir, since: startedAt);
-        return new CompileResult(SafeExitCode(proc), diags.ToImmutable(), artifacts);
+        return new CompileResult(SafeExitCode(proc), diags.ToImmutable(), artifacts)
+        {
+            LogPath = WrittenSince(logPath, startedAt) ? logPath : null,
+        };
     }
 
     /// <summary>Reads a redirected stream line-by-line until EOF, forwarding each line.</summary>
@@ -161,6 +222,9 @@ public sealed class TherionCompiler : ITherionCompiler
         }
     }
 
-    private static string QuoteIfNeeded(string path)
-        => path.Contains(' ') ? "\"" + path + "\"" : path;
+    private static bool WrittenSince(string path, DateTimeOffset since)
+    {
+        try { return File.Exists(path) && File.GetLastWriteTimeUtc(path) >= since.UtcDateTime; }
+        catch { return false; }
+    }
 }
