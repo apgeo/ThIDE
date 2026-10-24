@@ -62,6 +62,13 @@ public partial class App : Application
             {
                 DataContext = services.GetRequiredService<MainWindowViewModel>(),
             };
+
+            // test/agent-only UI automation server; a no-op unless THIDE_UI_AUTOMATION=1.
+            if (Services.UiAutomation.UiAutomationHost.IsRequested)
+            {
+                _ = Services.UiAutomation.UiAutomationHost.StartIfRequestedAsync(services.GetRequiredService<Services.ILogService>());
+                desktop.Exit += (_, _) => Services.UiAutomation.UiAutomationHost.RequestShutdown();
+            }
         }
 
         base.OnFrameworkInitializationCompleted();
