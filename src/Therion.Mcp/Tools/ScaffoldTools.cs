@@ -188,7 +188,12 @@ public sealed class ScaffoldTools(IWorkspaceHost host, MutationEngine mutations)
         };
 
         bool georeferenced = !string.IsNullOrWhiteSpace(fixC1) && !string.IsNullOrWhiteSpace(fixC2);
-        var plan = TopodroidProjectScaffold.BuildPlan(options);
+        ScaffoldPlan plan;
+        try { plan = TopodroidProjectScaffold.BuildPlan(options); }
+        catch (ArgumentException ex)
+        {
+            return Fail<ProjectScaffoldResult>(ToolErrorCodes.InvalidArgument, ex.Message);
+        }
 
         // Scaffolding into the survey's own directory makes the wrapper land on the survey itself,
         // replacing the data with a handful of `input` lines. The library knows how to spot that.
