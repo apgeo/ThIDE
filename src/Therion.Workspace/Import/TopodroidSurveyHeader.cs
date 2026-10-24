@@ -4,8 +4,10 @@
 // fix only when the survey has none) and to check that the sketches it was handed are the ones the
 // survey actually inputs.
 //
-// Pure: text in, record out. Only the first `survey … endsurvey` block is read; shots and scraps
-// are skipped, and anything unrecognised is ignored rather than reported.
+// Pure: text in, record out. Only the first `survey … endsurvey` block is read for the header;
+// shots and scraps are skipped, and anything unrecognised is ignored rather than reported. The
+// files the text reads (`input`, `import`) are collected from the whole text, because Therion
+// reads them wherever they stand.
 
 using System;
 using System.Collections.Generic;
@@ -37,6 +39,9 @@ public sealed record TopodroidSurveyHeader(
 {
     public bool HasCoordinateSystem => CoordinateSystem is not null;
     public bool HasFix => FixStation is not null;
+
+    /// <summary>The paths of the text's <c>import</c> commands (centreline data Therion reads from another file), in file order.</summary>
+    public IReadOnlyList<string> Imports { get; init; } = Array.Empty<string>();
 }
 
 public static class TopodroidSurveyHeaderReader
@@ -45,8 +50,11 @@ public static class TopodroidSurveyHeaderReader
     /// Reads the header of the first survey in <paramref name="surveyText"/>. The entrance station
     /// comes from the survey's <c>-entrance</c> option, else from a <c>station … entrance</c> flag,
     /// else from a commented-out <c>-entrance</c> (TopoDroid writes one) — the last case sets
-    /// <see cref="TopodroidSurveyHeader.EntranceFromComment"/>. A station reference's <c>@survey</c>
-    /// part is dropped.
+    /// <see cref="TopodroidSurveyHeader.EntranceFromComment"/>. Station references are given
+    /// relative to the first survey: a reference to the survey itself loses its <c>@survey</c> part,
+    /// and a station inside a nested survey keeps the path to it (<c>5@sub</c>), innermost first.
+    /// <see cref="TopodroidSurveyHeader.Inputs"/> and <see cref="TopodroidSurveyHeader.Imports"/>
+    /// come from every line of the text, inside the first survey or not.
     /// </summary>
     public static TopodroidSurveyHeader Read(string surveyText)
     {
@@ -57,15 +65,20 @@ public static class TopodroidSurveyHeaderReader
         var units = new List<string>();
         var fixCoords = new List<string>();
         var inputs = new List<string>();
+        var imports = new List<string>();
 
+        var nested = new List<string>();   // names of the surveys open inside the first one, outermost first
         int depth = 0;          // survey nesting inside the first survey
         bool inCenterline = false, done = false;
         foreach (var raw in surveyText.Split('\n'))
         {
-            if (done) break;
             var t = Tokenize(raw);
             if (t.Count == 0) continue;
             var cmd = t[0].ToLowerInvariant();
+
+            if (cmd == "input" && t.Count > 1) { inputs.Add(t[1]); continue; }
+            if (cmd == "import" && t.Count > 1) { imports.Add(t[1]); continue; }
+            if (done) continue;
 
             if (depth == 0)
             {
@@ -73,17 +86,19 @@ public static class TopodroidSurveyHeaderReader
                 depth = 1;
                 name = t[1];
                 title = Option(t, "-title") ?? "";
-                entrance = StripSurvey(Option(t, "-entrance") ?? "");
+                entrance = Qualify(Option(t, "-entrance") ?? "", name, nested);
                 continue;
             }
 
             switch (cmd)
             {
-                case "survey": depth++; continue;
-                case "endsurvey": if (--depth == 0) done = true; continue;
+                case "survey": depth++; nested.Add(t.Count > 1 ? t[1] : ""); continue;
+                case "endsurvey":
+                    if (--depth == 0) done = true;
+                    else nested.RemoveAt(nested.Count - 1);
+                    continue;
                 case "centerline" or "centreline": inCenterline = true; continue;
                 case "endcenterline" or "endcentreline": inCenterline = false; continue;
-                case "input" when !inCenterline && t.Count > 1: inputs.Add(t[1]); continue;
             }
             if (!inCenterline) continue;
 
@@ -95,12 +110,12 @@ public static class TopodroidSurveyHeaderReader
                 case "declination" when t.Count > 1: declination ??= string.Join(' ', t.Skip(1)); break;
                 case "cs" when t.Count > 1: cs ??= t[1]; break;
                 case "fix" when t.Count > 1 && fixStation is null:
-                    fixStation = StripSurvey(t[1]);
+                    fixStation = Qualify(t[1], name, nested);
                     fixCoords.AddRange(t.Skip(2));
                     break;
                 case "station" when t.Count > 2 && flaggedEntrance is null
                                     && t.Skip(2).Any(x => x.Equals("entrance", StringComparison.OrdinalIgnoreCase)):
-                    flaggedEntrance = StripSurvey(t[1]);
+                    flaggedEntrance = Qualify(t[1], name, nested);
                     break;
             }
         }
@@ -114,7 +129,30 @@ public static class TopodroidSurveyHeaderReader
         }
 
         return new TopodroidSurveyHeader(name, title, dates, team, declination, units, cs, fixStation,
-            fixCoords, entrance, fromComment, inputs);
+            fixCoords, entrance, fromComment, inputs) { Imports = imports };
+    }
+
+    /// <summary>
+    /// The <c>input</c> and <c>import</c> paths of <paramref name="header"/> that could reach a file
+    /// outside the directory the survey sits in: a rooted path, a drive or UNC prefix, a backslash,
+    /// a <c>..</c> segment, or any directory part at all (TopoDroid writes bare names; a sketch sits
+    /// beside its survey). Therion reads whatever these name, and the content can come back in its
+    /// log or its exports, so a server must refuse an uploaded survey — and each uploaded sketch,
+    /// read the same way — when this returns anything.
+    /// </summary>
+    public static IReadOnlyList<string> UnsafeInputs(TopodroidSurveyHeader header)
+    {
+        ArgumentNullException.ThrowIfNull(header);
+        return header.Inputs.Concat(header.Imports).Where(IsUnsafeInputPath).ToList();
+    }
+
+    private static bool IsUnsafeInputPath(string path)
+    {
+        var p = path.Trim();
+        return p.Length == 0 || p is "." or ".."
+            || p.IndexOfAny(new[] { '/', '\\', ':' }) >= 0
+            || Path.IsPathRooted(p)
+            || p.Any(char.IsControl);
     }
 
     /// <summary>
@@ -141,10 +179,22 @@ public static class TopodroidSurveyHeaderReader
         return null;
     }
 
-    private static string StripSurvey(string station)
+    // A station reference written inside the nested surveys `nested` (outermost first), made
+    // relative to the first survey `root`: 5 inside sub → 5@sub, 5@deeper inside sub → 5@deeper.sub.
+    // A reference that ends with the first survey's own name drops that part (2@s inside s → 2).
+    private static string Qualify(string station, string root, IReadOnlyList<string> nested)
     {
-        var at = station.IndexOf('@');
-        return at < 0 ? station : station[..at];
+        if (station.Length == 0) return station;
+        var path = string.Join('.', nested.Reverse());
+        string qualified = path.Length == 0 ? station
+            : station.Contains('@') ? station + "." + path
+            : station + "@" + path;
+        if (root.Length > 0)
+        {
+            if (qualified.EndsWith("@" + root, StringComparison.Ordinal)) return qualified[..^(root.Length + 1)];
+            if (qualified.EndsWith("." + root, StringComparison.Ordinal)) return qualified[..^(root.Length + 1)];
+        }
+        return qualified;
     }
 
     // Whitespace-separated tokens; a double-quoted string is one token (quotes removed, "" inside
