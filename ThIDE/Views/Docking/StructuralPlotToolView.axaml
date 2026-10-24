@@ -4,6 +4,7 @@
              xmlns:docking="using:ThIDE.Views.Docking"
              xmlns:l="using:ThIDE.Resources"
              x:Class="ThIDE.Views.Docking.StructuralPlotToolView"
+             AutomationProperties.AutomationId="StructuralPlot.View"
              x:DataType="vm:StructuralPlotToolViewModel">
 
     <!-- The Structural Geology panel's 3D Plot tab, popped out into its own dockable/floatable
@@ -12,15 +13,17 @@
          Resulted Planes tab; deliberately has none of the wizard's top bar (scope/detect/status/
          Prev/Next) — only the in-tab plot toolbar. -->
     <DockPanel>
-        <Border DockPanel.Dock="Top" Padding="8,5" Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}">
+        <Border AutomationProperties.AutomationId="StructuralPlot.Toolbar" DockPanel.Dock="Top" Padding="8,5" Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}">
             <DockPanel>
-                <docking:PanelWindowControls DockPanel.Dock="Right" VerticalAlignment="Center" Margin="4,0,0,0" />
+                <docking:PanelWindowControls AutomationProperties.AutomationId="StructuralPlot.WindowControls" DockPanel.Dock="Right" VerticalAlignment="Center" Margin="4,0,0,0" />
                 <StackPanel Orientation="Horizontal" Spacing="6">
-                    <Button Content="{l:Loc Struct_FitView}" Click="OnFitView" Padding="8,2" FontSize="11" />
+                    <Button AutomationProperties.AutomationId="StructuralPlot.FitView" Content="{l:Loc Struct_FitView}" Click="OnFitView" Padding="8,2" FontSize="11" />
                     <Button Content="{l:Loc Struct_ExportImage}" Click="OnExportImage" Padding="8,2" FontSize="11"
+                            AutomationProperties.AutomationId="StructuralPlot.ExportImage"
                             ToolTip.Tip="{l:Loc Struct_ExportImageTip}" />
                     <TextBlock Text="{l:Loc Struct_DiscSize}" VerticalAlignment="Center" FontSize="11" Foreground="Gray" />
                     <ComboBox ItemsSource="{Binding Structural.DiscScales}"
+                              AutomationProperties.AutomationId="StructuralPlot.DiscSize" AutomationProperties.Name="{l:Loc Struct_DiscSizeTip}"
                               SelectedItem="{Binding Structural.DiscScale}" FontSize="11" MinWidth="64"
                               ToolTip.Tip="{l:Loc Struct_DiscSizeTip}">
                         <ComboBox.ItemTemplate>
@@ -28,17 +31,22 @@
                         </ComboBox.ItemTemplate>
                     </ComboBox>
                     <CheckBox Content="{l:Loc Struct_WhiteBackground}" FontSize="11" VerticalAlignment="Center"
+                              AutomationProperties.AutomationId="StructuralPlot.WhiteBackground"
                               IsChecked="{Binding Structural.WhiteBackground}" />
                     <CheckBox Content="{l:Loc Struct_ShowSplays}" FontSize="11" VerticalAlignment="Center"
+                              AutomationProperties.AutomationId="StructuralPlot.ShowSplays"
                               IsChecked="{Binding Structural.PlotSplays}" ToolTip.Tip="{l:Loc Struct_ShowSplaysTip}" />
                     <CheckBox Content="{l:Loc Struct_FadedSplays}" FontSize="11" VerticalAlignment="Center"
+                              AutomationProperties.AutomationId="StructuralPlot.FadedSplays"
                               IsChecked="{Binding Structural.FadedSplays}" IsEnabled="{Binding Structural.PlotSplays}"
                               ToolTip.Tip="{l:Loc Struct_FadedSplaysTip}" />
                     <CheckBox Content="{l:Loc Struct_NetInPlot}" FontSize="11" VerticalAlignment="Center"
+                              AutomationProperties.AutomationId="StructuralPlot.NetInPlot"
                               IsChecked="{Binding Structural.NetInPlot}" ToolTip.Tip="{l:Loc Struct_NetInPlotTip}" />
                     <Border Width="1" Margin="6,2" Background="Gray" />
                     <!-- Mirrors the Structural Geology panel's "Show in Mainline Map Preview" toggles. -->
                     <ToggleButton Content="{l:Loc Struct_ShowInPreview}" Padding="6,2" FontSize="12"
+                                  AutomationProperties.AutomationId="StructuralPlot.ShowInPreview"
                                   IsChecked="{Binding Structural.ShowPlanesInPreview, Mode=TwoWay}"
                                   ToolTip.Tip="{l:Loc Struct_ShowInPreviewTip}" />
                 </StackPanel>
@@ -46,7 +54,7 @@
         </Border>
 
         <Panel>
-            <Panel Name="PlotHost" />
+            <Panel AutomationProperties.AutomationId="StructuralPlot.Host" Name="PlotHost" />
             <Border Name="PlotFallback" IsVisible="False"
                     Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}">
                 <TextBlock VerticalAlignment="Center" HorizontalAlignment="Center" TextWrapping="Wrap"

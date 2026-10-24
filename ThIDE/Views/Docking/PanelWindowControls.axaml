@@ -15,14 +15,17 @@
     <StackPanel Orientation="{Binding Orientation, ElementName=Root}" Spacing="0"
                 HorizontalAlignment="Right" VerticalAlignment="Center">
         <Button Click="OnFullScreen" Width="17" Height="14" Padding="0"
+                AutomationProperties.AutomationId="PanelWindow.FullScreen" AutomationProperties.Name="{l:Loc Panel_FullScreenTip}"
                 Background="Transparent" BorderThickness="0" ToolTip.Tip="{l:Loc Panel_FullScreenTip}">
             <PathIcon Data="{DynamicResource Icon.FullScreen}" Width="9" Height="9" />
         </Button>
         <Button Click="OnFloatOtherScreen" Width="17" Height="14" Padding="0"
+                AutomationProperties.AutomationId="PanelWindow.FloatOtherScreen" AutomationProperties.Name="{l:Loc Panel_FloatScreenTip}"
                 Background="Transparent" BorderThickness="0" ToolTip.Tip="{l:Loc Panel_FloatScreenTip}">
             <PathIcon Data="{DynamicResource Icon.External}" Width="9" Height="9" />
         </Button>
         <Button Click="OnMoveToCenter" Width="17" Height="14" Padding="0"
+                AutomationProperties.AutomationId="PanelWindow.MoveToCenter" AutomationProperties.Name="{l:Loc Panel_MoveCenterTip}"
                 Background="Transparent" BorderThickness="0" ToolTip.Tip="{l:Loc Panel_MoveCenterTip}">
             <PathIcon Data="{DynamicResource Icon.Layout}" Width="9" Height="9" />
         </Button>

@@ -19,6 +19,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.Documents;
 using Avalonia.Input;
@@ -136,6 +137,8 @@ internal sealed class RenamePreviewWindow : Window
         };
         _nameBox = new TextBox { Text = initialName };
         _nameBox.TextChanged += (_, _) => UpdateNameDependent();
+        AutomationProperties.SetAutomationId(_nameBox, "RenamePreview.NewName");
+        AutomationProperties.SetName(_nameBox, nameLabel.Text);
         var nameRow = new DockPanel();
         DockPanel.SetDock(nameLabel, Avalonia.Controls.Dock.Left);
         nameRow.Children.Add(nameLabel);
@@ -154,6 +157,9 @@ internal sealed class RenamePreviewWindow : Window
         var cancelBtn = new Button { Content = Tr.Get("Common_Cancel"), IsCancel = true, MinWidth = 80 };
         _applyBtn.Click += (_, _) => Close(true);
         cancelBtn.Click += (_, _) => Close(false);
+        AutomationProperties.SetAutomationId(this, "RenamePreview.Window");
+        AutomationProperties.SetAutomationId(_applyBtn, "RenamePreview.Apply");
+        AutomationProperties.SetAutomationId(cancelBtn, "RenamePreview.Cancel");
         var buttons = new StackPanel
         {
             Orientation = Orientation.Horizontal,
@@ -252,6 +258,7 @@ internal sealed class RenamePreviewWindow : Window
         _sectionNodes.Clear();
 
         var tree = new TreeView { Margin = new Thickness(0, 0, 0, 0) };
+        AutomationProperties.SetAutomationId(tree, "RenamePreview.Tree");
 
         // Base changes — always applied, so always tinted, never checkable.
         var baseTint = new List<Border>();
@@ -291,6 +298,7 @@ internal sealed class RenamePreviewWindow : Window
                 IsChecked = g.Included,
                 VerticalAlignment = VerticalAlignment.Center,
             };
+            AutomationProperties.SetAutomationId(check, "RenamePreview.Include" + GroupKey(g));
             var group = g;
             check.IsCheckedChanged += (_, _) =>
             {
@@ -300,7 +308,7 @@ internal sealed class RenamePreviewWindow : Window
                 if (group.Included) Reveal(group.Node);
                 else if (group.Node is { } n) n.IsExpanded = false;
             };
-            panel.Children.Add(MakeCheckRow(check, g.Help));
+            panel.Children.Add(MakeCheckRow(check, g.Help, "RenamePreview.Help" + GroupKey(g)));
         }
         return panel;
     }
@@ -328,6 +336,7 @@ internal sealed class RenamePreviewWindow : Window
             };
             IsolatePointer(groupCheck);   // keep clicks from reaching the TreeViewItem (select/expand)
             g.GroupCheck = groupCheck;
+            AutomationProperties.SetAutomationId(groupCheck, "RenamePreview.Include" + GroupKey(g));
             var group = g;
             groupCheck.IsCheckedChanged += (_, _) =>
             {
@@ -341,7 +350,7 @@ internal sealed class RenamePreviewWindow : Window
                 GrowToFit();
             };
             headerContent = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4,
-                Children = { groupCheck, HelpButton(g.Help) } };
+                Children = { groupCheck, HelpButton(g.Help, "RenamePreview.Help" + GroupKey(g)) } };
         }
         else
         {
@@ -468,8 +477,11 @@ internal sealed class RenamePreviewWindow : Window
 
     // ---- small builders --------------------------------------------------
 
-    private static Control MakeCheckRow(CheckBox check, string help)
-        => new StackPanel { Orientation = Orientation.Horizontal, Children = { check, HelpButton(help) } };
+    private static Control MakeCheckRow(CheckBox check, string help, string helpAutomationId)
+        => new StackPanel { Orientation = Orientation.Horizontal, Children = { check, HelpButton(help, helpAutomationId) } };
+
+    // Stable, English UI-automation suffix for an option group.
+    private string GroupKey(OptionGroup g) => g == _equate ? "Equate" : g == _same ? "SameName" : "Comments";
 
     // A section header: bold label + a dim count (distinct from rows by weight + a rule, not colour —
     // blue is reserved for the "will be replaced" tint).
@@ -495,7 +507,7 @@ internal sealed class RenamePreviewWindow : Window
     private static void IsolatePointer(Control c) =>
         c.AddHandler(InputElement.PointerPressedEvent, (_, e) => e.Handled = true, RoutingStrategies.Bubble);
 
-    private static Button HelpButton(string help)
+    private static Button HelpButton(string help, string automationId)
     {
         var btn = new Button
         {
@@ -508,6 +520,8 @@ internal sealed class RenamePreviewWindow : Window
             Flyout = new Flyout { Content = new TextBlock { Text = help, TextWrapping = TextWrapping.Wrap, MaxWidth = 400 } },
         };
         ToolTip.SetTip(btn, "What does this do?");
+        AutomationProperties.SetAutomationId(btn, automationId);
+        AutomationProperties.SetName(btn, Tr.Get("Rename_HelpTip"));
         return btn;
     }
 

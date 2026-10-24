@@ -6,14 +6,16 @@
         Title="{l:Loc Book_Title}"
         Width="700" Height="340"
         WindowStartupLocation="CenterOwner"
+        AutomationProperties.AutomationId="Bookmarks.Window"
         CanResize="True">
     <DockPanel>
         <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="6"
                     Margin="8,6">
-            <Button x:Name="DeleteBtn" Content="{l:Loc Ctx_Delete}" Padding="10,3" Click="OnDeleteClick" />
-            <Button x:Name="NavigateBtn" Content="{l:Loc Book_GoTo}" Padding="10,3" Click="OnNavigateClick" />
+            <Button AutomationProperties.AutomationId="Bookmarks.Delete" x:Name="DeleteBtn" Content="{l:Loc Ctx_Delete}" Padding="10,3" Click="OnDeleteClick" />
+            <Button AutomationProperties.AutomationId="Bookmarks.Navigate" x:Name="NavigateBtn" Content="{l:Loc Book_GoTo}" Padding="10,3" Click="OnNavigateClick" />
         </StackPanel>
         <DataGrid x:Name="Grid"
+                  AutomationProperties.AutomationId="Bookmarks.Grid"
                   x:DataType="services:BookmarkEntry"
                   IsReadOnly="True"
                   GridLinesVisibility="Horizontal"

@@ -14,11 +14,12 @@
         <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
           <TextBlock Text="{Binding CustomLabel}" VerticalAlignment="Center" FontSize="12" />
           <Button Content="✕" Command="{Binding ClearCustomFilterCommand}"
+                  AutomationProperties.AutomationId="BrowserFilter.Clear" AutomationProperties.Name="{l:Loc OB_ClearFilter}"
                   Padding="4,0" MinWidth="0" MinHeight="0" Background="Transparent" BorderThickness="0"
                   Cursor="Hand" ToolTip.Tip="{l:Loc OB_ClearFilter}" />
         </StackPanel>
       </Border>
-      <TextBox Text="{Binding Text, Mode=TwoWay}" Watermark="{l:Loc OB_FilterWatermark}" VerticalAlignment="Center" />
+      <TextBox AutomationProperties.AutomationId="BrowserFilter.Text" AutomationProperties.Name="{l:Loc OB_FilterWatermark}" Text="{Binding Text, Mode=TwoWay}" Watermark="{l:Loc OB_FilterWatermark}" VerticalAlignment="Center" />
     </DockPanel>
   </Border>
 </UserControl>

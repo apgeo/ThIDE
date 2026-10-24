@@ -6,12 +6,13 @@
         x:DataType="vm:ScaffoldProjectViewModel"
         x:CompileBindings="False"
         Title="{l:Loc Scaffold_Title}" Width="560" Height="640"
+        AutomationProperties.AutomationId="Scaffold.Window"
         WindowStartupLocation="CenterOwner" CanResize="True">
     <DockPanel Margin="16">
         <Border DockPanel.Dock="Bottom" Margin="0,14,0,0">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
-                <Button Content="{l:Loc Common_Cancel}" Click="OnCancel" MinWidth="80" />
-                <Button Content="{l:Loc Scaffold_Create}" Click="OnCreate" IsDefault="True" MinWidth="120" />
+                <Button AutomationProperties.AutomationId="Scaffold.Cancel" Content="{l:Loc Common_Cancel}" Click="OnCancel" MinWidth="80" />
+                <Button AutomationProperties.AutomationId="Scaffold.Create" Content="{l:Loc Scaffold_Create}" Click="OnCreate" IsDefault="True" MinWidth="120" />
             </StackPanel>
         </Border>
 
@@ -23,16 +24,16 @@
                 <!-- Project identity -->
                 <Grid ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8">
                     <TextBlock Grid.Row="0" Grid.Column="0" Text="{l:Loc Scaffold_ProjectName}" VerticalAlignment="Center" />
-                    <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding ProjectName, Mode=TwoWay}" />
+                    <TextBox AutomationProperties.AutomationId="Scaffold.ProjectName" AutomationProperties.Name="{l:Loc Scaffold_ProjectName}" Grid.Row="0" Grid.Column="1" Text="{Binding ProjectName, Mode=TwoWay}" />
 
                     <TextBlock Grid.Row="1" Grid.Column="0" Text="{l:Loc Scaffold_SurveyTitle}" VerticalAlignment="Center" />
-                    <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Title, Mode=TwoWay}" />
+                    <TextBox AutomationProperties.AutomationId="Scaffold.SurveyTitle" AutomationProperties.Name="{l:Loc Scaffold_SurveyTitle}" Grid.Row="1" Grid.Column="1" Text="{Binding Title, Mode=TwoWay}" />
 
                     <TextBlock Grid.Row="2" Grid.Column="0" Text="{l:Loc Scaffold_SourceSurvey}" VerticalAlignment="Center" />
-                    <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding InnerSurveyName, Mode=TwoWay}" />
+                    <TextBox AutomationProperties.AutomationId="Scaffold.SourceSurvey" AutomationProperties.Name="{l:Loc Scaffold_SourceSurvey}" Grid.Row="2" Grid.Column="1" Text="{Binding InnerSurveyName, Mode=TwoWay}" />
 
                     <TextBlock Grid.Row="3" Grid.Column="0" Text="{l:Loc Scaffold_SourceFile}" VerticalAlignment="Center" />
-                    <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding SourceFileName, Mode=TwoWay}" />
+                    <TextBox AutomationProperties.AutomationId="Scaffold.SourceFile" AutomationProperties.Name="{l:Loc Scaffold_SourceFile}" Grid.Row="3" Grid.Column="1" Text="{Binding SourceFileName, Mode=TwoWay}" />
                 </Grid>
 
                 <!-- Georeferencing -->
@@ -41,37 +42,43 @@
                 <Grid ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="8">
                     <TextBlock Grid.Row="0" Grid.Column="0" Text="{l:Loc Scaffold_Entrance}" VerticalAlignment="Center" />
                     <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding EntranceStation, Mode=TwoWay}"
+                             AutomationProperties.AutomationId="Scaffold.EntranceStation" AutomationProperties.Name="{l:Loc Scaffold_Entrance}"
                              Watermark="{l:Loc Scaffold_EntranceWm}" />
 
                     <TextBlock Grid.Row="1" Grid.Column="0" Text="{l:Loc Scaffold_Cs}" VerticalAlignment="Center" />
                     <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding CoordinateSystems}"
+                              AutomationProperties.AutomationId="Scaffold.CoordinateSystem" AutomationProperties.Name="{l:Loc Scaffold_Cs}"
                               SelectedItem="{Binding CoordinateSystem, Mode=TwoWay}" HorizontalAlignment="Stretch" />
 
                     <TextBlock Grid.Row="2" Grid.Column="0" Text="{l:Loc Scaffold_Coord1}" VerticalAlignment="Center" />
                     <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding FixCoord1, Mode=TwoWay}"
+                             AutomationProperties.AutomationId="Scaffold.FixCoord1" AutomationProperties.Name="{l:Loc Scaffold_Coord1}"
                              Watermark="{l:Loc Scaffold_Coord1Wm}" />
 
                     <TextBlock Grid.Row="3" Grid.Column="0" Text="{l:Loc Scaffold_Coord2}" VerticalAlignment="Center" />
                     <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding FixCoord2, Mode=TwoWay}"
+                             AutomationProperties.AutomationId="Scaffold.FixCoord2" AutomationProperties.Name="{l:Loc Scaffold_Coord2}"
                              Watermark="{l:Loc Scaffold_Coord2Wm}" />
 
                     <TextBlock Grid.Row="4" Grid.Column="0" Text="{l:Loc Scaffold_Altitude}" VerticalAlignment="Center" />
-                    <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding FixAltitude, Mode=TwoWay}" />
+                    <TextBox AutomationProperties.AutomationId="Scaffold.FixAltitude" AutomationProperties.Name="{l:Loc Scaffold_Altitude}" Grid.Row="4" Grid.Column="1" Text="{Binding FixAltitude, Mode=TwoWay}" />
                 </Grid>
 
                 <!-- Layout + tree options -->
                 <TextBlock Text="{l:Loc Scaffold_Layout}" FontWeight="SemiBold" />
                 <StackPanel Spacing="8">
-                    <CheckBox Content="{l:Loc Scaffold_IncludeLayout}" IsChecked="{Binding IncludeLayout, Mode=TwoWay}" />
+                    <CheckBox AutomationProperties.AutomationId="Scaffold.IncludeLayout" Content="{l:Loc Scaffold_IncludeLayout}" IsChecked="{Binding IncludeLayout, Mode=TwoWay}" />
                     <StackPanel Orientation="Horizontal" Spacing="8" IsEnabled="{Binding IncludeLayout}">
                         <TextBlock Text="{l:Loc Scaffold_Scale}" VerticalAlignment="Center" Width="132" />
                         <TextBlock Text="1 :" VerticalAlignment="Center" />
                         <NumericUpDown Value="{Binding Scale, Mode=TwoWay}" Minimum="1" Maximum="1000000"
+                                       AutomationProperties.AutomationId="Scaffold.Scale" AutomationProperties.Name="{l:Loc Scaffold_Scale}"
                                        Increment="100" Width="150" />
                     </StackPanel>
                     <CheckBox Content="{l:Loc Scaffold_Legend}" IsChecked="{Binding Legend, Mode=TwoWay}"
+                              AutomationProperties.AutomationId="Scaffold.Legend"
                               IsEnabled="{Binding IncludeLayout}" />
-                    <CheckBox Content="{l:Loc Scaffold_GraphicsDir}" IsChecked="{Binding CreateGraphicsDir, Mode=TwoWay}" />
+                    <CheckBox AutomationProperties.AutomationId="Scaffold.GraphicsDir" Content="{l:Loc Scaffold_GraphicsDir}" IsChecked="{Binding CreateGraphicsDir, Mode=TwoWay}" />
                 </StackPanel>
 
                 <!-- Export targets -->

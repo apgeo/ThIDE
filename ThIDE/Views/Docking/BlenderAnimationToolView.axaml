@@ -4,11 +4,12 @@
              xmlns:vmm="using:ThIDE.ViewModels"
              xmlns:l="using:ThIDE.Resources"
              x:Class="ThIDE.Views.Docking.BlenderAnimationToolView"
+             AutomationProperties.AutomationId="Blender.View"
              x:DataType="vm:BlenderAnimationToolViewModel">
 
     <!-- Blender Animation panel (BA-B12). Binds to the tool VM; the content VM is reached via
          the `Blender.` prefix (compiled bindings). -->
-    <ScrollViewer>
+    <ScrollViewer AutomationProperties.AutomationId="Blender.Content">
         <StackPanel Margin="10" Spacing="8" MinWidth="320">
 
             <!-- experimental / WIP banner -->
@@ -23,6 +24,7 @@
             <!-- preset strip -->
             <TextBlock Text="{l:Loc Blender_UI_Preset}" FontWeight="Bold" />
             <ComboBox HorizontalAlignment="Stretch"
+                      AutomationProperties.AutomationId="Blender.Preset" AutomationProperties.Name="{l:Loc Blender_UI_Preset}"
                       ItemsSource="{Binding Blender.Presets}"
                       SelectedItem="{Binding Blender.SelectedPreset}">
                 <ComboBox.ItemTemplate>
@@ -32,21 +34,23 @@
                 </ComboBox.ItemTemplate>
             </ComboBox>
             <DockPanel>
-                <Button DockPanel.Dock="Right" Content="{l:Loc Blender_UI_DeletePreset}" Command="{Binding Blender.DeletePresetCommand}" Margin="4,0,0,0" />
-                <Button DockPanel.Dock="Right" Content="{l:Loc Blender_UI_SavePreset}" Command="{Binding Blender.SavePresetCommand}" Margin="4,0,0,0" />
-                <TextBox Watermark="{l:Loc Blender_UI_NewPresetName}" Text="{Binding Blender.NewPresetName}" />
+                <Button AutomationProperties.AutomationId="Blender.DeletePreset" DockPanel.Dock="Right" Content="{l:Loc Blender_UI_DeletePreset}" Command="{Binding Blender.DeletePresetCommand}" Margin="4,0,0,0" />
+                <Button AutomationProperties.AutomationId="Blender.SavePreset" DockPanel.Dock="Right" Content="{l:Loc Blender_UI_SavePreset}" Command="{Binding Blender.SavePresetCommand}" Margin="4,0,0,0" />
+                <TextBox AutomationProperties.AutomationId="Blender.NewPresetName" AutomationProperties.Name="{l:Loc Blender_UI_NewPresetName}" Watermark="{l:Loc Blender_UI_NewPresetName}" Text="{Binding Blender.NewPresetName}" />
             </DockPanel>
 
             <Separator />
 
             <!-- source -->
             <TextBlock Text="{l:Loc Blender_UI_Source}" FontWeight="Bold" />
-            <CheckBox Content="{l:Loc Blender_UI_UseExternalFile}" IsChecked="{Binding Blender.UseExternalFile}" />
+            <CheckBox AutomationProperties.AutomationId="Blender.UseExternalFile" Content="{l:Loc Blender_UI_UseExternalFile}" IsChecked="{Binding Blender.UseExternalFile}" />
             <TextBox Watermark="{l:Loc Blender_UI_ExternalFile}" Text="{Binding Blender.ExternalFilePath}"
+                     AutomationProperties.AutomationId="Blender.ExternalFilePath" AutomationProperties.Name="{l:Loc Blender_UI_ExternalFile}"
                      IsVisible="{Binding Blender.UseExternalFile}" />
             <DockPanel IsVisible="{Binding !Blender.UseExternalFile}">
-                <Button DockPanel.Dock="Right" Content="{l:Loc Blender_UI_ReloadArtifacts}" Command="{Binding Blender.ReloadArtifactsCommand}" Margin="4,0,0,0" />
+                <Button AutomationProperties.AutomationId="Blender.ReloadArtifacts" DockPanel.Dock="Right" Content="{l:Loc Blender_UI_ReloadArtifacts}" Command="{Binding Blender.ReloadArtifactsCommand}" Margin="4,0,0,0" />
                 <ComboBox HorizontalAlignment="Stretch"
+                          AutomationProperties.AutomationId="Blender.Artifact" AutomationProperties.Name="{l:Loc Blender_UI_Source}"
                           ItemsSource="{Binding Blender.Artifacts}"
                           SelectedItem="{Binding Blender.SelectedArtifact}">
                     <ComboBox.ItemTemplate>
@@ -62,50 +66,50 @@
             <!-- camera + engine -->
             <TextBlock Text="{l:Loc Blender_UI_Camera}" FontWeight="Bold" />
             <DockPanel><TextBlock Text="{l:Loc Blender_UI_Template}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
-                <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.CameraTemplates}" SelectedItem="{Binding Blender.CameraTemplate}" /></DockPanel>
+                <ComboBox AutomationProperties.AutomationId="Blender.CameraTemplate" AutomationProperties.Name="{l:Loc Blender_UI_Template}" HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.CameraTemplates}" SelectedItem="{Binding Blender.CameraTemplate}" /></DockPanel>
 
             <TextBlock Text="{l:Loc Blender_UI_Engine}" FontWeight="Bold" />
             <DockPanel><TextBlock Text="{l:Loc Blender_UI_Engine}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
-                <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.Engines}" SelectedItem="{Binding Blender.EngineKind}" /></DockPanel>
+                <ComboBox AutomationProperties.AutomationId="Blender.Engine" AutomationProperties.Name="{l:Loc Blender_UI_Engine}" HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.Engines}" SelectedItem="{Binding Blender.EngineKind}" /></DockPanel>
             <DockPanel><TextBlock Text="{l:Loc Blender_UI_Gpu}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
-                <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.GpuModes}" SelectedItem="{Binding Blender.Gpu}" /></DockPanel>
+                <ComboBox AutomationProperties.AutomationId="Blender.Gpu" AutomationProperties.Name="{l:Loc Blender_UI_Gpu}" HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.GpuModes}" SelectedItem="{Binding Blender.Gpu}" /></DockPanel>
             <DockPanel><TextBlock Text="{l:Loc Blender_UI_Samples}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
-                <TextBox Text="{Binding Blender.Samples}" /></DockPanel>
+                <TextBox AutomationProperties.AutomationId="Blender.Samples" AutomationProperties.Name="{l:Loc Blender_UI_Samples}" Text="{Binding Blender.Samples}" /></DockPanel>
 
             <!-- animation -->
             <TextBlock Text="{l:Loc Blender_UI_Animation}" FontWeight="Bold" />
             <DockPanel><TextBlock Text="{l:Loc Blender_UI_Fps}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
-                <TextBox Text="{Binding Blender.Fps}" /></DockPanel>
+                <TextBox AutomationProperties.AutomationId="Blender.Fps" AutomationProperties.Name="{l:Loc Blender_UI_Fps}" Text="{Binding Blender.Fps}" /></DockPanel>
             <DockPanel><TextBlock Text="{l:Loc Blender_UI_Duration}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
-                <TextBox Text="{Binding Blender.DurationSeconds}" /></DockPanel>
+                <TextBox AutomationProperties.AutomationId="Blender.Duration" AutomationProperties.Name="{l:Loc Blender_UI_Duration}" Text="{Binding Blender.DurationSeconds}" /></DockPanel>
 
             <Separator />
 
             <!-- output -->
             <TextBlock Text="{l:Loc Blender_UI_Output}" FontWeight="Bold" />
             <DockPanel><TextBlock Text="{l:Loc Blender_UI_Output}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
-                <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.OutputKinds}" SelectedItem="{Binding Blender.OutputKind}" /></DockPanel>
+                <ComboBox AutomationProperties.AutomationId="Blender.OutputKind" AutomationProperties.Name="{l:Loc Blender_UI_Output}" HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.OutputKinds}" SelectedItem="{Binding Blender.OutputKind}" /></DockPanel>
             <DockPanel><TextBlock Text="{l:Loc Blender_UI_Container}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
-                <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.Containers}" SelectedItem="{Binding Blender.Container}" /></DockPanel>
+                <ComboBox AutomationProperties.AutomationId="Blender.Container" AutomationProperties.Name="{l:Loc Blender_UI_Container}" HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.Containers}" SelectedItem="{Binding Blender.Container}" /></DockPanel>
             <DockPanel><TextBlock Text="{l:Loc Blender_UI_Width}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
-                <TextBox Text="{Binding Blender.Width}" /></DockPanel>
+                <TextBox AutomationProperties.AutomationId="Blender.Width" AutomationProperties.Name="{l:Loc Blender_UI_Width}" Text="{Binding Blender.Width}" /></DockPanel>
             <DockPanel><TextBlock Text="{l:Loc Blender_UI_Height}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
-                <TextBox Text="{Binding Blender.Height}" /></DockPanel>
+                <TextBox AutomationProperties.AutomationId="Blender.Height" AutomationProperties.Name="{l:Loc Blender_UI_Height}" Text="{Binding Blender.Height}" /></DockPanel>
             <DockPanel><TextBlock Text="{l:Loc Blender_UI_BaseName}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
-                <TextBox Text="{Binding Blender.BaseName}" /></DockPanel>
-            <CheckBox Content="{l:Loc Blender_UI_SelfContained}" IsChecked="{Binding Blender.SelfContained}" />
+                <TextBox AutomationProperties.AutomationId="Blender.BaseName" AutomationProperties.Name="{l:Loc Blender_UI_BaseName}" Text="{Binding Blender.BaseName}" /></DockPanel>
+            <CheckBox AutomationProperties.AutomationId="Blender.SelfContained" Content="{l:Loc Blender_UI_SelfContained}" IsChecked="{Binding Blender.SelfContained}" />
 
             <!-- labels -->
             <TextBlock Text="{l:Loc Blender_UI_Labels}" FontWeight="Bold" />
-            <CheckBox Content="{l:Loc Blender_UI_StationLabels}" IsChecked="{Binding Blender.ShowStationLabels}" />
-            <CheckBox Content="{l:Loc Blender_UI_LeadMarkers}" IsChecked="{Binding Blender.ShowLeadMarkers}" />
+            <CheckBox AutomationProperties.AutomationId="Blender.StationLabels" Content="{l:Loc Blender_UI_StationLabels}" IsChecked="{Binding Blender.ShowStationLabels}" />
+            <CheckBox AutomationProperties.AutomationId="Blender.LeadMarkers" Content="{l:Loc Blender_UI_LeadMarkers}" IsChecked="{Binding Blender.ShowLeadMarkers}" />
 
             <Separator />
 
             <!-- validation blockers -->
             <TextBlock Text="{l:Loc Blender_UI_Blockers}" FontWeight="Bold"
                        IsVisible="{Binding Blender.Blockers.Count}" />
-            <ItemsControl ItemsSource="{Binding Blender.Blockers}" Foreground="#C05050" />
+            <ItemsControl AutomationProperties.AutomationId="Blender.Blockers" ItemsSource="{Binding Blender.Blockers}" Foreground="#C05050" />
 
             <!-- actions -->
             <DockPanel>
@@ -114,13 +118,13 @@
             </DockPanel>
             <DockPanel>
                 <TextBlock Text="{l:Loc Blender_UI_ExportDir}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
-                <TextBox Text="{Binding Blender.ExportDirectory}" />
+                <TextBox AutomationProperties.AutomationId="Blender.ExportDirectory" AutomationProperties.Name="{l:Loc Blender_UI_ExportDir}" Text="{Binding Blender.ExportDirectory}" />
             </DockPanel>
             <WrapPanel>
-                <Button Content="{l:Loc Blender_UI_Render}" Command="{Binding Blender.RenderCommand}" Margin="0,0,6,6" />
-                <Button Content="{l:Loc Blender_UI_Export}" Command="{Binding Blender.ExportScriptCommand}" Margin="0,0,6,6" />
-                <Button Content="{l:Loc Blender_UI_OpenInBlender}" Command="{Binding Blender.OpenInBlenderGuiCommand}" Margin="0,0,6,6" />
-                <Button Content="{l:Loc Blender_UI_Cancel}" Command="{Binding Blender.CancelCommand}" IsVisible="{Binding Blender.IsBusy}" Margin="0,0,6,6" />
+                <Button AutomationProperties.AutomationId="Blender.Render" Content="{l:Loc Blender_UI_Render}" Command="{Binding Blender.RenderCommand}" Margin="0,0,6,6" />
+                <Button AutomationProperties.AutomationId="Blender.ExportScript" Content="{l:Loc Blender_UI_Export}" Command="{Binding Blender.ExportScriptCommand}" Margin="0,0,6,6" />
+                <Button AutomationProperties.AutomationId="Blender.OpenInBlender" Content="{l:Loc Blender_UI_OpenInBlender}" Command="{Binding Blender.OpenInBlenderGuiCommand}" Margin="0,0,6,6" />
+                <Button AutomationProperties.AutomationId="Blender.Cancel" Content="{l:Loc Blender_UI_Cancel}" Command="{Binding Blender.CancelCommand}" IsVisible="{Binding Blender.IsBusy}" Margin="0,0,6,6" />
             </WrapPanel>
 
             <!-- status + progress -->
@@ -136,16 +140,16 @@
 
             <!-- outputs -->
             <TextBlock Text="{l:Loc Blender_UI_Outputs}" FontWeight="Bold" IsVisible="{Binding Blender.Outputs.Count}" />
-            <ItemsControl ItemsSource="{Binding Blender.Outputs}" />
+            <ItemsControl AutomationProperties.AutomationId="Blender.Outputs" ItemsSource="{Binding Blender.Outputs}" />
             <WrapPanel IsVisible="{Binding Blender.Outputs.Count}">
-                <Button Content="{l:Loc Blender_UI_OpenFolder}" Command="{Binding Blender.OpenOutputFolderCommand}" Margin="0,4,6,0" />
-                <Button Content="{l:Loc Blender_UI_OpenLog}" Command="{Binding Blender.OpenJobLogCommand}" Margin="0,4,6,0" />
+                <Button AutomationProperties.AutomationId="Blender.OpenOutputFolder" Content="{l:Loc Blender_UI_OpenFolder}" Command="{Binding Blender.OpenOutputFolderCommand}" Margin="0,4,6,0" />
+                <Button AutomationProperties.AutomationId="Blender.OpenJobLog" Content="{l:Loc Blender_UI_OpenLog}" Command="{Binding Blender.OpenJobLogCommand}" Margin="0,4,6,0" />
             </WrapPanel>
-            <ItemsControl ItemsSource="{Binding Blender.Warnings}" Foreground="#B08000" />
+            <ItemsControl AutomationProperties.AutomationId="Blender.Warnings" ItemsSource="{Binding Blender.Warnings}" Foreground="#B08000" />
 
             <!-- recent renders -->
             <TextBlock Text="{l:Loc Blender_UI_Jobs}" FontWeight="Bold" IsVisible="{Binding Blender.Jobs.Count}" Margin="0,8,0,0" />
-            <ItemsControl ItemsSource="{Binding Blender.Jobs}">
+            <ItemsControl AutomationProperties.AutomationId="Blender.Jobs" ItemsSource="{Binding Blender.Jobs}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vmm:JobHistoryEntry">
                         <DockPanel Margin="0,2,0,2">

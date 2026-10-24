@@ -4,6 +4,7 @@
              xmlns:conv="using:ThIDE.Converters"
              xmlns:l="using:ThIDE.Resources"
              x:Class="ThIDE.Views.Docking.GeneratedFilesToolView"
+             AutomationProperties.AutomationId="GeneratedFiles.View"
              x:DataType="vm:GeneratedFilesToolViewModel">
     <Grid>
     <DockPanel>
@@ -16,25 +17,27 @@
         <!-- Column visibility + fit controls (#4). -->
         <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="6,3">
             <StackPanel Orientation="Horizontal" Spacing="6">
-                <Button Content="{l:Loc Common_Columns}" Padding="6,2" FontSize="11" ToolTip.Tip="{l:Loc Common_ShowHideColumns}">
+                <Button AutomationProperties.AutomationId="GeneratedFiles.Columns" Content="{l:Loc Common_Columns}" Padding="6,2" FontSize="11" ToolTip.Tip="{l:Loc Common_ShowHideColumns}">
                     <Button.Flyout>
                         <Flyout>
                             <StackPanel Spacing="2" Margin="8">
-                                <CheckBox Content="{l:Loc Browser_Col_Kind}"      Tag="Kind"      IsChecked="True"  Click="OnToggleColumn" />
-                                <CheckBox Content="{l:Loc Gen_Col_FileName}" Tag="File Name" IsChecked="True"  Click="OnToggleColumn" />
-                                <CheckBox Content="{l:Loc Col_Path}"      Tag="Path"      IsChecked="False" Click="OnToggleColumn" />
-                                <CheckBox Content="{l:Loc Gen_Col_Size}"      Tag="Size"      IsChecked="True"  Click="OnToggleColumn" />
-                                <CheckBox Content="{l:Loc Gen_Col_Modified}"  Tag="Modified"  IsChecked="True"  Click="OnToggleColumn" />
+                                <CheckBox AutomationProperties.AutomationId="GeneratedFiles.Columns.Kind" Content="{l:Loc Browser_Col_Kind}"      Tag="Kind"      IsChecked="True"  Click="OnToggleColumn" />
+                                <CheckBox AutomationProperties.AutomationId="GeneratedFiles.Columns.FileName" Content="{l:Loc Gen_Col_FileName}" Tag="File Name" IsChecked="True"  Click="OnToggleColumn" />
+                                <CheckBox AutomationProperties.AutomationId="GeneratedFiles.Columns.Path" Content="{l:Loc Col_Path}"      Tag="Path"      IsChecked="False" Click="OnToggleColumn" />
+                                <CheckBox AutomationProperties.AutomationId="GeneratedFiles.Columns.Size" Content="{l:Loc Gen_Col_Size}"      Tag="Size"      IsChecked="True"  Click="OnToggleColumn" />
+                                <CheckBox AutomationProperties.AutomationId="GeneratedFiles.Columns.Modified" Content="{l:Loc Gen_Col_Modified}"  Tag="Modified"  IsChecked="True"  Click="OnToggleColumn" />
                             </StackPanel>
                         </Flyout>
                     </Button.Flyout>
                 </Button>
                 <Button Content="{l:Loc Common_Fit}" Padding="6,2" FontSize="11" Click="OnFitColumns"
+                        AutomationProperties.AutomationId="GeneratedFiles.FitColumns"
                         ToolTip.Tip="{l:Loc Common_FitAll}" />
             </StackPanel>
         </Border>
 
         <DataGrid x:Name="Grid"
+                  AutomationProperties.AutomationId="GeneratedFiles.Grid"
                   ItemsSource="{Binding Build.Artifacts}"
                   SelectedItem="{Binding Build.SelectedArtifact, Mode=TwoWay}"
                   x:CompileBindings="False"
@@ -43,11 +46,11 @@
                   DoubleTapped="OnArtifactDoubleTapped">
             <DataGrid.ContextMenu>
                 <ContextMenu Opening="OnArtifactContextOpening">
-                    <MenuItem Header="{l:Loc Common_Open}" Click="OnOpenArtifact" />
-                    <MenuItem x:Name="View3DMenuItem" Header="{l:Loc Gen_View3D}" Click="OnViewArtifactIn3D" />
-                    <MenuItem Header="{l:Loc Gen_Reveal}" Click="OnRevealArtifact" />
+                    <MenuItem AutomationProperties.AutomationId="GeneratedFiles.Grid.Open" Header="{l:Loc Common_Open}" Click="OnOpenArtifact" />
+                    <MenuItem AutomationProperties.AutomationId="GeneratedFiles.Grid.View3D" x:Name="View3DMenuItem" Header="{l:Loc Gen_View3D}" Click="OnViewArtifactIn3D" />
+                    <MenuItem AutomationProperties.AutomationId="GeneratedFiles.Grid.Reveal" Header="{l:Loc Gen_Reveal}" Click="OnRevealArtifact" />
                     <Separator />
-                    <MenuItem Header="{l:Loc Gen_GoToDef}" Click="OnGoToArtifactDefinition" />
+                    <MenuItem AutomationProperties.AutomationId="GeneratedFiles.Grid.GoToDefinition" Header="{l:Loc Gen_GoToDef}" Click="OnGoToArtifactDefinition" />
                 </ContextMenu>
             </DataGrid.ContextMenu>
             <DataGrid.Columns>

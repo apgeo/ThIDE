@@ -3,12 +3,14 @@
              xmlns:vm="using:ThIDE.ViewModels.Docking"
              xmlns:l="using:ThIDE.Resources"
              x:Class="ThIDE.Views.Docking.CompilerOutputToolView"
+             AutomationProperties.AutomationId="CompilerOutput.View"
              x:DataType="vm:CompilerOutputToolViewModel">
     <Grid>
-    <TabControl>
+    <TabControl AutomationProperties.AutomationId="CompilerOutput.Tabs">
         <!-- Parsed view: per-line classification with time + severity icon + colored text. -->
-        <TabItem Header="{l:Loc Comp_TabOutput}">
+        <TabItem AutomationProperties.AutomationId="CompilerOutput.Tab.Output" Header="{l:Loc Comp_TabOutput}">
             <DataGrid x:Name="Grid"
+                      AutomationProperties.AutomationId="CompilerOutput.Grid" AutomationProperties.Name="{l:Loc Comp_TabOutput}"
                       ItemsSource="{Binding Build.Output}"
                       SelectedItem="{Binding Build.SelectedOutput, Mode=TwoWay}"
                       x:CompileBindings="False"
@@ -20,11 +22,11 @@
                       FontSize="11">
                 <DataGrid.ContextMenu>
                     <ContextMenu>
-                        <MenuItem Header="{l:Loc Common_Copy}" Click="OnCopyLine" />
-                        <MenuItem Header="{l:Loc Common_CopyAll}" Click="OnCopyAll" />
-                        <MenuItem Header="{l:Loc Common_SelectAll}" Click="OnSelectAll" />
+                        <MenuItem AutomationProperties.AutomationId="CompilerOutput.Grid.Copy" Header="{l:Loc Common_Copy}" Click="OnCopyLine" />
+                        <MenuItem AutomationProperties.AutomationId="CompilerOutput.Grid.CopyAll" Header="{l:Loc Common_CopyAll}" Click="OnCopyAll" />
+                        <MenuItem AutomationProperties.AutomationId="CompilerOutput.Grid.SelectAll" Header="{l:Loc Common_SelectAll}" Click="OnSelectAll" />
                         <Separator />
-                        <MenuItem Header="{l:Loc Common_ClearOutput}" Command="{Binding Build.ClearOutputCommand}" />
+                        <MenuItem AutomationProperties.AutomationId="CompilerOutput.Grid.Clear" Header="{l:Loc Common_ClearOutput}" Command="{Binding Build.ClearOutputCommand}" />
                     </ContextMenu>
                 </DataGrid.ContextMenu>
                 <DataGrid.Columns>
@@ -68,13 +70,14 @@
                                                ToolTip.Tip="{l:Loc Comp_OpenFile}">
                                         <TextBlock.ContextMenu>
                                             <ContextMenu>
-                                                <MenuItem Header="{l:Loc Comp_LinkOpen}" Click="OnLinkOpen" />
+                                                <MenuItem AutomationProperties.AutomationId="CompilerOutput.Link.Open" Header="{l:Loc Comp_LinkOpen}" Click="OnLinkOpen" />
                                                 <MenuItem Header="{l:Loc Comp_LinkOpenInApp}" Click="OnLinkOpenInApp"
+                                                          AutomationProperties.AutomationId="CompilerOutput.Link.OpenInApp"
                                                           IsEnabled="{Binding CanOpenInAppViewer}" />
-                                                <MenuItem Header="{l:Loc Comp_LinkOpenExternal}" Click="OnLinkOpenExternal" />
+                                                <MenuItem AutomationProperties.AutomationId="CompilerOutput.Link.OpenExternal" Header="{l:Loc Comp_LinkOpenExternal}" Click="OnLinkOpenExternal" />
                                                 <Separator />
-                                                <MenuItem Header="{l:Loc Comp_LinkReveal}" Click="OnLinkReveal" />
-                                                <MenuItem Header="{l:Loc Comp_LinkCopyPath}" Click="OnLinkCopyPath" />
+                                                <MenuItem AutomationProperties.AutomationId="CompilerOutput.Link.Reveal" Header="{l:Loc Comp_LinkReveal}" Click="OnLinkReveal" />
+                                                <MenuItem AutomationProperties.AutomationId="CompilerOutput.Link.CopyPath" Header="{l:Loc Comp_LinkCopyPath}" Click="OnLinkCopyPath" />
                                             </ContextMenu>
                                         </TextBlock.ContextMenu>
                                     </TextBlock>
@@ -89,18 +92,18 @@
         </TabItem>
 
         <!-- Raw view: verbatim stdout/stderr, selectable + copyable, warnings/errors colored. -->
-        <TabItem Header="{l:Loc Comp_TabRaw}">
-            <ScrollViewer x:Name="RawScroll" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+        <TabItem AutomationProperties.AutomationId="CompilerOutput.Tab.Raw" Header="{l:Loc Comp_TabRaw}">
+            <ScrollViewer AutomationProperties.AutomationId="CompilerOutput.Raw" x:Name="RawScroll" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
                 <SelectableTextBlock x:Name="RawText"
                                      FontFamily="Consolas,Cascadia Mono,Courier New,monospace"
                                      FontSize="11" Padding="6" TextWrapping="NoWrap">
                     <SelectableTextBlock.ContextMenu>
                         <ContextMenu>
-                            <MenuItem Header="{l:Loc Common_Copy}" Click="OnRawCopy" />
-                            <MenuItem Header="{l:Loc Common_CopyAll}" Click="OnRawCopyAll" />
-                            <MenuItem Header="{l:Loc Common_SelectAll}" Click="OnRawSelectAll" />
+                            <MenuItem AutomationProperties.AutomationId="CompilerOutput.Raw.Copy" Header="{l:Loc Common_Copy}" Click="OnRawCopy" />
+                            <MenuItem AutomationProperties.AutomationId="CompilerOutput.Raw.CopyAll" Header="{l:Loc Common_CopyAll}" Click="OnRawCopyAll" />
+                            <MenuItem AutomationProperties.AutomationId="CompilerOutput.Raw.SelectAll" Header="{l:Loc Common_SelectAll}" Click="OnRawSelectAll" />
                             <Separator />
-                            <MenuItem Header="{l:Loc Common_ClearOutput}" Command="{Binding Build.ClearOutputCommand}" />
+                            <MenuItem AutomationProperties.AutomationId="CompilerOutput.Raw.Clear" Header="{l:Loc Common_ClearOutput}" Command="{Binding Build.ClearOutputCommand}" />
                         </ContextMenu>
                     </SelectableTextBlock.ContextMenu>
                 </SelectableTextBlock>
@@ -113,6 +116,7 @@
                 Orientation="Horizontal" Spacing="6">
         <!-- Open the Therion log produced by the last build, in the editor (#3). -->
         <Button FontSize="11" Padding="6,2" Click="OnOpenLog"
+                AutomationProperties.AutomationId="CompilerOutput.OpenLog" AutomationProperties.Name="{l:Loc Comp_OpenLog}"
                 IsVisible="{Binding Build.HasLog}"
                 ToolTip.Tip="{l:Loc Comp_OpenLogTip}">
             <StackPanel Orientation="Horizontal" Spacing="4">
@@ -124,6 +128,7 @@
         <PathIcon Data="{DynamicResource Icon.Timer}" Width="13" Height="13"
                   Foreground="Gray" VerticalAlignment="Center" />
         <ComboBox MinWidth="120" FontSize="11" Padding="6,2"
+                  AutomationProperties.AutomationId="CompilerOutput.TimeColumnMode" AutomationProperties.Name="{l:Loc Comp_TimeColTip}"
                   SelectedIndex="{Binding Build.TimeColumnModeIndex, Mode=TwoWay}"
                   ToolTip.Tip="{l:Loc Comp_TimeColTip}">
             <ComboBoxItem Content="{l:Loc Comp_TimeLast}" />

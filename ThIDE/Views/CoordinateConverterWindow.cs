@@ -3,6 +3,7 @@
 
 using System;
 using System.Globalization;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
@@ -49,6 +50,27 @@ public sealed class CoordinateConverterWindow : Window
         copyLl.Click += (_, _) => Services.ClipboardHelper.SetText(_llFix);
         var close = new Button { Content = Tr.Get("Common_Close"), IsCancel = true, MinWidth = 80 };
         close.Click += (_, _) => Close();
+
+        // Stable UI-automation ids (+ screen-reader names for the unlabeled inputs).
+        void Automation(Control c, string id, string? nameKey = null)
+        {
+            AutomationProperties.SetAutomationId(c, "CoordinateConverter." + id);
+            if (nameKey is not null) AutomationProperties.SetName(c, Tr.Get(nameKey));
+        }
+        Automation(this, "Window");
+        Automation(_station, "Station", "Col_Station");
+        Automation(_alt, "Altitude", "CC_Altitude");
+        Automation(_lat, "Latitude", "CC_Latitude");
+        Automation(_lon, "Longitude", "CC_Longitude");
+        Automation(_utmOut, "UtmResult");
+        Automation(_zone, "Zone", "CC_Zone");
+        Automation(_hemi, "Hemisphere", "CC_Hemisphere");
+        Automation(_east, "Easting", "CC_Easting");
+        Automation(_north, "Northing", "CC_Northing");
+        Automation(_llOut, "LatLonResult");
+        Automation(copyUtm, "CopyUtm");
+        Automation(copyLl, "CopyLatLon");
+        Automation(close, "Close");
 
         var common = Row(Tr.Get("Col_Station"), _station, Tr.Get("CC_Altitude"), _alt);
 

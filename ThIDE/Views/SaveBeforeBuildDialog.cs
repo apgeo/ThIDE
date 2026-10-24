@@ -2,6 +2,7 @@
 // Save & compile / Compile without saving / Cancel. Returns the user's choice.
 
 using System.Threading.Tasks;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
@@ -33,6 +34,11 @@ public sealed class SaveBeforeBuildDialog : Window
         dontSave.Click += (_, _) => { _result = SaveBeforeBuildChoice.DontSave; Close(); };
         var cancel = new Button { Content = cancelLabel, IsCancel = true, MinWidth = 90 };
         cancel.Click += (_, _) => { _result = SaveBeforeBuildChoice.Cancel; Close(); };
+        AutomationProperties.SetAutomationId(this, "SaveBeforeBuild.Window");
+        AutomationProperties.SetAutomationId(text, "SaveBeforeBuild.Message");
+        AutomationProperties.SetAutomationId(save, "SaveBeforeBuild.Save");
+        AutomationProperties.SetAutomationId(dontSave, "SaveBeforeBuild.DontSave");
+        AutomationProperties.SetAutomationId(cancel, "SaveBeforeBuild.Cancel");
 
         Content = new StackPanel
         {

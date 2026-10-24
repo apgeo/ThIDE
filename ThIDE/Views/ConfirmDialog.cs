@@ -2,6 +2,7 @@
 // Returns true only when the user explicitly confirms.
 
 using System.Threading.Tasks;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Layout;
@@ -25,6 +26,10 @@ public sealed class ConfirmDialog : Window
         confirm.Click += (_, _) => Close(true);
         var cancel = new Button { Content = "Cancel", IsCancel = true, MinWidth = 80 };
         cancel.Click += (_, _) => Close(false);
+        AutomationProperties.SetAutomationId(this, "Confirm.Window");
+        AutomationProperties.SetAutomationId(text, "Confirm.Message");
+        AutomationProperties.SetAutomationId(confirm, "Confirm.Ok");
+        AutomationProperties.SetAutomationId(cancel, "Confirm.Cancel");
 
         Content = new StackPanel
         {

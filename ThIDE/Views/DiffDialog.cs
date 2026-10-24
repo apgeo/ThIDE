@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
@@ -30,6 +31,10 @@ public sealed class DiffDialog : Window
 
         var close = new Button { Content = "Close", IsCancel = true, MinWidth = 80, HorizontalAlignment = HorizontalAlignment.Right, Margin = new(0, 8, 0, 0) };
         close.Click += (_, _) => Close();
+        AutomationProperties.SetAutomationId(this, "Diff.Window");
+        AutomationProperties.SetAutomationId(left, "Diff.Left");
+        AutomationProperties.SetAutomationId(right, "Diff.Right");
+        AutomationProperties.SetAutomationId(close, "Diff.Close");
 
         Content = new DockPanel { Margin = new(10), Children = { Bottom(close), grid } };
         DockPanel.SetDock(grid, Avalonia.Controls.Dock.Top);
