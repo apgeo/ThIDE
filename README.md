@@ -78,6 +78,8 @@ Full documentation hosted in the [`docs/`](docs/README.md) folder:
 
 Topic guides: [3D viewer](docs/3d-viewer.md) · [Diagnostics](docs/diagnostics.md) · [LSP](docs/lsp.md) · [Plugins](docs/plugins.md) · [Release](docs/release.md) · [UI testing](docs/dev/ui-testing.md) — full index in [docs/README.md](docs/README.md).
 
+🇷🇴 The documentation is also available in Romanian: **[docs/ro/](docs/ro/README.md)** ([Ghidul utilizatorului](docs/ro/user-guide/README.md)).
+
 ---
 
 ## Contributing

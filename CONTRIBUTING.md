@@ -15,6 +15,12 @@ The UI tests, their prerequisites and the `uidrive` driver are described in
 `AutomationProperties.AutomationId` (`<Area>.<Thing>`), and icon-only ones a localized
 `AutomationProperties.Name`.
 
+## Documentation
+
+`docs/` exists in English and in Romanian (`docs/ro/`, the same tree file for file). When you change
+a page, change its Romanian twin too — see
+[About this guide → Translations](docs/user-guide/about-this-guide.md#translations).
+
 ## Licensing of contributions
 
 > By contributing, you agree your contributions are licensed under the project's

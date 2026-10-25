@@ -119,6 +119,25 @@ Keep new pages consistent with the existing ones:
 3. Link to it from any related pages.
 4. If a PDF build exists, the new file is picked up automatically by the filename-ordered glob.
 
+## Translations
+
+The whole of `docs/` — this guide included — also exists in **Romanian**, under
+[`docs/ro/`](../ro/README.md), which mirrors the English tree file for file
+(`docs/user-guide/07-editing.md` ↔ `docs/ro/user-guide/07-editing.md`). English is the source.
+
+- **Change both.** When you change a page, make the same change to its Romanian twin in the same
+  commit, and bump the version stamp in both `README.md` files together.
+- **Use the app's own words.** Name menus and controls as the Romanian UI shows them — the labels
+  come from `ThIDE/Resources/Strings.ro.resx` — so a reader can find **Fișier → Deschide dosar…**
+  on screen.
+- **Leave code alone.** Commands, file names, Therion keywords, diagnostic codes, settings keys and
+  automation ids stay as they are.
+- **Anchors follow the heading.** A link to a section uses the Romanian heading's anchor, so after
+  renaming a heading, fix the links that point at it.
+- **Links out of `docs/` need one more `../`** in the Romanian tree, because it sits one level deeper.
+
+The PDF build currently collates the English pages only.
+
 ## Known gaps / good first edits
 
 This is a **first iteration**. Screenshots would help a lot and are not included yet — a natural

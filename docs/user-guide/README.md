@@ -8,6 +8,8 @@
 > Check **Help → About** for the version you are running; if yours is newer, some screens may have
 > moved.
 
+> 🇷🇴 **Această documentație există și în limba română:** [Ghidul utilizatorului](../ro/user-guide/README.md).
+
 Welcome to the ThIDE user guide — a hands-on manual for cavers and surveyors who use
 **ThIDE** to write, check, build, and explore [Therion](https://therion.speleo.sk/) cave-survey
 projects.
