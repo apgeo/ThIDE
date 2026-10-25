@@ -45,7 +45,7 @@ Because these tables come from the live model, they're the quickest way to answe
 exist / how many splays are in this survey / which scraps aren't georeferenced".
 
 > The Object Browser entity tabs are part of **Survey analytics** and can be turned off on very large
-> workspaces — see [Settings → Survey analytics](19-settings-and-preferences.md#survey-analytics).
+> workspaces — see [Settings → Survey analytics](19-settings-and-preferences.md#visualization).
 
 ## The XVI panel
 

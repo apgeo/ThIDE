@@ -36,7 +36,7 @@ Optional companions ThIDE can launch if present:
 
 On first launch you'll see the **Welcome** page. From here you can create a new file, open an existing
 file/`thconfig`/folder, jump to recent items, reach the external-tools settings, or open the Therion
-Book. (You can reopen it any time with **Help → Welcome**, and turn off "Show this page on startup".)
+Book. (You can reopen it any time with **View → Welcome**, and turn off "Show this page on startup".)
 
 ## 4. Point ThIDE at your external tools
 

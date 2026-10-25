@@ -3,7 +3,7 @@
 > ⚠️ **Experimental — work in progress.** The MCP integration is young and still changing. Expect
 > rough edges, and settings or behaviour that move between releases.
 
-> **Draft.** The headless server (21 read-only tools + 11 that write) and the connection to the
+> **Draft.** The headless server (22 read-only tools + 12 that write) and the connection to the
 > *running* IDE (live buffers, opening files, driving panes) are both complete. The final polish of this
 > page — the model matrix and the caver-facing guide — lands with a later batch.
 
@@ -75,7 +75,7 @@ tools to use, in order; they lead with the read-only tools, so they still do use
 ## Profiles
 
 ```bash
-therion-mcp --profile data     # the 21 read-only tools, and nothing else
+therion-mcp --profile data     # the 22 read-only tools, and nothing else
 therion-mcp --profile full     # everything (the default)
 ```
 

@@ -9,7 +9,7 @@ where a coordinator spends a lot of time.
 > All figures here are **preview-quality**, computed in-app without Therion's loop adjustment —
 > excellent for tracking and sanity checks, but **Therion is the source of truth** for final adjusted
 > lengths. Analytics can be switched off on very large workspaces
-> ([Settings → Survey analytics](19-settings-and-preferences.md#survey-analytics)).
+> ([Settings → Survey analytics](19-settings-and-preferences.md#visualization)).
 
 ## The tabs
 

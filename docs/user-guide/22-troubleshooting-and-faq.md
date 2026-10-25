@@ -53,7 +53,7 @@ See [Core concepts](04-core-concepts.md#the-object-graph-the-semantic-model).
 The piece isn't joined to the main network *and* isn't georeferenced. Either add the missing `equate`
 to stitch it, or `fix` it. If it's grounded only by a bare `fix` (no coordinate system) and you're OK
 with that, enable **Treat a local fix as grounding** in
-[Settings → Diagnostics](19-settings-and-preferences.md#diagnostics). Colour the
+[Settings → Diagnostics](19-settings-and-preferences.md#visualization). Colour the
 [Mainline Preview](11-viewers.md#mainline-preview) **by Component** to see the floating piece.
 
 **The declination calculator says "No magnetic model loaded".**

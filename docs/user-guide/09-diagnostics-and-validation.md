@@ -74,7 +74,7 @@ When there's nothing to fix at the caret, it says so.
 
 A few checks are configurable under **Settings → Diagnostics** — for example, whether a bare local
 `fix` (no coordinate system) counts as "grounding" a disconnected piece and thus suppresses
-`TH_SEM_015`. See [Settings → Diagnostics](19-settings-and-preferences.md#diagnostics).
+`TH_SEM_015`. See [Settings → Diagnostics](19-settings-and-preferences.md#visualization).
 
 ---
 
