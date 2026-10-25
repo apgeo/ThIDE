@@ -2,6 +2,19 @@
 
 Contributions are welcome — just open a pull request or push a branch.
 
+## Building and testing
+
+```sh
+dotnet build ThIDE.sln -m:1     # -m:1: parallel MSBuild can run out of memory
+dotnet test  ThIDE.sln -m:1     # unit tests; the end-to-end UI tests skip themselves here
+tests/run-ui-tests.sh           # end-to-end UI tests against the real app
+```
+
+The UI tests, their prerequisites and the `uidrive` driver are described in
+[docs/dev/ui-testing.md](docs/dev/ui-testing.md). Give new interactive controls an
+`AutomationProperties.AutomationId` (`<Area>.<Thing>`), and icon-only ones a localized
+`AutomationProperties.Name`.
+
 ## Licensing of contributions
 
 > By contributing, you agree your contributions are licensed under the project's

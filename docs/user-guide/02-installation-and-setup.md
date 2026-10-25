@@ -32,6 +32,9 @@ Optional companions ThIDE can launch if present:
   dotnet run --project ThIDE
   ```
 
+You can also give ThIDE files to open when you start it, e.g.
+`ThIDE ~/caves/mycave/mycave.thconfig` — relative or absolute paths, on Windows, Linux and macOS.
+
 ## 3. First launch
 
 On first launch you'll see the **Welcome** page. From here you can create a new file, open an existing

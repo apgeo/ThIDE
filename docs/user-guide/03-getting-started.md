@@ -15,6 +15,9 @@ You can open at three levels of scope, all from the **File** menu (or the toolba
 | **Open thconfig…** | You know your configuration file | Opens it *and* adopts its folder as the workspace. |
 | **Open File…** | You just want to look at/edit one file | Opens a single file; a workspace may still be inferred from it. |
 
+You can also drag files onto the window, choose **Open with → ThIDE** in your file manager, or name
+them on the command line (`ThIDE /path/to/cave.thconfig`).
+
 For real work, **Open Folder** (or Open thconfig) is what you want — that's what gives ThIDE the
 cross-file understanding described in [Core concepts](04-core-concepts.md).
 

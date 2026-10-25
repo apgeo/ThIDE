@@ -5,7 +5,8 @@ ThIDE accepts file paths in three ways:
 1. **Drag-and-drop** — drop one or more `.th` / `.th2` / `.thconfig` files onto the main
    window and they open as tabs. (Implemented in `MainWindow` `OnDrop`.)
 2. **Command line** — `ThIDE path/to/cave.thconfig path/to/survey.th` opens those files
-   after the window appears. Paths that don't exist or that start with `-`/`/` are ignored.
+   after the window appears. Relative and absolute paths both work. Paths that don't exist, and
+   arguments that start with `-` (or with `/` on Windows, where that marks an option), are ignored.
    (Implemented in `App.ParseFileArgs` → `MainWindow.OpenStartupFileArgs`.)
 3. **OS file association ("Open with ThIDE")** — once associated, double-clicking a
    `.th`/`.thconfig` (or right-click → *Open with*) launches the app with the file path as an

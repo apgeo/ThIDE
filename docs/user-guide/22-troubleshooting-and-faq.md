@@ -17,8 +17,20 @@ ThIDE doesn't bundle Therion. Install it, then set its path in
 1. Enable it: **Settings → Visualization → Embedded 3D model viewer**.
 2. Make sure a web engine is present — Windows: WebView2 (built into Windows 11 / modern Edge);
    Linux: `apt install libwebkit2gtk-4.1-0`; macOS: built in.
-3. If it still can't render, use the pane's **Open externally (Loch / Aven)** button. Reference:
+3. On Linux, update to **0.3.0-alpha.2 or later**: earlier versions could leave the panel empty, or
+   stuck on *“Loading …”*, until the window was resized. If the panel is still white or black, see the
+   **Embedded web engine** options in
+   [Settings → Debug](19-settings-and-preferences.md#debug).
+4. If it still can't render, use the pane's **Open externally (Loch / Aven)** button. Reference:
    [docs/3d-viewer.md](../3d-viewer.md).
+
+**On Linux or macOS, "Open with ThIDE" (or `ThIDE /path/to/file`) starts the app but opens nothing.**
+Fixed in 0.3.0-alpha.2: absolute paths were mistaken for Windows-style options. Update, or pass a
+relative path.
+
+**"File not found" on an `input` line whose file is clearly there.**
+Check the extension. `input cave` finds `cave.th` or `cave.th2`; `input cave.th` needs exactly
+`cave.th`. Versions before 0.3.0-alpha.2 didn't add the default extension at all.
 
 **"Mapiah not found."**
 Install Mapiah and set the `mapiah` path in **Settings → External Tools** (the dialog links there).

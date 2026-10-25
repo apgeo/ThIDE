@@ -72,7 +72,12 @@ status line reports that no unique source declaration was found rather than navi
 ## Requirements & fallback
 
 - **Windows:** the WebView2 runtime ships with Windows 11 / modern Edge — no setup.
-- **Linux:** install the WebKit engine, e.g. `apt install libwebkit2gtk-4.1-0`.
+- **Linux:** install the WebKit engine, e.g. `apt install libwebkit2gtk-4.1-0`. CaveView renders in
+  the docked panel on WebKitGTK, software GL included. Two Linux specifics are handled for you: the
+  page posts its messages through NativeWebView's `invokeCSharpAction()` bridge (WebKitGTK has no
+  `window.chrome.webview`), and the app re-runs layout once the web engine's native host exists,
+  which it creates after the control's own layout pass. Before 0.3.0-alpha.2 the panel could stay
+  empty, or stuck on *“Loading …”*, until something resized it.
 - **macOS:** WKWebView is built in.
 
 If the web engine or the vendored assets are unavailable, the pane shows a friendly message and an

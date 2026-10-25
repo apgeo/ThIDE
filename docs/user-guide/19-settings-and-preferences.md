@@ -184,4 +184,4 @@ gesture are listed here too, so this is where you bind them. The current default
 
 ---
 
-Next: [Extensibility (CLI, LSP, plugins, hooks) →](20-extensibility.md)
+Next: [Extensibility (CLI, LSP, AI assistants, UI automation, plugins, hooks) →](20-extensibility.md)

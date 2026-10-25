@@ -76,7 +76,7 @@ Full documentation hosted in the [`docs/`](docs/README.md) folder:
 - **[Architecture](docs/architecture.md)** — layer design, project layout, and reusing the libraries.
 - **[Usage](docs/usage.md)** — external tools, the command-line tools, and configuration & data locations.
 
-Topic guides: [3D viewer](docs/3d-viewer.md) · [Diagnostics](docs/diagnostics.md) · [LSP](docs/lsp.md) · [Plugins](docs/plugins.md) · [Release](docs/release.md) — full index in [docs/README.md](docs/README.md).
+Topic guides: [3D viewer](docs/3d-viewer.md) · [Diagnostics](docs/diagnostics.md) · [LSP](docs/lsp.md) · [Plugins](docs/plugins.md) · [Release](docs/release.md) · [UI testing](docs/dev/ui-testing.md) — full index in [docs/README.md](docs/README.md).
 
 ---
 

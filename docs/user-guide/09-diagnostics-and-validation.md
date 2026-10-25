@@ -53,7 +53,9 @@ file can't reveal:
 - **Loop misclosure** beyond tolerance, **blunder/outlier** shots, **foresight/backsight**
   disagreement.
 - **File not found** — an `input`/`source` target that isn't on disk. Clicking the warning jumps to
-  the line that names it.
+  the line that names it. Like Therion, ThIDE tries the name as written, then with `.th`, then with
+  `.th2` — so `input cave` is satisfied by `cave.th` or `cave.th2`, but `input cave.th` is not
+  satisfied by `cave.th2`. The **create missing file** quick-fix creates `cave.th`.
 - **Disconnected survey** (`TH_SEM_015`) — a piece of the cave that is neither joined to the main
   network nor georeferenced by a `fix`, so it *floats*. Both end stations and the source files are
   named so you can find and stitch it.

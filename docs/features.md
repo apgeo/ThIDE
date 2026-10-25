@@ -7,6 +7,7 @@
 - Typed centreline model (`units`, `calibrate`, `declination`, `sd`, `grade`, `cs`, `extend`, `break`, `walls`, `station`, `mark`, …), typed `thconfig` (`select` / `export` / `maps` / `layout`), and a deep `.th2` model (point/line/area types and options).
 - `layout … endlayout` parsing (incl. opaque `code … endcode`), symbol-set / legend directives, and EPSG/named coordinate-system validation.
 - Cross-file **connectivity graph**, naming-convention lints, and **pluggable semantic rules** (`rules.json` + plugin DLLs).
+- `input` / `source` targets resolve the way Therion does: the literal name, then `.th`, then `.th2` — so an extensionless `input cave` finds `cave.th` (or `cave.th2`) in the editor, the workspace, and the *File not found* check alike.
 - A **Diagnostics** panel with stable diagnostic codes — see [diagnostics.md](diagnostics.md) and [layout-and-embedded-code.md](layout-and-embedded-code.md).
 
 ## Editing & navigation
@@ -15,7 +16,7 @@
 - **Workspace Explorer** (nested source/input tree), **Object Browser** (stations / shots / scraps / maps / XVI references and entity tables), and an **Outline** of centrelines and their stations.
 - **Command palette** (`Ctrl+Shift+P`), quick-open, and go-to-symbol.
 - **Relational Map** — an interactive diagram of object relationships (surveys, scraps, maps).
-- Find / replace and find / replace **in files**; drag-and-drop and "open with" file arguments.
+- Find / replace and find / replace **in files**; drag-and-drop and "open with" file arguments (relative or absolute paths, on every platform).
 
 ## Build & visualization
 - **Therion compile pipeline** with live output, cancel, and clickable diagnostics; a **Generated Files** panel with per-output actions and auto-open overrides.
@@ -47,6 +48,9 @@
 - **Crash recovery** / safe mode with autosaved dirty buffers; opt-in, **local-only** telemetry (off by default).
 - Many heavier features are **toggleable** (Preferences ▸ Performance / Extensions / Visualization) so large projects stay responsive.
 
+## Accessibility
+- Interactive controls carry a stable **automation id** (`Toolbar.Compile`, `Menu.File.OpenFile`, `Viewer3D.ResetView`, …) and icon-only buttons a **localized accessible name**, so screen readers announce what a button does rather than its type.
+
 ## Trust & safety
 - Binary / oversized-file open guard, delete confirmation (trash vs. permanent), and an external-change banner with side-by-side diff.
 
@@ -55,3 +59,4 @@
 - **`therion-lsp`** — an editor-agnostic Language Server (diagnostics over stdio). See [lsp.md](lsp.md).
 - **Script hooks** (on open / save / build) and a **semantic-rule plugin loader** (`ISemanticRule` DLLs). See [plugins.md](plugins.md).
 - ⚠️ **AI assistants over MCP** *(experimental — work in progress)* — a built-in **Assistant** panel driven by a local model, plus `therion-mcp`, which exposes ThIDE's parser, semantics, and workspace engines over the [Model Context Protocol](https://modelcontextprotocol.io) so an assistant can answer questions about a project without you pasting files into a chat. Read-only by default, opt-in write tools behind an approval gate. See [mcp-host-setup.md](mcp-host-setup.md) and [user-guide/20-extensibility.md](user-guide/20-extensibility.md#ai-assistants-mcp).
+- **UI automation** *(for tests and coding agents)* — an opt-in in-app server (`THIDE_UI_AUTOMATION=1`, loopback + bearer token, all platforms) that exposes the window's automation tree as `ui_*` MCP tools, and `tools/uidrive`, which drives the app through the Linux accessibility bus. End-to-end suites run on both. See [dev/ui-testing.md](dev/ui-testing.md).

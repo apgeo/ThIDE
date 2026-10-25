@@ -1,4 +1,4 @@
-# 20. Extensibility (CLI, LSP, AI assistants, plugins, hooks)
+# 20. Extensibility (CLI, LSP, AI assistants, UI automation, plugins, hooks)
 
 > [← Back to the User Guide home](README.md)
 
@@ -62,6 +62,16 @@ your work. If you're cautious, start it read-only.
 
 Setting up a specific AI host (LM Studio, Claude Code) is a few lines of configuration — see the
 step-by-step in **[docs/mcp-host-setup.md](../mcp-host-setup.md)**.
+
+## UI automation (for tests and coding agents)
+
+ThIDE can be driven from outside — clicking, typing, reading what's on screen, taking screenshots —
+for automated UI tests or for a coding agent that needs to check its own change in the real app.
+This is a **developer feature**: nothing turns it on from the app. It only starts when ThIDE is
+launched with the environment variable `THIDE_UI_AUTOMATION=1`, listens only on your own machine,
+and needs a random token. It is separate from the AI tools server above.
+
+How it works, the test suites, and the `uidrive` helper: **[docs/dev/ui-testing.md](../dev/ui-testing.md)**.
 
 ## Semantic-rule plugins
 

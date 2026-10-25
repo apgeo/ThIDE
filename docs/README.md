@@ -26,3 +26,10 @@ Guides and reference for ThIDE. See the [project README](../README.md) for the o
 | File associations | [file-association.md](file-association.md) |
 | Packaging & release | [release.md](release.md) |
 | Licensing details | [../LICENSING.md](../LICENSING.md) |
+
+## Developer notes
+
+| Topic | Doc |
+|---|---|
+| UI testing and driving the running app (automation server, `uidrive`, selectors) | [dev/ui-testing.md](dev/ui-testing.md) |
+| How station names are parsed | [dev/station-name-parsing.md](dev/station-name-parsing.md) |

@@ -110,6 +110,13 @@ result, and a shortcut to the Diagnostics panel (with F8 / Shift+F8 to step thro
 
 - **Settings → Theme & Colors**: System / Light / **Dark** themes; optional **custom syntax colors**.
 - **View → Language** (or Settings → General): **English** and **Română**, applied immediately.
+  This guide is available in both languages too.
+
+## Screen readers
+
+Buttons and fields have accessible names in your chosen language, so a screen reader announces an
+icon-only toolbar button by what it does (*Compile*, *Reset view*) rather than as "PathIcon".
+Rows inside lists and grids don't have individual names yet.
 
 ---
 

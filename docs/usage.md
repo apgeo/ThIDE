@@ -35,6 +35,28 @@ dotnet run --project src/Therion.Lsp
 
 See [lsp.md](lsp.md) for client configuration.
 
+## Opening files from the command line
+
+```sh
+ThIDE path/to/cave.thconfig /home/me/caves/survey.th
+```
+
+Every argument that names an existing `.th` / `.th2` / `.thconfig` file opens once the window is up;
+relative and absolute paths both work. Arguments starting with `-` (or `/` on Windows) are treated
+as options and skipped. File-manager *Open with* launches use the same path — see
+[file-association.md](file-association.md).
+
+## Environment variables for automation
+
+| Variable | Effect |
+|---|---|
+| `THIDE_UI_AUTOMATION=1` | Starts the in-app UI automation server (loopback MCP, bearer token). Off otherwise; no setting enables it. |
+| `THIDE_UI_AUTOMATION_ENDPOINT` | Where the server writes its `port` / `token` / `url` (default `<app data>/ThIDE/ui-automation-endpoint.json`, owner-only). |
+| `THIDE_UI_AUTOMATION_PORT`, `THIDE_UI_AUTOMATION_TOKEN` | Pin the port and the token. |
+| `THIDE_UI_TESTS=1` | Lets `tests/ThIDE.UiTests` run; without it they skip, so `dotnet test ThIDE.sln` stays a unit-test run. |
+
+Details: [dev/ui-testing.md](dev/ui-testing.md).
+
 ## Configuration & data locations
 
 User settings and per-project state live under your platform's application-data folder (`%AppData%/ThIDE` on Windows, the XDG/`~/Library` equivalents elsewhere), including:
