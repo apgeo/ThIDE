@@ -75,7 +75,7 @@ The first page ([`README.md`](README.md)) carries a stamp naming **the ThIDE ver
 content was last checked against**:
 
 ```markdown
-> **For ThIDE 0.3.0-alpha.1** — guide content last updated 2026-07-17.
+> **For ThIDE 0.3.0-alpha.2** — guide content last updated 2026-10-25.
 ```
 
 **This is a content fact, not a build fact.** It is deliberately *not* the version that happened to
