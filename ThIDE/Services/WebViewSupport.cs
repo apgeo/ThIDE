@@ -23,6 +23,9 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Avalonia.Controls;
+using Avalonia.Layout;
+using Avalonia.Threading;
+using Avalonia.VisualTree;
 using Avalonia.Platform;
 
 namespace ThIDE.Services;
@@ -81,12 +84,30 @@ public static class WebViewSupport
     /// enable-developer-extras (right-click ▸ Inspect Element); on WebView2 it enables F12.
     /// </summary>
     public static void ConfigureWebView(NativeWebView web)
-        => web.EnvironmentRequested += static (_, args) =>
+    {
+        web.EnvironmentRequested += static (_, args) =>
         {
             args.EnableDevTools = s_settings.WebViewEnableDevTools;
             if (args is GtkWebViewEnvironmentRequestedEventArgs gtk)
                 gtk.ExperimentalOffscreen = s_settings.WebViewExperimentalOffscreen;
         };
+        // The engine adapter (and the native host child that shows it) is created asynchronously, after
+        // the control's own layout pass. Nothing measures that late child, so on Linux/X11 its holder
+        // window stays a 1x1 unmapped box and the panel is blank until something resizes it. Re-run
+        // layout once the adapter exists.
+        web.AdapterCreated += static (sender, _) =>
+        {
+            if (sender is NativeWebView w)
+                Dispatcher.UIThread.Post(() => RelayoutNativeHost(w), DispatcherPriority.Loaded);
+        };
+    }
+
+    private static void RelayoutNativeHost(NativeWebView web)
+    {
+        web.InvalidateMeasure();
+        foreach (var child in web.GetVisualChildren())
+            if (child is Layoutable l) l.InvalidateMeasure();
+    }
 
     /// <summary>Opens the engine's developer tools for <paramref name="web"/>, best-effort.</summary>
     public static bool TryOpenDevTools(NativeWebView web)

@@ -2,6 +2,7 @@
 // flow needs to tell the user something went wrong (e.g. an output definition that
 // could not be located, or a thconfig that failed to load) instead of failing silently.
 
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Layout;
@@ -24,6 +25,9 @@ public sealed class MessageDialog : Window
         var ok = new Button { Content = "OK", IsDefault = true, IsCancel = true, MinWidth = 80,
                               HorizontalAlignment = HorizontalAlignment.Right };
         ok.Click += (_, _) => Close();
+        AutomationProperties.SetAutomationId(this, "Message.Window");
+        AutomationProperties.SetAutomationId(text, "Message.Text");
+        AutomationProperties.SetAutomationId(ok, "Message.Ok");
 
         Content = new StackPanel
         {

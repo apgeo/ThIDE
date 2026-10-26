@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections.Generic;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
@@ -34,14 +35,17 @@ public sealed class AboutWindow : Window
         var ver = new TextBlock { Text = Tr.Get("About_VersionPrefix") + AppEnvironmentInfo.AppVersion(), Foreground = Brushes.Gray };
         var blurb = new TextBlock { TextWrapping = TextWrapping.Wrap, Text = Tr.Get("About_Blurb") };
 
-        var repoRow = LabeledLink(Tr.Get("About_GitHub"), "github.com/apgeo/ThIDE", AppEnvironmentInfo.RepositoryUrl);
-        var projectByRow = LabeledLink(Tr.Get("About_ProjectByPrefix"), "SpeoSilex", "https://speosilex.ro/");
+        var repoRow = LabeledLink(Tr.Get("About_GitHub"), "github.com/apgeo/ThIDE", AppEnvironmentInfo.RepositoryUrl, "About.Link.Repository");
+        var projectByRow = LabeledLink(Tr.Get("About_ProjectByPrefix"), "SpeoSilex", "https://speosilex.ro/", "About.Link.ProjectBy");
 
         // Bundled components.
         var bundledHeader = Header(Tr.Get("About_Bundled"));
         var caveRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
         caveRow.Children.Add(new TextBlock { Text = $"CaveView.js  v{AppEnvironmentInfo.CaveViewVersion()}", VerticalAlignment = VerticalAlignment.Center });
-        caveRow.Children.Add(Link("↗", AppEnvironmentInfo.CaveViewUrl));
+        var caveLink = Link("↗", AppEnvironmentInfo.CaveViewUrl);
+        AutomationProperties.SetAutomationId(caveLink, "About.Link.CaveView");
+        AutomationProperties.SetName(caveLink, "CaveView.js");
+        caveRow.Children.Add(caveLink);
 
         // External tools — one row each, always with a link, status filled in asynchronously.
         var toolsHeader = Header(Tr.Get("About_ExternalTools"));
@@ -49,7 +53,9 @@ public sealed class AboutWindow : Window
         foreach (var (id, name, url) in AppEnvironmentInfo.KnownTools)
         {
             var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
-            row.Children.Add(Link(name, url));
+            var toolLink = Link(name, url);
+            AutomationProperties.SetAutomationId(toolLink, "About.Link.Tool" + char.ToUpperInvariant(id[0]) + id[1..]);
+            row.Children.Add(toolLink);
             var status = new TextBlock { Text = Tr.Get("About_Checking"), Foreground = Brushes.Gray, VerticalAlignment = VerticalAlignment.Center };
             _toolStatus[id] = status;
             row.Children.Add(status);
@@ -69,6 +75,10 @@ public sealed class AboutWindow : Window
         copy.Click += async (_, _) => { if (Clipboard is { } cb && _reportText.Length > 0) await cb.SetTextAsync(_reportText); };
         var close = new Button { Content = Tr.Get("Common_Close"), IsCancel = true, MinWidth = 80 };
         close.Click += (_, _) => Close();
+        AutomationProperties.SetAutomationId(this, "About.Window");
+        AutomationProperties.SetAutomationId(book, "About.OpenBook");
+        AutomationProperties.SetAutomationId(copy, "About.CopyInfo");
+        AutomationProperties.SetAutomationId(close, "About.Close");
 
         var buttons = new StackPanel
         {
@@ -119,11 +129,13 @@ public sealed class AboutWindow : Window
         new() { Text = text, FontWeight = FontWeight.SemiBold, Margin = new Avalonia.Thickness(0, 6, 0, 0) };
 
     // "Label: <link>" row.
-    private StackPanel LabeledLink(string label, string linkText, string url)
+    private StackPanel LabeledLink(string label, string linkText, string url, string automationId)
     {
         var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
         row.Children.Add(new TextBlock { Text = label, Foreground = Brushes.Gray, VerticalAlignment = VerticalAlignment.Center });
-        row.Children.Add(Link(linkText, url));
+        var link = Link(linkText, url);
+        AutomationProperties.SetAutomationId(link, automationId);
+        row.Children.Add(link);
         return row;
     }
 

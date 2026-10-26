@@ -6,6 +6,7 @@
              xmlns:conv="using:ThIDE.Converters"
              xmlns:l="using:ThIDE.Resources"
              x:Class="ThIDE.Views.Docking.StructuralStereonetToolView"
+             AutomationProperties.AutomationId="Stereonet.View"
              x:DataType="vm:StructuralStereonetToolViewModel">
 
     <!-- The Structural Geology panel's Stereonet tab, popped out into its own dockable/floatable
@@ -18,12 +19,13 @@
     </UserControl.Resources>
 
     <DockPanel>
-        <Border DockPanel.Dock="Top" Padding="8,5" Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}">
+        <Border AutomationProperties.AutomationId="Stereonet.Toolbar" DockPanel.Dock="Top" Padding="8,5" Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}">
             <DockPanel>
-                <docking:PanelWindowControls DockPanel.Dock="Right" VerticalAlignment="Center" Margin="4,0,0,0" />
+                <docking:PanelWindowControls AutomationProperties.AutomationId="Stereonet.WindowControls" DockPanel.Dock="Right" VerticalAlignment="Center" Margin="4,0,0,0" />
                 <StackPanel Orientation="Horizontal" Spacing="6">
                     <TextBlock Text="{l:Loc Struct_NetProjection}" VerticalAlignment="Center" FontSize="11" Foreground="Gray" />
                     <ComboBox ItemsSource="{Binding Structural.NetProjections}"
+                              AutomationProperties.AutomationId="Stereonet.Projection" AutomationProperties.Name="{l:Loc Struct_NetProjectionTip}"
                               SelectedItem="{Binding Structural.NetProjection}" FontSize="11" MinWidth="150"
                               ToolTip.Tip="{l:Loc Struct_NetProjectionTip}">
                         <ComboBox.ItemTemplate>
@@ -31,22 +33,28 @@
                         </ComboBox.ItemTemplate>
                     </ComboBox>
                     <CheckBox Content="{l:Loc Struct_NetPoles}" FontSize="11" VerticalAlignment="Center"
+                              AutomationProperties.AutomationId="Stereonet.Poles"
                               IsChecked="{Binding Structural.NetShowPoles}" ToolTip.Tip="{l:Loc Struct_NetPolesTip}" />
                     <CheckBox Content="{l:Loc Struct_NetMeasurements}" FontSize="11" VerticalAlignment="Center"
+                              AutomationProperties.AutomationId="Stereonet.Measurements"
                               IsChecked="{Binding Structural.NetShowMeasurements}" ToolTip.Tip="{l:Loc Struct_NetMeasurementsTip}" />
                     <CheckBox Content="{l:Loc Struct_NetGrid}" FontSize="11" VerticalAlignment="Center"
+                              AutomationProperties.AutomationId="Stereonet.Grid"
                               IsChecked="{Binding Structural.NetShowGrid}" ToolTip.Tip="{l:Loc Struct_NetGridTip}" />
                     <CheckBox Content="{l:Loc Struct_NetLabels}" FontSize="11" VerticalAlignment="Center"
+                              AutomationProperties.AutomationId="Stereonet.Labels"
                               IsChecked="{Binding Structural.NetShowLabels}" />
                     <CheckBox Content="{l:Loc Struct_WhiteBackground}" FontSize="11" VerticalAlignment="Center"
+                              AutomationProperties.AutomationId="Stereonet.WhiteBackground"
                               IsChecked="{Binding Structural.NetWhiteBackground}" />
                     <Border Width="1" Margin="6,2" Background="Gray" />
                     <Button Content="{l:Loc Struct_ExportImage}" Click="OnExportStereonet" Padding="8,2" FontSize="11"
+                            AutomationProperties.AutomationId="Stereonet.ExportImage"
                             ToolTip.Tip="{l:Loc Struct_NetExportTip}" />
                 </StackPanel>
             </DockPanel>
         </Border>
 
-        <v:StereonetControl Name="NetControl" Model="{Binding Structural.StereonetModel}" />
+        <v:StereonetControl AutomationProperties.AutomationId="Stereonet.Net" Name="NetControl" Model="{Binding Structural.StereonetModel}" />
     </DockPanel>
 </UserControl>

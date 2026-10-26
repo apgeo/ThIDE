@@ -5,6 +5,7 @@
              xmlns:l="using:ThIDE.Resources"
              x:Class="ThIDE.Views.Docking.MapViewerToolView"
              x:CompileBindings="False"
+             AutomationProperties.AutomationId="MapViewer.View"
              x:DataType="vm:MapViewerToolViewModel">
     <UserControl.Styles>
         <!-- Loading spinner for the panel overlay (#6). -->
@@ -19,19 +20,22 @@
         </Style>
     </UserControl.Styles>
     <DockPanel>
-        <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="6,3">
+        <Border AutomationProperties.AutomationId="MapViewer.Toolbar" DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="6,3">
           <DockPanel>
             <!-- Window controls, pinned to the right (#7) — shared reusable component. Vertical to
                  minimize the horizontal space it takes from the toolbar row. -->
             <docking:PanelWindowControls DockPanel.Dock="Right" Orientation="Vertical"
+                                         AutomationProperties.AutomationId="MapViewer.WindowControls"
                                          VerticalAlignment="Center" Margin="4,0,0,0" />
 
             <StackPanel Orientation="Horizontal" Spacing="6">
-                <Button Content="{l:Loc Common_OpenEllipsis}" Click="OnOpen" FontSize="11" Padding="8,2" />
+                <Button AutomationProperties.AutomationId="MapViewer.Open" Content="{l:Loc Common_OpenEllipsis}" Click="OnOpen" FontSize="11" Padding="8,2" />
                 <Button Content="{l:Loc Common_OpenExternally}" Command="{Binding Map.OpenExternallyCommand}"
+                        AutomationProperties.AutomationId="MapViewer.OpenExternally"
                         IsEnabled="{Binding Map.HasFile}" FontSize="11" Padding="8,2" />
                 <!-- Compatible map outputs declared by the active thconfig's export-map commands (#2). -->
                 <ComboBox MinWidth="130" MaxWidth="240" FontSize="11" VerticalAlignment="Center"
+                          AutomationProperties.AutomationId="MapViewer.Output" AutomationProperties.Name="{l:Loc MapV_OutputsTip}"
                           IsVisible="{Binding Map.HasAvailableOutputs}"
                           ItemsSource="{Binding Map.AvailableOutputs}"
                           SelectedItem="{Binding Map.SelectedOutput, Mode=TwoWay}"
@@ -44,18 +48,21 @@
                 </ComboBox>
                 <Separator Width="1" Margin="3,2" Background="Gray" />
                 <Button Content="◀" Command="{Binding Map.PrevPageCommand}"
+                        AutomationProperties.AutomationId="MapViewer.PrevPage" AutomationProperties.Name="{l:Loc MapV_PrevPage}"
                         IsVisible="{Binding Map.HasMultiplePages}" FontSize="11" Padding="6,2" />
                 <TextBlock Text="{Binding Map.PageLabel}" VerticalAlignment="Center" FontSize="11"
                            IsVisible="{Binding Map.HasMultiplePages}" />
                 <Button Content="▶" Command="{Binding Map.NextPageCommand}"
+                        AutomationProperties.AutomationId="MapViewer.NextPage" AutomationProperties.Name="{l:Loc MapV_NextPage}"
                         IsVisible="{Binding Map.HasMultiplePages}" FontSize="11" Padding="6,2" />
                 <Separator Width="1" Margin="3,2" Background="Gray" />
-                <Button Content="–" Command="{Binding Map.ZoomOutCommand}" FontSize="11" Padding="8,2" />
-                <Button Content="{l:Loc MapV_Fit100}" Command="{Binding Map.ZoomResetCommand}" FontSize="11" Padding="6,2" />
-                <Button Content="+" Command="{Binding Map.ZoomInCommand}" FontSize="11" Padding="8,2" />
+                <Button AutomationProperties.AutomationId="MapViewer.ZoomOut" AutomationProperties.Name="{l:Loc MapV_ZoomOut}" Content="–" Command="{Binding Map.ZoomOutCommand}" FontSize="11" Padding="8,2" />
+                <Button AutomationProperties.AutomationId="MapViewer.ZoomReset" Content="{l:Loc MapV_Fit100}" Command="{Binding Map.ZoomResetCommand}" FontSize="11" Padding="6,2" />
+                <Button AutomationProperties.AutomationId="MapViewer.ZoomIn" AutomationProperties.Name="{l:Loc MapV_ZoomIn}" Content="+" Command="{Binding Map.ZoomInCommand}" FontSize="11" Padding="8,2" />
                 <Button Content="{l:Loc MapV_FitWindow}" ToolTip.Tip="{l:Loc MapV_FitWindowTip}"
+                        AutomationProperties.AutomationId="MapViewer.Fit"
                         Click="OnFit" IsEnabled="{Binding Map.HasImage}" FontSize="11" Padding="6,2" />
-                <Button Content="{l:Loc Common_RefreshGlyph}" Command="{Binding Map.RefreshCommand}" FontSize="11" Padding="6,2" />
+                <Button AutomationProperties.AutomationId="MapViewer.Refresh" AutomationProperties.Name="{l:Loc Common_Refresh}" Content="{l:Loc Common_RefreshGlyph}" Command="{Binding Map.RefreshCommand}" FontSize="11" Padding="6,2" />
             </StackPanel>
           </DockPanel>
         </Border>
@@ -89,6 +96,7 @@
 
         <Grid>
             <ScrollViewer x:Name="Scroll" Background="#15808080"
+                          AutomationProperties.AutomationId="MapViewer.Canvas"
                           HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
                           PointerWheelChanged="OnWheel">
                 <LayoutTransformControl HorizontalAlignment="Center" VerticalAlignment="Center" Margin="12">

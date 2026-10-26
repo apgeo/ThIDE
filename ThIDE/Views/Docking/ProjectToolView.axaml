@@ -5,6 +5,7 @@
              xmlns:local="using:ThIDE.Views.Docking"
              x:Class="ThIDE.Views.Docking.ProjectToolView"
              x:CompileBindings="False"
+             AutomationProperties.AutomationId="Project.View"
              x:DataType="vm:ProjectToolViewModel">
     <UserControl.Styles>
         <!-- Flat clickable row used by the audit lists. -->
@@ -36,9 +37,9 @@
     </UserControl.Styles>
 
   <Grid>
-    <TabControl>
+    <TabControl AutomationProperties.AutomationId="Project.Tabs">
         <!-- Dashboard -->
-        <TabItem Header="{l:Loc Proj_Tab_Dashboard}">
+        <TabItem AutomationProperties.AutomationId="Project.Tab.Dashboard" Header="{l:Loc Proj_Tab_Dashboard}">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel Margin="12" Spacing="4">
                     <TextBlock Text="{Binding Dashboard.ProjectName}" FontSize="18" FontWeight="Bold" />
@@ -69,21 +70,22 @@
 
                     <TextBlock Classes="h" Text="{l:Loc Proj_QuickActions}" />
                     <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Button Content="{l:Loc Proj_Build}" Command="{Binding Dashboard.Build.BuildCommand}" />
-                        <Button Content="{l:Loc Proj_OpenOutputFolder}" Command="{Binding Dashboard.Build.OpenLastOutputFolderCommand}" />
-                        <Button Content="{l:Loc Common_Refresh}" Command="{Binding Dashboard.RefreshCommand}" />
+                        <Button AutomationProperties.AutomationId="Project.Dashboard.Build" Content="{l:Loc Proj_Build}" Command="{Binding Dashboard.Build.BuildCommand}" />
+                        <Button AutomationProperties.AutomationId="Project.Dashboard.OpenOutputFolder" Content="{l:Loc Proj_OpenOutputFolder}" Command="{Binding Dashboard.Build.OpenLastOutputFolderCommand}" />
+                        <Button AutomationProperties.AutomationId="Project.Dashboard.Refresh" Content="{l:Loc Common_Refresh}" Command="{Binding Dashboard.RefreshCommand}" />
                     </StackPanel>
                 </StackPanel>
             </ScrollViewer>
         </TabItem>
 
         <!-- Survey tree -->
-        <TabItem Header="{l:Loc Proj_Tab_Surveys}">
+        <TabItem AutomationProperties.AutomationId="Project.Tab.Surveys" Header="{l:Loc Proj_Tab_Surveys}">
             <DockPanel>
                 <TextBlock DockPanel.Dock="Top" Margin="8,6" Foreground="Gray"
                            Text="{l:Loc Proj_NoSurveys}"
                            IsVisible="{Binding Surveys.IsEmpty}" />
                 <TreeView ItemsSource="{Binding Surveys.Roots}"
+                          AutomationProperties.AutomationId="Project.Surveys.Tree" AutomationProperties.Name="{l:Loc Proj_Tab_Surveys}"
                           SelectedItem="{Binding Surveys.Selected, Mode=TwoWay}">
                     <TreeView.ItemTemplate>
                         <TreeDataTemplate ItemsSource="{Binding Children}">
@@ -100,15 +102,16 @@
         </TabItem>
 
         <!-- Statistics -->
-        <TabItem Header="{l:Loc Proj_Tab_Statistics}">
+        <TabItem AutomationProperties.AutomationId="Project.Tab.Statistics" Header="{l:Loc Proj_Tab_Statistics}">
             <DockPanel>
                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="8,6">
-                    <Button Content="{l:Loc Common_Refresh}" Command="{Binding Analytics.RefreshCommand}" />
-                    <Button Content="{l:Loc Common_Copy}" Command="{Binding Analytics.CopyStatisticsCommand}" />
+                    <Button AutomationProperties.AutomationId="Project.Statistics.Refresh" Content="{l:Loc Common_Refresh}" Command="{Binding Analytics.RefreshCommand}" />
+                    <Button AutomationProperties.AutomationId="Project.Statistics.Copy" Content="{l:Loc Common_Copy}" Command="{Binding Analytics.CopyStatisticsCommand}" />
                     <TextBlock Text="{Binding Analytics.Summary}" Foreground="Gray" VerticalAlignment="Center"
                                TextTrimming="CharacterEllipsis" />
                 </StackPanel>
                 <DataGrid ItemsSource="{Binding Analytics.Statistics}" IsReadOnly="True"
+                          AutomationProperties.AutomationId="Project.Statistics.Grid"
                           local:DataGridCopy.Enable="True"
                           GridLinesVisibility="Horizontal" AutoGenerateColumns="False" HeadersVisibility="None">
                     <DataGrid.Columns>
@@ -120,11 +123,11 @@
         </TabItem>
 
         <!-- Charts -->
-        <TabItem Header="{l:Loc Proj_Tab_Charts}">
+        <TabItem AutomationProperties.AutomationId="Project.Tab.Charts" Header="{l:Loc Proj_Tab_Charts}">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel Margin="10" Spacing="2">
                     <TextBlock Classes="h" Text="{l:Loc Proj_Chart_LengthBySurvey}" />
-                    <ItemsControl ItemsSource="{Binding Analytics.LengthBySurvey}">
+                    <ItemsControl AutomationProperties.AutomationId="Project.Charts.LengthBySurvey" ItemsSource="{Binding Analytics.LengthBySurvey}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <Grid ColumnDefinitions="180,*,90" Margin="0,1">
@@ -137,7 +140,7 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                     <TextBlock Classes="h" Text="{l:Loc Proj_Chart_LengthByDate}" />
-                    <ItemsControl ItemsSource="{Binding Analytics.LengthByDate}">
+                    <ItemsControl AutomationProperties.AutomationId="Project.Charts.LengthByDate" ItemsSource="{Binding Analytics.LengthByDate}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <Grid ColumnDefinitions="180,*,90" Margin="0,1">
@@ -154,12 +157,14 @@
         </TabItem>
 
         <!-- Team & trips -->
-        <TabItem Header="{l:Loc Proj_Tab_Team}">
+        <TabItem AutomationProperties.AutomationId="Project.Tab.Team" Header="{l:Loc Proj_Tab_Team}">
             <DockPanel>
                 <Button DockPanel.Dock="Top" HorizontalAlignment="Left" Margin="8,6"
+                        AutomationProperties.AutomationId="Project.Team.CopyCsv"
                         Content="{l:Loc Proj_CopyTeamCsv}" Command="{Binding Analytics.CopyTeamCommand}" />
                 <Grid RowDefinitions="*,Auto,*">
                     <DataGrid Grid.Row="0" ItemsSource="{Binding Analytics.Team}" IsReadOnly="True"
+                              AutomationProperties.AutomationId="Project.Team.Grid"
                               local:DataGridCopy.Enable="True"
                               GridLinesVisibility="Horizontal" CanUserSortColumns="True" AutoGenerateColumns="False">
                         <DataGrid.Columns>
@@ -170,6 +175,7 @@
                     </DataGrid>
                     <TextBlock Grid.Row="1" Classes="h" Text="{l:Loc Proj_Trips}" Margin="8,6,0,3" />
                     <DataGrid Grid.Row="2" ItemsSource="{Binding Analytics.Trips}" IsReadOnly="True"
+                              AutomationProperties.AutomationId="Project.Team.Trips"
                               local:DataGridCopy.Enable="True"
                               GridLinesVisibility="Horizontal" CanUserSortColumns="True" AutoGenerateColumns="False">
                         <DataGrid.Columns>
@@ -184,11 +190,13 @@
         </TabItem>
 
         <!-- Entrances & fixed points -->
-        <TabItem Header="{l:Loc Proj_Tab_Entrances}">
+        <TabItem AutomationProperties.AutomationId="Project.Tab.Entrances" Header="{l:Loc Proj_Tab_Entrances}">
             <DockPanel>
                 <Button DockPanel.Dock="Top" HorizontalAlignment="Left" Margin="8,6"
+                        AutomationProperties.AutomationId="Project.Entrances.CopyCsv"
                         Content="{l:Loc Proj_CopyCsv}" Command="{Binding Analytics.CopyFixedPointsCommand}" />
                 <DataGrid x:Name="EntrancesGrid" ItemsSource="{Binding Analytics.FixedPoints}" IsReadOnly="True"
+                          AutomationProperties.AutomationId="Project.Entrances.Grid"
                           local:DataGridCopy.Enable="True"
                           GridLinesVisibility="Horizontal" CanUserSortColumns="True" AutoGenerateColumns="False"
                           DoubleTapped="OnEntrancesRowDoubleTapped">
@@ -204,9 +212,9 @@
         </TabItem>
 
         <!-- Data quality — each count is a hyperlink that drills into the matching rows in the Object Browser. -->
-        <TabItem Header="{l:Loc Proj_Tab_Quality}">
+        <TabItem AutomationProperties.AutomationId="Project.Tab.Quality" Header="{l:Loc Proj_Tab_Quality}">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
-                <ItemsControl ItemsSource="{Binding Analytics.Quality}" Margin="12,8">
+                <ItemsControl AutomationProperties.AutomationId="Project.Quality.List" ItemsSource="{Binding Analytics.Quality}" Margin="12,8">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
                             <Grid ColumnDefinitions="*,Auto" Margin="0,3">
@@ -226,14 +234,17 @@
 
         <!-- Orphan / dead-file audit — computed on demand (the orphan scan walks every thconfig's
              source graph, so it is gated behind an explicit Calculate button, never run eagerly). -->
-        <TabItem Header="{l:Loc Proj_Tab_Audit}">
+        <TabItem AutomationProperties.AutomationId="Project.Tab.Audit" Header="{l:Loc Proj_Tab_Audit}">
             <DockPanel>
                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="8,6">
                     <Button Content="{l:Loc Proj_Audit_Calculate}" Command="{Binding Audit.CalculateCommand}"
+                            AutomationProperties.AutomationId="Project.Audit.Calculate"
                             IsVisible="{Binding !Audit.HasCalculated}" IsEnabled="{Binding !Audit.IsCalculating}" />
                     <Button Content="{l:Loc Proj_Audit_Recalculate}" Command="{Binding Audit.CalculateCommand}"
+                            AutomationProperties.AutomationId="Project.Audit.Recalculate"
                             IsVisible="{Binding Audit.HasCalculated}" IsEnabled="{Binding !Audit.IsCalculating}" />
                     <Button Content="{l:Loc Proj_Audit_AddExclusion}" Click="OnAddAuditExclusion"
+                            AutomationProperties.AutomationId="Project.Audit.AddExclusion"
                             ToolTip.Tip="{l:Loc Proj_Audit_AddExclusionTip}" />
                     <TextBlock Text="{Binding Audit.Summary}" Foreground="Gray" VerticalAlignment="Center"
                                TextTrimming="CharacterEllipsis" />
@@ -243,7 +254,7 @@
                 <StackPanel DockPanel.Dock="Top" Margin="8,0,8,4"
                             IsVisible="{Binding Audit.HasExclusions}">
                     <TextBlock Classes="h" Text="{l:Loc Proj_Audit_Exclusions}" />
-                    <ItemsControl ItemsSource="{Binding Audit.ExcludedDirectories}">
+                    <ItemsControl AutomationProperties.AutomationId="Project.Audit.Exclusions" ItemsSource="{Binding Audit.ExcludedDirectories}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal" Spacing="6">
@@ -267,7 +278,7 @@
                                    IsVisible="{Binding !Audit.HasCalculated}" />
                         <StackPanel IsVisible="{Binding Audit.HasCalculated}">
                         <TextBlock Classes="h" Text="{l:Loc Proj_Audit_Orphans}" />
-                        <ItemsControl ItemsSource="{Binding Audit.OrphanFiles}">
+                        <ItemsControl AutomationProperties.AutomationId="Project.Audit.OrphanFiles" ItemsSource="{Binding Audit.OrphanFiles}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Button Classes="row" Command="{Binding $parent[ItemsControl].DataContext.Audit.OpenCommand}"
@@ -283,7 +294,7 @@
                         </ItemsControl>
 
                         <TextBlock Classes="h" Text="{l:Loc Proj_Audit_Scraps}" />
-                        <ItemsControl ItemsSource="{Binding Audit.UnreferencedScraps}">
+                        <ItemsControl AutomationProperties.AutomationId="Project.Audit.UnreferencedScraps" ItemsSource="{Binding Audit.UnreferencedScraps}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Button Classes="row" Command="{Binding $parent[ItemsControl].DataContext.Audit.OpenCommand}"
@@ -299,7 +310,7 @@
                         </ItemsControl>
 
                         <TextBlock Classes="h" Text="{l:Loc Proj_Audit_Maps}" />
-                        <ItemsControl ItemsSource="{Binding Audit.UnexportedMaps}">
+                        <ItemsControl AutomationProperties.AutomationId="Project.Audit.UnexportedMaps" ItemsSource="{Binding Audit.UnexportedMaps}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Button Classes="row" Command="{Binding $parent[ItemsControl].DataContext.Audit.OpenCommand}"
@@ -320,19 +331,21 @@
         </TabItem>
 
         <!-- exploration leads register -->
-        <TabItem Header="{l:Loc Proj_Tab_Leads}">
+        <TabItem AutomationProperties.AutomationId="Project.Tab.Leads" Header="{l:Loc Proj_Tab_Leads}">
             <DockPanel>
                 <WrapPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="8,6" VerticalAlignment="Center">
-                    <Button Content="{l:Loc Proj_Rescan}" Command="{Binding Leads.RefreshCommand}" Margin="0,0,6,0" />
-                    <Button Content="{l:Loc Proj_CopyMarkdown}" Command="{Binding Leads.CopyAsMarkdownCommand}" Margin="0,0,12,0" />
+                    <Button AutomationProperties.AutomationId="Project.Leads.Rescan" Content="{l:Loc Proj_Rescan}" Command="{Binding Leads.RefreshCommand}" Margin="0,0,6,0" />
+                    <Button AutomationProperties.AutomationId="Project.Leads.CopyMarkdown" Content="{l:Loc Proj_CopyMarkdown}" Command="{Binding Leads.CopyAsMarkdownCommand}" Margin="0,0,12,0" />
                     <!-- Off by default: show only explicit station-flag leads; flip on to include the
                          heuristic "open leads" (comments, sketch points, dead-ends). -->
                     <ToggleSwitch Content="{l:Loc Proj_Lead_ShowAll}" IsChecked="{Binding Leads.ShowAllLeads, Mode=TwoWay}"
+                                  AutomationProperties.AutomationId="Project.Leads.ShowAll"
                                   OnContent="{l:Loc Common_On}" OffContent="{l:Loc Common_Off}"
                                   Margin="0,0,12,0" VerticalAlignment="Center" />
                     <TextBlock Text="{Binding Leads.Summary}" Foreground="Gray" VerticalAlignment="Center" />
                 </WrapPanel>
                 <DataGrid x:Name="LeadsGrid" ItemsSource="{Binding Leads.Leads}" IsReadOnly="True"
+                          AutomationProperties.AutomationId="Project.Leads.Grid"
                           local:DataGridCopy.Enable="True"
                           GridLinesVisibility="Horizontal" CanUserResizeColumns="True"
                           CanUserSortColumns="True" AutoGenerateColumns="False"
@@ -350,14 +363,15 @@
         </TabItem>
 
         <!-- TODO / FIXME / QM aggregator -->
-        <TabItem Header="{l:Loc Proj_Tab_Todos}">
+        <TabItem AutomationProperties.AutomationId="Project.Tab.Todos" Header="{l:Loc Proj_Tab_Todos}">
             <DockPanel>
                 <WrapPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="8,6" VerticalAlignment="Center">
-                    <Button Content="{l:Loc Proj_Rescan}" Command="{Binding Todos.RefreshCommand}" Margin="0,0,6,0" />
-                    <Button Content="{l:Loc Proj_CopyMarkdown}" Command="{Binding Todos.CopyAsMarkdownCommand}" Margin="0,0,12,0" />
+                    <Button AutomationProperties.AutomationId="Project.Todos.Rescan" Content="{l:Loc Proj_Rescan}" Command="{Binding Todos.RefreshCommand}" Margin="0,0,6,0" />
+                    <Button AutomationProperties.AutomationId="Project.Todos.CopyMarkdown" Content="{l:Loc Proj_CopyMarkdown}" Command="{Binding Todos.CopyAsMarkdownCommand}" Margin="0,0,12,0" />
                     <TextBlock Text="{Binding Todos.Summary}" Foreground="Gray" VerticalAlignment="Center" />
                 </WrapPanel>
                 <DataGrid x:Name="TodosGrid" ItemsSource="{Binding Todos.Todos}" IsReadOnly="True"
+                          AutomationProperties.AutomationId="Project.Todos.Grid"
                           local:DataGridCopy.Enable="True"
                           GridLinesVisibility="Horizontal" CanUserResizeColumns="True"
                           CanUserSortColumns="True" AutoGenerateColumns="False"
@@ -373,7 +387,7 @@
         </TabItem>
 
         <!-- project metadata editor (hidden behind OverviewFeatures.ShowMetadataTab until it round-trips to source) -->
-        <TabItem Header="{l:Loc Proj_Tab_Metadata}" IsVisible="{x:Static local:OverviewFeatures.ShowMetadataTab}">
+        <TabItem AutomationProperties.AutomationId="Project.Tab.Metadata" Header="{l:Loc Proj_Tab_Metadata}" IsVisible="{x:Static local:OverviewFeatures.ShowMetadataTab}">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel Margin="10" Spacing="8" MaxWidth="560" HorizontalAlignment="Left">
                     <TextBlock Text="{l:Loc Proj_Meta_Intro}"
@@ -381,23 +395,25 @@
                     <Grid ColumnDefinitions="130,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto"
                           IsEnabled="{Binding Metadata.HasProject}">
                         <TextBlock Grid.Row="0" Grid.Column="0" Text="{l:Loc Col_Name}" VerticalAlignment="Center" />
-                        <TextBox   Grid.Row="0" Grid.Column="1" Text="{Binding Metadata.Name}" Margin="0,0,0,4" />
+                        <TextBox AutomationProperties.AutomationId="Project.Metadata.Name" AutomationProperties.Name="{l:Loc Col_Name}"   Grid.Row="0" Grid.Column="1" Text="{Binding Metadata.Name}" Margin="0,0,0,4" />
                         <TextBlock Grid.Row="1" Grid.Column="0" Text="{l:Loc Col_Region}" VerticalAlignment="Center" />
-                        <TextBox   Grid.Row="1" Grid.Column="1" Text="{Binding Metadata.Region}" Margin="0,0,0,4" />
+                        <TextBox AutomationProperties.AutomationId="Project.Metadata.Region" AutomationProperties.Name="{l:Loc Col_Region}"   Grid.Row="1" Grid.Column="1" Text="{Binding Metadata.Region}" Margin="0,0,0,4" />
                         <TextBlock Grid.Row="2" Grid.Column="0" Text="{l:Loc Col_Crs}" VerticalAlignment="Center" />
-                        <TextBox   Grid.Row="2" Grid.Column="1" Text="{Binding Metadata.Crs}" Watermark="e.g. EPSG:3844" Margin="0,0,0,4" />
+                        <TextBox AutomationProperties.AutomationId="Project.Metadata.Crs" AutomationProperties.Name="{l:Loc Col_Crs}"   Grid.Row="2" Grid.Column="1" Text="{Binding Metadata.Crs}" Watermark="e.g. EPSG:3844" Margin="0,0,0,4" />
                         <TextBlock Grid.Row="3" Grid.Column="0" Text="{l:Loc Col_DeclSource}" VerticalAlignment="Center" />
-                        <TextBox   Grid.Row="3" Grid.Column="1" Text="{Binding Metadata.DeclinationSource}" Margin="0,0,0,4" />
+                        <TextBox AutomationProperties.AutomationId="Project.Metadata.DeclinationSource" AutomationProperties.Name="{l:Loc Col_DeclSource}"   Grid.Row="3" Grid.Column="1" Text="{Binding Metadata.DeclinationSource}" Margin="0,0,0,4" />
                         <TextBlock Grid.Row="4" Grid.Column="0" Text="{l:Loc Col_License}" VerticalAlignment="Center" />
-                        <TextBox   Grid.Row="4" Grid.Column="1" Text="{Binding Metadata.License}" />
+                        <TextBox AutomationProperties.AutomationId="Project.Metadata.License" AutomationProperties.Name="{l:Loc Col_License}"   Grid.Row="4" Grid.Column="1" Text="{Binding Metadata.License}" />
                     </Grid>
                     <TextBlock Text="{l:Loc Col_Notes}" />
                     <TextBox Text="{Binding Metadata.Notes}" AcceptsReturn="True" TextWrapping="Wrap"
+                             AutomationProperties.AutomationId="Project.Metadata.Notes" AutomationProperties.Name="{l:Loc Col_Notes}"
                              MinHeight="80" IsEnabled="{Binding Metadata.HasProject}" />
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <Button Content="{l:Loc Proj_Save}" Command="{Binding Metadata.SaveCommand}"
+                                AutomationProperties.AutomationId="Project.Metadata.Save"
                                 IsEnabled="{Binding Metadata.HasProject}" />
-                        <Button Content="{l:Loc Proj_Reload}" Command="{Binding Metadata.ReloadCommand}" />
+                        <Button AutomationProperties.AutomationId="Project.Metadata.Reload" Content="{l:Loc Proj_Reload}" Command="{Binding Metadata.ReloadCommand}" />
                         <TextBlock Text="{Binding Metadata.Status}" Foreground="Gray" VerticalAlignment="Center" />
                     </StackPanel>
                 </StackPanel>
@@ -405,15 +421,17 @@
         </TabItem>
 
         <!-- background-scan / media manager (hidden behind OverviewFeatures.ShowMediaTab until the asset workflow is complete) -->
-        <TabItem Header="{l:Loc Proj_Tab_Media}" IsVisible="{x:Static local:OverviewFeatures.ShowMediaTab}">
+        <TabItem AutomationProperties.AutomationId="Project.Tab.Media" Header="{l:Loc Proj_Tab_Media}" IsVisible="{x:Static local:OverviewFeatures.ShowMediaTab}">
             <DockPanel>
                 <WrapPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="8,6" VerticalAlignment="Center">
-                    <Button Content="{l:Loc Proj_Rescan}" Command="{Binding MediaManager.RefreshCommand}" Margin="0,0,6,0" />
+                    <Button AutomationProperties.AutomationId="Project.Media.Rescan" Content="{l:Loc Proj_Rescan}" Command="{Binding MediaManager.RefreshCommand}" Margin="0,0,6,0" />
                     <Button Content="{l:Loc Gen_Reveal}" Command="{Binding MediaManager.RevealCommand}"
+                            AutomationProperties.AutomationId="Project.Media.Reveal"
                             CommandParameter="{Binding #MediaGrid.SelectedItem}" Margin="0,0,12,0" />
                     <TextBlock Text="{Binding MediaManager.Summary}" Foreground="Gray" VerticalAlignment="Center" />
                 </WrapPanel>
                 <DataGrid x:Name="MediaGrid" ItemsSource="{Binding MediaManager.Media}" IsReadOnly="True"
+                          AutomationProperties.AutomationId="Project.Media.Grid"
                           local:DataGridCopy.Enable="True"
                           GridLinesVisibility="Horizontal" CanUserResizeColumns="True"
                           CanUserSortColumns="True" AutoGenerateColumns="False">

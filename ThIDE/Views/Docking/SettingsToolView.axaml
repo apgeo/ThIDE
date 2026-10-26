@@ -3,16 +3,18 @@
              xmlns:vm="using:ThIDE.ViewModels.Docking"
              xmlns:l="using:ThIDE.Resources"
              x:Class="ThIDE.Views.Docking.SettingsToolView"
+             AutomationProperties.AutomationId="Settings.View"
              x:DataType="vm:SettingsToolViewModel">
-    <TabControl>
-        <TabItem Header="{l:Loc Pref_External}">
+    <TabControl AutomationProperties.AutomationId="Settings.Tabs">
+        <TabItem AutomationProperties.AutomationId="Settings.Tab.ExternalTools" Header="{l:Loc Pref_External}">
             <DockPanel>
                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="6">
-                    <Button Content="{l:Loc Common_Refresh}" Command="{Binding Settings.RefreshCommand}" />
+                    <Button AutomationProperties.AutomationId="Settings.ExternalTools.Refresh" Content="{l:Loc Common_Refresh}" Command="{Binding Settings.RefreshCommand}" />
                     <TextBlock VerticalAlignment="Center" Margin="12,0,0,0"
                                Text="{Binding Settings.Status}" Foreground="Gray" />
                 </StackPanel>
                 <DataGrid ItemsSource="{Binding Settings.Tools}"
+                          AutomationProperties.AutomationId="Settings.ExternalTools.Grid" AutomationProperties.Name="{l:Loc Pref_External}"
                           x:CompileBindings="False"
                           GridLinesVisibility="Horizontal"
                           CanUserResizeColumns="True" CanUserSortColumns="True" AutoGenerateColumns="False">

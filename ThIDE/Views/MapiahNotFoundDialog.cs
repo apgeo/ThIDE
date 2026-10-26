@@ -1,6 +1,7 @@
 // Shown when "Edit with Mapiah" is clicked but the Mapiah executable can't be detected.
 // Points the user at the download page and the Settings → External Tools path override.
 
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Layout;
@@ -34,6 +35,10 @@ public sealed class MapiahNotFoundDialog : Window
         download.Click += (_, _) => Close(MapiahNotFoundChoice.Download);
         settings.Click += (_, _) => Close(MapiahNotFoundChoice.OpenSettings);
         cancel.Click += (_, _) => Close(MapiahNotFoundChoice.Cancel);
+        AutomationProperties.SetAutomationId(this, "MapiahNotFound.Window");
+        AutomationProperties.SetAutomationId(download, "MapiahNotFound.Download");
+        AutomationProperties.SetAutomationId(settings, "MapiahNotFound.OpenSettings");
+        AutomationProperties.SetAutomationId(cancel, "MapiahNotFound.Close");
 
         var buttons = new StackPanel
         {

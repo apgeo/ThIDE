@@ -1,0 +1,14 @@
+encoding utf-8
+# Invented test data: not a real cave. Used by the end-to-end UI tests.
+survey demo -title "Invented demo cave"
+  centreline
+    units length meters
+    units compass clino degrees
+    data normal from to length compass clino
+    0 1 10.0 0 -5
+    1 2 8.0 45 -10
+    2 3 12.0 90 0
+    3 4 6.0 180 20
+    2 5 9.0 300 -30
+  endcentreline
+endsurvey

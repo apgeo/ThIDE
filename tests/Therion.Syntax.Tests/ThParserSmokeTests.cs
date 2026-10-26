@@ -42,8 +42,8 @@ public class ThParserSmokeTests
     {
         // Resolve the committed corpus file relative to the test assembly so this runs on any
         // machine/CI checkout (the whole synthetic corpus is also swept by SyntheticCorpusTests).
-        var filePath = LocateSyntheticCorpusFile(Path.Combine("project", "av_cerbul_de_aur.th"));
-        Assert.True(filePath is not null, "Could not locate tests/Corpus/Synthetic/project/av_cerbul_de_aur.th");
+        var filePath = LocateSyntheticCorpusFile(Path.Combine("project", "av_bravo.th"));
+        Assert.True(filePath is not null, "Could not locate tests/Corpus/Synthetic/project/av_bravo.th");
         string text = EncodingResolver.ReadAllText(filePath!);
 
         var parser = new ThParser();
@@ -53,7 +53,7 @@ public class ThParserSmokeTests
         Assert.False(r.HasErrors);
 
         var survey = r.Value!.Children.OfType<SurveyCommand>().Single();
-        Assert.Equal("av_cerbul_de_aur_2025", survey.Name);
+        Assert.Equal("av_bravo_2025", survey.Name);
 
         var cl = survey.Children.OfType<CentrelineCommand>().Single();
         Assert.Contains(cl.Children, c => c is DataCommand);

@@ -70,6 +70,14 @@
   <data name="Menu_Build_Rebuild" xml:space="preserve"><value>_Recompile</value></data>
   <data name="Menu_Build_Cancel" xml:space="preserve"><value>_Cancel</value></data>
   <data name="Tool_WorkspaceExplorer" xml:space="preserve"><value>Workspace Explorer</value></data>
+  <data name="Ws_RelationalViewTip" xml:space="preserve"><value>Relational object-graph view</value></data>
+  <data name="Ws_FileExplorerViewTip" xml:space="preserve"><value>File-explorer view</value></data>
+  <data name="Ws_OpenThconfigTip" xml:space="preserve"><value>Open the selected thconfig in the editor</value></data>
+  <data name="Ws_ActiveConfigTip" xml:space="preserve"><value>Active configuration (drives the object graph)</value></data>
+  <data name="Ws_ShowFilesTip" xml:space="preserve"><value>Show file nodes in the object graph</value></data>
+  <data name="Ws_RevealOnHoverTip" xml:space="preserve"><value>Highlight workspace item when hovering a link in the editor</value></data>
+  <data name="Ws_RevealOnTabSwitchTip" xml:space="preserve"><value>Highlight the active file in the workspace when switching tabs</value></data>
+  <data name="Ws_SortByTip" xml:space="preserve"><value>Sort by</value></data>
   <data name="Tool_Diagnostics" xml:space="preserve"><value>Diagnostics</value></data>
   <data name="Tool_ObjectBrowser" xml:space="preserve"><value>Object Browser</value></data>
   <data name="Tool_CompilerOutput" xml:space="preserve"><value>Compiler Output</value></data>
@@ -535,6 +543,7 @@
   <data name="Rename_NewNameFor" xml:space="preserve"><value>New name for '{0}':</value></data>
   <data name="Rename_PreviewSummary" xml:space="preserve"><value>{0} occurrence(s) across {1} file(s). Double-click an entry to jump to it.</value></data>
   <data name="Rename_SeeOccurrences" xml:space="preserve"><value>See occurrences…</value></data>
+  <data name="Rename_HelpTip" xml:space="preserve"><value>What does this do?</value></data>
   <data name="Pref_Title" xml:space="preserve"><value>Settings</value></data>
   <data name="Pref_SearchWm" xml:space="preserve"><value>Search settings…</value></data>
   <data name="Pref_ReopenSession" xml:space="preserve"><value>Reopen files from last session on startup</value></data>
@@ -697,6 +706,10 @@
   <data name="MapV_FitWindowTip" xml:space="preserve"><value>Shrink to fit the window (never enlarges past 100%)</value></data>
   <data name="MapV_Fit100" xml:space="preserve"><value>100%</value></data>
   <data name="MapV_OutputsTip" xml:space="preserve"><value>Compatible map outputs from the active thconfig (export map)</value></data>
+  <data name="MapV_PrevPage" xml:space="preserve"><value>Previous page</value></data>
+  <data name="MapV_NextPage" xml:space="preserve"><value>Next page</value></data>
+  <data name="MapV_ZoomOut" xml:space="preserve"><value>Zoom out</value></data>
+  <data name="MapV_ZoomIn" xml:space="preserve"><value>Zoom in</value></data>
   <data name="Panel_FullScreenTip" xml:space="preserve"><value>Full screen</value></data>
   <data name="Panel_FloatScreenTip" xml:space="preserve"><value>Float on another monitor and maximize</value></data>
   <data name="Panel_MoveCenterTip" xml:space="preserve"><value>Move to the central panel</value></data>

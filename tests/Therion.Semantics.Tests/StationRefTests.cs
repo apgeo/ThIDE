@@ -10,14 +10,14 @@ public class StationRefTests
     [Fact]
     public void Parse_splits_point_and_reverses_survey_path()
     {
-        var r = StationRef.Parse("11@grind_175_baza_niagara");
+        var r = StationRef.Parse("11@alpha_175_baza_cascada");
 
         Assert.Equal("11", r.Point);
         Assert.True(r.HasSurvey);
-        Assert.Equal("grind_175_baza_niagara", r.SurveyLastName);
-        Assert.Equal("grind_175_baza_niagara", r.SurveyQuery);
+        Assert.Equal("alpha_175_baza_cascada", r.SurveyLastName);
+        Assert.Equal("alpha_175_baza_cascada", r.SurveyQuery);
         // point@survey ≡ survey.point (top-down).
-        Assert.Equal("grind_175_baza_niagara.11", r.StationQuery);
+        Assert.Equal("alpha_175_baza_cascada.11", r.StationQuery);
     }
 
     [Fact]
@@ -35,12 +35,12 @@ public class StationRefTests
     [Fact]
     public void Parse_bare_token_has_no_survey()
     {
-        var r = StationRef.Parse("grind_wg_superior_meandru");
+        var r = StationRef.Parse("alpha_wg_superior_meandru");
 
         Assert.False(r.HasSurvey);
         Assert.Null(r.SurveyQuery);
-        Assert.Equal("grind_wg_superior_meandru", r.Point);
-        Assert.Equal("grind_wg_superior_meandru", r.StationQuery);
+        Assert.Equal("alpha_wg_superior_meandru", r.Point);
+        Assert.Equal("alpha_wg_superior_meandru", r.StationQuery);
     }
 
     [Fact]
@@ -60,7 +60,7 @@ public class StationRefTests
     [InlineData(8, ReferencePart.Survey)]
     public void ClassifyClick_picks_point_vs_survey_by_offset(int offset, ReferencePart expected)
     {
-        var (part, _) = StationRef.ClassifyClick("11@grind", offset);
+        var (part, _) = StationRef.ClassifyClick("11@alpha", offset);
         Assert.Equal(expected, part);
     }
 

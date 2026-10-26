@@ -5,18 +5,21 @@
              xmlns:conv="using:ThIDE.Converters"
              xmlns:l="using:ThIDE.Resources"
              x:Class="ThIDE.Views.Docking.WorkspaceExplorerToolView"
+             AutomationProperties.AutomationId="WorkspaceExplorer.View"
              x:DataType="vm:WorkspaceExplorerToolViewModel">
     <DockPanel>
-        <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="8,5">
+        <Border AutomationProperties.AutomationId="WorkspaceExplorer.Toolbar" DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="8,5">
             <StackPanel Spacing="5">
                 <!-- View-mode switch (#5): relational object graph vs. file explorer. -->
                 <StackPanel Orientation="Horizontal" Spacing="0">
                     <ToggleButton Padding="6,3" ToolTip.Tip="Relational object-graph view"
+                                  AutomationProperties.AutomationId="WorkspaceExplorer.RelationalView" AutomationProperties.Name="{l:Loc Ws_RelationalViewTip}"
                                   IsChecked="{Binding Explorer.IsRelationalView, Mode=OneWay}"
                                   Command="{Binding Explorer.SwitchToRelationalCommand}">
                         <PathIcon Data="{DynamicResource Icon.Cube}" Width="14" Height="14" />
                     </ToggleButton>
                     <ToggleButton Padding="6,3" ToolTip.Tip="File-explorer view"
+                                  AutomationProperties.AutomationId="WorkspaceExplorer.FileExplorerView" AutomationProperties.Name="{l:Loc Ws_FileExplorerViewTip}"
                                   IsChecked="{Binding Explorer.IsFileExplorerView, Mode=OneWay}"
                                   Command="{Binding Explorer.SwitchToFileExplorerCommand}">
                         <PathIcon Data="{DynamicResource Icon.Folder}" Width="14" Height="14" />
@@ -26,12 +29,14 @@
                 <!-- Active thconfig dropdown (#3) + its formatted path (#8) + open button (#6). -->
                 <DockPanel>
                     <Button DockPanel.Dock="Right" Padding="5,3" Margin="4,0,0,0" VerticalAlignment="Center"
+                            AutomationProperties.AutomationId="WorkspaceExplorer.OpenThconfig" AutomationProperties.Name="{l:Loc Ws_OpenThconfigTip}"
                             x:CompileBindings="False"
                             Command="{Binding Explorer.OpenSelectedThconfigCommand}"
                             ToolTip.Tip="Open the selected thconfig in the editor">
                         <PathIcon Data="{DynamicResource Icon.File}" Width="13" Height="13" />
                     </Button>
                     <ComboBox HorizontalAlignment="Stretch" FontSize="11" x:CompileBindings="False"
+                              AutomationProperties.AutomationId="WorkspaceExplorer.ActiveThconfig" AutomationProperties.Name="{l:Loc Ws_ActiveConfigTip}"
                               ToolTip.Tip="Active configuration (drives the object graph)"
                               ItemsSource="{Binding Explorer.ThconfigCandidates}"
                               SelectedItem="{Binding Explorer.SelectedThconfig, Mode=TwoWay}">
@@ -46,17 +51,20 @@
                 <StackPanel Orientation="Horizontal" Spacing="4">
                     <!-- Show file nodes in the relational view (#5a); hidden in file-explorer mode. -->
                     <ToggleButton Padding="5,3" VerticalAlignment="Center"
+                                  AutomationProperties.AutomationId="WorkspaceExplorer.ShowFilesInModel" AutomationProperties.Name="{l:Loc Ws_ShowFilesTip}"
                                   ToolTip.Tip="Show file nodes in the object graph"
                                   IsVisible="{Binding Explorer.IsRelationalView}"
                                   IsChecked="{Binding Explorer.ShowFilesInModel, Mode=TwoWay}">
                         <PathIcon Data="{DynamicResource Icon.File}" Width="14" Height="14" />
                     </ToggleButton>
                     <ToggleButton Padding="5,3" VerticalAlignment="Center"
+                                  AutomationProperties.AutomationId="WorkspaceExplorer.RevealOnHover" AutomationProperties.Name="{l:Loc Ws_RevealOnHoverTip}"
                                   ToolTip.Tip="Highlight workspace item when hovering a link in the editor"
                                   IsChecked="{Binding Explorer.RevealOnHover, Mode=TwoWay}">
                         <PathIcon Data="{DynamicResource Icon.Eye}" Width="14" Height="14" />
                     </ToggleButton>
                     <ToggleButton Padding="5,3" VerticalAlignment="Center"
+                                  AutomationProperties.AutomationId="WorkspaceExplorer.RevealOnTabSwitch" AutomationProperties.Name="{l:Loc Ws_RevealOnTabSwitchTip}"
                                   ToolTip.Tip="Highlight the active file in the workspace when switching tabs"
                                   IsChecked="{Binding Explorer.RevealOnTabSwitch, Mode=TwoWay}">
                         <PathIcon Data="{DynamicResource Icon.Swap}" Width="14" Height="14" />
@@ -64,6 +72,7 @@
 
                     <!-- Sort files/folders (file-explorer view only), Windows-Explorer style (#15). -->
                     <Button Padding="5,3" VerticalAlignment="Center" x:CompileBindings="False"
+                            AutomationProperties.AutomationId="WorkspaceExplorer.Sort" AutomationProperties.Name="{l:Loc Ws_SortByTip}"
                             ToolTip.Tip="Sort by"
                             IsVisible="{Binding Explorer.IsFileExplorerView}">
                         <StackPanel Orientation="Horizontal" Spacing="4">
@@ -72,14 +81,14 @@
                         </StackPanel>
                         <Button.Flyout>
                             <MenuFlyout>
-                                <MenuItem Header="Name" Command="{Binding Explorer.SortByNameCommand}" />
-                                <MenuItem Header="Date modified" Command="{Binding Explorer.SortByModifiedCommand}" />
-                                <MenuItem Header="Type" Command="{Binding Explorer.SortByTypeCommand}" />
-                                <MenuItem Header="Size" Command="{Binding Explorer.SortBySizeCommand}" />
-                                <MenuItem Header="Date created" Command="{Binding Explorer.SortByCreatedCommand}" />
+                                <MenuItem AutomationProperties.AutomationId="WorkspaceExplorer.Sort.Name" Header="Name" Command="{Binding Explorer.SortByNameCommand}" />
+                                <MenuItem AutomationProperties.AutomationId="WorkspaceExplorer.Sort.Modified" Header="Date modified" Command="{Binding Explorer.SortByModifiedCommand}" />
+                                <MenuItem AutomationProperties.AutomationId="WorkspaceExplorer.Sort.Type" Header="Type" Command="{Binding Explorer.SortByTypeCommand}" />
+                                <MenuItem AutomationProperties.AutomationId="WorkspaceExplorer.Sort.Size" Header="Size" Command="{Binding Explorer.SortBySizeCommand}" />
+                                <MenuItem AutomationProperties.AutomationId="WorkspaceExplorer.Sort.Created" Header="Date created" Command="{Binding Explorer.SortByCreatedCommand}" />
                                 <Separator />
-                                <MenuItem Header="Ascending" Command="{Binding Explorer.SortAscendingCmdCommand}" />
-                                <MenuItem Header="Descending" Command="{Binding Explorer.SortDescendingCmdCommand}" />
+                                <MenuItem AutomationProperties.AutomationId="WorkspaceExplorer.Sort.Ascending" Header="Ascending" Command="{Binding Explorer.SortAscendingCmdCommand}" />
+                                <MenuItem AutomationProperties.AutomationId="WorkspaceExplorer.Sort.Descending" Header="Descending" Command="{Binding Explorer.SortDescendingCmdCommand}" />
                             </MenuFlyout>
                         </Button.Flyout>
                     </Button>
@@ -89,9 +98,11 @@
 
         <!-- File-modified-outside-editor banner (#5b). -->
         <Border DockPanel.Dock="Top" Background="#E3F2FD" Padding="8,4"
+                AutomationProperties.AutomationId="WorkspaceExplorer.Banner"
                 IsVisible="{Binding Explorer.WorkspaceBanner, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
             <DockPanel>
                 <Button DockPanel.Dock="Right" Content="&#x2715;" Padding="6,0"
+                        AutomationProperties.AutomationId="WorkspaceExplorer.DismissBanner" AutomationProperties.Name="{l:Loc File_Dismiss}"
                         Background="Transparent" BorderThickness="0" Foreground="#0D47A1"
                         Command="{Binding Explorer.DismissWorkspaceBannerCommand}" />
                 <TextBlock Text="{Binding Explorer.WorkspaceBanner}" Foreground="#0D47A1"
@@ -100,6 +111,7 @@
         </Border>
 
         <TreeView x:Name="Tree" x:CompileBindings="False"
+                  AutomationProperties.AutomationId="WorkspaceExplorer.Tree" AutomationProperties.Name="{l:Loc Menu_View_Workspace}"
                   ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                   ItemsSource="{Binding Explorer.Roots}"
                   SelectedItem="{Binding Explorer.Selected, Mode=TwoWay}"
@@ -136,23 +148,24 @@
                             PointerPressed="OnNodePointerPressed" PointerMoved="OnNodePointerMoved">
                         <Border.ContextMenu>
                             <ContextMenu Opening="OnContextMenuOpening">
-                                <MenuItem Header="{l:Loc Ctx_Open}" Click="OnCtxOpen" />
-                                <MenuItem Header="{l:Loc Ctx_Reveal}" Click="OnCtxReveal" />
+                                <MenuItem AutomationProperties.AutomationId="WorkspaceExplorer.Ctx.Open" Header="{l:Loc Ctx_Open}" Click="OnCtxOpen" />
+                                <MenuItem AutomationProperties.AutomationId="WorkspaceExplorer.Ctx.Reveal" Header="{l:Loc Ctx_Reveal}" Click="OnCtxReveal" />
                                 <!-- Only shown for .thconfig nodes (toggled in OnContextMenuOpening, #7). -->
                                 <MenuItem Header="{l:Loc Ctx_SetActive}" Tag="setactive"
+                                          AutomationProperties.AutomationId="WorkspaceExplorer.Ctx.SetActiveThconfig"
                                           Click="OnCtxSetActiveThconfig" />
                                 <Separator />
-                                <MenuItem Header="{l:Loc Ctx_NewFile}" Click="OnCtxNewFile" />
-                                <MenuItem Header="{l:Loc Ctx_NewFolder}" Click="OnCtxNewFolder" />
+                                <MenuItem AutomationProperties.AutomationId="WorkspaceExplorer.Ctx.NewFile" Header="{l:Loc Ctx_NewFile}" Click="OnCtxNewFile" />
+                                <MenuItem AutomationProperties.AutomationId="WorkspaceExplorer.Ctx.NewFolder" Header="{l:Loc Ctx_NewFolder}" Click="OnCtxNewFolder" />
                                 <!-- Shown on every OS; header is set per-platform in OnContextMenuOpening. -->
-                                <MenuItem Header="{l:Loc Ctx_Delete}" Tag="delete" Click="OnCtxDelete" />
+                                <MenuItem AutomationProperties.AutomationId="WorkspaceExplorer.Ctx.Delete" Header="{l:Loc Ctx_Delete}" Tag="delete" Click="OnCtxDelete" />
                                 <Separator />
-                                <MenuItem Header="{l:Loc Ctx_CopyFull}" Click="OnCtxCopyFull" />
-                                <MenuItem Header="{l:Loc Ctx_CopyRel}" Click="OnCtxCopyRel" />
+                                <MenuItem AutomationProperties.AutomationId="WorkspaceExplorer.Ctx.CopyFullPath" Header="{l:Loc Ctx_CopyFull}" Click="OnCtxCopyFull" />
+                                <MenuItem AutomationProperties.AutomationId="WorkspaceExplorer.Ctx.CopyRelativePath" Header="{l:Loc Ctx_CopyRel}" Click="OnCtxCopyRel" />
                                 <Separator />
-                                <MenuItem Header="{l:Loc Ctx_Refresh}" Click="OnCtxRefresh" />
+                                <MenuItem AutomationProperties.AutomationId="WorkspaceExplorer.Ctx.Refresh" Header="{l:Loc Ctx_Refresh}" Click="OnCtxRefresh" />
                                 <!-- Visible only where a native shell menu exists (INativeContextMenuService). -->
-                                <MenuItem Header="{l:Loc Ctx_ShellMore}" Tag="nativemenu" Click="OnCtxShellMenu" />
+                                <MenuItem AutomationProperties.AutomationId="WorkspaceExplorer.Ctx.ShellMore" Header="{l:Loc Ctx_ShellMore}" Tag="nativemenu" Click="OnCtxShellMenu" />
                             </ContextMenu>
                         </Border.ContextMenu>
                         <ToolTip.Tip>

@@ -3,10 +3,12 @@
              xmlns:vm="using:ThIDE.ViewModels.Docking"
              xmlns:l="using:ThIDE.Resources"
              x:Class="ThIDE.Views.Docking.DiagnosticsToolView"
+             AutomationProperties.AutomationId="Diagnostics.View"
              x:DataType="vm:DiagnosticsToolViewModel">
     <DockPanel>
         <!-- explanation pane for the selected diagnostic (thbook link + example fix). -->
         <Border DockPanel.Dock="Bottom" BorderBrush="Gray" BorderThickness="0,1,0,0" Padding="8,5"
+                AutomationProperties.AutomationId="Diagnostics.Details"
                 IsVisible="{Binding Diagnostics.HasExplanation}"
                 Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}">
             <StackPanel Spacing="4">
@@ -14,6 +16,7 @@
                     <TextBlock Text="{Binding Diagnostics.Selected.Code}" FontWeight="SemiBold" FontSize="11"
                                VerticalAlignment="Center" />
                     <Button FontSize="11" Padding="6,1"
+                            AutomationProperties.AutomationId="Diagnostics.OpenDocs"
                             Command="{Binding Diagnostics.OpenDocsCommand}"
                             IsVisible="{Binding Diagnostics.HasDocLink}"
                             Content="{l:Loc Diag_OpenDocs}" />
@@ -29,6 +32,7 @@
 
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="4,2" Spacing="6">
             <ToggleButton Content="{l:Loc Diag_ProjectScope}"
+                          AutomationProperties.AutomationId="Diagnostics.ProjectScope"
                           IsChecked="{Binding Diagnostics.ShowProjectScope, Mode=TwoWay}"
                           ToolTip.Tip="{l:Loc Diag_ProjectScopeTip}"
                           Padding="6,2" FontSize="11" />
@@ -36,40 +40,45 @@
             <TextBlock Text="{Binding Diagnostics.SummaryText}" VerticalAlignment="Center"
                        Foreground="Gray" FontSize="11" />
             <!-- Column show/hide + fit, mirroring the Generated Files grid (#3). -->
-            <Button Content="{l:Loc Common_Columns}" Padding="6,2" FontSize="11" ToolTip.Tip="Show or hide columns">
+            <Button AutomationProperties.AutomationId="Diagnostics.Columns" Content="{l:Loc Common_Columns}" Padding="6,2" FontSize="11" ToolTip.Tip="Show or hide columns">
                 <Button.Flyout>
                     <Flyout>
                         <StackPanel Spacing="2" Margin="8">
-                            <CheckBox Content="{l:Loc Diag_Col_Code}"      Tag="Code"      IsChecked="True"  Click="OnToggleColumn" />
-                            <CheckBox Content="{l:Loc Diag_Col_Severity}"  Tag="Severity"  IsChecked="True"  Click="OnToggleColumn" />
-                            <CheckBox Content="{l:Loc Diag_Col_Message}"   Tag="Message"   IsChecked="True"  Click="OnToggleColumn" />
-                            <CheckBox Content="{l:Loc Common_File}"      Tag="File"      IsChecked="True"  Click="OnToggleColumn" />
-                            <CheckBox Content="{l:Loc Col_Path}"      Tag="Path"      IsChecked="False" Click="OnToggleColumn" />
-                            <CheckBox Content="{l:Loc Browser_Col_Line}"      Tag="Line"      IsChecked="True"  Click="OnToggleColumn" />
+                            <CheckBox AutomationProperties.AutomationId="Diagnostics.Columns.Code" Content="{l:Loc Diag_Col_Code}"      Tag="Code"      IsChecked="True"  Click="OnToggleColumn" />
+                            <CheckBox AutomationProperties.AutomationId="Diagnostics.Columns.Severity" Content="{l:Loc Diag_Col_Severity}"  Tag="Severity"  IsChecked="True"  Click="OnToggleColumn" />
+                            <CheckBox AutomationProperties.AutomationId="Diagnostics.Columns.Message" Content="{l:Loc Diag_Col_Message}"   Tag="Message"   IsChecked="True"  Click="OnToggleColumn" />
+                            <CheckBox AutomationProperties.AutomationId="Diagnostics.Columns.File" Content="{l:Loc Common_File}"      Tag="File"      IsChecked="True"  Click="OnToggleColumn" />
+                            <CheckBox AutomationProperties.AutomationId="Diagnostics.Columns.Path" Content="{l:Loc Col_Path}"      Tag="Path"      IsChecked="False" Click="OnToggleColumn" />
+                            <CheckBox AutomationProperties.AutomationId="Diagnostics.Columns.Line" Content="{l:Loc Browser_Col_Line}"      Tag="Line"      IsChecked="True"  Click="OnToggleColumn" />
                         </StackPanel>
                     </Flyout>
                 </Button.Flyout>
             </Button>
             <Button Content="{l:Loc Common_Fit}" Padding="6,2" FontSize="11" Click="OnFitColumns"
+                    AutomationProperties.AutomationId="Diagnostics.FitColumns"
                     ToolTip.Tip="{l:Loc Common_FitAll}" />
         </StackPanel>
 
         <!-- search + severity/category filters + suppression. -->
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="4,0,4,3" Spacing="6">
             <TextBox Width="180" Watermark="{l:Loc Common_Filter}" FontSize="11" Padding="4,1"
+                     AutomationProperties.AutomationId="Diagnostics.Filter" AutomationProperties.Name="{l:Loc Common_Filter}"
                      Text="{Binding Diagnostics.SearchText, Mode=TwoWay}" />
-            <ToggleButton Content="{l:Loc Diag_Errors}"   IsChecked="{Binding Diagnostics.ShowErrors, Mode=TwoWay}"   Padding="6,2" FontSize="11" />
-            <ToggleButton Content="{l:Loc Diag_Warnings}" IsChecked="{Binding Diagnostics.ShowWarnings, Mode=TwoWay}" Padding="6,2" FontSize="11" />
-            <ToggleButton Content="{l:Loc Diag_Info}"     IsChecked="{Binding Diagnostics.ShowInfos, Mode=TwoWay}"    Padding="6,2" FontSize="11" />
+            <ToggleButton AutomationProperties.AutomationId="Diagnostics.ShowErrors" Content="{l:Loc Diag_Errors}"   IsChecked="{Binding Diagnostics.ShowErrors, Mode=TwoWay}"   Padding="6,2" FontSize="11" />
+            <ToggleButton AutomationProperties.AutomationId="Diagnostics.ShowWarnings" Content="{l:Loc Diag_Warnings}" IsChecked="{Binding Diagnostics.ShowWarnings, Mode=TwoWay}" Padding="6,2" FontSize="11" />
+            <ToggleButton AutomationProperties.AutomationId="Diagnostics.ShowInfo" Content="{l:Loc Diag_Info}"     IsChecked="{Binding Diagnostics.ShowInfos, Mode=TwoWay}"    Padding="6,2" FontSize="11" />
             <ToggleButton Content="{l:Loc Diag_ReferencesOnly}" IsChecked="{Binding Diagnostics.OnlyReferences, Mode=TwoWay}"
+                          AutomationProperties.AutomationId="Diagnostics.ReferencesOnly"
                           ToolTip.Tip="{l:Loc Diag_ReferencesTip}"
                           Padding="6,2" FontSize="11" />
             <Button Content="{l:Loc Diag_ClearSuppressions}" Padding="6,2" FontSize="11"
+                    AutomationProperties.AutomationId="Diagnostics.ClearSuppressions"
                     Command="{Binding Diagnostics.ClearSuppressionsCommand}"
                     IsVisible="{Binding Diagnostics.HasSuppressions}" />
         </StackPanel>
 
         <DataGrid x:Name="Grid"
+                  AutomationProperties.AutomationId="Diagnostics.Grid" AutomationProperties.Name="{l:Loc Tool_Diagnostics}"
                   ItemsSource="{Binding Diagnostics.Rows}"
                   SelectedItem="{Binding Diagnostics.Selected, Mode=TwoWay}"
                   x:CompileBindings="False"
@@ -78,12 +87,13 @@
                   DoubleTapped="OnRowDoubleTapped">
             <DataGrid.ContextMenu>
                 <ContextMenu>
-                    <MenuItem Header="{l:Loc Common_Copy}" Click="OnCopyRow" />
-                    <MenuItem Header="{l:Loc Common_CopyAll}" Click="OnCopyAll" />
+                    <MenuItem AutomationProperties.AutomationId="Diagnostics.Grid.Copy" Header="{l:Loc Common_Copy}" Click="OnCopyRow" />
+                    <MenuItem AutomationProperties.AutomationId="Diagnostics.Grid.CopyAll" Header="{l:Loc Common_CopyAll}" Click="OnCopyAll" />
                     <Separator />
                     <MenuItem Header="{l:Loc Diag_Explain}" Command="{Binding Diagnostics.OpenDocsCommand}"
+                              AutomationProperties.AutomationId="Diagnostics.Grid.Explain"
                               IsVisible="{Binding Diagnostics.HasDocLink}" />
-                    <MenuItem Header="{l:Loc Diag_Suppress}" Command="{Binding Diagnostics.SuppressSelectedCodeCommand}" />
+                    <MenuItem AutomationProperties.AutomationId="Diagnostics.Grid.Suppress" Header="{l:Loc Diag_Suppress}" Command="{Binding Diagnostics.SuppressSelectedCodeCommand}" />
                 </ContextMenu>
             </DataGrid.ContextMenu>
             <!-- Columns auto-size to fit their header + content; Message takes the remaining

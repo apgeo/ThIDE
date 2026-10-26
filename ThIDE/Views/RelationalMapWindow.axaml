@@ -6,6 +6,7 @@
         x:Class="ThIDE.Views.RelationalMapWindow"
         x:DataType="vm:RelationalMapViewModel"
         Width="1000" Height="700"
+        AutomationProperties.AutomationId="RelationalMap.Window"
         Title="{l:Loc Tb_RelationalMap}">
     <views:RelationalMapView />
 </Window>

@@ -5,6 +5,7 @@
              xmlns:l="using:ThIDE.Resources"
              x:Class="ThIDE.Views.Docking.AssistantToolView"
              x:CompileBindings="False"
+             AutomationProperties.AutomationId="Assistant.View"
              x:DataType="dvm:AssistantToolViewModel">
     <DockPanel DataContext="{Binding Assistant}">
 
@@ -22,6 +23,7 @@
             <DockPanel>
                 <StackPanel Orientation="Horizontal" Spacing="8" DockPanel.Dock="Left">
                     <Button Content="{l:Loc Assistant_NewChat}" Command="{Binding NewChatCommand}"
+                            AutomationProperties.AutomationId="Assistant.NewChat"
                             Padding="10,2" FontSize="11" />
                 </StackPanel>
                 <TextBlock DockPanel.Dock="Right" Text="{Binding Status}" Foreground="Gray"
@@ -39,16 +41,20 @@
                     <TextBlock Text="{l:Loc Assistant_ServerOff}" Foreground="Gray" FontSize="11"
                                VerticalAlignment="Center" TextWrapping="Wrap" />
                     <Button Content="{l:Loc Assistant_EnableServer}" Command="{Binding EnableServerCommand}"
+                            AutomationProperties.AutomationId="Assistant.EnableServer"
                             Padding="10,2" FontSize="11" />
                 </StackPanel>
                 <DockPanel>
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4" Margin="6,0,0,0">
                         <Button Content="{l:Loc Assistant_Send}" Command="{Binding SendCommand}"
+                                AutomationProperties.AutomationId="Assistant.Send"
                                 Padding="12,4" />
                         <Button Content="{l:Loc Assistant_Stop}" Command="{Binding StopCommand}"
+                                AutomationProperties.AutomationId="Assistant.Stop"
                                 IsVisible="{Binding IsBusy}" Padding="12,4" />
                     </StackPanel>
                     <TextBox Text="{Binding Input, Mode=TwoWay}" Watermark="{l:Loc Assistant_InputWatermark}"
+                             AutomationProperties.AutomationId="Assistant.Input" AutomationProperties.Name="{l:Loc Assistant_InputWatermark}"
                              AcceptsReturn="False" VerticalAlignment="Center"
                              IsEnabled="{Binding !IsBusy}" KeyDown="OnInputKeyDown" />
                 </DockPanel>
@@ -66,8 +72,8 @@
         </Border>
 
         <!-- transcript -->
-        <ScrollViewer x:Name="Transcript" VerticalScrollBarVisibility="Auto">
-            <ItemsControl ItemsSource="{Binding Items}" Margin="6">
+        <ScrollViewer AutomationProperties.AutomationId="Assistant.Transcript" x:Name="Transcript" VerticalScrollBarVisibility="Auto">
+            <ItemsControl AutomationProperties.AutomationId="Assistant.Items" ItemsSource="{Binding Items}" Margin="6">
                 <ItemsControl.DataTemplates>
 
                     <DataTemplate DataType="vm:UserChatItem">

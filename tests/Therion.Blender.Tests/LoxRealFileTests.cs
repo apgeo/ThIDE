@@ -1,5 +1,5 @@
 // .lox parser tests against the real Therion exports committed in tests/Corpus:
-// av_cerbul_de_aur (small, has walls) and grind2025 (21 MB big-file smoke). These are
+// av_bravo (small, has walls) and alpha2025 (21 MB big-file smoke). These are
 // the BA-B2 "real workspace .lox round-trips" done-when checks: parse → rewrite →
 // reparse must reproduce the model exactly, and the extracted content must look like
 // the cave the export came from (station labels, survey tree, UTM-scale coordinates).
@@ -12,9 +12,9 @@ namespace Therion.Blender.Tests;
 public class LoxRealFileTests
 {
     [CorpusFact]
-    public void AvCerbul_ParsesWithAllRecordKinds()
+    public void AvBravo_ParsesWithAllRecordKinds()
     {
-        var model = LoxReader.ReadFile(TestCorpus.AvCerbulLox());
+        var model = LoxReader.ReadFile(TestCorpus.AvBravoLox());
 
         Assert.Equal(CaveSourceFormat.Lox, model.SourceFormat);
         Assert.True(model.Surveys.Count > 0, "expected a survey tree");
@@ -41,9 +41,9 @@ public class LoxRealFileTests
     }
 
     [CorpusFact]
-    public void AvCerbul_RoundTripsExactly()
+    public void AvBravo_RoundTripsExactly()
     {
-        var first = LoxReader.ReadFile(TestCorpus.AvCerbulLox());
+        var first = LoxReader.ReadFile(TestCorpus.AvBravoLox());
 
         var rewritten = LoxWriter.Write(first);
         var second = LoxReader.Read(rewritten);
@@ -52,9 +52,9 @@ public class LoxRealFileTests
     }
 
     [CorpusFact]
-    public void Grind_BigFile_ParsesCompletely()
+    public void Alpha_BigFile_ParsesCompletely()
     {
-        var model = LoxReader.ReadFile(TestCorpus.GrindLox());
+        var model = LoxReader.ReadFile(TestCorpus.AlphaLox());
 
         Assert.True(model.Stations.Count > 100, $"found {model.Stations.Count} stations");
         Assert.True(model.Shots.Count > 100, $"found {model.Shots.Count} shots");

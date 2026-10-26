@@ -6,15 +6,17 @@
         Title="{l:Loc Refs_Title}"
         Width="760" Height="380"
         WindowStartupLocation="CenterOwner"
+        AutomationProperties.AutomationId="References.Window"
         CanResize="True">
     <DockPanel>
         <TextBlock x:Name="Header" DockPanel.Dock="Top" Margin="10,8,10,4"
                    Foreground="Gray" FontSize="12" TextTrimming="CharacterEllipsis" />
         <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="6" Margin="8,6">
-            <Button Content="{l:Loc Refs_GoTo}" Padding="10,3" Click="OnNavigateClick" />
-            <Button Content="{l:Loc Common_Close}" Padding="10,3" Click="OnCloseClick" />
+            <Button AutomationProperties.AutomationId="References.Navigate" Content="{l:Loc Refs_GoTo}" Padding="10,3" Click="OnNavigateClick" />
+            <Button AutomationProperties.AutomationId="References.Close" Content="{l:Loc Common_Close}" Padding="10,3" Click="OnCloseClick" />
         </StackPanel>
         <DataGrid x:Name="Grid"
+                  AutomationProperties.AutomationId="References.Grid"
                   x:DataType="views:ReferenceRow"
                   IsReadOnly="True"
                   GridLinesVisibility="Horizontal"

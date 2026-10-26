@@ -212,6 +212,7 @@ public partial class Model3DViewerToolView : UserControl
                 ShowInTaskbar = false,
                 Content = RootContent,
             };
+            Avalonia.Automation.AutomationProperties.SetAutomationId(_fsWindow, "Viewer3D.FullScreenWindow");
             _fsWindow.KeyDown += OnFullscreenKeyDown;
             _fsWindow.Closed += OnFullscreenWindowClosed;
             if (TopLevel.GetTopLevel(this) is Window owner) _fsWindow.Show(owner);

@@ -4,13 +4,13 @@ namespace Therion.Build.Tests;
 
 public class TherionLogParserTests
 {
-    // A trimmed but faithful copy of a successful run's therion.log (grind sample project).
+    // A trimmed but faithful copy of a successful run's therion.log (demo sample project).
     private const string SuccessLog = """
 therion 6.3.3 (2025-01-06)
   - using Proj 9.4.1, compiled against 9.4.1
 initialization file: C:\Program Files\Therion/therion.ini
 reading ... done
-configuration file: C:\caves\grind\thconfig_grind2025.thconfig
+configuration file: C:\caves\demo\thconfig_demo2025.thconfig
 reading ... done
 reading source files ... done
 preprocessing database ... done
@@ -33,29 +33,29 @@ processing survey data ...
  7> Total plan length of survey shots = 1735.53m
  8> Total vertical length of survey shots = 2283.74m
  9> Vertical range = 816.32m (from 623 at 6.95m to 67156 at -809.37m)
-10> North-South range = 76.05m (from 27833 at 5042171.37m to 36446 at 5042095.32m)
-11> East-West range = 320.63m (from 67536 at 360315.69m to 11930 at 359995.06m)
+10> North-South range = 76.05m (from 27833 at 5096110.42m to 36446 at 5096034.37m)
+11> East-West range = 320.63m (from 67536 at 477419.31m to 11930 at 477098.68m)
 ######################### transcription ########################
- 9> 623 : .@grind_intrare_0.grind -- 67156 : .@grind_term_2025_8xx.grind
+ 9> 623 : .@demo_intrare_0.demo -- 67156 : .@demo_term_2025_8xx.demo
 #################### end of cavern log file ####################
 done
 calculating basic statistics ... done
 processing references ... done
-writing rez\grind2025_v1_aven.lox ...
+writing rez\demo2025_v1_aven.lox ...
 processing projection plan ... done
  done
-writing rez\grind2025_v1_aven.3d ... done
+writing rez\demo2025_v1_aven.3d ... done
 compilation time: 24 sec
 
 
 ######################### loop errors ##########################
 REL-ERR ABS-ERR TOTAL-L STS X-ERROR Y-ERROR Z-ERROR STATIONS
- 71.92%    9.9m   13.7m   5   -0.4m    0.9m    9.8m [REFVECHE27@grind_intrare_0.grind - G1 - REFVECHE27]
-  0.36%    1.6m  432.4m  60   -1.2m   -1.0m   -0.0m [GP10@grind_prabusire_570.grind - GP11 - GP10]
+ 71.92%    9.9m   13.7m   5   -0.4m    0.9m    9.8m [REFVECHE27@demo_intrare_0.demo - G1 - REFVECHE27]
+  0.36%    1.6m  432.4m  60   -1.2m   -1.0m   -0.0m [GP10@demo_prabusire_570.demo - GP11 - GP10]
 ##################### end of loop errors #######################
 
 ############# CRS transformations chosen by PROJ ###############
-  Area of Use (AoU): (25.208, 45.519) (25.208, 45.519)
+  Area of Use (AoU): (26.708, 46.019) (26.708, 46.019)
   [LAT-LONG → UTM35] AoU: [yes] transformation: [axis order change (2D) + UTM zone 35N] definition: [proj=pipeline step proj=utm zone=35] accuracy: [0.000 m]
 ########## end of CRS transformations chosen by PROJ ###########
 """;
@@ -66,9 +66,9 @@ therion 6.3.3 (2025-01-06)
   - using Proj 9.4.1, compiled against 9.4.1
 initialization file: C:\Program Files\Therion/therion.ini
 reading ... done
-configuration file: D:\caves\av_cerbul_de_aur.th
+configuration file: D:\caves\av_demo.th
 reading ...
-C:\Program Files\Therion\therion.exe: error -- D:\caves\av_cerbul_de_aur.th [7] -- unknown configuration command -- survey
+C:\Program Files\Therion\therion.exe: error -- D:\caves\av_demo.th [7] -- unknown configuration command -- survey
 Press ENTER to exit!
 """;
 
@@ -84,7 +84,7 @@ Press ENTER to exit!
         Assert.Equal("1.4.22", log.SurvexVersion);
         // A path with spaces stays whole.
         Assert.Equal(@"C:\Program Files\Therion/therion.ini", log.InitializationFile);
-        Assert.Equal(@"C:\caves\grind\thconfig_grind2025.thconfig", log.ConfigurationFile);
+        Assert.Equal(@"C:\caves\demo\thconfig_demo2025.thconfig", log.ConfigurationFile);
     }
 
     [Fact]
@@ -97,7 +97,7 @@ Press ENTER to exit!
         Assert.Equal(2, log.Declinations.Count);
         Assert.Equal("2019.1.1", log.Declinations[0].Date);
         Assert.Equal(5.7852, log.Declinations[0].Degrees);
-        Assert.Equal("(25.208, 45.519) (25.208, 45.519)", log.AreaOfUse);
+        Assert.Equal("(26.708, 46.019) (26.708, 46.019)", log.AreaOfUse);
 
         var crs = Assert.Single(log.CrsTransformations);
         Assert.Equal("LAT-LONG", crs.From);
@@ -130,8 +130,8 @@ Press ENTER to exit!
 
         // The vertical range's endpoints are transcribed; the E-W range's are not, so its
         // numeric ids survive untouched.
-        Assert.Equal(".@grind_intrare_0.grind", log.VerticalRange!.FromStation);
-        Assert.Equal(".@grind_term_2025_8xx.grind", log.VerticalRange!.ToStation);
+        Assert.Equal(".@demo_intrare_0.demo", log.VerticalRange!.FromStation);
+        Assert.Equal(".@demo_term_2025_8xx.demo", log.VerticalRange!.ToStation);
         Assert.Equal("67536", log.EastWestRange!.FromStation);
     }
 
@@ -148,7 +148,7 @@ Press ENTER to exit!
         Assert.Equal(5, worst.StationCount);
         Assert.Equal(-0.4, worst.ErrorX);
         Assert.Equal(9.8, worst.ErrorZ);
-        Assert.StartsWith("REFVECHE27@grind_intrare_0.grind", worst.Stations);
+        Assert.StartsWith("REFVECHE27@demo_intrare_0.demo", worst.Stations);
     }
 
     [Fact]
@@ -159,7 +159,7 @@ Press ENTER to exit!
         Assert.Equal(2, log.OutputFiles.Count);
         // "writing …lox ..." is closed by a lone " done" two lines later, after a nested stage.
         Assert.All(log.OutputFiles, f => Assert.True(f.Completed));
-        Assert.Contains(log.OutputFiles, f => f.Path == @"rez\grind2025_v1_aven.lox");
+        Assert.Contains(log.OutputFiles, f => f.Path == @"rez\demo2025_v1_aven.lox");
         Assert.All(log.Stages, st => Assert.True(st.Completed, st.Name));
         Assert.Equal(24, log.CompilationTimeSeconds);
         Assert.False(log.Aborted);
@@ -174,7 +174,7 @@ Press ENTER to exit!
 
         var error = Assert.Single(log.Errors);
         Assert.Equal(TherionLogSeverity.Error, error.Severity);
-        Assert.Equal(@"D:\caves\av_cerbul_de_aur.th", error.File);
+        Assert.Equal(@"D:\caves\av_demo.th", error.File);
         Assert.Equal(7, error.Line);
         Assert.Equal("unknown configuration command", error.Message);
         Assert.Equal("survey", error.Symbol);
@@ -186,20 +186,20 @@ Press ENTER to exit!
         Assert.Equal("reading", log.IncompleteStage);
         // Even a dead run still yields its header + input fields.
         Assert.Equal("6.3.3", log.TherionVersion);
-        Assert.Equal(@"D:\caves\av_cerbul_de_aur.th", log.ConfigurationFile);
+        Assert.Equal(@"D:\caves\av_demo.th", log.ConfigurationFile);
     }
 
     [Fact]
     public void Reads_error_without_a_source_location()
     {
         var log = TherionLogParser.Parse(
-            "therion 6.3.3 (2025-01-06)\nC:\\Program Files\\Therion\\therion.exe: error -- survey does not exist -- av_cerbul_2025\n");
+            "therion 6.3.3 (2025-01-06)\nC:\\Program Files\\Therion\\therion.exe: error -- survey does not exist -- av_demo_2025\n");
 
         var error = Assert.Single(log.Errors);
         Assert.Null(error.File);
         Assert.Null(error.Line);
         Assert.Equal("survey does not exist", error.Message);
-        Assert.Equal("av_cerbul_2025", error.Symbol);
+        Assert.Equal("av_demo_2025", error.Symbol);
     }
 
     [Fact]
@@ -213,7 +213,7 @@ processing survey data ...
 
 C:\Program Files (x86)\Therion\therion.exe: warning -- can't open cavern log file for input
 calculating basic statistics ... done
-writing 22022081_pip1.lox ... done
+writing 10000001_demo1.lox ... done
 compilation time: 2 sec
 """;
         var log = TherionLogParser.Parse(text);
@@ -221,7 +221,7 @@ compilation time: 2 sec
         var warning = Assert.Single(log.Warnings);
         Assert.Equal("can't open cavern log file for input", warning.Message);
         Assert.Equal(2, log.CompilationTimeSeconds);
-        Assert.Contains(log.OutputFiles, f => f.Path == "22022081_pip1.lox" && f.Completed);
+        Assert.Contains(log.OutputFiles, f => f.Path == "10000001_demo1.lox" && f.Completed);
         Assert.Equal(TherionLogOutcome.SuccessWithWarnings, log.Outcome);
     }
 
@@ -260,4 +260,21 @@ compilation time: 1 sec
     [InlineData("empty.log", "")]
     public void Rejects_other_files(string name, string text) =>
         Assert.False(TherionLogParser.LooksLikeTherionLog(name, text));
+    // After a model with scraps Therion closes the .lox line with progress dots: ". done".
+    [Fact]
+    public void A_done_after_progress_dots_completes_the_open_output()
+    {
+        const string log = """
+            writing rez/cave.lox ...
+            processing projection plan ... done
+            average distortion: 0.02%
+            . done
+            writing rez/cave.3d ... done
+            compilation time: 1 sec
+            """;
+        var s = TherionLogParser.Parse(log);
+
+        Assert.All(s.OutputFiles, f => Assert.True(f.Completed, f.Path));
+        Assert.Equal(new[] { "rez/cave.lox", "rez/cave.3d" }, s.OutputFiles.Select(f => f.Path));
+    }
 }

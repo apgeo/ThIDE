@@ -4,6 +4,7 @@
              xmlns:ed="using:ThIDE.Editor"
              xmlns:l="using:ThIDE.Resources"
              x:Class="ThIDE.Views.Docking.FileDocumentView"
+             AutomationProperties.AutomationId="Document.View"
              x:DataType="vm:FileDocumentViewModel">
 
     <DockPanel>
@@ -18,8 +19,8 @@
         <Border Background="#FFF3E0" Padding="10,5" IsVisible="{Binding ParsingSuppressed}">
             <DockPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
-                    <Button Content="{l:Loc File_ParseAnyway}" Padding="8,2" Command="{Binding ForceParseCommand}" />
-                    <Button Content="{l:Loc File_SettingsBtn}" Padding="8,2" Command="{Binding OpenLimitSettingsCommand}" />
+                    <Button AutomationProperties.AutomationId="Document.ParseAnyway" Content="{l:Loc File_ParseAnyway}" Padding="8,2" Command="{Binding ForceParseCommand}" />
+                    <Button AutomationProperties.AutomationId="Document.ParseLimitSettings" Content="{l:Loc File_SettingsBtn}" Padding="8,2" Command="{Binding OpenLimitSettingsCommand}" />
                 </StackPanel>
                 <TextBlock Text="{Binding ParseBannerText}" Foreground="#E65100"
                            VerticalAlignment="Center" TextWrapping="Wrap" />
@@ -29,8 +30,8 @@
                 IsVisible="{Binding HighlightingSuppressed}">
             <DockPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
-                    <Button Content="{l:Loc File_HighlightAnyway}" Padding="8,2" Command="{Binding ForceHighlightCommand}" />
-                    <Button Content="{l:Loc File_SettingsBtn}" Padding="8,2" Command="{Binding OpenLimitSettingsCommand}" />
+                    <Button AutomationProperties.AutomationId="Document.HighlightAnyway" Content="{l:Loc File_HighlightAnyway}" Padding="8,2" Command="{Binding ForceHighlightCommand}" />
+                    <Button AutomationProperties.AutomationId="Document.HighlightLimitSettings" Content="{l:Loc File_SettingsBtn}" Padding="8,2" Command="{Binding OpenLimitSettingsCommand}" />
                 </StackPanel>
                 <TextBlock Text="{Binding HighlightBannerText}" Foreground="#8D6E00"
                            VerticalAlignment="Center" TextWrapping="Wrap" />
@@ -42,6 +43,7 @@
                 IsVisible="{Binding InfoBanner, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
             <DockPanel>
                 <Button DockPanel.Dock="Right" Content="&#x2715;" Padding="6,1"
+                        AutomationProperties.AutomationId="Document.DismissInfo" AutomationProperties.Name="{l:Loc File_Dismiss}"
                         Background="Transparent" BorderThickness="0" Foreground="#0D47A1"
                         Command="{Binding DismissInfoCommand}" />
                 <TextBlock Text="{Binding InfoBanner}" Foreground="#0D47A1" VerticalAlignment="Center" />
@@ -56,11 +58,13 @@
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
                         <!-- reload (use disk) / compare / keep-mine-to-disk / dismiss. -->
                         <Button Content="{l:Loc Proj_Reload}" Padding="8,2" Command="{Binding ReloadExternalCommand}"
+                                AutomationProperties.AutomationId="Document.External.Reload"
                                 IsVisible="{Binding !ExternalDeleted}" />
                         <Button Content="{l:Loc File_Compare}" Padding="8,2" Command="{Binding CompareExternalCommand}"
+                                AutomationProperties.AutomationId="Document.External.Compare"
                                 IsVisible="{Binding !ExternalDeleted}" />
-                        <Button Content="{l:Loc File_KeepMineSave}" Padding="8,2" Command="{Binding OverwriteExternalCommand}" />
-                        <Button Content="{l:Loc File_Dismiss}" Padding="8,2" Command="{Binding DismissExternalCommand}" />
+                        <Button AutomationProperties.AutomationId="Document.External.KeepMineSave" Content="{l:Loc File_KeepMineSave}" Padding="8,2" Command="{Binding OverwriteExternalCommand}" />
+                        <Button AutomationProperties.AutomationId="Document.External.Dismiss" Content="{l:Loc File_Dismiss}" Padding="8,2" Command="{Binding DismissExternalCommand}" />
                     </StackPanel>
                     <TextBlock Text="{Binding ExternalChangeText}" Foreground="White"
                                VerticalAlignment="Center" TextWrapping="Wrap" />
@@ -69,8 +73,9 @@
                 <DockPanel IsVisible="{Binding ConfirmDiscardPending}">
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
                         <Button Content="{l:Loc File_DiscardReload}" Padding="8,2"
+                                AutomationProperties.AutomationId="Document.External.DiscardReload"
                                 Command="{Binding ConfirmDiscardReloadCommand}" />
-                        <Button Content="{l:Loc File_KeepMine}" Padding="8,2" Command="{Binding DismissExternalCommand}" />
+                        <Button AutomationProperties.AutomationId="Document.External.KeepMine" Content="{l:Loc File_KeepMine}" Padding="8,2" Command="{Binding DismissExternalCommand}" />
                     </StackPanel>
                     <TextBlock Foreground="White" VerticalAlignment="Center" TextWrapping="Wrap"
                                Text="{l:Loc File_ConfirmDiscard}" />
@@ -80,9 +85,10 @@
     </StackPanel>
 
     <Grid>
-    <TabControl x:Name="DocumentTabControl">
-        <TabItem Header="{l:Loc File_TabSource}">
+    <TabControl AutomationProperties.AutomationId="Document.Tabs" x:Name="DocumentTabControl">
+        <TabItem AutomationProperties.AutomationId="Document.Tab.Source" Header="{l:Loc File_TabSource}">
             <ed:TherionTextEditor x:Name="Editor"
+                                  AutomationProperties.AutomationId="Document.Editor"
                                   Text="{Binding DocumentText, Mode=TwoWay}"
                                   Navigation="{Binding Navigation}"
                                   Diagnostics="{Binding Diagnostics}"
@@ -91,11 +97,12 @@
                                   CurrentFilePath="{Binding FilePath}" />
         </TabItem>
         <!-- Log tab: shown only when the file's content is Therion compiler output. -->
-        <TabItem Header="{l:Loc Log_Tab}" IsVisible="{Binding IsLogFile}">
+        <TabItem AutomationProperties.AutomationId="Document.Tab.Log" Header="{l:Loc Log_Tab}" IsVisible="{Binding IsLogFile}">
             <DockPanel DataContext="{Binding LogSummary}" x:DataType="vm:LogSummaryViewModel">
                 <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="8,6">
                     <DockPanel>
                         <Button DockPanel.Dock="Right" Padding="8,3" Content="{l:Loc Log_CopyAll}"
+                                AutomationProperties.AutomationId="Document.Log.CopyAll"
                                 Command="{Binding CopyAllCommand}" ToolTip.Tip="{l:Loc Log_CopyAllTip}" />
                         <Border Background="{Binding OutcomeBrush}" CornerRadius="3" Padding="8,2"
                                 HorizontalAlignment="Left" VerticalAlignment="Center">
@@ -105,7 +112,7 @@
                 </Border>
 
                 <ScrollViewer>
-                    <ItemsControl ItemsSource="{Binding Sections}" Margin="8">
+                    <ItemsControl AutomationProperties.AutomationId="Document.Log.Sections" ItemsSource="{Binding Sections}" Margin="8">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:LogSectionViewModel">
                                 <StackPanel Margin="0,0,0,14">
@@ -144,7 +151,7 @@
         </TabItem>
 
         <!-- Measurements tab: shown only for .th files (#4). -->
-        <TabItem Header="{l:Loc File_TabMeasurements}" IsVisible="{Binding IsThFile}">
+        <TabItem AutomationProperties.AutomationId="Document.Tab.Measurements" Header="{l:Loc File_TabMeasurements}" IsVisible="{Binding IsThFile}">
             <DockPanel>
                 <!-- Empty-state banner (#4): a .th file that declares no shots/stations. -->
                 <Border DockPanel.Dock="Top" Background="#FFF3E0" Padding="10,6"
@@ -154,53 +161,58 @@
                 </Border>
 
                 <!-- Shots + Stations sub-panels, both scoped to this file only (#7). -->
-                <TabControl IsVisible="{Binding Measurements.HasAnyData}">
-                    <TabItem Header="{l:Loc Browser_Tab_Shots}">
+                <TabControl AutomationProperties.AutomationId="Document.Measurements.Tabs" IsVisible="{Binding Measurements.HasAnyData}">
+                    <TabItem AutomationProperties.AutomationId="Document.Measurements.Tab.Shots" Header="{l:Loc Browser_Tab_Shots}">
                         <DockPanel>
                             <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="6,4">
                                 <WrapPanel Orientation="Horizontal">
                                     <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,8,0">
                                         <TextBlock Text="{l:Loc File_FilterLabel}" VerticalAlignment="Center" />
                                         <TextBox Width="180"
+                                                 AutomationProperties.AutomationId="Document.Shots.Filter" AutomationProperties.Name="{l:Loc File_ShotsFilterWm}"
                                                  Text="{Binding Measurements.FilterText, Mode=TwoWay}"
                                                  Watermark="{l:Loc File_ShotsFilterWm}" />
                                     </StackPanel>
                                     <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,8,0">
                                         <TextBlock Text="{l:Loc File_GroupBy}" VerticalAlignment="Center" />
                                         <ComboBox MinWidth="100"
+                                                  AutomationProperties.AutomationId="Document.Shots.GroupBy" AutomationProperties.Name="{l:Loc File_GroupBy}"
                                                   ItemsSource="{Binding Measurements.GroupByOptions}"
                                                   SelectedItem="{Binding Measurements.GroupBy, Mode=TwoWay}" />
                                     </StackPanel>
                                     <!-- Full station name toggle (#5). -->
                                     <ToggleButton Padding="6,3" VerticalAlignment="Center" Margin="0,0,4,0"
+                                                  AutomationProperties.AutomationId="Document.Shots.FullStationName" AutomationProperties.Name="{l:Loc Common_FullStationName}"
                                                   ToolTip.Tip="{l:Loc Common_FullStationName}"
                                                   IsChecked="{Binding Measurements.ShowFullStationName, Mode=TwoWay}">
                                         <PathIcon Data="{DynamicResource Icon.NodeGraph}" Width="14" Height="14" />
                                     </ToggleButton>
                                     <!-- Auto-fit button. -->
                                     <Button x:Name="ShotsFitBtn" Content="{l:Loc Common_Fit}" Padding="6,3" VerticalAlignment="Center"
+                                            AutomationProperties.AutomationId="Document.Shots.FitColumns"
                                             Margin="0,0,4,0" ToolTip.Tip="{l:Loc Common_FitAll}"
                                             Click="OnFitShotsColumns" />
                                     <!-- Column visibility flyout. -->
                                     <Button Content="{l:Loc File_Cols}" Padding="6,3" VerticalAlignment="Center"
+                                            AutomationProperties.AutomationId="Document.Shots.Columns"
                                             Margin="0,0,8,0" ToolTip.Tip="{l:Loc Common_ShowHideColumns}">
                                         <Button.Flyout>
                                             <Flyout>
                                                 <StackPanel Spacing="2" Margin="8">
-                                                    <CheckBox Content="{l:Loc Browser_Col_Survey}"  IsChecked="{Binding Measurements.ShotsColSurvey,    Mode=TwoWay}" />
-                                                    <CheckBox Content="{l:Loc Browser_Col_From}"    IsChecked="{Binding Measurements.ShotsColFrom,       Mode=TwoWay}" />
-                                                    <CheckBox Content="{l:Loc Browser_Col_To}"      IsChecked="{Binding Measurements.ShotsColTo,         Mode=TwoWay}" />
-                                                    <CheckBox Content="{l:Loc Browser_Col_Length}"  IsChecked="{Binding Measurements.ShotsColLength,     Mode=TwoWay}" />
-                                                    <CheckBox Content="{l:Loc Browser_Col_Compass}" IsChecked="{Binding Measurements.ShotsColCompass,    Mode=TwoWay}" />
-                                                    <CheckBox Content="{l:Loc Browser_Col_Clino}"   IsChecked="{Binding Measurements.ShotsColClino,      Mode=TwoWay}" />
+                                                    <CheckBox AutomationProperties.AutomationId="Document.Shots.Columns.Survey" Content="{l:Loc Browser_Col_Survey}"  IsChecked="{Binding Measurements.ShotsColSurvey,    Mode=TwoWay}" />
+                                                    <CheckBox AutomationProperties.AutomationId="Document.Shots.Columns.From" Content="{l:Loc Browser_Col_From}"    IsChecked="{Binding Measurements.ShotsColFrom,       Mode=TwoWay}" />
+                                                    <CheckBox AutomationProperties.AutomationId="Document.Shots.Columns.To" Content="{l:Loc Browser_Col_To}"      IsChecked="{Binding Measurements.ShotsColTo,         Mode=TwoWay}" />
+                                                    <CheckBox AutomationProperties.AutomationId="Document.Shots.Columns.Length" Content="{l:Loc Browser_Col_Length}"  IsChecked="{Binding Measurements.ShotsColLength,     Mode=TwoWay}" />
+                                                    <CheckBox AutomationProperties.AutomationId="Document.Shots.Columns.Compass" Content="{l:Loc Browser_Col_Compass}" IsChecked="{Binding Measurements.ShotsColCompass,    Mode=TwoWay}" />
+                                                    <CheckBox AutomationProperties.AutomationId="Document.Shots.Columns.Clino" Content="{l:Loc Browser_Col_Clino}"   IsChecked="{Binding Measurements.ShotsColClino,      Mode=TwoWay}" />
                                                     <Separator Margin="0,4" />
-                                                    <CheckBox Content="{l:Loc File_Col_Surf}"    IsChecked="{Binding Measurements.ShotsColSurface,    Mode=TwoWay}" />
-                                                    <CheckBox Content="{l:Loc File_Col_Dup}"     IsChecked="{Binding Measurements.ShotsColDuplicate,  Mode=TwoWay}" />
-                                                    <CheckBox Content="{l:Loc File_Col_Splay}"   IsChecked="{Binding Measurements.ShotsColSplay,      Mode=TwoWay}" />
-                                                    <CheckBox Content="{l:Loc File_Col_Approx}"  IsChecked="{Binding Measurements.ShotsColApproximate,Mode=TwoWay}" />
+                                                    <CheckBox AutomationProperties.AutomationId="Document.Shots.Columns.Surface" Content="{l:Loc File_Col_Surf}"    IsChecked="{Binding Measurements.ShotsColSurface,    Mode=TwoWay}" />
+                                                    <CheckBox AutomationProperties.AutomationId="Document.Shots.Columns.Duplicate" Content="{l:Loc File_Col_Dup}"     IsChecked="{Binding Measurements.ShotsColDuplicate,  Mode=TwoWay}" />
+                                                    <CheckBox AutomationProperties.AutomationId="Document.Shots.Columns.Splay" Content="{l:Loc File_Col_Splay}"   IsChecked="{Binding Measurements.ShotsColSplay,      Mode=TwoWay}" />
+                                                    <CheckBox AutomationProperties.AutomationId="Document.Shots.Columns.Approximate" Content="{l:Loc File_Col_Approx}"  IsChecked="{Binding Measurements.ShotsColApproximate,Mode=TwoWay}" />
                                                     <Separator Margin="0,4" />
-                                                    <CheckBox Content="{l:Loc Common_Comment}" IsChecked="{Binding Measurements.ShotsColComment,    Mode=TwoWay}" />
-                                                    <CheckBox Content="{l:Loc Browser_Col_Line}"    IsChecked="{Binding Measurements.ShotsColLine,       Mode=TwoWay}" />
+                                                    <CheckBox AutomationProperties.AutomationId="Document.Shots.Columns.Comment" Content="{l:Loc Common_Comment}" IsChecked="{Binding Measurements.ShotsColComment,    Mode=TwoWay}" />
+                                                    <CheckBox AutomationProperties.AutomationId="Document.Shots.Columns.Line" Content="{l:Loc Browser_Col_Line}"    IsChecked="{Binding Measurements.ShotsColLine,       Mode=TwoWay}" />
                                                 </StackPanel>
                                             </Flyout>
                                         </Button.Flyout>
@@ -212,6 +224,7 @@
                             </Border>
                             <!-- Editable shots grid (#6): Length/Compass/Clino are TwoWay-bound. -->
                             <DataGrid x:Name="ShotsGrid"
+                                      AutomationProperties.AutomationId="Document.Shots.Grid" AutomationProperties.Name="{l:Loc Browser_Tab_Shots}"
                                       ItemsSource="{Binding Measurements.View}"
                                       x:CompileBindings="False"
                                       GridLinesVisibility="All"
@@ -219,18 +232,18 @@
                                       CanUserReorderColumns="True" AutoGenerateColumns="False">
                                 <DataGrid.ContextMenu>
                                     <ContextMenu>
-                                        <MenuItem Header="{l:Loc Common_CopyRow}"  Click="OnCopyShotRow" />
-                                        <MenuItem Header="{l:Loc Common_CopyCell}" Click="OnCopyShotCell" />
+                                        <MenuItem AutomationProperties.AutomationId="Document.Shots.Grid.CopyRow" Header="{l:Loc Common_CopyRow}"  Click="OnCopyShotRow" />
+                                        <MenuItem AutomationProperties.AutomationId="Document.Shots.Grid.CopyCell" Header="{l:Loc Common_CopyCell}" Click="OnCopyShotCell" />
                                         <Separator />
-                                        <MenuItem Header="{l:Loc Common_GoToSource}"                Click="OnGoToShotSource" />
-                                        <MenuItem Header="{l:Loc File_GoToDeclFrom}" Click="OnGoToShotDefFrom" />
-                                        <MenuItem Header="{l:Loc File_GoToDeclTo}"   Click="OnGoToShotDefTo" />
+                                        <MenuItem AutomationProperties.AutomationId="Document.Shots.Grid.GoToSource" Header="{l:Loc Common_GoToSource}"                Click="OnGoToShotSource" />
+                                        <MenuItem AutomationProperties.AutomationId="Document.Shots.Grid.GoToDeclarationFrom" Header="{l:Loc File_GoToDeclFrom}" Click="OnGoToShotDefFrom" />
+                                        <MenuItem AutomationProperties.AutomationId="Document.Shots.Grid.GoToDeclarationTo" Header="{l:Loc File_GoToDeclTo}"   Click="OnGoToShotDefTo" />
                                         <Separator />
-                                        <MenuItem Header="{l:Loc File_ShowFrom3D}" Click="OnShowShotFromIn3D" />
-                                        <MenuItem Header="{l:Loc File_ShowTo3D}"   Click="OnShowShotToIn3D" />
+                                        <MenuItem AutomationProperties.AutomationId="Document.Shots.Grid.ShowFromIn3D" Header="{l:Loc File_ShowFrom3D}" Click="OnShowShotFromIn3D" />
+                                        <MenuItem AutomationProperties.AutomationId="Document.Shots.Grid.ShowToIn3D" Header="{l:Loc File_ShowTo3D}"   Click="OnShowShotToIn3D" />
                                         <Separator />
-                                        <MenuItem Header="{l:Loc File_RenameFrom}" Click="OnRenameFromStation" />
-                                        <MenuItem Header="{l:Loc File_RenameTo}"   Click="OnRenameToStation" />
+                                        <MenuItem AutomationProperties.AutomationId="Document.Shots.Grid.RenameFrom" Header="{l:Loc File_RenameFrom}" Click="OnRenameFromStation" />
+                                        <MenuItem AutomationProperties.AutomationId="Document.Shots.Grid.RenameTo" Header="{l:Loc File_RenameTo}"   Click="OnRenameToStation" />
                                     </ContextMenu>
                                 </DataGrid.ContextMenu>
                                 <DataGrid.Columns>
@@ -263,41 +276,46 @@
                             </DataGrid>
                         </DockPanel>
                     </TabItem>
-                    <TabItem Header="{l:Loc Browser_Tab_Stations}">
+                    <TabItem AutomationProperties.AutomationId="Document.Measurements.Tab.Stations" Header="{l:Loc Browser_Tab_Stations}">
                         <DockPanel>
                             <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="6,4">
                                 <WrapPanel Orientation="Horizontal">
                                     <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,8,0">
                                         <TextBlock Text="{l:Loc File_FilterLabel}" VerticalAlignment="Center" />
                                         <TextBox Width="180"
+                                                 AutomationProperties.AutomationId="Document.Stations.Filter" AutomationProperties.Name="{l:Loc File_StationsFilterWm}"
                                                  Text="{Binding Measurements.StationsFilterText, Mode=TwoWay}"
                                                  Watermark="{l:Loc File_StationsFilterWm}" />
                                     </StackPanel>
                                     <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,8,0">
                                         <TextBlock Text="{l:Loc File_GroupBy}" VerticalAlignment="Center" />
                                         <ComboBox MinWidth="100"
+                                                  AutomationProperties.AutomationId="Document.Stations.GroupBy" AutomationProperties.Name="{l:Loc File_GroupBy}"
                                                   ItemsSource="{Binding Measurements.StationsGroupByOptions}"
                                                   SelectedItem="{Binding Measurements.StationsGroupBy, Mode=TwoWay}" />
                                     </StackPanel>
                                     <!-- Full station name toggle. -->
                                     <ToggleButton Padding="6,3" VerticalAlignment="Center" Margin="0,0,4,0"
+                                                  AutomationProperties.AutomationId="Document.Stations.FullStationName" AutomationProperties.Name="{l:Loc Common_FullStationName}"
                                                   ToolTip.Tip="{l:Loc Common_FullStationName}"
                                                   IsChecked="{Binding Measurements.ShowFullStationName, Mode=TwoWay}">
                                         <PathIcon Data="{DynamicResource Icon.NodeGraph}" Width="14" Height="14" />
                                     </ToggleButton>
                                     <!-- Auto-fit button. -->
                                     <Button Content="{l:Loc Common_Fit}" Padding="6,3" VerticalAlignment="Center"
+                                            AutomationProperties.AutomationId="Document.Stations.FitColumns"
                                             Margin="0,0,4,0" ToolTip.Tip="{l:Loc Common_FitAll}"
                                             Click="OnFitStationsColumns" />
                                     <!-- Column visibility flyout. -->
                                     <Button Content="{l:Loc File_Cols}" Padding="6,3" VerticalAlignment="Center"
+                                            AutomationProperties.AutomationId="Document.Stations.Columns"
                                             Margin="0,0,8,0" ToolTip.Tip="{l:Loc Common_ShowHideColumns}">
                                         <Button.Flyout>
                                             <Flyout>
                                                 <StackPanel Spacing="2" Margin="8">
-                                                    <CheckBox Content="{l:Loc Browser_Col_Survey}" IsChecked="{Binding Measurements.StationsColSurvey, Mode=TwoWay}" />
-                                                    <CheckBox Content="{l:Loc Browser_Col_Kind}"   IsChecked="{Binding Measurements.StationsColKind,   Mode=TwoWay}" />
-                                                    <CheckBox Content="{l:Loc Browser_Col_Line}"   IsChecked="{Binding Measurements.StationsColLine,   Mode=TwoWay}" />
+                                                    <CheckBox AutomationProperties.AutomationId="Document.Stations.Columns.Survey" Content="{l:Loc Browser_Col_Survey}" IsChecked="{Binding Measurements.StationsColSurvey, Mode=TwoWay}" />
+                                                    <CheckBox AutomationProperties.AutomationId="Document.Stations.Columns.Kind" Content="{l:Loc Browser_Col_Kind}"   IsChecked="{Binding Measurements.StationsColKind,   Mode=TwoWay}" />
+                                                    <CheckBox AutomationProperties.AutomationId="Document.Stations.Columns.Line" Content="{l:Loc Browser_Col_Line}"   IsChecked="{Binding Measurements.StationsColLine,   Mode=TwoWay}" />
                                                 </StackPanel>
                                             </Flyout>
                                         </Button.Flyout>
@@ -308,6 +326,7 @@
                                 </WrapPanel>
                             </Border>
                             <DataGrid x:Name="StationsGrid"
+                                      AutomationProperties.AutomationId="Document.Stations.Grid" AutomationProperties.Name="{l:Loc Browser_Tab_Stations}"
                                       ItemsSource="{Binding Measurements.StationsView}"
                                       x:CompileBindings="False"
                                       IsReadOnly="True" GridLinesVisibility="Horizontal"
@@ -315,15 +334,15 @@
                                       AutoGenerateColumns="False">
                                 <DataGrid.ContextMenu>
                                     <ContextMenu>
-                                        <MenuItem Header="{l:Loc Common_CopyRow}"  Click="OnCopyStationRow" />
-                                        <MenuItem Header="{l:Loc Common_CopyCell}" Click="OnCopyStationCell" />
+                                        <MenuItem AutomationProperties.AutomationId="Document.Stations.Grid.CopyRow" Header="{l:Loc Common_CopyRow}"  Click="OnCopyStationRow" />
+                                        <MenuItem AutomationProperties.AutomationId="Document.Stations.Grid.CopyCell" Header="{l:Loc Common_CopyCell}" Click="OnCopyStationCell" />
                                         <Separator />
-                                        <MenuItem Header="{l:Loc Common_GoToSource}"   Click="OnGoToStationSource" />
-                                        <MenuItem Header="{l:Loc File_GoToDecl}" Click="OnGoToStationDeclaration" />
+                                        <MenuItem AutomationProperties.AutomationId="Document.Stations.Grid.GoToSource" Header="{l:Loc Common_GoToSource}"   Click="OnGoToStationSource" />
+                                        <MenuItem AutomationProperties.AutomationId="Document.Stations.Grid.GoToDeclaration" Header="{l:Loc File_GoToDecl}" Click="OnGoToStationDeclaration" />
                                         <Separator />
-                                        <MenuItem Header="{l:Loc File_ShowIn3D}" Click="OnShowStationIn3D" />
+                                        <MenuItem AutomationProperties.AutomationId="Document.Stations.Grid.ShowIn3D" Header="{l:Loc File_ShowIn3D}" Click="OnShowStationIn3D" />
                                         <Separator />
-                                        <MenuItem Header="{l:Loc File_RenameStation}" Click="OnRenameStation" />
+                                        <MenuItem AutomationProperties.AutomationId="Document.Stations.Grid.RenameStation" Header="{l:Loc File_RenameStation}" Click="OnRenameStation" />
                                     </ContextMenu>
                                 </DataGrid.ContextMenu>
                                 <DataGrid.Columns>
@@ -347,6 +366,7 @@
             <!-- Fold / unfold all recognised blocks (#2): two-state icon, kept in sync with the
                  editor's Fold All / Unfold All actions. -->
             <Button x:Name="FoldToggleButton" Padding="6,2" Background="Transparent" BorderThickness="0"
+                    AutomationProperties.AutomationId="Document.ToggleFoldAll" AutomationProperties.Name="{l:Loc Menu_Edit_FoldAll}"
                     FontSize="12" Click="OnToggleFoldAll" ToolTip.Tip="{l:Loc Menu_Edit_FoldAll}">
                 <PathIcon x:Name="FoldToggleIcon" Data="{DynamicResource Icon.UnfoldLess}" Width="14" Height="14" />
             </Button>
@@ -355,12 +375,14 @@
             <!-- Make this thconfig the active project configuration (build/graph reference). Disabled
                  when this file is already the active thconfig (#3). -->
             <Button x:Name="SetActiveThconfigButton" Padding="6,2" Background="Transparent" BorderThickness="0" FontSize="12"
+                    AutomationProperties.AutomationId="Document.SetActiveThconfig" AutomationProperties.Name="{l:Loc File_SetActiveTip}"
                     IsVisible="{Binding IsThconfigFile}" Click="OnSetActiveThconfig"
                     ToolTip.Tip="{l:Loc File_SetActiveTip}">
                 <PathIcon Data="{DynamicResource Icon.Config}" Width="14" Height="14" />
             </Button>
             <!-- Set this file's folder as the working directory AND make it the active thconfig. -->
             <Button Padding="6,2" Background="Transparent" BorderThickness="0" FontSize="12"
+                    AutomationProperties.AutomationId="Document.SetWorkingDirectory" AutomationProperties.Name="{l:Loc File_SetWorkingDirTip}"
                     IsVisible="{Binding IsThconfigFile}" Click="OnSetWorkingDirectory"
                     ToolTip.Tip="{l:Loc File_SetWorkingDirTip}">
                 <PathIcon Data="{DynamicResource Icon.FolderOpen}" Width="14" Height="14" />
@@ -369,6 +391,7 @@
             <!-- Edit-with-Mapiah: only for .th2 sketches. Launches the external Mapiah editor;
                  saved changes reload back into this tab automatically. -->
             <Button Padding="6,2" FontSize="12" Click="OnEditWithMapiah"
+                    AutomationProperties.AutomationId="Document.EditWithMapiah" AutomationProperties.Name="{l:Loc File_EditMapiah}"
                     IsVisible="{Binding IsTh2File}"
                     ToolTip.Tip="{l:Loc File_MapiahTip}">
                 <StackPanel Orientation="Horizontal" Spacing="4">
@@ -380,6 +403,7 @@
             <!-- Go to the parent / including file: shown only when another file references this one
                  in the object graph (a non-root file). Opens the parent if needed, then switches to it. -->
             <Button Padding="6,2" Background="Transparent" BorderThickness="0" FontSize="12"
+                    AutomationProperties.AutomationId="Document.GoToParentFile" AutomationProperties.Name="{l:Loc File_GoToParentTip}"
                     IsVisible="{Binding HasParentFile}" Click="OnGoToParentFile"
                     ToolTip.Tip="{l:Loc File_GoToParentTip}">
                 <PathIcon Data="{DynamicResource Icon.ParentFile}" Width="14" Height="14" />
@@ -387,16 +411,18 @@
 
             <!-- Reveal this file in the Workspace tree (#1): switches to file view and selects it. -->
             <Button Padding="6,2" Background="Transparent" BorderThickness="0" FontSize="13"
+                    AutomationProperties.AutomationId="Document.SelectInWorkspace" AutomationProperties.Name="{l:Loc File_SelectWorkspaceTip}"
                     Content="&#x1F50D;" Click="OnSelectInWorkspace"
                     ToolTip.Tip="{l:Loc File_SelectWorkspaceTip}" />
 
             <Button Padding="6,2" Background="Transparent" BorderThickness="0" FontSize="14"
+                    AutomationProperties.AutomationId="Document.Actions" AutomationProperties.Name="{l:Loc File_ActionsTip}"
                     Content="&#x22EF;" ToolTip.Tip="{l:Loc File_ActionsTip}">
                 <Button.Flyout>
                     <MenuFlyout>
-                        <MenuItem Header="{l:Loc Ctx_CopyName}" Command="{Binding CopyFileNameCommand}" />
-                        <MenuItem Header="{l:Loc Ctx_CopyRel}" Command="{Binding CopyRelativePathCommand}" />
-                        <MenuItem Header="{l:Loc Ctx_CopyFull}" Command="{Binding CopyFullPathCommand}" />
+                        <MenuItem AutomationProperties.AutomationId="Document.Actions.CopyFileName" Header="{l:Loc Ctx_CopyName}" Command="{Binding CopyFileNameCommand}" />
+                        <MenuItem AutomationProperties.AutomationId="Document.Actions.CopyRelativePath" Header="{l:Loc Ctx_CopyRel}" Command="{Binding CopyRelativePathCommand}" />
+                        <MenuItem AutomationProperties.AutomationId="Document.Actions.CopyFullPath" Header="{l:Loc Ctx_CopyFull}" Command="{Binding CopyFullPathCommand}" />
                     </MenuFlyout>
                 </Button.Flyout>
             </Button>

@@ -45,7 +45,7 @@ public class WorkspaceOccurrenceTests
     [Fact]
     public void Cross_file_at_fix_and_station_command_refs_merge_with_the_declaring_file()
     {
-        // grind.th shape: the root file references child-file stations via `fix X@survey` and
+        // alpha.th shape: the root file references child-file stations via `fix X@survey` and
         // `station X@survey "..."` (not just equate). Those tokens must be attributed to the real
         // declaring station, or a rename launched from / reaching into the root file misses them.
         var ws = Build(

@@ -411,6 +411,9 @@ public partial class MainWindow : Window
                 },
             },
         };
+        Avalonia.Automation.AutomationProperties.SetAutomationId(dialog, "LoadFolder.Window");
+        Avalonia.Automation.AutomationProperties.SetAutomationId(ok, "LoadFolder.Open");
+        Avalonia.Automation.AutomationProperties.SetAutomationId(cancel, "LoadFolder.Cancel");
         bool confirmed = false;
         ok.Click += (_, _) => { confirmed = true; dialog.Close(); };
         cancel.Click += (_, _) => dialog.Close();

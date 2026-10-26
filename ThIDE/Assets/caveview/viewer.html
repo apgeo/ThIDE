@@ -29,7 +29,8 @@
 "use strict";
 // Host page bridging the embedded CaveView.js viewer to the ThIDE C# shell.
 //   C# -> JS : InvokeScript("cvLoadModel('cave.lox')") etc. (functions on window).
-//   JS -> C# : window.chrome.webview.postMessage(json)  (NativeWebView WebMessageReceived).
+//   JS -> C# : invokeCSharpAction(json) / window.chrome.webview.postMessage(json)
+//              (NativeWebView WebMessageReceived).
 // Every entry point is defensive: the C# side must never see a JS exception turn into a
 // blank control, so failures degrade to a status message + an 'error' message back to C#.
 (function () {
@@ -51,7 +52,11 @@
     function post(obj) {
         try {
             var json = JSON.stringify(obj);
-            if (window.chrome && window.chrome.webview && window.chrome.webview.postMessage) {
+            // WebKitGTK (Linux) has no window.chrome.webview; NativeWebView injects the
+            // cross-platform invokeCSharpAction() bridge there instead.
+            if (typeof window.invokeCSharpAction === "function") {
+                window.invokeCSharpAction(json);
+            } else if (window.chrome && window.chrome.webview && window.chrome.webview.postMessage) {
                 window.chrome.webview.postMessage(json);
             } else if (window.parent) {
                 window.parent.postMessage(json, "*"); // Browser/iframe backend fallback

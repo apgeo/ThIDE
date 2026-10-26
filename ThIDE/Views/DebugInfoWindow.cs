@@ -3,6 +3,7 @@
 
 using System.Threading.Tasks;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
@@ -45,6 +46,11 @@ public sealed class DebugInfoWindow : Window
         copy.Click += async (_, _) => { if (Clipboard is { } cb) await cb.SetTextAsync(_text.Text ?? string.Empty); };
         var close = new Button { Content = Tr.Get("Common_Close"), IsCancel = true, MinWidth = 80 };
         close.Click += (_, _) => Close();
+        AutomationProperties.SetAutomationId(this, "DebugInfo.Window");
+        AutomationProperties.SetAutomationId(_text, "DebugInfo.Report");
+        AutomationProperties.SetName(_text, Tr.Get("Debug_Title"));
+        AutomationProperties.SetAutomationId(copy, "DebugInfo.Copy");
+        AutomationProperties.SetAutomationId(close, "DebugInfo.Close");
 
         var buttons = new StackPanel
         {

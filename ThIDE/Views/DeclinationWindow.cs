@@ -6,6 +6,7 @@ using System;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
@@ -46,6 +47,17 @@ public sealed class DeclinationWindow : Window
         _copy.Click += (_, _) => Services.ClipboardHelper.SetText(_declLine);
         var close = new Button { Content = Tr.Get("Common_Close"), IsCancel = true, MinWidth = 80 };
         close.Click += (_, _) => Close();
+        AutomationProperties.SetAutomationId(this, "Declination.Window");
+        AutomationProperties.SetAutomationId(_lat, "Declination.Latitude");
+        AutomationProperties.SetName(_lat, Tr.Get("CC_Latitude"));
+        AutomationProperties.SetAutomationId(_lon, "Declination.Longitude");
+        AutomationProperties.SetName(_lon, Tr.Get("CC_Longitude"));
+        AutomationProperties.SetAutomationId(_year, "Declination.Year");
+        AutomationProperties.SetName(_year, Tr.Get("DC_Year"));
+        AutomationProperties.SetAutomationId(_result, "Declination.Result");
+        AutomationProperties.SetAutomationId(load, "Declination.LoadModel");
+        AutomationProperties.SetAutomationId(_copy, "Declination.CopyLine");
+        AutomationProperties.SetAutomationId(close, "Declination.Close");
 
         Content = new StackPanel
         {

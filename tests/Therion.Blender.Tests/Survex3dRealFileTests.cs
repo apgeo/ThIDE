@@ -1,5 +1,5 @@
 // .3d parser tests against the real Therion-exported file committed in tests/Corpus
-// (av_cerbul_de_aur — the same cave/export also exists as .lox, which batch-4's
+// (av_bravo — the same cave/export also exists as .lox, which batch-4's
 // cross-format suite compares against station by station).
 
 using Therion.Blender;
@@ -10,9 +10,9 @@ namespace Therion.Blender.Tests;
 public class Survex3dRealFileTests
 {
     [CorpusFact]
-    public void AvCerbul_ParsesHeaderAndContent()
+    public void AvBravo_ParsesHeaderAndContent()
     {
-        var model = Survex3dReader.ReadFile(TestCorpus.AvCerbul3d());
+        var model = Survex3dReader.ReadFile(TestCorpus.AvBravo3d());
 
         Assert.Equal(CaveSourceFormat.Survex3d, model.SourceFormat);
         Assert.Equal(8, model.FormatVersion);

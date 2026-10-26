@@ -312,7 +312,7 @@ public sealed class McpHostService : IMcpHostService
 
     private void RaiseStateChanged() => StateChanged?.Invoke(this, EventArgs.Empty);
 
-    private static bool IsAuthorized(HttpRequest request, string token)
+    internal static bool IsAuthorized(HttpRequest request, string token)
     {
         var header = request.Headers.Authorization.ToString();
         const string prefix = "Bearer ";
@@ -324,10 +324,10 @@ public sealed class McpHostService : IMcpHostService
             && CryptographicOperations.FixedTimeEquals(presented, expected);
     }
 
-    private static string GenerateToken() => Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
+    internal static string GenerateToken() => Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
 
     /// <summary>Reserves a free loopback TCP port, then releases it for Kestrel to bind.</summary>
-    private static int FindFreeLoopbackPort()
+    internal static int FindFreeLoopbackPort()
     {
         var probe = new TcpListener(IPAddress.Loopback, 0);
         probe.Start();

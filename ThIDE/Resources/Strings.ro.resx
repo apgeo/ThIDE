@@ -70,6 +70,14 @@
   <data name="Menu_Build_Rebuild" xml:space="preserve"><value>_Recompilează</value></data>
   <data name="Menu_Build_Cancel" xml:space="preserve"><value>_Anulează</value></data>
   <data name="Tool_WorkspaceExplorer" xml:space="preserve"><value>Explorator proiect</value></data>
+  <data name="Ws_RelationalViewTip" xml:space="preserve"><value>Vedere relațională (graful obiectelor)</value></data>
+  <data name="Ws_FileExplorerViewTip" xml:space="preserve"><value>Vedere explorator de fișiere</value></data>
+  <data name="Ws_OpenThconfigTip" xml:space="preserve"><value>Deschide thconfig-ul selectat în editor</value></data>
+  <data name="Ws_ActiveConfigTip" xml:space="preserve"><value>Configurația activă (determină graful obiectelor)</value></data>
+  <data name="Ws_ShowFilesTip" xml:space="preserve"><value>Afișează nodurile de fișiere în graful obiectelor</value></data>
+  <data name="Ws_RevealOnHoverTip" xml:space="preserve"><value>Evidențiază elementul din spațiul de lucru la trecerea peste un link din editor</value></data>
+  <data name="Ws_RevealOnTabSwitchTip" xml:space="preserve"><value>Evidențiază fișierul activ în spațiul de lucru la schimbarea filelor</value></data>
+  <data name="Ws_SortByTip" xml:space="preserve"><value>Sortează după</value></data>
   <data name="Tool_Diagnostics" xml:space="preserve"><value>Diagnostice</value></data>
   <data name="Tool_ObjectBrowser" xml:space="preserve"><value>Navigator obiecte</value></data>
   <data name="Tool_CompilerOutput" xml:space="preserve"><value>Ieșire compilator</value></data>
@@ -535,6 +543,7 @@
   <data name="Rename_NewNameFor" xml:space="preserve"><value>Nume nou pentru '{0}':</value></data>
   <data name="Rename_PreviewSummary" xml:space="preserve"><value>{0} apariție(i) în {1} fișier(e). Dublu-clic pe o intrare pentru a naviga la ea.</value></data>
   <data name="Rename_SeeOccurrences" xml:space="preserve"><value>Vezi aparițiile…</value></data>
+  <data name="Rename_HelpTip" xml:space="preserve"><value>Ce face această opțiune?</value></data>
   <data name="Pref_Title" xml:space="preserve"><value>Setări</value></data>
   <data name="Pref_SearchWm" xml:space="preserve"><value>Caută în setări…</value></data>
   <data name="Pref_ReopenSession" xml:space="preserve"><value>Redeschide fișierele din sesiunea anterioară la pornire</value></data>
@@ -697,6 +706,10 @@
   <data name="MapV_FitWindowTip" xml:space="preserve"><value>Micșorează pentru a încăpea în fereastră (nu depășește 100%)</value></data>
   <data name="MapV_Fit100" xml:space="preserve"><value>100%</value></data>
   <data name="MapV_OutputsTip" xml:space="preserve"><value>Fișiere de hartă compatibile din thconfig-ul activ (export map)</value></data>
+  <data name="MapV_PrevPage" xml:space="preserve"><value>Pagina anterioară</value></data>
+  <data name="MapV_NextPage" xml:space="preserve"><value>Pagina următoare</value></data>
+  <data name="MapV_ZoomOut" xml:space="preserve"><value>Micșorează</value></data>
+  <data name="MapV_ZoomIn" xml:space="preserve"><value>Mărește</value></data>
   <data name="Panel_FullScreenTip" xml:space="preserve"><value>Ecran complet</value></data>
   <data name="Panel_FloatScreenTip" xml:space="preserve"><value>Desprinde pe alt monitor și maximizează</value></data>
   <data name="Panel_MoveCenterTip" xml:space="preserve"><value>Mută în panoul central</value></data>

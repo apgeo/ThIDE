@@ -2,6 +2,7 @@
 // "New File…/New Folder…" actions to collect a name. Returns the entered string, or
 // null when cancelled.
 
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Layout;
@@ -36,6 +37,11 @@ public sealed class InputDialog : Window
         var cancel = new Button { Content = Tr.Get("Common_Cancel"), IsCancel = true, MinWidth = 80 };
         ok.Click += (_, _) => Close(Value());
         cancel.Click += (_, _) => Close(null);
+        AutomationProperties.SetAutomationId(this, "Input.Window");
+        AutomationProperties.SetAutomationId(_box, "Input.Value");
+        AutomationProperties.SetName(_box, prompt);
+        AutomationProperties.SetAutomationId(ok, "Input.Ok");
+        AutomationProperties.SetAutomationId(cancel, "Input.Cancel");
 
         var rightButtons = new StackPanel
         {
@@ -51,6 +57,7 @@ public sealed class InputDialog : Window
             // A left-aligned "See occurrences" button: returns the name but flags the preview should open.
             var see = new Button { Content = seeText, MinWidth = 80 };
             see.Click += (_, _) => { SeeOccurrencesRequested = true; Close(Value()); };
+            AutomationProperties.SetAutomationId(see, "Input.SeeOccurrences");
             var bar = new DockPanel();
             DockPanel.SetDock(see, Avalonia.Controls.Dock.Left);
             bar.Children.Add(see);

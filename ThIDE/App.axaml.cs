@@ -62,6 +62,13 @@ public partial class App : Application
             {
                 DataContext = services.GetRequiredService<MainWindowViewModel>(),
             };
+
+            // test/agent-only UI automation server; a no-op unless THIDE_UI_AUTOMATION=1.
+            if (Services.UiAutomation.UiAutomationHost.IsRequested)
+            {
+                _ = Services.UiAutomation.UiAutomationHost.StartIfRequestedAsync(services.GetRequiredService<Services.ILogService>());
+                desktop.Exit += (_, _) => Services.UiAutomation.UiAutomationHost.RequestShutdown();
+            }
         }
 
         base.OnFrameworkInitializationCompleted();
@@ -69,13 +76,14 @@ public partial class App : Application
 
     // keep only arguments that look like real, openable Therion file paths (skip option
     // flags and non-existent paths). Extensions mirror MainWindow.OpenableExtensions.
-    private static System.Collections.Generic.IReadOnlyList<string> ParseFileArgs(string[]? args)
+    // '/' starts an option only on Windows; on Linux/macOS it starts an absolute path.
+    internal static System.Collections.Generic.IReadOnlyList<string> ParseFileArgs(string[]? args)
     {
         if (args is null || args.Length == 0) return System.Array.Empty<string>();
         var result = new System.Collections.Generic.List<string>();
         foreach (var a in args)
         {
-            if (string.IsNullOrWhiteSpace(a) || a.StartsWith('-') || a.StartsWith('/')) continue;
+            if (string.IsNullOrWhiteSpace(a) || a.StartsWith('-') || (a.StartsWith('/') && OperatingSystem.IsWindows())) continue;
             try { if (System.IO.File.Exists(a)) result.Add(System.IO.Path.GetFullPath(a)); }
             catch { /* malformed path arg — ignore */ }
         }

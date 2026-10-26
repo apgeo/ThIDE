@@ -144,9 +144,9 @@ public class CorruptInputTests
     public void FacadeDetection_RoutesBothRealFormats()
     {
         Assert.Equal(CaveSourceFormat.Lox,
-            CaveModelReader.ReadFile(TestCorpus.AvCerbulLox()).SourceFormat);
+            CaveModelReader.ReadFile(TestCorpus.AvBravoLox()).SourceFormat);
         Assert.Equal(CaveSourceFormat.Survex3d,
-            CaveModelReader.ReadFile(TestCorpus.AvCerbul3d()).SourceFormat);
+            CaveModelReader.ReadFile(TestCorpus.AvBravo3d()).SourceFormat);
     }
 
     [Fact]

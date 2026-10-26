@@ -87,7 +87,9 @@ public partial class FileDocumentView : UserControl
         bool allFolded = editor.AllFolded;
         var key = allFolded ? "Icon.UnfoldMore" : "Icon.UnfoldLess";
         if (this.TryFindResource(key, out var res) && res is Avalonia.Media.Geometry g) icon.Data = g;
-        ToolTip.SetTip(btn, ThIDE.Resources.Tr.Get(allFolded ? "Menu_Edit_UnfoldAll" : "Menu_Edit_FoldAll"));
+        var tip = ThIDE.Resources.Tr.Get(allFolded ? "Menu_Edit_UnfoldAll" : "Menu_Edit_FoldAll");
+        ToolTip.SetTip(btn, tip);
+        Avalonia.Automation.AutomationProperties.SetName(btn, tip);
     }
 
     // ---- #3: enable "set active thconfig" only when it isn't already active ----

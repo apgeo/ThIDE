@@ -4,6 +4,7 @@
 using System;
 using System.Globalization;
 using System.Linq;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
@@ -58,6 +59,22 @@ public sealed class UnitConverterWindow : Window
 
         var close = new Button { Content = Tr.Get("Common_Close"), IsCancel = true, MinWidth = 80 };
         close.Click += (_, _) => Close();
+
+        // Stable UI-automation ids (+ screen-reader names for the unlabeled inputs / glyph button).
+        void Automation(Control c, string id, string? nameKey = null)
+        {
+            AutomationProperties.SetAutomationId(c, "UnitConverter." + id);
+            if (nameKey is not null) AutomationProperties.SetName(c, Tr.Get(nameKey));
+        }
+        Automation(this, "Window");
+        Automation(_category, "Category", "UC_Category");
+        Automation(_input, "Value", "UC_Value");
+        Automation(_from, "From", "UC_From");
+        Automation(_to, "To", "UC_To");
+        Automation(swap, "Swap", "UC_SwapTip");
+        Automation(_result, "Result");
+        Automation(copy, "CopyResult");
+        Automation(close, "Close");
 
         var grid = new Grid
         {

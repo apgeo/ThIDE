@@ -5,6 +5,7 @@
              xmlns:l="using:ThIDE.Resources"
              x:Class="ThIDE.Views.Docking.ObjectBrowserToolView"
              x:CompileBindings="False"
+             AutomationProperties.AutomationId="ObjectBrowser.View"
              x:DataType="vm:ObjectBrowserToolViewModel">
   <DockPanel>
     <!-- Shared filter bar: edits the currently selected tab's filter (each tab keeps its own state).
@@ -18,30 +19,33 @@
           <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
             <TextBlock Text="{Binding Browser.ActiveFilter.CustomLabel}" VerticalAlignment="Center" FontSize="12" />
             <Button Content="✕" Command="{Binding Browser.ActiveFilter.ClearCustomFilterCommand}"
+                    AutomationProperties.AutomationId="ObjectBrowser.ClearFilter" AutomationProperties.Name="{l:Loc OB_ClearFilter}"
                     Padding="4,0" MinWidth="0" MinHeight="0" Background="Transparent" BorderThickness="0"
                     Cursor="Hand" ToolTip.Tip="{l:Loc OB_ClearFilter}" />
           </StackPanel>
         </Border>
         <TextBox Text="{Binding Browser.ActiveFilter.Text, Mode=TwoWay}"
+                 AutomationProperties.AutomationId="ObjectBrowser.Filter" AutomationProperties.Name="{l:Loc OB_FilterWatermark}"
                  Watermark="{l:Loc OB_FilterWatermark}" VerticalAlignment="Center" />
       </DockPanel>
     </Border>
 
     <Grid>
-      <TabControl SelectedIndex="{Binding Browser.SelectedTabIndex, Mode=TwoWay}">
-        <TabItem Header="{Binding Browser.TabStations}">
+      <TabControl AutomationProperties.AutomationId="ObjectBrowser.Tabs" SelectedIndex="{Binding Browser.SelectedTabIndex, Mode=TwoWay}">
+        <TabItem AutomationProperties.AutomationId="ObjectBrowser.Tab.Stations" Header="{Binding Browser.TabStations}">
             <DataGrid ItemsSource="{Binding Browser.StationsFilter.Items}" DoubleTapped="OnRowDoubleTapped"
+                      AutomationProperties.AutomationId="ObjectBrowser.Stations.Grid"
                       ContextRequested="OnGridContextRequested"
                       IsReadOnly="True" GridLinesVisibility="Horizontal"
                       CanUserResizeColumns="True" CanUserSortColumns="True" AutoGenerateColumns="False">
                 <!-- identifier actions. -->
                 <DataGrid.ContextMenu>
                     <ContextMenu>
-                        <MenuItem Header="{l:Loc Common_GoToDefinition}" Click="OnCtxNavigate" />
-                        <MenuItem Header="{l:Loc Common_FindReferences}" Click="OnCtxFindRefs" />
-                        <MenuItem Header="{l:Loc Common_RenameSymbol}" Click="OnCtxRename" />
+                        <MenuItem AutomationProperties.AutomationId="ObjectBrowser.Stations.Grid.GoToDefinition" Header="{l:Loc Common_GoToDefinition}" Click="OnCtxNavigate" />
+                        <MenuItem AutomationProperties.AutomationId="ObjectBrowser.Stations.Grid.FindReferences" Header="{l:Loc Common_FindReferences}" Click="OnCtxFindRefs" />
+                        <MenuItem AutomationProperties.AutomationId="ObjectBrowser.Stations.Grid.Rename" Header="{l:Loc Common_RenameSymbol}" Click="OnCtxRename" />
                         <Separator />
-                        <MenuItem Header="{l:Loc OB_CopyQName}" Click="OnCtxCopyQName" />
+                        <MenuItem AutomationProperties.AutomationId="ObjectBrowser.Stations.Grid.CopyQualifiedName" Header="{l:Loc OB_CopyQName}" Click="OnCtxCopyQName" />
                     </ContextMenu>
                 </DataGrid.ContextMenu>
                 <DataGrid.Columns>
@@ -51,8 +55,9 @@
                 </DataGrid.Columns>
             </DataGrid>
         </TabItem>
-        <TabItem Header="{Binding Browser.TabShots}">
+        <TabItem AutomationProperties.AutomationId="ObjectBrowser.Tab.Shots" Header="{Binding Browser.TabShots}">
             <DataGrid ItemsSource="{Binding Browser.ShotsFilter.Items}"
+                      AutomationProperties.AutomationId="ObjectBrowser.Shots.Grid"
                       GridLinesVisibility="Horizontal"
                       CanUserResizeColumns="True" CanUserSortColumns="True" AutoGenerateColumns="False">
                 <DataGrid.Columns>
@@ -66,18 +71,19 @@
             </DataGrid>
         </TabItem>
         <!-- entity tabs -->
-        <TabItem Header="{l:Loc Proj_Tab_Surveys}">
+        <TabItem AutomationProperties.AutomationId="ObjectBrowser.Tab.Surveys" Header="{l:Loc Proj_Tab_Surveys}">
             <DataGrid ItemsSource="{Binding Browser.SurveysFilter.Items}" DoubleTapped="OnRowDoubleTapped"
+                      AutomationProperties.AutomationId="ObjectBrowser.Surveys.Grid"
                       ContextRequested="OnGridContextRequested" IsReadOnly="True" GridLinesVisibility="Horizontal"
                       CanUserResizeColumns="True" CanUserSortColumns="True" AutoGenerateColumns="False">
                 <!-- identifier actions. -->
                 <DataGrid.ContextMenu>
                     <ContextMenu>
-                        <MenuItem Header="{l:Loc Common_GoToDefinition}" Click="OnCtxNavigate" />
-                        <MenuItem Header="{l:Loc Common_FindReferences}" Click="OnCtxFindRefs" />
-                        <MenuItem Header="{l:Loc Common_RenameSymbol}" Click="OnCtxRename" />
+                        <MenuItem AutomationProperties.AutomationId="ObjectBrowser.Surveys.Grid.GoToDefinition" Header="{l:Loc Common_GoToDefinition}" Click="OnCtxNavigate" />
+                        <MenuItem AutomationProperties.AutomationId="ObjectBrowser.Surveys.Grid.FindReferences" Header="{l:Loc Common_FindReferences}" Click="OnCtxFindRefs" />
+                        <MenuItem AutomationProperties.AutomationId="ObjectBrowser.Surveys.Grid.Rename" Header="{l:Loc Common_RenameSymbol}" Click="OnCtxRename" />
                         <Separator />
-                        <MenuItem Header="{l:Loc OB_CopyQName}" Click="OnCtxCopyQName" />
+                        <MenuItem AutomationProperties.AutomationId="ObjectBrowser.Surveys.Grid.CopyQualifiedName" Header="{l:Loc OB_CopyQName}" Click="OnCtxCopyQName" />
                     </ContextMenu>
                 </DataGrid.ContextMenu>
                 <DataGrid.Columns>
@@ -89,8 +95,9 @@
                 </DataGrid.Columns>
             </DataGrid>
         </TabItem>
-        <TabItem Header="{l:Loc OB_Tab_Fixes}">
+        <TabItem AutomationProperties.AutomationId="ObjectBrowser.Tab.Fixes" Header="{l:Loc OB_Tab_Fixes}">
             <DataGrid ItemsSource="{Binding Browser.FixesFilter.Items}" DoubleTapped="OnRowDoubleTapped" IsReadOnly="True" GridLinesVisibility="Horizontal"
+                      AutomationProperties.AutomationId="ObjectBrowser.Fixes.Grid"
                       CanUserResizeColumns="True" CanUserSortColumns="True" AutoGenerateColumns="False">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="{l:Loc Col_Station}" Binding="{Binding Station}" Width="*" />
@@ -101,8 +108,9 @@
                 </DataGrid.Columns>
             </DataGrid>
         </TabItem>
-        <TabItem Header="{l:Loc OB_Tab_Equates}">
+        <TabItem AutomationProperties.AutomationId="ObjectBrowser.Tab.Equates" Header="{l:Loc OB_Tab_Equates}">
             <DataGrid ItemsSource="{Binding Browser.EquatesFilter.Items}" DoubleTapped="OnRowDoubleTapped" IsReadOnly="True" GridLinesVisibility="Horizontal"
+                      AutomationProperties.AutomationId="ObjectBrowser.Equates.Grid"
                       CanUserResizeColumns="True" CanUserSortColumns="True" AutoGenerateColumns="False">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="{l:Loc OB_Col_Equate}" Binding="{Binding Stations}" Width="*" />
@@ -111,8 +119,9 @@
                 </DataGrid.Columns>
             </DataGrid>
         </TabItem>
-        <TabItem Header="{l:Loc OB_Tab_Maps}">
+        <TabItem AutomationProperties.AutomationId="ObjectBrowser.Tab.Maps" Header="{l:Loc OB_Tab_Maps}">
             <DataGrid ItemsSource="{Binding Browser.MapsFilter.Items}" DoubleTapped="OnRowDoubleTapped" IsReadOnly="True" GridLinesVisibility="Horizontal"
+                      AutomationProperties.AutomationId="ObjectBrowser.Maps.Grid"
                       CanUserResizeColumns="True" CanUserSortColumns="True" AutoGenerateColumns="False">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="{l:Loc Col_Id}" Binding="{Binding Id}" Width="*" />
@@ -124,8 +133,9 @@
                 </DataGrid.Columns>
             </DataGrid>
         </TabItem>
-        <TabItem Header="{l:Loc OB_Tab_Scraps}">
+        <TabItem AutomationProperties.AutomationId="ObjectBrowser.Tab.Scraps" Header="{l:Loc OB_Tab_Scraps}">
             <DataGrid ItemsSource="{Binding Browser.ScrapsFilter.Items}" DoubleTapped="OnRowDoubleTapped" IsReadOnly="True" GridLinesVisibility="Horizontal"
+                      AutomationProperties.AutomationId="ObjectBrowser.Scraps.Grid"
                       CanUserResizeColumns="True" CanUserSortColumns="True" AutoGenerateColumns="False">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="{l:Loc Col_Id}" Binding="{Binding Id}" Width="*" />
@@ -135,8 +145,9 @@
                 </DataGrid.Columns>
             </DataGrid>
         </TabItem>
-        <TabItem Header="{l:Loc OB_Tab_Points}">
+        <TabItem AutomationProperties.AutomationId="ObjectBrowser.Tab.Points" Header="{l:Loc OB_Tab_Points}">
             <DataGrid ItemsSource="{Binding Browser.PointsFilter.Items}" DoubleTapped="OnRowDoubleTapped" IsReadOnly="True" GridLinesVisibility="Horizontal"
+                      AutomationProperties.AutomationId="ObjectBrowser.Points.Grid"
                       CanUserResizeColumns="True" CanUserSortColumns="True" AutoGenerateColumns="False">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="{l:Loc Col_Type}" Binding="{Binding Type}" Width="*" />
@@ -146,8 +157,9 @@
                 </DataGrid.Columns>
             </DataGrid>
         </TabItem>
-        <TabItem Header="{l:Loc OB_Tab_Lines}">
+        <TabItem AutomationProperties.AutomationId="ObjectBrowser.Tab.Lines" Header="{l:Loc OB_Tab_Lines}">
             <DataGrid ItemsSource="{Binding Browser.LinesFilter.Items}" DoubleTapped="OnRowDoubleTapped" IsReadOnly="True" GridLinesVisibility="Horizontal"
+                      AutomationProperties.AutomationId="ObjectBrowser.Lines.Grid"
                       CanUserResizeColumns="True" CanUserSortColumns="True" AutoGenerateColumns="False">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="{l:Loc Col_Type}" Binding="{Binding Type}" Width="*" />
@@ -157,8 +169,9 @@
                 </DataGrid.Columns>
             </DataGrid>
         </TabItem>
-        <TabItem Header="{l:Loc OB_Tab_Areas}">
+        <TabItem AutomationProperties.AutomationId="ObjectBrowser.Tab.Areas" Header="{l:Loc OB_Tab_Areas}">
             <DataGrid ItemsSource="{Binding Browser.AreasFilter.Items}" DoubleTapped="OnRowDoubleTapped" IsReadOnly="True" GridLinesVisibility="Horizontal"
+                      AutomationProperties.AutomationId="ObjectBrowser.Areas.Grid"
                       CanUserResizeColumns="True" CanUserSortColumns="True" AutoGenerateColumns="False">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="{l:Loc Col_Type}" Binding="{Binding Type}" Width="*" />
@@ -170,7 +183,7 @@
         </TabItem>
       </TabControl>
       <!-- Shared window controls overlaid in the empty top-right of the tab strip. -->
-      <docking:PanelWindowControls HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,1,1,0" />
+      <docking:PanelWindowControls AutomationProperties.AutomationId="ObjectBrowser.WindowControls" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,1,1,0" />
     </Grid>
   </DockPanel>
 </UserControl>

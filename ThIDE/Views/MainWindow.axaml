@@ -14,6 +14,7 @@
         x:DataType="vm:MainWindowViewModel"
         Width="1300" Height="800"
         Icon="/Assets/thide.ico"
+        AutomationProperties.AutomationId="MainWindow.Window"
         Title="{Binding Title}">
 
     <Design.DataContext>
@@ -39,22 +40,23 @@
         <Style Selector="dock|DocumentTabStripItem">
             <Setter Property="ContextMenu">
                 <ContextMenu x:CompileBindings="False">
-                    <MenuItem Header="{l:Loc Tab_Pin}" Command="{Binding TogglePinCommand}" IsVisible="{Binding !IsPinned}" />
-                    <MenuItem Header="{l:Loc Tab_Unpin}" Command="{Binding TogglePinCommand}" IsVisible="{Binding IsPinned}" />
+                    <MenuItem AutomationProperties.AutomationId="TabMenu.Pin" Header="{l:Loc Tab_Pin}" Command="{Binding TogglePinCommand}" IsVisible="{Binding !IsPinned}" />
+                    <MenuItem AutomationProperties.AutomationId="TabMenu.Unpin" Header="{l:Loc Tab_Unpin}" Command="{Binding TogglePinCommand}" IsVisible="{Binding IsPinned}" />
                     <Separator />
-                    <MenuItem Header="{l:Loc Tab_Close}" Command="{Binding CloseTabCommand}" />
-                    <MenuItem Header="{l:Loc Tab_CloseOthers}" Command="{Binding CloseOtherTabsCommand}" />
-                    <MenuItem Header="{l:Loc Tab_CloseRight}" Command="{Binding CloseTabsToRightCommand}" />
-                    <MenuItem Header="{l:Loc Tab_CloseAll}" Command="{Binding CloseAllTabsCommand}" />
+                    <MenuItem AutomationProperties.AutomationId="TabMenu.Close" Header="{l:Loc Tab_Close}" Command="{Binding CloseTabCommand}" />
+                    <MenuItem AutomationProperties.AutomationId="TabMenu.CloseOthers" Header="{l:Loc Tab_CloseOthers}" Command="{Binding CloseOtherTabsCommand}" />
+                    <MenuItem AutomationProperties.AutomationId="TabMenu.CloseRight" Header="{l:Loc Tab_CloseRight}" Command="{Binding CloseTabsToRightCommand}" />
+                    <MenuItem AutomationProperties.AutomationId="TabMenu.CloseAll" Header="{l:Loc Tab_CloseAll}" Command="{Binding CloseAllTabsCommand}" />
                     <Separator />
                     <MenuItem Header="{l:Loc Menu_File_ReopenTab}"
+                              AutomationProperties.AutomationId="TabMenu.ReopenClosed"
                               Command="{Binding $parent[Window].DataContext.ReopenClosedTabCommand}" />
-                    <MenuItem Header="{l:Loc Tab_Float}" Command="{Binding FloatTabCommand}" />
+                    <MenuItem AutomationProperties.AutomationId="TabMenu.Float" Header="{l:Loc Tab_Float}" Command="{Binding FloatTabCommand}" />
                     <Separator />
-                    <MenuItem Header="{l:Loc Gen_Reveal}" Command="{Binding RevealInFileManagerCommand}" />
-                    <MenuItem Header="{l:Loc Ctx_CopyFull}" Command="{Binding CopyFullPathCommand}" />
-                    <MenuItem Header="{l:Loc Ctx_CopyRel}" Command="{Binding CopyRelativePathCommand}" />
-                    <MenuItem Header="{l:Loc Ctx_CopyName}" Command="{Binding CopyFileNameCommand}" />
+                    <MenuItem AutomationProperties.AutomationId="TabMenu.Reveal" Header="{l:Loc Gen_Reveal}" Command="{Binding RevealInFileManagerCommand}" />
+                    <MenuItem AutomationProperties.AutomationId="TabMenu.CopyFullPath" Header="{l:Loc Ctx_CopyFull}" Command="{Binding CopyFullPathCommand}" />
+                    <MenuItem AutomationProperties.AutomationId="TabMenu.CopyRelativePath" Header="{l:Loc Ctx_CopyRel}" Command="{Binding CopyRelativePathCommand}" />
+                    <MenuItem AutomationProperties.AutomationId="TabMenu.CopyFileName" Header="{l:Loc Ctx_CopyName}" Command="{Binding CopyFileNameCommand}" />
                 </ContextMenu>
             </Setter>
         </Style>
@@ -71,6 +73,7 @@
             <Setter Property="RightContentTemplate">
                 <DataTemplate x:CompileBindings="False">
                     <Button Padding="6,2" Margin="2,0" Background="Transparent" BorderThickness="0"
+                            AutomationProperties.AutomationId="DocumentTabs.SwitchOpenTab" AutomationProperties.Name="{l:Loc File_SwitchOpenTip}"
                             VerticalAlignment="Center" FontSize="12" Content="&#x25BE;"
                             ToolTip.Tip="{l:Loc File_SwitchOpenTip}">
                         <Button.Flyout>
@@ -151,171 +154,185 @@
     </Window.Styles>
 
     <DockPanel>
-        <Menu x:Name="MainMenu" DockPanel.Dock="Top">
-            <MenuItem Header="{Binding MenuFile}">
+        <Menu AutomationProperties.AutomationId="Menu.Bar" x:Name="MainMenu" DockPanel.Dock="Top">
+            <MenuItem AutomationProperties.AutomationId="Menu.File" Header="{Binding MenuFile}">
                 <!-- InputGesture is bound via {l:Gesture <ShellCommandId>} so a remap in
                      Settings ▸ Keyboard relabels the menu; unbound commands render no chord. -->
-                <MenuItem Header="{Binding MenuFileOpenFile}" InputGesture="{l:Gesture OpenFile}" Command="{Binding OpenFileCommand}" />
-                <MenuItem Header="{Binding MenuFileOpenThconfig}" InputGesture="{l:Gesture OpenThconfig}" Command="{Binding OpenThconfigCommand}" />
-                <MenuItem Header="{Binding MenuFileOpenFolder}" InputGesture="{l:Gesture OpenFolder}" Command="{Binding OpenFolderCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.File.OpenFile" Header="{Binding MenuFileOpenFile}" InputGesture="{l:Gesture OpenFile}" Command="{Binding OpenFileCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.File.OpenThconfig" Header="{Binding MenuFileOpenThconfig}" InputGesture="{l:Gesture OpenThconfig}" Command="{Binding OpenThconfigCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.File.OpenFolder" Header="{Binding MenuFileOpenFolder}" InputGesture="{l:Gesture OpenFolder}" Command="{Binding OpenFolderCommand}" />
                 <Separator />
                 <!-- Recent files, grouped per type (8 each), rebuilt in code-behind (#8). -->
-                <MenuItem x:Name="RecentMenu" Header="{Binding MenuFileRecent}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.File.Recent" x:Name="RecentMenu" Header="{Binding MenuFileRecent}" />
                 <!-- Recent working directories, rebuilt in code-behind. -->
-                <MenuItem x:Name="RecentDirectoriesMenu" Header="{Binding MenuFileRecentDirectories}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.File.RecentDirectories" x:Name="RecentDirectoriesMenu" Header="{Binding MenuFileRecentDirectories}" />
                 <!-- reopen the most-recently-closed tab. -->
                 <MenuItem Header="{l:Loc Menu_File_ReopenTab}" InputGesture="{l:Gesture ReopenClosedTab}"
+                          AutomationProperties.AutomationId="Menu.File.ReopenTab"
                           Command="{Binding ReopenClosedTabCommand}" />
                 <Separator />
-                <MenuItem Header="{Binding MenuFileExit}" Command="{Binding ExitCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.File.Exit" Header="{Binding MenuFileExit}" Command="{Binding ExitCommand}" />
             </MenuItem>
-            <MenuItem Header="{Binding MenuView}">
-                <MenuItem Header="{Binding MenuViewLanguage}">
-                    <MenuItem Header="{Binding MenuViewLanguageEn}" Command="{Binding SwitchToEnglishCommand}" />
-                    <MenuItem Header="{Binding MenuViewLanguageRo}" Command="{Binding SwitchToRomanianCommand}" />
+            <MenuItem AutomationProperties.AutomationId="Menu.View" Header="{Binding MenuView}">
+                <MenuItem AutomationProperties.AutomationId="Menu.View.Language" Header="{Binding MenuViewLanguage}">
+                    <MenuItem AutomationProperties.AutomationId="Menu.View.Language.English" Header="{Binding MenuViewLanguageEn}" Command="{Binding SwitchToEnglishCommand}" />
+                    <MenuItem AutomationProperties.AutomationId="Menu.View.Language.Romanian" Header="{Binding MenuViewLanguageRo}" Command="{Binding SwitchToRomanianCommand}" />
                 </MenuItem>
                 <Separator />
-                <MenuItem Header="{Binding MenuViewWelcome}" Command="{Binding ShowWelcomeCommand}" />
-                <MenuItem Header="{Binding MenuViewObjectBrowser}" InputGesture="{l:Gesture ToggleObjectBrowser}" Command="{Binding ToggleObjectBrowserCommand}" />
-                <MenuItem Header="{Binding MenuViewWorkspace}" InputGesture="{l:Gesture ToggleWorkspaceExplorer}" Command="{Binding ToggleWorkspaceExplorerCommand}" />
-                <MenuItem Header="{l:Loc Menu_View_Project}" InputGesture="{l:Gesture ToggleProject}" Command="{Binding ToggleProjectCommand}" />
-                <MenuItem Header="{l:Loc Menu_View_Log}" InputGesture="{l:Gesture ToggleLog}" Command="{Binding ToggleLogCommand}" />
-                <MenuItem Header="{l:Loc Menu_View_Assistant}" Command="{Binding ToggleAssistantCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.View.Welcome" Header="{Binding MenuViewWelcome}" Command="{Binding ShowWelcomeCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.View.ObjectBrowser" Header="{Binding MenuViewObjectBrowser}" InputGesture="{l:Gesture ToggleObjectBrowser}" Command="{Binding ToggleObjectBrowserCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.View.Workspace" Header="{Binding MenuViewWorkspace}" InputGesture="{l:Gesture ToggleWorkspaceExplorer}" Command="{Binding ToggleWorkspaceExplorerCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.View.Project" Header="{l:Loc Menu_View_Project}" InputGesture="{l:Gesture ToggleProject}" Command="{Binding ToggleProjectCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.View.Log" Header="{l:Loc Menu_View_Log}" InputGesture="{l:Gesture ToggleLog}" Command="{Binding ToggleLogCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.View.Assistant" Header="{l:Loc Menu_View_Assistant}" Command="{Binding ToggleAssistantCommand}" />
                 <MenuItem Header="{l:Loc Menu_View_LivePreview}" InputGesture="{l:Gesture ToggleLivePreview}" Command="{Binding ToggleLivePreviewCommand}"
+                          AutomationProperties.AutomationId="Menu.View.LivePreview"
                           IsVisible="{Binding LivePreviewEnabled}" />
                 <MenuItem Header="{l:Loc Menu_View_MapViewer}" InputGesture="{l:Gesture ToggleMapViewer}" Command="{Binding ToggleMapViewerCommand}"
+                          AutomationProperties.AutomationId="Menu.View.MapViewer"
                           IsVisible="{Binding MapViewerEnabled}" />
                 <MenuItem Header="{l:Loc Menu_View_Model3D}" InputGesture="{l:Gesture ToggleModel3DViewer}" Command="{Binding ToggleModel3DViewerCommand}"
+                          AutomationProperties.AutomationId="Menu.View.Model3D"
                           IsVisible="{Binding Model3DViewerEnabled}" />
                 <MenuItem Header="{l:Loc Menu_View_Structural}" InputGesture="{l:Gesture ToggleStructuralGeology}" Command="{Binding ToggleStructuralGeologyCommand}"
+                          AutomationProperties.AutomationId="Menu.View.Structural"
                           IsVisible="{Binding StructuralGeologyEnabled}" />
-                <MenuItem Header="{Binding MenuViewDiagnostics}" InputGesture="{l:Gesture ToggleDiagnostics}" Command="{Binding ToggleDiagnosticsCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.View.Diagnostics" Header="{Binding MenuViewDiagnostics}" InputGesture="{l:Gesture ToggleDiagnostics}" Command="{Binding ToggleDiagnosticsCommand}" />
                 <!-- document outline (hidden when the feature is disabled). -->
                 <MenuItem Header="{l:Loc Menu_View_Outline}" InputGesture="{l:Gesture ToggleOutline}" Command="{Binding ToggleOutlineCommand}"
+                          AutomationProperties.AutomationId="Menu.View.Outline"
                           IsVisible="{Binding OutlineFeatureEnabled}" />
                 <Separator />
-                <MenuItem Header="{Binding MenuViewRelationalMap}" Click="OnRelationalMapClick" />
+                <MenuItem AutomationProperties.AutomationId="Menu.View.RelationalMap" Header="{Binding MenuViewRelationalMap}" Click="OnRelationalMapClick" />
                 <Separator />
                 <MenuItem Header="{Binding MenuViewStrictParser}"
+                          AutomationProperties.AutomationId="Menu.View.StrictParser"
                           ToggleType="CheckBox"
                           IsChecked="{Binding StrictParserMode, Mode=TwoWay}" />
                 <!-- whitespace/EOL/indent-guide render toggles (hidden when the feature is off). -->
                 <Separator IsVisible="{Binding WhitespaceFeatureEnabled}" />
-                <MenuItem Header="{l:Loc Menu_View_Whitespace}" IsVisible="{Binding WhitespaceFeatureEnabled}">
+                <MenuItem AutomationProperties.AutomationId="Menu.View.Whitespace" Header="{l:Loc Menu_View_Whitespace}" IsVisible="{Binding WhitespaceFeatureEnabled}">
                     <MenuItem Header="{l:Loc Menu_View_ShowSpacesTabs}" ToggleType="CheckBox"
+                              AutomationProperties.AutomationId="Menu.View.Whitespace.ShowSpacesTabs"
                               IsChecked="{Binding ShowWhitespace, Mode=TwoWay}" />
                     <MenuItem Header="{l:Loc Menu_View_ShowEol}" ToggleType="CheckBox"
+                              AutomationProperties.AutomationId="Menu.View.Whitespace.ShowEol"
                               IsChecked="{Binding ShowEndOfLine, Mode=TwoWay}" />
                     <MenuItem Header="{l:Loc Menu_View_ShowIndentGuides}" ToggleType="CheckBox"
+                              AutomationProperties.AutomationId="Menu.View.Whitespace.ShowIndentGuides"
                               IsChecked="{Binding ShowIndentGuides, Mode=TwoWay}" />
                 </MenuItem>
                 <!-- minimap toggle (hidden when the feature is off). -->
                 <MenuItem Header="{l:Loc Menu_View_ShowMinimap}" ToggleType="CheckBox"
+                          AutomationProperties.AutomationId="Menu.View.ShowMinimap"
                           IsChecked="{Binding ShowMinimap, Mode=TwoWay}"
                           IsVisible="{Binding MinimapFeatureEnabled}" />
                 <!-- open the active document side-by-side in a float window. -->
                 <Separator IsVisible="{Binding SplitFeatureEnabled}" />
                 <MenuItem Header="{l:Loc Menu_View_SplitEditor}" InputGesture="{l:Gesture SplitEditor}" Command="{Binding SplitEditorCommand}"
+                          AutomationProperties.AutomationId="Menu.View.SplitEditor"
                           IsVisible="{Binding SplitFeatureEnabled}" />
                 <!-- full-layout save/load/reset + built-in arrangements (rebuilt, never
                      deserialized — a deserialized Dock 12 tree doesn't render). -->
                 <Separator />
-                <MenuItem Header="{l:Loc Menu_View_Layout}">
-                    <MenuItem Header="{l:Loc Menu_View_Layout_Save}" Command="{Binding SaveLayoutAsCommand}" />
-                    <MenuItem Header="{l:Loc Menu_View_Layout_Load}" Command="{Binding LoadLayoutFromFileCommand}" />
-                    <MenuItem Header="{l:Loc Menu_View_Layout_RestoreDefault}" Command="{Binding ResetLayoutCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.View.Layout" Header="{l:Loc Menu_View_Layout}">
+                    <MenuItem AutomationProperties.AutomationId="Menu.View.Layout.Save" Header="{l:Loc Menu_View_Layout_Save}" Command="{Binding SaveLayoutAsCommand}" />
+                    <MenuItem AutomationProperties.AutomationId="Menu.View.Layout.Load" Header="{l:Loc Menu_View_Layout_Load}" Command="{Binding LoadLayoutFromFileCommand}" />
+                    <MenuItem AutomationProperties.AutomationId="Menu.View.Layout.RestoreDefault" Header="{l:Loc Menu_View_Layout_RestoreDefault}" Command="{Binding ResetLayoutCommand}" />
                     <Separator />
-                    <MenuItem Header="{l:Loc Menu_View_Layout_Split2}" Command="{Binding ApplySplitLayout2Command}" />
-                    <MenuItem Header="{l:Loc Menu_View_Layout_Split3}" Command="{Binding ApplySplitLayout3Command}" />
-                    <MenuItem Header="{l:Loc Menu_View_Layout_MultiMonitor}" Command="{Binding ApplyMultiMonitorLayoutCommand}" />
+                    <MenuItem AutomationProperties.AutomationId="Menu.View.Layout.Split2" Header="{l:Loc Menu_View_Layout_Split2}" Command="{Binding ApplySplitLayout2Command}" />
+                    <MenuItem AutomationProperties.AutomationId="Menu.View.Layout.Split3" Header="{l:Loc Menu_View_Layout_Split3}" Command="{Binding ApplySplitLayout3Command}" />
+                    <MenuItem AutomationProperties.AutomationId="Menu.View.Layout.MultiMonitor" Header="{l:Loc Menu_View_Layout_MultiMonitor}" Command="{Binding ApplyMultiMonitorLayoutCommand}" />
                 </MenuItem>
             </MenuItem>
             <!-- Edit menu mirrors the editor's right-click menu; enabled when a file is open (#11). -->
-            <MenuItem Header="{Binding MenuEdit}" IsEnabled="{Binding HasStatusFile}">
+            <MenuItem AutomationProperties.AutomationId="Menu.Edit" Header="{Binding MenuEdit}" IsEnabled="{Binding HasStatusFile}">
                 <!-- Clipboard chords stay literal: they are AvaloniaEdit's own bindings, not gestures
                      dispatched by IKeyboardShortcutService, so they are not remappable. -->
-                <MenuItem Header="{Binding MenuEditCut}"        InputGesture="Ctrl+X" Click="OnEditCut" />
-                <MenuItem Header="{Binding MenuEditCopy}"       InputGesture="Ctrl+C" Click="OnEditCopy" />
-                <MenuItem Header="{Binding MenuEditPaste}"      InputGesture="Ctrl+V" Click="OnEditPaste" />
-                <MenuItem Header="{Binding MenuEditDelete}"     Click="OnEditDelete" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Edit.Cut" Header="{Binding MenuEditCut}"        InputGesture="Ctrl+X" Click="OnEditCut" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Edit.Copy" Header="{Binding MenuEditCopy}"       InputGesture="Ctrl+C" Click="OnEditCopy" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Edit.Paste" Header="{Binding MenuEditPaste}"      InputGesture="Ctrl+V" Click="OnEditPaste" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Edit.Delete" Header="{Binding MenuEditDelete}"     Click="OnEditDelete" />
                 <Separator />
-                <MenuItem Header="{Binding MenuEditSelectAll}" InputGesture="Ctrl+A" Click="OnEditSelectAll" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Edit.SelectAll" Header="{Binding MenuEditSelectAll}" InputGesture="Ctrl+A" Click="OnEditSelectAll" />
                 <Separator />
-                <MenuItem Header="{Binding MenuEditUpper}"  Click="OnEditUpper" />
-                <MenuItem Header="{Binding MenuEditLower}"  Click="OnEditLower" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Edit.UpperCase" Header="{Binding MenuEditUpper}"  Click="OnEditUpper" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Edit.LowerCase" Header="{Binding MenuEditLower}"  Click="OnEditLower" />
                 <Separator />
-                <MenuItem Header="{Binding MenuEditToggleComment}" InputGesture="{l:Gesture ToggleComment}" Click="OnEditToggleComment" />
-                <MenuItem Header="{Binding MenuEditEncloseRegion}" InputGesture="{l:Gesture EncloseInRegion}" Click="OnEditEncloseRegion" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Edit.ToggleComment" Header="{Binding MenuEditToggleComment}" InputGesture="{l:Gesture ToggleComment}" Click="OnEditToggleComment" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Edit.EncloseRegion" Header="{Binding MenuEditEncloseRegion}" InputGesture="{l:Gesture EncloseInRegion}" Click="OnEditEncloseRegion" />
                 <Separator />
-                <MenuItem Header="{Binding MenuEditFoldAll}"   Click="OnEditFoldAll" />
-                <MenuItem Header="{Binding MenuEditUnfoldAll}" Click="OnEditUnfoldAll" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Edit.FoldAll" Header="{Binding MenuEditFoldAll}"   Click="OnEditFoldAll" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Edit.UnfoldAll" Header="{Binding MenuEditUnfoldAll}" Click="OnEditUnfoldAll" />
                 <Separator />
-                <MenuItem Header="{Binding MenuEditAddBookmark}" Click="OnEditAddBookmark" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Edit.AddBookmark" Header="{Binding MenuEditAddBookmark}" Click="OnEditAddBookmark" />
             </MenuItem>
 
             <!-- Search menu (#12). Find/Replace act on the focused editor; the rest are global. -->
-            <MenuItem Header="{Binding MenuSearch}">
+            <MenuItem AutomationProperties.AutomationId="Menu.Search" Header="{Binding MenuSearch}">
                 <!-- Ctrl+F / Ctrl+H are AvaloniaEdit SearchPanel bindings — literal, not remappable. -->
-                <MenuItem Header="{Binding MenuSearchFind}"            InputGesture="Ctrl+F" Click="OnSearchFind" IsEnabled="{Binding HasStatusFile}" />
-                <MenuItem Header="{Binding MenuSearchReplace}"         InputGesture="Ctrl+H" Click="OnSearchReplace" IsEnabled="{Binding HasStatusFile}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Search.Find" Header="{Binding MenuSearchFind}"            InputGesture="Ctrl+F" Click="OnSearchFind" IsEnabled="{Binding HasStatusFile}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Search.Replace" Header="{Binding MenuSearchReplace}"         InputGesture="Ctrl+H" Click="OnSearchReplace" IsEnabled="{Binding HasStatusFile}" />
                 <Separator />
-                <MenuItem Header="{Binding MenuSearchFindInFiles}"    InputGesture="{l:Gesture FindInFiles}" Click="OnSearchFindInFiles" />
-                <MenuItem Header="{Binding MenuSearchReplaceInFiles}" InputGesture="{l:Gesture ReplaceInFiles}" Click="OnSearchReplaceInFiles" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Search.FindInFiles" Header="{Binding MenuSearchFindInFiles}"    InputGesture="{l:Gesture FindInFiles}" Click="OnSearchFindInFiles" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Search.ReplaceInFiles" Header="{Binding MenuSearchReplaceInFiles}" InputGesture="{l:Gesture ReplaceInFiles}" Click="OnSearchReplaceInFiles" />
                 <Separator />
-                <MenuItem Header="{Binding MenuSearchGoTo}"     InputGesture="{l:Gesture GoToLine}" Click="OnSearchGoTo" IsEnabled="{Binding HasStatusFile}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Search.GoTo" Header="{Binding MenuSearchGoTo}"     InputGesture="{l:Gesture GoToLine}" Click="OnSearchGoTo" IsEnabled="{Binding HasStatusFile}" />
                 <Separator />
-                <MenuItem Header="{Binding MenuSearchBookmarks}"    Click="OnBookmarksClick" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Search.Bookmarks" Header="{Binding MenuSearchBookmarks}"    Click="OnBookmarksClick" />
             </MenuItem>
             <!-- Tools: import / GIS export / surface / scaffold -->
-            <MenuItem Header="{l:Loc Menu_Tools}">
-                <MenuItem Header="{l:Loc Menu_Tools_ImportSurvey}" Command="{Binding ImportSurveyCommand}" />
-                <MenuItem Header="{l:Loc Menu_Tools_ImportDem}" Command="{Binding ImportDemSurfaceCommand}" />
-                <MenuItem Header="{l:Loc Menu_Tools_ImportGpx}" Command="{Binding ImportGpxCommand}" />
-                <MenuItem Header="{l:Loc Menu_Tools_ScaffoldProject}" Command="{Binding ScaffoldProjectCommand}" />
-                <MenuItem Header="{l:Loc Menu_Tools_ScaffoldActive}" Command="{Binding ScaffoldProjectCommand}" CommandParameter="active" />
+            <MenuItem AutomationProperties.AutomationId="Menu.Tools" Header="{l:Loc Menu_Tools}">
+                <MenuItem AutomationProperties.AutomationId="Menu.Tools.ImportSurvey" Header="{l:Loc Menu_Tools_ImportSurvey}" Command="{Binding ImportSurveyCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Tools.ImportDem" Header="{l:Loc Menu_Tools_ImportDem}" Command="{Binding ImportDemSurfaceCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Tools.ImportGpx" Header="{l:Loc Menu_Tools_ImportGpx}" Command="{Binding ImportGpxCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Tools.ScaffoldProject" Header="{l:Loc Menu_Tools_ScaffoldProject}" Command="{Binding ScaffoldProjectCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Tools.ScaffoldActive" Header="{l:Loc Menu_Tools_ScaffoldActive}" Command="{Binding ScaffoldProjectCommand}" CommandParameter="active" />
                 <Separator />
-                <MenuItem Header="{l:Loc Menu_Tools_ExportEntrances}">
-                    <MenuItem Header="KML…"      Command="{Binding ExportGisCommand}" CommandParameter="kml" />
-                    <MenuItem Header="GeoJSON…"  Command="{Binding ExportGisCommand}" CommandParameter="geojson" />
-                    <MenuItem Header="GPX…"      Command="{Binding ExportGisCommand}" CommandParameter="gpx" />
-                    <MenuItem Header="CSV…"      Command="{Binding ExportGisCommand}" CommandParameter="csv" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Tools.ExportEntrances" Header="{l:Loc Menu_Tools_ExportEntrances}">
+                    <MenuItem AutomationProperties.AutomationId="Menu.Tools.ExportEntrances.Kml" Header="KML…"      Command="{Binding ExportGisCommand}" CommandParameter="kml" />
+                    <MenuItem AutomationProperties.AutomationId="Menu.Tools.ExportEntrances.GeoJson" Header="GeoJSON…"  Command="{Binding ExportGisCommand}" CommandParameter="geojson" />
+                    <MenuItem AutomationProperties.AutomationId="Menu.Tools.ExportEntrances.Gpx" Header="GPX…"      Command="{Binding ExportGisCommand}" CommandParameter="gpx" />
+                    <MenuItem AutomationProperties.AutomationId="Menu.Tools.ExportEntrances.Csv" Header="CSV…"      Command="{Binding ExportGisCommand}" CommandParameter="csv" />
                 </MenuItem>
                 <!-- station / shot data tables. -->
-                <MenuItem Header="{l:Loc Menu_Tools_ExportTable}">
-                    <MenuItem Header="{l:Loc Browser_Tab_Stations}">
-                        <MenuItem Header="CSV…"      Command="{Binding ExportTableCommand}" CommandParameter="stations|csv" />
-                        <MenuItem Header="Markdown…" Command="{Binding ExportTableCommand}" CommandParameter="stations|markdown" />
-                        <MenuItem Header="HTML…"     Command="{Binding ExportTableCommand}" CommandParameter="stations|html" />
-                        <MenuItem Header="LaTeX…"    Command="{Binding ExportTableCommand}" CommandParameter="stations|latex" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Tools.ExportTable" Header="{l:Loc Menu_Tools_ExportTable}">
+                    <MenuItem AutomationProperties.AutomationId="Menu.Tools.ExportTable.Stations" Header="{l:Loc Browser_Tab_Stations}">
+                        <MenuItem AutomationProperties.AutomationId="Menu.Tools.ExportTable.Stations.Csv" Header="CSV…"      Command="{Binding ExportTableCommand}" CommandParameter="stations|csv" />
+                        <MenuItem AutomationProperties.AutomationId="Menu.Tools.ExportTable.Stations.Markdown" Header="Markdown…" Command="{Binding ExportTableCommand}" CommandParameter="stations|markdown" />
+                        <MenuItem AutomationProperties.AutomationId="Menu.Tools.ExportTable.Stations.Html" Header="HTML…"     Command="{Binding ExportTableCommand}" CommandParameter="stations|html" />
+                        <MenuItem AutomationProperties.AutomationId="Menu.Tools.ExportTable.Stations.Latex" Header="LaTeX…"    Command="{Binding ExportTableCommand}" CommandParameter="stations|latex" />
                     </MenuItem>
-                    <MenuItem Header="{l:Loc Browser_Tab_Shots}">
-                        <MenuItem Header="CSV…"      Command="{Binding ExportTableCommand}" CommandParameter="shots|csv" />
-                        <MenuItem Header="Markdown…" Command="{Binding ExportTableCommand}" CommandParameter="shots|markdown" />
-                        <MenuItem Header="HTML…"     Command="{Binding ExportTableCommand}" CommandParameter="shots|html" />
-                        <MenuItem Header="LaTeX…"    Command="{Binding ExportTableCommand}" CommandParameter="shots|latex" />
+                    <MenuItem AutomationProperties.AutomationId="Menu.Tools.ExportTable.Shots" Header="{l:Loc Browser_Tab_Shots}">
+                        <MenuItem AutomationProperties.AutomationId="Menu.Tools.ExportTable.Shots.Csv" Header="CSV…"      Command="{Binding ExportTableCommand}" CommandParameter="shots|csv" />
+                        <MenuItem AutomationProperties.AutomationId="Menu.Tools.ExportTable.Shots.Markdown" Header="Markdown…" Command="{Binding ExportTableCommand}" CommandParameter="shots|markdown" />
+                        <MenuItem AutomationProperties.AutomationId="Menu.Tools.ExportTable.Shots.Html" Header="HTML…"     Command="{Binding ExportTableCommand}" CommandParameter="shots|html" />
+                        <MenuItem AutomationProperties.AutomationId="Menu.Tools.ExportTable.Shots.Latex" Header="LaTeX…"    Command="{Binding ExportTableCommand}" CommandParameter="shots|latex" />
                     </MenuItem>
                 </MenuItem>
                 <!-- one-click survey report. -->
-                <MenuItem Header="{l:Loc Menu_Tools_GenReport}" InputGesture="{l:Gesture GenerateReport}" Command="{Binding GenerateReportCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Tools.GenerateReport" Header="{l:Loc Menu_Tools_GenReport}" InputGesture="{l:Gesture GenerateReport}" Command="{Binding GenerateReportCommand}" />
                 <Separator />
-                <MenuItem Header="{l:Loc Menu_Tools_NewScrap}" InputGesture="{l:Gesture NewScrapScaffold}" Command="{Binding NewScrapScaffoldCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Tools.NewScrap" Header="{l:Loc Menu_Tools_NewScrap}" InputGesture="{l:Gesture NewScrapScaffold}" Command="{Binding NewScrapScaffoldCommand}" />
                 <Separator />
                 <MenuItem Header="{l:Loc Menu_Tools_BlenderAnimation}" InputGesture="{l:Gesture ToggleBlenderAnimation}" Command="{Binding ToggleBlenderAnimationCommand}"
+                          AutomationProperties.AutomationId="Menu.Tools.BlenderAnimation"
                           IsVisible="{Binding BlenderAnimationEnabled}" />
                 <Separator />
                 <!-- calculators. -->
-                <MenuItem Header="{l:Loc Menu_Tools_Calculators}">
-                    <MenuItem Header="{l:Loc Menu_Tools_UnitConverter}" Click="OnUnitConverter" />
-                    <MenuItem Header="{l:Loc Menu_Tools_CoordConverter}" Click="OnCoordinateConverter" />
-                    <MenuItem Header="{l:Loc Menu_Tools_DeclinationCalc}" Click="OnDeclinationCalculator" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Tools.Calculators" Header="{l:Loc Menu_Tools_Calculators}">
+                    <MenuItem AutomationProperties.AutomationId="Menu.Tools.Calculators.UnitConverter" Header="{l:Loc Menu_Tools_UnitConverter}" Click="OnUnitConverter" />
+                    <MenuItem AutomationProperties.AutomationId="Menu.Tools.Calculators.CoordinateConverter" Header="{l:Loc Menu_Tools_CoordConverter}" Click="OnCoordinateConverter" />
+                    <MenuItem AutomationProperties.AutomationId="Menu.Tools.Calculators.Declination" Header="{l:Loc Menu_Tools_DeclinationCalc}" Click="OnDeclinationCalculator" />
                 </MenuItem>
             </MenuItem>
-            <MenuItem Header="{Binding MenuBuild}">
-                <MenuItem Header="{Binding MenuBuildBuild}"     InputGesture="{l:Gesture Build}"       Command="{Binding Build.BuildCommand}" />
-                <MenuItem Header="{Binding MenuBuildCancel}"    InputGesture="{l:Gesture CancelBuild}" Command="{Binding Build.CancelCommand}" />
+            <MenuItem AutomationProperties.AutomationId="Menu.Build" Header="{Binding MenuBuild}">
+                <MenuItem AutomationProperties.AutomationId="Menu.Build.Build" Header="{Binding MenuBuildBuild}"     InputGesture="{l:Gesture Build}"       Command="{Binding Build.BuildCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Build.Cancel" Header="{Binding MenuBuildCancel}"    InputGesture="{l:Gesture CancelBuild}" Command="{Binding Build.CancelCommand}" />
                 <Separator />
                 <!-- run a single export target from the active thconfig. -->
                 <MenuItem Header="{l:Loc Menu_Build_Target}" IsEnabled="{Binding Build.HasExportTargets}"
+                          AutomationProperties.AutomationId="Menu.Build.Target"
                           ItemsSource="{Binding Build.ExportTargets}">
                     <MenuItem.ItemContainerTheme>
                         <ControlTheme TargetType="MenuItem" x:DataType="vm:BuildTarget"
@@ -326,243 +343,254 @@
                     </MenuItem.ItemContainerTheme>
                 </MenuItem>
                 <!-- composed quick export. -->
-                <MenuItem Header="{l:Loc Menu_Build_QuickExport}" InputGesture="{l:Gesture QuickExport}" Command="{Binding Build.ShowQuickExportCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Build.QuickExport" Header="{l:Loc Menu_Build_QuickExport}" InputGesture="{l:Gesture QuickExport}" Command="{Binding Build.ShowQuickExportCommand}" />
                 <Separator />
-                <MenuItem Header="{Binding MenuBuildOpenLoch}"  InputGesture="{l:Gesture OpenInLoch}" Command="{Binding Build.OpenInLochCommand}" />
-                <MenuItem Header="{Binding MenuBuildOpenAven}"  InputGesture="{l:Gesture OpenInAven}" Command="{Binding Build.OpenInAvenCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Build.OpenInLoch" Header="{Binding MenuBuildOpenLoch}"  InputGesture="{l:Gesture OpenInLoch}" Command="{Binding Build.OpenInLochCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Build.OpenInAven" Header="{Binding MenuBuildOpenAven}"  InputGesture="{l:Gesture OpenInAven}" Command="{Binding Build.OpenInAvenCommand}" />
                 <!-- external round-trips. -->
-                <MenuItem Header="{l:Loc Menu_Build_SurvexTools}" IsEnabled="{Binding Build.HasAvenArtifact}">
-                    <MenuItem Header="{l:Loc Menu_Build_Dump3d}" Command="{Binding Build.Dump3dCommand}" />
-                    <MenuItem Header="{l:Loc Menu_Build_Extend}" Command="{Binding Build.ExtendCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Build.SurvexTools" Header="{l:Loc Menu_Build_SurvexTools}" IsEnabled="{Binding Build.HasAvenArtifact}">
+                    <MenuItem AutomationProperties.AutomationId="Menu.Build.SurvexTools.Dump3d" Header="{l:Loc Menu_Build_Dump3d}" Command="{Binding Build.Dump3dCommand}" />
+                    <MenuItem AutomationProperties.AutomationId="Menu.Build.SurvexTools.Extend" Header="{l:Loc Menu_Build_Extend}" Command="{Binding Build.ExtendCommand}" />
                 </MenuItem>
-                <MenuItem Header="{l:Loc Menu_Build_TherionInfo}">
-                    <MenuItem Header="{l:Loc Menu_Build_PrintVersion}" Command="{Binding Build.PrintTherionVersionCommand}" />
-                    <MenuItem Header="{l:Loc Menu_Build_PrintEnv}" Command="{Binding Build.PrintTherionEnvironmentCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Build.TherionInfo" Header="{l:Loc Menu_Build_TherionInfo}">
+                    <MenuItem AutomationProperties.AutomationId="Menu.Build.TherionInfo.PrintVersion" Header="{l:Loc Menu_Build_PrintVersion}" Command="{Binding Build.PrintTherionVersionCommand}" />
+                    <MenuItem AutomationProperties.AutomationId="Menu.Build.TherionInfo.PrintEnvironment" Header="{l:Loc Menu_Build_PrintEnv}" Command="{Binding Build.PrintTherionEnvironmentCommand}" />
                 </MenuItem>
                 <Separator />
-                <MenuItem Header="{Binding MenuBuildOpenOutputFolder}" InputGesture="{l:Gesture OpenOutputFolder}" Command="{Binding Build.OpenLastOutputFolderCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Build.OpenOutputFolder" Header="{Binding MenuBuildOpenOutputFolder}" InputGesture="{l:Gesture OpenOutputFolder}" Command="{Binding Build.OpenLastOutputFolderCommand}" />
             </MenuItem>
             <!-- Settings: a top-level entry (renamed from File ▸ Preferences) that opens the
                  Preferences window directly (#7). -->
-            <MenuItem Header="{Binding MenuSettings}" Click="OnPreferencesClick" />
+            <MenuItem AutomationProperties.AutomationId="Menu.Settings" Header="{Binding MenuSettings}" Click="OnPreferencesClick" />
             <!-- Help: About + the bundled Therion book (#1). -->
-            <MenuItem Header="{Binding MenuHelp}">
-                <MenuItem Header="{Binding MenuHelpUserGuide}" Command="{Binding OpenUserGuideCommand}" />
-                <MenuItem Header="{Binding MenuHelpThbook}" Click="OnOpenThbook" />
+            <MenuItem AutomationProperties.AutomationId="Menu.Help" Header="{Binding MenuHelp}">
+                <MenuItem AutomationProperties.AutomationId="Menu.Help.UserGuide" Header="{Binding MenuHelpUserGuide}" Command="{Binding OpenUserGuideCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Help.Thbook" Header="{Binding MenuHelpThbook}" Click="OnOpenThbook" />
                 <Separator />
-                <MenuItem Header="{Binding MenuHelpDebugInfo}" Click="OnDebugInfoClick" />
-                <MenuItem Header="{Binding MenuHelpAbout}" Click="OnAboutClick" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Help.DebugInfo" Header="{Binding MenuHelpDebugInfo}" Click="OnDebugInfoClick" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Help.About" Header="{Binding MenuHelpAbout}" Click="OnAboutClick" />
             </MenuItem>
         </Menu>
 
         <!-- Icon toolbar: grouped action sections (File / Nav / Edit / Search / Build /
              Viewers / View / editor toggles), separated by thin dividers (#11). Wraps to a
              second row when the window is narrow. -->
-        <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="6,3">
+        <Border AutomationProperties.AutomationId="Toolbar.Panel" DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="6,3">
             <WrapPanel Orientation="Horizontal">
                 <!-- File group -->
-                <Button Classes="tool" Command="{Binding OpenFileCommand}" ToolTip.Tip="{l:Loc Tb_OpenFile}">
+                <Button AutomationProperties.AutomationId="Toolbar.OpenFile" AutomationProperties.Name="{l:Loc Tb_OpenFile}" Classes="tool" Command="{Binding OpenFileCommand}" ToolTip.Tip="{l:Loc Tb_OpenFile}">
                     <PathIcon Data="{DynamicResource Icon.File}" />
                 </Button>
-                <Button Classes="tool" Command="{Binding OpenThconfigCommand}" ToolTip.Tip="{l:Loc Tb_OpenThconfig}">
+                <Button AutomationProperties.AutomationId="Toolbar.OpenThconfig" AutomationProperties.Name="{l:Loc Tb_OpenThconfig}" Classes="tool" Command="{Binding OpenThconfigCommand}" ToolTip.Tip="{l:Loc Tb_OpenThconfig}">
                     <PathIcon Data="{DynamicResource Icon.Config}" />
                 </Button>
-                <Button Classes="tool" Command="{Binding OpenFolderCommand}" ToolTip.Tip="{l:Loc Tb_OpenFolder}">
+                <Button AutomationProperties.AutomationId="Toolbar.OpenFolder" AutomationProperties.Name="{l:Loc Tb_OpenFolder}" Classes="tool" Command="{Binding OpenFolderCommand}" ToolTip.Tip="{l:Loc Tb_OpenFolder}">
                     <PathIcon Data="{DynamicResource Icon.FolderOpen}" />
                 </Button>
                 <Separator Width="1" Margin="4,2" Background="Gray" />
                 <!-- Navigation group -->
-                <Button Classes="tool" Command="{Binding GoBackCommand}" ToolTip.Tip="{l:Tip Tb_Back}">
+                <Button AutomationProperties.AutomationId="Toolbar.Back" AutomationProperties.Name="{l:Loc Tb_Back}" Classes="tool" Command="{Binding GoBackCommand}" ToolTip.Tip="{l:Tip Tb_Back}">
                     <PathIcon Data="{DynamicResource Icon.Back}" />
                 </Button>
-                <Button Classes="tool" Command="{Binding GoForwardCommand}" ToolTip.Tip="{l:Tip Tb_Forward}">
+                <Button AutomationProperties.AutomationId="Toolbar.Forward" AutomationProperties.Name="{l:Loc Tb_Forward}" Classes="tool" Command="{Binding GoForwardCommand}" ToolTip.Tip="{l:Tip Tb_Forward}">
                     <PathIcon Data="{DynamicResource Icon.Forward}" />
                 </Button>
                 <Separator Width="1" Margin="4,2" Background="Gray" />
-                <Button Classes="tool" Command="{Binding SaveCommand}" ToolTip.Tip="{l:Tip Tb_Save}">
+                <Button AutomationProperties.AutomationId="Toolbar.Save" AutomationProperties.Name="{l:Loc Tb_Save}" Classes="tool" Command="{Binding SaveCommand}" ToolTip.Tip="{l:Tip Tb_Save}">
                     <PathIcon Data="{DynamicResource Icon.Save}" />
                 </Button>
                 <Separator Width="1" Margin="4,2" Background="Gray" />
                 <!-- Edit group: enabled only when a file is open/focused (#11). -->
-                <Button Classes="tool" Click="OnEditCut" IsEnabled="{Binding HasStatusFile}" ToolTip.Tip="{l:Tip Tb_Cut}">
+                <Button AutomationProperties.AutomationId="Toolbar.Cut" AutomationProperties.Name="{l:Loc Tb_Cut}" Classes="tool" Click="OnEditCut" IsEnabled="{Binding HasStatusFile}" ToolTip.Tip="{l:Tip Tb_Cut}">
                     <PathIcon Data="{DynamicResource Icon.Cut}" />
                 </Button>
-                <Button Classes="tool" Click="OnEditCopy" IsEnabled="{Binding HasStatusFile}" ToolTip.Tip="{l:Tip Tb_Copy}">
+                <Button AutomationProperties.AutomationId="Toolbar.Copy" AutomationProperties.Name="{l:Loc Tb_Copy}" Classes="tool" Click="OnEditCopy" IsEnabled="{Binding HasStatusFile}" ToolTip.Tip="{l:Tip Tb_Copy}">
                     <PathIcon Data="{DynamicResource Icon.Copy}" />
                 </Button>
-                <Button Classes="tool" Click="OnEditPaste" IsEnabled="{Binding HasStatusFile}" ToolTip.Tip="{l:Tip Tb_Paste}">
+                <Button AutomationProperties.AutomationId="Toolbar.Paste" AutomationProperties.Name="{l:Loc Tb_Paste}" Classes="tool" Click="OnEditPaste" IsEnabled="{Binding HasStatusFile}" ToolTip.Tip="{l:Tip Tb_Paste}">
                     <PathIcon Data="{DynamicResource Icon.Paste}" />
                 </Button>
                 <Separator Width="1" Margin="4,2" Background="Gray" />
                 <!-- Search group -->
-                <Button Classes="tool" Click="OnSearchClick" ToolTip.Tip="{l:Tip Tb_FindInFiles}">
+                <Button AutomationProperties.AutomationId="Toolbar.FindInFiles" AutomationProperties.Name="{l:Loc Tb_FindInFiles}" Classes="tool" Click="OnSearchClick" ToolTip.Tip="{l:Tip Tb_FindInFiles}">
                     <PathIcon Data="{DynamicResource Icon.Search}" />
                 </Button>
-                <Button Classes="tool" Command="{Binding RenameSymbolCommand}" IsEnabled="{Binding HasStatusFile}" ToolTip.Tip="{l:Tip Tb_RenameSymbol}">
+                <Button AutomationProperties.AutomationId="Toolbar.RenameSymbol" AutomationProperties.Name="{l:Loc Tb_RenameSymbol}" Classes="tool" Command="{Binding RenameSymbolCommand}" IsEnabled="{Binding HasStatusFile}" ToolTip.Tip="{l:Tip Tb_RenameSymbol}">
                     <PathIcon Data="{DynamicResource Icon.Rename}" />
                 </Button>
                 <Separator Width="1" Margin="4,2" Background="Gray" />
                 <!-- Go-to group: quick-open, command palette, and symbol search (workspace / document). -->
-                <Button Classes="tool" Click="OnGoToFile" ToolTip.Tip="{l:Tip Tb_GoToFile}">
+                <Button AutomationProperties.AutomationId="Toolbar.GoToFile" AutomationProperties.Name="{l:Loc Tb_GoToFile}" Classes="tool" Click="OnGoToFile" ToolTip.Tip="{l:Tip Tb_GoToFile}">
                     <PathIcon Data="{DynamicResource Icon.FileSearch}" />
                 </Button>
-                <Button Classes="tool" Click="OnGoToAction" ToolTip.Tip="{l:Tip Tb_GoToAction}">
+                <Button AutomationProperties.AutomationId="Toolbar.GoToAction" AutomationProperties.Name="{l:Loc Tb_GoToAction}" Classes="tool" Click="OnGoToAction" ToolTip.Tip="{l:Tip Tb_GoToAction}">
                     <PathIcon Data="{DynamicResource Icon.Code}" />
                 </Button>
-                <Button Classes="tool" Click="OnGoToSymbolWorkspace" ToolTip.Tip="{l:Loc Tb_GoToSymbolWs}">
+                <Button AutomationProperties.AutomationId="Toolbar.GoToSymbolWorkspace" AutomationProperties.Name="{l:Loc Tb_GoToSymbolWs}" Classes="tool" Click="OnGoToSymbolWorkspace" ToolTip.Tip="{l:Loc Tb_GoToSymbolWs}">
                     <PathIcon Data="{DynamicResource Icon.ManageSearch}" />
                 </Button>
-                <Button Classes="tool" Click="OnGoToSymbolDocument" ToolTip.Tip="{l:Loc Tb_GoToSymbolDoc}">
+                <Button AutomationProperties.AutomationId="Toolbar.GoToSymbolDocument" AutomationProperties.Name="{l:Loc Tb_GoToSymbolDoc}" Classes="tool" Click="OnGoToSymbolDocument" ToolTip.Tip="{l:Loc Tb_GoToSymbolDoc}">
                     <PathIcon Data="{DynamicResource Icon.At}" />
                 </Button>
                 <Separator Width="1" Margin="4,2" Background="Gray" />
                 <!-- Tools group: import / export / report / scaffold / calculators (mirrors the Tools menu). -->
-                <Button Classes="tool" ToolTip.Tip="{l:Loc Tb_Import}">
+                <Button AutomationProperties.AutomationId="Toolbar.Import" AutomationProperties.Name="{l:Loc Tb_Import}" Classes="tool" ToolTip.Tip="{l:Loc Tb_Import}">
                     <PathIcon Data="{DynamicResource Icon.Import}" />
                     <Button.Flyout>
                         <MenuFlyout>
-                            <MenuItem Header="{l:Loc Menu_Tools_ImportSurvey}" Command="{Binding ImportSurveyCommand}" />
-                            <MenuItem Header="{l:Loc Menu_Tools_ImportDem}" Command="{Binding ImportDemSurfaceCommand}" />
-                            <MenuItem Header="{l:Loc Menu_Tools_ImportGpx}" Command="{Binding ImportGpxCommand}" />
-                            <MenuItem Header="{l:Loc Menu_Tools_ScaffoldProject}" Command="{Binding ScaffoldProjectCommand}" />
+                            <MenuItem AutomationProperties.AutomationId="Toolbar.Import.Survey" Header="{l:Loc Menu_Tools_ImportSurvey}" Command="{Binding ImportSurveyCommand}" />
+                            <MenuItem AutomationProperties.AutomationId="Toolbar.Import.Dem" Header="{l:Loc Menu_Tools_ImportDem}" Command="{Binding ImportDemSurfaceCommand}" />
+                            <MenuItem AutomationProperties.AutomationId="Toolbar.Import.Gpx" Header="{l:Loc Menu_Tools_ImportGpx}" Command="{Binding ImportGpxCommand}" />
+                            <MenuItem AutomationProperties.AutomationId="Toolbar.Import.ScaffoldProject" Header="{l:Loc Menu_Tools_ScaffoldProject}" Command="{Binding ScaffoldProjectCommand}" />
                         </MenuFlyout>
                     </Button.Flyout>
                 </Button>
-                <Button Classes="tool" ToolTip.Tip="{l:Loc Tb_Export}">
+                <Button AutomationProperties.AutomationId="Toolbar.Export" AutomationProperties.Name="{l:Loc Tb_Export}" Classes="tool" ToolTip.Tip="{l:Loc Tb_Export}">
                     <PathIcon Data="{DynamicResource Icon.Export}" />
                     <Button.Flyout>
                         <MenuFlyout>
-                            <MenuItem Header="{l:Loc Menu_Tools_EntrancesFixed}">
-                                <MenuItem Header="KML…"     Command="{Binding ExportGisCommand}" CommandParameter="kml" />
-                                <MenuItem Header="GeoJSON…" Command="{Binding ExportGisCommand}" CommandParameter="geojson" />
-                                <MenuItem Header="GPX…"     Command="{Binding ExportGisCommand}" CommandParameter="gpx" />
-                                <MenuItem Header="CSV…"     Command="{Binding ExportGisCommand}" CommandParameter="csv" />
+                            <MenuItem AutomationProperties.AutomationId="Toolbar.Export.Entrances" Header="{l:Loc Menu_Tools_EntrancesFixed}">
+                                <MenuItem AutomationProperties.AutomationId="Toolbar.Export.Entrances.Kml" Header="KML…"     Command="{Binding ExportGisCommand}" CommandParameter="kml" />
+                                <MenuItem AutomationProperties.AutomationId="Toolbar.Export.Entrances.GeoJson" Header="GeoJSON…" Command="{Binding ExportGisCommand}" CommandParameter="geojson" />
+                                <MenuItem AutomationProperties.AutomationId="Toolbar.Export.Entrances.Gpx" Header="GPX…"     Command="{Binding ExportGisCommand}" CommandParameter="gpx" />
+                                <MenuItem AutomationProperties.AutomationId="Toolbar.Export.Entrances.Csv" Header="CSV…"     Command="{Binding ExportGisCommand}" CommandParameter="csv" />
                             </MenuItem>
-                            <MenuItem Header="{l:Loc Menu_Tools_StationTable}">
-                                <MenuItem Header="CSV…"      Command="{Binding ExportTableCommand}" CommandParameter="stations|csv" />
-                                <MenuItem Header="Markdown…" Command="{Binding ExportTableCommand}" CommandParameter="stations|markdown" />
-                                <MenuItem Header="HTML…"     Command="{Binding ExportTableCommand}" CommandParameter="stations|html" />
-                                <MenuItem Header="LaTeX…"    Command="{Binding ExportTableCommand}" CommandParameter="stations|latex" />
+                            <MenuItem AutomationProperties.AutomationId="Toolbar.Export.Stations" Header="{l:Loc Menu_Tools_StationTable}">
+                                <MenuItem AutomationProperties.AutomationId="Toolbar.Export.Stations.Csv" Header="CSV…"      Command="{Binding ExportTableCommand}" CommandParameter="stations|csv" />
+                                <MenuItem AutomationProperties.AutomationId="Toolbar.Export.Stations.Markdown" Header="Markdown…" Command="{Binding ExportTableCommand}" CommandParameter="stations|markdown" />
+                                <MenuItem AutomationProperties.AutomationId="Toolbar.Export.Stations.Html" Header="HTML…"     Command="{Binding ExportTableCommand}" CommandParameter="stations|html" />
+                                <MenuItem AutomationProperties.AutomationId="Toolbar.Export.Stations.Latex" Header="LaTeX…"    Command="{Binding ExportTableCommand}" CommandParameter="stations|latex" />
                             </MenuItem>
-                            <MenuItem Header="{l:Loc Menu_Tools_ShotTable}">
-                                <MenuItem Header="CSV…"      Command="{Binding ExportTableCommand}" CommandParameter="shots|csv" />
-                                <MenuItem Header="Markdown…" Command="{Binding ExportTableCommand}" CommandParameter="shots|markdown" />
-                                <MenuItem Header="HTML…"     Command="{Binding ExportTableCommand}" CommandParameter="shots|html" />
-                                <MenuItem Header="LaTeX…"    Command="{Binding ExportTableCommand}" CommandParameter="shots|latex" />
+                            <MenuItem AutomationProperties.AutomationId="Toolbar.Export.Shots" Header="{l:Loc Menu_Tools_ShotTable}">
+                                <MenuItem AutomationProperties.AutomationId="Toolbar.Export.Shots.Csv" Header="CSV…"      Command="{Binding ExportTableCommand}" CommandParameter="shots|csv" />
+                                <MenuItem AutomationProperties.AutomationId="Toolbar.Export.Shots.Markdown" Header="Markdown…" Command="{Binding ExportTableCommand}" CommandParameter="shots|markdown" />
+                                <MenuItem AutomationProperties.AutomationId="Toolbar.Export.Shots.Html" Header="HTML…"     Command="{Binding ExportTableCommand}" CommandParameter="shots|html" />
+                                <MenuItem AutomationProperties.AutomationId="Toolbar.Export.Shots.Latex" Header="LaTeX…"    Command="{Binding ExportTableCommand}" CommandParameter="shots|latex" />
                             </MenuItem>
                         </MenuFlyout>
                     </Button.Flyout>
                 </Button>
-                <Button Classes="tool" Command="{Binding GenerateReportCommand}" ToolTip.Tip="{l:Loc Tb_GenReport}">
+                <Button AutomationProperties.AutomationId="Toolbar.GenerateReport" AutomationProperties.Name="{l:Loc Tb_GenReport}" Classes="tool" Command="{Binding GenerateReportCommand}" ToolTip.Tip="{l:Loc Tb_GenReport}">
                     <PathIcon Data="{DynamicResource Icon.Th}" />
                 </Button>
-                <Button Classes="tool" Command="{Binding NewScrapScaffoldCommand}" ToolTip.Tip="{l:Loc Tb_NewScrap}">
+                <Button AutomationProperties.AutomationId="Toolbar.NewScrap" AutomationProperties.Name="{l:Loc Tb_NewScrap}" Classes="tool" Command="{Binding NewScrapScaffoldCommand}" ToolTip.Tip="{l:Loc Tb_NewScrap}">
                     <PathIcon Data="{DynamicResource Icon.Th2}" />
                 </Button>
-                <Button Classes="tool" ToolTip.Tip="{l:Loc Menu_Tools_Calculators}">
+                <Button AutomationProperties.AutomationId="Toolbar.Calculators" AutomationProperties.Name="{l:Loc Menu_Tools_Calculators}" Classes="tool" ToolTip.Tip="{l:Loc Menu_Tools_Calculators}">
                     <PathIcon Data="{DynamicResource Icon.Timer}" />
                     <Button.Flyout>
                         <MenuFlyout>
-                            <MenuItem Header="{l:Loc Menu_Tools_UnitConverter}" Click="OnUnitConverter" />
-                            <MenuItem Header="{l:Loc Menu_Tools_CoordConverter}" Click="OnCoordinateConverter" />
-                            <MenuItem Header="{l:Loc Menu_Tools_DeclinationCalc}" Click="OnDeclinationCalculator" />
+                            <MenuItem AutomationProperties.AutomationId="Toolbar.Calculators.UnitConverter" Header="{l:Loc Menu_Tools_UnitConverter}" Click="OnUnitConverter" />
+                            <MenuItem AutomationProperties.AutomationId="Toolbar.Calculators.CoordinateConverter" Header="{l:Loc Menu_Tools_CoordConverter}" Click="OnCoordinateConverter" />
+                            <MenuItem AutomationProperties.AutomationId="Toolbar.Calculators.Declination" Header="{l:Loc Menu_Tools_DeclinationCalc}" Click="OnDeclinationCalculator" />
                         </MenuFlyout>
                     </Button.Flyout>
                 </Button>
                 <Separator Width="1" Margin="4,2" Background="Gray" />
                 <!-- Compile / Stop moved to the end of the toolbar (#1). -->
                 <Button Classes="tool" Command="{Binding Build.OpenInLochCommand}"
+                        AutomationProperties.AutomationId="Toolbar.OpenInLoch" AutomationProperties.Name="{l:Loc Tb_OpenLoch}"
                         IsEnabled="{Binding Build.HasLoxArtifact}" ToolTip.Tip="{l:Tip Tb_OpenLoch}">
                     <PathIcon Data="{DynamicResource Icon.External}" />
                 </Button>
                 <Button Classes="tool" Command="{Binding Build.OpenInAvenCommand}"
+                        AutomationProperties.AutomationId="Toolbar.OpenInAven" AutomationProperties.Name="{l:Loc Tb_OpenAven}"
                         IsEnabled="{Binding Build.HasAvenArtifact}" ToolTip.Tip="{l:Tip Tb_OpenAven}">
                     <PathIcon Data="{DynamicResource Icon.Terrain}" />
                 </Button>
                 <!-- composed quick export + open the last output folder. -->
-                <Button Classes="tool" Command="{Binding Build.ShowQuickExportCommand}" ToolTip.Tip="{l:Loc Menu_Build_QuickExport}">
+                <Button AutomationProperties.AutomationId="Toolbar.QuickExport" AutomationProperties.Name="{l:Loc Menu_Build_QuickExport}" Classes="tool" Command="{Binding Build.ShowQuickExportCommand}" ToolTip.Tip="{l:Loc Menu_Build_QuickExport}">
                     <PathIcon Data="{DynamicResource Icon.Swap}" />
                 </Button>
-                <Button Classes="tool" Command="{Binding Build.OpenLastOutputFolderCommand}" ToolTip.Tip="{l:Loc Proj_OpenOutputFolder}">
+                <Button AutomationProperties.AutomationId="Toolbar.OpenOutputFolder" AutomationProperties.Name="{l:Loc Proj_OpenOutputFolder}" Classes="tool" Command="{Binding Build.OpenLastOutputFolderCommand}" ToolTip.Tip="{l:Loc Proj_OpenOutputFolder}">
                     <PathIcon Data="{DynamicResource Icon.FolderOutput}" />
                 </Button>
                 <Separator Width="1" Margin="4,2" Background="Gray" />
                 <!-- View group: focus the main tool panels (#11/#14). -->
-                <Button Classes="tool" Command="{Binding ToggleObjectBrowserCommand}" ToolTip.Tip="{l:Loc Tool_ObjectBrowser}">
+                <Button AutomationProperties.AutomationId="Toolbar.ObjectBrowser" AutomationProperties.Name="{l:Loc Tool_ObjectBrowser}" Classes="tool" Command="{Binding ToggleObjectBrowserCommand}" ToolTip.Tip="{l:Loc Tool_ObjectBrowser}">
                     <PathIcon Data="{DynamicResource Icon.NodeGraph}" />
                 </Button>
-                <Button Classes="tool" Command="{Binding ToggleWorkspaceExplorerCommand}" ToolTip.Tip="{l:Tip Menu_View_Workspace}">
+                <Button AutomationProperties.AutomationId="Toolbar.Workspace" AutomationProperties.Name="{l:Loc Menu_View_Workspace}" Classes="tool" Command="{Binding ToggleWorkspaceExplorerCommand}" ToolTip.Tip="{l:Tip Menu_View_Workspace}">
                     <PathIcon Data="{DynamicResource Icon.Folder}" />
                 </Button>
-                <Button Classes="tool" Command="{Binding ToggleDiagnosticsCommand}" ToolTip.Tip="{l:Tip Tool_Diagnostics}">
+                <Button AutomationProperties.AutomationId="Toolbar.Diagnostics" AutomationProperties.Name="{l:Loc Tool_Diagnostics}" Classes="tool" Command="{Binding ToggleDiagnosticsCommand}" ToolTip.Tip="{l:Tip Tool_Diagnostics}">
                     <PathIcon Data="{DynamicResource Icon.Warning}" />
                 </Button>
-                <Button Classes="tool" Command="{Binding ToggleProjectCommand}" ToolTip.Tip="{l:Loc Menu_View_Project}">
+                <Button AutomationProperties.AutomationId="Toolbar.Project" AutomationProperties.Name="{l:Loc Menu_View_Project}" Classes="tool" Command="{Binding ToggleProjectCommand}" ToolTip.Tip="{l:Loc Menu_View_Project}">
                     <PathIcon Data="{DynamicResource Icon.Survey}" />
                 </Button>
-                <Button Classes="tool" Command="{Binding ToggleLogCommand}" ToolTip.Tip="{l:Loc Menu_View_Log}">
+                <Button AutomationProperties.AutomationId="Toolbar.Log" AutomationProperties.Name="{l:Loc Menu_View_Log}" Classes="tool" Command="{Binding ToggleLogCommand}" ToolTip.Tip="{l:Loc Menu_View_Log}">
                     <PathIcon Data="{DynamicResource Icon.Info}" />
                 </Button>
                 <Button Classes="tool" Command="{Binding ToggleOutlineCommand}" ToolTip.Tip="{l:Loc Menu_View_Outline}"
+                        AutomationProperties.AutomationId="Toolbar.Outline" AutomationProperties.Name="{l:Loc Menu_View_Outline}"
                         IsVisible="{Binding OutlineFeatureEnabled}">
                     <PathIcon Data="{DynamicResource Icon.Sort}" />
                 </Button>
-                <Button Classes="tool" Click="OnRelationalMapClick" ToolTip.Tip="{l:Loc Tb_RelationalMap}">
+                <Button AutomationProperties.AutomationId="Toolbar.RelationalMap" AutomationProperties.Name="{l:Loc Tb_RelationalMap}" Classes="tool" Click="OnRelationalMapClick" ToolTip.Tip="{l:Loc Tb_RelationalMap}">
                     <PathIcon Data="{DynamicResource Icon.AccountTree}" />
                 </Button>
                 <!-- Viewer panels, each gated by its feature setting (mirrors the View menu). -->
                 <Button Classes="tool" Command="{Binding ToggleLivePreviewCommand}" ToolTip.Tip="{l:Loc Menu_View_LivePreview}"
+                        AutomationProperties.AutomationId="Toolbar.LivePreview" AutomationProperties.Name="{l:Loc Menu_View_LivePreview}"
                         IsVisible="{Binding LivePreviewEnabled}">
                     <PathIcon Data="{DynamicResource Icon.Eye}" />
                 </Button>
                 <Button Classes="tool" Command="{Binding ToggleMapViewerCommand}" ToolTip.Tip="{l:Loc Menu_View_MapViewer}"
+                        AutomationProperties.AutomationId="Toolbar.MapViewer" AutomationProperties.Name="{l:Loc Menu_View_MapViewer}"
                         IsVisible="{Binding MapViewerEnabled}">
                     <PathIcon Data="{DynamicResource Icon.Map}" />
                 </Button>
                 <Button Classes="tool" Command="{Binding ToggleModel3DViewerCommand}" ToolTip.Tip="{l:Loc Menu_View_Model3D}"
+                        AutomationProperties.AutomationId="Toolbar.Model3D" AutomationProperties.Name="{l:Loc Menu_View_Model3D}"
                         IsVisible="{Binding Model3DViewerEnabled}">
                     <PathIcon Data="{DynamicResource Icon.Cube}" />
                 </Button>
                 <Button Classes="tool" Command="{Binding ToggleStructuralGeologyCommand}" ToolTip.Tip="{l:Loc Menu_View_Structural}"
+                        AutomationProperties.AutomationId="Toolbar.Structural" AutomationProperties.Name="{l:Loc Menu_View_Structural}"
                         IsVisible="{Binding StructuralGeologyEnabled}">
                     <PathIcon Data="{DynamicResource Icon.Scrap}" />
                 </Button>
                 <Separator Width="1" Margin="4,2" Background="Gray" />
-                <ToggleButton Classes="tool" IsChecked="{Binding WordWrap, Mode=TwoWay}" ToolTip.Tip="{l:Loc Tb_WordWrap}">
+                <ToggleButton AutomationProperties.AutomationId="Toolbar.WordWrap" AutomationProperties.Name="{l:Loc Tb_WordWrap}" Classes="tool" IsChecked="{Binding WordWrap, Mode=TwoWay}" ToolTip.Tip="{l:Loc Tb_WordWrap}">
                     <PathIcon Data="{DynamicResource Icon.WordWrap}" />
                 </ToggleButton>
                 <!-- Live validate-on-type push-switch: re-validate the whole project from unsaved buffers as you type. -->
-                <ToggleButton Classes="tool" IsChecked="{Binding ValidateOnType, Mode=TwoWay}" ToolTip.Tip="{l:Loc Tb_ValidateOnType}">
+                <ToggleButton AutomationProperties.AutomationId="Toolbar.ValidateOnType" AutomationProperties.Name="{l:Loc Tb_ValidateOnType}" Classes="tool" IsChecked="{Binding ValidateOnType, Mode=TwoWay}" ToolTip.Tip="{l:Loc Tb_ValidateOnType}">
                     <PathIcon Data="{DynamicResource Icon.Spellcheck}" />
                 </ToggleButton>
                 <!-- Push-switch: require a double-click (not a single click) to go to an identifier's declaration. -->
-                <ToggleButton Classes="tool" IsChecked="{Binding RequireDoubleClickToNavigate, Mode=TwoWay}" ToolTip.Tip="{l:Loc Tb_DoubleClickNav}">
+                <ToggleButton AutomationProperties.AutomationId="Toolbar.DoubleClickNavigate" AutomationProperties.Name="{l:Loc Tb_DoubleClickNav}" Classes="tool" IsChecked="{Binding RequireDoubleClickToNavigate, Mode=TwoWay}" ToolTip.Tip="{l:Loc Tb_DoubleClickNav}">
                     <PathIcon Data="{DynamicResource Icon.ClickNavigate}" />
                 </ToggleButton>
-                <Button Classes="tool" Click="OnToggleFullScreen" ToolTip.Tip="{l:Tip Tb_FullScreen}">
+                <Button AutomationProperties.AutomationId="Toolbar.FullScreen" AutomationProperties.Name="{l:Loc Tb_FullScreen}" Classes="tool" Click="OnToggleFullScreen" ToolTip.Tip="{l:Tip Tb_FullScreen}">
                     <PathIcon Data="{DynamicResource Icon.FullScreen}" />
                 </Button>
                 <!-- Layout controls (#16): float active document, reset to the default arrangement. -->
-                <Button Classes="tool" ToolTip.Tip="{l:Loc Tb_Layout}">
+                <Button AutomationProperties.AutomationId="Toolbar.Layout" AutomationProperties.Name="{l:Loc Tb_Layout}" Classes="tool" ToolTip.Tip="{l:Loc Tb_Layout}">
                     <PathIcon Data="{DynamicResource Icon.Layout}" />
                     <Button.Flyout>
                         <MenuFlyout>
                             <MenuItem Header="{l:Loc Layout_FloatActive}"
+                                      AutomationProperties.AutomationId="Toolbar.Layout.FloatActive"
                                       Command="{Binding FloatActiveDocumentCommand}" />
                             <Separator />
                             <MenuItem Header="{l:Loc Menu_View_Layout_Save}"
+                                      AutomationProperties.AutomationId="Toolbar.Layout.Save"
                                       Command="{Binding SaveLayoutAsCommand}" />
                             <MenuItem Header="{l:Loc Menu_View_Layout_Load}"
+                                      AutomationProperties.AutomationId="Toolbar.Layout.Load"
                                       Command="{Binding LoadLayoutFromFileCommand}" />
                             <Separator />
                             <MenuItem Header="{l:Loc Layout_Reset}"
+                                      AutomationProperties.AutomationId="Toolbar.Layout.Reset"
                                       Command="{Binding ResetLayoutCommand}" />
                         </MenuFlyout>
                     </Button.Flyout>
                 </Button>
                 <Separator Width="1" Margin="4,2" Background="Gray" />
                 <!-- notification center bell + unread badge + history flyout. -->
-                <Button Classes="tool" Click="OnNotificationsClick" ToolTip.Tip="{l:Loc Tb_Notifications}">
+                <Button AutomationProperties.AutomationId="Toolbar.Notifications" AutomationProperties.Name="{l:Loc Tb_Notifications}" Classes="tool" Click="OnNotificationsClick" ToolTip.Tip="{l:Loc Tb_Notifications}">
                     <Panel>
                         <PathIcon Data="{DynamicResource Icon.Bell}" />
                         <Border IsVisible="{Binding HasUnreadNotifications}"
@@ -581,6 +609,7 @@
                                         <TextBlock Grid.Column="0" Text="{l:Loc Tb_Notifications}" FontWeight="SemiBold"
                                                    VerticalAlignment="Center" />
                                         <Button Grid.Column="1" Content="{l:Loc Common_Clear}" Padding="8,2"
+                                                AutomationProperties.AutomationId="Toolbar.Notifications.Clear"
                                                 Background="Transparent" BorderThickness="0"
                                                 Command="{Binding ClearNotificationsCommand}" />
                                     </Grid>
@@ -589,6 +618,7 @@
                                                IsVisible="{Binding !HasNotificationHistory}" />
                                     <ScrollViewer>
                                         <ItemsControl ItemsSource="{Binding Notifications.History}"
+                                                      AutomationProperties.AutomationId="Toolbar.Notifications.List"
                                                       x:CompileBindings="False">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
@@ -622,12 +652,13 @@
                 <Border CornerRadius="6" Padding="2,0" Margin="2,0" VerticalAlignment="Center"
                         Classes.compiling="{Binding Build.IsBuilding}">
                     <StackPanel Orientation="Horizontal">
-                        <Button Classes="tool" Command="{Binding Build.BuildCommand}" ToolTip.Tip="{l:Tip Tb_Compile}">
+                        <Button AutomationProperties.AutomationId="Toolbar.Compile" AutomationProperties.Name="{l:Loc Tb_Compile}" Classes="tool" Command="{Binding Build.BuildCommand}" ToolTip.Tip="{l:Tip Tb_Compile}">
                             <PathIcon Data="{DynamicResource Icon.Build}" Foreground="#2E7D32"
                                       Classes.buildPulse="{Binding Build.IsBuilding}" />
                         </Button>
                         <!-- Stop is hidden while idle and only appears during a compilation (#6). -->
                         <Button Classes="tool" Command="{Binding Build.CancelCommand}"
+                                AutomationProperties.AutomationId="Toolbar.CancelCompile" AutomationProperties.Name="{l:Loc Tb_CancelCompile}"
                                 IsVisible="{Binding Build.IsBuilding}" ToolTip.Tip="{l:Tip Tb_CancelCompile}">
                             <PathIcon Data="{DynamicResource Icon.Stop}" Foreground="#C62828" />
                         </Button>
@@ -642,6 +673,7 @@
                     <TextBlock Text=" (" Foreground="Gray" VerticalAlignment="Center"
                                IsVisible="{Binding Build.HasArtifactLink}" />
                     <Button Classes="crumb" Content="{Binding Build.StatusArtifactCount}"
+                            AutomationProperties.AutomationId="Toolbar.ShowOutputs"
                             Command="{Binding Build.ShowOutputsCommand}"
                             IsVisible="{Binding Build.HasArtifactLink}" VerticalAlignment="Center"
                             ToolTip.Tip="{l:Loc Tb_ShowOutputs}" />
@@ -661,7 +693,7 @@
 
         <!-- Status bar (#10): transient messages on the left; open-file metrics on the right,
              grouped with thin separators. The full path is capped at 65% of the window width. -->
-        <Border DockPanel.Dock="Bottom" BorderBrush="Gray" BorderThickness="0,1,0,0" Padding="6,2">
+        <Border AutomationProperties.AutomationId="StatusBar.Panel" DockPanel.Dock="Bottom" BorderBrush="Gray" BorderThickness="0,1,0,0" Padding="6,2">
             <Border.Styles>
                 <!-- Build spinner animation for the status bar (#4). -->
                 <Style Selector="PathIcon.buildSpinner">
@@ -726,6 +758,7 @@
 
                 <!-- clickable problems badge — opens the Diagnostics panel (F8 cycles). -->
                 <Button DockPanel.Dock="Left" Background="Transparent" BorderThickness="0" Padding="6,0"
+                        AutomationProperties.AutomationId="StatusBar.OpenDiagnostics" AutomationProperties.Name="{l:Loc Status_OpenDiag}"
                         Margin="8,0,0,0" Command="{Binding ToggleDiagnosticsCommand}" Cursor="Hand"
                         IsVisible="{Binding Diagnostics.HasProblems}"
                         ToolTip.Tip="{l:Loc Status_OpenDiag}">
@@ -739,6 +772,7 @@
 
                 <!-- clickable @-qualified-name breadcrumb of the token under the caret. -->
                 <ItemsControl DockPanel.Dock="Left" Margin="12,0,0,0" VerticalAlignment="Center"
+                              AutomationProperties.AutomationId="StatusBar.Breadcrumb"
                               x:CompileBindings="False"
                               IsVisible="{Binding Breadcrumb.HasBreadcrumb}"
                               ItemsSource="{Binding Breadcrumb.Segments}">
@@ -763,6 +797,7 @@
                      directory reveals + shows that folder in the Workspace Explorer; the file name is
                      plain text. Capped in width so the right-side metrics always fit. -->
                 <ItemsControl DockPanel.Dock="Left" Margin="12,0,0,0" VerticalAlignment="Center"
+                              AutomationProperties.AutomationId="StatusBar.PathCrumbs"
                               x:CompileBindings="False" ClipToBounds="True"
                               IsVisible="{Binding HasStatusPath}"
                               ItemsSource="{Binding StatusPathCrumbs}"
@@ -848,16 +883,17 @@
 
         <!-- VS-style docking host: documents (center) + dockable/floatable tool windows. -->
         <Grid>
-            <dock:DockControl x:Name="Dock" Layout="{Binding Layout}" Factory="{Binding Factory}" />
+            <dock:DockControl AutomationProperties.AutomationId="MainWindow.Dock" x:Name="Dock" Layout="{Binding Layout}" Factory="{Binding Factory}" />
 
             <!-- Quick-pick overlay (#3 Ctrl+P Go-to-File / #4 Ctrl+Shift+P commands). Shown when
                  MainWindowViewModel.QuickPick is set; its own DataContext is that VM. -->
             <qp:QuickPickOverlay DataContext="{Binding QuickPick}"
+                                 AutomationProperties.AutomationId="MainWindow.QuickPick"
                                  IsVisible="{Binding Converter={x:Static ac:ObjectConverters.IsNotNull}}" />
 
             <!-- Ctrl+Tab document switcher overlay (#2): MRU list, opaque box, highlighted entry.
                  Shown while Ctrl is held; Ctrl-release activates the highlighted document. -->
-            <Border IsVisible="{Binding DocumentSwitcher.IsOpen}" Background="#66000000">
+            <Border AutomationProperties.AutomationId="DocumentSwitcher.Overlay" IsVisible="{Binding DocumentSwitcher.IsOpen}" Background="#66000000">
                 <Border Width="480" MaxHeight="440" VerticalAlignment="Center" HorizontalAlignment="Center"
                         Background="{DynamicResource SwBoxBg}"
                         BorderBrush="{DynamicResource SwBoxBorder}" BorderThickness="1"
@@ -883,7 +919,7 @@
                     <DockPanel>
                         <TextBlock DockPanel.Dock="Top" Text="{l:Loc Sw_OpenDocs}"
                                    Foreground="Gray" FontSize="11" Margin="8,4,8,6" />
-                        <ItemsControl ItemsSource="{Binding DocumentSwitcher.Items}">
+                        <ItemsControl AutomationProperties.AutomationId="DocumentSwitcher.List" ItemsSource="{Binding DocumentSwitcher.Items}">
                             <ItemsControl.Styles>
                                 <Style Selector="Border.swItem">
                                     <Setter Property="Background" Value="Transparent" />

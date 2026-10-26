@@ -3,8 +3,10 @@
              xmlns:vm="using:ThIDE.ViewModels.Docking"
              xmlns:l="using:ThIDE.Resources"
              x:Class="ThIDE.Views.Docking.XviToolView"
+             AutomationProperties.AutomationId="Xvi.View"
              x:DataType="vm:XviToolViewModel">
     <DataGrid ItemsSource="{Binding Xvi.Rows}"
+              AutomationProperties.AutomationId="Xvi.Grid"
               IsReadOnly="True" GridLinesVisibility="Horizontal"
               CanUserResizeColumns="True" CanUserSortColumns="True" AutoGenerateColumns="False">
         <DataGrid.Columns>

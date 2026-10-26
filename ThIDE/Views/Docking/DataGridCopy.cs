@@ -60,18 +60,19 @@ public static class DataGridCopy
         }, RoutingStrategies.Tunnel);
 
         var menu = new ContextMenu();
-        menu.Items.Add(Item(Tr.Get("Grid_Copy"), () => CopyCell(clicked)));
-        menu.Items.Add(Item(Tr.Get("Grid_CopyRow"), () => CopyRow(grid, formatted: false)));
-        menu.Items.Add(Item(Tr.Get("Grid_CopyRowFormatted"), () => CopyRow(grid, formatted: true)));
+        menu.Items.Add(Item(Tr.Get("Grid_Copy"), "GridMenu.CopyCell", () => CopyCell(clicked)));
+        menu.Items.Add(Item(Tr.Get("Grid_CopyRow"), "GridMenu.CopyRow", () => CopyRow(grid, formatted: false)));
+        menu.Items.Add(Item(Tr.Get("Grid_CopyRowFormatted"), "GridMenu.CopyRowFormatted", () => CopyRow(grid, formatted: true)));
         menu.Items.Add(new Separator());
-        menu.Items.Add(Item(Tr.Get("Grid_CopyAll"), () => CopyAll(grid, formatted: false)));
-        menu.Items.Add(Item(Tr.Get("Grid_CopyAllFormatted"), () => CopyAll(grid, formatted: true)));
+        menu.Items.Add(Item(Tr.Get("Grid_CopyAll"), "GridMenu.CopyAll", () => CopyAll(grid, formatted: false)));
+        menu.Items.Add(Item(Tr.Get("Grid_CopyAllFormatted"), "GridMenu.CopyAllFormatted", () => CopyAll(grid, formatted: true)));
         grid.ContextMenu = menu;
     }
 
-    private static MenuItem Item(string header, System.Action action)
+    private static MenuItem Item(string header, string automationId, System.Action action)
     {
         var mi = new MenuItem { Header = header };
+        Avalonia.Automation.AutomationProperties.SetAutomationId(mi, automationId);
         mi.Click += (_, _) => action();
         return mi;
     }

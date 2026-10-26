@@ -4,6 +4,7 @@
              xmlns:l="using:ThIDE.Resources"
              x:Class="ThIDE.Views.Docking.WelcomeToolView"
              x:CompileBindings="False"
+             AutomationProperties.AutomationId="Welcome.View"
              x:DataType="vm:WelcomeToolViewModel">
     <UserControl.Styles>
         <Style Selector="TextBlock.section">
@@ -66,19 +67,19 @@
             <Grid Grid.Row="1" ColumnDefinitions="*,36,1.25*">
                 <StackPanel Grid.Column="0" Spacing="4">
                     <TextBlock Classes="section" Text="{l:Loc Welcome_Start}" />
-                    <Button Classes="link" Command="{Binding Welcome.NewFileCommand}">
+                    <Button AutomationProperties.AutomationId="Welcome.NewFile" AutomationProperties.Name="{l:Loc Welcome_NewFile}" Classes="link" Command="{Binding Welcome.NewFileCommand}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <PathIcon Data="{DynamicResource Icon.File}" Width="16" Height="16" Foreground="#1565C0" />
                             <TextBlock Text="{l:Loc Welcome_NewFile}" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
-                    <Button Classes="link" Command="{Binding Welcome.OpenFileCommand}">
+                    <Button AutomationProperties.AutomationId="Welcome.OpenFile" AutomationProperties.Name="{l:Loc Welcome_OpenFile}" Classes="link" Command="{Binding Welcome.OpenFileCommand}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <PathIcon Data="{DynamicResource Icon.FolderOpen}" Width="16" Height="16" Foreground="#1565C0" />
                             <TextBlock Text="{l:Loc Welcome_OpenFile}" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
-                    <Button Classes="link" Command="{Binding Welcome.OpenFolderCommand}">
+                    <Button AutomationProperties.AutomationId="Welcome.OpenWorkspaceFolder" AutomationProperties.Name="{l:Loc Welcome_OpenFolder}" Classes="link" Command="{Binding Welcome.OpenFolderCommand}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <PathIcon Data="{DynamicResource Icon.Folder}" Width="16" Height="16" Foreground="#1565C0" />
                             <TextBlock Text="{l:Loc Welcome_OpenFolder}" VerticalAlignment="Center" />
@@ -86,7 +87,7 @@
                     </Button>
 
                     <TextBlock Classes="section" Text="{l:Loc Welcome_Learn}" Margin="4,16,0,3" />
-                    <Button Classes="link" Command="{Binding Welcome.OpenThbookCommand}">
+                    <Button AutomationProperties.AutomationId="Welcome.OpenThbook" AutomationProperties.Name="{l:Loc Welcome_ThBook}" Classes="link" Command="{Binding Welcome.OpenThbookCommand}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <PathIcon Data="{DynamicResource Icon.Help}" Width="16" Height="16" Foreground="#1565C0" />
                             <TextBlock Text="{l:Loc Welcome_ThBook}" VerticalAlignment="Center" />
@@ -99,6 +100,7 @@
                     <StackPanel Spacing="2">
                         <TextBlock Classes="section" Text="{l:Loc Welcome_RecentThconfig}" />
                         <ItemsControl ItemsSource="{Binding Welcome.RecentThconfigs}"
+                                      AutomationProperties.AutomationId="Welcome.RecentThconfigs"
                                       IsVisible="{Binding Welcome.HasRecentThconfigs}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
@@ -124,6 +126,7 @@
                     <StackPanel Spacing="2">
                         <TextBlock Classes="section" Text="{l:Loc Welcome_RecentWorkspaces}" />
                         <ItemsControl ItemsSource="{Binding Welcome.RecentWorkspaces}"
+                                      AutomationProperties.AutomationId="Welcome.RecentWorkspaces"
                                       IsVisible="{Binding Welcome.HasRecentWorkspaces}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
@@ -149,6 +152,7 @@
                     <StackPanel Spacing="2">
                         <TextBlock Classes="section" Text="{l:Loc Welcome_RecentFiles}" />
                         <ItemsControl ItemsSource="{Binding Welcome.RecentFiles}"
+                                      AutomationProperties.AutomationId="Welcome.RecentFiles"
                                       IsVisible="{Binding Welcome.HasRecentFiles}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
@@ -177,6 +181,7 @@
                     BorderBrush="#33808080" BorderThickness="1" Background="#0F808080">
                 <DockPanel>
                     <Button DockPanel.Dock="Right" Padding="6" VerticalAlignment="Center"
+                            AutomationProperties.AutomationId="Welcome.OpenExternalToolsSettings" AutomationProperties.Name="{l:Loc Welcome_OpenToolSettings}"
                             Background="Transparent" BorderThickness="0" Cursor="Hand"
                             Command="{Binding Welcome.OpenExternalToolsSettingsCommand}"
                             ToolTip.Tip="{l:Loc Welcome_OpenToolSettings}">
@@ -184,7 +189,7 @@
                     </Button>
                     <StackPanel Spacing="8">
                         <TextBlock Classes="section" Text="{l:Loc Welcome_ExternalTools}" />
-                        <ItemsControl ItemsSource="{Binding Welcome.Tools}">
+                        <ItemsControl AutomationProperties.AutomationId="Welcome.Tools" ItemsSource="{Binding Welcome.Tools}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
                             </ItemsControl.ItemsPanel>
@@ -210,6 +215,7 @@
 
             <!-- Show-on-startup -->
             <CheckBox Grid.Row="3" Margin="0,16,2,0" HorizontalAlignment="Right" FontSize="12"
+                      AutomationProperties.AutomationId="Welcome.ShowOnStartup"
                       Content="{l:Loc Welcome_ShowOnStartup}"
                       IsChecked="{Binding Welcome.ShowOnStartup, Mode=TwoWay}" />
         </Grid>

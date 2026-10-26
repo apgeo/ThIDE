@@ -1,7 +1,7 @@
 encoding utf-8
 # 2026.05.06 created by TopoDroid v 6.4.34
 
-survey av_cerbul_de_aur_2025 -title "Avenul Cerbul de Aur" #-entrance 25@av_cerbul_de_aur
+survey av_bravo_2025 -title "Avenul Bravo de Aur" #-entrance 25@av_bravo
 
   centerline
     date 2026.05.05 
@@ -1563,22 +1563,22 @@ survey av_cerbul_de_aur_2025 -title "Avenul Cerbul de Aur" #-entrance 25@av_cerb
     25 . 0.95 275.1 -21.8
   endcenterline
 
-  # input "av_cerbul_de_aur-1s.th2"
-  # input "av_cerbul_de_aur-2p.th2"
-  # input "av_cerbul_de_aur-3s.th2"
-  # input "av_cerbul_de_aur-4p.th2"
+  # input "av_bravo-1s.th2"
+  # input "av_bravo-2p.th2"
+  # input "av_bravo-3s.th2"
+  # input "av_bravo-4p.th2"
 
   # map m1s -projection extended
-  #   av_cerbul_de_aur-1s
+  #   av_bravo-1s
   # endmap
   # map m2p -projection plan
-  #   av_cerbul_de_aur-2p
+  #   av_bravo-2p
   # endmap
   # map m3s -projection [elevation 21]
-  #   av_cerbul_de_aur-3s
+  #   av_bravo-3s
   # endmap
   # map m4p -projection plan
-  #   av_cerbul_de_aur-4p
+  #   av_bravo-4p
   # endmap
 
 endsurvey

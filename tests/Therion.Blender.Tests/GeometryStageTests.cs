@@ -1,6 +1,6 @@
 // Tube synthesis + geometry-stage orchestration: cross-section framing, LRUD extremes,
 // mesh topology counts, recentering math, scraps-vs-tubes selection, depth tint, and
-// the real av_cerbul .lox producing a non-empty wall mesh.
+// the real av_bravo .lox producing a non-empty wall mesh.
 
 using Therion.Blender;
 using Therion.Blender.Geometry;
@@ -159,12 +159,12 @@ public class GeometryStageTests
     }
 
     [CorpusFact]
-    public void Stage_RealAvCerbulLox_ProducesNonEmptyWalls()
+    public void Stage_RealAvBravoLox_ProducesNonEmptyWalls()
     {
-        var model = LoxReader.ReadFile(TestCorpus.AvCerbulLox());
+        var model = LoxReader.ReadFile(TestCorpus.AvBravoLox());
         var result = GeometryStage.Build(model);
 
-        Assert.True(result.HasWalls, "av_cerbul .lox carries scrap walls");
+        Assert.True(result.HasWalls, "av_bravo .lox carries scrap walls");
         Assert.True(result.Walls.Triangles.Count > 100);
         // Recentered geometry sits near the origin (float32-safe).
         Assert.True(Math.Abs(result.LocalBounds.Min.X) < result.OriginalBounds.Diagonal);
@@ -175,7 +175,7 @@ public class GeometryStageTests
     [CorpusFact]
     public void Stage_Deterministic()
     {
-        var model = LoxReader.ReadFile(TestCorpus.AvCerbulLox());
+        var model = LoxReader.ReadFile(TestCorpus.AvBravoLox());
         var a = GeometryStage.Build(model);
         var b = GeometryStage.Build(model);
         Assert.Equal(a.Walls.Vertices, b.Walls.Vertices);
