@@ -200,3 +200,4 @@ results/
 # `python -m py_compile` (the golden scripts' syntax check) drops bytecode next to the source.
 __pycache__/
 *.pyc
+.vscode/settings.json
