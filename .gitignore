@@ -201,3 +201,10 @@ results/
 __pycache__/
 *.pyc
 .vscode/settings.json
+
+# End-to-end UI test output (tests/run-ui-tests.sh)
+tests/ui-artifacts/
+tests/e2e-linux/artifacts/
+tests/ui-fixtures/**/therion.log
+tests/ui-fixtures/**/*.lox
+tests/ui-fixtures/**/*.3d
