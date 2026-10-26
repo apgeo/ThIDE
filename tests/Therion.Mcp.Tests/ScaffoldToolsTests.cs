@@ -167,7 +167,7 @@ public class ScaffoldToolsTests
         Assert.True(result.Ok, result.Error?.Message);
         var wrapper = File.ReadAllText(fixture.PathTo("meziad", "meziad.th"));
         Assert.Contains("survey meziad", wrapper);
-        Assert.Contains("input th/td.th", wrapper);
+        Assert.Contains("input \"th/td.th\"", wrapper);
 
         var thconfig = File.ReadAllText(fixture.PathTo("meziad", "thconfig.thc"));
         Assert.Contains("source meziad.th", thconfig);
@@ -288,6 +288,29 @@ public class ScaffoldToolsTests
 
         var result = await tools.ScaffoldTopodroidProject("caves/td.th", "out", name, scale: scale);
 
+        Assert.Equal(ToolErrorCodes.InvalidArgument, result.Error!.Code);
+    }
+
+    /// <summary>
+    /// Values the scaffold cannot write as themselves — a line break in the title would add a
+    /// command to the wrapper, a ':' in the survey's file name is legal on Linux but not a bare name
+    /// everywhere — come back as an invalid argument, not as an exception out of the tool.
+    /// </summary>
+    [Theory]
+    [InlineData("td.th", "Line\nbreak", "lat-long")]
+    [InlineData("td.th", null, "lat-long\nsystem x")]
+    [InlineData("a:b.th", null, "lat-long")]
+    public async Task Project_reports_an_unwritable_value_as_an_invalid_argument(string file, string? title, string cs)
+    {
+        if (file.Contains(':') && OperatingSystem.IsWindows()) return;   // not a legal file name there
+        using var fixture = TopodroidFixture();
+        if (file != "td.th") File.Copy(fixture.PathTo("caves", "td.th"), fixture.PathTo("caves", file));
+        var tools = await LoadedToolsAsync(fixture);
+
+        var result = await tools.ScaffoldTopodroidProject("caves/" + file, "out", "cave", title: title,
+            coordinateSystem: cs, fixC1: "46.0", fixC2: "24.0", entranceStation: "1");
+
+        Assert.False(result.Ok);
         Assert.Equal(ToolErrorCodes.InvalidArgument, result.Error!.Code);
     }
 

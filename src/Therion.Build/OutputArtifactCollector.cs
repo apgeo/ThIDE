@@ -29,6 +29,14 @@ public sealed class OutputArtifactCollector : IOutputArtifactCollector
             [".png"]  = "PNG image",
             [".tlx"]  = "Therion log",
             [".dbf"]  = "DBF",
+            [".shx"]  = "Shapefile index",
+            [".prj"]  = "Shapefile projection",
+            [".sql"]  = "SQL database",
+            [".csv"]  = "CSV database",
+            [".plt"]  = "Compass plot",
+            [".wrl"]  = "VRML model",
+            [".3dmf"] = "3DMF model",
+            [".xhtml"] = "XHTML map",
         }.ToImmutableDictionary();
 
     public ImmutableArray<OutputArtifact> Collect(string workingDirectory, DateTimeOffset? since = null)

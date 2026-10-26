@@ -260,4 +260,21 @@ compilation time: 1 sec
     [InlineData("empty.log", "")]
     public void Rejects_other_files(string name, string text) =>
         Assert.False(TherionLogParser.LooksLikeTherionLog(name, text));
+    // After a model with scraps Therion closes the .lox line with progress dots: ". done".
+    [Fact]
+    public void A_done_after_progress_dots_completes_the_open_output()
+    {
+        const string log = """
+            writing rez/cave.lox ...
+            processing projection plan ... done
+            average distortion: 0.02%
+            . done
+            writing rez/cave.3d ... done
+            compilation time: 1 sec
+            """;
+        var s = TherionLogParser.Parse(log);
+
+        Assert.All(s.OutputFiles, f => Assert.True(f.Completed, f.Path));
+        Assert.Equal(new[] { "rez/cave.lox", "rez/cave.3d" }, s.OutputFiles.Select(f => f.Path));
+    }
 }
