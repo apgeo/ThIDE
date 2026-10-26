@@ -1,5 +1,5 @@
 {
-  "//": "Pinned Therion source-of-truth. Decision #4, §2 of Implementation Plan.",
+  "//": "Pinned Therion source-of-truth.",
   "repository": "https://github.com/therion/therion",
   "tag": "v6.4.0",
   "commitSha": null,
