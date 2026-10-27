@@ -66,6 +66,13 @@ public partial class FileDocumentView : UserControl
     private void OnReplaceSelectionRequested(object? sender, string text) =>
         this.FindControl<TherionTextEditor>("Editor")?.ReplaceSelectionWithSnippet(text);
 
+    private void OnApplyEditsRequested(object? sender, TextEditsRequest request)
+    {
+        if (this.FindControl<TherionTextEditor>("Editor") is not { } editor || !editor.HasDocument) return;
+        request.Handled = true;
+        request.Applied = editor.ApplyTextEdits(request.Edits);
+    }
+
     // ---- #2: fold / unfold all toggle button ----------------------------------
 
     private void OnToggleFoldAll(object? sender, RoutedEventArgs e)
@@ -273,6 +280,7 @@ public partial class FileDocumentView : UserControl
             _vm.CompareExternalRequested -= OnCompareExternalRequested;
             _vm.InsertAtCaretRequested -= OnInsertAtCaretRequested;
             _vm.ReplaceSelectionRequested -= OnReplaceSelectionRequested;
+            _vm.ApplyEditsRequested -= OnApplyEditsRequested;
         }
         DisposeMapiahWatcher(); // the watcher is tied to the previous document's file
         _vm = DataContext as FileDocumentViewModel;
@@ -284,6 +292,7 @@ public partial class FileDocumentView : UserControl
             _vm.CompareExternalRequested += OnCompareExternalRequested;
             _vm.InsertAtCaretRequested += OnInsertAtCaretRequested;
             _vm.ReplaceSelectionRequested += OnReplaceSelectionRequested;
+            _vm.ApplyEditsRequested += OnApplyEditsRequested;
             // Seed the VM's selection state for the new document (the editor may already have one).
             if (this.FindControl<TherionTextEditor>("Editor") is { } ed) _vm.SetHasSelection(ed.HasSelection);
             ApplyPendingScrollDeferred();

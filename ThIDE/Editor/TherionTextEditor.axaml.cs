@@ -2187,6 +2187,32 @@ public partial class TherionTextEditor : UserControl
         _editor.Focus();
     }
 
+    /// <summary>True once the inner editor and its document exist.</summary>
+    public bool HasDocument => _editor?.Document is not null;
+
+    /// <summary>
+    /// Applies planned edits as one undo step. Refuses (returns false, changing nothing) when any edit
+    /// no longer slices to its expected text — the buffer moved since the edits were planned.
+    /// </summary>
+    public bool ApplyTextEdits(IReadOnlyList<Therion.Workspace.Editing.TextEdit> edits)
+    {
+        if (_editor?.Document is not { } doc) return false;
+        foreach (var e in edits)
+            if (e.Start < 0 || e.End > doc.TextLength || doc.GetText(e.Start, e.Length) != e.ExpectedText)
+                return false;
+
+        // Back to front so earlier offsets stay valid; same-offset insertions in reverse so they end
+        // up in the order given.
+        var ordered = edits.Select((e, i) => (e, i)).OrderByDescending(x => x.e.Start).ThenByDescending(x => x.i);
+        doc.BeginUpdate();
+        try
+        {
+            foreach (var (e, _) in ordered) doc.Replace(e.Start, e.Length, e.NewText);
+        }
+        finally { doc.EndUpdate(); }
+        return true;
+    }
+
     /// <summary>Replaces the current selection with a snippet (native undo). No-op when nothing is
     /// selected — the caller checked, but this stays safe if the selection cleared meanwhile. CAP-03.</summary>
     public void ReplaceSelectionWithSnippet(string text)
