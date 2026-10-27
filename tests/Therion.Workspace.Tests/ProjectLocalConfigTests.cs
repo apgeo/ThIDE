@@ -63,4 +63,13 @@ public class ProjectLocalConfigTests : IDisposable
         Assert.Null(read.Value);
         Assert.StartsWith("bad.json (line 3)", read.Error);
     }
+
+    [Fact]
+    public void Empty_file_is_an_error_value()
+    {
+        var path = Path.Combine(_root, "empty.json");
+        File.WriteAllText(path, "");
+
+        Assert.Equal("empty.json: the file is empty.", ProjectLocalConfig.TryReadJson<Sample>(path).Error);
+    }
 }

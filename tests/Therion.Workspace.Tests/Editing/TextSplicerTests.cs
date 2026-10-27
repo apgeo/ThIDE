@@ -33,6 +33,12 @@ public class TextSplicerTests
     }
 
     [Fact]
+    public void Refuses_a_negative_length()
+    {
+        Assert.Null(TextSplicer.Splice("short", [new TextEdit(3, -1, "", "x")]));
+    }
+
+    [Fact]
     public void Empty_plan_returns_the_text_unchanged()
     {
         Assert.Equal("survey a\r\nendsurvey\r\n", TextSplicer.Splice("survey a\r\nendsurvey\r\n", []));

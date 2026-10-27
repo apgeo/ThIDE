@@ -81,6 +81,16 @@ public static class SourceFileIo
         stream.Write(bytes, 0, bytes.Length);
     }
 
+    /// <summary>
+    /// True when <paramref name="text"/> can be written in <paramref name="file"/>'s encoding, so a
+    /// batch can refuse up front instead of failing part-way through.
+    /// </summary>
+    public static bool CanEncode(SourceFile file, string text)
+    {
+        try { Encode(file, text); return true; }
+        catch (UnrepresentableCharacterException) { return false; }
+    }
+
     /// <summary>Writes bytes over an existing file, atomically. Used for the write and for rolling it back.</summary>
     public static void WriteOver(string path, byte[] bytes)
     {

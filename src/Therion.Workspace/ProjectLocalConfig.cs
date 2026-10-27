@@ -57,16 +57,17 @@ public static class ProjectLocalConfig
         if (!File.Exists(path)) return ConfigRead<T>.Missing;
         try
         {
+            if (new FileInfo(path).Length == 0) return new(null, $"{Path.GetFileName(path)}: the file is empty.");
             using var stream = File.OpenRead(path);
             var value = JsonSerializer.Deserialize<T>(stream, JsonOptions);
-            return value is null ? new(null, $"{Path.GetFileName(path)}: the file is empty.") : new(value, null);
+            return value is null ? new(null, $"{Path.GetFileName(path)}: the file holds no settings (null).") : new(value, null);
         }
         catch (JsonException ex)
         {
             var where = ex.LineNumber is { } line ? $" (line {line + 1})" : "";
             return new(null, $"{Path.GetFileName(path)}{where}: {ex.Message}");
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException)
         {
             return new(null, $"{Path.GetFileName(path)}: {ex.Message}");
         }

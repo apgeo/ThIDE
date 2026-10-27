@@ -21,7 +21,7 @@ public static class TextSplicer
         foreach (var edit in ordered)
         {
             if (edit.Start < previousEnd) return null;                       // overlapping edits
-            if (edit.Start < 0 || edit.End > text.Length) return null;       // off the end of the file
+            if (edit.Start < 0 || edit.Length < 0 || edit.End > text.Length) return null; // off either end
             if (!text.AsSpan(edit.Start, edit.Length).SequenceEqual(edit.ExpectedText)) return null;
 
             result.Append(text, previousEnd, edit.Start - previousEnd);

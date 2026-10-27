@@ -80,6 +80,41 @@ public class WorkspaceEditServiceTests : IDisposable
         Assert.Empty(_reloaded);
     }
 
+    [Fact]
+    public async Task A_character_the_encoding_cannot_hold_is_refused_before_writing()
+    {
+        File.WriteAllText(P("main.th"), "encoding iso-8859-1\nsurvey a\nendsurvey\n", Encoding.Latin1);
+        var batch = new EditBatch(
+            [new FileTextEdits(P("main.th"), [TextEdit.Insert(29, "  # Peștera\n")])],
+            [new FileCreate(P("notes.th"), "x")],
+            []);
+
+        var outcome = await Service().ApplyAsync(batch);
+
+        Assert.Equal(EditProblemKind.Unencodable, Assert.Single(outcome.Problems).Kind);
+        Assert.False(File.Exists(P("notes.th")));
+    }
+
+    [Fact]
+    public async Task A_failure_part_way_rolls_back_what_was_written()
+    {
+        File.WriteAllText(P("main.th"), "survey a\nendsurvey\n");
+        File.WriteAllText(P("src.th"), "x");
+        File.WriteAllText(P("blocker"), "a file where a folder is needed");
+        var batch = new EditBatch(
+            [new FileTextEdits(P("main.th"), [TextEdit.Insert(9, "  input blocker/c.th\n")])],
+            [new FileCreate(P("notes.th"), "x")],
+            [new FileCopy(P("src.th"), Path.Combine(P("blocker"), "c.th"))]);
+
+        var outcome = await Service().ApplyAsync(batch);
+
+        Assert.False(outcome.Success);
+        Assert.NotNull(outcome.Error);
+        Assert.Empty(outcome.Written);
+        Assert.False(File.Exists(P("notes.th")));
+        Assert.Equal("survey a\nendsurvey\n", File.ReadAllText(P("main.th")));
+    }
+
     /// <summary>An interface implementation answering every member from one function.</summary>
     public class Stub<T> : DispatchProxy where T : class
     {

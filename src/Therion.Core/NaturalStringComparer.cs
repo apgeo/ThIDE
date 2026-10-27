@@ -38,9 +38,10 @@ public sealed class NaturalStringComparer : IComparer<string?>
         int byLength = (x.Length - i).CompareTo(y.Length - j);
         if (byLength != 0) return byLength;
 
-        // Equal ignoring case and zero padding ("07" vs "7", "A" vs "a"): fewer leading zeros first,
-        // then ordinal, so distinct strings never compare equal.
-        return string.CompareOrdinal(x, y);
+        // Equal ignoring case and zero padding ("07" vs "7", "A" vs "a"): the shorter one — fewer
+        // leading zeros — first, then ordinal, so distinct strings never compare equal.
+        int byPadding = x.Length.CompareTo(y.Length);
+        return byPadding != 0 ? byPadding : string.CompareOrdinal(x, y);
     }
 
     /// <summary>Compares two digit runs by numeric value without parsing (runs may exceed any integer type).</summary>

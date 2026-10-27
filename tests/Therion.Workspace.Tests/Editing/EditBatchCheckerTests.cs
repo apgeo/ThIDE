@@ -8,7 +8,7 @@ public class EditBatchCheckerTests
     private static string P(string name) => Path.Combine(Root, name);
 
     private static EditBatchCheck Check(EditBatch batch, Dictionary<string, string> files) =>
-        EditBatchChecker.Check(batch, p => files.GetValueOrDefault(p), files.ContainsKey);
+        EditBatchChecker.Check(batch, p => files.GetValueOrDefault(p), p => files.ContainsKey(p) || p.EndsWith("dir"), files.ContainsKey);
 
     [Fact]
     public void Clean_batch_reports_the_rewritten_text()
@@ -62,5 +62,13 @@ public class EditBatchCheckerTests
         var batch = new EditBatch([], [new FileCreate(P("n.th"), "x")], [new FileCopy(P("src.th"), P("n.th"))]);
 
         Assert.Equal([new EditProblem(P("n.th"), EditProblemKind.Duplicate)], Check(batch, files).Problems);
+    }
+
+    [Fact]
+    public void Directory_as_copy_source_is_reported()
+    {
+        var batch = new EditBatch([], [], [new FileCopy(P("dir"), P("n.th"))]);
+
+        Assert.Equal([new EditProblem(P("dir"), EditProblemKind.NotAFile)], Check(batch, []).Problems);
     }
 }

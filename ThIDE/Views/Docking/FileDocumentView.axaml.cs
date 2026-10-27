@@ -68,6 +68,7 @@ public partial class FileDocumentView : UserControl
 
     private void OnApplyEditsRequested(object? sender, TextEditsRequest request)
     {
+        if (request.Handled) return; // another view of the same document already applied them
         if (this.FindControl<TherionTextEditor>("Editor") is not { } editor || !editor.HasDocument) return;
         request.Handled = true;
         request.Applied = editor.ApplyTextEdits(request.Edits);

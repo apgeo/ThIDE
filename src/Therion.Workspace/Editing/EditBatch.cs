@@ -39,6 +39,16 @@ public enum EditProblemKind
     Exists,
     /// <summary>The same path is targeted twice (two edit groups, or a create and a copy).</summary>
     Duplicate,
+    /// <summary>A copy source is not a regular file.</summary>
+    NotAFile,
+    /// <summary>The file could not be read.</summary>
+    Unreadable,
+    /// <summary>The new text holds a character the file's declared encoding cannot represent.</summary>
+    Unencodable,
+    /// <summary>The file is open with unsaved changes, and the batch needs it on disk (it adds an input).</summary>
+    UnsavedChanges,
+    /// <summary>The file is open and its editor text no longer matches the file on disk.</summary>
+    OpenBufferDiffers,
 }
 
 /// <param name="NewTexts">The rewritten text of every edited file, keyed by the path as given.</param>
@@ -55,7 +65,9 @@ public static class EditBatchChecker
     /// <param name="currentText">The text an edited file holds now — the editor buffer when it is open,
     /// the file on disk otherwise; null when it does not exist.</param>
     /// <param name="exists">Whether a path exists on disk (file or directory).</param>
-    public static EditBatchCheck Check(EditBatch batch, Func<string, string?> currentText, Func<string, bool> exists)
+    /// <param name="isFile">Whether a path is a regular file (copy sources must be).</param>
+    public static EditBatchCheck Check(
+        EditBatch batch, Func<string, string?> currentText, Func<string, bool> exists, Func<string, bool> isFile)
     {
         var problems = new List<EditProblem>();
         var newTexts = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -83,6 +95,7 @@ public static class EditBatchChecker
         foreach (var copy in batch.Copies)
         {
             if (!exists(copy.SourcePath)) problems.Add(new(copy.SourcePath, EditProblemKind.Missing));
+            else if (!isFile(copy.SourcePath)) problems.Add(new(copy.SourcePath, EditProblemKind.NotAFile));
             CheckNewTarget(copy.DestinationPath);
         }
 

@@ -35,7 +35,7 @@ public class NaturalStringComparerTests
     {
         var c = NaturalStringComparer.Instance;
 
-        Assert.True(c.Compare("7", "07") != 0);
+        Assert.Equal(["7", "07", "007"], Sorted("007", "07", "7"));
         Assert.Equal(-c.Compare("7", "07"), c.Compare("07", "7"));
         Assert.True(c.Compare("A", "a") != 0);
         Assert.True(c.Compare("6", "07") < 0);
