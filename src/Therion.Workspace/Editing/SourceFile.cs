@@ -9,7 +9,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Therion.Syntax;
 
-namespace Therion.Mcp.Mutations;
+namespace Therion.Workspace.Editing;
 
 /// <summary>
 /// The new text holds a character the file's declared encoding cannot represent. Writing anyway would
@@ -85,7 +85,7 @@ public static class SourceFileIo
     public static void WriteOver(string path, byte[] bytes)
     {
         // Same directory as the target: File.Move across volumes is a copy, which is not atomic.
-        var temporary = path + ".therion-mcp-" + Guid.NewGuid().ToString("N")[..8] + ".tmp";
+        var temporary = path + ".therion-write-" + Guid.NewGuid().ToString("N")[..8] + ".tmp";
         try
         {
             File.WriteAllBytes(temporary, bytes);

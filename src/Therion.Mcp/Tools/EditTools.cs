@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using ModelContextProtocol.Server;
 using Therion.Mcp.Mutations;
+using Therion.Workspace.Editing;
 
 namespace Therion.Mcp.Tools;
 
