@@ -106,6 +106,10 @@ public sealed record AppSettings
     /// <summary>Rebuild the object graph when a tracked file changes on disk (#5b).</summary>
     public bool AutoReloadGraphOnExternalChange { get; init; } = true;
 
+    /// <summary>Where a project's snippets, templates, hooks, tasks and macros are kept: the project's
+    /// <c>.thide/</c> folder (shared with the cave) or app data (private to this computer).</summary>
+    public Therion.Workspace.ProjectConfigLocation ProjectConfigLocation { get; init; } = Therion.Workspace.ProjectConfigLocation.ProjectFolder;
+
     // ---- scripting / macro hooks ----
     /// <summary>Run the configured hook commands on open/save/build. Adds processing time, so it
     /// can be turned off for big projects (default on, but hooks only fire when commands are set).</summary>

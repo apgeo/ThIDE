@@ -2,6 +2,8 @@
 // A file is a candidate when its extension is .thconfig/.thc, it is the bare
 // `thconfig` Therion convention file, or the sniffer rates its content Likely.
 // Mirrors the safety bounds used by ProjectEntryDiscovery (no unbounded walks).
+// Hidden directories (`.git`, `.thide`, …) are not descended into, and files the app generates
+// beside a thconfig (`.thide-*`) are never offered.
 
 using Therion.Processing.Abstractions;
 
@@ -39,6 +41,7 @@ public static class ThconfigDiscovery
             foreach (var file in files)
             {
                 if (budget-- <= 0) break;
+                if (Path.GetFileName(file).StartsWith(ProjectLocalConfig.GeneratedFilePrefix, StringComparison.OrdinalIgnoreCase)) continue;
                 if (IsCandidate(file, sniffer) && seen.Add(Path.GetFullPath(file)))
                     results.Add(Path.GetFullPath(file));
             }
@@ -46,7 +49,7 @@ public static class ThconfigDiscovery
             try
             {
                 foreach (var sub in Directory.EnumerateDirectories(dir))
-                    stack.Push(sub);
+                    if (!Path.GetFileName(sub).StartsWith('.')) stack.Push(sub);
             }
             catch { /* skip unreadable directory */ }
         }
