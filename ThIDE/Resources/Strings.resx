@@ -1332,4 +1332,10 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Pref_ContextModeNone" xml:space="preserve"><value>None (tools only)</value></data>
   <data name="Pref_ContextModeCard" xml:space="preserve"><value>Card (compact summary)</value></data>
   <data name="Pref_ContextModePack" xml:space="preserve"><value>Pack (rich digest)</value></data>
+  <data name="Picker_Filter" xml:space="preserve"><value>Filter…</value></data>
+  <data name="Picker_ShowList" xml:space="preserve"><value>Show or hide the list</value></data>
+  <data name="Picker_SelectedFormat" xml:space="preserve"><value>Selected: {0}</value></data>
+  <data name="Picker_NoneSelected" xml:space="preserve"><value>Nothing selected</value></data>
+  <data name="Picker_Preview" xml:space="preserve"><value>Preview</value></data>
+  <data name="Picker_OpenPreview" xml:space="preserve"><value>Open in a window…</value></data>
 </root>

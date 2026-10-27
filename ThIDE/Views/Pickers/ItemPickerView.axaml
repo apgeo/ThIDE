@@ -1,0 +1,36 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ThIDE.ViewModels.Pickers"
+             xmlns:l="using:ThIDE.Resources"
+             x:Class="ThIDE.Views.Pickers.ItemPickerView"
+             x:DataType="vm:ItemPickerViewModel"
+             x:CompileBindings="False">
+    <!-- Filter box + fold-away list. Works for any ItemPickerViewModel (stations, surveys). -->
+    <DockPanel>
+        <DockPanel DockPanel.Dock="Top">
+            <ToggleButton DockPanel.Dock="Right" Content="▾" Padding="8,2" Margin="4,0,0,0"
+                          IsChecked="{Binding IsListOpen, Mode=TwoWay}"
+                          AutomationProperties.AutomationId="{Binding ToggleId}"
+                          AutomationProperties.Name="{l:Loc Picker_ShowList}"
+                          ToolTip.Tip="{l:Loc Picker_ShowList}" />
+            <TextBox Text="{Binding Filter, Mode=TwoWay}"
+                     PlaceholderText="{l:Loc Picker_Filter}"
+                     AutomationProperties.AutomationId="{Binding FilterId}"
+                     AutomationProperties.Name="{l:Loc Picker_Filter}" />
+        </DockPanel>
+        <TextBlock DockPanel.Dock="Bottom" FontSize="11" Foreground="Gray" Margin="2,3,0,0"
+                   Text="{Binding SelectionText}" />
+        <ListBox ItemsSource="{Binding Visible}" SelectedItem="{Binding Selected, Mode=TwoWay}"
+                 IsVisible="{Binding IsListOpen}" MinHeight="80" Margin="0,4,0,0"
+                 AutomationProperties.AutomationId="{Binding ListId}">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="{Binding Indent, Converter={x:Static vm:PickerConverters.LeftMargin}}">
+                        <TextBlock Text="{Binding Primary}" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding Secondary}" Foreground="Gray" FontSize="11" VerticalAlignment="Center" />
+                    </StackPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+    </DockPanel>
+</UserControl>

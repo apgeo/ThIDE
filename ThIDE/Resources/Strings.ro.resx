@@ -1332,4 +1332,10 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Pref_ContextModeNone" xml:space="preserve"><value>Niciunul (doar unelte)</value></data>
   <data name="Pref_ContextModeCard" xml:space="preserve"><value>Fișă (rezumat compact)</value></data>
   <data name="Pref_ContextModePack" xml:space="preserve"><value>Pachet (rezumat bogat)</value></data>
+  <data name="Picker_Filter" xml:space="preserve"><value>Filtrează…</value></data>
+  <data name="Picker_ShowList" xml:space="preserve"><value>Afișează sau ascunde lista</value></data>
+  <data name="Picker_SelectedFormat" xml:space="preserve"><value>Selectat: {0}</value></data>
+  <data name="Picker_NoneSelected" xml:space="preserve"><value>Nimic selectat</value></data>
+  <data name="Picker_Preview" xml:space="preserve"><value>Previzualizare</value></data>
+  <data name="Picker_OpenPreview" xml:space="preserve"><value>Deschide într-o fereastră…</value></data>
 </root>
