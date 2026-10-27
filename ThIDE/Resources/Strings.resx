@@ -910,7 +910,6 @@
   <data name="Ed_InsertDate" xml:space="preserve"><value>Insert Today's Date</value></data>
   <data name="Ed_InsertTeamMember" xml:space="preserve"><value>Insert Team Member</value></data>
   <data name="Ed_RenameSymbol" xml:space="preserve"><value>Rename Symbol…  F2</value></data>
-  <data name="Ed_FindAllRefs" xml:space="preserve"><value>Find All References</value></data>
   <data name="Refs_Title" xml:space="preserve"><value>Find All References</value></data>
   <data name="Refs_Header" xml:space="preserve"><value>'{0}' — {1} occurrence(s) in {2} file(s)</value></data>
   <data name="Refs_None" xml:space="preserve"><value>No references to '{0}' were found in the workspace.</value></data>
