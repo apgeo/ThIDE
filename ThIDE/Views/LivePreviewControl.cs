@@ -46,6 +46,14 @@ public sealed class LivePreviewControl : Control
     private static readonly IBrush SplayPointBrush =
         new ImmutableSolidColorBrush(Color.FromArgb(0x99, 0x42, 0x77, 0xC4));
 
+    // A file being linked in, and the stations chosen for the link.
+    private static readonly IPen EmphasisPen =
+        new ImmutablePen(new ImmutableSolidColorBrush(Color.FromRgb(0xD8, 0x1B, 0x60)), 2.6);
+    private static readonly IPen ChosenRing =
+        new ImmutablePen(new ImmutableSolidColorBrush(Color.FromRgb(0x00, 0xC8, 0x53)), 2.4);
+    private static readonly IPen ChosenRingOuter =
+        new ImmutablePen(new ImmutableSolidColorBrush(Color.FromRgb(0x10, 0x10, 0x10)), 4.4);
+
     // Hover: a bright ring around the point + a dark info tooltip / corner readout.
     private static readonly IPen HoverRing =
         new ImmutablePen(new ImmutableSolidColorBrush(Color.FromRgb(0xFF, 0x6D, 0x00)), 2.0);
@@ -268,6 +276,9 @@ public sealed class LivePreviewControl : Control
     /// <summary>Raised when the user clicks (without dragging) near a leg / point.</summary>
     public event EventHandler<SourceSpan>? SegmentActivated;
 
+    /// <summary>Raised, before <see cref="SegmentActivated"/>, when a click lands on a station point.</summary>
+    public event EventHandler<StationPoint>? StationActivated;
+
     /// <summary>Raised when the user clicks (without dragging) near a structural-plane line.</summary>
     public event EventHandler<PlaneOverlayLine>? PlaneActivated;
 
@@ -294,13 +305,33 @@ public sealed class LivePreviewControl : Control
     private double _zoomTarget;
     private DispatcherTimer? _zoomTimer;
 
+    /// <summary>Legs from this file are drawn on top in a distinct colour (e.g. a survey being linked in).</summary>
+    public static readonly StyledProperty<string?> EmphasizedFileProperty =
+        AvaloniaProperty.Register<LivePreviewControl, string?>(nameof(EmphasizedFile));
+
+    public string? EmphasizedFile
+    {
+        get => GetValue(EmphasizedFileProperty);
+        set => SetValue(EmphasizedFileProperty, value);
+    }
+
+    /// <summary>Points marked with a ring (e.g. the stations chosen in a picker).</summary>
+    public static readonly StyledProperty<IReadOnlyList<StationPoint>?> HighlightedStationsProperty =
+        AvaloniaProperty.Register<LivePreviewControl, IReadOnlyList<StationPoint>?>(nameof(HighlightedStations));
+
+    public IReadOnlyList<StationPoint>? HighlightedStations
+    {
+        get => GetValue(HighlightedStationsProperty);
+        set => SetValue(HighlightedStationsProperty, value);
+    }
+
     static LivePreviewControl()
     {
         AffectsRender<LivePreviewControl>(
             SegmentsProperty, SplaysProperty, SplaysAsLinesProperty, StationPointsProperty,
             LeadMarkersProperty, EquateMarkersProperty, PlaneLinesProperty, ShowJunctionsProperty,
             ShowSplaysProperty, ShowStationSymbolsProperty, ShowLabelsProperty, ShowSurveyNamesProperty,
-            ShowNorthArrowProperty, ColorModeProperty);
+            ShowNorthArrowProperty, ColorModeProperty, EmphasizedFileProperty, HighlightedStationsProperty);
     }
 
     public LivePreviewControl()
@@ -467,6 +498,12 @@ public sealed class LivePreviewControl : Control
             var p2 = ToScreen(s.X2, s.Y2, size);
             ctx.DrawLine(coloured ? PenFor(s, mode, penCache!, legThick, emphasizeLegs) : LegPen, p1, p2);
         }
+        // A file being linked in: its legs again, on top, in the emphasis colour.
+        if (EmphasizedFile is { Length: > 0 } emphasized)
+            foreach (var s in segs)
+                if (string.Equals(s.File, emphasized, StringComparison.OrdinalIgnoreCase))
+                    ctx.DrawLine(EmphasisPen, ToScreen(s.X1, s.Y1, size), ToScreen(s.X2, s.Y2, size));
+
         // Station dots only when enabled and the layout isn't too dense.
         if (ShowStationSymbols && segs.Count <= 1500)
             foreach (var s in segs)
@@ -492,6 +529,15 @@ public sealed class LivePreviewControl : Control
                 var p = ToScreen(j.X, j.Y, size);
                 ctx.DrawEllipse(JunctionFill, JunctionOutline, p, JunctionRadius, JunctionRadius);
                 ctx.DrawEllipse(JunctionCore, null, p, 1.8, 1.8);
+            }
+
+        // Chosen stations: a ring that reads over junctions and leads.
+        if (HighlightedStations is { Count: > 0 } chosen)
+            foreach (var pt in chosen)
+            {
+                var p = ToScreen(pt.X, pt.Y, size);
+                ctx.DrawEllipse(null, ChosenRingOuter, p, 9, 9);
+                ctx.DrawEllipse(null, ChosenRing, p, 9, 9);
             }
 
         // Hovered-group emphasis (drawn from the FULL scene, so a hidden group shows while hovered).
@@ -888,6 +934,20 @@ public sealed class LivePreviewControl : Control
     private void ActivateAt(Point click)
     {
         var size = Bounds.Size;
+
+        // A station under the click is reported as such first (a picker selects it); the click then
+        // carries on to the usual navigation below.
+        if (StationActivated is not null && StationPoints is { } stationPts)
+        {
+            double bestSt = 8.0;
+            StationPoint? hitSt = null;
+            foreach (var pt in stationPts)
+            {
+                var d = Distance(click, ToScreen(pt.X, pt.Y, size));
+                if (d < bestSt) { bestSt = d; hitSt = pt; }
+            }
+            if (hitSt is not null) StationActivated(this, hitSt);
+        }
 
         // Equate junctions are the biggest, top-most targets.
         if (ShowJunctions && EquateMarkers is { } junctions)
