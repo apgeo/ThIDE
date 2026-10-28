@@ -39,6 +39,7 @@ internal sealed class NullDocumentService : IDocumentService
     public event EventHandler? DocumentChanged;
     public event EventHandler? ActiveDocumentChanged;
     public event EventHandler<FileDocumentViewModel>? OpenInDockRequested;
+    public event EventHandler<string>? DocumentSaved { add { } remove { } }
     public event EventHandler? HistoryChanged;
     public event EventHandler<Therion.Core.SourceSpan>? RevealInWorkspaceRequested;
     public event EventHandler<string>? SelectFileInWorkspaceRequested;

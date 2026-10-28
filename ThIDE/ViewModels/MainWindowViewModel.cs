@@ -770,8 +770,11 @@ public partial class MainWindowViewModel : ViewModelBase
         Build.NavigateRequested += (_, span) => NavigateTo(span);
         // Surface the Compiler Output panel when a build starts (#2).
         Build.BuildStarted += (_, _) => OnUiThread(() => _factory.ShowCompilerOutput());
+        Build.ExternalToolStarted += (_, _) => OnUiThread(() => _factory.ShowCompilerOutput());
+        // Compile-on-save follows every save — Save, Save All and auto-save — not just the command.
+        _documents.DocumentSaved += (_, _) => OnUiThread(TriggerCompileOnSave);
         // run the on-build script hook (active thconfig as {file}).
-        Build.BuildStarted += (_, _) => _hooks?.Run(ScriptHookEvent.Build, _session?.ActiveThconfig?.FullPath);
+        Build.BuildStarted += (_, entry) => _hooks?.Run(ScriptHookEvent.Build, entry);
 
         Refresh();
         RestoreSession();
@@ -1608,7 +1611,6 @@ public partial class MainWindowViewModel : ViewModelBase
             doc.RequestSaveCleanup(); // in-place trim/final-newline (caret-preserving) before write
             await _documents.WriteCurrentTextAsync(doc.DocumentText).ConfigureAwait(true);
             StatusText = $"Saved {doc.FilePath}";
-            TriggerCompileOnSave();
         }
         catch (Exception ex) { StatusText = ex.Message; }
     }

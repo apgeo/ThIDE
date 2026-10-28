@@ -498,7 +498,14 @@ public partial class BuildViewModel : ViewModelBase
     public event EventHandler<ImmutableArray<Diagnostic>>? CompileCompleted;
 
     /// <summary>Raised when a build begins so the shell can surface the Compiler Output panel (#2).</summary>
-    public event EventHandler? BuildStarted;
+    /// <summary>A Therion build is starting; the argument is the entry being compiled.</summary>
+    public event EventHandler<string>? BuildStarted;
+
+    /// <summary>An external tool run (dump3d, extend, --version) is starting.</summary>
+    public event EventHandler? ExternalToolStarted;
+
+    /// <summary>A build ended — succeeded, failed, was cancelled or threw. Raised on the UI thread.</summary>
+    public event EventHandler<Therion.Build.Automation.BuildOutcome>? BuildFinished;
 
     public bool CanBuild => !IsBuilding && ResolveBuildEntry() is not null;
 
@@ -534,14 +541,18 @@ public partial class BuildViewModel : ViewModelBase
     /// Runs Therion on <paramref name="entry"/> (which may be a generated temporary thconfig for
     /// ). <paramref name="tempThconfig"/>, when set, is deleted after the build.
     /// </summary>
-    public async Task RunBuildAsync(string entry, string? tempThconfig = null, string? label = null)
+    /// <returns>How the build ended, or null when it did not start (another build runs, or the
+    /// user cancelled saving the involved files).</returns>
+    public async Task<Therion.Build.Automation.BuildOutcome?> RunBuildAsync(string entry, string? tempThconfig = null, string? label = null)
     {
         using var lease = _gate.TryAcquire();
-        if (lease is null) { Status = "A compilation is already in progress."; return; }
+        if (lease is null) { Status = "A compilation is already in progress."; return null; }
 
         // Before compiling, make sure the involved unsaved files are on disk (Therion reads from
         // disk). Auto-save when configured, otherwise ask (naming the files). Cancel aborts.
-        if (!await EnsureInvolvedFilesSavedAsync(entry).ConfigureAwait(true)) return;
+        if (!await EnsureInvolvedFilesSavedAsync(entry).ConfigureAwait(true)) return null;
+        // What the build ends as; updated as it goes and reported in finally.
+        var outcome = new Therion.Build.Automation.BuildOutcome(entry, false, false, -1, 0, 0, [], null, TimeSpan.Zero, label);
 
         IsBuilding = true;
         HasBuildResult = false;          // clear the previous success/error status-bar icon
@@ -552,7 +563,7 @@ public partial class BuildViewModel : ViewModelBase
         HasLog = false; LogFilePath = null;           // clear the previous build's log (#3)
         SetPhase(BuildPhase.Starting);
         _log?.Info($"Build started: {label ?? entry}");
-        BuildStarted?.Invoke(this, EventArgs.Empty);  // surface the Compiler Output panel (#2)
+        BuildStarted?.Invoke(this, entry);  // surface the Compiler Output panel (#2)
         ClearOutputState();
         _cts = new CancellationTokenSource();
 
@@ -575,7 +586,7 @@ public partial class BuildViewModel : ViewModelBase
             var result = await _compiler.CompileAsync(entry, progress, _cts.Token).ConfigureAwait(true);
             sw.Stop();
             UpdateArtifacts(result.Artifacts);
-            DetectLog(entry, _buildStart);
+            DetectLog(entry, _buildStart, result.LogPath);
             _artifactCache.Save(entry, "unknown", result.Artifacts);
             var warnCount = result.Diagnostics.Count(d => d.Severity == DiagnosticSeverity.Warning);
             bool ok = result.ExitCode == 0;
@@ -610,6 +621,14 @@ public partial class BuildViewModel : ViewModelBase
                     ? $"Build succeeded: {result.Artifacts.Length} artifact(s)" + (warnCount > 0 ? $", {warnCount} warning(s)" : "")
                     : $"Build failed (exit {result.ExitCode}, {warnCount} warning(s))."
                       + (LastError.Length > 0 ? $" Error: {LastError.Replace(Environment.NewLine, " ⏎ ")}" : ""));
+            outcome = outcome with
+            {
+                Succeeded = ok, ExitCode = result.ExitCode,
+                Errors = result.Diagnostics.Count(d => d.Severity == DiagnosticSeverity.Error),
+                Warnings = warnCount,
+                Artifacts = result.Artifacts.Select(a => a.Path).ToList(),
+                LogPath = LogFilePath, Elapsed = sw.Elapsed,
+            };
             CompileCompleted?.Invoke(this, result.Diagnostics);
             if (ok) AutoOpenOutputs(result.Artifacts);
         }
@@ -617,6 +636,7 @@ public partial class BuildViewModel : ViewModelBase
         {
             sw.Stop();
             Status = "Compilation cancelled.";
+            outcome = outcome with { Cancelled = true, Elapsed = sw.Elapsed };
             _log?.Warning("Build cancelled.");
             AddRow(new CompilerOutputRow("Compilation cancelled.", "Error", null, OutputRowKind.Summary,
                 DateTimeOffset.Now, TimeSpan.Zero, sw.Elapsed, TimeColumnMode));
@@ -624,10 +644,12 @@ public partial class BuildViewModel : ViewModelBase
         catch (Exception ex)
         {
             Status = "Compilation error: " + ex.Message;
+            outcome = outcome with { Elapsed = sw.Elapsed };
             _log?.Error("Build error: " + ex.Message);
         }
         finally
         {
+            BuildFinished?.Invoke(this, outcome);
             IsBuilding = false;
             _cts?.Dispose();
             _cts = null;
@@ -635,6 +657,7 @@ public partial class BuildViewModel : ViewModelBase
             if (!string.IsNullOrEmpty(tempThconfig))
                 try { File.Delete(tempThconfig); } catch { /* best-effort temp cleanup */ }
         }
+        return outcome;
     }
 
     /// <summary>
@@ -926,8 +949,10 @@ public partial class BuildViewModel : ViewModelBase
     }
 
     /// <summary>Finds a Therion log (.log/.tlx) written during this build, for the open-log button (#3).</summary>
-    private void DetectLog(string entry, DateTimeOffset buildStart)
+    private void DetectLog(string entry, DateTimeOffset buildStart, string? reportedLog = null)
     {
+        // The compiler knows the log it wrote when it asked for one; otherwise take the newest.
+        if (reportedLog is not null && File.Exists(reportedLog)) { LogFilePath = reportedLog; HasLog = true; return; }
         try
         {
             var dir = Path.GetDirectoryName(Path.GetFullPath(entry));
@@ -1109,7 +1134,7 @@ public partial class BuildViewModel : ViewModelBase
             return false;
         }
 
-        BuildStarted?.Invoke(this, EventArgs.Empty); // surface the output panel (#2)
+        ExternalToolStarted?.Invoke(this, EventArgs.Empty); // surface the output panel (#2)
         ClearOutputState();
         _buildStart = DateTimeOffset.Now;
         _prevRowTime = _buildStart;
