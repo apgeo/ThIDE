@@ -16,6 +16,7 @@ using Avalonia.Media;
 using Avalonia.Media.Immutable;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Therion.Workspace;
 using Therion.Build;
 using Therion.Core;
 using Therion.Processing.Abstractions;

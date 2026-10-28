@@ -5,9 +5,10 @@
 // folder so relative source paths still resolve, then deleted after the build.
 
 using System.Collections.Generic;
+using System.Linq;
 using Therion.Syntax;
 
-namespace ThIDE.Services;
+namespace Therion.Workspace;
 
 /// <summary>An export command found in a thconfig (with its source line range).</summary>
 public sealed record ExportTargetInfo(
@@ -41,6 +42,19 @@ public static class ThconfigExportEditor
         var toComment = new HashSet<int>();
         foreach (var e in ParseExports(thconfigText))
             if (!(e.StartLine == keep.StartLine && e.EndLine == keep.EndLine))
+                for (int ln = e.StartLine; ln <= e.EndLine; ln++) toComment.Add(ln);
+        return CommentLines(thconfigText, toComment);
+    }
+
+    /// <summary>
+    /// Returns the thconfig with every export commented out except those in <paramref name="keep"/>
+    /// (matched by line range) — the batch build's way of building some targets of a thconfig.
+    /// </summary>
+    public static string IsolateExports(string thconfigText, IReadOnlyCollection<ExportTargetInfo> keep)
+    {
+        var toComment = new HashSet<int>();
+        foreach (var e in ParseExports(thconfigText))
+            if (!keep.Any(k => k.StartLine == e.StartLine && k.EndLine == e.EndLine))
                 for (int ln = e.StartLine; ln <= e.EndLine; ln++) toComment.Add(ln);
         return CommentLines(thconfigText, toComment);
     }

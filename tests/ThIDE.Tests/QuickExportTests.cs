@@ -2,6 +2,7 @@
 
 using System.Linq;
 using Therion.Syntax;
+using Therion.Workspace;
 using ThIDE.Services;
 using ThIDE.ViewModels;
 using Xunit;
