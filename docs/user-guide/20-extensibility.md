@@ -17,6 +17,8 @@ therion-cli format   path/to/file.th --write     # re-indent in place
 therion-cli stats    path/to/project.thconfig    # length/depth/etc.
 therion-cli deps     path/to/project.thconfig --dot   # include graph (Graphviz)
 therion-cli gis      path/to/project.thconfig --format kml --out entrances.kml
+therion-cli new      --list                      # project templates (built-in and imported)
+therion-cli new      single-cave --out ~/caves/pit --var project=pit
 ```
 
 Also `dump-ast` and `list-stations`. Full command list and examples:
