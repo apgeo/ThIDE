@@ -79,14 +79,52 @@ Your rule then contributes diagnostics like the built-in ones. The API and examp
 
 ## Script hooks
 
-Run an external command at key moments — **on open**, **on save**, or **on build**:
+Run an external command at key moments:
 
 1. Enable **script hooks** in [Settings → Extensions](19-settings-and-preferences.md#extensions).
-2. Set the command for each event; use **`{file}`** for the file path (the active thconfig for
-   build).
+2. The three single commands (**on open**, **on save**, **on build**) work as before — started and
+   forgotten. `{file}` is the file path (for build, the thconfig being compiled), now quoted so a
+   path with spaces stays one argument; *on save* now also follows **Save All** and auto-save.
+3. **More hooks** adds as many as you like, each for one event — *WorkspaceOpened*, *FileOpened*,
+   *FileSaved*, *BuildStarted*, *BuildFinished*, *BuildFailed* — with a timeout. Their output goes to
+   the **Automation** panel (*View → Automation*) unless marked *detached*.
 
-Use them to trigger a backup, a custom post-processor, a notification, or a version-control commit.
-Disable on very large workspaces if they slow things down.
+Commands may use `{file}`, `${file}`, `${fileDirname}`, `${fileBasename}`, `${workspaceRoot}`,
+`${activeThconfig}`, `${entry}` and `${env:NAME}`. Every hook also gets environment variables:
+`THIDE_EVENT`, `THIDE_FILE`, `THIDE_WORKSPACE`, `THIDE_THCONFIG`, `THIDE_ENTRY`, and after a build
+`THIDE_BUILD_EXIT`, `THIDE_BUILD_ERRORS`, `THIDE_BUILD_WARNINGS`, `THIDE_BUILD_LOG`, `THIDE_OUTPUTS`
+(separated like `PATH`) and `THIDE_ELAPSED_MS` — so *BuildFinished* can publish the PDF, *BuildFailed*
+can notify you. Use them for backups, post-processing, notifications or a version-control commit.
+
+### Project hooks and tasks (`.thide/`)
+
+A project can carry its own automation in its `.thide/` folder (committed with the cave):
+
+```jsonc
+// .thide/hooks.json
+{ "version": 1, "hooks": [
+  { "event": "BuildFinished", "command": "rsync -a output/ server:/caves/${env:USER}/", "timeoutSeconds": 120 },
+  { "event": "FileSaved", "task": "lint" }
+] }
+
+// .thide/tasks.json
+{ "version": 1, "tasks": [
+  { "id": "lint", "title": "Check names", "command": "python3 tools/check.py ${file}", "problemMatcher": "file-line" },
+  { "id": "all", "title": "Build every cave", "type": "builtin", "builtin": "batch-build", "entries": ["caves/a.thconfig", "caves/b.thconfig"] },
+  { "id": "therion-all", "title": "Therion on the master", "command": "therion", "args": ["all.thconfig"], "problemMatcher": "therion" }
+] }
+```
+
+Tasks run from **Tools → Tasks** or the command palette (*Task: …*). A task's `problemMatcher`
+(`therion`, or `file-line` for `path:line[:col]: message`) turns its output into entries in the
+Diagnostics panel. A task can be `shell` (the default), `builtin` (`build`, `batch-build`) or
+`macro`.
+
+**Trust.** Commands from a project only run once you trust its folder: the first time something
+would run, ThIDE names the folder and asks. Your answer is remembered; **Settings → Extensions →
+Trusted folders** lists them, and you can remove one there. Reading the project's snippets and
+templates never asks. The switch *Read hooks, tasks and macros from the project's .thide folder*
+turns all of it off.
 
 ## Where things live
 

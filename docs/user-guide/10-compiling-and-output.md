@@ -68,6 +68,16 @@ Under **Settings → Build & Output → After a successful build, open:** tick a
 than just the first. Per-file Auto-open overrides (above) win over these defaults. Leave all unticked
 to open nothing.
 
+## Building several at once
+
+**Build → Build multiple…** lists every thconfig of the workspace with its `export` lines. Tick the
+thconfigs to build and, under each, the exports to produce; they are built one after the other (a
+thconfig with some exports unticked is built from a temporary copy with the others commented out).
+*Stop at the first failure* ends the run early; **Cancel** stops it. A summary — result, errors,
+warnings, time and outputs per thconfig — goes to the **Automation** panel, and your selection is
+remembered for the project. From a terminal: `therion-cli build caves --all` (add `--json` for a
+machine-readable summary).
+
 ## One-off exports: Quick Export
 
 **Compile → Quick Export…** composes a single export without editing your thconfig: pick a **format**,

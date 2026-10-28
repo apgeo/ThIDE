@@ -25,6 +25,7 @@ dotnet run --project src/Therion.Cli -- format path/to/file.th --write
 dotnet run --project src/Therion.Cli -- stats  path/to/project.thconfig
 dotnet run --project src/Therion.Cli -- deps   path/to/project.thconfig --dot
 dotnet run --project src/Therion.Cli -- gis    path/to/project.thconfig --format kml --out entrances.kml
+dotnet run --project src/Therion.Cli -- build  caves --all --json --stop-on-failure
 dotnet run --project src/Therion.Cli -- new    --list
 dotnet run --project src/Therion.Cli -- new    expedition --out ./alba --var expedition=alba --var year=2026
 ```
