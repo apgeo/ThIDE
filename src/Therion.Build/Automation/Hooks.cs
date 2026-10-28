@@ -103,8 +103,8 @@ public static class HookVariables
     {
         string Q(string? v) => quote(v ?? "");
         var file = ctx.File;
-        var s = template
-            .Replace("\"{file}\"", Q(file)).Replace("'{file}'", Q(file)).Replace("{file}", Q(file));
+        // The legacy {file} (optionally already in quotes), never the "{file}" inside "${file}".
+        var s = System.Text.RegularExpressions.Regex.Replace(template, @"(?<!\$)(""\{file\}""|'\{file\}'|\{file\})", _ => Q(file));
         return System.Text.RegularExpressions.Regex.Replace(s, @"\$\{(env:)?([A-Za-z_][A-Za-z0-9_]*)\}", m =>
         {
             if (m.Groups[1].Success) return Q((env ?? System.Environment.GetEnvironmentVariable)(m.Groups[2].Value));
