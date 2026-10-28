@@ -117,6 +117,7 @@ public sealed class CommandPaletteProvider
         list.Add(VmCmd(tools, L("Menu_Tools_ImportGpx"), _vm.ImportGpxCommand, "Icon.Import"));
         list.Add(ParamCmd(tools, L("Menu_Tools_ScaffoldProject"), _vm.ScaffoldProjectCommand, null, "Icon.Config"));
         list.Add(ParamCmd(tools, L("Menu_Tools_ScaffoldActive"), _vm.ScaffoldProjectCommand, "active", "Icon.Config"));
+        list.Add(VmCmd(tools, L("Menu_Tools_LinkSurvey"), _vm.LinkSurveyCommand, "Icon.Import"));
         // Export entrances / fixed points — one flat, searchable item per format.
         foreach (var fmt in new[] { "kml", "geojson", "gpx", "csv" })
             list.Add(ParamCmd(tools, $"{L("Menu_Tools_ExportEntrances")} — {FormatLabel(fmt)}", _vm.ExportGisCommand, fmt, "Icon.Export"));

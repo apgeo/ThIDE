@@ -1321,6 +1321,13 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private void ScaffoldProject(string? mode) => ScaffoldProjectRequested?.Invoke(this, mode);
 
+    /// <summary>Raised to run "Link survey file" in the view (it owns the dialog and the pickers).</summary>
+    public event EventHandler? LinkSurveyRequested;
+
+    /// <summary>Link a standalone survey file into the project with generated input and equate lines.</summary>
+    [RelayCommand]
+    private void LinkSurvey() => LinkSurveyRequested?.Invoke(this, EventArgs.Empty);
+
     /// <summary>The picker the scaffold flow uses to prompt for the source survey and target folder.</summary>
     public IStoragePicker? StoragePicker => _picker;
 

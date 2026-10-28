@@ -11,6 +11,7 @@ using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
@@ -3202,9 +3203,13 @@ public partial class TherionTextEditor : UserControl
         menu.Items.Add(MakeItem(L("Ed_MoveLinesDown"),    MoveLinesDown));
         menu.Items.Add(MakeItem(L("Ed_SortLines"),        SortSelectedLines));
         menu.Items.Add(new Separator());
-        // insert helpers.
-        menu.Items.Add(MakeItem(L("Ed_InsertDate"),       InsertDate));
-        menu.Items.Add(MakeItem(L("Ed_InsertTeamMember"), InsertTeamMember));
+        // Generate code: lines ThIDE writes for you (inserts, and the survey-linking dialog).
+        var generate = new MenuItem { Header = L("Ctx_GenerateCode") };
+        AutomationProperties.SetAutomationId(generate, "Editor.Ctx.GenerateCode");
+        generate.Items.Add(MakeItem(L("Menu_Tools_LinkSurvey"), RequestLinkSurvey, "Editor.Ctx.GenerateCode.LinkSurvey"));
+        generate.Items.Add(MakeItem(L("Ed_InsertDate"),       InsertDate, "Editor.Ctx.GenerateCode.InsertDate"));
+        generate.Items.Add(MakeItem(L("Ed_InsertTeamMember"), InsertTeamMember, "Editor.Ctx.GenerateCode.InsertTeamMember"));
+        menu.Items.Add(generate);
         menu.Items.Add(new Separator());
         menu.Items.Add(MakeItem(L("Ed_RenameSymbol"),     StartRename));
         menu.Items.Add(MakeItem(L("Ed_FindAllRefs"),      StartFindAllReferences));
@@ -3596,11 +3601,24 @@ public partial class TherionTextEditor : UserControl
     // Localized string lookup (Strings.resx / .ro.resx) for code-built menus & dialogs.
     private static string L(string key) => ThIDE.Resources.Tr.Get(key);
 
-    private static MenuItem MakeItem(string header, Action onClick)
+    private static MenuItem MakeItem(string header, Action onClick, string? automationId = null)
     {
         var item = new MenuItem { Header = header };
+        if (automationId is not null) AutomationProperties.SetAutomationId(item, automationId);
         item.Click += (_, _) => onClick();
         return item;
+    }
+
+    /// <summary>
+    /// Raised by Generate code ▸ Link survey file with this editor's file and caret: the shell opens
+    /// the link dialog with the lines going into this file, in the survey at the caret.
+    /// </summary>
+    public static event EventHandler<(string FilePath, int Caret)>? LinkSurveyRequested;
+
+    private void RequestLinkSurvey()
+    {
+        if (CurrentFilePath is { Length: > 0 } path)
+            LinkSurveyRequested?.Invoke(this, (path, _editor?.CaretOffset ?? 0));
     }
 
     // Access clipboard via the same ApplicationLifetime path used elsewhere in the project.

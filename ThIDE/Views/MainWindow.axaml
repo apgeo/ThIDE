@@ -288,6 +288,7 @@
                 <MenuItem AutomationProperties.AutomationId="Menu.Tools.ImportGpx" Header="{l:Loc Menu_Tools_ImportGpx}" Command="{Binding ImportGpxCommand}" />
                 <MenuItem AutomationProperties.AutomationId="Menu.Tools.ScaffoldProject" Header="{l:Loc Menu_Tools_ScaffoldProject}" Command="{Binding ScaffoldProjectCommand}" />
                 <MenuItem AutomationProperties.AutomationId="Menu.Tools.ScaffoldActive" Header="{l:Loc Menu_Tools_ScaffoldActive}" Command="{Binding ScaffoldProjectCommand}" CommandParameter="active" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Tools.LinkSurvey" Header="{l:Loc Menu_Tools_LinkSurvey}" Command="{Binding LinkSurveyCommand}" />
                 <Separator />
                 <MenuItem AutomationProperties.AutomationId="Menu.Tools.ExportEntrances" Header="{l:Loc Menu_Tools_ExportEntrances}">
                     <MenuItem AutomationProperties.AutomationId="Menu.Tools.ExportEntrances.Kml" Header="KML…"      Command="{Binding ExportGisCommand}" CommandParameter="kml" />

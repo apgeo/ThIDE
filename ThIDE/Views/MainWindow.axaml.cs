@@ -80,6 +80,9 @@ public partial class MainWindow : Window
                 };
                 vm.Build.QuickExportRequested += (_, _) => _ = ShowQuickExportAsync(vm);
                 vm.ScaffoldProjectRequested += (_, mode) => _ = ShowScaffoldProjectAsync(vm, mode);
+                vm.LinkSurveyRequested += (_, _) => _ = ShowLinkSurveyAsync(null, 0);
+                ThIDE.Editor.TherionTextEditor.LinkSurveyRequested += (_, req) =>
+                    Avalonia.Threading.Dispatcher.UIThread.Post(() => _ = ShowLinkSurveyAsync(req.FilePath, req.Caret));
                 BuildRecentMenu(vm);
                 BuildRecentDirectoriesMenu(vm);
                 // The layout rendered without crashing — clear the crash sentinel so the next
@@ -491,6 +494,65 @@ public partial class MainWindow : Window
         if (string.IsNullOrEmpty(root)) return;
 
         await vm.RunScaffoldAsync(model.BuildOptions(), source, root);
+    }
+
+    // ----- link survey file -----------------------------------------------
+
+    /// <summary>
+    /// Opens "Link survey file". With <paramref name="destinationFile"/> (the editor's Generate code
+    /// entry) the lines go into that file, in the survey around <paramref name="caret"/>.
+    /// </summary>
+    private async System.Threading.Tasks.Task ShowLinkSurveyAsync(string? destinationFile, int caret)
+    {
+        var docs = AppServices.Provider.GetService<IDocumentService>();
+        var notifications = AppServices.Provider.GetService<INotificationService>();
+        if (docs?.Workspace is not { PerFile.Count: > 0 } ws)
+        {
+            notifications?.Warning(ThIDE.Resources.Tr.Get("LinkSurvey_Title"), ThIDE.Resources.Tr.Get("LinkSurvey_NoWorkspace"));
+            return;
+        }
+
+        // Snapshot the open buffers now (UI thread); the dialog reads files off it.
+        var buffers = new Dictionary<string, string>(OperatingSystem.IsLinux() ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase);
+        foreach (var d in docs.Documents)
+            if (!string.IsNullOrEmpty(d.FilePath) && Path.IsPathRooted(d.FilePath))
+                buffers.TryAdd(Path.GetFullPath(d.FilePath), d.DocumentText);
+
+        string? current = destinationFile;
+        int currentCaret = caret;
+        if (current is null && docs.Active is { } active && active.FilePath.EndsWith(".th", StringComparison.OrdinalIgnoreCase))
+        {
+            current = active.FilePath;
+            currentCaret = active.CurrentCaret.StartOffset;
+        }
+
+        var env = new LinkSurveyEnvironment(
+            ws,
+            AppServices.Provider.GetService<IWorkspaceSession>()?.RootPath,
+            path =>
+            {
+                var full = Path.GetFullPath(path);
+                if (buffers.TryGetValue(full, out var text)) return text;
+                return File.Exists(full) ? Therion.Syntax.EncodingResolver.ReadAllText(full) : null;
+            },
+            dir => Directory.Exists(dir)
+                ? Directory.EnumerateFiles(dir, "*.th2", SearchOption.AllDirectories).Take(500).ToList()
+                : [],
+            (a, b) => File.ReadAllBytes(a).AsSpan().SequenceEqual(File.ReadAllBytes(b)),
+            AppServices.Provider.GetService<IWorkspaceEditService>(),
+            current,
+            currentCaret,
+            DateOnly.FromDateTime(DateTime.Now));
+
+        var model = new LinkSurveyViewModel(env);
+        var dialog = new LinkSurveyWindow(model);
+        model.Applied += (_, outcome) =>
+            notifications?.Success(ThIDE.Resources.Tr.Get("LinkSurvey_Title"),
+                string.Format(ThIDE.Resources.Tr.Get("LinkSurvey_Done"), Path.GetFileName(model.SourcePath)));
+        // The dialog opens straight away; the survey file is chosen in it (Browse, or typed + Enter).
+        var load = model.LoadAsync(null, destinationFile);
+        await dialog.ShowDialog(this);
+        await load;
     }
 
     // ----- global search window (#3) -------------------------------------
