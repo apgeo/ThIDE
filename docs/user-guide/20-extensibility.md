@@ -90,6 +90,9 @@ Disable on very large workspaces if they slow things down.
 
 - Plugins: `%AppData%/ThIDE/plugins/*.dll`
 - Rule config: `rules.json` (app data)
+- Snippets: `snippets.json`; file templates: `templates/files/*.json` — in app data for yourself, and
+  in the project's `.thide/` folder (or its private app-data twin, per **Preferences ▸ General**) for
+  the project. See [The editor → Snippets and new files](07-editing.md#snippets-and-new-files).
 - The CLI and LSP are **separate executables** shipped alongside the app, not the GUI itself.
 
 See also the developer-facing [docs/architecture.md](../architecture.md) if you want to reuse the
