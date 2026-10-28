@@ -1,6 +1,7 @@
 // What the assistant may send to the model. The default sends everything — the model runs on this
 // computer (LM Studio). The other two exist for when it does not: hide every tool that returns survey
-// data, or keep the tools but blank out the values in what they return.
+// data, or keep the tools but blank out the values in what they return (ChatEngineOptions.ResultFilter
+// = ToolResultRedactor.Redact, so the user's own view of a result stays whole).
 
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -23,7 +24,7 @@ public sealed class FilteredToolCatalog(IToolCatalog inner) : IToolCatalog
     /// <summary>Tools that answer about Therion, ThIDE or the UI — never about the survey's contents.</summary>
     public static IReadOnlySet<string> DataFree { get; } = new HashSet<string>(StringComparer.Ordinal)
     {
-        "server_info", "describe_command", "explain_diagnostic", "search_thbook",
+        "describe_command", "explain_diagnostic", "search_thbook",
         "convert_coordinates", "convert_units", "get_declination",
         "list_commands", "run_command", "list_settings", "get_setting", "set_setting",
         "focus_tool", "show_toast", "set_layout", "reset_layout", "save_all",
@@ -37,18 +38,6 @@ public sealed class FilteredToolCatalog(IToolCatalog inner) : IToolCatalog
             : Task.FromResult(new ToolOutcome($"Error: '{name}' is not available: the user keeps project data from the model.", false));
 }
 
-/// <summary>Passes every result through <see cref="ToolResultRedactor"/> (the Redact policy).</summary>
-public sealed class RedactingToolCatalog(IToolCatalog inner) : IToolCatalog
-{
-    public IReadOnlyList<ToolDescriptor> Tools => inner.Tools;
-
-    public async Task<ToolOutcome> CallAsync(string name, IReadOnlyDictionary<string, object?> arguments, CancellationToken ct)
-    {
-        var outcome = await inner.CallAsync(name, arguments, ct).ConfigureAwait(false);
-        return outcome with { Content = ToolResultRedactor.Redact(outcome.Content) };
-    }
-}
-
 /// <summary>
 /// Best-effort removal of survey data from a tool result: the JSON keeps its shape, its keys, its
 /// booleans, diagnostic codes and severities, and counts; other numbers become <c>#</c> and other text
@@ -58,6 +47,8 @@ public static class ToolResultRedactor
 {
     private static readonly HashSet<string> KeptText = new(StringComparer.OrdinalIgnoreCase)
         { "code", "severity", "kind", "type", "status", "action", "tool", "dimension", "source", "unit", "units" };
+
+    private static readonly System.Text.RegularExpressions.Regex DiagnosticCode = new(@"^TH\d{4}$");
 
     private static readonly string[] CountSuffixes = ["count", "total", "offset", "limit", "errors", "warnings", "line", "column", "edits", "newerrors", "newwarnings", "comparablepieces"];
 
@@ -83,8 +74,7 @@ public static class ToolResultRedactor
                 return a;
             case JsonValue v when v.GetValueKind() == JsonValueKind.String:
                 var s = v.GetValue<string>();
-                return key is not null && KeptText.Contains(key) || s.StartsWith("TH", StringComparison.Ordinal) && s.Length <= 12
-                    ? v : JsonValue.Create("…");
+                return key is not null && KeptText.Contains(key) || DiagnosticCode.IsMatch(s) ? v : JsonValue.Create("…");
             case JsonValue v when v.GetValueKind() == JsonValueKind.Number:
                 return key is not null && CountSuffixes.Any(c => key.EndsWith(c, StringComparison.OrdinalIgnoreCase)) ? v : JsonValue.Create("#");
             default:

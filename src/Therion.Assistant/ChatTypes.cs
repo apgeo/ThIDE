@@ -21,6 +21,9 @@ public sealed record ChatEngineOptions(string Endpoint, string Model)
     /// <summary>Ask the user before a preview call (<c>dryRun: true</c>) too; off by default, previews change nothing.</summary>
     public bool AskForPreviews { get; init; }
 
+    /// <summary>Applied to each tool result before the model sees it (not to what the user is shown).</summary>
+    public Func<string, string>? ResultFilter { get; init; }
+
     /// <summary>Request server-sent-events streaming and surface partial text via
     /// <see cref="AssistantDelta"/>. Off by default; the pane turns it on (AI-08.2).</summary>
     public bool Stream { get; init; }

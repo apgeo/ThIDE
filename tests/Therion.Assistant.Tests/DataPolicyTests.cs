@@ -50,11 +50,11 @@ public sealed class DataPolicyTests
     }
 
     [Fact]
-    public async Task Redacting_RedactsEveryResult()
+    public void Redactor_KeepsOnlyRealDiagnosticCodes()
     {
-        var catalog = new RedactingToolCatalog(new FakeCatalog(Tool("read_file", """{"text":"survey a"}""")));
-        var outcome = await catalog.CallAsync("read_file", new Dictionary<string, object?>(), default);
-        Assert.Equal("""{"text":"…"}""", outcome.Content);
+        var red = JsonNode.Parse(ToolResultRedactor.Redact("""{"a":"TH0020","b":"THEODORA"}"""))!;
+        Assert.Equal("TH0020", (string?)red["a"]);
+        Assert.Equal("…", (string?)red["b"]);
     }
 
     [Fact]

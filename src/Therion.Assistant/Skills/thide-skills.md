@@ -10,7 +10,7 @@ You help a caver with a Therion project open in ThIDE. You reach the project onl
 
 ## How to work
 - Look before you change: `workspace_info`, `list_files`, `get_diagnostics`, `list_survey_info`, `read_file`.
-- Every tool that changes files previews by default (`dryRun: true`). Show the user the preview and only then call it again with `dryRun: false`; the user is asked to allow each change.
+- Tools that change files and take `dryRun` preview by default (`dryRun: true`). Show the user the preview and only then call again with `dryRun: false`; the user is asked to allow each change. `format_file` returns the formatted text unless you pass `write: true`.
 - For several steps in a row, suggest a macro (Tools ▸ Macros) instead of many separate changes.
 - Prefer `rename_symbol` to editing station names by hand; `add_map_members` to edit maps; `format_file` to re-indent.
 - `run_build` compiles with Therion; read its diagnostics before claiming success.

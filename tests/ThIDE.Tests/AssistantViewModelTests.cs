@@ -660,4 +660,21 @@ public class AssistantViewModelTests
         Assert.Equal(AssistantDataPolicy.HideContent, settings.Current.AssistantDataPolicy);
         Assert.True(vm.SendCommand.CanExecute(null));
     }
+
+    [Fact]
+    public async Task DataPolicy_ChangedInPreferences_UnlocksThePane_AndStartsANewChat()
+    {
+        var settings = new FakeSettings();
+        settings.Save(settings.Current with { AssistantDataPolicyChosen = false });
+        var assistant = AnswerOf("ok");
+        var vm = NewVm(assistant, settings);
+
+        settings.Save(settings.Current with { AssistantDataPolicy = AssistantDataPolicy.Redact, AssistantDataPolicyChosen = true });
+
+        Assert.False(vm.NeedsDataPolicy);
+        Assert.Equal(1, assistant.NewConversationCalls);
+        vm.Input = "hi";
+        await vm.SendCommand.ExecuteAsync(null);
+        Assert.Contains(vm.Items, i => i is UserChatItem);
+    }
 }

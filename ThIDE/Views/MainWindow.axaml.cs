@@ -886,9 +886,14 @@ public partial class MainWindow : Window
                 // The tools take paths inside the project: pass them relative to it.
                 if (value is not null && AppServices.Provider.GetService<IWorkspaceSession>()?.RootPath is { } root)
                 {
-                    var rel = Path.GetRelativePath(root, value);
-                    if (!rel.StartsWith("..", StringComparison.Ordinal) && !Path.IsPathRooted(rel)) value = rel.Replace('\\', '/');
-                    else AppServices.Provider.GetService<INotificationService>()?.Warning(macro.Title, ThIDE.Resources.Tr.Get("Macro_OutsideProject"));
+                    var rel = Path.GetRelativePath(root, value).Replace('\\', '/');
+                    if (rel == ".." || rel.StartsWith("../", StringComparison.Ordinal) || Path.IsPathRooted(rel))
+                    {
+                        // The tools would refuse it: say why and stop here rather than run a failing preview.
+                        AppServices.Provider.GetService<INotificationService>()?.Warning(macro.Title, ThIDE.Resources.Tr.Get("Macro_OutsideProject"));
+                        return null;
+                    }
+                    value = rel;
                 }
             }
             else

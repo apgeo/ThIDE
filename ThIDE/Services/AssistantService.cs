@@ -61,6 +61,7 @@ public sealed class AssistantService : IAssistantService
     private readonly IMcpHostService _host;
     private readonly ILogService _log;
     private readonly IWorkspaceSession? _workspace;
+    private readonly IWorkspaceTrustService? _trust;
 
     // One HttpClient for the model endpoint's lifetime; generous timeout — a 30B model on CPU
     // offload can legitimately take minutes per completion (same budget as the eval harness).
@@ -79,24 +80,28 @@ public sealed class AssistantService : IAssistantService
     private McpToolCatalog? _catalog;
     private string? _connectedToken;
     private ChatSession? _session;
+    private AssistantDataPolicy _sessionPolicy = AssistantDataPolicy.SendAll;
     private bool _disposed;
 
-    public AssistantService(IAppSettingsService settings, IMcpHostService host, ILogService log, IWorkspaceSession workspace)
-        : this(settings, host, log, DefaultConversationPath(), workspace) { }
+    public AssistantService(IAppSettingsService settings, IMcpHostService host, ILogService log,
+        IWorkspaceSession workspace, IWorkspaceTrustService trust)
+        : this(settings, host, log, DefaultConversationPath(), workspace, trust) { }
 
     // Test seam (InternalsVisibleTo ThIDE.Tests): a conversation file under a temp dir keeps a test
     // from reading or writing the developer's real %AppData%/ThIDE conversation.
     internal AssistantService(IAppSettingsService settings, IMcpHostService host, ILogService log, string conversationPath,
-        IWorkspaceSession? workspace = null)
+        IWorkspaceSession? workspace = null, IWorkspaceTrustService? trust = null)
     {
         _settings = settings;
         _host = host;
         _log = log;
         _workspace = workspace;
+        _trust = trust;
         _conversationPath = conversationPath;
-        // With project data kept from the model, nothing of a conversation is kept on disk either.
-        if (KeepsNothing(settings.Current)) TryDeleteConversation();
-        else _restored = LoadConversation(conversationPath);
+        // Only a conversation held under "send everything" is kept on disk: one saved then must not
+        // be resent after the user has narrowed what the model may see.
+        if (settings.Current.AssistantDataPolicy == AssistantDataPolicy.SendAll) _restored = LoadConversation(conversationPath);
+        else TryDeleteConversation();
     }
 
     public string ModelLabel => $"{_settings.Current.AssistantModel} @ {_settings.Current.AssistantEndpoint}";
@@ -110,22 +115,21 @@ public sealed class AssistantService : IAssistantService
         {
             var current = _settings.Current;
             IToolCatalog catalog = await EnsureConnectedAsync(ct);
-            catalog = current.AssistantDataPolicy switch
-            {
-                AssistantDataPolicy.HideContent => new FilteredToolCatalog(catalog),
-                AssistantDataPolicy.Redact => new RedactingToolCatalog(catalog),
-                _ => catalog,
-            };
+            if (current.AssistantDataPolicy == AssistantDataPolicy.HideContent) catalog = new FilteredToolCatalog(catalog);
             var engine = new ChatEngine(_http, new ChatEngineOptions(current.AssistantEndpoint, current.AssistantModel)
             {
                 MaxTurns = current.AssistantMaxTurns,
                 SynthesizeFinalAnswer = current.AssistantSynthesizeFinalAnswer,
                 Stream = current.AssistantStreaming,
+                ResultFilter = current.AssistantDataPolicy == AssistantDataPolicy.Redact ? ToolResultRedactor.Redact : null,
             });
             // Continue the restored conversation on the first turn after a restart; otherwise start a
             // fresh one, seeding the workspace context card when the setting asks for it (CD-02).
-            if (KeepsNothing(current)) _restored = null;
+            // A conversation begun under another data policy holds what this one may keep out.
+            if (current.AssistantDataPolicy != _sessionPolicy) _session = null;
+            if (current.AssistantDataPolicy != AssistantDataPolicy.SendAll) _restored = null;
             _session ??= _restored ?? await NewSessionAsync(current, ct);
+            _sessionPolicy = current.AssistantDataPolicy;
             _restored = null;
 
             var result = await engine.RunAsync(_session, userMessage, catalog, callbacks, ct);
@@ -235,11 +239,9 @@ public sealed class AssistantService : IAssistantService
         return settings.AssistantSkillPack ? prompt + "\n\n" + SkillPackText(settings) : prompt;
     }
 
-    private static bool KeepsNothing(AppSettings settings) => settings.AssistantDataPolicy == AssistantDataPolicy.HideContent;
-
     /// <summary>The built-in pack plus the user's notes (assistant-skills.md next to the settings) and the
     /// project's (assistant.md in its config folder). The project's notes are project data, so they stay
-    /// out when the user keeps project data from the model.</summary>
+    /// out unless everything may be sent; and they steer the model, so only a trusted folder's count.</summary>
     private string SkillPackText(AppSettings settings)
     {
         static string? Read(string? path)
@@ -248,8 +250,9 @@ public sealed class AssistantService : IAssistantService
             catch (Exception) { return null; }
         }
         var user = Read(Path.Combine(Path.GetDirectoryName(_conversationPath) ?? "", "assistant-skills.md"));
-        var project = settings.AssistantDataPolicy == AssistantDataPolicy.SendAll
-            ? Read(ProjectLocalConfig.PathFor(_workspace?.RootPath, settings.ProjectConfigLocation, "assistant.md"))
+        var root = _workspace?.RootPath;
+        var project = settings.AssistantDataPolicy == AssistantDataPolicy.SendAll && _trust?.Get(root) == TrustState.Trusted
+            ? Read(ProjectLocalConfig.PathFor(root, settings.ProjectConfigLocation, "assistant.md"))
             : null;
         var (text, warnings) = SkillPack.Assemble(user, project);
         foreach (var w in warnings) _log.Warning($"[Assistant] {w}");
@@ -313,7 +316,7 @@ public sealed class AssistantService : IAssistantService
     private void SaveConversation()
     {
         if (_session is null) return;
-        if (KeepsNothing(_settings.Current)) { TryDeleteConversation(); return; }
+        if (_sessionPolicy != AssistantDataPolicy.SendAll) { TryDeleteConversation(); return; }
         try
         {
             var dir = Path.GetDirectoryName(_conversationPath);

@@ -191,12 +191,14 @@ exactly the same tools, with the same safety rails.
 Tools that only read run silently. Any tool that writes (an edit, a scaffold, an export, a build)
 pauses the conversation on an **Allow / Deny** card showing the exact call and its arguments —
 nothing touches a file until you allow it, and the server still previews before applying. A preview
-call (`dryRun: true`) changes nothing, so it runs without a card; the call that applies it asks.
+call (`dryRun: true`, on a tool that has that parameter) changes nothing, so it runs without a card;
+the call that applies it asks.
 
 The panel's instructions include the **skill pack**: the built-in text (`therion-mcp skills print`),
 then your notes from `assistant-skills.md` next to ThIDE's settings file, then the project's from
 `assistant.md` in the project's config folder (`.thide/`, or the per-project folder under the app's
-settings when **Preferences ▸ General** says so). Turn it off under **Preferences ▸ MCP**.
+settings when **Preferences ▸ General** says so). The project's notes are used only in a folder you
+have trusted and only when everything may be sent. Turn the pack off under **Preferences ▸ MCP**.
 
 **What the model may see.** Before the first question the panel asks, and **Preferences ▸ MCP**
 can change it later:
@@ -205,7 +207,10 @@ can change it later:
 |---|---|
 | **Everything** (default) | All tools and their full results. Right for a model on this computer. |
 | **Keep project data from the model** | Only the tools that answer about Therion, ThIDE and the program (command help, diagnostics explained, the Therion book, unit and coordinate conversion, settings, layout). No workspace context, no project notes; the conversation is not saved. |
-| **Blank out values** | All tools, but names, numbers and text in their results become `…` / `#` placeholders; counts, diagnostic codes, severities and line numbers stay. Best effort only — what you type, and names the model writes into its own calls, still reach it. |
+| **Blank out values** | All tools, but names, numbers and text in their results become `…` / `#` placeholders before the model sees them (the cards in the panel still show the full result); counts, diagnostic codes, severities and line numbers stay. Best effort only — what you type, and names the model writes into its own calls, still reach it. |
+
+Changing the choice starts a new conversation; only conversations held under **Everything** are saved
+for the next start.
 
 In LM Studio, load the model and turn on **Developer ▸ Local Server** (default port 1234); the
 panel needs nothing else.

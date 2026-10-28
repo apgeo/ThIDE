@@ -75,11 +75,20 @@ public sealed partial class AutomationSession : ObservableObject, IAutomationSes
             : new AutomationRow(DateTime.Now, text, isError);
     }
 
-    public void Complete(AutomationState state, int? exitCode = null) => Post(() => { State = state; ExitCode = exitCode; });
+    public void Complete(AutomationState state, int? exitCode = null)
+    {
+        // A finished run has nothing to cancel, and its token source may already be disposed.
+        _cancel = null;
+        Post(() => { State = state; ExitCode = exitCode; });
+    }
 
     public void OnCancel(Action cancel) => _cancel = cancel;
 
-    public void Cancel() => _cancel?.Invoke();
+    public void Cancel()
+    {
+        try { _cancel?.Invoke(); }
+        catch (ObjectDisposedException) { /* the run ended between the click and here */ }
+    }
 
     public string Text() => string.Join(Environment.NewLine, Rows.Select(r => r.Text));
 
