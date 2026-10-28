@@ -88,4 +88,28 @@ public class NewTripViewModelTests
 
         Assert.False(vm.CanCreate);
     }
+
+    [Theory]
+    [InlineData("a/b")]
+    [InlineData("/tmp/x")]
+    public async Task A_survey_name_with_a_path_in_it_blocks(string name)
+    {
+        var (vm, _, _) = await Make();
+        vm.Stations.SelectByPayload(p => p.ToString()!.Contains("a.2"));
+
+        vm.SurveyName = name;
+
+        Assert.False(vm.CanCreate);
+    }
+
+    [Fact]
+    public async Task A_malformed_date_blocks()
+    {
+        var (vm, _, _) = await Make();
+        vm.Stations.SelectByPayload(p => p.ToString()!.Contains("a.2"));
+
+        vm.Date = "2026.ab.cd";
+
+        Assert.False(vm.CanCreate);
+    }
 }

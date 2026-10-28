@@ -37,4 +37,21 @@ public class TripDefaultsTests
     [InlineData("2026", "2026.00.00")]
     [InlineData("-", null)]
     public void Sortable_dates(string value, string? expected) => Assert.Equal(expected, TripDefaults.SortableDate(value));
+
+    [Fact]
+    public void Every_calibration_and_instrument_line_of_the_latest_trip_is_kept()
+    {
+        var text =
+            "survey a\n  centreline\n    date 2026.10.21\n    calibrate compass 1.5\n    calibrate clino -0.5\n" +
+            "    instrument compass \"X\"\n    instrument clino \"Y\"\n    data normal from to length compass clino\n  endcenterline\n" +
+            "  centreline\n    date 2020.01.01\n    units length feet\n  endcentreline\nendsurvey\n";
+        var files = new Dictionary<string, string> { ["/c/a.th"] = text };
+        var parsed = files.ToDictionary(kv => kv.Key, kv => new ThParser().Parse(kv.Key, kv.Value));
+
+        var d = TripDefaults.From(WorkspaceSemanticModel.Build(parsed, Array.Empty<XviFile>()), p => files.GetValueOrDefault(p));
+
+        Assert.Equal("calibrate compass 1.5\ncalibrate clino -0.5", d.Calibrate);
+        Assert.Equal("instrument compass \"X\"\ninstrument clino \"Y\"", d.Instrument);
+        Assert.Null(d.Units); // not the older block's
+    }
 }

@@ -104,4 +104,36 @@ public class ProjectTemplateTests : IDisposable
         Assert.Equal("mine", File.ReadAllText(Path.Combine(_root, "cave.th")));
         Assert.False(File.Exists(Path.Combine(_root, "cave.thconfig")));
     }
+
+    private string Folder(string name, string manifest)
+    {
+        var dir = Path.Combine(_root, "src2", name);
+        Directory.CreateDirectory(dir);
+        File.WriteAllText(Path.Combine(dir, "template.json"), manifest);
+        File.WriteAllText(Path.Combine(dir, "a.th"), "x");
+        return dir;
+    }
+
+    [Fact]
+    public void Duplicate_or_odd_variable_ids_are_refused()
+    {
+        Assert.NotNull(ProjectTemplateEngine.LoadFolder(Folder("d", """{ "id": "d", "variables": [ { "id": "n" }, { "id": "n" } ] }""")).Error);
+        Assert.NotNull(ProjectTemplateEngine.LoadFolder(Folder("e", """{ "id": "e", "variables": [ { "id": "cave-name" } ] }""")).Error);
+    }
+
+    [Fact]
+    public void A_macos_zip_with_its_extra_folder_imports_and_a_built_in_id_does_not()
+    {
+        var src = Path.Combine(_root, "zipsrc");
+        Directory.CreateDirectory(Path.Combine(src, "mine"));
+        Directory.CreateDirectory(Path.Combine(src, "__MACOSX", "mine"));
+        File.WriteAllText(Path.Combine(src, "mine", "template.json"), """{ "id": "mine" }""");
+        File.WriteAllText(Path.Combine(src, "__MACOSX", "mine", "._template.json"), "junk");
+        var zip = Path.Combine(_root, "mine.zip");
+        ZipFile.CreateFromDirectory(src, zip);
+
+        Assert.Null(ProjectTemplateEngine.Import(zip, Path.Combine(_root, "lib")).Error);
+        Assert.NotNull(ProjectTemplateEngine.Import(Folder("sc", """{ "id": "single-cave" }"""), Path.Combine(_root, "lib")).Error);
+        Assert.Equal(["mine"], ProjectTemplateEngine.LoadLibrary(Path.Combine(_root, "lib")).Select(t => t.Id));
+    }
 }

@@ -96,7 +96,7 @@ public sealed partial class NewTripViewModel : ObservableObject
             {
                 _scopes = SurveyScopeResolver.Build(_env.Workspace, Cached);
                 _ctx = new LinkContext(_env.Workspace, _scopes, _env.ReadText, Cached, _env.Exists);
-                defaults = TripDefaults.From(_env.Workspace, _env.ReadText);
+                defaults = TripDefaults.From(_env.Workspace, _env.ReadText, Cached);
             });
             Surveys.SetSurveys(LinkCatalog.Surveys(_env.Workspace, _scopes!));
             Stations.SetStations(LinkCatalog.Stations(_env.Workspace, _scopes!), showFile: true);
@@ -214,9 +214,13 @@ public sealed partial class NewTripViewModel : ObservableObject
         Plan = null;
         CanCreate = false;
         var warnings = new List<WarningRow>();
-        if (!ScaffoldValueRules.IsSurveyName(SurveyName.Trim())) warnings.Add(new(Tr.Get("NewTrip_BadName"), true));
+        // The survey name is also the file name: no path separators.
+        if (!ScaffoldValueRules.IsSurveyName(SurveyName.Trim()) || SurveyName.Contains('/')
+            || SurveyName.Trim().IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+            warnings.Add(new(Tr.Get("NewTrip_BadName"), true));
         if (!ScaffoldValueRules.IsStationRef(FirstStation.Trim()) || FirstStation.Contains('@')) warnings.Add(new(Tr.Get("NewTrip_BadStation"), true));
-        if (TripDefaults.SortableDate(Date) is null) warnings.Add(new(Tr.Get("NewTrip_BadDate"), true));
+        if (!System.Text.RegularExpressions.Regex.IsMatch(Date.Trim(), @"^\d{4}(\.\d{1,2}(\.\d{1,2})?)?$"))
+            warnings.Add(new(Tr.Get("NewTrip_BadDate"), true));
         if (Stations.SelectedStation is not { } tie || SelectedDestination is not { } dest || _ctx is null)
         {
             if (Stations.SelectedStation is null) warnings.Add(new(Tr.Get("NewTrip_PickTieIn"), true));

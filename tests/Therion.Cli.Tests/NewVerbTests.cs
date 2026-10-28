@@ -38,4 +38,11 @@ public class NewVerbTests : IDisposable
         Assert.Equal(2, Run("nope", "--out", _root));
         Assert.Contains("error:", _err.ToString());
     }
+
+    [Fact]
+    public void An_unknown_field_is_a_usage_error()
+    {
+        Assert.Equal(2, Run("single-cave", "--out", Path.Combine(_root, "y"), "--var", "projet=foo"));
+        Assert.Contains("has no field 'projet'", _err.ToString());
+    }
 }

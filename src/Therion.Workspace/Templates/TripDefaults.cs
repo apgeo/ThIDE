@@ -16,43 +16,57 @@ public sealed record TripDefaults(
     public static TripDefaults Empty { get; } = new(null, null, null, null, null, null, null, []);
 
     /// <summary>
-    /// Reads the defaults from the workspace. <paramref name="readText"/> gives a file's text (the
-    /// editor buffer when open).
+    /// Reads the defaults from the workspace: the centreline holding the latest <c>date</c> gives
+    /// its units, calibrations and instruments (every line of each), its last data order and its team.
     /// </summary>
-    public static TripDefaults From(WorkspaceSemanticModel ws, Func<string, string?> readText)
+    /// <param name="readText">A file's text (the editor buffer when open).</param>
+    /// <param name="ast">A file's parse, when the caller already has one (else it is parsed here).</param>
+    public static TripDefaults From(WorkspaceSemanticModel ws, Func<string, string?> readText, Func<string, TherionFile?>? ast = null)
     {
         string? bestFile = null, bestDate = null, bestText = null;
-        int bestOffset = 0;
+        BlockCommand? bestBlock = null;
         foreach (var path in ws.PerFile.Keys.Where(p => p.EndsWith(".th", StringComparison.OrdinalIgnoreCase)).Order(StringComparer.Ordinal))
         {
             if (readText(path) is not { } text) continue;
-            var ast = new ThParser().Parse(path, text).Value;
-            foreach (var date in Dates(ast?.Children ?? []))
+            var tree = ast?.Invoke(path) ?? new ThParser().Parse(path, text).Value;
+            foreach (var (block, date) in DatedBlocks(tree?.Children ?? []))
             {
                 var key = SortableDate(date.Value);
                 if (key is null || bestDate is not null && string.CompareOrdinal(key, bestDate) <= 0) continue;
-                (bestFile, bestDate, bestText) = (path, key, text);
-                // Read the commands of the centreline that holds this date: everything up to its end.
-                bestOffset = text.IndexOf("endcentreline", date.Span.StartOffset, StringComparison.OrdinalIgnoreCase) is var e and >= 0 ? e
-                           : text.IndexOf("endcenterline", date.Span.StartOffset, StringComparison.OrdinalIgnoreCase) is var e2 and >= 0 ? e2
-                           : text.Length;
+                (bestFile, bestDate, bestText, bestBlock) = (path, key, text, block);
             }
         }
 
         var members = DataAnalytics.TeamMembers(ws).Select(m => m.Name).ToList();
-        if (bestFile is null) return Empty with { TeamMembers = members };
+        if (bestBlock is null) return Empty with { TeamMembers = members };
 
-        var vars = SnippetVariables.Standard(new SnippetContext(bestFile, bestText!, bestOffset, DateTime.Now));
-        return new TripDefaults(vars("LAST_UNITS"), vars("LAST_CALIBRATE"), vars("LAST_INSTRUMENT"), vars("LAST_DATA"),
-            vars("TEAM_RECENT"), bestFile, bestDate, members);
+        var commands = bestBlock.Children.OfType<TherionCommand>().ToList();
+        string? Lines(string keyword, bool lastOnly = false)
+        {
+            var hits = commands.Where(c => string.Equals(c.Keyword, keyword, StringComparison.OrdinalIgnoreCase))
+                .Select(c => Text(bestText!, c)).ToList();
+            if (hits.Count == 0) return null;
+            return lastOnly ? hits[^1] : string.Join("\n", hits);
+        }
+        return new TripDefaults(Lines("units"), Lines("calibrate"), Lines("instrument"), Lines("data", lastOnly: true),
+            Lines("team"), bestFile, bestDate, members);
     }
 
-    private static IEnumerable<DateCommand> Dates(IEnumerable<TherionNode> nodes)
+    private static string Text(string text, TherionNode node)
+    {
+        int start = node.Span.StartOffset, end = Math.Min(text.Length, start + node.Span.Length);
+        return text[start..end].TrimEnd();
+    }
+
+    // Each centreline with the date line inside it.
+    private static IEnumerable<(BlockCommand Block, DateCommand Date)> DatedBlocks(IEnumerable<TherionNode> nodes)
     {
         foreach (var n in nodes)
         {
-            if (n is DateCommand d) yield return d;
-            else if (n is BlockCommand b) foreach (var inner in Dates(b.Children)) yield return inner;
+            if (n is not BlockCommand b) continue;
+            if (b is CentrelineCommand)
+                foreach (var d in b.Children.OfType<DateCommand>()) yield return (b, d);
+            foreach (var inner in DatedBlocks(b.Children)) yield return inner;
         }
     }
 

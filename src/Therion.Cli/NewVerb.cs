@@ -52,7 +52,13 @@ public static class NewVerb
                 var kv = args[++i];
                 int eq = kv.IndexOf('=');
                 if (eq <= 0) { stderr.WriteLine($"error: --var expects key=value, got '{kv}'."); return 2; }
-                values[kv[..eq]] = kv[(eq + 1)..];
+                var key = kv[..eq];
+                if (!template.Variables.Any(v => v.Id == key))
+                {
+                    stderr.WriteLine($"error: '{template.Id}' has no field '{key}' (fields: {string.Join(", ", template.Variables.Select(v => v.Id))}).");
+                    return 2;
+                }
+                values[key] = kv[(eq + 1)..];
             }
             else { stderr.WriteLine($"error: unexpected argument '{args[i]}'."); return 2; }
         }
@@ -77,12 +83,6 @@ public static class NewVerb
         return 0;
     }
 
-    private static List<ProjectTemplate> Available(string library)
-    {
-        var list = ProjectTemplateEngine.BuiltIns.ToList();
-        if (Directory.Exists(library))
-            foreach (var dir in Directory.EnumerateDirectories(library).Order(StringComparer.Ordinal))
-                if (ProjectTemplateEngine.LoadFolder(dir).Template is { } t) list.Add(t);
-        return list;
-    }
+    private static List<ProjectTemplate> Available(string library) =>
+        [.. ProjectTemplateEngine.BuiltIns, .. ProjectTemplateEngine.LoadLibrary(library)];
 }

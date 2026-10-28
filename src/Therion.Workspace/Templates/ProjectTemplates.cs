@@ -81,7 +81,14 @@ public static partial class ProjectTemplateEngine
                 ? new TemplateFileEntry(rel, File.ReadAllText(path))
                 : new TemplateFileEntry(rel, null, rel));
         }
-        var variables = (dto.Variables ?? []).Where(v => !string.IsNullOrWhiteSpace(v.Id)).Select(v => new TemplateVariable(
+        var ids = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var v in dto.Variables ?? [])
+        {
+            if (string.IsNullOrWhiteSpace(v.Id) || !VariableIdRx().IsMatch(v.Id))
+                return (null, $"{manifest}: variable id '{v.Id}' must be letters, digits and _ (it is written as ${{id}})");
+            if (!ids.Add(v.Id)) return (null, $"{manifest}: variable '{v.Id}' is listed twice");
+        }
+        var variables = (dto.Variables ?? []).Select(v => new TemplateVariable(
             v.Id!, v.Prompt ?? v.Id!, v.Default ?? "",
             Enum.TryParse<TemplateVariableType>(v.Type, ignoreCase: true, out var t) ? t : TemplateVariableType.Text,
             v.Choices, v.Required ?? true)).ToList();
@@ -102,17 +109,30 @@ public static partial class ProjectTemplateEngine
             else if (source.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)) ZipFile.ExtractToDirectory(source, staging);
             else return (null, $"{source}: not a folder or a .zip");
 
+            // The template at the root, or in the one top-level folder (ignoring the extra folders
+            // archivers add, such as macOS's __MACOSX).
+            var folders = Directory.GetDirectories(staging)
+                .Where(d => Path.GetFileName(d) is var n && n != "__MACOSX" && !n.StartsWith('.')).ToArray();
             var root = File.Exists(Path.Combine(staging, "template.json")) ? staging
-                     : Directory.GetDirectories(staging) is [var only] && File.Exists(Path.Combine(only, "template.json")) ? only
+                     : folders is [var only] && File.Exists(Path.Combine(only, "template.json")) ? only
                      : null;
             if (root is null) return (null, $"{Path.GetFileName(source)}: no template.json");
             var (template, error) = LoadFolder(root);
             if (template is null) return (null, error);
             if (!IsSafeId(template.Id)) return (null, $"'{template.Id}' is not a usable template id");
+            if (BuiltIns.Any(b => b.Id == template.Id)) return (null, $"'{template.Id}' is the id of a built-in template; give the template another id");
 
+            // Replace an earlier import of the same id only once the new one is in place.
             var target = Path.Combine(libraryFolder, template.Id);
-            if (Directory.Exists(target)) Directory.Delete(target, recursive: true);
-            Directory.Move(root, target);
+            var previous = Directory.Exists(target) ? target + ".old-" + Guid.NewGuid().ToString("N")[..8] : null;
+            if (previous is not null) Directory.Move(target, previous);
+            try { Directory.Move(root, target); }
+            catch
+            {
+                if (previous is not null) Directory.Move(previous, target);
+                throw;
+            }
+            if (previous is not null) Directory.Delete(previous, recursive: true);
             return LoadFolder(target);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
@@ -143,6 +163,21 @@ public static partial class ProjectTemplateEngine
 
     [GeneratedRegex(@"^\d{4}\.\d{2}\.\d{2}$")]
     private static partial Regex DateRx();
+
+    [GeneratedRegex(@"^[A-Za-z_][A-Za-z0-9_]*$")]
+    private static partial Regex VariableIdRx();
+
+    /// <summary>The templates imported into a library folder (one sub-folder each; hidden ones skipped).</summary>
+    public static IReadOnlyList<ProjectTemplate> LoadLibrary(string library)
+    {
+        if (!Directory.Exists(library)) return [];
+        return Directory.EnumerateDirectories(library)
+            .Where(d => !Path.GetFileName(d).StartsWith('.') && !Path.GetFileName(d).Contains(".old-"))
+            .Order(StringComparer.Ordinal)
+            .Select(d => LoadFolder(d).Template)
+            .OfType<ProjectTemplate>()
+            .ToList();
+    }
 
     /// <summary>The values to start the form with: each variable's default (dates default to today).</summary>
     public static Dictionary<string, string> Defaults(ProjectTemplate template, DateTime today) =>

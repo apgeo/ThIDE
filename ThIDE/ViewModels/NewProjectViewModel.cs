@@ -68,10 +68,8 @@ public sealed partial class NewProjectViewModel : ObservableObject
         Templates.Clear();
         foreach (var t in ProjectTemplateEngine.BuiltIns)
             Templates.Add(new ProjectTemplateRow(t, t.TitleKey is { } k ? Tr.Get(k) : t.Title, false));
-        if (Directory.Exists(_library))
-            foreach (var dir in Directory.EnumerateDirectories(_library).Where(d => !Path.GetFileName(d).StartsWith('.')).Order(StringComparer.Ordinal))
-                if (ProjectTemplateEngine.LoadFolder(dir).Template is { } t)
-                    Templates.Add(new ProjectTemplateRow(t, t.Title, true));
+        foreach (var t in ProjectTemplateEngine.LoadLibrary(_library))
+            Templates.Add(new ProjectTemplateRow(t, t.Title, true));
         SelectedTemplate = Templates.FirstOrDefault(t => t.Template.Id == select) ?? Templates.FirstOrDefault();
     }
 
@@ -132,7 +130,8 @@ public sealed partial class NewProjectViewModel : ObservableObject
     public void RemoveSelected()
     {
         if (SelectedTemplate is not { IsImported: true, Template.Folder: { } folder }) return;
-        try { Directory.Delete(folder, recursive: true); } catch (IOException) { }
+        try { Directory.Delete(folder, recursive: true); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { Message = ex.Message; return; }
         ReloadTemplates();
     }
 }
