@@ -1495,4 +1495,7 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Trust_Skipped" xml:space="preserve"><value>S-au omis comenzile proiectului: dosarul nu este de încredere</value></data>
   <data name="Trust_SkippedDetail" xml:space="preserve"><value>{0} nu au fost rulate.</value></data>
   <data name="Trust_TrustAction" xml:space="preserve"><value>Am încredere…</value></data>
+  <data name="Tool_Automation" xml:space="preserve"><value>Automatizare</value></data>
+  <data name="Menu_View_Automation" xml:space="preserve"><value>Automatizare</value></data>
+  <data name="Automation_Cancel" xml:space="preserve"><value>Anulează</value></data>
 </root>

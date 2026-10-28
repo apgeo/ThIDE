@@ -50,6 +50,7 @@ public sealed class DockFactory : Factory
     private readonly OutlineToolViewModel _outline;
     private readonly ProjectToolViewModel _project;
     private readonly LogToolViewModel _log;
+    private readonly AutomationToolViewModel _automation;
     private readonly LivePreviewToolViewModel _livePreview;
     private readonly MapViewerToolViewModel _mapViewer;
     private readonly Model3DViewerToolViewModel _model3dViewer;
@@ -88,8 +89,10 @@ public sealed class DockFactory : Factory
         SettingsToolViewModel settings,
         ThIDE.Services.ILayoutService? layoutState = null,
         ThIDE.Services.IAppSettingsService? appSettings = null,
-        ILogger<DockFactory>? logger = null)
+        ILogger<DockFactory>? logger = null,
+        AutomationToolViewModel? automation = null)
     {
+        _automation = automation ?? new AutomationToolViewModel();
         _welcome = welcome;
         _workspace = workspace;
         _objectBrowser = objectBrowser;
@@ -180,8 +183,10 @@ public sealed class DockFactory : Factory
         if (_rootDock is null) return;
         try
         {
-            if (!ContainsRef(_rootDock, tool) && FindDockById<IToolDock>(_rootDock, "RightTools") is { } right)
-                AddDockable(right, tool);
+            // The Automation panel belongs with the other output panes at the bottom.
+            var home = ReferenceEquals(tool, _automation) ? "BottomTools" : "RightTools";
+            if (!ContainsRef(_rootDock, tool) && FindDockById<IToolDock>(_rootDock, home) is { } dock)
+                AddDockable(dock, tool);
             SetActiveDockable(tool);
             SetFocusedDockable(_rootDock, tool);
             BringHostWindowToFront(tool);
@@ -429,7 +434,7 @@ public sealed class DockFactory : Factory
     private static string HomeRegion(string id) => id switch
     {
         "Workspace" or "Project" => "left",
-        "Diagnostics" or "CompilerOutput" or "GeneratedFiles" or "Log" => "bottom",
+        "Diagnostics" or "CompilerOutput" or "GeneratedFiles" or "Log" or "Automation" => "bottom",
         "ObjectBrowser" => "center",
         _ => "right",
     };
@@ -945,6 +950,7 @@ public sealed class DockFactory : Factory
         ["Outline"]        = _outline,
         ["Project"]        = _project,
         ["Log"]            = _log,
+        ["Automation"]     = _automation,
         ["LivePreview"]    = _livePreview,
         ["MapViewer"]      = _mapViewer,
         ["Model3DViewer"]  = _model3dViewer,
@@ -1272,6 +1278,7 @@ public sealed class DockFactory : Factory
             ["Outline"]        = () => _outline,
             ["Project"]        = () => _project,
             ["Log"]            = () => _log,
+            ["Automation"]     = () => _automation,
             ["LivePreview"]    = () => _livePreview,
             ["MapViewer"]      = () => _mapViewer,
             ["Model3DViewer"]  = () => _model3dViewer,

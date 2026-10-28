@@ -187,6 +187,8 @@
                 <MenuItem AutomationProperties.AutomationId="Menu.View.Project" Header="{l:Loc Menu_View_Project}" InputGesture="{l:Gesture ToggleProject}" Command="{Binding ToggleProjectCommand}" />
                 <MenuItem AutomationProperties.AutomationId="Menu.View.Log" Header="{l:Loc Menu_View_Log}" InputGesture="{l:Gesture ToggleLog}" Command="{Binding ToggleLogCommand}" />
                 <MenuItem AutomationProperties.AutomationId="Menu.View.Assistant" Header="{l:Loc Menu_View_Assistant}" Command="{Binding ToggleAssistantCommand}" />
+                <MenuItem Header="{l:Loc Menu_View_Automation}" Command="{Binding ToggleAutomationCommand}"
+                          AutomationProperties.AutomationId="Menu.View.Automation" />
                 <MenuItem Header="{l:Loc Menu_View_LivePreview}" InputGesture="{l:Gesture ToggleLivePreview}" Command="{Binding ToggleLivePreviewCommand}"
                           AutomationProperties.AutomationId="Menu.View.LivePreview"
                           IsVisible="{Binding LivePreviewEnabled}" />

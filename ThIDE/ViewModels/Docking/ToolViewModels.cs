@@ -170,6 +170,15 @@ public sealed class LogToolViewModel : ToolViewModelBase
 }
 
 /// <summary>live centreline preview (plan/elevation sketch).</summary>
+/// <summary>Output of hooks, tasks, macros and batch builds, one session per run.</summary>
+public sealed class AutomationToolViewModel : ToolViewModelBase
+{
+    public AutomationOutputViewModel Automation { get; }
+    public AutomationToolViewModel() : base("Automation", "Tool_Automation") => Automation = new AutomationOutputViewModel();
+    public AutomationToolViewModel(AutomationOutputViewModel automation, ILanguageService? lang = null)
+        : base("Automation", "Tool_Automation", lang) => Automation = automation;
+}
+
 public sealed class LivePreviewToolViewModel : ToolViewModelBase
 {
     [JsonIgnore] public LivePreviewViewModel Preview { get; }
@@ -270,4 +279,14 @@ public sealed class SettingsToolViewModel : ToolViewModelBase
         Settings = settings;
         Keyboard = keyboard;
     }
+}
+
+/// <summary>Converters for the Automation panel.</summary>
+public static class AutomationConverters
+{
+    private static readonly Avalonia.Media.IBrush Error = new Avalonia.Media.Immutable.ImmutableSolidColorBrush(Avalonia.Media.Color.FromRgb(0xE5, 0x39, 0x35));
+
+    /// <summary>Red for stderr lines; default text colour otherwise.</summary>
+    public static Avalonia.Data.Converters.IValueConverter ErrorBrush { get; } =
+        new Avalonia.Data.Converters.FuncValueConverter<bool, Avalonia.Media.IBrush?>(isError => isError ? Error : null);
 }

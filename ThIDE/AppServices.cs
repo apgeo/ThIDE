@@ -260,6 +260,9 @@ internal static class AppServices
         services.AddSingleton<ViewModels.Docking.OutlineToolViewModel>();
         services.AddSingleton<ViewModels.Docking.ProjectToolViewModel>();
         services.AddSingleton<ViewModels.Docking.LogToolViewModel>();       // #3
+        services.AddSingleton<ViewModels.AutomationOutputViewModel>();
+        services.AddSingleton<ViewModels.IAutomationOutput>(sp => sp.GetRequiredService<ViewModels.AutomationOutputViewModel>());
+        services.AddSingleton<ViewModels.Docking.AutomationToolViewModel>();
         services.AddSingleton<ViewModels.Docking.LivePreviewToolViewModel>();
         services.AddSingleton<ViewModels.Docking.MapViewerToolViewModel>();
         services.AddSingleton<ViewModels.Docking.Model3DViewerToolViewModel>();

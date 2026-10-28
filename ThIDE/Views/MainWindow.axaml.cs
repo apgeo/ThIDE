@@ -111,6 +111,7 @@ public partial class MainWindow : Window
                     docs.FindAllReferencesRequested += (_, args) => _ = HandleFindAllReferencesAsync(args.Raw, args.Kind);
                 }
                 AttachSnippetCatalog();
+                AttachAutomationPanel();
                 _crashRecovery = AppServices.Provider.GetService<ICrashRecoveryService>();
                 _mcpHost = AppServices.Provider.GetService<IMcpHostService>();
             }
@@ -618,6 +619,25 @@ public partial class MainWindow : Window
         var docs = AppServices.Provider.GetService<IDocumentService>();
         if (docs is not null)
             await docs.ActivateThconfigAsync(thconfig, new ThconfigActivation(SetWorkingDirectory: true, OpenInEditor: true, Notify: true));
+    }
+
+    // ----- automation panel -----------------------------------------------
+
+    /// <summary>Shows the Automation panel when a run starts, and opens the file:line a row names.</summary>
+    private void AttachAutomationPanel()
+    {
+        if (AppServices.Provider.GetService<AutomationOutputViewModel>() is not { } automation) return;
+        automation.SessionStarted += (_, _) => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            (DataContext as MainWindowViewModel)?.Factory.ShowToolById("Automation"));
+        automation.NavigateRequested += (_, row) =>
+        {
+            if (AppServices.Provider.GetService<IDocumentService>() is not { } docs || row.File is null) return;
+            var root = AppServices.Provider.GetService<IWorkspaceSession>()?.RootPath;
+            var path = Path.IsPathRooted(row.File) ? row.File : Path.Combine(root ?? "", row.File);
+            if (!File.Exists(path)) return;
+            var at = new Therion.Core.SourceLocation(row.Line, 1);
+            _ = docs.NavigateToSpanAsync(new Therion.Core.SourceSpan(path, at, at, 0, 0));
+        };
     }
 
     // ----- snippets -------------------------------------------------------

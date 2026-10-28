@@ -1495,4 +1495,7 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Trust_Skipped" xml:space="preserve"><value>Skipped project commands: the folder is not trusted</value></data>
   <data name="Trust_SkippedDetail" xml:space="preserve"><value>{0} were not run.</value></data>
   <data name="Trust_TrustAction" xml:space="preserve"><value>Trust…</value></data>
+  <data name="Tool_Automation" xml:space="preserve"><value>Automation</value></data>
+  <data name="Menu_View_Automation" xml:space="preserve"><value>Automation</value></data>
+  <data name="Automation_Cancel" xml:space="preserve"><value>Cancel</value></data>
 </root>

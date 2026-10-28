@@ -1543,6 +1543,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand] private void ToggleOutline()           => Activate(OutlineTool);
     [RelayCommand] private void ToggleProject()           => Activate(ProjectTool);
     [RelayCommand] private void ToggleLog()               => Activate(LogTool);      // #3
+    [RelayCommand] private void ToggleAutomation()        => _factory.ShowToolById("Automation");
     [RelayCommand] private void ToggleLivePreview()       => Activate(LivePreviewTool);
     [RelayCommand] private void ToggleMapViewer()         => Activate(MapViewerTool);
     [RelayCommand] private void ToggleAssistant()         => _factory.ShowTool(AssistantTool);   // AI-07 (absent from layouts saved before it existed → add on demand)
