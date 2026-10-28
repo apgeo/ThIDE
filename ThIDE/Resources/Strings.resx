@@ -1533,4 +1533,10 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Fix_InsertCs" xml:space="preserve"><value>Insert 'cs ' line</value></data>
   <data name="Fix_CommentOut" xml:space="preserve"><value>Comment out this line</value></data>
   <data name="Fix_CreateFile" xml:space="preserve"><value>Create file '{0}'</value></data>
+  <data name="Diag_Fix" xml:space="preserve"><value>Fix</value></data>
+  <data name="Diag_FixAll" xml:space="preserve"><value>Fix all '{0}' in the workspace…</value></data>
+  <data name="Diag_FixAllNone" xml:space="preserve"><value>None of these has a fix that can be applied without looking.</value></data>
+  <data name="Diag_FixAllSummary" xml:space="preserve"><value>{0} fixes in {1} files. {2} could not be fixed automatically and are left as they are. Untick any change you do not want.</value></data>
+  <data name="Diag_FixAllDone" xml:space="preserve"><value>Applied {0} changes.</value></data>
+  <data name="EditPreview_Apply" xml:space="preserve"><value>Apply</value></data>
 </root>

@@ -112,11 +112,42 @@ public partial class DiagnosticsViewModel : ViewModelBase
     partial void OnShowWarningsChanged(bool value) => ApplyFilter();
     partial void OnShowInfosChanged(bool value) => ApplyFilter();
     partial void OnOnlyReferencesChanged(bool value) => ApplyFilter();
-    partial void OnSelectedChanged(DiagnosticRow? value) => UpdateExplanation(value);
+    partial void OnSelectedChanged(DiagnosticRow? value)
+    {
+        UpdateExplanation(value);
+        OnPropertyChanged(nameof(CanFixAllSelected));
+        OnPropertyChanged(nameof(FixAllHeader));
+    }
+
+    /// <summary>Every diagnostic last loaded, unfiltered (fix-all reads their hints).</summary>
+    public IReadOnlyList<Diagnostic> All { get; private set; } = Array.Empty<Diagnostic>();
+
+    /// <summary>Raised by Fix on a row; the shell applies the row's fix.</summary>
+    public event EventHandler<Diagnostic>? FixRequested;
+    /// <summary>Raised by Fix all; the argument is the diagnostic code.</summary>
+    public event EventHandler<string>? FixAllRequested;
+
+    /// <summary>The selected row's code has a fix that may be applied everywhere.</summary>
+    public bool CanFixAllSelected => Selected is { } r && Therion.Workspace.Fixes.CodeFixes.BatchCodes.Contains(r.Code);
+    public string FixAllHeader => Selected is { } r ? string.Format(ThIDE.Resources.Tr.Get("Diag_FixAll"), r.Code) : string.Empty;
+
+    [RelayCommand]
+    private void FixSelected()
+    {
+        if (Selected is { } row && All.FirstOrDefault(d => d.Span == row.Span && d.Code.Value == row.Code) is { } d)
+            FixRequested?.Invoke(this, d);
+    }
+
+    [RelayCommand]
+    private void FixAllSelectedCode()
+    {
+        if (CanFixAllSelected) FixAllRequested?.Invoke(this, Selected!.Code);
+    }
 
     public void Load(IEnumerable<Diagnostic> diagnostics)
     {
-        _allRows = diagnostics
+        All = diagnostics as IReadOnlyList<Diagnostic> ?? diagnostics.ToList();
+        _allRows = All
             .Select(d => new DiagnosticRow(
                 d.Code, d.Severity.ToString(), d.Message,
                 d.Span.FilePath ?? string.Empty, d.Span.Start.Line, d.Span.Start.Column, d.Span))

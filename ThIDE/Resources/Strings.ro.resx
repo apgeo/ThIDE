@@ -1533,4 +1533,10 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Fix_InsertCs" xml:space="preserve"><value>Inserează o linie „cs ”</value></data>
   <data name="Fix_CommentOut" xml:space="preserve"><value>Transformă linia în comentariu</value></data>
   <data name="Fix_CreateFile" xml:space="preserve"><value>Creează fișierul „{0}”</value></data>
+  <data name="Diag_Fix" xml:space="preserve"><value>Corectează</value></data>
+  <data name="Diag_FixAll" xml:space="preserve"><value>Corectează toate „{0}” din spațiul de lucru…</value></data>
+  <data name="Diag_FixAllNone" xml:space="preserve"><value>Niciuna nu are o corectură care să poată fi aplicată fără verificare.</value></data>
+  <data name="Diag_FixAllSummary" xml:space="preserve"><value>{0} corecturi în {1} fișiere. {2} nu au putut fi corectate automat și rămân neschimbate. Debifează orice modificare nedorită.</value></data>
+  <data name="Diag_FixAllDone" xml:space="preserve"><value>S-au aplicat {0} modificări.</value></data>
+  <data name="EditPreview_Apply" xml:space="preserve"><value>Aplică</value></data>
 </root>

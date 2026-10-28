@@ -85,6 +85,8 @@ public partial class MainWindow : Window
                 vm.NewProjectRequested += (_, _) => _ = ShowNewProjectAsync();
                 vm.NewTripRequested += (_, _) => _ = ShowNewTripAsync();
                 vm.BatchBuildRequested += (_, entries) => _ = ShowBatchBuildAsync(vm, entries);
+                vm.Diagnostics.FixRequested += (_, d) => _ = FixOneAsync(d);
+                vm.Diagnostics.FixAllRequested += (_, code) => _ = FixAllAsync(vm, code);
                 ThIDE.Editor.TherionTextEditor.LinkSurveyRequested += (_, req) =>
                     Avalonia.Threading.Dispatcher.UIThread.Post(() => _ = ShowLinkSurveyAsync(req.FilePath, req.Caret));
                 BuildRecentMenu(vm);
@@ -674,6 +676,52 @@ public partial class MainWindow : Window
             menu.Items.Add(item);
         }
         if (tasks.Count == 0) menu.Items.Add(new MenuItem { Header = ThIDE.Resources.Tr.Get("Task_None"), IsEnabled = false });
+    }
+
+    // ----- fixes ----------------------------------------------------------------
+
+    /// <summary>A file's current text: the editor buffer when open, else the file by its encoding.</summary>
+    private static string? CurrentText(IDocumentService? docs, string path)
+    {
+        var doc = docs?.Documents.FirstOrDefault(d => Therion.Workspace.Editing.FilePaths.Same(d.FilePath, path));
+        if (doc is not null) return doc.DocumentText;
+        return File.Exists(path) ? Therion.Syntax.EncodingResolver.ReadAllText(path) : null;
+    }
+
+    /// <summary>Applies the first fix for one diagnostic (Diagnostics panel ▸ Fix).</summary>
+    private async System.Threading.Tasks.Task FixOneAsync(Therion.Core.Diagnostic d)
+    {
+        var docs = AppServices.Provider.GetService<IDocumentService>();
+        if (d.Span.FilePath is not { Length: > 0 } path || CurrentText(docs, path) is not { } text) return;
+        var fix = Therion.Workspace.Fixes.CodeFixes.ForDiagnostic(text, d)
+                  ?? Therion.Workspace.Fixes.CodeFixes.ForLine(text, d.Span.Start.Line, [d]).FirstOrDefault(f => f.TitleKey != "Fix_CommentOut");
+        if (fix is null || AppServices.Provider.GetService<IWorkspaceEditService>() is not { } editor) return;
+        var outcome = await editor.ApplyAsync(new Therion.Workspace.Editing.EditBatch([new(path, fix.Edits)], [], []));
+        if (!outcome.Success) AppServices.Provider.GetService<INotificationService>()?.Warning(ThIDE.Resources.Tr.Get("Diag_Fix"), outcome.Error ?? string.Join("; ", outcome.Problems.Select(p => p.Kind)));
+    }
+
+    /// <summary>Diagnostics panel ▸ Fix all '<code>': every safe fix for that code, previewed, then applied.</summary>
+    private async System.Threading.Tasks.Task FixAllAsync(MainWindowViewModel vm, string code)
+    {
+        var docs = AppServices.Provider.GetService<IDocumentService>();
+        var notifications = AppServices.Provider.GetService<INotificationService>();
+        var (batch, fixedCount, skipped) = Therion.Workspace.Fixes.FixAll.Plan(code, vm.Diagnostics.All, p => CurrentText(docs, p));
+        if (fixedCount == 0)
+        {
+            notifications?.Info(string.Format(ThIDE.Resources.Tr.Get("Diag_FixAll"), code), ThIDE.Resources.Tr.Get("Diag_FixAllNone"));
+            return;
+        }
+        var rows = Therion.Workspace.Fixes.FixAll.Preview(batch, p => CurrentText(docs, p));
+        var root = AppServices.Provider.GetService<IWorkspaceSession>()?.RootPath;
+        var preview = new EditPreviewViewModel(string.Format(ThIDE.Resources.Tr.Get("Diag_FixAll"), code),
+            string.Format(ThIDE.Resources.Tr.Get("Diag_FixAllSummary"), fixedCount, batch.Edits.Count, skipped), batch, rows, root);
+        var window = new EditPreviewWindow(preview);
+        await window.ShowDialog(this);
+        if (!window.Confirmed || AppServices.Provider.GetService<IWorkspaceEditService>() is not { } editor) return;
+        // Closed files change on disk without a re-parse: reload so the diagnostics are recomputed.
+        var outcome = await editor.ApplyAsync(preview.Chosen() with { RequiresWorkspaceReload = true });
+        if (outcome.Success) notifications?.Success(preview.Title, string.Format(ThIDE.Resources.Tr.Get("Diag_FixAllDone"), preview.CheckedCount));
+        else notifications?.Warning(preview.Title, outcome.Error ?? string.Join("; ", outcome.Problems.Select(p => $"{Path.GetFileName(p.FilePath)}: {p.Kind}")));
     }
 
     // ----- automation panel -----------------------------------------------
