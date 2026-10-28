@@ -168,7 +168,9 @@ public sealed class ChatEngine(HttpClient http, ChatEngineOptions options)
 
         callbacks?.OnUpdate?.Invoke(new ToolCallStarted(info));
 
-        if (!descriptor.ReadOnly
+        // A preview (dryRun: true) changes nothing, so it is not put to the user: the real call is.
+        bool preview = !options.AskForPreviews && args.TryGetValue("dryRun", out var dry) && dry is JsonElement { ValueKind: JsonValueKind.True };
+        if (!descriptor.ReadOnly && !preview
             && callbacks?.ApproveAsync is { } approve
             && !await approve(info, ct))
         {

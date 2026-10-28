@@ -321,6 +321,44 @@ public sealed class ChatEngineTests
     }
 
     [Fact]
+    public async Task PreviewCall_SkipsTheApprovalHook_TheRealCallDoesNot()
+    {
+        var handler = new ScriptedHandler(
+            ToolCallTurn(("c1", "edit_file", """{"path":"a.th","dryRun":true}""")),
+            ToolCallTurn(("c2", "edit_file", """{"path":"a.th","dryRun":false}""")),
+            FinalAnswer("done"));
+        var catalog = Catalog(writingTool("edit_file", _ => new ToolOutcome("ok", true)));
+        var asked = new List<ToolCallInfo>();
+        var callbacks = new ChatCallbacks
+        {
+            ApproveAsync = (info, _) => { asked.Add(info); return Task.FromResult(true); },
+        };
+
+        await Engine(handler).RunAsync(new ChatSession("s"), "edit", catalog, callbacks);
+
+        Assert.Equal(2, catalog.Received.Count);
+        Assert.Single(asked);
+    }
+
+    [Fact]
+    public async Task PreviewCall_IsAskedWhenTheOptionSaysSo()
+    {
+        var handler = new ScriptedHandler(
+            ToolCallTurn(("c1", "edit_file", """{"dryRun":true}""")),
+            FinalAnswer("done"));
+        var catalog = Catalog(writingTool("edit_file", _ => new ToolOutcome("ok", true)));
+        int asked = 0;
+        var callbacks = new ChatCallbacks { ApproveAsync = (_, _) => { asked++; return Task.FromResult(false); } };
+        var engine = new ChatEngine(new HttpClient(handler),
+            new ChatEngineOptions("http://127.0.0.1:9/v1", "test-model") { AskForPreviews = true });
+
+        await engine.RunAsync(new ChatSession("s"), "edit", catalog, callbacks);
+
+        Assert.Equal(1, asked);
+        Assert.Empty(catalog.Received);
+    }
+
+    [Fact]
     public async Task Updates_FireInOrder()
     {
         var handler = new ScriptedHandler(
