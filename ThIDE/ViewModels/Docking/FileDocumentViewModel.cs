@@ -97,6 +97,12 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
 
     public string FilePath { get; }
 
+    /// <summary>The encoding and byte-order mark the file was read with, kept for the save. Null for a
+    /// document that did not come from a file (saved as UTF-8 unless its text declares otherwise).</summary>
+    // The layout serializer must not see it: an Encoding cannot be written as JSON.
+    [System.Text.Json.Serialization.JsonIgnore]
+    public TextFileFormat? Format { get; set; }
+
     public MeasurementsViewModel Measurements { get; }
 
     /// <summary>True only for .th files — the Measurements tab is hidden for any other type (#4).</summary>
@@ -767,7 +773,7 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
     private void CompareExternal()
     {
         string disk = string.Empty;
-        try { if (System.IO.File.Exists(FilePath)) disk = System.IO.File.ReadAllText(FilePath); } catch { }
+        try { if (System.IO.File.Exists(FilePath)) disk = SourceFileIo.Read(FilePath).Text; } catch { }
         CompareExternalRequested?.Invoke(this, disk);
     }
 
@@ -789,7 +795,9 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
         try
         {
             if (!System.IO.File.Exists(FilePath)) return;
-            SetText(System.IO.File.ReadAllText(FilePath), reparse: true);
+            var file = SourceFileIo.Read(FilePath);
+            Format = SourceFileIo.FormatOf(file);
+            SetText(file.Text, reparse: true);
         }
         catch { /* leave editor content as-is on read failure */ }
     }

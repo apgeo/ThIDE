@@ -1596,4 +1596,6 @@ Aplici modificările? Pașii care nu au putut fi previzualizați rulează acum.<
   <data name="Pref_AssistantDataPolicy_RedactHelp" xml:space="preserve"><value>Toate instrumentele rămân, dar numele, numerele și textul din rezultate sunt înlocuite (numărătorile, codurile de eroare și numerele de linie rămân). Cu efort maxim, nu garantat: ce scrieți și numele pe care modelul le pune în apelurile sale ajung totuși la el. Răspunsurile devin mult mai slabe.</value></data>
   <data name="Pref_AssistantSkillPack" xml:space="preserve"><value>Adaugă pachetul de cunoștințe la instrucțiunile asistentului</value></data>
   <data name="Pref_AssistantSkillPackHelp" xml:space="preserve"><value>Îi explică modelului cum funcționează proiectele Therion și ThIDE, plus notele dvs. (assistant-skills.md lângă fișierul de setări) și ale proiectului (assistant.md în dosarul de configurare al proiectului). Fiecare parte e limitată la 8 KB.</value></data>
+  <data name="Notif_SaveEncodingTitle" xml:space="preserve"><value>Nesalvat</value></data>
+  <data name="Notif_SaveEncoding" xml:space="preserve"><value>{0}: „{1}” nu poate fi scris în {2}, codificarea declarată de fișier. Schimbați caracterul sau linia `encoding` a fișierului (de exemplu în utf-8) și salvați din nou.</value></data>
 </root>

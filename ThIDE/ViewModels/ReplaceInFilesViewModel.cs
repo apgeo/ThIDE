@@ -205,7 +205,8 @@ public sealed partial class ReplaceInFilesViewModel : ViewModelBase
                 string.Equals(d.FilePath, path, StringComparison.OrdinalIgnoreCase));
             try
             {
-                File.WriteAllText(path, text);
+                var format = Therion.Workspace.Editing.SourceFileIo.SaveText(path, text, openDoc?.Format);
+                if (openDoc is not null) openDoc.Format = format;
                 openDoc?.SetText(text, reparse: true);
                 fileCount++;
             }
@@ -315,7 +316,7 @@ public sealed partial class ReplaceInFilesViewModel : ViewModelBase
 
     private static string? ReadFile(string path)
     {
-        try { return File.Exists(path) ? File.ReadAllText(path) : null; }
+        try { return File.Exists(path) ? Therion.Workspace.Editing.SourceFileIo.Read(path).Text : null; }
         catch { return null; }
     }
 }

@@ -1596,4 +1596,6 @@ Apply the changes? Steps that could not preview run now.</value></data>
   <data name="Pref_AssistantDataPolicy_RedactHelp" xml:space="preserve"><value>All tools stay, but names, numbers and text in their results are replaced by placeholders (counts, error codes and line numbers stay). Best effort: what you type, and names the model writes in its own calls, still reach it. Answers get much weaker.</value></data>
   <data name="Pref_AssistantSkillPack" xml:space="preserve"><value>Add the skill pack to the assistant's instructions</value></data>
   <data name="Pref_AssistantSkillPackHelp" xml:space="preserve"><value>Tells the model how Therion projects and ThIDE work, plus your notes (assistant-skills.md next to the settings file) and the project's (assistant.md in the project's config folder). Each part is limited to 8 KB.</value></data>
+  <data name="Notif_SaveEncodingTitle" xml:space="preserve"><value>Not saved</value></data>
+  <data name="Notif_SaveEncoding" xml:space="preserve"><value>{0}: '{1}' cannot be written in {2}, the encoding the file declares. Change the character, or the file's `encoding` line (for example to utf-8), and save again.</value></data>
 </root>

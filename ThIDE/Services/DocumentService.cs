@@ -16,6 +16,7 @@ using Therion.Processing.Abstractions;
 using Therion.Semantics;
 using Therion.Syntax;
 using Therion.Workspace;
+using Therion.Workspace.Editing;
 using ThIDE.ViewModels.Docking;
 
 namespace ThIDE.Services;
@@ -316,8 +317,10 @@ public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, 
             return;
         }
 
-        var text = await File.ReadAllTextAsync(full, ct).ConfigureAwait(false);
-        var doc = CreateDocument(full, text);
+        // Decoded the way Therion reads it (an `encoding` line, a BOM, else UTF-8), and saved back the same way.
+        var file = await Task.Run(() => SourceFileIo.Read(full), ct).ConfigureAwait(false);
+        var doc = CreateDocument(full, file.Text);
+        doc.Format = SourceFileIo.FormatOf(file);
         OnUiSync(() => Documents.Add(doc));
 
         // Establish a workspace for a directly-opened file when none exists yet, then
@@ -608,9 +611,7 @@ public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, 
         newText = EditorTextCleanup.ApplyOnSave(newText, _settings?.Current);
         if (File.Exists(doc.FilePath))
         {
-            // Mark the path so the watcher doesn't treat our own save as an external edit (#6).
-            _session.SuppressSelfWrite(doc.FilePath);
-            await File.WriteAllTextAsync(doc.FilePath, newText, ct).ConfigureAwait(true);
+            if (!await WriteAsync(doc, newText, ct).ConfigureAwait(true)) return;
             doc.SetText(newText, reparse: true);
             DocumentSaved?.Invoke(this, doc.FilePath);
             return;
@@ -625,10 +626,32 @@ public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, 
         if (document is null || string.IsNullOrEmpty(document.FilePath) || !File.Exists(document.FilePath)) return;
         // cleanup, then write — suppressing the watcher so our own save isn't flagged external (#6).
         var newText = EditorTextCleanup.ApplyOnSave(document.DocumentText, _settings?.Current);
-        _session.SuppressSelfWrite(document.FilePath);
-        await File.WriteAllTextAsync(document.FilePath, newText, ct).ConfigureAwait(true);
+        if (!await WriteAsync(document, newText, ct).ConfigureAwait(true)) return;
         document.SetText(newText, reparse: true);
         DocumentSaved?.Invoke(this, document.FilePath);
+    }
+
+    /// <summary>
+    /// Writes a document in the encoding it was read with — or the one its `encoding` line now declares
+    /// — keeping its byte-order mark. A character that encoding cannot hold stops the save (the document
+    /// stays unsaved) instead of being written as '?'.
+    /// </summary>
+    private async Task<bool> WriteAsync(FileDocumentViewModel doc, string text, CancellationToken ct)
+    {
+        byte[] bytes;
+        TextFileFormat format;
+        try { (bytes, format) = SourceFileIo.EncodeForSave(doc.FilePath, text, doc.Format); }
+        catch (UnrepresentableCharacterException ex)
+        {
+            _notifications?.Error(ThIDE.Resources.Tr.Get("Notif_SaveEncodingTitle"),
+                string.Format(ThIDE.Resources.Tr.Get("Notif_SaveEncoding"), Path.GetFileName(doc.FilePath), ex.Character, ex.EncodingName));
+            return false;
+        }
+        // Mark the path so the watcher doesn't treat our own save as an external edit (#6).
+        _session.SuppressSelfWrite(doc.FilePath);
+        await File.WriteAllBytesAsync(doc.FilePath, bytes, ct).ConfigureAwait(true);
+        doc.Format = format;
+        return true;
     }
 
     private FileDocumentViewModel CreateDocument(string path, string text)
@@ -649,8 +672,7 @@ public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, 
         try
         {
             var text = EditorTextCleanup.ApplyOnSave(doc.DocumentText, _settings?.Current);
-            _session.SuppressSelfWrite(doc.FilePath);
-            await File.WriteAllTextAsync(doc.FilePath, text).ConfigureAwait(true);
+            if (!await WriteAsync(doc, text, CancellationToken.None).ConfigureAwait(true)) return;
             doc.SetText(text, reparse: true);
         }
         catch { /* best-effort; the banner is already cleared */ }

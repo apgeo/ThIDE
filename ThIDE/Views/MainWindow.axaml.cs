@@ -1463,7 +1463,7 @@ public partial class MainWindow : Window
 
     private static string? SafeReadAllText(string path)
     {
-        try { return System.IO.File.ReadAllText(path); } catch { return null; }
+        try { return Therion.Workspace.Editing.SourceFileIo.Read(path).Text; } catch { return null; }
     }
 
     /// <summary>
@@ -1615,8 +1615,19 @@ public partial class MainWindow : Window
                 sb.Remove(start, length).Insert(start, newName);
 
             var newText = sb.ToString();
+            var open = docs.Documents.FirstOrDefault(d => string.Equals(d.FilePath, fc.FilePath, System.StringComparison.OrdinalIgnoreCase));
             session?.SuppressSelfWrite(fc.FilePath);
-            try { await System.IO.File.WriteAllTextAsync(fc.FilePath, newText); }
+            try
+            {
+                var format = await System.Threading.Tasks.Task.Run(() => Therion.Workspace.Editing.SourceFileIo.SaveText(fc.FilePath, newText, open?.Format));
+                if (open is not null) open.Format = format;
+            }
+            catch (Therion.Workspace.Editing.UnrepresentableCharacterException ex)
+            {
+                AppServices.Provider.GetService<INotificationService>()?.Error(ThIDE.Resources.Tr.Get("Notif_SaveEncodingTitle"),
+                    string.Format(ThIDE.Resources.Tr.Get("Notif_SaveEncoding"), System.IO.Path.GetFileName(fc.FilePath), ex.Character, ex.EncodingName));
+                continue;
+            }
             catch { continue; }
 
             foreach (var doc in docs.Documents)

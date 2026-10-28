@@ -20,13 +20,64 @@ public sealed class UnrepresentableCharacterException(string path, string encodi
               + $"which '{path}' declares. Writing it would replace the character with '?'.")
 {
     public char Character { get; } = character;
+    public string EncodingName { get; } = encodingName;
 }
 
 /// <param name="Sha256">Lowercase hex digest of the file's bytes, for optimistic concurrency.</param>
 public sealed record SourceFile(string Path, string Text, string Sha256, Encoding Encoding, byte[] Bom);
 
+/// <summary>How a text file was stored: its encoding and its byte-order mark (empty when none).</summary>
+public sealed record TextFileFormat(Encoding Encoding, byte[] Bom)
+{
+    /// <summary>UTF-8 without a BOM — Therion's default, and what a new file is written as.</summary>
+    public static TextFileFormat Default { get; } = new(EncodingResolver.Default, []);
+}
+
 public static class SourceFileIo
 {
+    /// <summary>The format a file was read in.</summary>
+    public static TextFileFormat FormatOf(SourceFile file) => new(file.Encoding, file.Bom);
+
+    /// <summary>
+    /// The format to save <paramref name="text"/> in: the encoding its own <c>encoding</c> line declares
+    /// (so editing that line takes effect on save, as Therion will read it), else the one the file was
+    /// read as. The original BOM is kept when it still matches the encoding.
+    /// </summary>
+    public static TextFileFormat FormatForSave(string text, TextFileFormat? readAs)
+    {
+        readAs ??= TextFileFormat.Default;
+        var probe = Encoding.UTF8.GetBytes(text.Length > EncodingResolver.ProbeBytes ? text[..EncodingResolver.ProbeBytes] : text);
+        var declared = EncodingResolver.DetectEncoding(probe);
+        if (declared is null || declared.CodePage == readAs.Encoding.CodePage) return readAs;
+        EncodingResolver.BomLength(readAs.Bom, out var bomEncoding);
+        return new TextFileFormat(declared, bomEncoding?.CodePage == declared.CodePage ? readAs.Bom : []);
+    }
+
+    /// <summary>
+    /// Saves <paramref name="text"/> over <paramref name="path"/> in place, in the format the file has on
+    /// disk (or <paramref name="readAs"/>, the format an open editor read it with). Returns the format used.
+    /// </summary>
+    /// <exception cref="UnrepresentableCharacterException">The text holds a character the encoding cannot express.</exception>
+    public static TextFileFormat SaveText(string path, string text, TextFileFormat? readAs = null)
+    {
+        readAs ??= File.Exists(path) ? FormatOf(Read(path)) : null;
+        var (bytes, format) = EncodeForSave(path, text, readAs);
+        File.WriteAllBytes(path, bytes);
+        return format;
+    }
+
+    /// <summary>The bytes to save <paramref name="text"/> as (see <see cref="FormatForSave"/>).</summary>
+    /// <exception cref="UnrepresentableCharacterException">The text holds a character the encoding cannot express.</exception>
+    public static (byte[] Bytes, TextFileFormat Format) EncodeForSave(string path, string text, TextFileFormat? readAs)
+    {
+        var format = FormatForSave(text, readAs);
+        var payload = Encode(new SourceFile(path, "", "", format.Encoding, format.Bom), text);
+        var bytes = new byte[format.Bom.Length + payload.Length];
+        format.Bom.CopyTo(bytes, 0);
+        payload.CopyTo(bytes, format.Bom.Length);
+        return (bytes, format);
+    }
+
     /// <summary>Reads a file, resolving its encoding the way the parser does.</summary>
     public static SourceFile Read(string path)
     {
