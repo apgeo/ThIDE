@@ -14,7 +14,12 @@ namespace Therion.Mcp.Dispatch;
 
 /// <param name="HasDryRun">The tool takes a <c>dryRun</c> argument (it can preview its change).</param>
 /// <param name="HasExpectedSha">The tool takes <c>expectedSha256</c> (a stale-text guard).</param>
-public sealed record ToolDescriptor(string Name, string Description, JsonElement Schema, bool ReadOnly, bool HasDryRun, bool HasExpectedSha);
+/// <param name="HasWrite">The tool takes a <c>write</c> argument instead: <c>false</c> previews.</param>
+public sealed record ToolDescriptor(string Name, string Description, JsonElement Schema, bool ReadOnly, bool HasDryRun, bool HasExpectedSha, bool HasWrite = false)
+{
+    /// <summary>The tool can show what it would change without changing it.</summary>
+    public bool CanPreview => HasDryRun || HasWrite;
+}
 
 /// <param name="Result">The tool's <c>ToolResult</c> envelope (<c>ok</c>, <c>data</c>, <c>error</c>), as JSON.</param>
 public sealed record ToolCallOutcome(bool Found, bool Ok, JsonElement Result, string? Error);
@@ -51,7 +56,7 @@ public sealed class ToolDispatcher
                     new AIFunctionFactoryOptions { SerializerOptions = McpJsonUtilities.DefaultOptions, Name = name });
                 var parameters = method.GetParameters();
                 var descriptor = new ToolDescriptor(name, fn.Description, fn.JsonSchema, attr.ReadOnly,
-                    parameters.Any(p => p.Name == "dryRun"), parameters.Any(p => p.Name == "expectedSha256"));
+                    parameters.Any(p => p.Name == "dryRun"), parameters.Any(p => p.Name == "expectedSha256"), parameters.Any(p => p.Name == "write"));
                 _tools[name] = (fn, descriptor);
             }
         }
