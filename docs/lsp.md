@@ -25,6 +25,11 @@ Neovim's `nvim-lspconfig` you'd register a server whose `cmd` is `{ "therion-lsp
 - `initialize` → `textDocumentSync = full`, `serverInfo`.
 - `textDocument/didOpen` / `didChange` → `textDocument/publishDiagnostics`.
 - `textDocument/didClose` → clears diagnostics.
+- `textDocument/completion` → on the first word of a line: ThIDE's snippets (built-ins plus your
+  `snippets.json`, filtered by file kind, with variables such as the date, the recent team and the
+  next station already filled in for the cursor position) and Therion's command keywords. The
+  editor's richer completion — flag values, data fields, station names — is not offered over LSP
+  yet; snippets from a project's `.thide/snippets.json` are not read either.
 - `shutdown` / `exit`.
 
 The diagnostic mapping (Therion → LSP severities + 0-based ranges) lives in

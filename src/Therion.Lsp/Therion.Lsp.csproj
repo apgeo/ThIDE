@@ -11,6 +11,8 @@
     <ProjectReference Include="..\Therion.Core\Therion.Core.csproj" />
     <ProjectReference Include="..\Therion.Syntax\Therion.Syntax.csproj" />
     <ProjectReference Include="..\Therion.Semantics\Therion.Semantics.csproj" />
+    <!-- Snippet templates and catalog (completion). -->
+    <ProjectReference Include="..\Therion.Workspace\Therion.Workspace.csproj" />
   </ItemGroup>
 
 </Project>
