@@ -43,6 +43,8 @@ described in them). If Therion is new to you, keep the **Therion Book** open alo
 11. [The viewers: Map, 3D & Mainline preview](11-viewers.md)
 - [Blender animation renders](23-blender-animation.md) — *experimental, work in progress* (page 23,
   at the end of this guide)
+- [Linking a survey file into the project](24-linking-surveys.md) — generated `input` and `equate`
+  lines (page 24)
 
 ### Analyze your survey
 12. [Object Browser & Outline](12-object-browser-and-outline.md)

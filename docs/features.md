@@ -19,6 +19,7 @@
 
 ## Build & visualization
 - **Therion compile pipeline** with live output, cancel, and clickable diagnostics; a **Generated Files** panel with per-output actions and auto-open overrides.
+- **Link survey file** — pick a station of a standalone `.th` and the project station it continues from; ThIDE writes `input` + `equate` (names relative to the destination survey) into the suggested file, copies the file and its sketches into the project, checks for duplicates, and previews the result. See [user guide 24](user-guide/24-linking-surveys.md).
 - **Live 2D preview** of centrelines — equate-merged and fix-anchored, color-by survey/file/component, with clickable junction markers and per-component visibility.
 - **Map Viewer** — an in-app renderer for compiled **PNG / SVG / PDF** maps (zoom, fit-to-window, PDF page navigation, full-screen/float). It lists the active thconfig's `export map` outputs in a picker and can auto-show the first map after a build.
 - **Embedded 3D viewer** — renders compiled `.lox` / `.3d` models via [CaveView.js](https://github.com/aardgoose/CaveView.js) inside a native web view (no bundled Chromium); orientation/camera/feature toggles, color-by overlays, full-screen, and **click-a-station → jump to `.th` source**. See [3d-viewer.md](3d-viewer.md).

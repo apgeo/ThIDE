@@ -29,6 +29,11 @@ for the steps involved.
 5. Check the trip joins the rest of the cave: open **Mainline Preview**, colour **by Component**; a
    piece stacked at the origin is disconnected — add the missing `equate`.
 
+**The trip arrived as its own `.th` file?** Use **Tools → Link survey file…**: pick a station of the
+trip and the project station it continues from, and ThIDE writes the `input` and `equate` lines where
+the project's other ones are, copying the file (and its sketches) into the project — see
+[Linking a survey file](24-linking-surveys.md).
+
 ## C. Validate & clean up before sharing
 
 1. Turn on **View → Strict parser mode** for a stricter pass.
