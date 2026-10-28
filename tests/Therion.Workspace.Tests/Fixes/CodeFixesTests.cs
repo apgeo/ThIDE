@@ -57,4 +57,32 @@ public class CodeFixesTests
         Assert.False(fixes[1].SafeForBatch);
         Assert.Equal("survey a\n  # centreline\n  foo\nendsurvey\n", Apply(text, fixes[2]));
     }
+
+    [Fact]
+    public void Rename_only_touches_a_whole_token()
+    {
+        const string text = "equate a10 a1\n";
+
+        var fix = CodeFixes.ForDiagnostic(text, D(CodeFixes.UnresolvedStation, 1, "Station 'a1' not found", "did you mean 'a2'?"))!;
+
+        Assert.Equal("equate a10 a2\n", Apply(text, fix));
+        Assert.Null(CodeFixes.ForDiagnostic("equate a10\n", D(CodeFixes.UnresolvedStation, 1, "Station 'a1' not found", "did you mean 'a2'?")));
+    }
+
+    [Fact]
+    public void A_terminator_for_a_flat_body_is_not_batch_safe()
+    {
+        const string text = "centreline\ndata normal from to length compass clino\n1 2 10 0 0\n";
+
+        Assert.Null(CodeFixes.ForDiagnostic(text, D(CodeFixes.UnterminatedBlock, 3, "unterminated")));
+        Assert.False(CodeFixes.ForLine(text, 1, []).Single(f => f.TitleKey == "Fix_InsertEnd").SafeForBatch);
+    }
+
+    [Fact]
+    public void Batch_fix_needs_a_suggestion_for_unresolved_stations()
+    {
+        Assert.False(CodeFixes.CanBatchFix(D(CodeFixes.UnresolvedStation, 1, "Station 'x' not found")));
+        Assert.True(CodeFixes.CanBatchFix(D(CodeFixes.UnresolvedStation, 1, "Station 'x' not found", "did you mean 'y'?")));
+        Assert.True(CodeFixes.CanBatchFix(D(CodeFixes.UnterminatedBlock, 1, "x")));
+    }
 }

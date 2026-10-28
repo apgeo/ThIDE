@@ -61,7 +61,7 @@ public static class MapSync
                 continue;
             }
             var mapScope = scopes.EffectiveScope(file, SurveyScopeResolver.SurveyPathAt(ast(file), map.DeclarationSpan.StartOffset, text));
-            var members = byMap.Select(a => Reference(ws, scopes, a.Key, mapScope)).ToList();
+            var members = byMap.Select(a => Reference(ws, scopes, a.Key, mapScope, readText, ast)).ToList();
             var planned = MapMemberEdits.Plan(file, text, byMap.Key, members);
             if (planned.Problem != MapEditProblem.None) { problems.Add((byMap.Key, planned.Problem)); continue; }
             if (planned.Edit is { } edit)
@@ -76,10 +76,13 @@ public static class MapSync
 
     // The scrap named from the map's survey: `id`, `id@sub`, or the bare id when the scrap is not
     // below the map (Therion then resolves it by its unique id, as the user would have written it).
-    private static string Reference(WorkspaceSemanticModel ws, FileScopes scopes, string scrapId, ImmutableArray<string> mapScope)
+    private static string Reference(WorkspaceSemanticModel ws, FileScopes scopes, string scrapId, ImmutableArray<string> mapScope,
+        Func<string, string?> readText, Func<string, TherionFile?> ast)
     {
         if (!ws.ScrapsById.TryGetValue(scrapId, out var scrap) || scrap.DeclarationSpan.FilePath is not { } sketch) return scrapId;
-        var scrapScope = scopes.PrefixOf(sketch);
+        // A scrap may sit inside a survey block of its own file as well as below the file's input.
+        var scrapScope = scopes.EffectiveScope(sketch,
+            SurveyScopeResolver.SurveyPathAt(ast(sketch), scrap.DeclarationSpan.StartOffset, readText(sketch)));
         return StationReference.Format(QualifiedName.OfStation(scrapScope, scrapId), mapScope) ?? scrapId;
     }
 }

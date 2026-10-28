@@ -1555,4 +1555,10 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Suggest_NoneWithin" xml:space="preserve"><value>Nicio pereche de stații din bucăți diferite nu este atât de apropiată.</value></data>
   <data name="Suggest_Verify" xml:space="preserve"><value>Pozițiile sunt aproximative (fără închiderea buclelor): fiecare pereche e o candidată de verificat înainte de legare, nu o joncțiune confirmată.</value></data>
   <data name="FormatAll_Summary" xml:space="preserve"><value>{0} fișiere s-ar schimba; {1} rămân neatinse pentru că nu se analizează curat (corectează-le întâi). Terminațiile de linie se păstrează. Debifează un fișier pentru a-l omite.</value></data>
+  <data name="Diag_NoFix" xml:space="preserve"><value>Această problemă nu are o corectură automată.</value></data>
+  <data name="Diag_FixAllSaveFirst" xml:space="preserve"><value>Salvează întâi aceste fișiere deschise, ca problemele lor să fie verificate din nou: {0}.</value></data>
+  <data name="SyncMaps_MapNotFound" xml:space="preserve"><value>nu a fost găsită în fișierul ei, așa cum arată acum</value></data>
+  <data name="SyncMaps_Unterminated" xml:space="preserve"><value>fără endmap</value></data>
+  <data name="SyncMaps_None" xml:space="preserve"><value>neschimbată</value></data>
+  <data name="FormatAll_LinesDiffer" xml:space="preserve"><value>{0} linii se schimbă</value></data>
 </root>

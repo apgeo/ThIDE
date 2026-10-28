@@ -1555,4 +1555,10 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Suggest_NoneWithin" xml:space="preserve"><value>No pair of stations from different pieces is that close.</value></data>
   <data name="Suggest_Verify" xml:space="preserve"><value>Positions are approximate (no loop closure): each pair is a candidate to check before linking, not a confirmed join.</value></data>
   <data name="FormatAll_Summary" xml:space="preserve"><value>{0} files would change; {1} are left alone because they do not parse cleanly (fix those first). Line endings are kept. Untick a file to leave it out.</value></data>
+  <data name="Diag_NoFix" xml:space="preserve"><value>This problem has no automatic fix.</value></data>
+  <data name="Diag_FixAllSaveFirst" xml:space="preserve"><value>Save these open files first, so their problems are checked again: {0}.</value></data>
+  <data name="SyncMaps_MapNotFound" xml:space="preserve"><value>not found in its file as it reads now</value></data>
+  <data name="SyncMaps_Unterminated" xml:space="preserve"><value>no endmap</value></data>
+  <data name="SyncMaps_None" xml:space="preserve"><value>unchanged</value></data>
+  <data name="FormatAll_LinesDiffer" xml:space="preserve"><value>{0} line(s) change</value></data>
 </root>

@@ -696,9 +696,15 @@ public partial class MainWindow : Window
     {
         var docs = AppServices.Provider.GetService<IDocumentService>();
         if (d.Span.FilePath is not { Length: > 0 } path || CurrentText(docs, path) is not { } text) return;
+        // This diagnostic's own fix only (an unrelated fix on the same line is not "fixing" it).
         var fix = Therion.Workspace.Fixes.CodeFixes.ForDiagnostic(text, d)
-                  ?? Therion.Workspace.Fixes.CodeFixes.ForLine(text, d.Span.Start.Line, [d]).FirstOrDefault(f => f.TitleKey != "Fix_CommentOut");
-        if (fix is null || AppServices.Provider.GetService<IWorkspaceEditService>() is not { } editor) return;
+                  ?? Therion.Workspace.Fixes.CodeFixes.ForLine(text, d.Span.Start.Line, [d]).FirstOrDefault(f => f.DiagnosticCode == d.Code.Value);
+        if (fix is null)
+        {
+            AppServices.Provider.GetService<INotificationService>()?.Info(ThIDE.Resources.Tr.Get("Diag_Fix"), ThIDE.Resources.Tr.Get("Diag_NoFix"));
+            return;
+        }
+        if (AppServices.Provider.GetService<IWorkspaceEditService>() is not { } editor) return;
         var outcome = await editor.ApplyAsync(new Therion.Workspace.Editing.EditBatch([new(path, fix.Edits)], [], []));
         if (!outcome.Success) AppServices.Provider.GetService<INotificationService>()?.Warning(ThIDE.Resources.Tr.Get("Diag_Fix"), outcome.Error ?? string.Join("; ", outcome.Problems.Select(p => p.Kind)));
     }
@@ -708,6 +714,16 @@ public partial class MainWindow : Window
     {
         var docs = AppServices.Provider.GetService<IDocumentService>();
         var notifications = AppServices.Provider.GetService<INotificationService>();
+        // The diagnostics' line numbers are from the last check: an open file edited since may have
+        // moved them, so such files must be saved (and re-checked) first.
+        var dirty = vm.Diagnostics.All.Where(d => d.Code.Value == code && d.Span.FilePath is { } f
+                && docs?.Documents.Any(x => x.IsDirty && Therion.Workspace.Editing.FilePaths.Same(x.FilePath, f)) == true)
+            .Select(d => Path.GetFileName(d.Span.FilePath)).Distinct().ToList();
+        if (dirty.Count > 0)
+        {
+            notifications?.Warning(string.Format(ThIDE.Resources.Tr.Get("Diag_FixAll"), code), string.Format(ThIDE.Resources.Tr.Get("Diag_FixAllSaveFirst"), string.Join(", ", dirty)));
+            return;
+        }
         var (batch, fixedCount, skipped) = Therion.Workspace.Fixes.FixAll.Plan(code, vm.Diagnostics.All, p => CurrentText(docs, p));
         if (fixedCount == 0)
         {
@@ -757,7 +773,17 @@ public partial class MainWindow : Window
             .Where(f => f.EndsWith(".th", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".th2", StringComparison.OrdinalIgnoreCase)
                      || f.EndsWith(".thconfig", StringComparison.OrdinalIgnoreCase))
             .ToList();
-        var (batch, rows, skipped) = Therion.Workspace.Fixes.FormatAll.Plan(files, p => CurrentText(docs, p), Therion.Workspace.Fixes.LineEndings.Keep);
+        var settings = AppServices.Provider.GetService<IAppSettingsService>()?.Current;
+        var unit = settings is { ConvertTabsToSpaces: false } ? "\t" : new string(' ', Math.Max(1, settings?.IndentationSize ?? 2));
+        // The editor's Format Document: a re-indent that never reorders or drops anything.
+        string Format(string text)
+        {
+            var doc = new AvaloniaEdit.Document.TextDocument(text);
+            ThIDE.Editor.TherionFormatter.Reindent(doc, unit);
+            return doc.Text;
+        }
+        var (batch, rows, skipped) = Therion.Workspace.Fixes.FormatAll.Plan(files, p => CurrentText(docs, p), Therion.Workspace.Fixes.LineEndings.Keep,
+            Format, n => string.Format(ThIDE.Resources.Tr.Get("FormatAll_LinesDiffer"), n));
         var title = ThIDE.Resources.Tr.Get("Menu_Tools_FormatAll");
         var summary = string.Format(ThIDE.Resources.Tr.Get("FormatAll_Summary"), rows.Count, skipped.Count);
         if (batch.IsEmpty) { AppServices.Provider.GetService<INotificationService>()?.Info(title, summary); return; }
@@ -783,7 +809,8 @@ public partial class MainWindow : Window
         var scopes = Therion.Semantics.Linking.SurveyScopeResolver.Build(ws, Ast);
         var (batch, problems) = Therion.Workspace.Fixes.MapSync.Plan(ws, scopes, model.Assignments(), p => CurrentText(docs, p), Ast);
         var summary = problems.Count == 0 ? ThIDE.Resources.Tr.Get("SyncMaps_Summary")
-            : ThIDE.Resources.Tr.Get("SyncMaps_Summary") + " " + string.Format(ThIDE.Resources.Tr.Get("SyncMaps_Problems"), string.Join(", ", problems.Select(p => $"{p.Map} ({p.Problem})")));
+            : ThIDE.Resources.Tr.Get("SyncMaps_Summary") + " " + string.Format(ThIDE.Resources.Tr.Get("SyncMaps_Problems"),
+                string.Join(", ", problems.Select(p => $"{p.Map} ({ThIDE.Resources.Tr.Get("SyncMaps_" + p.Problem)})")));
         if (batch.IsEmpty) { n?.Warning(title, summary); return; }
         await PreviewAndApplyAsync(title, summary, batch);
     }

@@ -128,7 +128,9 @@ public partial class DiagnosticsViewModel : ViewModelBase
     public event EventHandler<string>? FixAllRequested;
 
     /// <summary>The selected row's code has a fix that may be applied everywhere.</summary>
-    public bool CanFixAllSelected => Selected is { } r && Therion.Workspace.Fixes.CodeFixes.BatchCodes.Contains(r.Code);
+    public bool CanFixAllSelected => Selected is { } r
+        && All.FirstOrDefault(d => d.Span == r.Span && d.Code.Value == r.Code) is { } d
+        && Therion.Workspace.Fixes.CodeFixes.CanBatchFix(d);
     public string FixAllHeader => Selected is { } r ? string.Format(ThIDE.Resources.Tr.Get("Diag_FixAll"), r.Code) : string.Empty;
 
     [RelayCommand]

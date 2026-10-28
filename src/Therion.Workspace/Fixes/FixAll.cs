@@ -23,9 +23,10 @@ public static class FixAll
         {
             if (readText(file.Key) is not { } text) { skipped += file.Count(); continue; }
             var edits = new List<TextEdit>();
+            var lines = new CodeFixes.Lines(text);
             foreach (var d in file.OrderBy(d => d.Span.Start.Line))
             {
-                if (CodeFixes.ForDiagnostic(text, d) is not { } fix) { skipped++; continue; }
+                if (CodeFixes.ForDiagnostic(lines, d) is not { } fix) { skipped++; continue; }
                 if (fix.Edits.Any(e => edits.Any(x => Overlaps(x, e)))) { skipped++; continue; }
                 edits.AddRange(fix.Edits);
                 fixedCount++;
@@ -46,6 +47,7 @@ public static class FixAll
         foreach (var group in batch.Edits)
         {
             if (readText(group.FilePath) is not { } text) continue;
+            var lineIndex = new CodeFixes.Lines(text);
             foreach (var e in group.Edits.OrderBy(e => e.Start))
             {
                 int lineStart = e.Start == 0 ? 0 : text.LastIndexOf('\n', Math.Max(0, e.Start - 1)) + 1;
@@ -54,7 +56,7 @@ public static class FixAll
                 if (lineEnd < 0) lineEnd = text.Length;
                 var before = text[lineStart..lineEnd].TrimEnd('\r');
                 var after = (text[lineStart..e.Start] + e.NewText + text[e.End..lineEnd]).TrimEnd('\r');
-                int line = 1 + text.Take(lineStart).Count(c => c == '\n');
+                int line = lineIndex.LineOf(lineStart);
                 rows.Add(new EditPreviewRow(group.FilePath, line, before, after, e));
             }
         }

@@ -17,7 +17,7 @@ public static class EquateCandidateFinder
     private const double GeographicDegreeLimit = 360.0;
 
     private readonly record struct Frame(double OffsetE, double OffsetN, double OffsetU, string Cs);
-    private readonly record struct Point(StationSymbol Station, int Component, string Cs, double E, double N, double U);
+    private readonly record struct Point(StationSymbol Station, string Name, int Component, string Cs, double E, double N, double U);
 
     /// <summary>Cross-piece pairs within <paramref name="threshold"/> metres, nearest first.</summary>
     public static EquateCandidateResult Find(WorkspaceSemanticModel model, double threshold)
@@ -34,7 +34,7 @@ public static class EquateCandidateFinder
             if (!seenReps.Add(graph.Representative(station.Name))) continue;
             if (positions.For(station.Name) is not { HorizontalReliable: true, VerticalReliable: true } p) continue;
             if (!frames.TryGetValue(p.ComponentId, out var frame)) continue;
-            points.Add(new Point(station, p.ComponentId, frame.Cs, p.X + frame.OffsetE, p.Y + frame.OffsetN, p.Z + frame.OffsetU));
+            points.Add(new Point(station, station.Name.ToString(), p.ComponentId, frame.Cs, p.X + frame.OffsetE, p.Y + frame.OffsetN, p.Z + frame.OffsetU));
         }
         var pairs = Pairs(points, threshold);
         pairs.Sort((a, b) => a.Distance.CompareTo(b.Distance));
@@ -85,7 +85,7 @@ public static class EquateCandidateFinder
                     var b = points[j];
                     if (a.Component == b.Component) continue;
                     if (!string.Equals(a.Cs, b.Cs, StringComparison.Ordinal)) continue;
-                    if (string.CompareOrdinal(a.Station.Name.ToString(), b.Station.Name.ToString()) >= 0) continue;
+                    if (string.CompareOrdinal(a.Name, b.Name) >= 0) continue;
                     double de = a.E - b.E, dn = a.N - b.N, du = a.U - b.U;
                     double d2 = de * de + dn * dn + du * du;
                     if (d2 > threshold2) continue;

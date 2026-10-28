@@ -56,9 +56,11 @@ public static partial class CodeFixes
     }
 
     /// <summary>The batch-safe fix for one diagnostic, or null when there is none (or it is ambiguous).</summary>
-    public static CodeFix? ForDiagnostic(string text, Diagnostic d)
+    public static CodeFix? ForDiagnostic(string text, Diagnostic d) => ForDiagnostic(new Lines(text), d);
+
+    /// <summary>As above, reusing the line index of a file with many diagnostics.</summary>
+    internal static CodeFix? ForDiagnostic(Lines lines, Diagnostic d)
     {
-        var lines = new Lines(text);
         int line = d.Span.Start.Line;
         if (line < 1 || line > lines.Count) return null;
         var fix = d.Code.Value switch
@@ -80,29 +82,51 @@ public static partial class CodeFixes
         if (!bad.Success || suggestions.Count == 0) return null;
         string from = bad.Groups[1].Value, to = suggestions[0].Groups[1].Value;
         string lineText = lines.Text(line);
-        int i = lineText.IndexOf(from, StringComparison.Ordinal);
-        if (from == to || i < 0) return null;
-        bool once = lineText.IndexOf(from, i + from.Length, StringComparison.Ordinal) < 0;
-        bool safe = suggestions.Count == 1 && once;
+        // Whole tokens only: 'a1' must not match inside 'a10'.
+        var hits = TokenHits(lineText, from).ToList();
+        if (from == to || hits.Count == 0) return null;
+        int i = hits[0];
+        bool safe = suggestions.Count == 1 && hits.Count == 1;
         return new CodeFix("Fix_Rename", [from, to], d.Code.Value, [new TextEdit(lines.Start(line) + i, from.Length, from, to)], safe);
     }
 
+    // Positions where `token` stands alone (whitespace, line ends or a comment around it).
+    private static IEnumerable<int> TokenHits(string lineText, string token)
+    {
+        for (int i = lineText.IndexOf(token, StringComparison.Ordinal); i >= 0; i = lineText.IndexOf(token, i + 1, StringComparison.Ordinal))
+        {
+            bool startOk = i == 0 || char.IsWhiteSpace(lineText[i - 1]);
+            int end = i + token.Length;
+            bool endOk = end == lineText.Length || char.IsWhiteSpace(lineText[end]) || lineText[end] == '#';
+            if (startOk && endOk) yield return i;
+        }
+    }
+
+    /// <summary>Whether "fix all" can do anything for this diagnostic (a rename needs a suggestion).</summary>
+    public static bool CanBatchFix(Diagnostic d) =>
+        BatchCodes.Contains(d.Code.Value)
+        && (d.Code.Value != UnresolvedStation || Suggestion().IsMatch((d.Message ?? "") + "  " + (d.Hint ?? "")));
+
     // A block opener on this line without its terminator ahead: insert it after the indented body.
+    // Only batch-safe when the body is indented under the opener (or there is none): with a flat
+    // body the end of the block cannot be told from the indentation.
     private static CodeFix? Terminator(Lines lines, int line)
     {
         string lineText = lines.Text(line);
         if (!Enders.TryGetValue(FirstWord(lineText), out var ender) || HasTerminatorAhead(lines, line, ender)) return null;
         string indent = Indent(lineText);
         int insertAfter = line;
+        bool flatBody = false;
         for (int n = line + 1; n <= lines.Count; n++)
         {
             string t = lines.Text(n);
             if (t.Trim().Length == 0) continue;
             if (Indent(t).Length > indent.Length) { insertAfter = n; continue; }
+            flatBody = insertAfter == line && !FirstWord(t).StartsWith("end", StringComparison.OrdinalIgnoreCase);
             break;
         }
         return new CodeFix("Fix_InsertEnd", [ender], UnterminatedBlock,
-            [TextEdit.Insert(lines.End(insertAfter), lines.NewLine + indent + ender)], true);
+            [TextEdit.Insert(lines.End(insertAfter), lines.NewLine + indent + ender)], !flatBody);
     }
 
     // The diagnostic may sit on the end of the file rather than on the opener: find the last
@@ -149,7 +173,7 @@ public static partial class CodeFixes
     }
 
     /// <summary>Line starts and ends (without the line break) of a text, 1-based.</summary>
-    private sealed class Lines
+    internal sealed class Lines
     {
         private readonly string _text;
         private readonly List<int> _starts = [0];
@@ -171,5 +195,12 @@ public static partial class CodeFixes
             return end;
         }
         public string Text(int line) => _text[Start(line)..End(line)];
+
+        /// <summary>The 1-based line holding <paramref name="offset"/>.</summary>
+        public int LineOf(int offset)
+        {
+            int i = _starts.BinarySearch(offset);
+            return i >= 0 ? i + 1 : ~i;
+        }
     }
 }
