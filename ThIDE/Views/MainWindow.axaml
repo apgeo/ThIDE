@@ -338,6 +338,7 @@
             <MenuItem AutomationProperties.AutomationId="Menu.Build" Header="{Binding MenuBuild}">
                 <MenuItem AutomationProperties.AutomationId="Menu.Build.Build" Header="{Binding MenuBuildBuild}"     InputGesture="{l:Gesture Build}"       Command="{Binding Build.BuildCommand}" />
                 <MenuItem AutomationProperties.AutomationId="Menu.Build.Cancel" Header="{Binding MenuBuildCancel}"    InputGesture="{l:Gesture CancelBuild}" Command="{Binding Build.CancelCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Build.BatchBuild" Header="{l:Loc Menu_Build_BatchBuild}" Command="{Binding BatchBuildCommand}" />
                 <Separator />
                 <!-- run a single export target from the active thconfig. -->
                 <MenuItem Header="{l:Loc Menu_Build_Target}" IsEnabled="{Binding Build.HasExportTargets}"

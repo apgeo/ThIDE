@@ -84,6 +84,7 @@ public partial class MainWindow : Window
                 vm.NewFileRequested += (_, folder) => _ = ShowNewFileAsync(folder);
                 vm.NewProjectRequested += (_, _) => _ = ShowNewProjectAsync();
                 vm.NewTripRequested += (_, _) => _ = ShowNewTripAsync();
+                vm.BatchBuildRequested += (_, entries) => _ = ShowBatchBuildAsync(vm, entries);
                 ThIDE.Editor.TherionTextEditor.LinkSurveyRequested += (_, req) =>
                     Avalonia.Threading.Dispatcher.UIThread.Post(() => _ = ShowLinkSurveyAsync(req.FilePath, req.Caret));
                 BuildRecentMenu(vm);
@@ -619,6 +620,41 @@ public partial class MainWindow : Window
         var docs = AppServices.Provider.GetService<IDocumentService>();
         if (docs is not null)
             await docs.ActivateThconfigAsync(thconfig, new ThconfigActivation(SetWorkingDirectory: true, OpenInEditor: true, Notify: true));
+    }
+
+    // ----- batch build ------------------------------------------------------
+
+    /// <summary>Build ▸ Build multiple…: the workspace's thconfigs and their exports, built in order.</summary>
+    private async System.Threading.Tasks.Task ShowBatchBuildAsync(MainWindowViewModel vm, IReadOnlyList<string>? preselect)
+    {
+        var session = AppServices.Provider.GetService<IWorkspaceSession>();
+        var configs = session?.Candidates.Select(c => c.FullPath).ToList() ?? [];
+        foreach (var p in preselect ?? []) if (!configs.Contains(p)) configs.Add(p);
+        if (configs.Count == 0)
+        {
+            AppServices.Provider.GetService<INotificationService>()?.Info(ThIDE.Resources.Tr.Get("Batch_Title"), ThIDE.Resources.Tr.Get("Batch_NoThconfigs"));
+            return;
+        }
+        var root = session?.RootPath;
+        var key = Therion.Workspace.ProjectSidecar.KeyFor(root);
+        var env = new BatchBuildEnvironment(
+            configs, root,
+            (entry, temp, label) => vm.Build.RunBuildAsync(entry, temp, label),
+            () => vm.Build.CancelCommand.Execute(null),
+            AppServices.Provider.GetService<IAutomationOutput>(),
+            key is null ? null : Path.Combine(Therion.Workspace.ProjectSidecar.DirectoryFor("batch"), key + ".json"));
+        var model = new BatchBuildViewModel(env, preselect);
+        model.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(BatchBuildViewModel.IsRunning) && !model.IsRunning && model.Outcomes.Count > 0)
+            {
+                var ok = model.Outcomes.Count(o => o.Succeeded);
+                var n = AppServices.Provider.GetService<INotificationService>();
+                if (ok == model.Outcomes.Count) n?.Success(ThIDE.Resources.Tr.Get("Batch_Title"), model.Status);
+                else n?.Warning(ThIDE.Resources.Tr.Get("Batch_Title"), model.Status);
+            }
+        };
+        await new BatchBuildWindow(model).ShowDialog(this);
     }
 
     // ----- tasks --------------------------------------------------------------

@@ -100,6 +100,7 @@ public sealed class CommandPaletteProvider
         list.Add(VmCmd(L("Cmd_Cat_Build"), L("Proj_OpenOutputFolder"), _vm.Build.OpenLastOutputFolderCommand, "Icon.Folder"));
         // quick export + external round-trips.
         list.Add(VmCmd(L("Cmd_Cat_Build"), L("Menu_Build_QuickExport"), _vm.Build.ShowQuickExportCommand, "Icon.Map"));
+        list.Add(VmCmd(L("Cmd_Cat_Build"), L("Menu_Build_BatchBuild"), _vm.BatchBuildCommand, "Icon.Cube"));
         list.Add(VmCmd(L("Cmd_Cat_Build"), L("Cmd_Dump3d"), _vm.Build.Dump3dCommand, "Icon.Cube"));
         list.Add(VmCmd(L("Cmd_Cat_Build"), L("Cmd_Extend"), _vm.Build.ExtendCommand, "Icon.Cube"));
         list.Add(VmCmd(L("Cmd_Cat_Build"), L("Cmd_PrintVersion"), _vm.Build.PrintTherionVersionCommand, "Icon.Info"));

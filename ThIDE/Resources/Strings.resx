@@ -1517,4 +1517,13 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Task_Unknown" xml:space="preserve"><value>No such task</value></data>
   <data name="Automation_Task" xml:space="preserve"><value>Task</value></data>
   <data name="Cmd_TaskFmt" xml:space="preserve"><value>Task: {0}</value></data>
+  <data name="Menu_Build_BatchBuild" xml:space="preserve"><value>Build multiple…</value></data>
+  <data name="Batch_Title" xml:space="preserve"><value>Batch build</value></data>
+  <data name="Batch_Intro" xml:space="preserve"><value>Tick the thconfigs to build, and under each the exports to produce. They are built one after the other; the summary goes to the Automation panel.</value></data>
+  <data name="Batch_StopOnFailure" xml:space="preserve"><value>Stop at the first failure</value></data>
+  <data name="Batch_Build" xml:space="preserve"><value>Build</value></data>
+  <data name="Batch_SomeTargets" xml:space="preserve"><value>({0} of {1} exports)</value></data>
+  <data name="Batch_NotStarted" xml:space="preserve"><value>The build did not start (another build is running, or saving was cancelled).</value></data>
+  <data name="Batch_Done" xml:space="preserve"><value>{0} of {1} built.</value></data>
+  <data name="Batch_NoThconfigs" xml:space="preserve"><value>The workspace has no thconfig to build.</value></data>
 </root>
