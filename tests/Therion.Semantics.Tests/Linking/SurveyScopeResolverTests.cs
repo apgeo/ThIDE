@@ -96,7 +96,8 @@ public class SurveyScopeResolverTests
 
         Assert.Equal(S("cave", "a"), SurveyScopeResolver.SurveyPathAt(ast, text.IndexOf("centreline")));
         Assert.Equal(S("cave"), SurveyScopeResolver.SurveyPathAt(ast, text.IndexOf("# here")));
-        Assert.Equal(S("cave"), SurveyScopeResolver.SurveyPathAt(ast, 0));
+        Assert.Equal(S(), SurveyScopeResolver.SurveyPathAt(ast, 0));      // before the header
+        Assert.Equal(S("cave"), SurveyScopeResolver.SurveyPathAt(ast, 3)); // on the header
         Assert.Equal(S(), SurveyScopeResolver.SurveyPathAt(ast, text.IndexOf("input")));
     }
 

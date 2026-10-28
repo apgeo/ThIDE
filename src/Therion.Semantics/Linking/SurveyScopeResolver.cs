@@ -135,7 +135,8 @@ public static class SurveyScopeResolver
 
     /// <summary>
     /// The file-local survey path (top-down) enclosing <paramref name="offset"/>: the names of every
-    /// <c>survey</c> block containing it. Empty at the file root or without an AST.
+    /// <c>survey</c> block containing it (a position right before a block's header is outside it).
+    /// Empty at the file root or without an AST.
     /// </summary>
     /// <param name="text">The file's text. With it, a block reaches to the end of its terminator
     /// line (a caret on the blank line before <c>endsurvey</c> is inside); without it, only to the
@@ -156,7 +157,7 @@ public static class SurveyScopeResolver
         {
             BlockCommand? inner = null;
             foreach (var node in children)
-                if (node is BlockCommand block && offset >= block.Span.StartOffset && offset < ExtentEnd(block, text))
+                if (node is BlockCommand block && offset > block.Span.StartOffset && offset < ExtentEnd(block, text))
                 {
                     inner = block;
                     break;
