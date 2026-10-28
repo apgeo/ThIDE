@@ -45,11 +45,11 @@ public static class MacroVerb
         var root = workspace is null ? null : Directory.Exists(workspace) ? Path.GetFullPath(workspace) : Path.GetDirectoryName(Path.GetFullPath(workspace));
         userMacroFolder ??= Path.Combine(ProjectSidecar.DirectoryFor("macros"));
         var (user, userErrors) = MacroCatalog.LoadFolder(userMacroFolder);
-        var (project, projectErrors) = MacroCatalog.LoadFolder(root is null ? null : Path.Combine(root, ProjectLocalConfig.DirectoryName, "macros"));
-        foreach (var e in userErrors.Concat(projectErrors)) stderr.WriteLine("warning: " + e);
-        // Project macros override user ones, which override the built-ins (by name).
-        var all = new Dictionary<string, MacroDefinition>(StringComparer.Ordinal);
-        foreach (var m in MacroCatalog.BuiltIns.Concat(user).Concat(project)) all[m.Name] = m;
+        // The project's macros wherever the user keeps project settings: in the project or in app data.
+        var (project, projectErrors) = MacroCatalog.LoadFolder(ProjectLocalConfig.PathFor(root, ProjectConfigLocation.ProjectFolder, "macros"));
+        var (privateProject, privateErrors) = MacroCatalog.LoadFolder(ProjectLocalConfig.PathFor(root, ProjectConfigLocation.AppData, "macros"));
+        foreach (var e in userErrors.Concat(projectErrors).Concat(privateErrors)) stderr.WriteLine("warning: " + e);
+        var all = MacroCatalog.Merge(user, privateProject.Concat(project)).ToDictionary(m => m.Macro.Name, m => m.Macro, StringComparer.Ordinal);
 
         if (verb == "list")
         {
@@ -73,6 +73,7 @@ public static class MacroVerb
         services.AddSingleton<IWorkspaceHost>(new WorkspaceHost(workspace));
         services.AddToolServices();
         var runner = new MacroRunner(new ToolDispatcher(buildProvider(services)));
+        if (root is not null) vars.TryAdd("workspaceRoot", root);
         var problems = runner.Check(macro, vars);
         if (problems.Count > 0)
         {
@@ -81,7 +82,15 @@ public static class MacroVerb
         }
 
         var progress = new Therion.Build.Automation.SyncProgress<StepResult>(s => { if (!json) stdout.WriteLine($"{s.StepId,-12} {s.Tool,-20} {s.Status,-9} {s.Summary}"); });
-        var preview = await runner.RunAsync(macro, vars, apply: false, progress: apply ? null : progress, ct: ct);
+        if (!json && apply) stdout.WriteLine("Preview:");
+        var preview = await runner.RunAsync(macro, vars, apply: false, progress: progress, ct: ct);
+        // A failed preview is never applied (the same rule as the app).
+        if (apply && preview.Failed)
+        {
+            stderr.WriteLine("error: the preview failed, so nothing was applied.");
+            apply = false;
+        }
+        if (!json && apply) stdout.WriteLine("Apply:");
         var run = apply ? await runner.RunAsync(macro, vars, apply: true, preview, progress, ct) : preview;
         if (json)
             stdout.WriteLine(JsonSerializer.Serialize(new

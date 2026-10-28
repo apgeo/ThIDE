@@ -883,6 +883,13 @@ public partial class MainWindow : Window
             {
                 var picker = (DataContext as MainWindowViewModel)?.StoragePicker;
                 value = picker is null ? null : v.Type == "file" ? await picker.PickOpenFileAsync(v.Prompt ?? v.Id) : await picker.PickOpenFolderAsync(v.Prompt ?? v.Id);
+                // The tools take paths inside the project: pass them relative to it.
+                if (value is not null && AppServices.Provider.GetService<IWorkspaceSession>()?.RootPath is { } root)
+                {
+                    var rel = Path.GetRelativePath(root, value);
+                    if (!rel.StartsWith("..", StringComparison.Ordinal) && !Path.IsPathRooted(rel)) value = rel.Replace('\\', '/');
+                    else AppServices.Provider.GetService<INotificationService>()?.Warning(macro.Title, ThIDE.Resources.Tr.Get("Macro_OutsideProject"));
+                }
             }
             else
             {

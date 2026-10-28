@@ -54,18 +54,24 @@ public sealed class MacroService : IMacroService
     private string? ProjectFolder() => _settings.Current.EnableProjectAutomation
         ? ProjectLocalConfig.PathFor(_session.RootPath, _settings.Current.ProjectConfigLocation, "macros") : null;
 
+    private readonly HashSet<string> _reported = new(StringComparer.Ordinal);
+
     public IReadOnlyList<(MacroDefinition Macro, bool FromProject)> Macros()
     {
-        var all = new Dictionary<string, (MacroDefinition, bool)>(StringComparer.Ordinal);
-        foreach (var m in MacroCatalog.BuiltIns) all[m.Name] = (m, false);
-        foreach (var m in MacroCatalog.LoadFolder(ProjectSidecar.DirectoryFor("macros")).Macros) all[m.Name] = (m, false);
+        var (user, userErrors) = MacroCatalog.LoadFolder(ProjectSidecar.DirectoryFor("macros"));
         var (project, errors) = MacroCatalog.LoadFolder(ProjectFolder());
-        foreach (var m in project) all[m.Name] = (m, true);
-        if (errors.Count > 0) _notifications?.Warning(Tr.Get("Macro_FileInvalid"), string.Join("\n", errors.Take(3)));
-        return all.Values.OrderBy(m => m.Item1.Title, StringComparer.CurrentCultureIgnoreCase).ToList();
+        // Each broken file is reported once, not every time the menu or the palette opens.
+        var fresh = userErrors.Concat(errors).Where(_reported.Add).ToList();
+        if (fresh.Count > 0) _notifications?.Warning(Tr.Get("Macro_FileInvalid"), string.Join("\n", fresh.Take(3)));
+        return MacroCatalog.Merge(user, project).OrderBy(m => m.Macro.Title, StringComparer.CurrentCultureIgnoreCase).ToList();
     }
 
-    private ToolDispatcher Dispatcher()
+    private ToolDispatcher? _dispatcher;
+
+    // One dispatcher for the app's lifetime: the provider (and its live workspace host) is built once.
+    private ToolDispatcher Dispatcher() => _dispatcher ??= CreateDispatcher();
+
+    private ToolDispatcher CreateDispatcher()
     {
         var services = new ServiceCollection();
         var bridge = _app.GetRequiredService<IUiBridge>();
@@ -78,6 +84,15 @@ public sealed class MacroService : IMacroService
     }
 
     public async Task RunAsync(string name)
+    {
+        try { await RunCoreAsync(name); }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            _notifications?.Error(Tr.Get("Macro_Title"), ex.Message);
+        }
+    }
+
+    private async Task RunCoreAsync(string name)
     {
         var entry = Macros().FirstOrDefault(m => m.Macro.Name == name);
         if (entry.Macro is not { } macro) { _notifications?.Warning(Tr.Get("Macro_Title"), string.Format(Tr.Get("Macro_Unknown"), name)); return; }
@@ -98,6 +113,8 @@ public sealed class MacroService : IMacroService
         var runner = new MacroRunner(Dispatcher());
         var problems = runner.Check(macro, vars);
         var session = _output.BeginSession($"{Tr.Get("Macro_Title")}: {macro.Title}", AutomationKind.Macro);
+        using var cancel = new System.Threading.CancellationTokenSource();
+        session.OnCancel(cancel.Cancel);
         if (problems.Count > 0)
         {
             foreach (var p in problems) session.Write(p, isError: true);
@@ -109,14 +126,22 @@ public sealed class MacroService : IMacroService
             session.Write($"{s.StepId}: {s.Tool} — {s.Status}: {s.Summary}", s.Status == StepStatus.Failed));
         session.Write(Tr.Get("Macro_Previewing"));
         // Off the UI thread: the live workspace host marshals onto it for each tool call.
-        var preview = await Task.Run(() => runner.RunAsync(macro, vars, apply: false, progress: progress));
+        MacroRun preview;
+        try { preview = await Task.Run(() => runner.RunAsync(macro, vars, apply: false, progress: progress, ct: cancel.Token)); }
+        catch (OperationCanceledException) { session.Complete(AutomationState.Cancelled); return; }
+        catch (Exception ex) when (ex is not OutOfMemoryException) { session.Write(ex.Message, isError: true); session.Complete(AutomationState.Failed); return; }
         if (preview.Failed || ConfirmApply is null || !await ConfirmApply(macro, preview))
         {
             session.Complete(preview.Failed ? AutomationState.Failed : AutomationState.Cancelled);
             return;
         }
         session.Write(Tr.Get("Macro_Applying"));
-        var run = await Task.Run(() => runner.RunAsync(macro, vars, apply: true, preview, progress));
-        session.Complete(run.Failed ? AutomationState.Failed : AutomationState.Succeeded);
+        try
+        {
+            var run = await Task.Run(() => runner.RunAsync(macro, vars, apply: true, preview, progress, cancel.Token));
+            session.Complete(run.Failed ? AutomationState.Failed : AutomationState.Succeeded);
+        }
+        catch (OperationCanceledException) { session.Complete(AutomationState.Cancelled); }
+        catch (Exception ex) when (ex is not OutOfMemoryException) { session.Write(ex.Message, isError: true); session.Complete(AutomationState.Failed); }
     }
 }

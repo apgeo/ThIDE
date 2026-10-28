@@ -49,4 +49,19 @@ public class MacroVerbTests : IDisposable
         Assert.Equal(2, await Run("run", "end-of-trip", "--workspace", _root));
         Assert.Contains("source", _err.ToString());
     }
+
+    [Fact]
+    public async Task A_failed_preview_is_not_applied()
+    {
+        File.WriteAllText(Path.Combine(_root, ".thide", "macros", "bad.json"), """
+            { "steps": [
+              { "id": "fmt", "tool": "format_file", "args": { "path": "cave.th", "write": true } },
+              { "id": "oops", "tool": "format_file", "args": { "path": "missing.th" } } ] }
+            """);
+
+        Assert.Equal(1, await Run("run", "bad", "--workspace", Path.Combine(_root, "cave.thconfig"), "--apply"));
+
+        Assert.Equal(Messy, File.ReadAllText(Path.Combine(_root, "cave.th")));
+        Assert.Contains("nothing was applied", _err.ToString());
+    }
 }

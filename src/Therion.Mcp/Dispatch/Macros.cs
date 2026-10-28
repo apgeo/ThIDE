@@ -78,6 +78,16 @@ public static partial class MacroCatalog
         return (macros, errors);
     }
 
+    /// <summary>Built-ins, then user macros, then project macros: a later one with the same name wins.</summary>
+    public static IReadOnlyList<(MacroDefinition Macro, bool FromProject)> Merge(IEnumerable<MacroDefinition> user, IEnumerable<MacroDefinition> project)
+    {
+        var all = new Dictionary<string, (MacroDefinition, bool)>(StringComparer.Ordinal);
+        foreach (var m in BuiltIns) all[m.Name] = (m, false);
+        foreach (var m in user) all[m.Name] = (m, false);
+        foreach (var m in project) all[m.Name] = (m, true);
+        return all.Values.OrderBy(m => m.Item1.Name, StringComparer.Ordinal).ToList();
+    }
+
     /// <summary>The macros ThIDE ships.</summary>
     public static IReadOnlyList<MacroDefinition> BuiltIns { get; } =
     [
@@ -89,11 +99,10 @@ public static partial class MacroCatalog
                 { "id": "report", "tool": "generate_report", "args": { "target": "output/report.html" } } ] }
             """).Macro!,
         Load("end-of-trip", """
-            { "title": "End of trip", "description": "Import a Survex or Compass export, format it, and check the project.",
-              "vars": [ { "id": "source", "prompt": "Survey export (.svx or .dat)", "type": "file" } ],
+            { "title": "End of trip", "description": "Convert a Survex or Compass export that is inside the project (incoming/, say) to Therion, then list the project's warnings. Link the new file with Tools > Link survey file.",
+              "vars": [ { "id": "source", "prompt": "Survey export inside the project (.svx or .dat)", "type": "file" } ],
               "steps": [
                 { "id": "imp", "tool": "import_survey", "args": { "source": "${source}", "target": "${file:basename(source)}.th" } },
-                { "id": "fmt", "tool": "format_file", "args": { "path": "${steps.imp.data.target}", "write": true } },
                 { "id": "diag", "tool": "get_diagnostics", "args": { "minSeverity": "warning" } } ] }
             """).Macro!,
     ];
@@ -108,8 +117,11 @@ public sealed partial class MacroRunner(ToolDispatcher dispatcher)
     /// The references a macro makes that cannot resolve: unknown variables, steps that come later or
     /// do not exist, unknown tools. A macro with any is not run.
     /// </summary>
-    public IReadOnlyList<string> Check(MacroDefinition macro, IReadOnlyDictionary<string, string> vars)
+    public IReadOnlyList<string> Check(MacroDefinition macro, IReadOnlyDictionary<string, string> given)
     {
+        // A variable with a default counts as given.
+        var vars = new Dictionary<string, string>(given, StringComparer.Ordinal);
+        foreach (var v in macro.Vars) if (v.Default is not null) vars.TryAdd(v.Id, v.Default);
         var problems = new List<string>();
         var earlier = new HashSet<string>(StringComparer.Ordinal);
         foreach (var step in macro.Steps)
@@ -123,7 +135,7 @@ public sealed partial class MacroRunner(ToolDispatcher dispatcher)
                     if (!earlier.Contains(id)) problems.Add($"step '{step.Id}': '{id}' is not an earlier step");
                 }
                 else if (FileFunction(r) is { } arg) { if (!vars.ContainsKey(arg)) problems.Add($"step '{step.Id}': no variable '{arg}'"); }
-                else if (r is not ("date" or "workspaceRoot") && !vars.ContainsKey(r)) problems.Add($"step '{step.Id}': no variable '{r}'");
+                else if (r != "date" && !vars.ContainsKey(r)) problems.Add($"step '{step.Id}': no variable '{r}'");
             }
             earlier.Add(step.Id);
         }
@@ -251,7 +263,7 @@ public sealed partial class MacroRunner(ToolDispatcher dispatcher)
         foreach (var p in parts.Skip(2))
         {
             if (current.ValueKind == JsonValueKind.Object && current.TryGetProperty(p, out var next)) current = next;
-            else if (current.ValueKind == JsonValueKind.Array && int.TryParse(p, out var i) && i < current.GetArrayLength()) current = current[i];
+            else if (current.ValueKind == JsonValueKind.Array && int.TryParse(p, out var i) && i >= 0 && i < current.GetArrayLength()) current = current[i];
             else throw new KeyNotFoundException($"'{reference}' is not in the result of step '{parts[1]}'");
         }
         return current;

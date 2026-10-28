@@ -1584,4 +1584,5 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
 Aplici modificările? Pașii care nu au putut fi previzualizați rulează acum.</value></data>
   <data name="Macro_Apply" xml:space="preserve"><value>Aplică</value></data>
   <data name="Cmd_MacroFmt" xml:space="preserve"><value>Macro: {0}</value></data>
+  <data name="Macro_OutsideProject" xml:space="preserve"><value>Fișierul este în afara proiectului; majoritatea uneltelor lucrează doar cu fișiere din interior (copiază-l întâi în incoming/).</value></data>
 </root>

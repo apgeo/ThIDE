@@ -92,4 +92,10 @@ public class MacroRunnerTests : IDisposable
     {
         Assert.Equal(["release-check", "end-of-trip"], MacroCatalog.BuiltIns.Select(m => m.Name));
     }
+
+    [Fact]
+    public void Check_counts_defaults_as_given()
+    {
+        Assert.Empty(Runner().Check(Tidy, new Dictionary<string, string>()));
+    }
 }

@@ -1584,4 +1584,5 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
 Apply the changes? Steps that could not preview run now.</value></data>
   <data name="Macro_Apply" xml:space="preserve"><value>Apply</value></data>
   <data name="Cmd_MacroFmt" xml:space="preserve"><value>Macro: {0}</value></data>
+  <data name="Macro_OutsideProject" xml:space="preserve"><value>That file is outside the project; most tools only work on files inside it (copy it to incoming/ first).</value></data>
 </root>

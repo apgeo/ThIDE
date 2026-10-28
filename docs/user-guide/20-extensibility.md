@@ -124,12 +124,13 @@ Diagnostics panel. A task can be `shell` (the default), `builtin` (`build`, `bat
 
 A macro is a list of tool calls — the same tools an AI assistant uses through MCP — run without any
 model, with variables you fill in. **Tools → Macros** (or the command palette, *Macro: …*) lists the
-built-in ones (*Release check*: diagnostics, build, report; *End of trip*: import a Survex/Compass
-export, format it, check the project), yours (`macros/*.json` in ThIDE's settings folder) and the
+built-in ones (*Release check*: diagnostics, build, report; *End of trip*: convert a Survex/Compass
+export that is in the project — `incoming/`, say — and list the warnings), yours (`macros/*.json` in ThIDE's settings folder) and the
 project's (`.thide/macros/*.json`). Every run **previews first** into the Automation panel: steps that
 can show their change without making it (`dryRun`, or `write: false`) do so, read-only steps run, and
-the rest are listed as waiting; ThIDE then asks before applying. A file changed between the preview and
-the apply is refused.
+the rest are listed as waiting; ThIDE then asks before applying (a preview that failed is never
+applied). For tools that preview with `dryRun`, a file changed between the preview and the apply is
+refused. Paths are relative to the project: a file picked for a `file` variable must be inside it.
 
 ```json
 { "title": "Tidy a trip", "description": "Format it and check it",
