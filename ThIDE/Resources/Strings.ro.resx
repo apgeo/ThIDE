@@ -1528,4 +1528,9 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Batch_NoThconfigs" xml:space="preserve"><value>Spațiul de lucru nu are niciun thconfig de compilat.</value></data>
   <data name="Batch_RowOk" xml:space="preserve"><value>  reușit</value></data>
   <data name="Batch_RowFailed" xml:space="preserve"><value>  eșuat (cod {0})</value></data>
+  <data name="Fix_Rename" xml:space="preserve"><value>Redenumește „{0}” → „{1}”</value></data>
+  <data name="Fix_InsertEnd" xml:space="preserve"><value>Inserează „{0}”</value></data>
+  <data name="Fix_InsertCs" xml:space="preserve"><value>Inserează o linie „cs ”</value></data>
+  <data name="Fix_CommentOut" xml:space="preserve"><value>Transformă linia în comentariu</value></data>
+  <data name="Fix_CreateFile" xml:space="preserve"><value>Creează fișierul „{0}”</value></data>
 </root>

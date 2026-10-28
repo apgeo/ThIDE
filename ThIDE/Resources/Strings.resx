@@ -1528,4 +1528,9 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Batch_NoThconfigs" xml:space="preserve"><value>The workspace has no thconfig to build.</value></data>
   <data name="Batch_RowOk" xml:space="preserve"><value>  ok</value></data>
   <data name="Batch_RowFailed" xml:space="preserve"><value>  failed (exit {0})</value></data>
+  <data name="Fix_Rename" xml:space="preserve"><value>Rename '{0}' → '{1}'</value></data>
+  <data name="Fix_InsertEnd" xml:space="preserve"><value>Insert '{0}'</value></data>
+  <data name="Fix_InsertCs" xml:space="preserve"><value>Insert 'cs ' line</value></data>
+  <data name="Fix_CommentOut" xml:space="preserve"><value>Comment out this line</value></data>
+  <data name="Fix_CreateFile" xml:space="preserve"><value>Create file '{0}'</value></data>
 </root>
