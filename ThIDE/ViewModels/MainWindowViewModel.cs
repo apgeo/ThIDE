@@ -1147,16 +1147,20 @@ public partial class MainWindowViewModel : ViewModelBase
     private void BatchBuild() => BatchBuildRequested?.Invoke(this, null);
 
     /// <summary>Whether the project's incoming folder is watched (Tools ▸ Watch the incoming folder).</summary>
-    public bool WatchIncoming => AppServices.Provider.GetService(typeof(IIncomingFolderService)) is IIncomingFolderService s && s.IsEnabled;
+    public bool WatchIncoming => AppServices.Provider.GetService(typeof(IIncomingFolderService)) is IIncomingFolderService { IsEnabled: true };
 
     [RelayCommand]
     private void ToggleWatchIncoming()
     {
         if (AppServices.Provider.GetService(typeof(IIncomingFolderService)) is not IIncomingFolderService s) return;
-        s.SetEnabled(!s.IsEnabled);
+        var before = s.Folder;
+        if (s.SetEnabled(!s.IsEnabled) is { } problem) { _notifications.Warning(Tr.Get("Incoming_Title"), problem); return; }
         OnPropertyChanged(nameof(WatchIncoming));
-        if (s.Folder is { } folder) _notifications.Info(Tr.Get("Incoming_Title"), string.Format(Tr.Get(s.IsEnabled ? "Incoming_On" : "Incoming_Off"), folder));
+        if ((s.Folder ?? before) is { } folder) _notifications.Info(Tr.Get("Incoming_Title"), string.Format(Tr.Get(s.IsEnabled ? "Incoming_On" : "Incoming_Off"), folder));
     }
+
+    /// <summary>Called when the incoming service changes (project switch): the menu check follows.</summary>
+    public void RefreshWatchIncoming() => OnUiThread(() => OnPropertyChanged(nameof(WatchIncoming)));
 
     /// <summary>Raised to open Tools ▸ Add unreferenced scraps to maps.</summary>
     public event EventHandler? SyncMapsRequested;

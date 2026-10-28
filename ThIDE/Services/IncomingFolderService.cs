@@ -1,11 +1,12 @@
 // Watches the project's incoming folder when the project has turned it on (project.json in its
 // config folder): a survey export that lands there is offered for import once it has finished
-// arriving. Off by default.
+// arriving — again whenever a file of the same name is replaced. Off by default.
 
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading;
 using Therion.Workspace;
 using Therion.Workspace.Incoming;
@@ -18,9 +19,12 @@ public interface IIncomingFolderService
     /// <summary>The folder being watched, or null.</summary>
     string? Folder { get; }
 
-    /// <summary>Turns watching on or off for the current project (writes its project.json).</summary>
-    void SetEnabled(bool enabled);
+    /// <summary>Turns watching on or off for the current project (writes its project.json). Null on success, else why not.</summary>
+    string? SetEnabled(bool enabled);
     bool IsEnabled { get; }
+
+    /// <summary>Raised when watching starts or stops (project switch, toggle).</summary>
+    event EventHandler? Changed;
 
     /// <summary>Raised when the user chooses Import… on an arrived file (any thread).</summary>
     event EventHandler<string>? ImportRequested;
@@ -34,7 +38,9 @@ public sealed class IncomingFolderService : IIncomingFolderService, IDisposable
     private readonly ILogService? _log;
     private readonly DebouncedFileWatcher _watcher = new(TimeSpan.FromMilliseconds(500));
     private readonly StableFileTracker _stable;
-    private readonly HashSet<string> _offered = new(StringComparer.Ordinal);
+    private readonly object _gate = new();
+    // What was offered, by path, with the size and time it had: a replaced file is offered again.
+    private readonly Dictionary<string, (long Size, DateTime Modified)> _offered = new(StringComparer.Ordinal);
     private readonly HashSet<string> _waiting = new(StringComparer.Ordinal);
     private readonly Timer _poll;
 
@@ -46,45 +52,82 @@ public sealed class IncomingFolderService : IIncomingFolderService, IDisposable
         _log = log;
         _stable = new StableFileTracker(Probe, () => DateTime.UtcNow);
         _watcher.Filter = p => IncomingFiles.Route(p) != IncomingRoute.Ignore;
-        _watcher.FileChanged += p => { lock (_waiting) if (!_offered.Contains(p)) _waiting.Add(p); };
+        _watcher.FileChanged += OnChanged;
         _watcher.Error += (dir, ex) => _log?.Warning($"Incoming folder {dir}: {ex.Message}");
-        _poll = new Timer(_ => Poll(), null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+        _poll = new Timer(_ => Poll(), null, Timeout.Infinite, Timeout.Infinite);
         _session.RootChanged += (_, _) => Restart();
         Restart();
     }
 
     public string? Folder { get; private set; }
-    public bool IsEnabled => Read()?.Incoming.Enabled == true;
+    public bool IsEnabled { get; private set; }
+    public event EventHandler? Changed;
     public event EventHandler<string>? ImportRequested;
 
     private string? SettingsPath() => ProjectLocalConfig.PathFor(_session.RootPath, _settings.Current.ProjectConfigLocation, "project.json");
 
-    private ProjectSettingsFile? Read() => SettingsPath() is { } p ? ProjectLocalConfig.TryReadJson<ProjectSettingsFile>(p).Value : null;
-
-    public void SetEnabled(bool enabled)
+    public string? SetEnabled(bool enabled)
     {
-        if (SettingsPath() is not { } path) return;
-        var file = Read() ?? new ProjectSettingsFile();
-        file.Incoming.Enabled = enabled;
+        if (SettingsPath() is not { } path) return Tr.Get("Incoming_NoProject");
+        // Change only incoming.enabled; keep whatever else the (hand-edited, shared) file holds.
+        JsonObject root;
+        try
+        {
+            root = File.Exists(path)
+                ? JsonNode.Parse(File.ReadAllText(path), documentOptions: new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true }) as JsonObject
+                  ?? throw new JsonException("not an object")
+                : new JsonObject { ["version"] = 1 };
+        }
+        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
+        {
+            return string.Format(Tr.Get("Incoming_FileInvalid"), path, ex.Message);
+        }
+        var incoming = root["incoming"] as JsonObject ?? new JsonObject { ["folder"] = "incoming" };
+        incoming["enabled"] = enabled;
+        root["incoming"] = incoming;
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            File.WriteAllText(path, JsonSerializer.Serialize(file, ProjectLocalConfig.JsonOptions));
-            if (enabled && IncomingFiles.FolderFor(_session.RootPath, file) is { } folder) Directory.CreateDirectory(folder);
+            File.WriteAllText(path, root.ToJsonString(ProjectLocalConfig.JsonOptions));
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { _log?.Warning(ex.Message); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return ex.Message; }
         Restart();
+        return null;
     }
 
     private void Restart()
     {
-        foreach (var dir in _watcher.Watched) _watcher.Unwatch(dir);
-        lock (_waiting) { _waiting.Clear(); _offered.Clear(); }
-        Folder = IncomingFiles.FolderFor(_session.RootPath, Read());
-        if (Folder is not null && Directory.Exists(Folder))
+        lock (_gate)
         {
-            _watcher.Watch(Folder);
-            _log?.Info($"Watching the incoming folder {Folder}");
+            foreach (var dir in _watcher.Watched) _watcher.Unwatch(dir);
+            _waiting.Clear();
+            _offered.Clear();
+            _stable.Clear();
+            var settings = SettingsPath() is { } p ? ProjectLocalConfig.TryReadJson<ProjectSettingsFile>(p).Value : null;
+            IsEnabled = settings?.Incoming.Enabled == true;
+            Folder = IncomingFiles.FolderFor(_session.RootPath, settings);
+            if (Folder is not null)
+            {
+                // Git does not keep an empty folder: a project that turned watching on may arrive without it.
+                try { Directory.CreateDirectory(Folder); }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { _log?.Warning(ex.Message); }
+                _watcher.Watch(Folder);
+                _log?.Info($"Watching the incoming folder {Folder}");
+            }
+            // Poll only while something is watched.
+            _poll.Change(Folder is null ? Timeout.Infinite : 1000, Folder is null ? Timeout.Infinite : 1000);
+        }
+        Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void OnChanged(string path)
+    {
+        lock (_gate)
+        {
+            if (Folder is null || !path.StartsWith(Folder, StringComparison.Ordinal)) return;   // a late event from an old folder
+            if (Probe(path) is not { } now) { _offered.Remove(path); _stable.Forget(path); return; }
+            if (_offered.TryGetValue(path, out var then) && then == now) return;   // the same file, offered already
+            _waiting.Add(path);
         }
     }
 
@@ -102,13 +145,17 @@ public sealed class IncomingFolderService : IIncomingFolderService, IDisposable
     private void Poll()
     {
         List<string> ready = [];
-        lock (_waiting)
+        lock (_gate)
         {
             foreach (var path in _waiting)
-                if (!File.Exists(path)) _offered.Add(path);
-                else if (_stable.IsStable(path)) ready.Add(path);
-            foreach (var path in ready) { _waiting.Remove(path); _offered.Add(path); }
-            _waiting.RemoveWhere(p => _offered.Contains(p));
+                if (_stable.IsStable(path)) ready.Add(path);
+            foreach (var path in ready)
+            {
+                _waiting.Remove(path);
+                _stable.Forget(path);
+                if (Probe(path) is { } now) _offered[path] = now;
+            }
+            _waiting.RemoveWhere(p => !File.Exists(p));
         }
         foreach (var path in ready) Offer(path);
     }

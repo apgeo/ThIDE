@@ -90,7 +90,10 @@ public partial class MainWindow : Window
                 vm.SuggestEquatesRequested += (_, _) => _ = SuggestEquatesAsync();
                 vm.FormatAllRequested += (_, _) => _ = FormatAllAsync();
                 if (AppServices.Provider.GetService<IIncomingFolderService>() is { } incoming)
+                {
                     incoming.ImportRequested += (_, path) => Avalonia.Threading.Dispatcher.UIThread.Post(() => _ = ImportArrivedAsync(vm, path));
+                    incoming.Changed += (_, _) => vm.RefreshWatchIncoming();
+                }
                 vm.Diagnostics.FixAllRequested += (_, code) => _ = FixAllAsync(vm, code);
                 ThIDE.Editor.TherionTextEditor.LinkSurveyRequested += (_, req) =>
                     Avalonia.Threading.Dispatcher.UIThread.Post(() => _ = ShowLinkSurveyAsync(req.FilePath, req.Caret));
@@ -818,7 +821,18 @@ public partial class MainWindow : Window
     }
 
     /// <summary>An arrived (or dropped) file: link a survey, or import Survex/Compass/GPX first.</summary>
+    private readonly System.Threading.SemaphoreSlim _importOneAtATime = new(1, 1);
+
     private async System.Threading.Tasks.Task ImportArrivedAsync(MainWindowViewModel vm, string path)
+    {
+        // Several dropped files: one dialog after another, not all at once.
+        await _importOneAtATime.WaitAsync();
+        try { await ImportOneAsync(vm, path); }
+        catch (Exception ex) { AppServices.Provider.GetService<INotificationService>()?.Error(ThIDE.Resources.Tr.Get("Notif_ImportFailed"), ex.Message); }
+        finally { _importOneAtATime.Release(); }
+    }
+
+    private async System.Threading.Tasks.Task ImportOneAsync(MainWindowViewModel vm, string path)
     {
         switch (Therion.Workspace.Incoming.IncomingFiles.Route(path))
         {

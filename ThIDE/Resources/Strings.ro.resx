@@ -1568,4 +1568,6 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Incoming_Sketch" xml:space="preserve"><value>A sosit o schiță ({0}); leagă întâi fișierul topografiei, apoi copiaz-o împreună cu el.</value></data>
   <data name="Incoming_On" xml:space="preserve"><value>Se urmărește {0}: exporturile de topografie care ajung acolo sunt oferite pentru import.</value></data>
   <data name="Incoming_Off" xml:space="preserve"><value>Nu se mai urmărește {0}.</value></data>
+  <data name="Incoming_NoProject" xml:space="preserve"><value>Deschide întâi un proiect.</value></data>
+  <data name="Incoming_FileInvalid" xml:space="preserve"><value>{0} nu poate fi citit ({1}); corectează-l de mână ca să nu se piardă nimic din el.</value></data>
 </root>

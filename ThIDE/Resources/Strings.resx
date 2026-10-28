@@ -1568,4 +1568,6 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Incoming_Sketch" xml:space="preserve"><value>A sketch arrived ({0}); link its survey file first, then copy the sketch with it.</value></data>
   <data name="Incoming_On" xml:space="preserve"><value>Watching {0}: survey exports that land there are offered for import.</value></data>
   <data name="Incoming_Off" xml:space="preserve"><value>No longer watching {0}.</value></data>
+  <data name="Incoming_NoProject" xml:space="preserve"><value>Open a project first.</value></data>
+  <data name="Incoming_FileInvalid" xml:space="preserve"><value>{0} cannot be read ({1}); fix it by hand so nothing in it is lost.</value></data>
 </root>

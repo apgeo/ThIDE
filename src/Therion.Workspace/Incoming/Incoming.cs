@@ -62,4 +62,6 @@ public sealed class StableFileTracker(Func<string, (long Size, DateTime Modified
     }
 
     public void Forget(string path) => _seen.Remove(path);
+
+    public void Clear() => _seen.Clear();
 }

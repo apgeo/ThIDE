@@ -37,8 +37,15 @@ public sealed class DebouncedFileWatcher : IDisposable
     {
         if (!Directory.Exists(directory)) return;
         var full = Path.GetFullPath(directory);
-        if (_watchers.ContainsKey(full)) return;
+        lock (_watchers)
+        {
+            if (_watchers.ContainsKey(full)) return;
+            WatchLocked(full, includeSubdirectories);
+        }
+    }
 
+    private void WatchLocked(string full, bool includeSubdirectories)
+    {
         var w = new FileSystemWatcher(full)
         {
             IncludeSubdirectories = includeSubdirectories,
@@ -56,7 +63,12 @@ public sealed class DebouncedFileWatcher : IDisposable
     /// <summary>Stops watching a directory given to <see cref="Watch"/>.</summary>
     public void Unwatch(string directory)
     {
-        if (_watchers.TryRemove(Path.GetFullPath(directory), out var w)) w.Dispose();
+        var full = Path.GetFullPath(directory);
+        if (_watchers.TryRemove(full, out var w)) w.Dispose();
+        // Events already queued from that folder are dropped too.
+        var prefix = full.EndsWith(Path.DirectorySeparatorChar) ? full : full + Path.DirectorySeparatorChar;
+        foreach (var path in _pending.Keys)
+            if (path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) _pending.TryRemove(path, out _);
     }
 
     /// <summary>The directories being watched.</summary>
