@@ -120,6 +120,10 @@ public sealed record AppSettings
     public string? HookOnSave { get; init; }
     /// <summary>Shell command run when a build starts (<c>{file}</c> = active thconfig), or null.</summary>
     public string? HookOnBuild { get; init; }
+    /// <summary>The user's own hooks (beyond the three single commands above), in run order.</summary>
+    public IReadOnlyList<Therion.Build.Automation.HookDefinition> Hooks { get; init; } = Array.Empty<Therion.Build.Automation.HookDefinition>();
+    /// <summary>Read hooks, tasks and macros from a project's config folder (they still need the folder to be trusted to run).</summary>
+    public bool EnableProjectAutomation { get; init; } = true;
 
     // ---- plugins ----
     /// <summary>Load external plugin assemblies (custom semantic rules) from the plugins folder.

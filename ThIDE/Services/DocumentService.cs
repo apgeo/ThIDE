@@ -611,7 +611,6 @@ public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, 
             // Mark the path so the watcher doesn't treat our own save as an external edit (#6).
             _session.SuppressSelfWrite(doc.FilePath);
             await File.WriteAllTextAsync(doc.FilePath, newText, ct).ConfigureAwait(true);
-            _hooks?.Run(ScriptHookEvent.Save, doc.FilePath);
             doc.SetText(newText, reparse: true);
             DocumentSaved?.Invoke(this, doc.FilePath);
             return;

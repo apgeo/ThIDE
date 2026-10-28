@@ -1498,4 +1498,17 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Tool_Automation" xml:space="preserve"><value>Automatizare</value></data>
   <data name="Menu_View_Automation" xml:space="preserve"><value>Automatizare</value></data>
   <data name="Automation_Cancel" xml:space="preserve"><value>Anulează</value></data>
+  <data name="Automation_Hook" xml:space="preserve"><value>Hook</value></data>
+  <data name="Automation_HookTimedOut" xml:space="preserve"><value>Un hook a durat prea mult și a fost oprit</value></data>
+  <data name="Automation_HookTimedOutDetail" xml:space="preserve"><value>Hook-ul {0} a rulat mai mult de {1} s.</value></data>
+  <data name="Pref_HookList" xml:space="preserve"><value>Alte hook-uri</value></data>
+  <data name="Pref_HookListHelp" xml:space="preserve"><value>Fiecare rulează o comandă când are loc evenimentul: la deschiderea unui spațiu de lucru, la deschiderea sau salvarea unui fișier, la începutul, sfârșitul sau eșecul unei compilări. Folosește {file}, ${fileDirname}, ${workspaceRoot}, ${activeThconfig}, ${entry}; hook-ul primește și variabile de mediu THIDE_* (codul de ieșire, erori, rezultate…). Ieșirea apare în panoul Automatizare, dacă hook-ul nu e detașat.</value></data>
+  <data name="Pref_HookTimeout" xml:space="preserve"><value>Secunde până la oprirea hook-ului</value></data>
+  <data name="Pref_HookDetached" xml:space="preserve"><value>Detașat</value></data>
+  <data name="Pref_HookEnabled" xml:space="preserve"><value>Activ</value></data>
+  <data name="Pref_HookAdd" xml:space="preserve"><value>Adaugă hook</value></data>
+  <data name="Pref_ProjectAutomation" xml:space="preserve"><value>Citește hook-uri, sarcini și macrouri din dosarul .thide al proiectului</value></data>
+  <data name="Pref_ProjectAutomationHelp" xml:space="preserve"><value>Rulează doar în dosarele în care ai încredere; ThIDE întreabă prima dată când un proiect vrea să ruleze ceva.</value></data>
+  <data name="Pref_TrustedFolders" xml:space="preserve"><value>Dosare de încredere</value></data>
+  <data name="Pref_TrustRemove" xml:space="preserve"><value>Elimină</value></data>
 </root>

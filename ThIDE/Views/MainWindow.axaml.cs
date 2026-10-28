@@ -1495,6 +1495,7 @@ public partial class MainWindow : Window
         if (settings is null) return;
 
         var vm = new PreferencesViewModel(settings, keyboard, language, externalTools, associations);
+        if (AppServices.Provider.GetService<IWorkspaceTrustService>() is { } trustStore) vm.AttachTrust(trustStore);
         if (!string.IsNullOrEmpty(section)) vm.SelectSectionById(section!);
         await new PreferencesWindow { DataContext = vm }.ShowDialog(this);
     }

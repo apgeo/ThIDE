@@ -775,6 +775,21 @@ public partial class MainWindowViewModel : ViewModelBase
         _documents.DocumentSaved += (_, _) => OnUiThread(TriggerCompileOnSave);
         // run the on-build script hook (active thconfig as {file}).
         Build.BuildStarted += (_, entry) => _hooks?.Run(ScriptHookEvent.Build, entry);
+        // Hooks for every save (Save, Save All, auto-save), for build results and for an opened workspace.
+        _documents.DocumentSaved += (_, path) => _hooks?.Run(ScriptHookEvent.Save, path);
+        Build.BuildFinished += (_, outcome) =>
+        {
+            if (_hooks is not ScriptHookService hooks) return;
+            hooks.Fire(hooks.Context(Therion.Build.Automation.HookEvent.BuildFinished, entry: outcome.Entry, outcome: outcome));
+            if (!outcome.Succeeded && !outcome.Cancelled)
+                hooks.Fire(hooks.Context(Therion.Build.Automation.HookEvent.BuildFailed, entry: outcome.Entry, outcome: outcome));
+        };
+        if (_session is not null)
+            _session.RootChanged += (_, _) =>
+            {
+                if (_hooks is ScriptHookService hooks && _session.RootPath is { } root)
+                    hooks.Fire(hooks.Context(Therion.Build.Automation.HookEvent.WorkspaceOpened, file: root));
+            };
 
         Refresh();
         RestoreSession();

@@ -436,6 +436,44 @@
                         <TextBox AutomationProperties.AutomationId="Preferences.HookOnBuild" AutomationProperties.Name="{l:Loc Pref_OnBuild}"   Grid.Row="2" Grid.Column="1" Text="{Binding HookOnBuild}" Watermark="{l:Loc Pref_CommandWm}" />
                     </Grid>
 
+                    <TextBlock Text="{l:Loc Pref_HookList}" FontWeight="SemiBold" Margin="0,6,0,0" />
+                    <TextBlock Text="{l:Loc Pref_HookListHelp}" Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
+                    <ItemsControl ItemsSource="{Binding HookRows}" IsEnabled="{Binding EnableScriptHooks}" AutomationProperties.AutomationId="Preferences.Hooks">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid ColumnDefinitions="150,*,90,Auto,Auto,Auto" Margin="0,0,0,4">
+                                    <ComboBox Grid.Column="0" ItemsSource="{Binding $parent[ItemsControl].DataContext.HookEvents}"
+                                              SelectedItem="{Binding Event, Mode=TwoWay}" HorizontalAlignment="Stretch" />
+                                    <TextBox Grid.Column="1" Text="{Binding Command, Mode=TwoWay}" Margin="4,0" Watermark="{l:Loc Pref_CommandWm}" />
+                                    <NumericUpDown Grid.Column="2" Value="{Binding TimeoutSeconds, Mode=TwoWay}" Minimum="1" Maximum="3600"
+                                                   ToolTip.Tip="{l:Loc Pref_HookTimeout}" FormatString="0" />
+                                    <CheckBox Grid.Column="3" Content="{l:Loc Pref_HookDetached}" IsChecked="{Binding Detached, Mode=TwoWay}" Margin="6,0,0,0" />
+                                    <CheckBox Grid.Column="4" Content="{l:Loc Pref_HookEnabled}" IsChecked="{Binding Enabled, Mode=TwoWay}" Margin="6,0,0,0" />
+                                    <Button Grid.Column="5" Content="✕" Margin="6,0,0,0"
+                                            Command="{Binding $parent[ItemsControl].DataContext.RemoveHookCommand}" CommandParameter="{Binding}" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Button Content="{l:Loc Pref_HookAdd}" Command="{Binding AddHookCommand}" HorizontalAlignment="Left"
+                            IsEnabled="{Binding EnableScriptHooks}" AutomationProperties.AutomationId="Preferences.Hooks.Add" />
+
+                    <CheckBox Content="{l:Loc Pref_ProjectAutomation}" IsChecked="{Binding EnableProjectAutomation}" Margin="0,6,0,0"
+                              AutomationProperties.AutomationId="Preferences.ProjectAutomation" />
+                    <TextBlock Text="{l:Loc Pref_ProjectAutomationHelp}" Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
+                    <TextBlock Text="{l:Loc Pref_TrustedFolders}" FontWeight="SemiBold" />
+                    <ItemsControl ItemsSource="{Binding TrustedFolders}" AutomationProperties.AutomationId="Preferences.TrustedFolders">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <DockPanel Margin="0,0,0,2">
+                                    <Button DockPanel.Dock="Right" Content="{l:Loc Pref_TrustRemove}"
+                                            Command="{Binding $parent[ItemsControl].DataContext.RevokeTrustCommand}" CommandParameter="{Binding}" />
+                                    <TextBlock Text="{Binding}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                </DockPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
                     <Separator Margin="0,6" />
                     <!-- plugin assemblies. -->
                     <CheckBox Content="{l:Loc Pref_LoadPlugins}"

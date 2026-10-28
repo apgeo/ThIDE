@@ -1498,4 +1498,17 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Tool_Automation" xml:space="preserve"><value>Automation</value></data>
   <data name="Menu_View_Automation" xml:space="preserve"><value>Automation</value></data>
   <data name="Automation_Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Automation_Hook" xml:space="preserve"><value>Hook</value></data>
+  <data name="Automation_HookTimedOut" xml:space="preserve"><value>A hook took too long and was stopped</value></data>
+  <data name="Automation_HookTimedOutDetail" xml:space="preserve"><value>The {0} hook ran longer than {1} s.</value></data>
+  <data name="Pref_HookList" xml:space="preserve"><value>More hooks</value></data>
+  <data name="Pref_HookListHelp" xml:space="preserve"><value>Each runs a shell command when its event happens: when a workspace opens, a file is opened or saved, a build starts, finishes or fails. Use {file}, ${fileDirname}, ${workspaceRoot}, ${activeThconfig}, ${entry}; the hook also gets THIDE_* environment variables (build exit code, errors, outputs…). Output goes to the Automation panel unless the hook is detached.</value></data>
+  <data name="Pref_HookTimeout" xml:space="preserve"><value>Seconds before the hook is stopped</value></data>
+  <data name="Pref_HookDetached" xml:space="preserve"><value>Detached</value></data>
+  <data name="Pref_HookEnabled" xml:space="preserve"><value>On</value></data>
+  <data name="Pref_HookAdd" xml:space="preserve"><value>Add hook</value></data>
+  <data name="Pref_ProjectAutomation" xml:space="preserve"><value>Read hooks, tasks and macros from the project's .thide folder</value></data>
+  <data name="Pref_ProjectAutomationHelp" xml:space="preserve"><value>They run only in folders you trust; ThIDE asks the first time a project wants to run something.</value></data>
+  <data name="Pref_TrustedFolders" xml:space="preserve"><value>Trusted folders</value></data>
+  <data name="Pref_TrustRemove" xml:space="preserve"><value>Remove</value></data>
 </root>
