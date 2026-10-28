@@ -134,6 +134,19 @@ LM Studio MCP Server config file path ex.: `C:\Users\Z\.lmstudio\mcp.json`
 Use an absolute path to the executable: LM Studio does not spawn it through a shell, so `~` and
 `PATH` lookups will not resolve.
 
+### The skill pack as LM Studio's system prompt
+
+A model does better when it knows how a Therion project is laid out and how these tools expect to be
+used (preview first, then apply). ThIDE's Assistant panel adds that text to its instructions on its
+own; for LM Studio's chat, print it and paste it into the preset's **System Prompt**:
+
+```
+therion-mcp skills print                                  # the built-in text
+therion-mcp skills print --user my-notes.md --project .thide/assistant.md
+```
+
+Each notes file is cut to 8 KB.
+
 ## Talking to the *running* ThIDE
 
 Everything above runs a **fresh, headless** copy of the engines against files on disk. If instead you
@@ -177,7 +190,22 @@ exactly the same tools, with the same safety rails.
 
 Tools that only read run silently. Any tool that writes (an edit, a scaffold, an export, a build)
 pauses the conversation on an **Allow / Deny** card showing the exact call and its arguments —
-nothing touches a file until you allow it, and the server still previews before applying.
+nothing touches a file until you allow it, and the server still previews before applying. A preview
+call (`dryRun: true`) changes nothing, so it runs without a card; the call that applies it asks.
+
+The panel's instructions include the **skill pack**: the built-in text (`therion-mcp skills print`),
+then your notes from `assistant-skills.md` next to ThIDE's settings file, then the project's from
+`assistant.md` in the project's config folder (`.thide/`, or the per-project folder under the app's
+settings when **Preferences ▸ General** says so). Turn it off under **Preferences ▸ MCP**.
+
+**What the model may see.** Before the first question the panel asks, and **Preferences ▸ MCP**
+can change it later:
+
+| Choice | What the model gets |
+|---|---|
+| **Everything** (default) | All tools and their full results. Right for a model on this computer. |
+| **Keep project data from the model** | Only the tools that answer about Therion, ThIDE and the program (command help, diagnostics explained, the Therion book, unit and coordinate conversion, settings, layout). No workspace context, no project notes; the conversation is not saved. |
+| **Blank out values** | All tools, but names, numbers and text in their results become `…` / `#` placeholders; counts, diagnostic codes, severities and line numbers stay. Best effort only — what you type, and names the model writes into its own calls, still reach it. |
 
 In LM Studio, load the model and turn on **Developer ▸ Local Server** (default port 1234); the
 panel needs nothing else.

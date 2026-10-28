@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Therion.Mcp\Therion.Mcp.csproj" />
+    <ProjectReference Include="..\Therion.Assistant\Therion.Assistant.csproj" />
   </ItemGroup>
 
 </Project>
