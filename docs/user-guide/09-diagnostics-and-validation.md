@@ -70,6 +70,27 @@ workspaces — leave it off if you notice lag and rely on save-time validation.
 Where ThIDE can offer a repair, **Quick Fix** (**Ctrl+.**) proposes it (also in the Command Palette).
 When there's nothing to fix at the caret, it says so.
 
+In the **Diagnostics panel**, right-click a row for **Fix** (its first fix) and, for problems with a fix
+that is safe to apply everywhere, **Fix all '<code>' in the workspace…**: an unknown station with a
+single "did you mean" suggestion (renamed) and a block without its terminator (`endsurvey` and the
+like, inserted after the block's body). A preview lists every change — file, line, before and after —
+and you untick any you don't want; **Apply** writes them (in an open file as one undo step) and the
+project is re-checked. Ambiguous cases are counted and left alone.
+
+## Project-wide tidying (Tools menu)
+
+- **Add unreferenced scraps to maps…** — lists the drawn scraps no map composes (so they are missing
+  from every exported map), proposes a map for each (one in the file that inputs the sketch, else the
+  closest name), and adds them after the map's last member, written `scrap@survey` when needed.
+- **Suggest equates…** — stations closer than a distance you choose but in different, separately
+  georeferenced pieces of the cave: likely missing `equate`s. Positions are estimates, so each pair is
+  a candidate to check; **Link…** opens [Link survey file](24-linking-surveys.md) on the two stations
+  and writes only the `equate`, where both can be named from.
+- **Format all files…** — every project file through the formatter, previewed first; files that do not
+  parse cleanly are left alone, line endings are kept.
+
+Renumbering or re-prefixing stations across a project is not offered yet.
+
 ## Tuning specific checks
 
 A few checks are configurable under **Settings → Diagnostics** — for example, whether a bare local
