@@ -1463,7 +1463,7 @@ public partial class MainWindow : Window
 
     private static string? SafeReadAllText(string path)
     {
-        try { return Therion.Workspace.Editing.SourceFileIo.Read(path).Text; } catch { return null; }
+        try { return Therion.Syntax.EncodingResolver.ReadAllText(path); } catch { return null; }
     }
 
     /// <summary>
@@ -1550,7 +1550,7 @@ public partial class MainWindow : Window
         {
             if (!seenPaths.Add(filePath)) continue;   // already handled as the active doc
             string text;
-            try { text = System.IO.File.ReadAllText(filePath); }
+            try { text = Therion.Syntax.EncodingResolver.ReadAllText(filePath); }
             catch { continue; }
 
             var hits = FindRenameHitsInText(text, oldName, nav, kind, targetSpan);
@@ -1605,6 +1605,9 @@ public partial class MainWindow : Window
         Services.IWorkspaceSession? session = null;
         try { session = AppServices.Provider.GetService<Services.IWorkspaceSession>(); } catch { /* design-time */ }
 
+        // Encode every file before writing any: one file whose encoding cannot hold the new name stops
+        // the whole rename, instead of leaving references to a survey that was not renamed.
+        var planned = new List<(RenameFileChanges Changes, string Text, byte[] Bytes, Therion.Workspace.Editing.TextFileFormat Format, ViewModels.Docking.FileDocumentViewModel? Open)>();
         foreach (var fc in changes)
         {
             var sorted = new System.Collections.Generic.List<(int, int)>(fc.Hits);
@@ -1616,17 +1619,27 @@ public partial class MainWindow : Window
 
             var newText = sb.ToString();
             var open = docs.Documents.FirstOrDefault(d => string.Equals(d.FilePath, fc.FilePath, System.StringComparison.OrdinalIgnoreCase));
-            session?.SuppressSelfWrite(fc.FilePath);
             try
             {
-                var format = await System.Threading.Tasks.Task.Run(() => Therion.Workspace.Editing.SourceFileIo.SaveText(fc.FilePath, newText, open?.Format));
-                if (open is not null) open.Format = format;
+                var (bytes, format) = await System.Threading.Tasks.Task.Run(() => Therion.Workspace.Editing.SourceFileIo.EncodeForSave(fc.FilePath, newText, open?.Format));
+                planned.Add((fc, newText, bytes, format, open));
             }
             catch (Therion.Workspace.Editing.UnrepresentableCharacterException ex)
             {
                 AppServices.Provider.GetService<INotificationService>()?.Error(ThIDE.Resources.Tr.Get("Notif_SaveEncodingTitle"),
                     string.Format(ThIDE.Resources.Tr.Get("Notif_SaveEncoding"), System.IO.Path.GetFileName(fc.FilePath), ex.Character, ex.EncodingName));
-                continue;
+                return;
+            }
+            catch { /* unreadable: skipped, as a failed write is below */ }
+        }
+
+        foreach (var (fc, newText, bytes, format, open) in planned)
+        {
+            session?.SuppressSelfWrite(fc.FilePath);
+            try
+            {
+                await System.Threading.Tasks.Task.Run(() => Therion.Workspace.Editing.SourceFileIo.WriteOver(fc.FilePath, bytes));
+                if (open is not null) open.Format = format;
             }
             catch { continue; }
 

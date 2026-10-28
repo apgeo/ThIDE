@@ -33,7 +33,7 @@ public partial class ReplaceWindow : Window
         if (this.FindControl<TextEditor>("Peek") is not { } peek) return;
         try
         {
-            peek.Text = File.Exists(hit.Span.FilePath) ? File.ReadAllText(hit.Span.FilePath) : string.Empty;
+            peek.Text = File.Exists(hit.Span.FilePath) ? Therion.Syntax.EncodingResolver.ReadAllText(hit.Span.FilePath) : string.Empty;
             int line = Math.Max(1, hit.Span.Start.Line);
             if (line <= peek.Document.LineCount)
             {

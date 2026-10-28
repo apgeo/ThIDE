@@ -631,15 +631,14 @@ public partial class FileDocumentView : UserControl
 
         var owner = TopLevel.GetTopLevel(this) as Window;
 
-        // Persist any pending edits so Mapiah opens the latest text. Suppress the self-write
-        // so our own save doesn't raise the "changed on disk" banner.
+        // Persist any pending edits so Mapiah opens the latest text — an ordinary save, so the file
+        // keeps its encoding and our own write doesn't raise the "changed on disk" banner.
         if (_vm.IsDirty)
         {
             try
             {
-                TrySession()?.SuppressSelfWrite(_vm.FilePath);
-                await File.WriteAllTextAsync(_vm.FilePath, _vm.DocumentText).ConfigureAwait(true);
-                _vm.SetText(_vm.DocumentText, reparse: false);
+                if (AppServices.Provider.GetService<IDocumentService>() is { } documents)
+                    await documents.SaveDocumentAsync(_vm).ConfigureAwait(true);
             }
             catch { /* fall through — let Mapiah open whatever is on disk */ }
         }

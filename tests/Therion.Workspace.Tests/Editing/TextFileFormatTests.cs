@@ -58,4 +58,47 @@ public sealed class TextFileFormatTests : IDisposable
         Assert.Throws<UnrepresentableCharacterException>(() =>
             SourceFileIo.EncodeForSave("e.th", "encoding iso-8859-1\nsurvey Peștera\n", latin1));
     }
+
+    [Fact]
+    public void DeletingTheEncodingLine_SavesAsUtf8_AsItWillBeReadBack()
+    {
+        var path = Write("f.th", Encoding.Latin1.GetBytes("encoding iso-8859-1\nsurvey Bédeilhac\n"));
+        var latin1 = SourceFileIo.FormatOf(SourceFileIo.Read(path));
+
+        var format = SourceFileIo.SaveText(path, "survey Bédeilhac\n", latin1);
+
+        Assert.Equal(Encoding.UTF8.CodePage, format.Encoding.CodePage);
+        Assert.Equal("survey Bédeilhac\n", SourceFileIo.Read(path).Text);
+    }
+
+    [Fact]
+    public void AUtf16File_KeepsItsFormat_EvenWithAnEncodingLine()
+    {
+        var bytes = Encoding.Unicode.GetPreamble().Concat(Encoding.Unicode.GetBytes("encoding iso-8859-1\nsurvey ș\n")).ToArray();
+        var file = SourceFileIo.Read(Write("g.th", bytes));
+
+        var (saved, format) = SourceFileIo.EncodeForSave(file.Path, file.Text, SourceFileIo.FormatOf(file));
+
+        Assert.Equal(Encoding.Unicode.CodePage, format.Encoding.CodePage);
+        Assert.Equal(bytes, saved);
+    }
+
+    [Fact]
+    public void AnEncodingLineTheScanCouldNotFindAgain_IsIgnored()
+    {
+        var (_, format) = SourceFileIo.EncodeForSave("h.th", "encoding utf-16\nsurvey a\n", TextFileFormat.Default);
+        Assert.Equal(Encoding.UTF8.CodePage, format.Encoding.CodePage);
+    }
+
+    [Fact]
+    public void WithoutAReadFormat_TheFormatOnDiskIsKept()
+    {
+        var bytes = Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes("survey ș\n")).ToArray();
+        var path = Write("i.th", bytes);
+
+        var (saved, _) = SourceFileIo.EncodeForSave(path, "survey ș\n", readAs: null);
+
+        Assert.Equal(bytes, saved);
+        Assert.Equal(TextFileFormat.Default, SourceFileIo.FormatOnDisk(Path.Combine(_dir, "missing.th")));
+    }
 }

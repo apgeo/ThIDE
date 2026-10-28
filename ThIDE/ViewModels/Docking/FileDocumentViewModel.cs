@@ -773,7 +773,7 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
     private void CompareExternal()
     {
         string disk = string.Empty;
-        try { if (System.IO.File.Exists(FilePath)) disk = SourceFileIo.Read(FilePath).Text; } catch { }
+        try { if (System.IO.File.Exists(FilePath)) disk = Therion.Syntax.EncodingResolver.ReadAllText(FilePath); } catch { }
         CompareExternalRequested?.Invoke(this, disk);
     }
 

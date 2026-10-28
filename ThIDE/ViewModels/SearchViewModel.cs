@@ -218,7 +218,7 @@ public sealed partial class SearchViewModel : ViewModelBase
 
     private static string? ReadFile(string path)
     {
-        try { return File.Exists(path) ? Therion.Workspace.Editing.SourceFileIo.Read(path).Text : null; }
+        try { return File.Exists(path) ? Therion.Syntax.EncodingResolver.ReadAllText(path) : null; }
         catch { return null; }
     }
 }
