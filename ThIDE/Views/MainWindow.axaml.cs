@@ -87,6 +87,7 @@ public partial class MainWindow : Window
                 vm.BatchBuildRequested += (_, entries) => _ = ShowBatchBuildAsync(vm, entries);
                 vm.Diagnostics.FixRequested += (_, d) => _ = FixOneAsync(d);
                 vm.SyncMapsRequested += (_, _) => _ = SyncMapsAsync();
+                vm.SuggestEquatesRequested += (_, _) => _ = SuggestEquatesAsync();
                 vm.Diagnostics.FixAllRequested += (_, code) => _ = FixAllAsync(vm, code);
                 ThIDE.Editor.TherionTextEditor.LinkSurveyRequested += (_, req) =>
                     Avalonia.Threading.Dispatcher.UIThread.Post(() => _ = ShowLinkSurveyAsync(req.FilePath, req.Caret));
@@ -741,6 +742,17 @@ public partial class MainWindow : Window
         return outcome.Success;
     }
 
+    /// <summary>Tools ▸ Suggest equates: pick a close pair and open Link survey file on it.</summary>
+    private async System.Threading.Tasks.Task SuggestEquatesAsync()
+    {
+        var docs = AppServices.Provider.GetService<IDocumentService>();
+        if (docs?.Workspace is not { PerFile.Count: > 0 } ws) return;
+        var window = new SuggestEquatesWindow(new SuggestEquatesViewModel(ws, AppServices.Provider.GetService<IWorkspaceSession>()?.RootPath));
+        await window.ShowDialog(this);
+        if (window.Chosen is not { } pair || pair.Candidate.A.DeclarationSpan.FilePath is not { } fa || pair.Candidate.B.DeclarationSpan.FilePath is not { } fb) return;
+        await ShowLinkSurveyAsync(null, 0, m => m.PresetStationsAsync(fa, pair.Candidate.A.Name, fb, pair.Candidate.B.Name));
+    }
+
     /// <summary>Tools ▸ Add unreferenced scraps to maps.</summary>
     private async System.Threading.Tasks.Task SyncMapsAsync()
     {
@@ -815,7 +827,8 @@ public partial class MainWindow : Window
     /// Opens "Link survey file". With <paramref name="destinationFile"/> (the editor's Generate code
     /// entry) the lines go into that file, in the survey around <paramref name="caret"/>.
     /// </summary>
-    private async System.Threading.Tasks.Task ShowLinkSurveyAsync(string? destinationFile, int caret)
+    private async System.Threading.Tasks.Task ShowLinkSurveyAsync(string? destinationFile, int caret,
+        Func<LinkSurveyViewModel, System.Threading.Tasks.Task>? preset = null)
     {
         var docs = AppServices.Provider.GetService<IDocumentService>();
         var notifications = AppServices.Provider.GetService<INotificationService>();
@@ -864,7 +877,7 @@ public partial class MainWindow : Window
             notifications?.Success(ThIDE.Resources.Tr.Get("LinkSurvey_Title"),
                 string.Format(ThIDE.Resources.Tr.Get("LinkSurvey_Done"), Path.GetFileName(model.SourcePath)));
         // The dialog opens straight away; the survey file is chosen in it (Browse, or typed + Enter).
-        var load = model.LoadAsync(null, destinationFile);
+        var load = preset is not null ? preset(model) : model.LoadAsync(null, destinationFile);
         await dialog.ShowDialog(this);
         await load;
     }

@@ -72,7 +72,7 @@ public sealed partial class LinkSurveyViewModel : ObservableObject
     public LinkSurveyViewModel(LinkSurveyEnvironment env)
     {
         _env = env;
-        SourceSelector.Picker.SelectionChanged += (_, _) => Replan();
+        SourceSelector.Picker.SelectionChanged += (_, _) => { if (_sourceInWorkspace) RefreshDestinations(); else Replan(); };
         Surveys.SelectionChanged += (_, _) => NarrowStations();
         Stations.SelectionChanged += (_, _) => OnWorkspaceStationChanged();
         Sketches.CollectionChanged += (_, e) =>
@@ -158,6 +158,18 @@ public sealed partial class LinkSurveyViewModel : ObservableObject
             _loading = false;
             IsBusy = false;
         }
+        RefreshDestinations();
+    }
+
+    /// <summary>
+    /// Opens the dialog on two project stations (Suggest equates): the first file as the "source",
+    /// linked where it is with an equate only.
+    /// </summary>
+    public async Task PresetStationsAsync(string fileA, QualifiedName localA, string fileB, QualifiedName localB)
+    {
+        await LoadAsync(fileA);
+        SourceSelector.Picker.Select(fileA, localA);
+        Stations.Select(fileB, localB);
         RefreshDestinations();
     }
 
@@ -269,7 +281,19 @@ public sealed partial class LinkSurveyViewModel : ObservableObject
             candidates.Add(new DestinationCandidate(preset.FilePath, preset.LocalScope,
                 _scopes!.EffectiveScope(preset.FilePath, preset.LocalScope), DestinationReason.Block, -1));
         if (Stations.SelectedStation is { } station)
-            candidates.AddRange(SurveyLinkPlanner.Candidates(_ctx, SurveyLinkPlanner.DefaultScope(station.Effective, nest: false)));
+        {
+            var scope = SurveyLinkPlanner.DefaultScope(station.Effective, nest: false);
+            // Both stations already in the project: the lines go where both can be named from.
+            if (_sourceInWorkspace && SourceSelector.Picker.SelectedStation is { } src && _scopes is not null)
+            {
+                var effective = _scopes.Effective(src.FilePath, src.Local);
+                var srcSurvey = effective.Parts.RemoveAt(effective.Parts.Length - 1);
+                int common = 0;
+                while (common < scope.Length && common < srcSurvey.Length && scope[common] == srcSurvey[common]) common++;
+                scope = scope.RemoveRange(common, scope.Length - common);
+            }
+            candidates.AddRange(SurveyLinkPlanner.Candidates(_ctx, scope));
+        }
 
         foreach (var c in candidates.DistinctBy(c => (c.FilePath, string.Join('.', c.LocalScope))))
             Destinations.Add(new DestinationRow(c, Label(c)));

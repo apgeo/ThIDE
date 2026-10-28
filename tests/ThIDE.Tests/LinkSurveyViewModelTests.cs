@@ -142,4 +142,15 @@ public class LinkSurveyViewModelTests
         Assert.Null(vm.Source);
         Assert.NotEmpty(vm.SourceStatus);
     }
+
+    [Fact]
+    public async Task Two_project_stations_from_suggest_equates_get_an_equate_where_both_can_be_named()
+    {
+        var (vm, _) = Make();
+
+        await vm.PresetStationsAsync(P("a.th"), QualifiedName.Of("a", "1"), P("a.th"), QualifiedName.Of("a", "2"));
+
+        Assert.Equal(P("main.th"), vm.SelectedDestination!.Candidate.FilePath);
+        Assert.Equal("equate 1@a 2@a", vm.GeneratedText);
+    }
 }

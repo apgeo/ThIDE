@@ -1,0 +1,39 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ThIDE.ViewModels"
+        xmlns:l="using:ThIDE.Resources"
+        x:Class="ThIDE.Views.SuggestEquatesWindow"
+        x:DataType="vm:SuggestEquatesViewModel"
+        x:CompileBindings="False"
+        Title="{l:Loc Menu_Tools_SuggestEquates}" Width="820" Height="520" MinWidth="520" MinHeight="300"
+        AutomationProperties.AutomationId="SuggestEquates.Window"
+        WindowStartupLocation="CenterOwner" CanResize="True">
+    <DockPanel Margin="12">
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+            <TextBlock Text="{l:Loc Suggest_Within}" VerticalAlignment="Center" />
+            <NumericUpDown Value="{Binding Threshold, Mode=TwoWay}" Minimum="0.1" Maximum="1000" Increment="1" Width="120" FormatString="0.#"
+                           AutomationProperties.AutomationId="SuggestEquates.Threshold" />
+            <TextBlock Text="m" VerticalAlignment="Center" />
+            <Button Content="{l:Loc Common_Refresh}" Command="{Binding RefreshCommand}" AutomationProperties.AutomationId="SuggestEquates.Refresh" />
+        </StackPanel>
+        <TextBlock DockPanel.Dock="Top" Text="{Binding Note}" TextWrapping="Wrap" Foreground="Gray" FontSize="11" Margin="0,0,0,6"
+                   AutomationProperties.AutomationId="SuggestEquates.Note" />
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,10,0,0">
+            <Button Content="{l:Loc Common_Close}" Click="OnClose" AutomationProperties.AutomationId="SuggestEquates.Close" />
+            <Button Content="{l:Loc Suggest_Link}" Click="OnLink" IsDefault="True" IsEnabled="{Binding Selected, Converter={x:Static ObjectConverters.IsNotNull}}"
+                    AutomationProperties.AutomationId="SuggestEquates.Link" />
+        </StackPanel>
+        <ListBox ItemsSource="{Binding Rows}" SelectedItem="{Binding Selected, Mode=TwoWay}" AutomationProperties.AutomationId="SuggestEquates.Rows">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <Grid ColumnDefinitions="*,*,90,*">
+                        <TextBlock Text="{Binding A}" FontWeight="SemiBold" />
+                        <TextBlock Grid.Column="1" Text="{Binding B}" FontWeight="SemiBold" />
+                        <TextBlock Grid.Column="2" Text="{Binding Distance}" />
+                        <TextBlock Grid.Column="3" Text="{Binding Files}" Foreground="Gray" FontSize="11" TextTrimming="CharacterEllipsis" />
+                    </Grid>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+    </DockPanel>
+</Window>

@@ -1549,4 +1549,9 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="SyncMaps_NoMaps" xml:space="preserve"><value>Proiectul nu are nicio hartă în care să se adauge scrap-uri. Creează întâi una (fragmentul mapb).</value></data>
   <data name="SyncMaps_Summary" xml:space="preserve"><value>Fiecare hartă primește membrii noi după ultimul existent.</value></data>
   <data name="SyncMaps_Problems" xml:space="preserve"><value>Nemodificate: {0}.</value></data>
+  <data name="Suggest_Within" xml:space="preserve"><value>Stații mai apropiate de</value></data>
+  <data name="Suggest_Link" xml:space="preserve"><value>Leagă…</value></data>
+  <data name="Suggest_NeedPieces" xml:space="preserve"><value>Pozițiile pot fi comparate doar între bucăți georeferențiate în același sistem de coordonate proiectat (un fix în UTM, de exemplu); s-au găsit {0}.</value></data>
+  <data name="Suggest_NoneWithin" xml:space="preserve"><value>Nicio pereche de stații din bucăți diferite nu este atât de apropiată.</value></data>
+  <data name="Suggest_Verify" xml:space="preserve"><value>Pozițiile sunt aproximative (fără închiderea buclelor): fiecare pereche e o candidată de verificat înainte de legare, nu o joncțiune confirmată.</value></data>
 </root>
