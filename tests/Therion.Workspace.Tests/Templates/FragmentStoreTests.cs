@@ -68,4 +68,17 @@ public class FragmentStoreTests
         Assert.Null(error);
         Assert.NotNull(json);
     }
+
+    [Theory]
+    [InlineData("[\n  { \"trigger\": \"fix\", \"template\": \"x\" } // club default\n]\n")]
+    [InlineData("[\n  { \"trigger\": \"fix\", \"template\": \"x\" }\n]\n// see [1]\n")]
+    public void A_comment_near_the_closing_bracket_does_not_break_the_file(string existing)
+    {
+        var (json, error) = FragmentStore.Append(existing, "plan", "d", "x");
+        var (snippets, errors) = SnippetCatalog.Load([], new SnippetLayer("p", json));
+
+        Assert.Null(error);
+        Assert.Empty(errors);
+        Assert.Equal(["fix", "plan"], snippets.Select(s => s.Trigger));
+    }
 }

@@ -46,6 +46,31 @@ public class NewFileViewModelTests
         Assert.True(vm.CanCreate);
     }
 
+    [Theory]
+    [InlineData("upper.level", "upper.level.th")]
+    [InlineData("cave.", "cave.th")]
+    [InlineData("cave.TH", "cave.TH")]
+    public void A_dot_in_the_name_is_not_taken_for_an_extension(string typed, string created)
+    {
+        var (vm, _, _) = Make();
+        vm.SelectedTemplate = vm.Templates.Single(t => t.Template.Id == "blank");
+
+        vm.FileName = typed;
+
+        Assert.Equal(P("trips/" + created), vm.TargetPath);
+    }
+
+    [Fact]
+    public void Switching_template_keeps_a_dotted_name()
+    {
+        var (vm, _, _) = Make();
+        vm.FileName = "entrance.2024";
+
+        vm.SelectedTemplate = vm.Templates.Single(t => t.Template.Id == "thconfig-basic");
+
+        Assert.Equal("entrance.2024.thconfig", vm.FileName);
+    }
+
     [Fact]
     public void Switching_template_changes_the_suggested_name_until_the_user_types_one()
     {

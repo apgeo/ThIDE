@@ -255,7 +255,7 @@ public sealed partial class NewTripViewModel : ObservableObject
         var batch = new EditBatch(plan.Batch.Edits, [new FileCreate(FilePath, text)], [], RequiresWorkspaceReload: true);
         var outcome = await _env.Editor.ApplyAsync(batch);
         if (!outcome.Success)
-            return outcome.Error ?? string.Join("; ", outcome.Problems.Select(p => string.Format(Tr.Get("Edit_Problem" + p.Kind), Path.GetFileName(p.FilePath))));
+            return outcome.Describe();
         await _env.Open(FilePath, caret);
         return null;
     }

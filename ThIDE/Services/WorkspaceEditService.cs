@@ -18,6 +18,10 @@ public sealed record EditOutcome(
     IReadOnlyList<string> Written)
 {
     public bool Success => Problems.Count == 0 && Error is null;
+
+    /// <summary>Why the batch failed, in the UI language: the I/O error, or one line per refused file.</summary>
+    public string Describe() => Error ?? string.Join("; ", Problems.Select(p =>
+        string.Format(ThIDE.Resources.Tr.Get("Edit_Problem" + p.Kind), Path.GetFileName(p.FilePath))));
 }
 
 /// <summary>
@@ -83,6 +87,7 @@ public sealed class WorkspaceEditService(IDocumentService documents, IWorkspaceS
         {
             foreach (var create in batch.Creates)
             {
+                CreateDirectoryFor(create.FilePath, undo);
                 session.SuppressSelfWrite(create.FilePath);
                 SourceFileIo.Create(create.FilePath, create.Content);
                 undo.Push(() => File.Delete(create.FilePath));
@@ -90,9 +95,16 @@ public sealed class WorkspaceEditService(IDocumentService documents, IWorkspaceS
             }
             foreach (var copy in batch.Copies)
             {
-                if (Path.GetDirectoryName(copy.DestinationPath) is { Length: > 0 } dir) Directory.CreateDirectory(dir);
+                CreateDirectoryFor(copy.DestinationPath, undo);
                 session.SuppressSelfWrite(copy.DestinationPath);
-                File.Copy(copy.SourcePath, copy.DestinationPath, overwrite: false);
+                bool existed = File.Exists(copy.DestinationPath);
+                try { File.Copy(copy.SourcePath, copy.DestinationPath, overwrite: false); }
+                catch when (!existed)
+                {
+                    // A copy that fails part-way leaves a partial file of ours behind.
+                    try { File.Delete(copy.DestinationPath); } catch { /* reporting the copy failure matters more */ }
+                    throw;
+                }
                 undo.Push(() => File.Delete(copy.DestinationPath));
                 written.Add(copy.DestinationPath);
             }
@@ -129,6 +141,20 @@ public sealed class WorkspaceEditService(IDocumentService documents, IWorkspaceS
             await session.SetActiveThconfigAsync(active.FullPath, ct).ConfigureAwait(true);
 
         return new EditOutcome([], null, written);
+
+        // Creates the missing folders above a new file, each with an undo that removes it again if empty.
+        static void CreateDirectoryFor(string path, Stack<Action> undo)
+        {
+            var missing = new List<string>();
+            for (var dir = Path.GetDirectoryName(path); !string.IsNullOrEmpty(dir) && !Directory.Exists(dir); dir = Path.GetDirectoryName(dir))
+                missing.Add(dir);
+            for (int i = missing.Count - 1; i >= 0; i--)   // outermost first, so the innermost is undone first
+            {
+                var dir = missing[i];
+                Directory.CreateDirectory(dir);
+                undo.Push(() => { if (!Directory.EnumerateFileSystemEntries(dir).Any()) Directory.Delete(dir); });
+            }
+        }
 
         // Open documents answer with their buffer; closed ones are read (and remembered) from disk.
         // A clean open document is read from disk too, so its disk text can be compared above.

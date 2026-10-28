@@ -147,7 +147,7 @@ public sealed partial class LinkSurveyViewModel : ObservableObject
             if (presetDestinationFile is not null && _env.ReadText(presetDestinationFile) is { } text)
             {
                 var ast = Ast(presetDestinationFile);
-                var offset = string.Equals(presetDestinationFile, _env.CurrentFile, StringComparison.OrdinalIgnoreCase) ? _env.CurrentCaret : 0;
+                var offset = _env.CurrentFile is { } current && FilePaths.Same(presetDestinationFile, current) ? _env.CurrentCaret : 0;
                 _preset = new LinkDestination(presetDestinationFile, SurveyScopeResolver.SurveyPathAt(ast, Math.Min(offset, text.Length), text));
                 UseCurrentFile = true;
             }
@@ -406,15 +406,11 @@ public sealed partial class LinkSurveyViewModel : ObservableObject
         {
             var outcome = await _env.Editor.ApplyAsync(plan.Batch);
             if (outcome.Success) Applied?.Invoke(this, outcome);
-            else Warnings = Warnings.Append(new WarningRow(OutcomeText(outcome), true)).ToList();
+            else Warnings = Warnings.Append(new WarningRow(outcome.Describe(), true)).ToList();
             return outcome;
         }
         finally { IsBusy = false; }
     }
-
-    private static string OutcomeText(EditOutcome outcome) =>
-        outcome.Error ?? string.Join("; ", outcome.Problems.Select(p =>
-            string.Format(Tr.Get("Edit_Problem" + p.Kind), Path.GetFileName(p.FilePath))));
 
     /// <summary>The stations to highlight and the link to draw in the full preview (model names).</summary>
     public (IReadOnlyList<SemanticModel> Models, (QualifiedName, QualifiedName)? Link, string? SourceFile) FullPreviewScene()

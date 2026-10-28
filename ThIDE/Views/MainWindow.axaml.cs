@@ -716,7 +716,7 @@ public partial class MainWindow : Window
         }
         if (AppServices.Provider.GetService<IWorkspaceEditService>() is not { } editor) return;
         var outcome = await editor.ApplyAsync(new Therion.Workspace.Editing.EditBatch([new(path, fix.Edits)], [], []));
-        if (!outcome.Success) AppServices.Provider.GetService<INotificationService>()?.Warning(ThIDE.Resources.Tr.Get("Diag_Fix"), outcome.Error ?? string.Join("; ", outcome.Problems.Select(p => p.Kind)));
+        if (!outcome.Success) AppServices.Provider.GetService<INotificationService>()?.Warning(ThIDE.Resources.Tr.Get("Diag_Fix"), outcome.Describe());
     }
 
     /// <summary>Diagnostics panel ▸ Fix all '<code>': every safe fix for that code, previewed, then applied.</summary>
@@ -754,11 +754,15 @@ public partial class MainWindow : Window
         var window = new EditPreviewWindow(preview);
         await window.ShowDialog(this);
         if (!window.Confirmed || AppServices.Provider.GetService<IWorkspaceEditService>() is not { } editor) return false;
-        // Closed files change on disk without a re-parse: reload when the diagnostics must follow.
-        var outcome = await editor.ApplyAsync(reload ? preview.Chosen() with { RequiresWorkspaceReload = true } : preview.Chosen());
+        var outcome = await editor.ApplyAsync(preview.Chosen());
+        // Closed files change on disk without a re-parse: reload when the diagnostics must follow. Not
+        // through the batch's own reload flag, which also refuses files with unsaved changes — right for
+        // a batch that adds an input, wrong for one that only edits text.
+        if (outcome.Success && reload && AppServices.Provider.GetService<IWorkspaceSession>() is { ActiveThconfig: { } active } session)
+            await session.SetActiveThconfigAsync(active.FullPath);
         var n = AppServices.Provider.GetService<INotificationService>();
         if (outcome.Success) n?.Success(title, string.Format(ThIDE.Resources.Tr.Get("Diag_FixAllDone"), preview.CheckedCount));
-        else n?.Warning(title, outcome.Error ?? string.Join("; ", outcome.Problems.Select(p => $"{Path.GetFileName(p.FilePath)}: {p.Kind}")));
+        else n?.Warning(title, outcome.Describe());
         return outcome.Success;
     }
 
@@ -822,7 +826,7 @@ public partial class MainWindow : Window
             : ThIDE.Resources.Tr.Get("SyncMaps_Summary") + " " + string.Format(ThIDE.Resources.Tr.Get("SyncMaps_Problems"),
                 string.Join(", ", problems.Select(p => $"{p.Map} ({ThIDE.Resources.Tr.Get("SyncMaps_" + p.Problem)})")));
         if (batch.IsEmpty) { n?.Warning(title, summary); return; }
-        await PreviewAndApplyAsync(title, summary, batch);
+        await PreviewAndApplyAsync(title, summary, batch, reload: true);
     }
 
     /// <summary>An arrived (or dropped) file: link a survey, or import Survex/Compass/GPX first.</summary>

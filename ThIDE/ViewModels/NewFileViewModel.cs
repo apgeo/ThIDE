@@ -76,9 +76,15 @@ public sealed partial class NewFileViewModel : ObservableObject
     [ObservableProperty] private string _message = string.Empty;
     [ObservableProperty] private bool _canCreate;
 
-    /// <summary>The file to create: the typed name, with the template's extension when it has none.</summary>
+    /// <summary>
+    /// The file to create: the typed name, with the template's extension unless it already ends in one
+    /// of the templates' extensions. Any other dot is part of the name (<c>upper.level</c> → <c>upper.level.th</c>).
+    /// </summary>
     public string TargetPath => Path.Combine(Folder,
-        SelectedTemplate is { } t && !Path.HasExtension(FileName) ? FileName + t.Template.Extension : FileName);
+        SelectedTemplate is { } t && KnownExtension(FileName) is null ? FileName.TrimEnd('.') + t.Template.Extension : FileName);
+
+    private string? KnownExtension(string name) => Templates.Select(r => r.Template.Extension)
+        .FirstOrDefault(e => e.Length > 0 && name.EndsWith(e, StringComparison.OrdinalIgnoreCase));
 
     partial void OnSelectedTemplateChanged(TemplateRow? value)
     {
@@ -86,7 +92,7 @@ public sealed partial class NewFileViewModel : ObservableObject
         {
             if (!_nameEdited) SetNameQuietly(NewFilePlanner.FreeName(Folder, value.Template.DefaultName, value.Template.Extension, _env.Exists));
             // A typed name keeps its stem but takes the template's extension.
-            else SetNameQuietly(Path.GetFileNameWithoutExtension(FileName) + value.Template.Extension);
+            else SetNameQuietly((KnownExtension(FileName) is { } e ? FileName[..^e.Length] : FileName.TrimEnd('.')) + value.Template.Extension);
         }
         Refresh();
     }
@@ -162,7 +168,7 @@ public sealed partial class NewFileViewModel : ObservableObject
         if (Plan is not { } plan || _env.Editor is null || SelectedTemplate is null) return Tr.Get("NewFile_CannotCreate");
         var outcome = await _env.Editor.ApplyAsync(plan.Batch);
         if (!outcome.Success)
-            return outcome.Error ?? string.Join("; ", outcome.Problems.Select(p => string.Format(Tr.Get("Edit_Problem" + p.Kind), Path.GetFileName(p.FilePath))));
+            return outcome.Describe();
         await _env.Open(plan.FilePath, plan.Caret);
         if (SelectedTemplate.Template.ActivateThconfig && _env.Activate is { } activate) await activate(plan.FilePath);
         return null;

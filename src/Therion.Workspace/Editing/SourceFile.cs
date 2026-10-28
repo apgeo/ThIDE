@@ -131,15 +131,24 @@ public static class SourceFileIo
     /// anything is already there: <see cref="FileMode.CreateNew"/> makes that check and the creation one
     /// indivisible operation, which <c>File.Exists</c> followed by a write is not.
     /// </summary>
-    /// <exception cref="IOException">The path already exists.</exception>
+    /// <exception cref="IOException">The path already exists, or the write failed (the file is then removed).</exception>
     public static void Create(string path, string content)
     {
         var directory = System.IO.Path.GetDirectoryName(path);
         if (!string.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
 
-        using var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None);
         var bytes = EncodingResolver.Default.GetBytes(content);
-        stream.Write(bytes, 0, bytes.Length);
+        var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+        try
+        {
+            using (stream) stream.Write(bytes, 0, bytes.Length);
+        }
+        catch
+        {
+            // The file is ours (CreateNew made it): a failed write must not leave it half-written.
+            try { File.Delete(path); } catch { /* the write already failed; this is cleanup */ }
+            throw;
+        }
     }
 
     /// <summary>
