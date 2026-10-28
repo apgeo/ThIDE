@@ -18,6 +18,9 @@ if (args is ["-h"] or ["--help"])
     return 0;
 }
 
+if (args is ["macro", ..])
+    return await Therion.Mcp.Dispatch.MacroVerb.RunAsync(args, Console.Out, Console.Error, s => s.BuildServiceProvider());
+
 if (args is ["--version"])
 {
     Console.WriteLine(ServerVersion());
@@ -139,6 +142,10 @@ static void PrintHelp()
     Console.WriteLine("Usage:");
     Console.WriteLine("  therion-mcp [--workspace <path>] [--profile data|full]");
     Console.WriteLine("  therion-mcp --connect [<discovery-file>]");
+    Console.WriteLine("  therion-mcp macro list [--workspace <path>]");
+    Console.WriteLine("  therion-mcp macro run <name|file.json> --workspace <path> [--var key=value]… [--apply] [--json]");
+    Console.WriteLine("                       Run a macro (a list of tool calls) without a model. Without");
+    Console.WriteLine("                       --apply only the preview runs and nothing is changed.");
     Console.WriteLine();
     Console.WriteLine("Options:");
     Console.WriteLine("  --workspace <path>   Open this .thconfig, .th, or project folder up front.");
