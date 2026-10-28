@@ -89,6 +89,8 @@ public partial class MainWindow : Window
                 vm.SyncMapsRequested += (_, _) => _ = SyncMapsAsync();
                 vm.SuggestEquatesRequested += (_, _) => _ = SuggestEquatesAsync();
                 vm.FormatAllRequested += (_, _) => _ = FormatAllAsync();
+                if (AppServices.Provider.GetService<IIncomingFolderService>() is { } incoming)
+                    incoming.ImportRequested += (_, path) => Avalonia.Threading.Dispatcher.UIThread.Post(() => _ = ImportArrivedAsync(vm, path));
                 vm.Diagnostics.FixAllRequested += (_, code) => _ = FixAllAsync(vm, code);
                 ThIDE.Editor.TherionTextEditor.LinkSurveyRequested += (_, req) =>
                     Avalonia.Threading.Dispatcher.UIThread.Post(() => _ = ShowLinkSurveyAsync(req.FilePath, req.Caret));
@@ -813,6 +815,24 @@ public partial class MainWindow : Window
                 string.Join(", ", problems.Select(p => $"{p.Map} ({ThIDE.Resources.Tr.Get("SyncMaps_" + p.Problem)})")));
         if (batch.IsEmpty) { n?.Warning(title, summary); return; }
         await PreviewAndApplyAsync(title, summary, batch);
+    }
+
+    /// <summary>An arrived (or dropped) file: link a survey, or import Survex/Compass/GPX first.</summary>
+    private async System.Threading.Tasks.Task ImportArrivedAsync(MainWindowViewModel vm, string path)
+    {
+        switch (Therion.Workspace.Incoming.IncomingFiles.Route(path))
+        {
+            case Therion.Workspace.Incoming.IncomingRoute.LinkSurvey:
+                await ShowLinkSurveyAsync(null, 0, m => m.LoadAsync(path));
+                break;
+            case Therion.Workspace.Incoming.IncomingRoute.ImportSurvey:
+                if (await vm.ImportSurveyFromPathAsync(path) is { } th)
+                    await ShowLinkSurveyAsync(null, 0, m => m.LoadAsync(th));
+                break;
+            case Therion.Workspace.Incoming.IncomingRoute.ImportGpx:
+                await vm.ImportGpxFromPathAsync(path);
+                break;
+        }
     }
 
     // ----- automation panel -----------------------------------------------
@@ -1628,6 +1648,10 @@ public partial class MainWindow : Window
             var ext = Path.GetExtension(path);
             if (OpenableExtensions.Contains(ext)) _ = docs.OpenFileAsync(path);
             else if (ImageExtensions.Contains(ext)) ScaffoldScrapForImage(path, docs);
+            // Survex/Compass/GPX: the importers, as from the incoming folder.
+            else if (DataContext is MainWindowViewModel vm
+                     && Therion.Workspace.Incoming.IncomingFiles.Route(path) is Therion.Workspace.Incoming.IncomingRoute.ImportSurvey or Therion.Workspace.Incoming.IncomingRoute.ImportGpx)
+                _ = ImportArrivedAsync(vm, path);
         }
     }
 

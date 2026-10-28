@@ -294,6 +294,8 @@
                 <MenuItem AutomationProperties.AutomationId="Menu.Tools.ScaffoldActive" Header="{l:Loc Menu_Tools_ScaffoldActive}" Command="{Binding ScaffoldProjectCommand}" CommandParameter="active" />
                 <MenuItem AutomationProperties.AutomationId="Menu.Tools.LinkSurvey" Header="{l:Loc Menu_Tools_LinkSurvey}" Command="{Binding LinkSurveyCommand}" />
                 <MenuItem AutomationProperties.AutomationId="Menu.Tools.NewTrip" Header="{l:Loc Menu_Tools_NewTrip}" Command="{Binding NewTripCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Tools.WatchIncoming" Header="{l:Loc Menu_Tools_WatchIncoming}"
+                          ToggleType="CheckBox" IsChecked="{Binding WatchIncoming, Mode=OneWay}" Command="{Binding ToggleWatchIncomingCommand}" />
                 <MenuItem AutomationProperties.AutomationId="Menu.Tools.SyncMaps" Header="{l:Loc Menu_Tools_SyncMaps}" Command="{Binding SyncMapsCommand}" />
                 <MenuItem AutomationProperties.AutomationId="Menu.Tools.SuggestEquates" Header="{l:Loc Menu_Tools_SuggestEquates}" Command="{Binding SuggestEquatesCommand}" />
                 <MenuItem AutomationProperties.AutomationId="Menu.Tools.FormatAll" Header="{l:Loc Menu_Tools_FormatAll}" Command="{Binding FormatAllCommand}" />

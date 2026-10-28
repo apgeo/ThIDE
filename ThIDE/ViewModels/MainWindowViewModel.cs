@@ -1146,6 +1146,18 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private void BatchBuild() => BatchBuildRequested?.Invoke(this, null);
 
+    /// <summary>Whether the project's incoming folder is watched (Tools ▸ Watch the incoming folder).</summary>
+    public bool WatchIncoming => AppServices.Provider.GetService(typeof(IIncomingFolderService)) is IIncomingFolderService s && s.IsEnabled;
+
+    [RelayCommand]
+    private void ToggleWatchIncoming()
+    {
+        if (AppServices.Provider.GetService(typeof(IIncomingFolderService)) is not IIncomingFolderService s) return;
+        s.SetEnabled(!s.IsEnabled);
+        OnPropertyChanged(nameof(WatchIncoming));
+        if (s.Folder is { } folder) _notifications.Info(Tr.Get("Incoming_Title"), string.Format(Tr.Get(s.IsEnabled ? "Incoming_On" : "Incoming_Off"), folder));
+    }
+
     /// <summary>Raised to open Tools ▸ Add unreferenced scraps to maps.</summary>
     public event EventHandler? SyncMapsRequested;
     [RelayCommand] private void SyncMaps() => SyncMapsRequested?.Invoke(this, EventArgs.Empty);
@@ -1216,6 +1228,13 @@ public partial class MainWindowViewModel : ViewModelBase
         if (_picker is null) return;
         var src = await _picker.PickOpenFileAsync("Import Survex (.svx) or Compass (.dat)").ConfigureAwait(true);
         if (string.IsNullOrEmpty(src)) return;
+        await ImportSurveyFromPathAsync(src).ConfigureAwait(true);
+    }
+
+    /// <summary>Converts a Survex/Compass file to Therion, asking where to save it; returns the new file or null.</summary>
+    public async Task<string?> ImportSurveyFromPathAsync(string src)
+    {
+        if (_picker is null) return null;
         try
         {
             var text = System.IO.File.ReadAllText(src);
@@ -1227,12 +1246,13 @@ public partial class MainWindowViewModel : ViewModelBase
             };
             var suggested = System.IO.Path.GetFileNameWithoutExtension(src) + ".th";
             var outPath = await _picker.PickSaveFileAsync("Save imported Therion file", suggested).ConfigureAwait(true);
-            if (string.IsNullOrEmpty(outPath)) return;
+            if (string.IsNullOrEmpty(outPath)) return null;
             System.IO.File.WriteAllText(outPath, th);
             await _documents.OpenFileAsync(outPath).ConfigureAwait(true);
             StatusText = $"Imported {System.IO.Path.GetFileName(src)} → {System.IO.Path.GetFileName(outPath)}";
+            return outPath;
         }
-        catch (Exception ex) { StatusText = ex.Message; _log?.Warning($"Import failed: {ex.Message}"); _notifications.Error(Tr.Get("Notif_ImportFailed"), ex.Message); }
+        catch (Exception ex) { StatusText = ex.Message; _log?.Warning($"Import failed: {ex.Message}"); _notifications.Error(Tr.Get("Notif_ImportFailed"), ex.Message); return null; }
     }
 
     /// <summary>export entrances / fixed points in the project CRS. Format via CommandParameter.</summary>
@@ -1302,6 +1322,13 @@ public partial class MainWindowViewModel : ViewModelBase
         if (_picker is null) return;
         var src = await _picker.PickOpenFileAsync("Import GPX waypoints").ConfigureAwait(true);
         if (string.IsNullOrEmpty(src)) return;
+        await ImportGpxFromPathAsync(src).ConfigureAwait(true);
+    }
+
+    /// <summary>Turns GPX waypoints into a fixed-stations Therion file, asking where to save it.</summary>
+    public async Task ImportGpxFromPathAsync(string src)
+    {
+        if (_picker is null) return;
         try
         {
             var name = System.IO.Path.GetFileNameWithoutExtension(src);

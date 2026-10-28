@@ -1561,4 +1561,11 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="SyncMaps_Unterminated" xml:space="preserve"><value>no endmap</value></data>
   <data name="SyncMaps_None" xml:space="preserve"><value>unchanged</value></data>
   <data name="FormatAll_LinesDiffer" xml:space="preserve"><value>{0} line(s) change</value></data>
+  <data name="Menu_Tools_WatchIncoming" xml:space="preserve"><value>Watch the incoming folder</value></data>
+  <data name="Incoming_Title" xml:space="preserve"><value>Incoming folder</value></data>
+  <data name="Incoming_Arrived" xml:space="preserve"><value>New survey export: {0}</value></data>
+  <data name="Incoming_Import" xml:space="preserve"><value>Import…</value></data>
+  <data name="Incoming_Sketch" xml:space="preserve"><value>A sketch arrived ({0}); link its survey file first, then copy the sketch with it.</value></data>
+  <data name="Incoming_On" xml:space="preserve"><value>Watching {0}: survey exports that land there are offered for import.</value></data>
+  <data name="Incoming_Off" xml:space="preserve"><value>No longer watching {0}.</value></data>
 </root>

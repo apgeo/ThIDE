@@ -1561,4 +1561,11 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="SyncMaps_Unterminated" xml:space="preserve"><value>fără endmap</value></data>
   <data name="SyncMaps_None" xml:space="preserve"><value>neschimbată</value></data>
   <data name="FormatAll_LinesDiffer" xml:space="preserve"><value>{0} linii se schimbă</value></data>
+  <data name="Menu_Tools_WatchIncoming" xml:space="preserve"><value>Urmărește dosarul de intrare</value></data>
+  <data name="Incoming_Title" xml:space="preserve"><value>Dosarul de intrare</value></data>
+  <data name="Incoming_Arrived" xml:space="preserve"><value>Export nou de topografie: {0}</value></data>
+  <data name="Incoming_Import" xml:space="preserve"><value>Importă…</value></data>
+  <data name="Incoming_Sketch" xml:space="preserve"><value>A sosit o schiță ({0}); leagă întâi fișierul topografiei, apoi copiaz-o împreună cu el.</value></data>
+  <data name="Incoming_On" xml:space="preserve"><value>Se urmărește {0}: exporturile de topografie care ajung acolo sunt oferite pentru import.</value></data>
+  <data name="Incoming_Off" xml:space="preserve"><value>Nu se mai urmărește {0}.</value></data>
 </root>

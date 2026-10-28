@@ -206,6 +206,7 @@ internal static class AppServices
         services.AddSingleton<ITelemetryService, LocalTelemetryService>();    // opt-in local telemetry/crash reports
         services.AddSingleton<IScriptHookService, ScriptHookService>();       // scripting/macro hooks
         services.AddSingleton<ITaskRunnerService, TaskRunnerService>();
+        services.AddSingleton<IIncomingFolderService, IncomingFolderService>();
         // MCP in-app host (T-03.1): the ring-R3 UI seam + the loopback server. Both are cheap to
         // construct; the Kestrel listener only spins up when EnableMcpServer is on (ApplySettingAsync).
         services.AddSingleton<Therion.Mcp.IUiBridge, UiBridge>();
