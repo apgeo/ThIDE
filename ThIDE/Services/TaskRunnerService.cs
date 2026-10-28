@@ -83,9 +83,14 @@ public sealed class TaskRunnerService : ITaskRunnerService
     {
         var task = Tasks().FirstOrDefault(t => t.Id == id);
         if (task is null) { _notifications?.Warning(Tr.Get("Task_Unknown"), id); return false; }
-        if (_session.RootPath is not { } root || !await _trust.EnsureTrustedAsync(root, Tr.Get("Trust_ReasonTasks")).ConfigureAwait(true))
+        // Started by a hook, the task asks like the hooks do: once, not on every save.
+        var root = _session.RootPath;
+        var (trusted, asked) = root is null ? (false, true) : context is null
+            ? (await _trust.EnsureTrustedAsync(root, Tr.Get("Trust_ReasonTasks")).ConfigureAwait(true), true)
+            : await _trust.EnsureTrustedOnceAsync(root, Tr.Get("Trust_ReasonTasks")).ConfigureAwait(true);
+        if (!trusted || root is null)
         {
-            _notifications?.Warning(Tr.Get("Trust_Skipped"), string.Format(Tr.Get("Trust_SkippedDetail"), task.Title));
+            if (asked) _notifications?.Warning(Tr.Get("Trust_Skipped"), string.Format(Tr.Get("Trust_SkippedDetail"), task.Title));
             return false;
         }
 

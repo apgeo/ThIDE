@@ -714,8 +714,15 @@ public partial class MainWindow : Window
             AppServices.Provider.GetService<INotificationService>()?.Info(ThIDE.Resources.Tr.Get("Diag_Fix"), ThIDE.Resources.Tr.Get("Diag_NoFix"));
             return;
         }
+        var batch = new Therion.Workspace.Editing.EditBatch([new(path, fix.Edits)], [], []);
+        // A fix that cannot tell where it belongs (an end inserted after a flat block body) is shown first.
+        if (!fix.SafeForBatch)
+        {
+            await PreviewAndApplyAsync(ThIDE.Resources.Tr.Get("Diag_Fix"), ThIDE.Resources.Tr.Get("Diag_FixCheck"), batch);
+            return;
+        }
         if (AppServices.Provider.GetService<IWorkspaceEditService>() is not { } editor) return;
-        var outcome = await editor.ApplyAsync(new Therion.Workspace.Editing.EditBatch([new(path, fix.Edits)], [], []));
+        var outcome = await editor.ApplyAsync(batch);
         if (!outcome.Success) AppServices.Provider.GetService<INotificationService>()?.Warning(ThIDE.Resources.Tr.Get("Diag_Fix"), outcome.Describe());
     }
 

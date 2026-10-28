@@ -124,6 +124,7 @@ public static partial class ProjectTemplateEngine
 
             // Replace an earlier import of the same id only once the new one is in place.
             var target = Path.Combine(libraryFolder, template.Id);
+            foreach (var stale in Directory.EnumerateDirectories(libraryFolder, "*.old-*")) TryDelete(stale);
             var previous = Directory.Exists(target) ? target + ".old-" + Guid.NewGuid().ToString("N")[..8] : null;
             if (previous is not null) Directory.Move(target, previous);
             try { Directory.Move(root, target); }
@@ -132,7 +133,9 @@ public static partial class ProjectTemplateEngine
                 if (previous is not null) Directory.Move(previous, target);
                 throw;
             }
-            if (previous is not null) Directory.Delete(previous, recursive: true);
+            // The import has succeeded: a locked file in the old copy must not report it as failed.
+            // What cannot be removed now is swept on the next import.
+            if (previous is not null) TryDelete(previous);
             return LoadFolder(target);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
@@ -327,4 +330,10 @@ public static partial class ProjectTemplateEngine
             ],
             ["${year}/sketches", "output"], "${expedition}-${year}.thconfig", TitleKey: "ProjTpl_Expedition"),
     ];
+
+    private static void TryDelete(string folder)
+    {
+        try { Directory.Delete(folder, recursive: true); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+    }
 }

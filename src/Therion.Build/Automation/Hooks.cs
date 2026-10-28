@@ -62,8 +62,10 @@ public static class HookCatalog
             var dto = JsonSerializer.Deserialize<FileDto>(json, Json);
             var all = (dto?.Hooks ?? []).Select(h => h with { Source = HookSource.Project }).ToList();
             // A hook with neither (or both) a command and a task is reported; the others still run.
-            var bad = all.Where(h => string.IsNullOrWhiteSpace(h.Command) == string.IsNullOrWhiteSpace(h.Task)).ToList();
-            return (all.Except(bad).ToList(), bad.Count == 0 ? null
+            static bool Broken(HookDefinition h) => string.IsNullOrWhiteSpace(h.Command) == string.IsNullOrWhiteSpace(h.Task);
+            var bad = all.Where(Broken).ToList();
+            // Not Except: that is a set operation and would also merge hooks listed twice on purpose.
+            return (all.Where(h => !Broken(h)).ToList(), bad.Count == 0 ? null
                 : $"hooks.json: each hook needs either a command or a task ({string.Join(", ", bad.Select(h => h.Event))})");
         }
         catch (JsonException ex) { return ([], $"hooks.json (line {(ex.LineNumber ?? 0) + 1}): {ex.Message}"); }

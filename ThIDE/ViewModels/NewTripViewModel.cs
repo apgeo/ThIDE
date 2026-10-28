@@ -219,7 +219,7 @@ public sealed partial class NewTripViewModel : ObservableObject
             || SurveyName.Trim().IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
             warnings.Add(new(Tr.Get("NewTrip_BadName"), true));
         if (!ScaffoldValueRules.IsStationRef(FirstStation.Trim()) || FirstStation.Contains('@')) warnings.Add(new(Tr.Get("NewTrip_BadStation"), true));
-        if (!System.Text.RegularExpressions.Regex.IsMatch(Date.Trim(), @"^\d{4}(\.\d{1,2}(\.\d{1,2})?)?$"))
+        if (!TripDefaults.IsDate(Date))
             warnings.Add(new(Tr.Get("NewTrip_BadDate"), true));
         if (Stations.SelectedStation is not { } tie || SelectedDestination is not { } dest || _ctx is null)
         {

@@ -26,6 +26,13 @@ public interface IWorkspaceTrustService
     /// </summary>
     Task<bool> EnsureTrustedAsync(string root, string reason);
 
+    /// <summary>
+    /// As <see cref="EnsureTrustedAsync"/>, for commands that start on their own (hooks, tasks a hook
+    /// starts): one question at a time, and a "no" holds for the rest of the session — Save All must
+    /// not ask once per file. <c>Asked</c> is false when the answer came from an earlier "no".
+    /// </summary>
+    Task<(bool Trusted, bool Asked)> EnsureTrustedOnceAsync(string root, string reason);
+
     IReadOnlyList<string> TrustedFolders { get; }
     void Trust(string root);
     void Revoke(string root);
@@ -43,6 +50,8 @@ public sealed class WorkspaceTrustService : IWorkspaceTrustService
     private readonly Func<string, string, Task<bool>> _ask;
     private readonly object _gate = new();
     private List<string> _trusted;
+    private readonly HashSet<string> _declined = new(FilePaths.Comparer);
+    private readonly System.Threading.SemaphoreSlim _asking = new(1, 1);
 
     /// <param name="storePath">trust.json (default: app data).</param>
     /// <param name="ask">Asks the user (folder, reason) → trust? Default: no one to ask, so no.</param>
@@ -76,9 +85,26 @@ public sealed class WorkspaceTrustService : IWorkspaceTrustService
         return true;
     }
 
+    public async Task<(bool Trusted, bool Asked)> EnsureTrustedOnceAsync(string root, string reason)
+    {
+        if (Get(root) == TrustState.Trusted) return (true, false);
+        await _asking.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            if (Get(root) == TrustState.Trusted) return (true, false);
+            var full = FilePaths.Full(root);
+            lock (_gate) if (_declined.Contains(full)) return (false, false);
+            if (await EnsureTrustedAsync(root, reason).ConfigureAwait(false)) return (true, true);
+            lock (_gate) _declined.Add(full);
+            return (false, true);
+        }
+        finally { _asking.Release(); }
+    }
+
     public void Trust(string root)
     {
         var full = FilePaths.Full(root);
+        lock (_gate) _declined.Remove(full);
         lock (_gate)
         {
             if (_trusted.Any(t => FilePaths.Comparer.Equals(t, full))) return;

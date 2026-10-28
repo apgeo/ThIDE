@@ -1599,4 +1599,5 @@ Aplici modificările? Pașii care nu au putut fi previzualizați rulează acum.<
   <data name="Notif_SaveEncodingTitle" xml:space="preserve"><value>Nesalvat</value></data>
   <data name="Notif_SaveEncoding" xml:space="preserve"><value>{0}: „{1}” nu poate fi scris în {2}, codificarea declarată de fișier. Schimbați caracterul sau linia `encoding` a fișierului (de exemplu în utf-8) și salvați din nou.</value></data>
   <data name="Replace_EncodingRefused" xml:space="preserve"><value>Nu s-a înlocuit nimic: {0} nu poate conține „{1}” în {2}, codificarea declarată de fișier. Niciun fișier nu a fost modificat.</value></data>
+  <data name="Diag_FixCheck" xml:space="preserve"><value>Este posibil ca această corectură să nu ajungă la locul potrivit: verificați unde se aplică înainte de a o aplica.</value></data>
 </root>

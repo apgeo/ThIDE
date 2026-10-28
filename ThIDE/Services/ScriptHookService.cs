@@ -43,7 +43,6 @@ public sealed class ScriptHookService : IScriptHookService
     private readonly IWorkspaceTrustService? _trust;
     private readonly IAutomationOutput? _output;
     private readonly INotificationService? _notifications;
-    private readonly HashSet<string> _declined = new(StringComparer.Ordinal);
     private readonly SemaphoreSlim _order = new(1, 1);
 
     public ScriptHookService(IAppSettingsService settings, ILogService? log = null, IWorkspaceSession? session = null,
@@ -58,7 +57,6 @@ public sealed class ScriptHookService : IScriptHookService
     }
 
     public Func<string, HookContext, Task>? RunTask { get; set; }
-    private readonly SemaphoreSlim _asking = new(1, 1);
 
     public void Run(ScriptHookEvent ev, string? filePath = null)
     {
@@ -123,20 +121,11 @@ public sealed class ScriptHookService : IScriptHookService
     private async Task<bool> ProjectAllowedAsync(string? root)
     {
         if (_trust is null || root is null) return false;
-        if (_trust.Get(root) == TrustState.Trusted) return true;
-        // One question at a time: Save All fires a hook per file, and only the first may ask.
-        await _asking.WaitAsync().ConfigureAwait(false);
-        try
-        {
-            if (_trust.Get(root) == TrustState.Trusted) return true;
-            lock (_declined) if (_declined.Contains(root)) return false;
-            if (await _trust.EnsureTrustedAsync(root, Tr.Get("Trust_ReasonHooks")).ConfigureAwait(false)) return true;
-            lock (_declined) _declined.Add(root);
-        }
-        finally { _asking.Release(); }
-        _notifications?.Warning(Tr.Get("Trust_Skipped"), string.Format(Tr.Get("Trust_SkippedDetail"), "hooks.json"),
-            Tr.Get("Trust_TrustAction"), () => _trust.Trust(root));
-        return false;
+        var (trusted, asked) = await _trust.EnsureTrustedOnceAsync(root, Tr.Get("Trust_ReasonHooks")).ConfigureAwait(false);
+        if (!trusted && asked)
+            _notifications?.Warning(Tr.Get("Trust_Skipped"), string.Format(Tr.Get("Trust_SkippedDetail"), "hooks.json"),
+                Tr.Get("Trust_TrustAction"), () => _trust.Trust(root));
+        return trusted;
     }
 
     private async Task RunOneAsync(HookDefinition hook, HookContext ctx, CancellationToken ct)

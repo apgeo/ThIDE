@@ -1599,4 +1599,5 @@ Apply the changes? Steps that could not preview run now.</value></data>
   <data name="Notif_SaveEncodingTitle" xml:space="preserve"><value>Not saved</value></data>
   <data name="Notif_SaveEncoding" xml:space="preserve"><value>{0}: '{1}' cannot be written in {2}, the encoding the file declares. Change the character, or the file's `encoding` line (for example to utf-8), and save again.</value></data>
   <data name="Replace_EncodingRefused" xml:space="preserve"><value>Nothing replaced: {0} cannot hold '{1}' in {2}, the encoding the file declares. No file was changed.</value></data>
+  <data name="Diag_FixCheck" xml:space="preserve"><value>This fix may not land in the right place here: check where it goes before applying it.</value></data>
 </root>

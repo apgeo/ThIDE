@@ -45,6 +45,14 @@ public class HookCatalogTests
     }
 
     [Fact]
+    public void A_hook_listed_twice_runs_twice()
+    {
+        var (hooks, error) = HookCatalog.LoadProject("""{ "hooks": [ { "event": "FileSaved", "command": "ok" }, { "event": "FileSaved", "command": "ok" } ] }""");
+        Assert.Null(error);
+        Assert.Equal(2, hooks.Count);
+    }
+
+    [Fact]
     public void Variables_are_quoted_once()
     {
         var ctx = new HookContext(HookEvent.FileSaved, "/caves/My Cave/it's.th", "/caves", "/caves/a.thconfig");

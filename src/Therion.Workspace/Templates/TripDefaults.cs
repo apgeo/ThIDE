@@ -82,4 +82,28 @@ public sealed record TripDefaults(
         string Part(int i) => i < parts.Length && int.TryParse(parts[i], NumberStyles.None, CultureInfo.InvariantCulture, out var n) ? n.ToString("00", CultureInfo.InvariantCulture) : "00";
         return $"{parts[0]}.{Part(1)}.{Part(2)}";
     }
+
+    /// <summary>
+    /// True for a value Therion accepts after <c>date</c>: <c>yyyy[.mm[.dd[@hh[:mm[:ss[.ss]]]]]]</c>,
+    /// or two of them as a range (<c>2026.10.27 - 2026.10.28</c>), with real months, days and times.
+    /// </summary>
+    public static bool IsDate(string value)
+    {
+        var parts = value.Trim().Split(" - ", 3, StringSplitOptions.TrimEntries);
+        return parts.Length <= 2 && parts.All(IsOneDate);
+
+        static bool IsOneDate(string d)
+        {
+            var m = DatePattern.Match(d);
+            if (!m.Success) return false;
+            static bool In(System.Text.RegularExpressions.Group g, int lo, int hi) =>
+                !g.Success || int.Parse(g.Value, CultureInfo.InvariantCulture) is var n && n >= lo && n <= hi;
+            return In(m.Groups["mo"], 1, 12) && In(m.Groups["d"], 1, 31)
+                && In(m.Groups["h"], 0, 23) && In(m.Groups["mi"], 0, 59) && In(m.Groups["s"], 0, 59);
+        }
+    }
+
+    private static readonly System.Text.RegularExpressions.Regex DatePattern = new(
+        @"^[0-9]{4}(\.(?<mo>[0-9]{1,2})(\.(?<d>[0-9]{1,2})(@(?<h>[0-9]{1,2})(:(?<mi>[0-9]{1,2})(:(?<s>[0-9]{1,2})(\.[0-9]+)?)?)?)?)?)?$",
+        System.Text.RegularExpressions.RegexOptions.CultureInvariant);
 }
