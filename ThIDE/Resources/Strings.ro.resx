@@ -1539,4 +1539,14 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Diag_FixAllSummary" xml:space="preserve"><value>{0} corecturi în {1} fișiere. {2} nu au putut fi corectate automat și rămân neschimbate. Debifează orice modificare nedorită.</value></data>
   <data name="Diag_FixAllDone" xml:space="preserve"><value>S-au aplicat {0} modificări.</value></data>
   <data name="EditPreview_Apply" xml:space="preserve"><value>Aplică</value></data>
+  <data name="Menu_Tools_SyncMaps" xml:space="preserve"><value>Adaugă scrap-urile nereferite în hărți…</value></data>
+  <data name="Menu_Tools_SuggestEquates" xml:space="preserve"><value>Sugerează equate-uri…</value></data>
+  <data name="Menu_Tools_FormatAll" xml:space="preserve"><value>Formatează toate fișierele…</value></data>
+  <data name="SyncMaps_Intro" xml:space="preserve"><value>Aceste scrap-uri sunt desenate, dar nicio hartă nu le include, deci nu apar în nicio hartă exportată de Therion. Alege harta în care intră fiecare (sau omite-l); vei vedea fiecare modificare înainte de scriere.</value></data>
+  <data name="SyncMaps_Skip" xml:space="preserve"><value>(omite)</value></data>
+  <data name="SyncMaps_Next" xml:space="preserve"><value>Previzualizează…</value></data>
+  <data name="SyncMaps_Nothing" xml:space="preserve"><value>Toate scrap-urile sunt deja într-o hartă.</value></data>
+  <data name="SyncMaps_NoMaps" xml:space="preserve"><value>Proiectul nu are nicio hartă în care să se adauge scrap-uri. Creează întâi una (fragmentul mapb).</value></data>
+  <data name="SyncMaps_Summary" xml:space="preserve"><value>Fiecare hartă primește membrii noi după ultimul existent.</value></data>
+  <data name="SyncMaps_Problems" xml:space="preserve"><value>Nemodificate: {0}.</value></data>
 </root>

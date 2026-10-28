@@ -121,6 +121,9 @@ public sealed class CommandPaletteProvider
         list.Add(ParamCmd(tools, L("Menu_Tools_ScaffoldActive"), _vm.ScaffoldProjectCommand, "active", "Icon.Config"));
         list.Add(VmCmd(tools, L("Menu_Tools_LinkSurvey"), _vm.LinkSurveyCommand, "Icon.Import"));
         list.Add(VmCmd(tools, L("Menu_Tools_NewTrip"), _vm.NewTripCommand, "Icon.File"));
+        list.Add(VmCmd(tools, L("Menu_Tools_SyncMaps"), _vm.SyncMapsCommand, "Icon.Map"));
+        list.Add(VmCmd(tools, L("Menu_Tools_SuggestEquates"), _vm.SuggestEquatesCommand, "Icon.Map"));
+        list.Add(VmCmd(tools, L("Menu_Tools_FormatAll"), _vm.FormatAllCommand, "Icon.File"));
         // One entry per project task (tasks.json), read when the palette opens.
         if (_vm.Tasks is { } taskRunner)
             foreach (var task in taskRunner.Tasks())

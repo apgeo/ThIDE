@@ -1539,4 +1539,14 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Diag_FixAllSummary" xml:space="preserve"><value>{0} fixes in {1} files. {2} could not be fixed automatically and are left as they are. Untick any change you do not want.</value></data>
   <data name="Diag_FixAllDone" xml:space="preserve"><value>Applied {0} changes.</value></data>
   <data name="EditPreview_Apply" xml:space="preserve"><value>Apply</value></data>
+  <data name="Menu_Tools_SyncMaps" xml:space="preserve"><value>Add unreferenced scraps to maps…</value></data>
+  <data name="Menu_Tools_SuggestEquates" xml:space="preserve"><value>Suggest equates…</value></data>
+  <data name="Menu_Tools_FormatAll" xml:space="preserve"><value>Format all files…</value></data>
+  <data name="SyncMaps_Intro" xml:space="preserve"><value>These scraps are drawn but no map composes them, so they appear in no map Therion exports. Choose the map each one joins (or leave it out); you will see every change before it is written.</value></data>
+  <data name="SyncMaps_Skip" xml:space="preserve"><value>(leave out)</value></data>
+  <data name="SyncMaps_Next" xml:space="preserve"><value>Preview…</value></data>
+  <data name="SyncMaps_Nothing" xml:space="preserve"><value>Every scrap is already in a map.</value></data>
+  <data name="SyncMaps_NoMaps" xml:space="preserve"><value>The project has no map to add scraps to. Create one first (snippet mapb).</value></data>
+  <data name="SyncMaps_Summary" xml:space="preserve"><value>Each map gets its new members after its last one.</value></data>
+  <data name="SyncMaps_Problems" xml:space="preserve"><value>Not changed: {0}.</value></data>
 </root>

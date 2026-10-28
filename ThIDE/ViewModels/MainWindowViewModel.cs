@@ -1146,6 +1146,18 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private void BatchBuild() => BatchBuildRequested?.Invoke(this, null);
 
+    /// <summary>Raised to open Tools ▸ Add unreferenced scraps to maps.</summary>
+    public event EventHandler? SyncMapsRequested;
+    [RelayCommand] private void SyncMaps() => SyncMapsRequested?.Invoke(this, EventArgs.Empty);
+
+    /// <summary>Raised to open Tools ▸ Suggest equates.</summary>
+    public event EventHandler? SuggestEquatesRequested;
+    [RelayCommand] private void SuggestEquates() => SuggestEquatesRequested?.Invoke(this, EventArgs.Empty);
+
+    /// <summary>Raised to run Tools ▸ Format all files.</summary>
+    public event EventHandler? FormatAllRequested;
+    [RelayCommand] private void FormatAll() => FormatAllRequested?.Invoke(this, EventArgs.Empty);
+
     /// <summary>Raised to open Tools ▸ New trip… in the view.</summary>
     public event EventHandler? NewTripRequested;
 

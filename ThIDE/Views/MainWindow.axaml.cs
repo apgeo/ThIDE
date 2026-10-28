@@ -86,6 +86,7 @@ public partial class MainWindow : Window
                 vm.NewTripRequested += (_, _) => _ = ShowNewTripAsync();
                 vm.BatchBuildRequested += (_, entries) => _ = ShowBatchBuildAsync(vm, entries);
                 vm.Diagnostics.FixRequested += (_, d) => _ = FixOneAsync(d);
+                vm.SyncMapsRequested += (_, _) => _ = SyncMapsAsync();
                 vm.Diagnostics.FixAllRequested += (_, code) => _ = FixAllAsync(vm, code);
                 ThIDE.Editor.TherionTextEditor.LinkSurveyRequested += (_, req) =>
                     Avalonia.Threading.Dispatcher.UIThread.Post(() => _ = ShowLinkSurveyAsync(req.FilePath, req.Caret));
@@ -722,6 +723,46 @@ public partial class MainWindow : Window
         var outcome = await editor.ApplyAsync(preview.Chosen() with { RequiresWorkspaceReload = true });
         if (outcome.Success) notifications?.Success(preview.Title, string.Format(ThIDE.Resources.Tr.Get("Diag_FixAllDone"), preview.CheckedCount));
         else notifications?.Warning(preview.Title, outcome.Error ?? string.Join("; ", outcome.Problems.Select(p => $"{Path.GetFileName(p.FilePath)}: {p.Kind}")));
+    }
+
+    /// <summary>Shows a preview of a batch and applies the ticked edits (one undo step per open file).</summary>
+    private async System.Threading.Tasks.Task<bool> PreviewAndApplyAsync(string title, string summary, Therion.Workspace.Editing.EditBatch batch)
+    {
+        var docs = AppServices.Provider.GetService<IDocumentService>();
+        var rows = Therion.Workspace.Fixes.FixAll.Preview(batch, p => CurrentText(docs, p));
+        var preview = new EditPreviewViewModel(title, summary, batch, rows, AppServices.Provider.GetService<IWorkspaceSession>()?.RootPath);
+        var window = new EditPreviewWindow(preview);
+        await window.ShowDialog(this);
+        if (!window.Confirmed || AppServices.Provider.GetService<IWorkspaceEditService>() is not { } editor) return false;
+        var outcome = await editor.ApplyAsync(preview.Chosen());
+        var n = AppServices.Provider.GetService<INotificationService>();
+        if (outcome.Success) n?.Success(title, string.Format(ThIDE.Resources.Tr.Get("Diag_FixAllDone"), preview.CheckedCount));
+        else n?.Warning(title, outcome.Error ?? string.Join("; ", outcome.Problems.Select(p => $"{Path.GetFileName(p.FilePath)}: {p.Kind}")));
+        return outcome.Success;
+    }
+
+    /// <summary>Tools ▸ Add unreferenced scraps to maps.</summary>
+    private async System.Threading.Tasks.Task SyncMapsAsync()
+    {
+        var docs = AppServices.Provider.GetService<IDocumentService>();
+        var n = AppServices.Provider.GetService<INotificationService>();
+        var title = ThIDE.Resources.Tr.Get("Menu_Tools_SyncMaps");
+        if (docs?.Workspace is not { } ws) return;
+        var model = new SyncMapsViewModel(ws, AppServices.Provider.GetService<IWorkspaceSession>()?.RootPath);
+        if (model.Rows.Count == 0 || !model.HasMaps) { n?.Info(title, ThIDE.Resources.Tr.Get(model.Rows.Count == 0 ? "SyncMaps_Nothing" : "SyncMaps_NoMaps")); return; }
+        var window = new SyncMapsWindow(model);
+        await window.ShowDialog(this);
+        if (!window.Confirmed) return;
+
+        var cache = new Dictionary<string, Therion.Syntax.TherionFile?>(Therion.Workspace.Editing.FilePaths.Comparer);
+        Therion.Syntax.TherionFile? Ast(string p) => cache.TryGetValue(p, out var a) ? a
+            : cache[p] = p.EndsWith(".th", StringComparison.OrdinalIgnoreCase) && CurrentText(docs, p) is { } t ? new Therion.Syntax.ThParser().Parse(p, t).Value : null;
+        var scopes = Therion.Semantics.Linking.SurveyScopeResolver.Build(ws, Ast);
+        var (batch, problems) = Therion.Workspace.Fixes.MapSync.Plan(ws, scopes, model.Assignments(), p => CurrentText(docs, p), Ast);
+        var summary = problems.Count == 0 ? ThIDE.Resources.Tr.Get("SyncMaps_Summary")
+            : ThIDE.Resources.Tr.Get("SyncMaps_Summary") + " " + string.Format(ThIDE.Resources.Tr.Get("SyncMaps_Problems"), string.Join(", ", problems.Select(p => $"{p.Map} ({p.Problem})")));
+        if (batch.IsEmpty) { n?.Warning(title, summary); return; }
+        await PreviewAndApplyAsync(title, summary, batch);
     }
 
     // ----- automation panel -----------------------------------------------
