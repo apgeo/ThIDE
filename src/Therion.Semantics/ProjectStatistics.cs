@@ -152,7 +152,7 @@ public static class ProjectStatistics
         var referenced = new HashSet<string>(StringComparer.Ordinal);
         foreach (var map in model.MapsById.Values)
             foreach (var member in map.Members)
-                referenced.Add(member);
+                referenced.Add(StationRef.Parse(member).Point);   // `s1@survey` references scrap s1
         return model.ScrapsById.Keys
             .Where(id => !referenced.Contains(id))
             .OrderBy(id => id, StringComparer.OrdinalIgnoreCase)
