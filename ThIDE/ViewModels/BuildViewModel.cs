@@ -513,7 +513,7 @@ public partial class BuildViewModel : ViewModelBase
     /// The build target: the active editor file when it is itself a thconfig, otherwise the
     /// workspace's active thconfig; falls back to the active file when no thconfig is known.
     /// </summary>
-    private string? ResolveBuildEntry()
+    public string? ResolveBuildEntry()
     {
         var active = _documents.CurrentPath;
         if (active is not null && IsThconfig(active)) return active;

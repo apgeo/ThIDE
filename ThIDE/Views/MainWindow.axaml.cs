@@ -621,6 +621,25 @@ public partial class MainWindow : Window
             await docs.ActivateThconfigAsync(thconfig, new ThconfigActivation(SetWorkingDirectory: true, OpenInEditor: true, Notify: true));
     }
 
+    // ----- tasks --------------------------------------------------------------
+
+    /// <summary>Fills Tools ▸ Tasks with the project's tasks each time it opens.</summary>
+    private void OnTasksSubmenuOpened(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (sender is not MenuItem menu || DataContext is not MainWindowViewModel { Tasks: { } runner }) return;
+        menu.Items.Clear();
+        var tasks = runner.Tasks();
+        foreach (var task in tasks)
+        {
+            var id = task.Id;
+            var item = new MenuItem { Header = task.Title };
+            Avalonia.Automation.AutomationProperties.SetAutomationId(item, "Menu.Tools.Tasks." + id);
+            item.Click += (_, _) => _ = runner.RunAsync(id);
+            menu.Items.Add(item);
+        }
+        if (tasks.Count == 0) menu.Items.Add(new MenuItem { Header = ThIDE.Resources.Tr.Get("Task_None"), IsEnabled = false });
+    }
+
     // ----- automation panel -----------------------------------------------
 
     /// <summary>Shows the Automation panel when a run starts, and opens the file:line a row names.</summary>

@@ -513,9 +513,11 @@ public partial class MainWindowViewModel : ViewModelBase
         ICrashRecoveryService? crashRecovery = null,
         IScriptHookService? hooks = null,
         IShellOpener? shell = null,
-        IMcpHostService? mcpHost = null)
+        IMcpHostService? mcpHost = null,
+        ITaskRunnerService? tasks = null)
     {
         _shell = shell;
+        Tasks = tasks;
         _mcpHost = mcpHost;
         _log = log;
         _crashRecovery = crashRecovery;
@@ -771,6 +773,23 @@ public partial class MainWindowViewModel : ViewModelBase
         // Surface the Compiler Output panel when a build starts (#2).
         Build.BuildStarted += (_, _) => OnUiThread(() => _factory.ShowCompilerOutput());
         Build.ExternalToolStarted += (_, _) => OnUiThread(() => _factory.ShowCompilerOutput());
+        if (Tasks is not null)
+        {
+            // Built-in tasks build through the same pipeline as the Build command.
+            Tasks.RunBuild = async (entries, batch) =>
+            {
+                if (batch && BatchBuildRequested is { } open) { open(this, entries); return; }
+                foreach (var entry in entries ?? (Build.ResolveBuildEntry() is { } e ? [e] : []))
+                    if (await Build.RunBuildAsync(entry, label: "Task") is { Succeeded: false }) break;
+            };
+            Tasks.PublishDiagnostics = diags => OnUiThread(() =>
+            {
+                var combined = System.Collections.Immutable.ImmutableArray.CreateBuilder<Therion.Core.Diagnostic>();
+                combined.AddRange(DiagnosticsSource());
+                combined.AddRange(diags);
+                Diagnostics.Load(combined.ToImmutable());
+            });
+        }
         // Compile-on-save follows every save — Save, Save All and auto-save — not just the command.
         _documents.DocumentSaved += (_, _) => OnUiThread(TriggerCompileOnSave);
         // run the on-build script hook (active thconfig as {file}).
@@ -1116,6 +1135,16 @@ public partial class MainWindowViewModel : ViewModelBase
         RequestNewFile(null);
         return Task.CompletedTask;
     }
+
+    /// <summary>The project's tasks (Tools ▸ Tasks, the palette), or null without the service.</summary>
+    public ITaskRunnerService? Tasks { get; }
+
+    /// <summary>Raised to open the batch build window, optionally preselecting entries.</summary>
+    public event EventHandler<IReadOnlyList<string>?>? BatchBuildRequested;
+
+    /// <summary>Build several thconfigs (and export targets) in one go.</summary>
+    [RelayCommand]
+    private void BatchBuild() => BatchBuildRequested?.Invoke(this, null);
 
     /// <summary>Raised to open Tools ▸ New trip… in the view.</summary>
     public event EventHandler? NewTripRequested;

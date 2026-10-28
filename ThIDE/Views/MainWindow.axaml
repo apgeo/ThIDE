@@ -294,6 +294,9 @@
                 <MenuItem AutomationProperties.AutomationId="Menu.Tools.ScaffoldActive" Header="{l:Loc Menu_Tools_ScaffoldActive}" Command="{Binding ScaffoldProjectCommand}" CommandParameter="active" />
                 <MenuItem AutomationProperties.AutomationId="Menu.Tools.LinkSurvey" Header="{l:Loc Menu_Tools_LinkSurvey}" Command="{Binding LinkSurveyCommand}" />
                 <MenuItem AutomationProperties.AutomationId="Menu.Tools.NewTrip" Header="{l:Loc Menu_Tools_NewTrip}" Command="{Binding NewTripCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Tools.Tasks" Header="{l:Loc Menu_Tools_Tasks}" SubmenuOpened="OnTasksSubmenuOpened">
+                    <MenuItem Header="{l:Loc Task_None}" IsEnabled="False" />
+                </MenuItem>
                 <Separator />
                 <MenuItem AutomationProperties.AutomationId="Menu.Tools.ExportEntrances" Header="{l:Loc Menu_Tools_ExportEntrances}">
                     <MenuItem AutomationProperties.AutomationId="Menu.Tools.ExportEntrances.Kml" Header="KML…"      Command="{Binding ExportGisCommand}" CommandParameter="kml" />

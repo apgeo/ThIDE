@@ -1511,4 +1511,10 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Pref_ProjectAutomationHelp" xml:space="preserve"><value>They run only in folders you trust; ThIDE asks the first time a project wants to run something.</value></data>
   <data name="Pref_TrustedFolders" xml:space="preserve"><value>Trusted folders</value></data>
   <data name="Pref_TrustRemove" xml:space="preserve"><value>Remove</value></data>
+  <data name="Menu_Tools_Tasks" xml:space="preserve"><value>Tasks</value></data>
+  <data name="Task_None" xml:space="preserve"><value>(no tasks in this project)</value></data>
+  <data name="Task_FileInvalid" xml:space="preserve"><value>Some tasks could not be read</value></data>
+  <data name="Task_Unknown" xml:space="preserve"><value>No such task</value></data>
+  <data name="Automation_Task" xml:space="preserve"><value>Task</value></data>
+  <data name="Cmd_TaskFmt" xml:space="preserve"><value>Task: {0}</value></data>
 </root>

@@ -1511,4 +1511,10 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Pref_ProjectAutomationHelp" xml:space="preserve"><value>Rulează doar în dosarele în care ai încredere; ThIDE întreabă prima dată când un proiect vrea să ruleze ceva.</value></data>
   <data name="Pref_TrustedFolders" xml:space="preserve"><value>Dosare de încredere</value></data>
   <data name="Pref_TrustRemove" xml:space="preserve"><value>Elimină</value></data>
+  <data name="Menu_Tools_Tasks" xml:space="preserve"><value>Sarcini</value></data>
+  <data name="Task_None" xml:space="preserve"><value>(nicio sarcină în acest proiect)</value></data>
+  <data name="Task_FileInvalid" xml:space="preserve"><value>Unele sarcini nu au putut fi citite</value></data>
+  <data name="Task_Unknown" xml:space="preserve"><value>Nu există această sarcină</value></data>
+  <data name="Automation_Task" xml:space="preserve"><value>Sarcină</value></data>
+  <data name="Cmd_TaskFmt" xml:space="preserve"><value>Sarcină: {0}</value></data>
 </root>

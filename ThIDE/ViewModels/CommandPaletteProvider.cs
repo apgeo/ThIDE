@@ -120,6 +120,10 @@ public sealed class CommandPaletteProvider
         list.Add(ParamCmd(tools, L("Menu_Tools_ScaffoldActive"), _vm.ScaffoldProjectCommand, "active", "Icon.Config"));
         list.Add(VmCmd(tools, L("Menu_Tools_LinkSurvey"), _vm.LinkSurveyCommand, "Icon.Import"));
         list.Add(VmCmd(tools, L("Menu_Tools_NewTrip"), _vm.NewTripCommand, "Icon.File"));
+        // One entry per project task (tasks.json), read when the palette opens.
+        if (_vm.Tasks is { } taskRunner)
+            foreach (var task in taskRunner.Tasks())
+                list.Add(Action(tools, string.Format(L("Cmd_TaskFmt"), task.Title), () => taskRunner.RunAsync(task.Id), "Icon.Config"));
         // Export entrances / fixed points — one flat, searchable item per format.
         foreach (var fmt in new[] { "kml", "geojson", "gpx", "csv" })
             list.Add(ParamCmd(tools, $"{L("Menu_Tools_ExportEntrances")} — {FormatLabel(fmt)}", _vm.ExportGisCommand, fmt, "Icon.Export"));
