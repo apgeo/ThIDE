@@ -2312,9 +2312,36 @@ public partial class TherionTextEditor : UserControl
 
     // ----- right-click: move caret to the click before showing the menu -------
 
+    private MenuItem? _snippetMenuItem;
+
+    private void RefreshSnippetMenu()
+    {
+        if (_snippetMenuItem is null) return;
+        _snippetMenuItem.Items.Clear();
+        bool enabled = EditorFeatureFlags.IsEnabled(EditorFeature.Snippets, CurrentSettings);
+        foreach (var snippet in TherionSnippets.For(CurrentFilePath))
+        {
+            var chosen = snippet;
+            var item = MakeItem($"{snippet.Trigger} — {TherionSnippets.DescriptionOf(snippet)}", () => InsertSnippetAtCaretFromMenu(chosen),
+                "Editor.Ctx.GenerateCode.Snippets." + snippet.Trigger);
+            _snippetMenuItem.Items.Add(item);
+        }
+        _snippetMenuItem.IsVisible = enabled && _snippetMenuItem.Items.Count > 0;
+    }
+
+    /// <summary>Inserts a snippet at the caret (replacing the selection), as Tab-expansion would.</summary>
+    private void InsertSnippetAtCaretFromMenu(Therion.Workspace.Templates.SnippetDefinition snippet)
+    {
+        if (_editor is null) return;
+        int start = _editor.SelectionLength > 0 ? _editor.SelectionStart : _editor.CaretOffset;
+        TherionSnippets.Insert(_editor.TextArea, start, _editor.SelectionLength, snippet, CurrentFilePath);
+        _editor.Focus();
+    }
+
     private void OnEditorContextRequested(object? sender, ContextRequestedEventArgs e)
     {
         if (_editor is null) return;
+        RefreshSnippetMenu();
         // refresh the gated items' visibility for the current settings.
         var fs = CurrentSettings;
         if (_matchMenuItem is not null)
@@ -2910,17 +2937,17 @@ public partial class TherionTextEditor : UserControl
             _                        => "·",
         };
 
-        private static string KindLabel(CompletionKind kind) => kind switch
+        private static string KindLabel(CompletionKind kind) => L(kind switch
         {
-            CompletionKind.Command   => "Command",
-            CompletionKind.Flag      => "Flag value",
-            CompletionKind.DataStyle => "Data style",
-            CompletionKind.DataField => "Data reading",
-            CompletionKind.Type      => "Symbol type",
-            CompletionKind.Station   => "Station",
-            CompletionKind.Snippet   => "Snippet",
-            _                        => "Identifier",
-        };
+            CompletionKind.Command   => "Ed_KindCommand",
+            CompletionKind.Flag      => "Ed_KindFlag",
+            CompletionKind.DataStyle => "Ed_KindDataStyle",
+            CompletionKind.DataField => "Ed_KindDataField",
+            CompletionKind.Type      => "Ed_KindType",
+            CompletionKind.Station   => "Ed_KindStation",
+            CompletionKind.Snippet   => "Ed_KindSnippet",
+            _                        => "Ed_KindIdentifier",
+        });
     }
 
     /// <summary>
@@ -3210,6 +3237,10 @@ public partial class TherionTextEditor : UserControl
         var generate = new MenuItem { Header = L("Ctx_GenerateCode") };
         AutomationProperties.SetAutomationId(generate, "Editor.Ctx.GenerateCode");
         generate.Items.Add(MakeItem(L("Menu_Tools_LinkSurvey"), RequestLinkSurvey, "Editor.Ctx.GenerateCode.LinkSurvey"));
+        // Filled with the snippets that apply to this file each time the menu opens.
+        _snippetMenuItem = new MenuItem { Header = L("Ed_InsertSnippet") };
+        AutomationProperties.SetAutomationId(_snippetMenuItem, "Editor.Ctx.GenerateCode.Snippets");
+        generate.Items.Add(_snippetMenuItem);
         generate.Items.Add(MakeItem(L("Ed_InsertDate"),       InsertDate, "Editor.Ctx.GenerateCode.InsertDate"));
         generate.Items.Add(MakeItem(L("Ed_InsertTeamMember"), InsertTeamMember, "Editor.Ctx.GenerateCode.InsertTeamMember"));
         menu.Items.Add(generate);

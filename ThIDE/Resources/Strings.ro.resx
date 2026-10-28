@@ -1402,4 +1402,13 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Snippet_thconf" xml:space="preserve"><value>schelet de thconfig</value></data>
   <data name="Ed_SnippetDescription" xml:space="preserve"><value>Fragment: {0}</value></data>
   <data name="Notif_SnippetsInvalid" xml:space="preserve"><value>Unele fragmente nu au putut fi citite</value></data>
+  <data name="Ed_KindCommand" xml:space="preserve"><value>Comandă</value></data>
+  <data name="Ed_KindFlag" xml:space="preserve"><value>Valoare de opțiune</value></data>
+  <data name="Ed_KindDataStyle" xml:space="preserve"><value>Stil de date</value></data>
+  <data name="Ed_KindDataField" xml:space="preserve"><value>Citire de date</value></data>
+  <data name="Ed_KindType" xml:space="preserve"><value>Tip de simbol</value></data>
+  <data name="Ed_KindStation" xml:space="preserve"><value>Stație</value></data>
+  <data name="Ed_KindSnippet" xml:space="preserve"><value>Fragment</value></data>
+  <data name="Ed_KindIdentifier" xml:space="preserve"><value>Identificator</value></data>
+  <data name="Ed_InsertSnippet" xml:space="preserve"><value>Inserează fragment</value></data>
 </root>

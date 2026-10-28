@@ -1402,4 +1402,13 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Snippet_thconf" xml:space="preserve"><value>thconfig skeleton</value></data>
   <data name="Ed_SnippetDescription" xml:space="preserve"><value>Snippet: {0}</value></data>
   <data name="Notif_SnippetsInvalid" xml:space="preserve"><value>Some snippets could not be read</value></data>
+  <data name="Ed_KindCommand" xml:space="preserve"><value>Command</value></data>
+  <data name="Ed_KindFlag" xml:space="preserve"><value>Flag value</value></data>
+  <data name="Ed_KindDataStyle" xml:space="preserve"><value>Data style</value></data>
+  <data name="Ed_KindDataField" xml:space="preserve"><value>Data reading</value></data>
+  <data name="Ed_KindType" xml:space="preserve"><value>Symbol type</value></data>
+  <data name="Ed_KindStation" xml:space="preserve"><value>Station</value></data>
+  <data name="Ed_KindSnippet" xml:space="preserve"><value>Snippet</value></data>
+  <data name="Ed_KindIdentifier" xml:space="preserve"><value>Identifier</value></data>
+  <data name="Ed_InsertSnippet" xml:space="preserve"><value>Insert snippet</value></data>
 </root>
