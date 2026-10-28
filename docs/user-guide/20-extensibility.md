@@ -120,6 +120,34 @@ Tasks run from **Tools → Tasks** or the command palette (*Task: …*). A task'
 Diagnostics panel. A task can be `shell` (the default), `builtin` (`build`, `batch-build`) or
 `macro`.
 
+### Macros
+
+A macro is a list of tool calls — the same tools an AI assistant uses through MCP — run without any
+model, with variables you fill in. **Tools → Macros** (or the command palette, *Macro: …*) lists the
+built-in ones (*Release check*: diagnostics, build, report; *End of trip*: import a Survex/Compass
+export, format it, check the project), yours (`macros/*.json` in ThIDE's settings folder) and the
+project's (`.thide/macros/*.json`). Every run **previews first** into the Automation panel: steps that
+can show their change without making it (`dryRun`, or `write: false`) do so, read-only steps run, and
+the rest are listed as waiting; ThIDE then asks before applying. A file changed between the preview and
+the apply is refused.
+
+```json
+{ "title": "Tidy a trip", "description": "Format it and check it",
+  "vars": [ { "id": "file", "prompt": "Survey file", "type": "file" } ],
+  "steps": [
+    { "id": "fmt", "tool": "format_file", "args": { "path": "${file}", "write": true } },
+    { "id": "diag", "tool": "get_diagnostics", "args": { "file": "${file}", "minSeverity": "warning" } },
+    { "id": "build", "tool": "run_build", "continueOnError": true } ] }
+```
+
+Arguments may use `${variable}`, `${steps.<id>.<path>}` (a value from an earlier step's result, e.g.
+`${steps.imp.data.target}`), `${file:basename(var)}`, `${file:dir(var)}`, `${date}` and
+`${workspaceRoot}`. A step stops the macro when it fails unless it says `continueOnError`. Variable
+types: `text`, `number`, `bool`, `choice` (with `choices`), `file`, `folder`. A task can run a macro
+(`"type": "macro", "macro": "<name>"`). From a terminal:
+`therion-mcp macro run tidy --workspace cave.thconfig --var file=trips/a.th` previews; add `--apply`
+to make the changes (`--json` for a report, `therion-mcp macro list` for the names).
+
 **Trust.** Commands from a project only run once you trust its folder: the first time something
 would run, ThIDE names the folder and asks. Your answer is remembered; **Settings → Extensions →
 Trusted folders** lists them, and you can remove one there. Reading the project's snippets and
