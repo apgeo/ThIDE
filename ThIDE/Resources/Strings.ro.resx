@@ -1391,4 +1391,15 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Edit_ProblemOpenBufferDiffers" xml:space="preserve"><value>{0} este deschis și diferă de fișierul de pe disc; salvează-l sau reîncarcă-l întâi.</value></data>
   <data name="LinkSurvey_Load" xml:space="preserve"><value>Încarcă</value></data>
   <data name="LinkSurvey_SourceHint" xml:space="preserve"><value>Calea fișierului .th de legat (Răsfoiește, sau scrie-o și apasă Enter)</value></data>
+  <data name="Snippet_survb" xml:space="preserve"><value>bloc survey … endsurvey</value></data>
+  <data name="Snippet_clt" xml:space="preserve"><value>centreline cu dată, echipă și date</value></data>
+  <data name="Snippet_datan" xml:space="preserve"><value>ordinea citirilor data normal</value></data>
+  <data name="Snippet_leg" xml:space="preserve"><value>următoarea viză de la ultima stație</value></data>
+  <data name="Snippet_eq" xml:space="preserve"><value>equate între două stații</value></data>
+  <data name="Snippet_inp" xml:space="preserve"><value>include alt fișier (input)</value></data>
+  <data name="Snippet_scrapb" xml:space="preserve"><value>bloc scrap … endscrap</value></data>
+  <data name="Snippet_mapb" xml:space="preserve"><value>bloc map … endmap</value></data>
+  <data name="Snippet_thconf" xml:space="preserve"><value>schelet de thconfig</value></data>
+  <data name="Ed_SnippetDescription" xml:space="preserve"><value>Fragment: {0}</value></data>
+  <data name="Notif_SnippetsInvalid" xml:space="preserve"><value>Unele fragmente nu au putut fi citite</value></data>
 </root>

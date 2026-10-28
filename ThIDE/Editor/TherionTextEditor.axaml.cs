@@ -879,9 +879,9 @@ public partial class TherionTextEditor : UserControl
         while (start > 0 && IsWordChar(text[start - 1])) start--;
         if (start == caret) return false;
         var word = text.Substring(start, caret - start);
-        if (TherionSnippets.Find(word) is not { } snippet) return false;
+        if (TherionSnippets.Find(word, CurrentFilePath) is not { } snippet) return false;
 
-        TherionSnippets.Insert(_editor.TextArea, start, caret - start, snippet);
+        TherionSnippets.Insert(_editor.TextArea, start, caret - start, snippet, CurrentFilePath);
         return true;
     }
 
@@ -1092,7 +1092,7 @@ public partial class TherionTextEditor : UserControl
             EndOffset = caret,
         };
         foreach (var c in matches)
-            window.CompletionList.CompletionData.Add(new TherionCompletionData(c, rich));
+            window.CompletionList.CompletionData.Add(new TherionCompletionData(c, rich, CurrentFilePath));
         window.Closed += (_, _) => _completionWindow = null;
         _completionWindow = window;
         HideSignatureHelp(); // don't overlap the completion popup
@@ -1144,9 +1144,9 @@ public partial class TherionTextEditor : UserControl
             .Select(k => new CompletionCandidate(k, CompletionKind.Command, Description: CommandDocs.GetValueOrDefault(k)))
             .ToList();
         if (EditorFeatureFlags.IsEnabled(EditorFeature.Snippets, CurrentSettings))
-            foreach (var s in TherionSnippets.All)
+            foreach (var s in TherionSnippets.For(CurrentFilePath))
                 list.Add(new CompletionCandidate(s.Trigger, CompletionKind.Snippet, Insert: s.Trigger,
-                    Description: $"Snippet: {s.Description}", IsSnippet: true));
+                    Description: string.Format(L("Ed_SnippetDescription"), TherionSnippets.DescriptionOf(s)), IsSnippet: true));
         return list;
     }
 
@@ -2871,8 +2871,11 @@ public partial class TherionTextEditor : UserControl
             _rich = false;
         }
 
-        public TherionCompletionData(CompletionCandidate c, bool rich)
+        private readonly string? _filePath;
+
+        public TherionCompletionData(CompletionCandidate c, bool rich, string? filePath = null)
         {
+            _filePath = filePath;
             Text = c.Text;
             _insert = c.Insert ?? c.Text;
             _kind = c.Kind;
@@ -2889,8 +2892,8 @@ public partial class TherionTextEditor : UserControl
 
         public void Complete(TextArea textArea, ISegment completionSegment, EventArgs insertionRequestEventArgs)
         {
-            if (_isSnippet && TherionSnippets.Find(Text) is { } snippet)
-                TherionSnippets.Insert(textArea, completionSegment.Offset, completionSegment.Length, snippet);
+            if (_isSnippet && TherionSnippets.Find(Text, _filePath) is { } snippet)
+                TherionSnippets.Insert(textArea, completionSegment.Offset, completionSegment.Length, snippet, _filePath);
             else
                 textArea.Document.Replace(completionSegment, _insert);
         }

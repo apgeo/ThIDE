@@ -107,6 +107,7 @@ public partial class MainWindow : Window
                     docs.RenameSymbolRequested += (_, args) => _ = HandleRenameSymbolAsync(args.Raw, args.Kind);
                     docs.FindAllReferencesRequested += (_, args) => _ = HandleFindAllReferencesAsync(args.Raw, args.Kind);
                 }
+                AttachSnippetCatalog();
                 _crashRecovery = AppServices.Provider.GetService<ICrashRecoveryService>();
                 _mcpHost = AppServices.Provider.GetService<IMcpHostService>();
             }
@@ -494,6 +495,31 @@ public partial class MainWindow : Window
         if (string.IsNullOrEmpty(root)) return;
 
         await vm.RunScaffoldAsync(model.BuildOptions(), source, root);
+    }
+
+    // ----- snippets -------------------------------------------------------
+
+    /// <summary>
+    /// Keeps the editor's snippet catalog on the current project (its config folder holds a
+    /// snippets.json of its own) and reports a broken snippet file once, with the details in the log.
+    /// </summary>
+    private void AttachSnippetCatalog()
+    {
+        var session = AppServices.Provider.GetService<IWorkspaceSession>();
+        var settings = AppServices.Provider.GetService<IAppSettingsService>();
+        var notifications = AppServices.Provider.GetService<INotificationService>();
+        var log = AppServices.Provider.GetService<ILogService>();
+        void Sync() => ThIDE.Editor.TherionSnippets.SetProject(session?.RootPath,
+            settings?.Current.ProjectConfigLocation ?? Therion.Workspace.ProjectConfigLocation.ProjectFolder);
+        Sync();
+        if (session is not null) session.RootChanged += (_, _) => Sync();
+        if (settings is not null) settings.Changed += (_, _) => Sync();
+        ThIDE.Editor.TherionSnippets.LoadErrors += (_, errors) =>
+        {
+            foreach (var e in errors) log?.Warning($"Snippets: {e}");
+            notifications?.Warning(ThIDE.Resources.Tr.Get("Notif_SnippetsInvalid"),
+                string.Join("\n", errors.Take(3).Select(e => e.ToString())));
+        };
     }
 
     // ----- link survey file -----------------------------------------------

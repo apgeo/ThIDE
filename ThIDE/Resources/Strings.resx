@@ -1391,4 +1391,15 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Edit_ProblemOpenBufferDiffers" xml:space="preserve"><value>{0} is open and differs from the file on disk; save or reload it first.</value></data>
   <data name="LinkSurvey_Load" xml:space="preserve"><value>Load</value></data>
   <data name="LinkSurvey_SourceHint" xml:space="preserve"><value>Path of the .th file to link (Browse, or type it and press Enter)</value></data>
+  <data name="Snippet_survb" xml:space="preserve"><value>survey … endsurvey block</value></data>
+  <data name="Snippet_clt" xml:space="preserve"><value>centreline with date, team and data</value></data>
+  <data name="Snippet_datan" xml:space="preserve"><value>data normal reading order</value></data>
+  <data name="Snippet_leg" xml:space="preserve"><value>next leg from the last station</value></data>
+  <data name="Snippet_eq" xml:space="preserve"><value>equate two stations</value></data>
+  <data name="Snippet_inp" xml:space="preserve"><value>input another file</value></data>
+  <data name="Snippet_scrapb" xml:space="preserve"><value>scrap … endscrap block</value></data>
+  <data name="Snippet_mapb" xml:space="preserve"><value>map … endmap block</value></data>
+  <data name="Snippet_thconf" xml:space="preserve"><value>thconfig skeleton</value></data>
+  <data name="Ed_SnippetDescription" xml:space="preserve"><value>Snippet: {0}</value></data>
+  <data name="Notif_SnippetsInvalid" xml:space="preserve"><value>Some snippets could not be read</value></data>
 </root>
