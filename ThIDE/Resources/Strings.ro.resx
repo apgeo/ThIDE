@@ -1338,4 +1338,57 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Picker_NoneSelected" xml:space="preserve"><value>Nimic selectat</value></data>
   <data name="Picker_Preview" xml:space="preserve"><value>Previzualizare</value></data>
   <data name="Picker_OpenPreview" xml:space="preserve"><value>Deschide într-o fereastră…</value></data>
+  <data name="LinkSurvey_Title" xml:space="preserve"><value>Leagă un fișier de topografie</value></data>
+  <data name="LinkSurvey_Intro" xml:space="preserve"><value>Alege o stație din fișierul de topografie și stația din proiect din care continuă. ThIDE scrie liniile input și equate acolo unde există deja linii asemănătoare.</value></data>
+  <data name="LinkSurvey_SourceFile" xml:space="preserve"><value>Fișier de topografie</value></data>
+  <data name="LinkSurvey_Browse" xml:space="preserve"><value>Răsfoiește…</value></data>
+  <data name="LinkSurvey_PickSource" xml:space="preserve"><value>Alege fișierul de topografie de legat</value></data>
+  <data name="LinkSurvey_PickTarget" xml:space="preserve"><value>Alege dosarul în care se copiază topografia</value></data>
+  <data name="LinkSurvey_SourceStatus" xml:space="preserve"><value>{0} stații, {1} vize, {2} erori de analiză</value></data>
+  <data name="LinkSurvey_SourceUnreadable" xml:space="preserve"><value>Fișierul nu poate fi citit: {0}</value></data>
+  <data name="LinkSurvey_SourceStation" xml:space="preserve"><value>Stația din topografia nouă</value></data>
+  <data name="LinkSurvey_WorkspaceStation" xml:space="preserve"><value>Stația din proiect</value></data>
+  <data name="LinkSurvey_Survey" xml:space="preserve"><value>Topografie</value></data>
+  <data name="LinkSurvey_Station" xml:space="preserve"><value>Stație</value></data>
+  <data name="LinkSurvey_FullPreview" xml:space="preserve"><value>Arată în previzualizarea completă…</value></data>
+  <data name="LinkSurvey_FullPreviewTitle" xml:space="preserve"><value>Previzualizare — topografia care se leagă</value></data>
+  <data name="LinkSurvey_Generated" xml:space="preserve"><value>Linii generate</value></data>
+  <data name="LinkSurvey_Destination" xml:space="preserve"><value>Inserează în</value></data>
+  <data name="LinkSurvey_UseCurrentFile" xml:space="preserve"><value>Inserează în fișierul curent</value></data>
+  <data name="LinkSurvey_CopyTo" xml:space="preserve"><value>Copiază în</value></data>
+  <data name="LinkSurvey_CopySource" xml:space="preserve"><value>Copiază fișierul de topografie în proiect</value></data>
+  <data name="LinkSurvey_Sketches" xml:space="preserve"><value>Schițe</value></data>
+  <data name="LinkSurvey_AddComment" xml:space="preserve"><value>Adaugă un comentariu cu data și fișierul sursă</value></data>
+  <data name="LinkSurvey_CommentFormat" xml:space="preserve"><value>Adăugat pe {0} din fișierul sursă {1}</value></data>
+  <data name="LinkSurvey_Copy" xml:space="preserve"><value>Copiază în clipboard</value></data>
+  <data name="LinkSurvey_Insert" xml:space="preserve"><value>Inserează</value></data>
+  <data name="LinkSurvey_RootScope" xml:space="preserve"><value>rădăcina fișierului</value></data>
+  <data name="LinkSurvey_ReasonBlockWithEquates" xml:space="preserve"><value>aici sunt deja equate-uri</value></data>
+  <data name="LinkSurvey_ReasonEquateFile" xml:space="preserve"><value>fișier de equate-uri</value></data>
+  <data name="LinkSurvey_ReasonBlock" xml:space="preserve"><value>blocul topografiei</value></data>
+  <data name="LinkSurvey_ReasonCaret" xml:space="preserve"><value>la cursor</value></data>
+  <data name="LinkSurvey_WarnScopeNotAncestor" xml:space="preserve"><value>O stație este în afara topografiei alese, deci nu poate fi numită de acolo. Alege o destinație mai sus.</value></data>
+  <data name="LinkSurvey_WarnUnterminatedBlock" xml:space="preserve"><value>Blocul topografiei {0} nu are linie de sfârșit; corectează-l întâi.</value></data>
+  <data name="LinkSurvey_WarnScopeNotFound" xml:space="preserve"><value>Topografia {0} nu a fost găsită în fișierul destinație.</value></data>
+  <data name="LinkSurvey_WarnInputExists" xml:space="preserve"><value>Fișierul este deja inclus din {0}.</value></data>
+  <data name="LinkSurvey_WarnEquateExists" xml:space="preserve"><value>Un equate cu aceste stații există deja în {0}.</value></data>
+  <data name="LinkSurvey_WarnTargetExists" xml:space="preserve"><value>{0} există deja cu alt conținut. Alege alt dosar.</value></data>
+  <data name="LinkSurvey_WarnSketchExists" xml:space="preserve"><value>{0} există deja cu alt conținut; schița nu se copiază.</value></data>
+  <data name="LinkSurvey_WarnSketchNotCopied" xml:space="preserve"><value>Topografia include {0}, care nu se copiază; includerea nu se va rezolva.</value></data>
+  <data name="LinkSurvey_WarnNothingToLink" xml:space="preserve"><value>Alege câte o stație pe fiecare parte.</value></data>
+  <data name="LinkSurvey_NoWorkspace" xml:space="preserve"><value>Deschide întâi un proiect: topografia se leagă în proiectul activ.</value></data>
+  <data name="LinkSurvey_Done" xml:space="preserve"><value>S-a legat {0}</value></data>
+  <data name="Menu_Tools_LinkSurvey" xml:space="preserve"><value>Leagă un fișier de topografie…</value></data>
+  <data name="Ctx_GenerateCode" xml:space="preserve"><value>Generează cod</value></data>
+  <data name="Edit_ProblemStale" xml:space="preserve"><value>{0} s-a schimbat de când au fost pregătite liniile; încearcă din nou.</value></data>
+  <data name="Edit_ProblemMissing" xml:space="preserve"><value>{0} nu există.</value></data>
+  <data name="Edit_ProblemExists" xml:space="preserve"><value>{0} există deja.</value></data>
+  <data name="Edit_ProblemDuplicate" xml:space="preserve"><value>{0} este scris de două ori.</value></data>
+  <data name="Edit_ProblemNotAFile" xml:space="preserve"><value>{0} nu este un fișier.</value></data>
+  <data name="Edit_ProblemUnreadable" xml:space="preserve"><value>{0} nu poate fi citit.</value></data>
+  <data name="Edit_ProblemUnencodable" xml:space="preserve"><value>{0} declară o codificare care nu poate reține textul nou.</value></data>
+  <data name="Edit_ProblemUnsavedChanges" xml:space="preserve"><value>{0} are modificări nesalvate; salvează-l întâi.</value></data>
+  <data name="Edit_ProblemOpenBufferDiffers" xml:space="preserve"><value>{0} este deschis și diferă de fișierul de pe disc; salvează-l sau reîncarcă-l întâi.</value></data>
+  <data name="LinkSurvey_Load" xml:space="preserve"><value>Încarcă</value></data>
+  <data name="LinkSurvey_SourceHint" xml:space="preserve"><value>Calea fișierului .th de legat (Răsfoiește, sau scrie-o și apasă Enter)</value></data>
 </root>
