@@ -71,7 +71,7 @@ public static class EditBatchChecker
     {
         var problems = new List<EditProblem>();
         var newTexts = new Dictionary<string, string>(StringComparer.Ordinal);
-        var targets = new HashSet<string>(PathComparer);
+        var targets = new HashSet<string>(FilePaths.Comparer);
 
         foreach (var group in batch.Edits)
         {
@@ -108,9 +108,5 @@ public static class EditBatchChecker
         }
     }
 
-    private static string Normalize(string path) => Path.GetFullPath(path);
-
-    // Windows and macOS file systems are case-insensitive by default; Linux is not.
-    private static StringComparer PathComparer =>
-        OperatingSystem.IsLinux() ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase;
+    private static string Normalize(string path) => FilePaths.Full(path);
 }

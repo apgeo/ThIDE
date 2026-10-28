@@ -68,6 +68,7 @@
                     <TextBlock Grid.Row="2" Text="{l:Loc LinkSurvey_CopyTo}" VerticalAlignment="Center" />
                     <DockPanel Grid.Row="2" Grid.Column="1">
                         <CheckBox DockPanel.Dock="Left" Content="{l:Loc LinkSurvey_CopySource}" IsChecked="{Binding CopySource, Mode=TwoWay}"
+                                  IsEnabled="{Binding CanCopySource}"
                                   Margin="0,0,8,0" AutomationProperties.AutomationId="LinkSurvey.CopySource" />
                         <Button DockPanel.Dock="Right" Content="{l:Loc LinkSurvey_Browse}" Click="OnBrowseTarget" Margin="6,0,0,0"
                                 IsEnabled="{Binding CopySource}" AutomationProperties.AutomationId="LinkSurvey.BrowseTarget" />

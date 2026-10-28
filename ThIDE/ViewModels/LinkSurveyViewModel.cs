@@ -59,12 +59,15 @@ public sealed record WarningRow(string Text, bool Blocks);
 public sealed partial class LinkSurveyViewModel : ObservableObject
 {
     private readonly LinkSurveyEnvironment _env;
-    private readonly Dictionary<string, TherionFile?> _asts = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, TherionFile?> _asts = new(FilePaths.Comparer);
     private FileScopes? _scopes;
     private LinkContext? _ctx;
     private LinkDestination? _preset;
     private bool _targetEdited;
     private bool _loading;
+    private int _replanSuspended;
+    // The source is already part of the project: link it where it is, without a second input.
+    private bool _sourceInWorkspace;
 
     public LinkSurveyViewModel(LinkSurveyEnvironment env)
     {
@@ -125,11 +128,19 @@ public sealed partial class LinkSurveyViewModel : ObservableObject
         IsBusy = true;
         try
         {
-            await Task.Run(() =>
+            try
             {
-                _scopes = SurveyScopeResolver.Build(_env.Workspace, Ast);
-                _ctx = new LinkContext(_env.Workspace, _scopes, _env.ReadText, Ast, p => File.Exists(p) || Directory.Exists(p), _env.SameContent);
-            });
+                await Task.Run(() =>
+                {
+                    _scopes = SurveyScopeResolver.Build(_env.Workspace, Ast);
+                    _ctx = new LinkContext(_env.Workspace, _scopes, _env.ReadText, Ast, p => File.Exists(p) || Directory.Exists(p), _env.SameContent);
+                });
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                SourceStatus = string.Format(Tr.Get("LinkSurvey_SourceUnreadable"), ex.Message);
+                return;
+            }
             Surveys.SetSurveys(LinkCatalog.Surveys(_env.Workspace, _scopes!));
             Stations.SetStations(LinkCatalog.Stations(_env.Workspace, _scopes!), showFile: true);
 
@@ -160,32 +171,43 @@ public sealed partial class LinkSurveyViewModel : ObservableObject
         SourcePath = sourcePath;
         Source = null;
         Sketches.Clear();
+        _replanSuspended++;
         try
         {
             var full = Path.GetFullPath(sourcePath);
-            var (source, errors) = await Task.Run(() =>
+            var (source, errors, sketches) = await Task.Run(() =>
             {
                 var text = _env.ReadText(full) ?? throw new FileNotFoundException(full);
                 var parse = new ThParser().Parse(full, text);
-                var model = new SemanticBinder().Bind(parse.Value!);
+                var ast = parse.Value ?? throw new InvalidDataException(full);
+                var model = new SemanticBinder().Bind(ast);
                 int errorCount = parse.Diagnostics.Count(d => d.Severity == Therion.Core.DiagnosticSeverity.Error);
-                return (new SourceSurvey(full, parse.Value!, model), errorCount);
+                var survey = new SourceSurvey(full, ast, model);
+                // A folder that cannot be listed just means no sketches are offered.
+                IEnumerable<string> beside;
+                try { beside = _env.FilesBeside(Path.GetDirectoryName(full)!).ToList(); }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { beside = []; }
+                return (survey, errorCount, SurveyLinkPlanner.Sketches(survey, beside));
             });
             Source = source;
             SourceStatus = string.Format(Tr.Get("LinkSurvey_SourceStatus"), source.Model.Stations.Count, Enumerable.Count(source.Model.Shots), errors);
             SourceSelector.Load(LinkCatalog.Stations(source), [source.Model], showFile: false);
 
-            // A source outside the project is copied in by default; one already inside is input in place.
-            CopySource = !IsUnderRoot(full);
-            var sketches = SurveyLinkPlanner.Sketches(source, _env.FilesBeside(Path.GetDirectoryName(full)!));
+            // A source already in the project is linked where it is; one outside the project folder
+            // is copied in by default; one inside it but not yet input is input in place.
+            _sourceInWorkspace = _env.Workspace.PerFile.Keys.Any(k => FilePaths.Same(k, full));
+            CopySource = !_sourceInWorkspace && !IsUnderRoot(full);
+            OnPropertyChanged(nameof(CanCopySource));
             foreach (var (path, referenced) in sketches)
                 Sketches.Add(new SketchRow(path, Path.GetRelativePath(Path.GetDirectoryName(full)!, path).Replace('\\', '/'), referenced));
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        catch (Exception ex) when (ex is not OutOfMemoryException)
         {
+            Source = null;
             SourceStatus = string.Format(Tr.Get("LinkSurvey_SourceUnreadable"), ex.Message);
             SourceSelector.Load([], [], showFile: false);
         }
+        finally { _replanSuspended--; }
         Replan();
     }
 
@@ -194,8 +216,14 @@ public sealed partial class LinkSurveyViewModel : ObservableObject
         && !Path.GetRelativePath(root, path).StartsWith("..", StringComparison.Ordinal)
         && !Path.IsPathRooted(Path.GetRelativePath(root, path));
 
+    /// <summary>Copying makes no sense for a file the project already inputs.</summary>
+    public bool CanCopySource => !_sourceInWorkspace;
+
+    // Only survey files carry the survey blocks scopes and destinations need; sketches and
+    // thconfigs are not parsed here.
     private TherionFile? Ast(string path)
     {
+        if (!path.EndsWith(".th", StringComparison.OrdinalIgnoreCase)) return null;
         lock (_asts)
         {
             if (_asts.TryGetValue(path, out var cached)) return cached;
@@ -223,7 +251,17 @@ public sealed partial class LinkSurveyViewModel : ObservableObject
     private void RefreshDestinations()
     {
         if (_loading || _ctx is null) return;
-        var previous = SelectedDestination?.Candidate;
+        var previous = SelectedDestination?.Candidate is { } p ? Key(p) : null;
+        _replanSuspended++;
+        try { FillDestinations(previous); }
+        finally { _replanSuspended--; }
+        Replan();
+    }
+
+    private static string Key(DestinationCandidate c) => FilePaths.Full(c.FilePath) + "\0" + string.Join('.', c.LocalScope);
+
+    private void FillDestinations(string? previous)
+    {
         Destinations.Clear();
 
         var candidates = new List<DestinationCandidate>();
@@ -241,7 +279,7 @@ public sealed partial class LinkSurveyViewModel : ObservableObject
 
         SelectedDestination =
             (UseCurrentFile ? Destinations.FirstOrDefault(d => SamePath(d.Candidate.FilePath, _env.CurrentFile!)) : null)
-            ?? Destinations.FirstOrDefault(d => previous is not null && d.Candidate == previous)
+            ?? Destinations.FirstOrDefault(d => previous is not null && Key(d.Candidate) == previous)
             ?? Destinations.FirstOrDefault();
     }
 
@@ -289,7 +327,7 @@ public sealed partial class LinkSurveyViewModel : ObservableObject
     /// <summary>Recomputes the generated lines, the edits and the warnings from the current choices.</summary>
     public void Replan()
     {
-        if (_loading) return;
+        if (_loading || _replanSuspended > 0) return;
         Plan = null;
         if (_ctx is null || Source is null || SourceSelector.Picker.SelectedStation is not { } src
             || Stations.SelectedStation is not { } dst || SelectedDestination is not { } dest)
@@ -305,12 +343,13 @@ public sealed partial class LinkSurveyViewModel : ObservableObject
             : null;
         var request = new LinkRequest(
             Source,
-            [new LinkMember(LinkSide.Source, Source.FilePath, src.Local), new LinkMember(LinkSide.Workspace, dst.FilePath, dst.Local)],
+            [new LinkMember(_sourceInWorkspace ? LinkSide.Workspace : LinkSide.Source, Source.FilePath, src.Local),
+             new LinkMember(LinkSide.Workspace, dst.FilePath, dst.Local)],
             dest.Candidate.Destination,
             CopySource && TargetDirectory.Length > 0
                 ? new LinkCopy(true, TargetDirectory, Sketches.Where(s => s.IsChecked).Select(s => s.Path).ToList())
                 : LinkCopy.InPlace,
-            new LinkOptions(Comment: comment));
+            new LinkOptions(InsertInput: !_sourceInWorkspace, Comment: comment));
 
         Plan = SurveyLinkPlanner.Plan(_ctx, request);
         GeneratedText = Plan.Text;
@@ -364,9 +403,7 @@ public sealed partial class LinkSurveyViewModel : ObservableObject
         return (models, link, Source.FilePath);
     }
 
-    private static bool SamePath(string a, string b) =>
-        string.Equals(Path.GetFullPath(a), Path.GetFullPath(b),
-            OperatingSystem.IsLinux() ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase);
+    private static bool SamePath(string a, string b) => FilePaths.Same(a, b);
 }
 
 /// <summary>Converters for the link dialog.</summary>

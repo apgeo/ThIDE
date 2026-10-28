@@ -35,6 +35,13 @@ public partial class LinkSurveyWindow : Window
 
     private async void OnBrowseSource(object? sender, RoutedEventArgs e)
     {
+        // LoadSourceAsync reports its own failures in the dialog; nothing may escape an async void.
+        try { await BrowseSourceAsync(); }
+        catch (Exception ex) { Model.SourceStatus = ex.Message; }
+    }
+
+    private async System.Threading.Tasks.Task BrowseSourceAsync()
+    {
         var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
             Title = ThIDE.Resources.Tr.Get("LinkSurvey_PickSource"),

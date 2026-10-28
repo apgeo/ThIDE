@@ -36,6 +36,16 @@ public partial class ItemPickerViewModel : ObservableObject
     [ObservableProperty] private PickerItem? _selected;
     [ObservableProperty] private bool _isListOpen = true;
 
+    /// <summary>
+    /// The list's selection. Separate from <see cref="Selected"/> because the list clears its
+    /// selection whenever the filter hides the chosen row — that must not undo the choice.
+    /// </summary>
+    public PickerItem? ListSelection
+    {
+        get => Selected is { } s && Visible.Contains(s) ? s : null;
+        set { if (value is not null) Selected = value; }
+    }
+
     /// <summary>Raised when the selection changes (also when cleared).</summary>
     public event EventHandler<PickerItem?>? SelectionChanged;
 
@@ -79,8 +89,11 @@ public partial class ItemPickerViewModel : ObservableObject
         IsListOpen = true;
     }
 
+    partial void OnVisibleChanged(IReadOnlyList<PickerItem> value) => OnPropertyChanged(nameof(ListSelection));
+
     partial void OnSelectedChanged(PickerItem? value)
     {
+        OnPropertyChanged(nameof(ListSelection));
         OnPropertyChanged(nameof(SelectionText));
         SelectionChanged?.Invoke(this, value);
     }

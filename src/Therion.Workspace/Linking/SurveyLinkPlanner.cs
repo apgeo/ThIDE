@@ -88,10 +88,10 @@ public static class SurveyLinkPlanner
     /// </summary>
     public static IReadOnlyList<(string Path, bool Referenced)> Sketches(SourceSurvey source, IEnumerable<string> th2FilesBeside)
     {
-        var referenced = InputTargets(source).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var referenced = InputTargets(source).ToHashSet(FilePaths.Comparer);
         return th2FilesBeside
             .Select(p => Path.GetFullPath(p))
-            .Order(StringComparer.OrdinalIgnoreCase)
+            .Order(StringComparer.Ordinal)
             .Select(p => (p, referenced.Contains(p)))
             .ToList();
     }
@@ -142,7 +142,7 @@ public static class SurveyLinkPlanner
             else if (ctx.SameContent?.Invoke(sourceFull, target) != true) warnings.Add(new(LinkWarningCode.TargetExists, target));
 
             var targetDir = Path.GetDirectoryName(target)!;
-            var copied = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var copied = new HashSet<string>(FilePaths.Comparer);
             foreach (var sketch in request.Copy.Sketches)
             {
                 var full = Path.GetFullPath(sketch);
@@ -347,7 +347,5 @@ public static class SurveyLinkPlanner
     public static string RelativePath(string fromDirectory, string target) =>
         Path.GetRelativePath(fromDirectory, target).Replace(Path.DirectorySeparatorChar, '/').Replace('\\', '/');
 
-    private static bool SamePath(string a, string b) =>
-        string.Equals(Path.GetFullPath(a), Path.GetFullPath(b),
-            OperatingSystem.IsLinux() ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase);
+    private static bool SamePath(string a, string b) => FilePaths.Same(a, b);
 }

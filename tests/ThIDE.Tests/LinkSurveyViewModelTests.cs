@@ -119,4 +119,27 @@ public class LinkSurveyViewModelTests
         Assert.True(vm.UseCurrentFile);
         Assert.Equal(P("main.th"), vm.SelectedDestination!.Candidate.FilePath);
     }
+
+    [Fact]
+    public async Task A_source_the_project_already_inputs_gets_only_an_equate()
+    {
+        var (vm, _) = Make();
+        await vm.LoadAsync(P("a.th"));
+        Assert.True(vm.SourceSelector.Picker.SelectByPayload(p => p.ToString()!.Contains("a.1")));
+        Assert.True(vm.Stations.SelectByPayload(p => p.ToString()!.Contains("a.2")));
+
+        Assert.False(vm.CanCopySource);
+        Assert.DoesNotContain("input", vm.GeneratedText);
+        Assert.Contains("equate 1@a 2@a", vm.GeneratedText);
+    }
+
+    [Fact]
+    public async Task An_unparsable_or_missing_source_is_reported_not_thrown()
+    {
+        var (vm, _) = Make();
+        await vm.LoadAsync(P("nowhere.th"));
+
+        Assert.Null(vm.Source);
+        Assert.NotEmpty(vm.SourceStatus);
+    }
 }

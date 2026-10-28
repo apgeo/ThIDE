@@ -154,7 +154,7 @@ public sealed class WorkspaceEditService(IDocumentService documents, IWorkspaceS
 
     private static string Key(string path)
     {
-        var full = Path.GetFullPath(path);
+        var full = FilePaths.Full(path);
         return OperatingSystem.IsLinux() ? full : full.ToUpperInvariant();
     }
 }

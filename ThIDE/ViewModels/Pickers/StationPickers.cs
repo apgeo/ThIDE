@@ -28,8 +28,7 @@ public sealed class StationPickerViewModel(string name) : ItemPickerViewModel(na
 
     /// <summary>Selects the station with this file-local name in this file.</summary>
     public bool Select(string filePath, QualifiedName local) =>
-        SelectByPayload(p => p is StationEntry s && s.Local.Equals(local)
-            && string.Equals(Path.GetFullPath(s.FilePath), Path.GetFullPath(filePath), StringComparison.OrdinalIgnoreCase));
+        SelectByPayload(p => p is StationEntry s && s.Local.Equals(local) && Therion.Workspace.Editing.FilePaths.Same(s.FilePath, filePath));
 }
 
 /// <summary>A picker over surveys shown as an indented tree; payloads are <see cref="SurveyEntry"/>.</summary>

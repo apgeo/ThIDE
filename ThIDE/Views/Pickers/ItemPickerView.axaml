@@ -20,7 +20,7 @@
         </DockPanel>
         <TextBlock DockPanel.Dock="Bottom" FontSize="11" Foreground="Gray" Margin="2,3,0,0"
                    Text="{Binding SelectionText}" />
-        <ListBox ItemsSource="{Binding Visible}" SelectedItem="{Binding Selected, Mode=TwoWay}"
+        <ListBox ItemsSource="{Binding Visible}" SelectedItem="{Binding ListSelection, Mode=TwoWay}"
                  IsVisible="{Binding IsListOpen}" MinHeight="80" Margin="0,4,0,0"
                  AutomationProperties.AutomationId="{Binding ListId}">
             <ListBox.ItemTemplate>

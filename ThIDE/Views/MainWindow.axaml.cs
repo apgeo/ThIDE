@@ -518,6 +518,7 @@ public partial class MainWindow : Window
             if (!string.IsNullOrEmpty(d.FilePath) && Path.IsPathRooted(d.FilePath))
                 buffers.TryAdd(Path.GetFullPath(d.FilePath), d.DocumentText);
 
+        if (destinationFile is not null && !destinationFile.EndsWith(".th", StringComparison.OrdinalIgnoreCase)) destinationFile = null;
         string? current = destinationFile;
         int currentCaret = caret;
         if (current is null && docs.Active is { } active && active.FilePath.EndsWith(".th", StringComparison.OrdinalIgnoreCase))

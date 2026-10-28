@@ -3617,7 +3617,8 @@ public partial class TherionTextEditor : UserControl
 
     private void RequestLinkSurvey()
     {
-        if (CurrentFilePath is { Length: > 0 } path)
+        // Only a survey file can receive input/equate lines (not a sketch or a thconfig).
+        if (CurrentFilePath is { Length: > 0 } path && path.EndsWith(".th", StringComparison.OrdinalIgnoreCase))
             LinkSurveyRequested?.Invoke(this, (path, _editor?.CaretOffset ?? 0));
     }
 

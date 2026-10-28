@@ -34,6 +34,22 @@ public class PickerViewModelTests
     }
 
     [Fact]
+    public void Filtering_the_choice_out_of_view_keeps_it_selected()
+    {
+        var picker = new ItemPickerViewModel("T");
+        picker.SetItems([Item("1", "one"), Item("2", "two")]);
+        picker.SelectByPayload(p => (string)p == "1");
+
+        picker.Filter = "two";
+        picker.ListSelection = null; // what the list does when its selected row disappears
+
+        Assert.Equal("1", picker.Selected!.Primary);
+        Assert.Null(picker.ListSelection);
+        picker.Filter = "";
+        Assert.Equal("1", picker.ListSelection!.Primary);
+    }
+
+    [Fact]
     public void Selection_survives_a_reload_when_its_payload_is_still_there()
     {
         var picker = new ItemPickerViewModel("T");
