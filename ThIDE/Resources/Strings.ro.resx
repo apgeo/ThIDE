@@ -1444,4 +1444,11 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Pref_ProjectConfigFolderHint" xml:space="preserve"><value>Păstrate împreună cu peștera și partajate prin git cu toți cei care au proiectul.</value></data>
   <data name="Pref_ProjectConfigAppData" xml:space="preserve"><value>În setările ThIDE de pe acest calculator</value></data>
   <data name="Pref_ProjectConfigAppDataHint" xml:space="preserve"><value>Private pe acest calculator; dosarul proiectului rămâne neatins. Fișierele existente nu se mută.</value></data>
+  <data name="QExport_SaveFragment" xml:space="preserve"><value>Salvează ca fragment…</value></data>
+  <data name="QExport_FragmentName" xml:space="preserve"><value>Numele fragmentului (se tastează pentru inserare, ca un fragment de cod)</value></data>
+  <data name="QExport_FragmentSaved" xml:space="preserve"><value>S-a salvat „{0}” în {1}. Este oferit în fișierele thconfig la Generează cod ▸ Inserează fragment.</value></data>
+  <data name="Snippet_layoutPlan500" xml:space="preserve"><value>layout de plan la 1:500</value></data>
+  <data name="Snippet_layoutCopy" xml:space="preserve"><value>layout bazat pe altul</value></data>
+  <data name="Snippet_exportPlanPdf" xml:space="preserve"><value>exportă o hartă în plan ca PDF</value></data>
+  <data name="Snippet_exportModelLox" xml:space="preserve"><value>exportă modelul 3D</value></data>
 </root>

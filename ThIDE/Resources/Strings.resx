@@ -1444,4 +1444,11 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Pref_ProjectConfigFolderHint" xml:space="preserve"><value>Kept with the cave and shared through git with everyone who has the project.</value></data>
   <data name="Pref_ProjectConfigAppData" xml:space="preserve"><value>In ThIDE's own settings on this computer</value></data>
   <data name="Pref_ProjectConfigAppDataHint" xml:space="preserve"><value>Private to this computer; the project folder stays untouched. Existing files are not moved.</value></data>
+  <data name="QExport_SaveFragment" xml:space="preserve"><value>Save as fragment…</value></data>
+  <data name="QExport_FragmentName" xml:space="preserve"><value>Fragment name (typed to insert it, like a snippet)</value></data>
+  <data name="QExport_FragmentSaved" xml:space="preserve"><value>Saved '{0}' in {1}. It is offered in thconfig files under Generate code ▸ Insert snippet.</value></data>
+  <data name="Snippet_layoutPlan500" xml:space="preserve"><value>plan layout at 1:500</value></data>
+  <data name="Snippet_layoutCopy" xml:space="preserve"><value>layout based on another</value></data>
+  <data name="Snippet_exportPlanPdf" xml:space="preserve"><value>export a plan map to PDF</value></data>
+  <data name="Snippet_exportModelLox" xml:space="preserve"><value>export the 3D model</value></data>
 </root>
