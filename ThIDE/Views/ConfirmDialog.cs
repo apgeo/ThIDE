@@ -24,7 +24,7 @@ public sealed class ConfirmDialog : Window
         var text = new TextBlock { TextWrapping = TextWrapping.Wrap, Text = message };
         var confirm = new Button { Content = confirmLabel, IsDefault = true, MinWidth = 90 };
         confirm.Click += (_, _) => Close(true);
-        var cancel = new Button { Content = "Cancel", IsCancel = true, MinWidth = 80 };
+        var cancel = new Button { Content = ThIDE.Resources.Tr.Get("Common_Cancel"), IsCancel = true, MinWidth = 80 };
         cancel.Click += (_, _) => Close(false);
         AutomationProperties.SetAutomationId(this, "Confirm.Window");
         AutomationProperties.SetAutomationId(text, "Confirm.Message");

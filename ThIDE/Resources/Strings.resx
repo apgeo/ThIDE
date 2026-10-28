@@ -1570,4 +1570,18 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Incoming_Off" xml:space="preserve"><value>No longer watching {0}.</value></data>
   <data name="Incoming_NoProject" xml:space="preserve"><value>Open a project first.</value></data>
   <data name="Incoming_FileInvalid" xml:space="preserve"><value>{0} cannot be read ({1}); fix it by hand so nothing in it is lost.</value></data>
+  <data name="Menu_Tools_Macros" xml:space="preserve"><value>Macros</value></data>
+  <data name="Macro_None" xml:space="preserve"><value>(no macros)</value></data>
+  <data name="Macro_Title" xml:space="preserve"><value>Macro</value></data>
+  <data name="Macro_Project" xml:space="preserve"><value>project</value></data>
+  <data name="Macro_Unknown" xml:space="preserve"><value>No macro named '{0}'.</value></data>
+  <data name="Macro_FileInvalid" xml:space="preserve"><value>Some macros could not be read</value></data>
+  <data name="Macro_Previewing" xml:space="preserve"><value>Preview (nothing is changed yet):</value></data>
+  <data name="Macro_Applying" xml:space="preserve"><value>Applying:</value></data>
+  <data name="Macro_ApplyQuestion" xml:space="preserve"><value>The preview finished:
+{0}
+
+Apply the changes? Steps that could not preview run now.</value></data>
+  <data name="Macro_Apply" xml:space="preserve"><value>Apply</value></data>
+  <data name="Cmd_MacroFmt" xml:space="preserve"><value>Macro: {0}</value></data>
 </root>

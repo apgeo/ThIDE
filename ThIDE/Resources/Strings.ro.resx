@@ -1570,4 +1570,18 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Incoming_Off" xml:space="preserve"><value>Nu se mai urmărește {0}.</value></data>
   <data name="Incoming_NoProject" xml:space="preserve"><value>Deschide întâi un proiect.</value></data>
   <data name="Incoming_FileInvalid" xml:space="preserve"><value>{0} nu poate fi citit ({1}); corectează-l de mână ca să nu se piardă nimic din el.</value></data>
+  <data name="Menu_Tools_Macros" xml:space="preserve"><value>Macrouri</value></data>
+  <data name="Macro_None" xml:space="preserve"><value>(niciun macro)</value></data>
+  <data name="Macro_Title" xml:space="preserve"><value>Macro</value></data>
+  <data name="Macro_Project" xml:space="preserve"><value>proiect</value></data>
+  <data name="Macro_Unknown" xml:space="preserve"><value>Nu există un macro numit „{0}”.</value></data>
+  <data name="Macro_FileInvalid" xml:space="preserve"><value>Unele macrouri nu au putut fi citite</value></data>
+  <data name="Macro_Previewing" xml:space="preserve"><value>Previzualizare (nu se schimbă încă nimic):</value></data>
+  <data name="Macro_Applying" xml:space="preserve"><value>Se aplică:</value></data>
+  <data name="Macro_ApplyQuestion" xml:space="preserve"><value>Previzualizarea s-a terminat:
+{0}
+
+Aplici modificările? Pașii care nu au putut fi previzualizați rulează acum.</value></data>
+  <data name="Macro_Apply" xml:space="preserve"><value>Aplică</value></data>
+  <data name="Cmd_MacroFmt" xml:space="preserve"><value>Macro: {0}</value></data>
 </root>

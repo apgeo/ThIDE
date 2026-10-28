@@ -299,6 +299,9 @@
                 <MenuItem AutomationProperties.AutomationId="Menu.Tools.SyncMaps" Header="{l:Loc Menu_Tools_SyncMaps}" Command="{Binding SyncMapsCommand}" />
                 <MenuItem AutomationProperties.AutomationId="Menu.Tools.SuggestEquates" Header="{l:Loc Menu_Tools_SuggestEquates}" Command="{Binding SuggestEquatesCommand}" />
                 <MenuItem AutomationProperties.AutomationId="Menu.Tools.FormatAll" Header="{l:Loc Menu_Tools_FormatAll}" Command="{Binding FormatAllCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Tools.Macros" Header="{l:Loc Menu_Tools_Macros}" SubmenuOpened="OnMacrosSubmenuOpened">
+                    <MenuItem Header="{l:Loc Macro_None}" IsEnabled="False" />
+                </MenuItem>
                 <MenuItem AutomationProperties.AutomationId="Menu.Tools.Tasks" Header="{l:Loc Menu_Tools_Tasks}" SubmenuOpened="OnTasksSubmenuOpened">
                     <MenuItem Header="{l:Loc Task_None}" IsEnabled="False" />
                 </MenuItem>

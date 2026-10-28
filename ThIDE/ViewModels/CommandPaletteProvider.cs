@@ -124,7 +124,10 @@ public sealed class CommandPaletteProvider
         list.Add(VmCmd(tools, L("Menu_Tools_SyncMaps"), _vm.SyncMapsCommand, "Icon.Map"));
         list.Add(VmCmd(tools, L("Menu_Tools_SuggestEquates"), _vm.SuggestEquatesCommand, "Icon.Map"));
         list.Add(VmCmd(tools, L("Menu_Tools_FormatAll"), _vm.FormatAllCommand, "Icon.File"));
-        // One entry per project task (tasks.json), read when the palette opens.
+        // One entry per macro and per project task, read when the palette opens.
+        if (AppServices.Provider.GetService(typeof(IMacroService)) is IMacroService macroRunner)
+            foreach (var (macro, _) in macroRunner.Macros())
+                list.Add(Action(tools, string.Format(L("Cmd_MacroFmt"), macro.Title), () => macroRunner.RunAsync(macro.Name), "Icon.Config"));
         if (_vm.Tasks is { } taskRunner)
             foreach (var task in taskRunner.Tasks())
                 list.Add(Action(tools, string.Format(L("Cmd_TaskFmt"), task.Title), () => taskRunner.RunAsync(task.Id), "Icon.Config"));

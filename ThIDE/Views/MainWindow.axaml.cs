@@ -89,6 +89,11 @@ public partial class MainWindow : Window
                 vm.SyncMapsRequested += (_, _) => _ = SyncMapsAsync();
                 vm.SuggestEquatesRequested += (_, _) => _ = SuggestEquatesAsync();
                 vm.FormatAllRequested += (_, _) => _ = FormatAllAsync();
+                if (AppServices.Provider.GetService<IMacroService>() is MacroService macroService)
+                {
+                    macroService.AskVariables = m => Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => AskMacroVariablesAsync(m));
+                    macroService.ConfirmApply = (m, p) => Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => ConfirmMacroAsync(m, p));
+                }
                 if (AppServices.Provider.GetService<IIncomingFolderService>() is { } incoming)
                 {
                     incoming.ImportRequested += (_, path) => Avalonia.Threading.Dispatcher.UIThread.Post(() => _ = ImportArrivedAsync(vm, path));
@@ -847,6 +852,55 @@ public partial class MainWindow : Window
                 await vm.ImportGpxFromPathAsync(path);
                 break;
         }
+    }
+
+    // ----- macros -----------------------------------------------------------
+
+    /// <summary>Fills Tools ▸ Macros each time it opens.</summary>
+    private void OnMacrosSubmenuOpened(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (sender is not MenuItem menu || AppServices.Provider.GetService<IMacroService>() is not { } macros) return;
+        menu.Items.Clear();
+        foreach (var (macro, fromProject) in macros.Macros())
+        {
+            var name = macro.Name;
+            var item = new MenuItem { Header = fromProject ? $"{macro.Title} ({ThIDE.Resources.Tr.Get("Macro_Project")})" : macro.Title };
+            ToolTip.SetTip(item, macro.Description);
+            Avalonia.Automation.AutomationProperties.SetAutomationId(item, "Menu.Tools.Macros." + name);
+            item.Click += (_, _) => _ = macros.RunAsync(name);
+            menu.Items.Add(item);
+        }
+    }
+
+    /// <summary>Asks for each macro variable in turn (null when cancelled).</summary>
+    private async System.Threading.Tasks.Task<Dictionary<string, string>?> AskMacroVariablesAsync(Therion.Mcp.Dispatch.MacroDefinition macro)
+    {
+        var values = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var v in macro.Vars)
+        {
+            string? value;
+            if (v.Type is "file" or "folder")
+            {
+                var picker = (DataContext as MainWindowViewModel)?.StoragePicker;
+                value = picker is null ? null : v.Type == "file" ? await picker.PickOpenFileAsync(v.Prompt ?? v.Id) : await picker.PickOpenFolderAsync(v.Prompt ?? v.Id);
+            }
+            else
+            {
+                var prompt = v.Choices is { Count: > 0 } c ? $"{v.Prompt ?? v.Id} ({string.Join(", ", c)})" : v.Prompt ?? v.Id;
+                value = await new InputDialog(macro.Title, prompt, v.Default ?? "").ShowAsync(this);
+            }
+            if (value is null) return null;
+            values[v.Id] = value;
+        }
+        return values;
+    }
+
+    /// <summary>Shows a macro's preview summary and asks whether to apply it.</summary>
+    private async System.Threading.Tasks.Task<bool> ConfirmMacroAsync(Therion.Mcp.Dispatch.MacroDefinition macro, Therion.Mcp.Dispatch.MacroRun preview)
+    {
+        var lines = preview.Steps.Select(s => $"• {s.StepId} ({s.Tool}): {s.Status} — {s.Summary}");
+        var message = string.Format(ThIDE.Resources.Tr.Get("Macro_ApplyQuestion"), string.Join("\n", lines));
+        return await new ConfirmDialog(macro.Title, message, ThIDE.Resources.Tr.Get("Macro_Apply")).ShowAsync(this);
     }
 
     // ----- automation panel -----------------------------------------------
