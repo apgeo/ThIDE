@@ -113,5 +113,14 @@ public static class SnippetCatalog
         new("thconf", "thconfig skeleton",
             "encoding  utf-8\nsource ${1:main.th}\n\nlayout ${2:layout1}\n  $0\nendlayout\n\nselect ${3:cave}\nexport map -layout $2 -output ${4:map.pdf}",
             SnippetScope.Thconfig, "Snippet_thconf"),
+        // Fragments: thconfig blocks.
+        new("layout-plan-500", "plan layout at 1:500",
+            "layout ${1:plan500}\n  scale 1 500\n  grid bottom\n  north grid\n  $0\nendlayout", SnippetScope.Thconfig, "Snippet_layoutPlan500"),
+        new("layout-copy", "layout based on another",
+            "layout ${1:mine}\n  copy ${2:base}\n  $0\nendlayout", SnippetScope.Thconfig, "Snippet_layoutCopy"),
+        new("export-plan-pdf", "export a plan map to PDF",
+            "export map -projection plan -layout ${1:layout1} -output ${2:plan.pdf}$0", SnippetScope.Thconfig, "Snippet_exportPlanPdf"),
+        new("export-model-lox", "export the 3D model",
+            "export model -output ${1:model.lox}$0", SnippetScope.Thconfig, "Snippet_exportModelLox"),
     ];
 }
