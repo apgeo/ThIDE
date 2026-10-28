@@ -1486,4 +1486,13 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="NewTrip_BadStation" xml:space="preserve"><value>Prima stație nu are un nume valid.</value></data>
   <data name="NewTrip_BadDate" xml:space="preserve"><value>Data trebuie să arate ca 2026.10.21.</value></data>
   <data name="NewTrip_PickTieIn" xml:space="preserve"><value>Alege stația din proiect de la care pornește ieșirea.</value></data>
+  <data name="Trust_Title" xml:space="preserve"><value>Ai încredere în acest dosar?</value></data>
+  <data name="Trust_Message" xml:space="preserve"><value>Proiectul din {0} vrea să ruleze comenzi pentru că {1}. Rulezi comenzi din acest proiect? Răspunde da doar pentru proiecte pe care le cunoști — comenzile rulează cu permisiunile tale. Răspunsul este reținut; Preferințe ▸ Extensii listează dosarele de încredere.</value></data>
+  <data name="Trust_Confirm" xml:space="preserve"><value>Am încredere, rulează</value></data>
+  <data name="Trust_ReasonHooks" xml:space="preserve"><value>definește hook-uri</value></data>
+  <data name="Trust_ReasonTasks" xml:space="preserve"><value>definește sarcini</value></data>
+  <data name="Trust_ReasonMacros" xml:space="preserve"><value>definește macrouri</value></data>
+  <data name="Trust_Skipped" xml:space="preserve"><value>S-au omis comenzile proiectului: dosarul nu este de încredere</value></data>
+  <data name="Trust_SkippedDetail" xml:space="preserve"><value>{0} nu au fost rulate.</value></data>
+  <data name="Trust_TrustAction" xml:space="preserve"><value>Am încredere…</value></data>
 </root>

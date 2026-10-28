@@ -1486,4 +1486,13 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="NewTrip_BadStation" xml:space="preserve"><value>The first station is not a valid station name.</value></data>
   <data name="NewTrip_BadDate" xml:space="preserve"><value>The date should look like 2026.10.21.</value></data>
   <data name="NewTrip_PickTieIn" xml:space="preserve"><value>Choose the project station the trip starts from.</value></data>
+  <data name="Trust_Title" xml:space="preserve"><value>Trust this folder?</value></data>
+  <data name="Trust_Message" xml:space="preserve"><value>The project in {0} wants to run commands because {1}. Run commands from this project? Only say yes for projects you know — the commands run with your permissions. Your answer is remembered; Preferences ▸ Extensions lists trusted folders.</value></data>
+  <data name="Trust_Confirm" xml:space="preserve"><value>Trust and run</value></data>
+  <data name="Trust_ReasonHooks" xml:space="preserve"><value>it defines hooks</value></data>
+  <data name="Trust_ReasonTasks" xml:space="preserve"><value>it defines tasks</value></data>
+  <data name="Trust_ReasonMacros" xml:space="preserve"><value>it defines macros</value></data>
+  <data name="Trust_Skipped" xml:space="preserve"><value>Skipped project commands: the folder is not trusted</value></data>
+  <data name="Trust_SkippedDetail" xml:space="preserve"><value>{0} were not run.</value></data>
+  <data name="Trust_TrustAction" xml:space="preserve"><value>Trust…</value></data>
 </root>

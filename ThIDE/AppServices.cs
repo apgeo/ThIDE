@@ -170,6 +170,7 @@ internal static class AppServices
         // Active-document host (�7.3).
         services.AddSingleton<IDocumentService, DocumentService>();
         services.AddSingleton<IWorkspaceEditService, WorkspaceEditService>();
+        services.AddSingleton<IWorkspaceTrustService>(_ => new WorkspaceTrustService(ask: TrustPrompt.AskAsync));
         // Same instance, narrow view: the in-app MCP host reads unsaved buffers through this (T-03.2).
         services.AddSingleton<IUnsavedBufferProvider>(sp => (IUnsavedBufferProvider)sp.GetRequiredService<IDocumentService>());
         // Same instance, narrow view: the assistant pane drops code snippets into the active editor (CAP-03).
