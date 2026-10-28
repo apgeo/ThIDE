@@ -17,7 +17,15 @@ for the steps involved.
 
 ## B. Enter data from a fresh trip
 
-1. Open the relevant survey `.th` (or make a new file: Workspace Explorer right-click → **New File**).
+**Tools → New trip…** does the set-up for you: it prefills the date, the team (everyone named in the
+project, with last trip's people ticked), the units, calibration, instruments and data order of the
+latest trip, names the survey after the date, and — once you pick the project station the trip starts
+from — writes the new file beside the other trips, plus the `input` and an `equate` stub (marked
+`# check the tie-in`) where the project keeps them. The new survey becomes a sibling of the station's
+survey; tick *Nest the trip inside that station's survey* to put it one level down instead. The new
+file opens with the cursor on the first data line. Then:
+
+1. Open the relevant survey `.th` (or make a new file: **File → New File…**).
 2. Type your `centreline` / `data` / shots. As you type:
    - Autocomplete and hover help guide the syntax.
    - The **Measurements** tab shows the parsed shots so you can eyeball them.
@@ -28,6 +36,11 @@ for the steps involved.
    — see [directives](../directives.md).
 5. Check the trip joins the rest of the cave: open **Mainline Preview**, colour **by Component**; a
    piece stacked at the origin is disconnected — add the missing `equate`.
+
+**The trip arrived as its own `.th` file?** Use **Tools → Link survey file…**: pick a station of the
+trip and the project station it continues from, and ThIDE writes the `input` and `equate` lines where
+the project's other ones are, copying the file (and its sketches) into the project — see
+[Linking a survey file](24-linking-surveys.md).
 
 ## C. Validate & clean up before sharing
 

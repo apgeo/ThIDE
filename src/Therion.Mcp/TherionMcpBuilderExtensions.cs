@@ -94,41 +94,18 @@ public static class TherionMcpBuilderExtensions
         ArgumentNullException.ThrowIfNull(builder);
 
         bool hasUi = builder.Services.Any(d => d.ServiceType == typeof(IUiBridge));
-        builder.Services.TryAddSingleton<IUiBridge>(NullUiBridge.Instance);
-        // The in-app host registers a live IWorkspaceHost (backed by the running session) beforehand; a
-        // headless host gets the disk-backed default here. Either way tools depend only on the interface.
-        builder.Services.TryAddSingleton<IWorkspaceHost>(_ => new WorkspaceHost());
-        builder.Services.TryAddSingleton<MutationEngine>();
-
-        // The same per-root sidecars the IDE reads: a lead the model marks pushed is one the caver
-        // sees marked pushed (D-027). A host with its own instances registers them first.
-        builder.Services.TryAddSingleton<Workspace.IProjectMetadataStore>(_ => new Workspace.ProjectMetadataStore());
-        builder.Services.TryAddSingleton<Workspace.ILeadStatusStore>(_ => new Workspace.LeadStatusStore());
-
-        // The real compiler, found on PATH or in the usual places. A test — or the in-app host, which
-        // has the user's configured override — registers its own first.
-        builder.Services.TryAddSingleton<Processing.Abstractions.IExternalToolLocator>(_ => new Build.ExternalToolLocator());
-        builder.Services.TryAddSingleton<Processing.Abstractions.ITherionCompiler>(sp =>
-            new Build.TherionCompiler(sp.GetRequiredService<Processing.Abstractions.IExternalToolLocator>()));
+        AddToolServices(builder.Services);
 
         // The named argument is load-bearing: a bare WithTools(someTypeArray) binds to the generic
         // WithTools<TToolType>(target) overload with TToolType = Type[], which registers nothing and
         // fails only later, as a missing tools/list capability.
-        builder.WithTools(toolTypes: ReadOnlyToolTypes);
-
-        if (profile is McpProfile.Full)
-        {
-            builder.WithTools(toolTypes: MutatingToolTypes);
-            if (hasUi && UiToolTypes.Length > 0) builder.WithTools(toolTypes: UiToolTypes);
-        }
+        builder.WithTools(toolTypes: ToolTypes(profile, hasUi).ToArray());
 
         // Resources mirror the read-only tools, so they ship in both profiles. WorkspaceResources delegates
         // to DiagnosticsTools/GraphTools, so those must be resolvable services: the SDK builds tool types by
         // DI but doesn't register them as services, hence the explicit TryAddSingleton. Cast to
         // IEnumerable<Type> so the call binds to WithResources(IEnumerable<Type>), not the generic overload
         // (the same load-bearing detail as WithTools' named argument above).
-        builder.Services.TryAddSingleton<DiagnosticsTools>();
-        builder.Services.TryAddSingleton<GraphTools>();
         builder.WithResources((IEnumerable<Type>)ResourceTypes);
 
         // Prompts are guidance text, safe in both profiles: each leads with read tools, so the data
@@ -136,5 +113,42 @@ public static class TherionMcpBuilderExtensions
         builder.WithPrompts((IEnumerable<Type>)PromptTypes);
 
         return builder;
+    }
+
+    /// <summary>The tool classes for a profile, in registration order (also used by the in-process dispatcher).</summary>
+    internal static IReadOnlyList<Type> ToolTypes(McpProfile profile, bool includeUi)
+    {
+        var types = new List<Type>(ReadOnlyToolTypes);
+        if (profile is McpProfile.Full)
+        {
+            types.AddRange(MutatingToolTypes);
+            if (includeUi) types.AddRange(UiToolTypes);
+        }
+        return types;
+    }
+
+    /// <summary>The services the tools resolve, with defaults a host's own registrations override.</summary>
+    internal static void AddToolServices(IServiceCollection services)
+    {
+        services.TryAddSingleton<IUiBridge>(NullUiBridge.Instance);
+        // The in-app host registers a live IWorkspaceHost (backed by the running session) beforehand; a
+        // headless host gets the disk-backed default here. Either way tools depend only on the interface.
+        services.TryAddSingleton<IWorkspaceHost>(_ => new WorkspaceHost());
+        services.TryAddSingleton<MutationEngine>();
+
+        // The same per-root sidecars the IDE reads: a lead the model marks pushed is one the caver
+        // sees marked pushed (D-027). A host with its own instances registers them first.
+        services.TryAddSingleton<Workspace.IProjectMetadataStore>(_ => new Workspace.ProjectMetadataStore());
+        services.TryAddSingleton<Workspace.ILeadStatusStore>(_ => new Workspace.LeadStatusStore());
+
+        // The real compiler, found on PATH or in the usual places. A test — or the in-app host, which
+        // has the user's configured override — registers its own first.
+        services.TryAddSingleton<Processing.Abstractions.IExternalToolLocator>(_ => new Build.ExternalToolLocator());
+        services.TryAddSingleton<Processing.Abstractions.ITherionCompiler>(sp =>
+            new Build.TherionCompiler(sp.GetRequiredService<Processing.Abstractions.IExternalToolLocator>()));
+
+        // Resources delegate to these two, so they must be resolvable services too.
+        services.TryAddSingleton<DiagnosticsTools>();
+        services.TryAddSingleton<GraphTools>();
     }
 }

@@ -158,6 +158,8 @@
             <MenuItem AutomationProperties.AutomationId="Menu.File" Header="{Binding MenuFile}">
                 <!-- InputGesture is bound via {l:Gesture <ShellCommandId>} so a remap in
                      Settings ▸ Keyboard relabels the menu; unbound commands render no chord. -->
+                <MenuItem AutomationProperties.AutomationId="Menu.File.NewFile" Header="{l:Loc Menu_File_NewFile}" Command="{Binding NewFileCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.File.NewProject" Header="{l:Loc Menu_File_NewProject}" Command="{Binding NewProjectCommand}" />
                 <MenuItem AutomationProperties.AutomationId="Menu.File.OpenFile" Header="{Binding MenuFileOpenFile}" InputGesture="{l:Gesture OpenFile}" Command="{Binding OpenFileCommand}" />
                 <MenuItem AutomationProperties.AutomationId="Menu.File.OpenThconfig" Header="{Binding MenuFileOpenThconfig}" InputGesture="{l:Gesture OpenThconfig}" Command="{Binding OpenThconfigCommand}" />
                 <MenuItem AutomationProperties.AutomationId="Menu.File.OpenFolder" Header="{Binding MenuFileOpenFolder}" InputGesture="{l:Gesture OpenFolder}" Command="{Binding OpenFolderCommand}" />
@@ -185,6 +187,8 @@
                 <MenuItem AutomationProperties.AutomationId="Menu.View.Project" Header="{l:Loc Menu_View_Project}" InputGesture="{l:Gesture ToggleProject}" Command="{Binding ToggleProjectCommand}" />
                 <MenuItem AutomationProperties.AutomationId="Menu.View.Log" Header="{l:Loc Menu_View_Log}" InputGesture="{l:Gesture ToggleLog}" Command="{Binding ToggleLogCommand}" />
                 <MenuItem AutomationProperties.AutomationId="Menu.View.Assistant" Header="{l:Loc Menu_View_Assistant}" Command="{Binding ToggleAssistantCommand}" />
+                <MenuItem Header="{l:Loc Menu_View_Automation}" Command="{Binding ToggleAutomationCommand}"
+                          AutomationProperties.AutomationId="Menu.View.Automation" />
                 <MenuItem Header="{l:Loc Menu_View_LivePreview}" InputGesture="{l:Gesture ToggleLivePreview}" Command="{Binding ToggleLivePreviewCommand}"
                           AutomationProperties.AutomationId="Menu.View.LivePreview"
                           IsVisible="{Binding LivePreviewEnabled}" />
@@ -288,6 +292,19 @@
                 <MenuItem AutomationProperties.AutomationId="Menu.Tools.ImportGpx" Header="{l:Loc Menu_Tools_ImportGpx}" Command="{Binding ImportGpxCommand}" />
                 <MenuItem AutomationProperties.AutomationId="Menu.Tools.ScaffoldProject" Header="{l:Loc Menu_Tools_ScaffoldProject}" Command="{Binding ScaffoldProjectCommand}" />
                 <MenuItem AutomationProperties.AutomationId="Menu.Tools.ScaffoldActive" Header="{l:Loc Menu_Tools_ScaffoldActive}" Command="{Binding ScaffoldProjectCommand}" CommandParameter="active" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Tools.LinkSurvey" Header="{l:Loc Menu_Tools_LinkSurvey}" Command="{Binding LinkSurveyCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Tools.NewTrip" Header="{l:Loc Menu_Tools_NewTrip}" Command="{Binding NewTripCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Tools.WatchIncoming" Header="{l:Loc Menu_Tools_WatchIncoming}"
+                          ToggleType="CheckBox" IsChecked="{Binding WatchIncoming, Mode=OneWay}" Command="{Binding ToggleWatchIncomingCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Tools.SyncMaps" Header="{l:Loc Menu_Tools_SyncMaps}" Command="{Binding SyncMapsCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Tools.SuggestEquates" Header="{l:Loc Menu_Tools_SuggestEquates}" Command="{Binding SuggestEquatesCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Tools.FormatAll" Header="{l:Loc Menu_Tools_FormatAll}" Command="{Binding FormatAllCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Tools.Macros" Header="{l:Loc Menu_Tools_Macros}" SubmenuOpened="OnMacrosSubmenuOpened">
+                    <MenuItem Header="{l:Loc Macro_None}" IsEnabled="False" />
+                </MenuItem>
+                <MenuItem AutomationProperties.AutomationId="Menu.Tools.Tasks" Header="{l:Loc Menu_Tools_Tasks}" SubmenuOpened="OnTasksSubmenuOpened">
+                    <MenuItem Header="{l:Loc Task_None}" IsEnabled="False" />
+                </MenuItem>
                 <Separator />
                 <MenuItem AutomationProperties.AutomationId="Menu.Tools.ExportEntrances" Header="{l:Loc Menu_Tools_ExportEntrances}">
                     <MenuItem AutomationProperties.AutomationId="Menu.Tools.ExportEntrances.Kml" Header="KML…"      Command="{Binding ExportGisCommand}" CommandParameter="kml" />
@@ -329,6 +346,7 @@
             <MenuItem AutomationProperties.AutomationId="Menu.Build" Header="{Binding MenuBuild}">
                 <MenuItem AutomationProperties.AutomationId="Menu.Build.Build" Header="{Binding MenuBuildBuild}"     InputGesture="{l:Gesture Build}"       Command="{Binding Build.BuildCommand}" />
                 <MenuItem AutomationProperties.AutomationId="Menu.Build.Cancel" Header="{Binding MenuBuildCancel}"    InputGesture="{l:Gesture CancelBuild}" Command="{Binding Build.CancelCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Build.BatchBuild" Header="{l:Loc Menu_Build_BatchBuild}" Command="{Binding BatchBuildCommand}" />
                 <Separator />
                 <!-- run a single export target from the active thconfig. -->
                 <MenuItem Header="{l:Loc Menu_Build_Target}" IsEnabled="{Binding Build.HasExportTargets}"

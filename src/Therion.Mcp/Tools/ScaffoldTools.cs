@@ -3,6 +3,7 @@ using ModelContextProtocol.Server;
 using Therion.Mcp.Mutations;
 using Therion.Syntax;
 using Therion.Workspace.Import;
+using Therion.Workspace.Editing;
 
 namespace Therion.Mcp.Tools;
 

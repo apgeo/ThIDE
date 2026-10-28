@@ -11,6 +11,7 @@ using System.Text.RegularExpressions;
 using AvaloniaEdit.Document;
 using Therion.Core;
 using Therion.Syntax;
+using ThIDE.Resources;
 
 namespace ThIDE.Editor;
 
@@ -19,13 +20,6 @@ public sealed record TherionQuickFix(string Title, Action Apply);
 
 public static class TherionCodeActions
 {
-    private static readonly Dictionary<string, string> Enders = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["survey"] = "endsurvey", ["centreline"] = "endcentreline", ["centerline"] = "endcentreline",
-        ["scrap"] = "endscrap", ["map"] = "endmap", ["surface"] = "endsurface", ["line"] = "endline",
-        ["area"] = "endarea", ["layout"] = "endlayout", ["group"] = "endgroup",
-    };
-
     public static IReadOnlyList<TherionQuickFix> Build(
         TextDocument doc, IReadOnlyList<Diagnostic>? diagnostics, int caretOffset, string? filePath)
     {
@@ -34,81 +28,36 @@ public static class TherionCodeActions
 
         caretOffset = Math.Clamp(caretOffset, 0, doc.TextLength);
         var line = doc.GetLineByOffset(caretOffset);
-        int lineNo = line.LineNumber;
         string lineText = doc.GetText(line.Offset, line.Length);
-        string indent = LeadingWhitespace(lineText);
         string fw = FirstWord(lineText);
 
-        var onLine = (diagnostics ?? Array.Empty<Diagnostic>())
-            .Where(d => d.Span.Start.Line == lineNo).ToList();
-
-        // 1. "did you mean 'X'?" → rename the offending token in this line.
-        foreach (var d in onLine)
-        {
-            var bad = Regex.Match(d.Message ?? string.Empty, @"'([^']+)'");
-            var sug = Regex.Match((d.Message ?? "") + "  " + (d.Hint ?? ""), @"did you mean '([^']+)'", RegexOptions.IgnoreCase);
-            if (bad.Success && sug.Success)
-            {
-                string from = bad.Groups[1].Value, to = sug.Groups[1].Value;
-                if (from != to && lineText.Contains(from, StringComparison.Ordinal))
-                    fixes.Add(new($"Rename '{from}' → '{to}'", () => ReplaceFirst(doc, line, from, to)));
-            }
-        }
-
-        // 2. Insert the matching terminator for a block opener that isn't terminated.
-        if (Enders.TryGetValue(fw, out var ender) && !HasTerminatorAhead(doc, lineNo, ender))
-            fixes.Add(new($"Insert '{ender}'", () => InsertTerminator(doc, line, indent, ender)));
-
-        // 3. Create a missing input/source/load target on disk.
-        if (fw is "input" or "source" or "load")
-        {
-            var target = ResolvePath(lineText, filePath);
-            if (target is not null && !File.Exists(target))
-                fixes.Add(new($"Create file '{Path.GetFileName(target)}'", () => CreateStub(target)));
-        }
-
-        // 4. Insert a cs line into a centreline that has none.
-        if ((fw is "centreline" or "centerline") && !BodyHasKeyword(doc, lineNo, "cs"))
-            fixes.Add(new("Insert 'cs ' line", () => InsertBelow(doc, line, indent + "  cs ")));
-
-        // 5. Comment out the current line (handy for an unknown command, code TH0010).
-        if (!lineText.TrimStart().StartsWith("#"))
-            fixes.Add(new("Comment out this line", () => CommentOut(doc, line, indent)));
-
+        // The text fixes come from the library (shared with "fix all"). Creating a missing file is
+        // not a text edit and stays here, in its original place: after rename and terminator.
+        var textFixes = Therion.Workspace.Fixes.CodeFixes.ForLine(doc.Text, line.LineNumber, diagnostics ?? Array.Empty<Diagnostic>());
+        int head = textFixes.TakeWhile(f => f.TitleKey is "Fix_Rename" or "Fix_InsertEnd").Count();
+        fixes.AddRange(textFixes.Take(head).Select(f => ToQuickFix(doc, f)));
+        if (fw is "input" or "source" or "load" && ResolvePath(lineText, filePath) is { } target && !File.Exists(target))
+            fixes.Add(new(string.Format(Tr.Get("Fix_CreateFile"), Path.GetFileName(target)), () => CreateStub(target)));
+        fixes.AddRange(textFixes.Skip(head).Select(f => ToQuickFix(doc, f)));
         return fixes;
     }
 
-    // ---- edits -------------------------------------------------------------------------------
+    private static string Title(Therion.Workspace.Fixes.CodeFix fix) => string.Format(Tr.Get(fix.TitleKey), fix.TitleArgs.Cast<object>().ToArray());
 
-    private static void ReplaceFirst(TextDocument doc, DocumentLine line, string from, string to)
+    // One undo step; edits back to front so earlier offsets stay valid.
+    private static TherionQuickFix ToQuickFix(TextDocument doc, Therion.Workspace.Fixes.CodeFix fix) => new(Title(fix), () =>
     {
-        string text = doc.GetText(line.Offset, line.Length);
-        int i = text.IndexOf(from, StringComparison.Ordinal);
-        if (i >= 0) doc.Replace(line.Offset + i, from.Length, to);
-    }
-
-    private static void InsertTerminator(TextDocument doc, DocumentLine opener, string indent, string ender)
-    {
-        // Place the terminator after the opener's indented body: walk forward while lines are
-        // blank or more-indented than the opener, then insert before the first dedented line (or EOF).
-        var cur = opener;
-        var insertAfter = opener;
-        while (cur.NextLine is { } next)
+        doc.BeginUpdate();
+        try
         {
-            string t = doc.GetText(next.Offset, next.Length);
-            if (t.Trim().Length == 0) { cur = next; continue; }
-            if (LeadingWhitespace(t).Length > indent.Length) { cur = next; insertAfter = next; continue; }
-            break;
+            foreach (var e in fix.Edits.OrderByDescending(e => e.Start))
+                if (e.End <= doc.TextLength && doc.GetText(e.Start, e.Length) == e.ExpectedText)
+                    doc.Replace(e.Start, e.Length, e.NewText);
         }
-        int at = insertAfter.EndOffset;
-        doc.Insert(at, Environment.NewLine + indent + ender);
-    }
+        finally { doc.EndUpdate(); }
+    });
 
-    private static void InsertBelow(TextDocument doc, DocumentLine line, string text) =>
-        doc.Insert(line.EndOffset, Environment.NewLine + text);
-
-    private static void CommentOut(TextDocument doc, DocumentLine line, string indent) =>
-        doc.Insert(line.Offset + indent.Length, "# ");
+    // ---- edits -------------------------------------------------------------------------------
 
     private static void CreateStub(string path)
     {
@@ -129,29 +78,6 @@ public static class TherionCodeActions
     }
 
     // ---- queries -----------------------------------------------------------------------------
-
-    private static bool HasTerminatorAhead(TextDocument doc, int openerLineNo, string ender)
-    {
-        for (int n = openerLineNo + 1; n <= doc.LineCount; n++)
-        {
-            var l = doc.GetLineByNumber(n);
-            if (string.Equals(FirstWord(doc.GetText(l.Offset, l.Length)), ender, StringComparison.OrdinalIgnoreCase))
-                return true;
-        }
-        return false;
-    }
-
-    private static bool BodyHasKeyword(TextDocument doc, int openerLineNo, string keyword)
-    {
-        for (int n = openerLineNo + 1; n <= doc.LineCount; n++)
-        {
-            var l = doc.GetLineByNumber(n);
-            var fw = FirstWord(doc.GetText(l.Offset, l.Length));
-            if (string.Equals(fw, keyword, StringComparison.OrdinalIgnoreCase)) return true;
-            if (fw.StartsWith("end", StringComparison.OrdinalIgnoreCase)) return false; // left the block
-        }
-        return false;
-    }
 
     private static string? ResolvePath(string lineText, string? filePath)
     {

@@ -94,6 +94,10 @@
                               AutomationProperties.AutomationId="Diagnostics.Grid.Explain"
                               IsVisible="{Binding Diagnostics.HasDocLink}" />
                     <MenuItem AutomationProperties.AutomationId="Diagnostics.Grid.Suppress" Header="{l:Loc Diag_Suppress}" Command="{Binding Diagnostics.SuppressSelectedCodeCommand}" />
+                    <Separator />
+                    <MenuItem AutomationProperties.AutomationId="Diagnostics.Grid.Fix" Header="{l:Loc Diag_Fix}" Command="{Binding Diagnostics.FixSelectedCommand}" />
+                    <MenuItem AutomationProperties.AutomationId="Diagnostics.Grid.FixAll" Header="{Binding Diagnostics.FixAllHeader}"
+                              Command="{Binding Diagnostics.FixAllSelectedCodeCommand}" IsVisible="{Binding Diagnostics.CanFixAllSelected}" />
                 </ContextMenu>
             </DataGrid.ContextMenu>
             <!-- Columns auto-size to fit their header + content; Message takes the remaining

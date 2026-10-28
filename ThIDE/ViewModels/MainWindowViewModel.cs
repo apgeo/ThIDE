@@ -513,9 +513,11 @@ public partial class MainWindowViewModel : ViewModelBase
         ICrashRecoveryService? crashRecovery = null,
         IScriptHookService? hooks = null,
         IShellOpener? shell = null,
-        IMcpHostService? mcpHost = null)
+        IMcpHostService? mcpHost = null,
+        ITaskRunnerService? tasks = null)
     {
         _shell = shell;
+        Tasks = tasks;
         _mcpHost = mcpHost;
         _log = log;
         _crashRecovery = crashRecovery;
@@ -752,6 +754,7 @@ public partial class MainWindowViewModel : ViewModelBase
         // Welcome start-page actions: the picker-based ones reuse the shell commands; the tools
         // shortcut opens Settings ▸ External Tools via the existing preferences-at-section event.
         WelcomeTool.Welcome.NewFileRequested += (_, _) => _ = NewFileAsync();
+        WelcomeTool.Welcome.NewProjectRequested += (_, _) => NewProjectRequested?.Invoke(this, EventArgs.Empty);
         WelcomeTool.Welcome.OpenFileRequested += (_, _) => OpenFileCommand.Execute(null);
         WelcomeTool.Welcome.OpenFolderRequested += (_, _) => OpenFolderCommand.Execute(null);
         WelcomeTool.Welcome.ShowExternalToolsSettingsRequested += (_, _) => ShowPreferencesRequested?.Invoke(this, "external");
@@ -769,8 +772,43 @@ public partial class MainWindowViewModel : ViewModelBase
         Build.NavigateRequested += (_, span) => NavigateTo(span);
         // Surface the Compiler Output panel when a build starts (#2).
         Build.BuildStarted += (_, _) => OnUiThread(() => _factory.ShowCompilerOutput());
+        Build.ExternalToolStarted += (_, _) => OnUiThread(() => _factory.ShowCompilerOutput());
+        if (Tasks is not null)
+        {
+            // Built-in tasks build through the same pipeline as the Build command.
+            Tasks.RunBuild = async (entries, batch) =>
+            {
+                if (batch && BatchBuildRequested is { } open) { open(this, entries); return; }
+                foreach (var entry in entries ?? (Build.ResolveBuildEntry() is { } e ? [e] : []))
+                    if (await Build.RunBuildAsync(entry, label: "Task") is { Succeeded: false }) break;
+            };
+            Tasks.PublishDiagnostics = diags => OnUiThread(() =>
+            {
+                var combined = System.Collections.Immutable.ImmutableArray.CreateBuilder<Therion.Core.Diagnostic>();
+                combined.AddRange(DiagnosticsSource());
+                combined.AddRange(diags);
+                Diagnostics.Load(combined.ToImmutable());
+            });
+        }
+        // Compile-on-save follows every save — Save, Save All and auto-save — not just the command.
+        _documents.DocumentSaved += (_, _) => OnUiThread(TriggerCompileOnSave);
         // run the on-build script hook (active thconfig as {file}).
-        Build.BuildStarted += (_, _) => _hooks?.Run(ScriptHookEvent.Build, _session?.ActiveThconfig?.FullPath);
+        Build.BuildStarted += (_, entry) => _hooks?.Run(ScriptHookEvent.Build, entry);
+        // Hooks for every save (Save, Save All, auto-save), for build results and for an opened workspace.
+        _documents.DocumentSaved += (_, path) => _hooks?.Run(ScriptHookEvent.Save, path);
+        Build.BuildFinished += (_, outcome) =>
+        {
+            if (_hooks is not ScriptHookService hooks) return;
+            hooks.Fire(hooks.Context(Therion.Build.Automation.HookEvent.BuildFinished, entry: outcome.Entry, outcome: outcome));
+            if (!outcome.Succeeded && !outcome.Cancelled)
+                hooks.Fire(hooks.Context(Therion.Build.Automation.HookEvent.BuildFailed, entry: outcome.Entry, outcome: outcome));
+        };
+        if (_session is not null)
+            _session.RootChanged += (_, _) =>
+            {
+                if (_hooks is ScriptHookService hooks && _session.RootPath is { } root)
+                    hooks.Fire(hooks.Context(Therion.Build.Automation.HookEvent.WorkspaceOpened));
+            };
 
         Refresh();
         RestoreSession();
@@ -1092,19 +1130,69 @@ public partial class MainWindowViewModel : ViewModelBase
     private Task NewFile() => NewFileAsync();
 
     /// <summary>Welcome page "New File": pick a save location, create the empty file, open it.</summary>
-    private async Task NewFileAsync()
+    private Task NewFileAsync()
     {
-        if (_picker is null) return;
-        var path = await _picker.PickSaveFileAsync(Tr.Get("Welcome_NewFile"), "new.th").ConfigureAwait(true);
-        if (string.IsNullOrEmpty(path)) return;
-        try
-        {
-            if (!System.IO.File.Exists(path)) System.IO.File.Create(path).Dispose();
-            await _documents.OpenFileAsync(path).ConfigureAwait(true);
-            StatusText = path;
-        }
-        catch (Exception ex) { StatusText = ex.Message; }
+        RequestNewFile(null);
+        return Task.CompletedTask;
     }
+
+    /// <summary>The project's tasks (Tools ▸ Tasks, the palette), or null without the service.</summary>
+    public ITaskRunnerService? Tasks { get; }
+
+    /// <summary>Raised to open the batch build window, optionally preselecting entries.</summary>
+    public event EventHandler<IReadOnlyList<string>?>? BatchBuildRequested;
+
+    /// <summary>Build several thconfigs (and export targets) in one go.</summary>
+    [RelayCommand]
+    private void BatchBuild() => BatchBuildRequested?.Invoke(this, null);
+
+    /// <summary>Whether the project's incoming folder is watched (Tools ▸ Watch the incoming folder).</summary>
+    public bool WatchIncoming => AppServices.Provider.GetService(typeof(IIncomingFolderService)) is IIncomingFolderService { IsEnabled: true };
+
+    [RelayCommand]
+    private void ToggleWatchIncoming()
+    {
+        if (AppServices.Provider.GetService(typeof(IIncomingFolderService)) is not IIncomingFolderService s) return;
+        var before = s.Folder;
+        if (s.SetEnabled(!s.IsEnabled) is { } problem) { _notifications.Warning(Tr.Get("Incoming_Title"), problem); return; }
+        OnPropertyChanged(nameof(WatchIncoming));
+        if ((s.Folder ?? before) is { } folder) _notifications.Info(Tr.Get("Incoming_Title"), string.Format(Tr.Get(s.IsEnabled ? "Incoming_On" : "Incoming_Off"), folder));
+    }
+
+    /// <summary>Called when the incoming service changes (project switch): the menu check follows.</summary>
+    public void RefreshWatchIncoming() => OnUiThread(() => OnPropertyChanged(nameof(WatchIncoming)));
+
+    /// <summary>Raised to open Tools ▸ Add unreferenced scraps to maps.</summary>
+    public event EventHandler? SyncMapsRequested;
+    [RelayCommand] private void SyncMaps() => SyncMapsRequested?.Invoke(this, EventArgs.Empty);
+
+    /// <summary>Raised to open Tools ▸ Suggest equates.</summary>
+    public event EventHandler? SuggestEquatesRequested;
+    [RelayCommand] private void SuggestEquates() => SuggestEquatesRequested?.Invoke(this, EventArgs.Empty);
+
+    /// <summary>Raised to run Tools ▸ Format all files.</summary>
+    public event EventHandler? FormatAllRequested;
+    [RelayCommand] private void FormatAll() => FormatAllRequested?.Invoke(this, EventArgs.Empty);
+
+    /// <summary>Raised to open Tools ▸ New trip… in the view.</summary>
+    public event EventHandler? NewTripRequested;
+
+    /// <summary>Start a new trip file tied into the project.</summary>
+    [RelayCommand]
+    private void NewTrip() => NewTripRequested?.Invoke(this, EventArgs.Empty);
+
+    /// <summary>Raised to open File ▸ New Project… in the view.</summary>
+    public event EventHandler? NewProjectRequested;
+
+    /// <summary>Create a new project folder from a project template.</summary>
+    [RelayCommand]
+    private void NewProject() => NewProjectRequested?.Invoke(this, EventArgs.Empty);
+
+    /// <summary>Raised to open File ▸ New File… in the view; the argument is a folder to start in, or null.</summary>
+    public event EventHandler<string?>? NewFileRequested;
+
+    /// <summary>Opens the New File dialog (the Workspace Explorer passes the folder it was invoked on).</summary>
+    public void RequestNewFile(string? folder) => NewFileRequested?.Invoke(this, folder);
 
     [RelayCommand]
     private async Task OpenThconfig()
@@ -1144,6 +1232,13 @@ public partial class MainWindowViewModel : ViewModelBase
         if (_picker is null) return;
         var src = await _picker.PickOpenFileAsync("Import Survex (.svx) or Compass (.dat)").ConfigureAwait(true);
         if (string.IsNullOrEmpty(src)) return;
+        await ImportSurveyFromPathAsync(src).ConfigureAwait(true);
+    }
+
+    /// <summary>Converts a Survex/Compass file to Therion, asking where to save it; returns the new file or null.</summary>
+    public async Task<string?> ImportSurveyFromPathAsync(string src)
+    {
+        if (_picker is null) return null;
         try
         {
             var text = System.IO.File.ReadAllText(src);
@@ -1155,12 +1250,13 @@ public partial class MainWindowViewModel : ViewModelBase
             };
             var suggested = System.IO.Path.GetFileNameWithoutExtension(src) + ".th";
             var outPath = await _picker.PickSaveFileAsync("Save imported Therion file", suggested).ConfigureAwait(true);
-            if (string.IsNullOrEmpty(outPath)) return;
+            if (string.IsNullOrEmpty(outPath)) return null;
             System.IO.File.WriteAllText(outPath, th);
             await _documents.OpenFileAsync(outPath).ConfigureAwait(true);
             StatusText = $"Imported {System.IO.Path.GetFileName(src)} → {System.IO.Path.GetFileName(outPath)}";
+            return outPath;
         }
-        catch (Exception ex) { StatusText = ex.Message; _log?.Warning($"Import failed: {ex.Message}"); _notifications.Error(Tr.Get("Notif_ImportFailed"), ex.Message); }
+        catch (Exception ex) { StatusText = ex.Message; _log?.Warning($"Import failed: {ex.Message}"); _notifications.Error(Tr.Get("Notif_ImportFailed"), ex.Message); return null; }
     }
 
     /// <summary>export entrances / fixed points in the project CRS. Format via CommandParameter.</summary>
@@ -1230,6 +1326,13 @@ public partial class MainWindowViewModel : ViewModelBase
         if (_picker is null) return;
         var src = await _picker.PickOpenFileAsync("Import GPX waypoints").ConfigureAwait(true);
         if (string.IsNullOrEmpty(src)) return;
+        await ImportGpxFromPathAsync(src).ConfigureAwait(true);
+    }
+
+    /// <summary>Turns GPX waypoints into a fixed-stations Therion file, asking where to save it.</summary>
+    public async Task ImportGpxFromPathAsync(string src)
+    {
+        if (_picker is null) return;
         try
         {
             var name = System.IO.Path.GetFileNameWithoutExtension(src);
@@ -1320,6 +1423,13 @@ public partial class MainWindowViewModel : ViewModelBase
     /// <summary>Build a compilable Therion project (dirs + wrapper .th + thconfig) around a bare survey .th.</summary>
     [RelayCommand]
     private void ScaffoldProject(string? mode) => ScaffoldProjectRequested?.Invoke(this, mode);
+
+    /// <summary>Raised to run "Link survey file" in the view (it owns the dialog and the pickers).</summary>
+    public event EventHandler? LinkSurveyRequested;
+
+    /// <summary>Link a standalone survey file into the project with generated input and equate lines.</summary>
+    [RelayCommand]
+    private void LinkSurvey() => LinkSurveyRequested?.Invoke(this, EventArgs.Empty);
 
     /// <summary>The picker the scaffold flow uses to prompt for the source survey and target folder.</summary>
     public IStoragePicker? StoragePicker => _picker;
@@ -1523,6 +1633,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand] private void ToggleOutline()           => Activate(OutlineTool);
     [RelayCommand] private void ToggleProject()           => Activate(ProjectTool);
     [RelayCommand] private void ToggleLog()               => Activate(LogTool);      // #3
+    [RelayCommand] private void ToggleAutomation()        => _factory.ShowToolById("Automation");
     [RelayCommand] private void ToggleLivePreview()       => Activate(LivePreviewTool);
     [RelayCommand] private void ToggleMapViewer()         => Activate(MapViewerTool);
     [RelayCommand] private void ToggleAssistant()         => _factory.ShowTool(AssistantTool);   // AI-07 (absent from layouts saved before it existed → add on demand)
@@ -1587,7 +1698,6 @@ public partial class MainWindowViewModel : ViewModelBase
             doc.RequestSaveCleanup(); // in-place trim/final-newline (caret-preserving) before write
             await _documents.WriteCurrentTextAsync(doc.DocumentText).ConfigureAwait(true);
             StatusText = $"Saved {doc.FilePath}";
-            TriggerCompileOnSave();
         }
         catch (Exception ex) { StatusText = ex.Message; }
     }
@@ -1664,11 +1774,13 @@ public partial class MainWindowViewModel : ViewModelBase
     private async void TriggerCompileOnSave()
     {
         if (_settings?.Current.CompileOnSave != true) return;
+        // Saves made by a build's own save-before-build step must not queue another build.
+        if (Build.IsBuilding || Build.IsPreparing) return;
         _autoBuildCts?.Cancel();
         var cts = _autoBuildCts = new System.Threading.CancellationTokenSource();
         try { await Task.Delay(700, cts.Token).ConfigureAwait(true); }
         catch (TaskCanceledException) { return; }
-        if (Build.BuildCommand.CanExecute(null))
+        if (!Build.IsBuilding && !Build.IsPreparing && Build.BuildCommand.CanExecute(null))
         {
             _log?.Info("Compile-on-save: rebuilding the project.");
             Build.BuildCommand.Execute(null);

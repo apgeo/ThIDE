@@ -1,0 +1,25 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ThIDE.ViewModels.Pickers"
+             xmlns:views="using:ThIDE.Views"
+             xmlns:pickers="using:ThIDE.Views.Pickers"
+             xmlns:l="using:ThIDE.Resources"
+             x:Class="ThIDE.Views.Pickers.StationSelectorView"
+             x:DataType="vm:StationSelectorViewModel"
+             x:CompileBindings="False">
+    <!-- Station picker over a small Mainline Preview: click a station in the sketch to pick it. -->
+    <Grid RowDefinitions="*,Auto,Auto">
+        <pickers:ItemPickerView Grid.Row="0" DataContext="{Binding Picker}" />
+        <DockPanel Grid.Row="1" Margin="0,6,0,2">
+            <Button DockPanel.Dock="Right" Content="{l:Loc Picker_OpenPreview}" Command="{Binding MaximizeCommand}"
+                    Padding="8,2" FontSize="11"
+                    AutomationProperties.AutomationId="{Binding Picker.Name, StringFormat='Picker.{0}.Maximize'}" />
+            <ToggleButton Content="{l:Loc Picker_Preview}" IsChecked="{Binding IsPreviewVisible, Mode=TwoWay}"
+                          Padding="8,2" FontSize="11" HorizontalAlignment="Left"
+                          AutomationProperties.AutomationId="{Binding Picker.Name, StringFormat='Picker.{0}.PreviewToggle'}" />
+        </DockPanel>
+        <Border Grid.Row="2" Height="220" BorderBrush="Gray" BorderThickness="1" IsVisible="{Binding IsPreviewVisible}">
+            <views:LivePreviewView DataContext="{Binding Preview}" IsToolbarVisible="False" />
+        </Border>
+    </Grid>
+</UserControl>

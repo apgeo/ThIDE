@@ -18,6 +18,24 @@ if (args is ["-h"] or ["--help"])
     return 0;
 }
 
+if (args is ["macro", ..])
+    return await Therion.Mcp.Dispatch.MacroVerb.RunAsync(args, Console.Out, Console.Error, s => s.BuildServiceProvider());
+
+// skills print: the text ThIDE's assistant adds to its instructions, for a host's system prompt
+// (LM Studio's preset), optionally with the user's and the project's notes appended.
+if (args is ["skills", "print", ..])
+{
+    static string? ReadOpt(string[] a, string name) => GetOption(a, name) is { } f ? File.ReadAllText(f) : null;
+    try
+    {
+        var (text, warnings) = Therion.Assistant.Skills.SkillPack.Assemble(ReadOpt(args, "--user"), ReadOpt(args, "--project"));
+        foreach (var w in warnings) Console.Error.WriteLine(w);
+        Console.WriteLine(text);
+        return 0;
+    }
+    catch (IOException ex) { Console.Error.WriteLine(ex.Message); return 1; }
+}
+
 if (args is ["--version"])
 {
     Console.WriteLine(ServerVersion());
@@ -139,6 +157,13 @@ static void PrintHelp()
     Console.WriteLine("Usage:");
     Console.WriteLine("  therion-mcp [--workspace <path>] [--profile data|full]");
     Console.WriteLine("  therion-mcp --connect [<discovery-file>]");
+    Console.WriteLine("  therion-mcp macro list [--workspace <path>]");
+    Console.WriteLine("  therion-mcp macro run <name|file.json> --workspace <path> [--var key=value]… [--apply] [--json]");
+    Console.WriteLine("                       Run a macro (a list of tool calls) without a model. Without");
+    Console.WriteLine("                       --apply only the preview runs and nothing is changed.");
+    Console.WriteLine("  therion-mcp skills print [--user <notes.md>] [--project <notes.md>]");
+    Console.WriteLine("                       Print the skill pack (what a model should know about");
+    Console.WriteLine("                       Therion and these tools) for a host's system prompt.");
     Console.WriteLine();
     Console.WriteLine("Options:");
     Console.WriteLine("  --workspace <path>   Open this .thconfig, .th, or project folder up front.");

@@ -1,3 +1,5 @@
+using Therion.Workspace.Editing;
+
 namespace Therion.Mcp.Mutations;
 
 /// <summary>

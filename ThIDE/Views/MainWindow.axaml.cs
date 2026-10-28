@@ -80,6 +80,28 @@ public partial class MainWindow : Window
                 };
                 vm.Build.QuickExportRequested += (_, _) => _ = ShowQuickExportAsync(vm);
                 vm.ScaffoldProjectRequested += (_, mode) => _ = ShowScaffoldProjectAsync(vm, mode);
+                vm.LinkSurveyRequested += (_, _) => _ = ShowLinkSurveyAsync(null, 0);
+                vm.NewFileRequested += (_, folder) => _ = ShowNewFileAsync(folder);
+                vm.NewProjectRequested += (_, _) => _ = ShowNewProjectAsync();
+                vm.NewTripRequested += (_, _) => _ = ShowNewTripAsync();
+                vm.BatchBuildRequested += (_, entries) => _ = ShowBatchBuildAsync(vm, entries);
+                vm.Diagnostics.FixRequested += (_, d) => _ = FixOneAsync(d);
+                vm.SyncMapsRequested += (_, _) => _ = SyncMapsAsync();
+                vm.SuggestEquatesRequested += (_, _) => _ = SuggestEquatesAsync();
+                vm.FormatAllRequested += (_, _) => _ = FormatAllAsync();
+                if (AppServices.Provider.GetService<IMacroService>() is MacroService macroService)
+                {
+                    macroService.AskVariables = m => Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => AskMacroVariablesAsync(m));
+                    macroService.ConfirmApply = (m, p) => Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => ConfirmMacroAsync(m, p));
+                }
+                if (AppServices.Provider.GetService<IIncomingFolderService>() is { } incoming)
+                {
+                    incoming.ImportRequested += (_, path) => Avalonia.Threading.Dispatcher.UIThread.Post(() => _ = ImportArrivedAsync(vm, path));
+                    incoming.Changed += (_, _) => vm.RefreshWatchIncoming();
+                }
+                vm.Diagnostics.FixAllRequested += (_, code) => _ = FixAllAsync(vm, code);
+                ThIDE.Editor.TherionTextEditor.LinkSurveyRequested += (_, req) =>
+                    Avalonia.Threading.Dispatcher.UIThread.Post(() => _ = ShowLinkSurveyAsync(req.FilePath, req.Caret));
                 BuildRecentMenu(vm);
                 BuildRecentDirectoriesMenu(vm);
                 // The layout rendered without crashing — clear the crash sentinel so the next
@@ -104,6 +126,8 @@ public partial class MainWindow : Window
                     docs.RenameSymbolRequested += (_, args) => _ = HandleRenameSymbolAsync(args.Raw, args.Kind);
                     docs.FindAllReferencesRequested += (_, args) => _ = HandleFindAllReferencesAsync(args.Raw, args.Kind);
                 }
+                AttachSnippetCatalog();
+                AttachAutomationPanel();
                 _crashRecovery = AppServices.Provider.GetService<ICrashRecoveryService>();
                 _mcpHost = AppServices.Provider.GetService<IMcpHostService>();
             }
@@ -491,6 +515,509 @@ public partial class MainWindow : Window
         if (string.IsNullOrEmpty(root)) return;
 
         await vm.RunScaffoldAsync(model.BuildOptions(), source, root);
+    }
+
+    // ----- new file -------------------------------------------------------
+
+    /// <summary>File ▸ New File…: templates, name, folder and an optional input line into a survey file.</summary>
+    private async System.Threading.Tasks.Task ShowNewFileAsync(string? folder)
+    {
+        var docs = AppServices.Provider.GetService<IDocumentService>();
+        var session = AppServices.Provider.GetService<IWorkspaceSession>();
+        var settings = AppServices.Provider.GetService<IAppSettingsService>();
+        if (docs is null) return;
+        var root = session?.RootPath;
+        var location = settings?.Current.ProjectConfigLocation ?? Therion.Workspace.ProjectConfigLocation.ProjectFolder;
+
+        // Template files: the user's (app data), then the project's (its config folder).
+        var layers = new List<Therion.Workspace.Templates.SnippetLayer>();
+        void AddDir(string? dir)
+        {
+            if (dir is null || !Directory.Exists(dir)) return;
+            foreach (var file in Directory.EnumerateFiles(dir, "*.json").Order(StringComparer.Ordinal))
+            {
+                try { layers.Add(new(Path.GetFileName(file), File.ReadAllText(file))); }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+            }
+        }
+        AddDir(Path.Combine(Therion.Workspace.ProjectSidecar.DirectoryFor("templates"), "files"));
+        AddDir(Therion.Workspace.ProjectLocalConfig.PathFor(root, location, Path.Combine("templates", "files")));
+        var (templates, errors) = Therion.Workspace.Templates.FileTemplateCatalog.Load(Therion.Workspace.Templates.FileTemplateCatalog.BuiltIns, layers);
+        if (errors.Count > 0)
+            AppServices.Provider.GetService<INotificationService>()?.Warning(ThIDE.Resources.Tr.Get("Notif_TemplatesInvalid"),
+                string.Join("\n", errors.Take(3).Select(e => e.ToString())));
+
+        var active = docs.Active;
+        var start = folder
+            ?? (active is { FilePath: { } ap } && Path.IsPathRooted(ap) ? Path.GetDirectoryName(ap) : null)
+            ?? root
+            ?? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+
+        var ws = docs.Workspace;
+        var surveyFiles = ws?.PerFile.Keys.Where(k => k.EndsWith(".th", StringComparison.OrdinalIgnoreCase))
+            .Order(StringComparer.OrdinalIgnoreCase).ToList() ?? [];
+        var parents = new HashSet<string>(ws?.FileGraphEdges.Select(e => Path.GetFullPath(e.From)) ?? [], Therion.Workspace.Editing.FilePaths.Comparer);
+        var buffers = docs.Documents.Where(d => Path.IsPathRooted(d.FilePath))
+            .GroupBy(d => Path.GetFullPath(d.FilePath), Therion.Workspace.Editing.FilePaths.Comparer)
+            .ToDictionary(g => g.Key, g => g.First().DocumentText, Therion.Workspace.Editing.FilePaths.Comparer);
+
+        var context = active is null
+            ? new Therion.Workspace.Templates.SnippetContext(null, "", 0, DateTime.Now)
+            : new Therion.Workspace.Templates.SnippetContext(active.FilePath, active.DocumentText, active.CurrentCaret.StartOffset, DateTime.Now);
+        var activeVars = Therion.Workspace.Templates.SnippetVariables.Standard(context);
+        string? Vars(string name) => name.StartsWith("FILE_", StringComparison.Ordinal) ? null : activeVars(name);
+
+        var env = new NewFileEnvironment(
+            templates, start, root, surveyFiles, parents,
+            p => buffers.TryGetValue(Path.GetFullPath(p), out var t) ? t : File.Exists(p) ? Therion.Syntax.EncodingResolver.ReadAllText(p) : null,
+            p => File.Exists(p) || Directory.Exists(p),
+            Vars,
+            AppServices.Provider.GetService<IWorkspaceEditService>(),
+            (path, caret) => OpenAtAsync(docs, path, caret),
+            path => docs.ActivateThconfigAsync(path));
+        await new NewFileWindow(new NewFileViewModel(env)).ShowDialog(this);
+    }
+
+    // ----- new trip -------------------------------------------------------
+
+    /// <summary>Tools ▸ New trip…: a trip file prefilled from the latest trip and tied into the project.</summary>
+    private async System.Threading.Tasks.Task ShowNewTripAsync()
+    {
+        var docs = AppServices.Provider.GetService<IDocumentService>();
+        var notifications = AppServices.Provider.GetService<INotificationService>();
+        if (docs?.Workspace is not { PerFile.Count: > 0 } ws)
+        {
+            notifications?.Warning(ThIDE.Resources.Tr.Get("NewTrip_Title"), ThIDE.Resources.Tr.Get("LinkSurvey_NoWorkspace"));
+            return;
+        }
+        var buffers = docs.Documents.Where(d => Path.IsPathRooted(d.FilePath))
+            .GroupBy(d => Path.GetFullPath(d.FilePath), Therion.Workspace.Editing.FilePaths.Comparer)
+            .ToDictionary(g => g.Key, g => g.First().DocumentText, Therion.Workspace.Editing.FilePaths.Comparer);
+        var env = new NewTripEnvironment(
+            ws,
+            AppServices.Provider.GetService<IWorkspaceSession>()?.RootPath,
+            p => buffers.TryGetValue(Path.GetFullPath(p), out var t) ? t : File.Exists(p) ? Therion.Syntax.EncodingResolver.ReadAllText(p) : null,
+            p => File.Exists(p) || Directory.Exists(p),
+            AppServices.Provider.GetService<IWorkspaceEditService>(),
+            (path, caret) => OpenAtAsync(docs, path, caret),
+            DateTime.Now);
+        var model = new NewTripViewModel(env);
+        var load = model.LoadAsync();
+        await new NewTripWindow(model).ShowDialog(this);
+        await load;
+    }
+
+    /// <summary>Opens a file and puts the caret at an offset.</summary>
+    private static async System.Threading.Tasks.Task OpenAtAsync(IDocumentService docs, string path, int caret)
+    {
+        await docs.OpenFileAsync(path);
+        var doc = docs.Documents.FirstOrDefault(d => Therion.Workspace.Editing.FilePaths.Same(d.FilePath, path));
+        if (doc is null) return;
+        var text = doc.DocumentText;
+        caret = Math.Clamp(caret, 0, text.Length);
+        int line = 1, col = 1;
+        for (int i = 0; i < caret; i++) { if (text[i] == '\n') { line++; col = 1; } else col++; }
+        var at = new Therion.Core.SourceLocation(line, col);
+        doc.RequestScrollTo(new Therion.Core.SourceSpan(path, at, at, caret, 0));
+    }
+
+    // ----- new project ----------------------------------------------------
+
+    /// <summary>File ▸ New Project…: writes a project from a template, then makes its thconfig active.</summary>
+    private async System.Threading.Tasks.Task ShowNewProjectAsync()
+    {
+        var library = Path.Combine(Therion.Workspace.ProjectSidecar.DirectoryFor("templates"), "projects");
+        var start = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        var model = new NewProjectViewModel(library, Path.Combine(start, "cave"));
+        var dialog = new NewProjectWindow(model);
+        await dialog.ShowDialog(this);
+        if (!dialog.Confirmed || model.CreatedThconfig is not { } thconfig) return;
+        var docs = AppServices.Provider.GetService<IDocumentService>();
+        if (docs is not null)
+            await docs.ActivateThconfigAsync(thconfig, new ThconfigActivation(SetWorkingDirectory: true, OpenInEditor: true, Notify: true));
+    }
+
+    // ----- batch build ------------------------------------------------------
+
+    /// <summary>Build ▸ Build multiple…: the workspace's thconfigs and their exports, built in order.</summary>
+    private async System.Threading.Tasks.Task ShowBatchBuildAsync(MainWindowViewModel vm, IReadOnlyList<string>? preselect)
+    {
+        var session = AppServices.Provider.GetService<IWorkspaceSession>();
+        var configs = session?.Candidates.Select(c => c.FullPath).ToList() ?? [];
+        foreach (var p in preselect ?? []) if (!configs.Contains(p)) configs.Add(p);
+        if (configs.Count == 0)
+        {
+            AppServices.Provider.GetService<INotificationService>()?.Info(ThIDE.Resources.Tr.Get("Batch_Title"), ThIDE.Resources.Tr.Get("Batch_NoThconfigs"));
+            return;
+        }
+        var root = session?.RootPath;
+        var key = Therion.Workspace.ProjectSidecar.KeyFor(root);
+        var env = new BatchBuildEnvironment(
+            configs, root,
+            (entry, temp, label) => vm.Build.RunBuildAsync(entry, temp, label),
+            () => vm.Build.CancelCommand.Execute(null),
+            AppServices.Provider.GetService<IAutomationOutput>(),
+            key is null ? null : Path.Combine(Therion.Workspace.ProjectSidecar.DirectoryFor("batch"), key + ".json"));
+        var model = new BatchBuildViewModel(env, preselect);
+        model.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(BatchBuildViewModel.IsRunning) && !model.IsRunning && model.Outcomes.Count > 0)
+            {
+                var ok = model.Outcomes.Count(o => o.Succeeded);
+                var n = AppServices.Provider.GetService<INotificationService>();
+                if (ok == model.Outcomes.Count) n?.Success(ThIDE.Resources.Tr.Get("Batch_Title"), model.Status);
+                else n?.Warning(ThIDE.Resources.Tr.Get("Batch_Title"), model.Status);
+            }
+        };
+        await new BatchBuildWindow(model).ShowDialog(this);
+    }
+
+    // ----- tasks --------------------------------------------------------------
+
+    /// <summary>Fills Tools ▸ Tasks with the project's tasks each time it opens.</summary>
+    private void OnTasksSubmenuOpened(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (sender is not MenuItem menu || DataContext is not MainWindowViewModel { Tasks: { } runner }) return;
+        menu.Items.Clear();
+        var tasks = runner.Tasks();
+        foreach (var task in tasks)
+        {
+            var id = task.Id;
+            var item = new MenuItem { Header = task.Title };
+            Avalonia.Automation.AutomationProperties.SetAutomationId(item, "Menu.Tools.Tasks." + id);
+            item.Click += (_, _) => _ = runner.RunAsync(id);
+            menu.Items.Add(item);
+        }
+        if (tasks.Count == 0) menu.Items.Add(new MenuItem { Header = ThIDE.Resources.Tr.Get("Task_None"), IsEnabled = false });
+    }
+
+    // ----- fixes ----------------------------------------------------------------
+
+    /// <summary>A file's current text: the editor buffer when open, else the file by its encoding.</summary>
+    private static string? CurrentText(IDocumentService? docs, string path)
+    {
+        var doc = docs?.Documents.FirstOrDefault(d => Therion.Workspace.Editing.FilePaths.Same(d.FilePath, path));
+        if (doc is not null) return doc.DocumentText;
+        return File.Exists(path) ? Therion.Syntax.EncodingResolver.ReadAllText(path) : null;
+    }
+
+    /// <summary>Applies the first fix for one diagnostic (Diagnostics panel ▸ Fix).</summary>
+    private async System.Threading.Tasks.Task FixOneAsync(Therion.Core.Diagnostic d)
+    {
+        var docs = AppServices.Provider.GetService<IDocumentService>();
+        if (d.Span.FilePath is not { Length: > 0 } path || CurrentText(docs, path) is not { } text) return;
+        // This diagnostic's own fix only (an unrelated fix on the same line is not "fixing" it).
+        var fix = Therion.Workspace.Fixes.CodeFixes.ForDiagnostic(text, d)
+                  ?? Therion.Workspace.Fixes.CodeFixes.ForLine(text, d.Span.Start.Line, [d]).FirstOrDefault(f => f.DiagnosticCode == d.Code.Value);
+        if (fix is null)
+        {
+            AppServices.Provider.GetService<INotificationService>()?.Info(ThIDE.Resources.Tr.Get("Diag_Fix"), ThIDE.Resources.Tr.Get("Diag_NoFix"));
+            return;
+        }
+        if (AppServices.Provider.GetService<IWorkspaceEditService>() is not { } editor) return;
+        var outcome = await editor.ApplyAsync(new Therion.Workspace.Editing.EditBatch([new(path, fix.Edits)], [], []));
+        if (!outcome.Success) AppServices.Provider.GetService<INotificationService>()?.Warning(ThIDE.Resources.Tr.Get("Diag_Fix"), outcome.Error ?? string.Join("; ", outcome.Problems.Select(p => p.Kind)));
+    }
+
+    /// <summary>Diagnostics panel ▸ Fix all '<code>': every safe fix for that code, previewed, then applied.</summary>
+    private async System.Threading.Tasks.Task FixAllAsync(MainWindowViewModel vm, string code)
+    {
+        var docs = AppServices.Provider.GetService<IDocumentService>();
+        var notifications = AppServices.Provider.GetService<INotificationService>();
+        // The diagnostics' line numbers are from the last check: an open file edited since may have
+        // moved them, so such files must be saved (and re-checked) first.
+        var dirty = vm.Diagnostics.All.Where(d => d.Code.Value == code && d.Span.FilePath is { } f
+                && docs?.Documents.Any(x => x.IsDirty && Therion.Workspace.Editing.FilePaths.Same(x.FilePath, f)) == true)
+            .Select(d => Path.GetFileName(d.Span.FilePath)).Distinct().ToList();
+        if (dirty.Count > 0)
+        {
+            notifications?.Warning(string.Format(ThIDE.Resources.Tr.Get("Diag_FixAll"), code), string.Format(ThIDE.Resources.Tr.Get("Diag_FixAllSaveFirst"), string.Join(", ", dirty)));
+            return;
+        }
+        var (batch, fixedCount, skipped) = Therion.Workspace.Fixes.FixAll.Plan(code, vm.Diagnostics.All, p => CurrentText(docs, p));
+        if (fixedCount == 0)
+        {
+            notifications?.Info(string.Format(ThIDE.Resources.Tr.Get("Diag_FixAll"), code), ThIDE.Resources.Tr.Get("Diag_FixAllNone"));
+            return;
+        }
+        await PreviewAndApplyAsync(string.Format(ThIDE.Resources.Tr.Get("Diag_FixAll"), code),
+            string.Format(ThIDE.Resources.Tr.Get("Diag_FixAllSummary"), fixedCount, batch.Edits.Count, skipped), batch, reload: true);
+    }
+
+    /// <summary>Shows a preview of a batch and applies the ticked edits (one undo step per open file).</summary>
+    private async System.Threading.Tasks.Task<bool> PreviewAndApplyAsync(string title, string summary, Therion.Workspace.Editing.EditBatch batch,
+        IReadOnlyList<Therion.Workspace.Fixes.EditPreviewRow>? rows = null, bool reload = false)
+    {
+        var docs = AppServices.Provider.GetService<IDocumentService>();
+        rows ??= Therion.Workspace.Fixes.FixAll.Preview(batch, p => CurrentText(docs, p));
+        var preview = new EditPreviewViewModel(title, summary, batch, rows, AppServices.Provider.GetService<IWorkspaceSession>()?.RootPath);
+        var window = new EditPreviewWindow(preview);
+        await window.ShowDialog(this);
+        if (!window.Confirmed || AppServices.Provider.GetService<IWorkspaceEditService>() is not { } editor) return false;
+        // Closed files change on disk without a re-parse: reload when the diagnostics must follow.
+        var outcome = await editor.ApplyAsync(reload ? preview.Chosen() with { RequiresWorkspaceReload = true } : preview.Chosen());
+        var n = AppServices.Provider.GetService<INotificationService>();
+        if (outcome.Success) n?.Success(title, string.Format(ThIDE.Resources.Tr.Get("Diag_FixAllDone"), preview.CheckedCount));
+        else n?.Warning(title, outcome.Error ?? string.Join("; ", outcome.Problems.Select(p => $"{Path.GetFileName(p.FilePath)}: {p.Kind}")));
+        return outcome.Success;
+    }
+
+    /// <summary>Tools ▸ Suggest equates: pick a close pair and open Link survey file on it.</summary>
+    private async System.Threading.Tasks.Task SuggestEquatesAsync()
+    {
+        var docs = AppServices.Provider.GetService<IDocumentService>();
+        if (docs?.Workspace is not { PerFile.Count: > 0 } ws) return;
+        var window = new SuggestEquatesWindow(new SuggestEquatesViewModel(ws, AppServices.Provider.GetService<IWorkspaceSession>()?.RootPath));
+        await window.ShowDialog(this);
+        if (window.Chosen is not { } pair || pair.Candidate.A.DeclarationSpan.FilePath is not { } fa || pair.Candidate.B.DeclarationSpan.FilePath is not { } fb) return;
+        await ShowLinkSurveyAsync(null, 0, m => m.PresetStationsAsync(fa, pair.Candidate.A.Name, fb, pair.Candidate.B.Name));
+    }
+
+    /// <summary>Tools ▸ Format all files: every project file through the formatter, previewed first.</summary>
+    private async System.Threading.Tasks.Task FormatAllAsync()
+    {
+        var docs = AppServices.Provider.GetService<IDocumentService>();
+        if (docs?.Workspace is not { } ws) return;
+        var files = ws.PerFile.Keys
+            .Concat(ws.FileGraphEdges.SelectMany(e => new[] { e.From, e.To }))
+            .Where(f => f.EndsWith(".th", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".th2", StringComparison.OrdinalIgnoreCase)
+                     || f.EndsWith(".thconfig", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        var settings = AppServices.Provider.GetService<IAppSettingsService>()?.Current;
+        var unit = settings is { ConvertTabsToSpaces: false } ? "\t" : new string(' ', Math.Max(1, settings?.IndentationSize ?? 2));
+        // The editor's Format Document: a re-indent that never reorders or drops anything.
+        string Format(string text)
+        {
+            var doc = new AvaloniaEdit.Document.TextDocument(text);
+            ThIDE.Editor.TherionFormatter.Reindent(doc, unit);
+            return doc.Text;
+        }
+        var (batch, rows, skipped) = Therion.Workspace.Fixes.FormatAll.Plan(files, p => CurrentText(docs, p), Therion.Workspace.Fixes.LineEndings.Keep,
+            Format, n => string.Format(ThIDE.Resources.Tr.Get("FormatAll_LinesDiffer"), n));
+        var title = ThIDE.Resources.Tr.Get("Menu_Tools_FormatAll");
+        var summary = string.Format(ThIDE.Resources.Tr.Get("FormatAll_Summary"), rows.Count, skipped.Count);
+        if (batch.IsEmpty) { AppServices.Provider.GetService<INotificationService>()?.Info(title, summary); return; }
+        await PreviewAndApplyAsync(title, summary, batch, rows, reload: true);
+    }
+
+    /// <summary>Tools ▸ Add unreferenced scraps to maps.</summary>
+    private async System.Threading.Tasks.Task SyncMapsAsync()
+    {
+        var docs = AppServices.Provider.GetService<IDocumentService>();
+        var n = AppServices.Provider.GetService<INotificationService>();
+        var title = ThIDE.Resources.Tr.Get("Menu_Tools_SyncMaps");
+        if (docs?.Workspace is not { } ws) return;
+        var model = new SyncMapsViewModel(ws, AppServices.Provider.GetService<IWorkspaceSession>()?.RootPath);
+        if (model.Rows.Count == 0 || !model.HasMaps) { n?.Info(title, ThIDE.Resources.Tr.Get(model.Rows.Count == 0 ? "SyncMaps_Nothing" : "SyncMaps_NoMaps")); return; }
+        var window = new SyncMapsWindow(model);
+        await window.ShowDialog(this);
+        if (!window.Confirmed) return;
+
+        var cache = new Dictionary<string, Therion.Syntax.TherionFile?>(Therion.Workspace.Editing.FilePaths.Comparer);
+        Therion.Syntax.TherionFile? Ast(string p) => cache.TryGetValue(p, out var a) ? a
+            : cache[p] = p.EndsWith(".th", StringComparison.OrdinalIgnoreCase) && CurrentText(docs, p) is { } t ? new Therion.Syntax.ThParser().Parse(p, t).Value : null;
+        var scopes = Therion.Semantics.Linking.SurveyScopeResolver.Build(ws, Ast);
+        var (batch, problems) = Therion.Workspace.Fixes.MapSync.Plan(ws, scopes, model.Assignments(), p => CurrentText(docs, p), Ast);
+        var summary = problems.Count == 0 ? ThIDE.Resources.Tr.Get("SyncMaps_Summary")
+            : ThIDE.Resources.Tr.Get("SyncMaps_Summary") + " " + string.Format(ThIDE.Resources.Tr.Get("SyncMaps_Problems"),
+                string.Join(", ", problems.Select(p => $"{p.Map} ({ThIDE.Resources.Tr.Get("SyncMaps_" + p.Problem)})")));
+        if (batch.IsEmpty) { n?.Warning(title, summary); return; }
+        await PreviewAndApplyAsync(title, summary, batch);
+    }
+
+    /// <summary>An arrived (or dropped) file: link a survey, or import Survex/Compass/GPX first.</summary>
+    private readonly System.Threading.SemaphoreSlim _importOneAtATime = new(1, 1);
+
+    private async System.Threading.Tasks.Task ImportArrivedAsync(MainWindowViewModel vm, string path)
+    {
+        // Several dropped files: one dialog after another, not all at once.
+        await _importOneAtATime.WaitAsync();
+        try { await ImportOneAsync(vm, path); }
+        catch (Exception ex) { AppServices.Provider.GetService<INotificationService>()?.Error(ThIDE.Resources.Tr.Get("Notif_ImportFailed"), ex.Message); }
+        finally { _importOneAtATime.Release(); }
+    }
+
+    private async System.Threading.Tasks.Task ImportOneAsync(MainWindowViewModel vm, string path)
+    {
+        switch (Therion.Workspace.Incoming.IncomingFiles.Route(path))
+        {
+            case Therion.Workspace.Incoming.IncomingRoute.LinkSurvey:
+                await ShowLinkSurveyAsync(null, 0, m => m.LoadAsync(path));
+                break;
+            case Therion.Workspace.Incoming.IncomingRoute.ImportSurvey:
+                if (await vm.ImportSurveyFromPathAsync(path) is { } th)
+                    await ShowLinkSurveyAsync(null, 0, m => m.LoadAsync(th));
+                break;
+            case Therion.Workspace.Incoming.IncomingRoute.ImportGpx:
+                await vm.ImportGpxFromPathAsync(path);
+                break;
+        }
+    }
+
+    // ----- macros -----------------------------------------------------------
+
+    /// <summary>Fills Tools ▸ Macros each time it opens.</summary>
+    private void OnMacrosSubmenuOpened(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (sender is not MenuItem menu || AppServices.Provider.GetService<IMacroService>() is not { } macros) return;
+        menu.Items.Clear();
+        foreach (var (macro, fromProject) in macros.Macros())
+        {
+            var name = macro.Name;
+            var item = new MenuItem { Header = fromProject ? $"{macro.Title} ({ThIDE.Resources.Tr.Get("Macro_Project")})" : macro.Title };
+            ToolTip.SetTip(item, macro.Description);
+            Avalonia.Automation.AutomationProperties.SetAutomationId(item, "Menu.Tools.Macros." + name);
+            item.Click += (_, _) => _ = macros.RunAsync(name);
+            menu.Items.Add(item);
+        }
+    }
+
+    /// <summary>Asks for each macro variable in turn (null when cancelled).</summary>
+    private async System.Threading.Tasks.Task<Dictionary<string, string>?> AskMacroVariablesAsync(Therion.Mcp.Dispatch.MacroDefinition macro)
+    {
+        var values = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var v in macro.Vars)
+        {
+            string? value;
+            if (v.Type is "file" or "folder")
+            {
+                var picker = (DataContext as MainWindowViewModel)?.StoragePicker;
+                value = picker is null ? null : v.Type == "file" ? await picker.PickOpenFileAsync(v.Prompt ?? v.Id) : await picker.PickOpenFolderAsync(v.Prompt ?? v.Id);
+                // The tools take paths inside the project: pass them relative to it.
+                if (value is not null && AppServices.Provider.GetService<IWorkspaceSession>()?.RootPath is { } root)
+                {
+                    var rel = Path.GetRelativePath(root, value).Replace('\\', '/');
+                    if (rel == ".." || rel.StartsWith("../", StringComparison.Ordinal) || Path.IsPathRooted(rel))
+                    {
+                        // The tools would refuse it: say why and stop here rather than run a failing preview.
+                        AppServices.Provider.GetService<INotificationService>()?.Warning(macro.Title, ThIDE.Resources.Tr.Get("Macro_OutsideProject"));
+                        return null;
+                    }
+                    value = rel;
+                }
+            }
+            else
+            {
+                var prompt = v.Choices is { Count: > 0 } c ? $"{v.Prompt ?? v.Id} ({string.Join(", ", c)})" : v.Prompt ?? v.Id;
+                value = await new InputDialog(macro.Title, prompt, v.Default ?? "").ShowAsync(this);
+            }
+            if (value is null) return null;
+            values[v.Id] = value;
+        }
+        return values;
+    }
+
+    /// <summary>Shows a macro's preview summary and asks whether to apply it.</summary>
+    private async System.Threading.Tasks.Task<bool> ConfirmMacroAsync(Therion.Mcp.Dispatch.MacroDefinition macro, Therion.Mcp.Dispatch.MacroRun preview)
+    {
+        var lines = preview.Steps.Select(s => $"• {s.StepId} ({s.Tool}): {s.Status} — {s.Summary}");
+        var message = string.Format(ThIDE.Resources.Tr.Get("Macro_ApplyQuestion"), string.Join("\n", lines));
+        return await new ConfirmDialog(macro.Title, message, ThIDE.Resources.Tr.Get("Macro_Apply")).ShowAsync(this);
+    }
+
+    // ----- automation panel -----------------------------------------------
+
+    /// <summary>Shows the Automation panel when a run starts, and opens the file:line a row names.</summary>
+    private void AttachAutomationPanel()
+    {
+        if (AppServices.Provider.GetService<AutomationOutputViewModel>() is not { } automation) return;
+        automation.SessionStarted += (_, _) => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            (DataContext as MainWindowViewModel)?.Factory.ShowToolById("Automation"));
+        automation.NavigateRequested += (_, row) =>
+        {
+            if (AppServices.Provider.GetService<IDocumentService>() is not { } docs || row.File is null) return;
+            var root = AppServices.Provider.GetService<IWorkspaceSession>()?.RootPath;
+            var path = Path.IsPathRooted(row.File) ? row.File : Path.Combine(root ?? "", row.File);
+            if (!File.Exists(path)) return;
+            var at = new Therion.Core.SourceLocation(row.Line, 1);
+            _ = docs.NavigateToSpanAsync(new Therion.Core.SourceSpan(path, at, at, 0, 0));
+        };
+    }
+
+    // ----- snippets -------------------------------------------------------
+
+    /// <summary>
+    /// Keeps the editor's snippet catalog on the current project (its config folder holds a
+    /// snippets.json of its own) and reports a broken snippet file once, with the details in the log.
+    /// </summary>
+    private void AttachSnippetCatalog()
+    {
+        var session = AppServices.Provider.GetService<IWorkspaceSession>();
+        var settings = AppServices.Provider.GetService<IAppSettingsService>();
+        var notifications = AppServices.Provider.GetService<INotificationService>();
+        var log = AppServices.Provider.GetService<ILogService>();
+        void Sync() => ThIDE.Editor.TherionSnippets.SetProject(session?.RootPath,
+            settings?.Current.ProjectConfigLocation ?? Therion.Workspace.ProjectConfigLocation.ProjectFolder);
+        Sync();
+        if (session is not null) session.RootChanged += (_, _) => Sync();
+        if (settings is not null) settings.Changed += (_, _) => Sync();
+        ThIDE.Editor.TherionSnippets.LoadErrors += (_, errors) =>
+        {
+            foreach (var e in errors) log?.Warning($"Snippets: {e}");
+            notifications?.Warning(ThIDE.Resources.Tr.Get("Notif_SnippetsInvalid"),
+                string.Join("\n", errors.Take(3).Select(e => e.ToString())));
+        };
+    }
+
+    // ----- link survey file -----------------------------------------------
+
+    /// <summary>
+    /// Opens "Link survey file". With <paramref name="destinationFile"/> (the editor's Generate code
+    /// entry) the lines go into that file, in the survey around <paramref name="caret"/>.
+    /// </summary>
+    private async System.Threading.Tasks.Task ShowLinkSurveyAsync(string? destinationFile, int caret,
+        Func<LinkSurveyViewModel, System.Threading.Tasks.Task>? preset = null)
+    {
+        var docs = AppServices.Provider.GetService<IDocumentService>();
+        var notifications = AppServices.Provider.GetService<INotificationService>();
+        if (docs?.Workspace is not { PerFile.Count: > 0 } ws)
+        {
+            notifications?.Warning(ThIDE.Resources.Tr.Get("LinkSurvey_Title"), ThIDE.Resources.Tr.Get("LinkSurvey_NoWorkspace"));
+            return;
+        }
+
+        // Snapshot the open buffers now (UI thread); the dialog reads files off it.
+        var buffers = new Dictionary<string, string>(OperatingSystem.IsLinux() ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase);
+        foreach (var d in docs.Documents)
+            if (!string.IsNullOrEmpty(d.FilePath) && Path.IsPathRooted(d.FilePath))
+                buffers.TryAdd(Path.GetFullPath(d.FilePath), d.DocumentText);
+
+        if (destinationFile is not null && !destinationFile.EndsWith(".th", StringComparison.OrdinalIgnoreCase)) destinationFile = null;
+        string? current = destinationFile;
+        int currentCaret = caret;
+        if (current is null && docs.Active is { } active && active.FilePath.EndsWith(".th", StringComparison.OrdinalIgnoreCase))
+        {
+            current = active.FilePath;
+            currentCaret = active.CurrentCaret.StartOffset;
+        }
+
+        var env = new LinkSurveyEnvironment(
+            ws,
+            AppServices.Provider.GetService<IWorkspaceSession>()?.RootPath,
+            path =>
+            {
+                var full = Path.GetFullPath(path);
+                if (buffers.TryGetValue(full, out var text)) return text;
+                return File.Exists(full) ? Therion.Syntax.EncodingResolver.ReadAllText(full) : null;
+            },
+            dir => Directory.Exists(dir)
+                ? Directory.EnumerateFiles(dir, "*.th2", SearchOption.AllDirectories).Take(500).ToList()
+                : [],
+            (a, b) => File.ReadAllBytes(a).AsSpan().SequenceEqual(File.ReadAllBytes(b)),
+            AppServices.Provider.GetService<IWorkspaceEditService>(),
+            current,
+            currentCaret,
+            DateOnly.FromDateTime(DateTime.Now));
+
+        var model = new LinkSurveyViewModel(env);
+        var dialog = new LinkSurveyWindow(model);
+        model.Applied += (_, outcome) =>
+            notifications?.Success(ThIDE.Resources.Tr.Get("LinkSurvey_Title"),
+                string.Format(ThIDE.Resources.Tr.Get("LinkSurvey_Done"), Path.GetFileName(model.SourcePath)));
+        // The dialog opens straight away; the survey file is chosen in it (Browse, or typed + Enter).
+        var load = preset is not null ? preset(model) : model.LoadAsync(null, destinationFile);
+        await dialog.ShowDialog(this);
+        await load;
     }
 
     // ----- global search window (#3) -------------------------------------
@@ -1201,6 +1728,10 @@ public partial class MainWindow : Window
             var ext = Path.GetExtension(path);
             if (OpenableExtensions.Contains(ext)) _ = docs.OpenFileAsync(path);
             else if (ImageExtensions.Contains(ext)) ScaffoldScrapForImage(path, docs);
+            // Survex/Compass/GPX: the importers, as from the incoming folder.
+            else if (DataContext is MainWindowViewModel vm
+                     && Therion.Workspace.Incoming.IncomingFiles.Route(path) is Therion.Workspace.Incoming.IncomingRoute.ImportSurvey or Therion.Workspace.Incoming.IncomingRoute.ImportGpx)
+                _ = ImportArrivedAsync(vm, path);
         }
     }
 
@@ -1263,6 +1794,7 @@ public partial class MainWindow : Window
         if (settings is null) return;
 
         var vm = new PreferencesViewModel(settings, keyboard, language, externalTools, associations);
+        if (AppServices.Provider.GetService<IWorkspaceTrustService>() is { } trustStore) vm.AttachTrust(trustStore);
         if (!string.IsNullOrEmpty(section)) vm.SelectSectionById(section!);
         await new PreferencesWindow { DataContext = vm }.ShowDialog(this);
     }

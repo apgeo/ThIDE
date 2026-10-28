@@ -4,6 +4,7 @@ using Therion.Mcp.Mutations;
 using Therion.Processing.Abstractions;
 using Therion.Syntax;
 using Therion.Workspace;
+using Therion.Workspace.Editing;
 
 namespace Therion.Mcp.Tools;
 
@@ -86,32 +87,25 @@ public sealed class MapTools(IWorkspaceHost host, MutationEngine mutations)
             return ToolResult<MutationResult>.Failure(ToolErrorCodes.ReadFailed, ex.Message);
         }
 
-        var parsed = TherionWorkspace.ParseText(file, source.Text);
-        if (parsed.Value is null || FindMap(parsed.Value.Children, mapId) is not { } block)
+        var planned = MapMemberEdits.Plan(file, source.Text, mapId, wanted);
+        if (planned.Problem == MapEditProblem.MapNotFound)
             return ToolResult<MutationResult>.Failure(ToolErrorCodes.StalePlan,
                 $"'{mapId}' is in the loaded model but not in '{Relative(snapshot.Root, file)}' as it "
                 + "reads now. Call load_workspace to pick up the current files, then retry.");
 
         // Inserting "before endmap" is only meaningful if there is an endmap. An unterminated block
         // would put the new members wherever the parser gave up, which is not what anyone asked for.
-        if (!block.IsTerminated)
+        if (planned.Problem == MapEditProblem.Unterminated)
             return ToolResult<MutationResult>.Failure(ToolErrorCodes.InvalidArgument,
                 $"The 'map {mapId}' block has no 'endmap', so there is no body to add to safely. "
                 + "Fix the block first — get_diagnostics points at it.");
 
-        var already = block.Members.Select(m => m.Id).ToHashSet(StringComparer.Ordinal);
-        var toAdd = wanted.Where(m => !already.Contains(m)).Distinct(StringComparer.Ordinal).ToList();
-
         // Everything asked for is already there. Report a clean no-op rather than an error: the
         // caller's intent ("these should be in the map") is satisfied.
-        if (toAdd.Count == 0)
+        if (planned.Edit is not { } insertion)
             return ToolResult<MutationResult>.Success(new MutationResult(dryRun, [], [], 0, 0));
 
-        var (offset, indent) = InsertionPoint(source.Text, block);
-        var newline = source.Text.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
-        var insertion = string.Concat(toAdd.Select(m => newline + indent + m));
-
-        var plan = new MutationPlan([new EditFile(file, [new TextEdit(offset, 0, string.Empty, insertion)])]);
+        var plan = new MutationPlan([new EditFile(file, [insertion])]);
         var expected = expectedSha256 is null
             ? null
             : new Dictionary<string, string> { [Relative(snapshot.Root, file)] = expectedSha256 };
@@ -127,59 +121,6 @@ public sealed class MapTools(IWorkspaceHost host, MutationEngine mutations)
     private static bool Resolves(Therion.Semantics.WorkspaceSemanticModel model, string reference) =>
         model.DescribeReference(reference, ReferenceKind.Map) is not null
         || model.DescribeReference(reference, ReferenceKind.ScrapObject) is not null;
-
-    private static MapCommand? FindMap(System.Collections.Immutable.ImmutableArray<TherionNode> nodes, string id)
-    {
-        foreach (var node in nodes)
-        {
-            if (node is MapCommand m && string.Equals(m.Id, id, StringComparison.Ordinal)) return m;
-            // Maps nest inside survey blocks, so the search cannot stop at the top level.
-            if (node is BlockCommand block && FindMap(block.Children, id) is { } found) return found;
-        }
-        return null;
-    }
-
-    /// <summary>
-    /// Where a new member line goes, and the indentation to give it: at the end of the last member's
-    /// line, or of the map header when the body is empty. Anchoring to a line the parser identified
-    /// avoids searching the text for `endmap`, which could match one inside a comment.
-    /// </summary>
-    private static (int Offset, string Indent) InsertionPoint(string text, MapCommand block)
-    {
-        if (block.Members.Length > 0)
-        {
-            var last = block.Members[^1].Span.StartOffset;
-            return (EndOfLine(text, last), IndentOf(text, last));
-        }
-
-        // Empty body: sit under the header, indented one step in from it.
-        var header = block.Span.StartOffset;
-        return (EndOfLine(text, header), IndentOf(text, header) + "  ");
-    }
-
-    /// <summary>
-    /// The offset just past the last character of the line holding <paramref name="offset"/> —
-    /// before its newline, and before the CR of a CRLF so an insertion cannot land between them.
-    /// </summary>
-    private static int EndOfLine(string text, int offset)
-    {
-        int at = text.IndexOf('\n', Math.Clamp(offset, 0, Math.Max(text.Length - 1, 0)));
-        if (at < 0) return text.Length;
-        return at > 0 && text[at - 1] == '\r' ? at - 1 : at;
-    }
-
-    /// <summary>The leading whitespace of the line holding <paramref name="offset"/>.</summary>
-    private static string IndentOf(string text, int offset)
-    {
-        if (text.Length == 0) return string.Empty;
-
-        int probe = Math.Clamp(offset, 0, text.Length - 1);
-        int start = text.LastIndexOf('\n', probe) + 1;   // -1 (first line) becomes 0
-
-        int i = start;
-        while (i < text.Length && (text[i] == ' ' || text[i] == '\t')) i++;
-        return text[start..i];
-    }
 
     private static string Relative(string root, string path) => WorkspacePaths.ToRelative(root, path);
 }

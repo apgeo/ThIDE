@@ -36,7 +36,11 @@ while (true)
             case "initialize":
                 Respond(id, new
                 {
-                    capabilities = new { textDocumentSync = 1 },   // 1 = full document sync
+                    capabilities = new
+                    {
+                        textDocumentSync = 1,   // 1 = full document sync
+                        completionProvider = new { resolveProvider = false },
+                    },
                     serverInfo = new { name = "therion-lsp", version = "0.1" },
                 });
                 break;
@@ -56,6 +60,14 @@ while (true)
                 if (TryChange(root, out var cu, out var ctext)) { docs[cu] = ctext; Publish(cu, ctext); }
                 break;
 
+            case "textDocument/completion":
+                // A broken snippet file or an unexpected input must not take the server down.
+                object result;
+                try { result = Completion(root); }
+                catch (Exception) { result = Array.Empty<object>(); }
+                Respond(id, result);
+                break;
+
             case "textDocument/didClose":
                 if (TryUri(root, out var clu)) { docs.Remove(clu); PublishEmpty(clu); }
                 break;
@@ -70,6 +82,38 @@ while (true)
 return 0;
 
 // ---- handlers / helpers ----
+
+object Completion(JsonElement root)
+{
+    if (!TryUri(root, out var uri) || !docs.TryGetValue(uri, out var text)
+        || !root.GetProperty("params").TryGetProperty("position", out var pos))
+        return Array.Empty<object>();
+    var items = CompletionProvider.Complete(UriToPath(uri), text, pos.GetProperty("line").GetInt32(),
+        pos.GetProperty("character").GetInt32(), Snippets(), DateTime.Now);
+    return items.Select(i => new
+    {
+        label = i.Label,
+        kind = i.Kind,
+        detail = i.Detail,
+        insertText = i.InsertText,
+        insertTextFormat = i.IsSnippet ? 2 : 1,
+    }).ToArray();
+}
+
+// Built-in snippets plus the user's snippets.json, as the editor loads them (re-read each time:
+// the file is small and editing it should take effect without restarting the server).
+static IReadOnlyList<Therion.Workspace.Templates.SnippetDefinition> Snippets()
+{
+    var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+    if (string.IsNullOrEmpty(appData))
+        appData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config");
+    var file = Path.Combine(appData, "ThIDE", "snippets.json");
+    string? json = null;
+    try { if (File.Exists(file)) json = File.ReadAllText(file); }
+    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+    return Therion.Workspace.Templates.SnippetCatalog.Load(Therion.Workspace.Templates.SnippetCatalog.BuiltIns,
+        new Therion.Workspace.Templates.SnippetLayer("snippets.json", json)).Snippets;
+}
 
 void Respond(JsonElement id, object? result) =>
     WriteMessage(new { jsonrpc = "2.0", id, result });

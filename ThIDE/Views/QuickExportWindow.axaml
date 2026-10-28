@@ -11,6 +11,7 @@
     <DockPanel Margin="16">
         <Border DockPanel.Dock="Bottom" Margin="0,14,0,0">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                <Button AutomationProperties.AutomationId="QuickExport.SaveFragment" Content="{l:Loc QExport_SaveFragment}" Click="OnSaveFragment" />
                 <Button AutomationProperties.AutomationId="QuickExport.Cancel" Content="{l:Loc Common_Cancel}" Click="OnCancel" MinWidth="80" />
                 <Button AutomationProperties.AutomationId="QuickExport.Export" Content="{l:Loc QExport_Export}" Click="OnExport" IsDefault="True" MinWidth="80" />
             </StackPanel>

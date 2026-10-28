@@ -163,6 +163,16 @@ public sealed partial class LivePreviewViewModel : ObservableObject
     [ObservableProperty] private IReadOnlyList<SplaySegment> _fullSplays = Array.Empty<SplaySegment>();
     [ObservableProperty] private IReadOnlyList<LeadMarker> _leadMarkers = Array.Empty<LeadMarker>();
     [ObservableProperty] private IReadOnlyList<EquateMarker> _equateMarkers = Array.Empty<EquateMarker>();
+    /// <summary>Legs from this file are drawn emphasised (a survey being linked in); null for none.</summary>
+    [ObservableProperty] private string? _emphasizedFile;
+    /// <summary>Points ringed in the sketch: the stations a picker has chosen.</summary>
+    [ObservableProperty] private IReadOnlyList<StationPoint> _highlightedStations = Array.Empty<StationPoint>();
+
+    // Standalone mode (a preview inside a dialog): the models to draw and the equates still to be
+    // written, instead of the workspace scoped to the active thconfig.
+    private IReadOnlyList<SemanticModel>? _externalModels;
+    private IReadOnlyList<(QualifiedName A, QualifiedName B)> _virtualEquates = Array.Empty<(QualifiedName, QualifiedName)>();
+    private IReadOnlyList<QualifiedName> _highlightRequest = Array.Empty<QualifiedName>();
     /// <summary>Structural-plane traces overlaid on the sketch (pushed by the Structural panel).</summary>
     [ObservableProperty] private IReadOnlyList<PlaneOverlayLine> _planeLines = Array.Empty<PlaneOverlayLine>();
     [ObservableProperty] private string _status = "No centreline yet.";
@@ -260,6 +270,51 @@ public sealed partial class LivePreviewViewModel : ObservableObject
     private bool _suppressApply;
 
     public LivePreviewViewModel() { } // design-time
+
+    /// <summary>
+    /// A preview with no workspace behind it: it draws only what <see cref="SetModels"/> gives it and
+    /// navigates nowhere. For previews hosted in dialogs.
+    /// </summary>
+    public static LivePreviewViewModel CreateStandalone() => new();
+
+    /// <summary>
+    /// Draws these models (standalone mode). <paramref name="virtualEquates"/> are merged as if
+    /// written — a link being prepared — and <paramref name="emphasizedFile"/>'s legs are emphasised.
+    /// Names are the models' own (file-local) station names.
+    /// </summary>
+    public void SetModels(
+        IReadOnlyList<SemanticModel> models,
+        IReadOnlyList<(QualifiedName A, QualifiedName B)>? virtualEquates = null,
+        string? emphasizedFile = null)
+    {
+        _externalModels = models;
+        _virtualEquates = virtualEquates ?? Array.Empty<(QualifiedName, QualifiedName)>();
+        EmphasizedFile = emphasizedFile;
+        Rebuild();
+    }
+
+    /// <summary>Rings these stations (model names) in the sketch; kept across rebuilds.</summary>
+    public void SetHighlightedStations(IReadOnlyList<QualifiedName> stations)
+    {
+        _highlightRequest = stations;
+        RefreshHighlights();
+    }
+
+    private void RefreshHighlights()
+    {
+        if (_highlightRequest.Count == 0 || _planeEquates is null) { HighlightedStations = Array.Empty<StationPoint>(); return; }
+        var points = new List<StationPoint>();
+        foreach (var qn in _highlightRequest)
+            if (_planePositions.TryGetValue(_planeEquates.Find(qn).ToString(), out var p))
+                points.Add(new StationPoint(p.X, p.Y, qn.ToString(), StationPointKind.Station, default, qn.ToString(), SurveyOf(qn), string.Empty, 0));
+        HighlightedStations = points;
+    }
+
+    /// <summary>Raised when a station point is clicked in the sketch (a picker selects it).</summary>
+    public event EventHandler<StationPoint>? StationActivated;
+
+    /// <summary>Called by the view when a station point is clicked.</summary>
+    public void ActivateStation(StationPoint point) => StationActivated?.Invoke(this, point);
     public LivePreviewViewModel(IDocumentService documents, IWorkspaceSession? session = null)
     {
         _documents = documents;
@@ -404,6 +459,12 @@ public sealed partial class LivePreviewViewModel : ObservableObject
 
     private void Rebuild()
     {
+        try { RebuildScene(); }
+        finally { RefreshHighlights(); }
+    }
+
+    private void RebuildScene()
+    {
         var (shots, models) = Gather();
         _surveyByName = BuildSurveyLookup(models);
         if (shots.Count == 0)
@@ -432,6 +493,7 @@ public sealed partial class LivePreviewViewModel : ObservableObject
 
         // Merge equated stations (within- AND cross-file) so connected surveys lay out in continuation.
         var equates = BuildEquateGraph(models);
+        foreach (var (a, b) in _virtualEquates) equates.Union(a, b);
         string Rep(QualifiedName qn) => equates.Find(qn).ToString();
 
         var layout = ComputeLayout(shots, equates);
@@ -829,8 +891,8 @@ public sealed partial class LivePreviewViewModel : ObservableObject
     /// <summary>The centreline shots + their per-file models, scoped to the active thconfig.</summary>
     private (List<ShotSymbol> Shots, List<SemanticModel> Models) Gather()
     {
-        var models = ScopedModels();
-        if (models.Count == 0 && _documents?.CurrentSemantics is { } m) models = new List<SemanticModel> { m };
+        var models = _externalModels is { } external ? external.ToList() : ScopedModels();
+        if (models.Count == 0 && _externalModels is null && _documents?.CurrentSemantics is { } m) models = new List<SemanticModel> { m };
         var shots = new List<ShotSymbol>();
         foreach (var model in models) shots.AddRange(model.Shots);
         return (shots, models);

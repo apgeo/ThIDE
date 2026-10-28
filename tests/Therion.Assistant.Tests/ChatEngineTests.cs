@@ -321,6 +321,79 @@ public sealed class ChatEngineTests
     }
 
     [Fact]
+    public async Task PreviewCall_SkipsTheApprovalHook_TheRealCallDoesNot()
+    {
+        var handler = new ScriptedHandler(
+            ToolCallTurn(("c1", "edit_file", """{"path":"a.th","dryRun":true}""")),
+            ToolCallTurn(("c2", "edit_file", """{"path":"a.th","dryRun":false}""")),
+            FinalAnswer("done"));
+        var catalog = Catalog(previewingTool("edit_file"));
+        var asked = new List<ToolCallInfo>();
+        var callbacks = new ChatCallbacks
+        {
+            ApproveAsync = (info, _) => { asked.Add(info); return Task.FromResult(true); },
+        };
+
+        await Engine(handler).RunAsync(new ChatSession("s"), "edit", catalog, callbacks);
+
+        Assert.Equal(2, catalog.Received.Count);
+        Assert.Single(asked);
+    }
+
+    [Fact]
+    public async Task DryRunOnAToolWithoutOne_IsStillAsked()
+    {
+        var handler = new ScriptedHandler(
+            ToolCallTurn(("c1", "format_file", """{"write":true,"dryRun":true}""")),
+            FinalAnswer("done"));
+        var catalog = Catalog(writingTool("format_file", _ => new ToolOutcome("ok", true)));
+        int asked = 0;
+        var callbacks = new ChatCallbacks { ApproveAsync = (_, _) => { asked++; return Task.FromResult(false); } };
+
+        await Engine(handler).RunAsync(new ChatSession("s"), "format", catalog, callbacks);
+
+        Assert.Equal(1, asked);
+        Assert.Empty(catalog.Received);
+    }
+
+    [Fact]
+    public async Task ResultFilter_ChangesWhatTheModelSees_NotTheCard()
+    {
+        var handler = new ScriptedHandler(
+            ToolCallTurn(("c1", "read_file", "{}")),
+            FinalAnswer("ok"));
+        var catalog = Catalog(readOnlyTool("read_file", _ => new ToolOutcome("secret", true)));
+        var shown = new List<string>();
+        var engine = new ChatEngine(new HttpClient(handler),
+            new ChatEngineOptions("http://127.0.0.1:9/v1", "test-model") { ResultFilter = _ => "hidden" });
+
+        await engine.RunAsync(new ChatSession("s"), "read", catalog,
+            new ChatCallbacks { OnUpdate = u => { if (u is ToolCallFinished f) shown.Add(f.Content); } });
+
+        Assert.Equal(["secret"], shown);
+        var toolMsg = handler.Requests[1]["messages"]!.AsArray()[^1]!;
+        Assert.Equal("hidden", (string?)toolMsg["content"]);
+    }
+
+    [Fact]
+    public async Task PreviewCall_IsAskedWhenTheOptionSaysSo()
+    {
+        var handler = new ScriptedHandler(
+            ToolCallTurn(("c1", "edit_file", """{"dryRun":true}""")),
+            FinalAnswer("done"));
+        var catalog = Catalog(previewingTool("edit_file"));
+        int asked = 0;
+        var callbacks = new ChatCallbacks { ApproveAsync = (_, _) => { asked++; return Task.FromResult(false); } };
+        var engine = new ChatEngine(new HttpClient(handler),
+            new ChatEngineOptions("http://127.0.0.1:9/v1", "test-model") { AskForPreviews = true });
+
+        await engine.RunAsync(new ChatSession("s"), "edit", catalog, callbacks);
+
+        Assert.Equal(1, asked);
+        Assert.Empty(catalog.Received);
+    }
+
+    [Fact]
     public async Task Updates_FireInOrder()
     {
         var handler = new ScriptedHandler(
@@ -425,6 +498,11 @@ public sealed class ChatEngineTests
 
     private static FakeTool readOnlyTool(string name, Func<IReadOnlyDictionary<string, object?>, ToolOutcome> run) =>
         new(new ToolDescriptor(name, "a test tool", """{"type":"object"}""", ReadOnly: true), run);
+
+    private static FakeTool previewingTool(string name) =>
+        new(new ToolDescriptor(name, "a previewing test tool",
+            """{"type":"object","properties":{"dryRun":{"type":"boolean"}}}""", ReadOnly: false),
+            _ => new ToolOutcome("ok", true));
 
     private static FakeTool writingTool(string name, Func<IReadOnlyDictionary<string, object?>, ToolOutcome> run) =>
         new(new ToolDescriptor(name, "a writing test tool", """{"type":"object"}""", ReadOnly: false), run);

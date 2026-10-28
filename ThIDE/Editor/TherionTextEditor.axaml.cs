@@ -11,6 +11,7 @@ using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
@@ -878,9 +879,9 @@ public partial class TherionTextEditor : UserControl
         while (start > 0 && IsWordChar(text[start - 1])) start--;
         if (start == caret) return false;
         var word = text.Substring(start, caret - start);
-        if (TherionSnippets.Find(word) is not { } snippet) return false;
+        if (TherionSnippets.Find(word, CurrentFilePath) is not { } snippet) return false;
 
-        TherionSnippets.Insert(_editor.TextArea, start, caret - start, snippet);
+        TherionSnippets.Insert(_editor.TextArea, start, caret - start, snippet, CurrentFilePath);
         return true;
     }
 
@@ -1091,7 +1092,7 @@ public partial class TherionTextEditor : UserControl
             EndOffset = caret,
         };
         foreach (var c in matches)
-            window.CompletionList.CompletionData.Add(new TherionCompletionData(c, rich));
+            window.CompletionList.CompletionData.Add(new TherionCompletionData(c, rich, CurrentFilePath));
         window.Closed += (_, _) => _completionWindow = null;
         _completionWindow = window;
         HideSignatureHelp(); // don't overlap the completion popup
@@ -1143,9 +1144,9 @@ public partial class TherionTextEditor : UserControl
             .Select(k => new CompletionCandidate(k, CompletionKind.Command, Description: CommandDocs.GetValueOrDefault(k)))
             .ToList();
         if (EditorFeatureFlags.IsEnabled(EditorFeature.Snippets, CurrentSettings))
-            foreach (var s in TherionSnippets.All)
+            foreach (var s in TherionSnippets.For(CurrentFilePath))
                 list.Add(new CompletionCandidate(s.Trigger, CompletionKind.Snippet, Insert: s.Trigger,
-                    Description: $"Snippet: {s.Description}", IsSnippet: true));
+                    Description: string.Format(L("Ed_SnippetDescription"), TherionSnippets.DescriptionOf(s)), IsSnippet: true));
         return list;
     }
 
@@ -2187,6 +2188,32 @@ public partial class TherionTextEditor : UserControl
         _editor.Focus();
     }
 
+    /// <summary>True once the inner editor and its document exist.</summary>
+    public bool HasDocument => _editor?.Document is not null;
+
+    /// <summary>
+    /// Applies planned edits as one undo step. Refuses (returns false, changing nothing) when any edit
+    /// no longer slices to its expected text — the buffer moved since the edits were planned.
+    /// </summary>
+    public bool ApplyTextEdits(IReadOnlyList<Therion.Workspace.Editing.TextEdit> edits)
+    {
+        if (_editor?.Document is not { } doc) return false;
+        foreach (var e in edits)
+            if (e.Start < 0 || e.End > doc.TextLength || doc.GetText(e.Start, e.Length) != e.ExpectedText)
+                return false;
+
+        // Back to front so earlier offsets stay valid; same-offset insertions in reverse so they end
+        // up in the order given.
+        var ordered = edits.Select((e, i) => (e, i)).OrderByDescending(x => x.e.Start).ThenByDescending(x => x.i);
+        doc.BeginUpdate();
+        try
+        {
+            foreach (var (e, _) in ordered) doc.Replace(e.Start, e.Length, e.NewText);
+        }
+        finally { doc.EndUpdate(); }
+        return true;
+    }
+
     /// <summary>Replaces the current selection with a snippet (native undo). No-op when nothing is
     /// selected — the caller checked, but this stays safe if the selection cleared meanwhile. CAP-03.</summary>
     public void ReplaceSelectionWithSnippet(string text)
@@ -2285,9 +2312,36 @@ public partial class TherionTextEditor : UserControl
 
     // ----- right-click: move caret to the click before showing the menu -------
 
+    private MenuItem? _snippetMenuItem;
+
+    private void RefreshSnippetMenu()
+    {
+        if (_snippetMenuItem is null) return;
+        _snippetMenuItem.Items.Clear();
+        bool enabled = EditorFeatureFlags.IsEnabled(EditorFeature.Snippets, CurrentSettings);
+        foreach (var snippet in TherionSnippets.For(CurrentFilePath))
+        {
+            var chosen = snippet;
+            var item = MakeItem($"{snippet.Trigger} — {TherionSnippets.DescriptionOf(snippet)}", () => InsertSnippetAtCaretFromMenu(chosen),
+                "Editor.Ctx.GenerateCode.Snippets." + snippet.Trigger);
+            _snippetMenuItem.Items.Add(item);
+        }
+        _snippetMenuItem.IsVisible = enabled && _snippetMenuItem.Items.Count > 0;
+    }
+
+    /// <summary>Inserts a snippet at the caret (replacing the selection), as Tab-expansion would.</summary>
+    private void InsertSnippetAtCaretFromMenu(Therion.Workspace.Templates.SnippetDefinition snippet)
+    {
+        if (_editor is null) return;
+        int start = _editor.SelectionLength > 0 ? _editor.SelectionStart : _editor.CaretOffset;
+        TherionSnippets.Insert(_editor.TextArea, start, _editor.SelectionLength, snippet, CurrentFilePath);
+        _editor.Focus();
+    }
+
     private void OnEditorContextRequested(object? sender, ContextRequestedEventArgs e)
     {
         if (_editor is null) return;
+        RefreshSnippetMenu();
         // refresh the gated items' visibility for the current settings.
         var fs = CurrentSettings;
         if (_matchMenuItem is not null)
@@ -2844,8 +2898,11 @@ public partial class TherionTextEditor : UserControl
             _rich = false;
         }
 
-        public TherionCompletionData(CompletionCandidate c, bool rich)
+        private readonly string? _filePath;
+
+        public TherionCompletionData(CompletionCandidate c, bool rich, string? filePath = null)
         {
+            _filePath = filePath;
             Text = c.Text;
             _insert = c.Insert ?? c.Text;
             _kind = c.Kind;
@@ -2862,8 +2919,8 @@ public partial class TherionTextEditor : UserControl
 
         public void Complete(TextArea textArea, ISegment completionSegment, EventArgs insertionRequestEventArgs)
         {
-            if (_isSnippet && TherionSnippets.Find(Text) is { } snippet)
-                TherionSnippets.Insert(textArea, completionSegment.Offset, completionSegment.Length, snippet);
+            if (_isSnippet && TherionSnippets.Find(Text, _filePath) is { } snippet)
+                TherionSnippets.Insert(textArea, completionSegment.Offset, completionSegment.Length, snippet, _filePath);
             else
                 textArea.Document.Replace(completionSegment, _insert);
         }
@@ -2880,17 +2937,17 @@ public partial class TherionTextEditor : UserControl
             _                        => "·",
         };
 
-        private static string KindLabel(CompletionKind kind) => kind switch
+        private static string KindLabel(CompletionKind kind) => L(kind switch
         {
-            CompletionKind.Command   => "Command",
-            CompletionKind.Flag      => "Flag value",
-            CompletionKind.DataStyle => "Data style",
-            CompletionKind.DataField => "Data reading",
-            CompletionKind.Type      => "Symbol type",
-            CompletionKind.Station   => "Station",
-            CompletionKind.Snippet   => "Snippet",
-            _                        => "Identifier",
-        };
+            CompletionKind.Command   => "Ed_KindCommand",
+            CompletionKind.Flag      => "Ed_KindFlag",
+            CompletionKind.DataStyle => "Ed_KindDataStyle",
+            CompletionKind.DataField => "Ed_KindDataField",
+            CompletionKind.Type      => "Ed_KindType",
+            CompletionKind.Station   => "Ed_KindStation",
+            CompletionKind.Snippet   => "Ed_KindSnippet",
+            _                        => "Ed_KindIdentifier",
+        });
     }
 
     /// <summary>
@@ -3176,9 +3233,17 @@ public partial class TherionTextEditor : UserControl
         menu.Items.Add(MakeItem(L("Ed_MoveLinesDown"),    MoveLinesDown));
         menu.Items.Add(MakeItem(L("Ed_SortLines"),        SortSelectedLines));
         menu.Items.Add(new Separator());
-        // insert helpers.
-        menu.Items.Add(MakeItem(L("Ed_InsertDate"),       InsertDate));
-        menu.Items.Add(MakeItem(L("Ed_InsertTeamMember"), InsertTeamMember));
+        // Generate code: lines ThIDE writes for you (inserts, and the survey-linking dialog).
+        var generate = new MenuItem { Header = L("Ctx_GenerateCode") };
+        AutomationProperties.SetAutomationId(generate, "Editor.Ctx.GenerateCode");
+        generate.Items.Add(MakeItem(L("Menu_Tools_LinkSurvey"), RequestLinkSurvey, "Editor.Ctx.GenerateCode.LinkSurvey"));
+        // Filled with the snippets that apply to this file each time the menu opens.
+        _snippetMenuItem = new MenuItem { Header = L("Ed_InsertSnippet") };
+        AutomationProperties.SetAutomationId(_snippetMenuItem, "Editor.Ctx.GenerateCode.Snippets");
+        generate.Items.Add(_snippetMenuItem);
+        generate.Items.Add(MakeItem(L("Ed_InsertDate"),       InsertDate, "Editor.Ctx.GenerateCode.InsertDate"));
+        generate.Items.Add(MakeItem(L("Ed_InsertTeamMember"), InsertTeamMember, "Editor.Ctx.GenerateCode.InsertTeamMember"));
+        menu.Items.Add(generate);
         menu.Items.Add(new Separator());
         menu.Items.Add(MakeItem(L("Ed_RenameSymbol"),     StartRename));
         menu.Items.Add(MakeItem(L("Ed_FindAllRefs"),      StartFindAllReferences));
@@ -3570,11 +3635,25 @@ public partial class TherionTextEditor : UserControl
     // Localized string lookup (Strings.resx / .ro.resx) for code-built menus & dialogs.
     private static string L(string key) => ThIDE.Resources.Tr.Get(key);
 
-    private static MenuItem MakeItem(string header, Action onClick)
+    private static MenuItem MakeItem(string header, Action onClick, string? automationId = null)
     {
         var item = new MenuItem { Header = header };
+        if (automationId is not null) AutomationProperties.SetAutomationId(item, automationId);
         item.Click += (_, _) => onClick();
         return item;
+    }
+
+    /// <summary>
+    /// Raised by Generate code ▸ Link survey file with this editor's file and caret: the shell opens
+    /// the link dialog with the lines going into this file, in the survey at the caret.
+    /// </summary>
+    public static event EventHandler<(string FilePath, int Caret)>? LinkSurveyRequested;
+
+    private void RequestLinkSurvey()
+    {
+        // Only a survey file can receive input/equate lines (not a sketch or a thconfig).
+        if (CurrentFilePath is { Length: > 0 } path && path.EndsWith(".th", StringComparison.OrdinalIgnoreCase))
+            LinkSurveyRequested?.Invoke(this, (path, _editor?.CaretOffset ?? 0));
     }
 
     // Access clipboard via the same ApplicationLifetime path used elsewhere in the project.

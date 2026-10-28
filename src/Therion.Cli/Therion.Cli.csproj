@@ -13,6 +13,7 @@
     <ProjectReference Include="..\Therion.Structural\Therion.Structural.csproj" />
     <ProjectReference Include="..\Therion.Workspace\Therion.Workspace.csproj" />
     <ProjectReference Include="..\Therion.Blender\Therion.Blender.csproj" />
+    <ProjectReference Include="..\Therion.Build\Therion.Build.csproj" />
   </ItemGroup>
 
 </Project>

@@ -102,6 +102,8 @@ public interface IDocumentService
     Task WriteCurrentTextAsync(string newText, CancellationToken ct = default);
     /// <summary>persists a specific document's current text to disk (auto-save).</summary>
     Task SaveDocumentAsync(FileDocumentViewModel document, CancellationToken ct = default);
+    /// <summary>Raised after a document was written to disk by Save, Save All or auto-save (the argument is its path).</summary>
+    event EventHandler<string>? DocumentSaved;
     void Close();
 
     // ---- navigation history (back/forward across files, VSCode-style) ----
@@ -609,10 +611,14 @@ public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, 
             // Mark the path so the watcher doesn't treat our own save as an external edit (#6).
             _session.SuppressSelfWrite(doc.FilePath);
             await File.WriteAllTextAsync(doc.FilePath, newText, ct).ConfigureAwait(true);
-            _hooks?.Run(ScriptHookEvent.Save, doc.FilePath);
+            doc.SetText(newText, reparse: true);
+            DocumentSaved?.Invoke(this, doc.FilePath);
+            return;
         }
         doc.SetText(newText, reparse: true);
     }
+
+    public event EventHandler<string>? DocumentSaved;
 
     public async Task SaveDocumentAsync(FileDocumentViewModel document, CancellationToken ct = default)
     {
@@ -622,6 +628,7 @@ public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, 
         _session.SuppressSelfWrite(document.FilePath);
         await File.WriteAllTextAsync(document.FilePath, newText, ct).ConfigureAwait(true);
         document.SetText(newText, reparse: true);
+        DocumentSaved?.Invoke(this, document.FilePath);
     }
 
     private FileDocumentViewModel CreateDocument(string path, string text)

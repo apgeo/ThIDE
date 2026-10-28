@@ -169,6 +169,8 @@ internal static class AppServices
 
         // Active-document host (�7.3).
         services.AddSingleton<IDocumentService, DocumentService>();
+        services.AddSingleton<IWorkspaceEditService, WorkspaceEditService>();
+        services.AddSingleton<IWorkspaceTrustService>(_ => new WorkspaceTrustService(ask: TrustPrompt.AskAsync));
         // Same instance, narrow view: the in-app MCP host reads unsaved buffers through this (T-03.2).
         services.AddSingleton<IUnsavedBufferProvider>(sp => (IUnsavedBufferProvider)sp.GetRequiredService<IDocumentService>());
         // Same instance, narrow view: the assistant pane drops code snippets into the active editor (CAP-03).
@@ -203,6 +205,10 @@ internal static class AppServices
         services.AddSingleton<IWorkspaceSymbolIndexStore, WorkspaceSymbolIndexStore>(); // persistent symbol index
         services.AddSingleton<ITelemetryService, LocalTelemetryService>();    // opt-in local telemetry/crash reports
         services.AddSingleton<IScriptHookService, ScriptHookService>();       // scripting/macro hooks
+        services.AddSingleton<ITaskRunnerService, TaskRunnerService>();
+        services.AddSingleton<IIncomingFolderService, IncomingFolderService>();
+        services.AddSingleton<IMacroService>(sp => new MacroService(sp, sp.GetRequiredService<IWorkspaceSession>(), sp.GetRequiredService<IAppSettingsService>(),
+            sp.GetRequiredService<IWorkspaceTrustService>(), sp.GetRequiredService<ViewModels.IAutomationOutput>(), sp.GetService<ITaskRunnerService>(), sp.GetService<INotificationService>()));
         // MCP in-app host (T-03.1): the ring-R3 UI seam + the loopback server. Both are cheap to
         // construct; the Kestrel listener only spins up when EnableMcpServer is on (ApplySettingAsync).
         services.AddSingleton<Therion.Mcp.IUiBridge, UiBridge>();
@@ -258,6 +264,9 @@ internal static class AppServices
         services.AddSingleton<ViewModels.Docking.OutlineToolViewModel>();
         services.AddSingleton<ViewModels.Docking.ProjectToolViewModel>();
         services.AddSingleton<ViewModels.Docking.LogToolViewModel>();       // #3
+        services.AddSingleton<ViewModels.AutomationOutputViewModel>();
+        services.AddSingleton<ViewModels.IAutomationOutput>(sp => sp.GetRequiredService<ViewModels.AutomationOutputViewModel>());
+        services.AddSingleton<ViewModels.Docking.AutomationToolViewModel>();
         services.AddSingleton<ViewModels.Docking.LivePreviewToolViewModel>();
         services.AddSingleton<ViewModels.Docking.MapViewerToolViewModel>();
         services.AddSingleton<ViewModels.Docking.Model3DViewerToolViewModel>();

@@ -910,7 +910,6 @@
   <data name="Ed_InsertDate" xml:space="preserve"><value>Inserează data de azi</value></data>
   <data name="Ed_InsertTeamMember" xml:space="preserve"><value>Inserează membru echipă</value></data>
   <data name="Ed_RenameSymbol" xml:space="preserve"><value>Redenumește simbolul…  F2</value></data>
-  <data name="Ed_FindAllRefs" xml:space="preserve"><value>Găsește toate referințele</value></data>
   <data name="Refs_Title" xml:space="preserve"><value>Toate referințele</value></data>
   <data name="Refs_Header" xml:space="preserve"><value>„{0}” — {1} apariții în {2} fișier(e)</value></data>
   <data name="Refs_None" xml:space="preserve"><value>Nu s-au găsit referințe la „{0}” în spațiul de lucru.</value></data>
@@ -1333,4 +1332,268 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Pref_ContextModeNone" xml:space="preserve"><value>Niciunul (doar unelte)</value></data>
   <data name="Pref_ContextModeCard" xml:space="preserve"><value>Fișă (rezumat compact)</value></data>
   <data name="Pref_ContextModePack" xml:space="preserve"><value>Pachet (rezumat bogat)</value></data>
+  <data name="Picker_Filter" xml:space="preserve"><value>Filtrează…</value></data>
+  <data name="Picker_ShowList" xml:space="preserve"><value>Afișează sau ascunde lista</value></data>
+  <data name="Picker_SelectedFormat" xml:space="preserve"><value>Selectat: {0}</value></data>
+  <data name="Picker_NoneSelected" xml:space="preserve"><value>Nimic selectat</value></data>
+  <data name="Picker_Preview" xml:space="preserve"><value>Previzualizare</value></data>
+  <data name="Picker_OpenPreview" xml:space="preserve"><value>Deschide într-o fereastră…</value></data>
+  <data name="LinkSurvey_Title" xml:space="preserve"><value>Leagă un fișier de topografie</value></data>
+  <data name="LinkSurvey_Intro" xml:space="preserve"><value>Alege o stație din fișierul de topografie și stația din proiect din care continuă. ThIDE scrie liniile input și equate acolo unde există deja linii asemănătoare.</value></data>
+  <data name="LinkSurvey_SourceFile" xml:space="preserve"><value>Fișier de topografie</value></data>
+  <data name="LinkSurvey_Browse" xml:space="preserve"><value>Răsfoiește…</value></data>
+  <data name="LinkSurvey_PickSource" xml:space="preserve"><value>Alege fișierul de topografie de legat</value></data>
+  <data name="LinkSurvey_PickTarget" xml:space="preserve"><value>Alege dosarul în care se copiază topografia</value></data>
+  <data name="LinkSurvey_SourceStatus" xml:space="preserve"><value>{0} stații, {1} vize, {2} erori de analiză</value></data>
+  <data name="LinkSurvey_SourceUnreadable" xml:space="preserve"><value>Fișierul nu poate fi citit: {0}</value></data>
+  <data name="LinkSurvey_SourceStation" xml:space="preserve"><value>Stația din topografia nouă</value></data>
+  <data name="LinkSurvey_WorkspaceStation" xml:space="preserve"><value>Stația din proiect</value></data>
+  <data name="LinkSurvey_Survey" xml:space="preserve"><value>Topografie</value></data>
+  <data name="LinkSurvey_Station" xml:space="preserve"><value>Stație</value></data>
+  <data name="LinkSurvey_FullPreview" xml:space="preserve"><value>Arată în previzualizarea completă…</value></data>
+  <data name="LinkSurvey_FullPreviewTitle" xml:space="preserve"><value>Previzualizare — topografia care se leagă</value></data>
+  <data name="LinkSurvey_Generated" xml:space="preserve"><value>Linii generate</value></data>
+  <data name="LinkSurvey_Destination" xml:space="preserve"><value>Inserează în</value></data>
+  <data name="LinkSurvey_UseCurrentFile" xml:space="preserve"><value>Inserează în fișierul curent</value></data>
+  <data name="LinkSurvey_CopyTo" xml:space="preserve"><value>Copiază în</value></data>
+  <data name="LinkSurvey_CopySource" xml:space="preserve"><value>Copiază fișierul de topografie în proiect</value></data>
+  <data name="LinkSurvey_Sketches" xml:space="preserve"><value>Schițe</value></data>
+  <data name="LinkSurvey_AddComment" xml:space="preserve"><value>Adaugă un comentariu cu data și fișierul sursă</value></data>
+  <data name="LinkSurvey_CommentFormat" xml:space="preserve"><value>Adăugat pe {0} din fișierul sursă {1}</value></data>
+  <data name="LinkSurvey_Copy" xml:space="preserve"><value>Copiază în clipboard</value></data>
+  <data name="LinkSurvey_Insert" xml:space="preserve"><value>Inserează</value></data>
+  <data name="LinkSurvey_RootScope" xml:space="preserve"><value>rădăcina fișierului</value></data>
+  <data name="LinkSurvey_ReasonBlockWithEquates" xml:space="preserve"><value>aici sunt deja equate-uri</value></data>
+  <data name="LinkSurvey_ReasonEquateFile" xml:space="preserve"><value>fișier de equate-uri</value></data>
+  <data name="LinkSurvey_ReasonBlock" xml:space="preserve"><value>blocul topografiei</value></data>
+  <data name="LinkSurvey_ReasonCaret" xml:space="preserve"><value>la cursor</value></data>
+  <data name="LinkSurvey_WarnScopeNotAncestor" xml:space="preserve"><value>O stație este în afara topografiei alese, deci nu poate fi numită de acolo. Alege o destinație mai sus.</value></data>
+  <data name="LinkSurvey_WarnUnterminatedBlock" xml:space="preserve"><value>Blocul topografiei {0} nu are linie de sfârșit; corectează-l întâi.</value></data>
+  <data name="LinkSurvey_WarnScopeNotFound" xml:space="preserve"><value>Topografia {0} nu a fost găsită în fișierul destinație.</value></data>
+  <data name="LinkSurvey_WarnInputExists" xml:space="preserve"><value>Fișierul este deja inclus din {0}.</value></data>
+  <data name="LinkSurvey_WarnEquateExists" xml:space="preserve"><value>Un equate cu aceste stații există deja în {0}.</value></data>
+  <data name="LinkSurvey_WarnTargetExists" xml:space="preserve"><value>{0} există deja cu alt conținut. Alege alt dosar.</value></data>
+  <data name="LinkSurvey_WarnSketchExists" xml:space="preserve"><value>{0} există deja cu alt conținut; schița nu se copiază.</value></data>
+  <data name="LinkSurvey_WarnSketchNotCopied" xml:space="preserve"><value>Topografia include {0}, care nu se copiază; includerea nu se va rezolva.</value></data>
+  <data name="LinkSurvey_WarnNothingToLink" xml:space="preserve"><value>Alege câte o stație pe fiecare parte.</value></data>
+  <data name="LinkSurvey_NoWorkspace" xml:space="preserve"><value>Deschide întâi un proiect: topografia se leagă în proiectul activ.</value></data>
+  <data name="LinkSurvey_Done" xml:space="preserve"><value>S-a legat {0}</value></data>
+  <data name="Menu_Tools_LinkSurvey" xml:space="preserve"><value>Leagă un fișier de topografie…</value></data>
+  <data name="Ctx_GenerateCode" xml:space="preserve"><value>Generează cod</value></data>
+  <data name="Edit_ProblemStale" xml:space="preserve"><value>{0} s-a schimbat de când au fost pregătite liniile; încearcă din nou.</value></data>
+  <data name="Edit_ProblemMissing" xml:space="preserve"><value>{0} nu există.</value></data>
+  <data name="Edit_ProblemExists" xml:space="preserve"><value>{0} există deja.</value></data>
+  <data name="Edit_ProblemDuplicate" xml:space="preserve"><value>{0} este scris de două ori.</value></data>
+  <data name="Edit_ProblemNotAFile" xml:space="preserve"><value>{0} nu este un fișier.</value></data>
+  <data name="Edit_ProblemUnreadable" xml:space="preserve"><value>{0} nu poate fi citit.</value></data>
+  <data name="Edit_ProblemUnencodable" xml:space="preserve"><value>{0} declară o codificare care nu poate reține textul nou.</value></data>
+  <data name="Edit_ProblemUnsavedChanges" xml:space="preserve"><value>{0} are modificări nesalvate; salvează-l întâi.</value></data>
+  <data name="Edit_ProblemOpenBufferDiffers" xml:space="preserve"><value>{0} este deschis și diferă de fișierul de pe disc; salvează-l sau reîncarcă-l întâi.</value></data>
+  <data name="LinkSurvey_Load" xml:space="preserve"><value>Încarcă</value></data>
+  <data name="LinkSurvey_SourceHint" xml:space="preserve"><value>Calea fișierului .th de legat (Răsfoiește, sau scrie-o și apasă Enter)</value></data>
+  <data name="Snippet_survb" xml:space="preserve"><value>bloc survey … endsurvey</value></data>
+  <data name="Snippet_clt" xml:space="preserve"><value>centreline cu dată, echipă și date</value></data>
+  <data name="Snippet_datan" xml:space="preserve"><value>ordinea citirilor data normal</value></data>
+  <data name="Snippet_leg" xml:space="preserve"><value>următoarea viză de la ultima stație</value></data>
+  <data name="Snippet_eq" xml:space="preserve"><value>equate între două stații</value></data>
+  <data name="Snippet_inp" xml:space="preserve"><value>include alt fișier (input)</value></data>
+  <data name="Snippet_scrapb" xml:space="preserve"><value>bloc scrap … endscrap</value></data>
+  <data name="Snippet_mapb" xml:space="preserve"><value>bloc map … endmap</value></data>
+  <data name="Snippet_thconf" xml:space="preserve"><value>schelet de thconfig</value></data>
+  <data name="Ed_SnippetDescription" xml:space="preserve"><value>Fragment: {0}</value></data>
+  <data name="Notif_SnippetsInvalid" xml:space="preserve"><value>Unele fragmente nu au putut fi citite</value></data>
+  <data name="Ed_KindCommand" xml:space="preserve"><value>Comandă</value></data>
+  <data name="Ed_KindFlag" xml:space="preserve"><value>Valoare de opțiune</value></data>
+  <data name="Ed_KindDataStyle" xml:space="preserve"><value>Stil de date</value></data>
+  <data name="Ed_KindDataField" xml:space="preserve"><value>Citire de date</value></data>
+  <data name="Ed_KindType" xml:space="preserve"><value>Tip de simbol</value></data>
+  <data name="Ed_KindStation" xml:space="preserve"><value>Stație</value></data>
+  <data name="Ed_KindSnippet" xml:space="preserve"><value>Fragment</value></data>
+  <data name="Ed_KindIdentifier" xml:space="preserve"><value>Identificator</value></data>
+  <data name="Ed_InsertSnippet" xml:space="preserve"><value>Inserează fragment</value></data>
+  <data name="Menu_File_NewFile" xml:space="preserve"><value>Fișier nou…</value></data>
+  <data name="NewFile_Title" xml:space="preserve"><value>Fișier nou</value></data>
+  <data name="NewFile_Template" xml:space="preserve"><value>Șablon</value></data>
+  <data name="NewFile_Name" xml:space="preserve"><value>Numele fișierului</value></data>
+  <data name="NewFile_Folder" xml:space="preserve"><value>Dosar</value></data>
+  <data name="NewFile_InputFrom" xml:space="preserve"><value>Include-l din</value></data>
+  <data name="NewFile_NoInput" xml:space="preserve"><value>(nicăieri — adaug eu includerea)</value></data>
+  <data name="NewFile_Preview" xml:space="preserve"><value>Conținut</value></data>
+  <data name="NewFile_Create" xml:space="preserve"><value>Creează</value></data>
+  <data name="NewFile_Exists" xml:space="preserve"><value>Un fișier cu acest nume există deja în dosar.</value></data>
+  <data name="NewFile_InputExists" xml:space="preserve"><value>Acel fișier include deja unul cu acest nume; nu se mai adaugă o linie input.</value></data>
+  <data name="NewFile_BadName" xml:space="preserve"><value>Numele conține caractere nepermise într-un nume de fișier.</value></data>
+  <data name="NewFolder_Title" xml:space="preserve"><value>Dosar nou</value></data>
+  <data name="NewFolder_Name" xml:space="preserve"><value>Numele dosarului</value></data>
+  <data name="NewFolder_Default" xml:space="preserve"><value>Dosar nou</value></data>
+  <data name="Notif_TemplatesInvalid" xml:space="preserve"><value>Unele șabloane de fișier nu au putut fi citite</value></data>
+  <data name="FileTpl_Trip" xml:space="preserve"><value>Ieșire de topografiere</value></data>
+  <data name="FileTpl_TripDesc" xml:space="preserve"><value>O topografie cu un centreline; data, echipa, unitățile și linia data preluate din fișierul deschis în editor.</value></data>
+  <data name="FileTpl_Connection" xml:space="preserve"><value>Topografie de legătură</value></data>
+  <data name="FileTpl_ConnectionDesc" xml:space="preserve"><value>O topografie-cadru care include alte topografii și le leagă cu equate.</value></data>
+  <data name="FileTpl_Thconfig" xml:space="preserve"><value>Thconfig</value></data>
+  <data name="FileTpl_ThconfigDesc" xml:space="preserve"><value>Compilează un fișier de topografie într-o hartă PDF și un model 3D; devine thconfig-ul activ.</value></data>
+  <data name="FileTpl_Scrap" xml:space="preserve"><value>Schiță (th2)</value></data>
+  <data name="FileTpl_ScrapDesc" xml:space="preserve"><value>Un scrap gol în plan, gata de desenat.</value></data>
+  <data name="FileTpl_Layouts" xml:space="preserve"><value>Bibliotecă de layout-uri</value></data>
+  <data name="FileTpl_LayoutsDesc" xml:space="preserve"><value>Layout-uri comune din care thconfig-urile proiectului pot copia.</value></data>
+  <data name="FileTpl_Blank" xml:space="preserve"><value>Fișier gol</value></data>
+  <data name="FileTpl_BlankDesc" xml:space="preserve"><value>Un fișier de topografie gol.</value></data>
+  <data name="Pref_ProjectConfig" xml:space="preserve"><value>Setările proiectului (fragmente, șabloane, hook-uri, sarcini, macrouri)</value></data>
+  <data name="Pref_ProjectConfigFolder" xml:space="preserve"><value>În dosarul .thide al proiectului</value></data>
+  <data name="Pref_ProjectConfigFolderHint" xml:space="preserve"><value>Păstrate împreună cu peștera și partajate prin git cu toți cei care au proiectul.</value></data>
+  <data name="Pref_ProjectConfigAppData" xml:space="preserve"><value>În setările ThIDE de pe acest calculator</value></data>
+  <data name="Pref_ProjectConfigAppDataHint" xml:space="preserve"><value>Private pe acest calculator; dosarul proiectului rămâne neatins. Fișierele existente nu se mută.</value></data>
+  <data name="QExport_SaveFragment" xml:space="preserve"><value>Salvează ca fragment…</value></data>
+  <data name="QExport_FragmentName" xml:space="preserve"><value>Numele fragmentului (se tastează pentru inserare, ca un fragment de cod)</value></data>
+  <data name="QExport_FragmentSaved" xml:space="preserve"><value>S-a salvat „{0}” în {1}. Este oferit în fișierele thconfig la Generează cod ▸ Inserează fragment.</value></data>
+  <data name="Snippet_layoutPlan500" xml:space="preserve"><value>layout de plan la 1:500</value></data>
+  <data name="Snippet_layoutCopy" xml:space="preserve"><value>layout bazat pe altul</value></data>
+  <data name="Snippet_exportPlanPdf" xml:space="preserve"><value>exportă o hartă în plan ca PDF</value></data>
+  <data name="Snippet_exportModelLox" xml:space="preserve"><value>exportă modelul 3D</value></data>
+  <data name="NewFile_CannotCreate" xml:space="preserve"><value>Fișierul nu poate fi creat aici.</value></data>
+  <data name="Menu_File_NewProject" xml:space="preserve"><value>Proiect nou…</value></data>
+  <data name="NewProject_Title" xml:space="preserve"><value>Proiect nou</value></data>
+  <data name="NewProject_Folder" xml:space="preserve"><value>Creează în dosarul</value></data>
+  <data name="NewProject_PickFolder" xml:space="preserve"><value>Alege dosarul pentru proiectul nou.</value></data>
+  <data name="NewProject_Taken" xml:space="preserve"><value>{0} există deja în acel dosar.</value></data>
+  <data name="NewProject_ImportFolder" xml:space="preserve"><value>Importă un dosar de șablon…</value></data>
+  <data name="NewProject_ImportZip" xml:space="preserve"><value>Importă un .zip de șablon…</value></data>
+  <data name="NewProject_Remove" xml:space="preserve"><value>Elimină șablonul</value></data>
+  <data name="ProjTpl_SingleCave" xml:space="preserve"><value>O singură peșteră</value></data>
+  <data name="ProjTpl_KarstArea" xml:space="preserve"><value>Zonă carstică</value></data>
+  <data name="ProjTpl_Expedition" xml:space="preserve"><value>Expediție</value></data>
+  <data name="ProjTpl_SingleCaveDesc" xml:space="preserve"><value>O peșteră: un fișier de topografie în care se includ ieșirile, un thconfig cu hartă în plan și model 3D, dosare pentru date, schițe și rezultate.</value></data>
+  <data name="ProjTpl_KarstAreaDesc" xml:space="preserve"><value>Mai multe peșteri dintr-o zonă: fiecare cu thconfig-ul ei, plus un thconfig principal care le compilează împreună.</value></data>
+  <data name="ProjTpl_ExpeditionDesc" xml:space="preserve"><value>O expediție anuală: un dosar pe an pentru ieșiri și schițe, și un thconfig pe an.</value></data>
+  <data name="Menu_Tools_NewTrip" xml:space="preserve"><value>Ieșire nouă…</value></data>
+  <data name="NewTrip_Title" xml:space="preserve"><value>Ieșire nouă</value></data>
+  <data name="NewTrip_Intro" xml:space="preserve"><value>Un fișier nou pentru o ieșire, cu unitățile, instrumentele și ordinea datelor din ultima ieșire, legat de stația din proiect de la care pornește.</value></data>
+  <data name="NewTrip_Date" xml:space="preserve"><value>Data</value></data>
+  <data name="NewTrip_SurveyName" xml:space="preserve"><value>Numele topografiei</value></data>
+  <data name="NewTrip_FirstStation" xml:space="preserve"><value>Prima stație</value></data>
+  <data name="NewTrip_Units" xml:space="preserve"><value>Unități</value></data>
+  <data name="NewTrip_Calibrate" xml:space="preserve"><value>Calibrare</value></data>
+  <data name="NewTrip_Instrument" xml:space="preserve"><value>Instrumente</value></data>
+  <data name="NewTrip_Data" xml:space="preserve"><value>Ordinea datelor</value></data>
+  <data name="NewTrip_Team" xml:space="preserve"><value>Echipa</value></data>
+  <data name="NewTrip_ExtraTeam" xml:space="preserve"><value>Alte persoane, separate prin virgulă</value></data>
+  <data name="NewTrip_Generated" xml:space="preserve"><value>Fișierul nou</value></data>
+  <data name="NewTrip_TieIn" xml:space="preserve"><value>Pornește din (stația din proiect)</value></data>
+  <data name="NewTrip_Nest" xml:space="preserve"><value>Pune ieșirea în interiorul topografiei stației</value></data>
+  <data name="NewTrip_CheckTieIn" xml:space="preserve"><value>verifică legătura</value></data>
+  <data name="NewTrip_BadName" xml:space="preserve"><value>Numele topografiei poate conține doar litere, cifre, _ și -.</value></data>
+  <data name="NewTrip_BadStation" xml:space="preserve"><value>Prima stație nu are un nume valid.</value></data>
+  <data name="NewTrip_BadDate" xml:space="preserve"><value>Data trebuie să arate ca 2026.10.21.</value></data>
+  <data name="NewTrip_PickTieIn" xml:space="preserve"><value>Alege stația din proiect de la care pornește ieșirea.</value></data>
+  <data name="Trust_Title" xml:space="preserve"><value>Ai încredere în acest dosar?</value></data>
+  <data name="Trust_Message" xml:space="preserve"><value>Proiectul din {0} vrea să ruleze comenzi pentru că {1}. Rulezi comenzi din acest proiect? Răspunde da doar pentru proiecte pe care le cunoști — comenzile rulează cu permisiunile tale. Răspunsul este reținut; Preferințe ▸ Extensii listează dosarele de încredere.</value></data>
+  <data name="Trust_Confirm" xml:space="preserve"><value>Am încredere, rulează</value></data>
+  <data name="Trust_ReasonHooks" xml:space="preserve"><value>definește hook-uri</value></data>
+  <data name="Trust_ReasonTasks" xml:space="preserve"><value>definește sarcini</value></data>
+  <data name="Trust_ReasonMacros" xml:space="preserve"><value>definește macrouri</value></data>
+  <data name="Trust_Skipped" xml:space="preserve"><value>S-au omis comenzile proiectului: dosarul nu este de încredere</value></data>
+  <data name="Trust_SkippedDetail" xml:space="preserve"><value>{0} nu au fost rulate.</value></data>
+  <data name="Trust_TrustAction" xml:space="preserve"><value>Am încredere…</value></data>
+  <data name="Tool_Automation" xml:space="preserve"><value>Automatizare</value></data>
+  <data name="Menu_View_Automation" xml:space="preserve"><value>Automatizare</value></data>
+  <data name="Automation_Cancel" xml:space="preserve"><value>Anulează</value></data>
+  <data name="Automation_Hook" xml:space="preserve"><value>Hook</value></data>
+  <data name="Automation_HookTimedOut" xml:space="preserve"><value>Un hook a durat prea mult și a fost oprit</value></data>
+  <data name="Automation_HookTimedOutDetail" xml:space="preserve"><value>Hook-ul {0} a rulat mai mult de {1} s.</value></data>
+  <data name="Pref_HookList" xml:space="preserve"><value>Alte hook-uri</value></data>
+  <data name="Pref_HookListHelp" xml:space="preserve"><value>Fiecare rulează o comandă când are loc evenimentul: la deschiderea unui spațiu de lucru, la deschiderea sau salvarea unui fișier, la începutul, sfârșitul sau eșecul unei compilări. Folosește {file}, ${fileDirname}, ${workspaceRoot}, ${activeThconfig}, ${entry}; hook-ul primește și variabile de mediu THIDE_* (codul de ieșire, erori, rezultate…). Ieșirea apare în panoul Automatizare, dacă hook-ul nu e detașat.</value></data>
+  <data name="Pref_HookTimeout" xml:space="preserve"><value>Secunde până la oprirea hook-ului</value></data>
+  <data name="Pref_HookDetached" xml:space="preserve"><value>Detașat</value></data>
+  <data name="Pref_HookEnabled" xml:space="preserve"><value>Activ</value></data>
+  <data name="Pref_HookAdd" xml:space="preserve"><value>Adaugă hook</value></data>
+  <data name="Pref_ProjectAutomation" xml:space="preserve"><value>Citește hook-uri, sarcini și macrouri din dosarul .thide al proiectului</value></data>
+  <data name="Pref_ProjectAutomationHelp" xml:space="preserve"><value>Rulează doar în dosarele în care ai încredere; ThIDE întreabă prima dată când un proiect vrea să ruleze ceva.</value></data>
+  <data name="Pref_TrustedFolders" xml:space="preserve"><value>Dosare de încredere</value></data>
+  <data name="Pref_TrustRemove" xml:space="preserve"><value>Elimină</value></data>
+  <data name="Menu_Tools_Tasks" xml:space="preserve"><value>Sarcini</value></data>
+  <data name="Task_None" xml:space="preserve"><value>(nicio sarcină în acest proiect)</value></data>
+  <data name="Task_FileInvalid" xml:space="preserve"><value>Unele sarcini nu au putut fi citite</value></data>
+  <data name="Task_Unknown" xml:space="preserve"><value>Nu există această sarcină</value></data>
+  <data name="Automation_Task" xml:space="preserve"><value>Sarcină</value></data>
+  <data name="Cmd_TaskFmt" xml:space="preserve"><value>Sarcină: {0}</value></data>
+  <data name="Menu_Build_BatchBuild" xml:space="preserve"><value>Compilează mai multe…</value></data>
+  <data name="Batch_Title" xml:space="preserve"><value>Compilare în serie</value></data>
+  <data name="Batch_Intro" xml:space="preserve"><value>Bifează thconfig-urile de compilat și, sub fiecare, exporturile de produs. Se compilează unul după altul; rezumatul apare în panoul Automatizare.</value></data>
+  <data name="Batch_StopOnFailure" xml:space="preserve"><value>Oprește la primul eșec</value></data>
+  <data name="Batch_Build" xml:space="preserve"><value>Compilează</value></data>
+  <data name="Batch_SomeTargets" xml:space="preserve"><value>({0} din {1} exporturi)</value></data>
+  <data name="Batch_NotStarted" xml:space="preserve"><value>Compilarea nu a pornit (rulează altă compilare sau salvarea a fost anulată).</value></data>
+  <data name="Batch_Done" xml:space="preserve"><value>{0} din {1} compilate.</value></data>
+  <data name="Batch_NoThconfigs" xml:space="preserve"><value>Spațiul de lucru nu are niciun thconfig de compilat.</value></data>
+  <data name="Batch_RowOk" xml:space="preserve"><value>  reușit</value></data>
+  <data name="Batch_RowFailed" xml:space="preserve"><value>  eșuat (cod {0})</value></data>
+  <data name="Fix_Rename" xml:space="preserve"><value>Redenumește „{0}” → „{1}”</value></data>
+  <data name="Fix_InsertEnd" xml:space="preserve"><value>Inserează „{0}”</value></data>
+  <data name="Fix_InsertCs" xml:space="preserve"><value>Inserează o linie „cs ”</value></data>
+  <data name="Fix_CommentOut" xml:space="preserve"><value>Transformă linia în comentariu</value></data>
+  <data name="Fix_CreateFile" xml:space="preserve"><value>Creează fișierul „{0}”</value></data>
+  <data name="Diag_Fix" xml:space="preserve"><value>Corectează</value></data>
+  <data name="Diag_FixAll" xml:space="preserve"><value>Corectează toate „{0}” din spațiul de lucru…</value></data>
+  <data name="Diag_FixAllNone" xml:space="preserve"><value>Niciuna nu are o corectură care să poată fi aplicată fără verificare.</value></data>
+  <data name="Diag_FixAllSummary" xml:space="preserve"><value>{0} corecturi în {1} fișiere. {2} nu au putut fi corectate automat și rămân neschimbate. Debifează orice modificare nedorită.</value></data>
+  <data name="Diag_FixAllDone" xml:space="preserve"><value>S-au aplicat {0} modificări.</value></data>
+  <data name="EditPreview_Apply" xml:space="preserve"><value>Aplică</value></data>
+  <data name="Menu_Tools_SyncMaps" xml:space="preserve"><value>Adaugă scrap-urile nereferite în hărți…</value></data>
+  <data name="Menu_Tools_SuggestEquates" xml:space="preserve"><value>Sugerează equate-uri…</value></data>
+  <data name="Menu_Tools_FormatAll" xml:space="preserve"><value>Formatează toate fișierele…</value></data>
+  <data name="SyncMaps_Intro" xml:space="preserve"><value>Aceste scrap-uri sunt desenate, dar nicio hartă nu le include, deci nu apar în nicio hartă exportată de Therion. Alege harta în care intră fiecare (sau omite-l); vei vedea fiecare modificare înainte de scriere.</value></data>
+  <data name="SyncMaps_Skip" xml:space="preserve"><value>(omite)</value></data>
+  <data name="SyncMaps_Next" xml:space="preserve"><value>Previzualizează…</value></data>
+  <data name="SyncMaps_Nothing" xml:space="preserve"><value>Toate scrap-urile sunt deja într-o hartă.</value></data>
+  <data name="SyncMaps_NoMaps" xml:space="preserve"><value>Proiectul nu are nicio hartă în care să se adauge scrap-uri. Creează întâi una (fragmentul mapb).</value></data>
+  <data name="SyncMaps_Summary" xml:space="preserve"><value>Fiecare hartă primește membrii noi după ultimul existent.</value></data>
+  <data name="SyncMaps_Problems" xml:space="preserve"><value>Nemodificate: {0}.</value></data>
+  <data name="Suggest_Within" xml:space="preserve"><value>Stații mai apropiate de</value></data>
+  <data name="Suggest_Link" xml:space="preserve"><value>Leagă…</value></data>
+  <data name="Suggest_NeedPieces" xml:space="preserve"><value>Pozițiile pot fi comparate doar între bucăți georeferențiate în același sistem de coordonate proiectat (un fix în UTM, de exemplu); s-au găsit {0}.</value></data>
+  <data name="Suggest_NoneWithin" xml:space="preserve"><value>Nicio pereche de stații din bucăți diferite nu este atât de apropiată.</value></data>
+  <data name="Suggest_Verify" xml:space="preserve"><value>Pozițiile sunt aproximative (fără închiderea buclelor): fiecare pereche e o candidată de verificat înainte de legare, nu o joncțiune confirmată.</value></data>
+  <data name="FormatAll_Summary" xml:space="preserve"><value>{0} fișiere s-ar schimba; {1} rămân neatinse pentru că nu se analizează curat (corectează-le întâi). Terminațiile de linie se păstrează. Debifează un fișier pentru a-l omite.</value></data>
+  <data name="Diag_NoFix" xml:space="preserve"><value>Această problemă nu are o corectură automată.</value></data>
+  <data name="Diag_FixAllSaveFirst" xml:space="preserve"><value>Salvează întâi aceste fișiere deschise, ca problemele lor să fie verificate din nou: {0}.</value></data>
+  <data name="SyncMaps_MapNotFound" xml:space="preserve"><value>nu a fost găsită în fișierul ei, așa cum arată acum</value></data>
+  <data name="SyncMaps_Unterminated" xml:space="preserve"><value>fără endmap</value></data>
+  <data name="SyncMaps_None" xml:space="preserve"><value>neschimbată</value></data>
+  <data name="FormatAll_LinesDiffer" xml:space="preserve"><value>{0} linii se schimbă</value></data>
+  <data name="Menu_Tools_WatchIncoming" xml:space="preserve"><value>Urmărește dosarul de intrare</value></data>
+  <data name="Incoming_Title" xml:space="preserve"><value>Dosarul de intrare</value></data>
+  <data name="Incoming_Arrived" xml:space="preserve"><value>Export nou de topografie: {0}</value></data>
+  <data name="Incoming_Import" xml:space="preserve"><value>Importă…</value></data>
+  <data name="Incoming_Sketch" xml:space="preserve"><value>A sosit o schiță ({0}); leagă întâi fișierul topografiei, apoi copiaz-o împreună cu el.</value></data>
+  <data name="Incoming_On" xml:space="preserve"><value>Se urmărește {0}: exporturile de topografie care ajung acolo sunt oferite pentru import.</value></data>
+  <data name="Incoming_Off" xml:space="preserve"><value>Nu se mai urmărește {0}.</value></data>
+  <data name="Incoming_NoProject" xml:space="preserve"><value>Deschide întâi un proiect.</value></data>
+  <data name="Incoming_FileInvalid" xml:space="preserve"><value>{0} nu poate fi citit ({1}); corectează-l de mână ca să nu se piardă nimic din el.</value></data>
+  <data name="Menu_Tools_Macros" xml:space="preserve"><value>Macrouri</value></data>
+  <data name="Macro_None" xml:space="preserve"><value>(niciun macro)</value></data>
+  <data name="Macro_Title" xml:space="preserve"><value>Macro</value></data>
+  <data name="Macro_Project" xml:space="preserve"><value>proiect</value></data>
+  <data name="Macro_Unknown" xml:space="preserve"><value>Nu există un macro numit „{0}”.</value></data>
+  <data name="Macro_FileInvalid" xml:space="preserve"><value>Unele macrouri nu au putut fi citite</value></data>
+  <data name="Macro_Previewing" xml:space="preserve"><value>Previzualizare (nu se schimbă încă nimic):</value></data>
+  <data name="Macro_Applying" xml:space="preserve"><value>Se aplică:</value></data>
+  <data name="Macro_ApplyQuestion" xml:space="preserve"><value>Previzualizarea s-a terminat:
+{0}
+
+Aplici modificările? Pașii care nu au putut fi previzualizați rulează acum.</value></data>
+  <data name="Macro_Apply" xml:space="preserve"><value>Aplică</value></data>
+  <data name="Cmd_MacroFmt" xml:space="preserve"><value>Macro: {0}</value></data>
+  <data name="Macro_OutsideProject" xml:space="preserve"><value>Fișierul este în afara proiectului; majoritatea uneltelor lucrează doar cu fișiere din interior (copiază-l întâi în incoming/).</value></data>
+  <data name="Assistant_DataPolicyQuestion" xml:space="preserve"><value>Înainte de prima întrebare: ce poate trimite asistentul modelului?</value></data>
+  <data name="Assistant_DataPolicyChosen" xml:space="preserve"><value>Politica datelor: {0}. O puteți schimba în Preferințe ▸ Asistent.</value></data>
+  <data name="Pref_AssistantDataPolicy" xml:space="preserve"><value>Ce poate trimite asistentul modelului</value></data>
+  <data name="Pref_AssistantDataPolicy_SendAll" xml:space="preserve"><value>Tot (modelul rulează pe acest calculator)</value></data>
+  <data name="Pref_AssistantDataPolicy_SendAllHelp" xml:space="preserve"><value>Instrumentele trimit modelului nume de stații, coordonate, textul fișierelor și comentarii. Cele mai bune răspunsuri. Alegeți asta când modelul rulează local (LM Studio): nimic nu părăsește calculatorul.</value></data>
+  <data name="Pref_AssistantDataPolicy_HideContent" xml:space="preserve"><value>Nu trimite modelului datele proiectului</value></data>
+  <data name="Pref_AssistantDataPolicy_HideContentHelp" xml:space="preserve"><value>Sunt oferite doar instrumentele despre Therion, ThIDE sau program; fără rezumatul proiectului, fără notele proiectului, conversația nu se salvează. Asistentul poate explica comenzi și erori, dar nu poate citi sau modifica topografia.</value></data>
+  <data name="Pref_AssistantDataPolicy_Redact" xml:space="preserve"><value>Ascunde valorile din rezultatele instrumentelor</value></data>
+  <data name="Pref_AssistantDataPolicy_RedactHelp" xml:space="preserve"><value>Toate instrumentele rămân, dar numele, numerele și textul din rezultate sunt înlocuite (numărătorile, codurile de eroare și numerele de linie rămân). Cu efort maxim, nu garantat: ce scrieți și numele pe care modelul le pune în apelurile sale ajung totuși la el. Răspunsurile devin mult mai slabe.</value></data>
+  <data name="Pref_AssistantSkillPack" xml:space="preserve"><value>Adaugă pachetul de cunoștințe la instrucțiunile asistentului</value></data>
+  <data name="Pref_AssistantSkillPackHelp" xml:space="preserve"><value>Îi explică modelului cum funcționează proiectele Therion și ThIDE, plus notele dvs. (assistant-skills.md lângă fișierul de setări) și ale proiectului (assistant.md în dosarul de configurare al proiectului). Fiecare parte e limitată la 8 KB.</value></data>
 </root>

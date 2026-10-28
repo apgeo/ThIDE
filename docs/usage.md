@@ -25,7 +25,14 @@ dotnet run --project src/Therion.Cli -- format path/to/file.th --write
 dotnet run --project src/Therion.Cli -- stats  path/to/project.thconfig
 dotnet run --project src/Therion.Cli -- deps   path/to/project.thconfig --dot
 dotnet run --project src/Therion.Cli -- gis    path/to/project.thconfig --format kml --out entrances.kml
+dotnet run --project src/Therion.Cli -- build  caves --all --json --stop-on-failure
+dotnet run --project src/Therion.Cli -- new    --list
+dotnet run --project src/Therion.Cli -- new    expedition --out ./alba --var expedition=alba --var year=2026
 ```
+
+`new` creates a project from a template: a built-in id, the id of a template imported in the app
+(*File → New Project… → Import*), or a template folder. Each `--var` sets one of the template's fields;
+values are checked as in the app, and nothing is overwritten.
 
 **LSP** — point any LSP-capable editor at the `therion-lsp` executable for live diagnostics:
 
@@ -40,6 +47,7 @@ See [lsp.md](lsp.md) for client configuration.
 User settings and per-project state live under your platform's application-data folder (`%AppData%/ThIDE` on Windows, the XDG/`~/Library` equivalents elsewhere), including:
 
 - preferences, keyboard shortcuts, theme, and language;
+- `snippets.json`, `templates/files/*.json` (your file templates) and `templates/projects/<id>/` (imported project templates);
 - the persistent symbol index, parse cache, and crash-recovery buffers;
 - semantic-rule config (`rules.json`), plugins (`plugins/*.dll`), and per-project sidecars (leads, metadata).
 

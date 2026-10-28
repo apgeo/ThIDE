@@ -37,6 +37,39 @@
             <StackPanel Spacing="6">
                 <!-- "server off" affordance replaces nothing — it sits above the input so the
                      user can enable and immediately resend. -->
+                <Border IsVisible="{Binding NeedsDataPolicy}" BorderBrush="Gray" BorderThickness="1"
+                        CornerRadius="4" Padding="8" AutomationProperties.AutomationId="Assistant.DataPolicy">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="{l:Loc Assistant_DataPolicyQuestion}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                        <Button Command="{Binding ChooseDataPolicyCommand}" CommandParameter="SendAll"
+                                AutomationProperties.AutomationId="Assistant.DataPolicy.SendAll"
+                                AutomationProperties.Name="{l:Loc Pref_AssistantDataPolicy_SendAll}"
+                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Left">
+                            <StackPanel>
+                                <TextBlock Text="{l:Loc Pref_AssistantDataPolicy_SendAll}" FontWeight="SemiBold" />
+                                <TextBlock Text="{l:Loc Pref_AssistantDataPolicy_SendAllHelp}" FontSize="11" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Button>
+                        <Button Command="{Binding ChooseDataPolicyCommand}" CommandParameter="HideContent"
+                                AutomationProperties.AutomationId="Assistant.DataPolicy.HideContent"
+                                AutomationProperties.Name="{l:Loc Pref_AssistantDataPolicy_HideContent}"
+                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Left">
+                            <StackPanel>
+                                <TextBlock Text="{l:Loc Pref_AssistantDataPolicy_HideContent}" FontWeight="SemiBold" />
+                                <TextBlock Text="{l:Loc Pref_AssistantDataPolicy_HideContentHelp}" FontSize="11" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Button>
+                        <Button Command="{Binding ChooseDataPolicyCommand}" CommandParameter="Redact"
+                                AutomationProperties.AutomationId="Assistant.DataPolicy.Redact"
+                                AutomationProperties.Name="{l:Loc Pref_AssistantDataPolicy_Redact}"
+                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Left">
+                            <StackPanel>
+                                <TextBlock Text="{l:Loc Pref_AssistantDataPolicy_Redact}" FontWeight="SemiBold" />
+                                <TextBlock Text="{l:Loc Pref_AssistantDataPolicy_RedactHelp}" FontSize="11" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Border>
                 <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding ServerOff}">
                     <TextBlock Text="{l:Loc Assistant_ServerOff}" Foreground="Gray" FontSize="11"
                                VerticalAlignment="Center" TextWrapping="Wrap" />

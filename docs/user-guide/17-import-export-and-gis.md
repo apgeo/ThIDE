@@ -19,6 +19,17 @@ project:
 After importing, add the new file to your thconfig (`input`/`source`) and compile. If an import
 fails, a toast notification tells you why.
 
+### The incoming folder
+
+Turn on **Tools → Watch the incoming folder** and ThIDE watches `incoming/` in the project (it creates
+the folder; the setting is stored in the project's `.thide/project.json`, where `incoming.folder` can
+name another folder). Point your phone sync or download folder there: when a survey export has
+finished arriving, a notification offers **Import…** — a `.th` opens
+[Link survey file](24-linking-surveys.md) on it, a Survex `.svx` or Compass `.dat` is converted first
+and then linked, a `.gpx` becomes a fixed-stations file. A `.th2` sketch on its own is only announced:
+link its survey first, and copy the sketch along. Dropping a `.svx`, `.dat` or `.gpx` on the window
+takes the same route. Watching is off until you turn it on.
+
 ## Export out of Therion
 
 ### Entrances & fixed points → GIS

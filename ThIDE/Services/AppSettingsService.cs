@@ -106,6 +106,10 @@ public sealed record AppSettings
     /// <summary>Rebuild the object graph when a tracked file changes on disk (#5b).</summary>
     public bool AutoReloadGraphOnExternalChange { get; init; } = true;
 
+    /// <summary>Where a project's snippets, templates, hooks, tasks and macros are kept: the project's
+    /// <c>.thide/</c> folder (shared with the cave) or app data (private to this computer).</summary>
+    public Therion.Workspace.ProjectConfigLocation ProjectConfigLocation { get; init; } = Therion.Workspace.ProjectConfigLocation.ProjectFolder;
+
     // ---- scripting / macro hooks ----
     /// <summary>Run the configured hook commands on open/save/build. Adds processing time, so it
     /// can be turned off for big projects (default on, but hooks only fire when commands are set).</summary>
@@ -116,6 +120,10 @@ public sealed record AppSettings
     public string? HookOnSave { get; init; }
     /// <summary>Shell command run when a build starts (<c>{file}</c> = active thconfig), or null.</summary>
     public string? HookOnBuild { get; init; }
+    /// <summary>The user's own hooks (beyond the three single commands above), in run order.</summary>
+    public IReadOnlyList<Therion.Build.Automation.HookDefinition> Hooks { get; init; } = Array.Empty<Therion.Build.Automation.HookDefinition>();
+    /// <summary>Read hooks, tasks and macros from a project's config folder (they still need the folder to be trusted to run).</summary>
+    public bool EnableProjectAutomation { get; init; } = true;
 
     // ---- plugins ----
     /// <summary>Load external plugin assemblies (custom semantic rules) from the plugins folder.
@@ -172,6 +180,15 @@ public sealed record AppSettings
     /// default; gated like the prose-summary clause.
     /// </summary>
     public bool AssistantSuggestCodeBlocks { get; init; } = true;
+    /// <summary>
+    /// Add the skill pack (what to know about Therion and ThIDE, plus the user's and the project's
+    /// notes) to the system prompt. On by default.
+    /// </summary>
+    public bool AssistantSkillPack { get; init; } = true;
+    /// <summary>What the assistant may send to the model; the pane asks once (see <see cref="AssistantDataPolicyChosen"/>).</summary>
+    public Therion.Assistant.AssistantDataPolicy AssistantDataPolicy { get; init; } = Therion.Assistant.AssistantDataPolicy.SendAll;
+    /// <summary>False until the user has picked a data policy in the pane or in Preferences.</summary>
+    public bool AssistantDataPolicyChosen { get; init; }
 
     // ---- telemetry ----
     /// <summary>Opt-in: record anonymous usage events + crash reports to LOCAL files only. Off by default.</summary>

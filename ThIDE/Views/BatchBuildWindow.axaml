@@ -1,0 +1,44 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ThIDE.ViewModels"
+        xmlns:l="using:ThIDE.Resources"
+        x:Class="ThIDE.Views.BatchBuildWindow"
+        x:DataType="vm:BatchBuildViewModel"
+        x:CompileBindings="False"
+        Title="{l:Loc Batch_Title}" Width="720" Height="560" MinWidth="480" MinHeight="360"
+        AutomationProperties.AutomationId="BatchBuild.Window"
+        WindowStartupLocation="CenterOwner" CanResize="True">
+    <DockPanel Margin="12">
+        <TextBlock DockPanel.Dock="Top" Text="{l:Loc Batch_Intro}" Foreground="Gray" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,8" />
+        <DockPanel DockPanel.Dock="Bottom" Margin="0,10,0,0">
+            <CheckBox DockPanel.Dock="Left" Content="{l:Loc Batch_StopOnFailure}" IsChecked="{Binding StopOnFailure}"
+                      AutomationProperties.AutomationId="BatchBuild.StopOnFailure" />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                <Button Content="{l:Loc Automation_Cancel}" Command="{Binding CancelRunCommand}" IsEnabled="{Binding IsRunning}"
+                        AutomationProperties.AutomationId="BatchBuild.Cancel" />
+                <Button Content="{l:Loc Common_Close}" Click="OnClose" AutomationProperties.AutomationId="BatchBuild.Close" />
+                <Button Content="{l:Loc Batch_Build}" Command="{Binding RunCommand}" IsDefault="True" MinWidth="100"
+                        IsEnabled="{Binding !IsRunning}" AutomationProperties.AutomationId="BatchBuild.Build" />
+            </StackPanel>
+        </DockPanel>
+        <TextBlock DockPanel.Dock="Bottom" Text="{Binding Status}" Margin="0,6,0,0" AutomationProperties.AutomationId="BatchBuild.Status" />
+        <ScrollViewer>
+            <ItemsControl ItemsSource="{Binding Configs}" AutomationProperties.AutomationId="BatchBuild.Configs">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Margin="0,0,0,6">
+                            <CheckBox Content="{Binding Label}" IsChecked="{Binding IsChecked, Mode=TwoWay}" FontWeight="SemiBold" />
+                            <ItemsControl ItemsSource="{Binding Targets}" Margin="26,0,0,0" IsEnabled="{Binding IsChecked}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <CheckBox Content="{Binding Title}" IsChecked="{Binding IsChecked, Mode=TwoWay}" FontSize="12" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </DockPanel>
+</Window>

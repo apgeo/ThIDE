@@ -25,6 +25,20 @@ public class ThconfigDiscoveryTests
     }
 
     [Fact]
+    public void Scan_skips_hidden_directories_and_generated_thconfigs()
+    {
+        using var dir = new TempDir();
+        var real = dir.Write("cave.thconfig");
+        dir.Write(".thide/templates/thconfig");
+        dir.Write(".git/thconfig");
+        dir.Write(".thide-batch-cave.thconfig");
+
+        var found = ThconfigDiscovery.Scan(dir.Path, new StubSniffer());
+
+        Assert.Equal([real], found);
+    }
+
+    [Fact]
     public void Scan_returns_empty_for_missing_directory()
     {
         var found = ThconfigDiscovery.Scan(@"X:\does\not\exist", new StubSniffer());

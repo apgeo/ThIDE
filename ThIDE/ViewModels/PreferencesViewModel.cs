@@ -53,6 +53,39 @@ public partial class PreferencesViewModel : ObservableObject
 
     // ---- extensions (hooks, plugins) ----
     [ObservableProperty] private bool _enableScriptHooks;
+    /// <summary>Project config (snippets, templates, hooks, tasks, macros) in the project's .thide/ folder (shared) or in app data (private).</summary>
+    [ObservableProperty] private bool _projectConfigInAppData;
+    [ObservableProperty] private bool _enableProjectAutomation;
+
+    /// <summary>The user's hook list (Preferences ▸ Extensions), edited in place and saved by Apply.</summary>
+    public System.Collections.ObjectModel.ObservableCollection<HookRow> HookRows { get; } = new();
+    public IReadOnlyList<Therion.Build.Automation.HookEvent> HookEvents { get; } = Enum.GetValues<Therion.Build.Automation.HookEvent>();
+
+    [CommunityToolkit.Mvvm.Input.RelayCommand]
+    private void AddHook() => HookRows.Add(new HookRow(new Therion.Build.Automation.HookDefinition(Therion.Build.Automation.HookEvent.FileSaved, "")));
+
+    [CommunityToolkit.Mvvm.Input.RelayCommand]
+    private void RemoveHook(HookRow? row) { if (row is not null) HookRows.Remove(row); }
+
+    /// <summary>Folders whose project-defined commands may run.</summary>
+    public System.Collections.ObjectModel.ObservableCollection<string> TrustedFolders { get; } = new();
+    private IWorkspaceTrustService? _trust;
+
+    /// <summary>Hands the trust store to the dialog (it lists and forgets trusted folders).</summary>
+    public void AttachTrust(IWorkspaceTrustService trust)
+    {
+        _trust = trust;
+        TrustedFolders.Clear();
+        foreach (var f in trust.TrustedFolders) TrustedFolders.Add(f);
+    }
+
+    [CommunityToolkit.Mvvm.Input.RelayCommand]
+    private void RevokeTrust(string? folder)
+    {
+        if (folder is null || _trust is null) return;
+        _trust.Revoke(folder);
+        TrustedFolders.Remove(folder);
+    }
     [ObservableProperty] private string _hookOnOpen = string.Empty;
     [ObservableProperty] private string _hookOnSave = string.Empty;
     [ObservableProperty] private string _hookOnBuild = string.Empty;
@@ -75,6 +108,16 @@ public partial class PreferencesViewModel : ObservableObject
     [ObservableProperty] private int _assistantContextModeIndex;
     /// <summary>Ask the model to put proposed Therion source in fenced code blocks (CAP-03).</summary>
     [ObservableProperty] private bool _assistantSuggestCodeBlocks;
+    [ObservableProperty] private bool _assistantSkillPack;
+    /// <summary>The data policy, as three radio buttons.</summary>
+    [ObservableProperty] private bool _assistantDataPolicySendAll;
+    [ObservableProperty] private bool _assistantDataPolicyHideContent;
+    [ObservableProperty] private bool _assistantDataPolicyRedact;
+
+    private Therion.Assistant.AssistantDataPolicy SelectedDataPolicy() =>
+        AssistantDataPolicyHideContent ? Therion.Assistant.AssistantDataPolicy.HideContent
+        : AssistantDataPolicyRedact ? Therion.Assistant.AssistantDataPolicy.Redact
+        : Therion.Assistant.AssistantDataPolicy.SendAll;
     /// <summary>0 = English, 1 = Romanian (#9 selector lives in Preferences, #11).</summary>
     [ObservableProperty] private int _languageIndex;
 
@@ -192,6 +235,9 @@ public partial class PreferencesViewModel : ObservableObject
         _showWelcomeOnStartup = s.ShowWelcomeOnStartup;
         _telemetryEnabled = s.TelemetryEnabled;
         _enableScriptHooks = s.EnableScriptHooks;
+        _projectConfigInAppData = s.ProjectConfigLocation == Therion.Workspace.ProjectConfigLocation.AppData;
+        _enableProjectAutomation = s.EnableProjectAutomation;
+        foreach (var h in s.Hooks) HookRows.Add(new HookRow(h));
         _hookOnOpen = s.HookOnOpen ?? string.Empty;
         _hookOnSave = s.HookOnSave ?? string.Empty;
         _hookOnBuild = s.HookOnBuild ?? string.Empty;
@@ -206,6 +252,10 @@ public partial class PreferencesViewModel : ObservableObject
         _assistantStreaming = s.AssistantStreaming;
         _assistantContextModeIndex = (int)s.AssistantContextMode;
         _assistantSuggestCodeBlocks = s.AssistantSuggestCodeBlocks;
+        _assistantSkillPack = s.AssistantSkillPack;
+        _assistantDataPolicySendAll = s.AssistantDataPolicy == Therion.Assistant.AssistantDataPolicy.SendAll;
+        _assistantDataPolicyHideContent = s.AssistantDataPolicy == Therion.Assistant.AssistantDataPolicy.HideContent;
+        _assistantDataPolicyRedact = s.AssistantDataPolicy == Therion.Assistant.AssistantDataPolicy.Redact;
         _languageIndex = string.Equals(s.UiLanguage, "ro", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
         _editorFontSize = s.EditorFontSize;
         _indentationSize = s.IndentationSize;
@@ -367,6 +417,9 @@ public partial class PreferencesViewModel : ObservableObject
             ShowWelcomeOnStartup = ShowWelcomeOnStartup,
             TelemetryEnabled = TelemetryEnabled,
             EnableScriptHooks = EnableScriptHooks,
+            ProjectConfigLocation = ProjectConfigInAppData ? Therion.Workspace.ProjectConfigLocation.AppData : Therion.Workspace.ProjectConfigLocation.ProjectFolder,
+            EnableProjectAutomation = EnableProjectAutomation,
+            Hooks = HookRows.Where(r => !string.IsNullOrWhiteSpace(r.Command) || !string.IsNullOrWhiteSpace(r.Task)).Select(r => r.ToDefinition()).ToList(),
             HookOnOpen = NullIfBlank(HookOnOpen),
             HookOnSave = NullIfBlank(HookOnSave),
             HookOnBuild = NullIfBlank(HookOnBuild),
@@ -384,6 +437,11 @@ public partial class PreferencesViewModel : ObservableObject
             AssistantStreaming = AssistantStreaming,
             AssistantContextMode = (AssistantContextMode)Math.Clamp(AssistantContextModeIndex, 0, 2),
             AssistantSuggestCodeBlocks = AssistantSuggestCodeBlocks,
+            AssistantSkillPack = AssistantSkillPack,
+            AssistantDataPolicy = SelectedDataPolicy(),
+            // Picking a different policy here is the choice the pane would otherwise ask for.
+            AssistantDataPolicyChosen = _settings.Current.AssistantDataPolicyChosen
+                || SelectedDataPolicy() != _settings.Current.AssistantDataPolicy,
             UiLanguage = code,
             EditorFontSize = EditorFontSize,
             IndentationSize = IndentationSize,
@@ -448,3 +506,38 @@ public partial class PreferencesViewModel : ObservableObject
 
     private static string? NullIfBlank(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
 }
+
+/// <summary>One editable row of the user's hook list.</summary>
+public sealed partial class HookRow : ObservableObject
+{
+    private readonly Therion.Build.Automation.HookDefinition _original;
+
+    public HookRow(Therion.Build.Automation.HookDefinition hook)
+    {
+        _original = hook;
+        _event = hook.Event;
+        _command = hook.Command ?? "";
+        _timeoutSeconds = hook.TimeoutSeconds;
+        _detached = hook.Detached;
+        _enabled = hook.Enabled;
+    }
+
+    [ObservableProperty] private Therion.Build.Automation.HookEvent _event;
+    [ObservableProperty] private string _command;
+    [ObservableProperty] private decimal _timeoutSeconds;
+    [ObservableProperty] private bool _detached;
+    [ObservableProperty] private bool _enabled;
+
+    /// <summary>A hook that runs a task (set in the settings file; the grid edits commands).</summary>
+    public string? Task => _original.Task;
+
+    public Therion.Build.Automation.HookDefinition ToDefinition() => _original with
+    {
+        Event = Event,
+        Command = string.IsNullOrWhiteSpace(Command) ? null : Command.Trim(),
+        Task = string.IsNullOrWhiteSpace(Command) ? _original.Task : null,
+        TimeoutSeconds = (int)Math.Max(1, TimeoutSeconds),
+        Detached = Detached, Enabled = Enabled,
+    };
+}
+

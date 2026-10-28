@@ -4,6 +4,7 @@ using Therion.Core;
 using Therion.Mcp.Mutations;
 using Therion.Syntax;
 using Therion.Workspace;
+using Therion.Workspace.Editing;
 
 namespace Therion.Mcp.Tools;
 

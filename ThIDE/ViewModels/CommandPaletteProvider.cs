@@ -80,6 +80,7 @@ public sealed class CommandPaletteProvider
 
         // ---- File ----
         list.Add(VmCmd(L("Cmd_Cat_File"), L("Welcome_NewFile"), _vm.NewFileCommand, "Icon.File"));
+        list.Add(VmCmd(L("Cmd_Cat_File"), L("Menu_File_NewProject"), _vm.NewProjectCommand, "Icon.Config"));
         list.Add(VmCmd(L("Cmd_Cat_File"), L("Cmd_OpenFile"), _vm.OpenFileCommand, "Icon.File"));
         list.Add(VmCmd(L("Cmd_Cat_File"), L("Cmd_OpenThconfig"), _vm.OpenThconfigCommand, "Icon.Config"));
         list.Add(VmCmd(L("Cmd_Cat_File"), L("Cmd_OpenFolder"), _vm.OpenFolderCommand, "Icon.FolderOpen"));
@@ -99,6 +100,7 @@ public sealed class CommandPaletteProvider
         list.Add(VmCmd(L("Cmd_Cat_Build"), L("Proj_OpenOutputFolder"), _vm.Build.OpenLastOutputFolderCommand, "Icon.Folder"));
         // quick export + external round-trips.
         list.Add(VmCmd(L("Cmd_Cat_Build"), L("Menu_Build_QuickExport"), _vm.Build.ShowQuickExportCommand, "Icon.Map"));
+        list.Add(VmCmd(L("Cmd_Cat_Build"), L("Menu_Build_BatchBuild"), _vm.BatchBuildCommand, "Icon.Cube"));
         list.Add(VmCmd(L("Cmd_Cat_Build"), L("Cmd_Dump3d"), _vm.Build.Dump3dCommand, "Icon.Cube"));
         list.Add(VmCmd(L("Cmd_Cat_Build"), L("Cmd_Extend"), _vm.Build.ExtendCommand, "Icon.Cube"));
         list.Add(VmCmd(L("Cmd_Cat_Build"), L("Cmd_PrintVersion"), _vm.Build.PrintTherionVersionCommand, "Icon.Info"));
@@ -117,6 +119,18 @@ public sealed class CommandPaletteProvider
         list.Add(VmCmd(tools, L("Menu_Tools_ImportGpx"), _vm.ImportGpxCommand, "Icon.Import"));
         list.Add(ParamCmd(tools, L("Menu_Tools_ScaffoldProject"), _vm.ScaffoldProjectCommand, null, "Icon.Config"));
         list.Add(ParamCmd(tools, L("Menu_Tools_ScaffoldActive"), _vm.ScaffoldProjectCommand, "active", "Icon.Config"));
+        list.Add(VmCmd(tools, L("Menu_Tools_LinkSurvey"), _vm.LinkSurveyCommand, "Icon.Import"));
+        list.Add(VmCmd(tools, L("Menu_Tools_NewTrip"), _vm.NewTripCommand, "Icon.File"));
+        list.Add(VmCmd(tools, L("Menu_Tools_SyncMaps"), _vm.SyncMapsCommand, "Icon.Map"));
+        list.Add(VmCmd(tools, L("Menu_Tools_SuggestEquates"), _vm.SuggestEquatesCommand, "Icon.Map"));
+        list.Add(VmCmd(tools, L("Menu_Tools_FormatAll"), _vm.FormatAllCommand, "Icon.File"));
+        // One entry per macro and per project task, read when the palette opens.
+        if (AppServices.Provider.GetService(typeof(IMacroService)) is IMacroService macroRunner)
+            foreach (var (macro, _) in macroRunner.Macros())
+                list.Add(Action(tools, string.Format(L("Cmd_MacroFmt"), macro.Title), () => macroRunner.RunAsync(macro.Name), "Icon.Config"));
+        if (_vm.Tasks is { } taskRunner)
+            foreach (var task in taskRunner.Tasks())
+                list.Add(Action(tools, string.Format(L("Cmd_TaskFmt"), task.Title), () => taskRunner.RunAsync(task.Id), "Icon.Config"));
         // Export entrances / fixed points — one flat, searchable item per format.
         foreach (var fmt in new[] { "kml", "geojson", "gpx", "csv" })
             list.Add(ParamCmd(tools, $"{L("Menu_Tools_ExportEntrances")} — {FormatLabel(fmt)}", _vm.ExportGisCommand, fmt, "Icon.Export"));

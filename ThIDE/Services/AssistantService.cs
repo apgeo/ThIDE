@@ -15,6 +15,8 @@ using System.Threading.Tasks;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 using Therion.Assistant;
+using Therion.Assistant.Skills;
+using Therion.Workspace;
 using ThIDE.Resources;
 
 namespace ThIDE.Services;
@@ -58,6 +60,8 @@ public sealed class AssistantService : IAssistantService
     private readonly IAppSettingsService _settings;
     private readonly IMcpHostService _host;
     private readonly ILogService _log;
+    private readonly IWorkspaceSession? _workspace;
+    private readonly IWorkspaceTrustService? _trust;
 
     // One HttpClient for the model endpoint's lifetime; generous timeout — a 30B model on CPU
     // offload can legitimately take minutes per completion (same budget as the eval harness).
@@ -76,20 +80,28 @@ public sealed class AssistantService : IAssistantService
     private McpToolCatalog? _catalog;
     private string? _connectedToken;
     private ChatSession? _session;
+    private AssistantDataPolicy _sessionPolicy = AssistantDataPolicy.SendAll;
     private bool _disposed;
 
-    public AssistantService(IAppSettingsService settings, IMcpHostService host, ILogService log)
-        : this(settings, host, log, DefaultConversationPath()) { }
+    public AssistantService(IAppSettingsService settings, IMcpHostService host, ILogService log,
+        IWorkspaceSession workspace, IWorkspaceTrustService trust)
+        : this(settings, host, log, DefaultConversationPath(), workspace, trust) { }
 
     // Test seam (InternalsVisibleTo ThIDE.Tests): a conversation file under a temp dir keeps a test
     // from reading or writing the developer's real %AppData%/ThIDE conversation.
-    internal AssistantService(IAppSettingsService settings, IMcpHostService host, ILogService log, string conversationPath)
+    internal AssistantService(IAppSettingsService settings, IMcpHostService host, ILogService log, string conversationPath,
+        IWorkspaceSession? workspace = null, IWorkspaceTrustService? trust = null)
     {
         _settings = settings;
         _host = host;
         _log = log;
+        _workspace = workspace;
+        _trust = trust;
         _conversationPath = conversationPath;
-        _restored = LoadConversation(conversationPath);
+        // Only a conversation held under "send everything" is kept on disk: one saved then must not
+        // be resent after the user has narrowed what the model may see.
+        if (settings.Current.AssistantDataPolicy == AssistantDataPolicy.SendAll) _restored = LoadConversation(conversationPath);
+        else TryDeleteConversation();
     }
 
     public string ModelLabel => $"{_settings.Current.AssistantModel} @ {_settings.Current.AssistantEndpoint}";
@@ -101,17 +113,23 @@ public sealed class AssistantService : IAssistantService
             throw new InvalidOperationException("The assistant is already answering; wait or press Stop.");
         try
         {
-            var catalog = await EnsureConnectedAsync(ct);
             var current = _settings.Current;
+            IToolCatalog catalog = await EnsureConnectedAsync(ct);
+            if (current.AssistantDataPolicy == AssistantDataPolicy.HideContent) catalog = new FilteredToolCatalog(catalog);
             var engine = new ChatEngine(_http, new ChatEngineOptions(current.AssistantEndpoint, current.AssistantModel)
             {
                 MaxTurns = current.AssistantMaxTurns,
                 SynthesizeFinalAnswer = current.AssistantSynthesizeFinalAnswer,
                 Stream = current.AssistantStreaming,
+                ResultFilter = current.AssistantDataPolicy == AssistantDataPolicy.Redact ? ToolResultRedactor.Redact : null,
             });
             // Continue the restored conversation on the first turn after a restart; otherwise start a
             // fresh one, seeding the workspace context card when the setting asks for it (CD-02).
+            // A conversation begun under another data policy holds what this one may keep out.
+            if (current.AssistantDataPolicy != _sessionPolicy) _session = null;
+            if (current.AssistantDataPolicy != AssistantDataPolicy.SendAll) _restored = null;
             _session ??= _restored ?? await NewSessionAsync(current, ct);
+            _sessionPolicy = current.AssistantDataPolicy;
             _restored = null;
 
             var result = await engine.RunAsync(_session, userMessage, catalog, callbacks, ct);
@@ -197,7 +215,7 @@ public sealed class AssistantService : IAssistantService
     /// (AI-08.1, gated by <see cref="AppSettings.AssistantRequireProseSummary"/>) steers tool-happy
     /// coder models toward answering in natural language instead of dumping JSON.
     /// </summary>
-    private static string SystemPrompt(AppSettings settings)
+    private string SystemPrompt(AppSettings settings)
     {
         var prompt =
             "You are the assistant built into ThIDE, an IDE for Therion cave-survey projects. "
@@ -217,7 +235,28 @@ public sealed class AssistantService : IAssistantService
                 "When you propose Therion source for the user to add or change, put it in a fenced code "
                 + "block (```therion … ```) so they can copy or insert it directly. ";
 
-        return prompt + "When you have the answer, reply directly and concisely.";
+        prompt += "When you have the answer, reply directly and concisely.";
+        return settings.AssistantSkillPack ? prompt + "\n\n" + SkillPackText(settings) : prompt;
+    }
+
+    /// <summary>The built-in pack plus the user's notes (assistant-skills.md next to the settings) and the
+    /// project's (assistant.md in its config folder). The project's notes are project data, so they stay
+    /// out unless everything may be sent; and they steer the model, so only a trusted folder's count.</summary>
+    private string SkillPackText(AppSettings settings)
+    {
+        static string? Read(string? path)
+        {
+            try { return path is not null && File.Exists(path) ? File.ReadAllText(path) : null; }
+            catch (Exception) { return null; }
+        }
+        var user = Read(Path.Combine(Path.GetDirectoryName(_conversationPath) ?? "", "assistant-skills.md"));
+        var root = _workspace?.RootPath;
+        var project = settings.AssistantDataPolicy == AssistantDataPolicy.SendAll && _trust?.Get(root) == TrustState.Trusted
+            ? Read(ProjectLocalConfig.PathFor(root, settings.ProjectConfigLocation, "assistant.md"))
+            : null;
+        var (text, warnings) = SkillPack.Assemble(user, project);
+        foreach (var w in warnings) _log.Warning($"[Assistant] {w}");
+        return text;
     }
 
     /// <summary>
@@ -230,7 +269,7 @@ public sealed class AssistantService : IAssistantService
     private async Task<ChatSession> NewSessionAsync(AppSettings settings, CancellationToken ct)
     {
         var session = new ChatSession(SystemPrompt(settings));
-        var uri = settings.AssistantContextMode switch
+        var uri = settings.AssistantDataPolicy != AssistantDataPolicy.SendAll ? null : settings.AssistantContextMode switch
         {
             AssistantContextMode.Card => "therion://context/card",
             AssistantContextMode.Pack => "therion://context/pack",
@@ -277,6 +316,7 @@ public sealed class AssistantService : IAssistantService
     private void SaveConversation()
     {
         if (_session is null) return;
+        if (_sessionPolicy != AssistantDataPolicy.SendAll) { TryDeleteConversation(); return; }
         try
         {
             var dir = Path.GetDirectoryName(_conversationPath);

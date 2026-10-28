@@ -1,5 +1,6 @@
 using System.Text;
 using Therion.Mcp.Mutations;
+using Therion.Workspace.Editing;
 
 namespace Therion.Mcp.Tests;
 

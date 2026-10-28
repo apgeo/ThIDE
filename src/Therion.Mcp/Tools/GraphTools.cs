@@ -803,34 +803,16 @@ public sealed class GraphTools(IWorkspaceHost host)
         if (error is not null) return ToolResult<EquateCandidates>.Failure(error);
 
         var model = snapshot!.Model;
-        var positions = StationPositionEstimator.Get(model);
-        var graph = ConnectivityGraph.Build(model, mergeCrossFileEquates: true);
-
-        // Each comparable piece gets the offset that turns its local frame into absolute metric coordinates.
-        var frames = ComponentFrames(model, graph, positions);
-        if (frames.Count < 2)
+        var found = EquateCandidateFinder.Find(model, threshold);
+        if (found.ComparablePieces < 2)
             return ToolResult<EquateCandidates>.Success(new EquateCandidates(
-                [], 0, 0, Truncated: false, ComparablePieces: frames.Count,
+                [], 0, 0, Truncated: false, ComparablePieces: found.ComparablePieces,
                 Note: $"Need at least two independently georeferenced pieces in the same projected (metric) "
-                    + $"coordinate system to compare positions across pieces; found {frames.Count}. A piece is "
+                    + $"coordinate system to compare positions across pieces; found {found.ComparablePieces}. A piece is "
                     + "georeferenced when it carries a fix in a projected CS such as UTM."));
-
-        // Absolute-position every reliably-placed station that belongs to a comparable piece.
-        var points = new List<GeoStation>();
-        var seenReps = new HashSet<QualifiedName>();
-        foreach (var station in model.StationsByQn.Values)
-        {
-            if (!seenReps.Add(graph.Representative(station.Name))) continue;
-            if (positions.For(station.Name) is not { HorizontalReliable: true, VerticalReliable: true } p) continue;
-            if (!frames.TryGetValue(p.ComponentId, out var frame)) continue;
-            points.Add(new GeoStation(
-                station.Name.ToString(), p.ComponentId, frame.Cs,
-                p.X + frame.OffsetE, p.Y + frame.OffsetN, p.Z + frame.OffsetU,
-                Location.From(station.DeclarationSpan, snapshot.Root)));
-        }
-
-        var candidates = NearbyCrossPiecePairs(points, threshold);
-        candidates.Sort((a, b) => a.Distance.CompareTo(b.Distance));
+        var candidates = found.Candidates.Select(c => new EquateCandidateDto(
+            c.A.Name.ToString(), c.B.Name.ToString(), c.Distance, c.ComponentA, c.ComponentB, c.CoordinateSystem,
+            Location.From(c.A.DeclarationSpan, snapshot.Root), Location.From(c.B.DeclarationSpan, snapshot.Root))).ToList();
 
         int start = Math.Clamp(offset, 0, candidates.Count);
         var page = candidates.Skip(start).Take(ToolLimits.ClampLimit(limit)).ToList();
@@ -838,84 +820,10 @@ public sealed class GraphTools(IWorkspaceHost host)
         return ToolResult<EquateCandidates>.Success(new EquateCandidates(
             page, candidates.Count, start,
             Truncated: start + page.Count < candidates.Count,
-            ComparablePieces: frames.Count,
-            Note: $"Compared {frames.Count} georeferenced pieces. Positions are approximate "
+            ComparablePieces: found.ComparablePieces,
+            Note: $"Compared {found.ComparablePieces} georeferenced pieces. Positions are approximate "
                 + "(dead-reckoning, no loop closure), so each pair is a CANDIDATE to verify before adding "
                 + "an 'equate' — not a confirmed join."));
-    }
-
-    /// <summary>Coordinates at or below this magnitude are treated as lat/long degrees, not projected metres.</summary>
-    private const double GeographicDegreeLimit = 360.0;
-
-    private readonly record struct ComponentFrame(double OffsetE, double OffsetN, double OffsetU, string Cs);
-
-    private readonly record struct GeoStation(
-        string Name, int Component, string Cs, double E, double N, double U, Location? Declaration);
-
-    /// <summary>
-    /// The local→absolute offset for each piece that has a georeferenced fix in a projected (metric) CS.
-    /// A piece with only a lat/long fix, or none, is absent — its stations cannot be compared in metres.
-    /// </summary>
-    private static Dictionary<int, ComponentFrame> ComponentFrames(
-        WorkspaceSemanticModel model, ConnectivityGraph graph, PositionSet positions)
-    {
-        var frames = new Dictionary<int, ComponentFrame>();
-        foreach (var station in model.StationsByQn.Values)
-        {
-            if (station.Kind != StationDeclarationKind.Fix || string.IsNullOrWhiteSpace(station.Cs)) continue;
-            if (station.FixX is not { } fx || station.FixY is not { } fy || station.FixZ is not { } fz) continue;
-            // Lat/long fixes are degrees, not metres — mixing them into a metric frame would be nonsense.
-            if (Math.Abs(fx) <= GeographicDegreeLimit && Math.Abs(fy) <= GeographicDegreeLimit) continue;
-            if (positions.For(station.Name) is not { } p || frames.ContainsKey(p.ComponentId)) continue;
-            frames[p.ComponentId] = new ComponentFrame(fx - p.X, fy - p.Y, fz - p.Z, station.Cs!);
-        }
-        return frames;
-    }
-
-    /// <summary>
-    /// Cross-piece station pairs within <paramref name="threshold"/> metres, using a uniform spatial grid so
-    /// the search is near-linear rather than O(n²). Each pair is emitted once (ordered by name) and only when
-    /// the two pieces share a coordinate system.
-    /// </summary>
-    private static List<EquateCandidateDto> NearbyCrossPiecePairs(List<GeoStation> points, double threshold)
-    {
-        (long, long, long) Cell(GeoStation s) =>
-            ((long)Math.Floor(s.E / threshold), (long)Math.Floor(s.N / threshold), (long)Math.Floor(s.U / threshold));
-
-        var grid = new Dictionary<(long, long, long), List<int>>();
-        for (int i = 0; i < points.Count; i++)
-        {
-            var key = Cell(points[i]);
-            (grid.TryGetValue(key, out var list) ? list : grid[key] = new List<int>()).Add(i);
-        }
-
-        var results = new List<EquateCandidateDto>();
-        double threshold2 = threshold * threshold;
-        for (int i = 0; i < points.Count; i++)
-        {
-            var a = points[i];
-            var (cx, cy, cz) = Cell(a);
-            for (long dx = -1; dx <= 1; dx++)
-            for (long dy = -1; dy <= 1; dy++)
-            for (long dz = -1; dz <= 1; dz++)
-            {
-                if (!grid.TryGetValue((cx + dx, cy + dy, cz + dz), out var bucket)) continue;
-                foreach (int j in bucket)
-                {
-                    var b = points[j];
-                    if (a.Component == b.Component) continue;
-                    if (!string.Equals(a.Cs, b.Cs, StringComparison.Ordinal)) continue;
-                    if (string.CompareOrdinal(a.Name, b.Name) >= 0) continue;   // emit each unordered pair once
-                    double de = a.E - b.E, dn = a.N - b.N, du = a.U - b.U;
-                    double d2 = de * de + dn * dn + du * du;
-                    if (d2 > threshold2) continue;
-                    results.Add(new EquateCandidateDto(
-                        a.Name, b.Name, Round(Math.Sqrt(d2)), a.Component, b.Component, a.Cs,
-                        a.Declaration, b.Declaration));
-                }
-            }
-        }
-        return results;
     }
 
     /// <summary>

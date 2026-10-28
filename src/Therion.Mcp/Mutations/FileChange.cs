@@ -1,16 +1,6 @@
-namespace Therion.Mcp.Mutations;
+using Therion.Workspace.Editing;
 
-/// <summary>
-/// One replacement inside a file, at character offsets into the text as it stood when the plan was
-/// made. <see cref="ExpectedText"/> is what those offsets sliced to then; the apply step re-reads the
-/// file and refuses the whole plan if any slice has moved. This is the guard
-/// <c>SymbolRenamePlan.Compute</c> already applies — except that it silently drops the drifted spans,
-/// which would leave a rename half-done. A tool must not half-do things to a caver's survey.
-/// </summary>
-public sealed record TextEdit(int Start, int Length, string ExpectedText, string NewText)
-{
-    public int End => Start + Length;
-}
+namespace Therion.Mcp.Mutations;
 
 /// <summary>What a plan proposes to do to one path.</summary>
 public abstract record FileChange(string AbsolutePath);

@@ -1,0 +1,28 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ThIDE.ViewModels"
+        xmlns:views="using:ThIDE.Views"
+        xmlns:pickers="using:ThIDE.Views.Pickers"
+        xmlns:l="using:ThIDE.Resources"
+        x:Class="ThIDE.Views.PreviewWindow"
+        x:DataType="vm:PreviewWindowViewModel"
+        x:CompileBindings="False"
+        Title="{Binding Title}" Width="1100" Height="800"
+        AutomationProperties.AutomationId="PreviewWindow"
+        WindowStartupLocation="CenterOwner" CanResize="True">
+    <!-- A Mainline Preview in its own window, optionally with the pickers that drive it on top. -->
+    <DockPanel>
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,12,*" Height="200" Margin="8"
+              IsVisible="{Binding HasPickers}">
+            <DockPanel Grid.Column="0">
+                <TextBlock DockPanel.Dock="Top" Text="{l:Loc LinkSurvey_SourceStation}" FontWeight="SemiBold" />
+                <pickers:ItemPickerView DataContext="{Binding LeftPicker}" />
+            </DockPanel>
+            <DockPanel Grid.Column="2">
+                <TextBlock DockPanel.Dock="Top" Text="{l:Loc LinkSurvey_WorkspaceStation}" FontWeight="SemiBold" />
+                <pickers:ItemPickerView DataContext="{Binding RightPicker}" />
+            </DockPanel>
+        </Grid>
+        <views:LivePreviewView DataContext="{Binding Preview}" />
+    </DockPanel>
+</Window>

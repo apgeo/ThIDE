@@ -910,7 +910,6 @@
   <data name="Ed_InsertDate" xml:space="preserve"><value>Insert Today's Date</value></data>
   <data name="Ed_InsertTeamMember" xml:space="preserve"><value>Insert Team Member</value></data>
   <data name="Ed_RenameSymbol" xml:space="preserve"><value>Rename Symbol…  F2</value></data>
-  <data name="Ed_FindAllRefs" xml:space="preserve"><value>Find All References</value></data>
   <data name="Refs_Title" xml:space="preserve"><value>Find All References</value></data>
   <data name="Refs_Header" xml:space="preserve"><value>'{0}' — {1} occurrence(s) in {2} file(s)</value></data>
   <data name="Refs_None" xml:space="preserve"><value>No references to '{0}' were found in the workspace.</value></data>
@@ -1333,4 +1332,268 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Pref_ContextModeNone" xml:space="preserve"><value>None (tools only)</value></data>
   <data name="Pref_ContextModeCard" xml:space="preserve"><value>Card (compact summary)</value></data>
   <data name="Pref_ContextModePack" xml:space="preserve"><value>Pack (rich digest)</value></data>
+  <data name="Picker_Filter" xml:space="preserve"><value>Filter…</value></data>
+  <data name="Picker_ShowList" xml:space="preserve"><value>Show or hide the list</value></data>
+  <data name="Picker_SelectedFormat" xml:space="preserve"><value>Selected: {0}</value></data>
+  <data name="Picker_NoneSelected" xml:space="preserve"><value>Nothing selected</value></data>
+  <data name="Picker_Preview" xml:space="preserve"><value>Preview</value></data>
+  <data name="Picker_OpenPreview" xml:space="preserve"><value>Open in a window…</value></data>
+  <data name="LinkSurvey_Title" xml:space="preserve"><value>Link survey file</value></data>
+  <data name="LinkSurvey_Intro" xml:space="preserve"><value>Pick a station of the survey file and the workspace station it continues from. ThIDE writes the input and equate lines where similar lines already are.</value></data>
+  <data name="LinkSurvey_SourceFile" xml:space="preserve"><value>Survey file</value></data>
+  <data name="LinkSurvey_Browse" xml:space="preserve"><value>Browse…</value></data>
+  <data name="LinkSurvey_PickSource" xml:space="preserve"><value>Choose the survey file to link</value></data>
+  <data name="LinkSurvey_PickTarget" xml:space="preserve"><value>Choose the folder to copy the survey into</value></data>
+  <data name="LinkSurvey_SourceStatus" xml:space="preserve"><value>{0} stations, {1} shots, {2} parse errors</value></data>
+  <data name="LinkSurvey_SourceUnreadable" xml:space="preserve"><value>Cannot read the file: {0}</value></data>
+  <data name="LinkSurvey_SourceStation" xml:space="preserve"><value>Station in the new survey</value></data>
+  <data name="LinkSurvey_WorkspaceStation" xml:space="preserve"><value>Station in the project</value></data>
+  <data name="LinkSurvey_Survey" xml:space="preserve"><value>Survey</value></data>
+  <data name="LinkSurvey_Station" xml:space="preserve"><value>Station</value></data>
+  <data name="LinkSurvey_FullPreview" xml:space="preserve"><value>Show in full preview…</value></data>
+  <data name="LinkSurvey_FullPreviewTitle" xml:space="preserve"><value>Mainline Preview — survey being linked</value></data>
+  <data name="LinkSurvey_Generated" xml:space="preserve"><value>Generated lines</value></data>
+  <data name="LinkSurvey_Destination" xml:space="preserve"><value>Insert into</value></data>
+  <data name="LinkSurvey_UseCurrentFile" xml:space="preserve"><value>Insert into the current file</value></data>
+  <data name="LinkSurvey_CopyTo" xml:space="preserve"><value>Copy into</value></data>
+  <data name="LinkSurvey_CopySource" xml:space="preserve"><value>Copy the survey file into the project</value></data>
+  <data name="LinkSurvey_Sketches" xml:space="preserve"><value>Sketches</value></data>
+  <data name="LinkSurvey_AddComment" xml:space="preserve"><value>Add a comment saying when and from which file</value></data>
+  <data name="LinkSurvey_CommentFormat" xml:space="preserve"><value>Added on {0} from source file {1}</value></data>
+  <data name="LinkSurvey_Copy" xml:space="preserve"><value>Copy to clipboard</value></data>
+  <data name="LinkSurvey_Insert" xml:space="preserve"><value>Insert</value></data>
+  <data name="LinkSurvey_RootScope" xml:space="preserve"><value>file root</value></data>
+  <data name="LinkSurvey_ReasonBlockWithEquates" xml:space="preserve"><value>equates already here</value></data>
+  <data name="LinkSurvey_ReasonEquateFile" xml:space="preserve"><value>file of equates</value></data>
+  <data name="LinkSurvey_ReasonBlock" xml:space="preserve"><value>survey block</value></data>
+  <data name="LinkSurvey_ReasonCaret" xml:space="preserve"><value>at the cursor</value></data>
+  <data name="LinkSurvey_WarnScopeNotAncestor" xml:space="preserve"><value>A station is outside the chosen survey, so it cannot be named from there. Choose a destination higher up.</value></data>
+  <data name="LinkSurvey_WarnUnterminatedBlock" xml:space="preserve"><value>The survey block {0} has no end line; fix it first.</value></data>
+  <data name="LinkSurvey_WarnScopeNotFound" xml:space="preserve"><value>The survey {0} was not found in the destination file.</value></data>
+  <data name="LinkSurvey_WarnInputExists" xml:space="preserve"><value>The file is already input from {0}.</value></data>
+  <data name="LinkSurvey_WarnEquateExists" xml:space="preserve"><value>An equate with these stations already exists in {0}.</value></data>
+  <data name="LinkSurvey_WarnTargetExists" xml:space="preserve"><value>{0} already exists with different content. Choose another folder.</value></data>
+  <data name="LinkSurvey_WarnSketchExists" xml:space="preserve"><value>{0} already exists with different content; that sketch is not copied.</value></data>
+  <data name="LinkSurvey_WarnSketchNotCopied" xml:space="preserve"><value>The survey inputs {0}, which is not being copied; its input will not resolve.</value></data>
+  <data name="LinkSurvey_WarnNothingToLink" xml:space="preserve"><value>Pick a station on each side.</value></data>
+  <data name="LinkSurvey_NoWorkspace" xml:space="preserve"><value>Open a project first: the survey is linked into the active project.</value></data>
+  <data name="LinkSurvey_Done" xml:space="preserve"><value>Linked {0}</value></data>
+  <data name="Menu_Tools_LinkSurvey" xml:space="preserve"><value>Link survey file…</value></data>
+  <data name="Ctx_GenerateCode" xml:space="preserve"><value>Generate code</value></data>
+  <data name="Edit_ProblemStale" xml:space="preserve"><value>{0} changed since the lines were planned; try again.</value></data>
+  <data name="Edit_ProblemMissing" xml:space="preserve"><value>{0} does not exist.</value></data>
+  <data name="Edit_ProblemExists" xml:space="preserve"><value>{0} already exists.</value></data>
+  <data name="Edit_ProblemDuplicate" xml:space="preserve"><value>{0} is written twice.</value></data>
+  <data name="Edit_ProblemNotAFile" xml:space="preserve"><value>{0} is not a file.</value></data>
+  <data name="Edit_ProblemUnreadable" xml:space="preserve"><value>{0} cannot be read.</value></data>
+  <data name="Edit_ProblemUnencodable" xml:space="preserve"><value>{0} declares an encoding that cannot hold the new text.</value></data>
+  <data name="Edit_ProblemUnsavedChanges" xml:space="preserve"><value>{0} has unsaved changes; save it first.</value></data>
+  <data name="Edit_ProblemOpenBufferDiffers" xml:space="preserve"><value>{0} is open and differs from the file on disk; save or reload it first.</value></data>
+  <data name="LinkSurvey_Load" xml:space="preserve"><value>Load</value></data>
+  <data name="LinkSurvey_SourceHint" xml:space="preserve"><value>Path of the .th file to link (Browse, or type it and press Enter)</value></data>
+  <data name="Snippet_survb" xml:space="preserve"><value>survey … endsurvey block</value></data>
+  <data name="Snippet_clt" xml:space="preserve"><value>centreline with date, team and data</value></data>
+  <data name="Snippet_datan" xml:space="preserve"><value>data normal reading order</value></data>
+  <data name="Snippet_leg" xml:space="preserve"><value>next leg from the last station</value></data>
+  <data name="Snippet_eq" xml:space="preserve"><value>equate two stations</value></data>
+  <data name="Snippet_inp" xml:space="preserve"><value>input another file</value></data>
+  <data name="Snippet_scrapb" xml:space="preserve"><value>scrap … endscrap block</value></data>
+  <data name="Snippet_mapb" xml:space="preserve"><value>map … endmap block</value></data>
+  <data name="Snippet_thconf" xml:space="preserve"><value>thconfig skeleton</value></data>
+  <data name="Ed_SnippetDescription" xml:space="preserve"><value>Snippet: {0}</value></data>
+  <data name="Notif_SnippetsInvalid" xml:space="preserve"><value>Some snippets could not be read</value></data>
+  <data name="Ed_KindCommand" xml:space="preserve"><value>Command</value></data>
+  <data name="Ed_KindFlag" xml:space="preserve"><value>Flag value</value></data>
+  <data name="Ed_KindDataStyle" xml:space="preserve"><value>Data style</value></data>
+  <data name="Ed_KindDataField" xml:space="preserve"><value>Data reading</value></data>
+  <data name="Ed_KindType" xml:space="preserve"><value>Symbol type</value></data>
+  <data name="Ed_KindStation" xml:space="preserve"><value>Station</value></data>
+  <data name="Ed_KindSnippet" xml:space="preserve"><value>Snippet</value></data>
+  <data name="Ed_KindIdentifier" xml:space="preserve"><value>Identifier</value></data>
+  <data name="Ed_InsertSnippet" xml:space="preserve"><value>Insert snippet</value></data>
+  <data name="Menu_File_NewFile" xml:space="preserve"><value>New File…</value></data>
+  <data name="NewFile_Title" xml:space="preserve"><value>New file</value></data>
+  <data name="NewFile_Template" xml:space="preserve"><value>Template</value></data>
+  <data name="NewFile_Name" xml:space="preserve"><value>File name</value></data>
+  <data name="NewFile_Folder" xml:space="preserve"><value>Folder</value></data>
+  <data name="NewFile_InputFrom" xml:space="preserve"><value>Input it from</value></data>
+  <data name="NewFile_NoInput" xml:space="preserve"><value>(nowhere — I will add the input myself)</value></data>
+  <data name="NewFile_Preview" xml:space="preserve"><value>Contents</value></data>
+  <data name="NewFile_Create" xml:space="preserve"><value>Create</value></data>
+  <data name="NewFile_Exists" xml:space="preserve"><value>A file with that name already exists in the folder.</value></data>
+  <data name="NewFile_InputExists" xml:space="preserve"><value>That file already inputs one with this name; no second input line is added.</value></data>
+  <data name="NewFile_BadName" xml:space="preserve"><value>The file name holds characters a file name cannot have.</value></data>
+  <data name="NewFolder_Title" xml:space="preserve"><value>New folder</value></data>
+  <data name="NewFolder_Name" xml:space="preserve"><value>Folder name</value></data>
+  <data name="NewFolder_Default" xml:space="preserve"><value>New Folder</value></data>
+  <data name="Notif_TemplatesInvalid" xml:space="preserve"><value>Some file templates could not be read</value></data>
+  <data name="FileTpl_Trip" xml:space="preserve"><value>Survey trip</value></data>
+  <data name="FileTpl_TripDesc" xml:space="preserve"><value>A survey with one centreline; date, team, units and data line carried over from the file open in the editor.</value></data>
+  <data name="FileTpl_Connection" xml:space="preserve"><value>Connection survey</value></data>
+  <data name="FileTpl_ConnectionDesc" xml:space="preserve"><value>A wrapper survey that inputs other surveys and equates them.</value></data>
+  <data name="FileTpl_Thconfig" xml:space="preserve"><value>Thconfig</value></data>
+  <data name="FileTpl_ThconfigDesc" xml:space="preserve"><value>Compiles one survey file to a PDF map and a 3D model; becomes the active thconfig.</value></data>
+  <data name="FileTpl_Scrap" xml:space="preserve"><value>Sketch (th2)</value></data>
+  <data name="FileTpl_ScrapDesc" xml:space="preserve"><value>An empty plan scrap ready for drawing.</value></data>
+  <data name="FileTpl_Layouts" xml:space="preserve"><value>Layout library</value></data>
+  <data name="FileTpl_LayoutsDesc" xml:space="preserve"><value>Shared layouts the project's thconfigs can copy from.</value></data>
+  <data name="FileTpl_Blank" xml:space="preserve"><value>Blank file</value></data>
+  <data name="FileTpl_BlankDesc" xml:space="preserve"><value>An empty survey file.</value></data>
+  <data name="Pref_ProjectConfig" xml:space="preserve"><value>Project settings (snippets, templates, hooks, tasks, macros)</value></data>
+  <data name="Pref_ProjectConfigFolder" xml:space="preserve"><value>In the project's .thide folder</value></data>
+  <data name="Pref_ProjectConfigFolderHint" xml:space="preserve"><value>Kept with the cave and shared through git with everyone who has the project.</value></data>
+  <data name="Pref_ProjectConfigAppData" xml:space="preserve"><value>In ThIDE's own settings on this computer</value></data>
+  <data name="Pref_ProjectConfigAppDataHint" xml:space="preserve"><value>Private to this computer; the project folder stays untouched. Existing files are not moved.</value></data>
+  <data name="QExport_SaveFragment" xml:space="preserve"><value>Save as fragment…</value></data>
+  <data name="QExport_FragmentName" xml:space="preserve"><value>Fragment name (typed to insert it, like a snippet)</value></data>
+  <data name="QExport_FragmentSaved" xml:space="preserve"><value>Saved '{0}' in {1}. It is offered in thconfig files under Generate code ▸ Insert snippet.</value></data>
+  <data name="Snippet_layoutPlan500" xml:space="preserve"><value>plan layout at 1:500</value></data>
+  <data name="Snippet_layoutCopy" xml:space="preserve"><value>layout based on another</value></data>
+  <data name="Snippet_exportPlanPdf" xml:space="preserve"><value>export a plan map to PDF</value></data>
+  <data name="Snippet_exportModelLox" xml:space="preserve"><value>export the 3D model</value></data>
+  <data name="NewFile_CannotCreate" xml:space="preserve"><value>The file cannot be created here.</value></data>
+  <data name="Menu_File_NewProject" xml:space="preserve"><value>New Project…</value></data>
+  <data name="NewProject_Title" xml:space="preserve"><value>New project</value></data>
+  <data name="NewProject_Folder" xml:space="preserve"><value>Create in folder</value></data>
+  <data name="NewProject_PickFolder" xml:space="preserve"><value>Choose the folder for the new project.</value></data>
+  <data name="NewProject_Taken" xml:space="preserve"><value>{0} already exists in that folder.</value></data>
+  <data name="NewProject_ImportFolder" xml:space="preserve"><value>Import template folder…</value></data>
+  <data name="NewProject_ImportZip" xml:space="preserve"><value>Import template .zip…</value></data>
+  <data name="NewProject_Remove" xml:space="preserve"><value>Remove template</value></data>
+  <data name="ProjTpl_SingleCave" xml:space="preserve"><value>Single cave</value></data>
+  <data name="ProjTpl_KarstArea" xml:space="preserve"><value>Karst area</value></data>
+  <data name="ProjTpl_Expedition" xml:space="preserve"><value>Expedition</value></data>
+  <data name="ProjTpl_SingleCaveDesc" xml:space="preserve"><value>One cave: a survey file to input trips into, a thconfig with a plan map and a 3D model, folders for data, sketches and output.</value></data>
+  <data name="ProjTpl_KarstAreaDesc" xml:space="preserve"><value>Several caves of one area: each cave with its own thconfig, plus a master thconfig that compiles them together.</value></data>
+  <data name="ProjTpl_ExpeditionDesc" xml:space="preserve"><value>A yearly expedition: one folder per year for its trips and sketches, and a thconfig per year.</value></data>
+  <data name="Menu_Tools_NewTrip" xml:space="preserve"><value>New trip…</value></data>
+  <data name="NewTrip_Title" xml:space="preserve"><value>New trip</value></data>
+  <data name="NewTrip_Intro" xml:space="preserve"><value>A new survey file for a trip, with the units, instruments and data order of the latest trip, tied to the project station it starts from.</value></data>
+  <data name="NewTrip_Date" xml:space="preserve"><value>Date</value></data>
+  <data name="NewTrip_SurveyName" xml:space="preserve"><value>Survey name</value></data>
+  <data name="NewTrip_FirstStation" xml:space="preserve"><value>First station</value></data>
+  <data name="NewTrip_Units" xml:space="preserve"><value>Units</value></data>
+  <data name="NewTrip_Calibrate" xml:space="preserve"><value>Calibration</value></data>
+  <data name="NewTrip_Instrument" xml:space="preserve"><value>Instruments</value></data>
+  <data name="NewTrip_Data" xml:space="preserve"><value>Data order</value></data>
+  <data name="NewTrip_Team" xml:space="preserve"><value>Team</value></data>
+  <data name="NewTrip_ExtraTeam" xml:space="preserve"><value>Other people, separated by commas</value></data>
+  <data name="NewTrip_Generated" xml:space="preserve"><value>New file</value></data>
+  <data name="NewTrip_TieIn" xml:space="preserve"><value>Starts from (project station)</value></data>
+  <data name="NewTrip_Nest" xml:space="preserve"><value>Nest the trip inside that station's survey</value></data>
+  <data name="NewTrip_CheckTieIn" xml:space="preserve"><value>check the tie-in</value></data>
+  <data name="NewTrip_BadName" xml:space="preserve"><value>The survey name may hold only letters, digits, _ and -.</value></data>
+  <data name="NewTrip_BadStation" xml:space="preserve"><value>The first station is not a valid station name.</value></data>
+  <data name="NewTrip_BadDate" xml:space="preserve"><value>The date should look like 2026.10.21.</value></data>
+  <data name="NewTrip_PickTieIn" xml:space="preserve"><value>Choose the project station the trip starts from.</value></data>
+  <data name="Trust_Title" xml:space="preserve"><value>Trust this folder?</value></data>
+  <data name="Trust_Message" xml:space="preserve"><value>The project in {0} wants to run commands because {1}. Run commands from this project? Only say yes for projects you know — the commands run with your permissions. Your answer is remembered; Preferences ▸ Extensions lists trusted folders.</value></data>
+  <data name="Trust_Confirm" xml:space="preserve"><value>Trust and run</value></data>
+  <data name="Trust_ReasonHooks" xml:space="preserve"><value>it defines hooks</value></data>
+  <data name="Trust_ReasonTasks" xml:space="preserve"><value>it defines tasks</value></data>
+  <data name="Trust_ReasonMacros" xml:space="preserve"><value>it defines macros</value></data>
+  <data name="Trust_Skipped" xml:space="preserve"><value>Skipped project commands: the folder is not trusted</value></data>
+  <data name="Trust_SkippedDetail" xml:space="preserve"><value>{0} were not run.</value></data>
+  <data name="Trust_TrustAction" xml:space="preserve"><value>Trust…</value></data>
+  <data name="Tool_Automation" xml:space="preserve"><value>Automation</value></data>
+  <data name="Menu_View_Automation" xml:space="preserve"><value>Automation</value></data>
+  <data name="Automation_Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Automation_Hook" xml:space="preserve"><value>Hook</value></data>
+  <data name="Automation_HookTimedOut" xml:space="preserve"><value>A hook took too long and was stopped</value></data>
+  <data name="Automation_HookTimedOutDetail" xml:space="preserve"><value>The {0} hook ran longer than {1} s.</value></data>
+  <data name="Pref_HookList" xml:space="preserve"><value>More hooks</value></data>
+  <data name="Pref_HookListHelp" xml:space="preserve"><value>Each runs a shell command when its event happens: when a workspace opens, a file is opened or saved, a build starts, finishes or fails. Use {file}, ${fileDirname}, ${workspaceRoot}, ${activeThconfig}, ${entry}; the hook also gets THIDE_* environment variables (build exit code, errors, outputs…). Output goes to the Automation panel unless the hook is detached.</value></data>
+  <data name="Pref_HookTimeout" xml:space="preserve"><value>Seconds before the hook is stopped</value></data>
+  <data name="Pref_HookDetached" xml:space="preserve"><value>Detached</value></data>
+  <data name="Pref_HookEnabled" xml:space="preserve"><value>On</value></data>
+  <data name="Pref_HookAdd" xml:space="preserve"><value>Add hook</value></data>
+  <data name="Pref_ProjectAutomation" xml:space="preserve"><value>Read hooks, tasks and macros from the project's .thide folder</value></data>
+  <data name="Pref_ProjectAutomationHelp" xml:space="preserve"><value>They run only in folders you trust; ThIDE asks the first time a project wants to run something.</value></data>
+  <data name="Pref_TrustedFolders" xml:space="preserve"><value>Trusted folders</value></data>
+  <data name="Pref_TrustRemove" xml:space="preserve"><value>Remove</value></data>
+  <data name="Menu_Tools_Tasks" xml:space="preserve"><value>Tasks</value></data>
+  <data name="Task_None" xml:space="preserve"><value>(no tasks in this project)</value></data>
+  <data name="Task_FileInvalid" xml:space="preserve"><value>Some tasks could not be read</value></data>
+  <data name="Task_Unknown" xml:space="preserve"><value>No such task</value></data>
+  <data name="Automation_Task" xml:space="preserve"><value>Task</value></data>
+  <data name="Cmd_TaskFmt" xml:space="preserve"><value>Task: {0}</value></data>
+  <data name="Menu_Build_BatchBuild" xml:space="preserve"><value>Build multiple…</value></data>
+  <data name="Batch_Title" xml:space="preserve"><value>Batch build</value></data>
+  <data name="Batch_Intro" xml:space="preserve"><value>Tick the thconfigs to build, and under each the exports to produce. They are built one after the other; the summary goes to the Automation panel.</value></data>
+  <data name="Batch_StopOnFailure" xml:space="preserve"><value>Stop at the first failure</value></data>
+  <data name="Batch_Build" xml:space="preserve"><value>Build</value></data>
+  <data name="Batch_SomeTargets" xml:space="preserve"><value>({0} of {1} exports)</value></data>
+  <data name="Batch_NotStarted" xml:space="preserve"><value>The build did not start (another build is running, or saving was cancelled).</value></data>
+  <data name="Batch_Done" xml:space="preserve"><value>{0} of {1} built.</value></data>
+  <data name="Batch_NoThconfigs" xml:space="preserve"><value>The workspace has no thconfig to build.</value></data>
+  <data name="Batch_RowOk" xml:space="preserve"><value>  ok</value></data>
+  <data name="Batch_RowFailed" xml:space="preserve"><value>  failed (exit {0})</value></data>
+  <data name="Fix_Rename" xml:space="preserve"><value>Rename '{0}' → '{1}'</value></data>
+  <data name="Fix_InsertEnd" xml:space="preserve"><value>Insert '{0}'</value></data>
+  <data name="Fix_InsertCs" xml:space="preserve"><value>Insert 'cs ' line</value></data>
+  <data name="Fix_CommentOut" xml:space="preserve"><value>Comment out this line</value></data>
+  <data name="Fix_CreateFile" xml:space="preserve"><value>Create file '{0}'</value></data>
+  <data name="Diag_Fix" xml:space="preserve"><value>Fix</value></data>
+  <data name="Diag_FixAll" xml:space="preserve"><value>Fix all '{0}' in the workspace…</value></data>
+  <data name="Diag_FixAllNone" xml:space="preserve"><value>None of these has a fix that can be applied without looking.</value></data>
+  <data name="Diag_FixAllSummary" xml:space="preserve"><value>{0} fixes in {1} files. {2} could not be fixed automatically and are left as they are. Untick any change you do not want.</value></data>
+  <data name="Diag_FixAllDone" xml:space="preserve"><value>Applied {0} changes.</value></data>
+  <data name="EditPreview_Apply" xml:space="preserve"><value>Apply</value></data>
+  <data name="Menu_Tools_SyncMaps" xml:space="preserve"><value>Add unreferenced scraps to maps…</value></data>
+  <data name="Menu_Tools_SuggestEquates" xml:space="preserve"><value>Suggest equates…</value></data>
+  <data name="Menu_Tools_FormatAll" xml:space="preserve"><value>Format all files…</value></data>
+  <data name="SyncMaps_Intro" xml:space="preserve"><value>These scraps are drawn but no map composes them, so they appear in no map Therion exports. Choose the map each one joins (or leave it out); you will see every change before it is written.</value></data>
+  <data name="SyncMaps_Skip" xml:space="preserve"><value>(leave out)</value></data>
+  <data name="SyncMaps_Next" xml:space="preserve"><value>Preview…</value></data>
+  <data name="SyncMaps_Nothing" xml:space="preserve"><value>Every scrap is already in a map.</value></data>
+  <data name="SyncMaps_NoMaps" xml:space="preserve"><value>The project has no map to add scraps to. Create one first (snippet mapb).</value></data>
+  <data name="SyncMaps_Summary" xml:space="preserve"><value>Each map gets its new members after its last one.</value></data>
+  <data name="SyncMaps_Problems" xml:space="preserve"><value>Not changed: {0}.</value></data>
+  <data name="Suggest_Within" xml:space="preserve"><value>Stations closer than</value></data>
+  <data name="Suggest_Link" xml:space="preserve"><value>Link…</value></data>
+  <data name="Suggest_NeedPieces" xml:space="preserve"><value>Positions can only be compared between pieces georeferenced in the same projected coordinate system (a fix in UTM, for example); found {0}.</value></data>
+  <data name="Suggest_NoneWithin" xml:space="preserve"><value>No pair of stations from different pieces is that close.</value></data>
+  <data name="Suggest_Verify" xml:space="preserve"><value>Positions are approximate (no loop closure): each pair is a candidate to check before linking, not a confirmed join.</value></data>
+  <data name="FormatAll_Summary" xml:space="preserve"><value>{0} files would change; {1} are left alone because they do not parse cleanly (fix those first). Line endings are kept. Untick a file to leave it out.</value></data>
+  <data name="Diag_NoFix" xml:space="preserve"><value>This problem has no automatic fix.</value></data>
+  <data name="Diag_FixAllSaveFirst" xml:space="preserve"><value>Save these open files first, so their problems are checked again: {0}.</value></data>
+  <data name="SyncMaps_MapNotFound" xml:space="preserve"><value>not found in its file as it reads now</value></data>
+  <data name="SyncMaps_Unterminated" xml:space="preserve"><value>no endmap</value></data>
+  <data name="SyncMaps_None" xml:space="preserve"><value>unchanged</value></data>
+  <data name="FormatAll_LinesDiffer" xml:space="preserve"><value>{0} line(s) change</value></data>
+  <data name="Menu_Tools_WatchIncoming" xml:space="preserve"><value>Watch the incoming folder</value></data>
+  <data name="Incoming_Title" xml:space="preserve"><value>Incoming folder</value></data>
+  <data name="Incoming_Arrived" xml:space="preserve"><value>New survey export: {0}</value></data>
+  <data name="Incoming_Import" xml:space="preserve"><value>Import…</value></data>
+  <data name="Incoming_Sketch" xml:space="preserve"><value>A sketch arrived ({0}); link its survey file first, then copy the sketch with it.</value></data>
+  <data name="Incoming_On" xml:space="preserve"><value>Watching {0}: survey exports that land there are offered for import.</value></data>
+  <data name="Incoming_Off" xml:space="preserve"><value>No longer watching {0}.</value></data>
+  <data name="Incoming_NoProject" xml:space="preserve"><value>Open a project first.</value></data>
+  <data name="Incoming_FileInvalid" xml:space="preserve"><value>{0} cannot be read ({1}); fix it by hand so nothing in it is lost.</value></data>
+  <data name="Menu_Tools_Macros" xml:space="preserve"><value>Macros</value></data>
+  <data name="Macro_None" xml:space="preserve"><value>(no macros)</value></data>
+  <data name="Macro_Title" xml:space="preserve"><value>Macro</value></data>
+  <data name="Macro_Project" xml:space="preserve"><value>project</value></data>
+  <data name="Macro_Unknown" xml:space="preserve"><value>No macro named '{0}'.</value></data>
+  <data name="Macro_FileInvalid" xml:space="preserve"><value>Some macros could not be read</value></data>
+  <data name="Macro_Previewing" xml:space="preserve"><value>Preview (nothing is changed yet):</value></data>
+  <data name="Macro_Applying" xml:space="preserve"><value>Applying:</value></data>
+  <data name="Macro_ApplyQuestion" xml:space="preserve"><value>The preview finished:
+{0}
+
+Apply the changes? Steps that could not preview run now.</value></data>
+  <data name="Macro_Apply" xml:space="preserve"><value>Apply</value></data>
+  <data name="Cmd_MacroFmt" xml:space="preserve"><value>Macro: {0}</value></data>
+  <data name="Macro_OutsideProject" xml:space="preserve"><value>That file is outside the project; most tools only work on files inside it (copy it to incoming/ first).</value></data>
+  <data name="Assistant_DataPolicyQuestion" xml:space="preserve"><value>Before the first question: what may the assistant send to the model?</value></data>
+  <data name="Assistant_DataPolicyChosen" xml:space="preserve"><value>Data policy: {0}. You can change it in Preferences ▸ Assistant.</value></data>
+  <data name="Pref_AssistantDataPolicy" xml:space="preserve"><value>What the assistant may send to the model</value></data>
+  <data name="Pref_AssistantDataPolicy_SendAll" xml:space="preserve"><value>Everything (the model runs on this computer)</value></data>
+  <data name="Pref_AssistantDataPolicy_SendAllHelp" xml:space="preserve"><value>The tools return station names, coordinates, file text and comments to the model. Best answers. Choose this when the model runs locally (LM Studio): nothing leaves the computer.</value></data>
+  <data name="Pref_AssistantDataPolicy_HideContent" xml:space="preserve"><value>Keep project data from the model</value></data>
+  <data name="Pref_AssistantDataPolicy_HideContentHelp" xml:space="preserve"><value>Only tools that answer about Therion, ThIDE or the program are offered; no workspace summary, no project notes, the conversation is not saved. The assistant can explain commands and errors but cannot read or change the survey.</value></data>
+  <data name="Pref_AssistantDataPolicy_Redact" xml:space="preserve"><value>Blank out values in tool results</value></data>
+  <data name="Pref_AssistantDataPolicy_RedactHelp" xml:space="preserve"><value>All tools stay, but names, numbers and text in their results are replaced by placeholders (counts, error codes and line numbers stay). Best effort: what you type, and names the model writes in its own calls, still reach it. Answers get much weaker.</value></data>
+  <data name="Pref_AssistantSkillPack" xml:space="preserve"><value>Add the skill pack to the assistant's instructions</value></data>
+  <data name="Pref_AssistantSkillPackHelp" xml:space="preserve"><value>Tells the model how Therion projects and ThIDE work, plus your notes (assistant-skills.md next to the settings file) and the project's (assistant.md in the project's config folder). Each part is limited to 8 KB.</value></data>
 </root>

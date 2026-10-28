@@ -1,118 +1,143 @@
-// code snippets / templates. Tab-expandable (and completion-listed) templates for the
-// common Therion blocks. Built-in defaults can be extended/overridden by a user-editable file at
-// %AppData%/ThIDE/snippets.json (XDG fallback on POSIX): an array of {trigger, description,
-// template}. Templates use \n for line breaks and $0 to mark the final caret position.
+// Snippets in the editor: the catalog (built-ins, the user's snippets.json in app data, the
+// project's snippets.json in its config folder) and the insertion, which renders the template with
+// the standard variables and hands it to AvaloniaEdit's snippet session — Tab and Shift+Tab move
+// between the fields, a field used twice is mirrored, Enter or Esc ends the session.
 
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Text.Json;
-using AvaloniaEdit.Document;
 using AvaloniaEdit.Editing;
+using AvaloniaEdit.Snippets;
+using Therion.Workspace;
+using Therion.Workspace.Templates;
+using ThIDE.Resources;
 
 namespace ThIDE.Editor;
 
 internal static class TherionSnippets
 {
-    public sealed record Snippet(string Trigger, string Description, string Template);
+    private static IReadOnlyList<SnippetDefinition>? _all;
+    private static string? _projectRoot;
+    private static ProjectConfigLocation _location;
+    private static readonly HashSet<string> _reported = new(StringComparer.Ordinal);
 
-    // Lazy so Load() runs on first access (after the type initializer has populated Defaults) rather
-    // than during static-field init, where Defaults (declared lower in the file) would still be null.
-    private static IReadOnlyList<Snippet>? _all;
-    public static IReadOnlyList<Snippet> All => _all ??= Load();
+    /// <summary>Raised once per broken snippet file per session, with what was wrong.</summary>
+    public static event EventHandler<IReadOnlyList<TemplateError>>? LoadErrors;
 
-    public static Snippet? Find(string trigger) =>
-        All.FirstOrDefault(s => string.Equals(s.Trigger, trigger, StringComparison.OrdinalIgnoreCase));
+    public static IReadOnlyList<SnippetDefinition> All => _all ??= Load();
+
+    /// <summary>Switches the project layer (called when the workspace root changes).</summary>
+    public static void SetProject(string? root, ProjectConfigLocation location)
+    {
+        _projectRoot = root;
+        _location = location;
+        _all = null;
+    }
+
+    /// <summary>Forgets the loaded catalog so the next use re-reads the snippet files.</summary>
+    public static void Reload() => _all = null;
+
+    public static SnippetDefinition? Find(string trigger, string? filePath) =>
+        All.FirstOrDefault(s => string.Equals(s.Trigger, trigger, StringComparison.OrdinalIgnoreCase) && s.AppliesTo(filePath));
+
+    public static IEnumerable<SnippetDefinition> For(string? filePath) => All.Where(s => s.AppliesTo(filePath));
+
+    public static string DescriptionOf(SnippetDefinition s) => s.DescriptionKey is { } key ? Tr.Get(key) : s.Description;
 
     /// <summary>
-    /// Replaces <c>[start, start+length)</c> with the rendered snippet (continuation lines indented
-    /// to the trigger's column) and positions the caret at the <c>$0</c> marker.
+    /// Replaces <c>[start, start+length)</c> with the snippet: variables filled in from the file and
+    /// the caret, continuation lines indented to the trigger's column, and a field session started
+    /// for its tab stops.
     /// </summary>
-    public static void Insert(TextArea area, int start, int length, Snippet snippet)
+    public static void Insert(TextArea area, int start, int length, SnippetDefinition snippet, string? filePath)
     {
+        var (template, error) = SnippetTemplate.Parse(snippet.Template);
+        if (template is null)
+        {
+            LoadErrors?.Invoke(null, [error! with { Source = snippet.Trigger }]);
+            return;
+        }
+
         var doc = area.Document;
-        var line = doc.GetLineByOffset(start);
-        var indent = LeadingWhitespace(doc.GetText(line.Offset, start - line.Offset));
-        var nl = doc.GetLineByNumber(1).DelimiterLength == 2 ? "\r\n" : "\n";
-        var (body, caret) = Render(snippet.Template, indent, nl);
-        doc.Replace(start, length, body);
-        area.Caret.Offset = Math.Min(start + caret, doc.TextLength);
-    }
+        var vars = SnippetVariables.Standard(new SnippetContext(filePath, doc.Text, start, DateTime.Now));
+        // AvaloniaEdit indents inserted line breaks to the caret line itself, so render flat.
+        var rendered = template.Render(vars, indent: "", newline: "\n");
 
-    private static (string Body, int Caret) Render(string template, string indent, string nl)
-    {
-        var lines = template.Replace("\r\n", "\n").Split('\n');
-        var sb = new StringBuilder();
-        for (int i = 0; i < lines.Length; i++)
+        // One undo step: the trigger and the expansion go together.
+        using (doc.RunUpdate())
         {
-            if (i > 0) sb.Append(nl).Append(indent);
-            sb.Append(lines[i]);
+            doc.Remove(start, length);
+            area.Caret.Offset = start;
+            ToAvaloniaSnippet(rendered).Insert(area);
         }
-        var rendered = sb.ToString();
-        int caret = rendered.IndexOf("$0", StringComparison.Ordinal);
-        if (caret >= 0) rendered = rendered.Remove(caret, 2);
-        else caret = rendered.Length;
-        return (rendered, caret);
     }
 
-    private static string LeadingWhitespace(string text)
+    /// <summary>Text runs, fields (first use of an index) and mirrors (later uses), plus the final caret.</summary>
+    private static Snippet ToAvaloniaSnippet(RenderedSnippet r)
     {
-        int i = 0;
-        while (i < text.Length && (text[i] == ' ' || text[i] == '\t')) i++;
-        return text.Substring(0, i);
-    }
+        var snippet = new Snippet();
+        var fields = new Dictionary<int, SnippetReplaceableTextElement>();
+        int pos = 0;
+        bool caretPlaced = false;
 
-    // ---- loading (built-in defaults + optional user overrides) ----
-
-    private sealed class SnippetDto
-    {
-        public string? Trigger { get; set; }
-        public string? Description { get; set; }
-        public string? Template { get; set; }
-    }
-
-    private static IReadOnlyList<Snippet> Load()
-    {
-        var map = new Dictionary<string, Snippet>(StringComparer.OrdinalIgnoreCase);
-        foreach (var s in Defaults) map[s.Trigger] = s;
-        try
+        void Text(int upTo)
         {
-            var path = UserSnippetPath();
-            if (File.Exists(path) &&
-                JsonSerializer.Deserialize<List<SnippetDto>>(File.ReadAllText(path)) is { } dtos)
+            if (!caretPlaced && r.FinalCaret >= pos && r.FinalCaret <= upTo && r.FinalCaret < r.Text.Length)
             {
-                foreach (var d in dtos)
-                    if (!string.IsNullOrWhiteSpace(d.Trigger) && d.Template is not null)
-                        map[d.Trigger!] = new Snippet(d.Trigger!, d.Description ?? d.Trigger!, d.Template);
+                if (r.FinalCaret > pos) snippet.Elements.Add(new SnippetTextElement { Text = r.Text[pos..r.FinalCaret] });
+                snippet.Elements.Add(new SnippetCaretElement());
+                caretPlaced = true;
+                pos = r.FinalCaret;
             }
+            if (upTo > pos) snippet.Elements.Add(new SnippetTextElement { Text = r.Text[pos..upTo] });
+            pos = Math.Max(pos, upTo);
         }
-        catch { /* ignore a malformed user file — keep the built-in defaults */ }
-        return map.Values.OrderBy(s => s.Trigger, StringComparer.OrdinalIgnoreCase).ToList();
+
+        foreach (var stop in r.Stops.OrderBy(s => s.Start))
+        {
+            Text(stop.Start);
+            var text = r.Text.Substring(stop.Start, stop.Length);
+            if (!stop.IsMirror && !fields.ContainsKey(stop.Index))
+            {
+                var field = new SnippetReplaceableTextElement { Text = text };
+                fields[stop.Index] = field;
+                snippet.Elements.Add(field);
+            }
+            else if (fields.TryGetValue(stop.Index, out var target))
+                snippet.Elements.Add(new SnippetBoundElement { TargetElement = target });
+            else
+                snippet.Elements.Add(new SnippetTextElement { Text = text });
+            pos = stop.Start + stop.Length;
+        }
+        Text(r.Text.Length);
+        if (!caretPlaced) snippet.Elements.Add(new SnippetCaretElement());
+        return snippet;
     }
 
-    private static string UserSnippetPath()
+    private static IReadOnlyList<SnippetDefinition> Load()
+    {
+        var layers = new List<SnippetLayer> { Layer("snippets.json (user)", UserSnippetPath()) };
+        if (ProjectLocalConfig.PathFor(_projectRoot, _location, "snippets.json") is { } projectFile)
+            layers.Add(Layer("snippets.json (project)", projectFile));
+
+        var (snippets, errors) = SnippetCatalog.Load(SnippetCatalog.BuiltIns, layers.ToArray());
+        var fresh = errors.Where(e => _reported.Add(e.ToString())).ToList();
+        if (fresh.Count > 0) LoadErrors?.Invoke(null, fresh);
+        return snippets;
+    }
+
+    private static SnippetLayer Layer(string name, string path)
+    {
+        try { return new SnippetLayer(name, File.Exists(path) ? File.ReadAllText(path) : null); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return new SnippetLayer(name, null); }
+    }
+
+    public static string UserSnippetPath()
     {
         var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         if (string.IsNullOrEmpty(appData))
             appData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config");
         return Path.Combine(appData, "ThIDE", "snippets.json");
     }
-
-    private static readonly Snippet[] Defaults =
-    {
-        new("survb", "survey … endsurvey block",
-            "survey $0 -title \"\"\n  centreline\n    date \n    team \"\"\n    data normal from to length compass clino\n    \n  endcentreline\nendsurvey"),
-        new("clt", "centreline + data normal",
-            "centreline\n  date $0\n  data normal from to length compass clino\n  \nendcentreline"),
-        new("datan", "data normal reading order",
-            "data normal from to length compass clino$0"),
-        new("scrapb", "scrap … endscrap block",
-            "scrap $0 -projection plan -scale [0 0 1 0 0 0 1 0 m]\n  \nendscrap"),
-        new("mapb", "map … endmap block",
-            "map $0\n  \nendmap"),
-        new("thconf", "thconfig skeleton",
-            "encoding  utf-8\nsource $0\n\nlayout layout1\nendlayout\n\nselect 1\nexport map -layout layout1 -output map.pdf"),
-    };
 }

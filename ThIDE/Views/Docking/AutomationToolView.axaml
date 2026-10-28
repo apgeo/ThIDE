@@ -1,0 +1,48 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ThIDE.ViewModels.Docking"
+             xmlns:l="using:ThIDE.Resources"
+             x:Class="ThIDE.Views.Docking.AutomationToolView"
+             x:CompileBindings="False"
+             AutomationProperties.AutomationId="Automation.View"
+             x:DataType="vm:AutomationToolViewModel">
+    <DockPanel>
+        <Border DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="6,3">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Content="{l:Loc Automation_Cancel}" Command="{Binding Automation.CancelSelectedCommand}"
+                        IsEnabled="{Binding Automation.Selected.IsRunning}" Padding="10,2" FontSize="11"
+                        AutomationProperties.AutomationId="Automation.Cancel" />
+                <Button Content="{l:Loc Common_Copy}" Click="OnCopy" Padding="10,2" FontSize="11" AutomationProperties.AutomationId="Automation.Copy" />
+                <Button Content="{l:Loc Common_Clear}" Command="{Binding Automation.ClearCommand}" Padding="10,2" FontSize="11"
+                        AutomationProperties.AutomationId="Automation.Clear" />
+            </StackPanel>
+        </Border>
+        <Grid ColumnDefinitions="260,4,*">
+            <ListBox Grid.Column="0" ItemsSource="{Binding Automation.Sessions}" SelectedItem="{Binding Automation.Selected, Mode=TwoWay}"
+                     AutomationProperties.AutomationId="Automation.Sessions">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel>
+                            <TextBlock Text="{Binding Header}" FontSize="12" TextTrimming="CharacterEllipsis" />
+                            <TextBlock FontSize="11" Foreground="Gray">
+                                <Run Text="{Binding State}" />
+                                <Run Text="{Binding ExitCode, StringFormat=' · exit {0}'}" />
+                            </TextBlock>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+            <GridSplitter Grid.Column="1" ResizeDirection="Columns" />
+            <ListBox Grid.Column="2" ItemsSource="{Binding Automation.Selected.Rows}" DoubleTapped="OnRowDoubleTapped"
+                     FontFamily="Consolas,Menlo,monospace" FontSize="12"
+                     AutomationProperties.AutomationId="Automation.Rows">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding Text}" TextWrapping="NoWrap"
+                                   Foreground="{Binding IsError, Converter={x:Static vm:AutomationConverters.ErrorBrush}}" />
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Grid>
+    </DockPanel>
+</UserControl>

@@ -20,6 +20,50 @@ switch to the **Dark** theme, which adapts both the UI and the syntax palette.
   (go to definition, find references, rename, documentation, show in 3D, open).
 - **Bracket/quote auto-pairing** and automatic indentation.
 
+## Snippets and new files
+
+Type a snippet's trigger at the start of a line and press **Tab** (or pick it from autocomplete, or
+from **Generate code ▸ Insert snippet** in the right-click menu). The snippet is inserted with its
+**fields** highlighted: type to fill the first, **Tab** / **Shift+Tab** to move between them, and
+**Enter** or **Esc** when done. A field used twice changes in both places.
+
+| Trigger | Inserts |
+|---|---|
+| `survb` | a `survey … endsurvey` block with today's date |
+| `clt` | a `centreline` with today's date, and the team and data line of the last trip above the cursor |
+| `leg` | the next leg: from the last station to the next number (`A07` → `A08`) |
+| `eq`, `inp` | an `equate`, an `input` |
+| `scrapb`, `mapb` | `scrap` (choose the projection) and `map` blocks |
+| `thconf`, `layout-plan-500`, `layout-copy`, `export-plan-pdf`, `export-model-lox` | thconfig skeleton and fragments (offered in thconfig files) |
+
+**Your own snippets** go in `snippets.json` — in ThIDE's settings folder for yourself, or in the
+project's `.thide/` folder to share them with everyone who has the project (where project files
+live is a choice in **Preferences ▸ General**). It is a list of entries:
+
+```json
+[
+  { "trigger": "fixutm", "description": "fix in UTM 34N", "scope": "th",
+    "template": "fix ${1:station} ${2:easting} ${3:northing} ${4:altitude}$0" }
+]
+```
+
+Templates use the VS Code snippet syntax: `$1`, `${1:default}`, `${1|plan,elevation|}` (a choice),
+`$0` (where the cursor ends), and variables — `$DATE`, `$TIME`, `$YEAR`, `$FILE_NAME`,
+`$FILE_BASENAME`, `$CURRENT_SURVEY`, `$PARENT_SURVEY`, `$TEAM_RECENT`, `$LAST_UNITS`,
+`$LAST_CALIBRATE`, `$LAST_INSTRUMENT`, `$LAST_DATA`, `$LAST_STATION`, `$NEXT_STATION`, or
+`${NAME:fallback}`. Write `\$` for a literal dollar. `scope` is `th`, `th2`, `thconfig` or `any`. A
+broken file is reported once and the rest of your snippets still work.
+
+**Quick Export ▸ Save as fragment…** saves the export block you composed as a thconfig snippet in the
+project's file.
+
+**File ▸ New File…** (also on the Welcome page, in the command palette and in the Workspace
+Explorer's right-click menu) creates a file from a template — survey trip, connection survey,
+thconfig, th2 sketch, layout library or blank — previews it, and can add the `input` line to a survey
+file in the same folder. Your own templates are JSON files in `templates/files/` (settings folder or
+the project's `.thide/`), each `{ "id", "title", "description", "extension", "defaultName", "body" }`
+with a body in the same template syntax.
+
 ## Folding
 
 - Therion blocks (`survey…endsurvey`, `scrap…endscrap`, `centreline…`, `map…`, `layout…`) fold.

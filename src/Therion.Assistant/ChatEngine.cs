@@ -168,7 +168,11 @@ public sealed class ChatEngine(HttpClient http, ChatEngineOptions options)
 
         callbacks?.OnUpdate?.Invoke(new ToolCallStarted(info));
 
-        if (!descriptor.ReadOnly
+        // A preview (dryRun: true on a tool that has the parameter) changes nothing, so it is not put
+        // to the user: the real call is. A dryRun on a tool without one would be ignored by the tool.
+        bool preview = !options.AskForPreviews && DeclaresDryRun(descriptor.ParametersJson)
+            && args.TryGetValue("dryRun", out var dry) && dry is JsonElement { ValueKind: JsonValueKind.True };
+        if (!descriptor.ReadOnly && !preview
             && callbacks?.ApproveAsync is { } approve
             && !await approve(info, ct))
         {
@@ -182,7 +186,7 @@ public sealed class ChatEngine(HttpClient http, ChatEngineOptions options)
             var outcome = await catalog.CallAsync(name, args, ct);
             var content = outcome.Content.Length == 0 ? "(no content)" : outcome.Content;
             callbacks?.OnUpdate?.Invoke(new ToolCallFinished(info, outcome.Ok, content));
-            return (content, new ChatToolCall(name, SchemaValid: true, Ok: outcome.Ok));
+            return (ForModel(content), new ChatToolCall(name, SchemaValid: true, Ok: outcome.Ok));
         }
         catch (OperationCanceledException)
         {
@@ -193,8 +197,20 @@ public sealed class ChatEngine(HttpClient http, ChatEngineOptions options)
             // The call was well-formed but the catalog rejected it — still schema-valid.
             var content = $"Error: {ex.Message}";
             callbacks?.OnUpdate?.Invoke(new ToolCallFinished(info, Ok: false, content));
-            return (content, new ChatToolCall(name, SchemaValid: true, Ok: false));
+            return (ForModel(content), new ChatToolCall(name, SchemaValid: true, Ok: false));
         }
+    }
+
+    // The user's card shows the result as it came; the model gets it through the filter.
+    private string ForModel(string content) => options.ResultFilter is { } filter ? filter(content) : content;
+
+    private static bool DeclaresDryRun(string parametersJson)
+    {
+        try
+        {
+            return JsonNode.Parse(parametersJson)?["properties"] is JsonObject props && props.ContainsKey("dryRun");
+        }
+        catch (JsonException) { return false; }
     }
 
     private static (string, ChatToolCall) Screened(ChatCallbacks? callbacks, ToolCallInfo info, string error)

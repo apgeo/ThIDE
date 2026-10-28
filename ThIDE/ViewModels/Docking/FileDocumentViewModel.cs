@@ -23,6 +23,7 @@ using Therion.Core;
 using Therion.Processing.Abstractions;
 using Therion.Semantics;
 using Therion.Syntax;
+using Therion.Workspace.Editing;
 using ThIDE.Services;
 
 namespace ThIDE.ViewModels.Docking;
@@ -54,6 +55,25 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
 
     /// <summary>Raised when the assistant asks to replace the current selection with a snippet (CAP-03).</summary>
     public event EventHandler<string>? ReplaceSelectionRequested;
+
+    /// <summary>Raised to apply planned edits through the editor, so they land as one undo step. The
+    /// view sets <see cref="TextEditsRequest.Handled"/>; with no view attached the text is replaced.</summary>
+    public event EventHandler<TextEditsRequest>? ApplyEditsRequested;
+
+    /// <summary>
+    /// Applies edits planned against this document's current text. Returns false, changing nothing,
+    /// when any edit no longer slices to its expected text.
+    /// </summary>
+    public bool ApplyEdits(IReadOnlyList<TextEdit> edits)
+    {
+        var request = new TextEditsRequest(edits);
+        ApplyEditsRequested?.Invoke(this, request);
+        if (request.Handled) return request.Applied;
+
+        if (TextSplicer.Splice(_documentText, edits) is not { } text) return false;
+        DocumentText = text;
+        return true;
+    }
 
     public void RequestInsertAtCaret(string text) => InsertAtCaretRequested?.Invoke(this, text);
     public void RequestReplaceSelection(string text) => ReplaceSelectionRequested?.Invoke(this, text);
@@ -837,4 +857,13 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
         _parseCts?.Dispose();
         _parseCts = null;
     }
+}
+
+/// <summary>Edits for the editor view to apply (see <see cref="FileDocumentViewModel.ApplyEdits"/>).</summary>
+public sealed class TextEditsRequest(IReadOnlyList<TextEdit> edits)
+{
+    public IReadOnlyList<TextEdit> Edits { get; } = edits;
+    /// <summary>A view took the request; <see cref="Applied"/> says how it went.</summary>
+    public bool Handled { get; set; }
+    public bool Applied { get; set; }
 }

@@ -53,6 +53,15 @@
                     <CheckBox Content="{l:Loc Pref_ShowWelcome}"
                               AutomationProperties.AutomationId="Preferences.ShowWelcome"
                               IsChecked="{Binding ShowWelcomeOnStartup}" />
+                    <TextBlock Text="{l:Loc Pref_ProjectConfig}" FontWeight="SemiBold" Margin="0,6,0,0" />
+                    <RadioButton GroupName="ProjectConfig" Content="{l:Loc Pref_ProjectConfigFolder}"
+                                 AutomationProperties.AutomationId="Preferences.ProjectConfig.Folder"
+                                 IsChecked="{Binding !ProjectConfigInAppData}" />
+                    <TextBlock Text="{l:Loc Pref_ProjectConfigFolderHint}" Foreground="Gray" FontSize="11" Margin="28,-6,0,0" TextWrapping="Wrap" />
+                    <RadioButton GroupName="ProjectConfig" Content="{l:Loc Pref_ProjectConfigAppData}"
+                                 AutomationProperties.AutomationId="Preferences.ProjectConfig.AppData"
+                                 IsChecked="{Binding ProjectConfigInAppData}" />
+                    <TextBlock Text="{l:Loc Pref_ProjectConfigAppDataHint}" Foreground="Gray" FontSize="11" Margin="28,-6,0,0" TextWrapping="Wrap" />
                     <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,4,0,0">
                         <TextBlock Text="{l:Loc Pref_Language}" VerticalAlignment="Center" Width="100" />
                         <ComboBox AutomationProperties.AutomationId="Preferences.Language" AutomationProperties.Name="{l:Loc Pref_Language}" MinWidth="180" SelectedIndex="{Binding LanguageIndex, Mode=TwoWay}">
@@ -427,6 +436,44 @@
                         <TextBox AutomationProperties.AutomationId="Preferences.HookOnBuild" AutomationProperties.Name="{l:Loc Pref_OnBuild}"   Grid.Row="2" Grid.Column="1" Text="{Binding HookOnBuild}" Watermark="{l:Loc Pref_CommandWm}" />
                     </Grid>
 
+                    <TextBlock Text="{l:Loc Pref_HookList}" FontWeight="SemiBold" Margin="0,6,0,0" />
+                    <TextBlock Text="{l:Loc Pref_HookListHelp}" Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
+                    <ItemsControl ItemsSource="{Binding HookRows}" IsEnabled="{Binding EnableScriptHooks}" AutomationProperties.AutomationId="Preferences.Hooks">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid ColumnDefinitions="150,*,90,Auto,Auto,Auto" Margin="0,0,0,4">
+                                    <ComboBox Grid.Column="0" ItemsSource="{Binding $parent[ItemsControl].DataContext.HookEvents}"
+                                              SelectedItem="{Binding Event, Mode=TwoWay}" HorizontalAlignment="Stretch" />
+                                    <TextBox Grid.Column="1" Text="{Binding Command, Mode=TwoWay}" Margin="4,0" Watermark="{l:Loc Pref_CommandWm}" />
+                                    <NumericUpDown Grid.Column="2" Value="{Binding TimeoutSeconds, Mode=TwoWay}" Minimum="1" Maximum="3600"
+                                                   ToolTip.Tip="{l:Loc Pref_HookTimeout}" FormatString="0" />
+                                    <CheckBox Grid.Column="3" Content="{l:Loc Pref_HookDetached}" IsChecked="{Binding Detached, Mode=TwoWay}" Margin="6,0,0,0" />
+                                    <CheckBox Grid.Column="4" Content="{l:Loc Pref_HookEnabled}" IsChecked="{Binding Enabled, Mode=TwoWay}" Margin="6,0,0,0" />
+                                    <Button Grid.Column="5" Content="✕" Margin="6,0,0,0"
+                                            Command="{Binding $parent[ItemsControl].DataContext.RemoveHookCommand}" CommandParameter="{Binding}" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Button Content="{l:Loc Pref_HookAdd}" Command="{Binding AddHookCommand}" HorizontalAlignment="Left"
+                            IsEnabled="{Binding EnableScriptHooks}" AutomationProperties.AutomationId="Preferences.Hooks.Add" />
+
+                    <CheckBox Content="{l:Loc Pref_ProjectAutomation}" IsChecked="{Binding EnableProjectAutomation}" Margin="0,6,0,0"
+                              AutomationProperties.AutomationId="Preferences.ProjectAutomation" />
+                    <TextBlock Text="{l:Loc Pref_ProjectAutomationHelp}" Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
+                    <TextBlock Text="{l:Loc Pref_TrustedFolders}" FontWeight="SemiBold" />
+                    <ItemsControl ItemsSource="{Binding TrustedFolders}" AutomationProperties.AutomationId="Preferences.TrustedFolders">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <DockPanel Margin="0,0,0,2">
+                                    <Button DockPanel.Dock="Right" Content="{l:Loc Pref_TrustRemove}"
+                                            Command="{Binding $parent[ItemsControl].DataContext.RevokeTrustCommand}" CommandParameter="{Binding}" />
+                                    <TextBlock Text="{Binding}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                </DockPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
                     <Separator Margin="0,6" />
                     <!-- plugin assemblies. -->
                     <CheckBox Content="{l:Loc Pref_LoadPlugins}"
@@ -499,6 +546,29 @@
                     </Grid>
                     <TextBlock Text="{l:Loc Pref_AssistantContextModeHelp}" Margin="16,2,0,0"
                                Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
+                    <CheckBox Content="{l:Loc Pref_AssistantSkillPack}" Margin="16,6,0,0"
+                              AutomationProperties.AutomationId="Preferences.AssistantSkillPack"
+                              IsChecked="{Binding AssistantSkillPack}" />
+                    <TextBlock Text="{l:Loc Pref_AssistantSkillPackHelp}" Margin="16,2,0,0"
+                               Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
+                    <TextBlock Text="{l:Loc Pref_AssistantDataPolicy}" Margin="16,8,0,2" FontWeight="SemiBold" />
+                    <StackPanel Margin="16,0,0,0" Spacing="2">
+                        <RadioButton GroupName="AssistantDataPolicy" Content="{l:Loc Pref_AssistantDataPolicy_SendAll}"
+                                     AutomationProperties.AutomationId="Preferences.AssistantDataPolicy.SendAll"
+                                     IsChecked="{Binding AssistantDataPolicySendAll}" />
+                        <TextBlock Text="{l:Loc Pref_AssistantDataPolicy_SendAllHelp}" Margin="24,0,0,4"
+                                   Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
+                        <RadioButton GroupName="AssistantDataPolicy" Content="{l:Loc Pref_AssistantDataPolicy_HideContent}"
+                                     AutomationProperties.AutomationId="Preferences.AssistantDataPolicy.HideContent"
+                                     IsChecked="{Binding AssistantDataPolicyHideContent}" />
+                        <TextBlock Text="{l:Loc Pref_AssistantDataPolicy_HideContentHelp}" Margin="24,0,0,4"
+                                   Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
+                        <RadioButton GroupName="AssistantDataPolicy" Content="{l:Loc Pref_AssistantDataPolicy_Redact}"
+                                     AutomationProperties.AutomationId="Preferences.AssistantDataPolicy.Redact"
+                                     IsChecked="{Binding AssistantDataPolicyRedact}" />
+                        <TextBlock Text="{l:Loc Pref_AssistantDataPolicy_RedactHelp}" Margin="24,0,0,4"
+                                   Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
+                    </StackPanel>
 
                     <Separator Margin="0,6" />
                     <TextBlock Text="{l:Loc Pref_CliHelp}"

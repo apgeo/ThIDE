@@ -18,6 +18,17 @@ You can open at three levels of scope, all from the **File** menu (or the toolba
 For real work, **Open Folder** (or Open thconfig) is what you want — that's what gives ThIDE the
 cross-file understanding described in [Core concepts](04-core-concepts.md).
 
+**Starting from nothing?** **File → New Project…** (also on the Welcome page) creates a project from a
+template — *Single cave* (survey file, thconfig with a plan map and a 3D model, `data/`, `sketches/`,
+`output/`), *Karst area* (one thconfig per cave plus a master one) or *Expedition* (a folder and a
+thconfig per year). Fill in the few fields (names may hold letters, digits, `_` and `-`), choose a
+folder, and ThIDE writes the project and opens its thconfig. **Import template folder / .zip…** adds a
+club's own template: a folder with a `template.json` (`id`, `title`, `description`, `variables` —
+each `{ "id", "prompt", "default", "type": "text|name|number|bool|choice|cs|date" }` — `directories`,
+`openAfterCreate`) and the project's files, whose paths and contents use `${id}`. The same templates
+work from the command line: `therion-cli new --list`, `therion-cli new single-cave --out ~/caves/pit
+--var project=pit`.
+
 ## Step 2 — Choose the active thconfig
 
 A project can contain several `.thconfig` files. ThIDE builds and analyzes against **one active

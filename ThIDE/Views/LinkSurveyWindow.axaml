@@ -1,0 +1,114 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ThIDE.ViewModels"
+        xmlns:pickers="using:ThIDE.Views.Pickers"
+        xmlns:l="using:ThIDE.Resources"
+        x:Class="ThIDE.Views.LinkSurveyWindow"
+        x:DataType="vm:LinkSurveyViewModel"
+        x:CompileBindings="False"
+        Title="{l:Loc LinkSurvey_Title}" Width="1040" Height="820" MinWidth="760" MinHeight="600"
+        AutomationProperties.AutomationId="LinkSurvey.Window"
+        WindowStartupLocation="CenterOwner" CanResize="True">
+    <DockPanel Margin="12">
+        <!-- Source file -->
+        <StackPanel DockPanel.Dock="Top" Spacing="4" Margin="0,0,0,8">
+            <TextBlock Text="{l:Loc LinkSurvey_Intro}" Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Left" Text="{l:Loc LinkSurvey_SourceFile}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                <Button DockPanel.Dock="Right" Content="{l:Loc LinkSurvey_Browse}" Click="OnBrowseSource" Margin="6,0,0,0"
+                        AutomationProperties.AutomationId="LinkSurvey.BrowseSource" />
+                <Button DockPanel.Dock="Right" Content="{l:Loc LinkSurvey_Load}" Command="{Binding LoadSourceCommand}" Margin="6,0,0,0"
+                        AutomationProperties.AutomationId="LinkSurvey.LoadSource" />
+                <TextBox Text="{Binding SourcePath, Mode=TwoWay}" PlaceholderText="{l:Loc LinkSurvey_SourceHint}"
+                         AutomationProperties.AutomationId="LinkSurvey.SourcePath" AutomationProperties.Name="{l:Loc LinkSurvey_SourceFile}">
+                    <TextBox.KeyBindings>
+                        <KeyBinding Gesture="Enter" Command="{Binding LoadSourceCommand}" />
+                    </TextBox.KeyBindings>
+                </TextBox>
+            </DockPanel>
+            <TextBlock Text="{Binding SourceStatus}" FontSize="11" Foreground="Gray" AutomationProperties.AutomationId="LinkSurvey.SourceStatus" />
+        </StackPanel>
+
+        <!-- Buttons -->
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,10,0,0">
+            <Button Content="{l:Loc LinkSurvey_Copy}" Command="{Binding CopyCommand}" MinWidth="120"
+                    AutomationProperties.AutomationId="LinkSurvey.Copy" />
+            <Button Content="{l:Loc Common_Cancel}" Click="OnCancel" MinWidth="80"
+                    AutomationProperties.AutomationId="LinkSurvey.Cancel" />
+            <Button Content="{l:Loc LinkSurvey_Insert}" Click="OnInsert" IsDefault="True" MinWidth="120"
+                    IsEnabled="{Binding CanInsert}"
+                    AutomationProperties.AutomationId="LinkSurvey.Insert" />
+        </StackPanel>
+
+        <!-- Result + options -->
+        <ScrollViewer DockPanel.Dock="Bottom" MaxHeight="330" Margin="0,8,0,0">
+            <StackPanel Spacing="6">
+                <TextBlock Text="{l:Loc LinkSurvey_Generated}" FontWeight="SemiBold" />
+                <TextBox Text="{Binding GeneratedText}" IsReadOnly="True" AcceptsReturn="True" FontFamily="monospace"
+                         MinHeight="64" TextWrapping="NoWrap"
+                         AutomationProperties.AutomationId="LinkSurvey.Generated" AutomationProperties.Name="{l:Loc LinkSurvey_Generated}" />
+                <ItemsControl ItemsSource="{Binding Warnings}" AutomationProperties.AutomationId="LinkSurvey.Warnings">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Text}" TextWrapping="Wrap" FontSize="12"
+                                       Foreground="{Binding Blocks, Converter={x:Static vm:LinkSurveyConverters.WarningBrush}}" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <Grid ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="6">
+                    <TextBlock Grid.Row="0" Text="{l:Loc LinkSurvey_Destination}" VerticalAlignment="Center" />
+                    <ComboBox Grid.Row="0" Grid.Column="1" HorizontalAlignment="Stretch"
+                              ItemsSource="{Binding Destinations}" SelectedItem="{Binding SelectedDestination, Mode=TwoWay}"
+                              AutomationProperties.AutomationId="LinkSurvey.Destination" AutomationProperties.Name="{l:Loc LinkSurvey_Destination}" />
+                    <CheckBox Grid.Row="1" Grid.Column="1" Content="{l:Loc LinkSurvey_UseCurrentFile}"
+                              IsChecked="{Binding UseCurrentFile, Mode=TwoWay}" IsEnabled="{Binding CanUseCurrentFile}"
+                              AutomationProperties.AutomationId="LinkSurvey.UseCurrentFile" />
+
+                    <TextBlock Grid.Row="2" Text="{l:Loc LinkSurvey_CopyTo}" VerticalAlignment="Center" />
+                    <DockPanel Grid.Row="2" Grid.Column="1">
+                        <CheckBox DockPanel.Dock="Left" Content="{l:Loc LinkSurvey_CopySource}" IsChecked="{Binding CopySource, Mode=TwoWay}"
+                                  IsEnabled="{Binding CanCopySource}"
+                                  Margin="0,0,8,0" AutomationProperties.AutomationId="LinkSurvey.CopySource" />
+                        <Button DockPanel.Dock="Right" Content="{l:Loc LinkSurvey_Browse}" Click="OnBrowseTarget" Margin="6,0,0,0"
+                                IsEnabled="{Binding CopySource}" AutomationProperties.AutomationId="LinkSurvey.BrowseTarget" />
+                        <TextBox Text="{Binding TargetDirectory, Mode=TwoWay}" IsEnabled="{Binding CopySource}"
+                                 AutomationProperties.AutomationId="LinkSurvey.TargetDirectory" AutomationProperties.Name="{l:Loc LinkSurvey_CopyTo}" />
+                    </DockPanel>
+
+                    <TextBlock Grid.Row="3" Text="{l:Loc LinkSurvey_Sketches}" VerticalAlignment="Top" Margin="0,4,0,0" />
+                    <ItemsControl Grid.Row="3" Grid.Column="1" ItemsSource="{Binding Sketches}" IsEnabled="{Binding CopySource}"
+                                  AutomationProperties.AutomationId="LinkSurvey.Sketches">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <CheckBox Content="{Binding Label}" IsChecked="{Binding IsChecked, Mode=TwoWay}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <CheckBox Grid.Row="4" Grid.Column="1" Content="{l:Loc LinkSurvey_AddComment}" IsChecked="{Binding AddComment, Mode=TwoWay}"
+                              AutomationProperties.AutomationId="LinkSurvey.AddComment" />
+                </Grid>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- The two stations -->
+        <Grid ColumnDefinitions="*,16,*">
+            <DockPanel Grid.Column="0">
+                <TextBlock DockPanel.Dock="Top" Text="{l:Loc LinkSurvey_SourceStation}" FontWeight="SemiBold" Margin="0,0,0,4" />
+                <pickers:StationSelectorView DataContext="{Binding SourceSelector}" />
+            </DockPanel>
+            <DockPanel Grid.Column="2">
+                <TextBlock DockPanel.Dock="Top" Text="{l:Loc LinkSurvey_WorkspaceStation}" FontWeight="SemiBold" Margin="0,0,0,4" />
+                <Button DockPanel.Dock="Bottom" Content="{l:Loc LinkSurvey_FullPreview}" Command="{Binding ShowFullPreviewCommand}"
+                        HorizontalAlignment="Left" Margin="0,6,0,0" AutomationProperties.AutomationId="LinkSurvey.FullPreview" />
+                <Grid RowDefinitions="Auto,170,Auto,*">
+                    <TextBlock Grid.Row="0" Text="{l:Loc LinkSurvey_Survey}" FontSize="11" Foreground="Gray" />
+                    <pickers:ItemPickerView Grid.Row="1" DataContext="{Binding Surveys}" />
+                    <TextBlock Grid.Row="2" Text="{l:Loc LinkSurvey_Station}" FontSize="11" Foreground="Gray" Margin="0,6,0,0" />
+                    <pickers:ItemPickerView Grid.Row="3" DataContext="{Binding Stations}" />
+                </Grid>
+            </DockPanel>
+        </Grid>
+    </DockPanel>
+</Window>

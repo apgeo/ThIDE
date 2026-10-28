@@ -39,6 +39,12 @@ public sealed class ThideApp : IAsyncDisposable
 
     public static string FixturesDir => Metadata("UiFixtures");
 
+    /// <summary>Where screenshots worth keeping go (tests/ui-artifacts unless UI_ARTIFACTS says otherwise).</summary>
+    public static string ArtifactsDir =>
+        Environment.GetEnvironmentVariable("UI_ARTIFACTS") is { Length: > 0 } dir
+            ? dir
+            : Path.GetFullPath(Path.Combine(FixturesDir, "..", "ui-artifacts"));
+
     /// <summary>Copies a fixture project (tests/ui-fixtures/&lt;name&gt;) to a temp dir and returns the dir.</summary>
     public static string CopyFixture(string name)
     {
