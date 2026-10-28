@@ -125,10 +125,16 @@ public sealed partial class BatchBuildViewModel : ObservableObject
                     label += " " + string.Format(Tr.Get("Batch_SomeTargets"), keep.Count, row.Targets.Count);
                 }
                 var outcome = await _env.Build(entry, temp, label);
-                if (outcome is null) { session?.Write(Tr.Get("Batch_NotStarted"), isError: true); break; }
+                if (outcome is null)
+                {
+                    // Not started: the build never reached the point where it deletes its copy.
+                    if (temp is not null) try { File.Delete(temp); } catch (IOException) { }
+                    session?.Write(Tr.Get("Batch_NotStarted"), isError: true);
+                    break;
+                }
                 outcome = outcome with { Entry = row.Path };
                 outcomes.Add(outcome);
-                session?.Write(outcome.Succeeded ? "  ok" : $"  failed (exit {outcome.ExitCode})", !outcome.Succeeded);
+                session?.Write(outcome.Succeeded ? Tr.Get("Batch_RowOk") : string.Format(Tr.Get("Batch_RowFailed"), outcome.ExitCode), !outcome.Succeeded);
                 if (!outcome.Succeeded && (StopOnFailure || outcome.Cancelled)) break;
             }
         }

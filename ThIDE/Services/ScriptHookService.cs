@@ -31,8 +31,8 @@ public interface IScriptHookService
     /// <summary>Runs every hook for an event and waits for the attached ones.</summary>
     Task RunAsync(HookContext context, CancellationToken ct = default);
 
-    /// <summary>Runs a task by id for hooks that name one (set by the task runner).</summary>
-    Func<string, Task>? RunTask { get; set; }
+    /// <summary>Runs a task by id, with the hook's context, for hooks that name one (set by the task runner).</summary>
+    Func<string, HookContext, Task>? RunTask { get; set; }
 }
 
 public sealed class ScriptHookService : IScriptHookService
@@ -57,7 +57,8 @@ public sealed class ScriptHookService : IScriptHookService
         _notifications = notifications;
     }
 
-    public Func<string, Task>? RunTask { get; set; }
+    public Func<string, HookContext, Task>? RunTask { get; set; }
+    private readonly SemaphoreSlim _asking = new(1, 1);
 
     public void Run(ScriptHookEvent ev, string? filePath = null)
     {
@@ -88,7 +89,9 @@ public sealed class ScriptHookService : IScriptHookService
     {
         var s = _settings.Current;
         if (!s.EnableScriptHooks) return;
-        var hooks = HookCatalog.For(HookCatalog.Merge(s.HookOnOpen, s.HookOnSave, s.HookOnBuild, s.Hooks, ProjectHooks(s)), context.Event).ToList();
+        var hooks = HookCatalog.For(HookCatalog.Merge(s.HookOnOpen, s.HookOnSave, s.HookOnBuild, s.Hooks, ProjectHooks(s)), context.Event)
+            .Where(h => !string.IsNullOrWhiteSpace(h.Command) || !string.IsNullOrWhiteSpace(h.Task))
+            .ToList();
         if (hooks.Count == 0) return;
 
         if (hooks.Any(h => h.Source == HookSource.Project) && !await ProjectAllowedAsync(context.WorkspaceRoot).ConfigureAwait(false))
@@ -121,9 +124,16 @@ public sealed class ScriptHookService : IScriptHookService
     {
         if (_trust is null || root is null) return false;
         if (_trust.Get(root) == TrustState.Trusted) return true;
-        lock (_declined) if (_declined.Contains(root)) return false;
-        if (await _trust.EnsureTrustedAsync(root, Tr.Get("Trust_ReasonHooks")).ConfigureAwait(false)) return true;
-        lock (_declined) _declined.Add(root);
+        // One question at a time: Save All fires a hook per file, and only the first may ask.
+        await _asking.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            if (_trust.Get(root) == TrustState.Trusted) return true;
+            lock (_declined) if (_declined.Contains(root)) return false;
+            if (await _trust.EnsureTrustedAsync(root, Tr.Get("Trust_ReasonHooks")).ConfigureAwait(false)) return true;
+            lock (_declined) _declined.Add(root);
+        }
+        finally { _asking.Release(); }
         _notifications?.Warning(Tr.Get("Trust_Skipped"), string.Format(Tr.Get("Trust_SkippedDetail"), "hooks.json"),
             Tr.Get("Trust_TrustAction"), () => _trust.Trust(root));
         return false;
@@ -133,7 +143,8 @@ public sealed class ScriptHookService : IScriptHookService
     {
         if (hook.Task is { Length: > 0 } taskId)
         {
-            if (RunTask is { } run) await run(taskId).ConfigureAwait(false);
+            // Tasks may build or open windows: they run on the UI thread.
+            if (RunTask is { } run) await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => run(taskId, ctx));
             return;
         }
         var command = HookVariables.Expand(hook.Command!, ctx, v => ShellQuote.ForArgument(v));
@@ -161,7 +172,7 @@ public sealed class ScriptHookService : IScriptHookService
         session?.Write("$ " + command);
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         session?.OnCancel(cts.Cancel);
-        var outcome = await ProcessRunner.RunAsync(spec, new Progress<ProcessLine>(l => session?.Write(l.Text, l.IsError)), cts.Token).ConfigureAwait(false);
+        var outcome = await ProcessRunner.RunAsync(spec, new SyncProgress<ProcessLine>(l => session?.Write(l.Text, l.IsError)), cts.Token).ConfigureAwait(false);
         if (outcome.StartError is { } err) session?.Write(err, isError: true);
         session?.Complete(outcome.Succeeded ? AutomationState.Succeeded : outcome.Cancelled ? AutomationState.Cancelled : AutomationState.Failed, outcome.ExitCode);
         if (outcome.TimedOut)

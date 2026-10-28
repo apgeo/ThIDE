@@ -93,7 +93,8 @@ public static partial class TaskCatalog
 
 public static partial class ProblemMatchers
 {
-    [GeneratedRegex(@"^(?<file>[^:\r\n]+?):(?<line>\d+)(?::(?<col>\d+))?:\s*(?<msg>.*)$")]
+    // A path with an extension (optionally after a Windows drive), so "12:30:45" is not a position.
+    [GeneratedRegex(@"^(?<file>(?:[A-Za-z]:[\\/])?[^:\r\n]*?\.[A-Za-z0-9]+):(?<line>\d+)(?::(?<col>\d+))?:\s*(?<msg>.*)$")]
     private static partial Regex FileLine();
 
     private static readonly HeuristicTherionOutputParser Therion = new();

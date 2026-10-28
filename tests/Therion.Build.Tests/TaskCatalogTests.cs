@@ -56,4 +56,24 @@ public class TaskCatalogTests
         Assert.Null(ProblemMatchers.Match("file-line", "just text", false, "/c", "lint"));
         Assert.Null(ProblemMatchers.Match(null, "a.th:1: x", false, "/c", "lint"));
     }
+
+    [Fact]
+    public void File_line_matcher_takes_windows_paths_and_ignores_timestamps()
+    {
+        var d = ProblemMatchers.Match("file-line", @"C:\cave\a.th:12: bad name", false, null, "lint");
+
+        Assert.Equal(@"C:\cave\a.th", d!.Span.FilePath);
+        Assert.Null(ProblemMatchers.Match("file-line", "12:30:45: started", false, "/c", "lint"));
+    }
+
+    [Fact]
+    public void Sync_progress_keeps_the_order()
+    {
+        var seen = new List<int>();
+        var progress = new SyncProgress<int>(seen.Add);
+
+        for (int i = 0; i < 100; i++) progress.Report(i);
+
+        Assert.Equal(Enumerable.Range(0, 100), seen);
+    }
 }

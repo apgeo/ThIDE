@@ -38,7 +38,9 @@ public class HookCatalogTests
     [Fact]
     public void A_hook_needs_exactly_one_of_command_and_task()
     {
-        Assert.NotNull(HookCatalog.LoadProject("""{ "hooks": [ { "event": "FileSaved" } ] }""").Error);
+        var (hooks, error) = HookCatalog.LoadProject("""{ "hooks": [ { "event": "FileSaved" }, { "event": "FileSaved", "command": "ok" } ] }""");
+        Assert.NotNull(error);
+        Assert.Equal("ok", Assert.Single(hooks).Command);
         Assert.NotNull(HookCatalog.LoadProject("{ broken").Error);
     }
 
@@ -66,5 +68,14 @@ public class HookCatalogTests
         Assert.Equal("3", env["THIDE_BUILD_ERRORS"]);
         Assert.Equal("1500", env["THIDE_ELAPSED_MS"]);
         Assert.Equal($"/c/a.pdf{Path.PathSeparator}/c/a.lox", env["THIDE_OUTPUTS"]);
+    }
+
+    [Fact]
+    public void A_value_that_looks_like_a_variable_is_not_expanded_again()
+    {
+        var ctx = new HookContext(HookEvent.FileSaved, "/c/${workspaceRoot}/a.th", "/ws path");
+
+        Assert.Equal("x " + Sh("/c/${workspaceRoot}/a.th"), HookVariables.Expand("x {file}", ctx, Sh));
+        Assert.Equal("x " + Sh("/c/${workspaceRoot}/a.th"), HookVariables.Expand("x ${file}", ctx, Sh));
     }
 }

@@ -807,7 +807,7 @@ public partial class MainWindowViewModel : ViewModelBase
             _session.RootChanged += (_, _) =>
             {
                 if (_hooks is ScriptHookService hooks && _session.RootPath is { } root)
-                    hooks.Fire(hooks.Context(Therion.Build.Automation.HookEvent.WorkspaceOpened, file: root));
+                    hooks.Fire(hooks.Context(Therion.Build.Automation.HookEvent.WorkspaceOpened));
             };
 
         Refresh();
@@ -1731,11 +1731,13 @@ public partial class MainWindowViewModel : ViewModelBase
     private async void TriggerCompileOnSave()
     {
         if (_settings?.Current.CompileOnSave != true) return;
+        // Saves made by a build's own save-before-build step must not queue another build.
+        if (Build.IsBuilding || Build.IsPreparing) return;
         _autoBuildCts?.Cancel();
         var cts = _autoBuildCts = new System.Threading.CancellationTokenSource();
         try { await Task.Delay(700, cts.Token).ConfigureAwait(true); }
         catch (TaskCanceledException) { return; }
-        if (Build.BuildCommand.CanExecute(null))
+        if (!Build.IsBuilding && !Build.IsPreparing && Build.BuildCommand.CanExecute(null))
         {
             _log?.Info("Compile-on-save: rebuilding the project.");
             Build.BuildCommand.Execute(null);

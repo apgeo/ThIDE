@@ -60,9 +60,11 @@ public static class HookCatalog
         try
         {
             var dto = JsonSerializer.Deserialize<FileDto>(json, Json);
-            var hooks = (dto?.Hooks ?? []).Select(h => h with { Source = HookSource.Project }).ToList();
-            var bad = hooks.FirstOrDefault(h => string.IsNullOrWhiteSpace(h.Command) == string.IsNullOrWhiteSpace(h.Task));
-            return bad is null ? (hooks, null) : ([], $"hooks.json: each hook needs either a command or a task ({bad.Event})");
+            var all = (dto?.Hooks ?? []).Select(h => h with { Source = HookSource.Project }).ToList();
+            // A hook with neither (or both) a command and a task is reported; the others still run.
+            var bad = all.Where(h => string.IsNullOrWhiteSpace(h.Command) == string.IsNullOrWhiteSpace(h.Task)).ToList();
+            return (all.Except(bad).ToList(), bad.Count == 0 ? null
+                : $"hooks.json: each hook needs either a command or a task ({string.Join(", ", bad.Select(h => h.Event))})");
         }
         catch (JsonException ex) { return ([], $"hooks.json (line {(ex.LineNumber ?? 0) + 1}): {ex.Message}"); }
     }
@@ -103,12 +105,15 @@ public static class HookVariables
     {
         string Q(string? v) => quote(v ?? "");
         var file = ctx.File;
-        // The legacy {file} (optionally already in quotes), never the "{file}" inside "${file}".
-        var s = System.Text.RegularExpressions.Regex.Replace(template, @"(?<!\$)(""\{file\}""|'\{file\}'|\{file\})", _ => Q(file));
-        return System.Text.RegularExpressions.Regex.Replace(s, @"\$\{(env:)?([A-Za-z_][A-Za-z0-9_]*)\}", m =>
+        // One pass, so a value that itself contains "${...}" is never expanded again: the legacy
+        // {file} (optionally already in quotes), or a ${name} / ${env:NAME} variable.
+        return System.Text.RegularExpressions.Regex.Replace(template,
+            @"(?<legacy>""\{file\}""|'\{file\}'|(?<!\$)\{file\})|\$\{(?<env>env:)?(?<name>[A-Za-z_][A-Za-z0-9_]*)\}", m =>
         {
-            if (m.Groups[1].Success) return Q((env ?? System.Environment.GetEnvironmentVariable)(m.Groups[2].Value));
-            return m.Groups[2].Value switch
+            if (m.Groups["legacy"].Success) return Q(file);
+            var name = m.Groups["name"].Value;
+            if (m.Groups["env"].Success) return Q((env ?? System.Environment.GetEnvironmentVariable)(name));
+            return name switch
             {
                 "file" => Q(file),
                 "fileDirname" => Q(file is null ? null : Path.GetDirectoryName(file)),

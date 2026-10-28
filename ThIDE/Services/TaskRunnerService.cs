@@ -22,7 +22,8 @@ public interface ITaskRunnerService
     /// <summary>The project's tasks, read fresh (the file is small and may have just been edited).</summary>
     IReadOnlyList<TaskDefinition> Tasks();
 
-    Task<bool> RunAsync(string id, CancellationToken ct = default);
+    /// <param name="context">The hook that started it, when one did (its file and event reach the task).</param>
+    Task<bool> RunAsync(string id, CancellationToken ct = default, HookContext? context = null);
 
     /// <summary>Builds entries (null = the active thconfig): set by the shell.</summary>
     Func<IReadOnlyList<string>?, bool, Task>? RunBuild { get; set; }
@@ -53,7 +54,7 @@ public sealed class TaskRunnerService : ITaskRunnerService
         _output = output;
         _notifications = notifications;
         _log = log;
-        if (hooks is not null) hooks.RunTask = id => RunAsync(id);
+        if (hooks is not null) hooks.RunTask = (id, ctx) => RunAsync(id, context: ctx);
     }
 
     public Func<IReadOnlyList<string>?, bool, Task>? RunBuild { get; set; }
@@ -78,7 +79,7 @@ public sealed class TaskRunnerService : ITaskRunnerService
         return tasks;
     }
 
-    public async Task<bool> RunAsync(string id, CancellationToken ct = default)
+    public async Task<bool> RunAsync(string id, CancellationToken ct = default, HookContext? context = null)
     {
         var task = Tasks().FirstOrDefault(t => t.Id == id);
         if (task is null) { _notifications?.Warning(Tr.Get("Task_Unknown"), id); return false; }
@@ -100,7 +101,7 @@ public sealed class TaskRunnerService : ITaskRunnerService
                 return true;
         }
 
-        var ctx = new HookContext(HookEvent.BuildStarted, null, root, _session.ActiveThconfig?.FullPath);
+        var ctx = (context ?? new HookContext(HookEvent.BuildStarted)) with { WorkspaceRoot = root, ActiveThconfig = _session.ActiveThconfig?.FullPath };
         var spec = TaskCatalog.Spec(task, ctx);
         var session = _output.BeginSession($"{Tr.Get("Automation_Task")}: {task.Title}", AutomationKind.Task);
         session.Write("$ " + (spec.UseShell ? spec.FileName : string.Join(' ', new[] { spec.FileName }.Concat(spec.Args))));
@@ -108,7 +109,7 @@ public sealed class TaskRunnerService : ITaskRunnerService
         session.OnCancel(cts.Cancel);
 
         var diagnostics = ImmutableArray.CreateBuilder<Diagnostic>();
-        var lines = new Progress<ProcessLine>(l =>
+        var lines = new SyncProgress<ProcessLine>(l =>
         {
             session.Write(l.Text, l.IsError);
             if (ProblemMatchers.Match(task.ProblemMatcher, l.Text, l.IsError, spec.WorkingDirectory, task.Id) is { } d)

@@ -499,6 +499,9 @@ public partial class BuildViewModel : ViewModelBase
     public event EventHandler<ImmutableArray<Diagnostic>>? CompileCompleted;
 
     /// <summary>Raised when a build begins so the shell can surface the Compiler Output panel (#2).</summary>
+    /// <summary>True while a build saves the files it involves, before it starts compiling.</summary>
+    public bool IsPreparing { get; private set; }
+
     /// <summary>A Therion build is starting; the argument is the entry being compiled.</summary>
     public event EventHandler<string>? BuildStarted;
 
@@ -551,7 +554,9 @@ public partial class BuildViewModel : ViewModelBase
 
         // Before compiling, make sure the involved unsaved files are on disk (Therion reads from
         // disk). Auto-save when configured, otherwise ask (naming the files). Cancel aborts.
-        if (!await EnsureInvolvedFilesSavedAsync(entry).ConfigureAwait(true)) return null;
+        IsPreparing = true;
+        try { if (!await EnsureInvolvedFilesSavedAsync(entry).ConfigureAwait(true)) return null; }
+        finally { IsPreparing = false; }
         // What the build ends as; updated as it goes and reported in finally.
         var outcome = new Therion.Build.Automation.BuildOutcome(entry, false, false, -1, 0, 0, [], null, TimeSpan.Zero, label);
 

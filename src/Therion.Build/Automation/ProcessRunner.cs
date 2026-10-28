@@ -23,6 +23,17 @@ public sealed record ProcessOutcome(int ExitCode, bool TimedOut, bool Cancelled,
 
 public readonly record struct ProcessLine(string Text, bool IsError);
 
+/// <summary>
+/// An <see cref="IProgress{T}"/> that calls back on the reporting thread, in order. (The BCL
+/// Progress posts each report to the thread pool when there is no synchronisation context, which
+/// reorders lines and can deliver them after the run is over.)
+/// </summary>
+public sealed class SyncProgress<T>(Action<T> report) : IProgress<T>
+{
+    private readonly object _gate = new();
+    public void Report(T value) { lock (_gate) report(value); }
+}
+
 public static class ProcessRunner
 {
     /// <summary>
@@ -83,10 +94,17 @@ public static class ProcessRunner
             UseShellExecute = false,
             CreateNoWindow = true,
         };
-        if (spec.UseShell)
+        if (spec.UseShell && OperatingSystem.IsWindows())
         {
-            psi.FileName = OperatingSystem.IsWindows() ? "cmd.exe" : "/bin/sh";
-            psi.ArgumentList.Add(OperatingSystem.IsWindows() ? "/c" : "-c");
+            // cmd does not undo the \" escaping ArgumentList would apply to the quotes inside the
+            // line, so the line goes in raw; /s makes cmd strip only the outer pair of quotes.
+            psi.FileName = "cmd.exe";
+            psi.Arguments = "/d /s /c \"" + spec.FileName + "\"";
+        }
+        else if (spec.UseShell)
+        {
+            psi.FileName = "/bin/sh";
+            psi.ArgumentList.Add("-c");
             psi.ArgumentList.Add(spec.FileName);
         }
         else

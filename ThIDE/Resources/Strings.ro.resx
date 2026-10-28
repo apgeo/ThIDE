@@ -1526,4 +1526,6 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Batch_NotStarted" xml:space="preserve"><value>Compilarea nu a pornit (rulează altă compilare sau salvarea a fost anulată).</value></data>
   <data name="Batch_Done" xml:space="preserve"><value>{0} din {1} compilate.</value></data>
   <data name="Batch_NoThconfigs" xml:space="preserve"><value>Spațiul de lucru nu are niciun thconfig de compilat.</value></data>
+  <data name="Batch_RowOk" xml:space="preserve"><value>  reușit</value></data>
+  <data name="Batch_RowFailed" xml:space="preserve"><value>  eșuat (cod {0})</value></data>
 </root>

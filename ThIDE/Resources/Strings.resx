@@ -1526,4 +1526,6 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Batch_NotStarted" xml:space="preserve"><value>The build did not start (another build is running, or saving was cancelled).</value></data>
   <data name="Batch_Done" xml:space="preserve"><value>{0} of {1} built.</value></data>
   <data name="Batch_NoThconfigs" xml:space="preserve"><value>The workspace has no thconfig to build.</value></data>
+  <data name="Batch_RowOk" xml:space="preserve"><value>  ok</value></data>
+  <data name="Batch_RowFailed" xml:space="preserve"><value>  failed (exit {0})</value></data>
 </root>

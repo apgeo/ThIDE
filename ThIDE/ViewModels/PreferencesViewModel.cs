@@ -405,7 +405,7 @@ public partial class PreferencesViewModel : ObservableObject
             EnableScriptHooks = EnableScriptHooks,
             ProjectConfigLocation = ProjectConfigInAppData ? Therion.Workspace.ProjectConfigLocation.AppData : Therion.Workspace.ProjectConfigLocation.ProjectFolder,
             EnableProjectAutomation = EnableProjectAutomation,
-            Hooks = HookRows.Where(r => !string.IsNullOrWhiteSpace(r.Command)).Select(r => r.ToDefinition()).ToList(),
+            Hooks = HookRows.Where(r => !string.IsNullOrWhiteSpace(r.Command) || !string.IsNullOrWhiteSpace(r.Task)).Select(r => r.ToDefinition()).ToList(),
             HookOnOpen = NullIfBlank(HookOnOpen),
             HookOnSave = NullIfBlank(HookOnSave),
             HookOnBuild = NullIfBlank(HookOnBuild),
@@ -509,9 +509,15 @@ public sealed partial class HookRow : ObservableObject
     [ObservableProperty] private bool _detached;
     [ObservableProperty] private bool _enabled;
 
+    /// <summary>A hook that runs a task (set in the settings file; the grid edits commands).</summary>
+    public string? Task => _original.Task;
+
     public Therion.Build.Automation.HookDefinition ToDefinition() => _original with
     {
-        Event = Event, Command = Command.Trim(), Task = null, TimeoutSeconds = (int)Math.Max(1, TimeoutSeconds),
+        Event = Event,
+        Command = string.IsNullOrWhiteSpace(Command) ? null : Command.Trim(),
+        Task = string.IsNullOrWhiteSpace(Command) ? _original.Task : null,
+        TimeoutSeconds = (int)Math.Max(1, TimeoutSeconds),
         Detached = Detached, Enabled = Enabled,
     };
 }

@@ -63,7 +63,7 @@ public static class BuildVerb
         foreach (var entry in entries)
         {
             stderr.WriteLine($"build: {entry}");
-            var lines = new Progress<CompilerOutputLine>(l => { if (!quiet) stderr.WriteLine("  " + l.Text); });
+            var lines = new SyncProgress<CompilerOutputLine>(l => { if (!quiet) stderr.WriteLine("  " + l.Text); });
             var clock = System.Diagnostics.Stopwatch.StartNew();
             CompileResult result;
             try { result = await compiler.CompileAsync(entry, options, lines, ct).ConfigureAwait(false); }
