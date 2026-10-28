@@ -22,6 +22,8 @@ Guides and reference for ThIDE. See the [project README](../README.md) for the o
 | Application directives (`#@region`) | [directives.md](directives.md) |
 | `layout` / embedded code blocks | [layout-and-embedded-code.md](layout-and-embedded-code.md) |
 | Language Server (LSP) | [lsp.md](lsp.md) |
+| AI hosts, the Assistant panel, macros (`therion-mcp`) | [mcp-host-setup.md](mcp-host-setup.md) |
+| Linking a survey file into the project | [user-guide/24-linking-surveys.md](user-guide/24-linking-surveys.md) |
 | Semantic-rule plugins | [plugins.md](plugins.md) |
 | File associations | [file-association.md](file-association.md) |
 | Packaging & release | [release.md](release.md) |
