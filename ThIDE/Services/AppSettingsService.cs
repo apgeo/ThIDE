@@ -180,6 +180,15 @@ public sealed record AppSettings
     /// default; gated like the prose-summary clause.
     /// </summary>
     public bool AssistantSuggestCodeBlocks { get; init; } = true;
+    /// <summary>
+    /// Add the skill pack (what to know about Therion and ThIDE, plus the user's and the project's
+    /// notes) to the system prompt. On by default.
+    /// </summary>
+    public bool AssistantSkillPack { get; init; } = true;
+    /// <summary>What the assistant may send to the model; the pane asks once (see <see cref="AssistantDataPolicyChosen"/>).</summary>
+    public Therion.Assistant.AssistantDataPolicy AssistantDataPolicy { get; init; } = Therion.Assistant.AssistantDataPolicy.SendAll;
+    /// <summary>False until the user has picked a data policy in the pane or in Preferences.</summary>
+    public bool AssistantDataPolicyChosen { get; init; }
 
     // ---- telemetry ----
     /// <summary>Opt-in: record anonymous usage events + crash reports to LOCAL files only. Off by default.</summary>

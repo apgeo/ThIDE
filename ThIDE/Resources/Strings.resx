@@ -1585,4 +1585,15 @@ Apply the changes? Steps that could not preview run now.</value></data>
   <data name="Macro_Apply" xml:space="preserve"><value>Apply</value></data>
   <data name="Cmd_MacroFmt" xml:space="preserve"><value>Macro: {0}</value></data>
   <data name="Macro_OutsideProject" xml:space="preserve"><value>That file is outside the project; most tools only work on files inside it (copy it to incoming/ first).</value></data>
+  <data name="Assistant_DataPolicyQuestion" xml:space="preserve"><value>Before the first question: what may the assistant send to the model?</value></data>
+  <data name="Assistant_DataPolicyChosen" xml:space="preserve"><value>Data policy: {0}. You can change it in Preferences ▸ Assistant.</value></data>
+  <data name="Pref_AssistantDataPolicy" xml:space="preserve"><value>What the assistant may send to the model</value></data>
+  <data name="Pref_AssistantDataPolicy_SendAll" xml:space="preserve"><value>Everything (the model runs on this computer)</value></data>
+  <data name="Pref_AssistantDataPolicy_SendAllHelp" xml:space="preserve"><value>The tools return station names, coordinates, file text and comments to the model. Best answers. Choose this when the model runs locally (LM Studio): nothing leaves the computer.</value></data>
+  <data name="Pref_AssistantDataPolicy_HideContent" xml:space="preserve"><value>Keep project data from the model</value></data>
+  <data name="Pref_AssistantDataPolicy_HideContentHelp" xml:space="preserve"><value>Only tools that answer about Therion, ThIDE or the program are offered; no workspace summary, no project notes, the conversation is not saved. The assistant can explain commands and errors but cannot read or change the survey.</value></data>
+  <data name="Pref_AssistantDataPolicy_Redact" xml:space="preserve"><value>Blank out values in tool results</value></data>
+  <data name="Pref_AssistantDataPolicy_RedactHelp" xml:space="preserve"><value>All tools stay, but names, numbers and text in their results are replaced by placeholders (counts, error codes and line numbers stay). Best effort: what you type, and names the model writes in its own calls, still reach it. Answers get much weaker.</value></data>
+  <data name="Pref_AssistantSkillPack" xml:space="preserve"><value>Add the skill pack to the assistant's instructions</value></data>
+  <data name="Pref_AssistantSkillPackHelp" xml:space="preserve"><value>Tells the model how Therion projects and ThIDE work, plus your notes (assistant-skills.md next to the settings file) and the project's (assistant.md in the project's config folder). Each part is limited to 8 KB.</value></data>
 </root>

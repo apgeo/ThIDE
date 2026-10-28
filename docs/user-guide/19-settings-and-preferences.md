@@ -153,6 +153,8 @@ project.
 | **Stream the answer with a live progress indicator** | |
 | **Ask the model to put proposed Therion source in code blocks** | Gives you **Copy / Insert / Replace** buttons on the block. |
 | **Workspace context** | How much project digest the model gets to start with: **None (tools only)** · **Card (compact summary)** · **Pack (rich digest)**. Figures are a snapshot, so the model is told to verify with tools. |
+| **Add the skill pack to the assistant's instructions** | On by default: how Therion projects and ThIDE work, then your notes (`assistant-skills.md` next to the settings file) and the project's (`assistant.md` in the project's config folder), 8 KB each. |
+| **What the assistant may send to the model** | **Everything** (default; for a model on this computer) · **Keep project data from the model** (only tools about Therion and the program, no context, conversation not saved) · **Blank out values in tool results** (best effort; answers get much weaker). The panel asks once before the first question. |
 
 The **CLI** (`therion-cli`) and **LSP** (`therion-lsp`) are separate executables, not settings here.
 

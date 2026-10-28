@@ -1585,4 +1585,15 @@ Aplici modificările? Pașii care nu au putut fi previzualizați rulează acum.<
   <data name="Macro_Apply" xml:space="preserve"><value>Aplică</value></data>
   <data name="Cmd_MacroFmt" xml:space="preserve"><value>Macro: {0}</value></data>
   <data name="Macro_OutsideProject" xml:space="preserve"><value>Fișierul este în afara proiectului; majoritatea uneltelor lucrează doar cu fișiere din interior (copiază-l întâi în incoming/).</value></data>
+  <data name="Assistant_DataPolicyQuestion" xml:space="preserve"><value>Înainte de prima întrebare: ce poate trimite asistentul modelului?</value></data>
+  <data name="Assistant_DataPolicyChosen" xml:space="preserve"><value>Politica datelor: {0}. O puteți schimba în Preferințe ▸ Asistent.</value></data>
+  <data name="Pref_AssistantDataPolicy" xml:space="preserve"><value>Ce poate trimite asistentul modelului</value></data>
+  <data name="Pref_AssistantDataPolicy_SendAll" xml:space="preserve"><value>Tot (modelul rulează pe acest calculator)</value></data>
+  <data name="Pref_AssistantDataPolicy_SendAllHelp" xml:space="preserve"><value>Instrumentele trimit modelului nume de stații, coordonate, textul fișierelor și comentarii. Cele mai bune răspunsuri. Alegeți asta când modelul rulează local (LM Studio): nimic nu părăsește calculatorul.</value></data>
+  <data name="Pref_AssistantDataPolicy_HideContent" xml:space="preserve"><value>Nu trimite modelului datele proiectului</value></data>
+  <data name="Pref_AssistantDataPolicy_HideContentHelp" xml:space="preserve"><value>Sunt oferite doar instrumentele despre Therion, ThIDE sau program; fără rezumatul proiectului, fără notele proiectului, conversația nu se salvează. Asistentul poate explica comenzi și erori, dar nu poate citi sau modifica topografia.</value></data>
+  <data name="Pref_AssistantDataPolicy_Redact" xml:space="preserve"><value>Ascunde valorile din rezultatele instrumentelor</value></data>
+  <data name="Pref_AssistantDataPolicy_RedactHelp" xml:space="preserve"><value>Toate instrumentele rămân, dar numele, numerele și textul din rezultate sunt înlocuite (numărătorile, codurile de eroare și numerele de linie rămân). Cu efort maxim, nu garantat: ce scrieți și numele pe care modelul le pune în apelurile sale ajung totuși la el. Răspunsurile devin mult mai slabe.</value></data>
+  <data name="Pref_AssistantSkillPack" xml:space="preserve"><value>Adaugă pachetul de cunoștințe la instrucțiunile asistentului</value></data>
+  <data name="Pref_AssistantSkillPackHelp" xml:space="preserve"><value>Îi explică modelului cum funcționează proiectele Therion și ThIDE, plus notele dvs. (assistant-skills.md lângă fișierul de setări) și ale proiectului (assistant.md în dosarul de configurare al proiectului). Fiecare parte e limitată la 8 KB.</value></data>
 </root>

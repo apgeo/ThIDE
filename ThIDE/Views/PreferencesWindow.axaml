@@ -546,6 +546,29 @@
                     </Grid>
                     <TextBlock Text="{l:Loc Pref_AssistantContextModeHelp}" Margin="16,2,0,0"
                                Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
+                    <CheckBox Content="{l:Loc Pref_AssistantSkillPack}" Margin="16,6,0,0"
+                              AutomationProperties.AutomationId="Preferences.AssistantSkillPack"
+                              IsChecked="{Binding AssistantSkillPack}" />
+                    <TextBlock Text="{l:Loc Pref_AssistantSkillPackHelp}" Margin="16,2,0,0"
+                               Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
+                    <TextBlock Text="{l:Loc Pref_AssistantDataPolicy}" Margin="16,8,0,2" FontWeight="SemiBold" />
+                    <StackPanel Margin="16,0,0,0" Spacing="2">
+                        <RadioButton GroupName="AssistantDataPolicy" Content="{l:Loc Pref_AssistantDataPolicy_SendAll}"
+                                     AutomationProperties.AutomationId="Preferences.AssistantDataPolicy.SendAll"
+                                     IsChecked="{Binding AssistantDataPolicySendAll}" />
+                        <TextBlock Text="{l:Loc Pref_AssistantDataPolicy_SendAllHelp}" Margin="24,0,0,4"
+                                   Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
+                        <RadioButton GroupName="AssistantDataPolicy" Content="{l:Loc Pref_AssistantDataPolicy_HideContent}"
+                                     AutomationProperties.AutomationId="Preferences.AssistantDataPolicy.HideContent"
+                                     IsChecked="{Binding AssistantDataPolicyHideContent}" />
+                        <TextBlock Text="{l:Loc Pref_AssistantDataPolicy_HideContentHelp}" Margin="24,0,0,4"
+                                   Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
+                        <RadioButton GroupName="AssistantDataPolicy" Content="{l:Loc Pref_AssistantDataPolicy_Redact}"
+                                     AutomationProperties.AutomationId="Preferences.AssistantDataPolicy.Redact"
+                                     IsChecked="{Binding AssistantDataPolicyRedact}" />
+                        <TextBlock Text="{l:Loc Pref_AssistantDataPolicy_RedactHelp}" Margin="24,0,0,4"
+                                   Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
+                    </StackPanel>
 
                     <Separator Margin="0,6" />
                     <TextBlock Text="{l:Loc Pref_CliHelp}"

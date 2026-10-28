@@ -20,7 +20,7 @@ public class AssistantViewModelTests
 {
     private sealed class FakeSettings : IAppSettingsService
     {
-        public AppSettings Current { get; private set; } = AppSettings.Default;
+        public AppSettings Current { get; private set; } = AppSettings.Default with { AssistantDataPolicyChosen = true };
         public event EventHandler? Changed;
         public void Save(AppSettings settings) { Current = settings; Changed?.Invoke(this, EventArgs.Empty); }
     }
@@ -636,5 +636,28 @@ public class AssistantViewModelTests
 
         Assert.Empty(vm.Items);
         Assert.Equal(1, assistant.NewConversationCalls);
+    }
+
+    [Fact]
+    public async Task DataPolicy_IsAskedFirst_AndTheChoiceIsSaved()
+    {
+        var settings = new FakeSettings();
+        settings.Save(settings.Current with { AssistantDataPolicyChosen = false });
+        int calls = 0;
+        var assistant = new FakeAssistant((_, _, _) => { calls++; return Task.FromResult(new ChatResult("ok", [], 0, 0)); });
+        var vm = NewVm(assistant, settings);
+
+        Assert.True(vm.NeedsDataPolicy);
+        vm.Input = "hi";
+        Assert.False(vm.SendCommand.CanExecute(null));
+        await vm.SendCommand.ExecuteAsync(null);
+        Assert.Equal(0, calls);
+
+        vm.ChooseDataPolicyCommand.Execute("HideContent");
+
+        Assert.False(vm.NeedsDataPolicy);
+        Assert.True(settings.Current.AssistantDataPolicyChosen);
+        Assert.Equal(AssistantDataPolicy.HideContent, settings.Current.AssistantDataPolicy);
+        Assert.True(vm.SendCommand.CanExecute(null));
     }
 }

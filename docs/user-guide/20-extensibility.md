@@ -46,6 +46,8 @@ Three ways to use it:
   chat inside ThIDE that talks to a local model served by **LM Studio** (or any OpenAI-compatible
   endpoint — set it under **Preferences → MCP**). It answers from the live project, and every
   change it proposes stops on an **Allow / Deny** card first — nothing is written until you allow it.
+  Before the first question it asks what it may send to the model: everything (the default, for a
+  model on your own computer), nothing from the project, or results with the values blanked out.
 - **Against files on disk (no ThIDE needed).** A small program, `therion-mcp`, runs ThIDE's engines
   headlessly. Your AI host (LM Studio, Claude Code, …) launches it and can then ask about a project
   folder. It reads your files; it can also format, scaffold, import/export, and run Therion — or, if

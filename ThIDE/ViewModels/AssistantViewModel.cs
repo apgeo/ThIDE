@@ -233,6 +233,12 @@ public sealed partial class AssistantViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(StopCommand))]
     private bool _isBusy;
 
+    /// <summary>True until the user has said what the assistant may send to the model; shows the choice
+    /// above the input and holds Send back.</summary>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(SendCommand))]
+    private bool _needsDataPolicy;
+
     /// <summary>True shows the "enable the in-app tools server" affordance instead of the input.</summary>
     [ObservableProperty] private bool _serverOff;
 
@@ -266,6 +272,7 @@ public sealed partial class AssistantViewModel : ObservableObject
         _session = session;
         _snippets = snippets;
         _serverOff = !settings.Current.EnableMcpServer;
+        _needsDataPolicy = !settings.Current.AssistantDataPolicyChosen;
         _status = assistant.ModelLabel;
         RestorePreviousConversation();
     }
@@ -323,12 +330,13 @@ public sealed partial class AssistantViewModel : ObservableObject
         }
     }
 
-    private bool CanSend() => !IsBusy && !string.IsNullOrWhiteSpace(Input);
+    private bool CanSend() => !IsBusy && !NeedsDataPolicy && !string.IsNullOrWhiteSpace(Input);
     private bool CanStop() => IsBusy;
 
     [RelayCommand(CanExecute = nameof(CanSend))]
     private async Task SendAsync()
     {
+        if (NeedsDataPolicy) return;
         var text = Input.Trim();
         Input = string.Empty;
         IsBusy = true;
@@ -382,6 +390,18 @@ public sealed partial class AssistantViewModel : ObservableObject
 
     [RelayCommand(CanExecute = nameof(CanStop))]
     private void Stop() => _cts?.Cancel();
+
+    /// <summary>Records the user's data policy (a name of <see cref="AssistantDataPolicy"/>).</summary>
+    [RelayCommand]
+    private void ChooseDataPolicy(string? name)
+    {
+        if (!Enum.TryParse<AssistantDataPolicy>(name, out var policy)) return;
+        _settings.Save(_settings.Current with { AssistantDataPolicy = policy, AssistantDataPolicyChosen = true });
+        NeedsDataPolicy = false;
+        // A conversation started under another policy may hold what the new one keeps out.
+        if (policy != AssistantDataPolicy.SendAll) NewChat();
+        Items.Add(new NoteChatItem(string.Format(Tr.Get("Assistant_DataPolicyChosen"), Tr.Get("Pref_AssistantDataPolicy_" + policy))));
+    }
 
     [RelayCommand]
     private void NewChat()

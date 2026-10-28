@@ -108,6 +108,16 @@ public partial class PreferencesViewModel : ObservableObject
     [ObservableProperty] private int _assistantContextModeIndex;
     /// <summary>Ask the model to put proposed Therion source in fenced code blocks (CAP-03).</summary>
     [ObservableProperty] private bool _assistantSuggestCodeBlocks;
+    [ObservableProperty] private bool _assistantSkillPack;
+    /// <summary>The data policy, as three radio buttons.</summary>
+    [ObservableProperty] private bool _assistantDataPolicySendAll;
+    [ObservableProperty] private bool _assistantDataPolicyHideContent;
+    [ObservableProperty] private bool _assistantDataPolicyRedact;
+
+    private Therion.Assistant.AssistantDataPolicy SelectedDataPolicy() =>
+        AssistantDataPolicyHideContent ? Therion.Assistant.AssistantDataPolicy.HideContent
+        : AssistantDataPolicyRedact ? Therion.Assistant.AssistantDataPolicy.Redact
+        : Therion.Assistant.AssistantDataPolicy.SendAll;
     /// <summary>0 = English, 1 = Romanian (#9 selector lives in Preferences, #11).</summary>
     [ObservableProperty] private int _languageIndex;
 
@@ -242,6 +252,10 @@ public partial class PreferencesViewModel : ObservableObject
         _assistantStreaming = s.AssistantStreaming;
         _assistantContextModeIndex = (int)s.AssistantContextMode;
         _assistantSuggestCodeBlocks = s.AssistantSuggestCodeBlocks;
+        _assistantSkillPack = s.AssistantSkillPack;
+        _assistantDataPolicySendAll = s.AssistantDataPolicy == Therion.Assistant.AssistantDataPolicy.SendAll;
+        _assistantDataPolicyHideContent = s.AssistantDataPolicy == Therion.Assistant.AssistantDataPolicy.HideContent;
+        _assistantDataPolicyRedact = s.AssistantDataPolicy == Therion.Assistant.AssistantDataPolicy.Redact;
         _languageIndex = string.Equals(s.UiLanguage, "ro", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
         _editorFontSize = s.EditorFontSize;
         _indentationSize = s.IndentationSize;
@@ -423,6 +437,11 @@ public partial class PreferencesViewModel : ObservableObject
             AssistantStreaming = AssistantStreaming,
             AssistantContextMode = (AssistantContextMode)Math.Clamp(AssistantContextModeIndex, 0, 2),
             AssistantSuggestCodeBlocks = AssistantSuggestCodeBlocks,
+            AssistantSkillPack = AssistantSkillPack,
+            AssistantDataPolicy = SelectedDataPolicy(),
+            // Picking a different policy here is the choice the pane would otherwise ask for.
+            AssistantDataPolicyChosen = _settings.Current.AssistantDataPolicyChosen
+                || SelectedDataPolicy() != _settings.Current.AssistantDataPolicy,
             UiLanguage = code,
             EditorFontSize = EditorFontSize,
             IndentationSize = IndentationSize,
