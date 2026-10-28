@@ -1554,4 +1554,5 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Suggest_NeedPieces" xml:space="preserve"><value>Positions can only be compared between pieces georeferenced in the same projected coordinate system (a fix in UTM, for example); found {0}.</value></data>
   <data name="Suggest_NoneWithin" xml:space="preserve"><value>No pair of stations from different pieces is that close.</value></data>
   <data name="Suggest_Verify" xml:space="preserve"><value>Positions are approximate (no loop closure): each pair is a candidate to check before linking, not a confirmed join.</value></data>
+  <data name="FormatAll_Summary" xml:space="preserve"><value>{0} files would change; {1} are left alone because they do not parse cleanly (fix those first). Line endings are kept. Untick a file to leave it out.</value></data>
 </root>

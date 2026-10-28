@@ -88,6 +88,7 @@ public partial class MainWindow : Window
                 vm.Diagnostics.FixRequested += (_, d) => _ = FixOneAsync(d);
                 vm.SyncMapsRequested += (_, _) => _ = SyncMapsAsync();
                 vm.SuggestEquatesRequested += (_, _) => _ = SuggestEquatesAsync();
+                vm.FormatAllRequested += (_, _) => _ = FormatAllAsync();
                 vm.Diagnostics.FixAllRequested += (_, code) => _ = FixAllAsync(vm, code);
                 ThIDE.Editor.TherionTextEditor.LinkSurveyRequested += (_, req) =>
                     Avalonia.Threading.Dispatcher.UIThread.Post(() => _ = ShowLinkSurveyAsync(req.FilePath, req.Caret));
@@ -713,29 +714,22 @@ public partial class MainWindow : Window
             notifications?.Info(string.Format(ThIDE.Resources.Tr.Get("Diag_FixAll"), code), ThIDE.Resources.Tr.Get("Diag_FixAllNone"));
             return;
         }
-        var rows = Therion.Workspace.Fixes.FixAll.Preview(batch, p => CurrentText(docs, p));
-        var root = AppServices.Provider.GetService<IWorkspaceSession>()?.RootPath;
-        var preview = new EditPreviewViewModel(string.Format(ThIDE.Resources.Tr.Get("Diag_FixAll"), code),
-            string.Format(ThIDE.Resources.Tr.Get("Diag_FixAllSummary"), fixedCount, batch.Edits.Count, skipped), batch, rows, root);
-        var window = new EditPreviewWindow(preview);
-        await window.ShowDialog(this);
-        if (!window.Confirmed || AppServices.Provider.GetService<IWorkspaceEditService>() is not { } editor) return;
-        // Closed files change on disk without a re-parse: reload so the diagnostics are recomputed.
-        var outcome = await editor.ApplyAsync(preview.Chosen() with { RequiresWorkspaceReload = true });
-        if (outcome.Success) notifications?.Success(preview.Title, string.Format(ThIDE.Resources.Tr.Get("Diag_FixAllDone"), preview.CheckedCount));
-        else notifications?.Warning(preview.Title, outcome.Error ?? string.Join("; ", outcome.Problems.Select(p => $"{Path.GetFileName(p.FilePath)}: {p.Kind}")));
+        await PreviewAndApplyAsync(string.Format(ThIDE.Resources.Tr.Get("Diag_FixAll"), code),
+            string.Format(ThIDE.Resources.Tr.Get("Diag_FixAllSummary"), fixedCount, batch.Edits.Count, skipped), batch, reload: true);
     }
 
     /// <summary>Shows a preview of a batch and applies the ticked edits (one undo step per open file).</summary>
-    private async System.Threading.Tasks.Task<bool> PreviewAndApplyAsync(string title, string summary, Therion.Workspace.Editing.EditBatch batch)
+    private async System.Threading.Tasks.Task<bool> PreviewAndApplyAsync(string title, string summary, Therion.Workspace.Editing.EditBatch batch,
+        IReadOnlyList<Therion.Workspace.Fixes.EditPreviewRow>? rows = null, bool reload = false)
     {
         var docs = AppServices.Provider.GetService<IDocumentService>();
-        var rows = Therion.Workspace.Fixes.FixAll.Preview(batch, p => CurrentText(docs, p));
+        rows ??= Therion.Workspace.Fixes.FixAll.Preview(batch, p => CurrentText(docs, p));
         var preview = new EditPreviewViewModel(title, summary, batch, rows, AppServices.Provider.GetService<IWorkspaceSession>()?.RootPath);
         var window = new EditPreviewWindow(preview);
         await window.ShowDialog(this);
         if (!window.Confirmed || AppServices.Provider.GetService<IWorkspaceEditService>() is not { } editor) return false;
-        var outcome = await editor.ApplyAsync(preview.Chosen());
+        // Closed files change on disk without a re-parse: reload when the diagnostics must follow.
+        var outcome = await editor.ApplyAsync(reload ? preview.Chosen() with { RequiresWorkspaceReload = true } : preview.Chosen());
         var n = AppServices.Provider.GetService<INotificationService>();
         if (outcome.Success) n?.Success(title, string.Format(ThIDE.Resources.Tr.Get("Diag_FixAllDone"), preview.CheckedCount));
         else n?.Warning(title, outcome.Error ?? string.Join("; ", outcome.Problems.Select(p => $"{Path.GetFileName(p.FilePath)}: {p.Kind}")));
@@ -751,6 +745,23 @@ public partial class MainWindow : Window
         await window.ShowDialog(this);
         if (window.Chosen is not { } pair || pair.Candidate.A.DeclarationSpan.FilePath is not { } fa || pair.Candidate.B.DeclarationSpan.FilePath is not { } fb) return;
         await ShowLinkSurveyAsync(null, 0, m => m.PresetStationsAsync(fa, pair.Candidate.A.Name, fb, pair.Candidate.B.Name));
+    }
+
+    /// <summary>Tools ▸ Format all files: every project file through the formatter, previewed first.</summary>
+    private async System.Threading.Tasks.Task FormatAllAsync()
+    {
+        var docs = AppServices.Provider.GetService<IDocumentService>();
+        if (docs?.Workspace is not { } ws) return;
+        var files = ws.PerFile.Keys
+            .Concat(ws.FileGraphEdges.SelectMany(e => new[] { e.From, e.To }))
+            .Where(f => f.EndsWith(".th", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".th2", StringComparison.OrdinalIgnoreCase)
+                     || f.EndsWith(".thconfig", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        var (batch, rows, skipped) = Therion.Workspace.Fixes.FormatAll.Plan(files, p => CurrentText(docs, p), Therion.Workspace.Fixes.LineEndings.Keep);
+        var title = ThIDE.Resources.Tr.Get("Menu_Tools_FormatAll");
+        var summary = string.Format(ThIDE.Resources.Tr.Get("FormatAll_Summary"), rows.Count, skipped.Count);
+        if (batch.IsEmpty) { AppServices.Provider.GetService<INotificationService>()?.Info(title, summary); return; }
+        await PreviewAndApplyAsync(title, summary, batch, rows, reload: true);
     }
 
     /// <summary>Tools ▸ Add unreferenced scraps to maps.</summary>

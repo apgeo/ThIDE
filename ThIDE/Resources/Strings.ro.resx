@@ -1554,4 +1554,5 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Suggest_NeedPieces" xml:space="preserve"><value>Pozițiile pot fi comparate doar între bucăți georeferențiate în același sistem de coordonate proiectat (un fix în UTM, de exemplu); s-au găsit {0}.</value></data>
   <data name="Suggest_NoneWithin" xml:space="preserve"><value>Nicio pereche de stații din bucăți diferite nu este atât de apropiată.</value></data>
   <data name="Suggest_Verify" xml:space="preserve"><value>Pozițiile sunt aproximative (fără închiderea buclelor): fiecare pereche e o candidată de verificat înainte de legare, nu o joncțiune confirmată.</value></data>
+  <data name="FormatAll_Summary" xml:space="preserve"><value>{0} fișiere s-ar schimba; {1} rămân neatinse pentru că nu se analizează curat (corectează-le întâi). Terminațiile de linie se păstrează. Debifează un fișier pentru a-l omite.</value></data>
 </root>
