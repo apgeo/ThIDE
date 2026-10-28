@@ -83,6 +83,7 @@ public partial class MainWindow : Window
                 vm.LinkSurveyRequested += (_, _) => _ = ShowLinkSurveyAsync(null, 0);
                 vm.NewFileRequested += (_, folder) => _ = ShowNewFileAsync(folder);
                 vm.NewProjectRequested += (_, _) => _ = ShowNewProjectAsync();
+                vm.NewTripRequested += (_, _) => _ = ShowNewTripAsync();
                 ThIDE.Editor.TherionTextEditor.LinkSurveyRequested += (_, req) =>
                     Avalonia.Threading.Dispatcher.UIThread.Post(() => _ = ShowLinkSurveyAsync(req.FilePath, req.Caret));
                 BuildRecentMenu(vm);
@@ -555,20 +556,52 @@ public partial class MainWindow : Window
             p => File.Exists(p) || Directory.Exists(p),
             Vars,
             AppServices.Provider.GetService<IWorkspaceEditService>(),
-            async (path, caret) =>
-            {
-                await docs.OpenFileAsync(path);
-                var doc = docs.Documents.FirstOrDefault(d => Therion.Workspace.Editing.FilePaths.Same(d.FilePath, path));
-                if (doc is null) return;
-                var text = doc.DocumentText;
-                caret = Math.Clamp(caret, 0, text.Length);
-                int line = 1, col = 1;
-                for (int i = 0; i < caret; i++) { if (text[i] == '\n') { line++; col = 1; } else col++; }
-                var at = new Therion.Core.SourceLocation(line, col);
-                doc.RequestScrollTo(new Therion.Core.SourceSpan(path, at, at, caret, 0));
-            },
+            (path, caret) => OpenAtAsync(docs, path, caret),
             path => docs.ActivateThconfigAsync(path));
         await new NewFileWindow(new NewFileViewModel(env)).ShowDialog(this);
+    }
+
+    // ----- new trip -------------------------------------------------------
+
+    /// <summary>Tools ▸ New trip…: a trip file prefilled from the latest trip and tied into the project.</summary>
+    private async System.Threading.Tasks.Task ShowNewTripAsync()
+    {
+        var docs = AppServices.Provider.GetService<IDocumentService>();
+        var notifications = AppServices.Provider.GetService<INotificationService>();
+        if (docs?.Workspace is not { PerFile.Count: > 0 } ws)
+        {
+            notifications?.Warning(ThIDE.Resources.Tr.Get("NewTrip_Title"), ThIDE.Resources.Tr.Get("LinkSurvey_NoWorkspace"));
+            return;
+        }
+        var buffers = docs.Documents.Where(d => Path.IsPathRooted(d.FilePath))
+            .GroupBy(d => Path.GetFullPath(d.FilePath), Therion.Workspace.Editing.FilePaths.Comparer)
+            .ToDictionary(g => g.Key, g => g.First().DocumentText, Therion.Workspace.Editing.FilePaths.Comparer);
+        var env = new NewTripEnvironment(
+            ws,
+            AppServices.Provider.GetService<IWorkspaceSession>()?.RootPath,
+            p => buffers.TryGetValue(Path.GetFullPath(p), out var t) ? t : File.Exists(p) ? Therion.Syntax.EncodingResolver.ReadAllText(p) : null,
+            p => File.Exists(p) || Directory.Exists(p),
+            AppServices.Provider.GetService<IWorkspaceEditService>(),
+            (path, caret) => OpenAtAsync(docs, path, caret),
+            DateTime.Now);
+        var model = new NewTripViewModel(env);
+        var load = model.LoadAsync();
+        await new NewTripWindow(model).ShowDialog(this);
+        await load;
+    }
+
+    /// <summary>Opens a file and puts the caret at an offset.</summary>
+    private static async System.Threading.Tasks.Task OpenAtAsync(IDocumentService docs, string path, int caret)
+    {
+        await docs.OpenFileAsync(path);
+        var doc = docs.Documents.FirstOrDefault(d => Therion.Workspace.Editing.FilePaths.Same(d.FilePath, path));
+        if (doc is null) return;
+        var text = doc.DocumentText;
+        caret = Math.Clamp(caret, 0, text.Length);
+        int line = 1, col = 1;
+        for (int i = 0; i < caret; i++) { if (text[i] == '\n') { line++; col = 1; } else col++; }
+        var at = new Therion.Core.SourceLocation(line, col);
+        doc.RequestScrollTo(new Therion.Core.SourceSpan(path, at, at, caret, 0));
     }
 
     // ----- new project ----------------------------------------------------

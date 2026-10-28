@@ -1,0 +1,79 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ThIDE.ViewModels"
+        xmlns:pickers="using:ThIDE.Views.Pickers"
+        xmlns:l="using:ThIDE.Resources"
+        x:Class="ThIDE.Views.NewTripWindow"
+        x:DataType="vm:NewTripViewModel"
+        x:CompileBindings="False"
+        Title="{l:Loc NewTrip_Title}" Width="1040" Height="780" MinWidth="760" MinHeight="560"
+        AutomationProperties.AutomationId="NewTrip.Window"
+        WindowStartupLocation="CenterOwner" CanResize="True">
+    <DockPanel Margin="12">
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,10,0,0">
+            <Button Content="{l:Loc Common_Cancel}" Click="OnCancel" MinWidth="80" AutomationProperties.AutomationId="NewTrip.Cancel" />
+            <Button Content="{l:Loc NewFile_Create}" Click="OnCreate" IsDefault="True" MinWidth="110"
+                    IsEnabled="{Binding CanCreate}" AutomationProperties.AutomationId="NewTrip.Create" />
+        </StackPanel>
+        <ItemsControl DockPanel.Dock="Bottom" ItemsSource="{Binding Warnings}" Margin="0,6,0,0" AutomationProperties.AutomationId="NewTrip.Warnings">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <TextBlock Text="{Binding Text}" TextWrapping="Wrap"
+                               Foreground="{Binding Blocks, Converter={x:Static vm:LinkSurveyConverters.WarningBrush}}" />
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <Grid ColumnDefinitions="*,16,*">
+            <ScrollViewer Grid.Column="0">
+                <StackPanel Spacing="6">
+                    <TextBlock Text="{l:Loc NewTrip_Intro}" Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
+                    <Grid ColumnDefinitions="130,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="6">
+                        <TextBlock Grid.Row="0" Text="{l:Loc NewTrip_Date}" VerticalAlignment="Center" />
+                        <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Date, Mode=TwoWay}" AutomationProperties.AutomationId="NewTrip.Date" AutomationProperties.Name="{l:Loc NewTrip_Date}" />
+                        <TextBlock Grid.Row="1" Text="{l:Loc NewTrip_SurveyName}" VerticalAlignment="Center" />
+                        <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding SurveyName, Mode=TwoWay}" AutomationProperties.AutomationId="NewTrip.SurveyName" AutomationProperties.Name="{l:Loc NewTrip_SurveyName}" />
+                        <TextBlock Grid.Row="2" Text="{l:Loc NewTrip_FirstStation}" VerticalAlignment="Center" />
+                        <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding FirstStation, Mode=TwoWay}" AutomationProperties.AutomationId="NewTrip.FirstStation" AutomationProperties.Name="{l:Loc NewTrip_FirstStation}" />
+                        <TextBlock Grid.Row="3" Text="{l:Loc NewTrip_Units}" VerticalAlignment="Center" />
+                        <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Units, Mode=TwoWay}" AutomationProperties.AutomationId="NewTrip.Units" />
+                        <TextBlock Grid.Row="4" Text="{l:Loc NewTrip_Calibrate}" VerticalAlignment="Center" />
+                        <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding Calibrate, Mode=TwoWay}" AutomationProperties.AutomationId="NewTrip.Calibrate" />
+                        <TextBlock Grid.Row="5" Text="{l:Loc NewTrip_Instrument}" VerticalAlignment="Center" />
+                        <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding Instrument, Mode=TwoWay}" AutomationProperties.AutomationId="NewTrip.Instrument" />
+                        <TextBlock Grid.Row="6" Text="{l:Loc NewTrip_Data}" VerticalAlignment="Center" />
+                        <TextBox Grid.Row="6" Grid.Column="1" Text="{Binding Data, Mode=TwoWay}" AutomationProperties.AutomationId="NewTrip.Data" />
+                    </Grid>
+                    <TextBlock Text="{l:Loc NewTrip_Team}" FontWeight="SemiBold" />
+                    <ItemsControl ItemsSource="{Binding Team}" AutomationProperties.AutomationId="NewTrip.Team">
+                        <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate><CheckBox Content="{Binding Name}" IsChecked="{Binding IsChecked, Mode=TwoWay}" Margin="0,0,10,0" /></DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBox Text="{Binding ExtraTeam, Mode=TwoWay}" PlaceholderText="{l:Loc NewTrip_ExtraTeam}"
+                             AutomationProperties.AutomationId="NewTrip.ExtraTeam" AutomationProperties.Name="{l:Loc NewTrip_ExtraTeam}" />
+                    <TextBlock Text="{l:Loc NewTrip_Generated}" FontWeight="SemiBold" Margin="0,6,0,0" />
+                    <TextBox Text="{Binding Generated}" IsReadOnly="True" AcceptsReturn="True" FontFamily="monospace" MinHeight="140"
+                             AutomationProperties.AutomationId="NewTrip.Generated" />
+                </StackPanel>
+            </ScrollViewer>
+            <DockPanel Grid.Column="2">
+                <StackPanel DockPanel.Dock="Bottom" Spacing="6" Margin="0,8,0,0">
+                    <CheckBox Content="{l:Loc NewTrip_Nest}" IsChecked="{Binding Nest, Mode=TwoWay}" AutomationProperties.AutomationId="NewTrip.Nest" />
+                    <TextBlock Text="{l:Loc LinkSurvey_Destination}" />
+                    <ComboBox ItemsSource="{Binding Destinations}" SelectedItem="{Binding SelectedDestination, Mode=TwoWay}" HorizontalAlignment="Stretch"
+                              AutomationProperties.AutomationId="NewTrip.Destination" />
+                    <TextBlock Text="{l:Loc NewFile_Folder}" />
+                    <TextBox Text="{Binding Folder, Mode=TwoWay}" AutomationProperties.AutomationId="NewTrip.Folder" />
+                </StackPanel>
+                <TextBlock DockPanel.Dock="Top" Text="{l:Loc NewTrip_TieIn}" FontWeight="SemiBold" Margin="0,0,0,4" />
+                <Grid RowDefinitions="Auto,150,Auto,*">
+                    <TextBlock Grid.Row="0" Text="{l:Loc LinkSurvey_Survey}" FontSize="11" Foreground="Gray" />
+                    <pickers:ItemPickerView Grid.Row="1" DataContext="{Binding Surveys}" />
+                    <TextBlock Grid.Row="2" Text="{l:Loc LinkSurvey_Station}" FontSize="11" Foreground="Gray" Margin="0,6,0,0" />
+                    <pickers:ItemPickerView Grid.Row="3" DataContext="{Binding Stations}" />
+                </Grid>
+            </DockPanel>
+        </Grid>
+    </DockPanel>
+</Window>

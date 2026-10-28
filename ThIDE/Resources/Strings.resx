@@ -1466,4 +1466,24 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="ProjTpl_SingleCaveDesc" xml:space="preserve"><value>One cave: a survey file to input trips into, a thconfig with a plan map and a 3D model, folders for data, sketches and output.</value></data>
   <data name="ProjTpl_KarstAreaDesc" xml:space="preserve"><value>Several caves of one area: each cave with its own thconfig, plus a master thconfig that compiles them together.</value></data>
   <data name="ProjTpl_ExpeditionDesc" xml:space="preserve"><value>A yearly expedition: one folder per year for its trips and sketches, and a thconfig per year.</value></data>
+  <data name="Menu_Tools_NewTrip" xml:space="preserve"><value>New trip…</value></data>
+  <data name="NewTrip_Title" xml:space="preserve"><value>New trip</value></data>
+  <data name="NewTrip_Intro" xml:space="preserve"><value>A new survey file for a trip, with the units, instruments and data order of the latest trip, tied to the project station it starts from.</value></data>
+  <data name="NewTrip_Date" xml:space="preserve"><value>Date</value></data>
+  <data name="NewTrip_SurveyName" xml:space="preserve"><value>Survey name</value></data>
+  <data name="NewTrip_FirstStation" xml:space="preserve"><value>First station</value></data>
+  <data name="NewTrip_Units" xml:space="preserve"><value>Units</value></data>
+  <data name="NewTrip_Calibrate" xml:space="preserve"><value>Calibration</value></data>
+  <data name="NewTrip_Instrument" xml:space="preserve"><value>Instruments</value></data>
+  <data name="NewTrip_Data" xml:space="preserve"><value>Data order</value></data>
+  <data name="NewTrip_Team" xml:space="preserve"><value>Team</value></data>
+  <data name="NewTrip_ExtraTeam" xml:space="preserve"><value>Other people, separated by commas</value></data>
+  <data name="NewTrip_Generated" xml:space="preserve"><value>New file</value></data>
+  <data name="NewTrip_TieIn" xml:space="preserve"><value>Starts from (project station)</value></data>
+  <data name="NewTrip_Nest" xml:space="preserve"><value>Nest the trip inside that station's survey</value></data>
+  <data name="NewTrip_CheckTieIn" xml:space="preserve"><value>check the tie-in</value></data>
+  <data name="NewTrip_BadName" xml:space="preserve"><value>The survey name may hold only letters, digits, _ and -.</value></data>
+  <data name="NewTrip_BadStation" xml:space="preserve"><value>The first station is not a valid station name.</value></data>
+  <data name="NewTrip_BadDate" xml:space="preserve"><value>The date should look like 2026.10.21.</value></data>
+  <data name="NewTrip_PickTieIn" xml:space="preserve"><value>Choose the project station the trip starts from.</value></data>
 </root>

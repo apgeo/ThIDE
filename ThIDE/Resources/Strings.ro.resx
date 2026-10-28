@@ -1466,4 +1466,24 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="ProjTpl_SingleCaveDesc" xml:space="preserve"><value>O peșteră: un fișier de topografie în care se includ ieșirile, un thconfig cu hartă în plan și model 3D, dosare pentru date, schițe și rezultate.</value></data>
   <data name="ProjTpl_KarstAreaDesc" xml:space="preserve"><value>Mai multe peșteri dintr-o zonă: fiecare cu thconfig-ul ei, plus un thconfig principal care le compilează împreună.</value></data>
   <data name="ProjTpl_ExpeditionDesc" xml:space="preserve"><value>O expediție anuală: un dosar pe an pentru ieșiri și schițe, și un thconfig pe an.</value></data>
+  <data name="Menu_Tools_NewTrip" xml:space="preserve"><value>Ieșire nouă…</value></data>
+  <data name="NewTrip_Title" xml:space="preserve"><value>Ieșire nouă</value></data>
+  <data name="NewTrip_Intro" xml:space="preserve"><value>Un fișier nou pentru o ieșire, cu unitățile, instrumentele și ordinea datelor din ultima ieșire, legat de stația din proiect de la care pornește.</value></data>
+  <data name="NewTrip_Date" xml:space="preserve"><value>Data</value></data>
+  <data name="NewTrip_SurveyName" xml:space="preserve"><value>Numele topografiei</value></data>
+  <data name="NewTrip_FirstStation" xml:space="preserve"><value>Prima stație</value></data>
+  <data name="NewTrip_Units" xml:space="preserve"><value>Unități</value></data>
+  <data name="NewTrip_Calibrate" xml:space="preserve"><value>Calibrare</value></data>
+  <data name="NewTrip_Instrument" xml:space="preserve"><value>Instrumente</value></data>
+  <data name="NewTrip_Data" xml:space="preserve"><value>Ordinea datelor</value></data>
+  <data name="NewTrip_Team" xml:space="preserve"><value>Echipa</value></data>
+  <data name="NewTrip_ExtraTeam" xml:space="preserve"><value>Alte persoane, separate prin virgulă</value></data>
+  <data name="NewTrip_Generated" xml:space="preserve"><value>Fișierul nou</value></data>
+  <data name="NewTrip_TieIn" xml:space="preserve"><value>Pornește din (stația din proiect)</value></data>
+  <data name="NewTrip_Nest" xml:space="preserve"><value>Pune ieșirea în interiorul topografiei stației</value></data>
+  <data name="NewTrip_CheckTieIn" xml:space="preserve"><value>verifică legătura</value></data>
+  <data name="NewTrip_BadName" xml:space="preserve"><value>Numele topografiei poate conține doar litere, cifre, _ și -.</value></data>
+  <data name="NewTrip_BadStation" xml:space="preserve"><value>Prima stație nu are un nume valid.</value></data>
+  <data name="NewTrip_BadDate" xml:space="preserve"><value>Data trebuie să arate ca 2026.10.21.</value></data>
+  <data name="NewTrip_PickTieIn" xml:space="preserve"><value>Alege stația din proiect de la care pornește ieșirea.</value></data>
 </root>

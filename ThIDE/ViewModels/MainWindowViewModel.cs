@@ -1099,6 +1099,13 @@ public partial class MainWindowViewModel : ViewModelBase
         return Task.CompletedTask;
     }
 
+    /// <summary>Raised to open Tools ▸ New trip… in the view.</summary>
+    public event EventHandler? NewTripRequested;
+
+    /// <summary>Start a new trip file tied into the project.</summary>
+    [RelayCommand]
+    private void NewTrip() => NewTripRequested?.Invoke(this, EventArgs.Empty);
+
     /// <summary>Raised to open File ▸ New Project… in the view.</summary>
     public event EventHandler? NewProjectRequested;
 
