@@ -70,29 +70,66 @@ public sealed class IncomingFolderService : IIncomingFolderService, IDisposable
     {
         if (SettingsPath() is not { } path) return Tr.Get("Incoming_NoProject");
         // Change only incoming.enabled; keep whatever else the (hand-edited, shared) file holds.
-        JsonObject root;
+        byte[] bytes;
         try
         {
-            root = File.Exists(path)
-                ? JsonNode.Parse(File.ReadAllText(path), documentOptions: new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true }) as JsonObject
-                  ?? throw new JsonException("not an object")
-                : new JsonObject { ["version"] = 1 };
+            var existing = File.Exists(path) ? File.ReadAllBytes(path) : null;
+            bytes = (existing is null ? null : ReplaceEnabled(existing, enabled))
+                    ?? Rewritten(existing, enabled);
         }
         catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
         {
             return string.Format(Tr.Get("Incoming_FileInvalid"), path, ex.Message);
         }
-        var incoming = root["incoming"] as JsonObject ?? new JsonObject { ["folder"] = "incoming" };
-        incoming["enabled"] = enabled;
-        root["incoming"] = incoming;
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            File.WriteAllText(path, root.ToJsonString(ProjectLocalConfig.JsonOptions));
+            Therion.Workspace.Editing.SourceFileIo.WriteOver(path, bytes);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return ex.Message; }
         Restart();
         return null;
+    }
+
+    // The file with the literal after incoming.enabled swapped in place, so comments and layout stay;
+    // null when there is no such value to swap. Names match in any case, as the reader matches them.
+    internal static byte[]? ReplaceEnabled(byte[] utf8, bool enabled)
+    {
+        var reader = new Utf8JsonReader(utf8, new JsonReaderOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true });
+        bool inIncoming = false;
+        while (reader.Read())
+        {
+            if (reader.TokenType != JsonTokenType.PropertyName) continue;
+            var name = reader.GetString();
+            if (reader.CurrentDepth == 1)
+            {
+                if (!reader.Read()) return null;
+                inIncoming = string.Equals(name, "incoming", StringComparison.OrdinalIgnoreCase) && reader.TokenType == JsonTokenType.StartObject;
+                if (!inIncoming) reader.Skip();
+            }
+            else if (inIncoming && reader.CurrentDepth == 2 && string.Equals(name, "enabled", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!reader.Read() || reader.TokenType is not (JsonTokenType.True or JsonTokenType.False)) return null;
+                int start = (int)reader.TokenStartIndex, length = reader.ValueSpan.Length;
+                var literal = enabled ? "true"u8 : "false"u8;
+                return [.. utf8.AsSpan(0, start), .. literal, .. utf8.AsSpan(start + length)];
+            }
+        }
+        return null;
+    }
+
+    // No value to swap: add one (an existing file is re-serialised, which drops its comments).
+    internal static byte[] Rewritten(byte[]? existing, bool enabled)
+    {
+        var root = existing is null ? new JsonObject { ["version"] = 1 }
+            : JsonNode.Parse(existing, documentOptions: new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true }) as JsonObject
+              ?? throw new JsonException("not an object");
+        var key = root.Select(p => p.Key).FirstOrDefault(k => string.Equals(k, "incoming", StringComparison.OrdinalIgnoreCase)) ?? "incoming";
+        var incoming = root[key] as JsonObject ?? new JsonObject { ["folder"] = "incoming" };
+        var enabledKey = incoming.Select(p => p.Key).FirstOrDefault(k => string.Equals(k, "enabled", StringComparison.OrdinalIgnoreCase)) ?? "enabled";
+        incoming[enabledKey] = enabled;
+        root[key] = incoming;
+        return System.Text.Encoding.UTF8.GetBytes(root.ToJsonString(ProjectLocalConfig.JsonOptions));
     }
 
     private void Restart()

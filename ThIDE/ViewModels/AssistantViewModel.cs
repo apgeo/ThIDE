@@ -388,6 +388,12 @@ public sealed partial class AssistantViewModel : ObservableObject
             _streaming = null;
             Activity = string.Empty;
             IsBusy = false;
+            if (_restartAfterTurn)
+            {
+                _restartAfterTurn = false;
+                NewChat();
+                AddPolicyNote();
+            }
         }
     }
 
@@ -411,10 +417,21 @@ public sealed partial class AssistantViewModel : ObservableObject
         NeedsDataPolicy = !current.AssistantDataPolicyChosen;
         bool changed = current.AssistantDataPolicy != _policy;
         _policy = current.AssistantDataPolicy;
-        if (changed && !IsBusy) NewChat();
-        if (changed || wasAsking && !NeedsDataPolicy)
-            Items.Add(new NoteChatItem(string.Format(Tr.Get("Assistant_DataPolicyChosen"), Tr.Get("Pref_AssistantDataPolicy_" + _policy))));
+        if (changed && IsBusy)
+        {
+            // Stop the answer under way; the pane starts over once it has ended (SendAsync's finally).
+            _restartAfterTurn = true;
+            Stop();
+            return;
+        }
+        if (changed) NewChat();
+        if (changed || wasAsking && !NeedsDataPolicy) AddPolicyNote();
     }
+
+    private bool _restartAfterTurn;
+
+    private void AddPolicyNote() =>
+        Items.Add(new NoteChatItem(string.Format(Tr.Get("Assistant_DataPolicyChosen"), Tr.Get("Pref_AssistantDataPolicy_" + _policy))));
 
     [RelayCommand]
     private void NewChat()

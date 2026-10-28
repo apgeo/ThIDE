@@ -121,7 +121,9 @@ public sealed class AssistantService : IAssistantService
                 MaxTurns = current.AssistantMaxTurns,
                 SynthesizeFinalAnswer = current.AssistantSynthesizeFinalAnswer,
                 Stream = current.AssistantStreaming,
-                ResultFilter = current.AssistantDataPolicy == AssistantDataPolicy.Redact ? ToolResultRedactor.Redact : null,
+                // Read the policy at each result, not only at the start: the user may narrow it while
+                // the model is still calling tools.
+                ResultFilter = content => ForModel(current.AssistantDataPolicy, _settings.Current.AssistantDataPolicy, content),
             });
             // Continue the restored conversation on the first turn after a restart; otherwise start a
             // fresh one, seeding the workspace context card when the setting asks for it (CD-02).
@@ -313,10 +315,22 @@ public sealed class AssistantService : IAssistantService
         catch { return null; }
     }
 
+    // A tool result as the model may see it, under the policy the turn began with and the one now set.
+    internal static string ForModel(AssistantDataPolicy atStart, AssistantDataPolicy now, string content)
+    {
+        if (now == AssistantDataPolicy.HideContent && atStart != AssistantDataPolicy.HideContent)
+            return "This result is withheld: the user changed the data policy while you were answering. Stop and say so.";
+        return atStart == AssistantDataPolicy.Redact || now == AssistantDataPolicy.Redact ? ToolResultRedactor.Redact(content) : content;
+    }
+
     private void SaveConversation()
     {
         if (_session is null) return;
-        if (_sessionPolicy != AssistantDataPolicy.SendAll) { TryDeleteConversation(); return; }
+        if (_sessionPolicy != AssistantDataPolicy.SendAll || _settings.Current.AssistantDataPolicy != AssistantDataPolicy.SendAll)
+        {
+            TryDeleteConversation();
+            return;
+        }
         try
         {
             var dir = Path.GetDirectoryName(_conversationPath);
