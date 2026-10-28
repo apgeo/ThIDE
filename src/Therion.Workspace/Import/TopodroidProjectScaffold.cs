@@ -325,17 +325,6 @@ public static class TopodroidProjectScaffold
         return list;
     }
 
-    // Therion's keyword (survey names) and extended keyword (station names); a station reference
-    // may name the survey it is in, innermost first: 5@sub or 5@deeper.sub.
-    private const string Keyword = "[A-Za-z0-9_/][A-Za-z0-9_/-]*";
-    private const string ExtKeyword = "[A-Za-z0-9_/][A-Za-z0-9_/+*.,'-]*";
-    private static readonly Regex SurveyNameRx = new("^" + Keyword + "$", RegexOptions.CultureInvariant);
-    private static readonly Regex StationRefRx = new("^" + ExtKeyword + "(@" + Keyword + @"(\." + Keyword + ")*)?$", RegexOptions.CultureInvariant);
-    private static readonly Regex EncodingRx = new("^[A-Za-z0-9_-]+$", RegexOptions.CultureInvariant);
-    private static readonly Regex CoordinateSystemRx = new("^[A-Za-z0-9:._+-]+$", RegexOptions.CultureInvariant);
-    private static readonly Regex BaseNameRx = new("^[A-Za-z0-9_.-]+$", RegexOptions.CultureInvariant);
-    private static readonly Regex OptionTokenRx = new("^[A-Za-z0-9_-]*$", RegexOptions.CultureInvariant);
-    private static readonly Regex ExtensionRx = new("^[A-Za-z0-9_.-]*$", RegexOptions.CultureInvariant);
 
     /// <summary>
     /// Throws <see cref="ArgumentException"/> when an option cannot be written into the wrapper and
@@ -364,11 +353,11 @@ public static class TopodroidProjectScaffold
                  })
             if (value is null || value.Any(char.IsControl)) Fail(what, value ?? "");
 
-        if (!EncodingRx.IsMatch(o.Encoding)) Fail("Encoding", o.Encoding);
-        if (!CoordinateSystemRx.IsMatch(o.CoordinateSystem.Trim())) Fail("CoordinateSystem", o.CoordinateSystem);
-        if (!string.IsNullOrWhiteSpace(o.InnerSurveyName) && !SurveyNameRx.IsMatch(o.InnerSurveyName.Trim()))
+        if (!ScaffoldValueRules.IsEncoding(o.Encoding)) Fail("Encoding", o.Encoding);
+        if (!ScaffoldValueRules.IsCoordinateSystem(o.CoordinateSystem.Trim())) Fail("CoordinateSystem", o.CoordinateSystem);
+        if (!string.IsNullOrWhiteSpace(o.InnerSurveyName) && !ScaffoldValueRules.IsSurveyName(o.InnerSurveyName.Trim()))
             Fail("InnerSurveyName", o.InnerSurveyName);
-        if (!string.IsNullOrWhiteSpace(o.EntranceStation) && !StationRefRx.IsMatch(o.EntranceStation.Trim()))
+        if (!string.IsNullOrWhiteSpace(o.EntranceStation) && !ScaffoldValueRules.IsStationRef(o.EntranceStation.Trim()))
             Fail("EntranceStation", o.EntranceStation);
         foreach (var (what, value) in new[] { ("FixC1", o.FixC1), ("FixC2", o.FixC2), ("FixC3", o.FixC3) })
             if (!string.IsNullOrWhiteSpace(value)
@@ -379,13 +368,13 @@ public static class TopodroidProjectScaffold
         if (!IsProjectRelativeDir(o.OutputDir, allowDot: false)) Fail("OutputDir", o.OutputDir);
         if (o.CreateGraphicsDir && !IsProjectRelativeDir(o.GraphicsDir, allowDot: false)) Fail("GraphicsDir", o.GraphicsDir);
         if (!string.IsNullOrWhiteSpace(o.OutputBaseName)
-            && (!BaseNameRx.IsMatch(o.OutputBaseName.Trim()) || o.OutputBaseName.Trim() is "." or ".."))
+            && (!ScaffoldValueRules.IsBaseName(o.OutputBaseName.Trim()) || o.OutputBaseName.Trim() is "." or ".."))
             Fail("OutputBaseName", o.OutputBaseName);
 
         foreach (var e in o.Exports)
         {
-            if (!OptionTokenRx.IsMatch(e.Fmt ?? "") || !OptionTokenRx.IsMatch(e.Projection ?? "")
-                || !OptionTokenRx.IsMatch(e.WallSource ?? "") || !ExtensionRx.IsMatch(e.Extension ?? ""))
+            if (!ScaffoldValueRules.IsOptionToken(e.Fmt ?? "") || !ScaffoldValueRules.IsOptionToken(e.Projection ?? "")
+                || !ScaffoldValueRules.IsOptionToken(e.WallSource ?? "") || !ScaffoldValueRules.IsExtension(e.Extension ?? ""))
                 Fail("Export", $"{e.Kind} {e.Fmt} {e.Projection} {e.WallSource} {e.Extension}");
         }
 
@@ -397,15 +386,7 @@ public static class TopodroidProjectScaffold
         ValidateCopyNames(o);
     }
 
-    // A directory under the project root: relative, forward slashes only, and no segment that is
-    // empty, '.', '..', or that could read as a drive (':') or end a quoted path ('"').
-    private static bool IsProjectRelativeDir(string dir, bool allowDot)
-    {
-        if (string.IsNullOrWhiteSpace(dir)) return false;
-        if (allowDot && dir == ".") return true;
-        if (Path.IsPathRooted(dir) || dir.IndexOfAny(new[] { '\\', ':', '"' }) >= 0) return false;
-        return dir.Split('/').All(s => s.Length > 0 && s is not "." and not ".." && s.Trim().Length == s.Length);
-    }
+    private static bool IsProjectRelativeDir(string dir, bool allowDot) => ScaffoldValueRules.IsProjectRelativeDir(dir, allowDot);
 
     // Copied names land in SourceDir as given, so a directory part ("../x", "a/b.th2") would place a
     // file outside it, and two names differing only in case collide on a case-insensitive disk. The
