@@ -73,6 +73,12 @@
                             <TextBlock Text="{l:Loc Welcome_NewFile}" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
+                    <Button AutomationProperties.AutomationId="Welcome.NewProject" AutomationProperties.Name="{l:Loc Menu_File_NewProject}" Classes="link" Command="{Binding Welcome.NewProjectCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <PathIcon Data="{DynamicResource Icon.Config}" Width="16" Height="16" Foreground="#1565C0" />
+                            <TextBlock Text="{l:Loc Menu_File_NewProject}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
                     <Button AutomationProperties.AutomationId="Welcome.OpenFile" AutomationProperties.Name="{l:Loc Welcome_OpenFile}" Classes="link" Command="{Binding Welcome.OpenFileCommand}">
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <PathIcon Data="{DynamicResource Icon.FolderOpen}" Width="16" Height="16" Foreground="#1565C0" />

@@ -80,6 +80,7 @@ public sealed class CommandPaletteProvider
 
         // ---- File ----
         list.Add(VmCmd(L("Cmd_Cat_File"), L("Welcome_NewFile"), _vm.NewFileCommand, "Icon.File"));
+        list.Add(VmCmd(L("Cmd_Cat_File"), L("Menu_File_NewProject"), _vm.NewProjectCommand, "Icon.Config"));
         list.Add(VmCmd(L("Cmd_Cat_File"), L("Cmd_OpenFile"), _vm.OpenFileCommand, "Icon.File"));
         list.Add(VmCmd(L("Cmd_Cat_File"), L("Cmd_OpenThconfig"), _vm.OpenThconfigCommand, "Icon.Config"));
         list.Add(VmCmd(L("Cmd_Cat_File"), L("Cmd_OpenFolder"), _vm.OpenFolderCommand, "Icon.FolderOpen"));

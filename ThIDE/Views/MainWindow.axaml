@@ -159,6 +159,7 @@
                 <!-- InputGesture is bound via {l:Gesture <ShellCommandId>} so a remap in
                      Settings ▸ Keyboard relabels the menu; unbound commands render no chord. -->
                 <MenuItem AutomationProperties.AutomationId="Menu.File.NewFile" Header="{l:Loc Menu_File_NewFile}" Command="{Binding NewFileCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.File.NewProject" Header="{l:Loc Menu_File_NewProject}" Command="{Binding NewProjectCommand}" />
                 <MenuItem AutomationProperties.AutomationId="Menu.File.OpenFile" Header="{Binding MenuFileOpenFile}" InputGesture="{l:Gesture OpenFile}" Command="{Binding OpenFileCommand}" />
                 <MenuItem AutomationProperties.AutomationId="Menu.File.OpenThconfig" Header="{Binding MenuFileOpenThconfig}" InputGesture="{l:Gesture OpenThconfig}" Command="{Binding OpenThconfigCommand}" />
                 <MenuItem AutomationProperties.AutomationId="Menu.File.OpenFolder" Header="{Binding MenuFileOpenFolder}" InputGesture="{l:Gesture OpenFolder}" Command="{Binding OpenFolderCommand}" />

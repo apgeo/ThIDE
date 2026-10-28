@@ -752,6 +752,7 @@ public partial class MainWindowViewModel : ViewModelBase
         // Welcome start-page actions: the picker-based ones reuse the shell commands; the tools
         // shortcut opens Settings ▸ External Tools via the existing preferences-at-section event.
         WelcomeTool.Welcome.NewFileRequested += (_, _) => _ = NewFileAsync();
+        WelcomeTool.Welcome.NewProjectRequested += (_, _) => NewProjectRequested?.Invoke(this, EventArgs.Empty);
         WelcomeTool.Welcome.OpenFileRequested += (_, _) => OpenFileCommand.Execute(null);
         WelcomeTool.Welcome.OpenFolderRequested += (_, _) => OpenFolderCommand.Execute(null);
         WelcomeTool.Welcome.ShowExternalToolsSettingsRequested += (_, _) => ShowPreferencesRequested?.Invoke(this, "external");
@@ -1097,6 +1098,13 @@ public partial class MainWindowViewModel : ViewModelBase
         RequestNewFile(null);
         return Task.CompletedTask;
     }
+
+    /// <summary>Raised to open File ▸ New Project… in the view.</summary>
+    public event EventHandler? NewProjectRequested;
+
+    /// <summary>Create a new project folder from a project template.</summary>
+    [RelayCommand]
+    private void NewProject() => NewProjectRequested?.Invoke(this, EventArgs.Empty);
 
     /// <summary>Raised to open File ▸ New File… in the view; the argument is a folder to start in, or null.</summary>
     public event EventHandler<string?>? NewFileRequested;

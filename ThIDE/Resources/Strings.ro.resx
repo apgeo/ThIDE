@@ -1452,4 +1452,18 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Snippet_exportPlanPdf" xml:space="preserve"><value>exportă o hartă în plan ca PDF</value></data>
   <data name="Snippet_exportModelLox" xml:space="preserve"><value>exportă modelul 3D</value></data>
   <data name="NewFile_CannotCreate" xml:space="preserve"><value>Fișierul nu poate fi creat aici.</value></data>
+  <data name="Menu_File_NewProject" xml:space="preserve"><value>Proiect nou…</value></data>
+  <data name="NewProject_Title" xml:space="preserve"><value>Proiect nou</value></data>
+  <data name="NewProject_Folder" xml:space="preserve"><value>Creează în dosarul</value></data>
+  <data name="NewProject_PickFolder" xml:space="preserve"><value>Alege dosarul pentru proiectul nou.</value></data>
+  <data name="NewProject_Taken" xml:space="preserve"><value>{0} există deja în acel dosar.</value></data>
+  <data name="NewProject_ImportFolder" xml:space="preserve"><value>Importă un dosar de șablon…</value></data>
+  <data name="NewProject_ImportZip" xml:space="preserve"><value>Importă un .zip de șablon…</value></data>
+  <data name="NewProject_Remove" xml:space="preserve"><value>Elimină șablonul</value></data>
+  <data name="ProjTpl_SingleCave" xml:space="preserve"><value>O singură peșteră</value></data>
+  <data name="ProjTpl_KarstArea" xml:space="preserve"><value>Zonă carstică</value></data>
+  <data name="ProjTpl_Expedition" xml:space="preserve"><value>Expediție</value></data>
+  <data name="ProjTpl_SingleCaveDesc" xml:space="preserve"><value>O peșteră: un fișier de topografie în care se includ ieșirile, un thconfig cu hartă în plan și model 3D, dosare pentru date, schițe și rezultate.</value></data>
+  <data name="ProjTpl_KarstAreaDesc" xml:space="preserve"><value>Mai multe peșteri dintr-o zonă: fiecare cu thconfig-ul ei, plus un thconfig principal care le compilează împreună.</value></data>
+  <data name="ProjTpl_ExpeditionDesc" xml:space="preserve"><value>O expediție anuală: un dosar pe an pentru ieșiri și schițe, și un thconfig pe an.</value></data>
 </root>

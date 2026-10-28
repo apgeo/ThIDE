@@ -82,6 +82,7 @@ public partial class MainWindow : Window
                 vm.ScaffoldProjectRequested += (_, mode) => _ = ShowScaffoldProjectAsync(vm, mode);
                 vm.LinkSurveyRequested += (_, _) => _ = ShowLinkSurveyAsync(null, 0);
                 vm.NewFileRequested += (_, folder) => _ = ShowNewFileAsync(folder);
+                vm.NewProjectRequested += (_, _) => _ = ShowNewProjectAsync();
                 ThIDE.Editor.TherionTextEditor.LinkSurveyRequested += (_, req) =>
                     Avalonia.Threading.Dispatcher.UIThread.Post(() => _ = ShowLinkSurveyAsync(req.FilePath, req.Caret));
                 BuildRecentMenu(vm);
@@ -568,6 +569,22 @@ public partial class MainWindow : Window
             },
             path => docs.ActivateThconfigAsync(path));
         await new NewFileWindow(new NewFileViewModel(env)).ShowDialog(this);
+    }
+
+    // ----- new project ----------------------------------------------------
+
+    /// <summary>File ▸ New Project…: writes a project from a template, then makes its thconfig active.</summary>
+    private async System.Threading.Tasks.Task ShowNewProjectAsync()
+    {
+        var library = Path.Combine(Therion.Workspace.ProjectSidecar.DirectoryFor("templates"), "projects");
+        var start = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        var model = new NewProjectViewModel(library, Path.Combine(start, "cave"));
+        var dialog = new NewProjectWindow(model);
+        await dialog.ShowDialog(this);
+        if (!dialog.Confirmed || model.CreatedThconfig is not { } thconfig) return;
+        var docs = AppServices.Provider.GetService<IDocumentService>();
+        if (docs is not null)
+            await docs.ActivateThconfigAsync(thconfig, new ThconfigActivation(SetWorkingDirectory: true, OpenInEditor: true, Notify: true));
     }
 
     // ----- snippets -------------------------------------------------------

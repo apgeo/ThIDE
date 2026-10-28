@@ -1452,4 +1452,18 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Snippet_exportPlanPdf" xml:space="preserve"><value>export a plan map to PDF</value></data>
   <data name="Snippet_exportModelLox" xml:space="preserve"><value>export the 3D model</value></data>
   <data name="NewFile_CannotCreate" xml:space="preserve"><value>The file cannot be created here.</value></data>
+  <data name="Menu_File_NewProject" xml:space="preserve"><value>New Project…</value></data>
+  <data name="NewProject_Title" xml:space="preserve"><value>New project</value></data>
+  <data name="NewProject_Folder" xml:space="preserve"><value>Create in folder</value></data>
+  <data name="NewProject_PickFolder" xml:space="preserve"><value>Choose the folder for the new project.</value></data>
+  <data name="NewProject_Taken" xml:space="preserve"><value>{0} already exists in that folder.</value></data>
+  <data name="NewProject_ImportFolder" xml:space="preserve"><value>Import template folder…</value></data>
+  <data name="NewProject_ImportZip" xml:space="preserve"><value>Import template .zip…</value></data>
+  <data name="NewProject_Remove" xml:space="preserve"><value>Remove template</value></data>
+  <data name="ProjTpl_SingleCave" xml:space="preserve"><value>Single cave</value></data>
+  <data name="ProjTpl_KarstArea" xml:space="preserve"><value>Karst area</value></data>
+  <data name="ProjTpl_Expedition" xml:space="preserve"><value>Expedition</value></data>
+  <data name="ProjTpl_SingleCaveDesc" xml:space="preserve"><value>One cave: a survey file to input trips into, a thconfig with a plan map and a 3D model, folders for data, sketches and output.</value></data>
+  <data name="ProjTpl_KarstAreaDesc" xml:space="preserve"><value>Several caves of one area: each cave with its own thconfig, plus a master thconfig that compiles them together.</value></data>
+  <data name="ProjTpl_ExpeditionDesc" xml:space="preserve"><value>A yearly expedition: one folder per year for its trips and sketches, and a thconfig per year.</value></data>
 </root>

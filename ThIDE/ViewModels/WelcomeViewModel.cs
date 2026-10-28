@@ -95,6 +95,8 @@ public sealed partial class WelcomeViewModel : ObservableObject
     // ---- actions ------------------------------------------------------------
 
     [RelayCommand] private void NewFile() => NewFileRequested?.Invoke(this, EventArgs.Empty);
+    public event EventHandler? NewProjectRequested;
+    [RelayCommand] private void NewProject() => NewProjectRequested?.Invoke(this, EventArgs.Empty);
     [RelayCommand] private void OpenFile() => OpenFileRequested?.Invoke(this, EventArgs.Empty);
     [RelayCommand] private void OpenFolder() => OpenFolderRequested?.Invoke(this, EventArgs.Empty);
     [RelayCommand] private void OpenThbook() => _thbook?.OpenAtPage(1);

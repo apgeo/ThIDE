@@ -1,0 +1,68 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ThIDE.ViewModels"
+        xmlns:l="using:ThIDE.Resources"
+        x:Class="ThIDE.Views.NewProjectWindow"
+        x:DataType="vm:NewProjectViewModel"
+        x:CompileBindings="False"
+        Title="{l:Loc NewProject_Title}" Width="860" Height="580" MinWidth="640" MinHeight="420"
+        AutomationProperties.AutomationId="NewProject.Window"
+        WindowStartupLocation="CenterOwner" CanResize="True">
+    <DockPanel Margin="12">
+        <DockPanel DockPanel.Dock="Bottom" Margin="0,10,0,0">
+            <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="8">
+                <Button Content="{l:Loc NewProject_ImportFolder}" Click="OnImportFolder" AutomationProperties.AutomationId="NewProject.ImportFolder" />
+                <Button Content="{l:Loc NewProject_ImportZip}" Click="OnImportZip" AutomationProperties.AutomationId="NewProject.ImportZip" />
+                <Button Content="{l:Loc NewProject_Remove}" Click="OnRemove" IsEnabled="{Binding SelectedTemplate.IsImported}"
+                        AutomationProperties.AutomationId="NewProject.Remove" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                <Button Content="{l:Loc Common_Cancel}" Click="OnCancel" MinWidth="80" AutomationProperties.AutomationId="NewProject.Cancel" />
+                <Button Content="{l:Loc NewFile_Create}" Click="OnCreate" IsDefault="True" MinWidth="110"
+                        IsEnabled="{Binding CanCreate}" AutomationProperties.AutomationId="NewProject.Create" />
+            </StackPanel>
+        </DockPanel>
+        <TextBlock DockPanel.Dock="Bottom" Text="{Binding Message}" Foreground="#E65100" TextWrapping="Wrap" Margin="0,6,0,0"
+                   AutomationProperties.AutomationId="NewProject.Message" />
+        <Grid ColumnDefinitions="280,12,*">
+            <ListBox Grid.Column="0" ItemsSource="{Binding Templates}" SelectedItem="{Binding SelectedTemplate, Mode=TwoWay}"
+                     AutomationProperties.AutomationId="NewProject.Templates">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Margin="0,2">
+                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" />
+                            <TextBlock Text="{Binding Description}" Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+            <ScrollViewer Grid.Column="2">
+                <StackPanel Spacing="8">
+                    <ItemsControl ItemsSource="{Binding Fields}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid ColumnDefinitions="200,*" Margin="0,0,0,8">
+                                    <TextBlock Text="{Binding Prompt}" VerticalAlignment="Center" TextWrapping="Wrap" />
+                                    <TextBox Grid.Column="1" Text="{Binding Value, Mode=TwoWay}" IsVisible="{Binding IsText}"
+                                             AutomationProperties.AutomationId="{Binding AutomationId}" AutomationProperties.Name="{Binding Prompt}" />
+                                    <CheckBox Grid.Column="1" IsChecked="{Binding BoolValue, Mode=TwoWay}" IsVisible="{Binding IsBool}" />
+                                    <ComboBox Grid.Column="1" ItemsSource="{Binding Choices}" SelectedItem="{Binding Value, Mode=TwoWay}"
+                                              IsVisible="{Binding IsChoice}" HorizontalAlignment="Stretch" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Grid ColumnDefinitions="200,*">
+                        <TextBlock Text="{l:Loc NewProject_Folder}" VerticalAlignment="Center" />
+                        <DockPanel Grid.Column="1">
+                            <Button DockPanel.Dock="Right" Content="{l:Loc LinkSurvey_Browse}" Click="OnBrowse" Margin="6,0,0,0"
+                                    AutomationProperties.AutomationId="NewProject.Browse" />
+                            <TextBox Text="{Binding TargetFolder, Mode=TwoWay}"
+                                     AutomationProperties.AutomationId="NewProject.Folder" AutomationProperties.Name="{l:Loc NewProject_Folder}" />
+                        </DockPanel>
+                    </Grid>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+    </DockPanel>
+</Window>
