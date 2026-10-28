@@ -1411,4 +1411,37 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Ed_KindSnippet" xml:space="preserve"><value>Fragment</value></data>
   <data name="Ed_KindIdentifier" xml:space="preserve"><value>Identificator</value></data>
   <data name="Ed_InsertSnippet" xml:space="preserve"><value>Inserează fragment</value></data>
+  <data name="Menu_File_NewFile" xml:space="preserve"><value>Fișier nou…</value></data>
+  <data name="NewFile_Title" xml:space="preserve"><value>Fișier nou</value></data>
+  <data name="NewFile_Template" xml:space="preserve"><value>Șablon</value></data>
+  <data name="NewFile_Name" xml:space="preserve"><value>Numele fișierului</value></data>
+  <data name="NewFile_Folder" xml:space="preserve"><value>Dosar</value></data>
+  <data name="NewFile_InputFrom" xml:space="preserve"><value>Include-l din</value></data>
+  <data name="NewFile_NoInput" xml:space="preserve"><value>(nicăieri — adaug eu includerea)</value></data>
+  <data name="NewFile_Preview" xml:space="preserve"><value>Conținut</value></data>
+  <data name="NewFile_Create" xml:space="preserve"><value>Creează</value></data>
+  <data name="NewFile_Exists" xml:space="preserve"><value>Un fișier cu acest nume există deja în dosar.</value></data>
+  <data name="NewFile_InputExists" xml:space="preserve"><value>Acel fișier include deja unul cu acest nume; nu se mai adaugă o linie input.</value></data>
+  <data name="NewFile_BadName" xml:space="preserve"><value>Numele conține caractere nepermise într-un nume de fișier.</value></data>
+  <data name="NewFolder_Title" xml:space="preserve"><value>Dosar nou</value></data>
+  <data name="NewFolder_Name" xml:space="preserve"><value>Numele dosarului</value></data>
+  <data name="NewFolder_Default" xml:space="preserve"><value>Dosar nou</value></data>
+  <data name="Notif_TemplatesInvalid" xml:space="preserve"><value>Unele șabloane de fișier nu au putut fi citite</value></data>
+  <data name="FileTpl_Trip" xml:space="preserve"><value>Ieșire de topografiere</value></data>
+  <data name="FileTpl_TripDesc" xml:space="preserve"><value>O topografie cu un centreline; data, echipa, unitățile și linia data preluate din fișierul deschis în editor.</value></data>
+  <data name="FileTpl_Connection" xml:space="preserve"><value>Topografie de legătură</value></data>
+  <data name="FileTpl_ConnectionDesc" xml:space="preserve"><value>O topografie-cadru care include alte topografii și le leagă cu equate.</value></data>
+  <data name="FileTpl_Thconfig" xml:space="preserve"><value>Thconfig</value></data>
+  <data name="FileTpl_ThconfigDesc" xml:space="preserve"><value>Compilează un fișier de topografie într-o hartă PDF și un model 3D; devine thconfig-ul activ.</value></data>
+  <data name="FileTpl_Scrap" xml:space="preserve"><value>Schiță (th2)</value></data>
+  <data name="FileTpl_ScrapDesc" xml:space="preserve"><value>Un scrap gol în plan, gata de desenat.</value></data>
+  <data name="FileTpl_Layouts" xml:space="preserve"><value>Bibliotecă de layout-uri</value></data>
+  <data name="FileTpl_LayoutsDesc" xml:space="preserve"><value>Layout-uri comune din care thconfig-urile proiectului pot copia.</value></data>
+  <data name="FileTpl_Blank" xml:space="preserve"><value>Fișier gol</value></data>
+  <data name="FileTpl_BlankDesc" xml:space="preserve"><value>Un fișier de topografie gol.</value></data>
+  <data name="Pref_ProjectConfig" xml:space="preserve"><value>Setările proiectului (fragmente, șabloane, hook-uri, sarcini, macrouri)</value></data>
+  <data name="Pref_ProjectConfigFolder" xml:space="preserve"><value>În dosarul .thide al proiectului</value></data>
+  <data name="Pref_ProjectConfigFolderHint" xml:space="preserve"><value>Păstrate împreună cu peștera și partajate prin git cu toți cei care au proiectul.</value></data>
+  <data name="Pref_ProjectConfigAppData" xml:space="preserve"><value>În setările ThIDE de pe acest calculator</value></data>
+  <data name="Pref_ProjectConfigAppDataHint" xml:space="preserve"><value>Private pe acest calculator; dosarul proiectului rămâne neatins. Fișierele existente nu se mută.</value></data>
 </root>

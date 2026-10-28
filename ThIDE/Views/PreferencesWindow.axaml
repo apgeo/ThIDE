@@ -53,6 +53,15 @@
                     <CheckBox Content="{l:Loc Pref_ShowWelcome}"
                               AutomationProperties.AutomationId="Preferences.ShowWelcome"
                               IsChecked="{Binding ShowWelcomeOnStartup}" />
+                    <TextBlock Text="{l:Loc Pref_ProjectConfig}" FontWeight="SemiBold" Margin="0,6,0,0" />
+                    <RadioButton GroupName="ProjectConfig" Content="{l:Loc Pref_ProjectConfigFolder}"
+                                 AutomationProperties.AutomationId="Preferences.ProjectConfig.Folder"
+                                 IsChecked="{Binding !ProjectConfigInAppData}" />
+                    <TextBlock Text="{l:Loc Pref_ProjectConfigFolderHint}" Foreground="Gray" FontSize="11" Margin="28,-6,0,0" TextWrapping="Wrap" />
+                    <RadioButton GroupName="ProjectConfig" Content="{l:Loc Pref_ProjectConfigAppData}"
+                                 AutomationProperties.AutomationId="Preferences.ProjectConfig.AppData"
+                                 IsChecked="{Binding ProjectConfigInAppData}" />
+                    <TextBlock Text="{l:Loc Pref_ProjectConfigAppDataHint}" Foreground="Gray" FontSize="11" Margin="28,-6,0,0" TextWrapping="Wrap" />
                     <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,4,0,0">
                         <TextBlock Text="{l:Loc Pref_Language}" VerticalAlignment="Center" Width="100" />
                         <ComboBox AutomationProperties.AutomationId="Preferences.Language" AutomationProperties.Name="{l:Loc Pref_Language}" MinWidth="180" SelectedIndex="{Binding LanguageIndex, Mode=TwoWay}">

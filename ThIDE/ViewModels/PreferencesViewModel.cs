@@ -53,6 +53,8 @@ public partial class PreferencesViewModel : ObservableObject
 
     // ---- extensions (hooks, plugins) ----
     [ObservableProperty] private bool _enableScriptHooks;
+    /// <summary>Project config (snippets, templates, hooks, tasks, macros) in the project's .thide/ folder (shared) or in app data (private).</summary>
+    [ObservableProperty] private bool _projectConfigInAppData;
     [ObservableProperty] private string _hookOnOpen = string.Empty;
     [ObservableProperty] private string _hookOnSave = string.Empty;
     [ObservableProperty] private string _hookOnBuild = string.Empty;
@@ -192,6 +194,7 @@ public partial class PreferencesViewModel : ObservableObject
         _showWelcomeOnStartup = s.ShowWelcomeOnStartup;
         _telemetryEnabled = s.TelemetryEnabled;
         _enableScriptHooks = s.EnableScriptHooks;
+        _projectConfigInAppData = s.ProjectConfigLocation == Therion.Workspace.ProjectConfigLocation.AppData;
         _hookOnOpen = s.HookOnOpen ?? string.Empty;
         _hookOnSave = s.HookOnSave ?? string.Empty;
         _hookOnBuild = s.HookOnBuild ?? string.Empty;
@@ -367,6 +370,7 @@ public partial class PreferencesViewModel : ObservableObject
             ShowWelcomeOnStartup = ShowWelcomeOnStartup,
             TelemetryEnabled = TelemetryEnabled,
             EnableScriptHooks = EnableScriptHooks,
+            ProjectConfigLocation = ProjectConfigInAppData ? Therion.Workspace.ProjectConfigLocation.AppData : Therion.Workspace.ProjectConfigLocation.ProjectFolder,
             HookOnOpen = NullIfBlank(HookOnOpen),
             HookOnSave = NullIfBlank(HookOnSave),
             HookOnBuild = NullIfBlank(HookOnBuild),

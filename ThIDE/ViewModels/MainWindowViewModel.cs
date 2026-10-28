@@ -1092,19 +1092,17 @@ public partial class MainWindowViewModel : ViewModelBase
     private Task NewFile() => NewFileAsync();
 
     /// <summary>Welcome page "New File": pick a save location, create the empty file, open it.</summary>
-    private async Task NewFileAsync()
+    private Task NewFileAsync()
     {
-        if (_picker is null) return;
-        var path = await _picker.PickSaveFileAsync(Tr.Get("Welcome_NewFile"), "new.th").ConfigureAwait(true);
-        if (string.IsNullOrEmpty(path)) return;
-        try
-        {
-            if (!System.IO.File.Exists(path)) System.IO.File.Create(path).Dispose();
-            await _documents.OpenFileAsync(path).ConfigureAwait(true);
-            StatusText = path;
-        }
-        catch (Exception ex) { StatusText = ex.Message; }
+        RequestNewFile(null);
+        return Task.CompletedTask;
     }
+
+    /// <summary>Raised to open File ▸ New File… in the view; the argument is a folder to start in, or null.</summary>
+    public event EventHandler<string?>? NewFileRequested;
+
+    /// <summary>Opens the New File dialog (the Workspace Explorer passes the folder it was invoked on).</summary>
+    public void RequestNewFile(string? folder) => NewFileRequested?.Invoke(this, folder);
 
     [RelayCommand]
     private async Task OpenThconfig()

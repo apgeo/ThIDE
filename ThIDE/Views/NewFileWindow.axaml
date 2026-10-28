@@ -1,0 +1,54 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ThIDE.ViewModels"
+        xmlns:l="using:ThIDE.Resources"
+        x:Class="ThIDE.Views.NewFileWindow"
+        x:DataType="vm:NewFileViewModel"
+        x:CompileBindings="False"
+        Title="{l:Loc NewFile_Title}" Width="820" Height="600" MinWidth="600" MinHeight="440"
+        AutomationProperties.AutomationId="NewFile.Window"
+        WindowStartupLocation="CenterOwner" CanResize="True">
+    <DockPanel Margin="12">
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,10,0,0">
+            <Button Content="{l:Loc Common_Cancel}" Click="OnCancel" MinWidth="80" AutomationProperties.AutomationId="NewFile.Cancel" />
+            <Button Content="{l:Loc NewFile_Create}" Click="OnCreate" IsDefault="True" MinWidth="110"
+                    IsEnabled="{Binding CanCreate}" AutomationProperties.AutomationId="NewFile.Create" />
+        </StackPanel>
+        <TextBlock DockPanel.Dock="Bottom" Text="{Binding Message}" Foreground="#E65100" TextWrapping="Wrap" Margin="0,6,0,0"
+                   AutomationProperties.AutomationId="NewFile.Message" />
+        <Grid ColumnDefinitions="260,12,*">
+            <ListBox Grid.Column="0" ItemsSource="{Binding Templates}" SelectedItem="{Binding SelectedTemplate, Mode=TwoWay}"
+                     AutomationProperties.AutomationId="NewFile.Templates" AutomationProperties.Name="{l:Loc NewFile_Template}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Margin="0,2">
+                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" />
+                            <TextBlock Text="{Binding Description}" Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+            <DockPanel Grid.Column="2">
+                <Grid DockPanel.Dock="Top" ColumnDefinitions="110,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="8" Margin="0,0,0,8">
+                    <TextBlock Grid.Row="0" Text="{l:Loc NewFile_Name}" VerticalAlignment="Center" />
+                    <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding FileName, Mode=TwoWay}"
+                             AutomationProperties.AutomationId="NewFile.Name" AutomationProperties.Name="{l:Loc NewFile_Name}" />
+                    <TextBlock Grid.Row="1" Text="{l:Loc NewFile_Folder}" VerticalAlignment="Center" />
+                    <DockPanel Grid.Row="1" Grid.Column="1">
+                        <Button DockPanel.Dock="Right" Content="{l:Loc LinkSurvey_Browse}" Click="OnBrowse" Margin="6,0,0,0"
+                                AutomationProperties.AutomationId="NewFile.Browse" />
+                        <TextBox Text="{Binding Folder, Mode=TwoWay}"
+                                 AutomationProperties.AutomationId="NewFile.Folder" AutomationProperties.Name="{l:Loc NewFile_Folder}" />
+                    </DockPanel>
+                    <TextBlock Grid.Row="2" Text="{l:Loc NewFile_InputFrom}" VerticalAlignment="Center" />
+                    <ComboBox Grid.Row="2" Grid.Column="1" HorizontalAlignment="Stretch"
+                              ItemsSource="{Binding InputTargets}" SelectedItem="{Binding SelectedInputTarget, Mode=TwoWay}"
+                              AutomationProperties.AutomationId="NewFile.InputFrom" AutomationProperties.Name="{l:Loc NewFile_InputFrom}" />
+                </Grid>
+                <TextBlock DockPanel.Dock="Top" Text="{l:Loc NewFile_Preview}" FontWeight="SemiBold" Margin="0,0,0,4" />
+                <TextBox Text="{Binding Preview}" IsReadOnly="True" AcceptsReturn="True" FontFamily="monospace"
+                         AutomationProperties.AutomationId="NewFile.Preview" />
+            </DockPanel>
+        </Grid>
+    </DockPanel>
+</Window>

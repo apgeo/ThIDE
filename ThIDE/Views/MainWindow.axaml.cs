@@ -81,6 +81,7 @@ public partial class MainWindow : Window
                 vm.Build.QuickExportRequested += (_, _) => _ = ShowQuickExportAsync(vm);
                 vm.ScaffoldProjectRequested += (_, mode) => _ = ShowScaffoldProjectAsync(vm, mode);
                 vm.LinkSurveyRequested += (_, _) => _ = ShowLinkSurveyAsync(null, 0);
+                vm.NewFileRequested += (_, folder) => _ = ShowNewFileAsync(folder);
                 ThIDE.Editor.TherionTextEditor.LinkSurveyRequested += (_, req) =>
                     Avalonia.Threading.Dispatcher.UIThread.Post(() => _ = ShowLinkSurveyAsync(req.FilePath, req.Caret));
                 BuildRecentMenu(vm);
@@ -495,6 +496,78 @@ public partial class MainWindow : Window
         if (string.IsNullOrEmpty(root)) return;
 
         await vm.RunScaffoldAsync(model.BuildOptions(), source, root);
+    }
+
+    // ----- new file -------------------------------------------------------
+
+    /// <summary>File ▸ New File…: templates, name, folder and an optional input line into a survey file.</summary>
+    private async System.Threading.Tasks.Task ShowNewFileAsync(string? folder)
+    {
+        var docs = AppServices.Provider.GetService<IDocumentService>();
+        var session = AppServices.Provider.GetService<IWorkspaceSession>();
+        var settings = AppServices.Provider.GetService<IAppSettingsService>();
+        if (docs is null) return;
+        var root = session?.RootPath;
+        var location = settings?.Current.ProjectConfigLocation ?? Therion.Workspace.ProjectConfigLocation.ProjectFolder;
+
+        // Template files: the user's (app data), then the project's (its config folder).
+        var layers = new List<Therion.Workspace.Templates.SnippetLayer>();
+        void AddDir(string? dir)
+        {
+            if (dir is null || !Directory.Exists(dir)) return;
+            foreach (var file in Directory.EnumerateFiles(dir, "*.json").Order(StringComparer.Ordinal))
+            {
+                try { layers.Add(new(Path.GetFileName(file), File.ReadAllText(file))); }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+            }
+        }
+        AddDir(Path.Combine(Therion.Workspace.ProjectSidecar.DirectoryFor("templates"), "files"));
+        AddDir(Therion.Workspace.ProjectLocalConfig.PathFor(root, location, Path.Combine("templates", "files")));
+        var (templates, errors) = Therion.Workspace.Templates.FileTemplateCatalog.Load(Therion.Workspace.Templates.FileTemplateCatalog.BuiltIns, layers);
+        if (errors.Count > 0)
+            AppServices.Provider.GetService<INotificationService>()?.Warning(ThIDE.Resources.Tr.Get("Notif_TemplatesInvalid"),
+                string.Join("\n", errors.Take(3).Select(e => e.ToString())));
+
+        var active = docs.Active;
+        var start = folder
+            ?? (active is { FilePath: { } ap } && Path.IsPathRooted(ap) ? Path.GetDirectoryName(ap) : null)
+            ?? root
+            ?? Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+
+        var ws = docs.Workspace;
+        var surveyFiles = ws?.PerFile.Keys.Where(k => k.EndsWith(".th", StringComparison.OrdinalIgnoreCase))
+            .Order(StringComparer.OrdinalIgnoreCase).ToList() ?? [];
+        var parents = new HashSet<string>(ws?.FileGraphEdges.Select(e => Path.GetFullPath(e.From)) ?? [], Therion.Workspace.Editing.FilePaths.Comparer);
+        var buffers = docs.Documents.Where(d => Path.IsPathRooted(d.FilePath))
+            .GroupBy(d => Path.GetFullPath(d.FilePath), Therion.Workspace.Editing.FilePaths.Comparer)
+            .ToDictionary(g => g.Key, g => g.First().DocumentText, Therion.Workspace.Editing.FilePaths.Comparer);
+
+        var context = active is null
+            ? new Therion.Workspace.Templates.SnippetContext(null, "", 0, DateTime.Now)
+            : new Therion.Workspace.Templates.SnippetContext(active.FilePath, active.DocumentText, active.CurrentCaret.StartOffset, DateTime.Now);
+        var activeVars = Therion.Workspace.Templates.SnippetVariables.Standard(context);
+        string? Vars(string name) => name.StartsWith("FILE_", StringComparison.Ordinal) ? null : activeVars(name);
+
+        var env = new NewFileEnvironment(
+            templates, start, root, surveyFiles, parents,
+            p => buffers.TryGetValue(Path.GetFullPath(p), out var t) ? t : File.Exists(p) ? Therion.Syntax.EncodingResolver.ReadAllText(p) : null,
+            p => File.Exists(p) || Directory.Exists(p),
+            Vars,
+            AppServices.Provider.GetService<IWorkspaceEditService>(),
+            async (path, caret) =>
+            {
+                await docs.OpenFileAsync(path);
+                var doc = docs.Documents.FirstOrDefault(d => Therion.Workspace.Editing.FilePaths.Same(d.FilePath, path));
+                if (doc is null) return;
+                var text = doc.DocumentText;
+                caret = Math.Clamp(caret, 0, text.Length);
+                int line = 1, col = 1;
+                for (int i = 0; i < caret; i++) { if (text[i] == '\n') { line++; col = 1; } else col++; }
+                var at = new Therion.Core.SourceLocation(line, col);
+                doc.RequestScrollTo(new Therion.Core.SourceSpan(path, at, at, caret, 0));
+            },
+            path => docs.ActivateThconfigAsync(path));
+        await new NewFileWindow(new NewFileViewModel(env)).ShowDialog(this);
     }
 
     // ----- snippets -------------------------------------------------------

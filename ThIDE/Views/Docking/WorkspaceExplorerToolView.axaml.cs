@@ -213,7 +213,13 @@ public partial class WorkspaceExplorerToolView : UserControl
     private async void OnCtxNewFile(object? sender, RoutedEventArgs e)
     {
         if (DirectoryFor(Ctx()) is not { } dir) return;
-        var name = await PromptName("New File", "File name:", "new.th").ConfigureAwait(true);
+        // The New File dialog (templates, optional input line) starts in this folder.
+        if (TopLevel.GetTopLevel(this)?.DataContext is MainWindowViewModel main)
+        {
+            main.RequestNewFile(dir);
+            return;
+        }
+        var name = await PromptName(ThIDE.Resources.Tr.Get("NewFile_Title"), ThIDE.Resources.Tr.Get("NewFile_Name"), "new.th").ConfigureAwait(true);
         if (string.IsNullOrWhiteSpace(name)) return;
 
         var path = Path.Combine(dir, name);
@@ -225,7 +231,7 @@ public partial class WorkspaceExplorerToolView : UserControl
     private async void OnCtxNewFolder(object? sender, RoutedEventArgs e)
     {
         if (DirectoryFor(Ctx()) is not { } dir) return;
-        var name = await PromptName("New Folder", "Folder name:", "New Folder").ConfigureAwait(true);
+        var name = await PromptName(ThIDE.Resources.Tr.Get("NewFolder_Title"), ThIDE.Resources.Tr.Get("NewFolder_Name"), ThIDE.Resources.Tr.Get("NewFolder_Default")).ConfigureAwait(true);
         if (string.IsNullOrWhiteSpace(name)) return;
 
         var path = Path.Combine(dir, name);
