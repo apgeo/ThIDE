@@ -47,6 +47,8 @@ public sealed partial class NewFileViewModel : ObservableObject
     private readonly NewFileEnvironment _env;
     private bool _nameEdited;
     private bool _settingName;
+    private bool _inputPicked;
+    private bool _settingInput;
 
     public NewFileViewModel(NewFileEnvironment env)
     {
@@ -58,7 +60,9 @@ public sealed partial class NewFileViewModel : ObservableObject
             InputTargets.Add(new InputTargetRow(f, env.WorkspaceRoot is { } root ? Path.GetRelativePath(root, f).Replace('\\', '/') : Path.GetFileName(f)));
         _folder = env.Folder;
         SelectedTemplate = Templates.FirstOrDefault();
+        _settingInput = true;
         SelectedInputTarget = DefaultInputTarget();
+        _settingInput = false;
     }
 
     public ObservableCollection<TemplateRow> Templates { get; } = new();
@@ -72,11 +76,18 @@ public sealed partial class NewFileViewModel : ObservableObject
     [ObservableProperty] private string _message = string.Empty;
     [ObservableProperty] private bool _canCreate;
 
-    public string TargetPath => Path.Combine(Folder, FileName);
+    /// <summary>The file to create: the typed name, with the template's extension when it has none.</summary>
+    public string TargetPath => Path.Combine(Folder,
+        SelectedTemplate is { } t && !Path.HasExtension(FileName) ? FileName + t.Template.Extension : FileName);
 
     partial void OnSelectedTemplateChanged(TemplateRow? value)
     {
-        if (!_nameEdited && value is not null) SetNameQuietly(NewFilePlanner.FreeName(Folder, value.Template.DefaultName, value.Template.Extension, _env.Exists));
+        if (value is not null)
+        {
+            if (!_nameEdited) SetNameQuietly(NewFilePlanner.FreeName(Folder, value.Template.DefaultName, value.Template.Extension, _env.Exists));
+            // A typed name keeps its stem but takes the template's extension.
+            else SetNameQuietly(Path.GetFileNameWithoutExtension(FileName) + value.Template.Extension);
+        }
         Refresh();
     }
 
@@ -89,11 +100,20 @@ public sealed partial class NewFileViewModel : ObservableObject
     partial void OnFolderChanged(string value)
     {
         if (!_nameEdited && SelectedTemplate is { } t) SetNameQuietly(NewFilePlanner.FreeName(value, t.Template.DefaultName, t.Template.Extension, _env.Exists));
-        SelectedInputTarget = DefaultInputTarget();
+        if (!_inputPicked)
+        {
+            _settingInput = true;
+            SelectedInputTarget = DefaultInputTarget();
+            _settingInput = false;
+        }
         Refresh();
     }
 
-    partial void OnSelectedInputTargetChanged(InputTargetRow? value) => Refresh();
+    partial void OnSelectedInputTargetChanged(InputTargetRow? value)
+    {
+        if (!_settingInput) _inputPicked = true;
+        Refresh();
+    }
 
     private void SetNameQuietly(string name)
     {
@@ -115,6 +135,7 @@ public sealed partial class NewFileViewModel : ObservableObject
     {
         Plan = null;
         CanCreate = false;
+        Message = string.Empty;
         if (SelectedTemplate is null || string.IsNullOrWhiteSpace(FileName) || string.IsNullOrWhiteSpace(Folder))
         {
             Preview = string.Empty;
@@ -138,7 +159,7 @@ public sealed partial class NewFileViewModel : ObservableObject
     /// <summary>Creates the file (and the input), opens it, and activates a thconfig template. Null on success, else why not.</summary>
     public async Task<string?> CreateAsync()
     {
-        if (Plan is not { } plan || _env.Editor is null || SelectedTemplate is null) return Tr.Get("NewFile_Exists");
+        if (Plan is not { } plan || _env.Editor is null || SelectedTemplate is null) return Tr.Get("NewFile_CannotCreate");
         var outcome = await _env.Editor.ApplyAsync(plan.Batch);
         if (!outcome.Success)
             return outcome.Error ?? string.Join("; ", outcome.Problems.Select(p => string.Format(Tr.Get("Edit_Problem" + p.Kind), Path.GetFileName(p.FilePath))));

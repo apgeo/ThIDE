@@ -84,4 +84,20 @@ public class SnippetTemplateTests
 
         Assert.Equal(["DATE", "TIME"], t!.VariableNames);
     }
+
+    [Fact]
+    public void Huge_tab_stop_numbers_are_errors()
+    {
+        Assert.NotNull(SnippetTemplate.Parse("$12345678901").Error);
+        Assert.NotNull(SnippetTemplate.Parse("${99999999999:x}").Error);
+    }
+
+    [Fact]
+    public void Escaped_commas_stay_inside_a_choice()
+    {
+        var r = Render(@"${1|a\,b,c|}");
+
+        Assert.Equal("a,b", r.Text);
+        Assert.Equal(["a,b", "c"], r.Stops[0].Choices);
+    }
 }

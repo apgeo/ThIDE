@@ -1451,4 +1451,5 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Snippet_layoutCopy" xml:space="preserve"><value>layout based on another</value></data>
   <data name="Snippet_exportPlanPdf" xml:space="preserve"><value>export a plan map to PDF</value></data>
   <data name="Snippet_exportModelLox" xml:space="preserve"><value>export the 3D model</value></data>
+  <data name="NewFile_CannotCreate" xml:space="preserve"><value>The file cannot be created here.</value></data>
 </root>

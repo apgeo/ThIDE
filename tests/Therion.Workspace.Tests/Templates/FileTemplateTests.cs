@@ -84,4 +84,12 @@ public class FileTemplateTests
         Assert.Equal(".th", templates.Single(t => t.Id == "club-trip").Extension);
         Assert.Equal("club-trip", templates[^1].Id);
     }
+
+    [Fact]
+    public void File_variables_name_the_new_file()
+    {
+        var tpl = new FileTemplate("x", "x", "", ".th", "x", "# $FILE_NAME ($FILE_BASENAME)\n");
+
+        Assert.Equal("# north.th (north)\n", NewFilePlanner.Plan(tpl, P("north.th"), _ => "WRONG").Content);
+    }
 }

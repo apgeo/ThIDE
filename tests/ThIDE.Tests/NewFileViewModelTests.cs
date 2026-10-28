@@ -56,7 +56,7 @@ public class NewFileViewModelTests
 
         vm.FileName = "cave.thconfig";
         vm.SelectedTemplate = vm.Templates.Single(t => t.Template.Id == "blank");
-        Assert.Equal("cave.thconfig", vm.FileName);
+        Assert.Equal("cave.th", vm.FileName); // the typed stem stays, the extension follows the template
     }
 
     [Fact]
@@ -80,5 +80,29 @@ public class NewFileViewModelTests
 
         Assert.False(vm.CanCreate);
         Assert.NotEmpty(vm.Message);
+    }
+
+    [Fact]
+    public void A_typed_name_takes_the_new_templates_extension()
+    {
+        var (vm, _, _) = Make();
+        vm.FileName = "north.th";
+
+        vm.SelectedTemplate = vm.Templates.Single(t => t.Template.Id == "thconfig-basic");
+
+        Assert.Equal("north.thconfig", vm.FileName);
+        vm.FileName = "cave2";
+        Assert.EndsWith("cave2.thconfig", vm.TargetPath);
+    }
+
+    [Fact]
+    public void A_picked_input_target_survives_folder_edits()
+    {
+        var (vm, _, _) = Make();
+        vm.SelectedInputTarget = vm.InputTargets.Single(t => t.Path == P("main.th"));
+
+        vm.Folder = P("trips/sub");
+
+        Assert.Equal(P("main.th"), vm.SelectedInputTarget!.Path);
     }
 }

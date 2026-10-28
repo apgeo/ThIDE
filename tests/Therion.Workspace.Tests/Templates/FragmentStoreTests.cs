@@ -45,4 +45,27 @@ public class FragmentStoreTests
         Assert.Null(json);
         Assert.NotNull(error);
     }
+
+    [Fact]
+    public void Adding_a_new_trigger_keeps_the_files_comments()
+    {
+        var existing = "[\n  // club house style\n  { \"trigger\": \"fix\", \"template\": \"fix $1\" }\n]\n";
+
+        var (json, error) = FragmentStore.Append(existing, "plan", "d", "x");
+        var (snippets, errors) = SnippetCatalog.Load([], new SnippetLayer("p", json));
+
+        Assert.Null(error);
+        Assert.Contains("// club house style", json);
+        Assert.Empty(errors);
+        Assert.Equal(["fix", "plan"], snippets.Select(s => s.Trigger));
+    }
+
+    [Fact]
+    public void A_non_string_trigger_is_not_a_crash()
+    {
+        var (json, error) = FragmentStore.Append("[ { \"trigger\": 5, \"template\": \"x\" } ]", "plan", "d", "x");
+
+        Assert.Null(error);
+        Assert.NotNull(json);
+    }
 }

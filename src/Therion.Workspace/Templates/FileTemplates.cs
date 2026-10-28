@@ -124,7 +124,14 @@ public static class NewFilePlanner
         string? inputInto = null, Func<string, string?>? readText = null)
     {
         var name = IdentifierFrom(Path.GetFileNameWithoutExtension(filePath));
-        string? Vars(string v) => v == "SURVEY_NAME" ? variables(v) ?? name : variables(v);
+        string? Vars(string v) => v switch
+        {
+            "SURVEY_NAME" => variables(v) ?? name,
+            "FILE_NAME" => Path.GetFileName(filePath),
+            "FILE_BASENAME" => Path.GetFileNameWithoutExtension(filePath),
+            "FILE_DIR" => Path.GetDirectoryName(filePath),
+            _ => variables(v),
+        };
 
         var (parsed, _) = SnippetTemplate.Parse(template.Body);
         var rendered = parsed is null

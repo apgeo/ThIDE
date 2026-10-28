@@ -35,6 +35,13 @@ public static partial class SnippetVariables
     {
         TherionFile? ast = null;
         bool parsed = false;
+        string? lastStation = null;
+        bool lastStationDone = false;
+        string? LastStationOnce()
+        {
+            if (!lastStationDone) { lastStationDone = true; lastStation = LastStation(Ast(), ctx); }
+            return lastStation;
+        }
         TherionFile? Ast()
         {
             if (!parsed)
@@ -63,8 +70,8 @@ public static partial class SnippetVariables
                 "LAST_CALIBRATE" => LastCommand(Ast(), ctx, "calibrate"),
                 "LAST_INSTRUMENT" => LastCommand(Ast(), ctx, "instrument"),
                 "LAST_DATA" => LastCommand(Ast(), ctx, "data"),
-                "LAST_STATION" => LastStation(Ast(), ctx),
-                "NEXT_STATION" => LastStation(Ast(), ctx) is { } last ? NextStation(last) : null,
+                "LAST_STATION" => LastStationOnce(),
+                "NEXT_STATION" => LastStationOnce() is { } last ? NextStation(last) : null,
                 _ => null,
             };
         };

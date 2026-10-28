@@ -1451,4 +1451,5 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Snippet_layoutCopy" xml:space="preserve"><value>layout bazat pe altul</value></data>
   <data name="Snippet_exportPlanPdf" xml:space="preserve"><value>exportă o hartă în plan ca PDF</value></data>
   <data name="Snippet_exportModelLox" xml:space="preserve"><value>exportă modelul 3D</value></data>
+  <data name="NewFile_CannotCreate" xml:space="preserve"><value>Fișierul nu poate fi creat aici.</value></data>
 </root>

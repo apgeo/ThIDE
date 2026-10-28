@@ -71,8 +71,10 @@ public sealed class SnippetTemplate
             {
                 int start = i + 1, end = start;
                 while (end < source.Length && char.IsAsciiDigit(source[end])) end++;
+                if (!int.TryParse(source.AsSpan(start, end - start), out var number))
+                    return (null, new TemplateError(start, "tab stop number is too large"));
                 FlushText();
-                segments.Add(new TabStopSegment(int.Parse(source.AsSpan(start, end - start)), null, null));
+                segments.Add(new TabStopSegment(number, null, null));
                 i = end;
                 continue;
             }
@@ -109,7 +111,8 @@ public sealed class SnippetTemplate
         {
             int start = i;
             while (i < s.Length && char.IsAsciiDigit(s[i])) i++;
-            int index = int.Parse(s.AsSpan(start, i - start));
+            if (!int.TryParse(s.AsSpan(start, i - start), out var index))
+                return (null, 0, new TemplateError(start, "tab stop number is too large"));
             if (i < s.Length && s[i] == '}') return (new TabStopSegment(index, null, null), i + 1, null);
             if (i < s.Length && s[i] == ':')
             {
@@ -120,7 +123,7 @@ public sealed class SnippetTemplate
             {
                 int close = s.IndexOf("|}", i + 1, StringComparison.Ordinal);
                 if (close < 0) return (null, 0, Unterminated(dollar));
-                var choices = s[(i + 1)..close].Split(',').Select(Unescape).ToList();
+                var choices = SplitChoices(s[(i + 1)..close]);
                 return (new TabStopSegment(index, choices[0], choices), close + 2, null);
             }
             return (null, 0, new TemplateError(i, "expected '}', ':' or '|' after the tab stop number"));
@@ -161,7 +164,20 @@ public sealed class SnippetTemplate
         return ("", -1);
     }
 
-    private static string Unescape(string s) => s.Replace("\\,", ",").Replace("\\|", "|");
+    // Options are separated by unescaped commas; "\," and "\|" are literal.
+    private static List<string> SplitChoices(string body)
+    {
+        var choices = new List<string>();
+        var sb = new StringBuilder();
+        for (int i = 0; i < body.Length; i++)
+        {
+            if (body[i] == '\\' && i + 1 < body.Length && body[i + 1] is ',' or '|' or '\\') { sb.Append(body[++i]); continue; }
+            if (body[i] == ',') { choices.Add(sb.ToString()); sb.Clear(); continue; }
+            sb.Append(body[i]);
+        }
+        choices.Add(sb.ToString());
+        return choices;
+    }
 
     private static TemplateError Unterminated(int at) => new(at, "'${' is not closed with '}'");
 

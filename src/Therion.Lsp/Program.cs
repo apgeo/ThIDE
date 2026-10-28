@@ -61,7 +61,11 @@ while (true)
                 break;
 
             case "textDocument/completion":
-                Respond(id, Completion(root));
+                // A broken snippet file or an unexpected input must not take the server down.
+                object result;
+                try { result = Completion(root); }
+                catch (Exception) { result = Array.Empty<object>(); }
+                Respond(id, result);
                 break;
 
             case "textDocument/didClose":
@@ -105,7 +109,8 @@ static IReadOnlyList<Therion.Workspace.Templates.SnippetDefinition> Snippets()
         appData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config");
     var file = Path.Combine(appData, "ThIDE", "snippets.json");
     string? json = null;
-    try { if (File.Exists(file)) json = File.ReadAllText(file); } catch (IOException) { }
+    try { if (File.Exists(file)) json = File.ReadAllText(file); }
+    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
     return Therion.Workspace.Templates.SnippetCatalog.Load(Therion.Workspace.Templates.SnippetCatalog.BuiltIns,
         new Therion.Workspace.Templates.SnippetLayer("snippets.json", json)).Snippets;
 }

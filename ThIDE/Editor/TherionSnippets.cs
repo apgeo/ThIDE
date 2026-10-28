@@ -64,9 +64,13 @@ internal static class TherionSnippets
         // AvaloniaEdit indents inserted line breaks to the caret line itself, so render flat.
         var rendered = template.Render(vars, indent: "", newline: "\n");
 
-        doc.Remove(start, length);
-        area.Caret.Offset = start;
-        ToAvaloniaSnippet(rendered).Insert(area);
+        // One undo step: the trigger and the expansion go together.
+        using (doc.RunUpdate())
+        {
+            doc.Remove(start, length);
+            area.Caret.Offset = start;
+            ToAvaloniaSnippet(rendered).Insert(area);
+        }
     }
 
     /// <summary>Text runs, fields (first use of an index) and mirrors (later uses), plus the final caret.</summary>
