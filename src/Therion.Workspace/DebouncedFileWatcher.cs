@@ -20,6 +20,12 @@ public sealed class DebouncedFileWatcher : IDisposable
 
     public event Action<string>? FileChanged;
 
+    /// <summary>Raised when a watcher fails (its buffer overflowed, the folder went away).</summary>
+    public event Action<string, Exception>? Error;
+
+    /// <summary>Only paths this accepts are reported (null: all).</summary>
+    public Func<string, bool>? Filter { get; set; }
+
     public DebouncedFileWatcher(TimeSpan? debounce = null)
     {
         _debounce = debounce ?? TimeSpan.FromMilliseconds(250);
@@ -43,13 +49,26 @@ public sealed class DebouncedFileWatcher : IDisposable
         w.Created += OnEvent;
         w.Deleted += OnEvent;
         w.Renamed += (_, e) => Enqueue(e.FullPath);
+        w.Error += (_, e) => Error?.Invoke(full, e.GetException());
         _watchers[full] = w;
     }
+
+    /// <summary>Stops watching a directory given to <see cref="Watch"/>.</summary>
+    public void Unwatch(string directory)
+    {
+        if (_watchers.TryRemove(Path.GetFullPath(directory), out var w)) w.Dispose();
+    }
+
+    /// <summary>The directories being watched.</summary>
+    public IReadOnlyCollection<string> Watched => _watchers.Keys.ToList();
 
     private void OnEvent(object sender, FileSystemEventArgs e) => Enqueue(e.FullPath);
 
     private void Enqueue(string path)
-        => _pending[path] = DateTime.UtcNow;
+    {
+        if (Filter is { } accept && !accept(path)) return;
+        _pending[path] = DateTime.UtcNow;
+    }
 
     private void Flush(object? _)
     {
