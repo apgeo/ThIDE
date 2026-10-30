@@ -256,6 +256,7 @@
                 <MenuItem AutomationProperties.AutomationId="Menu.Edit.Cut" Header="{Binding MenuEditCut}"        InputGesture="Ctrl+X" Click="OnEditCut" />
                 <MenuItem AutomationProperties.AutomationId="Menu.Edit.Copy" Header="{Binding MenuEditCopy}"       InputGesture="Ctrl+C" Click="OnEditCopy" />
                 <MenuItem AutomationProperties.AutomationId="Menu.Edit.Paste" Header="{Binding MenuEditPaste}"      InputGesture="Ctrl+V" Click="OnEditPaste" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Edit.PasteShots" Header="{l:Loc Menu_Edit_PasteShots}" Click="OnEditPasteShots" />
                 <MenuItem AutomationProperties.AutomationId="Menu.Edit.Delete" Header="{Binding MenuEditDelete}"     Click="OnEditDelete" />
                 <Separator />
                 <MenuItem AutomationProperties.AutomationId="Menu.Edit.SelectAll" Header="{Binding MenuEditSelectAll}" InputGesture="Ctrl+A" Click="OnEditSelectAll" />
@@ -299,6 +300,8 @@
                 <MenuItem AutomationProperties.AutomationId="Menu.Tools.SyncMaps" Header="{l:Loc Menu_Tools_SyncMaps}" Command="{Binding SyncMapsCommand}" />
                 <MenuItem AutomationProperties.AutomationId="Menu.Tools.SuggestEquates" Header="{l:Loc Menu_Tools_SuggestEquates}" Command="{Binding SuggestEquatesCommand}" />
                 <MenuItem AutomationProperties.AutomationId="Menu.Tools.FormatAll" Header="{l:Loc Menu_Tools_FormatAll}" Command="{Binding FormatAllCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Tools.Normalize" Header="{l:Loc Menu_Tools_Normalize}" Command="{Binding NormalizeProjectCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Tools.Renumber" Header="{l:Loc Menu_Tools_Renumber}" Command="{Binding RenumberStationsCommand}" />
                 <MenuItem AutomationProperties.AutomationId="Menu.Tools.Macros" Header="{l:Loc Menu_Tools_Macros}" SubmenuOpened="OnMacrosSubmenuOpened">
                     <MenuItem Header="{l:Loc Macro_None}" IsEnabled="False" />
                 </MenuItem>

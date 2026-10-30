@@ -1174,6 +1174,14 @@ public partial class MainWindowViewModel : ViewModelBase
     public event EventHandler? FormatAllRequested;
     [RelayCommand] private void FormatAll() => FormatAllRequested?.Invoke(this, EventArgs.Empty);
 
+    /// <summary>Raised to open Tools ▸ Normalise project.</summary>
+    public event EventHandler? NormalizeProjectRequested;
+    [RelayCommand] private void NormalizeProject() => NormalizeProjectRequested?.Invoke(this, EventArgs.Empty);
+
+    /// <summary>Raised to open Tools ▸ Renumber stations.</summary>
+    public event EventHandler? RenumberStationsRequested;
+    [RelayCommand] private void RenumberStations() => RenumberStationsRequested?.Invoke(this, EventArgs.Empty);
+
     /// <summary>Raised to open Tools ▸ New trip… in the view.</summary>
     public event EventHandler? NewTripRequested;
 
@@ -1241,13 +1249,14 @@ public partial class MainWindowViewModel : ViewModelBase
         if (_picker is null) return null;
         try
         {
-            var text = System.IO.File.ReadAllText(src);
-            var ext = System.IO.Path.GetExtension(src).ToLowerInvariant();
-            var th = ext switch
-            {
-                ".dat" => CompassImporter.Import(text),
-                _ => SurvexImporter.Import(text),   // .svx and anything else → Survex
-            };
+            var text = Therion.Syntax.EncodingResolver.ReadAllText(src);
+            // .svx and anything unrecognised → Survex, as before; .csv/.tsv are shot tables.
+            if (!SurveyImport.TryResolveFormat(null, src, out var format, out _) || format == SurveyImportFormat.Gpx) format = SurveyImportFormat.Survex;
+            var issues = new List<ShotIssue>();
+            var th = SurveyImport.Translate(format, text, ScaffoldValueRules.SafeSurveyName(System.IO.Path.GetFileNameWithoutExtension(src)), issues: issues);
+            if (string.IsNullOrWhiteSpace(th)) throw new InvalidOperationException(Tr.Get("ShotIssue_NoShots"));
+            if (issues.Count > 0)
+                _notifications.Warning(Tr.Get("PasteShots_Title"), string.Join("\n", issues.Take(5).Select(PasteShotsViewModel.Describe)) + (issues.Count > 5 ? "\n…" : ""));
             var suggested = System.IO.Path.GetFileNameWithoutExtension(src) + ".th";
             var outPath = await _picker.PickSaveFileAsync("Save imported Therion file", suggested).ConfigureAwait(true);
             if (string.IsNullOrEmpty(outPath)) return null;

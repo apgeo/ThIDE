@@ -89,6 +89,8 @@ public partial class MainWindow : Window
                 vm.SyncMapsRequested += (_, _) => _ = SyncMapsAsync();
                 vm.SuggestEquatesRequested += (_, _) => _ = SuggestEquatesAsync();
                 vm.FormatAllRequested += (_, _) => _ = FormatAllAsync();
+                vm.NormalizeProjectRequested += (_, _) => _ = NormalizeProjectAsync();
+                vm.RenumberStationsRequested += (_, _) => _ = RenumberStationsAsync();
                 if (AppServices.Provider.GetService<IMacroService>() is MacroService macroService)
                 {
                     macroService.AskVariables = m => Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => AskMacroVariablesAsync(m));
@@ -379,6 +381,7 @@ public partial class MainWindow : Window
     private void OnEditCut(object? s, Avalonia.Interactivity.RoutedEventArgs e) => ActiveEditor?.MenuCut();
     private void OnEditCopy(object? s, Avalonia.Interactivity.RoutedEventArgs e) => ActiveEditor?.MenuCopy();
     private void OnEditPaste(object? s, Avalonia.Interactivity.RoutedEventArgs e) => ActiveEditor?.MenuPaste();
+    private void OnEditPasteShots(object? s, Avalonia.Interactivity.RoutedEventArgs e) => ActiveEditor?.MenuPasteShots();
     private void OnEditDelete(object? s, Avalonia.Interactivity.RoutedEventArgs e) => ActiveEditor?.MenuDelete();
     private void OnEditSelectAll(object? s, Avalonia.Interactivity.RoutedEventArgs e) => ActiveEditor?.MenuSelectAll();
     private void OnEditUpper(object? s, Avalonia.Interactivity.RoutedEventArgs e) => ActiveEditor?.MenuUpperCase();
@@ -753,11 +756,11 @@ public partial class MainWindow : Window
 
     /// <summary>Shows a preview of a batch and applies the ticked edits (one undo step per open file).</summary>
     private async System.Threading.Tasks.Task<bool> PreviewAndApplyAsync(string title, string summary, Therion.Workspace.Editing.EditBatch batch,
-        IReadOnlyList<Therion.Workspace.Fixes.EditPreviewRow>? rows = null, bool reload = false)
+        IReadOnlyList<Therion.Workspace.Fixes.EditPreviewRow>? rows = null, bool reload = false, bool allOrNothing = false)
     {
         var docs = AppServices.Provider.GetService<IDocumentService>();
         rows ??= Therion.Workspace.Fixes.FixAll.Preview(batch, p => CurrentText(docs, p));
-        var preview = new EditPreviewViewModel(title, summary, batch, rows, AppServices.Provider.GetService<IWorkspaceSession>()?.RootPath);
+        var preview = new EditPreviewViewModel(title, summary, batch, rows, AppServices.Provider.GetService<IWorkspaceSession>()?.RootPath, allOrNothing);
         var window = new EditPreviewWindow(preview);
         await window.ShowDialog(this);
         if (!window.Confirmed || AppServices.Provider.GetService<IWorkspaceEditService>() is not { } editor) return false;
@@ -789,26 +792,64 @@ public partial class MainWindow : Window
     {
         var docs = AppServices.Provider.GetService<IDocumentService>();
         if (docs?.Workspace is not { } ws) return;
-        var files = ws.PerFile.Keys
-            .Concat(ws.FileGraphEdges.SelectMany(e => new[] { e.From, e.To }))
-            .Where(f => f.EndsWith(".th", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".th2", StringComparison.OrdinalIgnoreCase)
-                     || f.EndsWith(".thconfig", StringComparison.OrdinalIgnoreCase))
-            .ToList();
-        var settings = AppServices.Provider.GetService<IAppSettingsService>()?.Current;
-        var unit = settings is { ConvertTabsToSpaces: false } ? "\t" : new string(' ', Math.Max(1, settings?.IndentationSize ?? 2));
+        var files = ProjectSourceFiles(ws);
         // The editor's Format Document: a re-indent that never reorders or drops anything.
-        string Format(string text)
-        {
-            var doc = new AvaloniaEdit.Document.TextDocument(text);
-            ThIDE.Editor.TherionFormatter.Reindent(doc, unit);
-            return doc.Text;
-        }
+        var unit = IndentUnitSetting();
         var (batch, rows, skipped) = Therion.Workspace.Fixes.FormatAll.Plan(files, p => CurrentText(docs, p), Therion.Workspace.Fixes.LineEndings.Keep,
-            Format, n => string.Format(ThIDE.Resources.Tr.Get("FormatAll_LinesDiffer"), n));
+            t => Therion.Workspace.Formatting.TherionReindenter.Format(t, unit), n => string.Format(ThIDE.Resources.Tr.Get("FormatAll_LinesDiffer"), n));
         var title = ThIDE.Resources.Tr.Get("Menu_Tools_FormatAll");
         var summary = string.Format(ThIDE.Resources.Tr.Get("FormatAll_Summary"), rows.Count, skipped.Count);
         if (batch.IsEmpty) { AppServices.Provider.GetService<INotificationService>()?.Info(title, summary); return; }
         await PreviewAndApplyAsync(title, summary, batch, rows, reload: true);
+    }
+
+    private static string IndentUnitSetting()
+    {
+        var settings = AppServices.Provider.GetService<IAppSettingsService>()?.Current;
+        return Therion.Workspace.Formatting.TherionReindenter.IndentUnit(settings is { ConvertTabsToSpaces: false }, settings?.IndentationSize ?? 2);
+    }
+
+    /// <summary>The project's Therion sources: every parsed file and every file the include graph names.</summary>
+    private static List<string> ProjectSourceFiles(Therion.Semantics.WorkspaceSemanticModel ws) =>
+        ws.PerFile.Keys
+            .Concat(ws.FileGraphEdges.SelectMany(e => new[] { e.From, e.To }))
+            .Where(f => f.EndsWith(".th", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".th2", StringComparison.OrdinalIgnoreCase)
+                     || f.EndsWith(".thconfig", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+    /// <summary>Tools ▸ Normalise project: Format all plus line endings, UTF-8 and sorted inputs, previewed first.</summary>
+    private async System.Threading.Tasks.Task NormalizeProjectAsync()
+    {
+        var docs = AppServices.Provider.GetService<IDocumentService>();
+        if (docs?.Workspace is not { } ws) return;
+        var model = new NormalizeProjectViewModel();
+        var window = new NormalizeProjectWindow(model);
+        await window.ShowDialog(this);
+        if (!window.Confirmed) return;
+        var options = model.Options(IndentUnitSetting());
+        var title = ThIDE.Resources.Tr.Get("Menu_Tools_Normalize");
+        if (options.IsEmpty) return;
+        var (batch, rows, skipped) = Therion.Workspace.Fixes.ProjectNormalize.Plan(ProjectSourceFiles(ws), p => CurrentText(docs, p), options,
+            n => string.Format(ThIDE.Resources.Tr.Get("FormatAll_LinesDiffer"), n));
+        var summary = string.Format(ThIDE.Resources.Tr.Get("Normalize_Summary"), rows.Count, skipped.Count);
+        if (batch.IsEmpty) { AppServices.Provider.GetService<INotificationService>()?.Info(title, summary); return; }
+        await PreviewAndApplyAsync(title, summary, batch, rows, reload: true);
+    }
+
+    /// <summary>Tools ▸ Renumber stations: a new prefix or a number shift for a survey's stations, previewed, all or nothing.</summary>
+    private async System.Threading.Tasks.Task RenumberStationsAsync()
+    {
+        var docs = AppServices.Provider.GetService<IDocumentService>();
+        if (docs?.Workspace is not { SurveysByFullName.Count: > 0 } ws)
+        {
+            AppServices.Provider.GetService<INotificationService>()?.Info(ThIDE.Resources.Tr.Get("Menu_Tools_Renumber"), ThIDE.Resources.Tr.Get("Renumber_NoSurveys"));
+            return;
+        }
+        var model = new RenumberStationsViewModel(ws, p => CurrentText(docs, p));
+        var window = new RenumberStationsWindow(model);
+        await window.ShowDialog(this);
+        if (!window.Confirmed || model.Plan is not { Ok: true } plan) return;
+        await PreviewAndApplyAsync(ThIDE.Resources.Tr.Get("Menu_Tools_Renumber"), model.Summary, plan.Batch, reload: true, allOrNothing: true);
     }
 
     /// <summary>Tools ▸ Add unreferenced scraps to maps.</summary>

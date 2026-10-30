@@ -27,7 +27,8 @@ public sealed record EditOutcome(
 /// <summary>
 /// The one way in-app features write Therion files. Edits to a file open in the editor go into its
 /// buffer as one undo step (and are saved when the buffer was clean, so the editor and the disk stay
-/// in step); every other file is rewritten on disk in its own encoding. All-or-nothing: everything is
+/// in step); every other file is rewritten on disk as a save would write it (its own encoding, or the one an
+/// edited `encoding` line now declares). All-or-nothing: everything is
 /// checked first, and a failure while writing rolls back what was already written. Must be called on
 /// the UI thread: it reads and changes open documents.
 /// </summary>
@@ -42,6 +43,7 @@ public sealed class WorkspaceEditService(IDocumentService documents, IWorkspaceS
     {
         var open = OpenDocumentsByPath(documents.Documents);
         var onDisk = new Dictionary<string, SourceFile>(StringComparer.Ordinal);
+        var encoded = new Dictionary<string, byte[]>(StringComparer.Ordinal);
         var problems = new List<EditProblem>();
 
         EditBatchCheck check;
@@ -73,8 +75,13 @@ public sealed class WorkspaceEditService(IDocumentService documents, IWorkspaceS
                 }
                 if (doc is not null && !string.Equals(doc.DocumentText, file.Text, StringComparison.Ordinal))
                     problems.Add(new(group.FilePath, EditProblemKind.OpenBufferDiffers));
-                else if (!SourceFileIo.CanEncode(file, check.NewTexts[group.FilePath]))
-                    problems.Add(new(group.FilePath, EditProblemKind.Unencodable));
+                else
+                {
+                    // Saved the way it will be read back (an edited `encoding` line takes effect),
+                    // like a save from the editor.
+                    try { encoded[group.FilePath] = SourceFileIo.EncodeForSave(file.Path, check.NewTexts[group.FilePath], SourceFileIo.FormatOf(file)).Bytes; }
+                    catch (UnrepresentableCharacterException) { problems.Add(new(group.FilePath, EditProblemKind.Unencodable)); }
+                }
             }
         }
         if (problems.Count > 0) return new EditOutcome(problems, null, []);
@@ -114,7 +121,7 @@ public sealed class WorkspaceEditService(IDocumentService documents, IWorkspaceS
                 var file = onDisk[group.FilePath];
                 var original = File.ReadAllBytes(file.Path);
                 session.SuppressSelfWrite(file.Path);
-                SourceFileIo.Write(file, check.NewTexts[group.FilePath]);
+                SourceFileIo.WriteOver(file.Path, encoded[group.FilePath]);
                 undo.Push(() => { session.SuppressSelfWrite(file.Path); SourceFileIo.WriteOver(file.Path, original); });
                 written.Add(group.FilePath);
             }

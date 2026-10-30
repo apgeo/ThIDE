@@ -3214,6 +3214,7 @@ public partial class TherionTextEditor : UserControl
         menu.Items.Add(MakeItem(L("Menu_Edit_Cut"),       CutSelection));
         menu.Items.Add(MakeItem(L("Menu_Edit_Copy"),      CopySelection));
         menu.Items.Add(MakeItem(L("Menu_Edit_Paste"),     () => _ = PasteAsync()));
+        menu.Items.Add(MakeItem(L("Menu_Edit_PasteShots"), () => _ = PasteShotsAsync(), "Editor.Ctx.PasteShots"));
         menu.Items.Add(MakeItem(L("Menu_Edit_Delete"),    DeleteSelection));
         menu.Items.Add(new Separator());
         menu.Items.Add(MakeItem(L("Menu_Edit_SelectAll"), () => _editor?.SelectAll()));
@@ -3284,6 +3285,7 @@ public partial class TherionTextEditor : UserControl
     public void MenuCut() => CutSelection();
     public void MenuCopy() => CopySelection();
     public void MenuPaste() => _ = PasteAsync();
+    public void MenuPasteShots() => _ = PasteShotsAsync();
     public void MenuDelete() => DeleteSelection();
     public void MenuSelectAll() => _editor?.SelectAll();
     public void MenuUpperCase() => ApplyCase(upper: true);
@@ -3688,6 +3690,68 @@ public partial class TherionTextEditor : UserControl
         var (start, length) = ActionRange(includeDelimiter: true);
         if (length == 0) return;
         TrySetClipboard(_editor.Document.GetText(start, length));
+    }
+
+    /// <summary>
+    /// Edit ▸ Paste as shot data: the selection (when it is a table of shots) or the clipboard, turned
+    /// into a Therion data block in a dialog, then put where the selection or the caret is.
+    /// </summary>
+    public async System.Threading.Tasks.Task PasteShotsAsync()
+    {
+        if (_editor?.Document is not { } doc || TopLevel.GetTopLevel(this) is not Window owner) return;
+        bool fromSelection = _editor.SelectionLength > 0 && Therion.Workspace.Import.ShotTableReader.LooksLikeShots(_editor.SelectedText);
+        var source = fromSelection ? _editor.SelectedText : await TryGetClipboardAsync() ?? "";
+        int start = _editor.SelectionLength > 0 ? _editor.SelectionStart : _editor.CaretOffset;
+        int length = fromSelection ? _editor.SelectionLength : 0;
+        if (!fromSelection && _editor.SelectionLength > 0) { start = _editor.SelectionStart; length = _editor.SelectionLength; }
+
+        var text = doc.Text;
+        var ast = new Therion.Syntax.ThParser().Parse(CurrentFilePath ?? "untitled.th", text).Value;
+        var last = Therion.Workspace.Templates.SnippetVariables.Standard(
+            new Therion.Workspace.Templates.SnippetContext(CurrentFilePath, text, start, DateTime.Now))("LAST_STATION");
+        var model = new ThIDE.ViewModels.PasteShotsViewModel(source, last, wrap: !InsideCentreline(ast?.Children, start));
+        var window = new ThIDE.Views.PasteShotsWindow(model);
+        await window.ShowDialog(owner);
+        if (window.Result is not { } block) return;
+
+        // Line up the block with the line it goes into.
+        var line = doc.GetLineByOffset(start);
+        var lineText = doc.GetText(line);
+        var indent = TherionBlocks.LeadingWhitespace(lineText);
+        var lines = block.TrimEnd('\n').Split('\n');
+        var newline = text.Contains("\r\n") ? "\r\n" : "\n";
+        string insert;
+        if (lineText.Trim().Length == 0 && length == 0)
+        {
+            // An empty line: the block replaces it.
+            start = line.Offset; length = line.Length;
+            insert = string.Join(newline, lines.Select(l => indent + l));
+        }
+        else if (start - line.Offset <= indent.Length)
+        {
+            // At the start of a line: the block goes above it.
+            start = line.Offset; length = 0;
+            insert = string.Join("", lines.Select(l => indent + l + newline));
+        }
+        else
+        {
+            // Mid-line: the block starts on the next line; what followed the caret moves below it.
+            bool rest = start + length < line.EndOffset;
+            insert = string.Join("", lines.Select(l => newline + indent + l)) + (rest ? newline + indent : "");
+        }
+        doc.Replace(start, length, insert);
+        _editor.Focus();
+    }
+
+    private static bool InsideCentreline(IEnumerable<Therion.Syntax.TherionNode>? nodes, int offset)
+    {
+        foreach (var n in nodes ?? [])
+        {
+            if (n is not Therion.Syntax.BlockCommand b || offset < b.Span.StartOffset || offset > b.Span.StartOffset + b.Span.Length) continue;
+            if (b is Therion.Syntax.CentrelineCommand) return true;
+            if (InsideCentreline(b.Children, offset)) return true;
+        }
+        return false;
     }
 
     private async System.Threading.Tasks.Task PasteAsync()

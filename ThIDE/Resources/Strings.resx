@@ -1600,4 +1600,58 @@ Apply the changes? Steps that could not preview run now.</value></data>
   <data name="Notif_SaveEncoding" xml:space="preserve"><value>{0}: '{1}' cannot be written in {2}, the encoding the file declares. Change the character, or the file's `encoding` line (for example to utf-8), and save again.</value></data>
   <data name="Replace_EncodingRefused" xml:space="preserve"><value>Nothing replaced: {0} cannot hold '{1}' in {2}, the encoding the file declares. No file was changed.</value></data>
   <data name="Diag_FixCheck" xml:space="preserve"><value>This fix may not land in the right place here: check where it goes before applying it.</value></data>
+  <data name="Menu_Edit_PasteShots" xml:space="preserve"><value>Paste as shot data…</value></data>
+  <data name="Menu_Tools_Normalize" xml:space="preserve"><value>Normalise project…</value></data>
+  <data name="Menu_Tools_Renumber" xml:space="preserve"><value>Renumber stations…</value></data>
+  <data name="PasteShots_Title" xml:space="preserve"><value>Paste as shot data</value></data>
+  <data name="PasteShots_Intro" xml:space="preserve"><value>A table of shots — from a spreadsheet, a CSV file, PocketTopo or a DistoX dump — becomes a Therion data block. Columns come from the header row or the column count; correct them if the guess is wrong. In a table without stations, repeated shots of one leg become one averaged leg and single shots become splays.</value></data>
+  <data name="PasteShots_Columns" xml:space="preserve"><value>Columns:</value></data>
+  <data name="PasteShots_Start" xml:space="preserve"><value>First station:</value></data>
+  <data name="PasteShots_Units" xml:space="preserve"><value>Units:</value></data>
+  <data name="PasteShots_LengthAuto" xml:space="preserve"><value>Length: from the table</value></data>
+  <data name="PasteShots_Meters" xml:space="preserve"><value>Meters</value></data>
+  <data name="PasteShots_Feet" xml:space="preserve"><value>Feet</value></data>
+  <data name="PasteShots_AngleAuto" xml:space="preserve"><value>Angles: detect</value></data>
+  <data name="PasteShots_Degrees" xml:space="preserve"><value>Degrees</value></data>
+  <data name="PasteShots_Grads" xml:space="preserve"><value>Grads</value></data>
+  <data name="PasteShots_Merge" xml:space="preserve"><value>Shots per leg:</value></data>
+  <data name="PasteShots_Wrap" xml:space="preserve"><value>Wrap in centreline … endcentreline</value></data>
+  <data name="PasteShots_Insert" xml:space="preserve"><value>Insert</value></data>
+  <data name="PasteShots_Summary" xml:space="preserve"><value>{0} leg(s), {1} splay(s)</value></data>
+  <data name="PasteShots_BadColumns" xml:space="preserve"><value>Columns: use data keywords such as 'from to length compass clino' (length, compass and clino are needed; '-' skips a column).</value></data>
+  <data name="ShotIssue_Line" xml:space="preserve"><value>Line {0}: {1}</value></data>
+  <data name="ShotIssue_NoShots" xml:space="preserve"><value>No shots found in the text.</value></data>
+  <data name="ShotIssue_NotANumber" xml:space="preserve"><value>'{0}' is not a number; the row is left out.</value></data>
+  <data name="ShotIssue_TooFewValues" xml:space="preserve"><value>too few values; the row is left out.</value></data>
+  <data name="ShotIssue_ExtraColumns" xml:space="preserve"><value>{0} extra column(s) ignored.</value></data>
+  <data name="ShotIssue_NegativeLength" xml:space="preserve"><value>negative length {0}.</value></data>
+  <data name="ShotIssue_LongLength" xml:space="preserve"><value>length {0} is unusually long — check the unit.</value></data>
+  <data name="ShotIssue_CompassOutOfRange" xml:space="preserve"><value>compass {0} is out of range.</value></data>
+  <data name="ShotIssue_ClinoOutOfRange" xml:space="preserve"><value>clino {0} is out of range.</value></data>
+  <data name="ShotIssue_GradsInferred" xml:space="preserve"><value>Compass values above 360: the angles are read as grads.</value></data>
+  <data name="ShotIssue_SameStation" xml:space="preserve"><value>a leg from '{0}' to itself.</value></data>
+  <data name="ShotIssue_RepeatedLegsMerged" xml:space="preserve"><value>{0} leg(s) made from repeated shots; single shots became splays.</value></data>
+  <data name="ShotIssue_ColumnsGuessed" xml:space="preserve"><value>No header and {0} columns: the column guess may be wrong.</value></data>
+  <data name="Normalize_Intro" xml:space="preserve"><value>House-keeping for a shared repository, previewed before anything changes. Files that do not parse cleanly are left alone.</value></data>
+  <data name="Normalize_Reindent" xml:space="preserve"><value>Re-indent (the editor's Format Document)</value></data>
+  <data name="Normalize_LineEndings" xml:space="preserve"><value>Line endings:</value></data>
+  <data name="Normalize_KeepEndings" xml:space="preserve"><value>Keep each file's</value></data>
+  <data name="Normalize_Utf8" xml:space="preserve"><value>Convert files that declare another encoding to UTF-8</value></data>
+  <data name="Normalize_SortInputs" xml:space="preserve"><value>Sort each run of consecutive 'input' lines naturally (trip2 before trip10). Order rarely matters to Therion, but check the preview.</value></data>
+  <data name="Normalize_Summary" xml:space="preserve"><value>{0} files would change; {1} are left alone because they do not parse cleanly (fix those first). Untick a file to leave it out.</value></data>
+  <data name="Renumber_Intro" xml:space="preserve"><value>Give every station of a survey a new prefix, or shift its numbers, everywhere it is written: shots, equates, fixes and @-references in other files. Stations that do not match are left alone. Sketch (.th2) station labels are not renamed.</value></data>
+  <data name="Renumber_Survey" xml:space="preserve"><value>Survey:</value></data>
+  <data name="Renumber_OldPrefix" xml:space="preserve"><value>Current prefix:</value></data>
+  <data name="Renumber_OldPrefixHint" xml:space="preserve"><value>empty = every station</value></data>
+  <data name="Renumber_NewPrefix" xml:space="preserve"><value>New prefix:</value></data>
+  <data name="Renumber_Offset" xml:space="preserve"><value>Add to the number:</value></data>
+  <data name="Renumber_IncludeSub" xml:space="preserve"><value>Include the sub-surveys (each keeps its own names)</value></data>
+  <data name="Renumber_Nothing" xml:space="preserve"><value>Choose a new prefix or a number shift.</value></data>
+  <data name="Renumber_Summary" xml:space="preserve"><value>{0} station(s) renamed, {1} left alone — {2} edit(s) in {3} file(s).</value></data>
+  <data name="Renumber_NoSurveys" xml:space="preserve"><value>Open a project with surveys first.</value></data>
+  <data name="Renumber_InvalidName" xml:space="preserve"><value>'{0}' cannot be a station name ({1}).</value></data>
+  <data name="Renumber_Duplicate" xml:space="preserve"><value>Two stations would both become '{0}' ({1}).</value></data>
+  <data name="Renumber_Collides" xml:space="preserve"><value>'{0}' already exists and is not renamed ({1}).</value></data>
+  <data name="Renumber_Stale" xml:space="preserve"><value>{0} has changed since the project was read — save or reload, then try again.</value></data>
+  <data name="Renumber_NoSurvey" xml:space="preserve"><value>No survey '{0}' in the project.</value></data>
 </root>
