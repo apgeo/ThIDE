@@ -1654,4 +1654,5 @@ Apply the changes? Steps that could not preview run now.</value></data>
   <data name="Renumber_Collides" xml:space="preserve"><value>'{0}' already exists and is not renamed ({1}).</value></data>
   <data name="Renumber_Stale" xml:space="preserve"><value>{0} has changed since the project was read — save or reload, then try again.</value></data>
   <data name="Renumber_NoSurvey" xml:space="preserve"><value>No survey '{0}' in the project.</value></data>
+  <data name="ShotIssue_BadStation" xml:space="preserve"><value>'{0}' is not a station name; the row is left out.</value></data>
 </root>

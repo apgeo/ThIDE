@@ -3709,49 +3709,87 @@ public partial class TherionTextEditor : UserControl
         var ast = new Therion.Syntax.ThParser().Parse(CurrentFilePath ?? "untitled.th", text).Value;
         var last = Therion.Workspace.Templates.SnippetVariables.Standard(
             new Therion.Workspace.Templates.SnippetContext(CurrentFilePath, text, start, DateTime.Now))("LAST_STATION");
-        var model = new ThIDE.ViewModels.PasteShotsViewModel(source, last, wrap: !InsideCentreline(ast?.Children, start));
+        var centreline = EnclosingCentreline(ast?.Children, start);
+        var model = new ThIDE.ViewModels.PasteShotsViewModel(source, last, wrap: centreline is null);
         var window = new ThIDE.Views.PasteShotsWindow(model);
         await window.ShowDialog(owner);
         if (window.Result is not { } block) return;
+        var lines = block.TrimEnd('\n').Split('\n').ToList();
+        // Shots after the block must still be read with the units and data line they were written for.
+        if (centreline is not null && centreline.Children.Any(c => c.Span.StartOffset >= start + length))
+            lines.AddRange(RestoreReadingState(centreline, text, start, lines));
 
-        // Line up the block with the line it goes into.
-        var line = doc.GetLineByOffset(start);
-        var lineText = doc.GetText(line);
-        var indent = TherionBlocks.LeadingWhitespace(lineText);
-        var lines = block.TrimEnd('\n').Split('\n');
+        // A selection that ends at the start of a line keeps that line break.
+        int end = start + length;
+        if (length > 0 && doc.GetLineByOffset(end) is { } endLine && end == endLine.Offset && endLine.PreviousLine is { } prev && prev.Offset >= start)
+            end = prev.EndOffset;
+        var first = doc.GetLineByOffset(start);
+        var lastLine = doc.GetLineByOffset(end);
+        var indent = TherionBlocks.LeadingWhitespace(doc.GetText(first));
         var newline = text.Contains("\r\n") ? "\r\n" : "\n";
+        bool blankBefore = doc.GetText(first.Offset, start - first.Offset).Trim().Length == 0;
+        bool blankAfter = doc.GetText(end, lastLine.EndOffset - end).Trim().Length == 0;
         string insert;
-        if (lineText.Trim().Length == 0 && length == 0)
+        if (blankBefore && blankAfter)
         {
-            // An empty line: the block replaces it.
-            start = line.Offset; length = line.Length;
+            // Whole lines (or an empty one): the block takes their place.
+            start = first.Offset; end = lastLine.EndOffset;
             insert = string.Join(newline, lines.Select(l => indent + l));
         }
-        else if (start - line.Offset <= indent.Length)
+        else if (blankBefore)
         {
-            // At the start of a line: the block goes above it.
-            start = line.Offset; length = 0;
-            insert = string.Join("", lines.Select(l => indent + l + newline));
+            // At the start of a line with text after: the block goes above that text.
+            start = first.Offset;
+            insert = string.Join("", lines.Select(l => indent + l + newline)) + indent;
+            while (end < lastLine.EndOffset && doc.GetCharAt(end) is ' ' or '\t') end++;
         }
         else
         {
-            // Mid-line: the block starts on the next line; what followed the caret moves below it.
-            bool rest = start + length < line.EndOffset;
-            insert = string.Join("", lines.Select(l => newline + indent + l)) + (rest ? newline + indent : "");
+            // Mid-line: the block starts on the next line; what followed moves below it.
+            insert = string.Join("", lines.Select(l => newline + indent + l)) + (blankAfter ? "" : newline + indent);
         }
-        doc.Replace(start, length, insert);
+        doc.Replace(start, end - start, insert);
         _editor.Focus();
     }
 
-    private static bool InsideCentreline(IEnumerable<Therion.Syntax.TherionNode>? nodes, int offset)
+    /// <summary>The innermost <c>centreline</c> block the offset is strictly inside, or null.</summary>
+    private static Therion.Syntax.CentrelineCommand? EnclosingCentreline(IEnumerable<Therion.Syntax.TherionNode>? nodes, int offset)
     {
         foreach (var n in nodes ?? [])
         {
-            if (n is not Therion.Syntax.BlockCommand b || offset < b.Span.StartOffset || offset > b.Span.StartOffset + b.Span.Length) continue;
-            if (b is Therion.Syntax.CentrelineCommand) return true;
-            if (InsideCentreline(b.Children, offset)) return true;
+            if (n is not Therion.Syntax.BlockCommand b || offset <= b.Span.StartOffset || offset >= b.Span.StartOffset + b.Span.Length) continue;
+            return EnclosingCentreline(b.Children, offset) ?? b as Therion.Syntax.CentrelineCommand;
         }
-        return false;
+        return null;
+    }
+
+    /// <summary>
+    /// Lines that put back the <c>units</c> and <c>data</c> in force at the insertion point, so the
+    /// shots after a block pasted into a centreline are still read as they were written.
+    /// </summary>
+    private static IEnumerable<string> RestoreReadingState(Therion.Syntax.CentrelineCommand centreline, string text, int offset, IReadOnlyList<string> block)
+    {
+        string LineAt(int at)
+        {
+            int s = text.LastIndexOf('\n', Math.Max(0, at - 1)) + 1, e = text.IndexOf('\n', at);
+            return text[s..(e < 0 ? text.Length : e)].Trim();
+        }
+        var before = centreline.Children.Where(c => c.Span.StartOffset < offset).Select(c => LineAt(c.Span.StartOffset)).ToList();
+        var units = before.Where(l => TherionBlocks.FirstWord(l).Equals("units", StringComparison.OrdinalIgnoreCase)).ToList();
+        var data = before.LastOrDefault(l => TherionBlocks.FirstWord(l).Equals("data", StringComparison.OrdinalIgnoreCase));
+        var restore = new List<string>();
+        if (block.Any(l => l.StartsWith("units ", StringComparison.Ordinal)))
+        {
+            // Back to Therion's defaults for what the block changed, then the earlier units again.
+            if (block.Any(l => l.StartsWith("units length", StringComparison.Ordinal))) restore.Add("units length dimensions meters");
+            if (block.Any(l => l.StartsWith("units compass", StringComparison.Ordinal))) restore.Add("units compass clino degrees");
+            restore.AddRange(units);
+        }
+        var pastedData = block.FirstOrDefault(l => l.StartsWith("data ", StringComparison.Ordinal));
+        if (data is not null && !string.Equals(Collapse(data), Collapse(pastedData ?? ""), StringComparison.OrdinalIgnoreCase)) restore.Add(data);
+        return restore;
+
+        static string Collapse(string s) => string.Join(' ', s.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
     }
 
     private async System.Threading.Tasks.Task PasteAsync()

@@ -94,6 +94,17 @@ public class ImportToolsTests
         Assert.Contains(result.Data.Warnings!, w => w.Contains("compass 420"));
     }
 
+    [Fact]
+    public async Task A_survey_name_that_is_not_a_keyword_is_refused()
+    {
+        using var fixture = WithSource("raw/trip.csv", "1,2,3.5,10,-2\n");
+        var tools = await LoadedToolsAsync(fixture);
+
+        var result = await tools.ImportSurvey("raw/trip.csv", surveyName: "Upper Cave");
+
+        Assert.Equal(ToolErrorCodes.InvalidArgument, result.Error!.Code);
+    }
+
     /// <summary>A Survex file with the wrong extension still imports when the caller says so.</summary>
     [Fact]
     public async Task An_explicit_format_overrides_the_extension()

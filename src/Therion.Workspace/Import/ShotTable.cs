@@ -41,6 +41,8 @@ public enum ShotIssueKind
     RepeatedLegsMerged,
     /// <summary>No header and an unusual column count: the column guess may be wrong.</summary>
     ColumnsGuessed,
+    /// <summary>A station cell that is empty or cannot be a station name (Detail = the cell). The row is left out.</summary>
+    BadStation,
 }
 
 /// <param name="Line">1-based line in the pasted text, 0 for the table as a whole.</param>
@@ -157,6 +159,11 @@ public static partial class ShotTableReader
                 if (bad) break;
             }
             if (bad) continue;
+            if (hasStations && (!IsStation(from) || !IsSplay(to) && !IsStation(to)))
+            {
+                issues.Add(new ShotIssue(line, ShotIssueKind.BadStation, IsStation(from) ? to : from));
+                continue;
+            }
             if (!v.ContainsKey(ShotColumn.Length) || !v.ContainsKey(ShotColumn.Compass) || !v.ContainsKey(ShotColumn.Clino))
             {
                 issues.Add(new ShotIssue(line, ShotIssueKind.TooFewValues));
@@ -247,6 +254,7 @@ public static partial class ShotTableReader
             ShotIssueKind.SameStation => $"leg from '{issue.Detail}' to itself",
             ShotIssueKind.RepeatedLegsMerged => $"{issue.Detail} leg(s) made from repeated shots; single shots became splays",
             ShotIssueKind.ColumnsGuessed => $"no header and {issue.Detail} columns: the column guess may be wrong",
+            ShotIssueKind.BadStation => $"'{issue.Detail}' is not a station name; row left out",
             _ => issue.Kind.ToString(),
         };
     }
@@ -335,12 +343,20 @@ public static partial class ShotTableReader
         double sx = shots.Sum(s => Math.Cos(s[ShotColumn.Compass]!.Value * toRad)), sy = shots.Sum(s => Math.Sin(s[ShotColumn.Compass]!.Value * toRad));
         var compass = Math.Atan2(sy, sx) / toRad;
         if (compass < 0) compass += fullCircle;
-        return new Dictionary<ShotColumn, double?>
+        var result = new Dictionary<ShotColumn, double?>
         {
             [ShotColumn.Length] = Math.Round(shots.Average(s => s[ShotColumn.Length]!.Value), 3),
             [ShotColumn.Compass] = Math.Round(compass, 2) % fullCircle,
             [ShotColumn.Clino] = Math.Round(shots.Average(s => s[ShotColumn.Clino]!.Value), 2),
         };
+        // Passage dimensions: the mean of the shots that have one (a merged leg keeps its LRUD).
+        foreach (var c in Lrud)
+        {
+            var values = shots.Select(s => s.GetValueOrDefault(c)).OfType<double>().ToList();
+            if (values.Count > 0) result[c] = Math.Round(values.Average(), 2);
+            else if (shots.Any(s => s.ContainsKey(c))) result[c] = null;
+        }
+        return result;
     }
 
     // ── Cells, numbers, headers ──────────────────────────────────────────────────────────────────
@@ -407,6 +423,9 @@ public static partial class ShotTableReader
     }
 
     private static bool IsSplay(string to) => to is "" or "-" or "." or "*";
+
+    // One token that Therion can read as a station: no spaces, not an option, no quote.
+    private static bool IsStation(string s) => s.Length > 0 && s[0] != '-' && !s.Any(c => char.IsWhiteSpace(c) || c is '"' or '#');
 
     private static int Needed(IReadOnlyList<ShotColumn> columns)
     {

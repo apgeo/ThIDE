@@ -9,7 +9,9 @@ namespace Therion.Workspace.Formatting;
 
 public static class TherionReindenter
 {
-    // Canonical block keyword → its closer. A copy of the editor's table, which also drives folding.
+    /// <summary>The block keywords (canonical spelling); each closes with <c>end</c> + keyword. The editor's block table is built from this.</summary>
+    public static IReadOnlyCollection<string> BlockKeywords => Blocks;
+
     private static readonly HashSet<string> Blocks = new(StringComparer.OrdinalIgnoreCase)
     {
         "survey", "centreline", "scrap", "line", "area", "map", "surface", "scan", "comment",

@@ -93,6 +93,23 @@ public class ShotTableTests
     }
 
     [Fact]
+    public void Station_cells_that_cannot_be_stations_are_left_out()
+    {
+        var t = ShotTableReader.Read("from,to,length,compass,clino\n,A2,5,180,-5\n\"A 1\",A2,5,180,-5\nA1,A2,5,180,-5\n");
+        Assert.Single(t.Rows);
+        Assert.Equal(2, t.Issues.Count(i => i.Kind == ShotIssueKind.BadStation));
+    }
+
+    [Fact]
+    public void Merged_legs_keep_their_dimensions()
+    {
+        var t = ShotTableReader.Read("length compass clino left right up down\n3 10 0 1 2 3 4\n3 10 0 1 2 3 4\n3 10 0 1.3 2 - 4\n");
+        var leg = t.Rows.Single();
+        Assert.Equal("1.1", leg.Values[ShotColumn.Left]);
+        Assert.Equal("3", leg.Values[ShotColumn.Up]);
+    }
+
+    [Fact]
     public void Explicit_columns_override_the_guess()
     {
         var cols = ShotTableReader.ParseColumns("to from tape bearing gradient -");

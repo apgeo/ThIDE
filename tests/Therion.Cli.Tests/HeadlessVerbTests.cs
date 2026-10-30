@@ -68,11 +68,13 @@ public class HeadlessVerbTests : IDisposable
     }
 
     [Fact]
-    public void A_file_with_parse_errors_is_skipped_not_rewritten()
+    public void A_file_with_parse_errors_is_skipped_not_rewritten_and_fails_the_check()
     {
         var p = Write("bad.th", "survey a\ncentreline\n");
-        Assert.Equal(0, FormatVerb.Run(["format", "--check", p], _out, _err));
+        Assert.Equal(1, FormatVerb.Run(["format", "--check", p], _out, _err));
         Assert.Contains("skipped", _err.ToString());
+        Assert.Equal(0, FormatVerb.Run(["format", "--write", p], _out, _err));
+        Assert.Equal("survey a\ncentreline\n", File.ReadAllText(p));
     }
 
     [Fact]

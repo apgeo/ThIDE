@@ -16,7 +16,8 @@ public static class FormatVerb
 
     /// <summary>
     /// <c>format &lt;file|folder&gt;… [--write | --check] [--indent N|tab]</c>. Returns 0 ok (nothing to
-    /// change, for --check), 1 drift found (--check) or a write failed, 2 usage error or missing file.
+    /// change, for --check), 1 drift or an unparsable file found (--check) or a write failed, 2 usage
+    /// error or missing file.
     /// </summary>
     public static int Run(IReadOnlyList<string> args, TextWriter stdout, TextWriter stderr)
     {
@@ -104,7 +105,8 @@ public static class FormatVerb
             stderr.WriteLine(drift == 0
                 ? $"{files.Count} file(s) already formatted{skippedNote}."
                 : $"{drift} of {files.Count} file(s) would be reformatted{skippedNote}. Run 'therion-cli format --write' to fix.");
-            return drift > 0 || failed > 0 ? 1 : 0;
+            // A file that cannot be checked does not pass the check.
+            return drift > 0 || failed > 0 || skipped > 0 ? 1 : 0;
         }
         stderr.WriteLine($"{drift} file(s) reformatted{skippedNote}.");
         return failed > 0 ? 1 : 0;

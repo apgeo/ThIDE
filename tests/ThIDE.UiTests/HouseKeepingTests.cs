@@ -69,6 +69,26 @@ public class HouseKeepingTests
         Assert.Contains("centreline\n  data normal from to length compass clino\n  7 8 2.5 10 -3\nendcentreline", text.Replace("\r\n", "\n"));
     }
 
+    [UiFact]
+    public async Task Pasting_feet_into_a_centreline_restores_the_units_for_the_shots_after_it()
+    {
+        var dir = ThideApp.CopyFixture("demo-cave");
+        await using var app = await ThideApp.StartAsync(dir, "demo.th");
+        await app.WaitAsync("role:TabItem;name:demo.th;state:selected");
+        await app.KeyAsync("type:TextArea", ["Ctrl+Home", .. Enumerable.Repeat("Down", 8)]);   // start of "    1 2 8.0 45 -10"
+
+        await app.MenuAsync("Edit > Paste as shot data…");
+        await app.WaitAsync("#PasteShots.Window");
+        await app.SetTextAsync("#PasteShots.Source", "from\tto\tlength (ft)\tcompass\tclino\n1\t1a\t20\t10\t-3\n");
+        for (int i = 0; i < 20 && !(await app.TextOfAsync("#PasteShots.Output")).Contains("1a"); i++) await Task.Delay(250);
+        await app.InvokeAsync("#PasteShots.Insert");
+        await app.WaitAsync("#PasteShots.Window", gone: true);
+
+        var text = (await app.TextOfAsync("type:TextEditor")).Replace("\r\n", "\n");
+        Assert.Contains("    0 1 10.0 0 -5\n    units length feet\n    data normal from to length compass clino\n    1 1a 20 10 -3\n"
+                      + "    units length dimensions meters\n    units length meters\n    units compass clino degrees\n    1 2 8.0 45 -10", text);
+    }
+
     private static async Task SnapAsync(ThideApp app, string selector, string name)
     {
         var png = await app.ScreenshotAsync(selector);

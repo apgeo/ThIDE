@@ -106,6 +106,9 @@ public sealed class ImportTools(IWorkspaceHost host, MutationEngine mutations)
             ? resolved == ImportFormat.Csv ? ScaffoldValueRules.SafeSurveyName(Path.GetFileNameWithoutExtension(sourceFull)) : "gps"
             : surveyName;
 
+        if (!ScaffoldValueRules.IsSurveyName(surveyName))
+            return Fail(ToolErrorCodes.InvalidArgument, $"'{surveyName}' is not a survey name: letters, digits, '_', '-' and '/', no spaces.");
+
         string therion;
         var issues = new List<ShotIssue>();
         try

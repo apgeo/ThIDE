@@ -125,6 +125,7 @@ public static class StationRenumber
         // Every occurrence becomes an edit; a span that no longer slices to the old name means the
         // model is stale, and the whole plan is refused rather than renaming some occurrences.
         var byFile = new Dictionary<string, List<TextEdit>>(FilePaths.Comparer);
+        var taken = new HashSet<(string File, int Start)>();
         var texts = new Dictionary<string, string?>(FilePaths.Comparer);
         foreach (var (station, newName) in renames)
         {
@@ -139,8 +140,9 @@ public static class StationRenumber
                     problems.Add(new RenumberProblem(RenumberProblemKind.Stale, file, station.ToString()));
                     continue;
                 }
+                if (!taken.Add((file, start))) continue;
                 if (!byFile.TryGetValue(file, out var edits)) byFile[file] = edits = [];
-                if (edits.All(e => e.Start != start)) edits.Add(new TextEdit(start, length, station.Last, newName));
+                edits.Add(new TextEdit(start, length, station.Last, newName));
             }
         }
         if (problems.Count > 0)

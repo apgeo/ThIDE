@@ -64,36 +64,6 @@ internal static class TherionFoldingStrategy
         return result;
     }
 
-    /// <summary>
-    /// 1-based line numbers that fall <em>inside</em> a <c>layout … endlayout</c> or
-    /// <c>lookup … endlookup</c> block (the non-Therion body, excluding the opener and
-    /// closer lines). Used by the colorizer to leave that code unhighlighted.
-    /// </summary>
-    public static HashSet<int> LayoutBodyLines(TextDocument document)
-    {
-        var result = new HashSet<int>();
-        int openLine = -1;
-        string? closer = null;
-        foreach (var line in document.Lines)
-        {
-            var first = FirstWord(document.GetText(line));
-            if (first.Length == 0) continue;
-
-            if (openLine < 0)
-            {
-                if (string.Equals(first, "layout", StringComparison.OrdinalIgnoreCase)) { openLine = line.LineNumber; closer = "endlayout"; }
-                else if (string.Equals(first, "lookup", StringComparison.OrdinalIgnoreCase)) { openLine = line.LineNumber; closer = "endlookup"; }
-            }
-            else if (string.Equals(first, closer, StringComparison.OrdinalIgnoreCase))
-            {
-                for (int n = openLine + 1; n < line.LineNumber; n++) result.Add(n);
-                openLine = -1;
-                closer = null;
-            }
-        }
-        return result;
-    }
-
     /// <summary>True for an <c>end…</c> token; <paramref name="closes"/> is the block keyword it closes.</summary>
     private static bool IsEndKeyword(string word, out string closes)
     {
