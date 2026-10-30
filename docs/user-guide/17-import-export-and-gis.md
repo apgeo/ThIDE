@@ -12,12 +12,37 @@ project:
 
 | Import | Source format | Becomes |
 |---|---|---|
-| **Import survey (Survex / Compass)…** | `.svx` (Survex), `.dat` (Compass) | A Therion `.th` survey |
+| **Import survey (Survex / Compass)…** | `.svx` (Survex), `.dat` (Compass), `.csv`/`.tsv` (a shot table) | A Therion `.th` survey |
 | **Import DEM as surface (.asc)…** | ESRI ASCII grid | A Therion `surface` block |
 | **Import GPX waypoints (→ fix)…** | `.gpx` | `fix` lines (georeferenced stations) |
 
 After importing, add the new file to your thconfig (`input`/`source`) and compile. If an import
 fails, a toast notification tells you why.
+
+### Shot tables (spreadsheets, CSV, PocketTopo, DistoX)
+
+**Edit → Paste as shot data…** (also in the editor's right-click menu) turns a table of shots into a
+Therion `data` block: the selection when it is one, otherwise the clipboard. The dialog shows the
+table and the block side by side; edit either side's settings and the block follows.
+
+- **Columns** come from a header row (`From`, `To`, `Length (m)`, `Azimuth`, `Inclination`, `Left`…
+  and the usual synonyms) or, without one, from the column count: 3 = length compass clino, 5 = from to
+  length compass clino, 9 = the same plus left right up down. Type your own list (`to from tape bearing
+  gradient -`, where `-` skips a column) when the guess is wrong.
+- **Delimiters** — tabs, semicolons, commas (quoted cells allowed) or spaces; a decimal comma (`3,25`)
+  is recognised.
+- **Units** — `ft` / `feet` in the length header writes `units length feet`; compass values above 360
+  (and none above 400) are read as grads. Override either in the dialog.
+- **A table without stations** (an instrument dump) is named from the *first station* — the last
+  station before the caret, suggested — counting up. Three near-identical shots in a row (the DistoX
+  habit) become one averaged leg and single shots become splays from the current station; set *shots
+  per leg* to 0 to make every shot a leg.
+- **Checks** — negative or very long lengths, compass or clino out of range, a leg from a station to
+  itself, cells that are not numbers: each listed with its line.
+- Outside a `centreline` block the result is wrapped in `centreline … endcentreline`.
+
+The same reader imports a `.csv`/`.tsv` file as a new survey (**Import survey…**, `import_survey`, or
+`therion-cli import`).
 
 ### The incoming folder
 
@@ -54,7 +79,8 @@ Great for sharing entrance locations, plotting on a base map, or loading into a 
 
 **Tools → Generate survey report (HTML)…** builds a shareable, self-contained **HTML report** of the
 survey — a quick way to publish an overview without compiling maps. Table exports can also be produced
-in HTML/LaTeX for inclusion in documents.
+in HTML/LaTeX for inclusion in documents. From a terminal: `therion-cli report project.thconfig --out
+report.html`.
 
 ## Drawing with Mapiah
 

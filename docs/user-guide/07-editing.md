@@ -87,12 +87,14 @@ From the editor context menu (or the Command Palette):
 | **Duplicate Line(s)** | Copy the current line/selection below itself. |
 | **Move Line(s) Up / Down** | Shift lines without cut-and-paste. |
 | **Sort Selected Lines** | Alphabetically sort the selected lines. |
+| **Paste as shot data…** | Turn a table of shots (spreadsheet, CSV, DistoX) into a `data` block — see [Import](17-import-export-and-gis.md#shot-tables-spreadsheets-csv-pockettopo-distox). |
 | **Insert Today's Date** | Drop today's date (handy for `date`). |
 | **Insert Team Member** | Insert a `team` member from your project. |
 
 ## Formatting
 
-- **Format Document** — **Shift+Alt+F** re-indents the file to its block nesting.
+- **Format Document** — **Shift+Alt+F** re-indents the file to its block nesting. It never reorders or
+  drops a line; `therion-cli format --check` applies the same rule in CI.
 - **Format on save** — enable in **Settings → Editor** to auto-format every save.
 
 There's also a **region directive formatter** so *Enclose in Region* produces clean, correctly-quoted
