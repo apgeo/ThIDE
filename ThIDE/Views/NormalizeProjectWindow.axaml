@@ -1,0 +1,31 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ThIDE.ViewModels"
+        xmlns:l="using:ThIDE.Resources"
+        x:Class="ThIDE.Views.NormalizeProjectWindow"
+        x:DataType="vm:NormalizeProjectViewModel"
+        x:CompileBindings="False"
+        Title="{l:Loc Menu_Tools_Normalize}" Width="560" SizeToContent="Height"
+        AutomationProperties.AutomationId="Normalize.Window"
+        WindowStartupLocation="CenterOwner" CanResize="False">
+    <StackPanel Margin="14" Spacing="10">
+        <TextBlock Text="{l:Loc Normalize_Intro}" TextWrapping="Wrap" Foreground="Gray" FontSize="11" />
+        <CheckBox Content="{l:Loc Normalize_Reindent}" IsChecked="{Binding Reindent, Mode=TwoWay}" AutomationProperties.AutomationId="Normalize.Reindent" />
+        <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBlock Text="{l:Loc Normalize_LineEndings}" VerticalAlignment="Center" />
+            <ComboBox SelectedIndex="{Binding LineEndings, Mode=TwoWay}" MinWidth="200" AutomationProperties.AutomationId="Normalize.LineEndings">
+                <ComboBoxItem Content="{l:Loc Normalize_KeepEndings}" />
+                <ComboBoxItem Content="LF (Linux, macOS)" />
+                <ComboBoxItem Content="CRLF (Windows)" />
+            </ComboBox>
+        </StackPanel>
+        <CheckBox Content="{l:Loc Normalize_Utf8}" IsChecked="{Binding ToUtf8, Mode=TwoWay}" AutomationProperties.AutomationId="Normalize.Utf8" />
+        <CheckBox IsChecked="{Binding SortInputs, Mode=TwoWay}" AutomationProperties.AutomationId="Normalize.SortInputs">
+            <TextBlock Text="{l:Loc Normalize_SortInputs}" TextWrapping="Wrap" />
+        </CheckBox>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,6,0,0">
+            <Button Content="{l:Loc Common_Cancel}" Click="OnCancel" MinWidth="80" AutomationProperties.AutomationId="Normalize.Cancel" />
+            <Button Content="{l:Loc SyncMaps_Next}" Click="OnNext" IsDefault="True" MinWidth="110" AutomationProperties.AutomationId="Normalize.Next" />
+        </StackPanel>
+    </StackPanel>
+</Window>

@@ -38,6 +38,20 @@ public class WorkspaceTrustServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task A_no_to_an_automatic_run_is_not_asked_again()
+    {
+        int asked = 0;
+        var trust = new WorkspaceTrustService(Store, (_, _) => { asked++; return Task.FromResult(false); });
+        var cave = Path.Combine(_dir, "cave");
+
+        var answers = await Task.WhenAll(Enumerable.Range(0, 5).Select(_ => trust.EnsureTrustedOnceAsync(cave, "hooks")));
+
+        Assert.Equal(1, asked);
+        Assert.Single(answers, a => a.Asked);
+        Assert.All(answers, a => Assert.False(a.Trusted));
+    }
+
+    [Fact]
     public void No_root_is_never_trusted()
     {
         Assert.Equal(TrustState.NoRoot, new WorkspaceTrustService(Store).Get(null));

@@ -47,4 +47,31 @@ public static class SkillPack
         if (chars > 0 && char.IsHighSurrogate(text[chars - 1])) chars--;
         return (text[..chars] + "\n…", true);
     }
+
+    /// <summary>
+    /// An LM Studio preset (the <c>config-presets/*.preset.json</c> format) whose system prompt is
+    /// <paramref name="systemPrompt"/>, at temperature 0 like the assistant. Local models only: the
+    /// preset is how LM Studio's own chat gets the same instructions as ThIDE's assistant.
+    /// </summary>
+    public static string LmStudioPreset(string systemPrompt)
+    {
+        var preset = new System.Text.Json.Nodes.JsonObject
+        {
+            ["identifier"] = "@local:thide-therion",
+            ["name"] = "ThIDE — Therion survey",
+            ["changed"] = false,
+            ["operation"] = new System.Text.Json.Nodes.JsonObject
+            {
+                ["fields"] = new System.Text.Json.Nodes.JsonArray(
+                    new System.Text.Json.Nodes.JsonObject { ["key"] = "llm.prediction.systemPrompt", ["value"] = systemPrompt },
+                    new System.Text.Json.Nodes.JsonObject { ["key"] = "llm.prediction.temperature", ["value"] = 0 }),
+            },
+            ["load"] = new System.Text.Json.Nodes.JsonObject { ["fields"] = new System.Text.Json.Nodes.JsonArray() },
+        };
+        return preset.ToJsonString(new System.Text.Json.JsonSerializerOptions
+        {
+            WriteIndented = true,
+            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        }).Replace("\r\n", "\n") + "\n";
+    }
 }

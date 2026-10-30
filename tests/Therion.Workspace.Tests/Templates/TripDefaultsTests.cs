@@ -54,4 +54,16 @@ public class TripDefaultsTests
         Assert.Equal("instrument compass \"X\"\ninstrument clino \"Y\"", d.Instrument);
         Assert.Null(d.Units); // not the older block's
     }
+
+    [Theory]
+    [InlineData("2026", true)]
+    [InlineData("2026.10.27", true)]
+    [InlineData("2026.10.27@14:30", true)]
+    [InlineData("2026.10.27@14:30:05.5", true)]
+    [InlineData("2026.10.27 - 2026.10.28", true)]
+    [InlineData("2026.13.45", false)]
+    [InlineData("2026.10.27@25:00", false)]
+    [InlineData("27.10.2026", false)]
+    [InlineData("2026.10.27 - ", false)]
+    public void IsDate_accepts_what_Therion_accepts(string value, bool ok) => Assert.Equal(ok, TripDefaults.IsDate(value));
 }

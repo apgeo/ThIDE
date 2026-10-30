@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Therion.Core;
+using Therion.Workspace.Editing;
 using ThIDE.Services;
 using ThIDE.ViewModels.Docking;
 
@@ -154,6 +155,7 @@ public sealed partial class ReplaceInFilesViewModel : ViewModelBase
         }).ConfigureAwait(true);
 
         int fileCount = ApplyEdits(changes.Select(c => (c.Path, c.NewText)));
+        if (fileCount < 0) return;
         int total = changes.Sum(c => c.Count);
 
         if (changes.Count > 0)
@@ -175,9 +177,10 @@ public sealed partial class ReplaceInFilesViewModel : ViewModelBase
     private void Undo()
     {
         if (_undo.Count == 0) return;
-        var batch = _undo.Pop();
+        var batch = _undo.Peek();
         int n = ApplyEdits(batch.Select(e => (e.Path, e.OldText)));
-        _redo.Push(batch);
+        if (n < 0) return;
+        _redo.Push(_undo.Pop());
         NotifyHistory();
         Status = $"Undid replace in {n} file(s).";
     }
@@ -187,25 +190,46 @@ public sealed partial class ReplaceInFilesViewModel : ViewModelBase
     private void Redo()
     {
         if (_redo.Count == 0) return;
-        var batch = _redo.Pop();
+        var batch = _redo.Peek();
         int n = ApplyEdits(batch.Select(e => (e.Path, e.NewText)));
-        _undo.Push(batch);
+        if (n < 0) return;
+        _undo.Push(_redo.Pop());
         NotifyHistory();
         Status = $"Redid replace in {n} file(s).";
     }
 
     // Writes each (path, text): the live editor buffer takes precedence (reflected + reparsed) and is
-    // persisted; otherwise the file is written on disk directly. Returns the number of files written.
+    // persisted; otherwise the file is written on disk directly. Every file is encoded before any is
+    // written, so one whose encoding cannot hold the new text refuses the whole batch (returns -1 and
+    // Status says why) instead of leaving it half-applied. Returns the number of files written.
     private int ApplyEdits(IEnumerable<(string Path, string Text)> edits)
     {
-        int fileCount = 0;
+        var planned = new List<(string Path, string Text, byte[] Bytes, TextFileFormat Format, FileDocumentViewModel? Doc)>();
         foreach (var (path, text) in edits)
         {
             var openDoc = _documents.Documents.FirstOrDefault(d =>
                 string.Equals(d.FilePath, path, StringComparison.OrdinalIgnoreCase));
             try
             {
-                File.WriteAllText(path, text);
+                var (bytes, format) = SourceFileIo.EncodeForSave(path, text, openDoc?.Format);
+                planned.Add((path, text, bytes, format, openDoc));
+            }
+            catch (UnrepresentableCharacterException ex)
+            {
+                Status = string.Format(ThIDE.Resources.Tr.Get("Replace_EncodingRefused"),
+                    System.IO.Path.GetFileName(path), ex.Character, ex.EncodingName);
+                return -1;
+            }
+            catch { /* unreadable: skipped, as a failed write is below */ }
+        }
+
+        int fileCount = 0;
+        foreach (var (path, text, bytes, format, openDoc) in planned)
+        {
+            try
+            {
+                SourceFileIo.WriteOver(path, bytes);
+                if (openDoc is not null) openDoc.Format = format;
                 openDoc?.SetText(text, reparse: true);
                 fileCount++;
             }
@@ -315,7 +339,7 @@ public sealed partial class ReplaceInFilesViewModel : ViewModelBase
 
     private static string? ReadFile(string path)
     {
-        try { return File.Exists(path) ? File.ReadAllText(path) : null; }
+        try { return File.Exists(path) ? Therion.Syntax.EncodingResolver.ReadAllText(path) : null; }
         catch { return null; }
     }
 }

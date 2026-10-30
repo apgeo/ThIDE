@@ -98,23 +98,24 @@ public class TherionCompilerOptionsTests : IDisposable
     }
 
     // Turns the compiler's start info into a shell running `script`, keeping its environment and
-    // redirections. Therion's arguments follow as the script's positional parameters ($1, $2 …).
+    // redirections. On Unix, Therion's arguments follow as the script's positional parameters ($1, $2 …).
+    // On Windows the script goes to cmd as one raw command line: ArgumentList would quote it the C
+    // runtime's way (\"), which cmd does not understand, and anything after it would be appended to
+    // the command — so the Windows scripts name their paths themselves.
     private static ProcessStartInfo AsShell(ProcessStartInfo psi, string unixScript, string windowsScript)
     {
         var args = psi.ArgumentList.ToList();
-        psi.FileName = OperatingSystem.IsWindows() ? "cmd.exe" : "/bin/sh";
         psi.ArgumentList.Clear();
         if (OperatingSystem.IsWindows())
         {
-            psi.ArgumentList.Add("/c");
-            psi.ArgumentList.Add(windowsScript);
+            psi.FileName = "cmd.exe";
+            psi.Arguments = $"/d /s /c \"{windowsScript}\"";
+            return psi;
         }
-        else
-        {
-            psi.ArgumentList.Add("-c");
-            psi.ArgumentList.Add(unixScript);
-            psi.ArgumentList.Add("sh");
-        }
+        psi.FileName = "/bin/sh";
+        psi.ArgumentList.Add("-c");
+        psi.ArgumentList.Add(unixScript);
+        psi.ArgumentList.Add("sh");
         foreach (var a in args) psi.ArgumentList.Add(a);
         return psi;
     }

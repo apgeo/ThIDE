@@ -1,0 +1,38 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ThIDE.ViewModels"
+        xmlns:l="using:ThIDE.Resources"
+        x:Class="ThIDE.Views.RenumberStationsWindow"
+        x:DataType="vm:RenumberStationsViewModel"
+        x:CompileBindings="False"
+        Title="{l:Loc Menu_Tools_Renumber}" Width="720" Height="560" MinWidth="520" MinHeight="380"
+        AutomationProperties.AutomationId="Renumber.Window"
+        WindowStartupLocation="CenterOwner" CanResize="True">
+    <DockPanel Margin="12">
+        <TextBlock DockPanel.Dock="Top" Text="{l:Loc Renumber_Intro}" TextWrapping="Wrap" Foreground="Gray" FontSize="11" Margin="0,0,0,8" />
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" Margin="0,0,0,8">
+            <TextBlock Text="{l:Loc Renumber_Survey}" VerticalAlignment="Center" Margin="0,0,8,6" />
+            <ComboBox Grid.Column="1" ItemsSource="{Binding Surveys}" SelectedItem="{Binding Survey, Mode=TwoWay}" HorizontalAlignment="Stretch" Margin="0,0,0,6"
+                      AutomationProperties.AutomationId="Renumber.Survey" />
+            <TextBlock Grid.Row="1" Text="{l:Loc Renumber_OldPrefix}" VerticalAlignment="Center" Margin="0,0,8,6" />
+            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding OldPrefix, Mode=TwoWay}" Watermark="{l:Loc Renumber_OldPrefixHint}" Margin="0,0,0,6"
+                     AutomationProperties.AutomationId="Renumber.OldPrefix" />
+            <TextBlock Grid.Row="2" Text="{l:Loc Renumber_NewPrefix}" VerticalAlignment="Center" Margin="0,0,8,6" />
+            <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding NewPrefix, Mode=TwoWay}" Margin="0,0,0,6"
+                     AutomationProperties.AutomationId="Renumber.NewPrefix" />
+            <TextBlock Grid.Row="3" Text="{l:Loc Renumber_Offset}" VerticalAlignment="Center" Margin="0,0,8,6" />
+            <NumericUpDown Grid.Row="3" Grid.Column="1" Value="{Binding Offset, Mode=TwoWay}" Minimum="-100000" Maximum="100000" Increment="1" FormatString="0"
+                           HorizontalAlignment="Left" MinWidth="160" Margin="0,0,0,6" AutomationProperties.AutomationId="Renumber.Offset" />
+            <CheckBox Grid.Row="4" Grid.ColumnSpan="2" Content="{l:Loc Renumber_IncludeSub}" IsChecked="{Binding IncludeSubsurveys, Mode=TwoWay}"
+                      AutomationProperties.AutomationId="Renumber.IncludeSub" />
+        </Grid>
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,10,0,0">
+            <Button Content="{l:Loc Common_Cancel}" Click="OnCancel" MinWidth="80" AutomationProperties.AutomationId="Renumber.Cancel" />
+            <Button Content="{l:Loc SyncMaps_Next}" Click="OnNext" IsDefault="True" IsEnabled="{Binding CanApply}" MinWidth="110" AutomationProperties.AutomationId="Renumber.Next" />
+        </StackPanel>
+        <TextBlock DockPanel.Dock="Top" Text="{Binding Summary}" TextWrapping="Wrap" Margin="0,0,0,6" AutomationProperties.AutomationId="Renumber.Summary" />
+        <ListBox DockPanel.Dock="Bottom" ItemsSource="{Binding Problems}" MaxHeight="120" Foreground="OrangeRed" Margin="0,6,0,0"
+                 AutomationProperties.AutomationId="Renumber.Problems" />
+        <ListBox ItemsSource="{Binding Examples}" FontFamily="monospace" AutomationProperties.AutomationId="Renumber.Examples" />
+    </DockPanel>
+</Window>

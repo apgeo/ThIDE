@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using AvaloniaEdit.Document;
 
 namespace ThIDE.Editor;
@@ -12,23 +13,8 @@ internal static class TherionBlocks
 {
     /// <summary>Canonical block keyword → the <c>end…</c> keyword it expects.</summary>
     public static readonly IReadOnlyDictionary<string, string> Closers =
-        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["survey"]     = "endsurvey",
-            ["centreline"] = "endcentreline",
-            ["scrap"]      = "endscrap",
-            ["line"]       = "endline",
-            ["area"]       = "endarea",
-            ["map"]        = "endmap",
-            ["surface"]    = "endsurface",
-            ["scan"]       = "endscan",
-            ["comment"]    = "endcomment",
-            ["group"]      = "endgroup",
-            ["layout"]     = "endlayout",
-            ["lookup"]     = "endlookup",
-            ["code"]       = "endcode",
-            ["source"]     = "endsource",
-        };
+        Therion.Workspace.Formatting.TherionReindenter.BlockKeywords
+            .ToDictionary(k => k, k => "end" + k, StringComparer.OrdinalIgnoreCase);
 
     /// <summary>The canonical block type for a first word, or null when it isn't a block opener.</summary>
     public static string? OpenerType(string firstWord)

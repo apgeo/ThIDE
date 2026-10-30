@@ -1596,4 +1596,63 @@ Aplici modificările? Pașii care nu au putut fi previzualizați rulează acum.<
   <data name="Pref_AssistantDataPolicy_RedactHelp" xml:space="preserve"><value>Toate instrumentele rămân, dar numele, numerele și textul din rezultate sunt înlocuite (numărătorile, codurile de eroare și numerele de linie rămân). Cu efort maxim, nu garantat: ce scrieți și numele pe care modelul le pune în apelurile sale ajung totuși la el. Răspunsurile devin mult mai slabe.</value></data>
   <data name="Pref_AssistantSkillPack" xml:space="preserve"><value>Adaugă pachetul de cunoștințe la instrucțiunile asistentului</value></data>
   <data name="Pref_AssistantSkillPackHelp" xml:space="preserve"><value>Îi explică modelului cum funcționează proiectele Therion și ThIDE, plus notele dvs. (assistant-skills.md lângă fișierul de setări) și ale proiectului (assistant.md în dosarul de configurare al proiectului). Fiecare parte e limitată la 8 KB.</value></data>
+  <data name="Notif_SaveEncodingTitle" xml:space="preserve"><value>Nesalvat</value></data>
+  <data name="Notif_SaveEncoding" xml:space="preserve"><value>{0}: „{1}” nu poate fi scris în {2}, codificarea declarată de fișier. Schimbați caracterul sau linia `encoding` a fișierului (de exemplu în utf-8) și salvați din nou.</value></data>
+  <data name="Replace_EncodingRefused" xml:space="preserve"><value>Nu s-a înlocuit nimic: {0} nu poate conține „{1}” în {2}, codificarea declarată de fișier. Niciun fișier nu a fost modificat.</value></data>
+  <data name="Diag_FixCheck" xml:space="preserve"><value>Este posibil ca această corectură să nu ajungă la locul potrivit: verificați unde se aplică înainte de a o aplica.</value></data>
+  <data name="Menu_Edit_PasteShots" xml:space="preserve"><value>Lipește ca date de vize…</value></data>
+  <data name="Menu_Tools_Normalize" xml:space="preserve"><value>Normalizează proiectul…</value></data>
+  <data name="Menu_Tools_Renumber" xml:space="preserve"><value>Renumerotează stațiile…</value></data>
+  <data name="PasteShots_Title" xml:space="preserve"><value>Lipește ca date de vize</value></data>
+  <data name="PasteShots_Intro" xml:space="preserve"><value>Un tabel de vize — dintr-o foaie de calcul, un fișier CSV, PocketTopo sau o descărcare DistoX — devine un bloc data Therion. Coloanele se iau din rândul de antet sau din numărul de coloane; corectați-le dacă presupunerea e greșită. Într-un tabel fără stații, vizele repetate ale unui segment devin un singur segment mediat, iar vizele singure devin vize radiale (splay).</value></data>
+  <data name="PasteShots_Columns" xml:space="preserve"><value>Coloane:</value></data>
+  <data name="PasteShots_Start" xml:space="preserve"><value>Prima stație:</value></data>
+  <data name="PasteShots_Units" xml:space="preserve"><value>Unități:</value></data>
+  <data name="PasteShots_LengthAuto" xml:space="preserve"><value>Lungime: din tabel</value></data>
+  <data name="PasteShots_Meters" xml:space="preserve"><value>Metri</value></data>
+  <data name="PasteShots_Feet" xml:space="preserve"><value>Picioare</value></data>
+  <data name="PasteShots_AngleAuto" xml:space="preserve"><value>Unghiuri: detectează</value></data>
+  <data name="PasteShots_Degrees" xml:space="preserve"><value>Grade</value></data>
+  <data name="PasteShots_Grads" xml:space="preserve"><value>Grade centesimale</value></data>
+  <data name="PasteShots_Merge" xml:space="preserve"><value>Vize pe segment:</value></data>
+  <data name="PasteShots_Wrap" xml:space="preserve"><value>Încadrează în centreline … endcentreline</value></data>
+  <data name="PasteShots_Insert" xml:space="preserve"><value>Inserează</value></data>
+  <data name="PasteShots_Summary" xml:space="preserve"><value>{0} segment(e), {1} vize radiale</value></data>
+  <data name="PasteShots_BadColumns" xml:space="preserve"><value>Coloane: folosiți cuvinte cheie data precum „from to length compass clino” (length, compass și clino sunt necesare; „-” sare o coloană).</value></data>
+  <data name="ShotIssue_Line" xml:space="preserve"><value>Linia {0}: {1}</value></data>
+  <data name="ShotIssue_NoShots" xml:space="preserve"><value>Nu s-a găsit nicio viză în text.</value></data>
+  <data name="ShotIssue_NotANumber" xml:space="preserve"><value>„{0}” nu este un număr; rândul este omis.</value></data>
+  <data name="ShotIssue_TooFewValues" xml:space="preserve"><value>prea puține valori; rândul este omis.</value></data>
+  <data name="ShotIssue_ExtraColumns" xml:space="preserve"><value>{0} coloană(e) în plus ignorate.</value></data>
+  <data name="ShotIssue_NegativeLength" xml:space="preserve"><value>lungime negativă {0}.</value></data>
+  <data name="ShotIssue_LongLength" xml:space="preserve"><value>lungimea {0} este neobișnuit de mare — verificați unitatea.</value></data>
+  <data name="ShotIssue_CompassOutOfRange" xml:space="preserve"><value>azimutul {0} este în afara domeniului.</value></data>
+  <data name="ShotIssue_ClinoOutOfRange" xml:space="preserve"><value>înclinarea {0} este în afara domeniului.</value></data>
+  <data name="ShotIssue_GradsInferred" xml:space="preserve"><value>Azimuturi peste 360: unghiurile sunt citite ca grade centesimale.</value></data>
+  <data name="ShotIssue_SameStation" xml:space="preserve"><value>un segment de la „{0}” la ea însăși.</value></data>
+  <data name="ShotIssue_RepeatedLegsMerged" xml:space="preserve"><value>{0} segment(e) obținute din vize repetate; vizele singure au devenit vize radiale.</value></data>
+  <data name="ShotIssue_ColumnsGuessed" xml:space="preserve"><value>Fără antet și {0} coloane: presupunerea coloanelor poate fi greșită.</value></data>
+  <data name="Normalize_Intro" xml:space="preserve"><value>Întreținere pentru un depozit partajat, cu previzualizare înainte de orice modificare. Fișierele care nu se analizează curat rămân neatinse.</value></data>
+  <data name="Normalize_Reindent" xml:space="preserve"><value>Reindentează (Formatare document din editor)</value></data>
+  <data name="Normalize_LineEndings" xml:space="preserve"><value>Terminații de linie:</value></data>
+  <data name="Normalize_KeepEndings" xml:space="preserve"><value>Păstrează-le pe ale fiecărui fișier</value></data>
+  <data name="Normalize_Utf8" xml:space="preserve"><value>Convertește în UTF-8 fișierele care declară altă codificare</value></data>
+  <data name="Normalize_SortInputs" xml:space="preserve"><value>Sortează natural fiecare șir de linii „input” consecutive (trip2 înainte de trip10). Ordinea contează rar pentru Therion, dar verificați previzualizarea.</value></data>
+  <data name="Normalize_Summary" xml:space="preserve"><value>{0} fișiere s-ar schimba; {1} rămân neatinse pentru că nu se analizează curat (corectează-le întâi). Debifează un fișier pentru a-l omite.</value></data>
+  <data name="Renumber_Intro" xml:space="preserve"><value>Dă fiecărei stații a unei topografii un prefix nou sau decalează-i numerele, oriunde este scrisă: vize, equate, fix și referințe @ din alte fișiere. Stațiile care nu se potrivesc rămân neschimbate. Etichetele de stații din schițe (.th2) nu se redenumesc.</value></data>
+  <data name="Renumber_Survey" xml:space="preserve"><value>Topografie:</value></data>
+  <data name="Renumber_OldPrefix" xml:space="preserve"><value>Prefix actual:</value></data>
+  <data name="Renumber_OldPrefixHint" xml:space="preserve"><value>gol = toate stațiile</value></data>
+  <data name="Renumber_NewPrefix" xml:space="preserve"><value>Prefix nou:</value></data>
+  <data name="Renumber_Offset" xml:space="preserve"><value>Adună la număr:</value></data>
+  <data name="Renumber_IncludeSub" xml:space="preserve"><value>Include subtopografiile (fiecare își păstrează numele proprii)</value></data>
+  <data name="Renumber_Nothing" xml:space="preserve"><value>Alegeți un prefix nou sau un decalaj de numere.</value></data>
+  <data name="Renumber_Summary" xml:space="preserve"><value>{0} stație(i) redenumite, {1} neschimbate — {2} modificare(i) în {3} fișier(e).</value></data>
+  <data name="Renumber_NoSurveys" xml:space="preserve"><value>Deschideți mai întâi un proiect cu topografii.</value></data>
+  <data name="Renumber_InvalidName" xml:space="preserve"><value>„{0}” nu poate fi nume de stație ({1}).</value></data>
+  <data name="Renumber_Duplicate" xml:space="preserve"><value>Două stații ar deveni amândouă „{0}” ({1}).</value></data>
+  <data name="Renumber_Collides" xml:space="preserve"><value>„{0}” există deja și nu este redenumită ({1}).</value></data>
+  <data name="Renumber_Stale" xml:space="preserve"><value>{0} s-a schimbat de la citirea proiectului — salvați sau reîncărcați, apoi încercați din nou.</value></data>
+  <data name="Renumber_NoSurvey" xml:space="preserve"><value>Nu există topografia „{0}” în proiect.</value></data>
+  <data name="ShotIssue_BadStation" xml:space="preserve"><value>„{0}” nu este nume de stație; rândul este omis.</value></data>
 </root>

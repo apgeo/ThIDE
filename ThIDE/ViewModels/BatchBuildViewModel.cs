@@ -124,7 +124,15 @@ public sealed partial class BatchBuildViewModel : ObservableObject
                     entry = temp;
                     label += " " + string.Format(Tr.Get("Batch_SomeTargets"), keep.Count, row.Targets.Count);
                 }
-                var outcome = await _env.Build(entry, temp, label);
+                BuildOutcome? outcome;
+                try { outcome = await _env.Build(entry, temp, label); }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    // Failed before the build took the copy over (saving the involved files, say).
+                    if (temp is not null) try { File.Delete(temp); } catch (IOException) { }
+                    session?.Write(ex.Message, isError: true);
+                    break;
+                }
                 if (outcome is null)
                 {
                     // Not started: the build never reached the point where it deletes its copy.

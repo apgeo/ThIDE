@@ -115,6 +115,21 @@ public class WorkspaceEditServiceTests : IDisposable
         Assert.Equal("survey a\nendsurvey\n", File.ReadAllText(P("main.th")));
     }
 
+    [Fact]
+    public async Task A_rollback_removes_the_folders_the_batch_made()
+    {
+        File.WriteAllText(P("src.th"), "x");
+        File.WriteAllText(P("blocker"), "a file where a folder is needed");
+        var batch = new EditBatch([],
+            [new FileCreate(P("new/deep/notes.th"), "x")],
+            [new FileCopy(P("src.th"), Path.Combine(P("blocker"), "c.th"))]);
+
+        var outcome = await Service().ApplyAsync(batch);
+
+        Assert.False(outcome.Success);
+        Assert.False(Directory.Exists(P("new")));
+    }
+
     /// <summary>An interface implementation answering every member from one function.</summary>
     public class Stub<T> : DispatchProxy where T : class
     {

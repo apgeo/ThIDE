@@ -98,6 +98,13 @@ public static partial class MacroCatalog
                 { "id": "build", "tool": "run_build", "continueOnError": true },
                 { "id": "report", "tool": "generate_report", "args": { "target": "output/report.html" } } ] }
             """).Macro!,
+        Load("audit", """
+            { "title": "Audit the project", "description": "Every problem, the survey's structure (floating pieces), and what is left to draw.",
+              "steps": [
+                { "id": "diag", "tool": "get_diagnostics", "args": { "minSeverity": "warning" } },
+                { "id": "graph", "tool": "survey_graph" },
+                { "id": "drawing", "tool": "drawing_status" } ] }
+            """).Macro!,
         Load("end-of-trip", """
             { "title": "End of trip", "description": "Convert a Survex or Compass export that is inside the project (incoming/, say) to Therion, then list the project's warnings. Link the new file with Tools > Link survey file.",
               "vars": [ { "id": "source", "prompt": "Survey export inside the project (.svx or .dat)", "type": "file" } ],

@@ -17,6 +17,7 @@ public static class TherionPrompts
     [Description("Walk the project for problems and summarize what to fix first.")]
     public static string AuditWorkspace() =>
         "Audit this Therion project. Be concise.\n"
+        + MacroHint("audit", "get_diagnostics, survey_graph and drawing_status")
         + "1. Call get_diagnostics for every problem.\n"
         + "2. For each distinct code, call explain_diagnostic to understand it.\n"
         + "3. Call survey_graph and report any floating (disconnected, ungrounded) components.\n"
@@ -65,8 +66,18 @@ public static class TherionPrompts
     [Description("Check whether the project is ready to build and publish.")]
     public static string PrepareRelease() =>
         "Check whether this Therion project is ready to build and publish. Be concise.\n"
+        + MacroHint("release-check", "get_diagnostics, run_build and generate_report")
         + "1. Call get_diagnostics — report errors (blocking) separately from warnings.\n"
         + "2. Call survey_graph — flag any floating components.\n"
         + "3. If run_build is available, call it and report Therion's verdict and the artifacts it wrote.\n"
         + "4. List what must be fixed before release, most important first.";
+
+    /// <summary>
+    /// A deterministic macro does the same steps without a model: cheaper, repeatable, and nothing of
+    /// the project goes to the model. The prompt says so first, so the user can choose.
+    /// </summary>
+    private static string MacroHint(string macro, string steps) =>
+        $"First tell the user, in one sentence, that the built-in macro '{macro}' runs the same steps ({steps}) "
+        + $"without a model: Tools ▸ Macros in ThIDE, or `therion-mcp macro run {macro} --workspace <project>` in a shell. "
+        + "Then continue with the steps below unless they would rather run the macro.\n";
 }

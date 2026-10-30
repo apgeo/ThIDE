@@ -24,7 +24,7 @@ public static class FragmentStore
         {
             try
             {
-                if (JsonNode.Parse(existingJson, documentOptions: new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true })
+                if (JsonNode.Parse(existingJson, documentOptions: ReadOptions)
                     is not JsonArray parsed)
                     return (null, "the snippet file is not a list");
                 array = parsed;
@@ -51,17 +51,28 @@ public static class FragmentStore
             var head = existingJson[..close].TrimEnd();
             var separator = head.EndsWith('[') || head.EndsWith(',') ? "" : ",";
             var text = entry.ToJsonString(Options).Replace("\n", "\n  ");
-            return (head + separator + "\n  " + text + "\n" + existingJson[close..], null);
+            var spliced = head + separator + "\n  " + text + "\n" + existingJson[close..];
+            // The last ']' or the text before it may sit inside a comment; keep the splice only when
+            // it reads back as the same list plus the new entry, else rewrite the list.
+            if (ParsesAsAppended(spliced, array.Count, trigger)) return (spliced, null);
         }
-        array.Add(new JsonObject
-        {
-            ["trigger"] = trigger,
-            ["description"] = description,
-            ["template"] = template,
-            ["scope"] = "thconfig",
-        });
+        array.Add(entry);
         return (array.ToJsonString(Options) + "\n", null);
     }
+
+    private static bool ParsesAsAppended(string json, int countBefore, string trigger)
+    {
+        try
+        {
+            return JsonNode.Parse(json, documentOptions: ReadOptions) is JsonArray a
+                && a.Count == countBefore + 1
+                && TriggerOf(a[^1]) == trigger;
+        }
+        catch (JsonException) { return false; }
+    }
+
+    private static readonly JsonDocumentOptions ReadOptions =
+        new() { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true };
 
     private static readonly JsonSerializerOptions Options =
         new() { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping };

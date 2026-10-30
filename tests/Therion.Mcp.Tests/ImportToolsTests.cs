@@ -78,6 +78,33 @@ public class ImportToolsTests
         Assert.Equal(expected, result.Data!.Format);
     }
 
+    /// <summary>A shot table names its survey after the file and reports what looked wrong.</summary>
+    [Fact]
+    public async Task A_shot_table_imports_with_its_warnings()
+    {
+        using var fixture = WithSource("raw/trip 2.csv", "from,to,length,compass,clino\n1,2,3.5,10,-2\n2,3,4,420,1\n");
+        var tools = await LoadedToolsAsync(fixture);
+
+        var result = await tools.ImportSurvey("raw/trip 2.csv");
+
+        Assert.True(result.Ok, result.Error?.Message);
+        Assert.Equal("csv", result.Data!.Format);
+        Assert.Contains("survey trip_2", result.Data.Text);
+        Assert.Contains("1 2 3.5 10  -2", result.Data.Text);
+        Assert.Contains(result.Data.Warnings!, w => w.Contains("compass 420"));
+    }
+
+    [Fact]
+    public async Task A_survey_name_that_is_not_a_keyword_is_refused()
+    {
+        using var fixture = WithSource("raw/trip.csv", "1,2,3.5,10,-2\n");
+        var tools = await LoadedToolsAsync(fixture);
+
+        var result = await tools.ImportSurvey("raw/trip.csv", surveyName: "Upper Cave");
+
+        Assert.Equal(ToolErrorCodes.InvalidArgument, result.Error!.Code);
+    }
+
     /// <summary>A Survex file with the wrong extension still imports when the caller says so.</summary>
     [Fact]
     public async Task An_explicit_format_overrides_the_extension()

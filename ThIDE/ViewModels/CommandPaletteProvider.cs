@@ -124,6 +124,8 @@ public sealed class CommandPaletteProvider
         list.Add(VmCmd(tools, L("Menu_Tools_SyncMaps"), _vm.SyncMapsCommand, "Icon.Map"));
         list.Add(VmCmd(tools, L("Menu_Tools_SuggestEquates"), _vm.SuggestEquatesCommand, "Icon.Map"));
         list.Add(VmCmd(tools, L("Menu_Tools_FormatAll"), _vm.FormatAllCommand, "Icon.File"));
+        list.Add(VmCmd(tools, L("Menu_Tools_Normalize"), _vm.NormalizeProjectCommand, "Icon.File"));
+        list.Add(VmCmd(tools, L("Menu_Tools_Renumber"), _vm.RenumberStationsCommand, "Icon.File"));
         // One entry per macro and per project task, read when the palette opens.
         if (AppServices.Provider.GetService(typeof(IMacroService)) is IMacroService macroRunner)
             foreach (var (macro, _) in macroRunner.Macros())
@@ -196,6 +198,7 @@ public sealed class CommandPaletteProvider
         list.Add(Editor(L("Menu_Edit_Cut"), ed => ed.MenuCut()));
         list.Add(Editor(L("Menu_Edit_Copy"), ed => ed.MenuCopy()));
         list.Add(Editor(L("Menu_Edit_Paste"), ed => ed.MenuPaste()));
+        list.Add(Editor(L("Menu_Edit_PasteShots"), ed => ed.MenuPasteShots()));
         list.Add(Editor(L("Menu_Edit_Delete"), ed => ed.MenuDelete()));
         list.Add(Editor(L("Menu_Edit_SelectAll"), ed => ed.MenuSelectAll()));
         list.Add(Editor(L("Cmd_UpperSel"), ed => ed.MenuUpperCase()));

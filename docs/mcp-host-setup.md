@@ -147,6 +147,20 @@ therion-mcp skills print --user my-notes.md --project .thide/assistant.md
 
 Each notes file is cut to 8 KB.
 
+A ready preset is in the repository: **`docs/assistant/thide.preset.json`** (system prompt = the skill
+pack, temperature 0). Copy it into LM Studio's presets folder (`~/.lmstudio/config-presets/` on Linux
+and macOS, `%USERPROFILE%\.lmstudio\config-presets\` on Windows) or import it from LM Studio's preset
+menu, then pick **ThIDE — Therion survey** in the chat. To build one with your own and the project's
+notes appended:
+
+```
+therion-mcp skills preset --user my-notes.md --project .thide/assistant.md --out ~/.lmstudio/config-presets/thide.preset.json
+```
+
+The pack and the preset are meant for **local models** (LM Studio, Ollama). They teach the model to
+work from computed results and to suggest the built-in macros (`audit`, `release-check`,
+`end-of-trip`) rather than chaining tools itself.
+
 ## Talking to the *running* ThIDE
 
 Everything above runs a **fresh, headless** copy of the engines against files on disk. If instead you

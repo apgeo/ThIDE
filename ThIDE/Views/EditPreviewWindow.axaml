@@ -19,7 +19,8 @@
             <ListBox.ItemTemplate>
                 <DataTemplate>
                     <Grid ColumnDefinitions="Auto,220,*">
-                        <CheckBox Grid.Column="0" IsChecked="{Binding IsChecked, Mode=TwoWay}" VerticalAlignment="Top" />
+                        <CheckBox Grid.Column="0" IsChecked="{Binding IsChecked, Mode=TwoWay}" VerticalAlignment="Top"
+                                  IsEnabled="{Binding $parent[Window].DataContext.CanChoose}" />
                         <TextBlock Grid.Column="1" Text="{Binding Location}" Foreground="Gray" FontSize="12" TextTrimming="CharacterEllipsis" Margin="4,4,8,0" />
                         <StackPanel Grid.Column="2">
                             <TextBlock Text="{Binding Before}" FontFamily="Consolas,Menlo,monospace" FontSize="12" Foreground="#C62828" TextDecorations="Strikethrough" />

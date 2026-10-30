@@ -23,7 +23,7 @@ switch (args[0])
     case "validate":      return RequireArg(args, Validate);
     case "dump-ast":      return RequireArg(args, DumpAst);
     case "list-stations": return RequireArg(args, ListStations);
-    case "format":        return RequireArg(args, a => Format(a, args));
+    case "format":        return Therion.Cli.FormatVerb.Run(args, Console.Out, Console.Error);
     case "lint":          return await RequireArgAsync(args, Lint);
     case "stats":         return await RequireArgAsync(args, Stats);
     case "deps":          return await RequireArgAsync(args, a => Deps(a, args));
@@ -31,6 +31,8 @@ switch (args[0])
     case "structural":    return RequireArg(args, a => Structural(a, args));
     case "blender":       return await Therion.Cli.BlenderVerb.RunAsync(args, Console.Out, Console.Error);
     case "new":           return Therion.Cli.NewVerb.Run(args, Console.Out, Console.Error);
+    case "import":        return Therion.Cli.ImportVerb.Run(args, Console.Out, Console.Error);
+    case "report":        return await Therion.Cli.ReportVerb.RunAsync(args, Console.Out, Console.Error);
     case "build":
     {
         using var cancel = new CancellationTokenSource();
@@ -50,7 +52,9 @@ static void PrintHelp()
     Console.WriteLine("Usage:");
     Console.WriteLine("  therion-cli validate <file>            Parse a file and print diagnostics.");
     Console.WriteLine("  therion-cli lint <file|thconfig>       Project-wide semantic + correctness checks.");
-    Console.WriteLine("  therion-cli format <file> [--write]    Pretty-print via TherionWriter (stdout, or in place).");
+    Console.WriteLine("  therion-cli format <file> [--indent N|tab]   Print the file re-indented (the editor's Format Document).");
+    Console.WriteLine("  therion-cli format <file|folder>… --write|--check [--indent N|tab]");
+    Console.WriteLine("                                         Re-indent in place, or list files that would change (exit 1 on drift).");
     Console.WriteLine("  therion-cli stats <file|thconfig>      Print project statistics (length, stations, …).");
     Console.WriteLine("  therion-cli deps <file|thconfig> [--dot]   Print the include/dependency graph.");
     Console.WriteLine("  therion-cli gis <file|thconfig> [--format kml|geojson|gpx|csv] [--out <path>]");
@@ -63,6 +67,11 @@ static void PrintHelp()
     Console.WriteLine("  therion-cli new --list                 List project templates (built-in and imported).");
     Console.WriteLine("  therion-cli new <id|folder> --out <dir> [--var key=value]…");
     Console.WriteLine("                                         Create a project from a template.");
+    Console.WriteLine("  therion-cli import <file.svx|.dat|.gpx|.csv|.tsv> [--out <new.th>] [--format compass|survex|gpx|csv] [--survey <name>]");
+    Console.WriteLine("                     [--columns \"from to length compass clino\"] [--start <station>] [--length-unit m|ft] [--angle-unit deg|grad] [--merge N]");
+    Console.WriteLine("                                         Convert another program's survey (or a shot table) to Therion; never overwrites.");
+    Console.WriteLine("  therion-cli report <file|thconfig|folder> [--out <report.html>] [--title <name>]");
+    Console.WriteLine("                                         Write the HTML survey report (stdout without --out).");
     Console.WriteLine("  therion-cli dump-ast <file>            Print the parsed AST as JSON.");
     Console.WriteLine("  therion-cli list-stations <file>       List station references in a .th file.");
     Console.WriteLine("  therion-cli --version                  Print the pinned Therion syntax version.");
@@ -145,21 +154,6 @@ static async System.Threading.Tasks.Task<int> Lint(string path)
     Console.WriteLine();
     Console.WriteLine($"{ws.PerFile.Count} file(s) · {errors} error(s) · {warnings} warning(s).");
     return errors > 0 ? 1 : 0;
-}
-
-// format a single file by re-emitting its AST through TherionWriter.
-static int Format(string path, string[] args)
-{
-    var (file, _) = ParseAny(path);
-    if (file is null) return 2;
-    var written = new TherionWriter().Write(file);
-    if (HasFlag(args, "--write"))
-    {
-        File.WriteAllText(Path.GetFullPath(path), written);
-        Console.Error.WriteLine($"formatted {path}");
-    }
-    else Console.Write(written);
-    return 0;
 }
 
 // project statistics (length, station/shot/survey counts, vertical range, entrances).

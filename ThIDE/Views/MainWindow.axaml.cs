@@ -89,6 +89,8 @@ public partial class MainWindow : Window
                 vm.SyncMapsRequested += (_, _) => _ = SyncMapsAsync();
                 vm.SuggestEquatesRequested += (_, _) => _ = SuggestEquatesAsync();
                 vm.FormatAllRequested += (_, _) => _ = FormatAllAsync();
+                vm.NormalizeProjectRequested += (_, _) => _ = NormalizeProjectAsync();
+                vm.RenumberStationsRequested += (_, _) => _ = RenumberStationsAsync();
                 if (AppServices.Provider.GetService<IMacroService>() is MacroService macroService)
                 {
                     macroService.AskVariables = m => Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => AskMacroVariablesAsync(m));
@@ -379,6 +381,7 @@ public partial class MainWindow : Window
     private void OnEditCut(object? s, Avalonia.Interactivity.RoutedEventArgs e) => ActiveEditor?.MenuCut();
     private void OnEditCopy(object? s, Avalonia.Interactivity.RoutedEventArgs e) => ActiveEditor?.MenuCopy();
     private void OnEditPaste(object? s, Avalonia.Interactivity.RoutedEventArgs e) => ActiveEditor?.MenuPaste();
+    private void OnEditPasteShots(object? s, Avalonia.Interactivity.RoutedEventArgs e) => ActiveEditor?.MenuPasteShots();
     private void OnEditDelete(object? s, Avalonia.Interactivity.RoutedEventArgs e) => ActiveEditor?.MenuDelete();
     private void OnEditSelectAll(object? s, Avalonia.Interactivity.RoutedEventArgs e) => ActiveEditor?.MenuSelectAll();
     private void OnEditUpper(object? s, Avalonia.Interactivity.RoutedEventArgs e) => ActiveEditor?.MenuUpperCase();
@@ -714,9 +717,16 @@ public partial class MainWindow : Window
             AppServices.Provider.GetService<INotificationService>()?.Info(ThIDE.Resources.Tr.Get("Diag_Fix"), ThIDE.Resources.Tr.Get("Diag_NoFix"));
             return;
         }
+        var batch = new Therion.Workspace.Editing.EditBatch([new(path, fix.Edits)], [], []);
+        // A fix that cannot tell where it belongs (an end inserted after a flat block body) is shown first.
+        if (!fix.SafeForBatch)
+        {
+            await PreviewAndApplyAsync(ThIDE.Resources.Tr.Get("Diag_Fix"), ThIDE.Resources.Tr.Get("Diag_FixCheck"), batch);
+            return;
+        }
         if (AppServices.Provider.GetService<IWorkspaceEditService>() is not { } editor) return;
-        var outcome = await editor.ApplyAsync(new Therion.Workspace.Editing.EditBatch([new(path, fix.Edits)], [], []));
-        if (!outcome.Success) AppServices.Provider.GetService<INotificationService>()?.Warning(ThIDE.Resources.Tr.Get("Diag_Fix"), outcome.Error ?? string.Join("; ", outcome.Problems.Select(p => p.Kind)));
+        var outcome = await editor.ApplyAsync(batch);
+        if (!outcome.Success) AppServices.Provider.GetService<INotificationService>()?.Warning(ThIDE.Resources.Tr.Get("Diag_Fix"), outcome.Describe());
     }
 
     /// <summary>Diagnostics panel ▸ Fix all '<code>': every safe fix for that code, previewed, then applied.</summary>
@@ -746,19 +756,23 @@ public partial class MainWindow : Window
 
     /// <summary>Shows a preview of a batch and applies the ticked edits (one undo step per open file).</summary>
     private async System.Threading.Tasks.Task<bool> PreviewAndApplyAsync(string title, string summary, Therion.Workspace.Editing.EditBatch batch,
-        IReadOnlyList<Therion.Workspace.Fixes.EditPreviewRow>? rows = null, bool reload = false)
+        IReadOnlyList<Therion.Workspace.Fixes.EditPreviewRow>? rows = null, bool reload = false, bool allOrNothing = false)
     {
         var docs = AppServices.Provider.GetService<IDocumentService>();
         rows ??= Therion.Workspace.Fixes.FixAll.Preview(batch, p => CurrentText(docs, p));
-        var preview = new EditPreviewViewModel(title, summary, batch, rows, AppServices.Provider.GetService<IWorkspaceSession>()?.RootPath);
+        var preview = new EditPreviewViewModel(title, summary, batch, rows, AppServices.Provider.GetService<IWorkspaceSession>()?.RootPath, allOrNothing);
         var window = new EditPreviewWindow(preview);
         await window.ShowDialog(this);
         if (!window.Confirmed || AppServices.Provider.GetService<IWorkspaceEditService>() is not { } editor) return false;
-        // Closed files change on disk without a re-parse: reload when the diagnostics must follow.
-        var outcome = await editor.ApplyAsync(reload ? preview.Chosen() with { RequiresWorkspaceReload = true } : preview.Chosen());
+        var outcome = await editor.ApplyAsync(preview.Chosen());
+        // Closed files change on disk without a re-parse: reload when the diagnostics must follow. Not
+        // through the batch's own reload flag, which also refuses files with unsaved changes — right for
+        // a batch that adds an input, wrong for one that only edits text.
+        if (outcome.Success && reload && AppServices.Provider.GetService<IWorkspaceSession>() is { ActiveThconfig: { } active } session)
+            await session.SetActiveThconfigAsync(active.FullPath);
         var n = AppServices.Provider.GetService<INotificationService>();
         if (outcome.Success) n?.Success(title, string.Format(ThIDE.Resources.Tr.Get("Diag_FixAllDone"), preview.CheckedCount));
-        else n?.Warning(title, outcome.Error ?? string.Join("; ", outcome.Problems.Select(p => $"{Path.GetFileName(p.FilePath)}: {p.Kind}")));
+        else n?.Warning(title, outcome.Describe());
         return outcome.Success;
     }
 
@@ -778,26 +792,64 @@ public partial class MainWindow : Window
     {
         var docs = AppServices.Provider.GetService<IDocumentService>();
         if (docs?.Workspace is not { } ws) return;
-        var files = ws.PerFile.Keys
-            .Concat(ws.FileGraphEdges.SelectMany(e => new[] { e.From, e.To }))
-            .Where(f => f.EndsWith(".th", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".th2", StringComparison.OrdinalIgnoreCase)
-                     || f.EndsWith(".thconfig", StringComparison.OrdinalIgnoreCase))
-            .ToList();
-        var settings = AppServices.Provider.GetService<IAppSettingsService>()?.Current;
-        var unit = settings is { ConvertTabsToSpaces: false } ? "\t" : new string(' ', Math.Max(1, settings?.IndentationSize ?? 2));
+        var files = ProjectSourceFiles(ws);
         // The editor's Format Document: a re-indent that never reorders or drops anything.
-        string Format(string text)
-        {
-            var doc = new AvaloniaEdit.Document.TextDocument(text);
-            ThIDE.Editor.TherionFormatter.Reindent(doc, unit);
-            return doc.Text;
-        }
+        var unit = IndentUnitSetting();
         var (batch, rows, skipped) = Therion.Workspace.Fixes.FormatAll.Plan(files, p => CurrentText(docs, p), Therion.Workspace.Fixes.LineEndings.Keep,
-            Format, n => string.Format(ThIDE.Resources.Tr.Get("FormatAll_LinesDiffer"), n));
+            t => Therion.Workspace.Formatting.TherionReindenter.Format(t, unit), n => string.Format(ThIDE.Resources.Tr.Get("FormatAll_LinesDiffer"), n));
         var title = ThIDE.Resources.Tr.Get("Menu_Tools_FormatAll");
         var summary = string.Format(ThIDE.Resources.Tr.Get("FormatAll_Summary"), rows.Count, skipped.Count);
         if (batch.IsEmpty) { AppServices.Provider.GetService<INotificationService>()?.Info(title, summary); return; }
         await PreviewAndApplyAsync(title, summary, batch, rows, reload: true);
+    }
+
+    private static string IndentUnitSetting()
+    {
+        var settings = AppServices.Provider.GetService<IAppSettingsService>()?.Current;
+        return Therion.Workspace.Formatting.TherionReindenter.IndentUnit(settings is { ConvertTabsToSpaces: false }, settings?.IndentationSize ?? 2);
+    }
+
+    /// <summary>The project's Therion sources: every parsed file and every file the include graph names.</summary>
+    private static List<string> ProjectSourceFiles(Therion.Semantics.WorkspaceSemanticModel ws) =>
+        ws.PerFile.Keys
+            .Concat(ws.FileGraphEdges.SelectMany(e => new[] { e.From, e.To }))
+            .Where(f => f.EndsWith(".th", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".th2", StringComparison.OrdinalIgnoreCase)
+                     || f.EndsWith(".thconfig", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+    /// <summary>Tools ▸ Normalise project: Format all plus line endings, UTF-8 and sorted inputs, previewed first.</summary>
+    private async System.Threading.Tasks.Task NormalizeProjectAsync()
+    {
+        var docs = AppServices.Provider.GetService<IDocumentService>();
+        if (docs?.Workspace is not { } ws) return;
+        var model = new NormalizeProjectViewModel();
+        var window = new NormalizeProjectWindow(model);
+        await window.ShowDialog(this);
+        if (!window.Confirmed) return;
+        var options = model.Options(IndentUnitSetting());
+        var title = ThIDE.Resources.Tr.Get("Menu_Tools_Normalize");
+        if (options.IsEmpty) return;
+        var (batch, rows, skipped) = Therion.Workspace.Fixes.ProjectNormalize.Plan(ProjectSourceFiles(ws), p => CurrentText(docs, p), options,
+            n => string.Format(ThIDE.Resources.Tr.Get("FormatAll_LinesDiffer"), n));
+        var summary = string.Format(ThIDE.Resources.Tr.Get("Normalize_Summary"), rows.Count, skipped.Count);
+        if (batch.IsEmpty) { AppServices.Provider.GetService<INotificationService>()?.Info(title, summary); return; }
+        await PreviewAndApplyAsync(title, summary, batch, rows, reload: true);
+    }
+
+    /// <summary>Tools ▸ Renumber stations: a new prefix or a number shift for a survey's stations, previewed, all or nothing.</summary>
+    private async System.Threading.Tasks.Task RenumberStationsAsync()
+    {
+        var docs = AppServices.Provider.GetService<IDocumentService>();
+        if (docs?.Workspace is not { SurveysByFullName.Count: > 0 } ws)
+        {
+            AppServices.Provider.GetService<INotificationService>()?.Info(ThIDE.Resources.Tr.Get("Menu_Tools_Renumber"), ThIDE.Resources.Tr.Get("Renumber_NoSurveys"));
+            return;
+        }
+        var model = new RenumberStationsViewModel(ws, p => CurrentText(docs, p));
+        var window = new RenumberStationsWindow(model);
+        await window.ShowDialog(this);
+        if (!window.Confirmed || model.Plan is not { Ok: true } plan) return;
+        await PreviewAndApplyAsync(ThIDE.Resources.Tr.Get("Menu_Tools_Renumber"), model.Summary, plan.Batch, reload: true, allOrNothing: true);
     }
 
     /// <summary>Tools ▸ Add unreferenced scraps to maps.</summary>
@@ -822,7 +874,7 @@ public partial class MainWindow : Window
             : ThIDE.Resources.Tr.Get("SyncMaps_Summary") + " " + string.Format(ThIDE.Resources.Tr.Get("SyncMaps_Problems"),
                 string.Join(", ", problems.Select(p => $"{p.Map} ({ThIDE.Resources.Tr.Get("SyncMaps_" + p.Problem)})")));
         if (batch.IsEmpty) { n?.Warning(title, summary); return; }
-        await PreviewAndApplyAsync(title, summary, batch);
+        await PreviewAndApplyAsync(title, summary, batch, reload: true);
     }
 
     /// <summary>An arrived (or dropped) file: link a survey, or import Survex/Compass/GPX first.</summary>
@@ -1463,7 +1515,7 @@ public partial class MainWindow : Window
 
     private static string? SafeReadAllText(string path)
     {
-        try { return System.IO.File.ReadAllText(path); } catch { return null; }
+        try { return Therion.Syntax.EncodingResolver.ReadAllText(path); } catch { return null; }
     }
 
     /// <summary>
@@ -1550,7 +1602,7 @@ public partial class MainWindow : Window
         {
             if (!seenPaths.Add(filePath)) continue;   // already handled as the active doc
             string text;
-            try { text = System.IO.File.ReadAllText(filePath); }
+            try { text = Therion.Syntax.EncodingResolver.ReadAllText(filePath); }
             catch { continue; }
 
             var hits = FindRenameHitsInText(text, oldName, nav, kind, targetSpan);
@@ -1605,6 +1657,9 @@ public partial class MainWindow : Window
         Services.IWorkspaceSession? session = null;
         try { session = AppServices.Provider.GetService<Services.IWorkspaceSession>(); } catch { /* design-time */ }
 
+        // Encode every file before writing any: one file whose encoding cannot hold the new name stops
+        // the whole rename, instead of leaving references to a survey that was not renamed.
+        var planned = new List<(RenameFileChanges Changes, string Text, byte[] Bytes, Therion.Workspace.Editing.TextFileFormat Format, ViewModels.Docking.FileDocumentViewModel? Open)>();
         foreach (var fc in changes)
         {
             var sorted = new System.Collections.Generic.List<(int, int)>(fc.Hits);
@@ -1615,8 +1670,29 @@ public partial class MainWindow : Window
                 sb.Remove(start, length).Insert(start, newName);
 
             var newText = sb.ToString();
+            var open = docs.Documents.FirstOrDefault(d => string.Equals(d.FilePath, fc.FilePath, System.StringComparison.OrdinalIgnoreCase));
+            try
+            {
+                var (bytes, format) = await System.Threading.Tasks.Task.Run(() => Therion.Workspace.Editing.SourceFileIo.EncodeForSave(fc.FilePath, newText, open?.Format));
+                planned.Add((fc, newText, bytes, format, open));
+            }
+            catch (Therion.Workspace.Editing.UnrepresentableCharacterException ex)
+            {
+                AppServices.Provider.GetService<INotificationService>()?.Error(ThIDE.Resources.Tr.Get("Notif_SaveEncodingTitle"),
+                    string.Format(ThIDE.Resources.Tr.Get("Notif_SaveEncoding"), System.IO.Path.GetFileName(fc.FilePath), ex.Character, ex.EncodingName));
+                return;
+            }
+            catch { /* unreadable: skipped, as a failed write is below */ }
+        }
+
+        foreach (var (fc, newText, bytes, format, open) in planned)
+        {
             session?.SuppressSelfWrite(fc.FilePath);
-            try { await System.IO.File.WriteAllTextAsync(fc.FilePath, newText); }
+            try
+            {
+                await System.Threading.Tasks.Task.Run(() => Therion.Workspace.Editing.SourceFileIo.WriteOver(fc.FilePath, bytes));
+                if (open is not null) open.Format = format;
+            }
             catch { continue; }
 
             foreach (var doc in docs.Documents)

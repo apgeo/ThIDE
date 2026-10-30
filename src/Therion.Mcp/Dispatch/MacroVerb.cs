@@ -85,7 +85,8 @@ public static class MacroVerb
         if (!json && apply) stdout.WriteLine("Preview:");
         var preview = await runner.RunAsync(macro, vars, apply: false, progress: progress, ct: ct);
         // A failed preview is never applied (the same rule as the app).
-        if (apply && preview.Failed)
+        bool refused = apply && preview.Failed;
+        if (refused)
         {
             stderr.WriteLine("error: the preview failed, so nothing was applied.");
             apply = false;
@@ -98,7 +99,7 @@ public static class MacroVerb
                 macro = macro.Name, applied = run.Applied, failed = run.Failed,
                 steps = run.Steps.Select(s => new { id = s.StepId, tool = s.Tool, status = s.Status.ToString(), summary = s.Summary, error = s.Error }),
             }, new JsonSerializerOptions { WriteIndented = true }));
-        else if (!apply)
+        else if (!apply && !refused)
             stdout.WriteLine("Preview only: nothing was changed. Run again with --apply to make the changes.");
         return run.Failed ? 1 : 0;
     }

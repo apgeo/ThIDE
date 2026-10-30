@@ -2,9 +2,9 @@ using System.ComponentModel;
 using ModelContextProtocol.Server;
 using Therion.Core;
 using Therion.Mcp.Mutations;
-using Therion.Syntax;
 using Therion.Workspace;
 using Therion.Workspace.Editing;
+using Therion.Workspace.Formatting;
 
 namespace Therion.Mcp.Tools;
 
@@ -17,7 +17,7 @@ public sealed record FormatResult(
     bool Changed,
     MutationResult? Mutation);
 
-/// <summary>Ring R2 — re-emitting a file from its parse tree.</summary>
+/// <summary>Ring R2 — re-indenting a file (the editor's Format Document).</summary>
 [McpServerToolType]
 public sealed class FormatTools(IWorkspaceHost host, MutationEngine mutations)
 {
@@ -25,13 +25,15 @@ public sealed class FormatTools(IWorkspaceHost host, MutationEngine mutations)
     private const int MaxReportedErrors = 5;
 
     // Not readOnly (it can write) and destructive (it rewrites an existing file). Idempotent: running
-    // it twice leaves the same bytes, which is the property the formatter is tested against.
+    // it twice leaves the same bytes. It re-indents rather than re-emitting the parse tree: the
+    // writer drops commands it has no typed node for (units, among others).
     [McpServerTool(Name = "format_file", Title = "Format file",
         ReadOnly = false, Destructive = true, Idempotent = true)]
-    [Description("Pretty-prints a Therion file by re-emitting it from its parse tree. Returns the "
+    [Description("Re-indents a Therion file to its block nesting and trims trailing whitespace, "
+               + "like the editor's Format Document; nothing is reordered or dropped. Returns the "
                + "formatted text by default; pass write:true to replace the file, preserving its "
-               + "encoding. Refuses a file with parse errors, because a broken tree cannot be "
-               + "re-emitted without losing text. The write:true preview shows the file as one "
+               + "encoding and line endings. Refuses a file with parse errors, because the nesting "
+               + "of a broken file cannot be trusted. The write:true preview shows the file as one "
                + "elided change — read the text with write:false first if you want to see it.")]
     public async Task<ToolResult<FormatResult>> FormatFile(
         [Description("Workspace-relative path, e.g. 'caves/upper.th'.")]
@@ -72,7 +74,7 @@ public sealed class FormatTools(IWorkspaceHost host, MutationEngine mutations)
         if (Describe(parsed.Diagnostics, snapshot.Root) is { } errors)
             return ToolResult<FormatResult>.Failure(ToolErrorCodes.ParseErrors, errors);
 
-        var formatted = new TherionWriter().Write(parsed.Value);
+        var formatted = TherionReindenter.Format(current.Text, "  ");
 
         bool changed = !string.Equals(current.Text, formatted, StringComparison.Ordinal);
 

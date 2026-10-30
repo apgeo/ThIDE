@@ -90,7 +90,7 @@ public class MacroRunnerTests : IDisposable
     [Fact]
     public void Built_ins_load()
     {
-        Assert.Equal(["release-check", "end-of-trip"], MacroCatalog.BuiltIns.Select(m => m.Name));
+        Assert.Equal(["release-check", "audit", "end-of-trip"], MacroCatalog.BuiltIns.Select(m => m.Name));
     }
 
     [Fact]

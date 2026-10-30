@@ -14,6 +14,9 @@ quick check without opening the GUI:
 therion-cli validate path/to/project.thconfig   # report diagnostics
 therion-cli lint     path/to/file.th             # style / convention lints
 therion-cli format   path/to/file.th --write     # re-indent in place
+therion-cli format   caves --check               # list files that would change; exit 1 if any (CI, pre-commit)
+therion-cli import   raw/trip.csv --out caves/trip.th   # Survex, Compass, GPX or a shot table → new .th
+therion-cli report   path/to/project.thconfig --out output/report.html
 therion-cli stats    path/to/project.thconfig    # length/depth/etc.
 therion-cli deps     path/to/project.thconfig --dot   # include graph (Graphviz)
 therion-cli gis      path/to/project.thconfig --format kml --out entrances.kml
@@ -149,7 +152,14 @@ Arguments may use `${variable}`, `${steps.<id>.<path>}` (a value from an earlier
 types: `text`, `number`, `bool`, `choice` (with `choices`), `file`, `folder`. A task can run a macro
 (`"type": "macro", "macro": "<name>"`). From a terminal:
 `therion-mcp macro run tidy --workspace cave.thconfig --var file=trips/a.th` previews; add `--apply`
-to make the changes (`--json` for a report, `therion-mcp macro list` for the names).
+to make the changes (`--json` for a report, `therion-mcp macro list` for the names). Built-in macros:
+`audit` (diagnostics, survey graph, drawing status), `release-check` (diagnostics, build, HTML report)
+and `end-of-trip` (import a Survex/Compass export, then the warnings).
+
+**One tool from a shell.** `therion-mcp call <tool> --workspace cave.thconfig --arg key=value` (or
+`--args '{"key": …}'`, `--args-file f.json`) calls a single tool and prints its JSON result; the exit
+code is 1 when the tool reports a failure. `therion-mcp call --list` names the tools. Tools that change
+files still preview unless you pass `dryRun=false` (or `write=true` for `format_file`).
 
 **Trust.** Commands from a project only run once you trust its folder: the first time something
 would run, ThIDE names the folder and asks. Your answer is remembered; **Settings → Extensions →

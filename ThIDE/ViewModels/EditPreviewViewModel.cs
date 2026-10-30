@@ -22,9 +22,11 @@ public sealed partial class EditPreviewViewModel : ObservableObject
 {
     private readonly EditBatch _batch;
 
-    public EditPreviewViewModel(string title, string summary, EditBatch batch, IReadOnlyList<EditPreviewRow> rows, string? root)
+    /// <param name="allOrNothing">The edits only make sense together (a renumbering): no unticking.</param>
+    public EditPreviewViewModel(string title, string summary, EditBatch batch, IReadOnlyList<EditPreviewRow> rows, string? root, bool allOrNothing = false)
     {
         Title = title;
+        CanChoose = !allOrNothing;
         Summary = summary;
         _batch = batch;
         foreach (var r in rows)
@@ -38,6 +40,7 @@ public sealed partial class EditPreviewViewModel : ObservableObject
 
     public string Title { get; }
     public string Summary { get; }
+    public bool CanChoose { get; }
     public ObservableCollection<EditPreviewItem> Items { get; } = new();
     public int CheckedCount => Items.Count(i => i.IsChecked);
 

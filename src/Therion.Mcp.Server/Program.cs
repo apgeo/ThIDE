@@ -23,6 +23,29 @@ if (args is ["macro", ..])
 
 // skills print: the text ThIDE's assistant adds to its instructions, for a host's system prompt
 // (LM Studio's preset), optionally with the user's and the project's notes appended.
+if (args is ["call", ..])
+{
+    using var cancel = new CancellationTokenSource();
+    Console.CancelKeyPress += (_, e) => { e.Cancel = true; cancel.Cancel(); };
+    return await Therion.Mcp.Dispatch.CallVerb.RunAsync(args, Console.Out, Console.Error, s => s.BuildServiceProvider(), cancel.Token);
+}
+
+// skills preset: the same text as an LM Studio preset file (config-presets/*.preset.json).
+if (args is ["skills", "preset", ..])
+{
+    static string? ReadOpt(string[] a, string name) => GetOption(a, name) is { } f ? File.ReadAllText(f) : null;
+    try
+    {
+        var (text, warnings) = Therion.Assistant.Skills.SkillPack.Assemble(ReadOpt(args, "--user"), ReadOpt(args, "--project"));
+        foreach (var w in warnings) Console.Error.WriteLine(w);
+        var preset = Therion.Assistant.Skills.SkillPack.LmStudioPreset(text);
+        if (GetOption(args, "--out") is { } outPath) { File.WriteAllText(outPath, preset); Console.Error.WriteLine($"wrote {outPath}"); }
+        else Console.Write(preset);
+        return 0;
+    }
+    catch (IOException ex) { Console.Error.WriteLine(ex.Message); return 1; }
+}
+
 if (args is ["skills", "print", ..])
 {
     static string? ReadOpt(string[] a, string name) => GetOption(a, name) is { } f ? File.ReadAllText(f) : null;
@@ -161,9 +184,15 @@ static void PrintHelp()
     Console.WriteLine("  therion-mcp macro run <name|file.json> --workspace <path> [--var key=value]… [--apply] [--json]");
     Console.WriteLine("                       Run a macro (a list of tool calls) without a model. Without");
     Console.WriteLine("                       --apply only the preview runs and nothing is changed.");
+    Console.WriteLine("  therion-mcp call --list [--json]");
+    Console.WriteLine("  therion-mcp call <tool> --workspace <path> [--args '{json}' | --args-file <f>] [--arg key=value]…");
+    Console.WriteLine("                       Call one tool and print its JSON result (exit 1 if it failed).");
+    Console.WriteLine("                       Tools that change files preview unless told dryRun:false.");
     Console.WriteLine("  therion-mcp skills print [--user <notes.md>] [--project <notes.md>]");
     Console.WriteLine("                       Print the skill pack (what a model should know about");
     Console.WriteLine("                       Therion and these tools) for a host's system prompt.");
+    Console.WriteLine("  therion-mcp skills preset [--user <notes.md>] [--project <notes.md>] [--out <f.preset.json>]");
+    Console.WriteLine("                       The same text as an LM Studio preset (config-presets folder).");
     Console.WriteLine();
     Console.WriteLine("Options:");
     Console.WriteLine("  --workspace <path>   Open this .thconfig, .th, or project folder up front.");

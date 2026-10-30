@@ -70,7 +70,7 @@ public static class MapSync
                 list.Add(edit);
             }
         }
-        var batch = new EditBatch(groups.Select(g => new FileTextEdits(g.Key, g.Value)).ToList(), [], [], RequiresWorkspaceReload: true);
+        var batch = new EditBatch(groups.Select(g => new FileTextEdits(g.Key, g.Value)).ToList(), [], []);
         return (batch, problems);
     }
 

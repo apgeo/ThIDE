@@ -33,9 +33,9 @@ public class FormatToolsTests
         Assert.Equal(before, File.ReadAllText(fixture.PathTo("caves", "upper.th")));
     }
 
-    /// <summary>The text is whatever TherionWriter emits — the same thing `therion-cli format` prints.</summary>
+    /// <summary>The text is the editor's re-indent — the same thing `therion-cli format` prints.</summary>
     [Fact]
-    public async Task Text_is_what_the_writer_emits()
+    public async Task Text_is_the_reindented_file()
     {
         using var fixture = FixtureWorkspace.Create();
         var tools = await LoadedToolsAsync(fixture);
@@ -43,9 +43,23 @@ public class FormatToolsTests
 
         var result = await tools.FormatFile("caves/upper.th");
 
-        var expected = new TherionWriter().Write(
-            new ThParser().Parse(path, EncodingResolver.ReadAllText(path)).Value!);
+        var expected = Therion.Workspace.Formatting.TherionReindenter.Format(EncodingResolver.ReadAllText(path), "  ");
         Assert.Equal(expected, result.Data!.Text);
+    }
+
+    /// <summary>The parse-tree writer has no node for some commands; a formatter must never lose them.</summary>
+    [Fact]
+    public async Task Commands_the_writer_cannot_emit_survive()
+    {
+        using var fixture = FixtureWorkspace.Create();
+        var path = fixture.PathTo("caves", "upper.th");
+        File.WriteAllText(path, "survey upper\ncentreline\nunits length meters\n   units compass clino degrees\ndata normal from to length compass clino\n1 2 3.0 4 5\nendcentreline\nendsurvey\n");
+        var tools = await LoadedToolsAsync(fixture);
+
+        var result = await tools.FormatFile("caves/upper.th");
+
+        Assert.True(result.Ok, result.Error?.Message);
+        Assert.Contains("    units length meters\n    units compass clino degrees\n", result.Data!.Text);
     }
 
     /// <summary>A formatter that keeps changing its mind cannot be run in a loop or a commit hook.</summary>
@@ -234,6 +248,11 @@ public class FormatToolsTests
 
     private static async Task<FormatTools> LoadedToolsAsync(FixtureWorkspace fixture)
     {
+        // The fixture is tidy already; flatten its indentation so formatting has work to do.
+        var upper = fixture.PathTo("caves", "upper.th");
+        var bytes = File.ReadAllBytes(upper);
+        var latin1 = System.Text.Encoding.Latin1.GetString(bytes);
+        File.WriteAllBytes(upper, System.Text.Encoding.Latin1.GetBytes(string.Join("\n", latin1.Split('\n').Select(l => l.TrimStart()))));
         var host = new WorkspaceHost();
         await host.LoadAsync(fixture.Thconfig);
         return new FormatTools(host, new MutationEngine(host));

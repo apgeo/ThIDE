@@ -219,7 +219,7 @@ public sealed partial class NewTripViewModel : ObservableObject
             || SurveyName.Trim().IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
             warnings.Add(new(Tr.Get("NewTrip_BadName"), true));
         if (!ScaffoldValueRules.IsStationRef(FirstStation.Trim()) || FirstStation.Contains('@')) warnings.Add(new(Tr.Get("NewTrip_BadStation"), true));
-        if (!System.Text.RegularExpressions.Regex.IsMatch(Date.Trim(), @"^\d{4}(\.\d{1,2}(\.\d{1,2})?)?$"))
+        if (!TripDefaults.IsDate(Date))
             warnings.Add(new(Tr.Get("NewTrip_BadDate"), true));
         if (Stations.SelectedStation is not { } tie || SelectedDestination is not { } dest || _ctx is null)
         {
@@ -255,7 +255,7 @@ public sealed partial class NewTripViewModel : ObservableObject
         var batch = new EditBatch(plan.Batch.Edits, [new FileCreate(FilePath, text)], [], RequiresWorkspaceReload: true);
         var outcome = await _env.Editor.ApplyAsync(batch);
         if (!outcome.Success)
-            return outcome.Error ?? string.Join("; ", outcome.Problems.Select(p => string.Format(Tr.Get("Edit_Problem" + p.Kind), Path.GetFileName(p.FilePath))));
+            return outcome.Describe();
         await _env.Open(FilePath, caret);
         return null;
     }
