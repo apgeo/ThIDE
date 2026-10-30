@@ -15,34 +15,31 @@ public enum ImportFormat
     Survex,
     /// <summary>GPS waypoints, <c>.gpx</c> — becomes a survey of fixed stations.</summary>
     Gpx,
+    /// <summary>A table of shots, <c>.csv</c> / <c>.tsv</c> (a spreadsheet, PocketTopo or DistoX export).</summary>
+    Csv,
 }
 
 /// <param name="Text">The generated Therion source, on a dry run. Null once it has been written.</param>
 /// <param name="Truncated">The text was longer than the byte budget and was cut.</param>
 /// <param name="Target">Workspace-relative path of the .th, when one was named.</param>
+/// <param name="Warnings">What looked wrong in a shot table (line, value), so the result can be checked.</param>
 public sealed record ImportResult(
     string Format,
     string? Text,
     bool Truncated,
     string? Target,
-    MutationResult? Mutation);
+    MutationResult? Mutation,
+    IReadOnlyList<string>? Warnings = null);
 
 /// <summary>Ring R2 — translating another program's survey file into Therion.</summary>
 [McpServerToolType]
 public sealed class ImportTools(IWorkspaceHost host, MutationEngine mutations)
 {
-    /// <summary>Extension → format. Anything else needs the caller to say which format it is.</summary>
-    private static readonly Dictionary<string, ImportFormat> ByExtension = new(StringComparer.OrdinalIgnoreCase)
-    {
-        [".dat"] = ImportFormat.Compass,
-        [".svx"] = ImportFormat.Survex,
-        [".gpx"] = ImportFormat.Gpx,
-    };
-
     // Create-only, like the scaffolds: it writes a new .th and refuses an existing one.
     [McpServerTool(Name = "import_survey", Title = "Import survey",
         ReadOnly = false, Destructive = false, Idempotent = false)]
-    [Description("Translates a Compass (.dat), Survex (.svx) or GPX (.gpx) file into Therion source. "
+    [Description("Translates a Compass (.dat), Survex (.svx), GPX (.gpx) or shot-table (.csv/.tsv: "
+               + "from to length compass clino, with or without a header) file into Therion source. "
                + "Returns the generated text by default; give a target and dryRun:false to write it "
                + "to a new .th, which is never overwritten. The format is taken from the extension "
                + "unless you name it. Compass column-order overrides (FORMAT) and .mak project files "
@@ -52,10 +49,11 @@ public sealed class ImportTools(IWorkspaceHost host, MutationEngine mutations)
         string source,
         [Description("Workspace-relative .th to create. Omit to only look at the generated text.")]
         string? target = null,
-        [Description("compass, survex, or gpx. Taken from the source's extension when omitted.")]
+        [Description("compass, survex, gpx, or csv. Taken from the source's extension when omitted.")]
         string? format = null,
-        [Description("Name for the generated survey. GPX only; the others carry their own names.")]
-        string surveyName = "gps",
+        [Description("Name for the generated survey (GPX and csv; the others carry their own names). "
+                   + "Defaults to 'gps' for GPX and the file's name for csv.")]
+        string? surveyName = null,
         [Description("Preview without writing. Defaults to true — pass false to create the target.")]
         bool dryRun = true,
         [Description("Byte budget for the returned text; capped at 1000000, defaults to 100000.")]
@@ -104,10 +102,15 @@ public sealed class ImportTools(IWorkspaceHost host, MutationEngine mutations)
             return Fail(ToolErrorCodes.ImportFailed,
                 $"'{source}' holds no waypoints — it is empty, or it is not gpx.");
 
+        surveyName = string.IsNullOrWhiteSpace(surveyName)
+            ? resolved == ImportFormat.Csv ? ScaffoldValueRules.SafeSurveyName(Path.GetFileNameWithoutExtension(sourceFull)) : "gps"
+            : surveyName;
+
         string therion;
+        var issues = new List<ShotIssue>();
         try
         {
-            therion = Translate(resolved, text, surveyName);
+            therion = SurveyImport.Translate(Enum.Parse<SurveyImportFormat>(resolved.ToString()), text, surveyName, issues: issues);
         }
         catch (Exception ex)
         {
@@ -120,25 +123,18 @@ public sealed class ImportTools(IWorkspaceHost host, MutationEngine mutations)
 
         var relativeTarget = targetFull is null ? null : WorkspacePaths.ToRelative(root, targetFull);
 
+        var warnings = issues.Count == 0 ? null : issues.Select(ShotTableReader.Describe).ToList();
         if (targetFull is null)
-            return Success(resolved, Cap(therion, maxBytes, out var truncated), truncated, null, null);
+            return Success(resolved, Cap(therion, maxBytes, out var truncated), truncated, null, null, warnings);
 
         var plan = new MutationPlan([new CreateFile(targetFull, therion)]);
         var applied = await mutations.ApplyAsync(plan, dryRun, expectedSha256: null, ct);
         if (applied.Error is { } failure) return ToolResult<ImportResult>.Failure(failure);
 
         return dryRun
-            ? Success(resolved, Cap(therion, maxBytes, out var cut), cut, relativeTarget, applied.Data)
-            : Success(resolved, null, false, relativeTarget, applied.Data);
+            ? Success(resolved, Cap(therion, maxBytes, out var cut), cut, relativeTarget, applied.Data, warnings)
+            : Success(resolved, null, false, relativeTarget, applied.Data, warnings);
     }
-
-    private static string Translate(ImportFormat format, string text, string surveyName) => format switch
-    {
-        ImportFormat.Compass => CompassImporter.Import(text),
-        ImportFormat.Survex => SurvexImporter.Import(text),
-        ImportFormat.Gpx => GpxImporter.ToTherion(text, surveyName),
-        _ => throw new ArgumentOutOfRangeException(nameof(format)),
-    };
 
     private static bool TryResolveFormat(string? format, string sourcePath, out ImportFormat resolved, out string error)
     {
@@ -151,10 +147,14 @@ public sealed class ImportTools(IWorkspaceHost host, MutationEngine mutations)
             return false;
         }
 
-        var extension = Path.GetExtension(sourcePath);
-        if (ByExtension.TryGetValue(extension, out resolved)) return true;
+        if (SurveyImport.TryResolveFormat(null, sourcePath, out var byExtension, out _))
+        {
+            resolved = Enum.Parse<ImportFormat>(byExtension.ToString());
+            return true;
+        }
 
-        error = $"Cannot tell what '{extension}' is. Name the format: {ToolEnums.Names<ImportFormat>()}.";
+        error = $"Cannot tell what '{Path.GetExtension(sourcePath)}' is. Name the format: {ToolEnums.Names<ImportFormat>()}.";
+        resolved = default;
         return false;
     }
 
@@ -168,8 +168,8 @@ public sealed class ImportTools(IWorkspaceHost host, MutationEngine mutations)
     private static string Name(ImportFormat format) => format.ToString().ToLowerInvariant();
 
     private static ToolResult<ImportResult> Success(
-        ImportFormat format, string? text, bool truncated, string? target, MutationResult? mutation) =>
-        ToolResult<ImportResult>.Success(new ImportResult(Name(format), text, truncated, target, mutation));
+        ImportFormat format, string? text, bool truncated, string? target, MutationResult? mutation, IReadOnlyList<string>? warnings = null) =>
+        ToolResult<ImportResult>.Success(new ImportResult(Name(format), text, truncated, target, mutation, warnings));
 
     private static ToolResult<ImportResult> Fail(string code, string message) =>
         ToolResult<ImportResult>.Failure(code, message);

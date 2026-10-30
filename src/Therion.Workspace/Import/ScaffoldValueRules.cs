@@ -22,6 +22,18 @@ public static class ScaffoldValueRules
     private static readonly Regex ExtensionRx = new("^[A-Za-z0-9_.-]*$", RegexOptions.CultureInvariant);
 
     public static bool IsSurveyName(string value) => SurveyNameRx.IsMatch(value);
+
+    /// <summary>
+    /// A survey name made from <paramref name="value"/> (a file name, say): characters a keyword cannot
+    /// hold become <c>_</c>, a leading <c>-</c> too. <c>survey</c> when nothing is left.
+    /// </summary>
+    public static string SafeSurveyName(string value)
+    {
+        var chars = value.Trim().Select(c => c is (>= 'A' and <= 'Z') or (>= 'a' and <= 'z') or (>= '0' and <= '9') or '_' or '/' or '-' ? c : '_').ToArray();
+        if (chars.Length > 0 && chars[0] == '-') chars[0] = '_';
+        var name = new string(chars);
+        return name.Length == 0 ? "survey" : name;
+    }
     public static bool IsStationRef(string value) => StationRefRx.IsMatch(value);
     public static bool IsEncoding(string value) => EncodingRx.IsMatch(value);
     public static bool IsCoordinateSystem(string value) => CoordinateSystemRx.IsMatch(value);
