@@ -1914,8 +1914,18 @@ public partial class MainWindowViewModel : ViewModelBase
             merged.AddRange(_documents.CurrentDiagnostics);
             return merged.ToImmutable();
         }
+        // File scope still lists the active file's broken includes: they come from the project
+        // analysis (it is what probes the disk), not from the file's own parse.
+        if (_documents.Workspace is { } fileWs && _documents.CurrentPath is { } current)
+        {
+            var includes = ProjectAnalysisDiagnostics(fileWs).Where(d => IsIncludeCode(d.Code.Value) && IsActiveFile(d.Span.FilePath, current));
+            if (includes.Any()) return _documents.CurrentDiagnostics.AddRange(includes);
+        }
         return _documents.CurrentDiagnostics;
     }
+
+    private static bool IsIncludeCode(string code) =>
+        code is Therion.Semantics.SemanticDiagnosticCodes.DanglingReference or Therion.Semantics.SemanticDiagnosticCodes.WindowsPathSeparator;
 
     /// <summary>True when <paramref name="path"/> is the active document (path-normalized).</summary>
     private static bool IsActiveFile(string? path, string? activePath)

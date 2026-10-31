@@ -102,6 +102,8 @@ public partial class MainWindow : Window
                     incoming.Changed += (_, _) => vm.RefreshWatchIncoming();
                 }
                 vm.Diagnostics.FixAllRequested += (_, code) => _ = FixAllAsync(vm, code);
+                ThIDE.ViewModels.Docking.FileDocumentViewModel.FixPathSeparatorsInWorkspaceRequested += (_, doc) =>
+                    Avalonia.Threading.Dispatcher.UIThread.Post(() => _ = FixPathSeparatorsInWorkspaceAsync(doc.FilePath));
                 ThIDE.Editor.TherionTextEditor.LinkSurveyRequested += (_, req) =>
                     Avalonia.Threading.Dispatcher.UIThread.Post(() => _ = ShowLinkSurveyAsync(req.FilePath, req.Caret));
                 BuildRecentMenu(vm);
@@ -816,6 +818,37 @@ public partial class MainWindow : Window
             .Where(f => f.EndsWith(".th", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".th2", StringComparison.OrdinalIgnoreCase)
                      || f.EndsWith(".thconfig", StringComparison.OrdinalIgnoreCase))
             .ToList();
+
+    /// <summary>
+    /// The path-separator banner's workspace button: every include path in the workspace written with
+    /// Windows '\' separators that '/' turns into an existing file, previewed, then rewritten.
+    /// </summary>
+    private async System.Threading.Tasks.Task FixPathSeparatorsInWorkspaceAsync(string requestingFile)
+    {
+        var docs = AppServices.Provider.GetService<IDocumentService>();
+        var files = new List<string> { requestingFile };
+        if (docs?.Workspace is { } ws) files.AddRange(ProjectSourceFiles(ws));
+        // Files outside the project graph too: a broken include may be what cut them off from it.
+        files.AddRange(TherionFilesUnder(AppServices.Provider.GetService<IWorkspaceSession>()?.RootPath));
+        var (batch, rows) = Therion.Workspace.Fixes.PathSeparatorFixes.Plan(files, p => CurrentText(docs, p), File.Exists);
+        var title = ThIDE.Resources.Tr.Get("PathSep_Title");
+        if (batch.IsEmpty) { AppServices.Provider.GetService<INotificationService>()?.Info(title, ThIDE.Resources.Tr.Get("PathSep_None")); return; }
+        await PreviewAndApplyAsync(title, string.Format(ThIDE.Resources.Tr.Get("PathSep_Summary"), rows.Count, batch.Edits.Count), batch, rows, reload: true);
+    }
+
+    /// <summary>Every .th / .th2 / thconfig file below <paramref name="root"/> (none when it is unset).</summary>
+    private static IEnumerable<string> TherionFilesUnder(string? root)
+    {
+        if (string.IsNullOrEmpty(root) || !Directory.Exists(root)) return [];
+        var opts = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true };
+        try
+        {
+            return Directory.EnumerateFiles(root, "*", opts).Where(f =>
+                Path.GetExtension(f).ToLowerInvariant() is ".th" or ".th2" or ".thconfig" or ".thc"
+                || string.Equals(Path.GetFileName(f), "thconfig", StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return []; }
+    }
 
     /// <summary>Tools ▸ Normalise project: Format all plus line endings, UTF-8 and sorted inputs, previewed first.</summary>
     private async System.Threading.Tasks.Task NormalizeProjectAsync()

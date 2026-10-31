@@ -1532,6 +1532,14 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Fix_InsertEnd" xml:space="preserve"><value>Insert '{0}'</value></data>
   <data name="Fix_InsertCs" xml:space="preserve"><value>Insert 'cs ' line</value></data>
   <data name="Fix_CommentOut" xml:space="preserve"><value>Comment out this line</value></data>
+  <data name="Fix_PathSeparators" xml:space="preserve"><value>Write '{0}' with '/' separators</value></data>
+  <data name="File_PathSeparatorBanner" xml:space="preserve"><value>{0} include path(s) in this file use Windows '\' separators. Therion cannot open them on this system, but written with '/' they name existing files.</value></data>
+  <data name="File_PathSeparatorFixFile" xml:space="preserve"><value>Fix in this file</value></data>
+  <data name="File_PathSeparatorFixWorkspace" xml:space="preserve"><value>Fix in entire workspace…</value></data>
+  <data name="File_PathSeparatorFixed" xml:space="preserve"><value>Rewrote {0} include path(s) with '/' separators.</value></data>
+  <data name="PathSep_Title" xml:space="preserve"><value>Fix Windows path separators</value></data>
+  <data name="PathSep_Summary" xml:space="preserve"><value>{0} include path(s) in {1} file(s) will be written with '/' separators.</value></data>
+  <data name="PathSep_None" xml:space="preserve"><value>No include path in the workspace needs its separators fixed.</value></data>
   <data name="Fix_CreateFile" xml:space="preserve"><value>Create file '{0}'</value></data>
   <data name="Diag_Fix" xml:space="preserve"><value>Fix</value></data>
   <data name="Diag_FixAll" xml:space="preserve"><value>Fix all '{0}' in the workspace…</value></data>

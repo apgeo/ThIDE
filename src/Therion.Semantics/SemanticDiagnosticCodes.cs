@@ -36,6 +36,11 @@ public static class SemanticDiagnosticCodes
     /// with no defined position relative to the rest of the cave.
     /// </summary>
     public const string DisconnectedSurvey   = "TH_SEM_015";
+    /// <summary>
+    /// An include target written with Windows <c>\</c> separators, which Therion on Linux/macOS cannot
+    /// open, while the same path written with <c>/</c> names an existing file.
+    /// </summary>
+    public const string WindowsPathSeparator = "TH_SEM_016";
 
     // XVI semantic code: a `-sketch` target referenced from a .th2 scrap doesn't exist on disk.
     // (Syntax-layer XVI codes live in Therion.Syntax.DiagnosticCodes as TH_XVI_001..004.)

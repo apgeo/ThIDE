@@ -17,7 +17,11 @@ namespace Therion.Semantics;
 /// <paramref name="Site"/> — the span of the <c>source</c> / <c>input</c> / <c>sketch</c> command
 /// that names it. The site is what lets a "file not found" diagnostic underline the real line.
 /// </summary>
-public readonly record struct FileGraphEdge(string From, string To, SourceSpan Site);
+public readonly record struct FileGraphEdge(string From, string To, SourceSpan Site)
+{
+    /// <summary>The target as written in <see cref="From"/>, when the edge comes from an include command.</summary>
+    public string? Token { get; init; }
+}
 
 /// <summary>
 /// Cross-file semantic snapshot for an entire workspace.
@@ -448,7 +452,9 @@ public sealed class WorkspaceSemanticModel
         System.Func<string, bool> loaded,
         ImmutableArray<FileGraphEdge>.Builder edges)
     {
-        foreach (var (dep, site) in SourceGraph.DependencySites(file, parentPath, loaded))
-            edges.Add(new FileGraphEdge(parentPath, dep, site));
+        var dir = System.IO.Path.GetDirectoryName(parentPath) ?? string.Empty;
+        foreach (var (token, site) in SourceGraph.DependencyTokenSites(file))
+            if (SourceGraph.ResolveDependencyToken(token, dir, loaded) is { } dep)
+                edges.Add(new FileGraphEdge(parentPath, dep, site) { Token = token });
     }
 }

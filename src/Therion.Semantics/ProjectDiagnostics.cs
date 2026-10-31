@@ -478,16 +478,39 @@ public static class ProjectDiagnostics
         // Deduplicate per (including file, target): the same missing file referenced from two places
         // is two problems, and each `source`/`input` line deserves its own squiggle.
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var (from, to, site) in ws.FileGraphEdges)
+        foreach (var edge in ws.FileGraphEdges)
         {
+            var (from, to, site) = edge;
             if (string.IsNullOrEmpty(to) || !seen.Add(from + "\0" + to)) continue;
-            if (fileExists(to)) continue;
+            if (fileExists(to))
+            {
+                WindowsSeparator(edge, fileExists, diags);
+                continue;
+            }
             diags.Add(Diagnostic.Create(
                 SemanticDiagnosticCodes.DanglingReference,
                 DiagnosticSeverity.Warning,
                 $"File not found: '{to}', referenced by {System.IO.Path.GetFileName(from)}.",
                 SiteOrTopOf(from, site)));
         }
+    }
+
+    // The graph reads `date\a.th` as `date/a.th` so the project still loads, but Therion off Windows
+    // cannot open it: the target exists only under the `/` spelling. The message quotes the token
+    // as written first — the quick fix finds it on the line by that.
+    private static void WindowsSeparator(FileGraphEdge edge, Func<string, bool> fileExists,
+        ImmutableArray<Diagnostic>.Builder diags)
+    {
+        if (edge.Token is not { } token) return;
+        var dir = System.IO.Path.GetDirectoryName(edge.From) ?? string.Empty;
+        if (Therion.Syntax.SourceGraph.WindowsSeparatorTarget(token, dir, fileExists) is null) return;
+        var portable = Therion.Syntax.SourceGraph.PortableSeparators(token)!;
+        diags.Add(Diagnostic.Create(
+            SemanticDiagnosticCodes.WindowsPathSeparator,
+            DiagnosticSeverity.Warning,
+            $"File not found: '{token}' — '\\' is not a path separator on this system. '{portable}' exists.",
+            SiteOrTopOf(edge.From, edge.Site),
+            hint: $"Write the path with '/', which Therion reads on every platform: '{portable}'."));
     }
 
     /// <summary>

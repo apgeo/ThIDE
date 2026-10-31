@@ -38,6 +38,23 @@
             </DockPanel>
         </Border>
 
+        <!-- Include paths written with Windows '\' separators that '/' would make valid here. -->
+        <Border Background="#FFF8E1" Padding="10,5" IsVisible="{Binding ShowPathSeparatorBanner}"
+                AutomationProperties.AutomationId="Document.PathSeparatorBanner">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
+                    <Button AutomationProperties.AutomationId="Document.PathSeparator.FixFile" Content="{l:Loc File_PathSeparatorFixFile}" Padding="8,2" Command="{Binding FixPathSeparatorsCommand}" />
+                    <Button AutomationProperties.AutomationId="Document.PathSeparator.FixWorkspace" Content="{l:Loc File_PathSeparatorFixWorkspace}" Padding="8,2" Command="{Binding FixPathSeparatorsInWorkspaceCommand}" />
+                    <Button Content="&#x2715;" Padding="6,1"
+                            AutomationProperties.AutomationId="Document.PathSeparator.Dismiss" AutomationProperties.Name="{l:Loc File_Dismiss}"
+                            Background="Transparent" BorderThickness="0" Foreground="#8D6E00"
+                            Command="{Binding DismissPathSeparatorsCommand}" />
+                </StackPanel>
+                <TextBlock Text="{Binding PathSeparatorBannerText}" Foreground="#8D6E00"
+                           VerticalAlignment="Center" TextWrapping="Wrap" />
+            </DockPanel>
+        </Border>
+
         <!-- Transient info banner (#6): silent reload-from-disk notice. -->
         <Border Background="#E3F2FD" Padding="10,5"
                 IsVisible="{Binding InfoBanner, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">

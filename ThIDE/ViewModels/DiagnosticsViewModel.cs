@@ -37,7 +37,7 @@ public partial class DiagnosticsViewModel : ViewModelBase
     // Reference-resolution codes: the "References" category filter narrows to these.
     private static readonly HashSet<string> ReferenceCodes = new(StringComparer.Ordinal)
     {
-        "TH_SEM_001", "TH_SEM_003", "TH_SEM_014", "TH_WS_001",
+        "TH_SEM_001", "TH_SEM_003", "TH_SEM_014", "TH_SEM_016", "TH_WS_001",
     };
 
     private readonly IThbookDocumentationService? _docs;

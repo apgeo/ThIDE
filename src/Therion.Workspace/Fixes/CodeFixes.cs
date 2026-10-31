@@ -15,6 +15,7 @@ public static partial class CodeFixes
 {
     public const string UnresolvedStation = "TH_SEM_001";
     public const string UnterminatedBlock = "TH0020";
+    public const string WindowsPathSeparator = "TH_SEM_016";
 
     private static readonly Dictionary<string, string> Enders = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -30,11 +31,11 @@ public static partial class CodeFixes
     private static partial Regex Suggestion();
 
     /// <summary>Codes "fix all" can handle.</summary>
-    public static IReadOnlySet<string> BatchCodes { get; } = new HashSet<string> { UnresolvedStation, UnterminatedBlock };
+    public static IReadOnlySet<string> BatchCodes { get; } = new HashSet<string> { UnresolvedStation, UnterminatedBlock, WindowsPathSeparator };
 
     /// <summary>
-    /// The fixes for one line (1-based), in menu order: rename to a suggested name, insert a missing
-    /// terminator, insert a cs line into a centreline without one, comment the line out.
+    /// The fixes for one line (1-based), in menu order: rename to a suggested name, rewrite a Windows
+    /// path separator, insert a missing terminator, insert a cs line into a centreline without one, comment the line out.
     /// </summary>
     public static IReadOnlyList<CodeFix> ForLine(string text, int lineNumber, IReadOnlyList<Diagnostic> diagnostics)
     {
@@ -47,6 +48,8 @@ public static partial class CodeFixes
 
         foreach (var d in diagnostics.Where(d => d.Span.Start.Line == lineNumber))
             if (Rename(lines, d) is { } rename) fixes.Add(rename);
+        foreach (var d in diagnostics.Where(d => d.Span.Start.Line == lineNumber && d.Code.Value == WindowsPathSeparator))
+            if (Separators(lines, d) is { } separators) fixes.Add(separators);
         if (Terminator(lines, lineNumber) is { } end) fixes.Add(end);
         if (fw is "centreline" or "centerline" && !BodyHasKeyword(lines, lineNumber, "cs"))
             fixes.Add(new CodeFix("Fix_InsertCs", [], null, [TextEdit.Insert(lines.End(lineNumber), lines.NewLine + indent + "  cs ")], false));
@@ -67,6 +70,7 @@ public static partial class CodeFixes
         {
             UnresolvedStation => Rename(lines, d),
             UnterminatedBlock => Terminator(lines, line) ?? TerminatorForUnclosed(lines, line),
+            WindowsPathSeparator => Separators(lines, d),
             _ => null,
         };
         return fix is { SafeForBatch: true } ? fix : null;
@@ -88,6 +92,20 @@ public static partial class CodeFixes
         int i = hits[0];
         bool safe = suggestions.Count == 1 && hits.Count == 1;
         return new CodeFix("Fix_Rename", [from, to], d.Code.Value, [new TextEdit(lines.Start(line) + i, from.Length, from, to)], safe);
+    }
+
+    // `input date\a.th` → `input date/a.th`: the path is the first quoted text of the message. Safe when
+    // it is an argument of the line exactly once.
+    private static CodeFix? Separators(Lines lines, Diagnostic d)
+    {
+        int line = d.Span.Start.Line;
+        var quoted = Quoted().Match(d.Message ?? "");
+        if (!quoted.Success || Therion.Syntax.SourceGraph.PortableSeparators(quoted.Groups[1].Value) is not { } portable) return null;
+        string from = quoted.Groups[1].Value;
+        var hits = PathSeparatorFixes.Arguments(lines.Text(line)).Where(a => a.Token == from).ToList();
+        if (hits.Count == 0) return null;
+        return new CodeFix("Fix_PathSeparators", [from, portable], d.Code.Value,
+            [new TextEdit(lines.Start(line) + hits[0].Column, from.Length, from, portable)], hits.Count == 1);
     }
 
     // Positions where `token` stands alone (whitespace, line ends or a comment around it).
