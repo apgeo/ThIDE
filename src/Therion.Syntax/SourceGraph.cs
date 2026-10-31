@@ -79,20 +79,58 @@ public static class SourceGraph
     {
         var dir = Path.GetDirectoryName(parentPath ?? file.Path) ?? string.Empty;
         foreach (var (token, span) in DependencyTokenSites(file))
+            if (ResolveDependencyToken(token, dir, exists) is { } full)
+                yield return (full, span);
+    }
+
+    /// <summary>
+    /// One raw include token resolved the way <see cref="DependencySites"/> resolves it, against
+    /// <paramref name="directory"/> (the including file's folder); null for a malformed path.
+    /// </summary>
+    public static string? ResolveDependencyToken(string token, string directory, Func<string, bool>? exists = null)
+    {
+        var rel = token.Replace('\\', '/').Replace('/', Path.DirectorySeparatorChar);
+        try
         {
-            var rel = token.Replace('\\', '/').Replace('/', Path.DirectorySeparatorChar);
-            string full;
-            try
-            {
-                var combined = Path.IsPathRooted(rel) ? rel : Path.Combine(dir, rel);
-                var absolute = Path.GetFullPath(combined);
-                full = exists is null
-                    ? WithDefaultIncludeExtension(absolute)
-                    : ResolveIncludePath(absolute, exists);
-            }
-            catch { continue; } // malformed path token — skip rather than throw.
-            yield return (full, span);
+            var combined = Path.IsPathRooted(rel) ? rel : Path.Combine(directory, rel);
+            var absolute = Path.GetFullPath(combined);
+            return exists is null
+                ? WithDefaultIncludeExtension(absolute)
+                : ResolveIncludePath(absolute, exists);
         }
+        catch { return null; } // malformed path token — skip rather than throw.
+    }
+
+    /// <summary>
+    /// The include graph reads <c>\</c> as a separator on every host so a project written on Windows
+    /// still loads, but Therion itself does not: on Linux and macOS <c>input date\a.th</c> names a
+    /// file literally called <c>date\a.th</c> and the build fails. Returns the file the token means
+    /// when spelt with <c>/</c> — only when the token is relative, the name as written does not exist
+    /// and the <c>/</c> spelling does (so on Windows, where both spellings are the same file, never).
+    /// Rooted Windows paths (<c>C:\…</c>, <c>\\server\…</c>) are left alone: no spelling fixes them here.
+    /// </summary>
+    public static string? WindowsSeparatorTarget(string token, string directory, Func<string, bool> exists)
+    {
+        if (PortableSeparators(token) is not { } portable) return null;
+        try
+        {
+            if (IncludeCandidates(Path.GetFullPath(Path.Combine(directory, token))).Any(exists)) return null;
+            var full = Path.GetFullPath(Path.Combine(directory, portable.Replace('/', Path.DirectorySeparatorChar)));
+            return IncludeCandidates(full).FirstOrDefault(exists);
+        }
+        catch { return null; }
+    }
+
+    /// <summary>
+    /// <paramref name="token"/> with every <c>\</c> turned into <c>/</c> (which Therion accepts on every
+    /// platform), or null when it has none or is not a relative path a separator change could fix.
+    /// </summary>
+    public static string? PortableSeparators(string token)
+    {
+        if (string.IsNullOrEmpty(token) || !token.Contains('\\')) return null;
+        if (token[0] is '\\' or '/' || token.EndsWith('\\')) return null;
+        if (token.Length >= 2 && token[1] == ':' && char.IsAsciiLetter(token[0])) return null;
+        return token.Replace('\\', '/');
     }
 
     /// <summary>

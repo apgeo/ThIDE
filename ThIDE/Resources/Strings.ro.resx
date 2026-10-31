@@ -1532,6 +1532,14 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Fix_InsertEnd" xml:space="preserve"><value>Inserează „{0}”</value></data>
   <data name="Fix_InsertCs" xml:space="preserve"><value>Inserează o linie „cs ”</value></data>
   <data name="Fix_CommentOut" xml:space="preserve"><value>Transformă linia în comentariu</value></data>
+  <data name="Fix_PathSeparators" xml:space="preserve"><value>Scrie „{0}” cu separatori „/”</value></data>
+  <data name="File_PathSeparatorBanner" xml:space="preserve"><value>{0} căi de includere din acest fișier folosesc separatori Windows „\”. Therion nu le poate deschide pe acest sistem, dar scrise cu „/” indică fișiere existente.</value></data>
+  <data name="File_PathSeparatorFixFile" xml:space="preserve"><value>Corectează în acest fișier</value></data>
+  <data name="File_PathSeparatorFixWorkspace" xml:space="preserve"><value>Corectează în tot spațiul de lucru…</value></data>
+  <data name="File_PathSeparatorFixed" xml:space="preserve"><value>Au fost rescrise {0} căi de includere cu separatori „/”.</value></data>
+  <data name="PathSep_Title" xml:space="preserve"><value>Corectează separatorii de cale Windows</value></data>
+  <data name="PathSep_Summary" xml:space="preserve"><value>{0} căi de includere din {1} fișiere vor fi scrise cu separatori „/”.</value></data>
+  <data name="PathSep_None" xml:space="preserve"><value>Nicio cale de includere din spațiul de lucru nu are nevoie de corectarea separatorilor.</value></data>
   <data name="Fix_CreateFile" xml:space="preserve"><value>Creează fișierul „{0}”</value></data>
   <data name="Diag_Fix" xml:space="preserve"><value>Corectează</value></data>
   <data name="Diag_FixAll" xml:space="preserve"><value>Corectează toate „{0}” din spațiul de lucru…</value></data>

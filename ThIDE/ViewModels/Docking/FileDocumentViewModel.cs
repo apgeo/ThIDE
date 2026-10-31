@@ -519,9 +519,10 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
         _parseCts = cts;
         var token = cts.Token;
 
-        void Apply(ParsedDocument parsed)
+        void Apply(ParsedDocument parsed, IReadOnlyList<TextEdit> separatorFixes)
         {
             if (_disposed || token.IsCancellationRequested) return;
+            SetPathSeparatorFixes(separatorFixes);
             Ast = parsed.Ast;
             Semantics = parsed.Semantics;
             UpdateNavigation();
@@ -544,7 +545,8 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
         {
             var parsed = DocumentParser.Parse(FilePath, snapshot, _commands);
             if (token.IsCancellationRequested) return;
-            Dispatcher.UIThread.Post(() => Apply(parsed));
+            var separatorFixes = FindPathSeparatorFixes(snapshot);
+            Dispatcher.UIThread.Post(() => Apply(parsed, separatorFixes));
         }, token);
     }
 
@@ -815,6 +817,56 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
         var t = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
         t.Tick += (_, _) => { t.Stop(); InfoBanner = null; };
         return t;
+    }
+
+    // ----- banner: Windows path separators on a host that doesn't read them -------
+
+    private bool _pathSeparatorBannerDismissed;
+
+    /// <summary>
+    /// Shown when include paths written with Windows <c>\</c> separators would name existing files
+    /// with <c>/</c> (Therion off Windows cannot open them as written).
+    /// </summary>
+    [ObservableProperty] private bool _showPathSeparatorBanner;
+    [ObservableProperty] private string _pathSeparatorBannerText = string.Empty;
+
+    /// <summary>Raised by the banner's workspace button; the shell plans, previews and applies the fix.</summary>
+    public static event EventHandler<FileDocumentViewModel>? FixPathSeparatorsInWorkspaceRequested;
+
+    private IReadOnlyList<TextEdit> FindPathSeparatorFixes(string text)
+    {
+        try { return Therion.Workspace.Fixes.PathSeparatorFixes.Find(text, FilePath, System.IO.File.Exists); }
+        catch { return Array.Empty<TextEdit>(); }
+    }
+
+    private void SetPathSeparatorFixes(IReadOnlyList<TextEdit> fixes)
+    {
+        // A dismissal lasts until the file has nothing left to fix, so new paths typed later show it again.
+        if (fixes.Count == 0) _pathSeparatorBannerDismissed = false;
+        PathSeparatorBannerText = fixes.Count == 0 ? string.Empty
+            : string.Format(ThIDE.Resources.Tr.Get("File_PathSeparatorBanner"), fixes.Count);
+        ShowPathSeparatorBanner = fixes.Count > 0 && !_pathSeparatorBannerDismissed;
+    }
+
+    [RelayCommand]
+    private void FixPathSeparators()
+    {
+        // Re-planned against the text as it is now: the banner's list may predate the last keystroke.
+        var fixes = FindPathSeparatorFixes(_documentText);
+        if (fixes.Count == 0 || !ApplyEdits(fixes)) { SetPathSeparatorFixes(fixes); return; }
+        // The edit re-parses the file, which recounts what is left.
+        ShowPathSeparatorBanner = false;
+        FlashInfo(string.Format(ThIDE.Resources.Tr.Get("File_PathSeparatorFixed"), fixes.Count));
+    }
+
+    [RelayCommand]
+    private void FixPathSeparatorsInWorkspace() => FixPathSeparatorsInWorkspaceRequested?.Invoke(this, this);
+
+    [RelayCommand]
+    private void DismissPathSeparators()
+    {
+        _pathSeparatorBannerDismissed = true;
+        ShowPathSeparatorBanner = false;
     }
 
     // ----- tab tooltip: full path + cached last-write-time (B1) ----------------

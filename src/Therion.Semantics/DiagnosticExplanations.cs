@@ -45,6 +45,7 @@ public static class DiagnosticExplanations
         ["TH_SEM_013"] = new("The foresight and backsight disagree by more than the tolerance. Compass back ≈ fore ± 180°, clino back ≈ −fore.", "data normal from to length compass backcompass clino backclino", "data"),
         ["TH_SEM_014"] = new("An included file (input/source target) was not found on disk.", "input ../survey/part.th", "input"),
         ["TH_SEM_015"] = new("This piece of survey is disconnected from the rest of the cave and isn't georeferenced. Join it to a neighbouring station with an 'equate', or anchor it in absolute coordinates with a 'fix' under a 'cs'.", "equate 0@thispart 14@mainpassage", "equate"),
+        ["TH_SEM_016"] = new("The include path uses Windows '\\' separators. Therion on Linux and macOS reads '\\' as part of the file name, so it cannot open the file; the same path written with '/' exists. '/' works on every platform, Windows included.", "input date/cave/part.th", "input"),
 
         // XVI
         ["TH_XVI_001"] = new("The image file referenced by this .xvi was not found.", null, "xvi"),

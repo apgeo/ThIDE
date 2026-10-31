@@ -98,6 +98,7 @@ args, extend > 3 stations, > 21 readings — `THDATA_MAX_ITEMS` is 22 but counts
 | `TH_SEM_013` | Warning | Foresight/backsight disagreement (DIAG-04). | `ProjectDiagnostics` |
 | `TH_SEM_014` | Warning | File not found: an `input`/`source` target that isn't on disk, reported on the line that names it (DIAG-06). | `ProjectDiagnostics` |
 | `TH_SEM_015` | Warning | A connected piece of survey is neither joined to the main network nor georeferenced by a `fix` — it floats (source files + its two end stations are named). | `ProjectDiagnostics` |
+| `TH_SEM_016` | Warning | An `input`/`source` path written with Windows `\` separators: Therion on Linux/macOS cannot open it, but the `/` spelling names an existing file. Quick fix and fix-all rewrite the separators; the editor banner offers the same for the file or the whole workspace. Never raised on Windows. | `ProjectDiagnostics` |
 | `TH_SEM_NAMING` | configurable | User naming-convention lint violated (LANG-13). | `NamingConventionRule` |
 
 ## XVI format (`set XVI*` Tcl export)

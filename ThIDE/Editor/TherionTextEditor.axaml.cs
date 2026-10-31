@@ -2151,6 +2151,9 @@ public partial class TherionTextEditor : UserControl
         if (_editor is null || _hoverDiagnostic is null) return;
         _hoverDiagnostic = null;
         ToolTip.SetIsOpen(_editor, false);
+        // Detach the text too: a tip left on the editor is reopened by the tooltip service on the
+        // next hover anywhere in it, long after its diagnostic is gone.
+        ToolTip.SetTip(_editor, null);
     }
 
     // ----- occurrence highlight + caret reporting ------------------------
@@ -2293,6 +2296,7 @@ public partial class TherionTextEditor : UserControl
     private void OnEditorPointerExited(object? sender, PointerEventArgs e)
     {
         if (_editor is null) return;
+        ClearHover();
         if (_hyperlinkColorizer?.Clear() == true)
         {
             _editor.TextArea.TextView.Cursor = null;
@@ -2817,6 +2821,8 @@ public partial class TherionTextEditor : UserControl
             ? new List<Diagnostic>(_boundDiagnostics)
             : new List<Diagnostic>(_boundDiagnostics.Count + _fileWarnings.Count);
         if (_fileWarnings.Count != 0) { merged.AddRange(_boundDiagnostics); merged.AddRange(_fileWarnings); }
+        // The diagnostic under the pointer may just have been fixed: drop its tooltip with it.
+        if (_hoverDiagnostic is { } hovered && !merged.Contains(hovered)) ClearHover();
         _squiggles?.SetDiagnostics(merged);
         _overviewRuler?.SetDiagnostics(merged);
     }
@@ -2863,12 +2869,17 @@ public partial class TherionTextEditor : UserControl
             new SourceLocation(startLoc.Line, startLoc.Column),
             new SourceLocation(endLoc.Line, endLoc.Column),
             tok.Start, tok.Length);
+        var raw = tok.Raw.Trim();
+        var baseDir = Path.GetDirectoryName(CurrentFilePath) ?? string.Empty;
+        var hint = SourceGraph.WindowsSeparatorTarget(raw, baseDir, File.Exists) is not null
+            ? $"'{keyword}' expects an existing file. '\\' is not a path separator on this system; '{SourceGraph.PortableSeparators(raw)}' exists."
+            : $"'{keyword}' expects an existing file.";
         return Diagnostic.Create(
             "TH_LINK_404",
             DiagnosticSeverity.Warning,
-            $"Referenced file not found: '{tok.Raw.Trim()}'.",
+            $"Referenced file not found: '{raw}'.",
             span,
-            hint: $"'{keyword}' expects an existing file.");
+            hint: hint);
     }
 
     private static string FirstWordRaw(string text)
