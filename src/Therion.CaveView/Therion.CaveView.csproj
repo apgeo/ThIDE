@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(TherionLibraryTargetFrameworks)</TargetFrameworks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- the .lox / .3d readers, for the places a page offers from the model itself -->
+    <ProjectReference Include="..\Therion.Blender\Therion.Blender.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Therion.CaveView.Tests" />
+  </ItemGroup>
+
+  <!--
+    The CaveView.js runtime (apgeo/CaveView.js, the SilexGIS fork of aardgoose/CaveView.js, MIT)
+    and the stand-alone web page written around it, carried as embedded resources so every
+    consumer - the ThIDE 3D viewer, the CLI, SilexGIS - reads the same bytes from one place.
+    Resource names are forward-slash relative paths: "CaveView/<path under Runtime/>" for the
+    runtime and "Page/<file>" for the page. See README.md for how to update the runtime.
+  -->
+  <ItemGroup>
+    <EmbeddedResource Include="Runtime\**\*" LogicalName="CaveView/%(RecursiveDir)%(Filename)%(Extension)" />
+    <EmbeddedResource Include="Page\**\*" LogicalName="Page/%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>

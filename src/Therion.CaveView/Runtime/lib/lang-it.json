@@ -186,6 +186,7 @@
 		"title": "Aiuto",
 		"header_svx": "Comandi da tastiera (survex)",
 		"header_native": "Comandi da tastiera (nativi)",
+		"version": "CaveView %{version}",
 		"shading": {
 			"header": "Ombreggiatura",
 			"height": "altezza",
