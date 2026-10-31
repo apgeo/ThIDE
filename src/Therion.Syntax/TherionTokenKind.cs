@@ -1,5 +1,5 @@
 // Implementation Plan §4.1 (Lexer), §4.2 (Parser).
-// Token kinds shared by the .th / .th2 / .thconfig lexer (Superpower).
+// Token kinds shared by the .th / .th2 / .thconfig lexer.
 // The .xvi format uses a separate, simpler tokenizer (§3.1, §4.1).
 
 namespace Therion.Syntax;
