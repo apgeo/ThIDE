@@ -1,8 +1,7 @@
 // Implementation Plan �4.1 (Lexer). Hand-rolled tokenizer for the Therion text
-// formats (.th / .th2 / .thconfig). Superpower 3.0.0 no longer ships
-// TokenizerBuilder<T>; we keep the door open to using TokenListParser<TKind,T>
-// in the higher-level parser layer (M2+) by emitting a token list shape that
-// can be wrapped if needed.
+// formats (.th / .th2 / .thconfig). No parser-combinator package is involved: the
+// tokenizer emits a plain token list that a higher-level parser layer can wrap if
+// one is ever needed.
 //
 // Therion source-of-truth references:
 //   - Comments / line continuation: therion/src/thinput.cxx

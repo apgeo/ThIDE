@@ -66,3 +66,36 @@ jobs:
         with:
           name: ui-test-artifacts
           path: tests/ui-artifacts/
+
+  # net10.0 leg. The libraries (and, through the same switch, the library test projects)
+  # also build for net10.0; the matrix above is pinned to the 8.0 SDK and never compiles or
+  # runs those assemblies. Both SDKs are installed because the apps stay net8.0.
+  build-test-net10:
+    name: build & test net10.0 (ubuntu)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Restore
+        run: dotnet restore ThIDE.sln -p:TherionMultiTargetNet10=true
+
+      - name: Build (net8.0 + net10.0)
+        run: dotnet build ThIDE.sln -m:1 --no-restore -c Release -p:TherionMultiTargetNet10=true
+
+      # Every test project that follows the libraries' target frameworks, on net10.0 only;
+      # the net8.0 half is what the matrix above already covers.
+      - name: Test (net10.0)
+        shell: bash
+        run: |
+          set -euo pipefail
+          for proj in $(grep -l 'TherionTestTargetFrameworks' tests/*/*.csproj); do
+            dotnet test "$proj" --no-build -c Release --framework net10.0 --verbosity normal -p:TherionMultiTargetNet10=true
+          done
