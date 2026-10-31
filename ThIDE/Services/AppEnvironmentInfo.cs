@@ -11,11 +11,9 @@ using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
-using Avalonia.Platform;
 using Therion.Build;
 using Therion.Processing.Abstractions;
 
@@ -29,7 +27,7 @@ public static class AppEnvironmentInfo
     /// <summary>This project's public source repository.</summary>
     public const string RepositoryUrl = "https://github.com/apgeo/ThIDE";
     /// <summary>Homepage of the bundled 3D viewer library.</summary>
-    public const string CaveViewUrl = "https://github.com/aardgoose/CaveView.js";
+    public const string CaveViewUrl = "https://github.com/apgeo/CaveView.js";
 
     /// <summary>The external tools we detect + link to (id, display name, homepage).</summary>
     public static readonly IReadOnlyList<(string Id, string Name, string Url)> KnownTools = new[]
@@ -68,24 +66,8 @@ public static class AppEnvironmentInfo
         return core;
     }
 
-    private static string? _caveViewVersion;
-
-    /// <summary>Version of the vendored CaveView.js bundle, read from its banner (cached), else a known fallback.</summary>
-    public static string CaveViewVersion()
-    {
-        if (_caveViewVersion is not null) return _caveViewVersion;
-        try
-        {
-            var uri = new Uri("avares://ThIDE/Assets/caveview/CaveView/js/CaveView2.js");
-            using var s = AssetLoader.Open(uri);
-            using var reader = new StreamReader(s, Encoding.ASCII);
-            var text = reader.ReadToEnd();
-            var m = Regex.Match(text, @"CaveView v(\d+\.\d+(?:\.\d+)?)");
-            if (m.Success) return _caveViewVersion = m.Groups[1].Value;
-        }
-        catch { /* fall back to the pinned bundle version */ }
-        return _caveViewVersion = "2.9.0";
-    }
+    /// <summary>Version of the CaveView.js runtime (the apgeo fork's distribution version), from Therion.CaveView.</summary>
+    public static string CaveViewVersion() => Therion.CaveView.CaveViewRuntime.Version;
 
     private static string AvaloniaVersion()
     {

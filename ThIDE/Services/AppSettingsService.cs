@@ -270,6 +270,8 @@ public sealed record AppSettings
     public bool EnableModel3DAutoPreview { get; init; } = true;
     /// <summary>last-used 3D color-by shading mode (height / survey / length / inclination / single).</summary>
     public string Model3DShadingMode { get; init; } = "height";
+    /// <summary>"Show in 3D" zooms in on the station (else it only centres it at the current zoom).</summary>
+    public bool Model3DZoomOnShow { get; init; } = true;
     /// <summary>the structural-geology module (plane strike/dip calculator). On by default.</summary>
     public bool EnableStructuralGeology { get; init; } = true;
     /// <summary>the Blender Animation module (render presentations of the 3D model). On by default.</summary>

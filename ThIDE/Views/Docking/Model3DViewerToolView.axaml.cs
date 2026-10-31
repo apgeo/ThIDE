@@ -119,6 +119,7 @@ public partial class Model3DViewerToolView : UserControl
         _vm.FullscreenRequested += OnFullscreenRequested;
         _vm.ScriptRequested += OnScriptRequested;
         _vm.DevToolsRequested += OnDevToolsRequested;
+        _vm.ExportWebPageRequested += OnExportWebPageRequested;
         _vmWired = true;
     }
 
@@ -128,6 +129,7 @@ public partial class Model3DViewerToolView : UserControl
         _vm.FullscreenRequested -= OnFullscreenRequested;
         _vm.ScriptRequested -= OnScriptRequested;
         _vm.DevToolsRequested -= OnDevToolsRequested;
+        _vm.ExportWebPageRequested -= OnExportWebPageRequested;
         _vmWired = false;
     }
 
@@ -160,6 +162,23 @@ public partial class Model3DViewerToolView : UserControl
             },
         });
         if (files.FirstOrDefault()?.TryGetLocalPath() is { } path) _vm.LoadModel(path);
+    }
+
+    // ---- export as a web page: options dialog, then a folder ----
+
+    private async void OnExportWebPageRequested(object? sender, EventArgs e)
+    {
+        if (_vm is null || TopLevel.GetTopLevel(this) is not Window owner) return;
+        var choices = await new ExportWebPageDialog(_vm.DefaultPageTitle).ShowAsync(owner);
+        if (choices is null || _vm is null) return;
+        var folders = await owner.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = ThIDE.Resources.Tr.Get("M3D_ExportFolder"),
+            AllowMultiple = false,
+        });
+        if (folders.FirstOrDefault()?.TryGetLocalPath() is not { } folder) return;
+        await _vm.WriteWebPageAsync(folder, choices.Title, choices.Description,
+            choices.IncludePlaces, choices.EmbedModel, choices.CurrentView);
     }
 
     // ---- URL test: navigate the embedded engine to an arbitrary page ----

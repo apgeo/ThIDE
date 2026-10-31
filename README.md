@@ -96,6 +96,6 @@ ThIDE is dual-licensed: **Reusable libraries** (`src/**`) — **MPL-2.0**;  The 
 
 - The **[Therion](https://therion.speleo.sk/)** project — the cave-surveying system this tool targets.
 - The **[Survex](https://github.com/ojwb/survex/)** project, [survex.com](https://survex.com/) .
-- **[CaveView.js](https://github.com/aardgoose/CaveView.js)** — the embedded 3D model renderer.
+- **[CaveView.js](https://github.com/apgeo/CaveView.js)** (fork of [aardgoose/CaveView.js](https://github.com/aardgoose/CaveView.js)) — the embedded 3D model renderer and the exported web pages.
 - **[Mapiah](https://github.com/rsevero/mapiah)** project, [flathub](https://flathub.org/en/apps/io.github.rsevero.mapiah) — the .th2 visual map / scrap editor.
 - **[Avalonia](https://avaloniaui.net/)**, **[AvaloniaEdit](https://github.com/AvaloniaUI/AvaloniaEdit)**, **[Dock.Avalonia](https://github.com/wieslawsoltes/Dock)**, **[CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet)**, **[Superpower](https://github.com/datalust/superpower)**, **Svg.Skia**, and **Docnet** — some of the libraries ThIDE is built on.

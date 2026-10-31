@@ -42,7 +42,7 @@ An in-app viewer for compiled **2D maps** — **PNG, SVG and PDF**. Open it from
 ## 3D Viewer
 
 An **embedded 3D model viewer** that renders compiled `.lox` / `.3d` cave models right inside ThIDE
-using [CaveView.js](https://github.com/aardgoose/CaveView.js) in your OS's native web engine (no
+using [CaveView.js](https://github.com/apgeo/CaveView.js) in your OS's native web engine (no
 bundled browser). Open it from **View → 3D Viewer**.
 
 > **Off by default.** Enable *Embedded 3D model viewer* (and optionally *Auto-show the 3D model after
@@ -70,7 +70,16 @@ sidebar). **Color by:** Height · Survey · Length · Inclination · Plain. **Re
   `.th` source.
 - Going the other way, **Show in 3D View** — right-click a station (or a shot's *From*/*To*) in the
   Measurements grid, or use the editor hover card / right-click on a station or survey reference — to
-  select and frame it in 3D (a survey gets a bounding box).
+  fly there and mark the station with a **crosshair** that follows it (a survey is framed). The
+  **🔍 Close-up** switch in the 3D toolbar chooses between zooming in on the station and only centring
+  it. On a **splay** row, *Show To* marks the end of that splay.
+
+**Sharing the model — 🌍 Web page…**
+
+Exports the loaded model as a stand-alone web page: a folder with `index.html`, the viewer and the
+model, to put on any web server (or, with *works opened straight from a disk*, to open by
+double-clicking). It can list the cave's entrances and commented stations as places to fly to, and
+links like `index.html#station=cave.12` open it on a station.
 
 For the deeper reference (how it maps stations to source, requirements, fallbacks), see
 **[docs/3d-viewer.md](../3d-viewer.md)**.

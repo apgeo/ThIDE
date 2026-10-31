@@ -1,9 +1,10 @@
 // asset host for the embedded 3D viewer (CaveView.js in a NativeWebView).
 //
 // CaveView fetch()es its model from `surveyDirectory` over a *real* HTTP origin, so a
-// file:// page is CORS-blocked (plan risk R1). This service serves the vendored CaveView.js
-// dist + the host viewer.html (from avares: resources) and the currently-staged model file
-// (from a temp dir) over a loopback HttpListener bound to 127.0.0.1 on a random free port.
+// file:// page is CORS-blocked (plan risk R1). This service serves the host viewer.html (an
+// avares: resource), the CaveView.js runtime and the shared station-mark script (embedded in
+// Therion.CaveView, the one copy the web-page export uses too) and the currently-staged model
+// file (from a temp dir) over a loopback HttpListener bound to 127.0.0.1 on a random free port.
 //
 // Mirrors the IMapRenderService contract shape: a small clean interface, fully defensive
 // (never throws into the UI), IDisposable. The 3D view degrades to a friendly message +
@@ -17,12 +18,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Platform;
 using Microsoft.Extensions.Logging;
+using Therion.CaveView;
 
 namespace ThIDE.Services;
 
 public interface ICaveview3DAssetHost : IDisposable
 {
-    /// <summary>True when the vendored CaveView.js bundle + host page are present as resources.</summary>
+    /// <summary>True when the CaveView.js runtime + host page are present as resources.</summary>
     bool IsAvailable { get; }
 
     /// <summary>True once the loopback server is listening.</summary>
@@ -43,10 +45,9 @@ public interface ICaveview3DAssetHost : IDisposable
 
 public sealed class Caveview3DAssetHost : ICaveview3DAssetHost
 {
-    // Root of the vendored dist + host page (covered by the Assets/** AvaloniaResource glob).
-    private const string AssetRoot = "avares://ThIDE/Assets/caveview/";
-    private const string BundleAsset = AssetRoot + "CaveView/js/CaveView2.js";
-    private const string ViewerAsset = AssetRoot + "viewer.html";
+    // The host page (covered by the Assets/** AvaloniaResource glob). The runtime it loads is
+    // served from Therion.CaveView under /CaveView/, the shared page scripts under /assets/.
+    private const string ViewerAsset = "avares://ThIDE/Assets/caveview/viewer.html";
 
     private readonly ILogger? _logger;
     private readonly string _modelDir;
@@ -78,7 +79,7 @@ public sealed class Caveview3DAssetHost : ICaveview3DAssetHost
     {
         get
         {
-            try { return _assetExists(new Uri(BundleAsset)) && _assetExists(new Uri(ViewerAsset)); }
+            try { return CaveViewRuntime.IsAvailable && _assetExists(new Uri(ViewerAsset)); }
             catch { return false; }
         }
     }
@@ -183,12 +184,14 @@ public sealed class Caveview3DAssetHost : ICaveview3DAssetHost
                 return;
             }
 
-            // Everything else: a vendored avares resource (viewer.html + CaveView/**).
-            if (MapRequestToAsset(path) is { } assetUri && _assetExists(new Uri(assetUri)))
+            // Everything else: the host page, the CaveView runtime or a shared page script.
+            if (MapRequestToAsset(path) is { } asset && OpenAsset(asset) is { } src)
             {
-                res.ContentType = MimeTypeFor(assetUri);
-                using var src = _assetOpen(new Uri(assetUri));
-                src.CopyTo(res.OutputStream);
+                using (src)
+                {
+                    res.ContentType = MimeTypeFor(asset.Path);
+                    src.CopyTo(res.OutputStream);
+                }
                 return;
             }
 
@@ -202,15 +205,30 @@ public sealed class Caveview3DAssetHost : ICaveview3DAssetHost
 
     // ---- pure helpers (unit-tested) -----------------------------------------
 
-    /// <summary>Maps an HTTP request path to a vendored avares: asset URI, or null if out of bounds.</summary>
-    internal static string? MapRequestToAsset(string absolutePath)
+    internal enum AssetKind { Viewer, Runtime, Page }
+
+    /// <summary>A served file: the host page, a runtime file (path under the runtime's home) or a page file.</summary>
+    internal readonly record struct AssetRef(AssetKind Kind, string Path);
+
+    /// <summary>Maps an HTTP request path to the file it serves, or null if out of bounds.</summary>
+    internal static AssetRef? MapRequestToAsset(string absolutePath)
     {
         var rel = (absolutePath ?? "/").TrimStart('/');
         if (rel.Length == 0) rel = "viewer.html";
-        // Reject traversal / absolute escapes; only serve from under the caveview asset root.
-        if (rel.Contains("..", StringComparison.Ordinal) || rel.Contains(':')) return null;
-        return AssetRoot + rel;
+        // Reject traversal / absolute escapes.
+        if (rel.Contains("..", StringComparison.Ordinal) || rel.Contains(':') || rel.Contains('\\')) return null;
+        if (rel == "viewer.html") return new AssetRef(AssetKind.Viewer, rel);
+        if (rel.StartsWith("CaveView/", StringComparison.Ordinal)) return new AssetRef(AssetKind.Runtime, rel["CaveView/".Length..]);
+        if (rel.StartsWith("assets/", StringComparison.Ordinal)) return new AssetRef(AssetKind.Page, rel);
+        return null;
     }
+
+    private Stream? OpenAsset(AssetRef asset) => asset.Kind switch
+    {
+        AssetKind.Viewer => _assetExists(new Uri(ViewerAsset)) ? _assetOpen(new Uri(ViewerAsset)) : null,
+        AssetKind.Runtime => CaveViewRuntime.Open(asset.Path),
+        _ => CaveViewRuntime.OpenPageFile(asset.Path),
+    };
 
     /// <summary>Content-type for the small set of file kinds the viewer serves.</summary>
     internal static string MimeTypeFor(string path) =>

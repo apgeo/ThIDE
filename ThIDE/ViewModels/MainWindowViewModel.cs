@@ -680,12 +680,12 @@ public partial class MainWindowViewModel : ViewModelBase
         // Same for the Stereonet tab.
         StructuralGeologyTool.Structural.StereonetPopOutRequested += (_, _) => _factory.ShowToolInDocuments(StructuralStereonetTool);
         // "Show in 3D" from a station/survey context menu → reveal it in the embedded viewer.
-        _documents.ShowInModel3DRequested += (_, name) => OnUiThread(() =>
+        _documents.ShowInModel3DRequested += (_, target) => OnUiThread(() =>
         {
             if (!Model3DViewerEnabled) return;
             _factory.ShowTool(Model3DViewerTool);
             Model3DViewerTool.Viewer.OnPanelActivated();   // ensure a default model is loaded first
-            Model3DViewerTool.Viewer.SelectInModel(name);
+            Model3DViewerTool.Viewer.SelectInModel(target);
         });
 
         Build.CompileCompleted += (_, diags) =>

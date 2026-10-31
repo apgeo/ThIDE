@@ -52,7 +52,9 @@ ThIDE does **not** link or embed Therion's source:
 
 Third-party NuGet dependencies (Avalonia, Dock.Avalonia, CommunityToolkit.Mvvm,
 Svg.Skia, Docnet/PDFium, WebView, …) and the vendored CaveView.js are all
-permissive (MIT/BSD).
+permissive (MIT/BSD). CaveView.js (the apgeo fork, MIT) is carried as embedded resources of
+`src/Therion.CaveView` with its own `LICENSE`, and is copied with that licence into every web page
+the library exports.
 
 ## Contributing
 

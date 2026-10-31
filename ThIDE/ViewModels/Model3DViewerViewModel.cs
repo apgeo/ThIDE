@@ -9,13 +9,17 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Therion.Workspace;
 using Therion.Build;
+using Therion.CaveView;
+using ThIDE.Resources;
 using ThIDE.Services;
 
 namespace ThIDE.ViewModels;
@@ -57,6 +61,8 @@ public sealed partial class Model3DViewerViewModel : ObservableObject
     [ObservableProperty] private bool _isOrthographic;
     /// <summary>True while the panel is shown full-screen (drives the toolbar's Exit-fullscreen state).</summary>
     [ObservableProperty] private bool _isFullscreen;
+    /// <summary>"Show in 3D" zooms in on the station (close-up) rather than only centring it. Remembered.</summary>
+    [ObservableProperty] private bool _zoomOnShow = true;
 
     // ---- model dropdown (BUILD export-model targets + detected .lox/.3d) ----
     public ObservableCollection<Model3DOption> Models { get; } = new();
@@ -66,7 +72,8 @@ public sealed partial class Model3DViewerViewModel : ObservableObject
     private bool _viewerReady;
     private bool _started;
     private string? _pendingModelName;   // staged name awaiting the page's 'ready' message
-    private string? _pendingSelect;      // selection requested before the page was ready
+    private Model3DTarget? _pendingSelect;   // "Show in 3D" waiting for the page and its model
+    private bool _modelLoading;              // a cvLoadModel() not yet answered by 'loaded'
 
     /// <summary>True when the vendored CaveView.js assets are installed.</summary>
     public bool IsAvailable => _host?.IsAvailable ?? false;
@@ -104,6 +111,7 @@ public sealed partial class Model3DViewerViewModel : ObservableObject
         _settings = settings;
         _session = session;
         if (_settings?.Current.Model3DShadingMode is { Length: > 0 } m) _shadingMode = m;
+        if (_settings is not null) _zoomOnShow = _settings.Current.Model3DZoomOnShow;
         // Marshal to the UI thread: the session raises Changed on a background thread (its graph
         // rebuild runs under Task.Run/ConfigureAwait(false)), and OnSessionChanged mutates the
         // UI-bound Models collection — doing that off-thread throws "the calling thread cannot
@@ -132,7 +140,14 @@ public sealed partial class Model3DViewerViewModel : ObservableObject
             Status = "Could not start the 3D viewer.";
             return null;
         }
-        return url;
+        return url + ViewerLanguageQuery(CultureInfo.CurrentUICulture);
+    }
+
+    /// <summary>"?lang=xx" for an interface language CaveView has a catalogue for; English needs none.</summary>
+    internal static string ViewerLanguageQuery(CultureInfo culture)
+    {
+        var lang = culture.TwoLetterISOLanguageName;
+        return lang != "en" && CaveViewRuntime.Languages.Contains(lang) ? "?lang=" + lang : string.Empty;
     }
 
     /// <summary>The View reports the OS web engine is unavailable (no WebView2 / WebKit).</summary>
@@ -154,6 +169,7 @@ public sealed partial class Model3DViewerViewModel : ObservableObject
     public void PrepareViewerReload()
     {
         _viewerReady = false;
+        _modelLoading = false;
         _pendingModelName = CurrentModelPath is { } p ? _host?.StageModel(p) : null;
     }
 
@@ -231,14 +247,57 @@ public sealed partial class Model3DViewerViewModel : ObservableObject
             ?? rows.Where(a => HasExt(a.Path, ".3d")).OrderByDescending(a => a.LastWriteUtc).FirstOrDefault();
     }
 
-    /// <summary>Phase 3 "Show in 3D": select a station/survey by its full dotted path in the model.</summary>
-    public void SelectInModel(string label)
+    /// <summary>"Show in 3D": fly to a station/survey by its full dotted path in the model.</summary>
+    public void SelectInModel(string label) => SelectInModel(new Model3DTarget(label));
+
+    /// <summary>
+    /// "Show in 3D": fly to a station (close-up or centred, per <see cref="ZoomOnShow"/>) and put a
+    /// crosshair on it, frame a survey, or mark the end of a splay. The page reports what it found
+    /// ("shown"), which sets the status line.
+    /// </summary>
+    public void SelectInModel(Model3DTarget target)
     {
-        if (_host is null || string.IsNullOrWhiteSpace(label)) return;
+        if (_host is null || string.IsNullOrWhiteSpace(target?.Name)) return;
         if (!_started) EnsureStarted();
-        if (_viewerReady) ScriptRequested?.Invoke(this, $"cvSelect({JsStr(label)})");
-        else _pendingSelect = label;   // applied once the page reports 'ready'
-        Status = $"Showing {label} in 3D.";
+        // a crosshair on the end of a splay points at nothing while splays are hidden
+        if (target.IsSplay) SplaysOn = true;
+        // sent once the model is up and its controls re-asserted ('loaded'), so a view change
+        // made then does not undo the flight
+        if (_viewerReady && !_modelLoading) ScriptRequested?.Invoke(this, ShowScript(target, ZoomOnShow));
+        else _pendingSelect = target;
+        Status = string.Format(CultureInfo.CurrentCulture, Tr.Get("M3D_Showing"), target.Name);
+    }
+
+    /// <summary>The <c>cvShow(name, opts)</c> call for a target. Pure (unit-tested).</summary>
+    internal static string ShowScript(Model3DTarget target, bool zoom)
+    {
+        object? splay = target.IsSplay
+            ? new { length = target.SplayLength ?? 1, compass = target.SplayCompass ?? 0, clino = target.SplayClino ?? 0 }
+            : null;
+        return $"cvShow({JsStr(target.Name)},{JsonSerializer.Serialize(new { zoom, splay })})";
+    }
+
+    /// <summary>The status line for the page's "shown" report. Pure (unit-tested).</summary>
+    internal static string ShownStatus(string target, string? kind, string? name, string? splay, int? angle)
+    {
+        var shown = string.IsNullOrEmpty(name) ? target : name;
+        string F(string key, params object?[] args) => string.Format(CultureInfo.CurrentCulture, Tr.Get(key), args);
+        return (kind, splay) switch
+        {
+            ("station", "matched") => F("M3D_ShownSplay", shown),
+            ("station", "closest") => F("M3D_ShownSplayClosest", shown, angle ?? 0),
+            ("station", "missing") => F("M3D_ShownSplayMissing", shown),
+            ("station", _) => F("M3D_ShownStation", shown),
+            ("survey", _) => F("M3D_ShownSurvey", target),
+            ("cancelled", _) => string.Empty,
+            _ => F("M3D_ShownNone", target),
+        };
+    }
+
+    partial void OnZoomOnShowChanged(bool value)
+    {
+        if (_settings is not null && _settings.Current.Model3DZoomOnShow != value)
+            _settings.Save(_settings.Current with { Model3DZoomOnShow = value });
     }
 
     /// <summary>Handles a JSON message posted by the host page (JS→C#). Never throws.</summary>
@@ -260,18 +319,25 @@ public sealed partial class Model3DViewerViewModel : ObservableObject
                     // A reparent (full-screen toggle) can reload the page after a model was shown;
                     // re-stage the current model so it doesn't come back blank.
                     else if (CurrentModelPath is { } cur) LoadModel(cur);
-                    if (_pendingSelect is { } sel) { ScriptRequested?.Invoke(this, $"cvSelect({JsStr(sel)})"); _pendingSelect = null; }
                     break;
                 case "loaded":
                     // Re-assert toggles/orientation: a freshly loaded cave can reset feature layers,
                     // and a full-screen reparent reloads the page, so this also restores state then.
+                    _modelLoading = false;
                     ApplyAllControls();
                     Status = HasModel
                         ? $"{Path.GetFileName(CurrentModelPath)}{(IsStale ? "  ·  ⚠ stale (rebuild to refresh)" : string.Empty)}"
                         : "Model loaded.";
+                    if (_pendingSelect is { } sel) { _pendingSelect = null; SelectInModel(sel); }
                     break;
                 case "station":
                     HandlePick(root);
+                    break;
+                case "shown":
+                    var shownStatus = ShownStatus(
+                        Str(root, "target") ?? string.Empty, Str(root, "kind"), Str(root, "name"), Str(root, "splay"),
+                        root.TryGetProperty("angle", out var a) && a.ValueKind == JsonValueKind.Number ? a.GetInt32() : null);
+                    if (shownStatus.Length > 0) Status = shownStatus;
                     break;
                 case "error":
                     _log?.Warning("3D viewer: " + (root.TryGetProperty("message", out var m) ? m.GetString() : "error"));
@@ -287,6 +353,9 @@ public sealed partial class Model3DViewerViewModel : ObservableObject
         }
         catch { /* malformed bridge message — ignore */ }
     }
+
+    private static string? Str(JsonElement root, string name) =>
+        root.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
 
     /// <summary>Routes a forwarded page console message (#2) into the in-app Log at the right level.</summary>
     private void LogConsole(JsonElement root)
@@ -322,7 +391,11 @@ public sealed partial class Model3DViewerViewModel : ObservableObject
         if (_viewerReady) ScriptRequested?.Invoke(this, $"cvSetShading({JsStr(ShadingMode)})");
     }
 
-    private void SendLoad(string stagedName) => ScriptRequested?.Invoke(this, $"cvLoadModel({JsStr(stagedName)})");
+    private void SendLoad(string stagedName)
+    {
+        _modelLoading = true;
+        ScriptRequested?.Invoke(this, $"cvLoadModel({JsStr(stagedName)})");
+    }
 
     // ---- toolbar commands (Phase 4) ----
 
@@ -389,6 +462,75 @@ public sealed partial class Model3DViewerViewModel : ObservableObject
         OnPropertyChanged(nameof(ShadingMode));   // refresh the Color-by toggle bindings
         ApplyShading();
         ApplyAllControls();
+    }
+
+    // ---- export the model as a stand-alone web page (Therion.CaveView) ----
+
+    /// <summary>Raised when the user asks to export the model as a web page; the View collects the options.</summary>
+    public event EventHandler? ExportWebPageRequested;
+
+    [RelayCommand]
+    private void ExportWebPage()
+    {
+        if (!HasModel || !File.Exists(CurrentModelPath)) { Status = Tr.Get("M3D_ExportNoModel"); return; }
+        ExportWebPageRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>A title for the page: the model's file name without its extension.</summary>
+    public string DefaultPageTitle => HasModel ? Path.GetFileNameWithoutExtension(CurrentModelPath!) : string.Empty;
+
+    /// <summary>How the model is displayed right now, as the page's opening view.</summary>
+    public ModelPageView CurrentPageView() => new()
+    {
+        Shading = ShadingMode,
+        Walls = WallsOn,
+        Splays = SplaysOn,
+        Stations = StationsOn,
+        StationLabels = LabelsOn,
+        Entrances = NamesOn,
+        BoundingBox = BoxOn,
+        Orientation = CurrentView,
+        Orthographic = IsOrthographic,
+        AutoRotate = AutoRotateOn,
+    };
+
+    /// <summary>
+    /// Writes the current model as a web page into <paramref name="folder"/> and reveals it in the
+    /// file manager. Returns the page's index.html, or null on failure (the status says why).
+    /// </summary>
+    public async Task<string?> WriteWebPageAsync(string folder, string title, string? description,
+        bool includePlaces, bool embedModel, bool currentView)
+    {
+        if (CurrentModelPath is not { } model || !File.Exists(model)) { Status = Tr.Get("M3D_ExportNoModel"); return null; }
+        var lang = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+        var options = new ModelPageOptions
+        {
+            Title = string.IsNullOrWhiteSpace(title) ? Path.GetFileNameWithoutExtension(model) : title.Trim(),
+            Description = description,
+            Language = CaveViewRuntime.Languages.Contains(lang) ? lang : "en",
+            View = currentView ? CurrentPageView() : new ModelPageView(),
+            EmbedModel = embedModel,
+            CloseUp = ZoomOnShow,
+            Generator = "ThIDE " + AppEnvironmentInfo.AppVersion(),
+        };
+        try
+        {
+            var index = await Task.Run(() =>
+            {
+                var o = includePlaces ? options with { Places = ModelPlaces.FromFile(model) } : options;
+                return ModelPageExporter.WriteToDirectory(ModelPageModel.FromFile(model), o, folder);
+            });
+            Status = string.Format(CultureInfo.CurrentCulture, Tr.Get("M3D_ExportDone"), folder);
+            _log?.Info("3D viewer: web page written to " + index);
+            try { _shell?.RevealInFileManager(index); } catch { /* best-effort */ }
+            return index;
+        }
+        catch (Exception ex)
+        {
+            Status = string.Format(CultureInfo.CurrentCulture, Tr.Get("M3D_ExportFailed"), ex.Message);
+            _log?.Warning("3D viewer: web page export failed: " + ex.Message);
+            return null;
+        }
     }
 
     /// <summary>#5: raised when the user asks for the web engine's developer tools; the View handles it.</summary>
@@ -482,6 +624,7 @@ public sealed partial class Model3DViewerViewModel : ObservableObject
         IsStale = false;
         GeneratedNotice = string.Empty;
         _pendingModelName = null;
+        _modelLoading = false;
         _suppressModelSelection = true;
         try { SelectedModel = null; } finally { _suppressModelSelection = false; }
         if (_viewerReady) ScriptRequested?.Invoke(this, "cvClear()");
