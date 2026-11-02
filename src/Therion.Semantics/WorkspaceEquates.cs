@@ -15,8 +15,9 @@ namespace Therion.Semantics;
 public static class WorkspaceEquates
 {
     /// <summary>
-    /// Union-find over every station name in the workspace, merging both the per-file equate classes
-    /// and the cross-file <c>@</c>-equates resolved through <paramref name="workspace"/>.
+    /// Union-find over every station name in the workspace, merging the per-file equate classes, the
+    /// cross-file <c>@</c>-equates resolved through <paramref name="workspace"/>, and the placeholder
+    /// stations the per-file binder records for an unresolved <c>point@survey</c> reference.
     /// </summary>
     public static EquateGraph Build(WorkspaceSemanticModel workspace)
     {
@@ -38,6 +39,16 @@ public static class WorkspaceEquates
                     else equates.Union(first.Value, qn);
                 }
             }
+
+        // A station the per-file binder could only record literally (`fix 1@partA …` in a wrapper
+        // records `wrapper.1@partA`) is the station it names: fold the placeholder into it, so a fix,
+        // entrance or shot written through such a reference lands on the real station. Only a
+        // workspace-level match counts here: guessing by bare point name could merge two caves.
+        foreach (var model in workspace.PerFile.Values)
+            foreach (var name in model.Stations.Keys)
+                if (name.Last.Contains('@') && workspace.ResolveStationSymbol(name.Last) is { } real
+                    && !real.Name.Equals(name))
+                    equates.Union(real.Name, name);
 
         return equates;
     }
