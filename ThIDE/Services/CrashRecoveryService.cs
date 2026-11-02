@@ -29,8 +29,9 @@ public interface ICrashRecoveryService
 
     /// <summary>Records that the app is now running; detects a leftover sentinel from a crashed run.</summary>
     void MarkRunning();
-    /// <summary>Records a clean shutdown: removes the sentinel and clears the recovery folder.</summary>
-    void MarkCleanShutdown();
+    /// <summary>Records a clean shutdown: removes the sentinel and clears the recovery folder — unless
+    /// <paramref name="keepRecovery"/> is set, for an exit that could not ask about unsaved buffers.</summary>
+    void MarkCleanShutdown(bool keepRecovery = false);
 
     /// <summary>Writes the given unsaved buffers to the recovery folder (only the changed ones).</summary>
     void SaveBuffers(IEnumerable<(string Path, string Text)> dirty);
@@ -76,10 +77,10 @@ public sealed class CrashRecoveryService : ICrashRecoveryService
         catch (Exception ex) { _logger?.LogWarning(ex, "Crash sentinel could not be written."); }
     }
 
-    public void MarkCleanShutdown()
+    public void MarkCleanShutdown(bool keepRecovery = false)
     {
         try { if (File.Exists(_sentinel)) File.Delete(_sentinel); } catch { /* best-effort */ }
-        ClearRecovery();
+        if (!keepRecovery) ClearRecovery();
     }
 
     public void SaveBuffers(IEnumerable<(string Path, string Text)> dirty)

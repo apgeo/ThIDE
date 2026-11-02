@@ -157,6 +157,16 @@ public sealed class ThideApp : IAsyncDisposable
         return result.Content.OfType<ImageContentBlock>().First().DecodedData.ToArray();
     }
 
+    /// <summary>True once the app process has ended.</summary>
+    public bool HasExited => _process.HasExited;
+
+    /// <summary>Waits up to <paramref name="timeout"/> for the app to exit on its own; true when it did.</summary>
+    public async Task<bool> WaitForExitAsync(TimeSpan timeout)
+    {
+        try { await _process.WaitForExitAsync().WaitAsync(timeout); return true; }
+        catch (TimeoutException) { return false; }
+    }
+
     public async ValueTask DisposeAsync()
     {
         if (_client is not null) await _client.DisposeAsync();

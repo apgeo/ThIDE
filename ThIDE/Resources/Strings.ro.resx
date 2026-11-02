@@ -1608,6 +1608,8 @@ Aplici modificările? Pașii care nu au putut fi previzualizați rulează acum.<
   <data name="Notif_SaveEncoding" xml:space="preserve"><value>{0}: „{1}” nu poate fi scris în {2}, codificarea declarată de fișier. Schimbați caracterul sau linia `encoding` a fișierului (de exemplu în utf-8) și salvați din nou.</value></data>
   <data name="Notif_SaveFailedTitle" xml:space="preserve"><value>Salvare eșuată</value></data>
   <data name="Notif_SaveFailedMsg" xml:space="preserve"><value>{0} nu a putut fi scris: {1} Modificările sunt încă în editor, nesalvate.</value></data>
+  <data name="Exit_SavePromptMsg" xml:space="preserve"><value>{0} fișier(e) au modificări nesalvate. Doriți să le salvați înainte de a închide ThIDE?</value></data>
+  <data name="Exit_SaveAll" xml:space="preserve"><value>Salvează tot</value></data>
   <data name="Replace_EncodingRefused" xml:space="preserve"><value>Nu s-a înlocuit nimic: {0} nu poate conține „{1}” în {2}, codificarea declarată de fișier. Niciun fișier nu a fost modificat.</value></data>
   <data name="Diag_FixCheck" xml:space="preserve"><value>Este posibil ca această corectură să nu ajungă la locul potrivit: verificați unde se aplică înainte de a o aplica.</value></data>
   <data name="Menu_Edit_PasteShots" xml:space="preserve"><value>Lipește ca date de vize…</value></data>

@@ -1496,7 +1496,10 @@ public partial class MainWindowViewModel : ViewModelBase
         if (Avalonia.Application.Current?.ApplicationLifetime is
             Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop)
         {
-            desktop.Shutdown();
+            // Close the main window rather than Shutdown(), which closes windows without letting them
+            // cancel: the window's close guard asks about unsaved documents, and closing it ends the app.
+            if (desktop.MainWindow is { } main) main.Close();
+            else desktop.Shutdown();
         }
     }
 
@@ -1716,6 +1719,22 @@ public partial class MainWindowViewModel : ViewModelBase
                 string.Format(Tr.Get("Close_SavePromptMsg"), System.IO.Path.GetFileName(doc.FilePath)),
                 Tr.Get("Close_Save"), Tr.Get("Close_DontSave"), Tr.Get("Common_Cancel"),
                 noWindowResult: Views.SaveBeforeBuildChoice.DontSave),
+            _documents, message => StatusText = message);
+
+    /// <summary>True when an open document has unsaved changes (closing the window must ask first).</summary>
+    public bool HasUnsavedDocuments => _documents.Documents.Any(d => d.IsDirty);
+
+    /// <summary>
+    /// Close guard for the main window: asks Save all / Don't save / Cancel over every modified document.
+    /// Returns true to let the window (and the app) close, false to keep it open.
+    /// </summary>
+    public Task<bool> ConfirmCloseAsync() =>
+        SaveBeforeClose.ConfirmAsync(_documents.Documents.ToList(), dirty => Views.SaveBeforeBuildDialog.ShowOverMainAsync(
+                Tr.Get("Close_SavePromptTitle"),
+                string.Format(Tr.Get("Exit_SavePromptMsg"), dirty.Count) + Environment.NewLine + Environment.NewLine
+                    + string.Join(Environment.NewLine, dirty.Select(d => "  • " + System.IO.Path.GetFileName(d.FilePath))),
+                Tr.Get("Exit_SaveAll"), Tr.Get("Close_DontSave"), Tr.Get("Common_Cancel"),
+                noWindowResult: Views.SaveBeforeBuildChoice.Cancel),
             _documents, message => StatusText = message);
 
     // ---- auto-save -------------------------------------------------

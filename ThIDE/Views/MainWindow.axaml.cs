@@ -26,6 +26,9 @@ public partial class MainWindow : Window
     private ILayoutService? _layout;
     private IGlobalHotkeyService? _globalHotkey;
     private ICrashRecoveryService? _crashRecovery;
+    // Main-window close guard: the user already answered the unsaved-changes prompt / it is showing.
+    private bool _closeConfirmed;
+    private bool _closePromptOpen;
     private IMcpHostService? _mcpHost;
 
     // System-wide build hotkey (Ctrl+Alt+B): triggers a compile even when the app isn't
@@ -147,11 +150,36 @@ public partial class MainWindow : Window
         };
         // A clean close clears the crash sentinel + recovery buffers so the next launch
         // doesn't enter safe mode or offer stale recovery.
-        Closing += (_, _) =>
+        Closing += async (_, e) =>
         {
+            // Unsaved documents: hold the close, ask Save all / Don't save / Cancel, then close again.
+            // An OS shutdown cannot wait for the answer, so it keeps the recovery buffers instead.
+            bool keepRecovery = false;
+            if (!_closeConfirmed && DataContext is MainWindowViewModel { HasUnsavedDocuments: true } closingVm)
+            {
+                if (e.CloseReason == WindowCloseReason.OSShutdown)
+                {
+                    PersistRecoveryBuffers();
+                    keepRecovery = true;
+                }
+                else
+                {
+                    e.Cancel = true;
+                    if (_closePromptOpen) return;
+                    _closePromptOpen = true;
+                    bool close;
+                    try { close = await closingVm.ConfirmCloseAsync(); }
+                    finally { _closePromptOpen = false; }
+                    if (!close) return;
+                    _closeConfirmed = true;
+                    Close();
+                    return;
+                }
+            }
+
             _autosaveTimer?.Stop();
             PersistAll();
-            _crashRecovery?.MarkCleanShutdown();
+            _crashRecovery?.MarkCleanShutdown(keepRecovery);
             _globalHotkey?.Dispose();
             _modalWatchdog?.Dispose();
             // Remove the discovery file at once (no host should reconnect to a dying port) and stop the
