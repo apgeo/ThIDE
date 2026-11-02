@@ -1770,7 +1770,8 @@ public partial class MainWindow : Window
             catch (Therion.Workspace.Editing.UnrepresentableCharacterException ex)
             {
                 AppServices.Provider.GetService<INotificationService>()?.Error(ThIDE.Resources.Tr.Get("Notif_SaveEncodingTitle"),
-                    string.Format(ThIDE.Resources.Tr.Get("Notif_SaveEncoding"), System.IO.Path.GetFileName(fc.FilePath), ex.Character, ex.EncodingName));
+                    string.Format(ThIDE.Resources.Tr.Get(ex is Therion.Workspace.Editing.UndecodableBytesException ? "Notif_SaveUndecodable" : "Notif_SaveEncoding"),
+                        System.IO.Path.GetFileName(fc.FilePath), ex.Character, ex.EncodingName));
                 return;
             }
             catch { /* unreadable: skipped, as a failed write is below */ }

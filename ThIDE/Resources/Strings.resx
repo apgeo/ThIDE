@@ -1392,6 +1392,7 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Edit_ProblemUnencodable" xml:space="preserve"><value>{0} declares an encoding that cannot hold the new text.</value></data>
   <data name="Edit_ProblemUnsavedChanges" xml:space="preserve"><value>{0} has unsaved changes; save it first.</value></data>
   <data name="Edit_ProblemOpenBufferDiffers" xml:space="preserve"><value>{0} is open and differs from the file on disk; save or reload it first.</value></data>
+  <data name="Edit_ProblemUndecodable" xml:space="preserve"><value>{0} holds bytes its encoding cannot read; writing it would replace them for good.</value></data>
   <data name="LinkSurvey_Load" xml:space="preserve"><value>Load</value></data>
   <data name="LinkSurvey_SourceHint" xml:space="preserve"><value>Path of the .th file to link (Browse, or type it and press Enter)</value></data>
   <data name="Snippet_survb" xml:space="preserve"><value>survey … endsurvey block</value></data>
@@ -1616,6 +1617,8 @@ Apply the changes? Steps that could not preview run now.</value></data>
   <data name="Exit_SaveAll" xml:space="preserve"><value>Save all</value></data>
   <data name="Replace_EncodingRefused" xml:space="preserve"><value>Nothing replaced: {0} cannot hold '{1}' in {2}, the encoding the file declares. No file was changed.</value></data>
   <data name="Replace_UndoRefused" xml:space="preserve"><value>Nothing restored: {0} was changed after the replace. No file was changed.</value></data>
+  <data name="Notif_SaveUndecodable" xml:space="preserve"><value>{0} holds bytes that are not valid {2}; they show as '{1}'. Saving would replace them for good. Add an `encoding` line naming the file's real encoding with another editor and reopen it, or retype the characters shown as '{1}'.</value></data>
+  <data name="Replace_UndecodableRefused" xml:space="preserve"><value>Nothing replaced: {0} holds bytes that are not valid {2} (shown as '{1}'), and writing it would replace them for good. No file was changed.</value></data>
   <data name="Diag_FixCheck" xml:space="preserve"><value>This fix may not land in the right place here: check where it goes before applying it.</value></data>
   <data name="Menu_Edit_PasteShots" xml:space="preserve"><value>Paste as shot data…</value></data>
   <data name="Menu_Tools_Normalize" xml:space="preserve"><value>Normalise project…</value></data>

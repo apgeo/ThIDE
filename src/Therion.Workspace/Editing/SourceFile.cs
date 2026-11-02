@@ -15,20 +15,47 @@ namespace Therion.Workspace.Editing;
 /// The new text holds a character the file's declared encoding cannot represent. Writing anyway would
 /// substitute <c>?</c> for it, silently and irreversibly.
 /// </summary>
-public sealed class UnrepresentableCharacterException(string path, string encodingName, char character)
-    : Exception($"'{character}' (U+{(int)character:X4}) cannot be written in {encodingName}, "
-              + $"which '{path}' declares. Writing it would replace the character with '?'.")
+public class UnrepresentableCharacterException : Exception
 {
-    public char Character { get; } = character;
-    public string EncodingName { get; } = encodingName;
+    public UnrepresentableCharacterException(string path, string encodingName, char character)
+        : this(encodingName, character, $"'{character}' (U+{(int)character:X4}) cannot be written in {encodingName}, "
+             + $"which '{path}' declares. Writing it would replace the character with '?'.") { }
+
+    protected UnrepresentableCharacterException(string encodingName, char character, string message) : base(message)
+    {
+        Character = character;
+        EncodingName = encodingName;
+    }
+
+    public char Character { get; }
+    public string EncodingName { get; }
 }
 
+/// <summary>
+/// The file held bytes its encoding could not decode, read as U+FFFD, and the new text still holds
+/// one. Writing it would put U+FFFD where those bytes were, so the original would be gone for good.
+/// </summary>
+public sealed class UndecodableBytesException(string path, string encodingName)
+    : UnrepresentableCharacterException(encodingName, '\uFFFD',
+        $"'{path}' holds bytes that are not valid {encodingName} (read as '\uFFFD'). Writing it would "
+      + "replace them for good. Declare the file's real encoding with an `encoding` line, or retype the replaced characters.");
+
 /// <param name="Sha256">Lowercase hex digest of the file's bytes, for optimistic concurrency.</param>
-public sealed record SourceFile(string Path, string Text, string Sha256, Encoding Encoding, byte[] Bom);
+public sealed record SourceFile(string Path, string Text, string Sha256, Encoding Encoding, byte[] Bom)
+{
+    /// <summary>
+    /// Some bytes were not valid in <see cref="Encoding"/> and <see cref="Text"/> holds U+FFFD in their
+    /// place. A write of text that still holds U+FFFD is refused (<see cref="UndecodableBytesException"/>).
+    /// </summary>
+    public bool Lossy { get; init; }
+}
 
 /// <summary>How a text file was stored: its encoding and its byte-order mark (empty when none).</summary>
 public sealed record TextFileFormat(Encoding Encoding, byte[] Bom)
 {
+    /// <summary>As <see cref="SourceFile.Lossy"/>: the text read in this format stands in for bytes it could not decode.</summary>
+    public bool Lossy { get; init; }
+
     /// <summary>UTF-8 without a BOM — Therion's default, and what a new file is written as.</summary>
     public static TextFileFormat Default { get; } = new(EncodingResolver.Default, []);
 }
@@ -36,7 +63,7 @@ public sealed record TextFileFormat(Encoding Encoding, byte[] Bom)
 public static class SourceFileIo
 {
     /// <summary>The format a file was read in.</summary>
-    public static TextFileFormat FormatOf(SourceFile file) => new(file.Encoding, file.Bom);
+    public static TextFileFormat FormatOf(SourceFile file) => new(file.Encoding, file.Bom) { Lossy = file.Lossy };
 
     /// <summary>
     /// The format to save <paramref name="text"/> in — whatever <see cref="Read"/> (and Therion) will
@@ -61,7 +88,7 @@ public static class SourceFileIo
 
         var encoding = declared ?? bomEncoding ?? EncodingResolver.Default;
         if (encoding.CodePage == readAs.Encoding.CodePage) return readAs;
-        return new TextFileFormat(encoding, bomEncoding?.CodePage == encoding.CodePage ? readAs.Bom : []);
+        return new TextFileFormat(encoding, bomEncoding?.CodePage == encoding.CodePage ? readAs.Bom : []) { Lossy = readAs.Lossy };
     }
 
     /// <summary>
@@ -81,11 +108,14 @@ public static class SourceFileIo
     /// The bytes to save <paramref name="text"/> as (see <see cref="FormatForSave"/>). A null
     /// <paramref name="readAs"/> means the format the file has on disk now (UTF-8 for a new file).
     /// </summary>
+    /// <remarks>The format returned is not <see cref="TextFileFormat.Lossy"/>: the bytes it goes with decode cleanly.</remarks>
     /// <exception cref="UnrepresentableCharacterException">The text holds a character the encoding cannot express.</exception>
+    /// <exception cref="UndecodableBytesException">The text was read lossily and still holds U+FFFD.</exception>
     public static (byte[] Bytes, TextFileFormat Format) EncodeForSave(string path, string text, TextFileFormat? readAs)
     {
         var format = FormatForSave(text, readAs ?? FormatOnDisk(path));
-        return (WithBom(format.Bom, Encode(path, format.Encoding, text)), format);
+        var bytes = WithBom(format.Bom, Encode(path, format.Encoding, text, format.Lossy));
+        return (bytes, format.Lossy ? format with { Lossy = false } : format);
     }
 
     /// <summary>The format <paramref name="path"/> is stored in, or <see cref="TextFileFormat.Default"/> when it is not there.</summary>
@@ -94,7 +124,7 @@ public static class SourceFileIo
         if (!File.Exists(path)) return TextFileFormat.Default;
         var bytes = File.ReadAllBytes(path);
         var (encoding, bomLength) = Resolve(bytes);
-        return new TextFileFormat(encoding, bytes[..bomLength]);
+        return new TextFileFormat(encoding, bytes[..bomLength]) { Lossy = Decode(encoding, bytes, bomLength).Lossy };
     }
 
     /// <summary>Reads a file, resolving its encoding the way the parser does.</summary>
@@ -102,13 +132,14 @@ public static class SourceFileIo
     {
         var bytes = File.ReadAllBytes(path);
         var (encoding, bomLength) = Resolve(bytes);
+        var (text, lossy) = Decode(encoding, bytes, bomLength);
 
         return new SourceFile(
             Path: path,
-            Text: encoding.GetString(bytes, bomLength, bytes.Length - bomLength),
+            Text: text,
             Sha256: Digest(bytes),
             Encoding: encoding,
-            Bom: bytes[..bomLength]);
+            Bom: bytes[..bomLength]) { Lossy = lossy };
     }
 
     /// <summary>
@@ -121,9 +152,10 @@ public static class SourceFileIo
     /// encoder fallback would write <c>?</c> instead — a rename to <c>Peștera</c> inside a Latin-1
     /// survey must fail, not quietly become <c>Pe?tera</c>.
     /// </exception>
+    /// <exception cref="UndecodableBytesException">The file was read lossily and the text still holds U+FFFD.</exception>
     public static void Write(SourceFile file, string text)
     {
-        WriteOver(file.Path, WithBom(file.Bom, Encode(file.Path, file.Encoding, text)));
+        WriteOver(file.Path, WithBom(file.Bom, Encode(file.Path, file.Encoding, text, file.Lossy)));
     }
 
     /// <summary>
@@ -157,7 +189,7 @@ public static class SourceFileIo
     /// </summary>
     public static bool CanEncode(SourceFile file, string text)
     {
-        try { Encode(file.Path, file.Encoding, text); return true; }
+        try { Encode(file.Path, file.Encoding, text, file.Lossy); return true; }
         catch (UnrepresentableCharacterException) { return false; }
     }
 
@@ -189,10 +221,13 @@ public static class SourceFileIo
 
     /// <summary>
     /// Encodes with an exception fallback rather than the default best-fit one, so a character the
-    /// encoding cannot hold stops the write instead of becoming <c>?</c>.
+    /// encoding cannot hold stops the write instead of becoming <c>?</c>. After a lossy read, a U+FFFD
+    /// left in the text stands for bytes that were never decoded, so it stops the write too.
     /// </summary>
-    private static byte[] Encode(string path, Encoding encoding, string text)
+    private static byte[] Encode(string path, Encoding encoding, string text, bool lossy)
     {
+        if (lossy && text.Contains('\uFFFD')) throw new UndecodableBytesException(path, encoding.WebName);
+
         var strict = Encoding.GetEncoding(
             encoding.CodePage, EncoderFallback.ExceptionFallback, DecoderFallback.ReplacementFallback);
 
@@ -204,6 +239,16 @@ public static class SourceFileIo
         {
             throw new UnrepresentableCharacterException(path, encoding.WebName, ex.CharUnknown);
         }
+    }
+
+    // Decodes strictly first, so bytes the encoding cannot read are noticed rather than quietly
+    // becoming U+FFFD; the text is then the usual replacement decode.
+    private static (string Text, bool Lossy) Decode(Encoding encoding, byte[] bytes, int offset)
+    {
+        var strict = Encoding.GetEncoding(
+            encoding.CodePage, EncoderFallback.ReplacementFallback, DecoderFallback.ExceptionFallback);
+        try { return (strict.GetString(bytes, offset, bytes.Length - offset), false); }
+        catch (DecoderFallbackException) { return (encoding.GetString(bytes, offset, bytes.Length - offset), true); }
     }
 
     // The parser's rule: an `encoding` line in the ASCII prefix, else the BOM, else UTF-8.

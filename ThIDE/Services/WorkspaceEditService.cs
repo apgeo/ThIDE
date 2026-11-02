@@ -80,7 +80,10 @@ public sealed class WorkspaceEditService(IDocumentService documents, IWorkspaceS
                     // Saved the way it will be read back (an edited `encoding` line takes effect),
                     // like a save from the editor.
                     try { encoded[group.FilePath] = SourceFileIo.EncodeForSave(file.Path, check.NewTexts[group.FilePath], SourceFileIo.FormatOf(file)).Bytes; }
-                    catch (UnrepresentableCharacterException) { problems.Add(new(group.FilePath, EditProblemKind.Unencodable)); }
+                    catch (UnrepresentableCharacterException ex)
+                    {
+                        problems.Add(new(group.FilePath, ex is UndecodableBytesException ? EditProblemKind.Undecodable : EditProblemKind.Unencodable));
+                    }
                 }
             }
         }

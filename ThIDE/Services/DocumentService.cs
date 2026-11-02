@@ -721,7 +721,8 @@ public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, 
         catch (UnrepresentableCharacterException ex)
         {
             _notifications?.Error(ThIDE.Resources.Tr.Get("Notif_SaveEncodingTitle"),
-                string.Format(ThIDE.Resources.Tr.Get("Notif_SaveEncoding"), Path.GetFileName(doc.FilePath), ex.Character, ex.EncodingName));
+                string.Format(ThIDE.Resources.Tr.Get(ex is UndecodableBytesException ? "Notif_SaveUndecodable" : "Notif_SaveEncoding"),
+                    Path.GetFileName(doc.FilePath), ex.Character, ex.EncodingName));
             return false;
         }
         // Mark the path so the watcher doesn't treat our own save as an external edit (#6).

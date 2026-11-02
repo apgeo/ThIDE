@@ -49,6 +49,8 @@ public enum EditProblemKind
     UnsavedChanges,
     /// <summary>The file is open and its editor text no longer matches the file on disk.</summary>
     OpenBufferDiffers,
+    /// <summary>The file holds bytes its encoding cannot decode, and the new text would overwrite them.</summary>
+    Undecodable,
 }
 
 /// <param name="NewTexts">The rewritten text of every edited file, keyed by the path as given.</param>

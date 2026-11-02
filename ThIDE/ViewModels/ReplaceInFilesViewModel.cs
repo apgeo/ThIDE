@@ -258,7 +258,7 @@ public sealed partial class ReplaceInFilesViewModel : ViewModelBase
             }
             catch (UnrepresentableCharacterException ex)
             {
-                Status = string.Format(ThIDE.Resources.Tr.Get("Replace_EncodingRefused"),
+                Status = string.Format(ThIDE.Resources.Tr.Get(ex is UndecodableBytesException ? "Replace_UndecodableRefused" : "Replace_EncodingRefused"),
                     System.IO.Path.GetFileName(path), ex.Character, ex.EncodingName);
                 return -1;
             }

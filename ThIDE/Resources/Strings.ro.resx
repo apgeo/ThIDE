@@ -1392,6 +1392,7 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Edit_ProblemUnencodable" xml:space="preserve"><value>{0} declară o codificare care nu poate reține textul nou.</value></data>
   <data name="Edit_ProblemUnsavedChanges" xml:space="preserve"><value>{0} are modificări nesalvate; salvează-l întâi.</value></data>
   <data name="Edit_ProblemOpenBufferDiffers" xml:space="preserve"><value>{0} este deschis și diferă de fișierul de pe disc; salvează-l sau reîncarcă-l întâi.</value></data>
+  <data name="Edit_ProblemUndecodable" xml:space="preserve"><value>{0} conține octeți pe care codificarea sa nu îi poate citi; scrierea i-ar înlocui definitiv.</value></data>
   <data name="LinkSurvey_Load" xml:space="preserve"><value>Încarcă</value></data>
   <data name="LinkSurvey_SourceHint" xml:space="preserve"><value>Calea fișierului .th de legat (Răsfoiește, sau scrie-o și apasă Enter)</value></data>
   <data name="Snippet_survb" xml:space="preserve"><value>bloc survey … endsurvey</value></data>
@@ -1616,6 +1617,8 @@ Aplici modificările? Pașii care nu au putut fi previzualizați rulează acum.<
   <data name="Exit_SaveAll" xml:space="preserve"><value>Salvează tot</value></data>
   <data name="Replace_EncodingRefused" xml:space="preserve"><value>Nu s-a înlocuit nimic: {0} nu poate conține „{1}” în {2}, codificarea declarată de fișier. Niciun fișier nu a fost modificat.</value></data>
   <data name="Replace_UndoRefused" xml:space="preserve"><value>Nu s-a restaurat nimic: {0} a fost modificat după înlocuire. Niciun fișier nu a fost modificat.</value></data>
+  <data name="Notif_SaveUndecodable" xml:space="preserve"><value>{0} conține octeți care nu sunt valizi în {2}; apar ca „{1}”. Salvarea i-ar înlocui definitiv. Adăugați cu alt editor o linie `encoding` cu codificarea reală a fișierului și redeschideți-l, sau rescrieți caracterele afișate ca „{1}”.</value></data>
+  <data name="Replace_UndecodableRefused" xml:space="preserve"><value>Nu s-a înlocuit nimic: {0} conține octeți care nu sunt valizi în {2} (afișați ca „{1}”), iar scrierea i-ar înlocui definitiv. Niciun fișier nu a fost modificat.</value></data>
   <data name="Diag_FixCheck" xml:space="preserve"><value>Este posibil ca această corectură să nu ajungă la locul potrivit: verificați unde se aplică înainte de a o aplica.</value></data>
   <data name="Menu_Edit_PasteShots" xml:space="preserve"><value>Lipește ca date de vize…</value></data>
   <data name="Menu_Tools_Normalize" xml:space="preserve"><value>Normalizează proiectul…</value></data>
