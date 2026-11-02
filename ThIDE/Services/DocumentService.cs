@@ -321,24 +321,66 @@ public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, 
             return;
         }
 
-        // Decoded the way Therion reads it (an `encoding` line, a BOM, else UTF-8), and saved back the same way.
-        var file = await Task.Run(() => SourceFileIo.Read(full), ct).ConfigureAwait(false);
-        var doc = CreateDocument(full, file.Text);
-        doc.Format = SourceFileIo.FormatOf(file);
-        OnUiSync(() => Documents.Add(doc));
+        // A second open of a path that is still being read waits for the first one and shows its
+        // document, instead of reading the file again and adding a duplicate (double-click, MCP, startup).
+        var loading = new TaskCompletionSource<FileDocumentViewModel?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        Task<FileDocumentViewModel?>? pending;
+        lock (_loading)
+        {
+            if (!_loading.TryGetValue(full, out pending)) _loading[full] = loading.Task;
+        }
+        if (pending is not null)
+        {
+            if (await pending.ConfigureAwait(false) is { } loaded) ShowOpened(loaded);
+            return;
+        }
 
-        // Establish a workspace for a directly-opened file when none exists yet, then
-        // light up cross-file navigation and the orphan banner (#1/#4).
-        await _session.EnsureCoversAsync(full, ct).ConfigureAwait(false);
-        doc.SetWorkspace(Workspace);
-        UpdateMembership(doc);
+        FileDocumentViewModel? doc = null;
+        try
+        {
+            // Decoded the way Therion reads it (an `encoding` line, a BOM, else UTF-8), and saved back the same way.
+            var file = await Task.Run(() => SourceFileIo.Read(full), ct).ConfigureAwait(false);
+            var created = CreateDocument(full, file.Text);
+            created.Format = SourceFileIo.FormatOf(file);
+            // Re-check on the UI thread: an open that began before this one registered may have added it.
+            FileDocumentViewModel? existing = null;
+            OnUiSync(() => { existing = FindOpen(full); if (existing is null) Documents.Add(created); });
+            if (existing is not null)
+            {
+                created.Dispose();
+                doc = existing;
+                ShowOpened(existing);
+                return;
+            }
+            doc = created;
 
-        // Batch mode still creates the tab (the dock adds it unfocused) but defers activation —
-        // and with it the per-file tool fan-out — to the end of the batch.
+            // Establish a workspace for a directly-opened file when none exists yet, then
+            // light up cross-file navigation and the orphan banner (#1/#4).
+            await _session.EnsureCoversAsync(full, ct).ConfigureAwait(false);
+            doc.SetWorkspace(Workspace);
+            UpdateMembership(doc);
+
+            // Batch mode still creates the tab (the dock adds it unfocused) but defers activation —
+            // and with it the per-file tool fan-out — to the end of the batch.
+            ShowOpened(doc);
+            _hooks?.Run(ScriptHookEvent.Open, full);
+        }
+        finally
+        {
+            lock (_loading) _loading.Remove(full);
+            loading.SetResult(doc);
+        }
+    }
+
+    // Paths being read by an open, so an overlapping open of the same file joins it (keyed like FindOpen).
+    private readonly System.Collections.Generic.Dictionary<string, Task<FileDocumentViewModel?>> _loading =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    private void ShowOpened(FileDocumentViewModel doc)
+    {
         OpenInDockRequested?.Invoke(this, doc);
         if (IsBatchOpenActive) _batchLastOpened = doc;
         else SetActive(doc);
-        _hooks?.Run(ScriptHookEvent.Open, full);
     }
 
     public async Task OpenFolderAsync(string folderPath, CancellationToken ct = default)
