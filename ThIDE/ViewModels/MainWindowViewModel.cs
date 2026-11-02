@@ -957,7 +957,12 @@ public partial class MainWindowViewModel : ViewModelBase
                 () => _factory.RestoreFloatWindows(_layout?.Current.FloatWindows),
                 Avalonia.Threading.DispatcherPriority.Background);
         else
+        {
+            // Nothing is restored, but autosave must now capture the live tree rather than keep
+            // writing back the saved (skipped) profile.
+            _factory.RestoreFloatWindows(null);
             _log?.Warning("Started in safe mode after an unclean shutdown — floated-window layout was not restored.");
+        }
 
         // Show the Welcome start page when nothing was restored (and the option is on). Posted at
         // Background priority AFTER the placeholder/float restore above so the document count is final.
@@ -1595,10 +1600,21 @@ public partial class MainWindowViewModel : ViewModelBase
         if (_picker is null) return;
         var path = await _picker.PickOpenLayoutAsync(Tr.Get("Pick_LoadLayoutTitle"));
         if (string.IsNullOrEmpty(path)) return;
-        if (LayoutProfileFile.TryLoad(path!) is { } profile)
-            ApplyLayoutProfile(profile);
-        else
+        if (LayoutProfileFile.TryLoad(path!) is not { } profile)
+        {
             _notifications.Error(Tr.Get("Notif_LayoutLoadFailed"), path!);
+            return;
+        }
+        try
+        {
+            ApplyLayoutProfile(profile);
+        }
+        catch (Exception ex)
+        {
+            _log?.Warning($"Layout file could not be applied: {ex.Message}");
+            _notifications.Error(Tr.Get("Notif_LayoutLoadFailed"), path!);
+            ResetLayout();
+        }
     }
 
     /// <summary>View ▸ Layout ▸ Split Side Panels in 2/3 — more panels visible at once.</summary>

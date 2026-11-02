@@ -351,7 +351,13 @@ public sealed class DockFactory : Factory
         (PersistDockLayout ? TryLoadLayout() : null) ?? TryBuildFromSavedProfile() ?? BuildDefaultLayout();
 
     /// <summary>Builds a fresh default layout for the "reset layout" command (#16).</summary>
-    public IRootDock ResetToDefault() => BuildDefaultLayout();
+    public IRootDock ResetToDefault()
+    {
+        // A freshly built default tree is the live layout: from here on autosave must capture it,
+        // not echo a saved profile that was skipped or replaced.
+        _floatsRestored = true;
+        return BuildDefaultLayout();
+    }
 
     // ---- full-layout persistence via the declarative profile -----------------
     // The dock tree is never deserialized (a deserialized Dock 12 tree doesn't render);
