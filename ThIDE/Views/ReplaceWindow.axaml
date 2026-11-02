@@ -25,8 +25,8 @@
                 <ComboBox MinWidth="180" ItemsSource="{Binding Scopes}"
                           AutomationProperties.AutomationId="Replace.Scope" AutomationProperties.Name="{l:Loc Search_LookIn}"
                           SelectedItem="{Binding Scope, Mode=TwoWay}" />
-                <Button AutomationProperties.AutomationId="Replace.FindAll" Content="{l:Loc Search_FindAll}" Command="{Binding FindAllCommand}" />
-                <Button Content="{l:Loc Replace_ReplaceAll}" Command="{Binding ReplaceAllCommand}" IsDefault="True"
+                <Button AutomationProperties.AutomationId="Replace.FindAll" Content="{l:Loc Search_FindAll}" Command="{Binding FindAllCommand}" IsDefault="True" />
+                <Button Content="{l:Loc Replace_ReplaceAll}" Command="{Binding ReplaceAllCommand}"
                         AutomationProperties.AutomationId="Replace.ReplaceAll"
                         Background="#C62828" Foreground="White" />
                 <!-- Global (cross-file) undo/redo of the whole Replace-All operation. -->

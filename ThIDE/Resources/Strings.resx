@@ -1611,6 +1611,7 @@ Apply the changes? Steps that could not preview run now.</value></data>
   <data name="Exit_SavePromptMsg" xml:space="preserve"><value>{0} file(s) have unsaved changes. Do you want to save them before closing ThIDE?</value></data>
   <data name="Exit_SaveAll" xml:space="preserve"><value>Save all</value></data>
   <data name="Replace_EncodingRefused" xml:space="preserve"><value>Nothing replaced: {0} cannot hold '{1}' in {2}, the encoding the file declares. No file was changed.</value></data>
+  <data name="Replace_UndoRefused" xml:space="preserve"><value>Nothing restored: {0} was changed after the replace. No file was changed.</value></data>
   <data name="Diag_FixCheck" xml:space="preserve"><value>This fix may not land in the right place here: check where it goes before applying it.</value></data>
   <data name="Menu_Edit_PasteShots" xml:space="preserve"><value>Paste as shot data…</value></data>
   <data name="Menu_Tools_Normalize" xml:space="preserve"><value>Normalise project…</value></data>
