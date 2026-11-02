@@ -57,7 +57,19 @@ public sealed class EditTools(IWorkspaceHost host, MutationEngine mutations)
             return ToolResult<MutationResult>.Failure(ToolErrorCodes.ReadFailed, ex.Message);
         }
 
+        // read_file shows every line ending as a bare \n, so a quotation spanning lines arrives in that
+        // form. Match and splice it in the file's own line ending, or a CRLF file can never be edited
+        // across lines and a multi-line replacement mixes both endings into it. A quotation that already
+        // matches the raw text (a mixed file) is taken as given.
+        var newline = DominantNewline(current.Text);
         int at = current.Text.IndexOf(find, StringComparison.Ordinal);
+        if (at < 0 && newline != "\n")
+        {
+            find = WithNewline(find, newline);
+            at = current.Text.IndexOf(find, StringComparison.Ordinal);
+        }
+        replace = WithNewline(replace, newline);
+
         if (at < 0)
             return ToolResult<MutationResult>.Failure(ToolErrorCodes.InvalidArgument,
                 "The text to replace was not found. Quote 'find' exactly as read_file shows it, including whitespace.");
@@ -75,4 +87,19 @@ public sealed class EditTools(IWorkspaceHost host, MutationEngine mutations)
 
         return await mutations.ApplyAsync(plan, dryRun, expected, ct);
     }
+
+    /// <summary>"\r\n" when CRLF endings outnumber bare LF ones, otherwise "\n".</summary>
+    private static string DominantNewline(string text)
+    {
+        int crlf = 0, lf = 0;
+        for (int i = 0; i < text.Length; i++)
+        {
+            if (text[i] != '\n') continue;
+            if (i > 0 && text[i - 1] == '\r') crlf++; else lf++;
+        }
+        return crlf > lf ? "\r\n" : "\n";
+    }
+
+    private static string WithNewline(string text, string newline) =>
+        newline == "\n" ? text : text.Replace("\r\n", "\n").Replace("\n", newline);
 }
