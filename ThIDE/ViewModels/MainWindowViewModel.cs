@@ -889,7 +889,10 @@ public partial class MainWindowViewModel : ViewModelBase
                 {
                     if (!string.IsNullOrEmpty(s.LastWorkspaceRoot) && System.IO.Directory.Exists(s.LastWorkspaceRoot))
                         await _session.SetRootAsync(s.LastWorkspaceRoot).ConfigureAwait(true);
-                    if (!string.IsNullOrEmpty(s.LastActiveThconfig) && System.IO.File.Exists(s.LastActiveThconfig))
+                    // SetRootAsync usually auto-picks this same config already; loading it again would
+                    // build the whole project a second time on every start.
+                    if (!string.IsNullOrEmpty(s.LastActiveThconfig) && System.IO.File.Exists(s.LastActiveThconfig)
+                        && !(_session.ActiveThconfig is { } active && Therion.Workspace.Editing.FilePaths.Same(active.FullPath, s.LastActiveThconfig)))
                         await _session.SetActiveThconfigAsync(s.LastActiveThconfig).ConfigureAwait(true);
                 }
                 catch { /* fall through to file/sample restore */ }

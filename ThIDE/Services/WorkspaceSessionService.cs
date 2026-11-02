@@ -98,7 +98,7 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
 
     private TherionWorkspace? _workspace;
     private DebouncedFileWatcher? _rootWatcher;
-    private readonly Dictionary<string, DateTime> _selfWrites = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, SelfWriteMark> _selfWrites = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _externalConfigs = new(StringComparer.OrdinalIgnoreCase);
 
     public string? RootPath { get; private set; }
@@ -107,17 +107,29 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
     public WorkspaceSemanticModel? Model { get; private set; }
     public IReadOnlyList<string>? LoadedFiles => _workspace?.LoadedFiles;
 
-    public bool IsIndexing { get; private set; }
+    // A count, not a flag: activations and rebuilds overlap, and the first one to finish must not
+    // switch the indicator off while another is still building.
+    private int _indexingCount;
+    public bool IsIndexing => Volatile.Read(ref _indexingCount) > 0;
     public event EventHandler? IndexingChanged;
 
     public WorkspaceSymbolIndex? SymbolIndex { get; private set; }
 
-    private void SetIndexing(bool value)
+    private void BeginIndexing()
     {
-        if (IsIndexing == value) return;
-        IsIndexing = value;
-        IndexingChanged?.Invoke(this, EventArgs.Empty);
+        if (Interlocked.Increment(ref _indexingCount) == 1) IndexingChanged?.Invoke(this, EventArgs.Empty);
     }
+
+    private void EndIndexing()
+    {
+        if (Interlocked.Decrement(ref _indexingCount) == 0) IndexingChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    // Bumped by every activation and every root change. An activation publishes its workspace only
+    // while it is still the latest request, so overlapping activations end with the one asked for
+    // last rather than the one that happened to finish last.
+    private int _activationGeneration;
+    private bool IsLatestActivation(int generation) => Volatile.Read(ref _activationGeneration) == generation;
 
     public event EventHandler? Changed;
     public event EventHandler? BuffersRevalidated;
@@ -140,6 +152,7 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
     public async Task SetRootAsync(string rootDir, CancellationToken ct = default)
     {
         if (string.IsNullOrEmpty(rootDir) || !Directory.Exists(rootDir)) return;
+        Interlocked.Increment(ref _activationGeneration);   // a pending activation must not re-root us afterwards
         await AdoptRootAsync(rootDir).ConfigureAwait(false);
 
         // Pick the thconfig to activate as the reference graph (task 1).
@@ -288,6 +301,7 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
         if (string.IsNullOrEmpty(thconfigPath)) return false;
         var full = Path.GetFullPath(thconfigPath);
         if (!File.Exists(full)) return false; // missing file → let the caller warn (#8)
+        int generation = Interlocked.Increment(ref _activationGeneration);
 
         var ws = new TherionWorkspace(options: new WorkspaceOptions { ParserOptions = Therion.Syntax.ParserOptionsHost.Current });
         try { await ws.LoadAsync(full, ct).ConfigureAwait(false); }
@@ -296,9 +310,14 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
         // build the (potentially heavy) cross-file semantic model on a background thread
         // with a "ready" indicator, so a large project never blocks the UI while it indexes.
         WorkspaceSemanticModel model;
-        SetIndexing(true);
+        BeginIndexing();
         try { model = await Task.Run(() => ws.BuildSemanticModel(), ct).ConfigureAwait(false); }
-        finally { SetIndexing(false); }
+        catch { await ws.DisposeAsync().ConfigureAwait(false); throw; }
+        finally { EndIndexing(); }
+
+        // A newer activation (or a root change) was requested while this one loaded: it wins, so this
+        // result is dropped. Not a load failure — callers must not warn about it.
+        if (!IsLatestActivation(generation)) { await ws.DisposeAsync().ConfigureAwait(false); return true; }
 
         // The active thconfig *is* the project, so the workspace root follows it: activating one
         // from outside the current root (dropdown, scaffold, Open thconfig) re-roots the session at
@@ -309,7 +328,11 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
             if (Path.GetDirectoryName(full) is { Length: > 0 } dir)
                 await AdoptRootAsync(dir).ConfigureAwait(false);
 
-        var old = SwapWorkspace(ws, model, full);
+        if (!TrySwapWorkspace(ws, model, full, generation, out var old))
+        {
+            await ws.DisposeAsync().ConfigureAwait(false);
+            return true;
+        }
         UpdateSymbolIndex(model);
         if (old is not null) await old.DisposeAsync().ConfigureAwait(false);
 
@@ -337,7 +360,7 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
         {
             if (buffers.Count == 0 && _bufferOverlaid.Count == 0) return;   // nothing dirty and no overlay to undo
 
-            SetIndexing(true);
+            BeginIndexing();
             try
             {
                 WorkspaceSemanticModel model;
@@ -367,7 +390,7 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
                 UpdateSymbolIndex(model);
                 BuffersRevalidated?.Invoke(this, EventArgs.Empty);
             }
-            finally { SetIndexing(false); }
+            finally { EndIndexing(); }
         }
         finally { _revalidateGate.Release(); }
     }
@@ -420,24 +443,30 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
     public void SuppressSelfWrite(string filePath)
     {
         if (string.IsNullOrEmpty(filePath)) return;
-        lock (_gate) _selfWrites[TryFull(filePath)] = DateTime.UtcNow;
+        lock (_gate) _selfWrites[TryFull(filePath)] = new SelfWriteMark(DateTime.UtcNow);
     }
 
     // ---- internals ---------------------------------------------------------
 
-    private TherionWorkspace? SwapWorkspace(TherionWorkspace ws, WorkspaceSemanticModel model, string activePath)
+    // Swaps in an activation's workspace unless a newer activation was requested meanwhile (checked
+    // under the gate, so two activations cannot both pass the check and publish in the wrong order).
+    private bool TrySwapWorkspace(TherionWorkspace ws, WorkspaceSemanticModel model, string activePath, int generation,
+        out TherionWorkspace? replaced)
     {
         TherionWorkspace? old;
+        replaced = null;
         lock (_gate)
         {
+            if (!IsLatestActivation(generation)) return false;
             old = _workspace;
             if (old is not null) old.WorkspaceChanged -= OnWorkspaceChanged;
             _workspace = ws;
             ws.WorkspaceChanged += OnWorkspaceChanged;
             Model = model;
+            ActiveThconfig = new ThconfigCandidate(activePath, DisplayFor(activePath), !IsUnderRoot(activePath));
         }
-        ActiveThconfig = new ThconfigCandidate(activePath, DisplayFor(activePath), !IsUnderRoot(activePath));
-        return ReferenceEquals(old, ws) ? null : old;
+        replaced = ReferenceEquals(old, ws) ? null : old;
+        return true;
     }
 
     // The TherionWorkspace re-parses a changed tracked file and raises this; rebuild the
@@ -445,13 +474,57 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
     private void OnWorkspaceChanged(object? sender, EventArgs e)
     {
         if (_settings is { Current.AutoReloadGraphOnExternalChange: false }) return;
-        if (sender is not TherionWorkspace ws) return;
-        _ = RebuildGraphAsync(ws);   // rebuild off the watcher thread, with the indicator
+        if (sender is not TherionWorkspace) return;
+        RequestRebuild();
+    }
+
+    // Coalesces the per-file WorkspaceChanged events into one rebuild pump: a change that touches many
+    // files at once (checkout, sync, Format all) raises one event per file, but is built and published
+    // once. Rebuilds run one at a time, so the model left in place is always built from a snapshot
+    // taken after the last re-parse, never an earlier partial one that happened to finish last.
+    private static readonly TimeSpan RebuildQuietPeriod = TimeSpan.FromMilliseconds(200);
+    private bool _rebuildRequested;
+    private bool _rebuildPumpRunning;
+
+    private void RequestRebuild()
+    {
+        lock (_gate)
+        {
+            _rebuildRequested = true;
+            if (_rebuildPumpRunning) return;
+            _rebuildPumpRunning = true;
+        }
+        _ = RunRebuildPumpAsync();   // rebuild off the watcher thread, with the indicator
+    }
+
+    private async Task RunRebuildPumpAsync()
+    {
+        while (true)
+        {
+            // Trailing quiet period: keep waiting while the burst is still arriving.
+            do
+            {
+                lock (_gate) _rebuildRequested = false;
+                await Task.Delay(RebuildQuietPeriod).ConfigureAwait(false);
+            }
+            while (Volatile.Read(ref _rebuildRequested));
+
+            TherionWorkspace? ws;
+            lock (_gate) ws = _workspace;
+            if (ws is not null) await RebuildGraphAsync(ws).ConfigureAwait(false);
+
+            lock (_gate)
+            {
+                if (!_rebuildRequested) { _rebuildPumpRunning = false; return; }
+            }
+        }
     }
 
     private async Task RebuildGraphAsync(TherionWorkspace ws)
     {
-        SetIndexing(true);
+        BeginIndexing();
+        // Serialized with the buffer revalidation, which mutates the same workspace.
+        await _revalidateGate.WaitAsync().ConfigureAwait(false);
         try
         {
             WorkspaceSemanticModel model;
@@ -461,7 +534,7 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
             UpdateSymbolIndex(model);
             Raise();
         }
-        finally { SetIndexing(false); }
+        finally { _revalidateGate.Release(); EndIndexing(); }
     }
 
     /// <summary>rebuilds the persistent symbol index from the new model and persists it.</summary>
@@ -506,15 +579,39 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
         ExternalFileChanged?.Invoke(this, new ExternalFileChange(full, DateTime.UtcNow, !File.Exists(full)));
     }
 
+    // A pending self-write: when it was marked, and the file's size + write time as first seen after it.
+    private sealed class SelfWriteMark(DateTime markedUtc)
+    {
+        public DateTime MarkedUtc { get; } = markedUtc;
+        public (long Length, DateTime WriteUtc)? Seen { get; set; }
+    }
+
     private bool IsSelfWrite(string full)
     {
+        var stamp = StampOf(full);
         lock (_gate)
         {
-            if (!_selfWrites.TryGetValue(full, out var when)) return false;
+            if (!_selfWrites.TryGetValue(full, out var mark)) return false;
             // Self-write window: the watcher fires shortly after our File.WriteAllText.
-            if (DateTime.UtcNow - when > TimeSpan.FromSeconds(3)) { _selfWrites.Remove(full); return false; }
-            return true;
+            if (DateTime.UtcNow - mark.MarkedUtc > TimeSpan.FromSeconds(3)) { _selfWrites.Remove(full); return false; }
+            // The first event after the mark is our own write; remember what the file looked like then.
+            if (mark.Seen is null) { mark.Seen = stamp; return true; }
+            // A repeat notification for that same write leaves the file as we saw it. Anything else is a
+            // genuine external write (a save hook, an agent) and must be reported.
+            if (mark.Seen == stamp) return true;
+            _selfWrites.Remove(full);
+            return false;
         }
+    }
+
+    private static (long Length, DateTime WriteUtc) StampOf(string path)
+    {
+        try
+        {
+            var info = new FileInfo(path);
+            return info.Exists ? (info.Length, info.LastWriteTimeUtc) : (-1, DateTime.MinValue);
+        }
+        catch { return (-1, DateTime.MinValue); }
     }
 
     private void RescanCandidates()
