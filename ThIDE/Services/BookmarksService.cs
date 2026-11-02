@@ -58,7 +58,7 @@ public sealed class BookmarksService : IBookmarksService
 
     public bool HasBookmark(string filePath, int line) =>
         _bookmarks.Any(b =>
-            string.Equals(b.FilePath, filePath, StringComparison.OrdinalIgnoreCase) &&
+            Therion.Workspace.Editing.FilePaths.Comparer.Equals(b.FilePath, filePath) &&
             b.Line == line);
 
     private void Load()

@@ -619,7 +619,7 @@ public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, 
     }
 
     private static bool SameLine(Therion.Core.SourceSpan a, Therion.Core.SourceSpan b) =>
-        string.Equals(a.FilePath, b.FilePath, StringComparison.OrdinalIgnoreCase) &&
+        FilePaths.Comparer.Equals(a.FilePath, b.FilePath) &&
         a.Start.Line == b.Start.Line;
 
     public async Task NavigateToSpanAsync(Therion.Core.SourceSpan span, CancellationToken ct = default)
@@ -805,7 +805,7 @@ public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, 
         var current = _settings.Current;
         var list = new System.Collections.Generic.List<string>(current.RecentFiles.Count + 1) { fullPath };
         foreach (var p in current.RecentFiles)
-            if (!string.Equals(p, fullPath, StringComparison.OrdinalIgnoreCase)) list.Add(p);
+            if (!FilePaths.Comparer.Equals(p, fullPath)) list.Add(p);
         if (list.Count > MaxRecentFiles) list.RemoveRange(MaxRecentFiles, list.Count - MaxRecentFiles);
         try { _settings.Save(current with { RecentFiles = list }); } catch { /* best-effort */ }
     }
@@ -818,17 +818,17 @@ public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, 
         var current = _settings.Current;
         var list = new System.Collections.Generic.List<string>(current.RecentFiles.Count + fullPaths.Count);
         for (int i = fullPaths.Count - 1; i >= 0; i--)
-            if (!list.Contains(fullPaths[i], StringComparer.OrdinalIgnoreCase)) list.Add(fullPaths[i]);
+            if (!list.Contains(fullPaths[i], FilePaths.Comparer)) list.Add(fullPaths[i]);
         foreach (var p in current.RecentFiles)
-            if (!list.Contains(p, StringComparer.OrdinalIgnoreCase)) list.Add(p);
+            if (!list.Contains(p, FilePaths.Comparer)) list.Add(p);
         if (list.Count > MaxRecentFiles) list.RemoveRange(MaxRecentFiles, list.Count - MaxRecentFiles);
         try { _settings.Save(current with { RecentFiles = list }); } catch { /* best-effort */ }
     }
 
     private FileDocumentViewModel? FindOpen(string path) =>
         Documents.FirstOrDefault(d =>
-            string.Equals(d.FilePath, path, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(Path.GetFullPath(d.FilePath), TryFull(path), StringComparison.OrdinalIgnoreCase));
+            FilePaths.Comparer.Equals(d.FilePath, path) ||
+            FilePaths.Comparer.Equals(Path.GetFullPath(d.FilePath), TryFull(path)));
 
     private static string TryFull(string p) { try { return Path.GetFullPath(p); } catch { return p; } }
 
@@ -885,7 +885,7 @@ public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, 
     private void RecordRecentlyClosed(string path)
     {
         if (string.IsNullOrEmpty(path) || !File.Exists(path)) return; // unsaved/in-memory → nothing to reopen
-        _recentlyClosed.RemoveAll(p => string.Equals(p, path, StringComparison.OrdinalIgnoreCase));
+        _recentlyClosed.RemoveAll(p => FilePaths.Comparer.Equals(p, path));
         _recentlyClosed.Add(path);
         if (_recentlyClosed.Count > MaxRecentlyClosed) _recentlyClosed.RemoveAt(0);
     }

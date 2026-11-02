@@ -244,7 +244,7 @@ public partial class MainWindow : Window
             var groupFiles = new List<string>();
             foreach (var path in recent)
             {
-                if (pinned.Contains(path, StringComparer.OrdinalIgnoreCase)) continue;   // shown in pinned group
+                if (pinned.Contains(path, Therion.Workspace.Editing.FilePaths.Comparer)) continue;   // shown in pinned group
                 var ext = Path.GetExtension(path);
                 bool inGroup = exts.Length == 0
                     ? !RecentGroupedExts.Contains(ext)         // "Other": anything not in a named group
@@ -1314,7 +1314,7 @@ public partial class MainWindow : Window
             // "See occurrences" button to open the preview on demand.
             var activePath = docs!.Active?.FilePath;
             bool crossFile = changes.Any(c => activePath is null ||
-                !string.Equals(c.FilePath, activePath, StringComparison.OrdinalIgnoreCase));
+                !Therion.Workspace.Editing.FilePaths.Comparer.Equals(c.FilePath, activePath));
             bool otherSurvey = equateLinkedChanges.Count > 0 || sameNameChanges.Count > 0;
             bool complex = crossFile || otherSurvey || settings?.Current.ShowRenamePreviewBeforeApply == true;
 
@@ -1423,7 +1423,7 @@ public partial class MainWindow : Window
         // clobber unsaved edits (and the stale-drift guard would silently drop the file's spans).
         var edits = Therion.Semantics.SymbolRenamePlan.Compute(workspace, symbol, name,
             path => active?.FilePath is { Length: > 0 } ap &&
-                    string.Equals(path, ap, System.StringComparison.OrdinalIgnoreCase) &&
+                    Therion.Workspace.Editing.FilePaths.Comparer.Equals(path, ap) &&
                     active.DocumentText is { Length: > 0 } at
                 ? at
                 : SafeReadAllText(path));
@@ -1449,13 +1449,13 @@ public partial class MainWindow : Window
         var text = active.DocumentText;
         if (string.IsNullOrEmpty(path) || string.IsNullOrEmpty(text)) return null;
         // The occurrence index only covers this file, so the declaration must live here.
-        if (!string.Equals(targetSpan.FilePath, path, System.StringComparison.OrdinalIgnoreCase)) return null;
+        if (!Therion.Workspace.Editing.FilePaths.Comparer.Equals(targetSpan.FilePath, path)) return null;
 
         // Resolve the clicked declaration to a symbol identity within this file (mirrors the workspace
         // path). Any ⇒ try station then survey (a plain token arrives as Any — see CollectSymbolRenameChanges).
         bool Match(Therion.Core.SourceSpan d) =>
             d.StartOffset == targetSpan.StartOffset &&
-            string.Equals(d.FilePath, path, System.StringComparison.OrdinalIgnoreCase);
+            Therion.Workspace.Editing.FilePaths.Comparer.Equals(d.FilePath, path);
 
         Therion.Semantics.SymbolId symbol;
         string name;
@@ -1534,7 +1534,7 @@ public partial class MainWindow : Window
         if (targetQn is null && active?.Semantics is { } m)
             foreach (var s in m.Stations.Values)
                 if (s.DeclarationSpan.StartOffset == targetSpan.StartOffset &&
-                    string.Equals(s.DeclarationSpan.FilePath, targetSpan.FilePath, System.StringComparison.OrdinalIgnoreCase))
+                    Therion.Workspace.Editing.FilePaths.Comparer.Equals(s.DeclarationSpan.FilePath, targetSpan.FilePath))
                 { targetQn = s.Name; break; }
         if (targetQn is null) return new();
 
@@ -1560,12 +1560,12 @@ public partial class MainWindow : Window
         if (symbols.Count == 0) return new();
 
         var covered = already.ToDictionary(c => c.FilePath,
-            c => new HashSet<int>(c.Hits.Select(h => h.Start)), StringComparer.OrdinalIgnoreCase);
-        var byPath = new Dictionary<string, RenameFileChanges>(StringComparer.OrdinalIgnoreCase);
+            c => new HashSet<int>(c.Hits.Select(h => h.Start)), Therion.Workspace.Editing.FilePaths.Comparer);
+        var byPath = new Dictionary<string, RenameFileChanges>(Therion.Workspace.Editing.FilePaths.Comparer);
 
         string? Read(string p) =>
             active?.FilePath is { Length: > 0 } ap &&
-            string.Equals(p, ap, System.StringComparison.OrdinalIgnoreCase) &&
+            Therion.Workspace.Editing.FilePaths.Comparer.Equals(p, ap) &&
             active.DocumentText is { Length: > 0 } at
                 ? at
                 : (System.IO.File.Exists(p) ? SafeReadAllText(p) : null);
@@ -1608,9 +1608,12 @@ public partial class MainWindow : Window
         string oldName, List<RenameFileChanges> symbolChanges)
     {
         var known = symbolChanges.ToDictionary(c => c.FilePath,
-            c => new HashSet<int>(c.Hits.Select(h => h.Start)), StringComparer.OrdinalIgnoreCase);
+            c => new HashSet<int>(c.Hits.Select(h => h.Start)), Therion.Workspace.Editing.FilePaths.Comparer);
+        // A file the symbol pass already plans is scanned in that very text, so both passes' offsets
+        // agree when they are merged and applied to it.
+        var plannedText = symbolChanges.ToDictionary(c => c.FilePath, c => c.FileText, Therion.Workspace.Editing.FilePaths.Comparer);
         var result = new List<RenameFileChanges>();
-        var seenPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var seenPaths = new HashSet<string>(Therion.Workspace.Editing.FilePaths.Comparer);
 
         void Scan(string path, string text)
         {
@@ -1627,25 +1630,34 @@ public partial class MainWindow : Window
         foreach (var path in workspace.PerFile.Keys)
         {
             if (seenPaths.Contains(path)) continue;
-            string text;
-            try { text = File.ReadAllText(path); } catch { continue; }
+            // Decoded the way Therion reads the file (its `encoding` line), as the other rename passes do:
+            // the hits are applied to this text and it is saved back in that encoding.
+            var text = plannedText.TryGetValue(path, out var planned) ? planned : SafeReadAllText(path);
+            if (text is null) continue;
             Scan(path, text);
         }
         return result;
     }
 
-    /// <summary>Merges two change sets by file (dedup + order hits), so both passes apply cleanly.</summary>
+    /// <summary>
+    /// Merges two change sets by file (dedup + order hits), so both passes apply cleanly. Hits are
+    /// offsets into their own <see cref="RenameFileChanges.FileText"/>, so a file whose two plans were
+    /// computed against different texts keeps only the first plan's hits rather than misplacing the second's.
+    /// </summary>
     private static List<RenameFileChanges> MergeRenameChanges(
         List<RenameFileChanges> a, IReadOnlyList<RenameFileChanges> b)
     {
-        var byPath = a.ToDictionary(c => c.FilePath, StringComparer.OrdinalIgnoreCase);
+        var byPath = a.ToDictionary(c => c.FilePath, Therion.Workspace.Editing.FilePaths.Comparer);
         foreach (var c in b)
         {
             if (byPath.TryGetValue(c.FilePath, out var existing))
+            {
+                if (!string.Equals(existing.FileText, c.FileText, StringComparison.Ordinal)) continue;
                 byPath[c.FilePath] = existing with
                 {
                     Hits = existing.Hits.Concat(c.Hits).Distinct().OrderBy(h => h.Start).ToList(),
                 };
+            }
             else byPath[c.FilePath] = c;
         }
         return byPath.Values.ToList();
@@ -1666,7 +1678,7 @@ public partial class MainWindow : Window
         Therion.Core.SourceSpan targetSpan)
     {
         var result = new List<RenameFileChanges>();
-        var seenPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var seenPaths = new HashSet<string>(Therion.Workspace.Editing.FilePaths.Comparer);
 
         // The active document may not be part of the loaded workspace; scan its live (possibly-unsaved)
         // text first so its spans align with what the user sees.
@@ -1710,7 +1722,7 @@ public partial class MainWindow : Window
                 {
                     var resolved = nav.GoToDefinition(t.Raw, kind);
                     if (resolved is { } rs &&
-                        string.Equals(rs.FilePath, targetSpan.FilePath, System.StringComparison.OrdinalIgnoreCase) &&
+                        Therion.Workspace.Editing.FilePaths.Comparer.Equals(rs.FilePath, targetSpan.FilePath) &&
                         rs.StartOffset == targetSpan.StartOffset)
                     {
                         hits.Add((idx, oldName.Length));
@@ -1749,7 +1761,7 @@ public partial class MainWindow : Window
                 sb.Remove(start, length).Insert(start, newName);
 
             var newText = sb.ToString();
-            var open = docs.Documents.FirstOrDefault(d => string.Equals(d.FilePath, fc.FilePath, System.StringComparison.OrdinalIgnoreCase));
+            var open = docs.Documents.FirstOrDefault(d => Therion.Workspace.Editing.FilePaths.Comparer.Equals(d.FilePath, fc.FilePath));
             try
             {
                 var (bytes, format) = await System.Threading.Tasks.Task.Run(() => Therion.Workspace.Editing.SourceFileIo.EncodeForSave(fc.FilePath, newText, open?.Format));
@@ -1776,7 +1788,7 @@ public partial class MainWindow : Window
 
             foreach (var doc in docs.Documents)
             {
-                if (!string.Equals(doc.FilePath, fc.FilePath, System.StringComparison.OrdinalIgnoreCase)) continue;
+                if (!Therion.Workspace.Editing.FilePaths.Comparer.Equals(doc.FilePath, fc.FilePath)) continue;
 
                 // The active file's new text already incorporates its unsaved edits, so update it
                 // silently. Any OTHER tab with unsaved edits keeps the conflict banner so those

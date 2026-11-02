@@ -15,6 +15,7 @@ using Microsoft.Extensions.Localization;
 using Therion.Build;
 using Therion.Semantics;
 using Therion.Syntax;
+using Therion.Workspace.Editing;
 using Therion.Workspace.Import;
 using ThIDE.Docking;
 using ThIDE.Resources;
@@ -608,8 +609,12 @@ public partial class MainWindowViewModel : ViewModelBase
         };
         _factory.DockableClosed += (_, e) =>
         {
+            if (e.Dockable is { } closed) OnUiThread(() => _mru.Remove(closed));   // the MRU orders open dockables; it must not keep closed ones alive
             if (e.Dockable is FileDocumentViewModel doc) _documents.CloseDocument(doc);
         };
+        // Documents closed through the document service (e.g. Close All) do not pass DockableClosed: drop them too.
+        _documents.Documents.CollectionChanged += (_, _) => OnUiThread(() =>
+            _mru.RemoveAll(d => d is FileDocumentViewModel f && !_documents.Documents.Contains(f)));
         // Prompt to save a modified document before its tab closes (Save / Don't save / Cancel).
         _factory.DocumentCloseGuard = PromptSaveBeforeCloseAsync;
 
@@ -690,12 +695,12 @@ public partial class MainWindowViewModel : ViewModelBase
             Model3DViewerTool.Viewer.SelectInModel(name);
         });
 
+        // Compiler diagnostics stay listed (across document switches and re-validation) until the
+        // next build replaces them.
         Build.CompileCompleted += (_, diags) =>
         {
-            var combined = System.Collections.Immutable.ImmutableArray.CreateBuilder<Therion.Core.Diagnostic>();
-            combined.AddRange(DiagnosticsSource());
-            combined.AddRange(diags);
-            Diagnostics.Load(combined.ToImmutable());
+            _buildDiagnostics = diags;
+            RefreshDiagnostics();
         };
         // toast the build result with a one-click "Show output" action. The result flags
         // are set on BuildViewModel before CompileCompleted fires, so they are current here.
@@ -786,10 +791,8 @@ public partial class MainWindowViewModel : ViewModelBase
             };
             Tasks.PublishDiagnostics = diags => OnUiThread(() =>
             {
-                var combined = System.Collections.Immutable.ImmutableArray.CreateBuilder<Therion.Core.Diagnostic>();
-                combined.AddRange(DiagnosticsSource());
-                combined.AddRange(diags);
-                Diagnostics.Load(combined.ToImmutable());
+                _taskDiagnostics = diags;   // kept until the next task run publishes its own set
+                RefreshDiagnostics();
             });
         }
         // Compile-on-save follows every save — Save, Save All and auto-save — not just the command.
@@ -925,7 +928,7 @@ public partial class MainWindowViewModel : ViewModelBase
                         await _documents.OpenFileAsync(path).ConfigureAwait(true); loaded++;
                         // restore the caret offset so the tab reopens where it was left.
                         if (s?.SessionCaretOffsets is { } carets && carets.TryGetValue(path, out var off) && off > 0 &&
-                            _documents.Documents.FirstOrDefault(d => string.Equals(d.FilePath, path, StringComparison.OrdinalIgnoreCase)) is { } reopened)
+                            _documents.Documents.FirstOrDefault(d => FilePaths.Comparer.Equals(d.FilePath, path)) is { } reopened)
                             reopened.SavedCaretOffset = off;
                     }
                     catch (Exception ex) { _log?.Warning($"Failed to load '{path}': {ex.Message}"); }
@@ -1011,7 +1014,7 @@ public partial class MainWindowViewModel : ViewModelBase
         if (_settings is null) return;
         var paths = new System.Collections.Generic.List<string>();
         // also remember each tab's caret offset so it restores where the user left off.
-        var carets = new System.Collections.Generic.Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        var carets = new System.Collections.Generic.Dictionary<string, int>(FilePaths.Comparer);
         foreach (var doc in _documents.Documents)
         {
             if (string.IsNullOrEmpty(doc.FilePath) || !System.IO.File.Exists(doc.FilePath)) continue;
@@ -1047,7 +1050,7 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         if (_settings is null || string.IsNullOrEmpty(path)) return;
         var s = _settings.Current;
-        if (s.PinnedRecentFiles.Contains(path, StringComparer.OrdinalIgnoreCase)) return;
+        if (s.PinnedRecentFiles.Contains(path, FilePaths.Comparer)) return;
         var pinned = new List<string>(s.PinnedRecentFiles) { path };
         _settings.Save(s with { PinnedRecentFiles = pinned });
     }
@@ -1058,7 +1061,7 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         if (_settings is null || string.IsNullOrEmpty(path)) return;
         var s = _settings.Current;
-        var pinned = s.PinnedRecentFiles.Where(p => !string.Equals(p, path, StringComparison.OrdinalIgnoreCase)).ToList();
+        var pinned = s.PinnedRecentFiles.Where(p => !FilePaths.Comparer.Equals(p, path)).ToList();
         if (pinned.Count == s.PinnedRecentFiles.Count) return;
         _settings.Save(s with { PinnedRecentFiles = pinned });
     }
@@ -1488,7 +1491,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 System.IO.Path.Combine(targetRoot, plan.SourceCopyRelativePath));
             System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(sourceDest)!);
             // Guard against copying a file onto itself (e.g. scaffolding around a file already in place).
-            if (!string.Equals(System.IO.Path.GetFullPath(sourcePath), sourceDest, StringComparison.OrdinalIgnoreCase))
+            if (!FilePaths.Comparer.Equals(System.IO.Path.GetFullPath(sourcePath), sourceDest))
                 System.IO.File.Copy(sourcePath, sourceDest, overwrite: true);
 
             foreach (var f in plan.Files)
@@ -1901,8 +1904,22 @@ public partial class MainWindowViewModel : ViewModelBase
         WorkspaceExplorer.Refresh();
     }
 
-    /// <summary>Returns the diagnostics source based on the current scope toggle.</summary>
-    private System.Collections.Immutable.ImmutableArray<Therion.Core.Diagnostic> DiagnosticsSource()
+    /// <summary>The last build's compiler diagnostics; replaced when the next build completes.</summary>
+    private System.Collections.Immutable.ImmutableArray<Therion.Core.Diagnostic> _buildDiagnostics =
+        System.Collections.Immutable.ImmutableArray<Therion.Core.Diagnostic>.Empty;
+    /// <summary>The last task run's problem-matcher diagnostics; replaced by the next task that publishes.</summary>
+    private System.Collections.Immutable.ImmutableArray<Therion.Core.Diagnostic> _taskDiagnostics =
+        System.Collections.Immutable.ImmutableArray<Therion.Core.Diagnostic>.Empty;
+
+    /// <summary>
+    /// Everything the Diagnostics panel lists: the parse/semantic/project set for the current scope
+    /// plus the last build's and the last task's diagnostics, which no re-parse reproduces.
+    /// </summary>
+    private System.Collections.Immutable.ImmutableArray<Therion.Core.Diagnostic> DiagnosticsSource() =>
+        EditorDiagnosticsSource().AddRange(_buildDiagnostics).AddRange(_taskDiagnostics);
+
+    /// <summary>Returns the parse/semantic/project diagnostics based on the current scope toggle.</summary>
+    private System.Collections.Immutable.ImmutableArray<Therion.Core.Diagnostic> EditorDiagnosticsSource()
     {
         // NOTE: do NOT gate this on `ws.Diagnostics` being non-empty. Those are only the per-file
         // parse/bind/xvi diagnostics; the project-wide analysis below (loop closure, blunders, and the
@@ -1952,12 +1969,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private static bool IsActiveFile(string? path, string? activePath)
     {
         if (string.IsNullOrEmpty(path) || string.IsNullOrEmpty(activePath)) return false;
-        try
-        {
-            return string.Equals(System.IO.Path.GetFullPath(path), System.IO.Path.GetFullPath(activePath),
-                StringComparison.OrdinalIgnoreCase);
-        }
-        catch { return string.Equals(path, activePath, StringComparison.OrdinalIgnoreCase); }
+        return FilePaths.Same(path, activePath);
     }
 
     private WorkspaceSemanticModel? _projDiagWorkspace;
@@ -2106,7 +2118,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private void UpdateCaretStatus(Therion.Core.SourceSpan span)
     {
         // Only the active document's caret drives the status bar.
-        if (!string.Equals(span.FilePath, _documents.CurrentPath, StringComparison.OrdinalIgnoreCase)) return;
+        if (!FilePaths.Comparer.Equals(span.FilePath, _documents.CurrentPath)) return;
         StatusCaretLine = span.Start.Line;
         StatusCaretCol = span.Start.Column;
         StatusCaretPos = span.StartOffset;
