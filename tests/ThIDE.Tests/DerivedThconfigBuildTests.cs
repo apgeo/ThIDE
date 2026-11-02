@@ -72,7 +72,7 @@ public class DerivedThconfigBuildTests : IDisposable
             "get_Documents" => docs,
             "get_CurrentText" => string.Empty,
             "get_CurrentDiagnostics" => ImmutableArray<Therion.Core.Diagnostic>.Empty,
-            "SaveDocumentAsync" => Task.CompletedTask,
+            "SaveDocumentAsync" => Task.FromResult(true),
             _ => null,
         }, (m, args) =>
         {
