@@ -2,9 +2,15 @@
 // (begin/end ≈ survey, *fix/*equate/*data map almost 1:1), so this produces a faithful, readable
 // .th scaffold. Pure string→string; the caller writes the file. Not every Survex command is
 // supported — unknown `*commands` are passed through as comments so nothing is silently lost.
+//
+// Survex settings (*units, *data, …) stay in force inside a nested *begin and after its *end, while
+// every Therion centreline starts from defaults; each Scope therefore remembers the settings in
+// force and every centreline the importer opens restates them. A station written `sub.station` is
+// rewritten to Therion's `station@sub`.
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace Therion.Workspace.Import;
@@ -29,7 +35,15 @@ public static class SurvexImporter
             {
                 sb.Append(Indent()).Append("centreline\n");
                 s.CentrelineOpen = true;
+                foreach (var (_, setting) in s.Settings) sb.Append(Indent(1)).Append(setting).Append('\n');
             }
+        }
+        // Writes a setting line into the (opened) centreline and keeps it for the centrelines opened later.
+        void Setting(string key, string line, bool replace = true)
+        {
+            EnsureCentreline();
+            sb.Append(Indent(1)).Append(line).Append('\n');
+            scopes.Peek().Remember(key, line, replace);
         }
         void CloseCentreline()
         {
@@ -61,7 +75,7 @@ public static class SurvexImporter
                         CloseCentreline();
                         var name = FirstToken(rest);
                         sb.Append(Indent()).Append("survey ").Append(string.IsNullOrEmpty(name) ? "_" : name).Append('\n');
-                        scopes.Push(new Scope(name, scopes.Count));
+                        scopes.Push(new Scope(name, scopes.Count, scopes.Peek()));
                         break;
                     case "end":
                         CloseCentreline();
@@ -77,39 +91,43 @@ public static class SurvexImporter
                         break;
                     case "fix":
                         EnsureCentreline();
-                        sb.Append(Indent(1)).Append("fix ").Append(rest.Trim()).Append('\n');
+                        sb.Append(Indent(1)).Append("fix ").Append(QualifyStations(rest.Trim(), scopes.Peek(), firstOnly: true)).Append('\n');
                         break;
                     case "equate":
                         EnsureCentreline();
-                        sb.Append(Indent(1)).Append("equate ").Append(rest.Trim()).Append('\n');
+                        sb.Append(Indent(1)).Append("equate ").Append(QualifyStations(rest.Trim(), scopes.Peek())).Append('\n');
                         break;
                     case "data":
-                        EnsureCentreline();
-                        sb.Append(Indent(1)).Append("data ").Append(MapDataReadings(rest.Trim())).Append('\n');
+                        var dataLine = "data " + MapDataReadings(rest.Trim());
+                        Setting("data", dataLine);
+                        scopes.Peek().DataColumns = DataColumns(rest);
                         break;
                     case "date":
-                        EnsureCentreline();
-                        sb.Append(Indent(1)).Append("date ").Append(rest.Trim().Replace('.', '.')).Append('\n');
+                        Setting("date", "date " + rest.Trim().Replace('.', '.'));
                         break;
                     case "team":
                         EnsureCentreline();
                         sb.Append(Indent(1)).Append("# team ").Append(rest.Trim()).Append('\n');
                         break;
                     case "flags":
-                        EnsureCentreline();
-                        sb.Append(Indent(1)).Append("flags ").Append(rest.Trim()).Append('\n');
+                        Setting("flags", "flags " + rest.Trim(), replace: false);   // cumulative
                         break;
                     case "calibrate":
-                        EnsureCentreline();
-                        sb.Append(Indent(1)).Append("calibrate ").Append(rest.Trim()).Append('\n');
+                        Setting("calibrate " + FirstToken(rest), "calibrate " + rest.Trim());
                         break;
                     case "units":
-                        EnsureCentreline();
-                        sb.Append(Indent(1)).Append("units ").Append(rest.Trim()).Append('\n');
+                        var unitWords = rest.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+                        Setting("units " + string.Join(' ', unitWords.Take(Math.Max(unitWords.Length - 1, 1))), "units " + rest.Trim());
                         break;
                     case "cs":
-                        EnsureCentreline();
-                        sb.Append(Indent(1)).Append("cs ").Append(rest.Trim()).Append('\n');
+                        Setting("cs", "cs " + rest.Trim());
+                        break;
+                    case "set":
+                        var setWords = rest.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+                        if (setWords.Length > 1 && setWords[0].Equals("separator", StringComparison.OrdinalIgnoreCase)
+                            && setWords[1].Trim('"').Length == 1)
+                            scopes.Peek().Separator = setWords[1].Trim('"')[0];
+                        sb.Append(Indent()).Append("# *").Append(trimmed[1..].Trim()).Append('\n');
                         break;
                     case "include":
                         sb.Append(Indent()).Append("input ").Append(Unquote(rest.Trim())).Append('\n');
@@ -125,7 +143,7 @@ public static class SurvexImporter
 
             // A plain data row inside the current scope.
             EnsureCentreline();
-            sb.Append(Indent(1)).Append(trimmed);
+            sb.Append(Indent(1)).Append(QualifyRow(trimmed, scopes.Peek()));
             if (comment is not null) sb.Append(" # ").Append(comment);
             sb.Append('\n');
         }
@@ -147,10 +165,74 @@ public static class SurvexImporter
 
     private sealed class Scope
     {
-        public Scope(string? name, int depth) { Name = name; Depth = depth; }
+        // A child starts with the settings and station syntax in force where it begins.
+        public Scope(string? name, int depth, Scope? parent = null)
+        {
+            Name = name; Depth = depth;
+            if (parent is null) return;
+            Settings.AddRange(parent.Settings);
+            DataColumns = parent.DataColumns;
+            Separator = parent.Separator;
+        }
         public string? Name { get; }
         public int Depth { get; }
         public bool CentrelineOpen { get; set; }
+        /// <summary>The setting lines in force (Therion spelling), in the order they were given, keyed by what they set.</summary>
+        public List<(string Key, string Line)> Settings { get; } = new();
+        /// <summary>The column names of the active <c>*data</c> line after its style; Survex's default is <c>from to tape compass clino</c>.</summary>
+        public string[] DataColumns { get; set; } = { "from", "to", "tape", "compass", "clino" };
+        public char Separator { get; set; } = '.';
+
+        public void Remember(string key, string line, bool replace)
+        {
+            if (replace) Settings.RemoveAll(x => x.Key == key);
+            Settings.Add((key, line));
+        }
+    }
+
+    // The columns of `*data <style> <column>…`; `default` (or no column) restores Survex's default order.
+    private static string[] DataColumns(string rest)
+    {
+        var words = rest.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        if (words.Length < 2 || words[0].Equals("default", StringComparison.OrdinalIgnoreCase))
+            return new[] { "from", "to", "tape", "compass", "clino" };
+        return words.Skip(1).Select(w => w.ToLowerInvariant()).ToArray();
+    }
+
+    // Survex names a station in a sub-survey `a.b.5`; Therion writes `5@b.a` (innermost survey first).
+    // A name without the separator, or with an empty part (`..`, `.`, a trailing separator), is kept.
+    private static string QualifyStation(string name, char separator)
+    {
+        if (name.IndexOf(separator) < 0) return name;
+        var parts = name.Split(separator);
+        if (parts.Any(p => p.Length == 0)) return name;
+        return parts[^1] + "@" + string.Join('.', parts.Take(parts.Length - 1).Reverse());
+    }
+
+    // Rewrites the station names of a `*equate` (all words) or `*fix` (the first word) argument.
+    private static string QualifyStations(string args, Scope scope, bool firstOnly = false)
+    {
+        var words = args.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        for (int i = 0; i < words.Length && (!firstOnly || i == 0); i++)
+            words[i] = QualifyStation(words[i], scope.Separator);
+        return string.Join(' ', words);
+    }
+
+    // Rewrites the station columns (from / to / station) of a data row to follow the active `*data`
+    // order. A row is left as written when it names no sub-survey station or the order has `newline`.
+    private static string QualifyRow(string row, Scope scope)
+    {
+        var cols = scope.DataColumns;
+        if (cols.Contains("newline")) return row;
+        var words = row.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        bool changed = false;
+        for (int i = 0; i < words.Length && i < cols.Length; i++)
+        {
+            if (cols[i] is not ("from" or "to" or "station")) continue;
+            var q = QualifyStation(words[i], scope.Separator);
+            if (q != words[i]) { words[i] = q; changed = true; }
+        }
+        return changed ? string.Join(' ', words) : row;
     }
 
     private static (string Line, string? Comment) SplitComment(string s)

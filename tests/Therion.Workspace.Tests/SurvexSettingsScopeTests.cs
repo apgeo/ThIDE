@@ -48,4 +48,26 @@ public class SurvexSettingsScopeTests
         Assert.True(afterChild >= 0 && row > afterChild, "expected the row 3 4 100 -5 30 after `endsurvey` of a:\n" + th);
         Assert.True(data >= 0 && data < row, "the centreline reopened after `survey a` has no `data` line before its row, so Therion reads 100 as the length:\n" + th);
     }
+
+    [Fact]
+    public void A_setting_changed_in_a_child_does_not_leak_back_to_the_parent()
+    {
+        var th = SurvexImporter.Import("""
+            *begin cave
+            *units tape feet
+            *begin a
+            *units tape metres
+            1 2 30 100 -5
+            *end a
+            3 4 30 100 -5
+            *end cave
+            """);
+
+        int afterChild = th.IndexOf("endsurvey", StringComparison.Ordinal);
+        int row = th.IndexOf("3 4 30", afterChild, StringComparison.Ordinal);
+        int units = th.IndexOf("units tape feet", afterChild, StringComparison.Ordinal);
+
+        Assert.True(units >= 0 && units < row, th);
+        Assert.DoesNotContain("units tape metres", th[afterChild..]);
+    }
 }
