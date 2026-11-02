@@ -1849,25 +1849,35 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private async Task ApplyShotEditAsync(ShotEditEventArgs e)
     {
-        if (_editService is null || _documents.CurrentAst is null) return;
+        if (_editService is null) return;
         if (e.Row.SourceRow is not { } source || e.Row.FieldDefinition is not { } fields) return;
+        if (_documents.CurrentAst is not { } ast) { RevertShotRow(e.Row); return; }
 
         int idx = -1;
         for (int i = 0; i < fields.Fields.Length; i++)
         {
             if (string.Equals(fields.Fields[i], e.Field, StringComparison.OrdinalIgnoreCase)) { idx = i; break; }
         }
-        if (idx < 0) return;
+        if (idx < 0) { RevertShotRow(e.Row); return; }
 
-        var values = source.Values.ToBuilder();
-        while (values.Count <= idx) values.Add("-");
-        values[idx] = e.Value?.ToString("0.###", CultureInfo.InvariantCulture) ?? "-";
+        var value = e.Value?.ToString("0.###", CultureInfo.InvariantCulture) ?? "-";
 
-        var replacement = source with { Values = values.ToImmutable() };
-        var result = _editService.ReplaceNode(_documents.CurrentAst, source, replacement);
+        // The edit is applied to the active document's AST: a row from another workspace file
+        // cannot be found there.
+        if (_documents.CurrentPath is not { } current || !FilePaths.Same(source.Span.FilePath, current))
+        {
+            StatusText = string.Format(CultureInfo.CurrentCulture, Tr.Get("ShotEdit_OtherFile"),
+                System.IO.Path.GetFileName(source.Span.FilePath));
+            RevertShotRow(e.Row);
+            return;
+        }
+
+        // Only the edited token changes; the rest of the file (layout, comments, blocks) is kept as is.
+        var result = _editService.ReplaceRowValue(ast, _documents.CurrentText, source, idx, value);
         if (!result.Success || result.UpdatedText is null)
         {
             StatusText = result.Diagnostics.Length > 0 ? result.Diagnostics[0].Message : "Edit failed.";
+            RevertShotRow(e.Row);
             return;
         }
         try
@@ -1875,7 +1885,17 @@ public partial class MainWindowViewModel : ViewModelBase
             await _documents.WriteCurrentTextAsync(result.UpdatedText).ConfigureAwait(true);
             StatusText = $"Shot {e.Row.From} → {e.Row.To} updated.";
         }
-        catch (Exception ex) { StatusText = ex.Message; }
+        catch (Exception ex) { StatusText = ex.Message; RevertShotRow(e.Row); }
+    }
+
+    /// <summary>
+    /// Puts a rejected edit's cell back to the file's value, so the grid does not show an unsaved number.
+    /// Posted, because the edit arrives from inside the cell's own value commit.
+    /// </summary>
+    private static void RevertShotRow(ShotRow row)
+    {
+        if (row.Source is { } shot)
+            Avalonia.Threading.Dispatcher.UIThread.Post(() => row.SetSilently(shot.Length, shot.Compass, shot.Clino));
     }
 
     private static void OnUiThread(Action action)

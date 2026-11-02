@@ -1672,4 +1672,5 @@ Aplici modificările? Pașii care nu au putut fi previzualizați rulează acum.<
   <data name="Renumber_Stale" xml:space="preserve"><value>{0} s-a schimbat de la citirea proiectului — salvați sau reîncărcați, apoi încercați din nou.</value></data>
   <data name="Renumber_NoSurvey" xml:space="preserve"><value>Nu există topografia „{0}” în proiect.</value></data>
   <data name="ShotIssue_BadStation" xml:space="preserve"><value>„{0}” nu este nume de stație; rândul este omis.</value></data>
+  <data name="ShotEdit_OtherFile" xml:space="preserve"><value>Această viză este în {0}: deschideți acel fișier pentru a o edita.</value></data>
 </root>
