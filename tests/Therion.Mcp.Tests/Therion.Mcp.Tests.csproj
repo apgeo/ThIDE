@@ -23,6 +23,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Therion.Mcp\Therion.Mcp.csproj" />
+    <!-- The eval harness: its grader and committed suite are graded here against the real server. -->
+    <ProjectReference Include="..\..\src\Therion.Mcp.Evals\Therion.Mcp.Evals.csproj" />
     <!--
       Build order only: the e2e test spawns therion-mcp as a real child process rather than
       linking it. ReferenceOutputAssembly=false keeps the exe out of the test's own closure.
