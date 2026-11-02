@@ -99,6 +99,20 @@ public static class WorkspacePaths
     }
 
     /// <summary>
+    /// True when <paramref name="candidate"/> is the project's own config folder (<c>.thide/</c>) or
+    /// lies beneath it. That folder holds hooks and tasks that run commands once the folder is
+    /// trusted, so no agent write may land there: an edited hook would run on the next save or build.
+    /// Both forms are tested — the folder as named and with links followed — because a <c>.thide</c>
+    /// that is a symlink to another workspace folder is still where the hooks are read from.
+    /// </summary>
+    public static bool IsProjectConfig(string root, string candidate)
+    {
+        var config = Path.Combine(root.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+            Therion.Workspace.ProjectLocalConfig.DirectoryName);
+        return IsInside(config, candidate) || IsInside(Canonicalize(config), candidate);
+    }
+
+    /// <summary>
     /// Absolute path with <c>..</c> collapsed and every symlink resolved. Each component is resolved
     /// in turn, not just the leaf: a directory symlink halfway down the path is exactly how a
     /// jail that only inspects the final segment gets walked out of. Components that do not exist

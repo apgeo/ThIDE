@@ -29,6 +29,9 @@ public static class ToolErrorCodes
 
     public const string WriteFailed = "write_failed";
 
+    /// <summary>The path is in the project's config folder (hooks, tasks), which agent tools never write.</summary>
+    public const string ProtectedPath = "protected_path";
+
     /// <summary>The new text holds a character the file's declared encoding cannot represent.</summary>
     public const string UnrepresentableCharacter = "unrepresentable_character";
 

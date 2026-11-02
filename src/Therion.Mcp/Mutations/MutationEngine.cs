@@ -1,10 +1,10 @@
 // The one path by which an MCP tool is allowed to change a file (02 §B.4, §B.6; D-005).
 //
 // Everything a mutating tool needs to be safe lives here, so no individual tool has to remember it:
-// dry-run by default, the workspace jail, an optional sha256 precondition, a per-edit text-slice
-// check that refuses a stale plan outright rather than applying part of it, an atomic
-// encoding-preserving write with rollback, and a re-lint of the changed files so the result carries
-// its own evidence.
+// dry-run by default, the workspace jail (with the project's config folder kept out of it), an
+// optional sha256 precondition, a per-edit text-slice check that refuses a stale plan outright
+// rather than applying part of it, an atomic encoding-preserving write with rollback, and a re-lint
+// of the changed files so the result carries its own evidence.
 
 using Therion.Core;
 using Therion.Mcp.Tools;
@@ -54,6 +54,11 @@ public sealed class MutationEngine(IWorkspaceHost host)
                 if (!WorkspacePaths.IsInside(root, path))
                     return ToolResult<MutationResult>.Failure(ToolErrorCodes.PathOutsideWorkspace,
                         $"'{WorkspacePaths.ToRelative(root, path)}' is outside the workspace.");
+                else if (WorkspacePaths.IsProjectConfig(root, path))
+                    return ToolResult<MutationResult>.Failure(ToolErrorCodes.ProtectedPath,
+                        $"'{WorkspacePaths.ToRelative(root, path)}' is in the project's config folder "
+                        + $"({Workspace.ProjectLocalConfig.DirectoryName}/), which holds the hooks and tasks that run commands. "
+                        + "Agent tools do not change it; ask the user to edit it.");
 
             var (preparedChange, failure) = Prepare(change, root, expectedSha256);
             if (failure is not null) return ToolResult<MutationResult>.Failure(failure);

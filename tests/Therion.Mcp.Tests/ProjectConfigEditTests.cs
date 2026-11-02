@@ -26,4 +26,27 @@ public class ProjectConfigEditTests
         Assert.False(result.Ok, "edit_file accepted a write under .thide/");
         Assert.Equal(before, File.ReadAllText(hooksPath));
     }
+
+    [Fact]
+    public async Task No_mutation_can_create_files_in_the_project_config_folder()
+    {
+        using var fixture = FixtureWorkspace.CreateBroken();
+        var host = new WorkspaceHost();
+        await host.LoadAsync(fixture.Thconfig);
+        var engine = new MutationEngine(host);
+        var config = Path.Combine(fixture.Root, ".thide");
+
+        foreach (var change in new FileChange[]
+                 {
+                     new CreateDirectory(config),
+                     new CreateFile(Path.Combine(config, "tasks.json"), "{}"),
+                     new WriteFile(Path.Combine(config, "hooks.json"), "{}"),
+                 })
+        {
+            var result = await engine.ApplyAsync(new MutationPlan([change]), dryRun: false);
+            Assert.False(result.Ok, $"{change.GetType().Name} reached the config folder");
+            Assert.Equal(ToolErrorCodes.ProtectedPath, result.Error!.Code);
+        }
+        Assert.False(Directory.Exists(config));
+    }
 }
