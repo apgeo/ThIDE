@@ -289,7 +289,7 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
         var full = Path.GetFullPath(thconfigPath);
         if (!File.Exists(full)) return false; // missing file → let the caller warn (#8)
 
-        var ws = new TherionWorkspace();
+        var ws = new TherionWorkspace(options: new WorkspaceOptions { ParserOptions = Therion.Syntax.ParserOptionsHost.Current });
         try { await ws.LoadAsync(full, ct).ConfigureAwait(false); }
         catch (Exception ex) { _log?.Error($"Failed to load thconfig '{full}': {ex.Message}"); await ws.DisposeAsync().ConfigureAwait(false); return false; }
 

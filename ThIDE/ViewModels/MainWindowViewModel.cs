@@ -165,6 +165,8 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             Mode = value ? ParserMode.Strict : ParserMode.Lenient,
         };
+        // Re-parse what is open so the diagnostics follow the toggle now, not on the next edit.
+        foreach (var doc in _documents.Documents) doc.RequestReparse();
     }
 
     /// <summary>Editor word-wrap toggle (#7); persisted and applied live to all editors.</summary>

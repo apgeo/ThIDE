@@ -128,14 +128,16 @@ public sealed class TherionWorkspace : IWorkspace
         var version = TherionSyntaxVersion.Default;
         var key = new ParseCacheKey(path, info.Length, info.LastWriteTimeUtc, version);
 
-        if (!_options.DisableDiskCache && _cache.TryGet(key, out var cached))
+        // Cache entries are not keyed by parser mode, so a strict workspace neither reads nor fills them.
+        bool cacheable = (_options.ParserOptions?.Mode ?? ParserMode.Lenient) == ParserMode.Lenient;
+        if (cacheable && !_options.DisableDiskCache && _cache.TryGet(key, out var cached))
             return cached;
 
         // EncodingResolver, not File.ReadAllText: a .th may declare `encoding iso-8859-1`, and reading
         // it as UTF-8 turns every accented survey name into a replacement character — which then
         // reaches the semantic model, the rename index, and anything that writes the file back out.
-        var result = ParseText(path, EncodingResolver.ReadAllText(path));
-        _cache.Set(key, result);
+        var result = ParseText(path, EncodingResolver.ReadAllText(path), _options.ParserOptions);
+        if (cacheable) _cache.Set(key, result);
         return result;
     }
 
@@ -146,15 +148,19 @@ public sealed class TherionWorkspace : IWorkspace
     /// file (formatting) has to do this, or it rewrites the file from a stale tree.
     /// </remarks>
     public static ParseResult<TherionFile> ParseText(string path, string text)
+        => ParseText(path, text, options: null);
+
+    /// <summary>Like <see cref="ParseText(string, string)"/> with explicit parser options (null = default).</summary>
+    public static ParseResult<TherionFile> ParseText(string path, string text, ParserOptions? options)
     {
         var ext = Path.GetExtension(path).ToLowerInvariant();
         return ext switch
         {
-            ".th2"      => new Th2Parser().Parse(path, text),
-            ".thconfig" => new ThconfigParser().Parse(path, text),
-            ".thc"      => new ThconfigParser().Parse(path, text),
-            ".th"       => new ThParser().Parse(path, text),
-            _           => ProbeAndParse(path, text),
+            ".th2"      => new Th2Parser().Parse(path, text, options),
+            ".thconfig" => new ThconfigParser().Parse(path, text, options),
+            ".thc"      => new ThconfigParser().Parse(path, text, options),
+            ".th"       => new ThParser().Parse(path, text, options),
+            _           => ProbeAndParse(path, text, options),
         };
     }
 
@@ -167,7 +173,7 @@ public sealed class TherionWorkspace : IWorkspace
     public void UpdateFileFromText(string path, string text)
     {
         var full = Path.GetFullPath(path);
-        var result = ParseText(full, text);
+        var result = ParseText(full, text, _options.ParserOptions);
         lock (_gate) _files[full] = result;
     }
 
@@ -180,10 +186,10 @@ public sealed class TherionWorkspace : IWorkspace
         lock (_gate) _files[full] = result;
     }
 
-    private static ParseResult<TherionFile> ProbeAndParse(string path, string text)
+    private static ParseResult<TherionFile> ProbeAndParse(string path, string text, ParserOptions? options)
     {
         // No extension (e.g., `thconfig`): assume thconfig.
-        return new ThconfigParser().Parse(path, text);
+        return new ThconfigParser().Parse(path, text, options);
     }
 
     /// <summary>

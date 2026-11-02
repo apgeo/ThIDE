@@ -439,6 +439,13 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
     /// <summary>True when this file is a Therion source type that gets parsed/syntax-checked (#5).</summary>
     [ObservableProperty] private bool _isParsed;
 
+    /// <summary>Re-parses the buffer as it stands, e.g. after the parser options changed.</summary>
+    public void RequestReparse()
+    {
+        if (Dispatcher.UIThread.CheckAccess()) Reparse();
+        else Dispatcher.UIThread.Post(Reparse);
+    }
+
     private void Reparse()
     {
         if (_disposed) return;

@@ -9,6 +9,7 @@ namespace ThIDE.Tests;
 /// View ▸ Strict parser mode must change how the app parses documents: an unterminated block is a
 /// warning in lenient mode and an error in strict mode (the parsers already implement the split).
 /// </summary>
+[Collection(ParserOptionsHostCollection.Name)]
 public class StrictParserModeTests
 {
     [Fact]
@@ -31,4 +32,14 @@ public class StrictParserModeTests
             ParserOptionsHost.Current = before;
         }
     }
+}
+
+/// <summary>
+/// Tests that flip the process-wide <see cref="ParserOptionsHost.Current"/> run alone: every
+/// document parse reads it, so a parallel test class would otherwise see strict-mode diagnostics.
+/// </summary>
+[CollectionDefinition(Name, DisableParallelization = true)]
+public sealed class ParserOptionsHostCollection
+{
+    public const string Name = "ParserOptionsHost";
 }
