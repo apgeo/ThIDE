@@ -1,6 +1,7 @@
 // Implementation Plan �6 � in-memory project / session.
 // Loads a .thconfig (or any entry-point), BFS-walks `source` directives,
-// parses each file (cache-backed), and re-parses on file changes.
+// parses each file (cache-backed), and re-parses on file changes. An edit that changes a file's
+// `source`/`input` lines re-walks the graph, so the loaded set follows the files on disk.
 
 using System.Collections.Immutable;
 using Therion.Core;
@@ -16,6 +17,9 @@ public sealed class TherionWorkspace : IWorkspace
     private readonly WorkspaceOptions _options;
     private readonly DebouncedFileWatcher _watcher;
     private readonly object _gate = new();
+    // Serializes file-change handling (the watcher's timer callbacks can overlap) so two re-walks of
+    // the include graph never interleave.
+    private readonly object _reloadGate = new();
     private readonly Dictionary<string, ParseResult<TherionFile>> _files
         = new(StringComparer.OrdinalIgnoreCase);
 
@@ -178,9 +182,11 @@ public sealed class TherionWorkspace : IWorkspace
     }
 
     /// <summary>Re-parses <paramref name="path"/> from disk (cache-backed), undoing any buffer overlay.</summary>
+    /// <remarks>A file the workspace no longer loads (an edit dropped its <c>input</c>) is left out.</remarks>
     public void ReloadFileFromDisk(string path)
     {
         var full = Path.GetFullPath(path);
+        lock (_gate) if (!_files.ContainsKey(full)) return;
         if (!File.Exists(full)) return;
         var result = ParseFile(full);
         lock (_gate) _files[full] = result;
@@ -204,21 +210,66 @@ public sealed class TherionWorkspace : IWorkspace
     private void OnFileChanged(string path)
     {
         var full = Path.GetFullPath(path);
-        bool tracked;
-        lock (_gate) tracked = _files.ContainsKey(full);
-        if (!tracked) return;
+        lock (_reloadGate)
+        {
+            ParseResult<TherionFile>? previous;
+            lock (_gate) if (!_files.TryGetValue(full, out previous)) return;
 
-        _cache.Invalidate(full);
-        if (!File.Exists(full))
-        {
-            lock (_gate) _files.Remove(full);
-        }
-        else
-        {
-            var result = ParseFile(full);
-            lock (_gate) _files[full] = result;
+            _cache.Invalidate(full);
+            if (!File.Exists(full))
+            {
+                // A deletion drops only the file: it is often transient (a VCS checkout, a
+                // delete-and-rewrite save), and unloading everything it reaches would empty the model.
+                lock (_gate) _files.Remove(full);
+            }
+            else
+            {
+                var result = ParseFile(full);
+                lock (_gate) _files[full] = result;
+
+                // An added or removed `input`/`source` changes the include graph, not only this file.
+                var before = new HashSet<string>(ExtractDependencies(full, previous.Value), StringComparer.OrdinalIgnoreCase);
+                if (!before.SetEquals(ExtractDependencies(full, result.Value)))
+                    FollowIncludeGraph();
+            }
         }
         RaiseChanged();
+    }
+
+    /// <summary>
+    /// Re-walks the include graph from <see cref="EntryPointPath"/>: loads (and watches) the files it
+    /// now reaches and drops the loaded files it no longer does. Already-loaded files keep their
+    /// snapshot (and any buffer overlay); only new ones are parsed.
+    /// </summary>
+    private void FollowIncludeGraph()
+    {
+        if (EntryPointPath is not { } entry) return;
+
+        var reached = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var queue = new Queue<string>();
+        queue.Enqueue(entry);
+        while (queue.Count > 0)
+        {
+            var path = queue.Dequeue();
+            if (!reached.Add(path)) continue;
+
+            ParseResult<TherionFile>? result;
+            lock (_gate) _files.TryGetValue(path, out result);
+            if (result is null)
+            {
+                if (!File.Exists(path)) continue;
+                result = ParseFile(path);
+                lock (_gate) _files[path] = result;
+                _watcher.Watch(Path.GetDirectoryName(path)!);
+            }
+
+            foreach (var dep in ExtractDependencies(path, result.Value))
+                queue.Enqueue(dep);
+        }
+
+        lock (_gate)
+            foreach (var path in _files.Keys.ToList())
+                if (!reached.Contains(path)) _files.Remove(path);
     }
 
     private void RaiseChanged()
