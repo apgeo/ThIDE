@@ -1,5 +1,6 @@
 // Implementation Plan §6.1 — entry-point discovery.
-// Order: no-extension first ? .thconfig/.thc ? syntax-based autodetect.
+// Order: files named as configs (.thconfig/.thc, bare `thconfig`) first; only when there are
+// none, a content sniff of the other extensionless files.
 
 using System.Collections.Immutable;
 using Therion.Core;
@@ -52,28 +53,34 @@ public sealed class ProjectEntryPointResolver : IProjectEntryPointResolver
             IgnoreInaccessible = true,
         };
 
+        // Files named as configs (.thconfig/.thc, or the bare `thconfig`) win; only when there are
+        // none are other extensionless files sniffed, as ThconfigDiscovery does. Survey files
+        // (.th/.th2) are never candidates, and the files the app generates are skipped.
+        var named = new List<string>();
         var noExt = new List<string>();
-        var withExt = new List<string>();
-        var others = new List<string>();
 
         foreach (var file in Directory.EnumerateFiles(pathOrFolder, "*", enumOptions))
         {
+            var name = Path.GetFileName(file);
+            if (name.StartsWith(ProjectLocalConfig.GeneratedFilePrefix, StringComparison.OrdinalIgnoreCase)) continue;
             var ext = Path.GetExtension(file);
-            if (string.IsNullOrEmpty(ext)) noExt.Add(file);
-            else if (Array.Exists(ConfigExtensions, e => string.Equals(e, ext, StringComparison.OrdinalIgnoreCase)))
-                withExt.Add(file);
-            else others.Add(file);
+            if (Array.Exists(ConfigExtensions, e => string.Equals(e, ext, StringComparison.OrdinalIgnoreCase)) ||
+                (ext.Length == 0 && string.Equals(name, "thconfig", StringComparison.OrdinalIgnoreCase)))
+                named.Add(file);
+            else if (ext.Length == 0) noExt.Add(file);
         }
 
         var candidates = ImmutableArray.CreateBuilder<string>();
-        foreach (var f in noExt) candidates.Add(Path.GetFullPath(f));
-        foreach (var f in withExt) candidates.Add(Path.GetFullPath(f));
+        foreach (var f in named) candidates.Add(Path.GetFullPath(f));
 
-        // Syntax-based autodetect on remaining files.
-        foreach (var f in others)
+        // Content-based autodetect on extensionless files.
+        if (candidates.Count == 0)
         {
-            if (_sniffer.Probe(f) == SnifferVerdict.Likely)
-                candidates.Add(Path.GetFullPath(f));
+            foreach (var f in noExt)
+            {
+                if (_sniffer.Probe(f) == SnifferVerdict.Likely)
+                    candidates.Add(Path.GetFullPath(f));
+            }
         }
 
         string? selected = candidates.Count == 1 ? candidates[0] : null;

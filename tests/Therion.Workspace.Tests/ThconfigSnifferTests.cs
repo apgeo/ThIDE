@@ -33,4 +33,24 @@ public class ThconfigSnifferTests
 
         Assert.Equal(SnifferVerdict.Unlikely, verdict);
     }
+
+    [Fact]
+    public void Two_config_commands_at_line_start_make_a_thconfig()
+    {
+        using var dir = new TempDir();
+        var cfg = Path.Combine(dir.Path, "build");
+        File.WriteAllText(cfg, "# cave build\nsource cave.th\n  export map -o cave.pdf\n");
+
+        Assert.Equal(SnifferVerdict.Likely, new ThconfigSniffer().Probe(cfg));
+    }
+
+    [Fact]
+    public void Config_words_inside_a_line_do_not_count()
+    {
+        using var dir = new TempDir();
+        var notes = Path.Combine(dir.Path, "NOTES");
+        File.WriteAllText(notes, "Remember to export the map and select the source survey.\nsource is in git.\n");
+
+        Assert.Equal(SnifferVerdict.Unlikely, new ThconfigSniffer().Probe(notes));
+    }
 }

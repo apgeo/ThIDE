@@ -39,4 +39,32 @@ public class ProjectEntryPointResolverTests
 
         Assert.Equal(Path.GetFullPath(cfg), entry);
     }
+
+    [Fact]
+    public async Task A_named_thconfig_wins_over_extensionless_files()
+    {
+        using var dir = new TempDir();
+        var cfg = Path.Combine(dir.Path, "cave.thc");
+        File.WriteAllText(cfg, "source cave.th\n");
+        File.WriteAllText(Path.Combine(dir.Path, "README"), "source cave.th\nexport map\n");
+        File.WriteAllText(Path.Combine(dir.Path, "LICENSE"), "Permission is granted.\n");
+
+        var resolution = await new ProjectEntryPointResolver(new ThconfigSniffer()).ResolveAsync(dir.Path);
+
+        Assert.Equal(Path.GetFullPath(cfg), resolution.Selected);
+    }
+
+    [Fact]
+    public async Task Without_a_named_thconfig_an_extensionless_config_is_found_by_its_content()
+    {
+        using var dir = new TempDir();
+        var cfg = Path.Combine(dir.Path, "build");
+        File.WriteAllText(cfg, "source cave.th\nexport map -o cave.pdf\n");
+        File.WriteAllText(Path.Combine(dir.Path, "README"), "Import the source files.\n");
+        File.WriteAllText(Path.Combine(dir.Path, "cave.th"), "encoding utf-8\ninput a.th\nsurvey cave\nendsurvey\n");
+
+        var resolution = await new ProjectEntryPointResolver(new ThconfigSniffer()).ResolveAsync(dir.Path);
+
+        Assert.Equal(Path.GetFullPath(cfg), resolution.Selected);
+    }
 }
