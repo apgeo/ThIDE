@@ -33,7 +33,10 @@ public static class SurfaceFromDem
 
     /// <summary>
     /// Converts an ESRI ASCII grid into a Therion surface block. Throws <see cref="FormatException"/>
-    /// if the header is missing required keys or the value count doesn't match ncols×nrows.
+    /// if the header is missing required keys, the value count doesn't match ncols×nrows, or every
+    /// cell is NODATA. A Therion grid has no missing-value marker, so each cell equal to the header's
+    /// <c>NODATA_value</c> is written as the lowest elevation of the grid instead, and a comment line
+    /// in the block says how many cells that was.
     /// </summary>
     public static string FromEsriAscii(string asc)
     {
@@ -63,8 +66,32 @@ public static class SurfaceFromDem
         if (values.Count != expected)
             throw new FormatException($"ESRI grid has {values.Count} values but ncols×nrows = {expected}.");
 
+        int noData = 0;
+        if (header.TryGetValue("nodata_value", out var nd) && IsNumber(nd))
+        {
+            double sentinel = D(nd);
+            string? lowest = null;
+            double lowestValue = 0;
+            var missing = new List<int>();
+            for (int i = 0; i < values.Count; i++)
+            {
+                if (!IsNumber(values[i])) continue;
+                double v = D(values[i]);
+                if (v == sentinel) missing.Add(i);
+                else if (lowest is null || v < lowestValue) { lowest = values[i]; lowestValue = v; }
+            }
+            if (missing.Count > 0)
+            {
+                if (lowest is null) throw new FormatException("ESRI grid has no cell with data (every value is NODATA_value).");
+                foreach (var i in missing) values[i] = lowest;
+                noData = missing.Count;
+            }
+        }
+
         var sb = new StringBuilder();
         sb.Append("surface\n");
+        if (noData > 0)
+            sb.Append("  # ").Append(noData).Append(" cell(s) without data were set to the lowest elevation of the grid\n");
         sb.Append("  grid ").Append(F(x0)).Append(' ').Append(F(y0)).Append(' ')
           .Append(F(cell)).Append(' ').Append(F(cell)).Append(' ').Append(ncols).Append(' ').Append(nrows).Append('\n');
         // ASC rows are north→south; emit south→north (reverse), each row left→right.
