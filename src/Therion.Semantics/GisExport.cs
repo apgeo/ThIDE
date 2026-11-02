@@ -1,7 +1,7 @@
 // export survey entrances / fixed points to GIS formats in the project CRS.
-// CSV and GeoJSON carry the raw coordinates + the CRS (so any GIS can reproject); GPX and KML
-// require WGS84 lon/lat, so points are reprojected via CoordinateTransform and points whose CRS
-// we can't convert are skipped. Pure (string output); the caller writes the file.
+// CSV carries the raw coordinates + the CRS (so any GIS can reproject); GeoJSON, GPX and KML
+// require WGS84 lon/lat, so points are reprojected via CoordinateTransform. Points whose CRS
+// we can't convert are skipped by GPX/KML and become null-geometry features in GeoJSON.
 
 using System;
 using System.Collections.Generic;
@@ -73,18 +73,28 @@ public static class GisExport
         foreach (var p in points)
         {
             if (p.X is not { } x || p.Y is not { } y) continue;
-            // Prefer proper WGS84 lon/lat; otherwise emit the raw coordinates (CRS in properties).
-            double gx, gy;
-            if (CoordinateTransform.TryToWgs84(p.Cs, x, y, out var ll)) { gx = ll.Lon; gy = ll.Lat; }
-            else { gx = x; gy = y; }
+            // GeoJSON coordinates are WGS84 lon/lat (RFC 7946); a point that can't be converted keeps
+            // its raw values in properties under a null geometry instead of being written as degrees.
+            bool ok = CoordinateTransform.TryToWgs84(p.Cs, x, y, out var ll);
             if (!first) sb.Append(',');
             first = false;
-            sb.Append("{\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[")
-              .Append(N(gx)).Append(',').Append(N(gy));
-            if (p.Z is { } z) sb.Append(',').Append(N(z));
-            sb.Append("]},\"properties\":{\"name\":").Append(Js(p.Name))
+            sb.Append("{\"type\":\"Feature\",\"geometry\":");
+            if (ok)
+            {
+                sb.Append("{\"type\":\"Point\",\"coordinates\":[").Append(N(ll.Lon)).Append(',').Append(N(ll.Lat));
+                if (p.Z is { } z) sb.Append(',').Append(N(z));
+                sb.Append("]}");
+            }
+            else sb.Append("null");
+            sb.Append(",\"properties\":{\"name\":").Append(Js(p.Name))
               .Append(",\"kind\":").Append(Js(p.Kind))
-              .Append(",\"cs\":").Append(Js(p.Cs)).Append("}}");
+              .Append(",\"sourceCs\":").Append(Js(p.Cs));
+            if (!ok)
+            {
+                sb.Append(",\"x\":").Append(N(x)).Append(",\"y\":").Append(N(y));
+                if (p.Z is { } rz) sb.Append(",\"z\":").Append(N(rz));
+            }
+            sb.Append("}}");
         }
         sb.Append("]}");
         return sb.ToString();

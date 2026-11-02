@@ -168,10 +168,7 @@ public static class ProjectDiagnostics
         ImmutableArray<Diagnostic>.Builder diags)
     {
         // Merge equate classes across files so loops that close via @-equates are seen.
-        var equates = new EquateGraph();
-        foreach (var model in ws.PerFile.Values)
-            foreach (var group in model.Equates.Groups())
-                for (int i = 1; i < group.Length; i++) equates.Union(group[0], group[i]);
+        var equates = WorkspaceEquates.Build(ws);
 
         // Edge list (a→b with its 3-D vector) over equate-merged nodes; skip splays + incomplete shots.
         var edges = new List<(QualifiedName A, QualifiedName B, Vec3 V, double Len, SourceSpan Span)>();

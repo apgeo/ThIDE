@@ -53,7 +53,7 @@ public class GisExportTests
         var json = GisExport.Export(Utm, GisFormat.GeoJson);
         Assert.Contains("\"FeatureCollection\"", json);
         Assert.Contains("\"name\":\"E1\"", json);
-        Assert.Contains("\"cs\":\"UTM33\"", json);
+        Assert.Contains("\"sourceCs\":\"UTM33\"", json);
         Assert.DoesNotContain("411000", json);   // coordinates were reprojected, not raw
     }
 

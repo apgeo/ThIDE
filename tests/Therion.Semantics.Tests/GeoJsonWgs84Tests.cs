@@ -20,7 +20,8 @@ public class GeoJsonWgs84Tests
     {
         var json = GisExport.Export(new[] { new GisPoint("J", -600000, -1200000, 300, "S-JTSK", "fixed") }, GisFormat.GeoJson);
 
-        Assert.DoesNotContain("-600000", json);
+        Assert.DoesNotContain("\"coordinates\":[-600000", json);
+        Assert.Contains("\"geometry\":null", json);
     }
 
     [Fact]
