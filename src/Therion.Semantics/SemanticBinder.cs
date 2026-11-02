@@ -110,10 +110,10 @@ public sealed class SemanticBinder
         // Flags are stateful within a centreline body, and a comment line directly
         // above a data row binds to that row. Both are tracked across this child list.
         var activeFlags = ShotFlags.None;
-        // Active angle units for compass/clino (value validation). A `units` command
-        // earlier in this body switches degrees↔grads↔… for the range checks that follow.
-        var compassUnit = AngleUnit.Degree;
-        var clinoUnit = AngleUnit.Degree;
+        // Active reading units. A `units` command earlier in this body switches degrees↔grads↔…
+        // for the range checks that follow, and metres↔feet↔… (with an optional factor) for the
+        // conversion of the readings into the metres and degrees every shot is stored in.
+        var units = ReadingUnits.Default;
         TrivialComment? pendingComment = null;
         // The survey these direct children belong to (team/date attach here).
         QualifiedName? currentSurvey = scope.IsEmpty ? null : new QualifiedName(scope);
@@ -151,8 +151,8 @@ public sealed class SemanticBinder
                 case FlagsCommand flags:
                     activeFlags = ApplyFlags(activeFlags, flags.Tokens);
                     break;
-                case UnitsCommand units:
-                    ApplyAngleUnits(units, ref compassUnit, ref clinoUnit);
+                case UnitsCommand unitsCmd:
+                    units = ApplyUnits(unitsCmd, units);
                     break;
                 case DataCommand d:
                     currentFields = d;
@@ -164,10 +164,10 @@ public sealed class SemanticBinder
                     // files that rely on the default.
                     var fields = currentFields ?? DefaultNormalData;
                     ValidateRowArity(row, fields, ctx);
-                    ValidateRowValues(row, fields, ctx, compassUnit, clinoUnit);
+                    ValidateRowValues(row, fields, ctx, units.Compass, units.Clino);
                     var leading = AdjacentLeadingComment(pendingComment, row);
                     BindShot(row, fields, ctx, scope, activeFlags,
-                        CombineComments(leading, row.TrailingComment));
+                        CombineComments(leading, row.TrailingComment), units);
                     break;
                 case ScrapBlock scrap:
                     BindScrap(scrap, ctx, scope);
@@ -493,24 +493,50 @@ public sealed class SemanticBinder
         }
     }
 
-    /// <summary>Folds an in-body <c>units</c> command into the active compass/clino angle units.</summary>
-    private static void ApplyAngleUnits(UnitsCommand units, ref AngleUnit compassUnit, ref AngleUnit clinoUnit)
+    /// <summary>
+    /// The units the readings of a centreline body are written in: metres per written tape unit
+    /// (foresight and backsight; the <c>units</c> factor folded in) and the compass/clino angle units.
+    /// </summary>
+    private readonly record struct ReadingUnits(
+        double TapeScale, double BackTapeScale, AngleUnit Compass, AngleUnit Clino)
     {
-        if (MeasurementUnits.TryAngle(units.Unit) is not { } angle) return;
-        foreach (var q in units.Quantities)
+        public static ReadingUnits Default { get; } = new(1.0, 1.0, AngleUnit.Degree, AngleUnit.Degree);
+    }
+
+    /// <summary>Folds an in-body <c>units</c> command into the active reading units.</summary>
+    private static ReadingUnits ApplyUnits(UnitsCommand cmd, ReadingUnits units)
+    {
+        if (MeasurementUnits.TryLength(cmd.Unit) is { } length)
+        {
+            double scale = (cmd.Factor ?? 1.0) * UnitConverter.Instance.ToMetres(new Length(1.0, length));
+            foreach (var q in cmd.Quantities)
+                switch (q.ToLowerInvariant())
+                {
+                    // `length`/`tape` covers the backsight tape too unless that is given its own units.
+                    case "length" or "tape":
+                        units = units with { TapeScale = scale, BackTapeScale = scale }; break;
+                    case "backlength" or "backtape":
+                        units = units with { BackTapeScale = scale }; break;
+                }
+            return units;
+        }
+
+        if (MeasurementUnits.TryAngle(cmd.Unit) is not { } angle) return units;
+        foreach (var q in cmd.Quantities)
         {
             switch (q.ToLowerInvariant())
             {
                 case "compass" or "bearing" or "backcompass" or "backbearing":
-                    compassUnit = angle; break;
+                    units = units with { Compass = angle }; break;
                 case "clino" or "gradient" or "backclino" or "backgradient":
-                    clinoUnit = angle; break;
+                    units = units with { Clino = angle }; break;
             }
         }
+        return units;
     }
 
     private void BindShot(DataRow row, DataCommand data, BindContext ctx, ImmutableArray<string> scope,
-        ShotFlags flags, string? comment)
+        ShotFlags flags, string? comment, ReadingUnits units)
     {
         var (fromIdx, toIdx) = DataStyles.FindFromTo(data.Fields);
         if (fromIdx < 0 || toIdx < 0) return;
@@ -540,7 +566,7 @@ public sealed class SemanticBinder
 
         var effectiveFlags = fromSplay || toSplay ? flags | ShotFlags.Splay : flags;
 
-        var (length, compass, clino) = ExtractMeasurements(row, data);
+        var (length, compass, clino) = ExtractMeasurements(row, data, units);
         ctx.Shots.Add(new ShotSymbol(from, to, length, compass, clino, row.Span)
         {
             SourceRow = row,
@@ -562,21 +588,49 @@ public sealed class SemanticBinder
     /// Foresight readings win when both are present. Without this, backsight-only or <c>tape</c>-based
     /// legs (very common in real projects) bind with null measurements, which drops them from the
     /// centreline layout and undercounts survey-length statistics.
+    /// <para>The values are returned in metres and degrees whatever <paramref name="units"/> the body
+    /// declares, and a clino written as a plumb/level keyword (<c>down</c>, <c>+V</c>, <c>level</c>, …)
+    /// is read as ±90° / 0°, so every consumer sees one convention.</para>
     /// </summary>
-    private static (double? Length, double? Compass, double? Clino) ExtractMeasurements(DataRow row, DataCommand data)
+    private static (double? Length, double? Compass, double? Clino) ExtractMeasurements(
+        DataRow row, DataCommand data, ReadingUnits units)
     {
-        double? length = TryGet(row, data, "length") ?? TryGet(row, data, "tape")
-                      ?? TryGet(row, data, "backtape") ?? TryGet(row, data, "backlength");
+        double? length = TryGet(row, data, "length") ?? TryGet(row, data, "tape");
+        length = length * units.TapeScale
+              ?? (TryGet(row, data, "backtape") ?? TryGet(row, data, "backlength")) * units.BackTapeScale;
 
-        double? compass = TryGet(row, data, "compass") ?? TryGet(row, data, "bearing");
-        if (compass is null && (TryGet(row, data, "backcompass") ?? TryGet(row, data, "backbearing")) is { } backCompass)
+        double? compass = Degrees(TryGet(row, data, "compass") ?? TryGet(row, data, "bearing"), units.Compass);
+        if (compass is null
+            && Degrees(TryGet(row, data, "backcompass") ?? TryGet(row, data, "backbearing"), units.Compass) is { } backCompass)
             compass = (backCompass + 180.0) % 360.0;
 
-        double? clino = TryGet(row, data, "clino") ?? TryGet(row, data, "gradient");
-        if (clino is null && (TryGet(row, data, "backclino") ?? TryGet(row, data, "backgradient")) is { } backClino)
+        double? clino = TryGetClino(row, data, "clino", units.Clino) ?? TryGetClino(row, data, "gradient", units.Clino);
+        if (clino is null
+            && (TryGetClino(row, data, "backclino", units.Clino) ?? TryGetClino(row, data, "backgradient", units.Clino))
+                is { } backClino)
             clino = -backClino;
 
         return (length, compass, clino);
+    }
+
+    private static double? Degrees(double? value, AngleUnit unit) =>
+        value is { } v && unit != AngleUnit.Degree ? UnitConverter.Instance.ToDegrees(new Angle(v, unit)) : value;
+
+    /// <summary>
+    /// A clino column value in degrees: a number in <paramref name="unit"/>, or one of the plumb/level
+    /// keywords Therion and Survex accept. A lone <c>-</c> stays "not read" (null), not level.
+    /// </summary>
+    private static double? TryGetClino(DataRow row, DataCommand data, string field, AngleUnit unit)
+    {
+        int i = IndexOf(data.Fields, field);
+        if (i < 0 || i >= row.Values.Length) return null;
+        return row.Values[i].ToLowerInvariant() switch
+        {
+            "up" or "u" or "+v" => 90.0,
+            "down" or "d" or "-v" => -90.0,
+            "level" or "h" or "horizontal" => 0.0,
+            _ => Degrees(TryGet(row, data, field), unit),
+        };
     }
 
     /// <summary>A '.' (feature) or '-' (wall) endpoint marks the shot as a splay, not a station.</summary>

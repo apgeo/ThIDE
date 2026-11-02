@@ -55,4 +55,39 @@ public class PlumbKeywordTests
         Assert.Equal(0, q.MissingClino);
         Assert.Equal(0, q.MissingCompass);   // a plumb needs no bearing
     }
+
+    [Theory]
+    [InlineData("up", 90.0)]
+    [InlineData("+V", 90.0)]
+    [InlineData("-v", -90.0)]
+    [InlineData("level", 0.0)]
+    public void Clino_keywords_read_as_angles(string word, double degrees)
+    {
+        var ws = Ws($"""
+            survey s
+              centreline
+                data normal from to length compass clino
+                1 2 5 - {word}
+              endcentreline
+            endsurvey
+            """);
+
+        var shot = Assert.Single(Assert.Single(ws.PerFile.Values).Shots);
+        Assert.Equal(degrees, shot.Clino!.Value, 6);
+    }
+
+    [Fact]
+    public void Dash_clino_stays_not_read()
+    {
+        var ws = Ws("""
+            survey s
+              centreline
+                data normal from to length compass clino
+                1 2 5 0 -
+              endcentreline
+            endsurvey
+            """);
+
+        Assert.Null(Assert.Single(Assert.Single(ws.PerFile.Values).Shots).Clino);
+    }
 }
