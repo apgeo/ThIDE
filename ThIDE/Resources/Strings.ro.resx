@@ -1492,6 +1492,7 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Trust_ReasonHooks" xml:space="preserve"><value>definește hook-uri</value></data>
   <data name="Trust_ReasonTasks" xml:space="preserve"><value>definește sarcini</value></data>
   <data name="Trust_ReasonMacros" xml:space="preserve"><value>definește macrouri</value></data>
+  <data name="Trust_ReasonSystemCommands" xml:space="preserve"><value>un asistent a cerut compilarea lui, iar thconfig-ul său rulează comenzi system</value></data>
   <data name="Trust_Skipped" xml:space="preserve"><value>S-au omis comenzile proiectului: dosarul nu este de încredere</value></data>
   <data name="Trust_SkippedDetail" xml:space="preserve"><value>{0} nu au fost rulate.</value></data>
   <data name="Trust_TrustAction" xml:space="preserve"><value>Am încredere…</value></data>

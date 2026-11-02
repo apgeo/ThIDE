@@ -198,6 +198,54 @@ public class BuildToolsTests
         Assert.Equal(outside, Assert.Single(result.Data!.Artifacts).Path);
     }
 
+    [Fact]
+    public async Task A_thconfig_with_system_lines_builds_only_when_the_host_approves()
+    {
+        using var fixture = FixtureWorkspace.Create();
+        File.AppendAllText(fixture.Thconfig, "\ninput extra.thc\n");
+        File.WriteAllText(fixture.PathTo("extra.thc"), "system \"echo from-fragment\"\n");
+        var host = new WorkspaceHost();
+        await host.LoadAsync(fixture.Thconfig);
+        var approval = new RecordingApproval(approve: false);
+        var compiler = new StubCompiler();
+
+        var declined = await new BuildTools(host, compiler, approval).RunBuild();
+
+        Assert.Equal(ToolErrorCodes.NotTrusted, declined.Error!.Code);
+        Assert.Null(compiler.CompiledPath);
+        Assert.Equal(["\"echo from-fragment\""], approval.Seen);
+
+        var approved = await new BuildTools(host, compiler, new RecordingApproval(approve: true)).RunBuild();
+        Assert.True(approved.Ok, approved.Error?.Message);
+        Assert.NotNull(compiler.CompiledPath);
+    }
+
+    [Fact]
+    public async Task A_thconfig_without_system_lines_never_asks()
+    {
+        using var fixture = FixtureWorkspace.Create();
+        var host = new WorkspaceHost();
+        await host.LoadAsync(fixture.Thconfig);
+        var approval = new RecordingApproval(approve: false);
+
+        var result = await new BuildTools(host, new StubCompiler(), approval).RunBuild();
+
+        Assert.True(result.Ok, result.Error?.Message);
+        Assert.Null(approval.Seen);
+    }
+
+    private sealed class RecordingApproval(bool approve) : IBuildApproval
+    {
+        public IReadOnlyList<string>? Seen { get; private set; }
+
+        public Task<bool> ApproveSystemCommandsAsync(string root, string entryPoint, IReadOnlyList<string> systemCommands,
+            CancellationToken ct = default)
+        {
+            Seen = systemCommands;
+            return Task.FromResult(approve);
+        }
+    }
+
     private static CompilerOutputLine Info(string text) => new(text, DiagnosticSeverity.Info, null);
     private static CompilerOutputLine Warning(string text) => new(text, DiagnosticSeverity.Warning, null);
     private static CompilerOutputLine Error(string text) => new(text, DiagnosticSeverity.Error, null);

@@ -1492,6 +1492,7 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Trust_ReasonHooks" xml:space="preserve"><value>it defines hooks</value></data>
   <data name="Trust_ReasonTasks" xml:space="preserve"><value>it defines tasks</value></data>
   <data name="Trust_ReasonMacros" xml:space="preserve"><value>it defines macros</value></data>
+  <data name="Trust_ReasonSystemCommands" xml:space="preserve"><value>an assistant asked to build it, and its thconfig runs system commands</value></data>
   <data name="Trust_Skipped" xml:space="preserve"><value>Skipped project commands: the folder is not trusted</value></data>
   <data name="Trust_SkippedDetail" xml:space="preserve"><value>{0} were not run.</value></data>
   <data name="Trust_TrustAction" xml:space="preserve"><value>Trust…</value></data>

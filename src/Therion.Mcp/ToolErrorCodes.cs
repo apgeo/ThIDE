@@ -75,6 +75,9 @@ public static class ToolErrorCodes
     /// <summary>The command is on the excluded list (opens an OS/modal dialog) and is never run.</summary>
     public const string CommandExcluded = "command_excluded";
 
+    /// <summary>The build would run the thconfig's shell commands and the user did not approve it.</summary>
+    public const string NotTrusted = "not_trusted";
+
     /// <summary>A gated command was called without <c>confirm:true</c>. Re-call with the confirmation.</summary>
     public const string ConfirmationRequired = "confirmation_required";
 }
