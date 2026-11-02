@@ -167,16 +167,18 @@ public sealed class MutationEngine(IWorkspaceHost host)
     }
 
     /// <summary>
-    /// The absolute path of the first offset-<see cref="EditFile"/> whose target is open with unsaved edits,
-    /// or null. Only offset edits are at risk; creates/copies/whole-file writes don't splice into existing
-    /// disk bytes. <paramref name="dirtyFiles"/> is empty on the headless host, so this is a no-op there.
+    /// The absolute path of the first <see cref="EditFile"/> or <see cref="WriteFile"/> whose target is open
+    /// with unsaved edits, or null. An offset edit would land on the wrong span; a whole-file write would
+    /// replace the disk copy under the user's buffer, forking the two. Creates and copies only make new
+    /// files, which cannot be open. <paramref name="dirtyFiles"/> is empty on the headless host, so this is
+    /// a no-op there.
     /// </summary>
     private static string? FirstDirtyEdit(List<PreparedChange> prepared, IReadOnlyCollection<string> dirtyFiles)
     {
         if (dirtyFiles.Count == 0) return null;
         var dirty = new HashSet<string>(dirtyFiles.Select(WorkspacePaths.Canonicalize), PathComparer);
         foreach (var p in prepared)
-            if (p.Change is EditFile && dirty.Contains(WorkspacePaths.Canonicalize(p.Change.AbsolutePath)))
+            if (p.Change is EditFile or WriteFile && dirty.Contains(WorkspacePaths.Canonicalize(p.Change.AbsolutePath)))
                 return p.Change.AbsolutePath;
         return null;
     }

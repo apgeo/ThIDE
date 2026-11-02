@@ -152,6 +152,12 @@ public sealed class ExportTools(IWorkspaceHost host, MutationEngine mutations)
         if (!WorkspacePaths.TryResolve(snapshot.Root, target, out var full, out var reason))
             return Fail(ToolErrorCodes.PathOutsideWorkspace, reason);
 
+        // Replacing yesterday's export is the point; replacing the survey it was made from is data loss.
+        if (IsProjectSource(snapshot, full))
+            return Fail(ToolErrorCodes.InvalidArgument,
+                $"'{target}' is a Therion source file of the project; an export never replaces one. "
+                + "Choose a target such as 'out/" + Path.GetFileNameWithoutExtension(full) + "." + format + "'.");
+
         var applied = await mutations.ApplyAsync(new MutationPlan([new WriteFile(full, document)]),
             dryRun, expectedSha256: null, ct);
         if (applied.Error is { } failure) return ToolResult<ExportResult>.Failure(failure);
@@ -163,6 +169,20 @@ public sealed class ExportTools(IWorkspaceHost host, MutationEngine mutations)
         var preview = ToolLimits.Utf8Prefix(document, ToolLimits.ClampBytes(maxBytes));
         return Ok(format, preview, preview.Length < document.Length, relative, applied.Data);
     }
+
+    /// <summary>
+    /// True when <paramref name="full"/> (canonical) is a file the project loads, or has a Therion source
+    /// name (.th, .th2, .thconfig, .thc, a bare <c>thconfig</c>) whether or not this project loads it.
+    /// </summary>
+    private static bool IsProjectSource(WorkspaceSnapshot snapshot, string full)
+    {
+        var ext = Path.GetExtension(full);
+        if (SourceExtensions.Any(e => e.Equals(ext, StringComparison.OrdinalIgnoreCase))) return true;
+        if (ext.Length == 0 && Path.GetFileName(full).Equals("thconfig", StringComparison.OrdinalIgnoreCase)) return true;
+        return snapshot.FindLoadedFile(full) is not null;
+    }
+
+    private static readonly string[] SourceExtensions = [".th", ".th2", ".thconfig", ".thc"];
 
     private static ToolResult<ExportResult> Ok(
         string format, string? text, bool truncated, string? target, MutationResult? mutation) =>

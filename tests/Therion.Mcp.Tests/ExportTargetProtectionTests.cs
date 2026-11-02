@@ -27,19 +27,22 @@ public class ExportTargetProtectionTests
     [Fact]
     public async Task Export_refuses_to_overwrite_a_file_that_is_open_and_dirty_in_the_ide()
     {
+        // Not a survey source (those are refused outright): yesterday's export, open in the IDE and edited.
         using var fixture = FixtureWorkspace.Create();
-        var survey = fixture.PathTo("caves", "upper.th");
+        Directory.CreateDirectory(fixture.PathTo("out"));
+        var export = fixture.PathTo("out", "shots.csv");
+        File.WriteAllText(export, "from,to,length\n");
         var inner = new WorkspaceHost();
         await inner.LoadAsync(fixture.Thconfig);
-        var host = new DirtyHost(inner, survey);
+        var host = new DirtyHost(inner, export);
         var tools = new ExportTools(host, new MutationEngine(host));
-        var before = File.ReadAllText(survey);
+        var before = File.ReadAllText(export);
 
-        var result = await tools.ExportTables("shots", "csv", target: "caves/upper.th", dryRun: false);
+        var result = await tools.ExportTables("shots", "csv", target: "out/shots.csv", dryRun: false);
 
         Assert.False(result.Ok, "export_tables wrote over a file that is open with unsaved edits, forking the editor buffer from disk");
         Assert.Equal(ToolErrorCodes.FileDirty, result.Error!.Code);
-        Assert.Equal(before, File.ReadAllText(survey));
+        Assert.Equal(before, File.ReadAllText(export));
     }
 
     private static async Task<(ExportTools Tools, WorkspaceHost Host)> LoadedAsync(FixtureWorkspace fixture)
