@@ -36,4 +36,32 @@ public class LeadStatusStoreSharingTests
 
         Assert.Equal("pushed", ide.Get(root, "a"));
     }
+
+    [Fact]
+    public void A_damaged_sidecar_does_not_wipe_what_the_store_already_had()
+    {
+        using var dir = new TempDir();
+        const string root = "C:/proj";
+        var store = new LeadStatusStore(dir.Path);
+        store.Set(root, "a", "pushed");
+        var file = Assert.Single(Directory.GetFiles(dir.Path, "*.json"));
+        File.WriteAllText(file, "{\"a\": \"pus");   // truncated by a crash mid-write
+
+        store.Set(root, "b", "checked");
+
+        var onDisk = new LeadStatusStore(dir.Path);
+        Assert.Equal("pushed", onDisk.Get(root, "a"));
+        Assert.Equal("checked", onDisk.Get(root, "b"));
+    }
+
+    [Fact]
+    public void A_write_leaves_no_temporary_file_behind()
+    {
+        using var dir = new TempDir();
+        var store = new LeadStatusStore(dir.Path);
+        store.Set("C:/proj", "a", "pushed");
+        store.Set("C:/proj", "a", "dead");
+
+        Assert.Single(Directory.GetFiles(dir.Path));
+    }
 }
