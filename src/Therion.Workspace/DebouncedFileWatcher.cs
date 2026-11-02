@@ -33,31 +33,49 @@ public sealed class DebouncedFileWatcher : IDisposable
             TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(50));
     }
 
+    /// <summary>
+    /// Starts watching <paramref name="directory"/>. Never throws for a directory that cannot be
+    /// watched (on Linux the per-user inotify instance limit, a folder removed meanwhile, no access):
+    /// that is reported through <see cref="Error"/>, the directory goes unwatched, and a later call
+    /// tries again. Watching is a convenience; it must not fail the caller's real work.
+    /// </summary>
     public void Watch(string directory, bool includeSubdirectories = false)
     {
         if (!Directory.Exists(directory)) return;
         var full = Path.GetFullPath(directory);
+        Exception? failure;
         lock (_watchers)
         {
             if (_watchers.ContainsKey(full)) return;
-            WatchLocked(full, includeSubdirectories);
+            failure = WatchLocked(full, includeSubdirectories);
         }
+        if (failure is not null) Error?.Invoke(full, failure);
     }
 
-    private void WatchLocked(string full, bool includeSubdirectories)
+    private Exception? WatchLocked(string full, bool includeSubdirectories)
     {
-        var w = new FileSystemWatcher(full)
+        FileSystemWatcher? w = null;
+        try
         {
-            IncludeSubdirectories = includeSubdirectories,
-            NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.Size,
-            EnableRaisingEvents = true,
-        };
-        w.Changed += OnEvent;
-        w.Created += OnEvent;
-        w.Deleted += OnEvent;
-        w.Renamed += (_, e) => Enqueue(e.FullPath);
-        w.Error += (_, e) => Error?.Invoke(full, e.GetException());
-        _watchers[full] = w;
+            w = new FileSystemWatcher(full)
+            {
+                IncludeSubdirectories = includeSubdirectories,
+                NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.Size,
+            };
+            w.Changed += OnEvent;
+            w.Created += OnEvent;
+            w.Deleted += OnEvent;
+            w.Renamed += (_, e) => Enqueue(e.FullPath);
+            w.Error += (_, e) => Error?.Invoke(full, e.GetException());
+            w.EnableRaisingEvents = true;
+            _watchers[full] = w;
+            return null;
+        }
+        catch (Exception ex) when (ex is IOException or ArgumentException or UnauthorizedAccessException or PlatformNotSupportedException)
+        {
+            w?.Dispose();
+            return ex;
+        }
     }
 
     /// <summary>Stops watching a directory given to <see cref="Watch"/>.</summary>
