@@ -19,9 +19,10 @@ public class EvalGraderTests
     [Fact]
     public async Task LintClean_FailsForACaseWhoseWorkspaceIsAlreadyClean_WhenNothingWasDone()
     {
-        // Cases graded only by "lints clean" on a fixture that already lints clean: a run with no
-        // model turn at all must not pass them.
-        var cases = EvalSuite.Cases.Where(c => c.Check is LintClean && c.Workspace == "valid").ToList();
+        // Cases graded by "lints clean" on a fixture that already lints clean: a run with no model
+        // turn at all must not pass them (the check may be composite: lint plus evidence of the edit).
+        var cases = EvalSuite.Cases.Where(c => Flatten(c.Check).Any(k => k is LintClean)
+            && c.Workspace is "valid" or "unformatted").ToList();
         Assert.NotEmpty(cases);
 
         foreach (var evalCase in cases)
@@ -99,6 +100,9 @@ public class EvalGraderTests
     }
 
     // ---- helpers ------------------------------------------------------------------------------
+
+    private static IEnumerable<Check> Flatten(Check check) =>
+        check is AllOf all ? all.Checks.SelectMany(Flatten) : [check];
 
     /// <summary>The ground truth the way the grader derives it: call the tool, read <c>data</c> at the pointer.</summary>
     private static async Task<string> ComputeAsync(McpClient client, AnswerMatchesComputed check, CancellationToken ct)

@@ -47,6 +47,22 @@ public sealed record FileExists(string RelativePath) : Check;
 public sealed record FileContains(string RelativePath, params string[] Tokens) : Check;
 
 /// <summary>
+/// A file under the workspace holds none of <paramref name="Tokens"/> after the run — the trap a
+/// plausible-but-wrong edit falls into (an end state that contains the right words <em>and</em> the
+/// wrong ones).
+/// </summary>
+public sealed record FileLacks(string RelativePath, params string[] Tokens) : Check;
+
+/// <summary>
+/// The final answer contains none of <paramref name="Phrases"/> (case-insensitive) — the negations that
+/// turn a right-sounding keyword into the wrong answer ("no errors").
+/// </summary>
+public sealed record AnswerLacks(params string[] Phrases) : Check;
+
+/// <summary>Every one of <paramref name="Checks"/> passes: an end state plus the evidence it was reached.</summary>
+public sealed record AllOf(params Check[] Checks) : Check;
+
+/// <summary>
 /// The model neither invented a tool (no call rejected as unknown) nor produced an empty answer — the
 /// refusal/ambiguity case: it should say it can't, not hallucinate.
 /// </summary>
