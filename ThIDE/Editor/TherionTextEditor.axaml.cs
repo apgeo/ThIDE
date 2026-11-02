@@ -149,6 +149,9 @@ public partial class TherionTextEditor : UserControl
     private int _pendingNavOffset = -1;   // definition offset to collapse selection on PointerReleased (#2)
     private TopLevel? _windowForPopup;     // window-level pointer routing while popup is open (#3)
     private IBookmarksService? _bookmarks;
+    // Kept so the singleton service's subscription can be dropped on detach (it would otherwise
+    // keep every closed editor alive and repaint it on each bookmark change).
+    private EventHandler? _bookmarksChangedHandler;
     private BookmarkHighlightRenderer? _bookmarkHighlighter;
     private BookmarkMargin? _bookmarkMargin;
     private Point _infoPointer;
@@ -359,8 +362,23 @@ public partial class TherionTextEditor : UserControl
         try
         {
             _bookmarks = AppServices.Provider.GetService<IBookmarksService>();
-            if (_bookmarks is not null)
-                _bookmarks.BookmarksChanged += (_, _) => editor.TextArea.TextView.InvalidateVisual();
+            if (_bookmarks is { } bookmarks)
+            {
+                _bookmarksChangedHandler = (_, _) => editor.TextArea.TextView.InvalidateVisual();
+                bookmarks.BookmarksChanged += _bookmarksChangedHandler;
+                // Dock re-parents editors (float, move), so re-subscribe on attach; -= first keeps it single.
+                AttachedToVisualTree += (_, _) =>
+                {
+                    bookmarks.BookmarksChanged -= _bookmarksChangedHandler;
+                    bookmarks.BookmarksChanged += _bookmarksChangedHandler;
+                    _bookmarkMargin?.SetContext(bookmarks, CurrentFilePath);
+                };
+                DetachedFromVisualTree += (_, _) =>
+                {
+                    bookmarks.BookmarksChanged -= _bookmarksChangedHandler;
+                    _bookmarkMargin?.SetContext(null, null);
+                };
+            }
         }
         catch { /* design-time / no container */ }
         UpdateFoldings();
