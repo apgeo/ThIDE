@@ -69,14 +69,15 @@ public sealed class ChatEngine(HttpClient http, ChatEngineOptions options)
             session.Messages.Add(message.DeepClone());
             turns++;
 
-            // Every advertised tool_call must get a result message, even on cancellation — a
-            // dangling tool_call would poison the session for the *next* turn.
+            // Every advertised tool_call must get a result message, even on cancellation or a failure
+            // — a dangling tool_call would poison the session for the *next* turn. The reads are
+            // tolerant: an endpoint may send a numeric id or object-shaped arguments.
             var pending = new Queue<(string Id, string Name, string Args)>();
             foreach (var call in toolCalls.OfType<JsonObject>())
                 pending.Enqueue((
-                    (string?)call["id"] ?? "",
-                    (string?)call["function"]?["name"] ?? "",
-                    (string?)call["function"]?["arguments"] ?? "{}"));
+                    TextOf(call["id"]) ?? "",
+                    TextOf(call["function"]?["name"]) ?? "",
+                    TextOf(call["function"]?["arguments"]) ?? "{}"));
 
             try
             {
@@ -93,6 +94,12 @@ public sealed class ChatEngine(HttpClient http, ChatEngineOptions options)
             {
                 foreach (var (id, _, _) in pending)
                     session.Messages.Add(ToolResultMessage(id, "(cancelled by the user)"));
+                throw;
+            }
+            catch
+            {
+                foreach (var (id, _, _) in pending)
+                    session.Messages.Add(ToolResultMessage(id, "(the tool call failed before it could run)"));
                 throw;
             }
         }
@@ -265,8 +272,19 @@ public sealed class ChatEngine(HttpClient http, ChatEngineOptions options)
             return await StreamAsync(messages, tools, ct, toolChoice, callbacks);
 
         var response = await CompleteAsync(messages, tools, ct, toolChoice);
-        return (response?["choices"]?[0]?["message"], (int?)response?["usage"]?["total_tokens"] ?? 0);
+        return (FirstChoice(response)?["message"], (int?)response?["usage"]?["total_tokens"] ?? 0);
     }
+
+    /// <summary>
+    /// The first entry of <c>choices</c>, or null. The usage-only chunk of a stream (and a bad reply)
+    /// carries an empty array, which <c>?[0]</c> would throw on.
+    /// </summary>
+    private static JsonNode? FirstChoice(JsonNode? response) =>
+        response?["choices"] is JsonArray { Count: > 0 } choices ? choices[0] : null;
+
+    /// <summary>A string for a string node, the JSON text for any other node (a number, an object).</summary>
+    private static string? TextOf(JsonNode? node) =>
+        node is JsonValue value && value.TryGetValue<string>(out var text) ? text : node?.ToJsonString();
 
     /// <summary>
     /// Streams a completion over SSE, emitting <see cref="AssistantDelta"/> per content chunk and
@@ -327,7 +345,7 @@ public sealed class ChatEngine(HttpClient http, ChatEngineOptions options)
 
             tokens = (int?)chunk?["usage"]?["total_tokens"] ?? tokens;
 
-            var delta = chunk?["choices"]?[0]?["delta"];
+            var delta = FirstChoice(chunk)?["delta"];
             if (delta is null) continue;
 
             if ((string?)delta["content"] is { Length: > 0 } piece)
