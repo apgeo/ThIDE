@@ -59,7 +59,9 @@ public static class TherionPrompts
         "Write a short expedition-history narrative for this cave. Be concise.\n"
         + "1. Call list_survey_info for each survey's team, dates, and length.\n"
         + "2. Order the surveys by date and group them into years or seasons.\n"
-        + "3. Note who surveyed, when, and roughly how much length was added each period.\n"
+        + "3. Note who surveyed, when, and roughly how much length was added each period — call "
+        + "list_survey_info with that period's dateFrom/dateTo and read totalLength; do not add up the "
+        + "rows' lengths, which include nested surveys of other dates.\n"
         + "4. Write a brief chronological summary. Some surveys may be undated — say so rather than guessing.";
 
     [McpServerPrompt(Name = "prepare_release", Title = "Check release readiness")]
