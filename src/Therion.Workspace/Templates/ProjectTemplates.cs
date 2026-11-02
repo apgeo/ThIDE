@@ -9,6 +9,8 @@ using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Therion.Syntax;
+using Therion.Workspace.Editing;
 using Therion.Workspace.Import;
 
 namespace Therion.Workspace.Templates;
@@ -78,7 +80,7 @@ public static partial class ProjectTemplateEngine
             var rel = Path.GetRelativePath(folder, path).Replace('\\', '/');
             if (rel == "template.json") continue;
             files.Add(TextExtensions.Contains(Path.GetExtension(path))
-                ? new TemplateFileEntry(rel, File.ReadAllText(path))
+                ? new TemplateFileEntry(rel, EncodingResolver.ReadAllText(path))
                 : new TemplateFileEntry(rel, null, rel));
         }
         var ids = new HashSet<string>(StringComparer.Ordinal);
@@ -277,7 +279,8 @@ public static partial class ProjectTemplateEngine
 
     /// <summary>
     /// Writes a plan under <paramref name="targetRoot"/>. Refuses, writing nothing, when any file it
-    /// would write already exists. Binary files are copied from <paramref name="templateFolder"/>.
+    /// would write already exists, or when a text file holds a character the encoding its own
+    /// <c>encoding</c> line declares cannot express. Binary files are copied from <paramref name="templateFolder"/>.
     /// </summary>
     public static string? Write(ScaffoldPlan plan, string? templateFolder, string targetRoot)
     {
@@ -286,12 +289,21 @@ public static partial class ProjectTemplateEngine
             return $"{taken} already exists";
         if (plan.SourceCopies.Count > 0 && templateFolder is null) return "the template has no folder to copy files from";
 
-        foreach (var dir in plan.Directories) Directory.CreateDirectory(Path.Combine(targetRoot, dir));
+        // Each text file in the encoding it declares, as Therion will read it; all encoded before
+        // anything is written, so a value the encoding cannot hold leaves no half-made project.
+        var encoded = new List<(string Path, byte[] Bytes)>();
         foreach (var f in plan.Files)
         {
             var path = Path.Combine(targetRoot, f.RelativePath);
+            try { encoded.Add((path, SourceFileIo.EncodeForSave(path, f.Content, TextFileFormat.Default).Bytes)); }
+            catch (UnrepresentableCharacterException ex) { return ex.Message; }
+        }
+
+        foreach (var dir in plan.Directories) Directory.CreateDirectory(Path.Combine(targetRoot, dir));
+        foreach (var (path, bytes) in encoded)
+        {
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            File.WriteAllText(path, f.Content, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+            File.WriteAllBytes(path, bytes);
         }
         foreach (var c in plan.SourceCopies)
             File.Copy(Path.Combine(templateFolder!, c.SourceFileName), Path.Combine(targetRoot, c.RelativePath));
