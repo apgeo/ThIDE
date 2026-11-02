@@ -18,7 +18,7 @@ public sealed record SurveyTreeNode(string Name, string FullName, SourceSpan Dec
     public int Stations { get; init; }
     /// <summary>Non-splay legs in this survey and its descendants.</summary>
     public int Shots { get; init; }
-    /// <summary>Surveyed length (metres, splays/duplicates excluded) in this subtree.</summary>
+    /// <summary>Surveyed length (metres, splay/duplicate/surface legs excluded) in this subtree.</summary>
     public double Length { get; init; }
     public List<SurveyTreeNode> Children { get; } = new();
 }
@@ -59,7 +59,7 @@ public static class ProjectStatistics
                 var sv = SurveyOf(shot.From, nodeNames);
                 if (sv is null) continue;
                 directShots[sv] = directShots.GetValueOrDefault(sv) + 1;
-                if (shot.Length is { } len && (shot.Flags & ShotFlags.Duplicate) == 0)
+                if (shot.Length is { } len && (shot.Flags & (ShotFlags.Duplicate | ShotFlags.Surface)) == 0)
                     directLength[sv] = directLength.GetValueOrDefault(sv) + len;
             }
 
@@ -114,25 +114,14 @@ public static class ProjectStatistics
 
         int shotCount = 0;
         double totalLength = 0;
-        // Undirected graph (station-qn → neighbours with signed dz) for a relative depth estimate.
-        var adjacency = new Dictionary<string, List<(string To, double Dz)>>(StringComparer.Ordinal);
-        void Link(string a, string b, double dz)
-        {
-            (adjacency.TryGetValue(a, out var la) ? la : adjacency[a] = new()).Add((b, dz));
-            (adjacency.TryGetValue(b, out var lb) ? lb : adjacency[b] = new()).Add((a, -dz));
-        }
-
         foreach (var perFile in model.PerFile.Values)
             foreach (var shot in perFile.Shots)
             {
                 if ((shot.Flags & ShotFlags.Splay) != 0) continue;
                 shotCount++;
-                if (shot.Length is { } len)
-                {
-                    if ((shot.Flags & ShotFlags.Duplicate) == 0) totalLength += len;
-                    double dz = shot.Clino is { } clino ? len * Math.Sin(clino * Math.PI / 180.0) : 0;
-                    Link(shot.From.ToString(), shot.To.ToString(), dz);
-                }
+                // Surface and duplicate legs are not cave length (thbook, `flags`).
+                if (shot.Length is { } len && (shot.Flags & (ShotFlags.Duplicate | ShotFlags.Surface)) == 0)
+                    totalLength += len;
             }
 
         return new ProjectTotals(
@@ -140,7 +129,7 @@ public static class ProjectStatistics
             model.StationsByQn.Count,
             shotCount,
             totalLength,
-            VerticalRange(adjacency),
+            DataAnalytics.LayoutExtents(model).Range,
             entrances,
             fixedPts);
     }
@@ -181,7 +170,7 @@ public static class ProjectStatistics
         foreach (var obj in model.Th2Objects)
         {
             if (obj.StationName is not { Length: > 0 } name) continue;
-            if (ResolveStation(model, name) is not { } station) continue;
+            if (ResolveStation(model, name, obj.Span.FilePath) is not { } station) continue;
             if (SurveyOf(station.Name, nodeNames) is { } sv) drawn.Add(sv);
         }
 
@@ -200,11 +189,13 @@ public static class ProjectStatistics
     }
 
     /// <summary>
-    /// The station a <c>.th2</c> <c>-name</c> points at. Mirrors the resolution order the workspace
-    /// index navigates with, so a drawing counts as drawn by the same rule ctrl-click follows:
-    /// <c>point@survey</c> first, then a fully-qualified name, then a bare (usually unique) one.
+    /// The station a <c>.th2</c> <c>-name</c> points at, by the rule ctrl-click follows:
+    /// <c>point@survey</c> first, then a fully-qualified name, then a bare name in the surveys of the
+    /// <c>.th</c> that inputs the sketch. A bare name the file graph does not settle counts only when
+    /// it is unique in the project — crediting the first of several same-named stations would mark
+    /// an arbitrary survey as drawn.
     /// </summary>
-    private static StationSymbol? ResolveStation(WorkspaceSemanticModel model, string raw)
+    private static StationSymbol? ResolveStation(WorkspaceSemanticModel model, string raw, string sketchPath)
     {
         var r = StationRef.Parse(raw.Trim());
 
@@ -215,7 +206,11 @@ public static class ProjectStatistics
 
         if (model.StationsByQn.TryGetValue(r.StationQuery, out var byQn)) return byQn;
 
-        return model.StationsByLastName.TryGetValue(r.Point, out var byName) && !byName.IsEmpty
+        if (r.SurveyLastName is null && !string.IsNullOrEmpty(sketchPath)
+            && model.StationInInputtingFile(r.Point, sketchPath) is { } inScope)
+            return inScope;
+
+        return model.StationsByLastName.TryGetValue(r.Point, out var byName) && byName.Length == 1
             ? byName[0]
             : null;
     }
@@ -231,30 +226,5 @@ public static class ProjectStatistics
             if (nodeNames.Contains(name)) return name;
         }
         return null;
-    }
-
-    // Relative depth: BFS each component from an arbitrary root (z=0), accumulate dz, span = max−min.
-    private static double VerticalRange(Dictionary<string, List<(string To, double Dz)>> adjacency)
-    {
-        if (adjacency.Count == 0) return 0;
-        var z = new Dictionary<string, double>(StringComparer.Ordinal);
-        double globalMin = 0, globalMax = 0;
-        foreach (var start in adjacency.Keys)
-        {
-            if (z.ContainsKey(start)) continue;
-            z[start] = 0;
-            var queue = new Queue<string>();
-            queue.Enqueue(start);
-            while (queue.Count > 0)
-            {
-                var u = queue.Dequeue();
-                double zu = z[u];
-                globalMin = Math.Min(globalMin, zu);
-                globalMax = Math.Max(globalMax, zu);
-                foreach (var (v, dz) in adjacency[u])
-                    if (!z.ContainsKey(v)) { z[v] = zu + dz; queue.Enqueue(v); }
-            }
-        }
-        return globalMax - globalMin;
     }
 }
