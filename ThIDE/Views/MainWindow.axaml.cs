@@ -708,7 +708,8 @@ public partial class MainWindow : Window
             (entry, temp, label) => vm.Build.RunBuildAsync(entry, temp, label),
             () => vm.Build.CancelCommand.Execute(null),
             AppServices.Provider.GetService<IAutomationOutput>(),
-            key is null ? null : Path.Combine(Therion.Workspace.ProjectSidecar.DirectoryFor("batch"), key + ".json"));
+            key is null ? null : Path.Combine(Therion.Workspace.ProjectSidecar.DirectoryFor("batch"), key + ".json"),
+            path => vm.Build.EnsureInvolvedFilesSavedAsync(path));
         var model = new BatchBuildViewModel(env, preselect);
         model.PropertyChanged += (_, e) =>
         {

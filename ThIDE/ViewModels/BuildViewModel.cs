@@ -672,7 +672,7 @@ public partial class BuildViewModel : ViewModelBase
     /// otherwise prompts (naming the files) with Save / Compile without saving / Cancel. Returns
     /// <c>false</c> only when the user cancels — the build should then not run.
     /// </summary>
-    private async Task<bool> EnsureInvolvedFilesSavedAsync(string entry)
+    public async Task<bool> EnsureInvolvedFilesSavedAsync(string entry)
     {
         string entryFull; try { entryFull = Path.GetFullPath(entry); } catch { entryFull = entry; }
         var dirty = _documents.Documents
@@ -1064,9 +1064,10 @@ public partial class BuildViewModel : ViewModelBase
     {
         try
         {
-            var modified = ThconfigExportEditor.IsolateExport(File.ReadAllText(cfg), info);
+            // Save first: the copy is made from disk, so it must see the editor's unsaved edits.
+            if (!await EnsureInvolvedFilesSavedAsync(cfg).ConfigureAwait(true)) return;
             var temp = Path.Combine(Path.GetDirectoryName(cfg)!, ".thide-target.thconfig");
-            File.WriteAllText(temp, modified);
+            DerivedThconfig.Write(cfg, temp, text => ThconfigExportEditor.IsolateExport(text, info));
             await RunBuildAsync(temp, temp, $"{Path.GetFileName(cfg)} :: {info.Title}").ConfigureAwait(true);
         }
         catch (Exception ex) { Status = ex.Message; _log?.Error("Target build error: " + ex.Message); }
@@ -1080,9 +1081,9 @@ public partial class BuildViewModel : ViewModelBase
         try
         {
             var dir = Path.GetDirectoryName(cfg)!;
-            var modified = ThconfigExportEditor.ComposeExport(File.ReadAllText(cfg), exportBlock);
+            if (!await EnsureInvolvedFilesSavedAsync(cfg).ConfigureAwait(true)) return;
             var temp = Path.Combine(dir, ".thide-export.thconfig");
-            File.WriteAllText(temp, modified);
+            DerivedThconfig.Write(cfg, temp, text => ThconfigExportEditor.ComposeExport(text, exportBlock));
             await RunBuildAsync(temp, temp, $"Quick export → {outputFileName}").ConfigureAwait(true);
             var outPath = Path.Combine(dir, outputFileName);
             if (LastBuildSucceeded && File.Exists(outPath)) _shell.Open(outPath);
