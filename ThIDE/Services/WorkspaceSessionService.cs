@@ -417,7 +417,7 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
         await _revalidateGate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            SetIndexing(true);
+            BeginIndexing();
             try
             {
                 WorkspaceSemanticModel model;
@@ -440,7 +440,7 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
                 UpdateSymbolIndex(model);
                 Raise();
             }
-            finally { SetIndexing(false); }
+            finally { EndIndexing(); }
         }
         finally { _revalidateGate.Release(); }
     }
