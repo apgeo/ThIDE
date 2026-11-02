@@ -1463,6 +1463,19 @@ public partial class MainWindowViewModel : ViewModelBase
                 return false;
             }
 
+            // Scaffolding into an existing project would silently replace the user's thconfig,
+            // wrapper .th or copied survey. Refuse and name the files instead.
+            var existing = Therion.Workspace.Import.TopodroidProjectScaffold
+                .ExistingTargets(plan, targetRoot, new[] { sourcePath });
+            if (existing.Count > 0)
+            {
+                var msg = string.Format(Tr.Get("Notif_ScaffoldTargetsExist"), string.Join(", ", existing));
+                StatusText = msg;
+                _log?.Warning($"Scaffold refused: {msg}");
+                _notifications.Error(Tr.Get("Notif_ScaffoldFailed"), msg);
+                return false;
+            }
+
             foreach (var dir in plan.Directories)
                 System.IO.Directory.CreateDirectory(System.IO.Path.Combine(targetRoot, dir));
 
