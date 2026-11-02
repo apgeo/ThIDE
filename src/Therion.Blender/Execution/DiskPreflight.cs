@@ -39,9 +39,21 @@ public static class DiskPreflight
     {
         try
         {
-            var root = Path.GetPathRoot(Path.GetFullPath(path));
-            if (string.IsNullOrEmpty(root)) return null;
-            return new DriveInfo(root).AvailableFreeSpace;
+            string full = Path.GetFullPath(path);
+            if (OperatingSystem.IsWindows())
+            {
+                var root = Path.GetPathRoot(full);
+                if (string.IsNullOrEmpty(root)) return null;
+                return new DriveInfo(root).AvailableFreeSpace;
+            }
+
+            // On Unix the path root is always "/", which hides separate mounts (a tmpfs /tmp,
+            // a data volume); DriveInfo statvfs()es the name it is given, so hand it the
+            // nearest existing directory instead (the job folder may not exist yet).
+            string? dir = full;
+            while (dir is not null && !Directory.Exists(dir)) dir = Path.GetDirectoryName(dir);
+            if (dir is null) return null;
+            return new DriveInfo(dir).AvailableFreeSpace;
         }
         catch (Exception ex) when (ex is IOException or ArgumentException or UnauthorizedAccessException)
         {

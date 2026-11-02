@@ -64,12 +64,25 @@ public sealed class BlenderRenderService : IBlenderRenderService
                 ErrorMessage = locate.Detail,
             };
 
+        // The job folder is scratch (transport mesh, scene-meta, script, job.log); the outputs
+        // go to the caller's OutputDirectory when the spec sets one, else into the job folder.
         string jobDir = CreateJobDirectory();
-        var (scriptPath, frameCount, effectiveSpec) = await PrepareAsync(spec, source, jobDir, progress, ct)
-            .ConfigureAwait(false);
+        string outputDir = string.IsNullOrWhiteSpace(spec.Output.OutputDirectory)
+            ? jobDir
+            : Path.GetFullPath(spec.Output.OutputDirectory);
+        try
+        {
+            Directory.CreateDirectory(outputDir);
+            var (scriptPath, frameCount, effectiveSpec) = await PrepareAsync(spec, source, jobDir, progress, ct, outputDirectory: outputDir)
+                .ConfigureAwait(false);
 
-        var job = new RenderJob(scriptPath, jobDir, frameCount, effectiveSpec.Output);
-        return await _runner.RunAsync(locate.Installation!, job, progress, ct).ConfigureAwait(false);
+            var job = new RenderJob(scriptPath, jobDir, frameCount, effectiveSpec.Output);
+            return await _runner.RunAsync(locate.Installation!, job, progress, ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            DeleteScratch(jobDir);
+        }
     }
 
     public async Task<string> ExportScriptAsync(
@@ -89,10 +102,11 @@ public sealed class BlenderRenderService : IBlenderRenderService
 
     /// <summary>Convert into <paramref name="assetDir"/>, build camera framing, generate the
     /// script, and write <c>render.py</c> there. Returns its path, the frame count, and the
-    /// spec with its source/output pointed at the produced assets.</summary>
+    /// spec with its source pointed at the produced assets and its output at
+    /// <paramref name="outputDirectory"/> (the asset folder when null).</summary>
     private async Task<(string ScriptPath, int FrameCount, SceneSpec Spec)> PrepareAsync(
         SceneSpec spec, RenderSource source, string assetDir, IProgress<RenderProgress>? progress, CancellationToken ct,
-        ScriptPurpose purpose = ScriptPurpose.Render)
+        ScriptPurpose purpose = ScriptPurpose.Render, string? outputDirectory = null)
     {
         ct.ThrowIfCancellationRequested();
         progress?.Report(new RenderProgress(RenderPhase.ConvertingGeometry, "Converting model"));
@@ -108,7 +122,7 @@ public sealed class BlenderRenderService : IBlenderRenderService
                 PlyPath = conversion.Manifest.ModelPath,
                 SceneMetaPath = conversion.Manifest.SceneMetaPath,
             },
-            Output = spec.Output with { OutputDirectory = assetDir },
+            Output = spec.Output with { OutputDirectory = outputDirectory ?? assetDir },
         };
         int frameCount = SceneSpecValidator.FrameCount(effectiveSpec);
 
@@ -134,6 +148,21 @@ public sealed class BlenderRenderService : IBlenderRenderService
         byte[]? plyBytes = spec.Source.EmbedMesh ? File.ReadAllBytes(conversion.Manifest.ModelPath) : null;
         return new ScriptAssets { SceneMetaJson = metaJson, PlyBytes = plyBytes };
     }
+
+    /// <summary>Removes the per-render scratch files (transport mesh, scene-meta, script) once
+    /// the run is over; <c>job.log</c> and any outputs written into the job folder stay.
+    /// Best-effort — a file still locked or already gone is left alone.</summary>
+    private static void DeleteScratch(string jobDir)
+    {
+        foreach (var name in ScratchFileNames)
+        {
+            try { File.Delete(Path.Combine(jobDir, name)); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+        }
+    }
+
+    // ConversionOptions' default file names plus the script PrepareAsync writes.
+    private static readonly string[] ScratchFileNames = ["model.ply", "scene-meta.json", "render.py"];
 
     private string CreateJobDirectory()
     {

@@ -104,4 +104,35 @@ public class RenderOutputDirectoryTests : IDisposable
         var leftovers = Directory.GetFiles(Path.Combine(_root, "jobs"), "model.ply", SearchOption.AllDirectories);
         Assert.True(leftovers.Length == 0, "scratch transport mesh left under the job root: " + string.Join(", ", leftovers));
     }
+    [Fact]
+    public async Task Render_WithoutOutputDirectory_KeepsOutputsAndLogInTheJobFolder_AndDropsScratch()
+    {
+        var result = await Service(Path.Combine(_root, "unused")).RenderAsync(VideoSpec(""), SyntheticSource());
+
+        Assert.True(result.Succeeded, result.ErrorMessage);
+        string output = Assert.Single(result.OutputPaths);
+        string jobDir = Path.GetDirectoryName(output)!;
+        Assert.StartsWith(Path.Combine(_root, "jobs") + Path.DirectorySeparatorChar, jobDir);
+        Assert.True(File.Exists(output));
+        Assert.True(File.Exists(Path.Combine(jobDir, "job.log")));
+        Assert.False(File.Exists(Path.Combine(jobDir, "model.ply")));
+        Assert.False(File.Exists(Path.Combine(jobDir, "scene-meta.json")));
+        Assert.False(File.Exists(Path.Combine(jobDir, "render.py")));
+    }
+
+    [Fact]
+    public async Task Render_DiskPreflight_ProbesTheOutputDirectory()
+    {
+        string wanted = Path.Combine(_root, "wanted");
+        var probed = new List<string>();
+        var service = new BlenderRenderService(
+            new BlenderLocator(new FakeProbe(), () => new[] { "/fake/blender" }),
+            new BlenderRunner(new FakeLauncher([wanted]), p => { probed.Add(p); return 50_000_000_000L; }),
+            Path.Combine(_root, "jobs"));
+
+        var result = await service.RenderAsync(VideoSpec(wanted), SyntheticSource());
+
+        Assert.True(result.Succeeded, result.ErrorMessage);
+        Assert.Equal([wanted], probed);
+    }
 }
