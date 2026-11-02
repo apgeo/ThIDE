@@ -40,7 +40,7 @@ public class BuildToolConcurrencyTests
         var compiler = new OverlapCountingCompiler(expectedStarts: 1);
         compiler.Release.TrySetResult();
         var gate = new Therion.Build.CompileGate();
-        var tools = new BuildTools(host, compiler, gate);
+        var tools = new BuildTools(host, compiler, gate: gate);
 
         // The IDE's own build holds the gate.
         using (gate.TryAcquire())
