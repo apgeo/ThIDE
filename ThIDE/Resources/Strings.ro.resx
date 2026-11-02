@@ -1676,4 +1676,8 @@ Aplici modificările? Pașii care nu au putut fi previzualizați rulează acum.<
   <data name="Renumber_NoSurvey" xml:space="preserve"><value>Nu există topografia „{0}” în proiect.</value></data>
   <data name="ShotIssue_BadStation" xml:space="preserve"><value>„{0}” nu este nume de stație; rândul este omis.</value></data>
   <data name="ShotEdit_OtherFile" xml:space="preserve"><value>Această viză este în {0}: deschideți acel fișier pentru a o edita.</value></data>
+  <data name="Explorer_TrashFailed" xml:space="preserve"><value>„{0}” nu a putut fi mutat în coșul de gunoi.
+
+Îl ștergeți definitiv? Operațiunea nu poate fi anulată.</value></data>
+  <data name="Explorer_DeletePermanently" xml:space="preserve"><value>Șterge definitiv</value></data>
 </root>

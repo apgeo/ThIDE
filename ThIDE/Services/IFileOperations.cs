@@ -27,4 +27,10 @@ public interface IFileOperations
     /// "Delete Permanently" (no trash backend available).
     /// </summary>
     string DeleteActionLabel { get; }
+
+    /// <summary>
+    /// Deletes permanently, bypassing the trash. Used only after <see cref="Delete"/> failed and the
+    /// user explicitly agreed. Returns false when unsupported or on failure.
+    /// </summary>
+    bool DeletePermanently(string path) => false;
 }

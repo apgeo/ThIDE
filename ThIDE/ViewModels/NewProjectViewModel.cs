@@ -119,7 +119,8 @@ public sealed partial class NewProjectViewModel : ObservableObject
     /// <summary>Imports a template folder or zip into the library and selects it.</summary>
     public string? Import(string source)
     {
-        Directory.CreateDirectory(_library);
+        try { Directory.CreateDirectory(_library); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return ex.Message; }
         var (template, error) = ProjectTemplateEngine.Import(source, _library);
         if (template is null) return error;
         ReloadTemplates(template.Id);

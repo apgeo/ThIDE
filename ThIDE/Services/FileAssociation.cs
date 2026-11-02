@@ -78,6 +78,9 @@ public static class FileAssociationCatalog
     {
         try
         {
+            // An AppImage runs from a transient mount; $APPIMAGE is the durable file to launch.
+            var appImage = Environment.GetEnvironmentVariable("APPIMAGE");
+            if (!string.IsNullOrEmpty(appImage) && File.Exists(appImage)) return appImage;
             if (!string.IsNullOrEmpty(Environment.ProcessPath)) return Environment.ProcessPath!;
             return System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName ?? string.Empty;
         }
