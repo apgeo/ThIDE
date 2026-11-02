@@ -419,6 +419,9 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
         if (_suspend || !_activated) return;
 
         var model = BuildScopedModel();
+        // Re-runs come from every document event (tab switch, re-parse) as well as option changes;
+        // keep the user's per-row choices across the rebuild instead of resetting them to defaults.
+        var kept = CaptureRowState();
         Measurements.Clear();
         Planes.Clear();
         SelectedPlane = null;
@@ -444,15 +447,22 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
         _caveLegs = result.CaveLegs;
         _caveSplays = result.CaveSplays;
 
+        _bulk = true;   // restoring kept state must not recompute / push per row
         for (int i = 0; i < result.Batches.Length; i++)
         {
             var planeRow = new StructuralPlaneRow(this, result.Batches[i], result.Planes[i])
             {
                 ColorHex = PlanePalette[i % PlanePalette.Length],
             };
-            foreach (var m in result.Batches[i].Measurements)
+            if (kept.Planes.TryGetValue(planeRow.Batch.Key, out var ps))
+            {
+                planeRow.Visible = ps.Visible;
+                planeRow.Type = ps.Type;
+            }
+            foreach (var (m, key) in MeasurementKeys(result.Batches[i]))
             {
                 var row = new StructuralMeasurementRow(this, planeRow, m);
+                if (key is { } k && kept.Includes.TryGetValue(k, out var include)) row.Include = include;
                 planeRow.Rows.Add(row);
                 Measurements.Add(row);
             }
@@ -461,6 +471,7 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
             RecomputePlane(planeRow);
             Planes.Add(planeRow);
         }
+        _bulk = false;
 
         var deltaText = _delta.ToString("+0.0;-0.0", System.Globalization.CultureInfo.CurrentCulture);
         var declNote = result.Declination.Effective switch
@@ -474,6 +485,42 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
             Planes.Count, Measurements.Count(m => !m.IsOrigin), declNote);
         PushPlot();
         PushPreview();
+    }
+
+    /// <summary>Identifies a measurement row across re-runs: its batch, its shot's stations and the
+    /// occurrence of that shot within the batch (a station pair can be measured more than once).
+    /// Source spans are not used because typing above the shot shifts them on every re-parse.</summary>
+    private readonly record struct MeasurementKey(string Batch, QualifiedName From, QualifiedName To, int Occurrence);
+
+    private readonly record struct PlaneState(bool Visible, string Type);
+
+    /// <summary>The user's per-row choices (inclusion, plane visibility and type) before a rebuild.</summary>
+    private (Dictionary<MeasurementKey, bool> Includes, Dictionary<string, PlaneState> Planes) CaptureRowState()
+    {
+        var includes = new Dictionary<MeasurementKey, bool>();
+        var planes = new Dictionary<string, PlaneState>(StringComparer.Ordinal);
+        foreach (var p in Planes)
+        {
+            planes[p.Batch.Key] = new PlaneState(p.Visible, p.Type);
+            // Rows were built in the batch's measurement order (see Rerun).
+            foreach (var (row, (_, key)) in p.Rows.Zip(MeasurementKeys(p.Batch)))
+                if (key is { } k) includes[k] = row.Include;
+        }
+        return (includes, planes);
+    }
+
+    /// <summary>Each measurement of a batch with its <see cref="MeasurementKey"/>; the synthetic origin
+    /// gets none, so it keeps following the Detect-tab "include origin" option.</summary>
+    private static IEnumerable<(StructuralMeasurement M, MeasurementKey? Key)> MeasurementKeys(StructuralBatch batch)
+    {
+        var seen = new Dictionary<(QualifiedName, QualifiedName), int>();
+        foreach (var m in batch.Measurements)
+        {
+            if (m.IsOrigin) { yield return (m, null); continue; }
+            seen.TryGetValue((m.From, m.To), out var n);
+            seen[(m.From, m.To)] = n + 1;
+            yield return (m, new MeasurementKey(batch.Key, m.From, m.To, n));
+        }
     }
 
     // ---- Mainline Preview overlay (planes as strike / apparent-dip lines) -------------------------
@@ -840,10 +887,15 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
             .SelectMany(m => (IEnumerable<KeyValuePair<QualifiedName, StationSymbol>>)m.Stations)
             .GroupBy(kv => kv.Key)
             .ToFrozenDictionary(g => g.Key, g => g.First().Value);
+        // Surveys carry the dates the WMM-auto declination is evaluated at.
+        var surveys = models
+            .SelectMany(m => (IEnumerable<KeyValuePair<QualifiedName, SurveySymbol>>)m.Surveys)
+            .GroupBy(kv => kv.Key)
+            .ToFrozenDictionary(g => g.Key, g => g.First().Value);
         var equates = LivePreviewViewModel.BuildEquateGraph(models);
         return new SemanticModel(
             stations,
-            FrozenDictionary<QualifiedName, SurveySymbol>.Empty,
+            surveys,
             shots,
             equates,
             ImmutableArray<Diagnostic>.Empty)
