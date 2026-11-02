@@ -103,8 +103,11 @@ public sealed partial class LinkSurveyViewModel : ObservableObject
 
     [ObservableProperty] private string _generatedText = string.Empty;
     [ObservableProperty] private IReadOnlyList<WarningRow> _warnings = Array.Empty<WarningRow>();
-    [ObservableProperty] private bool _canInsert;
-    [ObservableProperty] private bool _isBusy;
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(InsertEnabled))] private bool _canInsert;
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(InsertEnabled))] private bool _isBusy;
+
+    /// <summary>Insert is offered only while a plan can be applied and nothing is loading or applying.</summary>
+    public bool InsertEnabled => CanInsert && !IsBusy;
 
     public LinkPlan? Plan { get; private set; }
 
@@ -400,7 +403,9 @@ public sealed partial class LinkSurveyViewModel : ObservableObject
     /// <summary>Writes the plan. Returns the outcome; on success <see cref="Applied"/> is raised.</summary>
     public async Task<EditOutcome?> InsertAsync()
     {
-        if (Plan is not { CanApply: true } plan || _env.Editor is null) return null;
+        // A second Insert (Enter on the default button, a double click) while the first is still
+        // applying would splice the same zero-length insertions again at shifted offsets.
+        if (IsBusy || Plan is not { CanApply: true } plan || _env.Editor is null) return null;
         IsBusy = true;
         try
         {
