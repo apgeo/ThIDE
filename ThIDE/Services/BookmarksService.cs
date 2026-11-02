@@ -87,8 +87,9 @@ public sealed class BookmarksService : IBookmarksService
                 Title = b.Title,
                 CreatedAt = b.CreatedAt,
             }).ToList();
-            File.WriteAllText(_persistPath, JsonSerializer.Serialize(dtos,
-                new JsonSerializerOptions { WriteIndented = true }));
+            // Temp file + rename, so a failed write keeps the previous bookmarks.
+            Therion.Workspace.Editing.SourceFileIo.WriteOver(_persistPath, System.Text.Encoding.UTF8.GetBytes(
+                JsonSerializer.Serialize(dtos, new JsonSerializerOptions { WriteIndented = true })));
         }
         catch { }
     }

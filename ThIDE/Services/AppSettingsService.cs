@@ -6,9 +6,12 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
+using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using Therion.Workspace.Editing;
 
 namespace ThIDE.Services;
 
@@ -446,6 +449,8 @@ public sealed class AppSettingsService : IAppSettingsService
     private readonly string _path;
     private readonly ILogger? _logger;
     private AppSettings _state;
+    // Save runs from the UI thread (window deactivation) and from background session work.
+    private readonly object _writeGate = new();
 
     public AppSettingsService(ILogger<AppSettingsService>? logger = null) : this(DefaultPath(), logger) { }
 
@@ -462,8 +467,11 @@ public sealed class AppSettingsService : IAppSettingsService
 
     public void Save(AppSettings settings)
     {
-        _state = settings;
-        TryWrite();
+        lock (_writeGate)
+        {
+            _state = settings;
+            TryWrite();
+        }
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
@@ -476,7 +484,26 @@ public sealed class AppSettingsService : IAppSettingsService
         }
         catch (Exception ex)
         {
-            _logger?.LogWarning(ex, "Failed to load settings from {Path}; using defaults.", _path);
+            // The next save writes defaults over this file, so keep its bytes first: it holds the
+            // recent/pinned files, hooks and MCP configuration the user may want to recover.
+            var kept = KeepAside();
+            _logger?.LogWarning(ex, "Failed to load settings from {Path}; using defaults. Original kept as {Copy}.",
+                _path, kept ?? "(copy failed)");
+            return null;
+        }
+    }
+
+    private string? KeepAside()
+    {
+        try
+        {
+            var copy = _path + ".unreadable-"
+                + DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
+            File.Copy(_path, copy, overwrite: true);
+            return copy;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
             return null;
         }
     }
@@ -487,8 +514,9 @@ public sealed class AppSettingsService : IAppSettingsService
         {
             var dir = Path.GetDirectoryName(_path);
             if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
-            File.WriteAllText(_path,
-                JsonSerializer.Serialize(_state, new JsonSerializerOptions { WriteIndented = true }));
+            // Temp file + rename: a failed write (disk full, crash) leaves the previous file intact.
+            SourceFileIo.WriteOver(_path, Encoding.UTF8.GetBytes(
+                JsonSerializer.Serialize(_state, new JsonSerializerOptions { WriteIndented = true })));
         }
         catch (Exception ex)
         {
