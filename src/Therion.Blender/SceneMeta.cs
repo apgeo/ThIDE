@@ -19,9 +19,19 @@ public sealed record SceneMetaVec(double X, double Y, double Z)
 /// <summary>An axis-aligned box with its derived centre and size, for convenience.</summary>
 public sealed record SceneMetaBounds(SceneMetaVec Min, SceneMetaVec Max, SceneMetaVec Center, SceneMetaVec Size)
 {
-    public static SceneMetaBounds From(BoundingBox box) => new(
-        SceneMetaVec.From(box.Min), SceneMetaVec.From(box.Max),
-        SceneMetaVec.From(box.Center), SceneMetaVec.From(box.Size));
+    /// <summary>An empty box (no geometry) maps to all-zero extents: its ±infinity Min/Max
+    /// cannot be written as JSON.</summary>
+    public static SceneMetaBounds From(BoundingBox box)
+    {
+        if (box.IsEmpty)
+        {
+            var zero = SceneMetaVec.From(CaveVector3.Zero);
+            return new(zero, zero, zero, zero);
+        }
+        return new(
+            SceneMetaVec.From(box.Min), SceneMetaVec.From(box.Max),
+            SceneMetaVec.From(box.Center), SceneMetaVec.From(box.Size));
+    }
 }
 
 /// <summary>Where the model came from (echoed from the parsed <see cref="CaveModel"/>).</summary>

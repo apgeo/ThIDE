@@ -43,8 +43,44 @@ public static class GeometryStage
             WallSource.Tubes => false,
             _ => model.Scraps.Count > 0, // Auto
         };
-        return useScraps ? MeshFromScraps(model.Scraps) : TubeMesher.Build(model.Shots, options);
+        return useScraps ? MeshFromScraps(model.Scraps) : TubeMesher.Build(WithPassageLrud(model), options);
     }
+
+    /// <summary>
+    /// <c>.3d</c> keeps its passage dimensions in XSECT records keyed by station name, while
+    /// its legs carry only endpoint coordinates. Joins the two (name → station position →
+    /// leg endpoint) so the tube mesher sees the measured LRUD instead of the default radius.
+    /// Shots that already carry LRUD (<c>.lox</c>) are left as they are; the first
+    /// cross-section seen for a station wins.
+    /// </summary>
+    private static IReadOnlyList<CaveShot> WithPassageLrud(CaveModel model)
+    {
+        if (model.Passages.Count == 0) return model.Shots;
+
+        var positionByName = new Dictionary<string, CaveVector3>(StringComparer.Ordinal);
+        foreach (var station in model.Stations) positionByName.TryAdd(station.Name, station.Position);
+
+        var lrudAt = new Dictionary<(long, long, long), CaveLrud>();
+        foreach (var passage in model.Passages)
+            foreach (var xsect in passage.Stations)
+                if (positionByName.TryGetValue(xsect.StationName, out var position))
+                    lrudAt.TryAdd(PositionKey(position), new CaveLrud(xsect.Left, xsect.Right, xsect.Up, xsect.Down));
+        if (lrudAt.Count == 0) return model.Shots;
+
+        var shots = new List<CaveShot>(model.Shots.Count);
+        foreach (var shot in model.Shots)
+        {
+            var from = shot.FromLrud ?? (lrudAt.TryGetValue(PositionKey(shot.FromPosition), out var f) ? f : null);
+            var to = shot.ToLrud ?? (lrudAt.TryGetValue(PositionKey(shot.ToPosition), out var t) ? t : null);
+            shots.Add(from == shot.FromLrud && to == shot.ToLrud ? shot : shot with { FromLrud = from, ToLrud = to });
+        }
+        return shots;
+    }
+
+    // Station and leg coordinates come from the same file values (and the same recenter
+    // shift), so a millimetre grid matches them without accumulating float noise.
+    private static (long, long, long) PositionKey(CaveVector3 p) =>
+        ((long)Math.Round(p.X * 1000.0), (long)Math.Round(p.Y * 1000.0), (long)Math.Round(p.Z * 1000.0));
 
     private static CaveMesh MeshFromScraps(IReadOnlyList<CaveScrap> scraps)
     {

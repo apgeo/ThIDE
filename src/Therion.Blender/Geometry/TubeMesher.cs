@@ -121,10 +121,13 @@ public static class TubeMesher
         {
             uint v0 = ring + (uint)s;
             uint v1 = ring + (uint)((s + 1) % sides);
-            // Wind the two end caps oppositely so both face outward.
+            // Wind the two end caps oppositely so both face outward: the ring runs
+            // counter-clockwise seen from behind the leg (right × up = −direction), so the
+            // forward cap needs (centre, v1, v0) for a +direction normal and the back cap
+            // (centre, v0, v1).
             triangles.Add(facingForward
-                ? new CaveTriangle(centerIndex, v0, v1)
-                : new CaveTriangle(centerIndex, v1, v0));
+                ? new CaveTriangle(centerIndex, v1, v0)
+                : new CaveTriangle(centerIndex, v0, v1));
         }
     }
 }
