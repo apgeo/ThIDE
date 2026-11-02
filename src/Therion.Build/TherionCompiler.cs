@@ -147,8 +147,8 @@ public sealed class TherionCompiler : ITherionCompiler
             // therion.exe itself has exited. That EOF may never arrive, so the build would appear
             // to run forever (button kept flashing, spinner stuck). Owning the readers lets us
             // bound how long we wait for them once the process is gone (#3).
-            var outTask = PumpAsync(proc.StandardOutput, isStderr: false, progress, diags, diagLock, cancellationToken);
-            var errTask = PumpAsync(proc.StandardError, isStderr: true, progress, diags, diagLock, cancellationToken);
+            var outTask = PumpAsync(proc.StandardOutput, isStderr: false, progress, diags, diagLock, workDir, cancellationToken);
+            var errTask = PumpAsync(proc.StandardError, isStderr: true, progress, diags, diagLock, workDir, cancellationToken);
 
             using (cancellationToken.Register(() => { try { proc.Kill(entireProcessTree: true); } catch { } }))
             {
@@ -185,13 +185,13 @@ public sealed class TherionCompiler : ITherionCompiler
         StreamReader reader, bool isStderr,
         IProgress<CompilerOutputLine>? progress,
         ImmutableArray<Diagnostic>.Builder diags, object diagLock,
-        CancellationToken cancellationToken)
+        string workDir, CancellationToken cancellationToken)
     {
         try
         {
             string? text;
             while ((text = await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false)) is not null)
-                Forward(text, isStderr, progress, diags, diagLock);
+                Forward(text, isStderr, progress, diags, diagLock, workDir);
         }
         catch (OperationCanceledException) { /* build cancelled — stop reading */ }
         catch (Exception) { /* pipe closed / process gone — stop reading */ }
@@ -207,13 +207,16 @@ public sealed class TherionCompiler : ITherionCompiler
     private void Forward(
         string? text, bool isStderr,
         IProgress<CompilerOutputLine>? progress,
-        ImmutableArray<Diagnostic>.Builder diags, object diagLock)
+        ImmutableArray<Diagnostic>.Builder diags, object diagLock, string workDir)
     {
         if (text is null) return;
         var line = _outputParser.Classify(text, isStderr);
         progress?.Report(line);
         if (line.Severity >= DiagnosticSeverity.Warning && line.Span is { } span)
         {
+            // Therion echoes the path as written in the config, relative to its working directory.
+            if (span.FilePath.Length > 0 && !Path.IsPathRooted(span.FilePath))
+                span = span with { FilePath = Path.GetFullPath(Path.Combine(workDir, span.FilePath)) };
             lock (diagLock)
                 diags.Add(Diagnostic.Create(
                     "TH_BUILD_OUT",
