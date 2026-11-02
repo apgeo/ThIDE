@@ -57,8 +57,13 @@ public class SaveWithoutWriteTests
         doc.DocumentText = "encoding iso8859-2\nsurvey b\n  # peșteră\nendsurvey\n";
         Assert.True(doc.IsDirty);
 
-        await svc.SaveDocumentAsync(doc);
+        var before = File.ReadAllBytes(path);
+        var saved = await svc.SaveDocumentAsync(doc);
 
-        Assert.False(doc.IsDirty, "the save returned normally but the document is still unsaved");
+        // Nothing can be written without corrupting the character, so the save must report that it
+        // wrote nothing, and leave both the file and the unsaved buffer as they were.
+        Assert.False(saved, "the save reported success but wrote nothing");
+        Assert.True(doc.IsDirty, "the document was marked saved although nothing was written");
+        Assert.Equal(before, File.ReadAllBytes(path));
     }
 }

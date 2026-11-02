@@ -1715,26 +1715,14 @@ public partial class MainWindowViewModel : ViewModelBase
     /// Close guard for a modified document (wired into the DockFactory): asks Save / Don't save /
     /// Cancel. Returns true to let the tab close (after saving when chosen), false to keep it open.
     /// </summary>
-    private async Task<bool> PromptSaveBeforeCloseAsync(FileDocumentViewModel doc)
-    {
-        var choice = await Views.SaveBeforeBuildDialog.ShowOverMainAsync(
-            Tr.Get("Close_SavePromptTitle"),
-            string.Format(Tr.Get("Close_SavePromptMsg"), System.IO.Path.GetFileName(doc.FilePath)),
-            Tr.Get("Close_Save"), Tr.Get("Close_DontSave"), Tr.Get("Common_Cancel"),
-            noWindowResult: Views.SaveBeforeBuildChoice.DontSave).ConfigureAwait(true);
-
-        switch (choice)
-        {
-            case Views.SaveBeforeBuildChoice.Save:
-                try { await _documents.SaveDocumentAsync(doc).ConfigureAwait(true); }
-                catch (Exception ex) { StatusText = ex.Message; return false; }   // save failed → keep the tab open
-                return true;
-            case Views.SaveBeforeBuildChoice.DontSave:
-                return true;
-            default:
-                return false;   // Cancel → keep the tab open
-        }
-    }
+    private Task<bool> PromptSaveBeforeCloseAsync(FileDocumentViewModel doc) =>
+        // A save that failed or wrote nothing leaves the document dirty → the tab stays open.
+        SaveBeforeClose.ConfirmAsync(new[] { doc }, _ => Views.SaveBeforeBuildDialog.ShowOverMainAsync(
+                Tr.Get("Close_SavePromptTitle"),
+                string.Format(Tr.Get("Close_SavePromptMsg"), System.IO.Path.GetFileName(doc.FilePath)),
+                Tr.Get("Close_Save"), Tr.Get("Close_DontSave"), Tr.Get("Common_Cancel"),
+                noWindowResult: Views.SaveBeforeBuildChoice.DontSave),
+            _documents, message => StatusText = message);
 
     // ---- auto-save -------------------------------------------------
     private Avalonia.Threading.DispatcherTimer? _autoSaveTimer;
@@ -1765,7 +1753,9 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         foreach (var doc in _documents.Documents.ToList())
         {
-            if (!doc.IsDirty) continue;
+            // Auto-save never recreates a file deleted on disk (a branch switch, a delete elsewhere);
+            // an explicit save does.
+            if (!doc.IsDirty || !System.IO.File.Exists(doc.FilePath)) continue;
             try { await _documents.SaveDocumentAsync(doc).ConfigureAwait(true); }
             catch (Exception ex) { _log?.Warning($"Auto-save failed for '{doc.FilePath}': {ex.Message}"); }
         }

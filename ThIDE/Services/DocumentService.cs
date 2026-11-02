@@ -101,8 +101,12 @@ public interface IDocumentService
     /// <summary>Opens the file a span lives in (if needed) and scrolls/flashes the editor to it.</summary>
     Task NavigateToSpanAsync(Therion.Core.SourceSpan span, CancellationToken ct = default);
     Task WriteCurrentTextAsync(string newText, CancellationToken ct = default);
-    /// <summary>persists a specific document's current text to disk (auto-save).</summary>
-    Task SaveDocumentAsync(FileDocumentViewModel document, CancellationToken ct = default);
+    /// <summary>
+    /// Persists a specific document's current text to disk (auto-save, save before build or close),
+    /// recreating the file if it was deleted. Returns false when nothing could be written because the
+    /// file's encoding cannot hold the text (a notification says so); a failed write throws.
+    /// </summary>
+    Task<bool> SaveDocumentAsync(FileDocumentViewModel document, CancellationToken ct = default);
     /// <summary>Raised after a document was written to disk by Save, Save All or auto-save (the argument is its path).</summary>
     event EventHandler<string>? DocumentSaved;
     void Close();
@@ -609,32 +613,42 @@ public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, 
         // trim trailing whitespace + ensure a final newline on save. Idempotent, so a
         // loaded editor that already cleaned itself in place (caret-preserving) makes this a no-op.
         newText = EditorTextCleanup.ApplyOnSave(newText, _settings?.Current);
-        if (File.Exists(doc.FilePath))
-        {
-            if (!await WriteAsync(doc, newText, ct).ConfigureAwait(true)) return;
-            doc.SetText(newText, reparse: true);
-            DocumentSaved?.Invoke(this, doc.FilePath);
-            return;
-        }
-        doc.SetText(newText, reparse: true);
+        if (string.IsNullOrEmpty(doc.FilePath)) { doc.SetText(newText, reparse: true); return; }
+        // A file deleted on disk is written again: marking the buffer clean without writing it would
+        // let the tab close without a prompt and lose the text.
+        await SaveTextAsync(doc, newText, ct).ConfigureAwait(true);
     }
 
     public event EventHandler<string>? DocumentSaved;
 
-    public async Task SaveDocumentAsync(FileDocumentViewModel document, CancellationToken ct = default)
+    public async Task<bool> SaveDocumentAsync(FileDocumentViewModel document, CancellationToken ct = default)
     {
-        if (document is null || string.IsNullOrEmpty(document.FilePath) || !File.Exists(document.FilePath)) return;
-        // cleanup, then write — suppressing the watcher so our own save isn't flagged external (#6).
+        if (document is null || string.IsNullOrEmpty(document.FilePath)) return false;
+        // Let a loaded editor clean itself in place first, as Ctrl+S does, so the caret and the undo
+        // history survive; the text-level cleanup below is then a no-op.
+        document.RequestSaveCleanup();
         var newText = EditorTextCleanup.ApplyOnSave(document.DocumentText, _settings?.Current);
-        if (!await WriteAsync(document, newText, ct).ConfigureAwait(true)) return;
-        document.SetText(newText, reparse: true);
-        DocumentSaved?.Invoke(this, document.FilePath);
+        return await SaveTextAsync(document, newText, ct).ConfigureAwait(true);
+    }
+
+    /// <summary>
+    /// Writes <paramref name="text"/> and makes it the document's saved state. Text typed while the
+    /// write was in flight stays in the buffer, which then stays dirty: the write holds only the snapshot.
+    /// </summary>
+    private async Task<bool> SaveTextAsync(FileDocumentViewModel doc, string text, CancellationToken ct)
+    {
+        var before = doc.DocumentText;
+        if (!await WriteAsync(doc, text, ct).ConfigureAwait(true)) return false;
+        if (string.Equals(doc.DocumentText, before, StringComparison.Ordinal)) doc.SetText(text, reparse: true);
+        else doc.MarkSaved(text);
+        DocumentSaved?.Invoke(this, doc.FilePath);
+        return true;
     }
 
     /// <summary>
     /// Writes a document in the encoding it was read with — or the one its `encoding` line now declares
     /// — keeping its byte-order mark. A character that encoding cannot hold stops the save (the document
-    /// stays unsaved) instead of being written as '?'.
+    /// stays unsaved) instead of being written as '?'. A failed write is reported and rethrown.
     /// </summary>
     private async Task<bool> WriteAsync(FileDocumentViewModel doc, string text, CancellationToken ct)
     {
@@ -648,10 +662,52 @@ public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, 
             return false;
         }
         // Mark the path so the watcher doesn't treat our own save as an external edit (#6).
+        var target = LinkTargetOf(doc.FilePath);
         _session.SuppressSelfWrite(doc.FilePath);
-        await File.WriteAllBytesAsync(doc.FilePath, bytes, ct).ConfigureAwait(true);
+        if (!string.Equals(target, doc.FilePath, StringComparison.Ordinal)) _session.SuppressSelfWrite(target);
+        try { await Task.Run(() => WriteSource(target, bytes), ct).ConfigureAwait(true); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _notifications?.Error(ThIDE.Resources.Tr.Get("Notif_SaveFailedTitle"),
+                string.Format(ThIDE.Resources.Tr.Get("Notif_SaveFailedMsg"), Path.GetFileName(doc.FilePath), ex.Message));
+            throw;
+        }
         doc.Format = format;
         return true;
+    }
+
+    // A symlinked source is saved into the file it points to, so the link and the file it shares survive.
+    private static string LinkTargetOf(string path)
+    {
+        try
+        {
+            var info = new FileInfo(path);
+            return info.LinkTarget is null ? path : info.ResolveLinkTarget(returnFinalTarget: true)?.FullName ?? path;
+        }
+        catch (IOException) { return path; }
+    }
+
+    /// <summary>
+    /// Replaces the file through a temporary sibling and a move, so a full disk, a dropped volume or a
+    /// kill mid-write leaves the old contents whole instead of truncated. The file keeps its permissions,
+    /// a read-only file still refuses the save, and a folder that does not allow the temporary file gets
+    /// the in-place write instead.
+    /// </summary>
+    private static void WriteSource(string path, byte[] bytes)
+    {
+        if (!File.Exists(path)) { SourceFileIo.WriteOver(path, bytes); return; }
+
+        // The move would replace a read-only file regardless of its mode: check the file is writable first.
+        using (new FileStream(path, FileMode.Open, FileAccess.Write, FileShare.ReadWrite)) { }
+        UnixFileMode? mode = null;
+        if (!OperatingSystem.IsWindows()) mode = File.GetUnixFileMode(path);
+        try { SourceFileIo.WriteOver(path, bytes); }
+        catch (UnauthorizedAccessException)
+        {
+            File.WriteAllBytes(path, bytes);   // the folder refused the temporary file; the file itself is writable
+            return;
+        }
+        if (!OperatingSystem.IsWindows() && mode is { } m) File.SetUnixFileMode(path, m);
     }
 
     private FileDocumentViewModel CreateDocument(string path, string text)
@@ -672,10 +728,9 @@ public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, 
         try
         {
             var text = EditorTextCleanup.ApplyOnSave(doc.DocumentText, _settings?.Current);
-            if (!await WriteAsync(doc, text, CancellationToken.None).ConfigureAwait(true)) return;
-            doc.SetText(text, reparse: true);
+            await SaveTextAsync(doc, text, CancellationToken.None).ConfigureAwait(true);
         }
-        catch { /* best-effort; the banner is already cleared */ }
+        catch { /* the failure is already notified; the document stays dirty */ }
     }
 
     private const int MaxRecentFiles = 64;

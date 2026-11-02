@@ -757,15 +757,23 @@ public partial class TherionTextEditor : UserControl
             // or external edit) — otherwise echoing the user's own keystrokes back
             // would reset the caret to the start of the document.
             var v = change.GetNewValue<string?>() ?? string.Empty;
-            if (_editor.Text != v)
+            var current = _editor.Text;
+            if (current != v)
             {
-                _editor.Text = v;
+                // The same document changed underneath (a save's cleanup, a reload, a rename): replace
+                // only the part that differs, so the caret, the undo history and the folds outside it
+                // survive. A new document (first load, or this view bound to another file) loads whole.
+                if (ReferenceEquals(DataContext, _textOwner) && current.Length > 0)
+                    ReplaceChangedPart(_editor.Document, current, v);
+                else
+                    _editor.Text = v;
                 UpdateFoldings();
                 UpdateBlockPairs();
                 UpdateThconfigDecorations();
                 RecomputeFileWarnings();
                 _overviewRuler?.InvalidateVisual();
             }
+            _textOwner = DataContext;
         }
         else if (change.Property == DiagnosticsProperty)
         {
@@ -786,6 +794,22 @@ public partial class TherionTextEditor : UserControl
         {
             ApplyHighlightingEnabled(change.GetNewValue<bool>());
         }
+    }
+
+    // The document whose text the editor last took from the Text property (see OnPropertyChanged).
+    private object? _textOwner;
+
+    /// <summary>Turns <paramref name="current"/> into <paramref name="text"/> with one replace of the span
+    /// between their common prefix and suffix (one undo step; anchors outside it keep their place).</summary>
+    private static void ReplaceChangedPart(TextDocument doc, string current, string text)
+    {
+        int max = Math.Min(current.Length, text.Length);
+        int prefix = 0;
+        while (prefix < max && current[prefix] == text[prefix]) prefix++;
+        int suffix = 0;
+        while (suffix < max - prefix && current[current.Length - 1 - suffix] == text[text.Length - 1 - suffix]) suffix++;
+        using (doc.RunUpdate())
+            doc.Replace(prefix, current.Length - prefix - suffix, text.Substring(prefix, text.Length - prefix - suffix));
     }
 
     // Large-file guard (#10): when disabled, drop the syntax colorizer so a huge document
