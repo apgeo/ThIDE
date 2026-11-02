@@ -137,8 +137,11 @@ public sealed class DockFactory : Factory
 
     public override bool OnDockableClosing(IDockable? dockable)
     {
+        // Consume the confirmation token unconditionally: the Save branch clears IsDirty before the
+        // re-close, so a dirty-first check would skip the Remove and keep the closed document alive.
+        bool confirmed = dockable is FileDocumentViewModel d && _closeConfirmed.Remove(d);
         if (dockable is FileDocumentViewModel doc && DocumentCloseGuard is { } guard
-            && doc.IsDirty && !_closeConfirmed.Remove(doc))
+            && doc.IsDirty && !confirmed)
         {
             if (_closePromptInFlight.Add(doc)) _ = ConfirmThenCloseAsync(doc, guard);
             return false;   // cancel now; the async flow re-issues the close if the user agrees
