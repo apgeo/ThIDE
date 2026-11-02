@@ -40,6 +40,27 @@ public class MutationEngineConcurrentWriteTests
         await host.DisposeAsync();
     }
 
+    [Fact]
+    public async Task A_file_changed_after_it_was_read_is_reported_as_changed()
+    {
+        using var fixture = FixtureWorkspace.Create();
+        var host = new WorkspaceHost();
+        await host.LoadAsync(fixture.Thconfig);
+        var engine = new MutationEngine(host);
+        var target = fixture.PathTo("caves", "upper.th");
+
+        var text = File.ReadAllText(target);
+        int start = text.IndexOf("upper", StringComparison.Ordinal);
+        var plan = new MutationPlan([new EditFile(target, [new TextEdit(start, "upper".Length, "upper", "lower")])]);
+        var concurrentWriter = new WriteOnLookup(() => File.AppendAllText(target, "\n" + ExternalLine + "\n"));
+
+        var result = await engine.ApplyAsync(plan, dryRun: false, expectedSha256: concurrentWriter);
+
+        Assert.Equal(ToolErrorCodes.FileChanged, result.Error?.Code);
+        Assert.Equal(text + "\n" + ExternalLine + "\n", File.ReadAllText(target));
+        await host.DisposeAsync();
+    }
+
     /// <summary>An empty precondition map whose lookup has a side effect, so a write can be placed inside the window.</summary>
     private sealed class WriteOnLookup(Action onLookup) : IReadOnlyDictionary<string, string>
     {

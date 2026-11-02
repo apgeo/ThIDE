@@ -76,6 +76,21 @@ public sealed class LiveWorkspaceHost : IWorkspaceHost, IDisposable
     /// <summary>Re-reads the live session (there is no separate on-disk copy to reload).</summary>
     public ValueTask<WorkspaceSnapshot> ReloadAsync(CancellationToken ct = default) => GetAsync(ct);
 
+    /// <summary>
+    /// After a tool wrote <paramref name="changedPaths"/>: the session would hear of the write only from
+    /// its debounced file watcher, so a snapshot taken now would still describe the files as they were.
+    /// Re-parse them from disk and rebuild first, so the re-lint sees what was written.
+    /// </summary>
+    public async ValueTask<WorkspaceSnapshot> ReloadAsync(IReadOnlyCollection<string> changedPaths, CancellationToken ct = default)
+    {
+        await _bridge.InvokeAsync(async () =>
+        {
+            await _session.ReloadFilesFromDiskAsync(changedPaths, ct).ConfigureAwait(true);
+            return true;
+        }).ConfigureAwait(false);
+        return await GetAsync(ct).ConfigureAwait(false);
+    }
+
     /// <summary>A fresh host is built on each server start; the child DI container disposes it on stop.</summary>
     public void Dispose() => _gate.Dispose();
 }

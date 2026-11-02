@@ -77,6 +77,12 @@ public interface IWorkspaceSession : IAsyncDisposable
     /// <see cref="BuffersRevalidated"/> rather than <see cref="Changed"/>.
     /// </summary>
     Task RevalidateBuffersAsync(IReadOnlyList<(string Path, string Text)> buffers, CancellationToken ct = default);
+    /// <summary>
+    /// Re-parses <paramref name="paths"/> from disk and rebuilds the graph now, without waiting for the
+    /// file watcher — for a writer (the in-app MCP host) that must read back what it just wrote. A file
+    /// overlaid with an unsaved buffer keeps the buffer. Raises <see cref="Changed"/>.
+    /// </summary>
+    Task ReloadFilesFromDiskAsync(IReadOnlyCollection<string> paths, CancellationToken ct = default);
     /// <summary>Adds an open thconfig located outside the root to the candidate list (#3).</summary>
     void RegisterExternalThconfig(string thconfigPath);
     /// <summary>True when <paramref name="filePath"/> participates in the active object graph (#4).</summary>
@@ -391,6 +397,44 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
                 BuffersRevalidated?.Invoke(this, EventArgs.Empty);
             }
             finally { EndIndexing(); }
+        }
+        finally { _revalidateGate.Release(); }
+    }
+
+    public async Task ReloadFilesFromDiskAsync(IReadOnlyCollection<string> paths, CancellationToken ct = default)
+    {
+        TherionWorkspace? ws;
+        lock (_gate) ws = _workspace;
+        if (ws is null || paths.Count == 0) return;
+
+        // Same gate as the buffer overlay: both re-parse files in `ws` and read `_bufferOverlaid`.
+        await _revalidateGate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            SetIndexing(true);
+            try
+            {
+                WorkspaceSemanticModel model;
+                try
+                {
+                    model = await Task.Run(() =>
+                    {
+                        var loaded = new HashSet<string>(ws.LoadedFiles, StringComparer.OrdinalIgnoreCase);
+                        foreach (var path in paths)
+                        {
+                            var full = TryFull(path);
+                            if (loaded.Contains(full) && !_bufferOverlaid.Contains(full)) ws.ReloadFileFromDisk(full);
+                        }
+                        return ws.BuildSemanticModel();
+                    }, ct).ConfigureAwait(false);
+                }
+                catch { return; }
+
+                lock (_gate) { if (!ReferenceEquals(_workspace, ws)) return; Model = model; }
+                UpdateSymbolIndex(model);
+                Raise();
+            }
+            finally { SetIndexing(false); }
         }
         finally { _revalidateGate.Release(); }
     }

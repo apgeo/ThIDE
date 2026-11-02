@@ -88,6 +88,14 @@ public interface IWorkspaceHost
 
     /// <summary>Re-reads the current workspace, picking up changes made since the last snapshot.</summary>
     ValueTask<WorkspaceSnapshot> ReloadAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Re-reads the workspace after <paramref name="changedPaths"/> were written to disk, so the snapshot
+    /// describes them as written. A host whose <see cref="ReloadAsync(CancellationToken)"/> does not
+    /// re-read the disk (the in-app one) must override this; the default reloads everything.
+    /// </summary>
+    ValueTask<WorkspaceSnapshot> ReloadAsync(IReadOnlyCollection<string> changedPaths, CancellationToken ct = default) =>
+        ReloadAsync(ct);
 }
 
 public sealed class WorkspaceHost : IWorkspaceHost, IAsyncDisposable
