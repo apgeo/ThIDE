@@ -107,6 +107,12 @@ public interface IDocumentService
     /// file's encoding cannot hold the text (a notification says so); a failed write throws.
     /// </summary>
     Task<bool> SaveDocumentAsync(FileDocumentViewModel document, CancellationToken ct = default);
+    /// <summary>
+    /// Reopens a buffer recovered after a crash as a dirty document holding <paramref name="text"/>:
+    /// over the file when it can be opened (past the binary/huge-file guard, which the user had already
+    /// overridden), otherwise on its own, so the recovered text is never dropped.
+    /// </summary>
+    Task<FileDocumentViewModel> OpenRecoveredAsync(string path, string text, CancellationToken ct = default);
     /// <summary>Raised after a document was written to disk by Save, Save All or auto-save (the argument is its path).</summary>
     event EventHandler<string>? DocumentSaved;
     void Close();
@@ -381,6 +387,21 @@ public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, 
         OpenInDockRequested?.Invoke(this, doc);
         if (IsBatchOpenActive) _batchLastOpened = doc;
         else SetActive(doc);
+    }
+
+    public async Task<FileDocumentViewModel> OpenRecoveredAsync(string path, string text, CancellationToken ct = default)
+    {
+        if (File.Exists(path))
+        {
+            // Any failure (unreadable, permissions, a parse that throws) falls through: the text must not be dropped.
+            try { await ForceOpenFileAsync(path, ct).ConfigureAwait(true); }
+            catch { /* kept on its own below */ }
+        }
+        // The file is gone or could not be read: hold the text in a document whose saved state is
+        // empty, so it shows as unsaved, is kept by crash recovery and prompts before it closes.
+        var doc = FindOpen(path) ?? OpenTextDocument(path, string.Empty);
+        doc.DocumentText = text;
+        return doc;
     }
 
     public async Task OpenFolderAsync(string folderPath, CancellationToken ct = default)

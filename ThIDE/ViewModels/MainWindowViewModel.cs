@@ -982,28 +982,22 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private async Task RecoverBuffersAsync(System.Collections.Generic.IReadOnlyList<RecoveredBuffer> buffers)
     {
+        int recovered = 0;
         foreach (var b in buffers)
         {
             try
             {
-                if (System.IO.File.Exists(b.OriginalPath))
-                {
-                    await _documents.OpenFileAsync(b.OriginalPath).ConfigureAwait(true);
-                    // Apply the recovered text on top of the on-disk content → the editor reopens
-                    // dirty with the unsaved work, ready to save.
-                    if (_documents.Documents.FirstOrDefault(d =>
-                            string.Equals(d.FilePath, b.OriginalPath, StringComparison.OrdinalIgnoreCase)) is { } doc)
-                        doc.DocumentText = b.Text;
-                }
-                else
-                {
-                    _documents.OpenTextDocument(b.OriginalPath, b.Text);
-                }
+                // The editor reopens dirty with the unsaved work, ready to save — over the file when it
+                // still opens, on its own when it does not.
+                await _documents.OpenRecoveredAsync(b.OriginalPath, b.Text).ConfigureAwait(true);
+                recovered++;
             }
             catch (Exception ex) { _log?.Warning($"Failed to recover '{b.OriginalPath}': {ex.Message}"); }
         }
-        _crashRecovery?.ClearRecovery();
-        StatusText = $"Recovered {buffers.Count} unsaved file(s).";
+        // The reopened buffers are dirty, so the periodic recovery save writes them back. Delete the old
+        // copies only when every one is open again: one that is not keeps its file in the recovery folder.
+        if (recovered == buffers.Count) _crashRecovery?.ClearRecovery();
+        StatusText = $"Recovered {recovered} unsaved file(s).";
     }
 
     /// <summary>Records the open files + workspace root/active thconfig for next launch (#9).</summary>
