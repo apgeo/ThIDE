@@ -87,7 +87,7 @@ public sealed class ScriptHookService : IScriptHookService
     {
         var s = _settings.Current;
         if (!s.EnableScriptHooks) return;
-        var hooks = HookCatalog.For(HookCatalog.Merge(s.HookOnOpen, s.HookOnSave, s.HookOnBuild, s.Hooks, ProjectHooks(s)), context.Event)
+        var hooks = HookCatalog.For(HookCatalog.Merge(s.HookOnOpen, s.HookOnSave, s.HookOnBuild, s.Hooks, ProjectHooks(s, context.WorkspaceRoot)), context.Event)
             .Where(h => !string.IsNullOrWhiteSpace(h.Command) || !string.IsNullOrWhiteSpace(h.Task))
             .ToList();
         if (hooks.Count == 0) return;
@@ -104,9 +104,11 @@ public sealed class ScriptHookService : IScriptHookService
         finally { _order.Release(); }
     }
 
-    private IReadOnlyList<HookDefinition> ProjectHooks(AppSettings s)
+    // Read from the context's root, the folder whose trust is checked below — not the session's
+    // current root, which may have moved on since the hook was queued.
+    private IReadOnlyList<HookDefinition> ProjectHooks(AppSettings s, string? root)
     {
-        if (!s.EnableProjectAutomation || ProjectLocalConfig.PathFor(_session?.RootPath, s.ProjectConfigLocation, "hooks.json") is not { } path
+        if (!s.EnableProjectAutomation || ProjectLocalConfig.PathFor(root, s.ProjectConfigLocation, "hooks.json") is not { } path
             || !File.Exists(path)) return [];
         string json;
         try { json = File.ReadAllText(path); }
@@ -117,14 +119,14 @@ public sealed class ScriptHookService : IScriptHookService
     }
 
     // Asks once per folder per session; after "not now" the project's hooks are skipped quietly
-    // (one toast, with a Trust… action).
+    // (one toast, with a Trust… action that asks again before it trusts).
     private async Task<bool> ProjectAllowedAsync(string? root)
     {
         if (_trust is null || root is null) return false;
         var (trusted, asked) = await _trust.EnsureTrustedOnceAsync(root, Tr.Get("Trust_ReasonHooks")).ConfigureAwait(false);
         if (!trusted && asked)
             _notifications?.Warning(Tr.Get("Trust_Skipped"), string.Format(Tr.Get("Trust_SkippedDetail"), "hooks.json"),
-                Tr.Get("Trust_TrustAction"), () => _trust.Trust(root));
+                Tr.Get("Trust_TrustAction"), () => _ = _trust.EnsureTrustedAsync(root, Tr.Get("Trust_ReasonHooks")));
         return trusted;
     }
 
