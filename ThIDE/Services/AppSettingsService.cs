@@ -232,6 +232,10 @@ public sealed record AppSettings
         new Dictionary<string, bool>();
     /// <summary>automatically (re)build the active project a short moment after each save. Off by default.</summary>
     public bool CompileOnSave { get; init; }
+    /// <summary>System-wide Ctrl+Alt+B build hotkey (Windows only). Off by default: Windows reports
+    /// AltGr as Ctrl+Alt, so the hotkey would swallow AltGr+B, which types a character ('{' and
+    /// others) on several keyboard layouts.</summary>
+    public bool EnableGlobalBuildHotkey { get; init; }
     /// <summary>Before compiling, ensure each export's output directory exists, creating it
     /// recursively when missing (Therion otherwise fails on a non-existent output folder). On by default.</summary>
     public bool EnsureOutputDirectories { get; init; } = true;

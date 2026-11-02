@@ -306,6 +306,12 @@
                               IsChecked="{Binding CompileOnSave}" />
                     <TextBlock Text="{l:Loc Pref_CompileOnSaveHelp}"
                                Foreground="Gray" FontSize="11" />
+                    <!-- system-wide build hotkey (Windows only, off by default). -->
+                    <CheckBox Content="{l:Loc Pref_GlobalBuildHotkey}"
+                              AutomationProperties.AutomationId="Preferences.GlobalBuildHotkey"
+                              IsChecked="{Binding EnableGlobalBuildHotkey}" />
+                    <TextBlock Text="{l:Loc Pref_GlobalBuildHotkeyHelp}"
+                               Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
                     <Separator Margin="0,6" />
                     <CheckBox Content="{l:Loc Pref_EnsureDirs}"
                               AutomationProperties.AutomationId="Preferences.EnsureOutputDirectories"

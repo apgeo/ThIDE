@@ -33,16 +33,34 @@ public partial class MainWindow : Window
 
     // System-wide build hotkey (Ctrl+Alt+B): triggers a compile even when the app isn't
     // focused, marshalled onto the UI thread (#3). No-op on platforms without support.
+    // Opt-in (EnableGlobalBuildHotkey): on Windows it also captures AltGr+B, a character key on
+    // several layouts, so it is registered only while the setting is on and follows its changes.
     private void AttachGlobalHotkey(MainWindowViewModel vm)
     {
-        _globalHotkey = AppServices.Provider.GetService<IGlobalHotkeyService>();
-        if (_globalHotkey is null) return;
-        _globalHotkey.BuildHotkeyPressed += (_, _) =>
-            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        var settings = AppServices.Provider.GetService<IAppSettingsService>();
+        if (settings is null) return;
+        void Sync()
+        {
+            var wanted = settings.Current.EnableGlobalBuildHotkey;
+            if (wanted == (_globalHotkey is not null)) return;
+            if (!wanted)
             {
-                if (vm.Build.BuildCommand.CanExecute(null)) vm.Build.BuildCommand.Execute(null);
-            });
-        _globalHotkey.Start();
+                _globalHotkey!.Dispose();
+                _globalHotkey = null;
+                return;
+            }
+            // A fresh instance each time: a disposed hotkey service cannot be started again.
+            var hotkey = GlobalHotkeyServiceFactory.Create();
+            hotkey.BuildHotkeyPressed += (_, _) =>
+                Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                {
+                    if (vm.Build.BuildCommand.CanExecute(null)) vm.Build.BuildCommand.Execute(null);
+                });
+            hotkey.Start();
+            _globalHotkey = hotkey;
+        }
+        Sync();
+        settings.Changed += (_, _) => Avalonia.Threading.Dispatcher.UIThread.Post(Sync);
     }
 
     public MainWindow()

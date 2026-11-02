@@ -144,6 +144,7 @@ public partial class PreferencesViewModel : ObservableObject
     /// <summary>True = open every matching output; false = open just the first.</summary>
     [ObservableProperty] private bool _openAllOutputsAfterBuild;
     [ObservableProperty] private bool _compileOnSave;
+    [ObservableProperty] private bool _enableGlobalBuildHotkey;
     /// <summary>Ensure (and recursively create) each export's output directory before compiling.</summary>
     [ObservableProperty] private bool _ensureOutputDirectories;
     /// <summary>Save modified files automatically before compiling (otherwise prompt).</summary>
@@ -274,6 +275,7 @@ public partial class PreferencesViewModel : ObservableObject
         _openPdfAfterBuild = s.OpenPdfAfterBuild;
         _openAllOutputsAfterBuild = s.OpenAllOutputsAfterBuild;
         _compileOnSave = s.CompileOnSave;
+        _enableGlobalBuildHotkey = s.EnableGlobalBuildHotkey;
         _ensureOutputDirectories = s.EnsureOutputDirectories;
         _autoSaveBeforeCompile = s.AutoSaveBeforeCompile;
         _autoSaveModeIndex = (int)s.AutoSave;
@@ -461,6 +463,7 @@ public partial class PreferencesViewModel : ObservableObject
             OpenPdfAfterBuild = OpenPdfAfterBuild,
             OpenAllOutputsAfterBuild = OpenAllOutputsAfterBuild,
             CompileOnSave = CompileOnSave,
+            EnableGlobalBuildHotkey = EnableGlobalBuildHotkey,
             EnsureOutputDirectories = EnsureOutputDirectories,
             AutoSaveBeforeCompile = AutoSaveBeforeCompile,
             AutoSave = (AutoSaveMode)Math.Clamp(AutoSaveModeIndex, 0, 2),

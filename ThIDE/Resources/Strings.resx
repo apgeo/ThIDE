@@ -602,6 +602,8 @@
   <data name="Pref_OpenAll" xml:space="preserve"><value>Open every matching output (otherwise just the first)</value></data>
   <data name="Pref_CompileOnSave" xml:space="preserve"><value>Compile on save (rebuild the active thconfig on save)</value></data>
   <data name="Pref_CompileOnSaveHelp" xml:space="preserve"><value>Debounced background build; watch the spinner and the Log panel. Off by default.</value></data>
+  <data name="Pref_GlobalBuildHotkey" xml:space="preserve"><value>System-wide build hotkey (Ctrl+Alt+B, even when ThIDE is not focused)</value></data>
+  <data name="Pref_GlobalBuildHotkeyHelp" xml:space="preserve"><value>Windows only. Windows reports AltGr as Ctrl+Alt, so while this is on AltGr+B no longer types its character in any program (on Czech, Slovak, Hungarian and other layouts that is a brace). Off by default.</value></data>
   <data name="Pref_EnsureDirs" xml:space="preserve"><value>Create missing output folders before compiling</value></data>
   <data name="Pref_EnsureDirsHelp" xml:space="preserve"><value>Checks each export's output directory and creates it recursively if absent (Therion otherwise fails on a missing folder). An info line is logged when a folder is created. On by default.</value></data>
   <data name="Pref_AutoSaveBeforeCompile" xml:space="preserve"><value>Save modified files automatically before compiling</value></data>

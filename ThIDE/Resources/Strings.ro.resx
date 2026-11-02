@@ -602,6 +602,8 @@
   <data name="Pref_OpenAll" xml:space="preserve"><value>Deschide fiecare ieșire corespunzătoare (altfel doar prima)</value></data>
   <data name="Pref_CompileOnSave" xml:space="preserve"><value>Compilează la salvare (recompilează proiectul la scurt timp după fiecare salvare)</value></data>
   <data name="Pref_CompileOnSaveHelp" xml:space="preserve"><value>Compilare de fundal amânată; urmăriți indicatorul și panoul Jurnal. Dezactivat implicit.</value></data>
+  <data name="Pref_GlobalBuildHotkey" xml:space="preserve"><value>Tastă rapidă de compilare la nivel de sistem (Ctrl+Alt+B, chiar și când ThIDE nu este în prim-plan)</value></data>
+  <data name="Pref_GlobalBuildHotkeyHelp" xml:space="preserve"><value>Doar pe Windows. Windows raportează AltGr ca Ctrl+Alt, așa că, cât timp opțiunea este activă, AltGr+B nu mai scrie caracterul său în niciun program (pe tastaturile cehă, slovacă, maghiară și altele acesta este o acoladă). Dezactivat implicit.</value></data>
   <data name="Pref_EnsureDirs" xml:space="preserve"><value>Creează dosarele de ieșire lipsă înainte de compilare</value></data>
   <data name="Pref_EnsureDirsHelp" xml:space="preserve"><value>Verifică dosarul de ieșire al fiecărui export și îl creează recursiv dacă lipsește (altfel Therion eșuează la un dosar lipsă). O linie informativă este înregistrată când un dosar este creat. Activat implicit.</value></data>
   <data name="Pref_AutoSaveBeforeCompile" xml:space="preserve"><value>Salvează automat fișierele modificate înainte de compilare</value></data>
