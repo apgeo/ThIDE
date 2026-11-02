@@ -185,7 +185,10 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
         if (!string.Equals(full, RootPath, StringComparison.OrdinalIgnoreCase))
             await ResetForNewRootAsync().ConfigureAwait(false);
 
+        var previousRoot = RootPath;
         RootPath = full;
+        if (previousRoot is not null && !string.Equals(previousRoot, full, StringComparison.OrdinalIgnoreCase))
+            _rootWatcher?.Unwatch(previousRoot);   // the old root must stop raising FileSystemChanged
         RootChanged?.Invoke(this, EventArgs.Empty);
         RecordRecentDirectory(full);
         _log?.Info($"Workspace root set: {full}");
@@ -332,7 +335,10 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
         // published, so RootChanged still precedes Changed as everywhere else.
         if (RootPath is null || !IsUnderRoot(full))
             if (Path.GetDirectoryName(full) is { Length: > 0 } dir)
-                await AdoptRootAsync(dir).ConfigureAwait(false);
+            {
+                try { await AdoptRootAsync(dir).ConfigureAwait(false); }
+                catch { await ws.DisposeAsync().ConfigureAwait(false); throw; }
+            }
 
         if (!TrySwapWorkspace(ws, model, full, generation, out var old))
         {

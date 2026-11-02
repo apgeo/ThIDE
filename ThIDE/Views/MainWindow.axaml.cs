@@ -402,7 +402,7 @@ public partial class MainWindow : Window
 
         var vm = new RelationalMapViewModel(docs, session);
         _relationalMapWindow = new RelationalMapWindow { DataContext = vm };
-        _relationalMapWindow.Closed += (_, _) => _relationalMapWindow = null;
+        _relationalMapWindow.Closed += (_, _) => { _relationalMapWindow = null; vm.Dispose(); };
         _relationalMapWindow.Show(this);
     }
 

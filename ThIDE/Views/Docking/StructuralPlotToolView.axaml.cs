@@ -32,6 +32,27 @@ public partial class StructuralPlotToolView : UserControl
         TryInit();
     }
 
+    // Dock re-templates tool views while the ViewModel stays a singleton; unwire and dispose the
+    // web control on detach so old views are not kept alive. TryInit re-wires on attach.
+    protected override void OnDetachedFromVisualTree(global::Avalonia.VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+        if (Vm is { } vm)
+        {
+            vm.PlotImageReady -= OnPlotImageReady;
+            vm.PlotScriptRequested -= OnPlotScript;
+        }
+        _plotWired = false;
+        if (_plot is not null)
+        {
+            _plot.WebMessageReceived -= OnPlotMessage;
+            PlotHost?.Children.Clear();
+            (_plot as IDisposable)?.Dispose();
+            _plot = null;
+        }
+        _inited = false;
+    }
+
     protected override void OnDataContextChanged(EventArgs e)
     {
         base.OnDataContextChanged(e);
