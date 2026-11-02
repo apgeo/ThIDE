@@ -101,7 +101,7 @@ public sealed class DeclinationWindow : Window
             double d = _geoModel.Declination(lat, lon, 0, year);
             var hemi = d >= 0 ? "E" : "W";
             _result.Text = string.Format(Tr.Get("DC_DeclinationFmt"), d.ToString("0.00"), hemi);
-            _declLine = $"declination {d:0.00} degrees";
+            _declLine = TherionFixLines.Declination(d);
             _copy.IsEnabled = true;
         }
         catch

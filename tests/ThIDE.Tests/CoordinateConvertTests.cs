@@ -36,4 +36,22 @@ public class CoordinateConvertTests
         Assert.True(utm.Northing > 9_800_000);   // 10,000,000 false northing minus a little
         Assert.Equal("31S", utm.ZoneLabel);
     }
+
+    [Fact]
+    public void Copied_fix_and_declination_lines_use_a_decimal_point_under_a_comma_culture()
+    {
+        var previous = System.Globalization.CultureInfo.CurrentCulture;
+        System.Globalization.CultureInfo.CurrentCulture = new System.Globalization.CultureInfo("ro-RO");
+        try
+        {
+            var utm = new UtmCoordinate(32, true, 500000.25, 5150000.125);
+            Assert.Equal("cs UTM32N\nfix 1 500000.25 5150000.13 500", TherionFixLines.Utm("1", utm, "500"));
+            Assert.Equal("cs lat-long\nfix 1 46.5000000 8.0000000 0", TherionFixLines.LatLong("1", 46.5, 8.0, "0"));
+            Assert.Equal("declination -2.35 degrees", TherionFixLines.Declination(-2.354));
+        }
+        finally
+        {
+            System.Globalization.CultureInfo.CurrentCulture = previous;
+        }
+    }
 }

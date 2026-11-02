@@ -116,7 +116,7 @@ public sealed class CoordinateConverterWindow : Window
         {
             var u = CoordinateConverter.LatLonToUtm(lat, lon);
             _utmOut.Text = $"Zone {u.ZoneLabel} · E {u.Easting:0.##} · N {u.Northing:0.##}   (cs UTM{u.ZoneLabel})";
-            _utmFix = $"cs UTM{u.ZoneLabel}\nfix {station} {u.Easting:0.##} {u.Northing:0.##} {alt}";
+            _utmFix = TherionFixLines.Utm(station, u, alt);
         }
         else { _utmOut.Text = "—"; _utmFix = string.Empty; }
 
@@ -129,7 +129,7 @@ public sealed class CoordinateConverterWindow : Window
             // on another continent.
             var (la, lo) = CoordinateConverter.UtmToLatLon(new UtmCoordinate(zone, _hemi.SelectedIndex == 0, e, n));
             _llOut.Text = $"Lat {la:0.0000000} · Lon {lo:0.0000000}   (cs lat-long → fix is lat lon alt)";
-            _llFix = $"cs lat-long\nfix {station} {la:0.0000000} {lo:0.0000000} {alt}";
+            _llFix = TherionFixLines.LatLong(station, la, lo, alt);
         }
         else { _llOut.Text = "—"; _llFix = string.Empty; }
     }
