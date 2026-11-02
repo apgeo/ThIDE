@@ -47,4 +47,22 @@ public class TopodroidSurveyImageReferenceSafetyTests
 
         Assert.Equal(new[] { "../../secret.th2" }, TopodroidSurveyHeaderReader.UnsafeInputs(h));
     }
+
+    [Fact]
+    public void Bare_image_names_beside_the_survey_are_safe()
+    {
+        var h = TopodroidSurveyHeaderReader.Read("""
+            survey invented
+              surface
+                bitmap plan.png 0 0 100 200 10 10 110 210
+              endsurface
+            endsurvey
+            scrap s1 -projection plan -sketch plan.jpg 0 0
+            endscrap
+            """);
+
+        Assert.Equal(new[] { "plan.png" }, h.Bitmaps);
+        Assert.Equal(new[] { "plan.jpg" }, h.Sketches);
+        Assert.Empty(TopodroidSurveyHeaderReader.UnsafeInputs(h));
+    }
 }

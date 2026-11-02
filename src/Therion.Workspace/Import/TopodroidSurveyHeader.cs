@@ -6,8 +6,8 @@
 //
 // Pure: text in, record out. Only the first `survey … endsurvey` block is read for the header;
 // shots and scraps are skipped, and anything unrecognised is ignored rather than reported. The
-// files the text reads (`input`, `import`) are collected from the whole text, because Therion
-// reads them wherever they stand.
+// files the text reads (`input`, `import`, a surface `bitmap`, a scrap `-sketch`) are collected from
+// the whole text, because Therion reads them wherever they stand.
 
 using System;
 using System.Collections.Generic;
@@ -42,6 +42,12 @@ public sealed record TopodroidSurveyHeader(
 
     /// <summary>The paths of the text's <c>import</c> commands (centreline data Therion reads from another file), in file order.</summary>
     public IReadOnlyList<string> Imports { get; init; } = Array.Empty<string>();
+
+    /// <summary>The image paths of the text's <c>bitmap</c> commands inside <c>surface</c> blocks, in file order.</summary>
+    public IReadOnlyList<string> Bitmaps { get; init; } = Array.Empty<string>();
+
+    /// <summary>The image paths of the <c>-sketch</c> option of the text's <c>scrap</c> commands, in file order.</summary>
+    public IReadOnlyList<string> Sketches { get; init; } = Array.Empty<string>();
 }
 
 public static class TopodroidSurveyHeaderReader
@@ -53,7 +59,8 @@ public static class TopodroidSurveyHeaderReader
     /// <see cref="TopodroidSurveyHeader.EntranceFromComment"/>. Station references are given
     /// relative to the first survey: a reference to the survey itself loses its <c>@survey</c> part,
     /// and a station inside a nested survey keeps the path to it (<c>5@sub</c>), innermost first.
-    /// <see cref="TopodroidSurveyHeader.Inputs"/> and <see cref="TopodroidSurveyHeader.Imports"/>
+    /// <see cref="TopodroidSurveyHeader.Inputs"/>, <see cref="TopodroidSurveyHeader.Imports"/>,
+    /// <see cref="TopodroidSurveyHeader.Bitmaps"/> and <see cref="TopodroidSurveyHeader.Sketches"/>
     /// come from every line of the text, inside the first survey or not.
     /// </summary>
     public static TopodroidSurveyHeader Read(string surveyText)
@@ -66,6 +73,9 @@ public static class TopodroidSurveyHeaderReader
         var fixCoords = new List<string>();
         var inputs = new List<string>();
         var imports = new List<string>();
+        var bitmaps = new List<string>();
+        var sketches = new List<string>();
+        bool inSurface = false;
 
         var nested = new List<string>();   // names of the surveys open inside the first one, outermost first
         int depth = 0;          // survey nesting inside the first survey
@@ -78,6 +88,10 @@ public static class TopodroidSurveyHeaderReader
 
             if (cmd == "input" && t.Count > 1) { inputs.Add(t[1]); continue; }
             if (cmd == "import" && t.Count > 1) { imports.Add(t[1]); continue; }
+            if (cmd == "surface") inSurface = true;
+            else if (cmd == "endsurface") inSurface = false;
+            else if (cmd == "bitmap" && inSurface && t.Count > 1) bitmaps.Add(t[1]);
+            else if (cmd == "scrap" && Option(t, "-sketch") is { } sketch) sketches.Add(sketch);
             if (done) continue;
 
             if (depth == 0)
@@ -129,12 +143,12 @@ public static class TopodroidSurveyHeaderReader
         }
 
         return new TopodroidSurveyHeader(name, title, dates, team, declination, units, cs, fixStation,
-            fixCoords, entrance, fromComment, inputs) { Imports = imports };
+            fixCoords, entrance, fromComment, inputs) { Imports = imports, Bitmaps = bitmaps, Sketches = sketches };
     }
 
     /// <summary>
-    /// The <c>input</c> and <c>import</c> paths of <paramref name="header"/> that could reach a file
-    /// outside the directory the survey sits in: a rooted path, a drive or UNC prefix, a backslash,
+    /// The <c>input</c>, <c>import</c>, surface <c>bitmap</c> and scrap <c>-sketch</c> paths of
+    /// <paramref name="header"/> that could reach a file outside the directory the survey sits in: a rooted path, a drive or UNC prefix, a backslash,
     /// a <c>..</c> segment, or any directory part at all (TopoDroid writes bare names; a sketch sits
     /// beside its survey). Therion reads whatever these name, and the content can come back in its
     /// log or its exports, so a server must refuse an uploaded survey — and each uploaded sketch,
@@ -143,7 +157,8 @@ public static class TopodroidSurveyHeaderReader
     public static IReadOnlyList<string> UnsafeInputs(TopodroidSurveyHeader header)
     {
         ArgumentNullException.ThrowIfNull(header);
-        return header.Inputs.Concat(header.Imports).Where(IsUnsafeInputPath).ToList();
+        return header.Inputs.Concat(header.Imports).Concat(header.Bitmaps).Concat(header.Sketches)
+            .Where(IsUnsafeInputPath).ToList();
     }
 
     private static bool IsUnsafeInputPath(string path)
@@ -199,8 +214,10 @@ public static class TopodroidSurveyHeaderReader
 
     // Whitespace-separated tokens; a double-quoted string is one token (quotes removed, "" inside
     // it is a literal quote, Therion's escape). A '#' outside quotes starts a comment.
+    // A leading byte order mark (a file read without stripping it) is not part of the first word.
     private static List<string> Tokenize(string line)
     {
+        line = line.TrimStart('\uFEFF');
         var tokens = new List<string>();
         var sb = new StringBuilder();
         bool inQuotes = false, any = false;
