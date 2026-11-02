@@ -47,11 +47,14 @@ public sealed class MutationEngine(IWorkspaceHost host)
 
         // Validate every file before touching any of them: a plan that would fail halfway must fail
         // before it starts, or the caller is left with a workspace in a state nobody planned.
+        // Both sides canonical: a host may report its root as the user opened it (through a symlink), and
+        // a plan's paths may come from the jail (resolved) or from the model (as the loader walked them).
+        var canonicalRoot = WorkspacePaths.Canonicalize(root);
         var prepared = new List<PreparedChange>(plan.Changes.Count);
         foreach (var change in plan.Changes)
         {
             foreach (var path in PathsOf(change))
-                if (!WorkspacePaths.IsInside(root, path))
+                if (!WorkspacePaths.IsInside(canonicalRoot, WorkspacePaths.Canonicalize(path)))
                     return ToolResult<MutationResult>.Failure(ToolErrorCodes.PathOutsideWorkspace,
                         $"'{WorkspacePaths.ToRelative(root, path)}' is outside the workspace.");
                 else if (WorkspacePaths.IsProjectConfig(root, path))
@@ -265,7 +268,7 @@ public sealed class MutationEngine(IWorkspaceHost host)
     /// <summary>Diagnostics belonging to the touched files only — the caller changed nothing else.</summary>
     private static List<Diagnostic> DiagnosticsFor(WorkspaceSnapshot snapshot, IEnumerable<string> paths)
     {
-        var touched = new HashSet<string>(paths, PathComparer);
+        var touched = new HashSet<string>(paths.Select(WorkspacePaths.Canonicalize), PathComparer);
 
         bool Touched(Diagnostic d) =>
             !string.IsNullOrEmpty(d.Span.FilePath) && touched.Contains(WorkspacePaths.Canonicalize(d.Span.FilePath));

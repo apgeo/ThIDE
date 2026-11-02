@@ -79,11 +79,32 @@ public static class WorkspacePaths
     }
 
     /// <summary>The workspace-relative, forward-slashed form of <paramref name="fullPath"/> for the wire.</summary>
+    /// <remarks>
+    /// When the two are spelled differently — one through a symlink, one resolved — the plain relative
+    /// path climbs out with <c>..</c> although the file is inside; the canonical forms are then compared
+    /// instead. Only that case pays for the filesystem lookups.
+    /// </remarks>
     public static string ToRelative(string root, string fullPath)
     {
         var relative = Path.GetRelativePath(root, fullPath);
+        if (ClimbsOut(relative))
+        {
+            try
+            {
+                var canonical = Path.GetRelativePath(Canonicalize(root), Canonicalize(fullPath));
+                if (!ClimbsOut(canonical)) relative = canonical;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+            {
+                // keep the plain form
+            }
+        }
         return relative.Replace(Path.DirectorySeparatorChar, '/').Replace('\\', '/');
     }
+
+    private static bool ClimbsOut(string relative) =>
+        relative == ".." || relative.StartsWith("../", StringComparison.Ordinal)
+        || relative.StartsWith("..\\", StringComparison.Ordinal) || Path.IsPathRooted(relative);
 
     /// <summary>True when <paramref name="candidate"/> is <paramref name="root"/> itself or lies beneath it.</summary>
     public static bool IsInside(string root, string candidate)
