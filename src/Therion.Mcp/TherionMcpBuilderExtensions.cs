@@ -148,6 +148,9 @@ public static class TherionMcpBuilderExtensions
         services.TryAddSingleton<Processing.Abstractions.IExternalToolLocator>(_ => new Build.ExternalToolLocator());
         services.TryAddSingleton<Processing.Abstractions.ITherionCompiler>(sp =>
             new Build.TherionCompiler(sp.GetRequiredService<Processing.Abstractions.IExternalToolLocator>()));
+        // One compile at a time. The in-app host registers the IDE's gate first, so run_build and the
+        // Build pane share it; a headless host gets one of its own, shared by every run_build call.
+        services.TryAddSingleton<Build.ICompileGate>(_ => new Build.CompileGate());
 
         // Resources delegate to these two, so they must be resolvable services too.
         services.TryAddSingleton<DiagnosticsTools>();

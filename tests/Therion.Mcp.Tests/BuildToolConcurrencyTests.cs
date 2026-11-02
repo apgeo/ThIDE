@@ -31,6 +31,30 @@ public class BuildToolConcurrencyTests
         await host.DisposeAsync();
     }
 
+    [Fact]
+    public async Task Run_build_is_refused_while_the_shared_gate_is_held()
+    {
+        using var fixture = FixtureWorkspace.Create();
+        var host = new WorkspaceHost();
+        await host.LoadAsync(fixture.Thconfig);
+        var compiler = new OverlapCountingCompiler(expectedStarts: 1);
+        compiler.Release.TrySetResult();
+        var gate = new Therion.Build.CompileGate();
+        var tools = new BuildTools(host, compiler, gate);
+
+        // The IDE's own build holds the gate.
+        using (gate.TryAcquire())
+        {
+            var busy = await tools.RunBuild();
+            Assert.Equal(ToolErrorCodes.BuildBusy, busy.Error?.Code);
+            Assert.False(compiler.AllStarted.Task.IsCompleted, "the compiler ran although the gate was held");
+        }
+
+        var free = await tools.RunBuild();
+        Assert.True(free.Ok, free.Error?.Message);
+        await host.DisposeAsync();
+    }
+
     private sealed class OverlapCountingCompiler(int expectedStarts) : ITherionCompiler
     {
         private int _active;

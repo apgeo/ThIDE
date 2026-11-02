@@ -53,6 +53,9 @@ public static class ToolErrorCodes
     /// <summary>The compiler could not be run at all — not "it reported errors", which is a success.</summary>
     public const string BuildFailed = "build_failed";
 
+    /// <summary>Another compilation of the workspace is running; Therion is run one build at a time.</summary>
+    public const string BuildBusy = "build_busy";
+
     /// <summary>
     /// The target is open in the IDE with unsaved changes, so writing disk would fork the user's state.
     /// Only the in-app host can raise this (Q-01, resolved at T-03.6); the headless server cannot know.

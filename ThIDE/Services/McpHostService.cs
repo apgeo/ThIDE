@@ -23,6 +23,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Therion.Build;
 using Therion.Mcp;
 using Therion.Processing.Abstractions;
 using ThIDE.Resources;
@@ -74,6 +75,7 @@ public sealed class McpHostService : IMcpHostService
     private readonly IWorkspaceSession? _session;
     private readonly IUnsavedBufferProvider? _buffers;
     private readonly IWorkspaceTrustService? _trust;
+    private readonly ICompileGate? _compileGate;
 
     // Serializes start/stop transitions so a fast toggle or a settings change mid-start can't race.
     private readonly SemaphoreSlim _gate = new(1, 1);
@@ -94,8 +96,9 @@ public sealed class McpHostService : IMcpHostService
         ITherionCompiler compiler,
         IWorkspaceSession? session = null,
         IUnsavedBufferProvider? buffers = null,
-        IWorkspaceTrustService? trust = null)
-        : this(settings, log, uiBridge, toolLocator, compiler, session, buffers, DiscoveryFilePath(), trust) { }
+        IWorkspaceTrustService? trust = null,
+        ICompileGate? compileGate = null)
+        : this(settings, log, uiBridge, toolLocator, compiler, session, buffers, DiscoveryFilePath(), trust, compileGate) { }
 
     // Test seam (InternalsVisibleTo ThIDE.Tests): a discovery path under a temp dir keeps a test run
     // from writing or deleting the developer's real %AppData%/ThIDE/mcp-endpoint.json. Not seen by DI,
@@ -109,7 +112,8 @@ public sealed class McpHostService : IMcpHostService
         IWorkspaceSession? session,
         IUnsavedBufferProvider? buffers,
         string discoveryPath,
-        IWorkspaceTrustService? trust = null)
+        IWorkspaceTrustService? trust = null,
+        ICompileGate? compileGate = null)
     {
         _settings = settings;
         _log = log;
@@ -118,6 +122,7 @@ public sealed class McpHostService : IMcpHostService
         _compiler = compiler;
         _session = session;
         _buffers = buffers;
+        _compileGate = compileGate;
         _discoveryPath = discoveryPath;
         _trust = trust;
         _settings.Changed += OnSettingsChanged;
@@ -210,6 +215,9 @@ public sealed class McpHostService : IMcpHostService
             builder.Services.AddSingleton(_compiler);
             // A build whose thconfig runs `system` commands asks the folder's trust first, like hooks do.
             if (_trust is not null) builder.Services.AddSingleton<IBuildApproval>(new TrustBuildApproval(_trust));
+            // The Build pane's gate, so an agent's run_build and the user's F5 / compile-on-save never
+            // run Therion on the same project at once.
+            if (_compileGate is not null) builder.Services.AddSingleton(_compileGate);
 
             // The workspace tools read the running IDE (T-03.2): the live session model with unsaved
             // buffers overlaid, marshalled onto the UI thread. A fresh host per server start, registered as

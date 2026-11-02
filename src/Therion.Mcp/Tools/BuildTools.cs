@@ -29,9 +29,16 @@ public sealed record BuildResult(
     bool Truncated);
 
 /// <summary>Ring R2 — running the real Therion compiler over the project.</summary>
+/// <param name="gate">
+/// One compile at a time per workspace: two Therion runs on one thconfig write the same outputs and
+/// the same log. In-app this is the IDE's own gate, so run_build and the Build pane exclude each other;
+/// without one (a test constructing the tool directly) the tool keeps a gate of its own.
+/// </param>
 [McpServerToolType]
-public sealed class BuildTools(IWorkspaceHost host, ITherionCompiler compiler, IBuildApproval? approval = null)
+public sealed class BuildTools(IWorkspaceHost host, ITherionCompiler compiler, IBuildApproval? approval = null, ICompileGate? gate = null)
 {
+    private readonly ICompileGate _gate = gate ?? new CompileGate();
+
     /// <summary>Therion's own code for "I could not find the executable".</summary>
     private const string ToolMissing = "TH_BUILD_001";
 
@@ -95,6 +102,13 @@ public sealed class BuildTools(IWorkspaceHost host, ITherionCompiler compiler, I
                 Message = line.Text,
             });
         });
+
+        // Refuse rather than queue: a build can take minutes, and the caller should know why it waits.
+        using var lease = _gate.TryAcquire();
+        if (lease is null)
+            return Fail(ToolErrorCodes.BuildBusy,
+                "Another compilation is already running for this workspace (an earlier run_build, or a "
+                + "build started in the IDE). Wait for it to finish, then call run_build again.");
 
         CompileResult result;
         try
