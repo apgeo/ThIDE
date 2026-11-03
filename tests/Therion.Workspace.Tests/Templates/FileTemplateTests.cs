@@ -30,6 +30,20 @@ public class FileTemplateTests
     }
 
     [Fact]
+    public void Trip_template_without_a_recent_team_writes_no_empty_team_name()
+    {
+        // Therion rejects `team ""` ("invalid name format"); without a team to copy the line is a hint.
+        var plan = NewFilePlanner.Plan(T("th-trip"), P("t.th"), v => v == "DATE" ? "2026.10.21" : null);
+
+        Assert.DoesNotContain("team \"\"", plan.Content);
+        Assert.Contains("\n    # team \"name\"\n", plan.Content);
+        Assert.Empty(new Therion.Syntax.ThParser().Parse(P("t.th"), plan.Content).Diagnostics);
+
+        var withTeam = NewFilePlanner.Plan(T("th-trip"), P("t.th"), v => v == "TEAM_RECENT" ? "team \"A. Caver\"" : null);
+        Assert.Contains("\n    team \"A. Caver\"\n", withTeam.Content);
+    }
+
+    [Fact]
     public void Input_goes_after_the_last_input_with_its_indentation()
     {
         var parent = "survey cave\n  input a.th\n  input b.th\nendsurvey\n";
