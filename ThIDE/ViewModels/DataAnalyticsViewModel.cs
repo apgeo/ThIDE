@@ -46,11 +46,15 @@ public sealed partial class DataAnalyticsViewModel : ObservableObject
 
     public DataAnalyticsViewModel() { } // design-time
 
-    public DataAnalyticsViewModel(IDocumentService documents, IAppSettingsService settings)
+    public DataAnalyticsViewModel(IDocumentService documents, IAppSettingsService settings,
+        IWorkspaceSession? session = null)
     {
         _documents = documents;
         _settings = settings;
         _documents.DocumentChanged += (_, _) => ProjectFormat.OnUi(Rebuild);
+        // The graph rebuilt from unsaved buffers (typing, or a dirty tab closed with "Don't save")
+        // raises only BuffersRevalidated: without it the figures kept a discarded edit until Refresh.
+        if (session is not null) session.BuffersRevalidated += (_, _) => ProjectFormat.OnUi(Rebuild);
         _settings.Changed += (_, _) => ProjectFormat.OnUi(Rebuild);
         Rebuild();
     }
@@ -171,14 +175,16 @@ public sealed partial class DataAnalyticsViewModel : ObservableObject
         var q = DataAnalytics.DataQuality(model);
         // Each metric carries a drill-down filter that reproduces its count in the Object Browser:
         // the same predicate the count is computed from, so the two never diverge.
-        Quality.Add(Q("Total legs", q.TotalShots, BrowserTab.Shots, _ => true));
-        Quality.Add(Q("Zero-length legs", q.ZeroLength, BrowserTab.Shots, Shot(DataQualityChecks.IsZeroLength)));
-        Quality.Add(Q("Legs missing length", q.MissingLength, BrowserTab.Shots, Shot(DataQualityChecks.IsMissingLength)));
-        Quality.Add(Q("Legs missing compass", q.MissingCompass, BrowserTab.Shots, Shot(DataQualityChecks.IsMissingCompass)));
-        Quality.Add(Q("Legs missing clino", q.MissingClino, BrowserTab.Shots, Shot(DataQualityChecks.IsMissingClino)));
-        Quality.Add(Q("Legs without backsight style", q.NoBacksight, BrowserTab.Shots, Shot(DataQualityChecks.HasNoBacksight)));
-        Quality.Add(Q("Legs without LRUD", q.NoLrud, BrowserTab.Shots, Shot(DataQualityChecks.HasNoLrud)));
-        Quality.Add(Q("Steep legs (80–90°)", q.SteepLegs, BrowserTab.Shots, Shot(DataQualityChecks.IsSteep)));
+        // The leg rows leave splays out (they have their own row), so "Total legs" agrees with the
+        // "Legs (shots)" figure on Statistics.
+        Quality.Add(Q("Total legs", q.TotalLegs, BrowserTab.Shots, Leg(_ => true)));
+        Quality.Add(Q("Zero-length legs", q.ZeroLength, BrowserTab.Shots, Leg(DataQualityChecks.IsZeroLength)));
+        Quality.Add(Q("Legs missing length", q.MissingLength, BrowserTab.Shots, Leg(DataQualityChecks.IsMissingLength)));
+        Quality.Add(Q("Legs missing compass", q.MissingCompass, BrowserTab.Shots, Leg(DataQualityChecks.IsMissingCompass)));
+        Quality.Add(Q("Legs missing clino", q.MissingClino, BrowserTab.Shots, Leg(DataQualityChecks.IsMissingClino)));
+        Quality.Add(Q("Legs without backsight style", q.NoBacksight, BrowserTab.Shots, Leg(DataQualityChecks.HasNoBacksight)));
+        Quality.Add(Q("Legs without LRUD", q.NoLrud, BrowserTab.Shots, Leg(DataQualityChecks.HasNoLrud)));
+        Quality.Add(Q("Steep legs (80–90°)", q.SteepLegs, BrowserTab.Shots, Leg(DataQualityChecks.IsSteep)));
         Quality.Add(Q("Splay shots", q.SplayShots, BrowserTab.Shots, Shot(DataQualityChecks.IsSplay)));
         Quality.Add(Q("Duplicate shots", q.DuplicateShots, BrowserTab.Shots, Shot(DataQualityChecks.IsDuplicate)));
         Quality.Add(Q("Undated surveys", q.UndatedSurveys, BrowserTab.Surveys, Survey(DataQualityChecks.IsUndated)));
@@ -187,6 +193,7 @@ public sealed partial class DataAnalyticsViewModel : ObservableObject
         static QualityRow Q(string metric, int count, BrowserTab tab, Func<object, bool> predicate) =>
             new(metric, count, new BrowserFilter(tab, metric, predicate));
         static Func<object, bool> Shot(Func<ShotSymbol, bool> p) => o => o is ShotRow { Source: { } s } && p(s);
+        static Func<object, bool> Leg(Func<ShotSymbol, bool> p) => Shot(s => DataQualityChecks.IsLeg(s) && p(s));
         static Func<object, bool> Survey(Func<SurveySymbol, bool> p) => o => o is SurveyEntityRow { Source: { } s } && p(s);
     }
 

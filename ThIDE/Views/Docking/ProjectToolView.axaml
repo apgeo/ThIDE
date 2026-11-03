@@ -45,28 +45,30 @@
                     <TextBlock Text="{Binding Dashboard.ProjectName}" FontSize="18" FontWeight="Bold" />
                     <Grid ColumnDefinitions="130,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" Margin="0,8,0,0">
                         <TextBlock Grid.Row="0" Grid.Column="0" Classes="k" Text="{l:Loc Proj_Dash_EntryConfig}" />
-                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Dashboard.EntryConfig}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Dashboard.EntryConfig}" TextTrimming="CharacterEllipsis"
+                                   ToolTip.Tip="{Binding Dashboard.EntryConfig}" />
                         <TextBlock Grid.Row="1" Grid.Column="0" Classes="k" Text="{l:Loc Proj_Dash_Files}" />
-                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Dashboard.FileSummary}" />
+                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Dashboard.FileSummary}" TextWrapping="Wrap" />
                         <TextBlock Grid.Row="2" Grid.Column="0" Classes="k" Text="{l:Loc Proj_Tab_Surveys}" />
-                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Dashboard.SurveySummary}" />
+                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Dashboard.SurveySummary}" TextWrapping="Wrap" />
                         <TextBlock Grid.Row="3" Grid.Column="0" Classes="k" Text="{l:Loc Browser_Tab_Stations}" />
-                        <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Dashboard.StationsText}" />
+                        <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Dashboard.StationsText}" TextWrapping="Wrap" />
                         <TextBlock Grid.Row="4" Grid.Column="0" Classes="k" Text="{l:Loc Proj_Dash_TotalLength}" />
                         <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding Dashboard.LengthText}" FontWeight="SemiBold" />
                         <TextBlock Grid.Row="5" Grid.Column="0" Classes="k" Text="{l:Loc Proj_Dash_Depth}" />
-                        <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding Dashboard.DepthText}" />
+                        <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding Dashboard.DepthText}" TextWrapping="Wrap" />
                         <TextBlock Grid.Row="6" Grid.Column="0" Classes="k" Text="{l:Loc Proj_Tab_Entrances}" />
-                        <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding Dashboard.EntrancesText}" />
+                        <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding Dashboard.EntrancesText}" TextWrapping="Wrap" />
                         <TextBlock Grid.Row="7" Grid.Column="0" Classes="k" Text="{l:Loc Tool_Diagnostics}" />
-                        <TextBlock Grid.Row="7" Grid.Column="1" Text="{Binding Dashboard.DiagnosticsText}" />
+                        <TextBlock Grid.Row="7" Grid.Column="1" Text="{Binding Dashboard.DiagnosticsText}" TextWrapping="Wrap" />
                     </Grid>
 
                     <Border Height="1" Background="{DynamicResource ControlStrokeColorDefaultBrush}" Margin="0,12" />
-                    <StackPanel Orientation="Horizontal" Spacing="6">
+                    <Grid ColumnDefinitions="130,*">
                         <TextBlock Classes="k" Text="{l:Loc Proj_Dash_LastBuild}" VerticalAlignment="Center" />
-                        <TextBlock Text="{Binding Dashboard.BuildStatus}" VerticalAlignment="Center" />
-                    </StackPanel>
+                        <TextBlock Grid.Column="1" Text="{Binding Dashboard.BuildStatus}" VerticalAlignment="Center"
+                                   TextWrapping="Wrap" />
+                    </Grid>
 
                     <TextBlock Classes="h" Text="{l:Loc Proj_QuickActions}" />
                     <StackPanel Orientation="Horizontal" Spacing="8">

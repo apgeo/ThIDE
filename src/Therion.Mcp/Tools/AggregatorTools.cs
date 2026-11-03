@@ -101,6 +101,7 @@ public sealed class AggregatorTools(IWorkspaceHost host, Therion.Workspace.ILead
     [Description("Counts of common data-quality issues across the project: zero-length and missing-length "
                + "legs, legs missing a compass or clino reading, very steep legs (|clino| 80–90°), splays "
                + "and duplicates, legs without a backsight or LRUD, and surveys with no date or no team. "
+               + "Leg counts (totalLegs and the leg checks) leave splays out; totalShots counts every shot. "
                + "Optionally scoped to a survey subtree. These are the same checks the IDE's data-quality "
                + "dashboard shows — a fast triage of where the survey data needs attention.")]
     public async Task<ToolResult<DataQualityReport>> GetDataQualityReport(

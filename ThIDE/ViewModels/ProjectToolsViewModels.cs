@@ -120,16 +120,30 @@ public sealed partial class ProjectDashboardViewModel : ObservableObject
 
     public ProjectDashboardViewModel() { } // design-time
 
-    public ProjectDashboardViewModel(IWorkspaceSession session, IDocumentService documents, BuildViewModel build)
+    public ProjectDashboardViewModel(IWorkspaceSession session, IDocumentService documents, BuildViewModel build,
+        DiagnosticsViewModel? diagnostics = null)
     {
         _session = session;
         _documents = documents;
+        _diagnostics = diagnostics;
         Build = build;
         _session.Changed += (_, _) => ProjectFormat.OnUi(Rebuild);
         _session.RootChanged += (_, _) => ProjectFormat.OnUi(Rebuild);
+        // The graph rebuilt from unsaved buffers (or restored from disk when a dirty tab is discarded).
+        _session.BuffersRevalidated += (_, _) => ProjectFormat.OnUi(Rebuild);
+        _session.CandidatesChanged += (_, _) => ProjectFormat.OnUi(Rebuild);
         build.PropertyChanged += (_, _) => ProjectFormat.OnUi(UpdateBuildStatus);
+        // Count what the Diagnostics panel lists, so the two never disagree.
+        if (diagnostics is not null)
+            diagnostics.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName is nameof(DiagnosticsViewModel.ErrorCount) or nameof(DiagnosticsViewModel.WarningCount))
+                    ProjectFormat.OnUi(() => { _semanticDiagnostics = DiagnosticCounts(); ComposeDiagnostics(); });
+            };
         Rebuild();
     }
+
+    private readonly DiagnosticsViewModel? _diagnostics;
 
     [RelayCommand] private void Refresh() => Rebuild();
 
@@ -139,7 +153,7 @@ public sealed partial class ProjectDashboardViewModel : ObservableObject
         ProjectName = string.IsNullOrEmpty(root) ? "(no project open)"
             : new DirectoryInfo(root).Name;
         EntryConfig = _session?.ActiveThconfig?.DisplayPath ?? "—";
-        FileSummary = CountFiles(root);
+        FileSummary = CountFiles(root, _session?.Candidates.Count);
 
         if (_documents?.Workspace is { } model)
         {
@@ -149,9 +163,7 @@ public sealed partial class ProjectDashboardViewModel : ObservableObject
             LengthText = ProjectFormat.Length(t.TotalLength);
             DepthText = $"{ProjectFormat.Length(t.VerticalRange)} vertical range";
             EntrancesText = $"{t.EntranceCount} entrances · {t.FixedCount} fixed points";
-            int errors = model.Diagnostics.Count(d => d.Severity == DiagnosticSeverity.Error);
-            int warnings = model.Diagnostics.Count(d => d.Severity == DiagnosticSeverity.Warning);
-            _semanticDiagnostics = errors == 0 && warnings == 0 ? "No diagnostics" : $"{errors} errors · {warnings} warnings";
+            _semanticDiagnostics = DiagnosticCounts();
         }
         else
         {
@@ -164,6 +176,20 @@ public sealed partial class ProjectDashboardViewModel : ObservableObject
     // The semantic-diagnostics portion of DiagnosticsText; the last build error (if any) is appended
     // in ComposeDiagnostics so both the model diagnostics and the compiler error are visible.
     private string _semanticDiagnostics = "—";
+
+    // The Diagnostics panel's totals when it is wired (the per-file model list alone missed the
+    // project analysis and rule diagnostics the panel shows); the model's own list otherwise.
+    private string DiagnosticCounts()
+    {
+        int errors, warnings;
+        if (_diagnostics is not null)
+            (errors, warnings) = (_diagnostics.ErrorCount, _diagnostics.WarningCount);
+        else if (_documents?.Workspace is { } model)
+            (errors, warnings) = (model.Diagnostics.Count(d => d.Severity == DiagnosticSeverity.Error),
+                                  model.Diagnostics.Count(d => d.Severity == DiagnosticSeverity.Warning));
+        else return "—";
+        return errors == 0 && warnings == 0 ? "No diagnostics" : $"{errors} errors · {warnings} warnings";
+    }
 
     private void UpdateBuildStatus()
     {
@@ -199,7 +225,9 @@ public sealed partial class ProjectDashboardViewModel : ObservableObject
         return string.Empty;
     }
 
-    private static string CountFiles(string? root)
+    // thconfigs are counted as the switcher lists them (candidates, external ones included), not by
+    // file extension; the extension count is the fallback when no session is wired.
+    internal static string CountFiles(string? root, int? thconfigCandidates = null)
     {
         if (string.IsNullOrEmpty(root) || !Directory.Exists(root)) return "—";
         try
@@ -215,7 +243,7 @@ public sealed partial class ProjectDashboardViewModel : ObservableObject
                     case ".thconfig": case ".thc": cfg++; break;
                 }
             }
-            return $"{th} .th · {th2} .th2 · {cfg} .thconfig";
+            return $"{th} .th · {th2} .th2 · {thconfigCandidates ?? cfg} .thconfig";
         }
         catch { return "—"; }
     }

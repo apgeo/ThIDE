@@ -45,11 +45,13 @@ public sealed record FixedPointRow(
 
 // ---- -----------------------------------------------------------------
 
-/// <summary>Data-quality counts for the dashboard.</summary>
+/// <summary>Data-quality counts for the dashboard. <see cref="TotalShots"/> counts every shot; the leg
+/// metrics (<see cref="TotalLegs"/> through <see cref="SteepLegs"/>) leave splays out, which are
+/// counted on their own in <see cref="SplayShots"/>. <see cref="DuplicateShots"/> covers every shot.</summary>
 public sealed record DataQualityReport(
     int TotalShots, int ZeroLength, int MissingLength, int MissingCompass, int MissingClino,
     int NoBacksight, int NoLrud, int SteepLegs, int SplayShots, int DuplicateShots,
-    int UndatedSurveys, int TeamlessSurveys);
+    int UndatedSurveys, int TeamlessSurveys, int TotalLegs);
 
 /// <summary>Pure survey-domain analytics computed from a <see cref="WorkspaceSemanticModel"/>.</summary>
 public static class DataAnalytics
@@ -253,15 +255,18 @@ public static class DataAnalytics
             surveyPrefix is not { Length: > 0 }
             || s.Name.ToString() == surveyPrefix || s.Name.ToString().StartsWith(prefixDot!, StringComparison.Ordinal);
 
-        int total = 0, zero = 0, noLen = 0, noComp = 0, noClino = 0, noBack = 0, noLrud = 0,
+        int total = 0, legs = 0, zero = 0, noLen = 0, noComp = 0, noClino = 0, noBack = 0, noLrud = 0,
             steep = 0, splay = 0, dup = 0;
         foreach (var perFile in model.PerFile.Values)
             foreach (var shot in perFile.Shots)
             {
                 if (!ShotIn(shot)) continue;
                 total++;
-                if (DataQualityChecks.IsSplay(shot)) splay++;
                 if (DataQualityChecks.IsDuplicate(shot)) dup++;
+                // A splay carries no LRUD and is often steep by design: counting it among the legs
+                // swamped every leg metric on a project with thousands of splays.
+                if (DataQualityChecks.IsSplay(shot)) { splay++; continue; }
+                legs++;
                 if (DataQualityChecks.IsZeroLength(shot)) zero++;
                 if (DataQualityChecks.IsMissingLength(shot)) noLen++;
                 if (DataQualityChecks.IsMissingCompass(shot)) noComp++;
@@ -280,7 +285,7 @@ public static class DataAnalytics
         }
 
         return new DataQualityReport(total, zero, noLen, noComp, noClino, noBack, noLrud,
-            steep, splay, dup, undated, teamless);
+            steep, splay, dup, undated, teamless, legs);
     }
 
     // ===== shared helpers ====================================================
@@ -337,6 +342,8 @@ public static class DataAnalytics
 public static class DataQualityChecks
 {
     public static bool IsSplay(ShotSymbol s) => (s.Flags & ShotFlags.Splay) != 0;
+    /// <summary>A survey leg: any shot that is not a splay. The leg metrics count only these.</summary>
+    public static bool IsLeg(ShotSymbol s) => !IsSplay(s);
     public static bool IsDuplicate(ShotSymbol s) => (s.Flags & ShotFlags.Duplicate) != 0;
     public static bool IsZeroLength(ShotSymbol s) => s.Length is { } l && l == 0;
     public static bool IsMissingLength(ShotSymbol s) => s.Length is null;
