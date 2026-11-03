@@ -6,7 +6,10 @@
 //      SAFE MODE (skips the riskier float-window layout restore) so a bad layout can't brick it.
 //   2. Periodic autosave of the *unsaved* editor buffers into a recovery folder (+ a manifest).
 //      After a crash these survive and are offered back to the user until restored or dismissed; a
-//      clean shutdown clears only that run's own copies.
+//      clean shutdown clears only that run's own copies. Restoring or dismissing settles only the runs
+//      the offer was made from, and moves their copies under the run that settled them (`handled/`),
+//      where they stay until its next autosave has written the reopened buffers: a crash in between
+//      loses neither those nor the run's own unsaved edits.
 //
 // Stored under %AppData%/ThIDE/ (XDG fallback on POSIX), mirroring the other JSON services.
 //
@@ -47,10 +50,17 @@ public interface ICrashRecoveryService
     void SaveBuffers(IEnumerable<(string Path, string Text)> dirty);
     /// <summary>
     /// Returns the recoverable buffers: this run's own plus those left by crashed runs (never those of
-    /// another instance that is still running). Empty after a clean shutdown.
+    /// another instance that is still running). Empty after a clean shutdown. The first call of a run
+    /// (and the first after <see cref="ClearRecovery"/>) is the offer: the ended runs it read are the
+    /// ones <see cref="ClearRecovery"/> settles.
     /// </summary>
     IReadOnlyList<RecoveredBuffer> GetRecoverable();
-    /// <summary>Deletes this run's and crashed runs' recovery files (e.g. once the user has restored or dismissed them).</summary>
+    /// <summary>
+    /// Settles the offer once the user has restored or dismissed it: the copies of the runs it was made
+    /// from are no longer offered, while a run that ended after it keeps its copies. They are kept with
+    /// this run until its next <see cref="SaveBuffers"/> (or a clean shutdown) rather than deleted, so a
+    /// crash before that still recovers the reopened text; this run's own copies are not touched.
+    /// </summary>
     void ClearRecovery();
 }
 
@@ -59,6 +69,7 @@ public sealed class CrashRecoveryService : ICrashRecoveryService
     private const string LockPrefix = "running.";
     private const string LockSuffix = ".lock";
     private const string ManifestName = "manifest.json";
+    private const string HandledName = "handled"; // recovery/<id>/handled: settled copies kept until the next autosave
 
     private readonly string _root;         // profile folder holding the locks and recovery/
     private readonly string _recoveryRoot; // recovery/ (one sub-folder per instance)
@@ -66,6 +77,7 @@ public sealed class CrashRecoveryService : ICrashRecoveryService
     private readonly string _dir;          // recovery/<id>
     private readonly string _sentinel;     // running.<id>.lock
     private readonly string _manifest;     // recovery/<id>/manifest.json
+    private readonly string _handled;      // recovery/<id>/handled
     private readonly ILogger? _logger;
     private FileStream? _lock;             // held open (exclusively) while this instance runs
 
@@ -73,6 +85,8 @@ public sealed class CrashRecoveryService : ICrashRecoveryService
     private readonly Dictionary<string, string> _lastHash = new(FilePaths.Comparer);
     // path → recovery file name, so a buffer keeps the same backing file across saves.
     private readonly Dictionary<string, string> _bufferFiles = new(FilePaths.Comparer);
+    // The ended runs' folders the pending offer was read from (see GetRecoverable); null when none is pending.
+    private List<string>? _offered;
 
     public bool PreviousRunCrashed { get; private set; }
 
@@ -86,6 +100,7 @@ public sealed class CrashRecoveryService : ICrashRecoveryService
         _dir = Path.Combine(_recoveryRoot, _id);
         _sentinel = LockPath(_id);
         _manifest = Path.Combine(_dir, ManifestName);
+        _handled = Path.Combine(_dir, HandledName);
         _logger = logger;
     }
 
@@ -166,6 +181,9 @@ public sealed class CrashRecoveryService : ICrashRecoveryService
 
             File.WriteAllText(_manifest, JsonSerializer.Serialize(entries,
                 new JsonSerializerOptions { WriteIndented = true }));
+
+            // The buffers reopened from settled copies are dirty, so they are now this run's own copies.
+            if (Directory.Exists(_handled)) Directory.Delete(_handled, recursive: true);
         }
         catch (Exception ex) { _logger?.LogWarning(ex, "Failed to autosave recovery buffers."); }
     }
@@ -173,14 +191,21 @@ public sealed class CrashRecoveryService : ICrashRecoveryService
     public IReadOnlyList<RecoveredBuffer> GetRecoverable()
     {
         var result = new List<RecoveredBuffer>();
-        foreach (var dir in OwnedRecoveryFolders())
+        var folders = OwnedRecoveryFolders();
+        _offered ??= folders.FindAll(dir => !FilePaths.Same(dir, _dir));
+        // This run's settled copies are not offered to it again; an ended run's are, with its own.
+        foreach (var dir in folders) ReadCopies(dir, withHandled: !FilePaths.Same(dir, _dir), result);
+        return result;
+    }
+
+    private void ReadCopies(string dir, bool withHandled, List<RecoveredBuffer> result)
+    {
+        var manifest = Path.Combine(dir, ManifestName);
+        try
         {
-            var manifest = Path.Combine(dir, ManifestName);
-            try
+            if (File.Exists(manifest)
+                && JsonSerializer.Deserialize<List<ManifestEntry>>(File.ReadAllText(manifest)) is { } entries)
             {
-                if (!File.Exists(manifest)) continue;
-                var entries = JsonSerializer.Deserialize<List<ManifestEntry>>(File.ReadAllText(manifest));
-                if (entries is null) continue;
                 foreach (var e in entries)
                 {
                     var full = Path.Combine(dir, e.RecoveryFile);
@@ -189,27 +214,33 @@ public sealed class CrashRecoveryService : ICrashRecoveryService
                     catch { /* skip an unreadable buffer */ }
                 }
             }
-            catch (Exception ex) { _logger?.LogWarning(ex, "Failed to read recovery manifest."); }
+            var handled = Path.Combine(dir, HandledName);
+            if (withHandled && Directory.Exists(handled))
+                foreach (var sub in Directory.GetDirectories(handled)) ReadCopies(sub, withHandled: true, result);
         }
-        return result;
+        catch (Exception ex) { _logger?.LogWarning(ex, "Failed to read recovery manifest."); }
     }
 
     public void ClearRecovery()
     {
-        _lastHash.Clear();
-        _bufferFiles.Clear();
-        foreach (var dir in OwnedRecoveryFolders())
+        var offered = _offered ?? new List<string>();
+        _offered = null;
+        foreach (var dir in offered)
         {
             try
             {
+                Directory.CreateDirectory(_handled);
                 if (FilePaths.Same(dir, _recoveryRoot))
                 {
                     // Earlier versions' flat layout: only its files; the sub-folders are other instances'.
-                    foreach (var f in Directory.GetFiles(dir)) TryDelete(f);
+                    var legacy = Directory.CreateDirectory(Path.Combine(_handled, "legacy")).FullName;
+                    foreach (var f in Directory.GetFiles(dir))
+                        File.Move(f, Path.Combine(legacy, Path.GetFileName(f)), overwrite: true);
                 }
-                else if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true);
+                else Directory.Move(dir, Path.Combine(_handled, Path.GetFileName(dir)));
             }
-            catch (Exception ex) { _logger?.LogWarning(ex, "Failed to clear recovery folder."); }
+            catch (DirectoryNotFoundException) { /* another instance settled this run first */ }
+            catch (Exception ex) { _logger?.LogWarning(ex, "Failed to set a handled recovery folder aside."); }
         }
     }
 
