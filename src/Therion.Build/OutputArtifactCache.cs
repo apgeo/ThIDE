@@ -13,11 +13,27 @@ using Therion.Processing.Abstractions;
 
 namespace Therion.Build;
 
+/// <summary>
+/// When an entry's output list was last built, and whether it is out of date because a later build
+/// of the same entry failed (the files on disk are then from an older, successful build).
+/// </summary>
+public sealed record OutputListState(DateTimeOffset? BuiltUtc, bool Stale)
+{
+    public static OutputListState Unknown { get; } = new(null, false);
+}
+
 public interface IOutputArtifactCache
 {
     ImmutableArray<OutputArtifact> Load(string entryPointPath, string therionVersion);
     void Save(string entryPointPath, string therionVersion, ImmutableArray<OutputArtifact> artifacts);
     void Clear(string entryPointPath, string therionVersion);
+
+    /// <summary>Saves the output list together with its build state. Caches that keep no state save the list only.</summary>
+    void Save(string entryPointPath, string therionVersion, ImmutableArray<OutputArtifact> artifacts, OutputListState state)
+        => Save(entryPointPath, therionVersion, artifacts);
+
+    /// <summary>The build state saved with the list, or <see cref="OutputListState.Unknown"/>.</summary>
+    OutputListState LoadState(string entryPointPath, string therionVersion) => OutputListState.Unknown;
 }
 
 public sealed class JsonOutputArtifactCache : IOutputArtifactCache
@@ -48,16 +64,9 @@ public sealed class JsonOutputArtifactCache : IOutputArtifactCache
 
     public ImmutableArray<OutputArtifact> Load(string entryPointPath, string therionVersion)
     {
-        var path = EntryPath(entryPointPath, therionVersion);
-        if (!File.Exists(path)) return ImmutableArray<OutputArtifact>.Empty;
         try
         {
-            CacheEntry? entry;
-            lock (_gate)
-            {
-                using var fs = File.OpenRead(path);
-                entry = JsonSerializer.Deserialize<CacheEntry>(fs);
-            }
+            var entry = ReadEntry(entryPointPath, therionVersion);
             if (entry?.Artifacts is null) return ImmutableArray<OutputArtifact>.Empty;
             var builder = ImmutableArray.CreateBuilder<OutputArtifact>(entry.Artifacts.Count);
             foreach (var a in entry.Artifacts)
@@ -71,7 +80,36 @@ public sealed class JsonOutputArtifactCache : IOutputArtifactCache
         }
     }
 
-    public void Save(string entryPointPath, string therionVersion, ImmutableArray<OutputArtifact> artifacts)
+    public OutputListState LoadState(string entryPointPath, string therionVersion)
+    {
+        try
+        {
+            var entry = ReadEntry(entryPointPath, therionVersion);
+            if (entry is null) return OutputListState.Unknown;
+            DateTimeOffset? built = entry.BuiltUtcTicks is { } t ? new DateTimeOffset(t, TimeSpan.Zero) : null;
+            return new OutputListState(built, entry.Stale);
+        }
+        catch
+        {
+            return OutputListState.Unknown;
+        }
+    }
+
+    private CacheEntry? ReadEntry(string entryPointPath, string therionVersion)
+    {
+        var path = EntryPath(entryPointPath, therionVersion);
+        if (!File.Exists(path)) return null;
+        lock (_gate)
+        {
+            using var fs = File.OpenRead(path);
+            return JsonSerializer.Deserialize<CacheEntry>(fs);
+        }
+    }
+
+    public void Save(string entryPointPath, string therionVersion, ImmutableArray<OutputArtifact> artifacts) =>
+        Save(entryPointPath, therionVersion, artifacts, OutputListState.Unknown);
+
+    public void Save(string entryPointPath, string therionVersion, ImmutableArray<OutputArtifact> artifacts, OutputListState state)
     {
         try
         {
@@ -79,6 +117,8 @@ public sealed class JsonOutputArtifactCache : IOutputArtifactCache
             {
                 EntryPoint = entryPointPath,
                 TherionVersion = therionVersion,
+                BuiltUtcTicks = state.BuiltUtc?.UtcTicks,
+                Stale = state.Stale,
                 Artifacts = artifacts.Select(a => new ArtifactDto
                 {
                     Path = a.Path,
@@ -122,6 +162,9 @@ public sealed class JsonOutputArtifactCache : IOutputArtifactCache
         [JsonPropertyName("entry")] public string EntryPoint { get; set; } = string.Empty;
         [JsonPropertyName("therion")] public string TherionVersion { get; set; } = string.Empty;
         [JsonPropertyName("artifacts")] public List<ArtifactDto> Artifacts { get; set; } = new();
+        // Absent in lists written before the build state was kept: read as "unknown, not stale".
+        [JsonPropertyName("built")] public long? BuiltUtcTicks { get; set; }
+        [JsonPropertyName("stale")] public bool Stale { get; set; }
     }
 
     internal sealed class ArtifactDto

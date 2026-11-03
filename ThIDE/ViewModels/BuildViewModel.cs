@@ -334,6 +334,8 @@ public partial class BuildViewModel : ViewModelBase
     [ObservableProperty] private bool _lastBuildHasWarnings;
     /// <summary>Number of warnings from the last build.</summary>
     [ObservableProperty] private int _lastBuildWarningCount;
+    /// <summary>What the last build compiled: the thconfig file name, or a derived build's label.</summary>
+    [ObservableProperty] private string _lastBuildTarget = string.Empty;
 
     /// <summary>
     /// The error text from the last failed build (the error line(s) Therion reported), kept as state
@@ -480,12 +482,19 @@ public partial class BuildViewModel : ViewModelBase
         _settings = settings;
         _log = log;
         _notifications = notifications;
-        _documents.DocumentChanged += (_, _) => { RestoreLastArtifacts(); RefreshExportTargets(); };
+        _documents.DocumentChanged += (_, _) => { ProjectFormat.OnUi(OnBuildTargetMayHaveChanged); RefreshExportTargets(); };
         // Marshal to the UI thread: Changed is raised on a background thread (the session rebuilds
         // the graph under Task.Run/ConfigureAwait(false)) and RefreshExportTargets writes UI-bound
         // state — running it off-thread throws "the calling thread cannot access this object".
-        if (_session is not null) _session.Changed += (_, _) => ProjectFormat.OnUi(RefreshExportTargets);
+        if (_session is not null)
+            _session.Changed += (_, _) => ProjectFormat.OnUi(() =>
+            {
+                RefreshExportTargets();
+                OnBuildTargetMayHaveChanged();
+                RefreshArtifactStaleness();   // the graph is (re)loaded: the stale check can see every input now
+            });
         RefreshExportTargets();
+        OnBuildTargetMayHaveChanged();
     }
 
     private readonly ILogService? _log;
@@ -514,15 +523,54 @@ public partial class BuildViewModel : ViewModelBase
     public bool CanBuild => !IsBuilding && ResolveBuildEntry() is not null;
 
     /// <summary>
-    /// The build target: the active editor file when it is itself a thconfig, otherwise the
-    /// workspace's active thconfig; falls back to the active file when no thconfig is known.
+    /// The build target: always the workspace's active thconfig, whichever tab has focus. Only when
+    /// no thconfig is active (a lone file opened without a project) does it fall back to the active file.
+    /// A focused thconfig other than the active one is built by <see cref="BuildThisThconfigCommand"/>.
     /// </summary>
-    public string? ResolveBuildEntry()
+    public string? ResolveBuildEntry() => _session?.ActiveThconfig?.FullPath ?? _documents.CurrentPath;
+
+    /// <summary>File name of what Compile builds (tooltip, status), or empty when there is nothing to build.</summary>
+    public string BuildTargetName => ResolveBuildEntry() is { } entry ? Path.GetFileName(entry) : string.Empty;
+
+    /// <summary>The focused editor file when it is a thconfig other than the build target, else null.</summary>
+    public string? FocusedOtherThconfig =>
+        _documents.CurrentPath is { } current && IsThconfig(current)
+        && !(ResolveBuildEntry() is { } target && SamePath(current, target))
+            ? current : null;
+
+    /// <summary>"Build this thconfig": builds the focused thconfig without making it the active one.</summary>
+    [RelayCommand(CanExecute = nameof(CanBuildThisThconfig))]
+    private async Task BuildThisThconfigAsync()
     {
-        var active = _documents.CurrentPath;
-        if (active is not null && IsThconfig(active)) return active;
-        return _session?.ActiveThconfig?.FullPath ?? active;
+        if (FocusedOtherThconfig is not { } cfg) return;
+        await RunBuildAsync(cfg).ConfigureAwait(true);
     }
+
+    private bool CanBuildThisThconfig() => !IsBuilding && FocusedOtherThconfig is not null;
+
+    partial void OnIsBuildingChanged(bool value) => BuildThisThconfigCommand.NotifyCanExecuteChanged();
+
+    // The target last seen by OnBuildTargetMayHaveChanged; Generated Files follows it when it changes.
+    private string? _syncedTarget;
+
+    /// <summary>Re-reads the build target after a focus or active-thconfig change.</summary>
+    private void OnBuildTargetMayHaveChanged()
+    {
+        OnPropertyChanged(nameof(BuildTargetName));
+        OnPropertyChanged(nameof(CanBuild));
+        OnPropertyChanged(nameof(FocusedOtherThconfig));
+        BuildThisThconfigCommand.NotifyCanExecuteChanged();
+
+        // Generated Files lists the outputs of the build target. It switches only when the target
+        // itself changes, so focusing another tab never swaps in the outputs of a different thconfig,
+        // and the outputs of a "Build this thconfig" run stay listed until the active one changes.
+        var target = ResolveBuildEntry();
+        if (target is null || IsBuilding || (_syncedTarget is not null && SamePath(_syncedTarget, target))) return;
+        _syncedTarget = target;
+        ShowOutputsOf(target);
+    }
+
+    private static bool SamePath(string a, string b) => Therion.Workspace.Editing.FilePaths.Same(a, b);
 
     private static bool IsThconfig(string path)
     {
@@ -560,9 +608,13 @@ public partial class BuildViewModel : ViewModelBase
         // What the build ends as; updated as it goes and reported in finally.
         var outcome = new Therion.Build.Automation.BuildOutcome(entry, false, false, -1, 0, 0, [], null, TimeSpan.Zero, label);
 
+        // What is being built, by name: the thconfig, or the label of a derived (temporary) build.
+        var target = tempThconfig is not null && label is not null ? label : Path.GetFileName(entry);
         IsBuilding = true;
         HasBuildResult = false;          // clear the previous success/error status-bar icon
-        Status = "Compiling…";           // clear the previous "succeeded/failed" label (#3)
+        LastBuildTarget = target;
+        // clears the previous "succeeded/failed" label (#3)
+        Status = string.Format(ThIDE.Resources.Tr.Get("Build_CompilingTarget"), target);
         StatusArtifactCount = string.Empty;
         LastError = string.Empty;        // the last error is state only until the next compilation
         _buildErrorLines.Clear();
@@ -579,6 +631,7 @@ public partial class BuildViewModel : ViewModelBase
         _buildStart = DateTimeOffset.Now;
         _prevRowTime = _buildStart;
         _buildWorkDir = Path.GetDirectoryName(Path.GetFullPath(entry)); // resolve output paths (#1)
+        AddRow(TargetRow(entry, tempThconfig is null ? null : target));
         AddRow(new CompilerOutputRow(command, "Command", null, OutputRowKind.Command,
             _buildStart, TimeSpan.Zero, TimeSpan.Zero, TimeColumnMode));
 
@@ -591,11 +644,10 @@ public partial class BuildViewModel : ViewModelBase
         {
             var result = await _compiler.CompileAsync(entry, progress, _cts.Token).ConfigureAwait(true);
             sw.Stop();
-            UpdateArtifacts(result.Artifacts);
-            DetectLog(entry, _buildStart, result.LogPath);
-            _artifactCache.Save(entry, "unknown", result.Artifacts);
-            var warnCount = result.Diagnostics.Count(d => d.Severity == DiagnosticSeverity.Warning);
             bool ok = result.ExitCode == 0;
+            RecordOutputs(entry, tempThconfig is null ? null : target, result.Artifacts, ok);
+            DetectLog(entry, _buildStart, result.LogPath);
+            var warnCount = result.Diagnostics.Count(d => d.Severity == DiagnosticSeverity.Warning);
             HasBuildResult = true;
             LastBuildSucceeded = ok;
             LastBuildHasWarnings = warnCount > 0;
@@ -657,6 +709,7 @@ public partial class BuildViewModel : ViewModelBase
         {
             BuildFinished?.Invoke(this, outcome);
             IsBuilding = false;
+            OnBuildTargetMayHaveChanged();   // the active thconfig may have changed while it built
             _cts?.Dispose();
             _cts = null;
             SetPhase(BuildPhase.Idle); // clear the phase indicator
@@ -828,6 +881,22 @@ public partial class BuildViewModel : ViewModelBase
         var now = DateTimeOffset.Now;
         return new CompilerOutputRow(sb.ToString(), ok ? "Info" : "Error", null, OutputRowKind.Summary,
             now, TimeSpan.Zero, now - buildStart, TimeColumnMode, success: ok);
+    }
+
+    /// <summary>
+    /// First output row: what this build compiles. A real thconfig is named by its full path, as a link
+    /// that opens it; a derived build by its <paramref name="derivedLabel"/>.
+    /// </summary>
+    private CompilerOutputRow TargetRow(string entry, string? derivedLabel)
+    {
+        string full; try { full = Path.GetFullPath(entry); } catch { full = entry; }
+        var shown = derivedLabel ?? full;
+        var text = string.Format(ThIDE.Resources.Tr.Get("Build_OutputTarget"), shown);
+        SourceSpan? link = derivedLabel is null
+            ? new SourceSpan(full, new SourceLocation(1, 1), new SourceLocation(1, 1), 0, 0)
+            : null;
+        return new CompilerOutputRow(text, "Command", link, OutputRowKind.Command,
+            _buildStart, TimeSpan.Zero, TimeSpan.Zero, TimeColumnMode, linkText: derivedLabel is null ? full : null);
     }
 
     private void AddRow(CompilerOutputRow row)
@@ -1230,15 +1299,118 @@ public partial class BuildViewModel : ViewModelBase
         View3DRequested?.Invoke(this, row.Path);
     }
 
+    // ---- Generated Files: the outputs of one thconfig ------------------------------------------
+
+    // Artifact-cache version key (the cache is keyed by entry + Therion version; the version is not probed).
+    private const string CacheVersion = "unknown";
+
+    /// <summary>Full path of the thconfig whose outputs are listed; null for a derived build or none.</summary>
+    private string? _artifactsEntry;
+    /// <summary>File name (or derived-build label) shown in the Generated Files header.</summary>
+    private string _artifactsName = string.Empty;
+    private OutputListState _artifactsState = OutputListState.Unknown;
+    private ImmutableArray<OutputArtifact> _artifactsRaw = ImmutableArray<OutputArtifact>.Empty;
+
+    /// <summary>"Outputs of thconfig_x · built 20:21"; empty before any thconfig is known.</summary>
+    [ObservableProperty] private string _artifactsHeader = string.Empty;
+    /// <summary>Shown in place of the empty grid: "not built yet" or "the last build wrote no outputs".</summary>
+    [ObservableProperty] private string _artifactsEmptyText = string.Empty;
+    [ObservableProperty] private bool _hasArtifactsEmptyText;
+    /// <summary>True when the empty state offers Compile (never built, and Compile builds this thconfig).</summary>
+    [ObservableProperty] private bool _canCompileFromEmptyState;
+    /// <summary>Why the outputs are stale: a later build failed, or an input changed since.</summary>
+    [ObservableProperty] private string _staleBannerText = string.Empty;
+
+    /// <summary>Lists the saved outputs of <paramref name="entry"/> (restored across restarts, stale flag included).</summary>
+    private void ShowOutputsOf(string entry)
+    {
+        var cached = _artifactCache.Load(entry, CacheVersion);
+        var state = _artifactCache.LoadState(entry, CacheVersion);
+        SetArtifacts(entry, Path.GetFileName(entry), ExistingOnly(cached), state);
+    }
+
+    /// <summary>
+    /// Saves and lists what a build of <paramref name="entry"/> produced. A failed build keeps the
+    /// earlier outputs listed (they are still on disk) and marks them stale, persistently, so a
+    /// restart does not relabel them "current". A derived build (<paramref name="derivedLabel"/>)
+    /// is listed under its label and not saved, its temporary thconfig being gone after the build.
+    /// </summary>
+    private void RecordOutputs(string entry, string? derivedLabel, ImmutableArray<OutputArtifact> produced, bool ok)
+    {
+        if (derivedLabel is not null)
+        {
+            SetArtifacts(null, derivedLabel, produced, new OutputListState(DateTimeOffset.UtcNow, !ok));
+            return;
+        }
+        ImmutableArray<OutputArtifact> list;
+        OutputListState state;
+        if (ok)
+        {
+            list = produced;
+            state = new OutputListState(DateTimeOffset.UtcNow, false);
+        }
+        else
+        {
+            var earlier = ExistingOnly(_artifactCache.Load(entry, CacheVersion));
+            var producedPaths = produced.Select(a => a.Path).ToHashSet(StringComparer.Ordinal);
+            list = earlier.Where(a => !producedPaths.Contains(a.Path)).Concat(produced).ToImmutableArray();
+            state = new OutputListState(_artifactCache.LoadState(entry, CacheVersion).BuiltUtc, Stale: list.Length > 0);
+        }
+        _artifactCache.Save(entry, CacheVersion, list, state);
+        SetArtifacts(entry, Path.GetFileName(entry), list, state);
+    }
+
+    private static ImmutableArray<OutputArtifact> ExistingOnly(ImmutableArray<OutputArtifact> list) =>
+        list.IsDefaultOrEmpty ? ImmutableArray<OutputArtifact>.Empty
+            : list.Where(a => { try { return File.Exists(a.Path); } catch { return false; } }).ToImmutableArray();
+
+    private void SetArtifacts(string? entry, string name, ImmutableArray<OutputArtifact> list, OutputListState state)
+    {
+        _artifactsEntry = entry;
+        _artifactsName = name;
+        _artifactsState = state;
+        _artifactsRaw = list;
+        UpdateArtifacts(list);
+
+        var built = state.BuiltUtc ?? (list.IsDefaultOrEmpty ? null : list.Max(a => a.LastWriteUtc));
+        ArtifactsHeader = built is { } b
+            ? string.Format(ThIDE.Resources.Tr.Get("Gen_HeaderBuilt"), name, FormatBuiltTime(b))
+            : string.Format(ThIDE.Resources.Tr.Get("Gen_Header"), name);
+        bool neverBuilt = built is null;
+        ArtifactsEmptyText = !list.IsDefaultOrEmpty ? string.Empty
+            : string.Format(ThIDE.Resources.Tr.Get(neverBuilt ? "Gen_NotBuiltYet" : "Gen_NoOutputs"), name);
+        HasArtifactsEmptyText = ArtifactsEmptyText.Length > 0;
+        CanCompileFromEmptyState = HasArtifactsEmptyText && neverBuilt
+                                   && entry is not null && ResolveBuildEntry() is { } t && SamePath(t, entry);
+    }
+
+    /// <summary>"20:21" for today, else "2026-11-03 20:21" (local time).</summary>
+    private static string FormatBuiltTime(DateTimeOffset builtUtc)
+    {
+        var local = builtUtc.ToLocalTime();
+        return local.Date == DateTimeOffset.Now.Date
+            ? local.ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture)
+            : local.ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>Recomputes the per-row stale flags (an input may be newer now, or the graph just loaded).</summary>
+    private void RefreshArtifactStaleness()
+    {
+        if (IsBuilding || _artifactsRaw.IsDefaultOrEmpty) return;
+        UpdateArtifacts(_artifactsRaw);
+    }
+
     private void UpdateArtifacts(ImmutableArray<OutputArtifact> artifacts)
     {
-        // an output is "stale" if any project input is newer than it.
-        var newest = NewestInputUtc();
+        // an output is "stale" if a later build of its thconfig failed, or if any project input is
+        // newer than it.
+        bool failed = _artifactsState.Stale;
+        var newest = NewestInputUtc(_artifactsEntry);
         var overrides = _settings?.Current.AutoOpenOverrides;
         var rows = artifacts
             .Select(a => new ArtifactRow(a.Path, a.Kind, a.SizeBytes, a.LastWriteUtc)
             {
-                IsStale = newest is { } n && a.LastWriteUtc < n,
+                IsStale = failed || (newest is { } n && a.LastWriteUtc < n),
                 AutoOpen = LookupAutoOpen(overrides, a.Path),   // #7: restore the persisted override
             })
             .OrderBy(a => a.Kind, StringComparer.Ordinal)
@@ -1248,18 +1420,25 @@ public partial class BuildViewModel : ViewModelBase
         HasLoxArtifact  = rows.Any(a => HasExt(a.Path, ".lox"));
         HasAvenArtifact = rows.Any(a => HasExt(a.Path, ".3d"));
         HasStaleArtifacts = rows.Any(a => a.IsStale);
+        StaleBannerText = failed
+            ? string.Format(ThIDE.Resources.Tr.Get("Gen_StaleAfterFailedBuild"), _artifactsName)
+            : ThIDE.Resources.Tr.Get("Gen_StaleBanner");
     }
 
-    /// <summary>Newest last-write time across the project's source files (stale check).</summary>
-    private DateTimeOffset? NewestInputUtc()
+    /// <summary>
+    /// Newest last-write time across the inputs of <paramref name="entry"/> (stale check). The loaded
+    /// graph is the active thconfig's, so it only counts when the listed outputs are that thconfig's.
+    /// </summary>
+    private DateTimeOffset? NewestInputUtc(string? entry)
     {
         var files = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        if (_session?.Model is { } model)
+        var active = _session?.ActiveThconfig?.FullPath;
+        if (entry is not null) files.Add(entry);
+        if (_session?.Model is { } model && entry is not null && active is not null && SamePath(entry, active))
         {
             foreach (var k in model.PerFile.Keys) files.Add(k);
             foreach (var (from, to, _) in model.FileGraphEdges) { files.Add(from); files.Add(to); }
         }
-        if (_session?.ActiveThconfig?.FullPath is { } cfg) files.Add(cfg);
 
         DateTimeOffset? newest = null;
         foreach (var f in files)
@@ -1285,17 +1464,6 @@ public partial class BuildViewModel : ViewModelBase
         if (!row.IsStale) return;
         Status = $"Opening a stale output ({Path.GetFileName(row.Path)}) — rebuild to refresh.";
         _log?.Warning($"Opening a stale output '{Path.GetFileName(row.Path)}': a project input changed since the last build. Rebuild to refresh.");
-    }
-
-    private void RestoreLastArtifacts()
-    {
-        var entry = _documents.CurrentPath;
-        if (entry is null) return;
-        var cached = _artifactCache.Load(entry, "unknown");
-        // Only repopulate when the newly-active file actually has cached build outputs.
-        // A bare document change (e.g. returning focus after opening an artifact externally)
-        // must not wipe the freshly-built artifact list to an empty grid (#4).
-        if (!cached.IsDefaultOrEmpty) UpdateArtifacts(cached);
     }
 
     /// <summary>

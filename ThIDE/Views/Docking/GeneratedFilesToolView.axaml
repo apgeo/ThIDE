@@ -8,10 +8,17 @@
              x:DataType="vm:GeneratedFilesToolViewModel">
     <Grid>
     <DockPanel>
-        <!-- stale-output banner (an input changed since the last build). -->
+        <!-- Which thconfig these outputs belong to, and when it was built. -->
+        <Border DockPanel.Dock="Top" Padding="8,4"
+                IsVisible="{Binding Build.ArtifactsHeader, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+            <TextBlock Text="{Binding Build.ArtifactsHeader}" FontWeight="SemiBold"
+                       AutomationProperties.AutomationId="GeneratedFiles.Header"
+                       TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Build.ArtifactsHeader}" />
+        </Border>
+        <!-- stale-output banner (a later build failed, or an input changed since the last build). -->
         <Border DockPanel.Dock="Top" Background="#33E65100" Padding="8,4"
                 IsVisible="{Binding Build.HasStaleArtifacts}">
-            <TextBlock Text="{l:Loc Gen_StaleBanner}"
+            <TextBlock Text="{Binding Build.StaleBannerText}"
                        Foreground="#E65100" FontSize="11" TextWrapping="Wrap" />
         </Border>
         <!-- Column visibility + fit controls (#4). -->
@@ -36,6 +43,7 @@
             </StackPanel>
         </Border>
 
+        <Panel>
         <DataGrid x:Name="Grid"
                   AutomationProperties.AutomationId="GeneratedFiles.Grid"
                   ItemsSource="{Binding Build.Artifacts}"
@@ -117,6 +125,16 @@
                 <DataGridTextColumn Header="{l:Loc Gen_Col_Modified}" Binding="{Binding ModifiedDisplay}" Width="Auto" SortMemberPath="LastWriteUtc" />
             </DataGrid.Columns>
         </DataGrid>
+        <!-- Empty state: this thconfig has not been built yet (with Compile), or its build wrote nothing. -->
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8" Margin="16"
+                    IsVisible="{Binding Build.HasArtifactsEmptyText}">
+            <TextBlock Text="{Binding Build.ArtifactsEmptyText}" Foreground="Gray" TextWrapping="Wrap"
+                       AutomationProperties.AutomationId="GeneratedFiles.EmptyState" HorizontalAlignment="Center" />
+            <Button AutomationProperties.AutomationId="GeneratedFiles.Compile" Content="{l:Loc Tb_Compile}"
+                    HorizontalAlignment="Center" Padding="12,3"
+                    IsVisible="{Binding Build.CanCompileFromEmptyState}" Command="{Binding Build.BuildCommand}" />
+        </StackPanel>
+        </Panel>
     </DockPanel>
         <!-- #3: brief highlight flash when surfaced from the build-status artifact link. -->
         <Border x:Name="FlashOverlay" IsHitTestVisible="False" Opacity="0" Background="#66FFC107" />

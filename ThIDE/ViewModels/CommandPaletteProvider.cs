@@ -93,6 +93,7 @@ public sealed class CommandPaletteProvider
 
         // ---- Build ----
         list.Add(VmCmd(L("Cmd_Cat_Build"), L("Cmd_BuildCurrent"), _vm.Build.BuildCommand, "Icon.Cube"));
+        list.Add(VmCmd(L("Cmd_Cat_Build"), L("Cmd_BuildThisThconfig"), _vm.Build.BuildThisThconfigCommand, "Icon.Cube"));
         list.Add(VmCmd(L("Cmd_Cat_Build"), L("Cmd_Rebuild"), _vm.Build.RebuildCommand, "Icon.Cube"));
         list.Add(VmCmd(L("Cmd_Cat_Build"), L("Cmd_CancelBuild"), _vm.Build.CancelCommand, "Icon.Cube"));
         list.Add(VmCmd(L("Cmd_Cat_Build"), L("Cmd_OpenLoch"), _vm.Build.OpenInLochCommand, "Icon.Cube"));
