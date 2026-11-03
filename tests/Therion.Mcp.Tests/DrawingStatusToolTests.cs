@@ -10,7 +10,7 @@ namespace Therion.Mcp.Tests;
 public class DrawingStatusToolTests
 {
     private static AggregatorTools Tools(WorkspaceHost host) =>
-        new(host, new Therion.Workspace.LeadStatusStore());
+        new(host, new Therion.Workspace.LeadStatusStore(SidecarDir.New()));
 
     private static async Task LoadAsync(WorkspaceHost host, FixtureWorkspace fixture) =>
         Assert.True((await new WorkspaceTools(host).LoadWorkspace(fixture.Thconfig)).Ok);

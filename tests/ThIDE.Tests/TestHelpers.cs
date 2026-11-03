@@ -47,3 +47,24 @@ internal sealed class FakeSettings : IAppSettingsService
     public event EventHandler? Changed;
     public void Save(AppSettings settings) { Current = settings; Changed?.Invoke(this, EventArgs.Empty); }
 }
+
+/// <summary>
+/// Stand-ins for what the app's design-time constructors would read from the user profile or probe
+/// on the machine, so tests that compose the shell never touch either.
+/// </summary>
+internal static class TestProfile
+{
+    /// <summary>A path in a fresh, not-yet-created temp folder; nothing appears there unless a test saves.</summary>
+    public static string NewPath(string fileName) =>
+        Path.Combine(Path.GetTempPath(), "ThIDETests_profile_" + Guid.NewGuid().ToString("N"), fileName);
+
+    public static ThIDE.ViewModels.Docking.SettingsToolViewModel SettingsTool() => new(
+        new ThIDE.ViewModels.SettingsViewModel(new NoTools()),
+        new ThIDE.ViewModels.KeyboardShortcutsViewModel(new JsonKeyboardShortcutService(NewPath("keyboard.json"))));
+
+    private sealed class NoTools : IExternalToolLocator
+    {
+        public System.Threading.Tasks.ValueTask<ToolInfo?> FindAsync(string toolId, System.Threading.CancellationToken cancellationToken = default) =>
+            new((ToolInfo?)null);
+    }
+}

@@ -44,7 +44,7 @@ internal static class MainWindowViewModelHost
         new StructuralStereonetToolViewModel(new StructuralGeologyViewModel()),
         new AssistantToolViewModel(),
         new BlenderAnimationToolViewModel(new BlenderAnimationViewModel()),
-        new SettingsToolViewModel(new SettingsViewModel(), new KeyboardShortcutsViewModel()),
+        TestProfile.SettingsTool(),
         tasks: tasks);
 
     private static DockFactory NewFactory() => new(
@@ -66,7 +66,8 @@ internal static class MainWindowViewModelHost
         new StructuralStereonetToolViewModel(new StructuralGeologyViewModel()),
         new AssistantToolViewModel(),
         new BlenderAnimationToolViewModel(new BlenderAnimationViewModel()),
-        new SettingsToolViewModel(new SettingsViewModel(), new KeyboardShortcutsViewModel()));
+        TestProfile.SettingsTool(),
+        layoutPath: TestProfile.NewPath("dock-layout.json"));
 
     private sealed class KeyLocalizer : IStringLocalizer<Strings>
     {

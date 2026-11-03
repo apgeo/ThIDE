@@ -20,7 +20,7 @@ public class LayoutCaptureAfterSkippedProfileTests
         public void Save(LayoutState state) { Current = state; LayoutChanged?.Invoke(this, EventArgs.Empty); }
     }
 
-    private static DockFactory NewFactory(ILayoutService layout) => new(
+    private static DockFactory NewFactory(ILayoutService layout, string? layoutPath = null) => new(
         new WelcomeToolViewModel(), new WorkspaceExplorerToolViewModel(), new ObjectBrowserToolViewModel(),
         new DiagnosticsToolViewModel(), new CompilerOutputToolViewModel(), new GeneratedFilesToolViewModel(),
         new XviToolViewModel(), new OutlineToolViewModel(), new ProjectToolViewModel(), new LogToolViewModel(),
@@ -28,7 +28,7 @@ public class LayoutCaptureAfterSkippedProfileTests
         new StructuralGeologyToolViewModel(), new StructuralPlotToolViewModel(),
         new StructuralStereonetToolViewModel(),
         new AssistantToolViewModel(), new BlenderAnimationToolViewModel(),
-        new SettingsToolViewModel(), layout);
+        new SettingsToolViewModel(), layout, layoutPath: layoutPath ?? TestProfile.NewPath("dock-layout.json"));
 
     [Fact]
     public void Autosave_after_a_skipped_profile_captures_the_live_default_layout()
@@ -54,5 +54,30 @@ public class LayoutCaptureAfterSkippedProfileTests
         Assert.True(!ReferenceEquals(saved, captured.Profile),
             "autosave kept the skipped saved profile instead of capturing the live layout");
         Assert.Single(captured.Profile!.LeftSections);
+    }
+
+    [Fact]
+    public void Applying_a_saved_profile_keeps_its_crash_sentinel_beside_the_given_layout_path()
+    {
+        // The sentinel guards the profile apply on every launch; a factory given its own layout path
+        // must keep it there, never in the user profile.
+        var layoutPath = TestProfile.NewPath("dock-layout.json");
+        var saved = new LayoutProfile
+        {
+            LeftSections = new[] { new DockSectionState { Tools = new[] { "Workspace" }, ActiveTool = "Workspace" } },
+        };
+        var factory = NewFactory(new FixedLayoutService(new LayoutState { Profile = saved }), layoutPath);
+        try
+        {
+            factory.CreateLayout();
+            Assert.True(System.IO.File.Exists(layoutPath + ".loading"),
+                "the profile apply did not write its crash sentinel beside the layout path it was given");
+            factory.ConfirmLayoutLoaded();
+            Assert.False(System.IO.File.Exists(layoutPath + ".loading"));
+        }
+        finally
+        {
+            try { System.IO.Directory.Delete(System.IO.Path.GetDirectoryName(layoutPath)!, recursive: true); } catch { }
+        }
     }
 }

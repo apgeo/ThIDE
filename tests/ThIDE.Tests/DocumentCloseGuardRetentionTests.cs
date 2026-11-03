@@ -31,7 +31,8 @@ public class DocumentCloseGuardRetentionTests
         new StructuralStereonetToolViewModel(new StructuralGeologyViewModel()),
         new AssistantToolViewModel(),
         new BlenderAnimationToolViewModel(new BlenderAnimationViewModel()),
-        new SettingsToolViewModel(new SettingsViewModel(), new KeyboardShortcutsViewModel()));
+        TestProfile.SettingsTool(),
+        layoutPath: TestProfile.NewPath("dock-layout.json"));
 
     private static IReadOnlyCollection<FileDocumentViewModel> ConfirmedSet(DockFactory factory)
     {

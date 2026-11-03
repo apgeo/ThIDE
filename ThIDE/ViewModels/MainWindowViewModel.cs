@@ -866,7 +866,8 @@ public partial class MainWindowViewModel : ViewModelBase
         new StructuralStereonetToolViewModel(new StructuralGeologyViewModel()),
         new AssistantToolViewModel(),
         new BlenderAnimationToolViewModel(new BlenderAnimationViewModel()),
-        new SettingsToolViewModel(new SettingsViewModel(), new KeyboardShortcutsViewModel()));
+        new SettingsToolViewModel(new SettingsViewModel(), new KeyboardShortcutsViewModel()),
+        layoutPath: System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ThIDE-design", "dock-layout.json"));
 
     /// <summary>Wires the storage picker once the View is attached to a TopLevel.</summary>
     public void AttachStoragePicker(IStoragePicker picker) => _picker = picker;
