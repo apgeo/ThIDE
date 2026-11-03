@@ -2040,17 +2040,7 @@ public partial class MainWindow : Window
     /// <summary>writes the currently-dirty editor buffers to the crash-recovery folder.</summary>
     private void PersistRecoveryBuffers()
     {
-        if (_crashRecovery is null) return;
-        try
-        {
-            var docs = AppServices.Provider.GetService<IDocumentService>();
-            if (docs is null) return;
-            var dirty = new List<(string, string)>();
-            foreach (var d in docs.Documents)
-                if (d.IsDirty && !string.IsNullOrEmpty(d.FilePath))
-                    dirty.Add((d.FilePath, d.DocumentText));
-            _crashRecovery.SaveBuffers(dirty);
-        }
+        try { (DataContext as MainWindowViewModel)?.SaveRecoveryBuffers(); }
         catch { /* best-effort */ }
     }
 
