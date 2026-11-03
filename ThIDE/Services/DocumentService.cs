@@ -749,10 +749,11 @@ public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, 
             return false;
         }
         // Mark the path so the watcher doesn't treat our own save as an external edit (#6).
-        var target = LinkTargetOf(doc.FilePath);
+        // A symlinked source is saved into the file it points to, so that is the path the watcher sees change.
+        var target = SourceFileIo.LinkTargetOf(doc.FilePath);
         _session.SuppressSelfWrite(doc.FilePath);
         if (!string.Equals(target, doc.FilePath, StringComparison.Ordinal)) _session.SuppressSelfWrite(target);
-        try { await Task.Run(() => WriteSource(target, bytes), ct).ConfigureAwait(true); }
+        try { await Task.Run(() => SourceFileIo.WriteOver(target, bytes), ct).ConfigureAwait(true); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             _notifications?.Error(ThIDE.Resources.Tr.Get("Notif_SaveFailedTitle"),
@@ -761,40 +762,6 @@ public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, 
         }
         doc.Format = format;
         return true;
-    }
-
-    // A symlinked source is saved into the file it points to, so the link and the file it shares survive.
-    private static string LinkTargetOf(string path)
-    {
-        try
-        {
-            var info = new FileInfo(path);
-            return info.LinkTarget is null ? path : info.ResolveLinkTarget(returnFinalTarget: true)?.FullName ?? path;
-        }
-        catch (IOException) { return path; }
-    }
-
-    /// <summary>
-    /// Replaces the file through a temporary sibling and a move, so a full disk, a dropped volume or a
-    /// kill mid-write leaves the old contents whole instead of truncated. The file keeps its permissions,
-    /// a read-only file still refuses the save, and a folder that does not allow the temporary file gets
-    /// the in-place write instead.
-    /// </summary>
-    private static void WriteSource(string path, byte[] bytes)
-    {
-        if (!File.Exists(path)) { SourceFileIo.WriteOver(path, bytes); return; }
-
-        // The move would replace a read-only file regardless of its mode: check the file is writable first.
-        using (new FileStream(path, FileMode.Open, FileAccess.Write, FileShare.ReadWrite)) { }
-        UnixFileMode? mode = null;
-        if (!OperatingSystem.IsWindows()) mode = File.GetUnixFileMode(path);
-        try { SourceFileIo.WriteOver(path, bytes); }
-        catch (UnauthorizedAccessException)
-        {
-            File.WriteAllBytes(path, bytes);   // the folder refused the temporary file; the file itself is writable
-            return;
-        }
-        if (!OperatingSystem.IsWindows() && mode is { } m) File.SetUnixFileMode(path, m);
     }
 
     private FileDocumentViewModel CreateDocument(string path, string text)

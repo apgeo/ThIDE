@@ -171,6 +171,7 @@ public sealed class MutationEngine(IWorkspaceHost host)
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or UnrepresentableCharacterException)
             {
+                try { change.RemoveMadeFolders(); } catch (Exception cleanup) when (cleanup is IOException or UnauthorizedAccessException) { /* empty folders; the failure matters more */ }
                 var unrolled = RollBack(committed, root);
                 var code = ex switch
                 {
@@ -341,7 +342,9 @@ public sealed class MutationEngine(IWorkspaceHost host)
     {
         private byte[]? _originalBytes;
         private string? _newDigest;
-        private bool _createdDirectory;
+
+        /// <summary>The folders this change brought into being, innermost first; only these are removed on rollback.</summary>
+        private readonly List<string> _madeFolders = [];
 
         /// <summary>Whether the target already existed when the plan was prepared, for an honest action label.</summary>
         private bool _replaced;
@@ -360,18 +363,16 @@ public sealed class MutationEngine(IWorkspaceHost host)
             switch (Change)
             {
                 case CreateDirectory:
-                    // Only a directory we brought into being may be removed on rollback.
-                    _createdDirectory = !Directory.Exists(Change.AbsolutePath);
-                    Directory.CreateDirectory(Change.AbsolutePath);
+                    MakeFolder(Change.AbsolutePath);
                     return;
 
                 case CopyFile copy:
-                    var parent = Path.GetDirectoryName(copy.AbsolutePath);
-                    if (!string.IsNullOrEmpty(parent)) Directory.CreateDirectory(parent);
+                    MakeFolder(Path.GetDirectoryName(copy.AbsolutePath));
                     File.Copy(copy.SourceAbsolutePath, copy.AbsolutePath, overwrite: false);
                     break;
 
                 case CreateFile:
+                    MakeFolder(Path.GetDirectoryName(Change.AbsolutePath));
                     SourceFileIo.Create(Change.AbsolutePath, NewText);
                     break;
 
@@ -383,6 +384,7 @@ public sealed class MutationEngine(IWorkspaceHost host)
                     }
                     else
                     {
+                        MakeFolder(Path.GetDirectoryName(Change.AbsolutePath));
                         SourceFileIo.Create(Change.AbsolutePath, NewText);
                     }
                     break;
@@ -406,14 +408,31 @@ public sealed class MutationEngine(IWorkspaceHost host)
         /// <summary>Restores what <see cref="Write"/> replaced: the original bytes, or nothing at all.</summary>
         public void Undo()
         {
-            if (Change is CreateDirectory)
+            if (Change is not CreateDirectory)
             {
-                if (_createdDirectory) Directory.Delete(Change.AbsolutePath, recursive: false);
-                return;
+                if (_originalBytes is { } original) SourceFileIo.WriteOver(Change.AbsolutePath, original);
+                else File.Delete(Change.AbsolutePath);
             }
+            RemoveMadeFolders();
+        }
 
-            if (_originalBytes is { } original) SourceFileIo.WriteOver(Change.AbsolutePath, original);
-            else File.Delete(Change.AbsolutePath);
+        /// <summary>
+        /// Removes the folders this change made, innermost first, as long as they are empty: after a
+        /// rollback, or after the change itself failed part-way (it is then not in the committed list).
+        /// </summary>
+        public void RemoveMadeFolders()
+        {
+            foreach (var folder in _madeFolders)
+                if (Directory.Exists(folder) && !Directory.EnumerateFileSystemEntries(folder).Any())
+                    Directory.Delete(folder, recursive: false);
+        }
+
+        // Creates the folder and any missing parents, remembering which of them were not there before.
+        private void MakeFolder(string? folder)
+        {
+            for (var dir = folder; !string.IsNullOrEmpty(dir) && !Directory.Exists(dir); dir = Path.GetDirectoryName(dir))
+                _madeFolders.Add(dir);
+            if (!string.IsNullOrEmpty(folder)) Directory.CreateDirectory(folder);
         }
 
         public FileChangeDto Describe(string root) => Describe(root, Source?.Sha256);
