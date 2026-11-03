@@ -3,12 +3,13 @@
              xmlns:ae="https://github.com/avaloniaui/avaloniaedit"
              x:Class="ThIDE.Editor.TherionTextEditor">
     <Grid x:Name="Root" ColumnDefinitions="*,Auto,Auto" RowDefinitions="Auto,*">
-        <!-- breadcrumb bar (enclosing survey/centreline/scrap path); shown from code-behind. -->
+        <!-- breadcrumb bar (file, then the enclosing survey/centreline/scrap path); shown from code-behind
+             as soon as a document is, at a fixed height, so the text never moves under a click. -->
         <Border x:Name="BreadcrumbBar" Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
                 IsVisible="False" Padding="6,1"
                 Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}"
                 BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="0,0,0,1">
-            <StackPanel x:Name="Breadcrumb" Orientation="Horizontal" Spacing="1" />
+            <StackPanel x:Name="Breadcrumb" Orientation="Horizontal" Spacing="1" Height="18" />
         </Border>
         <ae:TextEditor x:Name="Editor"
                        Grid.Row="1" Grid.Column="0"

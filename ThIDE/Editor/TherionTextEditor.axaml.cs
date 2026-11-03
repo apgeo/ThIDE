@@ -248,16 +248,41 @@ public partial class TherionTextEditor : UserControl
             // Track the most-recently focused editor so the shell Edit/Search menus can act on
             // the active document's editor (#11/#12).
             _editor.TextArea.GotFocus += (_, _) => LastFocused = this;
+            // The hover card must not outlive the editor's focus: a dialog, the palette, a flyout or
+            // another window taking it left the card on top of them.
+            _editor.TextArea.LostFocus += OnTextAreaLostFocusForHover;
         }
 
         // Register this editor instance so the shell can target it by file even when unfocused (#9).
-        AttachedToVisualTree += (_, _) => { if (!Instances.Contains(this)) Instances.Add(this); };
+        AttachedToVisualTree += (_, _) =>
+        {
+            if (!Instances.Contains(this)) Instances.Add(this);
+            _hoverWindow = TopLevel.GetTopLevel(this) as Window;
+            if (_hoverWindow is not null) _hoverWindow.Deactivated += OnWindowDeactivatedForHover;
+        };
         DetachedFromVisualTree += (_, _) =>
         {
             Instances.Remove(this);
             if (ReferenceEquals(LastFocused, this)) LastFocused = null;
+            if (_hoverWindow is not null) _hoverWindow.Deactivated -= OnWindowDeactivatedForHover;
+            _hoverWindow = null;
         };
     }
+
+    // The window hosting this editor, watched so the hover card closes when it loses activation.
+    private Window? _hoverWindow;
+
+    private void OnWindowDeactivatedForHover(object? sender, EventArgs e) => HideHoverInfo();
+
+    // Focus can move into the card itself (its buttons) — keep it then; close it for anywhere else.
+    // Posted so the focus change has settled before the check.
+    private void OnTextAreaLostFocusForHover(object? sender, Avalonia.Interactivity.RoutedEventArgs e) =>
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            if (_pointerOverPopup || _editor is null || _editor.TextArea.IsKeyboardFocusWithin) return;
+            if (_infoPopup?.Child is { IsKeyboardFocusWithin: true }) return;
+            HideHoverInfo();
+        });
 
     /// <summary>The editor that last held focus — the target of the shell Edit/Search menus (#11/#12).</summary>
     public static TherionTextEditor? LastFocused { get; private set; }
@@ -789,6 +814,7 @@ public partial class TherionTextEditor : UserControl
                 UpdateBlockPairs();
                 UpdateThconfigDecorations();
                 RecomputeFileWarnings();
+                UpdateBreadcrumb();
                 _overviewRuler?.InvalidateVisual();
             }
             _textOwner = DataContext;
@@ -807,6 +833,7 @@ public partial class TherionTextEditor : UserControl
             _bookmarkMargin?.SetContext(_bookmarks, path);
             UpdateThconfigDecorations();
             RecomputeFileWarnings();
+            UpdateBreadcrumb();
         }
         else if (change.Property == HighlightingEnabledProperty)
         {
@@ -899,12 +926,18 @@ public partial class TherionTextEditor : UserControl
     // preempt AvaloniaEdit's default newline / indent.
     private void OnTextAreaPreviewKeyDown(object? sender, KeyEventArgs e)
     {
+        // Any key closes the hover card (typing, Esc, a shortcut that opens a dialog or the palette);
+        // a bare modifier does not, so Ctrl alone keeps it while the user starts a chord.
+        if (!IsModifierKey(e.Key)) HideHoverInfo();
         bool plain = (e.KeyModifiers & (KeyModifiers.Control | KeyModifiers.Shift | KeyModifiers.Alt)) == 0;
         if (plain && (e.Key == Key.Enter || e.Key == Key.Return) && TrySmartEnter())
             e.Handled = true;
         else if (plain && e.Key == Key.Tab && _completionWindow is null && TryExpandSnippet())
             e.Handled = true;
     }
+
+    private static bool IsModifierKey(Key key) => key is Key.LeftCtrl or Key.RightCtrl or Key.LeftShift
+        or Key.RightShift or Key.LeftAlt or Key.RightAlt or Key.LWin or Key.RWin;
 
     /// <summary>
     /// if the word immediately before the caret is a snippet trigger, replace it with the
@@ -1358,9 +1391,12 @@ public partial class TherionTextEditor : UserControl
             return;
         }
 
+        // The path always starts with the file crumb, so the bar is shown (and keeps its height) from
+        // the moment the document is: appearing on the first caret move shifted the text by a line
+        // under a click and turned it into a two-line selection.
         var doc = _editor.Document;
-        var path = EnclosingBlocks(doc, doc.GetLineByOffset(_editor.CaretOffset).LineNumber);
-        if (path.Count == 0) { bar.IsVisible = false; panel.Children.Clear(); return; }
+        var fileLabel = string.IsNullOrEmpty(CurrentFilePath) ? "\u200B" : System.IO.Path.GetFileName(CurrentFilePath);
+        var path = TherionBlocks.BreadcrumbPath(doc, doc.GetLineByOffset(_editor.CaretOffset).LineNumber, fileLabel);
 
         panel.Children.Clear();
         for (int i = 0; i < path.Count; i++)
@@ -1384,30 +1420,6 @@ public partial class TherionTextEditor : UserControl
             panel.Children.Add(btn);
         }
         bar.IsVisible = true;
-    }
-
-    private static List<(string Label, int Line)> EnclosingBlocks(TextDocument doc, int caretLine)
-    {
-        var stack = new List<(string Label, int Line, string Type)>();
-        int max = Math.Min(caretLine, doc.LineCount);
-        for (int i = 1; i <= max; i++)
-        {
-            var text = doc.GetText(doc.GetLineByNumber(i));
-            var fw = TherionBlocks.FirstWord(text);
-            if (fw.Length == 0) continue;
-            if (TherionBlocks.IsBlockOpenerLine(text, out var type))
-                stack.Add((BlockLabel(type, text), i, type));
-            else if (TherionBlocks.CloserType(fw) is { } ctype)
-                for (int k = stack.Count - 1; k >= 0; k--)
-                    if (stack[k].Type == ctype) { stack.RemoveRange(k, stack.Count - k); break; }
-        }
-        return stack.ConvertAll(s => (s.Label, s.Line));
-    }
-
-    private static string BlockLabel(string type, string lineText)
-    {
-        var parts = lineText.Trim().Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
-        return parts.Length >= 2 && !parts[1].StartsWith('-') ? $"{type} {parts[1]}" : type;
     }
 
     // ----- : peek definition (inline popup) -------------------------
@@ -1756,6 +1768,13 @@ public partial class TherionTextEditor : UserControl
     {
         _infoShowTimer?.Stop();
         if (_editor is null || FloorOffset(_infoPointer) is not { } off) return;
+        // The show is delayed: by now the pointer may have left the editor, or a dialog may have
+        // taken over. Opening then left a card nobody pointed at on top of whatever came next.
+        if (!_pointerOverPopup && (!_editor.TextArea.TextView.IsPointerOver || _hoverWindow is { IsActive: false }))
+        {
+            CancelHoverInfo();
+            return;
+        }
 
         Control? content =
             HoverCommandWord(off) is { } cmd ? BuildCommandInfo(cmd) :
@@ -2339,6 +2358,11 @@ public partial class TherionTextEditor : UserControl
     {
         if (_editor is null) return;
         ClearHover();
+        // Leaving the editor cancels a pending card and starts the grace-hide of an open one (the
+        // pointer may be on its way to the card, which cancels the hide when it gets there).
+        _infoShowTimer?.Stop();
+        if (_infoPopup is { IsOpen: true } && !_pointerOverPopup) StartHoverHide();
+        else if (!_pointerOverPopup) _infoTokenStart = -1;
         if (_hyperlinkColorizer?.Clear() == true)
         {
             _editor.TextArea.TextView.Cursor = null;
@@ -2387,6 +2411,7 @@ public partial class TherionTextEditor : UserControl
     private void OnEditorContextRequested(object? sender, ContextRequestedEventArgs e)
     {
         if (_editor is null) return;
+        HideHoverInfo();   // the card would otherwise sit over the menu
         RefreshSnippetMenu();
         // refresh the gated items' visibility for the current settings.
         var fs = CurrentSettings;

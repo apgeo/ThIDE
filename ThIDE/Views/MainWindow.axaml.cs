@@ -1168,7 +1168,9 @@ public partial class MainWindow : Window
     private void OnGoToSymbolDocument(object? sender, Avalonia.Interactivity.RoutedEventArgs e) =>
         (DataContext as MainWindowViewModel)?.ShowGoToSymbol(workspace: false);
 
-    private void ShowSearch()
+    /// <param name="seedFromSelection">False when the caller has set the query itself (Find all
+    /// references): the editor selection must not overwrite it.</param>
+    private void ShowSearch(bool seedFromSelection = true)
     {
         if (_searchWindow is { } w && w.IsVisible) { w.Activate(); return; }
 
@@ -1182,7 +1184,7 @@ public partial class MainWindow : Window
         _searchWindow.Show(this);
 
         // Prefill from the editor selection and auto-search (#10).
-        vm.SeedAndSearch(ActiveEditor?.EditorSelectedText);
+        vm.SeedAndSearch(seedFromSelection ? ActiveEditor?.EditorSelectedText : null);
     }
 
     // ----- replace in files window (#9) ----------------------------------
@@ -1819,7 +1821,7 @@ public partial class MainWindow : Window
         vm.MatchCase = true;
         vm.UseRegex = false;
         vm.Scope = ViewModels.SearchViewModel.ScopeProject;
-        ShowSearch();
+        ShowSearch(seedFromSelection: false);
         vm.SearchCommand.Execute(null);
     }
 

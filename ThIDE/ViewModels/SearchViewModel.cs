@@ -59,11 +59,13 @@ public sealed partial class SearchViewModel : ViewModelBase
             foreach (var q in _settings.Current.RecentSearches) RecentQueries.Add(q);
     }
 
-    /// <summary>Prefills the query from the editor selection and runs the search immediately (#10).</summary>
+    /// <summary>Prefills the query from the editor selection and runs the search immediately (#10).
+    /// A selection spanning lines is not a query (a search never matches across lines): the previous
+    /// query is kept instead.</summary>
     public void SeedAndSearch(string? selectedText)
     {
         PrepareDefaults();
-        if (string.IsNullOrWhiteSpace(selectedText)) return;
+        if (string.IsNullOrWhiteSpace(selectedText) || selectedText.AsSpan().IndexOfAny('\r', '\n') >= 0) return;
         Query = selectedText;
         if (SearchCommand.CanExecute(null)) SearchCommand.Execute(null);
     }
