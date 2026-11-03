@@ -1538,6 +1538,8 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Fix_InsertEnd" xml:space="preserve"><value>Inserează „{0}”</value></data>
   <data name="Fix_InsertCs" xml:space="preserve"><value>Inserează o linie „cs ”</value></data>
   <data name="Fix_CommentOut" xml:space="preserve"><value>Transformă linia în comentariu</value></data>
+  <data name="Fix_CommentOutDisconnects" xml:space="preserve"><value>Transformă linia în comentariu (deconectează {0})</value></data>
+  <data name="Fix_Equate" xml:space="preserve"><value>Înlocuiește cu „equate {0} {1}”</value></data>
   <data name="Fix_PathSeparators" xml:space="preserve"><value>Scrie „{0}” cu separatori „/”</value></data>
   <data name="File_PathSeparatorBanner" xml:space="preserve"><value>{0} căi de includere din acest fișier folosesc separatori Windows „\”. Therion nu le poate deschide pe acest sistem, dar scrise cu „/” indică fișiere existente.</value></data>
   <data name="File_PathSeparatorFixFile" xml:space="preserve"><value>Corectează în acest fișier</value></data>
@@ -1640,6 +1642,9 @@ Aplici modificările? Pașii care nu au putut fi previzualizați rulează acum.<
   <data name="PasteShots_Insert" xml:space="preserve"><value>Inserează</value></data>
   <data name="PasteShots_Summary" xml:space="preserve"><value>{0} segment(e), {1} vize radiale</value></data>
   <data name="PasteShots_BadColumns" xml:space="preserve"><value>Coloane: folosiți cuvinte cheie data precum „from to length compass clino” (length, compass și clino sunt necesare; „-” sare o coloană).</value></data>
+  <data name="PasteShots_Target" xml:space="preserve"><value>Se inserează în: {0}, centreline de la linia {1}</value></data>
+  <data name="PasteShots_TargetNew" xml:space="preserve"><value>Se inserează în: {0}, un centreline nou la sfârșitul topografiei {1} (linia {2})</value></data>
+  <data name="PasteShots_NoSurvey" xml:space="preserve"><value>Aici nu există nicio topografie în care să intre vizele. Puneți cursorul într-o topografie sau creați întâi una.</value></data>
   <data name="ShotIssue_Line" xml:space="preserve"><value>Linia {0}: {1}</value></data>
   <data name="ShotIssue_NoShots" xml:space="preserve"><value>Nu s-a găsit nicio viză în text.</value></data>
   <data name="ShotIssue_NotANumber" xml:space="preserve"><value>„{0}” nu este un număr; rândul este omis.</value></data>
@@ -1676,6 +1681,7 @@ Aplici modificările? Pașii care nu au putut fi previzualizați rulează acum.<
   <data name="Renumber_Stale" xml:space="preserve"><value>{0} s-a schimbat de la citirea proiectului — salvați sau reîncărcați, apoi încercați din nou.</value></data>
   <data name="Renumber_NoSurvey" xml:space="preserve"><value>Nu există topografia „{0}” în proiect.</value></data>
   <data name="ShotIssue_BadStation" xml:space="preserve"><value>„{0}” nu este nume de stație; rândul este omis.</value></data>
+  <data name="ShotIssue_ReadAsSplay" xml:space="preserve"><value>o valoare lipsă: citit ca viză radială din „{0}”.</value></data>
   <data name="ShotEdit_OtherFile" xml:space="preserve"><value>Această viză este în {0}: deschideți acel fișier pentru a o edita.</value></data>
   <data name="Explorer_TrashFailed" xml:space="preserve"><value>„{0}” nu a putut fi mutat în coșul de gunoi.
 

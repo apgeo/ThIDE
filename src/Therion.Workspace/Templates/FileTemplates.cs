@@ -70,7 +70,7 @@ public static class FileTemplateCatalog
     [
         new("th-trip", "Survey trip", "A survey with one centreline: date, team, units and data line from the last trip in the open file.",
             ".th", "trip",
-            "encoding utf-8\nsurvey ${SURVEY_NAME} -title \"${SURVEY_NAME}\"\n  centreline\n    date $DATE\n    ${TEAM_RECENT:team \"\"}\n" +
+            "encoding utf-8\nsurvey ${SURVEY_NAME} -title \"${SURVEY_NAME}\"\n  centreline\n    date $DATE\n    ${TEAM_RECENT:# team \"name\"}\n" +
             "    ${LAST_UNITS:units length meters}\n    ${LAST_DATA:data normal from to length compass clino}\n    $0\n  endcentreline\nendsurvey\n",
             TitleKey: "FileTpl_Trip", DescriptionKey: "FileTpl_TripDesc"),
         new("th-connection", "Connection survey", "A wrapper survey that inputs other surveys and equates them.",

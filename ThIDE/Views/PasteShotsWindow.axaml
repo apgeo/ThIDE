@@ -43,6 +43,8 @@
                     AutomationProperties.AutomationId="PasteShots.Insert" />
         </StackPanel>
         <ListBox DockPanel.Dock="Bottom" ItemsSource="{Binding Issues}" MaxHeight="110" Margin="0,8,0,0" AutomationProperties.AutomationId="PasteShots.Issues" />
+        <TextBlock DockPanel.Dock="Bottom" Text="{Binding Target}" IsVisible="{Binding Target, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                   TextWrapping="Wrap" Margin="0,8,0,0" AutomationProperties.AutomationId="PasteShots.Target" />
         <Grid ColumnDefinitions="*,8,*">
             <TextBox Text="{Binding Source, Mode=TwoWay}" AcceptsReturn="True" AcceptsTab="True" FontFamily="monospace" TextWrapping="NoWrap"
                      AutomationProperties.AutomationId="PasteShots.Source" />

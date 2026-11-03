@@ -26,6 +26,24 @@ public class AutomationDialogsViewModelTests
     }
 
     [Fact]
+    public void Paste_shots_reports_a_short_leg_row_and_shows_where_it_inserts()
+    {
+        var m = new PasteShotsViewModel("from to length compass clino\n1 2 4.50 120 -10\n2 3 3.20 -5\n3 4 5.00 90 2\n", null, wrap: false,
+            target: "Insert into: trip.th, centreline at line 3");
+        Assert.Equal("Insert into: trip.th, centreline at line 3", m.Target);
+        Assert.DoesNotContain("2 -", m.Output);
+        Assert.Equal([PasteShotsViewModel.Describe(new Therion.Workspace.Import.ShotIssue(3, Therion.Workspace.Import.ShotIssueKind.TooFewValues))], m.Issues);
+        Assert.Contains("3", m.Issues.Single());
+    }
+
+    [Fact]
+    public void Every_shot_issue_has_a_message()
+    {
+        foreach (var kind in Enum.GetValues<Therion.Workspace.Import.ShotIssueKind>())
+            Assert.NotEqual("ShotIssue_" + kind, ThIDE.Resources.Tr.Get("ShotIssue_" + kind));
+    }
+
+    [Fact]
     public void Paste_shots_with_nothing_usable_cannot_insert()
     {
         var m = new PasteShotsViewModel("just words", null, wrap: true);
