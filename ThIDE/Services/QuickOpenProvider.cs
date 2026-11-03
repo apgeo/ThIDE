@@ -78,12 +78,9 @@ public sealed class QuickOpenProvider
 
     private static IEnumerable<string> EnumerateTherionFiles(string root)
     {
-        var opts = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true };
-        IEnumerable<string> files;
-        try { files = Directory.EnumerateFiles(root, "*", opts); }
-        catch { yield break; }
+        // Not into symlinked folders: `all -> /` in a project would otherwise walk the whole disk.
         int n = 0;
-        foreach (var f in files)
+        foreach (var f in ProjectFileWalk.EnumerateFiles(root, "*"))
         {
             if (Array.IndexOf(TherionExtensions, Path.GetExtension(f).ToLowerInvariant()) < 0) continue;
             yield return f;
