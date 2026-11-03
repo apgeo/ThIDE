@@ -32,9 +32,12 @@ public static class WorkspaceEquates
             foreach (var record in model.EquateRecords)
             {
                 QualifiedName? first = null;
-                foreach (var raw in record.Stations)
+                for (int i = 0; i < record.Stations.Length; i++)
                 {
-                    if (ResolveMember(workspace, model, raw) is not { } qn) continue;
+                    // The binder's resolution in the equate's own survey scope wins: re-resolving the
+                    // raw `0` here could only guess, and fails once sibling surveys reuse the name.
+                    var bound = i < record.ResolvedMembers.Length ? record.ResolvedMembers[i] : null;
+                    if ((bound ?? ResolveMember(workspace, model, record.Stations[i])) is not { } qn) continue;
                     if (first is null) first = qn;
                     else equates.Union(first.Value, qn);
                 }
@@ -92,11 +95,12 @@ public static class WorkspaceEquates
         if (workspace.ResolveStationSymbol(raw) is { } sym) return sym.Name;
 
         var r = StationRef.Parse(raw);
-        if (!r.HasSurvey)
-        {
-            var direct = QualifiedName.Of(r.Point);
-            if (model.Stations.ContainsKey(direct)) return direct;
-        }
+        // A `point@survey` names its survey: when the workspace does not know that survey, a guess by
+        // point name would weld the member to an unrelated station (a typo such as `1@entrnce`).
+        if (r.HasSurvey) return null;
+
+        var direct = QualifiedName.Of(r.Point);
+        if (model.Stations.ContainsKey(direct)) return direct;
 
         // A unique last-name match inside this one file (station names are effectively unique per
         // survey; requiring uniqueness avoids guessing across surveys that reuse a name).

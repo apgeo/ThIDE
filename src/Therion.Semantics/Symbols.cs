@@ -78,7 +78,15 @@ public sealed record SurveySymbol(
 /// <summary>An <c>equate</c> relationship: the stations declared equivalent and its source span.</summary>
 public sealed record EquateRecord(
     ImmutableArray<string> Stations,
-    SourceSpan Span);
+    SourceSpan Span)
+{
+    /// <summary>
+    /// Per member (parallel to <see cref="Stations"/>): the station the binder resolved it to in the
+    /// equate's own survey scope, or null when only the workspace can resolve it (a cross-file member,
+    /// or any <c>point@survey</c> member). Empty for a record built without a binder.
+    /// </summary>
+    public ImmutableArray<QualifiedName?> ResolvedMembers { get; init; } = ImmutableArray<QualifiedName?>.Empty;
+}
 
 /// <summary>
 /// A single <c>equate</c> station reference that the per-file binder could not resolve from this
