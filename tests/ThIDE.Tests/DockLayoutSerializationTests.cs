@@ -6,15 +6,16 @@ using Dock.Serializer.SystemTextJson;
 
 namespace ThIDE.Tests;
 
-// Guards the dock-layout persistence fix: the stock DockSerializer must round-trip an
-// IRootDock tree of plain Dock base types (Id + structure). A custom type-info resolver
-// previously dropped the polymorphic discriminators, making Deserialize throw
-// "Deserialization of interface or abstract types is not supported" and silently reset
-// the layout on every launch. DockFactory now serializes exactly this kind of skeleton.
+// Pins a property of the third-party Dock serializer, not of ThIDE: the stock DockSerializer
+// round-trips an IRootDock tree of plain Dock base types (Id + structure). A custom type-info
+// resolver once dropped the polymorphic discriminators, which made Deserialize throw
+// "Deserialization of interface or abstract types is not supported". No ThIDE code runs here:
+// DockFactory's own dock-tree persistence (its skeleton/swap path) is switched off, and the
+// layout is rebuilt from the saved profile instead, which other tests cover.
 public class DockLayoutSerializationTests
 {
     [Fact]
-    public void Base_type_root_dock_round_trips_through_default_serializer()
+    public void Dock_serializer_round_trips_a_base_type_root_dock()
     {
         var serializer = new DockSerializer();
         var root = BuildSkeleton();
