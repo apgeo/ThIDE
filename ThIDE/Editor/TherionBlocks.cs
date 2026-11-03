@@ -105,4 +105,37 @@ internal static class TherionBlocks
         }
         return pairs;
     }
+
+    /// <summary>The editor breadcrumb for a caret line: <paramref name="fileLabel"/> (pointing at line 1)
+    /// followed by each block opener enclosing the line, outermost first. Never empty.</summary>
+    public static List<(string Label, int Line)> BreadcrumbPath(TextDocument doc, int caretLine, string fileLabel)
+    {
+        var path = EnclosingBlocks(doc, caretLine);
+        path.Insert(0, (fileLabel, 1));
+        return path;
+    }
+
+    private static List<(string Label, int Line)> EnclosingBlocks(TextDocument doc, int caretLine)
+    {
+        var stack = new List<(string Label, int Line, string Type)>();
+        int max = Math.Min(caretLine, doc.LineCount);
+        for (int i = 1; i <= max; i++)
+        {
+            var text = doc.GetText(doc.GetLineByNumber(i));
+            var fw = FirstWord(text);
+            if (fw.Length == 0) continue;
+            if (IsBlockOpenerLine(text, out var type))
+                stack.Add((BlockLabel(type, text), i, type));
+            else if (CloserType(fw) is { } ctype)
+                for (int k = stack.Count - 1; k >= 0; k--)
+                    if (stack[k].Type == ctype) { stack.RemoveRange(k, stack.Count - k); break; }
+        }
+        return stack.ConvertAll(s => (s.Label, s.Line));
+    }
+
+    private static string BlockLabel(string type, string lineText)
+    {
+        var parts = lineText.Trim().Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length >= 2 && !parts[1].StartsWith('-') ? $"{type} {parts[1]}" : type;
+    }
 }

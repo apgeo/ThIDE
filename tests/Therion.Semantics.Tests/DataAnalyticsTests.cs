@@ -87,6 +87,30 @@ public class DataAnalyticsTests
     }
 
     [Fact]
+    public void DataQuality_leg_metrics_leave_splays_out()
+    {
+        // 2 legs + 3 splays, none with LRUD; one splay is steep. Only the legs count as legs.
+        var q = DataAnalytics.DataQuality(Build(("s.th", """
+            survey sp
+              centreline
+                data normal from to length compass clino
+                0 1 5 10 0
+                1 2 4 20 -5
+                1 - 2 90 85
+                1 - 2 180 0
+                2 . 3 270 0
+              endcentreline
+            endsurvey
+            """)));
+        Assert.Equal(5, q.TotalShots);
+        Assert.Equal(2, q.TotalLegs);
+        Assert.Equal(3, q.SplayShots);
+        Assert.Equal(2, q.NoLrud);
+        Assert.Equal(2, q.NoBacksight);
+        Assert.Equal(0, q.SteepLegs);
+    }
+
+    [Fact]
     public void DataQuality_flags_undated_and_teamless()
     {
         var q = DataAnalytics.DataQuality(Build(("b.th", """
