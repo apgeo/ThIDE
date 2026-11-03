@@ -33,10 +33,9 @@ public class EncodingBomTests
     [Fact]
     public void Declared_iso_8859_2_encoding_decodes_non_ascii_titles()
     {
-        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-        var latin2 = Encoding.GetEncoding("iso-8859-2");
-        // "Občina" contains a c-with-caron (0xE8 in ISO-8859-2).
-        var bytes = latin2.GetBytes("encoding iso-8859-2\nsurvey s -title \"Občina\"\nendsurvey\n");
+        // "Občina" contains a c-with-caron (0xE8 in ISO-8859-2), spelled as a byte so that only the
+        // resolver makes the code page available.
+        byte[] bytes = [.. "encoding iso-8859-2\nsurvey s -title \"Ob"u8, 0xE8, .. "ina\"\nendsurvey\n"u8];
         var text = EncodingResolver.Decode(bytes);
         Assert.Contains("Občina", text);
     }

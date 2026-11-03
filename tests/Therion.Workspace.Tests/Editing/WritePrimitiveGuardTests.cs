@@ -97,4 +97,16 @@ public class WritePrimitiveGuardTests : IDisposable
         Assert.True(read.Text == content,
             $"a created file declaring iso8859-2 reads back as '{read.Text.Split('\n')[1]}' instead of the title it was given");
     }
+
+    [Fact]
+    public void Create_refuses_content_its_encoding_cannot_hold_and_makes_nothing()
+    {
+        var path = Path.Combine(_root, "new", "trip.th");
+        var content = "encoding iso8859-1\nsurvey a -title \"Peștera\"\nendsurvey\n";
+
+        var refused = Assert.Throws<UnrepresentableCharacterException>(() => SourceFileIo.Create(path, content));
+
+        Assert.Equal('ș', refused.Character);
+        Assert.False(Directory.Exists(Path.Combine(_root, "new")));
+    }
 }

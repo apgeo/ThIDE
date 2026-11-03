@@ -116,6 +116,29 @@ public class WorkspaceEditServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task A_failure_after_an_edit_was_written_restores_the_edited_file()
+    {
+        // The creates and copies run before the edits, so the failure has to come from a later edit:
+        // a read-only file refuses the write after the first file has been rewritten.
+        if (OperatingSystem.IsWindows() || Environment.UserName == "root") return;
+        File.WriteAllText(P("main.th"), "survey a\nendsurvey\n");
+        File.WriteAllText(P("locked.th"), "survey b\nendsurvey\n");
+        File.SetUnixFileMode(P("locked.th"), UnixFileMode.UserRead | UnixFileMode.GroupRead | UnixFileMode.OtherRead);
+        var batch = new EditBatch(
+            [new FileTextEdits(P("main.th"), [TextEdit.Insert(9, "  # a\n")]),
+             new FileTextEdits(P("locked.th"), [TextEdit.Insert(9, "  # b\n")])],
+            [],
+            []);
+
+        var outcome = await Service().ApplyAsync(batch);
+
+        Assert.False(outcome.Success);
+        Assert.Empty(outcome.Written);
+        Assert.Equal("survey a\nendsurvey\n", File.ReadAllText(P("main.th")));
+        Assert.Equal("survey b\nendsurvey\n", File.ReadAllText(P("locked.th")));
+    }
+
+    [Fact]
     public async Task A_rollback_removes_the_folders_the_batch_made()
     {
         File.WriteAllText(P("src.th"), "x");

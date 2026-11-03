@@ -159,17 +159,20 @@ public static class SourceFileIo
     }
 
     /// <summary>
-    /// Creates a new file as UTF-8 without a BOM — the encoding Therion assumes by default. Fails if
+    /// Creates a new file in the encoding its own <c>encoding</c> line declares, else as UTF-8 without a
+    /// BOM — the encoding Therion assumes by default — so it reads back as the text it was given. Fails if
     /// anything is already there: <see cref="FileMode.CreateNew"/> makes that check and the creation one
     /// indivisible operation, which <c>File.Exists</c> followed by a write is not.
     /// </summary>
     /// <exception cref="IOException">The path already exists, or the write failed (the file is then removed).</exception>
+    /// <exception cref="UnrepresentableCharacterException">The content holds a character its declared encoding cannot express; nothing is created.</exception>
     public static void Create(string path, string content)
     {
+        var bytes = EncodeForSave(path, content, TextFileFormat.Default).Bytes;
+
         var directory = System.IO.Path.GetDirectoryName(path);
         if (!string.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
 
-        var bytes = EncodingResolver.Default.GetBytes(content);
         var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None);
         try
         {
@@ -193,14 +196,55 @@ public static class SourceFileIo
         catch (UnrepresentableCharacterException) { return false; }
     }
 
-    /// <summary>Writes bytes over an existing file, atomically. Used for the write and for rolling it back.</summary>
+    /// <summary>
+    /// Writes bytes over a file, atomically: they go to a sibling temporary file that is then moved over
+    /// the target, so a crash or a full disk leaves the original whole rather than truncated. Used for the
+    /// write and for rolling it back. The file is replaced as an in-place write would change it: a
+    /// symbolic link is written through (its target changes, the link stays), the file keeps its
+    /// permissions (Unix mode, Windows attributes), and a read-only file refuses the write. A folder that
+    /// refuses the temporary file gets the in-place write instead. A file that is not there is created.
+    /// </summary>
+    /// <exception cref="UnauthorizedAccessException">The file is read-only, or its folder refuses a new file.</exception>
     public static void WriteOver(string path, byte[] bytes)
+    {
+        path = LinkTargetOf(path);
+        if (!File.Exists(path)) { ReplaceThroughTemporary(path, bytes, mode: null); return; }
+
+        // The move would replace a read-only file regardless of its mode: check the file is writable first.
+        using (new FileStream(path, FileMode.Open, FileAccess.Write, FileShare.ReadWrite)) { }
+        UnixFileMode? mode = null;
+        FileAttributes? attributes = null;
+        if (OperatingSystem.IsWindows()) attributes = File.GetAttributes(path);
+        else mode = File.GetUnixFileMode(path);
+        try { ReplaceThroughTemporary(path, bytes, mode); }
+        catch (UnauthorizedAccessException)
+        {
+            File.WriteAllBytes(path, bytes);   // the folder refused the temporary file; the file itself is writable
+            return;
+        }
+        if (attributes is { } a) File.SetAttributes(path, a);
+    }
+
+    /// <summary>The file a symbolic link at <paramref name="path"/> finally points to, or <paramref name="path"/> itself.</summary>
+    public static string LinkTargetOf(string path)
+    {
+        try
+        {
+            var info = new FileInfo(path);
+            return info.LinkTarget is null ? path : info.ResolveLinkTarget(returnFinalTarget: true)?.FullName ?? path;
+        }
+        catch (IOException) { return path; }
+    }
+
+    private static void ReplaceThroughTemporary(string path, byte[] bytes, UnixFileMode? mode)
     {
         // Same directory as the target: File.Move across volumes is a copy, which is not atomic.
         var temporary = path + ".therion-write-" + Guid.NewGuid().ToString("N")[..8] + ".tmp";
         try
         {
             File.WriteAllBytes(temporary, bytes);
+            // The file's own mode before it takes the file's place, so the text is never readable more widely.
+            if (mode is { } m && !OperatingSystem.IsWindows()) File.SetUnixFileMode(temporary, m);
             File.Move(temporary, path, overwrite: true);
         }
         catch
@@ -242,13 +286,19 @@ public static class SourceFileIo
     }
 
     // Decodes strictly first, so bytes the encoding cannot read are noticed rather than quietly
-    // becoming U+FFFD; the text is then the usual replacement decode.
+    // becoming U+FFFD; the text is then a replacement decode. Its replacement is always U+FFFD, not the
+    // encoding's own ('?' for ASCII), or Encode could not tell the lost bytes from a real '?'.
     private static (string Text, bool Lossy) Decode(Encoding encoding, byte[] bytes, int offset)
     {
         var strict = Encoding.GetEncoding(
             encoding.CodePage, EncoderFallback.ReplacementFallback, DecoderFallback.ExceptionFallback);
         try { return (strict.GetString(bytes, offset, bytes.Length - offset), false); }
-        catch (DecoderFallbackException) { return (encoding.GetString(bytes, offset, bytes.Length - offset), true); }
+        catch (DecoderFallbackException)
+        {
+            var replacing = Encoding.GetEncoding(
+                encoding.CodePage, EncoderFallback.ReplacementFallback, new DecoderReplacementFallback("\uFFFD"));
+            return (replacing.GetString(bytes, offset, bytes.Length - offset), true);
+        }
     }
 
     // The parser's rule: an `encoding` line in the ASCII prefix, else the BOM, else UTF-8.

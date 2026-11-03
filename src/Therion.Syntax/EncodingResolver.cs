@@ -122,10 +122,18 @@ public static class EncodingResolver
         return null;
     }
 
-    private static int _codePagesRegistered;
+    // The flag is set only once the provider is in place: a second thread that sees it set may rely on
+    // the legacy code pages at once, so it must not see it while the first is still registering.
+    private static readonly object CodePagesLock = new();
+    private static volatile bool _codePagesRegistered;
     private static void EnsureCodePagesRegistered()
     {
-        if (System.Threading.Interlocked.Exchange(ref _codePagesRegistered, 1) == 0)
+        if (_codePagesRegistered) return;
+        lock (CodePagesLock)
+        {
+            if (_codePagesRegistered) return;
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+            _codePagesRegistered = true;
+        }
     }
 }
