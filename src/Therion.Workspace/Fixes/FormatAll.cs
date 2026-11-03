@@ -36,13 +36,14 @@ public static class FormatAll
             }
 
             var formatted = format(text);
+            // Keep leaves every line its own ending, so a file that mixes CRLF and LF stays mixed.
             var newline = endings switch
             {
                 LineEndings.Lf => "\n",
                 LineEndings.CrLf => "\r\n",
-                _ => text.Contains("\r\n") ? "\r\n" : "\n",
+                _ => MixesCrLfAndLf(text) ? null : text.Contains("\r\n") ? "\r\n" : "\n",
             };
-            formatted = formatted.Replace("\r\n", "\n").Replace("\n", newline);
+            if (newline is not null) formatted = formatted.Replace("\r\n", "\n").Replace("\n", newline);
             if (string.Equals(formatted, text, StringComparison.Ordinal)) continue;
 
             var edit = new TextEdit(0, text.Length, text, formatted);
@@ -50,6 +51,14 @@ public static class FormatAll
             rows.Add(new EditPreviewRow(file, 1, describe(ChangedLines(text, formatted)), "", edit));
         }
         return (new EditBatch(groups, [], []), rows, skipped);
+    }
+
+    private static bool MixesCrLfAndLf(string text)
+    {
+        bool crlf = false, lf = false;
+        for (int i = text.IndexOf('\n'); i >= 0 && !(crlf && lf); i = text.IndexOf('\n', i + 1))
+            if (i > 0 && text[i - 1] == '\r') crlf = true; else lf = true;
+        return crlf && lf;
     }
 
     private static int ChangedLines(string a, string b)

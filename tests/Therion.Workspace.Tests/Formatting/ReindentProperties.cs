@@ -101,7 +101,7 @@ public partial class ReindentProperties
     }
 
     /// <summary>A closer whose block is not open anywhere is a typo or a leftover; the blocks that are open stay open.</summary>
-    [Fact(Skip = "Known bug: a closer whose block is not open pops every open block, so the rest of the file is indented as top level")]
+    [Fact]
     public void A_stray_closer_does_not_change_the_indentation_of_the_lines_after_it()
     {
         var text = "survey a\ncentreline\nendscrap\n1 2 3 4 5\nendcentreline\nendsurvey\n";
@@ -119,7 +119,7 @@ public partial class ReindentProperties
     /// A whitespace-only line between a lone CR and an LF is emptied, and the two terminators then read
     /// as one CRLF: the file loses a line.
     /// </summary>
-    [Fact(Skip = "Known bug: emptying a whitespace-only line that sits between a lone CR and an LF merges the two terminators into one CRLF, so a line is lost")]
+    [Fact]
     public void Emptying_a_blank_line_never_merges_the_line_breaks_around_it()
     {
         var text = "survey a\r   \nendsurvey\n";
@@ -130,7 +130,7 @@ public partial class ReindentProperties
     /// A quoted string continued with <c>\</c> carries on to the next line, so that line's leading
     /// whitespace is part of the string; re-indenting the line changes the string.
     /// </summary>
-    [Fact(Skip = "Known bug: a line that continues a quoted string is re-indented, which changes the string's text")]
+    [Fact]
     public void A_line_continuing_a_quoted_string_is_left_as_it_is()
     {
         var text = "survey a -title \"first \\\n        second\"\nendsurvey\n";
@@ -143,7 +143,7 @@ public partial class ReindentProperties
     /// re-indenter trims every Unicode space, so it turns <c>NBSP + survey</c> into the keyword and drops a
     /// no-break space at the end of a data value.
     /// </summary>
-    [Fact(Skip = "Known bug: the re-indenter trims no-break and other Unicode spaces that the tokenizer keeps as part of a token")]
+    [Fact]
     public void Unicode_spaces_that_belong_to_a_token_are_kept()
     {
         foreach (var text in new[] { "survey a\n\u00A0x 1\nendsurvey\n", "survey a\n1 2 3 4 5\u00A0\nendsurvey\n", "survey a\n\u2003endsurvey\n" })
@@ -194,7 +194,7 @@ public partial class ReindentProperties
     }
 
     /// <summary>"Keep" keeps each line's own ending, as the re-indenter does, in a file that mixes them.</summary>
-    [Fact(Skip = "Known bug: Format all with Keep rewrites every line of a file that mixes CRLF and LF with CRLF")]
+    [Fact]
     public void Format_all_keep_leaves_each_line_ending_of_a_mixed_file_alone()
     {
         for (int seed = 0; seed < 50; seed++)

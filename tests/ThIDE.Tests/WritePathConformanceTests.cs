@@ -91,7 +91,7 @@ public class WritePathConformanceTests
         WritePathConformance.Check(placed, WriterKind.Reindent, outcome, "Format all files");
     }
 
-    [Theory(Skip = "Known bug: Format all with Keep rewrites every line of a file that mixes CRLF and LF with CRLF")]
+    [Theory]
     [MemberData(nameof(AllFixtures))]
     public async Task Format_all_files_conforms_on_mixed_line_endings(string fixture)
     {
