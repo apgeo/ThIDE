@@ -11,6 +11,8 @@ public partial class ScaffoldProjectWindow : Window
     public ScaffoldProjectWindow(ScaffoldProjectViewModel model)
     {
         InitializeComponent();
+        this.ClampOnOpen();
+        this.FocusOnOpen("FirstInput");
         DataContext = model;
     }
 

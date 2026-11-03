@@ -16,7 +16,7 @@
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
                 <Button Content="{l:Loc Automation_Cancel}" Command="{Binding CancelRunCommand}" IsEnabled="{Binding IsRunning}"
                         AutomationProperties.AutomationId="BatchBuild.Cancel" />
-                <Button Content="{l:Loc Common_Close}" Click="OnClose" AutomationProperties.AutomationId="BatchBuild.Close" />
+                <Button Content="{l:Loc Common_Close}" Click="OnClose" IsCancel="True" AutomationProperties.AutomationId="BatchBuild.Close" />
                 <Button Content="{l:Loc Batch_Build}" Command="{Binding RunCommand}" IsDefault="True" MinWidth="100"
                         IsEnabled="{Binding !IsRunning}" AutomationProperties.AutomationId="BatchBuild.Build" />
             </StackPanel>

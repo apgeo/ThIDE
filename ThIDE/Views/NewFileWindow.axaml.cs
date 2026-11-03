@@ -8,7 +8,12 @@ namespace ThIDE.Views;
 
 public partial class NewFileWindow : Window
 {
-    public NewFileWindow() => InitializeComponent();
+    public NewFileWindow()
+    {
+        InitializeComponent();
+        this.ClampOnOpen();
+        this.FocusOnOpen("FirstInput");
+    }
 
     public NewFileWindow(NewFileViewModel model) : this() => DataContext = model;
 

@@ -6,7 +6,11 @@ namespace ThIDE.Views;
 
 public partial class RenumberStationsWindow : Window
 {
-    public RenumberStationsWindow() => InitializeComponent();
+    public RenumberStationsWindow()
+    {
+        InitializeComponent();
+        this.FocusOnOpen("FirstInput");
+    }
     public RenumberStationsWindow(RenumberStationsViewModel model) : this() => DataContext = model;
 
     /// <summary>True when the user went on to the preview.</summary>

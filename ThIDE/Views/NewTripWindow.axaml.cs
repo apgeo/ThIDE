@@ -7,7 +7,12 @@ namespace ThIDE.Views;
 
 public partial class NewTripWindow : Window
 {
-    public NewTripWindow() => InitializeComponent();
+    public NewTripWindow()
+    {
+        InitializeComponent();
+        this.ClampOnOpen();
+        this.FocusOnOpen("FirstInput");
+    }
 
     public NewTripWindow(NewTripViewModel model) : this() => DataContext = model;
 

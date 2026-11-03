@@ -1855,8 +1855,22 @@ public partial class MainWindow : Window
         // Errors linger; everything else auto-expires. The whole toast is clickable when the
         // notification carries an action (e.g. "Show output").
         var expiration = n.Kind == Services.NotificationKind.Error ? TimeSpan.FromSeconds(12) : TimeSpan.FromSeconds(6);
+        _notificationManager.Margin = new Thickness(0, 0, 8, ToastBottomMargin());
         _notificationManager.Show(new Avalonia.Controls.Notifications.Notification(
             n.Title, n.Message, type, expiration, onClick: n.Action));
+    }
+
+    // Toasts stack up from the bottom of the window: keep them clear of the status bar and, when the
+    // window runs past the bottom of the work area, inside what is actually visible.
+    private double ToastBottomMargin()
+    {
+        double statusHeight = this.FindControl<Border>("StatusBarPanel")?.Bounds.Height ?? 0;
+        var screen = Screens?.ScreenFromWindow(this) ?? Screens?.Primary;
+        if (screen is null) return WindowFit.ToastBottomMargin(0, 0, statusHeight);
+        double scale = screen.Scaling <= 0 ? 1 : screen.Scaling;
+        double windowBottom = Position.Y / scale + Bounds.Height;
+        double workBottom = (screen.WorkingArea.Y + screen.WorkingArea.Height) / scale;
+        return WindowFit.ToastBottomMargin(windowBottom, workBottom, statusHeight);
     }
 
     // ----- "open with" / file association ------------------------
@@ -1977,14 +1991,41 @@ public partial class MainWindow : Window
         // Restore the normal window bounds first, then re-apply a maximized state on top so
         // un-maximizing returns to the saved size. The dock arrangement itself is restored
         // separately by the DockFactory.
-        if (s.WindowWidth > 200) Width = s.WindowWidth;
-        if (s.WindowHeight > 200) Height = s.WindowHeight;
-        if (s.WindowLeft is double l && s.WindowTop is double t)
+        // No saved bounds (first start), or a saved size under the window minimum (325x50 was
+        // written after repeated full-screen toggles): treat it as a first start.
+        if (s.WindowLeft is not null && WindowFit.IsUsableSize(s.WindowWidth, s.WindowHeight, MinWidth, MinHeight))
         {
-            try { Position = new PixelPoint((int)l, (int)t); } catch { }
+            Width = s.WindowWidth;
+            Height = s.WindowHeight;
+            if (s.WindowLeft is double l && s.WindowTop is double t)
+            {
+                try { Position = new PixelPoint((int)l, (int)t); } catch { }
+            }
+            this.ClampToWorkArea();   // saved on a bigger monitor, or a taller work area than now
         }
+        else
+            SizeForFirstRun();
         if ((WindowState)s.WindowState == WindowState.Maximized)
             WindowState = WindowState.Maximized;
+    }
+
+    // First start: most of the work area, centred, instead of a fixed 1300x800 that runs off a
+    // 1366x768 screen (status bar and bottom tab strips out of reach).
+    private void SizeForFirstRun()
+    {
+        var screen = Screens?.ScreenFromWindow(this) ?? Screens?.Primary;
+        if (screen is null) return;
+        double scale = screen.Scaling <= 0 ? 1 : screen.Scaling;
+        var area = screen.WorkingArea;
+        double chrome = WindowFitting.ChromeHeight(this);
+        var (w, h) = WindowFit.FirstRunSize(MinWidth, MinHeight, area.Width / scale, area.Height / scale, chrome);
+        Width = w;
+        Height = h;
+        // Centre the whole frame (title bar included); Position is the client area's corner.
+        var (x, y) = WindowFit.Nudge(
+            area.X / scale + (area.Width / scale - w) / 2, area.Y / scale + (area.Height / scale - h - chrome) / 2, w, h + chrome,
+            area.X / scale, area.Y / scale, area.Width / scale, area.Height / scale);
+        Position = new PixelPoint((int)(x * scale), (int)((y + chrome) * scale));
     }
 
     private void SaveLayout()
@@ -2000,7 +2041,8 @@ public partial class MainWindow : Window
             // Only capture bounds while in the Normal state — when maximized/fullscreen the
             // reported size is the screen frame, so keeping the last Normal bounds lets a later
             // un-maximize restore the user's chosen size. The state itself is always recorded.
-            var next = WindowState == WindowState.Normal
+            // A transient degenerate size (mid full-screen toggle) is not a bound worth keeping.
+            var next = WindowState == WindowState.Normal && WindowFit.IsUsableSize(Width, Height, MinWidth, MinHeight)
                 ? current with
                 {
                     WindowWidth = Width,
