@@ -190,21 +190,16 @@ public static class ProjectStatistics
 
     /// <summary>
     /// The station a <c>.th2</c> <c>-name</c> points at, by the rule ctrl-click follows:
-    /// <c>point@survey</c> first, then a fully-qualified name, then a bare name in the surveys of the
-    /// <c>.th</c> that inputs the sketch. A bare name the file graph does not settle counts only when
-    /// it is unique in the project — crediting the first of several same-named stations would mark
-    /// an arbitrary survey as drawn.
+    /// <c>point@survey</c> or a fully-qualified name first (<see cref="WorkspaceSemanticModel.ResolveStationSymbol"/>),
+    /// then a bare name in the surveys of the <c>.th</c> that inputs the sketch. A bare name the file
+    /// graph does not settle counts only when it is unique in the project — crediting the first of
+    /// several same-named stations would mark an arbitrary survey as drawn.
     /// </summary>
     private static StationSymbol? ResolveStation(WorkspaceSemanticModel model, string raw, string sketchPath)
     {
         var r = StationRef.Parse(raw.Trim());
 
-        if (r.SurveyLastName is { } surveyLast
-            && model.StationsBySurveyAndPoint.TryGetValue(
-                WorkspaceSemanticModel.SurveyPointKey(surveyLast, r.Point), out var bySurvey))
-            return bySurvey;
-
-        if (model.StationsByQn.TryGetValue(r.StationQuery, out var byQn)) return byQn;
+        if (model.ResolveStationSymbol(raw) is { } direct) return direct;
 
         if (r.SurveyLastName is null && !string.IsNullOrEmpty(sketchPath)
             && model.StationInInputtingFile(r.Point, sketchPath) is { } inScope)

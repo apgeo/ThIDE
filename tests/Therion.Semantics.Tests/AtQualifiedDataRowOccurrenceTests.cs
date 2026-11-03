@@ -72,4 +72,31 @@ public class AtQualifiedDataRowOccurrenceTests
         // Two tokens in A.th name svb.1: the fix and the equate member.
         Assert.True(occ.Count == 2, $"expected 2 occurrences of svb.1 in A.th (fix + equate), got {occ.Count}");
     }
+
+    [Fact]
+    public void A_standalone_file_warns_only_for_at_references_to_surveys_it_does_not_declare()
+    {
+        var model = new SemanticBinder().Bind(new ThParser().Parse("/p/cave.th", """
+            survey cave
+              survey a
+                centreline
+                  1 2 3 0 0
+                endcentreline
+              endsurvey
+              survey b
+                centreline
+                  1 2 4 0 0
+                endcentreline
+              endsurvey
+              centreline
+                1@a 1@b 5 0 0
+                2@a 9@elsewhere 6 0 0
+              endcentreline
+            endsurvey
+            """).Value!);
+
+        var warned = model.UnresolvedEquateDiagnostics().Select(d => d.Message).ToList();
+
+        Assert.Equal(new[] { "Unresolved station reference '9@elsewhere'." }, warned);
+    }
 }

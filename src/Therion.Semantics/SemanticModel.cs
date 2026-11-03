@@ -66,20 +66,47 @@ public sealed class SemanticModel : ISymbolIndex
 
     /// <summary>
     /// TH_SEM_001 warnings for every <see cref="UnresolvedEquateRefs"/> — the fallback for a file
-    /// with no workspace to consult (where a cross-file target genuinely can't be checked).
+    /// with no workspace to consult (where a cross-file target genuinely can't be checked). A
+    /// <c>point@survey</c> whose survey is declared in this same file (a connecting shot written in
+    /// the parent, <c>1@a 1@b …</c>) is checked here, by the rule the workspace uses.
     /// </summary>
     public ImmutableArray<Diagnostic> UnresolvedEquateDiagnostics()
     {
         if (UnresolvedEquateRefs.IsDefaultOrEmpty) return ImmutableArray<Diagnostic>.Empty;
+        HashSet<string>? local = null;
         var b = ImmutableArray.CreateBuilder<Diagnostic>(UnresolvedEquateRefs.Length);
         foreach (var r in UnresolvedEquateRefs)
+        {
+            if (ResolvesInThisFile(r.Raw, ref local)) continue;
             b.Add(Diagnostic.Create(
                 SemanticDiagnosticCodes.UnresolvedStation,
                 DiagnosticSeverity.Warning,
                 $"Unresolved station reference '{r.Raw}'.",
                 r.Span,
                 hint: r.Hint));
+        }
         return b.ToImmutable();
+    }
+
+    /// <summary>
+    /// True when the <c>point@survey</c> <paramref name="raw"/> names a station of this file: by its
+    /// full path, or by its innermost survey's name and the point (<see cref="WorkspaceSemanticModel.ResolveStationSymbol"/>).
+    /// </summary>
+    private bool ResolvesInThisFile(string raw, ref HashSet<string>? local)
+    {
+        var r = StationRef.Parse(raw.Trim());
+        if (r.SurveyLastName is not { } survey) return false;
+        if (local is null)
+        {
+            local = new HashSet<string>(System.StringComparer.Ordinal);
+            foreach (var qn in Stations.Keys)
+            {
+                if (qn.Parts.Length < 2 || qn.Last.Contains('@')) continue;   // root or placeholder
+                local.Add(qn.ToString());
+                local.Add(WorkspaceSemanticModel.SurveyPointKey(qn.Parts[^2], qn.Last));
+            }
+        }
+        return local.Contains(r.StationQuery) || local.Contains(WorkspaceSemanticModel.SurveyPointKey(survey, r.Point));
     }
 
     public SemanticModel(

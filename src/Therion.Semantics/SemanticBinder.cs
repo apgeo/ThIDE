@@ -35,11 +35,14 @@ public sealed class SemanticBinder
         // Resolve all equate references; emit TH_SEM_001 for unresolved.
         // Equate groups are resolved as a post-pass so all stations declared
         // anywhere in the file are visible regardless of source order.
-        foreach (var group in ctx.EquateGroups)
+        for (int g = 0; g < ctx.EquateGroups.Count; g++)
         {
+            var group = ctx.EquateGroups[g];
+            var members = new QualifiedName?[group.Count];
             QualifiedName? firstResolved = null;
-            foreach (var (raw, span, scope) in group)
+            for (int m = 0; m < group.Count; m++)
             {
+                var (raw, span, scope) = group[m];
                 var resolved = TryResolveRef(raw, scope, ctx.Stations.Keys);
                 if (resolved is null)
                 {
@@ -52,10 +55,16 @@ public sealed class SemanticBinder
                 var st = ctx.Stations[resolved.Value];
                 ctx.Stations[resolved.Value] = st with { References = st.References.Add(span) };
                 AddStationOccurrence(ctx, resolved.Value, span, raw, OccurrenceRole.Reference);
+                // An `x@sub` member can only have matched the placeholder a same-file `fix x@sub` (or
+                // shot / station / mark) recorded. Keep it in this file's class, but defer the token to
+                // the workspace tier too, which attributes it to the real station (as for the fix).
+                if (raw.IndexOf('@') >= 0) RecordAtQualifiedStationRef(ctx, raw, span);
+                else members[m] = resolved;
                 ctx.Equates.Add(resolved.Value);
                 if (firstResolved is null) firstResolved = resolved;
                 else ctx.Equates.Union(firstResolved.Value, resolved.Value);
             }
+            ctx.EquateRecords[g] = ctx.EquateRecords[g] with { ResolvedMembers = members.ToImmutableArray() };
         }
 
         var stations = ctx.Stations.ToFrozenDictionary();
@@ -104,16 +113,19 @@ public sealed class SemanticBinder
         ImmutableArray<TherionNode> children,
         BindContext ctx,
         ImmutableArray<string> scope,
-        DataCommand? dataFields)
+        DataCommand? dataFields,
+        ShotFlags initialFlags = ShotFlags.None,
+        ReadingUnits? initialUnits = null)
     {
         var currentFields = dataFields;
         // Flags are stateful within a centreline body, and a comment line directly
         // above a data row binds to that row. Both are tracked across this child list.
-        var activeFlags = ShotFlags.None;
+        // A `group` starts from the state in force before it (passed in) and its own changes stay local.
+        var activeFlags = initialFlags;
         // Active reading units. A `units` command earlier in this body switches degrees↔grads↔…
         // for the range checks that follow, and metres↔feet↔… (with an optional factor) for the
         // conversion of the readings into the metres and degrees every shot is stored in.
-        var units = ReadingUnits.Default;
+        var units = initialUnits ?? ReadingUnits.Default;
         TrivialComment? pendingComment = null;
         // The survey these direct children belong to (team/date attach here).
         QualifiedName? currentSurvey = scope.IsEmpty ? null : new QualifiedName(scope);
@@ -139,8 +151,10 @@ public sealed class SemanticBinder
                     break;
                 case GroupCommand grp:
                     // `group` is transparent: process its children in the current scope,
-                    // inheriting the active data-field definition (it may sit in a centreline).
-                    WalkChildren(grp.Children, ctx, scope, currentFields);
+                    // inheriting the active data-field definition, flags and units (it may sit in a
+                    // centreline). Therion saves that state at `group` and restores it at `endgroup`,
+                    // so changes inside the group do not leak out.
+                    WalkChildren(grp.Children, ctx, scope, currentFields, activeFlags, units);
                     break;
                 case StationFix fix:
                     BindFix(fix, ctx, scope);
@@ -236,11 +250,13 @@ public sealed class SemanticBinder
         {
             var raw = mk.Stations[i];
             var qn = QualifyLocal(raw, scope);
+            var span = i < mk.StationSpans.Length ? mk.StationSpans[i] : default;
+            // Declared at its own token (one `mark` can name several stations; see BindShot).
             if (!ctx.Stations.TryGetValue(qn, out var s))
-                s = new StationSymbol(qn, mk.Span, StationDeclarationKind.Shot, ImmutableArray<SourceSpan>.Empty);
+                s = new StationSymbol(qn, span.IsEmpty ? mk.Span : span,
+                    StationDeclarationKind.Shot, ImmutableArray<SourceSpan>.Empty);
             ctx.Stations[qn] = s with { MarkType = mk.MarkType };
             ctx.Equates.Add(qn);
-            var span = i < mk.StationSpans.Length ? mk.StationSpans[i] : default;
             AddStationOccurrence(ctx, qn, span, raw, OccurrenceRole.Reference);
             RecordAtQualifiedStationRef(ctx, raw, span);
         }
@@ -552,16 +568,26 @@ public sealed class SemanticBinder
 
         var from = fromSplay ? QualifiedName.Of(fromRaw) : QualifyLocal(fromRaw, scope);
         var to   = toSplay   ? QualifiedName.Of(toRaw)   : QualifyLocal(toRaw,   scope);
-        if (!fromSplay) DeclareImplicit(ctx, from, row.Span);
-        if (!toSplay)   DeclareImplicit(ctx, to,   row.Span);
+        var fromSpan = ValueSpan(row, fromIdx);
+        var toSpan   = ValueSpan(row, toIdx);
+        // Each endpoint is declared at its own token, not at the shared row span: go-to-definition
+        // returns the declaration span and rename / find-refs turn it back into the station, so two
+        // stations first written in one row must not share it.
+        if (!fromSplay) DeclareImplicit(ctx, from, fromSpan.IsEmpty ? row.Span : fromSpan);
+        if (!toSplay)   DeclareImplicit(ctx, to,   toSpan.IsEmpty ? row.Span : toSpan);
 
         // Token-level occurrences (rename / find-refs) — the row's per-value spans, not row.Span.
-        if (!row.ValueSpans.IsDefaultOrEmpty)
+        // A `point@survey` endpoint is also deferred to the workspace tier, which attributes it to the
+        // real station (the per-file walk can only record a placeholder for it).
+        if (!fromSplay)
         {
-            if (!fromSplay && fromIdx < row.ValueSpans.Length)
-                AddStationOccurrence(ctx, from, row.ValueSpans[fromIdx], fromRaw, OccurrenceRole.Reference);
-            if (!toSplay && toIdx < row.ValueSpans.Length)
-                AddStationOccurrence(ctx, to, row.ValueSpans[toIdx], toRaw, OccurrenceRole.Reference);
+            AddStationOccurrence(ctx, from, fromSpan, fromRaw, OccurrenceRole.Reference);
+            RecordAtQualifiedStationRef(ctx, fromRaw, fromSpan);
+        }
+        if (!toSplay)
+        {
+            AddStationOccurrence(ctx, to, toSpan, toRaw, OccurrenceRole.Reference);
+            RecordAtQualifiedStationRef(ctx, toRaw, toSpan);
         }
 
         var effectiveFlags = fromSplay || toSplay ? flags | ShotFlags.Splay : flags;
@@ -632,6 +658,10 @@ public sealed class SemanticBinder
             _ => Degrees(TryGet(row, data, field), unit),
         };
     }
+
+    /// <summary>The span of the row's <paramref name="index"/>-th value, or an empty span when the row has none.</summary>
+    private static SourceSpan ValueSpan(DataRow row, int index) =>
+        !row.ValueSpans.IsDefaultOrEmpty && index < row.ValueSpans.Length ? row.ValueSpans[index] : default;
 
     /// <summary>A '.' (feature) or '-' (wall) endpoint marks the shot as a splay, not a station.</summary>
     private static bool IsSplayMarker(string token) => token is "." or "-";

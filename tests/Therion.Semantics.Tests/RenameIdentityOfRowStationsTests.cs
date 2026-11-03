@@ -53,4 +53,27 @@ public class RenameIdentityOfRowStationsTests
         var texts = refs.Select(r => Upper.Substring(r.Span.StartOffset, r.Span.Length)).ToList();
         Assert.All(texts, t => Assert.Equal("p2", t));
     }
+
+    [Fact]
+    public void Stations_first_named_by_one_mark_command_resolve_to_themselves()
+    {
+        var ws = Build(("/p/m.th", """
+            survey m
+              centreline
+                mark q1 q2 fixed
+                data normal from to length compass clino
+                q1 q2 4 0 0
+              endcentreline
+            endsurvey
+            """));
+        var nav = new WorkspaceSymbolNavigationService(ws);
+
+        foreach (var name in new[] { "q1", "q2" })
+        {
+            var span = nav.GoToDefinition(name + "@m", ReferenceKind.Any);
+            Assert.NotNull(span);
+            var resolved = SymbolReferences.ResolveDeclaration(ws, ReferenceKind.Any, span!.Value);
+            Assert.Equal("m." + name, resolved?.Symbol.Name.ToString());
+        }
+    }
 }
