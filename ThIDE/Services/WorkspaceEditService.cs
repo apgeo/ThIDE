@@ -12,10 +12,12 @@ namespace ThIDE.Services;
 /// <param name="Problems">Why the batch was refused; nothing was written (or everything was rolled back).</param>
 /// <param name="Error">An I/O failure part-way through; what was written has been rolled back.</param>
 /// <param name="Written">Every path created, copied or edited, in the order it happened.</param>
+/// <param name="Changes">On success, every file's text before and after, for a workspace undo record.</param>
 public sealed record EditOutcome(
     IReadOnlyList<EditProblem> Problems,
     string? Error,
-    IReadOnlyList<string> Written)
+    IReadOnlyList<string> Written,
+    IReadOnlyList<FileChange>? Changes = null)
 {
     public bool Success => Problems.Count == 0 && Error is null;
 
@@ -92,6 +94,7 @@ public sealed class WorkspaceEditService(IDocumentService documents, IWorkspaceS
         // Disk first, with an undo record for each step; buffers last (they cannot fail now: the
         // checks above ran against the same text on the same thread).
         var written = new List<string>();
+        var changes = new List<FileChange>();
         var undo = new Stack<Action>();
         try
         {
@@ -102,6 +105,7 @@ public sealed class WorkspaceEditService(IDocumentService documents, IWorkspaceS
                 SourceFileIo.Create(create.FilePath, create.Content);
                 undo.Push(() => File.Delete(create.FilePath));
                 written.Add(create.FilePath);
+                changes.Add(new FileChange(create.FilePath, null, create.Content) { Created = File.ReadAllBytes(create.FilePath) });
             }
             foreach (var copy in batch.Copies)
             {
@@ -117,6 +121,7 @@ public sealed class WorkspaceEditService(IDocumentService documents, IWorkspaceS
                 }
                 undo.Push(() => File.Delete(copy.DestinationPath));
                 written.Add(copy.DestinationPath);
+                changes.Add(new FileChange(copy.DestinationPath, null, "") { Created = File.ReadAllBytes(copy.DestinationPath) });
             }
             foreach (var group in batch.Edits)
             {
@@ -127,6 +132,7 @@ public sealed class WorkspaceEditService(IDocumentService documents, IWorkspaceS
                 SourceFileIo.WriteOver(file.Path, encoded[group.FilePath]);
                 undo.Push(() => { session.SuppressSelfWrite(file.Path); SourceFileIo.WriteOver(file.Path, original); });
                 written.Add(group.FilePath);
+                changes.Add(new FileChange(group.FilePath, file.Text, check.NewTexts[group.FilePath]));
             }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or UnrepresentableCharacterException)
@@ -142,15 +148,20 @@ public sealed class WorkspaceEditService(IDocumentService documents, IWorkspaceS
         {
             if (!open.TryGetValue(Key(group.FilePath), out var doc)) continue;
             bool wasDirty = doc.IsDirty;
+            var before = doc.DocumentText;
             doc.ApplyEdits(group.Edits);
-            if (wasDirty) written.Add(group.FilePath);
+            if (wasDirty)
+            {
+                written.Add(group.FilePath);
+                changes.Add(new FileChange(group.FilePath, before, check.NewTexts[group.FilePath]) { BufferOnly = true });
+            }
             else doc.SetText(check.NewTexts[group.FilePath], reparse: false); // on disk already; ApplyEdits scheduled the reparse
         }
 
         if (batch.RequiresWorkspaceReload && session.ActiveThconfig is { } active)
             await session.SetActiveThconfigAsync(active.FullPath, ct).ConfigureAwait(true);
 
-        return new EditOutcome([], null, written);
+        return new EditOutcome([], null, written, changes);
 
         // Creates the missing folders above a new file, each with an undo that removes it again if empty.
         static void CreateDirectoryFor(string path, Stack<Action> undo)

@@ -21,7 +21,8 @@ namespace ThIDE.Tests;
 
 internal static class MainWindowViewModelHost
 {
-    public static MainWindowViewModel Create(IDocumentService documents, ITaskRunnerService? tasks = null) => new(
+    public static MainWindowViewModel Create(IDocumentService documents, ITaskRunnerService? tasks = null,
+        IWorkspaceUndoService? workspaceUndo = null) => new(
         new KeyLocalizer(),
         new LanguageService(),
         documents,
@@ -45,7 +46,8 @@ internal static class MainWindowViewModelHost
         new AssistantToolViewModel(),
         new BlenderAnimationToolViewModel(new BlenderAnimationViewModel()),
         TestProfile.SettingsTool(),
-        tasks: tasks);
+        tasks: tasks,
+        workspaceUndo: workspaceUndo);
 
     private static DockFactory NewFactory() => new(
         new WelcomeToolViewModel(new WelcomeViewModel()),

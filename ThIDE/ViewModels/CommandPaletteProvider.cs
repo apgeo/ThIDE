@@ -91,6 +91,10 @@ public sealed class CommandPaletteProvider
         list.Add(VmCmd(L("Cmd_Cat_File"), L("Cmd_ClearRecentDirs"), _vm.ClearRecentDirectoriesCommand, "Icon.Folder"));
         list.Add(VmCmd(L("Cmd_Cat_File"), L("Cmd_Exit"), _vm.ExitCommand, "Icon.File"));
 
+        // ---- Edit: the workspace-level undo of the last multi-file write ----
+        if (_vm.CanUndoWorkspace) list.Add(VmCmd(L("Cmd_Cat_Edit"), _vm.WorkspaceUndoHeader, _vm.UndoWorkspaceCommand, "Icon.File"));
+        if (_vm.CanRedoWorkspace) list.Add(VmCmd(L("Cmd_Cat_Edit"), _vm.WorkspaceRedoHeader, _vm.RedoWorkspaceCommand, "Icon.File"));
+
         // ---- Build ----
         list.Add(VmCmd(L("Cmd_Cat_Build"), L("Cmd_BuildCurrent"), _vm.Build.BuildCommand, "Icon.Cube"));
         list.Add(VmCmd(L("Cmd_Cat_Build"), L("Cmd_Rebuild"), _vm.Build.RebuildCommand, "Icon.Cube"));

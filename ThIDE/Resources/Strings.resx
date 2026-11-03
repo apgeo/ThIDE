@@ -1681,4 +1681,20 @@ Apply the changes? Steps that could not preview run now.</value></data>
 
 Delete it permanently instead? This cannot be undone.</value></data>
   <data name="Explorer_DeletePermanently" xml:space="preserve"><value>Delete Permanently</value></data>
+  <data name="WsUndo_Menu" xml:space="preserve"><value>Undo {0}</value></data>
+  <data name="WsUndo_MenuNone" xml:space="preserve"><value>Undo multi-file change</value></data>
+  <data name="WsUndo_RedoMenu" xml:space="preserve"><value>Redo {0}</value></data>
+  <data name="WsUndo_RedoMenuNone" xml:space="preserve"><value>Redo multi-file change</value></data>
+  <data name="WsUndo_Files" xml:space="preserve"><value>{0} file(s): {1}</value></data>
+  <data name="WsUndo_More" xml:space="preserve"><value> and {0} more</value></data>
+  <data name="WsUndo_Done" xml:space="preserve"><value>Undid {0} in {1} file(s): {2}</value></data>
+  <data name="WsUndo_Redone" xml:space="preserve"><value>Redid {0} in {1} file(s): {2}</value></data>
+  <data name="WsUndo_Refused" xml:space="preserve"><value>Nothing restored: {0} has changed since. No file was changed.</value></data>
+  <data name="WsUndo_Encoding" xml:space="preserve"><value>Nothing restored: {0} cannot hold '{1}' in {2}, the encoding the file declares. No file was changed.</value></data>
+  <data name="WsUndo_Gone" xml:space="preserve"><value>This change was already undone.</value></data>
+  <data name="WsUndo_OpRename" xml:space="preserve"><value>Rename</value></data>
+  <data name="Rename_Done" xml:space="preserve"><value>Renamed {0} → {1} in {2} file(s).</value></data>
+  <data name="Replace_Confirm" xml:space="preserve"><value>Replace {0} occurrence(s) in {1} files?</value></data>
+  <data name="Replace_Done" xml:space="preserve"><value>Replaced {0} occurrence(s) in {1} file(s).</value></data>
+  <data name="NewTrip_Done" xml:space="preserve"><value>Created {0}</value></data>
 </root>
