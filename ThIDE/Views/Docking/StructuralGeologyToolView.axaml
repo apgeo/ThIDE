@@ -62,10 +62,14 @@
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Spacing="10">
                     <TextBlock Text="{l:Loc Struct_Scope}" VerticalAlignment="Center" FontSize="11" Foreground="Gray" />
-                    <RadioButton Content="{l:Loc Struct_ActiveFile}" GroupName="scope" FontSize="11"
+                    <!-- No GroupName: the two buttons group as siblings of this panel. A named group is shared
+                         by every button outside a window (Avalonia's default group manager), so the views Dock
+                         builds and drops while it swaps a layout unchecked each other through ProjectScope
+                         without end (Restore Default Layout froze). -->
+                    <RadioButton Content="{l:Loc Struct_ActiveFile}" FontSize="11"
                                  AutomationProperties.AutomationId="Structural.ScopeActiveFile"
                                  IsChecked="{Binding !Structural.ProjectScope}" />
-                    <RadioButton Content="{l:Loc Struct_WholeProject}" GroupName="scope" FontSize="11"
+                    <RadioButton Content="{l:Loc Struct_WholeProject}" FontSize="11"
                                  AutomationProperties.AutomationId="Structural.ScopeWholeProject"
                                  IsChecked="{Binding Structural.ProjectScope}" />
                     <Button AutomationProperties.AutomationId="Structural.Detect" Content="{l:Loc Struct_Detect}" Command="{Binding Structural.RefreshCommand}" Padding="8,2" FontSize="11" />
