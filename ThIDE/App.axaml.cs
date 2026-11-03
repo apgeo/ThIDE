@@ -49,6 +49,13 @@ public partial class App : Application
         // Apply the persisted theme (mode + custom syntax colors) before the window shows (#2).
         services.GetRequiredService<Services.IThemeService>().Apply();
 
+        // Apply the persisted UI language before MainWindow is built: its XAML and the code-built
+        // menus read their strings while the window is constructed, which happens before the view
+        // model (whose constructor also applies the language) is resolved for its DataContext.
+        var uiLanguage = services.GetRequiredService<Services.IAppSettingsService>().Current.UiLanguage;
+        if (!string.IsNullOrEmpty(uiLanguage))
+            services.GetRequiredService<Services.ILanguageService>().SetLanguage(uiLanguage);
+
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             // stash any file paths passed on the command line so MainWindow can open them

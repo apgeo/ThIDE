@@ -360,6 +360,11 @@
   <data name="Menu_View_Model3D" xml:space="preserve"><value>Vizualizator 3D</value></data>
   <data name="Menu_View_Structural" xml:space="preserve"><value>Geologie structurală</value></data>
   <data name="Menu_View_Outline" xml:space="preserve"><value>Contur</value></data>
+  <data name="Tool_Outline" xml:space="preserve"><value>Contur</value></data>
+  <data name="Tool_Log" xml:space="preserve"><value>Jurnal</value></data>
+  <data name="Tool_MapViewer" xml:space="preserve"><value>Vizualizator hărți</value></data>
+  <data name="Tool_Model3D" xml:space="preserve"><value>Vizualizator 3D</value></data>
+  <data name="Tool_StructuralGeology" xml:space="preserve"><value>Geologie structurală</value></data>
   <data name="Menu_View_Whitespace" xml:space="preserve"><value>Spații albe</value></data>
   <data name="Menu_View_ShowSpacesTabs" xml:space="preserve"><value>Arată spații și taburi</value></data>
   <data name="Menu_View_ShowEol" xml:space="preserve"><value>Arată sfârșitul de linie</value></data>
@@ -548,7 +553,7 @@
   <data name="Pref_SearchWm" xml:space="preserve"><value>Caută în setări…</value></data>
   <data name="Pref_ReopenSession" xml:space="preserve"><value>Redeschide fișierele din sesiunea anterioară la pornire</value></data>
   <data name="Pref_Language" xml:space="preserve"><value>Limbă</value></data>
-  <data name="Pref_LanguageHelp" xml:space="preserve"><value>Limba se aplică imediat meniurilor și etichetelor.</value></data>
+  <data name="Pref_LanguageHelp" xml:space="preserve"><value>Meniurile și panourile își schimbă limba când apăsați OK; câteva etichete din listele deja deschise se actualizează după repornire.</value></data>
   <data name="Pref_AutoSave" xml:space="preserve"><value>Salvare automată</value></data>
   <data name="Pref_AutoSaveOff" xml:space="preserve"><value>Dezactivat</value></data>
   <data name="Pref_AutoSaveDelay" xml:space="preserve"><value>După o întârziere</value></data>

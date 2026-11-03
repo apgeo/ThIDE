@@ -109,7 +109,7 @@ result, and a shortcut to the Diagnostics panel (with F8 / Shift+F8 to step thro
 ## Themes & language
 
 - **Settings → Theme & Colors**: System / Light / **Dark** themes; optional **custom syntax colors**.
-- **View → Language** (or Settings → General): **English** and **Română**, applied immediately.
+- **View → Language** (or Settings → General): **English** and **Română**. Menus and panels switch at once (from Settings, when you click OK); a few labels in lists that are already open follow after a restart.
 
 ---
 
