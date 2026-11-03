@@ -110,7 +110,8 @@ public interface IDocumentService
     /// <summary>
     /// Reopens a buffer recovered after a crash as a dirty document holding <paramref name="text"/>:
     /// over the file when it can be opened (past the binary/huge-file guard, which the user had already
-    /// overridden), otherwise on its own, so the recovered text is never dropped.
+    /// overridden), otherwise on its own, so the recovered text is never dropped. When the file is already
+    /// open with different unsaved edits, those are kept and the recovered text opens beside them.
     /// </summary>
     Task<FileDocumentViewModel> OpenRecoveredAsync(string path, string text, CancellationToken ct = default);
     /// <summary>Raised after a document was written to disk by Save, Save All or auto-save (the argument is its path).</summary>
@@ -391,6 +392,15 @@ public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, 
 
     public async Task<FileDocumentViewModel> OpenRecoveredAsync(string path, string text, CancellationToken ct = default)
     {
+        // Already open with unsaved edits made since the restart: those are newer, so they are kept and the
+        // recovered text opens beside them as its own unsaved document, for the user to compare and merge.
+        if (FindOpen(path) is { IsDirty: true } edited)
+        {
+            if (edited.DocumentText == text) return edited;
+            var side = OpenTextDocument(RecoveredCopyPath(path), string.Empty);
+            side.DocumentText = text;
+            return side;
+        }
         if (File.Exists(path))
         {
             // Any failure (unreadable, permissions, a parse that throws) falls through: the text must not be dropped.
@@ -402,6 +412,19 @@ public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, 
         var doc = FindOpen(path) ?? OpenTextDocument(path, string.Empty);
         doc.DocumentText = text;
         return doc;
+    }
+
+    /// <summary>A free "&lt;name&gt;.recovered[.n]&lt;ext&gt;" next to <paramref name="path"/>: not on disk, not open.</summary>
+    private string RecoveredCopyPath(string path)
+    {
+        var dir = Path.GetDirectoryName(path) ?? string.Empty;
+        var stem = Path.GetFileNameWithoutExtension(path);
+        var ext = Path.GetExtension(path);
+        for (int n = 1; ; n++)
+        {
+            var candidate = Path.Combine(dir, n == 1 ? $"{stem}.recovered{ext}" : $"{stem}.recovered.{n}{ext}");
+            if (!File.Exists(candidate) && FindOpen(candidate) is null) return candidate;
+        }
     }
 
     public async Task OpenFolderAsync(string folderPath, CancellationToken ct = default)
