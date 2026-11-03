@@ -13,10 +13,23 @@ public sealed class UiFactAttribute : FactAttribute
 {
     public UiFactAttribute()
     {
-        if (Environment.GetEnvironmentVariable("THIDE_UI_TESTS") != "1")
-            Skip = "UI test: set THIDE_UI_TESTS=1 or run tests/run-ui-tests.sh.";
-        else if (OperatingSystem.IsLinux() && string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DISPLAY")))
-            Skip = "UI test: no X display (run under tests/run-ui-tests.sh, which starts Xvfb).";
+        if (SkipReason(Environment.GetEnvironmentVariable("THIDE_UI_TESTS"), Environment.GetEnvironmentVariable("DISPLAY"),
+                OperatingSystem.IsLinux(), OperatingSystem.IsWindows()) is { } reason)
+            Skip = reason;
+    }
+
+    /// <summary>Why a UI test cannot run here, or null when it can.</summary>
+    internal static string? SkipReason(string? uiTests, string? display, bool isLinux, bool isWindows)
+    {
+        if (uiTests != "1")
+            return "UI test: set THIDE_UI_TESTS=1 or run tests/run-ui-tests.sh.";
+        // The throw-away profile is set up through XDG_* (see StartAsync), which Windows ignores: the
+        // app would read and write the developer's own %APPDATA%\ThIDE.
+        if (isWindows)
+            return "UI test: not run on Windows, where the app cannot be given a throw-away profile.";
+        if (isLinux && string.IsNullOrEmpty(display))
+            return "UI test: no X display (run under tests/run-ui-tests.sh, which starts Xvfb).";
+        return null;
     }
 }
 
@@ -77,7 +90,8 @@ public sealed class ThideApp : IAsyncDisposable
         psi.Environment["THIDE_UI_AUTOMATION"] = "1";
         psi.Environment["THIDE_UI_AUTOMATION_ENDPOINT"] = endpointFile;
         // A fresh profile so settings/layout never leak between tests or into the developer's own.
-        // (.NET maps ApplicationData to XDG_CONFIG_HOME on Linux; Windows/macOS use the real profile.)
+        // (.NET maps ApplicationData to XDG_CONFIG_HOME on Linux and macOS; Windows would use the real
+        // profile, so UiFact skips there.)
         // The folders must exist: for a missing XDG_CONFIG_HOME .NET returns "" and the app then falls
         // back to ~/.config, i.e. the developer's real profile.
         psi.Environment["XDG_CONFIG_HOME"] = Directory.CreateDirectory(Path.Combine(home, "config")).FullName;
