@@ -115,8 +115,7 @@ public sealed class Th2OptionList
     private static bool IsOptionName(string t) =>
         t.Length >= 2 && t[0] == '-' && (char.IsLetter(t[1]) || t[1] == '-');
 
-    private static string Unquote(string s) =>
-        s.Length >= 2 && s[0] == '"' && s[^1] == '"' ? s[1..^1] : s;
+    private static string Unquote(string s) => TherionStrings.Unquote(s);
 
     private static SourceSpan SpanUnion(SourceSpan a, SourceSpan b)
     {
