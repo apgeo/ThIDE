@@ -26,11 +26,13 @@ public enum NotificationKind
 /// <summary>
 /// One user-facing notification. <see cref="Action"/> (when set) is invoked from the toast
 /// click and the history "action" button; <see cref="ActionLabel"/> is its button caption.
+/// <see cref="SecondaryAction"/> (optional) is a second history button only, e.g. "Discard".
 /// </summary>
 public sealed class AppNotification
 {
     public AppNotification(string title, string message, NotificationKind kind,
-        string? actionLabel = null, Action? action = null)
+        string? actionLabel = null, Action? action = null,
+        string? secondaryActionLabel = null, Action? secondaryAction = null)
     {
         Time = DateTimeOffset.Now;
         Title = title ?? string.Empty;
@@ -38,6 +40,8 @@ public sealed class AppNotification
         Kind = kind;
         ActionLabel = actionLabel;
         Action = action;
+        SecondaryActionLabel = secondaryActionLabel;
+        SecondaryAction = secondaryAction;
     }
 
     public DateTimeOffset Time { get; }
@@ -46,9 +50,12 @@ public sealed class AppNotification
     public NotificationKind Kind { get; }
     public string? ActionLabel { get; }
     public Action? Action { get; }
+    public string? SecondaryActionLabel { get; }
+    public Action? SecondaryAction { get; }
 
     /// <summary>True when this notification carries an invocable action (for binding visibility).</summary>
     public bool HasAction => Action is not null && !string.IsNullOrEmpty(ActionLabel);
+    public bool HasSecondaryAction => SecondaryAction is not null && !string.IsNullOrEmpty(SecondaryActionLabel);
 
     /// <summary>Short "HH:mm" time shown in the history list.</summary>
     public string TimeText => Time.ToLocalTime().ToString("HH:mm");
@@ -57,6 +64,10 @@ public sealed class AppNotification
     /// <summary>Command wrapper around <see cref="Action"/> for the history "action" button.</summary>
     public System.Windows.Input.ICommand? ActionCommand =>
         Action is null ? null : _actionCommand ??= new CommunityToolkit.Mvvm.Input.RelayCommand(Action);
+
+    private System.Windows.Input.ICommand? _secondaryActionCommand;
+    public System.Windows.Input.ICommand? SecondaryActionCommand =>
+        SecondaryAction is null ? null : _secondaryActionCommand ??= new CommunityToolkit.Mvvm.Input.RelayCommand(SecondaryAction);
 }
 
 /// <summary>App-wide notification hub. Raises <see cref="Posted"/> for the toast layer and keeps a
