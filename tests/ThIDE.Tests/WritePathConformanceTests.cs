@@ -154,7 +154,7 @@ public class WritePathConformanceTests
     /// The reader finds the directive after a long accented header (it scans the file's own bytes); the
     /// editor's save must keep the file in that encoding.
     /// </summary>
-    [Fact(Skip = "Known bug: the save probes the first 4096 chars re-encoded as UTF-8, so a directive the reader found after a long accented header is missed and the file is rewritten as UTF-8")]
+    [Fact]
     public async Task Editor_save_keeps_the_encoding_a_directive_after_a_long_accented_header_declares()
     {
         using var dir = new TempDir();
