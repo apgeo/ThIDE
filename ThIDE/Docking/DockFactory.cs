@@ -22,14 +22,16 @@ namespace ThIDE.Docking;
 
 public sealed class DockFactory : Factory
 {
-    private static readonly string LayoutPath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "ThIDE", "dock-layout.json");
+    private readonly string _layoutPath;
 
     // Crash sentinel: created while a saved layout is being applied, deleted once the window
     // has rendered. If it's still present on the next launch, that apply crashed mid-render,
     // so we discard the layout instead of bricking startup (task 2).
-    private static readonly string LoadSentinelPath = LayoutPath + ".loading";
+    private readonly string _loadSentinelPath;
+
+    private static string DefaultLayoutPath() => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+        "ThIDE", "dock-layout.json");
 
     // The stock Dock serializer: its built-in resolver carries the polymorphic type
     // discriminators that let an IRootDock tree round-trip. (A custom resolver dropped
@@ -90,8 +92,13 @@ public sealed class DockFactory : Factory
         ThIDE.Services.ILayoutService? layoutState = null,
         ThIDE.Services.IAppSettingsService? appSettings = null,
         ILogger<DockFactory>? logger = null,
-        AutomationToolViewModel? automation = null)
+        AutomationToolViewModel? automation = null,
+        string? layoutPath = null)
     {
+        // layoutPath (and the crash sentinel beside it) defaults to the user profile; tests and the
+        // designer pass a throw-away path.
+        _layoutPath = layoutPath ?? DefaultLayoutPath();
+        _loadSentinelPath = _layoutPath + ".loading";
         _automation = automation ?? new AutomationToolViewModel();
         _welcome = welcome;
         _workspace = workspace;
@@ -373,18 +380,18 @@ public sealed class DockFactory : Factory
         try
         {
             if (_layoutState?.Current.Profile is not { } profile) return null;
-            if (File.Exists(LoadSentinelPath))
+            if (File.Exists(_loadSentinelPath))
             {
-                TryDelete(LoadSentinelPath);
+                TryDelete(_loadSentinelPath);
                 return null;
             }
-            TryWrite(LoadSentinelPath, string.Empty);
+            TryWrite(_loadSentinelPath, string.Empty);
             return BuildFromProfile(profile);
         }
         catch (Exception ex)
         {
             _logger?.LogWarning(ex, "Saved layout profile could not be applied; using the default layout.");
-            TryDelete(LoadSentinelPath);
+            TryDelete(_loadSentinelPath);
             return null;
         }
     }
@@ -1007,22 +1014,22 @@ public sealed class DockFactory : Factory
     {
         try
         {
-            if (!File.Exists(LayoutPath)) return null;
+            if (!File.Exists(_layoutPath)) return null;
 
             // A leftover sentinel means the previous attempt to apply this layout crashed
             // during render — discard it rather than crash again.
-            if (File.Exists(LoadSentinelPath))
+            if (File.Exists(_loadSentinelPath))
             {
-                TryDelete(LayoutPath);
-                TryDelete(LoadSentinelPath);
+                TryDelete(_layoutPath);
+                TryDelete(_loadSentinelPath);
                 return null;
             }
 
-            var json = File.ReadAllText(LayoutPath);
-            TryWrite(LoadSentinelPath, string.Empty);
+            var json = File.ReadAllText(_layoutPath);
+            TryWrite(_loadSentinelPath, string.Empty);
 
             var root = _serializer.Deserialize<IRootDock>(json);
-            if (root is null) { TryDelete(LoadSentinelPath); return null; }
+            if (root is null) { TryDelete(_loadSentinelPath); return null; }
 
             // The JSON deserializer fills VisibleDockables with plain non-observable List<>s,
             // which the Dock content controls don't render from. Rebuild every collection as
@@ -1036,12 +1043,12 @@ public sealed class DockFactory : Factory
             SwapSingletons(root, map);
 
             if (FindDockById<DocumentDock>(root, "Documents") is not { } documentDock)
-            { TryDelete(LoadSentinelPath); return null; }
+            { TryDelete(_loadSentinelPath); return null; }
             _documentDock = documentDock;
 
             // Require every tool + the document well to be present (guards version skew).
             foreach (var singleton in map.Values)
-                if (!ContainsRef(root, singleton)) { TryDelete(LoadSentinelPath); return null; }
+                if (!ContainsRef(root, singleton)) { TryDelete(_loadSentinelPath); return null; }
 
             _rootDock = root;
             _lastSavedJson = json; // identical layout — no need to immediately rewrite it
@@ -1050,9 +1057,9 @@ public sealed class DockFactory : Factory
         catch (Exception ex)
         {
             // Corrupt/incompatible layout — drop it so it can't fail again.
-            _logger?.LogWarning(ex, "Saved dock layout could not be loaded; discarding {Path}.", LayoutPath);
-            TryDelete(LayoutPath);
-            TryDelete(LoadSentinelPath);
+            _logger?.LogWarning(ex, "Saved dock layout could not be loaded; discarding {Path}.", _layoutPath);
+            TryDelete(_layoutPath);
+            TryDelete(_loadSentinelPath);
             return null;
         }
     }
@@ -1061,7 +1068,7 @@ public sealed class DockFactory : Factory
     /// Confirms the loaded layout rendered successfully (clears the crash sentinel). Call
     /// once the main window is shown so the next launch trusts the saved layout (task 2).
     /// </summary>
-    public void ConfirmLayoutLoaded() => TryDelete(LoadSentinelPath);
+    public void ConfirmLayoutLoaded() => TryDelete(_loadSentinelPath);
 
     /// <summary>
     /// Serializes the current layout to disk. Non-destructive (open documents are excluded by
@@ -1079,14 +1086,14 @@ public sealed class DockFactory : Factory
             // are substituted back by Id on load via SwapSingletons.
             var json = _serializer.Serialize<IRootDock>(BuildRootSkeleton(_rootDock));
             if (string.Equals(json, _lastSavedJson, StringComparison.Ordinal)) return; // unchanged
-            var dir = Path.GetDirectoryName(LayoutPath);
+            var dir = Path.GetDirectoryName(_layoutPath);
             if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
-            File.WriteAllText(LayoutPath, json);
+            File.WriteAllText(_layoutPath, json);
             _lastSavedJson = json;
         }
         catch (Exception ex)
         {
-            _logger?.LogWarning(ex, "Failed to persist dock layout to {Path}.", LayoutPath);
+            _logger?.LogWarning(ex, "Failed to persist dock layout to {Path}.", _layoutPath);
         }
     }
 

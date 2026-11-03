@@ -18,7 +18,7 @@ public class StrictParserModeTests
         var before = ParserOptionsHost.Current;
         try
         {
-            var vm = new MainWindowViewModel();
+            var vm = MainWindowViewModelHost.Create(new NullDocumentService());
             vm.StrictParserMode = true;
 
             var parsed = DocumentParser.ParseByExtension("x.th", "survey a\n  centerline\n  endcenterline\n");
