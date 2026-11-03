@@ -1538,6 +1538,8 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Fix_InsertEnd" xml:space="preserve"><value>Insert '{0}'</value></data>
   <data name="Fix_InsertCs" xml:space="preserve"><value>Insert 'cs ' line</value></data>
   <data name="Fix_CommentOut" xml:space="preserve"><value>Comment out this line</value></data>
+  <data name="Fix_CommentOutDisconnects" xml:space="preserve"><value>Comment out this line (disconnects {0})</value></data>
+  <data name="Fix_Equate" xml:space="preserve"><value>Replace with 'equate {0} {1}'</value></data>
   <data name="Fix_PathSeparators" xml:space="preserve"><value>Write '{0}' with '/' separators</value></data>
   <data name="File_PathSeparatorBanner" xml:space="preserve"><value>{0} include path(s) in this file use Windows '\' separators. Therion cannot open them on this system, but written with '/' they name existing files.</value></data>
   <data name="File_PathSeparatorFixFile" xml:space="preserve"><value>Fix in this file</value></data>

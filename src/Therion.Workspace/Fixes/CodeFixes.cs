@@ -3,6 +3,7 @@
 
 using System.Text.RegularExpressions;
 using Therion.Core;
+using Therion.Semantics;
 using Therion.Workspace.Editing;
 
 namespace Therion.Workspace.Fixes;
@@ -16,6 +17,7 @@ public static partial class CodeFixes
     public const string UnresolvedStation = "TH_SEM_001";
     public const string UnterminatedBlock = "TH0020";
     public const string WindowsPathSeparator = "TH_SEM_016";
+    public const string ShotOutlier = SemanticDiagnosticCodes.ShotOutlier;
 
     private static readonly Dictionary<string, string> Enders = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -35,7 +37,8 @@ public static partial class CodeFixes
 
     /// <summary>
     /// The fixes for one line (1-based), in menu order: rename to a suggested name, rewrite a Windows
-    /// path separator, insert a missing terminator, insert a cs line into a centreline without one, comment the line out.
+    /// path separator, turn a zero-length leg into an equate, insert a missing terminator, insert a cs
+    /// line into a centreline without one, comment the line out (naming the stations that disconnects).
     /// </summary>
     public static IReadOnlyList<CodeFix> ForLine(string text, int lineNumber, IReadOnlyList<Diagnostic> diagnostics)
     {
@@ -50,12 +53,46 @@ public static partial class CodeFixes
             if (Rename(lines, d) is { } rename) fixes.Add(rename);
         foreach (var d in diagnostics.Where(d => d.Span.Start.Line == lineNumber && d.Code.Value == WindowsPathSeparator))
             if (Separators(lines, d) is { } separators) fixes.Add(separators);
+        var outliers = diagnostics.Where(d => d.Span.Start.Line == lineNumber && d.Code.Value == ShotOutlier).ToList();
+        var zeroLeg = outliers.Count > 0 ? ZeroLengthLeg(text, lines, lineNumber, outliers[0]) : null;
+        if (zeroLeg?.Equate is { } equate) fixes.Add(equate);
         if (Terminator(lines, lineNumber) is { } end) fixes.Add(end);
         if (fw is "centreline" or "centerline" && !BodyHasKeyword(lines, lineNumber, "cs"))
             fixes.Add(new CodeFix("Fix_InsertCs", [], null, [TextEdit.Insert(lines.End(lineNumber), lines.NewLine + indent + "  cs ")], false));
-        if (!lineText.TrimStart().StartsWith('#'))
-            fixes.Add(new CodeFix("Fix_CommentOut", [], null, [TextEdit.Insert(lines.Start(lineNumber) + indent.Length, "# ")], false));
+        // A fix that disconnects a station is never the only one offered.
+        if (!lineText.TrimStart().StartsWith('#') && zeroLeg is not { Equate: null, Disconnects.Length: > 0 })
+            fixes.Add(zeroLeg?.Disconnects is { Length: > 0 } cut
+                ? new CodeFix("Fix_CommentOutDisconnects", [cut], null, [TextEdit.Insert(lines.Start(lineNumber) + indent.Length, "# ")], false)
+                : new CodeFix("Fix_CommentOut", [], null, [TextEdit.Insert(lines.Start(lineNumber) + indent.Length, "# ")], false));
         return fixes;
+    }
+
+    // A zero-length leg between two stations says they are the same point: `equate` says so without a
+    // shot. Commenting the leg out instead drops that link, so the stations it alone connects (in this
+    // file: no other leg, no equate) are named in that fix's title.
+    private static (CodeFix? Equate, string Disconnects)? ZeroLengthLeg(string text, Lines lines, int line, Diagnostic d)
+    {
+        var ast = new Therion.Syntax.ThParser().Parse(d.Span.FilePath is { Length: > 0 } p ? p : "untitled.th", text).Value;
+        if (ast is null) return null;
+        var model = new SemanticBinder().Bind(ast, buildOccurrences: false);
+        static bool Leg(ShotSymbol s) => (s.Flags & ShotFlags.Splay) == 0 && !s.From.Equals(s.To);
+        var leg = model.Shots.FirstOrDefault(s => s.Span.Start.Line == line && Leg(s) && s.Length is <= 0.0001);
+        if (leg is null) return null;
+
+        bool Connected(QualifiedName station) =>
+            model.Shots.Any(s => !ReferenceEquals(s, leg) && Leg(s) && (s.From.Equals(station) || s.To.Equals(station)))
+            || model.EquateRecords.Any(e => e.ResolvedMembers.Any(m => m is { } q && q.Equals(station)));
+        var cut = string.Join(", ", new[] { leg.From, leg.To }.Where(st => !Connected(st)).Select(st => st.Last));
+
+        // The station tokens as written on the line; the rest of the line (readings) goes, a comment stays.
+        string lineText = lines.Text(line);
+        int indent = Indent(lineText).Length, hash = lineText.IndexOf('#');
+        string body = (hash < 0 ? lineText[indent..] : lineText[indent..hash]).TrimEnd();
+        var tokens = body.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        if (!tokens.Contains(leg.From.Last) || !tokens.Contains(leg.To.Last)) return (null, cut);
+        var equate = new CodeFix("Fix_Equate", [leg.From.Last, leg.To.Last], ShotOutlier,
+            [new TextEdit(lines.Start(line) + indent, body.Length, body, $"equate {leg.From.Last} {leg.To.Last}")], false);
+        return (equate, cut);
     }
 
     /// <summary>The batch-safe fix for one diagnostic, or null when there is none (or it is ambiguous).</summary>
