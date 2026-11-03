@@ -999,6 +999,18 @@ public partial class MainWindowViewModel : ViewModelBase
             Tr.Get("Notif_DiscardRecovered"), () => { if (handled) return; handled = true; _crashRecovery?.ClearRecovery(); })));
     }
 
+    /// <summary>Writes the unsaved editor buffers to the crash-recovery folder now (the periodic autosave
+    /// and the steps that could hang or crash, such as a layout swap).</summary>
+    public void SaveRecoveryBuffers()
+    {
+        if (_crashRecovery is null) return;
+        var dirty = new System.Collections.Generic.List<(string, string)>();
+        foreach (var d in _documents.Documents)
+            if (d.IsDirty && !string.IsNullOrEmpty(d.FilePath))
+                dirty.Add((d.FilePath, d.DocumentText));
+        _crashRecovery.SaveBuffers(dirty);
+    }
+
     private async Task RecoverBuffersAsync(System.Collections.Generic.IReadOnlyList<RecoveredBuffer> buffers)
     {
         int recovered = 0;
@@ -1551,6 +1563,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private void ResetLayout()
     {
+        SaveRecoveryBuffers();   // a swap that hangs or crashes must not cost the unsaved edits
         _factory.CloseAllFloatWindows();   // the old tree's torn-off windows must not linger
         var layout = _factory.ResetToDefault();
         _factory.InitLayout(layout);
@@ -1569,6 +1582,7 @@ public partial class MainWindowViewModel : ViewModelBase
     /// <summary>Swaps in the layout described by <paramref name="profile"/>.</summary>
     private void ApplyLayoutProfile(LayoutProfile profile)
     {
+        SaveRecoveryBuffers();
         _factory.CloseAllFloatWindows();
         var layout = _factory.BuildFromProfile(profile);
         _factory.InitLayout(layout);
