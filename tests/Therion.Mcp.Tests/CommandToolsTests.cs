@@ -22,6 +22,7 @@ public class CommandToolsTests
         public bool FollowAgent { get; init; } = true;
 
         public string? RanCommand { get; private set; }
+        public string? BuildEntry { get; init; }
         public bool SavedAll { get; private set; }
         public string? AppliedLayout { get; private set; }
         public (string Key, string Value)? SetPair { get; private set; }
@@ -35,6 +36,8 @@ public class CommandToolsTests
             RanCommand = commandId;
             return Task.FromResult(new UiActionResult(true, $"Ran '{commandId}'."));
         }
+
+        public Task<string?> GetBuildEntryAsync() => Task.FromResult(BuildEntry);
 
         public Task<UiActionResult> SaveAllAsync()
         {
@@ -86,6 +89,55 @@ public class CommandToolsTests
         var r = await Tools(bridge).RunCommand(ShellCommandIds.Build);
 
         Assert.True(r.Ok);
+        Assert.Equal(ShellCommandIds.Build, bridge.RanCommand);
+    }
+
+    // ---- Build / Rebuild ask the system-command approval run_build asks ---------------------------
+
+    private sealed class CountingApproval(bool approve) : IBuildApproval
+    {
+        public int Asked { get; private set; }
+
+        public Task<bool> ApproveSystemCommandsAsync(string root, string entryPoint, IReadOnlyList<string> systemCommands,
+            CancellationToken ct = default)
+        {
+            Asked++;
+            return Task.FromResult(approve);
+        }
+    }
+
+    [Theory]
+    [InlineData(ShellCommandIds.Build)]
+    [InlineData(ShellCommandIds.Rebuild)]
+    public async Task Building_the_ides_target_with_system_lines_needs_the_approval(string commandId)
+    {
+        // The IDE builds the active editor's thconfig, which need not be the workspace's entry point.
+        using var fixture = FixtureWorkspace.Create();
+        var other = fixture.PathTo("other.thconfig");
+        System.IO.File.WriteAllText(other, "source caves/upper.th\nsystem \"echo from-agent\"\n");
+        var bridge = new FakeBridge { BuildEntry = other };
+        var host = new WorkspaceHost(fixture.Thconfig);
+
+        var declined = await new CommandTools(bridge, host, new CountingApproval(approve: false)).RunCommand(commandId);
+        Assert.Equal(ToolErrorCodes.NotTrusted, declined.Error?.Code);
+        Assert.Null(bridge.RanCommand);
+
+        var approved = await new CommandTools(bridge, host, new CountingApproval(approve: true)).RunCommand(commandId);
+        Assert.True(approved.Ok);
+        Assert.Equal(commandId, bridge.RanCommand);
+    }
+
+    [Fact]
+    public async Task Building_without_system_lines_never_asks()
+    {
+        using var fixture = FixtureWorkspace.Create();
+        var bridge = new FakeBridge();
+        var approval = new CountingApproval(approve: false);
+
+        var r = await new CommandTools(bridge, new WorkspaceHost(fixture.Thconfig), approval).RunCommand(ShellCommandIds.Build);
+
+        Assert.True(r.Ok);
+        Assert.Equal(0, approval.Asked);
         Assert.Equal(ShellCommandIds.Build, bridge.RanCommand);
     }
 

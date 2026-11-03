@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using ModelContextProtocol.Server;
+using Therion.Processing.Abstractions;
 
 namespace Therion.Mcp.Tools;
 
@@ -21,9 +22,11 @@ public sealed record SettingList(IReadOnlyList<McpSettingInfo> Settings);
 /// tool that <em>changes</em> anything honors the "follow the agent" toggle (declines with
 /// <c>ui_control_disabled</c> when it is off) and needs a window (<c>ui_unavailable</c> otherwise); the
 /// read tools need only the window. The command allowlist is fixed in <see cref="R3CommandPolicy"/>.
+/// Build and Rebuild compile a thconfig whose <c>system</c> lines run shell commands, so they ask the
+/// same <see cref="IBuildApproval"/> run_build asks before the IDE starts the build.
 /// </summary>
 [McpServerToolType]
-public sealed class CommandTools(IUiBridge bridge)
+public sealed class CommandTools(IUiBridge bridge, IWorkspaceHost? host = null, IBuildApproval? approval = null)
 {
     /// <summary>Layout presets <c>set_layout</c> accepts (validated here so a bad name is a clean caller error).</summary>
     private static readonly string[] Presets = ["default", "split2", "split3", "multi-monitor"];
@@ -69,7 +72,9 @@ public sealed class CommandTools(IUiBridge bridge)
     [Description("Runs one IDE command by id (see list_commands). Allowed commands run at once; a gated "
                + "command (it can change your files, e.g. Save) needs confirm:true. Commands that open a "
                + "dialog, or that need a focused editor, are refused — use open_file / rename_symbol / "
-               + "format_file for those. Honors 'follow the agent'.")]
+               + "format_file for those. Build and Rebuild of a thconfig with `system` lines need the "
+               + "user's approval first, like run_build, and fail with not_trusted when they decline. "
+               + "Honors 'follow the agent'.")]
     public async Task<ToolResult<ActionOk>> RunCommand(
         [Description("The command id from list_commands, e.g. 'Build' or 'ToggleDiagnostics'.")]
         string commandId,
@@ -93,7 +98,33 @@ public sealed class CommandTools(IUiBridge bridge)
             return ToolResult<ActionOk>.Failure(ToolErrorCodes.ConfirmationRequired,
                 $"'{commandId}' ({command.Title}) can change your files. Re-call with confirm:true to proceed.");
 
+        if (command.Id is ShellCommandIds.Build or ShellCommandIds.Rebuild
+            && await BuildGateAsync(ct).ConfigureAwait(false) is { } declined)
+            return ToolResult<ActionOk>.Failure(declined);
+
         return Wrap(await bridge.RunCommandAsync(commandId).ConfigureAwait(false));
+    }
+
+    /// <summary>
+    /// The run_build approval for what the IDE's Build would compile: the bridge's answer, else the
+    /// workspace's entry point. The folder asked about is the workspace root when the entry lies in it,
+    /// else the entry's own folder. Null when the build may start (or there is nothing to build, which
+    /// the command itself reports).
+    /// </summary>
+    private async Task<ToolError?> BuildGateAsync(CancellationToken ct)
+    {
+        var entry = await bridge.GetBuildEntryAsync().ConfigureAwait(false);
+        string? root = null;
+        if (host is not null && await host.TryGetSnapshotAsync(ct).ConfigureAwait(false) is ({ } snapshot, _))
+        {
+            entry ??= snapshot.EntryPointPath;
+            root = snapshot.Root;
+        }
+        if (entry is null) return null;
+        entry = WorkspacePaths.Canonicalize(entry);
+        if (root is not null && !WorkspacePaths.IsInside(root, entry)) root = null;
+        root ??= Path.GetDirectoryName(entry) ?? entry;
+        return await BuildTools.CheckSystemCommandsAsync(approval, root, entry, ct).ConfigureAwait(false);
     }
 
     // ---- settings --------------------------------------------------------------------------------
