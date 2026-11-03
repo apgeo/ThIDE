@@ -561,7 +561,13 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
 
             TherionWorkspace? ws;
             lock (_gate) ws = _workspace;
-            if (ws is not null) await RebuildGraphAsync(ws).ConfigureAwait(false);
+            // A throw here (a Changed subscriber, the symbol index) must not end the pump with the
+            // running flag still set: every later change would then be ignored for the session.
+            if (ws is not null)
+            {
+                try { await RebuildGraphAsync(ws).ConfigureAwait(false); }
+                catch (Exception ex) { _log?.Error($"Workspace rebuild failed: {ex.Message}"); }
+            }
 
             lock (_gate)
             {
