@@ -124,7 +124,8 @@ public sealed class SemanticBinder
         var activeFlags = initialFlags;
         // Active reading units. A `units` command earlier in this body switches degrees↔grads↔…
         // for the range checks that follow, and metres↔feet↔… (with an optional factor) for the
-        // conversion of the readings into the metres and degrees every shot is stored in.
+        // conversion of the readings into the metres and degrees every shot is stored in. A
+        // `calibrate` command is part of the same state (and saved and restored by `group` with it).
         var units = initialUnits ?? ReadingUnits.Default;
         TrivialComment? pendingComment = null;
         // The survey these direct children belong to (team/date attach here).
@@ -167,6 +168,9 @@ public sealed class SemanticBinder
                     break;
                 case UnitsCommand unitsCmd:
                     units = ApplyUnits(unitsCmd, units);
+                    break;
+                case CalibrateCommand calibrate:
+                    units = ApplyCalibrate(calibrate, units);
                     break;
                 case DataCommand d:
                     currentFields = d;
@@ -487,12 +491,15 @@ public sealed class SemanticBinder
 
     /// <summary>
     /// The units the readings of a centreline body are written in: metres per written tape unit
-    /// (foresight and backsight; the <c>units</c> factor folded in) and the compass/clino angle units.
+    /// (foresight and backsight; the <c>units</c> factor folded in) and the compass/clino angle units,
+    /// with the <c>calibrate</c> in force for the tape, compass and clino.
     /// </summary>
     private readonly record struct ReadingUnits(
-        double TapeScale, double BackTapeScale, AngleUnit Compass, AngleUnit Clino)
+        double TapeScale, double BackTapeScale, AngleUnit Compass, AngleUnit Clino,
+        ReadingCalibration LengthCal, ReadingCalibration CompassCal, ReadingCalibration ClinoCal)
     {
-        public static ReadingUnits Default { get; } = new(1.0, 1.0, AngleUnit.Degree, AngleUnit.Degree);
+        public static ReadingUnits Default { get; } = new(1.0, 1.0, AngleUnit.Degree, AngleUnit.Degree,
+            ReadingCalibration.None, ReadingCalibration.None, ReadingCalibration.None);
     }
 
     /// <summary>Folds an in-body <c>units</c> command into the active reading units.</summary>
@@ -524,6 +531,32 @@ public sealed class SemanticBinder
                     units = units with { Clino = angle }; break;
             }
         }
+        return units;
+    }
+
+    /// <summary>
+    /// Folds an in-body <c>calibrate</c> command into the active reading units. Therion applies it to
+    /// the reading as written, before the unit conversion, and the backsight columns use the
+    /// foresight's calibration (thdata.cxx); <c>calibrate backlength</c> changes nothing. Only the
+    /// quantities a shot is bound from are tracked.
+    /// </summary>
+    private static ReadingUnits ApplyCalibrate(CalibrateCommand cmd, ReadingUnits units)
+    {
+        // A scale of 0 is an error in Therion, and more than two numbers is a piecewise table that a
+        // zero error and a scale cannot express: leave the readings as written rather than guess.
+        int numbers = cmd.Raw.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length - cmd.Quantities.Length;
+        if (cmd.Scale == 0 || numbers > 2) return units;
+        var calibration = new ReadingCalibration(cmd.ZeroError, cmd.Scale ?? 1.0);
+        foreach (var q in cmd.Quantities)
+            switch (q.ToLowerInvariant())
+            {
+                case "length" or "tape":
+                    units = units with { LengthCal = calibration }; break;
+                case "compass" or "bearing":
+                    units = units with { CompassCal = calibration }; break;
+                case "clino" or "gradient":
+                    units = units with { ClinoCal = calibration }; break;
+            }
         return units;
     }
 
@@ -575,6 +608,9 @@ public sealed class SemanticBinder
             FieldDefinition = data,
             CompassUnit = units.Compass,
             ClinoUnit = units.Clino,
+            LengthCalibration = units.LengthCal,
+            CompassCalibration = units.CompassCal,
+            ClinoCalibration = units.ClinoCal,
             Flags = effectiveFlags,
             Comment = comment,
         });
@@ -593,38 +629,51 @@ public sealed class SemanticBinder
     /// legs (very common in real projects) bind with null measurements, which drops them from the
     /// centreline layout and undercounts survey-length statistics.
     /// <para>The values are returned in metres and degrees whatever <paramref name="units"/> the body
-    /// declares, and a clino written as a plumb/level keyword (<c>down</c>, <c>+V</c>, <c>level</c>, …)
-    /// is read as ±90° / 0°, so every consumer sees one convention.</para>
+    /// declares, with its <c>calibrate</c> applied, and a clino written as a plumb/level keyword
+    /// (<c>down</c>, <c>+V</c>, <c>level</c>, …) is read as ±90° / 0°, so every consumer sees one
+    /// convention.</para>
     /// </summary>
     private static (double? Length, double? Compass, double? Clino) ExtractMeasurements(
         DataRow row, DataCommand data, ReadingUnits units)
     {
-        double? length = TryGet(row, data, "length") ?? TryGet(row, data, "tape");
+        double? length = Calibrated(TryGet(row, data, "length") ?? TryGet(row, data, "tape"), units.LengthCal);
         length = length * units.TapeScale
-              ?? (TryGet(row, data, "backtape") ?? TryGet(row, data, "backlength")) * units.BackTapeScale;
+              ?? Calibrated(TryGet(row, data, "backtape") ?? TryGet(row, data, "backlength"), units.LengthCal)
+                 * units.BackTapeScale;
 
-        double? compass = Degrees(TryGet(row, data, "compass") ?? TryGet(row, data, "bearing"), units.Compass);
+        double? compass = Bearing(Degrees(Calibrated(
+            TryGet(row, data, "compass") ?? TryGet(row, data, "bearing"), units.CompassCal), units.Compass));
         if (compass is null
-            && Degrees(TryGet(row, data, "backcompass") ?? TryGet(row, data, "backbearing"), units.Compass) is { } backCompass)
-            compass = (backCompass + 180.0) % 360.0;
+            && Degrees(Calibrated(TryGet(row, data, "backcompass") ?? TryGet(row, data, "backbearing"), units.CompassCal),
+                units.Compass) is { } backCompass)
+            compass = Bearing(backCompass + 180.0);
 
-        double? clino = TryGetClino(row, data, "clino", units.Clino) ?? TryGetClino(row, data, "gradient", units.Clino);
+        double? clino = TryGetClino(row, data, "clino", units.Clino, units.ClinoCal)
+                     ?? TryGetClino(row, data, "gradient", units.Clino, units.ClinoCal);
         if (clino is null
-            && (TryGetClino(row, data, "backclino", units.Clino) ?? TryGetClino(row, data, "backgradient", units.Clino))
-                is { } backClino)
+            && (TryGetClino(row, data, "backclino", units.Clino, units.ClinoCal)
+                ?? TryGetClino(row, data, "backgradient", units.Clino, units.ClinoCal)) is { } backClino)
             clino = -backClino;
 
         return (length, compass, clino);
     }
 
+    private static double? Calibrated(double? reading, ReadingCalibration calibration) =>
+        reading is { } r ? calibration.Apply(r) : null;
+
+    /// <summary>A bearing brought into [0, 360), as Therion stores it (a calibrated 0.2 − 0.5 is 359.7).</summary>
+    private static double? Bearing(double? degrees) => degrees is { } d ? (d % 360.0 + 360.0) % 360.0 : null;
+
     private static double? Degrees(double? value, AngleUnit unit) =>
         value is { } v && unit != AngleUnit.Degree ? UnitConverter.Instance.ToDegrees(new Angle(v, unit)) : value;
 
     /// <summary>
-    /// A clino column value in degrees: a number in <paramref name="unit"/>, or one of the plumb/level
-    /// keywords Therion and Survex accept. A lone <c>-</c> stays "not read" (null), not level.
+    /// A clino column value in degrees: a number in <paramref name="unit"/> (calibrated), or one of the
+    /// plumb/level keywords Therion and Survex accept, which no calibration changes. A lone <c>-</c>
+    /// stays "not read" (null), not level.
     /// </summary>
-    private static double? TryGetClino(DataRow row, DataCommand data, string field, AngleUnit unit)
+    private static double? TryGetClino(DataRow row, DataCommand data, string field, AngleUnit unit,
+        ReadingCalibration calibration)
     {
         int i = IndexOf(data.Fields, field);
         if (i < 0 || i >= row.Values.Length) return null;
@@ -633,7 +682,7 @@ public sealed class SemanticBinder
             "up" or "u" or "+v" => 90.0,
             "down" or "d" or "-v" => -90.0,
             "level" or "h" or "horizontal" => 0.0,
-            _ => Degrees(TryGet(row, data, field), unit),
+            _ => Degrees(Calibrated(TryGet(row, data, field), calibration), unit),
         };
     }
 
