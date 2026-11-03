@@ -98,7 +98,8 @@ public static class ProcessRunner
         {
             // cmd does not undo the \" escaping ArgumentList would apply to the quotes inside the
             // line, so the line goes in raw; /s makes cmd strip only the outer pair of quotes.
-            psi.FileName = "cmd.exe";
+            // By full path: Windows looks for a bare "cmd.exe" in ThIDE's own working directory first.
+            psi.FileName = Path.Combine(Environment.SystemDirectory, "cmd.exe");
             psi.Arguments = "/d /s /c \"" + spec.FileName + "\"";
         }
         else if (spec.UseShell)
@@ -115,6 +116,11 @@ public static class ProcessRunner
         if (spec.WorkingDirectory is { Length: > 0 } wd) psi.WorkingDirectory = wd;
         if (spec.Environment is { } env)
             foreach (var (k, v) in env) psi.Environment[k] = v;
+        // cmd looks a bare program name up in its working directory before PATH, and that directory is
+        // usually inside the project: `python x.py` in the user's own hook would run a python.cmd the
+        // project ships. This variable turns the lookup off (for cmd and for what it starts).
+        if (spec.UseShell && OperatingSystem.IsWindows())
+            psi.Environment["NoDefaultCurrentDirectoryInExePath"] = "1";
         return psi;
     }
 

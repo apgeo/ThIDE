@@ -40,7 +40,9 @@ public sealed class ShellOpener : IShellOpener
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                Process.Start("explorer.exe", $"/select,\"{path}\"");
+                // By full path: a bare name is looked up in ThIDE's working directory first.
+                var explorer = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "explorer.exe");
+                Process.Start(explorer, $"/select,\"{path}\"");
                 return true;
             }
             var dir = File.Exists(path) ? Path.GetDirectoryName(path)! : path;
