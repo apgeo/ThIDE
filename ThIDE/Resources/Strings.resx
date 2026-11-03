@@ -1108,6 +1108,7 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Notif_RecoveredTitle" xml:space="preserve"><value>Unsaved changes recovered</value></data>
   <data name="Notif_RecoveredMsg" xml:space="preserve"><value>{0} file(s) had unsaved changes when the app last closed unexpectedly.</value></data>
   <data name="Notif_Restore" xml:space="preserve"><value>Restore</value></data>
+  <data name="Notif_DiscardRecovered" xml:space="preserve"><value>Discard copies</value></data>
   <data name="Notif_ImportFailed" xml:space="preserve"><value>Import failed</value></data>
   <data name="Notif_GisExportFailed" xml:space="preserve"><value>GIS export failed</value></data>
   <data name="Notif_TableExportFailed" xml:space="preserve"><value>Table export failed</value></data>

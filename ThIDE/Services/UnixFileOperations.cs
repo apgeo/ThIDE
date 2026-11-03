@@ -42,7 +42,7 @@ public sealed class UnixFileOperations : IFileOperations
     {
         try
         {
-            if (_useFinder && TrashViaFinder(path)) return true;
+            if (_useFinder) return TrashViaFinder(path); // same rule as below: no silent permanent delete
             if (_trashCommand is not null) return TrashViaCommand(path); // never fall back silently: the user was told it is restorable
             return PermanentDelete(path); // no trash backend at all (the dialog said "permanent")
         }

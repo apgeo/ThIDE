@@ -653,10 +653,14 @@
                                                             </Grid>
                                                             <TextBlock Text="{Binding Message}" Foreground="Gray"
                                                                        FontSize="12" TextWrapping="Wrap" />
-                                                            <Button Content="{Binding ActionLabel}" Padding="8,2" Margin="0,2,0,0"
-                                                                    HorizontalAlignment="Left"
-                                                                    Command="{Binding ActionCommand}"
-                                                                    IsVisible="{Binding HasAction}" />
+                                                            <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,2,0,0">
+                                                                <Button Content="{Binding ActionLabel}" Padding="8,2"
+                                                                        Command="{Binding ActionCommand}"
+                                                                        IsVisible="{Binding HasAction}" />
+                                                                <Button Content="{Binding SecondaryActionLabel}" Padding="8,2"
+                                                                        Command="{Binding SecondaryActionCommand}"
+                                                                        IsVisible="{Binding HasSecondaryAction}" />
+                                                            </StackPanel>
                                                         </StackPanel>
                                                     </Border>
                                                 </DataTemplate>
