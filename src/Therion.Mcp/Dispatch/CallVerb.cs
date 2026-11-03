@@ -12,13 +12,15 @@ public static class CallVerb
 {
     /// <summary>
     /// <c>call --list [--json]</c>, or <c>call &lt;tool&gt; --workspace p [--args '{json}' | --args-file f]
-    /// [--arg k=v]…</c>. Returns 0 when the tool succeeded, 1 when it reported a failure, 2 usage error.
+    /// [--arg k=v]… [--allow-system-commands]</c>. Returns 0 when the tool succeeded, 1 when it reported a
+    /// failure, 2 usage error. Without <c>--allow-system-commands</c> run_build refuses a thconfig with
+    /// <c>system</c> lines, as the server does.
     /// </summary>
     public static async Task<int> RunAsync(IReadOnlyList<string> args, TextWriter stdout, TextWriter stderr,
         Func<IServiceCollection, IServiceProvider> buildProvider, CancellationToken ct = default)
     {
         string? workspace = null, tool = null, json = null;
-        bool list = false, asJson = false;
+        bool list = false, asJson = false, allowSystemCommands = false;
         var pairs = new List<(string Key, string Value)>();
         for (int i = 1; i < args.Count; i++)
         {
@@ -26,6 +28,7 @@ public static class CallVerb
             {
                 case "--workspace" when i + 1 < args.Count: workspace = args[++i]; break;
                 case "--list": list = true; break;
+                case AllowAllBuildApproval.CommandLineFlag: allowSystemCommands = true; break;
                 case "--json": asJson = true; break;
                 case "--args" when i + 1 < args.Count: json = args[++i]; break;
                 case "--args-file" when i + 1 < args.Count:
@@ -48,6 +51,7 @@ public static class CallVerb
 
         var services = new ServiceCollection();
         services.AddSingleton<IWorkspaceHost>(new WorkspaceHost(workspace));
+        if (allowSystemCommands) services.AddSingleton<IBuildApproval>(AllowAllBuildApproval.Instance);
         services.AddToolServices();
         var dispatcher = new ToolDispatcher(buildProvider(services));
 

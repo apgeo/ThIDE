@@ -113,6 +113,11 @@ if (builder.Configuration["Logging:LogLevel:Default"] is null)
 if (workspacePath is not null)
     builder.Services.AddSingleton<IWorkspaceHost>(new WorkspaceHost(workspacePath));
 
+// A thconfig's `system` lines are shell commands. With no one to ask, run_build refuses a thconfig that
+// has them unless whoever started the server said it may run them.
+if (Array.IndexOf(args, AllowAllBuildApproval.CommandLineFlag) >= 0)
+    builder.Services.AddSingleton<IBuildApproval>(AllowAllBuildApproval.Instance);
+
 builder.Services
     .AddMcpServer(o => o.ServerInfo = new() { Name = "therion-mcp", Version = ServerVersion() })
     .WithStdioServerTransport()
@@ -178,14 +183,16 @@ static void PrintHelp()
     Console.WriteLine("to it over stdio. Running it by hand does nothing useful.");
     Console.WriteLine();
     Console.WriteLine("Usage:");
-    Console.WriteLine("  therion-mcp [--workspace <path>] [--profile data|full]");
+    Console.WriteLine("  therion-mcp [--workspace <path>] [--profile data|full] [--allow-system-commands]");
     Console.WriteLine("  therion-mcp --connect [<discovery-file>]");
     Console.WriteLine("  therion-mcp macro list [--workspace <path>]");
     Console.WriteLine("  therion-mcp macro run <name|file.json> --workspace <path> [--var key=value]… [--apply] [--json]");
+    Console.WriteLine("                       [--allow-system-commands]");
     Console.WriteLine("                       Run a macro (a list of tool calls) without a model. Without");
     Console.WriteLine("                       --apply only the preview runs and nothing is changed.");
     Console.WriteLine("  therion-mcp call --list [--json]");
     Console.WriteLine("  therion-mcp call <tool> --workspace <path> [--args '{json}' | --args-file <f>] [--arg key=value]…");
+    Console.WriteLine("                       [--allow-system-commands]");
     Console.WriteLine("                       Call one tool and print its JSON result (exit 1 if it failed).");
     Console.WriteLine("                       Tools that change files preview unless told dryRun:false.");
     Console.WriteLine("  therion-mcp skills print [--user <notes.md>] [--project <notes.md>]");
@@ -203,6 +210,12 @@ static void PrintHelp()
     Console.WriteLine("                       in-app server, so a stdio-only host reaches the live app");
     Console.WriteLine("                       (its UI tools included). Reads the discovery file written");
     Console.WriteLine("                       by Preferences ▸ MCP; pass a path to override its location.");
+    Console.WriteLine("  --allow-system-commands");
+    Console.WriteLine("                       Let run_build compile a thconfig that has 'system' lines");
+    Console.WriteLine("                       (shell commands Therion runs while it builds). Without it");
+    Console.WriteLine("                       such a build is refused with not_trusted: a model may have");
+    Console.WriteLine("                       written those lines itself. Use it only for a folder you");
+    Console.WriteLine("                       trust. 'call' and 'macro run' accept it too.");
     Console.WriteLine("  --version            Print the server version.");
     Console.WriteLine("  -h, --help           Show this help.");
     Console.WriteLine();

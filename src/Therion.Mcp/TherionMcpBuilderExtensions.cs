@@ -131,8 +131,9 @@ public static class TherionMcpBuilderExtensions
     internal static void AddToolServices(IServiceCollection services)
     {
         services.TryAddSingleton<IUiBridge>(NullUiBridge.Instance);
-        // The in-app host registers one that asks about the folder's trust; headless builds run as before.
-        services.TryAddSingleton<IBuildApproval>(AllowAllBuildApproval.Instance);
+        // The in-app host registers one that asks about the folder's trust, and a headless server started
+        // with --allow-system-commands one that allows them; anyone else refuses a build that runs them.
+        services.TryAddSingleton<IBuildApproval>(RefuseSystemCommandsBuildApproval.Instance);
         // The in-app host registers a live IWorkspaceHost (backed by the running session) beforehand; a
         // headless host gets the disk-backed default here. Either way tools depend only on the interface.
         services.TryAddSingleton<IWorkspaceHost>(_ => new WorkspaceHost());
