@@ -1640,6 +1640,9 @@ Aplici modificările? Pașii care nu au putut fi previzualizați rulează acum.<
   <data name="PasteShots_Insert" xml:space="preserve"><value>Inserează</value></data>
   <data name="PasteShots_Summary" xml:space="preserve"><value>{0} segment(e), {1} vize radiale</value></data>
   <data name="PasteShots_BadColumns" xml:space="preserve"><value>Coloane: folosiți cuvinte cheie data precum „from to length compass clino” (length, compass și clino sunt necesare; „-” sare o coloană).</value></data>
+  <data name="PasteShots_Target" xml:space="preserve"><value>Se inserează în: {0}, centreline de la linia {1}</value></data>
+  <data name="PasteShots_TargetNew" xml:space="preserve"><value>Se inserează în: {0}, un centreline nou la sfârșitul topografiei {1} (linia {2})</value></data>
+  <data name="PasteShots_NoSurvey" xml:space="preserve"><value>Aici nu există nicio topografie în care să intre vizele. Puneți cursorul într-o topografie sau creați întâi una.</value></data>
   <data name="ShotIssue_Line" xml:space="preserve"><value>Linia {0}: {1}</value></data>
   <data name="ShotIssue_NoShots" xml:space="preserve"><value>Nu s-a găsit nicio viză în text.</value></data>
   <data name="ShotIssue_NotANumber" xml:space="preserve"><value>„{0}” nu este un număr; rândul este omis.</value></data>

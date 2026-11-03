@@ -718,10 +718,11 @@ public partial class TherionTextEditor : UserControl
     /// Scrolls to a <see cref="SourceSpan"/> and briefly flashes its range (capped to
     /// the first line). Highlighting uses the transient flash adornment rather than a
     /// text selection, so navigating never leaves a multi-line selection behind (#6).
+    /// A zero-length span in a file is a caret position (a new file opened on its first data line).
     /// </summary>
     public void ScrollTo(SourceSpan span)
     {
-        if (_editor is null || span.IsEmpty) return;
+        if (_editor is null || span.IsEmpty && string.IsNullOrEmpty(span.FilePath)) return;
         var doc = _editor.Document;
         int line = Math.Max(1, span.Start.Line);
         if (line > doc.LineCount) return;
@@ -740,7 +741,7 @@ public partial class TherionTextEditor : UserControl
         // preventing AvaloniaEdit from extending selection on the next click (#2/#6).
         _editor.Select(startOffset, 0);
         _editor.ScrollToLine(line);
-        _flash?.Flash(startOffset, length);
+        if (!span.IsEmpty) _flash?.Flash(startOffset, length);
         _editor.Focus();
     }
 
@@ -3747,29 +3748,62 @@ public partial class TherionTextEditor : UserControl
 
     /// <summary>
     /// Edit ▸ Paste as shot data: the selection (when it is a table of shots) or the clipboard, turned
-    /// into a Therion data block in a dialog, then put where the selection or the caret is.
+    /// into a Therion data block in a dialog, then put where the caret is when that is in a centreline,
+    /// else at the end of the survey's last centreline (<see cref="Therion.Workspace.Import.ShotInsertion"/>).
     /// </summary>
     public async System.Threading.Tasks.Task PasteShotsAsync()
     {
         if (_editor?.Document is not { } doc || TopLevel.GetTopLevel(this) is not Window owner) return;
         bool fromSelection = _editor.SelectionLength > 0 && Therion.Workspace.Import.ShotTableReader.LooksLikeShots(_editor.SelectedText);
-        var source = fromSelection ? _editor.SelectedText : await TryGetClipboardAsync() ?? "";
         int start = _editor.SelectionLength > 0 ? _editor.SelectionStart : _editor.CaretOffset;
-        int length = fromSelection ? _editor.SelectionLength : 0;
-        if (!fromSelection && _editor.SelectionLength > 0) { start = _editor.SelectionStart; length = _editor.SelectionLength; }
+        int length = _editor.SelectionLength;
 
         var text = doc.Text;
         var ast = new Therion.Syntax.ThParser().Parse(CurrentFilePath ?? "untitled.th", text).Value;
+        if (Therion.Workspace.Import.ShotInsertion.Find(ast, text, start) is not { } target)
+        {
+            await ShowMessageAsync(L("PasteShots_Title"), L("PasteShots_NoSurvey"));
+            return;
+        }
+        var source = fromSelection ? _editor.SelectedText : await TryGetClipboardAsync() ?? "";
         var last = Therion.Workspace.Templates.SnippetVariables.Standard(
-            new Therion.Workspace.Templates.SnippetContext(CurrentFilePath, text, start, DateTime.Now))("LAST_STATION");
-        var centreline = EnclosingCentreline(ast?.Children, start);
-        var model = new ThIDE.ViewModels.PasteShotsViewModel(source, last, wrap: centreline is null);
+            new Therion.Workspace.Templates.SnippetContext(CurrentFilePath, text, target.Start, DateTime.Now))("LAST_STATION");
+        var file = Path.GetFileName(CurrentFilePath ?? "untitled.th");
+        var where = target.Wrap
+            ? string.Format(L("PasteShots_TargetNew"), file, target.Survey, target.Line)
+            : string.Format(L("PasteShots_Target"), file, target.Line);
+        var model = new ThIDE.ViewModels.PasteShotsViewModel(source, last, wrap: target.Wrap, target: where);
         var window = new ThIDE.Views.PasteShotsWindow(model);
         await window.ShowDialog(owner);
         if (window.Result is not { } block) return;
         var lines = block.TrimEnd('\n').Split('\n').ToList();
+        var newline = text.Contains("\r\n") ? "\r\n" : "\n";
+
+        if (!target.AtCaret)
+        {
+            // At the end of the survey's last centreline (or in a new one above endsurvey); a table
+            // selected outside it is taken out. One undo step.
+            int caret;
+            doc.BeginUpdate();
+            try
+            {
+                // The later edit first, so the earlier offset stays valid.
+                bool removeSelection = fromSelection && (start + length <= target.Start || start >= target.Start + target.Length);
+                var blockText = string.Join("", lines.Select(l => target.Indent + l + newline));
+                if (removeSelection && start > target.Start) doc.Remove(start, length);
+                doc.Replace(target.Start, target.Length, blockText);
+                if (removeSelection && start < target.Start) doc.Remove(start, length);
+                caret = target.Start + blockText.Length - newline.Length - (removeSelection && start < target.Start ? length : 0);
+            }
+            finally { doc.EndUpdate(); }
+            CaretAfterInsert(caret);
+            FocusEditorAfterDialog();
+            return;
+        }
+
+        var centreline = target.Centreline!;
         // Shots after the block must still be read with the units and data line they were written for.
-        if (centreline is not null && centreline.Children.Any(c => c.Span.StartOffset >= start + length))
+        if (centreline.Children.Any(c => c.Span.StartOffset >= start + length))
             lines.AddRange(RestoreReadingState(centreline, text, start, lines));
 
         // A selection that ends at the start of a line keeps that line break.
@@ -3779,7 +3813,6 @@ public partial class TherionTextEditor : UserControl
         var first = doc.GetLineByOffset(start);
         var lastLine = doc.GetLineByOffset(end);
         var indent = TherionBlocks.LeadingWhitespace(doc.GetText(first));
-        var newline = text.Contains("\r\n") ? "\r\n" : "\n";
         bool blankBefore = doc.GetText(first.Offset, start - first.Offset).Trim().Length == 0;
         bool blankAfter = doc.GetText(end, lastLine.EndOffset - end).Trim().Length == 0;
         string insert;
@@ -3802,18 +3835,23 @@ public partial class TherionTextEditor : UserControl
             insert = string.Join("", lines.Select(l => newline + indent + l)) + (blankAfter ? "" : newline + indent);
         }
         doc.Replace(start, end - start, insert);
-        _editor.Focus();
+        CaretAfterInsert(start + insert.Length);
+        FocusEditorAfterDialog();
     }
 
-    /// <summary>The innermost <c>centreline</c> block the offset is strictly inside, or null.</summary>
-    private static Therion.Syntax.CentrelineCommand? EnclosingCentreline(IEnumerable<Therion.Syntax.TherionNode>? nodes, int offset)
+    // The editor leaves a replaced range selected; a second paste would then replace the first block.
+    private void CaretAfterInsert(int offset)
     {
-        foreach (var n in nodes ?? [])
-        {
-            if (n is not Therion.Syntax.BlockCommand b || offset <= b.Span.StartOffset || offset >= b.Span.StartOffset + b.Span.Length) continue;
-            return EnclosingCentreline(b.Children, offset) ?? b as Therion.Syntax.CentrelineCommand;
-        }
-        return null;
+        if (_editor is null) return;
+        _editor.Select(Math.Clamp(offset, 0, _editor.Document.TextLength), 0);
+    }
+
+    // The owner window gives focus back to whatever had it before the dialog once the dialog closes;
+    // take it after that, so the first Ctrl+Z undoes the insert.
+    private void FocusEditorAfterDialog()
+    {
+        _editor?.TextArea.Focus();
+        Dispatcher.UIThread.Post(() => _editor?.TextArea.Focus(), DispatcherPriority.Background);
     }
 
     /// <summary>

@@ -1640,6 +1640,9 @@ Apply the changes? Steps that could not preview run now.</value></data>
   <data name="PasteShots_Insert" xml:space="preserve"><value>Insert</value></data>
   <data name="PasteShots_Summary" xml:space="preserve"><value>{0} leg(s), {1} splay(s)</value></data>
   <data name="PasteShots_BadColumns" xml:space="preserve"><value>Columns: use data keywords such as 'from to length compass clino' (length, compass and clino are needed; '-' skips a column).</value></data>
+  <data name="PasteShots_Target" xml:space="preserve"><value>Insert into: {0}, centreline at line {1}</value></data>
+  <data name="PasteShots_TargetNew" xml:space="preserve"><value>Insert into: {0}, a new centreline at the end of survey {1} (line {2})</value></data>
+  <data name="PasteShots_NoSurvey" xml:space="preserve"><value>There is no survey here for the shots to go into. Put the caret inside a survey, or create one first.</value></data>
   <data name="ShotIssue_Line" xml:space="preserve"><value>Line {0}: {1}</value></data>
   <data name="ShotIssue_NoShots" xml:space="preserve"><value>No shots found in the text.</value></data>
   <data name="ShotIssue_NotANumber" xml:space="preserve"><value>'{0}' is not a number; the row is left out.</value></data>
