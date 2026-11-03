@@ -125,7 +125,7 @@ public class WritePathConformanceTests
     /// A file declared ASCII that holds an 8-bit byte reads as lossy; Replace All must leave it alone
     /// rather than write '?' where the byte was.
     /// </summary>
-    [Fact(Skip = "Known bug: Replace in Files decodes with EncodingResolver.Decode, whose ASCII fallback yields '?' rather than U+FFFD, so its lossy check misses the file and Replace All writes '?' over the 8-bit byte")]
+    [Fact]
     public async Task Replace_in_files_leaves_an_ascii_file_with_an_8bit_byte_alone() => await ReplaceInFilesAsync("ascii/lossy");
 
     private static async Task ReplaceInFilesAsync(string fixture)

@@ -384,8 +384,10 @@ public sealed partial class ReplaceInFilesViewModel : ViewModelBase
             if (!File.Exists(path)) return null;
             var bytes = File.ReadAllBytes(path);
             if (Array.IndexOf(bytes, (byte)0) >= 0) return null;   // binary
-            var text = Therion.Syntax.EncodingResolver.Decode(bytes);
-            return text.Contains('\uFFFD') ? null : text;          // lossy decode: rewriting would corrupt it
+            // Read as the save reads it: a file holding bytes its encoding cannot decode is skipped, since
+            // rewriting it would replace them (an ASCII file shows them as '?', not U+FFFD, in a plain decode).
+            var file = SourceFileIo.Read(path, bytes);
+            return file.Lossy ? null : file.Text;
         }
         catch { return null; }
     }

@@ -134,9 +134,11 @@ public static class SourceFileIo
     }
 
     /// <summary>Reads a file, resolving its encoding the way the parser does.</summary>
-    public static SourceFile Read(string path)
+    public static SourceFile Read(string path) => Read(path, File.ReadAllBytes(path));
+
+    /// <summary>As <see cref="Read(string)"/>, for bytes already read from <paramref name="path"/>.</summary>
+    public static SourceFile Read(string path, byte[] bytes)
     {
-        var bytes = File.ReadAllBytes(path);
         var (encoding, bomLength) = Resolve(bytes);
         var (text, lossy) = Decode(encoding, bytes, bomLength);
 
