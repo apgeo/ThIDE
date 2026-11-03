@@ -20,20 +20,48 @@ public class MediaScannerTests
     [Fact]
     public void Referenced_missing_xvi_is_flagged_missing()
     {
-        // A scrap referencing an .xvi that doesn't exist → XVI index entry → "Missing".
+        // A scrap whose -sketch points at an .xvi that doesn't exist → one "Missing" item.
         using var dir = new TempDir();
+        var ws = BuildWorkspace(dir);
+
+        var item = Assert.Single(MediaScanner.ScanReferenced(ws));
+        Assert.Equal(MediaStatus.Missing, item.Status);
+        Assert.Equal("bg.xvi", item.FileName);
+        Assert.Equal(1, item.ReferencingScraps);
+    }
+
+    [Fact]
+    public void Referenced_present_xvi_is_flagged_referenced()
+    {
+        using var dir = new TempDir();
+        var xviPath = dir.Write("bg.xvi", "set XVIgrids {1.0 m}\n");
+        var xvi = new XviParser().Parse(xviPath, File.ReadAllText(xviPath)).Value!;
+        var ws = BuildWorkspace(dir, xvi);
+
+        var item = Assert.Single(MediaScanner.ScanReferenced(ws));
+        Assert.Equal(MediaStatus.Referenced, item.Status);
+        Assert.Equal("bg.xvi", item.FileName);
+        Assert.Equal(1, item.ReferencingScraps);
+    }
+
+    [Fact]
+    public void Referenced_xvi_on_disk_but_not_parsed_is_flagged_referenced()
+    {
+        using var dir = new TempDir();
+        dir.Write("bg.xvi", "set XVIgrids {1.0 m}\n");
+        var ws = BuildWorkspace(dir);
+
+        var item = Assert.Single(MediaScanner.ScanReferenced(ws));
+        Assert.Equal(MediaStatus.Referenced, item.Status);
+    }
+
+    private static WorkspaceSemanticModel BuildWorkspace(TempDir dir, params XviFile[] xvi)
+    {
         var th2 = dir.Write("plan.th2",
-            "scrap s1 -projection plan\n" +
-            "  input \"bg.xvi\"\n" +
+            "scrap s1 -projection plan -sketch \"bg.xvi\" 0 0\n" +
             "endscrap\n");
         var parsed = new Dictionary<string, ParseResult<TherionFile>> { [th2] = new Th2Parser().Parse(th2, File.ReadAllText(th2)) };
-        var ws = WorkspaceSemanticModel.Build(parsed, System.Array.Empty<XviFile>());
-
-        var items = MediaScanner.ScanReferenced(ws);
-        // Whether or not the parser records the sketch ref, the scan must not throw and any item
-        // pointing at a non-existent file is Missing.
-        Assert.All(items, m => Assert.True(m.Status != MediaStatus.Orphan));
-        Assert.DoesNotContain(items, m => m.Status == MediaStatus.Referenced && !File.Exists(m.Path));
+        return WorkspaceSemanticModel.Build(parsed, xvi);
     }
 
     [Fact]

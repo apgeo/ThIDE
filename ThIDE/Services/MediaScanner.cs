@@ -40,6 +40,20 @@ public static class MediaScanner
                 path, "xvi", exists ? MediaStatus.Referenced : MediaStatus.Missing,
                 grid, sym.ReferencingScraps.Length, Georeferenced: sym.File?.Grid is not null));
         }
+
+        // ByPath holds only the .xvi files the workspace parsed, so a sketch pointing at a file that
+        // was never loaded (typically because it does not exist) is known only as a .th2 → .xvi edge.
+        var unparsed = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        foreach (var edge in workspace.Xvi.FileGraphEdges)
+            if (!workspace.Xvi.ByPath.ContainsKey(edge.To))
+                unparsed[edge.To] = unparsed.TryGetValue(edge.To, out var n) ? n + 1 : 1;
+        foreach (var (to, count) in unparsed)
+        {
+            var path = TryFull(to);
+            items.Add(new MediaItem(
+                path, "xvi", SafeExists(path) ? MediaStatus.Referenced : MediaStatus.Missing,
+                "—", count, Georeferenced: false));
+        }
         return items;
     }
 
