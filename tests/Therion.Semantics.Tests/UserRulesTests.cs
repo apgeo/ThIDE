@@ -66,7 +66,7 @@ public class UserRulesTests
     }
 
     [Fact]
-    public void Naming_convention_forbid_mode_flags_matches()
+    public void Naming_convention_forbid_mode_is_silent_when_nothing_matches()
     {
         var ws = WorkspaceOf(Sample);
         var rule = new NamingConventionRule(new[]
@@ -76,6 +76,19 @@ public class UserRulesTests
         // survey "cave" doesn't match "temp" → no violation in forbid mode.
         var diags = new SemanticRuleRunner(new ISemanticRule[] { rule }).Run(ws);
         Assert.DoesNotContain(diags, d => d.Code.Value == SemanticDiagnosticCodes.NamingConvention);
+    }
+
+    [Fact]
+    public void Naming_convention_forbid_mode_flags_matches()
+    {
+        var ws = WorkspaceOf(Sample.Replace("survey cave", "survey temp-trip"));
+        var rule = new NamingConventionRule(new[]
+        {
+            new NamingConventionSpec("noTemp", NamingTarget.Survey, "temp", DiagnosticSeverity.Info, Forbid: true),
+        });
+        var diags = new SemanticRuleRunner(new ISemanticRule[] { rule }).Run(ws);
+        Assert.Contains(diags, d => d.Code.Value == SemanticDiagnosticCodes.NamingConvention
+                                    && d.Message.Contains("temp-trip"));
     }
 
     [Fact]

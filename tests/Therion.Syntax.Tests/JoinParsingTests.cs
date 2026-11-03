@@ -35,6 +35,23 @@ public class JoinParsingTests
             endscrap
             """);
 
-        Assert.DoesNotContain(result.Diagnostics, d => d.Code == DiagnosticCodes.UnknownCommand);
+        var join = result.Value!.Children.OfType<ScrapBlock>().Single().Children.OfType<JoinCommand>().Single();
+        Assert.Equal(new[] { "L1", "L2" }, join.Targets);
+        Assert.Empty(result.Diagnostics);
+    }
+
+    [Fact]
+    public void Th2_join_with_option_keeps_targets_and_raw_options()
+    {
+        var result = new Th2Parser().Parse("/p/s.th2", """
+            scrap sc1
+              join L1 L2 -count 3
+            endscrap
+            """);
+
+        var join = result.Value!.Children.OfType<ScrapBlock>().Single().Children.OfType<JoinCommand>().Single();
+        Assert.Equal(new[] { "L1", "L2" }, join.Targets);
+        Assert.Contains("-count", join.OptionsRaw);
+        Assert.Empty(result.Diagnostics);
     }
 }

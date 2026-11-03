@@ -41,11 +41,16 @@ public static class GeoStructureDetector
         if (options.Grouping == GroupingMode.ByFromStation)
         {
             int i = 0;
+            var runsPerKey = new Dictionary<string, int>();
             while (i < candidates.Count)
             {
                 int j = i + 1;
                 while (j < candidates.Count && candidates[j].Key == candidates[i].Key) j++;
-                batches.Add(BuildBatch(candidates.GetRange(i, j - i), options, equates, solution));
+                var batch = BuildBatch(candidates.GetRange(i, j - i), options, equates, solution);
+                // A station revisited after another one yields a second run; consumers key state by Key.
+                runsPerKey[batch.Key] = runsPerKey.GetValueOrDefault(batch.Key) + 1;
+                int run = runsPerKey[batch.Key];
+                batches.Add(run == 1 ? batch : batch with { Key = batch.Key + "#" + run.ToString(System.Globalization.CultureInfo.InvariantCulture) });
                 i = j;
             }
         }

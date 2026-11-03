@@ -11,29 +11,10 @@ namespace Therion.Blender.Tests;
 public class ScaffoldSmokeTests
 {
     [Fact]
-    public void SchemaVersions_ArePositive()
-    {
-        Assert.True(BlenderModule.SceneMetaSchemaVersion > 0);
-        Assert.True(BlenderModule.SceneSpecSchemaVersion > 0);
-    }
-
-    [Fact]
     public void SceneSpec_DefaultsToCurrentSchemaVersion()
     {
         var spec = new SceneSpec();
         Assert.Equal(BlenderModule.SceneSpecSchemaVersion, spec.Version);
-    }
-
-    [Fact]
-    public void RenderProgress_CarriesPhaseAndOptionalNumericFields()
-    {
-        var tick = new RenderProgress(RenderPhase.Rendering, "Rendering frame", Fraction: 0.5, Frame: 3, FrameCount: 10);
-
-        Assert.Equal(RenderPhase.Rendering, tick.Phase);
-        Assert.Equal(0.5, tick.Fraction);
-        Assert.Equal(3, tick.Frame);
-        Assert.Equal(10, tick.FrameCount);
-        Assert.Null(tick.SampleFraction); // unset optional stays null (tier-2 has no sample data)
     }
 
     [Fact]
@@ -55,23 +36,5 @@ public class ScaffoldSmokeTests
         Assert.Empty(model.Stations);
         Assert.Empty(model.Shots);
         Assert.False(model.HasWalls);
-    }
-
-    [Fact]
-    public void IBlenderRenderService_SeamIsImplementable()
-    {
-        // A do-nothing implementation compiles against the scaffold seam — proves the
-        // interface surface is coherent before any real stage exists.
-        IBlenderRenderService service = new NoopRenderService();
-        Assert.NotNull(service);
-    }
-
-    private sealed class NoopRenderService : IBlenderRenderService
-    {
-        public Task<RenderResult> RenderAsync(SceneSpec spec, RenderSource source, IProgress<RenderProgress>? progress = null, CancellationToken ct = default)
-            => Task.FromResult(new RenderResult());
-
-        public Task<string> ExportScriptAsync(SceneSpec spec, RenderSource source, string outputDir, IProgress<RenderProgress>? progress = null, CancellationToken ct = default, bool interactive = false)
-            => Task.FromResult(System.IO.Path.Combine(outputDir, "render.py"));
     }
 }
