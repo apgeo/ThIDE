@@ -119,7 +119,7 @@ public sealed class RelationalEdge
     }
 }
 
-public partial class RelationalMapViewModel : ViewModelBase
+public partial class RelationalMapViewModel : ViewModelBase, IDisposable
 {
     private readonly Services.IDocumentService? _docs;
     private readonly Services.IWorkspaceSession? _session;
@@ -171,9 +171,51 @@ public partial class RelationalMapViewModel : ViewModelBase
         _selectedLayout = LayoutOptions[0];
         _docs = docs;
         _session = session;
-        if (_docs is not null) _docs.DocumentChanged += (_, _) => OnUi(Rebuild);
-        if (_session is not null) _session.Changed += (_, _) => OnUi(Rebuild);
+        // The services are long-lived singletons: subscribe through a weak trampoline so a map
+        // that is dropped without Dispose is still collectable; Dispose detaches deterministically.
+        _link = new SourceLink(this, docs, session);
         Rebuild();
+    }
+
+    private readonly SourceLink? _link;
+    private bool _disposed;
+
+    private void OnSourceChanged() => OnUi(() => { if (!_disposed) Rebuild(); });
+
+    private sealed class SourceLink
+    {
+        private readonly WeakReference<RelationalMapViewModel> _target;
+        private readonly Services.IDocumentService? _docs;
+        private readonly Services.IWorkspaceSession? _session;
+
+        public SourceLink(RelationalMapViewModel target, Services.IDocumentService? docs, Services.IWorkspaceSession? session)
+        {
+            _target = new WeakReference<RelationalMapViewModel>(target);
+            _docs = docs;
+            _session = session;
+            if (_docs is not null) _docs.DocumentChanged += OnChanged;
+            if (_session is not null) _session.Changed += OnChanged;
+        }
+
+        private void OnChanged(object? sender, EventArgs e)
+        {
+            if (_target.TryGetTarget(out var vm)) vm.OnSourceChanged();
+            else Detach();
+        }
+
+        public void Detach()
+        {
+            if (_docs is not null) _docs.DocumentChanged -= OnChanged;
+            if (_session is not null) _session.Changed -= OnChanged;
+        }
+    }
+
+    /// <summary>Detaches from the singleton document/session services so a closed map can be collected.</summary>
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        _link?.Detach();
     }
 
     partial void OnIncludeFilesChanged(bool value) => Rebuild();

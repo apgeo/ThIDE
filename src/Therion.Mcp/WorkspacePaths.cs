@@ -79,11 +79,32 @@ public static class WorkspacePaths
     }
 
     /// <summary>The workspace-relative, forward-slashed form of <paramref name="fullPath"/> for the wire.</summary>
+    /// <remarks>
+    /// When the two are spelled differently — one through a symlink, one resolved — the plain relative
+    /// path climbs out with <c>..</c> although the file is inside; the canonical forms are then compared
+    /// instead. Only that case pays for the filesystem lookups.
+    /// </remarks>
     public static string ToRelative(string root, string fullPath)
     {
         var relative = Path.GetRelativePath(root, fullPath);
+        if (ClimbsOut(relative))
+        {
+            try
+            {
+                var canonical = Path.GetRelativePath(Canonicalize(root), Canonicalize(fullPath));
+                if (!ClimbsOut(canonical)) relative = canonical;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+            {
+                // keep the plain form
+            }
+        }
         return relative.Replace(Path.DirectorySeparatorChar, '/').Replace('\\', '/');
     }
+
+    private static bool ClimbsOut(string relative) =>
+        relative == ".." || relative.StartsWith("../", StringComparison.Ordinal)
+        || relative.StartsWith("..\\", StringComparison.Ordinal) || Path.IsPathRooted(relative);
 
     /// <summary>True when <paramref name="candidate"/> is <paramref name="root"/> itself or lies beneath it.</summary>
     public static bool IsInside(string root, string candidate)
@@ -96,6 +117,20 @@ public static class WorkspacePaths
         // Guard the "/work" vs "/workspace-of-someone-else" prefix collision.
         char boundary = candidate[root.Length];
         return boundary == Path.DirectorySeparatorChar || boundary == Path.AltDirectorySeparatorChar;
+    }
+
+    /// <summary>
+    /// True when <paramref name="candidate"/> is the project's own config folder (<c>.thide/</c>) or
+    /// lies beneath it. That folder holds hooks and tasks that run commands once the folder is
+    /// trusted, so no agent write may land there: an edited hook would run on the next save or build.
+    /// Both forms are tested — the folder as named and with links followed — because a <c>.thide</c>
+    /// that is a symlink to another workspace folder is still where the hooks are read from.
+    /// </summary>
+    public static bool IsProjectConfig(string root, string candidate)
+    {
+        var config = Path.Combine(root.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+            Therion.Workspace.ProjectLocalConfig.DirectoryName);
+        return IsInside(config, candidate) || IsInside(Canonicalize(config), candidate);
     }
 
     /// <summary>

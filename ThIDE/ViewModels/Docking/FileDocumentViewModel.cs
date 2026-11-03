@@ -318,6 +318,17 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
     }
 
     /// <summary>
+    /// Records <paramref name="savedText"/> as what is now on disk without touching the buffer — for a
+    /// save whose text was edited again while it was being written. The document stays dirty if the
+    /// buffer differs.
+    /// </summary>
+    public void MarkSaved(string savedText)
+    {
+        _savedText = savedText;
+        IsDirty = !string.Equals(_documentText, _savedText, StringComparison.Ordinal);
+    }
+
+    /// <summary>
     /// The most recent scroll target that hasn't been consumed by the view yet. Lets a
     /// freshly-opened document (whose editor view isn't attached at request time) replay
     /// the scroll once its view binds.
@@ -427,6 +438,13 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
     [ObservableProperty] private string _interpretedTypeText = string.Empty;
     /// <summary>True when this file is a Therion source type that gets parsed/syntax-checked (#5).</summary>
     [ObservableProperty] private bool _isParsed;
+
+    /// <summary>Re-parses the buffer as it stands, e.g. after the parser options changed.</summary>
+    public void RequestReparse()
+    {
+        if (Dispatcher.UIThread.CheckAccess()) Reparse();
+        else Dispatcher.UIThread.Post(Reparse);
+    }
 
     private void Reparse()
     {

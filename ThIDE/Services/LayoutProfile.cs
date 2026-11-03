@@ -79,13 +79,36 @@ public static class LayoutProfileFile
             JsonSerializer.Serialize(profile, new JsonSerializerOptions { WriteIndented = true }));
     }
 
+    // System.Text.Json writes an explicit null over the init defaults; replace those with empty
+    // collections and drop null entries so the rebuild never has to guard against them.
+    private static LayoutProfile Normalize(LayoutProfile p) => p with
+    {
+        LeftSections = NormalizeSections(p.LeftSections),
+        RightSections = NormalizeSections(p.RightSections),
+        BottomSections = NormalizeSections(p.BottomSections),
+        CenterTools = NormalizeIds(p.CenterTools),
+        FloatWindows = (p.FloatWindows ?? Array.Empty<FloatWindowState>())
+            .Where(w => w is not null)
+            .Select(w => w with { DockableIds = NormalizeIds(w.DockableIds) })
+            .ToList(),
+    };
+
+    private static IReadOnlyList<DockSectionState> NormalizeSections(IReadOnlyList<DockSectionState>? sections) =>
+        (sections ?? Array.Empty<DockSectionState>())
+            .Where(s => s is not null)
+            .Select(s => s with { Tools = NormalizeIds(s.Tools) })
+            .ToList();
+
+    private static IReadOnlyList<string> NormalizeIds(IReadOnlyList<string>? ids) =>
+        (ids ?? Array.Empty<string>()).Where(i => i is not null).ToList();
+
     /// <summary>Null on any error or on a newer (unknown) version — the caller notifies.</summary>
     public static LayoutProfile? TryLoad(string path)
     {
         try
         {
             var profile = JsonSerializer.Deserialize<LayoutProfile>(File.ReadAllText(path));
-            return profile is { Version: <= LayoutProfile.CurrentVersion and >= 1 } ? profile : null;
+            return profile is { Version: <= LayoutProfile.CurrentVersion and >= 1 } ? Normalize(profile) : null;
         }
         catch
         {

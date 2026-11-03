@@ -21,6 +21,7 @@ namespace ThIDE.ViewModels;
 public sealed partial class ReplaceInFilesViewModel : ViewModelBase
 {
     private const int MaxResults = 5000;
+    private const string DefaultMask = "*.th;*.th2;*.thconfig;*.thc";
     private readonly IDocumentService _documents;
 
     [ObservableProperty] private string _query = string.Empty;
@@ -29,7 +30,7 @@ public sealed partial class ReplaceInFilesViewModel : ViewModelBase
     [ObservableProperty] private bool _wholeWord;
     [ObservableProperty] private bool _useRegex;
     [ObservableProperty] private string _directory = string.Empty;
-    [ObservableProperty] private string _fileMask = "*.th;*.th2;*.thconfig;*.thc";
+    [ObservableProperty] private string _fileMask = DefaultMask;
     [ObservableProperty] private string _scope = ScopeProject;
     [ObservableProperty] private IReadOnlyList<SearchHit> _results = Array.Empty<SearchHit>();
     [ObservableProperty] private string _status = string.Empty;
@@ -139,15 +140,12 @@ public sealed partial class ReplaceInFilesViewModel : ViewModelBase
         var changes = await Task.Run(() =>
         {
             var list = new List<ReplaceEdit>();
-            foreach (var path in paths.Distinct(StringComparer.OrdinalIgnoreCase))
+            foreach (var path in paths.Distinct(FilePaths.Comparer))
             {
                 string? text = openText.TryGetValue(path, out var t) ? t : ReadFile(path);
                 if (text is null) continue;
-                int count = regex.Matches(text).Count;
+                var newText = ReplaceLines(text, regex, replacement, useRegexReplacement, out int count);
                 if (count == 0) continue;
-                var newText = useRegexReplacement
-                    ? regex.Replace(text, replacement)
-                    : regex.Replace(text, _ => replacement); // literal replacement (no $-expansion)
                 if (!string.Equals(newText, text, StringComparison.Ordinal))
                     list.Add(new ReplaceEdit(path, text, newText, count));
             }
@@ -172,12 +170,40 @@ public sealed partial class ReplaceInFilesViewModel : ViewModelBase
         Status = summary;
     }
 
+    // Replaces line by line, exactly the units ScanText previews (a line's '\r' is not part of it), so
+    // Replace All changes the matches Find All listed: '^' anchors a line and no match spans lines.
+    private static string ReplaceLines(string text, Regex regex, string replacement, bool expand, out int count)
+    {
+        count = 0;
+        var sb = new System.Text.StringBuilder(text.Length);
+        int lineStart = 0;
+        for (int i = 0; i <= text.Length; i++)
+        {
+            if (i != text.Length && text[i] != '\n') continue;
+
+            int end = i > lineStart && text[i - 1] == '\r' ? i - 1 : i;
+            var line = text[lineStart..end];
+            int n = regex.Matches(line).Count;
+            if (n == 0) sb.Append(line);
+            else
+            {
+                count += n;
+                sb.Append(expand ? regex.Replace(line, replacement)
+                                 : regex.Replace(line, _ => replacement)); // literal (no $-expansion)
+            }
+            sb.Append(text, end, Math.Min(i + 1, text.Length) - end); // the line terminator, if any
+            lineStart = i + 1;
+        }
+        return sb.ToString();
+    }
+
     /// <summary>Reverts the last Replace-All (restores every file's previous content), keeping it redoable.</summary>
     [RelayCommand(CanExecute = nameof(CanUndo))]
     private void Undo()
     {
         if (_undo.Count == 0) return;
         var batch = _undo.Peek();
+        if (!StillMatches(batch.Select(e => (e.Path, e.NewText)))) return;
         int n = ApplyEdits(batch.Select(e => (e.Path, e.OldText)));
         if (n < 0) return;
         _redo.Push(_undo.Pop());
@@ -191,11 +217,27 @@ public sealed partial class ReplaceInFilesViewModel : ViewModelBase
     {
         if (_redo.Count == 0) return;
         var batch = _redo.Peek();
+        if (!StillMatches(batch.Select(e => (e.Path, e.OldText)))) return;
         int n = ApplyEdits(batch.Select(e => (e.Path, e.NewText)));
         if (n < 0) return;
         _undo.Push(_redo.Pop());
         NotifyHistory();
         Status = $"Redid replace in {n} file(s).";
+    }
+
+    // Undo/Redo restore whole-file snapshots, so they only run while every file still holds the text the
+    // batch left (open buffer, else disk); otherwise a later edit would be overwritten. Refuses the step.
+    private bool StillMatches(IEnumerable<(string Path, string Text)> expected)
+    {
+        foreach (var (path, text) in expected)
+        {
+            var openDoc = _documents.Documents.FirstOrDefault(d => FilePaths.Comparer.Equals(d.FilePath, path));
+            var current = openDoc is not null ? openDoc.DocumentText : ReadFile(path);
+            if (string.Equals(current, text, StringComparison.Ordinal)) continue;
+            Status = string.Format(ThIDE.Resources.Tr.Get("Replace_UndoRefused"), Path.GetFileName(path));
+            return false;
+        }
+        return true;
     }
 
     // Writes each (path, text): the live editor buffer takes precedence (reflected + reparsed) and is
@@ -208,7 +250,7 @@ public sealed partial class ReplaceInFilesViewModel : ViewModelBase
         foreach (var (path, text) in edits)
         {
             var openDoc = _documents.Documents.FirstOrDefault(d =>
-                string.Equals(d.FilePath, path, StringComparison.OrdinalIgnoreCase));
+                FilePaths.Comparer.Equals(d.FilePath, path));
             try
             {
                 var (bytes, format) = SourceFileIo.EncodeForSave(path, text, openDoc?.Format);
@@ -216,7 +258,7 @@ public sealed partial class ReplaceInFilesViewModel : ViewModelBase
             }
             catch (UnrepresentableCharacterException ex)
             {
-                Status = string.Format(ThIDE.Resources.Tr.Get("Replace_EncodingRefused"),
+                Status = string.Format(ThIDE.Resources.Tr.Get(ex is UndecodableBytesException ? "Replace_UndecodableRefused" : "Replace_EncodingRefused"),
                     System.IO.Path.GetFileName(path), ex.Character, ex.EncodingName);
                 return -1;
             }
@@ -258,8 +300,8 @@ public sealed partial class ReplaceInFilesViewModel : ViewModelBase
     {
         var openText = _documents.Documents
             .Where(d => !string.IsNullOrEmpty(d.FilePath))
-            .GroupBy(d => d.FilePath, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(g => g.Key, g => g.First().DocumentText, StringComparer.OrdinalIgnoreCase);
+            .GroupBy(d => d.FilePath, FilePaths.Comparer)
+            .ToDictionary(g => g.Key, g => g.First().DocumentText, FilePaths.Comparer);
 
         IEnumerable<string> paths = Scope switch
         {
@@ -275,7 +317,7 @@ public sealed partial class ReplaceInFilesViewModel : ViewModelBase
     {
         var hits = new List<SearchHit>();
         int files = 0;
-        foreach (var path in paths.Distinct(StringComparer.OrdinalIgnoreCase))
+        foreach (var path in paths.Distinct(FilePaths.Comparer))
         {
             if (hits.Count >= MaxResults) break;
             string? text = openText.TryGetValue(path, out var t) ? t : ReadFile(path);
@@ -312,7 +354,7 @@ public sealed partial class ReplaceInFilesViewModel : ViewModelBase
 
     private IReadOnlyCollection<string> ProjectFiles()
     {
-        var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var set = new HashSet<string>(FilePaths.Comparer);
         if (_documents.Workspace is { } ws)
         {
             foreach (var p in ws.PerFile.Keys) set.Add(p);
@@ -327,19 +369,33 @@ public sealed partial class ReplaceInFilesViewModel : ViewModelBase
     {
         if (string.IsNullOrWhiteSpace(dir) || !System.IO.Directory.Exists(dir)) yield break;
         var patterns = mask.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        if (patterns.Length == 0) patterns = new[] { "*" };
+        if (patterns.Length == 0) patterns = DefaultMask.Split(';');
+        var options = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true };
         foreach (var pattern in patterns)
         {
-            IEnumerable<string> found;
-            try { found = System.IO.Directory.EnumerateFiles(dir, pattern, SearchOption.AllDirectories); }
+            IEnumerator<string> found;
+            try { found = System.IO.Directory.EnumerateFiles(dir, pattern, options).GetEnumerator(); }
             catch { continue; }
-            foreach (var f in found) yield return f;
+            using (found)
+                while (true)
+                {
+                    try { if (!found.MoveNext()) break; }
+                    catch { break; }
+                    yield return found.Current;
+                }
         }
     }
 
     private static string? ReadFile(string path)
     {
-        try { return File.Exists(path) ? Therion.Syntax.EncodingResolver.ReadAllText(path) : null; }
+        try
+        {
+            if (!File.Exists(path)) return null;
+            var bytes = File.ReadAllBytes(path);
+            if (Array.IndexOf(bytes, (byte)0) >= 0) return null;   // binary
+            var text = Therion.Syntax.EncodingResolver.Decode(bytes);
+            return text.Contains('\uFFFD') ? null : text;          // lossy decode: rewriting would corrupt it
+        }
         catch { return null; }
     }
 }

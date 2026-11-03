@@ -122,7 +122,7 @@ public static partial class ProblemMatchers
                              : msg.StartsWith("info", StringComparison.OrdinalIgnoreCase) || msg.StartsWith("note", StringComparison.OrdinalIgnoreCase) ? DiagnosticSeverity.Info
                              : DiagnosticSeverity.Error;
                 var at = new SourceLocation(ln, col);
-                return Diagnostic.Create("task:" + taskId, severity, msg, new SourceSpan(Rooted(m.Groups["file"].Value.Trim(), cwd), at, at, 0, 0));
+                return Diagnostic.Create("task:" + taskId, severity, msg, new SourceSpan(Rooted(m.Groups["file"].Value.Trim(), cwd), at, at with { Column = at.Column + 1 }, 0, 1));
             default:
                 return null;
         }

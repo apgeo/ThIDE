@@ -59,7 +59,8 @@ public static class CompassImporter
         if (!string.IsNullOrWhiteSpace(team)) sb.Append("    # team ").Append(team).Append('\n');
         if (!string.IsNullOrWhiteSpace(declination) && declination != "0" && declination != "0.00")
             sb.Append("    declination ").Append(declination).Append(" degrees\n");
-        sb.Append("    units length feet\n");
+        // LRUD is a separate quantity from `length` in Therion (it reads it as metres otherwise).
+        sb.Append("    units length dimensions feet\n");
         sb.Append("    data normal from to length compass clino left up down right\n");
 
         for (int r = headerEnd; r < lines.Length; r++)

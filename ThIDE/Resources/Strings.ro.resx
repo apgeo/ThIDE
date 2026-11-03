@@ -602,6 +602,8 @@
   <data name="Pref_OpenAll" xml:space="preserve"><value>Deschide fiecare ieșire corespunzătoare (altfel doar prima)</value></data>
   <data name="Pref_CompileOnSave" xml:space="preserve"><value>Compilează la salvare (recompilează proiectul la scurt timp după fiecare salvare)</value></data>
   <data name="Pref_CompileOnSaveHelp" xml:space="preserve"><value>Compilare de fundal amânată; urmăriți indicatorul și panoul Jurnal. Dezactivat implicit.</value></data>
+  <data name="Pref_GlobalBuildHotkey" xml:space="preserve"><value>Tastă rapidă de compilare la nivel de sistem (Ctrl+Alt+B, chiar și când ThIDE nu este în prim-plan)</value></data>
+  <data name="Pref_GlobalBuildHotkeyHelp" xml:space="preserve"><value>Doar pe Windows. Windows raportează AltGr ca Ctrl+Alt, așa că, cât timp opțiunea este activă, AltGr+B nu mai scrie caracterul său în niciun program (pe tastaturile cehă, slovacă, maghiară și altele acesta este o acoladă). Dezactivat implicit.</value></data>
   <data name="Pref_EnsureDirs" xml:space="preserve"><value>Creează dosarele de ieșire lipsă înainte de compilare</value></data>
   <data name="Pref_EnsureDirsHelp" xml:space="preserve"><value>Verifică dosarul de ieșire al fiecărui export și îl creează recursiv dacă lipsește (altfel Therion eșuează la un dosar lipsă). O linie informativă este înregistrată când un dosar este creat. Activat implicit.</value></data>
   <data name="Pref_AutoSaveBeforeCompile" xml:space="preserve"><value>Salvează automat fișierele modificate înainte de compilare</value></data>
@@ -1117,6 +1119,7 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Notif_UnstuckTitle" xml:space="preserve"><value>Fereastră deblocată</value></data>
   <data name="Notif_UnstuckBody" xml:space="preserve"><value>Fereastra a rămas dezactivată de un dialog deja închis și nu mai răspundea la clicuri. A fost reactivată; detaliile sunt în jurnal.</value></data>
   <data name="Notif_ScaffoldOverwritesSource" xml:space="preserve"><value>Folderul țintă este chiar folderul carnetului, așa că fișierul generat ar suprascrie „{0}”. Alege alt folder.</value></data>
+  <data name="Notif_ScaffoldTargetsExist" xml:space="preserve"><value>Folderul țintă conține deja {0}; generarea scheletului le-ar suprascrie. Alege un folder gol sau mută mai întâi acele fișiere.</value></data>
   <data name="Scaffold_Title" xml:space="preserve"><value>Generează proiect Therion din tur</value></data>
   <data name="Scaffold_Intro" xml:space="preserve"><value>Construiește un proiect compilabil în jurul unui fișier de tur .th simplu (de ex. exportat din TopoDroid): creează structura de foldere, copiază turul în th/ și scrie un fișier .th de legătură plus un thconfig cu exporturile alese.</value></data>
   <data name="Scaffold_ProjectName" xml:space="preserve"><value>Nume proiect</value></data>
@@ -1389,6 +1392,7 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Edit_ProblemUnencodable" xml:space="preserve"><value>{0} declară o codificare care nu poate reține textul nou.</value></data>
   <data name="Edit_ProblemUnsavedChanges" xml:space="preserve"><value>{0} are modificări nesalvate; salvează-l întâi.</value></data>
   <data name="Edit_ProblemOpenBufferDiffers" xml:space="preserve"><value>{0} este deschis și diferă de fișierul de pe disc; salvează-l sau reîncarcă-l întâi.</value></data>
+  <data name="Edit_ProblemUndecodable" xml:space="preserve"><value>{0} conține octeți pe care codificarea sa nu îi poate citi; scrierea i-ar înlocui definitiv.</value></data>
   <data name="LinkSurvey_Load" xml:space="preserve"><value>Încarcă</value></data>
   <data name="LinkSurvey_SourceHint" xml:space="preserve"><value>Calea fișierului .th de legat (Răsfoiește, sau scrie-o și apasă Enter)</value></data>
   <data name="Snippet_survb" xml:space="preserve"><value>bloc survey … endsurvey</value></data>
@@ -1492,6 +1496,7 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Trust_ReasonHooks" xml:space="preserve"><value>definește hook-uri</value></data>
   <data name="Trust_ReasonTasks" xml:space="preserve"><value>definește sarcini</value></data>
   <data name="Trust_ReasonMacros" xml:space="preserve"><value>definește macrouri</value></data>
+  <data name="Trust_ReasonSystemCommands" xml:space="preserve"><value>un asistent a cerut compilarea lui, iar thconfig-ul său rulează comenzi system</value></data>
   <data name="Trust_Skipped" xml:space="preserve"><value>S-au omis comenzile proiectului: dosarul nu este de încredere</value></data>
   <data name="Trust_SkippedDetail" xml:space="preserve"><value>{0} nu au fost rulate.</value></data>
   <data name="Trust_TrustAction" xml:space="preserve"><value>Am încredere…</value></data>
@@ -1606,7 +1611,14 @@ Aplici modificările? Pașii care nu au putut fi previzualizați rulează acum.<
   <data name="Pref_AssistantSkillPackHelp" xml:space="preserve"><value>Îi explică modelului cum funcționează proiectele Therion și ThIDE, plus notele dvs. (assistant-skills.md lângă fișierul de setări) și ale proiectului (assistant.md în dosarul de configurare al proiectului). Fiecare parte e limitată la 8 KB.</value></data>
   <data name="Notif_SaveEncodingTitle" xml:space="preserve"><value>Nesalvat</value></data>
   <data name="Notif_SaveEncoding" xml:space="preserve"><value>{0}: „{1}” nu poate fi scris în {2}, codificarea declarată de fișier. Schimbați caracterul sau linia `encoding` a fișierului (de exemplu în utf-8) și salvați din nou.</value></data>
+  <data name="Notif_SaveFailedTitle" xml:space="preserve"><value>Salvare eșuată</value></data>
+  <data name="Notif_SaveFailedMsg" xml:space="preserve"><value>{0} nu a putut fi scris: {1} Modificările sunt încă în editor, nesalvate.</value></data>
+  <data name="Exit_SavePromptMsg" xml:space="preserve"><value>{0} fișier(e) au modificări nesalvate. Doriți să le salvați înainte de a închide ThIDE?</value></data>
+  <data name="Exit_SaveAll" xml:space="preserve"><value>Salvează tot</value></data>
   <data name="Replace_EncodingRefused" xml:space="preserve"><value>Nu s-a înlocuit nimic: {0} nu poate conține „{1}” în {2}, codificarea declarată de fișier. Niciun fișier nu a fost modificat.</value></data>
+  <data name="Replace_UndoRefused" xml:space="preserve"><value>Nu s-a restaurat nimic: {0} a fost modificat după înlocuire. Niciun fișier nu a fost modificat.</value></data>
+  <data name="Notif_SaveUndecodable" xml:space="preserve"><value>{0} conține octeți care nu sunt valizi în {2}; apar ca „{1}”. Salvarea i-ar înlocui definitiv. Adăugați cu alt editor o linie `encoding` cu codificarea reală a fișierului și redeschideți-l, sau rescrieți caracterele afișate ca „{1}”.</value></data>
+  <data name="Replace_UndecodableRefused" xml:space="preserve"><value>Nu s-a înlocuit nimic: {0} conține octeți care nu sunt valizi în {2} (afișați ca „{1}”), iar scrierea i-ar înlocui definitiv. Niciun fișier nu a fost modificat.</value></data>
   <data name="Diag_FixCheck" xml:space="preserve"><value>Este posibil ca această corectură să nu ajungă la locul potrivit: verificați unde se aplică înainte de a o aplica.</value></data>
   <data name="Menu_Edit_PasteShots" xml:space="preserve"><value>Lipește ca date de vize…</value></data>
   <data name="Menu_Tools_Normalize" xml:space="preserve"><value>Normalizează proiectul…</value></data>
@@ -1663,4 +1675,9 @@ Aplici modificările? Pașii care nu au putut fi previzualizați rulează acum.<
   <data name="Renumber_Stale" xml:space="preserve"><value>{0} s-a schimbat de la citirea proiectului — salvați sau reîncărcați, apoi încercați din nou.</value></data>
   <data name="Renumber_NoSurvey" xml:space="preserve"><value>Nu există topografia „{0}” în proiect.</value></data>
   <data name="ShotIssue_BadStation" xml:space="preserve"><value>„{0}” nu este nume de stație; rândul este omis.</value></data>
+  <data name="ShotEdit_OtherFile" xml:space="preserve"><value>Această viză este în {0}: deschideți acel fișier pentru a o edita.</value></data>
+  <data name="Explorer_TrashFailed" xml:space="preserve"><value>„{0}” nu a putut fi mutat în coșul de gunoi.
+
+Îl ștergeți definitiv? Operațiunea nu poate fi anulată.</value></data>
+  <data name="Explorer_DeletePermanently" xml:space="preserve"><value>Șterge definitiv</value></data>
 </root>

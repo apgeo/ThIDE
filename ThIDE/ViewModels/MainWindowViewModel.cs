@@ -15,6 +15,7 @@ using Microsoft.Extensions.Localization;
 using Therion.Build;
 using Therion.Semantics;
 using Therion.Syntax;
+using Therion.Workspace.Editing;
 using Therion.Workspace.Import;
 using ThIDE.Docking;
 using ThIDE.Resources;
@@ -165,6 +166,8 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             Mode = value ? ParserMode.Strict : ParserMode.Lenient,
         };
+        // Re-parse what is open so the diagnostics follow the toggle now, not on the next edit.
+        foreach (var doc in _documents.Documents) doc.RequestReparse();
     }
 
     /// <summary>Editor word-wrap toggle (#7); persisted and applied live to all editors.</summary>
@@ -606,8 +609,12 @@ public partial class MainWindowViewModel : ViewModelBase
         };
         _factory.DockableClosed += (_, e) =>
         {
+            if (e.Dockable is { } closed) OnUiThread(() => _mru.Remove(closed));   // the MRU orders open dockables; it must not keep closed ones alive
             if (e.Dockable is FileDocumentViewModel doc) _documents.CloseDocument(doc);
         };
+        // Documents closed through the document service (e.g. Close All) do not pass DockableClosed: drop them too.
+        _documents.Documents.CollectionChanged += (_, _) => OnUiThread(() =>
+            _mru.RemoveAll(d => d is FileDocumentViewModel f && !_documents.Documents.Contains(f)));
         // Prompt to save a modified document before its tab closes (Save / Don't save / Cancel).
         _factory.DocumentCloseGuard = PromptSaveBeforeCloseAsync;
 
@@ -688,12 +695,12 @@ public partial class MainWindowViewModel : ViewModelBase
             Model3DViewerTool.Viewer.SelectInModel(name);
         });
 
+        // Compiler diagnostics stay listed (across document switches and re-validation) until the
+        // next build replaces them.
         Build.CompileCompleted += (_, diags) =>
         {
-            var combined = System.Collections.Immutable.ImmutableArray.CreateBuilder<Therion.Core.Diagnostic>();
-            combined.AddRange(DiagnosticsSource());
-            combined.AddRange(diags);
-            Diagnostics.Load(combined.ToImmutable());
+            _buildDiagnostics = diags;
+            RefreshDiagnostics();
         };
         // toast the build result with a one-click "Show output" action. The result flags
         // are set on BuildViewModel before CompileCompleted fires, so they are current here.
@@ -784,10 +791,8 @@ public partial class MainWindowViewModel : ViewModelBase
             };
             Tasks.PublishDiagnostics = diags => OnUiThread(() =>
             {
-                var combined = System.Collections.Immutable.ImmutableArray.CreateBuilder<Therion.Core.Diagnostic>();
-                combined.AddRange(DiagnosticsSource());
-                combined.AddRange(diags);
-                Diagnostics.Load(combined.ToImmutable());
+                _taskDiagnostics = diags;   // kept until the next task run publishes its own set
+                RefreshDiagnostics();
             });
         }
         // Compile-on-save follows every save — Save, Save All and auto-save — not just the command.
@@ -887,7 +892,10 @@ public partial class MainWindowViewModel : ViewModelBase
                 {
                     if (!string.IsNullOrEmpty(s.LastWorkspaceRoot) && System.IO.Directory.Exists(s.LastWorkspaceRoot))
                         await _session.SetRootAsync(s.LastWorkspaceRoot).ConfigureAwait(true);
-                    if (!string.IsNullOrEmpty(s.LastActiveThconfig) && System.IO.File.Exists(s.LastActiveThconfig))
+                    // SetRootAsync usually auto-picks this same config already; loading it again would
+                    // build the whole project a second time on every start.
+                    if (!string.IsNullOrEmpty(s.LastActiveThconfig) && System.IO.File.Exists(s.LastActiveThconfig)
+                        && !(_session.ActiveThconfig is { } active && Therion.Workspace.Editing.FilePaths.Same(active.FullPath, s.LastActiveThconfig)))
                         await _session.SetActiveThconfigAsync(s.LastActiveThconfig).ConfigureAwait(true);
                 }
                 catch { /* fall through to file/sample restore */ }
@@ -920,7 +928,7 @@ public partial class MainWindowViewModel : ViewModelBase
                         await _documents.OpenFileAsync(path).ConfigureAwait(true); loaded++;
                         // restore the caret offset so the tab reopens where it was left.
                         if (s?.SessionCaretOffsets is { } carets && carets.TryGetValue(path, out var off) && off > 0 &&
-                            _documents.Documents.FirstOrDefault(d => string.Equals(d.FilePath, path, StringComparison.OrdinalIgnoreCase)) is { } reopened)
+                            _documents.Documents.FirstOrDefault(d => FilePaths.Comparer.Equals(d.FilePath, path)) is { } reopened)
                             reopened.SavedCaretOffset = off;
                     }
                     catch (Exception ex) { _log?.Warning($"Failed to load '{path}': {ex.Message}"); }
@@ -949,7 +957,12 @@ public partial class MainWindowViewModel : ViewModelBase
                 () => _factory.RestoreFloatWindows(_layout?.Current.FloatWindows),
                 Avalonia.Threading.DispatcherPriority.Background);
         else
+        {
+            // Nothing is restored, but autosave must now capture the live tree rather than keep
+            // writing back the saved (skipped) profile.
+            _factory.RestoreFloatWindows(null);
             _log?.Warning("Started in safe mode after an unclean shutdown — floated-window layout was not restored.");
+        }
 
         // Show the Welcome start page when nothing was restored (and the option is on). Posted at
         // Background priority AFTER the placeholder/float restore above so the document count is final.
@@ -982,28 +995,22 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private async Task RecoverBuffersAsync(System.Collections.Generic.IReadOnlyList<RecoveredBuffer> buffers)
     {
+        int recovered = 0;
         foreach (var b in buffers)
         {
             try
             {
-                if (System.IO.File.Exists(b.OriginalPath))
-                {
-                    await _documents.OpenFileAsync(b.OriginalPath).ConfigureAwait(true);
-                    // Apply the recovered text on top of the on-disk content → the editor reopens
-                    // dirty with the unsaved work, ready to save.
-                    if (_documents.Documents.FirstOrDefault(d =>
-                            string.Equals(d.FilePath, b.OriginalPath, StringComparison.OrdinalIgnoreCase)) is { } doc)
-                        doc.DocumentText = b.Text;
-                }
-                else
-                {
-                    _documents.OpenTextDocument(b.OriginalPath, b.Text);
-                }
+                // The editor reopens dirty with the unsaved work, ready to save — over the file when it
+                // still opens, on its own when it does not.
+                await _documents.OpenRecoveredAsync(b.OriginalPath, b.Text).ConfigureAwait(true);
+                recovered++;
             }
             catch (Exception ex) { _log?.Warning($"Failed to recover '{b.OriginalPath}': {ex.Message}"); }
         }
-        _crashRecovery?.ClearRecovery();
-        StatusText = $"Recovered {buffers.Count} unsaved file(s).";
+        // The reopened buffers are dirty, so the periodic recovery save writes them back. Delete the old
+        // copies only when every one is open again: one that is not keeps its file in the recovery folder.
+        if (recovered == buffers.Count) _crashRecovery?.ClearRecovery();
+        StatusText = $"Recovered {recovered} unsaved file(s).";
     }
 
     /// <summary>Records the open files + workspace root/active thconfig for next launch (#9).</summary>
@@ -1012,7 +1019,7 @@ public partial class MainWindowViewModel : ViewModelBase
         if (_settings is null) return;
         var paths = new System.Collections.Generic.List<string>();
         // also remember each tab's caret offset so it restores where the user left off.
-        var carets = new System.Collections.Generic.Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        var carets = new System.Collections.Generic.Dictionary<string, int>(FilePaths.Comparer);
         foreach (var doc in _documents.Documents)
         {
             if (string.IsNullOrEmpty(doc.FilePath) || !System.IO.File.Exists(doc.FilePath)) continue;
@@ -1048,7 +1055,7 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         if (_settings is null || string.IsNullOrEmpty(path)) return;
         var s = _settings.Current;
-        if (s.PinnedRecentFiles.Contains(path, StringComparer.OrdinalIgnoreCase)) return;
+        if (s.PinnedRecentFiles.Contains(path, FilePaths.Comparer)) return;
         var pinned = new List<string>(s.PinnedRecentFiles) { path };
         _settings.Save(s with { PinnedRecentFiles = pinned });
     }
@@ -1059,7 +1066,7 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         if (_settings is null || string.IsNullOrEmpty(path)) return;
         var s = _settings.Current;
-        var pinned = s.PinnedRecentFiles.Where(p => !string.Equals(p, path, StringComparison.OrdinalIgnoreCase)).ToList();
+        var pinned = s.PinnedRecentFiles.Where(p => !FilePaths.Comparer.Equals(p, path)).ToList();
         if (pinned.Count == s.PinnedRecentFiles.Count) return;
         _settings.Save(s with { PinnedRecentFiles = pinned });
     }
@@ -1469,6 +1476,19 @@ public partial class MainWindowViewModel : ViewModelBase
                 return false;
             }
 
+            // Scaffolding into an existing project would silently replace the user's thconfig,
+            // wrapper .th or copied survey. Refuse and name the files instead.
+            var existing = Therion.Workspace.Import.TopodroidProjectScaffold
+                .ExistingTargets(plan, targetRoot, new[] { sourcePath });
+            if (existing.Count > 0)
+            {
+                var msg = string.Format(Tr.Get("Notif_ScaffoldTargetsExist"), string.Join(", ", existing));
+                StatusText = msg;
+                _log?.Warning($"Scaffold refused: {msg}");
+                _notifications.Error(Tr.Get("Notif_ScaffoldFailed"), msg);
+                return false;
+            }
+
             foreach (var dir in plan.Directories)
                 System.IO.Directory.CreateDirectory(System.IO.Path.Combine(targetRoot, dir));
 
@@ -1476,7 +1496,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 System.IO.Path.Combine(targetRoot, plan.SourceCopyRelativePath));
             System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(sourceDest)!);
             // Guard against copying a file onto itself (e.g. scaffolding around a file already in place).
-            if (!string.Equals(System.IO.Path.GetFullPath(sourcePath), sourceDest, StringComparison.OrdinalIgnoreCase))
+            if (!FilePaths.Comparer.Equals(System.IO.Path.GetFullPath(sourcePath), sourceDest))
                 System.IO.File.Copy(sourcePath, sourceDest, overwrite: true);
 
             foreach (var f in plan.Files)
@@ -1502,7 +1522,10 @@ public partial class MainWindowViewModel : ViewModelBase
         if (Avalonia.Application.Current?.ApplicationLifetime is
             Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop)
         {
-            desktop.Shutdown();
+            // Close the main window rather than Shutdown(), which closes windows without letting them
+            // cancel: the window's close guard asks about unsaved documents, and closing it ends the app.
+            if (desktop.MainWindow is { } main) main.Close();
+            else desktop.Shutdown();
         }
     }
 
@@ -1577,10 +1600,21 @@ public partial class MainWindowViewModel : ViewModelBase
         if (_picker is null) return;
         var path = await _picker.PickOpenLayoutAsync(Tr.Get("Pick_LoadLayoutTitle"));
         if (string.IsNullOrEmpty(path)) return;
-        if (LayoutProfileFile.TryLoad(path!) is { } profile)
-            ApplyLayoutProfile(profile);
-        else
+        if (LayoutProfileFile.TryLoad(path!) is not { } profile)
+        {
             _notifications.Error(Tr.Get("Notif_LayoutLoadFailed"), path!);
+            return;
+        }
+        try
+        {
+            ApplyLayoutProfile(profile);
+        }
+        catch (Exception ex)
+        {
+            _log?.Warning($"Layout file could not be applied: {ex.Message}");
+            _notifications.Error(Tr.Get("Notif_LayoutLoadFailed"), path!);
+            ResetLayout();
+        }
     }
 
     /// <summary>View ▸ Layout ▸ Split Side Panels in 2/3 — more panels visible at once.</summary>
@@ -1715,26 +1749,30 @@ public partial class MainWindowViewModel : ViewModelBase
     /// Close guard for a modified document (wired into the DockFactory): asks Save / Don't save /
     /// Cancel. Returns true to let the tab close (after saving when chosen), false to keep it open.
     /// </summary>
-    private async Task<bool> PromptSaveBeforeCloseAsync(FileDocumentViewModel doc)
-    {
-        var choice = await Views.SaveBeforeBuildDialog.ShowOverMainAsync(
-            Tr.Get("Close_SavePromptTitle"),
-            string.Format(Tr.Get("Close_SavePromptMsg"), System.IO.Path.GetFileName(doc.FilePath)),
-            Tr.Get("Close_Save"), Tr.Get("Close_DontSave"), Tr.Get("Common_Cancel"),
-            noWindowResult: Views.SaveBeforeBuildChoice.DontSave).ConfigureAwait(true);
+    private Task<bool> PromptSaveBeforeCloseAsync(FileDocumentViewModel doc) =>
+        // A save that failed or wrote nothing leaves the document dirty → the tab stays open.
+        SaveBeforeClose.ConfirmAsync(new[] { doc }, _ => Views.SaveBeforeBuildDialog.ShowOverMainAsync(
+                Tr.Get("Close_SavePromptTitle"),
+                string.Format(Tr.Get("Close_SavePromptMsg"), System.IO.Path.GetFileName(doc.FilePath)),
+                Tr.Get("Close_Save"), Tr.Get("Close_DontSave"), Tr.Get("Common_Cancel"),
+                noWindowResult: Views.SaveBeforeBuildChoice.DontSave),
+            _documents, message => StatusText = message);
 
-        switch (choice)
-        {
-            case Views.SaveBeforeBuildChoice.Save:
-                try { await _documents.SaveDocumentAsync(doc).ConfigureAwait(true); }
-                catch (Exception ex) { StatusText = ex.Message; return false; }   // save failed → keep the tab open
-                return true;
-            case Views.SaveBeforeBuildChoice.DontSave:
-                return true;
-            default:
-                return false;   // Cancel → keep the tab open
-        }
-    }
+    /// <summary>True when an open document has unsaved changes (closing the window must ask first).</summary>
+    public bool HasUnsavedDocuments => _documents.Documents.Any(d => d.IsDirty);
+
+    /// <summary>
+    /// Close guard for the main window: asks Save all / Don't save / Cancel over every modified document.
+    /// Returns true to let the window (and the app) close, false to keep it open.
+    /// </summary>
+    public Task<bool> ConfirmCloseAsync() =>
+        SaveBeforeClose.ConfirmAsync(_documents.Documents.ToList(), dirty => Views.SaveBeforeBuildDialog.ShowOverMainAsync(
+                Tr.Get("Close_SavePromptTitle"),
+                string.Format(Tr.Get("Exit_SavePromptMsg"), dirty.Count) + Environment.NewLine + Environment.NewLine
+                    + string.Join(Environment.NewLine, dirty.Select(d => "  • " + System.IO.Path.GetFileName(d.FilePath))),
+                Tr.Get("Exit_SaveAll"), Tr.Get("Close_DontSave"), Tr.Get("Common_Cancel"),
+                noWindowResult: Views.SaveBeforeBuildChoice.Cancel),
+            _documents, message => StatusText = message);
 
     // ---- auto-save -------------------------------------------------
     private Avalonia.Threading.DispatcherTimer? _autoSaveTimer;
@@ -1765,7 +1803,9 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         foreach (var doc in _documents.Documents.ToList())
         {
-            if (!doc.IsDirty) continue;
+            // Auto-save never recreates a file deleted on disk (a branch switch, a delete elsewhere);
+            // an explicit save does.
+            if (!doc.IsDirty || !System.IO.File.Exists(doc.FilePath)) continue;
             try { await _documents.SaveDocumentAsync(doc).ConfigureAwait(true); }
             catch (Exception ex) { _log?.Warning($"Auto-save failed for '{doc.FilePath}': {ex.Message}"); }
         }
@@ -1825,25 +1865,35 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private async Task ApplyShotEditAsync(ShotEditEventArgs e)
     {
-        if (_editService is null || _documents.CurrentAst is null) return;
+        if (_editService is null) return;
         if (e.Row.SourceRow is not { } source || e.Row.FieldDefinition is not { } fields) return;
+        if (_documents.CurrentAst is not { } ast) { RevertShotRow(e.Row); return; }
 
         int idx = -1;
         for (int i = 0; i < fields.Fields.Length; i++)
         {
             if (string.Equals(fields.Fields[i], e.Field, StringComparison.OrdinalIgnoreCase)) { idx = i; break; }
         }
-        if (idx < 0) return;
+        if (idx < 0) { RevertShotRow(e.Row); return; }
 
-        var values = source.Values.ToBuilder();
-        while (values.Count <= idx) values.Add("-");
-        values[idx] = e.Value?.ToString("0.###", CultureInfo.InvariantCulture) ?? "-";
+        var value = e.Value?.ToString("0.###", CultureInfo.InvariantCulture) ?? "-";
 
-        var replacement = source with { Values = values.ToImmutable() };
-        var result = _editService.ReplaceNode(_documents.CurrentAst, source, replacement);
+        // The edit is applied to the active document's AST: a row from another workspace file
+        // cannot be found there.
+        if (_documents.CurrentPath is not { } current || !FilePaths.Same(source.Span.FilePath, current))
+        {
+            StatusText = string.Format(CultureInfo.CurrentCulture, Tr.Get("ShotEdit_OtherFile"),
+                System.IO.Path.GetFileName(source.Span.FilePath));
+            RevertShotRow(e.Row);
+            return;
+        }
+
+        // Only the edited token changes; the rest of the file (layout, comments, blocks) is kept as is.
+        var result = _editService.ReplaceRowValue(ast, _documents.CurrentText, source, idx, value);
         if (!result.Success || result.UpdatedText is null)
         {
             StatusText = result.Diagnostics.Length > 0 ? result.Diagnostics[0].Message : "Edit failed.";
+            RevertShotRow(e.Row);
             return;
         }
         try
@@ -1851,7 +1901,17 @@ public partial class MainWindowViewModel : ViewModelBase
             await _documents.WriteCurrentTextAsync(result.UpdatedText).ConfigureAwait(true);
             StatusText = $"Shot {e.Row.From} → {e.Row.To} updated.";
         }
-        catch (Exception ex) { StatusText = ex.Message; }
+        catch (Exception ex) { StatusText = ex.Message; RevertShotRow(e.Row); }
+    }
+
+    /// <summary>
+    /// Puts a rejected edit's cell back to the file's value, so the grid does not show an unsaved number.
+    /// Posted, because the edit arrives from inside the cell's own value commit.
+    /// </summary>
+    private static void RevertShotRow(ShotRow row)
+    {
+        if (row.Source is { } shot)
+            Avalonia.Threading.Dispatcher.UIThread.Post(() => row.SetSilently(shot.Length, shot.Compass, shot.Clino));
     }
 
     private static void OnUiThread(Action action)
@@ -1880,8 +1940,22 @@ public partial class MainWindowViewModel : ViewModelBase
         WorkspaceExplorer.Refresh();
     }
 
-    /// <summary>Returns the diagnostics source based on the current scope toggle.</summary>
-    private System.Collections.Immutable.ImmutableArray<Therion.Core.Diagnostic> DiagnosticsSource()
+    /// <summary>The last build's compiler diagnostics; replaced when the next build completes.</summary>
+    private System.Collections.Immutable.ImmutableArray<Therion.Core.Diagnostic> _buildDiagnostics =
+        System.Collections.Immutable.ImmutableArray<Therion.Core.Diagnostic>.Empty;
+    /// <summary>The last task run's problem-matcher diagnostics; replaced by the next task that publishes.</summary>
+    private System.Collections.Immutable.ImmutableArray<Therion.Core.Diagnostic> _taskDiagnostics =
+        System.Collections.Immutable.ImmutableArray<Therion.Core.Diagnostic>.Empty;
+
+    /// <summary>
+    /// Everything the Diagnostics panel lists: the parse/semantic/project set for the current scope
+    /// plus the last build's and the last task's diagnostics, which no re-parse reproduces.
+    /// </summary>
+    private System.Collections.Immutable.ImmutableArray<Therion.Core.Diagnostic> DiagnosticsSource() =>
+        EditorDiagnosticsSource().AddRange(_buildDiagnostics).AddRange(_taskDiagnostics);
+
+    /// <summary>Returns the parse/semantic/project diagnostics based on the current scope toggle.</summary>
+    private System.Collections.Immutable.ImmutableArray<Therion.Core.Diagnostic> EditorDiagnosticsSource()
     {
         // NOTE: do NOT gate this on `ws.Diagnostics` being non-empty. Those are only the per-file
         // parse/bind/xvi diagnostics; the project-wide analysis below (loop closure, blunders, and the
@@ -1931,12 +2005,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private static bool IsActiveFile(string? path, string? activePath)
     {
         if (string.IsNullOrEmpty(path) || string.IsNullOrEmpty(activePath)) return false;
-        try
-        {
-            return string.Equals(System.IO.Path.GetFullPath(path), System.IO.Path.GetFullPath(activePath),
-                StringComparison.OrdinalIgnoreCase);
-        }
-        catch { return string.Equals(path, activePath, StringComparison.OrdinalIgnoreCase); }
+        return FilePaths.Same(path, activePath);
     }
 
     private WorkspaceSemanticModel? _projDiagWorkspace;
@@ -2085,7 +2154,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private void UpdateCaretStatus(Therion.Core.SourceSpan span)
     {
         // Only the active document's caret drives the status bar.
-        if (!string.Equals(span.FilePath, _documents.CurrentPath, StringComparison.OrdinalIgnoreCase)) return;
+        if (!FilePaths.Comparer.Equals(span.FilePath, _documents.CurrentPath)) return;
         StatusCaretLine = span.Start.Line;
         StatusCaretCol = span.Start.Column;
         StatusCaretPos = span.StartOffset;

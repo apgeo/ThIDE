@@ -9,6 +9,7 @@
 // narrates is mirrored into the in-app LogService (Log pane = audit trail).
 
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Net;
@@ -22,8 +23,10 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Therion.Build;
 using Therion.Mcp;
 using Therion.Processing.Abstractions;
+using ThIDE.Resources;
 
 namespace ThIDE.Services;
 
@@ -71,6 +74,8 @@ public sealed class McpHostService : IMcpHostService
     private readonly ITherionCompiler _compiler;
     private readonly IWorkspaceSession? _session;
     private readonly IUnsavedBufferProvider? _buffers;
+    private readonly IWorkspaceTrustService? _trust;
+    private readonly ICompileGate? _compileGate;
 
     // Serializes start/stop transitions so a fast toggle or a settings change mid-start can't race.
     private readonly SemaphoreSlim _gate = new(1, 1);
@@ -90,8 +95,10 @@ public sealed class McpHostService : IMcpHostService
         IExternalToolLocator toolLocator,
         ITherionCompiler compiler,
         IWorkspaceSession? session = null,
-        IUnsavedBufferProvider? buffers = null)
-        : this(settings, log, uiBridge, toolLocator, compiler, session, buffers, DiscoveryFilePath()) { }
+        IUnsavedBufferProvider? buffers = null,
+        IWorkspaceTrustService? trust = null,
+        ICompileGate? compileGate = null)
+        : this(settings, log, uiBridge, toolLocator, compiler, session, buffers, DiscoveryFilePath(), trust, compileGate) { }
 
     // Test seam (InternalsVisibleTo ThIDE.Tests): a discovery path under a temp dir keeps a test run
     // from writing or deleting the developer's real %AppData%/ThIDE/mcp-endpoint.json. Not seen by DI,
@@ -104,7 +111,9 @@ public sealed class McpHostService : IMcpHostService
         ITherionCompiler compiler,
         IWorkspaceSession? session,
         IUnsavedBufferProvider? buffers,
-        string discoveryPath)
+        string discoveryPath,
+        IWorkspaceTrustService? trust = null,
+        ICompileGate? compileGate = null)
     {
         _settings = settings;
         _log = log;
@@ -113,7 +122,9 @@ public sealed class McpHostService : IMcpHostService
         _compiler = compiler;
         _session = session;
         _buffers = buffers;
+        _compileGate = compileGate;
         _discoveryPath = discoveryPath;
+        _trust = trust;
         _settings.Changed += OnSettingsChanged;
     }
 
@@ -202,6 +213,11 @@ public sealed class McpHostService : IMcpHostService
             builder.Services.AddSingleton(_uiBridge);   // presence => the R3 catalog is eligible
             builder.Services.AddSingleton(_toolLocator);
             builder.Services.AddSingleton(_compiler);
+            // A build whose thconfig runs `system` commands asks the folder's trust first, like hooks do.
+            if (_trust is not null) builder.Services.AddSingleton<IBuildApproval>(new TrustBuildApproval(_trust));
+            // The Build pane's gate, so an agent's run_build and the user's F5 / compile-on-save never
+            // run Therion on the same project at once.
+            if (_compileGate is not null) builder.Services.AddSingleton(_compileGate);
 
             // The workspace tools read the running IDE (T-03.2): the live session model with unsaved
             // buffers overlaid, marshalled onto the UI thread. A fresh host per server start, registered as
@@ -335,18 +351,51 @@ public sealed class McpHostService : IMcpHostService
         finally { probe.Stop(); }
     }
 
+    /// <summary>
+    /// Writes a file only its owner can read: a discovery file holds a bearer token in cleartext.
+    /// %AppData% is user-scoped on Windows, but the POSIX ~/.config fallback is created world-readable
+    /// under a normal umask, and changing the mode after the write leaves a window in which another
+    /// local user can open the file and keep reading the token. So on POSIX the folder is created
+    /// 0700, the content goes to a fresh 0600 file, and that file is renamed over the old one.
+    /// </summary>
+    internal static void WriteOwnerOnly(string path, string text)
+    {
+        var dir = Path.GetDirectoryName(path);
+        if (OperatingSystem.IsWindows())
+        {
+            if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+            File.WriteAllText(path, text);
+            return;
+        }
+
+        if (!string.IsNullOrEmpty(dir))
+            Directory.CreateDirectory(dir, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        var temp = path + "." + Convert.ToHexString(RandomNumberGenerator.GetBytes(4)) + ".tmp";
+        try
+        {
+            // CreateNew: never write into a file someone else put there first.
+            using (var stream = new FileStream(temp, new FileStreamOptions
+                   {
+                       Mode = FileMode.CreateNew,
+                       Access = FileAccess.Write,
+                       UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite,
+                   }))
+            using (var writer = new StreamWriter(stream))
+                writer.Write(text);
+            File.Move(temp, path, overwrite: true);
+        }
+        catch
+        {
+            try { File.Delete(temp); } catch { /* best effort */ }
+            throw;
+        }
+    }
+
     private void WriteDiscoveryFile(McpEndpoint info)
     {
         try
         {
-            var dir = Path.GetDirectoryName(_discoveryPath);
-            if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
-            File.WriteAllText(_discoveryPath, info.ToJson());
-            // The file holds the bearer token in cleartext. %AppData% is user-scoped on Windows, but the
-            // POSIX ~/.config fallback is created world-readable under a normal umask — so lock it to the
-            // owner, or any local user could read the token and drive the server (code review, 2026-07-11).
-            if (!OperatingSystem.IsWindows())
-                File.SetUnixFileMode(_discoveryPath, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+            WriteOwnerOnly(_discoveryPath, info.ToJson());
         }
         catch (Exception ex)
         {
@@ -406,4 +455,14 @@ public sealed class McpHostService : IMcpHostService
             private sealed class NullScope : IDisposable { public void Dispose() { } }
         }
     }
+}
+
+/// <summary>
+/// The in-app answer to "may this agent-started build run the thconfig's system commands?": the
+/// folder's trust, asked of the user when it is not settled yet — the question hooks and tasks ask.
+/// </summary>
+internal sealed class TrustBuildApproval(IWorkspaceTrustService trust) : IBuildApproval
+{
+    public Task<bool> ApproveSystemCommandsAsync(string root, string entryPoint, IReadOnlyList<string> systemCommands,
+        CancellationToken ct = default) => trust.EnsureTrustedAsync(root, Tr.Get("Trust_ReasonSystemCommands"));
 }

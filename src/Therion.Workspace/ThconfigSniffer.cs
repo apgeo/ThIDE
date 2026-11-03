@@ -28,17 +28,34 @@ public sealed class ThconfigSniffer : IThconfigSniffer
             var text = File.ReadAllText(filePath);
             var tokens = _tokenizer.Tokenize(filePath, text);
 
+            // Only a keyword in command position (the first token of a logical line) counts, and
+            // two distinct ones are needed: `source`, `input`, `encoding`, `text` or `log` alone are
+            // ordinary words in prose and ordinary commands in survey files.
             int seen = 0;
-            int topLevelHits = 0;
+            bool atLineStart = true;
+            var keywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var tok in tokens)
             {
                 if (seen++ >= SnifferConstants.SnifferMaxTokens) break;
-                if (tok.Kind != TherionTokenKind.Identifier) continue;
-                if (ThconfigParser.TopLevelKeywords.Contains(tok.Text)) topLevelHits++;
-                if (topLevelHits >= 2) return SnifferVerdict.Likely;
+                switch (tok.Kind)
+                {
+                    case TherionTokenKind.NewLine:
+                        atLineStart = true;
+                        continue;
+                    case TherionTokenKind.Whitespace:
+                    case TherionTokenKind.LineContinuation:
+                    case TherionTokenKind.LineComment:
+                        continue;
+                }
+
+                if (atLineStart && tok.Kind == TherionTokenKind.Identifier &&
+                    ThconfigParser.TopLevelKeywords.Contains(tok.Text) &&
+                    keywords.Add(tok.Text) && keywords.Count >= 2)
+                    return SnifferVerdict.Likely;
+                atLineStart = false;
             }
 
-            return topLevelHits >= 1 ? SnifferVerdict.Likely : SnifferVerdict.Unlikely;
+            return SnifferVerdict.Unlikely;
         }
         catch
         {

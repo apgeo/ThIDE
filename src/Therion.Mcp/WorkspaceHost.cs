@@ -23,7 +23,41 @@ public sealed record WorkspaceSnapshot(
     WorkspaceSemanticModel Model,
     string Root,
     string EntryPointPath,
-    IReadOnlyCollection<string> DirtyFiles);
+    IReadOnlyCollection<string> DirtyFiles)
+{
+    private Dictionary<string, string>? _byCanonical;
+
+    // `with` must not carry the lookup over: it was built from the original's file list.
+    private WorkspaceSnapshot(WorkspaceSnapshot original)
+    {
+        LoadedFiles = original.LoadedFiles;
+        Model = original.Model;
+        Root = original.Root;
+        EntryPointPath = original.EntryPointPath;
+        DirtyFiles = original.DirtyFiles;
+    }
+
+    /// <summary>
+    /// The project's own spelling of <paramref name="canonicalPath"/> — the key <see cref="LoadedFiles"/>
+    /// and <c>Model.PerFile</c> use — or null when the file is not part of the project. The jail hands
+    /// tools symlink-resolved paths, while the loader keys files by the path it walked, so a file reached
+    /// through a symlinked root or subdirectory is only found by comparing canonical forms. Built once per
+    /// snapshot.
+    /// </summary>
+    public string? FindLoadedFile(string canonicalPath)
+    {
+        var map = _byCanonical;
+        if (map is null)
+        {
+            map = new Dictionary<string, string>(
+                OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+            foreach (var file in LoadedFiles.Concat(Model.PerFile.Keys))
+                map.TryAdd(WorkspacePaths.Canonicalize(file), file);
+            _byCanonical = map;
+        }
+        return map.GetValueOrDefault(canonicalPath);
+    }
+}
 
 /// <summary>Raised when a tool needs the workspace and none has been loaded.</summary>
 public sealed class WorkspaceNotLoadedException() : Exception(
@@ -54,6 +88,14 @@ public interface IWorkspaceHost
 
     /// <summary>Re-reads the current workspace, picking up changes made since the last snapshot.</summary>
     ValueTask<WorkspaceSnapshot> ReloadAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Re-reads the workspace after <paramref name="changedPaths"/> were written to disk, so the snapshot
+    /// describes them as written. A host whose <see cref="ReloadAsync(CancellationToken)"/> does not
+    /// re-read the disk (the in-app one) must override this; the default reloads everything.
+    /// </summary>
+    ValueTask<WorkspaceSnapshot> ReloadAsync(IReadOnlyCollection<string> changedPaths, CancellationToken ct = default) =>
+        ReloadAsync(ct);
 }
 
 public sealed class WorkspaceHost : IWorkspaceHost, IAsyncDisposable
@@ -145,6 +187,12 @@ public sealed class WorkspaceHost : IWorkspaceHost, IAsyncDisposable
         var entryPoint = WorkspacePaths.Canonicalize(
             await WorkspaceLoader.ResolveEntryPointAsync(pathOrFolder, cancellationToken: ct).ConfigureAwait(false));
 
+        // The entry point's directory becomes the jail every other path argument is held to, so only a
+        // Therion project may define it. The shared loader is lenient on purpose (the CLI opens whatever
+        // it is given); here one model-chosen path would otherwise move the jail to any directory.
+        if (RefusedEntryPoint(entryPoint) is { } refusal)
+            throw new WorkspaceLoadException(refusal, []);
+
         var opened = await WorkspaceLoader.OpenAsync(entryPoint, cancellationToken: ct).ConfigureAwait(false);
 
         var previous = _workspace;
@@ -155,6 +203,37 @@ public sealed class WorkspaceHost : IWorkspaceHost, IAsyncDisposable
 
         if (previous is not null) await previous.DisposeAsync().ConfigureAwait(false);
     }
+
+    /// <summary>
+    /// Why <paramref name="entryPoint"/> (canonical) may not define the workspace, or null when it may: it
+    /// must be a .th or a thconfig (by extension, Therion's bare <c>thconfig</c> name, or content sniff),
+    /// and its directory must not be the filesystem root or the user's home.
+    /// </summary>
+    private static string? RefusedEntryPoint(string entryPoint)
+    {
+        bool isSurvey = Path.GetExtension(entryPoint).Equals(".th", StringComparison.OrdinalIgnoreCase);
+        if (!isSurvey && !ThconfigDiscovery.IsCandidate(entryPoint, new ThconfigSniffer()))
+            return $"'{entryPoint}' is not a Therion project file. Give a .thconfig or .th file, "
+                 + "or a folder that holds one.";
+
+        var root = Path.GetDirectoryName(entryPoint);
+        if (string.IsNullOrEmpty(root) || string.Equals(root, Path.GetPathRoot(root), PathComparison))
+            return "A project at the filesystem root cannot be opened: its folder would become the workspace.";
+
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        if (!string.IsNullOrEmpty(home)
+            && string.Equals(TrimSeparators(root), TrimSeparators(WorkspacePaths.Canonicalize(home)), PathComparison))
+            return "A project directly in the home folder cannot be opened: the whole home folder would become "
+                 + "the workspace. Move it into a folder of its own.";
+
+        return null;
+    }
+
+    private static string TrimSeparators(string path) =>
+        path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+    private static StringComparison PathComparison =>
+        OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
 
     /// <summary>Caller must hold the gate.</summary>
     private WorkspaceSnapshot? Snapshot() =>

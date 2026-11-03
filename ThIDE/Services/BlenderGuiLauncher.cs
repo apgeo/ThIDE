@@ -54,13 +54,22 @@ public sealed class BlenderGuiLauncher : IBlenderGuiLauncher
 
             var process = new Process { StartInfo = psi, EnableRaisingEvents = true };
             var log = new StreamWriter(scriptPath + ".blender.log", append: false) { AutoFlush = true };
+            bool logFailed = false;
             void Write(string? data)
             {
                 if (data is null) return;
                 lock (log)
                 {
+                    if (logFailed) return;
                     try { log.WriteLine(data); }
                     catch (ObjectDisposedException) { /* late line after exit */ }
+                    catch (System.IO.IOException)
+                    {
+                        // Disk full / I/O error: these handlers run on the process output pump,
+                        // where an escaping exception is rethrown on the thread pool and kills
+                        // the app. Stop logging; Blender itself keeps running.
+                        logFailed = true;
+                    }
                 }
             }
             process.OutputDataReceived += (_, e) => Write(e.Data);

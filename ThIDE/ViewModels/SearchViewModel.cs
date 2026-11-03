@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Therion.Core;
+using Therion.Workspace.Editing;
 using ThIDE.Services;
 
 namespace ThIDE.ViewModels;
@@ -114,8 +115,8 @@ public sealed partial class SearchViewModel : ViewModelBase
         Status = "Searching…";
         var openText = _documents.Documents
             .Where(d => !string.IsNullOrEmpty(d.FilePath))
-            .GroupBy(d => d.FilePath, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(g => g.Key, g => g.First().DocumentText, StringComparer.OrdinalIgnoreCase);
+            .GroupBy(d => d.FilePath, FilePaths.Comparer)
+            .ToDictionary(g => g.Key, g => g.First().DocumentText, FilePaths.Comparer);
 
         var scope = Scope;
         var dir = Directory;
@@ -154,7 +155,7 @@ public sealed partial class SearchViewModel : ViewModelBase
             _              => projectFiles ?? Array.Empty<string>(),
         };
 
-        foreach (var path in paths.Distinct(StringComparer.OrdinalIgnoreCase))
+        foreach (var path in paths.Distinct(FilePaths.Comparer))
         {
             if (hits.Count >= MaxResults) break;
             string? text = openText.TryGetValue(path, out var t) ? t : ReadFile(path);
@@ -191,7 +192,7 @@ public sealed partial class SearchViewModel : ViewModelBase
 
     private IReadOnlyCollection<string> ProjectFiles()
     {
-        var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var set = new HashSet<string>(FilePaths.Comparer);
         if (_documents.Workspace is { } ws)
         {
             foreach (var p in ws.PerFile.Keys) set.Add(p);
@@ -206,19 +207,33 @@ public sealed partial class SearchViewModel : ViewModelBase
     {
         if (string.IsNullOrWhiteSpace(dir) || !System.IO.Directory.Exists(dir)) yield break;
         var patterns = mask.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        if (patterns.Length == 0) patterns = new[] { "*" };
+        if (patterns.Length == 0) patterns = new[] { "*.th", "*.th2", "*.thconfig", "*.thc" };
+        var options = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true };
         foreach (var pattern in patterns)
         {
-            IEnumerable<string> found;
-            try { found = System.IO.Directory.EnumerateFiles(dir, pattern, SearchOption.AllDirectories); }
+            IEnumerator<string> found;
+            try { found = System.IO.Directory.EnumerateFiles(dir, pattern, options).GetEnumerator(); }
             catch { continue; }
-            foreach (var f in found) yield return f;
+            using (found)
+                while (true)
+                {
+                    try { if (!found.MoveNext()) break; }
+                    catch { break; }
+                    yield return found.Current;
+                }
         }
     }
 
     private static string? ReadFile(string path)
     {
-        try { return File.Exists(path) ? Therion.Syntax.EncodingResolver.ReadAllText(path) : null; }
+        try
+        {
+            if (!File.Exists(path)) return null;
+            var bytes = File.ReadAllBytes(path);
+            if (Array.IndexOf(bytes, (byte)0) >= 0) return null;   // binary
+            var text = Therion.Syntax.EncodingResolver.Decode(bytes);
+            return text.Contains('\uFFFD') ? null : text;
+        }
         catch { return null; }
     }
 }

@@ -79,19 +79,49 @@ public partial class StructuralGeologyToolView : UserControl
         ApplyColumns(MeasurementsGrid, _vm.MeasurementColumns, MeasColumnsPanel, _measColKey);
         ApplyColumns(PlanesGrid, _vm.PlaneColumns, PlaneColumnsPanel, _planeColKey);
 
-        _vm.GroupingChanged += (_, _) => SetupGrouping();
+        _vm.GroupingChanged += OnGroupingChanged;
         _vm.PlotImageReady += OnPlotImageReady;
         // Clicking a great circle / pole in the stereonet selects the plane row (same sync as the
         // 3D plot's pick message).
         if (NetControl is not null)
-            NetControl.PlaneActivated += (_, name) => _vm?.SelectPlaneByName(name);
+            NetControl.PlaneActivated += OnNetPlaneActivated;
         // Once the plot pops out into its own panel, this tab's WebView must go away — otherwise
         // two NativeWebViews would both be wired to the same PlotScriptRequested bridge.
-        _vm.PropertyChanged += (_, e) =>
+        _vm.PropertyChanged += OnVmPropertyChanged;
+
+        // Re-attached while the plot tab is showing: the plot was torn down on detach.
+        if (Wizard?.SelectedIndex == PlotTabIndex && !_vm.PlotPoppedOut)
         {
-            if (e.PropertyName == nameof(StructuralGeologyViewModel.PlotPoppedOut) && _vm.PlotPoppedOut)
-                TeardownPlot();
-        };
+            EnsurePlot();
+            KickResize();
+        }
+    }
+
+    // Dock re-templates tool views (float, re-dock, tab switch) while the ViewModel stays a
+    // singleton; drop this instance's subscriptions and web control when it leaves the tree so
+    // old views are not kept alive and do not all react to one event. TryInit re-wires on attach.
+    protected override void OnDetachedFromVisualTree(global::Avalonia.VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+        if (_vm is not null)
+        {
+            _vm.GroupingChanged -= OnGroupingChanged;
+            _vm.PlotImageReady -= OnPlotImageReady;
+            _vm.PropertyChanged -= OnVmPropertyChanged;
+        }
+        if (NetControl is not null) NetControl.PlaneActivated -= OnNetPlaneActivated;
+        TeardownPlot();
+        _inited = false;
+    }
+
+    private void OnGroupingChanged(object? sender, EventArgs e) => SetupGrouping();
+
+    private void OnNetPlaneActivated(object? sender, string name) => _vm?.SelectPlaneByName(name);
+
+    private void OnVmPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(StructuralGeologyViewModel.PlotPoppedOut) && _vm is { PlotPoppedOut: true })
+            TeardownPlot();
     }
 
     // ---- measurements grouping (#10) -----------------------------------------------------------
@@ -405,6 +435,7 @@ public partial class StructuralGeologyToolView : UserControl
         _plotWired = false;
         _plot.WebMessageReceived -= OnPlotMessage;
         PlotHost?.Children.Clear();
+        (_plot as IDisposable)?.Dispose();
         _plot = null;
     }
 

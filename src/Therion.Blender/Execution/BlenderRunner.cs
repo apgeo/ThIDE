@@ -67,7 +67,9 @@ public sealed class BlenderRunner
 
         // Disk preflight: fail fast rather than mid-render (skipped when free space is unknown).
         long estimate = DiskPreflight.EstimateBytes(job.FrameCount, job.Output.Width, job.Output.Height, job.Output.Kind);
-        if (_freeSpaceProbe(job.WorkingDirectory) is { } free && !DiskPreflight.IsSufficient(estimate, free))
+        // Probe where the outputs land — the caller's output directory when it differs from the job folder.
+        string outputVolume = string.IsNullOrWhiteSpace(job.Output.OutputDirectory) ? job.WorkingDirectory : job.Output.OutputDirectory;
+        if (_freeSpaceProbe(outputVolume) is { } free && !DiskPreflight.IsSufficient(estimate, free))
             return new RenderResult
             {
                 Succeeded = false,

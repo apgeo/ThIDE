@@ -435,6 +435,32 @@ public static class TopodroidProjectScaffold
         return hits;
     }
 
+    /// <summary>
+    /// Plan targets (generated files and copied survey/sketches) that already exist under
+    /// <paramref name="targetRoot"/>, as project-relative paths. A copy whose destination is the
+    /// source itself (scaffolding around a file already in place) is not counted. Scaffolding into
+    /// an existing project would replace a hand-edited thconfig, wrapper or survey, so callers must
+    /// refuse the plan (or get explicit consent) when this returns anything.
+    /// </summary>
+    public static IReadOnlyList<string> ExistingTargets(ScaffoldPlan plan, string targetRoot, IEnumerable<string> sourcePaths)
+    {
+        var sources = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var p in sourcePaths) sources.Add(Path.GetFullPath(p));
+
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var hits = new List<string>();
+        void Check(string rel, bool isCopy)
+        {
+            var dest = Path.GetFullPath(Path.Combine(targetRoot, rel));
+            if (!seen.Add(dest) || (isCopy && sources.Contains(dest))) return;
+            if (File.Exists(dest)) hits.Add(rel);
+        }
+        foreach (var f in plan.Files) Check(f.RelativePath, isCopy: false);
+        Check(plan.SourceCopyRelativePath, isCopy: true);
+        foreach (var c in plan.SourceCopies) Check(c.RelativePath, isCopy: true);
+        return hits;
+    }
+
     private static void AppendSection(StringBuilder sb, string header, IReadOnlyList<string> lines)
     {
         if (lines.Count == 0) return;

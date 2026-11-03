@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
@@ -33,8 +34,10 @@ public partial class BookmarksWindow : Window
 
     private void Refresh()
     {
+        // Hand the grid a fresh snapshot: the service exposes its live list, and re-assigning the same
+        // instance after an add / remove is no property change, so the grid would keep the stale rows.
         if (this.FindControl<DataGrid>("Grid") is { } grid)
-            grid.ItemsSource = _service?.Bookmarks ?? Array.Empty<BookmarkEntry>();
+            grid.ItemsSource = _service is null ? Array.Empty<BookmarkEntry>() : _service.Bookmarks.ToArray();
     }
 
     private BookmarkEntry? SelectedEntry()

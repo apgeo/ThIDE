@@ -66,7 +66,7 @@ public sealed class StructuralTools(IWorkspaceHost host)
             return ToolResult<StructuralResult>.Failure(ToolErrorCodes.InvalidArgument,
                 "Structural analysis reads a .th survey file.");
 
-        if (!snapshot.Model.PerFile.TryGetValue(full, out var model))
+        if (snapshot.FindLoadedFile(full) is not { } key || !snapshot.Model.PerFile.TryGetValue(key, out var model))
             return ToolResult<StructuralResult>.Failure(ToolErrorCodes.FileNotFound,
                 $"'{file}' is not part of the loaded project. Call list_files to see what is.");
 

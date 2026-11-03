@@ -76,7 +76,7 @@ public class ScaffoldToolsTests
         Assert.True(result.Ok, result.Error?.Message);
         Assert.Equal("caves/upper.th", result.Data!.AddedTo);
         Assert.Equal("input upper-plan.th2", result.Data.InputLine);
-        Assert.EndsWith("input upper-plan.th2\n", File.ReadAllText(fixture.PathTo("caves", "upper.th")));
+        Assert.EndsWith("  input upper-plan.th2\nendsurvey", File.ReadAllText(fixture.PathTo("caves", "upper.th")));
     }
 
     [Fact]

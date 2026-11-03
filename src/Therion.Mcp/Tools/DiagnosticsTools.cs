@@ -85,7 +85,7 @@ public sealed class DiagnosticsTools(IWorkspaceHost host)
             if (!WorkspacePaths.TryResolve(snapshot!.Root, file, out scopedFile, out var reason))
                 return ToolResult<DiagnosticList>.Failure(ToolErrorCodes.PathOutsideWorkspace, reason);
 
-            if (!snapshot.Model.PerFile.ContainsKey(scopedFile))
+            if (snapshot.FindLoadedFile(scopedFile) is not { } key || !snapshot.Model.PerFile.ContainsKey(key))
                 return ToolResult<DiagnosticList>.Failure(ToolErrorCodes.FileNotFound,
                     $"'{file}' is not part of the loaded project. Call list_files to see what is.");
         }

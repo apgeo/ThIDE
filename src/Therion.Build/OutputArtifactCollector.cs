@@ -39,6 +39,10 @@ public sealed class OutputArtifactCollector : IOutputArtifactCollector
             [".xhtml"] = "XHTML map",
         }.ToImmutableDictionary();
 
+    // A share whose server clock runs behind, or a file system with 2 s timestamps (FAT), stamps a
+    // fresh output a little before the compile started; a few seconds of slack keeps it.
+    private static readonly TimeSpan TimestampTolerance = TimeSpan.FromSeconds(5);
+
     public ImmutableArray<OutputArtifact> Collect(string workingDirectory, DateTimeOffset? since = null)
     {
         if (!Directory.Exists(workingDirectory)) return ImmutableArray<OutputArtifact>.Empty;
@@ -61,7 +65,7 @@ public sealed class OutputArtifactCollector : IOutputArtifactCollector
             catch { continue; }
 
             var when = (DateTimeOffset)info.LastWriteTimeUtc;
-            if (since is { } floor && when < floor) continue;
+            if (since is { } floor && when < floor - TimestampTolerance) continue;
 
             builder.Add(new OutputArtifact(path, kind, info.Length, when));
         }

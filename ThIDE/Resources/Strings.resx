@@ -602,6 +602,8 @@
   <data name="Pref_OpenAll" xml:space="preserve"><value>Open every matching output (otherwise just the first)</value></data>
   <data name="Pref_CompileOnSave" xml:space="preserve"><value>Compile on save (rebuild the active thconfig on save)</value></data>
   <data name="Pref_CompileOnSaveHelp" xml:space="preserve"><value>Debounced background build; watch the spinner and the Log panel. Off by default.</value></data>
+  <data name="Pref_GlobalBuildHotkey" xml:space="preserve"><value>System-wide build hotkey (Ctrl+Alt+B, even when ThIDE is not focused)</value></data>
+  <data name="Pref_GlobalBuildHotkeyHelp" xml:space="preserve"><value>Windows only. Windows reports AltGr as Ctrl+Alt, so while this is on AltGr+B no longer types its character in any program (on Czech, Slovak, Hungarian and other layouts that is a brace). Off by default.</value></data>
   <data name="Pref_EnsureDirs" xml:space="preserve"><value>Create missing output folders before compiling</value></data>
   <data name="Pref_EnsureDirsHelp" xml:space="preserve"><value>Checks each export's output directory and creates it recursively if absent (Therion otherwise fails on a missing folder). An info line is logged when a folder is created. On by default.</value></data>
   <data name="Pref_AutoSaveBeforeCompile" xml:space="preserve"><value>Save modified files automatically before compiling</value></data>
@@ -1117,6 +1119,7 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Notif_UnstuckTitle" xml:space="preserve"><value>Window unlocked</value></data>
   <data name="Notif_UnstuckBody" xml:space="preserve"><value>The window was left disabled by a dialog that had already closed, so it stopped responding to clicks. It has been re-enabled; the details are in the log.</value></data>
   <data name="Notif_ScaffoldOverwritesSource" xml:space="preserve"><value>The target folder is the survey's own folder, so the generated wrapper would overwrite '{0}'. Pick a different folder.</value></data>
+  <data name="Notif_ScaffoldTargetsExist" xml:space="preserve"><value>The target folder already contains {0}; scaffolding would overwrite them. Pick an empty folder or move those files away first.</value></data>
   <data name="Scaffold_Title" xml:space="preserve"><value>Scaffold Therion project from survey</value></data>
   <data name="Scaffold_Intro" xml:space="preserve"><value>Builds a compilable project around a bare (e.g. TopoDroid-exported) survey .th: creates the folder tree, copies the survey into th/, and writes a wrapper .th plus a thconfig with the exports you choose.</value></data>
   <data name="Scaffold_ProjectName" xml:space="preserve"><value>Project name</value></data>
@@ -1389,6 +1392,7 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Edit_ProblemUnencodable" xml:space="preserve"><value>{0} declares an encoding that cannot hold the new text.</value></data>
   <data name="Edit_ProblemUnsavedChanges" xml:space="preserve"><value>{0} has unsaved changes; save it first.</value></data>
   <data name="Edit_ProblemOpenBufferDiffers" xml:space="preserve"><value>{0} is open and differs from the file on disk; save or reload it first.</value></data>
+  <data name="Edit_ProblemUndecodable" xml:space="preserve"><value>{0} holds bytes its encoding cannot read; writing it would replace them for good.</value></data>
   <data name="LinkSurvey_Load" xml:space="preserve"><value>Load</value></data>
   <data name="LinkSurvey_SourceHint" xml:space="preserve"><value>Path of the .th file to link (Browse, or type it and press Enter)</value></data>
   <data name="Snippet_survb" xml:space="preserve"><value>survey … endsurvey block</value></data>
@@ -1492,6 +1496,7 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Trust_ReasonHooks" xml:space="preserve"><value>it defines hooks</value></data>
   <data name="Trust_ReasonTasks" xml:space="preserve"><value>it defines tasks</value></data>
   <data name="Trust_ReasonMacros" xml:space="preserve"><value>it defines macros</value></data>
+  <data name="Trust_ReasonSystemCommands" xml:space="preserve"><value>an assistant asked to build it, and its thconfig runs system commands</value></data>
   <data name="Trust_Skipped" xml:space="preserve"><value>Skipped project commands: the folder is not trusted</value></data>
   <data name="Trust_SkippedDetail" xml:space="preserve"><value>{0} were not run.</value></data>
   <data name="Trust_TrustAction" xml:space="preserve"><value>Trust…</value></data>
@@ -1606,7 +1611,14 @@ Apply the changes? Steps that could not preview run now.</value></data>
   <data name="Pref_AssistantSkillPackHelp" xml:space="preserve"><value>Tells the model how Therion projects and ThIDE work, plus your notes (assistant-skills.md next to the settings file) and the project's (assistant.md in the project's config folder). Each part is limited to 8 KB.</value></data>
   <data name="Notif_SaveEncodingTitle" xml:space="preserve"><value>Not saved</value></data>
   <data name="Notif_SaveEncoding" xml:space="preserve"><value>{0}: '{1}' cannot be written in {2}, the encoding the file declares. Change the character, or the file's `encoding` line (for example to utf-8), and save again.</value></data>
+  <data name="Notif_SaveFailedTitle" xml:space="preserve"><value>Save failed</value></data>
+  <data name="Notif_SaveFailedMsg" xml:space="preserve"><value>{0} could not be written: {1} Your edits are still in the editor, unsaved.</value></data>
+  <data name="Exit_SavePromptMsg" xml:space="preserve"><value>{0} file(s) have unsaved changes. Do you want to save them before closing ThIDE?</value></data>
+  <data name="Exit_SaveAll" xml:space="preserve"><value>Save all</value></data>
   <data name="Replace_EncodingRefused" xml:space="preserve"><value>Nothing replaced: {0} cannot hold '{1}' in {2}, the encoding the file declares. No file was changed.</value></data>
+  <data name="Replace_UndoRefused" xml:space="preserve"><value>Nothing restored: {0} was changed after the replace. No file was changed.</value></data>
+  <data name="Notif_SaveUndecodable" xml:space="preserve"><value>{0} holds bytes that are not valid {2}; they show as '{1}'. Saving would replace them for good. Add an `encoding` line naming the file's real encoding with another editor and reopen it, or retype the characters shown as '{1}'.</value></data>
+  <data name="Replace_UndecodableRefused" xml:space="preserve"><value>Nothing replaced: {0} holds bytes that are not valid {2} (shown as '{1}'), and writing it would replace them for good. No file was changed.</value></data>
   <data name="Diag_FixCheck" xml:space="preserve"><value>This fix may not land in the right place here: check where it goes before applying it.</value></data>
   <data name="Menu_Edit_PasteShots" xml:space="preserve"><value>Paste as shot data…</value></data>
   <data name="Menu_Tools_Normalize" xml:space="preserve"><value>Normalise project…</value></data>
@@ -1663,4 +1675,9 @@ Apply the changes? Steps that could not preview run now.</value></data>
   <data name="Renumber_Stale" xml:space="preserve"><value>{0} has changed since the project was read — save or reload, then try again.</value></data>
   <data name="Renumber_NoSurvey" xml:space="preserve"><value>No survey '{0}' in the project.</value></data>
   <data name="ShotIssue_BadStation" xml:space="preserve"><value>'{0}' is not a station name; the row is left out.</value></data>
+  <data name="ShotEdit_OtherFile" xml:space="preserve"><value>This shot is in {0}: open that file to edit it.</value></data>
+  <data name="Explorer_TrashFailed" xml:space="preserve"><value>'{0}' could not be moved to the trash.
+
+Delete it permanently instead? This cannot be undone.</value></data>
+  <data name="Explorer_DeletePermanently" xml:space="preserve"><value>Delete Permanently</value></data>
 </root>

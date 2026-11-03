@@ -257,7 +257,12 @@ public partial class WorkspaceExplorerToolView : UserControl
 
         if (!await new ConfirmDialog("Delete", message, label).ShowAsync(owner).ConfigureAwait(true)) return;
         // Cross-platform delete (recycle bin / trash / permanent) via the OS-specific service.
-        if (fileOps?.Delete(path) == true) Explorer?.Refresh();
+        if (fileOps?.Delete(path) == true) { Explorer?.Refresh(); return; }
+        // The trash refused it; the folder is still there. Only delete for good if the user says so.
+        if (fileOps is null || !undoable) return;
+        var again = string.Format(ThIDE.Resources.Tr.Get("Explorer_TrashFailed"), name);
+        if (!await new ConfirmDialog("Delete", again, ThIDE.Resources.Tr.Get("Explorer_DeletePermanently")).ShowAsync(owner).ConfigureAwait(true)) return;
+        if (fileOps.DeletePermanently(path)) Explorer?.Refresh();
     }
 
     private void OnCtxCopyFull(object? sender, RoutedEventArgs e)

@@ -52,7 +52,7 @@ public sealed class FormatTools(IWorkspaceHost host, MutationEngine mutations)
         if (!WorkspacePaths.TryResolve(snapshot!.Root, path, out var full, out var reason))
             return ToolResult<FormatResult>.Failure(ToolErrorCodes.PathOutsideWorkspace, reason);
 
-        if (!snapshot.LoadedFiles.Contains(full, StringComparer.OrdinalIgnoreCase))
+        if (snapshot.FindLoadedFile(full) is null)
             return ToolResult<FormatResult>.Failure(ToolErrorCodes.FileNotFound,
                 $"'{path}' is not a parsed file in the loaded project. Call list_files to see what is.");
 

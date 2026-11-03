@@ -121,6 +121,16 @@ public sealed class CalculatorTools
         if (longitude is < -180 or > 180)
             return ToolResult<DeclinationResult>.Failure(ToolErrorCodes.InvalidArgument, "Longitude must be between -180 and 180.");
 
+        // The path comes from the model, and nothing about reading a coefficient file needs the jail, but
+        // it must at least be a small regular file: a pipe or a device would hang or exhaust this call.
+        // A missing file falls through to the "where to put it" answer below.
+        if (cofPath is not null
+            && (GeoMagneticModelLoader.IsNetworkPath(cofPath)
+                || (File.Exists(cofPath) && !GeoMagneticModelLoader.IsCofCandidate(cofPath))))
+            return ToolResult<DeclinationResult>.Failure(ToolErrorCodes.InvalidArgument,
+                $"'{cofPath}' is not a local regular file of at most {GeoMagneticModelLoader.MaxCofBytes / 1024} KB, "
+                + "so it cannot be a WMM.COF coefficient file.");
+
         var model = cofPath is null
             ? GeoMagneticModelLoader.TryLoadDefault()
             : GeoMagneticModelLoader.TryLoadFrom(cofPath);

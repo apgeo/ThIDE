@@ -150,7 +150,8 @@ public sealed class JsonKeyboardShortcutService : IKeyboardShortcutService
                 .Where(kv => !_defaults.TryGetValue(kv.Key, out var d) || d != kv.Value)
                 .ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.Ordinal);
             var json = JsonSerializer.Serialize(deltas, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(_storagePath, json);
+            // Temp file + rename, so a failed write keeps the previous shortcuts.
+            Therion.Workspace.Editing.SourceFileIo.WriteOver(_storagePath, System.Text.Encoding.UTF8.GetBytes(json));
         }
         catch { /* best-effort */ }
     }

@@ -8,20 +8,28 @@ namespace ThIDE.Views.Docking;
 
 public partial class AssistantToolView : UserControl
 {
-    private bool _autoScrollWired;
+    private AssistantViewModel? _wiredVm;
 
     public AssistantToolView()
     {
         InitializeComponent();
-        // Keep the newest transcript entry in view while a turn streams in. Wired once — the view
-        // can re-attach on dock/float moves, and the content VM is a singleton.
+        // Keep the newest transcript entry in view while a turn streams in. The content VM is a
+        // singleton and Dock re-creates views, so wire on attach and unwire on detach.
         this.AttachedToVisualTree += (_, _) =>
         {
-            if (_autoScrollWired || DataContext is not AssistantToolViewModel { Assistant: { } vm }) return;
-            _autoScrollWired = true;
-            vm.Items.CollectionChanged += (_, _) => Transcript.ScrollToEnd();
+            if (_wiredVm is not null || DataContext is not AssistantToolViewModel { Assistant: { } vm }) return;
+            _wiredVm = vm;
+            vm.Items.CollectionChanged += OnItemsChanged;
+        };
+        this.DetachedFromVisualTree += (_, _) =>
+        {
+            if (_wiredVm is { } vm) vm.Items.CollectionChanged -= OnItemsChanged;
+            _wiredVm = null;
         };
     }
+
+    private void OnItemsChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e) =>
+        Transcript.ScrollToEnd();
 
     /// <summary>Enter sends; Up/Down at the box's start/end recall past messages.</summary>
     private void OnInputKeyDown(object? sender, KeyEventArgs e)

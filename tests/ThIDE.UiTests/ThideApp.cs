@@ -78,9 +78,11 @@ public sealed class ThideApp : IAsyncDisposable
         psi.Environment["THIDE_UI_AUTOMATION_ENDPOINT"] = endpointFile;
         // A fresh profile so settings/layout never leak between tests or into the developer's own.
         // (.NET maps ApplicationData to XDG_CONFIG_HOME on Linux; Windows/macOS use the real profile.)
-        psi.Environment["XDG_CONFIG_HOME"] = Path.Combine(home, "config");
-        psi.Environment["XDG_DATA_HOME"] = Path.Combine(home, "data");
-        psi.Environment["XDG_CACHE_HOME"] = Path.Combine(home, "cache");
+        // The folders must exist: for a missing XDG_CONFIG_HOME .NET returns "" and the app then falls
+        // back to ~/.config, i.e. the developer's real profile.
+        psi.Environment["XDG_CONFIG_HOME"] = Directory.CreateDirectory(Path.Combine(home, "config")).FullName;
+        psi.Environment["XDG_DATA_HOME"] = Directory.CreateDirectory(Path.Combine(home, "data")).FullName;
+        psi.Environment["XDG_CACHE_HOME"] = Directory.CreateDirectory(Path.Combine(home, "cache")).FullName;
 
         var process = Process.Start(psi) ?? throw new InvalidOperationException("Could not start ThIDE.");
         var app = new ThideApp(process, home);
@@ -155,6 +157,16 @@ public sealed class ThideApp : IAsyncDisposable
         var result = await _client.CallToolAsync("ui_screenshot", dict);
         if (result.IsError == true) throw new UiToolException("ui_screenshot failed");
         return result.Content.OfType<ImageContentBlock>().First().DecodedData.ToArray();
+    }
+
+    /// <summary>True once the app process has ended.</summary>
+    public bool HasExited => _process.HasExited;
+
+    /// <summary>Waits up to <paramref name="timeout"/> for the app to exit on its own; true when it did.</summary>
+    public async Task<bool> WaitForExitAsync(TimeSpan timeout)
+    {
+        try { await _process.WaitForExitAsync().WaitAsync(timeout); return true; }
+        catch (TimeoutException) { return false; }
     }
 
     public async ValueTask DisposeAsync()

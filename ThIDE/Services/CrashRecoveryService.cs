@@ -8,6 +8,13 @@
 //      After a crash these survive and are offered back to the user; a clean shutdown clears them.
 //
 // Stored under %AppData%/ThIDE/ (XDG fallback on POSIX), mirroring the other JSON services.
+//
+// Several ThIDE processes can share that folder (a file opened from the OS file association while
+// the app already runs starts a second one), so the state is per instance: each run holds its own
+// `running.<id>.lock` open with an exclusive lock and autosaves into `recovery/<id>/`. A lock file
+// that can be opened exclusively belongs to a run that has ended without cleaning up (a crash: the
+// OS released its lock); its recovery copies are the ones offered back. A live instance's are not
+// touched. The single `running.lock` + flat `recovery/` of earlier versions is read as a crashed run.
 
 using System;
 using System.Collections.Generic;
@@ -16,6 +23,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using Therion.Workspace.Editing;
 
 namespace ThIDE.Services;
 
@@ -29,28 +37,40 @@ public interface ICrashRecoveryService
 
     /// <summary>Records that the app is now running; detects a leftover sentinel from a crashed run.</summary>
     void MarkRunning();
-    /// <summary>Records a clean shutdown: removes the sentinel and clears the recovery folder.</summary>
-    void MarkCleanShutdown();
+    /// <summary>Records a clean shutdown: removes the sentinel and clears the recovery folder — unless
+    /// <paramref name="keepRecovery"/> is set, for an exit that could not ask about unsaved buffers.</summary>
+    void MarkCleanShutdown(bool keepRecovery = false);
 
     /// <summary>Writes the given unsaved buffers to the recovery folder (only the changed ones).</summary>
     void SaveBuffers(IEnumerable<(string Path, string Text)> dirty);
-    /// <summary>Returns the recoverable buffers left by a crashed run (empty after a clean shutdown).</summary>
+    /// <summary>
+    /// Returns the recoverable buffers: this run's own plus those left by crashed runs (never those of
+    /// another instance that is still running). Empty after a clean shutdown.
+    /// </summary>
     IReadOnlyList<RecoveredBuffer> GetRecoverable();
-    /// <summary>Deletes all recovery files (e.g. once the user has restored or dismissed them).</summary>
+    /// <summary>Deletes this run's and crashed runs' recovery files (e.g. once the user has restored or dismissed them).</summary>
     void ClearRecovery();
 }
 
 public sealed class CrashRecoveryService : ICrashRecoveryService
 {
-    private readonly string _dir;          // recovery folder
-    private readonly string _sentinel;     // run lock file
-    private readonly string _manifest;     // recovery/manifest.json
+    private const string LockPrefix = "running.";
+    private const string LockSuffix = ".lock";
+    private const string ManifestName = "manifest.json";
+
+    private readonly string _root;         // profile folder holding the locks and recovery/
+    private readonly string _recoveryRoot; // recovery/ (one sub-folder per instance)
+    private readonly string _id;           // this instance's id
+    private readonly string _dir;          // recovery/<id>
+    private readonly string _sentinel;     // running.<id>.lock
+    private readonly string _manifest;     // recovery/<id>/manifest.json
     private readonly ILogger? _logger;
+    private FileStream? _lock;             // held open (exclusively) while this instance runs
 
     // path → last-written content hash, so the 5 s autosave only rewrites buffers that changed.
-    private readonly Dictionary<string, string> _lastHash = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, string> _lastHash = new(FilePaths.Comparer);
     // path → recovery file name, so a buffer keeps the same backing file across saves.
-    private readonly Dictionary<string, string> _bufferFiles = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, string> _bufferFiles = new(FilePaths.Comparer);
 
     public bool PreviousRunCrashed { get; private set; }
 
@@ -58,9 +78,12 @@ public sealed class CrashRecoveryService : ICrashRecoveryService
 
     public CrashRecoveryService(string root, ILogger<CrashRecoveryService>? logger = null)
     {
-        _dir = Path.Combine(root, "recovery");
-        _sentinel = Path.Combine(root, "running.lock");
-        _manifest = Path.Combine(_dir, "manifest.json");
+        _root = root;
+        _recoveryRoot = Path.Combine(root, "recovery");
+        _id = $"{Environment.ProcessId}-{Guid.NewGuid():N}";
+        _dir = Path.Combine(_recoveryRoot, _id);
+        _sentinel = LockPath(_id);
+        _manifest = Path.Combine(_dir, ManifestName);
         _logger = logger;
     }
 
@@ -68,18 +91,35 @@ public sealed class CrashRecoveryService : ICrashRecoveryService
     {
         try
         {
-            PreviousRunCrashed = File.Exists(_sentinel);
-            var dir = Path.GetDirectoryName(_sentinel);
-            if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
-            File.WriteAllText(_sentinel, DateTime.UtcNow.ToString("o"));
+            Directory.CreateDirectory(_root);
+            // A crashed run's lock is no longer held; a running instance's is. Stale locks are
+            // removed once seen, so safe mode applies to the next start only (their recovery
+            // copies stay until restored or dismissed).
+            var legacy = Path.Combine(_root, "running.lock");
+            bool crashed = File.Exists(legacy);
+            if (crashed) TryDelete(legacy);
+            foreach (var other in Directory.GetFiles(_root, LockPrefix + "*" + LockSuffix))
+            {
+                if (FilePaths.Same(other, _sentinel) || IsHeld(other)) continue;
+                crashed = true;
+                TryDelete(other);
+            }
+            PreviousRunCrashed = crashed;
+            _lock?.Dispose();
+            _lock = new FileStream(_sentinel, FileMode.Create, FileAccess.ReadWrite, FileShare.None);
+            var stamp = Encoding.UTF8.GetBytes(DateTime.UtcNow.ToString("o", System.Globalization.CultureInfo.InvariantCulture));
+            _lock.Write(stamp);
+            _lock.Flush();
         }
         catch (Exception ex) { _logger?.LogWarning(ex, "Crash sentinel could not be written."); }
     }
 
-    public void MarkCleanShutdown()
+    public void MarkCleanShutdown(bool keepRecovery = false)
     {
-        try { if (File.Exists(_sentinel)) File.Delete(_sentinel); } catch { /* best-effort */ }
-        ClearRecovery();
+        try { _lock?.Dispose(); } catch { /* best-effort */ }
+        _lock = null;
+        TryDelete(_sentinel);
+        if (!keepRecovery) ClearRecovery();
     }
 
     public void SaveBuffers(IEnumerable<(string Path, string Text)> dirty)
@@ -88,7 +128,7 @@ public sealed class CrashRecoveryService : ICrashRecoveryService
         {
             Directory.CreateDirectory(_dir);
             var entries = new List<ManifestEntry>();
-            var live = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var live = new HashSet<string>(FilePaths.Comparer);
 
             foreach (var (path, text) in dirty)
             {
@@ -125,20 +165,24 @@ public sealed class CrashRecoveryService : ICrashRecoveryService
     public IReadOnlyList<RecoveredBuffer> GetRecoverable()
     {
         var result = new List<RecoveredBuffer>();
-        try
+        foreach (var dir in OwnedRecoveryFolders())
         {
-            if (!File.Exists(_manifest)) return result;
-            var entries = JsonSerializer.Deserialize<List<ManifestEntry>>(File.ReadAllText(_manifest));
-            if (entries is null) return result;
-            foreach (var e in entries)
+            var manifest = Path.Combine(dir, ManifestName);
+            try
             {
-                var full = Path.Combine(_dir, e.RecoveryFile);
-                if (!File.Exists(full)) continue;
-                try { result.Add(new RecoveredBuffer(e.OriginalPath, File.ReadAllText(full), e.SavedUtc)); }
-                catch { /* skip an unreadable buffer */ }
+                if (!File.Exists(manifest)) continue;
+                var entries = JsonSerializer.Deserialize<List<ManifestEntry>>(File.ReadAllText(manifest));
+                if (entries is null) continue;
+                foreach (var e in entries)
+                {
+                    var full = Path.Combine(dir, e.RecoveryFile);
+                    if (!File.Exists(full)) continue;
+                    try { result.Add(new RecoveredBuffer(e.OriginalPath, File.ReadAllText(full), e.SavedUtc)); }
+                    catch { /* skip an unreadable buffer */ }
+                }
             }
+            catch (Exception ex) { _logger?.LogWarning(ex, "Failed to read recovery manifest."); }
         }
-        catch (Exception ex) { _logger?.LogWarning(ex, "Failed to read recovery manifest."); }
         return result;
     }
 
@@ -146,8 +190,58 @@ public sealed class CrashRecoveryService : ICrashRecoveryService
     {
         _lastHash.Clear();
         _bufferFiles.Clear();
-        try { if (Directory.Exists(_dir)) Directory.Delete(_dir, recursive: true); }
-        catch (Exception ex) { _logger?.LogWarning(ex, "Failed to clear recovery folder."); }
+        foreach (var dir in OwnedRecoveryFolders())
+        {
+            try
+            {
+                if (FilePaths.Same(dir, _recoveryRoot))
+                {
+                    // Earlier versions' flat layout: only its files; the sub-folders are other instances'.
+                    foreach (var f in Directory.GetFiles(dir)) TryDelete(f);
+                }
+                else if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true);
+            }
+            catch (Exception ex) { _logger?.LogWarning(ex, "Failed to clear recovery folder."); }
+        }
+    }
+
+    /// <summary>
+    /// The recovery folders this instance may read and clear: its own, those of runs whose lock is
+    /// gone or no longer held (crashed), and the flat folder an earlier version left behind.
+    /// </summary>
+    private List<string> OwnedRecoveryFolders()
+    {
+        var result = new List<string> { _dir };
+        try
+        {
+            if (!Directory.Exists(_recoveryRoot)) return result;
+            if (File.Exists(Path.Combine(_recoveryRoot, ManifestName))) result.Add(_recoveryRoot);
+            foreach (var dir in Directory.GetDirectories(_recoveryRoot))
+            {
+                var id = Path.GetFileName(dir);
+                if (id == _id || IsHeld(LockPath(id))) continue;
+                result.Add(dir);
+            }
+        }
+        catch (Exception ex) { _logger?.LogWarning(ex, "Failed to list recovery folders."); }
+        return result;
+    }
+
+    private string LockPath(string id) => Path.Combine(_root, LockPrefix + id + LockSuffix);
+
+    /// <summary>True when another live instance holds <paramref name="lockFile"/> open (its run is ongoing).</summary>
+    private static bool IsHeld(string lockFile)
+    {
+        try
+        {
+            using var probe = new FileStream(lockFile, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+            // Still empty: an instance is between creating and locking it (POSIX) — not a crash.
+            return probe.Length == 0;
+        }
+        catch (FileNotFoundException) { return false; }
+        catch (DirectoryNotFoundException) { return false; }
+        catch (IOException) { return true; }               // sharing violation / lock held
+        catch (UnauthorizedAccessException) { return true; } // cannot tell: leave it alone
     }
 
     private static string NewBufferName(string path)

@@ -1,8 +1,8 @@
 // survey-domain analytics over a WorkspaceSemanticModel.
 // Pure aggregation (no UI / no disk), unit-testable, reused by the dashboard, data-quality,
 // team and entrances views. Lengths/depths/extents are "preview-quality": computed from our own
-// model (shot length / compass / clino), not from a full Therion/Survex adjustment. Angles are
-// assumed to be degrees (the dominant case); a future units-aware pass can refine this.
+// model (shot length / compass / clino), not from a full Therion/Survex adjustment. The binder
+// stores readings in metres and degrees whatever `units` the data was written in.
 
 using System;
 using System.Collections.Generic;
@@ -54,21 +54,12 @@ public sealed record DataQualityReport(
 /// <summary>Pure survey-domain analytics computed from a <see cref="WorkspaceSemanticModel"/>.</summary>
 public static class DataAnalytics
 {
-    private const double DegToRad = Math.PI / 180.0;
-
     // ===== : detailed totals ==========================================
 
     public static DetailedTotals ComputeDetailedTotals(WorkspaceSemanticModel model)
     {
         int splay = 0, dup = 0, surf = 0, shots = 0;
         double total = 0, underground = 0, surface = 0, dupLen = 0, splayLen = 0;
-        var adjacency = new Dictionary<string, List<(string To, double Dx, double Dy, double Dz)>>(StringComparer.Ordinal);
-
-        void Link(string a, string b, double dx, double dy, double dz)
-        {
-            (adjacency.TryGetValue(a, out var la) ? la : adjacency[a] = new()).Add((b, dx, dy, dz));
-            (adjacency.TryGetValue(b, out var lb) ? lb : adjacency[b] = new()).Add((a, -dx, -dy, -dz));
-        }
 
         foreach (var perFile in model.PerFile.Values)
             foreach (var shot in perFile.Shots)
@@ -81,15 +72,6 @@ public static class DataAnalytics
                     if (isSplay) splayLen += len;
                     else if (isDup) dupLen += len;
                     else { total += len; if (isSurf) surface += len; else underground += len; }
-
-                    if (!isSplay)
-                    {
-                        double h = shot.Clino is { } c ? len * Math.Cos(c * DegToRad) : len;
-                        double dz = shot.Clino is { } c2 ? len * Math.Sin(c2 * DegToRad) : 0;
-                        double dx = shot.Compass is { } b ? h * Math.Sin(b * DegToRad) : 0;
-                        double dy = shot.Compass is { } b2 ? h * Math.Cos(b2 * DegToRad) : h;
-                        Link(shot.From.ToString(), shot.To.ToString(), dx, dy, dz);
-                    }
                 }
                 if (isSplay) { splay++; continue; }
                 shots++;
@@ -97,7 +79,7 @@ public static class DataAnalytics
                 if ((shot.Flags & ShotFlags.Surface) != 0) surf++;
             }
 
-        var (range, hi, lo, ew, ns) = LayoutExtents(adjacency);
+        var (range, hi, lo, ew, ns) = LayoutExtents(model);
 
         int entrances = 0, fixedPts = 0;
         foreach (var st in model.StationsByQn.Values)
@@ -113,42 +95,52 @@ public static class DataAnalytics
             range, hi, lo, ew, ns, entrances, fixedPts);
     }
 
-    // Relative 3-D layout: BFS each component from an arbitrary root, accumulate dx/dy/dz, then
-    // derive the vertical range (+ extreme station ids) and the horizontal bounding box.
-    private static (double Range, string? Hi, string? Lo, double EW, double NS) LayoutExtents(
-        Dictionary<string, List<(string To, double Dx, double Dy, double Dz)>> adjacency)
+    /// <summary>
+    /// Vertical range (with its highest/lowest station) and horizontal extents, read off the
+    /// equate-aware position estimate. Positions are local to each connected piece, so spans are
+    /// measured within a piece, never across two: the range and its extremes come from the piece with
+    /// the greatest vertical span, and each horizontal extent is the widest piece's on that axis.
+    /// </summary>
+    internal static (double Range, string? Hi, string? Lo, double EW, double NS) LayoutExtents(
+        WorkspaceSemanticModel model)
     {
-        if (adjacency.Count == 0) return (0, null, null, 0, 0);
-        var pos = new Dictionary<string, (double X, double Y, double Z)>(StringComparer.Ordinal);
-        double minX = 0, maxX = 0, minY = 0, maxY = 0, minZ = 0, maxZ = 0;
-        string? hi = null, lo = null;
-        bool any = false;
+        var positions = StationPositionEstimator.Get(model).Positions;
+        if (positions.Count == 0) return (0, null, null, 0, 0);
 
-        foreach (var start in adjacency.Keys)
+        var pieces = new Dictionary<int, PieceExtent>();
+        // Every equate alias carries the same position: visit real names before `x@survey`
+        // placeholders, then ordinal, so an extreme is labelled by a real station, deterministically.
+        foreach (var (name, p) in positions
+                     .OrderBy(kv => kv.Key.Last.Contains('@'))
+                     .ThenBy(kv => kv.Key.ToString(), StringComparer.Ordinal))
         {
-            if (pos.ContainsKey(start)) continue;
-            pos[start] = (0, 0, 0);
-            var queue = new Queue<string>();
-            queue.Enqueue(start);
-            while (queue.Count > 0)
+            if (!pieces.TryGetValue(p.ComponentId, out var e))
             {
-                var u = queue.Dequeue();
-                var (x, y, z) = pos[u];
-                if (!any || z > maxZ) { maxZ = z; hi = u; }
-                if (!any || z < minZ) { minZ = z; lo = u; }
-                minX = any ? Math.Min(minX, x) : x; maxX = any ? Math.Max(maxX, x) : x;
-                minY = any ? Math.Min(minY, y) : y; maxY = any ? Math.Max(maxY, y) : y;
-                any = true;
-                foreach (var (v, dx, dy, dz) in adjacency[u])
-                    if (!pos.ContainsKey(v)) { pos[v] = (x + dx, y + dy, z + dz); queue.Enqueue(v); }
+                pieces[p.ComponentId] = new PieceExtent(name.ToString(), p);
+                continue;
             }
+            if (p.Z > e.MaxZ) { e.MaxZ = p.Z; e.Hi = name.ToString(); }
+            if (p.Z < e.MinZ) { e.MinZ = p.Z; e.Lo = name.ToString(); }
+            e.MinX = Math.Min(e.MinX, p.X); e.MaxX = Math.Max(e.MaxX, p.X);
+            e.MinY = Math.Min(e.MinY, p.Y); e.MaxY = Math.Max(e.MaxY, p.Y);
         }
-        return (maxZ - minZ, hi, lo, maxX - minX, maxY - minY);
+
+        var deepest = pieces
+            .OrderByDescending(kv => kv.Value.MaxZ - kv.Value.MinZ).ThenBy(kv => kv.Key)
+            .First().Value;
+        return (deepest.MaxZ - deepest.MinZ, deepest.Hi, deepest.Lo,
+            pieces.Values.Max(e => e.MaxX - e.MinX), pieces.Values.Max(e => e.MaxY - e.MinY));
+    }
+
+    private sealed class PieceExtent(string first, StationPosition p)
+    {
+        public double MinX = p.X, MaxX = p.X, MinY = p.Y, MaxY = p.Y, MinZ = p.Z, MaxZ = p.Z;
+        public string Hi = first, Lo = first;
     }
 
     // ===== : length series ============================================
 
-    /// <summary>Surveyed length per survey (direct, splays/duplicates excluded), longest first.</summary>
+    /// <summary>Surveyed length per survey (direct, splay/duplicate/surface legs excluded), longest first.</summary>
     public static IReadOnlyList<LengthBucket> LengthBySurvey(WorkspaceSemanticModel model)
     {
         var byName = new Dictionary<string, (double Len, int Shots)>(StringComparer.Ordinal);
@@ -159,7 +151,7 @@ public static class DataAnalytics
                 if ((shot.Flags & ShotFlags.Splay) != 0) continue;
                 var sv = SurveyOf(shot.From, nodeNames) ?? "(root)";
                 var (len, n) = byName.GetValueOrDefault(sv);
-                if (shot.Length is { } l && (shot.Flags & ShotFlags.Duplicate) == 0) len += l;
+                if (shot.Length is { } l && (shot.Flags & (ShotFlags.Duplicate | ShotFlags.Surface)) == 0) len += l;
                 byName[sv] = (len, n + 1);
             }
         return byName
@@ -293,7 +285,7 @@ public static class DataAnalytics
 
     // ===== shared helpers ====================================================
 
-    /// <summary>Direct (non-rolled-up) surveyed length per survey, splays/duplicates excluded.</summary>
+    /// <summary>Direct (non-rolled-up) surveyed length per survey, splay/duplicate/surface legs excluded.</summary>
     public static Dictionary<string, double> DirectLengthBySurvey(WorkspaceSemanticModel model)
     {
         var nodeNames = new HashSet<string>(model.SurveysByFullName.Keys, StringComparer.Ordinal);
@@ -304,7 +296,7 @@ public static class DataAnalytics
                 if ((shot.Flags & ShotFlags.Splay) != 0) continue;
                 var sv = SurveyOf(shot.From, nodeNames);
                 if (sv is null) continue;
-                if (shot.Length is { } len && (shot.Flags & ShotFlags.Duplicate) == 0)
+                if (shot.Length is { } len && (shot.Flags & (ShotFlags.Duplicate | ShotFlags.Surface)) == 0)
                     directLength[sv] = directLength.GetValueOrDefault(sv) + len;
             }
         return directLength;
@@ -348,8 +340,10 @@ public static class DataQualityChecks
     public static bool IsDuplicate(ShotSymbol s) => (s.Flags & ShotFlags.Duplicate) != 0;
     public static bool IsZeroLength(ShotSymbol s) => s.Length is { } l && l == 0;
     public static bool IsMissingLength(ShotSymbol s) => s.Length is null;
-    public static bool IsMissingCompass(ShotSymbol s) => s.Compass is null && !IsSplay(s);
+    // A plumbed leg (clino ±90°) has no bearing to read, so a blank compass there is not missing.
+    public static bool IsMissingCompass(ShotSymbol s) => s.Compass is null && !IsSplay(s) && !IsPlumb(s);
     public static bool IsMissingClino(ShotSymbol s) => s.Clino is null && !IsSplay(s);
+    public static bool IsPlumb(ShotSymbol s) => s.Clino is { } c && Math.Abs(c) == 90;
     public static bool IsSteep(ShotSymbol s) => s.Clino is { } c && Math.Abs(c) >= 80 && Math.Abs(c) < 90;
     public static bool HasNoBacksight(ShotSymbol s) => !HasBacksight(Fields(s));
     public static bool HasNoLrud(ShotSymbol s) => !HasLrud(Fields(s));

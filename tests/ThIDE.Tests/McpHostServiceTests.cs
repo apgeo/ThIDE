@@ -187,4 +187,26 @@ public class McpHostServiceTests
         Assert.EndsWith(Path.Combine("ThIDE", "mcp-endpoint.json"), path);
         Assert.True(Path.IsPathRooted(path));
     }
+
+    [Fact]
+    public void The_discovery_file_is_owner_only_from_the_moment_it_exists()
+    {
+        if (OperatingSystem.IsWindows()) return;   // %AppData% is user-scoped; no POSIX modes there
+        var dir = Path.Combine(Path.GetTempPath(), "ThIDE-test", Guid.NewGuid().ToString("N"), "ThIDE");
+        var path = Path.Combine(dir, "mcp-endpoint.json");
+        try
+        {
+            McpHostService.WriteOwnerOnly(path, "first");
+            Assert.Equal(UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute, File.GetUnixFileMode(dir));
+            Assert.Equal(UnixFileMode.UserRead | UnixFileMode.UserWrite, File.GetUnixFileMode(path));
+
+            // A file left world-readable by an older version is replaced, not rewritten in place.
+            File.SetUnixFileMode(path, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.GroupRead | UnixFileMode.OtherRead);
+            McpHostService.WriteOwnerOnly(path, "second");
+            Assert.Equal(UnixFileMode.UserRead | UnixFileMode.UserWrite, File.GetUnixFileMode(path));
+            Assert.Equal("second", File.ReadAllText(path));
+            Assert.Single(Directory.GetFiles(dir));
+        }
+        finally { Directory.Delete(Path.GetDirectoryName(dir)!, recursive: true); }
+    }
 }

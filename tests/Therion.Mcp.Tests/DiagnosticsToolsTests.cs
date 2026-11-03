@@ -150,10 +150,12 @@ public class DiagnosticsToolsTests
     {
         await using var host = new WorkspaceHost();
 
-        // TH0032's docTerm is "data", a real command that isn't in the page index → no citation.
+        // TH0032 is about the 'data' command, which has no page in the thbook index, so the catalog
+        // gives it no doc term (every doc term must open a page) → no citation either.
         var result = new DiagnosticsTools(host).ExplainDiagnostic("TH0032");
 
-        Assert.Equal("data", result.Data!.DocTerm);
+        Assert.True(result.Ok);
+        Assert.Null(result.Data!.DocTerm);
         Assert.Null(result.Data.ThbookCitation);
     }
 

@@ -97,7 +97,6 @@ internal static class AppServices
         services.AddLocalization();
         services.AddSingleton<ILanguageService, LanguageService>();
         services.AddSingleton<IThemeService, ThemeService>();
-        services.AddSingleton<IGlobalHotkeyService>(_ => GlobalHotkeyServiceFactory.Create());
 
         // Workspace primitives (�6).
         services.AddSingleton(WorkspaceOptions.FromEnvironment());

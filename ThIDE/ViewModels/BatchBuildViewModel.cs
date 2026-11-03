@@ -1,3 +1,4 @@
+using ThIDE.Services;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -47,13 +48,16 @@ public sealed partial class BatchConfigRow : ObservableObject
 /// <param name="Build">Builds one entry (deleting <c>temp</c> afterwards when given) and reports how it ended.</param>
 /// <param name="Cancel">Cancels the build in progress.</param>
 /// <param name="SelectionFile">Where the window remembers what was ticked (per project).</param>
+/// <param name="SaveFirst">Puts a thconfig's unsaved edits on disk before a trimmed copy is made from it;
+/// false when the user cancelled. Null: nothing to save.</param>
 public sealed record BatchBuildEnvironment(
     IReadOnlyList<string> Thconfigs,
     string? Root,
     Func<string, string?, string, Task<BuildOutcome?>> Build,
     Action Cancel,
     IAutomationOutput? Output,
-    string? SelectionFile);
+    string? SelectionFile,
+    Func<string, Task<bool>>? SaveFirst = null);
 
 /// <summary>Build ▸ Build multiple…: a checklist of thconfigs × exports, built one after the other.</summary>
 public sealed partial class BatchBuildViewModel : ObservableObject
@@ -116,19 +120,27 @@ public sealed partial class BatchBuildViewModel : ObservableObject
                 session?.Write($"{label}: {row.Label}");
                 string entry = row.Path;
                 string? temp = null;
-                if (!row.Whole)
-                {
-                    temp = Path.Combine(Path.GetDirectoryName(row.Path)!, ProjectLocalConfig.GeneratedFilePrefix + "batch-" + Path.GetFileName(row.Path));
-                    var keep = row.Targets.Where(t => t.IsChecked).Select(t => t.Target).ToList();
-                    await File.WriteAllTextAsync(temp, ThconfigExportEditor.IsolateExports(await File.ReadAllTextAsync(row.Path), keep));
-                    entry = temp;
-                    label += " " + string.Format(Tr.Get("Batch_SomeTargets"), keep.Count, row.Targets.Count);
-                }
                 BuildOutcome? outcome;
-                try { outcome = await _env.Build(entry, temp, label); }
-                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                try
                 {
-                    // Failed before the build took the copy over (saving the involved files, say).
+                    if (!row.Whole)
+                    {
+                        if (_env.SaveFirst is not null && !await _env.SaveFirst(row.Path))
+                        {
+                            session?.Write(Tr.Get("Batch_NotStarted"), isError: true);
+                            break;
+                        }
+                        temp = Path.Combine(Path.GetDirectoryName(row.Path)!, ProjectLocalConfig.GeneratedFilePrefix + "batch-" + Path.GetFileName(row.Path));
+                        var keep = row.Targets.Where(t => t.IsChecked).Select(t => t.Target).ToList();
+                        DerivedThconfig.Write(row.Path, temp, text => ThconfigExportEditor.IsolateExports(text, keep));
+                        entry = temp;
+                        label += " " + string.Format(Tr.Get("Batch_SomeTargets"), keep.Count, row.Targets.Count);
+                    }
+                    outcome = await _env.Build(entry, temp, label);
+                }
+                catch (Exception ex)
+                {
+                    // Failed before the build took the copy over (reading the thconfig, writing the copy, saving).
                     if (temp is not null) try { File.Delete(temp); } catch (IOException) { }
                     session?.Write(ex.Message, isError: true);
                     break;

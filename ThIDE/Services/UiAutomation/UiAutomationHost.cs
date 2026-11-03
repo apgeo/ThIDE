@@ -80,10 +80,7 @@ public static class UiAutomationHost
             var endpoint = new McpEndpoint(port, token, Environment.ProcessId,
                 DateTimeOffset.UtcNow.ToString("o", CultureInfo.InvariantCulture), $"http://127.0.0.1:{port}/");
             s_discoveryPath = DiscoveryFilePath();
-            Directory.CreateDirectory(Path.GetDirectoryName(s_discoveryPath)!);
-            File.WriteAllText(s_discoveryPath, endpoint.ToJson());
-            if (!OperatingSystem.IsWindows())
-                File.SetUnixFileMode(s_discoveryPath, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+            McpHostService.WriteOwnerOnly(s_discoveryPath, endpoint.ToJson());
             log.Warning($"UI automation server listening on {endpoint.Url} ({EnableVariable}=1); endpoint in {s_discoveryPath}.");
         }
         catch (Exception ex)

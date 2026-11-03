@@ -81,22 +81,26 @@ public static class DocumentParser
         return false;
     }
 
-    /// <summary>Parses a file's text into an AST, dispatching on its interpreted type.</summary>
+    /// <summary>Parses a file's text into an AST, dispatching on its interpreted type. Without
+    /// <paramref name="options"/> the app-wide <see cref="ParserOptionsHost.Current"/> applies, so
+    /// View ▸ Strict parser mode reaches every document parse.</summary>
     public static ParseResult<TherionFile> ParseByExtension(
-        string filePath, string text, ICommandRegistry? commands = null)
+        string filePath, string text, ICommandRegistry? commands = null, ParserOptions? options = null)
     {
+        options ??= ParserOptionsHost.Current;
         var (type, _) = Classify(filePath, text);
         return type switch
         {
-            SourceFileType.Th2      => new Th2Parser().Parse(filePath, text),
-            SourceFileType.Thconfig => new ThconfigParser().Parse(filePath, text),
-            _                       => new ThParser(commands).Parse(filePath, text),
+            SourceFileType.Th2      => new Th2Parser().Parse(filePath, text, options),
+            SourceFileType.Thconfig => new ThconfigParser().Parse(filePath, text, options),
+            _                       => new ThParser(commands).Parse(filePath, text, options),
         };
     }
 
-    public static ParsedDocument Parse(string filePath, string text, ICommandRegistry? commands = null)
+    public static ParsedDocument Parse(
+        string filePath, string text, ICommandRegistry? commands = null, ParserOptions? options = null)
     {
-        var parsed = ParseByExtension(filePath, text, commands);
+        var parsed = ParseByExtension(filePath, text, commands, options);
 
         var semantics = parsed.Value is null ? null : new SemanticBinder().Bind(parsed.Value);
         var navigation = semantics is null ? null : new SymbolNavigationService(semantics);

@@ -22,17 +22,62 @@ public static class GeoMagneticModelLoader
     {
         foreach (var path in CandidatePaths())
         {
-            try { if (File.Exists(path)) return GeoMagneticModel.FromCof(File.ReadAllText(path)); }
+            try { if (IsCofCandidate(path)) return GeoMagneticModel.FromCof(ReadBounded(path)); }
             catch { /* try the next candidate */ }
         }
         return null;
     }
 
-    /// <summary>Loads a specific .COF file, or null when it is missing or unparseable.</summary>
+    /// <summary>Loads a specific .COF file, or null when it is missing, not a plausible .COF file, or unparseable.</summary>
     public static GeoMagneticModel? TryLoadFrom(string cofPath)
     {
-        try { return File.Exists(cofPath) ? GeoMagneticModel.FromCof(File.ReadAllText(cofPath)) : null; }
+        try { return IsCofCandidate(cofPath) ? GeoMagneticModel.FromCof(ReadBounded(cofPath)) : null; }
         catch { return null; }
+    }
+
+    /// <summary>A .COF file is a few tens of KB; anything past this is not one.</summary>
+    public const long MaxCofBytes = 1024 * 1024;
+
+    /// <summary>
+    /// True when <paramref name="path"/> is a local regular file (symlinks followed) of 1 byte to
+    /// <see cref="MaxCofBytes"/>. Decided from metadata alone, without opening it: opening a named pipe
+    /// blocks, a device such as /dev/zero reads without end, and a UNC path makes Windows authenticate to
+    /// whatever host it names. Pipes and devices report a length of 0, so the size bound excludes them.
+    /// </summary>
+    public static bool IsCofCandidate(string path)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(path)) return false;
+            if (IsNetworkPath(path)) return false;
+
+            var info = new FileInfo(Path.GetFullPath(path));
+            if (info.ResolveLinkTarget(returnFinalTarget: true) is FileInfo target) info = target;
+            return info.Exists && info.Length is > 0 and <= MaxCofBytes;
+        }
+        catch { return false; }
+    }
+
+    /// <summary>True for a UNC path (<c>\\host\share</c>), which must not even be probed.</summary>
+    public static bool IsNetworkPath(string path)
+    {
+        try
+        {
+            var full = Path.GetFullPath(path);
+            return full.StartsWith(@"\\", StringComparison.Ordinal) || full.StartsWith("//", StringComparison.Ordinal);
+        }
+        catch { return false; }
+    }
+
+    /// <summary>Reads at most <see cref="MaxCofBytes"/>, so a file that grows after the check cannot run unbounded.</summary>
+    private static string ReadBounded(string path)
+    {
+        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        using var reader = new StreamReader(stream);
+        var buffer = new char[MaxCofBytes + 1];
+        int read = reader.ReadBlock(buffer, 0, buffer.Length);
+        if (read > MaxCofBytes) throw new InvalidDataException("Coefficient file is too large.");
+        return new string(buffer, 0, read);
     }
 
     /// <summary>Where <see cref="TryLoadDefault"/> looks, in order. Useful for telling a user where to put the file.</summary>

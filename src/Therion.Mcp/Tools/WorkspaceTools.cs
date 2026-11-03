@@ -94,7 +94,8 @@ public sealed class WorkspaceTools(IWorkspaceHost host)
     [Description("Opens a Therion project and makes it the subject of every other tool. Give it a "
                + ".thconfig or .th file, or a folder containing exactly one entry-point candidate. "
                + "This is the one path argument not restricted to the current workspace — it "
-               + "defines the workspace. Loading again replaces what was open.")]
+               + "defines the workspace, so only a Therion project file is accepted, and not one at the "
+               + "filesystem root or directly in the home folder. Loading again replaces what was open.")]
     public async Task<ToolResult<WorkspaceInfo>> LoadWorkspace(
         [Description("Absolute or working-directory-relative path to a .thconfig, a .th, or a project folder.")]
         string path,

@@ -423,8 +423,21 @@ public sealed class WorkspaceSemanticModel
     public SourceSpan? ResolveStationInFileScope(string stationName, string sketchPath)
     {
         if (string.IsNullOrEmpty(stationName) || string.IsNullOrEmpty(sketchPath)) return null;
-        var full = System.IO.Path.GetFullPath(sketchPath);
+        if (StationInInputtingFile(stationName, sketchPath) is { } st) return st.DeclarationSpan;
 
+        // Fallback: a station with this (usually-unique) name anywhere in the project.
+        if (StationsByLastName.TryGetValue(stationName, out var byName) && !byName.IsEmpty)
+            return byName[0].DeclarationSpan;
+        return null;
+    }
+
+    /// <summary>
+    /// The station a bare name in a <c>.th2</c> sketch means, looked up only in the surveys of the
+    /// <c>.th</c> file(s) that <c>input</c> the sketch; null when none of them has it.
+    /// </summary>
+    internal StationSymbol? StationInInputtingFile(string stationName, string sketchPath)
+    {
+        var full = System.IO.Path.GetFullPath(sketchPath);
         foreach (var (from, to, _) in FileGraphEdges)
         {
             if (!string.Equals(to, full, System.StringComparison.OrdinalIgnoreCase)) continue;
@@ -433,13 +446,9 @@ public sealed class WorkspaceSemanticModel
             {
                 if (StationsBySurveyAndPoint.TryGetValue(
                         SurveyPointKey(sv.Name.Last, stationName), out var st))
-                    return st.DeclarationSpan;
+                    return st;
             }
         }
-
-        // Fallback: a station with this (usually-unique) name anywhere in the project.
-        if (StationsByLastName.TryGetValue(stationName, out var byName) && !byName.IsEmpty)
-            return byName[0].DeclarationSpan;
         return null;
     }
 

@@ -38,6 +38,13 @@ public sealed record WorkspaceOptions
     /// <summary>Serialization format for the disk cache (Plan §4.5 / D2 / Post-M6 D).</summary>
     public DiskCacheFormat DiskCacheFormat { get; init; } = DiskCacheFormat.MessagePack;
 
+    /// <summary>
+    /// Options for every file the workspace parses (lenient/strict, syntax version, validation).
+    /// Null means <see cref="Therion.Syntax.ParserOptions.Default"/>. Parse caching is bypassed for
+    /// anything but the default lenient mode, since cache entries are not keyed by mode.
+    /// </summary>
+    public Therion.Syntax.ParserOptions? ParserOptions { get; init; }
+
     /// <summary>Filename of the sidecar settings file (Decision #14).</summary>
     public string SidecarFileName { get; init; } = ".thp.json";
 

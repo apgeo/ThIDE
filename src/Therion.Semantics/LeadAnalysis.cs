@@ -101,11 +101,15 @@ public static class LeadAnalysis
         // 4 — : topological dead-ends the surveyor didn't mark as a continuation.
         try
         {
-            var graph = ConnectivityGraph.Build(workspace);
+            var graph = ConnectivityGraph.Build(workspace, mergeCrossFileEquates: true);
+            // A flag on any alias of a junction covers its representative.
+            var flaggedReps = new HashSet<QualifiedName>();
+            foreach (var f in flagged)
+                if (workspace.StationsByQn.TryGetValue(f, out var fs)) flaggedReps.Add(graph.Representative(fs.Name));
             foreach (var node in graph.DeadEnds)
             {
                 var key = node.ToString();
-                if (flagged.Contains(key)) continue;   // already a lead via flag/comment
+                if (flagged.Contains(key) || flaggedReps.Contains(node)) continue;   // already a lead via flag/comment
                 if (!workspace.StationsByQn.TryGetValue(key, out var st)) continue;
                 leads.Add(new Lead(key, LeadKind.DeadEnd, "leaf node (no continuation flag)", st.DeclarationSpan));
             }

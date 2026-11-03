@@ -1,10 +1,10 @@
 // The one path by which an MCP tool is allowed to change a file (02 §B.4, §B.6; D-005).
 //
 // Everything a mutating tool needs to be safe lives here, so no individual tool has to remember it:
-// dry-run by default, the workspace jail, an optional sha256 precondition, a per-edit text-slice
-// check that refuses a stale plan outright rather than applying part of it, an atomic
-// encoding-preserving write with rollback, and a re-lint of the changed files so the result carries
-// its own evidence.
+// dry-run by default, the workspace jail (with the project's config folder kept out of it), an
+// optional sha256 precondition, a per-edit text-slice check that refuses a stale plan outright
+// rather than applying part of it, an atomic encoding-preserving write with rollback, and a re-lint
+// of the changed files so the result carries its own evidence.
 
 using Therion.Core;
 using Therion.Mcp.Tools;
@@ -17,6 +17,12 @@ public sealed class MutationEngine(IWorkspaceHost host)
 {
     /// <summary>Preview lines returned per file before the rest are elided.</summary>
     private const int MaxPreviewLinesPerFile = 20;
+
+    /// <summary>
+    /// One plan at a time from reading its files to writing them: two tool calls arriving in parallel
+    /// would otherwise both read the same text and the second write would erase the first.
+    /// </summary>
+    private readonly SemaphoreSlim _commitLock = new(1, 1);
 
     /// <summary>
     /// Validates <paramref name="plan"/>, and — unless <paramref name="dryRun"/> — writes it and
@@ -45,39 +51,58 @@ public sealed class MutationEngine(IWorkspaceHost host)
                 $"The plan changes '{WorkspacePaths.ToRelative(root, duplicate)}' twice. "
                 + "Each file may appear once, or the second change would silently win.");
 
-        // Validate every file before touching any of them: a plan that would fail halfway must fail
-        // before it starts, or the caller is left with a workspace in a state nobody planned.
-        var prepared = new List<PreparedChange>(plan.Changes.Count);
+        // Both sides canonical: a host may report its root as the user opened it (through a symlink), and
+        // a plan's paths may come from the jail (resolved) or from the model (as the loader walked them).
+        var canonicalRoot = WorkspacePaths.Canonicalize(root);
         foreach (var change in plan.Changes)
-        {
             foreach (var path in PathsOf(change))
-                if (!WorkspacePaths.IsInside(root, path))
+                if (!WorkspacePaths.IsInside(canonicalRoot, WorkspacePaths.Canonicalize(path)))
                     return ToolResult<MutationResult>.Failure(ToolErrorCodes.PathOutsideWorkspace,
                         $"'{WorkspacePaths.ToRelative(root, path)}' is outside the workspace.");
-
-            var (preparedChange, failure) = Prepare(change, root, expectedSha256);
-            if (failure is not null) return ToolResult<MutationResult>.Failure(failure);
-            prepared.Add(preparedChange!);
-        }
+                else if (WorkspacePaths.IsProjectConfig(root, path))
+                    return ToolResult<MutationResult>.Failure(ToolErrorCodes.ProtectedPath,
+                        $"'{WorkspacePaths.ToRelative(root, path)}' is in the project's config folder "
+                        + $"({Workspace.ProjectLocalConfig.DirectoryName}/), which holds the hooks and tasks that run commands. "
+                        + "Agent tools do not change it; ask the user to edit it.");
 
         if (dryRun)
-            return ToolResult<MutationResult>.Success(
-                new MutationResult(true, prepared.Select(p => p.Describe(root)).ToList(), [], 0, 0));
+        {
+            var (preview, previewFailure) = PrepareAll(plan, root, expectedSha256);
+            return previewFailure is not null
+                ? ToolResult<MutationResult>.Failure(previewFailure)
+                : ToolResult<MutationResult>.Success(
+                    new MutationResult(true, preview!.Select(p => p.Describe(root)).ToList(), [], 0, 0));
+        }
 
-        // In-app dirty-file policy (Q-01, resolved at T-03.6 → D-039: refuse, don't route through buffers):
-        // an EditFile splices offsets — taken from the caller's snapshot — into the file's *disk* bytes.
-        // When that file is open in the IDE with unsaved edits, the disk bytes are not what the offsets were
-        // computed against, so a write could land on the wrong span *and* silently fork the user's buffer.
-        // Refuse rather than corrupt or fork. DirtyFiles is empty for the headless host.
-        if (FirstDirtyEdit(prepared, snapshot.DirtyFiles) is { } dirtyPath)
-            return ToolResult<MutationResult>.Failure(ToolErrorCodes.FileDirty,
-                $"'{WorkspacePaths.ToRelative(root, dirtyPath)}' is open in the IDE with unsaved changes, so it "
-                + "cannot be edited safely right now. Ask the user to save (or close) it, then retry.");
+        // The whole-project analysis takes a while on a large cave. Run it before the files are read, so
+        // it does not widen the window between reading a file and writing it back.
+        var before = CountSeverities(DiagnosticsFor(snapshot, plan.Changes.Select(c => c.AbsolutePath)));
 
-        var before = CountSeverities(DiagnosticsFor(snapshot, prepared.Select(p => p.Change.AbsolutePath)));
+        await _commitLock.WaitAsync(ct);
+        List<PreparedChange> prepared;
+        try
+        {
+            (var ready, var failure) = PrepareAll(plan, root, expectedSha256);
+            if (failure is not null) return ToolResult<MutationResult>.Failure(failure);
+            prepared = ready!;
 
-        if (Commit(prepared, root) is { } writeFailure)
-            return ToolResult<MutationResult>.Failure(writeFailure);
+            // In-app dirty-file policy (Q-01, resolved at T-03.6 → D-039: refuse, don't route through buffers):
+            // an EditFile splices offsets — taken from the caller's snapshot — into the file's *disk* bytes.
+            // When that file is open in the IDE with unsaved edits, the disk bytes are not what the offsets were
+            // computed against, so a write could land on the wrong span *and* silently fork the user's buffer.
+            // Refuse rather than corrupt or fork. DirtyFiles is empty for the headless host.
+            if (FirstDirtyEdit(prepared, snapshot.DirtyFiles) is { } dirtyPath)
+                return ToolResult<MutationResult>.Failure(ToolErrorCodes.FileDirty,
+                    $"'{WorkspacePaths.ToRelative(root, dirtyPath)}' is open in the IDE with unsaved changes, so it "
+                    + "cannot be edited safely right now. Ask the user to save (or close) it, then retry.");
+
+            if (Commit(prepared, root) is { } writeFailure)
+                return ToolResult<MutationResult>.Failure(writeFailure);
+        }
+        finally
+        {
+            _commitLock.Release();
+        }
 
         // The digest a caller passes back on its next call must describe the file as it is now, not as
         // it was before this write.
@@ -87,7 +112,7 @@ public sealed class MutationEngine(IWorkspaceHost host)
         WorkspaceSnapshot reloaded;
         try
         {
-            reloaded = await host.ReloadAsync(ct);
+            reloaded = await host.ReloadAsync(prepared.Select(p => p.Change.AbsolutePath).ToList(), ct);
         }
         catch (Exception ex) when (ex is Workspace.WorkspaceLoadException or WorkspaceNotLoadedException
                                       or IOException or UnauthorizedAccessException)
@@ -113,6 +138,22 @@ public sealed class MutationEngine(IWorkspaceHost host)
             NewWarnings: afterCounts.Warnings - before.Warnings));
     }
 
+    /// <summary>Validates every file of the plan, in order; the first failure stops it.</summary>
+    private static (List<PreparedChange>? Prepared, ToolError? Failure) PrepareAll(
+        MutationPlan plan, string root, IReadOnlyDictionary<string, string>? expectedSha256)
+    {
+        // Validate every file before touching any of them: a plan that would fail halfway must fail
+        // before it starts, or the caller is left with a workspace in a state nobody planned.
+        var prepared = new List<PreparedChange>(plan.Changes.Count);
+        foreach (var change in plan.Changes)
+        {
+            var (preparedChange, failure) = Prepare(change, root, expectedSha256);
+            if (failure is not null) return (null, failure);
+            prepared.Add(preparedChange!);
+        }
+        return (prepared, null);
+    }
+
     /// <summary>
     /// Writes every change, rolling the committed ones back if a later one fails. Per-file writes are
     /// atomic on their own; without this the second of three writes failing would leave the first
@@ -131,9 +172,12 @@ public sealed class MutationEngine(IWorkspaceHost host)
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or UnrepresentableCharacterException)
             {
                 var unrolled = RollBack(committed, root);
-                var code = ex is UnrepresentableCharacterException
-                    ? ToolErrorCodes.UnrepresentableCharacter
-                    : ToolErrorCodes.WriteFailed;
+                var code = ex switch
+                {
+                    UnrepresentableCharacterException => ToolErrorCodes.UnrepresentableCharacter,
+                    ChangedOnDiskException => ToolErrorCodes.FileChanged,
+                    _ => ToolErrorCodes.WriteFailed,
+                };
 
                 var message = $"'{WorkspacePaths.ToRelative(root, change.Change.AbsolutePath)}': {ex.Message}";
                 return new ToolError(code, unrolled is null
@@ -159,16 +203,18 @@ public sealed class MutationEngine(IWorkspaceHost host)
     }
 
     /// <summary>
-    /// The absolute path of the first offset-<see cref="EditFile"/> whose target is open with unsaved edits,
-    /// or null. Only offset edits are at risk; creates/copies/whole-file writes don't splice into existing
-    /// disk bytes. <paramref name="dirtyFiles"/> is empty on the headless host, so this is a no-op there.
+    /// The absolute path of the first <see cref="EditFile"/> or <see cref="WriteFile"/> whose target is open
+    /// with unsaved edits, or null. An offset edit would land on the wrong span; a whole-file write would
+    /// replace the disk copy under the user's buffer, forking the two. Creates and copies only make new
+    /// files, which cannot be open. <paramref name="dirtyFiles"/> is empty on the headless host, so this is
+    /// a no-op there.
     /// </summary>
     private static string? FirstDirtyEdit(List<PreparedChange> prepared, IReadOnlyCollection<string> dirtyFiles)
     {
         if (dirtyFiles.Count == 0) return null;
         var dirty = new HashSet<string>(dirtyFiles.Select(WorkspacePaths.Canonicalize), PathComparer);
         foreach (var p in prepared)
-            if (p.Change is EditFile && dirty.Contains(WorkspacePaths.Canonicalize(p.Change.AbsolutePath)))
+            if (p.Change is EditFile or WriteFile && dirty.Contains(WorkspacePaths.Canonicalize(p.Change.AbsolutePath)))
                 return p.Change.AbsolutePath;
         return null;
     }
@@ -260,7 +306,7 @@ public sealed class MutationEngine(IWorkspaceHost host)
     /// <summary>Diagnostics belonging to the touched files only — the caller changed nothing else.</summary>
     private static List<Diagnostic> DiagnosticsFor(WorkspaceSnapshot snapshot, IEnumerable<string> paths)
     {
-        var touched = new HashSet<string>(paths, PathComparer);
+        var touched = new HashSet<string>(paths.Select(WorkspacePaths.Canonicalize), PathComparer);
 
         bool Touched(Diagnostic d) =>
             !string.IsNullOrEmpty(d.Span.FilePath) && touched.Contains(WorkspacePaths.Canonicalize(d.Span.FilePath));
@@ -342,8 +388,15 @@ public sealed class MutationEngine(IWorkspaceHost host)
                     break;
 
                 default:
-                    _originalBytes = File.ReadAllBytes(Change.AbsolutePath);
-                    SourceFileIo.Write(Source!, NewText);
+                    // NewText was spliced into the text read at Prepare. If anyone wrote the file since
+                    // (the user's Ctrl+S, another writer), writing it now would erase their change.
+                    var current = File.ReadAllBytes(Change.AbsolutePath);
+                    if (!string.Equals(SourceFileIo.Digest(current), Source!.Sha256, StringComparison.OrdinalIgnoreCase))
+                        throw new ChangedOnDiskException(
+                            "it changed on disk after it was read, so this edit would have erased that change; "
+                            + "call load_workspace to pick up the current file, then re-plan.");
+                    _originalBytes = current;
+                    SourceFileIo.Write(Source, NewText);
                     break;
             }
 
@@ -393,4 +446,7 @@ public sealed class MutationEngine(IWorkspaceHost host)
             }
         }
     }
+
+    /// <summary>A file was written by someone else between being read and being written back.</summary>
+    private sealed class ChangedOnDiskException(string message) : IOException(message);
 }

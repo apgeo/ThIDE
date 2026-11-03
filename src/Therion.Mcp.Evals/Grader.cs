@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 
@@ -43,7 +44,11 @@ public static class Grader
                 if (Resolve(data, amc.Pointer) is not { } value)
                     return (false, $"could not compute {amc.Tool}{amc.Pointer}");
                 var expected = ValueString(value);
-                return (ContainsToken(input.FinalText, expected), $"expected '{expected}' in the answer");
+                // A number is matched as a whole number: "13" is not "3", "150" is not "50".
+                bool found = value.ValueKind == JsonValueKind.Number
+                    ? ContainsNumber(input.FinalText, expected)
+                    : ContainsToken(input.FinalText, expected);
+                return (found, $"expected '{expected}' in the answer");
             }
 
             case FileExists fe:
@@ -68,6 +73,37 @@ public static class Grader
                         : $"{fc.RelativePath} missing: {string.Join(", ", absent)}");
             }
 
+            case FileLacks fl:
+            {
+                var path = Path.Combine(input.WorkspaceDir, fl.RelativePath.Replace('/', Path.DirectorySeparatorChar));
+                if (!File.Exists(path)) return (false, $"missing file: {fl.RelativePath}");
+
+                string text;
+                try { text = await File.ReadAllTextAsync(path, ct); }
+                catch (IOException ex) { return (false, $"could not read {fl.RelativePath}: {ex.Message}"); }
+
+                var present = fl.Tokens.Where(tok => ContainsToken(text, tok)).ToList();
+                return (present.Count == 0,
+                    present.Count == 0
+                        ? $"{fl.RelativePath} holds none of the unwanted tokens"
+                        : $"{fl.RelativePath} still holds: {string.Join(", ", present)}");
+            }
+
+            case AnswerLacks al:
+            {
+                var present = al.Phrases.Where(p => ContainsToken(input.FinalText, p)).ToList();
+                return (present.Count == 0,
+                    present.Count == 0 ? "no excluded phrase" : $"answer says: {string.Join(", ", present)}");
+            }
+
+            case AllOf all:
+            {
+                var results = new List<(bool Passed, string Detail)>();
+                foreach (var inner in all.Checks)
+                    results.Add(await GradeAsync(inner, input, ct));
+                return (results.All(r => r.Passed), string.Join("; ", results.Select(r => r.Detail)));
+            }
+
             case HandledGracefully:
             {
                 bool inventedTool = input.Calls.Any(c => !c.SchemaValid);
@@ -81,8 +117,24 @@ public static class Grader
         }
     }
 
-    private static bool ContainsToken(string haystack, string token) =>
-        !string.IsNullOrEmpty(token) && haystack.Contains(token, StringComparison.OrdinalIgnoreCase);
+    /// <summary>
+    /// Case-insensitive match that starts at a word boundary, and does not end inside a longer number
+    /// when the token ends in a digit ("55" is not in "155" or "550"; "approximate" is in "approximately").
+    /// </summary>
+    private static bool ContainsToken(string haystack, string token)
+    {
+        if (string.IsNullOrEmpty(token)) return false;
+        var tail = char.IsDigit(token[^1]) ? @"(?!\d)" : "";
+        return Regex.IsMatch(haystack, $@"(?<![\p{{L}}\p{{N}}]){Regex.Escape(token)}{tail}", RegexOptions.IgnoreCase);
+    }
+
+    /// <summary>
+    /// Whole-number match: not preceded by a digit or decimal separator, not followed by more digits or a
+    /// fraction ("3." ending a sentence and "3.0" are still 3).
+    /// </summary>
+    private static bool ContainsNumber(string haystack, string number) =>
+        !string.IsNullOrEmpty(number)
+        && Regex.IsMatch(haystack, $@"(?<![\d.,]){Regex.Escape(number)}(?:\.0+)?(?!\d|[.,]\d)");
 
     internal static Dictionary<string, object> ToArgs(IReadOnlyDictionary<string, object?>? args) =>
         args is null ? new() : args.Where(kv => kv.Value is not null).ToDictionary(kv => kv.Key, kv => kv.Value!);

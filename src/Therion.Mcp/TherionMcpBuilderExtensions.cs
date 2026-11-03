@@ -131,6 +131,8 @@ public static class TherionMcpBuilderExtensions
     internal static void AddToolServices(IServiceCollection services)
     {
         services.TryAddSingleton<IUiBridge>(NullUiBridge.Instance);
+        // The in-app host registers one that asks about the folder's trust; headless builds run as before.
+        services.TryAddSingleton<IBuildApproval>(AllowAllBuildApproval.Instance);
         // The in-app host registers a live IWorkspaceHost (backed by the running session) beforehand; a
         // headless host gets the disk-backed default here. Either way tools depend only on the interface.
         services.TryAddSingleton<IWorkspaceHost>(_ => new WorkspaceHost());
@@ -146,6 +148,9 @@ public static class TherionMcpBuilderExtensions
         services.TryAddSingleton<Processing.Abstractions.IExternalToolLocator>(_ => new Build.ExternalToolLocator());
         services.TryAddSingleton<Processing.Abstractions.ITherionCompiler>(sp =>
             new Build.TherionCompiler(sp.GetRequiredService<Processing.Abstractions.IExternalToolLocator>()));
+        // One compile at a time. The in-app host registers the IDE's gate first, so run_build and the
+        // Build pane share it; a headless host gets one of its own, shared by every run_build call.
+        services.TryAddSingleton<Build.ICompileGate>(_ => new Build.CompileGate());
 
         // Resources delegate to these two, so they must be resolvable services too.
         services.TryAddSingleton<DiagnosticsTools>();

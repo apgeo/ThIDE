@@ -31,9 +31,15 @@ public sealed class HeuristicTherionOutputParser : ITherionOutputParser
         @"(?<file>(?:[A-Za-z]:[\\/])?[^\s\[\]]+" + Ext + @")\s*\[(?<line>\d+)\]",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
+    // The same location in the native "-- <file> [<line>] --" frame: the file is everything between
+    // the dashes and the bracket, so a path with spaces stays whole (tried before TherionLocRx).
+    private static readonly Regex TherionFramedLocRx = new(
+        @"(?:^|\s)--\s+(?<file>\S.*?" + Ext + @")\s*\[(?<line>\d+)\]",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
     // file:line[:col]: message
     private static readonly Regex FileLineRx = new(
-        @"^\s*(?<file>[^:\r\n]+" + Ext + @"):(?<line>\d+)(?::(?<col>\d+))?\s*[:\-]?\s*(?<rest>.*)$",
+        @"^\s*(?<file>(?:[A-Za-z]:[\\/])?[^:\r\n]+" + Ext + @"):(?<line>\d+)(?::(?<col>\d+))?\s*[:\-]?\s*(?<rest>.*)$",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     // Any bare path token (no line) — makes "reading <file>" / "configuration file: <file>" style
@@ -81,11 +87,13 @@ public sealed class HeuristicTherionOutputParser : ITherionOutputParser
         SourceSpan? span = null;
         string? symbol = null;
 
-        if (TherionLocRx.Match(line) is { Success: true } tm)
+        var tm = TherionFramedLocRx.Match(line);
+        if (!tm.Success) tm = TherionLocRx.Match(line);
+        if (tm.Success)
         {
             int.TryParse(tm.Groups["line"].Value, out var ln);
             var loc = new SourceLocation(ln <= 0 ? 1 : ln, 1);
-            span = new SourceSpan(tm.Groups["file"].Value, loc, loc, 0, 0);
+            span = Located(tm.Groups["file"].Value, loc);
             symbol = ExtractTrailingSymbol(line, tm.Index + tm.Length);
         }
         else if (FileLineRx.Match(line) is { Success: true } fm)
@@ -94,21 +102,25 @@ public sealed class HeuristicTherionOutputParser : ITherionOutputParser
             int.TryParse(fm.Groups["col"].Value, out var col);
             if (col == 0) col = 1;
             var loc = new SourceLocation(ln <= 0 ? 1 : ln, col);
-            span = new SourceSpan(fm.Groups["file"].Value, loc, loc, 0, 0);
+            span = Located(fm.Groups["file"].Value, loc);
         }
         else if (LabeledPath(line) is { } labeled)
         {
             var loc = new SourceLocation(1, 1);
-            span = new SourceSpan(labeled, loc, loc, 0, 0);
+            span = Located(labeled, loc);
         }
         else if (FirstLinkablePath(line) is { } file)
         {
             var loc = new SourceLocation(1, 1);
-            span = new SourceSpan(file, loc, loc, 0, 0);
+            span = Located(file, loc);
         }
 
         return new CompilerOutputLine(line, severity, span, symbol);
     }
+
+    // One character wide, because the editor treats a zero-length span as "no location".
+    private static SourceSpan Located(string file, SourceLocation at) =>
+        new(file, at, at with { Column = at.Column + 1 }, 0, 1);
 
     /// <summary>
     /// The full path from a Therion "&lt;label&gt; file: &lt;path&gt;" line (the whole remainder, so an

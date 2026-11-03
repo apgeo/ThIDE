@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using ModelContextProtocol.Server;
 using Therion.Mcp.Mutations;
+using Therion.Semantics.Linking;
 using Therion.Syntax;
 using Therion.Workspace.Import;
 using Therion.Workspace.Editing;
@@ -8,7 +9,7 @@ using Therion.Workspace.Editing;
 namespace Therion.Mcp.Tools;
 
 /// <param name="InputLine">The <c>input</c> line that pulls the new sketch into a survey.</param>
-/// <param name="AddedTo">The .th the input line was appended to, or null when the caller must add it.</param>
+/// <param name="AddedTo">The .th the input line was added to, or null when the caller must add it.</param>
 public sealed record Th2ScaffoldResult(string InputLine, string? AddedTo, MutationResult Mutation);
 
 /// <param name="Thconfig">Workspace-relative path of the generated thconfig — the project's entry point.</param>
@@ -31,7 +32,8 @@ public sealed class ScaffoldTools(IWorkspaceHost host, MutationEngine mutations)
         ReadOnly = false, Destructive = false, Idempotent = false)]
     [Description("Creates an empty .th2 sketch holding one scrap, optionally wired to an .xvi "
                + "background image, and hands back the 'input' line that pulls it into a survey. "
-               + "Give addInputTo to have that line appended for you. Never overwrites anything.")]
+               + "Give addInputTo to have that line added for you, inside the file's last survey "
+               + "block so the sketch's station names resolve in that survey. Never overwrites anything.")]
     public async Task<ToolResult<Th2ScaffoldResult>> ScaffoldTh2(
         [Description("Workspace-relative path of the .th2 to create, e.g. 'caves/upper-plan.th2'.")]
         string path,
@@ -41,7 +43,7 @@ public sealed class ScaffoldTools(IWorkspaceHost host, MutationEngine mutations)
         string projection = "plan",
         [Description("Workspace-relative .xvi to trace over, if there is one.")]
         string? sketchXvi = null,
-        [Description("Workspace-relative .th to append the 'input' line to. Omit to add it yourself.")]
+        [Description("Workspace-relative .th to add the 'input' line to (before its last 'endsurvey'). Omit to add it yourself.")]
         string? addInputTo = null,
         [Description("Preview without writing. Defaults to true — pass false to create the files.")]
         bool dryRun = true,
@@ -95,10 +97,7 @@ public sealed class ScaffoldTools(IWorkspaceHost host, MutationEngine mutations)
                 return Fail<Th2ScaffoldResult>(ToolErrorCodes.ReadFailed, ex.Message);
             }
 
-            // Append at the very end: a zero-length edit whose expected text is empty, so the engine's
-            // slice guard still fires if the file grew between the plan and the apply.
-            var appended = (text.EndsWith('\n') ? "" : "\n") + inputLine + "\n";
-            changes.Add(new EditFile(survey, [new TextEdit(text.Length, 0, "", appended)]));
+            changes.Add(new EditFile(survey, [InputEdit(survey, text, inputLine)]));
             addedTo = WorkspacePaths.ToRelative(root, survey);
         }
         else
@@ -110,6 +109,41 @@ public sealed class ScaffoldTools(IWorkspaceHost host, MutationEngine mutations)
         if (applied.Error is { } failure) return ToolResult<Th2ScaffoldResult>.Failure(failure);
 
         return ToolResult<Th2ScaffoldResult>.Success(new Th2ScaffoldResult(inputLine, addedTo, applied.Data!));
+    }
+
+    /// <summary>
+    /// The edit that adds <paramref name="inputLine"/> to the .th: just before the <c>endsurvey</c> of its
+    /// last top-level survey. A survey is a namespace, and a sketch input after <c>endsurvey</c> would
+    /// resolve its <c>-name 1</c> stations in the enclosing scope instead. A file with no terminated
+    /// survey gets the line at its end.
+    /// </summary>
+    private static TextEdit InputEdit(string path, string text, string inputLine)
+    {
+        var newline = text.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
+
+        if (new ThParser().Parse(path, text).Value?.Children.OfType<SurveyCommand>().LastOrDefault() is { } block
+            && SurveyScopeResolver.TerminatorLineStart(block, text) is { } lineStart)
+        {
+            // Replace the terminator line with the input plus that same line, so the engine's slice guard
+            // refuses the edit if the block moved between the plan and the apply.
+            int lineEnd = text.IndexOf('\n', lineStart);
+            var terminator = lineEnd < 0 ? text[lineStart..] : text[lineStart..lineEnd];
+            var indent = IndentOf(text, block.Span.StartOffset) + "  ";
+            return new TextEdit(lineStart, terminator.Length, terminator, indent + inputLine + newline + terminator);
+        }
+
+        // Append at the very end: a zero-length edit whose expected text is empty, so the engine's
+        // slice guard still fires if the file grew between the plan and the apply.
+        var appended = (text.EndsWith('\n') ? "" : newline) + inputLine + newline;
+        return new TextEdit(text.Length, 0, "", appended);
+    }
+
+    private static string IndentOf(string text, int offset)
+    {
+        int lineStart = offset == 0 ? 0 : text.LastIndexOf('\n', offset - 1) + 1;
+        int i = lineStart;
+        while (i < text.Length && text[i] is ' ' or '\t') i++;
+        return text[lineStart..i];
     }
 
     [McpServerTool(Name = "scaffold_topodroid_project", Title = "Scaffold TopoDroid project",

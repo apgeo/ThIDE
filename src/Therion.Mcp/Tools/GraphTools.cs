@@ -457,12 +457,13 @@ public sealed class GraphTools(IWorkspaceHost host)
     [Description("Per-survey metadata: title, team (the surveyors), the survey dates, station count and "
                + "surveyed length — plus, for 'which part of the cave' questions, an approximate spatial "
                + "extent (bounding box + centroid). Filter by a date range (dateFrom/dateTo as YYYY, "
-               + "YYYY.MM or YYYY.MM.DD — a survey matches when its dates OVERLAP the range) or a survey "
-               + "path. Team and dates come straight from the survey's team/date commands; undated "
-               + "surveys are excluded when a date filter is set. For 'how much was surveyed in year X' "
-               + "read totalLength/totalStations, which cover the whole filtered set and already count "
-               + "nested surveys once — do NOT add the rows up yourself, as each row's length is a "
-               + "subtree total and a child inside a matched parent would be counted twice.")]
+               + "YYYY.MM or YYYY.MM.DD — a survey matches when one of its own dates falls in the range) "
+               + "or a survey path. Team and dates come straight from the survey's team/date commands; "
+               + "undated surveys are excluded when a date filter is set, and a nested survey has its "
+               + "own dates. For 'how much was surveyed in year X' read totalLength/totalStations: they "
+               + "count only the matched surveys' own shots, so a nested survey dated another year is "
+               + "not included — do NOT add the rows up yourself, as each row's length is a subtree "
+               + "total that includes every nested survey whatever its date.")]
     public async Task<ToolResult<SurveyInfoList>> ListSurveyInfo(
         [Description("Only surveys whose dates reach on/after this date (YYYY, YYYY.MM, or YYYY.MM.DD).")]
         string? dateFrom = null,
@@ -503,20 +504,28 @@ public sealed class GraphTools(IWorkspaceHost host)
         var positions = StationPositionEstimator.Get(model);
         var extents = ComputeSurveyExtents(model, positions);
 
-        var treeInfo = new Dictionary<string, (int Stations, double Length)>(StringComparer.Ordinal);
+        var treeInfo = new Dictionary<string, TreeInfo>(StringComparer.Ordinal);
         foreach (var root in ProjectStatistics.BuildSurveyTree(model)) CollectTreeInfo(root, treeInfo);
 
         var list = new List<SurveyInfoDto>();
+        int ownStations = 0;
+        double ownLength = 0;
         foreach (var survey in model.SurveysByFullName.Values)
         {
             var name = survey.Name.ToString();
             if (surveyPrefix is { Length: > 0 } p
                 && name != p && !name.StartsWith(p + ".", StringComparison.Ordinal)) continue;
 
+            // Each date on its own, not their hull: two trips nine years apart say nothing about the
+            // years between them.
             var span = TherionDate.Span(survey.Dates);
-            if (byDate && (span is not { } sp || !sp.Overlaps(rangeFrom, rangeTo))) continue;
+            if (byDate && (survey.Dates.IsDefaultOrEmpty
+                           || !survey.Dates.Any(d => TherionDate.Parse(d) is { } i && i.Overlaps(rangeFrom, rangeTo))))
+                continue;
 
-            var (stations, length) = treeInfo.TryGetValue(name, out var ti) ? ti : (0, 0d);
+            var info = treeInfo.GetValueOrDefault(name);
+            ownStations += info.OwnStations;
+            ownLength += info.OwnLength;
             list.Add(new SurveyInfoDto(
                 Name: name,
                 Title: survey.Title,
@@ -524,8 +533,8 @@ public sealed class GraphTools(IWorkspaceHost host)
                 Dates: survey.Dates.IsDefaultOrEmpty ? Array.Empty<string>() : survey.Dates,
                 DateFrom: span?.Min.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
                 DateTo: span?.Max.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
-                Stations: stations,
-                Length: Round(length),
+                Stations: info.Stations,
+                Length: Round(info.Length),
                 Extent: extents.TryGetValue(name, out var ext) ? ext.ToExtent() : null,
                 Declaration: Location.From(survey.DeclarationSpan, snapshot.Root)));
         }
@@ -535,43 +544,13 @@ public sealed class GraphTools(IWorkspaceHost host)
         var page = list.Skip(start).Take(ToolLimits.ClampLimit(limit)).ToList();
 
         bool placed = positions.Positions.Count > 0;
-        var (totalStations, totalLength) = RollUpMatched(list);
         return ToolResult<SurveyInfoList>.Success(new SurveyInfoList(
             page, list.Count, start,
             Truncated: start + page.Count < list.Count,
-            TotalLength: Round(totalLength),
-            TotalStations: totalStations,
+            TotalLength: Round(ownLength),
+            TotalStations: ownStations,
             PositionSource: placed ? "approximate" : "none",
             PositionCaveat: placed ? SurveyExtentCaveat : null));
-    }
-
-    /// <summary>
-    /// Length + stations across the matched set, counting nested surveys once. Each row's Length is a
-    /// subtree roll-up, so summing every row would count a child inside its matched parent twice — on a
-    /// three-trip cave that reads 210 m instead of 105. Only the topmost matches contribute; their
-    /// subtrees already include everything below them.
-    /// </summary>
-    private static (int Stations, double Length) RollUpMatched(List<SurveyInfoDto> matched)
-    {
-        var names = matched.Select(s => s.Name).ToHashSet(StringComparer.Ordinal);
-        int stations = 0;
-        double length = 0;
-
-        foreach (var survey in matched)
-        {
-            if (HasAncestorIn(survey.Name, names)) continue;
-            stations += survey.Stations;
-            length += survey.Length;
-        }
-        return (stations, length);
-    }
-
-    /// <summary>True when a dotted ancestor of <paramref name="name"/> is itself in <paramref name="names"/>.</summary>
-    private static bool HasAncestorIn(string name, HashSet<string> names)
-    {
-        for (int dot = name.IndexOf('.'); dot > 0; dot = name.IndexOf('.', dot + 1))
-            if (names.Contains(name[..dot])) return true;
-        return false;
     }
 
     private const string SurveyExtentCaveat =
@@ -580,10 +559,19 @@ public sealed class GraphTools(IWorkspaceHost host)
         + "magnetic north/east — so compare extents only between surveys in the SAME component. A "
         + "component of -1 means the survey's stations span more than one piece.";
 
-    /// <summary>Rolled-up station count + length per survey (subtree totals), keyed by full name.</summary>
-    private static void CollectTreeInfo(SurveyTreeNode node, Dictionary<string, (int, double)> map)
+    /// <summary>
+    /// A survey's subtree totals, and its own share of them: what it holds itself, without its nested
+    /// surveys. The own shares of a set of surveys add up without counting anything twice.
+    /// </summary>
+    private readonly record struct TreeInfo(int Stations, double Length, int OwnStations, double OwnLength);
+
+    /// <summary>Station count + length per survey, subtree and own, keyed by full name.</summary>
+    private static void CollectTreeInfo(SurveyTreeNode node, Dictionary<string, TreeInfo> map)
     {
-        map[node.FullName] = (node.Stations, node.Length);
+        map[node.FullName] = new TreeInfo(
+            node.Stations, node.Length,
+            node.Stations - node.Children.Sum(c => c.Stations),
+            node.Length - node.Children.Sum(c => c.Length));
         foreach (var child in node.Children) CollectTreeInfo(child, map);
     }
 

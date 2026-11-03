@@ -4,6 +4,8 @@ using ModelContextProtocol.Server;
 using Therion.Build;
 using Therion.Core;
 using Therion.Processing.Abstractions;
+using Therion.Syntax;
+using Therion.Workspace.Editing;
 
 namespace Therion.Mcp.Tools;
 
@@ -27,9 +29,16 @@ public sealed record BuildResult(
     bool Truncated);
 
 /// <summary>Ring R2 — running the real Therion compiler over the project.</summary>
+/// <param name="gate">
+/// One compile at a time per workspace: two Therion runs on one thconfig write the same outputs and
+/// the same log. In-app this is the IDE's own gate, so run_build and the Build pane exclude each other;
+/// without one (a test constructing the tool directly) the tool keeps a gate of its own.
+/// </param>
 [McpServerToolType]
-public sealed class BuildTools(IWorkspaceHost host, ITherionCompiler compiler)
+public sealed class BuildTools(IWorkspaceHost host, ITherionCompiler compiler, IBuildApproval? approval = null, ICompileGate? gate = null)
 {
+    private readonly ICompileGate _gate = gate ?? new CompileGate();
+
     /// <summary>Therion's own code for "I could not find the executable".</summary>
     private const string ToolMissing = "TH_BUILD_001";
 
@@ -47,7 +56,9 @@ public sealed class BuildTools(IWorkspaceHost host, ITherionCompiler compiler)
                + "thconfig exports — 3D models, maps, atlases. Reports Therion's own errors and "
                + "warnings, the files it wrote, and streams its output as progress while it runs. "
                + "This is the ground truth: get_diagnostics is ThIDE's own analysis, run_build is "
-               + "Therion's verdict. It can take minutes on a large cave, and it can be cancelled.")]
+               + "Therion's verdict. It can take minutes on a large cave, and it can be cancelled. "
+               + "A thconfig with `system` lines runs shell commands; such a build needs the user's "
+               + "approval first, and fails with not_trusted when they decline.")]
     public async Task<ToolResult<BuildResult>> RunBuild(
         [Description("Workspace-relative .thconfig or .th to compile. Defaults to the loaded entry point.")]
         string? entryPoint = null,
@@ -66,6 +77,14 @@ public sealed class BuildTools(IWorkspaceHost host, ITherionCompiler compiler)
                 return Fail(ToolErrorCodes.FileNotFound, $"No such file: {entryPoint}");
         }
 
+        // `system` lines run shell commands; the host decides whether this build may run them.
+        if (SystemCommandsOf(target, snapshot.Root) is { Count: > 0 } commands
+            && !await (approval ?? AllowAllBuildApproval.Instance).ApproveSystemCommandsAsync(snapshot.Root, target, commands, ct))
+            return Fail(ToolErrorCodes.NotTrusted,
+                $"'{WorkspacePaths.ToRelative(snapshot.Root, target)}' runs {commands.Count} system command(s) "
+                + "while it builds, and the user has not trusted this folder to run commands. Nothing was run. "
+                + "Ask the user to build it themselves, or to trust the folder.");
+
         var lines = new List<CompilerOutputLine>();
         int reported = 0;
 
@@ -83,6 +102,13 @@ public sealed class BuildTools(IWorkspaceHost host, ITherionCompiler compiler)
                 Message = line.Text,
             });
         });
+
+        // Refuse rather than queue: a build can take minutes, and the caller should know why it waits.
+        using var lease = _gate.TryAcquire();
+        if (lease is null)
+            return Fail(ToolErrorCodes.BuildBusy,
+                "Another compilation is already running for this workspace (an earlier run_build, or a "
+                + "build started in the IDE). Wait for it to finish, then call run_build again.");
 
         CompileResult result;
         try
@@ -142,6 +168,39 @@ public sealed class BuildTools(IWorkspaceHost host, ITherionCompiler compiler)
             .ToList();
 
         return ([.. interesting, .. tail], interesting.Count + tail.Count < said.Count);
+    }
+
+    /// <summary>
+    /// The <c>system</c> commands a build of <paramref name="entryPoint"/> would run: those of the
+    /// thconfig and of the config fragments it pulls in with <c>input</c>, inside the workspace. A
+    /// .th entry point is compiled with Therion's defaults and has none.
+    /// </summary>
+    internal static IReadOnlyList<string> SystemCommandsOf(string entryPoint, string root)
+    {
+        var ext = Path.GetExtension(entryPoint);
+        if (ext.Equals(".th", StringComparison.OrdinalIgnoreCase) || ext.Equals(".th2", StringComparison.OrdinalIgnoreCase))
+            return [];
+
+        var commands = new List<string>();
+        var seen = new HashSet<string>(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+        var pending = new Queue<string>([entryPoint]);
+        var parser = new ThconfigParser();
+        while (pending.Count > 0)
+        {
+            var path = pending.Dequeue();
+            if (!seen.Add(path) || !File.Exists(path)) continue;
+            TherionFile? file;
+            try { file = parser.Parse(path, SourceFileIo.Read(path).Text).Value; }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { continue; }
+            if (file is null) continue;
+            commands.AddRange(ThconfigSystemCommands.Find(file).Select(c => c.Command));
+            var dir = Path.GetDirectoryName(path) ?? root;
+            foreach (var token in ThconfigSystemCommands.ConfigInputs(file))
+                if (SourceGraph.ResolveDependencyToken(token, dir, File.Exists) is { } next
+                    && WorkspacePaths.IsInside(root, WorkspacePaths.Canonicalize(next)))
+                    pending.Enqueue(WorkspacePaths.Canonicalize(next));
+        }
+        return commands;
     }
 
     private static ArtifactDto ToDto(OutputArtifact artifact, string root) => new(

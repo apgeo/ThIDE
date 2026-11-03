@@ -43,9 +43,15 @@ public sealed class UnixFileOperations : IFileOperations
         try
         {
             if (_useFinder && TrashViaFinder(path)) return true;
-            if (_trashCommand is not null && TrashViaCommand(path)) return true;
-            return PermanentDelete(path); // last resort when no trash backend is usable
+            if (_trashCommand is not null) return TrashViaCommand(path); // never fall back silently: the user was told it is restorable
+            return PermanentDelete(path); // no trash backend at all (the dialog said "permanent")
         }
+        catch { return false; }
+    }
+
+    public bool DeletePermanently(string path)
+    {
+        try { return PermanentDelete(path); }
         catch { return false; }
     }
 

@@ -29,6 +29,9 @@ public static class ToolErrorCodes
 
     public const string WriteFailed = "write_failed";
 
+    /// <summary>The path is in the project's config folder (hooks, tasks), which agent tools never write.</summary>
+    public const string ProtectedPath = "protected_path";
+
     /// <summary>The new text holds a character the file's declared encoding cannot represent.</summary>
     public const string UnrepresentableCharacter = "unrepresentable_character";
 
@@ -49,6 +52,9 @@ public static class ToolErrorCodes
 
     /// <summary>The compiler could not be run at all — not "it reported errors", which is a success.</summary>
     public const string BuildFailed = "build_failed";
+
+    /// <summary>Another compilation of the workspace is running; Therion is run one build at a time.</summary>
+    public const string BuildBusy = "build_busy";
 
     /// <summary>
     /// The target is open in the IDE with unsaved changes, so writing disk would fork the user's state.
@@ -71,6 +77,9 @@ public static class ToolErrorCodes
 
     /// <summary>The command is on the excluded list (opens an OS/modal dialog) and is never run.</summary>
     public const string CommandExcluded = "command_excluded";
+
+    /// <summary>The build would run the thconfig's shell commands and the user did not approve it.</summary>
+    public const string NotTrusted = "not_trusted";
 
     /// <summary>A gated command was called without <c>confirm:true</c>. Re-call with the confirmation.</summary>
     public const string ConfirmationRequired = "confirmation_required";

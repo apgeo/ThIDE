@@ -3,6 +3,7 @@
 // then re-decode the entire byte buffer with that encoding. Falls back to UTF-8.
 
 using System;
+using System.Globalization;
 using System.IO;
 using System.Text;
 
@@ -95,12 +96,30 @@ public static class EncodingResolver
             // Therion historically uses names like "utf-8", "iso-8859-1", "cp1250".
             // Register the code-pages provider once so legacy names resolve on .NET.
             EnsureCodePagesRegistered();
-            return Encoding.GetEncoding(name);
+            return TherionCodePage(name) is { } codePage ? Encoding.GetEncoding(codePage) : Encoding.GetEncoding(name);
         }
         catch
         {
             return null;
         }
+    }
+
+    /// <summary>
+    /// The code page of a name in Therion's own spelling (<c>therion --print-encodings</c>: ASCII,
+    /// CP1250..CP1253, ISO8859-1/2/5/7, UTF-8, any case). .NET's name table knows some of these
+    /// (<c>cp1252</c>, <c>iso8859-2</c>) but not others (<c>cp1250</c>, <c>iso8859-5</c>), so the
+    /// <c>cpNNNN</c> and <c>iso8859-N</c> forms are mapped by number.
+    /// </summary>
+    private static int? TherionCodePage(string name)
+    {
+        if (name.StartsWith("cp", StringComparison.OrdinalIgnoreCase)
+            && int.TryParse(name.AsSpan(2), NumberStyles.None, CultureInfo.InvariantCulture, out int cp))
+            return cp;
+        if (name.StartsWith("iso8859-", StringComparison.OrdinalIgnoreCase)
+            && int.TryParse(name.AsSpan(8), NumberStyles.None, CultureInfo.InvariantCulture, out int part)
+            && part is >= 1 and <= 16)
+            return 28590 + part;
+        return null;
     }
 
     private static int _codePagesRegistered;
