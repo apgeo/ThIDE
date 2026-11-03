@@ -39,4 +39,9 @@
     </AssemblyAttribute>
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- The write-path fixture matrix, shared by every test project that has a writer to check. -->
+    <Compile Include="..\Shared\WritePath\*.cs" LinkBase="Shared\WritePath" />
+  </ItemGroup>
+
 </Project>
