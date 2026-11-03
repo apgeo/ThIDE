@@ -8,6 +8,7 @@ using Therion.Core;
 using Therion.Processing.Abstractions;
 using Therion.Semantics;
 using Therion.Syntax;
+using Therion.Workspace.Editing;
 
 namespace Therion.Workspace;
 
@@ -21,7 +22,7 @@ public sealed class TherionWorkspace : IWorkspace
     // the include graph never interleave.
     private readonly object _reloadGate = new();
     private readonly Dictionary<string, ParseResult<TherionFile>> _files
-        = new(StringComparer.OrdinalIgnoreCase);
+        = new(FilePaths.Comparer);
 
     public string? EntryPointPath { get; private set; }
     public ImmutableArray<string> LoadedFiles
@@ -55,7 +56,7 @@ public sealed class TherionWorkspace : IWorkspace
         var full = Path.GetFullPath(entryPointPath);
         EntryPointPath = full;
 
-        var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var visited = new HashSet<string>(FilePaths.Comparer);
         var queue = new Queue<string>();
         queue.Enqueue(full);
 
@@ -101,7 +102,7 @@ public sealed class TherionWorkspace : IWorkspace
     public WorkspaceSemanticModel BuildSemanticModel(IEnumerable<XviFile>? extraXvi = null)
     {
         Dictionary<string, ParseResult<TherionFile>> snapshot;
-        lock (_gate) snapshot = new(_files, StringComparer.OrdinalIgnoreCase);
+        lock (_gate) snapshot = new(_files, FilePaths.Comparer);
 
         var xviList = new List<XviFile>();
         if (extraXvi is not null) xviList.AddRange(extraXvi);
@@ -123,7 +124,7 @@ public sealed class TherionWorkspace : IWorkspace
             }
         }
 
-        return WorkspaceSemanticModel.Build(snapshot, xviList);
+        return WorkspaceSemanticModel.Build(snapshot, xviList, fileExists: null, FilePaths.Comparer);
     }
 
     private ParseResult<TherionFile> ParseFile(string path)
@@ -228,7 +229,7 @@ public sealed class TherionWorkspace : IWorkspace
                 lock (_gate) _files[full] = result;
 
                 // An added or removed `input`/`source` changes the include graph, not only this file.
-                var before = new HashSet<string>(ExtractDependencies(full, previous.Value), StringComparer.OrdinalIgnoreCase);
+                var before = new HashSet<string>(ExtractDependencies(full, previous.Value), FilePaths.Comparer);
                 if (!before.SetEquals(ExtractDependencies(full, result.Value)))
                     FollowIncludeGraph();
             }
@@ -245,7 +246,7 @@ public sealed class TherionWorkspace : IWorkspace
     {
         if (EntryPointPath is not { } entry) return;
 
-        var reached = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var reached = new HashSet<string>(FilePaths.Comparer);
         var queue = new Queue<string>();
         queue.Enqueue(entry);
         while (queue.Count > 0)

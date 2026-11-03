@@ -205,8 +205,19 @@ public sealed class WorkspaceSemanticModel
         IReadOnlyDictionary<string, ParseResult<TherionFile>> parsedFiles,
         IReadOnlyCollection<XviFile> xviFiles,
         System.Func<string, bool>? fileExists = null)
+        => Build(parsedFiles, xviFiles, fileExists, System.StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// As the overload above (which keys paths case-insensitively), with the comparer the snapshot's paths are keyed by (<see cref="PerFile"/> and the include
+    /// resolution), so a case-sensitive file system keeps `Cave.th` and `cave.th` apart.
+    /// </summary>
+    public static WorkspaceSemanticModel Build(
+        IReadOnlyDictionary<string, ParseResult<TherionFile>> parsedFiles,
+        IReadOnlyCollection<XviFile> xviFiles,
+        System.Func<string, bool>? fileExists,
+        System.StringComparer pathComparer)
     {
-        var perFile = new Dictionary<string, SemanticModel>(System.StringComparer.OrdinalIgnoreCase);
+        var perFile = new Dictionary<string, SemanticModel>(pathComparer);
         var allDiags = ImmutableArray.CreateBuilder<Diagnostic>();
         var graphEdges = ImmutableArray.CreateBuilder<FileGraphEdge>();
         var th2Files = new List<TherionFile>();
@@ -220,7 +231,7 @@ public sealed class WorkspaceSemanticModel
         // is absent (never loaded, or typed just now) falls back to the plain `.th` default, exactly
         // what this resolved to before. Keys are normalized because test snapshots use verbatim
         // paths while SourceGraph yields full paths.
-        var loaded = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
+        var loaded = new HashSet<string>(pathComparer);
         foreach (var p in parsedFiles.Keys)
         {
             try { loaded.Add(System.IO.Path.GetFullPath(p)); }
@@ -252,7 +263,7 @@ public sealed class WorkspaceSemanticModel
         allDiags.AddRange(xvi.Diagnostics);
         foreach (var edge in xvi.FileGraphEdges) graphEdges.Add(edge);
 
-        var frozenPerFile = perFile.ToFrozenDictionary(System.StringComparer.OrdinalIgnoreCase);
+        var frozenPerFile = perFile.ToFrozenDictionary(pathComparer);
         var idx = ReferenceIndexBuilder.Build(frozenPerFile.Values, th2Files);
 
         return new WorkspaceSemanticModel(

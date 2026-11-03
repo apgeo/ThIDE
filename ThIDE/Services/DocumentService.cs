@@ -381,7 +381,7 @@ public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, 
 
     // Paths being read by an open, so an overlapping open of the same file joins it (keyed like FindOpen).
     private readonly System.Collections.Generic.Dictionary<string, Task<FileDocumentViewModel?>> _loading =
-        new(StringComparer.OrdinalIgnoreCase);
+        new(FilePaths.Comparer);
 
     private void ShowOpened(FileDocumentViewModel doc)
     {
