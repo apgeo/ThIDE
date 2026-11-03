@@ -339,36 +339,12 @@ public sealed class SemanticBinder
     {
         if (string.IsNullOrEmpty(optionsRaw)) return null;
         bool wantValue = false;
-        foreach (var token in TokenizeOptions(optionsRaw))
+        foreach (var token in TherionStrings.SplitArguments(optionsRaw))
         {
             if (wantValue) return token;
             if (string.Equals(token, "-title", StringComparison.OrdinalIgnoreCase)) wantValue = true;
         }
         return null;
-    }
-
-    /// <summary>Splits an option string into whitespace- or quote-delimited tokens (quotes stripped).</summary>
-    private static IEnumerable<string> TokenizeOptions(string raw)
-    {
-        int i = 0;
-        while (i < raw.Length)
-        {
-            while (i < raw.Length && char.IsWhiteSpace(raw[i])) i++;
-            if (i >= raw.Length) yield break;
-            if (raw[i] == '"')
-            {
-                int end = raw.IndexOf('"', ++i);
-                if (end < 0) { yield return raw[i..]; yield break; }
-                yield return raw[i..end];
-                i = end + 1;
-            }
-            else
-            {
-                int start = i;
-                while (i < raw.Length && !char.IsWhiteSpace(raw[i])) i++;
-                yield return raw[start..i];
-            }
-        }
     }
 
     private void BindSurvey(SurveyCommand sv, BindContext ctx, ImmutableArray<string> scope)

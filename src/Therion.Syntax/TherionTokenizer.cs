@@ -74,7 +74,7 @@ public sealed class TherionTokenizer
                     MakeSpan(filePath, startLine, startCol, line, col, startPos, pos - startPos),
                     string.Empty));
 
-                bool wasSurfaceHeader = LineFirstSignificantIs(builder, lineStartIdx, "surface");
+                bool wasSurfaceHeader = IsSurfaceBlockHeader(builder, lineStartIdx);
                 line++;
                 col = 1;
                 lineStartIdx = builder.Count;
@@ -152,7 +152,11 @@ public sealed class TherionTokenizer
                 continue;
             }
 
-            // -- String literal: double-quoted, allows internal newlines -------
+            // -- String literal: double-quoted, on one logical line -----------
+            // Therion reads line by line (joining backslash-continued lines first) and splits the
+            // words of each line, so a string ends at the line break: a missing closing quote takes
+            // the rest of the line (thparse.cxx thsplit_args) and never swallows the lines below.
+            // A doubled quote ("") inside a string is a literal quote character, not its end.
             if (c == '"')
             {
                 int startPos = pos;
@@ -160,13 +164,25 @@ public sealed class TherionTokenizer
                 int startCol = col;
                 pos++;
                 col++;
-                while (pos < text.Length && text[pos] != '"')
+                while (pos < text.Length && text[pos] is not ('\r' or '\n'))
                 {
-                    if (text[pos] == '\n') { line++; col = 1; }
-                    else col++;
+                    if (text[pos] == '"')
+                    {
+                        if (pos + 1 < text.Length && text[pos + 1] == '"') { pos += 2; col += 2; continue; }
+                        break;
+                    }
+                    if (text[pos] == '\\' && ContinuationEnd(text, pos) is int afterBreak)
+                    {
+                        // A continued line carries the string on to the next physical line.
+                        pos = afterBreak;
+                        line++;
+                        col = 1;
+                        continue;
+                    }
                     pos++;
+                    col++;
                 }
-                if (pos < text.Length) { pos++; col++; } // closing quote
+                if (pos < text.Length && text[pos] == '"') { pos++; col++; } // closing quote
                 builder.Add(new TherionToken(
                     TherionTokenKind.String,
                     MakeSpan(filePath, startLine, startCol, line, col, startPos, pos - startPos),
@@ -261,6 +277,31 @@ public sealed class TherionTokenizer
         return builder.ToImmutable();
     }
 
+    /// <summary>
+    /// True if <paramref name="token"/> is a string literal whose closing quote is missing. Every
+    /// quote inside a string comes in a doubled pair, so a closed string holds an even number of
+    /// quote characters (opening + pairs + closing) and an unclosed one an odd number.
+    /// </summary>
+    public static bool IsUnterminatedString(TherionToken token)
+    {
+        if (token.Kind != TherionTokenKind.String) return false;
+        int quotes = 0;
+        foreach (char ch in token.Text) if (ch == '"') quotes++;
+        return quotes % 2 == 1;
+    }
+
+    /// <summary>
+    /// When the backslash at <paramref name="pos"/> continues the line (only spaces or tabs, then
+    /// a line break, follow it), the offset just past that line break; otherwise null.
+    /// </summary>
+    private static int? ContinuationEnd(string text, int pos)
+    {
+        int look = pos + 1;
+        while (look < text.Length && (text[look] == ' ' || text[look] == '\t')) look++;
+        if (look >= text.Length || text[look] is not ('\r' or '\n')) return null;
+        return text[look] == '\r' && look + 1 < text.Length && text[look + 1] == '\n' ? look + 2 : look + 1;
+    }
+
     private static bool IsNumberStart(string text, int pos)
     {
         char c = text[pos];
@@ -291,18 +332,28 @@ public sealed class TherionTokenizer
 
     // ---- opaque `surface … endsurface` body collapse --------------------
 
-    /// <summary>True if the first significant token of <c>builder[startIdx..]</c> equals <paramref name="keyword"/>.</summary>
-    private static bool LineFirstSignificantIs(
-        ImmutableArray<TherionToken>.Builder builder, int startIdx, string keyword)
+    /// <summary>
+    /// True if the line in <c>builder[startIdx..]</c> opens a <c>surface … endsurface</c> block:
+    /// its first word is <c>surface</c> and the next word, if any, is an option (<c>-title …</c>).
+    /// The layout option of the same name always takes a bare value (<c>surface top|bottom|off</c>)
+    /// and has no body, so it must not collapse the lines below it.
+    /// </summary>
+    private static bool IsSurfaceBlockHeader(ImmutableArray<TherionToken>.Builder builder, int startIdx)
     {
+        int seen = 0;
         for (int i = startIdx; i < builder.Count; i++)
         {
             var k = builder[i].Kind;
             if (k is TherionTokenKind.Whitespace or TherionTokenKind.LineContinuation
                 or TherionTokenKind.LineComment or TherionTokenKind.NewLine) continue;
-            return string.Equals(builder[i].Text, keyword, StringComparison.OrdinalIgnoreCase);
+            if (seen++ == 0)
+            {
+                if (!string.Equals(builder[i].Text, "surface", StringComparison.OrdinalIgnoreCase)) return false;
+                continue;
+            }
+            return builder[i].Text.StartsWith('-');
         }
-        return false;
+        return seen == 1;
     }
 
     /// <summary>

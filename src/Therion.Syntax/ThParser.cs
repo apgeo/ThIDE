@@ -106,9 +106,10 @@ public sealed class ThParser
                 return children.ToImmutable();
             }
 
-            // If we see a different "end..." while parsing a block, surface it
-            // and stop � caller will report a missing-terminator diagnostic.
-            if (blockTerminator is not null && kw.StartsWith("end", StringComparison.OrdinalIgnoreCase))
+            // If we see a different block terminator while parsing a block, surface it
+            // and stop � caller will report a missing-terminator diagnostic. Only the real
+            // terminators count: a data row whose station is `END` or `endpoint` is not one.
+            if (blockTerminator is not null && IsBlockTerminator(kw))
             {
                 diagnostics.Add(Diagnostic.Create(
                     DiagnosticCodes.MismatchedBlockTerminator,
@@ -118,6 +119,7 @@ public sealed class ThParser
                 return children.ToImmutable();
             }
 
+            TherionStrings.ReportUnterminated(line.Tokens, diagnostics);
             cursor++;
             // Children see the surrounding context. For most blocks parentBlock == blockKeyword;
             // a context-transparent `group` passes its enclosing context through instead.
@@ -771,14 +773,14 @@ public sealed class ThParser
         };
     }
 
-    /// <summary>True if the first <c>end…</c> line at/after <paramref name="from"/> is <c>endgrade</c>.</summary>
+    /// <summary>True if the first block-terminator line at/after <paramref name="from"/> is <c>endgrade</c>.</summary>
     private static bool NextTerminatorIsEndgrade(ImmutableArray<LogicalLine> lines, int from)
     {
         for (int i = from; i < lines.Length; i++)
         {
             if (lines[i].IsEmpty) continue;
             var k = lines[i].Keyword;
-            if (k.StartsWith("end", StringComparison.OrdinalIgnoreCase))
+            if (IsBlockTerminator(k))
                 return string.Equals(k, "endgrade", StringComparison.OrdinalIgnoreCase);
         }
         return false;
@@ -1226,10 +1228,18 @@ public sealed class ThParser
         return s.Length == 0 ? null : s;
     }
 
-    private static string Unquote(string text) =>
-        text.Length >= 2 && text[0] == '"' && text[^1] == '"'
-            ? text[1..^1]
-            : text;
+    private static string Unquote(string text) => TherionStrings.Unquote(text);
+
+    // The closing keywords of Therion's block commands (thbook §"Data format"), for .th and the
+    // .th2/.thconfig blocks that can appear in an input-ed .th file.
+    private static readonly HashSet<string> BlockTerminators = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "endsurvey", "endcentreline", "endcenterline", "endgroup", "endmap", "endsurface",
+        "endscan", "endlayout", "endgrade", "endcomment", "endscrap", "endline", "endarea",
+        "endlookup", "endcode", "endsource",
+    };
+
+    private static bool IsBlockTerminator(string kw) => BlockTerminators.Contains(kw);
 
     // Therion treats "centerline" and "centreline" (and their "end*" forms) as equivalent.
     private static string NormalizeCentrelineAlias(string kw) =>

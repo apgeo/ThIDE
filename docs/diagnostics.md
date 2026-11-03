@@ -9,6 +9,7 @@
 | Code | Severity | Message | Source |
 |---|---|---|---|
 | `TH0002` | Warning | Unexpected token `<text>`.     | `ThconfigParser` |
+| `TH0003` | Warning | String is missing its closing quote (it ends at the end of the line, as in Therion). | `ThParser`, `Th2Parser`, `ThconfigParser` |
 | `TH0010` | lenient | Unknown command `<keyword>`. | `ThconfigParser`, `ThParser`, `Th2Parser` |
 | `TH0020` | lenient | Block `<x>` is missing its terminator (e.g. `endsurvey`). | `ThParser` |
 | `TH0021` | Error   | Mismatched block terminator (found a different `end…`). | `ThParser` |

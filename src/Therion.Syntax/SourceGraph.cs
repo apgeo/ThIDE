@@ -46,7 +46,7 @@ public static class SourceGraph
                     break;
                 // .thconfig `source`/`input`/`load` (raw).
                 case UnknownCommand cmd when IsSourceLike(cmd.Keyword):
-                    foreach (var token in SplitArgs(cmd.RawArguments))
+                    foreach (var token in TherionStrings.SplitArguments(cmd.RawArguments))
                         yield return (token, cmd.Span);
                     break;
             }
@@ -197,29 +197,4 @@ public static class SourceGraph
         => string.Equals(keyword, "source", System.StringComparison.OrdinalIgnoreCase)
         || string.Equals(keyword, "input", System.StringComparison.OrdinalIgnoreCase)
         || string.Equals(keyword, "load", System.StringComparison.OrdinalIgnoreCase);
-
-    /// <summary>Splits a raw argument string into whitespace- or quote-delimited tokens.</summary>
-    private static IEnumerable<string> SplitArgs(string raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw)) yield break;
-        int i = 0;
-        while (i < raw.Length)
-        {
-            while (i < raw.Length && char.IsWhiteSpace(raw[i])) i++;
-            if (i >= raw.Length) yield break;
-            if (raw[i] == '"')
-            {
-                int end = raw.IndexOf('"', ++i);
-                if (end < 0) { yield return raw[i..]; yield break; }
-                yield return raw[i..end];
-                i = end + 1;
-            }
-            else
-            {
-                int start = i;
-                while (i < raw.Length && !char.IsWhiteSpace(raw[i])) i++;
-                yield return raw[start..i];
-            }
-        }
-    }
 }
