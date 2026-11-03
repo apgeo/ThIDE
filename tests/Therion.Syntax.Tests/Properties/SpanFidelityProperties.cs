@@ -117,7 +117,7 @@ public class SpanFidelityProperties
 
     // ---- known defects, kept as skipped properties ----
 
-    [Fact(Skip = "Known bug: a collapsed surface body ends at column 1 of its last line, and the line break after it starts at column 1 (TherionTokenizer.TryCollapseSurfaceBody)")]
+    [Fact]
     public void A_collapsed_surface_body_and_the_line_break_after_it_sit_at_their_offsets()
     {
         var tokenizer = new TherionTokenizer();
@@ -125,7 +125,7 @@ public class SpanFidelityProperties
             SpanChecks.TokenProblems(Path, text, tokenizer.Tokenize(Path, text)));
     }
 
-    [Fact(Skip = "Known bug: a surface body counts only \\n line breaks, so with lone \\r breaks every later token gets the wrong line (TherionTokenizer.TryCollapseSurfaceBody)")]
+    [Fact]
     public void Lines_after_a_surface_body_keep_their_numbers_with_lone_cr_line_breaks()
     {
         var tokenizer = new TherionTokenizer();
@@ -140,7 +140,7 @@ public class SpanFidelityProperties
         });
     }
 
-    [Fact(Skip = "Known bug: the file node of a multi-line file ends at line 1, column length+1 (ThParser.Parse fileSpan)")]
+    [Fact]
     public void The_file_node_ends_at_the_position_of_the_end_of_the_text()
     {
         var parser = new ThParser();

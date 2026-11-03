@@ -28,10 +28,7 @@ public sealed class Th2Parser
         int cursor = 0;
         var children = ParseBody(lines, ref cursor, filePath, options, null, null, diags);
 
-        var fileSpan = sourceText.Length == 0
-            ? SourceSpan.None with { FilePath = filePath }
-            : new SourceSpan(filePath, SourceLocation.Start,
-                new SourceLocation(1, sourceText.Length + 1), 0, sourceText.Length);
+        var fileSpan = TherionTokenizer.WholeFileSpan(filePath, sourceText);
 
         var file = new TherionFile(fileSpan, filePath, children,
             options.Version ?? TherionSyntaxVersion.Default);
