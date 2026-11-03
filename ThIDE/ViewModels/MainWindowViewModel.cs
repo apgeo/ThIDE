@@ -875,7 +875,48 @@ public partial class MainWindowViewModel : ViewModelBase
     public void AttachStoragePicker(IStoragePicker picker) => _picker = picker;
 
     /// <summary>Restores the workspace root + active thconfig (#9) and last session's files.</summary>
-    private void RestoreSession() => _ = RestoreSessionAsync(_settings?.Current);
+    private void RestoreSession() => _sessionRestored = RestoreSessionAsync(_settings?.Current);
+
+    private Task? _sessionRestored;
+
+    /// <summary>
+    /// Opens the files passed on the command line (file association, "Open with"), once the
+    /// previous session is restored. The first <c>.thconfig</c> among them becomes the active
+    /// configuration, so Compile builds it rather than the configuration restored from last time;
+    /// it only opens as a tab when it cannot be loaded. Every other file opens as a tab.
+    /// </summary>
+    public async Task OpenStartupFilesAsync(IReadOnlyList<string> paths)
+    {
+        if (paths.Count == 0) return;
+        // Restoring sets the last session's active thconfig; activating ours first would lose to it.
+        try { if (_sessionRestored is { } restore) await restore.ConfigureAwait(true); }
+        catch { /* a failed restore still lets the files open */ }
+
+        bool activated = false;
+        foreach (var path in paths)
+        {
+            try
+            {
+                if (!activated && IsThconfigPath(path))
+                {
+                    activated = await _documents.ActivateThconfigAsync(path,
+                        new ThconfigActivation(OpenInEditor: true)).ConfigureAwait(true);
+                    if (activated) continue;
+                }
+                await _documents.OpenFileAsync(path).ConfigureAwait(true);
+            }
+            catch (Exception ex) { _log?.Warning($"Failed to open '{path}': {ex.Message}"); }
+        }
+    }
+
+    private static bool IsThconfigPath(string path)
+    {
+        var ext = System.IO.Path.GetExtension(path);
+        return ext.Length == 0
+            ? string.Equals(System.IO.Path.GetFileName(path), "thconfig", StringComparison.OrdinalIgnoreCase)
+            : ext.Equals(".thconfig", StringComparison.OrdinalIgnoreCase)
+              || ext.Equals(".thc", StringComparison.OrdinalIgnoreCase);
+    }
 
     private async Task RestoreSessionAsync(AppSettings? s)
     {

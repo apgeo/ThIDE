@@ -115,7 +115,7 @@ public sealed partial class ProjectDashboardViewModel : ObservableObject
     [ObservableProperty] private string _depthText = "—";
     [ObservableProperty] private string _stationsText = "—";
     [ObservableProperty] private string _entrancesText = "—";
-    [ObservableProperty] private string _buildStatus = "Never built this session";
+    [ObservableProperty] private string _buildStatus = Tr.Get("Dash_BuildNever");
     [ObservableProperty] private string _diagnosticsText = "—";
 
     public ProjectDashboardViewModel() { } // design-time
@@ -167,15 +167,18 @@ public sealed partial class ProjectDashboardViewModel : ObservableObject
 
     private void UpdateBuildStatus()
     {
+        // Names what was built, which need not be the "Entry config" shown above it.
         var err = Build?.LastError ?? string.Empty;
         if (Build is not { HasBuildResult: true })
-            BuildStatus = "Never built this session";
+            BuildStatus = Tr.Get("Dash_BuildNever");
         else if (Build.LastBuildSucceeded)
             BuildStatus = Build.LastBuildHasWarnings
-                ? $"Last build succeeded ({Build.LastBuildWarningCount} warnings)"
-                : "Last build succeeded";
+                ? string.Format(Tr.Get("Dash_BuildOkWarnings"), Build.LastBuildTarget, Build.LastBuildWarningCount)
+                : string.Format(Tr.Get("Dash_BuildOk"), Build.LastBuildTarget);
         else
-            BuildStatus = err.Length > 0 ? $"Last build failed — {FirstLine(err)}" : "Last build failed";
+            BuildStatus = err.Length > 0
+                ? string.Format(Tr.Get("Dash_BuildFailedError"), Build.LastBuildTarget, FirstLine(err))
+                : string.Format(Tr.Get("Dash_BuildFailed"), Build.LastBuildTarget);
         ComposeDiagnostics();
     }
 

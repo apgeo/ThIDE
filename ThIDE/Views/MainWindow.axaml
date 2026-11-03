@@ -352,6 +352,8 @@
             </MenuItem>
             <MenuItem AutomationProperties.AutomationId="Menu.Build" Header="{Binding MenuBuild}">
                 <MenuItem AutomationProperties.AutomationId="Menu.Build.Build" Header="{Binding MenuBuildBuild}"     InputGesture="{l:Gesture Build}"       Command="{Binding Build.BuildCommand}" />
+                <!-- builds the focused thconfig tab when it is not the active thconfig (Compile always builds the active one). -->
+                <MenuItem AutomationProperties.AutomationId="Menu.Build.BuildThisThconfig" Header="{l:Loc Menu_Build_BuildThisThconfig}" Command="{Binding Build.BuildThisThconfigCommand}" />
                 <MenuItem AutomationProperties.AutomationId="Menu.Build.Cancel" Header="{Binding MenuBuildCancel}"    InputGesture="{l:Gesture CancelBuild}" Command="{Binding Build.CancelCommand}" />
                 <MenuItem AutomationProperties.AutomationId="Menu.Build.BatchBuild" Header="{l:Loc Menu_Build_BatchBuild}" Command="{Binding BatchBuildCommand}" />
                 <Separator />
@@ -681,7 +683,14 @@
                 <Border CornerRadius="6" Padding="2,0" Margin="2,0" VerticalAlignment="Center"
                         Classes.compiling="{Binding Build.IsBuilding}">
                     <StackPanel Orientation="Horizontal">
-                        <Button AutomationProperties.AutomationId="Toolbar.Compile" AutomationProperties.Name="{l:Loc Tb_Compile}" Classes="tool" Command="{Binding Build.BuildCommand}" ToolTip.Tip="{l:Tip Tb_Compile}">
+                        <Button AutomationProperties.AutomationId="Toolbar.Compile" AutomationProperties.Name="{l:Loc Tb_Compile}" Classes="tool" Command="{Binding Build.BuildCommand}">
+                            <!-- names the build target under "Compile (F5)": always the active thconfig. -->
+                            <ToolTip.Tip>
+                                <StackPanel>
+                                    <TextBlock Text="{l:Tip Tb_Compile}" />
+                                    <TextBlock Text="{Binding Build.BuildTargetName}" FontWeight="SemiBold" />
+                                </StackPanel>
+                            </ToolTip.Tip>
                             <PathIcon Data="{DynamicResource Icon.Build}" Foreground="#2E7D32"
                                       Classes.buildPulse="{Binding Build.IsBuilding}" />
                         </Button>

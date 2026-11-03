@@ -1854,13 +1854,8 @@ public partial class MainWindow : Window
     {
         var args = App.StartupFileArgs;
         if (args.Count == 0) return;
-        IDocumentService? docs = null;
-        try { docs = AppServices.Provider.GetService<IDocumentService>(); }
-        catch { /* design-time / no container */ }
-        if (docs is null) return;
-        foreach (var path in args)
-            if (OpenableExtensions.Contains(Path.GetExtension(path)))
-                _ = docs.OpenFileAsync(path);
+        // A .thconfig among them becomes the active configuration (after the session restore).
+        _ = vm.OpenStartupFilesAsync(args.Where(p => OpenableExtensions.Contains(Path.GetExtension(p))).ToList());
     }
 
     // ----- drag-and-drop open (#17) --------------------------------------

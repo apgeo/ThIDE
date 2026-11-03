@@ -709,19 +709,35 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
 
     private DispatcherTimer? _infoBannerTimer;
 
-    /// <summary>Sets the orphan banner from the active workspace membership (#4).</summary>
+    // The active thconfig the orphan banner was dismissed for; it shows again once another one is active.
+    private string? _orphanDismissedFor;
+    private string? _orphanActiveName;
+
+    /// <summary>
+    /// Sets the orphan banner from the active workspace membership (#4): "Not part of the active
+    /// thconfig (x)", or for a thconfig file "Not the active thconfig (x is)", which the banner's
+    /// "Make this the active thconfig" button resolves.
+    /// </summary>
     public void SetWorkspaceMembership(bool isMember, string? activeThconfigName)
     {
         void Apply()
         {
-            IsOrphan = !isMember;
-            OrphanBannerText = isMember
-                ? string.Empty
-                : activeThconfigName is { Length: > 0 } name
-                    ? $"This file seems like it is not bound to the active project relational tree ({name})."
-                    :  "This file seems like it is not bound to the active project relational tree.";
+            _orphanActiveName = activeThconfigName;
+            if (isMember) _orphanDismissedFor = null;
+            IsOrphan = !isMember && !string.Equals(_orphanDismissedFor, activeThconfigName ?? string.Empty, StringComparison.Ordinal);
+            OrphanBannerText = isMember ? string.Empty
+                : activeThconfigName is not { Length: > 0 } name ? ThIDE.Resources.Tr.Get("File_NotInActiveThconfigNoName")
+                : string.Format(ThIDE.Resources.Tr.Get(IsThconfigFile ? "File_NotTheActiveThconfig" : "File_NotInActiveThconfig"), name);
         }
         if (Dispatcher.UIThread.CheckAccess()) Apply(); else Dispatcher.UIThread.Post(Apply);
+    }
+
+    /// <summary>Hides the orphan banner until a different thconfig becomes active.</summary>
+    [RelayCommand]
+    private void DismissOrphanBanner()
+    {
+        _orphanDismissedFor = _orphanActiveName ?? string.Empty;
+        IsOrphan = false;
     }
 
     /// <summary>

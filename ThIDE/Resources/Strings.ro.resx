@@ -1708,4 +1708,22 @@ Aplici modificările? Pașii care nu au putut fi previzualizați rulează acum.<
   <data name="Replace_Confirm" xml:space="preserve"><value>Înlocuiți {0} apariții în {1} fișiere?</value></data>
   <data name="Replace_Done" xml:space="preserve"><value>S-au înlocuit {0} apariții în {1} fișier(e).</value></data>
   <data name="NewTrip_Done" xml:space="preserve"><value>S-a creat {0}</value></data>
+  <data name="Build_CompilingTarget" xml:space="preserve"><value>Se compilează {0}…</value></data>
+  <data name="Build_OutputTarget" xml:space="preserve"><value>Se compilează {0}</value></data>
+  <data name="Menu_Build_BuildThisThconfig" xml:space="preserve"><value>Compilează acest thconfig (fila activă)</value></data>
+  <data name="Cmd_BuildThisThconfig" xml:space="preserve"><value>Compilează acest thconfig (fila activă, nu thconfig-ul activ)</value></data>
+  <data name="Gen_Header" xml:space="preserve"><value>Fișiere generate de {0}</value></data>
+  <data name="Gen_HeaderBuilt" xml:space="preserve"><value>Fișiere generate de {0} · compilat la {1}</value></data>
+  <data name="Gen_NotBuiltYet" xml:space="preserve"><value>{0} nu a fost compilat încă.</value></data>
+  <data name="Gen_NoOutputs" xml:space="preserve"><value>Ultima compilare a fișierului {0} nu a scris niciun fișier de ieșire.</value></data>
+  <data name="Gen_StaleAfterFailedBuild" xml:space="preserve"><value>⚠ Ultima compilare a fișierului {0} a eșuat — aceste ieșiri provin dintr-o compilare anterioară. Corectați erorile și compilați din nou.</value></data>
+  <data name="Dash_BuildNever" xml:space="preserve"><value>Nicio compilare în această sesiune</value></data>
+  <data name="Dash_BuildOk" xml:space="preserve"><value>Ultima compilare a fișierului {0} a reușit</value></data>
+  <data name="Dash_BuildOkWarnings" xml:space="preserve"><value>Ultima compilare a fișierului {0} a reușit ({1} avertismente)</value></data>
+  <data name="Dash_BuildFailed" xml:space="preserve"><value>Ultima compilare a fișierului {0} a eșuat</value></data>
+  <data name="Dash_BuildFailedError" xml:space="preserve"><value>Ultima compilare a fișierului {0} a eșuat — {1}</value></data>
+  <data name="File_NotInActiveThconfig" xml:space="preserve"><value>Nu face parte din thconfig-ul activ ({0}).</value></data>
+  <data name="File_NotInActiveThconfigNoName" xml:space="preserve"><value>Nu face parte din thconfig-ul activ.</value></data>
+  <data name="File_NotTheActiveThconfig" xml:space="preserve"><value>Nu este thconfig-ul activ (cel activ este {0}).</value></data>
+  <data name="File_MakeActiveThconfig" xml:space="preserve"><value>Setați ca thconfig activ</value></data>
 </root>
