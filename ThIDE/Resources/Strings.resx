@@ -1676,6 +1676,7 @@ Apply the changes? Steps that could not preview run now.</value></data>
   <data name="Renumber_Stale" xml:space="preserve"><value>{0} has changed since the project was read — save or reload, then try again.</value></data>
   <data name="Renumber_NoSurvey" xml:space="preserve"><value>No survey '{0}' in the project.</value></data>
   <data name="ShotIssue_BadStation" xml:space="preserve"><value>'{0}' is not a station name; the row is left out.</value></data>
+  <data name="ShotIssue_ReadAsSplay" xml:space="preserve"><value>one value short: read as a splay from '{0}'.</value></data>
   <data name="ShotEdit_OtherFile" xml:space="preserve"><value>This shot is in {0}: open that file to edit it.</value></data>
   <data name="Explorer_TrashFailed" xml:space="preserve"><value>'{0}' could not be moved to the trash.
 
