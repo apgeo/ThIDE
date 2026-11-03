@@ -15,7 +15,7 @@ small tidy project or a huge multi-cave system.
 |---|---|
 | **Reopen files from last session on startup** | Restore your open tabs. |
 | **Show the welcome page on startup** | The [Welcome](03-getting-started.md) start page. |
-| **Language** | English / Română, applied immediately. |
+| **Language** | English / Română. Menus and panels switch when you click OK; a few labels in lists that are already open follow after a restart. |
 | **Auto-save** | Off · **After a delay** (set seconds) · **On focus loss**. |
 | **Record anonymous usage & crash reports** | **Off by default.** When on, events are written under `%AppData%/ThIDE/telemetry` and **never leave your machine** — it's local-only. |
 

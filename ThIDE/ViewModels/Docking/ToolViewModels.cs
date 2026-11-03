@@ -107,11 +107,10 @@ public sealed class GeneratedFilesToolViewModel : ToolViewModelBase
 
 public sealed class OutlineToolViewModel : ToolViewModelBase
 {
-    // titleKey "Outline" has no resx entry, so Tr.Get falls back to "Outline".
     [JsonIgnore] public OutlineViewModel Outline { get; }
-    public OutlineToolViewModel() : base("Outline", "Outline") => Outline = null!;
+    public OutlineToolViewModel() : base("Outline", "Tool_Outline") => Outline = null!;
     public OutlineToolViewModel(OutlineViewModel outline, ILanguageService? lang = null)
-        : base("Outline", "Outline", lang) => Outline = outline;
+        : base("Outline", "Tool_Outline", lang) => Outline = outline;
 }
 
 /// <summary>a single "Project" pane with Dashboard / Surveys / Audit tabs.</summary>
@@ -164,9 +163,9 @@ public sealed class ProjectToolViewModel : ToolViewModelBase
 public sealed class LogToolViewModel : ToolViewModelBase
 {
     [JsonIgnore] public LogViewModel Log { get; }
-    public LogToolViewModel() : base("Log", "Log") => Log = null!;
+    public LogToolViewModel() : base("Log", "Tool_Log") => Log = null!;
     public LogToolViewModel(LogViewModel log, ILanguageService? lang = null)
-        : base("Log", "Log", lang) => Log = log;
+        : base("Log", "Tool_Log", lang) => Log = log;
 }
 
 /// <summary>live centreline preview (plan/elevation sketch).</summary>
@@ -193,27 +192,27 @@ public sealed class LivePreviewToolViewModel : ToolViewModelBase
 public sealed class MapViewerToolViewModel : ToolViewModelBase
 {
     [JsonIgnore] public MapViewerViewModel Map { get; }
-    public MapViewerToolViewModel() : base("MapViewer", "Map Viewer") => Map = null!;
+    public MapViewerToolViewModel() : base("MapViewer", "Tool_MapViewer") => Map = null!;
     public MapViewerToolViewModel(MapViewerViewModel map, ILanguageService? lang = null)
-        : base("MapViewer", "Map Viewer", lang) => Map = map;
+        : base("MapViewer", "Tool_MapViewer", lang) => Map = map;
 }
 
 /// <summary>embedded 3D model viewer (CaveView.js in a NativeWebView).</summary>
 public sealed class Model3DViewerToolViewModel : ToolViewModelBase
 {
     [JsonIgnore] public Model3DViewerViewModel Viewer { get; }
-    public Model3DViewerToolViewModel() : base("Model3DViewer", "3D Viewer") => Viewer = null!;
+    public Model3DViewerToolViewModel() : base("Model3DViewer", "Tool_Model3D") => Viewer = null!;
     public Model3DViewerToolViewModel(Model3DViewerViewModel viewer, ILanguageService? lang = null)
-        : base("Model3DViewer", "3D Viewer", lang) => Viewer = viewer;
+        : base("Model3DViewer", "Tool_Model3D", lang) => Viewer = viewer;
 }
 
 /// <summary>structural-geology module (plane strike/dip calculator). Off by default.</summary>
 public sealed class StructuralGeologyToolViewModel : ToolViewModelBase
 {
     [JsonIgnore] public StructuralGeologyViewModel Structural { get; }
-    public StructuralGeologyToolViewModel() : base("StructuralGeology", "Structural Geology") => Structural = null!;
+    public StructuralGeologyToolViewModel() : base("StructuralGeology", "Tool_StructuralGeology") => Structural = null!;
     public StructuralGeologyToolViewModel(StructuralGeologyViewModel structural, ILanguageService? lang = null)
-        : base("StructuralGeology", "Structural Geology", lang) => Structural = structural;
+        : base("StructuralGeology", "Tool_StructuralGeology", lang) => Structural = structural;
 }
 
 /// <summary>Blender Animation dock tool (BA-B12): renders presentations of the 3D model.</summary>

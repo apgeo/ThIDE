@@ -360,6 +360,11 @@
   <data name="Menu_View_Model3D" xml:space="preserve"><value>3D Viewer</value></data>
   <data name="Menu_View_Structural" xml:space="preserve"><value>Structural Geology</value></data>
   <data name="Menu_View_Outline" xml:space="preserve"><value>Outline</value></data>
+  <data name="Tool_Outline" xml:space="preserve"><value>Outline</value></data>
+  <data name="Tool_Log" xml:space="preserve"><value>Log</value></data>
+  <data name="Tool_MapViewer" xml:space="preserve"><value>Map Viewer</value></data>
+  <data name="Tool_Model3D" xml:space="preserve"><value>3D Viewer</value></data>
+  <data name="Tool_StructuralGeology" xml:space="preserve"><value>Structural Geology</value></data>
   <data name="Menu_View_Whitespace" xml:space="preserve"><value>Whitespace</value></data>
   <data name="Menu_View_ShowSpacesTabs" xml:space="preserve"><value>Show Spaces &amp; Tabs</value></data>
   <data name="Menu_View_ShowEol" xml:space="preserve"><value>Show End of Line</value></data>
@@ -548,7 +553,7 @@
   <data name="Pref_SearchWm" xml:space="preserve"><value>Search settings…</value></data>
   <data name="Pref_ReopenSession" xml:space="preserve"><value>Reopen files from last session on startup</value></data>
   <data name="Pref_Language" xml:space="preserve"><value>Language</value></data>
-  <data name="Pref_LanguageHelp" xml:space="preserve"><value>Language applies immediately to menus and labels.</value></data>
+  <data name="Pref_LanguageHelp" xml:space="preserve"><value>Menus and panels switch language when you click OK; a few labels in already-open lists update after a restart.</value></data>
   <data name="Pref_AutoSave" xml:space="preserve"><value>Auto-save</value></data>
   <data name="Pref_AutoSaveOff" xml:space="preserve"><value>Off</value></data>
   <data name="Pref_AutoSaveDelay" xml:space="preserve"><value>After a delay</value></data>
