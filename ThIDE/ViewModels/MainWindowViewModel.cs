@@ -478,7 +478,7 @@ public partial class MainWindowViewModel : ViewModelBase
         nameof(MenuSearchFindInFiles), nameof(MenuSearchReplaceInFiles), nameof(MenuSearchGoTo),
         nameof(MenuSearchBookmarks), nameof(MenuBuildOpenLoch), nameof(MenuBuildOpenAven),
         nameof(MenuBuildOpenOutputFolder), nameof(MenuBuildBuild), nameof(MenuBuildRebuild),
-        nameof(MenuBuildCancel),
+        nameof(MenuBuildCancel), nameof(WorkspaceUndoHeader), nameof(WorkspaceRedoHeader),
     };
 
     public MainWindowViewModel(
@@ -517,7 +517,8 @@ public partial class MainWindowViewModel : ViewModelBase
         IScriptHookService? hooks = null,
         IShellOpener? shell = null,
         IMcpHostService? mcpHost = null,
-        ITaskRunnerService? tasks = null)
+        ITaskRunnerService? tasks = null,
+        IWorkspaceUndoService? workspaceUndo = null)
     {
         _shell = shell;
         Tasks = tasks;
@@ -532,6 +533,7 @@ public partial class MainWindowViewModel : ViewModelBase
             HasUnreadNotifications = _notifications.UnreadCount > 0;
             HasNotificationHistory = _notifications.History.Count > 0;
         });
+        AttachWorkspaceUndo(workspaceUndo);
         _quickOpen = quickOpen;
         _l = localizer;
         _language = language;

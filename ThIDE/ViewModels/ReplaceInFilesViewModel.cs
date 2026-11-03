@@ -1,7 +1,8 @@
 // Global "Replace in Files" (#9), Visual-Studio-style: find + replace across the project
 // (files related to the active .thconfig), a directory, or the open documents; with
 // match-case, whole-word and regex options and a file-type mask. "Find All" previews the
-// matches; "Replace All" rewrites every matching file (and live-updates any open editor).
+// matches; "Replace All" rewrites every matching file (and live-updates any open editor), after a
+// confirmation when it reaches more than one file, and records it for the workspace undo.
 
 using System;
 using System.Collections.Generic;
@@ -23,8 +24,11 @@ public sealed partial class ReplaceInFilesViewModel : ViewModelBase
     private const int MaxResults = 5000;
     private const string DefaultMask = "*.th;*.th2;*.thconfig;*.thc";
     private readonly IDocumentService _documents;
+    private readonly IWorkspaceUndoService _history;
 
-    [ObservableProperty] private string _query = string.Empty;
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(ReplaceAllCommand))]
+    private string _query = string.Empty;
     [ObservableProperty] private string _replacement = string.Empty;
     [ObservableProperty] private bool _matchCase;
     [ObservableProperty] private bool _wholeWord;
@@ -47,7 +51,32 @@ public sealed partial class ReplaceInFilesViewModel : ViewModelBase
 
     public ReplaceInFilesViewModel() : this(new NullDocumentService()) { }
 
-    public ReplaceInFilesViewModel(IDocumentService documents) => _documents = documents;
+    /// <param name="history">The workspace undo history Replace All records into; a private one when null.</param>
+    public ReplaceInFilesViewModel(IDocumentService documents, IWorkspaceUndoService? history = null)
+    {
+        _documents = documents;
+        _history = history ?? new WorkspaceUndoService(documents);
+        _history.Changed += (_, _) => OnHistoryChanged();
+    }
+
+    // A Replace All undone or redone elsewhere (Edit ▸ Undo, the notification's Undo) changed the files
+    // the list shows: search again so it does not list lines that are gone.
+    private void OnHistoryChanged()
+    {
+        NotifyHistory();
+        if (_running || string.IsNullOrEmpty(Query)) return;
+        if (_history.NextUndo is { } u && _mine.Contains(u) || _history.NextRedo is { } r && _mine.Contains(r))
+            _ = FindAll();
+    }
+
+    // Set while this panel itself replaces, undoes or redoes (it searches again on its own).
+    private bool _running;
+
+    /// <summary>
+    /// Asks the user to go ahead (the question in the UI language); true to replace. Set by the view.
+    /// Replace All asks only when it would change more than one file; with no confirmation set it does not ask.
+    /// </summary>
+    public Func<string, Task<bool>>? Confirm { get; set; }
 
     /// <summary>
     /// Prepares the panel each time it is opened: clears any stale status/results and seeds the search
@@ -113,18 +142,19 @@ public sealed partial class ReplaceInFilesViewModel : ViewModelBase
             : $"{hits.Count} matches in {fileCount} files";
     }
 
-    /// <summary>One file's before/after content in a replace batch (for global undo/redo).</summary>
+    /// <summary>One file's before/after content in a replace batch.</summary>
     private sealed record ReplaceEdit(string Path, string OldText, string NewText, int Count);
 
-    // Global (cross-file) undo/redo stacks for whole Replace-All operations. Each entry reverts/re-applies
-    // every file the operation touched, so a project-wide replace is a single reversible step.
-    private readonly Stack<IReadOnlyList<ReplaceEdit>> _undo = new();
-    private readonly Stack<IReadOnlyList<ReplaceEdit>> _redo = new();
+    // Replace All operations recorded by this panel. They live in the workspace undo history (Edit ▸
+    // Undo reverts them too); the panel's own Undo/Redo act only while the next step is one of these.
+    private readonly HashSet<WorkspaceUndoRecord> _mine = [];
 
-    public bool CanUndo => _undo.Count > 0;
-    public bool CanRedo => _redo.Count > 0;
+    public bool CanUndo => _history.NextUndo is { } r && _mine.Contains(r);
+    public bool CanRedo => _history.NextRedo is { } r && _mine.Contains(r);
 
-    [RelayCommand]
+    private bool CanReplaceAll() => !string.IsNullOrEmpty(Query);
+
+    [RelayCommand(CanExecute = nameof(CanReplaceAll))]
     private async Task ReplaceAll()
     {
         if (string.IsNullOrEmpty(Query)) { Status = "Enter text to find."; return; }
@@ -152,20 +182,29 @@ public sealed partial class ReplaceInFilesViewModel : ViewModelBase
             return list;
         }).ConfigureAwait(true);
 
-        int fileCount = ApplyEdits(changes.Select(c => (c.Path, c.NewText)));
-        if (fileCount < 0) return;
         int total = changes.Sum(c => c.Count);
-
-        if (changes.Count > 0)
+        if (changes.Count > 1 && Confirm is { } confirm
+            && !await confirm(string.Format(ThIDE.Resources.Tr.Get("Replace_Confirm"), total, changes.Count)).ConfigureAwait(true))
         {
-            _undo.Push(changes);   // a new operation invalidates the redo history
-            _redo.Clear();
-            NotifyHistory();
+            Status = string.Empty;
+            return;
         }
 
-        // Re-search for the replacement so the list shows where it landed (like Find All on the new value).
-        var summary = $"Replaced {total} occurrence(s) in {fileCount} file(s).";
-        Query = Replacement;
+        int fileCount = ApplyEdits(changes.Select(c => (c.Path, c.NewText)));
+        if (fileCount < 0) return;
+
+        var summary = string.Format(ThIDE.Resources.Tr.Get("Replace_Done"), total, fileCount);
+        if (changes.Count > 0)
+        {
+            var record = new WorkspaceUndoRecord(ThIDE.Resources.Tr.Get("Replace_Title"), summary,
+                changes.Select(c => new FileChange(c.Path, c.OldText, c.NewText)).ToList());
+            _mine.Add(record);
+            _running = true;
+            try { _history.Push(record); }   // a new operation invalidates the redo history
+            finally { _running = false; }
+        }
+
+        // The query stays; searching it again lists what is left of it (normally nothing).
         await FindAll().ConfigureAwait(true);
         Status = summary;
     }
@@ -199,45 +238,24 @@ public sealed partial class ReplaceInFilesViewModel : ViewModelBase
 
     /// <summary>Reverts the last Replace-All (restores every file's previous content), keeping it redoable.</summary>
     [RelayCommand(CanExecute = nameof(CanUndo))]
-    private void Undo()
-    {
-        if (_undo.Count == 0) return;
-        var batch = _undo.Peek();
-        if (!StillMatches(batch.Select(e => (e.Path, e.NewText)))) return;
-        int n = ApplyEdits(batch.Select(e => (e.Path, e.OldText)));
-        if (n < 0) return;
-        _redo.Push(_undo.Pop());
-        NotifyHistory();
-        Status = $"Undid replace in {n} file(s).";
-    }
+    private Task Undo() => RunHistoryAsync(undo: true);
 
     /// <summary>Re-applies the last undone Replace-All across every file it touched.</summary>
     [RelayCommand(CanExecute = nameof(CanRedo))]
-    private void Redo()
-    {
-        if (_redo.Count == 0) return;
-        var batch = _redo.Peek();
-        if (!StillMatches(batch.Select(e => (e.Path, e.OldText)))) return;
-        int n = ApplyEdits(batch.Select(e => (e.Path, e.NewText)));
-        if (n < 0) return;
-        _undo.Push(_redo.Pop());
-        NotifyHistory();
-        Status = $"Redid replace in {n} file(s).";
-    }
+    private Task Redo() => RunHistoryAsync(undo: false);
 
-    // Undo/Redo restore whole-file snapshots, so they only run while every file still holds the text the
-    // batch left (open buffer, else disk); otherwise a later edit would be overwritten. Refuses the step.
-    private bool StillMatches(IEnumerable<(string Path, string Text)> expected)
+    // The workspace history only runs a step while every file still holds the text the batch left
+    // (open buffer, else disk); otherwise a later edit would be overwritten, and it refuses the step.
+    // The search runs again afterwards, so the list shows the files as they are now.
+    private async Task RunHistoryAsync(bool undo)
     {
-        foreach (var (path, text) in expected)
-        {
-            var openDoc = _documents.Documents.FirstOrDefault(d => FilePaths.Comparer.Equals(d.FilePath, path));
-            var current = openDoc is not null ? openDoc.DocumentText : ReadFile(path);
-            if (string.Equals(current, text, StringComparison.Ordinal)) continue;
-            Status = string.Format(ThIDE.Resources.Tr.Get("Replace_UndoRefused"), Path.GetFileName(path));
-            return false;
-        }
-        return true;
+        if (!(undo ? CanUndo : CanRedo)) return;
+        WorkspaceUndoOutcome outcome;
+        _running = true;
+        try { outcome = undo ? await _history.UndoAsync().ConfigureAwait(true) : await _history.RedoAsync().ConfigureAwait(true); }
+        finally { _running = false; }
+        if (outcome.Status == WorkspaceUndoStatus.Done) await FindAll().ConfigureAwait(true);
+        if (outcome.Message is { } message) Status = message;
     }
 
     // Writes each (path, text): the live editor buffer takes precedence (reflected + reparsed) and is
@@ -322,8 +340,9 @@ public sealed partial class ReplaceInFilesViewModel : ViewModelBase
             if (hits.Count >= MaxResults) break;
             string? text = openText.TryGetValue(path, out var t) ? t : ReadFile(path);
             if (text is null) continue;
-            files++;
+            int before = hits.Count;
             ScanText(path, text, regex, hits);
+            if (hits.Count > before) files++;   // "in N files" counts the files with a match, not those searched
         }
         return (hits, files);
     }

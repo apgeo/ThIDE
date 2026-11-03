@@ -253,6 +253,10 @@
             <MenuItem AutomationProperties.AutomationId="Menu.Edit" Header="{Binding MenuEdit}" IsEnabled="{Binding HasStatusFile}">
                 <!-- Clipboard chords stay literal: they are AvaloniaEdit's own bindings, not gestures
                      dispatched by IKeyboardShortcutService, so they are not remappable. -->
+                <!-- Workspace-level undo of the last multi-file write (rename, Replace All, New trip, Format all…). -->
+                <MenuItem AutomationProperties.AutomationId="Menu.Edit.UndoWorkspace" Header="{Binding WorkspaceUndoHeader}" Command="{Binding UndoWorkspaceCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Edit.RedoWorkspace" Header="{Binding WorkspaceRedoHeader}" Command="{Binding RedoWorkspaceCommand}" />
+                <Separator />
                 <MenuItem AutomationProperties.AutomationId="Menu.Edit.Cut" Header="{Binding MenuEditCut}"        InputGesture="Ctrl+X" Click="OnEditCut" />
                 <MenuItem AutomationProperties.AutomationId="Menu.Edit.Copy" Header="{Binding MenuEditCopy}"       InputGesture="Ctrl+C" Click="OnEditCopy" />
                 <MenuItem AutomationProperties.AutomationId="Menu.Edit.Paste" Header="{Binding MenuEditPaste}"      InputGesture="Ctrl+V" Click="OnEditPaste" />

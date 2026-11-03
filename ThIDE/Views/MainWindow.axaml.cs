@@ -651,7 +651,8 @@ public partial class MainWindow : Window
             p => File.Exists(p) || Directory.Exists(p),
             AppServices.Provider.GetService<IWorkspaceEditService>(),
             (path, caret) => OpenAtAsync(docs, path, caret),
-            DateTime.Now);
+            DateTime.Now,
+            AppServices.Provider.GetService<IWorkspaceUndoService>());
         var model = new NewTripViewModel(env);
         var load = model.LoadAsync();
         await new NewTripWindow(model).ShowDialog(this);
@@ -820,7 +821,14 @@ public partial class MainWindow : Window
         if (outcome.Success && reload && AppServices.Provider.GetService<IWorkspaceSession>() is { ActiveThconfig: { } active } session)
             await session.SetActiveThconfigAsync(active.FullPath);
         var n = AppServices.Provider.GetService<INotificationService>();
-        if (outcome.Success) n?.Success(title, string.Format(ThIDE.Resources.Tr.Get("Diag_FixAllDone"), preview.CheckedCount));
+        if (outcome.Success)
+        {
+            var done = string.Format(ThIDE.Resources.Tr.Get("Diag_FixAllDone"), preview.CheckedCount);
+            // One undo step for every file written; the record's notification offers it.
+            if (AppServices.Provider.GetService<IWorkspaceUndoService>() is { } history && outcome.Changes is { Count: > 0 } changes)
+                history.Push(new WorkspaceUndoRecord(WorkspaceUndoRecord.OperationName(title), done, changes));
+            else n?.Success(title, done);
+        }
         else n?.Warning(title, outcome.Describe());
         return outcome.Success;
     }
@@ -1139,13 +1147,12 @@ public partial class MainWindow : Window
             AppServices.Provider.GetService<IWorkspaceEditService>(),
             current,
             currentCaret,
-            DateOnly.FromDateTime(DateTime.Now));
+            DateOnly.FromDateTime(DateTime.Now),
+            AppServices.Provider.GetService<IWorkspaceUndoService>());
 
+        // The insert records itself in the workspace undo history, whose notification reports it.
         var model = new LinkSurveyViewModel(env);
         var dialog = new LinkSurveyWindow(model);
-        model.Applied += (_, outcome) =>
-            notifications?.Success(ThIDE.Resources.Tr.Get("LinkSurvey_Title"),
-                string.Format(ThIDE.Resources.Tr.Get("LinkSurvey_Done"), Path.GetFileName(model.SourcePath)));
         // The dialog opens straight away; the survey file is chosen in it (Browse, or typed + Enter).
         var load = preset is not null ? preset(model) : model.LoadAsync(null, destinationFile);
         await dialog.ShowDialog(this);
@@ -1335,7 +1342,7 @@ public partial class MainWindow : Window
 
                 if (!dlg.SeeOccurrencesRequested)
                 {
-                    await ApplyRenameChangesAsync(changes, newName, docs!);   // simple path: apply directly
+                    await ApplyRenameChangesAsync(changes, oldName, newName, docs!);   // simple path: apply directly
                     return;
                 }
                 // "See occurrences" → open the preview with the entered name pre-filled.
@@ -1356,7 +1363,7 @@ public partial class MainWindow : Window
             if (string.IsNullOrWhiteSpace(newName) || newName == oldName) return;
             if (InvalidName(newName) is { } bad2) { await ShowInvalidNameAsync(newName, bad2); return; }
 
-            await ApplyRenameChangesAsync(MergeRenameChanges(changes, optional), newName, docs!);
+            await ApplyRenameChangesAsync(MergeRenameChanges(changes, optional), oldName, newName, docs!);
         }
         catch (System.Exception ex)
         {
@@ -1738,70 +1745,16 @@ public partial class MainWindow : Window
     private static bool IsRefChar(char c) =>
         char.IsLetterOrDigit(c) || c is '.' or '_' or '-' or '@' or ':';
 
-    private static async System.Threading.Tasks.Task ApplyRenameChangesAsync(
+    private static System.Threading.Tasks.Task ApplyRenameChangesAsync(
         List<RenameFileChanges> changes,
+        string oldName,
         string newName,
         IDocumentService docs)
     {
-        // The rename is an app-initiated write, so suppress the file-watcher for each file (like a
-        // normal Save) and update any open buffer in place — instead of a "reloaded from disk"
-        // banner/toast, which was misleading for a change the app made itself (#1).
         Services.IWorkspaceSession? session = null;
         try { session = AppServices.Provider.GetService<Services.IWorkspaceSession>(); } catch { /* design-time */ }
-
-        // Encode every file before writing any: one file whose encoding cannot hold the new name stops
-        // the whole rename, instead of leaving references to a survey that was not renamed.
-        var planned = new List<(RenameFileChanges Changes, string Text, byte[] Bytes, Therion.Workspace.Editing.TextFileFormat Format, ViewModels.Docking.FileDocumentViewModel? Open)>();
-        foreach (var fc in changes)
-        {
-            var sorted = new System.Collections.Generic.List<(int, int)>(fc.Hits);
-            sorted.Sort((a, b) => b.Item1.CompareTo(a.Item1));
-
-            var sb = new System.Text.StringBuilder(fc.FileText);
-            foreach (var (start, length) in sorted)
-                sb.Remove(start, length).Insert(start, newName);
-
-            var newText = sb.ToString();
-            var open = docs.Documents.FirstOrDefault(d => Therion.Workspace.Editing.FilePaths.Comparer.Equals(d.FilePath, fc.FilePath));
-            try
-            {
-                var (bytes, format) = await System.Threading.Tasks.Task.Run(() => Therion.Workspace.Editing.SourceFileIo.EncodeForSave(fc.FilePath, newText, open?.Format));
-                planned.Add((fc, newText, bytes, format, open));
-            }
-            catch (Therion.Workspace.Editing.UnrepresentableCharacterException ex)
-            {
-                AppServices.Provider.GetService<INotificationService>()?.Error(ThIDE.Resources.Tr.Get("Notif_SaveEncodingTitle"),
-                    string.Format(ThIDE.Resources.Tr.Get(ex is Therion.Workspace.Editing.UndecodableBytesException ? "Notif_SaveUndecodable" : "Notif_SaveEncoding"),
-                        System.IO.Path.GetFileName(fc.FilePath), ex.Character, ex.EncodingName));
-                return;
-            }
-            catch { /* unreadable: skipped, as a failed write is below */ }
-        }
-
-        foreach (var (fc, newText, bytes, format, open) in planned)
-        {
-            session?.SuppressSelfWrite(fc.FilePath);
-            try
-            {
-                await System.Threading.Tasks.Task.Run(() => Therion.Workspace.Editing.SourceFileIo.WriteOver(fc.FilePath, bytes));
-                if (open is not null) open.Format = format;
-            }
-            catch { continue; }
-
-            foreach (var doc in docs.Documents)
-            {
-                if (!Therion.Workspace.Editing.FilePaths.Comparer.Equals(doc.FilePath, fc.FilePath)) continue;
-
-                // The active file's new text already incorporates its unsaved edits, so update it
-                // silently. Any OTHER tab with unsaved edits keeps the conflict banner so those
-                // edits aren't discarded; a clean tab just reflects the rename silently.
-                if (!ReferenceEquals(doc, docs.Active) && doc.IsDirty)
-                    doc.NotifyExternalChange(System.DateTime.Now, deleted: false, autoReload: true);
-                else
-                    doc.SetText(newText, reparse: true);
-                break;
-            }
-        }
+        return RenameApplier.ApplyAsync(changes, oldName, newName, docs, session,
+            AppServices.Provider.GetService<INotificationService>(), AppServices.Provider.GetService<IWorkspaceUndoService>());
     }
 
     // Find all references (#4): configure Find-in-Files as a whole-word, project-scoped
@@ -1852,12 +1805,34 @@ public partial class MainWindow : Window
             Services.NotificationKind.Error   => Avalonia.Controls.Notifications.NotificationType.Error,
             _                                 => Avalonia.Controls.Notifications.NotificationType.Information,
         };
-        // Errors linger; everything else auto-expires. The whole toast is clickable when the
-        // notification carries an action (e.g. "Show output").
+        // Errors linger; everything else auto-expires. A notification that carries an action (e.g.
+        // "Show output", "Undo") shows it as a button, and stays a little longer to give time to reach it.
         var expiration = n.Kind == Services.NotificationKind.Error ? TimeSpan.FromSeconds(12) : TimeSpan.FromSeconds(6);
         _notificationManager.Margin = new Thickness(0, 0, 8, ToastBottomMargin());
-        _notificationManager.Show(new Avalonia.Controls.Notifications.Notification(
-            n.Title, n.Message, type, expiration, onClick: n.Action));
+        if (!n.HasAction)
+        {
+            _notificationManager.Show(new Avalonia.Controls.Notifications.Notification(n.Title, n.Message, type, expiration));
+            return;
+        }
+        var action = new Button { Content = n.ActionLabel, HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right };
+        Avalonia.Automation.AutomationProperties.SetAutomationId(action, "Toast.Action");
+        var content = new StackPanel
+        {
+            Spacing = 4,
+            MaxWidth = 360,
+            Children =
+            {
+                new TextBlock { Text = n.Title, FontWeight = Avalonia.Media.FontWeight.SemiBold, TextWrapping = Avalonia.Media.TextWrapping.Wrap },
+                new TextBlock { Text = n.Message, TextWrapping = Avalonia.Media.TextWrapping.Wrap },
+                action,
+            },
+        };
+        action.Click += (_, _) =>
+        {
+            _notificationManager.Close(content);
+            n.Action!();
+        };
+        _notificationManager.Show(content, type, expiration + TimeSpan.FromSeconds(4));
     }
 
     // Toasts stack up from the bottom of the window: keep them clear of the status bar and, when the

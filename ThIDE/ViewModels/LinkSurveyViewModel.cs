@@ -23,6 +23,7 @@ namespace ThIDE.ViewModels;
 /// <param name="FilesBeside">Every <c>.th2</c> under a folder (the source's sketches).</param>
 /// <param name="CurrentFile">The active editor's file, when it is a workspace <c>.th</c>.</param>
 /// <param name="CurrentCaret">Caret offset in <paramref name="CurrentFile"/>.</param>
+/// <param name="History">Where an insert is recorded as one undo step (none: not undoable).</param>
 public sealed record LinkSurveyEnvironment(
     WorkspaceSemanticModel Workspace,
     string? WorkspaceRoot,
@@ -32,7 +33,8 @@ public sealed record LinkSurveyEnvironment(
     IWorkspaceEditService? Editor,
     string? CurrentFile,
     int CurrentCaret,
-    DateOnly Today);
+    DateOnly Today,
+    IWorkspaceUndoService? History = null);
 
 /// <summary>One destination the user can choose, with its explanation.</summary>
 public sealed record DestinationRow(DestinationCandidate Candidate, string Label)
@@ -410,6 +412,9 @@ public sealed partial class LinkSurveyViewModel : ObservableObject
         try
         {
             var outcome = await _env.Editor.ApplyAsync(plan.Batch);
+            if (outcome.Success && outcome.Changes is { Count: > 0 } changes)
+                _env.History?.Push(new WorkspaceUndoRecord(Tr.Get("LinkSurvey_Title"),
+                    string.Format(Tr.Get("LinkSurvey_Done"), Path.GetFileName(SourcePath)), changes));
             if (outcome.Success) Applied?.Invoke(this, outcome);
             else Warnings = Warnings.Append(new WarningRow(outcome.Describe(), true)).ToList();
             return outcome;

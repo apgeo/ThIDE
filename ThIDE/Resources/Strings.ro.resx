@@ -1692,4 +1692,20 @@ Aplici modificările? Pașii care nu au putut fi previzualizați rulează acum.<
 
 Îl ștergeți definitiv? Operațiunea nu poate fi anulată.</value></data>
   <data name="Explorer_DeletePermanently" xml:space="preserve"><value>Șterge definitiv</value></data>
+  <data name="WsUndo_Menu" xml:space="preserve"><value>Anulează: {0}</value></data>
+  <data name="WsUndo_MenuNone" xml:space="preserve"><value>Anulează modificarea din mai multe fișiere</value></data>
+  <data name="WsUndo_RedoMenu" xml:space="preserve"><value>Refă: {0}</value></data>
+  <data name="WsUndo_RedoMenuNone" xml:space="preserve"><value>Refă modificarea din mai multe fișiere</value></data>
+  <data name="WsUndo_Files" xml:space="preserve"><value>{0} fișier(e): {1}</value></data>
+  <data name="WsUndo_More" xml:space="preserve"><value> și încă {0}</value></data>
+  <data name="WsUndo_Done" xml:space="preserve"><value>Operația „{0}” a fost anulată în {1} fișier(e): {2}</value></data>
+  <data name="WsUndo_Redone" xml:space="preserve"><value>Operația „{0}” a fost refăcută în {1} fișier(e): {2}</value></data>
+  <data name="WsUndo_Refused" xml:space="preserve"><value>Nu s-a restaurat nimic: {0} s-a modificat între timp. Niciun fișier nu a fost modificat.</value></data>
+  <data name="WsUndo_Encoding" xml:space="preserve"><value>Nu s-a restaurat nimic: {0} nu poate conține „{1}” în {2}, codificarea declarată de fișier. Niciun fișier nu a fost modificat.</value></data>
+  <data name="WsUndo_Gone" xml:space="preserve"><value>Această modificare a fost deja anulată.</value></data>
+  <data name="WsUndo_OpRename" xml:space="preserve"><value>Redenumire</value></data>
+  <data name="Rename_Done" xml:space="preserve"><value>S-a redenumit {0} → {1} în {2} fișier(e).</value></data>
+  <data name="Replace_Confirm" xml:space="preserve"><value>Înlocuiți {0} apariții în {1} fișiere?</value></data>
+  <data name="Replace_Done" xml:space="preserve"><value>S-au înlocuit {0} apariții în {1} fișier(e).</value></data>
+  <data name="NewTrip_Done" xml:space="preserve"><value>S-a creat {0}</value></data>
 </root>

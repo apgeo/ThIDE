@@ -20,6 +20,14 @@ public partial class ReplaceWindow : Window
         // Esc closes the window (mirrors Find in Files, #8/#9). Tunnel so it fires even while a
         // TextBox holds focus.
         AddHandler(KeyDownEvent, OnPreviewKeyDown, RoutingStrategies.Tunnel);
+        // Replace All in more than one file asks first, over this window.
+        DataContextChanged += (_, _) =>
+        {
+            if (DataContext is ReplaceInFilesViewModel vm)
+                vm.Confirm = question => new ConfirmDialog(ThIDE.Resources.Tr.Get("Replace_Title"), question,
+                    ThIDE.Resources.Tr.Get("Replace_ReplaceAll")).ShowAsync(this);
+        };
+        Closed += (_, _) => { if (DataContext is ReplaceInFilesViewModel vm) vm.Confirm = null; };
     }
 
     private void OnPreviewKeyDown(object? sender, KeyEventArgs e)
