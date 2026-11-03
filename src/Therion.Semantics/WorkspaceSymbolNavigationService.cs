@@ -269,7 +269,7 @@ public sealed class WorkspaceSymbolNavigationService : ISymbolNavigationService
         {
             // (a) an @-qualified / globally-resolvable member that is the same station.
             if (target is not null &&
-                _workspace.ResolveStationSymbol(memberRaw) is { } s && s.Name.Equals(target.Name))
+                _workspace.ResolveStationSymbol(memberRaw, rec.Scope) is { } s && s.Name.Equals(target.Name))
                 return true;
 
             // (c) survey half of point@survey: a member qualified by that survey.

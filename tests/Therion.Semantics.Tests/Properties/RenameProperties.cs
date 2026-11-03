@@ -266,7 +266,7 @@ public class RenameProperties
         endsurvey
         """;
 
-    [Fact(Skip = "Known bug: an @ path component above an input file's root survey is not an occurrence of that survey, so renaming it leaves the path stale")]
+    [Fact]
     public void Renaming_a_survey_rewrites_its_name_in_an_at_path_that_continues_into_an_input_file()
     {
         var files = new Dictionary<string, string> { ["/gen/cave.th"] = NestedInputMain, ["/gen/hall.th"] = NestedInputHall };
@@ -298,7 +298,7 @@ public class RenameProperties
 
         """;
 
-    [Fact(Skip = "Known bug: x@sub resolves by the innermost survey name only, so with two same-named sub-surveys every parent's reference goes to the first one")]
+    [Fact]
     public void An_at_reference_resolves_to_the_sub_survey_of_its_own_parent_when_another_parent_has_one_of_the_same_name()
     {
         var text = "survey cave\n" + SameNamedSubSurvey("c1") + SameNamedSubSurvey("c2") + "endsurvey\n";

@@ -49,7 +49,7 @@ public sealed class SemanticBinder
                     // This file can't see cross-file / @-qualified targets, so don't warn here —
                     // record the reference for the workspace-level validator, which has cross-file
                     // and @ visibility. (Falls back to a per-file warning when there's no workspace.)
-                    ctx.UnresolvedEquateRefs.Add(new EquateRef(raw, span, NearestHint(raw, ctx.Stations.Keys)));
+                    ctx.UnresolvedEquateRefs.Add(new EquateRef(raw, span, NearestHint(raw, ctx.Stations.Keys)) { Scope = scope });
                     continue;
                 }
                 var st = ctx.Stations[resolved.Value];
@@ -58,7 +58,7 @@ public sealed class SemanticBinder
                 // An `x@sub` member can only have matched the placeholder a same-file `fix x@sub` (or
                 // shot / station / mark) recorded. Keep it in this file's class, but defer the token to
                 // the workspace tier too, which attributes it to the real station (as for the fix).
-                if (raw.IndexOf('@') >= 0) RecordAtQualifiedStationRef(ctx, raw, span);
+                if (raw.IndexOf('@') >= 0) RecordAtQualifiedStationRef(ctx, raw, span, scope);
                 else members[m] = resolved;
                 ctx.Equates.Add(resolved.Value);
                 if (firstResolved is null) firstResolved = resolved;
@@ -220,7 +220,7 @@ public sealed class SemanticBinder
         if (string.IsNullOrEmpty(st.Station)) return;
         var qn = QualifyLocal(st.Station, scope);
         AddStationOccurrence(ctx, qn, st.StationSpan, st.Station, OccurrenceRole.Declaration);
-        RecordAtQualifiedStationRef(ctx, st.Station, st.StationSpan);
+        RecordAtQualifiedStationRef(ctx, st.Station, st.StationSpan, scope);
         var existing = ctx.Stations.TryGetValue(qn, out var s)
             ? s
             : new StationSymbol(qn, st.Span, StationDeclarationKind.Shot, ImmutableArray<SourceSpan>.Empty);
@@ -262,7 +262,7 @@ public sealed class SemanticBinder
             ctx.Stations[qn] = s with { MarkType = mk.MarkType };
             ctx.Equates.Add(qn);
             AddStationOccurrence(ctx, qn, span, raw, OccurrenceRole.Reference);
-            RecordAtQualifiedStationRef(ctx, raw, span);
+            RecordAtQualifiedStationRef(ctx, raw, span, scope);
         }
     }
 
@@ -272,12 +272,13 @@ public sealed class SemanticBinder
     /// all (it qualifies the raw token into a scope-local name), so without this the workspace
     /// occurrence index never attributes these tokens to the declaring station and a rename misses
     /// them (the alpha.th shape: a root file whose centreline is all <c>fix X@sub</c> /
-    /// <c>station X@sub</c> lines).
+    /// <c>station X@sub</c> lines). The <paramref name="scope"/> goes with it: the <c>@</c> path is
+    /// relative to the survey the token is written in.
     /// </summary>
-    private static void RecordAtQualifiedStationRef(BindContext ctx, string raw, SourceSpan span)
+    private static void RecordAtQualifiedStationRef(BindContext ctx, string raw, SourceSpan span, ImmutableArray<string> scope)
     {
         if (span.IsEmpty || raw.IndexOf('@') < 0) return;
-        ctx.UnresolvedEquateRefs.Add(new EquateRef(raw, span));
+        ctx.UnresolvedEquateRefs.Add(new EquateRef(raw, span) { Scope = scope });
     }
 
     /// <summary>Folds a <c>flags [not] name...</c> token list into the active flag set.</summary>
@@ -397,7 +398,7 @@ public sealed class SemanticBinder
     {
         var qn = QualifyLocal(fix.Station, scope);
         AddStationOccurrence(ctx, qn, fix.StationSpan, fix.Station, OccurrenceRole.Declaration);
-        RecordAtQualifiedStationRef(ctx, fix.Station, fix.StationSpan);
+        RecordAtQualifiedStationRef(ctx, fix.Station, fix.StationSpan, scope);
         if (ctx.Stations.TryGetValue(qn, out var existing))
         {
             if (existing.Kind == StationDeclarationKind.Fix)
@@ -438,7 +439,7 @@ public sealed class SemanticBinder
         if (group.Count > 0)
         {
             ctx.EquateGroups.Add(group);
-            ctx.EquateRecords.Add(new EquateRecord(eq.Stations, eq.Span));
+            ctx.EquateRecords.Add(new EquateRecord(eq.Stations, eq.Span) { Scope = scope });
         }
     }
 
@@ -591,12 +592,12 @@ public sealed class SemanticBinder
         if (!fromSplay)
         {
             AddStationOccurrence(ctx, from, fromSpan, fromRaw, OccurrenceRole.Reference);
-            RecordAtQualifiedStationRef(ctx, fromRaw, fromSpan);
+            RecordAtQualifiedStationRef(ctx, fromRaw, fromSpan, scope);
         }
         if (!toSplay)
         {
             AddStationOccurrence(ctx, to, toSpan, toRaw, OccurrenceRole.Reference);
-            RecordAtQualifiedStationRef(ctx, toRaw, toSpan);
+            RecordAtQualifiedStationRef(ctx, toRaw, toSpan, scope);
         }
 
         var effectiveFlags = fromSplay || toSplay ? flags | ShotFlags.Splay : flags;

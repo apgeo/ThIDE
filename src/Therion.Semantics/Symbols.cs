@@ -86,6 +86,9 @@ public sealed record EquateRecord(
     /// or any <c>point@survey</c> member). Empty for a record built without a binder.
     /// </summary>
     public ImmutableArray<QualifiedName?> ResolvedMembers { get; init; } = ImmutableArray<QualifiedName?>.Empty;
+
+    /// <summary>The survey path the <c>equate</c> is written in, in this file's naming (see <see cref="EquateRef.Scope"/>).</summary>
+    public ImmutableArray<string> Scope { get; init; } = ImmutableArray<string>.Empty;
 }
 
 /// <summary>
@@ -94,7 +97,14 @@ public sealed record EquateRecord(
 /// which has cross-file + <c>@</c> visibility; only then is TH_SEM_001 emitted. <see cref="Hint"/> is
 /// a "did you mean" suggestion computed against this file's stations (used for the standalone case).
 /// </summary>
-public sealed record EquateRef(string Raw, SourceSpan Span, string? Hint = null);
+public sealed record EquateRef(string Raw, SourceSpan Span, string? Hint = null)
+{
+    /// <summary>
+    /// The survey path the reference is written in, in this file's naming. An <c>@</c> path is relative
+    /// to it (<c>1@ent</c> written in <c>cave.c2</c> names <c>cave.c2.ent.1</c>). Empty when unknown.
+    /// </summary>
+    public ImmutableArray<string> Scope { get; init; } = ImmutableArray<string>.Empty;
+}
 
 /// <summary>
 /// A summary of a <c>.th2</c> drawing object (point/line/area) for the Object Browser:
