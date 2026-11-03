@@ -547,6 +547,8 @@ public sealed class SemanticBinder
         {
             SourceRow = row,
             FieldDefinition = data,
+            CompassUnit = units.Compass,
+            ClinoUnit = units.Clino,
             Flags = effectiveFlags,
             Comment = comment,
         });

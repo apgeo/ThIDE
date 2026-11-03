@@ -1023,9 +1023,9 @@ public sealed class ThParser
         CheckFixCoordinate(values[4], spans[4], "z", sev, diagnostics);
 
         var station = values[1];
-        double x = ParseDouble(values[2]);
-        double y = ParseDouble(values[3]);
-        double z = ParseDouble(values[4]);
+        double x = ParseCoordinate(values[2]);
+        double y = ParseCoordinate(values[3]);
+        double z = ParseCoordinate(values[4]);
         string opts = string.Empty;
         if (values.Length > 5)
         {
@@ -1213,6 +1213,19 @@ public sealed class ThParser
             sb.Append(line.Tokens[i].Text);
         }
         return sb.ToString();
+    }
+
+    /// <summary>A fix coordinate: decimal, or <c>deg:min[:sec]</c> (the sign of the degrees applies to all parts).</summary>
+    private static double ParseCoordinate(string text)
+    {
+        if (!text.Contains(':')) return ParseDouble(text);
+        var parts = text.Split(':');
+        double deg = ParseDouble(parts[0]);
+        bool neg = parts[0].TrimStart().StartsWith('-');
+        double min = parts.Length > 1 ? ParseDouble(parts[1]) : 0d;
+        double sec = parts.Length > 2 ? ParseDouble(parts[2]) : 0d;
+        double v = Math.Abs(deg) + min / 60d + sec / 3600d;
+        return neg ? -v : v;
     }
 
     private static double ParseDouble(string text) =>

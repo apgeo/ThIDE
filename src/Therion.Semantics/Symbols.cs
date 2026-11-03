@@ -151,6 +151,12 @@ public sealed record ShotSymbol(
     /// Used to map edited fields (length/compass/clino) back to their slot.
     /// </summary>
     public DataCommand? FieldDefinition { get; init; }
+
+    /// <summary>Unit of the raw compass/bearing columns of <see cref="SourceRow"/> (<c>units compass</c>).</summary>
+    public AngleUnit CompassUnit { get; init; } = AngleUnit.Degree;
+
+    /// <summary>Unit of the raw clino/gradient columns of <see cref="SourceRow"/> (<c>units clino</c>).</summary>
+    public AngleUnit ClinoUnit { get; init; } = AngleUnit.Degree;
 }
 
 /// <summary>A <c>scrap</c> symbol (.th2): id + declaration span (Plan �7.3 / M6 #7).</summary>

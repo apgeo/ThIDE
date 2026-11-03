@@ -21,7 +21,7 @@ public static class CoordinateSystems
     private static readonly ImmutableHashSet<string> Named =
         ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase,
             "lat-long", "long-lat",
-            "wgs84", "etrs", "etrs89",
+            "wgs84", "etrs", "etrs89", "eur79z30",
             "jtsk", "ijtsk", "jtsk03", "ijtsk03", "s-jtsk", "s-merc",
             // a few common datum/grids Therion ships in thcsdata
             "ed50", "ch1903", "osgb", "nad27", "nad83", "google", "web-mercator");
@@ -47,6 +47,12 @@ public static class CoordinateSystems
 
         // UTM<zone>[N|S] / UTM<zone>[N|S] — zone 1..60
         if (s.StartsWith("UTM", StringComparison.OrdinalIgnoreCase) && IsUtmZone(s.Substring(3)))
+            return true;
+
+        // ETRS<zone> — Therion generates etrs28..etrs37 (EPSG 25828-25837)
+        if (s.StartsWith("ETRS", StringComparison.OrdinalIgnoreCase)
+            && int.TryParse(s.AsSpan(4), NumberStyles.None, CultureInfo.InvariantCulture, out var etrsZone)
+            && etrsZone is >= 28 and <= 37)
             return true;
 
         // OSGB:<square> — H/N/O/S/T + a letter
