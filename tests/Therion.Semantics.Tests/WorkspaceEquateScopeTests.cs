@@ -74,4 +74,46 @@ public class WorkspaceEquateScopeTests
             g.Find(QualifiedName.Of("cave", "ent", "1")).Equals(g.Find(QualifiedName.Of("cave", "5"))),
             "the misspelt `1@entrnce` was welded to cave.ent.1 by its point name");
     }
+
+    [Fact]
+    public void An_at_member_names_the_sub_survey_of_its_own_parent_when_another_parent_has_one_of_the_same_name()
+    {
+        var ws = Build(("/p/cave.th", """
+            survey cave
+              survey c1
+                survey ent
+                  centreline
+                    data normal from to length compass clino
+                    1 2 3 0 0
+                  endcentreline
+                endsurvey
+                centreline
+                  data normal from to length compass clino
+                  5 6 2 90 0
+                endcentreline
+                equate 5 1@ent
+              endsurvey
+              survey c2
+                survey ent
+                  centreline
+                    data normal from to length compass clino
+                    1 2 3 0 0
+                  endcentreline
+                endsurvey
+                centreline
+                  data normal from to length compass clino
+                  5 6 2 90 0
+                endcentreline
+                equate 5 1@ent
+              endsurvey
+            endsurvey
+            """));
+
+        var g = WorkspaceEquates.Build(ws);
+
+        Assert.True(g.Find(QualifiedName.Of("cave", "c2", "5")).Equals(g.Find(QualifiedName.Of("cave", "c2", "ent", "1"))),
+            "c2's `equate 5 1@ent` did not reach c2's own ent");
+        Assert.False(g.Find(QualifiedName.Of("cave", "c2", "5")).Equals(g.Find(QualifiedName.Of("cave", "c1", "ent", "1"))),
+            "c2's `equate 5 1@ent` was welded to c1's ent");
+    }
 }

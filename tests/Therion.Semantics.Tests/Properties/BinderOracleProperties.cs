@@ -52,7 +52,7 @@ public class BinderOracleProperties
         AssertRecovered(Enumerable.Range(CaveSeed + offset, PropertyRuns.Count(40)), features);
     }
 
-    [Fact(Skip = "Known bug: calibrate is parsed but never applied, so calibrated lengths and clinos bind as read (SemanticBinder.WalkChildren has no CalibrateCommand case)")]
+    [Fact]
     public void Binder_applies_calibrate_zero_errors_and_scales()
     {
         // Metres and degrees only, so the calibration formula, (read - zero error) * scale, is unambiguous.

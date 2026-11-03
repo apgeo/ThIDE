@@ -86,6 +86,9 @@ public sealed record EquateRecord(
     /// or any <c>point@survey</c> member). Empty for a record built without a binder.
     /// </summary>
     public ImmutableArray<QualifiedName?> ResolvedMembers { get; init; } = ImmutableArray<QualifiedName?>.Empty;
+
+    /// <summary>The survey path the <c>equate</c> is written in, in this file's naming (see <see cref="EquateRef.Scope"/>).</summary>
+    public ImmutableArray<string> Scope { get; init; } = ImmutableArray<string>.Empty;
 }
 
 /// <summary>
@@ -94,7 +97,14 @@ public sealed record EquateRecord(
 /// which has cross-file + <c>@</c> visibility; only then is TH_SEM_001 emitted. <see cref="Hint"/> is
 /// a "did you mean" suggestion computed against this file's stations (used for the standalone case).
 /// </summary>
-public sealed record EquateRef(string Raw, SourceSpan Span, string? Hint = null);
+public sealed record EquateRef(string Raw, SourceSpan Span, string? Hint = null)
+{
+    /// <summary>
+    /// The survey path the reference is written in, in this file's naming. An <c>@</c> path is relative
+    /// to it (<c>1@ent</c> written in <c>cave.c2</c> names <c>cave.c2.ent.1</c>). Empty when unknown.
+    /// </summary>
+    public ImmutableArray<string> Scope { get; init; } = ImmutableArray<string>.Empty;
+}
 
 /// <summary>
 /// A summary of a <c>.th2</c> drawing object (point/line/area) for the Object Browser:
@@ -165,6 +175,29 @@ public sealed record ShotSymbol(
 
     /// <summary>Unit of the raw clino/gradient columns of <see cref="SourceRow"/> (<c>units clino</c>).</summary>
     public AngleUnit ClinoUnit { get; init; } = AngleUnit.Degree;
+
+    /// <summary>The <c>calibrate length</c> in force for the raw tape columns of <see cref="SourceRow"/>.</summary>
+    public ReadingCalibration LengthCalibration { get; init; } = ReadingCalibration.None;
+
+    /// <summary>The <c>calibrate compass</c> in force for the raw compass/bearing columns of <see cref="SourceRow"/>.</summary>
+    public ReadingCalibration CompassCalibration { get; init; } = ReadingCalibration.None;
+
+    /// <summary>The <c>calibrate clino</c> in force for the raw clino/gradient columns of <see cref="SourceRow"/>.</summary>
+    public ReadingCalibration ClinoCalibration { get; init; } = ReadingCalibration.None;
+}
+
+/// <summary>
+/// A <c>calibrate &lt;quantity&gt; &lt;zero error&gt; [&lt;scale&gt;]</c> in force: Therion applies it to a
+/// reading as written, before the unit conversion, as (reading − zero error) × scale. The backsight
+/// columns share the foresight's calibration.
+/// </summary>
+public readonly record struct ReadingCalibration(double ZeroError, double Scale)
+{
+    /// <summary>No calibration: every reading is taken as written.</summary>
+    public static ReadingCalibration None { get; } = new(0.0, 1.0);
+
+    /// <summary>The calibrated value of <paramref name="reading"/>, in the reading's own units.</summary>
+    public double Apply(double reading) => (reading - ZeroError) * Scale;
 }
 
 /// <summary>A <c>scrap</c> symbol (.th2): id + declaration span (Plan �7.3 / M6 #7).</summary>

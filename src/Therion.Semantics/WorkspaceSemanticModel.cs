@@ -127,22 +127,40 @@ public sealed class WorkspaceSemanticModel
 
     /// <summary>Resolves a station reference to its declaring <see cref="StationSymbol"/> (its identity).</summary>
     public StationSymbol? ResolveStationSymbol(string raw)
+        => ResolveStationSymbol(raw, ImmutableArray<string>.Empty);
+
+    /// <summary>
+    /// Resolves a station reference written in survey <paramref name="scope"/> (the referencing file's
+    /// naming, e.g. <see cref="EquateRef.Scope"/>): an <c>@</c> path is relative to that survey.
+    /// </summary>
+    public StationSymbol? ResolveStationSymbol(string raw, ImmutableArray<string> scope)
     {
         if (string.IsNullOrWhiteSpace(raw)) return null;
-        return FindStation(StationRef.Parse(raw.Trim()), StationsByQn, StationsBySurveyAndPoint);
+        return FindStation(StationRef.Parse(raw.Trim()), scope, StationsByQn, StationsBySurveyAndPoint);
     }
 
     /// <summary>
-    /// The station <paramref name="r"/> names: the exact full path first (<c>1@ent.c2</c> →
-    /// <c>c2.ent.1</c>), so the outer surveys of an <c>@</c> path pick between same-named sub-surveys;
-    /// then the innermost survey's last name, which is all a file input under a parent of unknown path
-    /// can match (its stations are indexed relative to its own root).
+    /// The station <paramref name="r"/> names. An <c>@</c> path is relative to the survey it is written
+    /// in, so with a <paramref name="scope"/> the path under that survey comes first (<c>1@ent</c> in
+    /// <c>cave.c2</c> → <c>cave.c2.ent.1</c>, not the <c>ent</c> of a sibling), then under each
+    /// enclosing survey. Then the exact full path (<c>1@ent.c2</c> → <c>c2.ent.1</c>), so the outer
+    /// surveys of an <c>@</c> path pick between same-named sub-surveys; then the innermost survey's last
+    /// name, which is all a file input under a parent of unknown path can match (its stations are
+    /// indexed relative to its own root).
     /// </summary>
     private static StationSymbol? FindStation(
         StationRef r,
+        ImmutableArray<string> scope,
         FrozenDictionary<string, StationSymbol> byQn,
         FrozenDictionary<string, StationSymbol> bySurveyAndPoint)
     {
+        if (r.HasSurvey && !scope.IsDefaultOrEmpty)
+        {
+            var parts = scope.ToArray();
+            for (int depth = parts.Length; depth > 0; depth--)
+                if (byQn.TryGetValue(string.Concat(string.Join('.', parts, 0, depth), ".", r.StationQuery), out var scoped))
+                    return scoped;
+        }
         if (byQn.TryGetValue(r.StationQuery, out var exact)) return exact;
         return r.SurveyLastName is { } sl && bySurveyAndPoint.TryGetValue(SurveyPointKey(sl, r.Point), out var byKey)
             ? byKey
@@ -164,7 +182,7 @@ public sealed class WorkspaceSemanticModel
                 QualifiedName? first = null;
                 foreach (var raw in rec.Stations)
                 {
-                    if (ResolveStationSymbol(raw) is not { } s) continue;
+                    if (ResolveStationSymbol(raw, rec.Scope) is not { } s) continue;
                     eq.Add(s.Name);
                     if (first is null) first = s.Name; else eq.Union(first.Value, s.Name);
                 }
@@ -315,6 +333,8 @@ public sealed class WorkspaceSemanticModel
             b.Add(o);
         }
 
+        bool SurveyExists(QualifiedName survey) => idx.SurveysByFullName.ContainsKey(survey.ToString());
+
         foreach (var model in perFile.Values)
         {
             foreach (var o in model.Occurrences.All) Add(o);   // per-file (already resolved)
@@ -323,14 +343,15 @@ public sealed class WorkspaceSemanticModel
             // declaring file indexed it under) so the link isn't orphaned by a rename.
             foreach (var uref in model.UnresolvedEquateRefs)
             {
-                var sym = FindStation(StationRef.Parse(uref.Raw.Trim()), idx.StationsByQn, idx.StationsBySurveyAndPoint);
+                var sym = FindStation(StationRef.Parse(uref.Raw.Trim()), uref.Scope, idx.StationsByQn, idx.StationsBySurveyAndPoint);
                 if (sym is { } s)
                 {
                     Add(new SymbolOccurrence(
                         StationTokenSpans.NarrowToPoint(uref.Span, uref.Raw),
                         new SymbolId(SymbolKind.Station, s.Name), OccurrenceRole.Reference));
-                    // ...and the survey components of the cross-file @-path.
-                    foreach (var (sid, sp) in SurveyRefDecomposer.Decompose(uref.Raw, uref.Span, s.Name))
+                    // ...and the survey components of the cross-file @-path, including those above the
+                    // root survey of an input file, which name the referencing file's own surveys.
+                    foreach (var (sid, sp) in SurveyRefDecomposer.Decompose(uref.Raw, uref.Span, s.Name, uref.Scope, SurveyExists))
                         Add(new SymbolOccurrence(sp, sid, OccurrenceRole.Reference));
                 }
             }
@@ -414,7 +435,7 @@ public sealed class WorkspaceSemanticModel
     }
 
     private SourceSpan? ResolveStation(StationRef r)
-        => FindStation(r, StationsByQn, StationsBySurveyAndPoint)?.DeclarationSpan;
+        => FindStation(r, ImmutableArray<string>.Empty, StationsByQn, StationsBySurveyAndPoint)?.DeclarationSpan;
 
     private SourceSpan? ResolveMap(StationRef r)
         => MapsById.TryGetValue(r.Point, out var m) ? m.DeclarationSpan : null;
