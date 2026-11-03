@@ -17,6 +17,7 @@ using System.Threading.Tasks;
 using Therion.Processing.Abstractions;
 using Therion.Semantics;
 using Therion.Workspace;
+using Therion.Workspace.Editing;
 
 namespace ThIDE.Services;
 
@@ -104,8 +105,8 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
 
     private TherionWorkspace? _workspace;
     private DebouncedFileWatcher? _rootWatcher;
-    private readonly Dictionary<string, SelfWriteMark> _selfWrites = new(StringComparer.OrdinalIgnoreCase);
-    private readonly HashSet<string> _externalConfigs = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, SelfWriteMark> _selfWrites = new(FilePaths.Comparer);
+    private readonly HashSet<string> _externalConfigs = new(FilePaths.Comparer);
 
     public string? RootPath { get; private set; }
     public IReadOnlyList<ThconfigCandidate> Candidates { get; private set; } = Array.Empty<ThconfigCandidate>();
@@ -182,12 +183,12 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
         // the externally-registered thconfigs and unload the old active config + graph so the
         // dropdown and object tree reflect only the new directory (#2). Without this, old
         // thconfigs linger in the selector and the previous project stays loaded.
-        if (!string.Equals(full, RootPath, StringComparison.OrdinalIgnoreCase))
+        if (!FilePaths.Comparer.Equals(full, RootPath))
             await ResetForNewRootAsync().ConfigureAwait(false);
 
         var previousRoot = RootPath;
         RootPath = full;
-        if (previousRoot is not null && !string.Equals(previousRoot, full, StringComparison.OrdinalIgnoreCase))
+        if (previousRoot is not null && !FilePaths.Comparer.Equals(previousRoot, full))
             _rootWatcher?.Unwatch(previousRoot);   // the old root must stop raising FileSystemChanged
         RootChanged?.Invoke(this, EventArgs.Empty);
         RecordRecentDirectory(full);
@@ -237,7 +238,7 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
         if (_settings?.Current.LastThconfigByRoot is { } map &&
             map.TryGetValue(NormalizeDir(root), out var remembered) &&
             File.Exists(remembered) &&
-            internalCandidates.Any(p => string.Equals(p, remembered, StringComparison.OrdinalIgnoreCase)))
+            internalCandidates.Any(p => FilePaths.Comparer.Equals(p, remembered)))
             return remembered;
 
         // 2. Highest in the tree (shallowest), then newest modified.
@@ -281,7 +282,7 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
         var current = _settings.Current;
         var list = new List<string>(current.RecentDirectories.Count + 1) { fullDir };
         foreach (var p in current.RecentDirectories)
-            if (!string.Equals(NormalizeDir(p), key, StringComparison.OrdinalIgnoreCase)) list.Add(p);
+            if (!FilePaths.Comparer.Equals(NormalizeDir(p), key)) list.Add(p);
         if (list.Count > MaxRecentDirectories) list.RemoveRange(MaxRecentDirectories, list.Count - MaxRecentDirectories);
         try { _settings.Save(current with { RecentDirectories = list }); } catch { /* best-effort */ }
     }
@@ -296,10 +297,10 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
         var key = NormalizeDir(root);
         var cur = _settings.Current;
         if (cur.LastThconfigByRoot.TryGetValue(key, out var prev) &&
-            string.Equals(prev, active.FullPath, StringComparison.OrdinalIgnoreCase))
+            FilePaths.Comparer.Equals(prev, active.FullPath))
             return; // already recorded
 
-        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var map = new Dictionary<string, string>(FilePaths.Comparer);
         foreach (var kv in cur.LastThconfigByRoot) map[kv.Key] = kv.Value;
         map[key] = active.FullPath;
         _settings.Save(cur with { LastThconfigByRoot = map });
@@ -356,7 +357,7 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
     }
 
     // Files currently overlaid with an unsaved buffer (so they can be restored from disk later).
-    private readonly HashSet<string> _bufferOverlaid = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _bufferOverlaid = new(FilePaths.Comparer);
 
     public async Task RevalidateBuffersAsync(IReadOnlyList<(string Path, string Text)> buffers, CancellationToken ct = default)
     {
@@ -380,8 +381,8 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
                 {
                     model = await Task.Run(() =>
                     {
-                        var loaded = new HashSet<string>(ws.LoadedFiles, StringComparer.OrdinalIgnoreCase);
-                        var current = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                        var loaded = new HashSet<string>(ws.LoadedFiles, FilePaths.Comparer);
+                        var current = new HashSet<string>(FilePaths.Comparer);
                         foreach (var (path, _) in buffers) current.Add(TryFull(path));
 
                         // Drop overlays no longer supplied (the buffer was saved or its tab closed).
@@ -425,7 +426,7 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
                 {
                     model = await Task.Run(() =>
                     {
-                        var loaded = new HashSet<string>(ws.LoadedFiles, StringComparer.OrdinalIgnoreCase);
+                        var loaded = new HashSet<string>(ws.LoadedFiles, FilePaths.Comparer);
                         foreach (var path in paths)
                         {
                             var full = TryFull(path);
@@ -484,10 +485,10 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
         var full = TryFull(filePath);
         if (model.PerFile.ContainsKey(full)) return true;
         foreach (var (from, to, _) in model.FileGraphEdges)
-            if (string.Equals(from, full, StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(to, full, StringComparison.OrdinalIgnoreCase)) return true;
+            if (FilePaths.Comparer.Equals(from, full) ||
+                FilePaths.Comparer.Equals(to, full)) return true;
         // The active thconfig itself is part of the graph even when it sources nothing.
-        return ActiveThconfig is { } a && string.Equals(a.FullPath, full, StringComparison.OrdinalIgnoreCase);
+        return ActiveThconfig is { } a && FilePaths.Comparer.Equals(a.FullPath, full);
     }
 
     public void SuppressSelfWrite(string filePath)
@@ -561,7 +562,13 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
 
             TherionWorkspace? ws;
             lock (_gate) ws = _workspace;
-            if (ws is not null) await RebuildGraphAsync(ws).ConfigureAwait(false);
+            // A throw here (a Changed subscriber, the symbol index) must not end the pump with the
+            // running flag still set: every later change would then be ignored for the session.
+            if (ws is not null)
+            {
+                try { await RebuildGraphAsync(ws).ConfigureAwait(false); }
+                catch (Exception ex) { _log?.Error($"Workspace rebuild failed: {ex.Message}"); }
+            }
 
             lock (_gate)
             {
@@ -667,7 +674,7 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
     private void RescanCandidates()
     {
         var list = new List<ThconfigCandidate>();
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var seen = new HashSet<string>(FilePaths.Comparer);
 
         if (RootPath is { } root)
             foreach (var p in ThconfigDiscovery.Scan(root, _sniffer))
@@ -688,7 +695,7 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
 
     private void EnsureCandidate(string full)
     {
-        if (Candidates.Any(c => string.Equals(c.FullPath, full, StringComparison.OrdinalIgnoreCase))) return;
+        if (Candidates.Any(c => FilePaths.Comparer.Equals(c.FullPath, full))) return;
         if (!IsUnderRoot(full)) lock (_gate) _externalConfigs.Add(full);
         RescanCandidates();
     }

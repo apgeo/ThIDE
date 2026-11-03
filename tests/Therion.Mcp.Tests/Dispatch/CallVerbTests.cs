@@ -67,4 +67,34 @@ public class CallVerbTests : IDisposable
         Assert.Contains(MacroCatalog.BuiltIns, m => m.Name == "audit");
         Assert.Contains(MacroCatalog.BuiltIns, m => m.Name == "release-check");
     }
+
+    [Fact]
+    public async Task Run_build_refuses_system_lines_unless_the_call_opts_in()
+    {
+        File.AppendAllText(Path.Combine(_root, "cave.thconfig"), "system \"echo from-cli\"\n");
+        var compiler = new RecordingCompiler();
+        Task<int> Build(params string[] extra) => CallVerb.RunAsync(
+            ["call", "run_build", "--workspace", Path.Combine(_root, "cave.thconfig"), .. extra], _out, _err,
+            s => { s.AddSingleton<Therion.Processing.Abstractions.ITherionCompiler>(compiler); return s.BuildServiceProvider(); });
+
+        Assert.Equal(1, await Build());
+        Assert.Null(compiler.CompiledPath);
+        Assert.Contains(ToolErrorCodes.NotTrusted, _out.ToString());
+        Assert.Contains(AllowAllBuildApproval.CommandLineFlag, _out.ToString());   // the refusal says how to opt in
+
+        Assert.Equal(0, await Build(AllowAllBuildApproval.CommandLineFlag));
+        Assert.NotNull(compiler.CompiledPath);
+    }
+
+    private sealed class RecordingCompiler : Therion.Processing.Abstractions.ITherionCompiler
+    {
+        public string? CompiledPath { get; private set; }
+
+        public ValueTask<Therion.Processing.Abstractions.CompileResult> CompileAsync(string entryPointPath,
+            IProgress<Therion.Processing.Abstractions.CompilerOutputLine>? progress = null, CancellationToken cancellationToken = default)
+        {
+            CompiledPath = entryPointPath;
+            return ValueTask.FromResult(new Therion.Processing.Abstractions.CompileResult(0, [], []));
+        }
+    }
 }

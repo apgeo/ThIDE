@@ -99,4 +99,5 @@ Tools: `ui_windows`, `ui_tree`, `ui_find`, `ui_get`, `ui_invoke`, `ui_menu`, `ui
   `ui_get`.
 - Keys sent through the in-app server are routed events, not OS input; use `uidrive key` when the
   platform input path itself is under test.
-- On Windows/macOS the C# suite runs against your real ThIDE profile (only Linux is isolated).
+- The C# suite isolates the profile through `XDG_*`, which .NET honours on Linux and macOS. Windows
+  ignores it, so the suite skips every UI test there rather than run against your real ThIDE profile.

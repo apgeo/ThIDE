@@ -145,6 +145,7 @@ public sealed record StructuralMeasurement
 /// <summary>A group of measurements forming one candidate geological plane.</summary>
 public sealed record StructuralBatch
 {
+    /// <summary>Unique within one detection result (a revisited from-station gets a <c>#n</c> suffix).</summary>
     public required string Key { get; init; }
     public required string Name { get; init; }
     public string? SourceFile { get; init; }

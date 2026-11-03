@@ -20,6 +20,7 @@ public static class DiagnosticExplanations
     {
         // Parser core
         ["TH0002"] = new("An unexpected token was found where it isn't allowed in this command.", null, null),
+        ["TH0003"] = new("A quoted string has no closing quote, so it ends at the end of its line. Inside a string, write \"\" for a quote character.", "survey s -title \"Main \"\"Big\"\" Hall\"", null),
         ["TH0020"] = new("The file ends in the middle of a block — a closing keyword (e.g. endsurvey) is missing.", null, null),
         ["TH0010"] = new("This top-level keyword isn't a recognized Therion command. Check spelling or context.", null, null),
         ["TH0021"] = new("A block is closed by the wrong terminator keyword — it must match the block that was opened.", "survey foo\n  …\nendsurvey", "survey"),

@@ -42,7 +42,9 @@ public partial class KeyboardShortcutsViewModel : ViewModelBase
     /// <summary>Rows currently shown, after applying the Preferences search filter (#11).</summary>
     [ObservableProperty] private IReadOnlyList<KeyboardShortcutRow> _rows = Array.Empty<KeyboardShortcutRow>();
 
-    public KeyboardShortcutsViewModel() : this(new Services.JsonKeyboardShortcutService()) { }
+    /// <summary>Designer-only: reads and writes a throw-away file, never the user's keyboard.json.</summary>
+    public KeyboardShortcutsViewModel() : this(new Services.JsonKeyboardShortcutService(
+        System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ThIDE-design", "keyboard.json"))) { }
 
     public KeyboardShortcutsViewModel(IKeyboardShortcutService service)
     {

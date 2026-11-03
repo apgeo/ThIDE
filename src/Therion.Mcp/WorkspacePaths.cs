@@ -107,12 +107,14 @@ public static class WorkspacePaths
         || relative.StartsWith("..\\", StringComparison.Ordinal) || Path.IsPathRooted(relative);
 
     /// <summary>True when <paramref name="candidate"/> is <paramref name="root"/> itself or lies beneath it.</summary>
-    public static bool IsInside(string root, string candidate)
+    public static bool IsInside(string root, string candidate) => IsInside(root, candidate, PathComparison);
+
+    private static bool IsInside(string root, string candidate, StringComparison comparison)
     {
         root = root.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 
-        if (candidate.Equals(root, PathComparison)) return true;
-        if (!candidate.StartsWith(root, PathComparison)) return false;
+        if (candidate.Equals(root, comparison)) return true;
+        if (!candidate.StartsWith(root, comparison)) return false;
 
         // Guard the "/work" vs "/workspace-of-someone-else" prefix collision.
         char boundary = candidate[root.Length];
@@ -123,14 +125,23 @@ public static class WorkspacePaths
     /// True when <paramref name="candidate"/> is the project's own config folder (<c>.thide/</c>) or
     /// lies beneath it. That folder holds hooks and tasks that run commands once the folder is
     /// trusted, so no agent write may land there: an edited hook would run on the next save or build.
-    /// Both forms are tested — the folder as named and with links followed — because a <c>.thide</c>
-    /// that is a symlink to another workspace folder is still where the hooks are read from.
+    /// Both forms of each side are tested — as named and with links followed — because a <c>.thide</c>
+    /// that is a symlink to another workspace folder is still where the hooks are read from, and a
+    /// link to <c>.thide</c> elsewhere in the project still writes into it.
+    /// Unlike the jail, this is a deny-list, so the comparison ignores case on every OS: on a
+    /// case-insensitive volume (macOS, Windows) <c>.THIDE/hooks.json</c> is the real hooks file, and
+    /// refusing it on a case-sensitive one costs nothing.
     /// </summary>
     public static bool IsProjectConfig(string root, string candidate)
     {
         var config = Path.Combine(root.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
             Therion.Workspace.ProjectLocalConfig.DirectoryName);
-        return IsInside(config, candidate) || IsInside(Canonicalize(config), candidate);
+        var realConfig = Canonicalize(config);
+        var realCandidate = Canonicalize(candidate);
+        return IsInside(config, candidate, StringComparison.OrdinalIgnoreCase)
+            || IsInside(realConfig, candidate, StringComparison.OrdinalIgnoreCase)
+            || IsInside(config, realCandidate, StringComparison.OrdinalIgnoreCase)
+            || IsInside(realConfig, realCandidate, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>

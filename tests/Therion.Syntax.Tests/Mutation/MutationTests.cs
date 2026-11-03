@@ -11,8 +11,15 @@ namespace Therion.Syntax.Tests.Mutation;
 public class MutationTests
 {
     /// <summary>Deterministic per-case RNG so Tier2 mutations are reproducible.</summary>
-    private static Random RngFor(string seedId, string mutationId) =>
-        new(StringComparer.Ordinal.GetHashCode(seedId + "|" + mutationId) & int.MaxValue);
+    private static Random RngFor(string seedId, string mutationId) => new(StableHash(seedId + "|" + mutationId));
+
+    // string.GetHashCode is randomised per process; FNV-1a is stable across runs.
+    private static int StableHash(string s)
+    {
+        uint h = 2166136261;
+        foreach (var c in s) h = (h ^ c) * 16777619;
+        return (int)(h & int.MaxValue);
+    }
 
     [Theory]
     [InlineData("th")]
@@ -50,11 +57,10 @@ public class MutationTests
         }
         else
         {
-            // Tier2: the mutation may accidentally stay valid; the invariant is only that
-            // corrupting a clean seed never REMOVES diagnostics.
-            Assert.True(mutantDiags.Length >= seedDiags.Length,
-                $"Mutation '{mutationId}' unexpectedly reduced diagnostics " +
-                $"({seedDiags.Length} → {mutantDiags.Length}).");
+            // Tier2: the mutation may accidentally stay valid, so no diagnostic is required;
+            // the invariant is that parsing a corrupted file completes (no throw: reaching
+            // here proves it) and the clean seed it came from stays clean.
+            Assert.True(seedDiags.IsEmpty, $"Seed '{seedId}' must be clean for Tier2 mutation '{mutationId}'.");
         }
     }
 

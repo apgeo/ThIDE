@@ -76,7 +76,11 @@ public static class EncodingResolver
                 if (line.Length >= 9 && line[..8].ToString().Equals("encoding", StringComparison.OrdinalIgnoreCase)
                     && char.IsWhiteSpace(line[8]))
                 {
-                    var name = line[8..].Trim().ToString();
+                    // Therion splits arguments and stops at '#', so a trailing comment is legal.
+                    var rest = line[8..].ToString();
+                    int hash = rest.IndexOf('#');
+                    if (hash >= 0) rest = rest[..hash];
+                    var name = rest.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries) is { Length: > 0 } w ? w[0] : string.Empty;
                     return TryGetEncoding(name);
                 }
                 // First non-comment, non-encoding line: stop looking.
@@ -122,10 +126,18 @@ public static class EncodingResolver
         return null;
     }
 
-    private static int _codePagesRegistered;
+    // The flag is set only once the provider is in place: a second thread that sees it set may rely on
+    // the legacy code pages at once, so it must not see it while the first is still registering.
+    private static readonly object CodePagesLock = new();
+    private static volatile bool _codePagesRegistered;
     private static void EnsureCodePagesRegistered()
     {
-        if (System.Threading.Interlocked.Exchange(ref _codePagesRegistered, 1) == 0)
+        if (_codePagesRegistered) return;
+        lock (CodePagesLock)
+        {
+            if (_codePagesRegistered) return;
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+            _codePagesRegistered = true;
+        }
     }
 }

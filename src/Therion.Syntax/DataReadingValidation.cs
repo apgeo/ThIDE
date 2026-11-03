@@ -96,6 +96,9 @@ public static class DataReadingValidation
                 if (IsOmitted(value) || ClinoWords.Contains(value)) return null;
                 if (!TryNum(value, out var clino)) return NotANumber(reading, value);
                 var cmax = MaxClino(clinoUnit);
+                // Therion wraps the fore clino from [270°, 360°] to negative (thdata.cxx); not the back one.
+                if (!reading.StartsWith("back", StringComparison.OrdinalIgnoreCase)
+                    && clino >= cmax * 3 && clino <= cmax * 4) return null;
                 return clino < -cmax || clino > cmax
                     ? OutOfRange(reading, value, $"−{Fmt(cmax)}…{Fmt(cmax)}")
                     : null;
@@ -140,9 +143,9 @@ public static class DataReadingValidation
 
     private static double MaxClino(AngleUnit u) => u switch
     {
-        AngleUnit.Grad => 200,
-        AngleUnit.Mil => 3200,
-        AngleUnit.Degree => 180,
+        AngleUnit.Grad => 100,
+        AngleUnit.Mil => 1600,
+        AngleUnit.Degree => 90,
         _ => double.PositiveInfinity, // percent slope is unbounded
     };
 

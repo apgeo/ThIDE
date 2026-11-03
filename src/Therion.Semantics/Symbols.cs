@@ -78,7 +78,15 @@ public sealed record SurveySymbol(
 /// <summary>An <c>equate</c> relationship: the stations declared equivalent and its source span.</summary>
 public sealed record EquateRecord(
     ImmutableArray<string> Stations,
-    SourceSpan Span);
+    SourceSpan Span)
+{
+    /// <summary>
+    /// Per member (parallel to <see cref="Stations"/>): the station the binder resolved it to in the
+    /// equate's own survey scope, or null when only the workspace can resolve it (a cross-file member,
+    /// or any <c>point@survey</c> member). Empty for a record built without a binder.
+    /// </summary>
+    public ImmutableArray<QualifiedName?> ResolvedMembers { get; init; } = ImmutableArray<QualifiedName?>.Empty;
+}
 
 /// <summary>
 /// A single <c>equate</c> station reference that the per-file binder could not resolve from this
@@ -151,6 +159,12 @@ public sealed record ShotSymbol(
     /// Used to map edited fields (length/compass/clino) back to their slot.
     /// </summary>
     public DataCommand? FieldDefinition { get; init; }
+
+    /// <summary>Unit of the raw compass/bearing columns of <see cref="SourceRow"/> (<c>units compass</c>).</summary>
+    public AngleUnit CompassUnit { get; init; } = AngleUnit.Degree;
+
+    /// <summary>Unit of the raw clino/gradient columns of <see cref="SourceRow"/> (<c>units clino</c>).</summary>
+    public AngleUnit ClinoUnit { get; init; } = AngleUnit.Degree;
 }
 
 /// <summary>A <c>scrap</c> symbol (.th2): id + declaration span (Plan �7.3 / M6 #7).</summary>

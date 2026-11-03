@@ -75,6 +75,7 @@ public sealed class Th2Parser
                 return children.ToImmutable();
             }
 
+            TherionStrings.ReportUnterminated(line.Tokens, diags);
             cursor++;
             switch (kw.ToLowerInvariant())
             {
@@ -235,6 +236,9 @@ public sealed class Th2Parser
             {
                 cursor++; terminated = true; break;
             }
+            // A missing endline: stop at the next object or scrap boundary and leave that line to
+            // the scrap body, instead of skipping it as a line-point option line.
+            if (EndsUnterminatedBody(ln.Keyword, "endline")) break;
             // Vertex: <x> <y> [options...] � first token is a number, not a keyword.
             if (ln.Tokens.Length >= 2 &&
                 double.TryParse(ln.Tokens[0].Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var vx) &&
@@ -303,6 +307,7 @@ public sealed class Th2Parser
             {
                 cursor++; terminated = true; break;
             }
+            if (EndsUnterminatedBody(ln.Keyword, "endarea")) break;
             // Each body line lists a border line identifier (skip option/keyword tokens like `-id`).
             foreach (var t in ln.Tokens) borders.Add(t.Text);
             cursor++;
@@ -325,6 +330,16 @@ public sealed class Th2Parser
     }
 
     // ---- helpers --------------------------------------------------------
+
+    /// <summary>
+    /// True if <paramref name="keyword"/> cannot be part of a <c>line</c>/<c>area</c> body whose
+    /// own terminator is <paramref name="ownEnd"/>: a scrap boundary or the start or end of another
+    /// object, which means that body's terminator is missing.
+    /// </summary>
+    private static bool EndsUnterminatedBody(string keyword, string ownEnd) =>
+        !string.Equals(keyword, ownEnd, StringComparison.OrdinalIgnoreCase) &&
+        keyword.ToLowerInvariant() is "scrap" or "endscrap" or "point" or "line" or "endline"
+            or "area" or "endarea";
 
     /// <summary>
     /// Coalesces adjacent (no-whitespace-gap) tokens starting at <paramref name="start"/> into one
@@ -375,8 +390,7 @@ public sealed class Th2Parser
                     $"Unknown option '-{o.Name}'.", o.Span));
     }
 
-    private static string Unquote(string text) =>
-        text.Length >= 2 && text[0] == '"' && text[^1] == '"' ? text[1..^1] : text;
+    private static string Unquote(string text) => TherionStrings.Unquote(text);
 
     /// <summary>
     /// <c>comment … endcomment</c> multi-line comment block — body is free text, consumed opaquely

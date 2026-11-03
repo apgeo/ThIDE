@@ -1108,6 +1108,7 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.
   <data name="Notif_RecoveredTitle" xml:space="preserve"><value>Modificări nesalvate recuperate</value></data>
   <data name="Notif_RecoveredMsg" xml:space="preserve"><value>{0} fișier(e) aveau modificări nesalvate când aplicația s-a închis ultima dată neașteptat.</value></data>
   <data name="Notif_Restore" xml:space="preserve"><value>Restaurează</value></data>
+  <data name="Notif_DiscardRecovered" xml:space="preserve"><value>Șterge copiile</value></data>
   <data name="Notif_ImportFailed" xml:space="preserve"><value>Import eșuat</value></data>
   <data name="Notif_GisExportFailed" xml:space="preserve"><value>Export GIS eșuat</value></data>
   <data name="Notif_TableExportFailed" xml:space="preserve"><value>Export tabel eșuat</value></data>

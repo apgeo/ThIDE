@@ -11,15 +11,16 @@ namespace Therion.Mcp.Dispatch;
 public static class MacroVerb
 {
     /// <summary>
-    /// <c>macro list [--workspace p]</c> or <c>macro run &lt;name|file&gt; --workspace p [--var k=v]… [--apply] [--json]</c>.
-    /// Returns 0 ok, 1 a step failed, 2 usage error.
+    /// <c>macro list [--workspace p]</c> or <c>macro run &lt;name|file&gt; --workspace p [--var k=v]… [--apply] [--json]
+    /// [--allow-system-commands]</c>. Returns 0 ok, 1 a step failed, 2 usage error. Without
+    /// <c>--allow-system-commands</c> a run_build step refuses a thconfig with <c>system</c> lines.
     /// </summary>
     /// <param name="buildProvider">Builds the service provider (the host's DI container implementation).</param>
     public static async Task<int> RunAsync(IReadOnlyList<string> args, TextWriter stdout, TextWriter stderr,
         Func<IServiceCollection, IServiceProvider> buildProvider, string? userMacroFolder = null, CancellationToken ct = default)
     {
         string? workspace = null, target = null;
-        bool apply = false, json = false;
+        bool apply = false, json = false, allowSystemCommands = false;
         var vars = new Dictionary<string, string>(StringComparer.Ordinal);
         string verb = args.Count > 1 ? args[1] : "";
         for (int i = 2; i < args.Count; i++)
@@ -28,6 +29,7 @@ public static class MacroVerb
             {
                 case "--workspace" when i + 1 < args.Count: workspace = args[++i]; break;
                 case "--apply": apply = true; break;
+                case AllowAllBuildApproval.CommandLineFlag: allowSystemCommands = true; break;
                 case "--json": json = true; break;
                 case "--var" when i + 1 < args.Count:
                     var kv = args[++i];
@@ -71,6 +73,7 @@ public static class MacroVerb
 
         var services = new ServiceCollection();
         services.AddSingleton<IWorkspaceHost>(new WorkspaceHost(workspace));
+        if (allowSystemCommands) services.AddSingleton<IBuildApproval>(AllowAllBuildApproval.Instance);
         services.AddToolServices();
         var runner = new MacroRunner(new ToolDispatcher(buildProvider(services)));
         if (root is not null) vars.TryAdd("workspaceRoot", root);

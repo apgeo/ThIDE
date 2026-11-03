@@ -100,6 +100,7 @@ public class McpSettingKeysTests
     [InlineData("EnableMcpServer")]
     [InlineData("telemetry.enabled")]
     [InlineData("hook.onSave")]
+    [InlineData("build.compileOnSave")] // with it on, save_all would build without the system-command approval
     public void Security_and_privilege_settings_are_not_on_the_whitelist(string key)
     {
         Assert.Null(McpSettingKeys.Get(Defaults, key));

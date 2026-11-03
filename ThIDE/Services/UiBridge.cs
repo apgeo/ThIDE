@@ -40,6 +40,7 @@ public sealed class UiBridge : IUiBridge
     private IReadOnlyDictionary<string, ICommand?>? _shellCommands;
     private IReadOnlyDictionary<string, ICommand?>? _layoutPresets;
     private Func<Task>? _saveAll;
+    private Func<string?>? _buildEntry;
 
     public UiBridge(
         IDocumentService? documents = null,
@@ -65,17 +66,20 @@ public sealed class UiBridge : IUiBridge
 
     /// <summary>
     /// Wires the guarded R3 tools (T-03.5) to the running shell: the id→command map the keyboard uses,
-    /// a save-all callback, and the named layout-preset commands. Called on the UI thread once the
+    /// a save-all callback, the named layout-preset commands, and what the Build command would compile
+    /// (so run_command can check that thconfig's system commands first). Called on the UI thread once the
     /// MainWindow has its view-model.
     /// </summary>
     public void ConnectShell(
         IReadOnlyDictionary<string, ICommand?> shellCommands,
         Func<Task> saveAll,
-        IReadOnlyDictionary<string, ICommand?> layoutPresets)
+        IReadOnlyDictionary<string, ICommand?> layoutPresets,
+        Func<string?>? buildEntry = null)
     {
         _shellCommands = shellCommands;
         _saveAll = saveAll;
         _layoutPresets = layoutPresets;
+        _buildEntry = buildEntry;
     }
 
     /// <summary>True once the desktop lifetime has a main window that R3 tools could act on.</summary>
@@ -229,6 +233,8 @@ public sealed class UiBridge : IUiBridge
         _log?.Info($"MCP ran command '{commandId}'.");
         return Task.FromResult(new UiActionResult(true, $"Ran '{commandId}'."));
     });
+
+    public Task<string?> GetBuildEntryAsync() => InvokeAsync(() => Task.FromResult(_buildEntry?.Invoke()));
 
     public Task<UiActionResult> SaveAllAsync() => InvokeAsync(async () =>
     {

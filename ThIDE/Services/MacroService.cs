@@ -79,6 +79,8 @@ public sealed class MacroService : IMacroService
         services.AddSingleton(_app.GetRequiredService<IExternalToolLocator>());
         services.AddSingleton(_app.GetRequiredService<ITherionCompiler>());
         services.AddSingleton<IWorkspaceHost>(_ => new LiveWorkspaceHost(_session, _app.GetRequiredService<IUnsavedBufferProvider>(), bridge));
+        // A run_build step of a thconfig with `system` lines asks the folder's trust, as the agent's does.
+        services.AddSingleton<IBuildApproval>(new TrustBuildApproval(_trust));
         services.AddToolServices();
         return new ToolDispatcher(services.BuildServiceProvider(), McpProfile.Full, includeUi: true);
     }

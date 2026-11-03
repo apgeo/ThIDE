@@ -129,10 +129,24 @@ public sealed class WorkspaceSemanticModel
     public StationSymbol? ResolveStationSymbol(string raw)
     {
         if (string.IsNullOrWhiteSpace(raw)) return null;
-        var r = StationRef.Parse(raw.Trim());
-        if (r.SurveyLastName is { } sl &&
-            StationsBySurveyAndPoint.TryGetValue(SurveyPointKey(sl, r.Point), out var byKey)) return byKey;
-        return StationsByQn.TryGetValue(r.StationQuery, out var byQn) ? byQn : null;
+        return FindStation(StationRef.Parse(raw.Trim()), StationsByQn, StationsBySurveyAndPoint);
+    }
+
+    /// <summary>
+    /// The station <paramref name="r"/> names: the exact full path first (<c>1@ent.c2</c> →
+    /// <c>c2.ent.1</c>), so the outer surveys of an <c>@</c> path pick between same-named sub-surveys;
+    /// then the innermost survey's last name, which is all a file input under a parent of unknown path
+    /// can match (its stations are indexed relative to its own root).
+    /// </summary>
+    private static StationSymbol? FindStation(
+        StationRef r,
+        FrozenDictionary<string, StationSymbol> byQn,
+        FrozenDictionary<string, StationSymbol> bySurveyAndPoint)
+    {
+        if (byQn.TryGetValue(r.StationQuery, out var exact)) return exact;
+        return r.SurveyLastName is { } sl && bySurveyAndPoint.TryGetValue(SurveyPointKey(sl, r.Point), out var byKey)
+            ? byKey
+            : null;
     }
 
     /// <summary>
@@ -205,8 +219,19 @@ public sealed class WorkspaceSemanticModel
         IReadOnlyDictionary<string, ParseResult<TherionFile>> parsedFiles,
         IReadOnlyCollection<XviFile> xviFiles,
         System.Func<string, bool>? fileExists = null)
+        => Build(parsedFiles, xviFiles, fileExists, System.StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// As the overload above (which keys paths case-insensitively), with the comparer the snapshot's paths are keyed by (<see cref="PerFile"/> and the include
+    /// resolution), so a case-sensitive file system keeps `Cave.th` and `cave.th` apart.
+    /// </summary>
+    public static WorkspaceSemanticModel Build(
+        IReadOnlyDictionary<string, ParseResult<TherionFile>> parsedFiles,
+        IReadOnlyCollection<XviFile> xviFiles,
+        System.Func<string, bool>? fileExists,
+        System.StringComparer pathComparer)
     {
-        var perFile = new Dictionary<string, SemanticModel>(System.StringComparer.OrdinalIgnoreCase);
+        var perFile = new Dictionary<string, SemanticModel>(pathComparer);
         var allDiags = ImmutableArray.CreateBuilder<Diagnostic>();
         var graphEdges = ImmutableArray.CreateBuilder<FileGraphEdge>();
         var th2Files = new List<TherionFile>();
@@ -220,7 +245,7 @@ public sealed class WorkspaceSemanticModel
         // is absent (never loaded, or typed just now) falls back to the plain `.th` default, exactly
         // what this resolved to before. Keys are normalized because test snapshots use verbatim
         // paths while SourceGraph yields full paths.
-        var loaded = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
+        var loaded = new HashSet<string>(pathComparer);
         foreach (var p in parsedFiles.Keys)
         {
             try { loaded.Add(System.IO.Path.GetFullPath(p)); }
@@ -252,7 +277,7 @@ public sealed class WorkspaceSemanticModel
         allDiags.AddRange(xvi.Diagnostics);
         foreach (var edge in xvi.FileGraphEdges) graphEdges.Add(edge);
 
-        var frozenPerFile = perFile.ToFrozenDictionary(System.StringComparer.OrdinalIgnoreCase);
+        var frozenPerFile = perFile.ToFrozenDictionary(pathComparer);
         var idx = ReferenceIndexBuilder.Build(frozenPerFile.Values, th2Files);
 
         return new WorkspaceSemanticModel(
@@ -298,12 +323,7 @@ public sealed class WorkspaceSemanticModel
             // declaring file indexed it under) so the link isn't orphaned by a rename.
             foreach (var uref in model.UnresolvedEquateRefs)
             {
-                var r = StationRef.Parse(uref.Raw.Trim());
-                StationSymbol? sym =
-                    r.SurveyLastName is { } sl &&
-                    idx.StationsBySurveyAndPoint.TryGetValue(SurveyPointKey(sl, r.Point), out var a) ? a
-                    : idx.StationsByQn.TryGetValue(r.StationQuery, out var b2) ? b2
-                    : null;
+                var sym = FindStation(StationRef.Parse(uref.Raw.Trim()), idx.StationsByQn, idx.StationsBySurveyAndPoint);
                 if (sym is { } s)
                 {
                     Add(new SymbolOccurrence(
@@ -394,14 +414,7 @@ public sealed class WorkspaceSemanticModel
     }
 
     private SourceSpan? ResolveStation(StationRef r)
-    {
-        if (r.SurveyLastName is { } surveyLast &&
-            StationsBySurveyAndPoint.TryGetValue(SurveyPointKey(surveyLast, r.Point), out var byKey))
-            return byKey.DeclarationSpan;
-        if (StationsByQn.TryGetValue(r.StationQuery, out var byQn))
-            return byQn.DeclarationSpan;
-        return null;
-    }
+        => FindStation(r, StationsByQn, StationsBySurveyAndPoint)?.DeclarationSpan;
 
     private SourceSpan? ResolveMap(StationRef r)
         => MapsById.TryGetValue(r.Point, out var m) ? m.DeclarationSpan : null;
@@ -442,6 +455,11 @@ public sealed class WorkspaceSemanticModel
         {
             if (!string.Equals(to, full, System.StringComparison.OrdinalIgnoreCase)) continue;
             if (!PerFile.TryGetValue(from, out var model)) continue;
+            // A survey's full path first, so two same-named sub-surveys are told apart; the survey's
+            // last name only when no survey of the file holds the station under its full path.
+            foreach (var sv in model.Surveys.Values)
+                if (StationsByQn.TryGetValue(string.Concat(sv.Name.ToString(), ".", stationName), out var exact))
+                    return exact;
             foreach (var sv in model.Surveys.Values)
             {
                 if (StationsBySurveyAndPoint.TryGetValue(

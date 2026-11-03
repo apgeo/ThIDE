@@ -110,7 +110,8 @@ public interface IDocumentService
     /// <summary>
     /// Reopens a buffer recovered after a crash as a dirty document holding <paramref name="text"/>:
     /// over the file when it can be opened (past the binary/huge-file guard, which the user had already
-    /// overridden), otherwise on its own, so the recovered text is never dropped.
+    /// overridden), otherwise on its own, so the recovered text is never dropped. When the file is already
+    /// open with different unsaved edits, those are kept and the recovered text opens beside them.
     /// </summary>
     Task<FileDocumentViewModel> OpenRecoveredAsync(string path, string text, CancellationToken ct = default);
     /// <summary>Raised after a document was written to disk by Save, Save All or auto-save (the argument is its path).</summary>
@@ -380,7 +381,7 @@ public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, 
 
     // Paths being read by an open, so an overlapping open of the same file joins it (keyed like FindOpen).
     private readonly System.Collections.Generic.Dictionary<string, Task<FileDocumentViewModel?>> _loading =
-        new(StringComparer.OrdinalIgnoreCase);
+        new(FilePaths.Comparer);
 
     private void ShowOpened(FileDocumentViewModel doc)
     {
@@ -391,6 +392,15 @@ public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, 
 
     public async Task<FileDocumentViewModel> OpenRecoveredAsync(string path, string text, CancellationToken ct = default)
     {
+        // Already open with unsaved edits made since the restart: those are newer, so they are kept and the
+        // recovered text opens beside them as its own unsaved document, for the user to compare and merge.
+        if (FindOpen(path) is { IsDirty: true } edited)
+        {
+            if (edited.DocumentText == text) return edited;
+            var side = OpenTextDocument(RecoveredCopyPath(path), string.Empty);
+            side.DocumentText = text;
+            return side;
+        }
         if (File.Exists(path))
         {
             // Any failure (unreadable, permissions, a parse that throws) falls through: the text must not be dropped.
@@ -402,6 +412,19 @@ public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, 
         var doc = FindOpen(path) ?? OpenTextDocument(path, string.Empty);
         doc.DocumentText = text;
         return doc;
+    }
+
+    /// <summary>A free "&lt;name&gt;.recovered[.n]&lt;ext&gt;" next to <paramref name="path"/>: not on disk, not open.</summary>
+    private string RecoveredCopyPath(string path)
+    {
+        var dir = Path.GetDirectoryName(path) ?? string.Empty;
+        var stem = Path.GetFileNameWithoutExtension(path);
+        var ext = Path.GetExtension(path);
+        for (int n = 1; ; n++)
+        {
+            var candidate = Path.Combine(dir, n == 1 ? $"{stem}.recovered{ext}" : $"{stem}.recovered.{n}{ext}");
+            if (!File.Exists(candidate) && FindOpen(candidate) is null) return candidate;
+        }
     }
 
     public async Task OpenFolderAsync(string folderPath, CancellationToken ct = default)
@@ -726,10 +749,11 @@ public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, 
             return false;
         }
         // Mark the path so the watcher doesn't treat our own save as an external edit (#6).
-        var target = LinkTargetOf(doc.FilePath);
+        // A symlinked source is saved into the file it points to, so that is the path the watcher sees change.
+        var target = SourceFileIo.LinkTargetOf(doc.FilePath);
         _session.SuppressSelfWrite(doc.FilePath);
         if (!string.Equals(target, doc.FilePath, StringComparison.Ordinal)) _session.SuppressSelfWrite(target);
-        try { await Task.Run(() => WriteSource(target, bytes), ct).ConfigureAwait(true); }
+        try { await Task.Run(() => SourceFileIo.WriteOver(target, bytes), ct).ConfigureAwait(true); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             _notifications?.Error(ThIDE.Resources.Tr.Get("Notif_SaveFailedTitle"),
@@ -738,40 +762,6 @@ public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, 
         }
         doc.Format = format;
         return true;
-    }
-
-    // A symlinked source is saved into the file it points to, so the link and the file it shares survive.
-    private static string LinkTargetOf(string path)
-    {
-        try
-        {
-            var info = new FileInfo(path);
-            return info.LinkTarget is null ? path : info.ResolveLinkTarget(returnFinalTarget: true)?.FullName ?? path;
-        }
-        catch (IOException) { return path; }
-    }
-
-    /// <summary>
-    /// Replaces the file through a temporary sibling and a move, so a full disk, a dropped volume or a
-    /// kill mid-write leaves the old contents whole instead of truncated. The file keeps its permissions,
-    /// a read-only file still refuses the save, and a folder that does not allow the temporary file gets
-    /// the in-place write instead.
-    /// </summary>
-    private static void WriteSource(string path, byte[] bytes)
-    {
-        if (!File.Exists(path)) { SourceFileIo.WriteOver(path, bytes); return; }
-
-        // The move would replace a read-only file regardless of its mode: check the file is writable first.
-        using (new FileStream(path, FileMode.Open, FileAccess.Write, FileShare.ReadWrite)) { }
-        UnixFileMode? mode = null;
-        if (!OperatingSystem.IsWindows()) mode = File.GetUnixFileMode(path);
-        try { SourceFileIo.WriteOver(path, bytes); }
-        catch (UnauthorizedAccessException)
-        {
-            File.WriteAllBytes(path, bytes);   // the folder refused the temporary file; the file itself is writable
-            return;
-        }
-        if (!OperatingSystem.IsWindows() && mode is { } m) File.SetUnixFileMode(path, m);
     }
 
     private FileDocumentViewModel CreateDocument(string path, string text)

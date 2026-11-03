@@ -99,6 +99,12 @@ public interface IUiBridge
     /// <summary>Runs the shell command with id <paramref name="commandId"/> (a <c>ShellCommandIds</c> token). The caller has already checked the allowlist.</summary>
     Task<UiActionResult> RunCommandAsync(string commandId) => Unsupported();
 
+    /// <summary>
+    /// The file the IDE's Build command would compile right now (the active editor's thconfig, else the
+    /// project's), or null when the host cannot say; run_command then checks the workspace's entry point.
+    /// </summary>
+    Task<string?> GetBuildEntryAsync() => Task.FromResult<string?>(null);
+
     /// <summary>Saves every open file that has unsaved changes.</summary>
     Task<UiActionResult> SaveAllAsync() => Unsupported();
 

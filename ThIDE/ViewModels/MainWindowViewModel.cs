@@ -866,7 +866,8 @@ public partial class MainWindowViewModel : ViewModelBase
         new StructuralStereonetToolViewModel(new StructuralGeologyViewModel()),
         new AssistantToolViewModel(),
         new BlenderAnimationToolViewModel(new BlenderAnimationViewModel()),
-        new SettingsToolViewModel(new SettingsViewModel(), new KeyboardShortcutsViewModel()));
+        new SettingsToolViewModel(new SettingsViewModel(), new KeyboardShortcutsViewModel()),
+        layoutPath: System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ThIDE-design", "dock-layout.json"));
 
     /// <summary>Wires the storage picker once the View is attached to a TopLevel.</summary>
     public void AttachStoragePicker(IStoragePicker picker) => _picker = picker;
@@ -987,10 +988,15 @@ public partial class MainWindowViewModel : ViewModelBase
         if (_crashRecovery is null) return;
         var recoverable = _crashRecovery.GetRecoverable();
         if (recoverable.Count == 0) return;
-        OnUiThread(() => _notifications.Warning(
+        // The copies stay (a clean exit keeps them) until the user restores or discards them. The toast and
+        // its history entry stay clickable, so only the first of the two actions does anything.
+        bool handled = false;
+        OnUiThread(() => _notifications.Post(new AppNotification(
             Tr.Get("Notif_RecoveredTitle"),
             string.Format(Tr.Get("Notif_RecoveredMsg"), recoverable.Count),
-            Tr.Get("Notif_Restore"), () => _ = RecoverBuffersAsync(recoverable)));
+            NotificationKind.Warning,
+            Tr.Get("Notif_Restore"), () => { if (handled) return; handled = true; _ = RecoverBuffersAsync(recoverable); },
+            Tr.Get("Notif_DiscardRecovered"), () => { if (handled) return; handled = true; _crashRecovery?.ClearRecovery(); })));
     }
 
     private async Task RecoverBuffersAsync(System.Collections.Generic.IReadOnlyList<RecoveredBuffer> buffers)

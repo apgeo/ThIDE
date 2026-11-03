@@ -1,9 +1,11 @@
 // The whitelist of application settings the MCP ring-R3 get_setting/set_setting tools may touch
-// (T-03.5). Deliberately small and safe: editor/diagnostics/build/theme/language preferences a caver
+// (T-03.5). Deliberately small and safe: editor/diagnostics/theme/language preferences a caver
 // might reasonably ask the assistant to flip. It never exposes anything with security or privilege
 // weight — EnableMcpServer, McpFollowAgent (the agent must not grant itself UI control), telemetry,
-// hooks, plugins are all absent. Pure: AppSettings in, a modified AppSettings (or an error) out — no
-// UI, no dispatcher — so it is unit-tested directly.
+// hooks, plugins are all absent, and so is compile-on-save: with it on, the agent's save_all would
+// start a build without the system-command approval run_build and run_command ask for. Pure:
+// AppSettings in, a modified AppSettings (or an error) out — no UI, no dispatcher — so it is
+// unit-tested directly.
 
 using System;
 using System.Collections.Generic;
@@ -36,8 +38,6 @@ public static class McpSettingKeys
             s => s.EditorShowWhitespace, (s, b) => s with { EditorShowWhitespace = b }),
         Number("editor.fontSize", "Editor font size in points (6–48).", 6, 48,
             s => s.EditorFontSize, (s, d) => s with { EditorFontSize = d }),
-        Bool("build.compileOnSave", "Rebuild the active project a moment after each save.",
-            s => s.CompileOnSave, (s, b) => s with { CompileOnSave = b }),
         Bool("diagnostics.workspaceScope",
             "Show project-wide diagnostics (all files + cross-file analysis) rather than only the active file's.",
             s => s.DiagnosticsWorkspaceScope, (s, b) => s with { DiagnosticsWorkspaceScope = b }),

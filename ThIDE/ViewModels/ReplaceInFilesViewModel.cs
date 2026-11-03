@@ -370,20 +370,11 @@ public sealed partial class ReplaceInFilesViewModel : ViewModelBase
         if (string.IsNullOrWhiteSpace(dir) || !System.IO.Directory.Exists(dir)) yield break;
         var patterns = mask.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         if (patterns.Length == 0) patterns = DefaultMask.Split(';');
-        var options = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true };
+        // Not into symlinked folders: a link in a shared project would make Replace All rewrite files
+        // outside the directory the user chose.
         foreach (var pattern in patterns)
-        {
-            IEnumerator<string> found;
-            try { found = System.IO.Directory.EnumerateFiles(dir, pattern, options).GetEnumerator(); }
-            catch { continue; }
-            using (found)
-                while (true)
-                {
-                    try { if (!found.MoveNext()) break; }
-                    catch { break; }
-                    yield return found.Current;
-                }
-        }
+            foreach (var file in ProjectFileWalk.EnumerateFiles(dir, pattern))
+                yield return file;
     }
 
     private static string? ReadFile(string path)

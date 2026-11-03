@@ -124,14 +124,12 @@ public static class AppEnvironmentInfo
     {
         try
         {
+            // Only the cavern installed beside aven: a bare name would be looked up in ThIDE's working
+            // directory first on Windows, which may be a project folder.
             var dir = Path.GetDirectoryName(avenPath);
-            string cavern = "cavern"; // PATH fallback
-            if (!string.IsNullOrEmpty(dir))
-            {
-                var candidate = Path.Combine(dir, OperatingSystem.IsWindows() ? "cavern.exe" : "cavern");
-                if (File.Exists(candidate)) cavern = candidate;
-            }
-            return await RunVersionAsync(cavern, "--version", ct).ConfigureAwait(false);
+            if (string.IsNullOrEmpty(dir)) return null;
+            var cavern = Path.Combine(dir, OperatingSystem.IsWindows() ? "cavern.exe" : "cavern");
+            return File.Exists(cavern) ? await RunVersionAsync(cavern, "--version", ct).ConfigureAwait(false) : null;
         }
         catch { return null; }
     }

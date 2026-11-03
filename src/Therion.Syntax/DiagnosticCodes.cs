@@ -8,6 +8,7 @@ public static class DiagnosticCodes
 {
     // -- Lexer / parser core ----------------------------------------------
     public const string UnexpectedToken          = "TH0002";
+    public const string UnterminatedString       = "TH0003";  // "… with no closing quote on its line
     public const string UnknownCommand           = "TH0010";
     public const string PluginHandlerFailed      = "TH0012";
 

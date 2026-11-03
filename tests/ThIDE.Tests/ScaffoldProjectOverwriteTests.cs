@@ -1,4 +1,5 @@
 using Therion.Workspace.Import;
+using ThIDE.Services;
 using ThIDE.ViewModels;
 
 namespace ThIDE.Tests;
@@ -26,7 +27,7 @@ public class ScaffoldProjectOverwriteTests
             const string edited = "# keep: user layouts and extra exports live here\n";
             File.WriteAllText(thconfig, edited);
 
-            var vm = new MainWindowViewModel();
+            var vm = MainWindowViewModelHost.Create(new NullDocumentService());
             var options = new ScaffoldOptions
             {
                 ProjectName = "demo",

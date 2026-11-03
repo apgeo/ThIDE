@@ -62,22 +62,17 @@ public sealed class ThconfigParser
                 {
                     var commandStart = tok;
                     int lineEnd = i + 1;
+                    // A LineContinuation token already holds its line break, so the command simply
+                    // runs on to the next NewLine token.
                     while (lineEnd < tokens.Length &&
                            tokens[lineEnd].Kind != TherionTokenKind.NewLine)
-                    {
-                        if (tokens[lineEnd].Kind == TherionTokenKind.LineContinuation &&
-                            lineEnd + 1 < tokens.Length)
-                        {
-                            lineEnd += 2;
-                            continue;
-                        }
                         lineEnd++;
-                    }
 
                     var keyword = commandStart.Text;
                     var fullSpan = SpanFromTo(commandStart, tokens[lineEnd - 1]);
                     var rawArgs = ExtractRawArguments(sourceText, tokens, i + 1, lineEnd);
                     var lineTokens = CollectSignificant(tokens, i, lineEnd);
+                    TherionStrings.ReportUnterminated(lineTokens, diagnostics);
 
                     // Bare `source … endsource` (no filename on the opener) is the inline-source
                     // multi-line form (thbook §source): its body is inline Therion data, not a file
@@ -205,8 +200,7 @@ public sealed class ThconfigParser
         return sb.ToString();
     }
 
-    private static string Unquote(string s) =>
-        s.Length >= 2 && s[0] == '"' && s[^1] == '"' ? s[1..^1] : s;
+    private static string Unquote(string s) => TherionStrings.Unquote(s);
 
     /// <summary>
     /// Dispatches the typed (non-traversal) .thconfig commands. Returns null for keywords that
@@ -393,6 +387,11 @@ public sealed class ThconfigParser
             endOffset - startOffset);
     }
 
+    /// <summary>
+    /// The source text of the tokens in <c>[startIndex, endIndexExclusive)</c>, without the
+    /// backslash continuations: Therion joins a continued line to the next one before reading
+    /// its arguments (thinput.cxx), so <c>source a.th \</c> + <c>b.th</c> names two files.
+    /// </summary>
     private static string ExtractRawArguments(
         string source, ImmutableArray<TherionToken> tokens, int startIndex, int endIndexExclusive)
     {
@@ -400,6 +399,18 @@ public sealed class ThconfigParser
         int s = tokens[startIndex].Span.StartOffset;
         var last = tokens[endIndexExclusive - 1].Span;
         int e = last.StartOffset + last.Length;
-        return source.Substring(s, e - s).Trim();
+
+        System.Text.StringBuilder? joined = null;
+        int copied = s;
+        for (int k = startIndex; k < endIndexExclusive; k++)
+        {
+            if (tokens[k].Kind != TherionTokenKind.LineContinuation) continue;
+            joined ??= new System.Text.StringBuilder(e - s);
+            joined.Append(source, copied, tokens[k].Span.StartOffset - copied);
+            copied = tokens[k].Span.StartOffset + tokens[k].Span.Length;
+        }
+        if (joined is null) return source.Substring(s, e - s).Trim();
+        joined.Append(source, copied, e - copied);
+        return joined.ToString().Trim();
     }
 }

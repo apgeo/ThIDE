@@ -5,7 +5,8 @@
 //      present at the next launch, the previous run did not exit cleanly → the app starts in
 //      SAFE MODE (skips the riskier float-window layout restore) so a bad layout can't brick it.
 //   2. Periodic autosave of the *unsaved* editor buffers into a recovery folder (+ a manifest).
-//      After a crash these survive and are offered back to the user; a clean shutdown clears them.
+//      After a crash these survive and are offered back to the user until restored or dismissed; a
+//      clean shutdown clears only that run's own copies.
 //
 // Stored under %AppData%/ThIDE/ (XDG fallback on POSIX), mirroring the other JSON services.
 //
@@ -37,8 +38,9 @@ public interface ICrashRecoveryService
 
     /// <summary>Records that the app is now running; detects a leftover sentinel from a crashed run.</summary>
     void MarkRunning();
-    /// <summary>Records a clean shutdown: removes the sentinel and clears the recovery folder — unless
-    /// <paramref name="keepRecovery"/> is set, for an exit that could not ask about unsaved buffers.</summary>
+    /// <summary>Records a clean shutdown: removes the sentinel and clears this run's own recovery copies —
+    /// unless <paramref name="keepRecovery"/> is set, for an exit that could not ask about unsaved buffers.
+    /// Copies left by crashed runs stay until <see cref="ClearRecovery"/> (restored or dismissed).</summary>
     void MarkCleanShutdown(bool keepRecovery = false);
 
     /// <summary>Writes the given unsaved buffers to the recovery folder (only the changed ones).</summary>
@@ -119,7 +121,13 @@ public sealed class CrashRecoveryService : ICrashRecoveryService
         try { _lock?.Dispose(); } catch { /* best-effort */ }
         _lock = null;
         TryDelete(_sentinel);
-        if (!keepRecovery) ClearRecovery();
+        if (keepRecovery) return;
+        // Only this run's folder: a crashed run's copies that were offered but not restored or
+        // dismissed are offered again at the next start.
+        _lastHash.Clear();
+        _bufferFiles.Clear();
+        try { if (Directory.Exists(_dir)) Directory.Delete(_dir, recursive: true); }
+        catch (Exception ex) { _logger?.LogWarning(ex, "Failed to clear recovery folder."); }
     }
 
     public void SaveBuffers(IEnumerable<(string Path, string Text)> dirty)
