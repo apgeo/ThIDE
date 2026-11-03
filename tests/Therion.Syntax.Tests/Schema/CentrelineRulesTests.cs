@@ -27,7 +27,7 @@ public class CentrelineRulesTests
     [InlineData("data normal from to length compass clino")]
     [InlineData("data normal from to tape bearing gradient")]                  // aliases
     [InlineData("data topofil from to fromcount tocount compass clino")]       // topofil ≡ normal
-    [InlineData("data diving from to length bearing depth")]
+    [InlineData("data diving from to length bearing fromdepth todepth")]
     [InlineData("data cylpolar from to tape compass depthchange")]
     [InlineData("data cartesian from to easting northing altitude")]
     [InlineData("data cartesian from to dx dy dz")]

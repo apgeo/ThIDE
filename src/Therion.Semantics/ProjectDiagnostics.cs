@@ -139,8 +139,8 @@ public static class ProjectDiagnostics
 
     private static void ForeBack(ShotSymbol shot, ProjectDiagnosticOptions o, ImmutableArray<Diagnostic>.Builder diags)
     {
-        var fore = Reading(shot, "compass", "bearing");
-        var back = Reading(shot, "backcompass", "backbearing");
+        var fore = Reading(shot, shot.CompassUnit, "compass", "bearing");
+        var back = Reading(shot, shot.CompassUnit, "backcompass", "backbearing");
         if (fore is { } fc && back is { } bc)
         {
             double diff = Math.Abs(NormalizeDeg(bc - (fc + 180)));
@@ -150,8 +150,8 @@ public static class ProjectDiagnostics
                     $"(fore {Fmt(fc)}, back {Fmt(bc)}, expected ~{Fmt(NormalizeDeg(fc + 180))}).", shot.Span));
         }
 
-        var foreI = Reading(shot, "clino", "gradient");
-        var backI = Reading(shot, "backclino", "backgradient");
+        var foreI = Reading(shot, shot.ClinoUnit, "clino", "gradient");
+        var backI = Reading(shot, shot.ClinoUnit, "backclino", "backgradient");
         if (foreI is { } fi && backI is { } bi)
         {
             double diff = Math.Abs(bi - (-fi));
@@ -533,15 +533,18 @@ public static class ProjectDiagnostics
 
     private static Vec3 Negate(Vec3 v) => new(-v.E, -v.N, -v.Z);
 
-    /// <summary>Reads a numeric reading from a shot's source row by field name(s), if present.</summary>
-    private static double? Reading(ShotSymbol shot, params string[] names)
+    /// <summary>Reads a numeric angle reading from a shot's source row by field name(s), in degrees.</summary>
+    private static double? Reading(ShotSymbol shot, AngleUnit unit, params string[] names)
     {
         if (shot.SourceRow is not { } row || shot.FieldDefinition is not { } data) return null;
         for (int i = 0; i < data.Fields.Length && i < row.Values.Length; i++)
         {
             foreach (var name in names)
                 if (string.Equals(data.Fields[i], name, StringComparison.OrdinalIgnoreCase))
-                    return double.TryParse(row.Values[i], NumberStyles.Float, CultureInfo.InvariantCulture, out var d) ? d : null;
+                {
+                    if (!double.TryParse(row.Values[i], NumberStyles.Float, CultureInfo.InvariantCulture, out var d)) return null;
+                    return unit == AngleUnit.Degree ? d : UnitConverter.Instance.ToDegrees(new Angle(d, unit));
+                }
         }
         return null;
     }

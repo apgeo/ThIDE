@@ -177,7 +177,8 @@ public static class DataStyles
                 $"Too many readings ({readings.Length}); Therion allows at most {MaxReadings}."));
 
         var seen = new HashSet<string>(StringComparer.Ordinal);
-        bool station = false, from = false, to = false, newline = false;
+        bool station = false, from = false, to = false, newline = false, depth = false;
+        bool length = false, count = false, fromToCount = false, fromToDepth = false;
 
         for (int i = 0; i < readings.Length; i++)
         {
@@ -201,6 +202,29 @@ public static class DataStyles
                     "'station' (interleaved) cannot be mixed with 'from'/'to'."));
                 continue;
             }
+            // length/count vs fromcount/tocount and depth/fromdepth+todepth are alternatives (thdata.cxx err_duplicate/err_inimm).
+            bool conflict = canon switch
+            {
+                "length" or "count" => fromToCount,
+                "fromcount" or "tocount" => length || count,
+                "depth" => fromToDepth,
+                "fromdepth" or "todepth" => depth,
+                _ => false,
+            };
+            if (conflict)
+            {
+                problems.Add(new(OrderProblemKind.Duplicate, i,
+                    $"Reading '{readings[i]}' cannot be combined with the other length/count or depth readings in this order."));
+                continue;
+            }
+            switch (canon)
+            {
+                case "length": length = true; break;
+                case "count": count = true; break;
+                case "fromcount" or "tocount": fromToCount = true; break;
+                case "depth": depth = true; break;
+                case "fromdepth" or "todepth": fromToDepth = true; break;
+            }
             switch (canon)
             {
                 case "station": station = true; break;
@@ -218,7 +242,7 @@ public static class DataStyles
             }
 
             // Interleaved-only readings must precede `newline` in the header part.
-            if (newline && canon is "station" or "up" or "down" or "left" or "right")
+            if (newline && canon is "station" or "count" or "depth" or "up" or "down" or "left" or "right")
             {
                 problems.Add(new(OrderProblemKind.InterleavedMix, i,
                     $"Interleaved reading '{readings[i]}' cannot appear after 'newline'."));
@@ -251,9 +275,10 @@ public static class DataStyles
             problems.Add(new(OrderProblemKind.Incomplete, -1,
                 $"Not all data for the '{style.ToString().ToLowerInvariant()}' style: missing {missing}."));
 
-        // Interleaved orders (station + newline): non-interleaved readings must come AFTER
-        // the newline (thdata.cxx:1551 second pass — "non-interleaved data before newline").
-        if (station && newline)
+        // Interleaved orders (station or depth): non-interleaved readings must come AFTER the
+        // newline, or there must be none (thdata.cxx:1551 second pass — "non-interleaved data
+        // before newline"; without a newline the pass runs to the end of the order).
+        if (station || depth)
         {
             for (int i = 0; i < readings.Length; i++)
             {

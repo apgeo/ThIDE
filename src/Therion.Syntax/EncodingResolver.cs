@@ -76,7 +76,11 @@ public static class EncodingResolver
                 if (line.Length >= 9 && line[..8].ToString().Equals("encoding", StringComparison.OrdinalIgnoreCase)
                     && char.IsWhiteSpace(line[8]))
                 {
-                    var name = line[8..].Trim().ToString();
+                    // Therion splits arguments and stops at '#', so a trailing comment is legal.
+                    var rest = line[8..].ToString();
+                    int hash = rest.IndexOf('#');
+                    if (hash >= 0) rest = rest[..hash];
+                    var name = rest.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries) is { Length: > 0 } w ? w[0] : string.Empty;
                     return TryGetEncoding(name);
                 }
                 // First non-comment, non-encoding line: stop looking.
