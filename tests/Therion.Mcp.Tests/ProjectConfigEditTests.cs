@@ -49,4 +49,71 @@ public class ProjectConfigEditTests
         }
         Assert.False(Directory.Exists(config));
     }
+
+    [Theory]
+    [InlineData(".THIDE/hooks.json")]
+    [InlineData(".Thide/tasks.json")]
+    public async Task The_config_folder_is_protected_in_any_case(string relative)
+    {
+        // On a case-insensitive volume (macOS, Windows) this is the real hooks file; on a
+        // case-sensitive one refusing it costs nothing, so the guard ignores case everywhere.
+        using var fixture = FixtureWorkspace.CreateBroken();
+        Directory.CreateDirectory(Path.Combine(fixture.Root, ".thide"));
+        var host = new WorkspaceHost();
+        await host.LoadAsync(fixture.Thconfig);
+
+        var result = await new MutationEngine(host).ApplyAsync(
+            new MutationPlan([new WriteFile(Path.Combine(fixture.Root, relative), "{}")]), dryRun: false);
+
+        Assert.False(result.Ok, $"a write to {relative} was accepted");
+        Assert.Equal(ToolErrorCodes.ProtectedPath, result.Error!.Code);
+    }
+
+    [Fact]
+    public async Task A_link_to_the_config_folder_does_not_lead_into_it()
+    {
+        using var fixture = FixtureWorkspace.CreateBroken();
+        var config = Path.Combine(fixture.Root, ".thide");
+        Directory.CreateDirectory(config);
+        var hooksPath = Path.Combine(config, "hooks.json");
+        File.WriteAllText(hooksPath, "{}");
+        var link = Path.Combine(fixture.Root, "settings");
+        if (!TryLinkDirectory(link, config)) return;   // unprivileged Windows: nothing to prove
+        var host = new WorkspaceHost();
+        await host.LoadAsync(fixture.Thconfig);
+
+        var result = await new MutationEngine(host).ApplyAsync(
+            new MutationPlan([new WriteFile(Path.Combine(link, "hooks.json"), "{ \"pwned\": true }")]), dryRun: false);
+
+        Assert.False(result.Ok, "a write through a link to .thide/ was accepted");
+        Assert.Equal(ToolErrorCodes.ProtectedPath, result.Error!.Code);
+        Assert.Equal("{}", File.ReadAllText(hooksPath));
+    }
+
+    [Fact]
+    public async Task A_config_folder_that_is_a_link_protects_its_target()
+    {
+        // The hooks are read from wherever .thide points, so that folder is the protected one.
+        using var fixture = FixtureWorkspace.CreateBroken();
+        var shared = Path.Combine(fixture.Root, "shared-config");
+        Directory.CreateDirectory(shared);
+        var hooksPath = Path.Combine(shared, "hooks.json");
+        File.WriteAllText(hooksPath, "{}");
+        if (!TryLinkDirectory(Path.Combine(fixture.Root, ".thide"), shared)) return;
+        var host = new WorkspaceHost();
+        await host.LoadAsync(fixture.Thconfig);
+
+        var result = await new MutationEngine(host).ApplyAsync(
+            new MutationPlan([new WriteFile(hooksPath, "{ \"pwned\": true }")]), dryRun: false);
+
+        Assert.False(result.Ok, "a write to the folder .thide links to was accepted");
+        Assert.Equal(ToolErrorCodes.ProtectedPath, result.Error!.Code);
+        Assert.Equal("{}", File.ReadAllText(hooksPath));
+    }
+
+    private static bool TryLinkDirectory(string link, string target)
+    {
+        try { Directory.CreateSymbolicLink(link, target); return true; }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or PlatformNotSupportedException) { return false; }
+    }
 }

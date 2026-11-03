@@ -2161,7 +2161,7 @@ public partial class MainWindow : Window
             ["split3"]        = vm.ApplySplitLayout3Command,
             ["multi-monitor"] = vm.ApplyMultiMonitorLayoutCommand,
         };
-        bridge.ConnectShell(BuildShellCommandMap(vm), vm.SaveAllDirtyAsync, layoutPresets);
+        bridge.ConnectShell(BuildShellCommandMap(vm), vm.SaveAllDirtyAsync, layoutPresets, vm.Build.ResolveBuildEntry);
     }
 
     private void RebuildKeyBindings(MainWindowViewModel vm, IKeyboardShortcutService shortcuts)

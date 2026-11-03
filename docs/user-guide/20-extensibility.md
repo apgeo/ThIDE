@@ -159,7 +159,10 @@ and `end-of-trip` (import a Survex/Compass export, then the warnings).
 **One tool from a shell.** `therion-mcp call <tool> --workspace cave.thconfig --arg key=value` (or
 `--args '{"key": …}'`, `--args-file f.json`) calls a single tool and prints its JSON result; the exit
 code is 1 when the tool reports a failure. `therion-mcp call --list` names the tools. Tools that change
-files still preview unless you pass `dryRun=false` (or `write=true` for `format_file`).
+files still preview unless you pass `dryRun=false` (or `write=true` for `format_file`). A `run_build`
+of a thconfig with `system` lines (shell commands Therion runs) is refused from the terminal unless
+you add `--allow-system-commands`, to `call` or to `macro run`; inside ThIDE it asks whether you trust
+the folder instead.
 
 **Trust.** Commands from a project only run once you trust its folder: the first time something
 would run, ThIDE names the folder and asks. Your answer is remembered; **Settings → Extensions →

@@ -78,12 +78,8 @@ public sealed class BuildTools(IWorkspaceHost host, ITherionCompiler compiler, I
         }
 
         // `system` lines run shell commands; the host decides whether this build may run them.
-        if (SystemCommandsOf(target, snapshot.Root) is { Count: > 0 } commands
-            && !await (approval ?? AllowAllBuildApproval.Instance).ApproveSystemCommandsAsync(snapshot.Root, target, commands, ct))
-            return Fail(ToolErrorCodes.NotTrusted,
-                $"'{WorkspacePaths.ToRelative(snapshot.Root, target)}' runs {commands.Count} system command(s) "
-                + "while it builds, and the user has not trusted this folder to run commands. Nothing was run. "
-                + "Ask the user to build it themselves, or to trust the folder.");
+        if (await CheckSystemCommandsAsync(approval, snapshot.Root, target, ct) is { } declined)
+            return ToolResult<BuildResult>.Failure(declined);
 
         var lines = new List<CompilerOutputLine>();
         int reported = 0;
@@ -168,6 +164,23 @@ public sealed class BuildTools(IWorkspaceHost host, ITherionCompiler compiler, I
             .ToList();
 
         return ([.. interesting, .. tail], interesting.Count + tail.Count < said.Count);
+    }
+
+    /// <summary>
+    /// Null when a build of <paramref name="entryPoint"/> may start: it runs no <c>system</c> commands,
+    /// or <paramref name="approval"/> allows them. Otherwise the <c>not_trusted</c> error to return
+    /// instead of building. Every agent route to a build goes through this (run_build, and run_command's
+    /// Build and Rebuild); no approval registered means no one agreed, so the build is refused.
+    /// </summary>
+    internal static async Task<ToolError?> CheckSystemCommandsAsync(
+        IBuildApproval? approval, string root, string entryPoint, CancellationToken ct)
+    {
+        if (SystemCommandsOf(entryPoint, root) is not { Count: > 0 } commands) return null;
+        approval ??= RefuseSystemCommandsBuildApproval.Instance;
+        if (await approval.ApproveSystemCommandsAsync(root, entryPoint, commands, ct).ConfigureAwait(false)) return null;
+        var name = WorkspacePaths.IsInside(root, entryPoint) ? WorkspacePaths.ToRelative(root, entryPoint) : entryPoint;
+        return new ToolError(ToolErrorCodes.NotTrusted,
+            $"'{name}' runs {commands.Count} system command(s) while it builds. Nothing was run. {approval.DeclinedReason}");
     }
 
     /// <summary>

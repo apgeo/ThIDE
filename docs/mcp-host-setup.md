@@ -83,6 +83,22 @@ therion-mcp --profile full     # everything (the default)
 the server's tool list at all, so no amount of persuasion — or prompt injection inside a `.th` file —
 can make a model call it. If you are pointing a local model at a project you care about, start here.
 
+## System commands
+
+A thconfig can contain `system` lines: shell commands Therion runs while it builds. A model with the
+write tools can add such a line and then ask for a build, so `run_build` refuses to compile a thconfig
+that has one (or that pulls in, with `input`, a config fragment that has one). It answers `not_trusted`
+and runs nothing.
+
+```bash
+therion-mcp --workspace /caves/pestera/project.thconfig --allow-system-commands
+```
+
+`--allow-system-commands` lifts that refusal for the whole session. Add it only for a project you trust,
+whose `system` lines you have read. `therion-mcp call` and `therion-mcp macro run` accept the same option.
+Inside ThIDE there is no option: an agent's build of such a thconfig asks whether you trust the folder,
+the same question hooks and tasks ask.
+
 ## Building
 
 ```bash
@@ -254,6 +270,8 @@ List-returning tools page with `offset`/`limit` and report `total` plus `truncat
   written, and rolled back if a later write fails. Files keep their encoding, including a `.th` that
   declares `encoding iso-8859-1`; a character that encoding cannot hold stops the write instead of
   quietly becoming `?`.
+- **No shell commands unasked.** A build whose thconfig has `system` lines is refused unless the server
+  was started with `--allow-system-commands` (see [System commands](#system-commands)).
 - **Creates never overwrite.** The scaffolds and `import_survey` refuse an existing target.
 - **Path jail.** Every path argument is canonicalized — symlinks and `..` resolved, component by
   component — and refused if it leaves the workspace root. `load_workspace` is the sole exception:
@@ -274,6 +292,9 @@ NOAA download. The error message names the three paths the server searches; put 
 
 **`run_build` says `tool_not_found`.** Therion itself is not installed, or not where the server looks:
 the configured override, then the usual install locations, then `PATH`.
+
+**`run_build` says `not_trusted`.** The thconfig, or a fragment it pulls in with `input`, has `system`
+lines. Build it yourself, or restart the server with `--allow-system-commands` if you trust the project.
 
 **A writing tool is missing from the list.** You started the server with `--profile data`. That is the
 profile doing its job.

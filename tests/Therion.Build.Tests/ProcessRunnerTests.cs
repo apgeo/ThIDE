@@ -84,4 +84,14 @@ public class ProcessRunnerTests
 
         Assert.Equal(value, lines.Seen.Single().Text);
     }
+
+    [Fact]
+    public void The_windows_shell_is_started_by_full_path_and_ignores_the_working_directory()
+    {
+        if (!OperatingSystem.IsWindows()) return; // CreateProcess and cmd's lookup order are Windows-only
+        var psi = ProcessRunner.StartInfo(new ProcessSpec("python x.py", [], WorkingDirectory: Path.GetTempPath(), UseShell: true));
+
+        Assert.True(Path.IsPathRooted(psi.FileName), $"cmd started by bare name '{psi.FileName}'");
+        Assert.Equal("1", psi.Environment["NoDefaultCurrentDirectoryInExePath"]);
+    }
 }
