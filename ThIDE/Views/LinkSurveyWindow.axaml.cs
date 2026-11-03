@@ -14,6 +14,8 @@ public partial class LinkSurveyWindow : Window
     public LinkSurveyWindow(LinkSurveyViewModel model)
     {
         InitializeComponent();
+        this.ClampOnOpen();
+        this.FocusOnOpen("FirstInput");
         DataContext = model;
         if (model is null) return;
         model.CopyRequested += async (_, text) =>

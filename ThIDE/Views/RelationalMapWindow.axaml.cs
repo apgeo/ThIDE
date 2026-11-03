@@ -8,5 +8,6 @@ public partial class RelationalMapWindow : Window
     public RelationalMapWindow()
     {
         AvaloniaXamlLoader.Load(this);
+        this.ClampOnOpen();
     }
 }

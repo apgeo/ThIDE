@@ -13,6 +13,7 @@ public partial class ReplaceWindow : Window
     public ReplaceWindow()
     {
         InitializeComponent();
+        this.ClampOnOpen();
         // Seeding (selection → Find All, or previous query) + status reset is done by the opener via
         // PrepareForOpenAsync; here we just move focus to the Find box.
         Opened += (_, _) => this.FindControl<TextBox>("QueryBox")?.Focus();

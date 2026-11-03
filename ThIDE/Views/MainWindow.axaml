@@ -12,7 +12,7 @@
         mc:Ignorable="d" d:DesignWidth="1300" d:DesignHeight="800"
         x:Class="ThIDE.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Width="1300" Height="800"
+        Width="1300" Height="800" MinWidth="900" MinHeight="560"
         Icon="/Assets/thide.ico"
         AutomationProperties.AutomationId="MainWindow.Window"
         Title="{Binding Title}">
@@ -718,7 +718,7 @@
 
         <!-- Status bar (#10): transient messages on the left; open-file metrics on the right,
              grouped with thin separators. The full path is capped at 65% of the window width. -->
-        <Border AutomationProperties.AutomationId="StatusBar.Panel" DockPanel.Dock="Bottom" BorderBrush="Gray" BorderThickness="0,1,0,0" Padding="6,2">
+        <Border x:Name="StatusBarPanel" AutomationProperties.AutomationId="StatusBar.Panel" DockPanel.Dock="Bottom" BorderBrush="Gray" BorderThickness="0,1,0,0" Padding="6,2">
             <Border.Styles>
                 <!-- Build spinner animation for the status bar (#4). -->
                 <Style Selector="PathIcon.buildSpinner">

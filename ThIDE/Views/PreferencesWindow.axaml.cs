@@ -22,32 +22,7 @@ public partial class PreferencesWindow : Window
     protected override void OnOpened(EventArgs e)
     {
         base.OnOpened(e);
-        ClampToCurrentScreen();
-    }
-
-    private void ClampToCurrentScreen()
-    {
-        var screen = Screens?.ScreenFromWindow(this)
-                     ?? Screens?.ScreenFromPoint(Position)
-                     ?? Screens?.Primary;
-        if (screen is null) return;
-
-        double scale = screen.Scaling <= 0 ? 1 : screen.Scaling;
-        // WorkingArea excludes the taskbar; convert its physical pixels to the window's DIPs.
-        double availW = screen.WorkingArea.Width / scale;
-        double availH = screen.WorkingArea.Height / scale;
-        const double margin = 24;
-
-        double w = Math.Min(Width, Math.Max(MinWidth, availW - margin));
-        double h = Math.Min(Height, Math.Max(MinHeight, availH - margin));
-        if (h < Height) Height = h;   // height especially: keep it inside the screen bounds
-        if (w < Width) Width = w;
-
-        // Nudge back on-screen if centring pushed an edge past the working area.
-        double left = screen.WorkingArea.X / scale, top = screen.WorkingArea.Y / scale;
-        double x = Math.Max(left, Math.Min(Position.X / scale, left + availW - Width));
-        double y = Math.Max(top, Math.Min(Position.Y / scale, top + availH - Height));
-        Position = new Avalonia.PixelPoint((int)(x * scale), (int)(y * scale));
+        this.ClampToWorkArea();
     }
 
     // Esc closes the window (Cancel). A child that consumes Esc first — e.g. the gesture-capture
