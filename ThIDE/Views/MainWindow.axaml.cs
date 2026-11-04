@@ -750,93 +750,32 @@ public partial class MainWindow : Window
     }
 
     // ----- fixes ----------------------------------------------------------------
+    // Planned, previewed and applied by ProjectFixesService; the window shows the dialogs.
 
-    /// <summary>A file's current text: the editor buffer when open, else the file by its encoding.</summary>
-    private static string? CurrentText(IDocumentService? docs, string path)
+    private ProjectFixesService? _fixes;
+
+    private ProjectFixesService Fixes => _fixes ??= new ProjectFixesService(
+        AppServices.Provider.GetService<IDocumentService>(),
+        AppServices.Provider.GetService<IWorkspaceSession>(),
+        AppServices.Provider.GetService<IWorkspaceEditService>(),
+        AppServices.Provider.GetService<INotificationService>(),
+        AppServices.Provider.GetService<IWorkspaceUndoService>(),
+        AppServices.Provider.GetService<IAppSettingsService>(),
+        ShowEditPreviewAsync);
+
+    /// <summary>Shows a batch's preview; true when the user chose to apply the ticked edits.</summary>
+    private async System.Threading.Tasks.Task<bool> ShowEditPreviewAsync(EditPreviewViewModel preview)
     {
-        var doc = docs?.Documents.FirstOrDefault(d => Therion.Workspace.Editing.FilePaths.Same(d.FilePath, path));
-        if (doc is not null) return doc.DocumentText;
-        return File.Exists(path) ? Therion.Syntax.EncodingResolver.ReadAllText(path) : null;
+        var window = new EditPreviewWindow(preview);
+        await window.ShowDialog(this);
+        return window.Confirmed;
     }
 
     /// <summary>Applies the first fix for one diagnostic (Diagnostics panel ▸ Fix).</summary>
-    private async System.Threading.Tasks.Task FixOneAsync(Therion.Core.Diagnostic d)
-    {
-        var docs = AppServices.Provider.GetService<IDocumentService>();
-        if (d.Span.FilePath is not { Length: > 0 } path || CurrentText(docs, path) is not { } text) return;
-        // This diagnostic's own fix only (an unrelated fix on the same line is not "fixing" it).
-        var fix = Therion.Workspace.Fixes.CodeFixes.ForDiagnostic(text, d)
-                  ?? Therion.Workspace.Fixes.CodeFixes.ForLine(text, d.Span.Start.Line, [d]).FirstOrDefault(f => f.DiagnosticCode == d.Code.Value);
-        if (fix is null)
-        {
-            AppServices.Provider.GetService<INotificationService>()?.Info(ThIDE.Resources.Tr.Get("Diag_Fix"), ThIDE.Resources.Tr.Get("Diag_NoFix"));
-            return;
-        }
-        var batch = new Therion.Workspace.Editing.EditBatch([new(path, fix.Edits)], [], []);
-        // A fix that cannot tell where it belongs (an end inserted after a flat block body) is shown first.
-        if (!fix.SafeForBatch)
-        {
-            await PreviewAndApplyAsync(ThIDE.Resources.Tr.Get("Diag_Fix"), ThIDE.Resources.Tr.Get("Diag_FixCheck"), batch);
-            return;
-        }
-        if (AppServices.Provider.GetService<IWorkspaceEditService>() is not { } editor) return;
-        var outcome = await editor.ApplyAsync(batch);
-        if (!outcome.Success) AppServices.Provider.GetService<INotificationService>()?.Warning(ThIDE.Resources.Tr.Get("Diag_Fix"), outcome.Describe());
-    }
+    private System.Threading.Tasks.Task FixOneAsync(Therion.Core.Diagnostic d) => Fixes.FixOneAsync(d);
 
     /// <summary>Diagnostics panel ▸ Fix all '<code>': every safe fix for that code, previewed, then applied.</summary>
-    private async System.Threading.Tasks.Task FixAllAsync(MainWindowViewModel vm, string code)
-    {
-        var docs = AppServices.Provider.GetService<IDocumentService>();
-        var notifications = AppServices.Provider.GetService<INotificationService>();
-        // The diagnostics' line numbers are from the last check: an open file edited since may have
-        // moved them, so such files must be saved (and re-checked) first.
-        var dirty = vm.Diagnostics.All.Where(d => d.Code.Value == code && d.Span.FilePath is { } f
-                && docs?.Documents.Any(x => x.IsDirty && Therion.Workspace.Editing.FilePaths.Same(x.FilePath, f)) == true)
-            .Select(d => Path.GetFileName(d.Span.FilePath)).Distinct().ToList();
-        if (dirty.Count > 0)
-        {
-            notifications?.Warning(string.Format(ThIDE.Resources.Tr.Get("Diag_FixAll"), code), string.Format(ThIDE.Resources.Tr.Get("Diag_FixAllSaveFirst"), string.Join(", ", dirty)));
-            return;
-        }
-        var (batch, fixedCount, skipped) = Therion.Workspace.Fixes.FixAll.Plan(code, vm.Diagnostics.All, p => CurrentText(docs, p));
-        if (fixedCount == 0)
-        {
-            notifications?.Info(string.Format(ThIDE.Resources.Tr.Get("Diag_FixAll"), code), ThIDE.Resources.Tr.Get("Diag_FixAllNone"));
-            return;
-        }
-        await PreviewAndApplyAsync(string.Format(ThIDE.Resources.Tr.Get("Diag_FixAll"), code),
-            string.Format(ThIDE.Resources.Tr.Get("Diag_FixAllSummary"), ThIDE.Resources.Tr.Plural("Count_Fixes", fixedCount), ThIDE.Resources.Tr.Plural("Rename_Files", batch.Edits.Count), skipped), batch, reload: true);
-    }
-
-    /// <summary>Shows a preview of a batch and applies the ticked edits (one undo step per open file).</summary>
-    private async System.Threading.Tasks.Task<bool> PreviewAndApplyAsync(string title, string summary, Therion.Workspace.Editing.EditBatch batch,
-        IReadOnlyList<Therion.Workspace.Fixes.EditPreviewRow>? rows = null, bool reload = false, bool allOrNothing = false)
-    {
-        var docs = AppServices.Provider.GetService<IDocumentService>();
-        rows ??= Therion.Workspace.Fixes.FixAll.Preview(batch, p => CurrentText(docs, p));
-        var preview = new EditPreviewViewModel(title, summary, batch, rows, AppServices.Provider.GetService<IWorkspaceSession>()?.RootPath, allOrNothing);
-        var window = new EditPreviewWindow(preview);
-        await window.ShowDialog(this);
-        if (!window.Confirmed || preview.IsEmpty || AppServices.Provider.GetService<IWorkspaceEditService>() is not { } editor) return false;
-        var outcome = await editor.ApplyAsync(preview.Chosen());
-        // Closed files change on disk without a re-parse: reload when the diagnostics must follow. Not
-        // through the batch's own reload flag, which also refuses files with unsaved changes — right for
-        // a batch that adds an input, wrong for one that only edits text.
-        if (outcome.Success && reload && AppServices.Provider.GetService<IWorkspaceSession>() is { ActiveThconfig: { } active } session)
-            await session.SetActiveThconfigAsync(active.FullPath);
-        var n = AppServices.Provider.GetService<INotificationService>();
-        if (outcome.Success)
-        {
-            var done = ThIDE.Resources.Tr.Plural("Diag_FixAllDone", preview.CheckedCount);
-            // One undo step for every file written; the record's notification offers it.
-            if (AppServices.Provider.GetService<IWorkspaceUndoService>() is { } history && outcome.Changes is { Count: > 0 } changes)
-                history.Push(new WorkspaceUndoRecord(WorkspaceUndoRecord.OperationName(title), done, changes));
-            else n?.Success(title, done);
-        }
-        else n?.Warning(title, outcome.Describe());
-        return outcome.Success;
-    }
+    private System.Threading.Tasks.Task FixAllAsync(MainWindowViewModel vm, string code) => Fixes.FixAllAsync(code, vm.Diagnostics.All);
 
     /// <summary>Tools ▸ Suggest equates: pick a close pair and open Link survey file on it.</summary>
     private async System.Threading.Tasks.Task SuggestEquatesAsync()
@@ -850,132 +789,40 @@ public partial class MainWindow : Window
     }
 
     /// <summary>Tools ▸ Format all files: every project file through the formatter, previewed first.</summary>
-    private async System.Threading.Tasks.Task FormatAllAsync()
-    {
-        var docs = AppServices.Provider.GetService<IDocumentService>();
-        if (docs?.Workspace is not { } ws) return;
-        var files = ProjectSourceFiles(ws);
-        // The editor's Format Document: a re-indent that never reorders or drops anything.
-        var unit = IndentUnitSetting();
-        var (batch, rows, skipped) = Therion.Workspace.Fixes.FormatAll.PlanShowingChanges(files, p => CurrentText(docs, p), Therion.Workspace.Fixes.LineEndings.Keep,
-            t => Therion.Workspace.Formatting.TherionReindenter.Format(t, unit), EditPreviewViewModel.DescribeFormatChange);
-        var title = ThIDE.Resources.Tr.Get("Menu_Tools_FormatAll");
-        // An empty plan still opens the preview, which then says "Nothing to change in N files".
-        var summary = batch.IsEmpty
-            ? EditPreviewViewModel.NothingToChange(CountFiles(files) - skipped.Count, skipped.Count)
-            : EditPreviewViewModel.ChangeSummary("FormatAll_Summary", rows.Count, skipped.Count);
-        await PreviewAndApplyAsync(title, summary, batch, rows, reload: true);
-    }
+    private System.Threading.Tasks.Task FormatAllAsync() => Fixes.FormatAllAsync();
 
-    private static int CountFiles(IEnumerable<string> files) => files.Distinct(Therion.Workspace.Editing.FilePaths.Comparer).Count();
-
-    private static string IndentUnitSetting()
-    {
-        var settings = AppServices.Provider.GetService<IAppSettingsService>()?.Current;
-        return Therion.Workspace.Formatting.TherionReindenter.IndentUnit(settings is { ConvertTabsToSpaces: false }, settings?.IndentationSize ?? 2);
-    }
-
-    /// <summary>The project's Therion sources: every parsed file and every file the include graph names.</summary>
-    private static List<string> ProjectSourceFiles(Therion.Semantics.WorkspaceSemanticModel ws) =>
-        ws.PerFile.Keys
-            .Concat(ws.FileGraphEdges.SelectMany(e => new[] { e.From, e.To }))
-            .Where(f => f.EndsWith(".th", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".th2", StringComparison.OrdinalIgnoreCase)
-                     || f.EndsWith(".thconfig", StringComparison.OrdinalIgnoreCase))
-            .ToList();
-
-    /// <summary>
-    /// The path-separator banner's workspace button: every include path in the workspace written with
-    /// Windows '\' separators that '/' turns into an existing file, previewed, then rewritten.
-    /// </summary>
-    private async System.Threading.Tasks.Task FixPathSeparatorsInWorkspaceAsync(string requestingFile)
-    {
-        var docs = AppServices.Provider.GetService<IDocumentService>();
-        var files = new List<string> { requestingFile };
-        if (docs?.Workspace is { } ws) files.AddRange(ProjectSourceFiles(ws));
-        // Files outside the project graph too: a broken include may be what cut them off from it.
-        files.AddRange(TherionFilesUnder(AppServices.Provider.GetService<IWorkspaceSession>()?.RootPath));
-        var (batch, rows) = Therion.Workspace.Fixes.PathSeparatorFixes.Plan(files, p => CurrentText(docs, p), File.Exists);
-        var title = ThIDE.Resources.Tr.Get("PathSep_Title");
-        if (batch.IsEmpty) { AppServices.Provider.GetService<INotificationService>()?.Info(title, ThIDE.Resources.Tr.Get("PathSep_None")); return; }
-        await PreviewAndApplyAsync(title, string.Format(ThIDE.Resources.Tr.Get("PathSep_Summary"), ThIDE.Resources.Tr.Plural("Count_IncludePaths", rows.Count), ThIDE.Resources.Tr.Plural("Rename_Files", batch.Edits.Count)), batch, rows, reload: true);
-    }
-
-    /// <summary>Every .th / .th2 / thconfig file below <paramref name="root"/> (none when it is unset).</summary>
-    private static IEnumerable<string> TherionFilesUnder(string? root)
-    {
-        if (string.IsNullOrEmpty(root) || !Directory.Exists(root)) return [];
-        var opts = new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true };
-        try
-        {
-            return Directory.EnumerateFiles(root, "*", opts).Where(f =>
-                Path.GetExtension(f).ToLowerInvariant() is ".th" or ".th2" or ".thconfig" or ".thc"
-                || string.Equals(Path.GetFileName(f), "thconfig", StringComparison.OrdinalIgnoreCase)).ToList();
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return []; }
-    }
+    /// <summary>The path-separator banner's workspace button (see <see cref="ProjectFixesService.FixPathSeparatorsAsync"/>).</summary>
+    private System.Threading.Tasks.Task FixPathSeparatorsInWorkspaceAsync(string requestingFile) => Fixes.FixPathSeparatorsAsync(requestingFile);
 
     /// <summary>Tools ▸ Normalise project: Format all plus line endings, UTF-8 and sorted inputs, previewed first.</summary>
     private async System.Threading.Tasks.Task NormalizeProjectAsync()
     {
-        var docs = AppServices.Provider.GetService<IDocumentService>();
-        if (docs?.Workspace is not { } ws) return;
+        if (Fixes.Workspace is not { } ws) return;
         var model = new NormalizeProjectViewModel();
         var window = new NormalizeProjectWindow(model);
         await window.ShowDialog(this);
         if (!window.Confirmed) return;
-        var options = model.Options(IndentUnitSetting());
-        var title = ThIDE.Resources.Tr.Get("Menu_Tools_Normalize");
-        if (options.IsEmpty) return;
-        var files = ProjectSourceFiles(ws);
-        var (batch, rows, skipped) = Therion.Workspace.Fixes.ProjectNormalize.PlanShowingChanges(files, p => CurrentText(docs, p), options,
-            EditPreviewViewModel.DescribeFormatChange);
-        var summary = batch.IsEmpty
-            ? EditPreviewViewModel.NothingToChange(CountFiles(files) - skipped.Count, skipped.Count)
-            : EditPreviewViewModel.ChangeSummary("Normalize_Summary", rows.Count, skipped.Count);
-        await PreviewAndApplyAsync(title, summary, batch, rows, reload: true);
+        await Fixes.NormalizeAsync(ws, model.Options(Fixes.IndentUnit()));
     }
 
     /// <summary>Tools ▸ Renumber stations: a new prefix or a number shift for a survey's stations, previewed, all or nothing.</summary>
     private async System.Threading.Tasks.Task RenumberStationsAsync()
     {
-        var docs = AppServices.Provider.GetService<IDocumentService>();
-        if (docs?.Workspace is not { SurveysByFullName.Count: > 0 } ws)
-        {
-            AppServices.Provider.GetService<INotificationService>()?.Info(ThIDE.Resources.Tr.Get("Menu_Tools_Renumber"), ThIDE.Resources.Tr.Get("Renumber_NoSurveys"));
-            return;
-        }
-        var model = new RenumberStationsViewModel(ws, p => CurrentText(docs, p));
+        if (Fixes.PrepareRenumber() is not { } model) return;
         var window = new RenumberStationsWindow(model);
         await window.ShowDialog(this);
         if (!window.Confirmed || model.Plan is not { Ok: true } plan) return;
-        // One row per changed line, showing the line as it will read (a shot line renames two stations).
-        var rows = Therion.Workspace.Fixes.FixAll.PreviewByLine(plan.Batch, p => CurrentText(docs, p));
-        await PreviewAndApplyAsync(ThIDE.Resources.Tr.Get("Menu_Tools_Renumber"), model.Summary, plan.Batch, rows, reload: true, allOrNothing: true);
+        await Fixes.RenumberAsync(plan, model.Summary);
     }
 
     /// <summary>Tools ▸ Add unreferenced scraps to maps.</summary>
     private async System.Threading.Tasks.Task SyncMapsAsync()
     {
-        var docs = AppServices.Provider.GetService<IDocumentService>();
-        var n = AppServices.Provider.GetService<INotificationService>();
-        var title = ThIDE.Resources.Tr.Get("Menu_Tools_SyncMaps");
-        if (docs?.Workspace is not { } ws) return;
-        var model = new SyncMapsViewModel(ws, AppServices.Provider.GetService<IWorkspaceSession>()?.RootPath);
-        if (model.Rows.Count == 0 || !model.HasMaps) { n?.Info(title, ThIDE.Resources.Tr.Get(model.Rows.Count == 0 ? "SyncMaps_Nothing" : "SyncMaps_NoMaps")); return; }
+        if (Fixes.Workspace is not { } ws || Fixes.PrepareSyncMaps(ws) is not { } model) return;
         var window = new SyncMapsWindow(model);
         await window.ShowDialog(this);
         if (!window.Confirmed) return;
-
-        var cache = new Dictionary<string, Therion.Syntax.TherionFile?>(Therion.Workspace.Editing.FilePaths.Comparer);
-        Therion.Syntax.TherionFile? Ast(string p) => cache.TryGetValue(p, out var a) ? a
-            : cache[p] = p.EndsWith(".th", StringComparison.OrdinalIgnoreCase) && CurrentText(docs, p) is { } t ? new Therion.Syntax.ThParser().Parse(p, t).Value : null;
-        var scopes = Therion.Semantics.Linking.SurveyScopeResolver.Build(ws, Ast);
-        var (batch, problems) = Therion.Workspace.Fixes.MapSync.Plan(ws, scopes, model.Assignments(), p => CurrentText(docs, p), Ast);
-        var summary = problems.Count == 0 ? ThIDE.Resources.Tr.Get("SyncMaps_Summary")
-            : ThIDE.Resources.Tr.Get("SyncMaps_Summary") + " " + string.Format(ThIDE.Resources.Tr.Get("SyncMaps_Problems"),
-                string.Join(", ", problems.Select(p => $"{p.Map} ({ThIDE.Resources.Tr.Get("SyncMaps_" + p.Problem)})")));
-        if (batch.IsEmpty) { n?.Warning(title, summary); return; }
-        await PreviewAndApplyAsync(title, summary, batch, reload: true);
+        await Fixes.SyncMapsAsync(ws, model);
     }
 
     /// <summary>An arrived (or dropped) file: link a survey, or import Survex/Compass/GPX first.</summary>
