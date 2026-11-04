@@ -50,6 +50,8 @@ public partial class BookmarksWindow : Window
 
     private void OnNavigateClick(object? sender, RoutedEventArgs e) => NavigateSelected();
 
+    private void OnCloseClick(object? sender, RoutedEventArgs e) => Close();
+
     private void OnDoubleTapped(object? sender, Avalonia.Input.TappedEventArgs e) => NavigateSelected();
 
     private void NavigateSelected()

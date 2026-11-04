@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using Avalonia;
 
 namespace ThIDE.Services;
 
@@ -62,9 +64,31 @@ public static class WindowFit
     /// <param name="windowBottom">Bottom edge of the window in screen DIPs.</param>
     /// <param name="workAreaBottom">Bottom edge of the work area in screen DIPs.</param>
     /// <param name="statusBarHeight">Height of the status bar the toasts must clear.</param>
-    public static double ToastBottomMargin(double windowBottom, double workAreaBottom, double statusBarHeight)
+    /// <param name="tabStripClearance">
+    /// Distance from the bottom of the window to the top of the tool tab strip the toasts must clear
+    /// (see <see cref="TabStripClearance"/>); it already includes the status bar, so the larger of the two wins.
+    /// </param>
+    public static double ToastBottomMargin(double windowBottom, double workAreaBottom, double statusBarHeight,
+                                           double tabStripClearance = 0)
     {
         double overflow = Math.Max(0, windowBottom - workAreaBottom);
-        return overflow + Math.Max(0, statusBarHeight) + 8;
+        return overflow + Math.Max(Math.Max(0, statusBarHeight), Math.Max(0, tabStripClearance)) + 8;
+    }
+
+    /// <summary>
+    /// How far up from the bottom of a window of height <paramref name="hostHeight"/> the toasts must start
+    /// to stay clear of the tool tab strips under them: the distance to the top of the lowest strip that
+    /// reaches into the toast column (its right edge is past <paramref name="toastLeft"/>) and sits in the
+    /// lower half of the window. Strips are in window coordinates. 0 when none is in the way.
+    /// </summary>
+    public static double TabStripClearance(double hostHeight, double toastLeft, IEnumerable<Rect> strips)
+    {
+        Rect? lowest = null;
+        foreach (var s in strips)
+        {
+            if (s.Width <= 0 || s.Height <= 0 || s.Right <= toastLeft || s.Bottom <= hostHeight / 2) continue;
+            if (lowest is null || s.Bottom > lowest.Value.Bottom) lowest = s;
+        }
+        return lowest is { } l ? Math.Max(0, hostHeight - l.Top) : 0;
     }
 }

@@ -6,7 +6,12 @@ namespace ThIDE.Views;
 
 public partial class NormalizeProjectWindow : Window
 {
-    public NormalizeProjectWindow() => InitializeComponent();
+    public NormalizeProjectWindow()
+    {
+        InitializeComponent();
+        this.FocusOnOpen("FirstInput");
+    }
+
     public NormalizeProjectWindow(NormalizeProjectViewModel model) : this() => DataContext = model;
 
     /// <summary>True when the user went on to the preview.</summary>

@@ -8,6 +8,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
+using Avalonia.VisualTree;
 using Microsoft.Extensions.DependencyInjection;
 using Therion.Processing.Abstractions;
 using ThIDE.Services;
@@ -1842,12 +1843,27 @@ public partial class MainWindow : Window
     private double ToastBottomMargin()
     {
         double statusHeight = this.FindControl<Border>("StatusBarPanel")?.Bounds.Height ?? 0;
+        double tabStrips = ToolTabStripClearance();
         var screen = Screens?.ScreenFromWindow(this) ?? Screens?.Primary;
-        if (screen is null) return WindowFit.ToastBottomMargin(0, 0, statusHeight);
+        if (screen is null) return WindowFit.ToastBottomMargin(0, 0, statusHeight, tabStrips);
         double scale = screen.Scaling <= 0 ? 1 : screen.Scaling;
         double windowBottom = Position.Y / scale + Bounds.Height;
         double workBottom = (screen.WorkingArea.Y + screen.WorkingArea.Height) / scale;
-        return WindowFit.ToastBottomMargin(windowBottom, workBottom, statusHeight);
+        return WindowFit.ToastBottomMargin(windowBottom, workBottom, statusHeight, tabStrips);
+    }
+
+    // The tool docks put their tab strips along the bottom edge of the dock area, right where the
+    // bottom-right toasts stack up: measure them so the toasts start above, not on top of, the tabs.
+    private double ToolTabStripClearance()
+    {
+        const double toastColumnWidth = 400;
+        var strips = new List<Rect>();
+        foreach (var strip in this.GetVisualDescendants().OfType<Dock.Avalonia.Controls.ToolTabStrip>())
+        {
+            if (!strip.IsVisible || strip.TranslatePoint(default, this) is not { } origin) continue;
+            strips.Add(new Rect(origin, strip.Bounds.Size));
+        }
+        return WindowFit.TabStripClearance(Bounds.Height, Bounds.Width - toastColumnWidth, strips);
     }
 
     // ----- "open with" / file association ------------------------

@@ -1,6 +1,7 @@
 using System;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using ThIDE.Services;
 
 namespace ThIDE.Views;
@@ -55,7 +56,20 @@ public static class WindowFitting
     /// <summary>Clamps the window to the screen once it is shown.</summary>
     public static void ClampOnOpen(this Window window) => window.Opened += (_, _) => window.ClampToWorkArea();
 
-    /// <summary>Moves keyboard focus to the named control when the window opens, so typing works at once.</summary>
+    /// <summary>
+    /// Moves keyboard focus to the named control when the window opens, so typing works at once. A list
+    /// box is not focusable itself (its rows are), so focus goes to its selected row, or the first one
+    /// once the rows exist.
+    /// </summary>
     public static void FocusOnOpen(this Window window, string controlName) =>
-        window.Opened += (_, _) => window.FindControl<Control>(controlName)?.Focus();
+        window.Opened += (_, _) =>
+        {
+            var target = window.FindControl<Control>(controlName);
+            if (target is SelectingItemsControl { Focusable: false } list)
+                Avalonia.Threading.Dispatcher.UIThread.Post(
+                    () => list.ContainerFromIndex(Math.Max(0, list.SelectedIndex))?.Focus(),
+                    Avalonia.Threading.DispatcherPriority.Loaded);
+            else
+                target?.Focus();
+        };
 }

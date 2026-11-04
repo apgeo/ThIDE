@@ -2802,7 +2802,7 @@ public partial class TherionTextEditor : UserControl
     {
         if (TopLevel.GetTopLevel(this) is not Window owner) return;
 
-        var ok = new Button { Content = "OK", IsDefault = true, HorizontalAlignment = HorizontalAlignment.Right };
+        var ok = new Button { Content = "OK", IsDefault = true, IsCancel = true, HorizontalAlignment = HorizontalAlignment.Right };
         var dialog = new Window
         {
             Title = title,
