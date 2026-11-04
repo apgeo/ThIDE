@@ -15,7 +15,8 @@ public enum DiagnosticSeverity
 
 /// <summary>
 /// A culture-invariant diagnostic code (e.g., <c>TH0007</c>, <c>TH_XVI_001</c>).
-/// Codes never change once shipped; localized messages are looked up by code.
+/// Codes never change once shipped. <see cref="Diagnostic.Message"/> and <see cref="Diagnostic.Hint"/>
+/// are English; a UI that shows them in another language keys its own translations by code.
 /// See <c>docs/diagnostics.md</c> for the catalog.
 /// </summary>
 public readonly record struct DiagnosticCode(string Value)

@@ -1749,4 +1749,177 @@ Aplici modificările? Pașii care nu au putut fi previzualizați rulează acum.<
   <data name="File_NotInActiveThconfigNoName" xml:space="preserve"><value>Nu face parte din thconfig-ul activ.</value></data>
   <data name="File_NotTheActiveThconfig" xml:space="preserve"><value>Nu este thconfig-ul activ (cel activ este {0}).</value></data>
   <data name="File_MakeActiveThconfig" xml:space="preserve"><value>Setați ca thconfig activ</value></data>
+  <data name="Diag_Sev_Error" xml:space="preserve"><value>Eroare</value></data>
+  <data name="Diag_Sev_Warning" xml:space="preserve"><value>Avertisment</value></data>
+  <data name="Diag_Sev_Info" xml:space="preserve"><value>Informație</value></data>
+  <data name="Diag_Sev_Hint" xml:space="preserve"><value>Sugestie</value></data>
+  <data name="Diag_Msg_TH0002" xml:space="preserve"><value>Simbol neașteptat „{0}”.</value></data>
+  <data name="Diag_Msg_TH0003" xml:space="preserve"><value>Șirului îi lipsesc ghilimelele de închidere; se termină la sfârșitul liniei.</value></data>
+  <data name="Diag_Hint_TH0003" xml:space="preserve"><value>Închideți șirul cu ". Scrieți "" pentru un caracter ghilimele în interiorul lui.</value></data>
+  <data name="Diag_Msg_TH0010" xml:space="preserve"><value>Comandă necunoscută „{0}”.</value></data>
+  <data name="Diag_Msg_TH0010__th2" xml:space="preserve"><value>Comandă .th2 necunoscută „{0}”.</value></data>
+  <data name="Diag_Msg_TH0010__thconfig" xml:space="preserve"><value>Comandă de nivel superior necunoscută „{0}”.</value></data>
+  <data name="Diag_Hint_TH0010" xml:space="preserve"><value>Se așteaptă una dintre: {0}</value></data>
+  <data name="Diag_Msg_TH0012" xml:space="preserve"><value>Rutina comenzii „{0}” a eșuat: {1}</value></data>
+  <data name="Diag_Msg_TH0020" xml:space="preserve"><value>Blocului „{0}” îi lipsește terminatorul „{1}”.</value></data>
+  <data name="Diag_Msg_TH0021" xml:space="preserve"><value>Se aștepta „{0}” pentru a închide „{1}”, dar s-a găsit „{2}”.</value></data>
+  <data name="Diag_Msg_TH0030" xml:space="preserve"><value>„fix” necesită o stație și coordonatele x y z.</value></data>
+  <data name="Diag_Msg_TH0030__axis" xml:space="preserve"><value>Coordonata {0} „{1}” din „fix” nu este un număr.</value></data>
+  <data name="Diag_Msg_TH0031" xml:space="preserve"><value>„equate” necesită cel puțin două stații.</value></data>
+  <data name="Diag_Msg_TH0032" xml:space="preserve"><value>„data” necesită cel puțin numele unui stil.</value></data>
+  <data name="Diag_Msg_TH0033" xml:space="preserve"><value>Stil de date necunoscut „{0}”.</value></data>
+  <data name="Diag_Hint_TH0033" xml:space="preserve"><value>Se așteaptă unul dintre: {0}</value></data>
+  <data name="Diag_Msg_TH0034" xml:space="preserve"><value>Citire de date necunoscută „{0}”.</value></data>
+  <data name="Diag_Msg_TH0036" xml:space="preserve"><value>Ordinea citirilor din „data” nu are „from”/„to” (sau „station”) pentru a identifica vizele.</value></data>
+  <data name="Diag_Msg_TH0037" xml:space="preserve"><value>„{0}” nu este nici o comandă centreline validă, nici un rând de date (o viză are nevoie de cel puțin două coloane).</value></data>
+  <data name="Diag_Msg_TH0038" xml:space="preserve"><value>„sd” așteaptă „&lt;mărime…&gt; &lt;valoare&gt; &lt;unitate&gt;” (de ex. „sd length 0.05 metres”).</value></data>
+  <data name="Diag_Msg_TH0039" xml:space="preserve"><value>„{0}” necesită o valoare numerică.</value></data>
+  <data name="Diag_Msg_TH0040" xml:space="preserve"><value>Mărime necunoscută pentru unități „{0}”.</value></data>
+  <data name="Diag_Msg_TH0040__name" xml:space="preserve"><value>„units” necesită numele unei unități (de ex. metres, degrees).</value></data>
+  <data name="Diag_Msg_TH0041" xml:space="preserve"><value>„calibrate” necesită o valoare a erorii de zero.</value></data>
+  <data name="Diag_Msg_TH0042" xml:space="preserve"><value>„declination” necesită o valoare numerică (sau o listă datată, ori „-” pentru dezactivare).</value></data>
+  <data name="Diag_Msg_TH0042__units" xml:space="preserve"><value>O declinație numerică necesită unități unghiulare (de ex. „declination 2.5 degrees”).</value></data>
+  <data name="Diag_Msg_TH0043" xml:space="preserve"><value>Sistem de coordonate necunoscut „{0}”.</value></data>
+  <data name="Diag_Hint_TH0043" xml:space="preserve"><value>Folosiți UTM&lt;zonă&gt;, EPSG:&lt;n&gt;, lat-long, S-MERC, …</value></data>
+  <data name="Diag_Msg_TH0056" xml:space="preserve"><value>„infer” așteaptă „&lt;plumbs|equates&gt; &lt;on|off&gt;”.</value></data>
+  <data name="Diag_Msg_TH0050" xml:space="preserve"><value>Identificatorul de topografie „{0}” conține caracterul nepermis „{1}”.</value></data>
+  <data name="Diag_Msg_TH0050__scrap" xml:space="preserve"><value>Identificatorul de schiță „{0}” conține caracterul nepermis „{1}”.</value></data>
+  <data name="Diag_Msg_TH0050__map" xml:space="preserve"><value>Identificatorul de hartă „{0}” conține caracterul nepermis „{1}”.</value></data>
+  <data name="Diag_Msg_TH0050__identifier" xml:space="preserve"><value>Identificatorul „{0}” conține caracterul nepermis „{1}”.</value></data>
+  <data name="Diag_Msg_TH0051" xml:space="preserve"><value>„{0} {1}” nu corespunde cu „{2} {3}”.</value></data>
+  <data name="Diag_Msg_TH0052" xml:space="preserve"><value>Indicator de viză necunoscut „{0}”.</value></data>
+  <data name="Diag_Hint_TH0052" xml:space="preserve"><value>Se așteaptă surface, duplicate, splay sau approximate (opțional precedat de „not”).</value></data>
+  <data name="Diag_Msg_TH0053" xml:space="preserve"><value>Tip de marcaj necunoscut „{0}”.</value></data>
+  <data name="Diag_Hint_TH0053" xml:space="preserve"><value>Se așteaptă: fixed, painted sau temporary.</value></data>
+  <data name="Diag_Msg_TH0054" xml:space="preserve"><value>Specificație extend necunoscută „{0}”.</value></data>
+  <data name="Diag_Hint_TH0054" xml:space="preserve"><value>Se așteaptă normal/reverse/left/right/vertical/start/ignore/hide sau un procent 0–200 %.</value></data>
+  <data name="Diag_Msg_TH0055" xml:space="preserve"><value>Indicator de stație necunoscut „{0}”.</value></data>
+  <data name="Diag_Msg_TH0055__fixed" xml:space="preserve"><value>Indicatorul de stație „fixed” nu poate fi setat direct — folosiți comanda „fix” („not fixed” este permis).</value></data>
+  <data name="Diag_Msg_TH0055__explored" xml:space="preserve"><value>„explored” necesită ca indicatorul „continuation” să fie setat mai întâi.</value></data>
+  <data name="Diag_Hint_TH0055" xml:space="preserve"><value>Se așteaptă entrance/continuation/air-draught/sink/spring/doline/dig/arch/overhang.</value></data>
+  <data name="Diag_Msg_TH0060" xml:space="preserve"><value>Tip de export necunoscut „{0}”.</value></data>
+  <data name="Diag_Hint_TH0060" xml:space="preserve"><value>Se așteaptă: {0}</value></data>
+  <data name="Diag_Msg_TH0061" xml:space="preserve"><value>„{0}” nu este un format valid pentru „export {1}”.</value></data>
+  <data name="Diag_Msg_TH0062" xml:space="preserve"><value>Opțiune de layout necunoscută „{0}”.</value></data>
+  <data name="Diag_Msg_TH0063" xml:space="preserve"><value>„{0}” așteaptă cel puțin {1} argument(e), s-au găsit {2}.</value></data>
+  <data name="Diag_Msg_TH0063__join" xml:space="preserve"><value>„join” are nevoie de cel puțin două obiecte de conectat.</value></data>
+  <data name="Diag_Msg_TH0064" xml:space="preserve"><value>„{0}” așteaptă cel mult {1} argument(e), s-au găsit {2}.</value></data>
+  <data name="Diag_Msg_TH0064__extend" xml:space="preserve"><value>„extend” acceptă cel mult 3 stații ca argumente, s-au găsit {0}.</value></data>
+  <data name="Diag_Msg_TH0064__fix" xml:space="preserve"><value>„fix” acceptă cel mult 7 argumente (stația, x, y, z, până la 3 abateri standard); s-au găsit {0}.</value></data>
+  <data name="Diag_Msg_TH0064__readings" xml:space="preserve"><value>Prea multe citiri ({0}); Therion permite cel mult {1}.</value></data>
+  <data name="Diag_Msg_TH0065" xml:space="preserve"><value>„{0}” nu este o valoare numerică validă pentru &lt;{1}&gt;.</value></data>
+  <data name="Diag_Msg_TH0065__value" xml:space="preserve"><value>„{0}” nu este o valoare validă pentru &lt;{1}&gt;.</value></data>
+  <data name="Diag_Msg_TH0065__layout" xml:space="preserve"><value>„{0}” nu este o valoare validă pentru opțiunea de layout „{1}” (permise: {2}).</value></data>
+  <data name="Diag_Msg_TH0065__position" xml:space="preserve"><value>„{0}” nu este o poziție validă pentru map-header (n/s/e/w/ne/nw/se/sw/center/off).</value></data>
+  <data name="Diag_Msg_TH0065__projection" xml:space="preserve"><value>„{0}” nu este o proiecție validă (plan, elevation, extended, none).</value></data>
+  <data name="Diag_Msg_TH0065__sd" xml:space="preserve"><value>Abaterea standard „{0}” din „fix” nu este un număr.</value></data>
+  <data name="Diag_Msg_TH0065__person" xml:space="preserve"><value>„{0}” are nevoie de numele unei persoane; Therion respinge un nume gol.</value></data>
+  <data name="Diag_Msg_TH0065__role" xml:space="preserve"><value>Rol de echipă necunoscut „{0}”.</value></data>
+  <data name="Diag_Hint_TH0065__role" xml:space="preserve"><value>Thbook documentează „explorer”, dar compilatorul Therion îl respinge.</value></data>
+  <data name="Diag_Msg_TH0065__instrument" xml:space="preserve"><value>Mărime de instrument nevalidă „{0}”.</value></data>
+  <data name="Diag_Msg_TH0065__lineopt" xml:space="preserve"><value>„{0}” nu este o valoare validă pentru -{1} (permise: {2}).</value></data>
+  <data name="Diag_Msg_TH0065__classes" xml:space="preserve"><value>Mărime incompatibilă „{0}” în „{1}”: mărimile de tip lungime și cele de tip unghi nu pot fi combinate.</value></data>
+  <data name="Diag_Msg_TH0065__date_empty" xml:space="preserve"><value>Valoare „{0}” nevalidă: dată goală în interval (se așteaptă YYYY[.MM[.DD[@HH[:MM[:SS]]]]] sau un interval).</value></data>
+  <data name="Diag_Msg_TH0065__date_parts" xml:space="preserve"><value>Valoare „{0}” nevalidă: prea multe componente de dată în „{1}” (se așteaptă YYYY[.MM[.DD[@HH[:MM[:SS]]]]] sau un interval).</value></data>
+  <data name="Diag_Msg_TH0065__date_year" xml:space="preserve"><value>Valoare „{0}” nevalidă: an nevalid „{1}” (se așteaptă YYYY[.MM[.DD[@HH[:MM[:SS]]]]] sau un interval).</value></data>
+  <data name="Diag_Msg_TH0065__date_month" xml:space="preserve"><value>Valoare „{0}” nevalidă: lună nevalidă „{1}” (se așteaptă YYYY[.MM[.DD[@HH[:MM[:SS]]]]] sau un interval).</value></data>
+  <data name="Diag_Msg_TH0065__date_day" xml:space="preserve"><value>Valoare „{0}” nevalidă: zi nevalidă „{1}” (se așteaptă YYYY[.MM[.DD[@HH[:MM[:SS]]]]] sau un interval).</value></data>
+  <data name="Diag_Msg_TH0065__date_time" xml:space="preserve"><value>Valoare „{0}” nevalidă: o oră necesită o dată completă an.lună.zi (se așteaptă YYYY[.MM[.DD[@HH[:MM[:SS]]]]] sau un interval).</value></data>
+  <data name="Diag_Msg_TH0065__date_tparts" xml:space="preserve"><value>Valoare „{0}” nevalidă: prea multe componente de oră în „{1}” (se așteaptă YYYY[.MM[.DD[@HH[:MM[:SS]]]]] sau un interval).</value></data>
+  <data name="Diag_Msg_TH0065__date_hour" xml:space="preserve"><value>Valoare „{0}” nevalidă: oră nevalidă „{1}” (se așteaptă YYYY[.MM[.DD[@HH[:MM[:SS]]]]] sau un interval).</value></data>
+  <data name="Diag_Msg_TH0065__date_minute" xml:space="preserve"><value>Valoare „{0}” nevalidă: minut nevalid „{1}” (se așteaptă YYYY[.MM[.DD[@HH[:MM[:SS]]]]] sau un interval).</value></data>
+  <data name="Diag_Msg_TH0065__date_second" xml:space="preserve"><value>Valoare „{0}” nevalidă: secundă nevalidă „{1}” (se așteaptă YYYY[.MM[.DD[@HH[:MM[:SS]]]]] sau un interval).</value></data>
+  <data name="Diag_Msg_TH0066" xml:space="preserve"><value>Opțiune necunoscută „-{0}” pentru „{1}”.</value></data>
+  <data name="Diag_Msg_TH0066__layoutkey" xml:space="preserve"><value>„-layout-{0}”: „{1}” nu este o opțiune de layout cunoscută.</value></data>
+  <data name="Diag_Msg_TH0066__onlyon" xml:space="preserve"><value>-{0} este valid doar pe liniile {1}, nu pe „{2}”.</value></data>
+  <data name="Diag_Msg_TH0066__height" xml:space="preserve"><value>-height este valid doar pe liniile pit (sau wall:pit), nu pe „{0}”.</value></data>
+  <data name="Diag_Msg_TH0066__rsize" xml:space="preserve"><value>-r-size nu este valid pe linii (respins necondiționat de Therion 6.4).</value></data>
+  <data name="Diag_Msg_TH0066__scale" xml:space="preserve"><value>-scale nu este permis pe obiectele area.</value></data>
+  <data name="Diag_Msg_TH0066__station" xml:space="preserve"><value>-{0} nu este valid cu tipul station.</value></data>
+  <data name="Diag_Msg_TH0066__dead" xml:space="preserve"><value>-{0} nu este valid pe puncte (respins necondiționat de Therion 6.4).</value></data>
+  <data name="Diag_Msg_TH0066__stationref" xml:space="preserve"><value>o referință la stație (-{0}) este validă doar pe punctele station/continuation, nu pe „{1}”.</value></data>
+  <data name="Diag_Msg_TH0066__pointonly" xml:space="preserve"><value>-{0} este valid doar pe punctele {1}, nu pe „{2}”.</value></data>
+  <data name="Diag_Msg_TH0066__clip" xml:space="preserve"><value>-clip nu este valid cu tipul „{0}”.</value></data>
+  <data name="Diag_Msg_TH0067" xml:space="preserve"><value>„{0}” trebuie scris „{1}” (Therion face distincție între majuscule și minuscule la cuvintele cheie).</value></data>
+  <data name="Diag_Msg_TH0068" xml:space="preserve"><value>„{0}” nu este nici un număr, nici o valoare specială Therion (- . NaN Inf up down).</value></data>
+  <data name="Diag_Msg_TH0069" xml:space="preserve"><value>Valoarea {1} pentru &lt;{0}&gt; este în afara intervalului {2}.</value></data>
+  <data name="Diag_Msg_TH0069__percent" xml:space="preserve"><value>„{0}” {1} este în afara intervalului 0–100.</value></data>
+  <data name="Diag_Msg_TH0069__orientation" xml:space="preserve"><value>-orientation {0} este în afara intervalului (0 ≤ valoare &lt; 360).</value></data>
+  <data name="Diag_Msg_TH0069__vthreshold" xml:space="preserve"><value>vthreshold {0} este în afara intervalului 0–90°.</value></data>
+  <data name="Diag_Msg_TH0069__sd" xml:space="preserve"><value>Abaterea standard din „fix” trebuie să fie pozitivă, s-a găsit {0}.</value></data>
+  <data name="Diag_Msg_TH0070" xml:space="preserve"><value>Citirea „{0}” nu este validă pentru stilul „{1}”.</value></data>
+  <data name="Diag_Msg_TH0071" xml:space="preserve"><value>Citirea „{0}” apare de două ori.</value></data>
+  <data name="Diag_Msg_TH0071__combined" xml:space="preserve"><value>Citirea „{0}” nu poate fi combinată cu celelalte citiri de lungime/count sau adâncime din această ordine.</value></data>
+  <data name="Diag_Msg_TH0072" xml:space="preserve"><value>Date incomplete pentru stilul „{0}”: lipsesc citirile de lungime/count, azimut și pantă.</value></data>
+  <data name="Diag_Msg_TH0072__depth" xml:space="preserve"><value>Date incomplete pentru stilul „{0}”: lipsesc citirile de lungime/count, azimut și adâncime.</value></data>
+  <data name="Diag_Msg_TH0072__cartesian" xml:space="preserve"><value>Date incomplete pentru stilul „{0}”: lipsește o citire easting/northing/altitude.</value></data>
+  <data name="Diag_Msg_TH0072__dimensions" xml:space="preserve"><value>Date incomplete pentru stilul „{0}”: lipsește o citire up/down/left/right.</value></data>
+  <data name="Diag_Msg_TH0073" xml:space="preserve"><value>„newline” nu poate fi prima sau ultima citire.</value></data>
+  <data name="Diag_Msg_TH0074" xml:space="preserve"><value>„station” (intercalat) nu poate fi combinat cu „from”/„to”.</value></data>
+  <data name="Diag_Msg_TH0074__after" xml:space="preserve"><value>Citirea intercalată „{0}” nu poate apărea după „newline”.</value></data>
+  <data name="Diag_Msg_TH0074__before" xml:space="preserve"><value>Citirea neintercalată „{0}” nu poate apărea înainte de „newline” în datele intercalate.</value></data>
+  <data name="Diag_Msg_TH_XVI_001" xml:space="preserve"><value>Variabilă XVI necunoscută „{0}”.</value></data>
+  <data name="Diag_Hint_TH_XVI_001" xml:space="preserve"><value>Se așteaptă XVIgrids, XVIstations, XVIshots, XVIsketchlines, XVIimages sau XVIgrid.</value></data>
+  <data name="Diag_Msg_TH_XVI_002" xml:space="preserve"><value>Instrucțiune neașteptată „{0}” (se așteaptă o comandă „set XVI…”).</value></data>
+  <data name="Diag_Msg_TH_XVI_003" xml:space="preserve"><value>Valorii „set {0}” îi lipsește acolada de închidere „}}”.</value></data>
+  <data name="Diag_Msg_TH_XVI_004" xml:space="preserve"><value>„XVIgrid” așteaptă 8 valori numerice (x0 y0 xax yax xay yay nx ny).</value></data>
+  <data name="Diag_Msg_TH_XVI_050" xml:space="preserve"><value>Fișierul .xvi referit „{0}” nu a fost găsit.</value></data>
+  <data name="Diag_Msg_THIDE_DIR_001" xml:space="preserve"><value>Lui „#@region” îi lipsește „#@endregion”.</value></data>
+  <data name="Diag_Msg_THIDE_DIR_001__titled" xml:space="preserve"><value>Lui „#@region” "{0}" îi lipsește „#@endregion”.</value></data>
+  <data name="Diag_Msg_THIDE_DIR_002" xml:space="preserve"><value>„#@endregion” nu are un „#@region” corespunzător.</value></data>
+  <data name="Diag_Msg_TH2_001" xml:space="preserve"><value>„point” necesită x, y și tipul.</value></data>
+  <data name="Diag_Msg_TH2_001__coord" xml:space="preserve"><value>Coordonata {0} „{1}” din „point” nu este un număr.</value></data>
+  <data name="Diag_Msg_TH2_002" xml:space="preserve"><value>Blocului „line” îi lipsește „endline”.</value></data>
+  <data name="Diag_Msg_TH2_003" xml:space="preserve"><value>Blocului „area” îi lipsește „endarea”.</value></data>
+  <data name="Diag_Msg_TH2_004" xml:space="preserve"><value>Tip de punct necunoscut „{0}”.</value></data>
+  <data name="Diag_Msg_TH2_005" xml:space="preserve"><value>Tip de linie necunoscut „{0}”.</value></data>
+  <data name="Diag_Msg_TH2_006" xml:space="preserve"><value>Tip de arie necunoscut „{0}”.</value></data>
+  <data name="Diag_Msg_TH2_008" xml:space="preserve"><value>Tipul de punct „{0}” nu acceptă subtip (doar station, air-draught, water-flow și u: acceptă).</value></data>
+  <data name="Diag_Msg_TH2_008__point" xml:space="preserve"><value>Subtip nevalid „{0}” pentru tipul de punct „{1}” (permise: {2}).</value></data>
+  <data name="Diag_Msg_TH2_008__line" xml:space="preserve"><value>Tipul de linie „{0}” nu acceptă subtip (doar wall, border, survey, water-flow și u: acceptă).</value></data>
+  <data name="Diag_Msg_TH2_008__linesub" xml:space="preserve"><value>Subtip nevalid „{0}” pentru tipul de linie „{1}” (permise: {2}).</value></data>
+  <data name="Diag_Msg_TH2_009" xml:space="preserve"><value>Opțiune necunoscută „-{0}”.</value></data>
+  <data name="Diag_Msg_TH2_010" xml:space="preserve"><value>Blocului „{0}” îi lipsește „{1}”.</value></data>
+  <data name="Diag_Msg_TH_SEM_001" xml:space="preserve"><value>Referință la stație nerezolvată „{0}”.</value></data>
+  <data name="Diag_Hint_TH_SEM_001" xml:space="preserve"><value>ați vrut să scrieți „{0}”?</value></data>
+  <data name="Diag_Msg_TH_SEM_002" xml:space="preserve"><value>Stația „{0}” este fixată de mai multe ori.</value></data>
+  <data name="Diag_Msg_TH_SEM_004" xml:space="preserve"><value>Stația fixă „{0}” nu este referită de nicio viză sau echivalare.</value></data>
+  <data name="Diag_Msg_TH_SEM_005" xml:space="preserve"><value>Rândul de date are {0} valoare(i), dar ordinea citirilor „{1}” așteaptă {2}.</value></data>
+  <data name="Diag_Msg_TH_SEM_006" xml:space="preserve"><value>Valoarea „{1}” pentru „{0}” nu este un număr valid.</value></data>
+  <data name="Diag_Msg_TH_SEM_007" xml:space="preserve"><value>Valoarea „{1}” pentru „{0}” nu ar trebui să fie negativă.</value></data>
+  <data name="Diag_Msg_TH_SEM_007__range" xml:space="preserve"><value>Valoarea „{1}” pentru „{0}” este în afara intervalului așteptat {2}.</value></data>
+  <data name="Diag_Msg_TH_SEM_NAMING" xml:space="preserve"><value>Numele de stație „{0}” se potrivește cu modelul interzis „{1}”.</value></data>
+  <data name="Diag_Msg_TH_SEM_NAMING__station_req" xml:space="preserve"><value>Numele de stație „{0}” nu se potrivește cu modelul obligatoriu „{1}”.</value></data>
+  <data name="Diag_Msg_TH_SEM_NAMING__survey" xml:space="preserve"><value>Numele de topografie „{0}” se potrivește cu modelul interzis „{1}”.</value></data>
+  <data name="Diag_Msg_TH_SEM_NAMING__survey_req" xml:space="preserve"><value>Numele de topografie „{0}” nu se potrivește cu modelul obligatoriu „{1}”.</value></data>
+  <data name="Diag_Msg_TH_SEM_NAMING__scrap" xml:space="preserve"><value>Numele de schiță „{0}” se potrivește cu modelul interzis „{1}”.</value></data>
+  <data name="Diag_Msg_TH_SEM_NAMING__scrap_req" xml:space="preserve"><value>Numele de schiță „{0}” nu se potrivește cu modelul obligatoriu „{1}”.</value></data>
+  <data name="Diag_Msg_TH_SEM_NAMING__map" xml:space="preserve"><value>Numele de hartă „{0}” se potrivește cu modelul interzis „{1}”.</value></data>
+  <data name="Diag_Msg_TH_SEM_NAMING__map_req" xml:space="preserve"><value>Numele de hartă „{0}” nu se potrivește cu modelul obligatoriu „{1}”.</value></data>
+  <data name="Diag_Msg_TH_SEM_010" xml:space="preserve"><value>Coliziune de nume: topografia „{0}” este declarată în {1} fișiere; numele topografiilor trebuie să fie unice în proiect.</value></data>
+  <data name="Diag_Msg_TH_SEM_010__map" xml:space="preserve"><value>Coliziune de nume: harta „{0}” este declarată în {1} fișiere; numele hărților trebuie să fie unice în proiect.</value></data>
+  <data name="Diag_Msg_TH_SEM_011" xml:space="preserve"><value>Eroare de închidere {0} m pe o buclă de {1} m (eroare {2}%) — verificați bucla pentru o greșeală grosolană.</value></data>
+  <data name="Diag_Msg_TH_SEM_012" xml:space="preserve"><value>Capetele from și to ale vizei sunt aceeași stație „{0}”.</value></data>
+  <data name="Diag_Msg_TH_SEM_012__zero" xml:space="preserve"><value>Tronson de lungime zero între stațiile distincte {0} → {1}.</value></data>
+  <data name="Diag_Msg_TH_SEM_012__long" xml:space="preserve"><value>Tronson neobișnuit de lung ({0} m) {1} → {2}; verificați dacă nu e o greșeală de transcriere.</value></data>
+  <data name="Diag_Msg_TH_SEM_013" xml:space="preserve"><value>Azimutul direct și cel invers diferă cu {0}° (direct {1}, invers {2}, așteptat ~{3}).</value></data>
+  <data name="Diag_Msg_TH_SEM_013__clino" xml:space="preserve"><value>Înclinarea directă și cea inversă diferă cu {0}° (directă {1}, inversă {2}, așteptată ~{3}).</value></data>
+  <data name="Diag_Msg_TH_SEM_014" xml:space="preserve"><value>Fișier negăsit: „{0}”, referit de {1}.</value></data>
+  <data name="Diag_Msg_TH_SEM_015" xml:space="preserve"><value>Topografie deconectată: această porțiune ({0} stații, {1} tronsoane; {2}) nu este legată de restul topografiei și nu este georeferențiată printr-un fix. Merge de la stația „{3}” la „{4}”. Legați-o cu un „equate” de o stație alăturată sau ancorați-o cu un „fix” sub un „cs”.</value></data>
+  <data name="Diag_Msg_TH_SEM_015__oneleg" xml:space="preserve"><value>Topografie deconectată: această porțiune ({0} stații, {1} tronson; {2}) nu este legată de restul topografiei și nu este georeferențiată printr-un fix. Merge de la stația „{3}” la „{4}”. Legați-o cu un „equate” de o stație alăturată sau ancorați-o cu un „fix” sub un „cs”.</value></data>
+  <data name="Diag_Msg_TH_SEM_016" xml:space="preserve"><value>Fișier negăsit: „{0}” — „\” nu este separator de cale pe acest sistem. „{1}” există.</value></data>
+  <data name="Diag_Hint_TH_SEM_016" xml:space="preserve"><value>Scrieți calea cu „/”, pe care Therion o citește pe orice platformă: „{0}”.</value></data>
+  <data name="Diag_Msg_TH_SEM_RULE" xml:space="preserve"><value>Regula semantică „{0}” a eșuat: {1}</value></data>
+  <data name="Diag_Msg_TH_EDIT_001" xml:space="preserve"><value>Nu se poate înlocui un nod de tipul {0} cu {1}.</value></data>
+  <data name="Diag_Msg_TH_EDIT_002" xml:space="preserve"><value>Nodul țintă nu a fost găsit în fișier.</value></data>
+  <data name="Diag_Msg_TH_BUILD_001" xml:space="preserve"><value>Executabilul Therion nu a fost găsit. Configurați ExternalTools.TherionPath sau instalați Therion.</value></data>
+  <data name="Diag_Msg_TH_BUILD_002" xml:space="preserve"><value>Procesul Therion nu a putut fi pornit.</value></data>
+  <data name="Diag_Msg_TH_BUILD_003" xml:space="preserve"><value>Compilarea Therion a eșuat: {0}</value></data>
+  <data name="Diag_Msg_TH_WS_001" xml:space="preserve"><value>Cale negăsită: {0}</value></data>
+  <data name="Diag_Msg_TH_WS_002" xml:space="preserve"><value>Nu s-a găsit niciun fișier de configurație Therion în „{0}”.</value></data>
+  <data name="Diag_Msg_TH_LINK_404" xml:space="preserve"><value>Fișierul referit nu a fost găsit: „{0}”.</value></data>
+  <data name="Diag_Hint_TH_LINK_404" xml:space="preserve"><value>„{0}” așteaptă un fișier existent.</value></data>
+  <data name="Diag_Hint_TH_LINK_404__separator" xml:space="preserve"><value>„{0}” așteaptă un fișier existent. „\” nu este separator de cale pe acest sistem; „{1}” există.</value></data>
+  <data name="Diag_Msg_THP-LARGE-FILE" xml:space="preserve"><value>„{0}” nu a fost analizat: {1} linii depășesc limita de analiză de {2} linii. Identificatorii săi nu sunt în graful de obiecte.</value></data>
+  <data name="Diag_Msg_THP-LARGE-FILE__kb" xml:space="preserve"><value>„{0}” nu a fost analizat: {1} KB depășesc limita de analiză de {2} KB. Identificatorii săi nu sunt în graful de obiecte.</value></data>
 </root>
