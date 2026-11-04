@@ -815,7 +815,7 @@ public partial class MainWindow : Window
         var preview = new EditPreviewViewModel(title, summary, batch, rows, AppServices.Provider.GetService<IWorkspaceSession>()?.RootPath, allOrNothing);
         var window = new EditPreviewWindow(preview);
         await window.ShowDialog(this);
-        if (!window.Confirmed || AppServices.Provider.GetService<IWorkspaceEditService>() is not { } editor) return false;
+        if (!window.Confirmed || preview.IsEmpty || AppServices.Provider.GetService<IWorkspaceEditService>() is not { } editor) return false;
         var outcome = await editor.ApplyAsync(preview.Chosen());
         // Closed files change on disk without a re-parse: reload when the diagnostics must follow. Not
         // through the batch's own reload flag, which also refuses files with unsaved changes — right for
@@ -854,13 +854,17 @@ public partial class MainWindow : Window
         var files = ProjectSourceFiles(ws);
         // The editor's Format Document: a re-indent that never reorders or drops anything.
         var unit = IndentUnitSetting();
-        var (batch, rows, skipped) = Therion.Workspace.Fixes.FormatAll.Plan(files, p => CurrentText(docs, p), Therion.Workspace.Fixes.LineEndings.Keep,
-            t => Therion.Workspace.Formatting.TherionReindenter.Format(t, unit), n => string.Format(ThIDE.Resources.Tr.Get("FormatAll_LinesDiffer"), n));
+        var (batch, rows, skipped) = Therion.Workspace.Fixes.FormatAll.PlanShowingChanges(files, p => CurrentText(docs, p), Therion.Workspace.Fixes.LineEndings.Keep,
+            t => Therion.Workspace.Formatting.TherionReindenter.Format(t, unit), EditPreviewViewModel.DescribeFormatChange);
         var title = ThIDE.Resources.Tr.Get("Menu_Tools_FormatAll");
-        var summary = string.Format(ThIDE.Resources.Tr.Get("FormatAll_Summary"), rows.Count, skipped.Count);
-        if (batch.IsEmpty) { AppServices.Provider.GetService<INotificationService>()?.Info(title, summary); return; }
+        // An empty plan still opens the preview, which then says "Nothing to change in N files".
+        var summary = batch.IsEmpty
+            ? EditPreviewViewModel.NothingToChange(CountFiles(files) - skipped.Count, skipped.Count)
+            : string.Format(ThIDE.Resources.Tr.Get("FormatAll_Summary"), rows.Count, skipped.Count);
         await PreviewAndApplyAsync(title, summary, batch, rows, reload: true);
     }
+
+    private static int CountFiles(IEnumerable<string> files) => files.Distinct(Therion.Workspace.Editing.FilePaths.Comparer).Count();
 
     private static string IndentUnitSetting()
     {
@@ -919,10 +923,12 @@ public partial class MainWindow : Window
         var options = model.Options(IndentUnitSetting());
         var title = ThIDE.Resources.Tr.Get("Menu_Tools_Normalize");
         if (options.IsEmpty) return;
-        var (batch, rows, skipped) = Therion.Workspace.Fixes.ProjectNormalize.Plan(ProjectSourceFiles(ws), p => CurrentText(docs, p), options,
-            n => string.Format(ThIDE.Resources.Tr.Get("FormatAll_LinesDiffer"), n));
-        var summary = string.Format(ThIDE.Resources.Tr.Get("Normalize_Summary"), rows.Count, skipped.Count);
-        if (batch.IsEmpty) { AppServices.Provider.GetService<INotificationService>()?.Info(title, summary); return; }
+        var files = ProjectSourceFiles(ws);
+        var (batch, rows, skipped) = Therion.Workspace.Fixes.ProjectNormalize.PlanShowingChanges(files, p => CurrentText(docs, p), options,
+            EditPreviewViewModel.DescribeFormatChange);
+        var summary = batch.IsEmpty
+            ? EditPreviewViewModel.NothingToChange(CountFiles(files) - skipped.Count, skipped.Count)
+            : string.Format(ThIDE.Resources.Tr.Get("Normalize_Summary"), rows.Count, skipped.Count);
         await PreviewAndApplyAsync(title, summary, batch, rows, reload: true);
     }
 
@@ -939,7 +945,9 @@ public partial class MainWindow : Window
         var window = new RenumberStationsWindow(model);
         await window.ShowDialog(this);
         if (!window.Confirmed || model.Plan is not { Ok: true } plan) return;
-        await PreviewAndApplyAsync(ThIDE.Resources.Tr.Get("Menu_Tools_Renumber"), model.Summary, plan.Batch, reload: true, allOrNothing: true);
+        // One row per changed line, showing the line as it will read (a shot line renames two stations).
+        var rows = Therion.Workspace.Fixes.FixAll.PreviewByLine(plan.Batch, p => CurrentText(docs, p));
+        await PreviewAndApplyAsync(ThIDE.Resources.Tr.Get("Menu_Tools_Renumber"), model.Summary, plan.Batch, rows, reload: true, allOrNothing: true);
     }
 
     /// <summary>Tools ▸ Add unreferenced scraps to maps.</summary>

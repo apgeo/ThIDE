@@ -61,3 +61,9 @@ calibration properties, `EquateRef.Scope` / `EquateRecord.Scope` / `EquateRecord
 scope overloads of `ResolveStationSymbol`, `WorkspaceEquates.ResolveMember`,
 `SurveyRefDecomposer.Decompose` and `WorkspaceSemanticModel.Build`, `DataQualityChecks.IsLeg`,
 `TherionStrings.Unquote`/`SplitArguments`, `TherionTokenizer.IsUnterminatedString`.
+
+Previews that show the change: `FormatAll.PlanShowingChanges` and `ProjectNormalize.PlanShowingChanges`
+(one row per file on its first changed line, with a `Description` built from `FormatAll.Describe`,
+`FormatChange` and `FormatChangeKinds`), `FixAll.PreviewByLine` (one row per changed line with every
+edit on it applied), `HitSnippet.Around`, and the init-only `EditPreviewRow.Edits` / `Description`
+with `AllEdits`. `FixAll.Keep` keeps every edit of a kept row; rows built as before behave as before.

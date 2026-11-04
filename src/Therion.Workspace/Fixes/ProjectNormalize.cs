@@ -42,6 +42,17 @@ public static partial class ProjectNormalize
     }
 
     /// <summary>
+    /// <see cref="Plan"/> with rows that say what changes in each file
+    /// (see <see cref="FormatAll.PlanShowingChanges"/>).
+    /// </summary>
+    public static (EditBatch Batch, IReadOnlyList<EditPreviewRow> Rows, IReadOnlyList<string> Skipped) PlanShowingChanges(
+        IEnumerable<string> files, Func<string, string?> readText, NormalizeOptions options, Func<FormatChange, string> describe)
+    {
+        var plan = FormatAll.PlanShowingChanges(files, readText, options.LineEndings, t => Apply(t, options), describe);
+        return options.SortInputs || options.ToUtf8 ? (plan.Batch with { RequiresWorkspaceReload = true }, plan.Rows, plan.Skipped) : plan;
+    }
+
+    /// <summary>
     /// <c>encoding utf-8</c> in place of an <c>encoding</c> line naming another encoding. Only the first
     /// directive counts (it is the one the reader honours), and only near the top of the file.
     /// </summary>

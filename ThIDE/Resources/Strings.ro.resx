@@ -546,7 +546,7 @@
   <data name="Common_Apply" xml:space="preserve"><value>Aplică</value></data>
   <data name="Rename_TitleFormat" xml:space="preserve"><value>Redenumire '{0}' → '{1}'</value></data>
   <data name="Rename_NewNameFor" xml:space="preserve"><value>Nume nou pentru '{0}':</value></data>
-  <data name="Rename_PreviewSummary" xml:space="preserve"><value>{0} apariție(i) în {1} fișier(e). Dublu-clic pe o intrare pentru a naviga la ea.</value></data>
+  <data name="Rename_PreviewSummary" xml:space="preserve"><value>{0} în {1}. Dublu-clic pe o intrare pentru a naviga la ea.</value></data>
   <data name="Rename_SeeOccurrences" xml:space="preserve"><value>Vezi aparițiile…</value></data>
   <data name="Rename_HelpTip" xml:space="preserve"><value>Ce face această opțiune?</value></data>
   <data name="Pref_Title" xml:space="preserve"><value>Setări</value></data>
@@ -1749,4 +1749,26 @@ Aplici modificările? Pașii care nu au putut fi previzualizați rulează acum.<
   <data name="File_NotInActiveThconfigNoName" xml:space="preserve"><value>Nu face parte din thconfig-ul activ.</value></data>
   <data name="File_NotTheActiveThconfig" xml:space="preserve"><value>Nu este thconfig-ul activ (cel activ este {0}).</value></data>
   <data name="File_MakeActiveThconfig" xml:space="preserve"><value>Setați ca thconfig activ</value></data>
+  <data name="Rename_Occurrences_One" xml:space="preserve"><value>{0} apariție</value></data>
+  <data name="Rename_Occurrences_Few" xml:space="preserve"><value>{0} apariții</value></data>
+  <data name="Rename_Occurrences_Many" xml:space="preserve"><value>{0} de apariții</value></data>
+  <data name="Rename_Files_One" xml:space="preserve"><value>{0} fișier</value></data>
+  <data name="Rename_Files_Few" xml:space="preserve"><value>{0} fișiere</value></data>
+  <data name="Rename_Files_Many" xml:space="preserve"><value>{0} de fișiere</value></data>
+  <data name="Rename_FileChanges_One" xml:space="preserve"><value>{0} modificare</value></data>
+  <data name="Rename_FileChanges_Few" xml:space="preserve"><value>{0} modificări</value></data>
+  <data name="Rename_FileChanges_Many" xml:space="preserve"><value>{0} de modificări</value></data>
+  <data name="FormatAll_Lines_One" xml:space="preserve"><value>{0} linie</value></data>
+  <data name="FormatAll_Lines_Few" xml:space="preserve"><value>{0} linii</value></data>
+  <data name="FormatAll_Lines_Many" xml:space="preserve"><value>{0} de linii</value></data>
+  <data name="FormatAll_KindTrailing" xml:space="preserve"><value>spații de la sfârșitul liniei eliminate</value></data>
+  <data name="FormatAll_KindIndent" xml:space="preserve"><value>indentare modificată</value></data>
+  <data name="FormatAll_KindEndings" xml:space="preserve"><value>terminații de linie modificate</value></data>
+  <data name="FormatAll_KindEncoding" xml:space="preserve"><value>linia encoding modificată</value></data>
+  <data name="FormatAll_KindReordered" xml:space="preserve"><value>linii reordonate</value></data>
+  <data name="FormatAll_KindOther" xml:space="preserve"><value>linii rescrise</value></data>
+  <data name="FormatAll_Nothing_One" xml:space="preserve"><value>Nimic de schimbat în {0} fișier.</value></data>
+  <data name="FormatAll_Nothing_Few" xml:space="preserve"><value>Nimic de schimbat în {0} fișiere.</value></data>
+  <data name="FormatAll_Nothing_Many" xml:space="preserve"><value>Nimic de schimbat în {0} de fișiere.</value></data>
+  <data name="FormatAll_NothingSkipped" xml:space="preserve"><value>Alte {0} rămân neatinse pentru că nu se analizează curat (corectați-le întâi).</value></data>
 </root>

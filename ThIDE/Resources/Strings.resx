@@ -546,7 +546,7 @@
   <data name="Common_Apply" xml:space="preserve"><value>Apply</value></data>
   <data name="Rename_TitleFormat" xml:space="preserve"><value>Rename '{0}' → '{1}'</value></data>
   <data name="Rename_NewNameFor" xml:space="preserve"><value>New name for '{0}':</value></data>
-  <data name="Rename_PreviewSummary" xml:space="preserve"><value>{0} occurrence(s) across {1} file(s). Double-click an entry to jump to it.</value></data>
+  <data name="Rename_PreviewSummary" xml:space="preserve"><value>{0} across {1}. Double-click an entry to jump to it.</value></data>
   <data name="Rename_SeeOccurrences" xml:space="preserve"><value>See occurrences…</value></data>
   <data name="Rename_HelpTip" xml:space="preserve"><value>What does this do?</value></data>
   <data name="Pref_Title" xml:space="preserve"><value>Settings</value></data>
@@ -1749,4 +1749,26 @@ Delete it permanently instead? This cannot be undone.</value></data>
   <data name="File_NotInActiveThconfigNoName" xml:space="preserve"><value>Not part of the active thconfig.</value></data>
   <data name="File_NotTheActiveThconfig" xml:space="preserve"><value>Not the active thconfig (the active one is {0}).</value></data>
   <data name="File_MakeActiveThconfig" xml:space="preserve"><value>Make this the active thconfig</value></data>
+  <data name="Rename_Occurrences_One" xml:space="preserve"><value>{0} occurrence</value></data>
+  <data name="Rename_Occurrences_Few" xml:space="preserve"><value>{0} occurrences</value></data>
+  <data name="Rename_Occurrences_Many" xml:space="preserve"><value>{0} occurrences</value></data>
+  <data name="Rename_Files_One" xml:space="preserve"><value>{0} file</value></data>
+  <data name="Rename_Files_Few" xml:space="preserve"><value>{0} files</value></data>
+  <data name="Rename_Files_Many" xml:space="preserve"><value>{0} files</value></data>
+  <data name="Rename_FileChanges_One" xml:space="preserve"><value>{0} change</value></data>
+  <data name="Rename_FileChanges_Few" xml:space="preserve"><value>{0} changes</value></data>
+  <data name="Rename_FileChanges_Many" xml:space="preserve"><value>{0} changes</value></data>
+  <data name="FormatAll_Lines_One" xml:space="preserve"><value>{0} line</value></data>
+  <data name="FormatAll_Lines_Few" xml:space="preserve"><value>{0} lines</value></data>
+  <data name="FormatAll_Lines_Many" xml:space="preserve"><value>{0} lines</value></data>
+  <data name="FormatAll_KindTrailing" xml:space="preserve"><value>trailing spaces removed</value></data>
+  <data name="FormatAll_KindIndent" xml:space="preserve"><value>indentation changed</value></data>
+  <data name="FormatAll_KindEndings" xml:space="preserve"><value>line endings changed</value></data>
+  <data name="FormatAll_KindEncoding" xml:space="preserve"><value>encoding line changed</value></data>
+  <data name="FormatAll_KindReordered" xml:space="preserve"><value>lines reordered</value></data>
+  <data name="FormatAll_KindOther" xml:space="preserve"><value>lines rewritten</value></data>
+  <data name="FormatAll_Nothing_One" xml:space="preserve"><value>Nothing to change in {0} file.</value></data>
+  <data name="FormatAll_Nothing_Few" xml:space="preserve"><value>Nothing to change in {0} files.</value></data>
+  <data name="FormatAll_Nothing_Many" xml:space="preserve"><value>Nothing to change in {0} files.</value></data>
+  <data name="FormatAll_NothingSkipped" xml:space="preserve"><value>{0} more are left alone because they do not parse cleanly (fix those first).</value></data>
 </root>
