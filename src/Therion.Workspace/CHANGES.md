@@ -29,6 +29,10 @@ and what to do. Entries also cover behaviour that reaches you through `Therion.S
   `NotSupportedException` (naming the node type) for any other node, such as a `map`, `surface` or
   `layout` block, which it used to leave out of the text silently. Migration: a caller that writes
   arbitrary trees catches `NotSupportedException`.
+- **`MapMemberEdits.Plan` (and so `MapSync.Plan`) keeps a lone-CR file's line breaks.** In a file
+  whose lines end in a bare `\r`, new map members were inserted at the end of the file with `\n`
+  breaks; they now go after the map's last member (or under its header) with `\r`. LF and CRLF files
+  are unchanged. Migration: none.
 
 ## 2026-11 (later)
 

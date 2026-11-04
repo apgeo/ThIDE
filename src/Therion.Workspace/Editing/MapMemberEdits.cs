@@ -29,7 +29,7 @@ public static class MapMemberEdits
         if (toAdd.Count == 0) return new MapMemberPlan(null, [], MapEditProblem.None);
 
         var (offset, indent) = InsertionPoint(text, block);
-        var newline = text.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
+        var newline = NewlineOf(text);
         return new MapMemberPlan(TextEdit.Insert(offset, string.Concat(toAdd.Select(m => newline + indent + m))), toAdd, MapEditProblem.None);
     }
 
@@ -60,19 +60,25 @@ public static class MapMemberEdits
         return (EndOfLine(text, header), IndentOf(text, header) + "  ");
     }
 
-    // Before the newline, and before the CR of a CRLF so an insertion cannot land between them.
+    // The file's own line break: CRLF, else a lone CR (classic Mac files, which the parser reads), else LF.
+    private static string NewlineOf(string text) =>
+        text.Contains("\r\n", StringComparison.Ordinal) ? "\r\n"
+        : text.Contains('\r') && !text.Contains('\n') ? "\r" : "\n";
+
+    // Before the line break: a CR or an LF, so an insertion cannot land between the two of a CRLF.
     private static int EndOfLine(string text, int offset)
     {
-        int at = text.IndexOf('\n', Math.Clamp(offset, 0, Math.Max(text.Length - 1, 0)));
-        if (at < 0) return text.Length;
-        return at > 0 && text[at - 1] == '\r' ? at - 1 : at;
+        int at = text.IndexOfAny(LineBreaks, Math.Clamp(offset, 0, Math.Max(text.Length - 1, 0)));
+        return at < 0 ? text.Length : at;
     }
+
+    private static readonly char[] LineBreaks = ['\r', '\n'];
 
     private static string IndentOf(string text, int offset)
     {
         if (text.Length == 0) return string.Empty;
         int probe = Math.Clamp(offset, 0, text.Length - 1);
-        int start = text.LastIndexOf('\n', probe) + 1;
+        int start = text.LastIndexOfAny(LineBreaks, probe) + 1;
         int i = start;
         while (i < text.Length && (text[i] == ' ' || text[i] == '\t')) i++;
         return text[start..i];
