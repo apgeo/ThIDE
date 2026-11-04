@@ -45,6 +45,17 @@ public sealed class GestureProxy : INotifyPropertyChanged
         }
     }
 
+    /// <summary>
+    /// The gesture bound to <paramref name="commandId"/> as the user reads it ("Ctrl+,"), or null when
+    /// it is unbound or no service is attached — for text that lists a shortcut (the command palette).
+    /// </summary>
+    public string? TextFor(string commandId)
+    {
+        if (string.IsNullOrEmpty(commandId) || _service is not { } svc) return null;
+        if (!svc.Gestures.TryGetValue(commandId, out var text) || string.IsNullOrWhiteSpace(text)) return null;
+        return ThIDE.Services.KeyGestureText.Format(text);
+    }
+
     public event PropertyChangedEventHandler? PropertyChanged;
 
     // Avalonia's indexer binding re-reads only on the CLR indexer name "Item" (see LocProxy).

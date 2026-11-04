@@ -50,7 +50,8 @@ public class R3CommandPolicyTests
         [
             ShellCommandIds.OpenFile, ShellCommandIds.OpenFolder, ShellCommandIds.OpenThconfig,
             ShellCommandIds.NewFile, ShellCommandIds.GenerateReport, ShellCommandIds.QuickExport,
-            ShellCommandIds.NewScrapScaffold,
+            ShellCommandIds.NewScrapScaffold, ShellCommandIds.SaveAs, ShellCommandIds.CloseTab,
+            ShellCommandIds.OpenPreferences, ShellCommandIds.OpenKeyboardShortcuts,
         ];
 
         foreach (var id in dialogOpeners)

@@ -173,6 +173,11 @@
                           AutomationProperties.AutomationId="Menu.File.ReopenTab"
                           Command="{Binding ReopenClosedTabCommand}" />
                 <Separator />
+                <MenuItem AutomationProperties.AutomationId="Menu.File.Save" Header="{l:Loc Menu_File_Save}" InputGesture="{l:Gesture Save}" Command="{Binding SaveCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.File.SaveAs" Header="{l:Loc Menu_File_SaveAs}" InputGesture="{l:Gesture SaveAs}" Command="{Binding SaveAsCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.File.SaveAll" Header="{l:Loc Menu_File_SaveAll}" InputGesture="{l:Gesture SaveAll}" Command="{Binding SaveAllCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.File.CloseTab" Header="{l:Loc Menu_File_CloseTab}" InputGesture="{l:Gesture CloseTab}" Command="{Binding CloseActiveTabCommand}" />
+                <Separator />
                 <MenuItem AutomationProperties.AutomationId="Menu.File.Exit" Header="{Binding MenuFileExit}" Command="{Binding ExitCommand}" />
             </MenuItem>
             <MenuItem AutomationProperties.AutomationId="Menu.View" Header="{Binding MenuView}">
@@ -253,6 +258,8 @@
             <MenuItem AutomationProperties.AutomationId="Menu.Edit" Header="{Binding MenuEdit}" IsEnabled="{Binding HasStatusFile}">
                 <!-- Clipboard chords stay literal: they are AvaloniaEdit's own bindings, not gestures
                      dispatched by IKeyboardShortcutService, so they are not remappable. -->
+                <MenuItem AutomationProperties.AutomationId="Menu.Edit.Undo" Header="{l:Loc Menu_Edit_Undo}" InputGesture="Ctrl+Z" Click="OnEditUndo" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Edit.Redo" Header="{l:Loc Menu_Edit_Redo}" InputGesture="Ctrl+Y" Click="OnEditRedo" />
                 <!-- Workspace-level undo of the last multi-file write (rename, Replace All, New trip, Format all…). -->
                 <MenuItem AutomationProperties.AutomationId="Menu.Edit.UndoWorkspace" Header="{Binding WorkspaceUndoHeader}" Command="{Binding UndoWorkspaceCommand}" />
                 <MenuItem AutomationProperties.AutomationId="Menu.Edit.RedoWorkspace" Header="{Binding WorkspaceRedoHeader}" Command="{Binding RedoWorkspaceCommand}" />
@@ -275,6 +282,12 @@
                 <MenuItem AutomationProperties.AutomationId="Menu.Edit.UnfoldAll" Header="{Binding MenuEditUnfoldAll}" Click="OnEditUnfoldAll" />
                 <Separator />
                 <MenuItem AutomationProperties.AutomationId="Menu.Edit.AddBookmark" Header="{Binding MenuEditAddBookmark}" Click="OnEditAddBookmark" />
+                <Separator />
+                <!-- Go to: caret-scoped symbol commands (the editor's own key bindings, shown here). -->
+                <MenuItem AutomationProperties.AutomationId="Menu.Edit.GoToDefinition" Header="{l:Loc Menu_Edit_GoToDefinition}" InputGesture="{l:Gesture GoToDefinition}" Click="OnEditGoToDefinition" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Edit.PeekDefinition" Header="{l:Loc Menu_Edit_PeekDefinition}" InputGesture="{l:Gesture PeekDefinition}" Click="OnEditPeekDefinition" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Edit.FindReferences" Header="{l:Loc Menu_Edit_FindReferences}" InputGesture="{l:Gesture FindReferences}" Click="OnEditFindReferences" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Edit.RenameSymbol" Header="{l:Loc Menu_Edit_RenameSymbol}" InputGesture="{l:Gesture RenameSymbol}" Click="OnEditRenameSymbol" />
             </MenuItem>
 
             <!-- Search menu (#12). Find/Replace act on the focused editor; the rest are global. -->
@@ -354,6 +367,7 @@
                 <MenuItem AutomationProperties.AutomationId="Menu.Build.Build" Header="{Binding MenuBuildBuild}"     InputGesture="{l:Gesture Build}"       Command="{Binding Build.BuildCommand}" />
                 <!-- builds the focused thconfig tab when it is not the active thconfig (Compile always builds the active one). -->
                 <MenuItem AutomationProperties.AutomationId="Menu.Build.BuildThisThconfig" Header="{l:Loc Menu_Build_BuildThisThconfig}" Command="{Binding Build.BuildThisThconfigCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Build.Rebuild" Header="{Binding MenuBuildRebuild}" InputGesture="{l:Gesture Rebuild}" Command="{Binding Build.RebuildCommand}" />
                 <MenuItem AutomationProperties.AutomationId="Menu.Build.Cancel" Header="{Binding MenuBuildCancel}"    InputGesture="{l:Gesture CancelBuild}" Command="{Binding Build.CancelCommand}" />
                 <MenuItem AutomationProperties.AutomationId="Menu.Build.BatchBuild" Header="{l:Loc Menu_Build_BatchBuild}" Command="{Binding BatchBuildCommand}" />
                 <Separator />
@@ -386,9 +400,11 @@
                 <Separator />
                 <MenuItem AutomationProperties.AutomationId="Menu.Build.OpenOutputFolder" Header="{Binding MenuBuildOpenOutputFolder}" InputGesture="{l:Gesture OpenOutputFolder}" Command="{Binding Build.OpenLastOutputFolderCommand}" />
             </MenuItem>
-            <!-- Settings: a top-level entry (renamed from File ▸ Preferences) that opens the
-                 Preferences window directly (#7). -->
-            <MenuItem AutomationProperties.AutomationId="Menu.Settings" Header="{Binding MenuSettings}" Click="OnPreferencesClick" />
+            <!-- Settings: a normal menu like every other header (the window opens at the chosen section). -->
+            <MenuItem AutomationProperties.AutomationId="Menu.Settings" Header="{Binding MenuSettings}">
+                <MenuItem AutomationProperties.AutomationId="Menu.Settings.Preferences" Header="{l:Loc Menu_Settings_Preferences}" InputGesture="{l:Gesture OpenPreferences}" Command="{Binding OpenPreferencesCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Settings.KeyboardShortcuts" Header="{l:Loc Menu_Settings_KeyboardShortcuts}" InputGesture="{l:Gesture OpenKeyboardShortcuts}" Command="{Binding OpenKeyboardShortcutsCommand}" />
+            </MenuItem>
             <!-- Help: About + the bundled Therion book (#1). -->
             <MenuItem AutomationProperties.AutomationId="Menu.Help" Header="{Binding MenuHelp}">
                 <MenuItem AutomationProperties.AutomationId="Menu.Help.UserGuide" Header="{Binding MenuHelpUserGuide}" Command="{Binding OpenUserGuideCommand}" />
@@ -405,7 +421,7 @@
         <Border AutomationProperties.AutomationId="Toolbar.Panel" DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="6,3">
             <WrapPanel Orientation="Horizontal">
                 <!-- File group -->
-                <Button AutomationProperties.AutomationId="Toolbar.OpenFile" AutomationProperties.Name="{l:Loc Tb_OpenFile}" Classes="tool" Command="{Binding OpenFileCommand}" ToolTip.Tip="{l:Loc Tb_OpenFile}">
+                <Button AutomationProperties.AutomationId="Toolbar.OpenFile" AutomationProperties.Name="{l:Loc Tb_OpenFile}" Classes="tool" Command="{Binding OpenFileCommand}" ToolTip.Tip="{l:Tip Tb_OpenFile}">
                     <PathIcon Data="{DynamicResource Icon.File}" />
                 </Button>
                 <Button AutomationProperties.AutomationId="Toolbar.OpenThconfig" AutomationProperties.Name="{l:Loc Tb_OpenThconfig}" Classes="tool" Command="{Binding OpenThconfigCommand}" ToolTip.Tip="{l:Loc Tb_OpenThconfig}">

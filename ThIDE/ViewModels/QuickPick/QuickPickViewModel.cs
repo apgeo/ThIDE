@@ -17,6 +17,8 @@ public sealed class QuickPickItem
 {
     public required string Title { get; init; }
     public string? Detail { get; init; }
+    /// <summary>The keyboard shortcut that runs the same command, shown right-aligned (commands only).</summary>
+    public string? Gesture { get; init; }
     /// <summary>A native shell icon (files); takes precedence over <see cref="IconKey"/>.</summary>
     public IImage? Icon { get; init; }
     /// <summary>A DynamicResource StreamGeometry key (e.g. "Icon.Config") rendered as a PathIcon.</summary>

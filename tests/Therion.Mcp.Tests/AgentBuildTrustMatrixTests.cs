@@ -94,6 +94,7 @@ public class AgentBuildTrustMatrixTests
         [ShellCommandIds.Build] = Reach.Compiles,
         [ShellCommandIds.Rebuild] = Reach.Compiles,
         [ShellCommandIds.Save] = Reach.SavesInIde,
+        [ShellCommandIds.SaveAll] = Reach.SavesInIde,
     };
 
     /// <summary>

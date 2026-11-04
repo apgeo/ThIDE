@@ -195,6 +195,7 @@ internal sealed class ScriptedDocumentService : IDocumentService
     public Task NavigateToSpanAsync(SourceSpan span, CancellationToken ct = default) => Task.CompletedTask;
     public Task WriteCurrentTextAsync(string newText, CancellationToken ct = default) => Task.CompletedTask;
     public Task<bool> SaveDocumentAsync(FileDocumentViewModel document, CancellationToken ct = default) => Task.FromResult(true);
+    public Task<FileDocumentViewModel?> SaveAsAsync(FileDocumentViewModel document, string newPath, CancellationToken ct = default) => Task.FromResult<FileDocumentViewModel?>(null);
     public event EventHandler<string>? DocumentSaved;
     public void Close() { }
 

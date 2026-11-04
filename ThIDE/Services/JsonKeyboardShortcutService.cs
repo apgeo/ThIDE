@@ -62,6 +62,11 @@ public sealed class JsonKeyboardShortcutService : IKeyboardShortcutService
             [ShellCommandIds.ToggleWordWrap]          = "",
             [ShellCommandIds.NewScrapScaffold]        = "",
             [ShellCommandIds.GenerateReport]          = "",
+            [ShellCommandIds.SaveAs]                  = "Ctrl+Shift+S",
+            [ShellCommandIds.SaveAll]                 = "",
+            [ShellCommandIds.CloseTab]                = "Ctrl+W",
+            [ShellCommandIds.OpenPreferences]         = "Ctrl+OemComma",
+            [ShellCommandIds.OpenKeyboardShortcuts]   = "",
 
             // ---- Editor scope (matched by the focused TherionTextEditor) ----
             [ShellCommandIds.GoToDefinition]          = "F12",

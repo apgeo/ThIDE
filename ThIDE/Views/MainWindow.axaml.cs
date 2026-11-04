@@ -430,6 +430,12 @@ public partial class MainWindow : Window
         }
     }
 
+    private void OnEditUndo(object? s, Avalonia.Interactivity.RoutedEventArgs e) => ActiveEditor?.MenuUndo();
+    private void OnEditRedo(object? s, Avalonia.Interactivity.RoutedEventArgs e) => ActiveEditor?.MenuRedo();
+    private void OnEditGoToDefinition(object? s, Avalonia.Interactivity.RoutedEventArgs e) => ActiveEditor?.GoToDefinitionAtCaret();
+    private void OnEditPeekDefinition(object? s, Avalonia.Interactivity.RoutedEventArgs e) => ActiveEditor?.PeekDefinition();
+    private void OnEditFindReferences(object? s, Avalonia.Interactivity.RoutedEventArgs e) => ActiveEditor?.StartFindAllReferences();
+    private void OnEditRenameSymbol(object? s, Avalonia.Interactivity.RoutedEventArgs e) => ActiveEditor?.StartRename();
     private void OnEditCut(object? s, Avalonia.Interactivity.RoutedEventArgs e) => ActiveEditor?.MenuCut();
     private void OnEditCopy(object? s, Avalonia.Interactivity.RoutedEventArgs e) => ActiveEditor?.MenuCopy();
     private void OnEditPaste(object? s, Avalonia.Interactivity.RoutedEventArgs e) => ActiveEditor?.MenuPaste();
@@ -1954,9 +1960,6 @@ public partial class MainWindow : Window
     private void OnDeclinationCalculator(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
         => new DeclinationWindow().Show(this);
 
-    private void OnPreferencesClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
-        => _ = OpenPreferences(null);
-
     private async System.Threading.Tasks.Task OpenPreferences(string? section)
     {
         IAppSettingsService? settings = null;
@@ -2174,6 +2177,11 @@ public partial class MainWindow : Window
             [ShellCommandIds.ToggleWordWrap]           = vm.ToggleWordWrapCommand,
             [ShellCommandIds.NewScrapScaffold]         = vm.NewScrapScaffoldCommand,
             [ShellCommandIds.GenerateReport]           = vm.GenerateReportCommand,
+            [ShellCommandIds.SaveAs]                   = vm.SaveAsCommand,
+            [ShellCommandIds.SaveAll]                  = vm.SaveAllCommand,
+            [ShellCommandIds.CloseTab]                 = vm.CloseActiveTabCommand,
+            [ShellCommandIds.OpenPreferences]          = vm.OpenPreferencesCommand,
+            [ShellCommandIds.OpenKeyboardShortcuts]    = vm.OpenKeyboardShortcutsCommand,
         };
     }
 

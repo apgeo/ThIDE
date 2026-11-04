@@ -1,6 +1,6 @@
 // Reactive source behind the {l:Tip Key} markup extension: the localized tooltip text for a toolbar
 // button, with the keyboard shortcut currently bound to that action appended as " (gesture)" when it
-// has one. It combines LocProxy (UI language) with the configurable IKeyboardShortcutService
+// has one. This is the only source of the suffix: the Tb_* strings themselves name no shortcut. It combines LocProxy (UI language) with the configurable IKeyboardShortcutService
 // (remappable gestures) plus a fixed table (the shell's built-in, non-remappable chords). Invalidate()
 // re-reads every {l:Tip} binding when the language OR a keybinding changes — so tooltips relocalize on
 // a language switch and reflect a remapped shortcut immediately.
@@ -27,6 +27,7 @@ public sealed class TipProxy : INotifyPropertyChanged
     // Toolbar tooltip loc-key → remappable command id (gesture read live from the service).
     private static readonly Dictionary<string, string> CommandByKey = new(StringComparer.Ordinal)
     {
+        ["Tb_OpenFile"]         = ShellCommandIds.OpenFile,
         ["Tb_Back"]             = ShellCommandIds.GoBack,
         ["Tb_Forward"]          = ShellCommandIds.GoForward,
         ["Tb_Save"]             = ShellCommandIds.Save,
@@ -80,7 +81,7 @@ public sealed class TipProxy : INotifyPropertyChanged
         if (string.IsNullOrEmpty(key)) return string.Empty;
         if (CommandByKey.TryGetValue(key, out var id) && _service is { } svc &&
             svc.Gestures.TryGetValue(id, out var g) && !string.IsNullOrWhiteSpace(g))
-            return g;
+            return ThIDE.Services.KeyGestureText.Format(g);
         return FixedByKey.TryGetValue(key, out var fixedG) ? fixedG : string.Empty;
     }
 

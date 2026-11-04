@@ -10,6 +10,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using Therion.Core;
+using Therion.Processing.Abstractions;
 using Therion.Semantics;
 using ThIDE.Editor;
 using ThIDE.Resources;
@@ -79,14 +80,17 @@ public sealed class CommandPaletteProvider
         var list = new List<QuickPickItem>();
 
         // ---- File ----
-        list.Add(VmCmd(L("Cmd_Cat_File"), L("Welcome_NewFile"), _vm.NewFileCommand, "Icon.File"));
+        list.Add(VmCmd(L("Cmd_Cat_File"), L("Welcome_NewFile"), _vm.NewFileCommand, "Icon.File", ShellCommandIds.NewFile));
         list.Add(VmCmd(L("Cmd_Cat_File"), L("Menu_File_NewProject"), _vm.NewProjectCommand, "Icon.Config"));
-        list.Add(VmCmd(L("Cmd_Cat_File"), L("Cmd_OpenFile"), _vm.OpenFileCommand, "Icon.File"));
-        list.Add(VmCmd(L("Cmd_Cat_File"), L("Cmd_OpenThconfig"), _vm.OpenThconfigCommand, "Icon.Config"));
-        list.Add(VmCmd(L("Cmd_Cat_File"), L("Cmd_OpenFolder"), _vm.OpenFolderCommand, "Icon.FolderOpen"));
-        list.Add(VmCmd(L("Cmd_Cat_File"), L("Cmd_Save"), _vm.SaveCommand, "Icon.File"));
-        list.Add(Action(L("Cmd_Cat_File"), L("Cmd_GoToFile"), () => { _vm.ShowQuickOpen(); return Task.CompletedTask; }, "Icon.Search"));
-        list.Add(VmCmd(L("Cmd_Cat_File"), L("Menu_File_ReopenTab"), _vm.ReopenClosedTabCommand, "Icon.File"));
+        list.Add(VmCmd(L("Cmd_Cat_File"), L("Cmd_OpenFile"), _vm.OpenFileCommand, "Icon.File", ShellCommandIds.OpenFile));
+        list.Add(VmCmd(L("Cmd_Cat_File"), L("Cmd_OpenThconfig"), _vm.OpenThconfigCommand, "Icon.Config", ShellCommandIds.OpenThconfig));
+        list.Add(VmCmd(L("Cmd_Cat_File"), L("Cmd_OpenFolder"), _vm.OpenFolderCommand, "Icon.FolderOpen", ShellCommandIds.OpenFolder));
+        list.Add(VmCmd(L("Cmd_Cat_File"), L("Cmd_Save"), _vm.SaveCommand, "Icon.File", ShellCommandIds.Save));
+        list.Add(VmCmd(L("Cmd_Cat_File"), L("Cmd_SaveAs"), _vm.SaveAsCommand, "Icon.File", ShellCommandIds.SaveAs));
+        list.Add(VmCmd(L("Cmd_Cat_File"), L("Cmd_SaveAll"), _vm.SaveAllCommand, "Icon.File", ShellCommandIds.SaveAll));
+        list.Add(VmCmd(L("Cmd_Cat_File"), L("Cmd_CloseTab"), _vm.CloseActiveTabCommand, "Icon.File", ShellCommandIds.CloseTab));
+        list.Add(Action(L("Cmd_Cat_File"), L("Cmd_GoToFile"), () => { _vm.ShowQuickOpen(); return Task.CompletedTask; }, "Icon.Search", ShellCommandIds.QuickOpen));
+        list.Add(VmCmd(L("Cmd_Cat_File"), L("Menu_File_ReopenTab"), _vm.ReopenClosedTabCommand, "Icon.File", ShellCommandIds.ReopenClosedTab));
         list.Add(VmCmd(L("Cmd_Cat_File"), L("Cmd_ClearRecent"), _vm.ClearRecentCommand, "Icon.Folder"));
         list.Add(VmCmd(L("Cmd_Cat_File"), L("Cmd_ClearRecentDirs"), _vm.ClearRecentDirectoriesCommand, "Icon.Folder"));
         list.Add(VmCmd(L("Cmd_Cat_File"), L("Cmd_Exit"), _vm.ExitCommand, "Icon.File"));
@@ -96,12 +100,12 @@ public sealed class CommandPaletteProvider
         if (_vm.CanRedoWorkspace) list.Add(VmCmd(L("Cmd_Cat_Edit"), _vm.WorkspaceRedoHeader, _vm.RedoWorkspaceCommand, "Icon.File"));
 
         // ---- Build ----
-        list.Add(VmCmd(L("Cmd_Cat_Build"), L("Cmd_BuildCurrent"), _vm.Build.BuildCommand, "Icon.Cube"));
+        list.Add(VmCmd(L("Cmd_Cat_Build"), L("Cmd_BuildCurrent"), _vm.Build.BuildCommand, "Icon.Cube", ShellCommandIds.Build));
         list.Add(VmCmd(L("Cmd_Cat_Build"), L("Cmd_BuildThisThconfig"), _vm.Build.BuildThisThconfigCommand, "Icon.Cube"));
-        list.Add(VmCmd(L("Cmd_Cat_Build"), L("Cmd_Rebuild"), _vm.Build.RebuildCommand, "Icon.Cube"));
-        list.Add(VmCmd(L("Cmd_Cat_Build"), L("Cmd_CancelBuild"), _vm.Build.CancelCommand, "Icon.Cube"));
-        list.Add(VmCmd(L("Cmd_Cat_Build"), L("Cmd_OpenLoch"), _vm.Build.OpenInLochCommand, "Icon.Cube"));
-        list.Add(VmCmd(L("Cmd_Cat_Build"), L("Cmd_OpenAven"), _vm.Build.OpenInAvenCommand, "Icon.Cube"));
+        list.Add(VmCmd(L("Cmd_Cat_Build"), L("Cmd_Rebuild"), _vm.Build.RebuildCommand, "Icon.Cube", ShellCommandIds.Rebuild));
+        list.Add(VmCmd(L("Cmd_Cat_Build"), L("Cmd_CancelBuild"), _vm.Build.CancelCommand, "Icon.Cube", ShellCommandIds.CancelBuild));
+        list.Add(VmCmd(L("Cmd_Cat_Build"), L("Cmd_OpenLoch"), _vm.Build.OpenInLochCommand, "Icon.Cube", ShellCommandIds.OpenInLoch));
+        list.Add(VmCmd(L("Cmd_Cat_Build"), L("Cmd_OpenAven"), _vm.Build.OpenInAvenCommand, "Icon.Cube", ShellCommandIds.OpenInAven));
         list.Add(VmCmd(L("Cmd_Cat_Build"), L("Proj_OpenOutputFolder"), _vm.Build.OpenLastOutputFolderCommand, "Icon.Folder"));
         // quick export + external round-trips.
         list.Add(VmCmd(L("Cmd_Cat_Build"), L("Menu_Build_QuickExport"), _vm.Build.ShowQuickExportCommand, "Icon.Map"));
@@ -132,7 +136,7 @@ public sealed class CommandPaletteProvider
         list.Add(VmCmd(tools, L("Menu_Tools_Normalize"), _vm.NormalizeProjectCommand, "Icon.File"));
         list.Add(VmCmd(tools, L("Menu_Tools_Renumber"), _vm.RenumberStationsCommand, "Icon.File"));
         // One entry per macro and per project task, read when the palette opens.
-        if (AppServices.Provider.GetService(typeof(IMacroService)) is IMacroService macroRunner)
+        if (TryGetMacros() is { } macroRunner)
             foreach (var (macro, _) in macroRunner.Macros())
                 list.Add(Action(tools, string.Format(L("Cmd_MacroFmt"), macro.Title), () => macroRunner.RunAsync(macro.Name), "Icon.Config"));
         if (_vm.Tasks is { } taskRunner)
@@ -153,8 +157,8 @@ public sealed class CommandPaletteProvider
 
         // ---- View / panels ----
         list.Add(VmCmd(L("Cmd_Cat_View"), L("Cmd_ToggleObjectBrowser"), _vm.ToggleObjectBrowserCommand, "Icon.Map"));
-        list.Add(VmCmd(L("Cmd_Cat_View"), L("Cmd_ToggleWorkspace"), _vm.ToggleWorkspaceExplorerCommand, "Icon.Folder"));
-        list.Add(VmCmd(L("Cmd_Cat_View"), L("Cmd_ToggleDiagnostics"), _vm.ToggleDiagnosticsCommand, "Icon.Search"));
+        list.Add(VmCmd(L("Cmd_Cat_View"), L("Cmd_ToggleWorkspace"), _vm.ToggleWorkspaceExplorerCommand, "Icon.Folder", ShellCommandIds.ToggleWorkspaceExplorer));
+        list.Add(VmCmd(L("Cmd_Cat_View"), L("Cmd_ToggleDiagnostics"), _vm.ToggleDiagnosticsCommand, "Icon.Search", ShellCommandIds.ToggleDiagnostics));
         list.Add(VmCmd(L("Cmd_Cat_View"), L("Cmd_ToggleOutline"), _vm.ToggleOutlineCommand, "Icon.Map"));
         list.Add(VmCmd(L("Cmd_Cat_View"), L("Cmd_ToggleProject"), _vm.ToggleProjectCommand, "Icon.NodeGraph"));
         list.Add(VmCmd(L("Cmd_Cat_View"), L("Cmd_ToggleLog"), _vm.ToggleLogCommand, "Icon.Search"));
@@ -169,16 +173,19 @@ public sealed class CommandPaletteProvider
         list.Add(VmCmd(L("Cmd_Cat_View"), L("Layout_FloatActive"), _vm.FloatActiveDocumentCommand, "Icon.File"));
 
         // ---- Navigation / search ----
-        list.Add(VmCmd(L("Cmd_Cat_Go"), L("Cmd_Back"), _vm.GoBackCommand, "Icon.Search"));
-        list.Add(VmCmd(L("Cmd_Cat_Go"), L("Cmd_Forward"), _vm.GoForwardCommand, "Icon.Search"));
-        list.Add(VmCmd(L("Cmd_Cat_Search"), L("Search_Title"), _vm.ShowFindInFilesCommand, "Icon.Search"));
-        list.Add(VmCmd(L("Cmd_Cat_Search"), L("Replace_Title"), _vm.ShowReplaceInFilesCommand, "Icon.Search"));
-        list.Add(VmCmd(L("Cmd_Cat_Edit"), L("Cmd_RenameSymbol"), _vm.RenameSymbolCommand, "Icon.File"));
+        list.Add(VmCmd(L("Cmd_Cat_Go"), L("Cmd_Back"), _vm.GoBackCommand, "Icon.Search", ShellCommandIds.GoBack));
+        list.Add(VmCmd(L("Cmd_Cat_Go"), L("Cmd_Forward"), _vm.GoForwardCommand, "Icon.Search", ShellCommandIds.GoForward));
+        list.Add(VmCmd(L("Cmd_Cat_Search"), L("Search_Title"), _vm.ShowFindInFilesCommand, "Icon.Search", ShellCommandIds.FindInFiles));
+        list.Add(VmCmd(L("Cmd_Cat_Search"), L("Replace_Title"), _vm.ShowReplaceInFilesCommand, "Icon.Search", ShellCommandIds.ReplaceInFiles));
+        // Symbol commands act on the caret. Rename is listed once: the shell command reaches the active editor.
+        list.Add(Editor(L("Cmd_GoToDefinition"), ed => ed.GoToDefinitionAtCaret(), ShellCommandIds.GoToDefinition));
+        list.Add(Editor(L("Cmd_FindReferences"), ed => ed.StartFindAllReferences(), ShellCommandIds.FindReferences));
+        list.Add(VmCmd(L("Cmd_Cat_Edit"), L("Cmd_RenameSymbol"), _vm.RenameSymbolCommand, "Icon.File", ShellCommandIds.RenameSymbol));
 
         // ---- Symbols / identifiers (pushed sub-steps; search like the doc terms) ----
         list.Add(Action(L("Cmd_Cat_Go"), L("Cmd_GoToSymbolWs"), () => { PushSymbolSearch(workspace: true); return Task.CompletedTask; }, "Icon.Map"));
         list.Add(Action(L("Cmd_Cat_Go"), L("Cmd_GoToSymbolDoc"), () => { PushSymbolSearch(workspace: false); return Task.CompletedTask; }, "Icon.Map"));
-        list.Add(Editor(L("Cmd_GoToLine"), ed => ed.MenuGoToLine()));
+        list.Add(Editor(L("Cmd_GoToLine"), ed => ed.MenuGoToLine(), ShellCommandIds.GoToLine));
 
         // ---- Editor view toggles ----
         list.Add(Action(L("Cmd_Cat_View"), L("Cmd_ToggleWordWrap"), () => { _vm.WordWrap = !_vm.WordWrap; return Task.CompletedTask; }, "Icon.File"));
@@ -208,33 +215,31 @@ public sealed class CommandPaletteProvider
         list.Add(Editor(L("Menu_Edit_SelectAll"), ed => ed.MenuSelectAll()));
         list.Add(Editor(L("Cmd_UpperSel"), ed => ed.MenuUpperCase()));
         list.Add(Editor(L("Cmd_LowerSel"), ed => ed.MenuLowerCase()));
-        list.Add(Editor(L("Menu_Edit_ToggleComment"), ed => ed.MenuToggleComment()));
+        list.Add(Editor(L("Menu_Edit_ToggleComment"), ed => ed.MenuToggleComment(), ShellCommandIds.ToggleComment));
         list.Add(Editor(L("Menu_Edit_FoldAll"), ed => ed.MenuFoldAll()));
         list.Add(Editor(L("Menu_Edit_UnfoldAll"), ed => ed.MenuUnfoldAll()));
         // line operations.
-        list.Add(Editor(L("Ed_DuplicateLines"), ed => ed.DuplicateLines()));
-        list.Add(Editor(L("Ed_MoveLinesUp"), ed => ed.MoveLinesUp()));
-        list.Add(Editor(L("Ed_MoveLinesDown"), ed => ed.MoveLinesDown()));
-        list.Add(Editor(L("Ed_SortLines"), ed => ed.SortSelectedLines()));
+        list.Add(Editor(L("Ed_DuplicateLines"), ed => ed.DuplicateLines(), ShellCommandIds.DuplicateLines));
+        list.Add(Editor(L("Ed_MoveLinesUp"), ed => ed.MoveLinesUp(), ShellCommandIds.MoveLinesUp));
+        list.Add(Editor(L("Ed_MoveLinesDown"), ed => ed.MoveLinesDown(), ShellCommandIds.MoveLinesDown));
+        list.Add(Editor(L("Ed_SortLines"), ed => ed.SortSelectedLines(), ShellCommandIds.SortLines));
         // insert helpers.
         list.Add(Editor(L("Ed_InsertDate"), ed => ed.InsertDate()));
         list.Add(Editor(L("Ed_InsertTeamMember"), ed => ed.InsertTeamMember()));
         list.Add(Editor(L("Menu_Edit_AddBookmark"), ed => ed.MenuAddBookmark()));
         list.Add(Editor(L("Cmd_Find"), ed => ed.MenuFind()));
         list.Add(Editor(L("Cmd_Replace"), ed => ed.MenuReplace()));
-        list.Add(Editor(L("Cmd_FormatDoc"), ed => ed.FormatDocument()));
-        list.Add(Editor(L("Cmd_EncloseRegion"), ed => ed.MenuEncloseInRegion()));
-        list.Add(Editor(L("Cmd_QuickFix"), ed => ed.ShowQuickFixes()));
-        list.Add(Editor(L("Cmd_GoToMatching"), ed => ed.GoToMatchingBlock()));
-        list.Add(Editor(L("Cmd_PeekDef"), ed => ed.PeekDefinition()));
-        list.Add(Editor(L("Ed_FindAllRefs"), ed => ed.StartFindAllReferences()));
-        list.Add(Editor(L("Ed_NextOccurrence"), ed => ed.NextOccurrenceInFile()));
-        list.Add(Editor(L("Cmd_StepInto"), ed => ed.FollowIncludeUnderCaret()));
-        list.Add(Editor(L("Cmd_RenameEditor"), ed => ed.StartRename()));
+        list.Add(Editor(L("Cmd_FormatDoc"), ed => ed.FormatDocument(), ShellCommandIds.FormatDocument));
+        list.Add(Editor(L("Cmd_EncloseRegion"), ed => ed.MenuEncloseInRegion(), ShellCommandIds.EncloseInRegion));
+        list.Add(Editor(L("Cmd_QuickFix"), ed => ed.ShowQuickFixes(), ShellCommandIds.QuickFixes));
+        list.Add(Editor(L("Cmd_GoToMatching"), ed => ed.GoToMatchingBlock(), ShellCommandIds.GoToMatchingBlock));
+        list.Add(Editor(L("Cmd_PeekDef"), ed => ed.PeekDefinition(), ShellCommandIds.PeekDefinition));
+        list.Add(Editor(L("Ed_NextOccurrence"), ed => ed.NextOccurrenceInFile(), ShellCommandIds.NextOccurrenceInFile));
+        list.Add(Editor(L("Cmd_StepInto"), ed => ed.FollowIncludeUnderCaret(), ShellCommandIds.StepIntoInclude));
 
         // ---- Windows ----
         list.Add(VmCmd(L("Cmd_Cat_Window"), L("Cmd_Welcome"), _vm.ShowWelcomeCommand, "Icon.Info"));
-        list.Add(Action(L("Cmd_Cat_Window"), L("Cmd_Preferences"), () => { _vm.RaiseShowPreferences(null); return Task.CompletedTask; }, "Icon.Config"));
+        list.Add(VmCmd(L("Cmd_Cat_Window"), L("Cmd_Preferences"), _vm.OpenPreferencesCommand, "Icon.Config", ShellCommandIds.OpenPreferences));
         list.Add(Action(L("Cmd_Cat_Window"), L("Cmd_About"), () => { _vm.RaiseShowAbout(); return Task.CompletedTask; }, "Icon.Config"));
         list.Add(Action(L("Cmd_Cat_Window"), L("Cmd_TherionBook"), () => { _vm.RaiseShowThbook(); return Task.CompletedTask; }, "Icon.Map"));
         list.Add(Action(L("Cmd_Cat_Window"), L("Book_Title"), () => { _vm.RaiseShowBookmarks(); return Task.CompletedTask; }, "Icon.File"));
@@ -370,12 +375,23 @@ public sealed class CommandPaletteProvider
         ("keyboard", "Pref_Keyboard"),
     };
 
+    private static IMacroService? TryGetMacros()
+    {
+        try { return AppServices.Provider.GetService(typeof(IMacroService)) as IMacroService; }
+        catch (InvalidOperationException) { return null; }   // no container (tests, design time)
+    }
+
     // ---- item factories ----
 
-    private static QuickPickItem VmCmd(string category, string title, ICommand command, string iconKey) => new()
+    // The gesture currently bound to a shell command id (live from Settings ▸ Keyboard), or null.
+    private static string? G(string? commandId) =>
+        commandId is null ? null : ThIDE.Resources.GestureProxy.Instance.TextFor(commandId);
+
+    private static QuickPickItem VmCmd(string category, string title, ICommand command, string iconKey, string? gestureId = null) => new()
     {
         Title = title,
         Detail = category,
+        Gesture = G(gestureId),
         IconKey = iconKey,
         NameLower = title.ToLowerInvariant(),
         PathLower = category.ToLowerInvariant(),
@@ -401,20 +417,22 @@ public sealed class CommandPaletteProvider
         _ => fmt.ToUpperInvariant(),
     };
 
-    private static QuickPickItem Action(string category, string title, Func<Task> run, string iconKey) => new()
+    private static QuickPickItem Action(string category, string title, Func<Task> run, string iconKey, string? gestureId = null) => new()
     {
         Title = title,
         Detail = category,
+        Gesture = G(gestureId),
         IconKey = iconKey,
         NameLower = title.ToLowerInvariant(),
         PathLower = category.ToLowerInvariant(),
         Run = run,
     };
 
-    private static QuickPickItem Editor(string title, Action<TherionTextEditor> act) => new()
+    private static QuickPickItem Editor(string title, Action<TherionTextEditor> act, string? gestureId = null) => new()
     {
         Title = title,
         Detail = L("Cmd_Cat_Editor"),
+        Gesture = G(gestureId),
         IconKey = "Icon.File",
         NameLower = title.ToLowerInvariant(),
         PathLower = "editor",

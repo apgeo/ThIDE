@@ -51,7 +51,7 @@
                     </ListBox.Styles>
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <Grid ColumnDefinitions="22,*" Height="22">
+                            <Grid ColumnDefinitions="22,*,Auto" Height="22">
                                 <Panel Grid.Column="0" Width="18" Height="16">
                                     <PathIcon Width="14" Height="14"
                                               Data="{Binding IconKey, Converter={x:Static conv:ResourceKeyToGeometryConverter.Instance}}" />
@@ -62,6 +62,8 @@
                                     <TextBlock Text="{Binding Detail}" Foreground="Gray" FontSize="11"
                                                VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                                 </StackPanel>
+                                <TextBlock Grid.Column="2" Text="{Binding Gesture}" Foreground="Gray" FontSize="11"
+                                           Margin="12,0,0,0" VerticalAlignment="Center" />
                             </Grid>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
