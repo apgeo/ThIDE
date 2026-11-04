@@ -55,11 +55,15 @@ public class HookCatalogTests
     [Fact]
     public void Variables_are_quoted_once()
     {
-        var ctx = new HookContext(HookEvent.FileSaved, "/caves/My Cave/it's.th", "/caves", "/caves/a.thconfig");
+        // Native paths: ${fileDirname} is the platform's own directory name (backslashes on Windows).
+        var root = Path.Combine(Path.GetPathRoot(Path.GetTempPath())!, "caves");
+        var dir = Path.Combine(root, "My Cave");
+        var file = Path.Combine(dir, "it's.th");
+        var ctx = new HookContext(HookEvent.FileSaved, file, root, Path.Combine(root, "a.thconfig"));
 
-        Assert.Equal($"lint {Sh("/caves/My Cave/it's.th")}", HookVariables.Expand("lint {file}", ctx, Sh));
-        Assert.Equal($"lint {Sh("/caves/My Cave/it's.th")}", HookVariables.Expand("lint \"{file}\"", ctx, Sh));
-        Assert.Equal($"cd {Sh("/caves/My Cave")} && x {Sh("it's.th")} {Sh("/caves")} ${{unknown}}",
+        Assert.Equal($"lint {Sh(file)}", HookVariables.Expand("lint {file}", ctx, Sh));
+        Assert.Equal($"lint {Sh(file)}", HookVariables.Expand("lint \"{file}\"", ctx, Sh));
+        Assert.Equal($"cd {Sh(dir)} && x {Sh("it's.th")} {Sh(root)} ${{unknown}}",
             HookVariables.Expand("cd ${fileDirname} && x ${fileBasename} ${workspaceRoot} ${unknown}", ctx, Sh));
         Assert.Equal(Sh("v"), HookVariables.Expand("${env:X}", ctx, Sh, n => n == "X" ? "v" : null));
     }
