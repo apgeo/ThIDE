@@ -46,9 +46,12 @@ public class TaskCatalogTests
     [Fact]
     public void File_line_matcher_reads_position_severity_and_resolves_relative_paths()
     {
-        var d = ProblemMatchers.Match("file-line", "caves/a.th:12:3: warning: odd shot", false, "/c", "lint")!;
+        // A task's folder is a full native path (the workspace root by default); "/c" would be
+        // relative to the current drive on Windows, so the test builds one the platform's way.
+        var cwd = Path.Combine(Path.GetPathRoot(Path.GetTempPath())!, "c");
+        var d = ProblemMatchers.Match("file-line", "caves/a.th:12:3: warning: odd shot", false, cwd, "lint")!;
 
-        Assert.Equal("/c/caves/a.th".Replace('/', Path.DirectorySeparatorChar), d.Span.FilePath.Replace('/', Path.DirectorySeparatorChar));
+        Assert.Equal(Path.Combine(cwd, "caves", "a.th"), d.Span.FilePath);
         Assert.Equal(12, d.Span.Start.Line);
         Assert.Equal(3, d.Span.Start.Column);
         Assert.Equal(DiagnosticSeverity.Warning, d.Severity);
