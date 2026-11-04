@@ -225,7 +225,7 @@ public static class CommandVocabulary
     public static readonly ImmutableHashSet<string> SdLengthQuantities =
         ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase,
             "length", "tape", "count", "counter", "depth",
-            "x", "easting", "dx", "y", "northing", "dy", "z", "altitude", "position", "gps");
+            "x", "easting", "dx", "y", "northing", "dy", "z", "altitude", "dz", "position", "gps");
 
     /// <summary><c>sd</c>/<c>units</c> angle-class quantities.</summary>
     public static readonly ImmutableHashSet<string> SdAngleQuantities =
