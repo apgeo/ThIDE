@@ -513,8 +513,12 @@ public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, 
 
     private void PropagateWorkspaceToDocuments()
     {
-        // Snapshot: this can run off a session-changed callback while documents open/close.
-        foreach (var d in Documents.ToList()) { d.SetWorkspace(Workspace); UpdateMembership(d); }
+        // Snapshot: this can run off a session-changed callback while documents open/close. Headless,
+        // those run inline on pool threads, serialized by HeadlessUiGate, so the snapshot takes it too.
+        List<FileDocumentViewModel> docs;
+        if (NoUiLoop) lock (HeadlessUiGate) docs = Documents.ToList();
+        else docs = Documents.ToList();
+        foreach (var d in docs) { d.SetWorkspace(Workspace); UpdateMembership(d); }
     }
 
     // ---- ValidateOnType: live whole-project re-validation from unsaved buffers -------------------
@@ -892,9 +896,14 @@ public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, 
     // UI thread (OpenFileAsync's continuation can run on a thread-pool thread). Marshal synchronously
     // (Invoke, not Post) so the open/close flow stays correctly ordered. This stops "Collection was
     // modified" enumeration crashes in any consumer iterating Documents (e.g. TodoScanViewModel).
+    // Headless there is no UI thread to serialize on, and two opens at once would mutate the collection
+    // from two pool threads together (a torn List, a null slot in a later snapshot); this gate stands in.
+    private static readonly object HeadlessUiGate = new();
+
     private static void OnUiSync(Action action)
     {
-        if (NoUiLoop || Avalonia.Threading.Dispatcher.UIThread.CheckAccess()) action();
+        if (NoUiLoop) { lock (HeadlessUiGate) action(); }
+        else if (Avalonia.Threading.Dispatcher.UIThread.CheckAccess()) action();
         else Avalonia.Threading.Dispatcher.UIThread.Invoke(action);
     }
 

@@ -7,6 +7,7 @@ namespace ThIDE.Tests;
 /// trash helper must therefore not turn the operation into a permanent delete behind their back.
 /// Linux only: the service resolves `gio` on PATH, which the test replaces with a stub that fails.
 /// </summary>
+[Collection(ProcessEnvironmentCollection.Name)]
 public class UnixFileOperationsTrashFailureTests : IDisposable
 {
     private readonly string _root = Directory.CreateTempSubdirectory("thide-trash-").FullName;

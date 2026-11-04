@@ -90,7 +90,18 @@ public class CrashRecoveryLifecycleProperties
 
         public string Context => $"seed {Seed}, steps: {string.Join(" → ", Trace)}";
 
-        public void Dispose() { try { Directory.Delete(Root, recursive: true); } catch { /* best-effort */ } }
+        /// <summary>
+        /// Every instance's workspace session, crashed ones included. A session that opened a file watches
+        /// the project folder, and on Linux each watcher holds an inotify instance until it is disposed;
+        /// hundreds of leaked ones exhaust the per-user limit and break watchers in other tests and processes.
+        /// </summary>
+        public List<WorkspaceSessionService> Sessions { get; } = new();
+
+        public void Dispose()
+        {
+            foreach (var session in Sessions) session.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            try { Directory.Delete(Root, recursive: true); } catch { /* best-effort */ }
+        }
     }
 
     private enum Op { Start, Edit, Autosave, SaveDocument, Crash, ExitDiscarding, ExitKeepingCopies, Restore, Dismiss }
@@ -234,11 +245,13 @@ public class CrashRecoveryLifecycleProperties
 
     private static Instance Start(World world)
     {
+        var session = new WorkspaceSessionService(new StubSniffer(), new FakeSettings());
+        world.Sessions.Add(session);
         var inst = new Instance
         {
             Id = world.NextId++,
             Recovery = new CrashRecoveryService(world.Profile),
-            Documents = new DocumentService(new StubResolver(), new WorkspaceSessionService(new StubSniffer(), new FakeSettings())),
+            Documents = new DocumentService(new StubResolver(), session),
         };
         inst.Recovery.MarkRunning();
         Assert.True((world.UnseenCrashes > 0) == inst.Recovery.PreviousRunCrashed,

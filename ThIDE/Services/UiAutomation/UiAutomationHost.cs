@@ -51,11 +51,7 @@ public static class UiAutomationHost
             string token = Environment.GetEnvironmentVariable(TokenVariable) is { Length: > 0 } t
                 ? t : McpHostService.GenerateToken();
 
-            var builder = WebApplication.CreateSlimBuilder(new WebApplicationOptions
-            {
-                Args = Array.Empty<string>(),
-                ContentRootPath = AppContext.BaseDirectory,
-            });
+            var builder = McpHostService.CreateLoopbackBuilder();
             builder.WebHost.ConfigureKestrel(o => o.Listen(IPAddress.Loopback, port));
             builder.Logging.ClearProviders();
             builder.Services

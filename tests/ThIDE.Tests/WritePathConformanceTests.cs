@@ -33,8 +33,14 @@ public class WritePathConformanceTests
             => new(new EntryPointResolution(ImmutableArray<string>.Empty, pathOrFolder, ImmutableArray<Diagnostic>.Empty));
     }
 
-    private static DocumentService NewDocuments() =>
-        new(new StubResolver(), new WorkspaceSessionService(new StubSniffer(), new FakeSettings()));
+    // Opening a file roots the session and starts its file watchers, which on Linux hold an inotify
+    // instance each. Callers dispose the session with `await using`, declared after the fixture so it is
+    // disposed before the fixture folder is deleted: a watcher whose folder is already gone is not torn
+    // down by Dispose and keeps its instance for the life of the process. Leaked over this matrix, they
+    // used up the per-user limit and broke the watchers of other tests and processes.
+    private static WorkspaceSessionService NewSession() => new(new StubSniffer(), new FakeSettings());
+
+    private static DocumentService NewDocuments(IWorkspaceSession session) => new(new StubResolver(), session);
 
     private static WorkspaceEditService NewEditService()
     {
@@ -49,7 +55,8 @@ public class WritePathConformanceTests
     {
         using var placed = PlacedFixture.TryPlace(WriteFixtures.Get(fixture));
         if (placed is null) return;
-        var svc = NewDocuments();
+        await using var session = NewSession();
+        var svc = NewDocuments(session);
         await svc.OpenFileAsync(placed.Path);
         var doc = svc.Documents.Single();
         doc.DocumentText = doc.DocumentText.Replace(WriteFixture.Find, placed.Fixture.Replace, StringComparison.Ordinal);
@@ -162,7 +169,8 @@ public class WritePathConformanceTests
         var header = string.Concat(Enumerable.Repeat("# " + new string('ž', 100) + "\n", 30));
         var path = Path.Combine(dir.Path, "a.th");
         File.WriteAllBytes(path, latin2.GetBytes(header + "encoding iso8859-2\nsurvey a\n# MARK\nendsurvey\n"));
-        var svc = NewDocuments();
+        await using var session = NewSession();
+        var svc = NewDocuments(session);
         await svc.OpenFileAsync(path);
         var doc = svc.Documents.Single();
         doc.DocumentText = doc.DocumentText.Replace("MARK", "MARQ ž", StringComparison.Ordinal);
