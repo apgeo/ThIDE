@@ -176,7 +176,7 @@ internal sealed class ScriptedDocumentService : IDocumentService
     public string CurrentText => Active?.DocumentText ?? string.Empty;
     public SemanticModel? CurrentSemantics => Active?.Semantics;
     public TherionFile? CurrentAst => Active?.Ast;
-    public WorkspaceSemanticModel? Workspace => null;
+    public WorkspaceSemanticModel? Workspace { get; set; }
     public ImmutableArray<Diagnostic> CurrentDiagnostics => Active?.Diagnostics ?? ImmutableArray<Diagnostic>.Empty;
     public ISymbolNavigationService? CurrentNavigation => null;
 
