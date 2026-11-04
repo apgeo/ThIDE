@@ -143,6 +143,6 @@ public static partial class SnippetVariables
         return station[..m.Index] + next.PadLeft(digits.Length, '0');
     }
 
-    [GeneratedRegex(@"(\d+)$")]
+    [GeneratedRegex(@"([0-9]+)$")]
     private static partial Regex TrailingNumber();
 }

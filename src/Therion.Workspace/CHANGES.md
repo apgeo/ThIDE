@@ -4,6 +4,14 @@ What a consumer of this library can notice, newest first. Each entry says what c
 and what to do. Entries also cover behaviour that reaches you through `Therion.Syntax` and
 `Therion.Semantics`, which this library is built on.
 
+## 2026-11 (round 5)
+
+### Behaviour changes
+- `RenumberRule.Apply` (and so `StationRenumber.Plan`) and `SnippetVariables.NextStation` no longer throw
+  `FormatException` for a station name that ends in, or is, a number written in non-ASCII digits (Arabic-Indic
+  or Persian digits, for instance). Only ASCII digits count as the number: such a station is left alone by a
+  renumbering with an offset, and `NextStation` returns null for it. Migration: none.
+
 ## 2026-11 (later)
 
 ### Behaviour changes
