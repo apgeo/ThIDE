@@ -333,7 +333,11 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
         // with a "ready" indicator, so a large project never blocks the UI while it indexes.
         WorkspaceSemanticModel model;
         BeginIndexing();
-        try { model = await Task.Run(() => ws.BuildSemanticModel(), ct).ConfigureAwait(false); }
+        try
+        {
+            if (ActivationLoadedForTests is { } hold) await hold(full).ConfigureAwait(false);
+            model = await Task.Run(() => ws.BuildSemanticModel(), ct).ConfigureAwait(false);
+        }
         catch { await ws.DisposeAsync().ConfigureAwait(false); throw; }
         finally { EndIndexing(); }
 
@@ -516,6 +520,10 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
     {
         lock (_gate) return _selfWrites.TryGetValue(TryFull(filePath), out var mark) && mark.Seen is null;
     }
+
+    // Test seam: awaited by each activation once its thconfig has loaded, before its graph is built (it
+    // counts as indexing by then), so a test can let overlapping activations finish in any order.
+    internal Func<string, Task>? ActivationLoadedForTests { get; set; }
 
     // Test seam: true while a requested graph rebuild is still waiting or running.
     internal bool IsRebuildPending
