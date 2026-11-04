@@ -16,15 +16,20 @@
     #overlay.hidden { display: none; }
     /* When the host hides CaveView's own menu, suppress its control panel (the left sidebar). */
     #scene.cv-hide-ui .cv-frame { display: none !important; }
+    /* The crosshair of "Show in 3D" is drawn here, laid exactly over the viewer. */
+    #mark-layer { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
 </style>
 </head>
 <body>
 <div id="scene" class="cv-container"></div>
+<div id="mark-layer"></div>
 <div id="overlay">Loading 3D engine…</div>
 
-<!-- Vendored CaveView.js (MIT). Detector provides WebGL feature detection. -->
+<!-- CaveView.js (the apgeo fork, MIT) and the station mark, both served from Therion.CaveView.
+     Detector provides WebGL feature detection. -->
 <script src="CaveView/lib/Detector.js"></script>
-<script src="CaveView/js/CaveView2.js"></script>
+<script src="CaveView/js/CaveView2.min.js"></script>
+<script src="assets/station-mark.js"></script>
 <script>
 "use strict";
 // Host page bridging the embedded CaveView.js viewer to the ThIDE C# shell.
@@ -36,6 +41,9 @@
 (function () {
 
     var viewer = null;
+    var mark = null;           // the crosshair of "Show in 3D" (station-mark.js)
+    var modelLoaded = false;   // a model is up: "Show in 3D" can look stations up
+    var pendingShow = null;    // a "Show in 3D" asked for while the model was still loading
     var caveUI = null;         // CaveView's own control panel (created lazily on first sidebar-enable)
     var fullscreenActive = false;  // host-managed: forward Esc to exit full screen only while set
     var pendingModel = null;   // a load requested before the viewer finished initialising
@@ -123,6 +131,8 @@
         if (!viewer) { pendingModel = file; return; }
         try {
             hideOverlay();
+            if (mark) mark.clear();
+            modelLoaded = false;
             viewer.clearView();
             viewer.loadCave(file);
         } catch (e) { post({ type: "error", message: String(e) }); }
@@ -133,12 +143,29 @@
         try { viewer.shadingMode = shadingFromName(name); } catch (e) { /* ignore */ }
     };
 
-    // Select a station or survey by its full dotted path (outer.inner.point). For a station
-    // CaveView highlights the point; for a survey it shows the bounding box — both native.
-    window.cvSelect = function (name) {
+    // "Show in 3D": fly to a station and put a crosshair on it, or frame a survey.
+    //   opts.zoom   true = close-up on the station, false = centre it at the current zoom
+    //   opts.splay  { length, compass, clino } — mark the end of the model's matching splay
+    // Reports back { type: "shown", target, kind, name, splay, angle } (see station-mark.js).
+    window.cvShow = function (name, opts) {
         if (!viewer || !name) return;
-        try { viewer.sectionByName = String(name); } catch (e) { /* ignore */ }
+        opts = opts || {};
+        // asked while the model is loading (the panel was just opened for it): show it on arrival
+        if (!modelLoaded) { pendingShow = { name: name, opts: opts }; return; }
+        if (!mark) {   // station-mark.js missing: CaveView's own selection still highlights it
+            try { viewer.sectionByName = String(name); } catch (e) { /* ignore */ }
+            return;
+        }
+        try {
+            mark.show(String(name), { zoom: !!opts.zoom, splay: opts.splay || null }).then(function (r) {
+                r = r || {};
+                post({ type: "shown", target: String(name), kind: r.kind || "none", name: r.name || null,
+                       splay: r.splay || null, angle: (r.angle === undefined ? null : r.angle) });
+            });
+        } catch (e) { post({ type: "error", message: String(e) }); }
     };
+
+    window.cvClearMark = function () { if (mark) mark.clear(); };
 
     window.cvResetView = function () {
         if (!viewer) return;
@@ -210,7 +237,9 @@
 
     // Unload the current model so a workspace/thconfig switch doesn't leave a stale cave on screen.
     window.cvClear = function () {
-        try { if (viewer) viewer.clearView(); } catch (e) { /* ignore */ }
+        modelLoaded = false;
+        pendingShow = null;
+        try { if (mark) mark.clear(); if (viewer) viewer.clearView(); } catch (e) { /* ignore */ }
         showOverlay("Build a 3D model (.lox / .3d) to view it here.");
     };
 
@@ -225,6 +254,7 @@
             if (!n) return;
             var name = (typeof n.name === "function") ? n.name() : (n.name || "");
             var c = (typeof n.coordinates === "function") ? n.coordinates() : null;
+            if (mark && name) mark.mark(name);   // the picked station keeps a crosshair too
             post({
                 type: "station",
                 station: name,
@@ -245,9 +275,12 @@
             return;
         }
         try {
+            // the host passes its interface language (?lang=ro); CaveView fetches the catalogue
+            var lang = /[?&]lang=([a-z]{2})/.exec(location.search);
             viewer = new CV2.CaveViewer("scene", {
                 home: "CaveView/",
                 surveyDirectory: "model/",
+                language: lang ? lang[1] : "en",
                 view: {
                     shadingMode: CV2.SHADING_HEIGHT,
                     box: true,
@@ -257,7 +290,18 @@
                 }
             });
 
-            viewer.addEventListener("newCave", function () { hideOverlay(); post({ type: "loaded" }); });
+            window.cvViewer = viewer;   // for the DevTools console
+            // created before the listener below: the mark clears itself on a new model, and a
+            // "Show in 3D" waiting for the model is then shown after that, not wiped by it
+            if (typeof CaveStationMark === "function")
+                mark = new CaveStationMark(viewer, document.getElementById("mark-layer"));
+
+            viewer.addEventListener("newCave", function () {
+                hideOverlay();
+                modelLoaded = true;
+                post({ type: "loaded" });
+                if (pendingShow) { var p = pendingShow; pendingShow = null; window.cvShow(p.name, p.opts); }
+            });
             viewer.addEventListener("station", onStation);
 
             // Keep the WebGL canvas fitted to the panel. CaveView only re-fits on a window 'resize',

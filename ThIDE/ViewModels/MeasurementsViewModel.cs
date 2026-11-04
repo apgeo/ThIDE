@@ -90,6 +90,23 @@ public partial class MeasurementsViewModel : ViewModelBase
     private readonly List<MeasurementRow> _all = new();
     private readonly List<StationMeasurementRow> _allStations = new();
 
+    /// <summary>
+    /// What "Show in 3D" on one end of a shot points at. A named end is a station. The anonymous
+    /// end of a splay (<c>-</c> / <c>.</c>) has no name in the model, so it becomes the splay of the
+    /// named end with the shot's readings, turned round when the splay was read towards the station.
+    /// </summary>
+    public static Model3DTarget Model3DTargetFor(MeasurementRow row, bool toEnd)
+    {
+        bool fromAnon = IsAnonymousStation(row.FromShort), toAnon = IsAnonymousStation(row.ToShort);
+        bool wantAnon = toEnd ? toAnon : fromAnon;
+        if (!wantAnon || (fromAnon && toAnon)) return new Model3DTarget(toEnd ? row.ToFull : row.FromFull);
+        if (toAnon) return Model3DTarget.Splay(row.FromFull, row.Length, row.Compass, row.Clino);
+        return Model3DTarget.Splay(row.ToFull, row.Length,
+            row.Compass is { } c ? (c + 180) % 360 : null, row.Clino is { } i ? -i : null);
+    }
+
+    private static bool IsAnonymousStation(string name) => name is "-" or "." or "";
+
     // ---- Shots view ----
     [ObservableProperty] private DataGridCollectionView? _view;
     [ObservableProperty] private int _count;

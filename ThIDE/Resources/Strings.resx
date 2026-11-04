@@ -766,6 +766,29 @@
   <data name="M3D_Plain" xml:space="preserve"><value>Plain</value></data>
   <data name="M3D_Unavailable" xml:space="preserve"><value>3D model viewer unavailable</value></data>
   <data name="M3D_OpenModelExternal" xml:space="preserve"><value>Open model externally (Loch / Aven)</value></data>
+  <data name="M3D_ZoomOnShow" xml:space="preserve"><value>🔍 Close-up</value></data>
+  <data name="M3D_ZoomOnShowTip" xml:space="preserve"><value>Show in 3D zooms in on the station (off: centres it at the current zoom)</value></data>
+  <data name="M3D_Showing" xml:space="preserve"><value>Showing {0} in 3D…</value></data>
+  <data name="M3D_ShownStation" xml:space="preserve"><value>Showing {0} in 3D.</value></data>
+  <data name="M3D_ShownSurvey" xml:space="preserve"><value>Framed survey {0} in 3D.</value></data>
+  <data name="M3D_ShownNone" xml:space="preserve"><value>“{0}” is not in the loaded model — rebuild the model, or pick a model that contains it.</value></data>
+  <data name="M3D_ShownSplay" xml:space="preserve"><value>Showing the splay from {0} in 3D.</value></data>
+  <data name="M3D_ShownSplayClosest" xml:space="preserve"><value>Showing the splay from {0} that is closest to the measured one (its direction differs by {1}°).</value></data>
+  <data name="M3D_ShownSplayMissing" xml:space="preserve"><value>The model has no splays at {0} — showing the station.</value></data>
+  <data name="M3D_ExportPage" xml:space="preserve"><value>🌍 Web page…</value></data>
+  <data name="M3D_ExportPageTip" xml:space="preserve"><value>Export the model as a stand-alone web page: a folder to put on any web server</value></data>
+  <data name="M3D_ExportTitle" xml:space="preserve"><value>Export the 3D model as a web page</value></data>
+  <data name="M3D_ExportIntro" xml:space="preserve"><value>Writes a folder with index.html, the 3D viewer and the model. Put the whole folder on any web server; nothing else is needed.</value></data>
+  <data name="M3D_ExportPageTitle" xml:space="preserve"><value>Page title</value></data>
+  <data name="M3D_ExportDescription" xml:space="preserve"><value>Text under the title (optional)</value></data>
+  <data name="M3D_ExportPlaces" xml:space="preserve"><value>List the model's entrances and commented stations as places that fly the view there</value></data>
+  <data name="M3D_ExportCurrentView" xml:space="preserve"><value>Open with the current view settings (layers, colouring, orientation)</value></data>
+  <data name="M3D_ExportEmbed" xml:space="preserve"><value>Also works opened straight from a disk (the model is carried inside the page, about a third larger)</value></data>
+  <data name="M3D_ExportChooseFolder" xml:space="preserve"><value>Choose folder…</value></data>
+  <data name="M3D_ExportFolder" xml:space="preserve"><value>Folder for the web page</value></data>
+  <data name="M3D_ExportDone" xml:space="preserve"><value>Web page written to {0}</value></data>
+  <data name="M3D_ExportFailed" xml:space="preserve"><value>Could not write the web page: {0}</value></data>
+  <data name="M3D_ExportNoModel" xml:space="preserve"><value>Load a model first.</value></data>
   <!-- Live preview tool -->
   <data name="Live_PlanTip" xml:space="preserve"><value>Plan view (looking down — north up)</value></data>
   <data name="Live_ViewPlan" xml:space="preserve"><value>Plan view</value></data>

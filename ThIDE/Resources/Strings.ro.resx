@@ -766,6 +766,29 @@
   <data name="M3D_Plain" xml:space="preserve"><value>Simplu</value></data>
   <data name="M3D_Unavailable" xml:space="preserve"><value>Vizualizatorul de model 3D indisponibil</value></data>
   <data name="M3D_OpenModelExternal" xml:space="preserve"><value>Deschide modelul extern (Loch / Aven)</value></data>
+  <data name="M3D_ZoomOnShow" xml:space="preserve"><value>🔍 Apropiere</value></data>
+  <data name="M3D_ZoomOnShowTip" xml:space="preserve"><value>„Arată în 3D” apropie imaginea de stație (dezactivat: doar o centrează, la zoomul curent)</value></data>
+  <data name="M3D_Showing" xml:space="preserve"><value>Se arată {0} în 3D…</value></data>
+  <data name="M3D_ShownStation" xml:space="preserve"><value>Se arată {0} în 3D.</value></data>
+  <data name="M3D_ShownSurvey" xml:space="preserve"><value>Topografia {0} este încadrată în 3D.</value></data>
+  <data name="M3D_ShownNone" xml:space="preserve"><value>„{0}” nu este în modelul încărcat — recompilați modelul sau alegeți un model care o conține.</value></data>
+  <data name="M3D_ShownSplay" xml:space="preserve"><value>Se arată vizeul radial (splay) din {0} în 3D.</value></data>
+  <data name="M3D_ShownSplayClosest" xml:space="preserve"><value>Se arată vizeul radial din {0} cel mai apropiat de cel măsurat (direcția diferă cu {1}°).</value></data>
+  <data name="M3D_ShownSplayMissing" xml:space="preserve"><value>Modelul nu are vize radiale în {0} — se arată stația.</value></data>
+  <data name="M3D_ExportPage" xml:space="preserve"><value>🌍 Pagină web…</value></data>
+  <data name="M3D_ExportPageTip" xml:space="preserve"><value>Exportă modelul ca pagină web de sine stătătoare: un dosar de pus pe orice server web</value></data>
+  <data name="M3D_ExportTitle" xml:space="preserve"><value>Exportă modelul 3D ca pagină web</value></data>
+  <data name="M3D_ExportIntro" xml:space="preserve"><value>Scrie un dosar cu index.html, vizualizatorul 3D și modelul. Puneți tot dosarul pe orice server web; nu mai este nevoie de nimic altceva.</value></data>
+  <data name="M3D_ExportPageTitle" xml:space="preserve"><value>Titlul paginii</value></data>
+  <data name="M3D_ExportDescription" xml:space="preserve"><value>Text sub titlu (opțional)</value></data>
+  <data name="M3D_ExportPlaces" xml:space="preserve"><value>Listează intrările și stațiile cu comentarii ale modelului ca locuri spre care se poate naviga</value></data>
+  <data name="M3D_ExportCurrentView" xml:space="preserve"><value>Deschide cu setările curente de afișare (straturi, colorare, orientare)</value></data>
+  <data name="M3D_ExportEmbed" xml:space="preserve"><value>Funcționează și deschisă direct de pe disc (modelul este inclus în pagină, cu aproximativ o treime mai mare)</value></data>
+  <data name="M3D_ExportChooseFolder" xml:space="preserve"><value>Alege dosarul…</value></data>
+  <data name="M3D_ExportFolder" xml:space="preserve"><value>Dosarul pentru pagina web</value></data>
+  <data name="M3D_ExportDone" xml:space="preserve"><value>Pagina web a fost scrisă în {0}</value></data>
+  <data name="M3D_ExportFailed" xml:space="preserve"><value>Pagina web nu a putut fi scrisă: {0}</value></data>
+  <data name="M3D_ExportNoModel" xml:space="preserve"><value>Încărcați mai întâi un model.</value></data>
   <!-- Live preview tool -->
   <data name="Live_PlanTip" xml:space="preserve"><value>Vedere în plan (privire de sus — nord în sus)</value></data>
   <data name="Live_ViewPlan" xml:space="preserve"><value>Vedere în plan</value></data>

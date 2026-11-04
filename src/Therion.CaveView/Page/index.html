@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="{{LANG}}">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="generator" content="{{GENERATOR}}" />
+<title>{{TITLE}}</title>
+<link rel="stylesheet" href="{{HOME}}css/caveview.css" />
+<link rel="stylesheet" href="assets/model-page.css" />
+</head>
+<body>
+<header class="cp-head">
+<h1>{{TITLE}}</h1>
+{{DESCRIPTION}}
+</header>
+<main class="cp-main">
+<div id="cp-stage" class="cp-stage">
+<div id="cp-model" class="cp-model"></div>
+<div id="cp-overlay" class="cp-overlay"></div>
+<div id="cp-status" class="cp-status" hidden></div>
+</div>
+<aside id="cp-places" class="cp-places" hidden><h2></h2><ul></ul></aside>
+</main>
+<footer class="cp-foot">{{FOOTER}}</footer>
+<script type="application/json" id="cave-page-config">{{CONFIG}}</script>
+<script src="{{HOME}}lib/Detector.js"></script>
+<script src="{{HOME}}js/CaveView2.min.js"></script>
+<script src="assets/station-mark.js"></script>
+{{MODEL_SCRIPT}}<script src="assets/model-page.js"></script>
+</body>
+</html>

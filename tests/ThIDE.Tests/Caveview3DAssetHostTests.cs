@@ -1,8 +1,9 @@
 // pure-logic tests for the 3D viewer asset host: MIME mapping, request→asset routing
 // (incl. traversal rejection), free-port selection, and model staging. The HTTP listener itself
-// and the avares asset reads need the Avalonia platform, so they're exercised at runtime.
+// and the avares read of viewer.html need the Avalonia platform, so they're exercised at runtime.
 
 using System.IO;
+using System.Linq;
 using ThIDE.Services;
 using Xunit;
 
@@ -12,27 +13,59 @@ public class Caveview3DAssetHostTests
 {
     [Theory]
     [InlineData("viewer.html", "text/html; charset=utf-8")]
-    [InlineData("CaveView/js/CaveView2.js", "text/javascript; charset=utf-8")]
-    [InlineData("CaveView/css/caveview.css", "text/css; charset=utf-8")]
+    [InlineData("js/CaveView2.min.js", "text/javascript; charset=utf-8")]
+    [InlineData("css/caveview.css", "text/css; charset=utf-8")]
     [InlineData("model/m1.lox", "application/octet-stream")]
     [InlineData("model/m1.3d", "application/octet-stream")]
-    [InlineData("CaveView/images/logo.svg", "image/svg+xml")]
+    [InlineData("images/logo.svg", "image/svg+xml")]
     public void MimeType_is_correct(string path, string expected) =>
         Assert.Equal(expected, Caveview3DAssetHost.MimeTypeFor(path));
 
     [Theory]
-    [InlineData("/", "avares://ThIDE/Assets/caveview/viewer.html")]
-    [InlineData("/viewer.html", "avares://ThIDE/Assets/caveview/viewer.html")]
-    [InlineData("/CaveView/js/CaveView2.js", "avares://ThIDE/Assets/caveview/CaveView/js/CaveView2.js")]
-    public void Request_path_maps_to_avares_asset(string path, string expected) =>
-        Assert.Equal(expected, Caveview3DAssetHost.MapRequestToAsset(path));
+    [InlineData("/", "Viewer", "viewer.html")]
+    [InlineData("/viewer.html", "Viewer", "viewer.html")]
+    [InlineData("/CaveView/js/CaveView2.min.js", "Runtime", "js/CaveView2.min.js")]
+    [InlineData("/assets/station-mark.js", "Page", "assets/station-mark.js")]
+    public void Request_path_maps_to_the_file_it_serves(string path, string kind, string expected)
+    {
+        var asset = Caveview3DAssetHost.MapRequestToAsset(path);
+        Assert.NotNull(asset);
+        Assert.Equal(kind, asset!.Value.Kind.ToString());
+        Assert.Equal(expected, asset.Value.Path);
+    }
 
     [Theory]
     [InlineData("/../secrets.txt")]
     [InlineData("/CaveView/../../etc")]
     [InlineData("/c:/windows")]
-    public void Traversal_and_absolute_paths_are_rejected(string path) =>
+    [InlineData("/elsewhere.js")]
+    public void Traversal_absolute_and_unknown_paths_are_rejected(string path) =>
         Assert.Null(Caveview3DAssetHost.MapRequestToAsset(path));
+
+    [Fact]
+    public void Every_file_viewer_html_loads_is_served()
+    {
+        // the host page names its scripts and stylesheet by path; each must map to a file that exists
+        var html = File.ReadAllText(Path.Combine(RepoRoot(), "ThIDE", "Assets", "caveview", "viewer.html"));
+        var refs = System.Text.RegularExpressions.Regex.Matches(html, "(?:src|href)=\"([^\"]+)\"").Select(m => m.Groups[1].Value).ToList();
+        Assert.NotEmpty(refs);
+        foreach (var r in refs)
+        {
+            var asset = Caveview3DAssetHost.MapRequestToAsset("/" + r);
+            Assert.True(asset is not null, r);
+            using var s = asset!.Value.Kind == Caveview3DAssetHost.AssetKind.Runtime
+                ? Therion.CaveView.CaveViewRuntime.Open(asset.Value.Path)
+                : Therion.CaveView.CaveViewRuntime.OpenPageFile(asset.Value.Path);
+            Assert.True(s is not null, r);
+        }
+    }
+
+    private static string RepoRoot()
+    {
+        var dir = new DirectoryInfo(System.AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "ThIDE.sln"))) dir = dir.Parent;
+        return dir?.FullName ?? throw new DirectoryNotFoundException("ThIDE.sln not found above the test output");
+    }
 
     [Fact]
     public void FindFreeLoopbackPort_returns_a_valid_port()

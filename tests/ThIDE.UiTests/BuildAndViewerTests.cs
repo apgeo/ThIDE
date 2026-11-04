@@ -40,4 +40,31 @@ public class BuildAndViewerTests
         // The status line only changes from "Loading…" once CaveView's page has answered over the JS bridge.
         await app.WaitAsync("#Viewer3D.View >> role:Text;name:demo.lox", timeoutMs: 30_000);
     }
+
+    [UiFact]
+    public async Task Show_in_3d_flies_to_a_station_and_reports_what_it_found()
+    {
+        if (!HasTherion()) return;
+        var dir = ThideApp.CopyFixture("demo-cave");
+        await using (var build = await ThideApp.StartAsync(dir, "demo.thconfig"))
+        {
+            await build.WaitAsync("role:TabItem;name:demo.thconfig;state:selected");
+            await build.InvokeAsync("#Toolbar.Compile");
+            for (int i = 0; i < 120 && !File.Exists(Path.Combine(dir, "demo.lox")); i++) await Task.Delay(500);
+        }
+
+        await using var app = await ThideApp.StartAsync(dir, "demo.thconfig");
+        await app.WaitAsync("role:TabItem;name:3D Viewer");
+        await app.InvokeAsync("role:TabItem;name:3D Viewer");
+        await app.WaitAsync("#Viewer3D.View >> role:Text;name:demo.lox", timeoutMs: 30_000);
+        await app.WaitAsync("#Viewer3D.ZoomOnShow");
+
+        // The status line takes the page's answer: the station was found in the model and marked…
+        await app.CallAsync("show_in_3d", new { station = "demo.3" });
+        await app.WaitAsync("#Viewer3D.View >> role:Text;name:Showing demo.3 in 3D.", timeoutMs: 30_000);
+
+        // …and a name the model does not have is said to be missing, not silently ignored.
+        await app.CallAsync("show_in_3d", new { station = "demo.99" });
+        await app.WaitAsync("#Viewer3D.View >> role:Text;name~:demo\\.99.*not in the loaded model", timeoutMs: 30_000);
+    }
 }

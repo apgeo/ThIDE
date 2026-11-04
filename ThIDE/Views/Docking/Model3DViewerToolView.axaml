@@ -58,7 +58,20 @@
                             ToolTip.Tip="{l:Loc M3D_OpenUrlTip}" />
                     <Button Content="{l:Loc Common_OpenExternally}" Command="{Binding Viewer.OpenExternallyCommand}"
                             AutomationProperties.AutomationId="Viewer3D.OpenExternally"
-                            IsEnabled="{Binding Viewer.HasModel}" FontSize="11" Padding="8,2" Margin="0,0,6,2" />
+                            IsEnabled="{Binding Viewer.HasModel}" FontSize="11" Padding="8,2" Margin="0,0,2,2" />
+                    <!-- Export the model as a stand-alone web page (a folder for any web server). -->
+                    <Button Content="{l:Loc M3D_ExportPage}" Command="{Binding Viewer.ExportWebPageCommand}"
+                            AutomationProperties.AutomationId="Viewer3D.ExportWebPage" AutomationProperties.Name="{l:Loc M3D_ExportPageTip}"
+                            IsEnabled="{Binding Viewer.HasModel}" FontSize="11" Padding="8,2" Margin="0,0,6,2"
+                            ToolTip.Tip="{l:Loc M3D_ExportPageTip}" />
+
+                    <Separator Width="1" Margin="3,2" Background="Gray" />
+
+                    <!-- "Show in 3D": zoom in on the station (close-up), or only centre it at the current zoom. -->
+                    <ToggleButton AutomationProperties.AutomationId="Viewer3D.ZoomOnShow" Content="{l:Loc M3D_ZoomOnShow}"
+                                  AutomationProperties.Name="{l:Loc M3D_ZoomOnShowTip}"
+                                  IsChecked="{Binding Viewer.ZoomOnShow, Mode=TwoWay}" FontSize="11" Padding="6,2" Margin="0,0,6,2"
+                                  ToolTip.Tip="{l:Loc M3D_ZoomOnShowTip}" />
 
                     <Separator Width="1" Margin="3,2" Background="Gray" />
 

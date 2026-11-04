@@ -157,7 +157,26 @@ public interface IDocumentService
 
     /// <summary>Asks the shell to reveal a station/survey (by full dotted name) in the embedded 3D viewer.</summary>
     void RequestShowInModel3D(string fullName);
-    event EventHandler<string>? ShowInModel3DRequested;
+    /// <summary>Asks the shell to reveal a station, survey or splay in the embedded 3D viewer.</summary>
+    void RequestShowInModel3D(Model3DTarget target);
+    event EventHandler<Model3DTarget>? ShowInModel3DRequested;
+}
+
+/// <summary>
+/// What "Show in 3D" points at: a station or survey by its full dotted name, or - with the shot's
+/// measurements - a splay shot from station <see cref="Name"/>, which has no name of its own.
+/// </summary>
+public sealed record Model3DTarget(string Name)
+{
+    public double? SplayLength { get; init; }
+    public double? SplayCompass { get; init; }
+    public double? SplayClino { get; init; }
+
+    public bool IsSplay => SplayCompass is not null || SplayClino is not null;
+
+    /// <summary>The splay shot from <paramref name="from"/> with these readings.</summary>
+    public static Model3DTarget Splay(string from, double? length, double? compass, double? clino) =>
+        new(from) { SplayLength = length, SplayCompass = compass ?? 0, SplayClino = clino ?? 0 };
 }
 
 public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, ISnippetEditor, IAsyncDisposable
@@ -217,12 +236,14 @@ public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, 
             FindAllReferencesRequested?.Invoke(this, (raw, kind));
     }
 
-    public event EventHandler<string>? ShowInModel3DRequested;
+    public event EventHandler<Model3DTarget>? ShowInModel3DRequested;
 
-    public void RequestShowInModel3D(string fullName)
+    public void RequestShowInModel3D(string fullName) => RequestShowInModel3D(new Model3DTarget(fullName ?? string.Empty));
+
+    public void RequestShowInModel3D(Model3DTarget target)
     {
-        if (!string.IsNullOrWhiteSpace(fullName))
-            ShowInModel3DRequested?.Invoke(this, fullName);
+        if (!string.IsNullOrWhiteSpace(target?.Name))
+            ShowInModel3DRequested?.Invoke(this, target);
     }
 
     // Projection of the active document.

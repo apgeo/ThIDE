@@ -186,6 +186,7 @@
 		"title": "Pomoč",
 		"header_svx": "Ukazi na tipkovnici (survex)",
 		"header_native": "Ukazi na tipkovnici (izvorni)",
+		"version": "CaveView %{version}",
 		"shading": {
 			"header": "Senčenje",
 			"height": "višina",

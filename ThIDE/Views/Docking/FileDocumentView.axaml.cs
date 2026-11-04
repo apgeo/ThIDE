@@ -563,14 +563,16 @@ public partial class FileDocumentView : UserControl
         if (StationGridSelectedRow() is { } row) TryDocuments()?.RequestShowInModel3D(row.FullName);
     }
 
+    // A splay's anonymous end has no name in the model, so its end is shown as the splay of the
+    // named station that matches the shot's readings; the named end is shown as a station.
     private void OnShowShotFromIn3D(object? sender, RoutedEventArgs e)
     {
-        if (ShotGridSelectedRow() is { } row) TryDocuments()?.RequestShowInModel3D(row.FromFull);
+        if (ShotGridSelectedRow() is { } row) TryDocuments()?.RequestShowInModel3D(MeasurementsViewModel.Model3DTargetFor(row, toEnd: false));
     }
 
     private void OnShowShotToIn3D(object? sender, RoutedEventArgs e)
     {
-        if (ShotGridSelectedRow() is { } row) TryDocuments()?.RequestShowInModel3D(row.ToFull);
+        if (ShotGridSelectedRow() is { } row) TryDocuments()?.RequestShowInModel3D(MeasurementsViewModel.Model3DTargetFor(row, toEnd: true));
     }
 
     // Column index instead of translated header text. Order MUST match the StationsGrid columns.

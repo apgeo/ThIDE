@@ -65,7 +65,7 @@
     <PackageReference Include="Docnet.Core" Version="2.6.0" />
     <!-- VIS-01: embedded 3D model viewer. NativeWebView uses each OS's native web engine
          (WebView2 on Windows, WKWebView on macOS, WebKitGTK/WPE on Linux) — no bundled
-         Chromium. Hosts the vendored CaveView.js dist (Assets/caveview/**). -->
+         Chromium. Hosts viewer.html (Assets/caveview/) and the CaveView.js runtime from Therion.CaveView. -->
     <PackageReference Include="Avalonia.Controls.WebView" Version="12.0.1" />
     <!-- MCP in-app host (T-03.1): streamable-HTTP transport on loopback Kestrel, started only
          when EnableMcpServer is on. Kestrel/ASP.NET Core references stay in the app project;
@@ -85,6 +85,7 @@
     <!-- Assistant pane (AI-07): the shared OpenAI-compatible chat/tool loop. -->
     <ProjectReference Include="..\src\Therion.Assistant\Therion.Assistant.csproj" />
     <ProjectReference Include="..\src\Therion.Blender\Therion.Blender.csproj" />
+    <ProjectReference Include="..\src\Therion.CaveView\Therion.CaveView.csproj" />
   </ItemGroup>
 
   <ItemGroup>

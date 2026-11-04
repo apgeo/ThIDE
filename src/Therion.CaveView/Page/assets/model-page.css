@@ -1,0 +1,49 @@
+/* Stand-alone cave model page: a header, the model filling the rest of the window, and an
+   optional list of places beside it (below it on a narrow screen). */
+:root {
+    --cp-bg: #111418;
+    --cp-panel: #1b2027;
+    --cp-text: #e6e8eb;
+    --cp-muted: #9aa3ad;
+    --cp-accent: #ff3b6b;
+    --cp-border: #2c333c;
+}
+
+html, body { margin: 0; height: 100%; background: var(--cp-bg); color: var(--cp-text);
+    font: 15px/1.5 system-ui, "Segoe UI", Roboto, sans-serif; }
+body { display: flex; flex-direction: column; min-height: 100%; }
+
+.cp-head { padding: 10px 16px; border-bottom: 1px solid var(--cp-border); }
+.cp-head h1 { margin: 0; font-size: 20px; font-weight: 600; }
+.cp-head p { margin: 2px 0 0; color: var(--cp-muted); white-space: pre-line; }
+
+.cp-main { flex: 1; display: flex; min-height: 0; }
+.cp-stage { position: relative; flex: 1; min-width: 0; min-height: 320px; background: #000; }
+.cp-model { position: absolute; inset: 0; }
+.cp-overlay { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.cp-status { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); max-width: 80%;
+    padding: 10px 14px; background: rgba(0,0,0,0.7); border-radius: 4px; text-align: center; z-index: 30; }
+.cp-status[hidden] { display: none; }
+
+.cp-places { width: 260px; flex: none; overflow-y: auto; padding: 10px 14px; background: var(--cp-panel);
+    border-left: 1px solid var(--cp-border); }
+.cp-places[hidden] { display: none; }
+.cp-places h2 { margin: 0 0 6px; font-size: 15px; font-weight: 600; }
+.cp-places ul { list-style: none; margin: 0; padding: 0; }
+.cp-places li { padding: 4px 0; border-bottom: 1px solid var(--cp-border); }
+.cp-places a { color: var(--cp-text); text-decoration: none; display: block; }
+.cp-places a:hover, .cp-places a:focus { color: var(--cp-accent); }
+.cp-note { display: block; color: var(--cp-muted); font-size: 13px; }
+.cp-closeup { display: block; margin: 0 0 8px; color: var(--cp-muted); font-size: 13px; cursor: pointer; }
+
+.cp-foot { padding: 6px 16px; font-size: 12px; color: var(--cp-muted); border-top: 1px solid var(--cp-border); }
+.cp-foot a { color: var(--cp-muted); }
+
+/* the viewer's own fullscreen covers the page with the stage when the browser refuses it */
+.cp-stage.toggle-fullscreen { position: fixed; inset: 0; z-index: 100; }
+
+@media (max-width: 700px) {
+    .cp-main { flex-direction: column; }
+    .cp-stage { min-height: 60vh; }
+    .cp-places { width: auto; max-height: 40vh; border-left: 0; border-top: 1px solid var(--cp-border); }
+}
