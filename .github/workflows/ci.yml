@@ -24,6 +24,14 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
+      # Every bold menu path in docs/user-guide must exist in the app's menus (tests/ci/check-guide-menu-paths.py).
+      - name: Check user guide menu paths
+        shell: bash
+        run: |
+          PY="$(command -v python3 || command -v python)"
+          "$PY" tests/ci/test_check_guide_menu_paths.py
+          "$PY" tests/ci/check-guide-menu-paths.py
+
       - name: Restore
         run: dotnet restore ThIDE.sln
 
