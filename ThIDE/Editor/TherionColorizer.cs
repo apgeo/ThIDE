@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Threading;
 using Avalonia.Media;
 using Avalonia.Media.Immutable;
 using AvaloniaEdit.Document;
@@ -28,54 +29,67 @@ public sealed class TherionColorizer : DocumentColorizingTransformer
 
     private static readonly FontWeight IdentifierWeight = FontWeight.Medium; // "light bold"
 
-    // Tuned for a dark background (VS-dark-like).
-    private static readonly Dictionary<TokenClassification, IBrush> DarkPalette = new()
+    /// <summary>The theme palettes and selection brushes, built once on first use.</summary>
+    private sealed class ThemeBrushes
     {
-        [TokenClassification.Keyword]     = Brush(86, 156, 214),
-        [TokenClassification.Option]      = Brush(220, 220, 170),
-        // Measurement values (numbers) in teal so they stand apart from green comments (#8).
-        [TokenClassification.Number]      = Brush(78, 201, 176),
-        [TokenClassification.String]      = Brush(206, 145, 120),
-        [TokenClassification.Comment]     = Brush(106, 153, 85),
-        [TokenClassification.Punctuation] = Brush(212, 212, 212),
-        // Identifiers in a brighter cyan-blue, distinct from the keyword blue (#1).
-        [TokenClassification.Identifier]  = Brush(120, 190, 255),
-    };
+        // Tuned for a dark background (VS-dark-like).
+        public readonly Dictionary<TokenClassification, IBrush> Dark = new()
+        {
+            [TokenClassification.Keyword]     = Brush(86, 156, 214),
+            [TokenClassification.Option]      = Brush(220, 220, 170),
+            // Measurement values (numbers) in teal so they stand apart from green comments (#8).
+            [TokenClassification.Number]      = Brush(78, 201, 176),
+            [TokenClassification.String]      = Brush(206, 145, 120),
+            [TokenClassification.Comment]     = Brush(106, 153, 85),
+            [TokenClassification.Punctuation] = Brush(212, 212, 212),
+            // Identifiers in a brighter cyan-blue, distinct from the keyword blue (#1).
+            [TokenClassification.Identifier]  = Brush(120, 190, 255),
+        };
 
-    // Tuned for a light background (VS-light-like) — the dark palette's pale
-    // yellow/green/near-white were nearly invisible on white.
-    private static readonly Dictionary<TokenClassification, IBrush> LightPalette = new()
-    {
-        [TokenClassification.Keyword]     = Brush(0, 0, 200),
-        [TokenClassification.Option]      = Brush(150, 110, 0),
-        // Measurement values (numbers) in teal so they stand apart from green comments (#8).
-        [TokenClassification.Number]      = Brush(0, 128, 140),
-        [TokenClassification.String]      = Brush(163, 21, 21),
-        [TokenClassification.Comment]     = Brush(0, 128, 0),
-        [TokenClassification.Punctuation] = Brush(90, 90, 90),
-        // Identifiers in a deeper azure, distinct from the keyword blue (#1).
-        [TokenClassification.Identifier]  = Brush(36, 114, 200),
-    };
+        // Tuned for a light background (VS-light-like) — the dark palette's pale
+        // yellow/green/near-white were nearly invisible on white.
+        public readonly Dictionary<TokenClassification, IBrush> Light = new()
+        {
+            [TokenClassification.Keyword]     = Brush(0, 0, 200),
+            [TokenClassification.Option]      = Brush(150, 110, 0),
+            // Measurement values (numbers) in teal so they stand apart from green comments (#8).
+            [TokenClassification.Number]      = Brush(0, 128, 140),
+            [TokenClassification.String]      = Brush(163, 21, 21),
+            [TokenClassification.Comment]     = Brush(0, 128, 0),
+            [TokenClassification.Punctuation] = Brush(90, 90, 90),
+            // Identifiers in a deeper azure, distinct from the keyword blue (#1).
+            [TokenClassification.Identifier]  = Brush(36, 114, 200),
+        };
 
-    // The selection behind the token colours. AvaloniaEdit's default is the opaque Fluent accent
-    // (#0078D7), on which the light palette's teal numbers and blue identifiers were invisible and the
-    // dark palette's keywords nearly so. These pale (light) / deep (dark) blues keep every palette
-    // colour at a contrast of 3:1 or more, so selected text keeps its syntax colours.
-    private static readonly IBrush LightSelection = Brush(187, 221, 255);
-    private static readonly IBrush DarkSelection = Brush(36, 63, 94);
+        // The selection behind the token colours. AvaloniaEdit's default is the opaque Fluent accent
+        // (#0078D7), on which the light palette's teal numbers and blue identifiers were invisible and the
+        // dark palette's keywords nearly so. These pale (light) / deep (dark) blues keep every palette
+        // colour at a contrast of 3:1 or more, so selected text keeps its syntax colours.
+        public readonly IBrush LightSelection = Brush(187, 221, 255);
+        public readonly IBrush DarkSelection = Brush(36, 63, 94);
+    }
+
+    // Not built in the type initializer: that runs on whichever thread first touches the class (a
+    // background classifier, a test thread), and an exception there leaves the type unusable for the
+    // rest of the process. Lazy builds the brushes once, safely from any thread, and a failed build
+    // (PublicationOnly does not cache the exception) is simply retried on the next use.
+    private static readonly Lazy<ThemeBrushes> Shared = new(() => new ThemeBrushes(), LazyThreadSafetyMode.PublicationOnly);
 
     /// <summary>The editor selection brush that goes with <paramref name="variant"/>'s palette.</summary>
-    public static IBrush SelectionBrush(Variant variant) => variant == Variant.Dark ? DarkSelection : LightSelection;
+    public static IBrush SelectionBrush(Variant variant) =>
+        variant == Variant.Dark ? Shared.Value.DarkSelection : Shared.Value.LightSelection;
 
-    internal static IReadOnlyDictionary<TokenClassification, IBrush> Palette(Variant variant) =>
-        variant == Variant.Dark ? DarkPalette : LightPalette;
+    internal static IReadOnlyDictionary<TokenClassification, IBrush> Palette(Variant variant) => PaletteOf(variant);
+
+    private static Dictionary<TokenClassification, IBrush> PaletteOf(Variant variant) =>
+        variant == Variant.Dark ? Shared.Value.Dark : Shared.Value.Light;
 
     private static readonly TherionTokenizer Tokenizer = new();
 
     // User custom syntax colors (#2): when set, these brushes override the theme palette for
     // the listed classifications across all editors. Raised through ColorsChanged so open
     // editors redraw on change.
-    private static Dictionary<TokenClassification, IBrush>? _customColors;
+    private static volatile Dictionary<TokenClassification, IBrush>? _customColors;
     public static event EventHandler? ColorsChanged;
     public static void SetCustomColors(Dictionary<TokenClassification, IBrush>? overrides)
     {
@@ -83,14 +97,13 @@ public sealed class TherionColorizer : DocumentColorizingTransformer
         ColorsChanged?.Invoke(null, EventArgs.Empty);
     }
 
-    private Dictionary<TokenClassification, IBrush> _palette = LightPalette;
+    private Dictionary<TokenClassification, IBrush> _palette = PaletteOf(Variant.Light);
     // Cache keyed by (region, line text): the same text can classify differently in a Therion line,
     // a layout option line, or an embedded MetaPost/TeX line, so the region must be part of the key.
     private readonly Dictionary<(int Region, string Text), ImmutableArray<ClassifiedSpan>> _cache = new();
     private IReadOnlyDictionary<int, EmbeddedRegion>? _regions;
 
-    public void SetVariant(Variant variant) =>
-        _palette = variant == Variant.Dark ? DarkPalette : LightPalette;
+    public void SetVariant(Variant variant) => _palette = PaletteOf(variant);
 
     /// <summary>Resolves a token's brush: user override first, then the theme palette.</summary>
     private bool TryBrush(TokenClassification c, out IBrush brush)
@@ -174,9 +187,8 @@ public sealed class TherionColorizer : DocumentColorizingTransformer
 
     // Built directly as immutable brushes, not as SolidColorBrush(...).ToImmutable(): a SolidColorBrush is an
     // AvaloniaObject, and creating one goes through Avalonia's property registry, which is not thread-safe.
-    // This type initializer runs on whichever thread first touches the class (a background classifier, a
-    // test thread), so racing another thread's Avalonia objects there could fail it, and a failed type
-    // initializer leaves the colorizer unusable for the rest of the process.
+    // The palettes are built on whichever thread first asks for them, possibly while another thread is
+    // creating Avalonia objects, and they are then read from every thread, so they must be immutable.
     private static IBrush Brush(byte r, byte g, byte b) =>
         new ImmutableSolidColorBrush(Color.FromRgb(r, g, b));
 }
