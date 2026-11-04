@@ -119,6 +119,7 @@ public sealed partial class Model3DViewerViewModel : ObservableObject
         // UI-bound Models collection — doing that off-thread throws "the calling thread cannot
         // access this object". Every other session subscriber marshals; keep this one consistent.
         if (_session is not null) _session.Changed += (_, _) => ProjectFormat.OnUi(OnSessionChanged);
+        LocProxy.Instance.PropertyChanged += (_, _) => ProjectFormat.OnUi(OnUiLanguageChanged);
         RefreshModels();
     }
 
@@ -150,7 +151,30 @@ public sealed partial class Model3DViewerViewModel : ObservableObject
             Status = "Could not start the 3D viewer.";
             return null;
         }
-        return url + ViewerLanguageQuery(CultureInfo.CurrentUICulture);
+        // Tr.Culture, not CultureInfo.CurrentUICulture: the ambient culture flows with the execution
+        // context and could still name the language the app started in.
+        _pageLanguageQuery = ViewerLanguageQuery(Tr.Culture);
+        return url + _pageLanguageQuery;
+    }
+
+    private string? _pageLanguageQuery;   // the ?lang= the viewer page was opened with
+
+    /// <summary>Raised with the viewer page's URL when the View should load it again (a UI language switch).</summary>
+    public event EventHandler<string>? NavigateRequested;
+
+    /// <summary>
+    /// After a UI language switch: CaveView reads its interface language (the HUD's "height" caption,
+    /// its panels) when the page starts, so an open viewer page is loaded again in the new language;
+    /// the current model comes back on the page's 'ready'.
+    /// </summary>
+    internal void OnUiLanguageChanged()
+    {
+        if (!_started || _pageLanguageQuery is null || _host?.ViewerUrl is not { } url) return;
+        var query = ViewerLanguageQuery(Tr.Culture);
+        if (query == _pageLanguageQuery) return;
+        _pageLanguageQuery = query;
+        PrepareViewerReload();
+        NavigateRequested?.Invoke(this, url + query);
     }
 
     /// <summary>"?lang=xx" for an interface language CaveView has a catalogue for; English needs none.</summary>
@@ -525,7 +549,7 @@ public sealed partial class Model3DViewerViewModel : ObservableObject
         bool includePlaces, bool embedModel, bool currentView)
     {
         if (CurrentModelPath is not { } model || !File.Exists(model)) { Status = Tr.Get("M3D_ExportNoModel"); return null; }
-        var lang = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+        var lang = Tr.Culture.TwoLetterISOLanguageName;
         var options = new ModelPageOptions
         {
             Title = string.IsNullOrWhiteSpace(title) ? Path.GetFileNameWithoutExtension(model) : title.Trim(),
