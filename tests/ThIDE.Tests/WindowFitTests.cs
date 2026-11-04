@@ -94,6 +94,38 @@ public class WindowFitTests
     public void ToastBottomMargin_AddsHowFarTheWindowRunsPastTheWorkArea()
         => Assert.Equal(58 + 26 + 8, WindowFit.ToastBottomMargin(786, 728, 26));
 
+    [Fact]
+    public void ToastBottomMargin_ClearsATabStripTallerThanTheStatusBar()
+        => Assert.Equal(58 + 8, WindowFit.ToastBottomMargin(700, 728, 26, 58));
+
+    [Fact]
+    public void ToastBottomMargin_IgnoresATabStripLowerThanTheStatusBar()
+        => Assert.Equal(26 + 8, WindowFit.ToastBottomMargin(700, 728, 26, 10));
+
+    [Fact]
+    public void TabStripClearance_IsTheDistanceFromTheWindowBottomToTheTopOfTheLowestStripUnderTheToasts()
+    {
+        // 1366x768 window: a 28 px strip along the bottom of the right-hand dock, above a 26 px status bar.
+        var rightStrip = new Avalonia.Rect(1000, 686, 366, 28);
+        Assert.Equal(768 - 686, WindowFit.TabStripClearance(768, 1366 - 400, new[] { rightStrip }));
+    }
+
+    [Fact]
+    public void TabStripClearance_SkipsStripsLeftOfTheToastsAndStripsHighUp()
+    {
+        var bottomDockStrip = new Avalonia.Rect(250, 686, 600, 28);  // ends left of the toast column
+        var topSectionStrip = new Avalonia.Rect(1000, 90, 366, 28);  // upper half of the window
+        Assert.Equal(0, WindowFit.TabStripClearance(768, 966, new[] { bottomDockStrip, topSectionStrip }));
+    }
+
+    [Fact]
+    public void TabStripClearance_PicksTheLowestOfSeveralStrips()
+    {
+        var upper = new Avalonia.Rect(1000, 400, 366, 28);
+        var lower = new Avalonia.Rect(1000, 686, 366, 28);
+        Assert.Equal(82, WindowFit.TabStripClearance(768, 966, new[] { upper, lower }));
+    }
+
     // ---- wizard dialogs: Esc must close them, and typing must work on open ----
 
     private static string RepoRoot()
@@ -125,6 +157,18 @@ public class WindowFitTests
         Assert.Contains("IsCancel=\"True\"", cancel, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData("SuggestEquatesWindow", "OnClose")]
+    [InlineData("BookmarksWindow", "OnCloseClick")]
+    [InlineData("ReferencesWindow", "OnCloseClick")]
+    public void ListWindows_CloseButtonIsTheEscapeButton(string window, string handler)
+    {
+        var xaml = File.ReadAllText(Views(window + ".axaml"));
+        var close = Regex.Matches(xaml, @"<Button\b[^>]*>", RegexOptions.Singleline)
+            .Select(m => m.Value).Single(b => b.Contains($"Click=\"{handler}\"", StringComparison.Ordinal));
+        Assert.Contains("IsCancel=\"True\"", close, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void BatchBuildWindow_CloseButtonIsTheEscapeButton()
     {
@@ -143,6 +187,7 @@ public class WindowFitTests
     [InlineData("RenumberStationsWindow")]
     [InlineData("ScaffoldProjectWindow")]
     [InlineData("QuickExportWindow")]
+    [InlineData("NormalizeProjectWindow")]
     public void WizardWindows_FocusTheirFirstInputWhenOpened(string window)
     {
         Assert.Contains("x:Name=\"FirstInput\"", File.ReadAllText(Views(window + ".axaml")), StringComparison.Ordinal);

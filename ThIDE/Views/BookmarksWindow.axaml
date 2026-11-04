@@ -13,6 +13,7 @@
                     Margin="8,6">
             <Button AutomationProperties.AutomationId="Bookmarks.Delete" x:Name="DeleteBtn" Content="{l:Loc Ctx_Delete}" Padding="10,3" Click="OnDeleteClick" />
             <Button AutomationProperties.AutomationId="Bookmarks.Navigate" x:Name="NavigateBtn" Content="{l:Loc Book_GoTo}" Padding="10,3" Click="OnNavigateClick" />
+            <Button AutomationProperties.AutomationId="Bookmarks.Close" Content="{l:Loc Common_Close}" Padding="10,3" Click="OnCloseClick" IsCancel="True" />
         </StackPanel>
         <DataGrid x:Name="Grid"
                   AutomationProperties.AutomationId="Bookmarks.Grid"
