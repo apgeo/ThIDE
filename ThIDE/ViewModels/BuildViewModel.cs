@@ -1145,7 +1145,7 @@ public partial class BuildViewModel : ViewModelBase
             // Save first: the copy is made from disk, so it must see the editor's unsaved edits.
             if (!await EnsureInvolvedFilesSavedAsync(cfg).ConfigureAwait(true)) return;
             var temp = Path.Combine(Path.GetDirectoryName(cfg)!, ".thide-target.thconfig");
-            DerivedThconfig.Write(cfg, temp, text => ThconfigExportEditor.IsolateExport(text, info));
+            DerivedThconfig.Write(cfg, temp, text => ThconfigExportEditor.IsolateExport(text, DerivedThconfig.Locate(text, info, cfg)));
             await RunBuildAsync(temp, temp, $"{Path.GetFileName(cfg)} :: {info.Title}").ConfigureAwait(true);
         }
         catch (Exception ex) { Status = ex.Message; _log?.Error("Target build error: " + ex.Message); }

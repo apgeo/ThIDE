@@ -1783,6 +1783,7 @@ Acțiunea nu poate fi anulată.</value></data>
   <data name="Build_Failed" xml:space="preserve"><value>Compilarea a eșuat (cod de ieșire {0}).</value></data>
   <data name="Build_Cancelled" xml:space="preserve"><value>Compilare oprită.</value></data>
   <data name="Build_CancelledUnsaved" xml:space="preserve"><value>Compilare oprită — modificări nesalvate.</value></data>
+  <data name="Build_TargetGone" xml:space="preserve"><value>Exportul „{0}” nu mai este în {1}; alegeți din nou ținta.</value></data>
   <data name="Build_Error" xml:space="preserve"><value>Eroare de compilare: {0}</value></data>
   <data name="Build_SummaryOk" xml:space="preserve"><value>Compilarea s-a încheiat cu succes în {0} secunde.</value></data>
   <data name="Build_SummaryOkFiles" xml:space="preserve"><value>Compilarea s-a încheiat cu succes în {0} secunde și a generat {1}.</value></data>
