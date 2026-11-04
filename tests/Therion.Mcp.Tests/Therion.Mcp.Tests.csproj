@@ -49,4 +49,9 @@
     <Compile Include="..\Shared\WritePath\*.cs" LinkBase="Shared\WritePath" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- The fixed-seed runner for the generated-input tests. -->
+    <Compile Include="..\Shared\Properties\*.cs" LinkBase="Shared\Properties" />
+  </ItemGroup>
+
 </Project>
