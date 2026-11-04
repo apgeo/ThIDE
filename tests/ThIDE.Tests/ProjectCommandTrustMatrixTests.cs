@@ -17,7 +17,21 @@ public class ProjectCommandTrustMatrixTests : IDisposable
 {
     private readonly string _dir = Directory.CreateTempSubdirectory("thide-trust-matrix-").FullName;
 
-    public void Dispose() => Directory.Delete(_dir, recursive: true);
+    /// <summary>
+    /// A detached hook is not waited for, and its marker appears before its shell has exited. On
+    /// Windows a folder that is a running process's working directory cannot be deleted, so the
+    /// cleanup waits for that shell to go.
+    /// </summary>
+    public void Dispose()
+    {
+        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(10);
+        while (true)
+        {
+            try { Directory.Delete(_dir, recursive: true); return; }
+            catch (IOException) when (DateTime.UtcNow < deadline) { Thread.Sleep(100); }
+            catch (UnauthorizedAccessException) when (DateTime.UtcNow < deadline) { Thread.Sleep(100); }
+        }
+    }
 
     public enum Entry
     {
