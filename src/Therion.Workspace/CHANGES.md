@@ -4,6 +4,15 @@ What a consumer of this library can notice, newest first. Each entry says what c
 and what to do. Entries also cover behaviour that reaches you through `Therion.Syntax` and
 `Therion.Semantics`, which this library is built on.
 
+## 2026-11 (round 5)
+
+### Behaviour changes
+- **`StationRenumber.Plan` no longer refuses a survey that holds a shot or fix written `x@sub`.**
+  Such a reference leaves a placeholder station `parent.x@sub` in the occurrence index; the plan
+  took it for a station of the parent, and any rule that renamed it gave an `InvalidName` problem
+  (`T2@sub`). Placeholders are now left out of `Renames` and `Unchanged`; the reference itself is
+  still renamed with the station it names when that station is in scope. Migration: none.
+
 ## 2026-11 (later)
 
 ### Behaviour changes
