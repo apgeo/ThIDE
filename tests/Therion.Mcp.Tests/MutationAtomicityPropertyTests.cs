@@ -66,7 +66,9 @@ public class MutationAtomicityPropertyTests
         try
         {
             var existing = Populate(root, rng);
-            var host = new WorkspaceHost();
+            // Disposed before the finally deletes the folder: a watcher whose folder is already gone keeps
+            // its inotify instance for the life of the process.
+            await using var host = new WorkspaceHost();
             await host.LoadAsync(Path.Combine(root, "project.thconfig"));
             var engine = new MutationEngine(host);
 

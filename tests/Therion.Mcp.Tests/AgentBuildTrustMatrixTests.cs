@@ -133,7 +133,8 @@ public class AgentBuildTrustMatrixTests
         {
             var bridge = new Bridge();
             var approval = new Approval(answer: false);
-            var result = await new CommandTools(bridge, new WorkspaceHost(ws.Entry), approval).RunCommand(command.Id, confirm: true);
+            await using var host = new WorkspaceHost(ws.Entry);
+            var result = await new CommandTools(bridge, host, approval).RunCommand(command.Id, confirm: true);
 
             Assert.Equal(ToolErrorCodes.NotTrusted, result.Error?.Code);
             Assert.Null(bridge.Ran);
@@ -260,31 +261,37 @@ public class AgentBuildTrustMatrixTests
         {
             case Route.RunBuildDefault:
             {
-                var r = await new BuildTools(new WorkspaceHost(ws.Entry), compiler, approval).RunBuild();
+                await using var host = new WorkspaceHost(ws.Entry);
+                var r = await new BuildTools(host, compiler, approval).RunBuild();
                 return (r.Ok, r.Error?.Code);
             }
             case Route.RunBuildNamedEntry:
             {
-                var r = await new BuildTools(new WorkspaceHost(ws.Entry), compiler, approval).RunBuild(ws.EntryRelative);
+                await using var host = new WorkspaceHost(ws.Entry);
+                var r = await new BuildTools(host, compiler, approval).RunBuild(ws.EntryRelative);
                 return (r.Ok, r.Error?.Code);
             }
             case Route.RunCommandBuild:
             {
-                var r = await new CommandTools(bridge, new WorkspaceHost(ws.Entry), approval).RunCommand(ShellCommandIds.Build);
+                await using var host = new WorkspaceHost(ws.Entry);
+                var r = await new CommandTools(bridge, host, approval).RunCommand(ShellCommandIds.Build);
                 return (r.Ok, r.Error?.Code);
             }
             case Route.RunCommandRebuildOfTheIdesTarget:
             {
                 // The IDE builds its own target; the workspace was opened on a plain survey.
                 bridge.BuildEntry = ws.Entry;
-                var r = await new CommandTools(bridge, new WorkspaceHost(ws.Survey), approval).RunCommand(ShellCommandIds.Rebuild);
+                await using var host = new WorkspaceHost(ws.Survey);
+                var r = await new CommandTools(bridge, host, approval).RunCommand(ShellCommandIds.Rebuild);
                 return (r.Ok, r.Error?.Code);
             }
             default:
             {
+                // An instance registration is not disposed by the provider, so the host is disposed here.
+                await using var host = new WorkspaceHost(ws.Entry);
                 var services = new ServiceCollection();
                 services.AddSingleton<IUiBridge>(bridge);
-                services.AddSingleton<IWorkspaceHost>(new WorkspaceHost(ws.Entry));
+                services.AddSingleton<IWorkspaceHost>(host);
                 services.AddSingleton<ITherionCompiler>(compiler);
                 if (approval is not null) services.AddSingleton(approval);
                 services.AddToolServices();
