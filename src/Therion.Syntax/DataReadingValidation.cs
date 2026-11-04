@@ -60,9 +60,9 @@ public static class DataReadingValidation
         "compass" or "bearing" or "backcompass" or "backbearing" => ReadingValueKind.Bearing,
         "clino" or "gradient" or "backclino" or "backgradient" => ReadingValueKind.Clino,
         "depth" or "fromdepth" or "todepth" or "depthchange"
-            or "counter" or "fromcount" or "tocount"
+            or "counter" or "count" or "fromcount" or "tocount" or "fromcounter" or "tocounter"
             or "northing" or "easting" or "altitude"
-            or "dx" or "dy" or "dz" or "x" or "y" or "z" or "position" => ReadingValueKind.Signed,
+            or "dx" or "dy" or "dz" or "x" or "y" or "z" or "position" or "gps" => ReadingValueKind.Signed,
         "up" or "ceiling" or "down" or "floor" or "left" or "right" => ReadingValueKind.Dimension,
         "ignore" => ReadingValueKind.Ignore,
         _ => ReadingValueKind.None,

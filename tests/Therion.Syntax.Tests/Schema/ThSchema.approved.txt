@@ -1,0 +1,143 @@
+# ThSchema snapshot: command [section] contexts, terminator, positional parameters, options
+optionset dataobject
+  option -attr (name: Identifier:charset=AttrName; value: String)
+  option -author (date: Date; person: Person)
+  option -copyright (date: Date; string: String)
+  option -cs (name: Identifier:charset=Keyword)
+  option -id (id: Identifier:charset=ExtKeyword)
+  option -station-names (prefix: Identifier:charset=ExtKeyword; suffix: Identifier:charset=ExtKeyword)
+  option -title (title: String)
+projection-types elevation|extended|none|plan
+
+survey [survey] in ThTopLevel,Survey ends with endsurvey
+  arg id: Identifier:charset=Keyword
+  option -namespace (switch: Bool)
+  option -declination (spec: Free)
+  option -person-rename (old: String; new: String)
+  option -entrance (station: StationRef)
+  option -title (title: String)
+  inherits dataobject
+
+centreline [centreline] in ThTopLevel,Survey ends with endcentreline aliases=centerline
+  inherits dataobject
+
+group [centreline] in Centreline ends with endgroup
+
+date [centreline] in Centreline
+  arg date: Date repeated
+
+explo-date [centreline] in Centreline
+  arg date: Date repeated
+
+team [centreline] in Centreline
+  arg person: String
+  arg role: Enum:enum{altitude|assistant|backbearing|backclino|backcompass|backgradient|backlength|backtape|bearing|ceiling|clino|compass|count|counter|depth|dimensions|dog|down|dz|floor|gps|gradient|instruments|insts|left|length|notebook|notes|pics|pictures|position|right|station|tape|up} optional repeated
+
+explo-team [centreline] in Centreline
+  arg person: String
+
+instrument [centreline] in Centreline
+  arg quantity: Enum:enum{assistant|backbearing|backclino|backcompass|backgradient|backlength|backtape|bearing|ceiling|clino|compass|count|counter|depth|dog|down|floor|gps|gradient|instruments|insts|left|length|notebook|notes|pics|pictures|position|right|station|tape|up} repeated
+  arg description: String
+
+calibrate [centreline] in Centreline
+  arg quantity: Enum:enum{altitude|bearing|ceiling|clino|compass|count|counter|depth|depthchange|dimensions|down|dx|dy|dz|easting|floor|gps|gradient|left|length|northing|position|right|tape|up|x|y|z} repeated
+  arg zero-error: Number
+  arg scale: Number optional
+
+units [centreline] in Centreline
+  arg quantity: Enum:enum{altitude|bearing|ceiling|clino|compass|count|counter|depth|depthchange|dimensions|down|dx|dy|dz|easting|floor|gps|gradient|left|length|northing|position|right|tape|up|x|y|z} repeated
+  arg factor: Number optional
+  arg unit: Units
+
+sd [centreline] in Centreline
+  arg quantity: Enum:enum{altitude|bearing|clino|compass|count|counter|depth|dx|dy|dz|easting|gps|gradient|length|northing|position|tape|x|y|z} repeated
+  arg value: SpecialOrNumber
+  arg unit: Units optional
+
+grade [centreline] in Centreline
+  arg grade: ObjectRef repeated
+
+declination [centreline] in Centreline
+  arg value: SpecialOrNumber
+  arg unit: Units optional
+
+grid-angle [centreline] in Centreline
+  arg value: Number
+  arg unit: Units optional
+
+infer [centreline] in Centreline
+  arg what: Enum:enum{equates|plumbs}
+  arg switch: Bool
+
+mark [centreline] in Centreline
+  arg station: StationRef optional repeated
+  arg type: Enum:enum{fixed|natural|painted|temp|temporary}
+
+flags [centreline] in Centreline
+  arg flag: Enum:enum{approx|approximate|duplicate|not|splay|surface} repeated
+
+station [centreline] in Centreline
+  arg station: StationRef
+  arg comment: String
+  arg flag: Enum:enum{air-draught|arch|attr|continuation|dig|doline|entrance|explored|fixed|not|overhang|sink|spring} optional repeated
+
+cs [centreline] in Centreline
+  arg name: Identifier:charset=Keyword
+
+fix [centreline] in Centreline
+  arg station: StationRef
+  arg x: Coord
+  arg y: Coord
+  arg z: Number
+  arg sd-1: Number:range=(0, ∞] optional
+  arg sd-2: Number:range=(0, ∞] optional
+  arg sd-3: Number:range=(0, ∞] optional
+
+equate [centreline] in Centreline
+  arg station: StationRef
+  arg station-2: StationRef
+  arg station-n: StationRef optional repeated
+
+data [centreline] in Centreline
+  arg style: Enum:enum{cartesian|cylpolar|dimensions|diving|normal|nosurvey|topofil}
+  arg reading: Enum:enum{altitude|backbearing|backclino|backcompass|backgradient|backlength|backtape|bearing|ceiling|clino|compass|count|counter|depth|depthchange|direction|down|dx|dy|dz|easting|floor|from|fromcount|fromcounter|fromdepth|gps|gradient|ignore|ignoreall|left|length|newline|northing|position|right|station|tape|to|tocount|tocounter|todepth|up|x|y|z} repeated
+
+break [centreline] in Centreline
+
+walls [centreline] in Centreline
+  arg switch: OnOffAuto
+
+vthreshold [centreline] in Centreline
+  arg value: Number:range=[0, 90]
+  arg unit: Units optional
+
+extend [centreline] in Centreline
+  arg spec: Free
+  arg from: StationRef optional
+  arg to: StationRef optional
+  arg before: StationRef optional
+
+station-names [centreline] in Centreline
+  arg prefix: Identifier:charset=ExtKeyword
+  arg suffix: Identifier:charset=ExtKeyword
+
+map [map] in ThTopLevel,Survey ends with endmap
+  arg id: Identifier:charset=Keyword
+  option -projection aliases=proj (type: Free)
+  option -survey (id: ObjectRef)
+  option -title (title: String)
+  inherits dataobject
+
+import [import] in ThTopLevel,Survey,Centreline
+  arg file: Free
+  option -fmt aliases=format (format: Enum:enum{3d|plt|xyz})
+  option -surveys (mode: Enum:enum{create|ignore|use})
+  option -filter (spec: Free)
+  option -calibrate (spec: Free)
+
+require [shared] in ThTopLevel,Survey,Thconfig
+  arg version: Free
+
+revise [shared] in ThTopLevel,Survey
+  arg id: ObjectRef
