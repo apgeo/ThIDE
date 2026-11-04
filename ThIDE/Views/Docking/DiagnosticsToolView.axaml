@@ -7,7 +7,7 @@
              ClipToBounds="True"
              x:DataType="vm:DiagnosticsToolViewModel">
     <!-- Rows: toolbar, filters, the grid, the explanation pane. The bottom dock keeps the panel tall
-         enough for about three rows (DockFactory), the explanation pane is one line until it is
+         enough for three full rows (DockFactory), the explanation pane is one line until it is
          expanded, and the grid never gives up its header and first row to it, so selecting a row at
          laptop height no longer squeezes the list away. -->
     <Grid>
