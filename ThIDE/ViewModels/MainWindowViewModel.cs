@@ -174,7 +174,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty] private bool _wordWrap;
     partial void OnWordWrapChanged(bool value)
     {
-        if (_settings is { } s) s.Save(s.Current with { EditorWordWrap = value });
+        if (_settings is { } s) s.Update(st => st with { EditorWordWrap = value });
     }
 
     /// <summary>Validate-on-type toggle: re-validate the whole project from unsaved buffers as you type
@@ -182,7 +182,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty] private bool _validateOnType;
     partial void OnValidateOnTypeChanged(bool value)
     {
-        if (_settings is { } s && s.Current.ValidateOnType != value) s.Save(s.Current with { ValidateOnType = value });
+        if (_settings is { } s && s.Current.ValidateOnType != value) s.Update(st => st with { ValidateOnType = value });
     }
 
     /// <summary>Require a double-click (not a single click) to jump to an identifier's declaration
@@ -191,7 +191,7 @@ public partial class MainWindowViewModel : ViewModelBase
     partial void OnRequireDoubleClickToNavigateChanged(bool value)
     {
         if (_settings is { } s && s.Current.RequireDoubleClickToNavigate != value)
-            s.Save(s.Current with { RequireDoubleClickToNavigate = value });
+            s.Update(st => st with { RequireDoubleClickToNavigate = value });
     }
 
     // ---- : whitespace / EOL / indent-guide render toggles (View menu) ----
@@ -202,19 +202,19 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty] private bool _showWhitespace;
     partial void OnShowWhitespaceChanged(bool value)
     {
-        if (_settings is { } s) s.Save(s.Current with { EditorShowWhitespace = value });
+        if (_settings is { } s) s.Update(st => st with { EditorShowWhitespace = value });
     }
 
     [ObservableProperty] private bool _showEndOfLine;
     partial void OnShowEndOfLineChanged(bool value)
     {
-        if (_settings is { } s) s.Save(s.Current with { EditorShowEndOfLine = value });
+        if (_settings is { } s) s.Update(st => st with { EditorShowEndOfLine = value });
     }
 
     [ObservableProperty] private bool _showIndentGuides;
     partial void OnShowIndentGuidesChanged(bool value)
     {
-        if (_settings is { } s) s.Save(s.Current with { EditorShowIndentGuides = value });
+        if (_settings is { } s) s.Update(st => st with { EditorShowIndentGuides = value });
     }
 
     // ---- : minimap toggle (View menu) ----
@@ -225,7 +225,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty] private bool _showMinimap;
     partial void OnShowMinimapChanged(bool value)
     {
-        if (_settings is { } s) s.Save(s.Current with { EditorShowMinimap = value });
+        if (_settings is { } s) s.Update(st => st with { EditorShowMinimap = value });
     }
 
     // ---- : split editor (side-by-side via a float window) ----
@@ -1015,6 +1015,19 @@ public partial class MainWindowViewModel : ViewModelBase
 
         // offer to recover unsaved buffers left by a crashed run.
         OfferCrashRecovery();
+        ReportUnreadableStateFiles();
+    }
+
+    /// <summary>
+    /// Says so when settings, bookmarks or shortcuts could not be read at launch: the defaults are in
+    /// use, and the unreadable file was kept beside the original rather than silently replaced.
+    /// </summary>
+    private void ReportUnreadableStateFiles()
+    {
+        var kept = UnreadableStateFile.TakeKept();
+        if (kept.Count == 0) return;
+        _notifications.Warning(Tr.Get("Notif_StateUnreadableTitle"),
+            string.Format(CultureInfo.CurrentCulture, Tr.Get("Notif_StateUnreadableMsg"), string.Join(", ", kept)));
     }
 
     /// <summary>Opens the Welcome start page at launch when no files/workspace were restored (#).</summary>
@@ -1096,7 +1109,7 @@ public partial class MainWindowViewModel : ViewModelBase
         }
         try
         {
-            _settings.Save(_settings.Current with
+            _settings.Update(st => st with
             {
                 LastSessionFiles = paths,
                 SessionCaretOffsets = carets,
@@ -1122,10 +1135,10 @@ public partial class MainWindowViewModel : ViewModelBase
     private void PinRecent(string? path)
     {
         if (_settings is null || string.IsNullOrEmpty(path)) return;
-        var s = _settings.Current;
-        if (s.PinnedRecentFiles.Contains(path, FilePaths.Comparer)) return;
-        var pinned = new List<string>(s.PinnedRecentFiles) { path };
-        _settings.Save(s with { PinnedRecentFiles = pinned });
+        if (_settings.Current.PinnedRecentFiles.Contains(path, FilePaths.Comparer)) return;
+        _settings.Update(s => s.PinnedRecentFiles.Contains(path, FilePaths.Comparer)
+            ? s
+            : s with { PinnedRecentFiles = new List<string>(s.PinnedRecentFiles) { path } });
     }
 
     /// <summary>unpin a previously-pinned recent file.</summary>
@@ -1133,10 +1146,11 @@ public partial class MainWindowViewModel : ViewModelBase
     private void UnpinRecent(string? path)
     {
         if (_settings is null || string.IsNullOrEmpty(path)) return;
-        var s = _settings.Current;
-        var pinned = s.PinnedRecentFiles.Where(p => !FilePaths.Comparer.Equals(p, path)).ToList();
-        if (pinned.Count == s.PinnedRecentFiles.Count) return;
-        _settings.Save(s with { PinnedRecentFiles = pinned });
+        if (!_settings.Current.PinnedRecentFiles.Contains(path, FilePaths.Comparer)) return;
+        _settings.Update(s => s with
+        {
+            PinnedRecentFiles = s.PinnedRecentFiles.Where(p => !FilePaths.Comparer.Equals(p, path)).ToList(),
+        });
     }
 
     /// <summary>clears the (unpinned) recent-files list.</summary>
@@ -1144,7 +1158,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private void ClearRecent()
     {
         if (_settings is null) return;
-        _settings.Save(_settings.Current with { RecentFiles = Array.Empty<string>() });
+        _settings.Update(st => st with { RecentFiles = Array.Empty<string>() });
     }
 
     /// <summary>Opens a directory from the File ▸ Recent Directories submenu as the workspace folder.</summary>
@@ -1162,7 +1176,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private void ClearRecentDirectories()
     {
         if (_settings is null) return;
-        _settings.Save(_settings.Current with { RecentDirectories = Array.Empty<string>() });
+        _settings.Update(st => st with { RecentDirectories = Array.Empty<string>() });
     }
 
     /// <summary>reopen the most-recently-closed tab (Ctrl+Shift+T).</summary>
@@ -1605,7 +1619,7 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         _language.SetLanguage(culture);
         if (_settings is { } s && !string.Equals(s.Current.UiLanguage, culture, StringComparison.Ordinal))
-            s.Save(s.Current with { UiLanguage = culture });
+            s.Update(st => st with { UiLanguage = culture });
     }
 
     // ---- layout controls (#16) ----------------------------------------------
@@ -1981,14 +1995,28 @@ public partial class MainWindowViewModel : ViewModelBase
         if (e.Row.SourceRow is not { } source || e.Row.FieldDefinition is not { } fields) return;
         if (_documents.CurrentAst is not { } ast) { RevertShotRow(e.Row); return; }
 
-        int idx = -1;
-        for (int i = 0; i < fields.Fields.Length; i++)
+        // The grid edits the foresight column, written under either of Therion's names for it.
+        string[] names = e.Field.ToLowerInvariant() switch
         {
-            if (string.Equals(fields.Fields[i], e.Field, StringComparison.OrdinalIgnoreCase)) { idx = i; break; }
+            "length" => ["length", "tape"],
+            "compass" => ["compass", "bearing"],
+            "clino" => ["clino", "gradient"],
+            _ => [e.Field],
+        };
+        int idx = -1;
+        foreach (var name in names)
+        {
+            idx = Array.FindIndex(fields.Fields.ToArray(), f => string.Equals(f, name, StringComparison.OrdinalIgnoreCase));
+            if (idx >= 0) break;
         }
         if (idx < 0) { RevertShotRow(e.Row); return; }
 
-        var value = e.Value?.ToString("0.###", CultureInfo.InvariantCulture) ?? "-";
+        // The grid shows the bound value (metres, degrees, calibration applied); the file holds the
+        // reading as surveyed, in the row's units and before calibration, so write that.
+        double? reading = e.Value is { } v && e.Row.Source is { } shot
+            ? ShotReadings.Reading(shot, fields.Fields[idx], v) ?? v
+            : e.Value;
+        var value = reading?.ToString("0.###", CultureInfo.InvariantCulture) ?? "-";
 
         // The edit is applied to the active document's AST: a row from another workspace file
         // cannot be found there.
@@ -2168,9 +2196,8 @@ public partial class MainWindowViewModel : ViewModelBase
     private void PersistDiagnosticsScope()
     {
         if (_settings is null) return;
-        var cur = _settings.Current;
-        if (cur.DiagnosticsWorkspaceScope == Diagnostics.ShowProjectScope) return;
-        try { _settings.Save(cur with { DiagnosticsWorkspaceScope = Diagnostics.ShowProjectScope }); }
+        if (_settings.Current.DiagnosticsWorkspaceScope == Diagnostics.ShowProjectScope) return;
+        try { _settings.Update(st => st with { DiagnosticsWorkspaceScope = Diagnostics.ShowProjectScope }); }
         catch { /* best-effort persistence */ }
     }
 

@@ -47,7 +47,6 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
     private bool _suspend;         // batch option changes during a programmatic reset / settings load
     private bool _bulk;            // suppress per-row recompute during a check-all / per-station toggle
     private bool _loaded;          // persisted state applied → persist subsequent changes
-    private double _delta;         // resolved declination applied to every plane
     private bool _plotReady;       // the three.js page reported {type:"ready"}
     private ImmutableArray<(Vec3 A, Vec3 B)> _caveLegs = ImmutableArray<(Vec3, Vec3)>.Empty;
     private ImmutableArray<(Vec3 A, Vec3 B)> _caveSplays = ImmutableArray<(Vec3, Vec3)>.Empty;
@@ -401,7 +400,7 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
     private void RecomputePlane(StructuralPlaneRow row)
     {
         var included = row.Rows.Where(r => r.Include).Select(r => r.Measurement).ToList();
-        row.UpdatePlane(StructuralAnalysis.Recompute(row.Batch, included, _delta));
+        row.UpdatePlane(StructuralAnalysis.Recompute(row.Batch, included, row.Delta));
         row.RefreshIncludeAll();
     }
 
@@ -428,7 +427,6 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
 
         if (model is null || model.Shots.IsDefaultOrEmpty)
         {
-            _delta = 0;
             Status = ThIDE.Resources.Tr.Get("Struct_StatusNoData");
             PushPreview();   // clear any stale overlay lines
             PushPlot();      // …and the stale 3D plot / stereonet
@@ -440,10 +438,10 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
             Detection = BuildDetectionOptions(),
             Declination = new DeclinationOptions { Source = DeclinationSource, ManualDegrees = DeclinationDegrees },
             DeclinationInputs = ComputeDeclinationInputs(model),
+            BatchDeclinationInputs = BatchDeclinationInputs(model),
         };
 
         var result = StructuralAnalysis.Analyze(model, options);
-        _delta = result.Declination.Delta;
         _caveLegs = result.CaveLegs;
         _caveSplays = result.CaveSplays;
 
@@ -453,6 +451,7 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
             var planeRow = new StructuralPlaneRow(this, result.Batches[i], result.Planes[i])
             {
                 ColorHex = PlanePalette[i % PlanePalette.Length],
+                Delta = result.BatchDeclinations[i].Delta,
             };
             if (kept.Planes.TryGetValue(planeRow.Batch.Key, out var ps))
             {
@@ -473,7 +472,9 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
         }
         _bulk = false;
 
-        var deltaText = _delta.ToString("+0.0;-0.0", System.Globalization.CultureInfo.CurrentCulture);
+        var deltaText = DeltaText(result.BatchDeclinations.IsDefaultOrEmpty
+            ? [result.Declination.Delta]
+            : result.BatchDeclinations.Select(d => d.Delta));
         var declNote = result.Declination.Effective switch
         {
             DeclinationSource.Manual => string.Format(ThIDE.Resources.Tr.Get("Struct_DeclManual"), deltaText),
@@ -661,7 +662,7 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
                     if (mr.Include && !mr.IsOrigin &&
                         mr.Measurement.Compass is { } compass && mr.Measurement.Clino is { } clino)
                     {
-                        var (t, p) = Stereonet.ShotToLine(compass, clino, _delta);
+                        var (t, p) = Stereonet.ShotToLine(compass, clino, row.Delta);
                         meas.Add(new StereonetMark(row.Name, Stereonet.ProjectLine(t, p, proj), color, selected));
                     }
         }
@@ -839,7 +840,7 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
             ShowFullStationName, ShowPlanesInPreview, PlotSplays, FadedSplays,
             NetProjection, NetShowPoles, NetShowMeasurements, NetShowGrid, NetShowLabels,
             NetWhiteBackground, NetInPlot);
-        try { _settings.Save(_settings.Current with { StructuralGeologySettings = JsonSerializer.Serialize(state) }); }
+        try { _settings.Update(st => st with { StructuralGeologySettings = JsonSerializer.Serialize(state) }); }
         catch { /* best-effort persistence */ }
     }
 
@@ -906,53 +907,103 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
 
     // ---- declination inputs (Phase 3b: WMM-auto from the fix point + survey date) ----------------
 
+    /// <summary>"+2.0", or "+2.0 … +5.0" when the batches were corrected by different amounts.</summary>
+    private static string DeltaText(IEnumerable<double> deltas)
+    {
+        var list = deltas.ToList();
+        static string F(double d) => d.ToString("+0.0;-0.0", System.Globalization.CultureInfo.CurrentCulture);
+        if (list.Count == 0) return F(0);
+        double min = list.Min(), max = list.Max();
+        return F(min) == F(max) ? F(min) : F(min) + " … " + F(max);
+    }
+
+    /// <summary>The inputs for the whole scope: the summary in the status line, and the fallback.</summary>
     private DeclinationInputs ComputeDeclinationInputs(SemanticModel model)
     {
         if (DeclinationSource == DeclinationSource.SurveyDeclared)
             return new DeclinationInputs(SurveyDeclaredDegrees: model.Declination);
-
         if (DeclinationSource != DeclinationSource.WmmAuto) return default;
-
-        StationSymbol? fix = null;
-        foreach (var s in model.Stations.Values)
-            if (s.FixX is not null && s.FixY is not null) { fix = s; break; }
-        if (fix is null) return new DeclinationInputs(WmmNote: "WMM: no fix point in scope");
-
-        if (!CoordinateTransform.TryToWgs84(fix.Cs, fix.FixX!.Value, fix.FixY!.Value, out var ll))
-            return new DeclinationInputs(WmmNote: $"WMM: can't convert fix cs '{fix.Cs ?? "?"}' to lat/lon");
-
-        var geo = GeoMagneticModelLoader.TryLoadDefault();
-        if (geo is null)
-            return new DeclinationInputs(WmmNote: string.Format(ThIDE.Resources.Tr.Get("Struct_WmmNoModel"), UserDataFolder.FullPath));
-
-        double year = SurveyYear(model);
-        double d = geo.Declination(ll.Lat, ll.Lon, 0, year);
-        return new DeclinationInputs(
-            WmmAutoDegrees: d,
-            WmmNote: $"WMM {geo.Name} · {ll.Lat:0.0},{ll.Lon:0.0} · {year:0.0}");
+        return WmmInputs(model, ScopeYear(model));
     }
 
-    private static double SurveyYear(SemanticModel model)
+    /// <summary>
+    /// Per batch: the declination declared in the batch's own file, and WMM at the date of the batch's
+    /// own survey. One file's declination or one survey's date applied to the whole project would
+    /// correct every other file's planes by the wrong amount. Null when every batch shares the inputs.
+    /// </summary>
+    private Func<StructuralBatch, DeclinationInputs>? BatchDeclinationInputs(SemanticModel model)
     {
-        foreach (var s in model.Surveys.Values)
-            foreach (var d in s.Dates)
-                if (TryParseDecimalYear(d, out var y)) return y;
+        if (DeclinationSource == DeclinationSource.SurveyDeclared)
+        {
+            var perFile = ProjectScope ? _documents?.Workspace?.PerFile : null;
+            if (perFile is null || perFile.Count == 0) return null;
+            return batch => new DeclinationInputs(SurveyDeclaredDegrees:
+                batch.SourceFile is { } file && perFile.TryGetValue(file, out var fileModel)
+                    ? fileModel.Declination
+                    : model.Declination);
+        }
+
+        if (DeclinationSource != DeclinationSource.WmmAuto) return null;
+        if (WmmField(model) is not { } field) return null;   // the scope-wide inputs carry the reason
+        double scopeYear = ScopeYear(model);
+        var byYear = new Dictionary<double, DeclinationInputs>();
+        return batch =>
+        {
+            double year = BatchStation(batch) is { } station
+                ? SurveyDates.DecimalYearOf(model, station) ?? scopeYear
+                : scopeYear;
+            if (!byYear.TryGetValue(year, out var inputs))
+                byYear[year] = inputs = field.At(year);
+            return inputs;
+        };
+    }
+
+    private static QualifiedName? BatchStation(StructuralBatch batch)
+    {
+        foreach (var m in batch.Measurements)
+            if (m.Shot is not null) return m.From;
+        return null;
+    }
+
+    private DeclinationInputs WmmInputs(SemanticModel model, double year) =>
+        WmmField(model) is { } field ? field.At(year) : new DeclinationInputs(WmmNote: WmmProblem(model));
+
+    /// <summary>The magnetic model at the scope's fix point, or null when one of the two is missing.</summary>
+    private static WmmAtFix? WmmField(SemanticModel model)
+    {
+        if (FirstFix(model) is not { } fix) return null;
+        if (!CoordinateTransform.TryToWgs84(fix.Cs, fix.FixX!.Value, fix.FixY!.Value, out var ll)) return null;
+        return GeoMagneticModelLoader.TryLoadDefault() is { } geo ? new WmmAtFix(geo, ll.Lat, ll.Lon) : null;
+    }
+
+    private static string WmmProblem(SemanticModel model)
+    {
+        if (FirstFix(model) is not { } fix) return "WMM: no fix point in scope";
+        if (!CoordinateTransform.TryToWgs84(fix.Cs, fix.FixX!.Value, fix.FixY!.Value, out _))
+            return $"WMM: can't convert fix cs '{fix.Cs ?? "?"}' to lat/lon";
+        return string.Format(ThIDE.Resources.Tr.Get("Struct_WmmNoModel"), UserDataFolder.FullPath);
+    }
+
+    private static StationSymbol? FirstFix(SemanticModel model)
+    {
+        foreach (var s in model.Stations.Values)
+            if (s.FixX is not null && s.FixY is not null) return s;
+        return null;
+    }
+
+    private sealed record WmmAtFix(GeoMagneticModel Geo, double Lat, double Lon)
+    {
+        public DeclinationInputs At(double year) => new(
+            WmmAutoDegrees: Geo.Declination(Lat, Lon, 0, year),
+            WmmNote: $"WMM {Geo.Name} · {Lat:0.0},{Lon:0.0} · {year:0.0}");
+    }
+
+    /// <summary>The first survey date found in scope, else today.</summary>
+    private static double ScopeYear(SemanticModel model)
+    {
+        if (SurveyDates.FirstDecimalYear(model) is { } y) return y;
         var now = System.DateTime.UtcNow;
         return now.Year + (now.DayOfYear - 1) / 365.0;
-    }
-
-    private static bool TryParseDecimalYear(string? raw, out double year)
-    {
-        year = 0;
-        if (string.IsNullOrWhiteSpace(raw)) return false;
-        var first = raw.Split(new[] { ' ', '\t', '-' }, StringSplitOptions.RemoveEmptyEntries);
-        if (first.Length == 0) return false;
-        var parts = first[0].Split('.');
-        if (!int.TryParse(parts[0], out var yr) || yr < 1000 || yr > 3000) return false;
-        double frac = 0;
-        if (parts.Length > 1 && int.TryParse(parts[1], out var mo) && mo is >= 1 and <= 12) frac = (mo - 1) / 12.0;
-        year = yr + frac;
-        return true;
     }
 }
 
@@ -1016,6 +1067,9 @@ public sealed partial class StructuralPlaneRow : ObservableObject
 
     /// <summary>Stable palette colour shared by the 3D disc, the stereonet arc/pole and the inset.</summary>
     public string ColorHex { get; init; } = StructuralGeologyViewModel.PlanePalette[0];
+
+    /// <summary>The declination δ this plane's batch is corrected by (its own file's or survey date's).</summary>
+    public double Delta { get; init; }
 
     /// <summary>User-assigned plane type (Fault / Bedding plane / Joint, or a custom value). Drives the
     /// per-type colouring of the plane's line in the Mainline Preview. Editable free text with the

@@ -2141,4 +2141,8 @@ This cannot be undone.</value></data>
   <data name="IoErr_Other" xml:space="preserve"><value>the system reported a file error (Copy details has it)</value></data>
   <data name="Edit_IoFailed" xml:space="preserve"><value>The change could not be written to disk: {0}.</value></data>
   <data name="Rename_WriteFailed" xml:space="preserve"><value>{0} could not be written: {1}. Nothing was renamed.</value></data>
+  <data name="Notif_StateUnreadableTitle" xml:space="preserve"><value>Saved settings could not be read</value></data>
+  <data name="Notif_StateUnreadableMsg" xml:space="preserve"><value>The defaults are in use. A copy of the unreadable file was kept as {0}.</value></data>
+  <data name="Blender_UI_RenderDir" xml:space="preserve"><value>Render folder</value></data>
+  <data name="Blender_UI_RenderDirTip" xml:space="preserve"><value>Where the video, frames or still are saved. Leave empty to keep them in the temporary job folder.</value></data>
 </root>

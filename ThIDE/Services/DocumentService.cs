@@ -159,8 +159,10 @@ public interface IDocumentService
     event EventHandler<(string Raw, Therion.Processing.Abstractions.ReferenceKind Kind)>? RenameSymbolRequested;
 
     /// <summary>Asks the shell to list every reference to the symbol named by the raw token (#7).</summary>
-    void RequestFindAllReferences(string raw, Therion.Processing.Abstractions.ReferenceKind kind);
-    event EventHandler<(string Raw, Therion.Processing.Abstractions.ReferenceKind Kind)>? FindAllReferencesRequested;
+    /// <summary>Find All References for <paramref name="raw"/>, written at <paramref name="offset"/> in
+    /// <paramref name="filePath"/> when known (a bare station id is then that file's survey's station).</summary>
+    void RequestFindAllReferences(string raw, Therion.Processing.Abstractions.ReferenceKind kind, string? filePath = null, int offset = -1);
+    event EventHandler<(string Raw, Therion.Processing.Abstractions.ReferenceKind Kind, string? FilePath, int Offset)>? FindAllReferencesRequested;
 
     /// <summary>Asks the shell to reveal a station/survey (by full dotted name) in the embedded 3D viewer.</summary>
     void RequestShowInModel3D(string fullName);
@@ -255,12 +257,12 @@ public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, 
             RenameSymbolRequested?.Invoke(this, (raw, kind));
     }
 
-    public event EventHandler<(string Raw, Therion.Processing.Abstractions.ReferenceKind Kind)>? FindAllReferencesRequested;
+    public event EventHandler<(string Raw, Therion.Processing.Abstractions.ReferenceKind Kind, string? FilePath, int Offset)>? FindAllReferencesRequested;
 
-    public void RequestFindAllReferences(string raw, Therion.Processing.Abstractions.ReferenceKind kind)
+    public void RequestFindAllReferences(string raw, Therion.Processing.Abstractions.ReferenceKind kind, string? filePath = null, int offset = -1)
     {
         if (!string.IsNullOrWhiteSpace(raw))
-            FindAllReferencesRequested?.Invoke(this, (raw, kind));
+            FindAllReferencesRequested?.Invoke(this, (raw, kind, filePath, offset));
     }
 
     public event EventHandler<Model3DTarget>? ShowInModel3DRequested;
@@ -896,12 +898,18 @@ public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, 
     private void RecordRecent(string fullPath)
     {
         if (_settings is null) return;
-        var current = _settings.Current;
-        var list = new System.Collections.Generic.List<string>(current.RecentFiles.Count + 1) { fullPath };
-        foreach (var p in current.RecentFiles)
-            if (!FilePaths.Comparer.Equals(p, fullPath)) list.Add(p);
-        if (list.Count > MaxRecentFiles) list.RemoveRange(MaxRecentFiles, list.Count - MaxRecentFiles);
-        try { _settings.Save(current with { RecentFiles = list }); } catch { /* best-effort */ }
+        try
+        {
+            _settings.Update(current =>
+            {
+                var list = new System.Collections.Generic.List<string>(current.RecentFiles.Count + 1) { fullPath };
+                foreach (var p in current.RecentFiles)
+                    if (!FilePaths.Comparer.Equals(p, fullPath)) list.Add(p);
+                if (list.Count > MaxRecentFiles) list.RemoveRange(MaxRecentFiles, list.Count - MaxRecentFiles);
+                return current with { RecentFiles = list };
+            });
+        }
+        catch { /* best-effort */ }
     }
 
     /// <summary>Promotes a batch of just-opened files with a single settings save (same result as
@@ -909,14 +917,20 @@ public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, 
     private void RecordRecentMany(System.Collections.Generic.IReadOnlyList<string> fullPaths)
     {
         if (_settings is null || fullPaths.Count == 0) return;
-        var current = _settings.Current;
-        var list = new System.Collections.Generic.List<string>(current.RecentFiles.Count + fullPaths.Count);
-        for (int i = fullPaths.Count - 1; i >= 0; i--)
-            if (!list.Contains(fullPaths[i], FilePaths.Comparer)) list.Add(fullPaths[i]);
-        foreach (var p in current.RecentFiles)
-            if (!list.Contains(p, FilePaths.Comparer)) list.Add(p);
-        if (list.Count > MaxRecentFiles) list.RemoveRange(MaxRecentFiles, list.Count - MaxRecentFiles);
-        try { _settings.Save(current with { RecentFiles = list }); } catch { /* best-effort */ }
+        try
+        {
+            _settings.Update(current =>
+            {
+                var list = new System.Collections.Generic.List<string>(current.RecentFiles.Count + fullPaths.Count);
+                for (int i = fullPaths.Count - 1; i >= 0; i--)
+                    if (!list.Contains(fullPaths[i], FilePaths.Comparer)) list.Add(fullPaths[i]);
+                foreach (var p in current.RecentFiles)
+                    if (!list.Contains(p, FilePaths.Comparer)) list.Add(p);
+                if (list.Count > MaxRecentFiles) list.RemoveRange(MaxRecentFiles, list.Count - MaxRecentFiles);
+                return current with { RecentFiles = list };
+            });
+        }
+        catch { /* best-effort */ }
     }
 
     private FileDocumentViewModel? FindOpen(string path) =>

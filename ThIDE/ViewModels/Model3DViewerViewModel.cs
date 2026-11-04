@@ -307,7 +307,7 @@ public sealed partial class Model3DViewerViewModel : ObservableObject
     partial void OnZoomOnShowChanged(bool value)
     {
         if (_settings is not null && _settings.Current.Model3DZoomOnShow != value)
-            _settings.Save(_settings.Current with { Model3DZoomOnShow = value });
+            _settings.Update(st => st with { Model3DZoomOnShow = value });
     }
 
     /// <summary>Handles a JSON message posted by the host page (JS→C#). Never throws.</summary>
@@ -432,7 +432,7 @@ public sealed partial class Model3DViewerViewModel : ObservableObject
         OnPropertyChanged(nameof(ShadingMode));
         ApplyShading();
         if (_settings is not null)
-            _settings.Save(_settings.Current with { Model3DShadingMode = mode });
+            _settings.Update(st => st with { Model3DShadingMode = mode });
     }
 
     [RelayCommand] private void ResetView() => ScriptRequested?.Invoke(this, "cvResetView()");

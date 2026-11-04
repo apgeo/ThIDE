@@ -61,6 +61,34 @@ public class BlenderAnimationViewModelTests
         return vm;
     }
 
+    // ---- render folder ----
+
+    [Fact]
+    public async Task Render_WritesIntoTheRenderFolder_NotTheTemporaryJobFolder()
+    {
+        var svc = new FakeRenderService();
+        var vm = WithSource(Vm(svc));
+        Assert.Equal(BlenderAnimationViewModel.DefaultRenderDirectory(), vm.RenderDirectory);
+        Assert.False(vm.RenderDirectory!.StartsWith(Path.GetTempPath(), System.StringComparison.Ordinal));
+
+        vm.RenderDirectory = " /invented/renders ";
+        await vm.RenderCommand.ExecuteAsync(null);
+
+        Assert.Equal("/invented/renders", svc.LastSpec!.Output.OutputDirectory);
+    }
+
+    [Fact]
+    public async Task Render_WithAnEmptyRenderFolder_LeavesTheOutputsInTheJobFolder()
+    {
+        var svc = new FakeRenderService();
+        var vm = WithSource(Vm(svc));
+
+        vm.RenderDirectory = "";
+        await vm.RenderCommand.ExecuteAsync(null);
+
+        Assert.Equal("", svc.LastSpec!.Output.OutputDirectory);
+    }
+
     // ---- presets + knobs ----
 
     [Fact]

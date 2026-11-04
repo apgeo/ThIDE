@@ -70,6 +70,8 @@ public sealed class BlenderRenderService : IBlenderRenderService
         string outputDir = string.IsNullOrWhiteSpace(spec.Output.OutputDirectory)
             ? jobDir
             : Path.GetFullPath(spec.Output.OutputDirectory);
+        bool outputsElsewhere = !string.Equals(Path.GetFullPath(jobDir), outputDir, StringComparison.Ordinal);
+        RenderResult result;
         try
         {
             Directory.CreateDirectory(outputDir);
@@ -77,12 +79,47 @@ public sealed class BlenderRenderService : IBlenderRenderService
                 .ConfigureAwait(false);
 
             var job = new RenderJob(scriptPath, jobDir, frameCount, effectiveSpec.Output);
-            return await _runner.RunAsync(locate.Installation!, job, progress, ct).ConfigureAwait(false);
+            result = await _runner.RunAsync(locate.Installation!, job, progress, ct).ConfigureAwait(false);
         }
         finally
         {
             DeleteScratch(jobDir);
         }
+
+        // With the outputs elsewhere, a finished job's folder holds nothing but its log: drop the folder
+        // instead of leaving one behind per render. A failed or cancelled job keeps its log to look at.
+        if (outputsElsewhere && result.Succeeded && TryDeleteDirectory(jobDir))
+            return WithoutJobLog(result);
+        return result;
+    }
+
+    /// <summary>
+    /// Deletes the job folders under the job root that are older than <paramref name="olderThan"/> and
+    /// hold nothing but render scratch and <c>job.log</c> (a failed or cancelled run, or one whose
+    /// outputs went to <see cref="OutputSpec.OutputDirectory"/>). A folder holding anything else, such
+    /// as the outputs of a render without an output directory, is kept. Best-effort; returns the number
+    /// of folders deleted.
+    /// </summary>
+    public int PruneJobFolders(TimeSpan olderThan)
+    {
+        if (!Directory.Exists(_jobRoot)) return 0;
+        var cutoff = DateTime.UtcNow - olderThan;
+        int deleted = 0;
+        IEnumerable<string> folders;
+        try { folders = Directory.EnumerateDirectories(_jobRoot, "job-*").ToList(); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return 0; }
+        foreach (var dir in folders)
+        {
+            try
+            {
+                if (Directory.GetLastWriteTimeUtc(dir) > cutoff) continue;
+                if (Directory.EnumerateDirectories(dir).Any()) continue;
+                if (!Directory.EnumerateFiles(dir).All(f => DisposableFileNames.Contains(Path.GetFileName(f)))) continue;
+                if (TryDeleteDirectory(dir)) deleted++;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+        }
+        return deleted;
     }
 
     public async Task<string> ExportScriptAsync(
@@ -163,6 +200,29 @@ public sealed class BlenderRenderService : IBlenderRenderService
 
     // ConversionOptions' default file names plus the script PrepareAsync writes.
     private static readonly string[] ScratchFileNames = ["model.ply", "scene-meta.json", "render.py"];
+
+    // What a job folder may hold and still be deleted by PruneJobFolders: scratch and the runner's log.
+    private static readonly HashSet<string> DisposableFileNames = new([.. ScratchFileNames, "job.log"], StringComparer.Ordinal);
+
+    private static bool TryDeleteDirectory(string dir)
+    {
+        try { Directory.Delete(dir, recursive: true); return true; }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return false; }
+    }
+
+    private static RenderResult WithoutJobLog(RenderResult r) => new()
+    {
+        Succeeded = r.Succeeded,
+        FailureKind = r.FailureKind,
+        ErrorMessage = r.ErrorMessage,
+        StartFailedPath = r.StartFailedPath,
+        OutputPaths = r.OutputPaths,
+        Device = r.Device,
+        FrameCount = r.FrameCount,
+        JobLogPath = null,
+        Duration = r.Duration,
+        Warnings = r.Warnings,
+    };
 
     private string CreateJobDirectory()
     {

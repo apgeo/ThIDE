@@ -334,7 +334,7 @@ public sealed partial class ProjectAuditViewModel : ObservableObject
     {
         HasExclusions = ExcludedDirectories.Count > 0;
         if (_settings is null) return;
-        try { _settings.Save(_settings.Current with { AuditExcludedDirectories = ExcludedDirectories.ToArray() }); }
+        try { _settings.Update(st => st with { AuditExcludedDirectories = ExcludedDirectories.ToArray() }); }
         catch { /* best-effort persistence */ }
     }
 

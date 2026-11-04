@@ -19,10 +19,20 @@ public static class StructuralAnalysis
         var decl = DeclinationResolver.Resolve(options.Declination, options.DeclinationInputs);
 
         var planes = ImmutableArray.CreateBuilder<FittedPlane>(batches.Length);
+        var perBatch = ImmutableArray.CreateBuilder<DeclinationResolution>(batches.Length);
         foreach (var batch in batches)
-            planes.Add(Recompute(batch, batch.DefaultIncluded(), decl.Delta));
+        {
+            var batchDecl = options.BatchDeclinationInputs is { } inputsOf
+                ? DeclinationResolver.Resolve(options.Declination, inputsOf(batch))
+                : decl;
+            perBatch.Add(batchDecl);
+            planes.Add(Recompute(batch, batch.DefaultIncluded(), batchDecl.Delta));
+        }
 
-        return new AnalysisResult(batches, planes.ToImmutable(), solution.CaveLegs, solution.CaveSplays, decl);
+        return new AnalysisResult(batches, planes.ToImmutable(), solution.CaveLegs, solution.CaveSplays, decl)
+        {
+            BatchDeclinations = perBatch.ToImmutable(),
+        };
     }
 
     /// <summary>

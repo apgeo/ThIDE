@@ -98,7 +98,8 @@ public partial class TherionTextEditor : UserControl
 
     /// <summary>Raised when the user asks for every reference to the symbol at the caret (#7): symbol-scoped,
     /// not a name-based text search.</summary>
-    public event EventHandler<(string Raw, ReferenceKind Kind)>? FindAllReferencesRequested;
+    /// <summary>Find All References for a token; <c>Offset</c> is where the token is written in this file.</summary>
+    public event EventHandler<(string Raw, ReferenceKind Kind, int Offset)>? FindAllReferencesRequested;
 
     private const string ThbookUrl = "https://therion.speleo.sk/wiki/start";
 
@@ -1590,9 +1591,10 @@ public partial class TherionTextEditor : UserControl
     /// </summary>
     public void StartFindAllReferences()
     {
-        if (RefTokenAtCaret() is { } t) { FindAllReferencesRequested?.Invoke(this, t); return; }
-        if (_editor is not null && WordAt(_editor.Text, _editor.CaretOffset) is { Length: > 0 } word)
-            FindAllReferencesRequested?.Invoke(this, (word, ReferenceKind.Any));
+        if (_editor is null) return;
+        if (RefTokenAtCaret() is { } t) { FindAllReferencesRequested?.Invoke(this, (t.Raw, t.Kind, _editor.CaretOffset)); return; }
+        if (WordAt(_editor.Text, _editor.CaretOffset) is { Length: > 0 } word)
+            FindAllReferencesRequested?.Invoke(this, (word, ReferenceKind.Any, _editor.CaretOffset));
     }
 
     /// <summary>The station/survey reference token under the caret, with the kind it should resolve as.</summary>
@@ -2052,7 +2054,7 @@ public partial class TherionTextEditor : UserControl
         actions.Children.Add(IconAction("Icon.GoToDefinition", "Ed_GoToDefinition",
             () => { NavigateToSpan(where); HideHoverInfo(); }));
         actions.Children.Add(IconAction("Icon.ManageSearch", "Ed_FindAllRefs",
-            () => { FindAllReferencesRequested?.Invoke(this, (raw, kind)); HideHoverInfo(); }));
+            () => { FindAllReferencesRequested?.Invoke(this, (raw, kind, tokenOffset)); HideHoverInfo(); }));
         // Teardown + modal ordering is handled by IconAction's deferral (see PostHoverAction).
         actions.Children.Add(IconAction("Icon.Rename", "Ed_RenameDots", () =>
         {

@@ -170,6 +170,12 @@ public sealed record ShotSymbol(
     /// </summary>
     public DataCommand? FieldDefinition { get; init; }
 
+    /// <summary>
+    /// Metres per unit of the raw tape column of <see cref="SourceRow"/>: the <c>units length</c> in force,
+    /// with its factor (<c>units length 2 feet</c> is 0.6096).
+    /// </summary>
+    public double LengthScale { get; init; } = 1.0;
+
     /// <summary>Unit of the raw compass/bearing columns of <see cref="SourceRow"/> (<c>units compass</c>).</summary>
     public AngleUnit CompassUnit { get; init; } = AngleUnit.Degree;
 
@@ -198,6 +204,9 @@ public readonly record struct ReadingCalibration(double ZeroError, double Scale)
 
     /// <summary>The calibrated value of <paramref name="reading"/>, in the reading's own units.</summary>
     public double Apply(double reading) => (reading - ZeroError) * Scale;
+
+    /// <summary>The reading that calibrates to <paramref name="value"/>: the inverse of <see cref="Apply"/>.</summary>
+    public double Invert(double value) => value / Scale + ZeroError;
 }
 
 /// <summary>A <c>scrap</c> symbol (.th2): id + declaration span (Plan �7.3 / M6 #7).</summary>

@@ -322,7 +322,7 @@ public partial class WorkspaceExplorerViewModel : ViewModelBase
     private void SaveSettings()
     {
         if (_loadingSettings || _settings is null) return;
-        _settings.Save(_settings.Current with
+        _settings.Update(st => st with
         {
             WorkspaceShowObjectModel = ShowObjectModel,
             WorkspaceRevealOnHover = RevealOnHover,

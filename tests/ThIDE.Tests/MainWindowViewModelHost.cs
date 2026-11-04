@@ -215,8 +215,8 @@ internal sealed class ScriptedDocumentService : IDocumentService
     public event EventHandler<string>? FindReferencesRequested;
     public void RequestRenameSymbol(string raw, ReferenceKind kind) { }
     public event EventHandler<(string Raw, ReferenceKind Kind)>? RenameSymbolRequested;
-    public void RequestFindAllReferences(string raw, ReferenceKind kind) { }
-    public event EventHandler<(string Raw, ReferenceKind Kind)>? FindAllReferencesRequested;
+    public void RequestFindAllReferences(string raw, ReferenceKind kind, string? filePath = null, int offset = -1) { }
+    public event EventHandler<(string Raw, ReferenceKind Kind, string? FilePath, int Offset)>? FindAllReferencesRequested;
     public void RequestShowInModel3D(string fullName) { }
     public void RequestShowInModel3D(Model3DTarget target) { }
     public event EventHandler<Model3DTarget>? ShowInModel3DRequested;

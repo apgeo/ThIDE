@@ -607,6 +607,7 @@ public sealed class SemanticBinder
         {
             SourceRow = row,
             FieldDefinition = data,
+            LengthScale = units.TapeScale,
             CompassUnit = units.Compass,
             ClinoUnit = units.Clino,
             LengthCalibration = units.LengthCal,

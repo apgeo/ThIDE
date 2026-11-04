@@ -42,11 +42,11 @@ public static class ProcessRunner
     /// </summary>
     public static async Task<ProcessOutcome> RunAsync(ProcessSpec spec, IProgress<ProcessLine>? lines = null, CancellationToken ct = default)
     {
-        var psi = StartInfo(spec);
         var clock = Stopwatch.StartNew();
-        using var proc = new Process { StartInfo = psi };
+        using var proc = new Process();
         try
         {
+            proc.StartInfo = StartInfo(spec);
             if (!proc.Start()) return new ProcessOutcome(-1, false, false, clock.Elapsed, "the process did not start");
         }
         catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException or IOException)
@@ -84,6 +84,8 @@ public static class ProcessRunner
     }
 
     /// <summary>The start info for a spec (exposed for tests and for callers that need to adjust it).</summary>
+    /// <exception cref="FileNotFoundException">On Windows, a program spec whose program is not found by
+    /// <see cref="ExecutableSearch.Resolve"/>: it is refused rather than looked up in the current directory.</exception>
     public static ProcessStartInfo StartInfo(ProcessSpec spec)
     {
         var psi = new ProcessStartInfo
@@ -110,7 +112,12 @@ public static class ProcessRunner
         }
         else
         {
-            psi.FileName = spec.FileName;
+            // Windows would look a bare name up in ThIDE's own folder and current directory first, so a
+            // project could ship the "python.exe" a task names: start it by the full path found in the
+            // system folders and PATH, or not at all.
+            psi.FileName = ExecutableSearch.Resolve(spec.FileName, spec.WorkingDirectory)
+                ?? throw new FileNotFoundException(
+                    $"'{spec.FileName}' was not found in the system folders or on PATH. Give its full path.", spec.FileName);
             foreach (var a in spec.Args) psi.ArgumentList.Add(a);
         }
         if (spec.WorkingDirectory is { Length: > 0 } wd) psi.WorkingDirectory = wd;

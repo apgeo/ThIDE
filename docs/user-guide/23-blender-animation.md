@@ -54,6 +54,9 @@ describes one *render job*; nothing runs until you press **Render**.
    - **Output** — a video (MP4/MKV/WebM), a numbered PNG sequence, or a single still; plus
      resolution and file name.
    - **Labels** — turn on station labels and lead markers.
+   - **Render folder** — where the video, frames or still are saved; by default *Documents/ThIDE/Renders*
+     (your home folder's *ThIDE/Renders* where there is no Documents folder). Leave it empty to keep
+     them in the temporary job folder, which the operating system may clean up.
 
    If anything is wrong (an odd video resolution, zero frames, …) it appears under **Fix before
    rendering** and the **Render** button stays disabled with the reason.

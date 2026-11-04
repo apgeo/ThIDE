@@ -107,6 +107,21 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
     // ---- export target ----
     [ObservableProperty] private string? _exportDirectory;
 
+    /// <summary>
+    /// Where a render's video, frames or still go. Defaults to a folder of the user's own, not the
+    /// temporary job folder: temp is cleaned by the OS, and the job folder is only the render's scratch.
+    /// Empty puts the outputs in the job folder.
+    /// </summary>
+    [ObservableProperty] private string? _renderDirectory = DefaultRenderDirectory();
+
+    /// <summary>Documents/ThIDE/Renders (the home folder when the platform has no Documents folder).</summary>
+    public static string DefaultRenderDirectory()
+    {
+        var documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        if (string.IsNullOrEmpty(documents)) documents = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        return System.IO.Path.Combine(documents, "ThIDE", "Renders");
+    }
+
     // ---- run state ----
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private bool _isIndeterminate;
@@ -237,7 +252,10 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
             var progress = new Progress<RenderProgress>(OnProgress);
             StatusMessage = Tr.Get("Blender_Status_Acquiring");
             var source = await _sources!.AcquireAsync(BuildRequest(), _cts.Token).ConfigureAwait(true);
-            var result = await _renderService!.RenderAsync(_spec, source, progress, _cts.Token).ConfigureAwait(true);
+            var spec = string.IsNullOrWhiteSpace(RenderDirectory)
+                ? _spec
+                : _spec with { Output = _spec.Output with { OutputDirectory = RenderDirectory.Trim() } };
+            var result = await _renderService!.RenderAsync(spec, source, progress, _cts.Token).ConfigureAwait(true);
             ApplyResult(result);
         }
         catch (OperationCanceledException)

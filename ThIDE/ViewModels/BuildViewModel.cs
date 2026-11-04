@@ -1002,7 +1002,7 @@ public partial class BuildViewModel : ViewModelBase
         foreach (var kv in _settings.Current.AutoOpenOverrides)
             if (!string.Equals(NormPath(kv.Key), key, StringComparison.OrdinalIgnoreCase)) dict[kv.Key] = kv.Value;
         if (state is bool b) dict[key] = b;
-        _settings.Save(_settings.Current with { AutoOpenOverrides = dict });
+        _settings.Update(st => st with { AutoOpenOverrides = dict });
     }
 
     /// <summary>#1: open a specific .lox in Loch / .3d in Aven (falls back to the OS default app).</summary>
