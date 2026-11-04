@@ -28,6 +28,7 @@ public partial class Model3DViewerToolView : UserControl
     private bool _vmWired;       // guards against double-subscribing the singleton VM's events
     private bool _reFitQueued;   // coalesces bursts of size changes into a single canvas re-fit
     private Window? _fsWindow;   // borderless full-screen host for the whole panel
+    private bool _dragWatched;   // subscribed to DockDragState (hides the native view during a panel drag)
 
     public Model3DViewerToolView() => InitializeComponent();
 
@@ -35,6 +36,8 @@ public partial class Model3DViewerToolView : UserControl
     {
         base.OnAttachedToVisualTree(e);
         TryInitialize();
+        if (!_dragWatched) { ThIDE.Docking.DockDragState.Changed += OnDockDragChanged; _dragWatched = true; }
+        OnDockDragChanged(null, ThIDE.Docking.DockDragState.IsDragging);   // a drag that moved this panel may still be ending
     }
 
     // Dock recreates/re-parents tool views while the ViewModel stays a singleton. If every view
@@ -45,6 +48,15 @@ public partial class Model3DViewerToolView : UserControl
     {
         base.OnDetachedFromVisualTree(e);
         UnwireVm();
+        if (_dragWatched) { ThIDE.Docking.DockDragState.Changed -= OnDockDragChanged; _dragWatched = false; }
+    }
+
+    // The native view is drawn above every Avalonia control, the dock's drop targets included, so a panel
+    // dragged over the 3D viewer showed no targets and was dropped as a floating window. Hide the view
+    // while any panel is being dragged.
+    private void OnDockDragChanged(object? sender, bool dragging)
+    {
+        if (_web is not null) _web.IsVisible = !dragging;
     }
 
     protected override void OnDataContextChanged(EventArgs e)
