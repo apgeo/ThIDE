@@ -94,7 +94,7 @@ public static partial class TaskCatalog
 public static partial class ProblemMatchers
 {
     // A path with an extension (optionally after a Windows drive), so "12:30:45" is not a position.
-    [GeneratedRegex(@"^(?<file>(?:[A-Za-z]:[\\/])?[^:\r\n]*?\.[A-Za-z0-9]+):(?<line>\d+)(?::(?<col>\d+))?:\s*(?<msg>.*)$")]
+    [GeneratedRegex(@"^(?<file>(?:[A-Za-z]:[\\/])?[^:\r\n]*?\.[A-Za-z0-9]+):(?<line>[0-9]+)(?::(?<col>[0-9]+))?:\s*(?<msg>.*)$")]
     private static partial Regex FileLine();
 
     private static readonly HeuristicTherionOutputParser Therion = new();
@@ -115,8 +115,8 @@ public static partial class ProblemMatchers
             case "file-line":
                 var m = FileLine().Match(line);
                 if (!m.Success) return null;
-                int ln = int.Parse(m.Groups["line"].Value, System.Globalization.CultureInfo.InvariantCulture);
-                int col = m.Groups["col"].Success ? int.Parse(m.Groups["col"].Value, System.Globalization.CultureInfo.InvariantCulture) : 1;
+                int ln = Position(m.Groups["line"].Value);
+                int col = m.Groups["col"].Success ? Position(m.Groups["col"].Value) : 1;
                 var msg = m.Groups["msg"].Value;
                 var severity = msg.StartsWith("warning", StringComparison.OrdinalIgnoreCase) ? DiagnosticSeverity.Warning
                              : msg.StartsWith("info", StringComparison.OrdinalIgnoreCase) || msg.StartsWith("note", StringComparison.OrdinalIgnoreCase) ? DiagnosticSeverity.Info
@@ -127,6 +127,11 @@ public static partial class ProblemMatchers
                 return null;
         }
     }
+
+    // A line or column from a tool's output: counted from 1, and a number too large for an int (or 0)
+    // is the first one rather than an exception that would end the reading of the task's output.
+    private static int Position(string digits) =>
+        int.TryParse(digits, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var n) && n > 0 ? n : 1;
 
     private static string Rooted(string path, string? cwd) =>
         Path.IsPathRooted(path) || cwd is null ? path : Path.GetFullPath(Path.Combine(cwd, path));
