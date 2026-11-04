@@ -1,5 +1,23 @@
 # Therion.Build — changes for consumers
 
+## 2026-11 (later) — programs started by full path on Windows
+
+### Behaviour changes
+- **Windows only:** a program `ProcessSpec` (`UseShell: false`) is started by the full path
+  `ExecutableSearch.Resolve` finds. A bare name is looked up in the system folders and then in the
+  folders of PATH that are full paths; the host's own folder, its current directory and relative PATH
+  entries such as `.` are no longer searched. A relative path with a folder in it (`tools\build.cmd`)
+  is taken from the spec's `WorkingDirectory`. A program that is not found is refused:
+  `ProcessRunner.RunAsync` returns a `StartError`, and `ProcessRunner.StartInfo` throws
+  `FileNotFoundException`. Migration: a task that relied on a program in the current directory names
+  it by its full path, or by a path relative to its working directory. Linux and macOS are unchanged.
+- `ExternalToolLocator`'s PATH fallback skips relative PATH entries on every platform, so a tool is no
+  longer found in the host's current directory through a `.` in PATH. Migration: none.
+
+### Additive API
+- `Therion.Build.Automation.ExecutableSearch`: `Resolve(fileName, workingDirectory)` and the
+  platform-independent `ResolveOnWindows(fileName, workingDirectory, pathVariable, systemDirectories, fileExists)`.
+
 ## 2026-11 — correctness and safety fixes
 
 ### Behaviour changes

@@ -66,7 +66,8 @@ public sealed class ExternalToolLocator : IExternalToolLocator
             var exeName = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? toolId + ".exe" : toolId;
             foreach (var dir in envPath.Split(Path.PathSeparator))
             {
-                if (string.IsNullOrWhiteSpace(dir)) continue;
+                // A relative entry (".") is the current directory, which may be a project folder.
+                if (string.IsNullOrWhiteSpace(dir) || !Path.IsPathFullyQualified(dir)) continue;
                 try
                 {
                     var full = Path.Combine(dir, exeName);
