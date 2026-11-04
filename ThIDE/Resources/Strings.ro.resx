@@ -451,7 +451,7 @@
   <data name="Blender_Fail_DiskSpace" xml:space="preserve"><value>Spațiu insuficient pe disc pentru această randare.</value></data>
   <data name="Menu_Tools_ImportDem" xml:space="preserve"><value>Importă DEM ca suprafață (.asc)…</value></data>
   <data name="Menu_Tools_ImportGpx" xml:space="preserve"><value>Importă puncte GPX (→ fix)…</value></data>
-  <data name="Menu_Tools_ScaffoldProject" xml:space="preserve"><value>Generează proiect din tur…</value></data>
+  <data name="Menu_Tools_ScaffoldProject" xml:space="preserve"><value>Generează proiect din topografie…</value></data>
   <data name="Menu_Tools_ScaffoldActive" xml:space="preserve"><value>Generează proiect din fișierul activ</value></data>
   <data name="Menu_Tools_ExportEntrances" xml:space="preserve"><value>Exportă intrări / puncte fixe</value></data>
   <data name="Menu_Tools_ExportTable" xml:space="preserve"><value>Exportă tabel de date</value></data>
@@ -965,7 +965,7 @@
   <data name="Ed_BookmarkTitleWm" xml:space="preserve"><value>Titlu semn de carte (opțional)</value></data>
   <data name="Ed_AddBtn" xml:space="preserve"><value>Adaugă</value></data>
   <data name="Ed_GoToDefinition" xml:space="preserve"><value>Salt la definiție</value></data>
-  <data name="Ed_GoToEquate" xml:space="preserve"><value>Salt la equate</value></data>
+  <data name="Ed_GoToEquate" xml:space="preserve"><value>Salt la echivalare</value></data>
   <data name="Ed_GoToAggregation" xml:space="preserve"><value>Salt la harta care îl agregă</value></data>
   <data name="Ed_FindAllRefs" xml:space="preserve"><value>Găsește toate referințele</value></data>
   <data name="Ed_NextOccurrence" xml:space="preserve"><value>Următoarea apariție în acest fișier</value></data>
@@ -1152,11 +1152,11 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către {0} în
   <data name="Notif_UnstuckBody" xml:space="preserve"><value>Fereastra a rămas dezactivată de un dialog deja închis și nu mai răspundea la clicuri. A fost reactivată; detaliile sunt în jurnal.</value></data>
   <data name="Notif_ScaffoldOverwritesSource" xml:space="preserve"><value>Dosarul țintă este chiar dosarul topografiei, așa că fișierul generat ar suprascrie „{0}”. Alegeți alt dosar.</value></data>
   <data name="Notif_ScaffoldTargetsExist" xml:space="preserve"><value>Dosarul țintă conține deja {0}; generarea scheletului le-ar suprascrie. Alegeți un dosar gol sau mutați mai întâi acele fișiere.</value></data>
-  <data name="Scaffold_Title" xml:space="preserve"><value>Generează proiect Therion din tur</value></data>
+  <data name="Scaffold_Title" xml:space="preserve"><value>Generează proiect Therion din topografie</value></data>
   <data name="Scaffold_Intro" xml:space="preserve"><value>Pregătește un proiect compilabil în jurul unui fișier de topografie .th simplu (de ex. exportat din TopoDroid): creează structura de dosare, copiază topografia în th/ și scrie un fișier .th de legătură plus un thconfig cu exporturile alese.</value></data>
   <data name="Scaffold_ProjectName" xml:space="preserve"><value>Nume proiect</value></data>
   <data name="Scaffold_SurveyTitle" xml:space="preserve"><value>Titlu</value></data>
-  <data name="Scaffold_SourceSurvey" xml:space="preserve"><value>Nume tur (interior)</value></data>
+  <data name="Scaffold_SourceSurvey" xml:space="preserve"><value>Nume topografie (interior)</value></data>
   <data name="Scaffold_SourceFile" xml:space="preserve"><value>Fișier sursă (→ th/)</value></data>
   <data name="Scaffold_Geo" xml:space="preserve"><value>Georeferențiere (opțional)</value></data>
   <data name="Scaffold_GeoHint" xml:space="preserve"><value>Necesară pentru export KML / shapefile / GIS. Ordinea coordonatelor urmează sistemul de coordonate — pentru lat-long este latitudine apoi longitudine. Lăsați gol pentru a genera în schimb un șablon comentat.</value></data>
@@ -1372,7 +1372,7 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către {0} în
   <data name="Picker_Preview" xml:space="preserve"><value>Previzualizare</value></data>
   <data name="Picker_OpenPreview" xml:space="preserve"><value>Deschide într-o fereastră…</value></data>
   <data name="LinkSurvey_Title" xml:space="preserve"><value>Leagă un fișier de topografie</value></data>
-  <data name="LinkSurvey_Intro" xml:space="preserve"><value>Alegeți o stație din fișierul de topografie și stația din spațiul de lucru din care continuă. ThIDE scrie liniile input și equate acolo unde există deja linii asemănătoare.</value></data>
+  <data name="LinkSurvey_Intro" xml:space="preserve"><value>Alegeți o stație din fișierul de topografie și stația din spațiul de lucru din care continuă. ThIDE scrie liniile „input” și „equate” acolo unde există deja linii asemănătoare.</value></data>
   <data name="LinkSurvey_SourceFile" xml:space="preserve"><value>Fișier de topografie</value></data>
   <data name="LinkSurvey_Browse" xml:space="preserve"><value>Răsfoiește…</value></data>
   <data name="LinkSurvey_PickSource" xml:space="preserve"><value>Alegeți fișierul de topografie de legat</value></data>
@@ -1396,15 +1396,15 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către {0} în
   <data name="LinkSurvey_Copy" xml:space="preserve"><value>Copiază în clipboard</value></data>
   <data name="LinkSurvey_Insert" xml:space="preserve"><value>Inserează</value></data>
   <data name="LinkSurvey_RootScope" xml:space="preserve"><value>rădăcina fișierului</value></data>
-  <data name="LinkSurvey_ReasonBlockWithEquates" xml:space="preserve"><value>aici sunt deja equate-uri</value></data>
-  <data name="LinkSurvey_ReasonEquateFile" xml:space="preserve"><value>fișier de equate-uri</value></data>
+  <data name="LinkSurvey_ReasonBlockWithEquates" xml:space="preserve"><value>aici sunt deja echivalări</value></data>
+  <data name="LinkSurvey_ReasonEquateFile" xml:space="preserve"><value>fișier de echivalări</value></data>
   <data name="LinkSurvey_ReasonBlock" xml:space="preserve"><value>blocul topografiei</value></data>
   <data name="LinkSurvey_ReasonCaret" xml:space="preserve"><value>la cursor</value></data>
   <data name="LinkSurvey_WarnScopeNotAncestor" xml:space="preserve"><value>O stație este în afara topografiei alese, deci nu poate fi numită de acolo. Alegeți o destinație mai sus.</value></data>
   <data name="LinkSurvey_WarnUnterminatedBlock" xml:space="preserve"><value>Blocul topografiei {0} nu are linie de sfârșit; corectați-l întâi.</value></data>
   <data name="LinkSurvey_WarnScopeNotFound" xml:space="preserve"><value>Topografia {0} nu a fost găsită în fișierul destinație.</value></data>
   <data name="LinkSurvey_WarnInputExists" xml:space="preserve"><value>Fișierul este deja inclus din {0}.</value></data>
-  <data name="LinkSurvey_WarnEquateExists" xml:space="preserve"><value>Un equate cu aceste stații există deja în {0}.</value></data>
+  <data name="LinkSurvey_WarnEquateExists" xml:space="preserve"><value>O echivalare cu aceste stații există deja în {0}.</value></data>
   <data name="LinkSurvey_WarnTargetExists" xml:space="preserve"><value>{0} există deja cu alt conținut. Alegeți alt dosar.</value></data>
   <data name="LinkSurvey_WarnSketchExists" xml:space="preserve"><value>{0} există deja cu alt conținut; schița nu se copiază.</value></data>
   <data name="LinkSurvey_WarnSketchNotCopied" xml:space="preserve"><value>Topografia include {0}, care nu se copiază; includerea nu se va rezolva.</value></data>
@@ -1429,7 +1429,7 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către {0} în
   <data name="Snippet_clt" xml:space="preserve"><value>centreline cu dată, echipă și date</value></data>
   <data name="Snippet_datan" xml:space="preserve"><value>ordinea citirilor data normal</value></data>
   <data name="Snippet_leg" xml:space="preserve"><value>următoarea viză de la ultima stație</value></data>
-  <data name="Snippet_eq" xml:space="preserve"><value>equate între două stații</value></data>
+  <data name="Snippet_eq" xml:space="preserve"><value>echivalare între două stații</value></data>
   <data name="Snippet_inp" xml:space="preserve"><value>include alt fișier (input)</value></data>
   <data name="Snippet_scrapb" xml:space="preserve"><value>bloc scrap … endscrap</value></data>
   <data name="Snippet_mapb" xml:space="preserve"><value>bloc map … endmap</value></data>
@@ -1464,7 +1464,7 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către {0} în
   <data name="FileTpl_Trip" xml:space="preserve"><value>Ieșire de topografiere</value></data>
   <data name="FileTpl_TripDesc" xml:space="preserve"><value>O topografie cu o poligonație (centreline); data, echipa, unitățile și linia data preluate din fișierul deschis în editor.</value></data>
   <data name="FileTpl_Connection" xml:space="preserve"><value>Topografie de legătură</value></data>
-  <data name="FileTpl_ConnectionDesc" xml:space="preserve"><value>O topografie-cadru care include alte topografii și le leagă cu equate.</value></data>
+  <data name="FileTpl_ConnectionDesc" xml:space="preserve"><value>O topografie-cadru care include alte topografii și le leagă prin echivalări.</value></data>
   <data name="FileTpl_Thconfig" xml:space="preserve"><value>Thconfig</value></data>
   <data name="FileTpl_ThconfigDesc" xml:space="preserve"><value>Compilează un fișier de topografie într-o hartă PDF și un model 3D; devine thconfig-ul activ.</value></data>
   <data name="FileTpl_Scrap" xml:space="preserve"><value>Schiță (th2)</value></data>
@@ -1516,7 +1516,7 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către {0} în
   <data name="NewTrip_TieIn" xml:space="preserve"><value>Pornește din (stația din proiect)</value></data>
   <data name="NewTrip_Nest" xml:space="preserve"><value>Pune ieșirea în interiorul topografiei stației</value></data>
   <data name="NewTrip_NoTieIn" xml:space="preserve"><value>Fără legătură (prima ieșire / intrare)</value></data>
-  <data name="NewTrip_NoTieInHelp" xml:space="preserve"><value>Scrie doar linia input, în topografia aleasă mai sus; legați prima stație mai târziu cu equate sau fix.</value></data>
+  <data name="NewTrip_NoTieInHelp" xml:space="preserve"><value>Scrie doar linia „input”, în topografia aleasă mai sus; legați prima stație mai târziu cu „equate” sau „fix”.</value></data>
   <data name="NewTrip_PickSurvey" xml:space="preserve"><value>Alegeți topografia în care intră ieșirea.</value></data>
   <data name="NewTrip_BadName" xml:space="preserve"><value>Numele topografiei poate conține doar litere, cifre, _ și -.</value></data>
   <data name="NewTrip_BadStation" xml:space="preserve"><value>Prima stație nu are un nume valid.</value></data>
@@ -1584,7 +1584,7 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către {0} în
   <data name="Diag_FixAllSummary" xml:space="preserve"><value>{0} în {1}. Nu au putut fi corectate automat și rămân neschimbate: {2}. Debifați orice modificare nedorită.</value></data>
   <data name="EditPreview_Apply" xml:space="preserve"><value>Aplică</value></data>
   <data name="Menu_Tools_SyncMaps" xml:space="preserve"><value>Adaugă scrap-urile nereferite în hărți…</value></data>
-  <data name="Menu_Tools_SuggestEquates" xml:space="preserve"><value>Sugerează equate-uri…</value></data>
+  <data name="Menu_Tools_SuggestEquates" xml:space="preserve"><value>Sugerează echivalări…</value></data>
   <data name="Menu_Tools_FormatAll" xml:space="preserve"><value>Formatează toate fișierele…</value></data>
   <data name="SyncMaps_Intro" xml:space="preserve"><value>Aceste scrap-uri sunt desenate, dar nicio hartă nu le include, deci nu apar în nicio hartă exportată de Therion. Alegeți harta în care intră fiecare (sau omiteți-l); veți vedea fiecare modificare înainte de scriere.</value></data>
   <data name="SyncMaps_Skip" xml:space="preserve"><value>(omite)</value></data>
@@ -1689,7 +1689,7 @@ Aplici modificările? Pașii care nu au putut fi previzualizați rulează acum.<
   <data name="Normalize_Utf8" xml:space="preserve"><value>Convertește în UTF-8 fișierele care declară altă codificare</value></data>
   <data name="Normalize_SortInputs" xml:space="preserve"><value>Sortează natural fiecare șir de linii „input” consecutive (trip2 înainte de trip10). Ordinea contează rar pentru Therion, dar verificați previzualizarea.</value></data>
   <data name="Normalize_Summary" xml:space="preserve"><value>{0} Debifați un fișier pentru a-l omite.</value></data>
-  <data name="Renumber_Intro" xml:space="preserve"><value>Dați fiecărei stații a unei topografii un prefix nou sau decalați-i numerele, oriunde este scrisă: vize, equate, fix și referințe @ din alte fișiere. Stațiile care nu se potrivesc rămân neschimbate. Etichetele de stații din schițe (.th2) nu se redenumesc.</value></data>
+  <data name="Renumber_Intro" xml:space="preserve"><value>Dați fiecărei stații a unei topografii un prefix nou sau decalați-i numerele, oriunde este scrisă: vize, echivalări, puncte fixe și referințe @ din alte fișiere. Stațiile care nu se potrivesc rămân neschimbate. Etichetele de stații din schițe (.th2) nu se redenumesc.</value></data>
   <data name="Renumber_Survey" xml:space="preserve"><value>Topografie:</value></data>
   <data name="Renumber_OldPrefix" xml:space="preserve"><value>Prefix actual:</value></data>
   <data name="Renumber_OldPrefixHint" xml:space="preserve"><value>gol = toate stațiile</value></data>
@@ -2242,7 +2242,7 @@ Acțiunea nu poate fi anulată.</value></data>
   <data name="Opt_Scope_OpenFiles" xml:space="preserve"><value>Fișiere deschise</value></data>
   <data name="StationKind_Shot" xml:space="preserve"><value>Viză</value></data>
   <data name="StationKind_Fix" xml:space="preserve"><value>Punct fix</value></data>
-  <data name="StationKind_Equate" xml:space="preserve"><value>Equate</value></data>
+  <data name="StationKind_Equate" xml:space="preserve"><value>Echivalare</value></data>
   <data name="Proj_TodoScanOff" xml:space="preserve"><value>Scanarea TODO este dezactivată (Setări ▸ Vizualizare).</value></data>
   <data name="Proj_MediaScanOff" xml:space="preserve"><value>Scanarea fișierelor media este dezactivată (Setări ▸ Vizualizare).</value></data>
   <data name="Proj_CsWm" xml:space="preserve"><value>ex. EPSG:3844</value></data>
@@ -2260,7 +2260,7 @@ Acțiunea nu poate fi anulată.</value></data>
   <data name="Diag_Explain_TH_SEM_001" xml:space="preserve"><value>Această stație sau referință nu corespunde niciunei declarații. Verificați numele și calea topografiei.</value></data>
   <data name="Diag_Explain_TH_SEM_002" xml:space="preserve"><value>Această stație este fixată de mai multe ori — păstrați un singur „fix” pe stație.</value></data>
   <data name="Diag_Explain_TH_SEM_003" xml:space="preserve"><value>Referința este greșit formată (nume calificat cu @ incorect).</value></data>
-  <data name="Diag_Explain_TH_SEM_004" xml:space="preserve"><value>O stație fixată nu este folosită de nicio viză sau equate — probabil o greșeală de scriere sau un rest.</value></data>
+  <data name="Diag_Explain_TH_SEM_004" xml:space="preserve"><value>O stație fixată nu este folosită de nicio viză sau echivalare — probabil o greșeală de scriere sau un rest.</value></data>
   <data name="Diag_Explain_TH_SEM_005" xml:space="preserve"><value>Numărul de valori din rândul de date nu corespunde ordinii citirilor active.</value></data>
   <data name="Diag_Explain_TH_SEM_006" xml:space="preserve"><value>O valoare nu este un număr valid pentru citirea ei (de ex. o greșeală de scriere la lungime, azimut sau înclinare).</value></data>
   <data name="Diag_Explain_TH_SEM_007" xml:space="preserve"><value>O valoare este în afara domeniului așteptat pentru citirea ei (de ex. azimut &gt; 360°).</value></data>
@@ -2307,4 +2307,70 @@ Acțiunea nu poate fi anulată.</value></data>
   <data name="Feat_SmartEnter_Desc" xml:space="preserve"><value>Indentare automată la Enter și inserare automată a endX corespunzător pentru blocurile deschise.</value></data>
   <data name="Feat_ReadingOrderNav_Title" xml:space="preserve"><value>Navigare în ordinea citirii</value></data>
   <data name="Feat_ReadingOrderNav_Desc" xml:space="preserve"><value>Intră într-un fișier inclus și revine, cu un istoric de navigare.</value></data>
+  <data name="Meas_FlagsNone" xml:space="preserve"><value>(niciunul)</value></data>
+  <data name="Dash_NoProject" xml:space="preserve"><value>(niciun proiect deschis)</value></data>
+  <data name="Dash_VerticalRange" xml:space="preserve"><value>denivelare: {0}</value></data>
+  <data name="Dash_LastCompileError" xml:space="preserve"><value>{0} · ultima eroare de compilare: {1}</value></data>
+  <data name="Count_Surveys_One" xml:space="preserve"><value>{0} topografie</value></data>
+  <data name="Count_Surveys_Few" xml:space="preserve"><value>{0} topografii</value></data>
+  <data name="Count_Surveys_Many" xml:space="preserve"><value>{0} de topografii</value></data>
+  <data name="Count_Entrances_One" xml:space="preserve"><value>{0} intrare</value></data>
+  <data name="Count_Entrances_Few" xml:space="preserve"><value>{0} intrări</value></data>
+  <data name="Count_Entrances_Many" xml:space="preserve"><value>{0} de intrări</value></data>
+  <data name="Count_FixedPoints_One" xml:space="preserve"><value>{0} punct fix</value></data>
+  <data name="Count_FixedPoints_Few" xml:space="preserve"><value>{0} puncte fixe</value></data>
+  <data name="Count_FixedPoints_Many" xml:space="preserve"><value>{0} de puncte fixe</value></data>
+  <data name="Count_Errors_One" xml:space="preserve"><value>{0} eroare</value></data>
+  <data name="Count_Errors_Few" xml:space="preserve"><value>{0} erori</value></data>
+  <data name="Count_Errors_Many" xml:space="preserve"><value>{0} de erori</value></data>
+  <data name="Count_Files_One" xml:space="preserve"><value>{0} fișier</value></data>
+  <data name="Count_Files_Few" xml:space="preserve"><value>{0} fișiere</value></data>
+  <data name="Count_Files_Many" xml:space="preserve"><value>{0} de fișiere</value></data>
+  <data name="Audit_Clean" xml:space="preserve"><value>Niciun fișier orfan, nicio schiță nereferențiată și nicio hartă neexportată.</value></data>
+  <data name="Count_OrphanFiles_One" xml:space="preserve"><value>{0} fișier orfan</value></data>
+  <data name="Count_OrphanFiles_Few" xml:space="preserve"><value>{0} fișiere orfane</value></data>
+  <data name="Count_OrphanFiles_Many" xml:space="preserve"><value>{0} de fișiere orfane</value></data>
+  <data name="Count_UnreferencedScraps_One" xml:space="preserve"><value>{0} schiță nereferențiată</value></data>
+  <data name="Count_UnreferencedScraps_Few" xml:space="preserve"><value>{0} schițe nereferențiate</value></data>
+  <data name="Count_UnreferencedScraps_Many" xml:space="preserve"><value>{0} de schițe nereferențiate</value></data>
+  <data name="Count_UnexportedMaps_One" xml:space="preserve"><value>{0} hartă neexportată</value></data>
+  <data name="Count_UnexportedMaps_Few" xml:space="preserve"><value>{0} hărți neexportate</value></data>
+  <data name="Count_UnexportedMaps_Many" xml:space="preserve"><value>{0} de hărți neexportate</value></data>
+  <data name="Audit_ScrapNotComposed" xml:space="preserve"><value>schiță care nu apare în nicio hartă</value></data>
+  <data name="Audit_MapNotSelected" xml:space="preserve"><value>hartă declarată, dar neselectată pentru export</value></data>
+  <data name="Leads_None" xml:space="preserve"><value>Nu s-a găsit nicio pistă.</value></data>
+  <data name="Count_Leads_One" xml:space="preserve"><value>{0} pistă</value></data>
+  <data name="Count_Leads_Few" xml:space="preserve"><value>{0} piste</value></data>
+  <data name="Count_Leads_Many" xml:space="preserve"><value>{0} de piste</value></data>
+  <data name="Count_FlaggedLeads_One" xml:space="preserve"><value>{0} pistă marcată</value></data>
+  <data name="Count_FlaggedLeads_Few" xml:space="preserve"><value>{0} piste marcate</value></data>
+  <data name="Count_FlaggedLeads_Many" xml:space="preserve"><value>{0} de piste marcate</value></data>
+  <data name="Leads_SummaryAll" xml:space="preserve"><value>{0} · marcate: {1} · altele: {2}</value></data>
+  <data name="Leads_MoreHidden" xml:space="preserve"><value>încă {0} cu „{1}”</value></data>
+  <data name="Todo_None" xml:space="preserve"><value>Nu s-a găsit nicio etichetă TODO/FIXME/QM.</value></data>
+  <data name="Todo_Summary_One" xml:space="preserve"><value>{0} etichetă în {1}.</value></data>
+  <data name="Todo_Summary_Few" xml:space="preserve"><value>{0} etichete în {1}.</value></data>
+  <data name="Todo_Summary_Many" xml:space="preserve"><value>{0} de etichete în {1}.</value></data>
+  <data name="Meta_OpenProjectFirst" xml:space="preserve"><value>Deschideți mai întâi un proiect.</value></data>
+  <data name="Meta_Saved" xml:space="preserve"><value>Salvat ({0:HH:mm}).</value></data>
+  <data name="Media_None" xml:space="preserve"><value>Nu s-a găsit nicio scanare.</value></data>
+  <data name="Count_Scans_One" xml:space="preserve"><value>{0} scanare</value></data>
+  <data name="Count_Scans_Few" xml:space="preserve"><value>{0} scanări</value></data>
+  <data name="Count_Scans_Many" xml:space="preserve"><value>{0} de scanări</value></data>
+  <data name="Media_Missing" xml:space="preserve"><value>lipsă: {0}</value></data>
+  <data name="Media_Orphan" xml:space="preserve"><value>orfane: {0}</value></data>
+  <data name="QuickOpen_Title" xml:space="preserve"><value>Salt la fișier</value></data>
+  <data name="QuickOpen_Watermark" xml:space="preserve"><value>Căutați fișiere după nume sau cale…  (spațiu = potrivire pe părți)</value></data>
+  <data name="Live_StatusPlan" xml:space="preserve"><value>Plan</value></data>
+  <data name="Live_StatusProfile" xml:space="preserve"><value>Profil {0:0}°</value></data>
+  <data name="Live_StatusGroups" xml:space="preserve"><value>{0}/{1} grupuri</value></data>
+  <data name="Count_Junctions_One" xml:space="preserve"><value>{0} joncțiune</value></data>
+  <data name="Count_Junctions_Few" xml:space="preserve"><value>{0} joncțiuni</value></data>
+  <data name="Count_Junctions_Many" xml:space="preserve"><value>{0} de joncțiuni</value></data>
+  <data name="Live_StatusPreviewOnly" xml:space="preserve"><value> (doar previzualizare — nu este o randare Therion)</value></data>
+  <data name="Live_NothingShown" xml:space="preserve"><value>Nu se afișează nimic — activați un grup în legendă.</value></data>
+  <data name="Live_NoDrawableLegs" xml:space="preserve"><value>Niciun segment de desenat (sunt necesare lungimea, azimutul și înclinarea).</value></data>
+  <data name="Live_NoLegs" xml:space="preserve"><value>Nu există segmente de topografie de previzualizat.</value></data>
+  <data name="Meta_Unsaved" xml:space="preserve"><value>Modificări nesalvate.</value></data>
+  <data name="Meta_NoProject" xml:space="preserve"><value>Niciun proiect deschis.</value></data>
 </root>

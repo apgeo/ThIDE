@@ -98,7 +98,7 @@ ThIDE tries hard not to lose your work:
   permanent).
 - **Multi-file tools can be undone.** Rename, Replace in Files, New Trip, Link Survey File, Renumber,
   Format All, Normalize and *Fix all* write files that are not open straight to disk; **Edit → Undo
-  multi-file change** puts them all back ([details](05-interface-tour.md#undoing-a-tool-that-wrote-many-files)).
+  Multi-File Change** puts them all back ([details](05-interface-tour.md#undoing-a-tool-that-wrote-many-files)).
 - **Open guards.** Binary or oversized files prompt before opening as text (**Open anyway**), so you
   don't accidentally load a huge blob.
 

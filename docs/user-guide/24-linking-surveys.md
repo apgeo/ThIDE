@@ -81,7 +81,7 @@ different content.
 **Insert** writes the lines (and the copies) in one step: into the editor if the file is open —
 so **Undo** takes them back there — otherwise straight into the file, keeping its
 encoding. The whole run is one entry of the [workspace
-undo](05-interface-tour.md#undoing-a-tool-that-wrote-many-files): **Edit → Undo multi-file change**
+undo](05-interface-tour.md#undoing-a-tool-that-wrote-many-files): **Edit → Undo Multi-File Change**
 (or the **Undo** button on the notification) removes the lines and the copied files again, as long as
 nothing touched them since. The project is
 then re-read, so the Mainline Preview and the diagnostics include the new survey at once. A file

@@ -22,9 +22,10 @@ namespace ThIDE.Tests;
 internal static class MainWindowViewModelHost
 {
     public static MainWindowViewModel Create(IDocumentService documents, ITaskRunnerService? tasks = null,
-        ICrashRecoveryService? crashRecovery = null, IWorkspaceUndoService? workspaceUndo = null) => new(
+        ICrashRecoveryService? crashRecovery = null, IWorkspaceUndoService? workspaceUndo = null,
+        ILanguageService? language = null) => new(
         new KeyLocalizer(),
-        new LanguageService(),
+        language ?? new LanguageService(),
         documents,
         NewFactory(),
         new WelcomeToolViewModel(new WelcomeViewModel()),

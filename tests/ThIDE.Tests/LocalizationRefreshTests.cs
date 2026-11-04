@@ -61,6 +61,23 @@ public sealed class LocalizationRefreshTests
     }
 
     [Fact]
+    public void An_option_label_re_reads_after_the_language_changes()
+    {
+        InCulture(CultureInfo.InvariantCulture, () =>
+        {
+            // A combo item template ({l:LocOption}): the Group-by box kept "None" after a switch to Romanian.
+            var item = new TextBlock { DataContext = "None" };
+            item.Bind(TextBlock.TextProperty, Bind(new LocOptionExtension("Opt_GroupBy_")));
+            Assert.Equal("None", item.Text);
+
+            Tr.Culture = Ro;
+            LocProxy.Instance.Invalidate();
+
+            Assert.Equal("Fără grupare", item.Text);
+        });
+    }
+
+    [Fact]
     public void GestureBinding_ShowsTheChordOnceTheShortcutServiceIsAttached()
     {
         UiThread.Run(() =>

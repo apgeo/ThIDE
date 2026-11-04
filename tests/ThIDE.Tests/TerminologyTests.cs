@@ -96,7 +96,8 @@ public sealed class TerminologyTests
         string[] small = { "a", "an", "the", "and", "or", "to", "in", "on", "of", "for", "as", "at", "by", "from", "with", "into", "via" };
         // Therion command and file names stay as Therion writes them.
         string[] verbatim = { "thconfig", "dump3d", "extend", "fix", "lowercase", "th", "asc", "d" };
-        var bad = En.Where(kv => kv.Key.StartsWith("Menu_", StringComparison.Ordinal))
+        // The Edit menu's workspace undo/redo items are built in code from these two.
+        var bad = En.Where(kv => kv.Key.StartsWith("Menu_", StringComparison.Ordinal) || kv.Key is "WsUndo_MenuNone" or "WsUndo_RedoMenuNone")
             .Where(kv => Regex.Matches(kv.Value.Replace("_", ""), @"\p{L}[\p{L}'-]*").Skip(1)
                 .Any(m => char.IsLower(m.Value[0]) && !small.Contains(m.Value) && !verbatim.Contains(m.Value)))
             .Select(kv => $"{kv.Key} = {kv.Value}")
@@ -126,6 +127,31 @@ public sealed class TerminologyTests
             .Select(kv => $"{kv.Key} = {RoT[kv.Key]} (EN {kv.Value})")
             .ToList();
         Assert.True(bad.Count == 0, string.Join("\n", bad));
+    }
+
+    [Fact]
+    public void Romanian_equate_is_echivalare_and_the_keyword_appears_only_quoted()
+    {
+        // The glossary term (Domain_Equate) for the concept; Therion's keyword only as quoted syntax.
+        Assert.Equal("Echivalare", RoT["Domain_Equate"]);
+        Assert.Equal("Echivalări", RoT["OB_Tab_Equates"]);
+        Assert.Equal("Echivalare", RoT["StationKind_Equate"]);
+        var quoted = new Regex("„[^”]*”", RegexOptions.CultureInvariant);
+        var bad = RoT.Where(kv => kv.Value.Contains("equate", StringComparison.OrdinalIgnoreCase)
+                                  && quoted.Replace(kv.Value, "").Contains("equate", StringComparison.OrdinalIgnoreCase))
+            .Select(kv => $"{kv.Key} = {kv.Value}")
+            .ToList();
+        Assert.True(bad.Count == 0, string.Join("\n", bad));
+    }
+
+    [Fact]
+    public void Romanian_survey_is_topografie_not_tur()
+    {
+        Assert.Equal("Topografie", RoT["Domain_Survey"]);
+        var tur = new Regex(@"(?i)\btur(ul|ului)?\b", RegexOptions.CultureInvariant);
+        var bad = RoT.Where(kv => tur.IsMatch(kv.Value)).Select(kv => $"{kv.Key} = {kv.Value} (EN {En[kv.Key]})").ToList();
+        Assert.True(bad.Count == 0, string.Join("\n", bad));
+        Assert.Equal("Generează proiect din topografie…", RoT["Menu_Tools_ScaffoldProject"]);
     }
 
     [Fact]

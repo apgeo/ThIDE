@@ -620,7 +620,14 @@ public partial class MainWindowViewModel : ViewModelBase
         // Prompt to save a modified document before its tab closes (Save / Don't save / Cancel).
         _factory.DocumentCloseGuard = PromptSaveBeforeCloseAsync;
 
-        _language.LanguageChanged += (_, _) => Refresh();
+        _language.LanguageChanged += (_, _) =>
+        {
+            Refresh();
+            // Texts built in code once per document (file type, station kinds) take the new language
+            // now, not at the next re-parse; the status bar shows the active one.
+            foreach (var doc in _documents.Documents) doc.Relocalize();
+            UpdateFileStatus();
+        };
         if (_settings is not null)
         {
             _settings.Changed += (_, _) => OnUiThread(() =>

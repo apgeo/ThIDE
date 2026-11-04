@@ -208,7 +208,7 @@
                                                   SelectedItem="{Binding Measurements.GroupBy, Mode=TwoWay}">
                                             <ComboBox.ItemTemplate>
                                                 <DataTemplate x:DataType="x:String">
-                                                    <TextBlock Text="{Binding Converter={x:Static conv:LocKeyConverter.Instance}, ConverterParameter=Opt_GroupBy_}" />
+                                                    <TextBlock Text="{l:LocOption Opt_GroupBy_}" />
                                                 </DataTemplate>
                                             </ComboBox.ItemTemplate>
                                         </ComboBox>
@@ -328,7 +328,7 @@
                                                   SelectedItem="{Binding Measurements.StationsGroupBy, Mode=TwoWay}">
                                             <ComboBox.ItemTemplate>
                                                 <DataTemplate x:DataType="x:String">
-                                                    <TextBlock Text="{Binding Converter={x:Static conv:LocKeyConverter.Instance}, ConverterParameter=Opt_GroupBy_}" />
+                                                    <TextBlock Text="{l:LocOption Opt_GroupBy_}" />
                                                 </DataTemplate>
                                             </ComboBox.ItemTemplate>
                                         </ComboBox>

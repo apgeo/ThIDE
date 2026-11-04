@@ -446,6 +446,20 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
     /// <summary>True when this file is a Therion source type that gets parsed/syntax-checked (#5).</summary>
     [ObservableProperty] private bool _isParsed;
 
+    // The type InterpretedTypeText describes, so a language switch can describe it again.
+    private SourceFileType _fileType;
+
+    /// <summary>
+    /// After a UI language switch: the file-type text and the Measurements cells built in code take
+    /// the new language without a re-parse.
+    /// </summary>
+    public void Relocalize()
+    {
+        if (_disposed) return;
+        if (InterpretedTypeText.Length > 0) InterpretedTypeText = DocumentParser.DescribeType(FilePath, _fileType);
+        Measurements.Relocalize();
+    }
+
     /// <summary>Re-parses the buffer as it stands, e.g. after the parser options changed.</summary>
     public void RequestReparse()
     {
@@ -461,6 +475,7 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
         // and must not produce spurious diagnostics (#5).
         var (type, parseable) = DocumentParser.Classify(FilePath, _documentText);
         var typeText = DocumentParser.DescribeType(FilePath, type);
+        _fileType = type;
 
         if (!parseable)
         {

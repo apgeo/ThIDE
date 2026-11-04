@@ -34,6 +34,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Therion.Core;
 using Therion.Semantics;
+using ThIDE.Resources;
 using ThIDE.Services;
 using ThIDE.Views;
 
@@ -329,8 +330,12 @@ public sealed partial class LivePreviewViewModel : ObservableObject
         // caught up on save. Rebuild here so on-type edits refresh the sketch when the graph does.
         if (_session is not null)
             _session.BuffersRevalidated += (_, _) => OnUi(Rebuild);
-        // Relocalize the drawing-area caption (ViewLabel) live when the UI language switches.
-        ThIDE.Resources.LocProxy.Instance.PropertyChanged += (_, _) => OnPropertyChanged(nameof(ViewLabel));
+        // Relocalize the drawing-area caption (ViewLabel) and the status line live when the UI language switches.
+        ThIDE.Resources.LocProxy.Instance.PropertyChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(ViewLabel));
+            OnUi(Rebuild);
+        };
         Rebuild();
     }
 
@@ -487,7 +492,7 @@ public sealed partial class LivePreviewViewModel : ObservableObject
             FullSplays = Array.Empty<SplaySegment>();
             LeadMarkers = Array.Empty<LeadMarker>();
             EquateMarkers = Array.Empty<EquateMarker>();
-            Status = "No centreline data to preview.";
+            Status = Tr.Get("Live_NoLegs");
             return;
         }
 
@@ -684,18 +689,17 @@ public sealed partial class LivePreviewViewModel : ObservableObject
 
         if (segs.Count == 0)
         {
-            Status = Groups.Count > 1
-                ? "Nothing shown — enable a group in the legend."
-                : "No drawable legs (need length, compass and clino).";
+            Status = Tr.Get(Groups.Count > 1 ? "Live_NothingShown" : "Live_NoDrawableLegs");
             return;
         }
 
-        Status = $"{(IsElevation ? $"Profile {ProfileAzimuth:0}°" : "Plan")} · {segs.Count} legs · {surveys} survey(s) · {files} file(s)" +
-                 (ShowSplays && splays.Count > 0 ? $" · {splays.Count} splay(s)" : string.Empty) +
-                 (Groups.Count > 1 ? $" · {Groups.Count(g => g.IsVisible)}/{Groups.Count} groups" : string.Empty) +
-                 (EquateMarkers.Count > 0 ? $" · {EquateMarkers.Count} junction(s)" : string.Empty) +
-                 (LeadMarkers.Count > 0 ? $" · {LeadMarkers.Count} lead(s)" : string.Empty) +
-                 " (preview only — not a Therion render)";
+        Status = (IsElevation ? string.Format(Tr.Culture, Tr.Get("Live_StatusProfile"), ProfileAzimuth) : Tr.Get("Live_StatusPlan"))
+                 + $" · {Tr.Plural("Count_Legs", segs.Count)} · {Tr.Plural("Count_Surveys", surveys)} · {Tr.Plural("Count_Files", files)}"
+                 + (ShowSplays && splays.Count > 0 ? " · " + Tr.Plural("Count_Splays", splays.Count) : string.Empty)
+                 + (Groups.Count > 1 ? " · " + string.Format(Tr.Get("Live_StatusGroups"), Groups.Count(g => g.IsVisible), Groups.Count) : string.Empty)
+                 + (EquateMarkers.Count > 0 ? " · " + Tr.Plural("Count_Junctions", EquateMarkers.Count) : string.Empty)
+                 + (LeadMarkers.Count > 0 ? " · " + Tr.Plural("Count_Leads", LeadMarkers.Count) : string.Empty)
+                 + Tr.Get("Live_StatusPreviewOnly");
     }
 
     /// <summary>

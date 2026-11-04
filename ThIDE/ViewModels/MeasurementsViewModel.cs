@@ -53,14 +53,19 @@ public sealed partial class MeasurementRow : ObservableObject
     public bool Splay { get; init; }
     public bool Approximate { get; init; }
 
-    /// <summary>Active flags joined for reading / grouping, or "(none)".</summary>
-    public string Flags { get; init; } = "(none)";
+    /// <summary>The shot's Therion flags.</summary>
+    public ShotFlags FlagSet { get; init; }
+
+    /// <summary>Active flags joined for reading / grouping (Therion's keywords), or "(none)" in the UI language.</summary>
+    public string Flags => MeasurementsViewModel.FlagText(FlagSet);
 
     /// <summary>Inline and/or leading <c># ...</c> comment, joined with " | ".</summary>
     public string? Comment { get; init; }
 
     public string Style { get; init; } = string.Empty;
     public int Line { get; init; }
+
+    internal void Relocalize() => OnPropertyChanged(nameof(Flags));
 }
 
 /// <summary>One station projected for the Measurements "Stations" sub-panel (read-only).</summary>
@@ -75,8 +80,14 @@ public sealed partial class StationMeasurementRow : ObservableObject
 
     public string Name => ShowFullName ? FullName : ShortName;
 
-    public string Kind { get; init; } = string.Empty;
+    public StationDeclarationKind KindId { get; init; }
+
+    /// <summary>The kind in the UI language, read on each access so a language switch only has to re-raise it.</summary>
+    public string Kind => ThIDE.Resources.Tr.Get("StationKind_" + KindId);
+
     public int Line { get; init; }
+
+    internal void Relocalize() => OnPropertyChanged(nameof(Kind));
 }
 
 public partial class MeasurementsViewModel : ViewModelBase
@@ -238,6 +249,22 @@ public partial class MeasurementsViewModel : ViewModelBase
         Build(workspace.PerFile.Values.SelectMany(m => Project(m.Shots)));
     }
 
+    /// <summary>
+    /// After a UI language switch: the code-built cells (station kind, "(none)" flags) re-read their
+    /// text, and the views refresh so grouping and filtering use the new words.
+    /// </summary>
+    public void Relocalize()
+    {
+        foreach (var r in _all) r.Relocalize();
+        foreach (var s in _allStations) s.Relocalize();
+        if (GroupBy == GroupByFlags) ApplyGrouping();
+        else View?.Refresh();
+        if (StationsGroupBy == GroupByKind) ApplyStationsGrouping();
+        else StationsView?.Refresh();
+        UpdateCount();
+        UpdateStationsCount();
+    }
+
     // ---- Shots filter / group ----
 
     partial void OnShowFullStationNameChanged(bool value)
@@ -286,7 +313,7 @@ public partial class MeasurementsViewModel : ViewModelBase
                 Duplicate   = f.HasFlag(ShotFlags.Duplicate),
                 Splay       = f.HasFlag(ShotFlags.Splay),
                 Approximate = f.HasFlag(ShotFlags.Approximate),
-                Flags       = FlagText(f),
+                FlagSet     = f,
                 Comment     = s.Comment,
                 Style       = s.FieldDefinition?.Style ?? string.Empty,
                 Line        = s.Span.Start.Line,
@@ -302,7 +329,7 @@ public partial class MeasurementsViewModel : ViewModelBase
                 FullName  = s.Name.ToString(),
                 ShortName = s.Name.Last,
                 ShowFullName = ShowFullStationName,
-                Kind      = ThIDE.Resources.Tr.Get("StationKind_" + s.Kind),
+                KindId    = s.Kind,
                 Line      = s.DeclarationSpan.Start.Line,
             })
             .OrderBy(r => r.FullName, StringComparer.Ordinal);
@@ -404,9 +431,9 @@ public partial class MeasurementsViewModel : ViewModelBase
         haystack is not null &&
         haystack.Contains(needle, StringComparison.OrdinalIgnoreCase);
 
-    private static string FlagText(ShotFlags f)
+    internal static string FlagText(ShotFlags f)
     {
-        if (f == ShotFlags.None) return "(none)";
+        if (f == ShotFlags.None) return ThIDE.Resources.Tr.Get("Meas_FlagsNone");
         var parts = new List<string>(4);
         if (f.HasFlag(ShotFlags.Surface))     parts.Add("surface");
         if (f.HasFlag(ShotFlags.Duplicate))   parts.Add("duplicate");

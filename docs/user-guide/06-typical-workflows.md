@@ -27,7 +27,7 @@ station's survey* to put it one level down instead. For the first trip of a new 
 entrance) tick *No tie-in (first trip / entrance)* and pick the survey it goes into: only the
 `input` is written. The new file opens with the cursor on the empty line where the first leg goes.
 The `input` and `equate` go into files that may not be open, so they are written to disk — **Edit →
-Undo multi-file change** takes the whole trip back (see
+Undo Multi-File Change** takes the whole trip back (see
 [the workspace undo](05-interface-tour.md#undoing-a-tool-that-wrote-many-files)). Then:
 
 1. Open the relevant survey `.th` (or make a new file: **File → New File…**).

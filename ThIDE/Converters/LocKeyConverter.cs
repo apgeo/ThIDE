@@ -10,12 +10,16 @@ using ThIDE.Resources;
 
 namespace ThIDE.Converters;
 
-public sealed class LocKeyConverter : IValueConverter
+public sealed class LocKeyConverter : IValueConverter, IMultiValueConverter
 {
     public static readonly LocKeyConverter Instance = new();
 
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
         Label(parameter as string, value?.ToString());
+
+    /// <summary>The multi-binding form ({l:LocOption}): the id first, then bindings that only signal a language switch.</summary>
+    public object? Convert(System.Collections.Generic.IList<object?> values, Type targetType, object? parameter, CultureInfo culture) =>
+        Label(parameter as string, values.Count > 0 ? values[0]?.ToString() : null);
 
     /// <summary>The text for option <paramref name="id"/> under key prefix <paramref name="prefix"/>.</summary>
     public static string Label(string? prefix, string? id) =>

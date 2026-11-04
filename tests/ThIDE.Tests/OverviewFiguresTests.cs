@@ -15,6 +15,7 @@ using ThIDE.ViewModels.Docking;
 
 namespace ThIDE.Tests;
 
+[Collection(UiLanguageCollection.Name)]   // the figures are resx texts: keep the language fixed
 public class OverviewFiguresTests
 {
     private const string OneLeg = """
@@ -143,7 +144,7 @@ public class OverviewFiguresTests
             var model = Model(OneLeg);   // the model itself carries no diagnostics
             var panel = new DiagnosticsViewModel();
             var vm = new ProjectDashboardViewModel(new Session().Proxy, Documents(() => model), new BuildViewModel(), panel);
-            Assert.Equal("No diagnostics", vm.DiagnosticsText);
+            Assert.Equal("No warnings or errors", vm.DiagnosticsText);
 
             var at = new SourceLocation(1, 1);
             var span = new SourceSpan("/w/cave.th", at, at, 0, 0);
@@ -154,7 +155,7 @@ public class OverviewFiguresTests
                 Diagnostic.Create("TH_SEM_001", DiagnosticSeverity.Error, "e1", span),
             });
 
-            Assert.Equal("1 errors · 2 warnings", vm.DiagnosticsText);
+            Assert.Equal("1 error · 2 warnings", vm.DiagnosticsText);
         });
     }
 
