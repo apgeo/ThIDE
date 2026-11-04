@@ -227,6 +227,8 @@ public sealed class CommandPaletteProvider
         list.Add(Editor(L("Cmd_QuickFix"), ed => ed.ShowQuickFixes()));
         list.Add(Editor(L("Cmd_GoToMatching"), ed => ed.GoToMatchingBlock()));
         list.Add(Editor(L("Cmd_PeekDef"), ed => ed.PeekDefinition()));
+        list.Add(Editor(L("Ed_FindAllRefs"), ed => ed.StartFindAllReferences()));
+        list.Add(Editor(L("Ed_NextOccurrence"), ed => ed.NextOccurrenceInFile()));
         list.Add(Editor(L("Cmd_StepInto"), ed => ed.FollowIncludeUnderCaret()));
         list.Add(Editor(L("Cmd_RenameEditor"), ed => ed.StartRename()));
 

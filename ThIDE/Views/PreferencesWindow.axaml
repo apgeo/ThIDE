@@ -94,7 +94,7 @@
                     <CheckBox Content="{l:Loc Pref_Telemetry}"
                               AutomationProperties.AutomationId="Preferences.Telemetry"
                               IsChecked="{Binding TelemetryEnabled}" />
-                    <TextBlock Text="{l:Loc Pref_TelemetryHelp}"
+                    <TextBlock Text="{Binding TelemetryHelp}"
                                Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
                 </StackPanel>
 
@@ -485,7 +485,7 @@
                     <CheckBox Content="{l:Loc Pref_LoadPlugins}"
                               AutomationProperties.AutomationId="Preferences.LoadPlugins"
                               IsChecked="{Binding EnablePlugins}" />
-                    <TextBlock Text="{l:Loc Pref_LoadPluginsHelp}"
+                    <TextBlock Text="{Binding LoadPluginsHelp}"
                                Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
 
                     <Separator Margin="0,6" />
@@ -493,7 +493,7 @@
                     <CheckBox Content="{l:Loc Pref_McpServer}"
                               AutomationProperties.AutomationId="Preferences.McpServer"
                               IsChecked="{Binding EnableMcpServer}" />
-                    <TextBlock Text="{l:Loc Pref_McpServerHelp}"
+                    <TextBlock Text="{Binding McpServerHelp}"
                                Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
                     <!-- Follow the agent: allow the MCP action tools to drive the UI. -->
                     <CheckBox Content="{l:Loc Pref_McpFollowAgent}"
@@ -630,19 +630,39 @@
                              column stays on-screen, and the Gesture capture box is a bounded width
                              (~a third of its former full-width size) instead of eating the whole row. -->
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="{l:Loc Pref_Col_Command}" Binding="{Binding CommandId}" Width="*" MinWidth="140" IsReadOnly="True" />
-                            <!-- Capture box: focus it and press a chord to record the gesture (#11). -->
+                            <!-- The command's localized name; a gesture another command already has is
+                                 asked about here ("Already used by … — replace?") rather than taken silently. -->
+                            <DataGridTemplateColumn Header="{l:Loc Pref_Col_Command}" Width="*" MinWidth="140" SortMemberPath="DisplayName">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Margin="4,2" VerticalAlignment="Center" Spacing="2">
+                                            <TextBlock Text="{Binding DisplayName}" ToolTip.Tip="{Binding CommandId}" TextTrimming="CharacterEllipsis" />
+                                            <StackPanel IsVisible="{Binding HasConflict}" Spacing="4" AutomationProperties.AutomationId="Preferences.Keyboard.Conflict">
+                                                <TextBlock Text="{Binding ConflictText}" TextWrapping="Wrap" Foreground="#E65100" FontSize="12" />
+                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                    <Button Content="{l:Loc Kb_ConflictReplace}" Command="{Binding ReplaceConflictCommand}" Padding="8,2"
+                                                            AutomationProperties.AutomationId="Preferences.Keyboard.ConflictReplace" />
+                                                    <Button Content="{l:Loc Kb_ConflictKeep}" Command="{Binding KeepConflictCommand}" Padding="8,2"
+                                                            AutomationProperties.AutomationId="Preferences.Keyboard.ConflictKeep" />
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <!-- Capture box: focus it and press a chord to record the gesture (#11); the
+                                 window's tunnel handler does the recording. -->
                             <DataGridTemplateColumn Header="{l:Loc Pref_Col_Gesture}" Width="180" MinWidth="140">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <TextBox Text="{Binding Gesture}" IsReadOnly="True"
-                                                 Watermark="{l:Loc Pref_PressKeysWm}" Margin="2"
-                                                 KeyDown="OnGestureKeyDown"
+                                        <TextBox Classes="gestureCapture" Text="{Binding GestureDisplay, Mode=OneWay}" IsReadOnly="True"
+                                                 Watermark="{l:Loc Pref_PressKeysWm}" Margin="2" VerticalAlignment="Top"
+                                                 AutomationProperties.Name="{Binding DisplayName}"
                                                  ToolTip.Tip="{l:Loc Pref_GestureTip}" />
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-                            <DataGridTextColumn Header="{l:Loc Pref_Col_Default}" Binding="{Binding DefaultGesture}" Width="Auto" MinWidth="90" IsReadOnly="True" />
+                            <DataGridTextColumn Header="{l:Loc Pref_Col_Default}" Binding="{Binding DefaultDisplay}" Width="Auto" MinWidth="90" IsReadOnly="True" />
                             <DataGridTemplateColumn Header="" Width="Auto">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>

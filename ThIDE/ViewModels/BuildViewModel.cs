@@ -190,7 +190,11 @@ public sealed record ArtifactRow(string Path, string Kind, long SizeBytes, DateT
     /// </summary>
     public bool? AutoOpen { get; set; }
     /// <summary>Short status text for the Generated Files grid.</summary>
-    public string StateText => IsStale ? "⚠ stale" : "current";
+    public string StateText => ThIDE.Resources.Tr.Get(IsStale ? "Gen_State_Stale" : "Gen_State_Current");
+    /// <summary>The kind in the UI language (Therion.Build names it in English); the English kind when there is no key.</summary>
+    public string KindText =>
+        System.IO.Path.GetExtension(Path).TrimStart('.').ToLowerInvariant() is { Length: > 0 } ext
+        && ThIDE.Resources.Tr.Find("Gen_Kind_" + ext) is { Length: > 0 } text ? text : Kind;
     public string SizeDisplay => SizeBytes < 1024 ? $"{SizeBytes} B" : $"{SizeBytes / 1024} KB";
     /// <summary>File name only, for the dedicated File Name column (#4).</summary>
     public string FileName => System.IO.Path.GetFileName(Path);
@@ -585,7 +589,7 @@ public partial class BuildViewModel : ViewModelBase
     private async Task BuildAsync()
     {
         var entry = ResolveBuildEntry();
-        if (entry is null) { Status = "No project loaded."; return; }
+        if (entry is null) { Status = ThIDE.Resources.Tr.Get("Build_NoProject"); return; }
         await RunBuildAsync(entry).ConfigureAwait(true);
     }
 
@@ -598,7 +602,7 @@ public partial class BuildViewModel : ViewModelBase
     public async Task<Therion.Build.Automation.BuildOutcome?> RunBuildAsync(string entry, string? tempThconfig = null, string? label = null)
     {
         using var lease = _gate.TryAcquire();
-        if (lease is null) { Status = "A compilation is already in progress."; return null; }
+        if (lease is null) { Status = ThIDE.Resources.Tr.Get("Build_InProgress"); return null; }
 
         // Before compiling, make sure the involved unsaved files are on disk (Therion reads from
         // disk). Auto-save when configured, otherwise ask (naming the files). Cancel aborts.
@@ -657,8 +661,10 @@ public partial class BuildViewModel : ViewModelBase
             if (ok)
             {
                 LastError = string.Empty;
-                Status = result.Artifacts.Length > 0 ? "Compilation succeeded" : "Compilation succeeded (no outputs).";
-                StatusArtifactCount = result.Artifacts.Length > 0 ? $"{result.Artifacts.Length} artifact(s)" : string.Empty;
+                Status = ThIDE.Resources.Tr.Get(result.Artifacts.Length > 0 ? "Build_Succeeded" : "Build_SucceededNoOutputs");
+                StatusArtifactCount = result.Artifacts.Length > 0
+                    ? string.Format(ThIDE.Resources.Tr.Get("Build_ArtifactCount"), result.Artifacts.Length)
+                    : string.Empty;
             }
             else
             {
@@ -669,8 +675,8 @@ public partial class BuildViewModel : ViewModelBase
                     : string.Join(Environment.NewLine, _buildErrorLines.TakeLast(6));
                 var shortErr = FirstLine(LastError);
                 Status = shortErr.Length > 0
-                    ? $"Compilation failed (exit {result.ExitCode}): {shortErr}"
-                    : $"Compilation failed (exit {result.ExitCode}).";
+                    ? string.Format(ThIDE.Resources.Tr.Get("Build_FailedWithError"), result.ExitCode, shortErr)
+                    : string.Format(ThIDE.Resources.Tr.Get("Build_Failed"), result.ExitCode);
                 StatusArtifactCount = string.Empty;
             }
             _log?.Log(
@@ -693,15 +699,15 @@ public partial class BuildViewModel : ViewModelBase
         catch (OperationCanceledException)
         {
             sw.Stop();
-            Status = "Compilation cancelled.";
+            Status = ThIDE.Resources.Tr.Get("Build_Cancelled");
             outcome = outcome with { Cancelled = true, Elapsed = sw.Elapsed };
             _log?.Warning("Build cancelled.");
-            AddRow(new CompilerOutputRow("Compilation cancelled.", "Error", null, OutputRowKind.Summary,
+            AddRow(new CompilerOutputRow(ThIDE.Resources.Tr.Get("Build_Cancelled"), "Error", null, OutputRowKind.Summary,
                 DateTimeOffset.Now, TimeSpan.Zero, sw.Elapsed, TimeColumnMode));
         }
         catch (Exception ex)
         {
-            Status = "Compilation error: " + ex.Message;
+            Status = string.Format(ThIDE.Resources.Tr.Get("Build_Error"), ex.Message);
             outcome = outcome with { Elapsed = sw.Elapsed };
             _log?.Error("Build error: " + ex.Message);
         }
@@ -760,7 +766,7 @@ public partial class BuildViewModel : ViewModelBase
             case Views.SaveBeforeBuildChoice.DontSave:
                 return true;
             default:
-                Status = "Compilation cancelled — unsaved changes.";
+                Status = ThIDE.Resources.Tr.Get("Build_CancelledUnsaved");
                 return false;
         }
     }
@@ -872,14 +878,14 @@ public partial class BuildViewModel : ViewModelBase
     private CompilerOutputRow SummaryRow(bool ok, int warnCount, TimeSpan elapsed, int artifactCount,
         DateTimeOffset buildStart)
     {
-        var sb = new StringBuilder();
-        sb.Append(ok ? "Compilation finished successfully" : "Compilation finished with errors");
-        if (warnCount > 0) sb.Append(ok ? $" (with {warnCount} warning(s))" : $" and {warnCount} warning(s)");
-        sb.Append($" in {elapsed.TotalSeconds:0.00} seconds");
-        if (ok && artifactCount > 0) sb.Append($" and generated {artifactCount} output file(s)");
-        sb.Append('.');
+        var key = ok
+            ? (warnCount > 0 ? "Build_SummaryOkWarn" : "Build_SummaryOk") + (artifactCount > 0 ? "Files" : "")
+            : warnCount > 0 ? "Build_SummaryFailedWarn" : "Build_SummaryFailed";
+        var culture = ThIDE.Resources.Tr.Culture;
+        var text = string.Format(culture, ThIDE.Resources.Tr.Get(key),
+            elapsed.TotalSeconds.ToString("0.00", culture), artifactCount, warnCount);
         var now = DateTimeOffset.Now;
-        return new CompilerOutputRow(sb.ToString(), ok ? "Info" : "Error", null, OutputRowKind.Summary,
+        return new CompilerOutputRow(text, ok ? "Info" : "Error", null, OutputRowKind.Summary,
             now, TimeSpan.Zero, now - buildStart, TimeColumnMode, success: ok);
     }
 
@@ -1199,7 +1205,7 @@ public partial class BuildViewModel : ViewModelBase
     /// </summary>
     private async Task<bool> RunExternalAsync(string toolId, string args, string label, string? workDir)
     {
-        if (IsBuilding) { Status = "A compilation is already in progress."; return false; }
+        if (IsBuilding) { Status = ThIDE.Resources.Tr.Get("Build_InProgress"); return false; }
         var tool = await _locator.FindAsync(toolId).ConfigureAwait(true);
         if (tool is null)
         {

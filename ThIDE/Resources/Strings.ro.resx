@@ -546,7 +546,7 @@
   <data name="Common_Apply" xml:space="preserve"><value>Aplică</value></data>
   <data name="Rename_TitleFormat" xml:space="preserve"><value>Redenumire '{0}' → '{1}'</value></data>
   <data name="Rename_NewNameFor" xml:space="preserve"><value>Nume nou pentru '{0}':</value></data>
-  <data name="Rename_PreviewSummary" xml:space="preserve"><value>{0} apariție(i) în {1} fișier(e). Dublu-clic pe o intrare pentru a naviga la ea.</value></data>
+  <data name="Rename_PreviewSummary" xml:space="preserve"><value>{0} în {1}. Dublu-clic pe o intrare pentru a naviga la ea.</value></data>
   <data name="Rename_SeeOccurrences" xml:space="preserve"><value>Vezi aparițiile…</value></data>
   <data name="Rename_HelpTip" xml:space="preserve"><value>Ce face această opțiune?</value></data>
   <data name="Pref_Title" xml:space="preserve"><value>Setări</value></data>
@@ -561,7 +561,7 @@
   <data name="Pref_DelaySeconds" xml:space="preserve"><value>Întârziere (secunde)</value></data>
   <data name="Pref_AutoSaveHelp" xml:space="preserve"><value>Fișierele modificate sunt scrise automat; întârzierea se aplică modului După-o-întârziere.</value></data>
   <data name="Pref_Telemetry" xml:space="preserve"><value>Înregistrează utilizarea anonimă &amp; rapoartele de eroare (stocate local, niciodată trimise)</value></data>
-  <data name="Pref_TelemetryHelp" xml:space="preserve"><value>Dezactivat implicit. Când este activat, evenimentele și rapoartele de eroare sunt scrise în %AppData%/ThIDE/telemetry și nu părăsesc niciodată calculatorul dvs.</value></data>
+  <data name="Pref_TelemetryHelp" xml:space="preserve"><value>Dezactivat implicit. Când este activat, evenimentele și rapoartele de eroare sunt scrise în {0} și nu părăsesc niciodată calculatorul dvs.</value></data>
   <data name="Pref_AppTheme" xml:space="preserve"><value>Tema aplicației</value></data>
   <data name="Pref_ThemeSystem" xml:space="preserve"><value>Implicit sistem</value></data>
   <data name="Pref_ThemeLight" xml:space="preserve"><value>Luminoasă</value></data>
@@ -647,14 +647,14 @@
   <data name="Pref_OnBuild" xml:space="preserve"><value>La compilare</value></data>
   <data name="Pref_CommandWm" xml:space="preserve"><value>(comandă)</value></data>
   <data name="Pref_LoadPlugins" xml:space="preserve"><value>Încarcă pluginuri (reguli semantice personalizate din dosarul de pluginuri)</value></data>
-  <data name="Pref_LoadPluginsHelp" xml:space="preserve"><value>Puneți fișiere plugin .dll (tipuri care implementează ISemanticRule) în %AppData%/ThIDE/plugins. Încărcate la pornire; dezactivați pentru performanță. Modificările se aplică la repornire.</value></data>
+  <data name="Pref_LoadPluginsHelp" xml:space="preserve"><value>Puneți fișiere plugin .dll (tipuri care implementează ISemanticRule) în {0}. Încărcate la pornire; dezactivați pentru performanță. Modificările se aplică la repornire.</value></data>
   <data name="Pref_McpServer" xml:space="preserve"><value>Activează serverul de unelte AI din aplicație (MCP)</value></data>
-  <data name="Pref_McpServerHelp" xml:space="preserve"><value>Permite unui asistent AI local să acceseze acest proiect prin Model Context Protocol. Ascultă pe 127.0.0.1 (doar loopback) pe un port aleatoriu, protejat cu un token; portul și tokenul sunt scrise în %AppData%/ThIDE/mcp-endpoint.json. Dezactivat implicit — vezi docs/mcp-host-setup.md.</value></data>
+  <data name="Pref_McpServerHelp" xml:space="preserve"><value>Permite unui asistent AI local să acceseze acest proiect prin Model Context Protocol. Ascultă pe 127.0.0.1 (doar loopback) pe un port aleatoriu, protejat cu un token; portul și tokenul sunt scrise în {0}. Dezactivat implicit — vezi docs/mcp-host-setup.md.</value></data>
   <data name="Pref_McpFollowAgent" xml:space="preserve"><value>Urmează agentul (permite uneltelor AI să controleze fereastra)</value></data>
   <data name="Pref_McpFollowAgentHelp" xml:space="preserve"><value>Când este activ, asistentul AI poate deschide fișiere, focaliza panouri, rula comenzi, salva și schimba aspectul în această fereastră. Când este dezactivat, poate în continuare să citească proiectul și să răspundă la întrebări, dar nu poate atinge interfața. Activ implicit.</value></data>
   <data name="Pref_CliHelp" xml:space="preserve"><value>CLI-ul fără interfață (therion-cli) și serverul LSP (therion-lsp) sunt executabile separate — vezi documentația.</value></data>
   <data name="Pref_ResetAll" xml:space="preserve"><value>Resetează tot la valorile implicite</value></data>
-  <data name="Pref_KbHelp" xml:space="preserve"><value>Faceți clic pe un câmp de combinație și apăsați combinația de taste pentru a o atribui.</value></data>
+  <data name="Pref_KbHelp" xml:space="preserve"><value>Faceți clic pe un câmp de combinație și apăsați combinația de taste pentru a o atribui; Esc sau Delete o golește. Modificările se aplică la apăsarea butonului OK.</value></data>
   <data name="Pref_Col_Command" xml:space="preserve"><value>Comandă</value></data>
   <data name="Pref_Col_Gesture" xml:space="preserve"><value>Combinație</value></data>
   <data name="Pref_Col_Default" xml:space="preserve"><value>Implicit</value></data>
@@ -682,6 +682,8 @@
   <data name="Diag_Explain" xml:space="preserve"><value>Explică (deschide documentația)</value></data>
   <data name="Diag_Suppress" xml:space="preserve"><value>Suprimă acest cod</value></data>
   <data name="Diag_OpenDocs" xml:space="preserve"><value>Deschide documentația ↗</value></data>
+  <data name="Diag_Details" xml:space="preserve"><value>Detalii</value></data>
+  <data name="Diag_DetailsTip" xml:space="preserve"><value>Afișați explicația completă și un exemplu de corectare</value></data>
   <!-- Compiler output tool -->
   <data name="Comp_TabOutput" xml:space="preserve"><value>Ieșire</value></data>
   <data name="Comp_TabRaw" xml:space="preserve"><value>Brut</value></data>
@@ -728,6 +730,7 @@
   <data name="M3D_OpenTip" xml:space="preserve"><value>Deschide un fișier model .lox / .3d</value></data>
   <data name="M3D_FullScreen" xml:space="preserve"><value>⛶ Ecran complet</value></data>
   <data name="M3D_ExitFullScreen" xml:space="preserve"><value>⤢ Ieși din ecran complet</value></data>
+  <data name="M3D_ExitFullScreenTip" xml:space="preserve"><value>Ieșiți din ecranul complet (Esc)</value></data>
   <data name="M3D_ResetView" xml:space="preserve"><value>⟲ Resetează vederea</value></data>
   <data name="M3D_ResetViewTip" xml:space="preserve"><value>Reîncadrează modelul</value></data>
   <data name="M3D_Defaults" xml:space="preserve"><value>↺ Implicite</value></data>
@@ -788,6 +791,7 @@
   <data name="M3D_ExportFolder" xml:space="preserve"><value>Dosarul pentru pagina web</value></data>
   <data name="M3D_ExportDone" xml:space="preserve"><value>Pagina web a fost scrisă în {0}</value></data>
   <data name="M3D_ExportFailed" xml:space="preserve"><value>Pagina web nu a putut fi scrisă: {0}</value></data>
+  <data name="M3D_LoadFailed" xml:space="preserve"><value>Modelul {0} nu a putut fi afișat: {1}</value></data>
   <data name="M3D_ExportNoModel" xml:space="preserve"><value>Încărcați mai întâi un model.</value></data>
   <!-- Live preview tool -->
   <data name="Live_PlanTip" xml:space="preserve"><value>Vedere în plan (privire de sus — nord în sus)</value></data>
@@ -943,6 +947,7 @@
   <data name="Refs_Title" xml:space="preserve"><value>Toate referințele</value></data>
   <data name="Refs_Header" xml:space="preserve"><value>„{0}” — {1} apariții în {2} fișier(e)</value></data>
   <data name="Refs_None" xml:space="preserve"><value>Nu s-au găsit referințe la „{0}” în spațiul de lucru.</value></data>
+  <data name="Refs_NoOther" xml:space="preserve"><value>Nu există alte referințe la „{0}”</value></data>
   <data name="Refs_GoTo" xml:space="preserve"><value>Mergi la</value></data>
   <data name="Refs_Col_Kind" xml:space="preserve"><value>Tip</value></data>
   <data name="Refs_Col_Text" xml:space="preserve"><value>Textul liniei</value></data>
@@ -963,6 +968,7 @@
   <data name="Ed_GoToEquate" xml:space="preserve"><value>Salt la equate</value></data>
   <data name="Ed_GoToAggregation" xml:space="preserve"><value>Salt la harta care îl agregă</value></data>
   <data name="Ed_FindAllRefs" xml:space="preserve"><value>Găsește toate referințele</value></data>
+  <data name="Ed_NextOccurrence" xml:space="preserve"><value>Următoarea apariție în acest fișier</value></data>
   <data name="Ed_RenameDots" xml:space="preserve"><value>Redenumește…</value></data>
   <data name="Ed_Documentation" xml:space="preserve"><value>Documentație ↗</value></data>
   <data name="Ed_OpenArrow" xml:space="preserve"><value>Deschide ↗</value></data>
@@ -1007,7 +1013,7 @@
   <data name="DC_LoadModel" xml:space="preserve"><value>Încarcă model…</value></data>
   <data name="DC_Year" xml:space="preserve"><value>An</value></data>
   <data name="DC_NoModel" xml:space="preserve"><value>Niciun model magnetic încărcat</value></data>
-  <data name="DC_NoModelHelp" xml:space="preserve"><value>Descărcați un WMM.COF (NOAA, domeniu public) și puneți-l în %AppData%/ThIDE, sau apăsați „Încarcă model…”.</value></data>
+  <data name="DC_NoModelHelp" xml:space="preserve"><value>Descărcați un WMM.COF (NOAA, domeniu public) și puneți-l în {0}, sau apăsați „Încarcă model…”.</value></data>
   <data name="DC_DeclinationFmt" xml:space="preserve"><value>Declinație: {0}° {1}</value></data>
   <data name="DC_LoadFailed" xml:space="preserve"><value>Încărcarea modelului a eșuat</value></data>
   <data name="DC_PickTitle" xml:space="preserve"><value>Selectați un fișier .COF WMM/IGRF</value></data>
@@ -1032,7 +1038,7 @@ Vizează Therion v6.4.0 (thbook inclus).</value></data>
   <data name="Mapiah_Title" xml:space="preserve"><value>Mapiah nu a fost găsit</value></data>
   <data name="Mapiah_Message" xml:space="preserve"><value>Editorul de schițe Mapiah nu a putut fi găsit pe acest calculator.
 
-Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.exe în Setări → Unelte externe (rândul „mapiah”).</value></data>
+Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către {0} în Setări → Unelte externe (rândul „mapiah”).</value></data>
   <data name="Mapiah_Download" xml:space="preserve"><value>Descarcă Mapiah…</value></data>
   <data name="Mapiah_OpenSettings" xml:space="preserve"><value>Deschide Setări</value></data>
   <!-- Command palette (Ctrl+Shift+P) -->
@@ -1630,7 +1636,7 @@ Aplici modificările? Pașii care nu au putut fi previzualizați rulează acum.<
   <data name="Cmd_MacroFmt" xml:space="preserve"><value>Macro: {0}</value></data>
   <data name="Macro_OutsideProject" xml:space="preserve"><value>Fișierul este în afara proiectului; majoritatea uneltelor lucrează doar cu fișiere din interior (copiază-l întâi în incoming/).</value></data>
   <data name="Assistant_DataPolicyQuestion" xml:space="preserve"><value>Înainte de prima întrebare: ce poate trimite asistentul modelului?</value></data>
-  <data name="Assistant_DataPolicyChosen" xml:space="preserve"><value>Politica datelor: {0}. O puteți schimba în Preferințe ▸ Asistent.</value></data>
+  <data name="Assistant_DataPolicyChosen" xml:space="preserve"><value>Politica datelor: {0}. O puteți schimba în Setări ▸ Extensii.</value></data>
   <data name="Pref_AssistantDataPolicy" xml:space="preserve"><value>Ce poate trimite asistentul modelului</value></data>
   <data name="Pref_AssistantDataPolicy_SendAll" xml:space="preserve"><value>Tot (modelul rulează pe acest calculator)</value></data>
   <data name="Pref_AssistantDataPolicy_SendAllHelp" xml:space="preserve"><value>Instrumentele trimit modelului nume de stații, coordonate, textul fișierelor și comentarii. Cele mai bune răspunsuri. Alegeți asta când modelul rulează local (LM Studio): nimic nu părăsește calculatorul.</value></data>
@@ -1749,4 +1755,345 @@ Aplici modificările? Pașii care nu au putut fi previzualizați rulează acum.<
   <data name="File_NotInActiveThconfigNoName" xml:space="preserve"><value>Nu face parte din thconfig-ul activ.</value></data>
   <data name="File_NotTheActiveThconfig" xml:space="preserve"><value>Nu este thconfig-ul activ (cel activ este {0}).</value></data>
   <data name="File_MakeActiveThconfig" xml:space="preserve"><value>Setați ca thconfig activ</value></data>
+  <data name="Diag_Sev_Error" xml:space="preserve"><value>Eroare</value></data>
+  <data name="Diag_Sev_Warning" xml:space="preserve"><value>Avertisment</value></data>
+  <data name="Diag_Sev_Info" xml:space="preserve"><value>Informație</value></data>
+  <data name="Diag_Sev_Hint" xml:space="preserve"><value>Sugestie</value></data>
+  <data name="Status_EditFailed" xml:space="preserve"><value>Editarea a eșuat.</value></data>
+  <data name="Explorer_MoveToTrash" xml:space="preserve"><value>Mută în coșul de gunoi</value></data>
+  <data name="Explorer_MoveToRecycleBin" xml:space="preserve"><value>Mută în Coșul de reciclare</value></data>
+  <data name="Explorer_DeleteUndoable" xml:space="preserve"><value>{0}:
+
+{1}
+
+Îl puteți restaura din coșul de gunoi.</value></data>
+  <data name="Explorer_DeletePermanent" xml:space="preserve"><value>Ștergeți definitiv?
+
+{0}
+
+Acțiunea nu poate fi anulată.</value></data>
+  <data name="GoTo_LinePrompt" xml:space="preserve"><value>Numărul liniei (1–{0}):</value></data>
+  <data name="Rename_Title" xml:space="preserve"><value>Redenumire simbol</value></data>
+  <data name="Rename_NoOccurrences" xml:space="preserve"><value>Nu s-a găsit nicio apariție a „{0}” de redenumit în spațiul de lucru.</value></data>
+  <data name="Rename_InvalidName" xml:space="preserve"><value>„{0}” nu este un nume Therion valid — conține „{1}”.</value></data>
+  <data name="Recent_NoFiles" xml:space="preserve"><value>(niciun fișier recent)</value></data>
+  <data name="Recent_ClearFiles" xml:space="preserve"><value>Golește fișierele recente</value></data>
+  <data name="Recent_NoDirectories" xml:space="preserve"><value>(niciun dosar recent)</value></data>
+  <data name="Recent_ClearDirectories" xml:space="preserve"><value>Golește dosarele recente</value></data>
+  <data name="Recent_Pin" xml:space="preserve"><value>Fixează în listă</value></data>
+  <data name="Recent_Unpin" xml:space="preserve"><value>Elimină fixarea</value></data>
+  <data name="File_Type_Thconfig" xml:space="preserve"><value>Configurație Therion</value></data>
+  <data name="File_Type_Th" xml:space="preserve"><value>Topografie Therion</value></data>
+  <data name="File_Type_Th2" xml:space="preserve"><value>Schiță Therion</value></data>
+  <data name="File_Type_PlainText" xml:space="preserve"><value>Text simplu</value></data>
+  <data name="File_Type_NoExtension" xml:space="preserve"><value>fără extensie</value></data>
+  <data name="Status_FileParsed" xml:space="preserve"><value>{0} · analizat</value></data>
+  <data name="Status_FileNotParsed" xml:space="preserve"><value>{0} · neanalizat</value></data>
+  <data name="Build_NoProject" xml:space="preserve"><value>Niciun proiect încărcat.</value></data>
+  <data name="Build_InProgress" xml:space="preserve"><value>O compilare este deja în curs.</value></data>
+  <data name="Build_Succeeded" xml:space="preserve"><value>Compilare reușită</value></data>
+  <data name="Build_SucceededNoOutputs" xml:space="preserve"><value>Compilare reușită (niciun fișier generat).</value></data>
+  <data name="Build_ArtifactCount" xml:space="preserve"><value>{0} fișier(e) generat(e)</value></data>
+  <data name="Build_FailedWithError" xml:space="preserve"><value>Compilarea a eșuat (cod de ieșire {0}): {1}</value></data>
+  <data name="Build_Failed" xml:space="preserve"><value>Compilarea a eșuat (cod de ieșire {0}).</value></data>
+  <data name="Build_Cancelled" xml:space="preserve"><value>Compilare oprită.</value></data>
+  <data name="Build_CancelledUnsaved" xml:space="preserve"><value>Compilare oprită — modificări nesalvate.</value></data>
+  <data name="Build_Error" xml:space="preserve"><value>Eroare de compilare: {0}</value></data>
+  <data name="Build_SummaryOk" xml:space="preserve"><value>Compilarea s-a încheiat cu succes în {0} secunde.</value></data>
+  <data name="Build_SummaryOkFiles" xml:space="preserve"><value>Compilarea s-a încheiat cu succes în {0} secunde și a generat {1} fișier(e).</value></data>
+  <data name="Build_SummaryOkWarn" xml:space="preserve"><value>Compilarea s-a încheiat cu succes (cu {2} avertisment(e)) în {0} secunde.</value></data>
+  <data name="Build_SummaryOkWarnFiles" xml:space="preserve"><value>Compilarea s-a încheiat cu succes (cu {2} avertisment(e)) în {0} secunde și a generat {1} fișier(e).</value></data>
+  <data name="Build_SummaryFailed" xml:space="preserve"><value>Compilarea s-a încheiat cu erori în {0} secunde.</value></data>
+  <data name="Build_SummaryFailedWarn" xml:space="preserve"><value>Compilarea s-a încheiat cu erori și {2} avertisment(e) în {0} secunde.</value></data>
+  <data name="Gen_State_Stale" xml:space="preserve"><value>⚠ învechit</value></data>
+  <data name="Gen_State_Current" xml:space="preserve"><value>actual</value></data>
+  <data name="Gen_Kind_lox" xml:space="preserve"><value>Model 3D Loch</value></data>
+  <data name="Gen_Kind_3d" xml:space="preserve"><value>Model 3D Survex</value></data>
+  <data name="Gen_Kind_pdf" xml:space="preserve"><value>Hartă PDF</value></data>
+  <data name="Gen_Kind_svg" xml:space="preserve"><value>Hartă SVG</value></data>
+  <data name="Gen_Kind_xvi" xml:space="preserve"><value>Schiță XVI</value></data>
+  <data name="Gen_Kind_png" xml:space="preserve"><value>Imagine PNG</value></data>
+  <data name="Gen_Kind_tlx" xml:space="preserve"><value>Jurnal Therion</value></data>
+  <data name="Gen_Kind_shx" xml:space="preserve"><value>Index shapefile</value></data>
+  <data name="Gen_Kind_prj" xml:space="preserve"><value>Proiecție shapefile</value></data>
+  <data name="Gen_Kind_sql" xml:space="preserve"><value>Bază de date SQL</value></data>
+  <data name="Gen_Kind_csv" xml:space="preserve"><value>Bază de date CSV</value></data>
+  <data name="Gen_Kind_plt" xml:space="preserve"><value>Plot Compass</value></data>
+  <data name="Gen_Kind_wrl" xml:space="preserve"><value>Model VRML</value></data>
+  <data name="Gen_Kind_3dmf" xml:space="preserve"><value>Model 3DMF</value></data>
+  <data name="Gen_Kind_xhtml" xml:space="preserve"><value>Hartă XHTML</value></data>
+  <data name="ProjTpl_Var_project" xml:space="preserve"><value>Numele peșterii (fără spații)</value></data>
+  <data name="ProjTpl_Var_title" xml:space="preserve"><value>Titlu</value></data>
+  <data name="ProjTpl_Var_cs" xml:space="preserve"><value>Sistem de coordonate</value></data>
+  <data name="ProjTpl_Var_area" xml:space="preserve"><value>Numele zonei (fără spații)</value></data>
+  <data name="ProjTpl_Var_cave" xml:space="preserve"><value>Prima peșteră (fără spații)</value></data>
+  <data name="ProjTpl_Var_expedition" xml:space="preserve"><value>Numele expediției (fără spații)</value></data>
+  <data name="ProjTpl_Var_year" xml:space="preserve"><value>An</value></data>
+  <data name="ProjTpl_DefaultTitle" xml:space="preserve"><value>Peștera mea</value></data>
+  <data name="NewProject_ValueNeeded" xml:space="preserve"><value>{0}: este necesară o valoare</value></data>
+  <data name="NewProject_ValueInvalid" xml:space="preserve"><value>{0}: „{1}” nu poate fi scris în proiect</value></data>
+  <data name="Diag_Msg_TH0002" xml:space="preserve"><value>Simbol neașteptat „{0}”.</value></data>
+  <data name="Diag_Msg_TH0003" xml:space="preserve"><value>Șirului îi lipsesc ghilimelele de închidere; se termină la sfârșitul liniei.</value></data>
+  <data name="Diag_Hint_TH0003" xml:space="preserve"><value>Închideți șirul cu ". Scrieți "" pentru un caracter ghilimele în interiorul lui.</value></data>
+  <data name="Diag_Msg_TH0010" xml:space="preserve"><value>Comandă necunoscută „{0}”.</value></data>
+  <data name="Diag_Msg_TH0010__th2" xml:space="preserve"><value>Comandă .th2 necunoscută „{0}”.</value></data>
+  <data name="Diag_Msg_TH0010__thconfig" xml:space="preserve"><value>Comandă de nivel superior necunoscută „{0}”.</value></data>
+  <data name="Diag_Hint_TH0010" xml:space="preserve"><value>Se așteaptă una dintre: {0}</value></data>
+  <data name="Diag_Msg_TH0012" xml:space="preserve"><value>Rutina comenzii „{0}” a eșuat: {1}</value></data>
+  <data name="Diag_Msg_TH0020" xml:space="preserve"><value>Blocului „{0}” îi lipsește terminatorul „{1}”.</value></data>
+  <data name="Diag_Msg_TH0021" xml:space="preserve"><value>Se aștepta „{0}” pentru a închide „{1}”, dar s-a găsit „{2}”.</value></data>
+  <data name="Diag_Msg_TH0030" xml:space="preserve"><value>„fix” necesită o stație și coordonatele x y z.</value></data>
+  <data name="Diag_Msg_TH0030__axis" xml:space="preserve"><value>Coordonata {0} „{1}” din „fix” nu este un număr.</value></data>
+  <data name="Diag_Msg_TH0031" xml:space="preserve"><value>„equate” necesită cel puțin două stații.</value></data>
+  <data name="Diag_Msg_TH0032" xml:space="preserve"><value>„data” necesită cel puțin numele unui stil.</value></data>
+  <data name="Diag_Msg_TH0033" xml:space="preserve"><value>Stil de date necunoscut „{0}”.</value></data>
+  <data name="Diag_Hint_TH0033" xml:space="preserve"><value>Se așteaptă unul dintre: {0}</value></data>
+  <data name="Diag_Msg_TH0034" xml:space="preserve"><value>Citire de date necunoscută „{0}”.</value></data>
+  <data name="Diag_Msg_TH0036" xml:space="preserve"><value>Ordinea citirilor din „data” nu are „from”/„to” (sau „station”) pentru a identifica vizele.</value></data>
+  <data name="Diag_Msg_TH0037" xml:space="preserve"><value>„{0}” nu este nici o comandă centreline validă, nici un rând de date (o viză are nevoie de cel puțin două coloane).</value></data>
+  <data name="Diag_Msg_TH0038" xml:space="preserve"><value>„sd” așteaptă „&lt;mărime…&gt; &lt;valoare&gt; &lt;unitate&gt;” (de ex. „sd length 0.05 metres”).</value></data>
+  <data name="Diag_Msg_TH0039" xml:space="preserve"><value>„{0}” necesită o valoare numerică.</value></data>
+  <data name="Diag_Msg_TH0040" xml:space="preserve"><value>Mărime necunoscută pentru unități „{0}”.</value></data>
+  <data name="Diag_Msg_TH0040__name" xml:space="preserve"><value>„units” necesită numele unei unități (de ex. metres, degrees).</value></data>
+  <data name="Diag_Msg_TH0041" xml:space="preserve"><value>„calibrate” necesită o valoare a erorii de zero.</value></data>
+  <data name="Diag_Msg_TH0042" xml:space="preserve"><value>„declination” necesită o valoare numerică (sau o listă datată, ori „-” pentru dezactivare).</value></data>
+  <data name="Diag_Msg_TH0042__units" xml:space="preserve"><value>O declinație numerică necesită unități unghiulare (de ex. „declination 2.5 degrees”).</value></data>
+  <data name="Diag_Msg_TH0043" xml:space="preserve"><value>Sistem de coordonate necunoscut „{0}”.</value></data>
+  <data name="Diag_Hint_TH0043" xml:space="preserve"><value>Folosiți UTM&lt;zonă&gt;, EPSG:&lt;n&gt;, lat-long, S-MERC, …</value></data>
+  <data name="Diag_Msg_TH0056" xml:space="preserve"><value>„infer” așteaptă „&lt;plumbs|equates&gt; &lt;on|off&gt;”.</value></data>
+  <data name="Diag_Msg_TH0050" xml:space="preserve"><value>Identificatorul de topografie „{0}” conține caracterul nepermis „{1}”.</value></data>
+  <data name="Diag_Msg_TH0050__scrap" xml:space="preserve"><value>Identificatorul de schiță „{0}” conține caracterul nepermis „{1}”.</value></data>
+  <data name="Diag_Msg_TH0050__map" xml:space="preserve"><value>Identificatorul de hartă „{0}” conține caracterul nepermis „{1}”.</value></data>
+  <data name="Diag_Msg_TH0050__identifier" xml:space="preserve"><value>Identificatorul „{0}” conține caracterul nepermis „{1}”.</value></data>
+  <data name="Diag_Msg_TH0051" xml:space="preserve"><value>„{0} {1}” nu corespunde cu „{2} {3}”.</value></data>
+  <data name="Diag_Msg_TH0052" xml:space="preserve"><value>Indicator de viză necunoscut „{0}”.</value></data>
+  <data name="Diag_Hint_TH0052" xml:space="preserve"><value>Se așteaptă surface, duplicate, splay sau approximate (opțional precedat de „not”).</value></data>
+  <data name="Diag_Msg_TH0053" xml:space="preserve"><value>Tip de marcaj necunoscut „{0}”.</value></data>
+  <data name="Diag_Hint_TH0053" xml:space="preserve"><value>Se așteaptă: fixed, painted sau temporary.</value></data>
+  <data name="Diag_Msg_TH0054" xml:space="preserve"><value>Specificație extend necunoscută „{0}”.</value></data>
+  <data name="Diag_Hint_TH0054" xml:space="preserve"><value>Se așteaptă normal/reverse/left/right/vertical/start/ignore/hide sau un procent 0–200 %.</value></data>
+  <data name="Diag_Msg_TH0055" xml:space="preserve"><value>Indicator de stație necunoscut „{0}”.</value></data>
+  <data name="Diag_Msg_TH0055__fixed" xml:space="preserve"><value>Indicatorul de stație „fixed” nu poate fi setat direct — folosiți comanda „fix” („not fixed” este permis).</value></data>
+  <data name="Diag_Msg_TH0055__explored" xml:space="preserve"><value>„explored” necesită ca indicatorul „continuation” să fie setat mai întâi.</value></data>
+  <data name="Diag_Hint_TH0055" xml:space="preserve"><value>Se așteaptă entrance/continuation/air-draught/sink/spring/doline/dig/arch/overhang.</value></data>
+  <data name="Diag_Msg_TH0060" xml:space="preserve"><value>Tip de export necunoscut „{0}”.</value></data>
+  <data name="Diag_Hint_TH0060" xml:space="preserve"><value>Se așteaptă: {0}</value></data>
+  <data name="Diag_Msg_TH0061" xml:space="preserve"><value>„{0}” nu este un format valid pentru „export {1}”.</value></data>
+  <data name="Diag_Msg_TH0062" xml:space="preserve"><value>Opțiune de layout necunoscută „{0}”.</value></data>
+  <data name="Diag_Msg_TH0063" xml:space="preserve"><value>„{0}” așteaptă cel puțin {1} argument(e), s-au găsit {2}.</value></data>
+  <data name="Diag_Msg_TH0063__join" xml:space="preserve"><value>„join” are nevoie de cel puțin două obiecte de conectat.</value></data>
+  <data name="Diag_Msg_TH0064" xml:space="preserve"><value>„{0}” așteaptă cel mult {1} argument(e), s-au găsit {2}.</value></data>
+  <data name="Diag_Msg_TH0064__extend" xml:space="preserve"><value>„extend” acceptă cel mult 3 stații ca argumente, s-au găsit {0}.</value></data>
+  <data name="Diag_Msg_TH0064__fix" xml:space="preserve"><value>„fix” acceptă cel mult 7 argumente (stația, x, y, z, până la 3 abateri standard); s-au găsit {0}.</value></data>
+  <data name="Diag_Msg_TH0064__readings" xml:space="preserve"><value>Prea multe citiri ({0}); Therion permite cel mult {1}.</value></data>
+  <data name="Diag_Msg_TH0065" xml:space="preserve"><value>„{0}” nu este o valoare numerică validă pentru &lt;{1}&gt;.</value></data>
+  <data name="Diag_Msg_TH0065__value" xml:space="preserve"><value>„{0}” nu este o valoare validă pentru &lt;{1}&gt;.</value></data>
+  <data name="Diag_Msg_TH0065__layout" xml:space="preserve"><value>„{0}” nu este o valoare validă pentru opțiunea de layout „{1}” (permise: {2}).</value></data>
+  <data name="Diag_Msg_TH0065__position" xml:space="preserve"><value>„{0}” nu este o poziție validă pentru map-header (n/s/e/w/ne/nw/se/sw/center/off).</value></data>
+  <data name="Diag_Msg_TH0065__projection" xml:space="preserve"><value>„{0}” nu este o proiecție validă (plan, elevation, extended, none).</value></data>
+  <data name="Diag_Msg_TH0065__sd" xml:space="preserve"><value>Abaterea standard „{0}” din „fix” nu este un număr.</value></data>
+  <data name="Diag_Msg_TH0065__person" xml:space="preserve"><value>„{0}” are nevoie de numele unei persoane; Therion respinge un nume gol.</value></data>
+  <data name="Diag_Msg_TH0065__role" xml:space="preserve"><value>Rol de echipă necunoscut „{0}”.</value></data>
+  <data name="Diag_Hint_TH0065__role" xml:space="preserve"><value>Thbook documentează „explorer”, dar compilatorul Therion îl respinge.</value></data>
+  <data name="Diag_Msg_TH0065__instrument" xml:space="preserve"><value>Mărime de instrument nevalidă „{0}”.</value></data>
+  <data name="Diag_Msg_TH0065__lineopt" xml:space="preserve"><value>„{0}” nu este o valoare validă pentru -{1} (permise: {2}).</value></data>
+  <data name="Diag_Msg_TH0065__classes" xml:space="preserve"><value>Mărime incompatibilă „{0}” în „{1}”: mărimile de tip lungime și cele de tip unghi nu pot fi combinate.</value></data>
+  <data name="Diag_Msg_TH0065__date_empty" xml:space="preserve"><value>Valoare „{0}” nevalidă: dată goală în interval (se așteaptă YYYY[.MM[.DD[@HH[:MM[:SS]]]]] sau un interval).</value></data>
+  <data name="Diag_Msg_TH0065__date_parts" xml:space="preserve"><value>Valoare „{0}” nevalidă: prea multe componente de dată în „{1}” (se așteaptă YYYY[.MM[.DD[@HH[:MM[:SS]]]]] sau un interval).</value></data>
+  <data name="Diag_Msg_TH0065__date_year" xml:space="preserve"><value>Valoare „{0}” nevalidă: an nevalid „{1}” (se așteaptă YYYY[.MM[.DD[@HH[:MM[:SS]]]]] sau un interval).</value></data>
+  <data name="Diag_Msg_TH0065__date_month" xml:space="preserve"><value>Valoare „{0}” nevalidă: lună nevalidă „{1}” (se așteaptă YYYY[.MM[.DD[@HH[:MM[:SS]]]]] sau un interval).</value></data>
+  <data name="Diag_Msg_TH0065__date_day" xml:space="preserve"><value>Valoare „{0}” nevalidă: zi nevalidă „{1}” (se așteaptă YYYY[.MM[.DD[@HH[:MM[:SS]]]]] sau un interval).</value></data>
+  <data name="Diag_Msg_TH0065__date_time" xml:space="preserve"><value>Valoare „{0}” nevalidă: o oră necesită o dată completă an.lună.zi (se așteaptă YYYY[.MM[.DD[@HH[:MM[:SS]]]]] sau un interval).</value></data>
+  <data name="Diag_Msg_TH0065__date_tparts" xml:space="preserve"><value>Valoare „{0}” nevalidă: prea multe componente de oră în „{1}” (se așteaptă YYYY[.MM[.DD[@HH[:MM[:SS]]]]] sau un interval).</value></data>
+  <data name="Diag_Msg_TH0065__date_hour" xml:space="preserve"><value>Valoare „{0}” nevalidă: oră nevalidă „{1}” (se așteaptă YYYY[.MM[.DD[@HH[:MM[:SS]]]]] sau un interval).</value></data>
+  <data name="Diag_Msg_TH0065__date_minute" xml:space="preserve"><value>Valoare „{0}” nevalidă: minut nevalid „{1}” (se așteaptă YYYY[.MM[.DD[@HH[:MM[:SS]]]]] sau un interval).</value></data>
+  <data name="Diag_Msg_TH0065__date_second" xml:space="preserve"><value>Valoare „{0}” nevalidă: secundă nevalidă „{1}” (se așteaptă YYYY[.MM[.DD[@HH[:MM[:SS]]]]] sau un interval).</value></data>
+  <data name="Diag_Msg_TH0066" xml:space="preserve"><value>Opțiune necunoscută „-{0}” pentru „{1}”.</value></data>
+  <data name="Diag_Msg_TH0066__layoutkey" xml:space="preserve"><value>„-layout-{0}”: „{1}” nu este o opțiune de layout cunoscută.</value></data>
+  <data name="Diag_Msg_TH0066__onlyon" xml:space="preserve"><value>-{0} este valid doar pe liniile {1}, nu pe „{2}”.</value></data>
+  <data name="Diag_Msg_TH0066__height" xml:space="preserve"><value>-height este valid doar pe liniile pit (sau wall:pit), nu pe „{0}”.</value></data>
+  <data name="Diag_Msg_TH0066__rsize" xml:space="preserve"><value>-r-size nu este valid pe linii (respins necondiționat de Therion 6.4).</value></data>
+  <data name="Diag_Msg_TH0066__scale" xml:space="preserve"><value>-scale nu este permis pe obiectele area.</value></data>
+  <data name="Diag_Msg_TH0066__station" xml:space="preserve"><value>-{0} nu este valid cu tipul station.</value></data>
+  <data name="Diag_Msg_TH0066__dead" xml:space="preserve"><value>-{0} nu este valid pe puncte (respins necondiționat de Therion 6.4).</value></data>
+  <data name="Diag_Msg_TH0066__stationref" xml:space="preserve"><value>o referință la stație (-{0}) este validă doar pe punctele station/continuation, nu pe „{1}”.</value></data>
+  <data name="Diag_Msg_TH0066__pointonly" xml:space="preserve"><value>-{0} este valid doar pe punctele {1}, nu pe „{2}”.</value></data>
+  <data name="Diag_Msg_TH0066__clip" xml:space="preserve"><value>-clip nu este valid cu tipul „{0}”.</value></data>
+  <data name="Diag_Msg_TH0067" xml:space="preserve"><value>„{0}” trebuie scris „{1}” (Therion face distincție între majuscule și minuscule la cuvintele cheie).</value></data>
+  <data name="Diag_Msg_TH0068" xml:space="preserve"><value>„{0}” nu este nici un număr, nici o valoare specială Therion (- . NaN Inf up down).</value></data>
+  <data name="Diag_Msg_TH0069" xml:space="preserve"><value>Valoarea {1} pentru &lt;{0}&gt; este în afara intervalului {2}.</value></data>
+  <data name="Diag_Msg_TH0069__percent" xml:space="preserve"><value>„{0}” {1} este în afara intervalului 0–100.</value></data>
+  <data name="Diag_Msg_TH0069__orientation" xml:space="preserve"><value>-orientation {0} este în afara intervalului (0 ≤ valoare &lt; 360).</value></data>
+  <data name="Diag_Msg_TH0069__vthreshold" xml:space="preserve"><value>vthreshold {0} este în afara intervalului 0–90°.</value></data>
+  <data name="Diag_Msg_TH0069__sd" xml:space="preserve"><value>Abaterea standard din „fix” trebuie să fie pozitivă, s-a găsit {0}.</value></data>
+  <data name="Diag_Msg_TH0070" xml:space="preserve"><value>Citirea „{0}” nu este validă pentru stilul „{1}”.</value></data>
+  <data name="Diag_Msg_TH0071" xml:space="preserve"><value>Citirea „{0}” apare de două ori.</value></data>
+  <data name="Diag_Msg_TH0071__combined" xml:space="preserve"><value>Citirea „{0}” nu poate fi combinată cu celelalte citiri de lungime/count sau adâncime din această ordine.</value></data>
+  <data name="Diag_Msg_TH0072" xml:space="preserve"><value>Date incomplete pentru stilul „{0}”: lipsesc citirile de lungime/count, azimut și pantă.</value></data>
+  <data name="Diag_Msg_TH0072__depth" xml:space="preserve"><value>Date incomplete pentru stilul „{0}”: lipsesc citirile de lungime/count, azimut și adâncime.</value></data>
+  <data name="Diag_Msg_TH0072__cartesian" xml:space="preserve"><value>Date incomplete pentru stilul „{0}”: lipsește o citire easting/northing/altitude.</value></data>
+  <data name="Diag_Msg_TH0072__dimensions" xml:space="preserve"><value>Date incomplete pentru stilul „{0}”: lipsește o citire up/down/left/right.</value></data>
+  <data name="Diag_Msg_TH0073" xml:space="preserve"><value>„newline” nu poate fi prima sau ultima citire.</value></data>
+  <data name="Diag_Msg_TH0074" xml:space="preserve"><value>„station” (intercalat) nu poate fi combinat cu „from”/„to”.</value></data>
+  <data name="Diag_Msg_TH0074__after" xml:space="preserve"><value>Citirea intercalată „{0}” nu poate apărea după „newline”.</value></data>
+  <data name="Diag_Msg_TH0074__before" xml:space="preserve"><value>Citirea neintercalată „{0}” nu poate apărea înainte de „newline” în datele intercalate.</value></data>
+  <data name="Diag_Msg_TH_XVI_001" xml:space="preserve"><value>Variabilă XVI necunoscută „{0}”.</value></data>
+  <data name="Diag_Hint_TH_XVI_001" xml:space="preserve"><value>Se așteaptă XVIgrids, XVIstations, XVIshots, XVIsketchlines, XVIimages sau XVIgrid.</value></data>
+  <data name="Diag_Msg_TH_XVI_002" xml:space="preserve"><value>Instrucțiune neașteptată „{0}” (se așteaptă o comandă „set XVI…”).</value></data>
+  <data name="Diag_Msg_TH_XVI_003" xml:space="preserve"><value>Valorii „set {0}” îi lipsește acolada de închidere „}}”.</value></data>
+  <data name="Diag_Msg_TH_XVI_004" xml:space="preserve"><value>„XVIgrid” așteaptă 8 valori numerice (x0 y0 xax yax xay yay nx ny).</value></data>
+  <data name="Diag_Msg_TH_XVI_050" xml:space="preserve"><value>Fișierul .xvi referit „{0}” nu a fost găsit.</value></data>
+  <data name="Diag_Msg_THIDE_DIR_001" xml:space="preserve"><value>Lui „#@region” îi lipsește „#@endregion”.</value></data>
+  <data name="Diag_Msg_THIDE_DIR_001__titled" xml:space="preserve"><value>Lui „#@region” "{0}" îi lipsește „#@endregion”.</value></data>
+  <data name="Diag_Msg_THIDE_DIR_002" xml:space="preserve"><value>„#@endregion” nu are un „#@region” corespunzător.</value></data>
+  <data name="Diag_Msg_TH2_001" xml:space="preserve"><value>„point” necesită x, y și tipul.</value></data>
+  <data name="Diag_Msg_TH2_001__coord" xml:space="preserve"><value>Coordonata {0} „{1}” din „point” nu este un număr.</value></data>
+  <data name="Diag_Msg_TH2_002" xml:space="preserve"><value>Blocului „line” îi lipsește „endline”.</value></data>
+  <data name="Diag_Msg_TH2_003" xml:space="preserve"><value>Blocului „area” îi lipsește „endarea”.</value></data>
+  <data name="Diag_Msg_TH2_004" xml:space="preserve"><value>Tip de punct necunoscut „{0}”.</value></data>
+  <data name="Diag_Msg_TH2_005" xml:space="preserve"><value>Tip de linie necunoscut „{0}”.</value></data>
+  <data name="Diag_Msg_TH2_006" xml:space="preserve"><value>Tip de arie necunoscut „{0}”.</value></data>
+  <data name="Diag_Msg_TH2_008" xml:space="preserve"><value>Tipul de punct „{0}” nu acceptă subtip (doar station, air-draught, water-flow și u: acceptă).</value></data>
+  <data name="Diag_Msg_TH2_008__point" xml:space="preserve"><value>Subtip nevalid „{0}” pentru tipul de punct „{1}” (permise: {2}).</value></data>
+  <data name="Diag_Msg_TH2_008__line" xml:space="preserve"><value>Tipul de linie „{0}” nu acceptă subtip (doar wall, border, survey, water-flow și u: acceptă).</value></data>
+  <data name="Diag_Msg_TH2_008__linesub" xml:space="preserve"><value>Subtip nevalid „{0}” pentru tipul de linie „{1}” (permise: {2}).</value></data>
+  <data name="Diag_Msg_TH2_009" xml:space="preserve"><value>Opțiune necunoscută „-{0}”.</value></data>
+  <data name="Diag_Msg_TH2_010" xml:space="preserve"><value>Blocului „{0}” îi lipsește „{1}”.</value></data>
+  <data name="Diag_Msg_TH_SEM_001" xml:space="preserve"><value>Referință la stație nerezolvată „{0}”.</value></data>
+  <data name="Diag_Hint_TH_SEM_001" xml:space="preserve"><value>ați vrut să scrieți „{0}”?</value></data>
+  <data name="Diag_Msg_TH_SEM_002" xml:space="preserve"><value>Stația „{0}” este fixată de mai multe ori.</value></data>
+  <data name="Diag_Msg_TH_SEM_004" xml:space="preserve"><value>Stația fixă „{0}” nu este referită de nicio viză sau echivalare.</value></data>
+  <data name="Diag_Msg_TH_SEM_005" xml:space="preserve"><value>Rândul de date are {0} valoare(i), dar ordinea citirilor „{1}” așteaptă {2}.</value></data>
+  <data name="Diag_Msg_TH_SEM_006" xml:space="preserve"><value>Valoarea „{1}” pentru „{0}” nu este un număr valid.</value></data>
+  <data name="Diag_Msg_TH_SEM_007" xml:space="preserve"><value>Valoarea „{1}” pentru „{0}” nu ar trebui să fie negativă.</value></data>
+  <data name="Diag_Msg_TH_SEM_007__range" xml:space="preserve"><value>Valoarea „{1}” pentru „{0}” este în afara intervalului așteptat {2}.</value></data>
+  <data name="Diag_Msg_TH_SEM_NAMING" xml:space="preserve"><value>Numele de stație „{0}” se potrivește cu modelul interzis „{1}”.</value></data>
+  <data name="Diag_Msg_TH_SEM_NAMING__station_req" xml:space="preserve"><value>Numele de stație „{0}” nu se potrivește cu modelul obligatoriu „{1}”.</value></data>
+  <data name="Diag_Msg_TH_SEM_NAMING__survey" xml:space="preserve"><value>Numele de topografie „{0}” se potrivește cu modelul interzis „{1}”.</value></data>
+  <data name="Diag_Msg_TH_SEM_NAMING__survey_req" xml:space="preserve"><value>Numele de topografie „{0}” nu se potrivește cu modelul obligatoriu „{1}”.</value></data>
+  <data name="Diag_Msg_TH_SEM_NAMING__scrap" xml:space="preserve"><value>Numele de schiță „{0}” se potrivește cu modelul interzis „{1}”.</value></data>
+  <data name="Diag_Msg_TH_SEM_NAMING__scrap_req" xml:space="preserve"><value>Numele de schiță „{0}” nu se potrivește cu modelul obligatoriu „{1}”.</value></data>
+  <data name="Diag_Msg_TH_SEM_NAMING__map" xml:space="preserve"><value>Numele de hartă „{0}” se potrivește cu modelul interzis „{1}”.</value></data>
+  <data name="Diag_Msg_TH_SEM_NAMING__map_req" xml:space="preserve"><value>Numele de hartă „{0}” nu se potrivește cu modelul obligatoriu „{1}”.</value></data>
+  <data name="Diag_Msg_TH_SEM_010" xml:space="preserve"><value>Coliziune de nume: topografia „{0}” este declarată în {1} fișiere; numele topografiilor trebuie să fie unice în proiect.</value></data>
+  <data name="Diag_Msg_TH_SEM_010__map" xml:space="preserve"><value>Coliziune de nume: harta „{0}” este declarată în {1} fișiere; numele hărților trebuie să fie unice în proiect.</value></data>
+  <data name="Diag_Msg_TH_SEM_011" xml:space="preserve"><value>Eroare de închidere {0} m pe o buclă de {1} m (eroare {2}%) — verificați bucla pentru o greșeală grosolană.</value></data>
+  <data name="Diag_Msg_TH_SEM_012" xml:space="preserve"><value>Capetele from și to ale vizei sunt aceeași stație „{0}”.</value></data>
+  <data name="Diag_Msg_TH_SEM_012__zero" xml:space="preserve"><value>Tronson de lungime zero între stațiile distincte {0} → {1}.</value></data>
+  <data name="Diag_Msg_TH_SEM_012__long" xml:space="preserve"><value>Tronson neobișnuit de lung ({0} m) {1} → {2}; verificați dacă nu e o greșeală de transcriere.</value></data>
+  <data name="Diag_Msg_TH_SEM_013" xml:space="preserve"><value>Azimutul direct și cel invers diferă cu {0}° (direct {1}, invers {2}, așteptat ~{3}).</value></data>
+  <data name="Diag_Msg_TH_SEM_013__clino" xml:space="preserve"><value>Înclinarea directă și cea inversă diferă cu {0}° (directă {1}, inversă {2}, așteptată ~{3}).</value></data>
+  <data name="Diag_Msg_TH_SEM_014" xml:space="preserve"><value>Fișier negăsit: „{0}”, referit de {1}.</value></data>
+  <data name="Diag_Msg_TH_SEM_015" xml:space="preserve"><value>Topografie deconectată: această porțiune ({0} stații, {1} tronsoane; {2}) nu este legată de restul topografiei și nu este georeferențiată printr-un fix. Merge de la stația „{3}” la „{4}”. Legați-o cu un „equate” de o stație alăturată sau ancorați-o cu un „fix” sub un „cs”.</value></data>
+  <data name="Diag_Msg_TH_SEM_015__oneleg" xml:space="preserve"><value>Topografie deconectată: această porțiune ({0} stații, {1} tronson; {2}) nu este legată de restul topografiei și nu este georeferențiată printr-un fix. Merge de la stația „{3}” la „{4}”. Legați-o cu un „equate” de o stație alăturată sau ancorați-o cu un „fix” sub un „cs”.</value></data>
+  <data name="Diag_Msg_TH_SEM_016" xml:space="preserve"><value>Fișier negăsit: „{0}” — „\” nu este separator de cale pe acest sistem. „{1}” există.</value></data>
+  <data name="Diag_Hint_TH_SEM_016" xml:space="preserve"><value>Scrieți calea cu „/”, pe care Therion o citește pe orice platformă: „{0}”.</value></data>
+  <data name="Diag_Msg_TH_SEM_RULE" xml:space="preserve"><value>Regula semantică „{0}” a eșuat: {1}</value></data>
+  <data name="Diag_Msg_TH_EDIT_001" xml:space="preserve"><value>Nu se poate înlocui un nod de tipul {0} cu {1}.</value></data>
+  <data name="Diag_Msg_TH_EDIT_002" xml:space="preserve"><value>Nodul țintă nu a fost găsit în fișier.</value></data>
+  <data name="Diag_Msg_TH_BUILD_001" xml:space="preserve"><value>Executabilul Therion nu a fost găsit. Configurați ExternalTools.TherionPath sau instalați Therion.</value></data>
+  <data name="Diag_Msg_TH_BUILD_002" xml:space="preserve"><value>Procesul Therion nu a putut fi pornit.</value></data>
+  <data name="Diag_Msg_TH_BUILD_003" xml:space="preserve"><value>Compilarea Therion a eșuat: {0}</value></data>
+  <data name="Diag_Msg_TH_WS_001" xml:space="preserve"><value>Cale negăsită: {0}</value></data>
+  <data name="Diag_Msg_TH_WS_002" xml:space="preserve"><value>Nu s-a găsit niciun fișier de configurație Therion în „{0}”.</value></data>
+  <data name="Diag_Msg_TH_LINK_404" xml:space="preserve"><value>Fișierul referit nu a fost găsit: „{0}”.</value></data>
+  <data name="Diag_Hint_TH_LINK_404" xml:space="preserve"><value>„{0}” așteaptă un fișier existent.</value></data>
+  <data name="Diag_Hint_TH_LINK_404__separator" xml:space="preserve"><value>„{0}” așteaptă un fișier existent. „\” nu este separator de cale pe acest sistem; „{1}” există.</value></data>
+  <data name="Diag_Msg_THP-LARGE-FILE" xml:space="preserve"><value>„{0}” nu a fost analizat: {1} linii depășesc limita de analiză de {2} linii. Identificatorii săi nu sunt în graful de obiecte.</value></data>
+  <data name="Diag_Msg_THP-LARGE-FILE__kb" xml:space="preserve"><value>„{0}” nu a fost analizat: {1} KB depășesc limita de analiză de {2} KB. Identificatorii săi nu sunt în graful de obiecte.</value></data>
+  <data name="Dlg_CopyDetails" xml:space="preserve"><value>Copiază detaliile</value></data>
+  <data name="Rename_FailedTitle" xml:space="preserve"><value>Redenumirea simbolului a eșuat</value></data>
+  <data name="Rename_Failed" xml:space="preserve"><value>Redenumirea nu a putut fi finalizată: {0}</value></data>
+  <data name="Notif_GoToLineOutOfRange" xml:space="preserve"><value>Linia {0} nu există în acest fișier. Introduceți un număr între 1 și {1}.</value></data>
+  <data name="Notif_GoToLineNotNumber" xml:space="preserve"><value>„{0}” nu este un număr de linie. Introduceți un număr între 1 și {1}.</value></data>
+  <data name="Notif_NewFileFailed" xml:space="preserve"><value>Fișierul nu a putut fi creat</value></data>
+  <data name="Notif_NewFolderFailed" xml:space="preserve"><value>Folderul nu a putut fi creat</value></data>
+  <data name="Notif_CreateFailedMsg" xml:space="preserve"><value>Nu s-a putut crea „{0}”: {1}</value></data>
+  <data name="Struct_WmmNoModel" xml:space="preserve"><value>WMM: niciun model WMM.COF (adăugați unul în {0})</value></data>
+  <data name="Assistant_NoModel" xml:space="preserve"><value>Niciun model nu răspunde la {0} — porniți LM Studio sau Ollama ori schimbați adresa în Setări ▸ Extensii.</value></data>
+  <data name="Blender_Fail_StartFailed" xml:space="preserve"><value>Blender nu a putut fi pornit din „{0}”. Setați calea către un Blender funcțional în Setări ▸ Unelte externe.</value></data>
+  <data name="Blender_Fail_StoreHint" xml:space="preserve"><value>O instalare din Microsoft Store nu poate fi folosită fără interfață grafică — folosiți Blender-ul standard de pe blender.org.</value></data>
+  <data name="Tools_OverrideNotFound" xml:space="preserve"><value>Calea suprascrisă nu există: {0}</value></data>
+  <data name="Kb_Cmd_Build" xml:space="preserve"><value>Compilează</value></data>
+  <data name="Kb_Cmd_Rebuild" xml:space="preserve"><value>Recompilează</value></data>
+  <data name="Kb_Cmd_CancelBuild" xml:space="preserve"><value>Oprește compilarea</value></data>
+  <data name="Kb_Cmd_OpenInLoch" xml:space="preserve"><value>Deschide în Loch</value></data>
+  <data name="Kb_Cmd_OpenInAven" xml:space="preserve"><value>Deschide în Aven</value></data>
+  <data name="Kb_Cmd_ToggleWorkspaceExplorer" xml:space="preserve"><value>Comută Spațiul de lucru</value></data>
+  <data name="Kb_Cmd_ToggleDiagnostics" xml:space="preserve"><value>Comută Diagnosticele</value></data>
+  <data name="Kb_Cmd_Save" xml:space="preserve"><value>Salvează</value></data>
+  <data name="Kb_Cmd_GoBack" xml:space="preserve"><value>Înapoi</value></data>
+  <data name="Kb_Cmd_GoForward" xml:space="preserve"><value>Înainte</value></data>
+  <data name="Kb_Cmd_FindInFiles" xml:space="preserve"><value>Caută în fișiere</value></data>
+  <data name="Kb_Cmd_ReplaceInFiles" xml:space="preserve"><value>Înlocuiește în fișiere</value></data>
+  <data name="Kb_Cmd_QuickOpen" xml:space="preserve"><value>Salt la fișier</value></data>
+  <data name="Kb_Cmd_CommandPalette" xml:space="preserve"><value>Paletă de comenzi</value></data>
+  <data name="Kb_Cmd_ReopenClosedTab" xml:space="preserve"><value>Redeschide fila închisă</value></data>
+  <data name="Kb_Cmd_ToggleFullScreen" xml:space="preserve"><value>Comută ecranul complet</value></data>
+  <data name="Kb_Cmd_NextProblem" xml:space="preserve"><value>Problema următoare</value></data>
+  <data name="Kb_Cmd_PreviousProblem" xml:space="preserve"><value>Problema anterioară</value></data>
+  <data name="Kb_Cmd_NewFile" xml:space="preserve"><value>Fișier nou</value></data>
+  <data name="Kb_Cmd_OpenFile" xml:space="preserve"><value>Deschide fișier</value></data>
+  <data name="Kb_Cmd_OpenFolder" xml:space="preserve"><value>Deschide dosar</value></data>
+  <data name="Kb_Cmd_OpenThconfig" xml:space="preserve"><value>Deschide thconfig</value></data>
+  <data name="Kb_Cmd_ToggleObjectBrowser" xml:space="preserve"><value>Comută Navigatorul de obiecte</value></data>
+  <data name="Kb_Cmd_ToggleOutline" xml:space="preserve"><value>Comută Conturul</value></data>
+  <data name="Kb_Cmd_ToggleProject" xml:space="preserve"><value>Comută Prezentarea generală</value></data>
+  <data name="Kb_Cmd_ToggleLog" xml:space="preserve"><value>Comută Jurnalul</value></data>
+  <data name="Kb_Cmd_ToggleLivePreview" xml:space="preserve"><value>Comută Previzualizarea principală</value></data>
+  <data name="Kb_Cmd_ToggleMapViewer" xml:space="preserve"><value>Comută Vizualizatorul de hărți</value></data>
+  <data name="Kb_Cmd_ToggleModel3DViewer" xml:space="preserve"><value>Comută Vizualizatorul 3D</value></data>
+  <data name="Kb_Cmd_ToggleStructuralGeology" xml:space="preserve"><value>Comută Geologia structurală</value></data>
+  <data name="Kb_Cmd_ToggleBlenderAnimation" xml:space="preserve"><value>Animație Blender</value></data>
+  <data name="Kb_Cmd_SplitEditor" xml:space="preserve"><value>Împarte editorul</value></data>
+  <data name="Kb_Cmd_ResetLayout" xml:space="preserve"><value>Resetează aranjamentul</value></data>
+  <data name="Kb_Cmd_FloatActiveDocument" xml:space="preserve"><value>Desprinde documentul activ</value></data>
+  <data name="Kb_Cmd_QuickExport" xml:space="preserve"><value>Export rapid</value></data>
+  <data name="Kb_Cmd_OpenOutputFolder" xml:space="preserve"><value>Deschide ultimul dosar de ieșire</value></data>
+  <data name="Kb_Cmd_ToggleWordWrap" xml:space="preserve"><value>Comută încadrarea textului</value></data>
+  <data name="Kb_Cmd_NewScrapScaffold" xml:space="preserve"><value>Schiță nouă (.th2)</value></data>
+  <data name="Kb_Cmd_GenerateReport" xml:space="preserve"><value>Generează raport topografic</value></data>
+  <data name="Kb_Cmd_GoToDefinition" xml:space="preserve"><value>Salt la definiție</value></data>
+  <data name="Kb_Cmd_FindReferences" xml:space="preserve"><value>Găsește referințe</value></data>
+  <data name="Kb_Cmd_RenameSymbol" xml:space="preserve"><value>Redenumește simbolul</value></data>
+  <data name="Kb_Cmd_PeekDefinition" xml:space="preserve"><value>Vezi definiția</value></data>
+  <data name="Kb_Cmd_GoToMatchingBlock" xml:space="preserve"><value>Salt la blocul pereche</value></data>
+  <data name="Kb_Cmd_StepIntoInclude" xml:space="preserve"><value>Intră în fișierul inclus</value></data>
+  <data name="Kb_Cmd_StepOutInclude" xml:space="preserve"><value>Revino în fișierul care include</value></data>
+  <data name="Kb_Cmd_TriggerCompletion" xml:space="preserve"><value>Afișează completările</value></data>
+  <data name="Kb_Cmd_GoToLine" xml:space="preserve"><value>Salt la linie</value></data>
+  <data name="Kb_Cmd_ToggleComment" xml:space="preserve"><value>Comutare comentariu</value></data>
+  <data name="Kb_Cmd_FormatDocument" xml:space="preserve"><value>Formatează documentul</value></data>
+  <data name="Kb_Cmd_EncloseInRegion" xml:space="preserve"><value>Include în regiune</value></data>
+  <data name="Kb_Cmd_QuickFixes" xml:space="preserve"><value>Remediere rapidă</value></data>
+  <data name="Kb_Cmd_DuplicateLines" xml:space="preserve"><value>Duplică liniile</value></data>
+  <data name="Kb_Cmd_MoveLinesUp" xml:space="preserve"><value>Mută liniile în sus</value></data>
+  <data name="Kb_Cmd_MoveLinesDown" xml:space="preserve"><value>Mută liniile în jos</value></data>
+  <data name="Kb_Cmd_SortLines" xml:space="preserve"><value>Sortează liniile</value></data>
+  <data name="Kb_Cmd_NextOccurrenceInFile" xml:space="preserve"><value>Următoarea apariție în acest fișier</value></data>
+  <data name="Kb_ConflictFmt" xml:space="preserve"><value>Deja folosită de „{0}” — o înlocuiți?</value></data>
+  <data name="Kb_ConflictReplace" xml:space="preserve"><value>Înlocuiește</value></data>
+  <data name="Kb_ConflictKeep" xml:space="preserve"><value>Păstrează-o pe cea veche</value></data>
+  <data name="Rename_Occurrences_One" xml:space="preserve"><value>{0} apariție</value></data>
+  <data name="Rename_Occurrences_Few" xml:space="preserve"><value>{0} apariții</value></data>
+  <data name="Rename_Occurrences_Many" xml:space="preserve"><value>{0} de apariții</value></data>
+  <data name="Rename_Files_One" xml:space="preserve"><value>{0} fișier</value></data>
+  <data name="Rename_Files_Few" xml:space="preserve"><value>{0} fișiere</value></data>
+  <data name="Rename_Files_Many" xml:space="preserve"><value>{0} de fișiere</value></data>
+  <data name="Rename_FileChanges_One" xml:space="preserve"><value>{0} modificare</value></data>
+  <data name="Rename_FileChanges_Few" xml:space="preserve"><value>{0} modificări</value></data>
+  <data name="Rename_FileChanges_Many" xml:space="preserve"><value>{0} de modificări</value></data>
+  <data name="FormatAll_Lines_One" xml:space="preserve"><value>{0} linie</value></data>
+  <data name="FormatAll_Lines_Few" xml:space="preserve"><value>{0} linii</value></data>
+  <data name="FormatAll_Lines_Many" xml:space="preserve"><value>{0} de linii</value></data>
+  <data name="FormatAll_KindTrailing" xml:space="preserve"><value>spații de la sfârșitul liniei eliminate</value></data>
+  <data name="FormatAll_KindIndent" xml:space="preserve"><value>indentare modificată</value></data>
+  <data name="FormatAll_KindEndings" xml:space="preserve"><value>terminații de linie modificate</value></data>
+  <data name="FormatAll_KindEncoding" xml:space="preserve"><value>linia encoding modificată</value></data>
+  <data name="FormatAll_KindReordered" xml:space="preserve"><value>linii reordonate</value></data>
+  <data name="FormatAll_KindOther" xml:space="preserve"><value>linii rescrise</value></data>
+  <data name="FormatAll_Nothing_One" xml:space="preserve"><value>Nimic de schimbat în {0} fișier.</value></data>
+  <data name="FormatAll_Nothing_Few" xml:space="preserve"><value>Nimic de schimbat în {0} fișiere.</value></data>
+  <data name="FormatAll_Nothing_Many" xml:space="preserve"><value>Nimic de schimbat în {0} de fișiere.</value></data>
+  <data name="FormatAll_NothingSkipped" xml:space="preserve"><value>Alte {0} rămân neatinse pentru că nu se analizează curat (corectați-le întâi).</value></data>
 </root>

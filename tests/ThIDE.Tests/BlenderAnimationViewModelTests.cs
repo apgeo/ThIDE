@@ -171,6 +171,26 @@ public class BlenderAnimationViewModelTests
     }
 
     [Fact]
+    public async Task Render_WhenBlenderCannotBeStarted_NamesThePathWithoutRawExceptionOrStoreHint()
+    {
+        var svc = new FakeRenderService
+        {
+            Result = new RenderResult
+            {
+                Succeeded = false, FailureKind = RenderFailureKind.Crashed, StartFailedPath = "/nonexistent/blender",
+                ErrorMessage = "Could not start Blender at '/nonexistent/blender': An error occurred trying to start process",
+            },
+        };
+        var vm = WithSource(Vm(svc));
+
+        await vm.RenderCommand.ExecuteAsync(null);
+
+        Assert.Contains("/nonexistent/blender", vm.LastError);
+        Assert.DoesNotContain("Store", vm.LastError);
+        Assert.DoesNotContain("An error occurred", vm.LastError);
+    }
+
+    [Fact]
     public async Task Export_WritesScriptPath()
     {
         var vm = WithSource(Vm());

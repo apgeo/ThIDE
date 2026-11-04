@@ -1955,7 +1955,7 @@ public partial class MainWindowViewModel : ViewModelBase
         var result = _editService.ReplaceRowValue(ast, _documents.CurrentText, source, idx, value);
         if (!result.Success || result.UpdatedText is null)
         {
-            StatusText = result.Diagnostics.Length > 0 ? result.Diagnostics[0].Message : "Edit failed.";
+            StatusText = result.Diagnostics.Length > 0 ? DiagnosticText.Message(result.Diagnostics[0]) : Tr.Get("Status_EditFailed");
             RevertShotRow(e.Row);
             return;
         }
@@ -2158,7 +2158,15 @@ public partial class MainWindowViewModel : ViewModelBase
         StatusEncoding = DetectEncoding(doc.FilePath);
         StatusFileType = string.IsNullOrEmpty(doc.InterpretedTypeText)
             ? string.Empty
-            : doc.InterpretedTypeText + (doc.IsParsed ? " · parsed" : " · not parsed");
+            : string.Format(Tr.Get(doc.IsParsed ? "Status_FileParsed" : "Status_FileNotParsed"), doc.InterpretedTypeText);
+
+        // Line/Col/Pos follow the active document too: after a tab switch they show that file's last
+        // caret instead of the previous file's until the caret moves. A file not shown yet is at 1:1.
+        var caret = doc.CurrentCaret;
+        bool known = FilePaths.Comparer.Equals(caret.FilePath, doc.FilePath);
+        StatusCaretLine = known ? caret.Start.Line : 1;
+        StatusCaretCol = known ? caret.Start.Column : 1;
+        StatusCaretPos = known ? caret.StartOffset : 0;
     }
 
     /// <summary>
@@ -2211,6 +2219,19 @@ public partial class MainWindowViewModel : ViewModelBase
         if (!string.IsNullOrEmpty(file)) list.Add(new PathCrumb(file, Directory: null, IsLast: true));
         else if (list.Count > 0) list[^1] = list[^1] with { IsLast = true };
         return list;
+    }
+
+    /// <summary>
+    /// Find All References with nothing worth a list — no occurrence at all, or only the declaration —
+    /// is reported on the status bar instead of opening an empty list. Returns false when there are
+    /// references to list.
+    /// </summary>
+    public bool ReportIfNoOtherReferences(string raw, IReadOnlyList<SymbolReference> references)
+    {
+        if (references.Any(r => !r.IsDeclaration)) return false;
+        StatusText = string.Format(CultureInfo.CurrentCulture,
+            Tr.Get(references.Count == 0 ? "Refs_None" : "Refs_NoOther"), raw);
+        return true;
     }
 
     /// <summary>Updates the caret line/column/offset on the status bar (#10).</summary>

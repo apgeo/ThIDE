@@ -12,7 +12,6 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using ThIDE.Services;
@@ -28,6 +27,7 @@ public partial class Model3DViewerToolView : UserControl
     private bool _vmWired;       // guards against double-subscribing the singleton VM's events
     private bool _reFitQueued;   // coalesces bursts of size changes into a single canvas re-fit
     private Window? _fsWindow;   // borderless full-screen host for the whole panel
+    private bool _dragWatched;   // subscribed to DockDragState (hides the native view during a panel drag)
 
     public Model3DViewerToolView() => InitializeComponent();
 
@@ -35,6 +35,11 @@ public partial class Model3DViewerToolView : UserControl
     {
         base.OnAttachedToVisualTree(e);
         TryInitialize();
+        if (!_dragWatched) { ThIDE.Docking.DockDragState.Changed += OnDockDragChanged; _dragWatched = true; }
+        OnDockDragChanged(null, ThIDE.Docking.DockDragState.IsDragging);   // a drag that moved this panel may still be ending
+        // Floated or docked back: the web view now sits in another window, and only follows its size once
+        // the page is told (see ScheduleResizeKicks).
+        ScheduleResizeKicks();
     }
 
     // Dock recreates/re-parents tool views while the ViewModel stays a singleton. If every view
@@ -45,6 +50,15 @@ public partial class Model3DViewerToolView : UserControl
     {
         base.OnDetachedFromVisualTree(e);
         UnwireVm();
+        if (_dragWatched) { ThIDE.Docking.DockDragState.Changed -= OnDockDragChanged; _dragWatched = false; }
+    }
+
+    // The native view is drawn above every Avalonia control, the dock's drop targets included, so a panel
+    // dragged over the 3D viewer showed no targets and was dropped as a floating window. Hide the view
+    // while any panel is being dragged.
+    private void OnDockDragChanged(object? sender, bool dragging)
+    {
+        if (_web is not null) _web.IsVisible = !dragging;
     }
 
     protected override void OnDataContextChanged(EventArgs e)
@@ -224,11 +238,15 @@ public partial class Model3DViewerToolView : UserControl
         {
             if (_fsWindow is not null) return;
             OuterHost.Children.Remove(RootContent);
+            // The panel leaves the tree that gave it its view model, so the window passes it on (without
+            // it the toolbar was empty and disabled, "Exit full screen" included). The background follows
+            // the theme like the docked panel's: a fixed black one hid the toolbar's dark text.
             _fsWindow = new Window
             {
                 WindowState = WindowState.FullScreen,   // FullScreen hides the window chrome
-                Background = Brushes.Black,
                 ShowInTaskbar = false,
+                Title = FullscreenTitle(),
+                DataContext = DataContext,
                 Content = RootContent,
             };
             Avalonia.Automation.AutomationProperties.SetAutomationId(_fsWindow, "Viewer3D.FullScreenWindow");
@@ -270,7 +288,8 @@ public partial class Model3DViewerToolView : UserControl
         });
     }
 
-    // Re-fit the WebGL canvas after the panel has been reparented (full screen in/out).
+    // Re-fit the WebGL canvas after the panel has been reparented (full screen in/out, float, dock back):
+    // the page takes its new size from the window only when told, and the new size arrives late.
     private void ScheduleResizeKicks()
     {
         if (_web is null) return;
@@ -283,6 +302,8 @@ public partial class Model3DViewerToolView : UserControl
             }
         });
     }
+
+    private string FullscreenTitle() => _vm?.WindowTitle ?? ThIDE.Resources.Tr.Get("Tool_Model3D");
 
     private void OnFullscreenKeyDown(object? sender, KeyEventArgs e)
     {

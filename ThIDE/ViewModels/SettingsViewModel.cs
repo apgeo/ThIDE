@@ -59,6 +59,12 @@ public sealed partial class ExternalToolRow : ObservableObject
     private async Task TestAsync()
     {
         if (_locator is null) { TestResult = "(no locator)"; return; }
+        // An override that points nowhere is reported as such, not replaced by whatever else is installed.
+        if (!string.IsNullOrWhiteSpace(OverridePath) && !System.IO.File.Exists(OverridePath))
+        {
+            TestResult = string.Format(ThIDE.Resources.Tr.Get("Tools_OverrideNotFound"), OverridePath);
+            return;
+        }
         TestResult = "Testing�";
         var info = await _locator.FindAsync(ToolId).ConfigureAwait(true);
         if (info is null) { TestResult = "Not found"; return; }

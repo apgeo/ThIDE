@@ -53,6 +53,11 @@ public sealed class BlenderRunner
         _freeSpaceProbe = freeSpaceProbe ?? DiskPreflight.TryGetFreeBytes;
     }
 
+    /// <summary>True on Windows for a path inside the Microsoft Store's access-restricted <c>WindowsApps</c> folder.</summary>
+    public static bool IsWindowsStorePath(string? path) =>
+        OperatingSystem.IsWindows() && path is not null
+        && path.Contains("WindowsApps", StringComparison.OrdinalIgnoreCase);
+
     /// <summary>Runs the job, reporting progress and honouring cancellation. Never throws for a
     /// render failure — the outcome (including cancellation) comes back in the result.</summary>
     public async Task<RenderResult> RunAsync(
@@ -96,9 +101,12 @@ public sealed class BlenderRunner
             {
                 Succeeded = false,
                 FailureKind = RenderFailureKind.Crashed,
-                ErrorMessage = "Could not start Blender. A Microsoft Store install can't be used headlessly — its executable is " +
-                               "access-restricted and its launcher returns no output — so install the standard Blender from " +
-                               "blender.org and set its path in Preferences ▸ External tools: " + ex.Message,
+                ErrorMessage = $"Could not start Blender at '{blender.Path}': {ex.Message}"
+                               + (IsWindowsStorePath(blender.Path)
+                                   ? " A Microsoft Store install can't be used headlessly — its executable is access-restricted " +
+                                     "and its launcher returns no output — so use the standard Blender from blender.org."
+                                   : ""),
+                StartFailedPath = blender.Path,
                 JobLogPath = null,
                 Duration = stopwatch.Elapsed,
             };

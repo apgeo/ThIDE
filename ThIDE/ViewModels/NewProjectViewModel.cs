@@ -11,10 +11,14 @@ using ThIDE.Resources;
 namespace ThIDE.ViewModels;
 
 /// <summary>One field of the template's form.</summary>
-public sealed partial class TemplateFieldRow(TemplateVariable variable, string value, Action changed) : ObservableObject
+public sealed partial class TemplateFieldRow(TemplateVariable variable, string value, Action changed, bool builtIn = false) : ObservableObject
 {
     public TemplateVariable Variable { get; } = variable;
-    public string Prompt => Variable.Prompt;
+    /// <summary>A built-in template's prompt in the UI language; an imported template's as its author wrote it.</summary>
+    public string Prompt => PromptOf(Variable, builtIn);
+
+    internal static string PromptOf(TemplateVariable v, bool builtIn) =>
+        builtIn && Tr.Find("ProjTpl_Var_" + v.Id) is { Length: > 0 } text ? text : v.Prompt;
     public bool IsBool => Variable.Type == TemplateVariableType.Bool;
     public bool IsChoice => Variable.Type == TemplateVariableType.Choice;
     public bool IsText => !IsBool && !IsChoice;
@@ -79,7 +83,13 @@ public sealed partial class NewProjectViewModel : ObservableObject
         if (value is not null)
         {
             var defaults = ProjectTemplateEngine.Defaults(value.Template, _now());
-            foreach (var v in value.Template.Variables) Fields.Add(new TemplateFieldRow(v, defaults[v.Id], Refresh));
+            bool builtIn = !value.IsImported;
+            foreach (var v in value.Template.Variables)
+            {
+                // A built-in's sample title ("My cave") in the UI language; it is only a starting value.
+                var start = builtIn && v.Id == "title" && Tr.Find("ProjTpl_DefaultTitle") is { Length: > 0 } t ? t : defaults[v.Id];
+                Fields.Add(new TemplateFieldRow(v, start, Refresh, builtIn));
+            }
         }
         Refresh();
     }
@@ -88,12 +98,23 @@ public sealed partial class NewProjectViewModel : ObservableObject
 
     private Dictionary<string, string> Values() => Fields.ToDictionary(f => f.Variable.Id, f => f.Value, StringComparer.Ordinal);
 
+    // The value problems in the UI language; the engine's other (path) errors stay as it words them.
+    private IEnumerable<string> Describe(IReadOnlyList<string> errors)
+    {
+        var problems = ProjectTemplateEngine.ValueProblems(SelectedTemplate!.Template, Values());
+        if (problems.Count == 0) return errors;
+        bool builtIn = !SelectedTemplate.IsImported;
+        return problems.Select(p => p.Value.Length == 0
+            ? string.Format(Tr.Get("NewProject_ValueNeeded"), TemplateFieldRow.PromptOf(p.Variable, builtIn))
+            : string.Format(Tr.Get("NewProject_ValueInvalid"), TemplateFieldRow.PromptOf(p.Variable, builtIn), p.Value));
+    }
+
     private void Refresh()
     {
         CanCreate = false;
         if (SelectedTemplate is null) return;
         var (plan, errors) = ProjectTemplateEngine.Plan(SelectedTemplate.Template, Values(), _now());
-        if (plan is null) { Message = string.Join("\n", errors); return; }
+        if (plan is null) { Message = string.Join("\n", Describe(errors)); return; }
         if (string.IsNullOrWhiteSpace(TargetFolder) || !Path.IsPathRooted(TargetFolder)) { Message = Tr.Get("NewProject_PickFolder"); return; }
         var taken = plan.Files.Select(f => f.RelativePath).FirstOrDefault(p => File.Exists(Path.Combine(TargetFolder, p)));
         Message = taken is null ? string.Empty : string.Format(Tr.Get("NewProject_Taken"), taken);

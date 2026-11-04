@@ -2,7 +2,7 @@
 // Beyond syntax highlighting it wires the editor "IDE" features: find/replace,
 // code folding, auto-indent, bracket/quote pairing, diagnostic hover tooltips +
 // an overview ruler, context-aware autocomplete, and navigation
-// (F12 go-to-definition, Shift+F12 find-references, Ctrl+G go-to-line,
+// (F12 go-to-definition, Shift+F12 find-all-references, Ctrl+G go-to-line,
 // Ctrl+/ toggle comment, Ctrl+click linked-file open).
 
 using System;
@@ -71,8 +71,8 @@ public partial class TherionTextEditor : UserControl
     public event EventHandler<SourceSpan>? CaretMoved;
 
     /// <summary>
-    /// True while the caret is being moved by highlighted-term navigation (Shift+F12 cycling
-    /// through references). Such moves are excluded from the back/forward history (#1).
+    /// True while the caret is being moved by highlighted-term navigation (Ctrl+Shift+F12 cycling
+    /// through occurrences). Such moves are excluded from the back/forward history (#1).
     /// </summary>
     public bool IsTermNavigating { get; private set; }
 
@@ -93,14 +93,11 @@ public partial class TherionTextEditor : UserControl
     public static readonly Avalonia.Input.DataFormat<string> InsertPathFormat =
         Avalonia.Input.DataFormat.CreateInProcessFormat<string>("thide-insert-path");
 
-    /// <summary>Raised when the user requests "find all references" for an identifier (#4).</summary>
-    public event EventHandler<string>? FindReferencesRequested;
-
     /// <summary>Raised when the user requests a symbol rename (F2 / context menu / hover overlay).</summary>
     public event EventHandler<(string Raw, ReferenceKind Kind)>? RenameSymbolRequested;
 
-    /// <summary>Raised when the user asks for every reference to the symbol at the caret (#7). Unlike
-    /// <see cref="FindReferencesRequested"/> (a name-based text search) this is symbol-scoped.</summary>
+    /// <summary>Raised when the user asks for every reference to the symbol at the caret (#7): symbol-scoped,
+    /// not a name-based text search.</summary>
     public event EventHandler<(string Raw, ReferenceKind Kind)>? FindAllReferencesRequested;
 
     private const string ThbookUrl = "https://therion.speleo.sk/wiki/start";
@@ -166,7 +163,7 @@ public partial class TherionTextEditor : UserControl
     private MenuItem? _formatMenuItem;                    // context-menu item (visibility gated)
     private MenuItem? _peekMenuItem;                      // context-menu item (visibility gated)
     private MenuItem? _open3dMenuItem;                    // #5: "Open in 3D" (shown for station/survey refs)
-    private string? _open3dName;                          // the station/survey under the right-click
+    private (string Raw, ReferenceInfo Info)? _open3dRef; // the station/survey under the right-click
     private MenuItem? _gotoEquateMenuItem;               // "Go to equate" (shown for equated stations/surveys)
     private MenuItem? _gotoAggregationMenuItem;          // "Go to aggregating map" (shown for composed scraps/maps)
     private MenuItem? _encloseRegionMenuItem;            // "Enclose in region" (Therion files; enabled for a multi-line block)
@@ -451,7 +448,9 @@ public partial class TherionTextEditor : UserControl
         (ShellCommandIds.GoToDefinition, "F12", NoAliases,
             ed => { ed.TryNavigateAt(ed._editor!.CaretOffset); return true; }),
         (ShellCommandIds.FindReferences, "Shift+F12", NoAliases,
-            ed => { ed.FindReferencesAt(ed._editor!.CaretOffset); return true; }),
+            ed => { ed.StartFindAllReferences(); return true; }),
+        (ShellCommandIds.NextOccurrenceInFile, "Ctrl+Shift+F12", NoAliases,
+            ed => { ed.NextOccurrenceInFile(); return true; }),
         (ShellCommandIds.RenameSymbol, "F2", NoAliases,
             ed => { ed.StartRename(); return true; }),
         (ShellCommandIds.PeekDefinition, "Alt+F12", NoAliases,
@@ -744,7 +743,7 @@ public partial class TherionTextEditor : UserControl
         var offset = _editor.Document.GetOffset(line, col);
         _editor.CaretOffset = offset;
         _editor.ScrollToLine(line);
-        _editor.Focus();
+        FocusTextAreaDeferred();
     }
 
     /// <summary>
@@ -752,8 +751,10 @@ public partial class TherionTextEditor : UserControl
     /// the first line). Highlighting uses the transient flash adornment rather than a
     /// text selection, so navigating never leaves a multi-line selection behind (#6).
     /// A zero-length span in a file is a caret position (a new file opened on its first data line).
+    /// <paramref name="focus"/> false only reveals the place (Outline single click): the caret moves
+    /// but keyboard focus stays where the user is.
     /// </summary>
-    public void ScrollTo(SourceSpan span)
+    public void ScrollTo(SourceSpan span, bool focus = true)
     {
         if (_editor is null || span.IsEmpty && string.IsNullOrEmpty(span.FilePath)) return;
         var doc = _editor.Document;
@@ -775,7 +776,7 @@ public partial class TherionTextEditor : UserControl
         _editor.Select(startOffset, 0);
         _editor.ScrollToLine(line);
         if (!span.IsEmpty) _flash?.Flash(startOffset, length);
-        _editor.Focus();
+        if (focus) FocusTextAreaDeferred();
     }
 
     public string? Text
@@ -903,7 +904,16 @@ public partial class TherionTextEditor : UserControl
     {
         if (_editor?.Document is not { } doc) return;
         var fixes = TherionCodeActions.Build(doc, _boundDiagnostics, _editor.CaretOffset, CurrentFilePath);
+        // Open under the caret's line, not under the whole editor (which put it over the panel below).
         var flyout = new Avalonia.Controls.MenuFlyout { Placement = Avalonia.Controls.PlacementMode.Bottom };
+        if (CaretLineBottomLeft() is { } at)
+        {
+            flyout.Placement = Avalonia.Controls.PlacementMode.AnchorAndGravity;
+            flyout.PlacementAnchor = Avalonia.Controls.Primitives.PopupPositioning.PopupAnchor.TopLeft;
+            flyout.PlacementGravity = Avalonia.Controls.Primitives.PopupPositioning.PopupGravity.BottomRight;
+            flyout.HorizontalOffset = at.X;
+            flyout.VerticalOffset = at.Y;
+        }
         if (fixes.Count == 0)
         {
             flyout.Items.Add(new Avalonia.Controls.MenuItem { Header = L("Ed_NoQuickFixes"), IsEnabled = false });
@@ -920,6 +930,21 @@ public partial class TherionTextEditor : UserControl
             }
         }
         flyout.ShowAt(_editor.TextArea, showAtPointer: false);
+    }
+
+    /// <summary>The bottom-left corner of the caret's visual line in text-area coordinates, or null
+    /// while the caret is scrolled out of view.</summary>
+    private Point? CaretLineBottomLeft()
+    {
+        if (_editor is null) return null;
+        var area = _editor.TextArea;
+        var view = area.TextView;
+        if (!view.VisualLinesValid) return null;
+        var loc = _editor.Document.GetLocation(_editor.CaretOffset);
+        var vpos = view.GetVisualPosition(new TextViewPosition(loc), VisualYPosition.LineBottom);
+        if (view.TranslatePoint(vpos - view.ScrollOffset, area) is not { } p) return null;
+        if (p.Y < 0 || p.Y > area.Bounds.Height) return null;
+        return new Point(Math.Max(0, p.X), p.Y);
     }
 
     // ----- / 16 / 17: block matching, smart Enter, reading-order navigation -----
@@ -1557,10 +1582,17 @@ public partial class TherionTextEditor : UserControl
         if (RefTokenAtCaret() is { } t) RenameSymbolRequested?.Invoke(this, t);
     }
 
-    /// <summary>Fires <see cref="FindAllReferencesRequested"/> for the ref token at the caret.</summary>
+    /// <summary>
+    /// Fires <see cref="FindAllReferencesRequested"/> for the ref token at the caret — the one meaning of
+    /// "find references" (Shift+F12, the context menu, the hover card). A plain word that is not a
+    /// station/survey token is still asked about, so the shell can say that nothing refers to it instead
+    /// of the key doing nothing.
+    /// </summary>
     public void StartFindAllReferences()
     {
-        if (RefTokenAtCaret() is { } t) FindAllReferencesRequested?.Invoke(this, t);
+        if (RefTokenAtCaret() is { } t) { FindAllReferencesRequested?.Invoke(this, t); return; }
+        if (_editor is not null && WordAt(_editor.Text, _editor.CaretOffset) is { Length: > 0 } word)
+            FindAllReferencesRequested?.Invoke(this, (word, ReferenceKind.Any));
     }
 
     /// <summary>The station/survey reference token under the caret, with the kind it should resolve as.</summary>
@@ -1574,41 +1606,27 @@ public partial class TherionTextEditor : UserControl
 
     // ----- find references / go to line / toggle comment -----------------
 
-    private string? _refWord;
-    private int _refIndex;
-
-    private void FindReferencesAt(int offset)
+    /// <summary>
+    /// Moves the caret to the next whole-word occurrence of the word at the caret in this file,
+    /// wrapping at the end. A plain text match, so it works on any word; the symbol-scoped list
+    /// across the project is <see cref="StartFindAllReferences"/>.
+    /// </summary>
+    public void NextOccurrenceInFile()
     {
-        if (_editor is null || Navigation is null) return;
-        var word = WordAt(_editor.Text, offset);
-        if (string.IsNullOrEmpty(word)) return;
-
-        var all = Navigation.FindReferences(word);
-        if (all.IsDefaultOrEmpty) return;
-
-        // Prefer references in the current file so navigation stays in this editor.
-        var refs = string.IsNullOrEmpty(CurrentFilePath)
-            ? all.ToList()
-            : all.Where(s => string.Equals(s.FilePath, CurrentFilePath, StringComparison.OrdinalIgnoreCase)).ToList();
-        if (refs.Count == 0) refs = all.ToList();
-
-        if (!string.Equals(word, _refWord, StringComparison.Ordinal)) { _refWord = word; _refIndex = 0; }
-        else _refIndex = (_refIndex + 1) % refs.Count;
-
-        var span = refs[_refIndex];
-        var ln = Math.Max(1, span.Start.Line);
-        if (ln > _editor.Document.LineCount) return;
+        if (_editor is null || WordOccurrences.Next(_editor.Text, _editor.CaretOffset) is not { } next) return;
 
         // Flag this as term navigation so the caret move it triggers is kept out of
         // the back/forward history (#1).
         IsTermNavigating = true;
         try
         {
-            _editor.CaretOffset = _editor.Document.GetOffset(ln, Math.Max(1, span.Start.Column));
-            _editor.ScrollToLine(ln);
+            _editor.Select(next.Start, 0);
+            _editor.CaretOffset = next.Start;
+            _editor.ScrollToLine(_editor.Document.GetLineByOffset(next.Start).LineNumber);
         }
         finally { IsTermNavigating = false; }
-        _editor.Focus();
+        _flash?.Flash(next.Start, next.Length);
+        _editor.TextArea.Focus();
     }
 
     private async void ShowGoToLine()
@@ -1634,8 +1652,10 @@ public partial class TherionTextEditor : UserControl
         box.Loaded += (_, _) => box.Focus();
 
         var result = await dialog.ShowDialog<string?>(owner);
-        if (int.TryParse(result?.Trim(), out var lineNumber))
+        if (GoToLineInput.TryResolve(result, _editor.Document.LineCount, out var lineNumber, out var problem))
             ScrollTo(lineNumber, 1);
+        else if (problem is not null)
+            AppServices.Provider.GetService<INotificationService>()?.Warning(L("Ed_GoToLineTitle"), problem);
     }
 
     private void ToggleLineComment()
@@ -1721,8 +1741,7 @@ public partial class TherionTextEditor : UserControl
             if (!ReferenceEquals(_hoverDiagnostic, d))
             {
                 _hoverDiagnostic = d;
-                var tip = string.IsNullOrEmpty(d.Hint) ? d.Message : $"{d.Message}\n{d.Hint}";
-                ToolTip.SetTip(_editor, $"{d.Severity}: {tip}");
+                ToolTip.SetTip(_editor, ThIDE.Resources.DiagnosticText.Tooltip(d));
                 ToolTip.SetIsOpen(_editor, true);
             }
         }
@@ -1790,7 +1809,7 @@ public partial class TherionTextEditor : UserControl
             HoverCommandWord(off) is { } cmd ? BuildCommandInfo(cmd) :
             RefTokenUnderPointer(_infoPointer) is { } tok &&
                 Navigation?.Describe(tok.Raw, ChooseReferenceKind((tok.Start, tok.Length, tok.Raw), tok.Offset)) is { } info
-                ? BuildIdentifierInfo(tok.Raw, info, tok.Offset) :
+                ? BuildIdentifierInfo(tok.Raw, info, tok.Offset, ChooseReferenceKind((tok.Start, tok.Length, tok.Raw), tok.Offset)) :
             ResolvePathLinkAt(off) is { } link ? BuildFileInfo(link) : null;
 
         if (content is null) { CancelHoverInfo(); return; }
@@ -1987,9 +2006,12 @@ public partial class TherionTextEditor : UserControl
         catch { return false; }
     }
 
-    private void OpenInModel3D(string name)
+    // The token as written ("3", "3@sub.cave") is not a name the model knows: send the full dotted
+    // name of the station or survey it resolves to.
+    private void OpenInModel3D(string raw, ReferenceInfo info)
     {
-        if (!string.IsNullOrWhiteSpace(name)) TryDocuments()?.RequestShowInModel3D(name);
+        if (!string.IsNullOrWhiteSpace(raw) && TryDocuments() is { } documents)
+            documents.RequestShowInModel3D(Model3DTarget.ModelNameFor(raw, info, documents.Workspace));
         HideHoverInfo();
     }
 
@@ -2003,7 +2025,7 @@ public partial class TherionTextEditor : UserControl
         OpenExternalRequested?.Invoke(this, ThbookUrl);
     }
 
-    private Control BuildIdentifierInfo(string raw, ReferenceInfo info, int tokenOffset)
+    private Control BuildIdentifierInfo(string raw, ReferenceInfo info, int tokenOffset, ReferenceKind kind)
     {
         var panel = new StackPanel { Spacing = 6 };
         panel.Children.Add(MakeCardTitle(raw, info.Declaration, tokenOffset));
@@ -2030,7 +2052,7 @@ public partial class TherionTextEditor : UserControl
         actions.Children.Add(IconAction("Icon.GoToDefinition", "Ed_GoToDefinition",
             () => { NavigateToSpan(where); HideHoverInfo(); }));
         actions.Children.Add(IconAction("Icon.ManageSearch", "Ed_FindAllRefs",
-            () => { FindReferencesRequested?.Invoke(this, StationRef.Parse(raw).PointWithoutMark); HideHoverInfo(); }));
+            () => { FindAllReferencesRequested?.Invoke(this, (raw, kind)); HideHoverInfo(); }));
         // Teardown + modal ordering is handled by IconAction's deferral (see PostHoverAction).
         actions.Children.Add(IconAction("Icon.Rename", "Ed_RenameDots", () =>
         {
@@ -2040,7 +2062,7 @@ public partial class TherionTextEditor : UserControl
 
         // "Open in 3D" — only for stations/surveys, and only when a 3D model is available.
         if (Model3DAvailableFor(info.Kind))
-            actions.Children.Add(IconAction("Icon.Cube", "Ed_OpenIn3D", () => OpenInModel3D(raw)));
+            actions.Children.Add(IconAction("Icon.Cube", "Ed_OpenIn3D", () => OpenInModel3D(raw, info)));
 
         // Documentation button: links to the thbook page for this reference kind (#6),
         // shown only when a page mapping exists for it (info.Kind is "station"/"survey"/…).
@@ -2439,7 +2461,7 @@ public partial class TherionTextEditor : UserControl
             _encloseRegionMenuItem.IsEnabled = IsMultiLineSelection;   // active only for a block
         }
         if (_open3dMenuItem is not null) _open3dMenuItem.IsVisible = false;   // hidden unless on a station/survey
-        _open3dName = null;
+        _open3dRef = null;
         if (_gotoEquateMenuItem is not null) _gotoEquateMenuItem.IsVisible = false;
         if (_gotoAggregationMenuItem is not null) _gotoAggregationMenuItem.IsVisible = false;
         _ctxAggregations = System.Collections.Immutable.ImmutableArray<AggregationReference>.Empty;
@@ -2482,7 +2504,7 @@ public partial class TherionTextEditor : UserControl
             Navigation?.Describe(tok.Raw, ChooseReferenceKind((tok.Start, tok.Length, tok.Raw), tok.Offset)) is { } info &&
             Model3DAvailableFor(info.Kind))
         {
-            _open3dName = tok.Raw;
+            _open3dRef = (tok.Raw, info);
             _open3dMenuItem.IsVisible = true;
         }
     }
@@ -2733,8 +2755,7 @@ public partial class TherionTextEditor : UserControl
         return text.Substring(start, end - start);
     }
 
-    // Therion station refs are letters, digits, '.', '_', '-'.
-    private static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c == '.' || c == '_' || c == '-';
+    private static bool IsWordChar(char c) => WordOccurrences.IsWordChar(c);
 
     // ----- file-path hyperlinks (input / load / source / export / system) -----
 
@@ -3337,7 +3358,7 @@ public partial class TherionTextEditor : UserControl
         menu.Items.Add(MakeItem(L("Ed_RenameSymbol"),     StartRename));
         menu.Items.Add(MakeItem(L("Ed_FindAllRefs"),      StartFindAllReferences));
         // #5: shown only when right-clicking a station/survey reference and the 3D viewer has a model.
-        _open3dMenuItem = MakeItem(L("Ed_OpenIn3D"), () => { if (_open3dName is { } n) OpenInModel3D(n); });
+        _open3dMenuItem = MakeItem(L("Ed_OpenIn3D"), () => { if (_open3dRef is { } r) OpenInModel3D(r.Raw, r.Info); });
         menu.Items.Add(_open3dMenuItem);
         menu.Items.Add(new Separator());
         // shown only when their feature is enabled (refreshed on menu open).
@@ -3831,7 +3852,7 @@ public partial class TherionTextEditor : UserControl
             }
             finally { doc.EndUpdate(); }
             CaretAfterInsert(caret);
-            FocusEditorAfterDialog();
+            FocusTextAreaDeferred();
             return;
         }
 
@@ -3870,7 +3891,7 @@ public partial class TherionTextEditor : UserControl
         }
         doc.Replace(start, end - start, insert);
         CaretAfterInsert(start + insert.Length);
-        FocusEditorAfterDialog();
+        FocusTextAreaDeferred();
     }
 
     // The editor leaves a replaced range selected; a second paste would then replace the first block.
@@ -3880,9 +3901,12 @@ public partial class TherionTextEditor : UserControl
         _editor.Select(Math.Clamp(offset, 0, _editor.Document.TextLength), 0);
     }
 
-    // The owner window gives focus back to whatever had it before the dialog once the dialog closes;
-    // take it after that, so the first Ctrl+Z undoes the insert.
-    private void FocusEditorAfterDialog()
+    // Focus the text area now and once more after the current input event and layout pass. The owner
+    // window gives focus back to whatever had it before a dialog once the dialog closes, and a
+    // navigation is started from a panel (a grid row, a tree item) that takes focus on the pointer
+    // event, or switches tabs and detaches the editor that had it; the second call wins over both, so
+    // the first keystroke after a jump, or the first Ctrl+Z after an insert, lands in the editor.
+    private void FocusTextAreaDeferred()
     {
         _editor?.TextArea.Focus();
         Dispatcher.UIThread.Post(() => _editor?.TextArea.Focus(), DispatcherPriority.Background);

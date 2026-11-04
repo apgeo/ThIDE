@@ -127,7 +127,7 @@ public interface IDocumentService
     event EventHandler? HistoryChanged;
     /// <summary>
     /// Reports the active editor's caret so the back/forward history tracks cursor jumps
-    /// like a normal editor (#1). Term-navigation moves (Shift+F12) pass
+    /// like a normal editor (#1). Term-navigation moves (Ctrl+Shift+F12) pass
     /// <paramref name="isTermNavigation"/>=true and are ignored.
     /// </summary>
     void ReportCaret(Therion.Core.SourceSpan span, bool isTermNavigation, bool fromPointer = false);
@@ -177,6 +177,26 @@ public sealed record Model3DTarget(string Name)
     /// <summary>The splay shot from <paramref name="from"/> with these readings.</summary>
     public static Model3DTarget Splay(string from, double? length, double? compass, double? clino) =>
         new(from) { SplayLength = length, SplayCompass = compass ?? 0, SplayClino = clino ?? 0 };
+
+    /// <summary>
+    /// The model's name for a station or survey reference as written in a source file (<c>3</c>,
+    /// <c>3@sub.cave</c>): the full dotted name of the station or survey it resolves to, else the
+    /// reference itself in dotted form (<c>cave.sub.3</c>), which the viewer matches against the end of
+    /// its own names. The model never knows a name in Therion's <c>@</c> notation.
+    /// </summary>
+    public static string ModelNameFor(string raw, Therion.Processing.Abstractions.ReferenceInfo? info,
+        Therion.Semantics.WorkspaceSemanticModel? workspace)
+    {
+        if (workspace is not null && info is { Declaration.IsEmpty: false })
+        {
+            var kind = info.Kind == "survey"
+                ? Therion.Processing.Abstractions.ReferenceKind.Survey
+                : Therion.Processing.Abstractions.ReferenceKind.Station;
+            if (Therion.Semantics.SymbolReferences.ResolveDeclaration(workspace, kind, info.Declaration) is { } symbol)
+                return symbol.Symbol.Name.ToString();
+        }
+        return Therion.Semantics.StationRef.Parse((raw ?? string.Empty).Trim()).StationQuery;
+    }
 }
 
 public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, ISnippetEditor, IAsyncDisposable
@@ -493,8 +513,12 @@ public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, 
 
     private void PropagateWorkspaceToDocuments()
     {
-        // Snapshot: this can run off a session-changed callback while documents open/close.
-        foreach (var d in Documents.ToList()) { d.SetWorkspace(Workspace); UpdateMembership(d); }
+        // Snapshot: this can run off a session-changed callback while documents open/close. Headless,
+        // those run inline on pool threads, serialized by HeadlessUiGate, so the snapshot takes it too.
+        List<FileDocumentViewModel> docs;
+        if (NoUiLoop) lock (HeadlessUiGate) docs = Documents.ToList();
+        else docs = Documents.ToList();
+        foreach (var d in docs) { d.SetWorkspace(Workspace); UpdateMembership(d); }
     }
 
     // ---- ValidateOnType: live whole-project re-validation from unsaved buffers -------------------
@@ -584,7 +608,7 @@ public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, 
     // the cursor comes to rest on — by clicking, arrowing, paging, go-to-definition, or
     // switching files — is a stop. It is NOT limited to highlighted-term/reference jumps.
     // Column-only moves (typing along a line) coalesce, and only programmatic back/forward
-    // and Shift+F12 occurrence cycling are kept out of the trail.
+    // and Ctrl+Shift+F12 occurrence cycling are kept out of the trail.
 
     private readonly System.Collections.Generic.List<Therion.Core.SourceSpan> _history = new();
     private int _historyIndex = -1;
@@ -627,7 +651,7 @@ public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, 
         // The status bar follows every caret move (#7), independent of the history filtering.
         CaretMoved?.Invoke(this, span);
 
-        // Programmatic back/forward navigation and highlighted-term cycling (Shift+F12) keep the
+        // Programmatic back/forward navigation and highlighted-term cycling (Ctrl+Shift+F12) keep the
         // reference point current but never add to the trail (#6).
         if (isTermNavigation || _suppressHistory) { _lastCaret = span; _hasLastCaret = true; return; }
 
@@ -872,9 +896,14 @@ public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, 
     // UI thread (OpenFileAsync's continuation can run on a thread-pool thread). Marshal synchronously
     // (Invoke, not Post) so the open/close flow stays correctly ordered. This stops "Collection was
     // modified" enumeration crashes in any consumer iterating Documents (e.g. TodoScanViewModel).
+    // Headless there is no UI thread to serialize on, and two opens at once would mutate the collection
+    // from two pool threads together (a torn List, a null slot in a later snapshot); this gate stands in.
+    private static readonly object HeadlessUiGate = new();
+
     private static void OnUiSync(Action action)
     {
-        if (NoUiLoop || Avalonia.Threading.Dispatcher.UIThread.CheckAccess()) action();
+        if (NoUiLoop) { lock (HeadlessUiGate) action(); }
+        else if (Avalonia.Threading.Dispatcher.UIThread.CheckAccess()) action();
         else Avalonia.Threading.Dispatcher.UIThread.Invoke(action);
     }
 

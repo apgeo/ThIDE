@@ -189,13 +189,7 @@ public sealed class McpHostService : IMcpHostService
             int port = FindFreeLoopbackPort();
             string token = GenerateToken();
 
-            // Empty Args so the Avalonia command line (opened file paths) can't reconfigure the host;
-            // an explicit content root avoids surprises from the process working directory.
-            var builder = WebApplication.CreateSlimBuilder(new WebApplicationOptions
-            {
-                Args = Array.Empty<string>(),
-                ContentRootPath = AppContext.BaseDirectory,
-            });
+            var builder = CreateLoopbackBuilder();
 
             // Listen wins over UseUrls/ASPNETCORE_URLS, so the bind is authoritatively loopback-only.
             builder.WebHost.ConfigureKestrel(o => o.Listen(IPAddress.Loopback, port));
@@ -341,6 +335,20 @@ public sealed class McpHostService : IMcpHostService
     }
 
     internal static string GenerateToken() => Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
+
+    /// <summary>
+    /// The web host builder both in-app servers start from. Its arguments are fixed, so the Avalonia
+    /// command line (opened file paths) can't reconfigure the host, and the explicit content root avoids
+    /// surprises from the process working directory. The host's default watch on appsettings.json is off:
+    /// there is no such file to reload, and on Linux the watcher takes an inotify instance, whose creation
+    /// throws once the per-user limit is reached, so the server would fail to start for want of it.
+    /// </summary>
+    internal static WebApplicationBuilder CreateLoopbackBuilder() =>
+        WebApplication.CreateSlimBuilder(new WebApplicationOptions
+        {
+            Args = ["--hostBuilder:reloadConfigOnChange=false"],
+            ContentRootPath = AppContext.BaseDirectory,
+        });
 
     /// <summary>Reserves a free loopback TCP port, then releases it for Kestrel to bind.</summary>
     internal static int FindFreeLoopbackPort()

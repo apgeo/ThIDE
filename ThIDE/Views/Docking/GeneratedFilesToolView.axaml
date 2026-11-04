@@ -63,13 +63,13 @@
             </DataGrid.ContextMenu>
             <DataGrid.Columns>
                 <!-- Kind with a per-type icon (#4). -->
-                <DataGridTemplateColumn Header="{l:Loc Browser_Col_Kind}" Width="Auto" SortMemberPath="Kind">
+                <DataGridTemplateColumn Header="{l:Loc Browser_Col_Kind}" Width="Auto" SortMemberPath="KindText">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <StackPanel Orientation="Horizontal" Spacing="6" Margin="4,0" VerticalAlignment="Center">
                                 <PathIcon Width="13" Height="13"
                                           Data="{Binding IconKey, Converter={x:Static conv:ResourceKeyToGeometryConverter.Instance}}" />
-                                <TextBlock Text="{Binding Kind}" VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding KindText}" VerticalAlignment="Center" />
                             </StackPanel>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>

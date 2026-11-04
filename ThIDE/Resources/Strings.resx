@@ -546,7 +546,7 @@
   <data name="Common_Apply" xml:space="preserve"><value>Apply</value></data>
   <data name="Rename_TitleFormat" xml:space="preserve"><value>Rename '{0}' → '{1}'</value></data>
   <data name="Rename_NewNameFor" xml:space="preserve"><value>New name for '{0}':</value></data>
-  <data name="Rename_PreviewSummary" xml:space="preserve"><value>{0} occurrence(s) across {1} file(s). Double-click an entry to jump to it.</value></data>
+  <data name="Rename_PreviewSummary" xml:space="preserve"><value>{0} across {1}. Double-click an entry to jump to it.</value></data>
   <data name="Rename_SeeOccurrences" xml:space="preserve"><value>See occurrences…</value></data>
   <data name="Rename_HelpTip" xml:space="preserve"><value>What does this do?</value></data>
   <data name="Pref_Title" xml:space="preserve"><value>Settings</value></data>
@@ -561,7 +561,7 @@
   <data name="Pref_DelaySeconds" xml:space="preserve"><value>Delay (seconds)</value></data>
   <data name="Pref_AutoSaveHelp" xml:space="preserve"><value>Dirty files are written automatically; the delay applies to the After-a-delay mode.</value></data>
   <data name="Pref_Telemetry" xml:space="preserve"><value>Record anonymous usage &amp; crash reports (stored locally, never sent)</value></data>
-  <data name="Pref_TelemetryHelp" xml:space="preserve"><value>Off by default. When on, events and crash reports are written under %AppData%/ThIDE/telemetry and never leave your machine.</value></data>
+  <data name="Pref_TelemetryHelp" xml:space="preserve"><value>Off by default. When on, events and crash reports are written under {0} and never leave your machine.</value></data>
   <data name="Pref_AppTheme" xml:space="preserve"><value>App theme</value></data>
   <data name="Pref_ThemeSystem" xml:space="preserve"><value>System default</value></data>
   <data name="Pref_ThemeLight" xml:space="preserve"><value>Light</value></data>
@@ -647,14 +647,14 @@
   <data name="Pref_OnBuild" xml:space="preserve"><value>On build</value></data>
   <data name="Pref_CommandWm" xml:space="preserve"><value>(command)</value></data>
   <data name="Pref_LoadPlugins" xml:space="preserve"><value>Load plugins (custom semantic rules from the plugins folder)</value></data>
-  <data name="Pref_LoadPluginsHelp" xml:space="preserve"><value>Drop plugin .dll files (types implementing ISemanticRule) in %AppData%/ThIDE/plugins. Loaded at startup; disable for performance. Changes apply on restart.</value></data>
+  <data name="Pref_LoadPluginsHelp" xml:space="preserve"><value>Drop plugin .dll files (types implementing ISemanticRule) in {0}. Loaded at startup; disable for performance. Changes apply on restart.</value></data>
   <data name="Pref_McpServer" xml:space="preserve"><value>Enable the in-app AI tools server (MCP)</value></data>
-  <data name="Pref_McpServerHelp" xml:space="preserve"><value>Lets a local AI assistant reach this running project through the Model Context Protocol. Serves on 127.0.0.1 (loopback only) on a random port, protected by a bearer token; the port and token are written to %AppData%/ThIDE/mcp-endpoint.json. Off by default — see docs/mcp-host-setup.md.</value></data>
+  <data name="Pref_McpServerHelp" xml:space="preserve"><value>Lets a local AI assistant reach this running project through the Model Context Protocol. Serves on 127.0.0.1 (loopback only) on a random port, protected by a bearer token; the port and token are written to {0}. Off by default — see docs/mcp-host-setup.md.</value></data>
   <data name="Pref_McpFollowAgent" xml:space="preserve"><value>Follow the agent (let AI tools drive the window)</value></data>
   <data name="Pref_McpFollowAgentHelp" xml:space="preserve"><value>When on, the AI assistant may open files, focus panels, run commands, save, and change the layout in this window. When off, it can still read the project and answer questions, but cannot touch the UI. On by default.</value></data>
   <data name="Pref_CliHelp" xml:space="preserve"><value>The headless CLI (therion-cli) and the LSP server (therion-lsp) are separate executables — see docs.</value></data>
   <data name="Pref_ResetAll" xml:space="preserve"><value>Reset all to defaults</value></data>
-  <data name="Pref_KbHelp" xml:space="preserve"><value>Click a gesture field and press the key combination to assign it.</value></data>
+  <data name="Pref_KbHelp" xml:space="preserve"><value>Click a gesture field and press the key combination to assign it; Esc or Delete clears it. Changes take effect when you press OK.</value></data>
   <data name="Pref_Col_Command" xml:space="preserve"><value>Command</value></data>
   <data name="Pref_Col_Gesture" xml:space="preserve"><value>Gesture</value></data>
   <data name="Pref_Col_Default" xml:space="preserve"><value>Default</value></data>
@@ -682,6 +682,8 @@
   <data name="Diag_Explain" xml:space="preserve"><value>Explain (open docs)</value></data>
   <data name="Diag_Suppress" xml:space="preserve"><value>Suppress this code</value></data>
   <data name="Diag_OpenDocs" xml:space="preserve"><value>Open docs ↗</value></data>
+  <data name="Diag_Details" xml:space="preserve"><value>Details</value></data>
+  <data name="Diag_DetailsTip" xml:space="preserve"><value>Show the full explanation and an example fix</value></data>
   <!-- Compiler output tool -->
   <data name="Comp_TabOutput" xml:space="preserve"><value>Output</value></data>
   <data name="Comp_TabRaw" xml:space="preserve"><value>Raw</value></data>
@@ -728,6 +730,7 @@
   <data name="M3D_OpenTip" xml:space="preserve"><value>Open a .lox / .3d model file</value></data>
   <data name="M3D_FullScreen" xml:space="preserve"><value>⛶ Full screen</value></data>
   <data name="M3D_ExitFullScreen" xml:space="preserve"><value>⤢ Exit full screen</value></data>
+  <data name="M3D_ExitFullScreenTip" xml:space="preserve"><value>Leave full screen (Esc)</value></data>
   <data name="M3D_ResetView" xml:space="preserve"><value>⟲ Reset view</value></data>
   <data name="M3D_ResetViewTip" xml:space="preserve"><value>Re-frame the model</value></data>
   <data name="M3D_Defaults" xml:space="preserve"><value>↺ Defaults</value></data>
@@ -788,6 +791,7 @@
   <data name="M3D_ExportFolder" xml:space="preserve"><value>Folder for the web page</value></data>
   <data name="M3D_ExportDone" xml:space="preserve"><value>Web page written to {0}</value></data>
   <data name="M3D_ExportFailed" xml:space="preserve"><value>Could not write the web page: {0}</value></data>
+  <data name="M3D_LoadFailed" xml:space="preserve"><value>Could not show {0}: {1}</value></data>
   <data name="M3D_ExportNoModel" xml:space="preserve"><value>Load a model first.</value></data>
   <!-- Live preview tool -->
   <data name="Live_PlanTip" xml:space="preserve"><value>Plan view (looking down — north up)</value></data>
@@ -943,6 +947,7 @@
   <data name="Refs_Title" xml:space="preserve"><value>Find All References</value></data>
   <data name="Refs_Header" xml:space="preserve"><value>'{0}' — {1} occurrence(s) in {2} file(s)</value></data>
   <data name="Refs_None" xml:space="preserve"><value>No references to '{0}' were found in the workspace.</value></data>
+  <data name="Refs_NoOther" xml:space="preserve"><value>No other references to '{0}'</value></data>
   <data name="Refs_GoTo" xml:space="preserve"><value>Go to</value></data>
   <data name="Refs_Col_Kind" xml:space="preserve"><value>Kind</value></data>
   <data name="Refs_Col_Text" xml:space="preserve"><value>Line text</value></data>
@@ -963,6 +968,7 @@
   <data name="Ed_GoToEquate" xml:space="preserve"><value>Go to equate</value></data>
   <data name="Ed_GoToAggregation" xml:space="preserve"><value>Go to aggregating map</value></data>
   <data name="Ed_FindAllRefs" xml:space="preserve"><value>Find all references</value></data>
+  <data name="Ed_NextOccurrence" xml:space="preserve"><value>Next Occurrence in This File</value></data>
   <data name="Ed_RenameDots" xml:space="preserve"><value>Rename…</value></data>
   <data name="Ed_Documentation" xml:space="preserve"><value>Documentation ↗</value></data>
   <data name="Ed_OpenArrow" xml:space="preserve"><value>Open ↗</value></data>
@@ -1007,7 +1013,7 @@
   <data name="DC_LoadModel" xml:space="preserve"><value>Load model…</value></data>
   <data name="DC_Year" xml:space="preserve"><value>Year</value></data>
   <data name="DC_NoModel" xml:space="preserve"><value>No magnetic model loaded</value></data>
-  <data name="DC_NoModelHelp" xml:space="preserve"><value>Download a WMM.COF (NOAA, public domain) and place it in %AppData%/ThIDE, or click "Load model…".</value></data>
+  <data name="DC_NoModelHelp" xml:space="preserve"><value>Download a WMM.COF (NOAA, public domain) and place it in {0}, or click "Load model…".</value></data>
   <data name="DC_DeclinationFmt" xml:space="preserve"><value>Declination: {0}° {1}</value></data>
   <data name="DC_LoadFailed" xml:space="preserve"><value>Failed to load model</value></data>
   <data name="DC_PickTitle" xml:space="preserve"><value>Select a WMM/IGRF .COF file</value></data>
@@ -1032,7 +1038,7 @@ Targets Therion v6.4.0 (thbook bundled).</value></data>
   <data name="Mapiah_Title" xml:space="preserve"><value>Mapiah not found</value></data>
   <data name="Mapiah_Message" xml:space="preserve"><value>The Mapiah sketch editor could not be found on this computer.
 
-Install Mapiah from its releases page, then set the path to mapiah.exe in Settings → External Tools (the "mapiah" row).</value></data>
+Install Mapiah from its releases page, then set the path to {0} in Settings → External Tools (the "mapiah" row).</value></data>
   <data name="Mapiah_Download" xml:space="preserve"><value>Download Mapiah…</value></data>
   <data name="Mapiah_OpenSettings" xml:space="preserve"><value>Open Settings</value></data>
   <!-- Command palette (Ctrl+Shift+P) -->
@@ -1630,7 +1636,7 @@ Apply the changes? Steps that could not preview run now.</value></data>
   <data name="Cmd_MacroFmt" xml:space="preserve"><value>Macro: {0}</value></data>
   <data name="Macro_OutsideProject" xml:space="preserve"><value>That file is outside the project; most tools only work on files inside it (copy it to incoming/ first).</value></data>
   <data name="Assistant_DataPolicyQuestion" xml:space="preserve"><value>Before the first question: what may the assistant send to the model?</value></data>
-  <data name="Assistant_DataPolicyChosen" xml:space="preserve"><value>Data policy: {0}. You can change it in Preferences ▸ Assistant.</value></data>
+  <data name="Assistant_DataPolicyChosen" xml:space="preserve"><value>Data policy: {0}. You can change it in Settings ▸ Extensions.</value></data>
   <data name="Pref_AssistantDataPolicy" xml:space="preserve"><value>What the assistant may send to the model</value></data>
   <data name="Pref_AssistantDataPolicy_SendAll" xml:space="preserve"><value>Everything (the model runs on this computer)</value></data>
   <data name="Pref_AssistantDataPolicy_SendAllHelp" xml:space="preserve"><value>The tools return station names, coordinates, file text and comments to the model. Best answers. Choose this when the model runs locally (LM Studio): nothing leaves the computer.</value></data>
@@ -1749,4 +1755,345 @@ Delete it permanently instead? This cannot be undone.</value></data>
   <data name="File_NotInActiveThconfigNoName" xml:space="preserve"><value>Not part of the active thconfig.</value></data>
   <data name="File_NotTheActiveThconfig" xml:space="preserve"><value>Not the active thconfig (the active one is {0}).</value></data>
   <data name="File_MakeActiveThconfig" xml:space="preserve"><value>Make this the active thconfig</value></data>
+  <data name="Diag_Sev_Error" xml:space="preserve"><value>Error</value></data>
+  <data name="Diag_Sev_Warning" xml:space="preserve"><value>Warning</value></data>
+  <data name="Diag_Sev_Info" xml:space="preserve"><value>Info</value></data>
+  <data name="Diag_Sev_Hint" xml:space="preserve"><value>Hint</value></data>
+  <data name="Status_EditFailed" xml:space="preserve"><value>Edit failed.</value></data>
+  <data name="Explorer_MoveToTrash" xml:space="preserve"><value>Move to Trash</value></data>
+  <data name="Explorer_MoveToRecycleBin" xml:space="preserve"><value>Move to Recycle Bin</value></data>
+  <data name="Explorer_DeleteUndoable" xml:space="preserve"><value>{0}:
+
+{1}
+
+You can restore it from the trash/recycle bin.</value></data>
+  <data name="Explorer_DeletePermanent" xml:space="preserve"><value>Permanently delete?
+
+{0}
+
+This cannot be undone.</value></data>
+  <data name="GoTo_LinePrompt" xml:space="preserve"><value>Line number (1–{0}):</value></data>
+  <data name="Rename_Title" xml:space="preserve"><value>Rename Symbol</value></data>
+  <data name="Rename_NoOccurrences" xml:space="preserve"><value>No occurrences of '{0}' were found in the workspace to rename.</value></data>
+  <data name="Rename_InvalidName" xml:space="preserve"><value>'{0}' is not a valid Therion name — it contains '{1}'.</value></data>
+  <data name="Recent_NoFiles" xml:space="preserve"><value>(no recent files)</value></data>
+  <data name="Recent_ClearFiles" xml:space="preserve"><value>Clear Recent Files</value></data>
+  <data name="Recent_NoDirectories" xml:space="preserve"><value>(no recent directories)</value></data>
+  <data name="Recent_ClearDirectories" xml:space="preserve"><value>Clear Recent Directories</value></data>
+  <data name="Recent_Pin" xml:space="preserve"><value>Pin</value></data>
+  <data name="Recent_Unpin" xml:space="preserve"><value>Unpin</value></data>
+  <data name="File_Type_Thconfig" xml:space="preserve"><value>Therion configuration</value></data>
+  <data name="File_Type_Th" xml:space="preserve"><value>Therion survey</value></data>
+  <data name="File_Type_Th2" xml:space="preserve"><value>Therion sketch</value></data>
+  <data name="File_Type_PlainText" xml:space="preserve"><value>Plain text</value></data>
+  <data name="File_Type_NoExtension" xml:space="preserve"><value>no extension</value></data>
+  <data name="Status_FileParsed" xml:space="preserve"><value>{0} · parsed</value></data>
+  <data name="Status_FileNotParsed" xml:space="preserve"><value>{0} · not parsed</value></data>
+  <data name="Build_NoProject" xml:space="preserve"><value>No project loaded.</value></data>
+  <data name="Build_InProgress" xml:space="preserve"><value>A compilation is already in progress.</value></data>
+  <data name="Build_Succeeded" xml:space="preserve"><value>Compilation succeeded</value></data>
+  <data name="Build_SucceededNoOutputs" xml:space="preserve"><value>Compilation succeeded (no outputs).</value></data>
+  <data name="Build_ArtifactCount" xml:space="preserve"><value>{0} artifact(s)</value></data>
+  <data name="Build_FailedWithError" xml:space="preserve"><value>Compilation failed (exit {0}): {1}</value></data>
+  <data name="Build_Failed" xml:space="preserve"><value>Compilation failed (exit {0}).</value></data>
+  <data name="Build_Cancelled" xml:space="preserve"><value>Compilation cancelled.</value></data>
+  <data name="Build_CancelledUnsaved" xml:space="preserve"><value>Compilation cancelled — unsaved changes.</value></data>
+  <data name="Build_Error" xml:space="preserve"><value>Compilation error: {0}</value></data>
+  <data name="Build_SummaryOk" xml:space="preserve"><value>Compilation finished successfully in {0} seconds.</value></data>
+  <data name="Build_SummaryOkFiles" xml:space="preserve"><value>Compilation finished successfully in {0} seconds and generated {1} output file(s).</value></data>
+  <data name="Build_SummaryOkWarn" xml:space="preserve"><value>Compilation finished successfully (with {2} warning(s)) in {0} seconds.</value></data>
+  <data name="Build_SummaryOkWarnFiles" xml:space="preserve"><value>Compilation finished successfully (with {2} warning(s)) in {0} seconds and generated {1} output file(s).</value></data>
+  <data name="Build_SummaryFailed" xml:space="preserve"><value>Compilation finished with errors in {0} seconds.</value></data>
+  <data name="Build_SummaryFailedWarn" xml:space="preserve"><value>Compilation finished with errors and {2} warning(s) in {0} seconds.</value></data>
+  <data name="Gen_State_Stale" xml:space="preserve"><value>⚠ stale</value></data>
+  <data name="Gen_State_Current" xml:space="preserve"><value>current</value></data>
+  <data name="Gen_Kind_lox" xml:space="preserve"><value>Loch 3D model</value></data>
+  <data name="Gen_Kind_3d" xml:space="preserve"><value>Survex 3D model</value></data>
+  <data name="Gen_Kind_pdf" xml:space="preserve"><value>PDF map</value></data>
+  <data name="Gen_Kind_svg" xml:space="preserve"><value>SVG map</value></data>
+  <data name="Gen_Kind_xvi" xml:space="preserve"><value>XVI sketch</value></data>
+  <data name="Gen_Kind_png" xml:space="preserve"><value>PNG image</value></data>
+  <data name="Gen_Kind_tlx" xml:space="preserve"><value>Therion log</value></data>
+  <data name="Gen_Kind_shx" xml:space="preserve"><value>Shapefile index</value></data>
+  <data name="Gen_Kind_prj" xml:space="preserve"><value>Shapefile projection</value></data>
+  <data name="Gen_Kind_sql" xml:space="preserve"><value>SQL database</value></data>
+  <data name="Gen_Kind_csv" xml:space="preserve"><value>CSV database</value></data>
+  <data name="Gen_Kind_plt" xml:space="preserve"><value>Compass plot</value></data>
+  <data name="Gen_Kind_wrl" xml:space="preserve"><value>VRML model</value></data>
+  <data name="Gen_Kind_3dmf" xml:space="preserve"><value>3DMF model</value></data>
+  <data name="Gen_Kind_xhtml" xml:space="preserve"><value>XHTML map</value></data>
+  <data name="ProjTpl_Var_project" xml:space="preserve"><value>Cave name (no spaces)</value></data>
+  <data name="ProjTpl_Var_title" xml:space="preserve"><value>Title</value></data>
+  <data name="ProjTpl_Var_cs" xml:space="preserve"><value>Coordinate system</value></data>
+  <data name="ProjTpl_Var_area" xml:space="preserve"><value>Area name (no spaces)</value></data>
+  <data name="ProjTpl_Var_cave" xml:space="preserve"><value>First cave (no spaces)</value></data>
+  <data name="ProjTpl_Var_expedition" xml:space="preserve"><value>Expedition name (no spaces)</value></data>
+  <data name="ProjTpl_Var_year" xml:space="preserve"><value>Year</value></data>
+  <data name="ProjTpl_DefaultTitle" xml:space="preserve"><value>My cave</value></data>
+  <data name="NewProject_ValueNeeded" xml:space="preserve"><value>{0}: a value is needed</value></data>
+  <data name="NewProject_ValueInvalid" xml:space="preserve"><value>{0}: '{1}' cannot be written into the project</value></data>
+  <data name="Diag_Msg_TH0002" xml:space="preserve"><value>Unexpected token '{0}'.</value></data>
+  <data name="Diag_Msg_TH0003" xml:space="preserve"><value>String is missing its closing quote; it ends at the end of the line.</value></data>
+  <data name="Diag_Hint_TH0003" xml:space="preserve"><value>Close the string with ". Write "" for a quote character inside it.</value></data>
+  <data name="Diag_Msg_TH0010" xml:space="preserve"><value>Unknown command '{0}'.</value></data>
+  <data name="Diag_Msg_TH0010__th2" xml:space="preserve"><value>Unknown .th2 command '{0}'.</value></data>
+  <data name="Diag_Msg_TH0010__thconfig" xml:space="preserve"><value>Unknown top-level command '{0}'.</value></data>
+  <data name="Diag_Hint_TH0010" xml:space="preserve"><value>Expected one of: {0}</value></data>
+  <data name="Diag_Msg_TH0012" xml:space="preserve"><value>Command handler for '{0}' threw: {1}</value></data>
+  <data name="Diag_Msg_TH0020" xml:space="preserve"><value>Block '{0}' is missing its '{1}' terminator.</value></data>
+  <data name="Diag_Msg_TH0021" xml:space="preserve"><value>Expected '{0}' to close '{1}' but found '{2}'.</value></data>
+  <data name="Diag_Msg_TH0030" xml:space="preserve"><value>'fix' requires station and x y z coordinates.</value></data>
+  <data name="Diag_Msg_TH0030__axis" xml:space="preserve"><value>'fix' {0} coordinate '{1}' is not a number.</value></data>
+  <data name="Diag_Msg_TH0031" xml:space="preserve"><value>'equate' requires at least two stations.</value></data>
+  <data name="Diag_Msg_TH0032" xml:space="preserve"><value>'data' requires at least a style name.</value></data>
+  <data name="Diag_Msg_TH0033" xml:space="preserve"><value>Unknown data style '{0}'.</value></data>
+  <data name="Diag_Hint_TH0033" xml:space="preserve"><value>Expected one of: {0}</value></data>
+  <data name="Diag_Msg_TH0034" xml:space="preserve"><value>Unknown data reading '{0}'.</value></data>
+  <data name="Diag_Msg_TH0036" xml:space="preserve"><value>'data' reading order has no 'from'/'to' (or 'station') to identify shots.</value></data>
+  <data name="Diag_Msg_TH0037" xml:space="preserve"><value>'{0}' is not a valid centreline command or data row (a survey shot needs at least two columns).</value></data>
+  <data name="Diag_Msg_TH0038" xml:space="preserve"><value>'sd' expects '&lt;quantity…&gt; &lt;value&gt; &lt;unit&gt;' (e.g. 'sd length 0.05 metres').</value></data>
+  <data name="Diag_Msg_TH0039" xml:space="preserve"><value>'{0}' requires a numeric value.</value></data>
+  <data name="Diag_Msg_TH0040" xml:space="preserve"><value>Unknown unit quantity '{0}'.</value></data>
+  <data name="Diag_Msg_TH0040__name" xml:space="preserve"><value>'units' requires a unit name (e.g. metres, degrees).</value></data>
+  <data name="Diag_Msg_TH0041" xml:space="preserve"><value>'calibrate' requires a zero-error value.</value></data>
+  <data name="Diag_Msg_TH0042" xml:space="preserve"><value>'declination' requires a numeric value (or a dated list, or '-' to disable).</value></data>
+  <data name="Diag_Msg_TH0042__units" xml:space="preserve"><value>A numeric declination requires angular units (e.g. 'declination 2.5 degrees').</value></data>
+  <data name="Diag_Msg_TH0043" xml:space="preserve"><value>Unknown coordinate system '{0}'.</value></data>
+  <data name="Diag_Hint_TH0043" xml:space="preserve"><value>Use UTM&lt;zone&gt;, EPSG:&lt;n&gt;, lat-long, S-MERC, …</value></data>
+  <data name="Diag_Msg_TH0056" xml:space="preserve"><value>'infer' expects '&lt;plumbs|equates&gt; &lt;on|off&gt;'.</value></data>
+  <data name="Diag_Msg_TH0050" xml:space="preserve"><value>Survey id '{0}' contains an illegal character '{1}'.</value></data>
+  <data name="Diag_Msg_TH0050__scrap" xml:space="preserve"><value>Scrap id '{0}' contains an illegal character '{1}'.</value></data>
+  <data name="Diag_Msg_TH0050__map" xml:space="preserve"><value>Map id '{0}' contains an illegal character '{1}'.</value></data>
+  <data name="Diag_Msg_TH0050__identifier" xml:space="preserve"><value>Identifier '{0}' contains an illegal character '{1}'.</value></data>
+  <data name="Diag_Msg_TH0051" xml:space="preserve"><value>'{0} {1}' does not match '{2} {3}'.</value></data>
+  <data name="Diag_Msg_TH0052" xml:space="preserve"><value>Unknown shot flag '{0}'.</value></data>
+  <data name="Diag_Hint_TH0052" xml:space="preserve"><value>Expected surface, duplicate, splay or approximate (optionally prefixed with 'not').</value></data>
+  <data name="Diag_Msg_TH0053" xml:space="preserve"><value>Unknown mark type '{0}'.</value></data>
+  <data name="Diag_Hint_TH0053" xml:space="preserve"><value>Expected: fixed, painted or temporary.</value></data>
+  <data name="Diag_Msg_TH0054" xml:space="preserve"><value>Unknown extend spec '{0}'.</value></data>
+  <data name="Diag_Hint_TH0054" xml:space="preserve"><value>Expected normal/reverse/left/right/vertical/start/ignore/hide or a 0–200 %.</value></data>
+  <data name="Diag_Msg_TH0055" xml:space="preserve"><value>Unknown station flag '{0}'.</value></data>
+  <data name="Diag_Msg_TH0055__fixed" xml:space="preserve"><value>The 'fixed' station flag cannot be set directly — use the 'fix' command ('not fixed' is allowed).</value></data>
+  <data name="Diag_Msg_TH0055__explored" xml:space="preserve"><value>'explored' requires the 'continuation' flag to be set first.</value></data>
+  <data name="Diag_Hint_TH0055" xml:space="preserve"><value>Expected entrance/continuation/air-draught/sink/spring/doline/dig/arch/overhang.</value></data>
+  <data name="Diag_Msg_TH0060" xml:space="preserve"><value>Unknown export type '{0}'.</value></data>
+  <data name="Diag_Hint_TH0060" xml:space="preserve"><value>Expected: {0}</value></data>
+  <data name="Diag_Msg_TH0061" xml:space="preserve"><value>'{0}' is not a valid format for 'export {1}'.</value></data>
+  <data name="Diag_Msg_TH0062" xml:space="preserve"><value>Unknown layout option '{0}'.</value></data>
+  <data name="Diag_Msg_TH0063" xml:space="preserve"><value>'{0}' expects at least {1} argument(s), found {2}.</value></data>
+  <data name="Diag_Msg_TH0063__join" xml:space="preserve"><value>'join' needs at least two objects to connect.</value></data>
+  <data name="Diag_Msg_TH0064" xml:space="preserve"><value>'{0}' expects at most {1} argument(s), found {2}.</value></data>
+  <data name="Diag_Msg_TH0064__extend" xml:space="preserve"><value>'extend' takes at most 3 station arguments, found {0}.</value></data>
+  <data name="Diag_Msg_TH0064__fix" xml:space="preserve"><value>'fix' takes at most 7 arguments (station, x, y, z, up to 3 std deviations); found {0}.</value></data>
+  <data name="Diag_Msg_TH0064__readings" xml:space="preserve"><value>Too many readings ({0}); Therion allows at most {1}.</value></data>
+  <data name="Diag_Msg_TH0065" xml:space="preserve"><value>'{0}' is not a valid numeric value for &lt;{1}&gt;.</value></data>
+  <data name="Diag_Msg_TH0065__value" xml:space="preserve"><value>'{0}' is not a valid value for &lt;{1}&gt;.</value></data>
+  <data name="Diag_Msg_TH0065__layout" xml:space="preserve"><value>'{0}' is not a valid value for layout '{1}' (allowed: {2}).</value></data>
+  <data name="Diag_Msg_TH0065__position" xml:space="preserve"><value>'{0}' is not a valid map-header position (n/s/e/w/ne/nw/se/sw/center/off).</value></data>
+  <data name="Diag_Msg_TH0065__projection" xml:space="preserve"><value>'{0}' is not a valid projection (plan, elevation, extended, none).</value></data>
+  <data name="Diag_Msg_TH0065__sd" xml:space="preserve"><value>'fix' standard deviation '{0}' is not a number.</value></data>
+  <data name="Diag_Msg_TH0065__person" xml:space="preserve"><value>'{0}' needs a person's name; Therion rejects an empty one.</value></data>
+  <data name="Diag_Msg_TH0065__role" xml:space="preserve"><value>Unknown team role '{0}'.</value></data>
+  <data name="Diag_Hint_TH0065__role" xml:space="preserve"><value>The thbook documents 'explorer', but the Therion compiler rejects it.</value></data>
+  <data name="Diag_Msg_TH0065__instrument" xml:space="preserve"><value>Invalid instrument quantity '{0}'.</value></data>
+  <data name="Diag_Msg_TH0065__lineopt" xml:space="preserve"><value>'{0}' is not a valid -{1} value (allowed: {2}).</value></data>
+  <data name="Diag_Msg_TH0065__classes" xml:space="preserve"><value>Incompatible quantity '{0}' in '{1}': length-class and angle-class quantities cannot be mixed.</value></data>
+  <data name="Diag_Msg_TH0065__date_empty" xml:space="preserve"><value>Invalid '{0}' value: empty date in interval (expected YYYY[.MM[.DD[@HH[:MM[:SS]]]]] or an interval).</value></data>
+  <data name="Diag_Msg_TH0065__date_parts" xml:space="preserve"><value>Invalid '{0}' value: too many date components in '{1}' (expected YYYY[.MM[.DD[@HH[:MM[:SS]]]]] or an interval).</value></data>
+  <data name="Diag_Msg_TH0065__date_year" xml:space="preserve"><value>Invalid '{0}' value: invalid year '{1}' (expected YYYY[.MM[.DD[@HH[:MM[:SS]]]]] or an interval).</value></data>
+  <data name="Diag_Msg_TH0065__date_month" xml:space="preserve"><value>Invalid '{0}' value: invalid month '{1}' (expected YYYY[.MM[.DD[@HH[:MM[:SS]]]]] or an interval).</value></data>
+  <data name="Diag_Msg_TH0065__date_day" xml:space="preserve"><value>Invalid '{0}' value: invalid day '{1}' (expected YYYY[.MM[.DD[@HH[:MM[:SS]]]]] or an interval).</value></data>
+  <data name="Diag_Msg_TH0065__date_time" xml:space="preserve"><value>Invalid '{0}' value: a time requires a full year.month.day date (expected YYYY[.MM[.DD[@HH[:MM[:SS]]]]] or an interval).</value></data>
+  <data name="Diag_Msg_TH0065__date_tparts" xml:space="preserve"><value>Invalid '{0}' value: too many time components in '{1}' (expected YYYY[.MM[.DD[@HH[:MM[:SS]]]]] or an interval).</value></data>
+  <data name="Diag_Msg_TH0065__date_hour" xml:space="preserve"><value>Invalid '{0}' value: invalid hour '{1}' (expected YYYY[.MM[.DD[@HH[:MM[:SS]]]]] or an interval).</value></data>
+  <data name="Diag_Msg_TH0065__date_minute" xml:space="preserve"><value>Invalid '{0}' value: invalid minute '{1}' (expected YYYY[.MM[.DD[@HH[:MM[:SS]]]]] or an interval).</value></data>
+  <data name="Diag_Msg_TH0065__date_second" xml:space="preserve"><value>Invalid '{0}' value: invalid second '{1}' (expected YYYY[.MM[.DD[@HH[:MM[:SS]]]]] or an interval).</value></data>
+  <data name="Diag_Msg_TH0066" xml:space="preserve"><value>Unknown option '-{0}' for '{1}'.</value></data>
+  <data name="Diag_Msg_TH0066__layoutkey" xml:space="preserve"><value>'-layout-{0}': '{1}' is not a known layout option.</value></data>
+  <data name="Diag_Msg_TH0066__onlyon" xml:space="preserve"><value>-{0} is only valid on {1} lines, not '{2}'.</value></data>
+  <data name="Diag_Msg_TH0066__height" xml:space="preserve"><value>-height is only valid on pit lines (or wall:pit), not '{0}'.</value></data>
+  <data name="Diag_Msg_TH0066__rsize" xml:space="preserve"><value>-r-size is not valid on lines (rejected unconditionally by Therion 6.4).</value></data>
+  <data name="Diag_Msg_TH0066__scale" xml:space="preserve"><value>-scale is not allowed on area objects.</value></data>
+  <data name="Diag_Msg_TH0066__station" xml:space="preserve"><value>-{0} is not valid with type station.</value></data>
+  <data name="Diag_Msg_TH0066__dead" xml:space="preserve"><value>-{0} is not valid on points (rejected unconditionally by Therion 6.4).</value></data>
+  <data name="Diag_Msg_TH0066__stationref" xml:space="preserve"><value>a station reference (-{0}) is only valid on station/continuation points, not '{1}'.</value></data>
+  <data name="Diag_Msg_TH0066__pointonly" xml:space="preserve"><value>-{0} is only valid on {1} points, not '{2}'.</value></data>
+  <data name="Diag_Msg_TH0066__clip" xml:space="preserve"><value>-clip is not valid with type '{0}'.</value></data>
+  <data name="Diag_Msg_TH0067" xml:space="preserve"><value>'{0}' should be spelled '{1}' (Therion keywords are case-sensitive).</value></data>
+  <data name="Diag_Msg_TH0068" xml:space="preserve"><value>'{0}' is neither a number nor a Therion special value (- . NaN Inf up down).</value></data>
+  <data name="Diag_Msg_TH0069" xml:space="preserve"><value>&lt;{0}&gt; value {1} is outside {2}.</value></data>
+  <data name="Diag_Msg_TH0069__percent" xml:space="preserve"><value>'{0}' {1} is outside the 0–100 range.</value></data>
+  <data name="Diag_Msg_TH0069__orientation" xml:space="preserve"><value>-orientation {0} is out of range (0 ≤ value &lt; 360).</value></data>
+  <data name="Diag_Msg_TH0069__vthreshold" xml:space="preserve"><value>vthreshold {0} is outside the 0–90° range.</value></data>
+  <data name="Diag_Msg_TH0069__sd" xml:space="preserve"><value>'fix' standard deviation must be positive, found {0}.</value></data>
+  <data name="Diag_Msg_TH0070" xml:space="preserve"><value>Reading '{0}' is not valid for the '{1}' style.</value></data>
+  <data name="Diag_Msg_TH0071" xml:space="preserve"><value>Reading '{0}' is listed twice.</value></data>
+  <data name="Diag_Msg_TH0071__combined" xml:space="preserve"><value>Reading '{0}' cannot be combined with the other length/count or depth readings in this order.</value></data>
+  <data name="Diag_Msg_TH0072" xml:space="preserve"><value>Not all data for the '{0}' style: missing length/count, bearing and gradient readings.</value></data>
+  <data name="Diag_Msg_TH0072__depth" xml:space="preserve"><value>Not all data for the '{0}' style: missing length/count, bearing and depth readings.</value></data>
+  <data name="Diag_Msg_TH0072__cartesian" xml:space="preserve"><value>Not all data for the '{0}' style: missing an easting/northing/altitude reading.</value></data>
+  <data name="Diag_Msg_TH0072__dimensions" xml:space="preserve"><value>Not all data for the '{0}' style: missing an up/down/left/right reading.</value></data>
+  <data name="Diag_Msg_TH0073" xml:space="preserve"><value>'newline' cannot be the first or last reading.</value></data>
+  <data name="Diag_Msg_TH0074" xml:space="preserve"><value>'station' (interleaved) cannot be mixed with 'from'/'to'.</value></data>
+  <data name="Diag_Msg_TH0074__after" xml:space="preserve"><value>Interleaved reading '{0}' cannot appear after 'newline'.</value></data>
+  <data name="Diag_Msg_TH0074__before" xml:space="preserve"><value>Non-interleaved reading '{0}' cannot appear before 'newline' in interleaved data.</value></data>
+  <data name="Diag_Msg_TH_XVI_001" xml:space="preserve"><value>Unknown XVI variable '{0}'.</value></data>
+  <data name="Diag_Hint_TH_XVI_001" xml:space="preserve"><value>Expected XVIgrids, XVIstations, XVIshots, XVIsketchlines, XVIimages or XVIgrid.</value></data>
+  <data name="Diag_Msg_TH_XVI_002" xml:space="preserve"><value>Unexpected statement '{0}' (expected a 'set XVI…' command).</value></data>
+  <data name="Diag_Msg_TH_XVI_003" xml:space="preserve"><value>'set {0}' value is missing its closing '}}'.</value></data>
+  <data name="Diag_Msg_TH_XVI_004" xml:space="preserve"><value>'XVIgrid' expects 8 numeric values (x0 y0 xax yax xay yay nx ny).</value></data>
+  <data name="Diag_Msg_TH_XVI_050" xml:space="preserve"><value>Referenced .xvi file '{0}' not found.</value></data>
+  <data name="Diag_Msg_THIDE_DIR_001" xml:space="preserve"><value>'#@region' is missing its '#@endregion'.</value></data>
+  <data name="Diag_Msg_THIDE_DIR_001__titled" xml:space="preserve"><value>'#@region' "{0}" is missing its '#@endregion'.</value></data>
+  <data name="Diag_Msg_THIDE_DIR_002" xml:space="preserve"><value>'#@endregion' has no matching '#@region'.</value></data>
+  <data name="Diag_Msg_TH2_001" xml:space="preserve"><value>'point' requires x, y, and type.</value></data>
+  <data name="Diag_Msg_TH2_001__coord" xml:space="preserve"><value>'point' {0} coordinate '{1}' is not a number.</value></data>
+  <data name="Diag_Msg_TH2_002" xml:space="preserve"><value>'line' block is missing 'endline'.</value></data>
+  <data name="Diag_Msg_TH2_003" xml:space="preserve"><value>'area' block is missing 'endarea'.</value></data>
+  <data name="Diag_Msg_TH2_004" xml:space="preserve"><value>Unknown point type '{0}'.</value></data>
+  <data name="Diag_Msg_TH2_005" xml:space="preserve"><value>Unknown line type '{0}'.</value></data>
+  <data name="Diag_Msg_TH2_006" xml:space="preserve"><value>Unknown area type '{0}'.</value></data>
+  <data name="Diag_Msg_TH2_008" xml:space="preserve"><value>Point type '{0}' takes no subtype (only station, air-draught, water-flow and u: do).</value></data>
+  <data name="Diag_Msg_TH2_008__point" xml:space="preserve"><value>Invalid subtype '{0}' for point type '{1}' (allowed: {2}).</value></data>
+  <data name="Diag_Msg_TH2_008__line" xml:space="preserve"><value>Line type '{0}' takes no subtype (only wall, border, survey, water-flow and u: do).</value></data>
+  <data name="Diag_Msg_TH2_008__linesub" xml:space="preserve"><value>Invalid subtype '{0}' for line type '{1}' (allowed: {2}).</value></data>
+  <data name="Diag_Msg_TH2_009" xml:space="preserve"><value>Unknown option '-{0}'.</value></data>
+  <data name="Diag_Msg_TH2_010" xml:space="preserve"><value>Block '{0}' missing '{1}'.</value></data>
+  <data name="Diag_Msg_TH_SEM_001" xml:space="preserve"><value>Unresolved station reference '{0}'.</value></data>
+  <data name="Diag_Hint_TH_SEM_001" xml:space="preserve"><value>did you mean '{0}'?</value></data>
+  <data name="Diag_Msg_TH_SEM_002" xml:space="preserve"><value>Station '{0}' is fixed more than once.</value></data>
+  <data name="Diag_Msg_TH_SEM_004" xml:space="preserve"><value>Fixed station '{0}' is never referenced by a shot or equate.</value></data>
+  <data name="Diag_Msg_TH_SEM_005" xml:space="preserve"><value>Data row has {0} value(s) but the '{1}' reading order expects {2}.</value></data>
+  <data name="Diag_Msg_TH_SEM_006" xml:space="preserve"><value>'{0}' value '{1}' is not a valid number.</value></data>
+  <data name="Diag_Msg_TH_SEM_007" xml:space="preserve"><value>'{0}' value '{1}' should not be negative.</value></data>
+  <data name="Diag_Msg_TH_SEM_007__range" xml:space="preserve"><value>'{0}' value '{1}' is outside the expected {2} range.</value></data>
+  <data name="Diag_Msg_TH_SEM_NAMING" xml:space="preserve"><value>Station name '{0}' matches the forbidden pattern '{1}'.</value></data>
+  <data name="Diag_Msg_TH_SEM_NAMING__station_req" xml:space="preserve"><value>Station name '{0}' does not match the required pattern '{1}'.</value></data>
+  <data name="Diag_Msg_TH_SEM_NAMING__survey" xml:space="preserve"><value>Survey name '{0}' matches the forbidden pattern '{1}'.</value></data>
+  <data name="Diag_Msg_TH_SEM_NAMING__survey_req" xml:space="preserve"><value>Survey name '{0}' does not match the required pattern '{1}'.</value></data>
+  <data name="Diag_Msg_TH_SEM_NAMING__scrap" xml:space="preserve"><value>Scrap name '{0}' matches the forbidden pattern '{1}'.</value></data>
+  <data name="Diag_Msg_TH_SEM_NAMING__scrap_req" xml:space="preserve"><value>Scrap name '{0}' does not match the required pattern '{1}'.</value></data>
+  <data name="Diag_Msg_TH_SEM_NAMING__map" xml:space="preserve"><value>Map name '{0}' matches the forbidden pattern '{1}'.</value></data>
+  <data name="Diag_Msg_TH_SEM_NAMING__map_req" xml:space="preserve"><value>Map name '{0}' does not match the required pattern '{1}'.</value></data>
+  <data name="Diag_Msg_TH_SEM_010" xml:space="preserve"><value>Naming collision: survey '{0}' is declared in {1} files; survey names should be unique across the project.</value></data>
+  <data name="Diag_Msg_TH_SEM_010__map" xml:space="preserve"><value>Naming collision: map '{0}' is declared in {1} files; map names should be unique across the project.</value></data>
+  <data name="Diag_Msg_TH_SEM_011" xml:space="preserve"><value>Loop misclosure {0} m over a {1} m loop ({2}% error) — check this loop for a blunder.</value></data>
+  <data name="Diag_Msg_TH_SEM_012" xml:space="preserve"><value>Shot's from and to are the same station '{0}'.</value></data>
+  <data name="Diag_Msg_TH_SEM_012__zero" xml:space="preserve"><value>Zero-length leg between distinct stations {0} → {1}.</value></data>
+  <data name="Diag_Msg_TH_SEM_012__long" xml:space="preserve"><value>Unusually long leg ({0} m) {1} → {2}; check for a transcription error.</value></data>
+  <data name="Diag_Msg_TH_SEM_013" xml:space="preserve"><value>Foresight/backsight compass disagree by {0}° (fore {1}, back {2}, expected ~{3}).</value></data>
+  <data name="Diag_Msg_TH_SEM_013__clino" xml:space="preserve"><value>Foresight/backsight clino disagree by {0}° (fore {1}, back {2}, expected ~{3}).</value></data>
+  <data name="Diag_Msg_TH_SEM_014" xml:space="preserve"><value>File not found: '{0}', referenced by {1}.</value></data>
+  <data name="Diag_Msg_TH_SEM_015" xml:space="preserve"><value>Disconnected survey: this piece ({0} stations, {1} legs; {2}) is not connected to the rest of the survey and is not georeferenced by a fix. It runs from station '{3}' to '{4}'. Join it with an 'equate' to an adjacent station, or anchor it with a 'fix' under a 'cs'.</value></data>
+  <data name="Diag_Msg_TH_SEM_015__oneleg" xml:space="preserve"><value>Disconnected survey: this piece ({0} stations, {1} leg; {2}) is not connected to the rest of the survey and is not georeferenced by a fix. It runs from station '{3}' to '{4}'. Join it with an 'equate' to an adjacent station, or anchor it with a 'fix' under a 'cs'.</value></data>
+  <data name="Diag_Msg_TH_SEM_016" xml:space="preserve"><value>File not found: '{0}' — '\' is not a path separator on this system. '{1}' exists.</value></data>
+  <data name="Diag_Hint_TH_SEM_016" xml:space="preserve"><value>Write the path with '/', which Therion reads on every platform: '{0}'.</value></data>
+  <data name="Diag_Msg_TH_SEM_RULE" xml:space="preserve"><value>Semantic rule '{0}' threw: {1}</value></data>
+  <data name="Diag_Msg_TH_EDIT_001" xml:space="preserve"><value>Cannot replace node of type {0} with {1}.</value></data>
+  <data name="Diag_Msg_TH_EDIT_002" xml:space="preserve"><value>Target node not found in the file.</value></data>
+  <data name="Diag_Msg_TH_BUILD_001" xml:space="preserve"><value>Therion executable not found. Configure ExternalTools.TherionPath or install Therion.</value></data>
+  <data name="Diag_Msg_TH_BUILD_002" xml:space="preserve"><value>Failed to start Therion process.</value></data>
+  <data name="Diag_Msg_TH_BUILD_003" xml:space="preserve"><value>Therion compile failed: {0}</value></data>
+  <data name="Diag_Msg_TH_WS_001" xml:space="preserve"><value>Path not found: {0}</value></data>
+  <data name="Diag_Msg_TH_WS_002" xml:space="preserve"><value>No Therion configuration file found in '{0}'.</value></data>
+  <data name="Diag_Msg_TH_LINK_404" xml:space="preserve"><value>Referenced file not found: '{0}'.</value></data>
+  <data name="Diag_Hint_TH_LINK_404" xml:space="preserve"><value>'{0}' expects an existing file.</value></data>
+  <data name="Diag_Hint_TH_LINK_404__separator" xml:space="preserve"><value>'{0}' expects an existing file. '\' is not a path separator on this system; '{1}' exists.</value></data>
+  <data name="Diag_Msg_THP-LARGE-FILE" xml:space="preserve"><value>'{0}' was not parsed: {1} lines exceeds the {2}-line parse limit. Its identifiers are not in the object graph.</value></data>
+  <data name="Diag_Msg_THP-LARGE-FILE__kb" xml:space="preserve"><value>'{0}' was not parsed: {1} KB exceeds the {2} KB parse limit. Its identifiers are not in the object graph.</value></data>
+  <data name="Dlg_CopyDetails" xml:space="preserve"><value>Copy details</value></data>
+  <data name="Rename_FailedTitle" xml:space="preserve"><value>Rename Symbol failed</value></data>
+  <data name="Rename_Failed" xml:space="preserve"><value>The rename could not be completed: {0}</value></data>
+  <data name="Notif_GoToLineOutOfRange" xml:space="preserve"><value>Line {0} is outside this file. Enter a number from 1 to {1}.</value></data>
+  <data name="Notif_GoToLineNotNumber" xml:space="preserve"><value>'{0}' is not a line number. Enter a number from 1 to {1}.</value></data>
+  <data name="Notif_NewFileFailed" xml:space="preserve"><value>Could not create the file</value></data>
+  <data name="Notif_NewFolderFailed" xml:space="preserve"><value>Could not create the folder</value></data>
+  <data name="Notif_CreateFailedMsg" xml:space="preserve"><value>Could not create '{0}': {1}</value></data>
+  <data name="Struct_WmmNoModel" xml:space="preserve"><value>WMM: no WMM.COF model (add one in {0})</value></data>
+  <data name="Assistant_NoModel" xml:space="preserve"><value>No model answers at {0} — start LM Studio or Ollama, or change the endpoint in Settings ▸ Extensions.</value></data>
+  <data name="Blender_Fail_StartFailed" xml:space="preserve"><value>Blender could not be started from '{0}'. Set the path to a working Blender in Settings ▸ External Tools.</value></data>
+  <data name="Blender_Fail_StoreHint" xml:space="preserve"><value>A Microsoft Store install can't be used headlessly — use the standard Blender from blender.org.</value></data>
+  <data name="Tools_OverrideNotFound" xml:space="preserve"><value>Override path not found: {0}</value></data>
+  <data name="Kb_Cmd_Build" xml:space="preserve"><value>Compile</value></data>
+  <data name="Kb_Cmd_Rebuild" xml:space="preserve"><value>Recompile</value></data>
+  <data name="Kb_Cmd_CancelBuild" xml:space="preserve"><value>Stop compiling</value></data>
+  <data name="Kb_Cmd_OpenInLoch" xml:space="preserve"><value>Open in Loch</value></data>
+  <data name="Kb_Cmd_OpenInAven" xml:space="preserve"><value>Open in Aven</value></data>
+  <data name="Kb_Cmd_ToggleWorkspaceExplorer" xml:space="preserve"><value>Toggle Workspace</value></data>
+  <data name="Kb_Cmd_ToggleDiagnostics" xml:space="preserve"><value>Toggle Diagnostics</value></data>
+  <data name="Kb_Cmd_Save" xml:space="preserve"><value>Save</value></data>
+  <data name="Kb_Cmd_GoBack" xml:space="preserve"><value>Go Back</value></data>
+  <data name="Kb_Cmd_GoForward" xml:space="preserve"><value>Go Forward</value></data>
+  <data name="Kb_Cmd_FindInFiles" xml:space="preserve"><value>Find in Files</value></data>
+  <data name="Kb_Cmd_ReplaceInFiles" xml:space="preserve"><value>Replace in Files</value></data>
+  <data name="Kb_Cmd_QuickOpen" xml:space="preserve"><value>Go to File</value></data>
+  <data name="Kb_Cmd_CommandPalette" xml:space="preserve"><value>Command Palette</value></data>
+  <data name="Kb_Cmd_ReopenClosedTab" xml:space="preserve"><value>Reopen Closed Tab</value></data>
+  <data name="Kb_Cmd_ToggleFullScreen" xml:space="preserve"><value>Toggle Full Screen</value></data>
+  <data name="Kb_Cmd_NextProblem" xml:space="preserve"><value>Next Problem</value></data>
+  <data name="Kb_Cmd_PreviousProblem" xml:space="preserve"><value>Previous Problem</value></data>
+  <data name="Kb_Cmd_NewFile" xml:space="preserve"><value>New File</value></data>
+  <data name="Kb_Cmd_OpenFile" xml:space="preserve"><value>Open File</value></data>
+  <data name="Kb_Cmd_OpenFolder" xml:space="preserve"><value>Open Folder</value></data>
+  <data name="Kb_Cmd_OpenThconfig" xml:space="preserve"><value>Open thconfig</value></data>
+  <data name="Kb_Cmd_ToggleObjectBrowser" xml:space="preserve"><value>Toggle Object Browser</value></data>
+  <data name="Kb_Cmd_ToggleOutline" xml:space="preserve"><value>Toggle Outline</value></data>
+  <data name="Kb_Cmd_ToggleProject" xml:space="preserve"><value>Toggle Overview</value></data>
+  <data name="Kb_Cmd_ToggleLog" xml:space="preserve"><value>Toggle Log</value></data>
+  <data name="Kb_Cmd_ToggleLivePreview" xml:space="preserve"><value>Toggle Mainline Preview</value></data>
+  <data name="Kb_Cmd_ToggleMapViewer" xml:space="preserve"><value>Toggle Map Viewer</value></data>
+  <data name="Kb_Cmd_ToggleModel3DViewer" xml:space="preserve"><value>Toggle 3D Viewer</value></data>
+  <data name="Kb_Cmd_ToggleStructuralGeology" xml:space="preserve"><value>Toggle Structural Geology</value></data>
+  <data name="Kb_Cmd_ToggleBlenderAnimation" xml:space="preserve"><value>Blender Animation</value></data>
+  <data name="Kb_Cmd_SplitEditor" xml:space="preserve"><value>Split Editor</value></data>
+  <data name="Kb_Cmd_ResetLayout" xml:space="preserve"><value>Reset Layout</value></data>
+  <data name="Kb_Cmd_FloatActiveDocument" xml:space="preserve"><value>Float Active Document</value></data>
+  <data name="Kb_Cmd_QuickExport" xml:space="preserve"><value>Quick Export</value></data>
+  <data name="Kb_Cmd_OpenOutputFolder" xml:space="preserve"><value>Open Last Output Folder</value></data>
+  <data name="Kb_Cmd_ToggleWordWrap" xml:space="preserve"><value>Toggle Word Wrap</value></data>
+  <data name="Kb_Cmd_NewScrapScaffold" xml:space="preserve"><value>New Scrap (.th2)</value></data>
+  <data name="Kb_Cmd_GenerateReport" xml:space="preserve"><value>Generate Survey Report</value></data>
+  <data name="Kb_Cmd_GoToDefinition" xml:space="preserve"><value>Go to Definition</value></data>
+  <data name="Kb_Cmd_FindReferences" xml:space="preserve"><value>Find References</value></data>
+  <data name="Kb_Cmd_RenameSymbol" xml:space="preserve"><value>Rename Symbol</value></data>
+  <data name="Kb_Cmd_PeekDefinition" xml:space="preserve"><value>Peek Definition</value></data>
+  <data name="Kb_Cmd_GoToMatchingBlock" xml:space="preserve"><value>Go to Matching Block</value></data>
+  <data name="Kb_Cmd_StepIntoInclude" xml:space="preserve"><value>Step Into Included File</value></data>
+  <data name="Kb_Cmd_StepOutInclude" xml:space="preserve"><value>Step Out to Including File</value></data>
+  <data name="Kb_Cmd_TriggerCompletion" xml:space="preserve"><value>Show Completions</value></data>
+  <data name="Kb_Cmd_GoToLine" xml:space="preserve"><value>Go to Line</value></data>
+  <data name="Kb_Cmd_ToggleComment" xml:space="preserve"><value>Toggle Comment</value></data>
+  <data name="Kb_Cmd_FormatDocument" xml:space="preserve"><value>Format Document</value></data>
+  <data name="Kb_Cmd_EncloseInRegion" xml:space="preserve"><value>Enclose in Region</value></data>
+  <data name="Kb_Cmd_QuickFixes" xml:space="preserve"><value>Quick Fix</value></data>
+  <data name="Kb_Cmd_DuplicateLines" xml:space="preserve"><value>Duplicate Lines</value></data>
+  <data name="Kb_Cmd_MoveLinesUp" xml:space="preserve"><value>Move Lines Up</value></data>
+  <data name="Kb_Cmd_MoveLinesDown" xml:space="preserve"><value>Move Lines Down</value></data>
+  <data name="Kb_Cmd_SortLines" xml:space="preserve"><value>Sort Lines</value></data>
+  <data name="Kb_Cmd_NextOccurrenceInFile" xml:space="preserve"><value>Next Occurrence in This File</value></data>
+  <data name="Kb_ConflictFmt" xml:space="preserve"><value>Already used by {0} — replace?</value></data>
+  <data name="Kb_ConflictReplace" xml:space="preserve"><value>Replace</value></data>
+  <data name="Kb_ConflictKeep" xml:space="preserve"><value>Keep the old one</value></data>
+  <data name="Rename_Occurrences_One" xml:space="preserve"><value>{0} occurrence</value></data>
+  <data name="Rename_Occurrences_Few" xml:space="preserve"><value>{0} occurrences</value></data>
+  <data name="Rename_Occurrences_Many" xml:space="preserve"><value>{0} occurrences</value></data>
+  <data name="Rename_Files_One" xml:space="preserve"><value>{0} file</value></data>
+  <data name="Rename_Files_Few" xml:space="preserve"><value>{0} files</value></data>
+  <data name="Rename_Files_Many" xml:space="preserve"><value>{0} files</value></data>
+  <data name="Rename_FileChanges_One" xml:space="preserve"><value>{0} change</value></data>
+  <data name="Rename_FileChanges_Few" xml:space="preserve"><value>{0} changes</value></data>
+  <data name="Rename_FileChanges_Many" xml:space="preserve"><value>{0} changes</value></data>
+  <data name="FormatAll_Lines_One" xml:space="preserve"><value>{0} line</value></data>
+  <data name="FormatAll_Lines_Few" xml:space="preserve"><value>{0} lines</value></data>
+  <data name="FormatAll_Lines_Many" xml:space="preserve"><value>{0} lines</value></data>
+  <data name="FormatAll_KindTrailing" xml:space="preserve"><value>trailing spaces removed</value></data>
+  <data name="FormatAll_KindIndent" xml:space="preserve"><value>indentation changed</value></data>
+  <data name="FormatAll_KindEndings" xml:space="preserve"><value>line endings changed</value></data>
+  <data name="FormatAll_KindEncoding" xml:space="preserve"><value>encoding line changed</value></data>
+  <data name="FormatAll_KindReordered" xml:space="preserve"><value>lines reordered</value></data>
+  <data name="FormatAll_KindOther" xml:space="preserve"><value>lines rewritten</value></data>
+  <data name="FormatAll_Nothing_One" xml:space="preserve"><value>Nothing to change in {0} file.</value></data>
+  <data name="FormatAll_Nothing_Few" xml:space="preserve"><value>Nothing to change in {0} files.</value></data>
+  <data name="FormatAll_Nothing_Many" xml:space="preserve"><value>Nothing to change in {0} files.</value></data>
+  <data name="FormatAll_NothingSkipped" xml:space="preserve"><value>{0} more are left alone because they do not parse cleanly (fix those first).</value></data>
 </root>

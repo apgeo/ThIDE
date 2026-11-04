@@ -278,4 +278,29 @@ public class ReplaceInFilesViewModelTests
         for (int i = 0; i < 100 && vm.Results.Count < 2; i++) await Task.Delay(20);
         Assert.Equal(2, vm.Results.Count);
     }
+
+    [Fact]
+    public async Task ReplaceAll_tells_the_file_watcher_about_each_file_it_writes()
+    {
+        using var dir = new TempDir();
+        var a = dir.Write("a.th", "station A1\n");
+        var b = dir.Write("b.th", "equate A1 x\n");
+        var docs = WorkspaceEditServiceTests.Stub<IDocumentService>.Create(
+            m => m.Name == "get_Documents" ? new ObservableCollection<FileDocumentViewModel>() : null);
+        var suppressed = new List<string>();
+        var session = WorkspaceEditServiceTests.Stub<IWorkspaceSession>.Create(
+            _ => null, (m, args) => { if (m.Name == nameof(IWorkspaceSession.SuppressSelfWrite)) suppressed.Add((string)args[0]!); });
+        var vm = new ReplaceInFilesViewModel(docs, null, session)
+        {
+            Scope = ReplaceInFilesViewModel.ScopeDirectory, Directory = dir.Path, FileMask = "*.th",
+            Confirm = _ => Task.FromResult(true),
+        };
+        vm.Query = "A1";
+        vm.Replacement = "B1";
+
+        await vm.ReplaceAllCommand.ExecuteAsync(null);
+
+        Assert.Equal("station B1\n", File.ReadAllText(a));
+        Assert.Equal(new[] { a, b }.OrderBy(x => x), suppressed.OrderBy(x => x));
+    }
 }

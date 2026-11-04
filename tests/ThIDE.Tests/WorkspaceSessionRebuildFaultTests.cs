@@ -32,12 +32,14 @@ public class WorkspaceSessionRebuildFaultTests
             if (Interlocked.Exchange(ref thrown, 1) == 0) throw new InvalidOperationException("subscriber fault");
         };
 
+        // Wait for the throwing subscriber, not the counting one: the counter runs first, so seeing it
+        // alone can race ahead of the throw. The bound is generous for a loaded machine; a pass is quick.
         File.WriteAllText(source, Survey(2));
-        await WaitUntil(() => Volatile.Read(ref changed) >= 1, TimeSpan.FromSeconds(5));
+        await WaitUntil(() => Volatile.Read(ref thrown) == 1, TimeSpan.FromSeconds(30));
         Assert.Equal(1, Volatile.Read(ref thrown));
 
         File.WriteAllText(source, Survey(3));
-        await WaitUntil(() => Volatile.Read(ref changed) >= 2, TimeSpan.FromSeconds(5));
+        await WaitUntil(() => Volatile.Read(ref changed) >= 2, TimeSpan.FromSeconds(30));
 
         Assert.True(Volatile.Read(ref changed) >= 2,
             "after one subscriber threw, a later external change no longer rebuilt the graph (Changed was not raised again)");

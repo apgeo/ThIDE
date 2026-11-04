@@ -1,6 +1,8 @@
 # Diagnostic catalog
 
-> Localized messages live in `Therion.Core.Resources` (`Strings.resx` / `Strings.ro.resx`).
+> The libraries emit English messages and hints. ThIDE shows them in the UI language through the
+> `Diag_Msg_<code>` / `Diag_Hint_<code>` templates in `ThIDE/Resources/Strings.resx` / `Strings.ro.resx`,
+> and falls back to the English text when no template reproduces it.
 > Severities below are the lenient-mode defaults; in `ParserMode.Strict` the "lenient" rows
 > are promoted to Error.
 

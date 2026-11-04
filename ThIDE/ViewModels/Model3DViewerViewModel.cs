@@ -122,6 +122,11 @@ public sealed partial class Model3DViewerViewModel : ObservableObject
 
     partial void OnCurrentModelPathChanged(string? value) => OnPropertyChanged(nameof(HasModel));
 
+    /// <summary>Title of the full-screen window: the panel's name and the model's file name.</summary>
+    public string WindowTitle => HasModel
+        ? Tr.Get("Tool_Model3D") + " — " + Path.GetFileName(CurrentModelPath)
+        : Tr.Get("Tool_Model3D");
+
     /// <summary>
     /// Called by the View when it creates the web control: starts the loopback asset host
     /// (idempotent) and returns the URL the View should navigate to, or null if unavailable.
@@ -341,6 +346,19 @@ public sealed partial class Model3DViewerViewModel : ObservableObject
                     break;
                 case "error":
                     _log?.Warning("3D viewer: " + (root.TryGetProperty("message", out var m) ? m.GetString() : "error"));
+                    break;
+                case "alert":
+                    // CaveView reports a model it could not read or build with alert(), and then never
+                    // sends 'loaded': end the load here, or the status says "Loading…" for good.
+                    var alert = Str(root, "message") ?? string.Empty;
+                    _log?.Warning("3D viewer: " + alert);
+                    if (_modelLoading)
+                    {
+                        _modelLoading = false;
+                        _pendingSelect = null;
+                        Status = string.Format(CultureInfo.CurrentCulture, Tr.Get("M3D_LoadFailed"),
+                            Path.GetFileName(CurrentModelPath), alert);
+                    }
                     break;
                 case "console":
                     LogConsole(root);

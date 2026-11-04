@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using Avalonia.Media;
+using Avalonia.Media.Immutable;
 using AvaloniaEdit.Document;
 using AvaloniaEdit.Rendering;
 using Therion.Syntax;
@@ -171,6 +172,11 @@ public sealed class TherionColorizer : DocumentColorizingTransformer
             _                           => TokenClassifier.Classify(Tokenizer.Tokenize("<inline>", lineText)),
         };
 
+    // Built directly as immutable brushes, not as SolidColorBrush(...).ToImmutable(): a SolidColorBrush is an
+    // AvaloniaObject, and creating one goes through Avalonia's property registry, which is not thread-safe.
+    // This type initializer runs on whichever thread first touches the class (a background classifier, a
+    // test thread), so racing another thread's Avalonia objects there could fail it, and a failed type
+    // initializer leaves the colorizer unusable for the rest of the process.
     private static IBrush Brush(byte r, byte g, byte b) =>
-        new SolidColorBrush(Color.FromRgb(r, g, b)).ToImmutable();
+        new ImmutableSolidColorBrush(Color.FromRgb(r, g, b));
 }

@@ -335,9 +335,13 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
     /// </summary>
     public SourceSpan? PendingScroll { get; private set; }
 
-    public void RequestScrollTo(SourceSpan span)
+    /// <summary>Whether applying <see cref="PendingScroll"/> also focuses the editor (false: reveal only).</summary>
+    public bool PendingScrollFocus { get; private set; } = true;
+
+    public void RequestScrollTo(SourceSpan span, bool focus = true)
     {
         PendingScroll = span;
+        PendingScrollFocus = focus;
         ScrollToSpanRequested?.Invoke(this, span);
     }
 

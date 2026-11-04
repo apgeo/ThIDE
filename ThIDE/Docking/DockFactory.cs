@@ -99,6 +99,7 @@ public sealed class DockFactory : Factory
         // designer pass a throw-away path.
         _layoutPath = layoutPath ?? DefaultLayoutPath();
         _loadSentinelPath = _layoutPath + ".loading";
+        DockDragState.EnsureWatching();   // before the first drag, so a dragged-out float is told apart
         _automation = automation ?? new AutomationToolViewModel();
         _welcome = welcome;
         _workspace = workspace;
@@ -325,6 +326,161 @@ public sealed class DockFactory : Factory
         return true;
     }
 
+    // ---- floating: a visible move, and a way back ------------------------------
+    // A panel floated from its menu used to open exactly over the spot it left, so nothing seemed to
+    // happen, and its window offered "Dock" disabled: Dock.Avalonia's "Dock" is the way back from auto-hide
+    // (PinDockable) and enables itself only for a dockable with an OriginalOwner. So a float from the main
+    // window (from the menu, or a panel dragged out) remembers the dock the panel came from and offers it
+    // as that OriginalOwner, "Dock" puts the floating panel back there, and a float from the menu opens a
+    // step away from where it was.
+
+    private readonly Dictionary<IDockable, IDock> _floatHomes = new();
+    private bool _cascadeNextFloat;
+
+    /// <summary>Step, in pixels, between a floated panel's window and the spot (or window) it would cover.</summary>
+    internal const double FloatCascadeStep = 32;
+
+    public override void FloatDockable(IDockable dockable, DockWindowOptions? options)
+    {
+        // An auto-hidden panel has the root as its owner: it has no dock of its own to go back to.
+        var home = dockable.Owner is IDock d and not IRootDock ? d : null;
+        bool fromMainWindow = home is not null && _rootDock is not null && IsInMainTree(_rootDock, dockable);
+        // A panel dragged out of the window is floated where it was dropped.
+        _cascadeNextFloat = !DockDragState.IsDragging;
+        try { base.FloatDockable(dockable, options); }
+        finally { _cascadeNextFloat = false; }
+        if (fromMainWindow && IsInFloatWindow(dockable) && dockable.OriginalOwner is null)
+        {
+            _floatHomes[dockable] = home!;
+            dockable.OriginalOwner = home;
+        }
+    }
+
+    public override void SplitToWindow(IDock dock, IDockable dockable, double x, double y, double width, double height,
+        DockWindowOptions? options)
+    {
+        if (_cascadeNextFloat) (x, y) = CascadeFloatPosition(x, y, FloatWindowPositions());
+        base.SplitToWindow(dock, dockable, x, y, width, height, options);
+    }
+
+    /// <summary>
+    /// Where a window floated at (<paramref name="x"/>, <paramref name="y"/>) opens: a step down and to the
+    /// right, so the panel visibly moves, and further steps while another float window sits at that spot.
+    /// </summary>
+    internal static (double X, double Y) CascadeFloatPosition(double x, double y, IEnumerable<(double X, double Y)> taken)
+    {
+        if (double.IsNaN(x) || double.IsNaN(y)) return (x, y);
+        var others = taken.ToList();
+        do { x += FloatCascadeStep; y += FloatCascadeStep; }
+        while (others.Any(o => Math.Abs(o.X - x) < FloatCascadeStep / 2 && Math.Abs(o.Y - y) < FloatCascadeStep / 2));
+        return (x, y);
+    }
+
+    private IEnumerable<(double X, double Y)> FloatWindowPositions() =>
+        _rootDock?.Windows is { } windows ? windows.Select(w => (w.X, w.Y)).ToList() : Enumerable.Empty<(double, double)>();
+
+    /// <summary>"Dock" on a floated panel puts it back where it was floated from; anything else pins as usual.</summary>
+    public override void PinDockable(IDockable dockable)
+    {
+        if (DockHome(dockable)) return;
+        base.PinDockable(dockable);
+    }
+
+    /// <summary>
+    /// Moves a panel floated from the main window back into the dock it came from (or, when that dock has
+    /// gone with it, a dock on the same side, else the panel's default region). False when it has no
+    /// remembered home.
+    /// </summary>
+    public bool DockHome(IDockable dockable)
+    {
+        if (_rootDock is null || !_floatHomes.TryGetValue(dockable, out var home)) return false;
+        ForgetFloatHome(dockable);
+        var target = IsInMainTree(_rootDock, home) ? home : FallbackHome(dockable, home);
+        if (target is null || ReferenceEquals(dockable.Owner, target)) return false;
+        try
+        {
+            RemoveDockable(dockable, collapse: true);   // an emptied float window closes
+            AddDockable(target, dockable);
+            SetActiveDockable(dockable);
+            SetFocusedDockable(_rootDock, dockable);
+            return true;
+        }
+        catch { return false; }
+    }
+
+    private IDock? FallbackHome(IDockable dockable, IDock home)
+    {
+        if (home is IToolDock { Alignment: var side } &&
+            FindInMainTree<IToolDock>(_rootDock!, t => t.Alignment == side) is { } sameSide)
+            return sameSide;
+        var alignment = HomeRegion(dockable.Id) switch
+        {
+            "left" => Alignment.Left,
+            "bottom" => Alignment.Bottom,
+            "center" => Alignment.Unset,
+            _ => Alignment.Right,
+        };
+        return (alignment == Alignment.Unset ? null : FindInMainTree<IToolDock>(_rootDock!, t => t.Alignment == alignment))
+            ?? (IDock?)_documentDock;
+    }
+
+    private void ForgetFloatHome(IDockable dockable)
+    {
+        if (!_floatHomes.Remove(dockable, out var home)) return;
+        if (ReferenceEquals(dockable.OriginalOwner, home)) dockable.OriginalOwner = null;
+    }
+
+    // A floated panel dragged back into the main window, or closed and shown again, is home: drop the
+    // remembered dock, which would otherwise keep "Dock" enabled and "Auto Hide" disabled on it.
+    public override void OnDockableAdded(IDockable? dockable)
+    {
+        base.OnDockableAdded(dockable);
+        ForgetFloatHomeIfDocked(dockable);
+    }
+
+    public override void OnDockableClosed(IDockable? dockable)
+    {
+        base.OnDockableClosed(dockable);
+        if (dockable is not null) ForgetFloatHome(dockable);
+    }
+
+    public override void OnDockableDocked(IDockable? dockable, DockOperation operation)
+    {
+        base.OnDockableDocked(dockable, operation);
+        ForgetFloatHomeIfDocked(dockable);
+    }
+
+    public override void OnDockableMoved(IDockable? dockable)
+    {
+        base.OnDockableMoved(dockable);
+        ForgetFloatHomeIfDocked(dockable);
+    }
+
+    private void ForgetFloatHomeIfDocked(IDockable? dockable)
+    {
+        if (dockable is not null && _rootDock is not null && _floatHomes.ContainsKey(dockable) && IsInMainTree(_rootDock, dockable))
+            ForgetFloatHome(dockable);
+    }
+
+    /// <summary>True when <paramref name="target"/> is in the main window's tree (not in a float window).</summary>
+    private static bool IsInMainTree(IDockable node, IDockable target)
+    {
+        if (ReferenceEquals(node, target)) return true;
+        if (node is IDock dock && dock.VisibleDockables is { } list)
+            foreach (var c in list)
+                if (IsInMainTree(c, target)) return true;
+        return false;
+    }
+
+    private static T? FindInMainTree<T>(IDockable node, Func<T, bool> match) where T : class, IDock
+    {
+        if (node is T t && match(t)) return t;
+        if (node is IDock dock && dock.VisibleDockables is { } list)
+            foreach (var c in list)
+                if (FindInMainTree(c, match) is { } hit) return hit;
+        return null;
+    }
+
     /// <summary>Moves <paramref name="tool"/> into the central document well if it isn't already there (#7).</summary>
     public void MoveToolToDocuments(IDockable tool)
     {
@@ -401,6 +557,7 @@ public sealed class DockFactory : Factory
     /// live singletons and survive — the new tree re-docks (or re-floats) them.</summary>
     public void CloseAllFloatWindows()
     {
+        foreach (var floated in _floatHomes.Keys.ToList()) ForgetFloatHome(floated);   // their docks go too
         if (_rootDock?.Windows is not { } windows) return;
         foreach (var w in windows.ToList())
         {
@@ -480,6 +637,19 @@ public sealed class DockFactory : Factory
         return result;
     }
 
+    // A ToolDock passes its MinHeight to its inner chrome as well, which then overflows the dock by
+    // the height of its title bar; a one-child ProportionalDock around it carries the minimum instead.
+    private IDockable WithMinimumHeight(IDockable region) => new ProportionalDock
+    {
+        Id = BottomRegionId,
+        Orientation = Orientation.Vertical,
+        Proportion = region.Proportion,
+        MinHeight = BottomRegionMinHeight,
+        VisibleDockables = CreateList<IDockable>(region),
+    };
+
+    private const string BottomRegionId = "BottomRegion";
+
     private ToolDock MakeToolDock(string id, Alignment alignment, BuiltSection s, double proportion) => new()
     {
         Id = id,
@@ -525,6 +695,13 @@ public sealed class DockFactory : Factory
             VisibleDockables = children,
         };
     }
+
+    /// <summary>
+    /// The bottom panels (Diagnostics, Compiler Output, …) never shrink below their toolbars plus a
+    /// header and about three rows: at laptop height the default proportion left the Diagnostics list
+    /// a single row, or none at all once the explanation pane opened.
+    /// </summary>
+    private const double BottomRegionMinHeight = 250;
 
     /// <summary>
     /// Builds a renderable dock tree from a declarative profile: left/right rails (possibly
@@ -584,6 +761,7 @@ public sealed class DockFactory : Factory
         var leftNode = BuildRegion(leftSections, "LeftTools", Alignment.Left, leftProp, Orientation.Vertical);
         var rightNode = BuildRegion(rightSections, "RightTools", Alignment.Right, rightProp, Orientation.Vertical);
         var bottomNode = BuildRegion(bottomSections, "BottomTools", Alignment.Bottom, bottomProp, Orientation.Horizontal);
+        if (bottomSections.Count > 0) bottomNode = WithMinimumHeight(bottomNode);
 
         var centerColumn = new ProportionalDock
         {
@@ -671,7 +849,8 @@ public sealed class DockFactory : Factory
         {
             LeftProportion = Prop("LeftTools", baseState.LeftProportion),
             RightProportion = Prop("RightTools", baseState.RightProportion),
-            BottomProportion = Prop("BottomTools", baseState.BottomProportion),
+            // The splitter resizes the wrapper that carries the bottom minimum, when there is one.
+            BottomProportion = Prop(BottomRegionId, Prop("BottomTools", baseState.BottomProportion)),
             CenterProportion = Prop("CenterColumn", baseState.CenterProportion),
             BottomActiveTab = Active("BottomTools") ?? baseState.BottomActiveTab,
             RightActiveTab = Active("RightTools") ?? baseState.RightActiveTab,
@@ -926,7 +1105,7 @@ public sealed class DockFactory : Factory
             VisibleDockables = CreateList<IDockable>(
                 documentDock,
                 new ProportionalDockSplitter(),
-                bottomTools),
+                WithMinimumHeight(bottomTools)),
         };
 
         var mainRow = new ProportionalDock

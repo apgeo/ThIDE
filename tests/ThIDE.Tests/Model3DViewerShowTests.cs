@@ -142,4 +142,105 @@ public class Model3DViewerShowSequencingTests
         }
         finally { System.IO.File.Delete(model); }
     }
+
+    [Fact]
+    public void A_model_the_page_cannot_read_ends_the_load_with_its_message()
+    {
+        var model = System.IO.Path.GetTempFileName() + ".3d";
+        System.IO.File.WriteAllText(model, "x");
+        try
+        {
+            var vm = new Model3DViewerViewModel(new FakeHost(), new StationSourceResolver(), new NullDocumentService(), new FakeShell());
+            var scripts = new System.Collections.Generic.List<string>();
+            vm.ScriptRequested += (_, js) => scripts.Add(js);
+            vm.OnWebMessage("{\"type\":\"ready\"}");
+            vm.LoadModel(model);
+            vm.SelectInModel(new Model3DTarget("demo.3"));
+            Assert.Contains("…", vm.Status);   // "Showing … in 3D…" while the model loads
+
+            // CaveView reports an unreadable model with alert() and never sends 'loaded'
+            vm.OnWebMessage("{\"type\":\"alert\",\"message\":\"bad file\"}");
+            Assert.Contains("bad file", vm.Status);
+            Assert.Contains(System.IO.Path.GetFileName(model), vm.Status);
+
+            // the load is over: a show goes out at once, and the dropped one does not come back later
+            scripts.Clear();
+            vm.SelectInModel(new Model3DTarget("demo.4"));
+            Assert.StartsWith("cvShow(\"demo.4\"", Assert.Single(scripts, s => s.StartsWith("cvShow(", System.StringComparison.Ordinal)));
+        }
+        finally { System.IO.File.Delete(model); }
+    }
+
+    [Fact]
+    public void An_alert_after_the_model_is_up_leaves_the_status_alone()
+    {
+        var model = System.IO.Path.GetTempFileName() + ".lox";
+        System.IO.File.WriteAllText(model, "x");
+        try
+        {
+            var vm = new Model3DViewerViewModel(new FakeHost(), new StationSourceResolver(), new NullDocumentService(), new FakeShell());
+            vm.OnWebMessage("{\"type\":\"ready\"}");
+            vm.LoadModel(model);
+            vm.OnWebMessage("{\"type\":\"loaded\"}");
+            var status = vm.Status;
+
+            vm.OnWebMessage("{\"type\":\"alert\",\"message\":\"something else\"}");
+
+            Assert.Equal(status, vm.Status);
+        }
+        finally { System.IO.File.Delete(model); }
+    }
+}
+
+/// <summary>
+/// "Open in 3D" from the editor: a reference as written (<c>3</c>, <c>3@sub</c>) is sent as the full
+/// dotted name of what it resolves to, which the model knows; the model has no <c>@</c> names.
+/// </summary>
+public class Model3DTargetModelNameTests
+{
+    private const string Cave = """
+        survey demo
+          centreline
+            data normal from to length compass clino
+            1 2 10 0 0
+          endcentreline
+          survey sub
+            centreline
+              data normal from to length compass clino
+              3 4 5 90 0
+            endcentreline
+          endsurvey
+        endsurvey
+        """;
+
+    private static Therion.Semantics.WorkspaceSemanticModel Build()
+    {
+        var parsed = new System.Collections.Generic.Dictionary<string, Therion.Syntax.ParseResult<Therion.Syntax.TherionFile>>
+        {
+            ["/p/demo.th"] = new Therion.Syntax.ThParser().Parse("/p/demo.th", Cave),
+        };
+        return Therion.Semantics.WorkspaceSemanticModel.Build(parsed, System.Array.Empty<Therion.Syntax.XviFile>(), _ => true);
+    }
+
+    private static string NameFor(string raw, Therion.Semantics.WorkspaceSemanticModel ws)
+    {
+        var info = new Therion.Semantics.WorkspaceSymbolNavigationService(ws)
+            .Describe(raw, Therion.Processing.Abstractions.ReferenceKind.Any);
+        return Model3DTarget.ModelNameFor(raw, info, ws);
+    }
+
+    [Theory]
+    [InlineData("3@sub.demo", "demo.sub.3")]
+    [InlineData("1@demo", "demo.1")]
+    [InlineData("4", "demo.sub.4")]   // a bare name, as written inside its own survey
+    public void A_reference_is_sent_as_the_full_name_it_resolves_to(string raw, string expected) =>
+        Assert.Equal(expected, NameFor(raw, Build()));
+
+    [Fact]
+    public void An_unresolved_reference_is_sent_in_dotted_form()
+    {
+        Assert.Equal("demo.sub.9", Model3DTarget.ModelNameFor("9@sub.demo", null, Build()));
+        Assert.Equal("demo.sub.9", Model3DTarget.ModelNameFor(" 9@sub.demo ", null, null));
+        Assert.Equal("7", Model3DTarget.ModelNameFor("7", null, null));
+    }
 }

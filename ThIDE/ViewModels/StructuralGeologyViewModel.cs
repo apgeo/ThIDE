@@ -923,7 +923,7 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
 
         var geo = GeoMagneticModelLoader.TryLoadDefault();
         if (geo is null)
-            return new DeclinationInputs(WmmNote: "WMM: no WMM.COF model (add one in %AppData%/ThIDE)");
+            return new DeclinationInputs(WmmNote: string.Format(ThIDE.Resources.Tr.Get("Struct_WmmNoModel"), UserDataFolder.FullPath));
 
         double year = SurveyYear(model);
         double d = geo.Declination(ll.Lat, ll.Lon, 0, year);

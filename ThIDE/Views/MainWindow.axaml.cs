@@ -84,6 +84,9 @@ public partial class MainWindow : Window
                 vm.ConfirmLoadFolderRequested += (_, path) => _ = ConfirmLoadFolderAsync(vm, path);
                 // Command-palette (#4) view actions: open windows / settings.
                 vm.ShowPreferencesRequested += (_, section) => _ = OpenPreferences(section);
+                // The Assistant's "No model answers at …" note opens Settings at the page that holds the endpoint.
+                if (vm.AssistantTool?.Assistant is { } assistant)
+                    assistant.OpenSettingsRequested += (_, section) => _ = OpenPreferences(section);
                 vm.ShowAboutRequested       += (_, _) => OnAboutClick(this, new Avalonia.Interactivity.RoutedEventArgs());
                 vm.ShowThbookRequested      += (_, _) => OnOpenThbook(this, new Avalonia.Interactivity.RoutedEventArgs());
                 vm.ShowBookmarksRequested   += (_, _) => OnBookmarksClick(this, new Avalonia.Interactivity.RoutedEventArgs());
@@ -150,7 +153,7 @@ public partial class MainWindow : Window
                 {
                     docs.FindReferencesRequested += (_, term) => ShowFindReferences(term);
                     docs.RenameSymbolRequested += (_, args) => _ = HandleRenameSymbolAsync(args.Raw, args.Kind);
-                    docs.FindAllReferencesRequested += (_, args) => _ = HandleFindAllReferencesAsync(args.Raw, args.Kind);
+                    docs.FindAllReferencesRequested += (_, args) => HandleFindAllReferences(args.Raw, args.Kind);
                 }
                 AttachSnippetCatalog();
                 AttachAutomationPanel();
@@ -260,11 +263,11 @@ public partial class MainWindow : Window
         }
 
         if (items.Count == 0)
-            items.Add(new MenuItem { Header = "(no recent files)", IsEnabled = false });
+            items.Add(new MenuItem { Header = ThIDE.Resources.Tr.Get("Recent_NoFiles"), IsEnabled = false });
         else
         {
             items.Add(new Separator());
-            items.Add(new MenuItem { Header = "Clear Recent Files", Command = vm.ClearRecentCommand });
+            items.Add(new MenuItem { Header = ThIDE.Resources.Tr.Get("Recent_ClearFiles"), Command = vm.ClearRecentCommand });
         }
         menu.ItemsSource = items;
     }
@@ -290,7 +293,7 @@ public partial class MainWindow : Window
         item.Click += CloseMainMenu;
         var toggle = new MenuItem
         {
-            Header = isPinned ? "Unpin" : "Pin",
+            Header = ThIDE.Resources.Tr.Get(isPinned ? "Recent_Unpin" : "Recent_Pin"),
             Command = isPinned ? vm.UnpinRecentCommand : vm.PinRecentCommand,
             CommandParameter = path,
         };
@@ -324,11 +327,11 @@ public partial class MainWindow : Window
         }
 
         if (items.Count == 0)
-            items.Add(new MenuItem { Header = "(no recent directories)", IsEnabled = false });
+            items.Add(new MenuItem { Header = ThIDE.Resources.Tr.Get("Recent_NoDirectories"), IsEnabled = false });
         else
         {
             items.Add(new Separator());
-            items.Add(new MenuItem { Header = "Clear Recent Directories", Command = vm.ClearRecentDirectoriesCommand });
+            items.Add(new MenuItem { Header = ThIDE.Resources.Tr.Get("Recent_ClearDirectories"), Command = vm.ClearRecentDirectoriesCommand });
         }
         menu.ItemsSource = items;
     }
@@ -451,9 +454,11 @@ public partial class MainWindow : Window
     private async void OnSearchGoTo(object? s, Avalonia.Interactivity.RoutedEventArgs e)
     {
         if (ActiveEditor is not { } ed) return;
-        var input = await new InputDialog("Go To Line",
-            $"Line number (1–{ed.LineCount}):", ed.CurrentLine.ToString()).ShowAsync(this);
-        if (int.TryParse(input, out var line)) ed.GoToLine(line);
+        var input = await new InputDialog(ThIDE.Resources.Tr.Get("Ed_GoToLineTitle"),
+            string.Format(ThIDE.Resources.Tr.Get("GoTo_LinePrompt"), ed.LineCount), ed.CurrentLine.ToString()).ShowAsync(this);
+        if (GoToLineInput.TryResolve(input, ed.LineCount, out var line, out var problem)) ed.GoToLine(line);
+        else if (problem is not null)
+            AppServices.Provider.GetService<INotificationService>()?.Warning(ThIDE.Resources.Tr.Get("Ed_GoToLineTitle"), problem);
     }
 
     // ----- full screen (#8) ----------------------------------------------
@@ -815,7 +820,7 @@ public partial class MainWindow : Window
         var preview = new EditPreviewViewModel(title, summary, batch, rows, AppServices.Provider.GetService<IWorkspaceSession>()?.RootPath, allOrNothing);
         var window = new EditPreviewWindow(preview);
         await window.ShowDialog(this);
-        if (!window.Confirmed || AppServices.Provider.GetService<IWorkspaceEditService>() is not { } editor) return false;
+        if (!window.Confirmed || preview.IsEmpty || AppServices.Provider.GetService<IWorkspaceEditService>() is not { } editor) return false;
         var outcome = await editor.ApplyAsync(preview.Chosen());
         // Closed files change on disk without a re-parse: reload when the diagnostics must follow. Not
         // through the batch's own reload flag, which also refuses files with unsaved changes — right for
@@ -854,13 +859,17 @@ public partial class MainWindow : Window
         var files = ProjectSourceFiles(ws);
         // The editor's Format Document: a re-indent that never reorders or drops anything.
         var unit = IndentUnitSetting();
-        var (batch, rows, skipped) = Therion.Workspace.Fixes.FormatAll.Plan(files, p => CurrentText(docs, p), Therion.Workspace.Fixes.LineEndings.Keep,
-            t => Therion.Workspace.Formatting.TherionReindenter.Format(t, unit), n => string.Format(ThIDE.Resources.Tr.Get("FormatAll_LinesDiffer"), n));
+        var (batch, rows, skipped) = Therion.Workspace.Fixes.FormatAll.PlanShowingChanges(files, p => CurrentText(docs, p), Therion.Workspace.Fixes.LineEndings.Keep,
+            t => Therion.Workspace.Formatting.TherionReindenter.Format(t, unit), EditPreviewViewModel.DescribeFormatChange);
         var title = ThIDE.Resources.Tr.Get("Menu_Tools_FormatAll");
-        var summary = string.Format(ThIDE.Resources.Tr.Get("FormatAll_Summary"), rows.Count, skipped.Count);
-        if (batch.IsEmpty) { AppServices.Provider.GetService<INotificationService>()?.Info(title, summary); return; }
+        // An empty plan still opens the preview, which then says "Nothing to change in N files".
+        var summary = batch.IsEmpty
+            ? EditPreviewViewModel.NothingToChange(CountFiles(files) - skipped.Count, skipped.Count)
+            : string.Format(ThIDE.Resources.Tr.Get("FormatAll_Summary"), rows.Count, skipped.Count);
         await PreviewAndApplyAsync(title, summary, batch, rows, reload: true);
     }
+
+    private static int CountFiles(IEnumerable<string> files) => files.Distinct(Therion.Workspace.Editing.FilePaths.Comparer).Count();
 
     private static string IndentUnitSetting()
     {
@@ -919,10 +928,12 @@ public partial class MainWindow : Window
         var options = model.Options(IndentUnitSetting());
         var title = ThIDE.Resources.Tr.Get("Menu_Tools_Normalize");
         if (options.IsEmpty) return;
-        var (batch, rows, skipped) = Therion.Workspace.Fixes.ProjectNormalize.Plan(ProjectSourceFiles(ws), p => CurrentText(docs, p), options,
-            n => string.Format(ThIDE.Resources.Tr.Get("FormatAll_LinesDiffer"), n));
-        var summary = string.Format(ThIDE.Resources.Tr.Get("Normalize_Summary"), rows.Count, skipped.Count);
-        if (batch.IsEmpty) { AppServices.Provider.GetService<INotificationService>()?.Info(title, summary); return; }
+        var files = ProjectSourceFiles(ws);
+        var (batch, rows, skipped) = Therion.Workspace.Fixes.ProjectNormalize.PlanShowingChanges(files, p => CurrentText(docs, p), options,
+            EditPreviewViewModel.DescribeFormatChange);
+        var summary = batch.IsEmpty
+            ? EditPreviewViewModel.NothingToChange(CountFiles(files) - skipped.Count, skipped.Count)
+            : string.Format(ThIDE.Resources.Tr.Get("Normalize_Summary"), rows.Count, skipped.Count);
         await PreviewAndApplyAsync(title, summary, batch, rows, reload: true);
     }
 
@@ -939,7 +950,9 @@ public partial class MainWindow : Window
         var window = new RenumberStationsWindow(model);
         await window.ShowDialog(this);
         if (!window.Confirmed || model.Plan is not { Ok: true } plan) return;
-        await PreviewAndApplyAsync(ThIDE.Resources.Tr.Get("Menu_Tools_Renumber"), model.Summary, plan.Batch, reload: true, allOrNothing: true);
+        // One row per changed line, showing the line as it will read (a shot line renames two stations).
+        var rows = Therion.Workspace.Fixes.FixAll.PreviewByLine(plan.Batch, p => CurrentText(docs, p));
+        await PreviewAndApplyAsync(ThIDE.Resources.Tr.Get("Menu_Tools_Renumber"), model.Summary, plan.Batch, rows, reload: true, allOrNothing: true);
     }
 
     /// <summary>Tools ▸ Add unreferenced scraps to maps.</summary>
@@ -1249,7 +1262,7 @@ public partial class MainWindow : Window
     /// Find All References (#7): resolves the token to a symbol and lists every occurrence the index
     /// attributes to it (scope-correct, @-aware, cross-file) — the read-only half of true rename.
     /// </summary>
-    private async System.Threading.Tasks.Task HandleFindAllReferencesAsync(
+    private void HandleFindAllReferences(
         string raw, Therion.Processing.Abstractions.ReferenceKind kind)
     {
         IDocumentService? docs;
@@ -1258,12 +1271,8 @@ public partial class MainWindow : Window
         if (docs?.Workspace is not { } workspace) return;
 
         var references = Therion.Semantics.SymbolReferences.FindAll(workspace, raw, kind);
-        if (references.Count == 0)
-        {
-            await new MessageDialog(ThIDE.Resources.Tr.Get("Refs_Title"),
-                string.Format(ThIDE.Resources.Tr.Get("Refs_None"), raw)).ShowAsync(this);
-            return;
-        }
+        // Nothing else refers to it: a status-bar line, not a dialog or an empty list.
+        if (DataContext is MainWindowViewModel vm && vm.ReportIfNoOtherReferences(raw, references)) return;
 
         // Non-modal, and only one at a time: a second search replaces the list rather than stacking windows.
         _referencesWindow?.Close();
@@ -1310,8 +1319,8 @@ public partial class MainWindow : Window
                 ?? CollectRenameChanges(workspace, docs!.Active, nav, raw, kind, oldName, targetSpan.Value);
             if (changes.Count == 0)
             {
-                await new MessageDialog("Rename Symbol",
-                    $"No occurrences of '{oldName}' were found in the workspace to rename.").ShowAsync(this);
+                await new MessageDialog(ThIDE.Resources.Tr.Get("Rename_Title"),
+                    string.Format(ThIDE.Resources.Tr.Get("Rename_NoOccurrences"), oldName)).ShowAsync(this);
                 return;
             }
 
@@ -1335,7 +1344,7 @@ public partial class MainWindow : Window
 
             if (!complex)
             {
-                var dlg = new InputDialog("Rename Symbol",
+                var dlg = new InputDialog(ThIDE.Resources.Tr.Get("Rename_Title"),
                     string.Format(ThIDE.Resources.Tr.Get("Rename_NewNameFor"), oldName), oldName,
                     seeOccurrencesText: ThIDE.Resources.Tr.Get("Rename_SeeOccurrences"));
                 var entered = await dlg.ShowAsync(this);
@@ -1372,15 +1381,16 @@ public partial class MainWindow : Window
         catch (System.Exception ex)
         {
             // Never let the rename fail silently (it runs fire-and-forget from the editor event).
-            await new MessageDialog("Rename Symbol failed", ex.ToString()).ShowAsync(this);
+            await new MessageDialog(ThIDE.Resources.Tr.Get("Rename_FailedTitle"),
+                string.Format(ThIDE.Resources.Tr.Get("Rename_Failed"), ex.Message), ex.ToString()).ShowAsync(this);
         }
     }
 
     private static char? InvalidName(string name) => Therion.Syntax.TherionIdentifiers.FirstIllegalChar(name);
 
     private System.Threading.Tasks.Task ShowInvalidNameAsync(string name, char bad) =>
-        new MessageDialog("Rename Symbol",
-            $"'{name}' is not a valid Therion name — it contains '{bad}'.").ShowAsync(this);
+        new MessageDialog(ThIDE.Resources.Tr.Get("Rename_Title"),
+            string.Format(ThIDE.Resources.Tr.Get("Rename_InvalidName"), name, bad)).ShowAsync(this);
 
     /// <summary>
     /// Opens the occurrences preview (draining pending input first so the modal hand-off is reliable) and

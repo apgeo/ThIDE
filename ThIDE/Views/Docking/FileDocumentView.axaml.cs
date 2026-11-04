@@ -42,7 +42,6 @@ public partial class FileDocumentView : UserControl
             editor.NavigateToSpanRequested += OnNavigateToSpanRequested;
             editor.CaretMoved += OnCaretMoved;
             editor.HoverTargetChanged += OnHoverTargetChanged;
-            editor.FindReferencesRequested += OnFindReferencesRequested;
             editor.RenameSymbolRequested += OnRenameSymbolRequested;
             editor.FindAllReferencesRequested += OnFindAllReferencesRequested;
             editor.StepOutRequested += OnStepOutRequested;
@@ -139,9 +138,6 @@ public partial class FileDocumentView : UserControl
         catch { return string.Equals(active, filePath, StringComparison.OrdinalIgnoreCase); }
     }
 
-    private void OnFindReferencesRequested(object? sender, string term)
-        => TryDocuments()?.RequestFindReferences(term);
-
     // step back out of an included file to whoever opened it (reuses the nav history).
     private void OnStepOutRequested(object? sender, EventArgs e)
         => _ = TryDocuments()?.GoBackAsync();
@@ -237,7 +233,7 @@ public partial class FileDocumentView : UserControl
         _vm.SavedCaretOffset = span.StartOffset; // remember position for tab switches (#11)
 
         // Feed the caret into the back/forward history, but skip moves driven by
-        // highlighted-term navigation (Shift+F12 cycling), per #1. Pointer clicks are
+        // highlighted-term navigation (next-occurrence cycling, Ctrl+Shift+F12), per #1. Pointer clicks are
         // recorded even for short moves so back/forward tracks all visited points (#8).
         var ed = sender as TherionTextEditor;
         // find-next moves from the search panel are excluded from the trail too.
@@ -333,7 +329,7 @@ public partial class FileDocumentView : UserControl
 
     private void OnScrollRequested(object? sender, SourceSpan span)
     {
-        this.FindControl<TherionTextEditor>("Editor")?.ScrollTo(span);
+        this.FindControl<TherionTextEditor>("Editor")?.ScrollTo(span, _vm?.PendingScrollFocus ?? true);
         _vm?.ClearPendingScroll();
     }
 
@@ -348,7 +344,7 @@ public partial class FileDocumentView : UserControl
         if (_vm?.PendingScroll is not { } span) return;
         Dispatcher.UIThread.Post(() =>
         {
-            this.FindControl<TherionTextEditor>("Editor")?.ScrollTo(span);
+            this.FindControl<TherionTextEditor>("Editor")?.ScrollTo(span, _vm?.PendingScrollFocus ?? true);
             _vm?.ClearPendingScroll();
         }, DispatcherPriority.Loaded);
     }

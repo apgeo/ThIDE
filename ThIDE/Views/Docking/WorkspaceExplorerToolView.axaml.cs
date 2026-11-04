@@ -223,7 +223,8 @@ public partial class WorkspaceExplorerToolView : UserControl
         if (string.IsNullOrWhiteSpace(name)) return;
 
         var path = Path.Combine(dir, name);
-        try { if (!File.Exists(path)) File.Create(path).Dispose(); } catch { return; }
+        try { if (!File.Exists(path)) File.Create(path).Dispose(); }
+        catch (Exception ex) { NotifyCreateFailed("Notif_NewFileFailed", name, ex); return; }
         Explorer?.Refresh();
         Explorer?.RevealFile(path);
     }
@@ -235,10 +236,16 @@ public partial class WorkspaceExplorerToolView : UserControl
         if (string.IsNullOrWhiteSpace(name)) return;
 
         var path = Path.Combine(dir, name);
-        try { Directory.CreateDirectory(path); } catch { return; }
+        try { Directory.CreateDirectory(path); }
+        catch (Exception ex) { NotifyCreateFailed("Notif_NewFolderFailed", name, ex); return; }
         Explorer?.Refresh();
         Explorer?.RevealFile(path);
     }
+
+    // A name the file system refuses, a read-only folder, a file in the way: say so instead of doing nothing.
+    private static void NotifyCreateFailed(string titleKey, string name, Exception ex) =>
+        Service<INotificationService>()?.Error(ThIDE.Resources.Tr.Get(titleKey),
+            string.Format(ThIDE.Resources.Tr.Get("Notif_CreateFailedMsg"), name, ex.Message));
 
     private async void OnCtxDelete(object? sender, RoutedEventArgs e)
     {
@@ -248,20 +255,20 @@ public partial class WorkspaceExplorerToolView : UserControl
         // confirm before deleting. The message states whether it's undoable (trash) or
         // permanent, so the user knows the stakes.
         var fileOps = Service<IFileOperations>();
-        var label = fileOps?.DeleteActionLabel ?? "Delete";
+        var label = fileOps?.DeleteActionLabel ?? ThIDE.Resources.Tr.Get("Ctx_Delete");
         bool undoable = fileOps?.DeleteIsUndoable ?? false;
         var name = System.IO.Path.GetFileName(path);
         var message = undoable
-            ? $"{label}:\n\n{name}\n\nYou can restore it from the trash/recycle bin."
-            : $"Permanently delete?\n\n{name}\n\nThis cannot be undone.";
+            ? string.Format(ThIDE.Resources.Tr.Get("Explorer_DeleteUndoable"), label, name)
+            : string.Format(ThIDE.Resources.Tr.Get("Explorer_DeletePermanent"), name);
 
-        if (!await new ConfirmDialog("Delete", message, label).ShowAsync(owner).ConfigureAwait(true)) return;
+        if (!await new ConfirmDialog(ThIDE.Resources.Tr.Get("Ctx_Delete"), message, label).ShowAsync(owner).ConfigureAwait(true)) return;
         // Cross-platform delete (recycle bin / trash / permanent) via the OS-specific service.
         if (fileOps?.Delete(path) == true) { Explorer?.Refresh(); return; }
         // The trash refused it; the folder is still there. Only delete for good if the user says so.
         if (fileOps is null || !undoable) return;
         var again = string.Format(ThIDE.Resources.Tr.Get("Explorer_TrashFailed"), name);
-        if (!await new ConfirmDialog("Delete", again, ThIDE.Resources.Tr.Get("Explorer_DeletePermanently")).ShowAsync(owner).ConfigureAwait(true)) return;
+        if (!await new ConfirmDialog(ThIDE.Resources.Tr.Get("Ctx_Delete"), again, ThIDE.Resources.Tr.Get("Explorer_DeletePermanently")).ShowAsync(owner).ConfigureAwait(true)) return;
         if (fileOps.DeletePermanently(path)) Explorer?.Refresh();
     }
 

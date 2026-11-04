@@ -82,8 +82,8 @@ public partial class DiagnosticsViewModel : ViewModelBase
     {
         _docs = docs;
         // The roll-up is composed from localized fragments read on each get, so re-raise it when the
-        // UI language changes and it re-renders live in the new language.
-        if (language is not null) language.LanguageChanged += (_, _) => OnPropertyChanged(nameof(SummaryText));
+        // UI language changes and it re-renders live in the new language; the rows' messages likewise.
+        if (language is not null) language.LanguageChanged += (_, _) => { Load(All); OnPropertyChanged(nameof(SummaryText)); };
     }
 
     private static string T(string key) => ThIDE.Resources.Tr.Get(key);
@@ -151,7 +151,7 @@ public partial class DiagnosticsViewModel : ViewModelBase
         All = diagnostics as IReadOnlyList<Diagnostic> ?? diagnostics.ToList();
         _allRows = All
             .Select(d => new DiagnosticRow(
-                d.Code, d.Severity.ToString(), d.Message,
+                d.Code, d.Severity.ToString(), ThIDE.Resources.DiagnosticText.Message(d),
                 d.Span.FilePath ?? string.Empty, d.Span.Start.Line, d.Span.Start.Column, d.Span))
             .OrderBy(r => r.File, StringComparer.Ordinal)
             .ThenBy(r => r.Line)

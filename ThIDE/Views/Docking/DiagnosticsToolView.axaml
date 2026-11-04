@@ -4,33 +4,61 @@
              xmlns:l="using:ThIDE.Resources"
              x:Class="ThIDE.Views.Docking.DiagnosticsToolView"
              AutomationProperties.AutomationId="Diagnostics.View"
+             ClipToBounds="True"
              x:DataType="vm:DiagnosticsToolViewModel">
-    <DockPanel>
-        <!-- explanation pane for the selected diagnostic (thbook link + example fix). -->
-        <Border DockPanel.Dock="Bottom" BorderBrush="Gray" BorderThickness="0,1,0,0" Padding="8,5"
+    <!-- Rows: toolbar, filters, the grid, the explanation pane. The bottom dock keeps the panel tall
+         enough for about three rows (DockFactory), the explanation pane is one line until it is
+         expanded, and the grid never gives up its header and first row to it, so selecting a row at
+         laptop height no longer squeezes the list away. -->
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" MinHeight="64" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- explanation pane for the selected diagnostic (thbook link + example fix). The one-line
+             strip is always there, empty until a row with an explanation is selected: if it appeared
+             on the first click, the rows would move and the second click of a double-click would
+             land on it instead of the row. -->
+        <Border Grid.Row="3" BorderBrush="Gray" BorderThickness="0,1,0,0" Padding="8,3" MinHeight="25"
                 AutomationProperties.AutomationId="Diagnostics.Details"
-                IsVisible="{Binding Diagnostics.HasExplanation}"
                 Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}">
-            <StackPanel Spacing="4">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                    <TextBlock Text="{Binding Diagnostics.Selected.Code}" FontWeight="SemiBold" FontSize="11"
-                               VerticalAlignment="Center" />
-                    <Button FontSize="11" Padding="6,1"
+            <StackPanel Spacing="4" IsVisible="{Binding Diagnostics.HasExplanation}">
+                <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                    <TextBlock Grid.Column="0" Text="{Binding Diagnostics.Selected.Code}" FontWeight="SemiBold" FontSize="11"
+                               VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <!-- Collapsed: the explanation on one line, in full on hover. -->
+                    <TextBlock Grid.Column="1" Text="{Binding Diagnostics.SelectedExplanation}" FontSize="12"
+                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxLines="1"
+                               ToolTip.Tip="{Binding Diagnostics.SelectedExplanation}"
+                               IsVisible="{Binding !#DetailsToggle.IsChecked}" />
+                    <Button Grid.Column="2" FontSize="11" Padding="6,1" Margin="8,0,0,0"
                             AutomationProperties.AutomationId="Diagnostics.OpenDocs"
                             Command="{Binding Diagnostics.OpenDocsCommand}"
                             IsVisible="{Binding Diagnostics.HasDocLink}"
                             Content="{l:Loc Diag_OpenDocs}" />
-                </StackPanel>
-                <TextBlock Text="{Binding Diagnostics.SelectedExplanation}" TextWrapping="Wrap" FontSize="12" />
-                <Border Background="#22808080" CornerRadius="3" Padding="6,3"
-                        IsVisible="{Binding Diagnostics.HasExample}">
-                    <TextBlock Text="{Binding Diagnostics.SelectedExample}" FontFamily="Consolas,monospace"
-                               FontSize="11" TextWrapping="NoWrap" />
-                </Border>
+                    <ToggleButton Grid.Column="3" x:Name="DetailsToggle" FontSize="11" Padding="6,1" Margin="6,0,0,0"
+                                  AutomationProperties.AutomationId="Diagnostics.DetailsExpand"
+                                  Content="{l:Loc Diag_Details}" ToolTip.Tip="{l:Loc Diag_DetailsTip}" />
+                </Grid>
+                <!-- Expanded: the whole explanation and the example, scrolling past a few lines. -->
+                <ScrollViewer MaxHeight="80" HorizontalScrollBarVisibility="Auto"
+                              IsVisible="{Binding #DetailsToggle.IsChecked}">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="{Binding Diagnostics.SelectedExplanation}" TextWrapping="Wrap" FontSize="12" />
+                        <Border Background="#22808080" CornerRadius="3" Padding="6,3"
+                                IsVisible="{Binding Diagnostics.HasExample}">
+                            <TextBlock Text="{Binding Diagnostics.SelectedExample}" FontFamily="Consolas,monospace"
+                                       FontSize="11" TextWrapping="NoWrap" />
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
             </StackPanel>
         </Border>
 
-        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="4,2" Spacing="6">
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="4,2" Spacing="6">
             <ToggleButton Content="{l:Loc Diag_ProjectScope}"
                           AutomationProperties.AutomationId="Diagnostics.ProjectScope"
                           IsChecked="{Binding Diagnostics.ShowProjectScope, Mode=TwoWay}"
@@ -60,7 +88,7 @@
         </StackPanel>
 
         <!-- search + severity/category filters + suppression. -->
-        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="4,0,4,3" Spacing="6">
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="4,0,4,3" Spacing="6">
             <TextBox Width="180" Watermark="{l:Loc Common_Filter}" FontSize="11" Padding="4,1"
                      AutomationProperties.AutomationId="Diagnostics.Filter" AutomationProperties.Name="{l:Loc Common_Filter}"
                      Text="{Binding Diagnostics.SearchText, Mode=TwoWay}" />
@@ -77,7 +105,7 @@
                     IsVisible="{Binding Diagnostics.HasSuppressions}" />
         </StackPanel>
 
-        <DataGrid x:Name="Grid"
+        <DataGrid x:Name="Grid" Grid.Row="2"
                   AutomationProperties.AutomationId="Diagnostics.Grid" AutomationProperties.Name="{l:Loc Tool_Diagnostics}"
                   ItemsSource="{Binding Diagnostics.Rows}"
                   SelectedItem="{Binding Diagnostics.Selected, Mode=TwoWay}"
@@ -127,5 +155,5 @@
                 <DataGridTextColumn Header="{l:Loc Browser_Col_Line}"     Binding="{Binding Line}"     Width="Auto" MinWidth="48" />
             </DataGrid.Columns>
         </DataGrid>
-    </DockPanel>
+    </Grid>
 </UserControl>

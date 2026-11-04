@@ -22,6 +22,9 @@ public sealed record TemplateVariable(
     string Id, string Prompt, string Default, TemplateVariableType Type = TemplateVariableType.Text,
     IReadOnlyList<string>? Choices = null, bool Required = true);
 
+/// <summary>A template value that cannot be used; <paramref name="Value"/> is empty when a required one is missing.</summary>
+public sealed record TemplateValueProblem(TemplateVariable Variable, string Value);
+
 /// <summary>One file of a template: text (substituted) or a binary file copied as is.</summary>
 /// <param name="SourcePath">For a binary: where it is, relative to the template folder.</param>
 public sealed record TemplateFileEntry(string RelativePath, string? Text, string? SourcePath = null);
@@ -194,15 +197,26 @@ public static partial class ProjectTemplateEngine
             StringComparer.Ordinal);
 
     /// <summary>Why each value cannot be used (empty when all are fine).</summary>
-    public static IReadOnlyList<string> Validate(ProjectTemplate template, IReadOnlyDictionary<string, string> values)
+    public static IReadOnlyList<string> Validate(ProjectTemplate template, IReadOnlyDictionary<string, string> values) =>
+        ValueProblems(template, values)
+            .Select(p => p.Value.Length == 0
+                ? $"{p.Variable.Prompt}: a value is needed"
+                : $"{p.Variable.Prompt}: '{p.Value}' cannot be written into the project")
+            .ToList();
+
+    /// <summary>
+    /// The values <see cref="Validate"/> rejects, as data: a missing required value has an empty
+    /// <see cref="TemplateValueProblem.Value"/>. For a UI that words the messages itself.
+    /// </summary>
+    public static IReadOnlyList<TemplateValueProblem> ValueProblems(ProjectTemplate template, IReadOnlyDictionary<string, string> values)
     {
-        var errors = new List<string>();
+        var errors = new List<TemplateValueProblem>();
         foreach (var v in template.Variables)
         {
             var value = values.GetValueOrDefault(v.Id, "").Trim();
             if (value.Length == 0)
             {
-                if (v.Required) errors.Add($"{v.Prompt}: a value is needed");
+                if (v.Required) errors.Add(new(v, ""));
                 continue;
             }
             bool ok = ScaffoldValueRules.IsSingleLine(value) && !value.Contains('"') && v.Type switch
@@ -215,7 +229,7 @@ public static partial class ProjectTemplateEngine
                 TemplateVariableType.Date => DateRx().IsMatch(value),
                 _ => true,
             };
-            if (!ok) errors.Add($"{v.Prompt}: '{value}' cannot be written into the project");
+            if (!ok) errors.Add(new(v, value));
         }
         return errors;
     }

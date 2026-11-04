@@ -1,5 +1,6 @@
 using System.Linq;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using ThIDE.ViewModels.Docking;
@@ -13,12 +14,38 @@ public partial class DiagnosticsToolView : UserControl
         InitializeComponent();
         // The full Path column is hidden by default (#3); apply once the columns exist.
         AttachedToVisualTree += (_, _) => SetColumnVisible("Path", false);
+        // Enter opens the selected diagnostic. Tunnel, because the grid itself handles Enter on the
+        // way up (it moves to the next row).
+        var grid = this.FindControl<DataGrid>("Grid");
+        grid?.AddHandler(KeyDownEvent, OnGridKeyDown, RoutingStrategies.Tunnel);
+        // handledEventsToo: the grid marks the release handled once it has selected and focused a cell.
+        grid?.AddHandler(PointerReleasedEvent, OnGridPointerReleased, RoutingStrategies.Bubble, handledEventsToo: true);
     }
 
-    private void OnRowDoubleTapped(object? sender, RoutedEventArgs e)
+    // A double-click jumps on the button release, after the grid has focused the clicked cell, so the
+    // editor keeps the keyboard instead of handing it straight back to the grid.
+    private bool _navigateOnRelease;
+
+    private void OnRowDoubleTapped(object? sender, RoutedEventArgs e) => _navigateOnRelease = true;
+
+    private void OnGridPointerReleased(object? sender, PointerReleasedEventArgs e)
     {
-        if (DataContext is DiagnosticsToolViewModel vm && vm.Diagnostics.Selected is { } row)
-            vm.Diagnostics.NavigateCommand.Execute(row);
+        if (!_navigateOnRelease) return;
+        _navigateOnRelease = false;
+        NavigateToSelected();
+    }
+
+    private void OnGridKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter || e.KeyModifiers != KeyModifiers.None) return;
+        if (NavigateToSelected()) e.Handled = true;
+    }
+
+    private bool NavigateToSelected()
+    {
+        if (DataContext is not DiagnosticsToolViewModel vm || vm.Diagnostics.Selected is not { } row) return false;
+        vm.Diagnostics.NavigateCommand.Execute(row);
+        return true;
     }
 
     // ---- copy (#3) ----
