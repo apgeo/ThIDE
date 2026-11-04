@@ -51,14 +51,14 @@ public static class DocumentParser
     public static string DescribeType(string filePath, SourceFileType type)
     {
         var ext = Path.GetExtension(filePath);
-        var extLabel = string.IsNullOrEmpty(ext) ? "no extension" : ext;
-        var name = type switch
+        var extLabel = string.IsNullOrEmpty(ext) ? ThIDE.Resources.Tr.Get("File_Type_NoExtension") : ext;
+        var name = ThIDE.Resources.Tr.Get(type switch
         {
-            SourceFileType.Thconfig => "Therion configuration",
-            SourceFileType.Th       => "Therion survey",
-            SourceFileType.Th2      => "Therion sketch",
-            _                       => "Plain text",
-        };
+            SourceFileType.Thconfig => "File_Type_Thconfig",
+            SourceFileType.Th       => "File_Type_Th",
+            SourceFileType.Th2      => "File_Type_Th2",
+            _                       => "File_Type_PlainText",
+        });
         return $"{name} ({extLabel})";
     }
 

@@ -1,5 +1,5 @@
 // Diagnostic codes emitted by the parsing layer. Catalog: docs/diagnostics.md.
-// Codes are culture-invariant strings; messages are localized in Therion.Core.Resources.
+// Codes are culture-invariant strings; messages are English (a UI translates them by code).
 
 namespace Therion.Syntax;
 

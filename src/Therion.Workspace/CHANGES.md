@@ -61,3 +61,5 @@ calibration properties, `EquateRef.Scope` / `EquateRecord.Scope` / `EquateRecord
 scope overloads of `ResolveStationSymbol`, `WorkspaceEquates.ResolveMember`,
 `SurveyRefDecomposer.Decompose` and `WorkspaceSemanticModel.Build`, `DataQualityChecks.IsLeg`,
 `TherionStrings.Unquote`/`SplitArguments`, `TherionTokenizer.IsUnterminatedString`.
+`ProjectTemplateEngine.ValueProblems` and `TemplateValueProblem`: the values `Validate` rejects, as
+data, for a UI that words the messages in its own language (`Validate` is unchanged).

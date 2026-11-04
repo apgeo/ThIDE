@@ -14,7 +14,7 @@ public sealed class WindowsFileOperations : IFileOperations
 {
     public bool DeleteIsUndoable => true;
 
-    public string DeleteActionLabel => "Move to Recycle Bin";
+    public string DeleteActionLabel => ThIDE.Resources.Tr.Get("Explorer_MoveToRecycleBin");
 
     /// <summary>Deletes a file/folder, sending it to the Recycle Bin.</summary>
     public bool Delete(string path)

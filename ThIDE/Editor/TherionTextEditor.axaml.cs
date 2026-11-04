@@ -1739,8 +1739,7 @@ public partial class TherionTextEditor : UserControl
             if (!ReferenceEquals(_hoverDiagnostic, d))
             {
                 _hoverDiagnostic = d;
-                var tip = string.IsNullOrEmpty(d.Hint) ? d.Message : $"{d.Message}\n{d.Hint}";
-                ToolTip.SetTip(_editor, $"{d.Severity}: {tip}");
+                ToolTip.SetTip(_editor, ThIDE.Resources.DiagnosticText.Tooltip(d));
                 ToolTip.SetIsOpen(_editor, true);
             }
         }
