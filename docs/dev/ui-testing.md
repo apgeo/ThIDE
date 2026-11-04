@@ -113,6 +113,8 @@ Tools: `ui_windows`, `ui_tree`, `ui_find`, `ui_get`, `ui_invoke`, `ui_menu`, `ui
 
 - Avalonia's MenuItem peers have no invoke/expand pattern; the server drives `MenuItem` directly and
   `uidrive click` falls back to a real mouse click.
+- A context menu is in the tree only while it is open, listed under the control it belongs to: open it
+  with `ui_invoke` action `contextmenu` on that control, then invoke its item (`#Document.Stations.Grid.ShowIn3D`).
 - The AvaloniaEdit editor has no AT-SPI text interface: type into it with `uidrive`, read it with
   `ui_get`.
 - Keys sent through the in-app server are routed events, not OS input; use `uidrive key` when the

@@ -19,6 +19,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.LogicalTree;
 using Avalonia.Media.Imaging;
 
 namespace ThIDE.Services.UiAutomation;
@@ -49,6 +50,10 @@ internal static class UiTree
             IReadOnlyList<AutomationPeer> kids;
             try { kids = peer.GetChildren(); }
             catch { continue; }
+            // An open context menu sits in a popup of its own, outside the control's subtree: list it
+            // under the control it belongs to, so its items can be found and invoked.
+            if ((peer as ControlAutomationPeer)?.Owner is Control { ContextMenu: { IsOpen: true } menu })
+                stack.Push((ControlAutomationPeer.CreatePeerForElement(menu), depth + 1));
             for (int i = kids.Count - 1; i >= 0; i--) stack.Push((kids[i], depth + 1));
         }
     }
@@ -241,6 +246,7 @@ internal static class UiTree
         }
         if (action == "expand") throw new UiAutomationException("The menu item has no submenu.");
         mi.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent, mi));
+        mi.FindLogicalAncestorOfType<ContextMenu>()?.Close();   // as a click on it would
         return "invoked";
     }
 
