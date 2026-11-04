@@ -65,7 +65,7 @@ public sealed class AssistantService : IAssistantService
 
     // One HttpClient for the model endpoint's lifetime; generous timeout — a 30B model on CPU
     // offload can legitimately take minutes per completion (same budget as the eval harness).
-    private readonly HttpClient _http = new() { Timeout = TimeSpan.FromMinutes(10) };
+    private readonly HttpClient _http;
 
     // One turn at a time; the pane gates the UI, this gate is the backstop.
     private readonly SemaphoreSlim _turn = new(1, 1);
@@ -90,8 +90,10 @@ public sealed class AssistantService : IAssistantService
     // Test seam (InternalsVisibleTo ThIDE.Tests): a conversation file under a temp dir keeps a test
     // from reading or writing the developer's real %AppData%/ThIDE conversation.
     internal AssistantService(IAppSettingsService settings, IMcpHostService host, ILogService log, string conversationPath,
-        IWorkspaceSession? workspace = null, IWorkspaceTrustService? trust = null)
+        IWorkspaceSession? workspace = null, IWorkspaceTrustService? trust = null, HttpMessageHandler? modelHandler = null)
     {
+        _http = modelHandler is null ? new HttpClient() : new HttpClient(modelHandler);
+        _http.Timeout = TimeSpan.FromMinutes(10);
         _settings = settings;
         _host = host;
         _log = log;
@@ -114,7 +116,14 @@ public sealed class AssistantService : IAssistantService
         try
         {
             var current = _settings.Current;
-            IToolCatalog catalog = await EnsureConnectedAsync(ct);
+            IToolCatalog catalog;
+            try { catalog = await EnsureConnectedAsync(ct); }
+            catch (AssistantUnavailableException) when (current.AssistantDataPolicy == AssistantDataPolicy.HideContent)
+            {
+                // Under "keep project data from the model" the tools are not needed to answer, so a
+                // server that is off or down does not stop a general question.
+                catalog = NoTools.Instance;
+            }
             if (current.AssistantDataPolicy == AssistantDataPolicy.HideContent) catalog = new FilteredToolCatalog(catalog);
             var engine = new ChatEngine(_http, new ChatEngineOptions(current.AssistantEndpoint, current.AssistantModel)
             {
@@ -143,6 +152,15 @@ public sealed class AssistantService : IAssistantService
         {
             _turn.Release();
         }
+    }
+
+    // What the model is offered when there is no tools server: nothing.
+    private sealed class NoTools : IToolCatalog
+    {
+        public static readonly NoTools Instance = new();
+        public IReadOnlyList<ToolDescriptor> Tools => [];
+        public Task<ToolOutcome> CallAsync(string name, IReadOnlyDictionary<string, object?> arguments, CancellationToken ct) =>
+            Task.FromResult(new ToolOutcome($"Error: '{name}' is not available: the tools server is off.", false));
     }
 
     public IReadOnlyList<ConversationTurn> RestoredConversation() =>

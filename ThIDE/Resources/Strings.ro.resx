@@ -561,7 +561,7 @@
   <data name="Pref_DelaySeconds" xml:space="preserve"><value>Întârziere (secunde)</value></data>
   <data name="Pref_AutoSaveHelp" xml:space="preserve"><value>Fișierele modificate sunt scrise automat; întârzierea se aplică modului După-o-întârziere.</value></data>
   <data name="Pref_Telemetry" xml:space="preserve"><value>Înregistrează utilizarea anonimă &amp; rapoartele de eroare (stocate local, niciodată trimise)</value></data>
-  <data name="Pref_TelemetryHelp" xml:space="preserve"><value>Dezactivat implicit. Când este activat, evenimentele și rapoartele de eroare sunt scrise în %AppData%/ThIDE/telemetry și nu părăsesc niciodată calculatorul dvs.</value></data>
+  <data name="Pref_TelemetryHelp" xml:space="preserve"><value>Dezactivat implicit. Când este activat, evenimentele și rapoartele de eroare sunt scrise în {0} și nu părăsesc niciodată calculatorul dvs.</value></data>
   <data name="Pref_AppTheme" xml:space="preserve"><value>Tema aplicației</value></data>
   <data name="Pref_ThemeSystem" xml:space="preserve"><value>Implicit sistem</value></data>
   <data name="Pref_ThemeLight" xml:space="preserve"><value>Luminoasă</value></data>
@@ -647,9 +647,9 @@
   <data name="Pref_OnBuild" xml:space="preserve"><value>La compilare</value></data>
   <data name="Pref_CommandWm" xml:space="preserve"><value>(comandă)</value></data>
   <data name="Pref_LoadPlugins" xml:space="preserve"><value>Încarcă pluginuri (reguli semantice personalizate din dosarul de pluginuri)</value></data>
-  <data name="Pref_LoadPluginsHelp" xml:space="preserve"><value>Puneți fișiere plugin .dll (tipuri care implementează ISemanticRule) în %AppData%/ThIDE/plugins. Încărcate la pornire; dezactivați pentru performanță. Modificările se aplică la repornire.</value></data>
+  <data name="Pref_LoadPluginsHelp" xml:space="preserve"><value>Puneți fișiere plugin .dll (tipuri care implementează ISemanticRule) în {0}. Încărcate la pornire; dezactivați pentru performanță. Modificările se aplică la repornire.</value></data>
   <data name="Pref_McpServer" xml:space="preserve"><value>Activează serverul de unelte AI din aplicație (MCP)</value></data>
-  <data name="Pref_McpServerHelp" xml:space="preserve"><value>Permite unui asistent AI local să acceseze acest proiect prin Model Context Protocol. Ascultă pe 127.0.0.1 (doar loopback) pe un port aleatoriu, protejat cu un token; portul și tokenul sunt scrise în %AppData%/ThIDE/mcp-endpoint.json. Dezactivat implicit — vezi docs/mcp-host-setup.md.</value></data>
+  <data name="Pref_McpServerHelp" xml:space="preserve"><value>Permite unui asistent AI local să acceseze acest proiect prin Model Context Protocol. Ascultă pe 127.0.0.1 (doar loopback) pe un port aleatoriu, protejat cu un token; portul și tokenul sunt scrise în {0}. Dezactivat implicit — vezi docs/mcp-host-setup.md.</value></data>
   <data name="Pref_McpFollowAgent" xml:space="preserve"><value>Urmează agentul (permite uneltelor AI să controleze fereastra)</value></data>
   <data name="Pref_McpFollowAgentHelp" xml:space="preserve"><value>Când este activ, asistentul AI poate deschide fișiere, focaliza panouri, rula comenzi, salva și schimba aspectul în această fereastră. Când este dezactivat, poate în continuare să citească proiectul și să răspundă la întrebări, dar nu poate atinge interfața. Activ implicit.</value></data>
   <data name="Pref_CliHelp" xml:space="preserve"><value>CLI-ul fără interfață (therion-cli) și serverul LSP (therion-lsp) sunt executabile separate — vezi documentația.</value></data>
@@ -1007,7 +1007,7 @@
   <data name="DC_LoadModel" xml:space="preserve"><value>Încarcă model…</value></data>
   <data name="DC_Year" xml:space="preserve"><value>An</value></data>
   <data name="DC_NoModel" xml:space="preserve"><value>Niciun model magnetic încărcat</value></data>
-  <data name="DC_NoModelHelp" xml:space="preserve"><value>Descărcați un WMM.COF (NOAA, domeniu public) și puneți-l în %AppData%/ThIDE, sau apăsați „Încarcă model…”.</value></data>
+  <data name="DC_NoModelHelp" xml:space="preserve"><value>Descărcați un WMM.COF (NOAA, domeniu public) și puneți-l în {0}, sau apăsați „Încarcă model…”.</value></data>
   <data name="DC_DeclinationFmt" xml:space="preserve"><value>Declinație: {0}° {1}</value></data>
   <data name="DC_LoadFailed" xml:space="preserve"><value>Încărcarea modelului a eșuat</value></data>
   <data name="DC_PickTitle" xml:space="preserve"><value>Selectați un fișier .COF WMM/IGRF</value></data>
@@ -1032,7 +1032,7 @@ Vizează Therion v6.4.0 (thbook inclus).</value></data>
   <data name="Mapiah_Title" xml:space="preserve"><value>Mapiah nu a fost găsit</value></data>
   <data name="Mapiah_Message" xml:space="preserve"><value>Editorul de schițe Mapiah nu a putut fi găsit pe acest calculator.
 
-Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către mapiah.exe în Setări → Unelte externe (rândul „mapiah”).</value></data>
+Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către {0} în Setări → Unelte externe (rândul „mapiah”).</value></data>
   <data name="Mapiah_Download" xml:space="preserve"><value>Descarcă Mapiah…</value></data>
   <data name="Mapiah_OpenSettings" xml:space="preserve"><value>Deschide Setări</value></data>
   <!-- Command palette (Ctrl+Shift+P) -->
@@ -1630,7 +1630,7 @@ Aplici modificările? Pașii care nu au putut fi previzualizați rulează acum.<
   <data name="Cmd_MacroFmt" xml:space="preserve"><value>Macro: {0}</value></data>
   <data name="Macro_OutsideProject" xml:space="preserve"><value>Fișierul este în afara proiectului; majoritatea uneltelor lucrează doar cu fișiere din interior (copiază-l întâi în incoming/).</value></data>
   <data name="Assistant_DataPolicyQuestion" xml:space="preserve"><value>Înainte de prima întrebare: ce poate trimite asistentul modelului?</value></data>
-  <data name="Assistant_DataPolicyChosen" xml:space="preserve"><value>Politica datelor: {0}. O puteți schimba în Preferințe ▸ Asistent.</value></data>
+  <data name="Assistant_DataPolicyChosen" xml:space="preserve"><value>Politica datelor: {0}. O puteți schimba în Setări ▸ Extensii.</value></data>
   <data name="Pref_AssistantDataPolicy" xml:space="preserve"><value>Ce poate trimite asistentul modelului</value></data>
   <data name="Pref_AssistantDataPolicy_SendAll" xml:space="preserve"><value>Tot (modelul rulează pe acest calculator)</value></data>
   <data name="Pref_AssistantDataPolicy_SendAllHelp" xml:space="preserve"><value>Instrumentele trimit modelului nume de stații, coordonate, textul fișierelor și comentarii. Cele mai bune răspunsuri. Alegeți asta când modelul rulează local (LM Studio): nimic nu părăsește calculatorul.</value></data>
@@ -1749,4 +1749,17 @@ Aplici modificările? Pașii care nu au putut fi previzualizați rulează acum.<
   <data name="File_NotInActiveThconfigNoName" xml:space="preserve"><value>Nu face parte din thconfig-ul activ.</value></data>
   <data name="File_NotTheActiveThconfig" xml:space="preserve"><value>Nu este thconfig-ul activ (cel activ este {0}).</value></data>
   <data name="File_MakeActiveThconfig" xml:space="preserve"><value>Setați ca thconfig activ</value></data>
+  <data name="Dlg_CopyDetails" xml:space="preserve"><value>Copiază detaliile</value></data>
+  <data name="Rename_FailedTitle" xml:space="preserve"><value>Redenumirea simbolului a eșuat</value></data>
+  <data name="Rename_Failed" xml:space="preserve"><value>Redenumirea nu a putut fi finalizată: {0}</value></data>
+  <data name="Notif_GoToLineOutOfRange" xml:space="preserve"><value>Linia {0} nu există în acest fișier. Introduceți un număr între 1 și {1}.</value></data>
+  <data name="Notif_GoToLineNotNumber" xml:space="preserve"><value>„{0}” nu este un număr de linie. Introduceți un număr între 1 și {1}.</value></data>
+  <data name="Notif_NewFileFailed" xml:space="preserve"><value>Fișierul nu a putut fi creat</value></data>
+  <data name="Notif_NewFolderFailed" xml:space="preserve"><value>Folderul nu a putut fi creat</value></data>
+  <data name="Notif_CreateFailedMsg" xml:space="preserve"><value>Nu s-a putut crea „{0}”: {1}</value></data>
+  <data name="Struct_WmmNoModel" xml:space="preserve"><value>WMM: niciun model WMM.COF (adăugați unul în {0})</value></data>
+  <data name="Assistant_NoModel" xml:space="preserve"><value>Niciun model nu răspunde la {0} — porniți LM Studio sau Ollama ori schimbați adresa în Setări ▸ Extensii.</value></data>
+  <data name="Blender_Fail_StartFailed" xml:space="preserve"><value>Blender nu a putut fi pornit din „{0}”. Setați calea către un Blender funcțional în Setări ▸ Unelte externe.</value></data>
+  <data name="Blender_Fail_StoreHint" xml:space="preserve"><value>O instalare din Microsoft Store nu poate fi folosită fără interfață grafică — folosiți Blender-ul standard de pe blender.org.</value></data>
+  <data name="Tools_OverrideNotFound" xml:space="preserve"><value>Calea suprascrisă nu există: {0}</value></data>
 </root>

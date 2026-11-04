@@ -40,6 +40,10 @@ public sealed class RenderResult
     /// <summary>Human-facing failure detail (developer text; the UI localizes surroundings).</summary>
     public string? ErrorMessage { get; init; }
 
+    /// <summary>The Blender executable that could not be started (<see cref="RenderFailureKind.Crashed"/> before the
+    /// process ran); null for every other outcome.</summary>
+    public string? StartFailedPath { get; init; }
+
     /// <summary>Paths of the produced output files (video/frames/stills); BA-B11 verifies them.</summary>
     public ImmutableArray<string> OutputPaths { get; init; } = ImmutableArray<string>.Empty;
 

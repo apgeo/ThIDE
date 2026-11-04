@@ -84,6 +84,9 @@ public partial class MainWindow : Window
                 vm.ConfirmLoadFolderRequested += (_, path) => _ = ConfirmLoadFolderAsync(vm, path);
                 // Command-palette (#4) view actions: open windows / settings.
                 vm.ShowPreferencesRequested += (_, section) => _ = OpenPreferences(section);
+                // The Assistant's "No model answers at …" note opens Settings at the page that holds the endpoint.
+                if (vm.AssistantTool?.Assistant is { } assistant)
+                    assistant.OpenSettingsRequested += (_, section) => _ = OpenPreferences(section);
                 vm.ShowAboutRequested       += (_, _) => OnAboutClick(this, new Avalonia.Interactivity.RoutedEventArgs());
                 vm.ShowThbookRequested      += (_, _) => OnOpenThbook(this, new Avalonia.Interactivity.RoutedEventArgs());
                 vm.ShowBookmarksRequested   += (_, _) => OnBookmarksClick(this, new Avalonia.Interactivity.RoutedEventArgs());
@@ -453,7 +456,9 @@ public partial class MainWindow : Window
         if (ActiveEditor is not { } ed) return;
         var input = await new InputDialog("Go To Line",
             $"Line number (1–{ed.LineCount}):", ed.CurrentLine.ToString()).ShowAsync(this);
-        if (int.TryParse(input, out var line)) ed.GoToLine(line);
+        if (GoToLineInput.TryResolve(input, ed.LineCount, out var line, out var problem)) ed.GoToLine(line);
+        else if (problem is not null)
+            AppServices.Provider.GetService<INotificationService>()?.Warning(ThIDE.Resources.Tr.Get("Ed_GoToLineTitle"), problem);
     }
 
     // ----- full screen (#8) ----------------------------------------------
@@ -1372,7 +1377,8 @@ public partial class MainWindow : Window
         catch (System.Exception ex)
         {
             // Never let the rename fail silently (it runs fire-and-forget from the editor event).
-            await new MessageDialog("Rename Symbol failed", ex.ToString()).ShowAsync(this);
+            await new MessageDialog(ThIDE.Resources.Tr.Get("Rename_FailedTitle"),
+                string.Format(ThIDE.Resources.Tr.Get("Rename_Failed"), ex.Message), ex.ToString()).ShowAsync(this);
         }
     }
 

@@ -1634,8 +1634,10 @@ public partial class TherionTextEditor : UserControl
         box.Loaded += (_, _) => box.Focus();
 
         var result = await dialog.ShowDialog<string?>(owner);
-        if (int.TryParse(result?.Trim(), out var lineNumber))
+        if (GoToLineInput.TryResolve(result, _editor.Document.LineCount, out var lineNumber, out var problem))
             ScrollTo(lineNumber, 1);
+        else if (problem is not null)
+            AppServices.Provider.GetService<INotificationService>()?.Warning(L("Ed_GoToLineTitle"), problem);
     }
 
     private void ToggleLineComment()

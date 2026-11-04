@@ -94,7 +94,7 @@
                     <CheckBox Content="{l:Loc Pref_Telemetry}"
                               AutomationProperties.AutomationId="Preferences.Telemetry"
                               IsChecked="{Binding TelemetryEnabled}" />
-                    <TextBlock Text="{l:Loc Pref_TelemetryHelp}"
+                    <TextBlock Text="{Binding TelemetryHelp}"
                                Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
                 </StackPanel>
 
@@ -485,7 +485,7 @@
                     <CheckBox Content="{l:Loc Pref_LoadPlugins}"
                               AutomationProperties.AutomationId="Preferences.LoadPlugins"
                               IsChecked="{Binding EnablePlugins}" />
-                    <TextBlock Text="{l:Loc Pref_LoadPluginsHelp}"
+                    <TextBlock Text="{Binding LoadPluginsHelp}"
                                Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
 
                     <Separator Margin="0,6" />
@@ -493,7 +493,7 @@
                     <CheckBox Content="{l:Loc Pref_McpServer}"
                               AutomationProperties.AutomationId="Preferences.McpServer"
                               IsChecked="{Binding EnableMcpServer}" />
-                    <TextBlock Text="{l:Loc Pref_McpServerHelp}"
+                    <TextBlock Text="{Binding McpServerHelp}"
                                Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
                     <!-- Follow the agent: allow the MCP action tools to drive the UI. -->
                     <CheckBox Content="{l:Loc Pref_McpFollowAgent}"

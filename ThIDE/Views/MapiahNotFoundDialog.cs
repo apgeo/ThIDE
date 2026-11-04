@@ -26,7 +26,7 @@ public sealed class MapiahNotFoundDialog : Window
         var message = new TextBlock
         {
             TextWrapping = TextWrapping.Wrap,
-            Text = Tr.Get("Mapiah_Message"),
+            Text = string.Format(Tr.Get("Mapiah_Message"), System.OperatingSystem.IsWindows() ? "mapiah.exe" : "mapiah"),
         };
 
         var download = new Button { Content = Tr.Get("Mapiah_Download"), MinWidth = 130 };

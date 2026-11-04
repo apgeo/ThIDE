@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Therion.Assistant;
@@ -405,6 +406,41 @@ public class AssistantViewModelTests
         Assert.True(vm.ServerOff);
         Assert.Contains(vm.Items, i => i is NoteChatItem);
         Assert.False(vm.IsBusy);
+    }
+
+    [Fact]
+    public async Task Send_WhenNothingListensAtTheEndpoint_SaysWhereAndOffersTheSettingsPage()
+    {
+        var assistant = new FakeAssistant((_, _, _) => throw new HttpRequestException(
+            "Connection refused (127.0.0.1:1234)",
+            new System.Net.Sockets.SocketException((int)System.Net.Sockets.SocketError.ConnectionRefused)));
+        var vm = NewVm(assistant);
+        string? opened = null;
+        vm.OpenSettingsRequested += (_, section) => opened = section;
+        vm.Input = "hi";
+
+        await vm.SendCommand.ExecuteAsync(null);
+
+        var note = Assert.IsType<NoteChatItem>(vm.Items.Last());
+        Assert.Contains("http://127.0.0.1:1234", note.Text);   // the configured endpoint
+        Assert.DoesNotContain("refused", note.Text, StringComparison.OrdinalIgnoreCase);
+        Assert.True(note.HasAction);
+        note.ActionCommand!.Execute(null);
+        Assert.Equal("extensions", opened);
+    }
+
+    [Fact]
+    public async Task Send_WhenTheEndpointAnswersWithAnError_KeepsTheEndpointsText()
+    {
+        var assistant = new FakeAssistant((_, _, _) => throw new InvalidOperationException("endpoint returned 500: boom"));
+        var vm = NewVm(assistant);
+        vm.Input = "hi";
+
+        await vm.SendCommand.ExecuteAsync(null);
+
+        var note = Assert.IsType<NoteChatItem>(vm.Items.Last());
+        Assert.Contains("endpoint returned 500: boom", note.Text);
+        Assert.False(note.HasAction);
     }
 
     [Fact]

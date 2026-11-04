@@ -223,7 +223,8 @@ public partial class WorkspaceExplorerToolView : UserControl
         if (string.IsNullOrWhiteSpace(name)) return;
 
         var path = Path.Combine(dir, name);
-        try { if (!File.Exists(path)) File.Create(path).Dispose(); } catch { return; }
+        try { if (!File.Exists(path)) File.Create(path).Dispose(); }
+        catch (Exception ex) { NotifyCreateFailed("Notif_NewFileFailed", name, ex); return; }
         Explorer?.Refresh();
         Explorer?.RevealFile(path);
     }
@@ -235,10 +236,16 @@ public partial class WorkspaceExplorerToolView : UserControl
         if (string.IsNullOrWhiteSpace(name)) return;
 
         var path = Path.Combine(dir, name);
-        try { Directory.CreateDirectory(path); } catch { return; }
+        try { Directory.CreateDirectory(path); }
+        catch (Exception ex) { NotifyCreateFailed("Notif_NewFolderFailed", name, ex); return; }
         Explorer?.Refresh();
         Explorer?.RevealFile(path);
     }
+
+    // A name the file system refuses, a read-only folder, a file in the way: say so instead of doing nothing.
+    private static void NotifyCreateFailed(string titleKey, string name, Exception ex) =>
+        Service<INotificationService>()?.Error(ThIDE.Resources.Tr.Get(titleKey),
+            string.Format(ThIDE.Resources.Tr.Get("Notif_CreateFailedMsg"), name, ex.Message));
 
     private async void OnCtxDelete(object? sender, RoutedEventArgs e)
     {

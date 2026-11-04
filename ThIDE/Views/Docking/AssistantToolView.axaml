@@ -70,13 +70,14 @@
                         </Button>
                     </StackPanel>
                 </Border>
-                <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding ServerOff}">
+                <!-- the text wraps in the space the button leaves, so the button stays inside the panel -->
+                <DockPanel IsVisible="{Binding ServerOff}">
+                    <Button DockPanel.Dock="Right" Content="{l:Loc Assistant_EnableServer}" Command="{Binding EnableServerCommand}"
+                            AutomationProperties.AutomationId="Assistant.EnableServer"
+                            Margin="8,0,0,0" Padding="10,2" FontSize="11" VerticalAlignment="Center" />
                     <TextBlock Text="{l:Loc Assistant_ServerOff}" Foreground="Gray" FontSize="11"
                                VerticalAlignment="Center" TextWrapping="Wrap" />
-                    <Button Content="{l:Loc Assistant_EnableServer}" Command="{Binding EnableServerCommand}"
-                            AutomationProperties.AutomationId="Assistant.EnableServer"
-                            Padding="10,2" FontSize="11" />
-                </StackPanel>
+                </DockPanel>
                 <DockPanel>
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4" Margin="6,0,0,0">
                         <Button Content="{l:Loc Assistant_Send}" Command="{Binding SendCommand}"
@@ -124,8 +125,13 @@
                     </DataTemplate>
 
                     <DataTemplate DataType="vm:NoteChatItem">
-                        <TextBlock Text="{Binding Text}" Foreground="Gray" FontSize="11"
-                                   FontStyle="Italic" TextWrapping="Wrap" Margin="4,3" />
+                        <DockPanel Margin="4,3">
+                            <Button DockPanel.Dock="Right" Content="{Binding ActionLabel}" Command="{Binding ActionCommand}"
+                                    IsVisible="{Binding HasAction}" AutomationProperties.AutomationId="Assistant.NoteAction"
+                                    Margin="8,0,0,0" Padding="10,2" FontSize="11" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding Text}" Foreground="Gray" FontSize="11"
+                                       FontStyle="Italic" TextWrapping="Wrap" VerticalAlignment="Center" />
+                        </DockPanel>
                     </DataTemplate>
 
                     <!-- a fenced code block: monospace, scrollable in place, with snippet actions (CAP-03) -->
