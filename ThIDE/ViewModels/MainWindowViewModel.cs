@@ -2159,6 +2159,14 @@ public partial class MainWindowViewModel : ViewModelBase
         StatusFileType = string.IsNullOrEmpty(doc.InterpretedTypeText)
             ? string.Empty
             : doc.InterpretedTypeText + (doc.IsParsed ? " · parsed" : " · not parsed");
+
+        // Line/Col/Pos follow the active document too: after a tab switch they show that file's last
+        // caret instead of the previous file's until the caret moves. A file not shown yet is at 1:1.
+        var caret = doc.CurrentCaret;
+        bool known = FilePaths.Comparer.Equals(caret.FilePath, doc.FilePath);
+        StatusCaretLine = known ? caret.Start.Line : 1;
+        StatusCaretCol = known ? caret.Start.Column : 1;
+        StatusCaretPos = known ? caret.StartOffset : 0;
     }
 
     /// <summary>

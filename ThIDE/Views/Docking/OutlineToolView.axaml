@@ -22,11 +22,11 @@
         <TextBlock DockPanel.Dock="Top" Margin="8,6" Foreground="Gray"
                    Text="{l:Loc Outline_Empty}"
                    IsVisible="{Binding Outline.IsEmpty}" />
-        <!-- #1: single click folds/unfolds, double click navigates (handled in code-behind). -->
-        <TreeView ItemsSource="{Binding Outline.Roots}"
+        <!-- Single click reveals the line, double click navigates to it (handled in code-behind). -->
+        <TreeView x:Name="Tree" ItemsSource="{Binding Outline.Roots}"
                   AutomationProperties.AutomationId="Outline.Tree" AutomationProperties.Name="{l:Loc Menu_View_Outline}"
                   SelectedItem="{Binding Outline.SelectedNode, Mode=TwoWay}"
-                  Tapped="OnTreeTapped" DoubleTapped="OnTreeDoubleTapped">
+                  Tapped="OnTreeTapped">
             <TreeView.Styles>
                 <!-- #1: all nodes expanded by default. -->
                 <Style Selector="TreeViewItem">
@@ -35,7 +35,9 @@
             </TreeView.Styles>
             <TreeView.ItemTemplate>
                 <TreeDataTemplate ItemsSource="{Binding Children}">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
+                    <!-- Handled here, before the item's own double-click fold toggle. -->
+                    <StackPanel Orientation="Horizontal" Spacing="6" Background="Transparent"
+                                DoubleTapped="OnNodeDoubleTapped">
                         <TextBlock Text="{Binding Glyph}" Width="14" TextAlignment="Center" />
                         <TextBlock Text="{Binding Title}" />
                         <TextBlock Text="{Binding Line, StringFormat=':{0}'}"

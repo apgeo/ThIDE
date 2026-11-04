@@ -72,9 +72,13 @@ public partial class ReferencesWindow : Window
     private void OnNavigateClick(object? sender, RoutedEventArgs e) => NavigateToSelection();
     private void OnCloseClick(object? sender, RoutedEventArgs e) => Close();
 
-    private void NavigateToSelection()
+    // The list stays open (it floats above the main window), but the keyboard goes to the editor the
+    // jump landed in, so typing after a double-click edits the reference.
+    private async void NavigateToSelection()
     {
-        if (this.FindControl<DataGrid>("Grid")?.SelectedItem is not ReferenceRow row) return;
-        _ = _docs?.NavigateToSpanAsync(row.Span);
+        if (this.FindControl<DataGrid>("Grid")?.SelectedItem is not ReferenceRow row || _docs is null) return;
+        try { await _docs.NavigateToSpanAsync(row.Span); }
+        catch { return; /* best-effort jump */ }
+        Owner?.Activate();
     }
 }

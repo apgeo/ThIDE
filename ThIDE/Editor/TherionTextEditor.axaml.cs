@@ -744,7 +744,7 @@ public partial class TherionTextEditor : UserControl
         var offset = _editor.Document.GetOffset(line, col);
         _editor.CaretOffset = offset;
         _editor.ScrollToLine(line);
-        _editor.Focus();
+        FocusTextAreaDeferred();
     }
 
     /// <summary>
@@ -752,8 +752,10 @@ public partial class TherionTextEditor : UserControl
     /// the first line). Highlighting uses the transient flash adornment rather than a
     /// text selection, so navigating never leaves a multi-line selection behind (#6).
     /// A zero-length span in a file is a caret position (a new file opened on its first data line).
+    /// <paramref name="focus"/> false only reveals the place (Outline single click): the caret moves
+    /// but keyboard focus stays where the user is.
     /// </summary>
-    public void ScrollTo(SourceSpan span)
+    public void ScrollTo(SourceSpan span, bool focus = true)
     {
         if (_editor is null || span.IsEmpty && string.IsNullOrEmpty(span.FilePath)) return;
         var doc = _editor.Document;
@@ -775,7 +777,7 @@ public partial class TherionTextEditor : UserControl
         _editor.Select(startOffset, 0);
         _editor.ScrollToLine(line);
         if (!span.IsEmpty) _flash?.Flash(startOffset, length);
-        _editor.Focus();
+        if (focus) FocusTextAreaDeferred();
     }
 
     public string? Text
@@ -903,7 +905,16 @@ public partial class TherionTextEditor : UserControl
     {
         if (_editor?.Document is not { } doc) return;
         var fixes = TherionCodeActions.Build(doc, _boundDiagnostics, _editor.CaretOffset, CurrentFilePath);
+        // Open under the caret's line, not under the whole editor (which put it over the panel below).
         var flyout = new Avalonia.Controls.MenuFlyout { Placement = Avalonia.Controls.PlacementMode.Bottom };
+        if (CaretLineBottomLeft() is { } at)
+        {
+            flyout.Placement = Avalonia.Controls.PlacementMode.AnchorAndGravity;
+            flyout.PlacementAnchor = Avalonia.Controls.Primitives.PopupPositioning.PopupAnchor.TopLeft;
+            flyout.PlacementGravity = Avalonia.Controls.Primitives.PopupPositioning.PopupGravity.BottomRight;
+            flyout.HorizontalOffset = at.X;
+            flyout.VerticalOffset = at.Y;
+        }
         if (fixes.Count == 0)
         {
             flyout.Items.Add(new Avalonia.Controls.MenuItem { Header = L("Ed_NoQuickFixes"), IsEnabled = false });
@@ -920,6 +931,21 @@ public partial class TherionTextEditor : UserControl
             }
         }
         flyout.ShowAt(_editor.TextArea, showAtPointer: false);
+    }
+
+    /// <summary>The bottom-left corner of the caret's visual line in text-area coordinates, or null
+    /// while the caret is scrolled out of view.</summary>
+    private Point? CaretLineBottomLeft()
+    {
+        if (_editor is null) return null;
+        var area = _editor.TextArea;
+        var view = area.TextView;
+        if (!view.VisualLinesValid) return null;
+        var loc = _editor.Document.GetLocation(_editor.CaretOffset);
+        var vpos = view.GetVisualPosition(new TextViewPosition(loc), VisualYPosition.LineBottom);
+        if (view.TranslatePoint(vpos - view.ScrollOffset, area) is not { } p) return null;
+        if (p.Y < 0 || p.Y > area.Bounds.Height) return null;
+        return new Point(Math.Max(0, p.X), p.Y);
     }
 
     // ----- / 16 / 17: block matching, smart Enter, reading-order navigation -----
@@ -3831,7 +3857,7 @@ public partial class TherionTextEditor : UserControl
             }
             finally { doc.EndUpdate(); }
             CaretAfterInsert(caret);
-            FocusEditorAfterDialog();
+            FocusTextAreaDeferred();
             return;
         }
 
@@ -3870,7 +3896,7 @@ public partial class TherionTextEditor : UserControl
         }
         doc.Replace(start, end - start, insert);
         CaretAfterInsert(start + insert.Length);
-        FocusEditorAfterDialog();
+        FocusTextAreaDeferred();
     }
 
     // The editor leaves a replaced range selected; a second paste would then replace the first block.
@@ -3880,9 +3906,12 @@ public partial class TherionTextEditor : UserControl
         _editor.Select(Math.Clamp(offset, 0, _editor.Document.TextLength), 0);
     }
 
-    // The owner window gives focus back to whatever had it before the dialog once the dialog closes;
-    // take it after that, so the first Ctrl+Z undoes the insert.
-    private void FocusEditorAfterDialog()
+    // Focus the text area now and once more after the current input event and layout pass. The owner
+    // window gives focus back to whatever had it before a dialog once the dialog closes, and a
+    // navigation is started from a panel (a grid row, a tree item) that takes focus on the pointer
+    // event, or switches tabs and detaches the editor that had it; the second call wins over both, so
+    // the first keystroke after a jump, or the first Ctrl+Z after an insert, lands in the editor.
+    private void FocusTextAreaDeferred()
     {
         _editor?.TextArea.Focus();
         Dispatcher.UIThread.Post(() => _editor?.TextArea.Focus(), DispatcherPriority.Background);

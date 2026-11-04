@@ -333,7 +333,7 @@ public partial class FileDocumentView : UserControl
 
     private void OnScrollRequested(object? sender, SourceSpan span)
     {
-        this.FindControl<TherionTextEditor>("Editor")?.ScrollTo(span);
+        this.FindControl<TherionTextEditor>("Editor")?.ScrollTo(span, _vm?.PendingScrollFocus ?? true);
         _vm?.ClearPendingScroll();
     }
 
@@ -348,7 +348,7 @@ public partial class FileDocumentView : UserControl
         if (_vm?.PendingScroll is not { } span) return;
         Dispatcher.UIThread.Post(() =>
         {
-            this.FindControl<TherionTextEditor>("Editor")?.ScrollTo(span);
+            this.FindControl<TherionTextEditor>("Editor")?.ScrollTo(span, _vm?.PendingScrollFocus ?? true);
             _vm?.ClearPendingScroll();
         }, DispatcherPriority.Loaded);
     }

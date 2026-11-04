@@ -8,6 +8,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Therion.Core;
+using Therion.Workspace.Editing;
 using ThIDE.Editor;
 using ThIDE.Services;
 
@@ -58,7 +59,7 @@ public sealed partial class OutlineViewModel : ObservableObject
     /// <summary>#1: also list survey stations under each centreline (off by default — verbose).</summary>
     [ObservableProperty] private bool _includeStations;
 
-    /// <summary>Two-way bound to the tree's selection; navigation happens on double-click, not select.</summary>
+    /// <summary>Two-way bound to the tree's selection; a click reveals, a double-click navigates — selecting with the arrow keys does neither.</summary>
     [ObservableProperty] private OutlineNode? _selectedNode;
 
     public OutlineViewModel() { } // design-time
@@ -173,14 +174,34 @@ public sealed partial class OutlineViewModel : ObservableObject
         return true;
     }
 
-    /// <summary>Navigates the editor to the node's source line (double-click from the tree, #1).</summary>
+    /// <summary>Navigates the editor to the node's source line and focuses it (double-click from the tree, #1).</summary>
     public void NavigateToNode(OutlineNode? node)
     {
-        if (node is null || _documents is null || string.IsNullOrEmpty(_currentFile)) return;
+        if (node is null || _documents is null || NodeSpan(node) is not { } span) return;
+        _ = _documents.NavigateToSpanAsync(span);
+    }
+
+    /// <summary>
+    /// Single click: shows the node's line in the editor without taking focus from the tree, so the
+    /// outline can be browsed with the keyboard. The outline always describes the active document,
+    /// so the reveal goes straight to it; a stale tree falls back to an ordinary navigation.
+    /// </summary>
+    public void RevealNode(OutlineNode? node)
+    {
+        if (node is null || _documents is null || NodeSpan(node) is not { } span) return;
+        if (_documents.Active is { } doc && FilePaths.Same(doc.FilePath, span.FilePath))
+            doc.RequestScrollTo(span, focus: false);
+        else
+            _ = _documents.NavigateToSpanAsync(span);
+    }
+
+    private SourceSpan? NodeSpan(OutlineNode node)
+    {
+        if (string.IsNullOrEmpty(_currentFile)) return null;
         var loc = new SourceLocation(node.Line, 1);
         // Length must be > 0: NavigateToSpanAsync and ScrollTo both ignore IsEmpty (zero-length)
         // spans, which is why the double-click previously did nothing. Start.Line drives the jump.
-        _ = _documents.NavigateToSpanAsync(new SourceSpan(_currentFile!, loc, loc, 0, 1));
+        return new SourceSpan(_currentFile!, loc, loc, 0, 1);
     }
 
     private static List<OutlineNode> Prune(List<OutlineNode> nodes, string filter)
