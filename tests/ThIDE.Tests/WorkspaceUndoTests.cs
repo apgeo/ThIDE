@@ -94,6 +94,33 @@ public class WorkspaceUndoTests
     }
 
     [Fact]
+    public async Task A_rename_whose_file_cannot_be_written_says_so_and_puts_the_written_files_back()
+    {
+        using var dir = new TempDir();
+        var a = dir.Write("a.th", "station old\n");
+        var b = dir.Write("b.th", "equate old x\n");
+        File.SetAttributes(b, FileAttributes.ReadOnly);   // chmod a-w off Windows
+        try
+        {
+            var aDoc = new FileDocumentViewModel(a, "station old\n", new MeasurementsViewModel());
+            var docs = Docs([aDoc], aDoc);
+            var history = new WorkspaceUndoService(docs);
+
+            var ex = await Assert.ThrowsAsync<RenameWriteException>(() => RenameApplier.ApplyAsync(
+                [new RenameFileChanges(a, "station old\n", [(8, 3)]), new RenameFileChanges(b, "equate old x\n", [(7, 3)])],
+                "old", "new", docs, null, null, history));
+
+            Assert.Contains("b.th", ex.Message);
+            Assert.DoesNotContain(dir.Path, ex.Message);             // a sentence, not the .NET text with the full path
+            Assert.IsType<UnauthorizedAccessException>(ex.InnerException);   // kept for Copy details
+            Assert.Equal("station old\n", File.ReadAllText(a));      // not half-renamed
+            Assert.Equal("station old\n", aDoc.DocumentText);
+            Assert.Null(history.NextUndo);
+        }
+        finally { File.SetAttributes(b, FileAttributes.Normal); }
+    }
+
+    [Fact]
     public async Task An_edit_batch_with_a_created_file_is_undone_by_deleting_it_and_restoring_the_edit()
     {
         using var dir = new TempDir();

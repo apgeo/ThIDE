@@ -2105,4 +2105,5 @@ Acțiunea nu poate fi anulată.</value></data>
   <data name="IoErr_Exists" xml:space="preserve"><value>există deja un fișier cu acest nume</value></data>
   <data name="IoErr_Other" xml:space="preserve"><value>sistemul a raportat o eroare de fișier (o găsiți la Copiază detaliile)</value></data>
   <data name="Edit_IoFailed" xml:space="preserve"><value>Modificarea nu a putut fi scrisă pe disc: {0}.</value></data>
+  <data name="Rename_WriteFailed" xml:space="preserve"><value>{0} nu a putut fi scris: {1}. Nu s-a redenumit nimic.</value></data>
 </root>

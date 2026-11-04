@@ -15,7 +15,8 @@ internal static class RenameApplier
     /// <summary>
     /// Replaces each file's hits with <paramref name="newName"/>, writes the files and updates open
     /// buffers, then records the whole rename in <paramref name="history"/>. Returns the record, or
-    /// null when nothing was written.
+    /// null when nothing was written. A file that cannot be written throws
+    /// <see cref="RenameWriteException"/> after the files already written are put back.
     /// </summary>
     public static async Task<WorkspaceUndoRecord?> ApplyAsync(
         List<RenameFileChanges> changes,
@@ -56,19 +57,39 @@ internal static class RenameApplier
                         System.IO.Path.GetFileName(fc.FilePath), ex.Character, ex.EncodingName));
                 return null;
             }
-            catch { /* unreadable: skipped, as a failed write is below */ }
+            catch { /* unreadable: left out of the rename */ }
         }
 
-        var written = new List<FileChange>();
+        // Write every file before touching a buffer. A file that cannot be written (read-only, the disk
+        // full, held by another program) puts back the ones already written and stops the rename with
+        // an error the user sees: half a rename leaves references to a name that no longer exists.
+        var done = new List<(RenameFileChanges Changes, string Text, TextFileFormat Format, FileDocumentViewModel? Open, byte[] Original)>();
         foreach (var (fc, newText, bytes, format, open) in planned)
         {
             session?.SuppressSelfWrite(fc.FilePath);
             try
             {
+                var original = await Task.Run(() => System.IO.File.ReadAllBytes(fc.FilePath));
                 await Task.Run(() => SourceFileIo.WriteOver(fc.FilePath, bytes));
-                if (open is not null) open.Format = format;
+                done.Add((fc, newText, format, open, original));
             }
-            catch { continue; }
+            catch (Exception ex)
+            {
+                foreach (var w in done)
+                {
+                    session?.SuppressSelfWrite(w.Changes.FilePath);
+                    try { await Task.Run(() => SourceFileIo.WriteOver(w.Changes.FilePath, w.Original)); }
+                    catch { /* reporting the failed write matters more */ }
+                }
+                throw new RenameWriteException(
+                    string.Format(Tr.Get("Rename_WriteFailed"), System.IO.Path.GetFileName(fc.FilePath), IoErrorText.Reason(ex)), ex);
+            }
+        }
+
+        var written = new List<FileChange>();
+        foreach (var (fc, newText, format, open, _) in done)
+        {
+            if (open is not null) open.Format = format;
             written.Add(new FileChange(fc.FilePath, fc.FileText, newText));
 
             foreach (var doc in docs.Documents)
@@ -94,3 +115,6 @@ internal static class RenameApplier
         return record;
     }
 }
+
+/// <summary>A rename stopped because a file could not be written; the message is in the UI language.</summary>
+public sealed class RenameWriteException(string message, Exception inner) : System.IO.IOException(message, inner);

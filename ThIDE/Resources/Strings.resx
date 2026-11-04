@@ -2105,4 +2105,5 @@ This cannot be undone.</value></data>
   <data name="IoErr_Exists" xml:space="preserve"><value>a file with that name already exists</value></data>
   <data name="IoErr_Other" xml:space="preserve"><value>the system reported a file error (Copy details has it)</value></data>
   <data name="Edit_IoFailed" xml:space="preserve"><value>The change could not be written to disk: {0}.</value></data>
+  <data name="Rename_WriteFailed" xml:space="preserve"><value>{0} could not be written: {1}. Nothing was renamed.</value></data>
 </root>

@@ -1378,6 +1378,11 @@ public partial class MainWindow : Window
 
             await ApplyRenameChangesAsync(MergeRenameChanges(changes, optional), oldName, newName, docs!);
         }
+        catch (Services.RenameWriteException ex)
+        {
+            // A file could not be written: the message already says which and why, in the UI language.
+            await new MessageDialog(ThIDE.Resources.Tr.Get("Rename_FailedTitle"), ex.Message, ex.ToString()).ShowAsync(this);
+        }
         catch (System.Exception ex)
         {
             // Never let the rename fail silently (it runs fire-and-forget from the editor event).
