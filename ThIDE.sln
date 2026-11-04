@@ -67,6 +67,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Therion.CaveView", "src\The
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Therion.CaveView.Tests", "tests\Therion.CaveView.Tests\Therion.CaveView.Tests.csproj", "{65BFCFBD-36D2-444D-8E13-B2B85E1246BA}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EncodingRaceProbe", "tests\probes\EncodingRaceProbe\EncodingRaceProbe.csproj", "{33866086-7106-4D20-B7C8-6936B61CB344}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -425,6 +427,18 @@ Global
 		{65BFCFBD-36D2-444D-8E13-B2B85E1246BA}.Release|x64.Build.0 = Release|Any CPU
 		{65BFCFBD-36D2-444D-8E13-B2B85E1246BA}.Release|x86.ActiveCfg = Release|Any CPU
 		{65BFCFBD-36D2-444D-8E13-B2B85E1246BA}.Release|x86.Build.0 = Release|Any CPU
+		{33866086-7106-4D20-B7C8-6936B61CB344}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{33866086-7106-4D20-B7C8-6936B61CB344}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{33866086-7106-4D20-B7C8-6936B61CB344}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{33866086-7106-4D20-B7C8-6936B61CB344}.Debug|x64.Build.0 = Debug|Any CPU
+		{33866086-7106-4D20-B7C8-6936B61CB344}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{33866086-7106-4D20-B7C8-6936B61CB344}.Debug|x86.Build.0 = Debug|Any CPU
+		{33866086-7106-4D20-B7C8-6936B61CB344}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{33866086-7106-4D20-B7C8-6936B61CB344}.Release|Any CPU.Build.0 = Release|Any CPU
+		{33866086-7106-4D20-B7C8-6936B61CB344}.Release|x64.ActiveCfg = Release|Any CPU
+		{33866086-7106-4D20-B7C8-6936B61CB344}.Release|x64.Build.0 = Release|Any CPU
+		{33866086-7106-4D20-B7C8-6936B61CB344}.Release|x86.ActiveCfg = Release|Any CPU
+		{33866086-7106-4D20-B7C8-6936B61CB344}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -458,6 +472,7 @@ Global
 		{92DED30D-B136-4802-8163-5379716F00E7} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{C39E3B97-B08F-4515-838F-58E6D484335A} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{65BFCFBD-36D2-444D-8E13-B2B85E1246BA} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{33866086-7106-4D20-B7C8-6936B61CB344} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {C6CB19F0-06F7-4FF8-93B0-BF247D09D6A2}

@@ -23,6 +23,21 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Therion.Core\Therion.Core.csproj" />
     <ProjectReference Include="..\..\src\Therion.Syntax\Therion.Syntax.csproj" />
+    <!--
+      Build order only: the encoding race test runs the probe as a fresh child process, because the
+      code-page registration it checks is process-global. ReferenceOutputAssembly=false keeps the
+      exe out of the test's own closure.
+    -->
+    <ProjectReference Include="..\probes\EncodingRaceProbe\EncodingRaceProbe.csproj"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <!-- Hand the test the probe's build output (forward slashes work on every OS). -->
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>EncodingRaceProbeDll</_Parameter1>
+      <_Parameter2>$(MSBuildThisFileDirectory)../probes/EncodingRaceProbe/bin/$(Configuration)/net8.0/EncodingRaceProbe.dll</_Parameter2>
+    </AssemblyAttribute>
   </ItemGroup>
 
 </Project>
