@@ -32,6 +32,9 @@
   <ItemGroup>
     <!-- The write-path fixture matrix, shared by every test project that has a writer to check. -->
     <Compile Include="..\Shared\WritePath\*.cs" LinkBase="Shared\WritePath" />
+    <!-- The generated-cave model, printer and binder oracle of the Semantics tests, for the renumber,
+         fix-all and import properties. -->
+    <Compile Include="..\Therion.Semantics.Tests\Properties\CaveGen\*.cs" LinkBase="Shared\CaveGen" />
   </ItemGroup>
 
 </Project>
