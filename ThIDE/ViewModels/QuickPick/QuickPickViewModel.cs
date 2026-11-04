@@ -24,6 +24,8 @@ public sealed class QuickPickItem
     /// <summary>Runs when the item is accepted (Enter/click). May push another quick-pick step.</summary>
     public Func<System.Threading.Tasks.Task>? Run { get; init; }
     public object? Payload { get; init; }
+    /// <summary>Shown greyed and ranked last (Go to File: a file the active thconfig does not compile).</summary>
+    public bool IsDimmed { get; init; }
 
     // Pre-lowered match fields (filled by providers) so filtering is allocation-light.
     public string NameLower { get; init; } = string.Empty;

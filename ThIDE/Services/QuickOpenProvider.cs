@@ -2,6 +2,8 @@
 // (history, workspace directory, and/or thconfig-connected) and ranks them for a query: name
 // matches outrank path-only matches; space-separated tokens may each match any part of the name
 // or path. A rooted path that exists is offered directly (file → open; directory → load workspace).
+// Files the active thconfig compiles come first; the others are greyed and say so, so an archived
+// copy of a survey is never mistaken for the one that is built.
 
 using System;
 using System.Collections.Generic;
@@ -9,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Media;
+using ThIDE.Resources;
 using ThIDE.ViewModels.QuickPick;
 
 namespace ThIDE.Services;
@@ -52,28 +55,37 @@ public sealed class QuickOpenProvider
         var root = _session.RootPath;
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var list = new List<QuickPickItem>();
+        bool dir = sources.HasFlag(QuickOpenSources.Directory);
+        bool connectedOnly = sources.HasFlag(QuickOpenSources.ThconfigConnected) && !dir;
+        // Only with a built graph: while the thconfig is still loading nothing would count as in it.
+        var config = _session.Model is not null ? _session.ActiveThconfig : null;
+        string? notIn = config is null ? null : string.Format(Tr.Get("QuickOpen_NotInConfig"), Path.GetFileName(config.FullPath));
+
+        void Add(string p)
+        {
+            bool outside = notIn is not null && !_session.Covers(p);
+            // The connected-only scope applies to recent and open files too: a recently opened
+            // archived copy would otherwise still head the list.
+            if (outside && connectedOnly) return;
+            list.Add(FileItem(p, root, outside ? notIn : null));
+        }
 
         if (sources.HasFlag(QuickOpenSources.History))
         {
             foreach (var p in _settings.Current.RecentFiles)
-                if (seen.Add(p) && File.Exists(p)) list.Add(FileItem(p, root));
+                if (seen.Add(p) && File.Exists(p)) Add(p);
             foreach (var d in _docs.Documents)
                 if (d.FilePath is { Length: > 0 } fp && seen.Add(fp) && File.Exists(fp))
-                    list.Add(FileItem(fp, root));
+                    Add(fp);
         }
 
-        bool dir = sources.HasFlag(QuickOpenSources.Directory);
-        bool connectedOnly = sources.HasFlag(QuickOpenSources.ThconfigConnected) && !dir;
         if ((dir || connectedOnly) && !string.IsNullOrEmpty(root) && Directory.Exists(root))
         {
             foreach (var p in EnumerateTherionFiles(root!))
-            {
-                if (seen.Contains(p)) continue;
-                if (connectedOnly && !_session.Covers(p)) continue;
-                if (seen.Add(p)) list.Add(FileItem(p, root));
-            }
+                if (seen.Add(p)) Add(p);
         }
-        return list;
+        // Stable: within each group the history-then-folder order is kept.
+        return list.OrderBy(i => i.IsDimmed).ToList();
     }
 
     private static IEnumerable<string> EnumerateTherionFiles(string root)
@@ -113,14 +125,14 @@ public sealed class QuickOpenProvider
         for (int i = 0; i < candidates.Count; i++)
             if (QuickPickMatcher.Score(lc, candidates[i].NameLower, candidates[i].PathLower) is { } sc)
                 scored.Add((candidates[i], sc, i));
-        foreach (var s in scored.OrderByDescending(s => s.Score).ThenBy(s => s.Index).Take(MaxResults))
+        foreach (var s in scored.OrderBy(s => s.Item.IsDimmed).ThenByDescending(s => s.Score).ThenBy(s => s.Index).Take(MaxResults))
             results.Add(s.Item);
         return results;
     }
 
     // ---- item factories ----
 
-    private QuickPickItem FileItem(string path, string? root)
+    private QuickPickItem FileItem(string path, string? root, string? notInConfig)
     {
         var (icon, key) = IconFor(path);
         var name = Path.GetFileName(path);
@@ -135,11 +147,13 @@ public sealed class QuickOpenProvider
             catch { detail = Path.GetDirectoryName(path); }
         }
         else detail = Path.GetDirectoryName(path);
+        if (notInConfig is not null) detail = string.IsNullOrEmpty(detail) ? notInConfig : detail + "  " + notInConfig;
 
         return new QuickPickItem
         {
             Title = name,
             Detail = detail,
+            IsDimmed = notInConfig is not null,
             Icon = icon,
             IconKey = key,
             NameLower = name.ToLowerInvariant(),

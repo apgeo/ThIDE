@@ -62,8 +62,10 @@ override case by case.
 
 ## Workspace
 
-- **Go to File (Ctrl+P): search only files connected to the active thconfig** — when off, Ctrl+P
-  searches *every* Therion file in the workspace folder (history is always included). See
+- **Go to File (Ctrl+P): search only files connected to the active thconfig** — off by default.
+  When off, Ctrl+P lists *every* Therion file in the workspace folder: the files of the active
+  thconfig first, the others greyed and marked "(not in *name*.thconfig)". When on, those other
+  files are left out, recent and open ones included. See
   [Navigation & search](08-navigation-and-search.md#opening--switching-files).
 
 ## Build & Output

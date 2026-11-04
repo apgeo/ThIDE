@@ -598,7 +598,8 @@
   <data name="Pref_ReloadExternal" xml:space="preserve"><value>Reload open files changed outside the editor</value></data>
   <data name="Pref_UpdateGraph" xml:space="preserve"><value>Update the object graph when files change on disk</value></data>
   <data name="Pref_QuickOpenScope" xml:space="preserve"><value>Go to File (Ctrl+P): search only files connected to the active thconfig</value></data>
-  <data name="Pref_QuickOpenHelp" xml:space="preserve"><value>When off, Ctrl+P searches every Therion file in the workspace folder (history is always included).</value></data>
+  <data name="Pref_QuickOpenHelp" xml:space="preserve"><value>When off, Ctrl+P also lists the other Therion files of the workspace folder, greyed and after the files of the active thconfig.</value></data>
+  <data name="QuickOpen_NotInConfig" xml:space="preserve"><value>(not in {0})</value></data>
   <data name="Pref_AfterBuildOpen" xml:space="preserve"><value>After a successful build, open:</value></data>
   <data name="Pref_OpenLox" xml:space="preserve"><value>.lox (Loch 3D model)</value></data>
   <data name="Pref_Open3d" xml:space="preserve"><value>.3d (Survex / Aven model)</value></data>

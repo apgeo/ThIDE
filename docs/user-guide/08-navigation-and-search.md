@@ -24,7 +24,7 @@ It also doubles as a jump box via **prefixes**:
 
 | Action | Shortcut | Notes |
 |---|---|---|
-| **Go to File** | **Ctrl+P** | Fuzzy file open. Scope is configurable: only files connected to the active thconfig, or every Therion file in the workspace ([Settings → Workspace](19-settings-and-preferences.md#workspace)). |
+| **Go to File** | **Ctrl+P** | Fuzzy file open. Lists the files of the active thconfig first; other Therion files in the workspace follow, greyed and marked "(not in *name*.thconfig)", or are left out with [Settings → Workspace](19-settings-and-preferences.md#workspace). |
 | Switch open documents | **Ctrl+Tab** | Cycles the open tabs. |
 | **Reopen Closed Tab** | — | File menu; brings back the last closed document. |
 | Reveal active file in the tree | — | Command Palette → *Reveal Active File in Workspace*. |
