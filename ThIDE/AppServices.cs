@@ -290,11 +290,17 @@ internal static class AppServices
                 () => sp.GetRequiredService<IWorkspaceSession>().RootPath,
                 sp.GetRequiredService<IOutputArtifactCollector>()));
         services.AddSingleton<Therion.Blender.IBlenderRenderService>(sp =>
-            new Therion.Blender.Execution.BlenderRenderService(
+        {
+            var service = new Therion.Blender.Execution.BlenderRenderService(
                 sp.GetRequiredService<Therion.Blender.Execution.BlenderLocator>(),
                 sp.GetRequiredService<Therion.Blender.Execution.BlenderRunner>(),
                 BlenderJobRoot(),
-                blenderOverride: () => BlenderOverridePath(sp)));
+                blenderOverride: () => BlenderOverridePath(sp));
+            // Job folders left by failed or cancelled renders hold only scratch and a log; a week is
+            // long enough to read the log.
+            _ = System.Threading.Tasks.Task.Run(() => service.PruneJobFolders(TimeSpan.FromDays(7)));
+            return service;
+        });
         services.AddSingleton<IBlenderGuiLauncher>(sp =>
             new BlenderGuiLauncher(sp.GetRequiredService<Therion.Blender.Execution.BlenderLocator>(), () => BlenderOverridePath(sp)));
         services.AddSingleton<BlenderAnimationViewModel>();

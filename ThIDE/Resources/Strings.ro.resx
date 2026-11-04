@@ -2098,4 +2098,6 @@ Acțiunea nu poate fi anulată.</value></data>
   <data name="FormatAll_NothingSkipped" xml:space="preserve"><value>Alte {0} rămân neatinse pentru că nu se analizează curat (corectați-le întâi).</value></data>
   <data name="Notif_StateUnreadableTitle" xml:space="preserve"><value>Setările salvate nu au putut fi citite</value></data>
   <data name="Notif_StateUnreadableMsg" xml:space="preserve"><value>Se folosesc valorile implicite. S-a păstrat o copie a fișierului care nu a putut fi citit: {0}.</value></data>
+  <data name="Blender_UI_RenderDir" xml:space="preserve"><value>Folder randare</value></data>
+  <data name="Blender_UI_RenderDirTip" xml:space="preserve"><value>Unde se salvează videoclipul, cadrele sau imaginea. Lăsați gol pentru a le păstra în folderul temporar al lucrării.</value></data>
 </root>

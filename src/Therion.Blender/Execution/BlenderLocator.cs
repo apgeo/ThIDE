@@ -112,6 +112,8 @@ public sealed class BlenderLocator
         if (string.IsNullOrEmpty(pathVar)) yield break;
         foreach (var dir in pathVar.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
+            // A relative entry (".") is the current directory, which may be a project folder.
+            if (!Path.IsPathFullyQualified(dir)) continue;
             string candidate;
             try { candidate = Path.Combine(dir, exe); }
             catch (ArgumentException) { continue; } // bad chars in a PATH segment

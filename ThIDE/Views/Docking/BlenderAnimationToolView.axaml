@@ -117,6 +117,11 @@
                 <TextBlock Text="{Binding Blender.EstimatedFrameCount}" VerticalAlignment="Center" />
             </DockPanel>
             <DockPanel>
+                <TextBlock Text="{l:Loc Blender_UI_RenderDir}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                <TextBox AutomationProperties.AutomationId="Blender.RenderDirectory" AutomationProperties.Name="{l:Loc Blender_UI_RenderDir}" Text="{Binding Blender.RenderDirectory}"
+                         ToolTip.Tip="{l:Loc Blender_UI_RenderDirTip}" />
+            </DockPanel>
+            <DockPanel>
                 <TextBlock Text="{l:Loc Blender_UI_ExportDir}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
                 <TextBox AutomationProperties.AutomationId="Blender.ExportDirectory" AutomationProperties.Name="{l:Loc Blender_UI_ExportDir}" Text="{Binding Blender.ExportDirectory}" />
             </DockPanel>

@@ -41,7 +41,7 @@ public class RenderOutputDirectoryTests : IDisposable
     /// <summary>Simulates Blender writing the video into the given directories (the job folder
     /// it is started in, and the directory the spec asked for) so output collection succeeds
     /// whichever one the service renders into.</summary>
-    private sealed class FakeLauncher(IEnumerable<string> dirs) : IBlenderProcessLauncher
+    private sealed class FakeLauncher(IEnumerable<string> dirs, int exitCode = 0) : IBlenderProcessLauncher
     {
         public IBlenderProcess Start(string exe, IReadOnlyList<string> args, string cwd)
         {
@@ -50,7 +50,7 @@ public class RenderOutputDirectoryTests : IDisposable
                 Directory.CreateDirectory(dir);
                 File.WriteAllBytes(Path.Combine(dir, "render.mp4"), new byte[128]);
             }
-            return new FakeProcess(0);
+            return new FakeProcess(exitCode);
         }
     }
 
@@ -78,10 +78,70 @@ public class RenderOutputDirectoryTests : IDisposable
         Output = new OutputSpec { Kind = OutputKind.Video, Width = 64, Height = 64, BaseName = "render", OutputDirectory = outputDirectory },
     };
 
-    private BlenderRenderService Service(string wanted) => new(
+    private BlenderRenderService Service(string wanted, int exitCode = 0) => new(
         new BlenderLocator(new FakeProbe(), () => new[] { "/fake/blender" }),
-        new BlenderRunner(new FakeLauncher([wanted]), _ => 50_000_000_000L),
+        new BlenderRunner(new FakeLauncher([wanted], exitCode), _ => 50_000_000_000L),
         Path.Combine(_root, "jobs"));
+
+    private string[] JobFolders() =>
+        Directory.Exists(Path.Combine(_root, "jobs")) ? Directory.GetDirectories(Path.Combine(_root, "jobs"), "job-*") : [];
+
+    [Fact]
+    public async Task Render_WithAnOutputDirectory_LeavesNoJobFolderBehind_AfterSuccess()
+    {
+        string wanted = Path.Combine(_root, "wanted");
+        var result = await Service(wanted).RenderAsync(VideoSpec(wanted), SyntheticSource());
+
+        Assert.True(result.Succeeded, result.ErrorMessage);
+        Assert.True(File.Exists(Assert.Single(result.OutputPaths)));
+        Assert.Empty(JobFolders());
+        Assert.Null(result.JobLogPath);
+    }
+
+    [Fact]
+    public async Task Render_WithAnOutputDirectory_KeepsTheJobLog_WhenTheRenderFails()
+    {
+        string wanted = Path.Combine(_root, "wanted");
+        var result = await Service(wanted, exitCode: 1).RenderAsync(VideoSpec(wanted), SyntheticSource());
+
+        Assert.False(result.Succeeded);
+        Assert.NotNull(result.JobLogPath);
+        Assert.True(File.Exists(result.JobLogPath), "the failed job's log must stay for the user to read");
+        Assert.Single(JobFolders());
+    }
+
+    [Fact]
+    public void PruneJobFolders_DeletesOldFoldersWithOnlyScratchAndLog_AndKeepsOutputsAndRecentOnes()
+    {
+        string jobs = Path.Combine(_root, "jobs");
+        string Job(string name, DateTime written, params string[] files)
+        {
+            string dir = Path.Combine(jobs, name);
+            Directory.CreateDirectory(dir);
+            foreach (var f in files) File.WriteAllText(Path.Combine(dir, f), "x");
+            Directory.SetLastWriteTimeUtc(dir, written);
+            return dir;
+        }
+        var old = DateTime.UtcNow.AddDays(-30);
+        string failed = Job("job-1-failed", old, "job.log", "model.ply");
+        string empty = Job("job-2-empty", old);
+        string withVideo = Job("job-3-outputs", old, "job.log", "cave-render.mp4");
+        string recent = Job("job-4-recent", DateTime.UtcNow, "job.log");
+        string other = Job("not-a-job", old, "job.log");
+
+        int deleted = Service(Path.Combine(_root, "unused")).PruneJobFolders(TimeSpan.FromDays(7));
+
+        Assert.Equal(2, deleted);
+        Assert.False(Directory.Exists(failed));
+        Assert.False(Directory.Exists(empty));
+        Assert.True(Directory.Exists(withVideo), "a folder holding a render's outputs is the user's deliverable");
+        Assert.True(Directory.Exists(recent));
+        Assert.True(Directory.Exists(other));
+    }
+
+    [Fact]
+    public void PruneJobFolders_WithoutAJobRoot_DeletesNothing()
+        => Assert.Equal(0, Service(Path.Combine(_root, "unused")).PruneJobFolders(TimeSpan.Zero));
 
     [Fact]
     public async Task Render_WritesOutputsIntoTheSpecifiedOutputDirectory()
