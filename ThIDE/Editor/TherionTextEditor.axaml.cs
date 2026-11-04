@@ -334,7 +334,7 @@ public partial class TherionTextEditor : UserControl
             ThIDE.Resources.LocProxy.Instance.PropertyChanged -= OnUiLanguageChanged;
 
         _colorizer = new TherionColorizer();
-        _colorizer.SetVariant(IsDark() ? TherionColorizer.Variant.Dark : TherionColorizer.Variant.Light);
+        ApplyVariant(editor);
         editor.TextArea.TextView.LineTransformers.Add(_colorizer);
 
         // Added after the syntax colorizer so the link styling wins on the hovered path.
@@ -635,8 +635,16 @@ public partial class TherionTextEditor : UserControl
 
     private void OnThemeVariantChanged(object? sender, EventArgs e)
     {
-        _colorizer?.SetVariant(IsDark() ? TherionColorizer.Variant.Dark : TherionColorizer.Variant.Light);
+        if (_editor is not null) ApplyVariant(_editor);
         _editor?.TextArea.TextView.Redraw();
+    }
+
+    // Token palette and the selection brush that keeps those colours readable inside a selection.
+    private void ApplyVariant(TextEditor editor)
+    {
+        var variant = IsDark() ? TherionColorizer.Variant.Dark : TherionColorizer.Variant.Light;
+        _colorizer?.SetVariant(variant);
+        editor.TextArea.SelectionBrush = TherionColorizer.SelectionBrush(variant);
     }
 
     // Custom syntax colors changed in Preferences (#2) — repaint with the new brushes.

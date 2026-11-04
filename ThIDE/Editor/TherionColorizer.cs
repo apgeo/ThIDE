@@ -56,6 +56,19 @@ public sealed class TherionColorizer : DocumentColorizingTransformer
         [TokenClassification.Identifier]  = Brush(36, 114, 200),
     };
 
+    // The selection behind the token colours. AvaloniaEdit's default is the opaque Fluent accent
+    // (#0078D7), on which the light palette's teal numbers and blue identifiers were invisible and the
+    // dark palette's keywords nearly so. These pale (light) / deep (dark) blues keep every palette
+    // colour at a contrast of 3:1 or more, so selected text keeps its syntax colours.
+    private static readonly IBrush LightSelection = Brush(187, 221, 255);
+    private static readonly IBrush DarkSelection = Brush(36, 63, 94);
+
+    /// <summary>The editor selection brush that goes with <paramref name="variant"/>'s palette.</summary>
+    public static IBrush SelectionBrush(Variant variant) => variant == Variant.Dark ? DarkSelection : LightSelection;
+
+    internal static IReadOnlyDictionary<TokenClassification, IBrush> Palette(Variant variant) =>
+        variant == Variant.Dark ? DarkPalette : LightPalette;
+
     private static readonly TherionTokenizer Tokenizer = new();
 
     // User custom syntax colors (#2): when set, these brushes override the theme palette for
