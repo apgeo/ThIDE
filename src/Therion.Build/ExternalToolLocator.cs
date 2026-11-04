@@ -101,6 +101,9 @@ public sealed class ExternalToolLocator : IExternalToolLocator
                     RedirectStandardError = true,
                     UseShellExecute = false,
                     CreateNoWindow = true,
+                    // therion writes therion.log into its working directory even for --version, so
+                    // run it in a folder of our own and never touch the project's log.
+                    WorkingDirectory = ProbeDirectory(),
                 },
             };
             if (!p.Start()) return null;
@@ -118,6 +121,13 @@ public sealed class ExternalToolLocator : IExternalToolLocator
             return m.Success ? m.Value : firstLine;
         }
         catch { return null; }
+    }
+
+    private static string ProbeDirectory()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "ThIDE", "tool-probe");
+        Directory.CreateDirectory(dir);
+        return dir;
     }
 
     private static IEnumerable<string> GetCandidatePaths(string toolId)

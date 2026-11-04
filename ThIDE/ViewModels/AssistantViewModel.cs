@@ -6,8 +6,10 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Input;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -35,10 +37,21 @@ public sealed partial class AssistantChatItem : ChatItemViewModel
     [ObservableProperty] private string _text;
 }
 
-/// <summary>A grey status/error line in the transcript (stop notices, endpoint failures).</summary>
-public sealed class NoteChatItem(string text) : ChatItemViewModel
+/// <summary>A grey status/error line in the transcript (stop notices, endpoint failures), optionally
+/// with one button that does something about it (e.g. opens the settings page that fixes it).</summary>
+public sealed class NoteChatItem : ChatItemViewModel
 {
-    public string Text { get; } = text;
+    public NoteChatItem(string text, string? actionLabel = null, Action? action = null)
+    {
+        Text = text;
+        ActionLabel = actionLabel;
+        if (action is not null && !string.IsNullOrEmpty(actionLabel)) ActionCommand = new RelayCommand(action);
+    }
+
+    public string Text { get; }
+    public string? ActionLabel { get; }
+    public ICommand? ActionCommand { get; }
+    public bool HasAction => ActionCommand is not null;
 }
 
 /// <summary>
@@ -376,6 +389,12 @@ public sealed partial class AssistantViewModel : ObservableObject
         {
             Items.Add(new NoteChatItem(Tr.Get("Assistant_Stopped")));
         }
+        catch (Exception ex) when (IsModelUnreachable(ex))
+        {
+            // Nothing is listening where the endpoint setting points: say where, and offer the page to change it.
+            Items.Add(new NoteChatItem(string.Format(Tr.Get("Assistant_NoModel"), _settings.Current.AssistantEndpoint),
+                Tr.Get("Common_Open"), () => OpenSettingsRequested?.Invoke(this, "extensions")));
+        }
         catch (Exception ex)
         {
             Items.Add(new NoteChatItem(string.Format(Tr.Get("Assistant_Error"), ex.Message)));
@@ -399,6 +418,14 @@ public sealed partial class AssistantViewModel : ObservableObject
 
     [RelayCommand(CanExecute = nameof(CanStop))]
     private void Stop() => _cts?.Cancel();
+
+    /// <summary>Raised with a Settings section id when a note's button should open that page.</summary>
+    public event EventHandler<string>? OpenSettingsRequested;
+
+    // A transport failure reaching the model endpoint (connection refused, unknown host): an HTTP error
+    // status is raised by the engine as an InvalidOperationException, so it is not one of these.
+    internal static bool IsModelUnreachable(Exception ex) =>
+        ex is HttpRequestException { StatusCode: null } || ex.InnerException is System.Net.Sockets.SocketException;
 
     /// <summary>Records the user's data policy (a name of <see cref="AssistantDataPolicy"/>).</summary>
     [RelayCommand]

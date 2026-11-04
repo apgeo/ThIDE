@@ -85,7 +85,7 @@ public sealed class DeclinationWindow : Window
         if (_geoModel is null)
         {
             _result.Text = Tr.Get("DC_NoModel");
-            _model.Text = Tr.Get("DC_NoModelHelp");
+            _model.Text = string.Format(Tr.Get("DC_NoModelHelp"), ThIDE.Services.UserDataFolder.FullPath);
             _copy.IsEnabled = false;
             return;
         }

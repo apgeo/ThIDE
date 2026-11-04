@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using ThIDE.Services;
@@ -50,6 +51,11 @@ public partial class PreferencesViewModel : ObservableObject
     [ObservableProperty] private bool _showWelcomeOnStartup;
     /// <summary>opt-in local-only telemetry / crash reports.</summary>
     [ObservableProperty] private bool _telemetryEnabled;
+
+    // Help text that names a folder shows this platform's own path, not Windows' %AppData%.
+    public string TelemetryHelp => string.Format(Resources.Tr.Get("Pref_TelemetryHelp"), Path.Combine(UserDataFolder.FullPath, "telemetry"));
+    public string LoadPluginsHelp => string.Format(Resources.Tr.Get("Pref_LoadPluginsHelp"), Path.Combine(UserDataFolder.FullPath, "plugins"));
+    public string McpServerHelp => string.Format(Resources.Tr.Get("Pref_McpServerHelp"), Path.Combine(UserDataFolder.FullPath, "mcp-endpoint.json"));
 
     // ---- extensions (hooks, plugins) ----
     [ObservableProperty] private bool _enableScriptHooks;

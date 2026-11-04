@@ -25,6 +25,7 @@ public sealed partial class ReplaceInFilesViewModel : ViewModelBase
     private const string DefaultMask = "*.th;*.th2;*.thconfig;*.thc";
     private readonly IDocumentService _documents;
     private readonly IWorkspaceUndoService _history;
+    private readonly IWorkspaceSession? _session;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ReplaceAllCommand))]
@@ -52,10 +53,12 @@ public sealed partial class ReplaceInFilesViewModel : ViewModelBase
     public ReplaceInFilesViewModel() : this(new NullDocumentService()) { }
 
     /// <param name="history">The workspace undo history Replace All records into; a private one when null.</param>
-    public ReplaceInFilesViewModel(IDocumentService documents, IWorkspaceUndoService? history = null)
+    /// <param name="session">The workspace session whose file watcher is told about this panel's own writes, so they are not reported as external changes.</param>
+    public ReplaceInFilesViewModel(IDocumentService documents, IWorkspaceUndoService? history = null, IWorkspaceSession? session = null)
     {
         _documents = documents;
-        _history = history ?? new WorkspaceUndoService(documents);
+        _session = session;
+        _history = history ?? new WorkspaceUndoService(documents, session);
         _history.Changed += (_, _) => OnHistoryChanged();
     }
 
@@ -286,6 +289,7 @@ public sealed partial class ReplaceInFilesViewModel : ViewModelBase
         int fileCount = 0;
         foreach (var (path, text, bytes, format, openDoc) in planned)
         {
+            _session?.SuppressSelfWrite(path);
             try
             {
                 SourceFileIo.WriteOver(path, bytes);

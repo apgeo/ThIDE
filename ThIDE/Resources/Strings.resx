@@ -561,7 +561,7 @@
   <data name="Pref_DelaySeconds" xml:space="preserve"><value>Delay (seconds)</value></data>
   <data name="Pref_AutoSaveHelp" xml:space="preserve"><value>Dirty files are written automatically; the delay applies to the After-a-delay mode.</value></data>
   <data name="Pref_Telemetry" xml:space="preserve"><value>Record anonymous usage &amp; crash reports (stored locally, never sent)</value></data>
-  <data name="Pref_TelemetryHelp" xml:space="preserve"><value>Off by default. When on, events and crash reports are written under %AppData%/ThIDE/telemetry and never leave your machine.</value></data>
+  <data name="Pref_TelemetryHelp" xml:space="preserve"><value>Off by default. When on, events and crash reports are written under {0} and never leave your machine.</value></data>
   <data name="Pref_AppTheme" xml:space="preserve"><value>App theme</value></data>
   <data name="Pref_ThemeSystem" xml:space="preserve"><value>System default</value></data>
   <data name="Pref_ThemeLight" xml:space="preserve"><value>Light</value></data>
@@ -647,9 +647,9 @@
   <data name="Pref_OnBuild" xml:space="preserve"><value>On build</value></data>
   <data name="Pref_CommandWm" xml:space="preserve"><value>(command)</value></data>
   <data name="Pref_LoadPlugins" xml:space="preserve"><value>Load plugins (custom semantic rules from the plugins folder)</value></data>
-  <data name="Pref_LoadPluginsHelp" xml:space="preserve"><value>Drop plugin .dll files (types implementing ISemanticRule) in %AppData%/ThIDE/plugins. Loaded at startup; disable for performance. Changes apply on restart.</value></data>
+  <data name="Pref_LoadPluginsHelp" xml:space="preserve"><value>Drop plugin .dll files (types implementing ISemanticRule) in {0}. Loaded at startup; disable for performance. Changes apply on restart.</value></data>
   <data name="Pref_McpServer" xml:space="preserve"><value>Enable the in-app AI tools server (MCP)</value></data>
-  <data name="Pref_McpServerHelp" xml:space="preserve"><value>Lets a local AI assistant reach this running project through the Model Context Protocol. Serves on 127.0.0.1 (loopback only) on a random port, protected by a bearer token; the port and token are written to %AppData%/ThIDE/mcp-endpoint.json. Off by default — see docs/mcp-host-setup.md.</value></data>
+  <data name="Pref_McpServerHelp" xml:space="preserve"><value>Lets a local AI assistant reach this running project through the Model Context Protocol. Serves on 127.0.0.1 (loopback only) on a random port, protected by a bearer token; the port and token are written to {0}. Off by default — see docs/mcp-host-setup.md.</value></data>
   <data name="Pref_McpFollowAgent" xml:space="preserve"><value>Follow the agent (let AI tools drive the window)</value></data>
   <data name="Pref_McpFollowAgentHelp" xml:space="preserve"><value>When on, the AI assistant may open files, focus panels, run commands, save, and change the layout in this window. When off, it can still read the project and answer questions, but cannot touch the UI. On by default.</value></data>
   <data name="Pref_CliHelp" xml:space="preserve"><value>The headless CLI (therion-cli) and the LSP server (therion-lsp) are separate executables — see docs.</value></data>
@@ -1011,7 +1011,7 @@
   <data name="DC_LoadModel" xml:space="preserve"><value>Load model…</value></data>
   <data name="DC_Year" xml:space="preserve"><value>Year</value></data>
   <data name="DC_NoModel" xml:space="preserve"><value>No magnetic model loaded</value></data>
-  <data name="DC_NoModelHelp" xml:space="preserve"><value>Download a WMM.COF (NOAA, public domain) and place it in %AppData%/ThIDE, or click "Load model…".</value></data>
+  <data name="DC_NoModelHelp" xml:space="preserve"><value>Download a WMM.COF (NOAA, public domain) and place it in {0}, or click "Load model…".</value></data>
   <data name="DC_DeclinationFmt" xml:space="preserve"><value>Declination: {0}° {1}</value></data>
   <data name="DC_LoadFailed" xml:space="preserve"><value>Failed to load model</value></data>
   <data name="DC_PickTitle" xml:space="preserve"><value>Select a WMM/IGRF .COF file</value></data>
@@ -1036,7 +1036,7 @@ Targets Therion v6.4.0 (thbook bundled).</value></data>
   <data name="Mapiah_Title" xml:space="preserve"><value>Mapiah not found</value></data>
   <data name="Mapiah_Message" xml:space="preserve"><value>The Mapiah sketch editor could not be found on this computer.
 
-Install Mapiah from its releases page, then set the path to mapiah.exe in Settings → External Tools (the "mapiah" row).</value></data>
+Install Mapiah from its releases page, then set the path to {0} in Settings → External Tools (the "mapiah" row).</value></data>
   <data name="Mapiah_Download" xml:space="preserve"><value>Download Mapiah…</value></data>
   <data name="Mapiah_OpenSettings" xml:space="preserve"><value>Open Settings</value></data>
   <!-- Command palette (Ctrl+Shift+P) -->
@@ -1634,7 +1634,7 @@ Apply the changes? Steps that could not preview run now.</value></data>
   <data name="Cmd_MacroFmt" xml:space="preserve"><value>Macro: {0}</value></data>
   <data name="Macro_OutsideProject" xml:space="preserve"><value>That file is outside the project; most tools only work on files inside it (copy it to incoming/ first).</value></data>
   <data name="Assistant_DataPolicyQuestion" xml:space="preserve"><value>Before the first question: what may the assistant send to the model?</value></data>
-  <data name="Assistant_DataPolicyChosen" xml:space="preserve"><value>Data policy: {0}. You can change it in Preferences ▸ Assistant.</value></data>
+  <data name="Assistant_DataPolicyChosen" xml:space="preserve"><value>Data policy: {0}. You can change it in Settings ▸ Extensions.</value></data>
   <data name="Pref_AssistantDataPolicy" xml:space="preserve"><value>What the assistant may send to the model</value></data>
   <data name="Pref_AssistantDataPolicy_SendAll" xml:space="preserve"><value>Everything (the model runs on this computer)</value></data>
   <data name="Pref_AssistantDataPolicy_SendAllHelp" xml:space="preserve"><value>The tools return station names, coordinates, file text and comments to the model. Best answers. Choose this when the model runs locally (LM Studio): nothing leaves the computer.</value></data>
@@ -1772,7 +1772,6 @@ You can restore it from the trash/recycle bin.</value></data>
 This cannot be undone.</value></data>
   <data name="GoTo_LinePrompt" xml:space="preserve"><value>Line number (1–{0}):</value></data>
   <data name="Rename_Title" xml:space="preserve"><value>Rename Symbol</value></data>
-  <data name="Rename_Failed" xml:space="preserve"><value>Rename Symbol failed</value></data>
   <data name="Rename_NoOccurrences" xml:space="preserve"><value>No occurrences of '{0}' were found in the workspace to rename.</value></data>
   <data name="Rename_InvalidName" xml:space="preserve"><value>'{0}' is not a valid Therion name — it contains '{1}'.</value></data>
   <data name="Recent_NoFiles" xml:space="preserve"><value>(no recent files)</value></data>
@@ -2000,4 +1999,17 @@ This cannot be undone.</value></data>
   <data name="Diag_Hint_TH_LINK_404__separator" xml:space="preserve"><value>'{0}' expects an existing file. '\' is not a path separator on this system; '{1}' exists.</value></data>
   <data name="Diag_Msg_THP-LARGE-FILE" xml:space="preserve"><value>'{0}' was not parsed: {1} lines exceeds the {2}-line parse limit. Its identifiers are not in the object graph.</value></data>
   <data name="Diag_Msg_THP-LARGE-FILE__kb" xml:space="preserve"><value>'{0}' was not parsed: {1} KB exceeds the {2} KB parse limit. Its identifiers are not in the object graph.</value></data>
+  <data name="Dlg_CopyDetails" xml:space="preserve"><value>Copy details</value></data>
+  <data name="Rename_FailedTitle" xml:space="preserve"><value>Rename Symbol failed</value></data>
+  <data name="Rename_Failed" xml:space="preserve"><value>The rename could not be completed: {0}</value></data>
+  <data name="Notif_GoToLineOutOfRange" xml:space="preserve"><value>Line {0} is outside this file. Enter a number from 1 to {1}.</value></data>
+  <data name="Notif_GoToLineNotNumber" xml:space="preserve"><value>'{0}' is not a line number. Enter a number from 1 to {1}.</value></data>
+  <data name="Notif_NewFileFailed" xml:space="preserve"><value>Could not create the file</value></data>
+  <data name="Notif_NewFolderFailed" xml:space="preserve"><value>Could not create the folder</value></data>
+  <data name="Notif_CreateFailedMsg" xml:space="preserve"><value>Could not create '{0}': {1}</value></data>
+  <data name="Struct_WmmNoModel" xml:space="preserve"><value>WMM: no WMM.COF model (add one in {0})</value></data>
+  <data name="Assistant_NoModel" xml:space="preserve"><value>No model answers at {0} — start LM Studio or Ollama, or change the endpoint in Settings ▸ Extensions.</value></data>
+  <data name="Blender_Fail_StartFailed" xml:space="preserve"><value>Blender could not be started from '{0}'. Set the path to a working Blender in Settings ▸ External Tools.</value></data>
+  <data name="Blender_Fail_StoreHint" xml:space="preserve"><value>A Microsoft Store install can't be used headlessly — use the standard Blender from blender.org.</value></data>
+  <data name="Tools_OverrideNotFound" xml:space="preserve"><value>Override path not found: {0}</value></data>
 </root>

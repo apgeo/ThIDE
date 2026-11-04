@@ -408,7 +408,10 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         OpenJobLogCommand.NotifyCanExecuteChanged();
     }
 
-    private static string FailureMessage(RenderResult result) => result.FailureKind switch
+    private static string FailureMessage(RenderResult result) => result.StartFailedPath is { } path
+        ? string.Format(Tr.Get("Blender_Fail_StartFailed"), path)
+            + (Therion.Blender.Execution.BlenderRunner.IsWindowsStorePath(path) ? " " + Tr.Get("Blender_Fail_StoreHint") : "")
+        : result.FailureKind switch
     {
         RenderFailureKind.BlenderNotFound => Tr.Get("Blender_Fail_NotFound"),
         RenderFailureKind.BlenderTooOld => Tr.Get("Blender_Fail_TooOld"),

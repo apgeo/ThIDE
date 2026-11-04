@@ -130,6 +130,28 @@ public class BlenderRunnerTests : IDisposable
         Assert.Equal("PLY import produced no object", result.ErrorMessage);
     }
 
+    private sealed class ThrowingLauncher : IBlenderProcessLauncher
+    {
+        public IBlenderProcess Start(string exe, IReadOnlyList<string> args, string cwd) =>
+            throw new System.ComponentModel.Win32Exception("No such file or directory");
+    }
+
+    [Fact]
+    public async Task ABlenderThatCannotBeStarted_NamesThePath_AndOnlyMentionsTheStoreOnWindows()
+    {
+        var runner = new BlenderRunner(new ThrowingLauncher(), _ => 10_000_000_000L);
+        var result = await runner.RunAsync(Blender, Job(), null);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(RenderFailureKind.Crashed, result.FailureKind);
+        Assert.Equal(Blender.Path, result.StartFailedPath);
+        Assert.Contains(Blender.Path, result.ErrorMessage);
+        Assert.DoesNotContain("Store", result.ErrorMessage);   // this path is no Store install on any platform
+        Assert.False(BlenderRunner.IsWindowsStorePath(Blender.Path));
+        Assert.Equal(OperatingSystem.IsWindows(),
+            BlenderRunner.IsWindowsStorePath(@"C:\Program Files\WindowsApps\BlenderFoundation.Blender\blender.exe"));
+    }
+
     [Fact]
     public async Task NonzeroExit_WithoutDone_IsACrash_WithTail()
     {

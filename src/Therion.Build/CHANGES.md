@@ -7,6 +7,10 @@
   `NoDefaultCurrentDirectoryInExePath=1`, and "reveal in file manager" starts `explorer.exe` from the
   Windows folder, so a same-named program in the working directory is never run. Linux and macOS are
   unchanged. `ICompileGate` is unchanged.
+- `ExternalToolLocator` runs its `<tool> --version` probe with its working directory set to
+  `<temp>/ThIDE/tool-probe` (created on demand). Before, the probe ran in the host process's current
+  directory, so a host started from a project folder had `therion --version` overwrite that
+  project's `therion.log`. Migration: none.
 
 ### Additive API
 - `OutputListState(BuiltUtc, Stale)` and two default interface members on `IOutputArtifactCache`
