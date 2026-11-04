@@ -237,13 +237,23 @@ public sealed class ThconfigParser
                         options.Mode == ParserMode.Strict ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
                         $"Unknown export type '{what}'.", line[1].Span,
                         hint: "Expected: " + string.Join(", ", CommandVocabulary.ExportTypes)));
-                var (fmt, output) = ExtractExportOptions(line);
+                var (fmt, output, outputSpan) = ExtractExportOptions(line);
                 if (what.Length > 0 && fmt is { Length: > 0 } &&
                     CommandVocabulary.IsExportType(what) && !CommandVocabulary.IsExportFormat(what, fmt))
                     diagnostics.Add(Diagnostic.Create(
                         DiagnosticCodes.UnknownExportFormat,
                         options.Mode == ParserMode.Strict ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
                         $"'{fmt}' is not a valid format for 'export {what}'.", span));
+                // Therion reads '/' on every platform, '\' only on Windows: elsewhere `-output rez\a.lox`
+                // writes a file literally named `rez\a.lox` into the working folder. The message quotes
+                // the path as written first — the quick fix finds it on the line by that.
+                if (output is not null && SourceGraph.PortableSeparators(output) is { } portable)
+                    diagnostics.Add(Diagnostic.Create(
+                        DiagnosticCodes.BackslashOutputPath,
+                        OperatingSystem.IsWindows() ? DiagnosticSeverity.Info : DiagnosticSeverity.Warning,
+                        $"Output path '{output}' uses '\\' as a separator; Therion on Linux and macOS writes a file with '\\' in its name instead of into the folder.",
+                        outputSpan,
+                        hint: $"Write the path with '/', which Therion reads on every platform: '{portable}'."));
                 return new ExportCommand(span, what, JoinFrom(line, 2)) { Format = fmt, Output = output };
             }
             case "maps":
@@ -274,9 +284,10 @@ public sealed class ThconfigParser
         return sb.ToString();
     }
 
-    private static (string? Format, string? Output) ExtractExportOptions(List<TherionToken> line)
+    private static (string? Format, string? Output, SourceSpan OutputSpan) ExtractExportOptions(List<TherionToken> line)
     {
         string? fmt = null, output = null;
+        var outputSpan = SourceSpan.None;
         for (int k = 2; k < line.Count - 1; k++)
         {
             var t = line[k].Text;
@@ -286,9 +297,15 @@ public sealed class ThconfigParser
                 string.Equals(t, "-format", StringComparison.OrdinalIgnoreCase))
                 fmt = JoinAdjacent(line, k + 1);
             else if (t is "-o" || string.Equals(t, "-output", StringComparison.OrdinalIgnoreCase))
+            {
                 output = Unquote(JoinAdjacent(line, k + 1));
+                int last = k + 1;
+                while (last + 1 < line.Count &&
+                       line[last + 1].Span.StartOffset == line[last].Span.StartOffset + line[last].Span.Length) last++;
+                outputSpan = SpanFromTo(line[k + 1], line[last]);
+            }
         }
-        return (fmt, output);
+        return (fmt, output, outputSpan);
     }
 
     /// <summary>

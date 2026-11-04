@@ -1880,6 +1880,8 @@ This cannot be undone.</value></data>
   <data name="Diag_Hint_TH0060" xml:space="preserve"><value>Expected: {0}</value></data>
   <data name="Diag_Msg_TH0061" xml:space="preserve"><value>'{0}' is not a valid format for 'export {1}'.</value></data>
   <data name="Diag_Msg_TH0062" xml:space="preserve"><value>Unknown layout option '{0}'.</value></data>
+  <data name="Diag_Msg_TH0059" xml:space="preserve"><value>Output path '{0}' uses '\' as a separator; Therion on Linux and macOS writes a file with '\' in its name instead of into the folder.</value></data>
+  <data name="Diag_Hint_TH0059" xml:space="preserve"><value>Write the path with '/', which Therion reads on every platform: '{0}'.</value></data>
   <data name="Diag_Msg_TH0063" xml:space="preserve"><value>'{0}' expects at least {1} argument(s), found {2}.</value></data>
   <data name="Diag_Msg_TH0063__join" xml:space="preserve"><value>'join' needs at least two objects to connect.</value></data>
   <data name="Diag_Msg_TH0064" xml:space="preserve"><value>'{0}' expects at most {1} argument(s), found {2}.</value></data>

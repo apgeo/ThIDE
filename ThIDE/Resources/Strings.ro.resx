@@ -1880,6 +1880,8 @@ Acțiunea nu poate fi anulată.</value></data>
   <data name="Diag_Hint_TH0060" xml:space="preserve"><value>Se așteaptă: {0}</value></data>
   <data name="Diag_Msg_TH0061" xml:space="preserve"><value>„{0}” nu este un format valid pentru „export {1}”.</value></data>
   <data name="Diag_Msg_TH0062" xml:space="preserve"><value>Opțiune de layout necunoscută „{0}”.</value></data>
+  <data name="Diag_Msg_TH0059" xml:space="preserve"><value>Calea de ieșire „{0}” folosește „\” ca separator; Therion pe Linux și macOS scrie un fișier cu „\” în nume în loc să-l pună în dosar.</value></data>
+  <data name="Diag_Hint_TH0059" xml:space="preserve"><value>Scrieți calea cu „/”, pe care Therion o citește pe orice platformă: „{0}”.</value></data>
   <data name="Diag_Msg_TH0063" xml:space="preserve"><value>„{0}” așteaptă cel puțin {1} argument(e), s-au găsit {2}.</value></data>
   <data name="Diag_Msg_TH0063__join" xml:space="preserve"><value>„join” are nevoie de cel puțin două obiecte de conectat.</value></data>
   <data name="Diag_Msg_TH0064" xml:space="preserve"><value>„{0}” așteaptă cel mult {1} argument(e), s-au găsit {2}.</value></data>

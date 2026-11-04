@@ -17,6 +17,7 @@ public static partial class CodeFixes
     public const string UnresolvedStation = "TH_SEM_001";
     public const string UnterminatedBlock = "TH0020";
     public const string WindowsPathSeparator = "TH_SEM_016";
+    public const string BackslashOutputPath = Therion.Syntax.DiagnosticCodes.BackslashOutputPath;
     public const string ShotOutlier = SemanticDiagnosticCodes.ShotOutlier;
 
     private static readonly Dictionary<string, string> Enders = new(StringComparer.OrdinalIgnoreCase)
@@ -33,7 +34,7 @@ public static partial class CodeFixes
     private static partial Regex Suggestion();
 
     /// <summary>Codes "fix all" can handle.</summary>
-    public static IReadOnlySet<string> BatchCodes { get; } = new HashSet<string> { UnresolvedStation, UnterminatedBlock, WindowsPathSeparator };
+    public static IReadOnlySet<string> BatchCodes { get; } = new HashSet<string> { UnresolvedStation, UnterminatedBlock, WindowsPathSeparator, BackslashOutputPath };
 
     /// <summary>
     /// The fixes for one line (1-based), in menu order: rename to a suggested name, rewrite a Windows
@@ -51,7 +52,7 @@ public static partial class CodeFixes
 
         foreach (var d in diagnostics.Where(d => d.Span.Start.Line == lineNumber))
             if (Rename(lines, d) is { } rename) fixes.Add(rename);
-        foreach (var d in diagnostics.Where(d => d.Span.Start.Line == lineNumber && d.Code.Value == WindowsPathSeparator))
+        foreach (var d in diagnostics.Where(d => d.Span.Start.Line == lineNumber && d.Code.Value is WindowsPathSeparator or BackslashOutputPath))
             if (Separators(lines, d) is { } separators) fixes.Add(separators);
         // TH_SEM_012 comes from the project analysis, which the editor's own diagnostics do not hold, so
         // a line that may be a zero-length leg is checked without it: Ctrl+. in the editor and Fix in the
@@ -119,7 +120,7 @@ public static partial class CodeFixes
         {
             UnresolvedStation => Rename(lines, d),
             UnterminatedBlock => Terminator(lines, line) ?? TerminatorForUnclosed(lines, line),
-            WindowsPathSeparator => Separators(lines, d),
+            WindowsPathSeparator or BackslashOutputPath => Separators(lines, d),
             _ => null,
         };
         return fix is { SafeForBatch: true } ? fix : null;
@@ -143,8 +144,8 @@ public static partial class CodeFixes
         return new CodeFix("Fix_Rename", [from, to], d.Code.Value, [new TextEdit(lines.Start(line) + i, from.Length, from, to)], safe);
     }
 
-    // `input date\a.th` → `input date/a.th`: the path is the first quoted text of the message. Safe when
-    // it is an argument of the line exactly once.
+    // `input date\a.th` → `input date/a.th` (and `-output rez\a.lox` → `rez/a.lox`): the path is the
+    // first quoted text of the message. Safe when it is an argument of the line exactly once.
     private static CodeFix? Separators(Lines lines, Diagnostic d)
     {
         int line = d.Span.Start.Line;

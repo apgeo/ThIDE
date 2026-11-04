@@ -48,6 +48,7 @@ public static class DiagnosticCodes
     public const string UnknownExportType        = "TH0060";  // export <type>
     public const string UnknownExportFormat      = "TH0061";  // export … -fmt invalid for <type>
     public const string UnknownLayoutOption      = "TH0062";  // layout body option key
+    public const string BackslashOutputPath      = "TH0059";  // export … -output rez\a.lox ('\' off Windows)
 
     // -- schema-driven validation (SchemaValidator, syntax-coverage effort) --
     public const string MissingRequiredArgument  = "TH0063";  // fewer args than schema MinArgs

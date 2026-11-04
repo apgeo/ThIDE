@@ -52,6 +52,7 @@
 | `TH0060` | lenient | Unknown export type (`export <type>`). | `ThconfigParser` |
 | `TH0061` | lenient | `-fmt` value invalid for the export type. | `ThconfigParser` |
 | `TH0062` | lenient | Unknown layout option key. | `LayoutBodyParser` (`.th` + `.thconfig`) |
+| `TH0059` | Warning (Info on Windows) | An `export … -output` path written with Windows `\` separators: Therion on Linux/macOS writes a file with `\` in its name into the working folder instead of into the folder named. Quick fix and fix-all rewrite the separators to `/`, which Therion reads on every platform. Rooted paths (`C:\…`) are not reported. | `ThconfigParser` |
 
 ### Schema-driven validation (`SchemaValidator`, syntax-coverage effort)
 
