@@ -730,6 +730,7 @@
   <data name="M3D_OpenTip" xml:space="preserve"><value>Open a .lox / .3d model file</value></data>
   <data name="M3D_FullScreen" xml:space="preserve"><value>⛶ Full screen</value></data>
   <data name="M3D_ExitFullScreen" xml:space="preserve"><value>⤢ Exit full screen</value></data>
+  <data name="M3D_ExitFullScreenTip" xml:space="preserve"><value>Leave full screen (Esc)</value></data>
   <data name="M3D_ResetView" xml:space="preserve"><value>⟲ Reset view</value></data>
   <data name="M3D_ResetViewTip" xml:space="preserve"><value>Re-frame the model</value></data>
   <data name="M3D_Defaults" xml:space="preserve"><value>↺ Defaults</value></data>
@@ -790,6 +791,7 @@
   <data name="M3D_ExportFolder" xml:space="preserve"><value>Folder for the web page</value></data>
   <data name="M3D_ExportDone" xml:space="preserve"><value>Web page written to {0}</value></data>
   <data name="M3D_ExportFailed" xml:space="preserve"><value>Could not write the web page: {0}</value></data>
+  <data name="M3D_LoadFailed" xml:space="preserve"><value>Could not show {0}: {1}</value></data>
   <data name="M3D_ExportNoModel" xml:space="preserve"><value>Load a model first.</value></data>
   <!-- Live preview tool -->
   <data name="Live_PlanTip" xml:space="preserve"><value>Plan view (looking down — north up)</value></data>
