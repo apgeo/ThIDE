@@ -698,10 +698,13 @@ public sealed class DockFactory : Factory
 
     /// <summary>
     /// The bottom panels (Diagnostics, Compiler Output, …) never shrink below their toolbars plus a
-    /// header and about three rows: at laptop height the default proportion left the Diagnostics list
-    /// a single row, or none at all once the explanation pane opened.
+    /// header and three full rows: at laptop height the default proportion left the Diagnostics list
+    /// a single row, or none at all once the explanation pane opened. Measured at 1366x768 (maximized):
+    /// the dock's title and tab strip take 45 px, the Diagnostics toolbar and filter rows 64, the
+    /// grid's header 32 and each row 33, the explanation strip 25, so three rows need 266; at 250, what
+    /// a restart brings back, the grid showed two and a half.
     /// </summary>
-    private const double BottomRegionMinHeight = 250;
+    internal const double BottomRegionMinHeight = 270;
 
     /// <summary>
     /// Builds a renderable dock tree from a declarative profile: left/right rails (possibly
@@ -1487,7 +1490,7 @@ public sealed class DockFactory : Factory
 
         HostWindowLocator = new Dictionary<string, Func<IHostWindow?>>
         {
-            [nameof(IDockWindow)] = () => new HostWindow(),
+            [nameof(IDockWindow)] = () => new OwnedHostWindow(),
         };
 
         base.InitLayout(layout);

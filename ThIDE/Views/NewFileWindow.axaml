@@ -14,8 +14,13 @@
             <Button Content="{l:Loc NewFile_Create}" Click="OnCreate" IsDefault="True" MinWidth="110"
                     IsEnabled="{Binding CanCreate}" AutomationProperties.AutomationId="NewFile.Create" />
         </StackPanel>
-        <TextBlock DockPanel.Dock="Bottom" Text="{Binding Message}" Foreground="#E65100" TextWrapping="Wrap" Margin="0,6,0,0"
-                   AutomationProperties.AutomationId="NewFile.Message" />
+        <DockPanel DockPanel.Dock="Bottom" Margin="0,6,0,0">
+            <Button DockPanel.Dock="Right" Content="{l:Loc Dlg_CopyDetails}" Click="OnCopyDetails" Margin="8,0,0,0"
+                    VerticalAlignment="Top" IsVisible="{Binding HasErrorDetails}"
+                    AutomationProperties.AutomationId="NewFile.CopyDetails" />
+            <TextBlock Text="{Binding Message}" Foreground="#E65100" TextWrapping="Wrap"
+                       AutomationProperties.AutomationId="NewFile.Message" />
+        </DockPanel>
         <Grid ColumnDefinitions="260,12,*">
             <ListBox Grid.Column="0" ItemsSource="{Binding Templates}" SelectedItem="{Binding SelectedTemplate, Mode=TwoWay}"
                      AutomationProperties.AutomationId="NewFile.Templates" AutomationProperties.Name="{l:Loc NewFile_Template}">

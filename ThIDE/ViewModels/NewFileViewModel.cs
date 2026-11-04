@@ -75,6 +75,9 @@ public sealed partial class NewFileViewModel : ObservableObject
     [ObservableProperty] private string _preview = string.Empty;
     [ObservableProperty] private string _message = string.Empty;
     [ObservableProperty] private bool _canCreate;
+    /// <summary>The exception behind a failed create, for "Copy details"; null when there is none.</summary>
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(HasErrorDetails))] private string? _errorDetails;
+    public bool HasErrorDetails => ErrorDetails is not null;
 
     /// <summary>
     /// The file to create: the typed name, with the template's extension unless it already ends in one
@@ -142,6 +145,7 @@ public sealed partial class NewFileViewModel : ObservableObject
         Plan = null;
         CanCreate = false;
         Message = string.Empty;
+        ErrorDetails = null;
         if (SelectedTemplate is null || string.IsNullOrWhiteSpace(FileName) || string.IsNullOrWhiteSpace(Folder))
         {
             Preview = string.Empty;
@@ -167,10 +171,21 @@ public sealed partial class NewFileViewModel : ObservableObject
     {
         if (Plan is not { } plan || _env.Editor is null || SelectedTemplate is null) return Tr.Get("NewFile_CannotCreate");
         var outcome = await _env.Editor.ApplyAsync(plan.Batch);
+        if (outcome.Failure is { } failure) return CreateFailed(failure);
         if (!outcome.Success)
             return outcome.Describe();
         await _env.Open(plan.FilePath, plan.Caret);
         if (SelectedTemplate.Template.ActivateThconfig && _env.Activate is { } activate) await activate(plan.FilePath);
         return null;
+    }
+
+    /// <summary>
+    /// The file could not be written: a sentence in the UI language naming the file and the reason,
+    /// with the exception kept for "Copy details" instead of the raw .NET message in the dialog.
+    /// </summary>
+    public string CreateFailed(Exception ex)
+    {
+        ErrorDetails = ex.ToString();
+        return string.Format(Tr.Get("Notif_CreateFailedMsg"), Path.GetFileName(TargetPath), IoErrorText.Reason(ex));
     }
 }

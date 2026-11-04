@@ -459,7 +459,8 @@ public class LayoutProfileTests
 
         var region = FindById<IProportionalDock>(root, "BottomRegion");
         Assert.NotNull(region);
-        Assert.True(region!.MinHeight >= 200, $"bottom minimum {region.MinHeight}");
+        // Title and tab strip 45 + toolbar and filters 64 + header 32 + three 33 px rows + details 25.
+        Assert.True(region!.MinHeight >= 45 + 64 + 32 + 3 * 33 + 25, $"bottom minimum {region.MinHeight}");
         Assert.False(FindById<IToolDock>(root, "BottomTools")!.MinHeight > 0);
 
         var captured = LayoutProfileCapture.Capture(root, KnownTools.Contains);

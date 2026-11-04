@@ -26,7 +26,12 @@ public partial class NewFileWindow : Window
             if (await Model.CreateAsync() is { } problem) Model.Message = problem;
             else Close();
         }
-        catch (Exception ex) { Model.Message = ex.Message; }
+        catch (Exception ex) { Model.Message = Model.CreateFailed(ex); }
+    }
+
+    private void OnCopyDetails(object? sender, RoutedEventArgs e)
+    {
+        if (Model.ErrorDetails is { } details) ThIDE.Services.ClipboardHelper.SetText(details);
     }
 
     private void OnCancel(object? sender, RoutedEventArgs e) => Close();

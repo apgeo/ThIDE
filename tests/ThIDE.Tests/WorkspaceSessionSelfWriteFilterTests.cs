@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using ThIDE.Services;
 
@@ -49,6 +50,43 @@ public class WorkspaceSessionSelfWriteFilterTests
 
         lock (reported)
             Assert.True(reported.Count > 0, "the external write after the IDE's own save raised no ExternalFileChanged");
+    }
+
+    // A chmod fires inotify's attribute event, which the watcher reports like a write; it used to raise
+    // "modified outside the editor" (and a reload) for a file whose text had not changed.
+    [Fact]
+    public async Task A_permission_change_is_not_reported_and_a_later_edit_is()
+    {
+        if (OperatingSystem.IsWindows()) return;   // the attribute event is the Linux/macOS watcher's
+        using var dir = new TempDir();
+        var tracked = dir.Write("a.th", "survey a\nendsurvey\n");
+        var thconfig = dir.Write("cave.thconfig", "encoding utf-8\nsource a.th\n");
+
+        await using var session = new WorkspaceSessionService(new StubSniffer(), new FakeSettings());
+        await session.SetRootAsync(dir.Path);
+        Assert.True(await session.SetActiveThconfigAsync(thconfig));
+        Assert.True(session.Covers(tracked));
+
+        var reported = new List<ExternalFileChange>();
+        var any = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var seen = 0;
+        session.FileSystemChanged += (_, _) => Interlocked.Increment(ref seen);
+        session.ExternalFileChanged += (_, e) => { lock (reported) reported.Add(e); any.TrySetResult(); };
+
+        File.SetUnixFileMode(tracked, UnixFileMode.UserRead | UnixFileMode.GroupRead | UnixFileMode.OtherRead);
+        try
+        {
+            await WaitUntil(() => Volatile.Read(ref seen) > 0);   // the watcher delivered the chmod
+            Assert.True(Volatile.Read(ref seen) > 0, "the watcher never reported the chmod");
+            await Task.Delay(500);
+            lock (reported) Assert.Empty(reported);
+
+            File.SetUnixFileMode(tracked, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.GroupRead | UnixFileMode.OtherRead);
+            File.WriteAllText(tracked, "survey a\n# edited elsewhere\nendsurvey\n");
+            await Task.WhenAny(any.Task, Task.Delay(Patience));
+            lock (reported) Assert.Contains(reported, e => e.Path == Path.GetFullPath(tracked) && !e.Deleted);
+        }
+        finally { File.SetAttributes(tracked, FileAttributes.Normal); }
     }
 
     private static async Task WaitUntil(Func<bool> condition)

@@ -2131,4 +2131,14 @@ This cannot be undone.</value></data>
   <data name="Cmd_SaveAs" xml:space="preserve"><value>Save As…</value></data>
   <data name="Cmd_SaveAll" xml:space="preserve"><value>Save All</value></data>
   <data name="Cmd_CloseTab" xml:space="preserve"><value>Close Tab</value></data>
+  <data name="IoErr_Denied" xml:space="preserve"><value>access was denied — the file or folder may be read-only</value></data>
+  <data name="IoErr_NoFolder" xml:space="preserve"><value>the folder does not exist</value></data>
+  <data name="IoErr_NoFile" xml:space="preserve"><value>the file does not exist</value></data>
+  <data name="IoErr_PathTooLong" xml:space="preserve"><value>the path is too long</value></data>
+  <data name="IoErr_DiskFull" xml:space="preserve"><value>the disk is full</value></data>
+  <data name="IoErr_InUse" xml:space="preserve"><value>another program is using the file</value></data>
+  <data name="IoErr_Exists" xml:space="preserve"><value>a file with that name already exists</value></data>
+  <data name="IoErr_Other" xml:space="preserve"><value>the system reported a file error (Copy details has it)</value></data>
+  <data name="Edit_IoFailed" xml:space="preserve"><value>The change could not be written to disk: {0}.</value></data>
+  <data name="Rename_WriteFailed" xml:space="preserve"><value>{0} could not be written: {1}. Nothing was renamed.</value></data>
 </root>

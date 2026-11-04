@@ -1386,6 +1386,11 @@ public partial class MainWindow : Window
 
             await ApplyRenameChangesAsync(MergeRenameChanges(changes, optional), oldName, newName, docs!);
         }
+        catch (Services.RenameWriteException ex)
+        {
+            // A file could not be written: the message already says which and why, in the UI language.
+            await new MessageDialog(ThIDE.Resources.Tr.Get("Rename_FailedTitle"), ex.Message, ex.ToString()).ShowAsync(this);
+        }
         catch (System.Exception ex)
         {
             // Never let the rename fail silently (it runs fire-and-forget from the editor event).
@@ -1830,7 +1835,10 @@ public partial class MainWindow : Window
         // Errors linger; everything else auto-expires. A notification that carries an action (e.g.
         // "Show output", "Undo") shows it as a button, and stays a little longer to give time to reach it.
         var expiration = n.Kind == Services.NotificationKind.Error ? TimeSpan.FromSeconds(12) : TimeSpan.FromSeconds(6);
-        _notificationManager.Margin = new Thickness(0, 0, 8, ToastBottomMargin());
+        // Clear of the native web views too (a docked 3D viewer), which are drawn over every toast.
+        var (right, bottom) = WindowFit.ToastClearOfNativeViews(Bounds.Size, ToastColumnWidth, ToastBand,
+            8, ToastBottomMargin(), NativeViewBounds());
+        _notificationManager.Margin = new Thickness(0, 0, right, bottom);
         if (!n.HasAction)
         {
             _notificationManager.Show(new Avalonia.Controls.Notifications.Notification(n.Title, n.Message, type, expiration));
@@ -1871,18 +1879,32 @@ public partial class MainWindow : Window
         return WindowFit.ToastBottomMargin(windowBottom, workBottom, statusHeight, tabStrips);
     }
 
+    /// <summary>Room the bottom-right toasts take: a toast's width with its margin, and two toasts' height.</summary>
+    private const double ToastColumnWidth = 400, ToastBand = 200;
+
+    // Where the visible native web views of this window are, in window coordinates.
+    private List<Rect> NativeViewBounds()
+    {
+        var views = new List<Rect>();
+        foreach (var web in this.GetVisualDescendants().OfType<NativeWebView>())
+        {
+            if (!web.IsEffectivelyVisible || web.TranslatePoint(default, this) is not { } origin) continue;
+            views.Add(new Rect(origin, web.Bounds.Size));
+        }
+        return views;
+    }
+
     // The tool docks put their tab strips along the bottom edge of the dock area, right where the
     // bottom-right toasts stack up: measure them so the toasts start above, not on top of, the tabs.
     private double ToolTabStripClearance()
     {
-        const double toastColumnWidth = 400;
         var strips = new List<Rect>();
         foreach (var strip in this.GetVisualDescendants().OfType<Dock.Avalonia.Controls.ToolTabStrip>())
         {
             if (!strip.IsVisible || strip.TranslatePoint(default, this) is not { } origin) continue;
             strips.Add(new Rect(origin, strip.Bounds.Size));
         }
-        return WindowFit.TabStripClearance(Bounds.Height, Bounds.Width - toastColumnWidth, strips);
+        return WindowFit.TabStripClearance(Bounds.Height, Bounds.Width - ToastColumnWidth, strips);
     }
 
     // ----- "open with" / file association ------------------------

@@ -13,17 +13,21 @@ namespace ThIDE.Services;
 /// <param name="Error">An I/O failure part-way through; what was written has been rolled back.</param>
 /// <param name="Written">Every path created, copied or edited, in the order it happened.</param>
 /// <param name="Changes">On success, every file's text before and after, for a workspace undo record.</param>
+/// <param name="Failure">The exception behind <paramref name="Error"/>, for a "Copy details" button.</param>
 public sealed record EditOutcome(
     IReadOnlyList<EditProblem> Problems,
     string? Error,
     IReadOnlyList<string> Written,
-    IReadOnlyList<FileChange>? Changes = null)
+    IReadOnlyList<FileChange>? Changes = null,
+    Exception? Failure = null)
 {
     public bool Success => Problems.Count == 0 && Error is null;
 
-    /// <summary>Why the batch failed, in the UI language: the I/O error, or one line per refused file.</summary>
-    public string Describe() => Error ?? string.Join("; ", Problems.Select(p =>
-        string.Format(ThIDE.Resources.Tr.Get("Edit_Problem" + p.Kind), Path.GetFileName(p.FilePath))));
+    /// <summary>Why the batch failed, in the UI language: the I/O error's reason, or one line per refused file.</summary>
+    public string Describe() =>
+        Failure is not null ? string.Format(ThIDE.Resources.Tr.Get("Edit_IoFailed"), ThIDE.Resources.IoErrorText.Reason(Failure))
+        : Error ?? string.Join("; ", Problems.Select(p =>
+            string.Format(ThIDE.Resources.Tr.Get("Edit_Problem" + p.Kind), Path.GetFileName(p.FilePath))));
 }
 
 /// <summary>
@@ -55,7 +59,7 @@ public sealed class WorkspaceEditService(IDocumentService documents, IWorkspaceS
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            return new EditOutcome([], ex.Message, []);
+            return new EditOutcome([], ex.Message, [], Failure: ex);
         }
         problems.AddRange(check.Problems);
         if (problems.Count == 0)
@@ -141,7 +145,7 @@ public sealed class WorkspaceEditService(IDocumentService documents, IWorkspaceS
             {
                 try { undo.Pop()(); } catch (Exception) { /* best effort: report the original failure */ }
             }
-            return new EditOutcome([], ex.Message, []);
+            return new EditOutcome([], ex.Message, [], Failure: ex);
         }
 
         foreach (var group in batch.Edits)

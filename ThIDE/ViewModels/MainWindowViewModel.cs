@@ -2085,11 +2085,10 @@ public partial class MainWindowViewModel : ViewModelBase
             // governs the *rest* of the project's live re-analysis).
             var activePath = _documents.CurrentPath;
             var merged = System.Collections.Immutable.ImmutableArray.CreateBuilder<Therion.Core.Diagnostic>();
+            // The snapshot's list already holds every file's parse AND semantic diagnostics (the
+            // workspace build adds each bound file's model.Diagnostics to it), so the per-file models
+            // are not added again: that listed every other file's semantic findings twice.
             merged.AddRange(ws.Diagnostics.Where(d => !IsActiveFile(d.Span.FilePath, activePath)));
-            // Also include per-file semantic diagnostics from every loaded file except the active one.
-            foreach (var (path, model) in ws.PerFile)
-                if (!IsActiveFile(path, activePath))
-                    merged.AddRange(model.Diagnostics);
             // run the (config-driven) semantic rules over the workspace and include their
             // diagnostics. Cached per workspace snapshot so repeated refreshes don't re-run them.
             merged.AddRange(RuleDiagnostics(ws));

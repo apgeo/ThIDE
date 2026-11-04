@@ -220,4 +220,48 @@ public class WindowFitTests
         Assert.Contains("MinWidth=\"900\"", xaml, StringComparison.Ordinal);
         Assert.Contains("MinHeight=\"560\"", xaml, StringComparison.Ordinal);
     }
+
+    // A docked 3D viewer is a native web view, drawn over every toast; the toasts move out from under it.
+    private static readonly Avalonia.Size Host = new(1366, 685);
+
+    [Fact]
+    public void Toasts_move_left_of_a_web_view_docked_on_the_right()
+    {
+        var viewer = new Avalonia.Rect(1066, 60, 300, 580);   // right dock, down to the bottom tool area
+
+        var (right, bottom) = WindowFit.ToastClearOfNativeViews(Host, 400, 200, 8, 40, [viewer]);
+
+        Assert.Equal(Host.Width - viewer.Left + 8, right);
+        Assert.Equal(40, bottom);
+        Assert.True(Host.Width - right <= viewer.Left);
+    }
+
+    [Fact]
+    public void Toasts_stay_put_when_no_web_view_is_in_their_corner()
+    {
+        var leftViewer = new Avalonia.Rect(0, 60, 300, 580);
+        var high = new Avalonia.Rect(1000, 0, 366, 200);
+
+        Assert.Equal((8.0, 40.0), WindowFit.ToastClearOfNativeViews(Host, 400, 200, 8, 40, [leftViewer, high]));
+        Assert.Equal((8.0, 40.0), WindowFit.ToastClearOfNativeViews(Host, 400, 200, 8, 40, []));
+    }
+
+    [Fact]
+    public void Toasts_rise_above_a_web_view_that_spans_the_window_bottom()
+    {
+        var wide = new Avalonia.Rect(0, 400, 1366, 245);   // the 3D viewer docked along the bottom
+
+        var (right, bottom) = WindowFit.ToastClearOfNativeViews(Host, 400, 200, 8, 40, [wide]);
+
+        Assert.Equal(8, right);
+        Assert.Equal(Host.Height - wide.Top + 8, bottom);
+    }
+
+    [Fact]
+    public void Toasts_keep_their_place_when_a_web_view_fills_the_window()
+    {
+        var full = new Avalonia.Rect(0, 0, 1366, 685);
+
+        Assert.Equal((8.0, 40.0), WindowFit.ToastClearOfNativeViews(Host, 400, 200, 8, 40, [full]));
+    }
 }
