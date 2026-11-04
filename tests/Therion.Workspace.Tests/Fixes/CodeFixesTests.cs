@@ -64,6 +64,20 @@ public class CodeFixesTests
     }
 
     [Fact]
+    public void Zero_length_leg_gets_the_same_fixes_without_the_project_diagnostic()
+    {
+        // The editor's Ctrl+. passes only the file's own diagnostics; TH_SEM_012 is a project one.
+        var withDiagnostic = CodeFixes.ForLine(ZeroLeg, 4, [D(CodeFixes.ShotOutlier, 4, "zero-length")]);
+        var without = CodeFixes.ForLine(ZeroLeg, 4, []);
+
+        Assert.Equal(["Fix_Equate", "Fix_CommentOutDisconnects"], without.Select(f => f.TitleKey));
+        Assert.Equal(withDiagnostic.Select(f => (f.TitleKey, string.Join(",", f.TitleArgs))), without.Select(f => (f.TitleKey, string.Join(",", f.TitleArgs))));
+        Assert.Equal(Apply(ZeroLeg, withDiagnostic[0]), Apply(ZeroLeg, without[0]));
+        // A leg with a length is not one: the plain comment-out, as before.
+        Assert.Equal(["Fix_CommentOut"], CodeFixes.ForLine(ZeroLeg, 7, []).Select(f => f.TitleKey));
+    }
+
+    [Fact]
     public void Zero_length_leg_between_otherwise_connected_stations_comments_out_plainly()
     {
         var text = ZeroLeg.Replace("    A C 3 10 0", "    C B 3 10 0\n    A C 3 10 0");
