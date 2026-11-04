@@ -12,6 +12,12 @@ and what to do. Entries also cover behaviour that reaches you through `Therion.S
   took it for a station of the parent, and any rule that renamed it gave an `InvalidName` problem
   (`T2@sub`). Placeholders are now left out of `Renames` and `Unchanged`; the reference itself is
   still renamed with the station it names when that station is in scope. Migration: none.
+- **`FixAll.Plan` closes every block left open at one place in one run.** A survey whose last child
+  is an open centreline is reported on a line that leads back to the centreline, so its terminator
+  was skipped as a duplicate and a second run was needed. Both terminators now go into one insertion
+  edit, inner block first (`\n  endcentreline\nendsurvey`), and `Fixed` counts both. The same
+  diagnostic listed twice is still fixed once. Migration: none; a host that counts edits per
+  diagnostic sees one edit for the two fixes.
 
 ## 2026-11 (later)
 

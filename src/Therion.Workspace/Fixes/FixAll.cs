@@ -22,7 +22,8 @@ public static class FixAll
     /// <summary>
     /// The batch-safe fixes for every diagnostic with <paramref name="code"/>, one edit group per
     /// file. A fix that overlaps one already taken (two diagnostics on the same token) is skipped and
-    /// counted, as are diagnostics without a safe fix.
+    /// counted, as are diagnostics without a safe fix. The terminators of blocks left open at one place
+    /// go in one insertion, innermost first.
     /// </summary>
     public static (EditBatch Batch, int Fixed, int Skipped) Plan(string code, IEnumerable<Diagnostic> diagnostics, Func<string, string?> readText)
     {
@@ -37,6 +38,11 @@ public static class FixAll
             foreach (var d in file.OrderBy(d => d.Span.Start.Line))
             {
                 if (CodeFixes.ForDiagnostic(lines, d) is not { } fix) { skipped++; continue; }
+                if (code == CodeFixes.UnterminatedBlock)
+                {
+                    if (PlaceTerminator(edits, lines, d.Span.Start.Line)) fixedCount++; else skipped++;
+                    continue;
+                }
                 if (fix.Edits.Any(e => edits.Any(x => Overlaps(x, e)))) { skipped++; continue; }
                 edits.AddRange(fix.Edits);
                 fixedCount++;
@@ -49,6 +55,34 @@ public static class FixAll
     // Two insertions at one offset (two terminators for one block) count as overlapping too.
     private static bool Overlaps(TextEdit a, TextEdit b) =>
         a.Start == b.Start || a.Start < b.End && b.Start < a.End;
+
+    // A missing terminator for the diagnostic on `line`: the innermost unterminated opener's, or, when
+    // that one is planned already, the next one out. A survey whose last child is an open centreline
+    // is reported on a line that leads back to the centreline too; both terminators go at one offset,
+    // in one insertion, the inner (deeper indented) first, so one run closes both. False when every
+    // candidate is planned already (one block reported twice) or the next one is not batch-safe.
+    private static bool PlaceTerminator(List<TextEdit> edits, CodeFixes.Lines lines, int line)
+    {
+        foreach (var candidate in CodeFixes.UnclosedTerminators(lines, line))
+        {
+            if (!candidate.SafeForBatch || candidate.Edits is not [{ Length: 0 } insert]) return false;
+            int i = edits.FindIndex(x => x.Start == insert.Start && x.Length == 0);
+            if (i < 0)
+            {
+                if (edits.Any(x => Overlaps(x, insert))) return false;
+                edits.Add(insert);
+                return true;
+            }
+            var parts = System.Text.RegularExpressions.Regex.Split(edits[i].NewText, @"(?=\r\n|(?<!\r)\n)").Where(p => p.Length > 0).ToList();
+            if (parts.Contains(insert.NewText)) continue;
+            static int Depth(string part) => part.TrimStart('\r', '\n').TakeWhile(c => c is ' ' or '\t').Count();
+            int at = parts.FindIndex(p => Depth(p) < Depth(insert.NewText));
+            parts.Insert(at < 0 ? parts.Count : at, insert.NewText);
+            edits[i] = edits[i] with { NewText = string.Concat(parts) };
+            return true;
+        }
+        return false;
+    }
 
     /// <summary>The preview rows of a batch: each edit's line before and after.</summary>
     public static IReadOnlyList<EditPreviewRow> Preview(EditBatch batch, Func<string, string?> readText)
