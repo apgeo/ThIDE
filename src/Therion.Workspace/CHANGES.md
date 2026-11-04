@@ -4,6 +4,15 @@ What a consumer of this library can notice, newest first. Each entry says what c
 and what to do. Entries also cover behaviour that reaches you through `Therion.Syntax` and
 `Therion.Semantics`, which this library is built on.
 
+## 2026-11 (round 5)
+
+### Behaviour changes
+- **Strict mode now raises every documented "lenient" check to an Error.** Three checks stayed a
+  Warning in `ParserMode.Strict`: a `fix` with fewer than three coordinates (`TH0030`), a `.th2`
+  `point` without x, y and type (`TH2_001`) and an unknown `team` role (`TH0065`). Lenient-mode
+  results are unchanged. `docs/diagnostics.md` now lists `TH0036` (a `data` order without shot
+  endpoints). Migration: none.
+
 ## 2026-11 (later)
 
 ### Behaviour changes

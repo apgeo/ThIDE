@@ -1004,7 +1004,7 @@ public sealed class ThParser
         {
             diagnostics.Add(Diagnostic.Create(
                 DiagnosticCodes.MalformedFix,
-                DiagnosticSeverity.Warning,
+                Warn(options),
                 "'fix' requires station and x y z coordinates.",
                 line.Span));
             return new StationFix(line.Span,

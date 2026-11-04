@@ -20,6 +20,7 @@
 | `TH0032` | Warning | Malformed `data` (needs at least a style name). | `ThParser` |
 | `TH0033` | lenient | Unknown data style `<style>`. | `ThParser` |
 | `TH0034` | lenient | Unknown data reading `<keyword>`. | `ThParser` |
+| `TH0036` | lenient | `data` reading order names no shot endpoints (`from` and `to`, or `station` / `newline`). | `ThParser` |
 | `TH0037` | lenient | Single-column line in a centreline (`<tok>`): not a valid command or survey shot. | `ThParser` |
 | `TH0038` | lenient | Malformed `sd` (needs `<quantity…> <value> <unit>`). | `ThParser` |
 | `TH0039` | lenient | Malformed `grid-angle` / `vthreshold` (needs a numeric value). | `ThParser` |

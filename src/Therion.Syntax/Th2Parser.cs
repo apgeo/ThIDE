@@ -173,7 +173,7 @@ public sealed class Th2Parser
         if (line.Tokens.Length < 4)
         {
             diags.Add(Diagnostic.Create(DiagnosticCodes.Th2MalformedPoint,
-                DiagnosticSeverity.Warning,
+                options.Mode == ParserMode.Strict ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
                 "'point' requires x, y, and type.", line.Span));
             return new PointObject(line.Span, 0, 0, string.Empty, JoinFrom(line, 1));
         }
