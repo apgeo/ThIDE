@@ -1946,14 +1946,28 @@ public partial class MainWindowViewModel : ViewModelBase
         if (e.Row.SourceRow is not { } source || e.Row.FieldDefinition is not { } fields) return;
         if (_documents.CurrentAst is not { } ast) { RevertShotRow(e.Row); return; }
 
-        int idx = -1;
-        for (int i = 0; i < fields.Fields.Length; i++)
+        // The grid edits the foresight column, written under either of Therion's names for it.
+        string[] names = e.Field.ToLowerInvariant() switch
         {
-            if (string.Equals(fields.Fields[i], e.Field, StringComparison.OrdinalIgnoreCase)) { idx = i; break; }
+            "length" => ["length", "tape"],
+            "compass" => ["compass", "bearing"],
+            "clino" => ["clino", "gradient"],
+            _ => [e.Field],
+        };
+        int idx = -1;
+        foreach (var name in names)
+        {
+            idx = Array.FindIndex(fields.Fields.ToArray(), f => string.Equals(f, name, StringComparison.OrdinalIgnoreCase));
+            if (idx >= 0) break;
         }
         if (idx < 0) { RevertShotRow(e.Row); return; }
 
-        var value = e.Value?.ToString("0.###", CultureInfo.InvariantCulture) ?? "-";
+        // The grid shows the bound value (metres, degrees, calibration applied); the file holds the
+        // reading as surveyed, in the row's units and before calibration, so write that.
+        double? reading = e.Value is { } v && e.Row.Source is { } shot
+            ? ShotReadings.Reading(shot, fields.Fields[idx], v) ?? v
+            : e.Value;
+        var value = reading?.ToString("0.###", CultureInfo.InvariantCulture) ?? "-";
 
         // The edit is applied to the active document's AST: a row from another workspace file
         // cannot be found there.
