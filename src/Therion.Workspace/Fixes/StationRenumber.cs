@@ -88,8 +88,10 @@ public static class StationRenumber
         bool InScope(QualifiedName station) =>
             station.HasParent && (station.Parent().Equals(scope) || includeSubsurveys && IsUnder(station.Parent(), scope));
 
+        // A shot or fix written `x@sub` in a parent leaves a placeholder `parent.x@sub` in the index; its
+        // occurrences are also those of the station it names, so it is no station of the parent.
         var stations = model.StationOccurrences.Keys
-            .Where(k => k.Kind == SymbolKind.Station && InScope(k.Name))
+            .Where(k => k.Kind == SymbolKind.Station && !k.Name.Last.Contains('@') && InScope(k.Name))
             .Select(k => k.Name)
             .Distinct()
             .OrderBy(n => n.ToString(), NaturalStringComparer.Instance)

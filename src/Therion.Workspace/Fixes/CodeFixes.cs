@@ -199,11 +199,17 @@ public static partial class CodeFixes
 
     // The diagnostic may sit on the end of the file rather than on the opener: find the last
     // unterminated opener before it.
-    private static CodeFix? TerminatorForUnclosed(Lines lines, int line)
+    private static CodeFix? TerminatorForUnclosed(Lines lines, int line) => UnclosedTerminators(lines, line).FirstOrDefault();
+
+    /// <summary>
+    /// The terminator fixes of the unterminated openers at or before <paramref name="line"/>, innermost
+    /// first. Fix all takes the next one out when the first is planned already: two blocks left open at
+    /// one place are reported on lines that both lead back to the inner one.
+    /// </summary>
+    internal static IEnumerable<CodeFix> UnclosedTerminators(Lines lines, int line)
     {
         for (int n = Math.Min(line, lines.Count); n >= 1; n--)
-            if (Terminator(lines, n) is { } fix) return fix;
-        return null;
+            if (Terminator(lines, n) is { } fix) yield return fix;
     }
 
     private static bool HasTerminatorAhead(Lines lines, int opener, string ender)

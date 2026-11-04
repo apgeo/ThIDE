@@ -33,6 +33,26 @@ and what to do. Entries also cover behaviour that reaches you through `Therion.S
   whose lines end in a bare `\r`, new map members were inserted at the end of the file with `\n`
   breaks; they now go after the map's last member (or under its header) with `\r`. LF and CRLF files
   are unchanged. Migration: none.
+- **`StationRenumber.Plan` no longer refuses a survey that holds a shot or fix written `x@sub`.**
+  Such a reference leaves a placeholder station `parent.x@sub` in the occurrence index; the plan
+  took it for a station of the parent, and any rule that renamed it gave an `InvalidName` problem
+  (`T2@sub`). Placeholders are now left out of `Renames` and `Unchanged`; the reference itself is
+  still renamed with the station it names when that station is in scope. Migration: none.
+- **`FixAll.Plan` closes every block left open at one place in one run.** A survey whose last child
+  is an open centreline is reported on a line that leads back to the centreline, so its terminator
+  was skipped as a duplicate and a second run was needed. Both terminators now go into one insertion
+  edit, inner block first (`\n  endcentreline\nendsurvey`), and `Fixed` counts both. The same
+  diagnostic listed twice is still fixed once. Migration: none; a host that counts edits per
+  diagnostic sees one edit for the two fixes.
+- **Declaration lookups compare paths the way the model indexes its files**
+  (`Therion.Semantics.WorkspaceSemanticModel.FindStationByDeclaration`, `FindSurveyByDeclaration`,
+  and the station lookup of a `.th2` sketch): on Linux `Cave.th` and `cave.th` are two files, and a
+  survey declared at the same offset in both was found in whichever came first. They now use
+  `PerFile.Comparer`. Migration: a model built with the public constructor gets the comparer of the
+  `PerFile` dictionary passed in.
+- **`units dimensions …` is no longer reported as an unknown quantity** (`TH0040`, from
+  `Therion.Syntax`). Therion accepts it, and the Compass and shot-table importers write
+  `units length dimensions feet`, so every imported file had a false warning. Migration: none.
 
 ### Additions
 - **`ThconfigExportEditor.Locate(text, target)`** finds an `ExportTargetInfo` listed from an earlier

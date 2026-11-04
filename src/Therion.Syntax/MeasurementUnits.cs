@@ -25,8 +25,9 @@ public static class MeasurementUnits
             "altitude", "dz",
             // back-reading quantities are also calibratable
             "backtape", "backlength", "backcompass", "backbearing", "backclino", "backgradient",
-            // dimension quantities
-            "left", "right", "up", "down", "ceiling", "floor", "counter");
+            // dimension quantities; `dimensions` sets all four (thdata.cxx set_data_units), and the
+            // Compass and shot-table importers write `units length dimensions feet`
+            "dimensions", "left", "right", "up", "down", "ceiling", "floor", "counter");
 
     private static readonly Dictionary<string, LengthUnit> LengthNames =
         new(StringComparer.OrdinalIgnoreCase)
