@@ -497,6 +497,20 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
         lock (_gate) _selfWrites[TryFull(filePath)] = new SelfWriteMark(DateTime.UtcNow);
     }
 
+    // Test seam (InternalsVisibleTo ThIDE.Tests): true while a self-write mark still waits for the
+    // watcher event of the write it covers. A test waits for this rather than guessing the watcher's
+    // latency, which under load can exceed any fixed sleep.
+    internal bool IsSelfWriteUnseen(string filePath)
+    {
+        lock (_gate) return _selfWrites.TryGetValue(TryFull(filePath), out var mark) && mark.Seen is null;
+    }
+
+    // Test seam: true while a requested graph rebuild is still waiting or running.
+    internal bool IsRebuildPending
+    {
+        get { lock (_gate) return _rebuildPumpRunning; }
+    }
+
     // ---- internals ---------------------------------------------------------
 
     // Swaps in an activation's workspace unless a newer activation was requested meanwhile (checked
@@ -533,7 +547,8 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
     // files at once (checkout, sync, Format all) raises one event per file, but is built and published
     // once. Rebuilds run one at a time, so the model left in place is always built from a snapshot
     // taken after the last re-parse, never an earlier partial one that happened to finish last.
-    private static readonly TimeSpan RebuildQuietPeriod = TimeSpan.FromMilliseconds(200);
+    // Settable for tests only: a burst written by a loaded test machine can spread wider than 200 ms.
+    internal TimeSpan RebuildQuietPeriod { get; set; } = TimeSpan.FromMilliseconds(200);
     private bool _rebuildRequested;
     private bool _rebuildPumpRunning;
 
