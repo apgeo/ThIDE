@@ -149,7 +149,7 @@ public sealed class RenameTools(IWorkspaceHost host, MutationEngine mutations)
             return $"'{newName}' contains '{newName[structural]}'. A rename replaces one name token, "
                  + "not a qualified path or a reference.";
 
-        if (TherionIdentifiers.FirstIllegalChar(newName) is { } illegal)
+        if (TherionIdentifiers.FirstIllegal(newName) is { } illegal)
             return $"'{newName}' contains '{illegal}', which cannot appear in a Therion name.";
 
         if (newName[0] == '-') return $"'{newName}' starts with '-', which Therion reads as an option.";
