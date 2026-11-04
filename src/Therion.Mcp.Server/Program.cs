@@ -96,7 +96,10 @@ if (workspacePath is not null && !File.Exists(workspacePath) && !Directory.Exist
     return 2;
 }
 
-var builder = Host.CreateApplicationBuilder(args);
+// The host's default watch on appsettings.json is off: there is no such file to reload, and on Linux the
+// watcher takes an inotify instance, whose creation throws once the per-user limit is reached. A server
+// started while an editor or a test run holds many watchers would otherwise die before its handshake.
+var builder = Host.CreateApplicationBuilder(["--hostBuilder:reloadConfigOnChange=false", .. args]);
 
 // stdout carries the JSON-RPC frames: anything else written there corrupts the session.
 builder.Logging.ClearProviders();

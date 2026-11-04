@@ -168,16 +168,52 @@ public class McpHostServiceTests
     public async Task The_changed_event_alone_starts_and_stops_the_listener()
     {
         var settings = new FakeSettings();
-        await using var host = NewHost(settings, out _);
+        var log = new LogService();
+        var errors = new List<string>();
+        log.EntryAdded += (_, e) => { if (e.Level == LogVerbosity.Error) lock (errors) errors.Add(e.Message); };
+        var discoveryPath = Path.Combine(Path.GetTempPath(), "ThIDE-test", Guid.NewGuid().ToString("N"), "mcp-endpoint.json");
+        var locator = new ExternalToolLocator();
+        await using var host = new McpHostService(
+            settings, log, new UiBridge(), locator, new TherionCompiler(locator), session: null, buffers: null, discoveryPath);
 
         // No explicit ApplySettingAsync here: only the settings.Changed the Preferences toggle raises.
-        settings.SetMcpEnabled(true);
-        await WaitUntilAsync(() => host.IsListening, TimeSpan.FromSeconds(15));
-        Assert.True(host.IsListening);
+        // The host raises StateChanged when a start or a stop has finished, failed starts included, so
+        // the test waits for that rather than polling against a deadline a loaded machine can miss.
+        Assert.True(await StateAfterChangeAsync(host, () => settings.SetMcpEnabled(true), () => host.IsListening),
+            $"the listener did not start: {string.Join(" | ", errors)}");
 
-        settings.SetMcpEnabled(false);
-        await WaitUntilAsync(() => !host.IsListening, TimeSpan.FromSeconds(15));
-        Assert.False(host.IsListening);
+        Assert.True(await StateAfterChangeAsync(host, () => settings.SetMcpEnabled(false), () => !host.IsListening),
+            "the listener did not stop");
+    }
+
+    /// <summary>Runs <paramref name="change"/>, then waits for the StateChanged it causes and reports <paramref name="expected"/>.</summary>
+    private static async Task<bool> StateAfterChangeAsync(McpHostService host, Action change, Func<bool> expected)
+    {
+        var settled = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        EventHandler onState = (_, _) => settled.TrySetResult();
+        host.StateChanged += onState;
+        try
+        {
+            change();
+            // The bound only stops a broken host from hanging the run; a healthy one answers in well under a second.
+            await Task.WhenAny(settled.Task, Task.Delay(TimeSpan.FromMinutes(2)));
+            return expected();
+        }
+        finally { host.StateChanged -= onState; }
+    }
+
+    [Fact]
+    public void The_in_app_host_does_not_watch_its_configuration_files()
+    {
+        // A file watcher per host start costs an inotify instance on Linux, and creating one throws once the
+        // per-user limit is reached, so the server failed to start whenever other watchers had used them up.
+        var builder = McpHostService.CreateLoopbackBuilder();
+        var watched = ((Microsoft.Extensions.Configuration.IConfigurationBuilder)builder.Configuration).Sources
+            .OfType<Microsoft.Extensions.Configuration.FileConfigurationSource>()
+            .Where(s => s.ReloadOnChange)
+            .Select(s => s.Path)
+            .ToList();
+        Assert.Empty(watched);
     }
 
     [Fact]
