@@ -141,8 +141,50 @@ public static class GisExport
         var v = s ?? string.Empty;
         return v.IndexOfAny(new[] { ',', '"', '\n', '\r' }) < 0 ? v : "\"" + v.Replace("\"", "\"\"") + "\"";
     }
-    private static string Js(string? s) =>
-        "\"" + (s ?? string.Empty).Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n").Replace("\r", "") + "\"";
-    private static string Xml(string? s) =>
-        (s ?? string.Empty).Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;");
+
+    // A JSON string (RFC 8259): every control character escaped, a carriage return dropped so line ends
+    // read as \n, and a lone surrogate, which UTF-8 cannot carry, written as U+FFFD.
+    private static string Js(string? s)
+    {
+        var v = s ?? string.Empty;
+        var sb = new StringBuilder(v.Length + 2).Append('"');
+        for (int i = 0; i < v.Length; i++)
+            switch (v[i])
+            {
+                case '\\': sb.Append("\\\\"); break;
+                case '"': sb.Append("\\\""); break;
+                case '\n': sb.Append("\\n"); break;
+                case '\t': sb.Append("\\t"); break;
+                case '\r': break;
+                case < ' ': sb.Append("\\u").Append(((int)v[i]).ToString("x4", Inv)); break;
+                default: AppendScalar(sb, v, ref i); break;
+            }
+        return sb.Append('"').ToString();
+    }
+
+    // XML 1.0 text (KML, GPX): markup escaped; a control character other than tab and line ends, which
+    // XML cannot hold even as a reference, is dropped, and a lone surrogate is written as U+FFFD.
+    private static string Xml(string? s)
+    {
+        var v = s ?? string.Empty;
+        var sb = new StringBuilder(v.Length);
+        for (int i = 0; i < v.Length; i++)
+            switch (v[i])
+            {
+                case '&': sb.Append("&amp;"); break;
+                case '<': sb.Append("&lt;"); break;
+                case '>': sb.Append("&gt;"); break;
+                case '\t' or '\n' or '\r': sb.Append(v[i]); break;
+                case < ' ' or '\uFFFE' or '\uFFFF': break;
+                default: AppendScalar(sb, v, ref i); break;
+            }
+        return sb.ToString();
+    }
+
+    private static void AppendScalar(StringBuilder sb, string v, ref int i)
+    {
+        char c = v[i];
+        if (char.IsHighSurrogate(c) && i + 1 < v.Length && char.IsLowSurrogate(v[i + 1])) sb.Append(c).Append(v[++i]);
+        else sb.Append(char.IsSurrogate(c) ? '\uFFFD' : c);
+    }
 }
