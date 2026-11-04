@@ -137,7 +137,8 @@ public class StructuralGeologyReturningStationTests
         public void RequestFindAllReferences(string raw, ReferenceKind kind) { }
         public event EventHandler<(string Raw, ReferenceKind Kind)>? FindAllReferencesRequested;
         public void RequestShowInModel3D(string fullName) { }
-        public event EventHandler<string>? ShowInModel3DRequested;
+        public void RequestShowInModel3D(Model3DTarget target) { }
+        public event EventHandler<Model3DTarget>? ShowInModel3DRequested;
     }
 #pragma warning restore CS0067
 }
