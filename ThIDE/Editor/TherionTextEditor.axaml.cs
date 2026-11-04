@@ -859,13 +859,9 @@ public partial class TherionTextEditor : UserControl
     /// between their common prefix and suffix (one undo step; anchors outside it keep their place).</summary>
     private static void ReplaceChangedPart(TextDocument doc, string current, string text)
     {
-        int max = Math.Min(current.Length, text.Length);
-        int prefix = 0;
-        while (prefix < max && current[prefix] == text[prefix]) prefix++;
-        int suffix = 0;
-        while (suffix < max - prefix && current[current.Length - 1 - suffix] == text[text.Length - 1 - suffix]) suffix++;
+        var change = BufferSync.ChangedPart(current, text);
         using (doc.RunUpdate())
-            doc.Replace(prefix, current.Length - prefix - suffix, text.Substring(prefix, text.Length - prefix - suffix));
+            doc.Replace(change.Offset, change.Length, change.Text);
     }
 
     // Large-file guard (#10): when disabled, drop the syntax colorizer so a huge document
