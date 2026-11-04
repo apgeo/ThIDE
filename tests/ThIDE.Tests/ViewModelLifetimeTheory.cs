@@ -118,21 +118,33 @@ public sealed class ViewModelLifetimeTheory : IAsyncLifetime
 
     public static IEnumerable<object[]> RowNames() => Rows.Keys.Select(k => new object[] { k });
 
+    // Rows whose view-model posts work back to the UI thread as soon as it opens (a document parses and
+    // posts the result). They run on a thread bound to the UI dispatcher, pumped as the app's loop would:
+    // a posted job holds its view-model until it has run, and nothing pumps the dispatcher otherwise.
+    private static readonly HashSet<string> PostsToTheUiThread = ["FileDocumentViewModel"];
+
     [Theory]
     [MemberData(nameof(RowNames))]
-    public async Task A_closed_view_model_is_collectable(string name)
+    public void A_closed_view_model_is_collectable(string name)
     {
-        var (weak, keptAlive) = OpenAndClose(name);
+        if (PostsToTheUiThread.Contains(name)) UiThread.Run(() => OpenCloseAndCollect(name, pump: true));
+        else OpenCloseAndCollect(name, pump: false);
+    }
 
-        // Work the view-model started (a parse, a layout) may hold it for a moment after it is closed.
+    private void OpenCloseAndCollect(string name, bool pump)
+    {
+        var (weak, keptAlive) = OpenAndClose(name, pump);
+
+        // Work the view-model started may hold it for a moment after it is closed.
         var until = DateTime.UtcNow + TimeSpan.FromSeconds(5);
         do
         {
+            if (pump) Avalonia.Threading.Dispatcher.UIThread.RunJobs();
             GC.Collect();
             GC.WaitForPendingFinalizers();
             GC.Collect();
             if (!weak.IsAlive) break;
-            await Task.Delay(50);
+            Thread.Sleep(50);
         }
         while (DateTime.UtcNow < until);
 
@@ -146,10 +158,16 @@ public sealed class ViewModelLifetimeTheory : IAsyncLifetime
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    private (WeakReference Weak, object? KeptAlive) OpenAndClose(string name)
+    private (WeakReference Weak, object? KeptAlive) OpenAndClose(string name, bool pump)
     {
         var opened = Rows[name](this);
         Assert.Equal(name, opened.ViewModel.GetType().Name);
+        // Open for a moment, as a window is, so what it started has run before it closes.
+        for (int k = 0; k < 4; k++)
+        {
+            if (pump) Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+            Thread.Sleep(25);
+        }
         opened.Close?.Invoke();
         return (new WeakReference(opened.ViewModel), opened.KeptAlive);
     }
