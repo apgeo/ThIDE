@@ -24,6 +24,9 @@ and what to do. Entries also cover behaviour that reaches you through `Therion.S
   survey declared at the same offset in both was found in whichever came first. They now use
   `PerFile.Comparer`. Migration: a model built with the public constructor gets the comparer of the
   `PerFile` dictionary passed in.
+- **`units dimensions …` is no longer reported as an unknown quantity** (`TH0040`, from
+  `Therion.Syntax`). Therion accepts it, and the Compass and shot-table importers write
+  `units length dimensions feet`, so every imported file had a false warning. Migration: none.
 
 ## 2026-11 (later)
 
