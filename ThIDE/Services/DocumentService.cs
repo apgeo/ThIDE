@@ -108,6 +108,13 @@ public interface IDocumentService
     /// </summary>
     Task<bool> SaveDocumentAsync(FileDocumentViewModel document, CancellationToken ct = default);
     /// <summary>
+    /// Save As: writes <paramref name="document"/>'s text to <paramref name="newPath"/> (in the encoding
+    /// it was read with), opens that file in its place and closes the original without saving it, so
+    /// the original file keeps what was last saved there. A tab already open on the target shows the
+    /// new text. Returns the document now holding the text, or null when nothing was written.
+    /// </summary>
+    Task<FileDocumentViewModel?> SaveAsAsync(FileDocumentViewModel document, string newPath, CancellationToken ct = default);
+    /// <summary>
     /// Reopens a buffer recovered after a crash as a dirty document holding <paramref name="text"/>:
     /// over the file when it can be opened (past the binary/huge-file guard, which the user had already
     /// overridden), otherwise on its own, so the recovered text is never dropped. When the file is already
@@ -760,6 +767,57 @@ public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, 
         document.RequestSaveCleanup();
         var newText = EditorTextCleanup.ApplyOnSave(document.DocumentText, _settings?.Current);
         return await SaveTextAsync(document, newText, ct).ConfigureAwait(true);
+    }
+
+    public async Task<FileDocumentViewModel?> SaveAsAsync(FileDocumentViewModel document, string newPath, CancellationToken ct = default)
+    {
+        if (document is null || string.IsNullOrEmpty(newPath)) return null;
+        var full = Path.GetFullPath(newPath);
+        if (FilePaths.Comparer.Equals(full, TryFull(document.FilePath)))
+            return await SaveDocumentAsync(document, ct).ConfigureAwait(true) ? document : null;
+
+        document.RequestSaveCleanup();
+        var text = EditorTextCleanup.ApplyOnSave(document.DocumentText, _settings?.Current);
+        byte[] bytes;
+        TextFileFormat format;
+        try { (bytes, format) = SourceFileIo.EncodeForSave(full, text, document.Format); }
+        catch (UnrepresentableCharacterException ex)
+        {
+            _notifications?.Error(ThIDE.Resources.Tr.Get("Notif_SaveEncodingTitle"),
+                string.Format(ThIDE.Resources.Tr.Get(ex is UndecodableBytesException ? "Notif_SaveUndecodable" : "Notif_SaveEncoding"),
+                    Path.GetFileName(full), ex.Character, ex.EncodingName));
+            return null;
+        }
+        _session.SuppressSelfWrite(full);
+        try { await Task.Run(() => SourceFileIo.WriteOver(full, bytes), ct).ConfigureAwait(true); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _notifications?.Error(ThIDE.Resources.Tr.Get("Notif_SaveFailedTitle"),
+                string.Format(ThIDE.Resources.Tr.Get("Notif_SaveFailedMsg"), Path.GetFileName(full), ex.Message));
+            throw;
+        }
+
+        // The target's tab (if any) now shows what was written; otherwise the new file opens.
+        var target = FindOpen(full);
+        if (target is not null)
+        {
+            target.Format = format;
+            target.SetText(text, reparse: true);
+            OpenInDockRequested?.Invoke(this, target);
+            SetActive(target);
+        }
+        else
+        {
+            await ForceOpenFileAsync(full, ct).ConfigureAwait(true);
+            target = FindOpen(full);
+        }
+        DocumentSaved?.Invoke(this, full);
+
+        // The original goes back to its saved state so closing it neither asks nor writes.
+        document.RevertToSaved();
+        if (document.Factory is not null) document.CloseTabCommand.Execute(null);
+        else CloseDocument(document);
+        return target;
     }
 
     /// <summary>

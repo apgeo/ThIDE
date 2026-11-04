@@ -32,7 +32,7 @@ def test_toolbar_buttons_have_accessible_names(launch):
     ui = launch()
     tree = ui.tree("#Toolbar.Panel")
     assert "Avalonia.Controls" not in tree
-    assert ui.find("#Toolbar.OpenFile").name  # localized name, e.g. "Open File (Ctrl+O)"
+    assert ui.find("#Toolbar.OpenFile").name  # localized name, e.g. "Open File"
 
 
 def test_menu_opens_and_closes(launch):

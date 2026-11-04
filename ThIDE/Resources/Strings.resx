@@ -6,10 +6,10 @@
   <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
   <data name="AppTitle" xml:space="preserve"><value>ThIDE</value></data>
   <data name="Menu_File" xml:space="preserve"><value>_File</value></data>
-  <data name="Menu_File_OpenFile" xml:space="preserve"><value>Open _File...</value></data>
-  <data name="Menu_File_OpenThconfig" xml:space="preserve"><value>Open _thconfig...</value></data>
-  <data name="Menu_File_OpenFolder" xml:space="preserve"><value>Open F_older...</value></data>
-  <data name="Menu_Settings" xml:space="preserve"><value>_Settings</value></data>
+  <data name="Menu_File_OpenFile" xml:space="preserve"><value>Open _File…</value></data>
+  <data name="Menu_File_OpenThconfig" xml:space="preserve"><value>Open _thconfig…</value></data>
+  <data name="Menu_File_OpenFolder" xml:space="preserve"><value>Open F_older…</value></data>
+  <data name="Menu_Settings" xml:space="preserve"><value>Setti_ngs</value></data>
   <data name="Menu_Help" xml:space="preserve"><value>_Help</value></data>
   <data name="Menu_Help_Thbook" xml:space="preserve"><value>Therion _Book</value></data>
   <data name="Menu_Help_UserGuide" xml:space="preserve"><value>_User Guide</value></data>
@@ -32,7 +32,7 @@
   <data name="Welcome_ShowOnStartup" xml:space="preserve"><value>Show this page on startup</value></data>
   <data name="Pref_ShowWelcome" xml:space="preserve"><value>Show the welcome page on startup</value></data>
   <data name="Menu_File_Exit" xml:space="preserve"><value>E_xit</value></data>
-  <data name="Menu_File_Recent" xml:space="preserve"><value>Recent _Files</value></data>
+  <data name="Menu_File_Recent" xml:space="preserve"><value>_Recent Files</value></data>
   <data name="Menu_View" xml:space="preserve"><value>_View</value></data>
   <data name="Menu_View_ObjectBrowser" xml:space="preserve"><value>Object Browser</value></data>
   <data name="Menu_View_Workspace" xml:space="preserve"><value>Workspace</value></data>
@@ -68,7 +68,7 @@
   <data name="Menu_Build" xml:space="preserve"><value>_Compile</value></data>
   <data name="Menu_Build_Build" xml:space="preserve"><value>_Compile</value></data>
   <data name="Menu_Build_Rebuild" xml:space="preserve"><value>_Recompile</value></data>
-  <data name="Menu_Build_Cancel" xml:space="preserve"><value>_Cancel</value></data>
+  <data name="Menu_Build_Cancel" xml:space="preserve"><value>Ca_ncel</value></data>
   <data name="Tool_WorkspaceExplorer" xml:space="preserve"><value>Workspace Explorer</value></data>
   <data name="Ws_RelationalViewTip" xml:space="preserve"><value>Relational object-graph view</value></data>
   <data name="Ws_FileExplorerViewTip" xml:space="preserve"><value>File-explorer view</value></data>
@@ -386,7 +386,7 @@
   <data name="Notif_LayoutLoadFailed" xml:space="preserve"><value>Could not load layout</value></data>
   <data name="Notif_LayoutMultiMonitorTitle" xml:space="preserve"><value>Multi-monitor layout</value></data>
   <data name="Notif_LayoutNeedsTwoMonitors" xml:space="preserve"><value>This layout needs at least two monitors (and an enabled preview panel).</value></data>
-  <data name="Menu_Tools" xml:space="preserve"><value>Tools</value></data>
+  <data name="Menu_Tools" xml:space="preserve"><value>_Tools</value></data>
   <data name="Menu_Tools_ImportSurvey" xml:space="preserve"><value>Import survey (Survex / Compass)…</value></data>
   <data name="Menu_Tools_BlenderAnimation" xml:space="preserve"><value>Blender Animation…</value></data>
   <data name="Blender_Tool_Title" xml:space="preserve"><value>Blender Animation</value></data>
@@ -482,19 +482,19 @@
   <data name="Tab_Float" xml:space="preserve"><value>Float</value></data>
   <data name="Ctx_CopyName" xml:space="preserve"><value>Copy File Name</value></data>
   <!-- Toolbar tooltips -->
-  <data name="Tb_OpenFile" xml:space="preserve"><value>Open File (Ctrl+O)</value></data>
+  <data name="Tb_OpenFile" xml:space="preserve"><value>Open File</value></data>
   <data name="Tb_OpenThconfig" xml:space="preserve"><value>Open thconfig</value></data>
   <data name="Tb_OpenFolder" xml:space="preserve"><value>Open Folder</value></data>
-  <data name="Tb_Back" xml:space="preserve"><value>Back (Alt+Left)</value></data>
-  <data name="Tb_Forward" xml:space="preserve"><value>Forward (Alt+Right)</value></data>
-  <data name="Tb_Save" xml:space="preserve"><value>Save (Ctrl+S)</value></data>
-  <data name="Tb_Cut" xml:space="preserve"><value>Cut (Ctrl+X)</value></data>
-  <data name="Tb_Copy" xml:space="preserve"><value>Copy (Ctrl+C)</value></data>
-  <data name="Tb_Paste" xml:space="preserve"><value>Paste (Ctrl+V)</value></data>
-  <data name="Tb_FindInFiles" xml:space="preserve"><value>Find in Files (Ctrl+Shift+F)</value></data>
-  <data name="Tb_RenameSymbol" xml:space="preserve"><value>Rename Symbol (F2)</value></data>
-  <data name="Tb_GoToFile" xml:space="preserve"><value>Go to File (Ctrl+P)</value></data>
-  <data name="Tb_GoToAction" xml:space="preserve"><value>Go to Action — Command Palette (Ctrl+Shift+P)</value></data>
+  <data name="Tb_Back" xml:space="preserve"><value>Back</value></data>
+  <data name="Tb_Forward" xml:space="preserve"><value>Forward</value></data>
+  <data name="Tb_Save" xml:space="preserve"><value>Save</value></data>
+  <data name="Tb_Cut" xml:space="preserve"><value>Cut</value></data>
+  <data name="Tb_Copy" xml:space="preserve"><value>Copy</value></data>
+  <data name="Tb_Paste" xml:space="preserve"><value>Paste</value></data>
+  <data name="Tb_FindInFiles" xml:space="preserve"><value>Find in Files</value></data>
+  <data name="Tb_RenameSymbol" xml:space="preserve"><value>Rename Symbol</value></data>
+  <data name="Tb_GoToFile" xml:space="preserve"><value>Go to File</value></data>
+  <data name="Tb_GoToAction" xml:space="preserve"><value>Go to Action — Command Palette</value></data>
   <data name="Tb_GoToSymbolWs" xml:space="preserve"><value>Go to symbol in workspace</value></data>
   <data name="Tb_GoToSymbolDoc" xml:space="preserve"><value>Go to symbol in this document</value></data>
   <data name="Tb_Import" xml:space="preserve"><value>Import survey / DEM / GPX</value></data>
@@ -943,7 +943,7 @@
   <data name="Ed_SortLines" xml:space="preserve"><value>Sort Selected Lines</value></data>
   <data name="Ed_InsertDate" xml:space="preserve"><value>Insert Today's Date</value></data>
   <data name="Ed_InsertTeamMember" xml:space="preserve"><value>Insert Team Member</value></data>
-  <data name="Ed_RenameSymbol" xml:space="preserve"><value>Rename Symbol…  F2</value></data>
+  <data name="Ed_RenameSymbol" xml:space="preserve"><value>Rename Symbol…</value></data>
   <data name="Refs_Title" xml:space="preserve"><value>Find All References</value></data>
   <data name="Refs_Header" xml:space="preserve"><value>'{0}' — {1} occurrence(s) in {2} file(s)</value></data>
   <data name="Refs_None" xml:space="preserve"><value>No references to '{0}' were found in the workspace.</value></data>
@@ -954,10 +954,10 @@
   <data name="Refs_Kind_Declaration" xml:space="preserve"><value>Declaration</value></data>
   <data name="Refs_Kind_Reference" xml:space="preserve"><value>Reference</value></data>
   <data name="Ed_OpenIn3D" xml:space="preserve"><value>Open in 3D</value></data>
-  <data name="Ed_GoToMatching" xml:space="preserve"><value>Go to Matching Block  Ctrl+]</value></data>
+  <data name="Ed_GoToMatching" xml:space="preserve"><value>Go to Matching Block</value></data>
   <data name="Ed_StepInto" xml:space="preserve"><value>Step Into Included File  Alt+↓</value></data>
   <data name="Ed_FormatDoc" xml:space="preserve"><value>Format Document  Shift+Alt+F</value></data>
-  <data name="Ed_PeekDef" xml:space="preserve"><value>Peek Definition  Alt+F12</value></data>
+  <data name="Ed_PeekDef" xml:space="preserve"><value>Peek Definition</value></data>
   <data name="Ed_NoQuickFixes" xml:space="preserve"><value>No quick-fixes here</value></data>
   <data name="Ed_GoToLineTitle" xml:space="preserve"><value>Go to Line</value></data>
   <data name="Ed_LineNumberWm" xml:space="preserve"><value>Line number</value></data>
@@ -1068,7 +1068,7 @@ Install Mapiah from its releases page, then set the path to {0} in Settings → 
   <data name="Cmd_OpenThconfig" xml:space="preserve"><value>Open thconfig…</value></data>
   <data name="Cmd_OpenFolder" xml:space="preserve"><value>Open Folder…</value></data>
   <data name="Cmd_Save" xml:space="preserve"><value>Save</value></data>
-  <data name="Cmd_GoToFile" xml:space="preserve"><value>Go to File…  (Ctrl+P)</value></data>
+  <data name="Cmd_GoToFile" xml:space="preserve"><value>Go to File…</value></data>
   <data name="Cmd_RevealActive" xml:space="preserve"><value>Reveal Active File in Workspace</value></data>
   <data name="Cmd_BuildCurrent" xml:space="preserve"><value>Build current thconfig</value></data>
   <data name="Cmd_Rebuild" xml:space="preserve"><value>Rebuild</value></data>
@@ -1110,11 +1110,10 @@ Install Mapiah from its releases page, then set the path to {0} in Settings → 
   <data name="Cmd_Replace" xml:space="preserve"><value>Replace</value></data>
   <data name="Cmd_FormatDoc" xml:space="preserve"><value>Format Document</value></data>
   <data name="Cmd_EncloseRegion" xml:space="preserve"><value>Enclose in Region</value></data>
-  <data name="Cmd_QuickFix" xml:space="preserve"><value>Quick Fix…  (Ctrl+.)</value></data>
+  <data name="Cmd_QuickFix" xml:space="preserve"><value>Quick Fix…</value></data>
   <data name="Cmd_GoToMatching" xml:space="preserve"><value>Go to Matching Block</value></data>
   <data name="Cmd_PeekDef" xml:space="preserve"><value>Peek Definition</value></data>
   <data name="Cmd_StepInto" xml:space="preserve"><value>Step Into Included File</value></data>
-  <data name="Cmd_RenameEditor" xml:space="preserve"><value>Rename Symbol (editor)</value></data>
   <data name="Cmd_Preferences" xml:space="preserve"><value>Preferences…</value></data>
   <data name="Cmd_About" xml:space="preserve"><value>About</value></data>
   <data name="Cmd_TherionBook" xml:space="preserve"><value>Therion Book (documentation)</value></data>
@@ -2096,4 +2095,29 @@ This cannot be undone.</value></data>
   <data name="FormatAll_Nothing_Few" xml:space="preserve"><value>Nothing to change in {0} files.</value></data>
   <data name="FormatAll_Nothing_Many" xml:space="preserve"><value>Nothing to change in {0} files.</value></data>
   <data name="FormatAll_NothingSkipped" xml:space="preserve"><value>{0} more are left alone because they do not parse cleanly (fix those first).</value></data>
+  <data name="Menu_File_Save" xml:space="preserve"><value>_Save</value></data>
+  <data name="Menu_File_SaveAs" xml:space="preserve"><value>Save _As…</value></data>
+  <data name="Menu_File_SaveAll" xml:space="preserve"><value>Save A_ll</value></data>
+  <data name="Menu_File_CloseTab" xml:space="preserve"><value>_Close Tab</value></data>
+  <data name="Menu_Edit_Undo" xml:space="preserve"><value>_Undo</value></data>
+  <data name="Menu_Edit_Redo" xml:space="preserve"><value>_Redo</value></data>
+  <data name="Menu_Edit_GoToDefinition" xml:space="preserve"><value>Go to _Definition</value></data>
+  <data name="Menu_Edit_PeekDefinition" xml:space="preserve"><value>_Peek Definition</value></data>
+  <data name="Menu_Edit_FindReferences" xml:space="preserve"><value>Find Re_ferences</value></data>
+  <data name="Menu_Edit_RenameSymbol" xml:space="preserve"><value>Re_name Symbol…</value></data>
+  <data name="Menu_Settings_Preferences" xml:space="preserve"><value>_Preferences…</value></data>
+  <data name="Menu_Settings_KeyboardShortcuts" xml:space="preserve"><value>_Keyboard Shortcuts…</value></data>
+  <data name="Pick_SaveAsTitle" xml:space="preserve"><value>Save As</value></data>
+  <data name="Status_SavedFmt" xml:space="preserve"><value>Saved {0}</value></data>
+  <data name="Status_SavedAllFmt" xml:space="preserve"><value>Saved {0} file(s).</value></data>
+  <data name="Kb_Cmd_SaveAs" xml:space="preserve"><value>Save As</value></data>
+  <data name="Kb_Cmd_SaveAll" xml:space="preserve"><value>Save All</value></data>
+  <data name="Kb_Cmd_CloseTab" xml:space="preserve"><value>Close Tab</value></data>
+  <data name="Kb_Cmd_OpenPreferences" xml:space="preserve"><value>Preferences</value></data>
+  <data name="Kb_Cmd_OpenKeyboardShortcuts" xml:space="preserve"><value>Keyboard Shortcuts</value></data>
+  <data name="Cmd_GoToDefinition" xml:space="preserve"><value>Go to Definition</value></data>
+  <data name="Cmd_FindReferences" xml:space="preserve"><value>Find References</value></data>
+  <data name="Cmd_SaveAs" xml:space="preserve"><value>Save As…</value></data>
+  <data name="Cmd_SaveAll" xml:space="preserve"><value>Save All</value></data>
+  <data name="Cmd_CloseTab" xml:space="preserve"><value>Close Tab</value></data>
 </root>

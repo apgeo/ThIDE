@@ -317,6 +317,9 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
         if (reparse) Reparse();
     }
 
+    /// <summary>Drops the unsaved edits: the buffer goes back to the last saved text (Save As leaves the original so).</summary>
+    public void RevertToSaved() => SetText(_savedText, reparse: false);
+
     /// <summary>
     /// Records <paramref name="savedText"/> as what is now on disk without touching the buffer — for a
     /// save whose text was edited again while it was being written. The document stays dirty if the

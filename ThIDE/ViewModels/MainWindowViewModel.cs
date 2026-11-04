@@ -412,10 +412,10 @@ public partial class MainWindowViewModel : ViewModelBase
 
     // Localized menu labels.
     public string MenuFile           => L("Menu_File",                   "_File");
-    public string MenuFileOpenFile   => L("Menu_File_OpenFile",          "Open _File...");
-    public string MenuFileOpenThconfig => L("Menu_File_OpenThconfig",    "Open _thconfig...");
-    public string MenuFileOpenFolder => L("Menu_File_OpenFolder",        "Open F_older...");
-    public string MenuSettings       => L("Menu_Settings",               "_Settings");
+    public string MenuFileOpenFile   => L("Menu_File_OpenFile",          "Open _File…");
+    public string MenuFileOpenThconfig => L("Menu_File_OpenThconfig",    "Open _thconfig…");
+    public string MenuFileOpenFolder => L("Menu_File_OpenFolder",        "Open F_older…");
+    public string MenuSettings       => L("Menu_Settings",               "Setti_ngs");
     public string MenuHelp           => L("Menu_Help",                   "_Help");
     public string MenuHelpThbook     => L("Menu_Help_Thbook",            "Therion _Book");
     public string MenuHelpUserGuide  => L("Menu_Help_UserGuide",         "_User Guide");
@@ -430,8 +430,8 @@ public partial class MainWindowViewModel : ViewModelBase
     public string MenuBuild          => L("Menu_Build",                  "_Compile");
     public string MenuBuildBuild     => L("Menu_Build_Build",            "_Compile");
     public string MenuBuildRebuild   => L("Menu_Build_Rebuild",          "_Recompile");
-    public string MenuBuildCancel    => L("Menu_Build_Cancel",           "_Cancel");
-    public string MenuFileRecent     => L("Menu_File_Recent",           "Recent _Files");
+    public string MenuBuildCancel    => L("Menu_Build_Cancel",           "Ca_ncel");
+    public string MenuFileRecent     => L("Menu_File_Recent",           "_Recent Files");
     public string MenuFileRecentDirectories => L("Menu_File_RecentDirectories", "Recent _Directories");
     // View menu
     public string MenuViewObjectBrowser => L("Menu_View_ObjectBrowser", "Object Browser");
@@ -1803,10 +1803,52 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             doc.RequestSaveCleanup(); // in-place trim/final-newline (caret-preserving) before write
             await _documents.WriteCurrentTextAsync(doc.DocumentText).ConfigureAwait(true);
-            StatusText = $"Saved {doc.FilePath}";
+            StatusText = string.Format(Tr.Get("Status_SavedFmt"), doc.FilePath);
         }
         catch (Exception ex) { StatusText = ex.Message; }
     }
+
+    /// <summary>File ▸ Save As… — writes the active document under a new name and continues editing that file.</summary>
+    [RelayCommand]
+    private async Task SaveAs()
+    {
+        if (_documents.Active is not { } doc || _picker is null) return;
+        var path = await _picker.PickSaveFileAsync(Tr.Get("Pick_SaveAsTitle"),
+            System.IO.Path.GetFileName(doc.FilePath), FolderOf(doc.FilePath)).ConfigureAwait(true);
+        if (string.IsNullOrEmpty(path)) return;
+        try
+        {
+            if (await _documents.SaveAsAsync(doc, path!).ConfigureAwait(true) is { } saved)
+                StatusText = string.Format(Tr.Get("Status_SavedFmt"), saved.FilePath);
+        }
+        catch (Exception ex) { StatusText = ex.Message; }
+    }
+
+    /// <summary>File ▸ Save All — saves every modified document, recreating one deleted on disk as Save does.</summary>
+    [RelayCommand]
+    private async Task SaveAll()
+    {
+        int saved = 0;
+        foreach (var doc in _documents.Documents.Where(d => d.IsDirty && !string.IsNullOrEmpty(d.FilePath)).ToList())
+        {
+            try { if (await _documents.SaveDocumentAsync(doc).ConfigureAwait(true)) saved++; }
+            catch (Exception ex) { StatusText = ex.Message; return; }
+        }
+        StatusText = string.Format(Tr.Get("Status_SavedAllFmt"), saved);
+    }
+
+    /// <summary>File ▸ Close Tab — closes the active document through the dock, which asks about unsaved edits.</summary>
+    [RelayCommand]
+    private void CloseActiveTab()
+    {
+        if (_documents.Active is not { } doc) return;
+        if (doc.Factory is not null) doc.CloseTabCommand.Execute(null);
+        else _documents.CloseDocument(doc);
+    }
+
+    // Settings ▸ Preferences… / Keyboard Shortcuts… (the window opens at that section).
+    [RelayCommand] private void OpenPreferences() => RaiseShowPreferences(null);
+    [RelayCommand] private void OpenKeyboardShortcuts() => RaiseShowPreferences("keyboard");
 
     /// <summary>
     /// Close guard for a modified document (wired into the DockFactory): asks Save / Don't save /

@@ -6,9 +6,9 @@
   <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
   <data name="AppTitle" xml:space="preserve"><value>ThIDE</value></data>
   <data name="Menu_File" xml:space="preserve"><value>_Fișier</value></data>
-  <data name="Menu_File_OpenFile" xml:space="preserve"><value>_Deschide fișier...</value></data>
-  <data name="Menu_File_OpenThconfig" xml:space="preserve"><value>Deschide _thconfig...</value></data>
-  <data name="Menu_File_OpenFolder" xml:space="preserve"><value>Deschide d_osar...</value></data>
+  <data name="Menu_File_OpenFile" xml:space="preserve"><value>_Deschide fișier…</value></data>
+  <data name="Menu_File_OpenThconfig" xml:space="preserve"><value>Deschide _thconfig…</value></data>
+  <data name="Menu_File_OpenFolder" xml:space="preserve"><value>Deschide d_osar…</value></data>
   <data name="Menu_File_Exit" xml:space="preserve"><value>_Ieșire</value></data>
   <data name="Menu_File_Recent" xml:space="preserve"><value>Fișiere _recente</value></data>
   <data name="Menu_Settings" xml:space="preserve"><value>_Setări</value></data>
@@ -57,7 +57,7 @@
   <data name="Menu_Search_FindInFiles" xml:space="preserve"><value>Caută în fișiere…</value></data>
   <data name="Menu_Search_ReplaceInFiles" xml:space="preserve"><value>Înlocuiește în fișiere…</value></data>
   <data name="Menu_Search_GoTo" xml:space="preserve"><value>_Salt la linie…</value></data>
-  <data name="Menu_Search_Bookmarks" xml:space="preserve"><value>_Semne de carte…</value></data>
+  <data name="Menu_Search_Bookmarks" xml:space="preserve"><value>Se_mne de carte…</value></data>
   <data name="Menu_Build_OpenLoch" xml:space="preserve"><value>Deschide în _Loch</value></data>
   <data name="Menu_Build_OpenAven" xml:space="preserve"><value>Deschide în _Aven</value></data>
   <data name="Menu_Build_OpenOutputFolder" xml:space="preserve"><value>Deschide ultimul dosar de ieșire</value></data>
@@ -65,10 +65,10 @@
   <data name="Menu_View_Language" xml:space="preserve"><value>_Limbă</value></data>
   <data name="Menu_View_Language_English" xml:space="preserve"><value>English</value></data>
   <data name="Menu_View_Language_Romanian" xml:space="preserve"><value>Română</value></data>
-  <data name="Menu_Build" xml:space="preserve"><value>_Compilare</value></data>
+  <data name="Menu_Build" xml:space="preserve"><value>Co_mpilare</value></data>
   <data name="Menu_Build_Build" xml:space="preserve"><value>_Compilează</value></data>
   <data name="Menu_Build_Rebuild" xml:space="preserve"><value>_Recompilează</value></data>
-  <data name="Menu_Build_Cancel" xml:space="preserve"><value>_Anulează</value></data>
+  <data name="Menu_Build_Cancel" xml:space="preserve"><value>_Oprește compilarea</value></data>
   <data name="Tool_WorkspaceExplorer" xml:space="preserve"><value>Explorator proiect</value></data>
   <data name="Ws_RelationalViewTip" xml:space="preserve"><value>Vedere relațională (graful obiectelor)</value></data>
   <data name="Ws_FileExplorerViewTip" xml:space="preserve"><value>Vedere explorator de fișiere</value></data>
@@ -350,7 +350,7 @@
   <data name="Quality_ShowInBrowser" xml:space="preserve"><value>Arată-le în Object Browser</value></data>
   <!-- Main window: extra menus -->
   <data name="Menu_File_ReopenTab" xml:space="preserve"><value>Redeschide fila închisă</value></data>
-  <data name="Menu_File_RecentDirectories" xml:space="preserve"><value>_Dosare recente</value></data>
+  <data name="Menu_File_RecentDirectories" xml:space="preserve"><value>Dos_are recente</value></data>
   <data name="Menu_View_Project" xml:space="preserve"><value>Prezentare generală (Tablou de bord / Topografii / Audit)</value></data>
   <data name="Tool_Project" xml:space="preserve"><value>Prezentare generală</value></data>
   <data name="Menu_View_Log" xml:space="preserve"><value>Jurnal</value></data>
@@ -386,7 +386,7 @@
   <data name="Notif_LayoutLoadFailed" xml:space="preserve"><value>Aspectul nu a putut fi încărcat</value></data>
   <data name="Notif_LayoutMultiMonitorTitle" xml:space="preserve"><value>Aspect multi-monitor</value></data>
   <data name="Notif_LayoutNeedsTwoMonitors" xml:space="preserve"><value>Acest aspect necesită cel puțin două monitoare (și un panou de previzualizare activat).</value></data>
-  <data name="Menu_Tools" xml:space="preserve"><value>Unelte</value></data>
+  <data name="Menu_Tools" xml:space="preserve"><value>_Unelte</value></data>
   <data name="Menu_Tools_ImportSurvey" xml:space="preserve"><value>Importă topografie (Survex / Compass)…</value></data>
   <data name="Menu_Tools_BlenderAnimation" xml:space="preserve"><value>Animație Blender…</value></data>
   <data name="Blender_Tool_Title" xml:space="preserve"><value>Animație Blender</value></data>
@@ -482,19 +482,19 @@
   <data name="Tab_Float" xml:space="preserve"><value>Desprinde</value></data>
   <data name="Ctx_CopyName" xml:space="preserve"><value>Copiază numele fișierului</value></data>
   <!-- Toolbar tooltips -->
-  <data name="Tb_OpenFile" xml:space="preserve"><value>Deschide fișier (Ctrl+O)</value></data>
+  <data name="Tb_OpenFile" xml:space="preserve"><value>Deschide fișier</value></data>
   <data name="Tb_OpenThconfig" xml:space="preserve"><value>Deschide thconfig</value></data>
   <data name="Tb_OpenFolder" xml:space="preserve"><value>Deschide dosar</value></data>
-  <data name="Tb_Back" xml:space="preserve"><value>Înapoi (Alt+Stânga)</value></data>
-  <data name="Tb_Forward" xml:space="preserve"><value>Înainte (Alt+Dreapta)</value></data>
-  <data name="Tb_Save" xml:space="preserve"><value>Salvează (Ctrl+S)</value></data>
-  <data name="Tb_Cut" xml:space="preserve"><value>Decupează (Ctrl+X)</value></data>
-  <data name="Tb_Copy" xml:space="preserve"><value>Copiază (Ctrl+C)</value></data>
-  <data name="Tb_Paste" xml:space="preserve"><value>Lipește (Ctrl+V)</value></data>
-  <data name="Tb_FindInFiles" xml:space="preserve"><value>Caută în fișiere (Ctrl+Shift+F)</value></data>
-  <data name="Tb_RenameSymbol" xml:space="preserve"><value>Redenumește simbolul (F2)</value></data>
-  <data name="Tb_GoToFile" xml:space="preserve"><value>Salt la fișier (Ctrl+P)</value></data>
-  <data name="Tb_GoToAction" xml:space="preserve"><value>Salt la acțiune — Paletă de comenzi (Ctrl+Shift+P)</value></data>
+  <data name="Tb_Back" xml:space="preserve"><value>Înapoi</value></data>
+  <data name="Tb_Forward" xml:space="preserve"><value>Înainte</value></data>
+  <data name="Tb_Save" xml:space="preserve"><value>Salvează</value></data>
+  <data name="Tb_Cut" xml:space="preserve"><value>Decupează</value></data>
+  <data name="Tb_Copy" xml:space="preserve"><value>Copiază</value></data>
+  <data name="Tb_Paste" xml:space="preserve"><value>Lipește</value></data>
+  <data name="Tb_FindInFiles" xml:space="preserve"><value>Caută în fișiere</value></data>
+  <data name="Tb_RenameSymbol" xml:space="preserve"><value>Redenumește simbolul</value></data>
+  <data name="Tb_GoToFile" xml:space="preserve"><value>Salt la fișier</value></data>
+  <data name="Tb_GoToAction" xml:space="preserve"><value>Salt la acțiune — Paletă de comenzi</value></data>
   <data name="Tb_GoToSymbolWs" xml:space="preserve"><value>Salt la simbol în spațiul de lucru</value></data>
   <data name="Tb_GoToSymbolDoc" xml:space="preserve"><value>Salt la simbol în acest document</value></data>
   <data name="Tb_Import" xml:space="preserve"><value>Importă topografie / DEM / GPX</value></data>
@@ -943,7 +943,7 @@
   <data name="Ed_SortLines" xml:space="preserve"><value>Sortează liniile selectate</value></data>
   <data name="Ed_InsertDate" xml:space="preserve"><value>Inserează data de azi</value></data>
   <data name="Ed_InsertTeamMember" xml:space="preserve"><value>Inserează membru echipă</value></data>
-  <data name="Ed_RenameSymbol" xml:space="preserve"><value>Redenumește simbolul…  F2</value></data>
+  <data name="Ed_RenameSymbol" xml:space="preserve"><value>Redenumește simbolul…</value></data>
   <data name="Refs_Title" xml:space="preserve"><value>Toate referințele</value></data>
   <data name="Refs_Header" xml:space="preserve"><value>„{0}” — {1} apariții în {2} fișier(e)</value></data>
   <data name="Refs_None" xml:space="preserve"><value>Nu s-au găsit referințe la „{0}” în spațiul de lucru.</value></data>
@@ -954,10 +954,10 @@
   <data name="Refs_Kind_Declaration" xml:space="preserve"><value>Declarație</value></data>
   <data name="Refs_Kind_Reference" xml:space="preserve"><value>Referință</value></data>
   <data name="Ed_OpenIn3D" xml:space="preserve"><value>Deschide în 3D</value></data>
-  <data name="Ed_GoToMatching" xml:space="preserve"><value>Salt la blocul pereche  Ctrl+]</value></data>
+  <data name="Ed_GoToMatching" xml:space="preserve"><value>Salt la blocul pereche</value></data>
   <data name="Ed_StepInto" xml:space="preserve"><value>Intră în fișierul inclus  Alt+↓</value></data>
   <data name="Ed_FormatDoc" xml:space="preserve"><value>Formatează documentul  Shift+Alt+F</value></data>
-  <data name="Ed_PeekDef" xml:space="preserve"><value>Vezi definiția  Alt+F12</value></data>
+  <data name="Ed_PeekDef" xml:space="preserve"><value>Vezi definiția</value></data>
   <data name="Ed_NoQuickFixes" xml:space="preserve"><value>Nicio remediere rapidă aici</value></data>
   <data name="Ed_GoToLineTitle" xml:space="preserve"><value>Salt la linie</value></data>
   <data name="Ed_LineNumberWm" xml:space="preserve"><value>Număr linie</value></data>
@@ -1068,7 +1068,7 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către {0} în
   <data name="Cmd_OpenThconfig" xml:space="preserve"><value>Deschide thconfig…</value></data>
   <data name="Cmd_OpenFolder" xml:space="preserve"><value>Deschide dosar…</value></data>
   <data name="Cmd_Save" xml:space="preserve"><value>Salvează</value></data>
-  <data name="Cmd_GoToFile" xml:space="preserve"><value>Salt la fișier…  (Ctrl+P)</value></data>
+  <data name="Cmd_GoToFile" xml:space="preserve"><value>Salt la fișier…</value></data>
   <data name="Cmd_RevealActive" xml:space="preserve"><value>Afișează fișierul activ în spațiul de lucru</value></data>
   <data name="Cmd_BuildCurrent" xml:space="preserve"><value>Compilează thconfig-ul curent</value></data>
   <data name="Cmd_Rebuild" xml:space="preserve"><value>Recompilează</value></data>
@@ -1110,11 +1110,10 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către {0} în
   <data name="Cmd_Replace" xml:space="preserve"><value>Înlocuiește</value></data>
   <data name="Cmd_FormatDoc" xml:space="preserve"><value>Formatează documentul</value></data>
   <data name="Cmd_EncloseRegion" xml:space="preserve"><value>Include în regiune</value></data>
-  <data name="Cmd_QuickFix" xml:space="preserve"><value>Remediere rapidă…  (Ctrl+.)</value></data>
+  <data name="Cmd_QuickFix" xml:space="preserve"><value>Remediere rapidă…</value></data>
   <data name="Cmd_GoToMatching" xml:space="preserve"><value>Salt la blocul pereche</value></data>
   <data name="Cmd_PeekDef" xml:space="preserve"><value>Vezi definiția</value></data>
   <data name="Cmd_StepInto" xml:space="preserve"><value>Intră în fișierul inclus</value></data>
-  <data name="Cmd_RenameEditor" xml:space="preserve"><value>Redenumește simbolul (editor)</value></data>
   <data name="Cmd_Preferences" xml:space="preserve"><value>Preferințe…</value></data>
   <data name="Cmd_About" xml:space="preserve"><value>Despre</value></data>
   <data name="Cmd_TherionBook" xml:space="preserve"><value>Cartea Therion (documentație)</value></data>
@@ -2096,4 +2095,29 @@ Acțiunea nu poate fi anulată.</value></data>
   <data name="FormatAll_Nothing_Few" xml:space="preserve"><value>Nimic de schimbat în {0} fișiere.</value></data>
   <data name="FormatAll_Nothing_Many" xml:space="preserve"><value>Nimic de schimbat în {0} de fișiere.</value></data>
   <data name="FormatAll_NothingSkipped" xml:space="preserve"><value>Alte {0} rămân neatinse pentru că nu se analizează curat (corectați-le întâi).</value></data>
+  <data name="Menu_File_Save" xml:space="preserve"><value>_Salvează</value></data>
+  <data name="Menu_File_SaveAs" xml:space="preserve"><value>Salvează _ca…</value></data>
+  <data name="Menu_File_SaveAll" xml:space="preserve"><value>Salvează toat_e</value></data>
+  <data name="Menu_File_CloseTab" xml:space="preserve"><value>Închide _fila</value></data>
+  <data name="Menu_Edit_Undo" xml:space="preserve"><value>_Anulează</value></data>
+  <data name="Menu_Edit_Redo" xml:space="preserve"><value>_Refă</value></data>
+  <data name="Menu_Edit_GoToDefinition" xml:space="preserve"><value>Salt la _definiție</value></data>
+  <data name="Menu_Edit_PeekDefinition" xml:space="preserve"><value>_Vezi definiția</value></data>
+  <data name="Menu_Edit_FindReferences" xml:space="preserve"><value>_Găsește referințele</value></data>
+  <data name="Menu_Edit_RenameSymbol" xml:space="preserve"><value>Rede_numește simbolul…</value></data>
+  <data name="Menu_Settings_Preferences" xml:space="preserve"><value>_Preferințe…</value></data>
+  <data name="Menu_Settings_KeyboardShortcuts" xml:space="preserve"><value>Scurtături _tastatură…</value></data>
+  <data name="Pick_SaveAsTitle" xml:space="preserve"><value>Salvează ca</value></data>
+  <data name="Status_SavedFmt" xml:space="preserve"><value>Salvat: {0}</value></data>
+  <data name="Status_SavedAllFmt" xml:space="preserve"><value>Fișiere salvate: {0}.</value></data>
+  <data name="Kb_Cmd_SaveAs" xml:space="preserve"><value>Salvează ca</value></data>
+  <data name="Kb_Cmd_SaveAll" xml:space="preserve"><value>Salvează toate</value></data>
+  <data name="Kb_Cmd_CloseTab" xml:space="preserve"><value>Închide fila</value></data>
+  <data name="Kb_Cmd_OpenPreferences" xml:space="preserve"><value>Preferințe</value></data>
+  <data name="Kb_Cmd_OpenKeyboardShortcuts" xml:space="preserve"><value>Scurtături tastatură</value></data>
+  <data name="Cmd_GoToDefinition" xml:space="preserve"><value>Salt la definiție</value></data>
+  <data name="Cmd_FindReferences" xml:space="preserve"><value>Găsește referințele</value></data>
+  <data name="Cmd_SaveAs" xml:space="preserve"><value>Salvează ca…</value></data>
+  <data name="Cmd_SaveAll" xml:space="preserve"><value>Salvează toate</value></data>
+  <data name="Cmd_CloseTab" xml:space="preserve"><value>Închide fila</value></data>
 </root>

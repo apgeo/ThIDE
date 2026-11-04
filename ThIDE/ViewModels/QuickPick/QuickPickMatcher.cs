@@ -2,7 +2,9 @@
 // Supports several search modes at once, ranked best-first:
 //   • exact / prefix of the name              (strongest)
 //   • contiguous substring of the name        (with word-start + position bonuses)
-//   • fuzzy subsequence of the name           (chars in order, gaps allowed — VS-Code style)
+//   • fuzzy subsequence of the name           (chars in order, gaps allowed — VS-Code style; chars
+//                                               on word starts score more, and a match strewn
+//                                               thinly across a long name does not count)
 //   • contiguous / fuzzy match in the path     (weakest)
 // Space-separated tokens are AND-ed: every token must match somewhere (name preferred over path),
 // so "su ma" finds "survey_main", and "svmn" fuzzily finds "survey_main" too.
@@ -42,8 +44,7 @@ public static class QuickPickMatcher
         if (idx >= 0)
             return 1000 - Math.Min(idx, 200) * 2 + (idx == 0 ? 300 : 0) + WordStartBonus(nameLower, idx);
 
-        int fuzzy = Subsequence(nameLower, token);
-        if (fuzzy >= 0) return 420 - Math.Min(fuzzy, 300);
+        if (FuzzyName(nameLower, token) is { } fuzzy) return fuzzy;
 
         int pidx = pathLower.IndexOf(token, StringComparison.Ordinal);
         if (pidx >= 0) return 150 - Math.Min(pidx, 100);
@@ -69,6 +70,30 @@ public static class QuickPickMatcher
         return (last - first) + first; // span tightness + how late it started
     }
 
-    private static int WordStartBonus(string text, int idx) =>
-        idx == 0 || !char.IsLetterOrDigit(text[idx - 1]) ? 80 : 0;
+    // Fuzzy subsequence over the name: the compactness penalty as for paths, plus a bonus for each
+    // character that starts a word ("gtd" → "Go to Definition"). A sparse match that lands mostly
+    // inside words across a long name ("defin" through "Build target: export model …") is noise.
+    private static int? FuzzyName(string text, string pattern)
+    {
+        int ti = 0, pi = 0, first = -1, last = 0, starts = 0;
+        while (ti < text.Length && pi < pattern.Length)
+        {
+            if (text[ti] == pattern[pi])
+            {
+                if (first < 0) first = ti;
+                last = ti;
+                if (IsWordStart(text, ti)) starts++;
+                pi++;
+            }
+            ti++;
+        }
+        if (pi < pattern.Length) return null;
+        int span = last - first + 1;
+        if (span > pattern.Length * 4 + 4 && starts * 2 < pattern.Length) return null;
+        return 420 - Math.Min(last, 300) + starts * 30;
+    }
+
+    private static bool IsWordStart(string text, int idx) => idx == 0 || !char.IsLetterOrDigit(text[idx - 1]);
+
+    private static int WordStartBonus(string text, int idx) => IsWordStart(text, idx) ? 80 : 0;
 }

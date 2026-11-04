@@ -269,6 +269,11 @@ public static class ShellCommandIds
     public const string ToggleWordWrap     = "ToggleWordWrap";
     public const string NewScrapScaffold   = "NewScrapScaffold";
     public const string GenerateReport     = "GenerateReport";
+    public const string SaveAs             = "SaveAs";
+    public const string SaveAll            = "SaveAll";
+    public const string CloseTab           = "CloseTab";
+    public const string OpenPreferences    = "OpenPreferences";
+    public const string OpenKeyboardShortcuts = "OpenKeyboardShortcuts";
 
     // ---- Editor scope (matched by the focused TherionTextEditor) ----
     public const string GoToDefinition     = "GoToDefinition";

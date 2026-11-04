@@ -76,6 +76,7 @@ public static class R3CommandPolicy
 
         // ---- Shell scope: writes to the project → Gated (needs confirm:true) ----------------------
         new(ShellCommandIds.Save,                "Save the active file",            "File",     R3CommandGate.Gated,   R3CommandScope.Shell),
+        new(ShellCommandIds.SaveAll,             "Save every modified file",        "File",     R3CommandGate.Gated,   R3CommandScope.Shell),
         // Reachable from the shell (a tool panel has focus), but the R2 rename_symbol tool is preferred.
         new(ShellCommandIds.RenameSymbol,        "Rename the symbol under the caret", "Edit",   R3CommandGate.Gated,   R3CommandScope.Shell),
 
@@ -93,6 +94,11 @@ public static class R3CommandPolicy
         new(ShellCommandIds.NewScrapScaffold,    "Insert a new scrap scaffold…",    "Edit",     R3CommandGate.Excluded, R3CommandScope.Shell),
         // An interactive picker overlay: pointless for an agent, which cannot fill it — use list_commands.
         new(ShellCommandIds.CommandPalette,      "Open the command palette",        "View",     R3CommandGate.Excluded, R3CommandScope.Shell),
+        // A save dialog, the Settings window (modal), and a tab close that asks about unsaved edits.
+        new(ShellCommandIds.SaveAs,              "Save the active file as…",        "File",     R3CommandGate.Excluded, R3CommandScope.Shell),
+        new(ShellCommandIds.CloseTab,            "Close the active tab",            "File",     R3CommandGate.Excluded, R3CommandScope.Shell),
+        new(ShellCommandIds.OpenPreferences,     "Open Settings ▸ Preferences…",    "View",     R3CommandGate.Excluded, R3CommandScope.Shell),
+        new(ShellCommandIds.OpenKeyboardShortcuts, "Open Settings ▸ Keyboard Shortcuts…", "View", R3CommandGate.Excluded, R3CommandScope.Shell),
 
         // ---- Editor scope → Excluded: caret-scoped, need a focused editor -------------------------
         new(ShellCommandIds.GoToDefinition,      "Go to definition",                "Edit",     R3CommandGate.Excluded, R3CommandScope.Editor),

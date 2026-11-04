@@ -3320,28 +3320,30 @@ public partial class TherionTextEditor : UserControl
     private ContextMenu BuildContextMenu()
     {
         var menu = new ContextMenu();
-        menu.Items.Add(MakeItem(L("Menu_Edit_Cut"),       CutSelection));
-        menu.Items.Add(MakeItem(L("Menu_Edit_Copy"),      CopySelection));
-        menu.Items.Add(MakeItem(L("Menu_Edit_Paste"),     () => _ = PasteAsync()));
+        // Gestures are display-only here: shell ids follow Settings ▸ Keyboard live (GestureProxy);
+        // the clipboard chords are AvaloniaEdit's own and fixed.
+        menu.Items.Add(Fixed(MakeItem(L("Menu_Edit_Cut"),   CutSelection), "Ctrl+X"));
+        menu.Items.Add(Fixed(MakeItem(L("Menu_Edit_Copy"),  CopySelection), "Ctrl+C"));
+        menu.Items.Add(Fixed(MakeItem(L("Menu_Edit_Paste"), () => _ = PasteAsync()), "Ctrl+V"));
         menu.Items.Add(MakeItem(L("Menu_Edit_PasteShots"), () => _ = PasteShotsAsync(), "Editor.Ctx.PasteShots"));
         menu.Items.Add(MakeItem(L("Menu_Edit_Delete"),    DeleteSelection));
         menu.Items.Add(new Separator());
-        menu.Items.Add(MakeItem(L("Menu_Edit_SelectAll"), () => _editor?.SelectAll()));
+        menu.Items.Add(Fixed(MakeItem(L("Menu_Edit_SelectAll"), () => _editor?.SelectAll()), "Ctrl+A"));
         menu.Items.Add(new Separator());
         menu.Items.Add(MakeItem(L("Menu_Edit_Upper"),     () => ApplyCase(upper: true)));
         menu.Items.Add(MakeItem(L("Menu_Edit_Lower"),     () => ApplyCase(upper: false)));
         menu.Items.Add(new Separator());
-        menu.Items.Add(MakeItem(L("Ed_ToggleComment"),    ToggleLineComment));
+        menu.Items.Add(Gesture(MakeItem(L("Ed_ToggleComment"), ToggleLineComment), ShellCommandIds.ToggleComment));
         // "Enclose in region": shown for Therion files, enabled only for a multi-line selection
         // (gated per-open in OnEditorContextRequested).
-        _encloseRegionMenuItem = MakeItem(L("Ed_EncloseRegion"), () => _ = EncloseInRegionAsync());
+        _encloseRegionMenuItem = Gesture(MakeItem(L("Ed_EncloseRegion"), () => _ = EncloseInRegionAsync()), ShellCommandIds.EncloseInRegion);
         menu.Items.Add(_encloseRegionMenuItem);
         menu.Items.Add(new Separator());
         // line operations.
-        menu.Items.Add(MakeItem(L("Ed_DuplicateLines"),   DuplicateLines));
-        menu.Items.Add(MakeItem(L("Ed_MoveLinesUp"),      MoveLinesUp));
-        menu.Items.Add(MakeItem(L("Ed_MoveLinesDown"),    MoveLinesDown));
-        menu.Items.Add(MakeItem(L("Ed_SortLines"),        SortSelectedLines));
+        menu.Items.Add(Gesture(MakeItem(L("Ed_DuplicateLines"), DuplicateLines), ShellCommandIds.DuplicateLines));
+        menu.Items.Add(Gesture(MakeItem(L("Ed_MoveLinesUp"),    MoveLinesUp), ShellCommandIds.MoveLinesUp));
+        menu.Items.Add(Gesture(MakeItem(L("Ed_MoveLinesDown"),  MoveLinesDown), ShellCommandIds.MoveLinesDown));
+        menu.Items.Add(Gesture(MakeItem(L("Ed_SortLines"),      SortSelectedLines), ShellCommandIds.SortLines));
         menu.Items.Add(new Separator());
         // Generate code: lines ThIDE writes for you (inserts, and the survey-linking dialog).
         var generate = new MenuItem { Header = L("Ctx_GenerateCode") };
@@ -3355,17 +3357,17 @@ public partial class TherionTextEditor : UserControl
         generate.Items.Add(MakeItem(L("Ed_InsertTeamMember"), InsertTeamMember, "Editor.Ctx.GenerateCode.InsertTeamMember"));
         menu.Items.Add(generate);
         menu.Items.Add(new Separator());
-        menu.Items.Add(MakeItem(L("Ed_RenameSymbol"),     StartRename));
-        menu.Items.Add(MakeItem(L("Ed_FindAllRefs"),      StartFindAllReferences));
+        menu.Items.Add(Gesture(MakeItem(L("Ed_RenameSymbol"), StartRename), ShellCommandIds.RenameSymbol));
+        menu.Items.Add(Gesture(MakeItem(L("Ed_FindAllRefs"),  StartFindAllReferences), ShellCommandIds.FindReferences));
         // #5: shown only when right-clicking a station/survey reference and the 3D viewer has a model.
         _open3dMenuItem = MakeItem(L("Ed_OpenIn3D"), () => { if (_open3dRef is { } r) OpenInModel3D(r.Raw, r.Info); });
         menu.Items.Add(_open3dMenuItem);
         menu.Items.Add(new Separator());
         // shown only when their feature is enabled (refreshed on menu open).
-        _matchMenuItem = MakeItem(L("Ed_GoToMatching"), GoToMatchingBlock);
-        _stepIntoMenuItem = MakeItem(L("Ed_StepInto"), FollowIncludeUnderCaret);
-        _formatMenuItem = MakeItem(L("Ed_FormatDoc"), FormatDocument);
-        _peekMenuItem = MakeItem(L("Ed_PeekDef"), PeekDefinition);
+        _matchMenuItem = Gesture(MakeItem(L("Ed_GoToMatching"), GoToMatchingBlock), ShellCommandIds.GoToMatchingBlock);
+        _stepIntoMenuItem = Gesture(MakeItem(L("Ed_StepInto"), FollowIncludeUnderCaret), ShellCommandIds.StepIntoInclude);
+        _formatMenuItem = Gesture(MakeItem(L("Ed_FormatDoc"), FormatDocument), ShellCommandIds.FormatDocument);
+        _peekMenuItem = Gesture(MakeItem(L("Ed_PeekDef"), PeekDefinition), ShellCommandIds.PeekDefinition);
         // "Go to equate" / "Go to aggregating map": shown only when the right-clicked token is
         // aggregated elsewhere (populated per-invocation in OnEditorContextRequested).
         _gotoEquateMenuItem = MakeItem(L("Ed_GoToEquate"),
@@ -3391,6 +3393,10 @@ public partial class TherionTextEditor : UserControl
     /// <summary>The current editor selection (empty when nothing is selected); seeds Find/Replace.</summary>
     public string SelectedText => _editor?.SelectedText ?? string.Empty;
 
+    public void MenuUndo() => _editor?.Undo();
+    public void MenuRedo() => _editor?.Redo();
+    /// <summary>Go to Definition (F12) for the symbol or linked path at the caret.</summary>
+    public void GoToDefinitionAtCaret() { if (_editor is not null) TryNavigateAt(_editor.CaretOffset); }
     public void MenuCut() => CutSelection();
     public void MenuCopy() => CopySelection();
     public void MenuPaste() => _ = PasteAsync();
@@ -3751,6 +3757,25 @@ public partial class TherionTextEditor : UserControl
         var item = new MenuItem { Header = header };
         if (automationId is not null) AutomationProperties.SetAutomationId(item, automationId);
         item.Click += (_, _) => onClick();
+        return item;
+    }
+
+    // Shows the gesture currently bound to a shell command id (live, as {l:Gesture} does in XAML).
+    private static MenuItem Gesture(MenuItem item, string commandId)
+    {
+        item.Bind(MenuItem.InputGestureProperty, new Avalonia.Data.Binding
+        {
+            Source = ThIDE.Resources.GestureProxy.Instance,
+            Path = $"[{commandId}]",
+            Mode = Avalonia.Data.BindingMode.OneWay,
+        });
+        return item;
+    }
+
+    // Shows a fixed chord (AvaloniaEdit's own clipboard / select-all keys).
+    private static MenuItem Fixed(MenuItem item, string gesture)
+    {
+        item.InputGesture = KeyGesture.Parse(gesture);
         return item;
     }
 

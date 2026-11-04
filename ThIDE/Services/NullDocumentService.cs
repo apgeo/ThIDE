@@ -65,6 +65,7 @@ internal sealed class NullDocumentService : IDocumentService
     public Task NavigateToSpanAsync(Therion.Core.SourceSpan span, CancellationToken ct = default) => Task.CompletedTask;
     public Task WriteCurrentTextAsync(string newText, CancellationToken ct = default) => Task.CompletedTask;
     public Task<bool> SaveDocumentAsync(FileDocumentViewModel document, CancellationToken ct = default) => Task.FromResult(false);
+    public Task<FileDocumentViewModel?> SaveAsAsync(FileDocumentViewModel document, string newPath, CancellationToken ct = default) => Task.FromResult<FileDocumentViewModel?>(null);
     public Task<FileDocumentViewModel> OpenRecoveredAsync(string path, string text, CancellationToken ct = default) =>
         throw new NotSupportedException("Designer document service cannot open documents.");
     public void SetActive(FileDocumentViewModel? document) { }
