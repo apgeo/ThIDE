@@ -87,7 +87,7 @@ public static class WebViewSupport
     {
         web.EnvironmentRequested += static (_, args) =>
         {
-            args.EnableDevTools = s_settings.WebViewEnableDevTools;
+            args.EnableDevTools = s_settings.EnableWebDeveloperTools;
             if (args is GtkWebViewEnvironmentRequestedEventArgs gtk)
                 gtk.ExperimentalOffscreen = s_settings.WebViewExperimentalOffscreen;
         };
@@ -112,7 +112,7 @@ public static class WebViewSupport
     /// <summary>Opens the engine's developer tools for <paramref name="web"/>, best-effort.</summary>
     public static bool TryOpenDevTools(NativeWebView web)
     {
-        if (!s_settings.WebViewEnableDevTools) return false; // switched off in Preferences ▸ Debug
+        if (!s_settings.EnableWebDeveloperTools) return false; // switched off in Preferences ▸ Debug
         if (OperatingSystem.IsWindows()) return TryOpenWebView2DevTools(web);
         if (OperatingSystem.IsLinux()) return TryShowWebKitGtkInspector(web);
         return false; // macOS/WKWebView: no programmatic entry point; right-click ▸ Inspect Element

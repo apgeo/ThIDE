@@ -109,6 +109,25 @@ public class Model3DViewerShowSequencingTests
         public bool RevealInFileManager(string path) => true;
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Developer_buttons_follow_the_web_developer_tools_setting(bool enabled)
+    {
+        var settings = new FakeSettings(AppSettings.Default with { EnableWebDeveloperTools = enabled });
+        var vm = new Model3DViewerViewModel(new FakeHost(), new StationSourceResolver(), new NullDocumentService(), new FakeShell(), settings: settings);
+        Assert.Equal(enabled, vm.ShowDeveloperTools);
+    }
+
+    [Fact]
+    public void Web_developer_tools_are_off_by_default_also_for_a_profile_saved_with_the_old_switch()
+    {
+        Assert.False(AppSettings.Default.EnableWebDeveloperTools);
+        var old = JsonSerializer.Deserialize<AppSettings>("{\"WebViewEnableDevTools\": true}")!;
+        Assert.False(old.EnableWebDeveloperTools);
+        Assert.False(new Model3DViewerViewModel(new FakeHost(), new StationSourceResolver(), new NullDocumentService(), new FakeShell()).ShowDeveloperTools);
+    }
+
     [Fact]
     public void Show_waits_for_the_model_and_its_controls_before_flying()
     {

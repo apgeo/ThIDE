@@ -42,9 +42,13 @@ public sealed partial class TripTeamRow(string name, bool isChecked) : Observabl
 /// <summary>
 /// Tools ▸ New trip…: a new survey file for a trip, prefilled from the latest trip, tied to a
 /// project station with an <c>input</c> and an <c>equate</c> written where the project keeps them.
+/// A first trip (no tie-in) gets only the <c>input</c>, inside the survey the user picks.
 /// </summary>
 public sealed partial class NewTripViewModel : ObservableObject
 {
+    // Written into the user's survey data, so it must not depend on the UI language.
+    internal const string TieInComment = "check the tie-in";
+
     private readonly NewTripEnvironment _env;
     private LinkContext? _ctx;
     private FileScopes? _scopes;
@@ -56,7 +60,7 @@ public sealed partial class NewTripViewModel : ObservableObject
         _env = env;
         _date = env.Today.ToString("yyyy.MM.dd", CultureInfo.InvariantCulture);
         _surveyName = DefaultName(_date);
-        Surveys.SelectionChanged += (_, _) => NarrowStations();
+        Surveys.SelectionChanged += (_, _) => { NarrowStations(); if (NoTieIn) RefreshDestinations(); };
         Stations.SelectionChanged += (_, _) => RefreshDestinations();
     }
 
@@ -74,6 +78,8 @@ public sealed partial class NewTripViewModel : ObservableObject
     [ObservableProperty] private string _surveyName;
     [ObservableProperty] private string _firstStation = "0";
     [ObservableProperty] private bool _nest;
+    /// <summary>A first trip (or an entrance): no station to tie to, so only the <c>input</c> is written.</summary>
+    [ObservableProperty] private bool _noTieIn;
     [ObservableProperty] private DestinationRow? _selectedDestination;
     [ObservableProperty] private string _folder = string.Empty;
     [ObservableProperty] private string _generated = string.Empty;
@@ -130,8 +136,10 @@ public sealed partial class NewTripViewModel : ObservableObject
         try
         {
             Destinations.Clear();
-            if (Stations.SelectedStation is { } tie)
-                foreach (var c in SurveyLinkPlanner.Candidates(_ctx, SurveyLinkPlanner.DefaultScope(tie.Effective, Nest)))
+            ImmutableArray<string>? scope = NoTieIn ? Surveys.SelectedSurvey?.Effective
+                : Stations.SelectedStation is { } tie ? SurveyLinkPlanner.DefaultScope(tie.Effective, Nest) : null;
+            if (scope is { } sc)
+                foreach (var c in SurveyLinkPlanner.Candidates(_ctx, sc))
                     Destinations.Add(new DestinationRow(c, Label(c)));
             SelectedDestination = Destinations.FirstOrDefault(d => previous is not null && d.Candidate.FilePath == previous.FilePath
                                       && d.Candidate.LocalScope.SequenceEqual(previous.LocalScope))
@@ -150,6 +158,13 @@ public sealed partial class NewTripViewModel : ObservableObject
 
     // A different scope: offer its best destination rather than keeping the old choice.
     partial void OnNestChanged(bool value)
+    {
+        _quiet++;
+        SelectedDestination = null;
+        _quiet--;
+        RefreshDestinations();
+    }
+    partial void OnNoTieInChanged(bool value)
     {
         _quiet++;
         SelectedDestination = null;
@@ -223,9 +238,11 @@ public sealed partial class NewTripViewModel : ObservableObject
         if (!ScaffoldValueRules.IsStationRef(FirstStation.Trim()) || FirstStation.Contains('@')) warnings.Add(new(Tr.Get("NewTrip_BadStation"), true));
         if (!TripDefaults.IsDate(Date))
             warnings.Add(new(Tr.Get("NewTrip_BadDate"), true));
-        if (Stations.SelectedStation is not { } tie || SelectedDestination is not { } dest || _ctx is null)
+        var tie = NoTieIn ? null : Stations.SelectedStation;
+        if ((!NoTieIn && tie is null) || SelectedDestination is not { } dest || _ctx is null)
         {
-            if (Stations.SelectedStation is null) warnings.Add(new(Tr.Get("NewTrip_PickTieIn"), true));
+            if (NoTieIn && Surveys.SelectedSurvey is null) warnings.Add(new(Tr.Get("NewTrip_PickSurvey"), true));
+            else if (!NoTieIn && tie is null) warnings.Add(new(Tr.Get("NewTrip_PickTieIn"), true));
             Warnings = warnings;
             Generated = Body().Text;
             return;
@@ -238,10 +255,11 @@ public sealed partial class NewTripViewModel : ObservableObject
 
         var ast = new ThParser().Parse(FilePath, text).Value!;
         var source = new SourceSurvey(FilePath, ast, new SemanticBinder().Bind(ast));
-        var request = new LinkRequest(source,
-            [new LinkMember(LinkSide.Source, FilePath, QualifiedName.Of(SurveyName.Trim(), FirstStation.Trim())),
-             new LinkMember(LinkSide.Workspace, tie.FilePath, tie.Local)],
-            dest.Candidate.Destination, LinkCopy.InPlace, new LinkOptions(Comment: Tr.Get("NewTrip_CheckTieIn")));
+        var first = new LinkMember(LinkSide.Source, FilePath, QualifiedName.Of(SurveyName.Trim(), FirstStation.Trim()));
+        var request = tie is null
+            ? new LinkRequest(source, [first], dest.Candidate.Destination, LinkCopy.InPlace, new LinkOptions(InsertEquate: false))
+            : new LinkRequest(source, [first, new LinkMember(LinkSide.Workspace, tie.FilePath, tie.Local)],
+                dest.Candidate.Destination, LinkCopy.InPlace, new LinkOptions(Comment: TieInComment));
         Plan = SurveyLinkPlanner.Plan(_ctx, request);
         warnings.AddRange(Plan.Warnings.Where(w => w.Code != LinkWarningCode.SketchNotCopied)
             .Select(w => new WarningRow(string.Format(Tr.Get("LinkSurvey_Warn" + w.Code), w.Subject ?? ""), w.Blocks)));

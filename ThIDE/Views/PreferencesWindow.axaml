@@ -607,7 +607,7 @@
                     <Separator Margin="0,6" />
                     <CheckBox Content="{l:Loc Pref_DbgDevTools}"
                               AutomationProperties.AutomationId="Preferences.WebViewDevTools"
-                              IsChecked="{Binding WebViewEnableDevTools}" />
+                              IsChecked="{Binding EnableWebDeveloperTools}" />
                     <TextBlock Text="{l:Loc Pref_DbgDevToolsHelp}"
                                Foreground="Gray" FontSize="11" TextWrapping="Wrap" Margin="24,0,0,0" />
                 </StackPanel>

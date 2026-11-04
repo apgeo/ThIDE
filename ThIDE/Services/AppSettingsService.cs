@@ -297,9 +297,11 @@ public sealed record AppSettings
     /// <summary>Linux: use the control's experimental offscreen mode (renders through the app
     /// compositor instead of embedding a native X11 window). Off by default.</summary>
     public bool WebViewExperimentalOffscreen { get; init; }
-    /// <summary>allow opening the web engine's inspector/DevTools (3D viewer panel button,
-    /// right-click ▸ Inspect, F12). On by default.</summary>
-    public bool WebViewEnableDevTools { get; init; } = true;
+    /// <summary>Developer tools for the embedded web views: the 3D viewer's DevTools and "open a web
+    /// address" toolbar buttons, and the engine's inspector (right-click ▸ Inspect, F12). Off by
+    /// default. It replaced <c>WebViewEnableDevTools</c> (on by default), whose saved value is
+    /// deliberately not carried over, so existing profiles get the new default too.</summary>
+    public bool EnableWebDeveloperTools { get; init; }
 
     // ---- survey-domain analytics — disable on huge projects for performance ----
     /// <summary>compute the project statistics / charts / team / entrances /

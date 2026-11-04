@@ -112,6 +112,8 @@ public sealed partial class Model3DViewerViewModel : ObservableObject
         _session = session;
         if (_settings?.Current.Model3DShadingMode is { Length: > 0 } m) _shadingMode = m;
         if (_settings is not null) _zoomOnShow = _settings.Current.Model3DZoomOnShow;
+        // Read once, like the engine switch it goes with (Preferences ▸ Debug applies after a restart).
+        ShowDeveloperTools = _settings?.Current.EnableWebDeveloperTools == true;
         // Marshal to the UI thread: the session raises Changed on a background thread (its graph
         // rebuild runs under Task.Run/ConfigureAwait(false)), and OnSessionChanged mutates the
         // UI-bound Models collection — doing that off-thread throws "the calling thread cannot
@@ -119,6 +121,9 @@ public sealed partial class Model3DViewerViewModel : ObservableObject
         if (_session is not null) _session.Changed += (_, _) => ProjectFormat.OnUi(OnSessionChanged);
         RefreshModels();
     }
+
+    /// <summary>The DevTools and "open a web address" toolbar buttons: Preferences ▸ Debug ▸ Enable web developer tools.</summary>
+    public bool ShowDeveloperTools { get; }
 
     partial void OnCurrentModelPathChanged(string? value) => OnPropertyChanged(nameof(HasModel));
 

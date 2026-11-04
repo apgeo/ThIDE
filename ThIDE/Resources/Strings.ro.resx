@@ -147,7 +147,7 @@
   <data name="Pref_DbgOffscreen" xml:space="preserve"><value>Vizualizare web offscreen (experimental)</value></data>
   <data name="Pref_DbgOffscreenHelp" xml:space="preserve"><value>Redă conținutul web prin compozitorul aplicației în loc să încorporeze o fereastră nativă. Poate rezolva probleme de încorporare, poate afecta interacțiunea. Doar Linux; dezactivat implicit.</value></data>
   <data name="Pref_DbgDevTools" xml:space="preserve"><value>Activează instrumentele de dezvoltare web</value></data>
-  <data name="Pref_DbgDevToolsHelp" xml:space="preserve"><value>Permite deschiderea inspectorului/DevTools din panoul 3D și prin clic dreapta ▸ Inspectează. Toate platformele; activat implicit.</value></data>
+  <data name="Pref_DbgDevToolsHelp" xml:space="preserve"><value>Afișează butoanele DevTools și „deschide o adresă web” în bara panoului 3D și permite inspectorul motorului prin clic dreapta ▸ Inspectează / F12. Pentru dezvoltatori; dezactivat implicit.</value></data>
   <data name="Pref_Keyboard" xml:space="preserve"><value>Scurtături tastatură</value></data>
   <!-- Shared / common UI strings -->
   <data name="Common_ShowHideColumns" xml:space="preserve"><value>Afișează sau ascunde coloane</value></data>
@@ -598,7 +598,8 @@
   <data name="Pref_ReloadExternal" xml:space="preserve"><value>Reîncarcă fișierele deschise modificate în afara editorului</value></data>
   <data name="Pref_UpdateGraph" xml:space="preserve"><value>Actualizează graful de obiecte când fișierele se schimbă pe disc</value></data>
   <data name="Pref_QuickOpenScope" xml:space="preserve"><value>Salt la fișier (Ctrl+P): caută doar fișierele conectate la thconfig-ul activ</value></data>
-  <data name="Pref_QuickOpenHelp" xml:space="preserve"><value>Când este dezactivat, Ctrl+P caută în fiecare fișier Therion din dosarul proiectului (istoricul este inclus întotdeauna).</value></data>
+  <data name="Pref_QuickOpenHelp" xml:space="preserve"><value>Când este dezactivat, Ctrl+P listează și celelalte fișiere Therion din dosarul proiectului, estompate și după fișierele thconfig-ului activ.</value></data>
+  <data name="QuickOpen_NotInConfig" xml:space="preserve"><value>(nu este în {0})</value></data>
   <data name="Pref_AfterBuildOpen" xml:space="preserve"><value>După o compilare reușită, deschide:</value></data>
   <data name="Pref_OpenLox" xml:space="preserve"><value>.lox (model 3D Loch)</value></data>
   <data name="Pref_Open3d" xml:space="preserve"><value>.3d (model Survex / Aven)</value></data>
@@ -1519,7 +1520,9 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către {0} în
   <data name="NewTrip_Generated" xml:space="preserve"><value>Fișierul nou</value></data>
   <data name="NewTrip_TieIn" xml:space="preserve"><value>Pornește din (stația din proiect)</value></data>
   <data name="NewTrip_Nest" xml:space="preserve"><value>Pune ieșirea în interiorul topografiei stației</value></data>
-  <data name="NewTrip_CheckTieIn" xml:space="preserve"><value>verifică legătura</value></data>
+  <data name="NewTrip_NoTieIn" xml:space="preserve"><value>Fără legătură (prima ieșire / intrare)</value></data>
+  <data name="NewTrip_NoTieInHelp" xml:space="preserve"><value>Scrie doar linia input, în topografia aleasă mai sus; legați prima stație mai târziu cu equate sau fix.</value></data>
+  <data name="NewTrip_PickSurvey" xml:space="preserve"><value>Alegeți topografia în care intră ieșirea.</value></data>
   <data name="NewTrip_BadName" xml:space="preserve"><value>Numele topografiei poate conține doar litere, cifre, _ și -.</value></data>
   <data name="NewTrip_BadStation" xml:space="preserve"><value>Prima stație nu are un nume valid.</value></data>
   <data name="NewTrip_BadDate" xml:space="preserve"><value>Data trebuie să arate ca 2026.10.21.</value></data>
