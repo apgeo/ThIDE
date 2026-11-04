@@ -9,7 +9,7 @@ gives you tables, this gives you the *shape* of the project. Open it from **View
 
 ## What it shows
 
-- **Nodes** for each **survey**, **map** and **scrap** (colour-coded by kind).
+- **Nodes** for each **survey**, **map** and **scrap** (color-coded by kind).
 - **Links** for the relationships between them (a map aggregating scraps, a survey including another,
   and so on).
 - Turn on **Include files** to add the host `.thconfig` / `.th` / `.th2` files as nodes too — useful

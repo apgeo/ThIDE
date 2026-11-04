@@ -90,7 +90,7 @@ For the deeper reference (how it maps stations to source, requirements, fallback
 
 A **live plan/elevation sketch of your centrelines**, drawn directly from the object graph — **no
 compile needed**. Open it from **View → Mainline Preview**. It's the fastest way to see whether your
-data makes geometric sense as you type. (Enable *Mainline centreline preview* in Settings →
+data makes geometric sense as you type. (Enable *Mainline Preview* in Settings →
 Visualization.)
 
 **Views**
@@ -109,7 +109,7 @@ Visualization.)
 | **Legend** | The visibility list — hover a row to locate that group. |
 | **Separate** | Spread disconnected pieces into a grid instead of stacking them at the origin. |
 
-**Colour by** — **None**, **Survey**, **File**, or **Component**. Colouring **by Component** is the
+**Color by** — **None**, **Survey**, **File**, or **Component**. Coloring **by Component** is the
 quick way to spot disconnected pieces: anything stacked at the origin (or off on its own) isn't
 joined to the main network. The **Groups** row (all / none / invert / **main**) lets you show/hide
 individual pieces.

@@ -7,10 +7,10 @@ experience; jumping *around* code is in [Navigation & search](08-navigation-and-
 
 ## Syntax highlighting
 
-All four file types are colour-coded (keywords, identifiers, numbers, strings, comments, options,
+All four file types are color-coded (keywords, identifiers, numbers, strings, comments, options,
 punctuation). Inside `layout … endlayout` blocks, the embedded **MetaPost** and **TeX** code is
 highlighted with their own lexers (see [docs/layout-and-embedded-code.md](../layout-and-embedded-code.md)).
-You can recolour everything under **Settings → Theme & Colors → Use custom syntax colors**, or just
+You can recolor everything under **Settings → Theme & Colors → Use custom syntax colors**, or just
 switch to the **Dark** theme, which adapts both the UI and the syntax palette.
 
 ## Typing help
@@ -38,7 +38,7 @@ from **Generate code ▸ Insert snippet** in the right-click menu). The snippet 
 
 **Your own snippets** go in `snippets.json` — in ThIDE's settings folder for yourself, or in the
 project's `.thide/` folder to share them with everyone who has the project (where project files
-live is a choice in **Preferences ▸ General**). It is a list of entries:
+live is a choice in **Settings → General**). It is a list of entries:
 
 ```json
 [

@@ -27,7 +27,7 @@ guide can refer to it.
 
 Panels are **dockable**: drag a tab to re-dock it, float it into its own window (even onto another
 monitor), or hide it. Your layout — and any floating windows — **persists** between sessions.
-**View → Reset to Default Layout** puts everything back. **Split Editor (Float)** pops the active
+**View → Layout → Restore Default Layout** puts everything back. **Split Editor (Float)** pops the active
 document into a floating editor.
 
 ## The menu bar

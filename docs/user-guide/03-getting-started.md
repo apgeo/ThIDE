@@ -47,7 +47,7 @@ Give ThIDE a moment to index (watch the **Indexing…** hint in the status bar).
 - The **Workspace Explorer** (left) shows your files as a nested source/input tree.
 - The **Diagnostics** panel lists any problems it already found.
 - The **Overview** panel summarizes the cave (length, depth, files, last build).
-- Open a `.th` file and you'll get syntax colouring, and a **Measurements** tab next to the source.
+- Open a `.th` file and you'll get syntax coloring, and a **Measurements** tab next to the source.
 
 A full map of the interface is in [A tour of the interface](05-interface-tour.md).
 
@@ -61,7 +61,7 @@ Try these to feel the editor's "understanding" (details in [The editor](07-editi
 - Press **Ctrl+Shift+P** for the **Command Palette** — type to run any command, or prefix with
   `@` (symbol in this file), `#` (symbol in the workspace), or `:42` (go to line 42).
 
-As you type, ThIDE re-checks the file and surfaces problems as coloured squiggles and in the
+As you type, ThIDE re-checks the file and surfaces problems as colored squiggles and in the
 Diagnostics panel — see [Diagnostics & validation](09-diagnostics-and-validation.md).
 
 ## Step 5 — Compile

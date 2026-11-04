@@ -54,7 +54,7 @@ The planes drawn as **discs** in 3D against the cave.
   background** for print/export.
 - **Export image…** saves the current view as a PNG.
 - **Stereonet inset** shows a small stereonet "bowl" in the corner that **rotates together with the
-  cave model** — each visible plane's great circle and pole, in the plane's plot colour.
+  cave model** — each visible plane's great circle and pole, in the plane's plot color.
 - **Pop out to panel** moves the plot into its own dockable/floatable panel.
 
 > The 3D plot needs the bundled three.js assets and a system web engine (WebView2 / WebKit) — the
@@ -70,7 +70,7 @@ where the 3D plot's web engine is unavailable.
 - **Projection** — **Wulff (equal-angle)**, the traditional net for angle work, or **Schmidt
   (equal-area)**, standard for density/statistics.
 - **Poles** — plot each plane's pole point; **Measurements** — plot every included shot direction
-  as a small dot (colour-matched to its plane).
+  as a small dot (color-matched to its plane).
 - **Grid** / **Labels** / **White background** — presentation toggles; **Export image…** saves a
   crisp PNG.
 - Hover the net for a live **trend/plunge readout** of the cursor position; **click a great circle

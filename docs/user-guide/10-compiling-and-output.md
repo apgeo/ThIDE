@@ -77,7 +77,7 @@ to open nothing.
 
 ## Building several at once
 
-**Build → Build multiple…** lists every thconfig of the workspace with its `export` lines. Tick the
+**Compile → Compile Multiple…** lists every thconfig of the workspace with its `export` lines. Tick the
 thconfigs to build and, under each, the exports to produce; they are built one after the other (a
 thconfig with some exports unticked is built from a temporary copy with the others commented out).
 *Stop at the first failure* ends the run early; **Cancel** stops it. A summary — result, errors,

@@ -14,7 +14,7 @@ Blender's interface.
 
 > **You need Blender installed** — version **4.2 LTS or newer**. ThIDE finds it automatically
 > (Windows *Program Files*, the `PATH`, snap/flatpak on Linux, `/Applications` on macOS); if it
-> can't, point it at the executable in **Preferences → External tools**. ThIDE does not bundle
+> can't, point it at the executable in **Settings → External Tools**. ThIDE does not bundle
 > Blender and never modifies your Blender install.
 
 ---
@@ -32,7 +32,7 @@ describes one *render job*; nothing runs until you press **Render**.
    first (**Build → Compile**), or use an external file.
 
    > A `.lox` (Therion *loch*) model carries **walls**, so it renders as solid cave passage. A
-   > `.3d` (Survex) model is centre-line only, so ThIDE synthesizes tubes from the LRUD data.
+   > `.3d` (Survex) model is centerline only, so ThIDE synthesizes tubes from the LRUD data.
 
 2. **Choose a preset** (recommended). The preset strip offers a gallery:
    - **Orbit showcase** — a full turntable with studio lighting.
@@ -104,7 +104,7 @@ failure, `2` on a usage or spec error.
 
 | Symptom | What to do |
 |---|---|
-| *"Blender was not found"* | Install Blender 4.2+, or set its path in **Preferences → External tools**. |
+| *"Blender was not found"* | Install Blender 4.2+, or set its path in **Settings → External Tools**. |
 | *"…too old…"* | Update Blender to 4.2 or newer. |
 | The source dropdown is empty | Build the project first, or tick **Use an external file**. |
 | The render failed | Open the **job log** from the notification or the panel — it has Blender's full output. |

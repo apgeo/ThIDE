@@ -7,7 +7,7 @@ compile. This is one of the biggest reasons to edit Therion in ThIDE rather than
 
 ## Where diagnostics show up
 
-- **In the editor:** coloured squiggles under the offending text, with the message on hover.
+- **In the editor:** colored squiggles under the offending text, with the message on hover.
 - **In the Diagnostics panel** (**View → Diagnostics**): a filterable list of every problem.
 - **In the status bar:** a running count, with **F8 / Shift+F8** to jump to the next/previous one.
 
@@ -88,7 +88,7 @@ project is re-checked. Ambiguous cases are counted and left alone.
   and writes only the `equate`, where both can be named from.
 - **Format all files…** — every project file through the formatter, previewed first; files that do not
   parse cleanly are left alone, line endings are kept.
-- **Normalise project…** — Format all plus the house-keeping a shared repository wants: one line-ending
+- **Normalize Project…** — Format all plus the house-keeping a shared repository wants: one line-ending
   style (LF or CRLF), files that declare a legacy encoding (`encoding iso8859-2`, say) converted to
   UTF-8, and — if you tick it — each run of consecutive `input` lines sorted naturally (`trip2` before
   `trip10`). Previewed like Format all.

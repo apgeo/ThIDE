@@ -47,7 +47,7 @@ Three ways to use it:
 
 - **The built-in Assistant panel (no setup beyond a local model).** **View → Assistant** opens a
   chat inside ThIDE that talks to a local model served by **LM Studio** (or any OpenAI-compatible
-  endpoint — set it under **Preferences → MCP**). It answers from the live project, and every
+  endpoint — set it under **Settings → Extensions**). It answers from the live project, and every
   change it proposes stops on an **Allow / Deny** card first — nothing is written until you allow it.
   Before the first question it asks what it may send to the model: everything (the default, for a
   model on your own computer), nothing from the project, or results with the values blanked out.
@@ -55,7 +55,7 @@ Three ways to use it:
   headlessly. Your AI host (LM Studio, Claude Code, …) launches it and can then ask about a project
   folder. It reads your files; it can also format, scaffold, import/export, and run Therion — or, if
   you prefer, be limited to **read-only** with a single switch.
-- **Against the app you have open.** Turn on **Preferences → MCP → "Enable the in-app AI tools
+- **Against the app you have open.** Turn on **Settings → Extensions → "Enable the in-app AI tools
   server"** and the *running* ThIDE offers the same abilities plus live ones: the assistant can see the
   file you're editing (including unsaved changes), open a file, focus a panel, or reveal a station in
   the 3D view. Whether it may *touch* the window — not just read it — is governed by the **"Follow the
@@ -175,7 +175,7 @@ turns all of it off.
 - Plugins: `%AppData%/ThIDE/plugins/*.dll`
 - Rule config: `rules.json` (app data)
 - Snippets: `snippets.json`; file templates: `templates/files/*.json` — in app data for yourself, and
-  in the project's `.thide/` folder (or its private app-data twin, per **Preferences ▸ General**) for
+  in the project's `.thide/` folder (or its private app-data twin, per **Settings → General**) for
   the project. See [The editor → Snippets and new files](07-editing.md#snippets-and-new-files).
 - The CLI and LSP are **separate executables** shipped alongside the app, not the GUI itself.
 

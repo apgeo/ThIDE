@@ -12,7 +12,7 @@ folder paths and more time surveying and drawing.
 It gives you, in one window:
 
 - A **smart editor** for the four Therion file types (`.th`, `.th2`, `.thconfig`, `.xvi`) with
-  syntax colouring, autocomplete, hover help, folding, and live error-checking.
+  syntax coloring, autocomplete, hover help, folding, and live error-checking.
 - A **cross-file understanding** of your whole project — so it can jump to where a station or survey
   is defined, find every reference to it, and rename it everywhere at once.
 - One-click **compiling** with the real Therion program, with clickable errors and a list of the

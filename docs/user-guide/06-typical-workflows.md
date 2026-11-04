@@ -36,7 +36,7 @@ data line. Then:
    lines.
 4. Wrap the trip in a named, collapsible block with **Enclose in Region** (Ctrl+Shift+R) if you like
    — see [directives](../directives.md).
-5. Check the trip joins the rest of the cave: open **Mainline Preview**, colour **by Component**; a
+5. Check the trip joins the rest of the cave: open **Mainline Preview**, color **by Component**; a
    piece stacked at the origin is disconnected — add the missing `equate`.
 
 **The trip arrived as its own `.th` file?** Use **Tools → Link survey file…**: pick a station of the

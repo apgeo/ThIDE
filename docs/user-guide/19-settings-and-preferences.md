@@ -21,7 +21,7 @@ small tidy project or a huge multi-cave system.
 
 ## Theme & Colors
 
-- **App theme:** System default · Light · **Dark** (adapts both controls and editor syntax colours).
+- **App theme:** System default · Light · **Dark** (adapts both controls and editor syntax colors).
 - **Use custom syntax colors** — override the palette with your own `#RRGGBB` values for keyword,
   identifier, number, string, comment, option, punctuation (each with a live swatch).
 
@@ -40,7 +40,7 @@ small tidy project or a huge multi-cave system.
 ## Editor Features
 
 Its own section in the sidebar: a checkbox per editor enhancement (completion, signature help,
-minimap, sticky headers, breadcrumbs, peek, split/diff, colour swatches, whitespace, smart enter,
+minimap, sticky headers, breadcrumbs, peek, split/diff, color swatches, whitespace, smart enter,
 snippets…). Turn off anything you find noisy. **A feature greyed out here was switched off at build
 time** and can't be enabled from this window.
 
@@ -85,7 +85,7 @@ One section holding three groups — the preview panels, the analytics, and a di
 **Preview panels.** Enable/disable the read-only previews; disabling one hides its panel *and* its
 menu entry (reset the layout or restart to clear an already-open panel):
 
-- **Mainline centreline preview** (+ its plan/elevation sketch).
+- **Mainline Preview** (the centerline plan/elevation sketch).
 - **In-app map viewer (PNG / SVG / PDF)** — plus **Auto-show the rendered map after a build** and
   **Auto-show first map on workspace load**.
 - **Embedded 3D model viewer** (CaveView.js) — plus **Auto-show the 3D model after a build**.

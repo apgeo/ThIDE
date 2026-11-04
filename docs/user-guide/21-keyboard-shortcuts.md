@@ -63,7 +63,7 @@ expect from another editor does nothing, that is why — bind it there.
 | Shortcut | Command |
 |---|---|
 | `F5` | Build the active thconfig |
-| `Ctrl+F5` | Rebuild (force a full recompile) |
+| `Ctrl+F5` | Recompile (force a full recompile) |
 | `Shift+F5` | Cancel the running build |
 | `F9` | Open the compiled model in **Loch** |
 | `F10` | Open the compiled model in **Aven** |
@@ -78,7 +78,7 @@ See [Compiling & output](10-compiling-and-output.md).
 | `Ctrl+Shift+D` | Toggle the Diagnostics panel |
 | `F11` | Toggle full screen |
 
-The other panel toggles (Object Browser, Outline, Project, Log, Live Preview, Map Viewer, 3D Viewer,
+The other panel toggles (Object Browser, Outline, Overview, Log, Mainline Preview, Map Viewer, 3D Viewer,
 Structural Geology, Blender Animation) ship **unbound** — use the **View** menu, or bind them
 yourself in **Settings → Keyboard Shortcuts**.
 
