@@ -311,6 +311,11 @@
                 home: "CaveView/",
                 surveyDirectory: "model/",
                 language: lang ? lang[1] : "en",
+                // Below 1000 px CaveView shrinks the HUD dials (to 0.5, and to 0.25 under 768 px, which
+                // it takes for a phone) but not their text labels, whose offsets it scales all the same:
+                // in a docked panel the compass's "000°" ran over the attitude dial's "-90°" and past
+                // the right edge. At 0.6 the labels fit beside each other and inside the view.
+                hudScale: { medium: 0.6, small: 0.6, mobile: 0.6 },
                 view: {
                     shadingMode: CV2.SHADING_HEIGHT,
                     box: true,

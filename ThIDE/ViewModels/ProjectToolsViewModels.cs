@@ -48,7 +48,7 @@ public sealed class SurveyTreeItem
     public SurveyTreeItem(SurveyTreeNode node)
     {
         Name = string.IsNullOrEmpty(node.Title) ? node.Name : $"{node.Name}  ·  {node.Title}";
-        Counts = $"{node.Stations} st · {node.Shots} legs · {ProjectFormat.Length(node.Length)}";
+        Counts = $"{Tr.Plural("Count_Stations", node.Stations)} · {Tr.Plural("Count_Legs", node.Shots)} · {ProjectFormat.Length(node.Length)}";
         Declaration = node.Declaration;
         foreach (var c in node.Children) Children.Add(new SurveyTreeItem(c));
     }
@@ -77,6 +77,7 @@ public sealed partial class SurveyTreeViewModel : ObservableObject
         _documents = documents;
         _session.Changed += (_, _) => ProjectFormat.OnUi(Rebuild);
         _documents.DocumentChanged += (_, _) => ProjectFormat.OnUi(Rebuild);
+        LocProxy.Instance.PropertyChanged += (_, _) => ProjectFormat.OnUi(Rebuild);   // the counts are words
         Rebuild();
     }
 
@@ -107,7 +108,7 @@ public sealed partial class ProjectDashboardViewModel : ObservableObject
 
     public BuildViewModel? Build { get; }
 
-    [ObservableProperty] private string _projectName = "(no project open)";
+    [ObservableProperty] private string _projectName = Tr.Get("Dash_NoProject");
     [ObservableProperty] private string _entryConfig = "—";
     [ObservableProperty] private string _fileSummary = "—";
     [ObservableProperty] private string _surveySummary = "—";
@@ -133,6 +134,8 @@ public sealed partial class ProjectDashboardViewModel : ObservableObject
         _session.BuffersRevalidated += (_, _) => ProjectFormat.OnUi(Rebuild);
         _session.CandidatesChanged += (_, _) => ProjectFormat.OnUi(Rebuild);
         build.PropertyChanged += (_, _) => ProjectFormat.OnUi(UpdateBuildStatus);
+        // Every figure is a count phrase in the UI language: rebuild them on a language switch.
+        LocProxy.Instance.PropertyChanged += (_, _) => ProjectFormat.OnUi(Rebuild);
         // Count what the Diagnostics panel lists, so the two never disagree.
         if (diagnostics is not null)
             diagnostics.PropertyChanged += (_, e) =>
@@ -150,7 +153,7 @@ public sealed partial class ProjectDashboardViewModel : ObservableObject
     private void Rebuild()
     {
         var root = _session?.RootPath;
-        ProjectName = string.IsNullOrEmpty(root) ? "(no project open)"
+        ProjectName = string.IsNullOrEmpty(root) ? Tr.Get("Dash_NoProject")
             : new DirectoryInfo(root).Name;
         EntryConfig = _session?.ActiveThconfig?.DisplayPath ?? "—";
         FileSummary = CountFiles(root, _session?.Candidates.Count);
@@ -158,11 +161,11 @@ public sealed partial class ProjectDashboardViewModel : ObservableObject
         if (_documents?.Workspace is { } model)
         {
             var t = ProjectStatistics.ComputeTotals(model);
-            SurveySummary = $"{t.SurveyCount} surveys";
-            StationsText = $"{t.StationCount} stations · {t.ShotCount} legs";
+            SurveySummary = Tr.Plural("Count_Surveys", t.SurveyCount);
+            StationsText = $"{Tr.Plural("Count_Stations", t.StationCount)} · {Tr.Plural("Count_Legs", t.ShotCount)}";
             LengthText = ProjectFormat.Length(t.TotalLength);
-            DepthText = $"{ProjectFormat.Length(t.VerticalRange)} vertical range";
-            EntrancesText = $"{t.EntranceCount} entrances · {t.FixedCount} fixed points";
+            DepthText = string.Format(Tr.Get("Dash_VerticalRange"), ProjectFormat.Length(t.VerticalRange));
+            EntrancesText = $"{Tr.Plural("Count_Entrances", t.EntranceCount)} · {Tr.Plural("Count_FixedPoints", t.FixedCount)}";
             _semanticDiagnostics = DiagnosticCounts();
         }
         else
@@ -188,7 +191,9 @@ public sealed partial class ProjectDashboardViewModel : ObservableObject
             (errors, warnings) = (model.Diagnostics.Count(d => d.Severity == DiagnosticSeverity.Error),
                                   model.Diagnostics.Count(d => d.Severity == DiagnosticSeverity.Warning));
         else return "—";
-        return errors == 0 && warnings == 0 ? "No diagnostics" : $"{errors} errors · {warnings} warnings";
+        return errors == 0 && warnings == 0
+            ? Tr.Get("Diag_SummaryNone")
+            : $"{Tr.Plural("Count_Errors", errors)} · {Tr.Plural("Count_Warnings", warnings)}";
     }
 
     private void UpdateBuildStatus()
@@ -212,7 +217,7 @@ public sealed partial class ProjectDashboardViewModel : ObservableObject
     {
         var err = Build?.LastError ?? string.Empty;
         DiagnosticsText = Build is { HasBuildResult: true, LastBuildSucceeded: false } && err.Length > 0
-            ? $"{_semanticDiagnostics} · last build error: {FirstLine(err)}"
+            ? string.Format(Tr.Get("Dash_LastCompileError"), _semanticDiagnostics, FirstLine(err))
             : _semanticDiagnostics;
     }
 
@@ -308,6 +313,7 @@ public sealed partial class ProjectAuditViewModel : ObservableObject
         // results from another project (or a previous entry config) never linger silently.
         _session.RootChanged += (_, _) => ProjectFormat.OnUi(ResetToPlaceholder);
         _session.Changed += (_, _) => ProjectFormat.OnUi(ResetToPlaceholder);
+        LocProxy.Instance.PropertyChanged += (_, _) => ProjectFormat.OnUi(() => { if (HasCalculated) UpdateSummary(); });
         ResetToPlaceholder();
     }
 
@@ -406,8 +412,9 @@ public sealed partial class ProjectAuditViewModel : ObservableObject
         int total = OrphanFiles.Count + UnreferencedScraps.Count + UnexportedMaps.Count;
         IsClean = total == 0;
         Summary = IsClean
-            ? "No orphan files, unreferenced scraps or unexported maps."
-            : $"{OrphanFiles.Count} orphan file(s) · {UnreferencedScraps.Count} unreferenced scrap(s) · {UnexportedMaps.Count} unexported map(s)";
+            ? Tr.Get("Audit_Clean")
+            : $"{Tr.Plural("Count_OrphanFiles", OrphanFiles.Count)} · {Tr.Plural("Count_UnreferencedScraps", UnreferencedScraps.Count)}"
+              + $" · {Tr.Plural("Count_UnexportedMaps", UnexportedMaps.Count)}";
     }
 
     // The thconfigs whose include graphs define what is "reachable": every thconfig under the root
@@ -449,7 +456,7 @@ public sealed partial class ProjectAuditViewModel : ObservableObject
                 scraps.Add(new AuditItem
                 {
                     Title = id,
-                    Detail = "scrap not composed by any map",
+                    Detail = Tr.Get("Audit_ScrapNotComposed"),
                     Span = model.ScrapsById.TryGetValue(id, out var s) ? s.DeclarationSpan : null,
                 });
             }
@@ -528,7 +535,7 @@ public sealed partial class ProjectAuditViewModel : ObservableObject
                 list.Add(new AuditItem
                 {
                     Title = id,
-                    Detail = "map declared but not selected for export",
+                    Detail = Tr.Get("Audit_MapNotSelected"),
                     Span = map.DeclarationSpan,
                 });
         }
@@ -599,6 +606,7 @@ public sealed partial class LeadsViewModel : ObservableObject
         {
             if (_settings?.Current.AutoRecalcLeads ?? true) ProjectFormat.OnUi(Rebuild);
         };
+        LocProxy.Instance.PropertyChanged += (_, _) => ProjectFormat.OnUi(UpdateSummary);
         Rebuild();
     }
 
@@ -660,10 +668,11 @@ public sealed partial class LeadsViewModel : ObservableObject
         int flagged = _all.Count(l => l.IsStationFlag);
         int heuristic = _all.Length - flagged;
         Summary = _all.Length == 0
-            ? "No leads detected."
+            ? Tr.Get("Leads_None")
             : ShowAllLeads
-                ? $"{Leads.Count} lead(s) · {flagged} flagged · {heuristic} other"
-                : $"{Leads.Count} flagged lead(s)" + (heuristic > 0 ? $" · {heuristic} more via “show all”" : "");
+                ? string.Format(Tr.Get("Leads_SummaryAll"), Tr.Plural("Count_Leads", Leads.Count), flagged, heuristic)
+                : Tr.Plural("Count_FlaggedLeads", Leads.Count)
+                  + (heuristic > 0 ? " · " + string.Format(Tr.Get("Leads_MoreHidden"), heuristic, Tr.Get("Proj_Lead_ShowAll")) : "");
     }
 }
 
@@ -692,6 +701,7 @@ public sealed partial class TodoScanViewModel : ObservableObject
         _documents = documents;
         _settings = settings;
         _session.Changed += (_, _) => ProjectFormat.OnUi(Rebuild);
+        LocProxy.Instance.PropertyChanged += (_, _) => ProjectFormat.OnUi(UpdateSummary);
         Rebuild();
     }
 
@@ -738,8 +748,16 @@ public sealed partial class TodoScanViewModel : ObservableObject
                 Todos.Add(new TodoRow(item.Tag, item.Text, Path.GetFileName(path), item.Span.Start.Line, item.Span));
         }
 
-        Summary = Todos.Count == 0 ? "No TODO/FIXME/QM tags found." : $"{Todos.Count} tag(s) in {scanned} file(s).";
+        _scanned = scanned;
+        UpdateSummary();
     }
+
+    private int _scanned;
+
+    private void UpdateSummary() =>
+        Summary = _settings is { Current.EnableTodoScan: false } ? Tr.Get("Proj_TodoScanOff")
+            : Todos.Count == 0 ? Tr.Get("Todo_None")
+            : Tr.Plural("Todo_Summary", Todos.Count, Tr.Plural("Count_Files", _scanned));
 
     // Every distinct project file: graph members + open documents.
     private IEnumerable<string> ReachableFiles()
@@ -792,13 +810,13 @@ public sealed partial class ProjectMetadataViewModel : ObservableObject
     [RelayCommand]
     private void Save()
     {
-        if (_store is null || _session?.RootPath is not { } root) { Status = "Open a project first."; return; }
+        if (_store is null || _session?.RootPath is not { } root) { Status = Tr.Get("Meta_OpenProjectFirst"); return; }
         _store.Save(root, new ProjectMetadata
         {
             Name = Name, Region = Region, Crs = Crs,
             DeclinationSource = DeclinationSource, License = License, Notes = Notes,
         });
-        Status = $"Saved ({DateTime.Now:HH:mm}).";
+        Status = string.Format(Tr.Culture, Tr.Get("Meta_Saved"), DateTime.Now);
     }
 
     [RelayCommand] private void Reload() => Load();
@@ -811,7 +829,7 @@ public sealed partial class ProjectMetadataViewModel : ObservableObject
         Name = md.Name; Region = md.Region; Crs = md.Crs;
         DeclinationSource = md.DeclinationSource; License = md.License; Notes = md.Notes;
         _loading = false;
-        Status = HasProject ? string.Empty : "No project open.";
+        Status = HasProject ? string.Empty : Tr.Get("Meta_NoProject");
     }
 
     // Clear the "saved" hint as soon as the user edits a field.
@@ -821,7 +839,7 @@ public sealed partial class ProjectMetadataViewModel : ObservableObject
     partial void OnDeclinationSourceChanged(string value) => Touch();
     partial void OnLicenseChanged(string value) => Touch();
     partial void OnNotesChanged(string value) => Touch();
-    private void Touch() { if (!_loading && HasProject) Status = "Unsaved changes."; }
+    private void Touch() { if (!_loading && HasProject) Status = Tr.Get("Meta_Unsaved"); }
 }
 
 // ───────────────────────────── — background-scan / media manager ─────────────────────────────
@@ -847,6 +865,7 @@ public sealed partial class MediaManagerViewModel : ObservableObject
         _settings = settings;
         _session.Changed += (_, _) => ProjectFormat.OnUi(Rebuild);
         _session.FileSystemChanged += (_, _) => ProjectFormat.OnUi(Rebuild);
+        LocProxy.Instance.PropertyChanged += (_, _) => ProjectFormat.OnUi(UpdateSummary);
         Rebuild();
     }
 
@@ -873,10 +892,13 @@ public sealed partial class MediaManagerViewModel : ObservableObject
 
     private void UpdateSummary()
     {
+        if (_settings is { Current.EnableMediaScan: false }) { Summary = Tr.Get("Proj_MediaScanOff"); return; }
         int missing = Media.Count(m => m.Status == MediaStatus.Missing);
         int orphan = Media.Count(m => m.Status == MediaStatus.Orphan);
         Summary = Media.Count == 0
-            ? "No scans found."
-            : $"{Media.Count} scan(s)" + (missing > 0 ? $" · {missing} missing" : "") + (orphan > 0 ? $" · {orphan} orphan" : "");
+            ? Tr.Get("Media_None")
+            : Tr.Plural("Count_Scans", Media.Count)
+              + (missing > 0 ? " · " + string.Format(Tr.Get("Media_Missing"), missing) : "")
+              + (orphan > 0 ? " · " + string.Format(Tr.Get("Media_Orphan"), orphan) : "");
     }
 }

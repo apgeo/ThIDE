@@ -42,8 +42,8 @@ public sealed class QuickOpenProvider
     {
         var candidates = BuildCandidates();
         return new QuickPickViewModel(
-            "Go to File",
-            "Search files by name or path…  (space = match parts)",
+            Tr.Get("QuickOpen_Title"),
+            Tr.Get("QuickOpen_Watermark"),
             text => Rank(candidates, text, loadFolder));
     }
 

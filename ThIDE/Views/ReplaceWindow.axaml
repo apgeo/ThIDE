@@ -3,7 +3,6 @@
         xmlns:vm="using:ThIDE.ViewModels"
         xmlns:ae="using:AvaloniaEdit"
         xmlns:l="using:ThIDE.Resources"
-        xmlns:conv="using:ThIDE.Converters"
         x:Class="ThIDE.Views.ReplaceWindow"
         x:DataType="vm:ReplaceInFilesViewModel"
         Width="1240" Height="680"
@@ -28,7 +27,7 @@
                           SelectedItem="{Binding Scope, Mode=TwoWay}">
                     <ComboBox.ItemTemplate>
                         <DataTemplate x:DataType="x:String">
-                            <TextBlock Text="{Binding Converter={x:Static conv:LocKeyConverter.Instance}, ConverterParameter=Opt_Scope_}" />
+                            <TextBlock Text="{l:LocOption Opt_Scope_}" />
                         </DataTemplate>
                     </ComboBox.ItemTemplate>
                 </ComboBox>

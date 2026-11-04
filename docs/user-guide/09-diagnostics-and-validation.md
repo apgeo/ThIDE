@@ -80,12 +80,12 @@ like, inserted after the block's body). A preview lists every change — file, l
 and you untick any you don't want; **Apply** writes them and the project is re-checked. Ambiguous
 cases are counted and left alone. In an open file the fix is an editor change; a file that is not
 open is **rewritten on disk**, and the whole run is one entry of the [workspace
-undo](05-interface-tour.md#undoing-a-tool-that-wrote-many-files) (**Edit → Undo multi-file change**).
+undo](05-interface-tour.md#undoing-a-tool-that-wrote-many-files) (**Edit → Undo Multi-File Change**).
 
 ## Project-wide tidying (Tools menu)
 
 These tools change many files at once. Each one shows a preview first, and when you apply it the
-files that are not open are written to disk — one **Edit → Undo multi-file change** (named after the
+files that are not open are written to disk — one **Edit → Undo Multi-File Change** (named after the
 tool) puts them all back. A file that is open with unsaved edits takes the change in its editor and
 stays unsaved.
 

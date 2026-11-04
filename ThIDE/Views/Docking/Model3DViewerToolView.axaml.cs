@@ -132,6 +132,7 @@ public partial class Model3DViewerToolView : UserControl
         if (_vm is null || _vmWired) return;
         _vm.FullscreenRequested += OnFullscreenRequested;
         _vm.ScriptRequested += OnScriptRequested;
+        _vm.NavigateRequested += OnNavigateRequested;
         _vm.DevToolsRequested += OnDevToolsRequested;
         _vm.ExportWebPageRequested += OnExportWebPageRequested;
         _vmWired = true;
@@ -142,6 +143,7 @@ public partial class Model3DViewerToolView : UserControl
         if (_vm is null || !_vmWired) return;
         _vm.FullscreenRequested -= OnFullscreenRequested;
         _vm.ScriptRequested -= OnScriptRequested;
+        _vm.NavigateRequested -= OnNavigateRequested;
         _vm.DevToolsRequested -= OnDevToolsRequested;
         _vm.ExportWebPageRequested -= OnExportWebPageRequested;
         _vmWired = false;
@@ -157,6 +159,11 @@ public partial class Model3DViewerToolView : UserControl
     {
         try { if (_web is not null) await _web.InvokeScript(js); }
         catch { /* best-effort C#→JS call */ }
+    }
+
+    private void OnNavigateRequested(object? sender, string url)
+    {
+        if (_web is not null && Uri.TryCreate(url, UriKind.Absolute, out var uri)) _web.Source = uri;
     }
 
     private async void OnOpen(object? sender, RoutedEventArgs e)

@@ -124,12 +124,15 @@ Tools: `ui_windows`, `ui_tree`, `ui_find`, `ui_get`, `ui_invoke`, `ui_menu`, `ui
 ## Known limits
 
 - Avalonia's MenuItem peers have no invoke/expand pattern; the server drives `MenuItem` directly and
-  `uidrive click` falls back to a real mouse click.
+  `uidrive click` falls back to a real mouse click. After it runs an item, `ui_menu` closes the menu as a
+  click would, so a screenshot taken next shows no menu left drawn open.
 - A context menu is in the tree only while it is open, listed under the control it belongs to: open it
   with `ui_invoke` action `contextmenu` on that control, then invoke its item (`#Document.Stations.Grid.ShowIn3D`).
 - The AvaloniaEdit editor has no AT-SPI text interface: type into it with `uidrive`, read it with
   `ui_get`.
 - Keys sent through the in-app server are routed events, not OS input; use `uidrive key` when the
-  platform input path itself is under test.
+  platform input path itself is under test. `ui_key` first runs a matching `KeyBinding` of the target or
+  one of its ancestors, as the keyboard device does, so window shortcuts such as F5 (Compile) work; the
+  KeyDown event follows only when no binding took the key.
 - The C# suite isolates the profile through `XDG_*`, which .NET honours on Linux and macOS. Windows
   ignores it, so the suite skips every UI test there rather than run against your real ThIDE profile.

@@ -18,9 +18,11 @@ using ThIDE.Services;
 namespace ThIDE.ViewModels;
 
 /// <summary>One row per station in the Object Browser. <see cref="File"/> is the full path.</summary>
-public sealed record StationRow(string QualifiedName, string Kind, string Survey, string File, int Line)
+public sealed record StationRow(string QualifiedName, StationDeclarationKind KindId, string Survey, string File, int Line)
     : IBrowserNavRow
 {
+    /// <summary>The kind in the UI language.</summary>
+    public string Kind => Tr.Get("StationKind_" + KindId);
     public string? NavFile => File;
     public int NavLine => Line;
 }
@@ -249,7 +251,12 @@ public partial class ObjectBrowserViewModel : ViewModelBase
         _l = localizer;
         _settings = settings;
         _documents = documents;
-        language.LanguageChanged += (_, _) => RaiseHeadersChanged();
+        language.LanguageChanged += (_, _) =>
+        {
+            RaiseHeadersChanged();
+            // The rows are immutable: a new list makes the grid read every Kind again.
+            Stations = Stations.ToList();
+        };
     }
 
     private bool EntitiesEnabled => _settings?.Current.EnableObjectBrowserEntities ?? true;
@@ -326,7 +333,7 @@ public partial class ObjectBrowserViewModel : ViewModelBase
         var stations = model.Stations.Values
             .Select(s => new StationRow(
                 s.Name.ToString(),
-                Tr.Get("StationKind_" + s.Kind),
+                s.Kind,
                 s.Name.HasParent ? s.Name.Parent().ToString() : string.Empty,
                 s.DeclarationSpan.FilePath,
                 s.DeclarationSpan.Start.Line))
@@ -368,7 +375,7 @@ public partial class ObjectBrowserViewModel : ViewModelBase
                 if (!seenStations.Add(key)) continue;
                 stations.Add(new StationRow(
                     key,
-                    Tr.Get("StationKind_" + s.Kind),
+                    s.Kind,
                     s.Name.HasParent ? s.Name.Parent().ToString() : string.Empty,
                     s.DeclarationSpan.FilePath,
                     s.DeclarationSpan.Start.Line));

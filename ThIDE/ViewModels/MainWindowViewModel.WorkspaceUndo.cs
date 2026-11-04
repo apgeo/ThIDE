@@ -13,15 +13,15 @@ public partial class MainWindowViewModel
 {
     private IWorkspaceUndoService? _workspaceUndo;
 
-    /// <summary>"Undo Rename", or a disabled "Undo multi-file change" when there is nothing to undo.</summary>
+    /// <summary>"Undo Rename", or a disabled "Undo Multi-File Change" when there is nothing to undo.</summary>
     public string WorkspaceUndoHeader => _workspaceUndo?.NextUndo is { } r
         ? string.Format(L("WsUndo_Menu", "Undo {0}"), r.Label)
-        : L("WsUndo_MenuNone", "Undo multi-file change");
+        : L("WsUndo_MenuNone", "Undo Multi-File Change");
 
-    /// <summary>"Redo Rename", or a disabled "Redo multi-file change".</summary>
+    /// <summary>"Redo Rename", or a disabled "Redo Multi-File Change".</summary>
     public string WorkspaceRedoHeader => _workspaceUndo?.NextRedo is { } r
         ? string.Format(L("WsUndo_RedoMenu", "Redo {0}"), r.Label)
-        : L("WsUndo_RedoMenuNone", "Redo multi-file change");
+        : L("WsUndo_RedoMenuNone", "Redo Multi-File Change");
 
     public bool CanUndoWorkspace => _workspaceUndo?.NextUndo is not null;
     public bool CanRedoWorkspace => _workspaceUndo?.NextRedo is not null;
@@ -73,7 +73,7 @@ public partial class MainWindowViewModel
 
     private void Report(WorkspaceUndoOutcome outcome)
     {
-        var title = outcome.Record?.Label ?? L("WsUndo_MenuNone", "Undo multi-file change");
+        var title = outcome.Record?.Label ?? L("WsUndo_MenuNone", "Undo Multi-File Change");
         switch (outcome.Status)
         {
             case WorkspaceUndoStatus.Done: _notifications.Info(title, outcome.Message ?? string.Empty); break;

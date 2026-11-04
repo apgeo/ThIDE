@@ -22,9 +22,10 @@ namespace ThIDE.Tests;
 internal static class MainWindowViewModelHost
 {
     public static MainWindowViewModel Create(IDocumentService documents, ITaskRunnerService? tasks = null,
-        ICrashRecoveryService? crashRecovery = null, IWorkspaceUndoService? workspaceUndo = null) => new(
+        ICrashRecoveryService? crashRecovery = null, IWorkspaceUndoService? workspaceUndo = null,
+        ILanguageService? language = null) => new(
         new KeyLocalizer(),
-        new LanguageService(),
+        language ?? new LanguageService(),
         documents,
         NewFactory(),
         new WelcomeToolViewModel(new WelcomeViewModel()),
@@ -103,6 +104,37 @@ internal static class UiThread
             thread.Start();
             thread.Join();
             if (failure is not null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
+        }
+    }
+
+    /// <summary>
+    /// <see cref="Run"/> for an async body: its continuations come back to the UI-bound test thread
+    /// (a one-thread synchronization context pumps them), so an async test needs no blocking wait.
+    /// </summary>
+    public static Task RunAsync(Func<Task> body) => Task.Run(() => Run(() =>
+    {
+        var context = new PumpContext();
+        var previous = SynchronizationContext.Current;
+        SynchronizationContext.SetSynchronizationContext(context);
+        try { context.RunUntilDone(body()); }
+        finally { SynchronizationContext.SetSynchronizationContext(previous); }
+    }));
+
+    private sealed class PumpContext : SynchronizationContext
+    {
+        private readonly System.Collections.Concurrent.BlockingCollection<(SendOrPostCallback, object?)> _queue = new();
+
+        public override void Post(SendOrPostCallback d, object? state)
+        {
+            try { _queue.Add((d, state)); }
+            catch (InvalidOperationException) { ThreadPool.QueueUserWorkItem(_ => d(state)); }   // after the body finished
+        }
+
+        public void RunUntilDone(Task task)
+        {
+            task.ContinueWith(_ => _queue.CompleteAdding(), TaskScheduler.Default);
+            foreach (var (d, state) in _queue.GetConsumingEnumerable()) d(state);
+            task.GetAwaiter().GetResult();   // rethrows the body's failure
         }
     }
 

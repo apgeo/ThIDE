@@ -73,7 +73,7 @@ Measurements grid (right-click → *Rename Station…*).
 **What Undo covers.** A file that is open takes the rename in its editor, as one undo step of that
 file. A file that is **not open is rewritten on disk** with no editor to undo it in — so the rename as
 a whole is recorded in the [workspace undo](05-interface-tour.md#undoing-a-tool-that-wrote-many-files):
-**Edit → Undo multi-file change** (it reads *Undo Rename* after a rename) puts every file back. If a
+**Edit → Undo Multi-File Change** (it reads *Undo Rename* after a rename) puts every file back. If a
 file cannot be written, nothing is renamed and the message names it.
 
 ## Find & replace
@@ -84,7 +84,7 @@ file cannot be written, nothing is renamed and the message names it.
   (**Ctrl+Shift+H**) — choose a **directory** and a filename **mask**, with the same match options.
   A cross-file **Replace All** that reaches more than one file asks first, then writes the closed
   files straight to disk and can be **undone/redone** as a single operation (buttons in the dialog
-  and the notification, or **Edit → Undo multi-file change**).
+  and the notification, or **Edit → Undo Multi-File Change**).
 
 ## Stepping through diagnostics
 

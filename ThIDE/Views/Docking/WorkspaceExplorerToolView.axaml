@@ -40,6 +40,12 @@
                               ToolTip.Tip="{l:Loc Ws_ActiveConfigTip}"
                               ItemsSource="{Binding Explorer.ThconfigCandidates}"
                               SelectedItem="{Binding Explorer.SelectedThconfig, Mode=TwoWay}">
+                        <ComboBox.Styles>
+                            <!-- Screen readers and the automation tree name an entry by its shown path. -->
+                            <Style Selector="ComboBoxItem">
+                                <Setter Property="AutomationProperties.Name" Value="{Binding DisplayPath}" />
+                            </Style>
+                        </ComboBox.Styles>
                         <ComboBox.ItemTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding DisplayPath}" ToolTip.Tip="{Binding FullPath}" />

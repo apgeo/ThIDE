@@ -32,7 +32,7 @@ class MenuPathTests(unittest.TestCase):
         text = (
             "Use **File → Save As…**, **Compile → Compile This thconfig (Focused Tab)**, "
             "**Tools → Calculators → Unit Converter…** or **View → Layout → Restore Default Layout**.\n"
-            "Also **Edit → Undo multi-file change** and **Help → About ThIDE**, and with the arrow ▸: **Search ▸ Bookmarks…**."
+            "Also **Edit → Undo Multi-File Change** and **Help → About ThIDE**, and with the arrow ▸: **Search ▸ Bookmarks…**."
         )
         self.assertEqual([], self.problems(text))
 

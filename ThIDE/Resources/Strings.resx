@@ -1712,9 +1712,9 @@ Apply the changes? Steps that could not preview run now.</value></data>
 Delete it permanently instead? This cannot be undone.</value></data>
   <data name="Explorer_DeletePermanently" xml:space="preserve"><value>Delete Permanently</value></data>
   <data name="WsUndo_Menu" xml:space="preserve"><value>Undo {0}</value></data>
-  <data name="WsUndo_MenuNone" xml:space="preserve"><value>Undo multi-file change</value></data>
+  <data name="WsUndo_MenuNone" xml:space="preserve"><value>Undo Multi-File Change</value></data>
   <data name="WsUndo_RedoMenu" xml:space="preserve"><value>Redo {0}</value></data>
-  <data name="WsUndo_RedoMenuNone" xml:space="preserve"><value>Redo multi-file change</value></data>
+  <data name="WsUndo_RedoMenuNone" xml:space="preserve"><value>Redo Multi-File Change</value></data>
   <data name="WsUndo_More" xml:space="preserve"><value> and {0} more</value></data>
   <data name="WsUndo_Refused" xml:space="preserve"><value>Nothing restored: {0} has changed since. No file was changed.</value></data>
   <data name="WsUndo_Encoding" xml:space="preserve"><value>Nothing restored: {0} cannot hold '{1}' in {2}, the encoding the file declares. No file was changed.</value></data>
@@ -1732,7 +1732,7 @@ Delete it permanently instead? This cannot be undone.</value></data>
   <data name="Gen_NotBuiltYet" xml:space="preserve"><value>{0} has not been compiled yet.</value></data>
   <data name="Gen_NoOutputs" xml:space="preserve"><value>The last compilation of {0} wrote no output files.</value></data>
   <data name="Gen_StaleAfterFailedBuild" xml:space="preserve"><value>⚠ The last compilation of {0} failed — these outputs are from an earlier compilation. Fix the errors and compile again.</value></data>
-  <data name="Dash_BuildNever" xml:space="preserve"><value>Never built this session</value></data>
+  <data name="Dash_BuildNever" xml:space="preserve"><value>Not compiled this session</value></data>
   <data name="Dash_BuildOk" xml:space="preserve"><value>Last compilation of {0} succeeded</value></data>
   <data name="Dash_BuildOkWarnings" xml:space="preserve"><value>Last compilation of {0} succeeded ({1})</value></data>
   <data name="Dash_BuildFailed" xml:space="preserve"><value>Last compilation of {0} failed</value></data>
@@ -2307,4 +2307,70 @@ This cannot be undone.</value></data>
   <data name="Feat_SmartEnter_Desc" xml:space="preserve"><value>Auto-indent on Enter and auto-insert the matching endX for block openers.</value></data>
   <data name="Feat_ReadingOrderNav_Title" xml:space="preserve"><value>Reading-order navigation</value></data>
   <data name="Feat_ReadingOrderNav_Desc" xml:space="preserve"><value>Step into an included file and back, with a navigation backstack.</value></data>
+  <data name="Meas_FlagsNone" xml:space="preserve"><value>(none)</value></data>
+  <data name="Dash_NoProject" xml:space="preserve"><value>(no project open)</value></data>
+  <data name="Dash_VerticalRange" xml:space="preserve"><value>{0} vertical range</value></data>
+  <data name="Dash_LastCompileError" xml:space="preserve"><value>{0} · last compilation error: {1}</value></data>
+  <data name="Count_Surveys_One" xml:space="preserve"><value>{0} survey</value></data>
+  <data name="Count_Surveys_Few" xml:space="preserve"><value>{0} surveys</value></data>
+  <data name="Count_Surveys_Many" xml:space="preserve"><value>{0} surveys</value></data>
+  <data name="Count_Entrances_One" xml:space="preserve"><value>{0} entrance</value></data>
+  <data name="Count_Entrances_Few" xml:space="preserve"><value>{0} entrances</value></data>
+  <data name="Count_Entrances_Many" xml:space="preserve"><value>{0} entrances</value></data>
+  <data name="Count_FixedPoints_One" xml:space="preserve"><value>{0} fixed point</value></data>
+  <data name="Count_FixedPoints_Few" xml:space="preserve"><value>{0} fixed points</value></data>
+  <data name="Count_FixedPoints_Many" xml:space="preserve"><value>{0} fixed points</value></data>
+  <data name="Count_Errors_One" xml:space="preserve"><value>{0} error</value></data>
+  <data name="Count_Errors_Few" xml:space="preserve"><value>{0} errors</value></data>
+  <data name="Count_Errors_Many" xml:space="preserve"><value>{0} errors</value></data>
+  <data name="Count_Files_One" xml:space="preserve"><value>{0} file</value></data>
+  <data name="Count_Files_Few" xml:space="preserve"><value>{0} files</value></data>
+  <data name="Count_Files_Many" xml:space="preserve"><value>{0} files</value></data>
+  <data name="Audit_Clean" xml:space="preserve"><value>No orphan files, unreferenced scraps or unexported maps.</value></data>
+  <data name="Count_OrphanFiles_One" xml:space="preserve"><value>{0} orphan file</value></data>
+  <data name="Count_OrphanFiles_Few" xml:space="preserve"><value>{0} orphan files</value></data>
+  <data name="Count_OrphanFiles_Many" xml:space="preserve"><value>{0} orphan files</value></data>
+  <data name="Count_UnreferencedScraps_One" xml:space="preserve"><value>{0} unreferenced scrap</value></data>
+  <data name="Count_UnreferencedScraps_Few" xml:space="preserve"><value>{0} unreferenced scraps</value></data>
+  <data name="Count_UnreferencedScraps_Many" xml:space="preserve"><value>{0} unreferenced scraps</value></data>
+  <data name="Count_UnexportedMaps_One" xml:space="preserve"><value>{0} unexported map</value></data>
+  <data name="Count_UnexportedMaps_Few" xml:space="preserve"><value>{0} unexported maps</value></data>
+  <data name="Count_UnexportedMaps_Many" xml:space="preserve"><value>{0} unexported maps</value></data>
+  <data name="Audit_ScrapNotComposed" xml:space="preserve"><value>scrap not composed by any map</value></data>
+  <data name="Audit_MapNotSelected" xml:space="preserve"><value>map declared but not selected for export</value></data>
+  <data name="Leads_None" xml:space="preserve"><value>No leads detected.</value></data>
+  <data name="Count_Leads_One" xml:space="preserve"><value>{0} lead</value></data>
+  <data name="Count_Leads_Few" xml:space="preserve"><value>{0} leads</value></data>
+  <data name="Count_Leads_Many" xml:space="preserve"><value>{0} leads</value></data>
+  <data name="Count_FlaggedLeads_One" xml:space="preserve"><value>{0} flagged lead</value></data>
+  <data name="Count_FlaggedLeads_Few" xml:space="preserve"><value>{0} flagged leads</value></data>
+  <data name="Count_FlaggedLeads_Many" xml:space="preserve"><value>{0} flagged leads</value></data>
+  <data name="Leads_SummaryAll" xml:space="preserve"><value>{0} · flagged: {1} · other: {2}</value></data>
+  <data name="Leads_MoreHidden" xml:space="preserve"><value>{0} more with “{1}”</value></data>
+  <data name="Todo_None" xml:space="preserve"><value>No TODO/FIXME/QM tags found.</value></data>
+  <data name="Todo_Summary_One" xml:space="preserve"><value>{0} tag in {1}.</value></data>
+  <data name="Todo_Summary_Few" xml:space="preserve"><value>{0} tags in {1}.</value></data>
+  <data name="Todo_Summary_Many" xml:space="preserve"><value>{0} tags in {1}.</value></data>
+  <data name="Meta_OpenProjectFirst" xml:space="preserve"><value>Open a project first.</value></data>
+  <data name="Meta_Saved" xml:space="preserve"><value>Saved ({0:HH:mm}).</value></data>
+  <data name="Media_None" xml:space="preserve"><value>No scans found.</value></data>
+  <data name="Count_Scans_One" xml:space="preserve"><value>{0} scan</value></data>
+  <data name="Count_Scans_Few" xml:space="preserve"><value>{0} scans</value></data>
+  <data name="Count_Scans_Many" xml:space="preserve"><value>{0} scans</value></data>
+  <data name="Media_Missing" xml:space="preserve"><value>missing: {0}</value></data>
+  <data name="Media_Orphan" xml:space="preserve"><value>orphan: {0}</value></data>
+  <data name="QuickOpen_Title" xml:space="preserve"><value>Go to File</value></data>
+  <data name="QuickOpen_Watermark" xml:space="preserve"><value>Search files by name or path…  (space = match parts)</value></data>
+  <data name="Live_StatusPlan" xml:space="preserve"><value>Plan</value></data>
+  <data name="Live_StatusProfile" xml:space="preserve"><value>Profile {0:0}°</value></data>
+  <data name="Live_StatusGroups" xml:space="preserve"><value>{0}/{1} groups</value></data>
+  <data name="Count_Junctions_One" xml:space="preserve"><value>{0} junction</value></data>
+  <data name="Count_Junctions_Few" xml:space="preserve"><value>{0} junctions</value></data>
+  <data name="Count_Junctions_Many" xml:space="preserve"><value>{0} junctions</value></data>
+  <data name="Live_StatusPreviewOnly" xml:space="preserve"><value> (preview only — not a Therion render)</value></data>
+  <data name="Live_NothingShown" xml:space="preserve"><value>Nothing shown — enable a group in the legend.</value></data>
+  <data name="Live_NoDrawableLegs" xml:space="preserve"><value>No drawable legs (need length, compass and clino).</value></data>
+  <data name="Live_NoLegs" xml:space="preserve"><value>No survey legs to preview.</value></data>
+  <data name="Meta_Unsaved" xml:space="preserve"><value>Unsaved changes.</value></data>
+  <data name="Meta_NoProject" xml:space="preserve"><value>No project open.</value></data>
 </root>

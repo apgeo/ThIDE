@@ -10,7 +10,7 @@ namespace ThIDE.Tests;
 public class BrowserTabFilterTests
 {
     private static StationRow S(string qualifiedName, string survey) =>
-        new(qualifiedName, "station", survey, "f.th", 1);
+        new(qualifiedName, Therion.Semantics.StationDeclarationKind.Shot, survey, "f.th", 1);
 
     private static string[] Names(BrowserTabFilter f) =>
         f.Items.Cast<StationRow>().Select(r => r.QualifiedName).ToArray();

@@ -36,7 +36,7 @@ document into a floating editor.
 |---|---|
 | **File** | New File…, New Project…, Open File / thconfig / Folder…, Recent Files, Recent Directories, Reopen Closed Tab, Save, Save As…, Save All, Close Tab, Exit |
 | **View** | **Language**, **Welcome**, a toggle for each panel (Object Browser, Workspace Explorer, Overview, Log, **Assistant**, Automation, Mainline Preview, Map Viewer, 3D Viewer, Structural Geology, Diagnostics, Outline), Relational Map…, **Strict Parser Mode**, whitespace and minimap toggles, Split Editor (Float), **Layout** (save, load, restore the default layout, split the side panels) |
-| **Edit** | Undo / Redo, **Undo multi-file change** / Redo (the [workspace undo](#undoing-a-tool-that-wrote-many-files)), Cut / Copy / Paste, Paste as Shot Data…, Delete, Select All, UPPERCASE / lowercase, Toggle Comment, Enclose in Region, Fold All / Unfold All, Add Bookmark…, Go to Definition, Peek Definition, Find References, Rename Symbol… |
+| **Edit** | Undo / Redo, **Undo Multi-File Change** / Redo (the [workspace undo](#undoing-a-tool-that-wrote-many-files)), Cut / Copy / Paste, Paste as Shot Data…, Delete, Select All, UPPERCASE / lowercase, Toggle Comment, Enclose in Region, Fold All / Unfold All, Add Bookmark…, Go to Definition, Peek Definition, Find References, Rename Symbol… |
 | **Search** | Find, Replace, Find in Files…, Replace in Files…, Go To Line…, Bookmarks… |
 | **Tools** | Import Survey / DEM / GPX, Scaffold Project…, **Link Survey File…**, **New Trip…**, Watch the Incoming Folder, Add Unreferenced Scraps to Maps…, Suggest Equates…, Format All Files…, Normalize Project…, Renumber Stations…, Macros, Tasks, Export Entrances / Fixed Points, Export Data Table, Generate Survey Report (HTML)…, New Scrap (.th2)…, **Blender Animation…**, Calculators |
 | **Compile** | Compile, Compile This thconfig (Focused Tab), Recompile, Cancel, Compile Multiple…, Build Target, Quick Export…, Open in Loch / Aven, Survex Tools, Therion Info, Open Last Output Folder |
@@ -108,7 +108,7 @@ Rename Symbol, Replace in Files, **New Trip…**, **Link Survey File…**, **Ren
 **Format All Files…**, **Normalize Project…** and *Fix all* change several files in one go. The files
 that are **not open** are written to disk right away — a closed file has no editor history — and a
 file that is open with unsaved edits takes the change in its editor instead, so it stays unsaved.
-Every such run is one entry in the **workspace undo**: **Edit → Undo multi-file change** (the item
+Every such run is one entry in the **workspace undo**: **Edit → Undo Multi-File Change** (the item
 names the operation once there is one, for example *Undo Rename*) or the **Undo** button on the
 notification puts all the files back in one step, on disk and in the editors, and **Redo** applies
 them again. If one of the files has changed since, nothing is restored and the message names it.
