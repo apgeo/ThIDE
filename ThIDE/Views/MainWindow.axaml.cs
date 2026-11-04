@@ -27,9 +27,8 @@ public partial class MainWindow : Window
     private ILayoutService? _layout;
     private IGlobalHotkeyService? _globalHotkey;
     private ICrashRecoveryService? _crashRecovery;
-    // Main-window close guard: the user already answered the unsaved-changes prompt / it is showing.
-    private bool _closeConfirmed;
-    private bool _closePromptOpen;
+    // Main-window close sequence: the unsaved-changes prompt (answered, or showing) and the OS shutdown.
+    private readonly ExitFlow _exit;
     private IMcpHostService? _mcpHost;
 
     // System-wide build hotkey (Ctrl+Alt+B): triggers a compile even when the app isn't
@@ -67,6 +66,10 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        _exit = new ExitFlow(
+            () => DataContext is MainWindowViewModel { HasUnsavedDocuments: true },
+            () => DataContext is MainWindowViewModel vm ? vm.ConfirmCloseAsync() : System.Threading.Tasks.Task.FromResult(true),
+            Close);
         // Ctrl+Tab document switching is registered in the tunnel phase so it fires before any
         // focused child (the dock tab-strip, toolbar, menu, editor) can swallow it — otherwise it
         // only works while the editor is focused and dies once focus lands on the toolbar (#4).
@@ -178,28 +181,15 @@ public partial class MainWindow : Window
         {
             // Unsaved documents: hold the close, ask Save all / Don't save / Cancel, then close again.
             // An OS shutdown cannot wait for the answer, so it keeps the recovery buffers instead.
-            bool keepRecovery = false;
-            if (!_closeConfirmed && DataContext is MainWindowViewModel { HasUnsavedDocuments: true } closingVm)
+            var step = _exit.OnClosing(e.CloseReason == WindowCloseReason.OSShutdown);
+            if (step is ExitStep.Ask or ExitStep.Wait)
             {
-                if (e.CloseReason == WindowCloseReason.OSShutdown)
-                {
-                    PersistRecoveryBuffers();
-                    keepRecovery = true;
-                }
-                else
-                {
-                    e.Cancel = true;
-                    if (_closePromptOpen) return;
-                    _closePromptOpen = true;
-                    bool close;
-                    try { close = await closingVm.ConfirmCloseAsync(); }
-                    finally { _closePromptOpen = false; }
-                    if (!close) return;
-                    _closeConfirmed = true;
-                    Close();
-                    return;
-                }
+                e.Cancel = true;
+                if (step == ExitStep.Ask) await _exit.AskAsync();
+                return;
             }
+            bool keepRecovery = step == ExitStep.ExitKeepingRecovery;
+            if (keepRecovery) PersistRecoveryBuffers();
 
             _autosaveTimer?.Stop();
             PersistAll();
