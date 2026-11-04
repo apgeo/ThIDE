@@ -127,6 +127,8 @@ public partial class MainWindow : Window
                     incoming.Changed += (_, _) => vm.RefreshWatchIncoming();
                 }
                 vm.Diagnostics.FixAllRequested += (_, code) => _ = FixAllAsync(vm, code);
+                vm.RecoveryBanner.Confirm = question => new ConfirmDialog(ThIDE.Resources.Tr.Get("Notif_RecoveredTitle"), question,
+                    ThIDE.Resources.Tr.Get("Notif_DiscardRecovered")).ShowAsync(this);
                 ThIDE.ViewModels.Docking.FileDocumentViewModel.FixPathSeparatorsInWorkspaceRequested += (_, doc) =>
                     Avalonia.Threading.Dispatcher.UIThread.Post(() => _ = FixPathSeparatorsInWorkspaceAsync(doc.FilePath));
                 ThIDE.Editor.TherionTextEditor.LinkSurveyRequested += (_, req) =>

@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Therion.Processing.Abstractions;
@@ -110,10 +111,19 @@ public partial class KeyboardShortcutsViewModel : ViewModelBase
         Refresh();
     }
 
-    /// <summary>Stages every command's default gesture; nothing is saved until <see cref="Commit"/>.</summary>
+    /// <summary>Asks before Reset all throws away the custom gestures (the view sets it; null resets without asking).</summary>
+    public Func<string, Task<bool>>? Confirm { get; set; }
+
+    /// <summary>
+    /// Stages every command's default gesture, after asking when any row has another one; nothing is
+    /// saved until <see cref="Commit"/>.
+    /// </summary>
     [RelayCommand]
-    private void ResetAll()
+    private async Task ResetAll()
     {
+        int custom = _allRows.Count(r => !string.Equals(r.Gesture, r.DefaultGesture, StringComparison.Ordinal));
+        if (custom > 0 && Confirm is { } confirm && !await confirm(string.Format(Tr.Get("Kb_ResetAllConfirm"), custom)).ConfigureAwait(true))
+            return;
         foreach (var row in _allRows)
         {
             row.ConflictWith = null;

@@ -59,6 +59,30 @@ public sealed class KeyboardShortcutsStagingTests
     }
 
     [Fact]
+    public async System.Threading.Tasks.Task Reset_all_asks_before_replacing_custom_gestures()
+    {
+        var service = NewService(TestProfile.NewPath("keyboard.json"));
+        service.Set(ShellCommandIds.Save, "Ctrl+Alt+S");
+        var vm = new KeyboardShortcutsViewModel(service);
+        string? asked = null;
+        vm.Confirm = q => { asked = q; return System.Threading.Tasks.Task.FromResult(false); };
+
+        await vm.ResetAllCommand.ExecuteAsync(null);
+        Assert.NotNull(asked);
+        Assert.Equal("Ctrl+Alt+S", Row(vm, ShellCommandIds.Save).Gesture);
+
+        vm.Confirm = _ => System.Threading.Tasks.Task.FromResult(true);
+        await vm.ResetAllCommand.ExecuteAsync(null);
+        Assert.Equal("Ctrl+S", Row(vm, ShellCommandIds.Save).Gesture);
+
+        // Everything is at its default now: nothing to lose, nothing to ask.
+        asked = null;
+        vm.Confirm = q => { asked = q; return System.Threading.Tasks.Task.FromResult(false); };
+        await vm.ResetAllCommand.ExecuteAsync(null);
+        Assert.Null(asked);
+    }
+
+    [Fact]
     public void A_gesture_in_use_asks_and_replace_moves_it()
     {
         var service = NewService(TestProfile.NewPath("keyboard.json"));

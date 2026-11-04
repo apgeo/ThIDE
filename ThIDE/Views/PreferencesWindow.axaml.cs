@@ -15,6 +15,14 @@ public partial class PreferencesWindow : Window
     {
         InitializeComponent();
         AddHandler(KeyDownEvent, OnGesturePreviewKeyDown, RoutingStrategies.Tunnel);
+        // Reset all to defaults asks first, over this window.
+        DataContextChanged += (_, _) =>
+        {
+            if (DataContext is PreferencesViewModel { Keyboard: { } kb })
+                kb.Confirm = question => new ConfirmDialog(ThIDE.Resources.Tr.Get("Pref_ResetAll"), question,
+                    ThIDE.Resources.Tr.Get("Kb_ResetAllConfirmOk")).ShowAsync(this);
+        };
+        Closed += (_, _) => { if (DataContext is PreferencesViewModel { Keyboard: { } kb }) kb.Confirm = null; };
     }
 
     private void InitializeComponent() => AvaloniaXamlLoader.Load(this);

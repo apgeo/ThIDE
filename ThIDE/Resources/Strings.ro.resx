@@ -1143,6 +1143,10 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către {0} în
   <data name="Notif_RecoveredMsg" xml:space="preserve"><value>{0} fișier(e) aveau modificări nesalvate când aplicația s-a închis ultima dată neașteptat.</value></data>
   <data name="Notif_Restore" xml:space="preserve"><value>Restaurează</value></data>
   <data name="Notif_DiscardRecovered" xml:space="preserve"><value>Șterge copiile</value></data>
+  <data name="Recovery_BannerMsg" xml:space="preserve"><value>Modificările nesalvate dintr-o sesiune închisă neașteptat au fost păstrate pentru {0} fișier(e):</value></data>
+  <data name="Recovery_DiscardConfirm" xml:space="preserve"><value>Ștergeți copiile recuperate pentru {0} fișier(e)? Modificările nesalvate din ele se pierd definitiv.
+
+{1}</value></data>
   <data name="Notif_ImportFailed" xml:space="preserve"><value>Import eșuat</value></data>
   <data name="Notif_GisExportFailed" xml:space="preserve"><value>Export GIS eșuat</value></data>
   <data name="Notif_TableExportFailed" xml:space="preserve"><value>Export tabel eșuat</value></data>
@@ -2074,6 +2078,8 @@ Acțiunea nu poate fi anulată.</value></data>
   <data name="Kb_Cmd_SortLines" xml:space="preserve"><value>Sortează liniile</value></data>
   <data name="Kb_Cmd_NextOccurrenceInFile" xml:space="preserve"><value>Următoarea apariție în acest fișier</value></data>
   <data name="Kb_ConflictFmt" xml:space="preserve"><value>Deja folosită de „{0}” — o înlocuiți?</value></data>
+  <data name="Kb_ResetAllConfirm" xml:space="preserve"><value>Resetați toate scurtăturile de tastatură la valorile implicite? Scurtături modificate de dumneavoastră care vor fi înlocuite când apăsați OK: {0}.</value></data>
+  <data name="Kb_ResetAllConfirmOk" xml:space="preserve"><value>Resetează tot</value></data>
   <data name="Kb_ConflictReplace" xml:space="preserve"><value>Înlocuiește</value></data>
   <data name="Kb_ConflictKeep" xml:space="preserve"><value>Păstrează-o pe cea veche</value></data>
   <data name="Rename_Occurrences_One" xml:space="preserve"><value>{0} apariție</value></data>
