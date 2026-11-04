@@ -18,6 +18,12 @@ and what to do. Entries also cover behaviour that reaches you through `Therion.S
   edit, inner block first (`\n  endcentreline\nendsurvey`), and `Fixed` counts both. The same
   diagnostic listed twice is still fixed once. Migration: none; a host that counts edits per
   diagnostic sees one edit for the two fixes.
+- **Declaration lookups compare paths the way the model indexes its files**
+  (`Therion.Semantics.WorkspaceSemanticModel.FindStationByDeclaration`, `FindSurveyByDeclaration`,
+  and the station lookup of a `.th2` sketch): on Linux `Cave.th` and `cave.th` are two files, and a
+  survey declared at the same offset in both was found in whichever came first. They now use
+  `PerFile.Comparer`. Migration: a model built with the public constructor gets the comparer of the
+  `PerFile` dictionary passed in.
 
 ## 2026-11 (later)
 

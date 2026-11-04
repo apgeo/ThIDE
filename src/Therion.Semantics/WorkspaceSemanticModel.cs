@@ -99,9 +99,10 @@ public sealed class WorkspaceSemanticModel
     public StationSymbol? FindStationByDeclaration(SourceSpan declarationSpan)
     {
         if (declarationSpan.IsEmpty) return null;
+        // Paths compare as the model's file index does: on Linux Cave.th and cave.th are two files.
         bool Match(StationSymbol s) =>
             s.DeclarationSpan.StartOffset == declarationSpan.StartOffset &&
-            string.Equals(s.DeclarationSpan.FilePath, declarationSpan.FilePath, System.StringComparison.OrdinalIgnoreCase);
+            PerFile.Comparer.Equals(s.DeclarationSpan.FilePath, declarationSpan.FilePath);
 
         if (PerFile.TryGetValue(declarationSpan.FilePath, out var m))
             foreach (var s in m.Stations.Values)
@@ -120,7 +121,7 @@ public sealed class WorkspaceSemanticModel
         foreach (var model in PerFile.Values)
             foreach (var sv in model.Surveys.Values)
                 if (sv.DeclarationSpan.StartOffset == declarationSpan.StartOffset &&
-                    string.Equals(sv.DeclarationSpan.FilePath, declarationSpan.FilePath, System.StringComparison.OrdinalIgnoreCase))
+                    PerFile.Comparer.Equals(sv.DeclarationSpan.FilePath, declarationSpan.FilePath))
                     return sv;
         return null;
     }
@@ -474,7 +475,7 @@ public sealed class WorkspaceSemanticModel
         var full = System.IO.Path.GetFullPath(sketchPath);
         foreach (var (from, to, _) in FileGraphEdges)
         {
-            if (!string.Equals(to, full, System.StringComparison.OrdinalIgnoreCase)) continue;
+            if (!PerFile.Comparer.Equals(to, full)) continue;
             if (!PerFile.TryGetValue(from, out var model)) continue;
             // A survey's full path first, so two same-named sub-surveys are told apart; the survey's
             // last name only when no survey of the file holds the station under its full path.
