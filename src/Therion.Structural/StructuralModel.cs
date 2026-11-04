@@ -4,6 +4,7 @@
 // pure PlaneFitter. Selection state (which measurements are included) lives in the UI; the core only
 // carries an `IncludedByDefault` seed so a headless Analyze() has a sensible first result.
 
+using System;
 using System.Collections.Immutable;
 using Therion.Core;
 using Therion.Semantics;
@@ -107,6 +108,13 @@ public sealed record StructuralOptions
     public DetectionOptions Detection { get; init; } = new();
     public DeclinationOptions Declination { get; init; } = new();
     public DeclinationInputs DeclinationInputs { get; init; } = default;
+
+    /// <summary>
+    /// The declination inputs of one batch, when they differ between batches: in a whole-project run each
+    /// file declares its own <c>declination</c> and each survey has its own date. Null applies
+    /// <see cref="DeclinationInputs"/> to every batch.
+    /// </summary>
+    public Func<StructuralBatch, DeclinationInputs>? BatchDeclinationInputs { get; init; }
 }
 
 /// <summary>One detected measurement point feeding a plane fit.</summary>
@@ -167,4 +175,8 @@ public sealed record AnalysisResult(
     ImmutableArray<FittedPlane> Planes,
     ImmutableArray<(Vec3 A, Vec3 B)> CaveLegs,
     ImmutableArray<(Vec3 A, Vec3 B)> CaveSplays,
-    DeclinationResolution Declination);
+    DeclinationResolution Declination)
+{
+    /// <summary>The declination applied to each batch (parallel to <see cref="Batches"/>).</summary>
+    public ImmutableArray<DeclinationResolution> BatchDeclinations { get; init; } = ImmutableArray<DeclinationResolution>.Empty;
+}

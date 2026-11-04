@@ -101,6 +101,98 @@ public class StructuralGeologyViewModelTests
             $"the value for today's date would be {atToday:0.000000}");
     }
 
+    // Two files of one project, each declaring its own declination and dated twenty years apart, each
+    // with one structural station. Only the first has the fix point.
+    private const string OldText = """
+        survey old
+          centreline
+            date 1990.01.10
+            declination 2 deg
+            cs lat-long
+            fix 1 46.5 8.0 500
+            data normal from to length compass clino
+            1 geo1 5 10 -5
+            geo1 a 2 0 0
+            geo1 b 2 90 0
+            geo1 c 2 180 -30
+          endcentreline
+        endsurvey
+        """;
+
+    private const string NewText = """
+        survey young
+          centreline
+            date 2020.01.20
+            declination 5 deg
+            data normal from to length compass clino
+            1 geo2 5 10 -5
+            geo2 a 2 0 0
+            geo2 b 2 90 0
+            geo2 c 2 180 -30
+          endcentreline
+        endsurvey
+        """;
+
+    private static StructuralGeologyViewModel BuildProject()
+    {
+        var files = new[] { ("/invented/old.th", OldText), ("/invented/young.th", NewText) };
+        var perFile = files
+            .ToDictionary(f => f.Item1, f => new SemanticBinder().Bind(new ThParser().Parse(f.Item1, f.Item2).Value!))
+            .ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
+        var workspace = new WorkspaceSemanticModel(perFile, XviIndex.Empty,
+            ImmutableArray<FileGraphEdge>.Empty, ImmutableArray<Diagnostic>.Empty);
+        var docs = new FakeDocumentService
+        {
+            CurrentSemantics = perFile["/invented/young.th"], Workspace = workspace, CurrentPath = "/invented/young.th",
+        };
+        return new StructuralGeologyViewModel(docs);
+    }
+
+    private static StructuralPlaneRow PlaneOf(StructuralGeologyViewModel vm, string file) =>
+        Assert.Single(vm.Planes, p => p.Batch.SourceFile == file);
+
+    [Fact]
+    public void Project_scope_survey_declared_declination_is_each_files_own()
+    {
+        var vm = BuildProject();
+        vm.DeclinationSource = DeclinationSource.SurveyDeclared;
+        vm.OnPanelActivated();
+
+        Assert.Equal(2, vm.Planes.Count);
+        Assert.Equal(2.0, PlaneOf(vm, "/invented/old.th").Plane.DeclinationApplied, 9);
+        Assert.Equal(5.0, PlaneOf(vm, "/invented/young.th").Plane.DeclinationApplied, 9);
+    }
+
+    [Fact]
+    public void Project_scope_wmm_declination_is_evaluated_at_each_surveys_own_date()
+    {
+        using var cof = new TestGeoModel();
+        var geo = GeoMagneticModelLoader.TryLoadDefault()!;
+        double old = geo.Declination(FixLat, FixLon, 0, 1990.0), young = geo.Declination(FixLat, FixLon, 0, 2020.0);
+        Assert.NotEqual(old, young);
+
+        var vm = BuildProject();
+        vm.DeclinationSource = DeclinationSource.WmmAuto;
+        vm.OnPanelActivated();
+
+        Assert.Equal(old, PlaneOf(vm, "/invented/old.th").Plane.DeclinationApplied, 6);
+        Assert.Equal(young, PlaneOf(vm, "/invented/young.th").Plane.DeclinationApplied, 6);
+    }
+
+    [Fact]
+    public void A_plane_refit_after_unticking_a_row_keeps_its_own_declination()
+    {
+        var vm = BuildProject();
+        vm.DeclinationSource = DeclinationSource.SurveyDeclared;
+        vm.OnPanelActivated();
+
+        var young = PlaneOf(vm, "/invented/young.th");
+        young.Rows.First(r => !r.IsOrigin).Include = false;
+        young.Rows.First(r => !r.IsOrigin).Include = true;   // two refits through the row checkbox
+
+        Assert.Equal(5.0, PlaneOf(vm, "/invented/young.th").Plane.DeclinationApplied, 9);
+    }
+
     /// <summary>Puts a synthetic WMM coefficient file where the loader looks, unless a model is already
     /// available, and removes it afterwards.</summary>
     private sealed class TestGeoModel : IDisposable

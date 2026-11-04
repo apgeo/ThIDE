@@ -34,7 +34,8 @@ The detected points, grouped into candidate planes. Tick the points to include i
   watch the **RMS** column.
 - **Magnetic declination** — optionally rotate strike / dip-direction to true north from a chosen
   **source** and value (dip is unaffected). Off by default so you don't double-count a survey's own
-  declination.
+  declination. Over the whole project, *survey-declared* uses the declination of each plane's own
+  file and *WMM* the date of each plane's own survey, so the status line can show a range.
 
 Bulk selection helpers: **☑ All**, **☐ None**, **⇄ Invert**, group by station. Double-click a row to
 jump to its source shot. **Export** the grid to CSV.
