@@ -1,8 +1,8 @@
 // project-wide correctness diagnostics computed from a bound
 // WorkspaceSemanticModel. These are "preview-quality" checks from our own model (not a full
 // Therion/Survex adjustment): loop misclosure, blunder/outlier shots, foresight/backsight
-// consistency, cross-file naming collisions, and dangling include targets. Angles are assumed to
-// be in degrees (the overwhelmingly common case); grad-unit projects may see softer loop figures.
+// consistency, cross-file naming collisions, and dangling include targets. Angles are compared in
+// degrees, converted from the `units` in force for the row.
 
 using System;
 using System.Collections.Generic;
@@ -158,7 +158,7 @@ public static class ProjectDiagnostics
             if (diff > o.ForeBackClinoToleranceDeg)
                 diags.Add(Diagnostic.Create(SemanticDiagnosticCodes.ForeBackMismatch, DiagnosticSeverity.Warning,
                     $"Foresight/backsight clino disagree by {diff.ToString("0.#", CultureInfo.InvariantCulture)}° " +
-                    $"(fore {Fmt(fi)}, back {Fmt(bi)}, expected ~{Fmt(-fi)}).", shot.Span));
+                    $"(fore {FmtSigned(fi)}, back {FmtSigned(bi)}, expected ~{FmtSigned(-fi)}).", shot.Span));
         }
     }
 
@@ -559,5 +559,7 @@ public static class ProjectDiagnostics
     }
 
     private static string Fmt(double deg) => NormalizeAngle(deg).ToString("0.#", CultureInfo.InvariantCulture) + "°";
+    // A clino is a signed angle (−90…90): written as is, never wrapped into a bearing.
+    private static string FmtSigned(double deg) => deg.ToString("0.#", CultureInfo.InvariantCulture) + "°";
     private static double NormalizeAngle(double deg) { deg %= 360; if (deg < 0) deg += 360; return deg; }
 }

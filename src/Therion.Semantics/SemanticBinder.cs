@@ -49,7 +49,7 @@ public sealed class SemanticBinder
                     // This file can't see cross-file / @-qualified targets, so don't warn here —
                     // record the reference for the workspace-level validator, which has cross-file
                     // and @ visibility. (Falls back to a per-file warning when there's no workspace.)
-                    ctx.UnresolvedEquateRefs.Add(new EquateRef(raw, span, NearestHint(raw, ctx.Stations.Keys)) { Scope = scope });
+                    ctx.UnresolvedEquateRefs.Add(new EquateRef(raw, span, NearestHint(raw, scope, ctx.Stations.Keys)) { Scope = scope });
                     continue;
                 }
                 var st = ctx.Stations[resolved.Value];
@@ -786,14 +786,19 @@ public sealed class SemanticBinder
         return null;
     }
 
-    private static string? NearestHint(string raw, IReadOnlyCollection<QualifiedName> known)
+    private static string? NearestHint(string raw, ImmutableArray<string> scope, IReadOnlyCollection<QualifiedName> known)
     {
+        // A candidate is named as it would be written at the reference: a station of the equate's own
+        // survey by its bare name (comparing `a2` with `cave.a1` never came close), any other by its path.
+        QualifiedName? here = scope.IsEmpty ? null : new QualifiedName(scope);
         string? best = null;
         int bestDist = int.MaxValue;
         foreach (var k in known)
         {
-            int d = Levenshtein(raw, k.ToString());
-            if (d < bestDist) { bestDist = d; best = k.ToString(); }
+            bool local = here is { } h ? k.HasParent && k.Parent().Equals(h) : !k.HasParent;
+            var name = local ? k.Last : k.ToString();
+            int d = Levenshtein(raw, name);
+            if (d < bestDist) { bestDist = d; best = name; }
         }
         return (best is not null && bestDist <= Math.Max(2, raw.Length / 3))
             ? $"did you mean '{best}'?"
