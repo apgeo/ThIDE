@@ -132,7 +132,8 @@ public sealed partial class BatchBuildViewModel : ObservableObject
                         }
                         temp = Path.Combine(Path.GetDirectoryName(row.Path)!, ProjectLocalConfig.GeneratedFilePrefix + "batch-" + Path.GetFileName(row.Path));
                         var keep = row.Targets.Where(t => t.IsChecked).Select(t => t.Target).ToList();
-                        DerivedThconfig.Write(row.Path, temp, text => ThconfigExportEditor.IsolateExports(text, keep));
+                        DerivedThconfig.Write(row.Path, temp, text => ThconfigExportEditor.IsolateExports(text,
+                            keep.Select(k => DerivedThconfig.Locate(text, k, row.Path)).ToList()));
                         entry = temp;
                         label += " " + string.Format(Tr.Get("Batch_SomeTargets"), keep.Count, row.Targets.Count);
                     }

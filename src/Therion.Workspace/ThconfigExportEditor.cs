@@ -36,6 +36,24 @@ public static class ThconfigExportEditor
         return list;
     }
 
+    /// <summary>
+    /// Finds <paramref name="target"/>, parsed from an earlier version of the thconfig, in
+    /// <paramref name="thconfigText"/>: the export at the same lines while it is still the same one, else
+    /// the only export with the same title (lines were added, removed or reordered above it), else the
+    /// export of the same type at the same lines (edited where it stands). Null when none of these
+    /// names one export, so a caller can refuse rather than build a different one.
+    /// </summary>
+    public static ExportTargetInfo? Locate(string thconfigText, ExportTargetInfo target)
+    {
+        var exports = ParseExports(thconfigText);
+        bool SameLines(ExportTargetInfo e) => e.StartLine == target.StartLine && e.EndLine == target.EndLine;
+        if (exports.FirstOrDefault(e => SameLines(e) && e.Title == target.Title) is { } same) return same;
+        var titled = exports.Where(e => e.Title == target.Title).ToList();
+        if (titled.Count == 1) return titled[0];
+        if (titled.Count == 0) return exports.FirstOrDefault(e => SameLines(e) && e.ExportType == target.ExportType);
+        return null;
+    }
+
     /// <summary>Returns the thconfig with every export commented out except <paramref name="keep"/>.</summary>
     public static string IsolateExport(string thconfigText, ExportTargetInfo keep)
     {

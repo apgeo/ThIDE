@@ -4,7 +4,9 @@
 
 using System;
 using System.IO;
+using Therion.Workspace;
 using Therion.Workspace.Editing;
+using ThIDE.Resources;
 
 namespace ThIDE.Services;
 
@@ -18,4 +20,11 @@ internal static class DerivedThconfig
         var (bytes, _) = SourceFileIo.EncodeForSave(temp, transform(file.Text), SourceFileIo.FormatOf(file));
         File.WriteAllBytes(temp, bytes);
     }
+
+    /// <summary>The export <paramref name="target"/> (listed from the thconfig as it was) stands for in
+    /// <paramref name="text"/>, the thconfig being built: unsaved edits saved first can have moved it.
+    /// Throws with the message for the user when it cannot be told apart any more.</summary>
+    public static ExportTargetInfo Locate(string text, ExportTargetInfo target, string thconfigPath) =>
+        ThconfigExportEditor.Locate(text, target)
+        ?? throw new InvalidOperationException(string.Format(Tr.Get("Build_TargetGone"), target.Title, Path.GetFileName(thconfigPath)));
 }

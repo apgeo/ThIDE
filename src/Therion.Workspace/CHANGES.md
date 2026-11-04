@@ -4,6 +4,16 @@ What a consumer of this library can notice, newest first. Each entry says what c
 and what to do. Entries also cover behaviour that reaches you through `Therion.Syntax` and
 `Therion.Semantics`, which this library is built on.
 
+## 2026-11 (round 5)
+
+### Additions
+- **`ThconfigExportEditor.Locate(text, target)`** finds an `ExportTargetInfo` listed from an earlier
+  version of a thconfig in its current text: at the same lines while it is the same export, else the
+  only export with the same title, else the export of the same type at the same lines; null when none
+  of these names one. `IsolateExport` / `IsolateExports` still match by line range only, so a target
+  listed before unsaved edits were saved can name a different export there. Migration: none; a host
+  that lists targets and builds them later can pass each through `Locate` first.
+
 ## 2026-11 (later)
 
 ### Behaviour changes

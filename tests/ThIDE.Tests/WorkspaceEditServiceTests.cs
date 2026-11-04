@@ -96,8 +96,10 @@ public class WorkspaceEditServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task A_failure_part_way_rolls_back_what_was_written()
+    public async Task A_copy_failing_removes_the_files_created_before_it()
     {
+        // The copy step fails, and the edits come after it, so main.th is never written here: its check
+        // below holds without any rollback. Edit rollback: WorkspaceEditRollbackTests.
         File.WriteAllText(P("main.th"), "survey a\nendsurvey\n");
         File.WriteAllText(P("src.th"), "x");
         File.WriteAllText(P("blocker"), "a file where a folder is needed");
