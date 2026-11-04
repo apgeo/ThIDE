@@ -252,24 +252,10 @@ public partial class WorkspaceExplorerToolView : UserControl
         if (Ctx()?.FullPath is not { } path) return;
         if (TopLevel.GetTopLevel(this) is not Window owner) return;
 
-        // confirm before deleting. The message states whether it's undoable (trash) or
-        // permanent, so the user knows the stakes.
-        var fileOps = Service<IFileOperations>();
-        var label = fileOps?.DeleteActionLabel ?? ThIDE.Resources.Tr.Get("Ctx_Delete");
-        bool undoable = fileOps?.DeleteIsUndoable ?? false;
-        var name = System.IO.Path.GetFileName(path);
-        var message = undoable
-            ? string.Format(ThIDE.Resources.Tr.Get("Explorer_DeleteUndoable"), label, name)
-            : string.Format(ThIDE.Resources.Tr.Get("Explorer_DeletePermanent"), name);
-
-        if (!await new ConfirmDialog(ThIDE.Resources.Tr.Get("Ctx_Delete"), message, label).ShowAsync(owner).ConfigureAwait(true)) return;
-        // Cross-platform delete (recycle bin / trash / permanent) via the OS-specific service.
-        if (fileOps?.Delete(path) == true) { Explorer?.Refresh(); return; }
-        // The trash refused it; the folder is still there. Only delete for good if the user says so.
-        if (fileOps is null || !undoable) return;
-        var again = string.Format(ThIDE.Resources.Tr.Get("Explorer_TrashFailed"), name);
-        if (!await new ConfirmDialog(ThIDE.Resources.Tr.Get("Ctx_Delete"), again, ThIDE.Resources.Tr.Get("Explorer_DeletePermanently")).ShowAsync(owner).ConfigureAwait(true)) return;
-        if (fileOps.DeletePermanently(path)) Explorer?.Refresh();
+        // Confirm before deleting, and again before a delete for good when the trash refuses it.
+        var deleted = await ExplorerDelete.RunAsync(path, Service<IFileOperations>(),
+            (message, label) => new ConfirmDialog(ThIDE.Resources.Tr.Get("Ctx_Delete"), message, label).ShowAsync(owner)).ConfigureAwait(true);
+        if (deleted) Explorer?.Refresh();
     }
 
     private void OnCtxCopyFull(object? sender, RoutedEventArgs e)
