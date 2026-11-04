@@ -18,7 +18,9 @@ public class ProcessRunnerTests
     {
         var lines = new Lines();
 
-        var outcome = await ProcessRunner.RunAsync(Shell("echo out; echo err 1>&2; exit 3", "echo out & echo err 1>&2 & exit /b 3"), lines);
+        // No space before cmd's '&': its echo prints everything up to the operator, so "echo out &"
+        // writes "out " with the space.
+        var outcome = await ProcessRunner.RunAsync(Shell("echo out; echo err 1>&2; exit 3", "echo out& echo err>&2& exit /b 3"), lines);
 
         Assert.Equal(3, outcome.ExitCode);
         Assert.False(outcome.Succeeded);
