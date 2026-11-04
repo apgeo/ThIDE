@@ -905,7 +905,8 @@ public partial class TherionTextEditor : UserControl
             foreach (var fix in fixes)
             {
                 var apply = fix.Apply;
-                var item = new Avalonia.Controls.MenuItem { Header = fix.Title };
+                var item = new Avalonia.Controls.MenuItem();
+                item.Header = ThIDE.Views.DataLabel.For(item, fix.Title);   // titles quote station names
                 item.Click += (_, _) => { try { apply(); } catch { /* ignore failed fix */ } };
                 flyout.Items.Add(item);
             }
@@ -1411,12 +1412,12 @@ public partial class TherionTextEditor : UserControl
             int target = path[i].Line;
             var btn = new Button
             {
-                Content = path[i].Label,
                 Padding = new Thickness(5, 1),
                 Background = Brushes.Transparent,
                 BorderThickness = new Thickness(0),
                 FontSize = 11,
             };
+            btn.Content = ThIDE.Views.DataLabel.For(btn, path[i].Label);   // names keep their underscores
             btn.Click += (_, _) => ScrollTo(target, 1);
             panel.Children.Add(btn);
         }
