@@ -682,6 +682,8 @@
   <data name="Diag_Explain" xml:space="preserve"><value>Explain (open docs)</value></data>
   <data name="Diag_Suppress" xml:space="preserve"><value>Suppress this code</value></data>
   <data name="Diag_OpenDocs" xml:space="preserve"><value>Open docs ↗</value></data>
+  <data name="Diag_Details" xml:space="preserve"><value>Details</value></data>
+  <data name="Diag_DetailsTip" xml:space="preserve"><value>Show the full explanation and an example fix</value></data>
   <!-- Compiler output tool -->
   <data name="Comp_TabOutput" xml:space="preserve"><value>Output</value></data>
   <data name="Comp_TabRaw" xml:space="preserve"><value>Raw</value></data>

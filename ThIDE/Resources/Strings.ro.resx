@@ -682,6 +682,8 @@
   <data name="Diag_Explain" xml:space="preserve"><value>Explică (deschide documentația)</value></data>
   <data name="Diag_Suppress" xml:space="preserve"><value>Suprimă acest cod</value></data>
   <data name="Diag_OpenDocs" xml:space="preserve"><value>Deschide documentația ↗</value></data>
+  <data name="Diag_Details" xml:space="preserve"><value>Detalii</value></data>
+  <data name="Diag_DetailsTip" xml:space="preserve"><value>Afișați explicația completă și un exemplu de corectare</value></data>
   <!-- Compiler output tool -->
   <data name="Comp_TabOutput" xml:space="preserve"><value>Ieșire</value></data>
   <data name="Comp_TabRaw" xml:space="preserve"><value>Brut</value></data>
