@@ -41,7 +41,7 @@ internal static class RenamePlanner
     }
 
     /// <summary>A character Therion does not allow in a name, or null when <paramref name="name"/> is valid.</summary>
-    public static char? InvalidName(string name) => Therion.Syntax.TherionIdentifiers.FirstIllegalChar(name);
+    public static string? InvalidName(string name) => Therion.Syntax.TherionIdentifiers.FirstIllegal(name);
 
     /// <summary>
     /// Plans renaming the symbol declared at <paramref name="targetSpan"/> (the token <paramref name="raw"/>,

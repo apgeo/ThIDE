@@ -1219,7 +1219,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private System.Threading.Tasks.Task ShowInvalidNameAsync(string name, char bad) =>
+    private System.Threading.Tasks.Task ShowInvalidNameAsync(string name, string bad) =>
         new MessageDialog(ThIDE.Resources.Tr.Get("Rename_Title"),
             string.Format(ThIDE.Resources.Tr.Get("Rename_InvalidName"), name, bad)).ShowAsync(this);
 

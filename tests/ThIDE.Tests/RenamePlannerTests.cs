@@ -130,8 +130,9 @@ public class RenamePlannerTests : IDisposable
 
     [Theory]
     [InlineData("new", null)]
-    [InlineData("a b", ' ')]
-    [InlineData("a#b", '#')]
-    public void An_invalid_new_name_names_the_character_Therion_refuses(string name, char? bad) =>
+    [InlineData("a b", " ")]
+    [InlineData("a#b", "#")]
+    [InlineData("x\U0001F600y", "\U0001F600")]
+    public void An_invalid_new_name_names_the_character_Therion_refuses(string name, string? bad) =>
         Assert.Equal(bad, RenamePlanner.InvalidName(name));
 }
