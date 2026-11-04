@@ -5,7 +5,17 @@ namespace Therion.Workspace.Fixes;
 
 /// <summary>One proposed change, as the preview lists it.</summary>
 /// <param name="Line">1-based line the change starts on.</param>
-public sealed record EditPreviewRow(string FilePath, int Line, string Before, string After, TextEdit Edit);
+public sealed record EditPreviewRow(string FilePath, int Line, string Before, string After, TextEdit Edit)
+{
+    /// <summary>Every edit the row stands for, when it is more than <see cref="Edit"/> (a line with several changes).</summary>
+    public IReadOnlyList<TextEdit>? Edits { get; init; }
+
+    /// <summary>What the change does, in words, when the row stands for a whole file ("1 line: trailing spaces removed").</summary>
+    public string? Description { get; init; }
+
+    /// <summary>The edits applied when the row is kept.</summary>
+    public IReadOnlyList<TextEdit> AllEdits => Edits ?? [Edit];
+}
 
 public static class FixAll
 {
@@ -63,10 +73,58 @@ public static class FixAll
         return rows;
     }
 
+    /// <summary>
+    /// The preview rows of a batch with one row per changed line: the line before, and after every edit
+    /// on it. A line with two renamed stations reads as the final line, not as two half-changed ones. An
+    /// edit that runs past its line takes the lines it touches into the same row.
+    /// </summary>
+    public static IReadOnlyList<EditPreviewRow> PreviewByLine(EditBatch batch, Func<string, string?> readText)
+    {
+        var rows = new List<EditPreviewRow>();
+        foreach (var group in batch.Edits)
+        {
+            if (readText(group.FilePath) is not { } text) continue;
+            var lineIndex = new CodeFixes.Lines(text);
+            var edits = group.Edits.OrderBy(e => e.Start).ToList();
+            int i = 0;
+            while (i < edits.Count)
+            {
+                int lineStart = LineStartOf(text, edits[i].Start);
+                int lineEnd = LineEndOf(text, edits[i].End);
+                int j = i + 1;
+                while (j < edits.Count && edits[j].Start <= lineEnd)
+                    lineEnd = Math.Max(lineEnd, LineEndOf(text, edits[j++].End));
+                var taken = edits.GetRange(i, j - i);
+                var after = new System.Text.StringBuilder();
+                int at = lineStart;
+                foreach (var e in taken)
+                {
+                    after.Append(text, at, e.Start - at).Append(e.NewText);
+                    at = e.End;
+                }
+                after.Append(text, at, lineEnd - at);
+                rows.Add(new EditPreviewRow(group.FilePath, lineIndex.LineOf(lineStart),
+                    text[lineStart..lineEnd].TrimEnd('\r'), after.ToString().TrimEnd('\r'), taken[0])
+                    { Edits = taken });
+                i = j;
+            }
+        }
+        return rows;
+    }
+
+    private static int LineStartOf(string text, int offset) =>
+        offset == 0 ? 0 : text.LastIndexOf('\n', Math.Min(offset, text.Length) - 1) + 1;
+
+    private static int LineEndOf(string text, int offset)
+    {
+        int end = text.IndexOf('\n', Math.Min(offset, text.Length));
+        return end < 0 ? text.Length : end;
+    }
+
     /// <summary>The batch reduced to the chosen rows.</summary>
     public static EditBatch Keep(EditBatch batch, IEnumerable<EditPreviewRow> chosen)
     {
-        var keep = chosen.Select(r => r.Edit).ToHashSet();
+        var keep = chosen.SelectMany(r => r.AllEdits).ToHashSet();
         var groups = batch.Edits
             .Select(g => new FileTextEdits(g.FilePath, g.Edits.Where(keep.Contains).ToList()))
             .Where(g => g.Edits.Count > 0).ToList();

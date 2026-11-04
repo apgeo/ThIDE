@@ -16,4 +16,5 @@ public partial class EditPreviewWindow : Window
     private void OnApply(object? sender, RoutedEventArgs e) { Confirmed = true; Close(); }
 
     private void OnCancel(object? sender, RoutedEventArgs e) => Close();
+    private void OnClose(object? sender, RoutedEventArgs e) => Close();
 }

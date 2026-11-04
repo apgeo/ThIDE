@@ -47,6 +47,9 @@ internal sealed class RenamePreviewWindow : Window
     private static readonly IBrush HighlightBrush = new SolidColorBrush(Color.FromArgb(0x40, 0x21, 0x96, 0xF3));
     private static readonly IBrush SectionRule   = new SolidColorBrush(Color.FromArgb(0x66, 0x90, 0x90, 0x90));
     private static readonly IBrush DimText       = new SolidColorBrush(Color.FromArgb(0x99, 0x88, 0x88, 0x88));
+    // Old name struck through, new name after it: the colours of the other change previews.
+    private static readonly IBrush OldText       = new SolidColorBrush(Color.FromRgb(0xC6, 0x28, 0x28));
+    private static readonly IBrush NewText       = new SolidColorBrush(Color.FromRgb(0x2E, 0x7D, 0x32));
 
     private readonly Func<SourceSpan, Task>? _navigate;
     private readonly IReadOnlyList<RenameFileChanges> _changes;
@@ -74,6 +77,7 @@ internal sealed class RenamePreviewWindow : Window
     private readonly Border _checksHost = new();
     private readonly List<TreeViewItem> _baseFileNodes = new();
     private readonly List<TreeViewItem> _sectionNodes = new();
+    private readonly List<Run> _newNameRuns = new();   // the "new" half of every row, kept in step with the name field
 
     private const string EquateHelp =
         "Stations in different surveys can be declared to be the same physical point with an \"equate\" " +
@@ -190,6 +194,7 @@ internal sealed class RenamePreviewWindow : Window
         var nn = ResultNewName;
         Title = string.Format(Tr.Get("Rename_TitleFormat"), _oldName, nn);
         if (_applyBtn is not null) _applyBtn.IsEnabled = nn.Length > 0 && nn != _oldName;
+        foreach (var run in _newNameRuns) run.Text = nn;
     }
 
     private void OnOpened(object? sender, EventArgs e)
@@ -256,6 +261,7 @@ internal sealed class RenamePreviewWindow : Window
     {
         _baseFileNodes.Clear();
         _sectionNodes.Clear();
+        _newNameRuns.Clear();
 
         var tree = new TreeView { Margin = new Thickness(0, 0, 0, 0) };
         AutomationProperties.SetAutomationId(tree, "RenamePreview.Tree");
@@ -389,7 +395,7 @@ internal sealed class RenamePreviewWindow : Window
         {
             Padding = new Thickness(3, 0),
             CornerRadius = new CornerRadius(2),
-            Child = new TextBlock { Text = $"{Path.GetFileName(fc.FilePath)}  ({fc.Hits.Count} change{(fc.Hits.Count == 1 ? "" : "s")})", FontWeight = FontWeight.SemiBold },
+            Child = new TextBlock { Text = $"{Path.GetFileName(fc.FilePath)}  ({Tr.Plural("Rename_FileChanges", fc.Hits.Count)})", FontWeight = FontWeight.SemiBold },
         };
         tint.Add(fileHeader);
         var fileItem = new TreeViewItem { Header = fileHeader, IsExpanded = true };
@@ -398,10 +404,9 @@ internal sealed class RenamePreviewWindow : Window
         foreach (var (start, length) in fc.Hits)
         {
             var (line, col) = OffsetToLineCol(fc.FileText, start);
-            var lineText = GetLineText(fc.FileText, start).Trim();
             var span = BuildSpan(fc.FilePath, fc.FileText, start, length);
 
-            var text = EntryText(line, col, lineText);
+            var text = EntryText(line, col, Therion.Workspace.Fixes.HitSnippet.Around(fc.FileText, start, length));
 
             Control content = text;
             var key = (fc.FilePath, start);
@@ -493,12 +498,18 @@ internal sealed class RenamePreviewWindow : Window
         return tb;
     }
 
-    // A change entry: a dim, smaller "line/col" prefix followed by the actual source line (emphasised).
-    private static TextBlock EntryText(int line, int col, string lineText)
+    // A change entry: a dim, smaller "line/col" prefix, then the part of the line around the hit with
+    // the old name struck through and the new name after it — the hit is always inside the row.
+    private TextBlock EntryText(int line, int col, Therion.Workspace.Fixes.HitSnippet snippet)
     {
         var tb = new TextBlock { VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
         tb.Inlines!.Add(new Run($"L{line}:C{col}   ") { Foreground = DimText, FontSize = 11 });
-        tb.Inlines.Add(new Run(lineText));
+        tb.Inlines.Add(new Run(snippet.Before));
+        tb.Inlines.Add(new Run(snippet.Hit) { Foreground = OldText, TextDecorations = TextDecorations.Strikethrough });
+        var newName = new Run(ResultNewName) { Foreground = NewText, FontWeight = FontWeight.Bold };
+        _newNameRuns.Add(newName);
+        tb.Inlines.Add(newName);
+        tb.Inlines.Add(new Run(snippet.After));
         return tb;
     }
 
@@ -544,7 +555,7 @@ internal sealed class RenamePreviewWindow : Window
     {
         int total = 0;
         foreach (var fc in changes) total += fc.Hits.Count;
-        return string.Format(Tr.Get("Rename_PreviewSummary"), total, changes.Count);
+        return string.Format(Tr.Get("Rename_PreviewSummary"), Tr.Plural("Rename_Occurrences", total), Tr.Plural("Rename_Files", changes.Count));
     }
 
     private static (int Line, int Col) OffsetToLineCol(string text, int offset)
@@ -556,16 +567,6 @@ internal sealed class RenamePreviewWindow : Window
             else col++;
         }
         return (line, col);
-    }
-
-    private static string GetLineText(string text, int offset)
-    {
-        int start = offset;
-        while (start > 0 && text[start - 1] != '\n') start--;
-        int end = offset;
-        while (end < text.Length && text[end] != '\n') end++;
-        var line = text.Substring(start, end - start);
-        return line.Length > 80 ? line[..80] + "…" : line;
     }
 
     // ---- model -----------------------------------------------------------

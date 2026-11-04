@@ -546,7 +546,7 @@
   <data name="Common_Apply" xml:space="preserve"><value>Apply</value></data>
   <data name="Rename_TitleFormat" xml:space="preserve"><value>Rename '{0}' → '{1}'</value></data>
   <data name="Rename_NewNameFor" xml:space="preserve"><value>New name for '{0}':</value></data>
-  <data name="Rename_PreviewSummary" xml:space="preserve"><value>{0} occurrence(s) across {1} file(s). Double-click an entry to jump to it.</value></data>
+  <data name="Rename_PreviewSummary" xml:space="preserve"><value>{0} across {1}. Double-click an entry to jump to it.</value></data>
   <data name="Rename_SeeOccurrences" xml:space="preserve"><value>See occurrences…</value></data>
   <data name="Rename_HelpTip" xml:space="preserve"><value>What does this do?</value></data>
   <data name="Pref_Title" xml:space="preserve"><value>Settings</value></data>
@@ -654,7 +654,7 @@
   <data name="Pref_McpFollowAgentHelp" xml:space="preserve"><value>When on, the AI assistant may open files, focus panels, run commands, save, and change the layout in this window. When off, it can still read the project and answer questions, but cannot touch the UI. On by default.</value></data>
   <data name="Pref_CliHelp" xml:space="preserve"><value>The headless CLI (therion-cli) and the LSP server (therion-lsp) are separate executables — see docs.</value></data>
   <data name="Pref_ResetAll" xml:space="preserve"><value>Reset all to defaults</value></data>
-  <data name="Pref_KbHelp" xml:space="preserve"><value>Click a gesture field and press the key combination to assign it.</value></data>
+  <data name="Pref_KbHelp" xml:space="preserve"><value>Click a gesture field and press the key combination to assign it; Esc or Delete clears it. Changes take effect when you press OK.</value></data>
   <data name="Pref_Col_Command" xml:space="preserve"><value>Command</value></data>
   <data name="Pref_Col_Gesture" xml:space="preserve"><value>Gesture</value></data>
   <data name="Pref_Col_Default" xml:space="preserve"><value>Default</value></data>
@@ -2014,4 +2014,85 @@ This cannot be undone.</value></data>
   <data name="Blender_Fail_StartFailed" xml:space="preserve"><value>Blender could not be started from '{0}'. Set the path to a working Blender in Settings ▸ External Tools.</value></data>
   <data name="Blender_Fail_StoreHint" xml:space="preserve"><value>A Microsoft Store install can't be used headlessly — use the standard Blender from blender.org.</value></data>
   <data name="Tools_OverrideNotFound" xml:space="preserve"><value>Override path not found: {0}</value></data>
+  <data name="Kb_Cmd_Build" xml:space="preserve"><value>Compile</value></data>
+  <data name="Kb_Cmd_Rebuild" xml:space="preserve"><value>Recompile</value></data>
+  <data name="Kb_Cmd_CancelBuild" xml:space="preserve"><value>Stop compiling</value></data>
+  <data name="Kb_Cmd_OpenInLoch" xml:space="preserve"><value>Open in Loch</value></data>
+  <data name="Kb_Cmd_OpenInAven" xml:space="preserve"><value>Open in Aven</value></data>
+  <data name="Kb_Cmd_ToggleWorkspaceExplorer" xml:space="preserve"><value>Toggle Workspace</value></data>
+  <data name="Kb_Cmd_ToggleDiagnostics" xml:space="preserve"><value>Toggle Diagnostics</value></data>
+  <data name="Kb_Cmd_Save" xml:space="preserve"><value>Save</value></data>
+  <data name="Kb_Cmd_GoBack" xml:space="preserve"><value>Go Back</value></data>
+  <data name="Kb_Cmd_GoForward" xml:space="preserve"><value>Go Forward</value></data>
+  <data name="Kb_Cmd_FindInFiles" xml:space="preserve"><value>Find in Files</value></data>
+  <data name="Kb_Cmd_ReplaceInFiles" xml:space="preserve"><value>Replace in Files</value></data>
+  <data name="Kb_Cmd_QuickOpen" xml:space="preserve"><value>Go to File</value></data>
+  <data name="Kb_Cmd_CommandPalette" xml:space="preserve"><value>Command Palette</value></data>
+  <data name="Kb_Cmd_ReopenClosedTab" xml:space="preserve"><value>Reopen Closed Tab</value></data>
+  <data name="Kb_Cmd_ToggleFullScreen" xml:space="preserve"><value>Toggle Full Screen</value></data>
+  <data name="Kb_Cmd_NextProblem" xml:space="preserve"><value>Next Problem</value></data>
+  <data name="Kb_Cmd_PreviousProblem" xml:space="preserve"><value>Previous Problem</value></data>
+  <data name="Kb_Cmd_NewFile" xml:space="preserve"><value>New File</value></data>
+  <data name="Kb_Cmd_OpenFile" xml:space="preserve"><value>Open File</value></data>
+  <data name="Kb_Cmd_OpenFolder" xml:space="preserve"><value>Open Folder</value></data>
+  <data name="Kb_Cmd_OpenThconfig" xml:space="preserve"><value>Open thconfig</value></data>
+  <data name="Kb_Cmd_ToggleObjectBrowser" xml:space="preserve"><value>Toggle Object Browser</value></data>
+  <data name="Kb_Cmd_ToggleOutline" xml:space="preserve"><value>Toggle Outline</value></data>
+  <data name="Kb_Cmd_ToggleProject" xml:space="preserve"><value>Toggle Overview</value></data>
+  <data name="Kb_Cmd_ToggleLog" xml:space="preserve"><value>Toggle Log</value></data>
+  <data name="Kb_Cmd_ToggleLivePreview" xml:space="preserve"><value>Toggle Mainline Preview</value></data>
+  <data name="Kb_Cmd_ToggleMapViewer" xml:space="preserve"><value>Toggle Map Viewer</value></data>
+  <data name="Kb_Cmd_ToggleModel3DViewer" xml:space="preserve"><value>Toggle 3D Viewer</value></data>
+  <data name="Kb_Cmd_ToggleStructuralGeology" xml:space="preserve"><value>Toggle Structural Geology</value></data>
+  <data name="Kb_Cmd_ToggleBlenderAnimation" xml:space="preserve"><value>Blender Animation</value></data>
+  <data name="Kb_Cmd_SplitEditor" xml:space="preserve"><value>Split Editor</value></data>
+  <data name="Kb_Cmd_ResetLayout" xml:space="preserve"><value>Reset Layout</value></data>
+  <data name="Kb_Cmd_FloatActiveDocument" xml:space="preserve"><value>Float Active Document</value></data>
+  <data name="Kb_Cmd_QuickExport" xml:space="preserve"><value>Quick Export</value></data>
+  <data name="Kb_Cmd_OpenOutputFolder" xml:space="preserve"><value>Open Last Output Folder</value></data>
+  <data name="Kb_Cmd_ToggleWordWrap" xml:space="preserve"><value>Toggle Word Wrap</value></data>
+  <data name="Kb_Cmd_NewScrapScaffold" xml:space="preserve"><value>New Scrap (.th2)</value></data>
+  <data name="Kb_Cmd_GenerateReport" xml:space="preserve"><value>Generate Survey Report</value></data>
+  <data name="Kb_Cmd_GoToDefinition" xml:space="preserve"><value>Go to Definition</value></data>
+  <data name="Kb_Cmd_FindReferences" xml:space="preserve"><value>Find References</value></data>
+  <data name="Kb_Cmd_RenameSymbol" xml:space="preserve"><value>Rename Symbol</value></data>
+  <data name="Kb_Cmd_PeekDefinition" xml:space="preserve"><value>Peek Definition</value></data>
+  <data name="Kb_Cmd_GoToMatchingBlock" xml:space="preserve"><value>Go to Matching Block</value></data>
+  <data name="Kb_Cmd_StepIntoInclude" xml:space="preserve"><value>Step Into Included File</value></data>
+  <data name="Kb_Cmd_StepOutInclude" xml:space="preserve"><value>Step Out to Including File</value></data>
+  <data name="Kb_Cmd_TriggerCompletion" xml:space="preserve"><value>Show Completions</value></data>
+  <data name="Kb_Cmd_GoToLine" xml:space="preserve"><value>Go to Line</value></data>
+  <data name="Kb_Cmd_ToggleComment" xml:space="preserve"><value>Toggle Comment</value></data>
+  <data name="Kb_Cmd_FormatDocument" xml:space="preserve"><value>Format Document</value></data>
+  <data name="Kb_Cmd_EncloseInRegion" xml:space="preserve"><value>Enclose in Region</value></data>
+  <data name="Kb_Cmd_QuickFixes" xml:space="preserve"><value>Quick Fix</value></data>
+  <data name="Kb_Cmd_DuplicateLines" xml:space="preserve"><value>Duplicate Lines</value></data>
+  <data name="Kb_Cmd_MoveLinesUp" xml:space="preserve"><value>Move Lines Up</value></data>
+  <data name="Kb_Cmd_MoveLinesDown" xml:space="preserve"><value>Move Lines Down</value></data>
+  <data name="Kb_Cmd_SortLines" xml:space="preserve"><value>Sort Lines</value></data>
+  <data name="Kb_ConflictFmt" xml:space="preserve"><value>Already used by {0} — replace?</value></data>
+  <data name="Kb_ConflictReplace" xml:space="preserve"><value>Replace</value></data>
+  <data name="Kb_ConflictKeep" xml:space="preserve"><value>Keep the old one</value></data>
+  <data name="Rename_Occurrences_One" xml:space="preserve"><value>{0} occurrence</value></data>
+  <data name="Rename_Occurrences_Few" xml:space="preserve"><value>{0} occurrences</value></data>
+  <data name="Rename_Occurrences_Many" xml:space="preserve"><value>{0} occurrences</value></data>
+  <data name="Rename_Files_One" xml:space="preserve"><value>{0} file</value></data>
+  <data name="Rename_Files_Few" xml:space="preserve"><value>{0} files</value></data>
+  <data name="Rename_Files_Many" xml:space="preserve"><value>{0} files</value></data>
+  <data name="Rename_FileChanges_One" xml:space="preserve"><value>{0} change</value></data>
+  <data name="Rename_FileChanges_Few" xml:space="preserve"><value>{0} changes</value></data>
+  <data name="Rename_FileChanges_Many" xml:space="preserve"><value>{0} changes</value></data>
+  <data name="FormatAll_Lines_One" xml:space="preserve"><value>{0} line</value></data>
+  <data name="FormatAll_Lines_Few" xml:space="preserve"><value>{0} lines</value></data>
+  <data name="FormatAll_Lines_Many" xml:space="preserve"><value>{0} lines</value></data>
+  <data name="FormatAll_KindTrailing" xml:space="preserve"><value>trailing spaces removed</value></data>
+  <data name="FormatAll_KindIndent" xml:space="preserve"><value>indentation changed</value></data>
+  <data name="FormatAll_KindEndings" xml:space="preserve"><value>line endings changed</value></data>
+  <data name="FormatAll_KindEncoding" xml:space="preserve"><value>encoding line changed</value></data>
+  <data name="FormatAll_KindReordered" xml:space="preserve"><value>lines reordered</value></data>
+  <data name="FormatAll_KindOther" xml:space="preserve"><value>lines rewritten</value></data>
+  <data name="FormatAll_Nothing_One" xml:space="preserve"><value>Nothing to change in {0} file.</value></data>
+  <data name="FormatAll_Nothing_Few" xml:space="preserve"><value>Nothing to change in {0} files.</value></data>
+  <data name="FormatAll_Nothing_Many" xml:space="preserve"><value>Nothing to change in {0} files.</value></data>
+  <data name="FormatAll_NothingSkipped" xml:space="preserve"><value>{0} more are left alone because they do not parse cleanly (fix those first).</value></data>
 </root>

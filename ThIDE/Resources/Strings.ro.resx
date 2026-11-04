@@ -546,7 +546,7 @@
   <data name="Common_Apply" xml:space="preserve"><value>Aplică</value></data>
   <data name="Rename_TitleFormat" xml:space="preserve"><value>Redenumire '{0}' → '{1}'</value></data>
   <data name="Rename_NewNameFor" xml:space="preserve"><value>Nume nou pentru '{0}':</value></data>
-  <data name="Rename_PreviewSummary" xml:space="preserve"><value>{0} apariție(i) în {1} fișier(e). Dublu-clic pe o intrare pentru a naviga la ea.</value></data>
+  <data name="Rename_PreviewSummary" xml:space="preserve"><value>{0} în {1}. Dublu-clic pe o intrare pentru a naviga la ea.</value></data>
   <data name="Rename_SeeOccurrences" xml:space="preserve"><value>Vezi aparițiile…</value></data>
   <data name="Rename_HelpTip" xml:space="preserve"><value>Ce face această opțiune?</value></data>
   <data name="Pref_Title" xml:space="preserve"><value>Setări</value></data>
@@ -654,7 +654,7 @@
   <data name="Pref_McpFollowAgentHelp" xml:space="preserve"><value>Când este activ, asistentul AI poate deschide fișiere, focaliza panouri, rula comenzi, salva și schimba aspectul în această fereastră. Când este dezactivat, poate în continuare să citească proiectul și să răspundă la întrebări, dar nu poate atinge interfața. Activ implicit.</value></data>
   <data name="Pref_CliHelp" xml:space="preserve"><value>CLI-ul fără interfață (therion-cli) și serverul LSP (therion-lsp) sunt executabile separate — vezi documentația.</value></data>
   <data name="Pref_ResetAll" xml:space="preserve"><value>Resetează tot la valorile implicite</value></data>
-  <data name="Pref_KbHelp" xml:space="preserve"><value>Faceți clic pe un câmp de combinație și apăsați combinația de taste pentru a o atribui.</value></data>
+  <data name="Pref_KbHelp" xml:space="preserve"><value>Faceți clic pe un câmp de combinație și apăsați combinația de taste pentru a o atribui; Esc sau Delete o golește. Modificările se aplică la apăsarea butonului OK.</value></data>
   <data name="Pref_Col_Command" xml:space="preserve"><value>Comandă</value></data>
   <data name="Pref_Col_Gesture" xml:space="preserve"><value>Combinație</value></data>
   <data name="Pref_Col_Default" xml:space="preserve"><value>Implicit</value></data>
@@ -2014,4 +2014,85 @@ Acțiunea nu poate fi anulată.</value></data>
   <data name="Blender_Fail_StartFailed" xml:space="preserve"><value>Blender nu a putut fi pornit din „{0}”. Setați calea către un Blender funcțional în Setări ▸ Unelte externe.</value></data>
   <data name="Blender_Fail_StoreHint" xml:space="preserve"><value>O instalare din Microsoft Store nu poate fi folosită fără interfață grafică — folosiți Blender-ul standard de pe blender.org.</value></data>
   <data name="Tools_OverrideNotFound" xml:space="preserve"><value>Calea suprascrisă nu există: {0}</value></data>
+  <data name="Kb_Cmd_Build" xml:space="preserve"><value>Compilează</value></data>
+  <data name="Kb_Cmd_Rebuild" xml:space="preserve"><value>Recompilează</value></data>
+  <data name="Kb_Cmd_CancelBuild" xml:space="preserve"><value>Oprește compilarea</value></data>
+  <data name="Kb_Cmd_OpenInLoch" xml:space="preserve"><value>Deschide în Loch</value></data>
+  <data name="Kb_Cmd_OpenInAven" xml:space="preserve"><value>Deschide în Aven</value></data>
+  <data name="Kb_Cmd_ToggleWorkspaceExplorer" xml:space="preserve"><value>Comută Spațiul de lucru</value></data>
+  <data name="Kb_Cmd_ToggleDiagnostics" xml:space="preserve"><value>Comută Diagnosticele</value></data>
+  <data name="Kb_Cmd_Save" xml:space="preserve"><value>Salvează</value></data>
+  <data name="Kb_Cmd_GoBack" xml:space="preserve"><value>Înapoi</value></data>
+  <data name="Kb_Cmd_GoForward" xml:space="preserve"><value>Înainte</value></data>
+  <data name="Kb_Cmd_FindInFiles" xml:space="preserve"><value>Caută în fișiere</value></data>
+  <data name="Kb_Cmd_ReplaceInFiles" xml:space="preserve"><value>Înlocuiește în fișiere</value></data>
+  <data name="Kb_Cmd_QuickOpen" xml:space="preserve"><value>Salt la fișier</value></data>
+  <data name="Kb_Cmd_CommandPalette" xml:space="preserve"><value>Paletă de comenzi</value></data>
+  <data name="Kb_Cmd_ReopenClosedTab" xml:space="preserve"><value>Redeschide fila închisă</value></data>
+  <data name="Kb_Cmd_ToggleFullScreen" xml:space="preserve"><value>Comută ecranul complet</value></data>
+  <data name="Kb_Cmd_NextProblem" xml:space="preserve"><value>Problema următoare</value></data>
+  <data name="Kb_Cmd_PreviousProblem" xml:space="preserve"><value>Problema anterioară</value></data>
+  <data name="Kb_Cmd_NewFile" xml:space="preserve"><value>Fișier nou</value></data>
+  <data name="Kb_Cmd_OpenFile" xml:space="preserve"><value>Deschide fișier</value></data>
+  <data name="Kb_Cmd_OpenFolder" xml:space="preserve"><value>Deschide dosar</value></data>
+  <data name="Kb_Cmd_OpenThconfig" xml:space="preserve"><value>Deschide thconfig</value></data>
+  <data name="Kb_Cmd_ToggleObjectBrowser" xml:space="preserve"><value>Comută Navigatorul de obiecte</value></data>
+  <data name="Kb_Cmd_ToggleOutline" xml:space="preserve"><value>Comută Conturul</value></data>
+  <data name="Kb_Cmd_ToggleProject" xml:space="preserve"><value>Comută Prezentarea generală</value></data>
+  <data name="Kb_Cmd_ToggleLog" xml:space="preserve"><value>Comută Jurnalul</value></data>
+  <data name="Kb_Cmd_ToggleLivePreview" xml:space="preserve"><value>Comută Previzualizarea principală</value></data>
+  <data name="Kb_Cmd_ToggleMapViewer" xml:space="preserve"><value>Comută Vizualizatorul de hărți</value></data>
+  <data name="Kb_Cmd_ToggleModel3DViewer" xml:space="preserve"><value>Comută Vizualizatorul 3D</value></data>
+  <data name="Kb_Cmd_ToggleStructuralGeology" xml:space="preserve"><value>Comută Geologia structurală</value></data>
+  <data name="Kb_Cmd_ToggleBlenderAnimation" xml:space="preserve"><value>Animație Blender</value></data>
+  <data name="Kb_Cmd_SplitEditor" xml:space="preserve"><value>Împarte editorul</value></data>
+  <data name="Kb_Cmd_ResetLayout" xml:space="preserve"><value>Resetează aranjamentul</value></data>
+  <data name="Kb_Cmd_FloatActiveDocument" xml:space="preserve"><value>Desprinde documentul activ</value></data>
+  <data name="Kb_Cmd_QuickExport" xml:space="preserve"><value>Export rapid</value></data>
+  <data name="Kb_Cmd_OpenOutputFolder" xml:space="preserve"><value>Deschide ultimul dosar de ieșire</value></data>
+  <data name="Kb_Cmd_ToggleWordWrap" xml:space="preserve"><value>Comută încadrarea textului</value></data>
+  <data name="Kb_Cmd_NewScrapScaffold" xml:space="preserve"><value>Schiță nouă (.th2)</value></data>
+  <data name="Kb_Cmd_GenerateReport" xml:space="preserve"><value>Generează raport topografic</value></data>
+  <data name="Kb_Cmd_GoToDefinition" xml:space="preserve"><value>Salt la definiție</value></data>
+  <data name="Kb_Cmd_FindReferences" xml:space="preserve"><value>Găsește referințe</value></data>
+  <data name="Kb_Cmd_RenameSymbol" xml:space="preserve"><value>Redenumește simbolul</value></data>
+  <data name="Kb_Cmd_PeekDefinition" xml:space="preserve"><value>Vezi definiția</value></data>
+  <data name="Kb_Cmd_GoToMatchingBlock" xml:space="preserve"><value>Salt la blocul pereche</value></data>
+  <data name="Kb_Cmd_StepIntoInclude" xml:space="preserve"><value>Intră în fișierul inclus</value></data>
+  <data name="Kb_Cmd_StepOutInclude" xml:space="preserve"><value>Revino în fișierul care include</value></data>
+  <data name="Kb_Cmd_TriggerCompletion" xml:space="preserve"><value>Afișează completările</value></data>
+  <data name="Kb_Cmd_GoToLine" xml:space="preserve"><value>Salt la linie</value></data>
+  <data name="Kb_Cmd_ToggleComment" xml:space="preserve"><value>Comutare comentariu</value></data>
+  <data name="Kb_Cmd_FormatDocument" xml:space="preserve"><value>Formatează documentul</value></data>
+  <data name="Kb_Cmd_EncloseInRegion" xml:space="preserve"><value>Include în regiune</value></data>
+  <data name="Kb_Cmd_QuickFixes" xml:space="preserve"><value>Remediere rapidă</value></data>
+  <data name="Kb_Cmd_DuplicateLines" xml:space="preserve"><value>Duplică liniile</value></data>
+  <data name="Kb_Cmd_MoveLinesUp" xml:space="preserve"><value>Mută liniile în sus</value></data>
+  <data name="Kb_Cmd_MoveLinesDown" xml:space="preserve"><value>Mută liniile în jos</value></data>
+  <data name="Kb_Cmd_SortLines" xml:space="preserve"><value>Sortează liniile</value></data>
+  <data name="Kb_ConflictFmt" xml:space="preserve"><value>Deja folosită de „{0}” — o înlocuiți?</value></data>
+  <data name="Kb_ConflictReplace" xml:space="preserve"><value>Înlocuiește</value></data>
+  <data name="Kb_ConflictKeep" xml:space="preserve"><value>Păstrează-o pe cea veche</value></data>
+  <data name="Rename_Occurrences_One" xml:space="preserve"><value>{0} apariție</value></data>
+  <data name="Rename_Occurrences_Few" xml:space="preserve"><value>{0} apariții</value></data>
+  <data name="Rename_Occurrences_Many" xml:space="preserve"><value>{0} de apariții</value></data>
+  <data name="Rename_Files_One" xml:space="preserve"><value>{0} fișier</value></data>
+  <data name="Rename_Files_Few" xml:space="preserve"><value>{0} fișiere</value></data>
+  <data name="Rename_Files_Many" xml:space="preserve"><value>{0} de fișiere</value></data>
+  <data name="Rename_FileChanges_One" xml:space="preserve"><value>{0} modificare</value></data>
+  <data name="Rename_FileChanges_Few" xml:space="preserve"><value>{0} modificări</value></data>
+  <data name="Rename_FileChanges_Many" xml:space="preserve"><value>{0} de modificări</value></data>
+  <data name="FormatAll_Lines_One" xml:space="preserve"><value>{0} linie</value></data>
+  <data name="FormatAll_Lines_Few" xml:space="preserve"><value>{0} linii</value></data>
+  <data name="FormatAll_Lines_Many" xml:space="preserve"><value>{0} de linii</value></data>
+  <data name="FormatAll_KindTrailing" xml:space="preserve"><value>spații de la sfârșitul liniei eliminate</value></data>
+  <data name="FormatAll_KindIndent" xml:space="preserve"><value>indentare modificată</value></data>
+  <data name="FormatAll_KindEndings" xml:space="preserve"><value>terminații de linie modificate</value></data>
+  <data name="FormatAll_KindEncoding" xml:space="preserve"><value>linia encoding modificată</value></data>
+  <data name="FormatAll_KindReordered" xml:space="preserve"><value>linii reordonate</value></data>
+  <data name="FormatAll_KindOther" xml:space="preserve"><value>linii rescrise</value></data>
+  <data name="FormatAll_Nothing_One" xml:space="preserve"><value>Nimic de schimbat în {0} fișier.</value></data>
+  <data name="FormatAll_Nothing_Few" xml:space="preserve"><value>Nimic de schimbat în {0} fișiere.</value></data>
+  <data name="FormatAll_Nothing_Many" xml:space="preserve"><value>Nimic de schimbat în {0} de fișiere.</value></data>
+  <data name="FormatAll_NothingSkipped" xml:space="preserve"><value>Alte {0} rămân neatinse pentru că nu se analizează curat (corectați-le întâi).</value></data>
 </root>

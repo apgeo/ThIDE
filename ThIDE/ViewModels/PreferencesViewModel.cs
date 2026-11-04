@@ -234,6 +234,9 @@ public partial class PreferencesViewModel : ObservableObject
         _settings = settings;
         _language = language;
         Keyboard = keyboard;
+        // The shortcut rows are shared between openings: start from the saved gestures, not from
+        // edits a cancelled Settings window left staged.
+        Keyboard?.Discard();
         ExternalTools = externalTools;
         Associations = associations;
 
@@ -510,6 +513,7 @@ public partial class PreferencesViewModel : ObservableObject
             SyntaxOptionColor = NullIfBlank(SyntaxOptionColor),
             SyntaxPunctuationColor = NullIfBlank(SyntaxPunctuationColor),
         });
+        Keyboard?.Commit();     // shortcut edits are staged until OK, like every other setting here
         _language?.SetLanguage(code); // reflect the new language immediately
     }
 
