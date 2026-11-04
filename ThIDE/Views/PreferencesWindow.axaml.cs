@@ -1,8 +1,10 @@
 using System;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
+using Avalonia.VisualTree;
 using ThIDE.ViewModels;
 
 namespace ThIDE.Views;
@@ -12,6 +14,7 @@ public partial class PreferencesWindow : Window
     public PreferencesWindow()
     {
         InitializeComponent();
+        AddHandler(KeyDownEvent, OnGesturePreviewKeyDown, RoutingStrategies.Tunnel);
     }
 
     private void InitializeComponent() => AvaloniaXamlLoader.Load(this);
@@ -48,9 +51,12 @@ public partial class PreferencesWindow : Window
 
     // Keyboard-shortcut capture (#11): pressing a chord in a gesture field records it as the
     // new gesture for that command, instead of forcing the user to type gesture text by hand.
-    private void OnGestureKeyDown(object? sender, KeyEventArgs e)
+    // Handled on the tunnel pass, before the DataGrid, the TextBox or the window's Esc-closes-Cancel
+    // see the key: Esc in a capture field clears the field and must never close Settings.
+    private void OnGesturePreviewKeyDown(object? sender, KeyEventArgs e)
     {
-        if (sender is not TextBox { DataContext: KeyboardShortcutRow row }) return;
+        if ((e.Source as Visual)?.FindAncestorOfType<TextBox>(includeSelf: true) is not { DataContext: KeyboardShortcutRow row } box
+            || !box.Classes.Contains("gestureCapture")) return;
 
         // Ignore lone modifier presses — wait for the actual key in the chord.
         if (e.Key is Key.LeftCtrl or Key.RightCtrl or Key.LeftShift or Key.RightShift
@@ -60,16 +66,15 @@ public partial class PreferencesWindow : Window
             return;
         }
 
-        // Escape clears the binding; Back/Delete also clears.
+        // Escape clears the capture box; Back/Delete also clears.
         if (e.Key is Key.Escape or Key.Back or Key.Delete && e.KeyModifiers == KeyModifiers.None)
         {
-            row.Gesture = string.Empty;
+            row.Capture(string.Empty);
             e.Handled = true;
             return;
         }
 
-        var gesture = new KeyGesture(e.Key, e.KeyModifiers);
-        row.Gesture = gesture.ToString();
+        row.Capture(new KeyGesture(e.Key, e.KeyModifiers).ToString());
         e.Handled = true;
     }
 }
