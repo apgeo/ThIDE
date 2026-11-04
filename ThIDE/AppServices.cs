@@ -95,6 +95,8 @@ internal static class AppServices
         // why switching to Romanian did nothing (#9). Leaving ResourcesPath empty resolves the
         // base name to the type's full name, matching the embedded resources.
         services.AddLocalization();
+        // Injected localizers read Tr's UI language, not the ambient (ExecutionContext-flowing) culture.
+        services.AddSingleton<IStringLocalizer<ThIDE.Resources.Strings>, ThIDE.Resources.TrLocalizer>();
         services.AddSingleton<ILanguageService, LanguageService>();
         services.AddSingleton<IThemeService, ThemeService>();
 
