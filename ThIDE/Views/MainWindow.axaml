@@ -940,6 +940,28 @@
             </DockPanel>
         </Border>
 
+        <!-- Crash recovery: pinned above the editor area until answered; names the files. The toast and
+             the bell entry repeat the offer and answer through the same commands. -->
+        <Border DockPanel.Dock="Top" Background="#FFF8E1" Padding="10,5"
+                IsVisible="{Binding RecoveryBanner.IsOpen}"
+                AutomationProperties.AutomationId="RecoveryBanner">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
+                    <Button AutomationProperties.AutomationId="RecoveryBanner.Restore" Content="{l:Loc Notif_Restore}" Padding="8,2"
+                            Command="{Binding RecoveryBanner.RestoreCommand}" />
+                    <Button AutomationProperties.AutomationId="RecoveryBanner.Discard" Content="{l:Loc Notif_DiscardRecovered}" Padding="8,2"
+                            Command="{Binding RecoveryBanner.DiscardCommand}" />
+                </StackPanel>
+                <TextBlock VerticalAlignment="Center" TextWrapping="Wrap" Foreground="#8D6E00"
+                           AutomationProperties.AutomationId="RecoveryBanner.Files"
+                           ToolTip.Tip="{Binding RecoveryBanner.Paths}">
+                    <Run Text="{Binding RecoveryBanner.Message}" />
+                    <Run Text=" " />
+                    <Run Text="{Binding RecoveryBanner.Files}" FontWeight="SemiBold" />
+                </TextBlock>
+            </DockPanel>
+        </Border>
+
         <!-- VS-style docking host: documents (center) + dockable/floatable tool windows. -->
         <Grid>
             <dock:DockControl AutomationProperties.AutomationId="MainWindow.Dock" x:Name="Dock" Layout="{Binding Layout}" Factory="{Binding Factory}" />

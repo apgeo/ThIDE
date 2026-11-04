@@ -121,4 +121,19 @@ public class PathSeparatorFixesTests
         Assert.Contains(CodeFixes.ForLine(text, 2, [d]), f => f.TitleKey == "Fix_PathSeparators");
         Assert.True(CodeFixes.CanBatchFix(d));
     }
+
+    [Fact]
+    public void The_output_path_diagnostic_quick_fix_rewrites_the_export_line()
+    {
+        const string text = "source main.th\nexport map -fmt pdf -output rez\\plan.pdf -layout l1\n";
+        var d = new Therion.Syntax.ThconfigParser().Parse("x.thconfig", text).Diagnostics
+            .Single(x => x.Code.Value == CodeFixes.BackslashOutputPath);
+
+        var fix = CodeFixes.ForDiagnostic(text, d)!;
+
+        Assert.True(fix.SafeForBatch);
+        Assert.Equal("source main.th\nexport map -fmt pdf -output rez/plan.pdf -layout l1\n", TextSplicer.Splice(text, fix.Edits));
+        Assert.Contains(CodeFixes.ForLine(text, 2, [d]), f => f.TitleKey == "Fix_PathSeparators");
+        Assert.True(CodeFixes.CanBatchFix(d));
+    }
 }

@@ -4,6 +4,19 @@ What a consumer of this library can notice, newest first. Each entry says what c
 and what to do. Entries also cover behaviour that reaches you through `Therion.Syntax` and
 `Therion.Semantics`, which this library is built on.
 
+## 2026-11 (later)
+
+### Behaviour changes
+- **New thconfig diagnostic `TH0059` for `export … -output` paths written with `\`.** Off Windows,
+  Therion writes `-output rez\cave.lox` as a file literally named `rez\cave.lox` in the working
+  folder. `ThconfigParser` now reports such a relative path (Warning; Info on Windows, where it
+  works), quoting the path as written first and giving the `/` spelling in the hint. Rooted paths
+  (`C:\…`, `\\server\…`) are not reported. New: `DiagnosticCodes.BackslashOutputPath`,
+  `CodeFixes.BackslashOutputPath`.
+- **`CodeFixes` rewrites it**: `ForLine` and `ForDiagnostic` offer the `Fix_PathSeparators` fix for
+  `TH0059` as for `TH_SEM_016`, and `BatchCodes` / `CanBatchFix` include it, so "fix all" covers it.
+  Migration: none; a host that lists diagnostic codes or translates messages by code may add `TH0059`.
+
 ## 2026-11 — correctness and safety fixes
 
 ### Breaking (source only)

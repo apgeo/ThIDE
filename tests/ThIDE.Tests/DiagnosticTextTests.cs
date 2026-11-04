@@ -155,6 +155,7 @@ public sealed class DiagnosticTextTests
         "cs FOO\n" +
         "export nonsense\n" +
         "export map -fmt zzz\n" +
+        "export model -output rez\\cave.lox\n" +
         "bogus top level\n" +
         "layout l\n" +
         "  wrongopt 1\n" +

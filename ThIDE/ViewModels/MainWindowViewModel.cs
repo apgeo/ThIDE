@@ -1025,21 +1025,28 @@ public partial class MainWindowViewModel : ViewModelBase
         if (nothingRestored) _factory.ShowToolInDocuments(WelcomeTool);
     }
 
-    /// <summary>if a crashed run left unsaved buffers, surface a recovery notification.</summary>
+    /// <summary>The crash-recovery offer pinned above the editor area.</summary>
+    public RecoveryBannerViewModel RecoveryBanner { get; } = new();
+
+    /// <summary>if a crashed run left unsaved buffers, offer them in the banner (the toast and bell repeat it).</summary>
     private void OfferCrashRecovery()
     {
         if (_crashRecovery is null) return;
         var recoverable = _crashRecovery.GetRecoverable();
         if (recoverable.Count == 0) return;
         // The copies stay (a clean exit keeps them) until the user restores or discards them. The toast and
-        // its history entry stay clickable, so only the first of the two actions does anything.
-        bool handled = false;
-        OnUiThread(() => _notifications.Post(new AppNotification(
-            Tr.Get("Notif_RecoveredTitle"),
-            string.Format(Tr.Get("Notif_RecoveredMsg"), recoverable.Count),
-            NotificationKind.Warning,
-            Tr.Get("Notif_Restore"), () => { if (handled) return; handled = true; _ = RecoverBuffersAsync(recoverable); },
-            Tr.Get("Notif_DiscardRecovered"), () => { if (handled) return; handled = true; _crashRecovery?.ClearRecovery(); })));
+        // its history entry stay clickable; they answer through the banner, so only the first answer counts.
+        OnUiThread(() =>
+        {
+            RecoveryBanner.Offer(recoverable.Select(b => b.OriginalPath).ToList(),
+                () => RecoverBuffersAsync(recoverable), () => _crashRecovery?.ClearRecovery());
+            _notifications.Post(new AppNotification(
+                Tr.Get("Notif_RecoveredTitle"),
+                string.Format(Tr.Get("Notif_RecoveredMsg"), recoverable.Count),
+                NotificationKind.Warning,
+                Tr.Get("Notif_Restore"), () => _ = RecoveryBanner.RestoreCommand.ExecuteAsync(null),
+                Tr.Get("Notif_DiscardRecovered"), () => _ = RecoveryBanner.DiscardCommand.ExecuteAsync(null)));
+        });
     }
 
     /// <summary>Writes the unsaved editor buffers to the crash-recovery folder now (the periodic autosave

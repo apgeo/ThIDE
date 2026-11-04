@@ -1143,6 +1143,10 @@ Install Mapiah from its releases page, then set the path to {0} in Settings → 
   <data name="Notif_RecoveredMsg" xml:space="preserve"><value>{0} file(s) had unsaved changes when the app last closed unexpectedly.</value></data>
   <data name="Notif_Restore" xml:space="preserve"><value>Restore</value></data>
   <data name="Notif_DiscardRecovered" xml:space="preserve"><value>Discard copies</value></data>
+  <data name="Recovery_BannerMsg" xml:space="preserve"><value>Unsaved changes from a session that closed unexpectedly were kept for {0} file(s):</value></data>
+  <data name="Recovery_DiscardConfirm" xml:space="preserve"><value>Discard the recovered copies of {0} file(s)? The unsaved changes in them are lost for good.
+
+{1}</value></data>
   <data name="Notif_ImportFailed" xml:space="preserve"><value>Import failed</value></data>
   <data name="Notif_GisExportFailed" xml:space="preserve"><value>GIS export failed</value></data>
   <data name="Notif_TableExportFailed" xml:space="preserve"><value>Table export failed</value></data>
@@ -1882,6 +1886,8 @@ This cannot be undone.</value></data>
   <data name="Diag_Hint_TH0060" xml:space="preserve"><value>Expected: {0}</value></data>
   <data name="Diag_Msg_TH0061" xml:space="preserve"><value>'{0}' is not a valid format for 'export {1}'.</value></data>
   <data name="Diag_Msg_TH0062" xml:space="preserve"><value>Unknown layout option '{0}'.</value></data>
+  <data name="Diag_Msg_TH0059" xml:space="preserve"><value>Output path '{0}' uses '\' as a separator; Therion on Linux and macOS writes a file with '\' in its name instead of into the folder.</value></data>
+  <data name="Diag_Hint_TH0059" xml:space="preserve"><value>Write the path with '/', which Therion reads on every platform: '{0}'.</value></data>
   <data name="Diag_Msg_TH0063" xml:space="preserve"><value>'{0}' expects at least {1} argument(s), found {2}.</value></data>
   <data name="Diag_Msg_TH0063__join" xml:space="preserve"><value>'join' needs at least two objects to connect.</value></data>
   <data name="Diag_Msg_TH0064" xml:space="preserve"><value>'{0}' expects at most {1} argument(s), found {2}.</value></data>
@@ -2074,6 +2080,8 @@ This cannot be undone.</value></data>
   <data name="Kb_Cmd_SortLines" xml:space="preserve"><value>Sort Lines</value></data>
   <data name="Kb_Cmd_NextOccurrenceInFile" xml:space="preserve"><value>Next Occurrence in This File</value></data>
   <data name="Kb_ConflictFmt" xml:space="preserve"><value>Already used by {0} — replace?</value></data>
+  <data name="Kb_ResetAllConfirm" xml:space="preserve"><value>Reset every keyboard shortcut to its default? {0} shortcut(s) you changed will be replaced when you press OK.</value></data>
+  <data name="Kb_ResetAllConfirmOk" xml:space="preserve"><value>Reset all</value></data>
   <data name="Kb_ConflictReplace" xml:space="preserve"><value>Replace</value></data>
   <data name="Kb_ConflictKeep" xml:space="preserve"><value>Keep the old one</value></data>
   <data name="Rename_Occurrences_One" xml:space="preserve"><value>{0} occurrence</value></data>
