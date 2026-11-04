@@ -147,7 +147,7 @@
   <data name="Pref_DbgOffscreen" xml:space="preserve"><value>Experimental offscreen web view</value></data>
   <data name="Pref_DbgOffscreenHelp" xml:space="preserve"><value>Renders web content through the app compositor instead of embedding a native window. May fix embedding problems, may affect input handling. Linux only; off by default.</value></data>
   <data name="Pref_DbgDevTools" xml:space="preserve"><value>Enable web developer tools</value></data>
-  <data name="Pref_DbgDevToolsHelp" xml:space="preserve"><value>Allows opening the engine’s inspector/DevTools from the 3D viewer panel and via right-click ▸ Inspect. All platforms; on by default.</value></data>
+  <data name="Pref_DbgDevToolsHelp" xml:space="preserve"><value>Shows the DevTools and “open a web address” buttons in the 3D viewer toolbar, and allows the engine’s inspector via right-click ▸ Inspect / F12. For developers; off by default.</value></data>
   <data name="Pref_Keyboard" xml:space="preserve"><value>Keyboard Shortcuts</value></data>
   <!-- Shared / common UI strings -->
   <data name="Common_ShowHideColumns" xml:space="preserve"><value>Show or hide columns</value></data>

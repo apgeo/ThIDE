@@ -183,7 +183,7 @@ public partial class PreferencesViewModel : ObservableObject
     [ObservableProperty] private bool _webViewDisableDmabufRenderer;
     [ObservableProperty] private bool _webViewDisableCompositing;
     [ObservableProperty] private bool _webViewExperimentalOffscreen;
-    [ObservableProperty] private bool _webViewEnableDevTools;
+    [ObservableProperty] private bool _enableWebDeveloperTools;
 
     // ---- editor behaviour ----
     [ObservableProperty] private bool _showRenamePreviewBeforeApply;
@@ -307,7 +307,7 @@ public partial class PreferencesViewModel : ObservableObject
         _webViewDisableDmabufRenderer = s.WebViewDisableDmabufRenderer;
         _webViewDisableCompositing = s.WebViewDisableCompositing;
         _webViewExperimentalOffscreen = s.WebViewExperimentalOffscreen;
-        _webViewEnableDevTools = s.WebViewEnableDevTools;
+        _enableWebDeveloperTools = s.EnableWebDeveloperTools;
         _showRenamePreviewBeforeApply = s.ShowRenamePreviewBeforeApply;
         _maxHighlightLines = s.MaxHighlightLines;
         _maxHighlightKB = s.MaxHighlightKB;
@@ -495,7 +495,7 @@ public partial class PreferencesViewModel : ObservableObject
             WebViewDisableDmabufRenderer = WebViewDisableDmabufRenderer,
             WebViewDisableCompositing = WebViewDisableCompositing,
             WebViewExperimentalOffscreen = WebViewExperimentalOffscreen,
-            WebViewEnableDevTools = WebViewEnableDevTools,
+            EnableWebDeveloperTools = EnableWebDeveloperTools,
             ShowRenamePreviewBeforeApply = ShowRenamePreviewBeforeApply,
             MaxHighlightLines = MaxHighlightLines,
             MaxHighlightKB = MaxHighlightKB,

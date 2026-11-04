@@ -147,7 +147,7 @@
   <data name="Pref_DbgOffscreen" xml:space="preserve"><value>Vizualizare web offscreen (experimental)</value></data>
   <data name="Pref_DbgOffscreenHelp" xml:space="preserve"><value>Redă conținutul web prin compozitorul aplicației în loc să încorporeze o fereastră nativă. Poate rezolva probleme de încorporare, poate afecta interacțiunea. Doar Linux; dezactivat implicit.</value></data>
   <data name="Pref_DbgDevTools" xml:space="preserve"><value>Activează instrumentele de dezvoltare web</value></data>
-  <data name="Pref_DbgDevToolsHelp" xml:space="preserve"><value>Permite deschiderea inspectorului/DevTools din panoul 3D și prin clic dreapta ▸ Inspectează. Toate platformele; activat implicit.</value></data>
+  <data name="Pref_DbgDevToolsHelp" xml:space="preserve"><value>Afișează butoanele DevTools și „deschide o adresă web” în bara panoului 3D și permite inspectorul motorului prin clic dreapta ▸ Inspectează / F12. Pentru dezvoltatori; dezactivat implicit.</value></data>
   <data name="Pref_Keyboard" xml:space="preserve"><value>Scurtături tastatură</value></data>
   <!-- Shared / common UI strings -->
   <data name="Common_ShowHideColumns" xml:space="preserve"><value>Afișează sau ascunde coloane</value></data>

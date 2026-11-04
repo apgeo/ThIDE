@@ -176,8 +176,9 @@ web panel misbehaves — see [Troubleshooting](22-troubleshooting-and-faq.md).
 
 **All platforms:**
 
-- **Enable web developer tools** — allows opening the engine's inspector/DevTools from the 3D viewer
-  panel and via right-click ▸ **Inspect**. On by default.
+- **Enable web developer tools** — shows the **DevTools** and *Open a web address* buttons in the
+  3D viewer toolbar and allows the engine's inspector via right-click ▸ **Inspect** / F12. For
+  developers; off by default.
 
 ## Keyboard Shortcuts
 
