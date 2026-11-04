@@ -22,8 +22,10 @@ project, with last trip's people ticked), the units, calibration, instruments an
 latest trip, names the survey after the date, and — once you pick the project station the trip starts
 from — writes the new file beside the other trips, plus the `input` and an `equate` stub (marked
 `# check the tie-in`) where the project keeps them. The new survey becomes a sibling of the station's
-survey; tick *Nest the trip inside that station's survey* to put it one level down instead. The new
-file opens with the cursor on the first data line. Then:
+survey; tick *Nest the trip inside that station's survey* to put it one level down instead. For the
+first trip of a new project (or a new entrance) tick *No tie-in (first trip / entrance)* and pick the
+survey it goes into: only the `input` is written. The new file opens with the cursor on the first
+data line. Then:
 
 1. Open the relevant survey `.th` (or make a new file: **File → New File…**).
 2. Type your `centreline` / `data` / shots. As you type:

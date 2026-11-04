@@ -1521,7 +1521,9 @@ Install Mapiah from its releases page, then set the path to {0} in Settings → 
   <data name="NewTrip_Generated" xml:space="preserve"><value>New file</value></data>
   <data name="NewTrip_TieIn" xml:space="preserve"><value>Starts from (project station)</value></data>
   <data name="NewTrip_Nest" xml:space="preserve"><value>Nest the trip inside that station's survey</value></data>
-  <data name="NewTrip_CheckTieIn" xml:space="preserve"><value>check the tie-in</value></data>
+  <data name="NewTrip_NoTieIn" xml:space="preserve"><value>No tie-in (first trip / entrance)</value></data>
+  <data name="NewTrip_NoTieInHelp" xml:space="preserve"><value>Writes only the input line, inside the survey chosen above; tie the first station later with equate or fix.</value></data>
+  <data name="NewTrip_PickSurvey" xml:space="preserve"><value>Choose the survey the trip goes into.</value></data>
   <data name="NewTrip_BadName" xml:space="preserve"><value>The survey name may hold only letters, digits, _ and -.</value></data>
   <data name="NewTrip_BadStation" xml:space="preserve"><value>The first station is not a valid station name.</value></data>
   <data name="NewTrip_BadDate" xml:space="preserve"><value>The date should look like 2026.10.21.</value></data>

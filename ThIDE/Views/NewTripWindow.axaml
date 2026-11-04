@@ -59,7 +59,8 @@
             </ScrollViewer>
             <DockPanel Grid.Column="2">
                 <StackPanel DockPanel.Dock="Bottom" Spacing="6" Margin="0,8,0,0">
-                    <CheckBox Content="{l:Loc NewTrip_Nest}" IsChecked="{Binding Nest, Mode=TwoWay}" AutomationProperties.AutomationId="NewTrip.Nest" />
+                    <CheckBox Content="{l:Loc NewTrip_Nest}" IsChecked="{Binding Nest, Mode=TwoWay}" AutomationProperties.AutomationId="NewTrip.Nest"
+                              IsEnabled="{Binding !NoTieIn}" />
                     <TextBlock Text="{l:Loc LinkSurvey_Destination}" />
                     <ComboBox ItemsSource="{Binding Destinations}" SelectedItem="{Binding SelectedDestination, Mode=TwoWay}" HorizontalAlignment="Stretch"
                               AutomationProperties.AutomationId="NewTrip.Destination" />
@@ -67,11 +68,13 @@
                     <TextBox Text="{Binding Folder, Mode=TwoWay}" AutomationProperties.AutomationId="NewTrip.Folder" />
                 </StackPanel>
                 <TextBlock DockPanel.Dock="Top" Text="{l:Loc NewTrip_TieIn}" FontWeight="SemiBold" Margin="0,0,0,4" />
+                <CheckBox DockPanel.Dock="Top" Content="{l:Loc NewTrip_NoTieIn}" IsChecked="{Binding NoTieIn, Mode=TwoWay}"
+                          AutomationProperties.AutomationId="NewTrip.NoTieIn" ToolTip.Tip="{l:Loc NewTrip_NoTieInHelp}" />
                 <Grid RowDefinitions="Auto,150,Auto,*">
                     <TextBlock Grid.Row="0" Text="{l:Loc LinkSurvey_Survey}" FontSize="11" Foreground="Gray" />
                     <pickers:ItemPickerView Grid.Row="1" DataContext="{Binding Surveys}" />
                     <TextBlock Grid.Row="2" Text="{l:Loc LinkSurvey_Station}" FontSize="11" Foreground="Gray" Margin="0,6,0,0" />
-                    <pickers:ItemPickerView Grid.Row="3" DataContext="{Binding Stations}" />
+                    <pickers:ItemPickerView Grid.Row="3" DataContext="{Binding Stations}" IsEnabled="{Binding !$parent[Grid].DataContext.NoTieIn}" />
                 </Grid>
             </DockPanel>
         </Grid>
