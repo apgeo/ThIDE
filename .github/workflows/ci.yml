@@ -32,15 +32,68 @@ jobs:
         run: dotnet build ThIDE.sln -m:1 --no-restore -c Release
 
       - name: Test
-        run: dotnet test ThIDE.sln -m:1 --no-build -c Release --verbosity normal
+        run: dotnet test ThIDE.sln -m:1 --no-build -c Release --verbosity normal --logger trx --results-directory TestResults
 
-  # End-to-end UI tests on a virtual display (tests/run-ui-tests.sh): the C# suite over the in-app
-  # automation server and the black-box AT-SPI suite. Non-blocking until it has a track record on
-  # hosted runners.
+      # Failed test names as annotations and in the run summary, readable without the raw log.
+      - name: Report failed tests
+        if: failure()
+        shell: bash
+        run: |
+          PY="$(command -v python3 || command -v python)"
+          "$PY" tests/ci/trx-failures.py --annotate --summary "Failed tests (${{ matrix.os }})" TestResults/*.trx
+
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.os }}
+          path: TestResults/
+
+  # End-to-end UI tests on a virtual display (tests/run-ui-tests.sh), split by how stable they are.
+  # The C# suite over the in-app automation server is blocking: a test that fails is re-run once by
+  # name, and one that then passes is reported as flaky (a warning) instead of failing the build.
+  # Tests marked [Trait("Category", "Quarantine")] are left out of it and run in a non-blocking step.
   ui-tests:
-    name: UI tests (linux, xvfb)
+    name: UI tests, in-app suite (linux, xvfb)
     runs-on: ubuntu-latest
-    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Install display and toolchain packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            xvfb xfwm4 dbus-x11 at-spi2-core libwebkit2gtk-4.1-0 therion survex
+
+      - name: Run in-app UI tests (failed tests re-run once)
+        run: UI_RETRY=1 tests/run-ui-tests.sh mcp
+
+      - name: Run quarantined UI tests (non-blocking)
+        if: always()
+        continue-on-error: true
+        run: |
+          tests/run-ui-tests.sh quarantine || {
+            echo "::warning title=Quarantined UI tests::some quarantined UI tests still fail (see the artifacts)"
+            exit 1
+          }
+
+      - name: Upload UI test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-test-artifacts
+          path: tests/ui-artifacts/
+
+  # The black-box AT-SPI suite depends on the desktop accessibility stack, which is not stable on
+  # hosted runners. It never fails the build, but a failure is shown as a warning and in the summary.
+  ui-tests-atspi:
+    name: UI tests, AT-SPI suite (linux, xvfb, non-blocking)
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -57,14 +110,22 @@ jobs:
             python3-gi gir1.2-atspi-2.0 python3-pil python3-pytest \
             libwebkit2gtk-4.1-0 therion survex
 
-      - name: Run UI tests
-        run: tests/run-ui-tests.sh all
+      - name: Run AT-SPI UI tests
+        id: atspi
+        continue-on-error: true
+        run: tests/run-ui-tests.sh atspi
+
+      - name: Report an AT-SPI failure
+        if: steps.atspi.outcome == 'failure'
+        run: |
+          echo "::warning title=AT-SPI UI suite failed::non-blocking; see the ui-test-artifacts-atspi artifact (JUnit XML, screenshots, trees, logs)"
+          echo "### AT-SPI UI suite failed (non-blocking)" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload UI test artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ui-test-artifacts
+          name: ui-test-artifacts-atspi
           path: tests/ui-artifacts/
 
   # net10.0 leg. The libraries (and, through the same switch, the library test projects)

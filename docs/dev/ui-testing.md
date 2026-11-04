@@ -22,6 +22,8 @@ tests/run-ui-tests.sh            # both suites
 tests/run-ui-tests.sh mcp        # C# suite only
 tests/run-ui-tests.sh atspi      # AT-SPI suite only (Linux)
 tests/run-ui-tests.sh atspi -k 3d -x   # extra args go to pytest / dotnet test
+tests/run-ui-tests.sh quarantine # only the quarantined C# tests
+UI_RETRY=1 tests/run-ui-tests.sh mcp   # re-run failed C# tests once, as CI does
 ```
 
 On Linux the script runs everything on a private Xvfb display with its own D-Bus session and a
@@ -29,6 +31,16 @@ throw-away profile, so it needs no desktop and never touches your settings. Resu
 screenshot, the element tree and the app log for every failed AT-SPI test, go to `tests/ui-artifacts/`.
 
 `dotnet test ThIDE.sln` stays a unit-test run: the UI tests skip themselves unless `THIDE_UI_TESTS=1`.
+
+**On CI** the C# suite is blocking and the AT-SPI suite is not:
+
+- A C# test that fails is re-run once by name (`UI_RETRY=1`). If it passes the second time, the run
+  shows a "Flaky UI test" warning and stays green; a test that fails twice fails the build.
+- A C# test that is known to be unstable gets `[Trait("Category", "Quarantine")]`. The blocking run
+  leaves it out; a separate step runs the quarantined tests and only warns. Quarantine is a
+  holding pen, not a skip list: fix the test and drop the trait.
+- The AT-SPI suite depends on the desktop accessibility stack, which is not stable on hosted
+  runners. A failure shows as a warning and in the run summary, with the artifacts attached.
 
 Linux prerequisites (Ubuntu): `xvfb xfwm4 at-spi2-core xdotool python3-gi gir1.2-atspi-2.0
 python3-pil python3-pytest libwebkit2gtk-4.1-0`. Install `therion` and `survex` too for the compile
