@@ -163,7 +163,8 @@ public sealed class CoreCommandPlacementTests
         UiLanguageCollection.In(CultureInfo.InvariantCulture, () =>
         {
             TipProxy.Instance.Attach(new JsonKeyboardShortcutService(TestProfile.NewPath("keyboard.json")));
-            Assert.Equal("Save (Ctrl+S)", TipProxy.Instance["Tb_Save"]);
+            // The stored chord is the same everywhere; macOS shows it with its own symbols ("⌃S").
+            Assert.Equal($"Save ({KeyGestureText.Format("Ctrl+S")})", TipProxy.Instance["Tb_Save"]);
             Assert.Equal("Open File", TipProxy.Instance["Tb_OpenFile"]);
         });
     }
@@ -184,15 +185,15 @@ public sealed class CoreCommandPlacementTests
         {
             var refer = Palette("refer");
             Assert.Equal("Find References", refer[0].Title);
-            Assert.Equal("Shift+F12", refer[0].Gesture);
+            Assert.Equal(KeyGestureText.Format("Shift+F12"), refer[0].Gesture);
 
             var defin = Palette("defin").Take(2).Select(i => i.Title).ToList();
             Assert.Contains("Go to Definition", defin);
             Assert.Contains("Peek Definition", defin);
-            Assert.Equal("F12", Palette("go to definition")[0].Gesture);
+            Assert.Equal(KeyGestureText.Format("F12"), Palette("go to definition")[0].Gesture);
 
             var rename = Assert.Single(Palette("rename symbol"));
-            Assert.Equal("F2", rename.Gesture);
+            Assert.Equal(KeyGestureText.Format("F2"), rename.Gesture);
         });
 
     [Fact]
