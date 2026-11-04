@@ -270,8 +270,8 @@ public class StructuralGeologyViewModelTests
         public event EventHandler<string>? FindReferencesRequested;
         public void RequestRenameSymbol(string raw, Therion.Processing.Abstractions.ReferenceKind kind) { }
         public event EventHandler<(string Raw, Therion.Processing.Abstractions.ReferenceKind Kind)>? RenameSymbolRequested;
-        public void RequestFindAllReferences(string raw, Therion.Processing.Abstractions.ReferenceKind kind) { }
-        public event EventHandler<(string Raw, Therion.Processing.Abstractions.ReferenceKind Kind)>? FindAllReferencesRequested;
+        public void RequestFindAllReferences(string raw, Therion.Processing.Abstractions.ReferenceKind kind, string? filePath = null, int offset = -1) { }
+        public event EventHandler<(string Raw, Therion.Processing.Abstractions.ReferenceKind Kind, string? FilePath, int Offset)>? FindAllReferencesRequested;
         public void RequestShowInModel3D(string fullName) { }
         public void RequestShowInModel3D(Model3DTarget target) { }
         public event EventHandler<Model3DTarget>? ShowInModel3DRequested;

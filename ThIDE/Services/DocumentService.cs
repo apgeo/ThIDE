@@ -152,8 +152,10 @@ public interface IDocumentService
     event EventHandler<(string Raw, Therion.Processing.Abstractions.ReferenceKind Kind)>? RenameSymbolRequested;
 
     /// <summary>Asks the shell to list every reference to the symbol named by the raw token (#7).</summary>
-    void RequestFindAllReferences(string raw, Therion.Processing.Abstractions.ReferenceKind kind);
-    event EventHandler<(string Raw, Therion.Processing.Abstractions.ReferenceKind Kind)>? FindAllReferencesRequested;
+    /// <summary>Find All References for <paramref name="raw"/>, written at <paramref name="offset"/> in
+    /// <paramref name="filePath"/> when known (a bare station id is then that file's survey's station).</summary>
+    void RequestFindAllReferences(string raw, Therion.Processing.Abstractions.ReferenceKind kind, string? filePath = null, int offset = -1);
+    event EventHandler<(string Raw, Therion.Processing.Abstractions.ReferenceKind Kind, string? FilePath, int Offset)>? FindAllReferencesRequested;
 
     /// <summary>Asks the shell to reveal a station/survey (by full dotted name) in the embedded 3D viewer.</summary>
     void RequestShowInModel3D(string fullName);
@@ -248,12 +250,12 @@ public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, 
             RenameSymbolRequested?.Invoke(this, (raw, kind));
     }
 
-    public event EventHandler<(string Raw, Therion.Processing.Abstractions.ReferenceKind Kind)>? FindAllReferencesRequested;
+    public event EventHandler<(string Raw, Therion.Processing.Abstractions.ReferenceKind Kind, string? FilePath, int Offset)>? FindAllReferencesRequested;
 
-    public void RequestFindAllReferences(string raw, Therion.Processing.Abstractions.ReferenceKind kind)
+    public void RequestFindAllReferences(string raw, Therion.Processing.Abstractions.ReferenceKind kind, string? filePath = null, int offset = -1)
     {
         if (!string.IsNullOrWhiteSpace(raw))
-            FindAllReferencesRequested?.Invoke(this, (raw, kind));
+            FindAllReferencesRequested?.Invoke(this, (raw, kind, filePath, offset));
     }
 
     public event EventHandler<Model3DTarget>? ShowInModel3DRequested;

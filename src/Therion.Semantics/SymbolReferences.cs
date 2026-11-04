@@ -90,6 +90,75 @@ public static class SymbolReferences
         return Find(workspace, resolved.Symbol);
     }
 
+    /// <summary>
+    /// Like <see cref="FindAll(WorkspaceSemanticModel, string, ReferenceKind)"/> for the token written at
+    /// <paramref name="offset"/> in <paramref name="filePath"/>: the symbol is the one that token denotes
+    /// there. A bare station id names a station of the survey it is written in, so <c>3</c> in a second
+    /// file lists that file's station 3, not the first survey's. Without a usable location this is
+    /// <see cref="FindAll(WorkspaceSemanticModel, string, ReferenceKind)"/>.
+    /// </summary>
+    public static IReadOnlyList<SymbolReference> FindAll(
+        WorkspaceSemanticModel workspace, string raw, ReferenceKind kind, string? filePath, int offset)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return Array.Empty<SymbolReference>();
+        if (!string.IsNullOrEmpty(filePath) && offset >= 0)
+        {
+            // The occurrence index already attributes every written token to its symbol.
+            if (SymbolAt(workspace, filePath, offset, kind) is { } symbol) return Find(workspace, symbol);
+            // A token the index does not hold (an unsaved edit): resolve it in its enclosing survey.
+            if (WantsStation(kind) && StationInEnclosingSurvey(workspace, raw, filePath, offset) is { } span
+                && ResolveDeclaration(workspace, ReferenceKind.Station, span) is { } resolved)
+                return Find(workspace, resolved.Symbol);
+        }
+        return FindAll(workspace, raw, kind);
+    }
+
+    /// <summary>The symbol whose occurrence covers <paramref name="offset"/> in <paramref name="filePath"/>
+    /// (a caret just after the token counts); a station before a survey for <see cref="ReferenceKind.Any"/>.</summary>
+    private static SymbolId? SymbolAt(WorkspaceSemanticModel workspace, string filePath, int offset, ReferenceKind kind)
+    {
+        SymbolId? survey = null;
+        foreach (var (id, occurrences) in workspace.StationOccurrences)
+        {
+            bool wanted = id.Kind == SymbolKind.Station ? WantsStation(kind) : id.Kind == SymbolKind.Survey && WantsSurvey(kind);
+            if (!wanted) continue;
+            foreach (var o in occurrences)
+            {
+                var s = o.Span;
+                if (offset < s.StartOffset || offset > s.StartOffset + s.Length) continue;
+                if (!string.Equals(s.FilePath, filePath, StringComparison.OrdinalIgnoreCase)) continue;
+                if (id.Kind == SymbolKind.Station) return id;
+                survey ??= id;
+            }
+        }
+        return survey;
+    }
+
+    /// <summary>
+    /// The declaration of the station <paramref name="raw"/> names when written at <paramref name="offset"/>:
+    /// a bare id is looked up in the innermost survey around the offset, then in each enclosing one.
+    /// </summary>
+    private static SourceSpan? StationInEnclosingSurvey(
+        WorkspaceSemanticModel workspace, string raw, string filePath, int offset)
+    {
+        if (!workspace.PerFile.TryGetValue(filePath, out var model)) return null;
+        var scope = model.Surveys.Values
+            .Where(sv => sv.DeclarationSpan.StartOffset <= offset
+                         && offset <= sv.DeclarationSpan.StartOffset + sv.DeclarationSpan.Length
+                         && string.Equals(sv.DeclarationSpan.FilePath, filePath, StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(sv => sv.Name.Parts.Length)
+            .Select(sv => sv.Name)
+            .FirstOrDefault();
+        var parts = scope.Parts.IsDefaultOrEmpty ? System.Collections.Immutable.ImmutableArray<string>.Empty : scope.Parts;
+
+        var r = StationRef.Parse(raw.Trim());
+        if (r.HasSurvey) return workspace.ResolveStationSymbol(raw, parts)?.DeclarationSpan;
+        for (int depth = parts.Length; depth >= 0; depth--)
+            if (model.Stations.TryGetValue(QualifiedName.OfStation(parts.RemoveRange(depth, parts.Length - depth), r.Point), out var st))
+                return st.DeclarationSpan;
+        return null;
+    }
+
     // A plain token arrives as Any: it may be either, so both lookups must be tried.
     private static bool WantsStation(ReferenceKind k) => k is ReferenceKind.Station or ReferenceKind.Any;
     private static bool WantsSurvey(ReferenceKind k) => k is ReferenceKind.Survey or ReferenceKind.Any;

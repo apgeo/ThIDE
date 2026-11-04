@@ -153,7 +153,7 @@ public partial class MainWindow : Window
                 {
                     docs.FindReferencesRequested += (_, term) => ShowFindReferences(term);
                     docs.RenameSymbolRequested += (_, args) => _ = HandleRenameSymbolAsync(args.Raw, args.Kind);
-                    docs.FindAllReferencesRequested += (_, args) => HandleFindAllReferences(args.Raw, args.Kind);
+                    docs.FindAllReferencesRequested += (_, args) => HandleFindAllReferences(args.Raw, args.Kind, args.FilePath, args.Offset);
                 }
                 AttachSnippetCatalog();
                 AttachAutomationPanel();
@@ -1263,14 +1263,15 @@ public partial class MainWindow : Window
     /// attributes to it (scope-correct, @-aware, cross-file) — the read-only half of true rename.
     /// </summary>
     private void HandleFindAllReferences(
-        string raw, Therion.Processing.Abstractions.ReferenceKind kind)
+        string raw, Therion.Processing.Abstractions.ReferenceKind kind, string? filePath, int offset)
     {
         IDocumentService? docs;
         try { docs = AppServices.Provider.GetService<IDocumentService>(); }
         catch { return; }
         if (docs?.Workspace is not { } workspace) return;
 
-        var references = Therion.Semantics.SymbolReferences.FindAll(workspace, raw, kind);
+        // Resolved where the token is written: a bare station id is that file's survey's station.
+        var references = Therion.Semantics.SymbolReferences.FindAll(workspace, raw, kind, filePath, offset);
         // Nothing else refers to it: a status-bar line, not a dialog or an empty list.
         if (DataContext is MainWindowViewModel vm && vm.ReportIfNoOtherReferences(raw, references)) return;
 
