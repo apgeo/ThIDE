@@ -65,10 +65,18 @@ public class ScaffoldToolsTests
     }
 
     /// <summary>The input line has to be relative to the .th that carries it, not to the workspace root.</summary>
-    [Fact]
-    public async Task Th2_appends_an_input_line_to_the_survey()
+    /// <summary>
+    /// The added line takes the file's own line ending. Both styles are written explicitly: the
+    /// fixture's raw string has the checkout's line endings, which are CRLF on Windows.
+    /// </summary>
+    [Theory]
+    [InlineData("\n")]
+    [InlineData("\r\n")]
+    public async Task Th2_appends_an_input_line_to_the_survey(string newline)
     {
         using var fixture = FixtureWorkspace.Create();
+        var survey = fixture.PathTo("caves", "upper.th");
+        File.WriteAllText(survey, File.ReadAllText(survey).ReplaceLineEndings(newline));
         var tools = await LoadedToolsAsync(fixture);
 
         var result = await tools.ScaffoldTh2("caves/upper-plan.th2", addInputTo: "caves/upper.th", dryRun: false);
@@ -76,7 +84,7 @@ public class ScaffoldToolsTests
         Assert.True(result.Ok, result.Error?.Message);
         Assert.Equal("caves/upper.th", result.Data!.AddedTo);
         Assert.Equal("input upper-plan.th2", result.Data.InputLine);
-        Assert.EndsWith("  input upper-plan.th2\nendsurvey", File.ReadAllText(fixture.PathTo("caves", "upper.th")));
+        Assert.EndsWith($"{newline}  input upper-plan.th2{newline}endsurvey", File.ReadAllText(survey));
     }
 
     [Fact]
