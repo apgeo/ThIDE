@@ -50,11 +50,21 @@ public sealed record PointObject(
     public string? Id => Options.Id;
 }
 
-/// <summary>One vertex inside a <see cref="LineObject"/>; line-point options are parsed too.</summary>
+/// <summary>
+/// One vertex inside a <see cref="LineObject"/>; line-point options are parsed too. A Bézier
+/// vertex is written <c>c1x c1y c2x c2y x y</c>: <see cref="X"/>/<see cref="Y"/> are its end point
+/// and <see cref="Control1"/>/<see cref="Control2"/> the two control points (null on a straight vertex).
+/// </summary>
 public readonly record struct LineVertex(SourceSpan Span, double X, double Y, string OptionsRaw)
 {
     /// <summary>Parsed line-point options (<c>-subtype</c>, <c>-mark</c>, <c>-smooth</c>, …).</summary>
     public Th2OptionList Options { get; init; } = Th2OptionList.Empty;
+
+    /// <summary>The first Bézier control point, or null for a straight vertex.</summary>
+    public (double X, double Y)? Control1 { get; init; }
+
+    /// <summary>The second Bézier control point, or null for a straight vertex.</summary>
+    public (double X, double Y)? Control2 { get; init; }
 }
 
 /// <summary><c>line &lt;type&gt; ... endline</c> block.</summary>

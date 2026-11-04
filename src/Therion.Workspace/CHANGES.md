@@ -6,6 +6,34 @@ and what to do. Entries also cover behaviour that reaches you through `Therion.S
 
 ## 2026-11 (round 5)
 
+### Behaviour changes
+- **Strict mode now raises every documented "lenient" check to an Error.** Three checks stayed a
+  Warning in `ParserMode.Strict`: a `fix` with fewer than three coordinates (`TH0030`), a `.th2`
+  `point` without x, y and type (`TH2_001`) and an unknown `team` role (`TH0065`). Lenient-mode
+  results are unchanged. `docs/diagnostics.md` now lists `TH0036` (a `data` order without shot
+  endpoints). Migration: none.
+- **`.th2` structure is read more faithfully.**
+  - `ScrapBlock.IsTerminated` is false for a scrap without `endscrap` (it was true whenever the scrap
+    had a body).
+  - A `line` or `area` missing its end line now also stops at a `join` line, which then parses as
+    the scrap's `JoinCommand` instead of being swallowed.
+  - `JoinCommand.Targets` keeps each target whole (`l1:end`, `l2@s2:0`) in `.th` and `.th2`; they
+    were split at `:` into separate targets.
+  - A Bézier vertex (`c1x c1y c2x c2y x y`) has its end point as `LineVertex.X`/`Y` (it was the first
+    control point); the new `LineVertex.Control1`/`Control2` hold the control points, null on a
+    straight vertex.
+  Migration: none, unless code read the first control point as the vertex.
+- **`TherionWriter` no longer drops what it cannot write.** It now writes `units`, `calibrate`,
+  `declination`, `sd`, `grid-angle`, `join`, `mark`, `extend`, `station`, `cs`, `break`, `walls`,
+  `explo-date`, `group … endgroup`, line-vertex options and Bézier control points, and throws
+  `NotSupportedException` (naming the node type) for any other node, such as a `map`, `surface` or
+  `layout` block, which it used to leave out of the text silently. Migration: a caller that writes
+  arbitrary trees catches `NotSupportedException`.
+- **`MapMemberEdits.Plan` (and so `MapSync.Plan`) keeps a lone-CR file's line breaks.** In a file
+  whose lines end in a bare `\r`, new map members were inserted at the end of the file with `\n`
+  breaks; they now go after the map's last member (or under its header) with `\r`. LF and CRLF files
+  are unchanged. Migration: none.
+
 ### Additions
 - **`ThconfigExportEditor.Locate(text, target)`** finds an `ExportTargetInfo` listed from an earlier
   version of a thconfig in its current text: at the same lines while it is the same export, else the

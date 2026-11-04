@@ -1004,7 +1004,7 @@ public sealed class ThParser
         {
             diagnostics.Add(Diagnostic.Create(
                 DiagnosticCodes.MalformedFix,
-                DiagnosticSeverity.Warning,
+                Warn(options),
                 "'fix' requires station and x y z coordinates.",
                 line.Span));
             return new StationFix(line.Span,
@@ -1076,15 +1076,24 @@ public sealed class ThParser
         return new EquateCommand(line.Span, b.ToImmutable()) { StationSpans = spans.ToImmutable() };
     }
 
-    /// <summary>Parses <c>join a b [...] [-opt val]</c>: leading non-option tokens are targets.</summary>
+    /// <summary>
+    /// Parses <c>join a b [...] [-opt val]</c>: leading non-option words are targets, each rejoined
+    /// from the tokens the lexer split at punctuation (<c>l1@s1:end</c>).
+    /// </summary>
     private static JoinCommand ParseJoin(LogicalLine line)
     {
         var targets = ImmutableArray.CreateBuilder<string>();
         int i = 1;
-        for (; i < line.Tokens.Length; i++)
+        while (i < line.Tokens.Length && !line.Tokens[i].Text.StartsWith('-'))
         {
-            if (line.Tokens[i].Text.StartsWith('-')) break;
-            targets.Add(line.Tokens[i].Text);
+            var sb = new System.Text.StringBuilder(line.Tokens[i].Text);
+            int end = line.Tokens[i].Span.StartOffset + line.Tokens[i].Span.Length;
+            for (i++; i < line.Tokens.Length && line.Tokens[i].Span.StartOffset == end; i++)
+            {
+                sb.Append(line.Tokens[i].Text);
+                end = line.Tokens[i].Span.StartOffset + line.Tokens[i].Span.Length;
+            }
+            targets.Add(sb.ToString());
         }
         return new JoinCommand(line.Span, targets.ToImmutable(), JoinFrom(line, i));
     }

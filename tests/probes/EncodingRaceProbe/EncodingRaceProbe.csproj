@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    A one-file child process for Therion.Syntax.Tests: the code-page provider registration it
+    probes is process-global, so only a fresh process sees the first decode of a legacy encoding.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\Therion.Syntax\Therion.Syntax.csproj" />
+  </ItemGroup>
+
+</Project>

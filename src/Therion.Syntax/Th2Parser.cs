@@ -26,7 +26,7 @@ public sealed class Th2Parser
         var lines = LogicalLineReader.Split(tokens);
 
         int cursor = 0;
-        var children = ParseBody(lines, ref cursor, filePath, options, null, null, diags);
+        var children = ParseBody(lines, ref cursor, filePath, options, null, null, diags, out _);
 
         var fileSpan = TherionTokenizer.WholeFileSpan(filePath, sourceText);
 
@@ -44,9 +44,11 @@ public sealed class Th2Parser
         ref int cursor, string filePath, ParserOptions options,
         string? blockTerminator, string? blockKeyword,
         ImmutableArray<Diagnostic>.Builder diags,
+        out bool terminated,
         string? blockId = null)
     {
         var children = ImmutableArray.CreateBuilder<TherionNode>();
+        terminated = false;
 
         while (cursor < lines.Length)
         {
@@ -69,6 +71,7 @@ public sealed class Th2Parser
                         $"'{kw} {line.Tokens[1].Text}' does not match '{blockKeyword} {blockId}'.",
                         line.Tokens[1].Span));
                 cursor++;
+                terminated = true;
                 return children.ToImmutable();
             }
 
@@ -139,11 +142,8 @@ public sealed class Th2Parser
         // Extract any `-sketch <path> <x> <y>` option from the scrap header.
         var sketches = ExtractSketches(line, filePath);
 
-        bool terminated = false;
-        int startCursor = cursor;
         var body = ParseBody(lines, ref cursor, filePath, options,
-            blockTerminator: "endscrap", blockKeyword: "scrap", diags, blockId: id);
-        terminated = cursor != startCursor || body.Length > 0;
+            blockTerminator: "endscrap", blockKeyword: "scrap", diags, out bool terminated, blockId: id);
 
         var endSpan = body.Length > 0 ? body[^1].Span : line.Span;
         return new ScrapBlock(SpanUnion(line.Span, endSpan), id, optionsRaw,
@@ -173,7 +173,7 @@ public sealed class Th2Parser
         if (line.Tokens.Length < 4)
         {
             diags.Add(Diagnostic.Create(DiagnosticCodes.Th2MalformedPoint,
-                DiagnosticSeverity.Warning,
+                options.Mode == ParserMode.Strict ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
                 "'point' requires x, y, and type.", line.Span));
             return new PointObject(line.Span, 0, 0, string.Empty, JoinFrom(line, 1));
         }
@@ -236,15 +236,25 @@ public sealed class Th2Parser
             // A missing endline: stop at the next object or scrap boundary and leave that line to
             // the scrap body, instead of skipping it as a line-point option line.
             if (EndsUnterminatedBody(ln.Keyword, "endline")) break;
-            // Vertex: <x> <y> [options...] � first token is a number, not a keyword.
+            // Vertex: <x> <y> [options...], or a Bézier vertex <c1x> <c1y> <c2x> <c2y> <x> <y>
+            // whose end point is the last pair — first token is a number, not a keyword.
             if (ln.Tokens.Length >= 2 &&
                 double.TryParse(ln.Tokens[0].Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var vx) &&
                 double.TryParse(ln.Tokens[1].Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var vy))
             {
-                vertices.Add(new LineVertex(ln.Span, vx, vy, JoinFrom(ln, 2))
-                {
-                    Options = Th2OptionList.Parse(ln.Tokens, 2),
-                });
+                if (ln.Tokens.Length >= 6 && NumberAt(ln, 2) is { } c2x && NumberAt(ln, 3) is { } c2y
+                    && NumberAt(ln, 4) is { } ex && NumberAt(ln, 5) is { } ey)
+                    vertices.Add(new LineVertex(ln.Span, ex, ey, JoinFrom(ln, 6))
+                    {
+                        Options = Th2OptionList.Parse(ln.Tokens, 6),
+                        Control1 = (vx, vy),
+                        Control2 = (c2x, c2y),
+                    });
+                else
+                    vertices.Add(new LineVertex(ln.Span, vx, vy, JoinFrom(ln, 2))
+                    {
+                        Options = Th2OptionList.Parse(ln.Tokens, 2),
+                    });
             }
             cursor++;
         }
@@ -267,15 +277,19 @@ public sealed class Th2Parser
         };
     }
 
-    /// <summary>Parses <c>join a b [...] [-opt val]</c>: leading non-option tokens are targets.</summary>
+    /// <summary>
+    /// Parses <c>join a b [...] [-opt val]</c>: leading non-option words are targets, each rejoined
+    /// from the tokens the lexer split at punctuation (<c>l1:end</c>, <c>l2@s2:0</c>).
+    /// </summary>
     private static JoinCommand ParseJoin(LogicalLine line)
     {
         var targets = ImmutableArray.CreateBuilder<string>();
         int i = 1;
-        for (; i < line.Tokens.Length; i++)
+        while (i < line.Tokens.Length && !line.Tokens[i].Text.StartsWith('-'))
         {
-            if (line.Tokens[i].Text.StartsWith('-')) break;
-            targets.Add(line.Tokens[i].Text);
+            var (target, next) = CoalesceFrom(line.Tokens, i);
+            targets.Add(target);
+            i = next;
         }
         return new JoinCommand(line.Span, targets.ToImmutable(), JoinFrom(line, i));
     }
@@ -330,13 +344,13 @@ public sealed class Th2Parser
 
     /// <summary>
     /// True if <paramref name="keyword"/> cannot be part of a <c>line</c>/<c>area</c> body whose
-    /// own terminator is <paramref name="ownEnd"/>: a scrap boundary or the start or end of another
-    /// object, which means that body's terminator is missing.
+    /// own terminator is <paramref name="ownEnd"/>: a scrap boundary, the start or end of another
+    /// object, or a <c>join</c>, which means that body's terminator is missing.
     /// </summary>
     private static bool EndsUnterminatedBody(string keyword, string ownEnd) =>
         !string.Equals(keyword, ownEnd, StringComparison.OrdinalIgnoreCase) &&
         keyword.ToLowerInvariant() is "scrap" or "endscrap" or "point" or "line" or "endline"
-            or "area" or "endarea";
+            or "area" or "endarea" or "join";
 
     /// <summary>
     /// Coalesces adjacent (no-whitespace-gap) tokens starting at <paramref name="start"/> into one
@@ -369,6 +383,9 @@ public sealed class Th2Parser
         }
         return sb.ToString();
     }
+
+    private static double? NumberAt(LogicalLine line, int index) =>
+        double.TryParse(line.Tokens[index].Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var d) ? d : null;
 
     private static double ParseDouble(string text) =>
         double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var d) ? d : 0d;

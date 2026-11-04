@@ -195,7 +195,7 @@ internal static class ThCentrelineRules
                 ? "The thbook documents 'explorer', but the Therion compiler rejects it."
                 : null;
             diagnostics.Add(Diagnostic.Create(
-                DiagnosticCodes.ValueTypeMismatch, DiagnosticSeverity.Warning,
+                DiagnosticCodes.ValueTypeMismatch, Lenient(mode),
                 $"Unknown team role '{role}'.", team.Span, hint));
         }
     }

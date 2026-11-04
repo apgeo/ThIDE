@@ -1,9 +1,10 @@
 // golden / snapshot round-trip tests for TherionWriter.
 //
-// Rather than committing brittle golden-string files, these assert the writer's two strongest
-// guarantees: (1) round-trip stability — writing a re-parsed AST is byte-identical to the first
-// write (idempotent serialization, the real "golden snapshot" property); and (2) the re-parsed
-// output preserves structure and introduces no new errors.
+// Rather than committing brittle golden-string files, these assert the writer's guarantees:
+// (1) round-trip stability — writing a re-parsed AST is byte-identical to the first write
+// (idempotent serialization); (2) fidelity — the first write reads back to the same tree, spans
+// aside, so a dropped command cannot hide behind (1); and (3) the re-parsed output preserves
+// structure and introduces no new errors.
 
 using System.Linq;
 using Therion.Syntax;
@@ -47,6 +48,14 @@ public class WriterGoldenTests
         var first = WriteTh(src);
         var second = WriteTh(first);   // re-parse + re-write the writer's own output
         Assert.Equal(first, second);   // stable serialization (golden)
+
+        // Stability alone holds even when the first write drops lines, so the first write must also
+        // keep every command and read back to the same tree (spans aside).
+        Assert.Contains("units length meters", first);
+        Assert.Contains("calibrate compass 0.5", first);
+        Assert.Equal(
+            Properties.AstShape.Dump(new ThParser().Parse("a.th", src).Value!.Children, spans: false),
+            Properties.AstShape.Dump(new ThParser().Parse("a.th", first).Value!.Children, spans: false));
     }
 
     [Fact]
@@ -89,5 +98,8 @@ public class WriterGoldenTests
         var first = WriteTh2(src);
         var second = WriteTh2(first);
         Assert.Equal(first, second);
+        Assert.Equal(
+            Properties.AstShape.Dump(new Th2Parser().Parse("a.th2", src).Value!.Children, spans: false),
+            Properties.AstShape.Dump(new Th2Parser().Parse("a.th2", first).Value!.Children, spans: false));
     }
 }
