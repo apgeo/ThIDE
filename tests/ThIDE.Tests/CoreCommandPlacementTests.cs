@@ -264,18 +264,18 @@ public sealed class CoreCommandPlacementTests
     }
 
     [Fact]
-    public void Save_All_writes_every_modified_document() => UiThread.Run(() =>
+    public Task Save_All_writes_every_modified_document() => UiThread.RunAsync(async () =>
     {
         using var dir = new TempDir();
         var a = dir.Write("a.th", "survey a\nendsurvey\n");
         var b = dir.Write("b.th", "survey b\nendsurvey\n");
         var svc = NewDocuments();
-        svc.OpenFileAsync(a).GetAwaiter().GetResult();
-        svc.OpenFileAsync(b).GetAwaiter().GetResult();
+        await svc.OpenFileAsync(a);
+        await svc.OpenFileAsync(b);
         foreach (var d in svc.Documents) d.DocumentText = d.DocumentText.Replace("endsurvey", "  # x\nendsurvey");
         var vm = MainWindowViewModelHost.Create(svc);
 
-        vm.SaveAllCommand.ExecuteAsync(null).GetAwaiter().GetResult();
+        await vm.SaveAllCommand.ExecuteAsync(null);
 
         Assert.Contains("# x", File.ReadAllText(a));
         Assert.Contains("# x", File.ReadAllText(b));
