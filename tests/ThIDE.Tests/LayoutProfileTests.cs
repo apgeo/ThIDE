@@ -448,4 +448,22 @@ public class LayoutProfileTests
         Assert.Equal(new[] { "Diagnostics", "CompilerOutput", "GeneratedFiles", "Log" }, bottom.Tools);
         Assert.Equal(new[] { "ObjectBrowser" }, captured.CenterTools);
     }
+
+    // At laptop height the bottom panels kept a single Diagnostics row; the region now has a floor,
+    // carried by a wrapper (a ToolDock would hand it to its inner chrome too and overflow).
+    [Fact]
+    public void BuildFromProfile_gives_the_bottom_region_a_minimum_height_and_still_captures_it()
+    {
+        var factory = NewFactory();
+        var root = factory.BuildFromProfile(new LayoutProfile { BottomProportion = 0.31 });
+
+        var region = FindById<IProportionalDock>(root, "BottomRegion");
+        Assert.NotNull(region);
+        Assert.True(region!.MinHeight >= 200, $"bottom minimum {region.MinHeight}");
+        Assert.False(FindById<IToolDock>(root, "BottomTools")!.MinHeight > 0);
+
+        var captured = LayoutProfileCapture.Capture(root, KnownTools.Contains);
+        Assert.Equal(0.31, captured.BottomProportion);
+        Assert.Contains("Diagnostics", Assert.Single(captured.BottomSections).Tools);
+    }
 }

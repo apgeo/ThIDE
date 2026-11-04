@@ -273,6 +273,7 @@ public static class ShellCommandIds
     // ---- Editor scope (matched by the focused TherionTextEditor) ----
     public const string GoToDefinition     = "GoToDefinition";
     public const string FindReferences     = "FindReferences";
+    public const string NextOccurrenceInFile = "NextOccurrenceInFile";
     public const string RenameSymbol       = "RenameSymbol";
     public const string PeekDefinition     = "PeekDefinition";
     public const string GoToMatchingBlock  = "GoToMatchingBlock";

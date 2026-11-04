@@ -682,6 +682,8 @@
   <data name="Diag_Explain" xml:space="preserve"><value>Explain (open docs)</value></data>
   <data name="Diag_Suppress" xml:space="preserve"><value>Suppress this code</value></data>
   <data name="Diag_OpenDocs" xml:space="preserve"><value>Open docs ↗</value></data>
+  <data name="Diag_Details" xml:space="preserve"><value>Details</value></data>
+  <data name="Diag_DetailsTip" xml:space="preserve"><value>Show the full explanation and an example fix</value></data>
   <!-- Compiler output tool -->
   <data name="Comp_TabOutput" xml:space="preserve"><value>Output</value></data>
   <data name="Comp_TabRaw" xml:space="preserve"><value>Raw</value></data>
@@ -943,6 +945,7 @@
   <data name="Refs_Title" xml:space="preserve"><value>Find All References</value></data>
   <data name="Refs_Header" xml:space="preserve"><value>'{0}' — {1} occurrence(s) in {2} file(s)</value></data>
   <data name="Refs_None" xml:space="preserve"><value>No references to '{0}' were found in the workspace.</value></data>
+  <data name="Refs_NoOther" xml:space="preserve"><value>No other references to '{0}'</value></data>
   <data name="Refs_GoTo" xml:space="preserve"><value>Go to</value></data>
   <data name="Refs_Col_Kind" xml:space="preserve"><value>Kind</value></data>
   <data name="Refs_Col_Text" xml:space="preserve"><value>Line text</value></data>
@@ -963,6 +966,7 @@
   <data name="Ed_GoToEquate" xml:space="preserve"><value>Go to equate</value></data>
   <data name="Ed_GoToAggregation" xml:space="preserve"><value>Go to aggregating map</value></data>
   <data name="Ed_FindAllRefs" xml:space="preserve"><value>Find all references</value></data>
+  <data name="Ed_NextOccurrence" xml:space="preserve"><value>Next Occurrence in This File</value></data>
   <data name="Ed_RenameDots" xml:space="preserve"><value>Rename…</value></data>
   <data name="Ed_Documentation" xml:space="preserve"><value>Documentation ↗</value></data>
   <data name="Ed_OpenArrow" xml:space="preserve"><value>Open ↗</value></data>

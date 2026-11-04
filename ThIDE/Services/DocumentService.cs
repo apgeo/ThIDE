@@ -127,7 +127,7 @@ public interface IDocumentService
     event EventHandler? HistoryChanged;
     /// <summary>
     /// Reports the active editor's caret so the back/forward history tracks cursor jumps
-    /// like a normal editor (#1). Term-navigation moves (Shift+F12) pass
+    /// like a normal editor (#1). Term-navigation moves (Ctrl+Shift+F12) pass
     /// <paramref name="isTermNavigation"/>=true and are ignored.
     /// </summary>
     void ReportCaret(Therion.Core.SourceSpan span, bool isTermNavigation, bool fromPointer = false);
@@ -584,7 +584,7 @@ public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, 
     // the cursor comes to rest on — by clicking, arrowing, paging, go-to-definition, or
     // switching files — is a stop. It is NOT limited to highlighted-term/reference jumps.
     // Column-only moves (typing along a line) coalesce, and only programmatic back/forward
-    // and Shift+F12 occurrence cycling are kept out of the trail.
+    // and Ctrl+Shift+F12 occurrence cycling are kept out of the trail.
 
     private readonly System.Collections.Generic.List<Therion.Core.SourceSpan> _history = new();
     private int _historyIndex = -1;
@@ -627,7 +627,7 @@ public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, 
         // The status bar follows every caret move (#7), independent of the history filtering.
         CaretMoved?.Invoke(this, span);
 
-        // Programmatic back/forward navigation and highlighted-term cycling (Shift+F12) keep the
+        // Programmatic back/forward navigation and highlighted-term cycling (Ctrl+Shift+F12) keep the
         // reference point current but never add to the trail (#6).
         if (isTermNavigation || _suppressHistory) { _lastCaret = span; _hasLastCaret = true; return; }
 

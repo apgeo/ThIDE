@@ -66,6 +66,7 @@ public sealed class JsonKeyboardShortcutService : IKeyboardShortcutService
             // ---- Editor scope (matched by the focused TherionTextEditor) ----
             [ShellCommandIds.GoToDefinition]          = "F12",
             [ShellCommandIds.FindReferences]          = "Shift+F12",
+            [ShellCommandIds.NextOccurrenceInFile]    = "Ctrl+Shift+F12",
             [ShellCommandIds.RenameSymbol]            = "F2",
             [ShellCommandIds.PeekDefinition]          = "Alt+F12",
             [ShellCommandIds.GoToMatchingBlock]       = "Ctrl+OemCloseBrackets",

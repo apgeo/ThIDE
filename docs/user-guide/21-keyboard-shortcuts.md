@@ -42,7 +42,8 @@ expect from another editor does nothing, that is why — bind it there.
 | Shortcut | Command |
 |---|---|
 | `F12` | Go to Definition |
-| `Shift+F12` | Find References |
+| `Shift+F12` | Find All References (the list across the project) |
+| `Ctrl+Shift+F12` | Next occurrence of the word in this file |
 | `F2` | Rename Symbol (across the project) |
 | `Alt+F12` | Peek Definition |
 | `Ctrl+]` | Go to Matching Block |

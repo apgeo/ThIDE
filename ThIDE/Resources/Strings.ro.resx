@@ -682,6 +682,8 @@
   <data name="Diag_Explain" xml:space="preserve"><value>Explică (deschide documentația)</value></data>
   <data name="Diag_Suppress" xml:space="preserve"><value>Suprimă acest cod</value></data>
   <data name="Diag_OpenDocs" xml:space="preserve"><value>Deschide documentația ↗</value></data>
+  <data name="Diag_Details" xml:space="preserve"><value>Detalii</value></data>
+  <data name="Diag_DetailsTip" xml:space="preserve"><value>Afișați explicația completă și un exemplu de corectare</value></data>
   <!-- Compiler output tool -->
   <data name="Comp_TabOutput" xml:space="preserve"><value>Ieșire</value></data>
   <data name="Comp_TabRaw" xml:space="preserve"><value>Brut</value></data>
@@ -943,6 +945,7 @@
   <data name="Refs_Title" xml:space="preserve"><value>Toate referințele</value></data>
   <data name="Refs_Header" xml:space="preserve"><value>„{0}” — {1} apariții în {2} fișier(e)</value></data>
   <data name="Refs_None" xml:space="preserve"><value>Nu s-au găsit referințe la „{0}” în spațiul de lucru.</value></data>
+  <data name="Refs_NoOther" xml:space="preserve"><value>Nu există alte referințe la „{0}”</value></data>
   <data name="Refs_GoTo" xml:space="preserve"><value>Mergi la</value></data>
   <data name="Refs_Col_Kind" xml:space="preserve"><value>Tip</value></data>
   <data name="Refs_Col_Text" xml:space="preserve"><value>Textul liniei</value></data>
@@ -963,6 +966,7 @@
   <data name="Ed_GoToEquate" xml:space="preserve"><value>Salt la equate</value></data>
   <data name="Ed_GoToAggregation" xml:space="preserve"><value>Salt la harta care îl agregă</value></data>
   <data name="Ed_FindAllRefs" xml:space="preserve"><value>Găsește toate referințele</value></data>
+  <data name="Ed_NextOccurrence" xml:space="preserve"><value>Următoarea apariție în acest fișier</value></data>
   <data name="Ed_RenameDots" xml:space="preserve"><value>Redenumește…</value></data>
   <data name="Ed_Documentation" xml:space="preserve"><value>Documentație ↗</value></data>
   <data name="Ed_OpenArrow" xml:space="preserve"><value>Deschide ↗</value></data>

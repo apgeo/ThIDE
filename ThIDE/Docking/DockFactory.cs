@@ -480,6 +480,19 @@ public sealed class DockFactory : Factory
         return result;
     }
 
+    // A ToolDock passes its MinHeight to its inner chrome as well, which then overflows the dock by
+    // the height of its title bar; a one-child ProportionalDock around it carries the minimum instead.
+    private IDockable WithMinimumHeight(IDockable region) => new ProportionalDock
+    {
+        Id = BottomRegionId,
+        Orientation = Orientation.Vertical,
+        Proportion = region.Proportion,
+        MinHeight = BottomRegionMinHeight,
+        VisibleDockables = CreateList<IDockable>(region),
+    };
+
+    private const string BottomRegionId = "BottomRegion";
+
     private ToolDock MakeToolDock(string id, Alignment alignment, BuiltSection s, double proportion) => new()
     {
         Id = id,
@@ -525,6 +538,13 @@ public sealed class DockFactory : Factory
             VisibleDockables = children,
         };
     }
+
+    /// <summary>
+    /// The bottom panels (Diagnostics, Compiler Output, …) never shrink below their toolbars plus a
+    /// header and about three rows: at laptop height the default proportion left the Diagnostics list
+    /// a single row, or none at all once the explanation pane opened.
+    /// </summary>
+    private const double BottomRegionMinHeight = 250;
 
     /// <summary>
     /// Builds a renderable dock tree from a declarative profile: left/right rails (possibly
@@ -584,6 +604,7 @@ public sealed class DockFactory : Factory
         var leftNode = BuildRegion(leftSections, "LeftTools", Alignment.Left, leftProp, Orientation.Vertical);
         var rightNode = BuildRegion(rightSections, "RightTools", Alignment.Right, rightProp, Orientation.Vertical);
         var bottomNode = BuildRegion(bottomSections, "BottomTools", Alignment.Bottom, bottomProp, Orientation.Horizontal);
+        if (bottomSections.Count > 0) bottomNode = WithMinimumHeight(bottomNode);
 
         var centerColumn = new ProportionalDock
         {
@@ -671,7 +692,8 @@ public sealed class DockFactory : Factory
         {
             LeftProportion = Prop("LeftTools", baseState.LeftProportion),
             RightProportion = Prop("RightTools", baseState.RightProportion),
-            BottomProportion = Prop("BottomTools", baseState.BottomProportion),
+            // The splitter resizes the wrapper that carries the bottom minimum, when there is one.
+            BottomProportion = Prop(BottomRegionId, Prop("BottomTools", baseState.BottomProportion)),
             CenterProportion = Prop("CenterColumn", baseState.CenterProportion),
             BottomActiveTab = Active("BottomTools") ?? baseState.BottomActiveTab,
             RightActiveTab = Active("RightTools") ?? baseState.RightActiveTab,
@@ -926,7 +948,7 @@ public sealed class DockFactory : Factory
             VisibleDockables = CreateList<IDockable>(
                 documentDock,
                 new ProportionalDockSplitter(),
-                bottomTools),
+                WithMinimumHeight(bottomTools)),
         };
 
         var mainRow = new ProportionalDock
