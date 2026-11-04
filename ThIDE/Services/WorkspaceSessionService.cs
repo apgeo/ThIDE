@@ -22,7 +22,14 @@ using Therion.Workspace.Editing;
 namespace ThIDE.Services;
 
 /// <summary>One detected/known thconfig file, with a display string for the dropdown (#3).</summary>
-public sealed record ThconfigCandidate(string FullPath, string DisplayPath, bool IsExternal);
+public sealed record ThconfigCandidate(string FullPath, string DisplayPath, bool IsExternal)
+{
+    /// <summary>
+    /// The display path: what the switcher's accessible value and its entries' names fall back to
+    /// (the record's own ToString() put "ThconfigCandidate { FullPath = … }" in screen readers).
+    /// </summary>
+    public override string ToString() => DisplayPath;
+}
 
 /// <summary>An on-disk change to a tracked file (drives editor + workspace banners, #5b/#6).</summary>
 public sealed record ExternalFileChange(string Path, DateTime TimeUtc, bool Deleted);

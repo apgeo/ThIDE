@@ -47,6 +47,8 @@
                         <Style Selector="ListBoxItem">
                             <Setter Property="MinHeight" Value="0" />
                             <Setter Property="Padding" Value="8,2" />
+                            <!-- Screen readers and the automation tree name a row by its title. -->
+                            <Setter Property="AutomationProperties.Name" Value="{Binding Title}" />
                         </Style>
                         <Style Selector="Grid.dimmed">
                             <Setter Property="Opacity" Value="0.55" />

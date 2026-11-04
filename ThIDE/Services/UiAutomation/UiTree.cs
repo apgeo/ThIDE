@@ -20,6 +20,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.LogicalTree;
+using Avalonia.VisualTree;
 using Avalonia.Media.Imaging;
 
 namespace ThIDE.Services.UiAutomation;
@@ -246,7 +247,8 @@ internal static class UiTree
         }
         if (action == "expand") throw new UiAutomationException("The menu item has no submenu.");
         mi.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent, mi));
-        mi.FindLogicalAncestorOfType<ContextMenu>()?.Close();   // as a click on it would
+        // As a click on it would: the context menu, or the menu bar whose top-level item stayed drawn open.
+        mi.FindLogicalAncestorOfType<MenuBase>()?.Close();
         return "invoked";
     }
 
@@ -274,21 +276,36 @@ internal static class UiTree
         return window.FocusManager?.GetFocusedElement() ?? window;
     }
 
-    /// <summary>Raises KeyDown/KeyUp for a gesture like "Ctrl+S", "Escape" or "Ctrl+Shift+F".</summary>
+    /// <summary>
+    /// Presses a gesture like "Ctrl+S", "Escape", "F5" or "Ctrl+Shift+F" on <paramref name="target"/>: the
+    /// KeyBindings of the target and its ancestors first, as the keyboard device does (a window's F5 is a
+    /// KeyBinding, which a raised KeyDown alone never reaches), then KeyDown if no binding took it, then KeyUp.
+    /// </summary>
     public static void Key(IInputElement target, string gesture)
     {
         KeyGesture g;
         try { g = KeyGesture.Parse(gesture); }
         catch (Exception ex) { throw new UiAutomationException($"Can't parse key gesture '{gesture}': {ex.Message}"); }
-        foreach (var ev in new[] { InputElement.KeyDownEvent, InputElement.KeyUpEvent })
+        KeyEventArgs Args(RoutedEvent ev) => new() { RoutedEvent = ev, Key = g.Key, KeyModifiers = g.KeyModifiers, Source = target };
+        var down = Args(InputElement.KeyDownEvent);
+        RunKeyBindings(target, down);
+        if (!down.Handled) target.RaiseEvent(down);
+        target.RaiseEvent(Args(InputElement.KeyUpEvent));
+    }
+
+    /// <summary>Runs the first KeyBinding matching <paramref name="e"/> on the target or a visual ancestor.</summary>
+    internal static void RunKeyBindings(IInputElement target, KeyEventArgs e)
+    {
+        for (var at = target as Visual; at is not null && !e.Handled; at = at.GetVisualParent())
         {
-            target.RaiseEvent(new KeyEventArgs
+            if (at is not InputElement element) continue;
+            foreach (var binding in element.KeyBindings.ToList())
             {
-                RoutedEvent = ev,
-                Key = g.Key,
-                KeyModifiers = g.KeyModifiers,
-                Source = target,
-            });
+                if (binding.Gesture?.Matches(e) != true || binding.Command?.CanExecute(binding.CommandParameter) != true) continue;
+                e.Handled = true;
+                binding.Command.Execute(binding.CommandParameter);
+                return;
+            }
         }
     }
 

@@ -32,6 +32,9 @@ public sealed class QuickPickItem
     // Pre-lowered match fields (filled by providers) so filtering is allocation-light.
     public string NameLower { get; init; } = string.Empty;
     public string PathLower { get; init; } = string.Empty;
+
+    /// <summary>The title: what a list item's accessible name falls back to (it was the class name).</summary>
+    public override string ToString() => Title;
 }
 
 public partial class QuickPickViewModel : ObservableObject
