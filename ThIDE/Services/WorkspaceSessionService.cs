@@ -106,6 +106,8 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
     private TherionWorkspace? _workspace;
     private DebouncedFileWatcher? _rootWatcher;
     private readonly Dictionary<string, SelfWriteMark> _selfWrites = new(FilePaths.Comparer);
+    // A hash of each loaded file's bytes as last seen (see IsUnchangedOnDisk); null when unreadable.
+    private readonly Dictionary<string, byte[]?> _seen = new(FilePaths.Comparer);
     private readonly HashSet<string> _externalConfigs = new(FilePaths.Comparer);
 
     public string? RootPath { get; private set; }
@@ -644,10 +646,10 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
         FileSystemChanged?.Invoke(this, EventArgs.Empty);
         if (IsThconfig(full)) RescanCandidates();
 
-        if (IsSelfWrite(full)) return; // our own Save — not an external edit
-
         bool tracked = Covers(full);
-        if (!tracked) return;
+        bool unchanged = tracked && IsUnchangedOnDisk(full);   // hashed even for our own save, to keep it current
+        if (IsSelfWrite(full)) return; // our own Save — not an external edit
+        if (!tracked || unchanged) return;
         ExternalFileChanged?.Invoke(this, new ExternalFileChange(full, DateTime.UtcNow, !File.Exists(full)));
     }
 
@@ -674,6 +676,48 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
             _selfWrites.Remove(full);
             return false;
         }
+    }
+
+    // The watcher reports a chmod or chown as a change too (inotify's attribute event), and every
+    // report raised "modified outside the editor". A file whose bytes are what they were when it was
+    // loaded, or at its last event, has not been edited. Records what it holds now.
+    private bool IsUnchangedOnDisk(string full)
+    {
+        var hash = ContentHash(full);
+        lock (_gate)
+        {
+            bool same = hash is not null && _seen.TryGetValue(full, out var last) && last is not null
+                && hash.AsSpan().SequenceEqual(last);
+            _seen[full] = hash;
+            return same;
+        }
+    }
+
+    // Remembers the loaded files not seen yet, so their first event can be told apart from a chmod. A
+    // file already remembered keeps its hash: only its own watcher event moves it on, so a rebuild that
+    // runs between an external write and that write's event cannot hide the write.
+    private void RememberLoadedFiles()
+    {
+        if (_workspace?.LoadedFiles is not { } files) return;
+        foreach (var file in files)
+        {
+            var full = TryFull(file);
+            bool known;
+            lock (_gate) known = _seen.ContainsKey(full);
+            if (known) continue;
+            var hash = ContentHash(full);
+            lock (_gate) _seen.TryAdd(full, hash);
+        }
+    }
+
+    private static byte[]? ContentHash(string path)
+    {
+        try
+        {
+            using var stream = File.OpenRead(path);
+            return System.Security.Cryptography.SHA256.HashData(stream);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return null; }
     }
 
     private static (long Length, DateTime WriteUtc) StampOf(string path)
@@ -739,7 +783,11 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
 
     private static string TryFull(string p) { try { return Path.GetFullPath(p); } catch { return p; } }
 
-    private void Raise() => Changed?.Invoke(this, EventArgs.Empty);
+    private void Raise()
+    {
+        Changed?.Invoke(this, EventArgs.Empty);
+        RememberLoadedFiles();
+    }
 
     public async ValueTask DisposeAsync()
     {
