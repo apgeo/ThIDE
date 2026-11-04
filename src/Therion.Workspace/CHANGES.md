@@ -12,6 +12,17 @@ and what to do. Entries also cover behaviour that reaches you through `Therion.S
   `point` without x, y and type (`TH2_001`) and an unknown `team` role (`TH0065`). Lenient-mode
   results are unchanged. `docs/diagnostics.md` now lists `TH0036` (a `data` order without shot
   endpoints). Migration: none.
+- **`.th2` structure is read more faithfully.**
+  - `ScrapBlock.IsTerminated` is false for a scrap without `endscrap` (it was true whenever the scrap
+    had a body).
+  - A `line` or `area` missing its end line now also stops at a `join` line, which then parses as
+    the scrap's `JoinCommand` instead of being swallowed.
+  - `JoinCommand.Targets` keeps each target whole (`l1:end`, `l2@s2:0`) in `.th` and `.th2`; they
+    were split at `:` into separate targets.
+  - A Bézier vertex (`c1x c1y c2x c2y x y`) has its end point as `LineVertex.X`/`Y` (it was the first
+    control point); the new `LineVertex.Control1`/`Control2` hold the control points, null on a
+    straight vertex.
+  Migration: none, unless code read the first control point as the vertex.
 
 ## 2026-11 (later)
 
