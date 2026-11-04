@@ -18,6 +18,8 @@ public interface ITherionWriter
 /// Default writer for <c>.th</c> / <c>.thconfig</c> / <c>.th2</c> files.
 /// Round-trip fidelity is best-effort: unknown commands keep their raw arguments,
 /// known commands re-emit their typed fields with original options appended raw.
+/// A node it has no form for (a map, surface, layout, … block) throws
+/// <see cref="NotSupportedException"/> rather than being left out of the text.
 /// </summary>
 public sealed class TherionWriter : ITherionWriter
 {
@@ -119,8 +121,12 @@ public sealed class TherionWriter : ITherionWriter
                 foreach (var v in l.Vertices)
                 {
                     Indent(sb, indent + 1);
-                    sb.Append(v.X.ToString("R", CultureInfo.InvariantCulture)).Append(' ')
-                      .Append(v.Y.ToString("R", CultureInfo.InvariantCulture)).Append('\n');
+                    if (v.Control1 is { } c1 && v.Control2 is { } c2)
+                        sb.Append(Num(c1.X)).Append(' ').Append(Num(c1.Y)).Append(' ')
+                          .Append(Num(c2.X)).Append(' ').Append(Num(c2.Y)).Append(' ');
+                    sb.Append(Num(v.X)).Append(' ').Append(Num(v.Y));
+                    if (!string.IsNullOrWhiteSpace(v.OptionsRaw)) sb.Append(' ').Append(v.OptionsRaw);
+                    sb.Append('\n');
                 }
                 if (l.IsTerminated) { Indent(sb, indent); sb.Append("endline\n"); }
                 break;
@@ -141,8 +147,53 @@ public sealed class TherionWriter : ITherionWriter
                 if (!string.IsNullOrWhiteSpace(u.RawArguments)) sb.Append(' ').Append(u.RawArguments);
                 sb.Append('\n');
                 break;
+
+            // Commands whose arguments the parser keeps raw are written back from that text.
+            case UnitsCommand un: Line(sb, indent, "units", un.Raw); break;
+            case CalibrateCommand ca: Line(sb, indent, "calibrate", ca.Raw); break;
+            case DeclinationCommand de: Line(sb, indent, "declination", de.Raw); break;
+            case SdCommand sd: Line(sb, indent, "sd", sd.Raw); break;
+
+            case GridAngleCommand g:
+                Line(sb, indent, "grid-angle", g.Value is { } gv ? Num(gv) : null, g.Unit); break;
+            case JoinCommand j:
+                Line(sb, indent, "join", string.Join(' ', j.Targets), j.OptionsRaw); break;
+            case MarkCommand m:
+                Line(sb, indent, "mark", string.Join(' ', m.Stations), m.MarkType); break;
+            case ExtendCommand ex:
+                Line(sb, indent, "extend", ex.Spec, string.Join(' ', ex.Stations)); break;
+            case StationCommand st:
+                Line(sb, indent, "station", st.Station,
+                    st.Comment is null && st.Flags.IsEmpty ? null : Quote(st.Comment ?? ""), string.Join(' ', st.Flags));
+                break;
+            case CsCommand cs: Line(sb, indent, "cs", cs.System); break;
+            case BreakCommand: Line(sb, indent, "break"); break;
+            case WallsCommand wa: Line(sb, indent, "walls", wa.Value); break;
+            case ExploDateCommand ed: Line(sb, indent, "explo-date", ed.Value); break;
+
+            case GroupCommand gr:
+                Line(sb, indent, "group");
+                foreach (var c in gr.Children) WriteNode(sb, c, indent + 1);
+                Line(sb, indent, "endgroup");
+                break;
+
+            default:
+                throw new NotSupportedException($"TherionWriter cannot write a {node.GetType().Name} node.");
         }
     }
+
+    /// <summary>One line: the keyword, then each non-blank part after a space.</summary>
+    private static void Line(StringBuilder sb, int indent, string keyword, params string?[] parts)
+    {
+        Indent(sb, indent); sb.Append(keyword);
+        foreach (var p in parts)
+            if (!string.IsNullOrWhiteSpace(p)) sb.Append(' ').Append(p);
+        sb.Append('\n');
+    }
+
+    private static string Num(double v) => v.ToString("R", CultureInfo.InvariantCulture);
+
+    private static string Quote(string s) => "\"" + s.Replace("\"", "\"\"") + "\"";
 
     private static void Indent(StringBuilder sb, int n)
     {

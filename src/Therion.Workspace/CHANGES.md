@@ -23,6 +23,12 @@ and what to do. Entries also cover behaviour that reaches you through `Therion.S
     control point); the new `LineVertex.Control1`/`Control2` hold the control points, null on a
     straight vertex.
   Migration: none, unless code read the first control point as the vertex.
+- **`TherionWriter` no longer drops what it cannot write.** It now writes `units`, `calibrate`,
+  `declination`, `sd`, `grid-angle`, `join`, `mark`, `extend`, `station`, `cs`, `break`, `walls`,
+  `explo-date`, `group … endgroup`, line-vertex options and Bézier control points, and throws
+  `NotSupportedException` (naming the node type) for any other node, such as a `map`, `surface` or
+  `layout` block, which it used to leave out of the text silently. Migration: a caller that writes
+  arbitrary trees catches `NotSupportedException`.
 
 ## 2026-11 (later)
 
