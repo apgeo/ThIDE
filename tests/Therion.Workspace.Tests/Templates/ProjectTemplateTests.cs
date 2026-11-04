@@ -59,6 +59,21 @@ public class ProjectTemplateTests : IDisposable
     }
 
     [Fact]
+    public void Value_problems_name_the_variable_and_the_value_and_match_Validate()
+    {
+        var values = ProjectTemplateEngine.Defaults(B("single-cave"), Now);
+        values["project"] = "two words";
+        values["title"] = "";
+
+        var problems = ProjectTemplateEngine.ValueProblems(B("single-cave"), values);
+
+        Assert.Equal([("project", "two words"), ("title", "")], problems.Select(p => (p.Variable.Id, p.Value)));
+        Assert.Equal(
+            ["Cave name (no spaces): 'two words' cannot be written into the project", "Title: a value is needed"],
+            ProjectTemplateEngine.Validate(B("single-cave"), values));
+    }
+
+    [Fact]
     public void A_text_value_used_in_a_path_cannot_climb_out()
     {
         var template = new ProjectTemplate("t", "t", "", [new("dir", "dir", "x")], [new("${dir}/a.th", "x")], [], "");

@@ -260,11 +260,11 @@ public partial class MainWindow : Window
         }
 
         if (items.Count == 0)
-            items.Add(new MenuItem { Header = "(no recent files)", IsEnabled = false });
+            items.Add(new MenuItem { Header = ThIDE.Resources.Tr.Get("Recent_NoFiles"), IsEnabled = false });
         else
         {
             items.Add(new Separator());
-            items.Add(new MenuItem { Header = "Clear Recent Files", Command = vm.ClearRecentCommand });
+            items.Add(new MenuItem { Header = ThIDE.Resources.Tr.Get("Recent_ClearFiles"), Command = vm.ClearRecentCommand });
         }
         menu.ItemsSource = items;
     }
@@ -290,7 +290,7 @@ public partial class MainWindow : Window
         item.Click += CloseMainMenu;
         var toggle = new MenuItem
         {
-            Header = isPinned ? "Unpin" : "Pin",
+            Header = ThIDE.Resources.Tr.Get(isPinned ? "Recent_Unpin" : "Recent_Pin"),
             Command = isPinned ? vm.UnpinRecentCommand : vm.PinRecentCommand,
             CommandParameter = path,
         };
@@ -324,11 +324,11 @@ public partial class MainWindow : Window
         }
 
         if (items.Count == 0)
-            items.Add(new MenuItem { Header = "(no recent directories)", IsEnabled = false });
+            items.Add(new MenuItem { Header = ThIDE.Resources.Tr.Get("Recent_NoDirectories"), IsEnabled = false });
         else
         {
             items.Add(new Separator());
-            items.Add(new MenuItem { Header = "Clear Recent Directories", Command = vm.ClearRecentDirectoriesCommand });
+            items.Add(new MenuItem { Header = ThIDE.Resources.Tr.Get("Recent_ClearDirectories"), Command = vm.ClearRecentDirectoriesCommand });
         }
         menu.ItemsSource = items;
     }
@@ -451,8 +451,8 @@ public partial class MainWindow : Window
     private async void OnSearchGoTo(object? s, Avalonia.Interactivity.RoutedEventArgs e)
     {
         if (ActiveEditor is not { } ed) return;
-        var input = await new InputDialog("Go To Line",
-            $"Line number (1–{ed.LineCount}):", ed.CurrentLine.ToString()).ShowAsync(this);
+        var input = await new InputDialog(ThIDE.Resources.Tr.Get("Ed_GoToLineTitle"),
+            string.Format(ThIDE.Resources.Tr.Get("GoTo_LinePrompt"), ed.LineCount), ed.CurrentLine.ToString()).ShowAsync(this);
         if (int.TryParse(input, out var line)) ed.GoToLine(line);
     }
 
@@ -1310,8 +1310,8 @@ public partial class MainWindow : Window
                 ?? CollectRenameChanges(workspace, docs!.Active, nav, raw, kind, oldName, targetSpan.Value);
             if (changes.Count == 0)
             {
-                await new MessageDialog("Rename Symbol",
-                    $"No occurrences of '{oldName}' were found in the workspace to rename.").ShowAsync(this);
+                await new MessageDialog(ThIDE.Resources.Tr.Get("Rename_Title"),
+                    string.Format(ThIDE.Resources.Tr.Get("Rename_NoOccurrences"), oldName)).ShowAsync(this);
                 return;
             }
 
@@ -1335,7 +1335,7 @@ public partial class MainWindow : Window
 
             if (!complex)
             {
-                var dlg = new InputDialog("Rename Symbol",
+                var dlg = new InputDialog(ThIDE.Resources.Tr.Get("Rename_Title"),
                     string.Format(ThIDE.Resources.Tr.Get("Rename_NewNameFor"), oldName), oldName,
                     seeOccurrencesText: ThIDE.Resources.Tr.Get("Rename_SeeOccurrences"));
                 var entered = await dlg.ShowAsync(this);
@@ -1372,15 +1372,15 @@ public partial class MainWindow : Window
         catch (System.Exception ex)
         {
             // Never let the rename fail silently (it runs fire-and-forget from the editor event).
-            await new MessageDialog("Rename Symbol failed", ex.ToString()).ShowAsync(this);
+            await new MessageDialog(ThIDE.Resources.Tr.Get("Rename_Failed"), ex.ToString()).ShowAsync(this);
         }
     }
 
     private static char? InvalidName(string name) => Therion.Syntax.TherionIdentifiers.FirstIllegalChar(name);
 
     private System.Threading.Tasks.Task ShowInvalidNameAsync(string name, char bad) =>
-        new MessageDialog("Rename Symbol",
-            $"'{name}' is not a valid Therion name — it contains '{bad}'.").ShowAsync(this);
+        new MessageDialog(ThIDE.Resources.Tr.Get("Rename_Title"),
+            string.Format(ThIDE.Resources.Tr.Get("Rename_InvalidName"), name, bad)).ShowAsync(this);
 
     /// <summary>
     /// Opens the occurrences preview (draining pending input first so the modal hand-off is reliable) and

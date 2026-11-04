@@ -1955,7 +1955,7 @@ public partial class MainWindowViewModel : ViewModelBase
         var result = _editService.ReplaceRowValue(ast, _documents.CurrentText, source, idx, value);
         if (!result.Success || result.UpdatedText is null)
         {
-            StatusText = result.Diagnostics.Length > 0 ? result.Diagnostics[0].Message : "Edit failed.";
+            StatusText = result.Diagnostics.Length > 0 ? DiagnosticText.Message(result.Diagnostics[0]) : Tr.Get("Status_EditFailed");
             RevertShotRow(e.Row);
             return;
         }
@@ -2158,7 +2158,7 @@ public partial class MainWindowViewModel : ViewModelBase
         StatusEncoding = DetectEncoding(doc.FilePath);
         StatusFileType = string.IsNullOrEmpty(doc.InterpretedTypeText)
             ? string.Empty
-            : doc.InterpretedTypeText + (doc.IsParsed ? " · parsed" : " · not parsed");
+            : string.Format(Tr.Get(doc.IsParsed ? "Status_FileParsed" : "Status_FileNotParsed"), doc.InterpretedTypeText);
     }
 
     /// <summary>

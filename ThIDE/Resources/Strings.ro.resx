@@ -1753,6 +1753,80 @@ Aplici modificările? Pașii care nu au putut fi previzualizați rulează acum.<
   <data name="Diag_Sev_Warning" xml:space="preserve"><value>Avertisment</value></data>
   <data name="Diag_Sev_Info" xml:space="preserve"><value>Informație</value></data>
   <data name="Diag_Sev_Hint" xml:space="preserve"><value>Sugestie</value></data>
+  <data name="Status_EditFailed" xml:space="preserve"><value>Editarea a eșuat.</value></data>
+  <data name="Explorer_MoveToTrash" xml:space="preserve"><value>Mută în coșul de gunoi</value></data>
+  <data name="Explorer_MoveToRecycleBin" xml:space="preserve"><value>Mută în Coșul de reciclare</value></data>
+  <data name="Explorer_DeleteUndoable" xml:space="preserve"><value>{0}:
+
+{1}
+
+Îl puteți restaura din coșul de gunoi.</value></data>
+  <data name="Explorer_DeletePermanent" xml:space="preserve"><value>Ștergeți definitiv?
+
+{0}
+
+Acțiunea nu poate fi anulată.</value></data>
+  <data name="GoTo_LinePrompt" xml:space="preserve"><value>Numărul liniei (1–{0}):</value></data>
+  <data name="Rename_Title" xml:space="preserve"><value>Redenumire simbol</value></data>
+  <data name="Rename_Failed" xml:space="preserve"><value>Redenumirea simbolului a eșuat</value></data>
+  <data name="Rename_NoOccurrences" xml:space="preserve"><value>Nu s-a găsit nicio apariție a „{0}” de redenumit în spațiul de lucru.</value></data>
+  <data name="Rename_InvalidName" xml:space="preserve"><value>„{0}” nu este un nume Therion valid — conține „{1}”.</value></data>
+  <data name="Recent_NoFiles" xml:space="preserve"><value>(niciun fișier recent)</value></data>
+  <data name="Recent_ClearFiles" xml:space="preserve"><value>Golește fișierele recente</value></data>
+  <data name="Recent_NoDirectories" xml:space="preserve"><value>(niciun dosar recent)</value></data>
+  <data name="Recent_ClearDirectories" xml:space="preserve"><value>Golește dosarele recente</value></data>
+  <data name="Recent_Pin" xml:space="preserve"><value>Fixează în listă</value></data>
+  <data name="Recent_Unpin" xml:space="preserve"><value>Elimină fixarea</value></data>
+  <data name="File_Type_Thconfig" xml:space="preserve"><value>Configurație Therion</value></data>
+  <data name="File_Type_Th" xml:space="preserve"><value>Topografie Therion</value></data>
+  <data name="File_Type_Th2" xml:space="preserve"><value>Schiță Therion</value></data>
+  <data name="File_Type_PlainText" xml:space="preserve"><value>Text simplu</value></data>
+  <data name="File_Type_NoExtension" xml:space="preserve"><value>fără extensie</value></data>
+  <data name="Status_FileParsed" xml:space="preserve"><value>{0} · analizat</value></data>
+  <data name="Status_FileNotParsed" xml:space="preserve"><value>{0} · neanalizat</value></data>
+  <data name="Build_NoProject" xml:space="preserve"><value>Niciun proiect încărcat.</value></data>
+  <data name="Build_InProgress" xml:space="preserve"><value>O compilare este deja în curs.</value></data>
+  <data name="Build_Succeeded" xml:space="preserve"><value>Compilare reușită</value></data>
+  <data name="Build_SucceededNoOutputs" xml:space="preserve"><value>Compilare reușită (niciun fișier generat).</value></data>
+  <data name="Build_ArtifactCount" xml:space="preserve"><value>{0} fișier(e) generat(e)</value></data>
+  <data name="Build_FailedWithError" xml:space="preserve"><value>Compilarea a eșuat (cod de ieșire {0}): {1}</value></data>
+  <data name="Build_Failed" xml:space="preserve"><value>Compilarea a eșuat (cod de ieșire {0}).</value></data>
+  <data name="Build_Cancelled" xml:space="preserve"><value>Compilare oprită.</value></data>
+  <data name="Build_CancelledUnsaved" xml:space="preserve"><value>Compilare oprită — modificări nesalvate.</value></data>
+  <data name="Build_Error" xml:space="preserve"><value>Eroare de compilare: {0}</value></data>
+  <data name="Build_SummaryOk" xml:space="preserve"><value>Compilarea s-a încheiat cu succes în {0} secunde.</value></data>
+  <data name="Build_SummaryOkFiles" xml:space="preserve"><value>Compilarea s-a încheiat cu succes în {0} secunde și a generat {1} fișier(e).</value></data>
+  <data name="Build_SummaryOkWarn" xml:space="preserve"><value>Compilarea s-a încheiat cu succes (cu {2} avertisment(e)) în {0} secunde.</value></data>
+  <data name="Build_SummaryOkWarnFiles" xml:space="preserve"><value>Compilarea s-a încheiat cu succes (cu {2} avertisment(e)) în {0} secunde și a generat {1} fișier(e).</value></data>
+  <data name="Build_SummaryFailed" xml:space="preserve"><value>Compilarea s-a încheiat cu erori în {0} secunde.</value></data>
+  <data name="Build_SummaryFailedWarn" xml:space="preserve"><value>Compilarea s-a încheiat cu erori și {2} avertisment(e) în {0} secunde.</value></data>
+  <data name="Gen_State_Stale" xml:space="preserve"><value>⚠ învechit</value></data>
+  <data name="Gen_State_Current" xml:space="preserve"><value>actual</value></data>
+  <data name="Gen_Kind_lox" xml:space="preserve"><value>Model 3D Loch</value></data>
+  <data name="Gen_Kind_3d" xml:space="preserve"><value>Model 3D Survex</value></data>
+  <data name="Gen_Kind_pdf" xml:space="preserve"><value>Hartă PDF</value></data>
+  <data name="Gen_Kind_svg" xml:space="preserve"><value>Hartă SVG</value></data>
+  <data name="Gen_Kind_xvi" xml:space="preserve"><value>Schiță XVI</value></data>
+  <data name="Gen_Kind_png" xml:space="preserve"><value>Imagine PNG</value></data>
+  <data name="Gen_Kind_tlx" xml:space="preserve"><value>Jurnal Therion</value></data>
+  <data name="Gen_Kind_shx" xml:space="preserve"><value>Index shapefile</value></data>
+  <data name="Gen_Kind_prj" xml:space="preserve"><value>Proiecție shapefile</value></data>
+  <data name="Gen_Kind_sql" xml:space="preserve"><value>Bază de date SQL</value></data>
+  <data name="Gen_Kind_csv" xml:space="preserve"><value>Bază de date CSV</value></data>
+  <data name="Gen_Kind_plt" xml:space="preserve"><value>Plot Compass</value></data>
+  <data name="Gen_Kind_wrl" xml:space="preserve"><value>Model VRML</value></data>
+  <data name="Gen_Kind_3dmf" xml:space="preserve"><value>Model 3DMF</value></data>
+  <data name="Gen_Kind_xhtml" xml:space="preserve"><value>Hartă XHTML</value></data>
+  <data name="ProjTpl_Var_project" xml:space="preserve"><value>Numele peșterii (fără spații)</value></data>
+  <data name="ProjTpl_Var_title" xml:space="preserve"><value>Titlu</value></data>
+  <data name="ProjTpl_Var_cs" xml:space="preserve"><value>Sistem de coordonate</value></data>
+  <data name="ProjTpl_Var_area" xml:space="preserve"><value>Numele zonei (fără spații)</value></data>
+  <data name="ProjTpl_Var_cave" xml:space="preserve"><value>Prima peșteră (fără spații)</value></data>
+  <data name="ProjTpl_Var_expedition" xml:space="preserve"><value>Numele expediției (fără spații)</value></data>
+  <data name="ProjTpl_Var_year" xml:space="preserve"><value>An</value></data>
+  <data name="ProjTpl_DefaultTitle" xml:space="preserve"><value>Peștera mea</value></data>
+  <data name="NewProject_ValueNeeded" xml:space="preserve"><value>{0}: este necesară o valoare</value></data>
+  <data name="NewProject_ValueInvalid" xml:space="preserve"><value>{0}: „{1}” nu poate fi scris în proiect</value></data>
   <data name="Diag_Msg_TH0002" xml:space="preserve"><value>Simbol neașteptat „{0}”.</value></data>
   <data name="Diag_Msg_TH0003" xml:space="preserve"><value>Șirului îi lipsesc ghilimelele de închidere; se termină la sfârșitul liniei.</value></data>
   <data name="Diag_Hint_TH0003" xml:space="preserve"><value>Închideți șirul cu ". Scrieți "" pentru un caracter ghilimele în interiorul lui.</value></data>

@@ -36,7 +36,7 @@ public sealed class UnixFileOperations : IFileOperations
 
     public bool DeleteIsUndoable => _useFinder || _trashCommand is not null;
 
-    public string DeleteActionLabel => DeleteIsUndoable ? "Move to Trash" : "Delete Permanently";
+    public string DeleteActionLabel => ThIDE.Resources.Tr.Get(DeleteIsUndoable ? "Explorer_MoveToTrash" : "Explorer_DeletePermanently");
 
     public bool Delete(string path)
     {
