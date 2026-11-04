@@ -9,6 +9,7 @@ namespace ThIDE.Tests;
 /// removed for good. The macOS state is reproduced on Linux: the Finder route is switched on and
 /// `osascript` is a stub on PATH that always fails.
 /// </summary>
+[Collection(ProcessEnvironmentCollection.Name)]
 public class FinderTrashFailureTests : IDisposable
 {
     private readonly string _root = Directory.CreateTempSubdirectory("thide-finder-").FullName;

@@ -7,6 +7,7 @@ namespace ThIDE.Tests;
 /// an AppImage the process path is the runtime's temporary squashfs mount; the runtime exports the
 /// durable file as APPIMAGE, and that is what an association has to point at.
 /// </summary>
+[Collection(ProcessEnvironmentCollection.Name)]
 public class FileAssociationExecutablePathTests : IDisposable
 {
     private readonly string _root = Directory.CreateTempSubdirectory("thide-appimage-").FullName;
