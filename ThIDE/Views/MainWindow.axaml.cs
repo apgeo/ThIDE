@@ -816,7 +816,7 @@ public partial class MainWindow : Window
             return;
         }
         await PreviewAndApplyAsync(string.Format(ThIDE.Resources.Tr.Get("Diag_FixAll"), code),
-            string.Format(ThIDE.Resources.Tr.Get("Diag_FixAllSummary"), fixedCount, batch.Edits.Count, skipped), batch, reload: true);
+            string.Format(ThIDE.Resources.Tr.Get("Diag_FixAllSummary"), ThIDE.Resources.Tr.Plural("Count_Fixes", fixedCount), ThIDE.Resources.Tr.Plural("Rename_Files", batch.Edits.Count), skipped), batch, reload: true);
     }
 
     /// <summary>Shows a preview of a batch and applies the ticked edits (one undo step per open file).</summary>
@@ -838,7 +838,7 @@ public partial class MainWindow : Window
         var n = AppServices.Provider.GetService<INotificationService>();
         if (outcome.Success)
         {
-            var done = string.Format(ThIDE.Resources.Tr.Get("Diag_FixAllDone"), preview.CheckedCount);
+            var done = ThIDE.Resources.Tr.Plural("Diag_FixAllDone", preview.CheckedCount);
             // One undo step for every file written; the record's notification offers it.
             if (AppServices.Provider.GetService<IWorkspaceUndoService>() is { } history && outcome.Changes is { Count: > 0 } changes)
                 history.Push(new WorkspaceUndoRecord(WorkspaceUndoRecord.OperationName(title), done, changes));
@@ -873,7 +873,7 @@ public partial class MainWindow : Window
         // An empty plan still opens the preview, which then says "Nothing to change in N files".
         var summary = batch.IsEmpty
             ? EditPreviewViewModel.NothingToChange(CountFiles(files) - skipped.Count, skipped.Count)
-            : string.Format(ThIDE.Resources.Tr.Get("FormatAll_Summary"), rows.Count, skipped.Count);
+            : EditPreviewViewModel.ChangeSummary("FormatAll_Summary", rows.Count, skipped.Count);
         await PreviewAndApplyAsync(title, summary, batch, rows, reload: true);
     }
 
@@ -907,7 +907,7 @@ public partial class MainWindow : Window
         var (batch, rows) = Therion.Workspace.Fixes.PathSeparatorFixes.Plan(files, p => CurrentText(docs, p), File.Exists);
         var title = ThIDE.Resources.Tr.Get("PathSep_Title");
         if (batch.IsEmpty) { AppServices.Provider.GetService<INotificationService>()?.Info(title, ThIDE.Resources.Tr.Get("PathSep_None")); return; }
-        await PreviewAndApplyAsync(title, string.Format(ThIDE.Resources.Tr.Get("PathSep_Summary"), rows.Count, batch.Edits.Count), batch, rows, reload: true);
+        await PreviewAndApplyAsync(title, string.Format(ThIDE.Resources.Tr.Get("PathSep_Summary"), ThIDE.Resources.Tr.Plural("Count_IncludePaths", rows.Count), ThIDE.Resources.Tr.Plural("Rename_Files", batch.Edits.Count)), batch, rows, reload: true);
     }
 
     /// <summary>Every .th / .th2 / thconfig file below <paramref name="root"/> (none when it is unset).</summary>
@@ -941,7 +941,7 @@ public partial class MainWindow : Window
             EditPreviewViewModel.DescribeFormatChange);
         var summary = batch.IsEmpty
             ? EditPreviewViewModel.NothingToChange(CountFiles(files) - skipped.Count, skipped.Count)
-            : string.Format(ThIDE.Resources.Tr.Get("Normalize_Summary"), rows.Count, skipped.Count);
+            : EditPreviewViewModel.ChangeSummary("Normalize_Summary", rows.Count, skipped.Count);
         await PreviewAndApplyAsync(title, summary, batch, rows, reload: true);
     }
 

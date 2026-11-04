@@ -68,7 +68,7 @@
             <TextBlock Text="{Binding Diagnostics.SummaryText}" VerticalAlignment="Center"
                        Foreground="Gray" FontSize="11" />
             <!-- Column show/hide + fit, mirroring the Generated Files grid (#3). -->
-            <Button AutomationProperties.AutomationId="Diagnostics.Columns" Content="{l:Loc Common_Columns}" Padding="6,2" FontSize="11" ToolTip.Tip="Show or hide columns">
+            <Button AutomationProperties.AutomationId="Diagnostics.Columns" Content="{l:Loc Common_Columns}" Padding="6,2" FontSize="11" ToolTip.Tip="{l:Loc Common_ShowHideColumns}">
                 <Button.Flyout>
                     <Flyout>
                         <StackPanel Spacing="2" Margin="8">
@@ -132,7 +132,7 @@
                  space and the long File path is capped with a hover tooltip (#5). -->
             <DataGrid.Columns>
                 <DataGridTextColumn Header="{l:Loc Diag_Col_Code}"     Binding="{Binding Code}"     Width="Auto" MinWidth="70" />
-                <DataGridTextColumn Header="{l:Loc Diag_Col_Severity}" Binding="{Binding Severity}" Width="Auto" MinWidth="70" />
+                <DataGridTextColumn Header="{l:Loc Diag_Col_Severity}" Binding="{Binding SeverityText}" SortMemberPath="Severity" Width="Auto" MinWidth="70" />
                 <DataGridTemplateColumn Header="{l:Loc Diag_Col_Message}" Width="*" MinWidth="160" SortMemberPath="Message">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>

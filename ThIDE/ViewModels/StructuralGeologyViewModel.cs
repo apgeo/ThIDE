@@ -483,7 +483,8 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
             _ => result.Declination.Note is { } n ? $" · {n}" : "",
         };
         Status = string.Format(ThIDE.Resources.Tr.Get("Struct_StatusFmt"),
-            Planes.Count, Measurements.Count(m => !m.IsOrigin), declNote);
+            ThIDE.Resources.Tr.Plural("Count_Planes", Planes.Count),
+            ThIDE.Resources.Tr.Plural("Count_Measurements", Measurements.Count(m => !m.IsOrigin)), declNote);
         PushPlot();
         PushPreview();
     }

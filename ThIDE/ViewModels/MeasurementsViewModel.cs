@@ -302,7 +302,7 @@ public partial class MeasurementsViewModel : ViewModelBase
                 FullName  = s.Name.ToString(),
                 ShortName = s.Name.Last,
                 ShowFullName = ShowFullStationName,
-                Kind      = s.Kind.ToString(),
+                Kind      = ThIDE.Resources.Tr.Get("StationKind_" + s.Kind),
                 Line      = s.DeclarationSpan.Start.Line,
             })
             .OrderBy(r => r.FullName, StringComparer.Ordinal);

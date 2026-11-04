@@ -160,15 +160,14 @@ public partial class WorkspaceExplorerViewModel : ViewModelBase
     }
 
     /// <summary>Short label for the active sort key, shown on the sort dropdown button (#15).</summary>
-    public string SortModeLabel => SortMode switch
+    public string SortModeLabel => ThIDE.Resources.Tr.Get(SortMode switch
     {
-        WorkspaceSortMode.Name => "Name",
-        WorkspaceSortMode.Modified => "Date modified",
-        WorkspaceSortMode.Size => "Size",
-        WorkspaceSortMode.Type => "Type",
-        WorkspaceSortMode.Created => "Date created",
-        _ => "Name",
-    };
+        WorkspaceSortMode.Modified => "Ws_Sort_Modified",
+        WorkspaceSortMode.Size => "Ws_Sort_Size",
+        WorkspaceSortMode.Type => "Ws_Sort_Type",
+        WorkspaceSortMode.Created => "Ws_Sort_Created",
+        _ => "Ws_Sort_Name",
+    });
 
     [RelayCommand] private void SortByName() => SortMode = WorkspaceSortMode.Name;
     [RelayCommand] private void SortByModified() => SortMode = WorkspaceSortMode.Modified;
@@ -224,6 +223,8 @@ public partial class WorkspaceExplorerViewModel : ViewModelBase
         _settings = settings;
         _session = session;
         _iconProvider = iconProvider;
+        // The sort button's label is code-built, so it follows a language switch by hand.
+        ThIDE.Resources.LocProxy.Instance.PropertyChanged += (_, _) => OnPropertyChanged(nameof(SortModeLabel));
 
         if (settings is not null)
         {

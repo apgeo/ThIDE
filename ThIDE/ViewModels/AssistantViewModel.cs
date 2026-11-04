@@ -41,6 +41,8 @@ public sealed partial class AssistantChatItem : ChatItemViewModel
 /// with one button that does something about it (e.g. opens the settings page that fixes it).</summary>
 public sealed class NoteChatItem : ChatItemViewModel
 {
+    private readonly Func<string>? _localize;
+
     public NoteChatItem(string text, string? actionLabel = null, Action? action = null)
     {
         Text = text;
@@ -48,7 +50,19 @@ public sealed class NoteChatItem : ChatItemViewModel
         if (action is not null && !string.IsNullOrEmpty(actionLabel)) ActionCommand = new RelayCommand(action);
     }
 
-    public string Text { get; }
+    /// <summary>A note that states a setting rather than an event: <see cref="Relocalize"/> rebuilds its text.</summary>
+    public NoteChatItem(Func<string> localize) : this(localize()) => _localize = localize;
+
+    public string Text { get; private set; }
+
+    /// <summary>Re-reads a setting note's text in the current UI language.</summary>
+    public void Relocalize()
+    {
+        if (_localize is null) return;
+        Text = _localize();
+        OnPropertyChanged(nameof(Text));
+    }
+
     public string? ActionLabel { get; }
     public ICommand? ActionCommand { get; }
     public bool HasAction => ActionCommand is not null;
@@ -125,11 +139,11 @@ public sealed partial class ToolCallChatItem : ChatItemViewModel
 
     /// <summary>A one-line "N objects" header for the list; empty when there are none.</summary>
     public string SymbolsHeader =>
-        HasSymbols ? string.Format(Tr.Get("Assistant_Objects"), Symbols.Count) : string.Empty;
+        HasSymbols ? Tr.Plural("Assistant_Objects", Symbols.Count) : string.Empty;
 
     /// <summary>The one-liner shown when collapsed: the object count if there is a list, else the state.</summary>
     public string CollapsedSummary => HasSymbols
-        ? string.Format(Tr.Get("Assistant_Objects"), Symbols.Count)
+        ? Tr.Plural("Assistant_Objects", Symbols.Count)
         : State switch
         {
             ToolCallState.Ok => Tr.Get("Assistant_ToolOk"),
@@ -289,6 +303,7 @@ public sealed partial class AssistantViewModel : ObservableObject
         _needsDataPolicy = !settings.Current.AssistantDataPolicyChosen;
         _policy = settings.Current.AssistantDataPolicy;
         settings.Changed += OnSettingsChanged;
+        LocProxy.Instance.PropertyChanged += OnUiLanguageChanged;
         _status = assistant.ModelLabel;
         RestorePreviousConversation();
     }
@@ -457,8 +472,15 @@ public sealed partial class AssistantViewModel : ObservableObject
 
     private bool _restartAfterTurn;
 
+    // The policy line states the current setting, so it follows a language switch (the other notes
+    // report what happened at the time and keep their language).
     private void AddPolicyNote() =>
-        Items.Add(new NoteChatItem(string.Format(Tr.Get("Assistant_DataPolicyChosen"), Tr.Get("Pref_AssistantDataPolicy_" + _policy))));
+        Items.Add(new NoteChatItem(() => string.Format(Tr.Get("Assistant_DataPolicyChosen"), Tr.Get("Pref_AssistantDataPolicy_" + _policy))));
+
+    private void OnUiLanguageChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        foreach (var note in Items.OfType<NoteChatItem>()) note.Relocalize();
+    }
 
     [RelayCommand]
     private void NewChat()

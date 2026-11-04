@@ -1,6 +1,6 @@
 namespace ThIDE.UiTests;
 
-/// <summary>Tools ▸ Format all files previews the changes and writes them.</summary>
+/// <summary>Tools ▸ Format All Files previews the changes and writes them.</summary>
 public class FormatAllTests
 {
     [UiFact]
@@ -12,7 +12,7 @@ public class FormatAllTests
         await using var app = await ThideApp.StartAsync(dir, "demo.thconfig");
         await app.WaitAsync("role:TabItem;name:demo.thconfig;state:selected");
 
-        await app.MenuAsync("Tools > Format all files…");
+        await app.MenuAsync("Tools > Format All Files…");
         await app.WaitAsync("#EditPreview.Window");
         Assert.Contains("demo.th", await app.TreeAsync("#EditPreview.Items"));
         await app.InvokeAsync("#EditPreview.Apply");

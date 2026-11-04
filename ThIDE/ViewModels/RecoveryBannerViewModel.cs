@@ -41,7 +41,7 @@ public sealed partial class RecoveryBannerViewModel : ObservableObject
         _restore = restore;
         _discard = discard;
         _count = paths.Count;
-        Message = string.Format(Tr.Get("Recovery_BannerMsg"), paths.Count);
+        Message = Tr.Plural("Recovery_BannerMsg", paths.Count);
         Files = string.Join(", ", paths.Select(Path.GetFileName));
         Paths = string.Join(Environment.NewLine, paths);
         IsOpen = true;
@@ -64,7 +64,7 @@ public sealed partial class RecoveryBannerViewModel : ObservableObject
             _asking = true;
             try
             {
-                if (!await confirm(string.Format(Tr.Get("Recovery_DiscardConfirm"), _count, Files)).ConfigureAwait(true))
+                if (!await confirm(Tr.Plural("Recovery_DiscardConfirm", _count, Files)).ConfigureAwait(true))
                     return;
             }
             finally { _asking = false; }

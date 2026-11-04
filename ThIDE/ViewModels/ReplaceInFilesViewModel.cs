@@ -45,9 +45,10 @@ public sealed partial class ReplaceInFilesViewModel : ViewModelBase
     public bool IsDirectoryScope => Scope == ScopeDirectory;
     partial void OnScopeChanged(string value) => OnPropertyChanged(nameof(IsDirectoryScope));
 
-    public const string ScopeProject = "Project (active thconfig)";
+    // Option ids; the combo shows them as Opt_Scope_<id>.
+    public const string ScopeProject = "Project";
     public const string ScopeDirectory = "Directory";
-    public const string ScopeOpenFiles = "Open files";
+    public const string ScopeOpenFiles = "OpenFiles";
     public string[] Scopes { get; } = { ScopeProject, ScopeDirectory, ScopeOpenFiles };
 
     public ReplaceInFilesViewModel() : this(new NullDocumentService()) { }
@@ -187,7 +188,7 @@ public sealed partial class ReplaceInFilesViewModel : ViewModelBase
 
         int total = changes.Sum(c => c.Count);
         if (changes.Count > 1 && Confirm is { } confirm
-            && !await confirm(string.Format(ThIDE.Resources.Tr.Get("Replace_Confirm"), total, changes.Count)).ConfigureAwait(true))
+            && !await confirm(string.Format(ThIDE.Resources.Tr.Get("Replace_Confirm"), ThIDE.Resources.Tr.Plural("Rename_Occurrences", total), ThIDE.Resources.Tr.Plural("Rename_Files", changes.Count))).ConfigureAwait(true))
         {
             Status = string.Empty;
             return;
@@ -196,7 +197,7 @@ public sealed partial class ReplaceInFilesViewModel : ViewModelBase
         int fileCount = ApplyEdits(changes.Select(c => (c.Path, c.NewText)));
         if (fileCount < 0) return;
 
-        var summary = string.Format(ThIDE.Resources.Tr.Get("Replace_Done"), total, fileCount);
+        var summary = string.Format(ThIDE.Resources.Tr.Get("Replace_Done"), ThIDE.Resources.Tr.Plural("Rename_Occurrences", total), ThIDE.Resources.Tr.Plural("Rename_Files", fileCount));
         if (changes.Count > 0)
         {
             var record = new WorkspaceUndoRecord(ThIDE.Resources.Tr.Get("Replace_Title"), summary,

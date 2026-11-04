@@ -44,7 +44,7 @@ public static class DiagnosticExplanations
         ["TH_SEM_012"] = new("This leg looks implausible — zero length between distinct stations, a self-loop, or an unusually long shot.", null, null),
         ["TH_SEM_013"] = new("The foresight and backsight disagree by more than the tolerance. Compass back ≈ fore ± 180°, clino back ≈ −fore.", "data normal from to length compass backcompass clino backclino", null),
         ["TH_SEM_014"] = new("An included file (input/source target) was not found on disk.", "input ../survey/part.th", "input"),
-        ["TH_SEM_015"] = new("This piece of survey is disconnected from the rest of the cave and isn't georeferenced. Join it to a neighbouring station with an 'equate', or anchor it in absolute coordinates with a 'fix' under a 'cs'.", "equate 0@thispart 14@mainpassage", "equate"),
+        ["TH_SEM_015"] = new("This piece of survey is disconnected from the rest of the cave and isn't georeferenced. Join it to a neighboring station with an 'equate', or anchor it in absolute coordinates with a 'fix' under a 'cs'.", "equate 0@thispart 14@mainpassage", "equate"),
         ["TH_SEM_016"] = new("The include path uses Windows '\\' separators. Therion on Linux and macOS reads '\\' as part of the file name, so it cannot open the file; the same path written with '/' exists. '/' works on every platform, Windows included.", "input date/cave/part.th", "input"),
 
         // XVI
@@ -54,6 +54,9 @@ public static class DiagnosticExplanations
         ["TH_XVI_004"] = new("The XVIgrid value is malformed: it needs exactly 8 numeric values.", null, null),
         ["TH_XVI_050"] = new("The sketch (.xvi) file referenced from this scrap was not found on disk.", null, null),
     };
+
+    /// <summary>Every code that has an explanation.</summary>
+    public static IEnumerable<string> Codes => Map.Keys;
 
     public static DiagnosticExplanation? For(string? code) =>
         !string.IsNullOrEmpty(code) && Map.TryGetValue(code, out var e) ? e : null;

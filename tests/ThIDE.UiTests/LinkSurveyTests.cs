@@ -1,6 +1,6 @@
 namespace ThIDE.UiTests;
 
-/// <summary>Tools ▸ Link survey file over the invented demo cave and an invented new trip.</summary>
+/// <summary>Tools ▸ Link Survey File over the invented demo cave and an invented new trip.</summary>
 public class LinkSurveyTests
 {
     private const string Trip =
@@ -17,7 +17,7 @@ public class LinkSurveyTests
         await using var app = await ThideApp.StartAsync(dir, "demo.thconfig");
         await app.WaitAsync("role:TabItem;name:demo.thconfig;state:selected");
 
-        await app.MenuAsync("Tools > Link survey file…");
+        await app.MenuAsync("Tools > Link Survey File…");
         await app.WaitAsync("#LinkSurvey.Window");
         await app.SetTextAsync("#LinkSurvey.SourcePath", trip);
         await app.InvokeAsync("#LinkSurvey.LoadSource");

@@ -34,8 +34,9 @@ public sealed partial class EditorFeatureToggle : ObservableObject
     public EditorFeatureToggle(EditorFeatureInfo info, bool enabled)
     {
         Feature = info.Feature;
-        Title = info.Title;
-        Description = info.Description;
+        // The catalog's English, in the UI language when the resx has the feature (Feat_<feature>_Title/_Desc).
+        Title = Resources.Tr.Find($"Feat_{info.Feature}_Title") ?? info.Title;
+        Description = Resources.Tr.Find($"Feat_{info.Feature}_Desc") ?? info.Description;
         IsCompiledIn = EditorFeatureFlags.Compiled(info.Feature);
         _isEnabled = enabled && IsCompiledIn;
     }

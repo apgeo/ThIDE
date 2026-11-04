@@ -110,7 +110,7 @@ internal static class RenameApplier
         if (written.Count == 0) return null;
         // One step for every file: Edit ▸ Undo Rename (and the notification's Undo) puts them all back.
         var record = new WorkspaceUndoRecord(Tr.Get("WsUndo_OpRename"),
-            string.Format(Tr.Get("Rename_Done"), oldName, newName, written.Count), written);
+            Tr.Plural("Rename_Done", written.Count, oldName, newName), written);
         history?.Push(record);
         return record;
     }

@@ -84,7 +84,7 @@ public sealed partial class DataAnalyticsViewModel : ObservableObject
     {
         IsEnabled = _settings?.Current.EnableProjectAnalytics ?? true;
         Clear();
-        if (!IsEnabled) { Summary = "Project analytics disabled in Preferences."; return; }
+        if (!IsEnabled) { Summary = ThIDE.Resources.Tr.Get("Proj_AnalyticsOff"); return; }
 
         var model = _documents?.Workspace;
         if (model is null || model.PerFile.Count == 0) { Summary = "No project open."; return; }

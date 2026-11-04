@@ -713,7 +713,7 @@ public partial class MainWindowViewModel : ViewModelBase
             {
                 var warn = Build.LastBuildWarningCount;
                 _notifications.Success(Tr.Get("Notif_BuildOkTitle"),
-                    string.Format(Tr.Get("Notif_BuildArtifacts"), Build.Artifacts.Count) + (warn > 0 ? string.Format(Tr.Get("Notif_BuildWarnings"), warn) : "."),
+                    Tr.Plural("Build_ArtifactCount", Build.Artifacts.Count) + (warn > 0 ? string.Format(Tr.Get("Notif_BuildWarnings"), Tr.Plural("Count_Warnings", warn)) : "."),
                     Tr.Get("Notif_ShowOutput"), ShowOutput);
             }
             else
@@ -962,7 +962,7 @@ public partial class MainWindowViewModel : ViewModelBase
                     {
                         _log?.Warning(
                             $"Startup file loading exceeded {timeoutSec}s — skipped {pending.Count - loaded} remaining " +
-                            $"file(s). Open them manually, or raise the limit in Preferences ▸ Performance.");
+                            $"file(s). Open them manually, or raise the limit in Settings ▸ Performance.");
                         break;
                     }
                     // Each open swaps the file into its saved tab slot (dock/float/order) when a
@@ -1055,7 +1055,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 () => RecoverBuffersAsync(recoverable), () => _crashRecovery?.ClearRecovery());
             _notifications.Post(new AppNotification(
                 Tr.Get("Notif_RecoveredTitle"),
-                string.Format(Tr.Get("Notif_RecoveredMsg"), recoverable.Count),
+                Tr.Plural("Notif_RecoveredMsg", recoverable.Count),
                 NotificationKind.Warning,
                 Tr.Get("Notif_Restore"), () => _ = RecoveryBanner.RestoreCommand.ExecuteAsync(null),
                 Tr.Get("Notif_DiscardRecovered"), () => _ = RecoveryBanner.DiscardCommand.ExecuteAsync(null)));
@@ -1894,7 +1894,7 @@ public partial class MainWindowViewModel : ViewModelBase
     public Task<bool> ConfirmCloseAsync() =>
         SaveBeforeClose.ConfirmAsync(_documents.Documents.ToList(), dirty => Views.SaveBeforeBuildDialog.ShowOverMainAsync(
                 Tr.Get("Close_SavePromptTitle"),
-                string.Format(Tr.Get("Exit_SavePromptMsg"), dirty.Count) + Environment.NewLine + Environment.NewLine
+                Tr.Plural("Exit_SavePromptMsg", dirty.Count) + Environment.NewLine + Environment.NewLine
                     + string.Join(Environment.NewLine, dirty.Select(d => "  • " + System.IO.Path.GetFileName(d.FilePath))),
                 Tr.Get("Exit_SaveAll"), Tr.Get("Close_DontSave"), Tr.Get("Common_Cancel"),
                 noWindowResult: Views.SaveBeforeBuildChoice.Cancel),

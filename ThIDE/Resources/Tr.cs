@@ -38,11 +38,27 @@ public static class Tr
     /// "1 file", "5 files", and in Romanian "1 fișier", "5 fișiere", "20 de fișiere". The forms follow
     /// the Romanian rule (few = 0 and 2–19 after the hundreds); English gives _Few the _Many text.
     /// </summary>
-    public static string Plural(string key, int n)
+    public static string Plural(string key, int n) => string.Format(Culture, Get(key + PluralForm(n)), n);
+
+    /// <summary>
+    /// <see cref="Plural(string, int)"/> for a sentence with more arguments: <paramref name="n"/> is {0}
+    /// and <paramref name="more"/> are {1}, {2}, …
+    /// </summary>
+    public static string Plural(string key, int n, params object?[] more)
+    {
+        var args = new object?[more.Length + 1];
+        args[0] = n;
+        more.CopyTo(args, 1);
+        return string.Format(Culture, Get(key + PluralForm(n)), args);
+    }
+
+    /// <summary>True when <paramref name="key"/> has plural forms (<c>key_One</c> …).</summary>
+    public static bool HasPlural(string key) => Find(key + "_One") is not null;
+
+    private static string PluralForm(int n)
     {
         int tail = Math.Abs(n) % 100;
-        var form = n == 1 ? "_One" : n == 0 || tail is >= 1 and <= 19 ? "_Few" : "_Many";
-        return string.Format(Culture, Get(key + form), n);
+        return n == 1 ? "_One" : n == 0 || tail is >= 1 and <= 19 ? "_Few" : "_Many";
     }
 
     /// <summary>Localized string for <paramref name="key"/>, or null if there is none.</summary>

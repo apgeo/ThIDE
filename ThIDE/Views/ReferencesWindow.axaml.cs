@@ -40,8 +40,8 @@ public partial class ReferencesWindow : Window
         var rows = references.Select(Row).ToList();
         this.FindControl<DataGrid>("Grid")!.ItemsSource = rows;
         this.FindControl<TextBlock>("Header")!.Text =
-            string.Format(Tr.Get("Refs_Header"), symbolName, rows.Count,
-                rows.Select(r => r.FileName).Distinct(StringComparer.OrdinalIgnoreCase).Count());
+            string.Format(Tr.Get("Refs_Header"), symbolName, Tr.Plural("Rename_Occurrences", rows.Count),
+                Tr.Plural("Rename_Files", rows.Select(r => r.FileName).Distinct(StringComparer.OrdinalIgnoreCase).Count()));
     }
 
     private ReferenceRow Row(Therion.Semantics.SymbolReference r) => new()

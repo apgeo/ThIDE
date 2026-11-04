@@ -401,7 +401,7 @@
                         <TextBlock Grid.Row="1" Grid.Column="0" Text="{l:Loc Col_Region}" VerticalAlignment="Center" />
                         <TextBox AutomationProperties.AutomationId="Project.Metadata.Region" AutomationProperties.Name="{l:Loc Col_Region}"   Grid.Row="1" Grid.Column="1" Text="{Binding Metadata.Region}" Margin="0,0,0,4" />
                         <TextBlock Grid.Row="2" Grid.Column="0" Text="{l:Loc Col_Crs}" VerticalAlignment="Center" />
-                        <TextBox AutomationProperties.AutomationId="Project.Metadata.Crs" AutomationProperties.Name="{l:Loc Col_Crs}"   Grid.Row="2" Grid.Column="1" Text="{Binding Metadata.Crs}" Watermark="e.g. EPSG:3844" Margin="0,0,0,4" />
+                        <TextBox AutomationProperties.AutomationId="Project.Metadata.Crs" AutomationProperties.Name="{l:Loc Col_Crs}"   Grid.Row="2" Grid.Column="1" Text="{Binding Metadata.Crs}" Watermark="{l:Loc Proj_CsWm}" Margin="0,0,0,4" />
                         <TextBlock Grid.Row="3" Grid.Column="0" Text="{l:Loc Col_DeclSource}" VerticalAlignment="Center" />
                         <TextBox AutomationProperties.AutomationId="Project.Metadata.DeclinationSource" AutomationProperties.Name="{l:Loc Col_DeclSource}"   Grid.Row="3" Grid.Column="1" Text="{Binding Metadata.DeclinationSource}" Margin="0,0,0,4" />
                         <TextBlock Grid.Row="4" Grid.Column="0" Text="{l:Loc Col_License}" VerticalAlignment="Center" />

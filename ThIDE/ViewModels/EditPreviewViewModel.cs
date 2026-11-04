@@ -87,7 +87,18 @@ public sealed partial class EditPreviewViewModel : ObservableObject
     public static string NothingToChange(int checkedFiles, int skipped)
     {
         var text = Tr.Plural("FormatAll_Nothing", Math.Max(0, checkedFiles));
-        return skipped > 0 ? text + " " + string.Format(Tr.Get("FormatAll_NothingSkipped"), skipped) : text;
+        return skipped > 0 ? text + " " + Tr.Plural("FormatAll_NothingSkipped", skipped) : text;
+    }
+
+    /// <summary>
+    /// The summary of a plan with changes, <paramref name="key"/> holding the rest of the text:
+    /// "1 file would change. 2 files are left alone because … Untick a file to leave it out."
+    /// </summary>
+    public static string ChangeSummary(string key, int changing, int skipped)
+    {
+        var counts = Tr.Plural("Edit_WouldChange", changing);
+        if (skipped > 0) counts += " " + Tr.Plural("Edit_LeftAlone", skipped);
+        return string.Format(Tr.Get(key), counts);
     }
 
     /// <summary>The batch with only the ticked edits.</summary>

@@ -19,14 +19,14 @@ namespace ThIDE.Tests;
 
 public class AssistantViewModelTests
 {
-    private sealed class FakeSettings : IAppSettingsService
+    internal sealed class FakeSettings : IAppSettingsService
     {
         public AppSettings Current { get; private set; } = AppSettings.Default with { AssistantDataPolicyChosen = true };
         public event EventHandler? Changed;
         public void Save(AppSettings settings) { Current = settings; Changed?.Invoke(this, EventArgs.Empty); }
     }
 
-    private sealed class FakeHost : IMcpHostService
+    internal sealed class FakeHost : IMcpHostService
     {
         public bool IsListening => Endpoint is not null;
         public int? Port => Endpoint?.Port;
@@ -47,7 +47,7 @@ public class AssistantViewModelTests
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 
-    private sealed class FakeAssistant(
+    internal sealed class FakeAssistant(
         Func<string, ChatCallbacks, CancellationToken, Task<ChatResult>> onSend) : IAssistantService
     {
         public int NewConversationCalls { get; private set; }
@@ -60,7 +60,7 @@ public class AssistantViewModelTests
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 
-    private sealed class FakeSnippetEditor : ISnippetEditor
+    internal sealed class FakeSnippetEditor : ISnippetEditor
     {
         public SnippetOutcome InsertResult { get; set; } = SnippetOutcome.Applied;
         public SnippetOutcome ReplaceResult { get; set; } = SnippetOutcome.Applied;
@@ -71,13 +71,13 @@ public class AssistantViewModelTests
     }
 
     /// <summary>A scripted assistant that finalizes a single answer (used by the code-block tests).</summary>
-    private static FakeAssistant AnswerOf(string text) => new((_, callbacks, _) =>
+    internal static FakeAssistant AnswerOf(string text) => new((_, callbacks, _) =>
     {
         callbacks.OnUpdate!(new AssistantAnswered(text));
         return Task.FromResult(new ChatResult(text, Array.Empty<ChatToolCall>(), 0, 0));
     });
 
-    private static AssistantViewModel NewVm(
+    internal static AssistantViewModel NewVm(
         IAssistantService assistant, FakeSettings? settings = null, FakeHost? host = null, ISnippetEditor? snippets = null)
     {
         var vm = new AssistantViewModel(assistant, settings ?? new FakeSettings(), host ?? new FakeHost(), snippets: snippets)

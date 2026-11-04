@@ -40,7 +40,8 @@ public sealed class EditPreviewTextTests
         {
             Assert.Equal("Nothing to change in 91 files.", EditPreviewViewModel.NothingToChange(91, 0));
             Assert.Equal("Nothing to change in 1 file.", EditPreviewViewModel.NothingToChange(1, 0));
-            Assert.StartsWith("Nothing to change in 3 files. 2 more are left alone", EditPreviewViewModel.NothingToChange(3, 2));
+            Assert.StartsWith("Nothing to change in 3 files. 2 more files are left alone", EditPreviewViewModel.NothingToChange(3, 2));
+            Assert.StartsWith("Nothing to change in 3 files. 1 more file is left alone", EditPreviewViewModel.NothingToChange(3, 1));
         });
     }
 

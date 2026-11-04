@@ -208,7 +208,7 @@ public sealed class WorkspaceUndoService(IDocumentService documents, IWorkspaceS
             await session.SetActiveThconfigAsync(active.FullPath).ConfigureAwait(true);
 
         return new(WorkspaceUndoStatus.Done, record, record.Files.Count,
-            string.Format(Tr.Get(undo ? "WsUndo_Done" : "WsUndo_Redone"), record.Label, record.Files.Count, record.FileNames()));
+            Tr.Plural(undo ? "WsUndo_Done" : "WsUndo_Redone", record.Files.Count, record.Label, record.FileNames()));
     }
 
     // Whether the file is in the state the step starts from: the state the operation left (undo) or

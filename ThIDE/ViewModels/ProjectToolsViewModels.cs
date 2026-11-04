@@ -199,7 +199,7 @@ public sealed partial class ProjectDashboardViewModel : ObservableObject
             BuildStatus = Tr.Get("Dash_BuildNever");
         else if (Build.LastBuildSucceeded)
             BuildStatus = Build.LastBuildHasWarnings
-                ? string.Format(Tr.Get("Dash_BuildOkWarnings"), Build.LastBuildTarget, Build.LastBuildWarningCount)
+                ? string.Format(Tr.Get("Dash_BuildOkWarnings"), Build.LastBuildTarget, Tr.Plural("Count_Warnings", Build.LastBuildWarningCount))
                 : string.Format(Tr.Get("Dash_BuildOk"), Build.LastBuildTarget);
         else
             BuildStatus = err.Length > 0
@@ -717,7 +717,7 @@ public sealed partial class TodoScanViewModel : ObservableObject
     private void Rebuild()
     {
         Todos.Clear();
-        if (_settings is { Current.EnableTodoScan: false }) { Summary = "TODO scan disabled (Preferences ▸ Performance)."; return; }
+        if (_settings is { Current.EnableTodoScan: false }) { Summary = Tr.Get("Proj_TodoScanOff"); return; }
 
         // Prefer unsaved editor text for open files; read the rest from disk. Snapshot the live
         // Documents collection — it can be mutated (open/close) while this scan runs.
@@ -863,7 +863,7 @@ public sealed partial class MediaManagerViewModel : ObservableObject
     private void Rebuild()
     {
         Media.Clear();
-        if (_settings is { Current.EnableMediaScan: false }) { Summary = "Media scan disabled (Preferences ▸ Performance)."; return; }
+        if (_settings is { Current.EnableMediaScan: false }) { Summary = Tr.Get("Proj_MediaScanOff"); return; }
 
         foreach (var m in MediaScanner.ScanReferenced(_documents?.Workspace)) Media.Add(m);
         // asset health — present-but-unreferenced media on disk.

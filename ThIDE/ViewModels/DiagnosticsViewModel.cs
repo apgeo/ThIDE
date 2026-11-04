@@ -25,6 +25,9 @@ public sealed record DiagnosticRow(
     int Column,
     SourceSpan Span)
 {
+    /// <summary>The severity in the UI language (the Severity column); <see cref="Severity"/> stays the enum name.</summary>
+    public string SeverityText => ThIDE.Resources.Tr.Get("Diag_Sev_" + Severity);
+
     /// <summary>Just the file name (the dedicated File Name column, #3).</summary>
     public string FileName => string.IsNullOrEmpty(File) ? string.Empty : System.IO.Path.GetFileName(File);
 
@@ -83,7 +86,7 @@ public partial class DiagnosticsViewModel : ViewModelBase
         _docs = docs;
         // The roll-up is composed from localized fragments read on each get, so re-raise it when the
         // UI language changes and it re-renders live in the new language; the rows' messages likewise.
-        if (language is not null) language.LanguageChanged += (_, _) => { Load(All); OnPropertyChanged(nameof(SummaryText)); };
+        if (language is not null) language.LanguageChanged += (_, _) => { Load(All); UpdateExplanation(Selected); OnPropertyChanged(nameof(SummaryText)); };
     }
 
     private static string T(string key) => ThIDE.Resources.Tr.Get(key);
@@ -97,7 +100,7 @@ public partial class DiagnosticsViewModel : ViewModelBase
             string warns = string.Format(T(WarningCount == 1 ? "Diag_SummaryWarn1" : "Diag_SummaryWarnN"), WarningCount);
             string errs = string.Format(T(ErrorCount == 1 ? "Diag_SummaryErr1" : "Diag_SummaryErrN"), ErrorCount);
             string files = string.Format(T(FilesWithIssues == 1 ? "Diag_SummaryFile1" : "Diag_SummaryFileN"), FilesWithIssues);
-            string suff = SuppressedCount > 0 ? string.Format(T("Diag_SummarySuppressedFmt"), SuppressedCount) : "";
+            string suff = SuppressedCount > 0 ? ThIDE.Resources.Tr.Plural("Diag_SummarySuppressedFmt", SuppressedCount) : "";
             return string.Format(T("Diag_SummaryFmt"), warns, errs, files) + suff;
         }
     }
@@ -197,7 +200,7 @@ public partial class DiagnosticsViewModel : ViewModelBase
     private void UpdateExplanation(DiagnosticRow? row)
     {
         var ex = row is null ? null : DiagnosticExplanations.For(row.Code);
-        SelectedExplanation = ex?.Summary ?? string.Empty;
+        SelectedExplanation = ex is null ? string.Empty : ExplanationText(row!.Code, ex.Summary);
         SelectedExample = ex?.Example ?? string.Empty;
         HasExplanation = ex is not null;
         HasExample = !string.IsNullOrEmpty(ex?.Example);
@@ -205,6 +208,13 @@ public partial class DiagnosticsViewModel : ViewModelBase
         HasDocLink = _docs is { IsAvailable: true } && !string.IsNullOrEmpty(_selectedDocTerm)
                      && _docs.TryGetPage(_selectedDocTerm!, out _);
     }
+
+    /// <summary>
+    /// The library's English explanation of <paramref name="code"/> in the UI language: the resx holds
+    /// one Diag_Explain_&lt;code&gt; per explained code; a code without one keeps <paramref name="english"/>.
+    /// </summary>
+    public static string ExplanationText(string code, string english) =>
+        ThIDE.Resources.Tr.Find("Diag_Explain_" + code) is { Length: > 0 } text ? text : english;
 
     /// <summary>All rows as text for "Copy All" (#3).</summary>
     public string AllRowsAsText() => string.Join(Environment.NewLine, Rows.Select(r => r.ToClipboardText()));

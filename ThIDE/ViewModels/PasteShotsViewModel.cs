@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Globalization;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Therion.Workspace.Import;
@@ -71,12 +72,16 @@ public sealed partial class PasteShotsViewModel : ObservableObject
         DetectedColumns = string.Join(' ', table.Columns.Select(ShotTableReader.Keyword));
         CanInsert = table.Rows.Count > 0;
         Output = CanInsert ? ShotTableReader.ToTherion(table, "  ", Wrap) : "";
-        Summary = string.Format(Tr.Get("PasteShots_Summary"), table.Rows.Count(r => !r.Splay), table.Rows.Count(r => r.Splay));
+        Summary = string.Format(Tr.Get("PasteShots_Summary"), Tr.Plural("Count_Legs", table.Rows.Count(r => !r.Splay)), Tr.Plural("Count_Splays", table.Rows.Count(r => r.Splay)));
     }
 
     public static string Describe(ShotIssue issue)
     {
-        var text = string.Format(Tr.Get("ShotIssue_" + issue.Kind), issue.Detail);
+        var key = "ShotIssue_" + issue.Kind;
+        // A count detail ("3" extra columns) takes the singular or plural sentence.
+        var text = Tr.HasPlural(key) && int.TryParse(issue.Detail, NumberStyles.Integer, CultureInfo.InvariantCulture, out int n)
+            ? Tr.Plural(key, n)
+            : string.Format(Tr.Get(key), issue.Detail);
         return issue.Line > 0 ? string.Format(Tr.Get("ShotIssue_Line"), issue.Line, text) : text;
     }
 }

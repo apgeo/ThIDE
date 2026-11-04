@@ -207,7 +207,8 @@ public sealed partial class LinkSurveyViewModel : ObservableObject
                 return (survey, errorCount, SurveyLinkPlanner.Sketches(survey, beside));
             });
             Source = source;
-            SourceStatus = string.Format(Tr.Get("LinkSurvey_SourceStatus"), source.Model.Stations.Count, Enumerable.Count(source.Model.Shots), errors);
+            SourceStatus = string.Format(Tr.Get("LinkSurvey_SourceStatus"), Tr.Plural("Count_Stations", source.Model.Stations.Count),
+                Tr.Plural("Count_Shots", Enumerable.Count(source.Model.Shots)), Tr.Plural("Count_ParseErrors", errors));
             SourceSelector.Load(LinkCatalog.Stations(source), [source.Model], showFile: false);
 
             // A source already in the project is linked where it is; one outside the project folder

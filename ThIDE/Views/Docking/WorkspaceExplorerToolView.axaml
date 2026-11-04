@@ -12,13 +12,13 @@
             <StackPanel Spacing="5">
                 <!-- View-mode switch (#5): relational object graph vs. file explorer. -->
                 <StackPanel Orientation="Horizontal" Spacing="0">
-                    <ToggleButton Padding="6,3" ToolTip.Tip="Relational object-graph view"
+                    <ToggleButton Padding="6,3" ToolTip.Tip="{l:Loc Ws_RelationalViewTip}"
                                   AutomationProperties.AutomationId="WorkspaceExplorer.RelationalView" AutomationProperties.Name="{l:Loc Ws_RelationalViewTip}"
                                   IsChecked="{Binding Explorer.IsRelationalView, Mode=OneWay}"
                                   Command="{Binding Explorer.SwitchToRelationalCommand}">
                         <PathIcon Data="{DynamicResource Icon.Cube}" Width="14" Height="14" />
                     </ToggleButton>
-                    <ToggleButton Padding="6,3" ToolTip.Tip="File-explorer view"
+                    <ToggleButton Padding="6,3" ToolTip.Tip="{l:Loc Ws_FileExplorerViewTip}"
                                   AutomationProperties.AutomationId="WorkspaceExplorer.FileExplorerView" AutomationProperties.Name="{l:Loc Ws_FileExplorerViewTip}"
                                   IsChecked="{Binding Explorer.IsFileExplorerView, Mode=OneWay}"
                                   Command="{Binding Explorer.SwitchToFileExplorerCommand}">
@@ -32,12 +32,12 @@
                             AutomationProperties.AutomationId="WorkspaceExplorer.OpenThconfig" AutomationProperties.Name="{l:Loc Ws_OpenThconfigTip}"
                             x:CompileBindings="False"
                             Command="{Binding Explorer.OpenSelectedThconfigCommand}"
-                            ToolTip.Tip="Open the selected thconfig in the editor">
+                            ToolTip.Tip="{l:Loc Ws_OpenThconfigTip}">
                         <PathIcon Data="{DynamicResource Icon.File}" Width="13" Height="13" />
                     </Button>
                     <ComboBox HorizontalAlignment="Stretch" FontSize="11" x:CompileBindings="False"
                               AutomationProperties.AutomationId="WorkspaceExplorer.ActiveThconfig" AutomationProperties.Name="{l:Loc Ws_ActiveConfigTip}"
-                              ToolTip.Tip="Active configuration (drives the object graph)"
+                              ToolTip.Tip="{l:Loc Ws_ActiveConfigTip}"
                               ItemsSource="{Binding Explorer.ThconfigCandidates}"
                               SelectedItem="{Binding Explorer.SelectedThconfig, Mode=TwoWay}">
                         <ComboBox.ItemTemplate>
@@ -52,20 +52,20 @@
                     <!-- Show file nodes in the relational view (#5a); hidden in file-explorer mode. -->
                     <ToggleButton Padding="5,3" VerticalAlignment="Center"
                                   AutomationProperties.AutomationId="WorkspaceExplorer.ShowFilesInModel" AutomationProperties.Name="{l:Loc Ws_ShowFilesTip}"
-                                  ToolTip.Tip="Show file nodes in the object graph"
+                                  ToolTip.Tip="{l:Loc Ws_ShowFilesTip}"
                                   IsVisible="{Binding Explorer.IsRelationalView}"
                                   IsChecked="{Binding Explorer.ShowFilesInModel, Mode=TwoWay}">
                         <PathIcon Data="{DynamicResource Icon.File}" Width="14" Height="14" />
                     </ToggleButton>
                     <ToggleButton Padding="5,3" VerticalAlignment="Center"
                                   AutomationProperties.AutomationId="WorkspaceExplorer.RevealOnHover" AutomationProperties.Name="{l:Loc Ws_RevealOnHoverTip}"
-                                  ToolTip.Tip="Highlight workspace item when hovering a link in the editor"
+                                  ToolTip.Tip="{l:Loc Ws_RevealOnHoverTip}"
                                   IsChecked="{Binding Explorer.RevealOnHover, Mode=TwoWay}">
                         <PathIcon Data="{DynamicResource Icon.Eye}" Width="14" Height="14" />
                     </ToggleButton>
                     <ToggleButton Padding="5,3" VerticalAlignment="Center"
                                   AutomationProperties.AutomationId="WorkspaceExplorer.RevealOnTabSwitch" AutomationProperties.Name="{l:Loc Ws_RevealOnTabSwitchTip}"
-                                  ToolTip.Tip="Highlight the active file in the workspace when switching tabs"
+                                  ToolTip.Tip="{l:Loc Ws_RevealOnTabSwitchTip}"
                                   IsChecked="{Binding Explorer.RevealOnTabSwitch, Mode=TwoWay}">
                         <PathIcon Data="{DynamicResource Icon.Swap}" Width="14" Height="14" />
                     </ToggleButton>
@@ -73,7 +73,7 @@
                     <!-- Sort files/folders (file-explorer view only), Windows-Explorer style (#15). -->
                     <Button Padding="5,3" VerticalAlignment="Center" x:CompileBindings="False"
                             AutomationProperties.AutomationId="WorkspaceExplorer.Sort" AutomationProperties.Name="{l:Loc Ws_SortByTip}"
-                            ToolTip.Tip="Sort by"
+                            ToolTip.Tip="{l:Loc Ws_SortByTip}"
                             IsVisible="{Binding Explorer.IsFileExplorerView}">
                         <StackPanel Orientation="Horizontal" Spacing="4">
                             <PathIcon Data="{DynamicResource Icon.Sort}" Width="14" Height="14" />
@@ -81,14 +81,14 @@
                         </StackPanel>
                         <Button.Flyout>
                             <MenuFlyout>
-                                <MenuItem AutomationProperties.AutomationId="WorkspaceExplorer.Sort.Name" Header="Name" Command="{Binding Explorer.SortByNameCommand}" />
-                                <MenuItem AutomationProperties.AutomationId="WorkspaceExplorer.Sort.Modified" Header="Date modified" Command="{Binding Explorer.SortByModifiedCommand}" />
-                                <MenuItem AutomationProperties.AutomationId="WorkspaceExplorer.Sort.Type" Header="Type" Command="{Binding Explorer.SortByTypeCommand}" />
-                                <MenuItem AutomationProperties.AutomationId="WorkspaceExplorer.Sort.Size" Header="Size" Command="{Binding Explorer.SortBySizeCommand}" />
-                                <MenuItem AutomationProperties.AutomationId="WorkspaceExplorer.Sort.Created" Header="Date created" Command="{Binding Explorer.SortByCreatedCommand}" />
+                                <MenuItem AutomationProperties.AutomationId="WorkspaceExplorer.Sort.Name" Header="{l:Loc Ws_Sort_Name}" Command="{Binding Explorer.SortByNameCommand}" />
+                                <MenuItem AutomationProperties.AutomationId="WorkspaceExplorer.Sort.Modified" Header="{l:Loc Ws_Sort_Modified}" Command="{Binding Explorer.SortByModifiedCommand}" />
+                                <MenuItem AutomationProperties.AutomationId="WorkspaceExplorer.Sort.Type" Header="{l:Loc Ws_Sort_Type}" Command="{Binding Explorer.SortByTypeCommand}" />
+                                <MenuItem AutomationProperties.AutomationId="WorkspaceExplorer.Sort.Size" Header="{l:Loc Ws_Sort_Size}" Command="{Binding Explorer.SortBySizeCommand}" />
+                                <MenuItem AutomationProperties.AutomationId="WorkspaceExplorer.Sort.Created" Header="{l:Loc Ws_Sort_Created}" Command="{Binding Explorer.SortByCreatedCommand}" />
                                 <Separator />
-                                <MenuItem AutomationProperties.AutomationId="WorkspaceExplorer.Sort.Ascending" Header="Ascending" Command="{Binding Explorer.SortAscendingCmdCommand}" />
-                                <MenuItem AutomationProperties.AutomationId="WorkspaceExplorer.Sort.Descending" Header="Descending" Command="{Binding Explorer.SortDescendingCmdCommand}" />
+                                <MenuItem AutomationProperties.AutomationId="WorkspaceExplorer.Sort.Ascending" Header="{l:Loc Ws_Sort_Ascending}" Command="{Binding Explorer.SortAscendingCmdCommand}" />
+                                <MenuItem AutomationProperties.AutomationId="WorkspaceExplorer.Sort.Descending" Header="{l:Loc Ws_Sort_Descending}" Command="{Binding Explorer.SortDescendingCmdCommand}" />
                             </MenuFlyout>
                         </Button.Flyout>
                     </Button>

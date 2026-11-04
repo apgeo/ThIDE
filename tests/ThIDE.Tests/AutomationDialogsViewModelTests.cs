@@ -39,8 +39,9 @@ public class AutomationDialogsViewModelTests
     [Fact]
     public void Every_shot_issue_has_a_message()
     {
+        // A count issue has its singular/plural forms (ShotIssue_<kind>_One …) instead of one text.
         foreach (var kind in Enum.GetValues<Therion.Workspace.Import.ShotIssueKind>())
-            Assert.NotEqual("ShotIssue_" + kind, ThIDE.Resources.Tr.Get("ShotIssue_" + kind));
+            Assert.True(ThIDE.Resources.Tr.HasPlural("ShotIssue_" + kind) || ThIDE.Resources.Tr.Find("ShotIssue_" + kind) is not null, kind.ToString());
     }
 
     [Fact]

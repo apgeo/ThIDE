@@ -3,6 +3,7 @@
              xmlns:vm="using:ThIDE.ViewModels.Docking"
              xmlns:ed="using:ThIDE.Editor"
              xmlns:l="using:ThIDE.Resources"
+             xmlns:conv="using:ThIDE.Converters"
              x:Class="ThIDE.Views.Docking.FileDocumentView"
              AutomationProperties.AutomationId="Document.View"
              x:DataType="vm:FileDocumentViewModel">
@@ -204,7 +205,13 @@
                                         <ComboBox MinWidth="100"
                                                   AutomationProperties.AutomationId="Document.Shots.GroupBy" AutomationProperties.Name="{l:Loc File_GroupBy}"
                                                   ItemsSource="{Binding Measurements.GroupByOptions}"
-                                                  SelectedItem="{Binding Measurements.GroupBy, Mode=TwoWay}" />
+                                                  SelectedItem="{Binding Measurements.GroupBy, Mode=TwoWay}">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate x:DataType="x:String">
+                                                    <TextBlock Text="{Binding Converter={x:Static conv:LocKeyConverter.Instance}, ConverterParameter=Opt_GroupBy_}" />
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
                                     </StackPanel>
                                     <!-- Full station name toggle (#5). -->
                                     <ToggleButton Padding="6,3" VerticalAlignment="Center" Margin="0,0,4,0"
@@ -281,10 +288,10 @@
                                     <DataGridTextColumn Header="{l:Loc Browser_Col_Length}"  Binding="{Binding Length,  Mode=TwoWay}" Width="72"  />
                                     <DataGridTextColumn Header="{l:Loc Browser_Col_Compass}" Binding="{Binding Compass, Mode=TwoWay}" Width="82"  />
                                     <DataGridTextColumn Header="{l:Loc Browser_Col_Clino}"   Binding="{Binding Clino,   Mode=TwoWay}" Width="72"  />
-                                    <DataGridTextColumn Header="{l:Loc File_Col_Surf}"    Binding="{Binding Surface}"     Width="50" IsReadOnly="True" />
-                                    <DataGridTextColumn Header="{l:Loc File_Col_Dup}"     Binding="{Binding Duplicate}"   Width="50" IsReadOnly="True" />
-                                    <DataGridTextColumn Header="{l:Loc File_Col_Splay}"   Binding="{Binding Splay}"       Width="58" IsReadOnly="True" />
-                                    <DataGridTextColumn Header="{l:Loc File_Col_Approx}"  Binding="{Binding Approximate}" Width="68" IsReadOnly="True" />
+                                    <DataGridTextColumn Header="{l:Loc File_Col_Surf}"    Binding="{Binding Surface, Converter={x:Static conv:BoolCheckConverter.Instance}}" SortMemberPath="Surface"     Width="50" IsReadOnly="True" />
+                                    <DataGridTextColumn Header="{l:Loc File_Col_Dup}"     Binding="{Binding Duplicate, Converter={x:Static conv:BoolCheckConverter.Instance}}" SortMemberPath="Duplicate"   Width="50" IsReadOnly="True" />
+                                    <DataGridTextColumn Header="{l:Loc File_Col_Splay}"   Binding="{Binding Splay, Converter={x:Static conv:BoolCheckConverter.Instance}}" SortMemberPath="Splay"       Width="58" IsReadOnly="True" />
+                                    <DataGridTextColumn Header="{l:Loc File_Col_Approx}"  Binding="{Binding Approximate, Converter={x:Static conv:BoolCheckConverter.Instance}}" SortMemberPath="Approximate" Width="68" IsReadOnly="True" />
                                     <!-- Comment: trimmed with ellipsis; full text on hover. -->
                                     <DataGridTemplateColumn Header="{l:Loc Common_Comment}" Width="*" MaxWidth="380" IsReadOnly="True" SortMemberPath="Comment">
                                         <DataGridTemplateColumn.CellTemplate>
@@ -318,7 +325,13 @@
                                         <ComboBox MinWidth="100"
                                                   AutomationProperties.AutomationId="Document.Stations.GroupBy" AutomationProperties.Name="{l:Loc File_GroupBy}"
                                                   ItemsSource="{Binding Measurements.StationsGroupByOptions}"
-                                                  SelectedItem="{Binding Measurements.StationsGroupBy, Mode=TwoWay}" />
+                                                  SelectedItem="{Binding Measurements.StationsGroupBy, Mode=TwoWay}">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate x:DataType="x:String">
+                                                    <TextBlock Text="{Binding Converter={x:Static conv:LocKeyConverter.Instance}, ConverterParameter=Opt_GroupBy_}" />
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
                                     </StackPanel>
                                     <!-- Full station name toggle. -->
                                     <ToggleButton Padding="6,3" VerticalAlignment="Center" Margin="0,0,4,0"

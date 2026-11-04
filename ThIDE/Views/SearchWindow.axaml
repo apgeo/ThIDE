@@ -3,6 +3,7 @@
         xmlns:vm="using:ThIDE.ViewModels"
         xmlns:ae="using:AvaloniaEdit"
         xmlns:l="using:ThIDE.Resources"
+        xmlns:conv="using:ThIDE.Converters"
         x:Class="ThIDE.Views.SearchWindow"
         x:DataType="vm:SearchViewModel"
         Width="600" Height="640"
@@ -28,7 +29,13 @@
                 <TextBlock Text="{l:Loc Search_LookIn}" VerticalAlignment="Center" />
                 <ComboBox MinWidth="120" ItemsSource="{Binding Scopes}"
                           AutomationProperties.AutomationId="Search.Scope" AutomationProperties.Name="{l:Loc Search_LookIn}"
-                          SelectedItem="{Binding Scope, Mode=TwoWay}" />
+                          SelectedItem="{Binding Scope, Mode=TwoWay}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="x:String">
+                            <TextBlock Text="{Binding Converter={x:Static conv:LocKeyConverter.Instance}, ConverterParameter=Opt_Scope_}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
                 <Button AutomationProperties.AutomationId="Search.FindAll" Content="{l:Loc Search_FindAll}" Command="{Binding SearchCommand}" IsDefault="True" />
             </StackPanel>
 

@@ -65,7 +65,8 @@ public sealed partial class RenumberStationsViewModel : ObservableObject
         if (plan.Renames.Count > 40) Examples.Add("…");
         foreach (var p in plan.Problems.Take(20))
             Problems.Add(string.Format(Tr.Get("Renumber_" + p.Kind), p.Detail, p.Station is null ? "" : Shown(QualifiedName.Parse(p.Station))));
-        Summary = string.Format(Tr.Get("Renumber_Summary"), plan.Renames.Count, plan.Unchanged.Count, plan.Batch.Edits.Sum(g => g.Edits.Count), plan.Batch.Edits.Count);
+        Summary = string.Format(Tr.Get("Renumber_Summary"), Tr.Plural("Count_Stations", plan.Renames.Count), Tr.Plural("Count_Stations", plan.Unchanged.Count),
+            Tr.Plural("Count_Edits", plan.Batch.Edits.Sum(g => g.Edits.Count)), Tr.Plural("Rename_Files", plan.Batch.Edits.Count));
         Plan = plan;
         CanApply = plan.Ok;
     }

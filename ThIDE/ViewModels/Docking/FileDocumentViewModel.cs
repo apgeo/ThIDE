@@ -885,7 +885,7 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
         // A dismissal lasts until the file has nothing left to fix, so new paths typed later show it again.
         if (fixes.Count == 0) _pathSeparatorBannerDismissed = false;
         PathSeparatorBannerText = fixes.Count == 0 ? string.Empty
-            : string.Format(ThIDE.Resources.Tr.Get("File_PathSeparatorBanner"), fixes.Count);
+            : ThIDE.Resources.Tr.Plural("File_PathSeparatorBanner", fixes.Count);
         ShowPathSeparatorBanner = fixes.Count > 0 && !_pathSeparatorBannerDismissed;
     }
 
@@ -897,7 +897,7 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
         if (fixes.Count == 0 || !ApplyEdits(fixes)) { SetPathSeparatorFixes(fixes); return; }
         // The edit re-parses the file, which recounts what is left.
         ShowPathSeparatorBanner = false;
-        FlashInfo(string.Format(ThIDE.Resources.Tr.Get("File_PathSeparatorFixed"), fixes.Count));
+        FlashInfo(ThIDE.Resources.Tr.Plural("File_PathSeparatorFixed", fixes.Count));
     }
 
     [RelayCommand]

@@ -667,7 +667,7 @@ public partial class BuildViewModel : ViewModelBase
                 LastError = string.Empty;
                 Status = ThIDE.Resources.Tr.Get(result.Artifacts.Length > 0 ? "Build_Succeeded" : "Build_SucceededNoOutputs");
                 StatusArtifactCount = result.Artifacts.Length > 0
-                    ? string.Format(ThIDE.Resources.Tr.Get("Build_ArtifactCount"), result.Artifacts.Length)
+                    ? ThIDE.Resources.Tr.Plural("Build_ArtifactCount", result.Artifacts.Length)
                     : string.Empty;
             }
             else
@@ -756,7 +756,7 @@ public partial class BuildViewModel : ViewModelBase
         var list = string.Join(Environment.NewLine, dirty.Select(d => "  • " + Path.GetFileName(d.FilePath)));
         var choice = await Views.SaveBeforeBuildDialog.ShowOverMainAsync(
             ThIDE.Resources.Tr.Get("Build_SavePromptTitle"),
-            string.Format(ThIDE.Resources.Tr.Get("Build_SavePromptMsg"), dirty.Count) + Environment.NewLine + Environment.NewLine + list,
+            ThIDE.Resources.Tr.Plural("Build_SavePromptMsg", dirty.Count) + Environment.NewLine + Environment.NewLine + list,
             ThIDE.Resources.Tr.Get("Build_SaveAndCompile"),
             ThIDE.Resources.Tr.Get("Build_CompileWithoutSaving"),
             ThIDE.Resources.Tr.Get("Common_Cancel"),
@@ -885,7 +885,8 @@ public partial class BuildViewModel : ViewModelBase
             : warnCount > 0 ? "Build_SummaryFailedWarn" : "Build_SummaryFailed";
         var culture = ThIDE.Resources.Tr.Culture;
         var text = string.Format(culture, ThIDE.Resources.Tr.Get(key),
-            elapsed.TotalSeconds.ToString("0.00", culture), artifactCount, warnCount);
+            elapsed.TotalSeconds.ToString("0.00", culture),
+            ThIDE.Resources.Tr.Plural("Count_OutputFiles", artifactCount), ThIDE.Resources.Tr.Plural("Count_Warnings", warnCount));
         var (now, _, sinceStart) = Stamp(Elapsed());
         return new CompilerOutputRow(text, ok ? "Info" : "Error", null, OutputRowKind.Summary,
             now, TimeSpan.Zero, sinceStart, TimeColumnMode, success: ok);

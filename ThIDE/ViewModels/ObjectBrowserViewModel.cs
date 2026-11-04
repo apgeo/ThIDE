@@ -326,7 +326,7 @@ public partial class ObjectBrowserViewModel : ViewModelBase
         var stations = model.Stations.Values
             .Select(s => new StationRow(
                 s.Name.ToString(),
-                s.Kind.ToString(),
+                Tr.Get("StationKind_" + s.Kind),
                 s.Name.HasParent ? s.Name.Parent().ToString() : string.Empty,
                 s.DeclarationSpan.FilePath,
                 s.DeclarationSpan.Start.Line))
@@ -368,7 +368,7 @@ public partial class ObjectBrowserViewModel : ViewModelBase
                 if (!seenStations.Add(key)) continue;
                 stations.Add(new StationRow(
                     key,
-                    s.Kind.ToString(),
+                    Tr.Get("StationKind_" + s.Kind),
                     s.Name.HasParent ? s.Name.Parent().ToString() : string.Empty,
                     s.DeclarationSpan.FilePath,
                     s.DeclarationSpan.Start.Line));

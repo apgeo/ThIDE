@@ -35,10 +35,10 @@
   <data name="Menu_File_Recent" xml:space="preserve"><value>_Recent Files</value></data>
   <data name="Menu_View" xml:space="preserve"><value>_View</value></data>
   <data name="Menu_View_ObjectBrowser" xml:space="preserve"><value>Object Browser</value></data>
-  <data name="Menu_View_Workspace" xml:space="preserve"><value>Workspace</value></data>
+  <data name="Menu_View_Workspace" xml:space="preserve"><value>Workspace Explorer</value></data>
   <data name="Menu_View_Diagnostics" xml:space="preserve"><value>Diagnostics</value></data>
   <data name="Menu_View_RelationalMap" xml:space="preserve"><value>Relational Map…</value></data>
-  <data name="Menu_View_StrictParser" xml:space="preserve"><value>Strict parser mode</value></data>
+  <data name="Menu_View_StrictParser" xml:space="preserve"><value>Strict Parser Mode</value></data>
   <data name="Menu_Edit" xml:space="preserve"><value>_Edit</value></data>
   <data name="Menu_Edit_Cut" xml:space="preserve"><value>Cut</value></data>
   <data name="Menu_Edit_Copy" xml:space="preserve"><value>Copy</value></data>
@@ -61,7 +61,7 @@
   <data name="Menu_Search_Bookmarks" xml:space="preserve"><value>_Bookmarks…</value></data>
   <data name="Menu_Build_OpenLoch" xml:space="preserve"><value>Open in _Loch</value></data>
   <data name="Menu_Build_OpenAven" xml:space="preserve"><value>Open in _Aven</value></data>
-  <data name="Menu_Build_OpenOutputFolder" xml:space="preserve"><value>Open last _output folder</value></data>
+  <data name="Menu_Build_OpenOutputFolder" xml:space="preserve"><value>Open Last _Output Folder</value></data>
   <data name="Menu_View_Language" xml:space="preserve"><value>_Language</value></data>
   <data name="Menu_View_Language_English" xml:space="preserve"><value>English</value></data>
   <data name="Menu_View_Language_Romanian" xml:space="preserve"><value>Rom&#226;n&#259;</value></data>
@@ -75,8 +75,8 @@
   <data name="Ws_OpenThconfigTip" xml:space="preserve"><value>Open the selected thconfig in the editor</value></data>
   <data name="Ws_ActiveConfigTip" xml:space="preserve"><value>Active configuration (drives the object graph)</value></data>
   <data name="Ws_ShowFilesTip" xml:space="preserve"><value>Show file nodes in the object graph</value></data>
-  <data name="Ws_RevealOnHoverTip" xml:space="preserve"><value>Highlight workspace item when hovering a link in the editor</value></data>
-  <data name="Ws_RevealOnTabSwitchTip" xml:space="preserve"><value>Highlight the active file in the workspace when switching tabs</value></data>
+  <data name="Ws_RevealOnHoverTip" xml:space="preserve"><value>Highlight the Workspace Explorer item when hovering a link in the editor</value></data>
+  <data name="Ws_RevealOnTabSwitchTip" xml:space="preserve"><value>Highlight the active file in the Workspace Explorer when switching tabs</value></data>
   <data name="Ws_SortByTip" xml:space="preserve"><value>Sort by</value></data>
   <data name="Tool_Diagnostics" xml:space="preserve"><value>Diagnostics</value></data>
   <data name="Tool_ObjectBrowser" xml:space="preserve"><value>Object Browser</value></data>
@@ -116,7 +116,7 @@
   <data name="Ctx_CopyFull" xml:space="preserve"><value>Copy Full Path</value></data>
   <data name="Ctx_CopyRel" xml:space="preserve"><value>Copy Relative Path</value></data>
   <data name="Ctx_Refresh" xml:space="preserve"><value>Refresh</value></data>
-  <data name="Ctx_ShellMore" xml:space="preserve"><value>More options (Windows shell)…</value></data>
+  <data name="Ctx_ShellMore" xml:space="preserve"><value>More Options (Windows Shell)…</value></data>
   <data name="Common_Columns" xml:space="preserve"><value>Columns ▾</value></data>
   <data name="Common_Fit" xml:space="preserve"><value>↔ Fit</value></data>
   <data name="Common_Copy" xml:space="preserve"><value>Copy</value></data>
@@ -135,7 +135,7 @@
   <data name="Pref_Editor" xml:space="preserve"><value>Editor</value></data>
   <data name="Pref_Performance" xml:space="preserve"><value>Performance</value></data>
   <data name="Pref_Workspace" xml:space="preserve"><value>Workspace</value></data>
-  <data name="Pref_Build" xml:space="preserve"><value>Build &amp; Output</value></data>
+  <data name="Pref_Build" xml:space="preserve"><value>Compile &amp; Output</value></data>
   <data name="Pref_External" xml:space="preserve"><value>External Tools</value></data>
   <data name="Pref_Debug" xml:space="preserve"><value>Debug</value></data>
   <data name="Pref_DebugHelp" xml:space="preserve"><value>Low-level switches for the embedded web views (3D viewer, structural plots). Changes take effect after restarting ThIDE.</value></data>
@@ -186,9 +186,9 @@
   <data name="Struct_Tab4" xml:space="preserve"><value>4 · 3D plot</value></data>
   <data name="Struct_DetectionSignals" xml:space="preserve"><value>Detection signals</value></data>
   <data name="Struct_DetectionHelp" xml:space="preserve"><value>A shot is structural if it matches any enabled signal. Tune these to your survey's convention.</value></data>
-  <data name="Struct_FromNameKeyword" xml:space="preserve"><value>From-station name contains keyword(s)</value></data>
-  <data name="Struct_CommentMarker" xml:space="preserve"><value>Shot comment contains marker(s)</value></data>
-  <data name="Struct_StationFlag" xml:space="preserve"><value>From/To station carries flag(s)</value></data>
+  <data name="Struct_FromNameKeyword" xml:space="preserve"><value>From-station name contains one of the keywords</value></data>
+  <data name="Struct_CommentMarker" xml:space="preserve"><value>Shot comment contains one of the markers</value></data>
+  <data name="Struct_StationFlag" xml:space="preserve"><value>From/To station carries one of the flags</value></data>
   <data name="Struct_GroupingPoints" xml:space="preserve"><value>Grouping &amp; points</value></data>
   <data name="Struct_GroupPlaneBy" xml:space="preserve"><value>Group a plane by</value></data>
   <data name="Struct_SplayShots" xml:space="preserve"><value>Splay shots</value></data>
@@ -214,7 +214,7 @@
   <data name="Struct_ShowAllPlanes" xml:space="preserve"><value>Show every plane in the 3D plot</value></data>
   <data name="Struct_HideAllPlanes" xml:space="preserve"><value>Hide every plane</value></data>
   <data name="Struct_InvertPlanes" xml:space="preserve"><value>Invert plane visibility</value></data>
-  <data name="Struct_ShowInPreview" xml:space="preserve"><value>Show in Mainline Map</value></data>
+  <data name="Struct_ShowInPreview" xml:space="preserve"><value>Show in Mainline Preview</value></data>
   <data name="Struct_ShowInPreviewTip" xml:space="preserve"><value>Overlay the visible resulted planes on the Mainline Preview as thick strike/dip lines; click a line there to select its plane here</value></data>
   <data name="Struct_HighlightInPreview" xml:space="preserve"><value>Highlight in Mainline Preview</value></data>
   <data name="Struct_PopOutPlot" xml:space="preserve"><value>Pop out to panel</value></data>
@@ -257,7 +257,7 @@
   <data name="Struct_ShowSplays" xml:space="preserve"><value>Splays</value></data>
   <data name="Struct_ShowSplaysTip" xml:space="preserve"><value>Show the splay (wall) shots in the 3D plot</value></data>
   <data name="Struct_FadedSplays" xml:space="preserve"><value>Faded</value></data>
-  <data name="Struct_FadedSplaysTip" xml:space="preserve"><value>Draw the splays in a faded colour blended toward the background so they stay subtle</value></data>
+  <data name="Struct_FadedSplaysTip" xml:space="preserve"><value>Draw the splays in a faded color blended toward the background so they stay subtle</value></data>
   <data name="Struct_PlotFallback" xml:space="preserve"><value>The 3D plot needs the bundled three.js assets and a system web engine (WebView2 / WebKit).</value></data>
   <!-- Shared column headers (Project / Object Browser / other grids) -->
   <data name="Col_Name" xml:space="preserve"><value>Name</value></data>
@@ -304,9 +304,9 @@
   <data name="Proj_Dash_Files" xml:space="preserve"><value>Files</value></data>
   <data name="Proj_Dash_TotalLength" xml:space="preserve"><value>Total length</value></data>
   <data name="Proj_Dash_Depth" xml:space="preserve"><value>Depth</value></data>
-  <data name="Proj_Dash_LastBuild" xml:space="preserve"><value>Last build</value></data>
+  <data name="Proj_Dash_LastBuild" xml:space="preserve"><value>Last compilation</value></data>
   <data name="Proj_QuickActions" xml:space="preserve"><value>Quick actions</value></data>
-  <data name="Proj_Build" xml:space="preserve"><value>Build</value></data>
+  <data name="Proj_Build" xml:space="preserve"><value>Compile</value></data>
   <data name="Proj_OpenOutputFolder" xml:space="preserve"><value>Open output folder</value></data>
   <data name="Proj_NoSurveys" xml:space="preserve"><value>No surveys in the workspace yet.</value></data>
   <data name="Proj_Chart_LengthBySurvey" xml:space="preserve"><value>Length by survey (top 30)</value></data>
@@ -387,12 +387,12 @@
   <data name="Notif_LayoutMultiMonitorTitle" xml:space="preserve"><value>Multi-monitor layout</value></data>
   <data name="Notif_LayoutNeedsTwoMonitors" xml:space="preserve"><value>This layout needs at least two monitors (and an enabled preview panel).</value></data>
   <data name="Menu_Tools" xml:space="preserve"><value>_Tools</value></data>
-  <data name="Menu_Tools_ImportSurvey" xml:space="preserve"><value>Import survey (Survex / Compass)…</value></data>
+  <data name="Menu_Tools_ImportSurvey" xml:space="preserve"><value>Import Survey (Survex / Compass)…</value></data>
   <data name="Menu_Tools_BlenderAnimation" xml:space="preserve"><value>Blender Animation…</value></data>
   <data name="Blender_Tool_Title" xml:space="preserve"><value>Blender Animation</value></data>
   <data name="Blender_Blocker_NoSource" xml:space="preserve"><value>Select a model source.</value></data>
   <data name="Blender_Status_Acquiring" xml:space="preserve"><value>Acquiring source…</value></data>
-  <data name="Blender_Status_Cancelled" xml:space="preserve"><value>Cancelled.</value></data>
+  <data name="Blender_Status_Cancelled" xml:space="preserve"><value>Canceled.</value></data>
   <data name="Blender_Status_Failed" xml:space="preserve"><value>Render failed.</value></data>
   <data name="Blender_Status_Exporting" xml:space="preserve"><value>Exporting script…</value></data>
   <data name="Blender_Status_Exported" xml:space="preserve"><value>Script exported.</value></data>
@@ -446,32 +446,32 @@
   <data name="Blender_Notify_OpenFolder" xml:space="preserve"><value>Open folder</value></data>
   <data name="Blender_Notify_OpenLog" xml:space="preserve"><value>Open log</value></data>
   <data name="Blender_Status_OpenedInBlender" xml:space="preserve"><value>Opened in Blender.</value></data>
-  <data name="Blender_Fail_NotFound" xml:space="preserve"><value>Blender was not found. Set its path in Preferences ▸ External tools.</value></data>
+  <data name="Blender_Fail_NotFound" xml:space="preserve"><value>Blender was not found. Set its path in Settings ▸ External Tools.</value></data>
   <data name="Blender_Fail_TooOld" xml:space="preserve"><value>The installed Blender is too old — version 4.2 or newer is required.</value></data>
   <data name="Blender_Fail_DiskSpace" xml:space="preserve"><value>Not enough free disk space for this render.</value></data>
-  <data name="Menu_Tools_ImportDem" xml:space="preserve"><value>Import DEM as surface (.asc)…</value></data>
-  <data name="Menu_Tools_ImportGpx" xml:space="preserve"><value>Import GPX waypoints (→ fix)…</value></data>
-  <data name="Menu_Tools_ScaffoldProject" xml:space="preserve"><value>Scaffold project from survey…</value></data>
-  <data name="Menu_Tools_ScaffoldActive" xml:space="preserve"><value>Scaffold project from active file</value></data>
-  <data name="Menu_Tools_ExportEntrances" xml:space="preserve"><value>Export entrances / fixed points</value></data>
-  <data name="Menu_Tools_ExportTable" xml:space="preserve"><value>Export data table</value></data>
-  <data name="Menu_Tools_GenReport" xml:space="preserve"><value>Generate survey report (HTML)…</value></data>
-  <data name="Menu_Tools_NewScrap" xml:space="preserve"><value>New scrap (.th2)…</value></data>
+  <data name="Menu_Tools_ImportDem" xml:space="preserve"><value>Import DEM as Surface (.asc)…</value></data>
+  <data name="Menu_Tools_ImportGpx" xml:space="preserve"><value>Import GPX Waypoints (→ fix)…</value></data>
+  <data name="Menu_Tools_ScaffoldProject" xml:space="preserve"><value>Scaffold Project from Survey…</value></data>
+  <data name="Menu_Tools_ScaffoldActive" xml:space="preserve"><value>Scaffold Project from Active File</value></data>
+  <data name="Menu_Tools_ExportEntrances" xml:space="preserve"><value>Export Entrances / Fixed Points</value></data>
+  <data name="Menu_Tools_ExportTable" xml:space="preserve"><value>Export Data Table</value></data>
+  <data name="Menu_Tools_GenReport" xml:space="preserve"><value>Generate Survey Report (HTML)…</value></data>
+  <data name="Menu_Tools_NewScrap" xml:space="preserve"><value>New Scrap (.th2)…</value></data>
   <data name="Menu_Tools_Calculators" xml:space="preserve"><value>Calculators</value></data>
-  <data name="Menu_Tools_UnitConverter" xml:space="preserve"><value>Unit converter…</value></data>
-  <data name="Menu_Tools_CoordConverter" xml:space="preserve"><value>Coordinate converter…</value></data>
-  <data name="Menu_Tools_DeclinationCalc" xml:space="preserve"><value>Declination calculator…</value></data>
-  <data name="Menu_Tools_EntrancesFixed" xml:space="preserve"><value>Entrances / fixed points</value></data>
-  <data name="Menu_Tools_StationTable" xml:space="preserve"><value>Station table</value></data>
-  <data name="Menu_Tools_ShotTable" xml:space="preserve"><value>Shot table</value></data>
-  <data name="Menu_Build_Target" xml:space="preserve"><value>Build target</value></data>
+  <data name="Menu_Tools_UnitConverter" xml:space="preserve"><value>Unit Converter…</value></data>
+  <data name="Menu_Tools_CoordConverter" xml:space="preserve"><value>Coordinate Converter…</value></data>
+  <data name="Menu_Tools_DeclinationCalc" xml:space="preserve"><value>Declination Calculator…</value></data>
+  <data name="Menu_Tools_EntrancesFixed" xml:space="preserve"><value>Entrances / Fixed Points</value></data>
+  <data name="Menu_Tools_StationTable" xml:space="preserve"><value>Station Table</value></data>
+  <data name="Menu_Tools_ShotTable" xml:space="preserve"><value>Shot Table</value></data>
+  <data name="Menu_Build_Target" xml:space="preserve"><value>Build Target</value></data>
   <data name="Menu_Build_QuickExport" xml:space="preserve"><value>Quick Export…</value></data>
-  <data name="Menu_Build_SurvexTools" xml:space="preserve"><value>Survex tools (.3d)</value></data>
-  <data name="Menu_Build_Dump3d" xml:space="preserve"><value>dump3d (text dump)</value></data>
-  <data name="Menu_Build_Extend" xml:space="preserve"><value>extend (extended elevation)</value></data>
-  <data name="Menu_Build_TherionInfo" xml:space="preserve"><value>Therion info</value></data>
-  <data name="Menu_Build_PrintVersion" xml:space="preserve"><value>Print version</value></data>
-  <data name="Menu_Build_PrintEnv" xml:space="preserve"><value>Print environment</value></data>
+  <data name="Menu_Build_SurvexTools" xml:space="preserve"><value>Survex Tools (.3d)</value></data>
+  <data name="Menu_Build_Dump3d" xml:space="preserve"><value>dump3d (Text Dump)</value></data>
+  <data name="Menu_Build_Extend" xml:space="preserve"><value>extend (Extended Elevation)</value></data>
+  <data name="Menu_Build_TherionInfo" xml:space="preserve"><value>Therion Info</value></data>
+  <data name="Menu_Build_PrintVersion" xml:space="preserve"><value>Print Version</value></data>
+  <data name="Menu_Build_PrintEnv" xml:space="preserve"><value>Print Environment</value></data>
   <!-- Document tab context menu (UX-10) -->
   <data name="Tab_Pin" xml:space="preserve"><value>Pin Tab</value></data>
   <data name="Tab_Unpin" xml:space="preserve"><value>Unpin Tab</value></data>
@@ -512,7 +512,7 @@
   <data name="Tb_RelationalMap" xml:space="preserve"><value>Relational Map</value></data>
   <data name="Tb_ShowOutputs" xml:space="preserve"><value>Show Generated Files and the first "export model" command</value></data>
   <data name="Layout_FloatActive" xml:space="preserve"><value>Float Active Document</value></data>
-  <data name="Layout_Reset" xml:space="preserve"><value>Reset to Default Layout</value></data>
+  <data name="Layout_Reset" xml:space="preserve"><value>Restore Default Layout</value></data>
   <data name="Notif_Empty" xml:space="preserve"><value>No notifications yet.</value></data>
   <!-- Status bar -->
   <data name="Status_OpenFolderFailed" xml:space="preserve"><value>Could not open '{0}' in the file manager.</value></data>
@@ -525,12 +525,12 @@
   <data name="Status_Ch" xml:space="preserve"><value>ch,</value></data>
   <data name="Status_Ln" xml:space="preserve"><value>ln</value></data>
   <data name="Status_Indexing" xml:space="preserve"><value>Indexing…</value></data>
-  <data name="Status_BuildInProgress" xml:space="preserve"><value>Build in progress…</value></data>
+  <data name="Status_BuildInProgress" xml:space="preserve"><value>Compiling…</value></data>
   <data name="Status_BuildingGraph" xml:space="preserve"><value>Building the thconfig object graph…</value></data>
   <data name="Status_McpListening" xml:space="preserve"><value>AI tools server (MCP) is listening on loopback — a local AI assistant can reach this project</value></data>
   <data name="Mcp_ToastTitle" xml:space="preserve"><value>AI assistant</value></data>
-  <data name="Status_LastBuildOk" xml:space="preserve"><value>Last build succeeded</value></data>
-  <data name="Status_LastBuildFail" xml:space="preserve"><value>Last build failed</value></data>
+  <data name="Status_LastBuildOk" xml:space="preserve"><value>Last compilation succeeded</value></data>
+  <data name="Status_LastBuildFail" xml:space="preserve"><value>Last compilation failed</value></data>
   <data name="Status_OpenDiag" xml:space="preserve"><value>Open Diagnostics (F8: next, Shift+F8: previous)</value></data>
   <data name="Sw_OpenDocs" xml:space="preserve"><value>Open documents  —  Ctrl+Tab</value></data>
   <data name="Loading_Files" xml:space="preserve"><value>Loading files…</value></data>
@@ -540,7 +540,6 @@
   <data name="Common_On" xml:space="preserve"><value>On</value></data>
   <data name="Common_Off" xml:space="preserve"><value>Off</value></data>
   <data name="Build_SavePromptTitle" xml:space="preserve"><value>Unsaved changes</value></data>
-  <data name="Build_SavePromptMsg" xml:space="preserve"><value>{0} file(s) involved in this build have unsaved changes:</value></data>
   <data name="Build_SaveAndCompile" xml:space="preserve"><value>Save &amp; compile</value></data>
   <data name="Build_CompileWithoutSaving" xml:space="preserve"><value>Compile without saving</value></data>
   <data name="Common_Apply" xml:space="preserve"><value>Apply</value></data>
@@ -584,7 +583,7 @@
   <data name="Pref_RenamePreview" xml:space="preserve"><value>Show a preview before applying a symbol rename</value></data>
   <data name="Pref_FormatOnSave" xml:space="preserve"><value>Format document on save (re-indent to block nesting)</value></data>
   <data name="Pref_EditorFeatures" xml:space="preserve"><value>Editor Features</value></data>
-  <data name="Pref_EditorFeaturesHelp" xml:space="preserve"><value>Enable or disable individual editor enhancements. A feature greyed out here was switched off at build time.</value></data>
+  <data name="Pref_EditorFeaturesHelp" xml:space="preserve"><value>Enable or disable individual editor enhancements. A feature grayed out here was switched off at build time.</value></data>
   <data name="Pref_PerfHelp1" xml:space="preserve"><value>Above these limits, syntax highlighting and hover features are disabled.</value></data>
   <data name="Pref_MaxHighlightLines" xml:space="preserve"><value>Max highlight lines</value></data>
   <data name="Pref_MaxHighlightKB" xml:space="preserve"><value>Max highlight size (KB)</value></data>
@@ -598,32 +597,32 @@
   <data name="Pref_ReloadExternal" xml:space="preserve"><value>Reload open files changed outside the editor</value></data>
   <data name="Pref_UpdateGraph" xml:space="preserve"><value>Update the object graph when files change on disk</value></data>
   <data name="Pref_QuickOpenScope" xml:space="preserve"><value>Go to File (Ctrl+P): search only files connected to the active thconfig</value></data>
-  <data name="Pref_QuickOpenHelp" xml:space="preserve"><value>When off, Ctrl+P also lists the other Therion files of the workspace folder, greyed and after the files of the active thconfig.</value></data>
+  <data name="Pref_QuickOpenHelp" xml:space="preserve"><value>When off, Ctrl+P also lists the other Therion files of the workspace folder, grayed and after the files of the active thconfig.</value></data>
   <data name="QuickOpen_NotInConfig" xml:space="preserve"><value>(not in {0})</value></data>
-  <data name="Pref_AfterBuildOpen" xml:space="preserve"><value>After a successful build, open:</value></data>
+  <data name="Pref_AfterBuildOpen" xml:space="preserve"><value>After a successful compilation, open:</value></data>
   <data name="Pref_OpenLox" xml:space="preserve"><value>.lox (Loch 3D model)</value></data>
   <data name="Pref_Open3d" xml:space="preserve"><value>.3d (Survex / Aven model)</value></data>
   <data name="Pref_OpenPdf" xml:space="preserve"><value>.pdf (map export)</value></data>
   <data name="Pref_OpenNoneHelp" xml:space="preserve"><value>(leave all unchecked to open nothing)</value></data>
   <data name="Pref_OpenAll" xml:space="preserve"><value>Open every matching output (otherwise just the first)</value></data>
-  <data name="Pref_CompileOnSave" xml:space="preserve"><value>Compile on save (rebuild the active thconfig on save)</value></data>
-  <data name="Pref_CompileOnSaveHelp" xml:space="preserve"><value>Debounced background build; watch the spinner and the Log panel. Off by default.</value></data>
-  <data name="Pref_GlobalBuildHotkey" xml:space="preserve"><value>System-wide build hotkey (Ctrl+Alt+B, even when ThIDE is not focused)</value></data>
+  <data name="Pref_CompileOnSave" xml:space="preserve"><value>Compile on save (recompile the active thconfig on save)</value></data>
+  <data name="Pref_CompileOnSaveHelp" xml:space="preserve"><value>Debounced background compilation; watch the spinner and the Log panel. Off by default.</value></data>
+  <data name="Pref_GlobalBuildHotkey" xml:space="preserve"><value>System-wide compile hotkey (Ctrl+Alt+B, even when ThIDE is not focused)</value></data>
   <data name="Pref_GlobalBuildHotkeyHelp" xml:space="preserve"><value>Windows only. Windows reports AltGr as Ctrl+Alt, so while this is on AltGr+B no longer types its character in any program (on Czech, Slovak, Hungarian and other layouts that is a brace). Off by default.</value></data>
   <data name="Pref_EnsureDirs" xml:space="preserve"><value>Create missing output folders before compiling</value></data>
   <data name="Pref_EnsureDirsHelp" xml:space="preserve"><value>Checks each export's output directory and creates it recursively if absent (Therion otherwise fails on a missing folder). An info line is logged when a folder is created. On by default.</value></data>
   <data name="Pref_AutoSaveBeforeCompile" xml:space="preserve"><value>Save modified files automatically before compiling</value></data>
   <data name="Pref_AutoSaveBeforeCompileHelp" xml:space="preserve"><value>When off, compiling first asks whether to save the involved unsaved files (naming them). When on, they are saved automatically with no prompt. Off by default.</value></data>
   <data name="Pref_AutoRecalcLeads" xml:space="preserve"><value>Recompute the Leads register as you type</value></data>
-  <data name="Pref_AutoRecalcLeadsHelp" xml:space="preserve"><value>Refreshes the Workspace ▸ Leads register live from the unsaved editor buffers (debounced), not only on save. On by default — turn off on very large workspaces. The Rescan button always works.</value></data>
+  <data name="Pref_AutoRecalcLeadsHelp" xml:space="preserve"><value>Refreshes the Overview ▸ Leads register live from the unsaved editor buffers (debounced), not only on save. On by default — turn off on very large workspaces. The Rescan button always works.</value></data>
   <data name="Pref_Visualization" xml:space="preserve"><value>Visualization</value></data>
   <data name="Pref_VisualizationHelp" xml:space="preserve"><value>Enable or disable the read-only preview features. Disabling one hides its panel and menu (reset the layout or restart to remove an open panel).</value></data>
-  <data name="Pref_Vis_LivePreview" xml:space="preserve"><value>Mainline centreline preview (plan/elevation sketch from the model, no compile)</value></data>
+  <data name="Pref_Vis_LivePreview" xml:space="preserve"><value>Mainline Preview: centerline plan/elevation sketch from the model (no compile)</value></data>
   <data name="Pref_Vis_MapViewer" xml:space="preserve"><value>In-app map viewer (PNG / SVG / PDF)</value></data>
-  <data name="Pref_Vis_MapAuto" xml:space="preserve"><value>Auto-show the rendered map after a build</value></data>
+  <data name="Pref_Vis_MapAuto" xml:space="preserve"><value>Auto-show the rendered map after compiling</value></data>
   <data name="Pref_Vis_MapShowOnLoad" xml:space="preserve"><value>Auto-show first map on workspace load</value></data>
   <data name="Pref_Vis_Model3D" xml:space="preserve"><value>Embedded 3D model viewer (CaveView.js in a native web view)</value></data>
-  <data name="Pref_Vis_Model3DAuto" xml:space="preserve"><value>Auto-show the 3D model (.lox / .3d) after a build</value></data>
+  <data name="Pref_Vis_Model3DAuto" xml:space="preserve"><value>Auto-show the 3D model (.lox / .3d) after compiling</value></data>
   <data name="Pref_Vis_Structural" xml:space="preserve"><value>Structural Geology module (plane strike/dip calculator)</value></data>
   <data name="Pref_SurveyAnalytics" xml:space="preserve"><value>Survey analytics</value></data>
   <data name="Pref_SurveyAnalyticsHelp" xml:space="preserve"><value>Disable on very large workspaces to skip the extra processing on each graph rebuild.</value></data>
@@ -641,11 +640,11 @@
   <data name="Pref_Col_Override" xml:space="preserve"><value>Override</value></data>
   <data name="Pref_Col_Result" xml:space="preserve"><value>Result</value></data>
   <data name="Pref_Extensions" xml:space="preserve"><value>Extensions</value></data>
-  <data name="Pref_ScriptHooks" xml:space="preserve"><value>Enable script hooks (run a command on open / save / build)</value></data>
-  <data name="Pref_ScriptHooksHelp" xml:space="preserve"><value>Use {file} for the file path (active thconfig for build). Disable for big workspaces.</value></data>
+  <data name="Pref_ScriptHooks" xml:space="preserve"><value>Enable script hooks (run a command on open / save / compile)</value></data>
+  <data name="Pref_ScriptHooksHelp" xml:space="preserve"><value>Use {file} for the file path (the active thconfig when compiling). Disable for big workspaces.</value></data>
   <data name="Pref_OnOpen" xml:space="preserve"><value>On open</value></data>
   <data name="Pref_OnSave" xml:space="preserve"><value>On save</value></data>
-  <data name="Pref_OnBuild" xml:space="preserve"><value>On build</value></data>
+  <data name="Pref_OnBuild" xml:space="preserve"><value>On compile</value></data>
   <data name="Pref_CommandWm" xml:space="preserve"><value>(command)</value></data>
   <data name="Pref_LoadPlugins" xml:space="preserve"><value>Load plugins (custom semantic rules from the plugins folder)</value></data>
   <data name="Pref_LoadPluginsHelp" xml:space="preserve"><value>Drop plugin .dll files (types implementing ISemanticRule) in {0}. Loaded at startup; disable for performance. Changes apply on restart.</value></data>
@@ -680,8 +679,8 @@
   <data name="Diag_ReferencesOnly" xml:space="preserve"><value>References only</value></data>
   <data name="Diag_ReferencesTip" xml:space="preserve"><value>Show only dangling/unresolved reference diagnostics (DIAG-06)</value></data>
   <data name="Diag_ClearSuppressions" xml:space="preserve"><value>Clear suppressions</value></data>
-  <data name="Diag_Explain" xml:space="preserve"><value>Explain (open docs)</value></data>
-  <data name="Diag_Suppress" xml:space="preserve"><value>Suppress this code</value></data>
+  <data name="Diag_Explain" xml:space="preserve"><value>Explain (Open Docs)</value></data>
+  <data name="Diag_Suppress" xml:space="preserve"><value>Suppress This Code</value></data>
   <data name="Diag_OpenDocs" xml:space="preserve"><value>Open docs ↗</value></data>
   <data name="Diag_Details" xml:space="preserve"><value>Details</value></data>
   <data name="Diag_DetailsTip" xml:space="preserve"><value>Show the full explanation and an example fix</value></data>
@@ -699,7 +698,7 @@
   <data name="Comp_TimeColTip" xml:space="preserve"><value>Time column display</value></data>
   <data name="Comp_TimeLast" xml:space="preserve"><value>Since last line</value></data>
   <data name="Comp_TimeStamp" xml:space="preserve"><value>Timestamp</value></data>
-  <data name="Comp_TimeStart" xml:space="preserve"><value>Since build start</value></data>
+  <data name="Comp_TimeStart" xml:space="preserve"><value>Since compilation start</value></data>
   <!-- Log tool -->
   <data name="Log_Level" xml:space="preserve"><value>Level:</value></data>
   <data name="Log_LevelTip" xml:space="preserve"><value>Minimum level shown for new entries (does not re-filter older ones)</value></data>
@@ -771,11 +770,11 @@
   <data name="M3D_Unavailable" xml:space="preserve"><value>3D model viewer unavailable</value></data>
   <data name="M3D_OpenModelExternal" xml:space="preserve"><value>Open model externally (Loch / Aven)</value></data>
   <data name="M3D_ZoomOnShow" xml:space="preserve"><value>🔍 Close-up</value></data>
-  <data name="M3D_ZoomOnShowTip" xml:space="preserve"><value>Show in 3D zooms in on the station (off: centres it at the current zoom)</value></data>
+  <data name="M3D_ZoomOnShowTip" xml:space="preserve"><value>Show in 3D zooms in on the station (off: centers it at the current zoom)</value></data>
   <data name="M3D_Showing" xml:space="preserve"><value>Showing {0} in 3D…</value></data>
   <data name="M3D_ShownStation" xml:space="preserve"><value>Showing {0} in 3D.</value></data>
   <data name="M3D_ShownSurvey" xml:space="preserve"><value>Framed survey {0} in 3D.</value></data>
-  <data name="M3D_ShownNone" xml:space="preserve"><value>“{0}” is not in the loaded model — rebuild the model, or pick a model that contains it.</value></data>
+  <data name="M3D_ShownNone" xml:space="preserve"><value>“{0}” is not in the loaded model — recompile the model, or pick a model that contains it.</value></data>
   <data name="M3D_ShownSplay" xml:space="preserve"><value>Showing the splay from {0} in 3D.</value></data>
   <data name="M3D_ShownSplayClosest" xml:space="preserve"><value>Showing the splay from {0} that is closest to the measured one (its direction differs by {1}°).</value></data>
   <data name="M3D_ShownSplayMissing" xml:space="preserve"><value>The model has no splays at {0} — showing the station.</value></data>
@@ -786,7 +785,7 @@
   <data name="M3D_ExportPageTitle" xml:space="preserve"><value>Page title</value></data>
   <data name="M3D_ExportDescription" xml:space="preserve"><value>Text under the title (optional)</value></data>
   <data name="M3D_ExportPlaces" xml:space="preserve"><value>List the model's entrances and commented stations as places that fly the view there</value></data>
-  <data name="M3D_ExportCurrentView" xml:space="preserve"><value>Open with the current view settings (layers, colouring, orientation)</value></data>
+  <data name="M3D_ExportCurrentView" xml:space="preserve"><value>Open with the current view settings (layers, coloring, orientation)</value></data>
   <data name="M3D_ExportEmbed" xml:space="preserve"><value>Also works opened straight from a disk (the model is carried inside the page, about a third larger)</value></data>
   <data name="M3D_ExportChooseFolder" xml:space="preserve"><value>Choose folder…</value></data>
   <data name="M3D_ExportFolder" xml:space="preserve"><value>Folder for the web page</value></data>
@@ -822,10 +821,10 @@
   <data name="Live_SeparateTip" xml:space="preserve"><value>Spread disconnected pieces into a grid instead of stacking them at the origin</value></data>
   <data name="Live_Color" xml:space="preserve"><value>Color:</value></data>
   <data name="Live_None" xml:space="preserve"><value>None</value></data>
-  <data name="Live_ColSurveyTip" xml:space="preserve"><value>A distinct colour per survey (groups the legend by survey)</value></data>
-  <data name="Live_ColFileTip" xml:space="preserve"><value>A distinct colour per source .th file (groups the legend by file)</value></data>
+  <data name="Live_ColSurveyTip" xml:space="preserve"><value>A distinct color per survey (groups the legend by survey)</value></data>
+  <data name="Live_ColFileTip" xml:space="preserve"><value>A distinct color per source .th file (groups the legend by file)</value></data>
   <data name="Live_Component" xml:space="preserve"><value>Component</value></data>
-  <data name="Live_ComponentTip" xml:space="preserve"><value>A distinct colour per disconnected piece (reveals surveys stacked at the origin)</value></data>
+  <data name="Live_ComponentTip" xml:space="preserve"><value>A distinct color per disconnected piece (reveals surveys stacked at the origin)</value></data>
   <data name="Live_Groups" xml:space="preserve"><value>Groups</value></data>
   <data name="Live_All" xml:space="preserve"><value>all</value></data>
   <data name="Live_AllTip" xml:space="preserve"><value>Check all groups</value></data>
@@ -837,11 +836,11 @@
   <data name="Live_MainTip" xml:space="preserve"><value>Show only the largest group</value></data>
   <data name="Live_GroupRowTip" xml:space="preserve"><value>Hover to locate · tick to show/hide</value></data>
   <!-- Generated files tool -->
-  <data name="Gen_StaleBanner" xml:space="preserve"><value>⚠ Some outputs are out of date — a workspace input changed since the last build. Rebuild to refresh.</value></data>
-  <data name="Gen_View3D" xml:space="preserve"><value>View in internal 3D viewer</value></data>
+  <data name="Gen_StaleBanner" xml:space="preserve"><value>⚠ Some outputs are out of date — a workspace input changed since the last compilation. Recompile to refresh.</value></data>
+  <data name="Gen_View3D" xml:space="preserve"><value>View in Internal 3D Viewer</value></data>
   <data name="Gen_Col_FileName" xml:space="preserve"><value>File Name</value></data>
   <data name="Gen_Col_AutoOpen" xml:space="preserve"><value>Auto-open</value></data>
-  <data name="Gen_AutoOpenTip" xml:space="preserve"><value>Auto-open after build — ▣ default (use settings) · ✓ always · ✗ never</value></data>
+  <data name="Gen_AutoOpenTip" xml:space="preserve"><value>Auto-open after compiling — ▣ default (use settings) · ✓ always · ✗ never</value></data>
   <data name="Gen_Col_Actions" xml:space="preserve"><value>Actions</value></data>
   <data name="Gen_Col_State" xml:space="preserve"><value>State</value></data>
   <data name="Gen_Col_Size" xml:space="preserve"><value>Size</value></data>
@@ -887,7 +886,7 @@
   <data name="File_MapiahTip" xml:space="preserve"><value>Open this sketch in the Mapiah editor (changes reload automatically)</value></data>
   <data name="File_EditMapiah" xml:space="preserve"><value>Edit with Mapiah</value></data>
   <data name="File_SwitchOpenTip" xml:space="preserve"><value>Switch to an open file</value></data>
-  <data name="File_SelectWorkspaceTip" xml:space="preserve"><value>Select this file in the Workspace</value></data>
+  <data name="File_SelectWorkspaceTip" xml:space="preserve"><value>Select this file in the Workspace Explorer</value></data>
   <data name="File_GoToParentTip" xml:space="preserve"><value>Go to the parent file (the file that includes this one)</value></data>
   <data name="File_GoToParentMany" xml:space="preserve"><value>This file is included by several files:</value></data>
   <data name="File_ActionsTip" xml:space="preserve"><value>File actions</value></data>
@@ -928,7 +927,7 @@
   <!-- Quick export window -->
   <data name="QExport_Title" xml:space="preserve"><value>Quick Export</value></data>
   <data name="QExport_Export" xml:space="preserve"><value>Export</value></data>
-  <data name="QExport_Intro" xml:space="preserve"><value>Compose a one-off export. A temporary thconfig is generated from the active workspace, built, and the result opened.</value></data>
+  <data name="QExport_Intro" xml:space="preserve"><value>Compose a one-off export. A temporary thconfig is generated from the active workspace, compiled, and the result opened.</value></data>
   <data name="QExport_Format" xml:space="preserve"><value>Format</value></data>
   <data name="QExport_SurveyOpt" xml:space="preserve"><value>Survey (optional)</value></data>
   <data name="QExport_SurveyWm" xml:space="preserve"><value>e.g. cave.upper (blank = whole workspace)</value></data>
@@ -938,15 +937,15 @@
   <data name="Ed_ToggleComment" xml:space="preserve"><value>Toggle Comment  Ctrl+/</value></data>
   <data name="Ed_EncloseRegion" xml:space="preserve"><value>Enclose in Region  Ctrl+Shift+R</value></data>
   <data name="Region_TitlePrompt" xml:space="preserve"><value>Region title</value></data>
-  <data name="Ed_DuplicateLines" xml:space="preserve"><value>Duplicate Line(s)</value></data>
-  <data name="Ed_MoveLinesUp" xml:space="preserve"><value>Move Line(s) Up</value></data>
-  <data name="Ed_MoveLinesDown" xml:space="preserve"><value>Move Line(s) Down</value></data>
+  <data name="Ed_DuplicateLines" xml:space="preserve"><value>Duplicate Lines</value></data>
+  <data name="Ed_MoveLinesUp" xml:space="preserve"><value>Move Lines Up</value></data>
+  <data name="Ed_MoveLinesDown" xml:space="preserve"><value>Move Lines Down</value></data>
   <data name="Ed_SortLines" xml:space="preserve"><value>Sort Selected Lines</value></data>
   <data name="Ed_InsertDate" xml:space="preserve"><value>Insert Today's Date</value></data>
   <data name="Ed_InsertTeamMember" xml:space="preserve"><value>Insert Team Member</value></data>
   <data name="Ed_RenameSymbol" xml:space="preserve"><value>Rename Symbol…</value></data>
   <data name="Refs_Title" xml:space="preserve"><value>Find All References</value></data>
-  <data name="Refs_Header" xml:space="preserve"><value>'{0}' — {1} occurrence(s) in {2} file(s)</value></data>
+  <data name="Refs_Header" xml:space="preserve"><value>'{0}' — {1} in {2}</value></data>
   <data name="Refs_None" xml:space="preserve"><value>No references to '{0}' were found in the workspace.</value></data>
   <data name="Refs_NoOther" xml:space="preserve"><value>No other references to '{0}'</value></data>
   <data name="Refs_GoTo" xml:space="preserve"><value>Go to</value></data>
@@ -980,10 +979,10 @@
   <data name="UC_Title" xml:space="preserve"><value>Unit converter</value></data>
   <data name="UC_Length" xml:space="preserve"><value>Length</value></data>
   <data name="UC_Angle" xml:space="preserve"><value>Angle</value></data>
-  <data name="UC_Metres" xml:space="preserve"><value>Metres</value></data>
+  <data name="UC_Metres" xml:space="preserve"><value>Meters</value></data>
   <data name="UC_Feet" xml:space="preserve"><value>Feet</value></data>
-  <data name="UC_Centimetres" xml:space="preserve"><value>Centimetres</value></data>
-  <data name="UC_Kilometres" xml:space="preserve"><value>Kilometres</value></data>
+  <data name="UC_Centimetres" xml:space="preserve"><value>Centimeters</value></data>
+  <data name="UC_Kilometres" xml:space="preserve"><value>Kilometers</value></data>
   <data name="UC_Inches" xml:space="preserve"><value>Inches</value></data>
   <data name="UC_Yards" xml:space="preserve"><value>Yards</value></data>
   <data name="UC_Degrees" xml:space="preserve"><value>Degrees</value></data>
@@ -1048,7 +1047,7 @@ Install Mapiah from its releases page, then set the path to {0} in Settings → 
   <data name="Cmd_GoToLineFmt" xml:space="preserve"><value>Go to line {0}</value></data>
   <data name="Cmd_Cat_Navigate" xml:space="preserve"><value>navigate</value></data>
   <data name="Cmd_Cat_File" xml:space="preserve"><value>File</value></data>
-  <data name="Cmd_Cat_Build" xml:space="preserve"><value>Build</value></data>
+  <data name="Cmd_Cat_Build" xml:space="preserve"><value>Compile</value></data>
   <data name="Cmd_Cat_View" xml:space="preserve"><value>View</value></data>
   <data name="Cmd_Cat_Go" xml:space="preserve"><value>Go</value></data>
   <data name="Cmd_Cat_Search" xml:space="preserve"><value>Search</value></data>
@@ -1070,10 +1069,10 @@ Install Mapiah from its releases page, then set the path to {0} in Settings → 
   <data name="Cmd_OpenFolder" xml:space="preserve"><value>Open Folder…</value></data>
   <data name="Cmd_Save" xml:space="preserve"><value>Save</value></data>
   <data name="Cmd_GoToFile" xml:space="preserve"><value>Go to File…</value></data>
-  <data name="Cmd_RevealActive" xml:space="preserve"><value>Reveal Active File in Workspace</value></data>
-  <data name="Cmd_BuildCurrent" xml:space="preserve"><value>Build current thconfig</value></data>
-  <data name="Cmd_Rebuild" xml:space="preserve"><value>Rebuild</value></data>
-  <data name="Cmd_CancelBuild" xml:space="preserve"><value>Cancel build</value></data>
+  <data name="Cmd_RevealActive" xml:space="preserve"><value>Reveal Active File in Workspace Explorer</value></data>
+  <data name="Cmd_BuildCurrent" xml:space="preserve"><value>Compile current thconfig</value></data>
+  <data name="Cmd_Rebuild" xml:space="preserve"><value>Recompile</value></data>
+  <data name="Cmd_CancelBuild" xml:space="preserve"><value>Cancel compilation</value></data>
   <data name="Cmd_OpenLoch" xml:space="preserve"><value>Open in Loch</value></data>
   <data name="Cmd_OpenAven" xml:space="preserve"><value>Open in Aven</value></data>
   <data name="Cmd_Dump3d" xml:space="preserve"><value>Survex: dump3d (.3d → text)</value></data>
@@ -1081,12 +1080,12 @@ Install Mapiah from its releases page, then set the path to {0} in Settings → 
   <data name="Cmd_PrintVersion" xml:space="preserve"><value>Therion: print version</value></data>
   <data name="Cmd_PrintEnv" xml:space="preserve"><value>Therion: print environment</value></data>
   <data name="Cmd_BuildTargetFmt" xml:space="preserve"><value>Build target: {0}</value></data>
-  <data name="Cmd_BuildSpecific" xml:space="preserve"><value>Build a specific thconfig…</value></data>
+  <data name="Cmd_BuildSpecific" xml:space="preserve"><value>Compile a specific thconfig…</value></data>
   <data name="Cmd_ToggleObjectBrowser" xml:space="preserve"><value>Toggle Object Browser</value></data>
-  <data name="Cmd_ToggleWorkspace" xml:space="preserve"><value>Toggle Workspace</value></data>
+  <data name="Cmd_ToggleWorkspace" xml:space="preserve"><value>Toggle Workspace Explorer</value></data>
   <data name="Cmd_ToggleDiagnostics" xml:space="preserve"><value>Toggle Diagnostics</value></data>
   <data name="Cmd_ToggleOutline" xml:space="preserve"><value>Toggle Outline</value></data>
-  <data name="Cmd_ToggleProject" xml:space="preserve"><value>Toggle Workspace (Dashboard / Surveys / Audit)</value></data>
+  <data name="Cmd_ToggleProject" xml:space="preserve"><value>Toggle Overview (Dashboard / Surveys / Audit)</value></data>
   <data name="Cmd_ToggleLog" xml:space="preserve"><value>Toggle Log</value></data>
   <data name="Cmd_ToggleLivePreview" xml:space="preserve"><value>Toggle Mainline Preview</value></data>
   <data name="Cmd_ToggleMapViewer" xml:space="preserve"><value>Toggle Map Viewer</value></data>
@@ -1128,25 +1127,19 @@ Install Mapiah from its releases page, then set the path to {0} in Settings → 
   <data name="Cmd_SymWsTitle" xml:space="preserve"><value>Go to Symbol (workspace)</value></data>
   <data name="Cmd_SymDocTitle" xml:space="preserve"><value>Go to Symbol (document)</value></data>
   <data name="Cmd_SymWm" xml:space="preserve"><value>Search surveys, stations, scraps, maps…</value></data>
-  <data name="Cmd_BuildThTitle" xml:space="preserve"><value>Build thconfig</value></data>
-  <data name="Cmd_BuildThWm" xml:space="preserve"><value>Pick a thconfig to build…</value></data>
+  <data name="Cmd_BuildThTitle" xml:space="preserve"><value>Compile thconfig</value></data>
+  <data name="Cmd_BuildThWm" xml:space="preserve"><value>Pick a thconfig to compile…</value></data>
   <!-- Toast notifications -->
-  <data name="Notif_BuildOkTitle" xml:space="preserve"><value>Build succeeded</value></data>
-  <data name="Notif_BuildArtifacts" xml:space="preserve"><value>{0} artifact(s)</value></data>
-  <data name="Notif_BuildWarnings" xml:space="preserve"><value>, {0} warning(s).</value></data>
+  <data name="Notif_BuildOkTitle" xml:space="preserve"><value>Compilation succeeded</value></data>
+  <data name="Notif_BuildWarnings" xml:space="preserve"><value>, {0}.</value></data>
   <data name="Notif_ShowOutput" xml:space="preserve"><value>Show output</value></data>
-  <data name="Notif_BuildFailTitle" xml:space="preserve"><value>Build failed</value></data>
+  <data name="Notif_BuildFailTitle" xml:space="preserve"><value>Compilation failed</value></data>
   <data name="Notif_BuildFailMsg" xml:space="preserve"><value>The compilation reported errors.</value></data>
   <data name="Notif_3DDisabledTitle" xml:space="preserve"><value>3D viewer disabled</value></data>
-  <data name="Notif_3DDisabledMsg" xml:space="preserve"><value>Enable the embedded 3D model viewer in Preferences ▸ Build / Visualization.</value></data>
+  <data name="Notif_3DDisabledMsg" xml:space="preserve"><value>Enable the embedded 3D model viewer in Settings ▸ Visualization.</value></data>
   <data name="Notif_RecoveredTitle" xml:space="preserve"><value>Unsaved changes recovered</value></data>
-  <data name="Notif_RecoveredMsg" xml:space="preserve"><value>{0} file(s) had unsaved changes when the app last closed unexpectedly.</value></data>
   <data name="Notif_Restore" xml:space="preserve"><value>Restore</value></data>
   <data name="Notif_DiscardRecovered" xml:space="preserve"><value>Discard copies</value></data>
-  <data name="Recovery_BannerMsg" xml:space="preserve"><value>Unsaved changes from a session that closed unexpectedly were kept for {0} file(s):</value></data>
-  <data name="Recovery_DiscardConfirm" xml:space="preserve"><value>Discard the recovered copies of {0} file(s)? The unsaved changes in them are lost for good.
-
-{1}</value></data>
   <data name="Notif_ImportFailed" xml:space="preserve"><value>Import failed</value></data>
   <data name="Notif_GisExportFailed" xml:space="preserve"><value>GIS export failed</value></data>
   <data name="Notif_TableExportFailed" xml:space="preserve"><value>Table export failed</value></data>
@@ -1160,7 +1153,7 @@ Install Mapiah from its releases page, then set the path to {0} in Settings → 
   <data name="Notif_ScaffoldOverwritesSource" xml:space="preserve"><value>The target folder is the survey's own folder, so the generated wrapper would overwrite '{0}'. Pick a different folder.</value></data>
   <data name="Notif_ScaffoldTargetsExist" xml:space="preserve"><value>The target folder already contains {0}; scaffolding would overwrite them. Pick an empty folder or move those files away first.</value></data>
   <data name="Scaffold_Title" xml:space="preserve"><value>Scaffold Therion project from survey</value></data>
-  <data name="Scaffold_Intro" xml:space="preserve"><value>Builds a compilable project around a bare (e.g. TopoDroid-exported) survey .th: creates the folder tree, copies the survey into th/, and writes a wrapper .th plus a thconfig with the exports you choose.</value></data>
+  <data name="Scaffold_Intro" xml:space="preserve"><value>Sets up a compilable project around a bare (e.g. TopoDroid-exported) survey .th: creates the folder tree, copies the survey into th/, and writes a wrapper .th plus a thconfig with the exports you choose.</value></data>
   <data name="Scaffold_ProjectName" xml:space="preserve"><value>Project name</value></data>
   <data name="Scaffold_SurveyTitle" xml:space="preserve"><value>Title</value></data>
   <data name="Scaffold_SourceSurvey" xml:space="preserve"><value>Survey name (inner)</value></data>
@@ -1223,9 +1216,8 @@ Install Mapiah from its releases page, then set the path to {0} in Settings → 
   <data name="Diag_SummaryFile1" xml:space="preserve"><value>{0} file</value></data>
   <data name="Diag_SummaryFileN" xml:space="preserve"><value>{0} files</value></data>
   <data name="Diag_SummaryFmt" xml:space="preserve"><value>{0} and {1} in {2}</value></data>
-  <data name="Diag_SummarySuppressedFmt" xml:space="preserve"><value>  ·  {0} code(s) suppressed</value></data>
-  <data name="Struct_StatusNoData" xml:space="preserve"><value>No centreline data in scope. Open a survey (.th) with measurements.</value></data>
-  <data name="Struct_StatusFmt" xml:space="preserve"><value>{0} plane(s) from {1} measurement(s).{2}</value></data>
+  <data name="Struct_StatusNoData" xml:space="preserve"><value>No centerline data in scope. Open a survey (.th) with measurements.</value></data>
+  <data name="Struct_StatusFmt" xml:space="preserve"><value>{0} from {1}.{2}</value></data>
   <data name="Struct_DeclManual" xml:space="preserve"><value> · declination {0}° → true N</value></data>
   <data name="Struct_DeclSurvey" xml:space="preserve"><value> · declination {0}° (survey)</value></data>
   <data name="Struct_DeclWmm" xml:space="preserve"><value> · declination {0}° (WMM)</value></data>
@@ -1254,9 +1246,9 @@ Install Mapiah from its releases page, then set the path to {0} in Settings → 
   <data name="Pref_Vis_Model3DInternal" xml:space="preserve"><value>Open clicked .lox / .3d models in the built-in 3D viewer</value></data>
   <data name="Tb_ValidateOnType" xml:space="preserve"><value>Validate on type — re-check the file and whole thconfig file-tree as you type (not just on save)</value></data>
   <data name="Pref_ValidateOnType" xml:space="preserve"><value>Validate on type (file + whole thconfig file-tree)</value></data>
-  <data name="Pref_ValidateOnTypeHelp" xml:space="preserve"><value>Re-validate the whole object graph from the unsaved editor buffers on a short typing pause, instead of only on save. Off by default — it re-analyses the thconfig file-tree on every pause, which can be heavy on large workspaces.</value></data>
+  <data name="Pref_ValidateOnTypeHelp" xml:space="preserve"><value>Re-validate the whole object graph from the unsaved editor buffers on a short typing pause, instead of only on save. Off by default — it re-analyzes the thconfig file-tree on every pause, which can be heavy on large workspaces.</value></data>
   <data name="Tb_DoubleClickNav" xml:space="preserve"><value>Double-click to go to definition — a single click just places the caret (CTRL + click also available for navigation to definition in this mode).</value></data>
-  <data name="Pref_DoubleClickNav" xml:space="preserve"><value>Require a double-click to go to definition (or CTRL + click for single-click navigation behaviour)</value></data>
+  <data name="Pref_DoubleClickNav" xml:space="preserve"><value>Require a double-click to go to definition (or Ctrl+click for single-click navigation behavior)</value></data>
   <data name="Pref_DoubleClickNavHelp" xml:space="preserve"><value>When on, a single click on an identifier just places the caret (so you can edit it); a double-click jumps to its declaration. When off, a single click navigates like a hyperlink. Ctrl+click always navigates.</value></data>
   <data name="Common_Undo" xml:space="preserve"><value>Undo</value></data>
   <data name="Common_Redo" xml:space="preserve"><value>Redo</value></data>
@@ -1339,7 +1331,6 @@ Install Mapiah from its releases page, then set the path to {0} in Settings → 
   <data name="Assistant_Deny" xml:space="preserve"><value>Deny</value></data>
   <data name="Assistant_Result" xml:space="preserve"><value>Result</value></data>
   <data name="Assistant_RawJson" xml:space="preserve"><value>Raw JSON</value></data>
-  <data name="Assistant_Objects" xml:space="preserve"><value>{0} objects — click to open</value></data>
   <data name="Assistant_NoText" xml:space="preserve"><value>(The assistant returned no text — see the tool results above.)</value></data>
   <data name="Assistant_Copy" xml:space="preserve"><value>Copy</value></data>
   <data name="Assistant_Insert" xml:space="preserve"><value>Insert at caret</value></data>
@@ -1386,7 +1377,7 @@ Install Mapiah from its releases page, then set the path to {0} in Settings → 
   <data name="LinkSurvey_Browse" xml:space="preserve"><value>Browse…</value></data>
   <data name="LinkSurvey_PickSource" xml:space="preserve"><value>Choose the survey file to link</value></data>
   <data name="LinkSurvey_PickTarget" xml:space="preserve"><value>Choose the folder to copy the survey into</value></data>
-  <data name="LinkSurvey_SourceStatus" xml:space="preserve"><value>{0} stations, {1} shots, {2} parse errors</value></data>
+  <data name="LinkSurvey_SourceStatus" xml:space="preserve"><value>{0}, {1}, {2}</value></data>
   <data name="LinkSurvey_SourceUnreadable" xml:space="preserve"><value>Cannot read the file: {0}</value></data>
   <data name="LinkSurvey_SourceStation" xml:space="preserve"><value>Station in the new survey</value></data>
   <data name="LinkSurvey_WorkspaceStation" xml:space="preserve"><value>Station in the project</value></data>
@@ -1420,8 +1411,8 @@ Install Mapiah from its releases page, then set the path to {0} in Settings → 
   <data name="LinkSurvey_WarnNothingToLink" xml:space="preserve"><value>Pick a station on each side.</value></data>
   <data name="LinkSurvey_NoWorkspace" xml:space="preserve"><value>Open a project first: the survey is linked into the active project.</value></data>
   <data name="LinkSurvey_Done" xml:space="preserve"><value>Linked {0}</value></data>
-  <data name="Menu_Tools_LinkSurvey" xml:space="preserve"><value>Link survey file…</value></data>
-  <data name="Ctx_GenerateCode" xml:space="preserve"><value>Generate code</value></data>
+  <data name="Menu_Tools_LinkSurvey" xml:space="preserve"><value>Link Survey File…</value></data>
+  <data name="Ctx_GenerateCode" xml:space="preserve"><value>Generate Code</value></data>
   <data name="Edit_ProblemStale" xml:space="preserve"><value>{0} changed since the lines were planned; try again.</value></data>
   <data name="Edit_ProblemMissing" xml:space="preserve"><value>{0} does not exist.</value></data>
   <data name="Edit_ProblemExists" xml:space="preserve"><value>{0} already exists.</value></data>
@@ -1453,7 +1444,7 @@ Install Mapiah from its releases page, then set the path to {0} in Settings → 
   <data name="Ed_KindStation" xml:space="preserve"><value>Station</value></data>
   <data name="Ed_KindSnippet" xml:space="preserve"><value>Snippet</value></data>
   <data name="Ed_KindIdentifier" xml:space="preserve"><value>Identifier</value></data>
-  <data name="Ed_InsertSnippet" xml:space="preserve"><value>Insert snippet</value></data>
+  <data name="Ed_InsertSnippet" xml:space="preserve"><value>Insert Snippet</value></data>
   <data name="Menu_File_NewFile" xml:space="preserve"><value>New File…</value></data>
   <data name="NewFile_Title" xml:space="preserve"><value>New file</value></data>
   <data name="NewFile_Template" xml:space="preserve"><value>Template</value></data>
@@ -1471,7 +1462,7 @@ Install Mapiah from its releases page, then set the path to {0} in Settings → 
   <data name="NewFolder_Default" xml:space="preserve"><value>New Folder</value></data>
   <data name="Notif_TemplatesInvalid" xml:space="preserve"><value>Some file templates could not be read</value></data>
   <data name="FileTpl_Trip" xml:space="preserve"><value>Survey trip</value></data>
-  <data name="FileTpl_TripDesc" xml:space="preserve"><value>A survey with one centreline; date, team, units and data line carried over from the file open in the editor.</value></data>
+  <data name="FileTpl_TripDesc" xml:space="preserve"><value>A survey with one centerline; date, team, units and data line carried over from the file open in the editor.</value></data>
   <data name="FileTpl_Connection" xml:space="preserve"><value>Connection survey</value></data>
   <data name="FileTpl_ConnectionDesc" xml:space="preserve"><value>A wrapper survey that inputs other surveys and equates them.</value></data>
   <data name="FileTpl_Thconfig" xml:space="preserve"><value>Thconfig</value></data>
@@ -1509,7 +1500,7 @@ Install Mapiah from its releases page, then set the path to {0} in Settings → 
   <data name="ProjTpl_SingleCaveDesc" xml:space="preserve"><value>One cave: a survey file to input trips into, a thconfig with a plan map and a 3D model, folders for data, sketches and output.</value></data>
   <data name="ProjTpl_KarstAreaDesc" xml:space="preserve"><value>Several caves of one area: each cave with its own thconfig, plus a master thconfig that compiles them together.</value></data>
   <data name="ProjTpl_ExpeditionDesc" xml:space="preserve"><value>A yearly expedition: one folder per year for its trips and sketches, and a thconfig per year.</value></data>
-  <data name="Menu_Tools_NewTrip" xml:space="preserve"><value>New trip…</value></data>
+  <data name="Menu_Tools_NewTrip" xml:space="preserve"><value>New Trip…</value></data>
   <data name="NewTrip_Title" xml:space="preserve"><value>New trip</value></data>
   <data name="NewTrip_Intro" xml:space="preserve"><value>A new survey file for a trip, with the units, instruments and data order of the latest trip, tied to the project station it starts from.</value></data>
   <data name="NewTrip_Date" xml:space="preserve"><value>Date</value></data>
@@ -1532,12 +1523,12 @@ Install Mapiah from its releases page, then set the path to {0} in Settings → 
   <data name="NewTrip_BadDate" xml:space="preserve"><value>The date should look like 2026.10.21.</value></data>
   <data name="NewTrip_PickTieIn" xml:space="preserve"><value>Choose the project station the trip starts from.</value></data>
   <data name="Trust_Title" xml:space="preserve"><value>Trust this folder?</value></data>
-  <data name="Trust_Message" xml:space="preserve"><value>The project in {0} wants to run commands because {1}. Run commands from this project? Only say yes for projects you know — the commands run with your permissions. Your answer is remembered; Preferences ▸ Extensions lists trusted folders.</value></data>
+  <data name="Trust_Message" xml:space="preserve"><value>The project in {0} wants to run commands because {1}. Run commands from this project? Only say yes for projects you know — the commands run with your permissions. Your answer is remembered; Settings ▸ Extensions lists trusted folders.</value></data>
   <data name="Trust_Confirm" xml:space="preserve"><value>Trust and run</value></data>
   <data name="Trust_ReasonHooks" xml:space="preserve"><value>it defines hooks</value></data>
   <data name="Trust_ReasonTasks" xml:space="preserve"><value>it defines tasks</value></data>
   <data name="Trust_ReasonMacros" xml:space="preserve"><value>it defines macros</value></data>
-  <data name="Trust_ReasonSystemCommands" xml:space="preserve"><value>an assistant asked to build it, and its thconfig runs system commands</value></data>
+  <data name="Trust_ReasonSystemCommands" xml:space="preserve"><value>an assistant asked to compile it, and its thconfig runs system commands</value></data>
   <data name="Trust_Skipped" xml:space="preserve"><value>Skipped project commands: the folder is not trusted</value></data>
   <data name="Trust_SkippedDetail" xml:space="preserve"><value>{0} were not run.</value></data>
   <data name="Trust_TrustAction" xml:space="preserve"><value>Trust…</value></data>
@@ -1548,7 +1539,7 @@ Install Mapiah from its releases page, then set the path to {0} in Settings → 
   <data name="Automation_HookTimedOut" xml:space="preserve"><value>A hook took too long and was stopped</value></data>
   <data name="Automation_HookTimedOutDetail" xml:space="preserve"><value>The {0} hook ran longer than {1} s.</value></data>
   <data name="Pref_HookList" xml:space="preserve"><value>More hooks</value></data>
-  <data name="Pref_HookListHelp" xml:space="preserve"><value>Each runs a shell command when its event happens: when a workspace opens, a file is opened or saved, a build starts, finishes or fails. Use {file}, ${fileDirname}, ${workspaceRoot}, ${activeThconfig}, ${entry}; the hook also gets THIDE_* environment variables (build exit code, errors, outputs…). Output goes to the Automation panel unless the hook is detached.</value></data>
+  <data name="Pref_HookListHelp" xml:space="preserve"><value>Each runs a shell command when its event happens: when a workspace opens, a file is opened or saved, a compilation starts, finishes or fails. Use {file}, ${fileDirname}, ${workspaceRoot}, ${activeThconfig}, ${entry}; the hook also gets THIDE_* environment variables (compiler exit code, errors, outputs…). Output goes to the Automation panel unless the hook is detached.</value></data>
   <data name="Pref_HookTimeout" xml:space="preserve"><value>Seconds before the hook is stopped</value></data>
   <data name="Pref_HookDetached" xml:space="preserve"><value>Detached</value></data>
   <data name="Pref_HookEnabled" xml:space="preserve"><value>On</value></data>
@@ -1563,15 +1554,15 @@ Install Mapiah from its releases page, then set the path to {0} in Settings → 
   <data name="Task_Unknown" xml:space="preserve"><value>No such task</value></data>
   <data name="Automation_Task" xml:space="preserve"><value>Task</value></data>
   <data name="Cmd_TaskFmt" xml:space="preserve"><value>Task: {0}</value></data>
-  <data name="Menu_Build_BatchBuild" xml:space="preserve"><value>Build multiple…</value></data>
-  <data name="Batch_Title" xml:space="preserve"><value>Batch build</value></data>
-  <data name="Batch_Intro" xml:space="preserve"><value>Tick the thconfigs to build, and under each the exports to produce. They are built one after the other; the summary goes to the Automation panel.</value></data>
+  <data name="Menu_Build_BatchBuild" xml:space="preserve"><value>Compile Multiple…</value></data>
+  <data name="Batch_Title" xml:space="preserve"><value>Compile Multiple</value></data>
+  <data name="Batch_Intro" xml:space="preserve"><value>Tick the thconfigs to compile, and under each the exports to produce. They are compiled one after the other; the summary goes to the Automation panel.</value></data>
   <data name="Batch_StopOnFailure" xml:space="preserve"><value>Stop at the first failure</value></data>
-  <data name="Batch_Build" xml:space="preserve"><value>Build</value></data>
+  <data name="Batch_Build" xml:space="preserve"><value>Compile</value></data>
   <data name="Batch_SomeTargets" xml:space="preserve"><value>({0} of {1} exports)</value></data>
-  <data name="Batch_NotStarted" xml:space="preserve"><value>The build did not start (another build is running, or saving was cancelled).</value></data>
+  <data name="Batch_NotStarted" xml:space="preserve"><value>Compilation did not start (another compilation is running, or saving was canceled).</value></data>
   <data name="Batch_Done" xml:space="preserve"><value>{0} of {1} built.</value></data>
-  <data name="Batch_NoThconfigs" xml:space="preserve"><value>The workspace has no thconfig to build.</value></data>
+  <data name="Batch_NoThconfigs" xml:space="preserve"><value>The workspace has no thconfig to compile.</value></data>
   <data name="Batch_RowOk" xml:space="preserve"><value>  ok</value></data>
   <data name="Batch_RowFailed" xml:space="preserve"><value>  failed (exit {0})</value></data>
   <data name="Fix_Rename" xml:space="preserve"><value>Rename '{0}' → '{1}'</value></data>
@@ -1581,23 +1572,20 @@ Install Mapiah from its releases page, then set the path to {0} in Settings → 
   <data name="Fix_CommentOutDisconnects" xml:space="preserve"><value>Comment out this line (disconnects {0})</value></data>
   <data name="Fix_Equate" xml:space="preserve"><value>Replace with 'equate {0} {1}'</value></data>
   <data name="Fix_PathSeparators" xml:space="preserve"><value>Write '{0}' with '/' separators</value></data>
-  <data name="File_PathSeparatorBanner" xml:space="preserve"><value>{0} include path(s) in this file use Windows '\' separators. Therion cannot open them on this system, but written with '/' they name existing files.</value></data>
   <data name="File_PathSeparatorFixFile" xml:space="preserve"><value>Fix in this file</value></data>
   <data name="File_PathSeparatorFixWorkspace" xml:space="preserve"><value>Fix in entire workspace…</value></data>
-  <data name="File_PathSeparatorFixed" xml:space="preserve"><value>Rewrote {0} include path(s) with '/' separators.</value></data>
   <data name="PathSep_Title" xml:space="preserve"><value>Fix Windows path separators</value></data>
-  <data name="PathSep_Summary" xml:space="preserve"><value>{0} include path(s) in {1} file(s) will be written with '/' separators.</value></data>
+  <data name="PathSep_Summary" xml:space="preserve"><value>To be written with '/' separators: {0} in {1}.</value></data>
   <data name="PathSep_None" xml:space="preserve"><value>No include path in the workspace needs its separators fixed.</value></data>
   <data name="Fix_CreateFile" xml:space="preserve"><value>Create file '{0}'</value></data>
   <data name="Diag_Fix" xml:space="preserve"><value>Fix</value></data>
   <data name="Diag_FixAll" xml:space="preserve"><value>Fix all '{0}' in the workspace…</value></data>
   <data name="Diag_FixAllNone" xml:space="preserve"><value>None of these has a fix that can be applied without looking.</value></data>
-  <data name="Diag_FixAllSummary" xml:space="preserve"><value>{0} fixes in {1} files. {2} could not be fixed automatically and are left as they are. Untick any change you do not want.</value></data>
-  <data name="Diag_FixAllDone" xml:space="preserve"><value>Applied {0} changes.</value></data>
+  <data name="Diag_FixAllSummary" xml:space="preserve"><value>{0} in {1}. Could not be fixed automatically and are left as they are: {2}. Untick any change you do not want.</value></data>
   <data name="EditPreview_Apply" xml:space="preserve"><value>Apply</value></data>
-  <data name="Menu_Tools_SyncMaps" xml:space="preserve"><value>Add unreferenced scraps to maps…</value></data>
-  <data name="Menu_Tools_SuggestEquates" xml:space="preserve"><value>Suggest equates…</value></data>
-  <data name="Menu_Tools_FormatAll" xml:space="preserve"><value>Format all files…</value></data>
+  <data name="Menu_Tools_SyncMaps" xml:space="preserve"><value>Add Unreferenced Scraps to Maps…</value></data>
+  <data name="Menu_Tools_SuggestEquates" xml:space="preserve"><value>Suggest Equates…</value></data>
+  <data name="Menu_Tools_FormatAll" xml:space="preserve"><value>Format All Files…</value></data>
   <data name="SyncMaps_Intro" xml:space="preserve"><value>These scraps are drawn but no map composes them, so they appear in no map Therion exports. Choose the map each one joins (or leave it out); you will see every change before it is written.</value></data>
   <data name="SyncMaps_Skip" xml:space="preserve"><value>(leave out)</value></data>
   <data name="SyncMaps_Next" xml:space="preserve"><value>Preview…</value></data>
@@ -1610,14 +1598,13 @@ Install Mapiah from its releases page, then set the path to {0} in Settings → 
   <data name="Suggest_NeedPieces" xml:space="preserve"><value>Positions can only be compared between pieces georeferenced in the same projected coordinate system (a fix in UTM, for example); found {0}.</value></data>
   <data name="Suggest_NoneWithin" xml:space="preserve"><value>No pair of stations from different pieces is that close.</value></data>
   <data name="Suggest_Verify" xml:space="preserve"><value>Positions are approximate (no loop closure): each pair is a candidate to check before linking, not a confirmed join.</value></data>
-  <data name="FormatAll_Summary" xml:space="preserve"><value>{0} files would change; {1} are left alone because they do not parse cleanly (fix those first). Line endings are kept. Untick a file to leave it out.</value></data>
+  <data name="FormatAll_Summary" xml:space="preserve"><value>{0} Line endings are kept. Untick a file to leave it out.</value></data>
   <data name="Diag_NoFix" xml:space="preserve"><value>This problem has no automatic fix.</value></data>
   <data name="Diag_FixAllSaveFirst" xml:space="preserve"><value>Save these open files first, so their problems are checked again: {0}.</value></data>
   <data name="SyncMaps_MapNotFound" xml:space="preserve"><value>not found in its file as it reads now</value></data>
   <data name="SyncMaps_Unterminated" xml:space="preserve"><value>no endmap</value></data>
   <data name="SyncMaps_None" xml:space="preserve"><value>unchanged</value></data>
-  <data name="FormatAll_LinesDiffer" xml:space="preserve"><value>{0} line(s) change</value></data>
-  <data name="Menu_Tools_WatchIncoming" xml:space="preserve"><value>Watch the incoming folder</value></data>
+  <data name="Menu_Tools_WatchIncoming" xml:space="preserve"><value>Watch the Incoming Folder</value></data>
   <data name="Incoming_Title" xml:space="preserve"><value>Incoming folder</value></data>
   <data name="Incoming_Arrived" xml:space="preserve"><value>New survey export: {0}</value></data>
   <data name="Incoming_Import" xml:space="preserve"><value>Import…</value></data>
@@ -1656,16 +1643,15 @@ Apply the changes? Steps that could not preview run now.</value></data>
   <data name="Notif_SaveEncoding" xml:space="preserve"><value>{0}: '{1}' cannot be written in {2}, the encoding the file declares. Change the character, or the file's `encoding` line (for example to utf-8), and save again.</value></data>
   <data name="Notif_SaveFailedTitle" xml:space="preserve"><value>Save failed</value></data>
   <data name="Notif_SaveFailedMsg" xml:space="preserve"><value>{0} could not be written: {1} Your edits are still in the editor, unsaved.</value></data>
-  <data name="Exit_SavePromptMsg" xml:space="preserve"><value>{0} file(s) have unsaved changes. Do you want to save them before closing ThIDE?</value></data>
   <data name="Exit_SaveAll" xml:space="preserve"><value>Save all</value></data>
   <data name="Replace_EncodingRefused" xml:space="preserve"><value>Nothing replaced: {0} cannot hold '{1}' in {2}, the encoding the file declares. No file was changed.</value></data>
   <data name="Replace_UndoRefused" xml:space="preserve"><value>Nothing restored: {0} was changed after the replace. No file was changed.</value></data>
   <data name="Notif_SaveUndecodable" xml:space="preserve"><value>{0} holds bytes that are not valid {2}; they show as '{1}'. Saving would replace them for good. Add an `encoding` line naming the file's real encoding with another editor and reopen it, or retype the characters shown as '{1}'.</value></data>
   <data name="Replace_UndecodableRefused" xml:space="preserve"><value>Nothing replaced: {0} holds bytes that are not valid {2} (shown as '{1}'), and writing it would replace them for good. No file was changed.</value></data>
   <data name="Diag_FixCheck" xml:space="preserve"><value>This fix may not land in the right place here: check where it goes before applying it.</value></data>
-  <data name="Menu_Edit_PasteShots" xml:space="preserve"><value>Paste as shot data…</value></data>
-  <data name="Menu_Tools_Normalize" xml:space="preserve"><value>Normalise project…</value></data>
-  <data name="Menu_Tools_Renumber" xml:space="preserve"><value>Renumber stations…</value></data>
+  <data name="Menu_Edit_PasteShots" xml:space="preserve"><value>Paste as Shot Data…</value></data>
+  <data name="Menu_Tools_Normalize" xml:space="preserve"><value>Normalize Project…</value></data>
+  <data name="Menu_Tools_Renumber" xml:space="preserve"><value>Renumber Stations…</value></data>
   <data name="PasteShots_Title" xml:space="preserve"><value>Paste as shot data</value></data>
   <data name="PasteShots_Intro" xml:space="preserve"><value>A table of shots — from a spreadsheet, a CSV file, PocketTopo or a DistoX dump — becomes a Therion data block. Columns come from the header row or the column count; correct them if the guess is wrong. In a table without stations, repeated shots of one leg become one averaged leg and single shots become splays.</value></data>
   <data name="PasteShots_Columns" xml:space="preserve"><value>Columns:</value></data>
@@ -1680,7 +1666,7 @@ Apply the changes? Steps that could not preview run now.</value></data>
   <data name="PasteShots_Merge" xml:space="preserve"><value>Shots per leg:</value></data>
   <data name="PasteShots_Wrap" xml:space="preserve"><value>Wrap in centreline … endcentreline</value></data>
   <data name="PasteShots_Insert" xml:space="preserve"><value>Insert</value></data>
-  <data name="PasteShots_Summary" xml:space="preserve"><value>{0} leg(s), {1} splay(s)</value></data>
+  <data name="PasteShots_Summary" xml:space="preserve"><value>{0}, {1}</value></data>
   <data name="PasteShots_BadColumns" xml:space="preserve"><value>Columns: use data keywords such as 'from to length compass clino' (length, compass and clino are needed; '-' skips a column).</value></data>
   <data name="PasteShots_Target" xml:space="preserve"><value>Insert into: {0}, centreline at line {1}</value></data>
   <data name="PasteShots_TargetNew" xml:space="preserve"><value>Insert into: {0}, a new centreline at the end of survey {1} (line {2})</value></data>
@@ -1689,14 +1675,12 @@ Apply the changes? Steps that could not preview run now.</value></data>
   <data name="ShotIssue_NoShots" xml:space="preserve"><value>No shots found in the text.</value></data>
   <data name="ShotIssue_NotANumber" xml:space="preserve"><value>'{0}' is not a number; the row is left out.</value></data>
   <data name="ShotIssue_TooFewValues" xml:space="preserve"><value>too few values; the row is left out.</value></data>
-  <data name="ShotIssue_ExtraColumns" xml:space="preserve"><value>{0} extra column(s) ignored.</value></data>
   <data name="ShotIssue_NegativeLength" xml:space="preserve"><value>negative length {0}.</value></data>
   <data name="ShotIssue_LongLength" xml:space="preserve"><value>length {0} is unusually long — check the unit.</value></data>
   <data name="ShotIssue_CompassOutOfRange" xml:space="preserve"><value>compass {0} is out of range.</value></data>
   <data name="ShotIssue_ClinoOutOfRange" xml:space="preserve"><value>clino {0} is out of range.</value></data>
   <data name="ShotIssue_GradsInferred" xml:space="preserve"><value>Compass values above 360: the angles are read as grads.</value></data>
   <data name="ShotIssue_SameStation" xml:space="preserve"><value>a leg from '{0}' to itself.</value></data>
-  <data name="ShotIssue_RepeatedLegsMerged" xml:space="preserve"><value>{0} leg(s) made from repeated shots; single shots became splays.</value></data>
   <data name="ShotIssue_ColumnsGuessed" xml:space="preserve"><value>No header and {0} columns: the column guess may be wrong.</value></data>
   <data name="Normalize_Intro" xml:space="preserve"><value>House-keeping for a shared repository, previewed before anything changes. Files that do not parse cleanly are left alone.</value></data>
   <data name="Normalize_Reindent" xml:space="preserve"><value>Re-indent (the editor's Format Document)</value></data>
@@ -1704,7 +1688,7 @@ Apply the changes? Steps that could not preview run now.</value></data>
   <data name="Normalize_KeepEndings" xml:space="preserve"><value>Keep each file's</value></data>
   <data name="Normalize_Utf8" xml:space="preserve"><value>Convert files that declare another encoding to UTF-8</value></data>
   <data name="Normalize_SortInputs" xml:space="preserve"><value>Sort each run of consecutive 'input' lines naturally (trip2 before trip10). Order rarely matters to Therion, but check the preview.</value></data>
-  <data name="Normalize_Summary" xml:space="preserve"><value>{0} files would change; {1} are left alone because they do not parse cleanly (fix those first). Untick a file to leave it out.</value></data>
+  <data name="Normalize_Summary" xml:space="preserve"><value>{0} Untick a file to leave it out.</value></data>
   <data name="Renumber_Intro" xml:space="preserve"><value>Give every station of a survey a new prefix, or shift its numbers, everywhere it is written: shots, equates, fixes and @-references in other files. Stations that do not match are left alone. Sketch (.th2) station labels are not renamed.</value></data>
   <data name="Renumber_Survey" xml:space="preserve"><value>Survey:</value></data>
   <data name="Renumber_OldPrefix" xml:space="preserve"><value>Current prefix:</value></data>
@@ -1713,7 +1697,7 @@ Apply the changes? Steps that could not preview run now.</value></data>
   <data name="Renumber_Offset" xml:space="preserve"><value>Add to the number:</value></data>
   <data name="Renumber_IncludeSub" xml:space="preserve"><value>Include the sub-surveys (each keeps its own names)</value></data>
   <data name="Renumber_Nothing" xml:space="preserve"><value>Choose a new prefix or a number shift.</value></data>
-  <data name="Renumber_Summary" xml:space="preserve"><value>{0} station(s) renamed, {1} left alone — {2} edit(s) in {3} file(s).</value></data>
+  <data name="Renumber_Summary" xml:space="preserve"><value>Renamed: {0}; left alone: {1} — {2} in {3}.</value></data>
   <data name="Renumber_NoSurveys" xml:space="preserve"><value>Open a project with surveys first.</value></data>
   <data name="Renumber_InvalidName" xml:space="preserve"><value>'{0}' cannot be a station name ({1}).</value></data>
   <data name="Renumber_Duplicate" xml:space="preserve"><value>Two stations would both become '{0}' ({1}).</value></data>
@@ -1731,32 +1715,28 @@ Delete it permanently instead? This cannot be undone.</value></data>
   <data name="WsUndo_MenuNone" xml:space="preserve"><value>Undo multi-file change</value></data>
   <data name="WsUndo_RedoMenu" xml:space="preserve"><value>Redo {0}</value></data>
   <data name="WsUndo_RedoMenuNone" xml:space="preserve"><value>Redo multi-file change</value></data>
-  <data name="WsUndo_Files" xml:space="preserve"><value>{0} file(s): {1}</value></data>
   <data name="WsUndo_More" xml:space="preserve"><value> and {0} more</value></data>
-  <data name="WsUndo_Done" xml:space="preserve"><value>Undid {0} in {1} file(s): {2}</value></data>
-  <data name="WsUndo_Redone" xml:space="preserve"><value>Redid {0} in {1} file(s): {2}</value></data>
   <data name="WsUndo_Refused" xml:space="preserve"><value>Nothing restored: {0} has changed since. No file was changed.</value></data>
   <data name="WsUndo_Encoding" xml:space="preserve"><value>Nothing restored: {0} cannot hold '{1}' in {2}, the encoding the file declares. No file was changed.</value></data>
   <data name="WsUndo_Gone" xml:space="preserve"><value>This change was already undone.</value></data>
   <data name="WsUndo_OpRename" xml:space="preserve"><value>Rename</value></data>
-  <data name="Rename_Done" xml:space="preserve"><value>Renamed {0} → {1} in {2} file(s).</value></data>
-  <data name="Replace_Confirm" xml:space="preserve"><value>Replace {0} occurrence(s) in {1} files?</value></data>
-  <data name="Replace_Done" xml:space="preserve"><value>Replaced {0} occurrence(s) in {1} file(s).</value></data>
+  <data name="Replace_Confirm" xml:space="preserve"><value>Replace {0} in {1}?</value></data>
+  <data name="Replace_Done" xml:space="preserve"><value>Replaced {0} in {1}.</value></data>
   <data name="NewTrip_Done" xml:space="preserve"><value>Created {0}</value></data>
   <data name="Build_CompilingTarget" xml:space="preserve"><value>Compiling {0}…</value></data>
   <data name="Build_OutputTarget" xml:space="preserve"><value>Compiling {0}</value></data>
-  <data name="Menu_Build_BuildThisThconfig" xml:space="preserve"><value>Build this thconfig (focused tab)</value></data>
-  <data name="Cmd_BuildThisThconfig" xml:space="preserve"><value>Build this thconfig (the focused tab, not the active one)</value></data>
+  <data name="Menu_Build_BuildThisThconfig" xml:space="preserve"><value>Compile This thconfig (Focused Tab)</value></data>
+  <data name="Cmd_BuildThisThconfig" xml:space="preserve"><value>Compile this thconfig (the focused tab, not the active one)</value></data>
   <data name="Gen_Header" xml:space="preserve"><value>Outputs of {0}</value></data>
   <data name="Gen_HeaderBuilt" xml:space="preserve"><value>Outputs of {0} · built {1}</value></data>
-  <data name="Gen_NotBuiltYet" xml:space="preserve"><value>{0} has not been built yet.</value></data>
-  <data name="Gen_NoOutputs" xml:space="preserve"><value>The last build of {0} wrote no output files.</value></data>
-  <data name="Gen_StaleAfterFailedBuild" xml:space="preserve"><value>⚠ The last build of {0} failed — these outputs are from an earlier build. Fix the errors and compile again.</value></data>
+  <data name="Gen_NotBuiltYet" xml:space="preserve"><value>{0} has not been compiled yet.</value></data>
+  <data name="Gen_NoOutputs" xml:space="preserve"><value>The last compilation of {0} wrote no output files.</value></data>
+  <data name="Gen_StaleAfterFailedBuild" xml:space="preserve"><value>⚠ The last compilation of {0} failed — these outputs are from an earlier compilation. Fix the errors and compile again.</value></data>
   <data name="Dash_BuildNever" xml:space="preserve"><value>Never built this session</value></data>
-  <data name="Dash_BuildOk" xml:space="preserve"><value>Last build of {0} succeeded</value></data>
-  <data name="Dash_BuildOkWarnings" xml:space="preserve"><value>Last build of {0} succeeded ({1} warnings)</value></data>
-  <data name="Dash_BuildFailed" xml:space="preserve"><value>Last build of {0} failed</value></data>
-  <data name="Dash_BuildFailedError" xml:space="preserve"><value>Last build of {0} failed — {1}</value></data>
+  <data name="Dash_BuildOk" xml:space="preserve"><value>Last compilation of {0} succeeded</value></data>
+  <data name="Dash_BuildOkWarnings" xml:space="preserve"><value>Last compilation of {0} succeeded ({1})</value></data>
+  <data name="Dash_BuildFailed" xml:space="preserve"><value>Last compilation of {0} failed</value></data>
+  <data name="Dash_BuildFailedError" xml:space="preserve"><value>Last compilation of {0} failed — {1}</value></data>
   <data name="File_NotInActiveThconfig" xml:space="preserve"><value>Not part of the active thconfig ({0}).</value></data>
   <data name="File_NotInActiveThconfigNoName" xml:space="preserve"><value>Not part of the active thconfig.</value></data>
   <data name="File_NotTheActiveThconfig" xml:space="preserve"><value>Not the active thconfig (the active one is {0}).</value></data>
@@ -1799,18 +1779,17 @@ This cannot be undone.</value></data>
   <data name="Build_InProgress" xml:space="preserve"><value>A compilation is already in progress.</value></data>
   <data name="Build_Succeeded" xml:space="preserve"><value>Compilation succeeded</value></data>
   <data name="Build_SucceededNoOutputs" xml:space="preserve"><value>Compilation succeeded (no outputs).</value></data>
-  <data name="Build_ArtifactCount" xml:space="preserve"><value>{0} artifact(s)</value></data>
   <data name="Build_FailedWithError" xml:space="preserve"><value>Compilation failed (exit {0}): {1}</value></data>
   <data name="Build_Failed" xml:space="preserve"><value>Compilation failed (exit {0}).</value></data>
-  <data name="Build_Cancelled" xml:space="preserve"><value>Compilation cancelled.</value></data>
-  <data name="Build_CancelledUnsaved" xml:space="preserve"><value>Compilation cancelled — unsaved changes.</value></data>
+  <data name="Build_Cancelled" xml:space="preserve"><value>Compilation canceled.</value></data>
+  <data name="Build_CancelledUnsaved" xml:space="preserve"><value>Compilation canceled — unsaved changes.</value></data>
   <data name="Build_Error" xml:space="preserve"><value>Compilation error: {0}</value></data>
   <data name="Build_SummaryOk" xml:space="preserve"><value>Compilation finished successfully in {0} seconds.</value></data>
-  <data name="Build_SummaryOkFiles" xml:space="preserve"><value>Compilation finished successfully in {0} seconds and generated {1} output file(s).</value></data>
-  <data name="Build_SummaryOkWarn" xml:space="preserve"><value>Compilation finished successfully (with {2} warning(s)) in {0} seconds.</value></data>
-  <data name="Build_SummaryOkWarnFiles" xml:space="preserve"><value>Compilation finished successfully (with {2} warning(s)) in {0} seconds and generated {1} output file(s).</value></data>
+  <data name="Build_SummaryOkFiles" xml:space="preserve"><value>Compilation finished successfully in {0} seconds and generated {1}.</value></data>
+  <data name="Build_SummaryOkWarn" xml:space="preserve"><value>Compilation finished successfully (with {2}) in {0} seconds.</value></data>
+  <data name="Build_SummaryOkWarnFiles" xml:space="preserve"><value>Compilation finished successfully (with {2}) in {0} seconds and generated {1}.</value></data>
   <data name="Build_SummaryFailed" xml:space="preserve"><value>Compilation finished with errors in {0} seconds.</value></data>
-  <data name="Build_SummaryFailedWarn" xml:space="preserve"><value>Compilation finished with errors and {2} warning(s) in {0} seconds.</value></data>
+  <data name="Build_SummaryFailedWarn" xml:space="preserve"><value>Compilation finished with errors and {2} in {0} seconds.</value></data>
   <data name="Gen_State_Stale" xml:space="preserve"><value>⚠ stale</value></data>
   <data name="Gen_State_Current" xml:space="preserve"><value>current</value></data>
   <data name="Gen_Kind_lox" xml:space="preserve"><value>Loch 3D model</value></data>
@@ -2027,7 +2006,7 @@ This cannot be undone.</value></data>
   <data name="Kb_Cmd_CancelBuild" xml:space="preserve"><value>Stop compiling</value></data>
   <data name="Kb_Cmd_OpenInLoch" xml:space="preserve"><value>Open in Loch</value></data>
   <data name="Kb_Cmd_OpenInAven" xml:space="preserve"><value>Open in Aven</value></data>
-  <data name="Kb_Cmd_ToggleWorkspaceExplorer" xml:space="preserve"><value>Toggle Workspace</value></data>
+  <data name="Kb_Cmd_ToggleWorkspaceExplorer" xml:space="preserve"><value>Toggle Workspace Explorer</value></data>
   <data name="Kb_Cmd_ToggleDiagnostics" xml:space="preserve"><value>Toggle Diagnostics</value></data>
   <data name="Kb_Cmd_Save" xml:space="preserve"><value>Save</value></data>
   <data name="Kb_Cmd_GoBack" xml:space="preserve"><value>Go Back</value></data>
@@ -2080,7 +2059,7 @@ This cannot be undone.</value></data>
   <data name="Kb_Cmd_SortLines" xml:space="preserve"><value>Sort Lines</value></data>
   <data name="Kb_Cmd_NextOccurrenceInFile" xml:space="preserve"><value>Next Occurrence in This File</value></data>
   <data name="Kb_ConflictFmt" xml:space="preserve"><value>Already used by {0} — replace?</value></data>
-  <data name="Kb_ResetAllConfirm" xml:space="preserve"><value>Reset every keyboard shortcut to its default? {0} shortcut(s) you changed will be replaced when you press OK.</value></data>
+  <data name="Kb_ResetAllConfirm" xml:space="preserve"><value>Reset every keyboard shortcut to its default? Shortcuts you changed that will be replaced when you press OK: {0}.</value></data>
   <data name="Kb_ResetAllConfirmOk" xml:space="preserve"><value>Reset all</value></data>
   <data name="Kb_ConflictReplace" xml:space="preserve"><value>Replace</value></data>
   <data name="Kb_ConflictKeep" xml:space="preserve"><value>Keep the old one</value></data>
@@ -2105,7 +2084,6 @@ This cannot be undone.</value></data>
   <data name="FormatAll_Nothing_One" xml:space="preserve"><value>Nothing to change in {0} file.</value></data>
   <data name="FormatAll_Nothing_Few" xml:space="preserve"><value>Nothing to change in {0} files.</value></data>
   <data name="FormatAll_Nothing_Many" xml:space="preserve"><value>Nothing to change in {0} files.</value></data>
-  <data name="FormatAll_NothingSkipped" xml:space="preserve"><value>{0} more are left alone because they do not parse cleanly (fix those first).</value></data>
   <data name="Menu_File_Save" xml:space="preserve"><value>_Save</value></data>
   <data name="Menu_File_SaveAs" xml:space="preserve"><value>Save _As…</value></data>
   <data name="Menu_File_SaveAll" xml:space="preserve"><value>Save A_ll</value></data>
@@ -2120,7 +2098,7 @@ This cannot be undone.</value></data>
   <data name="Menu_Settings_KeyboardShortcuts" xml:space="preserve"><value>_Keyboard Shortcuts…</value></data>
   <data name="Pick_SaveAsTitle" xml:space="preserve"><value>Save As</value></data>
   <data name="Status_SavedFmt" xml:space="preserve"><value>Saved {0}</value></data>
-  <data name="Status_SavedAllFmt" xml:space="preserve"><value>Saved {0} file(s).</value></data>
+  <data name="Status_SavedAllFmt" xml:space="preserve"><value>Files saved: {0}.</value></data>
   <data name="Kb_Cmd_SaveAs" xml:space="preserve"><value>Save As</value></data>
   <data name="Kb_Cmd_SaveAll" xml:space="preserve"><value>Save All</value></data>
   <data name="Kb_Cmd_CloseTab" xml:space="preserve"><value>Close Tab</value></data>
@@ -2145,4 +2123,188 @@ This cannot be undone.</value></data>
   <data name="Notif_StateUnreadableMsg" xml:space="preserve"><value>The defaults are in use. A copy of the unreadable file was kept as {0}.</value></data>
   <data name="Blender_UI_RenderDir" xml:space="preserve"><value>Render folder</value></data>
   <data name="Blender_UI_RenderDirTip" xml:space="preserve"><value>Where the video, frames or still are saved. Leave empty to keep them in the temporary job folder.</value></data>
+  <data name="Count_Warnings_One" xml:space="preserve"><value>{0} warning</value></data>
+  <data name="Count_Warnings_Few" xml:space="preserve"><value>{0} warnings</value></data>
+  <data name="Count_Warnings_Many" xml:space="preserve"><value>{0} warnings</value></data>
+  <data name="Count_Planes_One" xml:space="preserve"><value>{0} plane</value></data>
+  <data name="Count_Planes_Few" xml:space="preserve"><value>{0} planes</value></data>
+  <data name="Count_Planes_Many" xml:space="preserve"><value>{0} planes</value></data>
+  <data name="Count_Measurements_One" xml:space="preserve"><value>{0} measurement</value></data>
+  <data name="Count_Measurements_Few" xml:space="preserve"><value>{0} measurements</value></data>
+  <data name="Count_Measurements_Many" xml:space="preserve"><value>{0} measurements</value></data>
+  <data name="Count_IncludePaths_One" xml:space="preserve"><value>{0} include path</value></data>
+  <data name="Count_IncludePaths_Few" xml:space="preserve"><value>{0} include paths</value></data>
+  <data name="Count_IncludePaths_Many" xml:space="preserve"><value>{0} include paths</value></data>
+  <data name="Count_Legs_One" xml:space="preserve"><value>{0} leg</value></data>
+  <data name="Count_Legs_Few" xml:space="preserve"><value>{0} legs</value></data>
+  <data name="Count_Legs_Many" xml:space="preserve"><value>{0} legs</value></data>
+  <data name="Count_Splays_One" xml:space="preserve"><value>{0} splay</value></data>
+  <data name="Count_Splays_Few" xml:space="preserve"><value>{0} splays</value></data>
+  <data name="Count_Splays_Many" xml:space="preserve"><value>{0} splays</value></data>
+  <data name="Count_Stations_One" xml:space="preserve"><value>{0} station</value></data>
+  <data name="Count_Stations_Few" xml:space="preserve"><value>{0} stations</value></data>
+  <data name="Count_Stations_Many" xml:space="preserve"><value>{0} stations</value></data>
+  <data name="Count_Shots_One" xml:space="preserve"><value>{0} shot</value></data>
+  <data name="Count_Shots_Few" xml:space="preserve"><value>{0} shots</value></data>
+  <data name="Count_Shots_Many" xml:space="preserve"><value>{0} shots</value></data>
+  <data name="Count_ParseErrors_One" xml:space="preserve"><value>{0} parse error</value></data>
+  <data name="Count_ParseErrors_Few" xml:space="preserve"><value>{0} parse errors</value></data>
+  <data name="Count_ParseErrors_Many" xml:space="preserve"><value>{0} parse errors</value></data>
+  <data name="Count_Edits_One" xml:space="preserve"><value>{0} edit</value></data>
+  <data name="Count_Edits_Few" xml:space="preserve"><value>{0} edits</value></data>
+  <data name="Count_Edits_Many" xml:space="preserve"><value>{0} edits</value></data>
+  <data name="Count_OutputFiles_One" xml:space="preserve"><value>{0} output file</value></data>
+  <data name="Count_OutputFiles_Few" xml:space="preserve"><value>{0} output files</value></data>
+  <data name="Count_OutputFiles_Many" xml:space="preserve"><value>{0} output files</value></data>
+  <data name="Count_Fixes_One" xml:space="preserve"><value>{0} fix</value></data>
+  <data name="Count_Fixes_Few" xml:space="preserve"><value>{0} fixes</value></data>
+  <data name="Count_Fixes_Many" xml:space="preserve"><value>{0} fixes</value></data>
+  <data name="Build_SavePromptMsg_One" xml:space="preserve"><value>{0} file involved in this compilation has unsaved changes:</value></data>
+  <data name="Build_SavePromptMsg_Few" xml:space="preserve"><value>{0} files involved in this compilation have unsaved changes:</value></data>
+  <data name="Build_SavePromptMsg_Many" xml:space="preserve"><value>{0} files involved in this compilation have unsaved changes:</value></data>
+  <data name="Notif_RecoveredMsg_One" xml:space="preserve"><value>{0} file had unsaved changes when the app last closed unexpectedly.</value></data>
+  <data name="Notif_RecoveredMsg_Few" xml:space="preserve"><value>{0} files had unsaved changes when the app last closed unexpectedly.</value></data>
+  <data name="Notif_RecoveredMsg_Many" xml:space="preserve"><value>{0} files had unsaved changes when the app last closed unexpectedly.</value></data>
+  <data name="Recovery_BannerMsg_One" xml:space="preserve"><value>Unsaved changes from a session that closed unexpectedly were kept for {0} file:</value></data>
+  <data name="Recovery_BannerMsg_Few" xml:space="preserve"><value>Unsaved changes from a session that closed unexpectedly were kept for {0} files:</value></data>
+  <data name="Recovery_BannerMsg_Many" xml:space="preserve"><value>Unsaved changes from a session that closed unexpectedly were kept for {0} files:</value></data>
+  <data name="Recovery_DiscardConfirm_One" xml:space="preserve"><value>Discard the recovered copy of {0} file? The unsaved changes in it are lost for good.
+
+{1}</value></data>
+  <data name="Recovery_DiscardConfirm_Few" xml:space="preserve"><value>Discard the recovered copies of {0} files? The unsaved changes in them are lost for good.
+
+{1}</value></data>
+  <data name="Recovery_DiscardConfirm_Many" xml:space="preserve"><value>Discard the recovered copies of {0} files? The unsaved changes in them are lost for good.
+
+{1}</value></data>
+  <data name="File_PathSeparatorBanner_One" xml:space="preserve"><value>{0} include path in this file uses Windows '\' separators. Therion cannot open it on this system, but written with '/' it names an existing file.</value></data>
+  <data name="File_PathSeparatorBanner_Few" xml:space="preserve"><value>{0} include paths in this file use Windows '\' separators. Therion cannot open them on this system, but written with '/' they name existing files.</value></data>
+  <data name="File_PathSeparatorBanner_Many" xml:space="preserve"><value>{0} include paths in this file use Windows '\' separators. Therion cannot open them on this system, but written with '/' they name existing files.</value></data>
+  <data name="File_PathSeparatorFixed_One" xml:space="preserve"><value>Rewrote {0} include path with '/' separators.</value></data>
+  <data name="File_PathSeparatorFixed_Few" xml:space="preserve"><value>Rewrote {0} include paths with '/' separators.</value></data>
+  <data name="File_PathSeparatorFixed_Many" xml:space="preserve"><value>Rewrote {0} include paths with '/' separators.</value></data>
+  <data name="Exit_SavePromptMsg_One" xml:space="preserve"><value>{0} file has unsaved changes. Do you want to save it before closing ThIDE?</value></data>
+  <data name="Exit_SavePromptMsg_Few" xml:space="preserve"><value>{0} files have unsaved changes. Do you want to save them before closing ThIDE?</value></data>
+  <data name="Exit_SavePromptMsg_Many" xml:space="preserve"><value>{0} files have unsaved changes. Do you want to save them before closing ThIDE?</value></data>
+  <data name="ShotIssue_ExtraColumns_One" xml:space="preserve"><value>{0} extra column ignored.</value></data>
+  <data name="ShotIssue_ExtraColumns_Few" xml:space="preserve"><value>{0} extra columns ignored.</value></data>
+  <data name="ShotIssue_ExtraColumns_Many" xml:space="preserve"><value>{0} extra columns ignored.</value></data>
+  <data name="ShotIssue_RepeatedLegsMerged_One" xml:space="preserve"><value>{0} leg made from repeated shots; single shots became splays.</value></data>
+  <data name="ShotIssue_RepeatedLegsMerged_Few" xml:space="preserve"><value>{0} legs made from repeated shots; single shots became splays.</value></data>
+  <data name="ShotIssue_RepeatedLegsMerged_Many" xml:space="preserve"><value>{0} legs made from repeated shots; single shots became splays.</value></data>
+  <data name="Build_ArtifactCount_One" xml:space="preserve"><value>{0} artifact</value></data>
+  <data name="Build_ArtifactCount_Few" xml:space="preserve"><value>{0} artifacts</value></data>
+  <data name="Build_ArtifactCount_Many" xml:space="preserve"><value>{0} artifacts</value></data>
+  <data name="Diag_SummarySuppressedFmt_One" xml:space="preserve"><value>  ·  {0} code suppressed</value></data>
+  <data name="Diag_SummarySuppressedFmt_Few" xml:space="preserve"><value>  ·  {0} codes suppressed</value></data>
+  <data name="Diag_SummarySuppressedFmt_Many" xml:space="preserve"><value>  ·  {0} codes suppressed</value></data>
+  <data name="Assistant_Objects_One" xml:space="preserve"><value>{0} object — click to open</value></data>
+  <data name="Assistant_Objects_Few" xml:space="preserve"><value>{0} objects — click to open</value></data>
+  <data name="Assistant_Objects_Many" xml:space="preserve"><value>{0} objects — click to open</value></data>
+  <data name="Diag_FixAllDone_One" xml:space="preserve"><value>Applied {0} change.</value></data>
+  <data name="Diag_FixAllDone_Few" xml:space="preserve"><value>Applied {0} changes.</value></data>
+  <data name="Diag_FixAllDone_Many" xml:space="preserve"><value>Applied {0} changes.</value></data>
+  <data name="WsUndo_Files_One" xml:space="preserve"><value>{0} file: {1}</value></data>
+  <data name="WsUndo_Files_Few" xml:space="preserve"><value>{0} files: {1}</value></data>
+  <data name="WsUndo_Files_Many" xml:space="preserve"><value>{0} files: {1}</value></data>
+  <data name="WsUndo_Done_One" xml:space="preserve"><value>Undid {1} in {0} file: {2}</value></data>
+  <data name="WsUndo_Done_Few" xml:space="preserve"><value>Undid {1} in {0} files: {2}</value></data>
+  <data name="WsUndo_Done_Many" xml:space="preserve"><value>Undid {1} in {0} files: {2}</value></data>
+  <data name="WsUndo_Redone_One" xml:space="preserve"><value>Redid {1} in {0} file: {2}</value></data>
+  <data name="WsUndo_Redone_Few" xml:space="preserve"><value>Redid {1} in {0} files: {2}</value></data>
+  <data name="WsUndo_Redone_Many" xml:space="preserve"><value>Redid {1} in {0} files: {2}</value></data>
+  <data name="Rename_Done_One" xml:space="preserve"><value>Renamed {1} → {2} in {0} file.</value></data>
+  <data name="Rename_Done_Few" xml:space="preserve"><value>Renamed {1} → {2} in {0} files.</value></data>
+  <data name="Rename_Done_Many" xml:space="preserve"><value>Renamed {1} → {2} in {0} files.</value></data>
+  <data name="Edit_WouldChange_One" xml:space="preserve"><value>{0} file would change.</value></data>
+  <data name="Edit_WouldChange_Few" xml:space="preserve"><value>{0} files would change.</value></data>
+  <data name="Edit_WouldChange_Many" xml:space="preserve"><value>{0} files would change.</value></data>
+  <data name="Edit_LeftAlone_One" xml:space="preserve"><value>{0} file is left alone because it does not parse cleanly (fix it first).</value></data>
+  <data name="Edit_LeftAlone_Few" xml:space="preserve"><value>{0} files are left alone because they do not parse cleanly (fix those first).</value></data>
+  <data name="Edit_LeftAlone_Many" xml:space="preserve"><value>{0} files are left alone because they do not parse cleanly (fix those first).</value></data>
+  <data name="FormatAll_NothingSkipped_One" xml:space="preserve"><value>{0} more file is left alone because it does not parse cleanly (fix it first).</value></data>
+  <data name="FormatAll_NothingSkipped_Few" xml:space="preserve"><value>{0} more files are left alone because they do not parse cleanly (fix those first).</value></data>
+  <data name="FormatAll_NothingSkipped_Many" xml:space="preserve"><value>{0} more files are left alone because they do not parse cleanly (fix those first).</value></data>
+  <data name="Ws_Sort_Name" xml:space="preserve"><value>Name</value></data>
+  <data name="Ws_Sort_Modified" xml:space="preserve"><value>Date Modified</value></data>
+  <data name="Ws_Sort_Type" xml:space="preserve"><value>Type</value></data>
+  <data name="Ws_Sort_Size" xml:space="preserve"><value>Size</value></data>
+  <data name="Ws_Sort_Created" xml:space="preserve"><value>Date Created</value></data>
+  <data name="Ws_Sort_Ascending" xml:space="preserve"><value>Ascending</value></data>
+  <data name="Ws_Sort_Descending" xml:space="preserve"><value>Descending</value></data>
+  <data name="Opt_GroupBy_None" xml:space="preserve"><value>None</value></data>
+  <data name="Opt_GroupBy_Survey" xml:space="preserve"><value>Survey</value></data>
+  <data name="Opt_GroupBy_Style" xml:space="preserve"><value>Style</value></data>
+  <data name="Opt_GroupBy_Flags" xml:space="preserve"><value>Flags</value></data>
+  <data name="Opt_GroupBy_Kind" xml:space="preserve"><value>Kind</value></data>
+  <data name="Opt_Scope_Project" xml:space="preserve"><value>Project (active thconfig)</value></data>
+  <data name="Opt_Scope_Directory" xml:space="preserve"><value>Directory</value></data>
+  <data name="Opt_Scope_OpenFiles" xml:space="preserve"><value>Open files</value></data>
+  <data name="StationKind_Shot" xml:space="preserve"><value>Shot</value></data>
+  <data name="StationKind_Fix" xml:space="preserve"><value>Fix</value></data>
+  <data name="StationKind_Equate" xml:space="preserve"><value>Equate</value></data>
+  <data name="Proj_TodoScanOff" xml:space="preserve"><value>TODO scan is off (Settings ▸ Visualization).</value></data>
+  <data name="Proj_MediaScanOff" xml:space="preserve"><value>Media scan is off (Settings ▸ Visualization).</value></data>
+  <data name="Proj_CsWm" xml:space="preserve"><value>e.g. EPSG:3844</value></data>
+  <data name="Diag_Explain_TH0002" xml:space="preserve"><value>An unexpected token was found where it isn't allowed in this command.</value></data>
+  <data name="Diag_Explain_TH0003" xml:space="preserve"><value>A quoted string has no closing quote, so it ends at the end of its line. Inside a string, write "" for a quote character.</value></data>
+  <data name="Diag_Explain_TH0020" xml:space="preserve"><value>The file ends in the middle of a block — a closing keyword (e.g. endsurvey) is missing.</value></data>
+  <data name="Diag_Explain_TH0010" xml:space="preserve"><value>This top-level keyword isn't a recognized Therion command. Check spelling or context.</value></data>
+  <data name="Diag_Explain_TH0021" xml:space="preserve"><value>A block is closed by the wrong terminator keyword — it must match the block that was opened.</value></data>
+  <data name="Diag_Explain_TH0032" xml:space="preserve"><value>A 'data' command is malformed — it needs a style and a reading order.</value></data>
+  <data name="Diag_Explain_TH0033" xml:space="preserve"><value>Unknown data style. Use one of: normal, diving, cartesian, cylpolar, dimensions, nosurvey, topofil.</value></data>
+  <data name="Diag_Explain_TH0034" xml:space="preserve"><value>Unknown data reading keyword in the reading order.</value></data>
+  <data name="Diag_Explain_TH0040" xml:space="preserve"><value>A 'units' command is malformed (unknown quantity or missing unit).</value></data>
+  <data name="Diag_Explain_TH0041" xml:space="preserve"><value>A 'calibrate' command is missing its zero-error value.</value></data>
+  <data name="Diag_Explain_TH0043" xml:space="preserve"><value>Unknown coordinate system. Use an EPSG code or a known cs name.</value></data>
+  <data name="Diag_Explain_TH_SEM_001" xml:space="preserve"><value>This station/reference can't be resolved to any declaration. Check the name and survey path.</value></data>
+  <data name="Diag_Explain_TH_SEM_002" xml:space="preserve"><value>This station is fixed more than once — keep a single 'fix' per station.</value></data>
+  <data name="Diag_Explain_TH_SEM_003" xml:space="preserve"><value>The reference is malformed (bad @-qualified name).</value></data>
+  <data name="Diag_Explain_TH_SEM_004" xml:space="preserve"><value>A fixed station is never used by any shot or equate — likely a typo or leftover.</value></data>
+  <data name="Diag_Explain_TH_SEM_005" xml:space="preserve"><value>The data row's value count doesn't match the active reading order.</value></data>
+  <data name="Diag_Explain_TH_SEM_006" xml:space="preserve"><value>A value isn't a valid number for its reading (e.g. a typo in a length/compass/clino).</value></data>
+  <data name="Diag_Explain_TH_SEM_007" xml:space="preserve"><value>A value is outside the expected range for its reading (e.g. compass &gt; 360°).</value></data>
+  <data name="Diag_Explain_TH_SEM_010" xml:space="preserve"><value>The same survey/map name is declared in more than one file. Names must be unique across the project (station names, however, are unique only per survey).</value></data>
+  <data name="Diag_Explain_TH_SEM_011" xml:space="preserve"><value>A closed loop doesn't close: the misclosure is large relative to the loop length. Look for a transposed digit or a missed backsight in the loop.</value></data>
+  <data name="Diag_Explain_TH_SEM_012" xml:space="preserve"><value>This leg looks implausible — zero length between distinct stations, a self-loop, or an unusually long shot.</value></data>
+  <data name="Diag_Explain_TH_SEM_013" xml:space="preserve"><value>The foresight and backsight disagree by more than the tolerance. Compass back ≈ fore ± 180°, clino back ≈ −fore.</value></data>
+  <data name="Diag_Explain_TH_SEM_014" xml:space="preserve"><value>An included file (input/source target) was not found on disk.</value></data>
+  <data name="Diag_Explain_TH_SEM_015" xml:space="preserve"><value>This piece of survey is disconnected from the rest of the cave and isn't georeferenced. Join it to a neighboring station with an 'equate', or anchor it in absolute coordinates with a 'fix' under a 'cs'.</value></data>
+  <data name="Diag_Explain_TH_SEM_016" xml:space="preserve"><value>The include path uses Windows '\' separators. Therion on Linux and macOS reads '\' as part of the file name, so it cannot open the file; the same path written with '/' exists. '/' works on every platform, Windows included.</value></data>
+  <data name="Diag_Explain_TH_XVI_001" xml:space="preserve"><value>Unknown XVI variable: only the 'set XVI…' variables ThIDE understands are read from this file.</value></data>
+  <data name="Diag_Explain_TH_XVI_002" xml:space="preserve"><value>Unexpected content in an .xvi file: only 'set' statements are expected at the top level.</value></data>
+  <data name="Diag_Explain_TH_XVI_003" xml:space="preserve"><value>A '{' block in this .xvi file is never closed — a matching '}' is missing.</value></data>
+  <data name="Diag_Explain_TH_XVI_004" xml:space="preserve"><value>The XVIgrid value is malformed: it needs exactly 8 numeric values.</value></data>
+  <data name="Diag_Explain_TH_XVI_050" xml:space="preserve"><value>The sketch (.xvi) file referenced from this scrap was not found on disk.</value></data>
+  <data name="Proj_AnalyticsOff" xml:space="preserve"><value>Project analytics is off (Settings ▸ Visualization).</value></data>
+  <data name="Feat_RichCompletion_Title" xml:space="preserve"><value>Rich completion items</value></data>
+  <data name="Feat_RichCompletion_Desc" xml:space="preserve"><value>Per-kind icons, documentation detail, and signature/snippet insertion in autocomplete.</value></data>
+  <data name="Feat_SignatureHelp_Title" xml:space="preserve"><value>Parameter / signature help</value></data>
+  <data name="Feat_SignatureHelp_Desc" xml:space="preserve"><value>Shows the expected next field as the caret moves across a command's arguments.</value></data>
+  <data name="Feat_Snippets_Title" xml:space="preserve"><value>Code snippets &amp; templates</value></data>
+  <data name="Feat_Snippets_Desc" xml:space="preserve"><value>Tab-expandable templates (survey block, centerline, scrap, thconfig skeleton, map block).</value></data>
+  <data name="Feat_FormatDocument_Title" xml:space="preserve"><value>Format document</value></data>
+  <data name="Feat_FormatDocument_Desc" xml:space="preserve"><value>Normalizes block indentation, aligns data columns and flag spelling via the Therion writer.</value></data>
+  <data name="Feat_Minimap_Title" xml:space="preserve"><value>Minimap / code overview</value></data>
+  <data name="Feat_Minimap_Desc" xml:space="preserve"><value>A condensed overview of the whole document beside the scrollbar.</value></data>
+  <data name="Feat_StickyScroll_Title" xml:space="preserve"><value>Sticky scroll &amp; breadcrumbs</value></data>
+  <data name="Feat_StickyScroll_Desc" xml:space="preserve"><value>Pins the enclosing survey/centerline/scrap header and shows a breadcrumb trail.</value></data>
+  <data name="Feat_Outline_Title" xml:space="preserve"><value>Document outline</value></data>
+  <data name="Feat_Outline_Desc" xml:space="preserve"><value>A live symbol tree (surveys, centerlines, scraps, objects) with click-to-navigate.</value></data>
+  <data name="Feat_PeekDefinition_Title" xml:space="preserve"><value>Peek definition</value></data>
+  <data name="Feat_PeekDefinition_Desc" xml:space="preserve"><value>Shows a definition inline in a popup without leaving the current file.</value></data>
+  <data name="Feat_SplitView_Title" xml:space="preserve"><value>Split / side-by-side editor</value></data>
+  <data name="Feat_SplitView_Desc" xml:space="preserve"><value>Open a file in a second pane (Split Right / Split Down).</value></data>
+  <data name="Feat_ColorAdornments_Title" xml:space="preserve"><value>Inline color &amp; unit hints</value></data>
+  <data name="Feat_ColorAdornments_Desc" xml:space="preserve"><value>A color swatch next to color values and a unit hint next to numerics.</value></data>
+  <data name="Feat_WhitespaceGuides_Title" xml:space="preserve"><value>Whitespace &amp; indent guides</value></data>
+  <data name="Feat_WhitespaceGuides_Desc" xml:space="preserve"><value>Render spaces/tabs/end-of-line markers and indentation guide lines.</value></data>
+  <data name="Feat_TrimTrailingOnSave_Title" xml:space="preserve"><value>Trim whitespace on save</value></data>
+  <data name="Feat_TrimTrailingOnSave_Desc" xml:space="preserve"><value>Remove trailing whitespace and ensure a final newline when saving.</value></data>
+  <data name="Feat_MatchTerminator_Title" xml:space="preserve"><value>Match block terminator</value></data>
+  <data name="Feat_MatchTerminator_Desc" xml:space="preserve"><value>Jump between survey/endsurvey and highlight the matching pair.</value></data>
+  <data name="Feat_SmartEnter_Title" xml:space="preserve"><value>Smart Enter</value></data>
+  <data name="Feat_SmartEnter_Desc" xml:space="preserve"><value>Auto-indent on Enter and auto-insert the matching endX for block openers.</value></data>
+  <data name="Feat_ReadingOrderNav_Title" xml:space="preserve"><value>Reading-order navigation</value></data>
+  <data name="Feat_ReadingOrderNav_Desc" xml:space="preserve"><value>Step into an included file and back, with a navigation backstack.</value></data>
 </root>

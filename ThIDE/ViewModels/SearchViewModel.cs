@@ -39,9 +39,10 @@ public sealed partial class SearchViewModel : ViewModelBase
     [ObservableProperty] private string _status = string.Empty;
     [ObservableProperty] private SearchHit? _selected;
 
+    // Option ids; the combo shows them as Opt_Scope_<id>.
     public const string ScopeProject = "Project";
     public const string ScopeDirectory = "Directory";
-    public const string ScopeOpenFiles = "Open files";
+    public const string ScopeOpenFiles = "OpenFiles";
     public string[] Scopes { get; } = { ScopeProject, ScopeDirectory, ScopeOpenFiles };
 
     private readonly IAppSettingsService? _settings;

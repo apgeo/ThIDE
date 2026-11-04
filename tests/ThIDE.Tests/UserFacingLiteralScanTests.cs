@@ -29,12 +29,12 @@ public sealed class UserFacingLiteralScanTests
         ["ThIDE/ViewModels/AssistantViewModel.cs"] = 1,
         ["ThIDE/ViewModels/BatchBuildViewModel.cs"] = 1,
         ["ThIDE/ViewModels/BuildViewModel.cs"] = 7,
-        ["ThIDE/ViewModels/DataAnalyticsViewModel.cs"] = 3,
+        ["ThIDE/ViewModels/DataAnalyticsViewModel.cs"] = 2,
         ["ThIDE/ViewModels/LivePreviewViewModel.cs"] = 2,
-        ["ThIDE/ViewModels/MainWindowViewModel.cs"] = 17,
+        ["ThIDE/ViewModels/MainWindowViewModel.cs"] = 16,
         ["ThIDE/ViewModels/MapViewerViewModel.cs"] = 1,
         ["ThIDE/ViewModels/Model3DViewerViewModel.cs"] = 6,
-        ["ThIDE/ViewModels/ProjectToolsViewModels.cs"] = 5,
+        ["ThIDE/ViewModels/ProjectToolsViewModels.cs"] = 3,
         ["ThIDE/ViewModels/ReplaceInFilesViewModel.cs"] = 4,
         ["ThIDE/ViewModels/SearchViewModel.cs"] = 2,
         ["ThIDE/ViewModels/SettingsViewModel.cs"] = 2,
@@ -67,5 +67,35 @@ public sealed class UserFacingLiteralScanTests
                 over.Add($"{rel}: {hits.Count} (baseline {allowed})\n    " + string.Join("\n    ", hits.Select(h => h.Trim())));
         }
         Assert.True(over.Count == 0, "English literals passed to user-facing APIs — localize them with Tr.Get:\n" + string.Join("\n", over));
+    }
+
+    // A literal text attribute in XAML ({l:Loc Key} is the rule): Header="Name", ToolTip.Tip="Sort by", …
+    private static readonly Regex XamlLiteral =
+        new(@"\b(Header|Text|ToolTip\.Tip|Content|Watermark|PlaceholderText|Title)=""(?<v>[^""{]*[A-Za-z]{3}[^""]*)""");
+
+    // Not words to translate: file formats, line-ending names, sample values and product names.
+    private static readonly HashSet<string> XamlAllowed = new(StringComparer.Ordinal)
+    {
+        "KML…", "GeoJSON…", "GPX…", "CSV…", "Markdown…", "HTML…", "LaTeX…",
+        "LF (Linux, macOS)", "CRLF (Windows)", "survey.station", "thconfig", "quick-export", "MCP", "DevTools",
+        "http://127.0.0.1:1234/v1", "qwen3-coder-30b-a3b-instruct", "geo", "plane, geo", "e.g. geo",
+    };
+
+    [Fact]
+    public void No_English_literal_text_in_XAML()
+    {
+        var root = new DirectoryInfo(AppContext.BaseDirectory);
+        while (root is not null && !File.Exists(Path.Combine(root.FullName, "ThIDE.sln"))) root = root.Parent;
+        Assert.NotNull(root);
+
+        var bad = new List<string>();
+        foreach (var file in Directory.EnumerateFiles(Path.Combine(root!.FullName, "ThIDE"), "*.axaml", SearchOption.AllDirectories))
+        {
+            var rel = Path.GetRelativePath(root.FullName, file).Replace(Path.DirectorySeparatorChar, '/');
+            if (rel.Contains("/obj/", StringComparison.Ordinal) || rel.Contains("/bin/", StringComparison.Ordinal)) continue;
+            foreach (Match m in XamlLiteral.Matches(File.ReadAllText(file)))
+                if (!XamlAllowed.Contains(m.Groups["v"].Value)) bad.Add($"{rel}: {m.Value}");
+        }
+        Assert.True(bad.Count == 0, "English literals in XAML — use {l:Loc Key}:\n" + string.Join("\n", bad));
     }
 }

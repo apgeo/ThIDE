@@ -1,6 +1,6 @@
 namespace ThIDE.UiTests;
 
-/// <summary>Tools ▸ New trip… over the invented demo cave.</summary>
+/// <summary>Tools ▸ New Trip… over the invented demo cave.</summary>
 public class NewTripTests
 {
     [UiFact]
@@ -10,7 +10,7 @@ public class NewTripTests
         await using var app = await ThideApp.StartAsync(dir, "demo.thconfig");
         await app.WaitAsync("role:TabItem;name:demo.thconfig;state:selected");
 
-        await app.MenuAsync("Tools > New trip…");
+        await app.MenuAsync("Tools > New Trip…");
         await app.WaitAsync("#NewTrip.Window");
         await app.SetTextAsync("#NewTrip.Date", "2026.10.21");
         await app.SetTextAsync("#Picker.TripStation.Filter", "demo.4");

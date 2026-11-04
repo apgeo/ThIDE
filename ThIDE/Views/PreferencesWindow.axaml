@@ -41,9 +41,11 @@
 
         <!-- Right pane: the selected section's settings. Horizontal scrolling is disabled so every
              section (notably the Keyboard Shortcuts / File Associations grids) is constrained to the
-             pane width and its star columns fit to the available width instead of overflowing. -->
-        <ScrollViewer AutomationProperties.AutomationId="Preferences.Content" Padding="18" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-            <Panel>
+             pane width and its star columns fit to the available width instead of overflowing. The 18 px
+             inset is the Panel's margin, not the ScrollViewer's padding: the padding shifted content that
+             was still measured at the full viewport width, so the last grid column ran 36 px past the edge. -->
+        <ScrollViewer AutomationProperties.AutomationId="Preferences.Content" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <Panel Margin="18">
                 <!-- General -->
                 <StackPanel AutomationProperties.AutomationId="Preferences.Section.General" Spacing="10" IsVisible="{Binding IsGeneral}">
                     <TextBlock Text="{l:Loc Pref_General}" FontSize="16" FontWeight="Bold" />
@@ -616,11 +618,14 @@
                 <DockPanel AutomationProperties.AutomationId="Preferences.Section.Keyboard" IsVisible="{Binding IsKeyboard}" VerticalAlignment="Top">
                     <TextBlock DockPanel.Dock="Top" Text="{l:Loc Pref_Keyboard}"
                                FontSize="16" FontWeight="Bold" Margin="0,0,0,8" />
-                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="10" Margin="0,0,0,8">
-                        <Button AutomationProperties.AutomationId="Preferences.Keyboard.ResetAll" Content="{l:Loc Pref_ResetAll}" Command="{Binding Keyboard.ResetAllCommand}" />
-                        <TextBlock VerticalAlignment="Center" Foreground="Gray" FontSize="11"
+                    <!-- A DockPanel, not a horizontal StackPanel, so the help text gets a finite width and wraps
+                         (in Romanian it ran past the right edge). -->
+                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                        <Button DockPanel.Dock="Left" Margin="0,0,10,0" VerticalAlignment="Center"
+                                AutomationProperties.AutomationId="Preferences.Keyboard.ResetAll" Content="{l:Loc Pref_ResetAll}" Command="{Binding Keyboard.ResetAllCommand}" />
+                        <TextBlock VerticalAlignment="Center" Foreground="Gray" FontSize="11" TextWrapping="Wrap"
                                    Text="{l:Loc Pref_KbHelp}" />
-                    </StackPanel>
+                    </DockPanel>
                     <DataGrid ItemsSource="{Binding Keyboard.Rows}"
                               AutomationProperties.AutomationId="Preferences.Keyboard.Grid" AutomationProperties.Name="{l:Loc Pref_Keyboard}"
                               x:CompileBindings="False" VerticalAlignment="Top"
@@ -652,7 +657,7 @@
                             </DataGridTemplateColumn>
                             <!-- Capture box: focus it and press a chord to record the gesture (#11); the
                                  window's tunnel handler does the recording. -->
-                            <DataGridTemplateColumn Header="{l:Loc Pref_Col_Gesture}" Width="180" MinWidth="140">
+                            <DataGridTemplateColumn Header="{l:Loc Pref_Col_Gesture}" Width="160" MinWidth="130">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <TextBox Classes="gestureCapture" Text="{Binding GestureDisplay, Mode=OneWay}" IsReadOnly="True"
@@ -663,7 +668,9 @@
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
                             <DataGridTextColumn Header="{l:Loc Pref_Col_Default}" Binding="{Binding DefaultDisplay}" Width="Auto" MinWidth="90" IsReadOnly="True" />
-                            <DataGridTemplateColumn Header="" Width="Auto">
+                            <!-- Wide enough for "Resetează" at the default window size; Auto alone was squeezed by
+                                 the star column and cut the button to "Re…". -->
+                            <DataGridTemplateColumn Header="" Width="Auto" MinWidth="104">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <Button Content="{l:Loc Pref_Reset}" Command="{Binding ResetToDefaultCommand}" Margin="2" />

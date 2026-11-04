@@ -1,6 +1,6 @@
 namespace ThIDE.UiTests;
 
-/// <summary>Tools ▸ Normalise project, Tools ▸ Renumber stations and Edit ▸ Paste as shot data, in the real app.</summary>
+/// <summary>Tools ▸ Normalize Project, Tools ▸ Renumber Stations and Edit ▸ Paste as Shot Data, in the real app.</summary>
 public class HouseKeepingTests
 {
     [UiFact]
@@ -12,7 +12,7 @@ public class HouseKeepingTests
         await using var app = await ThideApp.StartAsync(dir, "demo.thconfig");
         await app.WaitAsync("role:TabItem;name:demo.thconfig;state:selected");
 
-        await app.MenuAsync("Tools > Normalise project…");
+        await app.MenuAsync("Tools > Normalize Project…");
         await app.WaitAsync("#Normalize.Window");
         await SnapAsync(app, "#Normalize.Window", "normalize-dialog.png");
         await app.InvokeAsync("#Normalize.Next");
@@ -34,7 +34,7 @@ public class HouseKeepingTests
         await using var app = await ThideApp.StartAsync(dir, "demo.thconfig");
         await app.WaitAsync("role:TabItem;name:demo.thconfig;state:selected");
 
-        await app.MenuAsync("Tools > Renumber stations…");
+        await app.MenuAsync("Tools > Renumber Stations…");
         await app.WaitAsync("#Renumber.Window");
         await app.SetTextAsync("#Renumber.NewPrefix", "D");
         for (int i = 0; i < 20 && !(await app.TreeAsync("#Renumber.Examples")).Contains("D1"); i++) await Task.Delay(250);
@@ -57,7 +57,7 @@ public class HouseKeepingTests
         await app.WaitAsync("role:TabItem;name:demo.th;state:selected");
         await app.KeyAsync("type:TextArea", "Ctrl+End");
 
-        await app.MenuAsync("Edit > Paste as shot data…");
+        await app.MenuAsync("Edit > Paste as Shot Data…");
         await app.WaitAsync("#PasteShots.Window");
         await app.SetTextAsync("#PasteShots.Source", "from,to,length,compass,clino\n7,8,2.5,10,-3\n");
         for (int i = 0; i < 20 && !(await app.TextOfAsync("#PasteShots.Output")).Contains("7 8 2.5"); i++) await Task.Delay(250);
@@ -83,7 +83,7 @@ public class HouseKeepingTests
         await app.WaitAsync("role:TabItem;name:demo.th;state:selected");
         await app.KeyAsync("type:TextArea", ["Ctrl+Home", .. Enumerable.Repeat("Down", 8)]);   // start of "    1 2 8.0 45 -10"
 
-        await app.MenuAsync("Edit > Paste as shot data…");
+        await app.MenuAsync("Edit > Paste as Shot Data…");
         await app.WaitAsync("#PasteShots.Window");
         await app.SetTextAsync("#PasteShots.Source", "from\tto\tlength (ft)\tcompass\tclino\n1\t1a\t20\t10\t-3\n");
         for (int i = 0; i < 20 && !(await app.TextOfAsync("#PasteShots.Output")).Contains("1a"); i++) await Task.Delay(250);

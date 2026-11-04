@@ -4,6 +4,7 @@
 
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.Input;
+using ThIDE.Resources;
 using ThIDE.Services;
 
 namespace ThIDE.ViewModels;
@@ -33,7 +34,7 @@ public partial class MainWindowViewModel
         // The operation's notification names the files it changed and offers the undo.
         history.Pushed += (_, record) => _notifications.Post(new AppNotification(
             record.Label,
-            record.Summary + "\n" + string.Format(L("WsUndo_Files", "{0} file(s): {1}"), record.Files.Count, record.FileNames()),
+            record.Summary + "\n" + Tr.Plural("WsUndo_Files", record.Files.Count, record.FileNames()),
             NotificationKind.Success,
             L("Common_Undo", "Undo"),
             () => _ = UndoWorkspaceRecordAsync(record)));
