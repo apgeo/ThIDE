@@ -40,6 +40,7 @@
                     <Button Content="{l:Loc M3D_ExitFullScreen}" Command="{Binding Viewer.ToggleFullscreenCommand}"
                             AutomationProperties.AutomationId="Viewer3D.ExitFullScreen"
                             FontSize="11" Padding="6,2" Margin="0,0,2,2"
+                            ToolTip.Tip="{l:Loc M3D_ExitFullScreenTip}"
                             IsVisible="{Binding Viewer.IsFullscreen}" />
                     <Button Content="{l:Loc M3D_ResetView}" Command="{Binding Viewer.ResetViewCommand}" FontSize="11" Padding="6,2" Margin="0,0,2,2"
                             AutomationProperties.AutomationId="Viewer3D.ResetView"
@@ -133,6 +134,7 @@
                            TextWrapping="Wrap"
                            IsVisible="{Binding Viewer.GeneratedNotice, Converter={x:Static cnv:StringConverters.IsNotNullOrEmpty}}" />
                 <TextBlock Text="{Binding Viewer.Status}" Foreground="Gray" FontSize="11" Margin="6,2"
+                           AutomationProperties.AutomationId="Viewer3D.Status"
                            TextTrimming="CharacterEllipsis" />
             </StackPanel>
 

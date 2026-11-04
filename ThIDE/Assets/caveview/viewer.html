@@ -101,6 +101,36 @@
         });
     })();
 
+    // CaveView reports a model it cannot read or build with alert(), which a native web view shows
+    // nowhere, and then never sends 'newCave': pass it to the host, which ends the load with it.
+    window.alert = function (msg) {
+        if (!modelLoaded) showOverlay(String(msg));
+        post({ type: "alert", message: String(msg) });
+    };
+
+    // No web terrain. For a model without a terrain of its own CaveView starts a web-terrain loader
+    // while the browser is online, and holds back the model's 'newCave' (our 'loaded') until it is
+    // done. This page serves no tile sets, so the most it can draw is a flat plane; meanwhile the HUD
+    // shows a "0 %" dial, and a tile set that fails to load is never reported, so the model stayed
+    // "Loading…" for good. Offline, CaveView shows the model at once.
+    try { Object.defineProperty(navigator, "onLine", { configurable: true, get: function () { return false; } }); }
+    catch (e) { /* the engine keeps its own value: the model still loads, after the terrain */ }
+
+    // Keep the page's layers the size of the window. A web view moved into another window (full
+    // screen, a floated panel) goes on laying the page out at the engine's default size (1000x600 on
+    // WebKitGTK) while it shows it at the new one, so "inset: 0" left the scene, and the canvas
+    // CaveView fits to it, at 1000x600 in a bigger window. innerWidth/innerHeight follow the real size.
+    // Registered before CaveView's own 'resize' listener, which then measures the fitted scene.
+    function fitToWindow() {
+        var w = window.innerWidth, h = window.innerHeight;
+        if (!w || !h) return;
+        ["scene", "mark-layer", "overlay"].forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el) { el.style.width = w + "px"; el.style.height = h + "px"; }
+        });
+    }
+    window.addEventListener("resize", fitToWindow);
+
     function showOverlay(msg) {
         var o = document.getElementById("overlay");
         if (o) { o.textContent = msg; o.classList.remove("hidden"); }
@@ -232,7 +262,7 @@
     // Re-fit the WebGL canvas to its container (CaveView only re-fits on a window 'resize').
     // Called by the host after a layout change it can't observe (e.g. the full-screen reparent).
     window.cvResize = function () {
-        try { window.dispatchEvent(new Event("resize")); } catch (e) { /* ignore */ }
+        try { fitToWindow(); window.dispatchEvent(new Event("resize")); } catch (e) { /* ignore */ }
     };
 
     // Unload the current model so a workspace/thconfig switch doesn't leave a stale cave on screen.

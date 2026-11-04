@@ -166,7 +166,7 @@ public partial class TherionTextEditor : UserControl
     private MenuItem? _formatMenuItem;                    // context-menu item (visibility gated)
     private MenuItem? _peekMenuItem;                      // context-menu item (visibility gated)
     private MenuItem? _open3dMenuItem;                    // #5: "Open in 3D" (shown for station/survey refs)
-    private string? _open3dName;                          // the station/survey under the right-click
+    private (string Raw, ReferenceInfo Info)? _open3dRef; // the station/survey under the right-click
     private MenuItem? _gotoEquateMenuItem;               // "Go to equate" (shown for equated stations/surveys)
     private MenuItem? _gotoAggregationMenuItem;          // "Go to aggregating map" (shown for composed scraps/maps)
     private MenuItem? _encloseRegionMenuItem;            // "Enclose in region" (Therion files; enabled for a multi-line block)
@@ -1987,9 +1987,12 @@ public partial class TherionTextEditor : UserControl
         catch { return false; }
     }
 
-    private void OpenInModel3D(string name)
+    // The token as written ("3", "3@sub.cave") is not a name the model knows: send the full dotted
+    // name of the station or survey it resolves to.
+    private void OpenInModel3D(string raw, ReferenceInfo info)
     {
-        if (!string.IsNullOrWhiteSpace(name)) TryDocuments()?.RequestShowInModel3D(name);
+        if (!string.IsNullOrWhiteSpace(raw) && TryDocuments() is { } documents)
+            documents.RequestShowInModel3D(Model3DTarget.ModelNameFor(raw, info, documents.Workspace));
         HideHoverInfo();
     }
 
@@ -2040,7 +2043,7 @@ public partial class TherionTextEditor : UserControl
 
         // "Open in 3D" — only for stations/surveys, and only when a 3D model is available.
         if (Model3DAvailableFor(info.Kind))
-            actions.Children.Add(IconAction("Icon.Cube", "Ed_OpenIn3D", () => OpenInModel3D(raw)));
+            actions.Children.Add(IconAction("Icon.Cube", "Ed_OpenIn3D", () => OpenInModel3D(raw, info)));
 
         // Documentation button: links to the thbook page for this reference kind (#6),
         // shown only when a page mapping exists for it (info.Kind is "station"/"survey"/…).
@@ -2439,7 +2442,7 @@ public partial class TherionTextEditor : UserControl
             _encloseRegionMenuItem.IsEnabled = IsMultiLineSelection;   // active only for a block
         }
         if (_open3dMenuItem is not null) _open3dMenuItem.IsVisible = false;   // hidden unless on a station/survey
-        _open3dName = null;
+        _open3dRef = null;
         if (_gotoEquateMenuItem is not null) _gotoEquateMenuItem.IsVisible = false;
         if (_gotoAggregationMenuItem is not null) _gotoAggregationMenuItem.IsVisible = false;
         _ctxAggregations = System.Collections.Immutable.ImmutableArray<AggregationReference>.Empty;
@@ -2482,7 +2485,7 @@ public partial class TherionTextEditor : UserControl
             Navigation?.Describe(tok.Raw, ChooseReferenceKind((tok.Start, tok.Length, tok.Raw), tok.Offset)) is { } info &&
             Model3DAvailableFor(info.Kind))
         {
-            _open3dName = tok.Raw;
+            _open3dRef = (tok.Raw, info);
             _open3dMenuItem.IsVisible = true;
         }
     }
@@ -3337,7 +3340,7 @@ public partial class TherionTextEditor : UserControl
         menu.Items.Add(MakeItem(L("Ed_RenameSymbol"),     StartRename));
         menu.Items.Add(MakeItem(L("Ed_FindAllRefs"),      StartFindAllReferences));
         // #5: shown only when right-clicking a station/survey reference and the 3D viewer has a model.
-        _open3dMenuItem = MakeItem(L("Ed_OpenIn3D"), () => { if (_open3dName is { } n) OpenInModel3D(n); });
+        _open3dMenuItem = MakeItem(L("Ed_OpenIn3D"), () => { if (_open3dRef is { } r) OpenInModel3D(r.Raw, r.Info); });
         menu.Items.Add(_open3dMenuItem);
         menu.Items.Add(new Separator());
         // shown only when their feature is enabled (refreshed on menu open).

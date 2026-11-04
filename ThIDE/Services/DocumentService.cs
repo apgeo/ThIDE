@@ -177,6 +177,26 @@ public sealed record Model3DTarget(string Name)
     /// <summary>The splay shot from <paramref name="from"/> with these readings.</summary>
     public static Model3DTarget Splay(string from, double? length, double? compass, double? clino) =>
         new(from) { SplayLength = length, SplayCompass = compass ?? 0, SplayClino = clino ?? 0 };
+
+    /// <summary>
+    /// The model's name for a station or survey reference as written in a source file (<c>3</c>,
+    /// <c>3@sub.cave</c>): the full dotted name of the station or survey it resolves to, else the
+    /// reference itself in dotted form (<c>cave.sub.3</c>), which the viewer matches against the end of
+    /// its own names. The model never knows a name in Therion's <c>@</c> notation.
+    /// </summary>
+    public static string ModelNameFor(string raw, Therion.Processing.Abstractions.ReferenceInfo? info,
+        Therion.Semantics.WorkspaceSemanticModel? workspace)
+    {
+        if (workspace is not null && info is { Declaration.IsEmpty: false })
+        {
+            var kind = info.Kind == "survey"
+                ? Therion.Processing.Abstractions.ReferenceKind.Survey
+                : Therion.Processing.Abstractions.ReferenceKind.Station;
+            if (Therion.Semantics.SymbolReferences.ResolveDeclaration(workspace, kind, info.Declaration) is { } symbol)
+                return symbol.Symbol.Name.ToString();
+        }
+        return Therion.Semantics.StationRef.Parse((raw ?? string.Empty).Trim()).StationQuery;
+    }
 }
 
 public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, ISnippetEditor, IAsyncDisposable

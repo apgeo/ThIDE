@@ -728,6 +728,7 @@
   <data name="M3D_OpenTip" xml:space="preserve"><value>Deschide un fișier model .lox / .3d</value></data>
   <data name="M3D_FullScreen" xml:space="preserve"><value>⛶ Ecran complet</value></data>
   <data name="M3D_ExitFullScreen" xml:space="preserve"><value>⤢ Ieși din ecran complet</value></data>
+  <data name="M3D_ExitFullScreenTip" xml:space="preserve"><value>Ieșiți din ecranul complet (Esc)</value></data>
   <data name="M3D_ResetView" xml:space="preserve"><value>⟲ Resetează vederea</value></data>
   <data name="M3D_ResetViewTip" xml:space="preserve"><value>Reîncadrează modelul</value></data>
   <data name="M3D_Defaults" xml:space="preserve"><value>↺ Implicite</value></data>
@@ -788,6 +789,7 @@
   <data name="M3D_ExportFolder" xml:space="preserve"><value>Dosarul pentru pagina web</value></data>
   <data name="M3D_ExportDone" xml:space="preserve"><value>Pagina web a fost scrisă în {0}</value></data>
   <data name="M3D_ExportFailed" xml:space="preserve"><value>Pagina web nu a putut fi scrisă: {0}</value></data>
+  <data name="M3D_LoadFailed" xml:space="preserve"><value>Modelul {0} nu a putut fi afișat: {1}</value></data>
   <data name="M3D_ExportNoModel" xml:space="preserve"><value>Încărcați mai întâi un model.</value></data>
   <!-- Live preview tool -->
   <data name="Live_PlanTip" xml:space="preserve"><value>Vedere în plan (privire de sus — nord în sus)</value></data>
