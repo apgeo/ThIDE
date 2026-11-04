@@ -161,6 +161,17 @@ public class CentrelineRulesTests
     public void Valid_team_roles_are_ok(string teamLine) =>
         Assert.False(Has(Parse(teamLine), DiagnosticCodes.ValueTypeMismatch));
 
+    [Theory]
+    [InlineData("team \"\"")]
+    [InlineData("team \"  \" tape")]
+    [InlineData("explo-team \"\"")]
+    public void Empty_person_name_is_flagged(string line) =>
+        Assert.Contains(Parse(line), d => d.Code.Value == DiagnosticCodes.ValueTypeMismatch && d.Message.Contains("person's name"));
+
+    [Fact]
+    public void Named_person_is_not_flagged_as_empty() =>
+        Assert.DoesNotContain(Parse("team \"A. Caver\"\nexplo-team \"B. Caver\""), d => d.Message.Contains("person's name"));
+
     [Fact]
     public void Invalid_instrument_quantity_is_flagged() =>
         Assert.True(Has(Parse("instrument altitude \"barometer\""), DiagnosticCodes.ValueTypeMismatch));

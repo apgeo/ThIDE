@@ -8,6 +8,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
+using Avalonia.VisualTree;
 using Microsoft.Extensions.DependencyInjection;
 using Therion.Processing.Abstractions;
 using ThIDE.Services;
@@ -279,11 +280,11 @@ public partial class MainWindow : Window
     {
         var item = new MenuItem
         {
-            Header = (isPinned ? "📌 " : string.Empty) + Path.GetFileName(path),
             Command = vm.OpenRecentCommand,
             CommandParameter = path,
             [ToolTip.TipProperty] = path,
         };
+        item.Header = DataLabel.For(item, (isPinned ? "📌 " : string.Empty) + Path.GetFileName(path));
         // The open command runs async, so the menu doesn't auto-close on click and lingers open as
         // if nothing happened; close it explicitly once the item is invoked.
         item.Click += CloseMainMenu;
@@ -313,11 +314,11 @@ public partial class MainWindow : Window
         {
             var item = new MenuItem
             {
-                Header = RecentDirectoryLabel(dir),
                 Command = vm.OpenRecentDirectoryCommand,
                 CommandParameter = dir,
                 [ToolTip.TipProperty] = dir,
             };
+            item.Header = DataLabel.For(item, RecentDirectoryLabel(dir));
             item.Click += CloseMainMenu;   // async open → close the lingering menu explicitly
             items.Add(item);
         }
@@ -651,7 +652,8 @@ public partial class MainWindow : Window
             p => File.Exists(p) || Directory.Exists(p),
             AppServices.Provider.GetService<IWorkspaceEditService>(),
             (path, caret) => OpenAtAsync(docs, path, caret),
-            DateTime.Now);
+            DateTime.Now,
+            AppServices.Provider.GetService<IWorkspaceUndoService>());
         var model = new NewTripViewModel(env);
         var load = model.LoadAsync();
         await new NewTripWindow(model).ShowDialog(this);
@@ -735,7 +737,8 @@ public partial class MainWindow : Window
         foreach (var task in tasks)
         {
             var id = task.Id;
-            var item = new MenuItem { Header = task.Title };
+            var item = new MenuItem();
+            item.Header = DataLabel.For(item, task.Title);
             Avalonia.Automation.AutomationProperties.SetAutomationId(item, "Menu.Tools.Tasks." + id);
             item.Click += (_, _) => _ = runner.RunAsync(id);
             menu.Items.Add(item);
@@ -820,7 +823,14 @@ public partial class MainWindow : Window
         if (outcome.Success && reload && AppServices.Provider.GetService<IWorkspaceSession>() is { ActiveThconfig: { } active } session)
             await session.SetActiveThconfigAsync(active.FullPath);
         var n = AppServices.Provider.GetService<INotificationService>();
-        if (outcome.Success) n?.Success(title, string.Format(ThIDE.Resources.Tr.Get("Diag_FixAllDone"), preview.CheckedCount));
+        if (outcome.Success)
+        {
+            var done = string.Format(ThIDE.Resources.Tr.Get("Diag_FixAllDone"), preview.CheckedCount);
+            // One undo step for every file written; the record's notification offers it.
+            if (AppServices.Provider.GetService<IWorkspaceUndoService>() is { } history && outcome.Changes is { Count: > 0 } changes)
+                history.Push(new WorkspaceUndoRecord(WorkspaceUndoRecord.OperationName(title), done, changes));
+            else n?.Success(title, done);
+        }
         else n?.Warning(title, outcome.Describe());
         return outcome.Success;
     }
@@ -1139,13 +1149,12 @@ public partial class MainWindow : Window
             AppServices.Provider.GetService<IWorkspaceEditService>(),
             current,
             currentCaret,
-            DateOnly.FromDateTime(DateTime.Now));
+            DateOnly.FromDateTime(DateTime.Now),
+            AppServices.Provider.GetService<IWorkspaceUndoService>());
 
+        // The insert records itself in the workspace undo history, whose notification reports it.
         var model = new LinkSurveyViewModel(env);
         var dialog = new LinkSurveyWindow(model);
-        model.Applied += (_, outcome) =>
-            notifications?.Success(ThIDE.Resources.Tr.Get("LinkSurvey_Title"),
-                string.Format(ThIDE.Resources.Tr.Get("LinkSurvey_Done"), Path.GetFileName(model.SourcePath)));
         // The dialog opens straight away; the survey file is chosen in it (Browse, or typed + Enter).
         var load = preset is not null ? preset(model) : model.LoadAsync(null, destinationFile);
         await dialog.ShowDialog(this);
@@ -1168,7 +1177,9 @@ public partial class MainWindow : Window
     private void OnGoToSymbolDocument(object? sender, Avalonia.Interactivity.RoutedEventArgs e) =>
         (DataContext as MainWindowViewModel)?.ShowGoToSymbol(workspace: false);
 
-    private void ShowSearch()
+    /// <param name="seedFromSelection">False when the caller has set the query itself (Find all
+    /// references): the editor selection must not overwrite it.</param>
+    private void ShowSearch(bool seedFromSelection = true)
     {
         if (_searchWindow is { } w && w.IsVisible) { w.Activate(); return; }
 
@@ -1182,7 +1193,7 @@ public partial class MainWindow : Window
         _searchWindow.Show(this);
 
         // Prefill from the editor selection and auto-search (#10).
-        vm.SeedAndSearch(ActiveEditor?.EditorSelectedText);
+        vm.SeedAndSearch(seedFromSelection ? ActiveEditor?.EditorSelectedText : null);
     }
 
     // ----- replace in files window (#9) ----------------------------------
@@ -1335,7 +1346,7 @@ public partial class MainWindow : Window
 
                 if (!dlg.SeeOccurrencesRequested)
                 {
-                    await ApplyRenameChangesAsync(changes, newName, docs!);   // simple path: apply directly
+                    await ApplyRenameChangesAsync(changes, oldName, newName, docs!);   // simple path: apply directly
                     return;
                 }
                 // "See occurrences" → open the preview with the entered name pre-filled.
@@ -1356,7 +1367,7 @@ public partial class MainWindow : Window
             if (string.IsNullOrWhiteSpace(newName) || newName == oldName) return;
             if (InvalidName(newName) is { } bad2) { await ShowInvalidNameAsync(newName, bad2); return; }
 
-            await ApplyRenameChangesAsync(MergeRenameChanges(changes, optional), newName, docs!);
+            await ApplyRenameChangesAsync(MergeRenameChanges(changes, optional), oldName, newName, docs!);
         }
         catch (System.Exception ex)
         {
@@ -1738,70 +1749,16 @@ public partial class MainWindow : Window
     private static bool IsRefChar(char c) =>
         char.IsLetterOrDigit(c) || c is '.' or '_' or '-' or '@' or ':';
 
-    private static async System.Threading.Tasks.Task ApplyRenameChangesAsync(
+    private static System.Threading.Tasks.Task ApplyRenameChangesAsync(
         List<RenameFileChanges> changes,
+        string oldName,
         string newName,
         IDocumentService docs)
     {
-        // The rename is an app-initiated write, so suppress the file-watcher for each file (like a
-        // normal Save) and update any open buffer in place — instead of a "reloaded from disk"
-        // banner/toast, which was misleading for a change the app made itself (#1).
         Services.IWorkspaceSession? session = null;
         try { session = AppServices.Provider.GetService<Services.IWorkspaceSession>(); } catch { /* design-time */ }
-
-        // Encode every file before writing any: one file whose encoding cannot hold the new name stops
-        // the whole rename, instead of leaving references to a survey that was not renamed.
-        var planned = new List<(RenameFileChanges Changes, string Text, byte[] Bytes, Therion.Workspace.Editing.TextFileFormat Format, ViewModels.Docking.FileDocumentViewModel? Open)>();
-        foreach (var fc in changes)
-        {
-            var sorted = new System.Collections.Generic.List<(int, int)>(fc.Hits);
-            sorted.Sort((a, b) => b.Item1.CompareTo(a.Item1));
-
-            var sb = new System.Text.StringBuilder(fc.FileText);
-            foreach (var (start, length) in sorted)
-                sb.Remove(start, length).Insert(start, newName);
-
-            var newText = sb.ToString();
-            var open = docs.Documents.FirstOrDefault(d => Therion.Workspace.Editing.FilePaths.Comparer.Equals(d.FilePath, fc.FilePath));
-            try
-            {
-                var (bytes, format) = await System.Threading.Tasks.Task.Run(() => Therion.Workspace.Editing.SourceFileIo.EncodeForSave(fc.FilePath, newText, open?.Format));
-                planned.Add((fc, newText, bytes, format, open));
-            }
-            catch (Therion.Workspace.Editing.UnrepresentableCharacterException ex)
-            {
-                AppServices.Provider.GetService<INotificationService>()?.Error(ThIDE.Resources.Tr.Get("Notif_SaveEncodingTitle"),
-                    string.Format(ThIDE.Resources.Tr.Get(ex is Therion.Workspace.Editing.UndecodableBytesException ? "Notif_SaveUndecodable" : "Notif_SaveEncoding"),
-                        System.IO.Path.GetFileName(fc.FilePath), ex.Character, ex.EncodingName));
-                return;
-            }
-            catch { /* unreadable: skipped, as a failed write is below */ }
-        }
-
-        foreach (var (fc, newText, bytes, format, open) in planned)
-        {
-            session?.SuppressSelfWrite(fc.FilePath);
-            try
-            {
-                await System.Threading.Tasks.Task.Run(() => Therion.Workspace.Editing.SourceFileIo.WriteOver(fc.FilePath, bytes));
-                if (open is not null) open.Format = format;
-            }
-            catch { continue; }
-
-            foreach (var doc in docs.Documents)
-            {
-                if (!Therion.Workspace.Editing.FilePaths.Comparer.Equals(doc.FilePath, fc.FilePath)) continue;
-
-                // The active file's new text already incorporates its unsaved edits, so update it
-                // silently. Any OTHER tab with unsaved edits keeps the conflict banner so those
-                // edits aren't discarded; a clean tab just reflects the rename silently.
-                if (!ReferenceEquals(doc, docs.Active) && doc.IsDirty)
-                    doc.NotifyExternalChange(System.DateTime.Now, deleted: false, autoReload: true);
-                else
-                    doc.SetText(newText, reparse: true);
-                break;
-            }
-        }
+        return RenameApplier.ApplyAsync(changes, oldName, newName, docs, session,
+            AppServices.Provider.GetService<INotificationService>(), AppServices.Provider.GetService<IWorkspaceUndoService>());
     }
 
     // Find all references (#4): configure Find-in-Files as a whole-word, project-scoped
@@ -1819,7 +1776,7 @@ public partial class MainWindow : Window
         vm.MatchCase = true;
         vm.UseRegex = false;
         vm.Scope = ViewModels.SearchViewModel.ScopeProject;
-        ShowSearch();
+        ShowSearch(seedFromSelection: false);
         vm.SearchCommand.Execute(null);
     }
 
@@ -1852,11 +1809,62 @@ public partial class MainWindow : Window
             Services.NotificationKind.Error   => Avalonia.Controls.Notifications.NotificationType.Error,
             _                                 => Avalonia.Controls.Notifications.NotificationType.Information,
         };
-        // Errors linger; everything else auto-expires. The whole toast is clickable when the
-        // notification carries an action (e.g. "Show output").
+        // Errors linger; everything else auto-expires. A notification that carries an action (e.g.
+        // "Show output", "Undo") shows it as a button, and stays a little longer to give time to reach it.
         var expiration = n.Kind == Services.NotificationKind.Error ? TimeSpan.FromSeconds(12) : TimeSpan.FromSeconds(6);
-        _notificationManager.Show(new Avalonia.Controls.Notifications.Notification(
-            n.Title, n.Message, type, expiration, onClick: n.Action));
+        _notificationManager.Margin = new Thickness(0, 0, 8, ToastBottomMargin());
+        if (!n.HasAction)
+        {
+            _notificationManager.Show(new Avalonia.Controls.Notifications.Notification(n.Title, n.Message, type, expiration));
+            return;
+        }
+        var action = new Button { Content = n.ActionLabel, HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right };
+        Avalonia.Automation.AutomationProperties.SetAutomationId(action, "Toast.Action");
+        var content = new StackPanel
+        {
+            Spacing = 4,
+            MaxWidth = 360,
+            Children =
+            {
+                new TextBlock { Text = n.Title, FontWeight = Avalonia.Media.FontWeight.SemiBold, TextWrapping = Avalonia.Media.TextWrapping.Wrap },
+                new TextBlock { Text = n.Message, TextWrapping = Avalonia.Media.TextWrapping.Wrap },
+                action,
+            },
+        };
+        action.Click += (_, _) =>
+        {
+            _notificationManager.Close(content);
+            n.Action!();
+        };
+        _notificationManager.Show(content, type, expiration + TimeSpan.FromSeconds(4));
+    }
+
+    // Toasts stack up from the bottom of the window: keep them clear of the status bar and, when the
+    // window runs past the bottom of the work area, inside what is actually visible.
+    private double ToastBottomMargin()
+    {
+        double statusHeight = this.FindControl<Border>("StatusBarPanel")?.Bounds.Height ?? 0;
+        double tabStrips = ToolTabStripClearance();
+        var screen = Screens?.ScreenFromWindow(this) ?? Screens?.Primary;
+        if (screen is null) return WindowFit.ToastBottomMargin(0, 0, statusHeight, tabStrips);
+        double scale = screen.Scaling <= 0 ? 1 : screen.Scaling;
+        double windowBottom = Position.Y / scale + Bounds.Height;
+        double workBottom = (screen.WorkingArea.Y + screen.WorkingArea.Height) / scale;
+        return WindowFit.ToastBottomMargin(windowBottom, workBottom, statusHeight, tabStrips);
+    }
+
+    // The tool docks put their tab strips along the bottom edge of the dock area, right where the
+    // bottom-right toasts stack up: measure them so the toasts start above, not on top of, the tabs.
+    private double ToolTabStripClearance()
+    {
+        const double toastColumnWidth = 400;
+        var strips = new List<Rect>();
+        foreach (var strip in this.GetVisualDescendants().OfType<Dock.Avalonia.Controls.ToolTabStrip>())
+        {
+            if (!strip.IsVisible || strip.TranslatePoint(default, this) is not { } origin) continue;
+            strips.Add(new Rect(origin, strip.Bounds.Size));
+        }
+        return WindowFit.TabStripClearance(Bounds.Height, Bounds.Width - toastColumnWidth, strips);
     }
 
     // ----- "open with" / file association ------------------------
@@ -1865,13 +1873,8 @@ public partial class MainWindow : Window
     {
         var args = App.StartupFileArgs;
         if (args.Count == 0) return;
-        IDocumentService? docs = null;
-        try { docs = AppServices.Provider.GetService<IDocumentService>(); }
-        catch { /* design-time / no container */ }
-        if (docs is null) return;
-        foreach (var path in args)
-            if (OpenableExtensions.Contains(Path.GetExtension(path)))
-                _ = docs.OpenFileAsync(path);
+        // A .thconfig among them becomes the active configuration (after the session restore).
+        _ = vm.OpenStartupFilesAsync(args.Where(p => OpenableExtensions.Contains(Path.GetExtension(p))).ToList());
     }
 
     // ----- drag-and-drop open (#17) --------------------------------------
@@ -1977,14 +1980,41 @@ public partial class MainWindow : Window
         // Restore the normal window bounds first, then re-apply a maximized state on top so
         // un-maximizing returns to the saved size. The dock arrangement itself is restored
         // separately by the DockFactory.
-        if (s.WindowWidth > 200) Width = s.WindowWidth;
-        if (s.WindowHeight > 200) Height = s.WindowHeight;
-        if (s.WindowLeft is double l && s.WindowTop is double t)
+        // No saved bounds (first start), or a saved size under the window minimum (325x50 was
+        // written after repeated full-screen toggles): treat it as a first start.
+        if (s.WindowLeft is not null && WindowFit.IsUsableSize(s.WindowWidth, s.WindowHeight, MinWidth, MinHeight))
         {
-            try { Position = new PixelPoint((int)l, (int)t); } catch { }
+            Width = s.WindowWidth;
+            Height = s.WindowHeight;
+            if (s.WindowLeft is double l && s.WindowTop is double t)
+            {
+                try { Position = new PixelPoint((int)l, (int)t); } catch { }
+            }
+            this.ClampToWorkArea();   // saved on a bigger monitor, or a taller work area than now
         }
+        else
+            SizeForFirstRun();
         if ((WindowState)s.WindowState == WindowState.Maximized)
             WindowState = WindowState.Maximized;
+    }
+
+    // First start: most of the work area, centred, instead of a fixed 1300x800 that runs off a
+    // 1366x768 screen (status bar and bottom tab strips out of reach).
+    private void SizeForFirstRun()
+    {
+        var screen = Screens?.ScreenFromWindow(this) ?? Screens?.Primary;
+        if (screen is null) return;
+        double scale = screen.Scaling <= 0 ? 1 : screen.Scaling;
+        var area = screen.WorkingArea;
+        double chrome = WindowFitting.ChromeHeight(this);
+        var (w, h) = WindowFit.FirstRunSize(MinWidth, MinHeight, area.Width / scale, area.Height / scale, chrome);
+        Width = w;
+        Height = h;
+        // Centre the whole frame (title bar included); Position is the client area's corner.
+        var (x, y) = WindowFit.Nudge(
+            area.X / scale + (area.Width / scale - w) / 2, area.Y / scale + (area.Height / scale - h - chrome) / 2, w, h + chrome,
+            area.X / scale, area.Y / scale, area.Width / scale, area.Height / scale);
+        Position = new PixelPoint((int)(x * scale), (int)((y + chrome) * scale));
     }
 
     private void SaveLayout()
@@ -2000,7 +2030,8 @@ public partial class MainWindow : Window
             // Only capture bounds while in the Normal state — when maximized/fullscreen the
             // reported size is the screen frame, so keeping the last Normal bounds lets a later
             // un-maximize restore the user's chosen size. The state itself is always recorded.
-            var next = WindowState == WindowState.Normal
+            // A transient degenerate size (mid full-screen toggle) is not a bound worth keeping.
+            var next = WindowState == WindowState.Normal && WindowFit.IsUsableSize(Width, Height, MinWidth, MinHeight)
                 ? current with
                 {
                     WindowWidth = Width,
@@ -2040,17 +2071,7 @@ public partial class MainWindow : Window
     /// <summary>writes the currently-dirty editor buffers to the crash-recovery folder.</summary>
     private void PersistRecoveryBuffers()
     {
-        if (_crashRecovery is null) return;
-        try
-        {
-            var docs = AppServices.Provider.GetService<IDocumentService>();
-            if (docs is null) return;
-            var dirty = new List<(string, string)>();
-            foreach (var d in docs.Documents)
-                if (d.IsDirty && !string.IsNullOrEmpty(d.FilePath))
-                    dirty.Add((d.FilePath, d.DocumentText));
-            _crashRecovery.SaveBuffers(dirty);
-        }
+        try { (DataContext as MainWindowViewModel)?.SaveRecoveryBuffers(); }
         catch { /* best-effort */ }
     }
 

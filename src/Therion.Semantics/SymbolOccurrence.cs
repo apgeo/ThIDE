@@ -40,6 +40,19 @@ public static class SurveyRefDecomposer
     /// </summary>
     public static IEnumerable<(SymbolId Survey, SourceSpan Span)> Decompose(
         string raw, SourceSpan fullSpan, QualifiedName stationQn)
+        => Decompose(raw, fullSpan, stationQn, ImmutableArray<string>.Empty, null);
+
+    /// <summary>
+    /// As <see cref="Decompose(string, SourceSpan, QualifiedName)"/>, for a reference written in survey
+    /// <paramref name="scope"/>. A station declared in an input file is named from that file's root
+    /// survey, so an <c>@</c> path that reaches into the file (<c>1@hall.system</c> written in
+    /// <c>cave</c>, with <c>hall</c> input under <c>cave.system</c>) runs past the station's survey path:
+    /// each component past it names the referencing file's survey <c>scope.outer….component</c>, and is
+    /// yielded when <paramref name="surveyExists"/> knows that survey.
+    /// </summary>
+    public static IEnumerable<(SymbolId Survey, SourceSpan Span)> Decompose(
+        string raw, SourceSpan fullSpan, QualifiedName stationQn,
+        ImmutableArray<string> scope, System.Func<QualifiedName, bool>? surveyExists)
     {
         int at = raw.IndexOf('@');
         if (at < 0 || at + 1 >= raw.Length) yield break;
@@ -47,21 +60,35 @@ public static class SurveyRefDecomposer
 
         QualifiedName? survey = stationQn.HasParent ? stationQn.Parent() : null;
         int pos = 0;
-        foreach (var comp in comps)
+        for (int i = 0; i < comps.Length; i++)
         {
-            if (survey is not { } s) yield break;   // ran out of survey path
-            if (string.Equals(comp, s.Last, System.StringComparison.Ordinal))
+            var comp = comps[i];
+            QualifiedName? named = null;
+            if (survey is { } s)
+            {
+                if (string.Equals(comp, s.Last, System.StringComparison.Ordinal)) named = s;
+                survey = s.HasParent ? s.Parent() : null;
+            }
+            else if (surveyExists is null) yield break;   // ran out of survey path
+            else
+            {
+                var path = (scope.IsDefault ? ImmutableArray<string>.Empty : scope).ToBuilder();
+                for (int j = comps.Length - 1; j >= i; j--) path.Add(comps[j]);
+                var candidate = new QualifiedName(path.ToImmutable());
+                if (surveyExists(candidate)) named = candidate;
+            }
+
+            if (named is { } n)
             {
                 int startOffset = fullSpan.StartOffset + at + 1 + pos;
                 int startCol = fullSpan.Start.Column + at + 1 + pos;
                 yield return (
-                    new SymbolId(SymbolKind.Survey, s),
+                    new SymbolId(SymbolKind.Survey, n),
                     new SourceSpan(fullSpan.FilePath,
                         new SourceLocation(fullSpan.Start.Line, startCol),
                         new SourceLocation(fullSpan.Start.Line, startCol + comp.Length),
                         startOffset, comp.Length));
             }
-            survey = s.HasParent ? s.Parent() : null;
             pos += comp.Length + 1;
         }
     }

@@ -11,7 +11,8 @@ maps and models. ThIDE orchestrates the run and makes the results easy to work w
 
 | Command | Where | Does |
 |---|---|---|
-| **Compile** | Compile menu · toolbar hammer · Command Palette | Build the **active thconfig**. |
+| **Compile** | Compile menu · toolbar hammer · Command Palette | Build the **active thconfig** (the one selected in the Workspace Explorer), whichever tab has focus. Its tooltip names it. |
+| **Build this thconfig (focused tab)** | Compile menu · Command Palette | Build the thconfig open in the focused tab when it is not the active one, without making it active. |
 | **Recompile** | Compile menu | Force a clean rebuild. |
 | **Cancel** | Compile menu · toolbar | Stop a running build. |
 | **Build target: …** | Compile → Build target | Build a specific target from the config. |
@@ -43,13 +44,19 @@ The **Compiler Output** panel streams Therion's messages live.
   handy for spotting which phase is slow.
 - **Open log** opens Therion's own log file in the editor.
 
-The status bar shows **Build in progress…** and then **Last build succeeded/failed**; a toast
-notification summarizes artifacts and warnings (with **Show output**).
+The first output line names the thconfig being compiled (click it to open the file). The status bar
+shows **Compiling *name*…** and then the result; the Overview dashboard's **Last build** line names
+the thconfig that was built. A toast notification summarizes artifacts and warnings (with **Show output**).
 
 ## The results: the Generated Files panel
 
-Everything the build produced is listed in **Generated Files**, with columns **File Name · Auto-open
-· State · Size · Modified** and, per row, action buttons:
+**Generated Files** lists the outputs of one thconfig, named in its header (**Outputs of *name* ·
+built *time***). It follows the active thconfig: switch to another one and the list shows that
+thconfig's last outputs, or *"… has not been built yet"* with a **Compile** button. After **Build this
+thconfig**, it shows that build's outputs until the active thconfig changes. If a build fails, the
+outputs of the previous successful build stay listed and are marked **stale**, also after a restart.
+
+Each output has columns **File Name · Auto-open · State · Size · Modified** and, per row, action buttons:
 
 - **Open externally** (Loch / Aven for models; the default app otherwise).
 - **View in internal 3D viewer** (for `.lox`/`.3d`) — see [The 3D viewer](11-viewers.md#3d-viewer).

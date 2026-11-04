@@ -11,7 +11,9 @@
 //   2. a live instance's copies are never offered by, or deleted by, another instance;
 //   3. PreviousRunCrashed is true exactly for the first start after a run died;
 //   4. Restore never replaces a newer dirty buffer: it opens the recovered text beside it;
-//   5. a clean exit leaves no copy of its own behind.
+//   5. a clean exit leaves no copy of its own behind;
+//   6. restoring or dismissing settles only the runs the offer was made from, and until the next
+//      autosave a crash still recovers the settled copies and the run's own.
 // The instance death is simulated by closing the run lock the OS would release when the process ends.
 
 using System.Collections.Immutable;
@@ -48,10 +50,11 @@ public class CrashRecoveryLifecycleProperties
         public required DocumentService Documents { get; init; }
         /// <summary>What this run's last autosave wrote (path → text).</summary>
         public Dictionary<string, string> OwnCopies { get; } = new(StringComparer.Ordinal);
+        /// <summary>Copies of the offer this run restored or dismissed, kept with it until its next autosave.</summary>
+        public List<(string Path, string Text)> Settled { get; } = new();
         /// <summary>The buffers offered at start, while the user has not acted on them.</summary>
         public IReadOnlyList<RecoveredBuffer>? Offer { get; set; }
         public List<Unhandled> OfferedCopies { get; set; } = new();
-        public int OfferGeneration { get; set; }
     }
 
     private sealed class World : IDisposable
@@ -77,8 +80,6 @@ public class CrashRecoveryLifecycleProperties
         public List<string> Files { get; } = new();
         public List<Instance> Live { get; } = new();
         public List<Unhandled> Pool { get; } = new();
-        /// <summary>Bumped whenever an ended run adds copies to <see cref="Pool"/>.</summary>
-        public int PoolGeneration { get; set; }
         /// <summary>Lock files of runs that died and that no start has seen yet.</summary>
         public int UnseenCrashes { get; set; }
         public int NextId { get; set; }
@@ -138,7 +139,7 @@ public class CrashRecoveryLifecycleProperties
             weighted.Add((Op.ExitDiscarding, 1));
             weighted.Add((Op.ExitKeepingCopies, 1));
             if (world.Live.Any(i => i.Documents.Documents.Any(d => d.IsDirty))) weighted.Add((Op.SaveDocument, 1));
-            if (world.Live.Any(i => CanHandleOffer(world, i)))
+            if (world.Live.Any(i => CanHandleOffer(i)))
             {
                 weighted.Add((Op.Restore, 3));
                 weighted.Add((Op.Dismiss, 1));
@@ -154,12 +155,10 @@ public class CrashRecoveryLifecycleProperties
     }
 
     /// <summary>
-    /// An offer can be acted on while no run has ended with copies since it was made. Acting on it
-    /// later also deletes the copies of runs that ended afterwards (see the skipped fact below), which
-    /// would mask every other check here.
+    /// An offer can be acted on at any time, also after other runs have ended with copies since it was
+    /// made: those must stay for the next start (see the facts below).
     /// </summary>
-    private static bool CanHandleOffer(World world, Instance i) =>
-        i.Offer is { Count: > 0 } && i.OfferGeneration == world.PoolGeneration;
+    private static bool CanHandleOffer(Instance i) => i.Offer is { Count: > 0 };
 
     private static async Task ApplyAsync(World world, Op op, Random rnd, int step)
     {
@@ -219,12 +218,12 @@ public class CrashRecoveryLifecycleProperties
                 break;
 
             case Op.Restore:
-                await RestoreAsync(world, Pick(world.Live.Where(i => CanHandleOffer(world, i)).ToList(), rnd));
+                await RestoreAsync(world, Pick(world.Live.Where(i => CanHandleOffer(i)).ToList(), rnd));
                 break;
 
             case Op.Dismiss:
             {
-                var inst = Pick(world.Live.Where(i => CanHandleOffer(world, i)).ToList(), rnd);
+                var inst = Pick(world.Live.Where(i => CanHandleOffer(i)).ToList(), rnd);
                 inst.Recovery.ClearRecovery();
                 Handled(world, inst);
                 world.Count("dismiss");
@@ -256,7 +255,6 @@ public class CrashRecoveryLifecycleProperties
             world.Count("offer");
             inst.Offer = offered;
             inst.OfferedCopies = world.Pool.ToList();
-            inst.OfferGeneration = world.PoolGeneration;
         }
         world.Live.Add(inst);
         return inst;
@@ -271,6 +269,7 @@ public class CrashRecoveryLifecycleProperties
         inst.Recovery.SaveBuffers(dirty);
         inst.OwnCopies.Clear();
         foreach (var (path, text) in dirty) inst.OwnCopies[path] = text;
+        inst.Settled.Clear();
     }
 
     private static async Task ApplyExitAsync(World world, Instance inst, bool keepCopies)
@@ -294,9 +293,9 @@ public class CrashRecoveryLifecycleProperties
 
     private static void AddToPool(World world, Instance inst)
     {
-        if (inst.OwnCopies.Count == 0) return;
-        foreach (var (path, text) in inst.OwnCopies) world.Pool.Add(new Unhandled(inst.Id, path, text));
-        world.PoolGeneration++;
+        var copies = inst.OwnCopies.Select(kv => (kv.Key, kv.Value)).Concat(inst.Settled).ToList();
+        if (copies.Count == 0) return;
+        foreach (var (path, text) in copies) world.Pool.Add(new Unhandled(inst.Id, path, text));
     }
 
     /// <summary>What the main window's Restore does: reopen every offered buffer, then clear the copies when all reopened.</summary>
@@ -332,11 +331,14 @@ public class CrashRecoveryLifecycleProperties
         world.Count("restore");
     }
 
-    /// <summary>The user restored or dismissed the offer: its copies are gone, and so are this run's own.</summary>
+    /// <summary>
+    /// The user restored or dismissed the offer: its copies are no longer offered, but stay with this run
+    /// until its next autosave; this run's own copies are untouched.
+    /// </summary>
     private static void Handled(World world, Instance inst)
     {
+        inst.Settled.AddRange(inst.OfferedCopies.Select(c => (c.Path, c.Text)));
         world.Pool.RemoveAll(inst.OfferedCopies.Contains);
-        inst.OwnCopies.Clear();   // ClearRecovery also deletes this run's copies until its next autosave
         inst.Offer = null;
         inst.OfferedCopies = new();
         foreach (var other in world.Live.Where(o => o != inst && o.Offer is not null))
@@ -405,7 +407,7 @@ public class CrashRecoveryLifecycleProperties
         return (world, survivor);
     }
 
-    [Fact(Skip = "Known bug: Restore/Discard clears every ended run's copies present at click time, including those of a run that crashed after the offer was shown")]
+    [Fact]
     public void Acting_on_an_offer_keeps_the_copies_of_a_run_that_crashed_after_it_was_shown()
     {
         var (world, first) = WorldWithAnOffer(1, "survey f0\n  # crashed before the first start\nendsurvey\n");
@@ -426,7 +428,7 @@ public class CrashRecoveryLifecycleProperties
         next.MarkCleanShutdown();
     }
 
-    [Fact(Skip = "Known bug: Restore/Discard deletes the run's own autosaved copies, so a crash before the next autosave loses the restored and the other unsaved buffers")]
+    [Fact]
     public async Task Buffers_restored_or_still_unsaved_stay_recoverable_right_after_an_offer_is_handled()
     {
         const string crashedText = "survey f0\n  # crashed before this start\nendsurvey\n";

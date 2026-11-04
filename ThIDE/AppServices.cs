@@ -95,6 +95,8 @@ internal static class AppServices
         // why switching to Romanian did nothing (#9). Leaving ResourcesPath empty resolves the
         // base name to the type's full name, matching the embedded resources.
         services.AddLocalization();
+        // Injected localizers read Tr's UI language, not the ambient (ExecutionContext-flowing) culture.
+        services.AddSingleton<IStringLocalizer<ThIDE.Resources.Strings>, ThIDE.Resources.TrLocalizer>();
         services.AddSingleton<ILanguageService, LanguageService>();
         services.AddSingleton<IThemeService, ThemeService>();
 
@@ -169,6 +171,8 @@ internal static class AppServices
         // Active-document host (�7.3).
         services.AddSingleton<IDocumentService, DocumentService>();
         services.AddSingleton<IWorkspaceEditService, WorkspaceEditService>();
+        // Workspace-level undo of multi-file writes (Edit ▸ Undo <operation>).
+        services.AddSingleton<IWorkspaceUndoService, WorkspaceUndoService>();
         services.AddSingleton<IWorkspaceTrustService>(_ => new WorkspaceTrustService(ask: TrustPrompt.AskAsync));
         // Same instance, narrow view: the in-app MCP host reads unsaved buffers through this (T-03.2).
         services.AddSingleton<IUnsavedBufferProvider>(sp => (IUnsavedBufferProvider)sp.GetRequiredService<IDocumentService>());

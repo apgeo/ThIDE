@@ -82,11 +82,17 @@ public static class SourceFileIo
         EncodingResolver.BomLength(readAs.Bom, out var bomEncoding);
         if (bomEncoding is not null && !IsAsciiCompatible(bomEncoding)) return readAs;
 
-        var probe = Encoding.UTF8.GetBytes(text.Length > EncodingResolver.ProbeBytes ? text[..EncodingResolver.ProbeBytes] : text);
-        var declared = EncodingResolver.DetectEncoding(probe);
-        if (declared is not null && !IsAsciiCompatible(declared)) declared = null;
-
-        var encoding = declared ?? bomEncoding ?? EncodingResolver.Default;
+        // The reader scans the first ProbeBytes of the file's own bytes, so whether it sees the directive
+        // depends on the encoding the text is saved in: a long accented header is twice as long in UTF-8
+        // as in a Latin code page. Probe in the encoding the file was read in, then in whatever that
+        // resolves to, until the save resolves to the encoding it is written in.
+        var encoding = IsAsciiCompatible(readAs.Encoding) ? readAs.Encoding : EncodingResolver.Default;
+        for (int i = 0; i < 4; i++)
+        {
+            var resolved = ResolvedOnSave(text, encoding) ?? bomEncoding ?? EncodingResolver.Default;
+            if (resolved.CodePage == encoding.CodePage) break;
+            encoding = resolved;
+        }
         if (encoding.CodePage == readAs.Encoding.CodePage) return readAs;
         return new TextFileFormat(encoding, bomEncoding?.CodePage == encoding.CodePage ? readAs.Bom : []) { Lossy = readAs.Lossy };
     }
@@ -128,9 +134,11 @@ public static class SourceFileIo
     }
 
     /// <summary>Reads a file, resolving its encoding the way the parser does.</summary>
-    public static SourceFile Read(string path)
+    public static SourceFile Read(string path) => Read(path, File.ReadAllBytes(path));
+
+    /// <summary>As <see cref="Read(string)"/>, for bytes already read from <paramref name="path"/>.</summary>
+    public static SourceFile Read(string path, byte[] bytes)
     {
-        var bytes = File.ReadAllBytes(path);
         var (encoding, bomLength) = Resolve(bytes);
         var (text, lossy) = Decode(encoding, bytes, bomLength);
 
@@ -315,6 +323,16 @@ public static class SourceFileIo
         bom.CopyTo(bytes, 0);
         payload.CopyTo(bytes, bom.Length);
         return bytes;
+    }
+
+    // The ASCII-compatible encoding the directive scan finds in the first ProbeBytes of the text written
+    // in `encoding`, or null. Two chars per probe byte is enough even where a surrogate pair becomes one '?'.
+    private static Encoding? ResolvedOnSave(string text, Encoding encoding)
+    {
+        int length = Math.Min(text.Length, 2 * EncodingResolver.ProbeBytes);
+        var replacing = Encoding.GetEncoding(encoding.CodePage, EncoderFallback.ReplacementFallback, DecoderFallback.ReplacementFallback);
+        var declared = EncodingResolver.DetectEncoding(replacing.GetBytes(text, 0, length));
+        return declared is not null && IsAsciiCompatible(declared) ? declared : null;
     }
 
     // True when the encoding writes `encoding <name>` as plain ASCII bytes, so the directive scan can find it.

@@ -18,12 +18,51 @@ public class ShotTableTests
     }
 
     [Fact]
-    public void Whitespace_table_without_header_and_a_short_splay_row()
+    public void Short_rows_are_splays_only_in_a_table_without_full_rows()
     {
-        var t = ShotTableReader.Read("1 2 3.0 10 -1\n2 2.5 45 0\n2 3 4.0 20 1\n");
-        Assert.False(t.HasHeader);
-        Assert.Equal(["1", "2", "2"], t.Rows.Select(r => r.From));
-        Assert.Equal("-", t.Rows[1].To);
+        var t = ShotTableReader.Read("1 2.5 45 0\n1 1.2 300 10\n");
+        Assert.Equal([("1", "-"), ("1", "-")], t.Rows.Select(r => (r.From, r.To)));
+        Assert.All(t.Rows, r => Assert.True(r.Splay));
+        // Each row read that way is listed.
+        Assert.Equal([new ShotIssue(1, ShotIssueKind.ReadAsSplay, "1"), new ShotIssue(2, ShotIssueKind.ReadAsSplay, "1")],
+            t.Issues.Where(i => i.Kind != ShotIssueKind.ColumnsGuessed));
+    }
+
+    [Theory]
+    [InlineData("from to length compass clino\n1 2 4.50 120 -10\n2 3 3.20 -5\n3 4 5.00 90 2\n")]   // compass missing
+    [InlineData("from to length compass clino\n1 2 4.50 120 -10\n2 3 3.20 135\n3 4 5.00 90 2\n")]  // clino missing
+    [InlineData("1 2 4.50 120 -10\n2 3 3.20 -5\n3 4 5.00 90 2\n")]                                // no header
+    public void A_leg_one_value_short_among_full_rows_is_reported_not_read_as_a_splay(string text)
+    {
+        var t = ShotTableReader.Read(text);
+        int line = t.HasHeader ? 3 : 2;
+
+        Assert.DoesNotContain(t.Rows, r => r.Splay);
+        Assert.Equal([("1", "2"), ("3", "4")], t.Rows.Select(r => (r.From, r.To)));
+        Assert.Equal([new ShotIssue(line, ShotIssueKind.TooFewValues)], t.Issues);
+    }
+
+    [Theory]
+    [InlineData(",")]
+    [InlineData(";")]
+    [InlineData("\t")]
+    [InlineData(" ")]
+    public void Every_delimiter_reads_its_cells_with_or_without_a_short_row(string sep)
+    {
+        string Row(params string[] cells) => string.Join(sep, cells) + "\n";
+        string full = Row("1", "2", "4.50", "120", "-10") + Row("2", "3", "3.20", "135", "-5") + Row("3", "4", "5.00", "90", "2");
+        string shortRow = Row("1", "2", "4.50", "120", "-10") + Row("2", "3", "3.20", "-5") + Row("3", "4", "5.00", "90", "2");
+
+        var t = ShotTableReader.Read(full);
+        Assert.Equal([("1", "2"), ("2", "3"), ("3", "4")], t.Rows.Select(r => (r.From, r.To)));
+        Assert.Empty(t.Issues);
+
+        foreach (var text in new[] { shortRow, Row("from", "to", "length", "compass", "clino") + shortRow })
+        {
+            var s = ShotTableReader.Read(text);
+            Assert.Equal([("1", "2"), ("3", "4")], s.Rows.Select(r => (r.From, r.To)));
+            Assert.Equal([new ShotIssue(s.HasHeader ? 3 : 2, ShotIssueKind.TooFewValues)], s.Issues);
+        }
     }
 
     [Fact]

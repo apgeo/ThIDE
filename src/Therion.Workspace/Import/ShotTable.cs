@@ -43,6 +43,8 @@ public enum ShotIssueKind
     ColumnsGuessed,
     /// <summary>A station cell that is empty or cannot be a station name (Detail = the cell). The row is left out.</summary>
     BadStation,
+    /// <summary>A row one value short in a table of such rows, read as a splay without its 'to' (Detail = the from station).</summary>
+    ReadAsSplay,
 }
 
 /// <param name="Line">1-based line in the pasted text, 0 for the table as a whole.</param>
@@ -131,16 +133,19 @@ public static partial class ShotTableReader
         if (extra > 0 && !hasHeader) issues.Add(new ShotIssue(0, ShotIssueKind.ExtraColumns, extra.ToString(CultureInfo.InvariantCulture)));
 
         bool hasStations = columns.Contains(ShotColumn.From);
+        // A row one cell short in a table with stations is a splay that leaves 'to' out (PocketTopo),
+        // but only when no row is full: among full rows, a short one is a leg missing a value.
+        bool shortRowsAreSplays = hasStations && columns.Contains(ShotColumn.To)
+            && !cells.Any(c => c.Cells.Count >= Needed(columns));
         var parsed = new List<(int Line, string From, string To, Dictionary<ShotColumn, double?> V)>();
         foreach (var (line, row) in cells)
         {
             var v = new Dictionary<ShotColumn, double?>();
             string from = "", to = "";
             bool bad = false;
-            // A row one cell short in a table with stations is a splay that leaves 'to' out (PocketTopo).
             var map = columns;
-            if (hasStations && columns.Contains(ShotColumn.To) && row.Count == Needed(columns) - 1)
-                map = columns.Where(c => c != ShotColumn.To).ToList();
+            bool shortSplay = shortRowsAreSplays && row.Count == Needed(columns) - 1;
+            if (shortSplay) map = columns.Where(c => c != ShotColumn.To).ToList();
             if (row.Count < Needed(map)) { issues.Add(new ShotIssue(line, ShotIssueKind.TooFewValues)); continue; }
             for (int i = 0; i < map.Count && i < row.Count; i++)
             {
@@ -169,6 +174,7 @@ public static partial class ShotTableReader
                 issues.Add(new ShotIssue(line, ShotIssueKind.TooFewValues));
                 continue;
             }
+            if (shortSplay) issues.Add(new ShotIssue(line, ShotIssueKind.ReadAsSplay, from));
             parsed.Add((line, from, to, v));
         }
 
@@ -255,6 +261,7 @@ public static partial class ShotTableReader
             ShotIssueKind.RepeatedLegsMerged => $"{issue.Detail} leg(s) made from repeated shots; single shots became splays",
             ShotIssueKind.ColumnsGuessed => $"no header and {issue.Detail} columns: the column guess may be wrong",
             ShotIssueKind.BadStation => $"'{issue.Detail}' is not a station name; row left out",
+            ShotIssueKind.ReadAsSplay => $"one value short: read as a splay from '{issue.Detail}'",
             _ => issue.Kind.ToString(),
         };
     }
@@ -378,9 +385,13 @@ public static partial class ShotTableReader
         if (sample.Count == 0) return ' ';
         if (sample.Count(l => l.Contains('\t')) * 2 >= sample.Count) return '\t';
         if (sample.Count(l => l.Contains(';')) * 2 >= sample.Count) return ';';
-        // Commas separate cells when every line splits into the same number (≥3) of comma cells.
-        var counts = sample.Select(l => SplitQuoted(l, ',').Count).Distinct().ToList();
-        if (counts.Count == 1 && counts[0] >= 3 && sample.All(l => !Regex.IsMatch(l, @"\d,\d+\s+\S"))) return ',';
+        // Commas separate cells when every line has one and most lines split into the same number (≥3)
+        // of comma cells: a row a value short is still a comma row, reported by the reader, not a reason
+        // to read the whole table as one column.
+        var counts = sample.Select(l => SplitQuoted(l, ',').Count).ToList();
+        int width = counts.GroupBy(c => c).OrderByDescending(g => g.Count()).ThenByDescending(g => g.Key).First().Key;
+        if (width >= 3 && counts.Count(c => c == width) * 2 >= counts.Count && counts.All(c => c >= 2)
+            && sample.All(l => !Regex.IsMatch(l, @"\d,\d+\s+\S"))) return ',';
         return ' ';
     }
 

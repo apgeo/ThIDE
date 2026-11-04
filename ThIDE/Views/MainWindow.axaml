@@ -12,7 +12,7 @@
         mc:Ignorable="d" d:DesignWidth="1300" d:DesignHeight="800"
         x:Class="ThIDE.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Width="1300" Height="800"
+        Width="1300" Height="800" MinWidth="900" MinHeight="560"
         Icon="/Assets/thide.ico"
         AutomationProperties.AutomationId="MainWindow.Window"
         Title="{Binding Title}">
@@ -253,6 +253,10 @@
             <MenuItem AutomationProperties.AutomationId="Menu.Edit" Header="{Binding MenuEdit}" IsEnabled="{Binding HasStatusFile}">
                 <!-- Clipboard chords stay literal: they are AvaloniaEdit's own bindings, not gestures
                      dispatched by IKeyboardShortcutService, so they are not remappable. -->
+                <!-- Workspace-level undo of the last multi-file write (rename, Replace All, New trip, Format all…). -->
+                <MenuItem AutomationProperties.AutomationId="Menu.Edit.UndoWorkspace" Header="{Binding WorkspaceUndoHeader}" Command="{Binding UndoWorkspaceCommand}" />
+                <MenuItem AutomationProperties.AutomationId="Menu.Edit.RedoWorkspace" Header="{Binding WorkspaceRedoHeader}" Command="{Binding RedoWorkspaceCommand}" />
+                <Separator />
                 <MenuItem AutomationProperties.AutomationId="Menu.Edit.Cut" Header="{Binding MenuEditCut}"        InputGesture="Ctrl+X" Click="OnEditCut" />
                 <MenuItem AutomationProperties.AutomationId="Menu.Edit.Copy" Header="{Binding MenuEditCopy}"       InputGesture="Ctrl+C" Click="OnEditCopy" />
                 <MenuItem AutomationProperties.AutomationId="Menu.Edit.Paste" Header="{Binding MenuEditPaste}"      InputGesture="Ctrl+V" Click="OnEditPaste" />
@@ -348,6 +352,8 @@
             </MenuItem>
             <MenuItem AutomationProperties.AutomationId="Menu.Build" Header="{Binding MenuBuild}">
                 <MenuItem AutomationProperties.AutomationId="Menu.Build.Build" Header="{Binding MenuBuildBuild}"     InputGesture="{l:Gesture Build}"       Command="{Binding Build.BuildCommand}" />
+                <!-- builds the focused thconfig tab when it is not the active thconfig (Compile always builds the active one). -->
+                <MenuItem AutomationProperties.AutomationId="Menu.Build.BuildThisThconfig" Header="{l:Loc Menu_Build_BuildThisThconfig}" Command="{Binding Build.BuildThisThconfigCommand}" />
                 <MenuItem AutomationProperties.AutomationId="Menu.Build.Cancel" Header="{Binding MenuBuildCancel}"    InputGesture="{l:Gesture CancelBuild}" Command="{Binding Build.CancelCommand}" />
                 <MenuItem AutomationProperties.AutomationId="Menu.Build.BatchBuild" Header="{l:Loc Menu_Build_BatchBuild}" Command="{Binding BatchBuildCommand}" />
                 <Separator />
@@ -677,7 +683,14 @@
                 <Border CornerRadius="6" Padding="2,0" Margin="2,0" VerticalAlignment="Center"
                         Classes.compiling="{Binding Build.IsBuilding}">
                     <StackPanel Orientation="Horizontal">
-                        <Button AutomationProperties.AutomationId="Toolbar.Compile" AutomationProperties.Name="{l:Loc Tb_Compile}" Classes="tool" Command="{Binding Build.BuildCommand}" ToolTip.Tip="{l:Tip Tb_Compile}">
+                        <Button AutomationProperties.AutomationId="Toolbar.Compile" AutomationProperties.Name="{l:Loc Tb_Compile}" Classes="tool" Command="{Binding Build.BuildCommand}">
+                            <!-- names the build target under "Compile (F5)": always the active thconfig. -->
+                            <ToolTip.Tip>
+                                <StackPanel>
+                                    <TextBlock Text="{l:Tip Tb_Compile}" />
+                                    <TextBlock Text="{Binding Build.BuildTargetName}" FontWeight="SemiBold" />
+                                </StackPanel>
+                            </ToolTip.Tip>
                             <PathIcon Data="{DynamicResource Icon.Build}" Foreground="#2E7D32"
                                       Classes.buildPulse="{Binding Build.IsBuilding}" />
                         </Button>
@@ -718,7 +731,7 @@
 
         <!-- Status bar (#10): transient messages on the left; open-file metrics on the right,
              grouped with thin separators. The full path is capped at 65% of the window width. -->
-        <Border AutomationProperties.AutomationId="StatusBar.Panel" DockPanel.Dock="Bottom" BorderBrush="Gray" BorderThickness="0,1,0,0" Padding="6,2">
+        <Border x:Name="StatusBarPanel" AutomationProperties.AutomationId="StatusBar.Panel" DockPanel.Dock="Bottom" BorderBrush="Gray" BorderThickness="0,1,0,0" Padding="6,2">
             <Border.Styles>
                 <!-- Build spinner animation for the status bar (#4). -->
                 <Style Selector="PathIcon.buildSpinner">
@@ -807,10 +820,13 @@
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
                             <StackPanel Orientation="Horizontal">
-                                <Button Classes="crumb" Content="{Binding Text}"
+                                <!-- A TextBlock, not string content: AccessText would hide the first '_' of a name. -->
+                                <Button Classes="crumb" AutomationProperties.Name="{Binding Text}"
                                         Command="{Binding $parent[ItemsControl].DataContext.Breadcrumb.NavigateCommand}"
                                         CommandParameter="{Binding}"
-                                        ToolTip.Tip="{Binding NavToken}" />
+                                        ToolTip.Tip="{Binding NavToken}">
+                                    <TextBlock Text="{Binding Text}" />
+                                </Button>
                                 <TextBlock Text="›" Foreground="Gray" Margin="2,0" VerticalAlignment="Center"
                                            IsVisible="{Binding !IsLast}" />
                             </StackPanel>
@@ -836,11 +852,13 @@
                                 <!-- Padding/Margin tightened over the shared .crumb style: a full path
                                      has many segments, and the default gaps made it read as a list of
                                      words rather than one path. -->
-                                <Button Classes="crumb" Content="{Binding Name}" Padding="1,0"
+                                <Button Classes="crumb" AutomationProperties.Name="{Binding Name}" Padding="1,0"
                                         IsVisible="{Binding IsClickable}"
                                         Command="{Binding $parent[ItemsControl].DataContext.NavigatePathSegmentCommand}"
                                         CommandParameter="{Binding}"
-                                        ToolTip.Tip="{Binding Directory}" />
+                                        ToolTip.Tip="{Binding Directory}">
+                                    <TextBlock Text="{Binding Name}" />
+                                </Button>
                                 <TextBlock Text="{Binding Name}" Foreground="Gray" FontSize="11"
                                            VerticalAlignment="Center" IsVisible="{Binding !IsClickable}" />
                                 <TextBlock Text="›" Foreground="Gray" Margin="0" VerticalAlignment="Center"

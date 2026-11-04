@@ -91,7 +91,7 @@ public class WritePathConformanceTests
         WritePathConformance.Check(placed, WriterKind.Reindent, outcome, "Format all files");
     }
 
-    [Theory(Skip = "Known bug: Format all with Keep rewrites every line of a file that mixes CRLF and LF with CRLF")]
+    [Theory]
     [MemberData(nameof(AllFixtures))]
     public async Task Format_all_files_conforms_on_mixed_line_endings(string fixture)
     {
@@ -125,7 +125,7 @@ public class WritePathConformanceTests
     /// A file declared ASCII that holds an 8-bit byte reads as lossy; Replace All must leave it alone
     /// rather than write '?' where the byte was.
     /// </summary>
-    [Fact(Skip = "Known bug: Replace in Files decodes with EncodingResolver.Decode, whose ASCII fallback yields '?' rather than U+FFFD, so its lossy check misses the file and Replace All writes '?' over the 8-bit byte")]
+    [Fact]
     public async Task Replace_in_files_leaves_an_ascii_file_with_an_8bit_byte_alone() => await ReplaceInFilesAsync("ascii/lossy");
 
     private static async Task ReplaceInFilesAsync(string fixture)
@@ -154,7 +154,7 @@ public class WritePathConformanceTests
     /// The reader finds the directive after a long accented header (it scans the file's own bytes); the
     /// editor's save must keep the file in that encoding.
     /// </summary>
-    [Fact(Skip = "Known bug: the save probes the first 4096 chars re-encoded as UTF-8, so a directive the reader found after a long accented header is missed and the file is rewritten as UTF-8")]
+    [Fact]
     public async Task Editor_save_keeps_the_encoding_a_directive_after_a_long_accented_header_declares()
     {
         using var dir = new TempDir();

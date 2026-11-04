@@ -47,7 +47,7 @@ public sealed class GestureProxy : INotifyPropertyChanged
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    // Avalonia's reflection indexer binding re-reads on this exact name (see LocProxy).
-    private static readonly PropertyChangedEventArgs IndexerChanged = new("Item[]");
+    // Avalonia's indexer binding re-reads only on the CLR indexer name "Item" (see LocProxy).
+    private static readonly PropertyChangedEventArgs IndexerChanged = LocProxy.IndexerChanged;
     public void Invalidate() => PropertyChanged?.Invoke(this, IndexerChanged);
 }

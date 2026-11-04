@@ -6,7 +6,12 @@ namespace ThIDE.Views;
 
 public partial class PasteShotsWindow : Window
 {
-    public PasteShotsWindow() => InitializeComponent();
+    public PasteShotsWindow()
+    {
+        InitializeComponent();
+        this.ClampOnOpen();
+        this.FocusOnOpen("FirstInput");
+    }
     public PasteShotsWindow(PasteShotsViewModel model) : this() => DataContext = model;
 
     /// <summary>The Therion text to insert, or null when the dialog was cancelled.</summary>

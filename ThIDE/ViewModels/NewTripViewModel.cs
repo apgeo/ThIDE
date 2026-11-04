@@ -22,6 +22,7 @@ using ThIDE.ViewModels.Pickers;
 namespace ThIDE.ViewModels;
 
 /// <summary>What Tools ▸ New trip… needs from the app, captured when it opens.</summary>
+/// <param name="History">Where the created trip is recorded as one undo step (none: not undoable).</param>
 public sealed record NewTripEnvironment(
     WorkspaceSemanticModel Workspace,
     string? WorkspaceRoot,
@@ -29,7 +30,8 @@ public sealed record NewTripEnvironment(
     Func<string, bool> Exists,
     IWorkspaceEditService? Editor,
     Func<string, int, Task> Open,
-    DateTime Today);
+    DateTime Today,
+    IWorkspaceUndoService? History = null);
 
 public sealed partial class TripTeamRow(string name, bool isChecked) : ObservableObject
 {
@@ -256,6 +258,9 @@ public sealed partial class NewTripViewModel : ObservableObject
         var outcome = await _env.Editor.ApplyAsync(batch);
         if (!outcome.Success)
             return outcome.Describe();
+        if (outcome.Changes is { Count: > 0 } changes)
+            _env.History?.Push(new WorkspaceUndoRecord(Tr.Get("NewTrip_Title"),
+                string.Format(Tr.Get("NewTrip_Done"), System.IO.Path.GetFileName(FilePath)), changes));
         await _env.Open(FilePath, caret);
         return null;
     }

@@ -5,7 +5,11 @@ namespace ThIDE.Views;
 
 public partial class PreviewWindow : Window
 {
-    public PreviewWindow() => InitializeComponent();
+    public PreviewWindow()
+    {
+        InitializeComponent();
+        this.ClampOnOpen();
+    }
 
     public PreviewWindow(PreviewWindowViewModel model) : this()
     {

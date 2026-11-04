@@ -31,7 +31,14 @@ public static class TherionReindenter
         var desired = DesiredLines(lines, indentUnit);
         var sb = new StringBuilder(text.Length + 64);
         for (int i = 0; i < lines.Count; i++)
-            sb.Append(desired[i] ?? lines[i]).Append(endings[i]);
+        {
+            // Emptying a blank line between a lone CR and an LF would join the two terminators into
+            // one CRLF and lose a line; such a line keeps its blanks.
+            var line = desired[i] == string.Empty && i > 0 && endings[i - 1] == "\r" && endings[i].StartsWith('\n')
+                ? lines[i]
+                : desired[i] ?? lines[i];
+            sb.Append(line).Append(endings[i]);
+        }
         return sb.ToString();
     }
 
@@ -45,9 +52,18 @@ public static class TherionReindenter
         var result = new string?[lines.Count];
         var stack = new Stack<string>();
         string? opaqueCloser = null;
+        bool inString = false;   // the line starts inside a quoted string continued with `\`
         for (int i = 0; i < lines.Count; i++)
         {
             var text = lines[i];
+
+            // A line that continues a string is part of the string: leave it exactly as it is.
+            if (inString)
+            {
+                inString = EndsInContinuedString(text, true);
+                continue;
+            }
+
             var fw = FirstWord(text);
 
             // Inside layout/lookup only the closer counts; the body is someone else's language.
@@ -59,11 +75,15 @@ public static class TherionReindenter
 
             if (CloserType(fw) is { } ctype)
             {
-                while (stack.Count > 0 && stack.Peek() != ctype) stack.Pop();
-                if (stack.Count > 0) stack.Pop();
+                // A closer whose block is not open is a typo or a leftover and closes nothing.
+                if (stack.Contains(ctype))
+                {
+                    while (stack.Peek() != ctype) stack.Pop();
+                    stack.Pop();
+                }
             }
 
-            var body = text.Trim();
+            var body = text.Trim(' ', '\t');
             var want = body.Length == 0 ? string.Empty : Repeat(indentUnit, stack.Count) + body;
             if (!string.Equals(text, want, StringComparison.Ordinal)) result[i] = want;
 
@@ -72,8 +92,33 @@ public static class TherionReindenter
                 stack.Push(otype);
                 if (otype is "layout" or "lookup") opaqueCloser = "end" + otype;
             }
+            if (opaqueCloser is null) inString = EndsInContinuedString(text, false);
         }
         return result;
+    }
+
+    // Whether the line ends inside a quoted string that a trailing `\` carries on to the next line.
+    // Mirrors the tokenizer: a doubled quote is a literal quote, a string otherwise ends at the line
+    // break, and a `#` outside a string starts a comment.
+    private static bool EndsInContinuedString(string line, bool inString)
+    {
+        for (int i = 0; i < line.Length; i++)
+        {
+            char c = line[i];
+            if (!inString)
+            {
+                if (c == '#') return false;
+                if (c == '"') inString = true;
+            }
+            else if (c == '"')
+            {
+                if (i + 1 < line.Length && line[i + 1] == '"') i++;
+                else inString = false;
+            }
+            else if (c == '\\' && line.AsSpan(i + 1).Trim(" \t").IsEmpty)
+                return true;
+        }
+        return false;
     }
 
     private static (List<string> Lines, List<string> Endings) Split(string text)
@@ -98,9 +143,10 @@ public static class TherionReindenter
     private static string FirstWord(string text)
     {
         int i = 0;
-        while (i < text.Length && char.IsWhiteSpace(text[i])) i++;
+        // Only spaces and tabs separate words; the tokenizer keeps any other Unicode space in the word.
+        while (i < text.Length && text[i] is ' ' or '\t') i++;
         int start = i;
-        while (i < text.Length && !char.IsWhiteSpace(text[i])) i++;
+        while (i < text.Length && text[i] is not (' ' or '\t')) i++;
         return text[start..i];
     }
 

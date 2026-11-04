@@ -248,16 +248,41 @@ public partial class TherionTextEditor : UserControl
             // Track the most-recently focused editor so the shell Edit/Search menus can act on
             // the active document's editor (#11/#12).
             _editor.TextArea.GotFocus += (_, _) => LastFocused = this;
+            // The hover card must not outlive the editor's focus: a dialog, the palette, a flyout or
+            // another window taking it left the card on top of them.
+            _editor.TextArea.LostFocus += OnTextAreaLostFocusForHover;
         }
 
         // Register this editor instance so the shell can target it by file even when unfocused (#9).
-        AttachedToVisualTree += (_, _) => { if (!Instances.Contains(this)) Instances.Add(this); };
+        AttachedToVisualTree += (_, _) =>
+        {
+            if (!Instances.Contains(this)) Instances.Add(this);
+            _hoverWindow = TopLevel.GetTopLevel(this) as Window;
+            if (_hoverWindow is not null) _hoverWindow.Deactivated += OnWindowDeactivatedForHover;
+        };
         DetachedFromVisualTree += (_, _) =>
         {
             Instances.Remove(this);
             if (ReferenceEquals(LastFocused, this)) LastFocused = null;
+            if (_hoverWindow is not null) _hoverWindow.Deactivated -= OnWindowDeactivatedForHover;
+            _hoverWindow = null;
         };
     }
+
+    // The window hosting this editor, watched so the hover card closes when it loses activation.
+    private Window? _hoverWindow;
+
+    private void OnWindowDeactivatedForHover(object? sender, EventArgs e) => HideHoverInfo();
+
+    // Focus can move into the card itself (its buttons) — keep it then; close it for anywhere else.
+    // Posted so the focus change has settled before the check.
+    private void OnTextAreaLostFocusForHover(object? sender, Avalonia.Interactivity.RoutedEventArgs e) =>
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            if (_pointerOverPopup || _editor is null || _editor.TextArea.IsKeyboardFocusWithin) return;
+            if (_infoPopup?.Child is { IsKeyboardFocusWithin: true }) return;
+            HideHoverInfo();
+        });
 
     /// <summary>The editor that last held focus — the target of the shell Edit/Search menus (#11/#12).</summary>
     public static TherionTextEditor? LastFocused { get; private set; }
@@ -309,7 +334,7 @@ public partial class TherionTextEditor : UserControl
             ThIDE.Resources.LocProxy.Instance.PropertyChanged -= OnUiLanguageChanged;
 
         _colorizer = new TherionColorizer();
-        _colorizer.SetVariant(IsDark() ? TherionColorizer.Variant.Dark : TherionColorizer.Variant.Light);
+        ApplyVariant(editor);
         editor.TextArea.TextView.LineTransformers.Add(_colorizer);
 
         // Added after the syntax colorizer so the link styling wins on the hovered path.
@@ -610,8 +635,16 @@ public partial class TherionTextEditor : UserControl
 
     private void OnThemeVariantChanged(object? sender, EventArgs e)
     {
-        _colorizer?.SetVariant(IsDark() ? TherionColorizer.Variant.Dark : TherionColorizer.Variant.Light);
+        if (_editor is not null) ApplyVariant(_editor);
         _editor?.TextArea.TextView.Redraw();
+    }
+
+    // Token palette and the selection brush that keeps those colours readable inside a selection.
+    private void ApplyVariant(TextEditor editor)
+    {
+        var variant = IsDark() ? TherionColorizer.Variant.Dark : TherionColorizer.Variant.Light;
+        _colorizer?.SetVariant(variant);
+        editor.TextArea.SelectionBrush = TherionColorizer.SelectionBrush(variant);
     }
 
     // Custom syntax colors changed in Preferences (#2) — repaint with the new brushes.
@@ -718,10 +751,11 @@ public partial class TherionTextEditor : UserControl
     /// Scrolls to a <see cref="SourceSpan"/> and briefly flashes its range (capped to
     /// the first line). Highlighting uses the transient flash adornment rather than a
     /// text selection, so navigating never leaves a multi-line selection behind (#6).
+    /// A zero-length span in a file is a caret position (a new file opened on its first data line).
     /// </summary>
     public void ScrollTo(SourceSpan span)
     {
-        if (_editor is null || span.IsEmpty) return;
+        if (_editor is null || span.IsEmpty && string.IsNullOrEmpty(span.FilePath)) return;
         var doc = _editor.Document;
         int line = Math.Max(1, span.Start.Line);
         if (line > doc.LineCount) return;
@@ -740,7 +774,7 @@ public partial class TherionTextEditor : UserControl
         // preventing AvaloniaEdit from extending selection on the next click (#2/#6).
         _editor.Select(startOffset, 0);
         _editor.ScrollToLine(line);
-        _flash?.Flash(startOffset, length);
+        if (!span.IsEmpty) _flash?.Flash(startOffset, length);
         _editor.Focus();
     }
 
@@ -789,6 +823,7 @@ public partial class TherionTextEditor : UserControl
                 UpdateBlockPairs();
                 UpdateThconfigDecorations();
                 RecomputeFileWarnings();
+                UpdateBreadcrumb();
                 _overviewRuler?.InvalidateVisual();
             }
             _textOwner = DataContext;
@@ -807,6 +842,7 @@ public partial class TherionTextEditor : UserControl
             _bookmarkMargin?.SetContext(_bookmarks, path);
             UpdateThconfigDecorations();
             RecomputeFileWarnings();
+            UpdateBreadcrumb();
         }
         else if (change.Property == HighlightingEnabledProperty)
         {
@@ -877,7 +913,8 @@ public partial class TherionTextEditor : UserControl
             foreach (var fix in fixes)
             {
                 var apply = fix.Apply;
-                var item = new Avalonia.Controls.MenuItem { Header = fix.Title };
+                var item = new Avalonia.Controls.MenuItem();
+                item.Header = ThIDE.Views.DataLabel.For(item, fix.Title);   // titles quote station names
                 item.Click += (_, _) => { try { apply(); } catch { /* ignore failed fix */ } };
                 flyout.Items.Add(item);
             }
@@ -899,12 +936,18 @@ public partial class TherionTextEditor : UserControl
     // preempt AvaloniaEdit's default newline / indent.
     private void OnTextAreaPreviewKeyDown(object? sender, KeyEventArgs e)
     {
+        // Any key closes the hover card (typing, Esc, a shortcut that opens a dialog or the palette);
+        // a bare modifier does not, so Ctrl alone keeps it while the user starts a chord.
+        if (!IsModifierKey(e.Key)) HideHoverInfo();
         bool plain = (e.KeyModifiers & (KeyModifiers.Control | KeyModifiers.Shift | KeyModifiers.Alt)) == 0;
         if (plain && (e.Key == Key.Enter || e.Key == Key.Return) && TrySmartEnter())
             e.Handled = true;
         else if (plain && e.Key == Key.Tab && _completionWindow is null && TryExpandSnippet())
             e.Handled = true;
     }
+
+    private static bool IsModifierKey(Key key) => key is Key.LeftCtrl or Key.RightCtrl or Key.LeftShift
+        or Key.RightShift or Key.LeftAlt or Key.RightAlt or Key.LWin or Key.RWin;
 
     /// <summary>
     /// if the word immediately before the caret is a snippet trigger, replace it with the
@@ -1358,9 +1401,12 @@ public partial class TherionTextEditor : UserControl
             return;
         }
 
+        // The path always starts with the file crumb, so the bar is shown (and keeps its height) from
+        // the moment the document is: appearing on the first caret move shifted the text by a line
+        // under a click and turned it into a two-line selection.
         var doc = _editor.Document;
-        var path = EnclosingBlocks(doc, doc.GetLineByOffset(_editor.CaretOffset).LineNumber);
-        if (path.Count == 0) { bar.IsVisible = false; panel.Children.Clear(); return; }
+        var fileLabel = string.IsNullOrEmpty(CurrentFilePath) ? "\u200B" : System.IO.Path.GetFileName(CurrentFilePath);
+        var path = TherionBlocks.BreadcrumbPath(doc, doc.GetLineByOffset(_editor.CaretOffset).LineNumber, fileLabel);
 
         panel.Children.Clear();
         for (int i = 0; i < path.Count; i++)
@@ -1374,40 +1420,16 @@ public partial class TherionTextEditor : UserControl
             int target = path[i].Line;
             var btn = new Button
             {
-                Content = path[i].Label,
                 Padding = new Thickness(5, 1),
                 Background = Brushes.Transparent,
                 BorderThickness = new Thickness(0),
                 FontSize = 11,
             };
+            btn.Content = ThIDE.Views.DataLabel.For(btn, path[i].Label);   // names keep their underscores
             btn.Click += (_, _) => ScrollTo(target, 1);
             panel.Children.Add(btn);
         }
         bar.IsVisible = true;
-    }
-
-    private static List<(string Label, int Line)> EnclosingBlocks(TextDocument doc, int caretLine)
-    {
-        var stack = new List<(string Label, int Line, string Type)>();
-        int max = Math.Min(caretLine, doc.LineCount);
-        for (int i = 1; i <= max; i++)
-        {
-            var text = doc.GetText(doc.GetLineByNumber(i));
-            var fw = TherionBlocks.FirstWord(text);
-            if (fw.Length == 0) continue;
-            if (TherionBlocks.IsBlockOpenerLine(text, out var type))
-                stack.Add((BlockLabel(type, text), i, type));
-            else if (TherionBlocks.CloserType(fw) is { } ctype)
-                for (int k = stack.Count - 1; k >= 0; k--)
-                    if (stack[k].Type == ctype) { stack.RemoveRange(k, stack.Count - k); break; }
-        }
-        return stack.ConvertAll(s => (s.Label, s.Line));
-    }
-
-    private static string BlockLabel(string type, string lineText)
-    {
-        var parts = lineText.Trim().Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
-        return parts.Length >= 2 && !parts[1].StartsWith('-') ? $"{type} {parts[1]}" : type;
     }
 
     // ----- : peek definition (inline popup) -------------------------
@@ -1756,6 +1778,13 @@ public partial class TherionTextEditor : UserControl
     {
         _infoShowTimer?.Stop();
         if (_editor is null || FloorOffset(_infoPointer) is not { } off) return;
+        // The show is delayed: by now the pointer may have left the editor, or a dialog may have
+        // taken over. Opening then left a card nobody pointed at on top of whatever came next.
+        if (!_pointerOverPopup && (!_editor.TextArea.TextView.IsPointerOver || _hoverWindow is { IsActive: false }))
+        {
+            CancelHoverInfo();
+            return;
+        }
 
         Control? content =
             HoverCommandWord(off) is { } cmd ? BuildCommandInfo(cmd) :
@@ -2339,6 +2368,11 @@ public partial class TherionTextEditor : UserControl
     {
         if (_editor is null) return;
         ClearHover();
+        // Leaving the editor cancels a pending card and starts the grace-hide of an open one (the
+        // pointer may be on its way to the card, which cancels the hide when it gets there).
+        _infoShowTimer?.Stop();
+        if (_infoPopup is { IsOpen: true } && !_pointerOverPopup) StartHoverHide();
+        else if (!_pointerOverPopup) _infoTokenStart = -1;
         if (_hyperlinkColorizer?.Clear() == true)
         {
             _editor.TextArea.TextView.Cursor = null;
@@ -2387,6 +2421,7 @@ public partial class TherionTextEditor : UserControl
     private void OnEditorContextRequested(object? sender, ContextRequestedEventArgs e)
     {
         if (_editor is null) return;
+        HideHoverInfo();   // the card would otherwise sit over the menu
         RefreshSnippetMenu();
         // refresh the gated items' visibility for the current settings.
         var fs = CurrentSettings;
@@ -2776,7 +2811,7 @@ public partial class TherionTextEditor : UserControl
     {
         if (TopLevel.GetTopLevel(this) is not Window owner) return;
 
-        var ok = new Button { Content = "OK", IsDefault = true, HorizontalAlignment = HorizontalAlignment.Right };
+        var ok = new Button { Content = "OK", IsDefault = true, IsCancel = true, HorizontalAlignment = HorizontalAlignment.Right };
         var dialog = new Window
         {
             Title = title,
@@ -3747,29 +3782,62 @@ public partial class TherionTextEditor : UserControl
 
     /// <summary>
     /// Edit ▸ Paste as shot data: the selection (when it is a table of shots) or the clipboard, turned
-    /// into a Therion data block in a dialog, then put where the selection or the caret is.
+    /// into a Therion data block in a dialog, then put where the caret is when that is in a centreline,
+    /// else at the end of the survey's last centreline (<see cref="Therion.Workspace.Import.ShotInsertion"/>).
     /// </summary>
     public async System.Threading.Tasks.Task PasteShotsAsync()
     {
         if (_editor?.Document is not { } doc || TopLevel.GetTopLevel(this) is not Window owner) return;
         bool fromSelection = _editor.SelectionLength > 0 && Therion.Workspace.Import.ShotTableReader.LooksLikeShots(_editor.SelectedText);
-        var source = fromSelection ? _editor.SelectedText : await TryGetClipboardAsync() ?? "";
         int start = _editor.SelectionLength > 0 ? _editor.SelectionStart : _editor.CaretOffset;
-        int length = fromSelection ? _editor.SelectionLength : 0;
-        if (!fromSelection && _editor.SelectionLength > 0) { start = _editor.SelectionStart; length = _editor.SelectionLength; }
+        int length = _editor.SelectionLength;
 
         var text = doc.Text;
         var ast = new Therion.Syntax.ThParser().Parse(CurrentFilePath ?? "untitled.th", text).Value;
+        if (Therion.Workspace.Import.ShotInsertion.Find(ast, text, start) is not { } target)
+        {
+            await ShowMessageAsync(L("PasteShots_Title"), L("PasteShots_NoSurvey"));
+            return;
+        }
+        var source = fromSelection ? _editor.SelectedText : await TryGetClipboardAsync() ?? "";
         var last = Therion.Workspace.Templates.SnippetVariables.Standard(
-            new Therion.Workspace.Templates.SnippetContext(CurrentFilePath, text, start, DateTime.Now))("LAST_STATION");
-        var centreline = EnclosingCentreline(ast?.Children, start);
-        var model = new ThIDE.ViewModels.PasteShotsViewModel(source, last, wrap: centreline is null);
+            new Therion.Workspace.Templates.SnippetContext(CurrentFilePath, text, target.Start, DateTime.Now))("LAST_STATION");
+        var file = Path.GetFileName(CurrentFilePath ?? "untitled.th");
+        var where = target.Wrap
+            ? string.Format(L("PasteShots_TargetNew"), file, target.Survey, target.Line)
+            : string.Format(L("PasteShots_Target"), file, target.Line);
+        var model = new ThIDE.ViewModels.PasteShotsViewModel(source, last, wrap: target.Wrap, target: where);
         var window = new ThIDE.Views.PasteShotsWindow(model);
         await window.ShowDialog(owner);
         if (window.Result is not { } block) return;
         var lines = block.TrimEnd('\n').Split('\n').ToList();
+        var newline = text.Contains("\r\n") ? "\r\n" : "\n";
+
+        if (!target.AtCaret)
+        {
+            // At the end of the survey's last centreline (or in a new one above endsurvey); a table
+            // selected outside it is taken out. One undo step.
+            int caret;
+            doc.BeginUpdate();
+            try
+            {
+                // The later edit first, so the earlier offset stays valid.
+                bool removeSelection = fromSelection && (start + length <= target.Start || start >= target.Start + target.Length);
+                var blockText = string.Join("", lines.Select(l => target.Indent + l + newline));
+                if (removeSelection && start > target.Start) doc.Remove(start, length);
+                doc.Replace(target.Start, target.Length, blockText);
+                if (removeSelection && start < target.Start) doc.Remove(start, length);
+                caret = target.Start + blockText.Length - newline.Length - (removeSelection && start < target.Start ? length : 0);
+            }
+            finally { doc.EndUpdate(); }
+            CaretAfterInsert(caret);
+            FocusEditorAfterDialog();
+            return;
+        }
+
+        var centreline = target.Centreline!;
         // Shots after the block must still be read with the units and data line they were written for.
-        if (centreline is not null && centreline.Children.Any(c => c.Span.StartOffset >= start + length))
+        if (centreline.Children.Any(c => c.Span.StartOffset >= start + length))
             lines.AddRange(RestoreReadingState(centreline, text, start, lines));
 
         // A selection that ends at the start of a line keeps that line break.
@@ -3779,7 +3847,6 @@ public partial class TherionTextEditor : UserControl
         var first = doc.GetLineByOffset(start);
         var lastLine = doc.GetLineByOffset(end);
         var indent = TherionBlocks.LeadingWhitespace(doc.GetText(first));
-        var newline = text.Contains("\r\n") ? "\r\n" : "\n";
         bool blankBefore = doc.GetText(first.Offset, start - first.Offset).Trim().Length == 0;
         bool blankAfter = doc.GetText(end, lastLine.EndOffset - end).Trim().Length == 0;
         string insert;
@@ -3802,18 +3869,23 @@ public partial class TherionTextEditor : UserControl
             insert = string.Join("", lines.Select(l => newline + indent + l)) + (blankAfter ? "" : newline + indent);
         }
         doc.Replace(start, end - start, insert);
-        _editor.Focus();
+        CaretAfterInsert(start + insert.Length);
+        FocusEditorAfterDialog();
     }
 
-    /// <summary>The innermost <c>centreline</c> block the offset is strictly inside, or null.</summary>
-    private static Therion.Syntax.CentrelineCommand? EnclosingCentreline(IEnumerable<Therion.Syntax.TherionNode>? nodes, int offset)
+    // The editor leaves a replaced range selected; a second paste would then replace the first block.
+    private void CaretAfterInsert(int offset)
     {
-        foreach (var n in nodes ?? [])
-        {
-            if (n is not Therion.Syntax.BlockCommand b || offset <= b.Span.StartOffset || offset >= b.Span.StartOffset + b.Span.Length) continue;
-            return EnclosingCentreline(b.Children, offset) ?? b as Therion.Syntax.CentrelineCommand;
-        }
-        return null;
+        if (_editor is null) return;
+        _editor.Select(Math.Clamp(offset, 0, _editor.Document.TextLength), 0);
+    }
+
+    // The owner window gives focus back to whatever had it before the dialog once the dialog closes;
+    // take it after that, so the first Ctrl+Z undoes the insert.
+    private void FocusEditorAfterDialog()
+    {
+        _editor?.TextArea.Focus();
+        Dispatcher.UIThread.Post(() => _editor?.TextArea.Focus(), DispatcherPriority.Background);
     }
 
     /// <summary>

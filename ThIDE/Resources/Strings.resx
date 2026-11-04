@@ -360,6 +360,11 @@
   <data name="Menu_View_Model3D" xml:space="preserve"><value>3D Viewer</value></data>
   <data name="Menu_View_Structural" xml:space="preserve"><value>Structural Geology</value></data>
   <data name="Menu_View_Outline" xml:space="preserve"><value>Outline</value></data>
+  <data name="Tool_Outline" xml:space="preserve"><value>Outline</value></data>
+  <data name="Tool_Log" xml:space="preserve"><value>Log</value></data>
+  <data name="Tool_MapViewer" xml:space="preserve"><value>Map Viewer</value></data>
+  <data name="Tool_Model3D" xml:space="preserve"><value>3D Viewer</value></data>
+  <data name="Tool_StructuralGeology" xml:space="preserve"><value>Structural Geology</value></data>
   <data name="Menu_View_Whitespace" xml:space="preserve"><value>Whitespace</value></data>
   <data name="Menu_View_ShowSpacesTabs" xml:space="preserve"><value>Show Spaces &amp; Tabs</value></data>
   <data name="Menu_View_ShowEol" xml:space="preserve"><value>Show End of Line</value></data>
@@ -548,7 +553,7 @@
   <data name="Pref_SearchWm" xml:space="preserve"><value>Search settings…</value></data>
   <data name="Pref_ReopenSession" xml:space="preserve"><value>Reopen files from last session on startup</value></data>
   <data name="Pref_Language" xml:space="preserve"><value>Language</value></data>
-  <data name="Pref_LanguageHelp" xml:space="preserve"><value>Language applies immediately to menus and labels.</value></data>
+  <data name="Pref_LanguageHelp" xml:space="preserve"><value>Menus and panels switch language when you click OK; a few labels in already-open lists update after a restart.</value></data>
   <data name="Pref_AutoSave" xml:space="preserve"><value>Auto-save</value></data>
   <data name="Pref_AutoSaveOff" xml:space="preserve"><value>Off</value></data>
   <data name="Pref_AutoSaveDelay" xml:space="preserve"><value>After a delay</value></data>
@@ -1538,6 +1543,8 @@ Install Mapiah from its releases page, then set the path to mapiah.exe in Settin
   <data name="Fix_InsertEnd" xml:space="preserve"><value>Insert '{0}'</value></data>
   <data name="Fix_InsertCs" xml:space="preserve"><value>Insert 'cs ' line</value></data>
   <data name="Fix_CommentOut" xml:space="preserve"><value>Comment out this line</value></data>
+  <data name="Fix_CommentOutDisconnects" xml:space="preserve"><value>Comment out this line (disconnects {0})</value></data>
+  <data name="Fix_Equate" xml:space="preserve"><value>Replace with 'equate {0} {1}'</value></data>
   <data name="Fix_PathSeparators" xml:space="preserve"><value>Write '{0}' with '/' separators</value></data>
   <data name="File_PathSeparatorBanner" xml:space="preserve"><value>{0} include path(s) in this file use Windows '\' separators. Therion cannot open them on this system, but written with '/' they name existing files.</value></data>
   <data name="File_PathSeparatorFixFile" xml:space="preserve"><value>Fix in this file</value></data>
@@ -1640,6 +1647,9 @@ Apply the changes? Steps that could not preview run now.</value></data>
   <data name="PasteShots_Insert" xml:space="preserve"><value>Insert</value></data>
   <data name="PasteShots_Summary" xml:space="preserve"><value>{0} leg(s), {1} splay(s)</value></data>
   <data name="PasteShots_BadColumns" xml:space="preserve"><value>Columns: use data keywords such as 'from to length compass clino' (length, compass and clino are needed; '-' skips a column).</value></data>
+  <data name="PasteShots_Target" xml:space="preserve"><value>Insert into: {0}, centreline at line {1}</value></data>
+  <data name="PasteShots_TargetNew" xml:space="preserve"><value>Insert into: {0}, a new centreline at the end of survey {1} (line {2})</value></data>
+  <data name="PasteShots_NoSurvey" xml:space="preserve"><value>There is no survey here for the shots to go into. Put the caret inside a survey, or create one first.</value></data>
   <data name="ShotIssue_Line" xml:space="preserve"><value>Line {0}: {1}</value></data>
   <data name="ShotIssue_NoShots" xml:space="preserve"><value>No shots found in the text.</value></data>
   <data name="ShotIssue_NotANumber" xml:space="preserve"><value>'{0}' is not a number; the row is left out.</value></data>
@@ -1676,9 +1686,44 @@ Apply the changes? Steps that could not preview run now.</value></data>
   <data name="Renumber_Stale" xml:space="preserve"><value>{0} has changed since the project was read — save or reload, then try again.</value></data>
   <data name="Renumber_NoSurvey" xml:space="preserve"><value>No survey '{0}' in the project.</value></data>
   <data name="ShotIssue_BadStation" xml:space="preserve"><value>'{0}' is not a station name; the row is left out.</value></data>
+  <data name="ShotIssue_ReadAsSplay" xml:space="preserve"><value>one value short: read as a splay from '{0}'.</value></data>
   <data name="ShotEdit_OtherFile" xml:space="preserve"><value>This shot is in {0}: open that file to edit it.</value></data>
   <data name="Explorer_TrashFailed" xml:space="preserve"><value>'{0}' could not be moved to the trash.
 
 Delete it permanently instead? This cannot be undone.</value></data>
   <data name="Explorer_DeletePermanently" xml:space="preserve"><value>Delete Permanently</value></data>
+  <data name="WsUndo_Menu" xml:space="preserve"><value>Undo {0}</value></data>
+  <data name="WsUndo_MenuNone" xml:space="preserve"><value>Undo multi-file change</value></data>
+  <data name="WsUndo_RedoMenu" xml:space="preserve"><value>Redo {0}</value></data>
+  <data name="WsUndo_RedoMenuNone" xml:space="preserve"><value>Redo multi-file change</value></data>
+  <data name="WsUndo_Files" xml:space="preserve"><value>{0} file(s): {1}</value></data>
+  <data name="WsUndo_More" xml:space="preserve"><value> and {0} more</value></data>
+  <data name="WsUndo_Done" xml:space="preserve"><value>Undid {0} in {1} file(s): {2}</value></data>
+  <data name="WsUndo_Redone" xml:space="preserve"><value>Redid {0} in {1} file(s): {2}</value></data>
+  <data name="WsUndo_Refused" xml:space="preserve"><value>Nothing restored: {0} has changed since. No file was changed.</value></data>
+  <data name="WsUndo_Encoding" xml:space="preserve"><value>Nothing restored: {0} cannot hold '{1}' in {2}, the encoding the file declares. No file was changed.</value></data>
+  <data name="WsUndo_Gone" xml:space="preserve"><value>This change was already undone.</value></data>
+  <data name="WsUndo_OpRename" xml:space="preserve"><value>Rename</value></data>
+  <data name="Rename_Done" xml:space="preserve"><value>Renamed {0} → {1} in {2} file(s).</value></data>
+  <data name="Replace_Confirm" xml:space="preserve"><value>Replace {0} occurrence(s) in {1} files?</value></data>
+  <data name="Replace_Done" xml:space="preserve"><value>Replaced {0} occurrence(s) in {1} file(s).</value></data>
+  <data name="NewTrip_Done" xml:space="preserve"><value>Created {0}</value></data>
+  <data name="Build_CompilingTarget" xml:space="preserve"><value>Compiling {0}…</value></data>
+  <data name="Build_OutputTarget" xml:space="preserve"><value>Compiling {0}</value></data>
+  <data name="Menu_Build_BuildThisThconfig" xml:space="preserve"><value>Build this thconfig (focused tab)</value></data>
+  <data name="Cmd_BuildThisThconfig" xml:space="preserve"><value>Build this thconfig (the focused tab, not the active one)</value></data>
+  <data name="Gen_Header" xml:space="preserve"><value>Outputs of {0}</value></data>
+  <data name="Gen_HeaderBuilt" xml:space="preserve"><value>Outputs of {0} · built {1}</value></data>
+  <data name="Gen_NotBuiltYet" xml:space="preserve"><value>{0} has not been built yet.</value></data>
+  <data name="Gen_NoOutputs" xml:space="preserve"><value>The last build of {0} wrote no output files.</value></data>
+  <data name="Gen_StaleAfterFailedBuild" xml:space="preserve"><value>⚠ The last build of {0} failed — these outputs are from an earlier build. Fix the errors and compile again.</value></data>
+  <data name="Dash_BuildNever" xml:space="preserve"><value>Never built this session</value></data>
+  <data name="Dash_BuildOk" xml:space="preserve"><value>Last build of {0} succeeded</value></data>
+  <data name="Dash_BuildOkWarnings" xml:space="preserve"><value>Last build of {0} succeeded ({1} warnings)</value></data>
+  <data name="Dash_BuildFailed" xml:space="preserve"><value>Last build of {0} failed</value></data>
+  <data name="Dash_BuildFailedError" xml:space="preserve"><value>Last build of {0} failed — {1}</value></data>
+  <data name="File_NotInActiveThconfig" xml:space="preserve"><value>Not part of the active thconfig ({0}).</value></data>
+  <data name="File_NotInActiveThconfigNoName" xml:space="preserve"><value>Not part of the active thconfig.</value></data>
+  <data name="File_NotTheActiveThconfig" xml:space="preserve"><value>Not the active thconfig (the active one is {0}).</value></data>
+  <data name="File_MakeActiveThconfig" xml:space="preserve"><value>Make this the active thconfig</value></data>
 </root>

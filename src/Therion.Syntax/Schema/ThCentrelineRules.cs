@@ -57,7 +57,11 @@ internal static class ThCentrelineRules
                 ValidateFix(fix, options, diagnostics, mode);
                 break;
             case TeamCommand team:
+                ValidatePersonName(team.Name, team.Keyword, team.Span, options, diagnostics, mode);
                 ValidateTeamRoles(team, options, diagnostics, mode);
+                break;
+            case ExploTeamCommand explo:
+                ValidatePersonName(explo.Name, explo.Keyword, explo.Span, options, diagnostics, mode);
                 break;
             case InstrumentCommand instr:
                 ValidateInstrument(instr, options, diagnostics, mode);
@@ -166,6 +170,17 @@ internal static class ThCentrelineRules
                     $"'fix' standard deviation must be positive, found {sd}.", fix.Span));
             }
         }
+    }
+
+    // src: `team ""` → "invalid name format -- \"\"" (a person needs a name).
+    private static void ValidatePersonName(
+        string name, string keyword, SourceSpan span, SchemaValidationOptions options,
+        ImmutableArray<Diagnostic>.Builder diagnostics, ParserMode mode)
+    {
+        if (!options.IsCategoryEnabled(ValidationCategories.ValueTypes) || name.Trim().Length > 0) return;
+        diagnostics.Add(Diagnostic.Create(
+            DiagnosticCodes.ValueTypeMismatch, Lenient(mode),
+            $"'{keyword}' needs a person's name; Therion rejects an empty one.", span));
     }
 
     private static void ValidateTeamRoles(

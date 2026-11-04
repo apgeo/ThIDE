@@ -46,6 +46,57 @@ public class CodeFixesTests
         Assert.Equal("survey a\r\n  centreline\r\n    1 2 3 4 5\r\n  endcentreline\r\n\r\n", Apply(text, fix));
     }
 
+    // Station B is reached only through the zero-length leg; the rest of its shots are splays.
+    private const string ZeroLeg =
+        "survey s\n  centreline\n    data normal from to length compass clino\n    A B 0 0 0 # same point\n" +
+        "    B - 1.2 10 0\n    B - 1.5 100 0\n    A C 3 10 0\n  endcentreline\nendsurvey\n";
+
+    [Fact]
+    public void Zero_length_leg_is_offered_as_an_equate_first()
+    {
+        var fixes = CodeFixes.ForLine(ZeroLeg, 4, [D(CodeFixes.ShotOutlier, 4, "Zero-length leg between distinct stations s.A → s.B.")]);
+
+        Assert.Equal(["Fix_Equate", "Fix_CommentOutDisconnects"], fixes.Select(f => f.TitleKey));
+        Assert.Equal(CodeFixes.ShotOutlier, fixes[0].DiagnosticCode);
+        Assert.Contains("    equate A B # same point\n    B - 1.2", Apply(ZeroLeg, fixes[0]));
+        // Commenting the leg out leaves B and its splays hanging: the title says so.
+        Assert.Equal(["B"], fixes[1].TitleArgs);
+    }
+
+    [Fact]
+    public void Zero_length_leg_gets_the_same_fixes_without_the_project_diagnostic()
+    {
+        // The editor's Ctrl+. passes only the file's own diagnostics; TH_SEM_012 is a project one.
+        var withDiagnostic = CodeFixes.ForLine(ZeroLeg, 4, [D(CodeFixes.ShotOutlier, 4, "zero-length")]);
+        var without = CodeFixes.ForLine(ZeroLeg, 4, []);
+
+        Assert.Equal(["Fix_Equate", "Fix_CommentOutDisconnects"], without.Select(f => f.TitleKey));
+        Assert.Equal(withDiagnostic.Select(f => (f.TitleKey, string.Join(",", f.TitleArgs))), without.Select(f => (f.TitleKey, string.Join(",", f.TitleArgs))));
+        Assert.Equal(Apply(ZeroLeg, withDiagnostic[0]), Apply(ZeroLeg, without[0]));
+        // A leg with a length is not one: the plain comment-out, as before.
+        Assert.Equal(["Fix_CommentOut"], CodeFixes.ForLine(ZeroLeg, 7, []).Select(f => f.TitleKey));
+    }
+
+    [Fact]
+    public void Zero_length_leg_between_otherwise_connected_stations_comments_out_plainly()
+    {
+        var text = ZeroLeg.Replace("    A C 3 10 0", "    C B 3 10 0\n    A C 3 10 0");
+
+        var fixes = CodeFixes.ForLine(text, 4, [D(CodeFixes.ShotOutlier, 4, "zero-length")]);
+
+        Assert.Equal(["Fix_Equate", "Fix_CommentOut"], fixes.Select(f => f.TitleKey));
+    }
+
+    [Fact]
+    public void Other_shot_outliers_keep_the_plain_comment_out()
+    {
+        var text = ZeroLeg.Replace("A B 0 0 0", "A B 250 0 0");
+
+        var fixes = CodeFixes.ForLine(text, 4, [D(CodeFixes.ShotOutlier, 4, "Unusually long leg")]);
+
+        Assert.Equal(["Fix_CommentOut"], fixes.Select(f => f.TitleKey));
+    }
+
     [Fact]
     public void Line_fixes_come_in_menu_order()
     {

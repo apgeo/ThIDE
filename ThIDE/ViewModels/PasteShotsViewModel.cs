@@ -13,8 +13,10 @@ namespace ThIDE.ViewModels;
 /// </summary>
 public sealed partial class PasteShotsViewModel : ObservableObject
 {
-    public PasteShotsViewModel(string source, string? startStation, bool wrap)
+    /// <param name="target">Where the block will go ("Insert into: …"), shown in the dialog.</param>
+    public PasteShotsViewModel(string source, string? startStation, bool wrap, string? target = null)
     {
+        Target = target ?? "";
         _source = source;
         _startStation = string.IsNullOrWhiteSpace(startStation) ? "0" : startStation;
         _wrap = wrap;
@@ -41,6 +43,8 @@ public sealed partial class PasteShotsViewModel : ObservableObject
     [ObservableProperty] private bool _needsStations;
 
     public ObservableCollection<string> Issues { get; } = new();
+
+    public string Target { get; }
 
     protected override void OnPropertyChanged(PropertyChangedEventArgs e)
     {

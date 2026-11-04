@@ -8,6 +8,7 @@
 // disagree about what "the same station" means.
 
 using System;
+using System.Collections.Immutable;
 using Therion.Processing.Abstractions;
 
 namespace Therion.Semantics;
@@ -37,7 +38,7 @@ public static class WorkspaceEquates
                     // The binder's resolution in the equate's own survey scope wins: re-resolving the
                     // raw `0` here could only guess, and fails once sibling surveys reuse the name.
                     var bound = i < record.ResolvedMembers.Length ? record.ResolvedMembers[i] : null;
-                    if ((bound ?? ResolveMember(workspace, model, record.Stations[i])) is not { } qn) continue;
+                    if ((bound ?? ResolveMember(workspace, model, record.Stations[i], record.Scope)) is not { } qn) continue;
                     if (first is null) first = qn;
                     else equates.Union(first.Value, qn);
                 }
@@ -49,7 +50,7 @@ public static class WorkspaceEquates
         // workspace-level match counts here: guessing by bare point name could merge two caves.
         foreach (var model in workspace.PerFile.Values)
             foreach (var name in model.Stations.Keys)
-                if (name.Last.Contains('@') && workspace.ResolveStationSymbol(name.Last) is { } real
+                if (name.Last.Contains('@') && workspace.ResolveStationSymbol(name.Last, ScopeOf(name)) is { } real
                     && !real.Name.Equals(name))
                     equates.Union(real.Name, name);
 
@@ -79,20 +80,32 @@ public static class WorkspaceEquates
                 if (!localFixGrounds && string.IsNullOrWhiteSpace(station.Cs)) continue;
 
                 yield return station.Name.Last.Contains('@')
-                    ? ResolveMember(workspace, model, station.Name.Last) ?? station.Name
+                    ? ResolveMember(workspace, model, station.Name.Last, ScopeOf(station.Name)) ?? station.Name
                     : station.Name;
             }
     }
+
+    /// <summary>The survey a per-file placeholder station (<c>wrapper.1@partA</c>) was written in.</summary>
+    private static ImmutableArray<string> ScopeOf(QualifiedName placeholder) =>
+        placeholder.HasParent ? placeholder.Parent().Parts : ImmutableArray<string>.Empty;
 
     /// <summary>
     /// Resolves one <c>equate</c> member token (<c>0</c>, <c>0@part</c>, <c>cave.part.0</c>) to the
     /// station it names, or <c>null</c> when it names nothing resolvable.
     /// </summary>
     public static QualifiedName? ResolveMember(WorkspaceSemanticModel workspace, SemanticModel model, string raw)
+        => ResolveMember(workspace, model, raw, ImmutableArray<string>.Empty);
+
+    /// <summary>
+    /// As <see cref="ResolveMember(WorkspaceSemanticModel, SemanticModel, string)"/>, for a member
+    /// written in survey <paramref name="scope"/>, which an <c>@</c> path is relative to.
+    /// </summary>
+    public static QualifiedName? ResolveMember(WorkspaceSemanticModel workspace, SemanticModel model, string raw,
+        ImmutableArray<string> scope)
     {
         if (string.IsNullOrWhiteSpace(raw)) return null;
         raw = raw.Trim();
-        if (workspace.ResolveStationSymbol(raw) is { } sym) return sym.Name;
+        if (workspace.ResolveStationSymbol(raw, scope) is { } sym) return sym.Name;
 
         var r = StationRef.Parse(raw);
         // A `point@survey` names its survey: when the workspace does not know that survey, a guess by

@@ -8,7 +8,11 @@ namespace ThIDE.Views;
 
 public partial class NewProjectWindow : Window
 {
-    public NewProjectWindow() => InitializeComponent();
+    public NewProjectWindow()
+    {
+        InitializeComponent();
+        this.FocusOnOpen("FirstInput");
+    }
 
     public NewProjectWindow(NewProjectViewModel model) : this() => DataContext = model;
 

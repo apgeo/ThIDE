@@ -43,10 +43,7 @@ public sealed class ThParser
             lines, ref cursor, filePath, options,
             blockTerminator: null, blockKeyword: null, parentBlock: null, diagnostics);
 
-        var fileSpan = sourceText.Length == 0
-            ? SourceSpan.None with { FilePath = filePath }
-            : new SourceSpan(filePath, SourceLocation.Start,
-                new SourceLocation(1, sourceText.Length + 1), 0, sourceText.Length);
+        var fileSpan = TherionTokenizer.WholeFileSpan(filePath, sourceText);
 
         var file = new TherionFile(fileSpan, filePath, children,
             options.Version ?? TherionSyntaxVersion.Default);

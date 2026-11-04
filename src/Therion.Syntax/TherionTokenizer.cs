@@ -371,20 +371,44 @@ public sealed class TherionTokenizer
         int bodyEnd = NewlineStart(text, endLineStart);   // exclude the newline before endsurface
         if (bodyEnd <= bodyStart) return;                 // empty body — let normal lexing handle it
 
-        int newlines = 0;
-        for (int i = bodyStart; i < bodyEnd; i++) if (text[i] == '\n') newlines++;
+        var end = Advance(text, bodyStart, bodyEnd, line, col);
 
         builder.Add(new TherionToken(
             TherionTokenKind.Identifier,
             new SourceSpan(filePath,
-                new SourceLocation(line, 1), new SourceLocation(line + newlines, 1),
+                new SourceLocation(line, 1), new SourceLocation(end.Line, end.Column),
                 bodyStart, bodyEnd - bodyStart),
             text.Substring(bodyStart, bodyEnd - bodyStart)));
 
-        line += newlines;
-        col = 1;
+        line = end.Line;
+        col = end.Column;
         pos = bodyEnd;
         lineStartIdx = builder.Count;
+    }
+
+    /// <summary>
+    /// The location reached after walking <c>text[from..to)</c> from (<paramref name="line"/>,
+    /// <paramref name="col"/>): <c>\r\n</c>, <c>\n</c> and a lone <c>\r</c> each end one line, and
+    /// every other UTF-16 unit takes one column.
+    /// </summary>
+    private static SourceLocation Advance(string text, int from, int to, int line, int col)
+    {
+        for (int i = from; i < to; i++)
+        {
+            char c = text[i];
+            if (c == '\r' && i + 1 < to && text[i + 1] == '\n') i++;
+            if (c is '\r' or '\n') { line++; col = 1; }
+            else col++;
+        }
+        return new SourceLocation(line, col);
+    }
+
+    /// <summary>The span of a whole file's text, ending at the location of its last character.</summary>
+    internal static SourceSpan WholeFileSpan(string filePath, string text)
+    {
+        if (text.Length == 0) return SourceSpan.None with { FilePath = filePath };
+        var end = Advance(text, 0, text.Length, 1, 1);
+        return new SourceSpan(filePath, SourceLocation.Start, end, 0, text.Length);
     }
 
     /// <summary>Finds the start offset of the next line whose first word is <c>endsurface</c>.</summary>

@@ -14,6 +14,7 @@ public partial class QuickExportWindow : Window
     public QuickExportWindow()
     {
         InitializeComponent();
+        this.FocusOnOpen("FirstInput");
         DataContext = new QuickExportViewModel();
     }
 

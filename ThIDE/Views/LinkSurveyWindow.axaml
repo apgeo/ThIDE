@@ -19,7 +19,7 @@
                         AutomationProperties.AutomationId="LinkSurvey.BrowseSource" />
                 <Button DockPanel.Dock="Right" Content="{l:Loc LinkSurvey_Load}" Command="{Binding LoadSourceCommand}" Margin="6,0,0,0"
                         AutomationProperties.AutomationId="LinkSurvey.LoadSource" />
-                <TextBox Text="{Binding SourcePath, Mode=TwoWay}" PlaceholderText="{l:Loc LinkSurvey_SourceHint}"
+                <TextBox x:Name="FirstInput" Text="{Binding SourcePath, Mode=TwoWay}" PlaceholderText="{l:Loc LinkSurvey_SourceHint}"
                          AutomationProperties.AutomationId="LinkSurvey.SourcePath" AutomationProperties.Name="{l:Loc LinkSurvey_SourceFile}">
                     <TextBox.KeyBindings>
                         <KeyBinding Gesture="Enter" Command="{Binding LoadSourceCommand}" />
@@ -33,7 +33,7 @@
         <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,10,0,0">
             <Button Content="{l:Loc LinkSurvey_Copy}" Command="{Binding CopyCommand}" MinWidth="120"
                     AutomationProperties.AutomationId="LinkSurvey.Copy" />
-            <Button Content="{l:Loc Common_Cancel}" Click="OnCancel" MinWidth="80"
+            <Button Content="{l:Loc Common_Cancel}" Click="OnCancel" IsCancel="True" MinWidth="80"
                     AutomationProperties.AutomationId="LinkSurvey.Cancel" />
             <Button Content="{l:Loc LinkSurvey_Insert}" Click="OnInsert" IsDefault="True" MinWidth="120"
                     IsEnabled="{Binding InsertEnabled}"
@@ -81,7 +81,9 @@
                                   AutomationProperties.AutomationId="LinkSurvey.Sketches">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <CheckBox Content="{Binding Label}" IsChecked="{Binding IsChecked, Mode=TwoWay}" />
+                                <CheckBox AutomationProperties.Name="{Binding Label}" IsChecked="{Binding IsChecked, Mode=TwoWay}">
+                                    <TextBlock Text="{Binding Label}" />
+                                </CheckBox>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>

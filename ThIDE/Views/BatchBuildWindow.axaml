@@ -16,22 +16,27 @@
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
                 <Button Content="{l:Loc Automation_Cancel}" Command="{Binding CancelRunCommand}" IsEnabled="{Binding IsRunning}"
                         AutomationProperties.AutomationId="BatchBuild.Cancel" />
-                <Button Content="{l:Loc Common_Close}" Click="OnClose" AutomationProperties.AutomationId="BatchBuild.Close" />
+                <Button Content="{l:Loc Common_Close}" Click="OnClose" IsCancel="True" AutomationProperties.AutomationId="BatchBuild.Close" />
                 <Button Content="{l:Loc Batch_Build}" Command="{Binding RunCommand}" IsDefault="True" MinWidth="100"
                         IsEnabled="{Binding !IsRunning}" AutomationProperties.AutomationId="BatchBuild.Build" />
             </StackPanel>
         </DockPanel>
         <TextBlock DockPanel.Dock="Bottom" Text="{Binding Status}" Margin="0,6,0,0" AutomationProperties.AutomationId="BatchBuild.Status" />
         <ScrollViewer>
-            <ItemsControl ItemsSource="{Binding Configs}" AutomationProperties.AutomationId="BatchBuild.Configs">
+            <ItemsControl x:Name="ConfigList" ItemsSource="{Binding Configs}" AutomationProperties.AutomationId="BatchBuild.Configs">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
                         <StackPanel Margin="0,0,0,6">
-                            <CheckBox Content="{Binding Label}" IsChecked="{Binding IsChecked, Mode=TwoWay}" FontWeight="SemiBold" />
+                            <!-- TextBlock content: a string would lose the first '_' of the file name to AccessText. -->
+                            <CheckBox AutomationProperties.Name="{Binding Label}" IsChecked="{Binding IsChecked, Mode=TwoWay}" FontWeight="SemiBold">
+                                <TextBlock Text="{Binding Label}" />
+                            </CheckBox>
                             <ItemsControl ItemsSource="{Binding Targets}" Margin="26,0,0,0" IsEnabled="{Binding IsChecked}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <CheckBox Content="{Binding Title}" IsChecked="{Binding IsChecked, Mode=TwoWay}" FontSize="12" />
+                                        <CheckBox AutomationProperties.Name="{Binding Title}" IsChecked="{Binding IsChecked, Mode=TwoWay}" FontSize="12">
+                                            <TextBlock Text="{Binding Title}" />
+                                        </CheckBox>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>

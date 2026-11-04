@@ -13,6 +13,7 @@ public partial class SearchWindow : Window
     public SearchWindow()
     {
         InitializeComponent();
+        this.ClampOnOpen();
         Opened += (_, _) =>
         {
             (DataContext as SearchViewModel)?.PrepareDefaults();

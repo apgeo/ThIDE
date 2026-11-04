@@ -227,7 +227,7 @@ public class EncodingRoundTripProperties : IDisposable
     /// own bytes. A save must find it again, or it rewrites the file as UTF-8 while the file still
     /// declares a Latin code page.
     /// </summary>
-    [Theory(Skip = "Known bug: the save probes the first 4096 chars re-encoded as UTF-8, so a directive the reader found after a long accented header is missed and the file is rewritten as UTF-8")]
+    [Theory]
     [InlineData("cp1250", "ł")]
     [InlineData("cp1252", "é")]
     [InlineData("iso8859-2", "ž")]

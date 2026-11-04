@@ -478,7 +478,7 @@ public partial class MainWindowViewModel : ViewModelBase
         nameof(MenuSearchFindInFiles), nameof(MenuSearchReplaceInFiles), nameof(MenuSearchGoTo),
         nameof(MenuSearchBookmarks), nameof(MenuBuildOpenLoch), nameof(MenuBuildOpenAven),
         nameof(MenuBuildOpenOutputFolder), nameof(MenuBuildBuild), nameof(MenuBuildRebuild),
-        nameof(MenuBuildCancel),
+        nameof(MenuBuildCancel), nameof(WorkspaceUndoHeader), nameof(WorkspaceRedoHeader),
     };
 
     public MainWindowViewModel(
@@ -517,7 +517,8 @@ public partial class MainWindowViewModel : ViewModelBase
         IScriptHookService? hooks = null,
         IShellOpener? shell = null,
         IMcpHostService? mcpHost = null,
-        ITaskRunnerService? tasks = null)
+        ITaskRunnerService? tasks = null,
+        IWorkspaceUndoService? workspaceUndo = null)
     {
         _shell = shell;
         Tasks = tasks;
@@ -532,6 +533,7 @@ public partial class MainWindowViewModel : ViewModelBase
             HasUnreadNotifications = _notifications.UnreadCount > 0;
             HasNotificationHistory = _notifications.History.Count > 0;
         });
+        AttachWorkspaceUndo(workspaceUndo);
         _quickOpen = quickOpen;
         _l = localizer;
         _language = language;
@@ -873,7 +875,48 @@ public partial class MainWindowViewModel : ViewModelBase
     public void AttachStoragePicker(IStoragePicker picker) => _picker = picker;
 
     /// <summary>Restores the workspace root + active thconfig (#9) and last session's files.</summary>
-    private void RestoreSession() => _ = RestoreSessionAsync(_settings?.Current);
+    private void RestoreSession() => _sessionRestored = RestoreSessionAsync(_settings?.Current);
+
+    private Task? _sessionRestored;
+
+    /// <summary>
+    /// Opens the files passed on the command line (file association, "Open with"), once the
+    /// previous session is restored. The first <c>.thconfig</c> among them becomes the active
+    /// configuration, so Compile builds it rather than the configuration restored from last time;
+    /// it only opens as a tab when it cannot be loaded. Every other file opens as a tab.
+    /// </summary>
+    public async Task OpenStartupFilesAsync(IReadOnlyList<string> paths)
+    {
+        if (paths.Count == 0) return;
+        // Restoring sets the last session's active thconfig; activating ours first would lose to it.
+        try { if (_sessionRestored is { } restore) await restore.ConfigureAwait(true); }
+        catch { /* a failed restore still lets the files open */ }
+
+        bool activated = false;
+        foreach (var path in paths)
+        {
+            try
+            {
+                if (!activated && IsThconfigPath(path))
+                {
+                    activated = await _documents.ActivateThconfigAsync(path,
+                        new ThconfigActivation(OpenInEditor: true)).ConfigureAwait(true);
+                    if (activated) continue;
+                }
+                await _documents.OpenFileAsync(path).ConfigureAwait(true);
+            }
+            catch (Exception ex) { _log?.Warning($"Failed to open '{path}': {ex.Message}"); }
+        }
+    }
+
+    private static bool IsThconfigPath(string path)
+    {
+        var ext = System.IO.Path.GetExtension(path);
+        return ext.Length == 0
+            ? string.Equals(System.IO.Path.GetFileName(path), "thconfig", StringComparison.OrdinalIgnoreCase)
+            : ext.Equals(".thconfig", StringComparison.OrdinalIgnoreCase)
+              || ext.Equals(".thc", StringComparison.OrdinalIgnoreCase);
+    }
 
     private async Task RestoreSessionAsync(AppSettings? s)
     {
@@ -997,6 +1040,18 @@ public partial class MainWindowViewModel : ViewModelBase
             NotificationKind.Warning,
             Tr.Get("Notif_Restore"), () => { if (handled) return; handled = true; _ = RecoverBuffersAsync(recoverable); },
             Tr.Get("Notif_DiscardRecovered"), () => { if (handled) return; handled = true; _crashRecovery?.ClearRecovery(); })));
+    }
+
+    /// <summary>Writes the unsaved editor buffers to the crash-recovery folder now (the periodic autosave
+    /// and the steps that could hang or crash, such as a layout swap).</summary>
+    public void SaveRecoveryBuffers()
+    {
+        if (_crashRecovery is null) return;
+        var dirty = new System.Collections.Generic.List<(string, string)>();
+        foreach (var d in _documents.Documents)
+            if (d.IsDirty && !string.IsNullOrEmpty(d.FilePath))
+                dirty.Add((d.FilePath, d.DocumentText));
+        _crashRecovery.SaveBuffers(dirty);
     }
 
     private async Task RecoverBuffersAsync(System.Collections.Generic.IReadOnlyList<RecoveredBuffer> buffers)
@@ -1551,6 +1606,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private void ResetLayout()
     {
+        SaveRecoveryBuffers();   // a swap that hangs or crashes must not cost the unsaved edits
         _factory.CloseAllFloatWindows();   // the old tree's torn-off windows must not linger
         var layout = _factory.ResetToDefault();
         _factory.InitLayout(layout);
@@ -1569,6 +1625,7 @@ public partial class MainWindowViewModel : ViewModelBase
     /// <summary>Swaps in the layout described by <paramref name="profile"/>.</summary>
     private void ApplyLayoutProfile(LayoutProfile profile)
     {
+        SaveRecoveryBuffers();
         _factory.CloseAllFloatWindows();
         var layout = _factory.BuildFromProfile(profile);
         _factory.InitLayout(layout);

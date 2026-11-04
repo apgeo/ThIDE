@@ -193,7 +193,7 @@ public class AgentBuildTrustMatrixTests
                 yield return [layout, route];
     }
 
-    [Theory(Skip = "Known bug: the system-command scan skips input fragments outside the workspace root (BuildTools.SystemCommandsOf), so their commands run unasked")]
+    [Theory]
     [MemberData(nameof(GapMatrix))]
     public async Task An_agent_build_asks_about_system_commands_in_fragments_outside_the_folder(LayoutKind layout, Route route)
     {

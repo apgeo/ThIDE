@@ -185,9 +185,14 @@ public sealed class BuildTools(IWorkspaceHost host, ITherionCompiler compiler, I
 
     /// <summary>
     /// The <c>system</c> commands a build of <paramref name="entryPoint"/> would run: those of the
-    /// thconfig and of the config fragments it pulls in with <c>input</c>, inside the workspace. A
-    /// .th entry point is compiled with Therion's defaults and has none.
+    /// thconfig and of the config fragments it pulls in with <c>input</c>. A .th entry point is
+    /// compiled with Therion's defaults and has none.
     /// </summary>
+    /// <remarks>
+    /// Fragments outside <paramref name="root"/> (<c>../</c>, or a link out of the folder) are scanned
+    /// too: Therion runs their commands all the same, so skipping them would run them unasked. Only the
+    /// command lines reach the host's approval; nothing read here is returned to the agent.
+    /// </remarks>
     internal static IReadOnlyList<string> SystemCommandsOf(string entryPoint, string root)
     {
         var ext = Path.GetExtension(entryPoint);
@@ -209,8 +214,7 @@ public sealed class BuildTools(IWorkspaceHost host, ITherionCompiler compiler, I
             commands.AddRange(ThconfigSystemCommands.Find(file).Select(c => c.Command));
             var dir = Path.GetDirectoryName(path) ?? root;
             foreach (var token in ThconfigSystemCommands.ConfigInputs(file))
-                if (SourceGraph.ResolveDependencyToken(token, dir, File.Exists) is { } next
-                    && WorkspacePaths.IsInside(root, WorkspacePaths.Canonicalize(next)))
+                if (SourceGraph.ResolveDependencyToken(token, dir, File.Exists) is { } next)
                     pending.Enqueue(WorkspacePaths.Canonicalize(next));
         }
         return commands;

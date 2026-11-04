@@ -10,9 +10,18 @@
     <DockPanel>
     <StackPanel DockPanel.Dock="Top">
         <!-- Orphan banner (#4): file not part of the active project's object graph. -->
-        <Border Background="#E3F2FD" Padding="10,5" IsVisible="{Binding IsOrphan}">
-            <TextBlock Text="{Binding OrphanBannerText}" Foreground="#0D47A1"
-                       TextWrapping="Wrap" VerticalAlignment="Center" />
+        <Border Background="#E3F2FD" Padding="10,5" IsVisible="{Binding IsOrphan}"
+                AutomationProperties.AutomationId="Document.OrphanBanner">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
+                    <Button AutomationProperties.AutomationId="Document.Orphan.MakeActive" Content="{l:Loc File_MakeActiveThconfig}" Padding="8,2"
+                            IsVisible="{Binding IsThconfigFile}" Click="OnSetActiveThconfig" />
+                    <Button AutomationProperties.AutomationId="Document.Orphan.Dismiss" Content="{l:Loc File_Dismiss}" Padding="8,2"
+                            Command="{Binding DismissOrphanBannerCommand}" />
+                </StackPanel>
+                <TextBlock Text="{Binding OrphanBannerText}" Foreground="#0D47A1"
+                           TextWrapping="Wrap" VerticalAlignment="Center" />
+            </DockPanel>
         </Border>
 
         <!-- Large-file guards (#10): parsing/highlighting disabled banners. -->
