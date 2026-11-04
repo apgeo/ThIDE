@@ -106,6 +106,38 @@ public class WorkspacePathsTests
         }
     }
 
+    /// <summary>
+    /// A link inside the workspace whose stored target reaches back in through a linked folder — what
+    /// every link made under macOS's temp folder looks like, since /var is a link to /private/var.
+    /// </summary>
+    [Fact]
+    public void Accepts_a_link_whose_target_is_inside_through_a_linked_folder()
+    {
+        var top = WorkspacePaths.Canonicalize(Path.Combine(Path.GetTempPath(), "thmcp_alias_" + Guid.NewGuid().ToString("N")));
+        var real = Path.Combine(top, "real");
+        var root = Path.Combine(real, "ws");
+        Directory.CreateDirectory(Path.Combine(root, "store"));
+        Directory.CreateDirectory(Path.Combine(root, "caves"));
+        var content = Path.Combine(root, "store", "a.th");
+        File.WriteAllText(content, "survey a\nendsurvey\n");
+        try
+        {
+            var alias = Path.Combine(top, "alias");
+            if (!TryCreateSymlink(alias, real, directory: true)) return;
+            if (!TryCreateSymlink(Path.Combine(root, "caves", "a.th"), Path.Combine(alias, "ws", "store", "a.th"), directory: false)) return;
+
+            Assert.Equal(content, WorkspacePaths.Canonicalize(Path.Combine(root, "caves", "a.th")));
+            Assert.True(WorkspacePaths.TryResolve(root, "caves/a.th", out var full, out var error), error);
+            Assert.Equal(content, full);
+            Assert.True(WorkspacePaths.TryResolve(Path.Combine(alias, "ws"), "caves/a.th", out full, out error), error);
+            Assert.Equal(content, full);
+        }
+        finally
+        {
+            Directory.Delete(top, recursive: true);
+        }
+    }
+
     [Fact]
     public void Resolves_a_path_whose_file_does_not_exist_yet()
     {

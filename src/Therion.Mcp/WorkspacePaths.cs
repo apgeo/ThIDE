@@ -158,6 +158,18 @@ public static class WorkspacePaths
     /// </remarks>
     public static string Canonicalize(string path)
     {
+        int hops = MaxLinkHops;
+        return Canonicalize(path, ref hops);
+    }
+
+    /// <summary>
+    /// How many link targets one canonicalization re-resolves in all (Linux's own limit is 40), so an
+    /// odd tree of links pointing through links costs a bounded number of lookups.
+    /// </summary>
+    private const int MaxLinkHops = 40;
+
+    private static string Canonicalize(string path, ref int hops)
+    {
         var full = Path.GetFullPath(path);
 
         var prefix = Path.GetPathRoot(full);
@@ -170,7 +182,14 @@ public static class WorkspacePaths
         foreach (var segment in segments)
         {
             current = Path.Combine(current, segment);
-            if (Path.Exists(current)) current = ResolveLinks(current);
+            if (!Path.Exists(current)) continue;
+            var resolved = ResolveLinks(current);
+            // A link's target is spelled the way the link stores it, and its folders can be links in
+            // turn: on macOS a link to /var/folders/… really points into /private/var/folders/…. Left
+            // as stored, a target inside the workspace would compare as outside the canonical root.
+            if (!string.Equals(resolved, current, StringComparison.Ordinal) && hops-- > 0)
+                resolved = Canonicalize(resolved, ref hops);
+            current = resolved;
         }
 
         return Path.GetFullPath(current);
