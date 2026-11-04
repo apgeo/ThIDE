@@ -1,11 +1,11 @@
 // The opt-in "rename in comments too" pass must locate its hits in the text decoded the way Therion
 // reads the file (its `encoding` line), because the hits are applied to, and written over, that text.
 
-using System.Reflection;
 using System.Text;
 using Therion.Syntax;
 using Therion.Workspace;
 using Therion.Workspace.Editing;
+using ThIDE.Services;
 using ThIDE.Views;
 
 namespace ThIDE.Tests;
@@ -44,17 +44,11 @@ public class CommentRenameEncodingTests : IDisposable
     }
 
     private static List<RenameFileChanges> CollectCommentChanges(
-        Therion.Semantics.WorkspaceSemanticModel model, string oldName, List<RenameFileChanges> symbolChanges)
-    {
-        var m = typeof(MainWindow).GetMethod("CollectCommentRenameChanges", BindingFlags.NonPublic | BindingFlags.Static)!;
-        return (List<RenameFileChanges>)m.Invoke(null, [model, null, oldName, symbolChanges])!;
-    }
+        Therion.Semantics.WorkspaceSemanticModel model, string oldName, List<RenameFileChanges> symbolChanges) =>
+        RenamePlanner.CollectCommentRenameChanges(model, null, oldName, symbolChanges);
 
-    private static List<RenameFileChanges> Merge(List<RenameFileChanges> a, List<RenameFileChanges> b)
-    {
-        var m = typeof(MainWindow).GetMethod("MergeRenameChanges", BindingFlags.NonPublic | BindingFlags.Static)!;
-        return (List<RenameFileChanges>)m.Invoke(null, [a, b])!;
-    }
+    private static List<RenameFileChanges> Merge(List<RenameFileChanges> a, List<RenameFileChanges> b) =>
+        RenamePlanner.MergeRenameChanges(a, b);
 
     /// <summary>What the apply step does with a file's planned hits.</summary>
     private static string Apply(RenameFileChanges fc, string newName)
