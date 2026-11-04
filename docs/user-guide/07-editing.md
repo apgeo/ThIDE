@@ -23,7 +23,7 @@ switch to the **Dark** theme, which adapts both the UI and the syntax palette.
 ## Snippets and new files
 
 Type a snippet's trigger at the start of a line and press **Tab** (or pick it from autocomplete, or
-from **Generate code ▸ Insert snippet** in the right-click menu). The snippet is inserted with its
+from the right-click menu: **Generate Code** ▸ **Insert Snippet**). The snippet is inserted with its
 **fields** highlighted: type to fill the first, **Tab** / **Shift+Tab** to move between them, and
 **Enter** or **Esc** when done. A field used twice changes in both places.
 
@@ -54,10 +54,11 @@ Templates use the VS Code snippet syntax: `$1`, `${1:default}`, `${1|plan,elevat
 `${NAME:fallback}`. Write `\$` for a literal dollar. `scope` is `th`, `th2`, `thconfig` or `any`. A
 broken file is reported once and the rest of your snippets still work.
 
-**Quick Export ▸ Save as fragment…** saves the export block you composed as a thconfig snippet in the
-project's file.
+The **Quick Export** dialog (**Compile → Quick Export…**) has a **Save as fragment…** button: it saves the
+export block you composed as a thconfig snippet, offered under **Generate Code** ▸ **Insert Snippet** in
+thconfig files.
 
-**File ▸ New File…** (also on the Welcome page, in the command palette and in the Workspace
+**File → New File…** (also on the Welcome page, in the command palette and in the Workspace
 Explorer's right-click menu) creates a file from a template — survey trip, connection survey,
 thconfig, th2 sketch, layout library or blank — previews it, and can add the `input` line to a survey
 file in the same folder. Your own templates are JSON files in `templates/files/` (settings folder or
@@ -71,7 +72,7 @@ with a body in the same template syntax.
   Therion comments (so Therion ignores it). Select lines and run **Enclose in Region**
   (**Ctrl+Shift+R**, also in the Edit menu) to wrap them with an optional title. Full reference:
   [Application directives (`#@`)](../directives.md).
-- **Edit → Fold All / Unfold All** collapse or expand everything at once.
+- **Edit → Fold All** and **Edit → Unfold All** collapse or expand everything at once.
 
 ## Comments & case
 
@@ -84,18 +85,19 @@ From the editor context menu (or the Command Palette):
 
 | Action | What it does |
 |---|---|
-| **Duplicate Line(s)** | Copy the current line/selection below itself. |
-| **Move Line(s) Up / Down** | Shift lines without cut-and-paste. |
+| **Duplicate Lines** | Copy the current line/selection below itself. |
+| **Move Lines Up / Down** | Shift lines without cut-and-paste. |
 | **Sort Selected Lines** | Alphabetically sort the selected lines. |
-| **Paste as shot data…** | Turn a table of shots (spreadsheet, CSV, DistoX) into a `data` block — see [Import](17-import-export-and-gis.md#shot-tables-spreadsheets-csv-pockettopo-distox). |
-| **Insert Today's Date** | Drop today's date (handy for `date`). |
-| **Insert Team Member** | Insert a `team` member from your project. |
+| **Paste as Shot Data…** | Turn a table of shots (spreadsheet, CSV, DistoX) into a `data` block (also **Edit → Paste as Shot Data…**) — see [Import](17-import-export-and-gis.md#shot-tables-spreadsheets-csv-pockettopo-distox). |
+| **Generate Code** ▸ **Insert Today's Date** | Drop today's date (handy for `date`). |
+| **Generate Code** ▸ **Insert Team Member** | Insert a `team` member from your project. |
 
 ## Formatting
 
 - **Format Document** — **Shift+Alt+F** re-indents the file to its block nesting. It never reorders or
   drops a line; `therion-cli format --check` applies the same rule in CI.
-- **Format on save** — enable in **Settings → Editor** to auto-format every save.
+- **Format on save** — enable it on the **Editor** page of Settings (**Settings → Editor**) to auto-format
+  every save.
 
 There's also a **region directive formatter** so *Enclose in Region* produces clean, correctly-quoted
 directive lines.

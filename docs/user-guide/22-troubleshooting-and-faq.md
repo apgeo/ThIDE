@@ -27,18 +27,19 @@ Install Mapiah and set the `mapiah` path in **Settings → External Tools** (the
 Set their paths in **Settings → External Tools**; ThIDE checks common install locations but can't
 guess a custom one.
 
-## Building
+## Compiling
 
-**The build fails with a missing-directory error.**
+**The compilation fails with a missing-directory error.**
 Keep **Create missing output folders before compiling** on
-([Settings → Build & Output](19-settings-and-preferences.md#build--output)).
+([Settings → Compile & Output](19-settings-and-preferences.md#compile--output)).
 
 **It keeps asking to save before compiling.**
 That's the unsaved-files prompt. Turn on **Save modified files automatically before compiling** to
 skip it, or just choose **Save & compile**.
 
 **My outputs look old / a "stale" banner appeared.**
-An input changed since the last build. **Recompile**. The
+An input is newer than the outputs (this survives a restart, because it goes by file times), or the
+last compilation failed. **Compile → Recompile**. The
 [Generated Files](10-compiling-and-output.md#the-results-the-generated-files-panel) panel flags stale
 outputs.
 
@@ -52,19 +53,21 @@ See [Core concepts](04-core-concepts.md#the-object-graph-the-semantic-model).
 **"Disconnected survey" warning (TH_SEM_015) on data I think is fine.**
 The piece isn't joined to the main network *and* isn't georeferenced. Either add the missing `equate`
 to stitch it, or `fix` it. If it's grounded only by a bare `fix` (no coordinate system) and you're OK
-with that, enable **Treat a local fix as grounding** in
-[Settings → Diagnostics](19-settings-and-preferences.md#diagnostics). Color the
+with that, enable **Treat a local fix (no cs) as grounding a disconnected survey** in
+[Settings → Visualization](19-settings-and-preferences.md#visualization) (its *Diagnostics* group). Color the
 [Mainline Preview](11-viewers.md#mainline-preview) **by Component** to see the floating piece.
 
 **The declination calculator says "No magnetic model loaded".**
-Drop a `WMM.COF` (NOAA, public domain) in `%AppData%/ThIDE`, or use **Load model…**. See
+Drop a `WMM.COF` (NOAA, public domain) in ThIDE's settings folder (the panel names the exact path),
+or use **Load model…**. See
 [Calculators](18-calculators.md#declination-calculator).
 
 ## Performance
 
 **Everything is slow on a big project.**
 - Turn off previews/analytics you aren't using
-  ([Settings → Visualization / Survey analytics](19-settings-and-preferences.md#visualization)).
+  ([Settings → Visualization](19-settings-and-preferences.md#visualization), including its *Survey
+  analytics* group).
 - Leave **Validate on type** and **Compile on save** off.
 - Lower the **Performance** limits and the **Startup load timeout**
   ([Settings → Performance](19-settings-and-preferences.md#performance)).
@@ -80,14 +83,22 @@ limits in Settings → Performance.
 ThIDE tries hard not to lose your work:
 
 - **Crash recovery / safe mode.** If the app closed unexpectedly with unsaved changes, on next launch
-  a toast — *"Unsaved changes recovered"* — offers **Restore** to bring those buffers back.
+  a **recovery banner** is pinned above the editor, naming the files whose unsaved changes were kept,
+  with **Restore** to bring those buffers back and **Discard copies** to drop them (it asks before it
+  deletes them). It stays until you answer, so it cannot be missed on a small screen.
 - **External-change banner.** If a file you have open changes on disk (another program, a `git`
-  operation, Mapiah), ThIDE shows a banner: **Compare** (side-by-side diff), **Keep mine**,
-  **Keep mine (save)**, or **Discard & reload**. It never silently overwrites your edits. (Auto-reload
+  operation, Mapiah), ThIDE shows a banner: **Reload** (take the disk version), **Compare**
+  (side-by-side diff), **Keep mine (save)** (write your version over the disk one) or **Dismiss**.
+  Reloading a file with unsaved edits asks first (*Reloading will discard your unsaved changes*). It
+  never silently overwrites your edits. A change that only touches the file's permissions raises no
+  banner. (Auto-reload
   of externally-changed files is a [Settings → Performance](19-settings-and-preferences.md#performance)
   option.)
 - **Delete confirmation.** Deleting a file from the Workspace Explorer confirms first (trash vs.
   permanent).
+- **Multi-file tools can be undone.** Rename, Replace in Files, New Trip, Link Survey File, Renumber,
+  Format All, Normalize and *Fix all* write files that are not open straight to disk; **Edit → Undo
+  multi-file change** puts them all back ([details](05-interface-tour.md#undoing-a-tool-that-wrote-many-files)).
 - **Open guards.** Binary or oversized files prompt before opening as text (**Open anyway**), so you
   don't accidentally load a huge blob.
 
@@ -95,13 +106,13 @@ ThIDE tries hard not to lose your work:
 
 **A panel disappeared / my layout is a mess.**
 **View → Layout → Restore Default Layout**. Toggle any individual panel from the **View** menu or the Command
-Palette.
+Palette. Unsaved edits are written to crash recovery before the layout is rebuilt.
 
 **I closed a tab by accident.**
 **File → Reopen Closed Tab**.
 
 **Where are my settings stored?**
-Under `%AppData%/ThIDE` (Windows) or the XDG / `~/Library` equivalents — preferences, keybindings,
+In ThIDE's settings folder (`%AppData%\ThIDE` on Windows, `~/.config/ThIDE` on Linux) — preferences, keybindings,
 symbol index, crash-recovery buffers, plugins, and per-project sidecars. See
 [Installation](02-installation-and-setup.md#6-where-thide-stores-your-settings).
 

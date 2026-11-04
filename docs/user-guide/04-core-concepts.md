@@ -20,8 +20,8 @@ scope" diagnostics, the Overview analytics, find/replace in files, and the symbo
 A `.thconfig` is Therion's **configuration** file: it says which sources to read (`source` /
 `input`), what to `select`, and what to `export` (maps, models, lists). A workspace can hold several.
 ThIDE always has **one active thconfig** — the one it will compile and the one that defines "the
-project" for analytics and viewers. You choose it (right-click in the Workspace Explorer → *Set as
-Active Workspace thconfig*, or from a file's header), and it's shown in the status bar breadcrumb.
+project" for analytics and viewers. You choose it (the drop-down at the top of the Workspace Explorer, right-click →
+*Set as Active Workspace thconfig*, or a file's header), and it's shown in the status bar breadcrumb.
 
 ## The four file types
 
@@ -59,7 +59,7 @@ For final adjusted numbers and rendered maps, **compile with Therion**.
 
 ThIDE continuously validates your files and reports **diagnostics** (errors, warnings, info) with
 stable codes. By default it runs in **lenient mode** — many issues are warnings so you can keep
-working. Turn on **View → Strict parser mode** to promote lenient issues to errors (useful for a
+working. Turn on **View → Strict Parser Mode** to promote lenient issues to errors (useful for a
 final clean-up pass). Every code is catalogued in [docs/diagnostics.md](../diagnostics.md); the
 [Diagnostics & validation](09-diagnostics-and-validation.md) page explains the panel.
 

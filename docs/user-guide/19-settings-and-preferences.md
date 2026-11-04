@@ -2,9 +2,12 @@
 
 > [← Back to the User Guide home](README.md)
 
-Open **Settings** from the menu bar (or *Preferences…* in the Command Palette). The window has a
-**search box** (*Search settings…*) — type to jump to any option. Sections down the side group the
-options; this page walks through each. **Reset all to defaults** is at the bottom.
+Open the Settings window with **Settings → Preferences…** (**Ctrl+,**, or *Preferences…* in the
+Command Palette); **Settings → Keyboard Shortcuts…** opens it at the shortcut list. The window has a
+**search box** (*Search settings…*) — type to jump to any option. Sections (pages) down the side group
+the options; this page walks through each, and the rest of the guide writes a page as **Settings →
+Visualization** (and **Settings → Visualization → Media file scan** for a control on it). Changes are applied with **OK**;
+**Cancel** (or Esc) throws them away.
 
 Most performance-sensitive features have an explicit on/off switch here, so you can tune ThIDE for a
 small tidy project or a huge multi-cave system.
@@ -15,9 +18,9 @@ small tidy project or a huge multi-cave system.
 |---|---|
 | **Reopen files from last session on startup** | Restore your open tabs. |
 | **Show the welcome page on startup** | The [Welcome](03-getting-started.md) start page. |
-| **Language** | English / Română. Menus and panels switch when you click OK; a few labels in lists that are already open follow after a restart. |
+| **Language** | English / Română (also **View → Language**). Menus, panels and messages switch when you click OK; a few labels in lists that are already open follow after a restart. |
 | **Auto-save** | Off · **After a delay** (set seconds) · **On focus loss**. |
-| **Record anonymous usage & crash reports** | **Off by default.** When on, events are written under `%AppData%/ThIDE/telemetry` and **never leave your machine** — it's local-only. |
+| **Record anonymous usage & crash reports** | **Off by default.** When on, events are written under `telemetry` in ThIDE's settings folder and **never leave your machine** — it's local-only. |
 
 ## Theme & Colors
 
@@ -68,15 +71,15 @@ override case by case.
   files are left out, recent and open ones included. See
   [Navigation & search](08-navigation-and-search.md#opening--switching-files).
 
-## Build & Output
+## Compile & Output
 
 | Setting | Notes |
 |---|---|
-| **After a successful build, open:** `.lox` / `.3d` / `.pdf` | What auto-opens after a compile; **Open every matching output** vs just the first. |
-| **Compile on save** | Debounced background rebuild of the active thconfig on save. Off by default. |
+| **After a successful compilation, open:** `.lox` / `.3d` / `.pdf` | What auto-opens after a compile; **Open every matching output** vs just the first. |
+| **Compile on save** | Debounced background compilation of the active thconfig on save. Off by default. |
+| **System-wide compile hotkey** | **Windows only**, off by default: Ctrl+Alt+B compiles even when ThIDE is not focused (it takes AltGr+B away from other programs while on). |
 | **Create missing output folders before compiling** | Avoids Therion failing on an absent directory. On by default. |
 | **Save modified files automatically before compiling** | Skip the save prompt. Off by default. |
-| **Recompute the Leads register as you type** | Live [Leads](14-leads-notes-and-metadata.md) refresh from unsaved buffers. On by default; turn off on huge workspaces. |
 
 ## Visualization
 
@@ -86,9 +89,9 @@ One section holding three groups — the preview panels, the analytics, and a di
 menu entry (reset the layout or restart to clear an already-open panel):
 
 - **Mainline Preview** (the centerline plan/elevation sketch).
-- **In-app map viewer (PNG / SVG / PDF)** — plus **Auto-show the rendered map after a build** and
+- **In-app map viewer (PNG / SVG / PDF)** — plus **Auto-show the rendered map after compiling** and
   **Auto-show first map on workspace load**.
-- **Embedded 3D model viewer** (CaveView.js) — plus **Auto-show the 3D model after a build**.
+- **Embedded 3D model viewer** (CaveView.js) — plus **Auto-show the 3D model after compiling**.
 - **Structural Geology module**.
 - **Open clicked PDFs in the in-app viewer**.
 
@@ -101,6 +104,8 @@ rebuild:
 - **Object Browser entity tabs** (surveys, fixes, equates, scraps, maps, points, lines, areas).
 - **TODO / FIXME / QM comment scan**.
 - **Media file scan** (referenced `.xvi` + on-disk orphans).
+- **Recompute the Leads register as you type** — live [Leads](14-leads-notes-and-metadata.md) refresh
+  from unsaved buffers. On by default; turn off on huge workspaces.
 
 **Diagnostics.**
 
@@ -112,7 +117,8 @@ rebuild:
 ## External Tools
 
 Where you point ThIDE at Therion, Loch, Aven, Mapiah, Survex. Each row shows **Tool · Detected ·
-Version · Source · Override · Result**. Set an **Override** path and **Test** it. See
+Version · Source · Override · Result**. Set an **Override** path and **Test** it: the test runs the
+override (and says so when that path does not exist), not the detected copy. See
 [Installation](02-installation-and-setup.md#4-point-thide-at-your-external-tools).
 
 ## File Associations
@@ -125,15 +131,15 @@ in [docs/file-association.md](../file-association.md).
 
 Power-user hooks (all off by default; see [Extensibility](20-extensibility.md)):
 
-- **Enable script hooks** — run a command **on open / save / build** (use `{file}` for the path).
-- **Load plugins** — custom semantic rules (`ISemanticRule` DLLs) from `%AppData%/ThIDE/plugins`,
-  loaded at startup.
+- **Enable script hooks** — run a command **on open / save / compile** (use `{file}` for the path).
+- **Load plugins** — custom semantic rules (`ISemanticRule` DLLs) from the `plugins` folder of ThIDE's
+  settings folder, loaded at startup.
 
 ### AI tools server (MCP) — *experimental*
 
 - **Enable the in-app AI tools server (MCP)** — lets a local AI assistant reach the running project
   over the Model Context Protocol. It serves on **127.0.0.1 only** (loopback), on a random port,
-  behind a bearer token; port and token go to `%AppData%/ThIDE/mcp-endpoint.json`. **Off by
+  behind a bearer token; port and token go to `mcp-endpoint.json` in ThIDE's settings folder. **Off by
   default.** See [docs/mcp-host-setup.md](../mcp-host-setup.md).
 - **Follow the agent (let AI tools drive the window)** — when on, the assistant may open files, focus
   panels, run commands, save, and change the layout. When off it can still *read* the project and
@@ -182,10 +188,13 @@ web panel misbehaves — see [Troubleshooting](22-troubleshooting-and-faq.md).
 
 ## Keyboard Shortcuts
 
-Rebind any command: click its **Gesture** field and press the key combination. Columns show
-**Command · Gesture · Default**; **Reset** a row or all. Commands that ship **without** a default
-gesture are listed here too, so this is where you bind them. The current defaults are listed in
-[Keyboard shortcuts](21-keyboard-shortcuts.md).
+Rebind any command: click its **Gesture** field and press the key combination (Esc or Delete clears
+it). Columns show **Command · Gesture · Default**; **Reset** a row, or **Reset all to defaults** (it
+lists the shortcuts you changed and asks first). Nothing is saved until you press **OK** — **Cancel**
+puts every gesture back. A gesture another command already has is not taken silently: the row says
+*Already used by …* and asks whether to **Replace** it or **Keep the old one**. Commands that ship
+**without** a default gesture are listed here too, so this is where you bind them. The current
+defaults are listed in [Keyboard shortcuts](21-keyboard-shortcuts.md).
 
 ---
 

@@ -26,7 +26,7 @@ just a list. This makes trip planning ("which leads are near each other?") much 
 
 By default the register **recomputes as you type** (from the unsaved editor buffers, debounced), so
 it's always current. On very large workspaces you can turn that off
-([Settings → Build & Output](19-settings-and-preferences.md#build--output)) and refresh manually with
+(*Recompute the Leads register as you type* in [Settings → Visualization](19-settings-and-preferences.md#visualization)) and refresh manually with
 the **Re-scan** button — which always works regardless of the setting.
 
 ## TODOs
@@ -34,7 +34,7 @@ the **Re-scan** button — which always works regardless of the setting.
 The **TODOs** tab aggregates **TODO / FIXME / QM** comments from across the project into one list, so
 loose notes-to-self don't get buried in individual files. Click an entry to jump to it. The scan is
 part of Survey analytics and can be disabled
-([Settings → Survey analytics → TODO / FIXME / QM comment scan](19-settings-and-preferences.md#survey-analytics)).
+([Settings → Visualization → TODO / FIXME / QM comment scan](19-settings-and-preferences.md#visualization)).
 
 ## Metadata
 
@@ -48,7 +48,7 @@ it.
 The **Media** tab scans for media the project references — chiefly the `.xvi` sketches used by scraps
 — and flags **on-disk orphans** (media present but unreferenced). Useful for tidying an image folder
 before archiving. It's part of Survey analytics and can be disabled
-([Settings → Survey analytics → Media file scan](19-settings-and-preferences.md#survey-analytics)).
+([Settings → Visualization → Media file scan](19-settings-and-preferences.md#visualization)).
 
 ---
 

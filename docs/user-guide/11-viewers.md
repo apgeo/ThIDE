@@ -1,4 +1,4 @@
-# 11. The viewers: Map, 3D & Mainline preview
+# 11. The viewers: Map, 3D & Mainline Preview
 
 > [← Back to the User Guide home](README.md)
 
@@ -19,7 +19,7 @@ An in-app viewer for compiled **2D maps** — **PNG, SVG and PDF**. Open it from
 - **Open…** loads any PNG/SVG/PDF file directly.
 - The **outputs picker** lists the maps your active thconfig declares via `export map` that exist on
   disk — choose one to display it.
-- **Auto-show:** with *Auto-show the rendered map after a build* (or *…first map on workspace load*)
+- **Auto-show:** with *Auto-show the rendered map after compiling* (or *…first map on workspace load*)
   enabled, ThIDE opens the first suitable map for you. A per-file Auto-open override can force a
   specific one.
 
@@ -28,10 +28,10 @@ An in-app viewer for compiled **2D maps** — **PNG, SVG and PDF**. Open it from
 - **Zoom** with the `–` / `+` buttons or **Ctrl+scroll**; **100%** resets; **Fit** shrinks to the
   window (never enlarges past 100%).
 - **PDF page navigation** (**◀ / ▶**) appears for multi-page PDFs.
-- **Refresh** re-renders (e.g. after a rebuild). Rendering happens off the UI thread, so a big PDF
+- **Refresh** re-renders (e.g. after a recompile). Rendering happens off the UI thread, so a big PDF
   won't freeze the app — a spinner shows while it works.
 - **Full screen**, **float on another monitor**, and **move to the central panel** buttons are in the
-  top-right.
+  top-right corner of the panel, above the toolbar buttons.
 - The footer shows the file name, page, zoom %, file size, and last-modified time.
 
 > Prefer clicked PDFs to open here rather than externally? Enable *Open clicked PDFs in the in-app
@@ -46,7 +46,7 @@ using [CaveView.js](https://github.com/apgeo/CaveView.js) in your OS's native we
 bundled browser). Open it from **View → 3D Viewer**.
 
 > **Off by default.** Enable *Embedded 3D model viewer* (and optionally *Auto-show the 3D model after
-> a build*) in **Settings → Visualization**. It needs a platform web engine — see
+> a compilation*) in **Settings → Visualization**. It needs a platform web engine — see
 > [Installation](02-installation-and-setup.md#1-prerequisites).
 
 **Loading a model**
@@ -54,15 +54,18 @@ bundled browser). Open it from **View → 3D Viewer**.
 - The **Model** dropdown lists every model the active thconfig produces (each `export model` whose
   output is a `.lox`/`.3d`), plus any such file next to the thconfig; unbuilt targets show *"— not
   built"*.
-- **Open…** loads any `.lox`/`.3d` directly. After a build the newest model auto-loads when auto-show
+- **Open…** loads any `.lox`/`.3d` directly. After a compilation the newest model auto-loads when auto-show
   is on (`.lox` preferred over `.3d`).
-- A model older than its sources is flagged **stale** — rebuild to refresh.
+- A model older than its sources is flagged **stale** — recompile to refresh.
 
 **Controls** (mirroring the public CaveView galleries): **orientation** (Plan / profile N·E·S·W),
 **camera** (Perspective / Orthographic), and feature toggles — **Walls, Splays, Surface, Stations,
 Labels, Names, Box** (bounding box), **Auto-rotate, Light, HUD**, and **Menu** (CaveView's own
 sidebar). **Color by:** Height · Survey · Length · Inclination · Plain. **Reset view** re-frames;
-**↺ Defaults** restores every switch; **Full screen** goes borderless (Esc to exit).
+**↺ Defaults** restores every switch; **Full screen** opens the viewer in a window of its own with the
+same toolbar (**Exit full screen** or Esc leaves it). A floated viewer's picture follows its window.
+The **DevTools** and web-address buttons for developers stay hidden unless you switch on **Settings →
+Debug → Enable web developer tools**.
 
 **The killer feature — click-to-source**
 
@@ -88,10 +91,10 @@ For the deeper reference (how it maps stations to source, requirements, fallback
 
 ## Mainline Preview
 
-A **live plan/elevation sketch of your centrelines**, drawn directly from the object graph — **no
-compile needed**. Open it from **View → Mainline Preview**. It's the fastest way to see whether your
-data makes geometric sense as you type. (Enable *Mainline Preview* in Settings →
-Visualization.)
+A **live plan/elevation sketch of your centrelines**, drawn directly from the object graph — no
+compile needed. Open it from **View → Mainline Preview**. It's the fastest way to see whether your
+data makes geometric sense as you type. (Enable *Mainline Preview* under **Settings →
+Visualization**.)
 
 **Views**
 

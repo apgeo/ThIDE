@@ -34,8 +34,10 @@ work from the command line: `therion-cli new --list`, `therion-cli new single-ca
 A project can contain several `.thconfig` files. ThIDE builds and analyzes against **one active
 thconfig** at a time. If your workspace has exactly one, it's chosen automatically. Otherwise, set it:
 
-- In the **Workspace Explorer**, right-click a `.thconfig` → **Set as Active Workspace thconfig**, or
-- Open the file and use its header action **Set this file as the active thconfig**.
+- In the **Workspace Explorer**, pick it in the drop-down at the top of the panel (it shows the
+  active thconfig; hover it for the full path), or right-click a `.thconfig` and choose **Set as
+  Active Workspace thconfig**, or
+- open the file and use its header action **Set this file as the active thconfig**.
 
 The active thconfig drives the whole app: what compiles, which diagnostics are "workspace scope",
 which outputs the viewers offer.
@@ -46,7 +48,7 @@ Give ThIDE a moment to index (watch the **Indexing…** hint in the status bar).
 
 - The **Workspace Explorer** (left) shows your files as a nested source/input tree.
 - The **Diagnostics** panel lists any problems it already found.
-- The **Overview** panel summarizes the cave (length, depth, files, last build).
+- The **Overview** panel summarizes the cave (length, depth, files, last compilation).
 - Open a `.th` file and you'll get syntax coloring, and a **Measurements** tab next to the source.
 
 A full map of the interface is in [A tour of the interface](05-interface-tour.md).
@@ -66,14 +68,15 @@ Diagnostics panel — see [Diagnostics & validation](09-diagnostics-and-validati
 
 ## Step 5 — Compile
 
-Run **Compile** (menu **Compile → Compile**, the toolbar hammer, or the palette). ThIDE:
+Run **Compile** (menu **Compile → Compile**, **F5**, the toolbar hammer, or the palette). It always
+compiles the active thconfig, whichever tab has focus. ThIDE:
 
-1. Offers to save any unsaved files that are part of the build.
+1. Offers to save any unsaved files that are part of the compilation.
 2. Runs Therion, streaming its output into the **Compiler Output** panel.
 3. Makes every `file:line` message clickable so you can jump to the cause.
 4. Lists everything Therion produced in the **Generated Files** panel.
 
-If the build fails, the errors are right there and clickable. Full details:
+If the compilation fails, the errors are right there and clickable. Full details:
 [Compiling & output](10-compiling-and-output.md).
 
 ## Step 6 — Look at the result

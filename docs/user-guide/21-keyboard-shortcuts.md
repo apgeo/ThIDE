@@ -8,8 +8,8 @@ That settings page is the authoritative, always-current list; this page is a qui
 
 > On macOS, read **Ctrl** as **⌘** where your bindings map it that way.
 
-**Not every command ships with a gesture.** Plenty of them — *Open File*, *Open Folder*, *Split
-Editor*, *Quick Export*, *Duplicate Lines*, the panel toggles, and others — are deliberately
+**Not every command ships with a gesture.** Plenty of them — *Open File*, *Open Folder*, *Save All*,
+*Split Editor*, *Quick Export*, *Duplicate Lines*, the panel toggles, and others — are deliberately
 **unbound by default** and reachable from the menus or the Command Palette instead. They still appear
 as rows in **Settings → Keyboard Shortcuts**, so you can assign whatever you like. If a shortcut you
 expect from another editor does nothing, that is why — bind it there.
@@ -19,16 +19,20 @@ expect from another editor does nothing, that is why — bind it there.
 | Shortcut | Command |
 |---|---|
 | `Ctrl+S` | Save |
+| `Ctrl+Shift+S` | Save As… |
+| `Ctrl+W` | Close Tab |
+| `Ctrl+,` | Settings (**Settings → Preferences…**) |
 | `Ctrl+P` | Go to File (quick open) |
 | `Ctrl+Shift+P` | Command Palette (Go to Action) |
 | `Ctrl+Tab` / `Ctrl+Shift+Tab` | Cycle open documents & panels, most-recent first (hold `Ctrl`, tap `Tab`) |
-| `Ctrl+Shift+T` | Reopen Closed Tab |
+| `Ctrl+Shift+T` | Reopen Closed Tab (**File → Reopen Closed Tab**) |
 | `Alt+Left` / `Alt+Right` | Navigate Back / Forward |
 
 ## Editing
 
 | Shortcut | Command |
 |---|---|
+| `Ctrl+Z` / `Ctrl+Y` | Undo / Redo |
 | `Ctrl+X` / `Ctrl+C` / `Ctrl+V` | Cut / Copy / Paste |
 | `Ctrl+/` | Toggle Comment |
 | `Ctrl+Shift+R` | Enclose in Region |
@@ -42,7 +46,7 @@ expect from another editor does nothing, that is why — bind it there.
 | Shortcut | Command |
 |---|---|
 | `F12` | Go to Definition |
-| `Shift+F12` | Find All References (the list across the project) |
+| `Shift+F12` | Find References (the list of every use across the project) |
 | `Ctrl+Shift+F12` | Next occurrence of the word in this file |
 | `F2` | Rename Symbol (across the project) |
 | `Alt+F12` | Peek Definition |
@@ -58,13 +62,13 @@ expect from another editor does nothing, that is why — bind it there.
 | `F8` / `Shift+F8` | Next / Previous diagnostic |
 | `Ctrl+Shift+D` | Toggle the Diagnostics panel |
 
-## Build & external viewers
+## Compile & external viewers
 
 | Shortcut | Command |
 |---|---|
-| `F5` | Build the active thconfig |
-| `Ctrl+F5` | Recompile (force a full recompile) |
-| `Shift+F5` | Cancel the running build |
+| `F5` | Compile the active thconfig |
+| `Ctrl+F5` | Recompile (run the compilation again) |
+| `Shift+F5` | Cancel the running compilation |
 | `F9` | Open the compiled model in **Loch** |
 | `F10` | Open the compiled model in **Aven** |
 

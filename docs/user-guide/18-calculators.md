@@ -7,7 +7,7 @@ cave surveying. Each produces a result you can **copy** straight into your `.th`
 
 ## Unit converter
 
-**Tools → Calculators → Unit converter…** converts **length** and **angle** units:
+**Tools → Calculators → Unit Converter…** converts **length** and **angle** units:
 
 - **Length:** metres, feet, centimetres, kilometres, inches, yards.
 - **Angle:** degrees, grads, mils, percent slope, minutes.
@@ -17,22 +17,22 @@ Pick a **category**, enter a **value**, choose **From** and **To** units; **swap
 
 ## Coordinate converter
 
-**Tools → Calculators → Coordinate converter…** converts between **WGS84 lat/long** and **UTM**, both
+**Tools → Calculators → Coordinate Converter…** converts between **WGS84 lat/long** and **UTM**, both
 directions:
 
-- **Lat/long → UTM:** enter latitude, longitude, altitude → get zone, hemisphere, easting, northing.
-- **UTM → lat/long:** enter zone, hemisphere, easting, northing → get lat/long.
+- *Lat/long to UTM:* enter latitude, longitude, altitude, and read off zone, hemisphere, easting, northing.
+- *UTM to lat/long:* enter zone, hemisphere, easting, northing, and read off lat/long.
 
 Best of all, it can **copy a ready-made `fix` line** in either UTM or lat-long form, so georeferencing
 a station is copy-paste. Use it together with the coordinate systems your thconfig declares.
 
 ## Declination calculator
 
-**Tools → Calculators → Declination calculator…** computes **magnetic declination** for a location and
+**Tools → Calculators → Declination Calculator…** computes **magnetic declination** for a location and
 date using a geomagnetic model (WMM / IGRF spherical-harmonic synthesis).
 
 1. **Load a model:** ThIDE needs a `WMM.COF` (or IGRF `.COF`) file — download one (NOAA, public
-   domain) and drop it in `%AppData%/ThIDE`, or use **Load model…** to pick it. Until then the panel
+   domain) and drop it in ThIDE's settings folder (the panel names the exact path; see [Installation](02-installation-and-setup.md#6-where-thide-stores-your-settings)), or use **Load model…** to pick it. Until then the panel
    says *No magnetic model loaded*.
 2. Enter the location and **year**; read off the declination (° east/west).
 3. **Copy declination line** to paste a `declination` value into your survey.

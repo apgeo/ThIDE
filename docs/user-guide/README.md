@@ -4,8 +4,8 @@
      the PDF was generated. Bump it whenever you update the guide (see about-this-guide.md), and
      keep the "**For ThIDE <version>**" shape: build/build-user-guide.* parses this line to put the
      version on the PDF/HTML title page. -->
-> **For ThIDE 0.3.0-alpha.1** — guide content last updated 2026-07-17.
-> Check **Help → About** for the version you are running; if yours is newer, some screens may have
+> **For ThIDE 0.3.0-alpha.2** — guide content last updated 2026-11-04.
+> Check **Help → About ThIDE** for the version you are running; if yours is newer, some screens may have
 > moved.
 
 Welcome to the ThIDE user guide — a hands-on manual for cavers and surveyors who use
@@ -38,9 +38,9 @@ described in them). If Therion is new to you, keep the **Therion Book** open alo
 8. [Navigation & search](08-navigation-and-search.md)
 9. [Diagnostics & validation](09-diagnostics-and-validation.md)
 
-### Build & visualize
+### Compile & visualize
 10. [Compiling & output](10-compiling-and-output.md)
-11. [The viewers: Map, 3D & Mainline preview](11-viewers.md)
+11. [The viewers: Map, 3D & Mainline Preview](11-viewers.md)
 - [Blender animation renders](23-blender-animation.md) — *experimental, work in progress* (page 23,
   at the end of this guide)
 - [Linking a survey file into the project](24-linking-surveys.md) — generated `input` and `equate`

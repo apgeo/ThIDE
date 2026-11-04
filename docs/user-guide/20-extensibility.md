@@ -55,8 +55,7 @@ Three ways to use it:
   headlessly. Your AI host (LM Studio, Claude Code, …) launches it and can then ask about a project
   folder. It reads your files; it can also format, scaffold, import/export, and run Therion — or, if
   you prefer, be limited to **read-only** with a single switch.
-- **Against the app you have open.** Turn on **Settings → Extensions → "Enable the in-app AI tools
-  server"** and the *running* ThIDE offers the same abilities plus live ones: the assistant can see the
+- **Against the app you have open.** Turn on **Settings → Extensions → Enable the in-app AI tools server (MCP)** and the *running* ThIDE offers the same abilities plus live ones: the assistant can see the
   file you're editing (including unsaved changes), open a file, focus a panel, or reveal a station in
   the 3D view. Whether it may *touch* the window — not just read it — is governed by the **"Follow the
   agent"** checkbox next to that setting; turn it off to keep the assistant's hands off your layout
@@ -75,7 +74,7 @@ step-by-step in **[docs/mcp-host-setup.md](../mcp-host-setup.md)**.
 You can add your **own validation rules** without rebuilding ThIDE:
 
 1. Write a small .NET type implementing **`ISemanticRule`**.
-2. Drop the compiled `.dll` in `%AppData%/ThIDE/plugins`.
+2. Drop the compiled `.dll` in the `plugins` folder of ThIDE's settings folder (see [Installation](02-installation-and-setup.md#6-where-thide-stores-your-settings)).
 3. Enable **Load plugins** in [Settings → Extensions](19-settings-and-preferences.md#extensions) and
    restart.
 
@@ -87,12 +86,12 @@ Your rule then contributes diagnostics like the built-in ones. The API and examp
 Run an external command at key moments:
 
 1. Enable **script hooks** in [Settings → Extensions](19-settings-and-preferences.md#extensions).
-2. The three single commands (**on open**, **on save**, **on build**) work as before — started and
-   forgotten. `{file}` is the file path (for build, the thconfig being compiled), now quoted so a
+2. The three single commands (**On open**, **On save**, **On compile**) work as before — started and
+   forgotten. `{file}` is the file path (for compile, the thconfig being compiled), now quoted so a
    path with spaces stays one argument; *on save* now also follows **Save All** and auto-save.
 3. **More hooks** adds as many as you like, each for one event — *WorkspaceOpened*, *FileOpened*,
    *FileSaved*, *BuildStarted*, *BuildFinished*, *BuildFailed* — with a timeout. Their output goes to
-   the **Automation** panel (*View → Automation*) unless marked *detached*.
+   the **Automation** panel (**View → Automation**) unless marked *detached*.
 
 Commands may use `{file}`, `${file}`, `${fileDirname}`, `${fileBasename}`, `${workspaceRoot}`,
 `${activeThconfig}`, `${entry}` and `${env:NAME}`. Every hook also gets environment variables:
@@ -172,10 +171,10 @@ turns all of it off.
 
 ## Where things live
 
-- Plugins: `%AppData%/ThIDE/plugins/*.dll`
-- Rule config: `rules.json` (app data)
-- Snippets: `snippets.json`; file templates: `templates/files/*.json` — in app data for yourself, and
-  in the project's `.thide/` folder (or its private app-data twin, per **Settings → General**) for
+- Plugins: `plugins/*.dll` in ThIDE's settings folder
+- Rule config: `rules.json` (settings folder)
+- Snippets: `snippets.json`; file templates: `templates/files/*.json` — in the settings folder for yourself, and
+  in the project's `.thide/` folder (or its private twin in the settings folder, per **Settings → General**) for
   the project. See [The editor → Snippets and new files](07-editing.md#snippets-and-new-files).
 - The CLI and LSP are **separate executables** shipped alongside the app, not the GUI itself.
 

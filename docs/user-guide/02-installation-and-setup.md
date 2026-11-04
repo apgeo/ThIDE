@@ -36,14 +36,16 @@ Optional companions ThIDE can launch if present:
 
 On first launch you'll see the **Welcome** page. From here you can create a new file, open an existing
 file/`thconfig`/folder, jump to recent items, reach the external-tools settings, or open the Therion
-Book. (You can reopen it any time with **Help → Welcome**, and turn off "Show this page on startup".)
+Book. (You can reopen it any time with **View → Welcome**, and turn off "Show this page on startup".)
 
 ## 4. Point ThIDE at your external tools
 
 ThIDE auto-detects tools on your `PATH` and in the usual install locations, but you can set explicit
 paths:
 
-1. Open **Settings** (menu bar) → **External Tools**.
+1. Open the Settings window (**Settings → Preferences…**, or Ctrl+,) and go to the **External Tools**
+   page. This guide writes that as **Settings → External Tools**: *Settings* is the window, the
+   words after the arrow are its pages and, with another arrow, a control on the page.
 2. Each row shows the tool, whether it was **Detected**, its **Version**, and the detection
    **Source**. Use the **Override** column to point at a specific executable, and **Test** to
    confirm it runs.
@@ -62,11 +64,19 @@ needs no administrator rights. Details and platform notes: [docs/file-associatio
 
 ## 6. Where ThIDE stores your settings
 
-User settings and per-project state live under your platform's application-data folder
-(`%AppData%/ThIDE` on Windows; the XDG / `~/Library` equivalents on Linux/macOS): preferences,
-keyboard shortcuts, theme and language, the symbol index and parse cache, crash-recovery buffers,
-plugins, and per-project sidecars (leads, metadata). You rarely need to touch this folder directly,
-but it's where a few features (declination model, plugins) ask you to drop files.
+User settings and per-project state live in **ThIDE's settings folder**, under your platform's
+per-user application-data folder:
+
+| Platform | Settings folder |
+|---|---|
+| Windows | `%AppData%\ThIDE` |
+| Linux | `~/.config/ThIDE` (under `$XDG_CONFIG_HOME` when that is set) |
+| macOS | the application-data folder .NET reports for your user — the panel that asks you to put a file there (the declination model, plugins) names the exact path |
+
+It holds preferences, keyboard shortcuts, theme and language, the symbol index and parse cache,
+crash-recovery buffers, plugins, and per-project sidecars (leads, metadata). You rarely need to touch
+this folder directly, but it's where a few features (declination model, plugins) ask you to drop
+files. Other pages of this guide call it *the settings folder*.
 
 ---
 

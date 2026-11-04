@@ -75,7 +75,7 @@ The first page ([`README.md`](README.md)) carries a stamp naming **the ThIDE ver
 content was last checked against**:
 
 ```markdown
-> **For ThIDE 0.3.0-alpha.1** — guide content last updated 2026-07-17.
+> **For ThIDE 0.3.0-alpha.2** — guide content last updated 2026-11-04.
 ```
 
 **This is a content fact, not a build fact.** It is deliberately *not* the version that happened to
@@ -86,7 +86,7 @@ running?"*
 Rules:
 
 - **Bump it when you update the guide's content** to match a newer app version — and only then. Use
-  the app's SemVer as **Help → About** reports it (`build/version.props`:
+  the app's SemVer as **Help → About ThIDE** reports it (`build/version.props`:
   `TherionVersionMajor.Minor.Patch` + `TherionPrerelease`).
 - **Leave it alone** for edits that don't change what the guide describes (typos, wording, link
   fixes) — the stamp says which app version the *content* tracks, not when the file was touched.
@@ -105,12 +105,41 @@ Keep new pages consistent with the existing ones:
 - **Cross-links:** link generously between pages. Use relative links (`07-editing.md`), and link to
   reference docs one level up (`../diagnostics.md`).
 - **Menus & controls:** name them exactly as they appear in the app, e.g. **View → Map Viewer**,
-  the **Diagnostics** panel, the **Compile** menu. Bold the literal label.
+  the **Diagnostics** panel, the **Compile** menu. Bold the literal label, with its capital letters
+  (the app uses Title Case for menu items) and without the access-key underscore.
+- **Menu paths:** write a path inside one bold span with arrows (`Menu → Item → Subitem`). The
+  first word is a menu of the menu bar (File, View, Edit, Search, Tools, Compile, Settings, Help); a
+  trailing "…" and the parenthetical tail of a long label ("Overview (Dashboard / Surveys / Audit)")
+  may be left out. Two kinds of path are not menu items, and are written the same way:
+  - A path that starts with *Settings* and names a page opens the Settings window
+    (**Settings → Preferences…**, Ctrl+,) at that page: **Settings → External Tools**. One more arrow
+    names a control on the page: **Settings → Visualization → Embedded 3D model viewer**.
+  - A path that starts with a panel of the View menu names a tab inside it: **Overview → Audit**.
+    The check does not look inside panels.
+
+  Do not put arrows inside bold text for anything else — the check below reads them as paths.
 - **Shortcuts:** write keys as `Ctrl+Shift+P`. The canonical list is
   [Keyboard shortcuts](21-keyboard-shortcuts.md) — link there rather than duplicating.
 - **Tone:** short, scannable, task-first. Prefer tables and bullet lists over long paragraphs.
 - **Scope discipline:** one topic per page; if a page grows past a couple of screens, split it and
   add both halves to the home [Contents](README.md#contents).
+
+## Checking the menu paths
+
+A script resolves every bold menu path in the guide against the menus the app really has, so a
+renamed or moved menu item shows up as a failing check instead of as a reader who cannot find it:
+
+```sh
+python3 tests/ci/check-guide-menu-paths.py
+```
+
+It reads the menu tree from `ThIDE/Views/MainWindow.axaml`, the item texts from the English values
+in `ThIDE/Resources/Strings.resx` (and the label properties of `MainWindowViewModel` for headers
+that are bound), and the Settings pages from `PreferencesViewModel`. It prints each path that does
+not exist, with its file and line and the closest real item, and exits with 1. Items that fill in
+at run time (Recent Files, Macros, Tasks, Build Target) accept any text below them. The same check
+runs in CI (the **Test** job of `.github/workflows/ci.yml`), and `tests/ci/test_check_guide_menu_paths.py`
+tests the script itself. Run it after you change a menu label, and after you edit the guide.
 
 ## Adding a new page
 
@@ -118,6 +147,7 @@ Keep new pages consistent with the existing ones:
 2. Add a line for it under the right section of [`README.md`](README.md) Contents.
 3. Link to it from any related pages.
 4. If a PDF build exists, the new file is picked up automatically by the filename-ordered glob.
+5. Run the menu-path check above.
 
 ## Known gaps / good first edits
 

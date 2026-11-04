@@ -8,8 +8,9 @@ it can move you around by *meaning*, not just text. This is where a lot of the t
 ## The Command Palette
 
 **Ctrl+Shift+P** opens the Command Palette — a single search box for everything. Start typing a
-command name (Compile, Toggle Diagnostics, Format Document, Switch to Romanian…). It's grouped by
-category (File, Build, View, Go, Search, Edit, Editor, Settings, Docs, …).
+command name (Compile, Toggle Diagnostics, Format Document, Switch to Romanian…); each command shows
+its current shortcut at the right. It's grouped by
+category (File, Compile, View, Go, Search, Edit, Editor, Settings, Docs, …).
 
 It also doubles as a jump box via **prefixes**:
 
@@ -26,8 +27,8 @@ It also doubles as a jump box via **prefixes**:
 |---|---|---|
 | **Go to File** | **Ctrl+P** | Fuzzy file open. Lists the files of the active thconfig first; other Therion files in the workspace follow, greyed and marked "(not in *name*.thconfig)", or are left out with [Settings → Workspace](19-settings-and-preferences.md#workspace). |
 | Switch open documents | **Ctrl+Tab** | Cycles the open tabs. |
-| **Reopen Closed Tab** | — | File menu; brings back the last closed document. |
-| Reveal active file in the tree | — | Command Palette → *Reveal Active File in Workspace*. |
+| **Reopen Closed Tab** | **Ctrl+Shift+T** | **File → Reopen Closed Tab**; brings back the last closed document. |
+| Reveal active file in the tree | — | Command Palette → *Reveal Active File in Workspace Explorer*. |
 
 ## Go to symbol
 
@@ -42,10 +43,11 @@ From an identifier in the editor (hover card or right-click):
 
 | Action | Shortcut | What it does |
 |---|---|---|
-| **Go to Definition** | click / Ctrl+click / double-click* | Jump to where a station/survey/file is declared. |
+| **Go to Definition** | **F12** / click / Ctrl+click / double-click* | Jump to where a station/survey/file is declared. |
 | **Go to Equate** | — | Follow an `equate` to the stitched station. |
 | **Go to Aggregating Map** | — | From a scrap/map, jump to the map that includes it. |
-| **Find All References** | — | List every use across the project. |
+| **Find References** | **Shift+F12** | **Edit → Find References**, the context menu or the hover card: opens a list of every use of the symbol across the project (it understands stations and surveys, and answers for a plain word too); the status bar says so when there is no other use. |
+| **Next Occurrence in This File** | **Ctrl+Shift+F12** | Cycle the caret through the other places in this file where the same word appears. |
 | **Peek Definition** | **Alt+F12** | See the definition inline without leaving your spot. |
 | **Go to Matching Block** | **Ctrl+]** | Between a block opener and its `end…`. |
 | **Step Into Included File** | **Alt+↓** | Open the file an `input` line points to. |
@@ -61,19 +63,28 @@ definition, then hop straight back to where you were, across files.
 
 ## Rename a symbol everywhere
 
-**F2** (or *Rename Symbol* in the hover card / palette) renames a station/survey **across every file
-that references it**. If enabled, a **preview** first lists all occurrences (count across N files),
-which you can double-click to inspect before applying. Turn the preview on/off under
+**F2** (**Edit → Rename Symbol…**, or *Rename Symbol* in the hover card / palette) renames a
+station/survey **across every file that references it**. If enabled, a **preview** first lists the
+occurrences (count across N files), each as the line with the old name struck through and the new one
+in bold, which you can double-click to inspect before applying. Turn the preview on/off under
 [Settings → Editor](19-settings-and-preferences.md#editor). Stations can also be renamed from the
 Measurements grid (right-click → *Rename Station…*).
 
+**What Undo covers.** A file that is open takes the rename in its editor, as one undo step of that
+file. A file that is **not open is rewritten on disk** with no editor to undo it in — so the rename as
+a whole is recorded in the [workspace undo](05-interface-tour.md#undoing-a-tool-that-wrote-many-files):
+**Edit → Undo multi-file change** (it reads *Undo Rename* after a rename) puts every file back. If a
+file cannot be written, nothing is renamed and the message names it.
+
 ## Find & replace
 
-- **In the current file:** **Find** and **Replace** (Search menu) — with match-case, whole-word and
+- **In the current file:** **Search → Find** and **Search → Replace** — with match-case, whole-word and
   regex options.
-- **Across files:** **Find in Files** (**Ctrl+Shift+F**) and **Replace in Files** — choose a
-  **directory** and a filename **mask**, with the same match options. A cross-file **Replace All**
-  can be **undone/redone** as a single operation (buttons in the dialog).
+- **Across files:** **Search → Find in Files…** (**Ctrl+Shift+F**) and **Search → Replace in Files…**
+  (**Ctrl+Shift+H**) — choose a **directory** and a filename **mask**, with the same match options.
+  A cross-file **Replace All** that reaches more than one file asks first, then writes the closed
+  files straight to disk and can be **undone/redone** as a single operation (buttons in the dialog
+  and the notification, or **Edit → Undo multi-file change**).
 
 ## Stepping through diagnostics
 

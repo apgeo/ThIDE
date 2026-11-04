@@ -7,25 +7,28 @@ for the steps involved.
 
 ## A. Continue an existing project
 
-1. **File → Open Folder…** (or Open thconfig) → pick your project.
+1. **File → Open Folder…** (or **File → Open thconfig…**) → pick your project.
 2. If prompted or if several configs exist, set the **active thconfig**
    ([Core concepts](04-core-concepts.md#the-active-thconfig)).
 3. Let it **index** (status bar), then skim the **Diagnostics** panel for anything already broken.
 4. Edit — lean on **F2 rename**, **go to definition**, and the **Command Palette** (Ctrl+Shift+P).
-5. **Compile** (Compile → Compile), fix any clickable errors, repeat.
+5. **Compile** (**Compile → Compile**, F5), fix any clickable errors, repeat.
 6. Review the result in the **Map / 3D viewers**; check numbers in the **Overview** panel.
 
 ## B. Enter data from a fresh trip
 
-**Tools → New trip…** does the set-up for you: it prefills the date, the team (everyone named in the
+**Tools → New Trip…** does the set-up for you: it prefills the date, the team (everyone named in the
 project, with last trip's people ticked), the units, calibration, instruments and data order of the
 latest trip, names the survey after the date, and — once you pick the project station the trip starts
 from — writes the new file beside the other trips, plus the `input` and an `equate` stub (marked
-`# check the tie-in`) where the project keeps them. The new survey becomes a sibling of the station's
-survey; tick *Nest the trip inside that station's survey* to put it one level down instead. For the
-first trip of a new project (or a new entrance) tick *No tie-in (first trip / entrance)* and pick the
-survey it goes into: only the `input` is written. The new file opens with the cursor on the first
-data line. Then:
+`# check the tie-in`, always in English whatever language the app runs in) where the project keeps
+them. The new survey becomes a sibling of the station's survey; tick *Nest the trip inside that
+station's survey* to put it one level down instead. For the first trip of a new project (or a new
+entrance) tick *No tie-in (first trip / entrance)* and pick the survey it goes into: only the
+`input` is written. The new file opens with the cursor on the empty line where the first leg goes.
+The `input` and `equate` go into files that may not be open, so they are written to disk — **Edit →
+Undo multi-file change** takes the whole trip back (see
+[the workspace undo](05-interface-tour.md#undoing-a-tool-that-wrote-many-files)). Then:
 
 1. Open the relevant survey `.th` (or make a new file: **File → New File…**).
 2. Type your `centreline` / `data` / shots. As you type:
@@ -39,14 +42,14 @@ data line. Then:
 5. Check the trip joins the rest of the cave: open **Mainline Preview**, color **by Component**; a
    piece stacked at the origin is disconnected — add the missing `equate`.
 
-**The trip arrived as its own `.th` file?** Use **Tools → Link survey file…**: pick a station of the
+**The trip arrived as its own `.th` file?** Use **Tools → Link Survey File…**: pick a station of the
 trip and the project station it continues from, and ThIDE writes the `input` and `equate` lines where
 the project's other ones are, copying the file (and its sketches) into the project — see
 [Linking a survey file](24-linking-surveys.md).
 
 ## C. Validate & clean up before sharing
 
-1. Turn on **View → Strict parser mode** for a stricter pass.
+1. Turn on **View → Strict Parser Mode** for a stricter pass.
 2. Work the **Diagnostics** panel top to bottom: click a row to jump to it; use **Quick Fix**
    (Ctrl+.) where offered; **Suppress this code** for intentional patterns.
 3. Watch for the workspace-level checks: disconnected surveys (TH_SEM_015), loop misclosure,
@@ -57,7 +60,8 @@ the project's other ones are, copying the file (and its sketches) into the proje
 ## D. Compile and export deliverables
 
 1. Make sure the **active thconfig** exports what you want (`export map`, `export model`, …).
-2. **Compile**. Watch **Compiler Output**; open **Generated Files** to see the artifacts.
+2. **Compile** (the active thconfig). Watch **Compiler Output**; open **Generated Files** to see the
+   artifacts.
 3. Per-output actions in Generated Files: open externally, **view in internal 3D viewer**, reveal in
    file manager, go to the `export` line, or set a per-file **Auto-open** override.
 4. Need a one-off that isn't in the thconfig? **Compile → Quick Export…** composes a temporary
@@ -65,15 +69,15 @@ the project's other ones are, copying the file (and its sketches) into the proje
 
 ## E. Draw / edit passage art
 
-1. Scaffold a scrap: **Tools → New scrap (.th2)…** (blank, or from an image / `.xvi` sketch).
+1. Scaffold a scrap: **Tools → New Scrap (.th2)…** (blank, or from an image / `.xvi` sketch).
 2. Edit the `.th2` in ThIDE's editor, or hand it to **Mapiah** with **Edit with Mapiah** in the
    file header — changes reload automatically when you save there.
 3. Cross-check with **Object Browser → Scraps / Points / Lines / Areas** and the **XVI** panel.
 
 ## F. Import from another program
 
-1. **Tools → Import survey (Survex / Compass)…**, or **Import DEM as surface (.asc)…**, or
-   **Import GPX waypoints (→ fix)…**.
+1. **Tools → Import Survey (Survex / Compass)…**, or **Tools → Import DEM as Surface (.asc)…**, or
+   **Tools → Import GPX Waypoints (→ fix)…**.
 2. ThIDE converts to Therion constructs (a `.th`, a `surface`, or `fix` lines).
 3. Wire the new file into your thconfig and compile. See [Import, export & GIS](17-import-export-and-gis.md).
 
@@ -88,10 +92,10 @@ the project's other ones are, copying the file (and its sketches) into the proje
 ## H. Coordinator's health check of a big project
 
 1. Open the whole folder; set the active thconfig.
-2. **Overview → Dashboard** for length/depth/last-build at a glance; **Statistics / Charts** for the
+2. **Overview → Dashboard** for length/depth/last compilation at a glance; **Statistics / Charts** for the
    breakdown; **Team / Entrances / Quality** for people, ways in, and data problems.
 3. **Overview → Audit** (click **Calculate**) for structural gaps.
-4. **Relational Map** (View menu) to *see* how surveys, scraps and maps connect.
+4. **View → Relational Map…** to *see* how surveys, scraps and maps connect.
 5. If it's sluggish, tune **Settings → Performance** and disable heavy previews you're not using —
    [Settings](19-settings-and-preferences.md).
 

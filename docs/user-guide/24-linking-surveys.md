@@ -5,16 +5,16 @@
 A new trip usually arrives as a standalone `.th` file — exported from TopoDroid, typed up after the
 trip, or sent by another team. To make it part of the cave it needs two lines in the project: an
 `input` that brings the file in, and an `equate` that ties one of its stations to the station it
-continues from. **Link survey file** writes both, in the right place and with the right station
+continues from. **Link Survey File** writes both, in the right place and with the right station
 names.
 
 ---
 
 ## Opening it
 
-- **Tools → Link survey file…** (also in the command palette), or
-- right-click in a `.th` editor → **Generate code → Link survey file…** — the lines then go into
-  *that* file, in the survey block around the cursor.
+- **Tools → Link Survey File…** (also in the command palette), or
+- right-click in a `.th` editor and choose **Generate Code** ▸ **Link Survey File…** — the lines then
+  go into *that* file, in the survey block around the cursor.
 
 Choose the survey file with **Browse…** (or type its path and press **Enter**). The line under the
 path shows how many stations and shots it has and whether it parsed cleanly.
@@ -50,7 +50,7 @@ Therion expects), so they resolve however deeply the files are nested.
 | *equates already here* | the survey block that already holds the `equate`s for that level |
 | *file of equates* | a file of bare `equate` lines that is input from inside that survey |
 | *survey block* | the survey block itself, with no equates yet |
-| *at the cursor* | the place you right-clicked (Generate code entry) |
+| *at the cursor* | the place you right-clicked (Generate Code entry) |
 
 Enclosing surveys follow, lower in the list. The new survey becomes a *sibling* of the survey the
 project station belongs to, so the `equate` is written one level up. Tick **Insert into the current
@@ -78,8 +78,12 @@ different content.
 
 ## Inserting
 
-**Insert** writes the lines (and the copies) in one step: into the editor if the file is open — so
-**Undo** takes them back — otherwise straight into the file, keeping its encoding. The project is
+**Insert** writes the lines (and the copies) in one step: into the editor if the file is open —
+so **Undo** takes them back there — otherwise straight into the file, keeping its
+encoding. The whole run is one entry of the [workspace
+undo](05-interface-tour.md#undoing-a-tool-that-wrote-many-files): **Edit → Undo multi-file change**
+(or the **Undo** button on the notification) removes the lines and the copied files again, as long as
+nothing touched them since. The project is
 then re-read, so the Mainline Preview and the diagnostics include the new survey at once. A file
 that is open with unsaved changes has to be saved first when an `input` is added. **Copy to
 clipboard** gives you the lines without changing anything.

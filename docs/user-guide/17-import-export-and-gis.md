@@ -7,21 +7,21 @@ and terrain data. Most of these live in the **Tools** menu.
 
 ## Import into Therion
 
-**Tools → Import…** converts external data into Therion constructs you can then wire into your
-project:
+The three **Import** items of the **Tools** menu convert external data into Therion constructs you
+can then wire into your project:
 
 | Import | Source format | Becomes |
 |---|---|---|
-| **Import survey (Survex / Compass)…** | `.svx` (Survex), `.dat` (Compass), `.csv`/`.tsv` (a shot table) | A Therion `.th` survey |
-| **Import DEM as surface (.asc)…** | ESRI ASCII grid | A Therion `surface` block |
-| **Import GPX waypoints (→ fix)…** | `.gpx` | `fix` lines (georeferenced stations) |
+| **Tools → Import Survey (Survex / Compass)…** | `.svx` (Survex), `.dat` (Compass), `.csv`/`.tsv` (a shot table) | A Therion `.th` survey |
+| **Tools → Import DEM as Surface (.asc)…** | ESRI ASCII grid | A Therion `surface` block |
+| **Tools → Import GPX Waypoints (→ fix)…** | `.gpx` | `fix` lines (georeferenced stations) |
 
 After importing, add the new file to your thconfig (`input`/`source`) and compile. If an import
 fails, a toast notification tells you why.
 
 ### Shot tables (spreadsheets, CSV, PocketTopo, DistoX)
 
-**Edit → Paste as shot data…** (also in the editor's right-click menu) turns a table of shots into a
+**Edit → Paste as Shot Data…** (also in the editor's right-click menu) turns a table of shots into a
 Therion `data` block: the selection when it is one, otherwise the clipboard. The dialog shows the
 table and the block side by side; edit either side's settings and the block follows.
 
@@ -38,19 +38,25 @@ table and the block side by side; edit either side's settings and the block foll
   habit) become one averaged leg and single shots become splays from the current station; set *shots
   per leg* to 0 to make every shot a leg.
 - **Checks** — negative or very long lengths, compass or clino out of range, a leg from a station to
-  itself, cells that are not numbers: each listed with its line.
-- Outside a `centreline` block the result is wrapped in `centreline … endcentreline`.
+  itself, cells that are not numbers: each listed with its line. A row one value short is read as a
+  splay only in a table where no row is full length (PocketTopo); in any other table it is reported as
+  a leg with a missing value and left out. Mark splays with `-` in the *to* column.
+- **Where it goes** — the dialog names the place above the block (*Insert into: file, centreline at
+  line N*). With the caret (or the selection) inside a `centreline` the block goes there; elsewhere
+  in a survey it goes into that survey's last `centreline`, before its `endcentreline`, or into a new
+  one at the end of the survey. Outside any survey it refuses and says so, rather than writing the
+  block above the `encoding` line.
 
 The same reader imports a `.csv`/`.tsv` file as a new survey (**Import survey…**, `import_survey`, or
 `therion-cli import`).
 
 ### The incoming folder
 
-Turn on **Tools → Watch the incoming folder** and ThIDE watches `incoming/` in the project (it creates
+Turn on **Tools → Watch the Incoming Folder** and ThIDE watches `incoming/` in the project (it creates
 the folder; the setting is stored in the project's `.thide/project.json`, where `incoming.folder` can
 name another folder). Point your phone sync or download folder there: when a survey export has
 finished arriving, a notification offers **Import…** — a `.th` opens
-[Link survey file](24-linking-surveys.md) on it, a Survex `.svx` or Compass `.dat` is converted first
+[Link Survey File](24-linking-surveys.md) on it, a Survex `.svx` or Compass `.dat` is converted first
 and then linked, a `.gpx` becomes a fixed-stations file. A `.th2` sketch on its own is only announced:
 link its survey first, and copy the sketch along. Dropping a `.svx`, `.dat` or `.gpx` on the window
 takes the same route. Watching is off until you turn it on.
@@ -59,7 +65,7 @@ takes the same route. Watching is off until you turn it on.
 
 ### Entrances & fixed points → GIS
 
-**Tools → Export entrances / fixed points** writes your georeferenced points to a GIS/GPS format:
+**Tools → Export Entrances / Fixed Points** writes your georeferenced points to a GIS/GPS format:
 
 - **KML** (Google Earth), **GeoJSON** (web GIS), **GPX** (hand-held GPS), or **CSV** (spreadsheets).
 
@@ -67,7 +73,7 @@ Great for sharing entrance locations, plotting on a base map, or loading into a 
 
 ### Data tables → CSV
 
-**Tools → Export data table** produces tabular exports:
+**Tools → Export Data Table** produces tabular exports:
 
 - **Station table** — every station and its data.
 - **Shot table** — every leg/splay.
@@ -77,7 +83,7 @@ Great for sharing entrance locations, plotting on a base map, or loading into a 
 
 ### Survey report → HTML
 
-**Tools → Generate survey report (HTML)…** builds a shareable, self-contained **HTML report** of the
+**Tools → Generate Survey Report (HTML)…** builds a shareable, self-contained **HTML report** of the
 survey — a quick way to publish an overview without compiling maps. Table exports can also be produced
 in HTML/LaTeX for inclusion in documents. From a terminal: `therion-cli report project.thconfig --out
 report.html`.
@@ -87,7 +93,7 @@ report.html`.
 For passage art in `.th2` files, ThIDE integrates the external **Mapiah** visual editor:
 
 1. Open a `.th2` and click **Edit with Mapiah** in the file header (or scaffold one first with
-   **Tools → New scrap (.th2)…**).
+   **Tools → New Scrap (.th2)…**).
 2. Draw in Mapiah; when you **save** there, ThIDE **reloads** the file automatically.
 3. If Mapiah isn't installed, ThIDE points you to its download page and to
    **Settings → External Tools** to set the path.

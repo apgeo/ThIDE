@@ -2,26 +2,26 @@
 
 > [← Back to the User Guide home](README.md)
 
-The **Overview** panel (**View → Overview**, labelled *Overview (Dashboard / Surveys / Audit)*) is
+The **Overview** panel (**View → Overview**, shown in the menu as *Overview (Dashboard / Surveys / Audit)*) is
 your project cockpit: a set of tabs that summarise the whole cave, computed live from the model. It's
 where a coordinator spends a lot of time.
 
 > All figures here are **preview-quality**, computed in-app without Therion's loop adjustment —
 > excellent for tracking and sanity checks, but **Therion is the source of truth** for final adjusted
-> lengths. Analytics can be switched off on very large workspaces
-> ([Settings → Survey analytics](19-settings-and-preferences.md#survey-analytics)).
+> lengths. The figures follow your edits, unsaved ones included, and drop them again when you close a tab without saving. Analytics can be switched off on very large workspaces
+> (*Survey analytics* in [Settings → Visualization](19-settings-and-preferences.md#visualization)).
 
 ## The tabs
 
 | Tab | What you get |
 |---|---|
-| **Dashboard** | At-a-glance cards: entry config, file count, **total length**, **depth**, **last build**; **Quick actions** (Build, Open output folder). |
+| **Dashboard** | At-a-glance cards: entry config, file count, **total length**, **depth**, **last compilation** (naming the thconfig); **Quick actions** (Compile, Open output folder). |
 | **Surveys** | Every survey with its length and rollups. |
 | **Statistics** | Length breakdown (surface / underground / duplicate / splay), vertical range with **hi/lo stations**, horizontal extent, fixed points. |
 | **Charts** | **Length by survey** (top 30) and **length by date**. |
 | **Team** | Team members and their contribution; **Trips (by date)**; copy as CSV. |
 | **Entrances** | Entrances / fixed points with coordinates. |
-| **Quality** | Data-quality checks surfaced as a list. |
+| **Quality** | Data-quality checks surfaced as a list. They count **legs**, not splays (splays keep their own row), and offer *Show these in the Object Browser*. |
 | **Audit** | On-demand structural gaps — see below. |
 | **Leads** | Exploration-leads register — see [Leads, TODOs & metadata](14-leads-notes-and-metadata.md). |
 | **TODOs** | Aggregated TODO/FIXME/QM comments — same page. |

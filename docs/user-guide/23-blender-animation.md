@@ -27,9 +27,9 @@ describes one *render job*; nothing runs until you press **Render**.
 ## The workflow, step by step
 
 1. **Pick a source.** By default the panel lists the `.lox`/`.3d` models discovered in your
-   project's last build (newest first) — choose one from the dropdown. Or tick **Use an external
-   file** and give a path to any `.lox` or `.3d`. If the dropdown is empty, build your project
-   first (**Build → Compile**), or use an external file.
+   project's last compilation (newest first) — choose one from the dropdown. Or tick **Use an external
+   file** and give a path to any `.lox` or `.3d`. If the dropdown is empty, compile your project
+   first (**Compile → Compile**), or use an external file.
 
    > A `.lox` (Therion *loch*) model carries **walls**, so it renders as solid cave passage. A
    > `.3d` (Survex) model is centerline only, so ThIDE synthesizes tubes from the LRUD data.
@@ -106,6 +106,6 @@ failure, `2` on a usage or spec error.
 |---|---|
 | *"Blender was not found"* | Install Blender 4.2+, or set its path in **Settings → External Tools**. |
 | *"…too old…"* | Update Blender to 4.2 or newer. |
-| The source dropdown is empty | Build the project first, or tick **Use an external file**. |
+| The source dropdown is empty | Compile the project first (**Compile → Compile**), or tick **Use an external file**. |
 | The render failed | Open the **job log** from the notification or the panel — it has Blender's full output. |
 | EEVEE render fails on a server | Switch the engine to **Cycles**. |
