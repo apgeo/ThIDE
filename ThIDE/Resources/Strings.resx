@@ -2070,6 +2070,7 @@ This cannot be undone.</value></data>
   <data name="Kb_Cmd_MoveLinesUp" xml:space="preserve"><value>Move Lines Up</value></data>
   <data name="Kb_Cmd_MoveLinesDown" xml:space="preserve"><value>Move Lines Down</value></data>
   <data name="Kb_Cmd_SortLines" xml:space="preserve"><value>Sort Lines</value></data>
+  <data name="Kb_Cmd_NextOccurrenceInFile" xml:space="preserve"><value>Next Occurrence in This File</value></data>
   <data name="Kb_ConflictFmt" xml:space="preserve"><value>Already used by {0} — replace?</value></data>
   <data name="Kb_ConflictReplace" xml:space="preserve"><value>Replace</value></data>
   <data name="Kb_ConflictKeep" xml:space="preserve"><value>Keep the old one</value></data>

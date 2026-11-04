@@ -2070,6 +2070,7 @@ Acțiunea nu poate fi anulată.</value></data>
   <data name="Kb_Cmd_MoveLinesUp" xml:space="preserve"><value>Mută liniile în sus</value></data>
   <data name="Kb_Cmd_MoveLinesDown" xml:space="preserve"><value>Mută liniile în jos</value></data>
   <data name="Kb_Cmd_SortLines" xml:space="preserve"><value>Sortează liniile</value></data>
+  <data name="Kb_Cmd_NextOccurrenceInFile" xml:space="preserve"><value>Următoarea apariție în acest fișier</value></data>
   <data name="Kb_ConflictFmt" xml:space="preserve"><value>Deja folosită de „{0}” — o înlocuiți?</value></data>
   <data name="Kb_ConflictReplace" xml:space="preserve"><value>Înlocuiește</value></data>
   <data name="Kb_ConflictKeep" xml:space="preserve"><value>Păstrează-o pe cea veche</value></data>
