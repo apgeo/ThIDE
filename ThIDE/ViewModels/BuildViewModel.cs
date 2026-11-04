@@ -248,8 +248,12 @@ public partial class BuildViewModel : ViewModelBase
 
     // Timestamp bookkeeping: the first/command row shows the wall-clock time; each subsequent
     // row shows the delta since the previous one; the final summary row shows wall-clock again.
-    private DateTimeOffset _prevRowTime;
+    // Every time is read from one monotonic clock started with the run, and a compiler line is
+    // stamped when it is read from the process, not when the UI thread gets round to adding its row:
+    // those rows queue up behind the panel's redraws, and their "+N ms" measured the queue.
     private DateTimeOffset _buildStart;
+    private long _clockStart = Stopwatch.GetTimestamp();
+    private TimeSpan _prevElapsed;
     /// <summary>Working directory of the running build, used to resolve relative output paths (#1).</summary>
     private string? _buildWorkDir;
 
@@ -632,8 +636,7 @@ public partial class BuildViewModel : ViewModelBase
         // First row: the full command with its arguments.
         var tool = await _locator.FindAsync(ExternalToolLocator.Therion, _cts.Token).ConfigureAwait(true);
         var command = tool is null ? $"therion \"{entry}\"" : $"\"{tool.Path}\" \"{entry}\"";
-        _buildStart = DateTimeOffset.Now;
-        _prevRowTime = _buildStart;
+        StartClock();
         _buildWorkDir = Path.GetDirectoryName(Path.GetFullPath(entry)); // resolve output paths (#1)
         AddRow(TargetRow(entry, tempThconfig is null ? null : target));
         AddRow(new CompilerOutputRow(command, "Command", null, OutputRowKind.Command,
@@ -642,7 +645,8 @@ public partial class BuildViewModel : ViewModelBase
         EnsureExportOutputDirectories(entry);   // create any missing output folders (opt-out in Preferences)
 
         var sw = Stopwatch.StartNew();
-        var progress = new Progress<CompilerOutputLine>(line => { AddRow(MakeRow(line)); UpdatePhase(line.Text); });
+        var rows = new Progress<(CompilerOutputLine Line, TimeSpan At)>(p => { AddRow(MakeRow(p.Line, p.At)); UpdatePhase(p.Line.Text); });
+        var progress = new StampedProgress(rows, _clockStart);
 
         try
         {
@@ -702,8 +706,9 @@ public partial class BuildViewModel : ViewModelBase
             Status = ThIDE.Resources.Tr.Get("Build_Cancelled");
             outcome = outcome with { Cancelled = true, Elapsed = sw.Elapsed };
             _log?.Warning("Build cancelled.");
+            var (at, _, sinceStart) = Stamp(Elapsed());
             AddRow(new CompilerOutputRow(ThIDE.Resources.Tr.Get("Build_Cancelled"), "Error", null, OutputRowKind.Summary,
-                DateTimeOffset.Now, TimeSpan.Zero, sw.Elapsed, TimeColumnMode));
+                at, TimeSpan.Zero, sinceStart, TimeColumnMode));
         }
         catch (Exception ex)
         {
@@ -786,11 +791,9 @@ public partial class BuildViewModel : ViewModelBase
         return string.Empty;
     }
 
-    private CompilerOutputRow MakeRow(CompilerOutputLine line)
+    private CompilerOutputRow MakeRow(CompilerOutputLine line, TimeSpan readAt)
     {
-        var now = DateTimeOffset.Now;
-        var delta = now - _prevRowTime;
-        _prevRowTime = now;
+        var (now, delta, sinceStart) = Stamp(readAt);
 
         // The path as Therion printed it (used to highlight it in the line); resolve it against
         // the build's working directory so the link opens the right file even when relative (#1).
@@ -798,7 +801,7 @@ public partial class BuildViewModel : ViewModelBase
         var navSpan = ResolveOutputSpan(line.Span);
 
         return new CompilerOutputRow(line.Text, line.Severity.ToString(), navSpan,
-            OutputRowKind.Normal, now, delta, now - _buildStart, TimeColumnMode,
+            OutputRowKind.Normal, now, delta, sinceStart, TimeColumnMode,
             linkText: displayPath, symbol: line.Symbol);
     }
 
@@ -835,10 +838,9 @@ public partial class BuildViewModel : ViewModelBase
                 try
                 {
                     Directory.CreateDirectory(dir);
-                    var now = DateTimeOffset.Now;
+                    var (now, delta, sinceStart) = Stamp(Elapsed());
                     AddRow(new CompilerOutputRow($"Created missing output directory: {dir}", "Info", null,
-                        OutputRowKind.Normal, now, now - _prevRowTime, now - _buildStart, TimeColumnMode));
-                    _prevRowTime = now;
+                        OutputRowKind.Normal, now, delta, sinceStart, TimeColumnMode));
                     _log?.Info($"Created missing output directory: {dir}");
                 }
                 catch (Exception ex)
@@ -884,9 +886,9 @@ public partial class BuildViewModel : ViewModelBase
         var culture = ThIDE.Resources.Tr.Culture;
         var text = string.Format(culture, ThIDE.Resources.Tr.Get(key),
             elapsed.TotalSeconds.ToString("0.00", culture), artifactCount, warnCount);
-        var now = DateTimeOffset.Now;
+        var (now, _, sinceStart) = Stamp(Elapsed());
         return new CompilerOutputRow(text, ok ? "Info" : "Error", null, OutputRowKind.Summary,
-            now, TimeSpan.Zero, now - buildStart, TimeColumnMode, success: ok);
+            now, TimeSpan.Zero, sinceStart, TimeColumnMode, success: ok);
     }
 
     /// <summary>
@@ -923,7 +925,7 @@ public partial class BuildViewModel : ViewModelBase
         Output = Array.Empty<CompilerOutputRow>();
         _rawBuffer.Clear();
         RawOutput = string.Empty;
-        _prevRowTime = DateTimeOffset.Now;
+        _prevElapsed = TimeSpan.Zero;
         OutputCleared?.Invoke(this, EventArgs.Empty);
     }
 
@@ -1218,8 +1220,7 @@ public partial class BuildViewModel : ViewModelBase
 
         ExternalToolStarted?.Invoke(this, EventArgs.Empty); // surface the output panel (#2)
         ClearOutputState();
-        _buildStart = DateTimeOffset.Now;
-        _prevRowTime = _buildStart;
+        StartClock();
         AddRow(new CompilerOutputRow($"\"{tool.Path}\" {args}", "Command", null, OutputRowKind.Command,
             _buildStart, TimeSpan.Zero, TimeSpan.Zero, TimeColumnMode));
         try
@@ -1243,7 +1244,7 @@ public partial class BuildViewModel : ViewModelBase
             foreach (var el in err.Split('\n'))
                 if (el.Trim().Length > 0) AddRow(PlainRow(el.TrimEnd('\r'), "Warning"));
             await proc.WaitForExitAsync().ConfigureAwait(true);
-            AddRow(SummaryRow(proc.ExitCode == 0, 0, DateTimeOffset.Now - _buildStart, 0, _buildStart));
+            AddRow(SummaryRow(proc.ExitCode == 0, 0, Elapsed(), 0, _buildStart));
             _log?.Info($"{label} finished (exit {proc.ExitCode}).");
             Status = $"{label} finished (exit {proc.ExitCode}).";
             return proc.ExitCode == 0;
@@ -1258,10 +1259,38 @@ public partial class BuildViewModel : ViewModelBase
 
     private CompilerOutputRow PlainRow(string text, string severity)
     {
-        var now = DateTimeOffset.Now;
-        var delta = now - _prevRowTime;
-        _prevRowTime = now;
-        return new CompilerOutputRow(text, severity, null, OutputRowKind.Normal, now, delta, now - _buildStart, TimeColumnMode);
+        var (now, delta, sinceStart) = Stamp(Elapsed());
+        return new CompilerOutputRow(text, severity, null, OutputRowKind.Normal, now, delta, sinceStart, TimeColumnMode);
+    }
+
+    // ---- the run's clock ----
+
+    private void StartClock()
+    {
+        _buildStart = DateTimeOffset.Now;
+        _clockStart = Stopwatch.GetTimestamp();
+        _prevElapsed = TimeSpan.Zero;
+    }
+
+    private TimeSpan Elapsed() => Stopwatch.GetElapsedTime(_clockStart);
+
+    /// <summary>
+    /// The time columns of a row stamped <paramref name="elapsed"/> into the run. A row never goes back
+    /// in time: stdout and stderr are read on two threads, so a line can be stamped a moment before one
+    /// that reached the panel ahead of it.
+    /// </summary>
+    private (DateTimeOffset At, TimeSpan Delta, TimeSpan SinceStart) Stamp(TimeSpan elapsed)
+    {
+        if (elapsed < _prevElapsed) elapsed = _prevElapsed;
+        var delta = elapsed - _prevElapsed;
+        _prevElapsed = elapsed;
+        return (_buildStart + elapsed, delta, elapsed);
+    }
+
+    /// <summary>Stamps each compiler line on the thread that read it, then hands it to the UI-thread sink.</summary>
+    private sealed class StampedProgress(IProgress<(CompilerOutputLine, TimeSpan)> sink, long clockStart) : IProgress<CompilerOutputLine>
+    {
+        public void Report(CompilerOutputLine value) => sink.Report((value, Stopwatch.GetElapsedTime(clockStart)));
     }
 
     /// <summary>Raised to view an artifact in the in-app map viewer instead of externally.</summary>
