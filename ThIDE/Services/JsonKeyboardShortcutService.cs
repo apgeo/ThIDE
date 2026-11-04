@@ -137,7 +137,12 @@ public sealed class JsonKeyboardShortcutService : IKeyboardShortcutService
             foreach (var kv in map)
                 _gestures[kv.Key] = kv.Value;
         }
-        catch { /* best-effort */ }
+        catch
+        {
+            // Defaults, but keep the unreadable file: the next save would otherwise replace it.
+            _gestures = new Dictionary<string, string>(_defaults, StringComparer.Ordinal);
+            UnreadableStateFile.KeepAside(_storagePath);
+        }
     }
 
     private void TrySave()

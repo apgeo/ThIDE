@@ -2096,4 +2096,6 @@ This cannot be undone.</value></data>
   <data name="FormatAll_Nothing_Few" xml:space="preserve"><value>Nothing to change in {0} files.</value></data>
   <data name="FormatAll_Nothing_Many" xml:space="preserve"><value>Nothing to change in {0} files.</value></data>
   <data name="FormatAll_NothingSkipped" xml:space="preserve"><value>{0} more are left alone because they do not parse cleanly (fix those first).</value></data>
+  <data name="Notif_StateUnreadableTitle" xml:space="preserve"><value>Saved settings could not be read</value></data>
+  <data name="Notif_StateUnreadableMsg" xml:space="preserve"><value>The defaults are in use. A copy of the unreadable file was kept as {0}.</value></data>
 </root>

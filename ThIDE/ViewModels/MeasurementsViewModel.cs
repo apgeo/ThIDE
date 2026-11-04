@@ -191,7 +191,7 @@ public partial class MeasurementsViewModel : ViewModelBase
         {
             var svc = AppServices.Provider.GetService<IAppSettingsService>();
             if (svc is null) return;
-            svc.Save(svc.Current with
+            svc.Update(st => st with
             {
                 MColShotsSurvey     = ShotsColSurvey,
                 MColShotsFrom       = ShotsColFrom,

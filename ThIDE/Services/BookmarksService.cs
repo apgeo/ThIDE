@@ -33,10 +33,13 @@ public sealed class BookmarksService : IBookmarksService
     public event EventHandler? BookmarksChanged;
 
     public BookmarksService()
+        : this(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "ThIDE", "bookmarks.json"))
     {
-        _persistPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "ThIDE", "bookmarks.json");
+    }
+
+    internal BookmarksService(string persistPath)
+    {
+        _persistPath = persistPath;
         Load();
     }
 
@@ -72,7 +75,12 @@ public sealed class BookmarksService : IBookmarksService
             foreach (var d in dtos)
                 _bookmarks.Add(new BookmarkEntry(d.FilePath, d.Line, d.Title ?? string.Empty, d.CreatedAt));
         }
-        catch { /* corrupt/missing file — start fresh */ }
+        catch
+        {
+            // Start fresh, but keep the unreadable file: the next save would otherwise replace it.
+            _bookmarks.Clear();
+            UnreadableStateFile.KeepAside(_persistPath);
+        }
     }
 
     private void Save()

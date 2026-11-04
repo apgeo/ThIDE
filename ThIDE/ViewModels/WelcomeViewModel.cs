@@ -53,7 +53,7 @@ public sealed partial class WelcomeViewModel : ObservableObject
         set
         {
             if (_settings is null || value == ShowOnStartup) return;
-            _settings.Save(_settings.Current with { ShowWelcomeOnStartup = value });
+            _settings.Update(st => st with { ShowWelcomeOnStartup = value });
             OnPropertyChanged();
         }
     }

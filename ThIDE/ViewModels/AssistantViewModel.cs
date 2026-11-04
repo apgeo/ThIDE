@@ -432,7 +432,7 @@ public sealed partial class AssistantViewModel : ObservableObject
     private void ChooseDataPolicy(string? name)
     {
         if (Enum.TryParse<AssistantDataPolicy>(name, out var policy))
-            _settings.Save(_settings.Current with { AssistantDataPolicy = policy, AssistantDataPolicyChosen = true });
+            _settings.Update(st => st with { AssistantDataPolicy = policy, AssistantDataPolicyChosen = true });
     }
 
     // The policy can be chosen here or in Preferences; either way the pane follows. A conversation
@@ -498,7 +498,7 @@ public sealed partial class AssistantViewModel : ObservableObject
     [RelayCommand]
     private async Task EnableServerAsync()
     {
-        _settings.Save(_settings.Current with { EnableMcpServer = true });
+        _settings.Update(st => st with { EnableMcpServer = true });
         try
         {
             await _host.ApplySettingAsync();

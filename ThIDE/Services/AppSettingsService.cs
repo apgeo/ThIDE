@@ -443,6 +443,14 @@ public interface IAppSettingsService
 {
     AppSettings Current { get; }
     void Save(AppSettings settings);
+
+    /// <summary>
+    /// Applies <paramref name="change"/> to the settings as they are at the moment of writing and saves
+    /// the result. Prefer it to <c>Save(Current with { … })</c>: read-then-save from two threads drops one
+    /// of the two changes, this does not.
+    /// </summary>
+    void Update(Func<AppSettings, AppSettings> change) => Save(change(Current));
+
     event EventHandler? Changed;
 }
 
@@ -477,6 +485,17 @@ public sealed class AppSettingsService : IAppSettingsService
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
+    public void Update(Func<AppSettings, AppSettings> change)
+    {
+        ArgumentNullException.ThrowIfNull(change);
+        lock (_writeGate)
+        {
+            _state = change(_state);
+            TryWrite();
+        }
+        Changed?.Invoke(this, EventArgs.Empty);
+    }
+
     private AppSettings? TryLoad()
     {
         try
@@ -488,24 +507,9 @@ public sealed class AppSettingsService : IAppSettingsService
         {
             // The next save writes defaults over this file, so keep its bytes first: it holds the
             // recent/pinned files, hooks and MCP configuration the user may want to recover.
-            var kept = KeepAside();
+            var kept = UnreadableStateFile.KeepAside(_path);
             _logger?.LogWarning(ex, "Failed to load settings from {Path}; using defaults. Original kept as {Copy}.",
                 _path, kept ?? "(copy failed)");
-            return null;
-        }
-    }
-
-    private string? KeepAside()
-    {
-        try
-        {
-            var copy = _path + ".unreadable-"
-                + DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
-            File.Copy(_path, copy, overwrite: true);
-            return copy;
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
             return null;
         }
     }

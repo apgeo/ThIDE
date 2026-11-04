@@ -80,7 +80,7 @@ public sealed partial class SearchViewModel : ViewModelBase
         RecentQueries.Insert(0, query);
         while (RecentQueries.Count > 50) RecentQueries.RemoveAt(RecentQueries.Count - 1);
         if (_settings is not null)
-            try { _settings.Save(_settings.Current with { RecentSearches = RecentQueries.ToList() }); }
+            try { _settings.Update(st => st with { RecentSearches = RecentQueries.ToList() }); }
             catch { /* best-effort */ }
     }
 

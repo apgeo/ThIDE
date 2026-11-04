@@ -838,12 +838,18 @@ public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, 
     private void RecordRecent(string fullPath)
     {
         if (_settings is null) return;
-        var current = _settings.Current;
-        var list = new System.Collections.Generic.List<string>(current.RecentFiles.Count + 1) { fullPath };
-        foreach (var p in current.RecentFiles)
-            if (!FilePaths.Comparer.Equals(p, fullPath)) list.Add(p);
-        if (list.Count > MaxRecentFiles) list.RemoveRange(MaxRecentFiles, list.Count - MaxRecentFiles);
-        try { _settings.Save(current with { RecentFiles = list }); } catch { /* best-effort */ }
+        try
+        {
+            _settings.Update(current =>
+            {
+                var list = new System.Collections.Generic.List<string>(current.RecentFiles.Count + 1) { fullPath };
+                foreach (var p in current.RecentFiles)
+                    if (!FilePaths.Comparer.Equals(p, fullPath)) list.Add(p);
+                if (list.Count > MaxRecentFiles) list.RemoveRange(MaxRecentFiles, list.Count - MaxRecentFiles);
+                return current with { RecentFiles = list };
+            });
+        }
+        catch { /* best-effort */ }
     }
 
     /// <summary>Promotes a batch of just-opened files with a single settings save (same result as
@@ -851,14 +857,20 @@ public sealed class DocumentService : IDocumentService, IUnsavedBufferProvider, 
     private void RecordRecentMany(System.Collections.Generic.IReadOnlyList<string> fullPaths)
     {
         if (_settings is null || fullPaths.Count == 0) return;
-        var current = _settings.Current;
-        var list = new System.Collections.Generic.List<string>(current.RecentFiles.Count + fullPaths.Count);
-        for (int i = fullPaths.Count - 1; i >= 0; i--)
-            if (!list.Contains(fullPaths[i], FilePaths.Comparer)) list.Add(fullPaths[i]);
-        foreach (var p in current.RecentFiles)
-            if (!list.Contains(p, FilePaths.Comparer)) list.Add(p);
-        if (list.Count > MaxRecentFiles) list.RemoveRange(MaxRecentFiles, list.Count - MaxRecentFiles);
-        try { _settings.Save(current with { RecentFiles = list }); } catch { /* best-effort */ }
+        try
+        {
+            _settings.Update(current =>
+            {
+                var list = new System.Collections.Generic.List<string>(current.RecentFiles.Count + fullPaths.Count);
+                for (int i = fullPaths.Count - 1; i >= 0; i--)
+                    if (!list.Contains(fullPaths[i], FilePaths.Comparer)) list.Add(fullPaths[i]);
+                foreach (var p in current.RecentFiles)
+                    if (!list.Contains(p, FilePaths.Comparer)) list.Add(p);
+                if (list.Count > MaxRecentFiles) list.RemoveRange(MaxRecentFiles, list.Count - MaxRecentFiles);
+                return current with { RecentFiles = list };
+            });
+        }
+        catch { /* best-effort */ }
     }
 
     private FileDocumentViewModel? FindOpen(string path) =>

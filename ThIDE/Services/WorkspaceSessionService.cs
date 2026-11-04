@@ -279,12 +279,18 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
     {
         if (_settings is null) return;
         var key = NormalizeDir(fullDir);
-        var current = _settings.Current;
-        var list = new List<string>(current.RecentDirectories.Count + 1) { fullDir };
-        foreach (var p in current.RecentDirectories)
-            if (!FilePaths.Comparer.Equals(NormalizeDir(p), key)) list.Add(p);
-        if (list.Count > MaxRecentDirectories) list.RemoveRange(MaxRecentDirectories, list.Count - MaxRecentDirectories);
-        try { _settings.Save(current with { RecentDirectories = list }); } catch { /* best-effort */ }
+        try
+        {
+            _settings.Update(current =>
+            {
+                var list = new List<string>(current.RecentDirectories.Count + 1) { fullDir };
+                foreach (var p in current.RecentDirectories)
+                    if (!FilePaths.Comparer.Equals(NormalizeDir(p), key)) list.Add(p);
+                if (list.Count > MaxRecentDirectories) list.RemoveRange(MaxRecentDirectories, list.Count - MaxRecentDirectories);
+                return current with { RecentDirectories = list };
+            });
+        }
+        catch { /* best-effort */ }
     }
 
     // Persists the active thconfig for the current root so reopening the directory
@@ -295,15 +301,19 @@ public sealed class WorkspaceSessionService : IWorkspaceSession
         if (!IsUnderRoot(active.FullPath)) return; // only remember configs that live under the root
 
         var key = NormalizeDir(root);
-        var cur = _settings.Current;
-        if (cur.LastThconfigByRoot.TryGetValue(key, out var prev) &&
+        if (_settings.Current.LastThconfigByRoot.TryGetValue(key, out var prev) &&
             FilePaths.Comparer.Equals(prev, active.FullPath))
             return; // already recorded
 
-        var map = new Dictionary<string, string>(FilePaths.Comparer);
-        foreach (var kv in cur.LastThconfigByRoot) map[kv.Key] = kv.Value;
-        map[key] = active.FullPath;
-        _settings.Save(cur with { LastThconfigByRoot = map });
+        // Runs off the UI thread: the change is applied to the settings as they are when it is written,
+        // so a concurrent change made on the UI thread is kept.
+        _settings.Update(cur =>
+        {
+            var map = new Dictionary<string, string>(FilePaths.Comparer);
+            foreach (var kv in cur.LastThconfigByRoot) map[kv.Key] = kv.Value;
+            map[key] = active.FullPath;
+            return cur with { LastThconfigByRoot = map };
+        });
     }
 
     public async Task<bool> SetActiveThconfigAsync(string thconfigPath, CancellationToken ct = default)

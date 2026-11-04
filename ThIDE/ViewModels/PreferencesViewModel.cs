@@ -421,7 +421,7 @@ public partial class PreferencesViewModel : ObservableObject
         var editorFeatures = _settings.Current.EditorFeatures;
         foreach (var row in EditorFeatureRows)
             editorFeatures = editorFeatures.With(row.Feature, row.IsEnabled);
-        _settings.Save(_settings.Current with
+        _settings.Update(st => st with
         {
             EditorFeatures = editorFeatures,
             RestoreSessionOnStartup = RestoreSessionOnStartup,

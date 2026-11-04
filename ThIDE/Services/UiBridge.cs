@@ -269,12 +269,13 @@ public sealed class UiBridge : IUiBridge
     {
         if (_settings is null) return Task.FromResult(new UiActionResult(false, "No settings service."));
 
-        var (ok, next, error) = McpSettingKeys.TrySet(_settings.Current, key, value);
+        var (ok, _, error) = McpSettingKeys.TrySet(_settings.Current, key, value);
         if (!ok) return Task.FromResult(new UiActionResult(false, error ?? $"Could not set '{key}'."));
 
-        // Save raises Changed synchronously, and its subscribers (Preferences, editors) expect the UI
-        // thread — which is why this whole body runs inside InvokeAsync.
-        _settings.Save(next);
+        // Update raises Changed synchronously, and its subscribers (Preferences, editors) expect the UI
+        // thread — which is why this whole body runs inside InvokeAsync. The value is applied again to
+        // the settings as they are when written, so a change saved meanwhile is not undone.
+        _settings.Update(s => McpSettingKeys.TrySet(s, key, value) is (true, var next, _) ? next : s);
         _log?.Info($"MCP set '{key}' to '{value}'.");
         return Task.FromResult(new UiActionResult(true, $"Set '{key}' to '{value}'."));
     });

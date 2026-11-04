@@ -839,7 +839,7 @@ public sealed partial class StructuralGeologyViewModel : ObservableObject
             ShowFullStationName, ShowPlanesInPreview, PlotSplays, FadedSplays,
             NetProjection, NetShowPoles, NetShowMeasurements, NetShowGrid, NetShowLabels,
             NetWhiteBackground, NetInPlot);
-        try { _settings.Save(_settings.Current with { StructuralGeologySettings = JsonSerializer.Serialize(state) }); }
+        try { _settings.Update(st => st with { StructuralGeologySettings = JsonSerializer.Serialize(state) }); }
         catch { /* best-effort persistence */ }
     }
 

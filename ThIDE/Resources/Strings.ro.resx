@@ -2096,4 +2096,6 @@ Acțiunea nu poate fi anulată.</value></data>
   <data name="FormatAll_Nothing_Few" xml:space="preserve"><value>Nimic de schimbat în {0} fișiere.</value></data>
   <data name="FormatAll_Nothing_Many" xml:space="preserve"><value>Nimic de schimbat în {0} de fișiere.</value></data>
   <data name="FormatAll_NothingSkipped" xml:space="preserve"><value>Alte {0} rămân neatinse pentru că nu se analizează curat (corectați-le întâi).</value></data>
+  <data name="Notif_StateUnreadableTitle" xml:space="preserve"><value>Setările salvate nu au putut fi citite</value></data>
+  <data name="Notif_StateUnreadableMsg" xml:space="preserve"><value>Se folosesc valorile implicite. S-a păstrat o copie a fișierului care nu a putut fi citit: {0}.</value></data>
 </root>
