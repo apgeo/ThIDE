@@ -14,6 +14,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Therion.Core;
 
 namespace Therion.Semantics;
@@ -55,8 +56,12 @@ public sealed record Lead(string Location, LeadKind Kind, string Description, So
 
 public static class LeadAnalysis
 {
-    // Comment conventions that flag a lead (case-insensitive substring match).
-    private static readonly string[] CommentMarkers = { "qm", "lead", "continues", "dig", "?" };
+    // Comment conventions that flag a lead: a `?` anywhere, or one of the marker words standing on its
+    // own (case-insensitive). A word ends at a non-letter, so "QM12" counts and "digital", "leader" or
+    // "misleading" do not.
+    private static readonly Regex CommentMarker = new(
+        @"\?|(?<!\p{L})(?:qm|leads?|continues|dig)(?!\p{L})",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     public static ImmutableArray<Lead> Analyze(WorkspaceSemanticModel? workspace)
     {
@@ -159,12 +164,7 @@ public static class LeadAnalysis
         return active;
     }
 
-    private static bool IsLeadComment(string comment)
-    {
-        foreach (var m in CommentMarkers)
-            if (comment.Contains(m, StringComparison.OrdinalIgnoreCase)) return true;
-        return false;
-    }
+    private static bool IsLeadComment(string comment) => CommentMarker.IsMatch(comment);
 
     private static bool IsLeadPointType(string type)
     {
