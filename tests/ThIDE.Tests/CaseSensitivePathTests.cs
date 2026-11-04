@@ -2,7 +2,6 @@
 // the other's tab, or plan one's rename against the other's text.
 
 using System.Collections.Immutable;
-using System.Reflection;
 using Therion.Core;
 using Therion.Processing.Abstractions;
 using Therion.Workspace;
@@ -55,8 +54,7 @@ public class CaseSensitivePathTests
 
         // Cave.th (outside the project) is the active document, with an unsaved edit in its buffer.
         var active = new FileDocumentViewModel(upper, "survey upper\nendsurvey\n\n# st1 upper, edited\n", new MeasurementsViewModel());
-        var m = typeof(MainWindow).GetMethod("CollectCommentRenameChanges", BindingFlags.NonPublic | BindingFlags.Static)!;
-        var changes = (List<RenameFileChanges>)m.Invoke(null, [model, active, "st1", new List<RenameFileChanges>()])!;
+        var changes = RenamePlanner.CollectCommentRenameChanges(model, active, "st1", new List<RenameFileChanges>());
 
         Assert.Equal(active.DocumentText, changes.Single(c => c.FilePath == upper).FileText);
         Assert.Equal(File.ReadAllText(lower), changes.Single(c => c.FilePath == lower).FileText);
