@@ -2,7 +2,7 @@
 // Beyond syntax highlighting it wires the editor "IDE" features: find/replace,
 // code folding, auto-indent, bracket/quote pairing, diagnostic hover tooltips +
 // an overview ruler, context-aware autocomplete, and navigation
-// (F12 go-to-definition, Shift+F12 find-references, Ctrl+G go-to-line,
+// (F12 go-to-definition, Shift+F12 find-all-references, Ctrl+G go-to-line,
 // Ctrl+/ toggle comment, Ctrl+click linked-file open).
 
 using System;
@@ -71,8 +71,8 @@ public partial class TherionTextEditor : UserControl
     public event EventHandler<SourceSpan>? CaretMoved;
 
     /// <summary>
-    /// True while the caret is being moved by highlighted-term navigation (Shift+F12 cycling
-    /// through references). Such moves are excluded from the back/forward history (#1).
+    /// True while the caret is being moved by highlighted-term navigation (Ctrl+Shift+F12 cycling
+    /// through occurrences). Such moves are excluded from the back/forward history (#1).
     /// </summary>
     public bool IsTermNavigating { get; private set; }
 
@@ -93,14 +93,11 @@ public partial class TherionTextEditor : UserControl
     public static readonly Avalonia.Input.DataFormat<string> InsertPathFormat =
         Avalonia.Input.DataFormat.CreateInProcessFormat<string>("thide-insert-path");
 
-    /// <summary>Raised when the user requests "find all references" for an identifier (#4).</summary>
-    public event EventHandler<string>? FindReferencesRequested;
-
     /// <summary>Raised when the user requests a symbol rename (F2 / context menu / hover overlay).</summary>
     public event EventHandler<(string Raw, ReferenceKind Kind)>? RenameSymbolRequested;
 
-    /// <summary>Raised when the user asks for every reference to the symbol at the caret (#7). Unlike
-    /// <see cref="FindReferencesRequested"/> (a name-based text search) this is symbol-scoped.</summary>
+    /// <summary>Raised when the user asks for every reference to the symbol at the caret (#7): symbol-scoped,
+    /// not a name-based text search.</summary>
     public event EventHandler<(string Raw, ReferenceKind Kind)>? FindAllReferencesRequested;
 
     private const string ThbookUrl = "https://therion.speleo.sk/wiki/start";
@@ -451,7 +448,9 @@ public partial class TherionTextEditor : UserControl
         (ShellCommandIds.GoToDefinition, "F12", NoAliases,
             ed => { ed.TryNavigateAt(ed._editor!.CaretOffset); return true; }),
         (ShellCommandIds.FindReferences, "Shift+F12", NoAliases,
-            ed => { ed.FindReferencesAt(ed._editor!.CaretOffset); return true; }),
+            ed => { ed.StartFindAllReferences(); return true; }),
+        (ShellCommandIds.NextOccurrenceInFile, "Ctrl+Shift+F12", NoAliases,
+            ed => { ed.NextOccurrenceInFile(); return true; }),
         (ShellCommandIds.RenameSymbol, "F2", NoAliases,
             ed => { ed.StartRename(); return true; }),
         (ShellCommandIds.PeekDefinition, "Alt+F12", NoAliases,
@@ -1583,10 +1582,17 @@ public partial class TherionTextEditor : UserControl
         if (RefTokenAtCaret() is { } t) RenameSymbolRequested?.Invoke(this, t);
     }
 
-    /// <summary>Fires <see cref="FindAllReferencesRequested"/> for the ref token at the caret.</summary>
+    /// <summary>
+    /// Fires <see cref="FindAllReferencesRequested"/> for the ref token at the caret — the one meaning of
+    /// "find references" (Shift+F12, the context menu, the hover card). A plain word that is not a
+    /// station/survey token is still asked about, so the shell can say that nothing refers to it instead
+    /// of the key doing nothing.
+    /// </summary>
     public void StartFindAllReferences()
     {
-        if (RefTokenAtCaret() is { } t) FindAllReferencesRequested?.Invoke(this, t);
+        if (RefTokenAtCaret() is { } t) { FindAllReferencesRequested?.Invoke(this, t); return; }
+        if (_editor is not null && WordAt(_editor.Text, _editor.CaretOffset) is { Length: > 0 } word)
+            FindAllReferencesRequested?.Invoke(this, (word, ReferenceKind.Any));
     }
 
     /// <summary>The station/survey reference token under the caret, with the kind it should resolve as.</summary>
@@ -1600,41 +1606,27 @@ public partial class TherionTextEditor : UserControl
 
     // ----- find references / go to line / toggle comment -----------------
 
-    private string? _refWord;
-    private int _refIndex;
-
-    private void FindReferencesAt(int offset)
+    /// <summary>
+    /// Moves the caret to the next whole-word occurrence of the word at the caret in this file,
+    /// wrapping at the end. A plain text match, so it works on any word; the symbol-scoped list
+    /// across the project is <see cref="StartFindAllReferences"/>.
+    /// </summary>
+    public void NextOccurrenceInFile()
     {
-        if (_editor is null || Navigation is null) return;
-        var word = WordAt(_editor.Text, offset);
-        if (string.IsNullOrEmpty(word)) return;
-
-        var all = Navigation.FindReferences(word);
-        if (all.IsDefaultOrEmpty) return;
-
-        // Prefer references in the current file so navigation stays in this editor.
-        var refs = string.IsNullOrEmpty(CurrentFilePath)
-            ? all.ToList()
-            : all.Where(s => string.Equals(s.FilePath, CurrentFilePath, StringComparison.OrdinalIgnoreCase)).ToList();
-        if (refs.Count == 0) refs = all.ToList();
-
-        if (!string.Equals(word, _refWord, StringComparison.Ordinal)) { _refWord = word; _refIndex = 0; }
-        else _refIndex = (_refIndex + 1) % refs.Count;
-
-        var span = refs[_refIndex];
-        var ln = Math.Max(1, span.Start.Line);
-        if (ln > _editor.Document.LineCount) return;
+        if (_editor is null || WordOccurrences.Next(_editor.Text, _editor.CaretOffset) is not { } next) return;
 
         // Flag this as term navigation so the caret move it triggers is kept out of
         // the back/forward history (#1).
         IsTermNavigating = true;
         try
         {
-            _editor.CaretOffset = _editor.Document.GetOffset(ln, Math.Max(1, span.Start.Column));
-            _editor.ScrollToLine(ln);
+            _editor.Select(next.Start, 0);
+            _editor.CaretOffset = next.Start;
+            _editor.ScrollToLine(_editor.Document.GetLineByOffset(next.Start).LineNumber);
         }
         finally { IsTermNavigating = false; }
-        _editor.Focus();
+        _flash?.Flash(next.Start, next.Length);
+        _editor.TextArea.Focus();
     }
 
     private async void ShowGoToLine()
@@ -1816,7 +1808,7 @@ public partial class TherionTextEditor : UserControl
             HoverCommandWord(off) is { } cmd ? BuildCommandInfo(cmd) :
             RefTokenUnderPointer(_infoPointer) is { } tok &&
                 Navigation?.Describe(tok.Raw, ChooseReferenceKind((tok.Start, tok.Length, tok.Raw), tok.Offset)) is { } info
-                ? BuildIdentifierInfo(tok.Raw, info, tok.Offset) :
+                ? BuildIdentifierInfo(tok.Raw, info, tok.Offset, ChooseReferenceKind((tok.Start, tok.Length, tok.Raw), tok.Offset)) :
             ResolvePathLinkAt(off) is { } link ? BuildFileInfo(link) : null;
 
         if (content is null) { CancelHoverInfo(); return; }
@@ -2029,7 +2021,7 @@ public partial class TherionTextEditor : UserControl
         OpenExternalRequested?.Invoke(this, ThbookUrl);
     }
 
-    private Control BuildIdentifierInfo(string raw, ReferenceInfo info, int tokenOffset)
+    private Control BuildIdentifierInfo(string raw, ReferenceInfo info, int tokenOffset, ReferenceKind kind)
     {
         var panel = new StackPanel { Spacing = 6 };
         panel.Children.Add(MakeCardTitle(raw, info.Declaration, tokenOffset));
@@ -2056,7 +2048,7 @@ public partial class TherionTextEditor : UserControl
         actions.Children.Add(IconAction("Icon.GoToDefinition", "Ed_GoToDefinition",
             () => { NavigateToSpan(where); HideHoverInfo(); }));
         actions.Children.Add(IconAction("Icon.ManageSearch", "Ed_FindAllRefs",
-            () => { FindReferencesRequested?.Invoke(this, StationRef.Parse(raw).PointWithoutMark); HideHoverInfo(); }));
+            () => { FindAllReferencesRequested?.Invoke(this, (raw, kind)); HideHoverInfo(); }));
         // Teardown + modal ordering is handled by IconAction's deferral (see PostHoverAction).
         actions.Children.Add(IconAction("Icon.Rename", "Ed_RenameDots", () =>
         {
@@ -2759,8 +2751,7 @@ public partial class TherionTextEditor : UserControl
         return text.Substring(start, end - start);
     }
 
-    // Therion station refs are letters, digits, '.', '_', '-'.
-    private static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c == '.' || c == '_' || c == '-';
+    private static bool IsWordChar(char c) => WordOccurrences.IsWordChar(c);
 
     // ----- file-path hyperlinks (input / load / source / export / system) -----
 

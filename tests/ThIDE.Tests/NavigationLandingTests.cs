@@ -1,5 +1,6 @@
 // Where navigation leaves the user: the status bar follows the tab that is shown, an Outline click
-// reveals a line without taking focus from the tree, and a jump focuses the editor by default.
+// reveals a line without taking focus from the tree, and Find All References with nothing to list
+// says so on the status bar.
 
 using System.IO;
 using Therion.Core;
@@ -60,5 +61,48 @@ public class NavigationLandingTests
         doc.RequestScrollTo(Caret(FileA, 1, 1, 0) with { Length = 1 }, focus: false);
         doc.RequestScrollTo(Caret(FileA, 2, 1, 9) with { Length = 1 });
         Assert.True(doc.PendingScrollFocus);
+    }
+
+    [Fact]
+    public void No_references_at_all_is_reported_on_the_status_bar() => UiThread.Run(() =>
+    {
+        var vm = MainWindowViewModelHost.Create(new ScriptedDocumentService());
+
+        Assert.True(vm.ReportIfNoOtherReferences("nowhere", Array.Empty<SymbolReference>()));
+        Assert.Contains("nowhere", vm.StatusText);
+    });
+
+    [Fact]
+    public void A_declaration_with_no_uses_reports_no_other_references() => UiThread.Run(() =>
+    {
+        var vm = MainWindowViewModelHost.Create(new ScriptedDocumentService());
+        var declaration = new SymbolReference(Caret(FileA, 4, 3, 40) with { Length = 2 }, IsDeclaration: true);
+
+        Assert.True(vm.ReportIfNoOtherReferences("st1", new[] { declaration }));
+        Assert.Contains("st1", vm.StatusText);
+        Assert.NotEqual(string.Format(Resources.Tr.Get("Refs_None"), "st1"), vm.StatusText);
+    });
+
+    [Fact]
+    public void References_beyond_the_declaration_are_left_to_the_list() => UiThread.Run(() =>
+    {
+        var vm = MainWindowViewModelHost.Create(new ScriptedDocumentService());
+        vm.StatusText = "unchanged";
+        var refs = new[]
+        {
+            new SymbolReference(Caret(FileA, 4, 3, 40) with { Length = 2 }, IsDeclaration: true),
+            new SymbolReference(Caret(FileB, 9, 1, 80) with { Length = 2 }, IsDeclaration: false),
+        };
+
+        Assert.False(vm.ReportIfNoOtherReferences("st1", refs));
+        Assert.Equal("unchanged", vm.StatusText);
+    });
+
+    [Fact]
+    public void Shift_F12_lists_references_and_next_occurrence_has_its_own_gesture()
+    {
+        var shortcuts = new JsonKeyboardShortcutService(Path.Combine(Path.GetTempPath(), Path.GetRandomFileName(), "keyboard.json"));
+        Assert.Equal("Shift+F12", shortcuts.Defaults[ShellCommandIds.FindReferences]);
+        Assert.Equal("Ctrl+Shift+F12", shortcuts.Defaults[ShellCommandIds.NextOccurrenceInFile]);
     }
 }

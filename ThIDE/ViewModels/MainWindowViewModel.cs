@@ -2221,6 +2221,19 @@ public partial class MainWindowViewModel : ViewModelBase
         return list;
     }
 
+    /// <summary>
+    /// Find All References with nothing worth a list — no occurrence at all, or only the declaration —
+    /// is reported on the status bar instead of opening an empty list. Returns false when there are
+    /// references to list.
+    /// </summary>
+    public bool ReportIfNoOtherReferences(string raw, IReadOnlyList<SymbolReference> references)
+    {
+        if (references.Any(r => !r.IsDeclaration)) return false;
+        StatusText = string.Format(CultureInfo.CurrentCulture,
+            Tr.Get(references.Count == 0 ? "Refs_None" : "Refs_NoOther"), raw);
+        return true;
+    }
+
     /// <summary>Updates the caret line/column/offset on the status bar (#10).</summary>
     private void UpdateCaretStatus(Therion.Core.SourceSpan span)
     {

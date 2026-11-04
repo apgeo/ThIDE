@@ -97,6 +97,7 @@ public static class R3CommandPolicy
         // ---- Editor scope → Excluded: caret-scoped, need a focused editor -------------------------
         new(ShellCommandIds.GoToDefinition,      "Go to definition",                "Edit",     R3CommandGate.Excluded, R3CommandScope.Editor),
         new(ShellCommandIds.FindReferences,      "Find references",                 "Edit",     R3CommandGate.Excluded, R3CommandScope.Editor),
+        new(ShellCommandIds.NextOccurrenceInFile, "Next occurrence in this file",   "Edit",     R3CommandGate.Excluded, R3CommandScope.Editor),
         new(ShellCommandIds.PeekDefinition,      "Peek definition",                 "Edit",     R3CommandGate.Excluded, R3CommandScope.Editor),
         new(ShellCommandIds.GoToMatchingBlock,   "Go to matching block",            "Edit",     R3CommandGate.Excluded, R3CommandScope.Editor),
         new(ShellCommandIds.StepIntoInclude,     "Step into include",               "Edit",     R3CommandGate.Excluded, R3CommandScope.Editor),
