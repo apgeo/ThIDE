@@ -2096,4 +2096,13 @@ Acțiunea nu poate fi anulată.</value></data>
   <data name="FormatAll_Nothing_Few" xml:space="preserve"><value>Nimic de schimbat în {0} fișiere.</value></data>
   <data name="FormatAll_Nothing_Many" xml:space="preserve"><value>Nimic de schimbat în {0} de fișiere.</value></data>
   <data name="FormatAll_NothingSkipped" xml:space="preserve"><value>Alte {0} rămân neatinse pentru că nu se analizează curat (corectați-le întâi).</value></data>
+  <data name="IoErr_Denied" xml:space="preserve"><value>accesul a fost refuzat — fișierul sau dosarul poate fi doar în citire</value></data>
+  <data name="IoErr_NoFolder" xml:space="preserve"><value>dosarul nu există</value></data>
+  <data name="IoErr_NoFile" xml:space="preserve"><value>fișierul nu există</value></data>
+  <data name="IoErr_PathTooLong" xml:space="preserve"><value>calea este prea lungă</value></data>
+  <data name="IoErr_DiskFull" xml:space="preserve"><value>discul este plin</value></data>
+  <data name="IoErr_InUse" xml:space="preserve"><value>un alt program folosește fișierul</value></data>
+  <data name="IoErr_Exists" xml:space="preserve"><value>există deja un fișier cu acest nume</value></data>
+  <data name="IoErr_Other" xml:space="preserve"><value>sistemul a raportat o eroare de fișier (o găsiți la Copiază detaliile)</value></data>
+  <data name="Edit_IoFailed" xml:space="preserve"><value>Modificarea nu a putut fi scrisă pe disc: {0}.</value></data>
 </root>

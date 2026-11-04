@@ -13,10 +13,11 @@ public class NewFileViewModelTests
     private sealed class FakeEditor : IWorkspaceEditService
     {
         public EditBatch? Last;
+        public EditOutcome Result = new([], null, []);
         public Task<EditOutcome> ApplyAsync(EditBatch batch, CancellationToken ct = default)
         {
             Last = batch;
-            return Task.FromResult(new EditOutcome([], null, []));
+            return Task.FromResult(Result);
         }
     }
 
@@ -94,6 +95,30 @@ public class NewFileViewModelTests
         Assert.Equal(P("trips/trip.th"), Assert.Single(editor.Last!.Creates).FilePath);
         Assert.Contains("input trip.th", TextSplicer.Splice("survey trips\n  input a.th\nendsurvey\n", editor.Last.Edits.Single().Edits));
         Assert.Equal(P("trips/trip.th"), opened.Single().Item1);
+    }
+
+    // The dialog showed the .NET message ("Access to the path '…' is denied.") as it came: English,
+    // with the full path. It now says which file and why in the UI language, and keeps the exception
+    // for "Copy details".
+    [Fact]
+    public async Task A_write_failure_is_a_sentence_with_the_reason_and_the_exception_behind_copy_details()
+    {
+        var (vm, editor, opened) = Make();
+        var denied = new UnauthorizedAccessException($"Access to the path '{P("trips/trip.th")}' is denied.");
+        editor.Result = new EditOutcome([], denied.Message, [], Failure: denied);
+
+        var problem = await vm.CreateAsync();
+
+        Assert.NotNull(problem);
+        Assert.Contains("trip.th", problem);
+        Assert.Contains(ThIDE.Resources.Tr.Get("IoErr_Denied"), problem);
+        Assert.DoesNotContain(denied.Message, problem);
+        Assert.True(vm.HasErrorDetails);
+        Assert.Contains(denied.Message, vm.ErrorDetails);
+        Assert.Empty(opened);
+
+        vm.FileName = "other.th";            // any edit starts over without the old details
+        Assert.False(vm.HasErrorDetails);
     }
 
     [Fact]
