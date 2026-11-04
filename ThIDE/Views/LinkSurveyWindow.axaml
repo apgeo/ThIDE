@@ -81,7 +81,9 @@
                                   AutomationProperties.AutomationId="LinkSurvey.Sketches">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <CheckBox Content="{Binding Label}" IsChecked="{Binding IsChecked, Mode=TwoWay}" />
+                                <CheckBox AutomationProperties.Name="{Binding Label}" IsChecked="{Binding IsChecked, Mode=TwoWay}">
+                                    <TextBlock Text="{Binding Label}" />
+                                </CheckBox>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>

@@ -53,8 +53,11 @@ public static partial class CodeFixes
             if (Rename(lines, d) is { } rename) fixes.Add(rename);
         foreach (var d in diagnostics.Where(d => d.Span.Start.Line == lineNumber && d.Code.Value == WindowsPathSeparator))
             if (Separators(lines, d) is { } separators) fixes.Add(separators);
-        var outliers = diagnostics.Where(d => d.Span.Start.Line == lineNumber && d.Code.Value == ShotOutlier).ToList();
-        var zeroLeg = outliers.Count > 0 ? ZeroLengthLeg(text, lines, lineNumber, outliers[0]) : null;
+        // TH_SEM_012 comes from the project analysis, which the editor's own diagnostics do not hold, so
+        // a line that may be a zero-length leg is checked without it: Ctrl+. in the editor and Fix in the
+        // Diagnostics panel then offer the same fixes.
+        var outlier = diagnostics.FirstOrDefault(d => d.Span.Start.Line == lineNumber && d.Code.Value == ShotOutlier);
+        var zeroLeg = outlier is not null || HasZeroReading(lineText) ? ZeroLengthLeg(text, lines, lineNumber, outlier?.Span.FilePath) : null;
         if (zeroLeg?.Equate is { } equate) fixes.Add(equate);
         if (Terminator(lines, lineNumber) is { } end) fixes.Add(end);
         if (fw is "centreline" or "centerline" && !BodyHasKeyword(lines, lineNumber, "cs"))
@@ -70,9 +73,9 @@ public static partial class CodeFixes
     // A zero-length leg between two stations says they are the same point: `equate` says so without a
     // shot. Commenting the leg out instead drops that link, so the stations it alone connects (in this
     // file: no other leg, no equate) are named in that fix's title.
-    private static (CodeFix? Equate, string Disconnects)? ZeroLengthLeg(string text, Lines lines, int line, Diagnostic d)
+    private static (CodeFix? Equate, string Disconnects)? ZeroLengthLeg(string text, Lines lines, int line, string? filePath)
     {
-        var ast = new Therion.Syntax.ThParser().Parse(d.Span.FilePath is { Length: > 0 } p ? p : "untitled.th", text).Value;
+        var ast = new Therion.Syntax.ThParser().Parse(filePath is { Length: > 0 } p ? p : "untitled.th", text).Value;
         if (ast is null) return null;
         var model = new SemanticBinder().Bind(ast, buildOccurrences: false);
         static bool Leg(ShotSymbol s) => (s.Flags & ShotFlags.Splay) == 0 && !s.From.Equals(s.To);
@@ -93,6 +96,15 @@ public static partial class CodeFixes
         var equate = new CodeFix("Fix_Equate", [leg.From.Last, leg.To.Last], ShotOutlier,
             [new TextEdit(lines.Start(line) + indent, body.Length, body, $"equate {leg.From.Last} {leg.To.Last}")], false);
         return (equate, cut);
+    }
+
+    // Cheap test before parsing the file: a zero-length leg has a reading of 0 among its values.
+    private static bool HasZeroReading(string lineText)
+    {
+        int hash = lineText.IndexOf('#');
+        var tokens = (hash < 0 ? lineText : lineText[..hash]).Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        return tokens.Length >= 3 && tokens.Any(t =>
+            double.TryParse(t, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var v) && v == 0);
     }
 
     /// <summary>The batch-safe fix for one diagnostic, or null when there is none (or it is ambiguous).</summary>

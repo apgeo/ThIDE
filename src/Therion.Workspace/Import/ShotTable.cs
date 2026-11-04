@@ -385,9 +385,13 @@ public static partial class ShotTableReader
         if (sample.Count == 0) return ' ';
         if (sample.Count(l => l.Contains('\t')) * 2 >= sample.Count) return '\t';
         if (sample.Count(l => l.Contains(';')) * 2 >= sample.Count) return ';';
-        // Commas separate cells when every line splits into the same number (≥3) of comma cells.
-        var counts = sample.Select(l => SplitQuoted(l, ',').Count).Distinct().ToList();
-        if (counts.Count == 1 && counts[0] >= 3 && sample.All(l => !Regex.IsMatch(l, @"\d,\d+\s+\S"))) return ',';
+        // Commas separate cells when every line has one and most lines split into the same number (≥3)
+        // of comma cells: a row a value short is still a comma row, reported by the reader, not a reason
+        // to read the whole table as one column.
+        var counts = sample.Select(l => SplitQuoted(l, ',').Count).ToList();
+        int width = counts.GroupBy(c => c).OrderByDescending(g => g.Count()).ThenByDescending(g => g.Key).First().Key;
+        if (width >= 3 && counts.Count(c => c == width) * 2 >= counts.Count && counts.All(c => c >= 2)
+            && sample.All(l => !Regex.IsMatch(l, @"\d,\d+\s+\S"))) return ',';
         return ' ';
     }
 

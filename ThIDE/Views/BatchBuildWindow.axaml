@@ -27,11 +27,16 @@
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
                         <StackPanel Margin="0,0,0,6">
-                            <CheckBox Content="{Binding Label}" IsChecked="{Binding IsChecked, Mode=TwoWay}" FontWeight="SemiBold" />
+                            <!-- TextBlock content: a string would lose the first '_' of the file name to AccessText. -->
+                            <CheckBox AutomationProperties.Name="{Binding Label}" IsChecked="{Binding IsChecked, Mode=TwoWay}" FontWeight="SemiBold">
+                                <TextBlock Text="{Binding Label}" />
+                            </CheckBox>
                             <ItemsControl ItemsSource="{Binding Targets}" Margin="26,0,0,0" IsEnabled="{Binding IsChecked}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <CheckBox Content="{Binding Title}" IsChecked="{Binding IsChecked, Mode=TwoWay}" FontSize="12" />
+                                        <CheckBox AutomationProperties.Name="{Binding Title}" IsChecked="{Binding IsChecked, Mode=TwoWay}" FontSize="12">
+                                            <TextBlock Text="{Binding Title}" />
+                                        </CheckBox>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>

@@ -42,6 +42,29 @@ public class ShotTableTests
         Assert.Equal([new ShotIssue(line, ShotIssueKind.TooFewValues)], t.Issues);
     }
 
+    [Theory]
+    [InlineData(",")]
+    [InlineData(";")]
+    [InlineData("\t")]
+    [InlineData(" ")]
+    public void Every_delimiter_reads_its_cells_with_or_without_a_short_row(string sep)
+    {
+        string Row(params string[] cells) => string.Join(sep, cells) + "\n";
+        string full = Row("1", "2", "4.50", "120", "-10") + Row("2", "3", "3.20", "135", "-5") + Row("3", "4", "5.00", "90", "2");
+        string shortRow = Row("1", "2", "4.50", "120", "-10") + Row("2", "3", "3.20", "-5") + Row("3", "4", "5.00", "90", "2");
+
+        var t = ShotTableReader.Read(full);
+        Assert.Equal([("1", "2"), ("2", "3"), ("3", "4")], t.Rows.Select(r => (r.From, r.To)));
+        Assert.Empty(t.Issues);
+
+        foreach (var text in new[] { shortRow, Row("from", "to", "length", "compass", "clino") + shortRow })
+        {
+            var s = ShotTableReader.Read(text);
+            Assert.Equal([("1", "2"), ("3", "4")], s.Rows.Select(r => (r.From, r.To)));
+            Assert.Equal([new ShotIssue(s.HasHeader ? 3 : 2, ShotIssueKind.TooFewValues)], s.Issues);
+        }
+    }
+
     [Fact]
     public void Semicolons_and_decimal_commas()
     {

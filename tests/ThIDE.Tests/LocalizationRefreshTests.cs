@@ -1,7 +1,7 @@
 // The UI language reaches the user through three paths: {l:Loc}/{l:Gesture} bindings that must re-read
 // when the proxies signal a change, dock-panel titles looked up by resource key, and code-built titles
-// (Preferences navigation). These tests pin each path under ro-RO. Culture is set per thread (the
-// UiThread helper runs each body on its own thread), so parallel tests keep their own UI culture.
+// (Preferences navigation). These tests pin each path under ro-RO. The UI language is process-wide
+// (Tr.Culture), so they run in the non-parallel UiLanguage collection.
 
 using System.Globalization;
 using System.Reflection;
@@ -18,6 +18,7 @@ using Therion.Processing.Abstractions;
 
 namespace ThIDE.Tests;
 
+[Collection(UiLanguageCollection.Name)]
 public sealed class LocalizationRefreshTests
 {
     private static readonly CultureInfo Ro = new("ro-RO");
@@ -30,18 +31,14 @@ public sealed class LocalizationRefreshTests
     // What the XAML loader does with {l:Loc}/{l:Gesture}: the extension's binding, applied to a property.
     private static BindingBase Bind(MarkupExtension extension) => (BindingBase)extension.ProvideValue(null!);
 
-    private static void InCulture(CultureInfo culture, Action body) => UiThread.Run(() =>
-    {
-        CultureInfo.CurrentUICulture = culture;
-        body();
-    });
+    private static void InCulture(CultureInfo culture, Action body) =>
+        UiLanguageCollection.In(culture, () => UiThread.Run(body));
 
     [Fact]
     public void LocBinding_ReReadsAfterTheLanguageChanges()
     {
-        UiThread.Run(() =>
+        InCulture(CultureInfo.InvariantCulture, () =>
         {
-            CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
             var status = new TextBlock();
             status.Bind(TextBlock.TextProperty, Bind(new LocExtension("Status_Length")));
             // A header inside a submenu that has never been opened (the Layout submenu of View).
@@ -54,7 +51,7 @@ public sealed class LocalizationRefreshTests
             Assert.Equal("Length:", status.Text);
             Assert.Equal("Layout", layout.Header);
 
-            CultureInfo.CurrentUICulture = Ro;
+            Tr.Culture = Ro;
             LocProxy.Instance.Invalidate();
 
             Assert.Equal(RoValue("Status_Length"), status.Text);

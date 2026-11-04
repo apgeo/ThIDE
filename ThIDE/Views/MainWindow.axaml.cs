@@ -279,11 +279,11 @@ public partial class MainWindow : Window
     {
         var item = new MenuItem
         {
-            Header = (isPinned ? "📌 " : string.Empty) + Path.GetFileName(path),
             Command = vm.OpenRecentCommand,
             CommandParameter = path,
             [ToolTip.TipProperty] = path,
         };
+        item.Header = DataLabel.For(item, (isPinned ? "📌 " : string.Empty) + Path.GetFileName(path));
         // The open command runs async, so the menu doesn't auto-close on click and lingers open as
         // if nothing happened; close it explicitly once the item is invoked.
         item.Click += CloseMainMenu;
@@ -313,11 +313,11 @@ public partial class MainWindow : Window
         {
             var item = new MenuItem
             {
-                Header = RecentDirectoryLabel(dir),
                 Command = vm.OpenRecentDirectoryCommand,
                 CommandParameter = dir,
                 [ToolTip.TipProperty] = dir,
             };
+            item.Header = DataLabel.For(item, RecentDirectoryLabel(dir));
             item.Click += CloseMainMenu;   // async open → close the lingering menu explicitly
             items.Add(item);
         }
@@ -736,7 +736,8 @@ public partial class MainWindow : Window
         foreach (var task in tasks)
         {
             var id = task.Id;
-            var item = new MenuItem { Header = task.Title };
+            var item = new MenuItem();
+            item.Header = DataLabel.For(item, task.Title);
             Avalonia.Automation.AutomationProperties.SetAutomationId(item, "Menu.Tools.Tasks." + id);
             item.Click += (_, _) => _ = runner.RunAsync(id);
             menu.Items.Add(item);

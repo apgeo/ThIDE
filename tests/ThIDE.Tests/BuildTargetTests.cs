@@ -18,6 +18,7 @@ using ThIDE.ViewModels.Docking;
 
 namespace ThIDE.Tests;
 
+[Collection(UiLanguageCollection.Name)]   // one test sets the UI language
 public class BuildTargetTests : IDisposable
 {
     private readonly string _root = Directory.CreateTempSubdirectory("thide-target-").FullName;
@@ -338,14 +339,11 @@ public class BuildTargetTests : IDisposable
     public void Orphan_banner_on_a_thconfig_names_the_active_one_in_the_ui_language() => UiThread.Run(() =>
     {
         var doc = new FileDocumentViewModel(Path.Combine(_root, "old.thconfig"), "", new MeasurementsViewModel());
-        var saved = CultureInfo.CurrentUICulture;
-        try
+        UiLanguageCollection.In(new CultureInfo("ro-RO"), () =>
         {
-            CultureInfo.CurrentUICulture = new CultureInfo("ro-RO");
             doc.SetWorkspaceMembership(false, "new.thconfig");
             Assert.Equal("Nu este thconfig-ul activ (cel activ este new.thconfig).", doc.OrphanBannerText);
-        }
-        finally { CultureInfo.CurrentUICulture = saved; }
+        });
     });
 
     // ---- a thconfig passed on the command line becomes the active configuration ------------------

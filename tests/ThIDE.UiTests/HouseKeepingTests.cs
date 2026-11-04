@@ -62,11 +62,17 @@ public class HouseKeepingTests
         await app.SetTextAsync("#PasteShots.Source", "from,to,length,compass,clino\n7,8,2.5,10,-3\n");
         for (int i = 0; i < 20 && !(await app.TextOfAsync("#PasteShots.Output")).Contains("7 8 2.5"); i++) await Task.Delay(250);
         await SnapAsync(app, "#PasteShots.Window", "paste-shots-dialog.png");
+        // The caret is after endsurvey, outside any centreline: the dialog names the survey's last
+        // centreline (line 4) as the target instead of wrapping the shots at the caret.
+        Assert.Equal("Insert into: demo.th, centreline at line 4", await app.TextOfAsync("#PasteShots.Target"));
         await app.InvokeAsync("#PasteShots.Insert");
         await app.WaitAsync("#PasteShots.Window", gone: true);
 
-        var text = await app.TextOfAsync("type:TextEditor");
-        Assert.Contains("centreline\n  data normal from to length compass clino\n  7 8 2.5 10 -3\nendcentreline", text.Replace("\r\n", "\n"));
+        var text = (await app.TextOfAsync("type:TextEditor")).Replace("\r\n", "\n");
+        Assert.Contains("    2 5 9.0 300 -30\n    data normal from to length compass clino\n    7 8 2.5 10 -3\n  endcentreline\nendsurvey", text);
+        // Nothing went in at the caret: the file still has one centreline and ends with its survey.
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(text, @"^\s*centreline\b", System.Text.RegularExpressions.RegexOptions.Multiline));
+        Assert.EndsWith("endsurvey", text.TrimEnd());
     }
 
     [UiFact]

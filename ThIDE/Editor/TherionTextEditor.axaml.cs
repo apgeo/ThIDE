@@ -334,7 +334,7 @@ public partial class TherionTextEditor : UserControl
             ThIDE.Resources.LocProxy.Instance.PropertyChanged -= OnUiLanguageChanged;
 
         _colorizer = new TherionColorizer();
-        _colorizer.SetVariant(IsDark() ? TherionColorizer.Variant.Dark : TherionColorizer.Variant.Light);
+        ApplyVariant(editor);
         editor.TextArea.TextView.LineTransformers.Add(_colorizer);
 
         // Added after the syntax colorizer so the link styling wins on the hovered path.
@@ -635,8 +635,16 @@ public partial class TherionTextEditor : UserControl
 
     private void OnThemeVariantChanged(object? sender, EventArgs e)
     {
-        _colorizer?.SetVariant(IsDark() ? TherionColorizer.Variant.Dark : TherionColorizer.Variant.Light);
+        if (_editor is not null) ApplyVariant(_editor);
         _editor?.TextArea.TextView.Redraw();
+    }
+
+    // Token palette and the selection brush that keeps those colours readable inside a selection.
+    private void ApplyVariant(TextEditor editor)
+    {
+        var variant = IsDark() ? TherionColorizer.Variant.Dark : TherionColorizer.Variant.Light;
+        _colorizer?.SetVariant(variant);
+        editor.TextArea.SelectionBrush = TherionColorizer.SelectionBrush(variant);
     }
 
     // Custom syntax colors changed in Preferences (#2) — repaint with the new brushes.
@@ -905,7 +913,8 @@ public partial class TherionTextEditor : UserControl
             foreach (var fix in fixes)
             {
                 var apply = fix.Apply;
-                var item = new Avalonia.Controls.MenuItem { Header = fix.Title };
+                var item = new Avalonia.Controls.MenuItem();
+                item.Header = ThIDE.Views.DataLabel.For(item, fix.Title);   // titles quote station names
                 item.Click += (_, _) => { try { apply(); } catch { /* ignore failed fix */ } };
                 flyout.Items.Add(item);
             }
@@ -1411,12 +1420,12 @@ public partial class TherionTextEditor : UserControl
             int target = path[i].Line;
             var btn = new Button
             {
-                Content = path[i].Label,
                 Padding = new Thickness(5, 1),
                 Background = Brushes.Transparent,
                 BorderThickness = new Thickness(0),
                 FontSize = 11,
             };
+            btn.Content = ThIDE.Views.DataLabel.For(btn, path[i].Label);   // names keep their underscores
             btn.Click += (_, _) => ScrollTo(target, 1);
             panel.Children.Add(btn);
         }
