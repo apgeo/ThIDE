@@ -17,14 +17,24 @@ public static class TherionIdentifiers
     /// keyword/ext-keyword, or <c>null</c> if every character is legal. Unicode letters and
     /// digits are always accepted; the punctuation allow-list is the ext-keyword set.
     /// </summary>
-    public static char? FirstIllegalChar(string? id)
+    public static char? FirstIllegalChar(string? id) => FirstIllegal(id) is { } text ? text[0] : null;
+
+    /// <summary>
+    /// Like <see cref="FirstIllegalChar"/>, but a character outside the Basic Multilingual Plane (an
+    /// emoji, say, which is two UTF-16 units) comes back whole, so it can be quoted in a message:
+    /// half of a surrogate pair is not text.
+    /// </summary>
+    public static string? FirstIllegal(string? id)
     {
         if (string.IsNullOrEmpty(id)) return null;
-        foreach (var c in id)
+        for (int i = 0; i < id.Length; i++)
         {
+            var c = id[i];
             if (char.IsLetterOrDigit(c)) continue;            // includes Unicode letters/marks
             if (IsExtKeywordPunctuation(c)) continue;
-            return c;
+            return char.IsHighSurrogate(c) && i + 1 < id.Length && char.IsLowSurrogate(id[i + 1])
+                ? id.Substring(i, 2)
+                : c.ToString();
         }
         return null;
     }

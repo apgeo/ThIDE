@@ -132,7 +132,7 @@ public sealed class Th2Parser
     {
         string id = line.Tokens.Length > 1 ? line.Tokens[1].Text : string.Empty;
         string optionsRaw = JoinFrom(line, 2);
-        if (line.Tokens.Length > 1 && TherionIdentifiers.FirstIllegalChar(id) is { } badId)
+        if (line.Tokens.Length > 1 && TherionIdentifiers.FirstIllegal(id) is { } badId)
             diags.Add(Diagnostic.Create(
                 DiagnosticCodes.IllegalIdentifier,
                 options.Mode == ParserMode.Strict ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,

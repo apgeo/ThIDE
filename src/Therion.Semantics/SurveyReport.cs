@@ -29,7 +29,7 @@ public static class SurveyReport
         sb.Append("th{background:#f4f4f4}</style>\n</head><body>\n");
 
         sb.Append("<h1>").Append(Esc(name)).Append("</h1>\n");
-        sb.Append("<p class=\"meta\">Generated ").Append(DateTime.Now.ToString("yyyy-MM-dd HH:mm")).Append("</p>\n");
+        sb.Append("<p class=\"meta\">Generated ").Append(DateTime.Now.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)).Append("</p>\n");
 
         // Summary.
         sb.Append("<h2>Summary</h2>\n");

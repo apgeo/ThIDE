@@ -277,7 +277,7 @@ public sealed class ThParser
         ImmutableArray<Diagnostic>.Builder diagnostics)
     {
         var (name, rest) = HeadAndRest(line, fromIndex: 1);
-        if (line.Tokens.Length > 1 && TherionIdentifiers.FirstIllegalChar(name) is { } bad)
+        if (line.Tokens.Length > 1 && TherionIdentifiers.FirstIllegal(name) is { } bad)
             diagnostics.Add(Diagnostic.Create(
                 DiagnosticCodes.IllegalIdentifier,
                 options.Mode == ParserMode.Strict ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
@@ -327,7 +327,7 @@ public sealed class ThParser
         ParserOptions options)
     {
         var (id, opts) = HeadAndRest(line, fromIndex: 1);
-        if (line.Tokens.Length > 1 && TherionIdentifiers.FirstIllegalChar(id) is { } badId)
+        if (line.Tokens.Length > 1 && TherionIdentifiers.FirstIllegal(id) is { } badId)
             diagnostics.Add(Diagnostic.Create(
                 DiagnosticCodes.IllegalIdentifier,
                 options.Mode == ParserMode.Strict ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,

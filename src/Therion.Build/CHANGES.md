@@ -1,5 +1,13 @@
 # Therion.Build — changes for consumers
 
+## 2026-11 (round 5)
+
+### Behaviour changes
+- `ProblemMatchers.Match` with the `file-line` matcher no longer throws on a line or column number that
+  does not fit an `int` or that is written with non-ASCII digits (it threw `OverflowException` or
+  `FormatException`). Only ASCII digits make a position now; a position of 0 or one too large to
+  read is reported as line 1 / column 1, as `HeuristicTherionOutputParser` already did. Migration: none.
+
 ## 2026-11 (later) — programs started by full path on Windows
 
 ### Behaviour changes

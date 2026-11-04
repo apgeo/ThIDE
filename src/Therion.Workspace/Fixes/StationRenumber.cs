@@ -29,7 +29,7 @@ public sealed record RenumberRule(string OldPrefix, string NewPrefix, int Offset
         var rest = name[OldPrefix.Length..];
         if (Offset != 0)
         {
-            var m = Regex.Match(rest, @"^(\d+)(.*)$", RegexOptions.CultureInvariant);
+            var m = Regex.Match(rest, @"^([0-9]+)(.*)$", RegexOptions.CultureInvariant);
             if (!m.Success) return null;
             var digits = m.Groups[1].Value;
             var n = BigInteger.Parse(digits, CultureInfo.InvariantCulture) + Offset;

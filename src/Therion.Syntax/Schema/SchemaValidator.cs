@@ -270,7 +270,7 @@ public static class SchemaValidator
 
             case SchemaValueKind.Identifier:
                 if (!options.IsCategoryEnabled(ValidationCategories.Identifiers)) return;
-                if (TherionIdentifiers.FirstIllegalChar(token) is { } bad)
+                if (TherionIdentifiers.FirstIllegal(token) is { } bad)
                 {
                     diagnostics.Add(Diagnostic.Create(
                         DiagnosticCodes.IllegalIdentifier, DiagnosticSeverity.Warning,

@@ -91,6 +91,10 @@ public sealed class CalculatorTools
 
             var utm = new UtmCoordinate(z, north, e, n);
             var geographic = CoordinateConverter.UtmToLatLon(utm);
+            // An easting or northing far outside any UTM zone unprojects to infinity or NaN, which JSON cannot carry.
+            if (!double.IsFinite(geographic.Lat) || !double.IsFinite(geographic.Lon))
+                return ToolResult<CoordinateConversion>.Failure(ToolErrorCodes.InvalidArgument,
+                    "The easting and northing are too far from the zone to be converted.");
             return ToolResult<CoordinateConversion>.Success(new CoordinateConversion(
                 geographic.Lat, geographic.Lon, utm.Zone, utm.ZoneLabel, utm.Easting, utm.Northing));
         }
@@ -149,6 +153,8 @@ public sealed class CalculatorTools
     }
 
     private static ToolResult<UnitConversion> Converted(double value, string from, string to, double result) =>
-        ToolResult<UnitConversion>.Success(new UnitConversion(value, from, to, result));
+        double.IsFinite(value) && double.IsFinite(result)
+            ? ToolResult<UnitConversion>.Success(new UnitConversion(value, from, to, result))
+            : ToolResult<UnitConversion>.Failure(ToolErrorCodes.InvalidArgument, "The value, or the result, is too large to be a number.");
 
 }

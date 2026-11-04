@@ -53,6 +53,10 @@ and what to do. Entries also cover behaviour that reaches you through `Therion.S
 - **`units dimensions …` is no longer reported as an unknown quantity** (`TH0040`, from
   `Therion.Syntax`). Therion accepts it, and the Compass and shot-table importers write
   `units length dimensions feet`, so every imported file had a false warning. Migration: none.
+- `RenumberRule.Apply` (and so `StationRenumber.Plan`) and `SnippetVariables.NextStation` no longer throw
+  `FormatException` for a station name that ends in, or is, a number written in non-ASCII digits (Arabic-Indic
+  or Persian digits, for instance). Only ASCII digits count as the number: such a station is left alone by a
+  renumbering with an offset, and `NextStation` returns null for it. Migration: none.
 
 ### Additions
 - **`ThconfigExportEditor.Locate(text, target)`** finds an `ExportTargetInfo` listed from an earlier

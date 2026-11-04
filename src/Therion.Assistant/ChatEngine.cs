@@ -48,10 +48,10 @@ public sealed class ChatEngine(HttpClient http, ChatEngineOptions options)
             if (message is null)
                 return Finish("(no response from the endpoint)", calls, turns, tokens, callbacks);
 
-            var toolCalls = message["tool_calls"] as JsonArray;
+            var toolCalls = Child(message, "tool_calls") as JsonArray;
             if (toolCalls is null || toolCalls.Count == 0)
             {
-                var text = (string?)message["content"] ?? "";
+                var text = StringOf(Child(message, "content")) ?? "";
                 // Coder models often stop calling tools but return no prose. Force one tool-free turn
                 // so the user gets a written answer instead of a blank bubble (AI-08.1).
                 if (options.SynthesizeFinalAnswer && string.IsNullOrWhiteSpace(text))
@@ -76,8 +76,8 @@ public sealed class ChatEngine(HttpClient http, ChatEngineOptions options)
             foreach (var call in toolCalls.OfType<JsonObject>())
                 pending.Enqueue((
                     TextOf(call["id"]) ?? "",
-                    TextOf(call["function"]?["name"]) ?? "",
-                    TextOf(call["function"]?["arguments"]) ?? "{}"));
+                    TextOf(Child(Child(call, "function"), "name")) ?? "",
+                    TextOf(Child(Child(call, "function"), "arguments")) ?? "{}"));
 
             try
             {
@@ -135,7 +135,7 @@ public sealed class ChatEngine(HttpClient http, ChatEngineOptions options)
             + "JSON or repeat long lists — the detailed results are already shown to the user."));
 
         var (message, tokens) = await RequestAsync(messages, toolSpec, ct, "none", callbacks);
-        var text = (string?)message?["content"] ?? "";
+        var text = StringOf(Child(message, "content")) ?? "";
         return (text, tokens);
     }
 
@@ -272,7 +272,7 @@ public sealed class ChatEngine(HttpClient http, ChatEngineOptions options)
             return await StreamAsync(messages, tools, ct, toolChoice, callbacks);
 
         var response = await CompleteAsync(messages, tools, ct, toolChoice);
-        return (FirstChoice(response)?["message"], (int?)response?["usage"]?["total_tokens"] ?? 0);
+        return (Child(FirstChoice(response), "message"), IntOf(Child(Child(response, "usage"), "total_tokens")) ?? 0);
     }
 
     /// <summary>
@@ -280,7 +280,17 @@ public sealed class ChatEngine(HttpClient http, ChatEngineOptions options)
     /// carries an empty array, which <c>?[0]</c> would throw on.
     /// </summary>
     private static JsonNode? FirstChoice(JsonNode? response) =>
-        response?["choices"] is JsonArray { Count: > 0 } choices ? choices[0] : null;
+        Child(response, "choices") is JsonArray { Count: > 0 } choices ? choices[0] : null;
+
+    // The reads below take a reply from a server we do not control: a field of another shape than the
+    // protocol says (a number where text goes, a string where an object goes) is absent, not an exception.
+    private static JsonNode? Child(JsonNode? node, string key) => node is JsonObject o ? o[key] : null;
+
+    private static string? StringOf(JsonNode? node) =>
+        node is JsonValue value && value.TryGetValue<string>(out var text) ? text : null;
+
+    private static int? IntOf(JsonNode? node) =>
+        node is JsonValue value && value.TryGetValue<int>(out var number) ? number : null;
 
     /// <summary>A string for a string node, the JSON text for any other node (a number, an object).</summary>
     private static string? TextOf(JsonNode? node) =>
@@ -343,26 +353,26 @@ public sealed class ChatEngine(HttpClient http, ChatEngineOptions options)
             try { chunk = JsonNode.Parse(data); }
             catch (JsonException) { continue; }
 
-            tokens = (int?)chunk?["usage"]?["total_tokens"] ?? tokens;
+            tokens = IntOf(Child(Child(chunk, "usage"), "total_tokens")) ?? tokens;
 
-            var delta = FirstChoice(chunk)?["delta"];
+            var delta = Child(FirstChoice(chunk), "delta");
             if (delta is null) continue;
 
-            if ((string?)delta["content"] is { Length: > 0 } piece)
+            if (StringOf(Child(delta, "content")) is { Length: > 0 } piece)
             {
                 content.Append(piece);
                 callbacks?.OnUpdate?.Invoke(new AssistantDelta(piece, content.ToString()));
             }
 
-            if (delta["tool_calls"] is JsonArray deltaCalls)
+            if (Child(delta, "tool_calls") is JsonArray deltaCalls)
                 foreach (var tc in deltaCalls.OfType<JsonObject>())
                 {
-                    int index = (int?)tc["index"] ?? 0;
+                    int index = IntOf(tc["index"]) ?? 0;
                     if (!toolCalls.TryGetValue(index, out var acc))
                         acc = ("", "", new StringBuilder());
-                    if ((string?)tc["id"] is { Length: > 0 } id) acc.Id = id;
-                    if ((string?)tc["function"]?["name"] is { Length: > 0 } name) acc.Name = name;
-                    if ((string?)tc["function"]?["arguments"] is { } args) acc.Args.Append(args);
+                    if (StringOf(tc["id"]) is { Length: > 0 } id) acc.Id = id;
+                    if (StringOf(Child(Child(tc, "function"), "name")) is { Length: > 0 } name) acc.Name = name;
+                    if (StringOf(Child(Child(tc, "function"), "arguments")) is { } args) acc.Args.Append(args);
                     toolCalls[index] = acc;
                 }
         }
