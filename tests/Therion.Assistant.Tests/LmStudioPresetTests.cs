@@ -22,6 +22,10 @@ public class LmStudioPresetTests
         Assert.Contains("therion-mcp call", SkillPack.BuiltIn);
     }
 
+    /// <summary>A Windows checkout gives the embedded file CRLF; the pack is the same on every OS.</summary>
+    [Fact]
+    public void Built_in_pack_has_unix_line_endings() => Assert.DoesNotContain('\r', SkillPack.BuiltIn);
+
     /// <summary>The preset shipped in docs/ is generated from the pack; regenerate it when the pack changes.</summary>
     [Fact]
     public void Shipped_preset_matches_the_pack()

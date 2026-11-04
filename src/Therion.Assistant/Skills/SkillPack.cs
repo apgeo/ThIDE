@@ -18,7 +18,9 @@ public static class SkillPack
     private static string ReadBuiltIn()
     {
         using var stream = typeof(SkillPack).Assembly.GetManifestResourceStream("Therion.Assistant.Skills.thide-skills.md");
-        return stream is null ? "" : new StreamReader(stream, Encoding.UTF8).ReadToEnd();
+        // The embedded file has whatever line endings the checkout gave it (CRLF on Windows): the
+        // pack, and the preset generated from it, must not depend on where it was built.
+        return stream is null ? "" : new StreamReader(stream, Encoding.UTF8).ReadToEnd().Replace("\r\n", "\n");
     }
 
     /// <summary>The pack for a session: built-in, then the user's and the project's notes (null = absent).</summary>
