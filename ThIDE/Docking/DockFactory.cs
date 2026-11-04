@@ -1487,7 +1487,7 @@ public sealed class DockFactory : Factory
 
         HostWindowLocator = new Dictionary<string, Func<IHostWindow?>>
         {
-            [nameof(IDockWindow)] = () => new HostWindow(),
+            [nameof(IDockWindow)] = () => new OwnedHostWindow(),
         };
 
         base.InitLayout(layout);
