@@ -12,7 +12,7 @@ namespace Therion.Semantics.Tests;
 public class SemanticBinderEdgeTests
 {
     private static SemanticModel Bind(string text, bool buildOccurrences = true) =>
-        new SemanticBinder().Bind(new ThParser().Parse("/p/edge.th", text).Value, buildOccurrences);
+        new SemanticBinder().Bind(new ThParser().Parse("/p/edge.th", text).Value!, buildOccurrences);
 
     private static string Survey(params string[] lines) =>
         "survey s\n  centreline\n" + string.Concat(lines.Select(l => "    " + l + "\n")) +
@@ -161,7 +161,7 @@ public class SemanticBinderEdgeTests
     public void Scrap_id_declared_twice_keeps_the_first_declaration()
     {
         var th2 = new Th2Parser().Parse("/p/edge.th2", "scrap s1\nendscrap\nscrap s1 -scale [0 0 1 1 0 0 1 1 m]\nendscrap\nscrap s2\nendscrap\n");
-        var model = new SemanticBinder().Bind(th2.Value);
+        var model = new SemanticBinder().Bind(th2.Value!);
         Assert.Equal(new[] { "s1", "s2" }, model.Scraps.Keys.OrderBy(k => k, System.StringComparer.Ordinal));
         Assert.Equal(1, model.Scraps["s1"].DeclarationSpan.Start.Line);
         Assert.Equal(5, model.Scraps["s2"].DeclarationSpan.Start.Line);

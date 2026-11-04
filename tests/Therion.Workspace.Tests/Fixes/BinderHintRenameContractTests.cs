@@ -22,7 +22,7 @@ public class BinderHintRenameContractTests
         """;
 
     private static SemanticModel Bind(string text) =>
-        new SemanticBinder().Bind(new ThParser().Parse("/p/c.th", text).Value);
+        new SemanticBinder().Bind(new ThParser().Parse("/p/c.th", text).Value!);
 
     [Fact]
     public void Binder_suggestion_drives_the_batch_safe_rename_fix()
