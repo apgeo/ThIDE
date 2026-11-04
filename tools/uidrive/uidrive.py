@@ -9,7 +9,7 @@ own desktop or settings.
 It is both a library (used by the end-to-end tests in tests/e2e-linux) and a CLI meant for people
 and coding agents:
 
-    uidrive.py start [--project demo.thconfig] [--automation]   # boots display + app, waits for the window
+    uidrive.py start [--project demo.thconfig] [--automation] [--fresh]   # boots display + app, waits for the window
     uidrive.py tree [SELECTOR] [--depth N] [--raw]               # compact accessibility tree
     uidrive.py find SELECTOR                                     # list matches with state and bounds
     uidrive.py click SELECTOR [--mouse] [--double] [--right]     # AT-SPI action, or a real mouse click
@@ -46,6 +46,8 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 DEFAULT_SIZE = "1600x1000"
 DEFAULT_AUTOMATION_PORT = 47800
+# Sub-folders of a session's profile: the app sees them as its XDG base directories and as $HOME.
+PROFILE_DIRS = ("config", "data", "cache", "state", "home")
 RUNTIME_ROOT = Path(os.environ.get("XDG_RUNTIME_DIR") or "/tmp") / "thide-uidrive"
 
 # Roles that are pure layout in Avalonia's tree; compact output folds them away.
@@ -344,6 +346,25 @@ def default_app_dll() -> Path:
     return max(found, key=lambda p: p.stat().st_mtime)
 
 
+def profile_env(prof: Path) -> dict:
+    """Environment that confines a process to the throw-away profile `prof`.
+
+    The four XDG base directories cover ThIDE's own settings and everything GTK keeps under them
+    (the file chooser's recently-used.xbel lives in XDG_DATA_HOME, gtk-3.0/bookmarks in
+    XDG_CONFIG_HOME). HOME is redirected as well, because GTK and GLib fall back to ~/.gtk-bookmarks,
+    ~/.recently-used.xbel and ~/Desktop, ~/Documents (the chooser's places) when the XDG files are
+    missing. .NET and D-Bus need nothing from the real home: the bus address is passed explicitly.
+    """
+    return {"HOME": str(prof / "home"), "XDG_CONFIG_HOME": str(prof / "config"),
+            "XDG_DATA_HOME": str(prof / "data"), "XDG_CACHE_HOME": str(prof / "cache"),
+            "XDG_STATE_HOME": str(prof / "state")}
+
+
+def make_profile(prof: Path) -> None:
+    for sub in PROFILE_DIRS:
+        (prof / sub).mkdir(parents=True, exist_ok=True)
+
+
 class Session:
     """One isolated desktop: a virtual display, a private session bus, a profile dir and the app.
 
@@ -369,9 +390,7 @@ class Session:
     def env(self) -> dict:
         e = dict(os.environ)
         e.update(DISPLAY=self.state["display"], DBUS_SESSION_BUS_ADDRESS=self.state["dbus"])
-        prof = Path(self.state["profile"])
-        e.update(XDG_CONFIG_HOME=str(prof / "config"), XDG_DATA_HOME=str(prof / "data"),
-                 XDG_CACHE_HOME=str(prof / "cache"))
+        e.update(profile_env(Path(self.state["profile"])))
         e.pop("NO_AT_BRIDGE", None)
         return e
 
@@ -381,7 +400,8 @@ class Session:
     def app_alive(self) -> bool:
         return bool(self.state) and _alive(self.state.get("app_pid"))
 
-    def start_desktop(self, size: str = DEFAULT_SIZE, wm: bool = True, profile: Path | None = None) -> None:
+    def start_desktop(self, size: str = DEFAULT_SIZE, wm: bool = True, profile: Path | None = None,
+                      fresh: bool = False) -> None:
         if self.desktop_alive():
             raise UiError(f"session {self.name!r} is already running (display {self.state['display']}); "
                           "use `stop` first or another --session name")
@@ -391,9 +411,12 @@ class Session:
         if self.dir.exists():
             shutil.rmtree(self.dir / "shots", ignore_errors=True)
         self.dir.mkdir(parents=True, exist_ok=True)
+        if fresh and profile is not None:
+            raise UiError("fresh only wipes the session's own profile; delete the --profile folder yourself")
         prof = profile or (self.dir / "profile")
-        for sub in ("config", "data", "cache"):
-            (prof / sub).mkdir(parents=True, exist_ok=True)
+        if fresh:  # the profile of an earlier run with this session name (tabs, recent files, crash flags)
+            shutil.rmtree(prof, ignore_errors=True)
+        make_profile(prof)
 
         n = _free_display()
         display = f":{n}"
@@ -409,7 +432,9 @@ class Session:
         out = subprocess.run(
             ["dbus-daemon", "--session", "--fork", "--print-address=1", "--print-pid=1"],
             capture_output=True, text=True, check=True, start_new_session=True,
-            env={**os.environ, "DISPLAY": display}).stdout.split()
+            # Services the bus starts on demand (the xdg-desktop-portal that shows GTK file choosers,
+            # dconf, gvfs) inherit the bus daemon's environment, not the app's: give it the profile too.
+            env={**os.environ, **profile_env(prof), "DISPLAY": display}).stdout.split()
         self.state = {"name": self.name, "display": display, "size": size, "xvfb_pid": xvfb.pid,
                       "dbus": out[0], "dbus_pid": int(out[1]), "profile": str(prof), "wm_pid": None,
                       "app_pid": None}
@@ -430,10 +455,10 @@ class Session:
         if self.app_alive():
             raise UiError("the app is already running in this session; `restart` or `stop` it")
         if profile is not None:  # e.g. a fresh settings/layout dir per test
-            for sub in ("config", "data", "cache"):
-                (profile / sub).mkdir(parents=True, exist_ok=True)
+            make_profile(profile)
             self.state["profile"] = str(profile)
         dll = dll or default_app_dll()
+        make_profile(Path(self.state["profile"]))  # a session started before the state/home folders existed
         env = self.env
         env.update(extra_env or {})
         if automation:
@@ -756,7 +781,10 @@ def _cli(argv: list[str]) -> int:
     s.add_argument("--cwd", default=None, help="working directory for the app (default: the project file's dir)")
     s.add_argument("--size", default=DEFAULT_SIZE)
     s.add_argument("--no-wm", action="store_true", help="don't run a window manager")
-    s.add_argument("--profile", default=None, help="reuse this profile dir (settings/layout) instead of a fresh one")
+    s.add_argument("--profile", default=None, help="use this profile dir (settings/layout) instead of the session's own")
+    s.add_argument("--fresh", action="store_true",
+                   help="wipe the session's own profile first. Without it a session name keeps its profile "
+                        "across stop/start (tabs, recent files and an unclean-shutdown flag come back)")
     s.add_argument("--dll", default=None, help="ThIDE.dll to run (default: newest Debug/Release build)")
     s.add_argument("--build", action="store_true", help="dotnet build the app first")
     s.add_argument("--automation", action="store_true", help="also enable the in-app UI-automation MCP server")
@@ -832,7 +860,8 @@ def _cli(argv: list[str]) -> int:
         files = [str(Path(p).resolve()) for p in a.project]
         cwd = Path(a.cwd).resolve() if a.cwd else (Path(files[0]).parent if files else Path.cwd())
         args = files
-        sess.start_desktop(size=a.size, wm=not a.no_wm, profile=Path(a.profile).resolve() if a.profile else None)
+        sess.start_desktop(size=a.size, wm=not a.no_wm, profile=Path(a.profile).resolve() if a.profile else None,
+                           fresh=a.fresh)
         try:
             port = a.automation_port or (DEFAULT_AUTOMATION_PORT if a.session == "default" else None)
             sess.launch_app(args, cwd=cwd, dll=Path(a.dll) if a.dll else None, automation=a.automation,

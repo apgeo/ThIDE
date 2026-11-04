@@ -72,6 +72,24 @@ $U log                                    # app stdout/stderr
 $U stop
 ```
 
+### Isolation and fresh starts
+
+Each session runs the app, the window manager and the session bus inside a throw-away profile
+(`<runtime>/thide-uidrive/<session>/profile`, normally under `/run/user/<uid>`). `HOME` and the four
+XDG base directories (`XDG_CONFIG_HOME`, `XDG_DATA_HOME`, `XDG_CACHE_HOME`, `XDG_STATE_HOME`) point into
+it, so ThIDE's settings, GTK's `recently-used.xbel` and `gtk-3.0/bookmarks`, and the folders a file
+chooser lists (Desktop, Documents) all come from the profile and never from your own home. `HOME` is
+redirected because GTK falls back to `~/.gtk-bookmarks` and `~/.recently-used.xbel`, and the bus daemon
+gets the same environment because the portal that shows GTK file choosers is started by the bus and
+inherits the daemon's environment, not the app's. `tests/e2e-linux/test_profile_isolation.py` checks
+this by asking GLib and GTK which paths they would use under that environment (it never opens a file of
+your real home).
+
+A session name keeps its profile across `stop`/`start`: tabs, recent files and the "unclean shutdown"
+flag of the earlier run come back. Pass `start --fresh` to wipe the session's own profile first (it is
+refused together with `--profile`, which names a folder you own), or use a new session name. Delete
+`<runtime>/thide-uidrive/<session>` when you are done with a session that touched private data.
+
 The session (display, bus, profile, app) survives the CLI exiting, so an agent can issue one
 command per step and reconnect after a disconnect. Use `--session NAME` to run several side by side.
 
