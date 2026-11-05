@@ -13,7 +13,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Media;
-using Avalonia.Media.Immutable;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Therion.Workspace;
@@ -40,17 +39,12 @@ public enum TimeColumnMode
     SinceStart,
 }
 
+/// <summary>The text colour role of a compiler-output row; the view maps it to a theme resource.</summary>
+public enum OutputTone { Text, Command, Warning, Error, Success }
+
 /// <summary>One compiler-output row: raw text + classification + timing for the time column.</summary>
 public sealed class CompilerOutputRow : CommunityToolkit.Mvvm.ComponentModel.ObservableObject
 {
-    private static readonly IBrush ErrorBrush   = new ImmutableSolidColorBrush(Color.FromRgb(0xC6, 0x28, 0x28));
-    private static readonly IBrush WarnBrush     = new ImmutableSolidColorBrush(Color.FromRgb(0x8D, 0x6E, 0x00));
-    private static readonly IBrush CommandBrush  = new ImmutableSolidColorBrush(Color.FromRgb(0x55, 0x55, 0x55));
-    private static readonly IBrush SuccessBrush  = new ImmutableSolidColorBrush(Color.FromRgb(0x2E, 0x7D, 0x32));
-    private static readonly IBrush NormalBrush   = new ImmutableSolidColorBrush(Color.FromRgb(0x20, 0x20, 0x20));
-    private static readonly IBrush InfoBrush     = new ImmutableSolidColorBrush(Color.FromRgb(0x75, 0x75, 0x75));
-    private static readonly IBrush TimeBrush     = new ImmutableSolidColorBrush(Color.FromRgb(0x90, 0x90, 0x90));
-
     public string Text { get; }
     public string Severity { get; }
     public SourceSpan? Span { get; }
@@ -69,7 +63,6 @@ public sealed class CompilerOutputRow : CommunityToolkit.Mvvm.ComponentModel.Obs
     public bool IsWarning { get; }
     public bool IsInfo { get; }
     public bool IsSuccess { get; }
-    public IBrush TimeBrushValue => TimeBrush;
 
     // ---- severity icon (#4): info=gray, warning=amber, error=red ----
     // Per-glyph visibility flags so the cell can show the right colored icon without a
@@ -80,8 +73,13 @@ public sealed class CompilerOutputRow : CommunityToolkit.Mvvm.ComponentModel.Obs
     public bool ShowWarnIcon     => Kind == OutputRowKind.Normal && IsWarning;
     public bool ShowInfoIcon     => Kind == OutputRowKind.Normal && IsInfo;
 
-    /// <summary>Foreground for the text column: red for errors, amber for warnings, etc.</summary>
-    public IBrush TextBrush { get; }
+    /// <summary>Colour role of the text column: red for errors, amber for warnings, etc.</summary>
+    public OutputTone Tone { get; }
+    // Per-tone flags for the view's style classes (plain text is the unclassed default).
+    public bool IsCommandTone => Tone == OutputTone.Command;
+    public bool IsWarningTone => Tone == OutputTone.Warning;
+    public bool IsErrorTone => Tone == OutputTone.Error;
+    public bool IsSuccessTone => Tone == OutputTone.Success;
     public Avalonia.Media.FontWeight Weight =>
         Kind is OutputRowKind.Command or OutputRowKind.Summary ? FontWeight.SemiBold : FontWeight.Normal;
 
@@ -136,16 +134,20 @@ public sealed class CompilerOutputRow : CommunityToolkit.Mvvm.ComponentModel.Obs
         // as an error/warning in either output view (#4).
         if ((err || warn) && text.Contains("average loop error", StringComparison.OrdinalIgnoreCase))
         { err = false; warn = false; }
+        // A blank line (Therion's own spacing; on stderr it is classified as a warning) has no message to
+        // flag: it stays a blank row, with no severity glyph, so both views keep the output verbatim.
+        bool blank = string.IsNullOrWhiteSpace(text);
+        if (blank && kind == OutputRowKind.Normal) { err = false; warn = false; }
 
         IsError = err;
         IsWarning = warn;
         IsSuccess = success;
-        IsInfo = kind == OutputRowKind.Normal && !err && !warn;
-        TextBrush = kind switch
+        IsInfo = kind == OutputRowKind.Normal && !err && !warn && !blank;
+        Tone = kind switch
         {
-            OutputRowKind.Command => CommandBrush,
-            OutputRowKind.Summary => success ? SuccessBrush : ErrorBrush,
-            _ => IsError ? ErrorBrush : IsWarning ? WarnBrush : NormalBrush,
+            OutputRowKind.Command => OutputTone.Command,
+            OutputRowKind.Summary => success ? OutputTone.Success : OutputTone.Error,
+            _ => IsError ? OutputTone.Error : IsWarning ? OutputTone.Warning : OutputTone.Text,
         };
         ApplyTimeMode(mode);
     }

@@ -6,6 +6,27 @@
              x:Class="ThIDE.Views.Docking.CompilerOutputToolView"
              AutomationProperties.AutomationId="CompilerOutput.View"
              x:DataType="vm:CompilerOutputToolViewModel">
+    <!-- Text colours are theme resources (CompilerOutputPalette, added in code), picked per row by class. -->
+    <UserControl.Styles>
+        <Style Selector="TextBlock.outTime">
+            <Setter Property="Foreground" Value="{DynamicResource CompilerOutput.Time}" />
+        </Style>
+        <Style Selector="TextBlock.outText">
+            <Setter Property="Foreground" Value="{DynamicResource CompilerOutput.Text}" />
+        </Style>
+        <Style Selector="TextBlock.outText.command">
+            <Setter Property="Foreground" Value="{DynamicResource CompilerOutput.Command}" />
+        </Style>
+        <Style Selector="TextBlock.outText.warning">
+            <Setter Property="Foreground" Value="{DynamicResource CompilerOutput.Warning}" />
+        </Style>
+        <Style Selector="TextBlock.outText.error">
+            <Setter Property="Foreground" Value="{DynamicResource CompilerOutput.Error}" />
+        </Style>
+        <Style Selector="TextBlock.outText.success">
+            <Setter Property="Foreground" Value="{DynamicResource CompilerOutput.Success}" />
+        </Style>
+    </UserControl.Styles>
     <Grid>
     <TabControl AutomationProperties.AutomationId="CompilerOutput.Tabs">
         <!-- Parsed view: per-line classification with time + severity icon + colored text. -->
@@ -35,7 +56,7 @@
                     <DataGridTemplateColumn Width="86">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding TimeDisplay}" Foreground="{Binding TimeBrushValue}"
+                                <TextBlock Classes="outTime" Text="{Binding TimeDisplay}"
                                            VerticalAlignment="Center" Margin="4,0" TextAlignment="Right" />
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
@@ -63,7 +84,8 @@
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="2,0,12,0">
-                                    <TextBlock Text="{Binding MessagePrefix}" Foreground="{Binding TextBrush}"
+                                    <TextBlock Text="{Binding MessagePrefix}" Classes="outText" Classes.command="{Binding IsCommandTone}" Classes.warning="{Binding IsWarningTone}"
+                                               Classes.error="{Binding IsErrorTone}" Classes.success="{Binding IsSuccessTone}"
                                                FontWeight="{Binding Weight}" FontStretch="Condensed" />
                                     <TextBlock Text="{Binding MessagePath}" Foreground="#3B82F6" FontStretch="Condensed"
                                                TextDecorations="Underline" Cursor="Hand" IsVisible="{Binding HasLink}"
@@ -82,7 +104,8 @@
                                             </ContextMenu>
                                         </TextBlock.ContextMenu>
                                     </TextBlock>
-                                    <TextBlock Text="{Binding MessageSuffix}" Foreground="{Binding TextBrush}"
+                                    <TextBlock Text="{Binding MessageSuffix}" Classes="outText" Classes.command="{Binding IsCommandTone}" Classes.warning="{Binding IsWarningTone}"
+                                               Classes.error="{Binding IsErrorTone}" Classes.success="{Binding IsSuccessTone}"
                                                FontWeight="{Binding Weight}" FontStretch="Condensed" />
                                 </StackPanel>
                             </DataTemplate>

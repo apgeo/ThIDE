@@ -763,6 +763,8 @@
   <data name="M3D_HudTip" xml:space="preserve"><value>CaveView heads-up display</value></data>
   <data name="M3D_Menu" xml:space="preserve"><value>Menu</value></data>
   <data name="M3D_MenuTip" xml:space="preserve"><value>CaveView's own sidebar menu</value></data>
+  <data name="M3D_More" xml:space="preserve"><value>⋯</value></data>
+  <data name="M3D_MoreTip" xml:space="preserve"><value>More viewer controls</value></data>
   <data name="M3D_ColorBy" xml:space="preserve"><value>Color by:</value></data>
   <data name="M3D_Height" xml:space="preserve"><value>Height</value></data>
   <data name="M3D_Inclination" xml:space="preserve"><value>Inclination</value></data>

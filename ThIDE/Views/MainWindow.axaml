@@ -5,6 +5,7 @@
         xmlns:dock="using:Dock.Avalonia.Controls"
         xmlns:conv="using:ThIDE.Converters"
         xmlns:qp="using:ThIDE.Views.QuickPick"
+        xmlns:views="using:ThIDE.Views"
         xmlns:l="using:ThIDE.Resources"
         xmlns:ac="using:Avalonia.Data.Converters"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -859,8 +860,9 @@
                               IsVisible="{Binding HasStatusPath}"
                               ItemsSource="{Binding StatusPathCrumbs}"
                               MaxWidth="{Binding $parent[Window].Bounds.Width, Converter={x:Static conv:RatioConverter.Instance}, ConverterParameter=0.5}">
+                    <!-- Too narrow: the root-side folders give way to a leading "…", the file name stays whole. -->
                     <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                        <ItemsPanelTemplate><views:TailFirstPanel /></ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
@@ -884,7 +886,8 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
 
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="0"
+                <!-- The left margin keeps the metrics apart from the path crumb ("demo.th  Length: …"). -->
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="0" Margin="16,0,0,0"
                             IsVisible="{Binding HasStatusFile}">
                     <StackPanel.Styles>
                         <!-- Thin separators between status groups. -->
