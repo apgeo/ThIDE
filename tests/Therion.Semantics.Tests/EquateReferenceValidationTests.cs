@@ -60,4 +60,28 @@ public class EquateReferenceValidationTests
                                     && d.Message.Contains("NOPE@alpha_does_not_exist"));
         Assert.DoesNotContain(diags, d => d.Message.Contains("BVWG4@alpha_wg_deasupra_bivuac"));
     }
+
+    [Fact]
+    public void Workspace_diagnostic_keeps_the_binders_hint_marked_for_review()
+    {
+        var ws = Build("equate BVWG4 BVWG5X");
+        var b = ws.PerFile["/p/b.th"];
+
+        var d = Assert.Single(ws.ValidateEquateReferences(b));
+        Assert.Equal("did you mean 'BVWG5'?", d.Hint);
+        Assert.True(d.HintNeedsReview);
+        // The standalone fallback carries the same hint, not marked.
+        var standalone = Assert.Single(b.UnresolvedEquateDiagnostics());
+        Assert.Equal(d.Hint, standalone.Hint);
+        Assert.False(standalone.HintNeedsReview);
+    }
+
+    [Fact]
+    public void Workspace_diagnostic_without_a_suggestion_is_not_marked()
+    {
+        var ws = Build("equate BVWG4 ZZZZZZZZZZ");
+        var d = Assert.Single(ws.ValidateEquateReferences(ws.PerFile["/p/b.th"]));
+        Assert.Null(d.Hint);
+        Assert.False(d.HintNeedsReview);
+    }
 }

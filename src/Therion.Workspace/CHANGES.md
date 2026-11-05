@@ -4,6 +4,22 @@ What a consumer of this library can notice, newest first. Each entry says what c
 and what to do. Entries also cover behaviour that reaches you through `Therion.Syntax` and
 `Therion.Semantics`, which this library is built on.
 
+## 2026-11 (round 6)
+
+### Behaviour changes
+- **TH_SEM_001 from the workspace now carries the "did you mean" hint.**
+  `WorkspaceSemanticModel.ValidateEquateReferences` passes the binder's `Hint` (the nearest station
+  name in the file), as `SemanticModel.UnresolvedEquateDiagnostics` already did, and marks it with
+  the new `Diagnostic.HintNeedsReview`. `CodeFixes.ForLine` therefore offers the rename for a
+  project file, but as not safe for batch: `CodeFixes.ForDiagnostic` returns null for it,
+  `CodeFixes.CanBatchFix` is false, and `FixAll.Plan` counts it as skipped, since renaming every
+  unresolved reference to its nearest name could join the wrong stations. Migration: none; a
+  consumer that applies hints itself should honour `HintNeedsReview`.
+
+### Additions
+- `Diagnostic.HintNeedsReview` (`Therion.Core`, init-only, default false): the hint's suggestion is a
+  guess to show and offer one at a time, never to apply in bulk.
+
 ## 2026-11 (round 5)
 
 ### Behaviour changes

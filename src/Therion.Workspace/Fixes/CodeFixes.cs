@@ -127,7 +127,7 @@ public static partial class CodeFixes
     }
 
     // "did you mean 'X'?": rename the offending token in the line. Safe when there is exactly one
-    // suggestion and the token appears once on the line.
+    // suggestion, the token appears once on the line and the hint is not marked for review.
     private static CodeFix? Rename(Lines lines, Diagnostic d)
     {
         int line = d.Span.Start.Line;
@@ -140,7 +140,7 @@ public static partial class CodeFixes
         var hits = TokenHits(lineText, from).ToList();
         if (from == to || hits.Count == 0) return null;
         int i = hits[0];
-        bool safe = suggestions.Count == 1 && hits.Count == 1;
+        bool safe = suggestions.Count == 1 && hits.Count == 1 && !d.HintNeedsReview;
         return new CodeFix("Fix_Rename", [from, to], d.Code.Value, [new TextEdit(lines.Start(line) + i, from.Length, from, to)], safe);
     }
 
@@ -170,10 +170,11 @@ public static partial class CodeFixes
         }
     }
 
-    /// <summary>Whether "fix all" can do anything for this diagnostic (a rename needs a suggestion).</summary>
+    /// <summary>Whether "fix all" can do anything for this diagnostic (a rename needs a suggestion that needs no review).</summary>
     public static bool CanBatchFix(Diagnostic d) =>
         BatchCodes.Contains(d.Code.Value)
-        && (d.Code.Value != UnresolvedStation || Suggestion().IsMatch((d.Message ?? "") + "  " + (d.Hint ?? "")));
+        && (d.Code.Value != UnresolvedStation
+            || !d.HintNeedsReview && Suggestion().IsMatch((d.Message ?? "") + "  " + (d.Hint ?? "")));
 
     // A block opener on this line without its terminator ahead: insert it after the indented body.
     // Only batch-safe when the body is indented under the opener (or there is none): with a flat
