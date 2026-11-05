@@ -68,4 +68,15 @@ public class GisExportTests
         var gpx = GisExport.Export(nonGeo, GisFormat.Gpx);
         Assert.DoesNotContain("<wpt", gpx);       // can't reproject → skipped
     }
+
+    [Fact]
+    public void Gpx_writes_seven_decimals_and_the_other_formats_keep_six()
+    {
+        var p = new[] { new GisPoint("E3", 45.1234567, 13.7654321, 900.125, "lat-long", "fixed") };
+
+        Assert.Contains("<wpt lat=\"45.1234567\" lon=\"13.7654321\"><ele>900.125</ele>", GisExport.Export(p, GisFormat.Gpx));
+        Assert.Contains("<coordinates>13.765432,45.123457,900.125</coordinates>", GisExport.Export(p, GisFormat.Kml));
+        Assert.Contains("\"coordinates\":[13.765432,45.123457,900.125]", GisExport.Export(p, GisFormat.GeoJson));
+        Assert.Contains("E3,45.123457,13.765432,900.125,lat-long,fixed", GisExport.Export(p, GisFormat.Csv));
+    }
 }

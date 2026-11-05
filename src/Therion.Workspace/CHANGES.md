@@ -7,6 +7,11 @@ and what to do. Entries also cover behaviour that reaches you through `Therion.S
 ## 2026-11 (round 6)
 
 ### Behaviour changes
+- **GPX export writes latitude and longitude with 7 decimals** (about 1 cm; it was 6, about 0.1 m).
+  `GisExport.Export(…, GisFormat.Gpx)` now keeps what the GPX import writes, so a GPX → Therion →
+  GPX round trip is exact to 1e-7°. Trailing zeros are still trimmed and elevation keeps its
+  format. KML, GeoJSON and CSV are unchanged (6 decimals). Migration: none, unless a golden file or
+  a text comparison holds the old GPX output.
 - **TH_SEM_001 from the workspace now carries the "did you mean" hint.**
   `WorkspaceSemanticModel.ValidateEquateReferences` passes the binder's `Hint` (the nearest station
   name in the file), as `SemanticModel.UnresolvedEquateDiagnostics` already did, and marks it with
