@@ -75,19 +75,26 @@ public class DocumentLifecycleModelTests
         // A document's reaction to an external change runs on Avalonia's UI thread; bind it to this run's
         // thread so the reload happens inline instead of queueing forever. (The background parses still
         // post their results to the dispatcher; nothing here depends on them, so they are not run.)
+        bool fullRun = seeds.Count >= DefaultSeeds;
+        IEnumerable<string> Expected() => readOnlyWorks ? Shapes.Append("save failed: read-only folder") : Shapes;
+        bool AllReached() => Expected().All(shape => reached.GetValueOrDefault(shape) >= 3);
         UiThread.Run(() =>
         {
-            foreach (var seed in seeds)
+            void RunSeed(int seed)
             {
                 using var world = new World(seed, reached);
                 readOnlyWorks &= world.ReadOnlyFolderWorks;
                 world.Run(Steps);
             }
+            foreach (var seed in seeds) RunSeed(seed);
+            // How often a seed takes a rare path depends on the platform (file times, read-only folders), so
+            // a full run continues with the next seeds, up to three times as many, until every path is reached.
+            for (int extra = 0; fullRun && !AllReached() && extra < 2 * seeds.Count; extra++)
+                RunSeed(seeds[^1] + 1 + extra);
         });
-        if (seeds.Count < DefaultSeeds) return;   // a replay or a short run: no reach to check
+        if (!fullRun) return;   // a replay or a short run: no reach to check
 
-        var expected = readOnlyWorks ? Shapes.Append("save failed: read-only folder") : Shapes;
-        foreach (var shape in expected)
+        foreach (var shape in Expected())
             Assert.True(reached.GetValueOrDefault(shape) >= 3,
                 $"the runs reached '{shape}' fewer than 3 times: {string.Join(", ", reached.OrderBy(kv => kv.Key).Select(kv => $"{kv.Key}={kv.Value}"))}");
     }
