@@ -74,7 +74,7 @@ public class BlenderRunnerTests : IDisposable
         var ticks = new List<RenderProgress>();
         var runner = Runner(() => new FakeProcess(lines, exitCode: 0));
 
-        var result = await runner.RunAsync(Blender, Job(), new Progress<RenderProgress>(ticks.Add));
+        var result = await runner.RunAsync(Blender, Job(), new SyncProgress<RenderProgress>(ticks.Add));
 
         Assert.True(result.Succeeded);
         Assert.Equal(RenderFailureKind.None, result.FailureKind);

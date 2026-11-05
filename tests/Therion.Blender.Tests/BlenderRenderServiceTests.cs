@@ -81,7 +81,7 @@ public class BlenderRenderServiceTests : IDisposable
         var phases = new List<RenderPhase>();
 
         var scriptPath = await service.ExportScriptAsync(
-            OrbitVideoSpec(), CorpusSource(), outDir, new Progress<RenderProgress>(p => phases.Add(p.Phase)));
+            OrbitVideoSpec(), CorpusSource(), outDir, new SyncProgress<RenderProgress>(p => phases.Add(p.Phase)));
 
         Assert.Equal(Path.Combine(outDir, "render.py"), scriptPath);
         Assert.True(File.Exists(scriptPath));
@@ -114,7 +114,7 @@ public class BlenderRenderServiceTests : IDisposable
         var phases = new List<RenderPhase>();
 
         var result = await service.RenderAsync(
-            OrbitVideoSpec(), CorpusSource(), new Progress<RenderProgress>(p => phases.Add(p.Phase)));
+            OrbitVideoSpec(), CorpusSource(), new SyncProgress<RenderProgress>(p => phases.Add(p.Phase)));
 
         Assert.True(result.Succeeded, result.ErrorMessage);
         Assert.Equal("CPU", result.Device);
