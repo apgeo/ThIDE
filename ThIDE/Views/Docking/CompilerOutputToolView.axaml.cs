@@ -5,6 +5,7 @@ using Avalonia.Controls.Documents;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
+using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using ThIDE.ViewModels;
@@ -25,6 +26,9 @@ public partial class CompilerOutputToolView : UserControl
     public CompilerOutputToolView()
     {
         InitializeComponent();
+        CompilerOutputPalette.AddTo(Resources);
+        // The Raw tab's runs carry a looked-up brush, so a theme switch redraws them.
+        ActualThemeVariantChanged += (_, _) => RebuildRaw();
         DataContextChanged += OnDataContextChanged;
         AttachedToVisualTree += (_, _) => HookScrollViewers();
     }
@@ -114,7 +118,8 @@ public partial class CompilerOutputToolView : UserControl
         // do NOT embed clickable path links here — an InlineUIContainer link is skipped when the user
         // selects across it and copies, so it broke copying of raw output (#3). The parsed view keeps
         // its clickable links (its cells copy per-row, so the same problem doesn't apply there).
-        rt.Inlines.Add(new Run(row.Text) { Foreground = row.TextBrush });
+        var brush = this.TryFindResource(CompilerOutputPalette.Key(row.Tone), ActualThemeVariant, out var res) ? res as IBrush : null;
+        rt.Inlines.Add(new Run(row.Text) { Foreground = brush });
         rt.Inlines.Add(new LineBreak());
     }
 
