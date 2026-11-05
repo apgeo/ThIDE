@@ -164,7 +164,24 @@ jobs:
       - name: Test (net10.0)
         shell: bash
         run: |
-          set -euo pipefail
+          set -uo pipefail
+          rc=0
           for proj in $(grep -l 'TherionTestTargetFrameworks' tests/*/*.csproj); do
-            dotnet test "$proj" --no-build -c Release --framework net10.0 --verbosity normal -p:TherionMultiTargetNet10=true
+            dotnet test "$proj" --no-build -c Release --framework net10.0 --verbosity normal -p:TherionMultiTargetNet10=true \
+              --logger "trx;LogFilePrefix=$(basename "$proj" .csproj)" --results-directory TestResults || rc=1
           done
+          exit $rc
+
+      - name: Report failed tests
+        if: failure()
+        shell: bash
+        run: |
+          PY="$(command -v python3 || command -v python)"
+          "$PY" tests/ci/trx-failures.py --annotate --summary "Failed tests (net10.0)" TestResults/*.trx
+
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-net10
+          path: TestResults/
