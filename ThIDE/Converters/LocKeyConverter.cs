@@ -19,7 +19,8 @@ public sealed class LocKeyConverter : IValueConverter, IMultiValueConverter
 
     /// <summary>The multi-binding form ({l:LocOption}): the id first, then bindings that only signal a language switch.</summary>
     public object? Convert(System.Collections.Generic.IList<object?> values, Type targetType, object? parameter, CultureInfo culture) =>
-        Label(parameter as string, values.Count > 0 ? values[0]?.ToString() : null);
+        values.Count > 0 && values[0] is LocOptionItem item ? item.ToString()
+        : Label(parameter as string, values.Count > 0 ? values[0]?.ToString() : null);
 
     /// <summary>The text for option <paramref name="id"/> under key prefix <paramref name="prefix"/>.</summary>
     public static string Label(string? prefix, string? id) =>
@@ -27,4 +28,13 @@ public sealed class LocKeyConverter : IValueConverter, IMultiValueConverter
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         => BindingOperations.DoNothing;
+}
+
+/// <summary>
+/// A combo option that names itself: <see cref="ToString"/> is the label in the current UI language, so
+/// the combo's accessible value (the selected item's text) reads the label, not the id.
+/// </summary>
+public sealed record LocOptionItem(string Prefix, string Id)
+{
+    public override string ToString() => LocKeyConverter.Label(Prefix, Id);
 }

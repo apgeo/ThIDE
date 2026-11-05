@@ -168,12 +168,15 @@ public sealed class CompilerOutputRow : CommunityToolkit.Mvvm.ComponentModel.Obs
         };
     }
 
-    /// <summary>Relative-time formatter: a space sits between the value and its unit (#4).</summary>
+    /// <summary>
+    /// Relative-time formatter: a space sits between the value and its unit (#4). The decimal
+    /// separator is the UI language's, as in the summary row ("+1,5 s" in Romanian).
+    /// </summary>
     internal static string FormatElapsed(TimeSpan d)
     {
         var ms = d.TotalMilliseconds;
         if (ms < 0) ms = 0;
-        return ms < 1000 ? $"+{(int)ms} ms" : $"+{d.TotalSeconds:0.#} s";
+        return ms < 1000 ? $"+{(int)ms} ms" : string.Format(ThIDE.Resources.Tr.Culture, "+{0:0.#} s", d.TotalSeconds);
     }
 }
 public sealed record ArtifactRow(string Path, string Kind, long SizeBytes, DateTimeOffset LastWriteUtc)
@@ -272,6 +275,14 @@ public partial class BuildViewModel : ViewModelBase
         set => TimeColumnMode = (TimeColumnMode)value;
     }
 
+    /// <summary>
+    /// The time-mode combo's items, in <see cref="TimeColumnMode"/> order, as options under the
+    /// "Comp_Time" key prefix: the combo shows them through {l:LocOption}, so the selected one is drawn
+    /// again in a new UI language (a ComboBoxItem's text was copied into the box once).
+    /// </summary>
+    public IReadOnlyList<ThIDE.Converters.LocOptionItem> TimeColumnModeOptions { get; } =
+        [new("Comp_Time", "Last"), new("Comp_Time", "Stamp"), new("Comp_Time", "Start")];
+
     [ObservableProperty] private bool _isBuilding;
     [ObservableProperty] private string _status = string.Empty;
     /// <summary>#3: the "N artifact(s)" portion of a successful build's status, shown as a clickable link.</summary>
@@ -279,8 +290,31 @@ public partial class BuildViewModel : ViewModelBase
     /// <summary>True when there's an artifact-count link to show next to the status.</summary>
     public bool HasArtifactLink => _statusArtifactCount.Length > 0;
     partial void OnStatusArtifactCountChanged(string value) => OnPropertyChanged(nameof(HasArtifactLink));
-    // Any status change drops a stale artifact link; the success path re-sets it immediately after.
-    partial void OnStatusChanged(string value) => StatusArtifactCount = string.Empty;
+    // Any status change drops a stale artifact link and the status source; SetStatus sets them again after.
+    partial void OnStatusChanged(string value) { StatusArtifactCount = string.Empty; _statusSource = null; }
+
+    // The status as a resx key, its arguments and the artifact count, so Relocalize can show it in a
+    // new UI language. Null when the status is not one of those (e.g. a tool's own message).
+    private (string Key, object?[] Args, int Artifacts)? _statusSource;
+
+    /// <summary>Shows the resx status <paramref name="key"/>; with <paramref name="artifacts"/> &gt; 0 also the "N artifacts" link.</summary>
+    private void SetStatus(string key, int artifacts = 0, params object?[] args)
+    {
+        var text = ThIDE.Resources.Tr.Get(key);
+        Status = args.Length == 0 ? text : string.Format(ThIDE.Resources.Tr.Culture, text, args);
+        StatusArtifactCount = artifacts > 0 ? ThIDE.Resources.Tr.Plural("Build_ArtifactCount", artifacts) : string.Empty;
+        _statusSource = (key, args, artifacts);
+    }
+
+    /// <summary>
+    /// After a UI language switch: the toolbar status and the time column take the new language now,
+    /// not at the next compilation.
+    /// </summary>
+    public void Relocalize()
+    {
+        if (_statusSource is { } s) SetStatus(s.Key, s.Artifacts, s.Args);
+        foreach (var row in _outputBuffer) row.ApplyTimeMode(TimeColumnMode);
+    }
 
     // ---- build phases: a stage label + stepped progress, alongside the spinner ----
     [ObservableProperty] private BuildPhase _phase;
@@ -593,7 +627,7 @@ public partial class BuildViewModel : ViewModelBase
     private async Task BuildAsync()
     {
         var entry = ResolveBuildEntry();
-        if (entry is null) { Status = ThIDE.Resources.Tr.Get("Build_NoProject"); return; }
+        if (entry is null) { SetStatus("Build_NoProject"); return; }
         await RunBuildAsync(entry).ConfigureAwait(true);
     }
 
@@ -606,7 +640,7 @@ public partial class BuildViewModel : ViewModelBase
     public async Task<Therion.Build.Automation.BuildOutcome?> RunBuildAsync(string entry, string? tempThconfig = null, string? label = null)
     {
         using var lease = _gate.TryAcquire();
-        if (lease is null) { Status = ThIDE.Resources.Tr.Get("Build_InProgress"); return null; }
+        if (lease is null) { SetStatus("Build_InProgress"); return null; }
 
         // Before compiling, make sure the involved unsaved files are on disk (Therion reads from
         // disk). Auto-save when configured, otherwise ask (naming the files). Cancel aborts.
@@ -622,8 +656,7 @@ public partial class BuildViewModel : ViewModelBase
         HasBuildResult = false;          // clear the previous success/error status-bar icon
         LastBuildTarget = target;
         // clears the previous "succeeded/failed" label (#3)
-        Status = string.Format(ThIDE.Resources.Tr.Get("Build_CompilingTarget"), target);
-        StatusArtifactCount = string.Empty;
+        SetStatus("Build_CompilingTarget", 0, target);
         LastError = string.Empty;        // the last error is state only until the next compilation
         _buildErrorLines.Clear();
         HasLog = false; LogFilePath = null;           // clear the previous build's log (#3)
@@ -665,10 +698,7 @@ public partial class BuildViewModel : ViewModelBase
             if (ok)
             {
                 LastError = string.Empty;
-                Status = ThIDE.Resources.Tr.Get(result.Artifacts.Length > 0 ? "Build_Succeeded" : "Build_SucceededNoOutputs");
-                StatusArtifactCount = result.Artifacts.Length > 0
-                    ? ThIDE.Resources.Tr.Plural("Build_ArtifactCount", result.Artifacts.Length)
-                    : string.Empty;
+                SetStatus(result.Artifacts.Length > 0 ? "Build_Succeeded" : "Build_SucceededNoOutputs", result.Artifacts.Length);
             }
             else
             {
@@ -678,10 +708,8 @@ public partial class BuildViewModel : ViewModelBase
                     ? string.Empty
                     : string.Join(Environment.NewLine, _buildErrorLines.TakeLast(6));
                 var shortErr = FirstLine(LastError);
-                Status = shortErr.Length > 0
-                    ? string.Format(ThIDE.Resources.Tr.Get("Build_FailedWithError"), result.ExitCode, shortErr)
-                    : string.Format(ThIDE.Resources.Tr.Get("Build_Failed"), result.ExitCode);
-                StatusArtifactCount = string.Empty;
+                if (shortErr.Length > 0) SetStatus("Build_FailedWithError", 0, result.ExitCode, shortErr);
+                else SetStatus("Build_Failed", 0, result.ExitCode);
             }
             _log?.Log(
                 ok ? (warnCount > 0 ? LogVerbosity.Warning : LogVerbosity.Info) : LogVerbosity.Error,
@@ -703,7 +731,7 @@ public partial class BuildViewModel : ViewModelBase
         catch (OperationCanceledException)
         {
             sw.Stop();
-            Status = ThIDE.Resources.Tr.Get("Build_Cancelled");
+            SetStatus("Build_Cancelled");
             outcome = outcome with { Cancelled = true, Elapsed = sw.Elapsed };
             _log?.Warning("Build cancelled.");
             var (at, _, sinceStart) = Stamp(Elapsed());
@@ -712,7 +740,7 @@ public partial class BuildViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            Status = string.Format(ThIDE.Resources.Tr.Get("Build_Error"), ex.Message);
+            SetStatus("Build_Error", 0, ex.Message);
             outcome = outcome with { Elapsed = sw.Elapsed };
             _log?.Error("Build error: " + ex.Message);
         }
@@ -771,7 +799,7 @@ public partial class BuildViewModel : ViewModelBase
             case Views.SaveBeforeBuildChoice.DontSave:
                 return true;
             default:
-                Status = ThIDE.Resources.Tr.Get("Build_CancelledUnsaved");
+                SetStatus("Build_CancelledUnsaved");
                 return false;
         }
     }
@@ -1208,7 +1236,7 @@ public partial class BuildViewModel : ViewModelBase
     /// </summary>
     private async Task<bool> RunExternalAsync(string toolId, string args, string label, string? workDir)
     {
-        if (IsBuilding) { Status = ThIDE.Resources.Tr.Get("Build_InProgress"); return false; }
+        if (IsBuilding) { SetStatus("Build_InProgress"); return false; }
         var tool = await _locator.FindAsync(toolId).ConfigureAwait(true);
         if (tool is null)
         {

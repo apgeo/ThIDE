@@ -112,7 +112,8 @@
     </StackPanel>
 
     <Grid>
-    <TabControl AutomationProperties.AutomationId="Document.Tabs" x:Name="DocumentTabControl">
+    <TabControl AutomationProperties.AutomationId="Document.Tabs" x:Name="DocumentTabControl"
+                SelectedIndex="{Binding ViewTabIndex, Mode=TwoWay}">
         <TabItem AutomationProperties.AutomationId="Document.Tab.Source" Header="{l:Loc File_TabSource}">
             <ed:TherionTextEditor x:Name="Editor"
                                   AutomationProperties.AutomationId="Document.Editor"

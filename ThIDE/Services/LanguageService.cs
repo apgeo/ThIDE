@@ -1,5 +1,6 @@
 // Implementation Plan �7.6 � runtime UI language switching.
-// Coordinate/measurement display uses invariant numeric formatting elsewhere.
+// Numbers in display text (lengths, timings) follow the UI language too; file formats, the editor
+// text and grids that edit Therion values stay invariant.
 
 using System;
 using System.Globalization;

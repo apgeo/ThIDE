@@ -22,7 +22,7 @@ public sealed class LocOptionExtension : MarkupExtension
     {
         Bindings =
         {
-            new Binding(),   // the option id (the item)
+            new Binding(),   // the option id (the item), or a LocOptionItem that names itself
             new Binding { Source = LocProxy.Instance, Path = $"[{Prefix}]", Mode = BindingMode.OneWay },   // the language
         },
         Converter = LocKeyConverter.Instance,
