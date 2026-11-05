@@ -24,9 +24,15 @@ namespace ThIDE.ViewModels;
 
 internal static class ProjectFormat
 {
-    /// <summary>Human length: metres under 1 km, kilometres above, both 1-dp.</summary>
+    /// <summary>
+    /// Human length: metres under 1 km, kilometres above, both 1-dp. Display text, so the decimal
+    /// separator is the UI language's ("6,8 m" in Romanian), like the compile timings; values that are
+    /// written to a file, edited in a grid or parsed back stay invariant.
+    /// </summary>
     public static string Length(double metres) =>
-        metres >= 1000 ? $"{metres / 1000.0:0.0##} km" : $"{metres:0.0} m";
+        metres >= 1000
+            ? string.Format(Tr.Culture, "{0:0.0##} km", metres / 1000.0)
+            : string.Format(Tr.Culture, "{0:0.0} m", metres);
 
     public static void OnUi(Action a)
     {

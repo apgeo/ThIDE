@@ -626,6 +626,7 @@ public partial class MainWindowViewModel : ViewModelBase
             // Texts built in code once per document (file type, station kinds) take the new language
             // now, not at the next re-parse; the status bar shows the active one.
             foreach (var doc in _documents.Documents) doc.Relocalize();
+            Build.Relocalize();   // the toolbar compile status kept the language of the last compilation
             UpdateFileStatus();
         };
         if (_settings is not null)

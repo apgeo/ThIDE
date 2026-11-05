@@ -167,7 +167,7 @@ public sealed class LiveLanguageSwitchTests
         Assert.Equal("1 topografie", one.SurveySummary);
         Assert.Equal("2 stații · 1 segment", one.StationsText);
         Assert.Equal("0 intrări · 0 puncte fixe", one.EntrancesText);
-        Assert.Equal("denivelare: 0.0 m", one.DepthText);
+        Assert.Equal("denivelare: 0,0 m", one.DepthText);   // the UI language's decimal separator
         Assert.Equal("Fără avertismente sau erori", one.DiagnosticsText);
         Assert.Equal("Nicio compilare în această sesiune", one.BuildStatus);
         Assert.Equal("2 topografii", two.SurveySummary);

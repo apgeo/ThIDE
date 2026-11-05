@@ -341,8 +341,16 @@ public sealed partial class FileDocumentViewModel : Document, IDockContent, IDis
     /// <summary>Whether applying <see cref="PendingScroll"/> also focuses the editor (false: reveal only).</summary>
     public bool PendingScrollFocus { get; private set; } = true;
 
+    /// <summary>
+    /// The document's shown view (the tab index of Source, Log or Measurements). Kept on the document,
+    /// not in the view: the dock re-creates or reuses the view (another document's tab, a language
+    /// switch), and a view-local selection returned the document to Source.
+    /// </summary>
+    [ObservableProperty] private int _viewTabIndex;
+
     public void RequestScrollTo(SourceSpan span, bool focus = true)
     {
+        ViewTabIndex = 0;   // a scroll target is in the source text
         PendingScroll = span;
         PendingScrollFocus = focus;
         ScrollToSpanRequested?.Invoke(this, span);
