@@ -16,13 +16,14 @@
     <Panel x:Name="OuterHost">
         <DockPanel x:Name="RootContent">
             <!-- Control bar (mirrors the maintainer link reference viewer); reflows onto further rows on
-                 narrow panes so every button stays visible (like the Live Preview toolbar). -->
+                 narrow panes. In a narrow panel (docked at 1366x768) the controls after the "⋯" button
+                 move into its flyout, so the bar keeps to a few rows and the 3D view keeps its height. -->
             <Border AutomationProperties.AutomationId="Viewer3D.Toolbar" DockPanel.Dock="Top" BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="6,4">
               <DockPanel>
                 <docking:PanelWindowControls DockPanel.Dock="Right" Orientation="Vertical"
                                              AutomationProperties.AutomationId="Viewer3D.WindowControls"
                                              VerticalAlignment="Top" Margin="4,0,0,0" />
-                <WrapPanel Orientation="Horizontal">
+                <WrapPanel x:Name="Toolbar" Orientation="Horizontal">
                     <!-- Model dropdown: every model produced by the active thconfig's export-model commands. -->
                     <TextBlock Text="{l:Loc M3D_Model}" VerticalAlignment="Center" FontSize="11" Foreground="Gray" Margin="0,0,4,0" />
                     <ComboBox MinWidth="200" FontSize="11" Margin="0,0,6,2"
@@ -45,6 +46,10 @@
                     <Button Content="{l:Loc M3D_ResetView}" Command="{Binding Viewer.ResetViewCommand}" FontSize="11" Padding="6,2" Margin="0,0,2,2"
                             AutomationProperties.AutomationId="Viewer3D.ResetView"
                             ToolTip.Tip="{l:Loc M3D_ResetViewTip}" />
+                    <!-- Shown only in a narrow panel; everything after it then sits in its flyout (code-behind). -->
+                    <Button x:Name="OverflowButton" Content="{l:Loc M3D_More}" FontSize="11" Padding="8,2" Margin="0,0,2,2"
+                            AutomationProperties.AutomationId="Viewer3D.More" AutomationProperties.Name="{l:Loc M3D_MoreTip}"
+                            ToolTip.Tip="{l:Loc M3D_MoreTip}" IsVisible="False" />
                     <Button Content="{l:Loc M3D_Defaults}" Command="{Binding Viewer.ResetControlsCommand}" FontSize="11" Padding="6,2" Margin="0,0,2,2"
                             AutomationProperties.AutomationId="Viewer3D.ResetControls"
                             ToolTip.Tip="{l:Loc M3D_DefaultsTip}" />

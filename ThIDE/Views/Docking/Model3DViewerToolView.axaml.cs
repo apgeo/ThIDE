@@ -29,7 +29,41 @@ public partial class Model3DViewerToolView : UserControl
     private Window? _fsWindow;   // borderless full-screen host for the whole panel
     private bool _dragWatched;   // subscribed to DockDragState (hides the native view during a panel drag)
 
-    public Model3DViewerToolView() => InitializeComponent();
+    public Model3DViewerToolView()
+    {
+        InitializeComponent();
+        InitToolbarOverflow();
+    }
+
+    // ---- compact toolbar ----------------------------------------------------
+    // Docked at 1366x768 the panel is ~250 px wide and the full toolbar wrapped onto 9 rows, leaving the
+    // 3D view ~145 px (the HUD's height scale needs ~200). Below this width the controls after the "⋯"
+    // button move, unchanged (ids, names, tooltips, bindings), into that button's flyout.
+    internal const double CompactToolbarBelow = 720;
+    private readonly WrapPanel _overflowPanel = new() { Orientation = Avalonia.Layout.Orientation.Horizontal, MaxWidth = 320 };
+    private List<Control> _overflowItems = new();
+    private bool _toolbarCompact;
+
+    internal static bool IsCompactToolbar(double panelWidth) => panelWidth > 0 && panelWidth < CompactToolbarBelow;
+
+    private void InitToolbarOverflow()
+    {
+        _overflowItems = Toolbar.Children.Skip(Toolbar.Children.IndexOf(OverflowButton) + 1).ToList();
+        // The flyout's content is outside the view's tree; give it the toolbar's bindings' DataContext.
+        _overflowPanel[!DataContextProperty] = this[!DataContextProperty];
+        OverflowButton.Flyout = new Flyout { Content = _overflowPanel, Placement = PlacementMode.BottomEdgeAlignedRight };
+        RootContent.SizeChanged += (_, e) => SetToolbarCompact(IsCompactToolbar(e.NewSize.Width));
+    }
+
+    private void SetToolbarCompact(bool compact)
+    {
+        if (compact == _toolbarCompact) return;
+        _toolbarCompact = compact;
+        if (!compact) OverflowButton.Flyout?.Hide();
+        var (from, to) = compact ? (Toolbar.Children, _overflowPanel.Children) : (_overflowPanel.Children, Toolbar.Children);
+        foreach (var item in _overflowItems) { from.Remove(item); to.Add(item); }
+        OverflowButton.IsVisible = compact;
+    }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
