@@ -3,6 +3,7 @@
 // for every thread, be built once, and be immutable, since they are read from every thread afterwards.
 
 using Avalonia.Media;
+using Avalonia.Media.Immutable;
 using Therion.Syntax;
 using ThIDE.Editor;
 
@@ -24,9 +25,11 @@ public sealed class TherionColorizerThreadingTests
             try
             {
                 start.SignalAndWait();
-                // Every other thread goes through Avalonia's property system at the same moment.
+                // Every other thread creates Avalonia brushes at the same moment. Immutable ones: a mutable
+                // brush is an AvaloniaObject, and setting it off the UI thread can throw while another test
+                // has bound the UI thread to its own thread (that was this test's own flakiness).
                 if (i % 2 == 0)
-                    for (int k = 0; k < 50; k++) _ = new SolidColorBrush(Color.FromRgb((byte)k, (byte)i, 0)).Color;
+                    for (int k = 0; k < 50; k++) _ = new ImmutableSolidColorBrush(Color.FromRgb((byte)k, (byte)i, 0)).Color;
                 var colorizer = new TherionColorizer();
                 colorizer.SetVariant(i % 3 == 0 ? TherionColorizer.Variant.Dark : TherionColorizer.Variant.Light);
                 seen[i] = (TherionColorizer.Palette(TherionColorizer.Variant.Light),
