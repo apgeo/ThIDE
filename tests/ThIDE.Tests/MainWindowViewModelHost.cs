@@ -23,7 +23,7 @@ internal static class MainWindowViewModelHost
 {
     public static MainWindowViewModel Create(IDocumentService documents, ITaskRunnerService? tasks = null,
         ICrashRecoveryService? crashRecovery = null, IWorkspaceUndoService? workspaceUndo = null,
-        ILanguageService? language = null) => new(
+        ILanguageService? language = null, IWorkspaceSession? session = null) => new(
         new KeyLocalizer(),
         language ?? new LanguageService(),
         documents,
@@ -47,6 +47,7 @@ internal static class MainWindowViewModelHost
         new AssistantToolViewModel(),
         new BlenderAnimationToolViewModel(new BlenderAnimationViewModel()),
         TestProfile.SettingsTool(),
+        session: session,
         crashRecovery: crashRecovery,
         tasks: tasks,
         workspaceUndo: workspaceUndo);
