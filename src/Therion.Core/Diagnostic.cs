@@ -39,6 +39,12 @@ public sealed record Diagnostic(
     string? HelpUri = null,
     TherionSyntaxVersion? Version = null)
 {
+    /// <summary>
+    /// The suggestion in <see cref="Hint"/> is a guess a tool should not apply unseen: a quick fix may
+    /// offer it for this one diagnostic, but "fix all" leaves it out.
+    /// </summary>
+    public bool HintNeedsReview { get; init; }
+
     public static Diagnostic Create(
         string code,
         DiagnosticSeverity severity,

@@ -109,7 +109,7 @@ public static class GisExport
         {
             if (p.X is not { } x || p.Y is not { } y) continue;
             if (!CoordinateTransform.TryToWgs84(p.Cs, x, y, out var ll)) continue; // GPX needs lat/lon
-            sb.Append("  <wpt lat=\"").Append(N(ll.Lat)).Append("\" lon=\"").Append(N(ll.Lon)).Append("\">");
+            sb.Append("  <wpt lat=\"").Append(Deg7(ll.Lat)).Append("\" lon=\"").Append(Deg7(ll.Lon)).Append("\">");
             if (p.Z is { } z) sb.Append("<ele>").Append(N(z)).Append("</ele>");
             sb.Append("<name>").Append(Xml(p.Name)).Append("</name></wpt>\n");
         }
@@ -136,6 +136,8 @@ public static class GisExport
     }
 
     private static string N(double? v) => v is { } d ? d.ToString("0.######", Inv) : string.Empty;
+    // GPX lat/lon: 7 decimals (about 1 cm), as precise as the GPX import writes them.
+    private static string Deg7(double v) => v.ToString("0.#######", Inv);
     private static string Q(string? s)
     {
         var v = s ?? string.Empty;

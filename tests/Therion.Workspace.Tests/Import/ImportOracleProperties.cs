@@ -387,8 +387,8 @@ public class ImportOracleProperties
             foreach (var p in first)
             {
                 Assert.True(byName.TryGetValue("gps." + p.Name, out var q), $"{because}\n{p.Name} is missing after the round trip");
-                // The export writes 6 decimals (about 0.1 m): half its last digit is the tolerance.
-                Assert.True(Math.Abs(p.Lat - q!.Lat) <= 5.0001e-7 && Math.Abs(p.Lon - q.Lon) <= 5.0001e-7, $"{because}\n{p.Name}: {p.Lat} {p.Lon} -> {q.Lat} {q.Lon}");
+                // The export writes 7 decimals (about 1 cm), like the source.
+                Assert.True(Math.Abs(p.Lat - q!.Lat) <= 1e-7 && Math.Abs(p.Lon - q.Lon) <= 1e-7, $"{because}\n{p.Name}: {p.Lat} {p.Lon} -> {q.Lat} {q.Lon}");
                 Assert.True(Near(q.Elevation, p.Elevation ?? 0, 0.005), $"{because}\n{p.Name}: elevation {p.Elevation} -> {q.Elevation}");
             }
         }
