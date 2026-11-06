@@ -13,7 +13,7 @@ namespace Therion.CaveView;
 public static class CaveViewRuntime
 {
     /// <summary>The distribution version of the vendored bundle (<c>CV2.VERSION</c>).</summary>
-    public const string Version = "2.9.0-slx.22";
+    public const string Version = "2.9.0-slx.23";
 
     /// <summary>The interface languages the runtime carries a catalogue for (English is built in).</summary>
     public static IReadOnlyList<string> Languages { get; } = new[] { "en", "ro", "it", "sl" };

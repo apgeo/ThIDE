@@ -114,7 +114,7 @@ publish it. The page is written by the `Therion.CaveView` library (`ModelPageExp
 
 ## Updating CaveView.js
 
-The runtime lives in `src/Therion.CaveView/Runtime/` — version **2.9.0-slx.22** of the fork — and its
+The runtime lives in `src/Therion.CaveView/Runtime/` — version **2.9.0-slx.23** of the fork — and its
 `README.md` records the source commit, the bundle's SHA-256 and how to update it. Changes to the
 viewer itself are made in the fork, under a new distribution version, never in the vendored files.
 The earlier local patch to the information page (a null `loadedSource` when the sidebar **Menu** is
