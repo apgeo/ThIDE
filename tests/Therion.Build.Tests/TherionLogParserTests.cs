@@ -124,6 +124,33 @@ Press ENTER to exit!
     }
 
     [Fact]
+    public void Reads_cavern_statistics_in_the_wording_of_survex_1_4()
+    {
+        // Survex 1.4 says "legs" where earlier releases said "shots". Invented figures.
+        const string text = """
+            therion 6.3.4 (2025-04-08)
+            ####################### cavern log file ########################
+             1> Survex 1.4.19
+             5> Survey contains 5 survey stations, joined by 6 legs.
+             6> There is 1 loop.
+             7> Total length of survey legs =   47.30m (  47.20m adjusted)
+             8> Total plan length of survey legs =   46.16m
+             9> Total vertical length of survey legs =    6.65m
+            #################### end of cavern log file ####################
+            """;
+
+        var log = TherionLogParser.Parse(text);
+
+        Assert.Equal(5, log.StationCount);
+        Assert.Equal(6, log.ShotCount);
+        Assert.Equal(1, log.LoopCount);
+        Assert.Equal(47.30, log.TotalLength);
+        Assert.Equal(47.20, log.TotalLengthAdjusted);
+        Assert.Equal(46.16, log.PlanLength);
+        Assert.Equal(6.65, log.VerticalLength);
+    }
+
+    [Fact]
     public void Resolves_range_station_ids_through_the_transcription_block()
     {
         var log = TherionLogParser.Parse(SuccessLog);
