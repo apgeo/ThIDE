@@ -170,15 +170,16 @@ public static class TherionLogParser
     // A location Therion embeds in a message: "<file> [<line>] -- <message>".
     private static readonly Regex DiagLocationRx = new(@"^(?<file>\S.*?)\s+\[(?<line>\d+)\]\s+--\s+(?<rest>.*)$", Opts);
 
-    // Cavern statistics, echoed into the log with an " NN> " line-number prefix.
+    // Cavern statistics, echoed into the log with an " NN> " line-number prefix. Survex 1.4 calls
+    // the measurements "legs" where earlier releases said "shots"; both are read.
     private static readonly Regex CavernPrefixRx = new(@"^\s*\d+>\s?", Opts);
     private static readonly Regex SurvexVersionRx = new(@"^Survex\s+(?<v>\S+)", Opts);
-    private static readonly Regex ContainsRx = new(@"^Survey contains (?<st>\d+) survey stations, joined by (?<sh>\d+) shots\.", Opts);
+    private static readonly Regex ContainsRx = new(@"^Survey contains (?<st>\d+) survey stations, joined by (?<sh>\d+) (?:shots|legs)\.", Opts);
     private static readonly Regex LoopsRx = new(@"^There (?:is|are) (?<n>\d+) loops?\.", Opts);
     private static readonly Regex ComponentsRx = new(@"^Survey has (?<n>\d+) connected components?\.", Opts);
-    private static readonly Regex TotalLenRx = new(@"^Total length of survey shots =\s*(?<v>[\d.]+)m\s*\(\s*(?<adj>[\d.]+)m adjusted\)", Opts);
-    private static readonly Regex PlanLenRx = new(@"^Total plan length of survey shots =\s*(?<v>[\d.]+)m", Opts);
-    private static readonly Regex VertLenRx = new(@"^Total vertical length of survey shots =\s*(?<v>[\d.]+)m", Opts);
+    private static readonly Regex TotalLenRx = new(@"^Total length of survey (?:shots|legs) =\s*(?<v>[\d.]+)m\s*\(\s*(?<adj>[\d.]+)m adjusted\)", Opts);
+    private static readonly Regex PlanLenRx = new(@"^Total plan length of survey (?:shots|legs) =\s*(?<v>[\d.]+)m", Opts);
+    private static readonly Regex VertLenRx = new(@"^Total vertical length of survey (?:shots|legs) =\s*(?<v>[\d.]+)m", Opts);
     private static readonly Regex RangeRx = new(
         @"^(?<axis>Vertical|North-South|East-West) range =\s*(?<len>[\d.]+)m \(from (?<a>\S+) at (?<av>-?[\d.]+)m to (?<b>\S+) at (?<bv>-?[\d.]+)m\)", Opts);
 
