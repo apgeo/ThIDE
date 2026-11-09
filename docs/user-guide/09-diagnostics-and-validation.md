@@ -74,13 +74,20 @@ alone and says what it costs: for a zero-length leg (`TH_SEM_012`) the first pro
 An `export … -output` path written with `\` (`TH0059`) is fixed by rewriting the separators to `/`.
 
 In the **Diagnostics panel**, right-click a row for **Fix** (its first fix) and, for problems with a fix
-that is safe to apply everywhere, **Fix all '<code>' in the workspace…**: an unknown station with a
-single "did you mean" suggestion (renamed) and a block without its terminator (`endsurvey` and the
-like, inserted after the block's body). A preview lists every change — file, line, before and after —
-and you untick any you don't want; **Apply** writes them and the project is re-checked. Ambiguous
-cases are counted and left alone. In an open file the fix is an editor change; a file that is not
-open is **rewritten on disk**, and the whole run is one entry of the [workspace
-undo](05-interface-tour.md#undoing-a-tool-that-wrote-many-files) (**Edit → Undo Multi-File Change**).
+that is safe to apply everywhere, **Fix all '<code>' in the workspace…**: a block without its
+terminator (`endsurvey` and the like, inserted after the block's body), and an unknown station with a
+single "did you mean" suggestion (renamed) in a file checked on its own. A preview lists every
+change — file, line, before and after — and you untick any you don't want; **Apply** writes them and
+the project is re-checked. Ambiguous cases are counted and left alone. In an open file the fix is an
+editor change; a file that is not open is **rewritten on disk**, and the whole run is one entry of the
+[workspace undo](05-interface-tour.md#undoing-a-tool-that-wrote-many-files) (**Edit → Undo Multi-File
+Change**).
+
+In a project, an `equate` that names a station no file defines (`TH_SEM_001`, checked across the
+whole project) gets a "did you mean" too — the closest station of the equate's own survey, compared by
+its bare name — and **Ctrl+.** or **Fix** offers the rename for that one reference. Fix-all leaves
+these out: renaming every unresolved reference to its nearest name could join the wrong stations, so
+review each one.
 
 ## Project-wide tidying (Tools menu)
 

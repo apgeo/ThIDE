@@ -57,6 +57,8 @@ bundled browser). Open it from **View → 3D Viewer**.
 - **Open…** loads any `.lox`/`.3d` directly. After a compilation the newest model auto-loads when auto-show
   is on (`.lox` preferred over `.3d`).
 - A model older than its sources is flagged **stale** — recompile to refresh.
+- The viewer's own labels (such as the HUD captions) follow the app's language: switching
+  language reloads the viewer with the same model.
 
 **Controls** (mirroring the public CaveView galleries): **orientation** (Plan / profile N·E·S·W),
 **camera** (Perspective / Orthographic), and feature toggles — **Walls, Splays, Surface, Stations,

@@ -61,6 +61,31 @@ and then linked, a `.gpx` becomes a fixed-stations file. A `.th2` sketch on its 
 link its survey first, and copy the sketch along. Dropping a `.svx`, `.dat` or `.gpx` on the window
 takes the same route. Watching is off until you turn it on.
 
+### A project around a bare survey (TopoDroid)
+
+A survey exported from TopoDroid (or any lone `.th` with a single `survey` block) does not compile on
+its own until it has a thconfig around it. **Tools → Scaffold Project from Survey…** builds that
+project for you; **Scaffold Project from Active File** does the same for the `.th` open in the editor.
+
+The dialog is prefilled from the file: the project name is the survey's name with a trailing `_YYYY`
+dropped (TopoDroid often names surveys `cave_2025`), the title and a likely entrance station come from
+the survey. You choose:
+
+- **Georeferencing (optional)** — entrance station, coordinate system (`lat-long`, `UTM35N`,
+  `EPSG:4326`, …), the two coordinates in that system's order, and altitude. Needed for KML,
+  shapefile and other GIS output. Leave it blank and the wrapper gets a commented `fix` template to
+  fill in later.
+- **Layout & project tree** — a `layout` block with map scale and legend, and optionally a graphics
+  folder.
+- **Export targets** — tick the outputs the thconfig should build: 3D models (Loch `.lox`, Survex
+  `.3d`, KML, shapefile, Compass `.plt`, VRML, DXF, 3DMF), maps (PDF plan or extended elevation, SVG,
+  XHTML), the SQL or CSV database, and a survey list.
+
+**Create project** then asks for the project folder, copies the survey into `th/`, and writes a
+wrapper `.th` and a thconfig with the chosen exports. ThIDE refuses, before writing anything, a folder
+where the wrapper would overwrite the survey itself (the survey's own folder) or one that already
+holds any of the files it would write — pick an empty folder.
+
 ## Export out of Therion
 
 ### Entrances & fixed points → GIS
@@ -68,6 +93,8 @@ takes the same route. Watching is off until you turn it on.
 **Tools → Export Entrances / Fixed Points** writes your georeferenced points to a GIS/GPS format:
 
 - **KML** (Google Earth), **GeoJSON** (web GIS), **GPX** (hand-held GPS), or **CSV** (spreadsheets).
+  GPX coordinates are written with 7 decimals, as the GPX import reads them, so a round trip keeps
+  full precision; KML, GeoJSON and CSV use 6 (about 0.1 m).
 
 Great for sharing entrance locations, plotting on a base map, or loading into a GPS before a trip.
 

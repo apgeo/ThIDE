@@ -9,7 +9,9 @@ notes around it. All are project-wide and update from the live model.
 
 The **Leads** tab is a register of every place the cave might continue — built automatically from your
 survey. It picks up the usual conventions: continuation flags, `QM` / lead / `?` comments, and
-dead-ends (passage ends).
+dead-ends (passage ends). The marker words (`QM`, `lead`, `continues`, `dig`) count only as whole
+words — `QM12` is a lead, "digital disto" or "misleading" is not — while a `?` anywhere in a station
+comment still marks a lead.
 
 **What it shows**
 

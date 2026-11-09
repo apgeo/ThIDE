@@ -46,6 +46,7 @@
 ## Import / export & GIS
 - **Import:** Survex (`.svx`), Compass (`.dat`), DEM (ESRI ASCII → `surface`), and GPX waypoints (→ `fix`).
 - **Export:** entrances and fixed points to **KML / GeoJSON / GPX / CSV**.
+- **Scaffold a project** around a bare (e.g. TopoDroid) survey `.th`: folder tree, wrapper survey, optional georeference and layout, and a thconfig with the chosen exports.
 - `.th2` scaffolding (new scrap; sketch-from-image / `.xvi`) and coordinate transforms (WGS84 ↔ UTM, lat-long).
 
 ## Utilities
