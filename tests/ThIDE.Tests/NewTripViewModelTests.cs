@@ -117,7 +117,7 @@ public class NewTripViewModelTests
     [Fact]
     public async Task No_tie_in_writes_only_the_input_into_the_chosen_survey()
     {
-        // What File ▸ New Project ▸ Single cave leaves: a survey with no stations yet.
+        // What File ▸ New from Template ▸ Single cave leaves: a survey with no stations yet.
         var (vm, editor, files) = await Make(new() { [P("cave.th")] = "encoding utf-8\nsurvey cave -title \"Cave\"\nendsurvey\n" });
         Assert.False(vm.CanCreate);
         Assert.Empty(vm.Stations.Items);

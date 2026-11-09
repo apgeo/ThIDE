@@ -41,7 +41,7 @@ public sealed record ProjectTemplateRow(ProjectTemplate Template, string Title, 
     public override string ToString() => Title;
 }
 
-/// <summary>File ▸ New Project…: a template, its fields and a target folder.</summary>
+/// <summary>File ▸ New from Template…: a template, its fields and a target folder.</summary>
 public sealed partial class NewProjectViewModel : ObservableObject
 {
     private readonly string _library;

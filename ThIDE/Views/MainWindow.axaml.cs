@@ -679,7 +679,7 @@ public partial class MainWindow : Window
 
     // ----- new project ----------------------------------------------------
 
-    /// <summary>File ▸ New Project…: writes a project from a template, then makes its thconfig active.</summary>
+    /// <summary>File ▸ New from Template…: writes a project from a template, then makes its thconfig active.</summary>
     private async System.Threading.Tasks.Task ShowNewProjectAsync()
     {
         var library = Path.Combine(Therion.Workspace.ProjectSidecar.DirectoryFor("templates"), "projects");

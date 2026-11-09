@@ -34,7 +34,7 @@ document into a floating editor.
 
 | Menu | Contains |
 |---|---|
-| **File** | New File…, New Project…, Open File / thconfig / Folder…, Recent Files, Recent Directories, Reopen Closed Tab, Save, Save As…, Save All, Close Tab, Exit |
+| **File** | New File…, New from Template…, Open File / thconfig / Folder…, Recent Files, Recent Directories, Reopen Closed Tab, Save, Save As…, Save All, Close Tab, Exit |
 | **View** | **Language**, **Welcome**, a toggle for each panel (Object Browser, Workspace Explorer, Overview, Log, **Assistant**, Automation, Mainline Preview, Map Viewer, 3D Viewer, Structural Geology, Diagnostics, Outline), Relational Map…, **Strict Parser Mode**, whitespace and minimap toggles, Split Editor (Float), **Layout** (save, load, restore the default layout, split the side panels) |
 | **Edit** | Undo / Redo, **Undo Multi-File Change** / Redo (the [workspace undo](#undoing-a-tool-that-wrote-many-files)), Cut / Copy / Paste, Paste as Shot Data…, Delete, Select All, UPPERCASE / lowercase, Toggle Comment, Enclose in Region, Fold All / Unfold All, Add Bookmark…, Go to Definition, Peek Definition, Find References, Rename Symbol… |
 | **Search** | Find, Replace, Find in Files…, Replace in Files…, Go To Line…, Bookmarks… |

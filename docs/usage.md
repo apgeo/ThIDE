@@ -52,7 +52,7 @@ line.
 `--out`; `--title` sets the heading, default the project folder's name).
 
 `new` creates a project from a template: a built-in id, the id of a template imported in the app
-(*File → New Project… → Import*), or a template folder. Each `--var` sets one of the template's fields;
+(*File → New from Template… → Import*), or a template folder. Each `--var` sets one of the template's fields;
 values are checked as in the app, and nothing is overwritten.
 
 **LSP** — point any LSP-capable editor at the `therion-lsp` executable for live diagnostics:

@@ -1286,7 +1286,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private void NewTrip() => NewTripRequested?.Invoke(this, EventArgs.Empty);
 
-    /// <summary>Raised to open File ▸ New Project… in the view.</summary>
+    /// <summary>Raised to open File ▸ New from Template… in the view.</summary>
     public event EventHandler? NewProjectRequested;
 
     /// <summary>Create a new project folder from a project template.</summary>

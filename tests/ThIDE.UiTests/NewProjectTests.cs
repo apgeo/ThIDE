@@ -1,6 +1,6 @@
 namespace ThIDE.UiTests;
 
-/// <summary>File ▸ New Project… writes a project from a built-in template and opens its thconfig.</summary>
+/// <summary>File ▸ New from Template… writes a project from a built-in template and opens its thconfig.</summary>
 public class NewProjectTests
 {
     [UiFact]
@@ -10,7 +10,7 @@ public class NewProjectTests
         await using var app = await ThideApp.StartAsync();
         await app.WaitAsync("#Welcome.View;state:showing");
 
-        await app.MenuAsync("File > New Project…");
+        await app.MenuAsync("File > New from Template…");
         await app.WaitAsync("#NewProject.Window");
         await app.SetTextAsync("#NewProject.Field.project", "pit");
         await app.SetTextAsync("#NewProject.Folder", target);

@@ -1488,10 +1488,10 @@ Instalați Mapiah de pe pagina sa de versiuni, apoi setați calea către {0} în
   <data name="Snippet_exportPlanPdf" xml:space="preserve"><value>exportă o hartă în plan ca PDF</value></data>
   <data name="Snippet_exportModelLox" xml:space="preserve"><value>exportă modelul 3D</value></data>
   <data name="NewFile_CannotCreate" xml:space="preserve"><value>Fișierul nu poate fi creat aici.</value></data>
-  <data name="Menu_File_NewProject" xml:space="preserve"><value>Proiect nou…</value></data>
-  <data name="NewProject_Title" xml:space="preserve"><value>Proiect nou</value></data>
+  <data name="Menu_File_NewProject" xml:space="preserve"><value>Nou din șablon…</value></data>
+  <data name="NewProject_Title" xml:space="preserve"><value>Topografie nouă din șablon</value></data>
   <data name="NewProject_Folder" xml:space="preserve"><value>Creează în dosarul</value></data>
-  <data name="NewProject_PickFolder" xml:space="preserve"><value>Alegeți dosarul pentru proiectul nou.</value></data>
+  <data name="NewProject_PickFolder" xml:space="preserve"><value>Alegeți dosarul pentru topografia nouă.</value></data>
   <data name="NewProject_Taken" xml:space="preserve"><value>{0} există deja în acel dosar.</value></data>
   <data name="NewProject_ImportFolder" xml:space="preserve"><value>Importă un dosar de șablon…</value></data>
   <data name="NewProject_ImportZip" xml:space="preserve"><value>Importă un .zip de șablon…</value></data>
