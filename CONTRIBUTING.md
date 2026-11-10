@@ -2,6 +2,13 @@
 
 Contributions are welcome — just open a pull request or push a branch.
 
+## Documentation
+
+The user guide, `docs/features.md` and `docs/screenshots.md` also exist in Romanian (`docs/ro/`, the
+same tree file for file). When you change one of those pages, change its Romanian twin too — see
+[About this guide → Translations](docs/user-guide/about-this-guide.md#translations) and the term
+list in [`docs/ro/glossary.md`](docs/ro/glossary.md).
+
 ## Licensing of contributions
 
 > By contributing, you agree your contributions are licensed under the project's

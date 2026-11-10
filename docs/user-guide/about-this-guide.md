@@ -149,6 +149,28 @@ tests the script itself. Run it after you change a menu label, and after you edi
 4. If a PDF build exists, the new file is picked up automatically by the filename-ordered glob.
 5. Run the menu-path check above.
 
+## Translations
+
+The user's side of the documentation also exists in **Romanian**, under `docs/ro/`: this guide in
+[`docs/ro/user-guide/`](../ro/user-guide/README.md), plus `docs/ro/features.md` and
+`docs/ro/screenshots.md`. The tree mirrors the English one file for file
+(`docs/user-guide/07-editing.md` ↔ `docs/ro/user-guide/07-editing.md`). English is the source; the
+technical documentation (architecture, LSP, MCP, plugins…) is English only.
+
+- **Change both.** When you change a translated page, make the same change to its Romanian twin,
+  ideally in the same commit, and bump the version stamp in both `README.md` files together.
+- **Use the app's own words.** Name menus and controls as the Romanian UI shows them — the labels
+  come from `ThIDE/Resources/Strings.ro.resx` — so a reader finds them on screen.
+- **Leave code alone.** Commands, file names, Therion keywords, diagnostic codes, settings keys and
+  automation ids stay as they are.
+- **Keep the headings in step.** A Romanian page has the same headings, in the same order and at the
+  same levels, as its English twin; a link to a section uses the Romanian heading's anchor.
+- **Links out of the translated set need one more `../`** in the Romanian tree, because it sits one
+  level deeper (`../diagnostics.md` in the English guide is `../../diagnostics.md` in the Romanian one).
+- **The screenshots are shared**: the Romanian gallery shows the English tree's images.
+
+The PDF build currently collates the English pages only.
+
 ## Known gaps / good first edits
 
 This is a **first iteration**. Screenshots would help a lot and are not included yet — a natural
