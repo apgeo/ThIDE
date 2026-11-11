@@ -16,14 +16,19 @@ A cross-platform desktop **workbench / IDE for [Therion](https://therion.speleo.
 
 - **Semantic editor** for `.th`, `.th2`, `.thconfig`, and `.xvi` — syntax highlighting, context-aware autocomplete, hover docs, folding, diagnostic squiggles, and an overview ruler, built on AvaloniaEdit.
 - **Cross-file logical model** with **go-to-definition**, **find-references**, and **rename** across an entire project.
+- **Project-wide repairs with a preview** — Quick Fix (`Ctrl+.`) and *Fix all* from the Diagnostics panel, **Format all files**, **Normalize project**, **Renumber stations**, **Suggest equates**, and **Add unreferenced scraps to maps**; every multi-file change is listed before it is applied and undone in one step.
+- **Templates & snippets** — **New from Template** (single cave, karst area, expedition, or your club's own folder / `.zip`), **New File** from file templates, **New Trip** prefilled from your latest trip, and snippets with tab-stop fields and variables (date, recent team, next station).
 - **Build & run** the real Therion toolchain with streaming output, cancellation, and clickable `file:line` diagnostics — then open results in **Loch / Aven** or the built-in viewers.
 - **Map / scrap editing** of .th2 files is provided by integration of Mapiah.
-- **Live 2D centreline preview** and an **embedded 3D model viewer** (CaveView.js) with station-pick → jump-to-source.
+- **Live 2D centreline preview** and an **embedded 3D model viewer** ([CaveView.js](docs/3d-viewer.md), an enhanced fork) with station-pick → jump-to-source, **Show in 3D View** from a station in the editor or the station grid, and **export of a model as a stand-alone web page**.
 - **Survey analytics** — length breakdowns, vertical/horizontal extents, team rollups, fixed points, data-quality, and exploration **leads**.
 - **[Structural geology](docs/user-guide/15-structural-geology.md)** — turn shots taken along a fault, bedding plane, or joint into **strike / dip** measurements: detect them from station names, comments, or flags, fit planes with an RMS quality figure, optionally correct to true north, and plot the planes as discs in 3D.
 - **Import / export & GIS** — Survex, Compass, DEM, and GPX import; entrance/fix export to KML / GeoJSON / GPX / CSV.
-- **Extensible & scriptable** — a headless CLI, an editor-agnostic **LSP** server, script hooks, and a semantic-rule plugin loader.
-- **Cross-platform** (Windows / macOS / Linux), localized in **English and Romanian** (additions are welcome).
+- **From the field to the project** — **Paste as shot data** (spreadsheet, CSV, PocketTopo or DistoX tables → a Therion `data` block), **[Link survey file](docs/user-guide/24-linking-surveys.md)** (pick the station where a new survey ties in; ThIDE writes the `input` and `equate` lines), an opt-in **incoming folder** that offers phone exports for import as they arrive, and **Scaffold Project** around a bare TopoDroid survey.
+- **Automation** — an Automation panel for **project tasks** (with problem matchers), **hooks** on open / save / build events, **macros** of tool calls run with a preview first, and **batch builds** of several thconfigs; commands a project defines run only after you trust its folder.
+- **Extensible & scriptable** — a headless CLI (`therion-cli build`, `new`, `import`, `report`, `format --check` and more), an editor-agnostic **LSP** server, and a semantic-rule plugin loader.
+- **Reliability** — crash recovery of unsaved buffers, external-change detection, and a confirmation before destructive resets.
+- **Cross-platform** (Windows / macOS / Linux), localized in **English and Romanian** — the app, its diagnostics, and the [user guide](docs/ro/user-guide/README.md) (additions are welcome).
 - ⚠️ **[Blender animation renders](docs/user-guide/23-blender-animation.md)** *(experimental — work in progress)* — turn a compiled model into a fly-around video, helical descent, flythrough, or documentation stills, rendered headlessly by your own Blender install.
 - ⚠️ **[AI assistants over MCP](docs/user-guide/20-extensibility.md#ai-assistants-mcp)** *(experimental — work in progress)* — a built-in Assistant panel driven by a **local** model, and a `therion-mcp` server that lets an assistant answer questions about your project without you pasting files into a chat.
 
