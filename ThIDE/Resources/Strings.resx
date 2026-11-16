@@ -394,6 +394,7 @@
   <data name="Blender_Status_Acquiring" xml:space="preserve"><value>Acquiring source…</value></data>
   <data name="Blender_Status_Cancelled" xml:space="preserve"><value>Canceled.</value></data>
   <data name="Blender_Status_Failed" xml:space="preserve"><value>Render failed.</value></data>
+  <data name="Blender_ReExport_Failed" xml:space="preserve"><value>Therion could not export the model of {0}: {1}. Log: {2}</value></data>
   <data name="Blender_Status_Exporting" xml:space="preserve"><value>Exporting script…</value></data>
   <data name="Blender_Status_Exported" xml:space="preserve"><value>Script exported.</value></data>
   <data name="Blender_Status_Done" xml:space="preserve"><value>Render complete.</value></data>
@@ -414,6 +415,7 @@
   <data name="Blender_UI_ExternalFile" xml:space="preserve"><value>Model file path</value></data>
   <data name="Blender_UI_WorkspaceArtifact" xml:space="preserve"><value>Workspace model</value></data>
   <data name="Blender_UI_ReloadArtifacts" xml:space="preserve"><value>Refresh</value></data>
+  <data name="Blender_UI_ProjectModel" xml:space="preserve"><value>Project model (exported with Therion when out of date)</value></data>
   <data name="Blender_UI_Camera" xml:space="preserve"><value>Camera</value></data>
   <data name="Blender_UI_Template" xml:space="preserve"><value>Template</value></data>
   <data name="Blender_UI_Engine" xml:space="preserve"><value>Engine</value></data>

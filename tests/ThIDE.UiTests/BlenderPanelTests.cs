@@ -15,13 +15,20 @@ public class BlenderPanelTests
         (Environment.GetEnvironmentVariable("PATH") ?? "").Split(Path.PathSeparator)
             .Any(d => File.Exists(Path.Combine(d, OperatingSystem.IsWindows() ? tool + ".exe" : tool)));
 
-    /// <summary>The demo cave with a continuation lead on station 4, built with Therion.</summary>
-    private static async Task<string> BuiltDemoCaveAsync()
+    /// <summary>The demo cave with a continuation lead on station 4.</summary>
+    private static string DemoCave()
     {
         var dir = ThideApp.CopyFixture("demo-cave");
         var th = Path.Combine(dir, "demo.th");
         File.WriteAllText(th, File.ReadAllText(th).Replace(
             "  endcentreline", "    station 4 \"draught in the boulders\" continuation\n  endcentreline"));
+        return dir;
+    }
+
+    /// <summary><see cref="DemoCave"/>, built with Therion.</summary>
+    private static async Task<string> BuiltDemoCaveAsync()
+    {
+        var dir = DemoCave();
         var psi = new ProcessStartInfo("therion", "demo.thconfig")
         {
             WorkingDirectory = dir,
@@ -87,6 +94,41 @@ public class BlenderPanelTests
         Assert.Contains("LEAD_MARKERS = [", script);
         Assert.Contains("\"draught in the boulders\"", script);
         Assert.Contains("\"demo.4\"", script);
+    }
+
+    [UiFact]
+    public async Task Render_of_a_project_never_built_exports_the_model_outside_the_project()
+    {
+        if (!OnPath("therion")) return;
+        var dir = DemoCave();
+        var before = Directory.GetFileSystemEntries(dir).Order(StringComparer.Ordinal).ToArray();
+        var renders = Path.Combine(Path.GetTempPath(), "thide-ui-reexport-" + Guid.NewGuid().ToString("N"));
+        var scripts = Path.Combine(renders, "stub-scripts");
+        var environment = new Dictionary<string, string>
+        {
+            ["PATH"] = StubBlenderDirectory() + Path.PathSeparator + Environment.GetEnvironmentVariable("PATH"),
+            ["THIDE_STUB_BLENDER_SCRIPTS"] = scripts,
+        };
+        try
+        {
+            await using (var app = await ThideApp.StartAsync(environment, dir, "demo.thconfig"))
+            {
+                await OpenPanelAsync(app, Path.Combine(renders, "out"));
+                await app.InvokeAsync("#Blender.Render");
+                await app.WaitAsync("role:Text;name:Render complete.", timeoutMs: 120_000);
+            }
+
+            // The model came from a re-export: the lead is marked, and the project folder holds
+            // nothing it did not hold before (no model, no temporary thconfig, no log).
+            var script = File.ReadAllText(Assert.Single(Directory.GetFiles(scripts)));
+            Assert.Contains("\"demo.4\"", script);
+            var after = Directory.GetFileSystemEntries(dir).Order(StringComparer.Ordinal).ToArray();
+            Assert.Equal(before, after);
+        }
+        finally
+        {
+            try { Directory.Delete(renders, recursive: true); } catch { }
+        }
     }
 
     [UiFact]

@@ -45,10 +45,14 @@ public class BlenderAnimationViewModelTests
     private sealed class FakeSources : IBlenderSourceProvider
     {
         public List<ModelArtifact> Discovered { get; } = [];
+        public bool Project { get; init; }
+        public ModelSourceRequest? LastRequest { get; private set; }
+        public bool HasProject => Project;
         public IReadOnlyList<ModelArtifact> DiscoverArtifacts() => Discovered;
         public Task<RenderSource> AcquireAsync(ModelSourceRequest request, CancellationToken ct = default)
             => Task.FromResult(new RenderSource(
-                new ResolvedModelSource { Path = "m.lox", Format = CaveSourceFormat.Lox, Kind = ModelSourceKind.ExternalFile }, []));
+                new ResolvedModelSource { Path = "m.lox", Format = CaveSourceFormat.Lox, Kind = ModelSourceKind.ExternalFile }, []))
+            .ContinueWith(t => { LastRequest = request; return t.Result; }, TaskScheduler.Default);
     }
 
     private static BlenderAnimationViewModel Vm(FakeRenderService? svc = null, FakeSources? src = null, PresetStore? store = null)
@@ -59,6 +63,41 @@ public class BlenderAnimationViewModelTests
         vm.UseExternalFile = true;
         vm.ExternalFilePath = "m.lox";
         return vm;
+    }
+
+    // ---- source ----
+
+    [Fact]
+    public async Task With_a_project_open_the_projects_model_comes_first_and_renders_from_the_workspace()
+    {
+        var src = new FakeSources { Project = true };
+        src.Discovered.Add(new ModelArtifact("/invented/cave.lox", CaveSourceFormat.Lox, 10, System.DateTimeOffset.UnixEpoch));
+        var vm = Vm(src: src);
+
+        vm.ReloadArtifactsCommand.Execute(null);
+
+        Assert.Equal(2, vm.Artifacts.Count);
+        Assert.Null(vm.Artifacts[0].Artifact);
+        Assert.Equal(vm.Artifacts[0], vm.SelectedArtifact);
+        await vm.RenderCommand.ExecuteAsync(null);
+        Assert.Null(src.LastRequest!.ExternalFilePath);
+        Assert.True(src.LastRequest.AllowReExport);
+
+        vm.SelectedArtifact = vm.Artifacts[1];
+        await vm.RenderCommand.ExecuteAsync(null);
+        Assert.Equal("/invented/cave.lox", src.LastRequest!.ExternalFilePath);
+    }
+
+    [Fact]
+    public void Without_a_project_only_the_build_outputs_are_listed()
+    {
+        var src = new FakeSources();
+        src.Discovered.Add(new ModelArtifact("/invented/cave.lox", CaveSourceFormat.Lox, 10, System.DateTimeOffset.UnixEpoch));
+        var vm = Vm(src: src);
+
+        vm.ReloadArtifactsCommand.Execute(null);
+
+        Assert.NotNull(Assert.Single(vm.Artifacts).Artifact);
     }
 
     // ---- render folder ----

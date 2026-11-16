@@ -394,6 +394,7 @@
   <data name="Blender_Status_Acquiring" xml:space="preserve"><value>Se obține sursa…</value></data>
   <data name="Blender_Status_Cancelled" xml:space="preserve"><value>Oprit.</value></data>
   <data name="Blender_Status_Failed" xml:space="preserve"><value>Randare eșuată.</value></data>
+  <data name="Blender_ReExport_Failed" xml:space="preserve"><value>Therion nu a putut exporta modelul din {0}: {1}. Jurnal: {2}</value></data>
   <data name="Blender_Status_Exporting" xml:space="preserve"><value>Se exportă scriptul…</value></data>
   <data name="Blender_Status_Exported" xml:space="preserve"><value>Script exportat.</value></data>
   <data name="Blender_Status_Done" xml:space="preserve"><value>Randare completă.</value></data>
@@ -414,6 +415,7 @@
   <data name="Blender_UI_ExternalFile" xml:space="preserve"><value>Cale fișier model</value></data>
   <data name="Blender_UI_WorkspaceArtifact" xml:space="preserve"><value>Modelul spațiului de lucru</value></data>
   <data name="Blender_UI_ReloadArtifacts" xml:space="preserve"><value>Reîmprospătează</value></data>
+  <data name="Blender_UI_ProjectModel" xml:space="preserve"><value>Modelul proiectului (exportat cu Therion când e depășit)</value></data>
   <data name="Blender_UI_Camera" xml:space="preserve"><value>Cameră</value></data>
   <data name="Blender_UI_Template" xml:space="preserve"><value>Șablon</value></data>
   <data name="Blender_UI_Engine" xml:space="preserve"><value>Motor</value></data>

@@ -323,6 +323,10 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
     {
         Artifacts.Clear();
         if (_sources is null) return;
+        // First and preferred: the project's own model, re-exported when the build is missing
+        // or older than the sources.
+        if (_sources.HasProject)
+            Artifacts.Add(new ArtifactItem(Tr.Get("Blender_UI_ProjectModel"), null));
         foreach (var artifact in _sources.DiscoverArtifacts())
             Artifacts.Add(new ArtifactItem(
                 System.IO.Path.GetFileName(artifact.Path) + $" ({artifact.Format})", artifact));
@@ -370,8 +374,8 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
     {
         if (UseExternalFile && !string.IsNullOrWhiteSpace(ExternalFilePath))
             return ModelSourceRequest.ForExternalFile(ExternalFilePath);
-        if (SelectedArtifact is { } artifact)
-            return ModelSourceRequest.ForExternalFile(artifact.Artifact.Path);
+        if (SelectedArtifact is { Artifact: { } artifact })
+            return ModelSourceRequest.ForExternalFile(artifact.Path);
         return ModelSourceRequest.ForWorkspace(allowReExport: AllowReExport);
     }
 
@@ -523,7 +527,8 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
 public sealed record PresetItem(string Name, string? Description, bool BuiltIn, RenderPreset Preset);
 
 /// <summary>A discovered workspace model artifact in the source dropdown.</summary>
-public sealed record ArtifactItem(string DisplayName, ModelArtifact Artifact);
+/// <summary>A source in the panel's dropdown: a model file, or (null) the project's model.</summary>
+public sealed record ArtifactItem(string DisplayName, ModelArtifact? Artifact);
 
 /// <summary>A finished render job in the panel's history (BA-B13).</summary>
 public sealed record JobHistoryEntry(

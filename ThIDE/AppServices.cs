@@ -292,7 +292,14 @@ internal static class AppServices
                 () => BlenderSourceProvider.OpenLeads(
                     sp.GetRequiredService<IDocumentService>().Workspace,
                     sp.GetRequiredService<ILeadStatusStore>(),
-                    sp.GetRequiredService<IWorkspaceSession>().RootPath)));
+                    sp.GetRequiredService<IWorkspaceSession>().RootPath),
+                new BlenderModelReExporter(
+                    () => sp.GetRequiredService<IWorkspaceSession>().ActiveThconfig?.FullPath,
+                    sp.GetRequiredService<ITherionCompiler>(),
+                    BlenderModelReExporter.DefaultRoot()),
+                () => BlenderSourceProvider.NewestSource(
+                    sp.GetRequiredService<IDocumentService>().Workspace,
+                    sp.GetRequiredService<IWorkspaceSession>().ActiveThconfig?.FullPath)));
         services.AddSingleton<Therion.Blender.IBlenderRenderService>(sp =>
         {
             var service = new Therion.Blender.Execution.BlenderRenderService(
