@@ -16,7 +16,12 @@ public readonly record struct LabelItem(string Text, CaveVector3 Position, doubl
 
 /// <summary>A lead / QM marker: an icosphere of <paramref name="Radius"/> at
 /// <paramref name="Position"/>, optionally captioned.</summary>
-public readonly record struct LeadItem(string Text, CaveVector3 Position, double Radius, bool ShowText, double TextSize);
+public readonly record struct LeadItem(string Text, CaveVector3 Position, double Radius, bool ShowText, double TextSize)
+{
+    /// <summary>The lead's station, which names the marker's objects (two leads may share a
+    /// note); null falls back to <see cref="Text"/>.</summary>
+    public string? Station { get; init; }
+}
 
 /// <summary>The label engine's output — the data tables the emitter writes out.</summary>
 public sealed record LabelPlan
@@ -85,9 +90,21 @@ public static class LabelPlanner
         double size = diagonal * StationSizeFraction * spec.TextScale;
         var result = new List<LabelItem>(selected.Count);
         foreach (var s in selected)
-            result.Add(new LabelItem(s.Name, Vec(s.Position), size));
+            result.Add(new LabelItem(s.Name, AboveTheRoof(s, size), size));
         return result;
     }
+
+    /// <summary>A station sits inside its passage, where the walls hide its label from any
+    /// camera outside; the label goes just above the passage roof instead, its lower edge clear
+    /// of it. A station with no roof above it keeps its label on the station.</summary>
+    private static CaveVector3 AboveTheRoof(SceneMetaStation s, double size)
+    {
+        var at = Vec(s.Position);
+        return s.Roof is { } roof ? at + new CaveVector3(0.0, 0.0, roof + size * RoofClearanceFactor) : at;
+    }
+
+    /// <summary>Half a label's height plus a margin, in label sizes.</summary>
+    private const double RoofClearanceFactor = 0.75;
 
     private static Func<SceneMetaStation, bool> FilterPredicate(StationLabelSpec spec)
     {
@@ -130,7 +147,7 @@ public static class LabelPlanner
         foreach (var lead in meta.Leads)
         {
             string text = !string.IsNullOrWhiteSpace(lead.Note) ? lead.Note! : lead.Station;
-            result.Add(new LeadItem(text, Vec(lead.Position), radius, spec.ShowText, textSize));
+            result.Add(new LeadItem(text, Vec(lead.Position), radius, spec.ShowText, textSize) { Station = lead.Station });
         }
         return result;
     }

@@ -60,12 +60,12 @@ public class SceneProbeTests
 
         var report = await SceneProbeRunner.RunAsync("lead-markers", assets, spec, new ProbeOptions { Samples = 1 });
 
-        // A marker is named after the text it shows: the lead's note, or its station without one.
+        // A marker is named after its station and shows the lead's note.
         var leads = assets.Conversion.Meta.Leads;
         Assert.Equal(3, leads.Count);
-        var texts = leads.Select(l => l.Note ?? l.Station).Order().ToList();
-        Assert.Equal(texts.Select(t => "lead:" + t), report.WithRole(ProbeRoles.LeadMarker).Select(o => o.Name).Order());
-        Assert.Equal(texts, report.WithRole(ProbeRoles.LeadText).Select(o => o.Text).Order());
+        Assert.Equal(leads.Select(l => "lead:" + l.Station).Order(), report.WithRole(ProbeRoles.LeadMarker).Select(o => o.Name).Order());
+        Assert.Equal(leads.Select(l => "leadtxt:" + l.Station).Order(), report.WithRole(ProbeRoles.LeadText).Select(o => o.Name).Order());
+        Assert.Equal(leads.Select(l => l.Note).Order(), report.WithRole(ProbeRoles.LeadText).Select(o => o.Text).Order());
     }
 
     [BlenderFact]
@@ -165,6 +165,25 @@ public class SceneProbeTests
         Assert.Equal(8.0, info.Fps, 3);
     }
 
+    [BlenderFact]
+    public async Task StationLabels_AreNotBuriedInTheWalls()
+    {
+        var spec = Preset("Orbit showcase") with
+        {
+            Labels = new LabelsSpec { Stations = new StationLabelSpec { Show = true, Filter = StationFilter.Named } },
+            Output = Wide,
+        };
+
+        var report = await SceneProbeRunner.RunAsync("labels-buried", Medium.Value, spec, new ProbeOptions { Samples = 3 });
+
+        Assert.All(report.Frames, f =>
+        {
+            var labels = f.Objects.Where(o => o.Name.StartsWith("stn:", StringComparison.Ordinal)).ToList();
+            int buried = labels.Count(o => o.Occluder == "CaveModel");
+            Assert.True(buried <= labels.Count / 2, $"frame {f.Frame}: the walls hide {buried} of {labels.Count} labels");
+        });
+    }
+
     // ---- known defects: each states the wanted behaviour and is skipped until it is fixed ----
 
     [BlenderKnownDefectFact(
@@ -204,27 +223,6 @@ public class SceneProbeTests
         var whips = turns.Where(t => t.Degrees > 20.0).ToList();
         Assert.True(whips.Count == 0,
             "turns of more than 20° in one frame at 10 fps: " + string.Join(", ", whips.Select(w => $"frame {w.Frame}: {w.Degrees:F0}°")));
-    }
-
-    [BlenderKnownDefectFact(
-        "station labels sit exactly on their stations, inside the passage, so from outside the cave the " +
-        "walls hide most of them.")]
-    public async Task StationLabels_AreNotBuriedInTheWalls()
-    {
-        var spec = Preset("Orbit showcase") with
-        {
-            Labels = new LabelsSpec { Stations = new StationLabelSpec { Show = true, Filter = StationFilter.Named } },
-            Output = Wide,
-        };
-
-        var report = await SceneProbeRunner.RunAsync("labels-buried", Medium.Value, spec, new ProbeOptions { Samples = 3 });
-
-        Assert.All(report.Frames, f =>
-        {
-            var labels = f.Objects.Where(o => o.Name.StartsWith("stn:", StringComparison.Ordinal)).ToList();
-            int buried = labels.Count(o => o.Occluder == "CaveModel");
-            Assert.True(buried <= labels.Count / 2, $"frame {f.Frame}: the walls hide {buried} of {labels.Count} labels");
-        });
     }
 
     [BlenderKnownDefectFact(

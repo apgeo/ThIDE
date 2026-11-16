@@ -554,16 +554,17 @@ public static class ScriptGenerator
         using (w.Indented())
         {
             foreach (var lead in leads)
-                w.Line($"({PyWriter.Str(lead.Text)}, {PyWriter.Num(lead.Position.X)}, {PyWriter.Num(lead.Position.Y)}, {PyWriter.Num(lead.Position.Z)}, {PyWriter.Num(lead.Radius)}, {PyWriter.Num(lead.TextSize)}),");
+                w.Line($"({PyWriter.Str(lead.Text)}, {PyWriter.Num(lead.Position.X)}, {PyWriter.Num(lead.Position.Y)}, {PyWriter.Num(lead.Position.Z)}, {PyWriter.Num(lead.Radius)}, {PyWriter.Num(lead.TextSize)}, {PyWriter.Str(lead.Station ?? lead.Text)}),");
         }
         w.Line("]");
         using (w.Block("for _d in LEAD_MARKERS:"))
         {
-            w.Line("_dm = _thide_lead(\"lead:\" + _d[0], (_d[1], _d[2], _d[3]), _d[4])");
+            // Objects are named by station (_d[6]); the caption shows the note (_d[0]).
+            w.Line("_dm = _thide_lead(\"lead:\" + _d[6], (_d[1], _d[2], _d[3]), _d[4])");
             if (spec.Labels.Leads.Pulse)
                 w.Line("_thide_pulse(_dm)");
             if (spec.Labels.Leads.ShowText)
-                w.Line("_thide_label(\"leadtxt:\" + _d[0], _d[0], (_d[1], _d[2], _d[3] + _d[4] * 2.0), _d[5], _lead_markers)");
+                w.Line("_thide_label(\"leadtxt:\" + _d[6], _d[0], (_d[1], _d[2], _d[3] + _d[4] * 2.0), _d[5], _lead_markers)");
         }
     }
 

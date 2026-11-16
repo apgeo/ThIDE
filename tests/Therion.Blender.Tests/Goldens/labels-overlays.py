@@ -205,11 +205,11 @@ def _thide_lead(name, loc, radius):
     return _o
 
 LEAD_MARKERS = [
-    ("strong draught", 0, 0, -10, 1.5620499351813308, 1.874459922217597),
-    ("sump.3", -20, 10, -25, 1.5620499351813308, 1.874459922217597),
+    ("strong draught", 0, 0, -10, 1.5620499351813308, 1.874459922217597, "gallery.12"),
+    ("sump.3", -20, 10, -25, 1.5620499351813308, 1.874459922217597, "sump.3"),
 ]
 for _d in LEAD_MARKERS:
-    _dm = _thide_lead("lead:" + _d[0], (_d[1], _d[2], _d[3]), _d[4])
+    _dm = _thide_lead("lead:" + _d[6], (_d[1], _d[2], _d[3]), _d[4])
 # presentation overlays (camera HUD + world markers)
 _HUD_DEPTH = 3
 _hud_w, _hud_h = 960, 540

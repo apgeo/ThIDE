@@ -1,5 +1,25 @@
 # Therion.Blender — changes for consumers
 
+## 2026-11-16 (later) — station labels above the passage roof
+
+### Behaviour changes
+- **Station labels sit just above the roof of their passage** instead of on the station, inside
+  the passage, where the walls hid them from any camera outside the cave (102 of 116 labels on an
+  invented test cave; 2 now). Stations with no wall above them keep their labels on the station.
+  Migration: none.
+- **Lead marker objects are named after the lead's station** (`lead:<station>`,
+  `leadtxt:<station>`) instead of its note, so two leads with the same note no longer collide.
+  The caption still shows the note. Migration: a consumer that looks the objects up by name in a
+  generated scene uses the station name.
+
+### Additive API
+- `SceneMetaStation.Roof` (`roof` in `scene-meta.json`, omitted when null): how far above the
+  station the walls close over it, in metres. Null without walls or with nothing above. The
+  schema version stays 1; documents without the field read as before.
+- `Geometry.RoofFinder`: the height of the wall surface above a point (`HeightAbove`), or of the
+  roof of the passage the point is in (`HeightNear`).
+- `LeadItem.Station` (init-only).
+
 ## 2026-11-16 — the head torch lights the passage; titles stay in frame
 
 ### Behaviour changes

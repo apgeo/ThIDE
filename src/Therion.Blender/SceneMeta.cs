@@ -56,6 +56,11 @@ public sealed record SceneMetaStation
     public bool Surface { get; init; }
     public uint RawFlags { get; init; }
     public uint? SurveyId { get; init; }
+
+    /// <summary>How far above the station the walls close over it, in metres: the roof of its
+    /// passage. Null when the model has no walls or nothing lies above the station (and in
+    /// documents written before this field existed).</summary>
+    public double? Roof { get; init; }
 }
 
 /// <summary>A survey-tree node (from <c>.lox</c>; empty for <c>.3d</c>).</summary>
@@ -119,12 +124,15 @@ public sealed record SceneMeta
         ArgumentNullException.ThrowIfNull(geometry);
         var model = geometry.RecenteredModel;
 
+        var roofs = geometry.HasWalls ? new RoofFinder(geometry.Walls) : null;
         var stations = new List<SceneMetaStation>();
         foreach (var s in model.Stations)
         {
             if ((s.Flags & CaveStationFlags.Anonymous) != 0) continue;
+            double? roof = roofs?.HeightNear(s.Position);
             stations.Add(new SceneMetaStation
             {
+                Roof = roof is { } r ? Math.Round(r, 3) : null,
                 Name = s.Name,
                 Position = SceneMetaVec.From(s.Position),
                 Entrance = s.IsEntrance,

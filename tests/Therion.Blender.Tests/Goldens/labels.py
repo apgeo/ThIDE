@@ -219,13 +219,13 @@ def _thide_pulse(obj):
         _fc.modifiers.new(type='CYCLES')
 
 LEAD_MARKERS = [
-    ("strong draught", 0, 0, -10, 1.5620499351813308, 1.874459922217597),
-    ("sump.3", -20, 10, -25, 1.5620499351813308, 1.874459922217597),
+    ("strong draught", 0, 0, -10, 1.5620499351813308, 1.874459922217597, "gallery.12"),
+    ("sump.3", -20, 10, -25, 1.5620499351813308, 1.874459922217597, "sump.3"),
 ]
 for _d in LEAD_MARKERS:
-    _dm = _thide_lead("lead:" + _d[0], (_d[1], _d[2], _d[3]), _d[4])
+    _dm = _thide_lead("lead:" + _d[6], (_d[1], _d[2], _d[3]), _d[4])
     _thide_pulse(_dm)
-    _thide_label("leadtxt:" + _d[0], _d[0], (_d[1], _d[2], _d[3] + _d[4] * 2.0), _d[5], _lead_markers)
+    _thide_label("leadtxt:" + _d[6], _d[0], (_d[1], _d[2], _d[3] + _d[4] * 2.0), _d[5], _lead_markers)
 
 # ---- engine ----
 thide("phase", "engine")
