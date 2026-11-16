@@ -45,11 +45,12 @@ public class InventedCaveTests
     }
 
     [Fact]
-    public void Large_MakesMoreThanAHundredThousandWallTriangles()
+    public void Large_MakesTensOfThousandsOfWallTriangles()
     {
         var geometry = GeometryStage.Build(InventedCave.Build(InventedCaveSize.Large));
 
-        Assert.True(geometry.Walls.Triangles.Count > 100_000, $"{geometry.Walls.Triangles.Count} triangles");
+        // Sixteen to a leg once the tubes are joined, more round a junction, eight to a cap.
+        Assert.True(geometry.Walls.Triangles.Count > 70_000, $"{geometry.Walls.Triangles.Count} triangles");
         Assert.True(geometry.LocalBounds.Size.X > 2_500.0, "the far cave lies three kilometres east");
     }
 }

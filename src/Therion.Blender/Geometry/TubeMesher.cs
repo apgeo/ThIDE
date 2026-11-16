@@ -2,11 +2,11 @@
 //
 // topodroid's ExportSTL is only a facet WRITER; its wall model lives in a heavyweight
 // convex-hull package that isn't portable. Instead we synthesize the standard
-// cave-survey "LRUD tube": each leg becomes an independently capped tube whose
-// cross-section passes exactly through the Left/Right/Up/Down wall distances. Legs are
-// meshed independently (no miter joints or twist propagation) — robust, deterministic,
-// and visually equivalent to what Aven/Loch render; the small overlaps at junctions are
-// invisible in a solid render.
+// cave-survey "LRUD tube": each leg becomes a tube whose cross-section passes exactly
+// through the Left/Right/Up/Down wall distances, in the leg's own frame (no twist
+// propagation). Where legs meet at a station their tubes are joined into one skin
+// (TubeJoints), and a tube is capped only where the passage ends, so nothing stands across
+// a passage at a station. Robust and deterministic.
 
 namespace Therion.Blender.Geometry;
 
@@ -14,9 +14,10 @@ namespace Therion.Blender.Geometry;
 public static class TubeMesher
 {
     /// <summary>
-    /// Skins each non-auxiliary leg of <paramref name="shots"/> into a capped tube.
-    /// Positions come straight from the shots (already recentered by the caller when
-    /// requested). Legs shorter than a millimetre are skipped.
+    /// Skins the non-auxiliary legs of <paramref name="shots"/> into tubes, joined where
+    /// they meet (<see cref="GeometryOptions.JoinTubes"/>). Positions come straight from the
+    /// shots (already recentered by the caller when requested). Legs shorter than a
+    /// millimetre are skipped.
     /// </summary>
     public static CaveMesh Build(IReadOnlyList<CaveShot> shots, GeometryOptions options)
     {
@@ -58,9 +59,17 @@ public static class TubeMesher
         return legs;
     }
 
-    /// <summary>Meshes <paramref name="legs"/> (from <see cref="Legs"/>): two rings and the
-    /// walls between them for each, closed by end caps when
-    /// <see cref="GeometryOptions.CapTubes"/> is set.</summary>
+    /// <summary>
+    /// Meshes <paramref name="legs"/> (from <see cref="Legs"/>): for each, the walls between
+    /// the ring of vertices at its start and the one at its end. With
+    /// <see cref="GeometryOptions.JoinTubes"/> the rings at a station where legs meet are
+    /// joined: two legs share one ring, three or more end in open rims cut to fit each other
+    /// (drawn with more vertices than the cross-section has corners, as is then the ring at the
+    /// other end of each of those legs). <see cref="GeometryOptions.CapTubes"/> closes a tube
+    /// only where the passage ends. Without <see cref="GeometryOptions.JoinTubes"/> every leg
+    /// is a tube of its own, capped at both ends. Legs meet where their stations are equal to
+    /// the last digit. Triangles are in leg order: a leg's walls, then its caps.
+    /// </summary>
     public static CaveMesh BuildFromLegs(IReadOnlyList<TubeLeg> legs, GeometryOptions options)
     {
         ArgumentNullException.ThrowIfNull(legs);
@@ -68,29 +77,80 @@ public static class TubeMesher
 
         var vertices = new List<CaveVector3>();
         var triangles = new List<CaveTriangle>();
+        var ends = options.JoinTubes ? TubeJoints.Plan(legs) : null;
+        var written = new uint[legs.Count * 2][]; // the vertices of each ring, once it has them
 
-        foreach (var leg in legs)
+        // The vertices of ring `end` (2 i for the start of leg i, 2 i + 1 for its end): its
+        // own, or those of the ring it shares, which belongs to an earlier leg.
+        uint[] Points(int end, TubeSection section, int sides)
         {
-            int sides = Math.Max(3, leg.Sides);
-            uint ringA = (uint)vertices.Count;
-            AppendRing(vertices, leg.From, sides);
-            uint ringB = (uint)vertices.Count;
-            AppendRing(vertices, leg.To, sides);
+            uint[] points;
+            if (ends is not null && ends[end].Corners is { } shared)
+            {
+                var owner = written[ends[end].Owner];
+                points = new uint[sides];
+                for (int s = 0; s < sides; s++) points[s] = owner[shared[s]];
+            }
+            else
+            {
+                uint first = (uint)vertices.Count;
+                if (ends is not null && ends[end].Ring is { } ring) vertices.AddRange(ring);
+                else AppendRing(vertices, section, sides);
+                points = new uint[vertices.Count - (int)first];
+                for (int p = 0; p < points.Length; p++) points[p] = first + (uint)p;
+            }
+            return written[end] = points;
+        }
 
-            // Side quads between the two rings (two triangles each).
+        // A ring drawn with `steps` points to a side: the points it has, or its corners with
+        // new vertices on the straight sides between them.
+        uint[] Stepped(uint[] ring, int sides, int steps)
+        {
+            if (ring.Length == sides * steps) return ring;
+            var points = new uint[sides * steps];
             for (int s = 0; s < sides; s++)
             {
-                int next = (s + 1) % sides;
-                uint a0 = ringA + (uint)s, a1 = ringA + (uint)next;
-                uint b0 = ringB + (uint)s, b1 = ringB + (uint)next;
+                var from = vertices[(int)ring[s]];
+                var to = vertices[(int)ring[(s + 1) % sides]];
+                points[s * steps] = ring[s];
+                for (int step = 1; step < steps; step++)
+                {
+                    points[s * steps + step] = (uint)vertices.Count;
+                    vertices.Add(from.Lerp(to, (double)step / steps));
+                }
+            }
+            return points;
+        }
+
+        bool Closed(int end) => ends is null || ends[end].Kind == TubeEndKind.Closed;
+
+        for (int i = 0; i < legs.Count; i++)
+        {
+            var leg = legs[i];
+            int sides = Math.Max(3, leg.Sides);
+            var ringA = Points(2 * i, leg.From, sides);
+            var ringB = Points(2 * i + 1, leg.To, sides);
+
+            // An open rim has several points to a side; the ring at the leg's other end is
+            // then drawn with as many, so that every wall line runs from point to point.
+            int steps = Math.Max(ringA.Length, ringB.Length) / sides;
+            ringA = Stepped(ringA, sides, steps);
+            ringB = Stepped(ringB, sides, steps);
+
+            // Side quads between the two rings (two triangles each).
+            for (int p = 0; p < ringA.Length; p++)
+            {
+                int next = (p + 1) % ringA.Length;
+                uint a0 = ringA[p], a1 = ringA[next];
+                uint b0 = ringB[p], b1 = ringB[next];
                 triangles.Add(new CaveTriangle(a0, b0, b1));
                 triangles.Add(new CaveTriangle(a0, b1, a1));
             }
 
             if (options.CapTubes)
             {
-                AppendCap(vertices, triangles, leg.From, sides, facingForward: false);
-                AppendCap(vertices, triangles, leg.To, sides, facingForward: true);
+                if (Closed(2 * i)) AppendCap(vertices, triangles, leg.From, sides, facingForward: false);
+                if (Closed(2 * i + 1)) AppendCap(vertices, triangles, leg.To, sides, facingForward: true);
             }
         }
 
@@ -125,14 +185,21 @@ public static class TubeMesher
             v.Down > 0 ? v.Down : fallback);
     }
 
-    private static void AppendRing(List<CaveVector3> vertices, TubeSection section, int sides)
+    /// <summary>The corners of a cross-section drawn with <paramref name="sides"/> sides:
+    /// counter-clockwise seen from behind the leg, the first on the right wall.</summary>
+    internal static CaveVector3[] Ring(TubeSection section, int sides)
     {
+        var ring = new CaveVector3[sides];
         for (int s = 0; s < sides; s++)
         {
             var (horizontal, vertical) = section.OutlineAt(2.0 * Math.PI * s / sides);
-            vertices.Add(section.Station + section.RightAxis * horizontal + section.UpAxis * vertical);
+            ring[s] = section.Station + section.RightAxis * horizontal + section.UpAxis * vertical;
         }
+        return ring;
     }
+
+    private static void AppendRing(List<CaveVector3> vertices, TubeSection section, int sides)
+        => vertices.AddRange(Ring(section, sides));
 
     private static void AppendCap(
         List<CaveVector3> vertices, List<CaveTriangle> triangles, TubeSection section, int sides, bool facingForward)

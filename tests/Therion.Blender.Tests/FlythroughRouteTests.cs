@@ -3,10 +3,10 @@
 // it, never turns its view faster than the limit, never looks nearly straight up or down, and
 // speeds up and slows down at the ends.
 //
-// "Room" is measured here from the wall mesh itself (the planes of each leg's tube walls), not
-// with the cross-section code the planner uses, so the two check each other. End caps are left
-// out: every leg's tube is closed separately, so any route has to pass through two of them at
-// each station.
+// "Room" is measured here from the planes of each leg's own tube walls, not with the
+// cross-section code the planner uses, so the two check each other. The distance to the skin the
+// tubes are joined into, which is what a camera in Blender has round it, is measured from its
+// triangles (KeepsClearOfTheSkinTheTubesAreJoinedInto).
 
 using Therion.Blender.Emit;
 using Therion.Blender.Geometry;
@@ -60,6 +60,41 @@ public class FlythroughRouteTests
             Assert.True(tight.Count == 0,
                 "less than 0.3 m from a wall at " + string.Join(", ", tight.Take(8).Select(k => $"frame {k.Frame}: {k.Room:F2} m")));
         }
+    }
+
+    // The probe's clip again, against the wall mesh itself: nothing of it within 0.3 m of the
+    // camera, which is what the scene probe asks in a real Blender scene. Before the tubes were
+    // joined the camera passed through two end caps at every station (8 of 80 frames on the
+    // Medium cave). The caves here are the ones whose passages stay out of each other's way: in
+    // Medium seed 2 and in the Large cave a passage runs through another one beyond the station
+    // where they join, or away from any, and a camera in the one passes through the wall of
+    // the other.
+    [Theory]
+    [InlineData(InventedCaveSize.Small, 1)]
+    [InlineData(InventedCaveSize.Small, 2)]
+    [InlineData(InventedCaveSize.Small, 3)]
+    [InlineData(InventedCaveSize.Medium, 1)]
+    [InlineData(InventedCaveSize.Medium, 3)]
+    [InlineData(InventedCaveSize.Medium, 4)]
+    public void KeepsClearOfTheSkinTheTubesAreJoinedInto(InventedCaveSize size, int seed)
+    {
+        var geometry = GeometryStage.Build(InventedCave.Build(size, seed));
+        var keys = Fly(CameraFraming.FromGeometry(geometry), 10, 8);
+
+        var close = keys.Select(k => (k.Frame, Distance: MeshProbe.Nearest(geometry.Walls, k.Location))).Where(k => k.Distance < 0.3).ToList();
+        Assert.True(close.Count == 0,
+            "within 0.3 m of a wall surface at " + string.Join(", ", close.Select(k => $"frame {k.Frame}: {k.Distance:F2} m")));
+    }
+
+    [Fact]
+    public void WithEveryLegATubeOfItsOwn_TheCameraPassesThroughTheirEndCaps()
+    {
+        // What joining the tubes is for: the same route through the same cave, each leg capped.
+        var geometry = GeometryStage.Build(InventedCave.Build(InventedCaveSize.Medium), new GeometryOptions { JoinTubes = false });
+        var keys = Fly(CameraFraming.FromGeometry(geometry), 10, 8);
+
+        int close = keys.Count(k => MeshProbe.Nearest(geometry.Walls, k.Location) < 0.3);
+        Assert.True(close >= 5, $"within 0.3 m of a wall surface at {close} of {keys.Count} frames");
     }
 
     [Theory]
@@ -266,10 +301,10 @@ public class FlythroughRouteTests
     [MemberData(nameof(Caves))]
     public void TubeLegs_AreTheCrossSectionsTheWallsWereBuiltFrom(InventedCaveSize size, int seed)
     {
-        var options = new GeometryOptions { CapTubes = false };
+        var options = new GeometryOptions { CapTubes = false, JoinTubes = false };
         var geometry = GeometryStage.Build(InventedCave.Build(size, seed), options);
 
-        // An open tube is two rings of vertices per leg, in leg order.
+        // An open tube of its own is two rings of vertices per leg, in leg order.
         int sides = options.TubeSides;
         Assert.Equal(geometry.Walls.Vertices.Count, geometry.TubeLegs.Count * 2 * sides);
         for (int i = 0; i < geometry.TubeLegs.Count; i += Math.Max(1, geometry.TubeLegs.Count / 50))
@@ -281,6 +316,41 @@ public class FlythroughRouteTests
             Assert.True(leg.Clearance(middle) > 0.8, $"leg {i}: {leg.Clearance(middle):F2} m of room at its middle");
             Assert.True(leg.Clearance(middle + leg.From.RightAxis * 10.0) < 0.0, "a point 10 m to the right is outside the tube");
         }
+    }
+
+    [Theory]
+    [MemberData(nameof(Caves))]
+    public void JoinedWalls_StayOnTheCrossSectionsOfTheirLegs(InventedCaveSize size, int seed)
+    {
+        // Joining moves the ends of a leg's walls along the leg (exactly on its cross-sections)
+        // and, where two legs share a ring, halfway to what the other leg makes of the station.
+        // That is millimetres between passage legs and more where a level leg meets a shaft,
+        // whose frame is turned.
+        var options = new GeometryOptions { CapTubes = false };
+        var geometry = GeometryStage.Build(InventedCave.Build(size, seed), options);
+        var ends = TubeJoints.Plan(geometry.TubeLegs);
+
+        var off = new List<double>();
+        int next = 0;
+        for (int i = 0; i < geometry.TubeLegs.Count; i++)
+        {
+            int steps = Math.Max(ends[2 * i].Steps(options.TubeSides), ends[2 * i + 1].Steps(options.TubeSides));
+            var mine = new HashSet<uint>();
+            for (int t = 2 * options.TubeSides * steps; t > 0; t--)
+            {
+                var triangle = geometry.Walls.Triangles[next++];
+                mine.Add(triangle.A);
+                mine.Add(triangle.B);
+                mine.Add(triangle.C);
+            }
+            off.AddRange(mine.Select(v => Math.Abs(geometry.TubeLegs[i].Clearance(geometry.Walls.Vertices[(int)v]))));
+        }
+        Assert.Equal(geometry.Walls.Triangles.Count, next);
+
+        off.Sort();
+        Assert.True(off[off.Count / 2] < 0.01, $"half the wall vertices are more than {off[off.Count / 2]:F3} m off their leg's cross-section");
+        Assert.True(off[off.Count * 9 / 10] < 0.05, $"a tenth of the wall vertices are more than {off[off.Count * 9 / 10]:F3} m off their leg's cross-section");
+        Assert.True(off[^1] < 1.5, $"a wall vertex is {off[^1]:F2} m off its leg's cross-section");
     }
 
     [Theory]

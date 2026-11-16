@@ -29,8 +29,15 @@ public sealed record GeometryOptions
     /// <summary>Passage radius (metres) for legs lacking LRUD data.</summary>
     public double DefaultTubeRadius { get; init; } = 1.0;
 
-    /// <summary>Close each synthesized tube segment with end caps (watertight-ish; makes
-    /// overlapping per-leg tubes read as solid).</summary>
+    /// <summary>Join the synthesized tubes of legs that meet at a station into one skin: two
+    /// legs share one ring of vertices there, on the plane that halves the bend, and three or
+    /// more end in open rims cut to fit each other. Off gives every leg a tube of its own,
+    /// overlapping its neighbours.</summary>
+    public bool JoinTubes { get; init; } = true;
+
+    /// <summary>Close the synthesized tubes with end caps where a passage ends: at a station
+    /// with one leg, or whose legs all leave the same way. With <see cref="JoinTubes"/> off,
+    /// at both ends of every leg.</summary>
     public bool CapTubes { get; init; } = true;
 
     /// <summary>Add per-vertex depth-tint colours to the wall mesh (<see cref="DepthRamp"/>).</summary>

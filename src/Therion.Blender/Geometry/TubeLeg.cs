@@ -46,7 +46,9 @@ public readonly record struct TubeSection(
 /// <summary>
 /// One leg as the tube mesher skins it: the cross-sections at its two ends, which share the leg's
 /// own pair of axes, joined by straight walls between the corners of a polygon with
-/// <see cref="Sides"/> sides.
+/// <see cref="Sides"/> sides. Where legs meet, the mesher ends those walls on the join with the
+/// other tubes instead of on the cross-section at the station: a little before it on the inside
+/// of a bend, a little beyond it on the outside.
 /// </summary>
 public readonly record struct TubeLeg(TubeSection From, TubeSection To, int Sides)
 {

@@ -212,20 +212,18 @@ public class SceneProbeTests
             "turns of more than 20° in one frame at 10 fps: " + string.Join(", ", whips.Select(w => $"frame {w.Frame}: {w.Degrees:F0}°")));
     }
 
-    // ---- known defects: each states the wanted behaviour and is skipped until it is fixed ----
-
-    [BlenderKnownDefectFact(
-        "the flythrough has to pass through wall surfaces: every leg is a separate tube closed by a cap at " +
-        "each end, so the route crosses two caps at every station, and where a side passage joins or the " +
-        "route turns sharply it crosses the side of a tube that reaches into the one it is in. No route " +
-        "avoids that; it stays so until the tubes are joined into one skin.")]
+    [BlenderFact]
     public async Task Flythrough_KeepsClearOfTheWalls()
     {
+        // The tubes of the legs are one skin, open where they meet: the route no longer has
+        // to pass through an end cap at every station.
         var report = await SceneProbeRunner.RunAsync("flythrough-clearance", Medium.Value, Flythrough(), EveryFrame);
 
         var close = report.Frames.Where(f => f.Model!.NearestSurface < 0.3).Select(f => f.Frame).ToList();
         Assert.True(close.Count == 0, $"within 0.3 m of a wall at frames {string.Join(", ", close)}");
     }
+
+    // ---- known defects: each states the wanted behaviour and is skipped until it is fixed ----
 
     [BlenderKnownDefectFact(
         "a lead marker is a ball 1 % of the cave's diagonal in radius (3.7 m on this cave, 5.5 m at the top " +

@@ -19,7 +19,7 @@ public enum InventedCaveSize
     Medium,
 
     /// <summary>A branching system of about 4,000 legs over a few kilometres, plus a second,
-    /// unconnected cave three kilometres away; more than 100,000 wall triangles.</summary>
+    /// unconnected cave three kilometres away; more than 70,000 wall triangles.</summary>
     Large,
 }
 

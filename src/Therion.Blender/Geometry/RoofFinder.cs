@@ -87,8 +87,8 @@ public sealed class RoofFinder
     private int Cell(double v) => (int)Math.Floor(v / _cell);
 
     /// <summary>Roofs and floors only: a surface steeper than about 75° is a wall, or the end
-    /// cap of a leg's tube, which closes the tube at every station and would otherwise read as a
-    /// roof a few millimetres above it.</summary>
+    /// cap of a tube, which stands on the station where a passage ends and would otherwise
+    /// read as a roof a few millimetres above it.</summary>
     private static bool FacesUpOrDown(CaveVector3 a, CaveVector3 b, CaveVector3 c)
     {
         var u = b - a;

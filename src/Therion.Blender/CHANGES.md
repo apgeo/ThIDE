@@ -1,5 +1,65 @@
 # Therion.Blender — changes for consumers
 
+## 2026-11-17 — synthesized tubes are joined into one skin
+
+### Behaviour changes
+- **The tubes of legs that meet at a station are joined** instead of each leg being a closed tube of
+  its own that overlaps its neighbours. This changes the wall mesh of every model without scrap
+  walls (`.3d` files, centreline-only `.lox` files, `WallSource.Tubes`), and so every PLY, STL, OBJ
+  and glb written from one, and every render of one.
+  - *A station with two legs* has one ring of vertices that both tubes use, on the plane that halves
+    the bend (a mitre), so the passage is as wide round the bend as along the legs. Where the two
+    legs give the station different cross-sections (their own frames, their own wall distances) each
+    corner of the ring is halfway between the two. A turn of more than about 127° is cut flatter
+    than its mitre, so the outside corner reaches at most twice the wall distance past the station.
+  - *End caps close a tube only where the passage ends*: at a station with one leg, or whose legs
+    all leave within 30° of each other (a hairpin, or one leg surveyed twice and not flagged as a
+    duplicate). Those tubes are as before.
+  - *A station with three or more legs* has no caps. Each tube ends in an open rim: every wall
+    starts where it comes out of the other tubes at the station, so the side passage opens into the
+    main one and no tube has walls inside another there. A rim that is cut on a slant has four
+    vertices to each side of the cross-section, and so has the ring at the other end of that leg.
+    With more than five legs at a station (a survey hub, splays not flagged as splays) the rims are
+    left uncut, on the cross-section at the station.
+  - Splay, surface and duplicate legs and legs shorter than a millimetre still get no tube and take
+    no part in a join; legs without wall distances join at `DefaultTubeRadius`.
+  - On an invented test cave of 116 legs the mesh went from 3,944 vertices and 3,712 triangles to
+    1,942 and 2,768.
+
+  Migration: do not assume a fixed number of vertices or triangles per leg, that a leg's vertices
+  are its own, or that the mesh is a set of closed solids. `GeometryResult.TubeLegs` still has one
+  entry per meshed leg, in shot order, and is unchanged; the walls of leg `i` are still a run of
+  triangles after those of leg `i - 1`, but the run's length depends on how the leg's two ends are
+  joined. A consumer that needs one closed tube per leg (a volume, a print, picking a leg by its
+  vertex range) sets `GeometryOptions.JoinTubes = false`, which gives the previous mesh vertex for
+  vertex.
+- **A flythrough no longer passes through an end cap at every station.** On the invented test cave
+  (80 frames) the camera was within 0.3 m of a wall surface at 8 frames and is at none now; the
+  nearest it comes to one went from 0.04 m to 1.04 m. Four frames had more than a quarter of the
+  picture blown out by the head torch on a cap in front of the lens, and two were more than half
+  black behind one; none are now. The picture is darker on the whole (the mean luminance of a
+  frame, median over the clip, was 0.57 and is 0.26): the torch lights a passage instead of a cap a
+  metre away. Migration: none; the torch is as strong as it was, so raise `LightingSpec.Strength`
+  if a flythrough should be as bright as before.
+- **`SceneMetaStation.Roof` can be null for a station in a shaft or at the head of one.** With no
+  end cap under it such a station has no floor straight below (a shaft's walls are too steep to
+  count as one), and `RoofFinder.HeightNear` counts a roof only over a floor. On six invented caves
+  with a 30 m pitch, one to four of the 116 stations lost their roof this way; a shaft station's
+  roof used to be the end cap of the next leg, a few millimetres or one leg above it. Such a
+  station's label stays on the station. Elsewhere the roof moved by a centimetre (median) and is
+  nearer the measured height. Migration: none.
+- Known limits. The rims at a junction do not meet exactly: gaps of up to a few hundredths of the
+  view from the middle of the junction show the world behind (black in a head-torch render). Where
+  a passage leaves a junction within about 25° of another one, the two tubes run through each other
+  beyond the station as before, and a camera in the one meets the wall of the other. A leg shorter
+  than its passage is wide, at a sharp bend, gets open rims instead of a shared ring.
+
+### Additive API
+- `GeometryOptions.JoinTubes` (default true). Off gives every leg a closed tube of its own, as
+  before this change.
+- `GeometryOptions.CapTubes` now means "close the tubes where a passage ends"; with `JoinTubes`
+  off it closes both ends of every leg, as before.
+
 ## 2026-11-16 (flythrough) — the flythrough keeps to the middle of the passage and turns smoothly
 
 ### Behaviour changes
