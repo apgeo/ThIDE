@@ -1,5 +1,17 @@
 # Therion.Blender — changes for consumers
 
+## 2026-11-16 — the head torch lights the passage; titles stay in frame
+
+### Behaviour changes
+- **The headlamp rig's light is 0.3 m across** instead of 15 % of the model's bounding radius. On a
+  cave a few hundred metres across the old light was tens of metres wide, mostly outside the passage
+  the camera was in, and flythrough frames came out almost black (median luminance about 0.002;
+  about 0.3–0.7 with the new size). Renders of small models also change slightly. Migration: none.
+- **The title and the depth legend are placed and sized from the visible frame** (camera lens, sensor
+  fit and output aspect ratio) instead of fixed offsets that suited a square frame. In a 16:9 frame
+  the title was below the picture and never rendered. Migration: none; scripts generated from the
+  same spec differ in those lines.
+
 ## 2026-11 (later) — job folders are cleaned up
 
 ### Behaviour changes

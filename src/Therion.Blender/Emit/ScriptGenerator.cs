@@ -365,7 +365,10 @@ public static class ScriptGenerator
             case LightingRig.Headlamp:
                 w.Line("_hl = bpy.data.lights.new(\"Headlamp\", type='AREA')");
                 w.Line("_hl.energy = 80.0 * _light_strength");
-                w.Line("_hl.size = max(0.5, bounds_radius * 0.15)");
+                // A head-torch-sized emitter. Sized from the whole model it grew to tens of
+                // metres in any real cave, mostly outside the passage the camera is in, and the
+                // walls shadowed nearly all of it.
+                w.Line("_hl.size = 0.3");
                 w.Line("_hlo = bpy.data.objects.new(\"Headlamp\", _hl)");
                 w.Line("scene.collection.objects.link(_hlo)");
                 w.Line("_hlo.parent = cam"); // rides the camera, emits along its -Z view axis
@@ -564,6 +567,9 @@ public static class ScriptGenerator
         }
     }
 
+    /// <summary>How far in front of the camera the HUD overlays float, in metres.</summary>
+    private const double HudDepth = 3.0;
+
     private static bool OverlaysActive(OverlaySpec o)
         => !string.IsNullOrWhiteSpace(o.Title) || o.ScaleBar || o.NorthArrow || o.DepthLegend;
 
@@ -571,6 +577,21 @@ public static class ScriptGenerator
     {
         var o = spec.Labels.Overlays;
         w.Line("# presentation overlays (camera HUD + world markers)");
+        // The half-width and half-height of the picture at the HUD's depth, so the title and the
+        // legend stay inside the frame whatever the aspect ratio. Blender's AUTO sensor fit
+        // spreads the sensor width over the longer side.
+        w.Line($"_HUD_DEPTH = {PyWriter.Num(HudDepth)}");
+        w.Line($"_hud_w, _hud_h = {PyWriter.Num(spec.Output.Width)}, {PyWriter.Num(spec.Output.Height)}");
+        w.Line("_hud_fit = cam_data.sensor_fit");
+        using (w.Block("if _hud_fit == 'AUTO':"))
+            w.Line("_hud_fit = 'HORIZONTAL' if _hud_w >= _hud_h else 'VERTICAL'");
+        w.Line("_hud_sensor = cam_data.sensor_height if cam_data.sensor_fit == 'VERTICAL' else cam_data.sensor_width");
+        w.Line("_hud_half = _HUD_DEPTH * _hud_sensor / 2.0 / cam_data.lens");
+        using (w.Block("if _hud_fit == 'HORIZONTAL':"))
+            w.Line("_hud_half_x, _hud_half_y = _hud_half, _hud_half * _hud_h / _hud_w");
+        using (w.Block("else:"))
+            w.Line("_hud_half_x, _hud_half_y = _hud_half * _hud_w / _hud_h, _hud_half");
+        w.Line("_hud_unit = min(_hud_half_x, _hud_half_y)  # sizes follow the shorter side");
         // A flat, camera-parented HUD label (no billboard constraint — it rides the frame).
         using (w.Block("def _thide_hud(name, body, loc, size):"))
         {
@@ -600,7 +621,7 @@ public static class ScriptGenerator
         w.Blank();
 
         if (!string.IsNullOrWhiteSpace(o.Title))
-            w.Line($"_thide_hud(\"overlay:title\", {PyWriter.Str(o.Title!.ReplaceLineEndings(" "))}, (0.0, -1.15, -3.0), 0.16)");
+            w.Line($"_thide_hud(\"overlay:title\", {PyWriter.Str(o.Title!.ReplaceLineEndings(" "))}, (0.0, -_hud_half_y * 0.8, -_HUD_DEPTH), _hud_unit * 0.18)");
 
         if (o.NorthArrow)
         {
@@ -650,8 +671,8 @@ public static class ScriptGenerator
                 w.Line("_lp.name = \"overlay:legend\" + str(_idx)");
                 w.Line("_lp.data.materials.append(_lm)");
                 w.Line("_lp.parent = cam");
-                w.Line("_lp.scale = (0.05, 0.05, 0.05)");
-                w.Line("_lp.location = (1.15, 0.5 - _idx * 0.13, -3.0)");
+                w.Line("_lp.scale = (_hud_unit * 0.06, _hud_unit * 0.06, _hud_unit * 0.06)");
+                w.Line("_lp.location = (_hud_half_x * 0.88, _hud_half_y * (0.55 - _idx * 0.15), -_HUD_DEPTH)");
                 w.Line("_overlays.append(_lp)");
             }
         }
