@@ -91,6 +91,8 @@ public class BlenderRunnerE2ETests
     private static string VideoScript(string outPath) =>
         SceneSetup + "\n" +
         $"""
+        if hasattr(scene.render.image_settings, 'media_type'):
+            scene.render.image_settings.media_type = 'VIDEO'  # Blender 5 offers FFMPEG only for video
         scene.render.image_settings.file_format = 'FFMPEG'
         scene.render.ffmpeg.format = 'MPEG4'
         scene.render.ffmpeg.codec = 'H264'

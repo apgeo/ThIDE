@@ -25,6 +25,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Run inside Blender by the scene-probe tests, next to the generated script. -->
+    <None Update="SceneProbe\scene_probe.py" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- The fixed-seed runner for the generated-input tests. -->
     <Compile Include="..\Shared\Properties\*.cs" LinkBase="Shared\Properties" />
   </ItemGroup>
