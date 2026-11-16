@@ -20,13 +20,14 @@ public static class GeometryStage
         var recentered = offset == CaveVector3.Zero ? model : Translate(model, offset * -1.0);
         var localBounds = originalBounds.IsEmpty ? BoundingBox.Empty : originalBounds.Translate(offset * -1.0);
 
-        var walls = BuildWalls(recentered, options);
+        var (walls, tubeLegs) = BuildWalls(recentered, options);
         if (options.DepthTint && !walls.IsEmpty)
             walls = walls with { VertexColors = TintByDepth(walls.Vertices) };
 
         return new GeometryResult
         {
             Walls = walls,
+            TubeLegs = tubeLegs,
             Offset = offset,
             OriginalBounds = originalBounds,
             LocalBounds = localBounds,
@@ -35,7 +36,7 @@ public static class GeometryStage
         };
     }
 
-    private static CaveMesh BuildWalls(CaveModel model, GeometryOptions options)
+    private static (CaveMesh Walls, IReadOnlyList<TubeLeg> TubeLegs) BuildWalls(CaveModel model, GeometryOptions options)
     {
         bool useScraps = options.WallSource switch
         {
@@ -43,7 +44,9 @@ public static class GeometryStage
             WallSource.Tubes => false,
             _ => model.Scraps.Count > 0, // Auto
         };
-        return useScraps ? MeshFromScraps(model.Scraps) : TubeMesher.Build(WithPassageLrud(model), options);
+        if (useScraps) return (MeshFromScraps(model.Scraps), []);
+        var legs = TubeMesher.Legs(WithPassageLrud(model), options);
+        return (TubeMesher.BuildFromLegs(legs, options), legs);
     }
 
     /// <summary>

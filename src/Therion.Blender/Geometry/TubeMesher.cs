@@ -20,14 +20,24 @@ public static class TubeMesher
     /// </summary>
     public static CaveMesh Build(IReadOnlyList<CaveShot> shots, GeometryOptions options)
     {
+        ArgumentNullException.ThrowIfNull(options);
+        return BuildFromLegs(Legs(shots, options), options);
+    }
+
+    /// <summary>
+    /// The tube each non-auxiliary leg of <paramref name="shots"/> is skinned into: the
+    /// cross-sections at its two ends, with unmeasured wall distances already replaced by
+    /// <see cref="GeometryOptions.DefaultTubeRadius"/>. In shot order; splay, surface and
+    /// duplicate legs and legs shorter than a millimetre have none.
+    /// </summary>
+    public static IReadOnlyList<TubeLeg> Legs(IReadOnlyList<CaveShot> shots, GeometryOptions options)
+    {
         ArgumentNullException.ThrowIfNull(shots);
         ArgumentNullException.ThrowIfNull(options);
         int sides = Math.Max(3, options.TubeSides);
 
-        var vertices = new List<CaveVector3>();
-        var triangles = new List<CaveTriangle>();
+        var legs = new List<TubeLeg>(shots.Count);
         const CaveShotFlags skip = CaveShotFlags.Splay | CaveShotFlags.Surface | CaveShotFlags.Duplicate;
-
         foreach (var shot in shots)
         {
             if ((shot.Flags & skip) != 0) continue;
@@ -38,13 +48,34 @@ public static class TubeMesher
             if (legLength < 1e-3) continue;
 
             var (right, up) = CrossSectionFrame(axis / legLength);
-            var fromLrud = Resolve(shot.FromLrud, options.DefaultTubeRadius);
-            var toLrud = Resolve(shot.ToLrud, options.DefaultTubeRadius);
+            var from = Resolve(shot.FromLrud, options.DefaultTubeRadius);
+            var to = Resolve(shot.ToLrud, options.DefaultTubeRadius);
+            legs.Add(new TubeLeg(
+                new TubeSection(a, right, up, from.L, from.R, from.U, from.D),
+                new TubeSection(b, right, up, to.L, to.R, to.U, to.D),
+                sides));
+        }
+        return legs;
+    }
 
+    /// <summary>Meshes <paramref name="legs"/> (from <see cref="Legs"/>): two rings and the
+    /// walls between them for each, closed by end caps when
+    /// <see cref="GeometryOptions.CapTubes"/> is set.</summary>
+    public static CaveMesh BuildFromLegs(IReadOnlyList<TubeLeg> legs, GeometryOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(legs);
+        ArgumentNullException.ThrowIfNull(options);
+
+        var vertices = new List<CaveVector3>();
+        var triangles = new List<CaveTriangle>();
+
+        foreach (var leg in legs)
+        {
+            int sides = Math.Max(3, leg.Sides);
             uint ringA = (uint)vertices.Count;
-            AppendRing(vertices, a, right, up, fromLrud, sides);
+            AppendRing(vertices, leg.From, sides);
             uint ringB = (uint)vertices.Count;
-            AppendRing(vertices, b, right, up, toLrud, sides);
+            AppendRing(vertices, leg.To, sides);
 
             // Side quads between the two rings (two triangles each).
             for (int s = 0; s < sides; s++)
@@ -58,8 +89,8 @@ public static class TubeMesher
 
             if (options.CapTubes)
             {
-                AppendCap(vertices, triangles, a, right, up, fromLrud, sides, facingForward: false);
-                AppendCap(vertices, triangles, b, right, up, toLrud, sides, facingForward: true);
+                AppendCap(vertices, triangles, leg.From, sides, facingForward: false);
+                AppendCap(vertices, triangles, leg.To, sides, facingForward: true);
             }
         }
 
@@ -94,29 +125,22 @@ public static class TubeMesher
             v.Down > 0 ? v.Down : fallback);
     }
 
-    private static void AppendRing(
-        List<CaveVector3> vertices, CaveVector3 center, CaveVector3 right, CaveVector3 up,
-        (double L, double R, double U, double D) lrud, int sides)
+    private static void AppendRing(List<CaveVector3> vertices, TubeSection section, int sides)
     {
         for (int s = 0; s < sides; s++)
         {
-            double theta = 2.0 * Math.PI * s / sides;
-            double cos = Math.Cos(theta), sin = Math.Sin(theta);
-            double horizontal = cos >= 0 ? lrud.R * cos : lrud.L * cos; // cos<0 → toward left wall
-            double vertical = sin >= 0 ? lrud.U * sin : lrud.D * sin;   // sin<0 → toward floor
-            vertices.Add(center + right * horizontal + up * vertical);
+            var (horizontal, vertical) = section.OutlineAt(2.0 * Math.PI * s / sides);
+            vertices.Add(section.Station + section.RightAxis * horizontal + section.UpAxis * vertical);
         }
     }
 
     private static void AppendCap(
-        List<CaveVector3> vertices, List<CaveTriangle> triangles, CaveVector3 center,
-        CaveVector3 right, CaveVector3 up, (double L, double R, double U, double D) lrud,
-        int sides, bool facingForward)
+        List<CaveVector3> vertices, List<CaveTriangle> triangles, TubeSection section, int sides, bool facingForward)
     {
         uint centerIndex = (uint)vertices.Count;
-        vertices.Add(center);
+        vertices.Add(section.Station);
         uint ring = (uint)vertices.Count;
-        AppendRing(vertices, center, right, up, lrud, sides);
+        AppendRing(vertices, section, sides);
         for (int s = 0; s < sides; s++)
         {
             uint v0 = ring + (uint)s;

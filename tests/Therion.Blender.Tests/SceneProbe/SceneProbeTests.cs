@@ -32,6 +32,8 @@ public class SceneProbeTests
 
     private static readonly ProbeOptions EveryFrame = new() { Frames = Enumerable.Range(1, 80).ToList() };
 
+    private static readonly LabelsSpec NoLabels = new();
+
     [BlenderFact]
     public async Task Orbit_KeepsTheWholeCaveInFrame()
     {
@@ -184,36 +186,21 @@ public class SceneProbeTests
         });
     }
 
-    // ---- known defects: each states the wanted behaviour and is skipped until it is fixed ----
-
-    [BlenderKnownDefectFact(
-        "the flythrough leaves the passage: it ends on the last station, on the end cap of its tube, and " +
-        "in a narrow passage the 1.5 m push-out from the nearest wall vertex can carry it through the " +
-        "opposite wall. Those frames show the sky or a wall filling the picture.")]
+    [BlenderFact]
     public async Task Flythrough_StaysInsideThePassage()
     {
+        // Without the preset's lead markers: one of them marks the dead end this route stops in
+        // and hides the walls there, which is a defect of its own
+        // (Flythrough_ALeadMarkerDoesNotFillThePicture).
         var report = await SceneProbeRunner.RunAsync(
-            "flythrough-inside", Medium.Value, Flythrough(), EveryFrame with { Pixels = (64, 36) });
+            "flythrough-inside", Medium.Value, Flythrough(NoLabels), EveryFrame with { Pixels = (64, 36) });
 
         Assert.All(report.Frames, f => Assert.True(f.Model!.CameraInsideBounds, $"frame {f.Frame}"));
         var outside = report.Pixels.Where(p => p.Share(ProbeRoles.Model) < 0.9).Select(p => p.Frame).ToList();
         Assert.True(outside.Count == 0, $"the walls do not surround the camera at frames {string.Join(", ", outside)}");
     }
 
-    [BlenderKnownDefectFact(
-        "the flythrough comes within centimetres of the walls in narrow passages: the push-out keeps " +
-        "1.5 m from wall vertices, which a 2–4 m passage cannot give, and the route is smoothed after it.")]
-    public async Task Flythrough_KeepsClearOfTheWalls()
-    {
-        var report = await SceneProbeRunner.RunAsync("flythrough-clearance", Medium.Value, Flythrough(), EveryFrame);
-
-        var close = report.Frames.Where(f => f.Model!.NearestSurface < 0.3).Select(f => f.Frame).ToList();
-        Assert.True(close.Count == 0, $"within 0.3 m of a wall at frames {string.Join(", ", close)}");
-    }
-
-    [BlenderKnownDefectFact(
-        "the flythrough whips round by 60–90° in one frame at a pitch (the look direction passes the " +
-        "vertical, where the camera's up axis flips) and at sharp corners.")]
+    [BlenderFact]
     public async Task Flythrough_TurnsSmoothly()
     {
         var report = await SceneProbeRunner.RunAsync("flythrough-turns", Medium.Value, Flythrough(), EveryFrame);
@@ -223,6 +210,34 @@ public class SceneProbeTests
         var whips = turns.Where(t => t.Degrees > 20.0).ToList();
         Assert.True(whips.Count == 0,
             "turns of more than 20° in one frame at 10 fps: " + string.Join(", ", whips.Select(w => $"frame {w.Frame}: {w.Degrees:F0}°")));
+    }
+
+    // ---- known defects: each states the wanted behaviour and is skipped until it is fixed ----
+
+    [BlenderKnownDefectFact(
+        "the flythrough has to pass through wall surfaces: every leg is a separate tube closed by a cap at " +
+        "each end, so the route crosses two caps at every station, and where a side passage joins or the " +
+        "route turns sharply it crosses the side of a tube that reaches into the one it is in. No route " +
+        "avoids that; it stays so until the tubes are joined into one skin.")]
+    public async Task Flythrough_KeepsClearOfTheWalls()
+    {
+        var report = await SceneProbeRunner.RunAsync("flythrough-clearance", Medium.Value, Flythrough(), EveryFrame);
+
+        var close = report.Frames.Where(f => f.Model!.NearestSurface < 0.3).Select(f => f.Frame).ToList();
+        Assert.True(close.Count == 0, $"within 0.3 m of a wall at frames {string.Join(", ", close)}");
+    }
+
+    [BlenderKnownDefectFact(
+        "a lead marker is a ball 1 % of the cave's diagonal in radius (3.7 m on this cave, 5.5 m at the top " +
+        "of its pulse), wider than the passage it marks. A flythrough that comes to a lead flies into a ball " +
+        "that fills the picture.")]
+    public async Task Flythrough_ALeadMarkerDoesNotFillThePicture()
+    {
+        var report = await SceneProbeRunner.RunAsync(
+            "flythrough-lead-marker", Medium.Value, Flythrough(), EveryFrame with { Pixels = (64, 36) });
+
+        var filled = report.Pixels.Where(p => p.Share(ProbeRoles.LeadMarker) > 0.5).Select(p => p.Frame).ToList();
+        Assert.True(filled.Count == 0, $"a lead marker covers more than half the picture at frames {string.Join(", ", filled)}");
     }
 
     [BlenderKnownDefectFact(

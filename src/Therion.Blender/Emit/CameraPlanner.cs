@@ -4,14 +4,15 @@
 // trigonometry. Pure and golden-testable: same spec + framing ⇒ identical keyframes.
 //
 // Coordinates are LOCAL (recentered, matching the transport PLY — D-15). Framing (bounds,
-// centerline path, wall KD-tree) comes from the geometry stage (CameraFraming.FromGeometry).
+// centerline path, the tubes along it, wall KD-tree) comes from the geometry stage
+// (CameraFraming.FromGeometry). The flythrough's route is worked out in FlythroughRoute.
 
 using Therion.Blender.Geometry;
 
 namespace Therion.Blender.Emit;
 
 /// <summary>The model context the camera engine needs beyond the spec: local bounds, and
-/// (for the flythrough) the centerline route and a wall KD-tree for clearance.</summary>
+/// (for the flythrough) the centerline route with what is known of the walls around it.</summary>
 public sealed record CameraFraming
 {
     /// <summary>Model bounds in local (recentered) coordinates.</summary>
@@ -21,7 +22,17 @@ public sealed record CameraFraming
     /// model has no usable centerline.</summary>
     public IReadOnlyList<CaveVector3>? CenterlinePath { get; init; }
 
-    /// <summary>Wall vertices for clearance push-out; null when there is no wall mesh.</summary>
+    /// <summary>
+    /// The synthesized tube around each leg of <see cref="CenterlinePath"/>: entry <c>i</c> runs
+    /// from point <c>i</c> to point <c>i + 1</c>, and is null for a leg the mesher gave no tube.
+    /// One entry per leg, or the list is not used. The flythrough flies down the middle of
+    /// these. Null when the walls are not synthesized tubes (real scrap walls, or none); the
+    /// flythrough then keeps its distance from <see cref="WallTree"/> instead.
+    /// </summary>
+    public IReadOnlyList<TubeLeg?>? RouteTubes { get; init; }
+
+    /// <summary>Wall vertices, for keeping the flythrough between real scrap walls; null when
+    /// there is no wall mesh.</summary>
     public KdTree? WallTree { get; init; }
 
     /// <summary>Builds the framing from a geometry-stage result — the pipeline's one-liner.</summary>
@@ -29,12 +40,31 @@ public sealed record CameraFraming
     {
         ArgumentNullException.ThrowIfNull(geometry);
         var path = geometry.Centerline.LongestPathPolyline();
+        bool hasPath = path.Count >= 2;
         return new CameraFraming
         {
             LocalBounds = geometry.LocalBounds,
-            CenterlinePath = path.Count >= 2 ? path : null,
+            CenterlinePath = hasPath ? path : null,
+            RouteTubes = hasPath && geometry.TubeLegs.Count > 0 ? TubesAlong(path, geometry.TubeLegs) : null,
             WallTree = geometry.Walls.Vertices.Count > 0 ? new KdTree(geometry.Walls.Vertices) : null,
         };
+    }
+
+    /// <summary>The tube of each leg of <paramref name="path"/>, turned to run the way the path
+    /// does. A leg and its tube are matched by their end positions, which both take unchanged
+    /// from the same shots; where a passage was surveyed twice the first tube is used.</summary>
+    private static TubeLeg?[] TubesAlong(IReadOnlyList<CaveVector3> path, IReadOnlyList<TubeLeg> tubeLegs)
+    {
+        var byEnds = new Dictionary<(CaveVector3, CaveVector3), TubeLeg>(tubeLegs.Count);
+        foreach (var leg in tubeLegs) byEnds.TryAdd((leg.From.Station, leg.To.Station), leg);
+
+        var along = new TubeLeg?[path.Count - 1];
+        for (int i = 0; i < along.Length; i++)
+        {
+            if (byEnds.TryGetValue((path[i], path[i + 1]), out var forward)) along[i] = forward;
+            else if (byEnds.TryGetValue((path[i + 1], path[i]), out var backward)) along[i] = backward.Reversed();
+        }
+        return along;
     }
 }
 
@@ -92,7 +122,11 @@ public static class CameraPlanner
     public const double SensorWidthMm = 36.0;
 
     private const int KeysPerRevolution = 24;
-    private const int MaxFlythroughKeys = 300;
+
+    /// <summary>The flythrough gets a pose for every frame up to this many, so that each
+    /// rendered frame is on the planned route and not on a chord between two poses; a longer
+    /// clip spreads this many poses evenly.</summary>
+    private const int MaxFlythroughKeys = 1800;
 
     /// <summary>Plans the camera. The <see cref="CameraTemplate.Static"/> template needs no
     /// framing; every animated template requires it (throws otherwise, with a field path).</summary>
@@ -127,7 +161,7 @@ public static class CameraPlanner
         {
             CameraTemplate.Orbit => PlanOrbit(cam, center, radius, frames),
             CameraTemplate.Helix => PlanHelix(cam, bounds, center, radius, frames),
-            CameraTemplate.Flythrough => PlanFlythrough(cam, framing, frames, ref clipStart),
+            CameraTemplate.Flythrough => PlanFlythrough(cam, framing, frames, spec.Animation.Fps, ref clipStart),
             CameraTemplate.Viewpoints => PlanViewpoints(cam, spec.Animation.Fps, frames),
             CameraTemplate.StillSet => PlanStillSet(cam, center, radius),
             _ => throw new ArgumentOutOfRangeException(nameof(spec), cam.Template, "Unknown camera template."),
@@ -197,7 +231,7 @@ public static class CameraPlanner
     }
 
     private static (IReadOnlyList<CameraKeyframe>, KeyInterpolation, bool) PlanFlythrough(
-        CameraSpec cam, CameraFraming framing, int frames, ref double clipStart)
+        CameraSpec cam, CameraFraming framing, int frames, int fps, ref double clipStart)
     {
         var p = cam.Flythrough ?? new FlythroughParams();
         if (framing.CenterlinePath is null || framing.CenterlinePath.Count < 2)
@@ -205,27 +239,19 @@ public static class CameraPlanner
                 "The flythrough camera needs a centerline path with at least two points; this model has none.",
                 nameof(framing));
 
-        IReadOnlyList<CaveVector3> route = framing.CenterlinePath;
-        if (p.Reverse) route = route.Reverse().ToList();
-
-        var smoothed = new CenterlinePath(route).Smooth(p.SmoothingIterations);
-        var pushed = new List<CaveVector3>(smoothed.Points.Count);
-        foreach (var pt in smoothed.Points) pushed.Add(PushOut(pt, framing.WallTree, p.ClearanceMeters));
-        var path = new CenterlinePath(pushed);
+        var path = new CenterlinePath(FlythroughRoute.Build(framing, p));
 
         // Tighter near clip for tight passages (never below Blender's sensible floor).
         clipStart = Math.Max(0.005, Math.Min(clipStart, p.ClearanceMeters * 0.1 + 0.01));
 
         int keys = Math.Clamp(frames, 2, MaxFlythroughKeys);
-        double length = path.Length;
+        double seconds = fps > 0 ? Math.Max(frames - 1, 0) / (double)fps : 0.0;
+        var poses = FlythroughRoute.Fly(path, keys, seconds, p.LookAheadMeters);
         var list = new List<CameraKeyframe>(keys);
         for (int i = 0; i < keys; i++)
         {
             double u = (double)i / (keys - 1);
-            double distance = u * length;
-            var location = path.SampleAtDistance(distance);
-            var target = LookAheadPoint(path, distance + p.LookAheadMeters);
-            list.Add(new CameraKeyframe(FrameAt(u, frames), location, target, null));
+            list.Add(new CameraKeyframe(FrameAt(u, frames), poses[i].Location, poses[i].Target, null));
         }
         return (DedupByFrame(list), KeyInterpolation.Linear, false);
     }
@@ -317,30 +343,6 @@ public static class CameraPlanner
             _ => new CaveVector3(1, 1, 0.8),
         };
         return new CameraViewpoint { Position = center + direction.Normalized() * distance, Target = center };
-    }
-
-    /// <summary>The look-ahead target at arc length <paramref name="distance"/>, extrapolated
-    /// straight past the path end so the camera keeps looking forward on the final stretch.</summary>
-    private static CaveVector3 LookAheadPoint(CenterlinePath path, double distance)
-    {
-        if (path.Points.Count == 0) return CaveVector3.Zero;
-        if (distance <= path.Length || path.Points.Count < 2) return path.SampleAtDistance(distance);
-        var last = path.Points[^1];
-        var direction = (last - path.Points[^2]).Normalized();
-        return last + direction * (distance - path.Length);
-    }
-
-    /// <summary>Pushes a path point off the nearest wall until it clears
-    /// <paramref name="clearance"/>, capped so it never crosses where the wall was (R-09
-    /// best-effort, not collision-proof).</summary>
-    private static CaveVector3 PushOut(CaveVector3 point, KdTree? walls, double clearance)
-    {
-        if (walls is null || clearance <= 0 || !walls.TryNearest(point, out var wall)) return point;
-        var away = point - wall;
-        double distance = away.Length;
-        if (distance >= clearance || distance < 1e-9) return point;
-        double push = Math.Min(clearance - distance, distance * 0.9);
-        return point + away.Normalized() * push;
     }
 
     /// <summary>Maps a normalized position <paramref name="u"/> ∈ [0,1] to a 1-based frame.</summary>

@@ -11,6 +11,11 @@ public sealed record GeometryResult
     /// local coordinates, optionally depth-tinted.</summary>
     public required CaveMesh Walls { get; init; }
 
+    /// <summary>The tubes <see cref="Walls"/> was synthesized from, one per meshed leg, in
+    /// local coordinates: where each leg's passage is, as cross-sections rather than
+    /// triangles. Empty when the walls are real scrap meshes or there are none.</summary>
+    public IReadOnlyList<TubeLeg> TubeLegs { get; init; } = [];
+
     /// <summary>The vector subtracted from world coordinates to recenter
     /// (world = local + Offset); the original bbox centre, or zero when recentering was
     /// disabled.</summary>

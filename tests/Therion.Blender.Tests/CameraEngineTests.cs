@@ -1,7 +1,8 @@
 // Camera-engine numeric tests (BA-B6 batch 2): the path math behind each template —
 // orbit stays on its fit sphere, the helix descends monotonically, the flythrough runs
 // at constant speed / clears walls / looks ahead, viewpoints hit their frames with holds,
-// and the still set frames the standard directions. Pure C#, no Blender.
+// and the still set frames the standard directions. Pure C#, no Blender. The flythrough's
+// route through a passage has its own tests in FlythroughRouteTests.
 
 using Therion.Blender;
 using Therion.Blender.Emit;
@@ -123,22 +124,28 @@ public class CameraEngineTests
     }
 
     [Fact]
-    public void Flythrough_RunsAtConstantSpeed_AlongThePath()
+    public void Flythrough_RunsAtConstantSpeed_BetweenSpeedingUpAndSlowingDown()
     {
         // A straight run so smoothing/geometry don't perturb the spacing check.
         var path = new List<CaveVector3> { new(0, 0, 0), new(10, 0, 0), new(20, 0, 0), new(30, 0, 0) };
         var cam = new CameraSpec { Template = CameraTemplate.Flythrough, Flythrough = new FlythroughParams { SmoothingIterations = 0, ClearanceMeters = 0, LookAheadMeters = 5 } };
-        var plan = CameraPlanner.Plan(Spec(cam, fps: 10, seconds: 1), Framing(path));
+        var plan = CameraPlanner.Plan(Spec(cam, fps: 10, seconds: 6), Framing(path));
 
+        // One second (ten frames) of speeding up, one of slowing down, constant between them.
         var keys = plan.Keyframes;
-        double firstStep = (keys[1].Location - keys[0].Location).Length;
-        for (int i = 1; i < keys.Count; i++)
+        Assert.Equal(60, keys.Count);
+        double cruise = (keys[30].Location - keys[29].Location).Length;
+        for (int i = 11; i < keys.Count - 10; i++)
         {
             double step = (keys[i].Location - keys[i - 1].Location).Length;
-            Assert.Equal(firstStep, step, 4); // equal arc-length spacing = constant speed
+            Assert.Equal(cruise, step, 4); // equal arc-length spacing = constant speed
         }
-        // Look-ahead: the target leads the camera down the path (+X).
-        Assert.True(keys[0].Target.X > keys[0].Location.X);
+        Assert.True((keys[1].Location - keys[0].Location).Length < cruise * 0.1);
+        Assert.True((keys[^1].Location - keys[^2].Location).Length < cruise * 0.1);
+        Assert.Equal(new CaveVector3(0, 0, 0), keys[0].Location);
+        Assert.Equal(new CaveVector3(30, 0, 0), keys[^1].Location);
+        // Look-ahead: the target leads the camera down the path (+X), five metres ahead.
+        Assert.All(keys, k => Assert.Equal(k.Location.X + 5.0, k.Target.X, 6));
     }
 
     [Fact]
