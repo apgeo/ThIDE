@@ -1,0 +1,30 @@
+#!/usr/bin/env python3
+# A stand-in for Blender in the UI tests: answers the version probe, and for a run reads the
+# generated script, writes a small file where the script would have rendered, and prints the
+# progress lines the real script prints. It keeps a copy of each script it was given in
+# $THIDE_STUB_BLENDER_SCRIPTS, so a test can check what the application generated.
+import os
+import re
+import shutil
+import sys
+
+if "--version" in sys.argv:
+    print("Blender 99.0.0 (stub)")
+    sys.exit(0)
+
+script = sys.argv[sys.argv.index("--python") + 1]
+text = open(script, encoding="utf-8").read()
+keep = os.environ.get("THIDE_STUB_BLENDER_SCRIPTS")
+if keep:
+    os.makedirs(keep, exist_ok=True)
+    shutil.copy(script, os.path.join(keep, "render-%d.py" % len(os.listdir(keep))))
+
+out_dir = re.search(r'^OUT_DIR = "(.*)"$', text, re.M).group(1).encode().decode("unicode_escape")
+name = re.search(r'scene\.render\.filepath = os\.path\.join\(OUT_DIR, "([^"]+)"\)', text).group(1)
+target = os.path.join(out_dir, name.replace("####", "0001"))
+os.makedirs(out_dir, exist_ok=True)
+with open(target, "wb") as stream:
+    stream.write(b"stub render\n")
+
+for line in ("phase=render", "frames=1", "frame=1/1", "output=" + target, "done=1"):
+    print("THIDE:" + line, flush=True)
