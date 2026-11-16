@@ -251,18 +251,30 @@ public sealed class ExternalToolLocator : IExternalToolLocator
         }
         else
         {
-            // Flatpak installs a launcher wrapper that forwards arguments into the sandboxed app.
-            // The app id has been seen as both "io.github.rsevero.mapiah" (flathub) and
-            // "org.mapiah.mapiah" — try both, system- and user-wide, plus the native locations.
-            var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            foreach (var id in new[] { "io.github.rsevero.mapiah", "org.mapiah.mapiah" })
-            {
-                yield return "/var/lib/flatpak/exports/bin/" + id;
-                if (!string.IsNullOrEmpty(home))
-                    yield return Path.Combine(home, ".local/share/flatpak/exports/bin/" + id);
-            }
-            yield return "/usr/bin/mapiah";
-            yield return "/usr/local/bin/mapiah";
+            foreach (var p in LinuxMapiahCandidatePaths(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)))
+                yield return p;
+        }
+    }
+
+    /// <summary>
+    /// Linux Mapiah locations, most preferred first. Flatpak installs a launcher wrapper that
+    /// forwards arguments into the sandboxed app. "org.mapiah.mapiah" is the flatpak the Mapiah
+    /// project publishes; "io.github.rsevero.mapiah" is the Flathub build, frozen at 0.3.0, which
+    /// has no filesystem permission and so cannot open the file it is given. It stays in the list
+    /// for users who have nothing else, but comes last, after any native install.
+    /// </summary>
+    internal static IEnumerable<string> LinuxMapiahCandidatePaths(string? home)
+    {
+        foreach (var p in Flatpak("org.mapiah.mapiah")) yield return p;
+        yield return "/usr/bin/mapiah";
+        yield return "/usr/local/bin/mapiah";
+        foreach (var p in Flatpak("io.github.rsevero.mapiah")) yield return p;
+
+        IEnumerable<string> Flatpak(string id)
+        {
+            yield return "/var/lib/flatpak/exports/bin/" + id;
+            if (!string.IsNullOrEmpty(home))
+                yield return Path.Combine(home, ".local/share/flatpak/exports/bin/" + id);
         }
     }
 }

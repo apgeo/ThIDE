@@ -9,4 +9,8 @@
     <ProjectReference Include="..\Therion.Processing.Abstractions\Therion.Processing.Abstractions.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Therion.Build.Tests" />
+  </ItemGroup>
+
 </Project>
