@@ -1,5 +1,17 @@
 # Therion.Blender — changes for consumers
 
+## 2026-11-16 (leads) — leads find their station in a .lox survey tree
+
+### Behaviour changes
+- **`LeadsEnricher` matches a lead's dotted name against the `.lox` survey tree first.** A `.lox`
+  file names stations within their survey ("3"), so a register lead "cave.upper.3" used to be
+  placed at whichever "3" came first, or dropped. It is now placed on station 3 of survey
+  `upper` in survey `cave`, and also when one name has an extra outermost survey the other lacks,
+  as long as the match is unique. Migration: none.
+- **A station name shared by several stations no longer places a lead** by exact or
+  separator-insensitive match either (the last-segment fallback already worked this way): the
+  lead is dropped rather than put on an arbitrary one of them. Migration: none.
+
 ## 2026-11-16 (later) — station labels above the passage roof
 
 ### Behaviour changes
