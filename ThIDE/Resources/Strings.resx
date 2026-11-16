@@ -1940,6 +1940,7 @@ This cannot be undone.</value></data>
   <data name="Diag_Msg_TH2_001__coord" xml:space="preserve"><value>'point' {0} coordinate '{1}' is not a number.</value></data>
   <data name="Diag_Msg_TH2_002" xml:space="preserve"><value>'line' block is missing 'endline'.</value></data>
   <data name="Diag_Msg_TH2_003" xml:space="preserve"><value>'area' block is missing 'endarea'.</value></data>
+  <data name="Diag_Msg_TH2_003__borders" xml:space="preserve"><value>An area body line names one border line; put each name on a line of its own.</value></data>
   <data name="Diag_Msg_TH2_004" xml:space="preserve"><value>Unknown point type '{0}'.</value></data>
   <data name="Diag_Msg_TH2_005" xml:space="preserve"><value>Unknown line type '{0}'.</value></data>
   <data name="Diag_Msg_TH2_006" xml:space="preserve"><value>Unknown area type '{0}'.</value></data>

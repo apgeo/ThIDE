@@ -145,6 +145,7 @@ public sealed class DiagnosticTextTests
         "  1 1\n" +
         "endline\n" +
         "area blah\n" +
+        "  b1 b2\n" +
         "endarea\n" +
         "frob\n" +
         "endscrap\n";

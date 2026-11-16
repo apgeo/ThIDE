@@ -1940,6 +1940,7 @@ Acțiunea nu poate fi anulată.</value></data>
   <data name="Diag_Msg_TH2_001__coord" xml:space="preserve"><value>Coordonata {0} „{1}” din „point” nu este un număr.</value></data>
   <data name="Diag_Msg_TH2_002" xml:space="preserve"><value>Blocului „line” îi lipsește „endline”.</value></data>
   <data name="Diag_Msg_TH2_003" xml:space="preserve"><value>Blocului „area” îi lipsește „endarea”.</value></data>
+  <data name="Diag_Msg_TH2_003__borders" xml:space="preserve"><value>Un rând din blocul „area” poate numi o singură linie; puneți fiecare nume pe un rând separat.</value></data>
   <data name="Diag_Msg_TH2_004" xml:space="preserve"><value>Tip de punct necunoscut „{0}”.</value></data>
   <data name="Diag_Msg_TH2_005" xml:space="preserve"><value>Tip de linie necunoscut „{0}”.</value></data>
   <data name="Diag_Msg_TH2_006" xml:space="preserve"><value>Tip de arie necunoscut „{0}”.</value></data>

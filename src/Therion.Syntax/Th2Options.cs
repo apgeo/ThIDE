@@ -89,27 +89,52 @@ public sealed class Th2OptionList
         while (i < tokens.Length)
         {
             if (!IsOptionName(tokens[i].Text)) { i++; continue; }
-            var name = tokens[i].Text[1..];
-            var nameSpan = tokens[i].Span;
-            i++;
-            var sb = new System.Text.StringBuilder();
-            int valueStart = i;
-            int prevEnd = -1;
-            while (i < tokens.Length && !IsOptionName(tokens[i].Text))
-            {
-                // Insert a space only where the source had whitespace, so adjacent tokens the
-                // lexer split (4@cave, [10 5], station:fixed) recombine into their original text.
-                if (prevEnd >= 0 && tokens[i].Span.StartOffset != prevEnd) sb.Append(' ');
-                sb.Append(tokens[i].Text);
-                prevEnd = tokens[i].Span.StartOffset + tokens[i].Span.Length;
-                i++;
-            }
-            var span = valueStart < i
-                ? SpanUnion(nameSpan, tokens[i - 1].Span)
-                : nameSpan;
-            b.Add(new Th2Option(name, Unquote(sb.ToString()), span));
+            b.Add(ReadOption(tokens, tokens[i].Text[1..], ref i));
         }
         return b.Count == 0 ? Empty : new Th2OptionList(b.ToImmutable());
+    }
+
+    /// <summary>
+    /// True if <paramref name="name"/> is an option Therion also takes without its dash, on a line
+    /// of its own inside an <c>area … endarea</c> body (<c>place top</c>, <c>clip off</c>). Any
+    /// other body line names one border line. Checked against therion 6.x and Mapiah 1.0.
+    /// </summary>
+    public static bool IsAreaBodyOption(string name) =>
+        name.ToLowerInvariant() is "clip" or "context" or "id" or "place" or "visibility";
+
+    /// <summary>Parses a dash-less option line, <c>name value…</c>, starting at token 0.</summary>
+    internal static Th2Option ParseBare(ImmutableArray<TherionToken> tokens)
+    {
+        int i = 0;
+        return ReadOption(tokens, tokens[0].Text, ref i);
+    }
+
+    /// <summary>This list followed by <paramref name="more"/>.</summary>
+    internal Th2OptionList Concat(ImmutableArray<Th2Option> more) =>
+        more.IsDefaultOrEmpty ? this : new Th2OptionList(Options.AddRange(more));
+
+    // Reads the option whose name token is at i (named `name`) and its value tokens, up to the
+    // next -option; leaves i on that next option.
+    private static Th2Option ReadOption(ImmutableArray<TherionToken> tokens, string name, ref int i)
+    {
+        var nameSpan = tokens[i].Span;
+        i++;
+        var sb = new System.Text.StringBuilder();
+        int valueStart = i;
+        int prevEnd = -1;
+        while (i < tokens.Length && !IsOptionName(tokens[i].Text))
+        {
+            // Insert a space only where the source had whitespace, so adjacent tokens the
+            // lexer split (4@cave, [10 5], station:fixed) recombine into their original text.
+            if (prevEnd >= 0 && tokens[i].Span.StartOffset != prevEnd) sb.Append(' ');
+            sb.Append(tokens[i].Text);
+            prevEnd = tokens[i].Span.StartOffset + tokens[i].Span.Length;
+            i++;
+        }
+        var span = valueStart < i
+            ? SpanUnion(nameSpan, tokens[i - 1].Span)
+            : nameSpan;
+        return new Th2Option(name, Unquote(sb.ToString()), span);
     }
 
     private static bool IsOptionName(string t) =>

@@ -308,6 +308,8 @@ public sealed class Th2Parser
                 $"Unknown area type '{type}'.", header.Tokens[1].Span));
 
         var borders = ImmutableArray.CreateBuilder<string>();
+        var bodyOpts = ImmutableArray.CreateBuilder<Th2Option>();
+        var bodyOptsRaw = ImmutableArray.CreateBuilder<string>();
         bool terminated = false;
 
         while (cursor < lines.Length)
@@ -319,8 +321,29 @@ public sealed class Th2Parser
                 cursor++; terminated = true; break;
             }
             if (EndsUnterminatedBody(ln.Keyword, "endarea")) break;
-            // Each body line lists a border line identifier (skip option/keyword tokens like `-id`).
-            foreach (var t in ln.Tokens) borders.Add(t.Text);
+            if (ln.Tokens.Length >= 2 && Th2OptionList.IsAreaBodyOption(ln.Keyword))
+            {
+                // A dash-less area option on its own line: `place top`, `clip off`, `id a1`.
+                bodyOpts.Add(Th2OptionList.ParseBare(ln.Tokens));
+                bodyOptsRaw.Add(JoinFrom(ln, 0));
+            }
+            else
+            {
+                // Any other line names one border line; therion rejects a line with more
+                // ("one line name per line allowed"), so keep every name but report it.
+                int names = 0;
+                for (int i = 0; i < ln.Tokens.Length; names++)
+                {
+                    var (id, next) = CoalesceFrom(ln.Tokens, i);
+                    borders.Add(id);
+                    i = next;
+                }
+                if (names > 1)
+                    diags.Add(Diagnostic.Create(DiagnosticCodes.Th2MalformedArea,
+                        options.Mode == ParserMode.Strict ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
+                        "An area body line names one border line; put each name on a line of its own.",
+                        ln.Span));
+            }
             cursor++;
         }
 
@@ -332,11 +355,12 @@ public sealed class Th2Parser
                 "'area' block is missing 'endarea'.", header.Span));
         }
 
-        var areaOpts = Th2OptionList.Parse(header.Tokens, areaOptStart);
+        var areaOpts = Th2OptionList.Parse(header.Tokens, areaOptStart).Concat(bodyOpts.ToImmutable());
         ValidateOptions(areaOpts, options, diags);
         return new AreaObject(header.Span, type, optsRaw, borders.ToImmutable(), terminated)
         {
             Options = areaOpts,
+            BodyOptionsRaw = bodyOptsRaw.ToImmutable(),
         };
     }
 

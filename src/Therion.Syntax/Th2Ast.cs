@@ -93,7 +93,13 @@ public sealed record AreaObject(
     ImmutableArray<string> BorderLineIds,
     bool IsTerminated) : TherionNode(Span)
 {
+    /// <summary>
+    /// The header's <c>-options</c> followed by the dash-less option lines of the body
+    /// (<c>place top</c>), which Therion and Mapiah both accept.
+    /// </summary>
     public Th2OptionList Options { get; init; } = Th2OptionList.Empty;
+    /// <summary>The body's option lines as written (<c>place top</c>), for round-tripping.</summary>
+    public ImmutableArray<string> BodyOptionsRaw { get; init; } = ImmutableArray<string>.Empty;
     public string BaseType => Th2Symbols.SplitType(AreaType).Base;
     public string? Id => Options.Id;
 }

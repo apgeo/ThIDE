@@ -130,6 +130,7 @@ Semantic layer (`Therion.Semantics`):
 | `TH2_001` | lenient | Malformed `point` (needs x, y, type; coordinates must be numeric). | `Th2Parser` |
 | `TH2_002` | lenient | `line` block is missing `endline`. | `Th2Parser` |
 | `TH2_003` | lenient | `area` block is missing `endarea`. | `Th2Parser` |
+| `TH2_003` | lenient | A line in an `area` body names more than one border line (Therion allows one per line; `clip`, `context`, `id`, `place` and `visibility` lines are area options, not border lines). | `Th2Parser` |
 | `TH2_004` | lenient | Unknown point type `<type>`. | `Th2Parser` |
 | `TH2_005` | lenient | Unknown line type `<type>`. | `Th2Parser` |
 | `TH2_006` | lenient | Unknown area type `<type>`. | `Th2Parser` |

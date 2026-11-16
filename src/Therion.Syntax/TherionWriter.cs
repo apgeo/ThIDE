@@ -139,6 +139,10 @@ public sealed class TherionWriter : ITherionWriter
                 {
                     Indent(sb, indent + 1); sb.Append(id).Append('\n');
                 }
+                foreach (var opt in a.BodyOptionsRaw)
+                {
+                    Indent(sb, indent + 1); sb.Append(opt).Append('\n');
+                }
                 if (a.IsTerminated) { Indent(sb, indent); sb.Append("endarea\n"); }
                 break;
 
