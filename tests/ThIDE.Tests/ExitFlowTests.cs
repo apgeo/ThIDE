@@ -105,4 +105,69 @@ public class ExitFlowTests
         w.Unsaved = false;   // the user saved by hand after cancelling
         Assert.Equal(ExitStep.Exit, w.Close(osShutdown: false));
     }
+
+    /// <summary>A window with a render running: the stand-in records the job questions and stops.</summary>
+    private sealed class RenderingWindow
+    {
+        public bool Unsaved { get; set; }
+        public bool Rendering { get; set; } = true;
+        public bool StopAnswer { get; set; }
+        public int JobQuestions { get; private set; }
+        public int SaveQuestions { get; private set; }
+        public int Stops { get; private set; }
+        public List<ExitStep> Shutdowns { get; } = new();
+        public ExitFlow Flow { get; }
+
+        public RenderingWindow()
+        {
+            Flow = new ExitFlow(() => Unsaved, () => { SaveQuestions++; return Task.FromResult(true); }, () => Close(osShutdown: false),
+                jobRunning: () => Rendering,
+                confirmStopJobAsync: () => { JobQuestions++; return Task.FromResult(StopAnswer); },
+                stopJob: () => { Stops++; Rendering = false; });
+        }
+
+        public ExitStep Close(bool osShutdown)
+        {
+            var step = Flow.OnClosing(osShutdown);
+            if (step is ExitStep.Exit or ExitStep.ExitKeepingRecovery) Shutdowns.Add(step);
+            return step;
+        }
+    }
+
+    [Fact]
+    public async Task A_running_render_holds_the_close_and_is_left_running_when_the_user_cancels()
+    {
+        var w = new RenderingWindow { StopAnswer = false };
+
+        Assert.Equal(ExitStep.Ask, w.Close(osShutdown: false));
+        await w.Flow.AskAsync();
+
+        Assert.Equal(1, w.JobQuestions);
+        Assert.Equal(0, w.Stops);
+        Assert.Empty(w.Shutdowns);
+    }
+
+    [Fact]
+    public async Task Stopping_the_render_then_asks_about_unsaved_documents_and_closes()
+    {
+        var w = new RenderingWindow { StopAnswer = true, Unsaved = true };
+
+        Assert.Equal(ExitStep.Ask, w.Close(osShutdown: false));
+        await w.Flow.AskAsync();
+
+        Assert.Equal(1, w.JobQuestions);
+        Assert.Equal(1, w.SaveQuestions);
+        Assert.Equal(1, w.Stops);
+        Assert.Equal(new[] { ExitStep.Exit }, w.Shutdowns);
+    }
+
+    [Fact]
+    public void An_os_shutdown_stops_the_render_without_asking()
+    {
+        var w = new RenderingWindow();
+
+        Assert.Equal(ExitStep.Exit, w.Close(osShutdown: true));
+        Assert.Equal(0, w.JobQuestions);
+        Assert.Equal(1, w.Stops);
+    }
 }

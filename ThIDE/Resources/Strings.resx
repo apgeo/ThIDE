@@ -1648,6 +1648,9 @@ Apply the changes? Steps that could not preview run now.</value></data>
   <data name="Notif_SaveFailedTitle" xml:space="preserve"><value>Save failed</value></data>
   <data name="Notif_SaveFailedMsg" xml:space="preserve"><value>{0} could not be written: {1} Your edits are still in the editor, unsaved.</value></data>
   <data name="Exit_SaveAll" xml:space="preserve"><value>Save all</value></data>
+  <data name="Exit_RenderRunningTitle" xml:space="preserve"><value>Blender render running</value></data>
+  <data name="Exit_RenderRunningMsg" xml:space="preserve"><value>A Blender render is still running. Closing ThIDE stops it. Close anyway?</value></data>
+  <data name="Exit_StopRenderAndClose" xml:space="preserve"><value>Stop render and close</value></data>
   <data name="Replace_EncodingRefused" xml:space="preserve"><value>Nothing replaced: {0} cannot hold '{1}' in {2}, the encoding the file declares. No file was changed.</value></data>
   <data name="Replace_UndoRefused" xml:space="preserve"><value>Nothing restored: {0} was changed after the replace. No file was changed.</value></data>
   <data name="Notif_SaveUndecodable" xml:space="preserve"><value>{0} holds bytes that are not valid {2}; they show as '{1}'. Saving would replace them for good. Add an `encoding` line naming the file's real encoding with another editor and reopen it, or retype the characters shown as '{1}'.</value></data>

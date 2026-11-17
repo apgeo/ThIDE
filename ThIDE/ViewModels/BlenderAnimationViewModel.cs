@@ -318,6 +318,13 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
     [RelayCommand]
     private void Cancel() => _cts?.Cancel();
 
+    /// <summary>True while a render or script export runs; closing ThIDE would stop it.</summary>
+    public bool IsJobRunning => _cts is not null;
+
+    /// <summary>Stops the running job at once, for closing ThIDE: cancelling kills Blender's
+    /// process tree before this returns.</summary>
+    public void StopJob() => _cts?.Cancel();
+
     [RelayCommand]
     private void ReloadArtifacts()
     {

@@ -1648,6 +1648,9 @@ Aplici modificările? Pașii care nu au putut fi previzualizați rulează acum.<
   <data name="Notif_SaveFailedTitle" xml:space="preserve"><value>Salvare eșuată</value></data>
   <data name="Notif_SaveFailedMsg" xml:space="preserve"><value>{0} nu a putut fi scris: {1} Modificările sunt încă în editor, nesalvate.</value></data>
   <data name="Exit_SaveAll" xml:space="preserve"><value>Salvează tot</value></data>
+  <data name="Exit_RenderRunningTitle" xml:space="preserve"><value>Randare Blender în curs</value></data>
+  <data name="Exit_RenderRunningMsg" xml:space="preserve"><value>O randare Blender este încă în curs. Închiderea ThIDE o oprește. Închideți totuși?</value></data>
+  <data name="Exit_StopRenderAndClose" xml:space="preserve"><value>Oprește randarea și închide</value></data>
   <data name="Replace_EncodingRefused" xml:space="preserve"><value>Nu s-a înlocuit nimic: {0} nu poate conține „{1}” în {2}, codificarea declarată de fișier. Niciun fișier nu a fost modificat.</value></data>
   <data name="Replace_UndoRefused" xml:space="preserve"><value>Nu s-a restaurat nimic: {0} a fost modificat după înlocuire. Niciun fișier nu a fost modificat.</value></data>
   <data name="Notif_SaveUndecodable" xml:space="preserve"><value>{0} conține octeți care nu sunt valizi în {2}; apar ca „{1}”. Salvarea i-ar înlocui definitiv. Adăugați cu alt editor o linie `encoding` cu codificarea reală a fișierului și redeschideți-l, sau rescrieți caracterele afișate ca „{1}”.</value></data>
