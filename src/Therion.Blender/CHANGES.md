@@ -1,5 +1,68 @@
 # Therion.Blender — changes for consumers
 
+## 2026-11-17 (player) — a scene plan, and a player that renders it
+
+Nothing existing changes: `SceneSpec`, `ScriptGenerator` and the scripts they give are as before, and
+remain what the render service uses. This adds a second way to get from a description to a Blender
+scene, meant for what the script generator cannot say (several models, a camera path made elsewhere,
+and later texts and annotations) and for consumers that do not start Blender themselves.
+
+### Additive API
+- **`Therion.Blender.Plan`: the scene plan**, `scene-plan.json`. A plan is one render with nothing
+  left to work out: placed models, timed camera poses, the look and the output, all positions in one
+  frame (metres, X east, Y north, Z up, about `frame.origin`) and all times in seconds. Anything can
+  write one; it is the only thing the player reads.
+  - Records: `ScenePlan` with `PlanFrame`, `PlanTimeline` (`fps`, `frameCount`), `PlanModel` (a
+    `.ply` or `.glb` beside the plan, a translation, a material id), `PlanCamera` with its
+    `PlanCameraKey` poses (`t`, `eye`, `target`, optional `lens`), `PlanLook` (engine, samples,
+    device, picture size, `PlanMaterial`s of four kinds, `PlanLight`s of two kinds, `PlanWorld`),
+    `PlanOutput`, and `Features`: the player modules the plan needs, in the order they run.
+  - `ScenePlan.Sections` keeps every section the library does not know, so a plan with a section
+    for a module of your own reads and writes unchanged. `changes`, `annotations` and `texts` are
+    reserved names for later versions.
+  - `ScenePlanSerializer` (`Write`, `Read`, `WriteFile`, `ReadFile`, `ScenePlanFormatException`):
+    one line per camera pose, LF line endings, the same bytes on every platform and culture. A plan
+    of a newer version is refused.
+  - `ScenePlanValidator.Validate` returns `SpecError`s with field paths, as `SceneSpecValidator`
+    does. Model files and module folders must be relative paths that stay beside the plan.
+  - `ScenePlanSchema.Text`: the JSON schema (draft 2020-12) of the format, embedded in the assembly,
+    for a program that writes plans without this library.
+  - `BlenderModule.ScenePlanSchemaVersion` (1). The version is raised only by a change an older
+    player must not ignore; a new capability comes as a new module name in `features`, which an
+    older player refuses.
+- **`ScenePlanBuilder.FromSpec(spec, framing, meta)`** lowers a `SceneSpec` to a plan with the same
+  camera planners the script generator uses: the same poses, clip range, materials and lights, as
+  data. `framing` is required for every template, the static one too.
+  **Not carried yet**: station and component labels, lead markers, overlays, visibility events, and
+  the HDRI light rig (the plan gets a dim plain world). `ScenePlanBuilder.NotCarried(spec)` lists
+  what a given spec loses, so a caller can say so or keep to the script generator.
+- **`CameraPlanner.PlanPoses(spec, framing)`**: `Plan`, with the static template's one pose worked
+  out from the framing's bounds instead of left to the script.
+- **`Therion.Blender.Player`: the player**, Python embedded in the assembly (`PlayerFiles`). It is a
+  small core and one file per feature: `thide_player/core.py` reads and checks the plan and hands
+  each section to its module; `registry.py` finds the modules; `api.py` is what a module may use;
+  `modules/` holds `models`, `camera_track`, `look` and `output`. It prints the same `THIDE:` lines
+  as a generated script, so `BlenderRunner` and `RenderProgressParser` run it unchanged, and it needs
+  only `bpy`, `mathutils`, `bmesh` and the standard library. Blender 4.2, 4.5 and 5.0.
+  - `PlayerWriter.WriteJob(plan, folder, files)` writes `scene-plan.json`, `render.py` and
+    `thide_player/` into a folder, after copying the given meshes in. Start it like a generated
+    script: `blender -b --factory-startup --python render.py`.
+  - `PlayerWriter.SingleFile(plan, files)` gives the same as one script: the plan, the player and,
+    if given, the meshes. No text of the plan can end up as code: it travels as JSON in a raw string
+    with every apostrophe escaped.
+  - Options after `--`: `--plan PATH`, `--modules DIR` (repeatable), `--build-only` (build the
+    scene, do not render; also for opening the scene in Blender's window).
+- **Adding a feature without touching the player.** A feature module is one Python file named after
+  the feature, with `SECTION = "<plan section>"`, `build(ctx, section)` and optionally
+  `render(ctx, section)`. Put it in a folder, name the folder with `--modules DIR` or in the plan's
+  `moduleFolders` (only folders beside the plan), add the feature's name to the plan's `features`
+  and its data to the plan as a section of its own. A name found in two places is an error.
+- **GLB models** come in through Blender's own glTF importer and are joined into one object. That
+  importer needs numpy: it works in the official Blender builds and not in a Blender packaged
+  without numpy (Ubuntu's 5.0.1 is one), where the player refuses the plan and says why. PLY works
+  everywhere. A GLB is read as glTF defines it, Y up; note that `GlbWriter` in `Therion.CaveGeometry`
+  writes the model's own axes (Z up) unchanged, so one of its files comes in lying on its side.
+
 ## 2026-11-17 (later) — lead markers inside the cave, roofs of tube models, the gallery
 
 ### Behaviour changes
