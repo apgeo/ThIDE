@@ -18,9 +18,9 @@ public class RenderOutputDirectoryTests : IDisposable
 
     // ---- fakes ----
 
-    private sealed class FakeProbe : IBlenderProbe
+    private sealed class FakeProbe(BlenderVersion version) : IBlenderProbe
     {
-        public BlenderVersion? Probe(string path) => new(4, 5, 0);
+        public BlenderVersion? Probe(string path) => version;
     }
 
     private sealed class FakeProcess(int exitCode) : IBlenderProcess
@@ -79,8 +79,8 @@ public class RenderOutputDirectoryTests : IDisposable
         Output = new OutputSpec { Kind = OutputKind.Video, Width = 64, Height = 64, BaseName = "render", OutputDirectory = outputDirectory },
     };
 
-    private BlenderRenderService Service(string wanted, int exitCode = 0) => new(
-        new BlenderLocator(new FakeProbe(), () => new[] { "/fake/blender" }),
+    private BlenderRenderService Service(string wanted, int exitCode = 0, BlenderVersion? version = null) => new(
+        new BlenderLocator(new FakeProbe(version ?? new(4, 5, 0)), () => new[] { "/fake/blender" }),
         new BlenderRunner(new FakeLauncher([wanted], exitCode), _ => 50_000_000_000L),
         Path.Combine(_root, "jobs"));
 
@@ -187,7 +187,7 @@ public class RenderOutputDirectoryTests : IDisposable
         string wanted = Path.Combine(_root, "wanted");
         var probed = new List<string>();
         var service = new BlenderRenderService(
-            new BlenderLocator(new FakeProbe(), () => new[] { "/fake/blender" }),
+            new BlenderLocator(new FakeProbe(new(4, 5, 0)), () => new[] { "/fake/blender" }),
             new BlenderRunner(new FakeLauncher([wanted]), p => { probed.Add(p); return 50_000_000_000L; }),
             Path.Combine(_root, "jobs"));
 
@@ -195,5 +195,25 @@ public class RenderOutputDirectoryTests : IDisposable
 
         Assert.True(result.Succeeded, result.ErrorMessage);
         Assert.Equal([wanted], probed);
+    }
+
+    [Fact]
+    public async Task Render_WithABlenderNewerThanTested_RendersAndWarns()
+    {
+        string wanted = Path.Combine(_root, "wanted");
+        var result = await Service(wanted, version: new(5, 1, 0)).RenderAsync(VideoSpec(wanted), SyntheticSource());
+
+        Assert.True(result.Succeeded, result.ErrorMessage);
+        Assert.Contains(result.Warnings, w => w.Contains("5.1.0", StringComparison.Ordinal) && w.Contains("newer", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Render_WithATestedBlender_DoesNotWarnAboutTheVersion()
+    {
+        string wanted = Path.Combine(_root, "wanted");
+        var result = await Service(wanted, version: new(5, 0, 7)).RenderAsync(VideoSpec(wanted), SyntheticSource());
+
+        Assert.True(result.Succeeded, result.ErrorMessage);
+        Assert.DoesNotContain(result.Warnings, w => w.Contains("newer", StringComparison.Ordinal));
     }
 }

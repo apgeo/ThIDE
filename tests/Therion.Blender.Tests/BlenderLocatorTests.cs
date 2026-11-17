@@ -128,4 +128,13 @@ public class BlenderLocatorTests
         locator.Locate();
         Assert.Single(probe.Probed); // second Locate hits the cache
     }
+
+    [Theory]
+    [InlineData(4, 2, 0, false)]
+    [InlineData(4, 5, 16, false)]
+    [InlineData(5, 0, 9, false)]
+    [InlineData(5, 1, 0, true)]
+    [InlineData(6, 0, 0, true)]
+    public void A_release_newer_than_the_tested_one_gets_a_warning(int major, int minor, int patch, bool warns)
+        => Assert.Equal(warns, BlenderLocator.UntestedVersionWarning(new BlenderVersion(major, minor, patch)) is not null);
 }

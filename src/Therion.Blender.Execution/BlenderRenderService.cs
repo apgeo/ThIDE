@@ -80,6 +80,8 @@ public sealed class BlenderRenderService : IBlenderRenderService
 
             var job = new RenderJob(scriptPath, jobDir, frameCount, effectiveSpec.Output);
             result = await _runner.RunAsync(locate.Installation!, job, progress, ct).ConfigureAwait(false);
+            if (BlenderLocator.UntestedVersionWarning(locate.Installation!.Version) is { } untested)
+                result = Copy(result, result.JobLogPath, [untested, .. result.Warnings]);
         }
         finally
         {
@@ -89,7 +91,7 @@ public sealed class BlenderRenderService : IBlenderRenderService
         // With the outputs elsewhere, a finished job's folder holds nothing but its log: drop the folder
         // instead of leaving one behind per render. A failed or cancelled job keeps its log to look at.
         if (outputsElsewhere && result.Succeeded && TryDeleteDirectory(jobDir))
-            return WithoutJobLog(result);
+            return Copy(result, jobLogPath: null, result.Warnings);
         return result;
     }
 
@@ -210,7 +212,7 @@ public sealed class BlenderRenderService : IBlenderRenderService
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return false; }
     }
 
-    private static RenderResult WithoutJobLog(RenderResult r) => new()
+    private static RenderResult Copy(RenderResult r, string? jobLogPath, IReadOnlyList<string> warnings) => new()
     {
         Succeeded = r.Succeeded,
         FailureKind = r.FailureKind,
@@ -219,9 +221,9 @@ public sealed class BlenderRenderService : IBlenderRenderService
         OutputPaths = r.OutputPaths,
         Device = r.Device,
         FrameCount = r.FrameCount,
-        JobLogPath = null,
+        JobLogPath = jobLogPath,
         Duration = r.Duration,
-        Warnings = r.Warnings,
+        Warnings = warnings,
     };
 
     private string CreateJobDirectory()

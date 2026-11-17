@@ -13,6 +13,18 @@ public sealed class BlenderLocator
     /// <summary>Generated scripts target Blender ≥ 4.2 LTS (D-02).</summary>
     public static readonly BlenderVersion MinimumVersion = new(4, 2, 0);
 
+    /// <summary>The newest Blender release (major.minor) the generated scripts were tested with.
+    /// A newer one is used anyway — the scripts check Blender's names as they run — with a warning.</summary>
+    public static readonly BlenderVersion NewestTestedVersion = new(5, 0, 0);
+
+    /// <summary>A warning when <paramref name="version"/> is a newer release than
+    /// <see cref="NewestTestedVersion"/> (patch releases of it are not newer); otherwise null.</summary>
+    public static string? UntestedVersionWarning(BlenderVersion version)
+        => (version.Major, version.Minor).CompareTo((NewestTestedVersion.Major, NewestTestedVersion.Minor)) > 0
+            ? $"Blender {version} is newer than the newest version tested ({NewestTestedVersion.Major}.{NewestTestedVersion.Minor}); " +
+              "rendering anyway. If the render fails or looks wrong, use a tested version."
+            : null;
+
     private readonly IBlenderProbe _probe;
     private readonly Func<IEnumerable<string>> _candidateProvider;
     private readonly Dictionary<string, BlenderVersion?> _cache = new(StringComparer.OrdinalIgnoreCase);
