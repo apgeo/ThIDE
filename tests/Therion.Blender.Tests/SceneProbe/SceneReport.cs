@@ -94,6 +94,9 @@ internal sealed record ProbeObject
     public string? LightType { get; init; }
     public double? Energy { get; init; }
     public double? LightSize { get; init; }
+
+    /// <summary>The way a light shines, as a unit vector.</summary>
+    public double[]? Direction { get; init; }
     public double? Lens { get; init; }
     public bool? DepthOfField { get; init; }
 }

@@ -30,6 +30,9 @@
   <ItemGroup>
     <!-- Run inside Blender by the scene-probe tests, next to the generated script. -->
     <None Update="SceneProbe\scene_probe.py" CopyToOutputDirectory="PreserveNewest" />
+    <!-- For the player tests: a feature module outside the player, and a GLB made of two parts. -->
+    <None Update="Player\ExtraModules\*.py" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Player\two_part_glb.py" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

@@ -22,7 +22,8 @@
 #   --movie PATH        report a movie file's size, frame count and frame rate; nothing else
 #
 # Objects are told apart by the names the generator gives them (CaveModel, Camera, stn:<station>,
-# cmp:<n>, lead:<station>, leadtxt:<station>, overlay:<kind>).
+# cmp:<n>, lead:<station>, leadtxt:<station>, overlay:<kind>), or by the role the player stamps on
+# what it makes (the custom property "thide_role").
 #
 # Only bpy, mathutils and the standard library are used: the Blender packaged by a Linux
 # distribution runs on the system Python and has no numpy.
@@ -86,7 +87,8 @@ def parse_args():
     parser.add_argument("--sheet-cell", default="320x180")
     parser.add_argument("--sheet-samples", type=int, default=16)
     parser.add_argument("--movie", default="")
-    return parser.parse_args(argv)
+    # The script that built the scene may have options of its own after the "--".
+    return parser.parse_known_args(argv)[0]
 
 
 def size_of(text):
@@ -99,6 +101,8 @@ def vec(v):
 
 
 def role_of(obj):
+    if obj.get("thide_role"):
+        return obj["thide_role"]
     if obj.name in ROLE_BY_NAME:
         return ROLE_BY_NAME[obj.name]
     for prefix, role in ROLE_BY_PREFIX:
@@ -183,6 +187,8 @@ def describe_object(obj, depsgraph):
     elif obj.type == "LIGHT":
         info["lightType"] = obj.data.type
         info["energy"] = round(obj.data.energy, 6)
+        # A light shines along its own -Z axis.
+        info["direction"] = vec(evaluated.matrix_world.to_3x3().normalized() @ mathutils.Vector((0.0, 0.0, -1.0)))
         if obj.data.type == "AREA":
             info["lightSize"] = round(obj.data.size, 6)
     elif obj.type == "CAMERA":
