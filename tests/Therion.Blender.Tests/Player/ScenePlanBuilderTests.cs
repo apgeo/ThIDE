@@ -1,0 +1,337 @@
+// SceneSpec → scene plan: the plan holds the poses the camera planner computes and the look the
+// script generator would build, as data.
+
+using Therion.Blender.Emit;
+using Therion.Blender.Plan;
+using Therion.Blender.Presets;
+using Therion.Cave3D;
+using Therion.CaveGeometry;
+
+namespace Therion.Blender.Tests.Player;
+
+public class ScenePlanBuilderTests
+{
+    private static readonly BoundingBox Box = new(new CaveVector3(-40, -30, -20), new CaveVector3(60, 50, 20));
+
+    private static readonly CameraFraming BoxFraming = new() { LocalBounds = Box };
+
+    private static SceneSpec Spec(CameraSpec camera, int fps = 8, double seconds = 2, OutputKind kind = OutputKind.Video)
+        => PlanFixtures.WithPaths(new SceneSpec
+        {
+            Camera = camera,
+            Animation = new AnimationSpec { Fps = fps, DurationSeconds = seconds },
+            Output = new OutputSpec { Kind = kind, Width = 320, Height = 180 },
+        });
+
+    [Theory]
+    [InlineData(CameraTemplate.Orbit)]
+    [InlineData(CameraTemplate.Helix)]
+    [InlineData(CameraTemplate.Flythrough)]
+    [InlineData(CameraTemplate.StillSet)]
+    public void Track_HoldsEveryPoseOfTheCameraPlanner(CameraTemplate template)
+    {
+        var spec = PlanFixtures.WithPaths(new SceneSpec
+        {
+            Camera = new CameraSpec { Template = template },
+            Animation = new AnimationSpec { Fps = 10, DurationSeconds = 6 },
+            // A still set is a sequence of frames, one per view.
+            Output = new OutputSpec { Kind = template == CameraTemplate.StillSet ? OutputKind.FrameSequence : OutputKind.Video },
+        });
+        var planned = CameraPlanner.Plan(spec, PlanFixtures.MediumFraming);
+
+        var plan = ScenePlanBuilder.FromSpec(spec, PlanFixtures.MediumFraming);
+
+        Assert.Equal(planned.FrameCount, plan.Timeline.FrameCount);
+        Assert.Equal(planned.Keyframes.Count, plan.Camera.Track.Count);
+        Assert.All(planned.Keyframes.Zip(plan.Camera.Track), pair =>
+        {
+            var (key, pose) = pair;
+            Assert.Equal(key.Frame, ScenePlanValidator.FrameAt(pose.T, plan.Timeline.Fps));
+            Assert.True((key.Location - pose.Eye).Length < 2e-6, $"frame {key.Frame}: eye");
+            Assert.True((key.Target - pose.Target).Length < 2e-6, $"frame {key.Frame}: target");
+        });
+        Assert.Equal(planned.ClipStart, plan.Camera.ClipStart);
+        Assert.Equal(planned.ClipEnd, plan.Camera.ClipEnd);
+    }
+
+    [Fact]
+    public void StaticCamera_GetsThePoseTheGeneratedScriptWorksOutInBlender()
+    {
+        var spec = Spec(new CameraSpec { Template = CameraTemplate.Static, FocalLength = 50, AutoFramePadding = 1.2 });
+
+        var plan = ScenePlanBuilder.FromSpec(spec, BoxFraming);
+
+        // The script: back off from the centre of the bounds along (1, -1, 0.7) until a sphere
+        // around them fits the field of view.
+        var pose = Assert.Single(plan.Camera.Track);
+        double radius = Box.Diagonal / 2;
+        double distance = radius * 1.2 / Math.Tan(Math.Atan(36.0 / (2 * 50.0))) + radius;
+        var expected = Box.Center + new CaveVector3(1, -1, 0.7).Normalized() * distance;
+        Assert.Equal(0.0, pose.T);
+        Assert.True((expected - pose.Eye).Length < 2e-6);
+        Assert.Equal(Box.Center, pose.Target);
+        Assert.Equal(50.0, plan.Camera.Lens);
+        Assert.Equal(Math.Max(0.01, radius / 1000), plan.Camera.ClipStart);
+        Assert.Equal(Math.Max(100.0, radius * 10), plan.Camera.ClipEnd);
+    }
+
+    [Fact]
+    public void Viewpoints_KeepTheirLensesTheirEasingAndTheDepthOfField()
+    {
+        var spec = Spec(new CameraSpec
+        {
+            Template = CameraTemplate.Viewpoints,
+            Dof = new DepthOfFieldSpec { Enabled = true, FStop = 2.0 },
+            Viewpoints = new ViewpointParams
+            {
+                Viewpoints =
+                [
+                    new CameraViewpoint { Position = new(60, 0, 10), Target = new(10, 10, 0) },
+                    new CameraViewpoint { Position = new(0, 60, 20), Target = new(10, 10, 0), FocalLength = 50 },
+                ],
+            },
+        });
+
+        var camera = ScenePlanBuilder.FromSpec(spec, BoxFraming).Camera;
+
+        Assert.Equal(PlanInterpolation.Bezier, camera.Interpolation);
+        Assert.Equal(2.0, camera.FStop);
+        Assert.Equal([35.0, 50.0], camera.Track.Select(k => k.Lens!.Value));
+        Assert.Equal([0.0, 1.875], camera.Track.Select(k => k.T)); // frames 1 and 16 at 8 fps
+    }
+
+    [Fact]
+    public void WithoutDepthOfField_NoPoseHasALens_AndThereIsNoFStop()
+    {
+        var camera = ScenePlanBuilder.FromSpec(Spec(new CameraSpec { Template = CameraTemplate.Orbit }), BoxFraming).Camera;
+
+        Assert.Null(camera.FStop);
+        Assert.All(camera.Track, k => Assert.Null(k.Lens));
+        Assert.Equal(PlanInterpolation.Linear, camera.Interpolation);
+    }
+
+    [Fact]
+    public void Frame_Model_AndOutput_ComeFromTheSpecAndTheMetadata()
+    {
+        var spec = new SceneSpec
+        {
+            Name = "A name",
+            Seed = 9,
+            Source = new SourceSpec { PlyPath = Path.Combine("some", "folder", "walls.ply") },
+            Engine = new EngineSpec { Kind = RenderEngineKind.Eevee, Samples = 32, Denoise = false, TransparentBackground = true, Gpu = GpuMode.OptiX },
+            Animation = new AnimationSpec { Fps = 12, DurationSeconds = 2.5 },
+            Output = new OutputSpec { Kind = OutputKind.FrameSequence, Container = VideoContainer.WebM, Width = 640, Height = 360, OutputDirectory = "frames", BaseName = "shot" },
+        };
+
+        var plan = ScenePlanBuilder.FromSpec(spec, PlanFixtures.MediumFraming, PlanFixtures.MediumMeta);
+
+        Assert.Equal(BlenderModule.ScenePlanSchemaVersion, plan.Version);
+        Assert.Equal("A name", plan.Name);
+        Assert.Equal(ScenePlan.PlayerFeatures, plan.Features);
+        Assert.Equal(PlanFixtures.Medium.Offset, plan.Frame.Origin);
+        Assert.Equal(new PlanTimeline { Fps = 12, FrameCount = 30 }, plan.Timeline);
+
+        var model = Assert.Single(plan.Models);
+        Assert.Equal(new PlanModel { Id = "CaveModel", Path = "walls.ply", Material = "CaveRock" }, model);
+
+        Assert.Equal(PlanEngine.Eevee, plan.Look.Engine);
+        Assert.Equal(32, plan.Look.Samples);
+        Assert.False(plan.Look.Denoise);
+        Assert.True(plan.Look.Transparent);
+        Assert.Equal(PlanDevice.Optix, plan.Look.Device);
+        Assert.Equal(9, plan.Look.Seed);
+        Assert.Equal((640, 360), (plan.Look.Width, plan.Look.Height));
+        Assert.Equal(new PlanOutput { Kind = PlanOutputKind.Frames, Container = PlanContainer.Webm, Directory = "frames", BaseName = "shot" }, plan.Output);
+    }
+
+    [Fact]
+    public void WithoutMetadata_TheOriginIsZero()
+        => Assert.Equal(CaveVector3.Zero, ScenePlanBuilder.FromSpec(Spec(new CameraSpec()), BoxFraming).Frame.Origin);
+
+    [Fact]
+    public void StillOutput_IsOneFrame()
+    {
+        var plan = ScenePlanBuilder.FromSpec(Spec(new CameraSpec { Template = CameraTemplate.Orbit }, kind: OutputKind.Still), BoxFraming);
+
+        Assert.Equal(PlanOutputKind.Still, plan.Output.Kind);
+        Assert.Equal(1, plan.Timeline.FrameCount);
+        Assert.Single(plan.Camera.Track);
+    }
+
+    // ---- look ----
+
+    private static PlanMaterial RockOf(MaterialsSpec materials)
+        => Assert.Single(ScenePlanBuilder.FromSpec(Spec(new CameraSpec()) with { Materials = materials }, BoxFraming).Look.Materials);
+
+    [Fact]
+    public void FlatRock_IsOneColour()
+    {
+        var rock = RockOf(new MaterialsSpec { Rock = RockMaterial.Flat, BaseColor = new ColorRgb(0.2, 0.4, 0.6), Roughness = 0.5 });
+
+        Assert.Equal(new PlanMaterial { Id = "CaveRock", Kind = PlanMaterialKind.Flat, Color = new ColorRgb(0.2, 0.4, 0.6), Roughness = 0.5 }, rock);
+    }
+
+    [Fact]
+    public void PerSurveyRock_ShowsTheVertexColours()
+        => Assert.Equal(PlanMaterialKind.VertexColor, RockOf(new MaterialsSpec { Rock = RockMaterial.PerSurvey }).Kind);
+
+    [Fact]
+    public void DepthGradientRock_RampsTheDepthTintFromTheBottomOfTheModelToItsTop()
+    {
+        var rock = RockOf(new MaterialsSpec { Rock = RockMaterial.DepthGradient });
+
+        Assert.Equal(PlanMaterialKind.HeightRamp, rock.Kind);
+        Assert.Equal((-20.0, 20.0), (rock.Low, rock.High));
+        var stops = rock.Stops!;
+        Assert.Equal(DepthRamp.GradientStops.Count, stops.Count);
+        Assert.Equal(0.0, stops[0].At);
+        Assert.Equal(1.0, stops[^1].At);
+        // The ramp runs upwards; the tint's stops run from the top down.
+        var top = ScriptGenerator.FromSrgb(DepthRamp.GradientStops[0]);
+        Assert.Equal(top.R, stops[^1].Color.R, 6);
+        Assert.Equal(top.G, stops[^1].Color.G, 6);
+        Assert.Equal(top.B, stops[^1].Color.B, 6);
+    }
+
+    [Fact]
+    public void DepthGradient_OfAModelWithoutHeight_StillHasARange()
+    {
+        var flat = new CameraFraming { LocalBounds = new BoundingBox(new CaveVector3(-5, -5, 3), new CaveVector3(5, 5, 3)) };
+
+        var rock = Assert.Single(ScenePlanBuilder.FromSpec(Spec(new CameraSpec()), flat).Look.Materials);
+
+        Assert.True(rock.High > rock.Low);
+        Assert.Empty(ScenePlanValidator.Validate(ScenePlanBuilder.FromSpec(Spec(new CameraSpec()), flat)));
+    }
+
+    [Fact]
+    public void ProceduralRock_IsANoiseRampAroundTheBaseColour()
+    {
+        var rock = RockOf(new MaterialsSpec { Rock = RockMaterial.Procedural, BaseColor = new ColorRgb(0.5, 0.4, 0.9), ProceduralScale = 12, BumpStrength = 0.3 });
+
+        Assert.Equal(PlanMaterialKind.NoiseRamp, rock.Kind);
+        Assert.Equal((12.0, 0.3), (rock.Scale, rock.Bump));
+        Assert.Equal([new PlanColorStop(0, new ColorRgb(0.3, 0.24, 0.54)), new PlanColorStop(1, new ColorRgb(0.65, 0.52, 1.0))], rock.Stops!);
+    }
+
+    private static PlanLook LookOf(LightingSpec lighting)
+        => ScenePlanBuilder.FromSpec(Spec(new CameraSpec()) with { Lighting = lighting }, BoxFraming).Look;
+
+    [Fact]
+    public void Headlamp_IsOneLightThatRidesTheCamera_AndNoWorld()
+    {
+        var look = LookOf(new LightingSpec { Rig = LightingRig.Headlamp, Strength = 0.5 });
+
+        Assert.Equal(new PlanLight { Id = "Headlamp", Kind = PlanLightKind.Headlamp, Energy = 40, Size = 0.3 }, Assert.Single(look.Lights));
+        Assert.Null(look.World);
+    }
+
+    [Fact]
+    public void SunSky_IsASunUnderASky()
+    {
+        var look = LookOf(new LightingSpec { Rig = LightingRig.SunSky, Strength = 2 });
+
+        var sun = Assert.Single(look.Lights);
+        Assert.Equal((PlanLightKind.Sun, 6.0), (sun.Kind, sun.Energy));
+        Assert.Equal(new PlanWorld { Kind = PlanWorldKind.Sky, Strength = 1.0 }, look.World);
+    }
+
+    // The directions are what Blender's own mathutils gives for a light turned by the Euler
+    // angles of the generated scripts: Euler(angles, 'XYZ').to_matrix() @ Vector((0, 0, -1)).
+    [Theory]
+    [InlineData(LightingRig.SunSky, "Sun", -0.544224, 0.576777, -0.609219)]
+    [InlineData(LightingRig.ThreePoint, "Key", -0.430007, 0.657682, -0.618505)]
+    [InlineData(LightingRig.ThreePoint, "Fill", 0.702097, 0.556265, -0.444554)]
+    [InlineData(LightingRig.ThreePoint, "Rim", 0.583564, 0.194328, -0.788473)]
+    public void Suns_ShineTheWayTheGeneratedScriptsTurnThem(LightingRig rig, string id, double x, double y, double z)
+    {
+        var sun = LookOf(new LightingSpec { Rig = rig }).Lights.Single(l => l.Id == id);
+
+        // Blender computes in single precision.
+        Assert.True((new CaveVector3(x, y, z) - sun.Direction!.Value).Length < 2e-6, $"{sun.Direction}");
+    }
+
+    [Fact]
+    public void ThreePoint_IsThreeSunsOfTheScriptsEnergies()
+    {
+        var look = LookOf(new LightingSpec { Rig = LightingRig.ThreePoint });
+
+        Assert.Equal([("Key", 4.0), ("Fill", 1.5), ("Rim", 3.0)], look.Lights.Select(l => (l.Id, l.Energy)));
+        Assert.Null(look.World);
+    }
+
+    // ---- what a plan does not say yet ----
+
+    [Fact]
+    public void NotCarried_NamesWhatThePlanLeavesOut()
+    {
+        var spec = new SceneSpec
+        {
+            Lighting = new LightingSpec { Rig = LightingRig.HdriFile, HdriPath = "sky.hdr" },
+            Labels = new LabelsSpec
+            {
+                Stations = new StationLabelSpec { Show = true },
+                Components = new ComponentLabelSpec { Show = true },
+                Leads = new LeadMarkerSpec { Show = true },
+                Overlays = new OverlaySpec { ScaleBar = true },
+                Events = [new VisibilityEvent { Target = VisibilityTarget.Overlays, ShowFrame = 5 }],
+            },
+        };
+
+        Assert.Equal(
+            ["lighting.hdriPath", "labels.stations", "labels.components", "labels.leads", "labels.overlays", "labels.events"],
+            ScenePlanBuilder.NotCarried(spec));
+        Assert.Empty(ScenePlanBuilder.NotCarried(new SceneSpec()));
+    }
+
+    [Fact]
+    public void HdriRig_FallsBackToADimPlainWorld()
+    {
+        var look = LookOf(new LightingSpec { Rig = LightingRig.HdriFile, HdriPath = "sky.hdr" });
+
+        Assert.Empty(look.Lights);
+        Assert.Equal(PlanWorldKind.Color, look.World!.Kind);
+    }
+
+    // ---- errors ----
+
+    [Fact]
+    public void AnInvalidSpec_IsRefusedWithItsFieldPaths()
+    {
+        var spec = Spec(new CameraSpec()) with { Engine = new EngineSpec { Samples = 0 } };
+
+        var ex = Assert.Throws<ArgumentException>(() => ScenePlanBuilder.FromSpec(spec, BoxFraming));
+        Assert.Contains("engine.samples", ex.Message);
+    }
+
+    [Fact]
+    public void AFlythroughOfAModelWithoutACentreline_IsRefused()
+        => Assert.Throws<ArgumentException>(
+            () => ScenePlanBuilder.FromSpec(Spec(new CameraSpec { Template = CameraTemplate.Flythrough }), BoxFraming));
+
+    [Fact]
+    public void Framing_IsRequired()
+        => Assert.Throws<ArgumentNullException>(() => ScenePlanBuilder.FromSpec(Spec(new CameraSpec()), null!));
+
+    // ---- every preset ----
+
+    public static IEnumerable<object[]> PresetNames => BuiltInPresets.All.Select(p => new object[] { p.Name });
+
+    [Theory]
+    [MemberData(nameof(PresetNames))]
+    public void EveryBuiltInPreset_BecomesAValidPlan(string preset)
+    {
+        var plan = PlanFixtures.PlanOf(PlanFixtures.Preset(preset));
+
+        Assert.Empty(ScenePlanValidator.Validate(plan));
+        Assert.Empty(JsonSchemaSubset.Validate(ScenePlanSchema.Text, ScenePlanSerializer.Write(plan)));
+    }
+
+    [Fact]
+    public void TheSameSpec_GivesTheSamePlanBytes()
+    {
+        var spec = PlanFixtures.Preset("Full flythrough");
+
+        Assert.Equal(ScenePlanSerializer.Write(PlanFixtures.PlanOf(spec)), ScenePlanSerializer.Write(PlanFixtures.PlanOf(spec)));
+    }
+}

@@ -752,12 +752,12 @@ public static class ScriptGenerator
     private static string Rgba(ColorRgb c)
         => $"({PyWriter.Num(c.R)}, {PyWriter.Num(c.G)}, {PyWriter.Num(c.B)}, 1.0)";
 
-    private static ColorRgb Scale(ColorRgb c, double factor) => new(
+    internal static ColorRgb Scale(ColorRgb c, double factor) => new(
         Math.Clamp(c.R * factor, 0, 1), Math.Clamp(c.G * factor, 0, 1), Math.Clamp(c.B * factor, 0, 1));
 
     /// <summary>Converts an sRGB display colour (0–255) to the linear RGB Blender node
     /// colours expect, so the shader gradient matches the intended palette.</summary>
-    private static ColorRgb FromSrgb(CaveColor c) => new(SrgbToLinear(c.R), SrgbToLinear(c.G), SrgbToLinear(c.B));
+    internal static ColorRgb FromSrgb(CaveColor c) => new(SrgbToLinear(c.R), SrgbToLinear(c.G), SrgbToLinear(c.B));
 
     private static double SrgbToLinear(byte channel)
     {

@@ -182,6 +182,32 @@ public static class CameraPlanner
         };
     }
 
+    /// <summary>
+    /// Plans the camera with every pose worked out. Like <see cref="Plan"/>, except that the one
+    /// pose of the <see cref="CameraTemplate.Static"/> template is computed here, from the
+    /// framing's bounds, the way the generated script computes it from the imported mesh; the
+    /// result then carries that pose as its only keyframe, with the clip range. For a consumer
+    /// that needs the camera as data alone (the scene plan).
+    /// </summary>
+    public static CameraPlan PlanPoses(SceneSpec spec, CameraFraming framing)
+    {
+        ArgumentNullException.ThrowIfNull(framing);
+        var plan = Plan(spec, framing);
+        if (!plan.IsStatic) return plan;
+
+        var bounds = framing.LocalBounds;
+        double radius = BoundingRadius(bounds);
+        var center = bounds.IsEmpty ? CaveVector3.Zero : bounds.Center;
+        double distance = FitDistance(radius, spec.Camera.FocalLength, spec.Camera.AutoFramePadding);
+        var location = center + new CaveVector3(1.0, -1.0, 0.7).Normalized() * distance;
+        return plan with
+        {
+            Keyframes = [new CameraKeyframe(1, location, center, null)],
+            ClipStart = Math.Max(0.01, radius / 1000.0),
+            ClipEnd = Math.Max(100.0, radius * 10.0),
+        };
+    }
+
     // ---- templates ----
 
     private static (IReadOnlyList<CameraKeyframe>, KeyInterpolation, bool) PlanOrbit(

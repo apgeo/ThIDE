@@ -22,4 +22,8 @@ public static class BlenderModule
 
     /// <summary>Schema version of the <see cref="RenderPreset"/> envelope (presets, BA-B9).</summary>
     public const int PresetSchemaVersion = 1;
+
+    /// <summary>Schema version of <c>scene-plan.json</c>, the resolved render description the
+    /// player reads (<see cref="Plan.ScenePlan"/>).</summary>
+    public const int ScenePlanSchemaVersion = 1;
 }

@@ -13,6 +13,11 @@
     <ProjectReference Include="..\Therion.CaveGeometry\Therion.CaveGeometry.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- The schema of the scene plan, for programs that write one without this library. -->
+    <EmbeddedResource Include="Plan\scene-plan.schema.json" LogicalName="plan/scene-plan.schema.json" />
+  </ItemGroup>
+
   <!--
     Blender presentations of 3-D cave models: the scene description and its validation and
     serialization, the camera and label planners, the Python script generator, presets, the scene

@@ -1,0 +1,197 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:thide:scene-plan:1",
+  "title": "ThIDE scene plan, version 1",
+  "description": "A resolved description of one render, played in Blender by the ThIDE player. Positions are metres in one frame (X east, Y north, Z up) about frame.origin; times are seconds from the start of the clip; colours are linear RGB, each channel 0 to 1. Unknown top-level sections are allowed: they belong to player modules outside this schema.",
+  "type": "object",
+  "required": ["version", "features", "frame", "timeline"],
+  "properties": {
+    "version": { "const": 1 },
+    "generator": { "type": "string", "description": "What wrote the plan." },
+    "name": { "type": "string" },
+    "features": {
+      "description": "The player modules the plan needs, in the order they run. A player without one of them refuses the plan. The player's own: models, camera_track, look, output.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/moduleName" }
+    },
+    "moduleFolders": {
+      "description": "Folders beside the plan that hold more modules, as paths relative to the plan.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/relativePath" }
+    },
+    "frame": {
+      "description": "The coordinate frame of every position in the plan.",
+      "type": "object",
+      "required": ["units", "upAxis", "origin"],
+      "additionalProperties": false,
+      "properties": {
+        "units": { "const": "metres" },
+        "upAxis": { "const": "Z" },
+        "origin": { "$ref": "#/$defs/vector", "description": "Where the plan's origin lies in the world: world = plan + origin." },
+        "crs": { "type": "string", "description": "The coordinate system of the origin." }
+      }
+    },
+    "timeline": {
+      "description": "The length of the clip. Time 0 is frame 1; a time t falls on frame 1 + round(t * fps).",
+      "type": "object",
+      "required": ["fps", "frameCount"],
+      "additionalProperties": false,
+      "properties": {
+        "fps": { "type": "integer", "minimum": 1, "maximum": 240 },
+        "frameCount": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "models": {
+      "description": "Played by the module 'models'.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "path"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "minLength": 1, "description": "The model's name in the scene; unique in the plan." },
+          "path": { "$ref": "#/$defs/relativePath", "type": "string", "pattern": "\\.([pP][lL][yY]|[gG][lL][bB])$", "description": "A .ply or .glb file, relative to the plan." },
+          "translation": { "$ref": "#/$defs/vector", "description": "Where the mesh's own origin lies in the frame." },
+          "material": { "type": "string", "description": "The id of one of look.materials. Without it the model keeps what its file brings." }
+        }
+      }
+    },
+    "camera": {
+      "description": "Played by the module 'camera_track'.",
+      "type": "object",
+      "required": ["lens", "clipStart", "clipEnd", "track"],
+      "additionalProperties": false,
+      "properties": {
+        "sensorWidth": { "type": "number", "exclusiveMinimum": 0, "description": "Millimetres; with the lens it gives the horizontal field of view. Default 36." },
+        "lens": { "type": "number", "minimum": 1, "maximum": 1200, "description": "Focal length in millimetres." },
+        "clipStart": { "type": "number", "exclusiveMinimum": 0 },
+        "clipEnd": { "type": "number", "exclusiveMinimum": 0 },
+        "fStop": { "type": "number", "minimum": 0.5, "maximum": 1000, "description": "Turns depth of field on, focused on the target." },
+        "interpolation": { "enum": ["linear", "bezier", "constant"], "description": "Between poses. Default linear." },
+        "track": {
+          "description": "The poses, in rising order of time. One pose is a camera that stands still.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["t", "eye", "target"],
+            "additionalProperties": false,
+            "properties": {
+              "t": { "type": "number", "minimum": 0 },
+              "eye": { "$ref": "#/$defs/vector" },
+              "target": { "$ref": "#/$defs/vector" },
+              "lens": { "type": "number", "minimum": 1, "maximum": 1200 }
+            }
+          }
+        }
+      }
+    },
+    "look": {
+      "description": "Played by the module 'look'.",
+      "type": "object",
+      "required": ["width", "height"],
+      "additionalProperties": false,
+      "properties": {
+        "engine": { "enum": ["cycles", "eevee"] },
+        "samples": { "type": "integer", "minimum": 1, "maximum": 16384 },
+        "denoise": { "type": "boolean" },
+        "device": { "enum": ["auto", "cpu", "optix", "cuda", "hip", "oneapi", "metal"], "description": "For Cycles; falls back to the CPU." },
+        "seed": { "type": "integer" },
+        "transparent": { "type": "boolean" },
+        "width": { "type": "integer", "minimum": 16, "maximum": 16384 },
+        "height": { "type": "integer", "minimum": 16, "maximum": 16384 },
+        "materials": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "kind", "color"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "kind": { "enum": ["flat", "vertexColor", "heightRamp", "noiseRamp"] },
+              "color": { "$ref": "#/$defs/color", "description": "The colour of a flat material, and of a vertexColor one on a mesh without colours." },
+              "roughness": { "type": "number", "minimum": 0, "maximum": 1 },
+              "stops": {
+                "description": "The colours of a heightRamp or a noiseRamp, in rising order of 'at'.",
+                "type": "array",
+                "minItems": 2,
+                "items": {
+                  "type": "object",
+                  "required": ["at", "color"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "at": { "type": "number", "minimum": 0, "maximum": 1 },
+                    "color": { "$ref": "#/$defs/color" }
+                  }
+                }
+              },
+              "low": { "type": "number", "description": "The height (Z) where a heightRamp starts." },
+              "high": { "type": "number", "description": "The height where a heightRamp ends." },
+              "scale": { "type": "number", "exclusiveMinimum": 0, "description": "Of a noiseRamp's noise; larger is finer." },
+              "bump": { "type": "number", "minimum": 0, "description": "How strongly a noiseRamp's noise bumps the surface." }
+            }
+          }
+        },
+        "lights": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "kind", "energy"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "kind": { "enum": ["sun", "headlamp"], "description": "A headlamp is a small area light that rides the camera." },
+              "energy": { "type": "number", "minimum": 0 },
+              "direction": { "$ref": "#/$defs/vector", "description": "The way a sun's light travels." },
+              "size": { "type": "number", "exclusiveMinimum": 0, "description": "The side of a headlamp's emitter, in metres." }
+            }
+          }
+        },
+        "world": {
+          "description": "Without it the background is black and lights nothing.",
+          "type": "object",
+          "required": ["kind"],
+          "additionalProperties": false,
+          "properties": {
+            "kind": { "enum": ["color", "sky"] },
+            "color": { "$ref": "#/$defs/color" },
+            "strength": { "type": "number", "minimum": 0 }
+          }
+        }
+      }
+    },
+    "output": {
+      "description": "Played by the module 'output'.",
+      "type": "object",
+      "required": ["kind", "baseName"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "enum": ["video", "frames", "still"], "description": "video: <baseName>.<container>; frames: <baseName>_0001.png onwards; still: <baseName>.png of the first frame." },
+        "container": { "enum": ["mp4", "mkv", "webm"] },
+        "directory": { "type": "string", "minLength": 1, "description": "Relative to the plan, or absolute. Default: the plan's folder." },
+        "baseName": { "type": "string", "minLength": 1 }
+      }
+    },
+    "changes": { "type": "array", "description": "Reserved: timed changes of visibility, colour and strength." },
+    "annotations": { "type": "array", "description": "Reserved: labels, callouts, markers and photos anchored in the scene." },
+    "texts": { "type": "array", "description": "Reserved: titles, captions and credits, drawn in two dimensions." }
+  },
+  "$defs": {
+    "vector": {
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "color": {
+      "type": "array",
+      "items": { "type": "number", "minimum": 0, "maximum": 1 },
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "moduleName": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+    "relativePath": { "type": "string", "minLength": 1, "pattern": "^(?![/\\\\])(?!.*:)(?!(.*[/\\\\])?\\.\\.([/\\\\]|$))" }
+  }
+}
