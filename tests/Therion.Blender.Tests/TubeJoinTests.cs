@@ -3,8 +3,9 @@
 // fit each other where three or more legs meet; and nothing turned inside out by a hairpin, a
 // short leg or two legs that disagree about their station.
 
-using Therion.Blender.Geometry;
 using Therion.Blender.Tests.SceneProbe;
+using Therion.Cave3D;
+using Therion.CaveGeometry;
 
 namespace Therion.Blender.Tests;
 

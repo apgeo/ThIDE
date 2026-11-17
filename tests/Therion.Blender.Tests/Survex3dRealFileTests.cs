@@ -2,8 +2,8 @@
 // (av_bravo — the same cave/export also exists as .lox, which batch-4's
 // cross-format suite compares against station by station).
 
-using Therion.Blender;
-using Therion.Blender.Parsing;
+using Therion.Cave3D;
+using Therion.Cave3D.Parsing;
 
 namespace Therion.Blender.Tests;
 

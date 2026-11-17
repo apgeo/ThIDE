@@ -10,8 +10,9 @@ using System.Globalization;
 using System.Text;
 using Therion.Blender.Emit;
 using Therion.Blender.Execution;
-using Therion.Blender.Parsing;
 using Therion.Blender.Sources;
+using Therion.Cave3D;
+using Therion.Cave3D.Parsing;
 
 namespace Therion.Blender.Tests.SceneProbe;
 

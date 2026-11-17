@@ -2,8 +2,8 @@
 // workspace"): external-file resolution, artifact ranking (prefer-lox + newest),
 // freshness → re-export, re-export disabled/failed fallbacks, and the not-found paths.
 
-using Therion.Blender;
 using Therion.Blender.Sources;
+using Therion.Cave3D;
 
 namespace Therion.Blender.Tests;
 

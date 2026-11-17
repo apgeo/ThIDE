@@ -6,7 +6,8 @@
 
 using Therion.Blender;
 using Therion.Blender.Emit;
-using Therion.Blender.Geometry;
+using Therion.Cave3D;
+using Therion.CaveGeometry;
 
 namespace Therion.Blender.Tests;
 

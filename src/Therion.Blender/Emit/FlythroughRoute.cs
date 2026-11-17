@@ -13,7 +13,8 @@
 // time and limited in how fast they change, with the pitch kept well short of straight up or
 // down: a camera that tracks a target rolls over when its view passes the vertical.
 
-using Therion.Blender.Geometry;
+using Therion.Cave3D;
+using Therion.CaveGeometry;
 
 namespace Therion.Blender.Emit;
 

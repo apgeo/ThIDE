@@ -2,7 +2,8 @@
 // from inside gets out, whether its triangles close up edge to edge. Brute force over the
 // triangles, which is quick enough for the invented caves.
 
-using Therion.Blender.Geometry;
+using Therion.Cave3D;
+using Therion.CaveGeometry;
 
 namespace Therion.Blender.Tests;
 

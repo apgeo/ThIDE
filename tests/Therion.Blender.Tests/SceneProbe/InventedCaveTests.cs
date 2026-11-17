@@ -1,5 +1,5 @@
-using Therion.Blender.Geometry;
-using Therion.Blender.Parsing;
+using Therion.Cave3D.Parsing;
+using Therion.CaveGeometry;
 
 namespace Therion.Blender.Tests.SceneProbe;
 

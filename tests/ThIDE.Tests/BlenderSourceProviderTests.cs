@@ -6,11 +6,11 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Therion.Blender;
-using Therion.Core;
-using Therion.Semantics;
 using Therion.Blender.Sources;
 using Therion.Build;
+using Therion.Cave3D;
+using Therion.Core;
+using Therion.Semantics;
 using ThIDE.Services;
 
 namespace ThIDE.Tests;

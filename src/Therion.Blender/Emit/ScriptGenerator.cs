@@ -17,6 +17,8 @@
 //   device=<OPTIX|CUDA|HIP|ONEAPI|METAL|CPU|EEVEE>  frames=<N>  frame=<n>/<N>
 //   output=<path>  error=<message>  done=1
 
+using Therion.CaveGeometry;
+
 namespace Therion.Blender.Emit;
 
 /// <summary>
@@ -326,7 +328,7 @@ public static class ScriptGenerator
         w.Line("_ramp = _nt.nodes.new(\"ShaderNodeValToRGB\")");
         w.Line("_cr = _ramp.color_ramp");
         // Fac 0 = bottom of the cave, 1 = top; GradientStops is top→bottom, so reverse.
-        var stops = Geometry.DepthRamp.GradientStops;
+        var stops = DepthRamp.GradientStops;
         int last = stops.Count - 1;
         w.Line("_cr.elements[0].position = 0.0");
         w.Line($"_cr.elements[0].color = {Rgba(FromSrgb(stops[last]))}"); // bottom
@@ -653,7 +655,7 @@ public static class ScriptGenerator
         if (o.DepthLegend)
         {
             // A camera-parented column of the depth-ramp stops, warm (top) → cool (bottom).
-            var stops = Geometry.DepthRamp.GradientStops;
+            var stops = DepthRamp.GradientStops;
             var colors = new List<string>(stops.Count);
             foreach (var s in stops) colors.Add(Rgba(FromSrgb(s)));
             w.Line($"_legend = [{string.Join(", ", colors)}]");
@@ -755,7 +757,7 @@ public static class ScriptGenerator
 
     /// <summary>Converts an sRGB display colour (0–255) to the linear RGB Blender node
     /// colours expect, so the shader gradient matches the intended palette.</summary>
-    private static ColorRgb FromSrgb(Geometry.CaveColor c) => new(SrgbToLinear(c.R), SrgbToLinear(c.G), SrgbToLinear(c.B));
+    private static ColorRgb FromSrgb(CaveColor c) => new(SrgbToLinear(c.R), SrgbToLinear(c.G), SrgbToLinear(c.B));
 
     private static double SrgbToLinear(byte channel)
     {

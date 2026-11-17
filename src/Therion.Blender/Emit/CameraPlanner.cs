@@ -7,7 +7,8 @@
 // centerline path, the tubes along it, wall KD-tree) comes from the geometry stage
 // (CameraFraming.FromGeometry). The flythrough's route is worked out in FlythroughRoute.
 
-using Therion.Blender.Geometry;
+using Therion.Cave3D;
+using Therion.CaveGeometry;
 
 namespace Therion.Blender.Emit;
 

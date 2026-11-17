@@ -3,8 +3,8 @@
 // bitmaps, scrap meshes) and the basic malformed-input rejections. Real-file and
 // torture-level corrupt-input tests live in LoxRealFileTests / CorruptInputTests.
 
-using Therion.Blender;
-using Therion.Blender.Parsing;
+using Therion.Cave3D;
+using Therion.Cave3D.Parsing;
 
 namespace Therion.Blender.Tests;
 

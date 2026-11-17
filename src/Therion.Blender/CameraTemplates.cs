@@ -4,6 +4,8 @@
 // the planner (Emit/CameraPlanner.cs) fills them in. Coordinates for explicit viewpoints
 // are LOCAL (recentered, matching the PLY) — see SceneMeta / D-15.
 
+using Therion.Cave3D;
+
 namespace Therion.Blender;
 
 /// <summary>Which camera motion the render uses (FR-04). <see cref="Static"/> is the

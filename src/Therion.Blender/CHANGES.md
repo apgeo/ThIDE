@@ -1,5 +1,55 @@
 # Therion.Blender — changes for consumers
 
+## 2026-11-17 (split) — one library becomes four, and the model and geometry namespaces are renamed
+
+### Breaking changes
+- **`Therion.Blender` is split into four assemblies**, layered so that each references only the
+  ones above it in this list:
+
+  | Assembly | Holds | Starts a process |
+  |---|---|---|
+  | `Therion.Cave3D` | the 3-D model records, the `.lox` and `.3d` readers, the `.lox` writer | no |
+  | `Therion.CaveGeometry` | centreline graph and paths, tube and scrap meshing, bounds, depth ramp, mesh writers | no |
+  | `Therion.Blender` | scene description, planners, script generator, presets, scene metadata, model sources | no |
+  | `Therion.Blender.Execution` | finding Blender, running it, progress, output collection, the render service | yes |
+
+  A consumer that only reads models references `Therion.Cave3D` alone; one that meshes them adds
+  `Therion.CaveGeometry`. Nothing outside `Therion.Blender.Execution` references
+  `System.Diagnostics.Process`, and a test keeps it so — a rule such as "may not reach code that
+  starts a process" becomes "no reference to `Therion.Blender.Execution`".
+- **Namespaces of the model and geometry types are renamed.** Type names do not change:
+
+  | Old namespace | New namespace (assembly) | Types |
+  |---|---|---|
+  | `Therion.Blender` (model records only) | `Therion.Cave3D` | `CaveBitmapType`, `CaveLrud`, `CaveModel`, `CavePassage`, `CavePassageStation`, `CaveScrap`, `CaveShot`, `CaveShotFlags`, `CaveShotSection`, `CaveSourceFormat`, `CaveStation`, `CaveStationFlags`, `CaveSurfaceBitmap`, `CaveSurfaceGrid`, `CaveSurvey`, `CaveTraverseError`, `CaveTriangle`, `CaveVector3`, `SurveyStyle` |
+  | `Therion.Blender.Parsing` | `Therion.Cave3D.Parsing` | `CaveFileFormatException`, `CaveModelReader`, `LoxReader`, `LoxWriter`, `Survex3dReader` |
+  | `Therion.Blender.Geometry` | `Therion.CaveGeometry` | `BoundingBox`, `CaveColor`, `CaveMesh`, `CenterlineBranch`, `CenterlineComponent`, `CenterlineEdgeGeometry`, `CenterlineGraph`, `CenterlinePath`, `CenterlineReducedGraph`, `DepthRamp`, `GeometryOptions`, `GeometryResult`, `GeometryStage`, `KdTree`, `RoofFinder`, `TubeLeg`, `TubeMesher`, `TubeSection`, `WallSource` |
+  | `Therion.Blender.Writers` (mesh writers) | `Therion.CaveGeometry.Writers` | `GlbWriter`, `ObjWriter`, `PlyWriter`, `StlWriter` |
+
+  Unchanged: everything else in `Therion.Blender` (`SceneSpec`, `SceneMeta`, the labels and
+  materials specs, `IBlenderRenderService`, `RenderProgress`, `RenderResult`, `BlenderModule`),
+  `Therion.Blender.Emit`, `.Presets`, `.Sources`, `SceneMetaWriter` in `Therion.Blender.Writers`, and
+  `Therion.Blender.Execution` (same namespace, now its own assembly).
+- The model assembly is not called `Therion.CaveModel` because of its main type: inside any
+  `Therion.*` namespace the simple name `CaveModel` would then mean the namespace, not the type.
+
+### Migration
+1. Project references: replace the reference to `Therion.Blender.csproj` with the lowest layer the
+   project needs — `Therion.Cave3D` for reading models, `Therion.CaveGeometry` for the centreline
+   graph or meshes, `Therion.Blender` for scenes and scripts, `Therion.Blender.Execution` for
+   rendering. Each brings the layers above it in the table.
+2. `using` lines: `Therion.Blender.Parsing` → `Therion.Cave3D.Parsing`, `Therion.Blender.Geometry` →
+   `Therion.CaveGeometry`, `Therion.Blender.Writers` → `Therion.CaveGeometry.Writers` (keep
+   `Therion.Blender.Writers` only for `SceneMetaWriter`); add `using Therion.Cave3D;` wherever a
+   model record is used — it used to come with `using Therion.Blender;`, which can go if nothing
+   else from that namespace is used.
+3. Lists of allowed or forbidden types by full name (architecture tests): rename by the table
+   above, e.g. `Therion.Blender.CaveModel` → `Therion.Cave3D.CaveModel`,
+   `Therion.Blender.Geometry.CenterlineGraph` → `Therion.CaveGeometry.CenterlineGraph`,
+   `Therion.Blender.Parsing.LoxWriter` → `Therion.Cave3D.Parsing.LoxWriter`. A rule by assembly
+   can instead forbid `Therion.Blender.Execution` (and, for a reader-only consumer, `Therion.Blender`).
+4. No behaviour, file format or schema version changes; scripts and goldens are byte-identical.
+
 ## 2026-11-17 — synthesized tubes are joined into one skin
 
 ### Behaviour changes

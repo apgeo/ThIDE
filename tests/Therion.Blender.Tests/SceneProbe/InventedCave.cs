@@ -7,6 +7,8 @@
 // two-triangle scrap that exercise every field of the format, but lie two thousand kilometres
 // apart once recentred, so nothing about a picture can be tested on it.
 
+using Therion.Cave3D;
+
 namespace Therion.Blender.Tests.SceneProbe;
 
 public enum InventedCaveSize

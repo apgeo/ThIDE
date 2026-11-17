@@ -5,9 +5,11 @@
 // scene metadata that is valid JSON. Seeds are fixed (Therion.TestSupport.GeneratedRuns).
 
 using System.Text.Json;
-using Therion.Blender.Geometry;
-using Therion.Blender.Parsing;
 using Therion.Blender.Writers;
+using Therion.Cave3D;
+using Therion.Cave3D.Parsing;
+using Therion.CaveGeometry;
+using Therion.CaveGeometry.Writers;
 using Therion.TestSupport;
 
 namespace Therion.Blender.Tests;

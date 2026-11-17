@@ -5,6 +5,7 @@
 using System.Runtime.CompilerServices;
 using Therion.Blender.Execution;
 using Therion.Blender.Sources;
+using Therion.Cave3D;
 
 namespace Therion.Blender.Tests;
 

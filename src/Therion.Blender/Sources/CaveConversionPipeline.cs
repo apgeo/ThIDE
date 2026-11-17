@@ -3,9 +3,11 @@
 // scene-meta (+ leads) → write model.ply (transport, D-06) + scene-meta.json (+ any
 // requested extra mesh formats) → return a manifest describing what landed.
 
-using Therion.Blender.Geometry;
-using Therion.Blender.Parsing;
 using Therion.Blender.Writers;
+using Therion.Cave3D;
+using Therion.Cave3D.Parsing;
+using Therion.CaveGeometry;
+using Therion.CaveGeometry.Writers;
 
 namespace Therion.Blender.Sources;
 

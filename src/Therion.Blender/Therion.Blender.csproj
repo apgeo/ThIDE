@@ -5,25 +5,20 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Tests exercise a few internal geometry helpers (cross-section framing, model
-         translation) directly. -->
     <InternalsVisibleTo Include="Therion.Blender.Tests" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Therion.Cave3D\Therion.Cave3D.csproj" />
+    <ProjectReference Include="..\Therion.CaveGeometry\Therion.CaveGeometry.csproj" />
+  </ItemGroup>
+
   <!--
-    BLEND module (BA-B1 scaffold) — turns Therion 3D cave models (.lox/.3d) into
-    Blender-renderable presentations: parse → CaveModel → geometry stage → PLY + scene
-    meta → generated Blender Python script → headless render.
-
-    Pure logic library per .claude/CLAUDE.md: no UI, no Avalonia, no file I/O in the core
-    types. Deterministic + unit-testable. Direct project reference from the app shell
-    (like Therion.Structural); no abstraction layer until a 2nd consumer appears (D-05).
-
-    Intentionally dependency-free at scaffold time (D-20 isolation): the .lox/.3d parser
-    (BA-B2) defines its own CaveModel; project references are added per-batch when a real
-    need appears. Mesh writers (PLY/STL/OBJ/glb) are hand-rolled here (D-06) — no Assimp.
-
-    Design docs: .claude/blender-animation/ (private). IDs BA-xx.
+    Blender presentations of 3-D cave models: the scene description and its validation and
+    serialization, the camera and label planners, the Python script generator, presets, the scene
+    metadata, and model-source resolution. Pure: it writes scripts and data, and starts no process
+    (Therion.Blender.Execution runs Blender). Models come from Therion.Cave3D, meshes from
+    Therion.CaveGeometry.
   -->
 
 </Project>

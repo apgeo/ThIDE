@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Therion.Blender;
 using Therion.Blender.Sources;
 using Therion.Build;
+using Therion.Cave3D;
 using Therion.Semantics;
 using Therion.Workspace;
 

@@ -187,29 +187,29 @@ public class ModelPageExporterTests
 
 public class ModelPlacesTests
 {
-    private static Therion.Blender.CaveStation St(uint id, uint survey, string name, Therion.Blender.CaveStationFlags flags = 0, string? comment = null) =>
+    private static Therion.Cave3D.CaveStation St(uint id, uint survey, string name, Therion.Cave3D.CaveStationFlags flags = 0, string? comment = null) =>
         new() { Id = id, SurveyId = survey, Name = name, Flags = flags, Comment = comment };
 
     [Fact]
     public void Lox_paths_leave_out_the_top_survey_and_keep_dotted_names_whole()
     {
-        var model = new Therion.Blender.CaveModel
+        var model = new Therion.Cave3D.CaveModel
         {
-            SourceFormat = Therion.Blender.CaveSourceFormat.Lox,
+            SourceFormat = Therion.Cave3D.CaveSourceFormat.Lox,
             Surveys = new[]
             {
-                new Therion.Blender.CaveSurvey(0, 0, "", null),          // the file's own top survey
-                new Therion.Blender.CaveSurvey(1, 0, "cave", null),
-                new Therion.Blender.CaveSurvey(2, 1, "upper", null),
-                new Therion.Blender.CaveSurvey(3, 9, "orphan", null),    // parent not read before it
+                new Therion.Cave3D.CaveSurvey(0, 0, "", null),          // the file's own top survey
+                new Therion.Cave3D.CaveSurvey(1, 0, "cave", null),
+                new Therion.Cave3D.CaveSurvey(2, 1, "upper", null),
+                new Therion.Cave3D.CaveSurvey(3, 9, "orphan", null),    // parent not read before it
             },
             Stations = new[]
             {
-                St(10, 2, "N32.11", Therion.Blender.CaveStationFlags.Entrance),
+                St(10, 2, "N32.11", Therion.Cave3D.CaveStationFlags.Entrance),
                 St(11, 2, "5", comment: "  Big chamber "),
-                St(12, 3, "1", Therion.Blender.CaveStationFlags.Entrance),
+                St(12, 3, "1", Therion.Cave3D.CaveStationFlags.Entrance),
                 St(13, 2, "6"),                                          // neither: not listed
-                St(14, 2, "", Therion.Blender.CaveStationFlags.Entrance), // anonymous: not listed
+                St(14, 2, "", Therion.Cave3D.CaveStationFlags.Entrance), // anonymous: not listed
             },
         };
         var places = ModelPlaces.FromModel(model);
@@ -224,12 +224,12 @@ public class ModelPlacesTests
     [Fact]
     public void Survex_paths_are_the_labels_and_the_list_is_capped()
     {
-        var model = new Therion.Blender.CaveModel
+        var model = new Therion.Cave3D.CaveModel
         {
-            SourceFormat = Therion.Blender.CaveSourceFormat.Survex3d,
-            Stations = Enumerable.Range(0, 5).Select(i => new Therion.Blender.CaveStation
+            SourceFormat = Therion.Cave3D.CaveSourceFormat.Survex3d,
+            Stations = Enumerable.Range(0, 5).Select(i => new Therion.Cave3D.CaveStation
             {
-                Id = (uint)i, Name = $"cave.ent{i}", Flags = Therion.Blender.CaveStationFlags.Entrance,
+                Id = (uint)i, Name = $"cave.ent{i}", Flags = Therion.Cave3D.CaveStationFlags.Entrance,
             }).ToArray(),
         };
         var places = ModelPlaces.FromModel(model, max: 3);

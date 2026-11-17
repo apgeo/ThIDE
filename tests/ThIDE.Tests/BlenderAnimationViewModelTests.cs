@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Therion.Blender;
 using Therion.Blender.Presets;
 using Therion.Blender.Sources;
+using Therion.Cave3D;
 using ThIDE.Services;
 using ThIDE.ViewModels;
 

@@ -6,9 +6,10 @@ using System.Buffers.Binary;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
-using Therion.Blender;
-using Therion.Blender.Geometry;
-using Therion.Blender.Writers;
+using Therion.Cave3D;
+using Therion.Cave3D.Parsing;
+using Therion.CaveGeometry;
+using Therion.CaveGeometry.Writers;
 
 namespace Therion.Blender.Tests;
 
@@ -163,7 +164,7 @@ public class MeshWriterTests
     [CorpusFact]
     public void RealAvBravo_ConvertsToPlyWithWalls()
     {
-        var result = GeometryStage.Build(Parsing.LoxReader.ReadFile(TestCorpus.AvBravoLox()));
+        var result = GeometryStage.Build(LoxReader.ReadFile(TestCorpus.AvBravoLox()));
         var bytes = PlyWriter.Write(result.Walls);
 
         var (vertices, colors, faces) = ReadPly(bytes);

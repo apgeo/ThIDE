@@ -6,7 +6,8 @@
 // Leads/QM enrichment from the workspace leads register is added by BA-B4 (the `Leads`
 // list is intentionally present-but-empty here so the schema is stable).
 
-using Therion.Blender.Geometry;
+using Therion.Cave3D;
+using Therion.CaveGeometry;
 
 namespace Therion.Blender;
 

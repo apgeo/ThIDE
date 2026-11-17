@@ -6,7 +6,8 @@
 // Positions are LOCAL (recentered, matching the PLY and camera keyframes — D-15).
 
 using System.Text.RegularExpressions;
-using Therion.Blender.Geometry;
+using Therion.Cave3D;
+using Therion.CaveGeometry;
 
 namespace Therion.Blender.Emit;
 

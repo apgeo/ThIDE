@@ -6,7 +6,7 @@
 
   <ItemGroup>
     <!-- the .lox / .3d readers, for the places a page offers from the model itself -->
-    <ProjectReference Include="..\Therion.Blender\Therion.Blender.csproj" />
+    <ProjectReference Include="..\Therion.Cave3D\Therion.Cave3D.csproj" />
   </ItemGroup>
 
   <ItemGroup>
