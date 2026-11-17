@@ -190,8 +190,7 @@ public class SceneProbeTests
     public async Task Flythrough_StaysInsideThePassage()
     {
         // Without the preset's lead markers: one of them marks the dead end this route stops in
-        // and hides the walls there, which is a defect of its own
-        // (Flythrough_ALeadMarkerDoesNotFillThePicture).
+        // and covers part of the walls there (how much is Flythrough_ALeadMarkerDoesNotFillThePicture).
         var report = await SceneProbeRunner.RunAsync(
             "flythrough-inside", Medium.Value, Flythrough(NoLabels), EveryFrame with { Pixels = (64, 36) });
 
@@ -223,20 +222,18 @@ public class SceneProbeTests
         Assert.True(close.Count == 0, $"within 0.3 m of a wall at frames {string.Join(", ", close)}");
     }
 
-    // ---- known defects: each states the wanted behaviour and is skipped until it is fixed ----
-
-    [BlenderKnownDefectFact(
-        "a lead marker is a ball 1 % of the cave's diagonal in radius (3.7 m on this cave, 5.5 m at the top " +
-        "of its pulse), wider than the passage it marks. A flythrough that comes to a lead flies into a ball " +
-        "that fills the picture.")]
+    [BlenderFact]
     public async Task Flythrough_ALeadMarkerDoesNotFillThePicture()
     {
+        // Inside the cave a marker is sized from its passage, not from the whole cave.
         var report = await SceneProbeRunner.RunAsync(
             "flythrough-lead-marker", Medium.Value, Flythrough(), EveryFrame with { Pixels = (64, 36) });
 
         var filled = report.Pixels.Where(p => p.Share(ProbeRoles.LeadMarker) > 0.5).Select(p => p.Frame).ToList();
         Assert.True(filled.Count == 0, $"a lead marker covers more than half the picture at frames {string.Join(", ", filled)}");
     }
+
+    // ---- known defects: each states the wanted behaviour and is skipped until it is fixed ----
 
     [BlenderKnownDefectFact(
         "the title floats 3 m in front of the camera, so in a flythrough the walls of a narrow passage " +

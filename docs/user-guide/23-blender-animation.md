@@ -38,7 +38,6 @@ describes one *render job*; nothing runs until you press **Render**.
    - **Orbit showcase** — a full turntable with studio lighting.
    - **Helix descent** — a spiral from the top of the cave to the bottom.
    - **Full flythrough** — a head-torch fly-through of the longest passage.
-   - **Map reveal** — a near-top-down pass with the survey pieces labelled.
    - **Documentation stills** — framed top / front / side / isometric images.
 
    A preset fills in the camera, materials, lighting and output all at once. You can then tweak

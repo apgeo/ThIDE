@@ -41,8 +41,6 @@ singură *lucrare de randare*; nimic nu rulează până nu apăsați **Randează
      studio.
    - **Coborâre elicoidală (Helix descent)** — o spirală din partea de sus a peșterii până jos.
    - **Zbor complet (Full flythrough)** — un zbor în lumina frontalei prin cea mai lungă galerie.
-   - **Dezvăluirea hărții (Map reveal)** — o trecere aproape de sus, cu părțile topografiei
-     etichetate.
    - **Imagini pentru documentare (Documentation stills)** — imagini încadrate de sus / din față /
      din lateral / izometrice.
 

@@ -1,5 +1,22 @@
 # Therion.Blender — changes for consumers
 
+## 2026-11-17 (later) — lead markers inside the cave, roofs of tube models, the gallery
+
+### Behaviour changes
+- **In a flythrough a lead marker is sized from its passage**: radius 0.15 × the roof height at
+  its station (×`MarkerScale`, at least 0.1 m; 1.5 m assumed where no roof is known), never more
+  than the outside size. Every other camera keeps the size from the cave's diagonal. A
+  flythrough no longer ends inside a ball that fills the picture.
+- **`SceneMetaStation.Roof` of a tube model comes from the survey**: the largest vertical part of
+  the up distance of the station's level legs (legs within about 60° of horizontal). The walls are
+  asked only where there is none, and for scrap walls as before. A pitch head now has a roof (the
+  walls gave none, having no floor under it), and a junction no longer gets the roof of another
+  level seen through its opening. A station halfway down a shaft still has none.
+- **"Map reveal" is no longer in `BuiltInPresets.All`**, so `ByName("Map reveal")` returns null:
+  it revealed only labels, not the cave. `BuiltInPresets.MapReveal()` still builds it.
+
+  Migration: code that looked the preset up by name should build it with `MapReveal()`.
+
 ## 2026-11-17 (split) — one library becomes four, and the model and geometry namespaces are renamed
 
 ### Breaking changes

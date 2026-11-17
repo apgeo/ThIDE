@@ -55,7 +55,8 @@ public static class LabelPlanner
 
         var stations = PlanStations(labels.Stations, meta, diagonal, out bool capped, out int matched);
         var components = labels.Components.Show ? PlanComponents(labels.Components, meta, diagonal) : [];
-        var leads = labels.Leads.Show ? PlanLeads(labels.Leads, meta, diagonal) : [];
+        bool inside = spec.Camera.Template == CameraTemplate.Flythrough;
+        var leads = labels.Leads.Show ? PlanLeads(labels.Leads, meta, diagonal, inside) : [];
 
         return new LabelPlan
         {
@@ -140,18 +141,43 @@ public static class LabelPlanner
         return result;
     }
 
-    private static IReadOnlyList<LeadItem> PlanLeads(LeadMarkerSpec spec, SceneMeta meta, double diagonal)
+    /// <summary>Lead markers. Seen from outside the cave a marker is sized from the whole cave so
+    /// it shows at that distance; seen from inside (a flythrough) it is sized from the passage it
+    /// is in — a fraction of the roof height at its station — so the camera does not fly into a
+    /// ball wider than the passage. Never larger than the outside size.</summary>
+    private static IReadOnlyList<LeadItem> PlanLeads(LeadMarkerSpec spec, SceneMeta meta, double diagonal, bool inside)
     {
-        double radius = diagonal * LeadRadiusFraction * spec.MarkerScale;
+        double outsideRadius = diagonal * LeadRadiusFraction * spec.MarkerScale;
         double textSize = diagonal * StationSizeFraction;
+        var roofs = new Dictionary<string, double?>(StringComparer.Ordinal);
+        if (inside)
+            foreach (var s in meta.Stations) roofs.TryAdd(s.Name, s.Roof);
+
         var result = new List<LeadItem>(meta.Leads.Count);
         foreach (var lead in meta.Leads)
         {
             string text = !string.IsNullOrWhiteSpace(lead.Note) ? lead.Note! : lead.Station;
+            double radius = outsideRadius;
+            if (inside)
+            {
+                double roof = roofs.GetValueOrDefault(lead.Station) ?? UnknownPassageRoof;
+                double passageRadius = Math.Max(MinInsideRadius, roof * LeadRoofFraction) * spec.MarkerScale;
+                radius = Math.Min(outsideRadius, passageRadius);
+                textSize = Math.Min(textSize, radius);
+            }
             result.Add(new LeadItem(text, Vec(lead.Position), radius, spec.ShowText, textSize) { Station = lead.Station });
         }
         return result;
     }
+
+    /// <summary>Inside the cave, a marker's radius as a fraction of the roof height at its
+    /// station: at the top of its pulse (×1.5) the ball is under half that height across.</summary>
+    private const double LeadRoofFraction = 0.15;
+
+    /// <summary>The roof height assumed for a lead whose station has none.</summary>
+    private const double UnknownPassageRoof = 1.5;
+
+    private const double MinInsideRadius = 0.1;
 
     /// <summary>Greedy farthest-point sampling: keeps <paramref name="k"/> of
     /// <paramref name="points"/> spread as far apart as possible, so a capped label set

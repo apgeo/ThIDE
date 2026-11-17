@@ -12,14 +12,16 @@ public class BuiltInPresetsTests
     private static readonly SourceSpec Source = new() { PlyPath = "job/model.ply", SceneMetaPath = "job/scene-meta.json" };
 
     [Fact]
-    public void Gallery_HasTheFiveHeadlinePresets_AllBuiltIn()
+    public void Gallery_HasTheFourHeadlinePresets_AllBuiltIn()
     {
         var names = BuiltInPresets.All.Select(p => p.Name).ToList();
-        Assert.Equal(5, names.Count);
+        Assert.Equal(4, names.Count);
         Assert.Equal(names, names.Distinct().ToList());
         Assert.All(BuiltInPresets.All, p => Assert.True(p.BuiltIn));
         Assert.Contains("Orbit showcase", names);
         Assert.Contains("Documentation stills", names);
+        Assert.DoesNotContain("Map reveal", names); // reveals labels only, not the cave
+        Assert.Null(BuiltInPresets.ByName("Map reveal"));
     }
 
     [Fact]

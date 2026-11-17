@@ -147,6 +147,29 @@ public class LabelPlannerTests
     }
 
     [Fact]
+    public void InAFlythrough_ALeadMarkerIsSizedFromItsPassage_ElsewhereFromTheCave()
+    {
+        var stations = new[] { Station("x.9", 0, 0, 0) with { Roof = 2.0 }, Station("y.3", 1, 1, 1) };
+        var leads = new[]
+        {
+            new SceneMetaLead { Station = "x.9", Position = new SceneMetaVec(0, 0, 0) },
+            new SceneMetaLead { Station = "y.3", Position = new SceneMetaVec(1, 1, 1) }, // no roof known
+        };
+        var meta = Meta(stations, leads: leads);
+        var labels = new LabelsSpec { Leads = new LeadMarkerSpec { Show = true } };
+        var orbit = LabelPlanner.Plan(Spec(labels), meta);
+        var flythrough = LabelPlanner.Plan(Spec(labels) with { Camera = new CameraSpec { Template = CameraTemplate.Flythrough } }, meta);
+
+        double outside = orbit.Leads[0].Radius;
+        Assert.Equal(outside, orbit.Leads[1].Radius);
+        Assert.True(outside > 1.0, $"seen from outside a marker shows across the cave ({outside:F2} m)");
+        // At the top of its pulse (×1.5) the ball is under half the roof height across.
+        Assert.Equal(0.3, flythrough.Leads[0].Radius, 9);
+        Assert.True(flythrough.Leads[1].Radius < 0.5, "a station without a roof gets a passage-sized default");
+        Assert.All(flythrough.Leads, l => Assert.True(l.TextSize <= l.Radius));
+    }
+
+    [Fact]
     public void TextSize_ScalesWithBoundsAndTextScale()
     {
         var meta = Meta([Station("a", 0, 0, 0, entrance: true)]);
