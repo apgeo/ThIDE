@@ -20,6 +20,8 @@
   be needed`. A plan that sets a field a newer player added is no longer played as if the field
   were not there. Sections of other modules are still the business of their modules; a module
   without `KEYS` checks its own section, or not at all.
+- The player's markers glow in a material named `LeadMarker`, as in the generated scripts, where
+  it was `LabelMarker`.
 - **`ScenePlanSerializer.Read` refuses an unknown key inside a known section** the same way
   (`ScenePlanFormatException`: `models[1].tint is not known to this build (scene plan version 1);
   a newer build may be needed.`), where it ignored it. The keys it knows are the schema's; unknown

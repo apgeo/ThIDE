@@ -45,7 +45,7 @@ def build(ctx, labels):
 
     if markers.get("items"):
         colour = rgba(markers["color"])
-        material = glowing("LabelMarker", colour, markers.get("strength", 2.0))
+        material = glowing("LeadMarker", colour, markers.get("strength", 2.0))  # as the generated scripts name it
         pulse = markers.get("pulse")
         sizing = markers.get("byDistance")
         # A pulse lasts a whole number of frames: the frame its period falls on.

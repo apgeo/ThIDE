@@ -307,8 +307,7 @@ public class PlayerBlenderTests
             string what = $"{name}: {g.Name}";
             Assert.Equal((g.Role, g.Type, g.Parent, g.Animated, g.HideRender), (p.Role, p.Type, p.Parent, p.Animated, p.HideRender));
             Assert.Equal(g.Constraints, p.Constraints);
-            // The script names the markers' material after the leads; to the player a marker is any marker.
-            Assert.Equal(g.Materials.Select(m => m == "LeadMarker" ? "LabelMarker" : m), p.Materials);
+            Assert.Equal(g.Materials, p.Materials);
             Assert.Equal((g.Vertices, g.Polygons, g.LightType, g.DepthOfField, g.Text), (p.Vertices, p.Polygons, p.LightType, p.DepthOfField, p.Text));
             AssertNear(g.Location, p.Location, 1e-4, what);
             if (g.BoundsMin is not null)
@@ -391,7 +390,7 @@ public class PlayerBlenderTests
         AssertNear(new CaveVector3(-10, 5, 30), here.Location, 1e-5, "the marker");
         Assert.Equal((28.75, 31.25), (here.BoundsMin![2], here.BoundsMax![2]));
         Assert.InRange(here.BoundsMax[0] - here.BoundsMin[0], 2.2, 2.5);
-        Assert.Equal(["LabelMarker"], here.Materials);
+        Assert.Equal(["LeadMarker"], here.Materials);
     }
 
     [BlenderFact]
