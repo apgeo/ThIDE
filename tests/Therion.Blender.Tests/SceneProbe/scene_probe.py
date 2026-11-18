@@ -50,7 +50,8 @@ ROLE_BY_PREFIX = (
     ("lead:", "lead-marker"),
     ("overlay:", "overlay"),
 )
-ANNOTATION_ROLES = ("station-label", "component-label", "lead-text", "lead-marker", "overlay")
+# "label" and "marker" are what the player calls a text and a marker whose plan gives no role.
+ANNOTATION_ROLES = ("station-label", "component-label", "lead-text", "lead-marker", "overlay", "label", "marker")
 GEOMETRY_TYPES = ("MESH", "FONT", "CURVE", "SURFACE")
 
 # One primary colour per role: every channel is 0 or 1, so a pixel classifies by thresholding at

@@ -48,6 +48,8 @@ internal static class ProbeRoles
     public const string LeadMarker = "lead-marker";
     public const string LeadText = "lead-text";
     public const string Overlay = "overlay";
+    public const string Label = "label";
+    public const string Marker = "marker";
     public const string Light = "light";
     public const string Other = "other";
     public const string Background = "background";

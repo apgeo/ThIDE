@@ -27,6 +27,34 @@ public class ScenePlanSerializerTests
         Assert.Equal(PlanFixtures.Full().Models, read.Models);
         Assert.Equal(PlanFixtures.Full().Look.Lights, read.Look.Lights);
         Assert.Equal(PlanFixtures.Full().Frame, read.Frame);
+        Assert.Equal(PlanFixtures.Full().Labels!.Texts!.Items, read.Labels!.Texts!.Items);
+        Assert.Equal(PlanFixtures.Full().Labels!.Markers!.Items, read.Labels.Markers!.Items);
+        Assert.Equal(PlanFixtures.Full().Labels!.Markers!.Pulse, read.Labels.Markers.Pulse);
+        Assert.Equal(PlanFixtures.Full().Labels!.Markers!.ByDistance, read.Labels.Markers.ByDistance);
+    }
+
+    [Fact]
+    public void ALabel_TakesOneLine_WhateverItsTextSays()
+    {
+        string json = ScenePlanSerializer.Write(PlanFixtures.Full());
+
+        Assert.Contains(
+            "      \"items\": [\n" +
+            "        { \"id\": \"stn:entrance\", \"role\": \"station-label\", \"text\": \"Intrarea \\\"de sus\\\"\", \"at\": [1.5, 2, 3], \"size\": 1.2 },\n" +
+            "        { \"id\": \"note\", \"text\": \"two\\nlines\", \"at\": [-4, 0, 0.25], \"size\": 0.5 }\n" +
+            "      ]", json);
+        Assert.Contains(
+            "        { \"id\": \"lead:far.7\", \"role\": \"lead-marker\", \"at\": [40, -8, 2], \"radius\": 0.3 },\n" +
+            "        { \"id\": \"here\", \"at\": [0, 0, 0], \"radius\": 1 }\n", json);
+        Assert.Contains("\"pulse\": {\n        \"period\": 0.56,\n        \"scale\": 1.5\n      }", json);
+
+        var hostile = PlanFixtures.Full() with
+        {
+            Labels = new PlanLabels { Texts = new PlanTexts { Items = [new PlanText(PlayerWriterTests.HostileName, PlayerWriterTests.HostileName, default, 1)] } },
+        };
+        var read = ScenePlanSerializer.Read(ScenePlanSerializer.Write(hostile)).Labels!.Texts!.Items[0];
+        Assert.Equal((PlayerWriterTests.HostileName, PlayerWriterTests.HostileName), (read.Id, read.Text));
+        Assert.Null(read.Role);
     }
 
     [Fact]
@@ -68,7 +96,7 @@ public class ScenePlanSerializerTests
         foreach (string absent in new[]
                  {
                      "\"name\"", "\"crs\"", "\"fStop\"", "\"world\"", "\"material\"", "\"translation\"", "\"rotation\"", "\"scale\"",
-                     "\"render\"", "\"blend\"", "null",
+                     "\"render\"", "\"blend\"", "\"labels\"", "null",
                  })
             Assert.DoesNotContain(absent, json);
     }

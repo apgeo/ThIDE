@@ -50,6 +50,11 @@ public static partial class ScenePlanValidator
         ValidateModels(plan, Bad);
         ValidateCamera(plan, Bad);
         ValidateLook(plan.Look, plan.Output, Bad);
+        if (plan.Labels is { } labels)
+        {
+            ValidateLabels(labels, plan.Timeline.Fps, Bad);
+            NeedsFeature(plan, "labels", ScenePlan.LabelsFeature, Bad);
+        }
 
         // ---- output ----
         if (string.IsNullOrWhiteSpace(plan.Output.Directory))
@@ -211,6 +216,70 @@ public static partial class ScenePlanValidator
         }
     }
 
+    private static void ValidateLabels(PlanLabels labels, int fps, Action<string, string> bad)
+    {
+        var ids = new HashSet<string>(StringComparer.Ordinal);
+        void Id(string id, string? role, string path)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+                bad(path + ".id", "A label needs an id.");
+            else if (!ids.Add(id))
+                bad(path + ".id", $"The id '{id}' is used twice.");
+            if (role is not null && !RoleName().IsMatch(role))
+                bad(path + ".role", "A role is lower-case letters and digits, in words joined by '-'.");
+        }
+        void Glow(ColorRgb color, double strength, string path)
+        {
+            if (!IsUnitColor(color))
+                bad(path + ".color", "Colour channels must be within 0–1.");
+            if (!(strength >= 0) || !double.IsFinite(strength))
+                bad(path + ".strength", "The strength of the glow is not negative.");
+        }
+
+        if (labels.Texts is { } texts)
+        {
+            Glow(texts.Color, texts.Strength, "labels.texts");
+            for (int i = 0; i < texts.Items.Count; i++)
+            {
+                var text = texts.Items[i];
+                string path = $"labels.texts.items[{i}]";
+                Id(text.Id, text.Role, path);
+                if (text.Text is null) bad(path + ".text", "A text label needs its text.");
+                if (!IsFinite(text.At)) bad(path + ".at", "The position must be finite.");
+                if (!(text.Size > 0) || !double.IsFinite(text.Size)) bad(path + ".size", "The size of a text must be positive.");
+            }
+        }
+
+        if (labels.Markers is { } markers)
+        {
+            Glow(markers.Color, markers.Strength, "labels.markers");
+            if (markers.Pulse is { } pulse)
+            {
+                if (!(pulse.Period > 0) || !double.IsFinite(pulse.Period))
+                    bad("labels.markers.pulse.period", "The period of a pulse must be positive.");
+                else if (FrameAt(pulse.Period, fps) < 2)
+                    bad("labels.markers.pulse.period", $"A pulse takes at least one frame ({fps} fps).");
+                if (!(pulse.Scale > 0) || !double.IsFinite(pulse.Scale))
+                    bad("labels.markers.pulse.scale", "The scale of a pulse must be positive.");
+            }
+            if (markers.ByDistance is { } distance)
+            {
+                if (!(distance.Factor > 0) || !double.IsFinite(distance.Factor))
+                    bad("labels.markers.byDistance.factor", "The factor must be positive.");
+                if (!(distance.MinRadius > 0 && distance.MaxRadius >= distance.MinRadius && double.IsFinite(distance.MaxRadius)))
+                    bad("labels.markers.byDistance.minRadius", "A marker's radius stays between a positive 'minRadius' and a 'maxRadius' not below it.");
+            }
+            for (int i = 0; i < markers.Items.Count; i++)
+            {
+                var marker = markers.Items[i];
+                string path = $"labels.markers.items[{i}]";
+                Id(marker.Id, marker.Role, path);
+                if (!IsFinite(marker.At)) bad(path + ".at", "The position must be finite.");
+                if (!(marker.Radius > 0) || !double.IsFinite(marker.Radius)) bad(path + ".radius", "The radius of a marker must be positive.");
+            }
+        }
+    }
+
     private static void ValidateStops(IReadOnlyList<PlanColorStop>? stops, string path, Action<string, string> bad)
     {
         if (stops is null || stops.Count < 2)
@@ -251,4 +320,7 @@ public static partial class ScenePlanValidator
 
     [GeneratedRegex("^[a-z][a-z0-9_]*$", RegexOptions.CultureInvariant)]
     private static partial Regex ModuleName();
+
+    [GeneratedRegex("^[a-z][a-z0-9]*(-[a-z0-9]+)*$", RegexOptions.CultureInvariant)]
+    private static partial Regex RoleName();
 }

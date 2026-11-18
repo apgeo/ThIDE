@@ -9,10 +9,10 @@
 // from the start of the clip. Camera poses are data; no camera mathematics runs in Python.
 //
 // The sections: frame and timeline (what every part shares), models, camera, look, output, the
-// optional blend (the built scene saved as a Blender file), and features — the player modules the
-// plan needs, in the order they run. Any other section belongs to a module outside this library
-// and travels in Sections; "changes", "annotations" and "texts" are reserved names for later
-// versions.
+// optional labels (texts and markers in the scene) and blend (the built scene saved as a Blender
+// file), and features — the player modules the plan needs, in the order they run. Any other
+// section belongs to a module outside this library and travels in Sections; "changes",
+// "annotations" and "texts" are reserved names for later versions.
 
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -279,6 +279,74 @@ public sealed record PlanLook
     public PlanWorld? World { get; init; }
 }
 
+/// <summary>A text in the scene that turns to face the camera, centred on <see cref="At"/>.</summary>
+/// <param name="Id">The text's name in the scene; unique among the labels.</param>
+/// <param name="Size">The height of its letters, in metres.</param>
+/// <param name="Role">What the text is, for whoever looks for it in the scene: lower-case
+/// words joined by '-'. Null is "label".</param>
+public readonly record struct PlanText(string Id, string Text, CaveVector3 At, double Size, string? Role = null);
+
+/// <summary>A glowing ball that marks a place.</summary>
+/// <param name="Id">The marker's name in the scene; unique among the labels.</param>
+/// <param name="Radius">In metres; with <see cref="PlanMarkers.ByDistance"/>, the radius it is
+/// built with.</param>
+/// <param name="Role">As for a text. Null is "marker".</param>
+public readonly record struct PlanMarker(string Id, CaveVector3 At, double Radius, string? Role = null);
+
+public sealed record PlanTexts
+{
+    /// <summary>The colour the texts glow in: they are readable in an unlit cave.</summary>
+    public ColorRgb Color { get; init; } = new(0.95, 0.93, 0.82);
+
+    /// <summary>How strongly they glow.</summary>
+    public double Strength { get; init; } = 1.5;
+
+    public IReadOnlyList<PlanText> Items { get; init; } = [];
+}
+
+/// <summary>Markers that draw the eye: each grows to <see cref="Scale"/> times its size over
+/// <see cref="Period"/> seconds, again and again.</summary>
+public sealed record PlanPulse
+{
+    public double Period { get; init; } = 1.0;
+
+    public double Scale { get; init; } = 1.5;
+}
+
+/// <summary>Markers that keep about the same size in the picture: a marker's radius is
+/// <see cref="Factor"/> times its distance from the camera, kept within
+/// [<see cref="MinRadius"/>, <see cref="MaxRadius"/>] metres.</summary>
+public sealed record PlanDistanceSizing
+{
+    public double Factor { get; init; }
+
+    public double MinRadius { get; init; }
+
+    public double MaxRadius { get; init; }
+}
+
+public sealed record PlanMarkers
+{
+    public ColorRgb Color { get; init; } = new(1.0, 0.25, 0.1);
+
+    public double Strength { get; init; } = 2.0;
+
+    public PlanPulse? Pulse { get; init; }
+
+    public PlanDistanceSizing? ByDistance { get; init; }
+
+    public IReadOnlyList<PlanMarker> Items { get; init; } = [];
+}
+
+/// <summary>Texts and markers that stand in the scene. Where each one stands and how large it
+/// is has been worked out; the player only makes them.</summary>
+public sealed record PlanLabels
+{
+    public PlanTexts? Texts { get; init; }
+
+    public PlanMarkers? Markers { get; init; }
+}
+
 public sealed record PlanOutput
 {
     public PlanOutputKind Kind { get; init; } = PlanOutputKind.Video;
@@ -311,6 +379,9 @@ public sealed record ScenePlan
     public const string Metres = "metres";
     public const string ZUp = "Z";
 
+    /// <summary>The module that makes the texts and markers (<see cref="Labels"/>).</summary>
+    public const string LabelsFeature = "labels";
+
     /// <summary>The module that saves the scene as a Blender file (<see cref="Blend"/>).</summary>
     public const string BlendFileFeature = "blend_file";
 
@@ -318,9 +389,11 @@ public sealed record ScenePlan
     /// headlamp of the look rides the camera, and the output is set last.</summary>
     public static readonly IReadOnlyList<string> BasicFeatures = ["models", "camera_track", "look", "output"];
 
-    /// <summary>Every module of the player in this library, in the order a plan runs them. The
-    /// scene is saved when all of them have built it and before the output renders it.</summary>
-    public static readonly IReadOnlyList<string> PlayerFeatures = ["models", "camera_track", "look", BlendFileFeature, "output"];
+    /// <summary>Every module of the player in this library, in the order a plan runs them.
+    /// Labels turn to the camera; the scene is saved when all have built it and before the
+    /// output renders it.</summary>
+    public static readonly IReadOnlyList<string> PlayerFeatures =
+        ["models", "camera_track", "look", LabelsFeature, BlendFileFeature, "output"];
 
     public int Version { get; init; } = BlenderModule.ScenePlanSchemaVersion;
 
@@ -345,6 +418,10 @@ public sealed record ScenePlan
     public PlanCamera Camera { get; init; } = new();
 
     public PlanLook Look { get; init; } = new();
+
+    /// <summary>Texts and markers in the scene; played by the module
+    /// <see cref="LabelsFeature"/>.</summary>
+    public PlanLabels? Labels { get; init; }
 
     public PlanOutput Output { get; init; } = new();
 

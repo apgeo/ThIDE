@@ -3,8 +3,9 @@
 // with the planners the script generator uses, so both paths show the same camera move and the
 // same look.
 //
-// Not carried yet, because the player has no module for them: labels, lead markers, overlays and
-// their visibility events, and the HDRI light rig. NotCarried lists what a given spec loses.
+// Station and component labels and lead markers are carried too, placed and sized by the label
+// planner. Not carried, because the player has no module for them: overlays, the visibility
+// events of the labels, and the HDRI light rig. NotCarried lists what a given spec loses.
 //
 // Positions and colours are rounded to six decimals before they are written. They come through
 // sin, cos and pow, which agree between platforms only to the last bit; a micrometre is far below
@@ -26,6 +27,17 @@ public static class ScenePlanBuilder
     /// <summary>The id of the material made from <see cref="SceneSpec.Materials"/>.</summary>
     public const string RockMaterialId = "CaveRock";
 
+    /// <summary>The roles of the labels made from <see cref="SceneSpec.Labels"/>. Their ids are
+    /// the names the generated scripts give them: <c>stn:</c>, <c>cmp:</c>, <c>lead:</c> and
+    /// <c>leadtxt:</c> before the station's or the component's name.</summary>
+    public const string StationLabelRole = "station-label";
+    public const string ComponentLabelRole = "component-label";
+    public const string LeadMarkerRole = "lead-marker";
+    public const string LeadTextRole = "lead-text";
+
+    /// <summary>The frames a lead marker's pulse takes in the generated scripts.</summary>
+    private const int PulseFrames = 14;
+
     /// <summary>
     /// Lowers <paramref name="spec"/> to a plan. Throws <see cref="ArgumentException"/> when the
     /// spec is invalid, or when its camera template cannot be planned from
@@ -33,8 +45,9 @@ public static class ScenePlanBuilder
     /// </summary>
     /// <param name="framing">The model's bounds and centreline. Every template needs it here,
     /// the static one too: a plan holds the pose, not the rule for finding it.</param>
-    /// <param name="meta">Gives the frame its origin and coordinate system; without it the
-    /// origin is zero.</param>
+    /// <param name="meta">Gives the frame its origin and coordinate system, and the labels
+    /// their stations, components and leads; without it the origin is zero and there are no
+    /// labels.</param>
     /// <remarks>The model is named by the file name of <see cref="SourceSpec.PlyPath"/> alone:
     /// a plan lies beside its meshes. The output directory is taken as it is.</remarks>
     public static ScenePlan FromSpec(SceneSpec spec, CameraFraming framing, SceneMeta? meta = null)
@@ -48,9 +61,11 @@ public static class ScenePlanBuilder
                 nameof(spec));
 
         var camera = CameraPlanner.PlanPoses(spec, framing);
+        var labels = meta is null ? null : Labels(spec, meta);
         return new ScenePlan
         {
             Name = string.IsNullOrWhiteSpace(spec.Name) ? null : spec.Name,
+            Features = labels is null ? ScenePlan.BasicFeatures : WithFeature(ScenePlan.BasicFeatures, ScenePlan.LabelsFeature),
             Frame = new PlanFrame
             {
                 Origin = meta is null ? CaveVector3.Zero : new CaveVector3(meta.Offset.X, meta.Offset.Y, meta.Offset.Z),
@@ -60,6 +75,7 @@ public static class ScenePlanBuilder
             Models = [new PlanModel { Id = ModelId, Path = FileName(spec.Source.PlyPath), Material = RockMaterialId }],
             Camera = Camera(camera, spec.Animation.Fps),
             Look = Look(spec, framing.LocalBounds),
+            Labels = labels,
             Output = new PlanOutput
             {
                 Kind = spec.Output.Kind switch
@@ -189,9 +205,6 @@ public static class ScenePlanBuilder
         ArgumentNullException.ThrowIfNull(spec);
         var lost = new List<string>();
         if (spec.Lighting.Rig == LightingRig.HdriFile) lost.Add("lighting.hdriPath");
-        if (spec.Labels.Stations.Show) lost.Add("labels.stations");
-        if (spec.Labels.Components.Show) lost.Add("labels.components");
-        if (spec.Labels.Leads.Show) lost.Add("labels.leads");
         var overlays = spec.Labels.Overlays;
         if (!string.IsNullOrWhiteSpace(overlays.Title) || overlays.ScaleBar || overlays.NorthArrow || overlays.DepthLegend)
             lost.Add("labels.overlays");
@@ -219,6 +232,57 @@ public static class ScenePlanBuilder
                 plan.KeyframeFocal ? k.FocalLength ?? plan.FocalLength : null))
             .ToList(),
     };
+
+    /// <summary>The labels the script generator would make, as data: the planner's stations,
+    /// components and leads, under the names the scripts give their objects. Null when the
+    /// spec shows none.</summary>
+    private static PlanLabels? Labels(SceneSpec spec, SceneMeta meta)
+    {
+        var planned = LabelPlanner.Plan(spec, meta);
+        if (planned.IsEmpty) return null;
+
+        var ids = new HashSet<string>(StringComparer.Ordinal);
+        var texts = new List<PlanText>();
+        foreach (var station in planned.Stations)
+            texts.Add(new PlanText(Unique(ids, "stn:" + station.Text), station.Text, Rounded(station.Position), Rounded(station.Size), StationLabelRole));
+        foreach (var component in planned.Components)
+            texts.Add(new PlanText(Unique(ids, "cmp:" + component.Text), component.Text, Rounded(component.Position), Rounded(component.Size), ComponentLabelRole));
+
+        var markers = new List<PlanMarker>();
+        foreach (var lead in planned.Leads)
+        {
+            // A marker is named by its station; its caption shows the lead's note, above the ball.
+            string station = lead.Station ?? lead.Text;
+            markers.Add(new PlanMarker(Unique(ids, "lead:" + station), Rounded(lead.Position), Rounded(lead.Radius), LeadMarkerRole));
+            if (lead.ShowText)
+                texts.Add(new PlanText(
+                    Unique(ids, "leadtxt:" + station), lead.Text,
+                    Rounded(lead.Position + new CaveVector3(0.0, 0.0, lead.Radius * 2.0)), Rounded(lead.TextSize), LeadTextRole));
+        }
+
+        return new PlanLabels
+        {
+            Texts = texts.Count == 0 ? null : new PlanTexts { Color = Rounded(spec.Labels.Color), Items = texts },
+            Markers = markers.Count == 0 ? null : new PlanMarkers
+            {
+                Pulse = spec.Labels.Leads.Pulse ? new PlanPulse { Period = Rounded(PulseFrames / (double)spec.Animation.Fps) } : null,
+                ByDistance = planned.LeadsByDistance is { } sizing
+                    ? new PlanDistanceSizing { Factor = sizing.Factor, MinRadius = Rounded(sizing.MinRadius), MaxRadius = Rounded(sizing.MaxRadius) }
+                    : null,
+                Items = markers,
+            },
+        };
+    }
+
+    /// <summary>An id no other label has: a second label of the same name gets <c>.001</c>,
+    /// as Blender names a second object.</summary>
+    private static string Unique(HashSet<string> taken, string id)
+    {
+        string unique = id;
+        for (int n = 1; !taken.Add(unique); n++)
+            unique = id + "." + n.ToString("000", System.Globalization.CultureInfo.InvariantCulture);
+        return unique;
+    }
 
     private static PlanLook Look(SceneSpec spec, BoundingBox bounds)
     {

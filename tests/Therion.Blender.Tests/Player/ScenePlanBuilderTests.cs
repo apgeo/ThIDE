@@ -262,6 +262,167 @@ public class ScenePlanBuilderTests
         Assert.Null(look.World);
     }
 
+    // ---- labels ----
+
+    private static readonly LabelsSpec EveryLabel = new()
+    {
+        Stations = new StationLabelSpec { Show = true, Filter = StationFilter.Named, MaxCount = 30, TextScale = 1.5 },
+        Components = new ComponentLabelSpec { Show = true, MinStationCount = 1 },
+        Leads = new LeadMarkerSpec { Show = true, ShowText = true, MarkerScale = 2 },
+        Color = new ColorRgb(0.2, 0.9, 0.4),
+    };
+
+    private static SceneSpec Labelled(LabelsSpec labels, CameraTemplate template = CameraTemplate.Orbit, int fps = 10) => new()
+    {
+        Camera = new CameraSpec { Template = template },
+        Animation = new AnimationSpec { Fps = fps, DurationSeconds = 4 },
+        Labels = labels,
+    };
+
+    private static void AssertNear(CaveVector3 expected, CaveVector3 actual) => Assert.True((expected - actual).Length < 2e-6, $"{expected} / {actual}");
+
+    [Fact]
+    public void Labels_AreTheOnesTheLabelPlannerPlaces_UnderTheNamesTheScriptsGiveThem()
+    {
+        var spec = PlanFixtures.WithPaths(Labelled(EveryLabel));
+        var planned = LabelPlanner.Plan(spec, PlanFixtures.MediumWithLeads);
+
+        var plan = ScenePlanBuilder.FromSpec(spec, PlanFixtures.MediumFraming, PlanFixtures.MediumWithLeads);
+
+        Assert.Equal(["models", "camera_track", "look", "labels", "output"], plan.Features);
+        var texts = plan.Labels!.Texts!;
+        Assert.Equal(new ColorRgb(0.2, 0.9, 0.4), texts.Color);
+        Assert.True(planned.StationsCapped);
+        Assert.Equal((30, 3), (planned.Stations.Count, planned.Leads.Count));
+
+        // Stations, then components, then the captions of the leads.
+        var stations = texts.Items.Where(t => t.Role == "station-label").ToList();
+        Assert.Equal(planned.Stations.Select(s => ("stn:" + s.Text, s.Text)), stations.Select(t => (t.Id, t.Text)));
+        Assert.All(planned.Stations.Zip(stations), pair =>
+        {
+            AssertNear(pair.First.Position, pair.Second.At);
+            Assert.Equal(pair.First.Size, pair.Second.Size, 6);
+        });
+        var components = texts.Items.Where(t => t.Role == "component-label").ToList();
+        Assert.Equal(planned.Components.Select(c => ("cmp:" + c.Text, c.Text)), components.Select(t => (t.Id, t.Text)));
+        Assert.Equal(texts.Items, [.. stations, .. components, .. texts.Items.Where(t => t.Role == "lead-text")]);
+
+        // A lead: its ball named by its station, its note two radii above the ball's middle.
+        var markers = plan.Labels.Markers!;
+        Assert.Equal(planned.Leads.Select(l => "lead:" + l.Station), markers.Items.Select(m => m.Id));
+        Assert.All(markers.Items, m => Assert.Equal("lead-marker", m.Role));
+        Assert.All(planned.Leads.Zip(markers.Items), pair =>
+        {
+            AssertNear(pair.First.Position, pair.Second.At);
+            Assert.Equal(pair.First.Radius, pair.Second.Radius, 6);
+            var caption = texts.Items.Single(t => t.Id == "leadtxt:" + pair.First.Station);
+            Assert.Equal(pair.First.Text, caption.Text);
+            AssertNear(pair.First.Position + new CaveVector3(0, 0, 2 * pair.First.Radius), caption.At);
+            Assert.Equal(pair.First.TextSize, caption.Size, 6);
+        });
+        Assert.Equal(new PlanPulse { Period = 1.4, Scale = 1.5 }, markers.Pulse); // 14 frames at 10 fps
+        Assert.Null(markers.ByDistance);
+
+        Assert.Empty(ScenePlanValidator.Validate(plan));
+        Assert.Empty(JsonSchemaSubset.Validate(ScenePlanSchema.Text, ScenePlanSerializer.Write(plan)));
+    }
+
+    [Theory]
+    [InlineData(LeadMarkerSizing.Auto, CameraTemplate.Orbit)]
+    [InlineData(LeadMarkerSizing.Auto, CameraTemplate.Flythrough)]
+    [InlineData(LeadMarkerSizing.Cave, CameraTemplate.Flythrough)]
+    [InlineData(LeadMarkerSizing.Passage, CameraTemplate.Orbit)]
+    [InlineData(LeadMarkerSizing.CameraDistance, CameraTemplate.Flythrough)]
+    [InlineData(LeadMarkerSizing.HiddenInFlythrough, CameraTemplate.Orbit)]
+    [InlineData(LeadMarkerSizing.HiddenInFlythrough, CameraTemplate.Flythrough)]
+    public void LeadMarkers_HaveTheSizeTheSpecAsksFor(LeadMarkerSizing sizing, CameraTemplate template)
+    {
+        var labels = new LabelsSpec { Leads = new LeadMarkerSpec { Show = true, Pulse = false, Sizing = sizing }, Roof = LabelRoofSource.WallsFirst };
+        var spec = PlanFixtures.WithPaths(Labelled(labels, template));
+        var planned = LabelPlanner.Plan(spec, PlanFixtures.MediumWithLeads);
+
+        var plan = ScenePlanBuilder.FromSpec(spec, PlanFixtures.MediumFraming, PlanFixtures.MediumWithLeads);
+
+        if (planned.Leads.Count == 0)
+        {
+            Assert.Equal((LeadMarkerSizing.HiddenInFlythrough, CameraTemplate.Flythrough), (sizing, template));
+            Assert.Null(plan.Labels);
+            Assert.Equal(ScenePlan.BasicFeatures, plan.Features);
+            return;
+        }
+        var markers = plan.Labels!.Markers!;
+        Assert.Null(plan.Labels.Texts);
+        Assert.Null(markers.Pulse);
+        Assert.Equal(planned.Leads.Select(l => Math.Round(l.Radius, 6)), markers.Items.Select(m => m.Radius));
+        if (sizing == LeadMarkerSizing.CameraDistance)
+            Assert.Equal(
+                new PlanDistanceSizing { Factor = planned.LeadsByDistance!.Factor, MinRadius = planned.LeadsByDistance.MinRadius, MaxRadius = Math.Round(planned.LeadsByDistance.MaxRadius, 6) },
+                markers.ByDistance);
+        else
+            Assert.Null(markers.ByDistance);
+        Assert.Empty(ScenePlanValidator.Validate(plan));
+    }
+
+    [Theory]
+    [InlineData(LabelRoofSource.SurveyFirst)]
+    [InlineData(LabelRoofSource.WallsFirst)]
+    [InlineData(LabelRoofSource.WallsOnly)]
+    [InlineData(LabelRoofSource.None)]
+    public void StationLabels_StandAboveTheRoofTheSpecChooses(LabelRoofSource roof)
+    {
+        var labels = new LabelsSpec { Stations = new StationLabelSpec { Show = true, Filter = StationFilter.Named }, Roof = roof };
+        var spec = PlanFixtures.WithPaths(Labelled(labels));
+        var planned = LabelPlanner.Plan(spec, PlanFixtures.MediumWithLeads);
+
+        var texts = ScenePlanBuilder.FromSpec(spec, PlanFixtures.MediumFraming, PlanFixtures.MediumWithLeads).Labels!.Texts!.Items;
+
+        Assert.Equal(PlanFixtures.MediumWithLeads.Stations.Count, texts.Count);
+        Assert.All(planned.Stations.Zip(texts), pair => AssertNear(pair.First.Position, pair.Second.At));
+        // With no roof a label sits on its station; with one, most are lifted above it.
+        int lifted = PlanFixtures.MediumWithLeads.Stations.Zip(texts).Count(pair => pair.Second.At.Z > pair.First.Position.Z + 0.01);
+        Assert.Equal(roof != LabelRoofSource.None, lifted > texts.Count / 2);
+    }
+
+    [Fact]
+    public void TwoLabelsOfOneName_GetIdsOfTheirOwn_AsBlenderNamesASecondObject()
+    {
+        var meta = PlanFixtures.MediumWithLeads;
+        var lead = meta.Leads[0];
+        meta = meta with { Leads = [lead, lead with { Note = "the same place again" }, lead] };
+        var spec = PlanFixtures.WithPaths(Labelled(new LabelsSpec { Leads = new LeadMarkerSpec { Show = true, ShowText = true } }));
+
+        var plan = ScenePlanBuilder.FromSpec(spec, PlanFixtures.MediumFraming, meta);
+
+        string id = "lead:" + lead.Station, caption = "leadtxt:" + lead.Station;
+        Assert.Equal([id, id + ".001", id + ".002"], plan.Labels!.Markers!.Items.Select(m => m.Id));
+        Assert.Equal([caption, caption + ".001", caption + ".002"], plan.Labels.Texts!.Items.Select(t => t.Id));
+        Assert.Empty(ScenePlanValidator.Validate(plan));
+    }
+
+    [Fact]
+    public void WithoutMetadata_OrWithNothingToShow_APlanHasNoLabels()
+    {
+        var spec = PlanFixtures.WithPaths(Labelled(EveryLabel));
+
+        Assert.Null(ScenePlanBuilder.FromSpec(spec, PlanFixtures.MediumFraming).Labels);
+        var none = ScenePlanBuilder.FromSpec(PlanFixtures.WithPaths(Labelled(new LabelsSpec())), PlanFixtures.MediumFraming, PlanFixtures.MediumWithLeads);
+        Assert.Null(none.Labels);
+        Assert.Equal(ScenePlan.BasicFeatures, none.Features);
+    }
+
+    [Fact]
+    public void APulse_LastsTheFramesItLastsInTheGeneratedScripts_AtEveryFrameRate()
+    {
+        foreach (int fps in new[] { 1, 8, 24, 25, 30, 60, 240 })
+        {
+            var spec = PlanFixtures.WithPaths(Labelled(new LabelsSpec { Leads = new LeadMarkerSpec { Show = true } }, fps: fps));
+
+            var pulse = ScenePlanBuilder.FromSpec(spec, PlanFixtures.MediumFraming, PlanFixtures.MediumWithLeads).Labels!.Markers!.Pulse!;
+
+            Assert.Equal(15, ScenePlanValidator.FrameAt(pulse.Period, fps));
+        }
+    }
+
     // ---- more models ----
 
     [Fact]
@@ -411,10 +572,9 @@ public class ScenePlanBuilderTests
             },
         };
 
-        Assert.Equal(
-            ["lighting.hdriPath", "labels.stations", "labels.components", "labels.leads", "labels.overlays", "labels.events"],
-            ScenePlanBuilder.NotCarried(spec));
+        Assert.Equal(["lighting.hdriPath", "labels.overlays", "labels.events"], ScenePlanBuilder.NotCarried(spec));
         Assert.Empty(ScenePlanBuilder.NotCarried(new SceneSpec()));
+        Assert.All(BuiltInPresets.All, preset => Assert.Empty(ScenePlanBuilder.NotCarried(preset.Spec)));
     }
 
     [Fact]

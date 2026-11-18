@@ -210,67 +210,245 @@ public class PlayerBlenderTests
     [BlenderFact]
     public async Task TheScene_IsTheOneTheGeneratedScriptBuilds()
     {
+        // The presets as they are, labels included.
+        var flythrough = PlanFixtures.Preset("Full flythrough") with { Animation = new AnimationSpec { Fps = 10, DurationSeconds = 4 } };
         var cases = new (string Name, SceneSpec Spec)[]
         {
-            ("orbit", Preset("Orbit showcase")),                // depth gradient, three suns
-            ("helix", Preset("Helix descent")),                 // depth gradient, sun and sky
-            ("flythrough", Flythrough(frames: 40)),             // procedural rock, headlamp
-            ("stills", Preset("Documentation stills")),         // constant interpolation
+            ("orbit", PlanFixtures.Preset("Orbit showcase")),               // depth gradient, three suns, entrance labels
+            ("helix", PlanFixtures.Preset("Helix descent")),                // depth gradient, sun and sky
+            ("flythrough", flythrough),                                     // procedural rock, headlamp, pulsing lead markers
+            ("stills", PlanFixtures.Preset("Documentation stills")),        // constant interpolation, station and component labels
         };
         foreach (var (name, preset) in cases)
+            await AssertPlayedAsGenerated(name, preset with { Output = preset.Output with { Width = 320, Height = 180 } });
+    }
+
+    [BlenderFact]
+    public async Task Labels_AreTheOnesTheGeneratedScriptMakes_WhereverTheyStandAndHoweverTheyAreSized()
+    {
+        var orbit = PlanFixtures.Preset("Orbit showcase") with { Output = Wide };
+        var flythrough = PlanFixtures.Preset("Full flythrough") with { Animation = new AnimationSpec { Fps = 10, DurationSeconds = 4 }, Output = Wide };
+        var named = new StationLabelSpec { Show = true, Filter = StationFilter.Named, MaxCount = 25, TextScale = 1.5 };
+        var entrances = new StationLabelSpec { Show = true };
+        var cases = new (string Name, SceneSpec Spec)[]
         {
-            var spec = preset with { Output = preset.Output with { Width = 320, Height = 180 } };
-            var options = new ProbeOptions { Samples = 7 };
-
-            var generated = await SceneProbeRunner.RunAsync("player-same-generated-" + name, Medium.Value, spec, options);
-            var (_, job) = PlayerRunner.WriteJob("same-" + name, Medium.Value, spec);
-            var played = await PlayerRunner.ProbeAsync(job.ScriptPath, options);
-
-            Assert.Equal(
-                (generated.Scene.FrameStart, generated.Scene.FrameEnd, generated.Scene.Fps, generated.Scene.Engine, generated.Scene.Samples),
-                (played.Scene.FrameStart, played.Scene.FrameEnd, played.Scene.Fps, played.Scene.Engine, played.Scene.Samples));
-            Assert.Equal(generated.Scene.Resolution, played.Scene.Resolution);
-            // Built for inspection, a generated script keeps the world of Blender's start-up file
-            // where its light rig has none; rendering, it has none either.
-            Assert.Equal(generated.Scene.World == "CaveWorld" ? "CaveWorld" : null, played.Scene.World);
-            Assert.Equal(generated.Scene.Device, played.Scene.Device);
-
-            Assert.Equal(generated.Objects.Select(o => o.Name), played.Objects.Select(o => o.Name));
-            Assert.All(generated.Objects.Zip(played.Objects), pair =>
+            // Every kind at once: capped station labels, components, pulsing markers with their notes.
+            ("all", orbit with
             {
-                var (g, p) = pair;
-                string what = $"{name}: {g.Name}";
-                Assert.Equal((g.Role, g.Type, g.Parent, g.Animated, g.HideRender), (p.Role, p.Type, p.Parent, p.Animated, p.HideRender));
-                Assert.Equal(g.Constraints, p.Constraints);
-                Assert.Equal(g.Materials, p.Materials);
-                Assert.Equal((g.Vertices, g.Polygons, g.LightType, g.DepthOfField), (p.Vertices, p.Polygons, p.LightType, p.DepthOfField));
-                AssertNear(g.Location, p.Location, 1e-4, what);
-                if (g.BoundsMin is not null)
+                Labels = new LabelsSpec
                 {
-                    AssertNear(g.BoundsMin, p.BoundsMin!, 1e-4, what);
-                    AssertNear(g.BoundsMax!, p.BoundsMax!, 1e-4, what);
-                }
-                if (g.Energy is { } energy)
-                {
-                    Assert.Equal(energy, p.Energy!.Value, 4);
-                    Assert.Equal(g.LightSize, p.LightSize);
-                    Assert.True(AngleDegrees(g.Direction!, p.Direction!) < 0.01, $"{what} shines {AngleDegrees(g.Direction!, p.Direction!):F3}° off");
-                }
-            });
-
-            Assert.Equal(generated.Frames.Select(f => f.Frame), played.Frames.Select(f => f.Frame));
-            Assert.All(generated.Frames.Zip(played.Frames), pair =>
+                    Stations = named,
+                    Components = new ComponentLabelSpec { Show = true, MinStationCount = 1 },
+                    Leads = new LeadMarkerSpec { Show = true, ShowText = true },
+                    Color = new ColorRgb(0.3, 0.9, 0.5),
+                },
+            }),
+            ("passage-sized", orbit with
             {
-                var (g, p) = (pair.First.Camera!, pair.Second.Camera!);
-                string what = $"{name}: frame {pair.First.Frame}";
-                AssertNear(g.Location, p.Location, 1e-4, what);
-                AssertNear(g.Target!, p.Target!, 1e-4, what);
-                Assert.True(AngleDegrees(g.Forward, p.Forward) < 0.01, what);
-                Assert.Equal((g.Lens, g.SensorWidth, g.ClipStart, g.ClipEnd), (p.Lens, p.SensorWidth, p.ClipStart, p.ClipEnd));
-                Assert.Equal(pair.First.Model!.CornersInFrame, pair.Second.Model!.CornersInFrame);
-                Assert.Equal(pair.First.Model.VerticesInFrame, pair.Second.Model.VerticesInFrame, 3);
-            });
+                Labels = new LabelsSpec
+                {
+                    Stations = named with { MaxCount = 200 },
+                    Leads = new LeadMarkerSpec { Show = true, Pulse = false, Sizing = LeadMarkerSizing.Passage, MarkerScale = 1.5 },
+                    Roof = LabelRoofSource.WallsOnly,
+                },
+            }),
+            ("cave-sized-inside", flythrough with
+            {
+                Labels = new LabelsSpec { Leads = new LeadMarkerSpec { Show = true, Sizing = LeadMarkerSizing.Cave }, Stations = entrances, Roof = LabelRoofSource.None },
+            }),
+            ("walls-first", flythrough with { Labels = flythrough.Labels with { Stations = named, Roof = LabelRoofSource.WallsFirst } }),
+            ("by-distance", flythrough with
+            {
+                Labels = new LabelsSpec { Leads = new LeadMarkerSpec { Show = true, ShowText = true, Sizing = LeadMarkerSizing.CameraDistance } },
+            }),
+            ("by-distance-steady", flythrough with
+            {
+                Labels = new LabelsSpec { Leads = new LeadMarkerSpec { Show = true, Pulse = false, Sizing = LeadMarkerSizing.CameraDistance, MarkerScale = 0.5 } },
+            }),
+            ("hidden-inside", flythrough with
+            {
+                Labels = new LabelsSpec { Leads = new LeadMarkerSpec { Show = true, Sizing = LeadMarkerSizing.HiddenInFlythrough }, Stations = entrances },
+            }),
+        };
+        foreach (var (name, spec) in cases)
+        {
+            var played = await AssertPlayedAsGenerated("labels-" + name, spec);
+
+            int leads = spec.Labels.Leads.Sizing == LeadMarkerSizing.HiddenInFlythrough ? 0 : Medium.Value.Conversion.Meta.Leads.Count;
+            Assert.Equal(leads, played.WithRole(ProbeRoles.LeadMarker).Count);
+            Assert.Equal(spec.Labels.Leads.ShowText ? leads : 0, played.WithRole(ProbeRoles.LeadText).Count);
+            Assert.NotEmpty(played.Objects.Where(o => o.Role is ProbeRoles.StationLabel or ProbeRoles.LeadMarker));
         }
+    }
+
+    /// <summary>Builds the scene of <paramref name="spec"/> both ways, by the generated script
+    /// and by the player from the plan, and holds one against the other: the same objects, and
+    /// at seven frames the same camera and the same view of every label.</summary>
+    private static async Task<SceneReport> AssertPlayedAsGenerated(string name, SceneSpec spec)
+    {
+        var options = new ProbeOptions { Samples = 7 };
+        var generated = await SceneProbeRunner.RunAsync("player-same-generated-" + name, Medium.Value, spec, options);
+        var (_, job) = PlayerRunner.WriteJob("same-" + name, Medium.Value, spec);
+        var played = await PlayerRunner.ProbeAsync(job.ScriptPath, options);
+
+        Assert.Equal(
+            (generated.Scene.FrameStart, generated.Scene.FrameEnd, generated.Scene.Fps, generated.Scene.Engine, generated.Scene.Samples),
+            (played.Scene.FrameStart, played.Scene.FrameEnd, played.Scene.Fps, played.Scene.Engine, played.Scene.Samples));
+        Assert.Equal(generated.Scene.Resolution, played.Scene.Resolution);
+        // Built for inspection, a generated script keeps the world of Blender's start-up file
+        // where its light rig has none; rendering, it has none either.
+        Assert.Equal(generated.Scene.World == "CaveWorld" ? "CaveWorld" : null, played.Scene.World);
+        Assert.Equal(generated.Scene.Device, played.Scene.Device);
+
+        Assert.Equal(generated.Objects.Select(o => o.Name), played.Objects.Select(o => o.Name));
+        Assert.All(generated.Objects.Zip(played.Objects), pair =>
+        {
+            var (g, p) = pair;
+            string what = $"{name}: {g.Name}";
+            Assert.Equal((g.Role, g.Type, g.Parent, g.Animated, g.HideRender), (p.Role, p.Type, p.Parent, p.Animated, p.HideRender));
+            Assert.Equal(g.Constraints, p.Constraints);
+            // The script names the markers' material after the leads; to the player a marker is any marker.
+            Assert.Equal(g.Materials.Select(m => m == "LeadMarker" ? "LabelMarker" : m), p.Materials);
+            Assert.Equal((g.Vertices, g.Polygons, g.LightType, g.DepthOfField, g.Text), (p.Vertices, p.Polygons, p.LightType, p.DepthOfField, p.Text));
+            AssertNear(g.Location, p.Location, 1e-4, what);
+            if (g.BoundsMin is not null)
+            {
+                AssertNear(g.BoundsMin, p.BoundsMin!, 1e-4, what);
+                AssertNear(g.BoundsMax!, p.BoundsMax!, 1e-4, what);
+            }
+            if (g.TextSize is { } size)
+                Assert.True(Math.Abs(size - p.TextSize!.Value) < 1e-5, $"{what}: letters of {p.TextSize} m, not {size} m");
+            if (g.Energy is { } energy)
+            {
+                Assert.Equal(energy, p.Energy!.Value, 4);
+                Assert.Equal(g.LightSize, p.LightSize);
+                Assert.True(AngleDegrees(g.Direction!, p.Direction!) < 0.01, $"{what} shines {AngleDegrees(g.Direction!, p.Direction!):F3}° off");
+            }
+        });
+
+        Assert.Equal(generated.Frames.Select(f => f.Frame), played.Frames.Select(f => f.Frame));
+        Assert.All(generated.Frames.Zip(played.Frames), pair =>
+        {
+            var (g, p) = (pair.First.Camera!, pair.Second.Camera!);
+            string what = $"{name}: frame {pair.First.Frame}";
+            AssertNear(g.Location, p.Location, 1e-4, what);
+            AssertNear(g.Target!, p.Target!, 1e-4, what);
+            Assert.True(AngleDegrees(g.Forward, p.Forward) < 0.01, what);
+            Assert.Equal((g.Lens, g.SensorWidth, g.ClipStart, g.ClipEnd), (p.Lens, p.SensorWidth, p.ClipStart, p.ClipEnd));
+            Assert.Equal(pair.First.Model!.CornersInFrame, pair.Second.Model!.CornersInFrame);
+            Assert.Equal(pair.First.Model.VerticesInFrame, pair.Second.Model.VerticesInFrame, 3);
+
+            // Every label and marker: as large, at the same place in the picture, as far away,
+            // and hidden by the same thing.
+            Assert.Equal(pair.First.Objects.Select(o => o.Name), pair.Second.Objects.Select(o => o.Name));
+            Assert.All(pair.First.Objects.Zip(pair.Second.Objects), views =>
+            {
+                var (seen, shown) = views;
+                string label = $"{what}: {seen.Name}";
+                Assert.True(Math.Abs(seen.Scale - shown.Scale) < 1e-4, $"{label}: scale {shown.Scale}, not {seen.Scale}");
+                Assert.True(
+                    Math.Abs(seen.FrameX - shown.FrameX) < 1e-4 && Math.Abs(seen.FrameY - shown.FrameY) < 1e-4,
+                    $"{label}: at ({shown.FrameX}, {shown.FrameY}) in the picture, not ({seen.FrameX}, {seen.FrameY})");
+                Assert.True(Math.Abs(seen.Depth - shown.Depth) < 1e-3, $"{label}: {shown.Depth} m away, not {seen.Depth} m");
+                Assert.True(
+                    seen.Coverage is null == shown.Coverage is null && Math.Abs((seen.Coverage ?? 0) - (shown.Coverage ?? 0)) < 1e-4,
+                    $"{label}: covers {shown.Coverage} of the picture, not {seen.Coverage}");
+                Assert.True(
+                    (seen.Hidden, seen.InFrame, seen.Occluded, seen.Occluder) == (shown.Hidden, shown.InFrame, shown.Occluded, shown.Occluder),
+                    $"{label}: hidden {shown.Hidden}, in frame {shown.InFrame}, behind {shown.Occluder ?? "nothing"}; " +
+                    $"the script's is hidden {seen.Hidden}, in frame {seen.InFrame}, behind {seen.Occluder ?? "nothing"}");
+            });
+        });
+        return played;
+    }
+
+    // ---- labels ----
+
+    /// <summary>Labels as a program other than ThIDE would write them: no roles, no pulse.</summary>
+    private static ScenePlan WithNotes(ScenePlan plan) => plan with
+    {
+        Features = ["models", "camera_track", "look", "labels", "output"],
+        Labels = new PlanLabels
+        {
+            Texts = new PlanTexts { Color = new ColorRgb(1, 1, 0), Items = [new PlanText("note", PlayerWriterTests.HostileName, new CaveVector3(3, -2, 40), 2.5)] },
+            Markers = new PlanMarkers { Items = [new PlanMarker("here", new CaveVector3(-10, 5, 30), 1.25)] },
+        },
+    };
+
+    private static void AssertTheNotesAreThere(SceneReport report)
+    {
+        // The text is what the plan says, whatever it says; it stands where the plan puts it and faces the camera.
+        var note = report.Object("note");
+        Assert.Equal((ProbeRoles.Label, "FONT", PlayerWriterTests.HostileName), (note.Role, note.Type, note.Text));
+        Assert.Equal(2.5, note.TextSize);
+        AssertNear(new CaveVector3(3, -2, 40), note.Location, 1e-5, "the text");
+        Assert.Equal([new ProbeConstraint("TRACK_TO", "Camera")], note.Constraints);
+        Assert.Equal(["LabelText"], note.Materials);
+
+        // A ball of the plan's radius, at rest: its poles are a radius below and above its middle.
+        var here = report.Object("here");
+        Assert.Equal((ProbeRoles.Marker, "MESH", false), (here.Role, here.Type, here.Animated));
+        AssertNear(new CaveVector3(-10, 5, 30), here.Location, 1e-5, "the marker");
+        Assert.Equal((28.75, 31.25), (here.BoundsMin![2], here.BoundsMax![2]));
+        Assert.InRange(here.BoundsMax[0] - here.BoundsMin[0], 2.2, 2.5);
+        Assert.Equal(["LabelMarker"], here.Materials);
+    }
+
+    [BlenderFact]
+    public async Task LabelsOfAPlanWrittenByHand_StandWhereItPutsThem_AndSayWhatItSays()
+    {
+        var (_, job) = PlayerRunner.WriteJob("labels-by-hand", Small.Value, Orbit, WithNotes);
+
+        var report = await PlayerRunner.ProbeAsync(job.ScriptPath, new ProbeOptions { Samples = 3 });
+
+        AssertTheNotesAreThere(report);
+        Assert.DoesNotContain("owned", File.ReadAllLines(Path.Combine(job.Folder, "run.log")));
+        Assert.Equal(["2"], PlayerRunner.Reported(File.ReadAllText(Path.Combine(job.Folder, "run.log")), "labels"));
+        // The text keeps facing the camera as the camera goes round.
+        Assert.All(report.Frames, frame => Assert.True(frame.Object("note").Coverage > 0, $"frame {frame.Frame}"));
+    }
+
+    [BlenderFact]
+    public async Task LabelsListedBeforeTheCamera_AreRefused_WithTheOrderToUse()
+    {
+        var (_, job) = PlayerRunner.WriteJob("refuse-labels-first", Small.Value, Orbit, plan =>
+            WithNotes(plan) with { Features = ["models", "labels", "camera_track", "look", "output"] });
+
+        var (error, _) = await Refused(job);
+
+        Assert.Equal("labels turn to the camera; list \"camera_track\" before \"labels\" in \"features\"", error);
+    }
+
+    [BlenderFact]
+    public async Task MarkersSizedByTheirDistance_AreSizedSoInTheRender_AndInASavedSceneToo()
+    {
+        var spec = Parts(frames: 12) with
+        {
+            Labels = new LabelsSpec { Leads = new LeadMarkerSpec { Show = true, Sizing = LeadMarkerSizing.CameraDistance } },
+        };
+        var (plan, job) = PlayerRunner.WriteJob("labels-distance-saved", Medium.Value, spec, p => ScenePlanBuilder.SaveBlend(p, render: false));
+        var (exitCode, _) = await PlayerRunner.RunAsync(job.ScriptPath);
+        Assert.True(exitCode == 0, $"exit code {exitCode}; logs: {job.Folder}");
+
+        var options = new ProbeOptions { Frames = [1, 4, 8, 12] };
+        var opened = await PlayerRunner.ProbeBlendAsync(Path.Combine(job.Folder, "scene.blend"), options);
+        var built = await PlayerRunner.ProbeAsync(job.ScriptPath, options);
+
+        // What the plan asks for: the radius grows with the distance from the camera, within its
+        // limits, and swells and shrinks with the pulse. The saved scene needs no Python for it.
+        var sizing = plan.Labels!.Markers!.ByDistance!;
+        var pulse = plan.Labels.Markers.Pulse!;
+        int pulseFrames = ScenePlanValidator.FrameAt(pulse.Period, plan.Timeline.Fps) - 1;
+        Assert.All(built.Frames.Zip(opened.Frames), frames => Assert.All(plan.Labels.Markers.Items, marker =>
+        {
+            double distance = Distance(marker.At, frames.First.Camera!.Location);
+            double radius = Math.Clamp(distance * sizing.Factor, sizing.MinRadius, sizing.MaxRadius);
+            double swell = 1.25 - 0.25 * Math.Cos((frames.First.Frame - 1) * 2 * Math.PI / pulseFrames);
+            Assert.Equal(radius * swell / marker.Radius, frames.First.Object(marker.Id).Scale, 4);
+            Assert.Equal(frames.First.Object(marker.Id).Scale, frames.Second.Object(marker.Id).Scale, 5);
+        }));
+        var scales = built.Frames.Select(f => Math.Round(f.Object(plan.Labels.Markers.Items[0].Id).Scale, 3)).Distinct().Count();
+        Assert.Equal(4, scales);
     }
 
     // ---- models ----
@@ -827,7 +1005,7 @@ public class PlayerBlenderTests
     public async Task ASingleFile_PlaysWithNothingBesideIt()
     {
         var assets = Small.Value;
-        var plan = PlayerRunner.PlanFor(assets, Orbit) with { Name = PlayerWriterTests.HostileName };
+        var plan = WithNotes(PlayerRunner.PlanFor(assets, Orbit)) with { Name = PlayerWriterTests.HostileName };
         string dir = PlayerRunner.NewCase("single-file");
         string script = Path.Combine(dir, "render.py");
         File.WriteAllText(
@@ -836,13 +1014,14 @@ public class PlayerBlenderTests
             new UTF8Encoding(false));
 
         var single = await PlayerRunner.ProbeAsync(script, new ProbeOptions { Samples = 3 });
-        var (_, job) = PlayerRunner.WriteJob("single-file-as-folder", assets, Orbit);
+        var (_, job) = PlayerRunner.WriteJob("single-file-as-folder", assets, Orbit, WithNotes);
         var folder = await PlayerRunner.ProbeAsync(job.ScriptPath, new ProbeOptions { Samples = 3 });
 
         Assert.Equal([script], Directory.GetFiles(dir, "*.py", SearchOption.AllDirectories));
         Assert.False(File.Exists(Path.Combine(dir, "model.ply")));
-        // The name of the plan is text, whatever it says.
+        // The name of the plan and the text of a label are text, whatever they say.
         Assert.DoesNotContain("owned", File.ReadAllLines(Path.Combine(dir, "run.log")));
+        AssertTheNotesAreThere(single);
         Assert.Equal(folder.Objects.Select(o => (o.Name, o.Role, o.Vertices)), single.Objects.Select(o => (o.Name, o.Role, o.Vertices)));
         Assert.Equal(assets.Conversion.Manifest.WallTriangleCount, single.Object("CaveModel").Polygons);
         Assert.All(folder.Frames.Zip(single.Frames), pair =>

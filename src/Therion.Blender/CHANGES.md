@@ -1,6 +1,6 @@
 # Therion.Blender — changes for consumers
 
-## 2026-11-18 (player) — more in a plan: models turned and stretched, the scene as a .blend file, a draft look
+## 2026-11-18 (player) — more in a plan: models turned and stretched, the scene as a .blend file, a draft look, labels
 
 Additive. The script generator, its scripts and the render service are untouched; a plan written
 before reads and plays as before. The plan stays version 1: every addition is an optional field or
@@ -41,12 +41,45 @@ a new module name in `features`.
   Measured on the invented medium cave, Blender 5.0.1 on a CPU, machine busy with other work:
   the flythrough at 1920×1080 with 96 samples takes about 58 s a frame in Cycles and 0.34 s as a
   960×540 draft; the orbit 2.6 s and 0.22 s.
+- **Labels**: `ScenePlan.Labels` (`PlanLabels`; JSON section `labels`), played by the new player
+  module `labels`.
+  - `PlanTexts`: a glow colour and strength, and `PlanText` items (`id`, `text`, `at`, `size`,
+    optional `role`): texts that turn to face the camera.
+  - `PlanMarkers`: a glow colour and strength, `PlanMarker` items (`id`, `at`, `radius`, optional
+    `role`): glowing balls; `Pulse` (`PlanPulse`: every marker grows to `scale` times its size over
+    `period` seconds, again and again) and `ByDistance` (`PlanDistanceSizing`: a marker's radius is
+    `factor` × its distance from the camera, within `minRadius`–`maxRadius`).
+  - Every position and size is data: nothing is laid out in Python. An id is the object's name in
+    the scene, unique among texts and markers; a role is stamped on the object (`thide_role`).
+  - One line per text and per marker in the JSON, as for camera poses.
+- **`ScenePlanBuilder.FromSpec` carries the labels of a spec**: station labels, component labels
+  and lead markers with their captions, placed and sized by `LabelPlanner` — every
+  `LeadMarkerSizing` and `LabelRoofSource` — under the names the generated scripts give them
+  (`stn:…`, `cmp:…`, `lead:…`, `leadtxt:…`; a second label of the same name gets `.001`). The plan
+  lists `labels` in `features` when it has any. `ScenePlanBuilder.NotCarried` no longer names them;
+  what a plan still does not say: overlays, the visibility events of labels, the HDRI rig. The
+  "N of M station labels" notice of a capped label set is not in the plan either: it is known when
+  the plan is made (`LabelPlanner.Plan(...).StationsCapped`).
 - `ScenePlan.BasicFeatures` is what `PlayerFeatures` was (the four modules every plan needs, and
   the default of `ScenePlan.Features`); **`ScenePlan.PlayerFeatures` now lists every module of the
-  player** in running order, the optional ones too.
-- The validator refuses a plan whose `blend` section has no `blend_file` in `features`: nothing
-  would play it.
+  player** in running order, the optional ones too: `models`, `camera_track`, `look`, `labels`,
+  `blend_file`, `output`.
+- The validator refuses a plan whose `labels` or `blend` section has no module for it in
+  `features`: nothing would play it.
 - The player reports itself as version 1.1 (`THIDE:player=1.1`).
+
+### Behaviour changes
+- In Blender's solid view a model now shows the plain colour of its material, and a label its glow
+  colour (`diffuse_color` and the object colour are set). Renders are unchanged.
+- A plan made by `FromSpec` from a spec with labels now has them, where it had none: a consumer
+  that plays such plans gets the labels the generated script would show.
+
+### What an older player does with a newer plan
+A player 1.0 refuses a plan that lists `labels` or `blend_file` (it has no such module) and one
+with `"engine": "workbench"`. It does not notice `rotation` and `scale` on a model or
+`"render": false` on the output, and would place the model unturned and render. No player 1.0 was
+released, so the plan version stays 1; from the first release on, a field like these needs a new
+plan version or a module of its own.
 
 ## 2026-11-18 — the terrain surface, optionally with its image
 

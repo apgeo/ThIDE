@@ -1,6 +1,7 @@
 // scene-plan.json reading and writing. camelCase keys, enums as camelCase words, vectors and
-// colours as [x, y, z] and [r, g, b]. A camera pose and a colour stop take one line each, so a
-// track of a thousand poses is a thousand lines a person can still read and compare. Lines end
+// colours as [x, y, z] and [r, g, b]. A camera pose, a colour stop, a text and a marker take one
+// line each, so a track of a thousand poses is a thousand lines a person can still read and
+// compare. Lines end
 // in LF on every platform, and numbers are written the same under every culture, so the same plan
 // is the same bytes everywhere.
 //
@@ -41,6 +42,8 @@ public static class ScenePlanSerializer
             new ColorConverter(),
             new CameraKeyConverter(),
             new ColorStopConverter(),
+            new TextConverter(),
+            new MarkerConverter(),
         },
     };
 
@@ -107,11 +110,12 @@ public static class ScenePlanSerializer
 
     // ---- compact values ----
 
-    // The writer puts a value written as raw text straight after the one before it. A pose and a
-    // colour stop bring their own line break, and the indentation of the place they have in the
-    // document: camera.track[n] and look.materials[n].stops[n].
+    // The writer puts a value written as raw text straight after the one before it. A pose, a
+    // colour stop and a label bring their own line break, and the indentation of the place they
+    // have in the document: camera.track[n], look.materials[n].stops[n] and labels.*.items[n].
     private const string TrackIndent = "\n      ";
     private const string StopsIndent = "\n          ";
+    private const string LabelIndent = "\n        ";
 
     private static string Num(double value)
     {
@@ -125,6 +129,9 @@ public static class ScenePlanSerializer
     private static string Text(CaveVector3 v) => Triple(v.X, v.Y, v.Z);
 
     private static string Text(ColorRgb c) => Triple(c.R, c.G, c.B);
+
+    /// <summary>A text as a JSON string, escaped as the rest of the document is.</summary>
+    private static string Quoted(string text, JsonSerializerOptions options) => JsonSerializer.Serialize(text, options);
 
     private static (double, double, double) ReadTriple(ref Utf8JsonReader reader)
     {
@@ -203,5 +210,55 @@ public static class ScenePlanSerializer
 
         public override void Write(Utf8JsonWriter writer, PlanColorStop value, JsonSerializerOptions options)
             => writer.WriteRawValue($"{StopsIndent}{{ \"at\": {Num(value.At)}, \"color\": {Text(value.Color)} }}");
+    }
+
+    private sealed record TextJson
+    {
+        public required string Id { get; init; }
+        public string? Role { get; init; }
+        public required string Text { get; init; }
+        public required CaveVector3 At { get; init; }
+        public required double Size { get; init; }
+    }
+
+    private sealed class TextConverter : JsonConverter<PlanText>
+    {
+        public override PlanText Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options)
+        {
+            var text = JsonSerializer.Deserialize<TextJson>(ref reader, options) ?? throw new JsonException("Expected a text.");
+            return new PlanText(text.Id, text.Text, text.At, text.Size, text.Role);
+        }
+
+        public override void Write(Utf8JsonWriter writer, PlanText value, JsonSerializerOptions options)
+        {
+            string role = value.Role is { } r ? $", \"role\": {Quoted(r, options)}" : "";
+            writer.WriteRawValue(
+                $"{LabelIndent}{{ \"id\": {Quoted(value.Id, options)}{role}, \"text\": {Quoted(value.Text, options)}, " +
+                $"\"at\": {Text(value.At)}, \"size\": {Num(value.Size)} }}");
+        }
+    }
+
+    private sealed record MarkerJson
+    {
+        public required string Id { get; init; }
+        public string? Role { get; init; }
+        public required CaveVector3 At { get; init; }
+        public required double Radius { get; init; }
+    }
+
+    private sealed class MarkerConverter : JsonConverter<PlanMarker>
+    {
+        public override PlanMarker Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options)
+        {
+            var marker = JsonSerializer.Deserialize<MarkerJson>(ref reader, options) ?? throw new JsonException("Expected a marker.");
+            return new PlanMarker(marker.Id, marker.At, marker.Radius, marker.Role);
+        }
+
+        public override void Write(Utf8JsonWriter writer, PlanMarker value, JsonSerializerOptions options)
+        {
+            string role = value.Role is { } r ? $", \"role\": {Quoted(r, options)}" : "";
+            writer.WriteRawValue(
+                $"{LabelIndent}{{ \"id\": {Quoted(value.Id, options)}{role}, \"at\": {Text(value.At)}, \"radius\": {Num(value.Radius)} }}");
+        }
     }
 }

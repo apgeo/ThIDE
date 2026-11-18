@@ -4,6 +4,7 @@
 using Therion.Blender.Emit;
 using Therion.Blender.Plan;
 using Therion.Blender.Presets;
+using Therion.Blender.Sources;
 using Therion.Blender.Tests.SceneProbe;
 using Therion.Cave3D;
 using Therion.CaveGeometry;
@@ -21,6 +22,13 @@ internal static class PlanFixtures
     public static CameraFraming MediumFraming => CameraFraming.FromGeometry(Medium);
 
     public static SceneMeta MediumMeta => SceneMeta.Build(Medium);
+
+    private static readonly Lazy<SceneMeta> MediumLeads = new(() =>
+        LeadsEnricher.Enrich(MediumMeta, InventedCave.Leads(InventedCave.Build(InventedCaveSize.Medium))));
+
+    /// <summary>The medium cave's metadata with its three dead ends as leads, as the conversion
+    /// adds them.</summary>
+    public static SceneMeta MediumWithLeads => MediumLeads.Value;
 
     public static SceneSpec Preset(string name) => BuiltInPresets.All.Single(p => p.Name == name).Spec;
 
@@ -80,6 +88,29 @@ internal static class PlanFixtures
                 new PlanLight { Id = "Headlamp", Kind = PlanLightKind.Headlamp, Energy = 80, Size = 0.3 },
             ],
             World = new PlanWorld { Kind = PlanWorldKind.Color, Color = new ColorRgb(0.05, 0.05, 0.05), Strength = 0.5 },
+        },
+        Labels = new PlanLabels
+        {
+            Texts = new PlanTexts
+            {
+                Color = new ColorRgb(0.9, 0.9, 0.8), Strength = 1.25,
+                Items =
+                [
+                    new PlanText("stn:entrance", "Intrarea \"de sus\"", new CaveVector3(1.5, 2, 3), 1.2, "station-label"),
+                    new PlanText("note", "two\nlines", new CaveVector3(-4, 0, 0.25), 0.5),
+                ],
+            },
+            Markers = new PlanMarkers
+            {
+                Color = new ColorRgb(1, 0.25, 0.1), Strength = 2,
+                Pulse = new PlanPulse { Period = 0.56, Scale = 1.5 },
+                ByDistance = new PlanDistanceSizing { Factor = 0.015, MinRadius = 0.1, MaxRadius = 2.5 },
+                Items =
+                [
+                    new PlanMarker("lead:far.7", new CaveVector3(40, -8, 2), 0.3, "lead-marker"),
+                    new PlanMarker("here", new CaveVector3(0, 0, 0), 1),
+                ],
+            },
         },
         Output = new PlanOutput { Kind = PlanOutputKind.Video, Container = PlanContainer.Webm, Directory = "out", BaseName = "clip" },
         Blend = new PlanBlendFile { Path = "project/scene.blend" },

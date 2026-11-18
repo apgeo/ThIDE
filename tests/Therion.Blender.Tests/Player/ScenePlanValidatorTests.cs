@@ -178,6 +178,53 @@ public class ScenePlanValidatorTests
     }
 
     [Fact]
+    public void Labels_HaveUniqueIds_RealPlacesAndSizes_AndTheirModuleIsListed()
+    {
+        var labels = Full.Labels!;
+        var (texts, markers) = (labels.Texts!, labels.Markers!);
+        ScenePlan WithText(PlanText text) => Full with { Labels = labels with { Texts = texts with { Items = [.. texts.Items, text] } } };
+        ScenePlan WithMarker(PlanMarker marker) => Full with { Labels = labels with { Markers = markers with { Items = [.. markers.Items, marker] } } };
+        var at = new CaveVector3(1, 2, 3);
+
+        AssertBad(WithText(new PlanText("", "a", at, 1)), "labels.texts.items[2].id");
+        AssertBad(WithText(new PlanText("note", "a", at, 1)), "labels.texts.items[2].id");
+        AssertBad(WithText(new PlanText("t", "a", at, 1, "Station Label")), "labels.texts.items[2].role");
+        AssertBad(WithText(new PlanText("t", "a", new CaveVector3(double.NaN, 0, 0), 1)), "labels.texts.items[2].at");
+        AssertBad(WithText(new PlanText("t", "a", at, 0)), "labels.texts.items[2].size");
+        AssertBad(WithText(new PlanText("t", null!, at, 1)), "labels.texts.items[2].text");
+        Assert.Empty(ScenePlanValidator.Validate(WithText(new PlanText("t", "", at, 1, "poi-label-2"))));
+
+        // A marker cannot take the id of a text.
+        AssertBad(WithMarker(new PlanMarker("note", at, 1)), "labels.markers.items[2].id");
+        AssertBad(WithMarker(new PlanMarker("m", at, -1)), "labels.markers.items[2].radius");
+        AssertBad(WithMarker(new PlanMarker("m", new CaveVector3(0, double.PositiveInfinity, 0), 1)), "labels.markers.items[2].at");
+        AssertBad(WithMarker(new PlanMarker("m", at, 1, "-marker")), "labels.markers.items[2].role");
+
+        AssertBad(Full with { Labels = labels with { Texts = texts with { Color = new ColorRgb(0, 1.5, 0) } } }, "labels.texts.color");
+        AssertBad(Full with { Labels = labels with { Markers = markers with { Strength = -1 } } }, "labels.markers.strength");
+        AssertBad(Full with { Features = [.. ScenePlan.BasicFeatures, ScenePlan.BlendFileFeature] }, "labels");
+        Assert.Empty(ScenePlanValidator.Validate(Full with { Labels = new PlanLabels() }));
+    }
+
+    [Fact]
+    public void APulse_TakesAtLeastOneFrame_AndDistanceSizingHasARange()
+    {
+        var labels = Full.Labels!;
+        var markers = labels.Markers!;
+        ScenePlan With(PlanMarkers changed) => Full with { Labels = labels with { Markers = changed } };
+
+        AssertBad(With(markers with { Pulse = new PlanPulse { Period = 0 } }), "labels.markers.pulse.period");
+        AssertBad(With(markers with { Pulse = new PlanPulse { Period = 0.01 } }), "labels.markers.pulse.period"); // 25 fps
+        AssertBad(With(markers with { Pulse = new PlanPulse { Period = 1, Scale = 0 } }), "labels.markers.pulse.scale");
+        Assert.Empty(ScenePlanValidator.Validate(With(markers with { Pulse = new PlanPulse { Period = 0.04 } })));
+
+        AssertBad(With(markers with { ByDistance = new PlanDistanceSizing { Factor = 0, MinRadius = 1, MaxRadius = 2 } }), "labels.markers.byDistance.factor");
+        AssertBad(With(markers with { ByDistance = new PlanDistanceSizing { Factor = 1, MinRadius = 0, MaxRadius = 2 } }), "labels.markers.byDistance.minRadius");
+        AssertBad(With(markers with { ByDistance = new PlanDistanceSizing { Factor = 1, MinRadius = 3, MaxRadius = 2 } }), "labels.markers.byDistance.minRadius");
+        Assert.Empty(ScenePlanValidator.Validate(With(markers with { Pulse = null, ByDistance = null })));
+    }
+
+    [Fact]
     public void ABlendFile_LiesBesideThePlan_AndItsModuleIsListed()
     {
         AssertBad(Full with { Blend = new PlanBlendFile { Path = "/abs/scene.blend" } }, "blend.path");
@@ -185,7 +232,7 @@ public class ScenePlanValidatorTests
         AssertBad(Full with { Blend = new PlanBlendFile { Path = "scene.blend1" } }, "blend.path");
         AssertBad(Full with { Blend = new PlanBlendFile { Path = "" } }, "blend.path");
         AssertBad(Full with { Features = ScenePlan.BasicFeatures }, "blend");
-        Assert.Empty(ScenePlanValidator.Validate(Full with { Blend = null, Features = ScenePlan.BasicFeatures }));
+        Assert.Empty(ScenePlanValidator.Validate(Full with { Blend = null, Labels = null, Features = ScenePlan.BasicFeatures }));
         Assert.Empty(ScenePlanValidator.Validate(Full with { Blend = new PlanBlendFile { Path = "Scene.BLEND" }, Output = Full.Output with { Render = false } }));
     }
 

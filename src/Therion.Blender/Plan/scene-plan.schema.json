@@ -10,7 +10,7 @@
     "generator": { "type": "string", "description": "What wrote the plan." },
     "name": { "type": "string" },
     "features": {
-      "description": "The player modules the plan needs, in the order they run. A player without one of them refuses the plan. The player's own: models, camera_track, look, blend_file, output.",
+      "description": "The player modules the plan needs, in the order they run. A player without one of them refuses the plan. The player's own: models, camera_track, look, labels, blend_file, output.",
       "type": "array",
       "minItems": 1,
       "uniqueItems": true,
@@ -179,6 +179,81 @@
         }
       }
     },
+    "labels": {
+      "description": "Played by the module 'labels', after 'camera_track': texts that turn to face the camera, and glowing balls that mark places. Every position and size is given; ids are unique among texts and markers.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "texts": {
+          "type": "object",
+          "required": ["color", "items"],
+          "additionalProperties": false,
+          "properties": {
+            "color": { "$ref": "#/$defs/color", "description": "The colour the texts glow in." },
+            "strength": { "type": "number", "minimum": 0, "description": "How strongly they glow. Default 1.5." },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["id", "text", "at", "size"],
+                "additionalProperties": false,
+                "properties": {
+                  "id": { "type": "string", "minLength": 1, "description": "The text's name in the scene." },
+                  "role": { "$ref": "#/$defs/role", "description": "Default 'label'." },
+                  "text": { "type": "string" },
+                  "at": { "$ref": "#/$defs/vector", "description": "The middle of the text." },
+                  "size": { "type": "number", "exclusiveMinimum": 0, "description": "The height of the letters, in metres." }
+                }
+              }
+            }
+          }
+        },
+        "markers": {
+          "type": "object",
+          "required": ["color", "items"],
+          "additionalProperties": false,
+          "properties": {
+            "color": { "$ref": "#/$defs/color" },
+            "strength": { "type": "number", "minimum": 0, "description": "How strongly they glow. Default 2." },
+            "pulse": {
+              "description": "Every marker grows to 'scale' times its size over 'period' seconds, again and again.",
+              "type": "object",
+              "required": ["period"],
+              "additionalProperties": false,
+              "properties": {
+                "period": { "type": "number", "exclusiveMinimum": 0, "description": "At least one frame long." },
+                "scale": { "type": "number", "exclusiveMinimum": 0, "description": "Default 1.5." }
+              }
+            },
+            "byDistance": {
+              "description": "Markers that keep about the same size in the picture: a marker's radius is 'factor' times its distance from the camera, kept within minRadius and maxRadius.",
+              "type": "object",
+              "required": ["factor", "minRadius", "maxRadius"],
+              "additionalProperties": false,
+              "properties": {
+                "factor": { "type": "number", "exclusiveMinimum": 0 },
+                "minRadius": { "type": "number", "exclusiveMinimum": 0 },
+                "maxRadius": { "type": "number", "exclusiveMinimum": 0 }
+              }
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["id", "at", "radius"],
+                "additionalProperties": false,
+                "properties": {
+                  "id": { "type": "string", "minLength": 1, "description": "The marker's name in the scene." },
+                  "role": { "$ref": "#/$defs/role", "description": "Default 'marker'." },
+                  "at": { "$ref": "#/$defs/vector" },
+                  "radius": { "type": "number", "exclusiveMinimum": 0, "description": "In metres; with byDistance, the radius the ball is built with." }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "output": {
       "description": "Played by the module 'output'.",
       "type": "object",
@@ -219,6 +294,7 @@
       "maxItems": 3
     },
     "moduleName": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+    "role": { "type": "string", "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$", "description": "What a label is, for whoever looks for it in the scene: the player stamps it on the object (thide_role)." },
     "relativePath": { "type": "string", "minLength": 1, "pattern": "^(?![/\\\\])(?!.*:)(?!(.*[/\\\\])?\\.\\.([/\\\\]|$))" }
   }
 }
