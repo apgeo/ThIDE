@@ -309,7 +309,7 @@ public class PlayerWriterTests : IDisposable
         Assert.StartsWith("folder | module folder not found: ", lines[6]);
     }
 
-    private static (int ExitCode, string Output) Run(string program, params string[] arguments)
+    internal static (int ExitCode, string Output) Run(string program, params string[] arguments)
     {
         var psi = new ProcessStartInfo(program)
         {
@@ -324,7 +324,7 @@ public class PlayerWriterTests : IDisposable
         return (process.ExitCode, output + error.Result);
     }
 
-    private static string? FindPython()
+    internal static string? FindPython()
     {
         foreach (string name in new[] { "python3", "python" })
         {

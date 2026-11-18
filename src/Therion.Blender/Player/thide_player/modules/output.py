@@ -10,6 +10,7 @@ import bpy
 from thide_player import api
 
 SECTION = "output"
+KEYS = {"kind": None, "container": None, "directory": None, "baseName": None, "render": None}
 
 CONTAINERS = {"mp4": ("MPEG4", ".mp4"), "mkv": ("MKV", ".mkv"), "webm": ("WEBM", ".webm")}
 

@@ -13,6 +13,18 @@
 ### Behaviour changes
 - `SurfaceSpec.Opacity` defaults to 0.4 (was 0.5): the cave under the terrain shows better. It is
   still set per spec. `SPEC_HASH` of every generated script changes with it.
+- **The player refuses a key it does not know** in the core's sections (`frame`, `timeline`) and
+  in the section of every module that lists its keys, which all of the player's own do (`KEYS`
+  beside `SECTION`; see `thide_player/api.py`). The plan fails before anything is built, naming the
+  key, its section and the player: `models[1].tint is not known to player 1.1; a newer player may
+  be needed`. A plan that sets a field a newer player added is no longer played as if the field
+  were not there. Sections of other modules are still the business of their modules; a module
+  without `KEYS` checks its own section, or not at all.
+- **`ScenePlanSerializer.Read` refuses an unknown key inside a known section** the same way
+  (`ScenePlanFormatException`: `models[1].tint is not known to this build (scene plan version 1);
+  a newer build may be needed.`), where it ignored it. The keys it knows are the schema's; unknown
+  sections are still kept in `ScenePlan.Sections`. The schema says that every object but the plan
+  itself is closed, which it already was.
 
 ## 2026-11-18 (render bundle) — a scene plan, its meshes and the player in one zip
 

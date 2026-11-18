@@ -26,6 +26,10 @@ EXIT_FAILED = 64
 # The sections the core plays itself; every other section belongs to a module.
 CORE_SECTIONS = ("version", "generator", "name", "features", "moduleFolders", "frame", "timeline")
 
+# The keys of the core's own sections (see api.check_keys).
+FRAME_KEYS = {"units": None, "upAxis": None, "origin": None, "crs": None}
+TIMELINE_KEYS = {"fps": None, "frameCount": None}
+
 
 def main(plan_dir, plan_text=None, files=None):
     """Plays the plan and reports a failure the way the caller expects it: one THIDE:error line
@@ -77,6 +81,7 @@ def play(plan_dir, plan_text=None, files=None):
     folders += [folder_beside(plan_dir, folder) for folder in plan.get("moduleFolders", [])]
     registry = Registry(folders)
     modules = [registry.load(name) for name in plan["features"]]
+    check_sections(plan, modules)
     warn_of_unplayed_sections(plan, modules)
 
     api.report("phase", "scene")
@@ -151,6 +156,17 @@ def check(plan):
         value = timeline.get(key)
         if not isinstance(value, int) or isinstance(value, bool) or value < 1:
             raise api.PlanError("timeline.%s must be a whole number of at least 1" % key)
+
+
+def check_sections(plan, modules):
+    """Refuses a key that the core or a module does not know, in its own section. A module that
+    does not say which keys it knows (KEYS) checks its section itself, or not at all."""
+    api.check_keys(plan["frame"], FRAME_KEYS, "frame")
+    api.check_keys(plan["timeline"], TIMELINE_KEYS, "timeline")
+    for module in modules:
+        name, keys = getattr(module, "SECTION", None), getattr(module, "KEYS", None)
+        if name and keys is not None and plan.get(name) is not None:
+            api.check_keys(plan[name], keys, name)
 
 
 def is_vector(value):

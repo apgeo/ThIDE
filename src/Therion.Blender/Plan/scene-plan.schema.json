@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:thide:scene-plan:1",
   "title": "ThIDE scene plan, version 1",
-  "description": "A resolved description of one render, played in Blender by the ThIDE player. Positions are metres in one frame (X east, Y north, Z up) about frame.origin; times are seconds from the start of the clip; colours are linear RGB, each channel 0 to 1. Unknown top-level sections are allowed: they belong to player modules outside this schema.",
+  "description": "A resolved description of one render, played in Blender by the ThIDE player. Positions are metres in one frame (X east, Y north, Z up) about frame.origin; times are seconds from the start of the clip; colours are linear RGB, each channel 0 to 1. Unknown top-level sections are allowed: they belong to player modules outside this schema. Every other object is closed: the player and the library refuse a key it does not list, which may be one a newer version added.",
   "type": "object",
   "required": ["version", "features", "frame", "timeline"],
   "properties": {

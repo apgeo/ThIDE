@@ -14,6 +14,16 @@ import mathutils
 from thide_player import api
 
 SECTION = "look"
+KEYS = {
+    "engine": None, "samples": None, "denoise": None, "device": None, "seed": None,
+    "transparent": None, "width": None, "height": None,
+    "materials": [{
+        "id": None, "kind": None, "color": None, "roughness": None,
+        "stops": [{"at": None, "color": None}], "low": None, "high": None, "scale": None, "bump": None,
+    }],
+    "lights": [{"id": None, "kind": None, "energy": None, "direction": None, "size": None}],
+    "world": {"kind": None, "color": None, "strength": None},
+}
 
 GPU_BACKENDS = {"optix": "OPTIX", "cuda": "CUDA", "hip": "HIP", "oneapi": "ONEAPI", "metal": "METAL"}
 

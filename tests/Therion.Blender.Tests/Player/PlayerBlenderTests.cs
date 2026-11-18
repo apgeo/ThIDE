@@ -845,6 +845,29 @@ public class PlayerBlenderTests
         Assert.False(File.Exists(Path.Combine(Path.GetDirectoryName(job.Folder)!, "escaped.blend")));
     }
 
+    [BlenderFact]
+    public async Task AKeyThePlayerDoesNotKnow_IsRefused_BeforeAnythingIsBuilt()
+    {
+        var (_, job) = PlayerRunner.WriteJob("refuse-unknown-keys", Small.Value, Orbit);
+        string planText = File.ReadAllText(job.PlanPath);
+
+        foreach (var (original, changed, path) in new[]
+        {
+            ("\"upAxis\": \"Z\",", "\"upAxis\": \"Z\", \"tilt\": 3,", "frame.tilt"),
+            ("\"id\": \"CaveModel\",", "\"id\": \"CaveModel\", \"tint\": [1, 0, 0],", "models[0].tint"),
+            ("\"baseName\": ", "\"codec\": \"av1\", \"baseName\": ", "output.codec"),
+        })
+        {
+            Assert.Contains(original, planText);
+            File.WriteAllText(job.PlanPath, planText.Replace(original, changed));
+
+            var (error, log) = await Refused(job);
+
+            Assert.Equal($"{path} is not known to player {PlayerFiles.Version}; a newer player may be needed", error);
+            Assert.Empty(PlayerRunner.Reported(log, "phase"));
+        }
+    }
+
     // ---- modules from outside the player ----
 
     private static ScenePlan WithMarkers(ScenePlan plan) => plan with

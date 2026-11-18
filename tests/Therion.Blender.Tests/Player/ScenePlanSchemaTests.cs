@@ -86,6 +86,32 @@ public class ScenePlanSchemaTests
     }
 
     [Fact]
+    public void EveryObjectButThePlan_IsClosed()
+    {
+        using var schema = JsonDocument.Parse(ScenePlanSchema.Text);
+        var open = new List<string>();
+        void Walk(JsonElement node, string path)
+        {
+            if (node.ValueKind == JsonValueKind.Array)
+            {
+                int i = 0;
+                foreach (var item in node.EnumerateArray()) Walk(item, $"{path}[{i++}]");
+                return;
+            }
+            if (node.ValueKind != JsonValueKind.Object) return;
+            if (path.Length > 0 && node.TryGetProperty("properties", out _)
+                && !(node.TryGetProperty("additionalProperties", out var closed) && closed.ValueKind == JsonValueKind.False))
+                open.Add(path);
+            foreach (var property in node.EnumerateObject()) Walk(property.Value, path + "/" + property.Name);
+        }
+
+        Walk(schema.RootElement, "");
+
+        Assert.Empty(open);
+        Assert.False(schema.RootElement.TryGetProperty("additionalProperties", out _));
+    }
+
+    [Fact]
     public void AMissingRequiredSection_DoesNotConform()
         => Assert.Equal(
             ["$: 'features' is missing", "$: 'frame' is missing", "$: 'timeline' is missing"],

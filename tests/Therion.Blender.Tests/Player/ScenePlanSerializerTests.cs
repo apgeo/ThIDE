@@ -181,12 +181,22 @@ public class ScenePlanSerializerTests
         Assert.Equal(3, doc.RootElement.GetProperty("marker_cube").GetProperty("points")[0][2].GetInt32());
     }
 
-    [Fact]
-    public void AnUnknownKeyInsideAKnownSection_IsIgnored()
+    [Theory]
+    [InlineData("\"fps\": 25,", "\"fps\": 25, \"speed\": 2,", "timeline.speed")]
+    [InlineData("\"material\": \"rock\"", "\"material\": \"rock\", \"tint\": [1, 0, 0]", "models[0].tint")]
+    [InlineData("\"t\": 1,", "\"t\": 1, \"roll\": 5,", "camera.track[1].roll")]
+    [InlineData("\"at\": 1, ", "\"at\": 1, \"alpha\": 1, ", "look.materials[0].stops[1].alpha")]
+    [InlineData("\"radius\": 1 }", "\"radius\": 1, \"shape\": \"cube\" }", "labels.markers.items[1].shape")]
+    [InlineData("\"period\": 0.56", "\"period\": 0.56, \"ease\": true", "labels.markers.pulse.ease")]
+    [InlineData("\"baseName\": \"clip\"", "\"baseName\": \"clip\", \"codec\": \"av1\"", "output.codec")]
+    public void AnUnknownKeyInsideAKnownSection_IsRefused_ByItsPath(string original, string changed, string path)
     {
-        string json = ScenePlanSerializer.Write(PlanFixtures.Full()).Replace("\"fps\": 25,", "\"fps\": 25, \"speed\": 2,");
+        string full = ScenePlanSerializer.Write(PlanFixtures.Full());
+        Assert.Contains(original, full);
 
-        Assert.Equal(25, ScenePlanSerializer.Read(json).Timeline.Fps);
+        var ex = Assert.Throws<ScenePlanFormatException>(() => ScenePlanSerializer.Read(full.Replace(original, changed)));
+
+        Assert.Equal($"{path} is not known to this build (scene plan version 1); a newer build may be needed.", ex.Message);
     }
 
     // ---- refusals ----

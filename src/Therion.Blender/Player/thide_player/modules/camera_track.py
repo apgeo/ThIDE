@@ -9,6 +9,10 @@ import bpy
 from thide_player import api
 
 SECTION = "camera"
+KEYS = {
+    "sensorWidth": None, "lens": None, "clipStart": None, "clipEnd": None, "fStop": None,
+    "interpolation": None, "track": [{"t": None, "eye": None, "target": None, "lens": None}],
+}
 
 INTERPOLATIONS = {"linear": "LINEAR", "bezier": "BEZIER", "constant": "CONSTANT"}
 

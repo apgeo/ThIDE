@@ -14,6 +14,18 @@ import mathutils
 from thide_player import api
 
 SECTION = "labels"
+KEYS = {
+    "texts": {
+        "color": None, "strength": None,
+        "items": [{"id": None, "role": None, "text": None, "at": None, "size": None}],
+    },
+    "markers": {
+        "color": None, "strength": None,
+        "pulse": {"period": None, "scale": None},
+        "byDistance": {"factor": None, "minRadius": None, "maxRadius": None},
+        "items": [{"id": None, "role": None, "at": None, "radius": None}],
+    },
+}
 
 
 def build(ctx, labels):

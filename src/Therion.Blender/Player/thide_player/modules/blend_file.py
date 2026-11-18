@@ -17,6 +17,7 @@ import bpy
 from thide_player import api
 
 SECTION = "blend"
+KEYS = {"path": None}
 
 
 def build(ctx, blend):

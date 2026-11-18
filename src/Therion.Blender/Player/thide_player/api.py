@@ -3,6 +3,8 @@
 A feature module is one Python file named after its feature ("camera_track" is camera_track.py):
 
     SECTION = "camera"            the plan section it plays; the core passes it to both functions
+    KEYS = {...}                  optional: every key of the section it knows (see check_keys);
+                                  the core refuses a plan with any other before anything is built
     def build(ctx, section)       builds its part of the scene
     def render(ctx, section)      optional; runs after every module has built, and not at all
                                   when the scene is only built (--build-only)
@@ -18,6 +20,8 @@ import os
 import shutil
 import tempfile
 
+from . import PLAYER_VERSION
+
 
 class PlanError(Exception):
     """The plan cannot be played. The message says which part of it, and why."""
@@ -30,6 +34,25 @@ def report(key, value):
 
 def warn(message):
     report("warning", message)
+
+
+def check_keys(value, keys, where):
+    """Refuses a key the player does not know: a plan written for a newer player would otherwise
+    be played as if that key were not there. keys describes what may be there: a dict of the known
+    keys, each with the keys of its own value (a dict, or a list of one dict for a list of
+    objects) or None when its value holds no keys. A value of another type is left to the module
+    that reads it."""
+    if isinstance(keys, list):
+        if isinstance(value, list):
+            for index, item in enumerate(value):
+                check_keys(item, keys[0], "%s[%d]" % (where, index))
+    elif isinstance(keys, dict) and isinstance(value, dict):
+        for key, item in value.items():
+            if key not in keys:
+                raise PlanError("%s.%s is not known to player %s; a newer player may be needed"
+                                % (where, key, PLAYER_VERSION))
+            if keys[key] is not None:
+                check_keys(item, keys[key], where + "." + key)
 
 
 def stamp(obj, role, ident):

@@ -6,8 +6,9 @@
 // is the same bytes everywhere.
 //
 // Reading checks the version first: a plan newer than this build is refused with a message that
-// says so. Unknown keys inside a known section are ignored; unknown sections are kept
-// (ScenePlan.Sections).
+// says so. An unknown key inside a known section is refused too, as the player refuses it: it may
+// be what a newer version added. Unknown sections are kept (ScenePlan.Sections): they belong to
+// modules outside this library.
 
 using System.Globalization;
 using System.Text;
@@ -100,12 +101,48 @@ public static class ScenePlanSerializer
                 throw new ScenePlanFormatException("Scene plan JSON has no \"version\" field.");
             if (versionElement.ValueKind != JsonValueKind.Number || !versionElement.TryGetInt32(out int version))
                 throw new ScenePlanFormatException("Scene plan \"version\" must be an integer.");
+            if (version == BlenderModule.ScenePlanSchemaVersion && UnknownKey(doc.RootElement) is { } unknown)
+                throw new ScenePlanFormatException(
+                    $"{unknown} is not known to this build (scene plan version {version}); a newer build may be needed.");
             return version;
         }
         catch (JsonException ex)
         {
             throw new ScenePlanFormatException($"Malformed scene plan JSON: {ex.Message}");
         }
+    }
+
+    /// <summary>The path of the first key inside a known section that the schema does not have,
+    /// or null. The sections themselves may be any: those of other modules are kept.</summary>
+    private static string? UnknownKey(JsonElement root)
+    {
+        foreach (var section in root.EnumerateObject())
+            if (ScenePlanSchema.Keys.Keys.TryGetValue(section.Name, out var keys) && keys is not null
+                && UnknownKey(section.Value, keys, section.Name) is { } path)
+                return path;
+        return null;
+    }
+
+    private static string? UnknownKey(JsonElement value, PlanKeys keys, string path)
+    {
+        if (value.ValueKind == JsonValueKind.Array)
+        {
+            int index = 0;
+            foreach (var item in value.EnumerateArray())
+                if (UnknownKey(item, keys, $"{path}[{index++}]") is { } found)
+                    return found;
+        }
+        else if (value.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var property in value.EnumerateObject())
+            {
+                if (!keys.Keys.TryGetValue(property.Name, out var inner))
+                    return path + "." + property.Name;
+                if (inner is not null && UnknownKey(property.Value, inner, path + "." + property.Name) is { } found)
+                    return found;
+            }
+        }
+        return null;
     }
 
     // ---- compact values ----

@@ -15,6 +15,10 @@ import mathutils
 from thide_player import api
 
 SECTION = "models"
+KEYS = [{
+    "id": None, "path": None, "translation": None, "rotation": {"axis": None, "degrees": None},
+    "scale": None, "material": None,
+}]
 
 
 def build(ctx, models):
