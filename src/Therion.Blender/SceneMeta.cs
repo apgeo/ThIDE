@@ -63,6 +63,12 @@ public sealed record SceneMetaStation
     /// Null when neither gives one — a station halfway down a shaft, a model without walls,
     /// documents written before this field existed.</summary>
     public double? Roof { get; init; }
+
+    /// <summary>The roof from the walls alone (see <see cref="Roof"/>); null when they give none.</summary>
+    public double? WallRoof { get; init; }
+
+    /// <summary>The roof from the surveyed up distances alone (tube models); null when there is none.</summary>
+    public double? SurveyedRoof { get; init; }
 }
 
 /// <summary>A survey-tree node (from <c>.lox</c>; empty for <c>.3d</c>).</summary>
@@ -134,11 +140,14 @@ public sealed record SceneMeta
             if ((s.Flags & CaveStationFlags.Anonymous) != 0) continue;
             // Tubes are built from the surveyed distances, so those are the roof; a ray up
             // through the walls can leave by a junction's opening and find another level.
-            double? roof = surveyedRoofs.TryGetValue(s.Position, out double surveyed) ? surveyed
-                : roofs?.HeightNear(s.Position);
+            double? surveyedRoof = surveyedRoofs.TryGetValue(s.Position, out double surveyed) ? surveyed : null;
+            double? wallRoof = roofs?.HeightNear(s.Position);
+            double? roof = surveyedRoof ?? wallRoof;
             stations.Add(new SceneMetaStation
             {
                 Roof = roof is { } r ? Math.Round(r, 3) : null,
+                WallRoof = wallRoof is { } w ? Math.Round(w, 3) : null,
+                SurveyedRoof = surveyedRoof is { } u ? Math.Round(u, 3) : null,
                 Name = s.Name,
                 Position = SceneMetaVec.From(s.Position),
                 Entrance = s.IsEntrance,

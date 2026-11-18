@@ -29,6 +29,37 @@ public enum VisibilityTarget
     Overlays,
 }
 
+/// <summary>How big a lead marker is drawn.</summary>
+public enum LeadMarkerSizing
+{
+    /// <summary>From the passage in a flythrough (the camera is inside the cave), from the whole
+    /// cave for every other camera.</summary>
+    Auto,
+    /// <summary>From the whole cave (1 % of its diagonal), whatever the camera: seen from inside,
+    /// a marker can be wider than its passage.</summary>
+    Cave,
+    /// <summary>From the passage it is in: a fraction of the roof height at its station.</summary>
+    Passage,
+    /// <summary>Grows with its distance from the camera, so it keeps about the same size in the
+    /// picture: never tiny far away, never filling the picture close up.</summary>
+    CameraDistance,
+    /// <summary>From the whole cave, and not drawn at all in a flythrough.</summary>
+    HiddenInFlythrough,
+}
+
+/// <summary>Where a station label's roof (the height it is lifted above its station) comes from.</summary>
+public enum LabelRoofSource
+{
+    /// <summary>The surveyed up distance of a tube model's level legs, else the walls above.</summary>
+    SurveyFirst,
+    /// <summary>The walls above the station, else the surveyed up distance.</summary>
+    WallsFirst,
+    /// <summary>The walls above the station only (a station with none is labelled where it is).</summary>
+    WallsOnly,
+    /// <summary>No roof: every label sits on its station.</summary>
+    None,
+}
+
 /// <summary>Station/entrance label configuration (FR-05). The <see cref="MaxCount"/> cap +
 /// distance thinning keep thousands of stations from melting render times (R-13/NFR-06).</summary>
 public sealed record StationLabelSpec
@@ -76,6 +107,9 @@ public sealed record LeadMarkerSpec
 
     public double MarkerScale { get; init; } = 1.0;
 
+    /// <summary>How the markers are sized (see <see cref="LeadMarkerSizing"/>).</summary>
+    public LeadMarkerSizing Sizing { get; init; } = LeadMarkerSizing.Auto;
+
     /// <summary>Also place the station name / note next to the marker.</summary>
     public bool ShowText { get; init; }
 }
@@ -120,6 +154,10 @@ public sealed record LabelsSpec
     public OverlaySpec Overlays { get; init; } = new();
 
     public IReadOnlyList<VisibilityEvent> Events { get; init; } = [];
+
+    /// <summary>Where the roof that station labels are lifted above comes from; also the roof a
+    /// passage-sized lead marker is sized from.</summary>
+    public LabelRoofSource Roof { get; init; } = LabelRoofSource.SurveyFirst;
 
     /// <summary>Emissive tint for label text (readable in dark scenes).</summary>
     public ColorRgb Color { get; init; } = new(0.95, 0.93, 0.82);

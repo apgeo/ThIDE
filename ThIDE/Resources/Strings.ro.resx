@@ -433,6 +433,10 @@
   <data name="Blender_UI_Labels" xml:space="preserve"><value>Etichete</value></data>
   <data name="Blender_UI_StationLabels" xml:space="preserve"><value>Etichete stații</value></data>
   <data name="Blender_UI_LeadMarkers" xml:space="preserve"><value>Marcaje continuări</value></data>
+  <data name="Blender_UI_LeadMarkerSize" xml:space="preserve"><value>Mărimea marcajelor</value></data>
+  <data name="Blender_UI_LeadMarkerSize_Tip" xml:space="preserve"><value>Auto: după galerie într-un zbor prin peșteră, după toată peștera altfel. Cave: mereu după toată peștera. Passage: mereu după galerie. CameraDistance: cam aceeași mărime în imagine la orice distanță. HiddenInFlythrough: după toată peștera, și deloc într-un zbor prin peșteră.</value></data>
+  <data name="Blender_UI_LabelRoof" xml:space="preserve"><value>Etichete deasupra</value></data>
+  <data name="Blender_UI_LabelRoof_Tip" xml:space="preserve"><value>Tavanul deasupra căruia se ridică eticheta unei stații. SurveyFirst: distanța în sus măsurată, altfel pereții. WallsFirst: pereții, altfel distanța în sus măsurată. WallsOnly: doar pereții. None: etichetele stau pe stații.</value></data>
   <data name="Blender_UI_Render" xml:space="preserve"><value>Randează</value></data>
   <data name="Blender_UI_Export" xml:space="preserve"><value>Exportă scriptul…</value></data>
   <data name="Blender_UI_ExportDir" xml:space="preserve"><value>Folder export</value></data>

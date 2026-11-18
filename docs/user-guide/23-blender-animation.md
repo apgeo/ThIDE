@@ -52,7 +52,11 @@ describes one *render job*; nothing runs until you press **Render**.
      count**.
    - **Output** — a video (MP4/MKV/WebM), a numbered PNG sequence, or a single still; plus
      resolution and file name.
-   - **Labels** — turn on station labels and lead markers.
+   - **Labels** — turn on station labels and lead markers. *Lead marker size* chooses how big a
+     marker is: *Auto* sizes it from its passage in a flythrough and from the whole cave otherwise;
+     *Cave*, *Passage*, *CameraDistance* (about the same size in the picture at any distance) and
+     *HiddenInFlythrough* fix one way. *Labels above* chooses the roof a station label is lifted
+     above: the surveyed height first, the walls first, the walls only, or none (on the station).
    - **Render folder** — where the video, frames or still are saved; by default *Documents/ThIDE/Renders*
      (your home folder's *ThIDE/Renders* where there is no Documents folder). Leave it empty to keep
      them in the temporary job folder, which the operating system may clean up.

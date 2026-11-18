@@ -1,5 +1,24 @@
 # Therion.Blender — changes for consumers
 
+## 2026-11-18 — lead marker size and label roof are choices
+
+### Additive API
+- `LeadMarkerSpec.Sizing` (`LeadMarkerSizing`): `Auto` (the default, as before: from the passage
+  in a flythrough, from the cave otherwise), `Cave`, `Passage`, `CameraDistance` and
+  `HiddenInFlythrough`. `CameraDistance` gives each marker a driver that scales it with its
+  distance from the camera (0.015 × distance, between 0.1 m and the cave size); the expression is
+  one Blender evaluates without Python, so it works in a headless render, and the pulse is part of
+  it. `LabelPlan.LeadsByDistance` carries the numbers.
+- `LabelsSpec.Roof` (`LabelRoofSource`): `SurveyFirst` (the default, as before), `WallsFirst`,
+  `WallsOnly`, `None`. It sets both the height station labels are lifted to and the roof a
+  passage-sized marker is sized from.
+- `SceneMetaStation.WallRoof` and `.SurveyedRoof` keep the two roofs apart; `Roof` stays the
+  survey-first value. A document without them uses `Roof` for every source but `None`.
+
+### Behaviour change
+- The spec's JSON has the two new fields, so `SPEC_HASH` of every generated script changes; the
+  scripts are otherwise byte-identical.
+
 ## 2026-11-17 (player) — a scene plan, and a player that renders it
 
 Nothing existing changes: `SceneSpec`, `ScriptGenerator` and the scripts they give are as before, and

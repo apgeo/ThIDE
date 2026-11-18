@@ -455,7 +455,7 @@ public static class ScriptGenerator
                 w.Blank();
             }
             EmitTextLabelGroup(w, "_component_labels", "COMPONENT_LABELS", "cmp", plan.Components);
-            EmitLeadMarkers(w, spec, plan.Leads);
+            EmitLeadMarkers(w, spec, plan.Leads, plan.LeadsByDistance);
         }
         if (hasOverlays) EmitOverlays(w, spec);
         if (hasEvents) EmitVisibilityEvents(w, spec);
@@ -514,7 +514,7 @@ public static class ScriptGenerator
         w.Blank();
     }
 
-    private static void EmitLeadMarkers(PyWriter w, SceneSpec spec, IReadOnlyList<LeadItem> leads)
+    private static void EmitLeadMarkers(PyWriter w, SceneSpec spec, IReadOnlyList<LeadItem> leads, LeadDistanceSizing? byDistance)
     {
         if (leads.Count == 0) return; // bucket is already defined by EmitAnnotations
 
@@ -550,6 +550,29 @@ public static class ScriptGenerator
                     w.Line("_fc.modifiers.new(type='CYCLES')");
             }
         }
+        if (byDistance is not null)
+        {
+            // A driver scales each marker with its distance from the camera. The expression is
+            // one Blender evaluates itself (a "simple expression"), so it needs no Python
+            // auto-run; the pulse, when asked for, is part of it.
+            string pulse = spec.Labels.Leads.Pulse ? " * (1.25 - 0.25 * cos((frame - 1) * 0.4488))" : "";
+            w.Blank();
+            using (w.Block("def _thide_lead_by_distance(obj, radius):"))
+            {
+                w.Line($"_expr = \"min({PyWriter.Num(byDistance.MaxRadius)}, max({PyWriter.Num(byDistance.MinRadius)}, d * {PyWriter.Num(byDistance.Factor)})) / \" + repr(radius) + {PyWriter.Str(pulse)}");
+                using (w.Block("for _i in range(3):"))
+                {
+                    w.Line("_drv = obj.driver_add(\"scale\", _i).driver");
+                    w.Line("_drv.type = 'SCRIPTED'");
+                    w.Line("_var = _drv.variables.new()");
+                    w.Line("_var.name = \"d\"");
+                    w.Line("_var.type = 'LOC_DIFF'");
+                    w.Line("_var.targets[0].id = cam");
+                    w.Line("_var.targets[1].id = obj");
+                    w.Line("_drv.expression = _expr");
+                }
+            }
+        }
         w.Blank();
 
         w.Line("LEAD_MARKERS = [");
@@ -563,7 +586,9 @@ public static class ScriptGenerator
         {
             // Objects are named by station (_d[6]); the caption shows the note (_d[0]).
             w.Line("_dm = _thide_lead(\"lead:\" + _d[6], (_d[1], _d[2], _d[3]), _d[4])");
-            if (spec.Labels.Leads.Pulse)
+            if (byDistance is not null)
+                w.Line("_thide_lead_by_distance(_dm, _d[4])");
+            else if (spec.Labels.Leads.Pulse)
                 w.Line("_thide_pulse(_dm)");
             if (spec.Labels.Leads.ShowText)
                 w.Line("_thide_label(\"leadtxt:\" + _d[6], _d[0], (_d[1], _d[2], _d[3] + _d[4] * 2.0), _d[5], _lead_markers)");

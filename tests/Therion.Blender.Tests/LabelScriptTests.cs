@@ -194,12 +194,28 @@ public class LabelScriptTests
         Assert.Contains("thide(\"label-cap\", \"showing 25 of 500 station labels\")", script);
     }
 
+    private static string GenerateByDistance() => ScriptGenerator.Generate(
+        LabelledSpec() with { Labels = LabelledSpec().Labels with { Leads = new LeadMarkerSpec { Show = true, Pulse = true, Sizing = LeadMarkerSizing.CameraDistance } } },
+        assets: null, framing: null, meta: LabelledMeta());
+
+    [Fact]
+    public void CameraDistanceMarkers_AreScaledByADriver_InsteadOfThePulseKeys()
+    {
+        var script = GenerateByDistance();
+
+        Assert.Contains("_var.type = 'LOC_DIFF'", script);
+        Assert.Contains("_thide_lead_by_distance(_dm, _d[4])", script);
+        Assert.Contains("cos((frame - 1)", script);           // the pulse lives in the expression
+        Assert.DoesNotContain("_thide_pulse(_dm)", script);
+        Assert.DoesNotContain("_thide_lead_by_distance", Generate()); // other sizings: no driver
+    }
+
     [Fact]
     public void LabelledScript_CompilesAsPython_WhenPythonAvailable()
     {
         var python = FindPython();
         if (python is null) return;
-        foreach (var (label, script) in new[] { ("labels", Generate()), ("overlays", GenerateOverlays()) })
+        foreach (var (label, script) in new[] { ("labels", Generate()), ("overlays", GenerateOverlays()), ("distance", GenerateByDistance()) })
         {
             var path = Path.Combine(Path.GetTempPath(), $"thide-{label}-{Environment.ProcessId}.py");
             File.WriteAllText(path, script, new UTF8Encoding(false));

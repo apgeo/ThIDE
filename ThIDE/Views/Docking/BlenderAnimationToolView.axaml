@@ -103,6 +103,10 @@
             <TextBlock Text="{l:Loc Blender_UI_Labels}" FontWeight="Bold" />
             <CheckBox AutomationProperties.AutomationId="Blender.StationLabels" Content="{l:Loc Blender_UI_StationLabels}" IsChecked="{Binding Blender.ShowStationLabels}" />
             <CheckBox AutomationProperties.AutomationId="Blender.LeadMarkers" Content="{l:Loc Blender_UI_LeadMarkers}" IsChecked="{Binding Blender.ShowLeadMarkers}" />
+            <DockPanel><TextBlock Text="{l:Loc Blender_UI_LeadMarkerSize}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                <ComboBox AutomationProperties.AutomationId="Blender.LeadMarkerSize" AutomationProperties.Name="{l:Loc Blender_UI_LeadMarkerSize}" HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.LeadMarkerSizings}" SelectedItem="{Binding Blender.LeadMarkerSizing}" ToolTip.Tip="{l:Loc Blender_UI_LeadMarkerSize_Tip}" /></DockPanel>
+            <DockPanel><TextBlock Text="{l:Loc Blender_UI_LabelRoof}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                <ComboBox AutomationProperties.AutomationId="Blender.LabelRoof" AutomationProperties.Name="{l:Loc Blender_UI_LabelRoof}" HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.LabelRoofSources}" SelectedItem="{Binding Blender.LabelRoof}" ToolTip.Tip="{l:Loc Blender_UI_LabelRoof_Tip}" /></DockPanel>
 
             <Separator />
 

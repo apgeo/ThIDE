@@ -233,6 +233,22 @@ public class SceneProbeTests
         Assert.True(filled.Count == 0, $"a lead marker covers more than half the picture at frames {string.Join(", ", filled)}");
     }
 
+    [BlenderFact]
+    public async Task Flythrough_CameraDistanceMarkers_ShrinkAsTheCameraComes_AndNeverFillThePicture()
+    {
+        var spec = Flythrough();
+        spec = spec with { Labels = spec.Labels with { Leads = spec.Labels.Leads with { Sizing = LeadMarkerSizing.CameraDistance } } };
+        var report = await SceneProbeRunner.RunAsync(
+            "flythrough-lead-distance", Medium.Value, spec, EveryFrame with { Pixels = (64, 36) });
+
+        var filled = report.Pixels.Where(p => p.Share(ProbeRoles.LeadMarker) > 0.5).Select(p => p.Frame).ToList();
+        Assert.True(filled.Count == 0, $"a lead marker covers more than half the picture at frames {string.Join(", ", filled)}");
+        // The driver runs in a headless render: the markers' scale changes as the camera moves.
+        var scales = report.Frames.SelectMany(f => f.Objects).Where(o => o.Name.StartsWith("lead:", StringComparison.Ordinal))
+            .Select(o => Math.Round(o.Scale, 3)).Distinct().Count();
+        Assert.True(scales > 10, $"only {scales} different marker scales over 80 frames");
+    }
+
     // ---- known defects: each states the wanted behaviour and is skipped until it is fixed ----
 
     [BlenderKnownDefectFact(

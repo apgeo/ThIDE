@@ -169,6 +169,20 @@ public class BlenderAnimationViewModelTests
         Assert.True(vm.CurrentSpec.Labels.Stations.Show);
     }
 
+    [Fact]
+    public void LeadMarkerSize_AndLabelRoof_ReachTheSpec_AndComeBackFromAPreset()
+    {
+        var vm = Vm();
+        vm.LeadMarkerSizing = LeadMarkerSizing.CameraDistance;
+        vm.LabelRoof = LabelRoofSource.WallsOnly;
+        Assert.Equal(LeadMarkerSizing.CameraDistance, vm.CurrentSpec.Labels.Leads.Sizing);
+        Assert.Equal(LabelRoofSource.WallsOnly, vm.CurrentSpec.Labels.Roof);
+
+        vm.SelectedPreset = vm.Presets.First(p => p.BuiltIn);
+        Assert.Equal(LeadMarkerSizing.Auto, vm.LeadMarkerSizing);
+        Assert.Equal(LabelRoofSource.SurveyFirst, vm.LabelRoof);
+    }
+
     // ---- validation + gating ----
 
     [Fact]

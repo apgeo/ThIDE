@@ -38,6 +38,7 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         nameof(CameraTemplate), nameof(EngineKind), nameof(Gpu), nameof(Samples), nameof(Fps),
         nameof(DurationSeconds), nameof(OutputKind), nameof(Container), nameof(Width), nameof(Height),
         nameof(BaseName), nameof(SelfContained), nameof(ShowStationLabels), nameof(ShowLeadMarkers),
+        nameof(LeadMarkerSizing), nameof(LabelRoof),
     };
 
     private SceneSpec _spec;
@@ -103,6 +104,8 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
     [ObservableProperty] private bool _selfContained;
     [ObservableProperty] private bool _showStationLabels;
     [ObservableProperty] private bool _showLeadMarkers;
+    [ObservableProperty] private LeadMarkerSizing _leadMarkerSizing;
+    [ObservableProperty] private LabelRoofSource _labelRoof;
 
     // ---- export target ----
     [ObservableProperty] private string? _exportDirectory;
@@ -146,6 +149,8 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
     public IReadOnlyList<GpuMode> GpuModes { get; } = Enum.GetValues<GpuMode>();
     public IReadOnlyList<OutputKind> OutputKinds { get; } = Enum.GetValues<OutputKind>();
     public IReadOnlyList<VideoContainer> Containers { get; } = Enum.GetValues<VideoContainer>();
+    public IReadOnlyList<LeadMarkerSizing> LeadMarkerSizings { get; } = Enum.GetValues<LeadMarkerSizing>();
+    public IReadOnlyList<LabelRoofSource> LabelRoofSources { get; } = Enum.GetValues<LabelRoofSource>();
 
     // ---- change wiring ----
 
@@ -184,7 +189,8 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
             Labels = _spec.Labels with
             {
                 Stations = _spec.Labels.Stations with { Show = ShowStationLabels },
-                Leads = _spec.Labels.Leads with { Show = ShowLeadMarkers },
+                Leads = _spec.Labels.Leads with { Show = ShowLeadMarkers, Sizing = LeadMarkerSizing },
+                Roof = LabelRoof,
             },
         };
         Revalidate();
@@ -206,6 +212,8 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         SelfContained = spec.Source.SelfContained;
         ShowStationLabels = spec.Labels.Stations.Show;
         ShowLeadMarkers = spec.Labels.Leads.Show;
+        LeadMarkerSizing = spec.Labels.Leads.Sizing;
+        LabelRoof = spec.Labels.Roof;
     }
 
     private void Revalidate()

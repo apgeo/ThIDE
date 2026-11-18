@@ -55,7 +55,12 @@ singură *lucrare de randare*; nimic nu rulează până nu apăsați **Randează
    - **Animație** — cadre pe secundă și durată; panoul afișează **numărul de cadre** rezultat.
    - **Ieșire** — un videoclip (MP4/MKV/WebM), o secvență PNG numerotată sau o singură imagine;
      plus rezoluția și numele fișierului.
-   - **Etichete** — activați etichetele stațiilor și marcajele pistelor.
+   - **Etichete** — activați etichetele stațiilor și marcajele pistelor. *Mărimea marcajelor*
+     alege cât de mare e un marcaj: *Auto* îl dimensionează după galerie într-un zbor prin peșteră
+     și după toată peștera altfel; *Cave*, *Passage*, *CameraDistance* (cam aceeași mărime în
+     imagine la orice distanță) și *HiddenInFlythrough* fixează un singur fel. *Etichete deasupra*
+     alege tavanul deasupra căruia se ridică eticheta unei stații: întâi înălțimea măsurată, întâi
+     pereții, doar pereții sau deloc (pe stație).
    - **Folder randare** — unde se salvează videoclipul, cadrele sau imaginea; implicit
      *Documents/ThIDE/Renders* (*ThIDE/Renders* din dosarul personal, acolo unde nu există un dosar
      Documents). Lăsați-l gol pentru a le păstra în dosarul temporar al lucrării, pe care sistemul de
