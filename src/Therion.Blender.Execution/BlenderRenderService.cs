@@ -150,7 +150,13 @@ public sealed class BlenderRenderService : IBlenderRenderService
         ct.ThrowIfCancellationRequested();
         progress?.Report(new RenderProgress(RenderPhase.ConvertingGeometry, "Converting model"));
 
-        var options = new ConversionOptions { OutputDirectory = assetDir, Geometry = _geometry, Leads = source.Leads };
+        var options = new ConversionOptions
+        {
+            OutputDirectory = assetDir,
+            Geometry = _geometry,
+            Leads = source.Leads,
+            IncludeSurface = spec.Surface.Mode != SurfaceMode.Off,
+        };
         var conversion = await Task.Run(
             () => CaveConversionPipeline.ConvertResolvedFull(source.Model, options), ct).ConfigureAwait(false);
 
@@ -160,6 +166,8 @@ public sealed class BlenderRenderService : IBlenderRenderService
             {
                 PlyPath = conversion.Manifest.ModelPath,
                 SceneMetaPath = conversion.Manifest.SceneMetaPath,
+                SurfacePlyPath = conversion.Manifest.SurfacePath,
+                SurfaceImagePath = conversion.Manifest.SurfaceImagePath,
             },
             Output = spec.Output with { OutputDirectory = outputDirectory ?? assetDir },
         };
@@ -200,8 +208,10 @@ public sealed class BlenderRenderService : IBlenderRenderService
         }
     }
 
-    // ConversionOptions' default file names plus the script PrepareAsync writes.
-    private static readonly string[] ScratchFileNames = ["model.ply", "scene-meta.json", "render.py"];
+    // ConversionOptions' default file names (the terrain and its image too) plus the script
+    // PrepareAsync writes.
+    private static readonly string[] ScratchFileNames =
+        ["model.ply", "scene-meta.json", "render.py", "surface.ply", "surface.png", "surface.jpg"];
 
     // What a job folder may hold and still be deleted by PruneJobFolders: scratch and the runner's log.
     private static readonly HashSet<string> DisposableFileNames = new([.. ScratchFileNames, "job.log"], StringComparer.Ordinal);

@@ -53,8 +53,9 @@ internal static class SceneProbeRunner
     public static BlenderInstallation Blender => Located.Value;
 
     /// <summary>Writes <paramref name="model"/> as a .lox file and converts it the way the
-    /// application does. Stations flagged as continuations become leads.</summary>
-    public static ProbeAssets Prepare(string name, CaveModel model)
+    /// application does (with its terrain surface when <paramref name="includeSurface"/>).
+    /// Stations flagged as continuations become leads.</summary>
+    public static ProbeAssets Prepare(string name, CaveModel model, bool includeSurface = false)
     {
         string dir = Path.Combine(Root, "assets-" + name);
         if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true);
@@ -64,7 +65,7 @@ internal static class SceneProbeRunner
         LoxWriter.WriteFile(model, loxPath);
         var source = new ResolvedModelSource { Path = loxPath, Format = CaveSourceFormat.Lox, Kind = ModelSourceKind.ExternalFile };
         var conversion = CaveConversionPipeline.ConvertResolvedFull(
-            source, new ConversionOptions { OutputDirectory = dir, Leads = InventedCave.Leads(model) });
+            source, new ConversionOptions { OutputDirectory = dir, Leads = InventedCave.Leads(model), IncludeSurface = includeSurface });
         return new ProbeAssets(dir, conversion, CameraFraming.FromGeometry(conversion.Geometry));
     }
 
@@ -161,6 +162,8 @@ internal static class SceneProbeRunner
         {
             PlyPath = assets.Conversion.Manifest.ModelPath,
             SceneMetaPath = assets.Conversion.Manifest.SceneMetaPath,
+            SurfacePlyPath = assets.Conversion.Manifest.SurfacePath,
+            SurfaceImagePath = assets.Conversion.Manifest.SurfaceImagePath,
         },
         Output = spec.Output with { OutputDirectory = caseDir },
     };

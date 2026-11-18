@@ -87,6 +87,7 @@ public static class ScriptGenerator
         EmitSceneReset(w, spec, purpose);
         EmitImport(w, spec);
         EmitMaterials(w, spec);
+        EmitSurface(w, spec);
         EmitCamera(w, spec, camera);
         EmitLighting(w, spec);
         EmitAnnotations(w, spec, labels);
@@ -295,6 +296,83 @@ public static class ScriptGenerator
                 throw new ArgumentOutOfRangeException(nameof(spec), m.Rock, "Unknown rock material.");
         }
         w.Line("model.data.materials.append(mat)");
+        w.Blank();
+    }
+
+    /// <summary>The terrain's colour where no image is draped: a muted olive earth (linear RGB).</summary>
+    internal static readonly ColorRgb TerrainColor = new(0.22, 0.25, 0.14);
+
+    /// <summary>
+    /// The terrain surface, after the model's bounds are taken so it never changes the framing.
+    /// It is see-through from above (alpha = opacity) and invisible from below (alpha 0 on back
+    /// faces, which works the same in Cycles and EEVEE, unlike backface culling), and it casts no
+    /// shadow, so the sun rigs still light the cave under it. A missing terrain or image is a
+    /// warning, never a failed render.
+    /// </summary>
+    private static void EmitSurface(PyWriter w, SceneSpec spec)
+    {
+        var surface = spec.Surface;
+        if (surface.Mode == SurfaceMode.Off) return;
+        if (surface.Mode is not (SurfaceMode.Solid or SurfaceMode.Textured))
+            throw new ArgumentOutOfRangeException(nameof(spec), surface.Mode, "Unknown surface mode.");
+
+        w.Line($"# ---- terrain surface: {surface.Mode.ToString().ToLowerInvariant()} ----");
+        if (string.IsNullOrWhiteSpace(spec.Source.SurfacePlyPath))
+        {
+            w.Line("thide(\"warning\", \"The model has no terrain surface; rendering without one.\")");
+            w.Blank();
+            return;
+        }
+        bool textured = surface.Mode == SurfaceMode.Textured && !string.IsNullOrWhiteSpace(spec.Source.SurfaceImagePath);
+        if (surface.Mode == SurfaceMode.Textured && !textured)
+            w.Line("thide(\"warning\", \"The model has no surface image; drawing the terrain in one colour.\")");
+        w.Line($"SURFACE_PLY_PATH = {PyWriter.Str(spec.Source.SurfacePlyPath)}");
+        if (textured)
+            w.Line($"SURFACE_IMAGE_PATH = {PyWriter.Str(spec.Source.SurfaceImagePath!)}");
+        w.Line("terrain = None");
+        using (w.Block("if os.path.exists(SURFACE_PLY_PATH):"))
+        {
+            w.Line("bpy.ops.wm.ply_import(filepath=SURFACE_PLY_PATH)");
+            w.Line("terrain = bpy.context.selected_objects[0] if bpy.context.selected_objects else None");
+        }
+        using (w.Block("else:"))
+            w.Line("thide(\"warning\", \"terrain file not found: \" + SURFACE_PLY_PATH)");
+        using (w.Block("if terrain is not None:"))
+        {
+            w.Line("terrain.name = \"Terrain\"");
+            w.Line("terrain.select_set(False)");
+            using (w.Block("if hasattr(terrain, \"visible_shadow\"):"))
+                w.Line("terrain.visible_shadow = False");
+            w.Line("_tmat = bpy.data.materials.new(\"Terrain\")");
+            w.Line("_tmat.use_nodes = True");
+            w.Line("_tnt = _tmat.node_tree");
+            w.Line("_tbsdf = next(n for n in _tnt.nodes if n.type == 'BSDF_PRINCIPLED')");
+            w.Line("_tbsdf.inputs[\"Roughness\"].default_value = 1.0");
+            w.Line($"_tbsdf.inputs[\"Base Color\"].default_value = {Rgba(TerrainColor)}");
+            if (textured)
+            {
+                using (w.Block("if os.path.exists(SURFACE_IMAGE_PATH) and terrain.data.uv_layers:"))
+                {
+                    w.Line("_timg = _tnt.nodes.new(\"ShaderNodeTexImage\")");
+                    w.Line("_timg.image = bpy.data.images.load(SURFACE_IMAGE_PATH)");
+                    w.Line("_timg.extension = 'EXTEND'");
+                    w.Line("_tco = _tnt.nodes.new(\"ShaderNodeTexCoord\")");
+                    w.Line("_tnt.links.new(_tco.outputs[\"UV\"], _timg.inputs[\"Vector\"])");
+                    w.Line("_tnt.links.new(_timg.outputs[\"Color\"], _tbsdf.inputs[\"Base Color\"])");
+                }
+                using (w.Block("else:"))
+                    w.Line("thide(\"warning\", \"surface image not found or terrain has no UV map: \" + SURFACE_IMAGE_PATH)");
+            }
+            // alpha = opacity − opacity × backfacing: the opacity from above, 0 from below.
+            w.Line("_tgeo = _tnt.nodes.new(\"ShaderNodeNewGeometry\")");
+            w.Line("_talpha = _tnt.nodes.new(\"ShaderNodeMath\")");
+            w.Line("_talpha.operation = 'MULTIPLY_ADD'");
+            w.Line($"_talpha.inputs[1].default_value = {PyWriter.Num(-surface.Opacity)}");
+            w.Line($"_talpha.inputs[2].default_value = {PyWriter.Num(surface.Opacity)}");
+            w.Line("_tnt.links.new(_tgeo.outputs[\"Backfacing\"], _talpha.inputs[0])");
+            w.Line("_tnt.links.new(_talpha.outputs[\"Value\"], _tbsdf.inputs[\"Alpha\"])");
+            w.Line("terrain.data.materials.append(_tmat)");
+        }
         w.Blank();
     }
 

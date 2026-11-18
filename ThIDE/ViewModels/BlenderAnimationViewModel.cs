@@ -38,7 +38,7 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         nameof(CameraTemplate), nameof(EngineKind), nameof(Gpu), nameof(Samples), nameof(Fps),
         nameof(DurationSeconds), nameof(OutputKind), nameof(Container), nameof(Width), nameof(Height),
         nameof(BaseName), nameof(SelfContained), nameof(ShowStationLabels), nameof(ShowLeadMarkers),
-        nameof(LeadMarkerSizing), nameof(LabelRoof),
+        nameof(LeadMarkerSizing), nameof(LabelRoof), nameof(SurfaceMode),
     };
 
     private SceneSpec _spec;
@@ -114,6 +114,7 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
     [ObservableProperty] private bool _showLeadMarkers;
     [ObservableProperty] private LeadMarkerSizing _leadMarkerSizing;
     [ObservableProperty] private LabelRoofSource _labelRoof;
+    [ObservableProperty] private SurfaceMode _surfaceMode;
 
     // ---- export target ----
     [ObservableProperty] private string? _exportDirectory;
@@ -159,6 +160,7 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
     public IReadOnlyList<VideoContainer> Containers { get; } = Enum.GetValues<VideoContainer>();
     public IReadOnlyList<LeadMarkerSizing> LeadMarkerSizings { get; } = Enum.GetValues<LeadMarkerSizing>();
     public IReadOnlyList<LabelRoofSource> LabelRoofSources { get; } = Enum.GetValues<LabelRoofSource>();
+    public IReadOnlyList<SurfaceMode> SurfaceModes { get; } = Enum.GetValues<SurfaceMode>();
 
     // ---- change wiring ----
 
@@ -200,6 +202,7 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
                 Leads = _spec.Labels.Leads with { Show = ShowLeadMarkers, Sizing = LeadMarkerSizing },
                 Roof = LabelRoof,
             },
+            Surface = _spec.Surface with { Mode = SurfaceMode },
         };
         Revalidate();
     }
@@ -222,6 +225,7 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         ShowLeadMarkers = spec.Labels.Leads.Show;
         LeadMarkerSizing = spec.Labels.Leads.Sizing;
         LabelRoof = spec.Labels.Roof;
+        SurfaceMode = spec.Surface.Mode;
     }
 
     private void Revalidate()

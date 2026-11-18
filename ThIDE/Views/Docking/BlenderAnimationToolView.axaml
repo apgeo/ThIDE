@@ -67,6 +67,8 @@
             <TextBlock Text="{l:Loc Blender_UI_Camera}" FontWeight="Bold" />
             <DockPanel><TextBlock Text="{l:Loc Blender_UI_Template}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
                 <ComboBox AutomationProperties.AutomationId="Blender.CameraTemplate" AutomationProperties.Name="{l:Loc Blender_UI_Template}" HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.CameraTemplates}" SelectedItem="{Binding Blender.CameraTemplate}" /></DockPanel>
+            <DockPanel><TextBlock Text="{l:Loc Blender_UI_Surface}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                <ComboBox AutomationProperties.AutomationId="Blender.Surface" AutomationProperties.Name="{l:Loc Blender_UI_Surface}" HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.SurfaceModes}" SelectedItem="{Binding Blender.SurfaceMode}" ToolTip.Tip="{l:Loc Blender_UI_Surface_Tip}" /></DockPanel>
 
             <TextBlock Text="{l:Loc Blender_UI_Engine}" FontWeight="Bold" />
             <DockPanel><TextBlock Text="{l:Loc Blender_UI_Engine}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />

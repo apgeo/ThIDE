@@ -1,7 +1,9 @@
 // Binary PLY writer — the module's transport format (D-06): Blender's native C++ PLY
 // importer is always present headless, and the format is a trivial dependency-free
 // write. Emits binary_little_endian 1.0 with float32 positions, optional uchar RGB
-// vertex colours (depth tint), and uchar-count/int32 triangle faces.
+// vertex colours (depth tint), optional float32 texture coordinates, and uchar-count/int32
+// triangle faces. Texture coordinates are named s/t: Blender's PLY importer (4.2, 4.5 and
+// 5.0) turns s/t into a UV map as they are, while it ignores vertex properties named u/v.
 
 using System.Buffers.Binary;
 using System.Globalization;
@@ -21,6 +23,9 @@ public static class PlyWriter
         bool colored = mesh.HasColors;
         if (colored && mesh.VertexColors!.Count != mesh.Vertices.Count)
             throw new InvalidOperationException("Vertex colour count must match vertex count.");
+        bool mapped = mesh.HasTextureCoordinates;
+        if (mapped && mesh.TextureCoordinates!.Count != mesh.Vertices.Count)
+            throw new InvalidOperationException("Texture coordinate count must match vertex count.");
 
         using var stream = new MemoryStream();
 
@@ -33,6 +38,8 @@ public static class PlyWriter
         header.Append("property float x\nproperty float y\nproperty float z\n");
         if (colored)
             header.Append("property uchar red\nproperty uchar green\nproperty uchar blue\n");
+        if (mapped)
+            header.Append("property float s\nproperty float t\n");
         header.Append(CultureInfo.InvariantCulture, $"element face {mesh.Triangles.Count}\n");
         header.Append("property list uchar int vertex_indices\n");
         header.Append("end_header\n");
@@ -51,6 +58,12 @@ public static class PlyWriter
                 stream.WriteByte(c.R);
                 stream.WriteByte(c.G);
                 stream.WriteByte(c.B);
+            }
+            if (mapped)
+            {
+                var uv = mesh.TextureCoordinates![i];
+                WriteFloat(stream, f4, (float)uv.U);
+                WriteFloat(stream, f4, (float)uv.V);
             }
         }
 

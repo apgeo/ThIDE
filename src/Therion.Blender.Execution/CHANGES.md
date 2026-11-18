@@ -1,5 +1,12 @@
 # Therion.Blender.Execution — changes for consumers
 
+## 2026-11-18 — the terrain surface
+
+### Behaviour change
+- `BlenderRenderService` converts the terrain surface (and its image) when the spec's
+  `Surface.Mode` is not `Off`, points the script at them, and removes `surface.ply`,
+  `surface.png` and `surface.jpg` from the job folder with the other scratch files.
+
 ## 2026-11-17 (later) — a Blender newer than tested is used with a warning
 
 ### Additive API

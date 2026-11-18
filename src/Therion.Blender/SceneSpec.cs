@@ -70,6 +70,14 @@ public sealed record SourceSpec
     /// <summary>Additionally embed the PLY itself (base64) — a single mailable .py.
     /// Only meaningful with <see cref="SelfContained"/>.</summary>
     public bool EmbedMesh { get; init; }
+
+    /// <summary>Path of the terrain PLY (written by the conversion pipeline when
+    /// <see cref="SceneSpec.Surface"/> asks for a terrain and the model has one). Never embedded:
+    /// a self-contained script draws the terrain only while this file is where it was.</summary>
+    public string? SurfacePlyPath { get; init; }
+
+    /// <summary>Path of the surface image draped over the terrain, when the model has one.</summary>
+    public string? SurfaceImagePath { get; init; }
 }
 
 /// <summary>Engine + device configuration (D-09, FR-07/08).</summary>
@@ -184,6 +192,9 @@ public sealed record SceneSpec
     public CameraSpec Camera { get; init; } = new();
 
     public LabelsSpec Labels { get; init; } = new();
+
+    /// <summary>The terrain surface above the cave (off by default).</summary>
+    public SurfaceSpec Surface { get; init; } = new();
 
     public AnimationSpec Animation { get; init; } = new();
 

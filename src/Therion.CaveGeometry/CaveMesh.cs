@@ -5,10 +5,15 @@ namespace Therion.CaveGeometry;
 /// <summary>A per-vertex RGB colour (0–255 per channel), as written to PLY vertex colours.</summary>
 public readonly record struct CaveColor(byte R, byte G, byte B);
 
+/// <summary>A per-vertex texture coordinate: U across the image from its left edge, V up the
+/// image from its bottom edge, both 0–1 over the image (Blender's UV convention).</summary>
+public readonly record struct CaveUv(double U, double V);
+
 /// <summary>
 /// A triangle mesh ready for a writer: vertices in (recentered) metres, triangles as
-/// indices into <see cref="Vertices"/>, and optional per-vertex colours (depth tint).
-/// Produced by the geometry stage; consumed by the PLY/STL/OBJ/glb writers.
+/// indices into <see cref="Vertices"/>, optional per-vertex colours (depth tint) and optional
+/// per-vertex texture coordinates (a draped terrain). Produced by the geometry stage and the
+/// terrain mesher; consumed by the PLY/STL/OBJ/glb writers (only PLY writes the coordinates).
 /// </summary>
 public sealed record CaveMesh
 {
@@ -20,6 +25,10 @@ public sealed record CaveMesh
     /// the mesh is untinted.</summary>
     public IReadOnlyList<CaveColor>? VertexColors { get; init; }
 
+    /// <summary>Per-vertex texture coordinates, one per <see cref="Vertices"/> entry, or null
+    /// when the mesh carries none.</summary>
+    public IReadOnlyList<CaveUv>? TextureCoordinates { get; init; }
+
     public static readonly CaveMesh Empty = new()
     {
         Vertices = [],
@@ -30,12 +39,14 @@ public sealed record CaveMesh
 
     public bool HasColors => VertexColors is { Count: > 0 };
 
+    public bool HasTextureCoordinates => TextureCoordinates is { Count: > 0 };
+
     public BoundingBox Bounds => BoundingBox.FromPoints(Vertices);
 
     /// <summary>
-    /// Concatenates meshes, offsetting each mesh's triangle indices. Colours are kept
-    /// only if every non-empty part supplies them (all-or-nothing, so the writer never
-    /// sees a partially-coloured vertex list).
+    /// Concatenates meshes, offsetting each mesh's triangle indices. Colours and texture
+    /// coordinates are each kept only if every non-empty part supplies them (all-or-nothing,
+    /// so the writer never sees a partially-coloured or partially-mapped vertex list).
     /// </summary>
     public static CaveMesh Combine(IReadOnlyList<CaveMesh> parts)
     {
@@ -43,7 +54,9 @@ public sealed record CaveMesh
         var vertices = new List<CaveVector3>();
         var triangles = new List<CaveTriangle>();
         var colors = new List<CaveColor>();
+        var uvs = new List<CaveUv>();
         bool allColored = true;
+        bool allMapped = true;
 
         foreach (var part in parts)
         {
@@ -57,6 +70,11 @@ public sealed record CaveMesh
                 colors.AddRange(partColors);
             else
                 allColored = false;
+
+            if (part.TextureCoordinates is { Count: > 0 } partUvs && partUvs.Count == part.Vertices.Count)
+                uvs.AddRange(partUvs);
+            else
+                allMapped = false;
         }
 
         return new CaveMesh
@@ -64,6 +82,7 @@ public sealed record CaveMesh
             Vertices = vertices,
             Triangles = triangles,
             VertexColors = allColored && colors.Count == vertices.Count && vertices.Count > 0 ? colors : null,
+            TextureCoordinates = allMapped && uvs.Count == vertices.Count && vertices.Count > 0 ? uvs : null,
         };
     }
 }

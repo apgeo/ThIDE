@@ -40,6 +40,7 @@ internal sealed record SceneReport
 internal static class ProbeRoles
 {
     public const string Model = "model";
+    public const string Terrain = "terrain";
     public const string Camera = "camera";
     public const string CameraTarget = "camera-target";
     public const string StationLabel = "station-label";
@@ -89,6 +90,12 @@ internal sealed record ProbeObject
     public int? Vertices { get; init; }
     public int? Polygons { get; init; }
     public IReadOnlyList<string>? ColourAttributes { get; init; }
+    public IReadOnlyList<string>? UvMaps { get; init; }
+    public bool? VisibleShadow { get; init; }
+
+    /// <summary>Some vertices of a mesh with a UV map: where they are, their UV, and the colour of
+    /// the material's image at that UV (when it has one).</summary>
+    public IReadOnlyList<ProbeUvSample>? UvSamples { get; init; }
     public string? Text { get; init; }
     public double? TextSize { get; init; }
     public string? LightType { get; init; }
@@ -102,6 +109,8 @@ internal sealed record ProbeObject
 }
 
 internal sealed record ProbeImage(string Name, string Path, int[] Size, bool Loaded);
+
+internal sealed record ProbeUvSample(double[] Position, double[] Uv, double[]? ImageColour);
 
 internal sealed record ProbeFrame
 {

@@ -208,6 +208,21 @@ public class BlenderAnimationViewModelTests
         Assert.Equal(LabelRoofSource.SurveyFirst, vm.LabelRoof);
     }
 
+    [Fact]
+    public void Terrain_IsOffByDefault_ReachesTheSpec_AndComesBackFromAPreset()
+    {
+        var vm = Vm();
+        Assert.Equal(SurfaceMode.Off, vm.SurfaceMode);
+        Assert.Equal(System.Enum.GetValues<SurfaceMode>(), vm.SurfaceModes);
+
+        vm.SurfaceMode = SurfaceMode.Textured;
+        Assert.Equal(SurfaceMode.Textured, vm.CurrentSpec.Surface.Mode);
+
+        vm.SelectedPreset = vm.Presets.First(p => p.BuiltIn);
+        Assert.Equal(SurfaceMode.Off, vm.SurfaceMode);
+        Assert.Equal(SurfaceMode.Off, vm.CurrentSpec.Surface.Mode);
+    }
+
     // ---- validation + gating ----
 
     [Fact]

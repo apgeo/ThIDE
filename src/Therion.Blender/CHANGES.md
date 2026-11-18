@@ -1,5 +1,28 @@
 # Therion.Blender — changes for consumers
 
+## 2026-11-18 — the terrain surface, optionally with its image
+
+### Additive API
+- `SceneSpec.Surface` (`SurfaceSpec`): `Mode` (`SurfaceMode`: `Off`, the default, `Solid` or
+  `Textured`) and `Opacity` (0–1, default 0.5, validated as `surface.opacity`). The generated script
+  imports the terrain after the model's bounds are taken, so the camera still frames the cave. The
+  terrain is see-through from above at `Opacity` and invisible from below (alpha 0 on back faces,
+  the same in Cycles and EEVEE), and casts no shadow, so the sun rigs still light the cave under
+  it. `Textured` drapes the surface image through the terrain's UV map; with no image it draws the
+  terrain in one colour and the script prints a `THIDE:warning`. A spec asking for a terrain the
+  model does not have also warns, and renders without one.
+- `SourceSpec.SurfacePlyPath` and `.SurfaceImagePath`: the terrain files the script reads. They are
+  never embedded: a self-contained script draws the terrain only while the files are where they
+  were, and warns otherwise.
+- `ConversionOptions.IncludeSurface` (default false) and `.SurfaceFileName` (`surface.ply`): the
+  pipeline meshes the model's first surface (as Loch shows it) and saves its image beside it as
+  `surface.png` or `surface.jpg`, by the image's own signature. `ConversionManifest.SurfacePath`
+  and `.SurfaceImagePath` name what was written, or are null.
+
+### Behaviour change
+- The spec's JSON has the new fields, so `SPEC_HASH` of every generated script changes; with the
+  terrain off the scripts are otherwise byte-identical.
+
 ## 2026-11-18 — lead marker size and label roof are choices
 
 ### Additive API

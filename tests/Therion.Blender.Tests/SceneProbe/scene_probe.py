@@ -21,8 +21,8 @@
 #   --sheet-samples N   render samples for the sheet (default 16)
 #   --movie PATH        report a movie file's size, frame count and frame rate; nothing else
 #
-# Objects are told apart by the names the generator gives them (CaveModel, Camera, stn:<station>,
-# cmp:<n>, lead:<station>, leadtxt:<station>, overlay:<kind>), or by the role the player stamps on
+# Objects are told apart by the names the generator gives them (CaveModel, Terrain, Camera,
+# stn:<station>, cmp:<n>, lead:<station>, leadtxt:<station>, overlay:<kind>), or by the role the player stamps on
 # what it makes (the custom property "thide_role").
 #
 # Only bpy, mathutils and the standard library are used: the Blender packaged by a Linux
@@ -41,7 +41,7 @@ from mathutils.bvhtree import BVHTree
 
 PROBE_VERSION = 1
 
-ROLE_BY_NAME = {"CaveModel": "model", "Camera": "camera", "CameraTarget": "camera-target"}
+ROLE_BY_NAME = {"CaveModel": "model", "Terrain": "terrain", "Camera": "camera", "CameraTarget": "camera-target"}
 # "leadtxt:" must be tested before "lead:".
 ROLE_BY_PREFIX = (
     ("stn:", "station-label"),
@@ -54,9 +54,10 @@ ANNOTATION_ROLES = ("station-label", "component-label", "lead-text", "lead-marke
 GEOMETRY_TYPES = ("MESH", "FONT", "CURVE", "SURFACE")
 
 # One primary colour per role: every channel is 0 or 1, so a pixel classifies by thresholding at
-# one half whatever the colour management does to it.
+# one half whatever the colour management does to it. Black is the eighth and last one.
 ROLE_COLOURS = {
     "model": (1.0, 0.0, 0.0),
+    "terrain": (0.0, 0.0, 0.0),
     "station-label": (0.0, 1.0, 0.0),
     "component-label": (0.0, 1.0, 1.0),
     "lead-marker": (0.0, 0.0, 1.0),
@@ -67,6 +68,7 @@ ROLE_COLOURS = {
 ROLE_BY_BITS = {tuple(c > 0.5 for c in colour): role for role, colour in ROLE_COLOURS.items()}
 
 MAX_SAMPLED_VERTICES = 2000
+MAX_UV_SAMPLES = 64
 
 # 3x5 digits for the frame number stamped on each cell of the contact sheet.
 DIGITS = {
@@ -181,6 +183,10 @@ def describe_object(obj, depsgraph):
         info["vertices"] = len(obj.data.vertices)
         info["polygons"] = len(obj.data.polygons)
         info["colourAttributes"] = [a.name for a in obj.data.color_attributes]
+        info["uvMaps"] = [layer.name for layer in obj.data.uv_layers]
+        info["visibleShadow"] = bool(getattr(obj, "visible_shadow", True))
+        if obj.data.uv_layers:
+            info["uvSamples"] = uv_samples(obj)
     elif obj.type == "FONT":
         info["text"] = obj.data.body
         info["textSize"] = round(obj.data.size, 6)
@@ -195,6 +201,42 @@ def describe_object(obj, depsgraph):
         info["lens"] = round(obj.data.lens, 6)
         info["depthOfField"] = bool(obj.data.dof.use_dof)
     return info
+
+
+def first_image(obj):
+    for slot in obj.material_slots:
+        if slot.material and slot.material.node_tree:
+            for node in slot.material.node_tree.nodes:
+                if node.type == "TEX_IMAGE" and node.image is not None:
+                    return node.image
+    return None
+
+
+def uv_samples(obj):
+    """Where some vertices sit, their UV, and the colour of the material's image there (rows of
+    image.pixels run bottom-up, as UV v does)."""
+    mesh = obj.data
+    uv = mesh.uv_layers.active.data
+    image = first_image(obj)
+    pixels, width, height = None, 0, 0
+    if image is not None:
+        width, height = image.size  # reading the size loads the image
+        if width * height > 0:
+            pixels = array.array("f", bytes(4 * 4 * width * height))
+            image.pixels.foreach_get(pixels)
+    step = max(1, len(mesh.loops) // MAX_UV_SAMPLES)
+    samples = []
+    for index in range(0, len(mesh.loops), step):
+        u, v = uv[index].uv
+        sample = {"position": vec(obj.matrix_world @ mesh.vertices[mesh.loops[index].vertex_index].co),
+                  "uv": [round(u, 6), round(v, 6)]}
+        if pixels is not None:
+            x = min(width - 1, max(0, int(u * width)))
+            y = min(height - 1, max(0, int(v * height)))
+            at = 4 * (y * width + x)
+            sample["imageColour"] = [round(c, 4) for c in pixels[at:at + 4]]
+        samples.append(sample)
+    return samples
 
 
 def in_frame(x, y, depth, camera_data):

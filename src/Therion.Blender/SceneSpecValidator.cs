@@ -73,6 +73,10 @@ public static class SceneSpecValidator
         if (!IsUnitColor(spec.Materials.BaseColor))
             Bad("materials.baseColor", "Colour channels must be within 0–1.");
 
+        // ---- surface ----
+        if (spec.Surface.Opacity is < 0 or > 1 || double.IsNaN(spec.Surface.Opacity))
+            Bad("surface.opacity", "Surface opacity must be within 0–1.");
+
         // ---- lighting ----
         if (spec.Lighting.Strength is < 0 or > MaxLightStrength || double.IsNaN(spec.Lighting.Strength))
             Bad("lighting.strength", $"Light strength must be within 0–{MaxLightStrength}.");

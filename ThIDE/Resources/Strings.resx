@@ -438,6 +438,8 @@
   <data name="Blender_UI_LeadMarkerSize_Tip" xml:space="preserve"><value>Auto: from the passage in a flythrough, from the whole cave otherwise. Cave: always from the whole cave. Passage: always from the passage. CameraDistance: about the same size in the picture at any distance. HiddenInFlythrough: from the whole cave, and none in a flythrough.</value></data>
   <data name="Blender_UI_LabelRoof" xml:space="preserve"><value>Labels above</value></data>
   <data name="Blender_UI_LabelRoof_Tip" xml:space="preserve"><value>The roof a station label is lifted above. SurveyFirst: the surveyed up distance, else the walls. WallsFirst: the walls, else the surveyed up distance. WallsOnly: the walls only. None: labels sit on their stations.</value></data>
+  <data name="Blender_UI_Surface" xml:space="preserve"><value>Terrain</value></data>
+  <data name="Blender_UI_Surface_Tip" xml:space="preserve"><value>The terrain surface of a .lox model, above the cave. Off: none. Solid: in one colour. Textured: with the surface image draped over it (in one colour when the model has no image). From above it is half see-through, so the cave shows under it; from below it is invisible. The camera still frames the cave.</value></data>
   <data name="Blender_UI_Render" xml:space="preserve"><value>Render</value></data>
   <data name="Blender_UI_Export" xml:space="preserve"><value>Export script…</value></data>
   <data name="Blender_UI_ExportDir" xml:space="preserve"><value>Export folder</value></data>
