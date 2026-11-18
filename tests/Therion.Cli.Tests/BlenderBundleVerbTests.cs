@@ -112,6 +112,29 @@ public class BlenderBundleVerbTests : IDisposable
         Assert.Contains("--bundle", stderr);
     }
 
+    [Theory]
+    [InlineData("--draft", "--render-plan", "full")]                   // without --render
+    [InlineData("--render", "--render-plan", "everything")]            // not a choice
+    [InlineData("--render", "--render-plan", "draft")]                 // no draft in the bundle
+    [InlineData("--render", "--render-plan", "both")]
+    public async Task RenderPlan_ThatCannotBeRendered_IsAUsageError_AndWritesNothing(string flag, string option, string value)
+    {
+        string zip = Path.Combine(_dir, "cave.zip");
+        var (code, _, stderr) = await Run("blender", _lox, "--bundle", zip, flag, option, value);
+
+        Assert.Equal(2, code);
+        Assert.Contains("--render-plan", stderr);
+        Assert.False(File.Exists(zip));
+    }
+
+    [Fact]
+    public async Task RenderPlan_WithoutABundle_IsAUsageError()
+    {
+        var (code, _, stderr) = await Run("blender", _lox, "--render-plan", "full");
+        Assert.Equal(2, code);
+        Assert.Contains("--bundle", stderr);
+    }
+
     [Fact]
     public async Task Bundle_WithExport_OrWithoutAPath_IsAUsageError()
     {
@@ -123,7 +146,7 @@ public class BlenderBundleVerbTests : IDisposable
     // ---- with a real Blender ----
 
     [BlenderSmokeFact]
-    public async Task Render_RendersTheDraftOfTheBundle_AndPutsItBesideTheZip()
+    public async Task Render_RendersTheDraftOfTheBundle_AndPutsItBesideTheZip_OrThePlansItIsAskedFor()
     {
         string spec = Path.Combine(_dir, "spec.json");
         await File.WriteAllTextAsync(spec, """
@@ -147,7 +170,27 @@ public class BlenderBundleVerbTests : IDisposable
         Assert.All(frames, f => Assert.True(new FileInfo(f).Length > 0, f));
         Assert.Contains("[Rendering]", stderr);
 
-        // Into a folder of its own, the full plan this time.
+        // The full plan of a bundle with a draft, when asked for, and nothing of the draft.
+        string fullOnly = Path.Combine(_dir, "full-only");
+        (code, stdout, stderr) = await Run([.. args, "--render-plan", "full", "--out", fullOnly]);
+        Assert.True(code == 0, stderr);
+        Assert.Equal(
+            [.. Enumerable.Range(1, 4).Select(i => Path.Combine(fullOnly, $"view_{i:0000}.png"))],
+            stdout.Trim().Split('\n').Select(l => l.Trim()).Skip(1));
+
+        // Both: the draft first, for a look while the full plan renders.
+        string both = Path.Combine(_dir, "both");
+        (code, stdout, stderr) = await Run([.. args, "--render-plan", "both", "--out", both]);
+        Assert.True(code == 0, stderr);
+        Assert.Equal(
+            [.. Enumerable.Range(1, 4).Select(i => Path.Combine(both, $"view-draft_{i:0000}.png")),
+             .. Enumerable.Range(1, 4).Select(i => Path.Combine(both, $"view_{i:0000}.png"))],
+            stdout.Trim().Split('\n').Select(l => l.Trim()).Skip(1));
+        Assert.True(
+            stderr.IndexOf("rendered scene-plan.draft.json", StringComparison.Ordinal) < stderr.IndexOf("rendered scene-plan.json", StringComparison.Ordinal),
+            stderr);
+
+        // Into a folder of its own, the full plan of a bundle without a draft.
         string outDir = Path.Combine(_dir, "full");
         args.Remove("--draft");
         (code, stdout, stderr) = await Run([.. args, "--out", outDir]);

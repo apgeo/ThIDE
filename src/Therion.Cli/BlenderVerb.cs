@@ -50,11 +50,13 @@ public static class BlenderVerb
 
         string? bundle = Option(args, "--bundle");
         bool draft = Flag(args, "--draft"), render = Flag(args, "--render");
-        if (bundle is null && (draft || render))
+        string? renderPlan = Option(args, "--render-plan");
+        if (bundle is null && (draft || render || renderPlan is not null))
         {
-            stderr.WriteLine("error: --draft and --render go with --bundle <file.zip|folder>.");
+            stderr.WriteLine("error: --draft, --render and --render-plan go with --bundle <file.zip|folder>.");
             return 2;
         }
+        if (!TryRenderPlans(renderPlan, draft, render, stderr, out var plans)) return 2;
         if (bundle is not null)
         {
             if (bundle.StartsWith("--", StringComparison.Ordinal) || Option(args, "--export") is not null)
@@ -63,7 +65,7 @@ public static class BlenderVerb
                 return 2;
             }
             var model = new ResolvedModelSource { Path = Path.GetFullPath(source), Format = format, Kind = ModelSourceKind.ExternalFile };
-            return await BundleAsync(model, spec, bundle, draft, render, Option(args, "--out"), Option(args, "--blender"), stdout, stderr)
+            return await BundleAsync(model, spec, bundle, draft, plans, Option(args, "--out"), Option(args, "--blender"), stdout, stderr)
                 .ConfigureAwait(false);
         }
 
@@ -111,11 +113,57 @@ public static class BlenderVerb
         }
     }
 
+    /// <summary>Which plans of a bundle <c>--render</c> renders, in order.</summary>
+    [Flags]
+    private enum RenderPlans
+    {
+        None = 0,
+        Draft = 1,
+        Full = 2,
+    }
+
+    /// <summary>
+    /// What <c>--render</c> renders: <c>--render-plan full|draft|both</c>, or by default the draft
+    /// when the bundle has one and the full plan otherwise. A bundle made with <c>--draft</c> is
+    /// usually made for a quick look at the camera move before the long render, and the full
+    /// render stays one option away; both renders the draft first.
+    /// </summary>
+    private static bool TryRenderPlans(string? choice, bool draft, bool render, TextWriter stderr, out RenderPlans plans)
+    {
+        plans = RenderPlans.None;
+        if (choice is not null && !render)
+        {
+            stderr.WriteLine("error: --render-plan goes with --render.");
+            return false;
+        }
+        if (!render) return true;
+        plans = choice?.ToLowerInvariant() switch
+        {
+            null => draft ? RenderPlans.Draft : RenderPlans.Full,
+            "full" => RenderPlans.Full,
+            "draft" => RenderPlans.Draft,
+            "both" => RenderPlans.Draft | RenderPlans.Full,
+            _ => RenderPlans.None,
+        };
+        if (plans == RenderPlans.None)
+        {
+            stderr.WriteLine($"error: --render-plan takes full, draft or both, not '{choice}'.");
+            return false;
+        }
+        if (plans.HasFlag(RenderPlans.Draft) && !draft)
+        {
+            stderr.WriteLine($"error: --render-plan {choice} renders the draft, which a bundle has only with --draft.");
+            return false;
+        }
+        return true;
+    }
+
     /// <summary>Writes a render bundle (a zip, or a folder when the path does not end in .zip)
-    /// and, with <paramref name="render"/>, renders it: a zip is unpacked into a temporary folder
-    /// first, and what it writes is moved to <paramref name="outDir"/>, or beside the zip.</summary>
+    /// and renders the <paramref name="plans"/> asked for: a zip is unpacked into a temporary
+    /// folder first, and what they write is moved to <paramref name="outDir"/>, or beside the
+    /// zip.</summary>
     private static async Task<int> BundleAsync(
-        ResolvedModelSource model, SceneSpec spec, string bundle, bool draft, bool render, string? outDir,
+        ResolvedModelSource model, SceneSpec spec, string bundle, bool draft, RenderPlans plans, string? outDir,
         string? blenderOverride, TextWriter stdout, TextWriter stderr)
     {
         bool zip = bundle.EndsWith(".zip", StringComparison.OrdinalIgnoreCase);
@@ -147,7 +195,7 @@ public static class BlenderVerb
             stderr.WriteLine($"warning: the bundle leaves out '{lost}': a scene plan cannot say it yet.");
         stdout.WriteLine(Path.GetFullPath(bundle));
         stderr.WriteLine($"wrote a render bundle{(draft ? " with a draft" : "")} to {bundle}");
-        if (!render) return 0;
+        if (plans == RenderPlans.None) return 0;
 
         var located = new BlenderLocator(new ProcessBlenderProbe()).Locate(blenderOverride);
         if (!located.IsUsable)
@@ -171,39 +219,43 @@ public static class BlenderVerb
                 return 1;
             }
         }
-        var plan = draft ? content.Draft! : content.Plan;
-        string planFile = Path.Combine(folder, draft ? RenderBundleWriter.DraftPlanFileName : ScenePlanSerializer.FileName);
-        var job = new RenderJob(
-            Path.Combine(folder, PlayerFiles.EntryFileName), folder, plan.Timeline.FrameCount,
-            OutputOf(plan, Path.GetFullPath(Path.Combine(folder, plan.Output.Directory))))
-        {
-            ScriptArguments = ["--plan", planFile],
-        };
-        var progress = new Progress<RenderProgress>(p => stderr.WriteLine($"[{p.Phase}] {p.Message}"));
-        var result = await new BlenderRunner(new RealBlenderProcessLauncher()).RunAsync(blender, job, progress).ConfigureAwait(false);
-        if (!result.Succeeded)
-        {
-            stderr.WriteLine($"error: render failed ({result.FailureKind}): {result.ErrorMessage}");
-            if (zip) stderr.WriteLine($"the unpacked bundle and its job.log are in {folder}");
-            return 1;
-        }
-        foreach (string warning in result.Warnings) stderr.WriteLine($"warning: {warning}");
-
+        var toRender = new List<(ScenePlan Plan, string File)>();
+        if (plans.HasFlag(RenderPlans.Draft)) toRender.Add((content.Draft!, RenderBundleWriter.DraftPlanFileName));
+        if (plans.HasFlag(RenderPlans.Full)) toRender.Add((content.Plan, ScenePlanSerializer.FileName));
         string? destination = outDir ?? (zip ? Path.GetDirectoryName(Path.GetFullPath(bundle)) : null);
-        var outputs = result.OutputPaths.ToList();
-        if (destination is not null)
+        var progress = new Progress<RenderProgress>(p => stderr.WriteLine($"[{p.Phase}] {p.Message}"));
+        foreach (var (plan, file) in toRender)
         {
-            Directory.CreateDirectory(destination);
-            for (int i = 0; i < outputs.Count; i++)
+            var job = new RenderJob(
+                Path.Combine(folder, PlayerFiles.EntryFileName), folder, plan.Timeline.FrameCount,
+                OutputOf(plan, Path.GetFullPath(Path.Combine(folder, plan.Output.Directory))))
             {
-                string target = Path.Combine(destination, Path.GetFileName(outputs[i]));
-                File.Move(outputs[i], target, overwrite: true);
-                outputs[i] = target;
+                ScriptArguments = ["--plan", Path.Combine(folder, file)],
+            };
+            var result = await new BlenderRunner(new RealBlenderProcessLauncher()).RunAsync(blender, job, progress).ConfigureAwait(false);
+            if (!result.Succeeded)
+            {
+                stderr.WriteLine($"error: render of {file} failed ({result.FailureKind}): {result.ErrorMessage}");
+                if (zip) stderr.WriteLine($"the unpacked bundle and its job.log are in {folder}");
+                return 1;
             }
+            foreach (string warning in result.Warnings) stderr.WriteLine($"warning: {warning}");
+
+            var outputs = result.OutputPaths.ToList();
+            if (destination is not null)
+            {
+                Directory.CreateDirectory(destination);
+                for (int i = 0; i < outputs.Count; i++)
+                {
+                    string target = Path.Combine(destination, Path.GetFileName(outputs[i]));
+                    File.Move(outputs[i], target, overwrite: true);
+                    outputs[i] = target;
+                }
+            }
+            foreach (string path in outputs) stdout.WriteLine(path);
+            stderr.WriteLine($"rendered {file}: {result.FrameCount} frame(s) on {result.Device} in {result.Duration.TotalSeconds:0.0}s");
         }
         if (unpacked is not null) TryDelete(unpacked);
-        foreach (string path in outputs) stdout.WriteLine(path);
-        stderr.WriteLine($"rendered {result.FrameCount} frame(s) on {result.Device} in {result.Duration.TotalSeconds:0.0}s");
         return 0;
     }
 

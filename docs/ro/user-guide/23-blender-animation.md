@@ -114,7 +114,8 @@ mai nou, fără ThIDE:
 
 ```
 therion-cli blender <model.lox|.3d> [--preset "Full flythrough" | --spec spec.json] \
-                    --bundle cave-bundle.zip [--draft] [--render] [--out <dir>] [--blender <path>]
+                    --bundle cave-bundle.zip [--draft] [--render [--render-plan full|draft|both]] \
+                    [--out <dir>] [--blender <path>]
 ```
 
 Pachetul conține planul scenei (`scene-plan.json`: mișcarea camerei, aspectul și ieșirea, ca JSON
@@ -134,7 +135,11 @@ Windows); variabila de mediu `BLENDER` indică altă instalare, de exemplu
   mișcarea camerei înainte de randarea lungă.
 - `--render` randează pachetul și aici, cu Blender-ul găsit de ThIDE (sau cel dat cu `--blender`):
   arhiva este dezarhivată într-un dosar temporar, iar ce se randează este mutat lângă arhivă sau în
-  `--out`. Împreună cu `--draft` se randează previzualizarea.
+  `--out`. Fără `--draft` se randează planul complet; cu `--draft` se randează previzualizarea,
+  pentru că un pachet făcut cu `--draft` e de obicei făcut pentru o privire rapidă asupra mișcării
+  camerei, înainte de randarea lungă. Randarea completă rămâne la o opțiune distanță:
+  `--render-plan` alege `full` (planul complet), `draft` (previzualizarea) sau `both` (întâi
+  previzualizarea, apoi planul complet). `draft` și `both` cer `--draft`.
 - Același model cu aceleași setări dă întotdeauna, sub același nume, aceeași arhivă, octet cu
   octet.
 - Un plan de scenă nu poate exprima încă tot ce poate panoul: suprapunerile (titlu, scară grafică,

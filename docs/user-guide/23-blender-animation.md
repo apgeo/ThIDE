@@ -105,7 +105,8 @@ end in `.zip`), for rendering on any computer with Blender 4.2 or newer and with
 
 ```
 therion-cli blender <model.lox|.3d> [--preset "Full flythrough" | --spec spec.json] \
-                    --bundle cave-bundle.zip [--draft] [--render] [--out <dir>] [--blender <path>]
+                    --bundle cave-bundle.zip [--draft] [--render [--render-plan full|draft|both]] \
+                    [--out <dir>] [--blender <path>]
 ```
 
 The bundle holds the scene plan (`scene-plan.json`: the camera move, the look and the output, as
@@ -124,7 +125,10 @@ Windows); the `BLENDER` environment variable names another one, for example
   render.
 - `--render` also renders the bundle here, with the Blender ThIDE finds (or `--blender`): the zip is
   unpacked into a temporary folder and what it renders is moved next to the zip, or into `--out`.
-  With `--draft` it renders the draft.
+  Without `--draft` it renders the full plan; with `--draft` it renders the draft, because a
+  bundle made with `--draft` is usually made for a quick look at the camera move before the long
+  render. The full render stays one option away: `--render-plan` chooses `full`, `draft` or
+  `both` (the draft first, then the full plan). `draft` and `both` need `--draft`.
 - The same model and settings always give the same zip under the same name, byte for byte.
 - A scene plan cannot yet say everything the panel can: overlays (title, scale bar, north arrow,
   depth legend), the timed showing and hiding of labels, the HDRI light rig and the terrain surface

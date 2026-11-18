@@ -62,9 +62,11 @@ static void PrintHelp()
     Console.WriteLine("                                         Fit geological planes (strike/dip) from 'geo' shots.");
     Console.WriteLine("  therion-cli blender <model.lox|.3d> [--preset \"<name>\" | --spec <spec.json>] [--out <dir>] [--export <dir>] [--blender <path>]");
     Console.WriteLine("                                         Render (or --export) a Blender presentation of a 3D model, headless.");
-    Console.WriteLine("  therion-cli blender <model.lox|.3d> [--preset \"<name>\" | --spec <spec.json>] --bundle <file.zip|folder> [--draft] [--render] [--out <dir>] [--blender <path>]");
+    Console.WriteLine("  therion-cli blender <model.lox|.3d> [--preset \"<name>\" | --spec <spec.json>] --bundle <file.zip|folder> [--draft]");
+    Console.WriteLine("                     [--render [--render-plan full|draft|both]] [--out <dir>] [--blender <path>]");
     Console.WriteLine("                                         Write a render bundle (scene plan, mesh, player, run scripts) to render with any Blender 4.2+;");
-    Console.WriteLine("                                         --draft adds a quick draft plan, --render renders it (the draft, with --draft) here.");
+    Console.WriteLine("                                         --draft adds a quick draft plan, --render renders the bundle here: its draft when it has one,");
+    Console.WriteLine("                                         else the full plan, or what --render-plan names.");
     Console.WriteLine("  therion-cli build <thconfig|folder> [--all] [--therion <path>] [--quiet] [--no-log] [--json] [--stop-on-failure]");
     Console.WriteLine("                                         Compile with Therion and print a summary; exit 0 only if all succeed.");
     Console.WriteLine("  therion-cli new --list                 List project templates (built-in and imported).");
