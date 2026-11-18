@@ -128,6 +128,42 @@ public static class ScenePlanBuilder
         };
     }
 
+    /// <summary>The samples of a draft: enough to smooth the edges.</summary>
+    public const int DraftSamples = 8;
+
+    /// <summary>
+    /// The same plan with a fast look, to see the camera move and the framing before the long
+    /// render: a smaller picture, few samples, and by default Blender's solid view
+    /// (<see cref="PlanEngine.Workbench"/>), which draws a frame in a fraction of a second on any
+    /// machine. <see cref="PlanEngine.Eevee"/> keeps the materials and the lights.
+    /// </summary>
+    /// <param name="scale">The picture's size as a share of the plan's, above 0 and up to 1.</param>
+    /// <remarks>The draft writes beside the real output, under the base name with
+    /// <c>-draft</c> added. It always renders, and does not save the scene as a Blender file.</remarks>
+    public static ScenePlan Draft(ScenePlan plan, double scale = 0.5, PlanEngine engine = PlanEngine.Workbench)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        if (!(scale > 0 && scale <= 1))
+            throw new ArgumentOutOfRangeException(nameof(scale), scale, "A draft's scale is above 0 and at most 1.");
+        return plan with
+        {
+            Features = plan.Features.Where(f => f != ScenePlan.BlendFileFeature).ToList(),
+            Look = plan.Look with
+            {
+                Engine = engine,
+                Samples = Math.Min(plan.Look.Samples, DraftSamples),
+                Width = Scaled(plan.Look.Width, scale),
+                Height = Scaled(plan.Look.Height, scale),
+            },
+            Output = plan.Output with { BaseName = plan.Output.BaseName + "-draft", Render = true },
+            Blend = null,
+        };
+    }
+
+    /// <summary>A side of a smaller picture: even, as a video needs it.</summary>
+    private static int Scaled(int pixels, double scale)
+        => Math.Max(SceneSpecValidator.MinResolution, 2 * (int)Math.Round(pixels * scale / 2.0));
+
     /// <summary>Lists a module of the player among <paramref name="features"/>, at its place
     /// in the running order (<see cref="ScenePlan.PlayerFeatures"/>): before the first module
     /// that runs after it. Modules from elsewhere stay where they are.</summary>

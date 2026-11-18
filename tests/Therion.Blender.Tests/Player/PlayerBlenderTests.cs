@@ -459,6 +459,102 @@ public class PlayerBlenderTests
         Assert.DoesNotContain(report.Objects, o => o.Type == "EMPTY" && o.Name != "CameraTarget");
     }
 
+    // ---- a draft ----
+
+    /// <summary>What draft_colours.py reports of one model.</summary>
+    private sealed record ShownColours(string? Shown, string[] Attributes, double[]? Lowest, double[]? Highest, int Different);
+
+    [BlenderFact]
+    public async Task ADraft_ShowsEveryModelInTheColoursOfItsMaterial()
+    {
+        var walls = Small.Value.Conversion.Geometry.Walls;
+        string dir = PlayerRunner.NewCase("draft-colours");
+        PlyWriter.WriteFile(walls, Path.Combine(dir, "a.ply"));
+        PlyWriter.WriteFile(walls with { VertexColors = null }, Path.Combine(dir, "bare.ply"));
+        var (blue, red, green) = (new ColorRgb(0, 0, 1), new ColorRgb(1, 0, 0), new ColorRgb(0.2, 0.6, 0.3));
+        PlanColorStop[] stops = [new(0, blue), new(0.5, green), new(1, red)];
+        var up = new CaveVector3(0, 0, 500);
+        var first = PlayerRunner.PlanFor(Small.Value, Orbit);
+        var plan = ScenePlanBuilder.Draft(first with
+        {
+            Models =
+            [
+                new PlanModel { Id = "Ramped", Path = "a.ply", Material = "ramp" },
+                new PlanModel { Id = "RampedAbove", Path = "a.ply", Material = "ramp", Translation = up },
+                new PlanModel { Id = "Plain", Path = "a.ply", Material = "plain" },
+                new PlanModel { Id = "Noisy", Path = "a.ply", Material = "noise" },
+                new PlanModel { Id = "Baked", Path = "a.ply", Material = "baked" },
+                new PlanModel { Id = "BakedBare", Path = "bare.ply", Material = "baked" },
+                new PlanModel { Id = "AsItCame", Path = "a.ply" },
+            ],
+            Look = first.Look with
+            {
+                Materials =
+                [
+                    new PlanMaterial { Id = "ramp", Kind = PlanMaterialKind.HeightRamp, Stops = stops, Low = walls.Bounds.Min.Z, High = walls.Bounds.Max.Z },
+                    new PlanMaterial { Id = "plain", Kind = PlanMaterialKind.Flat, Color = green },
+                    new PlanMaterial { Id = "noise", Kind = PlanMaterialKind.NoiseRamp, Color = red, Stops = [stops[0], stops[2]] },
+                    new PlanMaterial { Id = "baked", Kind = PlanMaterialKind.VertexColor, Color = blue },
+                ],
+            },
+        });
+        var job = PlayerWriter.WriteJob(plan, dir);
+        string coloursPath = Path.Combine(dir, "colours.json");
+
+        var report = await PlayerRunner.ProbeAsync(job.ScriptPath, OneFrame);
+        var (exitCode, log) = await BlenderTestProcess.RunAsync(
+            SceneProbeRunner.Blender.Path,
+            ["--python", job.ScriptPath, "--python", PlayerRunner.DraftColoursScript, "--", "--build-only", "--colours", coloursPath], dir, 600);
+        Assert.True(exitCode == 0 && File.Exists(coloursPath), "No colours were reported: " + BlenderTestProcess.ExceptionLine(log));
+        var colours = JsonSerializer.Deserialize<Dictionary<string, ShownColours>>(
+            File.ReadAllText(coloursPath), new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
+
+        Assert.Equal("BLENDER_WORKBENCH", report.Scene.Engine);
+        Assert.Equal([160, 90], report.Scene.Resolution);
+
+        // A ramp over height: the colour of each vertex where it stands in the frame.
+        var ramped = colours["Ramped"];
+        Assert.Equal("ThideDraft", ramped.Shown);
+        AssertNear(Rgb(blue), ramped.Lowest!, 2e-3, "the lowest vertex");
+        AssertNear(Rgb(red), ramped.Highest!, 2e-3, "the highest vertex");
+        Assert.True(ramped.Different > 50, $"only {ramped.Different} colours along the ramp");
+        Assert.Equal((1, "ThideDraft"), (colours["RampedAbove"].Different, colours["RampedAbove"].Shown));
+        AssertNear(Rgb(red), colours["RampedAbove"].Lowest!, 1e-4, "a model above the ramp");
+
+        // One colour: a flat material's, and a noise ramp's plain one.
+        Assert.Equal((1, "ThideDraft"), (colours["Plain"].Different, colours["Plain"].Shown));
+        AssertNear(Rgb(green), colours["Plain"].Lowest!, 1e-4, "the flat material");
+        Assert.Equal((1, "ThideDraft"), (colours["Noisy"].Different, colours["Noisy"].Shown));
+        AssertNear(Rgb(red), colours["Noisy"].Lowest!, 1e-4, "the noise ramp");
+
+        // The mesh's own colours stay what is shown; a mesh without any gets the plain colour.
+        Assert.DoesNotContain("ThideDraft", colours["Baked"].Attributes);
+        Assert.NotNull(colours["Baked"].Shown);
+        Assert.True(colours["Baked"].Different > 50);
+        Assert.Equal((1, "ThideDraft"), (colours["BakedBare"].Different, colours["BakedBare"].Shown));
+        AssertNear(Rgb(blue), colours["BakedBare"].Lowest!, 1e-4, "the mesh without colours");
+        Assert.DoesNotContain("ThideDraft", colours["AsItCame"].Attributes);
+    }
+
+    [BlenderFact]
+    public async Task ADraft_RendersTheSmallerPicture_InTheSolidView()
+    {
+        var spec = Flythrough(frames: 4) with { Output = new OutputSpec { Kind = OutputKind.Video, Width = 320, Height = 180, BaseName = "clip" } };
+        var (plan, job) = PlayerRunner.WriteJob("draft-render", Medium.Value, spec, plan => ScenePlanBuilder.Draft(plan));
+
+        var result = await new BlenderRunner(new RealBlenderProcessLauncher()).RunAsync(
+            SceneProbeRunner.Blender,
+            new RenderJob(job.ScriptPath, job.Folder, plan.Timeline.FrameCount, spec.Output with { OutputDirectory = job.Folder, BaseName = "clip-draft" }),
+            new SyncProgress<RenderProgress>(_ => { }));
+
+        Assert.True(result.Succeeded, $"{result.FailureKind}: {result.ErrorMessage}\n  logs: {job.Folder}");
+        Assert.Equal("WORKBENCH", result.Device);
+        Assert.Equal([Path.Combine(job.Folder, "clip-draft.mp4")], result.OutputPaths);
+        var movie = await SceneProbeRunner.ReadMovieAsync(result.OutputPaths[0]);
+        Assert.Equal([160, 90], movie.Size);
+        Assert.Equal(4, movie.Frames);
+    }
+
     // ---- the scene as a Blender file ----
 
     private static SceneSpec Parts(int frames) => Flythrough(frames) with
@@ -761,6 +857,8 @@ public class PlayerBlenderTests
     // ---- helpers ----
 
     private static double[] Array(CaveVector3 v) => [v.X, v.Y, v.Z];
+
+    private static double[] Rgb(ColorRgb c) => [c.R, c.G, c.B];
 
     private static CaveVector3 Vector(double[] v) => new(v[0], v[1], v[2]);
 

@@ -2,6 +2,10 @@
 
 Runs after "models" and "camera_track": it gives the models the materials they ask for, and a
 headlamp rides the camera.
+
+The engine "workbench" is the draft look: Blender's solid view, many times faster than a real
+render. It knows no lights and no node materials, so every model is given the colours of its
+material as a colour attribute, which that engine does show.
 """
 
 import bpy
@@ -27,10 +31,12 @@ def build(ctx, look):
         use_cycles(scene, look)
     elif engine == "eevee":
         use_eevee(scene, look)
+    elif engine == "workbench":
+        use_workbench(scene, look)
     else:
         raise api.PlanError('look.engine: unknown engine "%s"' % engine)
 
-    give_materials(scene, look.get("materials", []))
+    give_materials(scene, look.get("materials", []), draft=engine == "workbench")
     for index, light in enumerate(look.get("lights", [])):
         add_light(scene, light, "look.lights[%d]" % index)
     if look.get("world"):
@@ -97,11 +103,29 @@ def use_eevee(scene, look):
     api.report("device", "EEVEE")
 
 
+def use_workbench(scene, look):
+    scene.render.engine = "BLENDER_WORKBENCH"
+    shading = scene.display.shading
+    shading.light = "STUDIO"
+    shading.color_type = "VERTEX"  # the colour attribute of each mesh: see show_in_draft
+    shading.show_cavity = True     # darkens creases, which is what shows the shape of a passage
+    # The samples pick the anti-aliasing: none, a fast approximation, or one of five levels.
+    samples = look.get("samples", 8)
+    levels = [level for level in (5, 8, 11, 16, 32) if level <= samples]
+    scene.display.render_aa = str(levels[-1]) if levels else "FXAA" if samples > 1 else "OFF"
+    api.report("device", "WORKBENCH")
+
+
 # ---- materials ----
 
-def give_materials(scene, materials):
+DRAFT_COLOURS = "ThideDraft"
+
+
+def give_materials(scene, materials, draft=False):
     specs = {spec["id"]: spec for spec in materials}
     made = {}
+    if draft:
+        bpy.context.view_layer.update()  # where the models stand, for a ramp over height
     for obj in api.with_role(scene, "model"):
         wanted = obj.get("thide_material")
         if not wanted:
@@ -118,6 +142,39 @@ def give_materials(scene, materials):
             made[key] = make_material(spec, plain)
         obj.data.materials.clear()
         obj.data.materials.append(made[key])
+        if draft and not (spec.get("kind") == "vertexColor" and not plain):
+            show_in_draft(obj, spec)
+
+
+def show_in_draft(obj, spec):
+    """Gives the mesh the colours of its material as a colour attribute, and makes it the one
+    the solid view shows: one colour, or a ramp over the height of each vertex. A noise ramp
+    shows as the material's plain colour."""
+    mesh = obj.data
+    if spec.get("kind") == "heightRamp":
+        low, span = spec["low"], spec["high"] - spec["low"]
+        colours = []
+        for vertex in mesh.vertices:
+            height = (obj.matrix_world @ vertex.co).z
+            colours.extend(rgba(ramp_colour(spec["stops"], (height - low) / span if span > 0.0 else 0.0)))
+    else:
+        colours = rgba(spec["color"]) * len(mesh.vertices)
+    attribute = mesh.color_attributes.new(DRAFT_COLOURS, "FLOAT_COLOR", "POINT")
+    attribute.data.foreach_set("color", colours)
+    mesh.color_attributes.active_color = attribute
+
+
+def ramp_colour(stops, at):
+    """The colour of a ramp at a place between 0 and 1: straight from stop to stop, as the
+    ramp of the material mixes them."""
+    if at <= stops[0]["at"]:
+        return stops[0]["color"]
+    for low, high in zip(stops, stops[1:]):
+        if at <= high["at"]:
+            span = high["at"] - low["at"]
+            share = (at - low["at"]) / span if span > 0.0 else 1.0
+            return [a + (b - a) * share for a, b in zip(low["color"], high["color"])]
+    return stops[-1]["color"]
 
 
 def rgba(colour):
@@ -127,6 +184,8 @@ def rgba(colour):
 def make_material(spec, plain):
     kind = "flat" if plain else spec.get("kind", "flat")
     material = bpy.data.materials.new(spec["id"])
+    if "color" in spec:
+        material.diffuse_color = rgba(spec["color"])  # in Blender's solid view
     material.use_nodes = True
     tree = material.node_tree
     shader = next(node for node in tree.nodes if node.type == "BSDF_PRINCIPLED")
@@ -215,11 +274,14 @@ def set_world(scene, spec):
     world.use_nodes = True
     tree = world.node_tree
     background = next(node for node in tree.nodes if node.type == "BACKGROUND")
-    background.inputs["Strength"].default_value = spec.get("strength", 1.0)
+    strength = spec.get("strength", 1.0)
+    background.inputs["Strength"].default_value = strength
     kind = spec.get("kind", "color")
     if kind == "color":
         background.inputs["Color"].default_value = rgba(spec["color"])
+        world.color = [min(1.0, channel * strength) for channel in spec["color"]]  # the draft's background
     elif kind == "sky":
+        world.color = [min(1.0, channel * strength) for channel in (0.35, 0.55, 0.9)]  # a draft has no sky
         sky = tree.nodes.new("ShaderNodeTexSky")
         # Blender 4 calls the physical sky NISHITA; Blender 5 has the two scattering models instead.
         api.set_enum(sky, "sky_type", ("NISHITA", "MULTIPLE_SCATTERING", "SINGLE_SCATTERING"))

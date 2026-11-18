@@ -34,8 +34,15 @@ public enum PlanInterpolation
 /// <summary>The render engine.</summary>
 public enum PlanEngine
 {
+    /// <summary>The path tracer: the real picture, and the slow one.</summary>
     Cycles,
+    /// <summary>The rasteriser: the same materials and lights without bounced light.</summary>
     Eevee,
+    /// <summary>Blender's solid view, for a draft: no lights, no shadows, no noise; every model
+    /// in the colours of its material, a ramp over height included. <see cref="PlanLook.Samples"/>
+    /// picks the anti-aliasing: 1 is none, up to 4 a fast approximation, then the largest of 5, 8,
+    /// 11, 16 and 32 that it reaches.</summary>
+    Workbench,
 }
 
 /// <summary>The Cycles device. <see cref="Auto"/> tries every GPU backend and falls back to

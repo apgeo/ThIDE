@@ -342,6 +342,57 @@ public class ScenePlanBuilderTests
         Assert.Empty(ScenePlanValidator.Validate(saved));
     }
 
+    // ---- a draft ----
+
+    [Fact]
+    public void Draft_IsTheSamePlan_SmallerAndInTheSolidView_BesideTheRealOutput()
+    {
+        var plan = ScenePlanBuilder.SaveBlend(PlanFixtures.PlanOf(PlanFixtures.Preset("Full flythrough")), render: false);
+
+        var draft = ScenePlanBuilder.Draft(plan);
+
+        Assert.Equal(PlanEngine.Workbench, draft.Look.Engine);
+        Assert.Equal((960, 540, 8), (draft.Look.Width, draft.Look.Height, draft.Look.Samples));
+        Assert.Equal("cave-render-draft", draft.Output.BaseName);
+        Assert.Equal(plan.Output.Directory, draft.Output.Directory);
+        // A draft is for looking at: it renders, and leaves the saved scene alone.
+        Assert.True(draft.Output.Render);
+        Assert.Null(draft.Blend);
+        Assert.DoesNotContain("blend_file", draft.Features);
+        // Everything else is the plan's.
+        Assert.Same(plan.Camera, draft.Camera);
+        Assert.Same(plan.Models, draft.Models);
+        Assert.Same(plan.Look.Materials, draft.Look.Materials);
+        Assert.Same(plan.Look.Lights, draft.Look.Lights);
+        Assert.Equal(plan.Timeline, draft.Timeline);
+        Assert.Empty(ScenePlanValidator.Validate(draft));
+        Assert.Empty(JsonSchemaSubset.Validate(ScenePlanSchema.Text, ScenePlanSerializer.Write(draft)));
+    }
+
+    [Theory]
+    [InlineData(1920, 1080, 0.25, 480, 270)]
+    [InlineData(1920, 1080, 1.0, 1920, 1080)]
+    [InlineData(1000, 562, 0.333, 332, 188)] // even, as a video needs it
+    [InlineData(64, 36, 0.1, 16, 16)]        // never below the smallest picture
+    public void Draft_ScalesThePicture_ToEvenSides(int width, int height, double scale, int draftWidth, int draftHeight)
+    {
+        var plan = PlanFixtures.PlanOf(new SceneSpec { Output = new OutputSpec { Width = width, Height = height } });
+
+        var draft = ScenePlanBuilder.Draft(plan, scale);
+
+        Assert.Equal((draftWidth, draftHeight), (draft.Look.Width, draft.Look.Height));
+    }
+
+    [Fact]
+    public void Draft_CanKeepMaterialsAndLights_WithFewSamples_AndNeverAddsSamples()
+    {
+        var plan = PlanFixtures.PlanOf(new SceneSpec { Engine = new EngineSpec { Samples = 4 } });
+
+        Assert.Equal((PlanEngine.Eevee, 4), (ScenePlanBuilder.Draft(plan, engine: PlanEngine.Eevee).Look.Engine, ScenePlanBuilder.Draft(plan).Look.Samples));
+        Assert.Throws<ArgumentOutOfRangeException>(() => ScenePlanBuilder.Draft(plan, scale: 0));
+        Assert.Throws<ArgumentOutOfRangeException>(() => ScenePlanBuilder.Draft(plan, scale: 1.5));
+    }
+
     // ---- what a plan does not say yet ----
 
     [Fact]

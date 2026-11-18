@@ -1,6 +1,6 @@
 # Therion.Blender — changes for consumers
 
-## 2026-11-18 (player) — more in a plan: models turned and stretched, the scene as a .blend file
+## 2026-11-18 (player) — more in a plan: models turned and stretched, the scene as a .blend file, a draft look
 
 Additive. The script generator, its scripts and the render service are untouched; a plan written
 before reads and plays as before. The plan stays version 1: every addition is an optional field or
@@ -29,6 +29,18 @@ a new module name in `features`.
   - The meshes are in the file; it needs neither the plan nor the player. A Cycles device is a
     setting of the machine, not of the file: a GPU is chosen where the file is rendered
     (`blender -b scene.blend -a -- --cycles-device OPTIX`).
+- **A draft look**: `PlanEngine.Workbench` (JSON `"engine": "workbench"`), Blender's solid view.
+  It draws no lights, shadows or node materials, so the player gives every model the colours of its
+  material as a colour attribute (`ThideDraft`): one colour for a flat material and for a noise
+  ramp, the ramp itself for a height ramp, the mesh's own colours for a vertex-colour material.
+  `PlanLook.Samples` picks the anti-aliasing there. The background is the world's colour.
+  **`ScenePlanBuilder.Draft(plan, scale, engine)`** gives the same plan with that look: half the
+  picture size by default, at most 8 samples, the output's base name with `-draft` added, and no
+  saved scene. `engine: PlanEngine.Eevee` keeps materials and lights instead. A draft is one more
+  plan beside the real one (`render.py -- --plan draft.json`), not a switch of the player.
+  Measured on the invented medium cave, Blender 5.0.1 on a CPU, machine busy with other work:
+  the flythrough at 1920×1080 with 96 samples takes about 58 s a frame in Cycles and 0.34 s as a
+  960×540 draft; the orbit 2.6 s and 0.22 s.
 - `ScenePlan.BasicFeatures` is what `PlayerFeatures` was (the four modules every plan needs, and
   the default of `ScenePlan.Features`); **`ScenePlan.PlayerFeatures` now lists every module of the
   player** in running order, the optional ones too.

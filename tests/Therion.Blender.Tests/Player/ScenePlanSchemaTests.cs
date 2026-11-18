@@ -58,7 +58,7 @@ public class ScenePlanSchemaTests
     [InlineData("\"scale\": [1, 1, 2]", "\"scale\": 2", "$.models[1].scale: expected array, found Number")]
     [InlineData("\"interpolation\": \"bezier\"", "\"interpolation\": \"spline\"", "$.camera.interpolation: \"spline\" is not one of")]
     [InlineData("\"target\": [0, 0, 0] }", "\"target\": [0, 0] }", "$.camera.track[0].target: fewer than 3 items")]
-    [InlineData("\"engine\": \"eevee\"", "\"engine\": \"workbench\"", "$.look.engine: \"workbench\" is not one of")]
+    [InlineData("\"engine\": \"eevee\"", "\"engine\": \"povray\"", "$.look.engine: \"povray\" is not one of")]
     [InlineData("\"roughness\": 0.5", "\"roughness\": 1.5", "$.look.materials[2].roughness: above 1")]
     [InlineData("\"color\": [0.2, 0.4, 0.6]", "\"colour\": [0.2, 0.4, 0.6]", "$.look.materials[2]: 'colour' is not a known property")]
     [InlineData("\"color\": [0.2, 0.4, 0.6]", "\"color\": [0.2, 0.4, 1.6]", "$.look.materials[2].color[2]: above 1")]

@@ -111,8 +111,8 @@
       "required": ["width", "height"],
       "additionalProperties": false,
       "properties": {
-        "engine": { "enum": ["cycles", "eevee"] },
-        "samples": { "type": "integer", "minimum": 1, "maximum": 16384 },
+        "engine": { "enum": ["cycles", "eevee", "workbench"], "description": "workbench is Blender's solid view, for a draft: no lights, shadows or noise; every model in the colours of its material, a ramp over height included. Default cycles." },
+        "samples": { "type": "integer", "minimum": 1, "maximum": 16384, "description": "For workbench the anti-aliasing: 1 is none, up to 4 a fast approximation, then the largest of 5, 8, 11, 16 and 32 that it reaches." },
         "denoise": { "type": "boolean" },
         "device": { "enum": ["auto", "cpu", "optix", "cuda", "hip", "oneapi", "metal"], "description": "For Cycles; falls back to the CPU." },
         "seed": { "type": "integer" },

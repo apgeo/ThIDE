@@ -33,6 +33,7 @@
     <!-- For the player tests: a feature module outside the player, and a GLB made of two parts. -->
     <None Update="Player\ExtraModules\*.py" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Player\two_part_glb.py" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Player\draft_colours.py" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
