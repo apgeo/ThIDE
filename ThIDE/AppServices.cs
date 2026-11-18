@@ -315,10 +315,12 @@ internal static class AppServices
         services.AddSingleton<IBlenderGuiLauncher>(sp =>
             new BlenderGuiLauncher(sp.GetRequiredService<Therion.Blender.Execution.BlenderLocator>(), () => BlenderOverridePath(sp)));
         // The same renderer, sources and presets, lent to the in-app MCP server's render tools.
+        services.AddSingleton<BlenderRenderSlot>();
         services.AddSingleton<Therion.Mcp.IBlenderRenderHost>(sp => new McpBlenderRenderHost(
             sp.GetRequiredService<Therion.Blender.IBlenderRenderService>(),
             sp.GetRequiredService<IBlenderSourceProvider>(),
-            sp.GetRequiredService<Therion.Blender.Presets.PresetStore>()));
+            sp.GetRequiredService<Therion.Blender.Presets.PresetStore>(),
+            sp.GetRequiredService<BlenderRenderSlot>()));
         services.AddSingleton<BlenderAnimationViewModel>();
         services.AddSingleton<ViewModels.Docking.BlenderAnimationToolViewModel>();
 

@@ -170,6 +170,31 @@ public class BlenderAnimationViewModelTests
     }
 
     [Fact]
+    public async Task An_agents_render_holds_the_slot_and_lands_in_the_history()
+    {
+        var slot = new BlenderRenderSlot();
+        var vm = WithSource(new BlenderAnimationViewModel(new FakeRenderService(), new FakeSources(), null, slot: slot));
+        Assert.True(vm.RenderCommand.CanExecute(null));
+
+        Assert.True(slot.TryTake("orbit (agent r1)"));
+        Assert.True(vm.AgentRendering);
+        Assert.False(vm.RenderCommand.CanExecute(null));
+
+        slot.ReleaseAgent(new AgentRenderFinished("orbit (agent r1)",
+            new RenderResult { Succeeded = true, OutputPaths = ImmutableArray.Create("out/orbit.mp4") }, null));
+        Assert.False(vm.AgentRendering);
+        Assert.True(vm.RenderCommand.CanExecute(null));
+        var entry = Assert.Single(vm.Jobs);
+        Assert.Equal("orbit (agent r1)", entry.Name);
+        Assert.True(entry.Succeeded);
+
+        // The panel's own render takes the slot, so an agent cannot start one meanwhile, and gives it back.
+        await vm.RenderCommand.ExecuteAsync(null);
+        Assert.Null(slot.Holder);
+        Assert.Equal(2, vm.Jobs.Count);
+    }
+
+    [Fact]
     public void LeadMarkerSize_AndLabelRoof_ReachTheSpec_AndComeBackFromAPreset()
     {
         var vm = Vm();

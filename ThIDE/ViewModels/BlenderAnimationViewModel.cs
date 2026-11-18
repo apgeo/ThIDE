@@ -63,8 +63,16 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         PresetStore? presetStore,
         INotificationService? notifications = null,
         IShellOpener? shell = null,
-        IBlenderGuiLauncher? gui = null)
+        IBlenderGuiLauncher? gui = null,
+        BlenderRenderSlot? slot = null)
     {
+        _slot = slot;
+        _ui = SynchronizationContext.Current;
+        if (_slot is not null)
+        {
+            _slot.Changed += (_, _) => OnUi(OnSlotChanged);
+            _slot.AgentRenderEnded += (_, finished) => OnUi(() => OnAgentRenderEnded(finished));
+        }
         _renderService = renderService;
         _sources = sources;
         _presetStore = presetStore;
@@ -242,13 +250,51 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         ? !string.IsNullOrWhiteSpace(ExternalFilePath)
         : SelectedArtifact is not null;
 
-    private bool CanStart => !IsBusy && HasSource && Blockers.Count == 0 && _renderService is not null && _sources is not null;
+    private bool CanStart => !IsBusy && !AgentRendering && HasSource && Blockers.Count == 0 && _renderService is not null && _sources is not null;
+
+    private readonly BlenderRenderSlot? _slot;
+    private readonly SynchronizationContext? _ui;
+
+    /// <summary>An agent's render holds the render slot; the panel cannot start one meanwhile.</summary>
+    public bool AgentRendering => _slot is { Holder: { } holder } && holder != PanelHolder;
+
+    private const string PanelHolder = "panel";
+
+    private void OnUi(Action action)
+    {
+        if (_ui is null || SynchronizationContext.Current == _ui) action();
+        else _ui.Post(_ => action(), null);
+    }
+
+    private void OnSlotChanged()
+    {
+        OnPropertyChanged(nameof(AgentRendering));
+        if (AgentRendering && !IsBusy) StatusMessage = Tr.Get("Blender_Status_AgentRendering");
+        RenderCommand.NotifyCanExecuteChanged();
+    }
+
+    private void OnAgentRenderEnded(AgentRenderFinished finished)
+    {
+        var result = finished.Result;
+        bool ok = result?.Succeeded == true;
+        string status = ok ? Tr.Get("Blender_Status_Done")
+            : result is not null ? FailureMessage(result)
+            : finished.Error ?? Tr.Get("Blender_Status_Failed");
+        Jobs.Insert(0, new JobHistoryEntry(finished.Name, ok, status,
+            ok ? [.. result!.OutputPaths] : [], result?.JobLogPath, result?.Duration ?? TimeSpan.Zero));
+        if (!IsBusy) StatusMessage = status;
+    }
 
     // ---- commands ----
 
     [RelayCommand(CanExecute = nameof(CanStart))]
     private async Task RenderAsync()
     {
+        if (_slot is not null && !_slot.TryTake(PanelHolder))
+        {
+            StatusMessage = Tr.Get("Blender_Status_AgentRendering");
+            return;
+        }
         Outputs.Clear();
         Warnings.Clear();
         LastError = null;
@@ -281,6 +327,7 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
             IsIndeterminate = false;
             _cts?.Dispose();
             _cts = null;
+            _slot?.Release();
             Revalidate();
         }
     }

@@ -25,4 +25,14 @@ public interface IBlenderRenderHost
     /// </summary>
     /// <exception cref="ModelSourceNotFoundException">There is no model to render.</exception>
     Task<RenderSource> AcquireAsync(ModelSourceRequest request, CancellationToken ct = default);
+
+    /// <summary>
+    /// Claims the host's render slot for an agent's render named <paramref name="name"/>; false when a
+    /// render the host started itself (its own panel) holds it. Renders run one at a time.
+    /// </summary>
+    bool TryBeginRender(string name) => true;
+
+    /// <summary>Gives the slot back once the render has ended: its result, or the error that stopped it
+    /// before Blender gave one.</summary>
+    void EndRender(string name, RenderResult? result, string? error) { }
 }

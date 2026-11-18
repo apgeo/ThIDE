@@ -15,7 +15,8 @@ using Therion.Mcp;
 namespace ThIDE.Services;
 
 public sealed class McpBlenderRenderHost(
-    IBlenderRenderService renderer, IBlenderSourceProvider sources, PresetStore presets) : IBlenderRenderHost
+    IBlenderRenderService renderer, IBlenderSourceProvider sources, PresetStore presets, BlenderRenderSlot? slot = null)
+    : IBlenderRenderHost
 {
     public IBlenderRenderService Renderer => renderer;
 
@@ -28,4 +29,10 @@ public sealed class McpBlenderRenderHost(
 
     public Task<RenderSource> AcquireAsync(ModelSourceRequest request, CancellationToken ct = default) =>
         sources.AcquireAsync(request, ct);
+
+    /// <summary>The panel and agents share one render slot.</summary>
+    public bool TryBeginRender(string name) => slot?.TryTake(name) ?? true;
+
+    public void EndRender(string name, RenderResult? result, string? error) =>
+        slot?.ReleaseAgent(new AgentRenderFinished(name, result, error));
 }

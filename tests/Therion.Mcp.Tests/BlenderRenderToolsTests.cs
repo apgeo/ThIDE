@@ -209,6 +209,25 @@ public sealed class BlenderRenderToolsTests : IDisposable
     }
 
     [Fact]
+    public async Task A_render_the_host_runs_itself_keeps_the_agent_waiting_and_each_render_gives_the_slot_back()
+    {
+        var (render, status) = await ToolsAsync();
+
+        _blender.PanelRendering = true;
+        var refused = await render.StartRender(model: "out/cave.3d");
+        Assert.Equal(ToolErrorCodes.RenderBusy, refused.Error!.Code);
+        Assert.Contains("panel", refused.Error.Message);
+        Assert.Empty(_blender.Ended);
+
+        _blender.PanelRendering = false;
+        var started = await render.StartRender(model: "out/cave.3d");
+        Assert.Equal("succeeded", (await FinishedAsync(status, started.Data!.JobId)).State);
+        var ended = Assert.Single(_blender.Ended);
+        Assert.Contains(started.Data.JobId, ended.Name);
+        Assert.True(ended.Succeeded);
+    }
+
+    [Fact]
     public async Task Status_reports_progress_while_the_render_runs()
     {
         _blender.Renderer.Gate = new TaskCompletionSource();
@@ -452,6 +471,15 @@ public sealed class BlenderRenderToolsTests : IDisposable
         public List<ModelSourceRequest> Requests { get; } = [];
         public bool NoModel { get; set; }
         public TaskCompletionSource? AcquireGate { get; set; }
+        public bool PanelRendering { get; set; }
+        public List<(string Name, bool? Succeeded, string? Error)> Ended { get; } = [];
+
+        public bool TryBeginRender(string name) => !PanelRendering;
+
+        public void EndRender(string name, RenderResult? result, string? error)
+        {
+            lock (Ended) Ended.Add((name, result?.Succeeded, error));
+        }
 
         public IReadOnlyList<RenderPreset> UserPresets() => Saved;
 

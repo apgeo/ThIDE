@@ -90,19 +90,45 @@ public sealed class BlenderRenderTools(IWorkspaceHost host, IBlenderRenderHost b
         if (refused is not null) return ToolResult<RenderJobStatus>.Failure(refused);
 
         var job = new BlenderRenderJob(snapshot.Root, plan!.Preset, plan.Spec);
+        string name = $"{plan.Spec.Output.BaseName} (agent {job.Id})";
+        if (jobs.Find(null) is { IsFinished: false } running)
+            return Busy(running);
+        if (!blender.TryBeginRender(name))
+            return ToolResult<RenderJobStatus>.Failure(ToolErrorCodes.RenderBusy,
+                "A render started in ThIDE's Blender panel is running, and renders run one at a time. "
+                + "Try again when it has finished.");
+
         bool started = jobs.TryStart(job, async (running, token) =>
         {
-            running.Report(new RenderProgress(RenderPhase.AcquiringSource, "Finding the model"));
-            var source = await blender.AcquireAsync(plan.Request, token).ConfigureAwait(false);
-            running.SetModel(source.Model);
-            return await blender.Renderer.RenderAsync(plan.Spec, source, new InlineProgress<RenderProgress>(running.Report), token)
-                .ConfigureAwait(false);
+            RenderResult? result = null;
+            string? error = null;
+            try
+            {
+                running.Report(new RenderProgress(RenderPhase.AcquiringSource, "Finding the model"));
+                var source = await blender.AcquireAsync(plan.Request, token).ConfigureAwait(false);
+                running.SetModel(source.Model);
+                result = await blender.Renderer.RenderAsync(plan.Spec, source, new InlineProgress<RenderProgress>(running.Report), token)
+                    .ConfigureAwait(false);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                error = ex is OperationCanceledException ? "cancelled" : ex.Message;
+                throw;
+            }
+            finally
+            {
+                blender.EndRender(name, result, error);
+            }
         }, out var busy);
 
-        return started
-            ? ToolResult<RenderJobStatus>.Success(job.Status())
-            : ToolResult<RenderJobStatus>.Failure(ToolErrorCodes.RenderBusy,
-                $"Render '{busy!.Id}' is still running, and renders run one at a time. Wait for it with "
+        if (started) return ToolResult<RenderJobStatus>.Success(job.Status());
+        blender.EndRender(name, null, "not started");
+        return Busy(busy!);
+
+        static ToolResult<RenderJobStatus> Busy(BlenderRenderJob running) =>
+            ToolResult<RenderJobStatus>.Failure(ToolErrorCodes.RenderBusy,
+                $"Render '{running.Id}' is still running, and renders run one at a time. Wait for it with "
                 + "render_status (waitSeconds), or stop it with cancel_render, then start again.");
     }
 
