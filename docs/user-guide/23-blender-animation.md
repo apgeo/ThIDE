@@ -97,6 +97,38 @@ therion-cli blender <model.lox|.3d> [--preset "Orbit showcase" | --spec spec.jso
 file paths are printed to standard output; the exit code is `0` on success, `1` on a render
 failure, `2` on a usage or spec error.
 
+### A render bundle, to render on another machine
+
+`--bundle` writes everything Blender needs into one zip (or into a folder, when the path does not
+end in `.zip`), for rendering on any computer with Blender 4.2 or newer and without ThIDE:
+
+```
+therion-cli blender <model.lox|.3d> [--preset "Full flythrough" | --spec spec.json] \
+                    --bundle cave-bundle.zip [--draft] [--render] [--out <dir>] [--blender <path>]
+```
+
+The bundle holds the scene plan (`scene-plan.json`: the camera move, the look and the output, as
+plain JSON), the cave's mesh (`model.ply`), the player that builds the scene in Blender
+(`render.py` and `thide_player/`), the run scripts `render.sh` (Linux, macOS) and `render.cmd`
+(Windows), and a `README.txt` that says how to render it. Whoever receives it unpacks it into a
+folder of its own and runs `sh render.sh` or `render.cmd`; the result lands in the bundle's `out`
+folder. The scripts find Blender on the PATH (and in its usual install folder on macOS and
+Windows); the `BLENDER` environment variable names another one, for example
+`BLENDER=/opt/blender-4.5/blender sh render.sh`.
+
+- `--draft` adds a second plan, `scene-plan.draft.json`, with a fast look: Blender's solid view at
+  half the picture size, a fraction of a second per frame. `sh render.sh --draft` (or
+  `render.cmd --draft`) renders it as `<name>-draft`, to check the camera move before the long
+  render.
+- `--render` also renders the bundle here, with the Blender ThIDE finds (or `--blender`): the zip is
+  unpacked into a temporary folder and what it renders is moved next to the zip, or into `--out`.
+  With `--draft` it renders the draft.
+- The same model and settings always give the same zip, byte for byte.
+- A scene plan cannot yet say everything the panel can: overlays (title, scale bar, north arrow,
+  depth legend), the timed showing and hiding of labels, the HDRI light rig and the terrain surface
+  are left out. The command warns about each one it leaves out, and the bundle's `README.txt` lists
+  them.
+
 ## Requirements & tips
 
 - **Blender 4.2 or newer** — older versions are rejected with a clear message.

@@ -103,6 +103,40 @@ therion-cli blender <model.lox|.3d> [--preset "Orbit showcase" | --spec spec.jso
 produse sunt afișate la ieșirea standard; codul de ieșire este `0` la succes, `1` la eșecul
 randării, `2` la o eroare de utilizare sau de specificație.
 
+### Un pachet de randare, pentru randarea pe alt calculator
+
+`--bundle` scrie tot ce îi trebuie lui Blender într-o singură arhivă zip (sau într-un dosar, dacă
+calea nu se termină în `.zip`), ca scena să poată fi randată pe orice calculator cu Blender 4.2 sau
+mai nou, fără ThIDE:
+
+```
+therion-cli blender <model.lox|.3d> [--preset "Full flythrough" | --spec spec.json] \
+                    --bundle cave-bundle.zip [--draft] [--render] [--out <dir>] [--blender <path>]
+```
+
+Pachetul conține planul scenei (`scene-plan.json`: mișcarea camerei, aspectul și ieșirea, ca JSON
+simplu), rețeaua de poligoane a peșterii (`model.ply`), playerul care construiește scena în
+Blender (`render.py` și `thide_player/`), scripturile de rulare `render.sh` (Linux, macOS) și
+`render.cmd` (Windows) și un fișier `README.txt` care explică cum se randează. Cine îl primește îl dezarhivează într-un dosar
+separat și rulează `sh render.sh` sau `render.cmd`; rezultatul ajunge în dosarul `out` al
+pachetului. Scripturile caută Blender în PATH (și în dosarul obișnuit de instalare pe macOS și
+Windows); variabila de mediu `BLENDER` indică altă instalare, de exemplu
+`BLENDER=/opt/blender-4.5/blender sh render.sh`.
+
+- `--draft` adaugă o previzualizare: un al doilea plan, `scene-plan.draft.json`, cu un aspect
+  rapid: vizualizarea solidă a Blender, la jumătate din dimensiunea imaginii, o fracțiune de
+  secundă pe cadru.
+  `sh render.sh --draft` (sau `render.cmd --draft`) îl randează ca `<nume>-draft`, ca să verificați
+  mișcarea camerei înainte de randarea lungă.
+- `--render` randează pachetul și aici, cu Blender-ul găsit de ThIDE (sau cel dat cu `--blender`):
+  arhiva este dezarhivată într-un dosar temporar, iar ce se randează este mutat lângă arhivă sau în
+  `--out`. Împreună cu `--draft` se randează previzualizarea.
+- Același model cu aceleași setări dă întotdeauna aceeași arhivă, octet cu octet.
+- Un plan de scenă nu poate exprima încă tot ce poate panoul: suprapunerile (titlu, scară grafică,
+  săgeata nordului, legenda adâncimii), afișarea și ascunderea temporizată a etichetelor,
+  iluminarea HDRI și suprafața terenului sunt omise. Comanda avertizează pentru fiecare element
+  omis, iar fișierul `README.txt` al pachetului le enumeră.
+
 ## Cerințe și sfaturi
 
 - **Blender 4.2 sau mai nou** — versiunile mai vechi sunt respinse cu un mesaj clar.
