@@ -348,13 +348,11 @@ public class PlayerBlenderTests
     [BlenderFact]
     public async Task AGlb_ComesInTheSameWayUpAsThePly()
     {
-        // glTF has Y up and Blender's importer turns that to Z up, so the file is written with
-        // (east, up, south) for (east, north, up).
+        // glTF has Y up and Blender's importer turns that to Z up; GlbWriter writes Y up.
         var walls = Small.Value.Conversion.Geometry.Walls;
-        var yUp = walls with { Vertices = walls.Vertices.Select(v => new CaveVector3(v.X, v.Z, -v.Y)).ToList() };
         string dir = PlayerRunner.NewCase("glb");
         PlyWriter.WriteFile(walls, Path.Combine(dir, "walls.ply"));
-        GlbWriter.WriteFile(yUp, Path.Combine(dir, "walls.glb"));
+        GlbWriter.WriteFile(walls, Path.Combine(dir, "walls.glb"));
         var first = PlayerRunner.PlanFor(Small.Value, Orbit);
         var plan = first with
         {

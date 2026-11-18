@@ -60,8 +60,7 @@ and later texts and annotations) and for consumers that do not start Blender the
 - **GLB models** come in through Blender's own glTF importer and are joined into one object. That
   importer needs numpy: it works in the official Blender builds and not in a Blender packaged
   without numpy (Ubuntu's 5.0.1 is one), where the player refuses the plan and says why. PLY works
-  everywhere. A GLB is read as glTF defines it, Y up; note that `GlbWriter` in `Therion.CaveGeometry`
-  writes the model's own axes (Z up) unchanged, so one of its files comes in lying on its side.
+  everywhere. A GLB is read as glTF defines it, Y up, as `GlbWriter` now writes it (see its change log).
 
 ## 2026-11-17 (later) — lead markers inside the cave, roofs of tube models, the gallery
 

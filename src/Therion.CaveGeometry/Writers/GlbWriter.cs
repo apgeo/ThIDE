@@ -1,7 +1,7 @@
 // Minimal binary glTF (.glb) writer (optional user-facing export, FR-02): a single
 // self-contained buffer with float32 POSITION and uint32 indices, one mesh/node/scene.
-// No normals/materials — "minimal" per D-06/plan; Blender computes normals on import.
-// SharpGLTF (MIT) is only pulled in later if glb needs outgrow this.
+// No normals/materials; importers compute normals. glTF is Y up, so the model's (east, north, up)
+// is written as (east, up, south): a rotation, which keeps the triangles' winding.
 
 using System.Buffers.Binary;
 using System.Text;
@@ -9,7 +9,8 @@ using System.Text.Json;
 
 namespace Therion.CaveGeometry.Writers;
 
-/// <summary>Writes a <see cref="Therion.CaveGeometry.CaveMesh"/> as a binary glTF 2.0 file.</summary>
+/// <summary>Writes a <see cref="Therion.CaveGeometry.CaveMesh"/> as a binary glTF 2.0 file, Y up as
+/// glTF defines it: a vertex (x, y, z) of the mesh (Z up) is written as (x, z, −y).</summary>
 public static class GlbWriter
 {
     private const uint Magic = 0x46546C67;      // "glTF"
@@ -37,7 +38,7 @@ public static class GlbWriter
         for (int i = 0; i < vertexCount; i++)
         {
             var v = mesh.Vertices[i];
-            float x = (float)v.X, y = (float)v.Y, z = (float)v.Z;
+            float x = (float)v.X, y = (float)v.Z, z = (float)-v.Y;
             BinaryPrimitives.WriteSingleLittleEndian(bin.AsSpan(i * 12), x);
             BinaryPrimitives.WriteSingleLittleEndian(bin.AsSpan(i * 12 + 4), y);
             BinaryPrimitives.WriteSingleLittleEndian(bin.AsSpan(i * 12 + 8), z);

@@ -143,6 +143,24 @@ public class MeshWriterTests
         Assert.True(binLen >= declaredBuffer); // padded to a 4-byte boundary
     }
 
+    [Fact]
+    public void Glb_IsYUp_AsGltfDefinesIt()
+    {
+        // A mesh vertex (east, north, up) is written (east, up, south).
+        var mesh = Cube();
+        var bytes = GlbWriter.Write(mesh);
+        uint jsonLen = BinaryPrimitives.ReadUInt32LittleEndian(bytes.AsSpan(12));
+        int bin = 20 + (int)jsonLen + 8;
+
+        for (int i = 0; i < mesh.Vertices.Count; i++)
+        {
+            var v = mesh.Vertices[i];
+            Assert.Equal((float)v.X, BinaryPrimitives.ReadSingleLittleEndian(bytes.AsSpan(bin + i * 12)));
+            Assert.Equal((float)v.Z, BinaryPrimitives.ReadSingleLittleEndian(bytes.AsSpan(bin + i * 12 + 4)));
+            Assert.Equal((float)-v.Y, BinaryPrimitives.ReadSingleLittleEndian(bytes.AsSpan(bin + i * 12 + 8)));
+        }
+    }
+
     [Theory]
     [InlineData("ply")]
     [InlineData("stl")]
