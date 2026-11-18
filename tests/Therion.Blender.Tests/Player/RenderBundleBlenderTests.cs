@@ -46,8 +46,11 @@ public class RenderBundleBlenderTests
         RenderBundleWriter.WriteZip(content, zip);
         Directory.Delete(work, recursive: true);
 
-        string folder = Path.Combine(root, "unpacked");
-        Unzip(zip, folder);
+        string unpacked = Path.Combine(root, "unpacked");
+        Unzip(zip, unpacked);
+        // One folder, named after the zip.
+        string folder = Assert.Single(Directory.GetFileSystemEntries(unpacked));
+        Assert.Equal(Path.Combine(unpacked, "cave-bundle"), folder);
 
         var (code, log) = await RunScript(folder);
         Assert.True(code == 0, $"render.sh failed (exit code {code}): {Failure(log)}\n  logs: {root}");
@@ -110,7 +113,7 @@ public class RenderBundleBlenderTests
             return (BlenderTestProcess.TimedOut, await output + await error);
         }
         string log = await output + await error;
-        await File.WriteAllTextAsync(Path.Combine(folder, "..", arguments.Length == 0 ? "render.log" : "draft.log"), log);
+        await File.WriteAllTextAsync(Path.Combine(folder, "..", "..", arguments.Length == 0 ? "render.log" : "draft.log"), log);
         return (process.ExitCode, log);
     }
 

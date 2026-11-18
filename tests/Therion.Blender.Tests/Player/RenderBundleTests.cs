@@ -42,10 +42,14 @@ public class RenderBundleTests : IDisposable
     private RenderBundleContent Content(SceneSpec? spec = null, bool draft = true, string work = "work")
         => RenderBundleWriter.FromModel(SmallCave(), spec ?? Orbit, Path.Combine(_dir, work), draft);
 
+    /// <summary>The entries of a zip, by their paths inside its one folder, which is named after
+    /// the zip.</summary>
     private static Dictionary<string, byte[]> Read(string zipPath)
     {
         using var zip = ZipFile.OpenRead(zipPath);
-        return zip.Entries.ToDictionary(e => e.FullName, e =>
+        string top = Path.GetFileNameWithoutExtension(zipPath) + "/";
+        Assert.All(zip.Entries, e => Assert.StartsWith(top, e.FullName, StringComparison.Ordinal));
+        return zip.Entries.ToDictionary(e => e.FullName[top.Length..], e =>
         {
             using var stream = e.Open();
             using var copy = new MemoryStream();
@@ -59,17 +63,18 @@ public class RenderBundleTests : IDisposable
     // ---- what is in it ----
 
     [Fact]
-    public void TheZip_HoldsThePlans_TheMesh_ThePlayer_TheScripts_AndTheReadme_InOrdinalOrder()
+    public void TheZip_HoldsThePlans_TheMesh_ThePlayer_TheScripts_AndTheReadme_InOrdinalOrder_InOneFolder()
     {
         string zipPath = Path.Combine(_dir, "cave.zip");
         var written = RenderBundleWriter.WriteZip(Content(), zipPath);
 
-        string[] expected =
+        string[] inside =
         [
             "README.txt", "model.ply", "render.cmd", "render.py", "render.sh", "scene-plan.draft.json", "scene-plan.json",
             .. PlayerFiles.JobFiles.Select(f => f.Path).Where(p => p.StartsWith("thide_player/", StringComparison.Ordinal)),
         ];
-        Array.Sort(expected, StringComparer.Ordinal);
+        Array.Sort(inside, StringComparer.Ordinal);
+        string[] expected = [.. inside.Select(p => "cave/" + p)];
         Assert.Equal(expected, written);
         using var zip = ZipFile.OpenRead(zipPath);
         Assert.Equal(expected, zip.Entries.Select(e => e.FullName));
@@ -88,27 +93,50 @@ public class RenderBundleTests : IDisposable
         var written = RenderBundleWriter.WriteZip(content, zipPath);
 
         Assert.Null(content.Draft);
-        Assert.DoesNotContain(RenderBundleWriter.DraftPlanFileName, written);
+        Assert.DoesNotContain("cave/" + RenderBundleWriter.DraftPlanFileName, written);
+        Assert.Contains("cave/" + ScenePlanSerializer.FileName, written);
         Assert.DoesNotContain("--draft", Text(Read(zipPath), "README.txt"));
     }
 
     [Fact]
-    public void TheSameInput_GivesTheSameBytes()
+    public void TheSameInputUnderTheSameName_GivesTheSameBytes()
     {
-        // Two conversions into two folders, two zip names, a pause between them.
-        string first = Path.Combine(_dir, "first.zip"), second = Path.Combine(_dir, "second.zip");
+        // Two conversions into two folders, two zips of one name in two folders, a pause between them.
+        string first = Path.Combine(_dir, "a", "cave.zip"), second = Path.Combine(_dir, "b", "cave.zip");
         RenderBundleWriter.WriteZip(Content(work: "a"), first);
         Thread.Sleep(1100);
         RenderBundleWriter.WriteZip(Content(work: "b"), second);
         Assert.Equal(File.ReadAllBytes(first), File.ReadAllBytes(second));
 
         using var stream = new MemoryStream();
-        RenderBundleWriter.WriteZip(Content(work: "c"), stream);
+        RenderBundleWriter.WriteZip(Content(work: "c"), stream, "cave");
         Assert.Equal(File.ReadAllBytes(first), stream.ToArray());
 
         using var zip = ZipFile.OpenRead(first);
         Assert.All(zip.Entries, e => Assert.Equal(new DateTime(1980, 1, 1), e.LastWriteTime.DateTime));
+
+        // Another name is another folder, and the same files in it.
+        string other = Path.Combine(_dir, "other.zip");
+        RenderBundleWriter.WriteZip(Content(work: "d"), other);
+        Assert.NotEqual(File.ReadAllBytes(first), File.ReadAllBytes(other));
+        var (one, two) = (Read(first), Read(other));
+        Assert.Equal(one.Keys, two.Keys);
+        Assert.All(one, e => Assert.Equal(e.Value, two[e.Key]));
     }
+
+    [Theory]
+    [InlineData("cave-bundle.zip", "cave-bundle")]
+    [InlineData("/somewhere/Peștera Mare 2026.zip", "Peștera Mare 2026")]
+    [InlineData("a<b>c:d\"e|f?g*h.zip", "a_b_c_d_e_f_g_h")]
+    [InlineData("tabs\tand\nlines.zip", "tabs_and_lines")]
+    [InlineData("trailing dots... .zip", "trailing dots")]
+    [InlineData("con.zip", "con_")]
+    [InlineData("LPT1.final.zip", "LPT1_.final")]
+    [InlineData("Console.zip", "Console")]
+    [InlineData("....zip", "render-bundle")]
+    [InlineData(".zip", "render-bundle")]
+    public void TheFolder_IsNamedAfterTheZip_AsEveryFileSystemTakesIt(string zipPath, string folder)
+        => Assert.Equal(folder, RenderBundleWriter.FolderName(zipPath));
 
     [Fact]
     public void ThePlans_AreValid_AndRenderIntoTheBundle()
@@ -167,10 +195,10 @@ public class RenderBundleTests : IDisposable
         foreach (string path in new[] { "../model.ply", "/abs/model.ply", "C:/model.ply", "render.py", "README.TXT", "thide_player/core.py" })
         {
             var bad = content with { Files = new Dictionary<string, string>(content.Files) { [path] = mesh } };
-            Assert.Throws<ArgumentException>(() => RenderBundleWriter.WriteZip(bad, sink));
+            Assert.Throws<ArgumentException>(() => RenderBundleWriter.WriteZip(bad, sink, "cave"));
         }
         Assert.Throws<ArgumentException>(() => RenderBundleWriter.WriteZip(
-            content with { Files = new Dictionary<string, string> { ["model.ply"] = mesh, ["./model.ply"] = mesh } }, sink));
+            content with { Files = new Dictionary<string, string> { ["model.ply"] = mesh, ["./model.ply"] = mesh } }, sink, "cave"));
     }
 
     [Fact]
@@ -180,19 +208,19 @@ public class RenderBundleTests : IDisposable
         using var sink = new MemoryStream();
 
         // The mesh is not given.
-        Assert.Throws<ArgumentException>(() => RenderBundleWriter.WriteZip(content with { Files = new Dictionary<string, string>() }, sink));
+        Assert.Throws<ArgumentException>(() => RenderBundleWriter.WriteZip(content with { Files = new Dictionary<string, string>() }, sink, "cave"));
         // The given mesh is not there.
         Assert.Throws<FileNotFoundException>(() => RenderBundleWriter.WriteZip(
-            content with { Files = new Dictionary<string, string> { ["model.ply"] = Path.Combine(_dir, "nowhere.ply") } }, sink));
+            content with { Files = new Dictionary<string, string> { ["model.ply"] = Path.Combine(_dir, "nowhere.ply") } }, sink, "cave"));
         // The render would write outside the bundle's folder.
         var outside = content with { Plan = content.Plan with { Output = content.Plan.Output with { Directory = "/tmp/renders" } } };
-        Assert.Throws<ArgumentException>(() => RenderBundleWriter.WriteZip(outside, sink));
+        Assert.Throws<ArgumentException>(() => RenderBundleWriter.WriteZip(outside, sink, "cave"));
         // A module folder the plan names is not in it.
         var modules = content with { Plan = content.Plan with { ModuleFolders = ["extra"] } };
-        Assert.Throws<ArgumentException>(() => RenderBundleWriter.WriteZip(modules, sink));
+        Assert.Throws<ArgumentException>(() => RenderBundleWriter.WriteZip(modules, sink, "cave"));
         // An invalid draft.
         var draft = content with { Draft = ScenePlanBuilder.Draft(content.Plan) with { Features = [] } };
-        Assert.Throws<ArgumentException>(() => RenderBundleWriter.WriteZip(draft, sink));
+        Assert.Throws<ArgumentException>(() => RenderBundleWriter.WriteZip(draft, sink, "cave"));
         Assert.Equal(0, sink.Length);
     }
 
@@ -208,7 +236,7 @@ public class RenderBundleTests : IDisposable
             Files = new Dictionary<string, string>(content.Files) { ["extra/marker_cube.py"] = module },
         };
         using var sink = new MemoryStream();
-        Assert.Contains("extra/marker_cube.py", RenderBundleWriter.WriteZip(withModule, sink));
+        Assert.Contains("cave/extra/marker_cube.py", RenderBundleWriter.WriteZip(withModule, sink, "cave"));
     }
 
     // ---- the run scripts ----
@@ -233,17 +261,20 @@ public class RenderBundleTests : IDisposable
         Assert.Contains("scene-plan.draft.json", cmd);
 
         using var zip = ZipFile.OpenRead(zipPath);
-        Assert.All(zip.Entries, e => Assert.Equal(e.FullName == "render.sh" ? 0x81ED : 0x81A4, e.ExternalAttributes >>> 16));
+        Assert.All(zip.Entries, e => Assert.Equal(e.FullName == "cave/render.sh" ? 0x81ED : 0x81A4, e.ExternalAttributes >>> 16));
     }
 
     [Fact]
     public async Task RenderSh_PassesThePlanAndTheOptionsToTheBlenderItIsGiven()
     {
         if (OperatingSystem.IsWindows()) return; // a POSIX shell script
-        string folder = Path.Combine(_dir, "unpacked");
+        string unpacked = Path.Combine(_dir, "unpacked");
         string zipPath = Path.Combine(_dir, "cave.zip");
         RenderBundleWriter.WriteZip(Content(), zipPath);
-        ZipFile.ExtractToDirectory(zipPath, folder);
+        ZipFile.ExtractToDirectory(zipPath, unpacked);
+        string folder = Assert.Single(Directory.GetDirectories(unpacked));
+        Assert.Equal(Path.Combine(unpacked, "cave"), folder);
+        Assert.Empty(Directory.GetFiles(unpacked));
 
         // A stand-in for Blender that prints the arguments it was given, one per line.
         string fake = Path.Combine(_dir, "fake blender");

@@ -31,10 +31,14 @@ public class BlenderBundleVerbTests : IDisposable
         return (code, so.ToString(), se.ToString());
     }
 
+    /// <summary>The entries of a bundle's zip, by their paths inside its one folder, which is
+    /// named after the zip.</summary>
     private static string[] Entries(string zip)
     {
         using var archive = ZipFile.OpenRead(zip);
-        return archive.Entries.Select(e => e.FullName).ToArray();
+        string top = Path.GetFileNameWithoutExtension(zip) + "/";
+        Assert.All(archive.Entries, e => Assert.StartsWith(top, e.FullName, StringComparison.Ordinal));
+        return archive.Entries.Select(e => e.FullName[top.Length..]).ToArray();
     }
 
     [Fact]
@@ -59,7 +63,7 @@ public class BlenderBundleVerbTests : IDisposable
     [Fact]
     public async Task Bundle_WithDraft_HasTheDraftPlan_AndIsTheSameEveryTime()
     {
-        string first = Path.Combine(_dir, "a.zip"), second = Path.Combine(_dir, "b.zip");
+        string first = Path.Combine(_dir, "a", "cave.zip"), second = Path.Combine(_dir, "b", "cave.zip");
         Assert.Equal(0, (await Run("blender", _lox, "--preset", "Full flythrough", "--bundle", first, "--draft")).Code);
         Assert.Equal(0, (await Run("blender", _lox, "--draft", "--preset", "Full flythrough", "--bundle", second)).Code);
 
@@ -94,7 +98,7 @@ public class BlenderBundleVerbTests : IDisposable
         Assert.True(code == 0, stderr);
         Assert.Contains("warning: the bundle leaves out 'labels.overlays'", stderr);
         using var archive = ZipFile.OpenRead(zip);
-        using var readme = new StreamReader(archive.GetEntry("README.txt")!.Open());
+        using var readme = new StreamReader(archive.GetEntry("cave/README.txt")!.Open());
         Assert.Contains("NOT IN THIS SCENE", readme.ReadToEnd());
     }
 

@@ -120,9 +120,10 @@ therion-cli blender <model.lox|.3d> [--preset "Full flythrough" | --spec spec.js
 Pachetul conține planul scenei (`scene-plan.json`: mișcarea camerei, aspectul și ieșirea, ca JSON
 simplu), rețeaua de poligoane a peșterii (`model.ply`), playerul care construiește scena în
 Blender (`render.py` și `thide_player/`), scripturile de rulare `render.sh` (Linux, macOS) și
-`render.cmd` (Windows) și un fișier `README.txt` care explică cum se randează. Cine îl primește îl dezarhivează într-un dosar
-separat și rulează `sh render.sh` sau `render.cmd`; rezultatul ajunge în dosarul `out` al
-pachetului. Scripturile caută Blender în PATH (și în dosarul obișnuit de instalare pe macOS și
+`render.cmd` (Windows) și un fișier `README.txt` care explică cum se randează. Arhiva conține un
+singur dosar, cu numele ei (`cave-bundle` pentru `cave-bundle.zip`), așa că dezarhivată oriunde
+face doar acel dosar. Cine o primește o dezarhivează și rulează `sh render.sh` sau `render.cmd` în
+acel dosar; rezultatul ajunge în dosarul `out` al pachetului. Scripturile caută Blender în PATH (și în dosarul obișnuit de instalare pe macOS și
 Windows); variabila de mediu `BLENDER` indică altă instalare, de exemplu
 `BLENDER=/opt/blender-4.5/blender sh render.sh`.
 
@@ -134,7 +135,8 @@ Windows); variabila de mediu `BLENDER` indică altă instalare, de exemplu
 - `--render` randează pachetul și aici, cu Blender-ul găsit de ThIDE (sau cel dat cu `--blender`):
   arhiva este dezarhivată într-un dosar temporar, iar ce se randează este mutat lângă arhivă sau în
   `--out`. Împreună cu `--draft` se randează previzualizarea.
-- Același model cu aceleași setări dă întotdeauna aceeași arhivă, octet cu octet.
+- Același model cu aceleași setări dă întotdeauna, sub același nume, aceeași arhivă, octet cu
+  octet.
 - Un plan de scenă nu poate exprima încă tot ce poate panoul: suprapunerile (titlu, scară grafică,
   săgeata nordului, legenda adâncimii), afișarea și ascunderea temporizată a etichetelor,
   iluminarea HDRI și suprafața terenului sunt omise. Comanda avertizează pentru fiecare element

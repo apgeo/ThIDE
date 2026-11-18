@@ -158,14 +158,16 @@ public static class BlenderVerb
         var blender = located.Installation!;
         if (BlenderLocator.UntestedVersionWarning(blender.Version) is { } untested) stderr.WriteLine($"warning: {untested}");
 
-        string folder = zip ? TempFolder("thide-bundle-render-") : bundle;
-        if (zip)
+        // A zip unpacks into one folder named after it.
+        string? unpacked = zip ? TempFolder("thide-bundle-render-") : null;
+        string folder = unpacked is null ? bundle : Path.Combine(unpacked, RenderBundleWriter.FolderName(bundle));
+        if (unpacked is not null)
         {
-            try { System.IO.Compression.ZipFile.ExtractToDirectory(bundle, folder); }
+            try { System.IO.Compression.ZipFile.ExtractToDirectory(bundle, unpacked); }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 stderr.WriteLine($"error: the bundle cannot be unpacked: {ex.Message}");
-                TryDelete(folder);
+                TryDelete(unpacked);
                 return 1;
             }
         }
@@ -199,7 +201,7 @@ public static class BlenderVerb
                 outputs[i] = target;
             }
         }
-        if (zip) TryDelete(folder);
+        if (unpacked is not null) TryDelete(unpacked);
         foreach (string path in outputs) stdout.WriteLine(path);
         stderr.WriteLine($"rendered {result.FrameCount} frame(s) on {result.Device} in {result.Duration.TotalSeconds:0.0}s");
         return 0;

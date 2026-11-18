@@ -111,9 +111,10 @@ therion-cli blender <model.lox|.3d> [--preset "Full flythrough" | --spec spec.js
 The bundle holds the scene plan (`scene-plan.json`: the camera move, the look and the output, as
 plain JSON), the cave's mesh (`model.ply`), the player that builds the scene in Blender
 (`render.py` and `thide_player/`), the run scripts `render.sh` (Linux, macOS) and `render.cmd`
-(Windows), and a `README.txt` that says how to render it. Whoever receives it unpacks it into a
-folder of its own and runs `sh render.sh` or `render.cmd`; the result lands in the bundle's `out`
-folder. The scripts find Blender on the PATH (and in its usual install folder on macOS and
+(Windows), and a `README.txt` that says how to render it. The zip holds one folder named after
+it (`cave-bundle` for `cave-bundle.zip`), so unpacking it anywhere makes that folder and nothing
+else. Whoever receives it unpacks it and runs `sh render.sh` or `render.cmd` in that folder; the
+result lands in the bundle's `out` folder. The scripts find Blender on the PATH (and in its usual install folder on macOS and
 Windows); the `BLENDER` environment variable names another one, for example
 `BLENDER=/opt/blender-4.5/blender sh render.sh`.
 
@@ -124,7 +125,7 @@ Windows); the `BLENDER` environment variable names another one, for example
 - `--render` also renders the bundle here, with the Blender ThIDE finds (or `--blender`): the zip is
   unpacked into a temporary folder and what it renders is moved next to the zip, or into `--out`.
   With `--draft` it renders the draft.
-- The same model and settings always give the same zip, byte for byte.
+- The same model and settings always give the same zip under the same name, byte for byte.
 - A scene plan cannot yet say everything the panel can: overlays (title, scale bar, north arrow,
   depth legend), the timed showing and hiding of labels, the HDRI light rig and the terrain surface
   are left out. The command warns about each one it leaves out, and the bundle's `README.txt` lists

@@ -14,6 +14,16 @@
   with the ball; its `at` and `size` are where it stands and how large it is while the ball has
   the radius it is built with. The validator refuses an id that is no marker's.
 
+### Breaking change
+- **A bundle's zip holds one folder**, named after the zip (`RenderBundleWriter.FolderName`: the
+  file name without its extension, with what some file system refuses replaced by `_`), so that
+  unpacking it makes that one folder. `WriteZip(content, stream)` became
+  `WriteZip(content, stream, name)`: a stream has no file name to take it from. Both overloads
+  return the entries' paths with the folder in front. The same content under the same name still
+  gives the same bytes; another name gives another folder. Migration: whoever unpacks a bundle's
+  zip finds the plan in `<name>/scene-plan.json`, not at the top; a caller of the stream overload
+  passes the name it wants. `WriteFolder` is unchanged: the folder is the bundle.
+
 ### Behaviour changes
 - **A lead's caption follows a marker sized by its distance from the camera**
   (`LeadMarkerSizing.CameraDistance`), in the generated scripts and in plans from `FromSpec`

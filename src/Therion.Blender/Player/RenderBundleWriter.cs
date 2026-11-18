@@ -1,5 +1,6 @@
 // A render bundle: a scene plan, its meshes, the player and two run scripts in one zip (or one
-// folder), for rendering on a machine that has Blender and nothing of ThIDE:
+// folder), for rendering on a machine that has Blender and nothing of ThIDE. A zip holds one
+// folder, named after the zip, so that unpacking it anywhere makes that folder and nothing else:
 //
 //   README.txt              what the files are and how to render them
 //   render.sh, render.cmd   start Blender with the player; --draft plays the draft plan
@@ -10,8 +11,9 @@
 //   model.ply ...           the meshes and any other file the plan names, at their plan paths
 //
 // A zip is deterministic: entries in ordinal order, one fixed time stamp, fixed permissions, so
-// the same content gives the same bytes every time on the same .NET runtime. Writing one starts
-// no process; rendering it is for whoever unpacks it (or Therion.Blender.Execution).
+// the same content under the same name gives the same bytes every time on the same .NET runtime.
+// Writing one starts no process; rendering it is for whoever unpacks it (or
+// Therion.Blender.Execution).
 
 using System.IO.Compression;
 using System.Text;
@@ -124,31 +126,34 @@ public static class RenderBundleWriter
         };
     }
 
-    /// <summary>Writes the bundle as a zip file, replacing one that is there.</summary>
+    /// <summary>Writes the bundle as a zip file, replacing one that is there. Its one folder is
+    /// named after the file (<see cref="FolderName"/>).</summary>
     /// <returns>The paths of the zip's entries, in their order.</returns>
     /// <exception cref="ArgumentException">The content is not a bundle that renders on its
-    /// own: see <see cref="WriteZip(RenderBundleContent, Stream)"/>.</exception>
+    /// own: see <see cref="WriteZip(RenderBundleContent, Stream, string)"/>.</exception>
     public static IReadOnlyList<string> WriteZip(RenderBundleContent content, string zipPath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(zipPath);
         var entries = Entries(content);
+        string top = FolderName(zipPath);
         string? folder = Path.GetDirectoryName(Path.GetFullPath(zipPath));
         if (folder is not null) Directory.CreateDirectory(folder);
         try
         {
             using var stream = new FileStream(zipPath, FileMode.Create, FileAccess.Write);
-            WriteZip(entries, stream);
+            WriteZip(entries, stream, top);
         }
         catch
         {
             try { File.Delete(zipPath); } catch (IOException) { /* best effort */ }
             throw;
         }
-        return entries.Select(e => e.Path).ToList();
+        return entries.Select(e => top + "/" + e.Path).ToList();
     }
 
     /// <summary>Writes the bundle as a zip into <paramref name="destination"/>, which stays
-    /// open.</summary>
+    /// open. Every entry lies in one folder, <paramref name="name"/> made a name that every file
+    /// system takes (see <see cref="FolderName"/>).</summary>
     /// <returns>The paths of the zip's entries, in their order.</returns>
     /// <exception cref="ArgumentException">A plan is invalid; its output directory does not lie
     /// beside it; a path of <see cref="RenderBundleContent.Files"/> is not a path inside the
@@ -156,13 +161,42 @@ public static class RenderBundleWriter
     /// the files.</exception>
     /// <exception cref="FileNotFoundException">A file of
     /// <see cref="RenderBundleContent.Files"/> does not exist.</exception>
-    public static IReadOnlyList<string> WriteZip(RenderBundleContent content, Stream destination)
+    public static IReadOnlyList<string> WriteZip(RenderBundleContent content, Stream destination, string name)
     {
         ArgumentNullException.ThrowIfNull(destination);
+        ArgumentNullException.ThrowIfNull(name);
         var entries = Entries(content);
-        WriteZip(entries, destination);
-        return entries.Select(e => e.Path).ToList();
+        string top = SafeName(name);
+        WriteZip(entries, destination, top);
+        return entries.Select(e => top + "/" + e.Path).ToList();
     }
+
+    /// <summary>The folder a bundle's zip holds, and makes when it is unpacked: the zip's file
+    /// name without its extension, with every character that some file system refuses replaced
+    /// by '_', no dot or space at its end, and '_' after a name Windows keeps for a device
+    /// ("CON_"); "render-bundle" when nothing is left of it.</summary>
+    public static string FolderName(string zipPath)
+    {
+        ArgumentNullException.ThrowIfNull(zipPath);
+        return SafeName(Path.GetFileNameWithoutExtension(zipPath));
+    }
+
+    private static string SafeName(string name)
+    {
+        var safe = new StringBuilder(name.Length);
+        foreach (char c in name)
+            safe.Append(c < ' ' || "<>:\"/\\|?*".Contains(c) ? '_' : c);
+        // Windows drops dots and spaces at the end of a name; they are taken off here, so that
+        // the folder has the same name everywhere.
+        string result = safe.ToString().Trim().TrimEnd('.', ' ');
+        if (result.Length == 0) return "render-bundle";
+        string stem = result.Split('.')[0];
+        return ReservedOnWindows.Contains(stem.TrimEnd(' ')) ? stem + "_" + result[stem.Length..] : result;
+    }
+
+    private static readonly HashSet<string> ReservedOnWindows = new(
+        ["CON", "PRN", "AUX", "NUL", .. Enumerable.Range(1, 9).SelectMany(i => new[] { $"COM{i}", $"LPT{i}" })],
+        StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Writes the bundle into a folder, as unpacking its zip would. Files of the same names are
@@ -210,7 +244,7 @@ public static class RenderBundleWriter
         Line();
         Line("HOW TO RENDER");
         Line();
-        Line("Unpack the bundle into a folder of its own, then in that folder:");
+        Line("Unpack the bundle: it unpacks into one folder, the one this file is in. In that folder:");
         Line();
         Line("  Linux, macOS:   sh render.sh");
         Line("  Windows:        render.cmd");
@@ -390,12 +424,12 @@ public static class RenderBundleWriter
         return new Entry(path, () => new MemoryStream(bytes, writable: false), executable);
     }
 
-    private static void WriteZip(List<Entry> entries, Stream destination)
+    private static void WriteZip(List<Entry> entries, Stream destination, string top)
     {
         using var zip = new ZipArchive(destination, ZipArchiveMode.Create, leaveOpen: true, Utf8NoBom);
         foreach (var entry in entries)
         {
-            var zipped = zip.CreateEntry(entry.Path, CompressionLevel.Optimal);
+            var zipped = zip.CreateEntry(top + "/" + entry.Path, CompressionLevel.Optimal);
             zipped.LastWriteTime = EntryTime;
             zipped.ExternalAttributes = (0x8000 | (int)(entry.Executable ? ExecutableMode : PlainMode)) << 16;
             using var input = entry.Open();
