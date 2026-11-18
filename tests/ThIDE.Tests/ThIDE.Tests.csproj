@@ -44,4 +44,10 @@
     <Compile Include="..\Shared\WritePath\*.cs" LinkBase="Shared\WritePath" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- For the in-app render tests: invented .3d models, and the opt-in switch for a real Blender. -->
+    <Compile Include="..\Therion.Blender.Tests\Survex3dFixtureBuilder.cs" Link="Shared\Blender\Survex3dFixtureBuilder.cs" />
+    <Compile Include="..\Therion.Blender.Tests\BlenderFactAttribute.cs" Link="Shared\Blender\BlenderFactAttribute.cs" />
+  </ItemGroup>
+
 </Project>

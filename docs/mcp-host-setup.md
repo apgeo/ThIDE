@@ -209,6 +209,34 @@ not the last save. Whether the assistant may *act* on the UI (not just read it) 
 If ThIDE isn't running with the server on, `--connect` exits at once with a message saying so, rather
 than hanging.
 
+### Blender renders (running ThIDE only)
+
+The running IDE also lends the assistant the **Blender Animation** panel's renderer — the same Blender
+(and the path set in Preferences), the same presets, the same model. The headless server has none of
+these tools.
+
+| Tool | What it does |
+|---|---|
+| `list_render_presets` | the built-in presets and your saved ones: camera move, output, size, length, samples |
+| `start_render` | starts a render and answers at once with a job id |
+| `render_status` | how the job is getting on; `waitSeconds` (up to 60) waits for it and streams progress |
+| `cancel_render` | stops the job, Blender included |
+| `export_render_script` | writes the Blender script, mesh and scene data into a workspace folder, without running Blender |
+
+A render takes minutes to hours, longer than a host waits for one tool call, so it runs as a job: start
+it, then ask `render_status` until it says `succeeded`, `failed` (with a `failureKind` such as
+`blenderNotFound` and the path of Blender's log) or `cancelled`. One render runs at a time; a second
+`start_render` answers `render_busy`. `start_render` takes a preset name and optionally a `.lox`/`.3d` in
+the workspace, the output kind (`video`, `frames`, `still`), width, height, length, samples, output folder
+and file name. Without a model it renders the project's own: the last build output, or — when that is
+missing or older than the sources — a fresh export of the model alone by Therion, on a copy of the
+thconfig without its `system` lines. Outputs go to a folder in the workspace, or to a temporary folder
+that `render_status` names; paths outside the workspace and the project's config folder are refused.
+Stopping the server (or ThIDE) cancels a render still running.
+
+`start_render`, `cancel_render` and `export_render_script` change things, so the Assistant panel asks
+before each, as it does for `run_build`.
+
 ## The built-in Assistant panel
 
 You don't need an external host at all: **View ▸ Assistant** opens a chat panel inside ThIDE.
@@ -295,6 +323,10 @@ the configured override, then the usual install locations, then `PATH`.
 
 **`run_build` says `not_trusted`.** The thconfig, or a fragment it pulls in with `input`, has `system`
 lines. Build it yourself, or restart the server with `--allow-system-commands` if you trust the project.
+
+**`render_status` says `failed` with `blenderNotFound`.** Blender 4.2 or later is not installed, or
+not where ThIDE looks: the path set in Preferences, then the usual install locations, then `PATH`. The
+Blender Animation panel finds it the same way.
 
 **A writing tool is missing from the list.** You started the server with `--profile data`. That is the
 profile doing its job.

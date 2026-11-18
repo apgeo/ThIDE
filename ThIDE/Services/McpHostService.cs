@@ -76,6 +76,7 @@ public sealed class McpHostService : IMcpHostService
     private readonly IUnsavedBufferProvider? _buffers;
     private readonly IWorkspaceTrustService? _trust;
     private readonly ICompileGate? _compileGate;
+    private readonly IBlenderRenderHost? _blender;
 
     // Serializes start/stop transitions so a fast toggle or a settings change mid-start can't race.
     private readonly SemaphoreSlim _gate = new(1, 1);
@@ -97,8 +98,9 @@ public sealed class McpHostService : IMcpHostService
         IWorkspaceSession? session = null,
         IUnsavedBufferProvider? buffers = null,
         IWorkspaceTrustService? trust = null,
-        ICompileGate? compileGate = null)
-        : this(settings, log, uiBridge, toolLocator, compiler, session, buffers, DiscoveryFilePath(), trust, compileGate) { }
+        ICompileGate? compileGate = null,
+        IBlenderRenderHost? blender = null)
+        : this(settings, log, uiBridge, toolLocator, compiler, session, buffers, DiscoveryFilePath(), trust, compileGate, blender) { }
 
     // Test seam (InternalsVisibleTo ThIDE.Tests): a discovery path under a temp dir keeps a test run
     // from writing or deleting the developer's real %AppData%/ThIDE/mcp-endpoint.json. Not seen by DI,
@@ -113,7 +115,8 @@ public sealed class McpHostService : IMcpHostService
         IUnsavedBufferProvider? buffers,
         string discoveryPath,
         IWorkspaceTrustService? trust = null,
-        ICompileGate? compileGate = null)
+        ICompileGate? compileGate = null,
+        IBlenderRenderHost? blender = null)
     {
         _settings = settings;
         _log = log;
@@ -125,6 +128,7 @@ public sealed class McpHostService : IMcpHostService
         _compileGate = compileGate;
         _discoveryPath = discoveryPath;
         _trust = trust;
+        _blender = blender;
         _settings.Changed += OnSettingsChanged;
     }
 
@@ -212,6 +216,8 @@ public sealed class McpHostService : IMcpHostService
             // The Build pane's gate, so an agent's run_build and the user's F5 / compile-on-save never
             // run Therion on the same project at once.
             if (_compileGate is not null) builder.Services.AddSingleton(_compileGate);
+            // The Blender panel's renderer and model sources: its presence adds the render tools.
+            if (_blender is not null) builder.Services.AddSingleton(_blender);
 
             // The workspace tools read the running IDE (T-03.2): the live session model with unsaved
             // buffers overlaid, marshalled onto the UI thread. A fresh host per server start, registered as
