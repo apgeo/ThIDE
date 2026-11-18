@@ -127,7 +127,9 @@ public class ScenePlanBuilderTests
 
         Assert.Equal(BlenderModule.ScenePlanSchemaVersion, plan.Version);
         Assert.Equal("A name", plan.Name);
-        Assert.Equal(ScenePlan.PlayerFeatures, plan.Features);
+        Assert.Equal(ScenePlan.BasicFeatures, plan.Features);
+        Assert.Null(plan.Blend);
+        Assert.True(plan.Output.Render);
         Assert.Equal(PlanFixtures.Medium.Offset, plan.Frame.Origin);
         Assert.Equal(new PlanTimeline { Fps = 12, FrameCount = 30 }, plan.Timeline);
 
@@ -308,6 +310,36 @@ public class ScenePlanBuilderTests
         Assert.Single(added.Look.Materials);
         Assert.Throws<ArgumentException>(() => ScenePlanBuilder.AddModel(
             plan, new PlanModel { Id = "Third", Path = "third.ply" }, new PlanMaterial { Id = "CaveRock", Color = new ColorRgb(1, 0, 0) }));
+    }
+
+    // ---- the scene as a Blender file ----
+
+    [Fact]
+    public void SaveBlend_ListsItsModuleBeforeTheOutput_SoTheFileIsThereWhileTheRenderRuns()
+    {
+        var plan = PlanFixtures.PlanOf(new SceneSpec());
+
+        var saved = ScenePlanBuilder.SaveBlend(plan);
+
+        Assert.Equal(["models", "camera_track", "look", "blend_file", "output"], saved.Features);
+        Assert.Equal(new PlanBlendFile { Path = "scene.blend" }, saved.Blend);
+        Assert.True(saved.Output.Render);
+        Assert.Empty(ScenePlanValidator.Validate(saved));
+        Assert.Same(saved.Features, ScenePlanBuilder.SaveBlend(saved).Features);
+    }
+
+    [Fact]
+    public void SaveBlend_CanLeaveTheRenderForLater_AndKeepsModulesFromElsewhereWhereTheyAre()
+    {
+        var plan = PlanFixtures.PlanOf(new SceneSpec());
+        plan = plan with { Features = ["models", "my_rocks", "camera_track", "look", "output", "my_credits"] };
+
+        var saved = ScenePlanBuilder.SaveBlend(plan, "project/cave.blend", render: false);
+
+        Assert.Equal(["models", "my_rocks", "camera_track", "look", "blend_file", "output", "my_credits"], saved.Features);
+        Assert.Equal("project/cave.blend", saved.Blend!.Path);
+        Assert.False(saved.Output.Render);
+        Assert.Empty(ScenePlanValidator.Validate(saved));
     }
 
     // ---- what a plan does not say yet ----

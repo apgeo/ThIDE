@@ -12,6 +12,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using Therion.Cave3D;
 
 namespace Therion.Blender.Plan;
@@ -32,6 +33,7 @@ public static class ScenePlanSerializer
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         // Names with diacritics stay readable; the file is UTF-8.
         Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        TypeInfoResolver = new DefaultJsonTypeInfoResolver { Modifiers = { WriteRenderOnlyWhenOff } },
         Converters =
         {
             new JsonStringEnumConverter(JsonNamingPolicy.CamelCase, allowIntegerValues: false),
@@ -41,6 +43,15 @@ public static class ScenePlanSerializer
             new ColorStopConverter(),
         },
     };
+
+    /// <summary>An output renders unless it says otherwise, so "render" is written only when
+    /// it is false.</summary>
+    private static void WriteRenderOnlyWhenOff(JsonTypeInfo type)
+    {
+        if (type.Type != typeof(PlanOutput)) return;
+        foreach (var property in type.Properties)
+            if (property.Name == "render") property.ShouldSerialize = (_, value) => value is false;
+    }
 
     public static string Write(ScenePlan plan)
     {

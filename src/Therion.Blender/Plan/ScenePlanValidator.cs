@@ -60,7 +60,24 @@ public static partial class ScenePlanValidator
                  || plan.Output.BaseName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
             Bad("output.baseName", "The base name must be a plain file name (no separators or reserved characters).");
 
+        // ---- the scene as a Blender file ----
+        if (plan.Blend is { } blend)
+        {
+            if (!IsPathBesideThePlan(blend.Path))
+                Bad("blend.path", "The Blender file is named relative to the plan and lies beside it.");
+            else if (!blend.Path.EndsWith(".blend", StringComparison.OrdinalIgnoreCase))
+                Bad("blend.path", "The Blender file's name ends in .blend.");
+            NeedsFeature(plan, "blend", ScenePlan.BlendFileFeature, Bad);
+        }
+
         return errors;
+    }
+
+    /// <summary>A section that no module in the features plays would be left out without a word.</summary>
+    private static void NeedsFeature(ScenePlan plan, string section, string feature, Action<string, string> bad)
+    {
+        if (!plan.Features.Contains(feature, StringComparer.Ordinal))
+            bad(section, $"The plan's features do not list '{feature}', the module that plays this section.");
     }
 
     private static void ValidateModels(ScenePlan plan, Action<string, string> bad)

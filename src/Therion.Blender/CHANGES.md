@@ -1,6 +1,6 @@
 # Therion.Blender — changes for consumers
 
-## 2026-11-18 (player) — more in a plan: models turned and stretched
+## 2026-11-18 (player) — more in a plan: models turned and stretched, the scene as a .blend file
 
 Additive. The script generator, its scripts and the render service are untouched; a plan written
 before reads and plays as before. The plan stays version 1: every addition is an optional field or
@@ -15,6 +15,26 @@ a new module name in `features`.
   a second cave, the centreline as a mesh of its own. `material` joins the look and is given to the
   model; `worldOrigin` (the `SceneMeta.Offset` of a mesh that was converted on its own) puts the
   model where it lies in the plan's frame.
+- **A plan can save the scene it builds as a Blender file**: `ScenePlan.Blend` (`PlanBlendFile`,
+  a `.blend` path relative to the plan; JSON section `blend`), played by the new player module
+  `blend_file`. `PlanOutput.Render = false` (JSON `"render": false`, written only when false) sets
+  the output up and renders nothing, for a scene that is saved now and rendered later.
+  `ScenePlanBuilder.SaveBlend(plan, path, render)` sets all three and lists the module.
+  - The file is saved when every module has built its part and before the render, so it is there
+    while a long render runs. A scene that is only built (`--build-only`) is not saved.
+  - In the file the render's output is named from where the file lies (`//frames/clip_####`) as
+    long as it stays in the plan's folder, so the folder can be moved and rendered elsewhere, in
+    parts: `blender -b scene.blend -s 1 -e 100 -a`. Use numbered frames for that; every part of a
+    video would write the same file.
+  - The meshes are in the file; it needs neither the plan nor the player. A Cycles device is a
+    setting of the machine, not of the file: a GPU is chosen where the file is rendered
+    (`blender -b scene.blend -a -- --cycles-device OPTIX`).
+- `ScenePlan.BasicFeatures` is what `PlayerFeatures` was (the four modules every plan needs, and
+  the default of `ScenePlan.Features`); **`ScenePlan.PlayerFeatures` now lists every module of the
+  player** in running order, the optional ones too.
+- The validator refuses a plan whose `blend` section has no `blend_file` in `features`: nothing
+  would play it.
+- The player reports itself as version 1.1 (`THIDE:player=1.1`).
 
 ## 2026-11-18 — the terrain surface, optionally with its image
 

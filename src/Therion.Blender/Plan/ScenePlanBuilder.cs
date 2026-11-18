@@ -111,6 +111,37 @@ public static class ScenePlanBuilder
         };
     }
 
+    /// <summary>
+    /// Makes <paramref name="plan"/> save the scene it builds as a Blender file, for editing by
+    /// hand and for rendering later from that file.
+    /// </summary>
+    /// <param name="path">The <c>.blend</c> file, relative to the plan.</param>
+    /// <param name="render">False saves the scene and renders nothing.</param>
+    public static ScenePlan SaveBlend(ScenePlan plan, string path = "scene.blend", bool render = true)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        return plan with
+        {
+            Features = WithFeature(plan.Features, ScenePlan.BlendFileFeature),
+            Blend = new PlanBlendFile { Path = path },
+            Output = plan.Output with { Render = render },
+        };
+    }
+
+    /// <summary>Lists a module of the player among <paramref name="features"/>, at its place
+    /// in the running order (<see cref="ScenePlan.PlayerFeatures"/>): before the first module
+    /// that runs after it. Modules from elsewhere stay where they are.</summary>
+    private static IReadOnlyList<string> WithFeature(IReadOnlyList<string> features, string name)
+    {
+        if (features.Contains(name, StringComparer.Ordinal)) return features;
+        var order = ScenePlan.PlayerFeatures.ToList();
+        int rank = order.IndexOf(name);
+        int at = features.Count;
+        for (int i = features.Count - 1; i >= 0; i--)
+            if (order.IndexOf(features[i]) > rank) at = i;
+        return [.. features.Take(at), name, .. features.Skip(at)];
+    }
+
     // A record compares its list of stops by reference.
     private static bool SameMaterial(PlanMaterial a, PlanMaterial b)
         => a with { Stops = null } == b with { Stops = null } && (a.Stops ?? []).SequenceEqual(b.Stops ?? []);

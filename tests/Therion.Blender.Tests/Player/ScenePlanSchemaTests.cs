@@ -64,6 +64,10 @@ public class ScenePlanSchemaTests
     [InlineData("\"color\": [0.2, 0.4, 0.6]", "\"color\": [0.2, 0.4, 1.6]", "$.look.materials[2].color[2]: above 1")]
     [InlineData("\"kind\": \"headlamp\"", "\"kind\": \"spot\"", "$.look.lights[1].kind: \"spot\" is not one of")]
     [InlineData("\"baseName\": \"clip\"", "\"baseName\": \"\"", "$.output.baseName: shorter than 1 characters")]
+    [InlineData("\"baseName\": \"clip\"", "\"baseName\": \"clip\", \"render\": \"no\"", "$.output.render: expected boolean, found String")]
+    [InlineData("\"path\": \"project/scene.blend\"", "\"path\": \"/tmp/scene.blend\"", "$.blend.path: '/tmp/scene.blend' does not match")]
+    [InlineData("\"path\": \"project/scene.blend\"", "\"path\": \"project/scene.txt\"", "$.blend.path: 'project/scene.txt' does not match")]
+    [InlineData("\"path\": \"project/scene.blend\"", "\"file\": \"project/scene.blend\"", "$.blend: 'path' is missing")]
     [InlineData("\"camera_track\"", "\"Camera-Track\"", "$.features[1]: 'Camera-Track' does not match")]
     public void WhatTheFormatForbids_DoesNotConform(string original, string changed, string expected)
     {

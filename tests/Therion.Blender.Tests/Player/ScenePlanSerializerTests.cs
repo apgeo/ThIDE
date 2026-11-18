@@ -67,9 +67,23 @@ public class ScenePlanSerializerTests
 
         foreach (string absent in new[]
                  {
-                     "\"name\"", "\"crs\"", "\"fStop\"", "\"world\"", "\"material\"", "\"translation\"", "\"rotation\"", "\"scale\"", "null",
+                     "\"name\"", "\"crs\"", "\"fStop\"", "\"world\"", "\"material\"", "\"translation\"", "\"rotation\"", "\"scale\"",
+                     "\"render\"", "\"blend\"", "null",
                  })
             Assert.DoesNotContain(absent, json);
+    }
+
+    [Fact]
+    public void AnOutputThatDoesNotRender_SaysSo_AndReadsBack()
+    {
+        var plan = PlanFixtures.Full() with { Output = PlanFixtures.Full().Output with { Render = false } };
+
+        string json = ScenePlanSerializer.Write(plan);
+
+        Assert.Contains("\"baseName\": \"clip\",\n    \"render\": false\n  },\n  \"blend\": {\n    \"path\": \"project/scene.blend\"\n  }", json);
+        Assert.False(ScenePlanSerializer.Read(json).Output.Render);
+        Assert.True(ScenePlanSerializer.Read(ScenePlanSerializer.Write(PlanFixtures.Full())).Output.Render);
+        Assert.Equal(plan.Blend, ScenePlanSerializer.Read(json).Blend);
     }
 
     [Fact]

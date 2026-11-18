@@ -178,6 +178,18 @@ public class ScenePlanValidatorTests
     }
 
     [Fact]
+    public void ABlendFile_LiesBesideThePlan_AndItsModuleIsListed()
+    {
+        AssertBad(Full with { Blend = new PlanBlendFile { Path = "/abs/scene.blend" } }, "blend.path");
+        AssertBad(Full with { Blend = new PlanBlendFile { Path = "../scene.blend" } }, "blend.path");
+        AssertBad(Full with { Blend = new PlanBlendFile { Path = "scene.blend1" } }, "blend.path");
+        AssertBad(Full with { Blend = new PlanBlendFile { Path = "" } }, "blend.path");
+        AssertBad(Full with { Features = ScenePlan.BasicFeatures }, "blend");
+        Assert.Empty(ScenePlanValidator.Validate(Full with { Blend = null, Features = ScenePlan.BasicFeatures }));
+        Assert.Empty(ScenePlanValidator.Validate(Full with { Blend = new PlanBlendFile { Path = "Scene.BLEND" }, Output = Full.Output with { Render = false } }));
+    }
+
+    [Fact]
     public void Output_NamesAFolderAndAPlainFileName()
     {
         AssertBad(Full with { Output = Full.Output with { Directory = " " } }, "output.directory");

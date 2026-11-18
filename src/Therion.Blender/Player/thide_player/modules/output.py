@@ -1,5 +1,6 @@
 """Feature "output": what the render writes (a video, numbered frames or one still), and the
-render itself, with its progress reported frame by frame.
+render itself, with its progress reported frame by frame. With "render": false the output is set
+up and nothing is rendered: the plan is for a scene that is saved and rendered later.
 """
 
 import os
@@ -63,6 +64,8 @@ def set_video(scene, output, directory, base):
 
 
 def render(ctx, output):
+    if not output.get("render", True):
+        return
     scene = ctx.scene
     if scene.camera is None:
         raise api.PlanError('there is no camera to render through; the plan\'s "features" need "camera_track"')

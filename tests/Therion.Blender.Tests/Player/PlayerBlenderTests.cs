@@ -459,6 +459,95 @@ public class PlayerBlenderTests
         Assert.DoesNotContain(report.Objects, o => o.Type == "EMPTY" && o.Name != "CameraTarget");
     }
 
+    // ---- the scene as a Blender file ----
+
+    private static SceneSpec Parts(int frames) => Flythrough(frames) with
+    {
+        Output = new OutputSpec { Kind = OutputKind.FrameSequence, Width = 64, Height = 36, BaseName = "part" },
+    };
+
+    [BlenderFact]
+    public async Task ASavedScene_OpensAgainAsItWasBuilt_AndNothingWasRendered()
+    {
+        var (_, job) = PlayerRunner.WriteJob("blend-only", Medium.Value, Parts(frames: 6), plan =>
+            ScenePlanBuilder.SaveBlend(plan with { Output = plan.Output with { Directory = "frames" } }, "project/cave.blend", render: false));
+        string blend = Path.Combine(job.Folder, "project", "cave.blend");
+
+        var (exitCode, log) = await PlayerRunner.RunAsync(job.ScriptPath);
+
+        Assert.True(exitCode == 0, $"exit code {exitCode}; logs: {job.Folder}");
+        Assert.Equal([blend], PlayerRunner.Reported(log, "blend"));
+        Assert.Equal(["1"], PlayerRunner.Reported(log, "done"));
+        Assert.Empty(PlayerRunner.Reported(log, "frame"));
+        Assert.False(Directory.Exists(Path.Combine(job.Folder, "frames")));
+
+        var options = new ProbeOptions { Samples = 3 };
+        var opened = await PlayerRunner.ProbeBlendAsync(blend, options);
+        var built = await PlayerRunner.ProbeAsync(job.ScriptPath, options);
+
+        // The output is named from where the file lies, so the folder can be moved.
+        Assert.Equal("//../frames/part_####", opened.Scene.OutputPath);
+        Assert.Equal(built.Scene with { OutputPath = "" }, opened.Scene with { OutputPath = "", Resolution = built.Scene.Resolution });
+        Assert.Equal(built.Scene.Resolution, opened.Scene.Resolution);
+        Assert.Equal(built.Objects.Select(o => (o.Name, o.Role, o.Type, o.Parent, o.Vertices, o.Polygons, o.Energy)),
+            opened.Objects.Select(o => (o.Name, o.Role, o.Type, o.Parent, o.Vertices, o.Polygons, o.Energy)));
+        Assert.All(built.Objects.Zip(opened.Objects), pair =>
+        {
+            Assert.Equal(pair.First.Materials, pair.Second.Materials);
+            Assert.Equal(pair.First.Constraints, pair.Second.Constraints);
+            AssertNear(pair.First.Location, pair.Second.Location, 1e-6, pair.First.Name);
+        });
+        Assert.All(built.Frames.Zip(opened.Frames), pair =>
+        {
+            AssertNear(pair.First.Camera!.Location, pair.Second.Camera!.Location, 1e-6, $"frame {pair.First.Frame}");
+            AssertNear(pair.First.Camera.Forward, pair.Second.Camera.Forward, 1e-6, $"frame {pair.First.Frame}");
+        });
+    }
+
+    [BlenderFact]
+    public async Task ASavedScene_RendersInParts_WhereverItsFolderIsMovedTo()
+    {
+        var (_, job) = PlayerRunner.WriteJob("blend-parts", Small.Value, Parts(frames: 4), plan =>
+            ScenePlanBuilder.SaveBlend(plan with { Output = plan.Output with { Directory = "frames" } }, render: false));
+        var (exitCode, _) = await PlayerRunner.RunAsync(job.ScriptPath);
+        Assert.True(exitCode == 0, $"exit code {exitCode}; logs: {job.Folder}");
+
+        // Somewhere else, with nothing of the job but the file: frames 2 and 3 of the four.
+        string moved = PlayerRunner.NewCase("blend-parts-moved");
+        string blend = Path.Combine(moved, "scene.blend");
+        File.Copy(Path.Combine(job.Folder, "scene.blend"), blend);
+        (exitCode, string log) = await BlenderTestProcess.RunAsync(SceneProbeRunner.Blender.Path, [blend, "-s", "2", "-e", "3", "-a"], moved, 600);
+        await File.WriteAllTextAsync(Path.Combine(moved, "run.log"), log);
+
+        Assert.True(exitCode == 0, $"exit code {exitCode}; logs: {moved}");
+        Assert.Equal(
+            ["part_0002.png", "part_0003.png"],
+            Directory.GetFiles(Path.Combine(moved, "frames")).Select(Path.GetFileName).Order());
+        Assert.False(Directory.Exists(Path.Combine(job.Folder, "frames")));
+    }
+
+    [BlenderFact]
+    public async Task APlan_CanSaveTheSceneAndRenderIt_TheFileFirst()
+    {
+        var spec = Orbit with { Output = new OutputSpec { Kind = OutputKind.Still, Width = 64, Height = 64, BaseName = "one" } };
+        var (_, job) = PlayerRunner.WriteJob("blend-and-render", Small.Value, spec, plan => ScenePlanBuilder.SaveBlend(plan));
+        string blend = Path.Combine(job.Folder, "scene.blend");
+
+        // A scene that is only built is not saved.
+        var (exitCode, _) = await PlayerRunner.RunAsync(job.ScriptPath, "--build-only");
+        Assert.Equal(0, exitCode);
+        Assert.False(File.Exists(blend));
+
+        (exitCode, string log) = await PlayerRunner.RunAsync(job.ScriptPath);
+
+        Assert.True(exitCode == 0, $"exit code {exitCode}; logs: {job.Folder}");
+        Assert.True(new FileInfo(blend).Length > 0);
+        Assert.True(new FileInfo(Path.Combine(job.Folder, "one.png")).Length > 0);
+        Assert.True(
+            log.IndexOf("THIDE:blend=", StringComparison.Ordinal) < log.IndexOf("THIDE:phase=render", StringComparison.Ordinal),
+            "the scene was saved after the render started");
+    }
+
     // ---- modules from outside the player ----
 
     private static ScenePlan WithMarkers(ScenePlan plan) => plan with

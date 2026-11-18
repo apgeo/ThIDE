@@ -10,7 +10,7 @@
     "generator": { "type": "string", "description": "What wrote the plan." },
     "name": { "type": "string" },
     "features": {
-      "description": "The player modules the plan needs, in the order they run. A player without one of them refuses the plan. The player's own: models, camera_track, look, output.",
+      "description": "The player modules the plan needs, in the order they run. A player without one of them refuses the plan. The player's own: models, camera_track, look, blend_file, output.",
       "type": "array",
       "minItems": 1,
       "uniqueItems": true,
@@ -188,7 +188,17 @@
         "kind": { "enum": ["video", "frames", "still"], "description": "video: <baseName>.<container>; frames: <baseName>_0001.png onwards; still: <baseName>.png of the first frame." },
         "container": { "enum": ["mp4", "mkv", "webm"] },
         "directory": { "type": "string", "minLength": 1, "description": "Relative to the plan, or absolute. Default: the plan's folder." },
-        "baseName": { "type": "string", "minLength": 1 }
+        "baseName": { "type": "string", "minLength": 1 },
+        "render": { "type": "boolean", "description": "False sets the output up and renders nothing: for a plan that only saves the scene ('blend'), to be rendered from that file later. Default true." }
+      }
+    },
+    "blend": {
+      "description": "Played by the module 'blend_file': the built scene is saved as a Blender file, before anything is rendered. In the file the render's output is named relative to the file where it lies in the plan's folder, so the folder can be moved and rendered elsewhere: blender -b scene.blend -s 1 -e 100 -a.",
+      "type": "object",
+      "required": ["path"],
+      "additionalProperties": false,
+      "properties": {
+        "path": { "$ref": "#/$defs/relativePath", "type": "string", "pattern": "\\.[bB][lL][eE][nN][dD]$", "description": "A .blend file, relative to the plan." }
       }
     },
     "changes": { "type": "array", "description": "Reserved: timed changes of visibility, colour and strength." },

@@ -8,10 +8,11 @@
 // position in one metric frame (X east, Y north, Z up, about Frame.Origin), every time in seconds
 // from the start of the clip. Camera poses are data; no camera mathematics runs in Python.
 //
-// The sections: frame and timeline (what every part shares), models, camera, look, output, and
-// features — the player modules the plan needs, in the order they run. Any other section belongs
-// to a module outside this library and travels in Sections; "changes", "annotations" and "texts"
-// are reserved names for later versions.
+// The sections: frame and timeline (what every part shares), models, camera, look, output, the
+// optional blend (the built scene saved as a Blender file), and features — the player modules the
+// plan needs, in the order they run. Any other section belongs to a module outside this library
+// and travels in Sections; "changes", "annotations" and "texts" are reserved names for later
+// versions.
 
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -283,6 +284,18 @@ public sealed record PlanOutput
 
     /// <summary>File name without extension.</summary>
     public string BaseName { get; init; } = "cave-render";
+
+    /// <summary>False sets the output up and renders nothing: for a plan that only saves the
+    /// scene (<see cref="ScenePlan.Blend"/>), to be rendered from that file later.</summary>
+    public bool Render { get; init; } = true;
+}
+
+/// <summary>The built scene saved as a Blender file, for editing by hand and for rendering
+/// later, in parts or on another machine: <c>blender -b scene.blend -s 1 -e 100 -a</c>.</summary>
+public sealed record PlanBlendFile
+{
+    /// <summary>The <c>.blend</c> file to write, relative to the plan.</summary>
+    public string Path { get; init; } = "scene.blend";
 }
 
 /// <summary>One render, fully resolved. See the file header.</summary>
@@ -291,9 +304,16 @@ public sealed record ScenePlan
     public const string Metres = "metres";
     public const string ZUp = "Z";
 
-    /// <summary>The modules of the player in this library, in the order a plan runs them: a
+    /// <summary>The module that saves the scene as a Blender file (<see cref="Blend"/>).</summary>
+    public const string BlendFileFeature = "blend_file";
+
+    /// <summary>The modules every plan of this library needs, in the order a plan runs them: a
     /// headlamp of the look rides the camera, and the output is set last.</summary>
-    public static readonly IReadOnlyList<string> PlayerFeatures = ["models", "camera_track", "look", "output"];
+    public static readonly IReadOnlyList<string> BasicFeatures = ["models", "camera_track", "look", "output"];
+
+    /// <summary>Every module of the player in this library, in the order a plan runs them. The
+    /// scene is saved when all of them have built it and before the output renders it.</summary>
+    public static readonly IReadOnlyList<string> PlayerFeatures = ["models", "camera_track", "look", BlendFileFeature, "output"];
 
     public int Version { get; init; } = BlenderModule.ScenePlanSchemaVersion;
 
@@ -304,7 +324,7 @@ public sealed record ScenePlan
 
     /// <summary>The player modules the plan needs, in the order they run. A player that lacks
     /// one refuses the plan instead of rendering less than it says.</summary>
-    public IReadOnlyList<string> Features { get; init; } = PlayerFeatures;
+    public IReadOnlyList<string> Features { get; init; } = BasicFeatures;
 
     /// <summary>Folders beside the plan that hold more modules than the player has.</summary>
     public IReadOnlyList<string> ModuleFolders { get; init; } = [];
@@ -320,6 +340,10 @@ public sealed record ScenePlan
     public PlanLook Look { get; init; } = new();
 
     public PlanOutput Output { get; init; } = new();
+
+    /// <summary>Set, the built scene is saved as a Blender file; played by the module
+    /// <see cref="BlendFileFeature"/>.</summary>
+    public PlanBlendFile? Blend { get; init; }
 
     /// <summary>Every other section, by name: what a module outside this library reads, and
     /// the sections reserved for later versions. Kept as it was read.</summary>

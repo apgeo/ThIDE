@@ -37,6 +37,7 @@ internal static class PlanFixtures
     public static ScenePlan Full() => new()
     {
         Name = "Every field",
+        Features = ScenePlan.PlayerFeatures,
         ModuleFolders = ["extra"],
         Frame = new PlanFrame { Origin = new CaveVector3(512000.5, 5120000.25, 1200), Crs = "EPSG:3844" },
         Timeline = new PlanTimeline { Fps = 25, FrameCount = 51 },
@@ -81,5 +82,6 @@ internal static class PlanFixtures
             World = new PlanWorld { Kind = PlanWorldKind.Color, Color = new ColorRgb(0.05, 0.05, 0.05), Strength = 0.5 },
         },
         Output = new PlanOutput { Kind = PlanOutputKind.Video, Container = PlanContainer.Webm, Directory = "out", BaseName = "clip" },
+        Blend = new PlanBlendFile { Path = "project/scene.blend" },
     };
 }

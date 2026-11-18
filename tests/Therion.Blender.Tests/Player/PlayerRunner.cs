@@ -57,11 +57,26 @@ internal static class PlayerRunner
     /// returns what the probe reports.</summary>
     public static async Task<SceneReport> ProbeAsync(string scriptPath, ProbeOptions? options = null, params string[] playerArguments)
     {
-        options ??= new ProbeOptions();
         string caseDir = Path.GetDirectoryName(scriptPath)!;
         string reportPath = Path.Combine(caseDir, "scene-report.json");
         var arguments = new List<string> { "--python", scriptPath, "--python", ProbeScript, "--", "--build-only", "--report", reportPath };
         arguments.AddRange(playerArguments);
+        return await ProbeAsync(caseDir, arguments, reportPath, "run.log", options ?? new ProbeOptions());
+    }
+
+    /// <summary>Opens a scene that was saved as a Blender file and returns what the probe
+    /// reports about it.</summary>
+    public static async Task<SceneReport> ProbeBlendAsync(string blendPath, ProbeOptions? options = null)
+    {
+        string caseDir = Path.GetDirectoryName(blendPath)!;
+        string reportPath = Path.Combine(caseDir, "blend-report.json");
+        var arguments = new List<string> { blendPath, "--python", ProbeScript, "--", "--report", reportPath };
+        return await ProbeAsync(caseDir, arguments, reportPath, "blend-probe.log", options ?? new ProbeOptions());
+    }
+
+    private static async Task<SceneReport> ProbeAsync(
+        string caseDir, List<string> arguments, string reportPath, string logName, ProbeOptions options)
+    {
         if (options.Frames.Count > 0)
         {
             arguments.Add("--frames");
@@ -86,7 +101,7 @@ internal static class PlayerRunner
         }
 
         var (exitCode, log) = await BlenderTestProcess.RunAsync(SceneProbeRunner.Blender.Path, arguments, caseDir, TimeoutSeconds);
-        await File.WriteAllTextAsync(Path.Combine(caseDir, "run.log"), log);
+        await File.WriteAllTextAsync(Path.Combine(caseDir, logName), log);
         Assert.True(exitCode == 0 && File.Exists(reportPath),
             $"Building the scene failed (exit code {exitCode}): {Failure(log)}\n  logs: {caseDir}");
         return SceneReport.Parse(await File.ReadAllTextAsync(reportPath));

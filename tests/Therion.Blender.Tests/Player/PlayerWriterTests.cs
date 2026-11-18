@@ -41,6 +41,7 @@ public class PlayerWriterTests : IDisposable
                 "thide_player/api.py",
                 "thide_player/core.py",
                 "thide_player/modules/__init__.py",
+                "thide_player/modules/blend_file.py",
                 "thide_player/modules/camera_track.py",
                 "thide_player/modules/look.py",
                 "thide_player/modules/models.py",
@@ -176,7 +177,7 @@ public class PlayerWriterTests : IDisposable
                  {
                      "thide_player", "thide_player.api", "thide_player.core", "thide_player.registry", "thide_player.modules",
                      "thide_player.modules.models", "thide_player.modules.camera_track", "thide_player.modules.look",
-                     "thide_player.modules.output",
+                     "thide_player.modules.output", "thide_player.modules.blend_file",
                  })
             Assert.Contains($"    \"{module}\": r'''\n", script);
         Assert.EndsWith("core.main(os.path.dirname(os.path.abspath(__file__)), PLAN, FILES)\n", script);
