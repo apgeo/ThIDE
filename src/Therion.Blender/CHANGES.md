@@ -16,8 +16,8 @@ a new module name in `features`.
   model; `worldOrigin` (the `SceneMeta.Offset` of a mesh that was converted on its own) puts the
   model where it lies in the plan's frame.
 - **A plan can save the scene it builds as a Blender file**: `ScenePlan.Blend` (`PlanBlendFile`,
-  a `.blend` path relative to the plan; JSON section `blend`), played by the new player module
-  `blend_file`. `PlanOutput.Render = false` (JSON `"render": false`, written only when false) sets
+  a `.blend` path relative to the plan and inside its folder; JSON section `blend`), played by the
+  new player module `blend_file`. `PlanOutput.Render = false` (JSON `"render": false`, written only when false) sets
   the output up and renders nothing, for a scene that is saved now and rendered later.
   `ScenePlanBuilder.SaveBlend(plan, path, render)` sets all three and lists the module.
   - The file is saved when every module has built its part and before the render, so it is there
@@ -39,8 +39,8 @@ a new module name in `features`.
   saved scene. `engine: PlanEngine.Eevee` keeps materials and lights instead. A draft is one more
   plan beside the real one (`render.py -- --plan draft.json`), not a switch of the player.
   Measured on the invented medium cave, Blender 5.0.1 on a CPU, machine busy with other work:
-  the flythrough at 1920×1080 with 96 samples takes about 58 s a frame in Cycles and 0.34 s as a
-  960×540 draft; the orbit 2.6 s and 0.22 s.
+  the flythrough at 1920×1080 with 96 samples takes about 57 s a frame in Cycles and 0.3 s as a
+  960×540 draft; the orbit, where the cave fills little of the picture, 2.6 s and 0.22 s.
 - **Labels**: `ScenePlan.Labels` (`PlanLabels`; JSON section `labels`), played by the new player
   module `labels`.
   - `PlanTexts`: a glow colour and strength, and `PlanText` items (`id`, `text`, `at`, `size`,

@@ -640,7 +640,8 @@ public class PlayerBlenderTests
     // ---- a draft ----
 
     /// <summary>What draft_colours.py reports of one model.</summary>
-    private sealed record ShownColours(string? Shown, string[] Attributes, double[]? Lowest, double[]? Highest, int Different);
+    private sealed record ShownColours(
+        string? Shown, string[] Attributes, double[]? Lowest, double[]? Highest, double[]? Between, double BetweenAt, int Different);
 
     [BlenderFact]
     public async Task ADraft_ShowsEveryModelInTheColoursOfItsMaterial()
@@ -696,6 +697,12 @@ public class PlayerBlenderTests
         AssertNear(Rgb(blue), ramped.Lowest!, 2e-3, "the lowest vertex");
         AssertNear(Rgb(red), ramped.Highest!, 2e-3, "the highest vertex");
         Assert.True(ramped.Different > 50, $"only {ramped.Different} colours along the ramp");
+        // In between, the colours of the two stops around it, mixed by where it stands between them.
+        Assert.InRange(ramped.BetweenAt, 0.2, 0.4);
+        double share = ramped.BetweenAt / 0.5;
+        AssertNear(
+            [blue.R + (green.R - blue.R) * share, blue.G + (green.G - blue.G) * share, blue.B + (green.B - blue.B) * share],
+            ramped.Between!, 2e-3, "a vertex between the first two stops");
         Assert.Equal((1, "ThideDraft"), (colours["RampedAbove"].Different, colours["RampedAbove"].Shown));
         AssertNear(Rgb(red), colours["RampedAbove"].Lowest!, 1e-4, "a model above the ramp");
 

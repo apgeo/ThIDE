@@ -22,6 +22,11 @@ for obj in bpy.context.scene.objects:
         highest = max(range(len(heights)), key=heights.__getitem__)
         entry["lowest"] = [round(c, 5) for c in shown.data[lowest].color[:3]]
         entry["highest"] = [round(c, 5) for c in shown.data[highest].color[:3]]
+        # One vertex in between, and how far up it stands (0 at the lowest, 1 at the highest).
+        span = (heights[highest] - heights[lowest]) or 1.0
+        between = min(range(len(heights)), key=lambda i: abs((heights[i] - heights[lowest]) / span - 0.3))
+        entry["between"] = [round(c, 5) for c in shown.data[between].color[:3]]
+        entry["betweenAt"] = (heights[between] - heights[lowest]) / span
         entry["different"] = len({tuple(round(c, 4) for c in value.color[:3]) for value in shown.data})
     report[obj.name] = entry
 
