@@ -164,6 +164,9 @@ internal sealed record ProbeObjectView
 
     /// <summary>Hidden from the render at this frame.</summary>
     public bool Hidden { get; init; }
+
+    /// <summary>Where the object's own origin is at this frame, in the scene.</summary>
+    public double[] Origin { get; init; } = [];
     public double Scale { get; init; }
     public double FrameX { get; init; }
     public double FrameY { get; init; }

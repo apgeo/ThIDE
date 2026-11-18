@@ -211,6 +211,21 @@ public class LabelScriptTests
     }
 
     [Fact]
+    public void ACameraDistanceMarker_TakesItsCaptionAlong_AndNoOtherMarkerDoes()
+    {
+        var spec = LabelledSpec() with
+        {
+            Labels = LabelledSpec().Labels with { Leads = new LeadMarkerSpec { Show = true, ShowText = true, Sizing = LeadMarkerSizing.CameraDistance } },
+        };
+        var script = ScriptGenerator.Generate(spec, assets: null, framing: null, meta: LabelledMeta());
+
+        Assert.Contains("_dt = _thide_label(\"leadtxt:\" + _d[6], _d[0], (_d[1], _d[2], _d[3] + _d[4] * 2.0), _d[5], _lead_markers)", script);
+        Assert.Contains("_dt.parent = _dm", script);
+        Assert.Contains("_dt.matrix_parent_inverse = mathutils.Matrix.Translation((_d[1], _d[2], _d[3])).inverted()", script);
+        Assert.DoesNotContain(".parent = _dm", Generate());
+    }
+
+    [Fact]
     public void LabelledScript_CompilesAsPython_WhenPythonAvailable()
     {
         var python = FindPython();

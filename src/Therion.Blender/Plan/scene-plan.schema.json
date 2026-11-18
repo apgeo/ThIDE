@@ -202,7 +202,8 @@
                   "role": { "$ref": "#/$defs/role", "description": "Default 'label'." },
                   "text": { "type": "string" },
                   "at": { "$ref": "#/$defs/vector", "description": "The middle of the text." },
-                  "size": { "type": "number", "exclusiveMinimum": 0, "description": "The height of the letters, in metres." }
+                  "size": { "type": "number", "exclusiveMinimum": 0, "description": "The height of the letters, in metres." },
+                  "follows": { "type": "string", "minLength": 1, "description": "The id of a marker the text moves and grows with, as a caption does with a marker sized byDistance: 'at' and 'size' are where it stands and how large it is while the marker has the radius it is built with." }
                 }
               }
             }

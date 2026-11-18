@@ -256,6 +256,7 @@ public static class ScenePlanSerializer
         public required string Text { get; init; }
         public required CaveVector3 At { get; init; }
         public required double Size { get; init; }
+        public string? Follows { get; init; }
     }
 
     private sealed class TextConverter : JsonConverter<PlanText>
@@ -263,15 +264,16 @@ public static class ScenePlanSerializer
         public override PlanText Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options)
         {
             var text = JsonSerializer.Deserialize<TextJson>(ref reader, options) ?? throw new JsonException("Expected a text.");
-            return new PlanText(text.Id, text.Text, text.At, text.Size, text.Role);
+            return new PlanText(text.Id, text.Text, text.At, text.Size, text.Role) { Follows = text.Follows };
         }
 
         public override void Write(Utf8JsonWriter writer, PlanText value, JsonSerializerOptions options)
         {
             string role = value.Role is { } r ? $", \"role\": {Quoted(r, options)}" : "";
+            string follows = value.Follows is { } f ? $", \"follows\": {Quoted(f, options)}" : "";
             writer.WriteRawValue(
                 $"{LabelIndent}{{ \"id\": {Quoted(value.Id, options)}{role}, \"text\": {Quoted(value.Text, options)}, " +
-                $"\"at\": {Text(value.At)}, \"size\": {Num(value.Size)} }}");
+                $"\"at\": {Text(value.At)}, \"size\": {Num(value.Size)}{follows} }}");
         }
     }
 

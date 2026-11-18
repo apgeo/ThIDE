@@ -319,6 +319,7 @@ public class ScenePlanBuilderTests
             Assert.Equal(pair.First.Text, caption.Text);
             AssertNear(pair.First.Position + new CaveVector3(0, 0, 2 * pair.First.Radius), caption.At);
             Assert.Equal(pair.First.TextSize, caption.Size, 6);
+            Assert.Null(caption.Follows); // a marker of a fixed size leaves its caption where it is
         });
         Assert.Equal(new PlanPulse { Period = 1.4, Scale = 1.5 }, markers.Pulse); // 14 frames at 10 fps
         Assert.Null(markers.ByDistance);
@@ -381,6 +382,27 @@ public class ScenePlanBuilderTests
         // With no roof a label sits on its station; with one, most are lifted above it.
         int lifted = PlanFixtures.MediumWithLeads.Stations.Zip(texts).Count(pair => pair.Second.At.Z > pair.First.Position.Z + 0.01);
         Assert.Equal(roof != LabelRoofSource.None, lifted > texts.Count / 2);
+    }
+
+    [Fact]
+    public void ACaption_FollowsItsMarker_WhenTheMarkerIsSizedByItsDistanceFromTheCamera()
+    {
+        var meta = PlanFixtures.MediumWithLeads;
+        var lead = meta.Leads[0];
+        meta = meta with { Leads = [.. meta.Leads, lead with { Note = "the same place again" }] };
+        var leads = new LeadMarkerSpec { Show = true, ShowText = true, Sizing = LeadMarkerSizing.CameraDistance };
+        var spec = PlanFixtures.WithPaths(Labelled(new LabelsSpec { Leads = leads }, CameraTemplate.Flythrough));
+
+        var plan = ScenePlanBuilder.FromSpec(spec, PlanFixtures.MediumFraming, meta);
+
+        var markers = plan.Labels!.Markers!.Items;
+        var captions = plan.Labels.Texts!.Items;
+        Assert.Equal(markers.Select(m => m.Id), captions.Select(t => t.Follows));
+        Assert.Equal("lead:" + lead.Station + ".001", captions[^1].Follows);
+        // Where a caption stands is where it stands while its ball has the radius it is built with.
+        Assert.All(markers.Zip(captions), pair => AssertNear(pair.First.At + new CaveVector3(0, 0, 2 * pair.First.Radius), pair.Second.At));
+        Assert.Empty(ScenePlanValidator.Validate(plan));
+        Assert.Empty(JsonSchemaSubset.Validate(ScenePlanSchema.Text, ScenePlanSerializer.Write(plan)));
     }
 
     [Fact]

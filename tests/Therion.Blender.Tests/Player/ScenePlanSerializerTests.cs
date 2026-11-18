@@ -41,7 +41,7 @@ public class ScenePlanSerializerTests
         Assert.Contains(
             "      \"items\": [\n" +
             "        { \"id\": \"stn:entrance\", \"role\": \"station-label\", \"text\": \"Intrarea \\\"de sus\\\"\", \"at\": [1.5, 2, 3], \"size\": 1.2 },\n" +
-            "        { \"id\": \"note\", \"text\": \"two\\nlines\", \"at\": [-4, 0, 0.25], \"size\": 0.5 }\n" +
+            "        { \"id\": \"note\", \"text\": \"two\\nlines\", \"at\": [-4, 0, 0.25], \"size\": 0.5, \"follows\": \"here\" }\n" +
             "      ]", json);
         Assert.Contains(
             "        { \"id\": \"lead:far.7\", \"role\": \"lead-marker\", \"at\": [40, -8, 2], \"radius\": 0.3 },\n" +

@@ -450,6 +450,43 @@ public class PlayerBlenderTests
         Assert.Equal(4, scales);
     }
 
+    [BlenderFact]
+    public async Task ACaption_StaysJustAboveItsDistanceSizedBall_AndInProportion_AtEveryFrame()
+    {
+        const int frames = 12;
+        var spec = Flythrough(frames) with
+        {
+            Labels = new LabelsSpec { Leads = new LeadMarkerSpec { Show = true, ShowText = true, Sizing = LeadMarkerSizing.CameraDistance } },
+        };
+        var options = new ProbeOptions { Frames = [.. Enumerable.Range(1, frames)] };
+        var (plan, job) = PlayerRunner.WriteJob("caption-follows", Medium.Value, spec);
+        var played = await PlayerRunner.ProbeAsync(job.ScriptPath, options);
+        var generated = await SceneProbeRunner.RunAsync("player-caption-follows-generated", Medium.Value, spec, options);
+
+        var markers = plan.Labels!.Markers!.Items;
+        Assert.NotEmpty(markers);
+        foreach (var (who, report) in new[] { ("the player", played), ("the generated script", generated) })
+        {
+            Assert.Equal(frames, report.Frames.Count);
+            foreach (var marker in markers)
+            {
+                string caption = plan.Labels.Texts!.Items.Single(t => t.Follows == marker.Id).Id;
+                Assert.Equal(marker.Id, report.Object(caption).Parent);
+                Assert.All(report.Frames, frame =>
+                {
+                    var (ball, text) = (frame.Object(marker.Id), frame.Object(caption));
+                    string what = $"{who}, frame {frame.Frame}: {caption}";
+                    // As large next to its ball as it was built, and two of the ball's radii above
+                    // its middle, whatever the driver makes of the ball.
+                    Assert.True(Math.Abs(ball.Scale - text.Scale) < 1e-4, $"{what}: scale {text.Scale}, its ball's {ball.Scale}");
+                    AssertNear(Vector(ball.Origin) + new CaveVector3(0, 0, 2 * marker.Radius * ball.Scale), text.Origin, 1e-3, what);
+                });
+                // The ball does change its size on the way: the caption has something to follow.
+                Assert.True(report.Frames.Select(f => Math.Round(f.Object(marker.Id).Scale, 3)).Distinct().Count() > 3, $"{who}: {marker.Id}");
+            }
+        }
+    }
+
     // ---- models ----
 
     [BlenderFact]

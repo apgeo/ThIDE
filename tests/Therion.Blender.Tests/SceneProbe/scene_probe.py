@@ -317,6 +317,7 @@ def sample_frame(scene, frame, model, sampled_vertices, annotations):
         info = {
             "name": obj.name,
             "hidden": bool(evaluated.hide_render),
+            "origin": vec(evaluated.matrix_world.translation),
             "scale": round(max(abs(s) for s in evaluated.matrix_world.to_scale()), 6),
             "frameX": round(x, 6),
             "frameY": round(y, 6),

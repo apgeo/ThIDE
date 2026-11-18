@@ -193,6 +193,9 @@ public class ScenePlanValidatorTests
         AssertBad(WithText(new PlanText("t", "a", at, 0)), "labels.texts.items[2].size");
         AssertBad(WithText(new PlanText("t", null!, at, 1)), "labels.texts.items[2].text");
         Assert.Empty(ScenePlanValidator.Validate(WithText(new PlanText("t", "", at, 1, "poi-label-2"))));
+        // A text follows a marker, not another text or nothing.
+        AssertBad(WithText(new PlanText("t", "a", at, 1) { Follows = "note" }), "labels.texts.items[2].follows");
+        AssertBad(Full with { Labels = labels with { Markers = null } }, "labels.texts.items[1].follows");
 
         // A marker cannot take the id of a text.
         AssertBad(WithMarker(new PlanMarker("note", at, 1)), "labels.markers.items[2].id");

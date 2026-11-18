@@ -2,7 +2,8 @@
 
 Where each one stands, how large it is and what it says comes from the plan; nothing is laid out
 here. Runs after "camera_track": the texts turn to the camera, and a marker that is sized by its
-distance measures that distance from the camera.
+distance measures that distance from the camera. A text that follows a marker (a lead's caption)
+is the marker's child: it grows with the ball and stays where it stands relative to it.
 """
 
 import math
@@ -17,7 +18,7 @@ SECTION = "labels"
 KEYS = {
     "texts": {
         "color": None, "strength": None,
-        "items": [{"id": None, "role": None, "text": None, "at": None, "size": None}],
+        "items": [{"id": None, "role": None, "text": None, "at": None, "size": None, "follows": None}],
     },
     "markers": {
         "color": None, "strength": None,
@@ -37,11 +38,14 @@ def build(ctx, labels):
     if camera is None:
         raise api.PlanError('labels turn to the camera; list "camera_track" before "labels" in "features"')
 
+    followers, placed = [], {}
     if texts.get("items"):
         colour = rgba(texts["color"])
         material = glowing("LabelText", colour, texts.get("strength", 1.5))
-        for item in texts["items"]:
-            add_text(ctx.scene, camera, item, material, colour)
+        for index, item in enumerate(texts["items"]):
+            text = add_text(ctx.scene, camera, item, material, colour)
+            if item.get("follows") is not None:
+                followers.append((text, item["follows"], "labels.texts.items[%d].follows" % index))
 
     if markers.get("items"):
         colour = rgba(markers["color"])
@@ -52,10 +56,16 @@ def build(ctx, labels):
         pulse_frames = max(1, ctx.frame_at(pulse["period"]) - 1) if pulse else 0
         for item in markers["items"]:
             marker = add_marker(ctx.scene, item, material, colour)
+            placed[item["id"]] = (marker, item["at"])
             if sizing:
                 size_by_distance(marker, camera, item["radius"], sizing, pulse, pulse_frames)
             elif pulse:
                 keep_pulsing(marker, pulse, pulse_frames)
+
+    for text, marker_id, where in followers:
+        if marker_id not in placed:
+            raise api.PlanError('%s: there is no marker "%s"' % (where, marker_id))
+        follow(text, *placed[marker_id])
     api.report("labels", len(texts.get("items", [])) + len(markers.get("items", [])))
 
 
@@ -116,6 +126,14 @@ def place(scene, obj, item, colour, role):
     obj.color = colour
     scene.collection.objects.link(obj)
     api.stamp(obj, item.get("role", role), item["id"])
+
+
+def follow(text, marker, marker_at):
+    """Makes the text the marker's child. The parent inverse undoes the marker's place, where the
+    text's own location was given, so that what moves and scales the marker moves and scales the
+    text about the marker's middle."""
+    text.parent = marker
+    text.matrix_parent_inverse = mathutils.Matrix.Translation(marker_at).inverted()
 
 
 def keep_pulsing(marker, pulse, frames):

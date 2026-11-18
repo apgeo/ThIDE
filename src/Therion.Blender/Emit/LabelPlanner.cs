@@ -38,7 +38,8 @@ public sealed record LabelPlan
     public int StationMatchCount { get; init; }
 
     /// <summary>Set when the lead markers grow with their distance from the camera
-    /// (<see cref="LeadMarkerSizing.CameraDistance"/>): the emitter drives their scale.</summary>
+    /// (<see cref="LeadMarkerSizing.CameraDistance"/>): the emitter drives their scale, and a
+    /// caption grows with its marker and stays above it.</summary>
     public LeadDistanceSizing? LeadsByDistance { get; init; }
 
     public bool IsEmpty => Stations.Count == 0 && Components.Count == 0 && Leads.Count == 0;

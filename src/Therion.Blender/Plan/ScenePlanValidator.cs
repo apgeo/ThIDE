@@ -238,6 +238,7 @@ public static partial class ScenePlanValidator
 
         if (labels.Texts is { } texts)
         {
+            var markerIds = (labels.Markers?.Items ?? []).Select(m => m.Id).ToHashSet(StringComparer.Ordinal);
             Glow(texts.Color, texts.Strength, "labels.texts");
             for (int i = 0; i < texts.Items.Count; i++)
             {
@@ -247,6 +248,8 @@ public static partial class ScenePlanValidator
                 if (text.Text is null) bad(path + ".text", "A text label needs its text.");
                 if (!IsFinite(text.At)) bad(path + ".at", "The position must be finite.");
                 if (!(text.Size > 0) || !double.IsFinite(text.Size)) bad(path + ".size", "The size of a text must be positive.");
+                if (text.Follows is { } follows && !markerIds.Contains(follows))
+                    bad(path + ".follows", $"labels.markers has no marker '{follows}'.");
             }
         }
 

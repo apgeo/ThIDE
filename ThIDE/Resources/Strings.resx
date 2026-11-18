@@ -435,7 +435,7 @@
   <data name="Blender_UI_StationLabels" xml:space="preserve"><value>Station labels</value></data>
   <data name="Blender_UI_LeadMarkers" xml:space="preserve"><value>Lead markers</value></data>
   <data name="Blender_UI_LeadMarkerSize" xml:space="preserve"><value>Lead marker size</value></data>
-  <data name="Blender_UI_LeadMarkerSize_Tip" xml:space="preserve"><value>Auto: from the passage in a flythrough, from the whole cave otherwise. Cave: always from the whole cave. Passage: always from the passage. CameraDistance: about the same size in the picture at any distance. HiddenInFlythrough: from the whole cave, and none in a flythrough.</value></data>
+  <data name="Blender_UI_LeadMarkerSize_Tip" xml:space="preserve"><value>Auto: from the passage in a flythrough, from the whole cave otherwise. Cave: always from the whole cave. Passage: always from the passage. CameraDistance: about the same size in the picture at any distance, its caption with it. HiddenInFlythrough: from the whole cave, and none in a flythrough.</value></data>
   <data name="Blender_UI_LabelRoof" xml:space="preserve"><value>Labels above</value></data>
   <data name="Blender_UI_LabelRoof_Tip" xml:space="preserve"><value>The roof a station label is lifted above. SurveyFirst: the surveyed up distance, else the walls. WallsFirst: the walls, else the surveyed up distance. WallsOnly: the walls only. None: labels sit on their stations.</value></data>
   <data name="Blender_UI_Surface" xml:space="preserve"><value>Terrain</value></data>

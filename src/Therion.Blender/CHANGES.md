@@ -9,8 +9,18 @@
   bytes it needs (`ArgumentException`, as for `PlyBytes`); a terrain the model does not have needs
   none. `BlenderRenderService` reads them from the conversion. A script that is self-contained
   without its mesh still reads the terrain from its files.
+- **A text can follow a marker**: `PlanText.Follows` (JSON `"follows"`, the id of one of
+  `labels.markers.items`) makes the text the marker's child in the scene, so that it moves and grows
+  with the ball; its `at` and `size` are where it stands and how large it is while the ball has
+  the radius it is built with. The validator refuses an id that is no marker's.
 
 ### Behaviour changes
+- **A lead's caption follows a marker sized by its distance from the camera**
+  (`LeadMarkerSizing.CameraDistance`), in the generated scripts and in plans from `FromSpec`
+  alike: it grows and shrinks with its ball, the pulse included, and stays two of the ball's radii
+  above its middle, where it used to keep its size two cave-sized radii above a shrinking ball. The
+  caption is the marker's child, with the ball's place as its parent inverse. Captions of markers
+  sized any other way are unchanged.
 - `SurfaceSpec.Opacity` defaults to 0.4 (was 0.5): the cave under the terrain shows better. It is
   still set per spec. `SPEC_HASH` of every generated script changes with it.
 - **The player refuses a key it does not know** in the core's sections (`frame`, `timeline`) and

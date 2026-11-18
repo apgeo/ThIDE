@@ -707,8 +707,19 @@ public static class ScriptGenerator
                 w.Line("_thide_lead_by_distance(_dm, _d[4])");
             else if (spec.Labels.Leads.Pulse)
                 w.Line("_thide_pulse(_dm)");
-            if (spec.Labels.Leads.ShowText)
+            if (spec.Labels.Leads.ShowText && byDistance is not null)
+            {
+                // The caption is the marker's child, so the driver's scale applies to both: it
+                // stays two radii above the ball and in proportion to it. The parent inverse is
+                // the ball's place, where the caption's location is given.
+                w.Line("_dt = _thide_label(\"leadtxt:\" + _d[6], _d[0], (_d[1], _d[2], _d[3] + _d[4] * 2.0), _d[5], _lead_markers)");
+                w.Line("_dt.parent = _dm");
+                w.Line("_dt.matrix_parent_inverse = mathutils.Matrix.Translation((_d[1], _d[2], _d[3])).inverted()");
+            }
+            else if (spec.Labels.Leads.ShowText)
+            {
                 w.Line("_thide_label(\"leadtxt:\" + _d[6], _d[0], (_d[1], _d[2], _d[3] + _d[4] * 2.0), _d[5], _lead_markers)");
+            }
         }
     }
 

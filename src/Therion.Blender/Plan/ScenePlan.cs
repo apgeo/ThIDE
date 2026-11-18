@@ -284,7 +284,13 @@ public sealed record PlanLook
 /// <param name="Size">The height of its letters, in metres.</param>
 /// <param name="Role">What the text is, for whoever looks for it in the scene: lower-case
 /// words joined by '-'. Null is "label".</param>
-public readonly record struct PlanText(string Id, string Text, CaveVector3 At, double Size, string? Role = null);
+public readonly record struct PlanText(string Id, string Text, CaveVector3 At, double Size, string? Role = null)
+{
+    /// <summary>The id of a marker the text moves and grows with, as a caption does with a marker
+    /// sized by its distance from the camera: <see cref="At"/> and <see cref="Size"/> are where it
+    /// stands and how large it is while the marker has the radius it is built with.</summary>
+    public string? Follows { get; init; }
+}
 
 /// <summary>A glowing ball that marks a place.</summary>
 /// <param name="Id">The marker's name in the scene; unique among the labels.</param>

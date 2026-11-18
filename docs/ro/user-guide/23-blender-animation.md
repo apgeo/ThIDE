@@ -65,7 +65,8 @@ singură *lucrare de randare*; nimic nu rulează până nu apăsați **Randează
    - **Etichete** — activați etichetele stațiilor și marcajele pistelor. *Mărimea marcajelor*
      alege cât de mare e un marcaj: *Auto* îl dimensionează după galerie într-un zbor prin peșteră
      și după toată peștera altfel; *Cave*, *Passage*, *CameraDistance* (cam aceeași mărime în
-     imagine la orice distanță) și *HiddenInFlythrough* fixează un singur fel. *Etichete deasupra*
+     imagine la orice distanță, cu tot cu textul lui) și *HiddenInFlythrough* fixează un singur
+     fel. *Etichete deasupra*
      alege tavanul deasupra căruia se ridică eticheta unei stații: întâi înălțimea măsurată, întâi
      pereții, doar pereții sau deloc (pe stație).
    - **Folder randare** — unde se salvează videoclipul, cadrele sau imaginea; implicit

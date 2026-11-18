@@ -254,12 +254,17 @@ public static class ScenePlanBuilder
         foreach (var lead in planned.Leads)
         {
             // A marker is named by its station; its caption shows the lead's note, above the ball.
+            // A marker sized by its distance from the camera takes its caption along.
             string station = lead.Station ?? lead.Text;
-            markers.Add(new PlanMarker(Unique(ids, "lead:" + station), Rounded(lead.Position), Rounded(lead.Radius), LeadMarkerRole));
+            string marker = Unique(ids, "lead:" + station);
+            markers.Add(new PlanMarker(marker, Rounded(lead.Position), Rounded(lead.Radius), LeadMarkerRole));
             if (lead.ShowText)
                 texts.Add(new PlanText(
                     Unique(ids, "leadtxt:" + station), lead.Text,
-                    Rounded(lead.Position + new CaveVector3(0.0, 0.0, lead.Radius * 2.0)), Rounded(lead.TextSize), LeadTextRole));
+                    Rounded(lead.Position + new CaveVector3(0.0, 0.0, lead.Radius * 2.0)), Rounded(lead.TextSize), LeadTextRole)
+                {
+                    Follows = planned.LeadsByDistance is null ? null : marker,
+                });
         }
 
         return new PlanLabels

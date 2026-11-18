@@ -97,7 +97,7 @@ internal static class PlanFixtures
                 Items =
                 [
                     new PlanText("stn:entrance", "Intrarea \"de sus\"", new CaveVector3(1.5, 2, 3), 1.2, "station-label"),
-                    new PlanText("note", "two\nlines", new CaveVector3(-4, 0, 0.25), 0.5),
+                    new PlanText("note", "two\nlines", new CaveVector3(-4, 0, 0.25), 0.5) { Follows = "here" },
                 ],
             },
             Markers = new PlanMarkers
