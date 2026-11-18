@@ -20,8 +20,14 @@ SECTION = "blend"
 
 
 def build(ctx, blend):
-    if blend and not str(blend.get("path", "")).lower().endswith(".blend"):
-        raise api.PlanError('blend.path: "%s" is not the name of a .blend file' % blend.get("path"))
+    if not blend:
+        return
+    name = str(blend.get("path", ""))
+    if not name.lower().endswith(".blend"):
+        raise api.PlanError('blend.path: "%s" is not the name of a .blend file' % name)
+    # A plan may come from anywhere; the file it has saved stays in its own folder.
+    if os.path.isabs(name) or not is_inside(ctx.path(name), ctx.plan_dir):
+        raise api.PlanError('blend.path: "%s" does not lie in the plan\'s folder' % name)
 
 
 def render(ctx, blend):

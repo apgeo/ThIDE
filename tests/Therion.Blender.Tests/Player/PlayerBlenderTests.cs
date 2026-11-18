@@ -644,6 +644,22 @@ public class PlayerBlenderTests
             "the scene was saved after the render started");
     }
 
+    [BlenderFact]
+    public async Task APlan_CannotSaveItsSceneOutsideItsFolder()
+    {
+        var (_, job) = PlayerRunner.WriteJob("refuse-blend-outside", Small.Value, Orbit, plan => ScenePlanBuilder.SaveBlend(plan));
+        string planText = File.ReadAllText(job.PlanPath);
+
+        File.WriteAllText(job.PlanPath, planText.Replace("\"path\": \"scene.blend\"", "\"path\": \"../escaped.blend\""));
+        var (error, _) = await Refused(job);
+        Assert.Equal("blend.path: \"../escaped.blend\" does not lie in the plan's folder", error);
+
+        File.WriteAllText(job.PlanPath, planText.Replace("\"path\": \"scene.blend\"", "\"path\": \"scene.txt\""));
+        (error, _) = await Refused(job);
+        Assert.Equal("blend.path: \"scene.txt\" is not the name of a .blend file", error);
+        Assert.False(File.Exists(Path.Combine(Path.GetDirectoryName(job.Folder)!, "escaped.blend")));
+    }
+
     // ---- modules from outside the player ----
 
     private static ScenePlan WithMarkers(ScenePlan plan) => plan with
