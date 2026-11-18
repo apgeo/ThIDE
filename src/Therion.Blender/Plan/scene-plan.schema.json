@@ -54,6 +54,23 @@
           "id": { "type": "string", "minLength": 1, "description": "The model's name in the scene; unique in the plan." },
           "path": { "$ref": "#/$defs/relativePath", "type": "string", "pattern": "\\.([pP][lL][yY]|[gG][lL][bB])$", "description": "A .ply or .glb file, relative to the plan." },
           "translation": { "$ref": "#/$defs/vector", "description": "Where the mesh's own origin lies in the frame." },
+          "rotation": {
+            "description": "A turn of the mesh about its own origin, by the right-hand rule: about [0, 0, 1], 90 degrees turn east to north.",
+            "type": "object",
+            "required": ["axis", "degrees"],
+            "additionalProperties": false,
+            "properties": {
+              "axis": { "$ref": "#/$defs/vector", "description": "The direction of the axis; any length but zero." },
+              "degrees": { "type": "number" }
+            }
+          },
+          "scale": {
+            "description": "A stretch along the mesh's own X, Y and Z axes, applied before the rotation. Default [1, 1, 1].",
+            "type": "array",
+            "items": { "type": "number", "exclusiveMinimum": 0 },
+            "minItems": 3,
+            "maxItems": 3
+          },
           "material": { "type": "string", "description": "The id of one of look.materials. Without it the model keeps what its file brings." }
         }
       }

@@ -82,6 +82,39 @@ public static class ScenePlanBuilder
         };
     }
 
+    /// <summary>
+    /// Adds one more model to <paramref name="plan"/>: a second cave, the centreline as a mesh of
+    /// its own, a piece of terrain.
+    /// </summary>
+    /// <param name="material">The model's material. It joins the look, unless the plan has it
+    /// already, and the model is given its id.</param>
+    /// <param name="worldOrigin">Where the mesh's own origin lies in the world, for a mesh that
+    /// was converted on its own (<see cref="SceneMeta.Offset"/> of its conversion): the model is
+    /// moved to where that is in the plan's frame. Null keeps the model's translation.</param>
+    /// <exception cref="ArgumentException">The plan has another material of that id.</exception>
+    public static ScenePlan AddModel(ScenePlan plan, PlanModel model, PlanMaterial? material = null, CaveVector3? worldOrigin = null)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        ArgumentNullException.ThrowIfNull(model);
+        if (worldOrigin is { } origin)
+            model = model with { Translation = Rounded(origin - plan.Frame.Origin) };
+        if (material is null)
+            return plan with { Models = [.. plan.Models, model] };
+
+        var known = plan.Look.Materials.FirstOrDefault(m => m.Id == material.Id);
+        if (known is not null && !SameMaterial(known, material))
+            throw new ArgumentException($"The plan has another material with the id '{material.Id}'.", nameof(material));
+        return plan with
+        {
+            Models = [.. plan.Models, model with { Material = material.Id }],
+            Look = known is null ? plan.Look with { Materials = [.. plan.Look.Materials, material] } : plan.Look,
+        };
+    }
+
+    // A record compares its list of stops by reference.
+    private static bool SameMaterial(PlanMaterial a, PlanMaterial b)
+        => a with { Stops = null } == b with { Stops = null } && (a.Stops ?? []).SequenceEqual(b.Stops ?? []);
+
     /// <summary>The settings of <paramref name="spec"/> that <see cref="FromSpec"/> leaves out,
     /// as field paths; empty when the plan says everything the spec does.</summary>
     public static IReadOnlyList<string> NotCarried(SceneSpec spec)

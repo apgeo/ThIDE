@@ -1,9 +1,11 @@
 """Feature "models": imports the plan's meshes, one object per model, and places them.
 
 A model is a PLY or a GLB file. A GLB may hold several meshes under a tree of nodes; they are
-joined into one object with the placements of the nodes applied.
+joined into one object with the placements of the nodes applied. The plan then stretches the
+model along its own axes, turns it about its own origin and moves it, in that order.
 """
 
+import math
 import os
 
 import bmesh
@@ -30,12 +32,24 @@ def build(ctx, models):
             raise api.PlanError('%s.path: "%s" is neither a .ply nor a .glb file' % (where, model["path"]))
 
         obj.name = model["id"]
-        obj.location = model.get("translation", (0.0, 0.0, 0.0))
+        place(obj, model, where)
         api.stamp(obj, "model", model["id"])
         if model.get("material"):
             obj["thide_material"] = model["material"]  # the "look" module assigns it
         triangles += sum(len(polygon.vertices) - 2 for polygon in obj.data.polygons)
     api.report("triangles", triangles)
+
+
+def place(obj, model, where):
+    obj.location = model.get("translation", (0.0, 0.0, 0.0))
+    obj.scale = model.get("scale", (1.0, 1.0, 1.0))
+    rotation = model.get("rotation")
+    if rotation:
+        axis = mathutils.Vector(rotation["axis"])
+        if axis.length == 0.0:
+            raise api.PlanError("%s.rotation.axis: an axis needs a direction" % where)
+        turn = mathutils.Quaternion(axis.normalized(), math.radians(rotation["degrees"]))
+        obj.rotation_euler = turn.to_euler(obj.rotation_mode)
 
 
 def imported_by(importer, path):

@@ -43,7 +43,11 @@ internal static class PlanFixtures
         Models =
         [
             new PlanModel { Id = "CaveModel", Path = "model.ply", Material = "rock" },
-            new PlanModel { Id = "Far", Path = "meshes/far.glb", Translation = new CaveVector3(3000, 400, 150) },
+            new PlanModel
+            {
+                Id = "Far", Path = "meshes/far.glb", Translation = new CaveVector3(3000, 400, 150),
+                Rotation = new PlanRotation { Axis = new CaveVector3(0, 0, 1), Degrees = 30 }, Scale = new CaveVector3(1, 1, 2),
+            },
         ],
         Camera = new PlanCamera
         {

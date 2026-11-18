@@ -123,7 +123,18 @@ public sealed record PlanTimeline
     public int FrameCount { get; init; } = 1;
 }
 
-/// <summary>One mesh, placed in the frame.</summary>
+/// <summary>A turn about an axis through the origin: counter-clockwise by
+/// <see cref="Degrees"/> for someone the axis points at (the right-hand rule). About (0, 0, 1),
+/// 90 turns east to north.</summary>
+public sealed record PlanRotation
+{
+    /// <summary>The direction of the axis; any length but zero.</summary>
+    public CaveVector3 Axis { get; init; } = CaveVector3.UnitZ;
+
+    public double Degrees { get; init; }
+}
+
+/// <summary>One mesh, placed in the frame: stretched, then turned, then moved.</summary>
 public sealed record PlanModel
 {
     /// <summary>The model's name in the scene; unique in the plan.</summary>
@@ -135,6 +146,13 @@ public sealed record PlanModel
     /// <summary>Where the mesh's own origin lies in the frame.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public CaveVector3 Translation { get; init; }
+
+    /// <summary>A turn of the mesh about its own origin; null leaves it as its file has it.</summary>
+    public PlanRotation? Rotation { get; init; }
+
+    /// <summary>A stretch of the mesh along its own X, Y and Z axes, before it is turned; null
+    /// is (1, 1, 1). (1, 1, 2) doubles the heights.</summary>
+    public CaveVector3? Scale { get; init; }
 
     /// <summary>The id of one of <see cref="PlanLook.Materials"/>; null keeps what the file
     /// brings.</summary>

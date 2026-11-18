@@ -79,6 +79,15 @@ public static partial class ScenePlanValidator
                 bad($"models[{i}].path", "A model file is a .ply or a .glb.");
             if (!IsFinite(model.Translation))
                 bad($"models[{i}].translation", "The translation must be finite.");
+            if (model.Rotation is { } rotation)
+            {
+                if (!IsFinite(rotation.Axis) || rotation.Axis.Length < 1e-9)
+                    bad($"models[{i}].rotation.axis", "A rotation needs the direction of its axis.");
+                if (!double.IsFinite(rotation.Degrees))
+                    bad($"models[{i}].rotation.degrees", "The angle must be finite.");
+            }
+            if (model.Scale is { } scale && !(IsFinite(scale) && scale.X > 0 && scale.Y > 0 && scale.Z > 0))
+                bad($"models[{i}].scale", "The scale must be positive along every axis.");
             if (model.Material is not null && !materials.Contains(model.Material))
                 bad($"models[{i}].material", $"look.materials has no material '{model.Material}'.");
         }

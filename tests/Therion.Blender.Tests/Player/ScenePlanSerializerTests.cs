@@ -47,6 +47,8 @@ public class ScenePlanSerializerTests
         Assert.Contains("\"upAxis\": \"Z\"", json);
         Assert.Contains("\"origin\": [512000.5, 5120000.25, 1200]", json);
         Assert.Contains("\"frameCount\": 51", json);
+        Assert.Contains("\"rotation\": {\n        \"axis\": [0, 0, 1],\n        \"degrees\": 30\n      },", json);
+        Assert.Contains("\"scale\": [1, 1, 2]", json);
         Assert.Contains("\"interpolation\": \"bezier\"", json);
         Assert.Contains("      { \"t\": 0, \"eye\": [10, -20, 5.5], \"target\": [0, 0, 0] },\n", json);
         Assert.Contains("      { \"t\": 1, \"eye\": [20, -10, 6], \"target\": [0, 0, 1], \"lens\": 50 },\n", json);
@@ -61,9 +63,12 @@ public class ScenePlanSerializerTests
     [Fact]
     public void WhatIsNotSet_IsNotWritten()
     {
-        string json = ScenePlanSerializer.Write(new ScenePlan());
+        string json = ScenePlanSerializer.Write(new ScenePlan { Models = [new PlanModel { Id = "m", Path = "m.ply" }] });
 
-        foreach (string absent in new[] { "\"name\"", "\"crs\"", "\"fStop\"", "\"world\"", "\"material\"", "null" })
+        foreach (string absent in new[]
+                 {
+                     "\"name\"", "\"crs\"", "\"fStop\"", "\"world\"", "\"material\"", "\"translation\"", "\"rotation\"", "\"scale\"", "null",
+                 })
             Assert.DoesNotContain(absent, json);
     }
 

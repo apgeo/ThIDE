@@ -78,6 +78,24 @@ public class ScenePlanValidatorTests
     }
 
     [Fact]
+    public void AModel_IsTurnedAboutARealAxis_AndStretchedByPositiveFactors()
+    {
+        ScenePlan With(PlanModel model) => Full with { Models = [Full.Models[0], model] };
+        var model = new PlanModel { Id = "b", Path = "a.ply" };
+
+        AssertBad(With(model with { Rotation = new PlanRotation { Axis = CaveVector3.Zero, Degrees = 90 } }), "models[1].rotation.axis");
+        AssertBad(With(model with { Rotation = new PlanRotation { Axis = new CaveVector3(0, double.NaN, 1), Degrees = 90 } }), "models[1].rotation.axis");
+        AssertBad(With(model with { Rotation = new PlanRotation { Degrees = double.PositiveInfinity } }), "models[1].rotation.degrees");
+        AssertBad(With(model with { Scale = new CaveVector3(1, 0, 1) }), "models[1].scale");
+        AssertBad(With(model with { Scale = new CaveVector3(1, 1, -2) }), "models[1].scale");
+        AssertBad(With(model with { Scale = new CaveVector3(double.NaN, 1, 1) }), "models[1].scale");
+        Assert.Empty(ScenePlanValidator.Validate(With(model with
+        {
+            Rotation = new PlanRotation { Axis = new CaveVector3(0, 3, 4), Degrees = -450 }, Scale = new CaveVector3(0.3048, 0.3048, 0.3048),
+        })));
+    }
+
+    [Fact]
     public void Camera_HasSaneOptics()
     {
         ScenePlan With(PlanCamera camera) => Full with { Camera = camera };

@@ -1,5 +1,21 @@
 # Therion.Blender — changes for consumers
 
+## 2026-11-18 (player) — more in a plan: models turned and stretched
+
+Additive. The script generator, its scripts and the render service are untouched; a plan written
+before reads and plays as before. The plan stays version 1: every addition is an optional field or
+a new module name in `features`.
+
+### Additive API
+- **A model can be turned and stretched as well as moved**: `PlanModel.Rotation` (`PlanRotation`:
+  an axis and degrees, right-hand rule, about the mesh's own origin) and `PlanModel.Scale` (along
+  the mesh's own X, Y, Z; applied before the rotation). In the JSON:
+  `"rotation": { "axis": [0, 0, 1], "degrees": 90 }, "scale": [1, 1, 2]`.
+- **`ScenePlanBuilder.AddModel(plan, model, material, worldOrigin)`** adds one more model to a plan:
+  a second cave, the centreline as a mesh of its own. `material` joins the look and is given to the
+  model; `worldOrigin` (the `SceneMeta.Offset` of a mesh that was converted on its own) puts the
+  model where it lies in the plan's frame.
+
 ## 2026-11-18 — the terrain surface, optionally with its image
 
 ### Additive API

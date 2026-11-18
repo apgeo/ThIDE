@@ -336,6 +336,56 @@ public class PlayerBlenderTests
         Assert.Equal("CaveWorld", report.Scene.World);
     }
 
+    [BlenderFact]
+    public async Task Walls_TheirCentreline_AndASecondCave_ShareOneFrame_EachPlacedOnItsOwn()
+    {
+        var (small, medium) = (Small.Value, Medium.Value);
+        string dir = PlayerRunner.NewCase("models-placed");
+        // The centreline as a mesh of its own: the legs again, as thin tubes.
+        var legs = small.Conversion.Geometry.RecenteredModel.Shots.Select(s => s with { FromLrud = null, ToLrud = null }).ToList();
+        PlyWriter.WriteFile(
+            TubeMesher.Build(legs, new GeometryOptions { DefaultTubeRadius = 0.05, TubeSides = 4 }), Path.Combine(dir, "centreline.ply"));
+        File.Copy(medium.Conversion.Manifest.ModelPath, Path.Combine(dir, "second.ply"));
+
+        // The second cave was converted on its own, about its own origin. It lies two kilometres
+        // east of where it was surveyed, turned a quarter and twice as high.
+        var secondOrigin = medium.Conversion.Geometry.Offset + new CaveVector3(2000, 0, 0);
+        var turn = new PlanRotation { Axis = new CaveVector3(0, 0, 3), Degrees = 90 };
+        var plan = PlayerRunner.PlanFor(small, Orbit);
+        plan = ScenePlanBuilder.AddModel(
+            plan, new PlanModel { Id = "Centreline", Path = "centreline.ply" }, new PlanMaterial { Id = "Line", Color = new ColorRgb(1, 0.8, 0.1) });
+        plan = ScenePlanBuilder.AddModel(
+            plan, new PlanModel { Id = "SecondCave", Path = "second.ply", Rotation = turn, Scale = new CaveVector3(1, 1, 2) },
+            new PlanMaterial { Id = "SecondRock", Kind = PlanMaterialKind.VertexColor }, secondOrigin);
+        var job = PlayerWriter.WriteJob(plan, dir, PlayerRunner.MeshOf(small));
+
+        var report = await PlayerRunner.ProbeAsync(job.ScriptPath, OneFrame);
+
+        Assert.Equal(["CaveModel", "Centreline", "SecondCave"], report.WithRole(ProbeRoles.Model).Select(m => m.Name));
+        var (walls, line, second) = (report.Object("CaveModel"), report.Object("Centreline"), report.Object("SecondCave"));
+        Assert.Equal(["CaveRock", "Line", "SecondRock"], new[] { walls, line, second }.Select(m => Assert.Single(m.Materials)));
+
+        // The centreline runs inside its walls.
+        AssertNear(CaveVector3.Zero, line.Location, 1e-6, "the centreline");
+        for (int axis = 0; axis < 3; axis++)
+        {
+            Assert.True(line.BoundsMin![axis] >= walls.BoundsMin![axis] && line.BoundsMax![axis] <= walls.BoundsMax![axis], $"axis {axis}");
+        }
+
+        // The second cave: every corner of its box stretched, turned east to north, then moved.
+        var move = secondOrigin - small.Conversion.Geometry.Offset;
+        AssertNear(move, second.Location, 1e-2, "the second cave");
+        var box = medium.Conversion.Geometry.Walls.Bounds;
+        var corners = (
+            from x in new[] { box.Min.X, box.Max.X }
+            from y in new[] { box.Min.Y, box.Max.Y }
+            from z in new[] { box.Min.Z, box.Max.Z }
+            select move + new CaveVector3(-y, x, 2 * z)).ToList();
+        AssertNear(new CaveVector3(corners.Min(c => c.X), corners.Min(c => c.Y), corners.Min(c => c.Z)), second.BoundsMin!, 2e-2, "lowest corner");
+        AssertNear(new CaveVector3(corners.Max(c => c.X), corners.Max(c => c.Y), corners.Max(c => c.Z)), second.BoundsMax!, 2e-2, "highest corner");
+        Assert.Equal(medium.Conversion.Manifest.WallTriangleCount, second.Polygons);
+    }
+
     /// <summary>Whether the Blender under test can read and write glTF. Its glTF add-on needs
     /// numpy, which the Blender a Linux distribution packages may not have.</summary>
     private static readonly Lazy<Task<bool>> ReadsGltf = new(async () =>

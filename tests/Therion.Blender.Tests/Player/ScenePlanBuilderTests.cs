@@ -260,6 +260,56 @@ public class ScenePlanBuilderTests
         Assert.Null(look.World);
     }
 
+    // ---- more models ----
+
+    [Fact]
+    public void AddModel_PutsAMeshConvertedOnItsOwn_WhereItLiesInThePlansFrame()
+    {
+        var plan = PlanFixtures.PlanOf(new SceneSpec());
+        var rock = new PlanMaterial { Id = "FarRock", Color = new ColorRgb(0.3, 0.3, 0.35) };
+        var farOrigin = PlanFixtures.Medium.Offset + new CaveVector3(3000, 400.5, -150);
+
+        var added = ScenePlanBuilder.AddModel(plan, new PlanModel { Id = "FarCave", Path = "far.ply" }, rock, farOrigin);
+
+        Assert.Equal(
+            [plan.Models[0], new PlanModel { Id = "FarCave", Path = "far.ply", Material = "FarRock", Translation = new CaveVector3(3000, 400.5, -150) }],
+            added.Models);
+        Assert.Equal(["CaveRock", "FarRock"], added.Look.Materials.Select(m => m.Id));
+        Assert.Empty(ScenePlanValidator.Validate(added));
+        Assert.Single(plan.Models); // the plan it was given is as it was
+    }
+
+    [Fact]
+    public void AddModel_KeepsTheModelsOwnPlacement_AndNeedsNoMaterial()
+    {
+        var plan = PlanFixtures.PlanOf(new SceneSpec());
+        var model = new PlanModel
+        {
+            Id = "Line", Path = "line.ply", Translation = new CaveVector3(1, 2, 3),
+            Rotation = new PlanRotation { Degrees = 12 }, Scale = new CaveVector3(1, 1, 2),
+        };
+
+        var added = ScenePlanBuilder.AddModel(plan, model);
+
+        Assert.Equal(model, added.Models[1]);
+        Assert.Same(plan.Look, added.Look);
+    }
+
+    [Fact]
+    public void AddModel_SharesAMaterialThePlanHas_AndRefusesAnotherOfThatId()
+    {
+        var plan = PlanFixtures.PlanOf(new SceneSpec { Materials = new MaterialsSpec { Rock = RockMaterial.DepthGradient } });
+        var rock = plan.Look.Materials[0];
+        var sameRock = rock with { Stops = [.. rock.Stops!] };
+
+        var added = ScenePlanBuilder.AddModel(plan, new PlanModel { Id = "Second", Path = "second.ply" }, sameRock);
+
+        Assert.Equal("CaveRock", added.Models[1].Material);
+        Assert.Single(added.Look.Materials);
+        Assert.Throws<ArgumentException>(() => ScenePlanBuilder.AddModel(
+            plan, new PlanModel { Id = "Third", Path = "third.ply" }, new PlanMaterial { Id = "CaveRock", Color = new ColorRgb(1, 0, 0) }));
+    }
+
     // ---- what a plan does not say yet ----
 
     [Fact]
