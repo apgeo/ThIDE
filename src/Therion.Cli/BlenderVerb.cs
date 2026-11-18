@@ -1,9 +1,13 @@
 // `therion-cli blender` (BA-B14) — render or export a Blender presentation of a cave model,
-// headless, reusing the whole Therion.Blender module. Kept in its own class (not a Program.cs
-// local function) so it is unit-testable with in-memory writers and no real Blender.
+// headless, reusing the whole Therion.Blender module; or write it as a render bundle (a scene
+// plan, its mesh, the player and run scripts in one zip) and optionally render that. Kept in its
+// own class (not a Program.cs local function) so it is unit-testable with in-memory writers and no
+// real Blender.
 
 using Therion.Blender;
 using Therion.Blender.Execution;
+using Therion.Blender.Plan;
+using Therion.Blender.Player;
 using Therion.Blender.Presets;
 using Therion.Blender.Sources;
 using Therion.Cave3D;
@@ -43,6 +47,25 @@ public static class BlenderVerb
         }
 
         if (!TryBuildSpec(args, stderr, out var spec)) return 2;
+
+        string? bundle = Option(args, "--bundle");
+        bool draft = Flag(args, "--draft"), render = Flag(args, "--render");
+        if (bundle is null && (draft || render))
+        {
+            stderr.WriteLine("error: --draft and --render go with --bundle <file.zip|folder>.");
+            return 2;
+        }
+        if (bundle is not null)
+        {
+            if (bundle.StartsWith("--", StringComparison.Ordinal) || Option(args, "--export") is not null)
+            {
+                stderr.WriteLine("error: --bundle takes a .zip file or a folder, and does not go with --export.");
+                return 2;
+            }
+            var model = new ResolvedModelSource { Path = Path.GetFullPath(source), Format = format, Kind = ModelSourceKind.ExternalFile };
+            return await BundleAsync(model, spec, bundle, draft, render, Option(args, "--out"), Option(args, "--blender"), stdout, stderr)
+                .ConfigureAwait(false);
+        }
 
         var renderSource = new RenderSource(
             new ResolvedModelSource { Path = Path.GetFullPath(source), Format = format, Kind = ModelSourceKind.ExternalFile },
@@ -88,6 +111,134 @@ public static class BlenderVerb
         }
     }
 
+    /// <summary>Writes a render bundle (a zip, or a folder when the path does not end in .zip)
+    /// and, with <paramref name="render"/>, renders it: a zip is unpacked into a temporary folder
+    /// first, and what it writes is moved to <paramref name="outDir"/>, or beside the zip.</summary>
+    private static async Task<int> BundleAsync(
+        ResolvedModelSource model, SceneSpec spec, string bundle, bool draft, bool render, string? outDir,
+        string? blenderOverride, TextWriter stdout, TextWriter stderr)
+    {
+        bool zip = bundle.EndsWith(".zip", StringComparison.OrdinalIgnoreCase);
+        string work = TempFolder("thide-bundle-");
+        RenderBundleContent content;
+        try
+        {
+            stderr.WriteLine($"[{RenderPhase.ConvertingGeometry}] Converting model");
+            content = RenderBundleWriter.FromModel(model, spec, work, draft);
+            if (zip) RenderBundleWriter.WriteZip(content, bundle);
+            else RenderBundleWriter.WriteFolder(content, bundle);
+        }
+        catch (ArgumentException ex)
+        {
+            stderr.WriteLine($"error: invalid render spec: {ex.Message}");
+            return 2;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or CaveFileFormatException)
+        {
+            stderr.WriteLine($"error: {ex.Message}");
+            return 1;
+        }
+        finally
+        {
+            TryDelete(work);
+        }
+
+        foreach (string lost in content.NotCarried)
+            stderr.WriteLine($"warning: the bundle leaves out '{lost}': a scene plan cannot say it yet.");
+        stdout.WriteLine(Path.GetFullPath(bundle));
+        stderr.WriteLine($"wrote a render bundle{(draft ? " with a draft" : "")} to {bundle}");
+        if (!render) return 0;
+
+        var located = new BlenderLocator(new ProcessBlenderProbe()).Locate(blenderOverride);
+        if (!located.IsUsable)
+        {
+            stderr.WriteLine($"error: no usable Blender: {located.Detail}");
+            return 1;
+        }
+        var blender = located.Installation!;
+        if (BlenderLocator.UntestedVersionWarning(blender.Version) is { } untested) stderr.WriteLine($"warning: {untested}");
+
+        string folder = zip ? TempFolder("thide-bundle-render-") : bundle;
+        if (zip)
+        {
+            try { System.IO.Compression.ZipFile.ExtractToDirectory(bundle, folder); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                stderr.WriteLine($"error: the bundle cannot be unpacked: {ex.Message}");
+                TryDelete(folder);
+                return 1;
+            }
+        }
+        var plan = draft ? content.Draft! : content.Plan;
+        string planFile = Path.Combine(folder, draft ? RenderBundleWriter.DraftPlanFileName : ScenePlanSerializer.FileName);
+        var job = new RenderJob(
+            Path.Combine(folder, PlayerFiles.EntryFileName), folder, plan.Timeline.FrameCount,
+            OutputOf(plan, Path.GetFullPath(Path.Combine(folder, plan.Output.Directory))))
+        {
+            ScriptArguments = ["--plan", planFile],
+        };
+        var progress = new Progress<RenderProgress>(p => stderr.WriteLine($"[{p.Phase}] {p.Message}"));
+        var result = await new BlenderRunner(new RealBlenderProcessLauncher()).RunAsync(blender, job, progress).ConfigureAwait(false);
+        if (!result.Succeeded)
+        {
+            stderr.WriteLine($"error: render failed ({result.FailureKind}): {result.ErrorMessage}");
+            if (zip) stderr.WriteLine($"the unpacked bundle and its job.log are in {folder}");
+            return 1;
+        }
+        foreach (string warning in result.Warnings) stderr.WriteLine($"warning: {warning}");
+
+        string? destination = outDir ?? (zip ? Path.GetDirectoryName(Path.GetFullPath(bundle)) : null);
+        var outputs = result.OutputPaths.ToList();
+        if (destination is not null)
+        {
+            Directory.CreateDirectory(destination);
+            for (int i = 0; i < outputs.Count; i++)
+            {
+                string target = Path.Combine(destination, Path.GetFileName(outputs[i]));
+                File.Move(outputs[i], target, overwrite: true);
+                outputs[i] = target;
+            }
+        }
+        if (zip) TryDelete(folder);
+        foreach (string path in outputs) stdout.WriteLine(path);
+        stderr.WriteLine($"rendered {result.FrameCount} frame(s) on {result.Device} in {result.Duration.TotalSeconds:0.0}s");
+        return 0;
+    }
+
+    /// <summary>The output of a plan as the runner collects it.</summary>
+    private static OutputSpec OutputOf(ScenePlan plan, string directory) => new()
+    {
+        Kind = plan.Output.Kind switch
+        {
+            PlanOutputKind.Video => OutputKind.Video,
+            PlanOutputKind.Frames => OutputKind.FrameSequence,
+            _ => OutputKind.Still,
+        },
+        Container = plan.Output.Container switch
+        {
+            PlanContainer.Mkv => VideoContainer.Mkv,
+            PlanContainer.Webm => VideoContainer.WebM,
+            _ => VideoContainer.Mp4,
+        },
+        Width = plan.Look.Width,
+        Height = plan.Look.Height,
+        BaseName = plan.Output.BaseName,
+        OutputDirectory = directory,
+    };
+
+    private static string TempFolder(string prefix)
+    {
+        string path = Path.Combine(Path.GetTempPath(), prefix + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(path);
+        return path;
+    }
+
+    private static void TryDelete(string folder)
+    {
+        try { Directory.Delete(folder, recursive: true); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+    }
+
     private static bool TryBuildSpec(IReadOnlyList<string> args, TextWriter stderr, out SceneSpec spec)
     {
         spec = BuiltInPresets.OrbitShowcase().Spec;
@@ -111,6 +262,14 @@ public static class BlenderVerb
             spec = preset.Spec;
         }
         return true;
+    }
+
+    private static bool Flag(IReadOnlyList<string> args, string name)
+    {
+        for (int i = 2; i < args.Count; i++)
+            if (string.Equals(args[i], name, StringComparison.OrdinalIgnoreCase))
+                return true;
+        return false;
     }
 
     private static string? Option(IReadOnlyList<string> args, string name)

@@ -1,5 +1,40 @@
 # Therion.Blender — changes for consumers
 
+## 2026-11-18 (render bundle) — a scene plan, its meshes and the player in one zip
+
+Additive. Nothing that exists changes, except that `NotCarried` names one more setting.
+
+### Additive API
+- **`RenderBundleWriter`** (namespace `Therion.Blender.Player`) writes a render bundle: everything
+  Blender 4.2 or newer needs to render a scene plan on a machine without ThIDE. Pure: it writes a
+  zip or a folder and starts nothing.
+  - `WriteZip(content, path)`, `WriteZip(content, stream)` and `WriteFolder(content, folder)`
+    return the paths written. A bundle holds `scene-plan.json`, `scene-plan.draft.json` when there
+    is a draft, the files the plans name at their plan paths, the player (`render.py`,
+    `thide_player/`), the run scripts `render.sh` (POSIX sh, executable in the zip) and `render.cmd`
+    (CRLF), and a `README.txt` that says how to render, what will be written, what the files are and
+    what the plan leaves out. The zip has no top folder.
+  - The scripts run `blender -b --factory-startup --python-exit-code 64 --python render.py --
+    --plan <plan>`, take `--draft` to play the draft plan, pass any further options to the player,
+    and use the Blender named in the `BLENDER` environment variable, else the one on the PATH, else
+    the usual install folder (macOS, Windows).
+  - **Deterministic**: entries in ordinal order, all dated 1980-01-01 00:00, fixed permissions, so
+    the same content gives the same bytes every time (on the same .NET runtime; the zip's "made by"
+    field says the operating system it was written on).
+  - Refused with `ArgumentException`: an invalid plan or draft; an output directory that is not
+    beside the plan (a bundle renders into its own folder); a file path outside the bundle or one of
+    the bundle's own names; a model whose file, or a module folder whose files, are not given.
+  - `RenderBundleContent`: `Plan`, `Draft`, `Files` (plan path → file on disk), `NotCarried`.
+  - `RenderBundleWriter.FromModel(source, spec, workDirectory, draft, geometry, leads)` converts a
+    model and lowers a `SceneSpec` to that content: the mesh as `model.ply`, the output in `out/`
+    under the spec's base name, the draft from `ScenePlanBuilder.Draft` with its defaults, and
+    `NotCarried` from `ScenePlanBuilder.NotCarried(spec)`.
+  - `RenderBundleWriter.Readme(content)` gives the README on its own.
+
+### Behaviour change
+- `ScenePlanBuilder.NotCarried` names `surface` when the spec asks for the terrain surface: the plan
+  has never carried it, and said nothing.
+
 ## 2026-11-18 (player) — more in a plan: models turned and stretched, the scene as a .blend file, a draft look, labels
 
 Additive. The script generator, its scripts and the render service are untouched; a plan written

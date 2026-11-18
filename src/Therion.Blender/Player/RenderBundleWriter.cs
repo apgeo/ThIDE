@@ -1,0 +1,420 @@
+// A render bundle: a scene plan, its meshes, the player and two run scripts in one zip (or one
+// folder), for rendering on a machine that has Blender and nothing of ThIDE:
+//
+//   README.txt              what the files are and how to render them
+//   render.sh, render.cmd   start Blender with the player; --draft plays the draft plan
+//   render.py               the player's entry script
+//   scene-plan.json         the plan
+//   scene-plan.draft.json   the same plan with a fast look (optional)
+//   thide_player/...        the player
+//   model.ply ...           the meshes and any other file the plan names, at their plan paths
+//
+// A zip is deterministic: entries in ordinal order, one fixed time stamp, fixed permissions, so
+// the same content gives the same bytes every time on the same .NET runtime. Writing one starts
+// no process; rendering it is for whoever unpacks it (or Therion.Blender.Execution).
+
+using System.IO.Compression;
+using System.Text;
+using Therion.Blender.Emit;
+using Therion.Blender.Plan;
+using Therion.Blender.Sources;
+using Therion.CaveGeometry;
+
+namespace Therion.Blender.Player;
+
+/// <summary>What goes into a render bundle.</summary>
+public sealed record RenderBundleContent
+{
+    /// <summary>The plan, written as <c>scene-plan.json</c>. Its output directory lies beside
+    /// it, so a render stays inside the bundle's folder.</summary>
+    public required ScenePlan Plan { get; init; }
+
+    /// <summary>A second plan with a fast look (<see cref="ScenePlanBuilder.Draft"/>), written
+    /// as <c>scene-plan.draft.json</c>; the run scripts play it with <c>--draft</c>.</summary>
+    public ScenePlan? Draft { get; init; }
+
+    /// <summary>The files the plans name, as plan path → the file on disk: every model's mesh,
+    /// and the modules of the plan's module folders.</summary>
+    public IReadOnlyDictionary<string, string> Files { get; init; } = new Dictionary<string, string>();
+
+    /// <summary>The settings the plan was made from that it does not carry
+    /// (<see cref="ScenePlanBuilder.NotCarried"/>); the README names them.</summary>
+    public IReadOnlyList<string> NotCarried { get; init; } = [];
+}
+
+/// <summary>Writes render bundles: everything Blender needs to render a scene plan, in one zip
+/// or folder.</summary>
+public static class RenderBundleWriter
+{
+    /// <summary>The draft plan's name in a bundle.</summary>
+    public const string DraftPlanFileName = "scene-plan.draft.json";
+
+    public const string ReadmeFileName = "README.txt";
+    public const string ShellScriptName = "render.sh";
+    public const string WindowsScriptName = "render.cmd";
+
+    /// <summary>Where <see cref="FromModel"/> lets the render write, relative to the plan.</summary>
+    public const string OutputDirectory = "out";
+
+    /// <summary>The oldest Blender the player plays a plan in.</summary>
+    public const string MinimumBlender = "4.2";
+
+    /// <summary>The time stamp of every entry of a zip.</summary>
+    private static readonly DateTimeOffset EntryTime = new(1980, 1, 1, 0, 0, 0, TimeSpan.Zero);
+
+    // Unix permissions: rw-r--r-- and rwxr-xr-x. In a zip entry's external attributes they stand
+    // in the upper 16 bits, beside the type of a regular file (0x8000).
+    private const UnixFileMode PlainMode = (UnixFileMode)0x1A4;
+    private const UnixFileMode ExecutableMode = (UnixFileMode)0x1ED;
+
+    private static readonly UTF8Encoding Utf8NoBom = new(encoderShouldEmitUTF8Identifier: false);
+
+    /// <summary>What the README says about each setting <see cref="ScenePlanBuilder.NotCarried"/>
+    /// can name.</summary>
+    private static readonly Dictionary<string, string> NotCarriedText = new(StringComparer.Ordinal)
+    {
+        ["lighting.hdriPath"] = "the HDRI image lighting (the scene has a dim plain background instead)",
+        ["labels.overlays"] = "the overlays: title, scale bar, north arrow, depth legend",
+        ["labels.events"] = "the timed showing and hiding of labels (they are shown throughout)",
+        ["surface"] = "the terrain surface",
+    };
+
+    /// <summary>
+    /// Converts a cave model and lowers <paramref name="spec"/> to a plan for it: the content of a
+    /// bundle. The mesh is written into <paramref name="workDirectory"/> and read from there when
+    /// the bundle is written; the caller removes the folder afterwards.
+    /// </summary>
+    /// <param name="spec">The scene. Its source paths are ignored; its output is written to
+    /// <see cref="OutputDirectory"/> inside the bundle under the spec's base name.</param>
+    /// <param name="draft">Also make a draft plan with <see cref="ScenePlanBuilder.Draft"/>'s
+    /// defaults.</param>
+    /// <param name="geometry">The conversion's geometry options.</param>
+    /// <param name="leads">Leads to mark, as the render service passes them.</param>
+    /// <exception cref="ArgumentException">The spec is invalid or cannot be planned for this
+    /// model.</exception>
+    public static RenderBundleContent FromModel(
+        ResolvedModelSource source, SceneSpec spec, string workDirectory, bool draft = false,
+        GeometryOptions? geometry = null, IReadOnlyList<SourceLead>? leads = null)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(spec);
+        ArgumentException.ThrowIfNullOrWhiteSpace(workDirectory);
+
+        var conversion = CaveConversionPipeline.ConvertResolvedFull(source, new ConversionOptions
+        {
+            OutputDirectory = workDirectory,
+            Geometry = geometry ?? new GeometryOptions(),
+            Leads = leads ?? [],
+        });
+        string modelPath = conversion.Manifest.ModelPath;
+        var plan = ScenePlanBuilder.FromSpec(
+            spec with
+            {
+                Source = spec.Source with { PlyPath = modelPath },
+                Output = spec.Output with { OutputDirectory = OutputDirectory },
+            },
+            CameraFraming.FromGeometry(conversion.Geometry),
+            conversion.Meta);
+        return new RenderBundleContent
+        {
+            Plan = plan,
+            Draft = draft ? ScenePlanBuilder.Draft(plan) : null,
+            Files = new Dictionary<string, string> { [Path.GetFileName(modelPath)] = modelPath },
+            NotCarried = ScenePlanBuilder.NotCarried(spec),
+        };
+    }
+
+    /// <summary>Writes the bundle as a zip file, replacing one that is there.</summary>
+    /// <returns>The paths of the zip's entries, in their order.</returns>
+    /// <exception cref="ArgumentException">The content is not a bundle that renders on its
+    /// own: see <see cref="WriteZip(RenderBundleContent, Stream)"/>.</exception>
+    public static IReadOnlyList<string> WriteZip(RenderBundleContent content, string zipPath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(zipPath);
+        var entries = Entries(content);
+        string? folder = Path.GetDirectoryName(Path.GetFullPath(zipPath));
+        if (folder is not null) Directory.CreateDirectory(folder);
+        try
+        {
+            using var stream = new FileStream(zipPath, FileMode.Create, FileAccess.Write);
+            WriteZip(entries, stream);
+        }
+        catch
+        {
+            try { File.Delete(zipPath); } catch (IOException) { /* best effort */ }
+            throw;
+        }
+        return entries.Select(e => e.Path).ToList();
+    }
+
+    /// <summary>Writes the bundle as a zip into <paramref name="destination"/>, which stays
+    /// open.</summary>
+    /// <returns>The paths of the zip's entries, in their order.</returns>
+    /// <exception cref="ArgumentException">A plan is invalid; its output directory does not lie
+    /// beside it; a path of <see cref="RenderBundleContent.Files"/> is not a path inside the
+    /// bundle or is one the bundle uses itself; a model's file or a module folder is not among
+    /// the files.</exception>
+    /// <exception cref="FileNotFoundException">A file of
+    /// <see cref="RenderBundleContent.Files"/> does not exist.</exception>
+    public static IReadOnlyList<string> WriteZip(RenderBundleContent content, Stream destination)
+    {
+        ArgumentNullException.ThrowIfNull(destination);
+        var entries = Entries(content);
+        WriteZip(entries, destination);
+        return entries.Select(e => e.Path).ToList();
+    }
+
+    /// <summary>
+    /// Writes the bundle into a folder, as unpacking its zip would. Files of the same names are
+    /// replaced, the player's package as a whole; anything else in the folder stays.
+    /// </summary>
+    /// <returns>The paths written, relative to the folder.</returns>
+    /// <exception cref="ArgumentException">See <see cref="WriteZip(RenderBundleContent, Stream)"/>.</exception>
+    public static IReadOnlyList<string> WriteFolder(RenderBundleContent content, string folder)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(folder);
+        var entries = Entries(content);
+        string package = Path.Combine(folder, PlayerFiles.PackageName);
+        if (Directory.Exists(package)) Directory.Delete(package, recursive: true);
+        foreach (var entry in entries)
+        {
+            string target = Path.Combine(folder, entry.Path.Replace('/', Path.DirectorySeparatorChar));
+            Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+            using (var input = entry.Open())
+            using (var output = new FileStream(target, FileMode.Create, FileAccess.Write))
+                input.CopyTo(output);
+            if (!OperatingSystem.IsWindows())
+                File.SetUnixFileMode(target, entry.Executable ? ExecutableMode : PlainMode);
+        }
+        return entries.Select(e => e.Path).ToList();
+    }
+
+    /// <summary>The README of a bundle with this content: what it is, how to render it, what
+    /// it will write, and what the plan does not carry.</summary>
+    public static string Readme(RenderBundleContent content)
+    {
+        ArgumentNullException.ThrowIfNull(content);
+        var plan = content.Plan;
+        var text = new StringBuilder();
+        void Line(string line = "") => text.Append(line).Append('\n');
+
+        string title = plan.Name is { Length: > 0 } name ? name : "A cave scene";
+        Line(title);
+        Line(new string('=', Math.Min(title.Length, 72)));
+        Line();
+        Line("A scene for Blender: a cave model, a camera move and a look, ready to render. Nothing in");
+        Line("this folder needs ThIDE.");
+        Line();
+        Line($"Needs Blender {MinimumBlender} or newer (tested with 4.2 LTS, 4.5 LTS and 5.0), from blender.org or");
+        Line("your system's packages. A Blender from the Microsoft Store cannot be started this way.");
+        Line();
+        Line("HOW TO RENDER");
+        Line();
+        Line("Unpack the bundle into a folder of its own, then in that folder:");
+        Line();
+        Line("  Linux, macOS:   sh render.sh");
+        Line("  Windows:        render.cmd");
+        if (content.Draft is not null)
+        {
+            Line();
+            Line("A quick draft first, to see the camera move and the framing:");
+            Line();
+            Line("  Linux, macOS:   sh render.sh --draft");
+            Line("  Windows:        render.cmd --draft");
+        }
+        Line();
+        Line("The scripts look for Blender on the PATH (and in /Applications on a Mac, in");
+        Line("\"C:\\Program Files\\Blender Foundation\" on Windows). To use another Blender, name it:");
+        Line();
+        Line("  Linux, macOS:   BLENDER=/path/to/blender sh render.sh");
+        Line("  Windows:        set \"BLENDER=C:\\path\\to\\blender.exe\"   and then   render.cmd");
+        Line();
+        Line("Or start Blender yourself in this folder:");
+        Line();
+        Line("  blender -b --factory-startup --python render.py");
+        if (content.Draft is not null)
+            Line($"  blender -b --factory-startup --python render.py -- --plan {DraftPlanFileName}");
+        Line();
+        Line("To look at the scene in Blender's window instead of rendering it:");
+        Line();
+        Line("  blender --factory-startup --python render.py -- --build-only");
+        Line();
+        Line("WHAT IT WRITES");
+        Line();
+        foreach (string line in Writes(plan, "")) Line(line);
+        if (content.Draft is { } draft)
+            foreach (string line in Writes(draft, "The draft: ")) Line(line);
+        Line();
+        Line("THE FILES");
+        Line();
+        var files = new List<(string, string)>
+        {
+            (ReadmeFileName, "this file"),
+            ($"{ShellScriptName}, {WindowsScriptName}", "start Blender with the player"),
+            (PlayerFiles.EntryFileName, "the script Blender runs: it plays scene-plan.json with thide_player"),
+            (ScenePlanSerializer.FileName, $"the scene: models, camera track, look, output (JSON, plan version {plan.Version})"),
+        };
+        if (content.Draft is not null)
+            files.Add((DraftPlanFileName, "the same scene with a fast look"));
+        files.Add((PlayerFiles.PackageName + "/", $"the player (Python), version {PlayerFiles.Version}"));
+        foreach (string path in content.Files.Keys.Select(Normalized).Order(StringComparer.Ordinal))
+            files.Add((path, plan.Models.Any(m => Normalized(m.Path) == path) ? "a model's mesh" : "a file the plan names"));
+        int width = files.Max(f => f.Item1.Length) + 2;
+        foreach (var (path, what) in files)
+            Line("  " + path.PadRight(width) + what);
+        Line();
+        Line("Every value in the plans is resolved: positions in metres (X east, Y north, Z up), times in");
+        Line("seconds, colours as linear RGB. Change a plan with any text editor and render again.");
+
+        if (content.NotCarried.Count > 0)
+        {
+            Line();
+            Line("NOT IN THIS SCENE");
+            Line();
+            Line("The settings this scene was made from also asked for the following, which a scene plan");
+            Line("cannot say yet. The render does not show them:");
+            Line();
+            foreach (string lost in content.NotCarried)
+                Line("  - " + (NotCarriedText.TryGetValue(lost, out var what) ? $"{what} ({lost})" : lost));
+        }
+        return text.ToString();
+    }
+
+    /// <summary>What a plan's render writes, in plain words.</summary>
+    private static IEnumerable<string> Writes(ScenePlan plan, string prefix)
+    {
+        var output = plan.Output;
+        string folder = Normalized(output.Directory);
+        string In(string file) => folder.Length == 0 ? file : folder + "/" + file;
+        string seconds = (plan.Timeline.FrameCount / (double)plan.Timeline.Fps).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+        string look = $"{plan.Look.Width}x{plan.Look.Height} pixels, {EngineName(plan.Look.Engine)}";
+        if (plan.Blend is { } blend)
+            yield return prefix + $"{Normalized(blend.Path)}: the built scene as a Blender file, to change by hand or render later.";
+        if (!output.Render)
+        {
+            yield return prefix + "nothing is rendered: the scene is only built and saved.";
+            yield break;
+        }
+        switch (output.Kind)
+        {
+            case PlanOutputKind.Video:
+                string extension = output.Container.ToString().ToLowerInvariant();
+                yield return prefix + $"{In(output.BaseName + "." + extension)}, a video of {plan.Timeline.FrameCount} frames at {plan.Timeline.Fps} fps ({seconds} s), {look}.";
+                if (prefix.Length == 0)
+                    yield return $"  (A Blender that cannot write video writes numbered PNG frames instead: {In(output.BaseName + "_0001.png")} ...)";
+                break;
+            case PlanOutputKind.Frames:
+                yield return prefix + $"{In(output.BaseName + "_0001.png")} to {In(output.BaseName + "_" + plan.Timeline.FrameCount.ToString("0000", System.Globalization.CultureInfo.InvariantCulture) + ".png")}, {look}.";
+                break;
+            default:
+                yield return prefix + $"{In(output.BaseName + ".png")}, one picture, {look}.";
+                break;
+        }
+    }
+
+    private static string EngineName(PlanEngine engine) => engine switch
+    {
+        PlanEngine.Cycles => "Cycles",
+        PlanEngine.Eevee => "EEVEE",
+        _ => "Workbench (Blender's solid view)",
+    };
+
+    // ---- the entries ----
+
+    private sealed record Entry(string Path, Func<Stream> Open, bool Executable = false);
+
+    private static List<Entry> Entries(RenderBundleContent content)
+    {
+        ArgumentNullException.ThrowIfNull(content);
+        ArgumentNullException.ThrowIfNull(content.Plan);
+        Check(content.Plan, "plan");
+        if (content.Draft is { } draft) Check(draft, "draft");
+
+        var reserved = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ScenePlanSerializer.FileName, DraftPlanFileName, ReadmeFileName, ShellScriptName, WindowsScriptName,
+            PlayerFiles.EntryFileName,
+        };
+        var files = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (planPath, source) in content.Files ?? new Dictionary<string, string>())
+        {
+            string path = ScenePlanValidator.IsPathBesideThePlan(planPath) ? Normalized(planPath) : "";
+            if (path.Length == 0)
+                throw new ArgumentException($"'{planPath}' is not a path inside the bundle.", nameof(content));
+            if (reserved.Contains(path) || path.StartsWith(PlayerFiles.PackageName + "/", StringComparison.OrdinalIgnoreCase))
+                throw new ArgumentException($"'{planPath}' is a file of the bundle itself.", nameof(content));
+            if (!files.TryAdd(path, source))
+                throw new ArgumentException($"'{planPath}' is given twice.", nameof(content));
+            if (!File.Exists(source))
+                throw new FileNotFoundException($"The file for '{planPath}' does not exist: {source}", source);
+        }
+        foreach (var plan in new[] { content.Plan, content.Draft }.OfType<ScenePlan>())
+        {
+            foreach (var model in plan.Models)
+                if (!files.ContainsKey(Normalized(model.Path)))
+                    throw new ArgumentException($"The file of model '{model.Id}' ({model.Path}) is not among the bundle's files.", nameof(content));
+            foreach (string folder in plan.ModuleFolders)
+                if (!files.Keys.Any(f => f.StartsWith(Normalized(folder) + "/", StringComparison.OrdinalIgnoreCase)))
+                    throw new ArgumentException($"The module folder '{folder}' has no files in the bundle.", nameof(content));
+        }
+
+        var entries = new List<Entry>
+        {
+            Text(ScenePlanSerializer.FileName, ScenePlanSerializer.Write(content.Plan)),
+            Text(ReadmeFileName, Readme(content)),
+            Text(ShellScriptName, Script("render.sh").ReplaceLineEndings("\n"), executable: true),
+            Text(WindowsScriptName, Script("render.cmd").ReplaceLineEndings("\r\n")),
+        };
+        if (content.Draft is { } d) entries.Add(Text(DraftPlanFileName, ScenePlanSerializer.Write(d)));
+        entries.AddRange(PlayerFiles.JobFiles.Select(f => Text(f.Path, f.Text)));
+        entries.AddRange(files.Select(f => new Entry(f.Key, () => File.OpenRead(f.Value))));
+        entries.Sort((a, b) => string.CompareOrdinal(a.Path, b.Path));
+        return entries;
+    }
+
+    private static void Check(ScenePlan plan, string which)
+    {
+        var errors = ScenePlanValidator.Validate(plan);
+        if (errors.Count > 0)
+            throw new ArgumentException(
+                $"The {which} is invalid: " + string.Join("; ", errors.Select(e => $"{e.Path}: {e.Message}")), nameof(plan));
+        if (!ScenePlanValidator.IsPathBesideThePlan(plan.Output.Directory))
+            throw new ArgumentException(
+                $"The {which}'s output directory '{plan.Output.Directory}' does not lie beside it; a bundle renders into its own folder.",
+                nameof(plan));
+    }
+
+    private static Entry Text(string path, string text, bool executable = false)
+    {
+        byte[] bytes = Utf8NoBom.GetBytes(text);
+        return new Entry(path, () => new MemoryStream(bytes, writable: false), executable);
+    }
+
+    private static void WriteZip(List<Entry> entries, Stream destination)
+    {
+        using var zip = new ZipArchive(destination, ZipArchiveMode.Create, leaveOpen: true, Utf8NoBom);
+        foreach (var entry in entries)
+        {
+            var zipped = zip.CreateEntry(entry.Path, CompressionLevel.Optimal);
+            zipped.LastWriteTime = EntryTime;
+            zipped.ExternalAttributes = (0x8000 | (int)(entry.Executable ? ExecutableMode : PlainMode)) << 16;
+            using var input = entry.Open();
+            using var output = zipped.Open();
+            input.CopyTo(output);
+        }
+    }
+
+    /// <summary>A plan path with forward slashes and without <c>.</c> or empty parts; "" for
+    /// the plan's own folder.</summary>
+    private static string Normalized(string path)
+        => string.Join('/', path.Split('/', '\\').Where(part => part.Length > 0 && part != "."));
+
+    private static string Script(string name)
+    {
+        var assembly = typeof(RenderBundleWriter).Assembly;
+        using var stream = assembly.GetManifestResourceStream("bundle/" + name)
+                           ?? throw new InvalidOperationException($"The run script {name} is not in the assembly.");
+        using var reader = new StreamReader(stream);
+        return reader.ReadToEnd();
+    }
+}

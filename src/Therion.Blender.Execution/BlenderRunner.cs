@@ -17,7 +17,12 @@ public sealed record RenderJob(
     string ScriptPath,
     string WorkingDirectory,
     int FrameCount,
-    OutputSpec Output);
+    OutputSpec Output)
+{
+    /// <summary>Arguments for the script, passed after <c>--</c> on Blender's command line: for
+    /// the player, <c>--plan</c> and the plan to play.</summary>
+    public IReadOnlyList<string> ScriptArguments { get; init; } = [];
+}
 
 /// <summary>A running Blender process: merged output lines, exit code, and a tree kill.</summary>
 public interface IBlenderProcess : IDisposable
@@ -87,7 +92,8 @@ public sealed class BlenderRunner
         string jobLogPath = Path.Combine(job.WorkingDirectory, "job.log");
         // --python-exit-code: an UNcaught Python exception (e.g. a Blender API rename the
         // script's probes missed) otherwise exits 0 and looks like a silent no-output run.
-        var args = new[] { "-b", "--factory-startup", "--python-exit-code", "64", "--python", job.ScriptPath };
+        string[] args = ["-b", "--factory-startup", "--python-exit-code", "64", "--python", job.ScriptPath];
+        if (job.ScriptArguments.Count > 0) args = [.. args, "--", .. job.ScriptArguments];
         var parser = new RenderProgressParser(job.FrameCount);
 
         IBlenderProcess process;

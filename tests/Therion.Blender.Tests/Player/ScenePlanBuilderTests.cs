@@ -570,9 +570,10 @@ public class ScenePlanBuilderTests
                 Overlays = new OverlaySpec { ScaleBar = true },
                 Events = [new VisibilityEvent { Target = VisibilityTarget.Overlays, ShowFrame = 5 }],
             },
+            Surface = new SurfaceSpec { Mode = SurfaceMode.Textured },
         };
 
-        Assert.Equal(["lighting.hdriPath", "labels.overlays", "labels.events"], ScenePlanBuilder.NotCarried(spec));
+        Assert.Equal(["lighting.hdriPath", "labels.overlays", "labels.events", "surface"], ScenePlanBuilder.NotCarried(spec));
         Assert.Empty(ScenePlanBuilder.NotCarried(new SceneSpec()));
         Assert.All(BuiltInPresets.All, preset => Assert.Empty(ScenePlanBuilder.NotCarried(preset.Spec)));
     }

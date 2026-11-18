@@ -5,7 +5,8 @@
 //
 // Station and component labels and lead markers are carried too, placed and sized by the label
 // planner. Not carried, because the player has no module for them: overlays, the visibility
-// events of the labels, and the HDRI light rig. NotCarried lists what a given spec loses.
+// events of the labels, the HDRI light rig and the terrain surface. NotCarried lists what a given
+// spec loses.
 //
 // Positions and colours are rounded to six decimals before they are written. They come through
 // sin, cos and pow, which agree between platforms only to the last bit; a micrometre is far below
@@ -209,6 +210,7 @@ public static class ScenePlanBuilder
         if (!string.IsNullOrWhiteSpace(overlays.Title) || overlays.ScaleBar || overlays.NorthArrow || overlays.DepthLegend)
             lost.Add("labels.overlays");
         if (spec.Labels.Events.Count > 0) lost.Add("labels.events");
+        if (spec.Surface.Mode != SurfaceMode.Off) lost.Add("surface");
         return lost;
     }
 

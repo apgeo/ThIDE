@@ -1,5 +1,12 @@
 # Therion.Blender.Execution — changes for consumers
 
+## 2026-11-18 (render bundle) — arguments for the script
+
+### Additive API
+- `RenderJob.ScriptArguments` (default empty): passed to the script after `--` on Blender's command
+  line. A player job folder or an unpacked render bundle plays another plan with
+  `["--plan", "<folder>/scene-plan.draft.json"]`.
+
 ## 2026-11-18 — the terrain surface
 
 ### Behaviour change
