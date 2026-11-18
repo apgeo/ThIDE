@@ -1,5 +1,11 @@
 # Therion.Blender — changes for consumers
 
+## 2026-11-18 (follow-ups) — terrain, player plans, lead captions, bundles
+
+### Behaviour changes
+- `SurfaceSpec.Opacity` defaults to 0.4 (was 0.5): the cave under the terrain shows better. It is
+  still set per spec. `SPEC_HASH` of every generated script changes with it.
+
 ## 2026-11-18 (render bundle) — a scene plan, its meshes and the player in one zip
 
 Additive. Nothing that exists changes, except that `NotCarried` names one more setting.

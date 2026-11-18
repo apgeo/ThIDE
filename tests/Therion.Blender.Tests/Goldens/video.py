@@ -10,7 +10,7 @@ import sys
 import bpy
 import mathutils
 
-SPEC_HASH = "fb828ab66d94c5756181153d0b8df02f975aa63f2c4bdf284499b9dd84a9e086"
+SPEC_HASH = "45e282be48b092d1046a602e9d430be5800fd1bd51e81abf05af65d81ff6e9a2"
 
 
 def thide(key, value):

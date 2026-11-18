@@ -26,5 +26,5 @@ public sealed record SurfaceSpec
     public SurfaceMode Mode { get; init; } = SurfaceMode.Off;
 
     /// <summary>How opaque the terrain is seen from above, 0–1 (1 hides the cave under it).</summary>
-    public double Opacity { get; init; } = 0.5;
+    public double Opacity { get; init; } = 0.4;
 }
