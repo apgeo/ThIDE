@@ -51,9 +51,11 @@ singură *lucrare de randare*; nimic nu rulează până nu apăsați **Randează
    - **Cameră** — șablonul de mișcare.
    - **Teren** — suprafața terenului pe care o poate avea un model *.lox*, desenată deasupra
      peșterii: *Off* (implicit), *Solid* (o singură culoare) sau *Textured* (cu imaginea suprafeței
-     așezată pe el; o singură culoare când modelul nu are imagine). Văzut de sus e transparent
-     (implicit opac în proporție de 40 %), văzut de jos nu se vede, nu aruncă umbre, iar camera
-     încadrează tot peștera. O grilă foarte mare e rărită la cel mult 512 × 512 puncte.
+     așezată pe el; o singură culoare când modelul nu are imagine). Văzut de sus e transparent,
+     văzut de jos nu se vede, nu aruncă umbre, iar camera încadrează tot peștera. **Opacitatea
+     terenului**, alături, alege cât din peșteră se vede prin el de sus: la 0 % terenul nu se
+     vede, la 100 % ascunde peștera de sub el; implicit 40 %. O grilă foarte mare e rărită la cel
+     mult 512 × 512 puncte.
    - **Motor** — *Cycles* (implicit, funcționează peste tot) sau *EEVEE* (mai rapid, dar necesită
      un afișaj; pe un server Linux fără afișaj folosiți Cycles). **Dispozitiv** alege backend-ul
      GPU pentru Cycles (Auto le încearcă pe toate și revine la CPU).

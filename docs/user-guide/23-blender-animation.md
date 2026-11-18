@@ -47,9 +47,10 @@ describes one *render job*; nothing runs until you press **Render**.
    - **Camera** — the motion template.
    - **Terrain** — the terrain surface a *.lox* model can carry, drawn above the cave: *Off* (the
      default), *Solid* (one colour) or *Textured* (the surface image draped over it; one colour when
-     the model has no image). It is see-through from above (40 % opaque by default) and invisible
-     from below, casts no shadow, and the camera still frames the cave. A very large grid is
-     thinned to at most 512 × 512 points.
+     the model has no image). It is see-through from above and invisible from below, casts no
+     shadow, and the camera still frames the cave. **Terrain opacity**, beside it, sets how much
+     of the cave shows through from above: 0 % hides the terrain, 100 % hides the cave under it;
+     the default is 40 %. A very large grid is thinned to at most 512 × 512 points.
    - **Engine** — *Cycles* (the default, works everywhere) or *EEVEE* (faster, but needs a
      display; on a headless Linux server use Cycles). **Device** picks the GPU backend for
      Cycles (Auto tries them all and falls back to CPU).

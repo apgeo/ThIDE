@@ -38,7 +38,7 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         nameof(CameraTemplate), nameof(EngineKind), nameof(Gpu), nameof(Samples), nameof(Fps),
         nameof(DurationSeconds), nameof(OutputKind), nameof(Container), nameof(Width), nameof(Height),
         nameof(BaseName), nameof(SelfContained), nameof(ShowStationLabels), nameof(ShowLeadMarkers),
-        nameof(LeadMarkerSizing), nameof(LabelRoof), nameof(SurfaceMode),
+        nameof(LeadMarkerSizing), nameof(LabelRoof), nameof(SurfaceMode), nameof(SurfaceOpacity),
     };
 
     private SceneSpec _spec;
@@ -114,7 +114,15 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
     [ObservableProperty] private bool _showLeadMarkers;
     [ObservableProperty] private LeadMarkerSizing _leadMarkerSizing;
     [ObservableProperty] private LabelRoofSource _labelRoof;
-    [ObservableProperty] private SurfaceMode _surfaceMode;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSurface))]
+    private SurfaceMode _surfaceMode;
+
+    /// <summary>How opaque the terrain is seen from above, 0–1.</summary>
+    [ObservableProperty] private double _surfaceOpacity;
+
+    /// <summary>True when a terrain is drawn: only then does its opacity matter.</summary>
+    public bool HasSurface => SurfaceMode != SurfaceMode.Off;
 
     // ---- export target ----
     [ObservableProperty] private string? _exportDirectory;
@@ -202,7 +210,8 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
                 Leads = _spec.Labels.Leads with { Show = ShowLeadMarkers, Sizing = LeadMarkerSizing },
                 Roof = LabelRoof,
             },
-            Surface = _spec.Surface with { Mode = SurfaceMode },
+            // A slider's steps are not exact in binary; the spec keeps whole percents.
+            Surface = _spec.Surface with { Mode = SurfaceMode, Opacity = Math.Round(SurfaceOpacity, 2) },
         };
         Revalidate();
     }
@@ -226,6 +235,7 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         LeadMarkerSizing = spec.Labels.Leads.Sizing;
         LabelRoof = spec.Labels.Roof;
         SurfaceMode = spec.Surface.Mode;
+        SurfaceOpacity = spec.Surface.Opacity;
     }
 
     private void Revalidate()

@@ -223,6 +223,29 @@ public class BlenderAnimationViewModelTests
         Assert.Equal(SurfaceMode.Off, vm.CurrentSpec.Surface.Mode);
     }
 
+    [Fact]
+    public void TerrainOpacity_IsUsableOnlyWithATerrain_ReachesTheSpec_AndComesBackFromAPreset()
+    {
+        var vm = Vm();
+        var changed = new List<string?>();
+        vm.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+        Assert.False(vm.HasSurface);
+        Assert.Equal(0.4, vm.SurfaceOpacity);
+
+        vm.SurfaceMode = SurfaceMode.Solid;
+        Assert.True(vm.HasSurface);
+        Assert.Contains(nameof(vm.HasSurface), changed);
+
+        // A slider's step lands a little off a whole percent; the spec keeps the percent.
+        vm.SurfaceOpacity = 0.1 + 0.2 + 0.4;
+        Assert.Equal(0.7, vm.CurrentSpec.Surface.Opacity);
+        Assert.Equal(SurfaceMode.Solid, vm.CurrentSpec.Surface.Mode);
+
+        vm.SelectedPreset = vm.Presets.First(p => p.BuiltIn);
+        Assert.Equal(0.4, vm.SurfaceOpacity);
+        Assert.False(vm.HasSurface);
+    }
+
     // ---- validation + gating ----
 
     [Fact]

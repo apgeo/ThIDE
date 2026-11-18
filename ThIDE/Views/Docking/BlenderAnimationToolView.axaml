@@ -69,6 +69,9 @@
                 <ComboBox AutomationProperties.AutomationId="Blender.CameraTemplate" AutomationProperties.Name="{l:Loc Blender_UI_Template}" HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.CameraTemplates}" SelectedItem="{Binding Blender.CameraTemplate}" /></DockPanel>
             <DockPanel><TextBlock Text="{l:Loc Blender_UI_Surface}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
                 <ComboBox AutomationProperties.AutomationId="Blender.Surface" AutomationProperties.Name="{l:Loc Blender_UI_Surface}" HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.SurfaceModes}" SelectedItem="{Binding Blender.SurfaceMode}" ToolTip.Tip="{l:Loc Blender_UI_Surface_Tip}" /></DockPanel>
+            <DockPanel IsEnabled="{Binding Blender.HasSurface}"><TextBlock Text="{l:Loc Blender_UI_SurfaceOpacity}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding Blender.SurfaceOpacity, StringFormat='{}{0:0%}'}" DockPanel.Dock="Right" MinWidth="40" TextAlignment="Right" VerticalAlignment="Center" />
+                <Slider AutomationProperties.AutomationId="Blender.SurfaceOpacity" AutomationProperties.Name="{l:Loc Blender_UI_SurfaceOpacity}" Minimum="0" Maximum="1" SmallChange="0.05" LargeChange="0.1" TickFrequency="0.05" IsSnapToTickEnabled="True" Value="{Binding Blender.SurfaceOpacity}" ToolTip.Tip="{l:Loc Blender_UI_SurfaceOpacity_Tip}" /></DockPanel>
 
             <TextBlock Text="{l:Loc Blender_UI_Engine}" FontWeight="Bold" />
             <DockPanel><TextBlock Text="{l:Loc Blender_UI_Engine}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
