@@ -33,6 +33,14 @@ public sealed record ScriptAssets
     /// <summary>The transport PLY bytes to embed base64 (required when the spec sets
     /// <see cref="SourceSpec.EmbedMesh"/>).</summary>
     public byte[]? PlyBytes { get; init; }
+
+    /// <summary>The terrain PLY bytes to embed base64 (required when the mesh is embedded and
+    /// the spec draws a terrain from <see cref="SourceSpec.SurfacePlyPath"/>).</summary>
+    public byte[]? SurfacePlyBytes { get; init; }
+
+    /// <summary>The surface image bytes to embed base64 (required when the mesh is embedded and
+    /// a textured terrain drapes <see cref="SourceSpec.SurfaceImagePath"/>).</summary>
+    public byte[]? SurfaceImageBytes { get; init; }
 }
 
 /// <summary>What a generated script is for: a headless render, or an interactive scene the
@@ -74,6 +82,10 @@ public static class ScriptGenerator
             throw new ArgumentException("Self-contained mode needs ScriptAssets.SceneMetaJson.", nameof(assets));
         if (spec.Source is { SelfContained: true, EmbedMesh: true } && assets?.PlyBytes is null)
             throw new ArgumentException("EmbedMesh needs ScriptAssets.PlyBytes.", nameof(assets));
+        if (EmbedsTerrain(spec) && assets?.SurfacePlyBytes is null)
+            throw new ArgumentException("EmbedMesh with a terrain needs ScriptAssets.SurfacePlyBytes.", nameof(assets));
+        if (EmbedsTerrainImage(spec) && assets?.SurfaceImageBytes is null)
+            throw new ArgumentException("EmbedMesh with a textured terrain needs ScriptAssets.SurfaceImageBytes.", nameof(assets));
 
         // Camera keyframes and label selection are precomputed here (D-16/R-13). Static
         // needs no framing; animated templates throw a clear ArgumentException without it.
@@ -210,7 +222,32 @@ public static class ScriptGenerator
         {
             w.Line($"PLY_BASE64 = {PyWriter.Str(Convert.ToBase64String(assets.PlyBytes!))}");
         }
+        if (EmbedsTerrain(spec))
+            w.Line($"SURFACE_PLY_BASE64 = {PyWriter.Str(Convert.ToBase64String(assets.SurfacePlyBytes!))}");
+        if (EmbedsTerrainImage(spec))
+            w.Line($"SURFACE_IMAGE_BASE64 = {PyWriter.Str(Convert.ToBase64String(assets.SurfaceImageBytes!))}");
         w.Blank();
+    }
+
+    /// <summary>A script that carries its mesh carries the terrain too, so that it draws the
+    /// terrain without its files.</summary>
+    private static bool EmbedsTerrain(SceneSpec spec)
+        => spec.Source is { SelfContained: true, EmbedMesh: true }
+           && spec.Surface.Mode != SurfaceMode.Off
+           && !string.IsNullOrWhiteSpace(spec.Source.SurfacePlyPath);
+
+    private static bool EmbedsTerrainImage(SceneSpec spec)
+        => EmbedsTerrain(spec) && spec.Surface.Mode == SurfaceMode.Textured
+           && !string.IsNullOrWhiteSpace(spec.Source.SurfaceImagePath);
+
+    /// <summary>Writes an embedded file to a temporary file with the extension it had, and names
+    /// it in <paramref name="pathVariable"/>.</summary>
+    private static void EmitUnpacked(PyWriter w, string file, string pathVariable, string base64Variable, string extension)
+    {
+        w.Line($"{file} = tempfile.NamedTemporaryFile(suffix={PyWriter.Str(extension)}, delete=False)");
+        w.Line($"{file}.write(base64.b64decode({base64Variable}))");
+        w.Line($"{file}.close()");
+        w.Line($"{pathVariable} = {file}.name");
     }
 
     private static void EmitSceneReset(PyWriter w, SceneSpec spec, ScriptPurpose purpose)
@@ -242,10 +279,7 @@ public static class ScriptGenerator
         w.Line("thide(\"phase\", \"import\")");
         if (spec.Source is { SelfContained: true, EmbedMesh: true })
         {
-            w.Line("_ply_file = tempfile.NamedTemporaryFile(suffix=\".ply\", delete=False)");
-            w.Line("_ply_file.write(base64.b64decode(PLY_BASE64))");
-            w.Line("_ply_file.close()");
-            w.Line("PLY_PATH = _ply_file.name");
+            EmitUnpacked(w, "_ply_file", "PLY_PATH", "PLY_BASE64", ".ply");
         }
         else
         {
@@ -326,8 +360,13 @@ public static class ScriptGenerator
         bool textured = surface.Mode == SurfaceMode.Textured && !string.IsNullOrWhiteSpace(spec.Source.SurfaceImagePath);
         if (surface.Mode == SurfaceMode.Textured && !textured)
             w.Line("thide(\"warning\", \"The model has no surface image; drawing the terrain in one colour.\")");
-        w.Line($"SURFACE_PLY_PATH = {PyWriter.Str(spec.Source.SurfacePlyPath)}");
-        if (textured)
+        if (EmbedsTerrain(spec))
+            EmitUnpacked(w, "_tply_file", "SURFACE_PLY_PATH", "SURFACE_PLY_BASE64", ".ply");
+        else
+            w.Line($"SURFACE_PLY_PATH = {PyWriter.Str(spec.Source.SurfacePlyPath)}");
+        if (EmbedsTerrainImage(spec))
+            EmitUnpacked(w, "_timg_file", "SURFACE_IMAGE_PATH", "SURFACE_IMAGE_BASE64", Path.GetExtension(spec.Source.SurfaceImagePath!).ToLowerInvariant());
+        else if (textured)
             w.Line($"SURFACE_IMAGE_PATH = {PyWriter.Str(spec.Source.SurfaceImagePath!)}");
         w.Line("terrain = None");
         using (w.Block("if os.path.exists(SURFACE_PLY_PATH):"))

@@ -1,6 +1,7 @@
 // The terrain surface in a real Blender, on an invented cave under an invented terrain with an
 // invented four-colour image. Opt-in like the other probe tests (THIDE_BLENDER_SMOKE=1).
 
+using Therion.Blender.Emit;
 using Therion.Blender.Presets;
 using Therion.Cave3D;
 using Therion.CaveGeometry;
@@ -59,6 +60,39 @@ public class TerrainProbeTests
             checkedSamples++;
         }
         Assert.True(checkedSamples >= 20, $"only {checkedSamples} samples were off the dividing lines");
+    }
+
+    [BlenderFact]
+    public async Task AScriptCarryingItsMesh_DrawsTheTerrainAndItsImage_WithoutTheirFiles()
+    {
+        var assets = SceneProbeRunner.Prepare("terrain-embedded", Model.Value, includeSurface: true);
+        var manifest = assets.Conversion.Manifest;
+        var embedded = new ScriptAssets
+        {
+            SceneMetaJson = await File.ReadAllTextAsync(manifest.SceneMetaPath),
+            PlyBytes = await File.ReadAllBytesAsync(manifest.ModelPath),
+            SurfacePlyBytes = await File.ReadAllBytesAsync(manifest.SurfacePath!),
+            SurfaceImageBytes = await File.ReadAllBytesAsync(manifest.SurfaceImagePath!),
+        };
+        // The script is all there is: the files it was made from are gone.
+        foreach (string file in new[] { manifest.ModelPath, manifest.SceneMetaPath, manifest.SurfacePath!, manifest.SurfaceImagePath! })
+            File.Delete(file);
+        var spec = Orbit(SurfaceMode.Textured) with { Source = new SourceSpec { SelfContained = true, EmbedMesh = true } };
+
+        var report = await SceneProbeRunner.RunAsync("terrain-embedded", assets, spec, new ProbeOptions { Samples = 1 }, embedded);
+
+        var terrain = report.Object("Terrain");
+        Assert.Equal(["Terrain"], terrain.Materials);
+        Assert.Equal(["UVMap"], terrain.UvMaps);
+        var expected = TerrainMesher.Build(Model.Value.Surfaces[0], assets.Conversion.Geometry.Offset)!.Mesh;
+        Assert.Equal((expected.Vertices.Count, expected.Triangles.Count), (terrain.Vertices, terrain.Polygons));
+        var image = Assert.Single(report.Images);
+        Assert.Equal([InventedTerrain.ImageWidth, InventedTerrain.ImageHeight], image.Size);
+        Assert.True(image.Loaded);
+        Assert.Contains(terrain.UvSamples!, sample => sample.ImageColour is { } c && Math.Abs(c[0] - InventedTerrain.SouthWest.R / 255.0) < 0.02
+            && Math.Abs(c[1] - InventedTerrain.SouthWest.G / 255.0) < 0.02 && Math.Abs(c[2] - InventedTerrain.SouthWest.B / 255.0) < 0.02);
+        string log = await File.ReadAllTextAsync(Path.Combine(SceneProbeRunner.Root, "terrain-embedded", "probe.log"));
+        Assert.DoesNotContain("THIDE:warning", log);
     }
 
     [BlenderFact]

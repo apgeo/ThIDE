@@ -72,8 +72,9 @@ public sealed record SourceSpec
     public bool EmbedMesh { get; init; }
 
     /// <summary>Path of the terrain PLY (written by the conversion pipeline when
-    /// <see cref="SceneSpec.Surface"/> asks for a terrain and the model has one). Never embedded:
-    /// a self-contained script draws the terrain only while this file is where it was.</summary>
+    /// <see cref="SceneSpec.Surface"/> asks for a terrain and the model has one). Embedded, with
+    /// the surface image, when <see cref="EmbedMesh"/> embeds the model's mesh; otherwise the
+    /// script draws the terrain only while this file is where it was.</summary>
     public string? SurfacePlyPath { get; init; }
 
     /// <summary>Path of the surface image draped over the terrain, when the model has one.</summary>

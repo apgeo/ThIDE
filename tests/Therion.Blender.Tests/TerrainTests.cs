@@ -340,6 +340,27 @@ public class TerrainTests : IDisposable
         Assert.False(File.Exists(Path.Combine(offDir, "surface.ply")));
     }
 
+    [Fact]
+    public async Task Service_Export_OfAScriptCarryingItsMesh_CarriesTheTerrainFilesToo()
+    {
+        var service = new BlenderRenderService(
+            new BlenderLocator(new NoBlender(), () => []), new BlenderRunner(new NoLauncher(), _ => 0), Path.Combine(_dir, "jobs"));
+        var model = WriteLox(InventedTerrain.Add(InventedCave.Build(InventedCaveSize.Small)), "service-embedded");
+        var spec = new SceneSpec
+        {
+            Source = new SourceSpec { SelfContained = true, EmbedMesh = true },
+            Surface = new SurfaceSpec { Mode = SurfaceMode.Textured },
+        };
+        string outDir = Path.Combine(_dir, "export-embedded");
+
+        string script = await File.ReadAllTextAsync(await service.ExportScriptAsync(spec, new RenderSource(model, []), outDir));
+
+        string ply = Convert.ToBase64String(await File.ReadAllBytesAsync(Path.Combine(outDir, "surface.ply")));
+        string png = Convert.ToBase64String(await File.ReadAllBytesAsync(Path.Combine(outDir, "surface.png")));
+        Assert.Contains($"SURFACE_PLY_BASE64 = \"{ply}\"", script);
+        Assert.Contains($"SURFACE_IMAGE_BASE64 = \"{png}\"", script);
+    }
+
     private sealed class NoBlender : IBlenderProbe
     {
         public BlenderVersion? Probe(string path) => null;
@@ -438,6 +459,79 @@ public class TerrainTests : IDisposable
         string script = ScriptGenerator.Generate(Spec(SurfaceMode.Solid, ply: null, image: null));
         Assert.Contains("thide(\"warning\", \"The model has no terrain surface; rendering without one.\")", script);
         Assert.DoesNotContain("SURFACE_PLY_PATH", script);
+    }
+
+    private static SceneSpec Embedded(SceneSpec spec) => spec with
+    {
+        Source = spec.Source with { SceneMetaPath = "/job/scene-meta.json", SelfContained = true, EmbedMesh = true },
+    };
+
+    private static readonly ScriptAssets EmbeddedAssets = new()
+    {
+        SceneMetaJson = "{}",
+        PlyBytes = [1, 2, 3],
+        SurfacePlyBytes = [0x70, 0x6C, 0x79, 0x0A, 0xFE],
+        SurfaceImageBytes = [0x89, 0x50, 0x4E, 0x47, 0xFF],
+    };
+
+    [Fact]
+    public void Script_CarryingItsMesh_CarriesTheTerrainAndItsImage_AndReadsNoTerrainFile()
+    {
+        string script = ScriptGenerator.Generate(Embedded(Spec(SurfaceMode.Textured)), EmbeddedAssets);
+
+        Assert.Contains($"SURFACE_PLY_BASE64 = \"{Convert.ToBase64String(EmbeddedAssets.SurfacePlyBytes!)}\"", script);
+        Assert.Contains($"SURFACE_IMAGE_BASE64 = \"{Convert.ToBase64String(EmbeddedAssets.SurfaceImageBytes!)}\"", script);
+        Assert.Contains("_tply_file = tempfile.NamedTemporaryFile(suffix=\".ply\", delete=False)", script);
+        Assert.Contains("_tply_file.write(base64.b64decode(SURFACE_PLY_BASE64))", script);
+        Assert.Contains("SURFACE_PLY_PATH = _tply_file.name", script);
+        Assert.Contains("_timg_file = tempfile.NamedTemporaryFile(suffix=\".png\", delete=False)", script);
+        Assert.Contains("SURFACE_IMAGE_PATH = _timg_file.name", script);
+        Assert.DoesNotContain("/job/surface", script);
+        // The terrain is unpacked where it was read before: after the framing bounds.
+        Assert.True(script.IndexOf("bounds_radius = ", StringComparison.Ordinal) < script.IndexOf("SURFACE_PLY_PATH = ", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Script_CarryingItsMesh_CarriesNoImageForASolidTerrain_AndNothingWithoutATerrain()
+    {
+        string solid = ScriptGenerator.Generate(Embedded(Spec(SurfaceMode.Solid, image: "/job/surface.JPG")), EmbeddedAssets);
+        Assert.Contains("SURFACE_PLY_BASE64", solid);
+        Assert.DoesNotContain("SURFACE_IMAGE", solid);
+
+        string off = ScriptGenerator.Generate(Embedded(Spec(SurfaceMode.Off)), EmbeddedAssets);
+        Assert.DoesNotContain("SURFACE_", off);
+
+        // A JPEG keeps its extension, in lower case.
+        string jpeg = ScriptGenerator.Generate(Embedded(Spec(SurfaceMode.Textured, image: "/job/surface.JPG")), EmbeddedAssets);
+        Assert.Contains("_timg_file = tempfile.NamedTemporaryFile(suffix=\".jpg\", delete=False)", jpeg);
+    }
+
+    [Fact]
+    public void Script_SelfContainedWithoutItsMesh_ReadsTheTerrainFromItsFiles()
+    {
+        var spec = Spec(SurfaceMode.Textured) with { Source = Spec(SurfaceMode.Textured).Source with { SceneMetaPath = "/job/scene-meta.json", SelfContained = true } };
+
+        string script = ScriptGenerator.Generate(spec, new ScriptAssets { SceneMetaJson = "{}" });
+
+        Assert.Contains("SURFACE_PLY_PATH = \"/job/surface.ply\"", script);
+        Assert.Contains("SURFACE_IMAGE_PATH = \"/job/surface.png\"", script);
+        Assert.DoesNotContain("BASE64", script);
+    }
+
+    [Fact]
+    public void Script_CarryingItsMesh_WithoutTheTerrainsBytes_IsRefused()
+    {
+        var ex = Assert.Throws<ArgumentException>(() => ScriptGenerator.Generate(
+            Embedded(Spec(SurfaceMode.Solid)), EmbeddedAssets with { SurfacePlyBytes = null }));
+        Assert.Contains("SurfacePlyBytes", ex.Message);
+
+        ex = Assert.Throws<ArgumentException>(() => ScriptGenerator.Generate(
+            Embedded(Spec(SurfaceMode.Textured)), EmbeddedAssets with { SurfaceImageBytes = null }));
+        Assert.Contains("SurfaceImageBytes", ex.Message);
+
+        // A terrain the model does not have needs no bytes: the script warns and draws none.
+        string script = ScriptGenerator.Generate(Embedded(Spec(SurfaceMode.Textured, ply: null, image: null)), EmbeddedAssets with { SurfacePlyBytes = null, SurfaceImageBytes = null });
+        Assert.Contains("The model has no terrain surface", script);
     }
 
     [Fact]

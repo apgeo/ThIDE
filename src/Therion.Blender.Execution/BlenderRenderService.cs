@@ -187,13 +187,20 @@ public sealed class BlenderRenderService : IBlenderRenderService
     }
 
     /// <summary>Self-contained assets (D-14): embed the scene-meta JSON and, when requested,
-    /// the PLY. Null for the default sidecar mode.</summary>
+    /// the PLY with the terrain and its image. Null for the default sidecar mode.</summary>
     private static ScriptAssets? BuildAssets(SceneSpec spec, ConversionResult conversion)
     {
         if (!spec.Source.SelfContained) return null;
         string metaJson = File.ReadAllText(conversion.Manifest.SceneMetaPath);
-        byte[]? plyBytes = spec.Source.EmbedMesh ? File.ReadAllBytes(conversion.Manifest.ModelPath) : null;
-        return new ScriptAssets { SceneMetaJson = metaJson, PlyBytes = plyBytes };
+        if (!spec.Source.EmbedMesh) return new ScriptAssets { SceneMetaJson = metaJson };
+        bool terrain = spec.Surface.Mode != SurfaceMode.Off;
+        return new ScriptAssets
+        {
+            SceneMetaJson = metaJson,
+            PlyBytes = File.ReadAllBytes(conversion.Manifest.ModelPath),
+            SurfacePlyBytes = terrain && conversion.Manifest.SurfacePath is { } surface ? File.ReadAllBytes(surface) : null,
+            SurfaceImageBytes = terrain && conversion.Manifest.SurfaceImagePath is { } image ? File.ReadAllBytes(image) : null,
+        };
     }
 
     /// <summary>Removes the per-render scratch files (transport mesh, scene-meta, script) once

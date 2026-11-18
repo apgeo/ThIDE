@@ -70,9 +70,10 @@ internal static class SceneProbeRunner
     }
 
     /// <summary>Generates the script for <paramref name="spec"/>, builds the scene in Blender
-    /// and returns what the probe reports.</summary>
+    /// and returns what the probe reports. <paramref name="embedded"/> are the files a
+    /// self-contained script carries.</summary>
     public static async Task<SceneReport> RunAsync(
-        string caseName, ProbeAssets assets, SceneSpec spec, ProbeOptions? options = null)
+        string caseName, ProbeAssets assets, SceneSpec spec, ProbeOptions? options = null, ScriptAssets? embedded = null)
     {
         options ??= new ProbeOptions();
         string caseDir = NewCaseDirectory(caseName);
@@ -80,7 +81,7 @@ internal static class SceneProbeRunner
         string scriptPath = Path.Combine(caseDir, "render.py");
         await File.WriteAllTextAsync(
             scriptPath,
-            ScriptGenerator.Generate(spec, null, assets.Framing, assets.Conversion.Meta, ScriptPurpose.Interactive),
+            ScriptGenerator.Generate(spec, embedded, assets.Framing, assets.Conversion.Meta, ScriptPurpose.Interactive),
             new UTF8Encoding(false));
 
         string reportPath = Path.Combine(caseDir, "scene-report.json");

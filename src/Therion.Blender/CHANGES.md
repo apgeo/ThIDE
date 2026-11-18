@@ -2,6 +2,14 @@
 
 ## 2026-11-18 (follow-ups) — terrain, player plans, lead captions, bundles
 
+### Additive API
+- `ScriptAssets.SurfacePlyBytes` and `.SurfaceImageBytes`: a script that carries its mesh
+  (`SourceSpec.SelfContained` and `.EmbedMesh`) now carries the terrain and its image too, base64
+  like the mesh, and draws them without their files. The generator refuses such a spec without the
+  bytes it needs (`ArgumentException`, as for `PlyBytes`); a terrain the model does not have needs
+  none. `BlenderRenderService` reads them from the conversion. A script that is self-contained
+  without its mesh still reads the terrain from its files.
+
 ### Behaviour changes
 - `SurfaceSpec.Opacity` defaults to 0.4 (was 0.5): the cave under the terrain shows better. It is
   still set per spec. `SPEC_HASH` of every generated script changes with it.
