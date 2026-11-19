@@ -104,6 +104,23 @@ plane fit, and declination), consuming the shared `ShotSymbol` / `SemanticModel`
 UI or web dependency, so it can be embedded in other tools or automation. Entry point:
 `StructuralAnalysis.Analyze(semanticModel, options)`.
 
+### Orientation statistics
+
+Statistics over sets of orientation readings live in a second, smaller library,
+**`Therion.Orientation`**, which references nothing but the .NET base class library — not even
+`Therion.Core` — so an application can take the maths without taking a survey-format dependency:
+
+- `Azimuth.Normalize` (fold onto [0, 360)) and `Azimuth.FoldAxial` (fold an axis onto [0, 180));
+- `Planes.DipDirectionFromStrike` / `StrikeFromDipDirection` (right-hand rule) and `Planes.Pole`;
+- `EqualAreaNet.Project` / `Unproject` — the lower-hemisphere Schmidt net, `r = √2·sin((90° − plunge)/2)`;
+- `KambDensity.Compute` — Kamb (1959) density of poles over a grid on the net, in standard
+  deviations above the count expected from a random scatter (counting circle `9 / (N + 9)` of the
+  hemisphere, contour step 2σ);
+- `WatsonU2.Compare` / `CompareAxial` — Watson's two-sample U² test on directions or on axes, with
+  its large-sample p-value.
+
+Planes are held as dip direction and dip; strike is converted by the right-hand rule.
+
 ## Screenshots
 [![Alt Text](./screenshots/low-resolution/thide_geostruct_overview_lr.jpeg)](./screenshots/thide_geostruct_overview.jpeg)
 
