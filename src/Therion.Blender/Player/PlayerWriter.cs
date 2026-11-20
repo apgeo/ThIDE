@@ -25,11 +25,11 @@ public static class PlayerWriter
     /// Writes a job folder: <c>scene-plan.json</c>, <c>render.py</c> and the player's package
     /// <c>thide_player/</c>, which replaces one that is already there.
     /// </summary>
-    /// <param name="files">Files to copy in first, as plan path → the file to copy: the meshes,
-    /// unless they are in the folder already.</param>
+    /// <param name="files">Files to copy in first, as plan path → the file to copy: the meshes
+    /// and the images of the materials, unless they are in the folder already.</param>
     /// <exception cref="ArgumentException">The plan is invalid, or a path of
     /// <paramref name="files"/> does not lie in the folder.</exception>
-    /// <exception cref="FileNotFoundException">A model's file is not in the folder.</exception>
+    /// <exception cref="FileNotFoundException">A file the plan names is not in the folder.</exception>
     public static PlayerJob WriteJob(ScenePlan plan, string folder, IReadOnlyDictionary<string, string>? files = null)
     {
         ThrowIfInvalid(plan);
@@ -44,11 +44,11 @@ public static class PlayerWriter
             Directory.CreateDirectory(Path.GetDirectoryName(target)!);
             File.Copy(source, target, overwrite: true);
         }
-        foreach (var model in plan.Models)
+        foreach (var (planPath, what) in FilesOf(plan))
         {
-            string path = InFolder(folder, model.Path);
+            string path = InFolder(folder, planPath);
             if (!File.Exists(path))
-                throw new FileNotFoundException($"The file of model '{model.Id}' is not in the job folder: {path}", path);
+                throw new FileNotFoundException($"The file of {what} is not in the job folder: {path}", path);
         }
 
         string package = Path.Combine(folder, PlayerFiles.PackageName);
@@ -66,19 +66,21 @@ public static class PlayerWriter
     }
 
     /// <summary>
-    /// The plan and the player as one Python script. Models whose files are given in
-    /// <paramref name="files"/> travel inside the script; the others are looked for beside it.
+    /// The plan and the player as one Python script. The files of the plan (meshes, images)
+    /// that are given in <paramref name="files"/> travel inside the script; the others are
+    /// looked for beside it.
     /// </summary>
-    /// <param name="files">Model files to carry, as plan path → content.</param>
+    /// <param name="files">Files to carry, as plan path → content.</param>
     /// <exception cref="ArgumentException">The plan is invalid, or a path of
-    /// <paramref name="files"/> is not the path of one of its models.</exception>
+    /// <paramref name="files"/> is not one the plan names.</exception>
     public static string SingleFile(ScenePlan plan, IReadOnlyDictionary<string, byte[]>? files = null)
     {
         ThrowIfInvalid(plan);
         files ??= new Dictionary<string, byte[]>();
+        var named = FilesOf(plan).Select(f => f.Path).ToHashSet(StringComparer.Ordinal);
         foreach (string path in files.Keys)
-            if (!plan.Models.Any(m => m.Path == path))
-                throw new ArgumentException($"No model of the plan has the path '{path}'.", nameof(files));
+            if (!named.Contains(path))
+                throw new ArgumentException($"No model or material of the plan has the path '{path}'.", nameof(files));
 
         var text = new StringBuilder();
         text.Append("# A scene plan and the ThIDE player that renders it, in one file.\n");
@@ -109,6 +111,18 @@ public static class PlayerWriter
 
         text.Append(PlayerFiles.SingleFileStart);
         return text.ToString();
+    }
+
+    /// <summary>The files a plan names, each with what it is the file of: every model's mesh
+    /// and every material's image.</summary>
+    public static IReadOnlyList<(string Path, string What)> FilesOf(ScenePlan plan)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        var files = plan.Models.Select(m => (m.Path, $"model '{m.Id}'")).ToList();
+        foreach (var material in plan.TexturedMaterials ?? [])
+            if (material.Image is { } image && !files.Any(f => f.Path == image))
+                files.Add((image, $"material '{material.Id}'"));
+        return files;
     }
 
     private static void ThrowIfInvalid(ScenePlan plan)

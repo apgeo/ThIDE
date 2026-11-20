@@ -50,6 +50,11 @@ public static partial class ScenePlanValidator
         ValidateModels(plan, Bad);
         ValidateCamera(plan, Bad);
         ValidateLook(plan.Look, plan.Output, Bad);
+        if (plan.TexturedMaterials is { } textured)
+        {
+            ValidateTexturedMaterials(plan, textured, Bad);
+            NeedsFeature(plan, "texturedMaterials", ScenePlan.TexturedMaterialsFeature, Bad);
+        }
         if (plan.Labels is { } labels)
         {
             ValidateLabels(labels, plan.Timeline.Fps, Bad);
@@ -118,6 +123,8 @@ public static partial class ScenePlanValidator
                 bad($"models[{i}].scale", "The scale must be positive along every axis.");
             if (model.Material is not null && !materials.Contains(model.Material))
                 bad($"models[{i}].material", $"look.materials has no material '{model.Material}'.");
+            if (model.Role is not null && !RoleName().IsMatch(model.Role))
+                bad($"models[{i}].role", "A role is lower-case letters and digits, in words joined by '-'.");
         }
     }
 
@@ -219,6 +226,50 @@ public static partial class ScenePlanValidator
                 bad("look.world.strength", "The world's strength is not negative.");
             if (world.Kind == PlanWorldKind.Color && !(world.Color is { } color && IsUnitColor(color)))
                 bad("look.world.color", "A plain world needs a colour with channels within 0–1.");
+        }
+    }
+
+    private static void ValidateTexturedMaterials(ScenePlan plan, IReadOnlyList<PlanTexturedMaterial> materials, Action<string, string> bad)
+    {
+        var ids = plan.Look.Materials.Select(m => m.Id).ToHashSet(StringComparer.Ordinal);
+        var worn = new HashSet<string>(StringComparer.Ordinal);
+        for (int i = 0; i < materials.Count; i++)
+        {
+            var material = materials[i];
+            string path = $"texturedMaterials[{i}]";
+            if (material is null)
+            {
+                bad(path, "A material is missing.");
+                continue;
+            }
+            if (string.IsNullOrWhiteSpace(material.Id))
+                bad(path + ".id", "A material needs an id.");
+            else if (!ids.Add(material.Id))
+                bad(path + ".id", $"The id '{material.Id}' is used twice among the plan's materials.");
+            for (int k = 0; k < material.Models.Count; k++)
+            {
+                string name = material.Models[k];
+                var model = plan.Models.FirstOrDefault(m => m.Id == name);
+                if (model is null)
+                    bad($"{path}.models[{k}]", $"The plan has no model '{name}'.");
+                else if (model.Material is not null || !worn.Add(name))
+                    bad($"{path}.models[{k}]", $"The model '{name}' has another material already.");
+            }
+            if (!IsUnitColor(material.Color))
+                bad(path + ".color", "Colour channels must be within 0–1.");
+            if (!(material.Roughness >= 0 && material.Roughness <= 1))
+                bad(path + ".roughness", "Roughness must be within 0–1.");
+            if (!(material.Opacity >= 0 && material.Opacity <= 1))
+                bad(path + ".opacity", "Opacity must be within 0–1.");
+            if (material.BackOpacity is { } back && !(back >= 0 && back <= 1))
+                bad(path + ".backOpacity", "Opacity must be within 0–1.");
+            if (material.Image is { } image)
+            {
+                if (!IsPathBesideThePlan(image))
+                    bad(path + ".image", "An image file is named relative to the plan and lies beside it.");
+                else if (!HasImageExtension(image))
+                    bad(path + ".image", "An image file is a .png or a .jpg.");
+            }
         }
     }
 
@@ -397,6 +448,10 @@ public static partial class ScenePlanValidator
         if (string.IsNullOrWhiteSpace(path) || path[0] is '/' or '\\' || path.Contains(':')) return false;
         return !path.Split('/', '\\').Contains("..");
     }
+
+    private static bool HasImageExtension(string path)
+        => path.EndsWith(".png", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase)
+           || path.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase);
 
     private static bool HasMeshExtension(string path)
         => path.EndsWith(".ply", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".glb", StringComparison.OrdinalIgnoreCase);

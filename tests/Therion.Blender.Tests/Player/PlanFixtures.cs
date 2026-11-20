@@ -57,6 +57,7 @@ internal static class PlanFixtures
                 Id = "Far", Path = "meshes/far.glb", Translation = new CaveVector3(3000, 400, 150),
                 Rotation = new PlanRotation { Axis = new CaveVector3(0, 0, 1), Degrees = 30 }, Scale = new CaveVector3(1, 1, 2),
             },
+            new PlanModel { Id = "Terrain", Role = "terrain", Path = "surface.ply" },
         ],
         Camera = new PlanCamera
         {
@@ -89,6 +90,14 @@ internal static class PlanFixtures
             ],
             World = new PlanWorld { Kind = PlanWorldKind.Color, Color = new ColorRgb(0.05, 0.05, 0.05), Strength = 0.5 },
         },
+        TexturedMaterials =
+        [
+            new PlanTexturedMaterial
+            {
+                Id = "Terrain", Models = ["Terrain"], Color = new ColorRgb(0.22, 0.25, 0.14), Roughness = 0.95, Image = "maps/surface.png",
+                Opacity = 0.4, BackOpacity = 0, Shadow = false,
+            },
+        ],
         Labels = new PlanLabels
         {
             Texts = new PlanTexts

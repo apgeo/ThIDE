@@ -20,7 +20,7 @@ public class PlayerWriterTests : IDisposable
     }
 
     /// <summary>The full plan with only its first model, whose file the tests invent.</summary>
-    private static ScenePlan OneModelPlan => PlanFixtures.Full() with { Models = [PlanFixtures.Full().Models[0]] };
+    private static ScenePlan OneModelPlan => PlanFixtures.Full() with { Models = [PlanFixtures.Full().Models[0]], TexturedMaterials = null };
 
     private string MeshFile(string name = "source.ply")
     {
@@ -48,6 +48,7 @@ public class PlayerWriterTests : IDisposable
                 "thide_player/modules/models.py",
                 "thide_player/modules/output.py",
                 "thide_player/modules/texts.py",
+                "thide_player/modules/textured_materials.py",
                 "thide_player/registry.py",
             ],
             PlayerFiles.JobFiles.Select(f => f.Path).Order(StringComparer.Ordinal));
@@ -128,10 +129,32 @@ public class PlayerWriterTests : IDisposable
         Directory.CreateDirectory(folder);
         File.WriteAllBytes(Path.Combine(folder, "model.ply"), [9]);
 
-        PlayerWriter.WriteJob(PlanFixtures.Full(), folder, new Dictionary<string, string> { ["meshes/far.glb"] = MeshFile() });
+        var files = new Dictionary<string, string> { ["meshes/far.glb"] = MeshFile(), ["surface.ply"] = MeshFile() };
+        // The image a material drapes over a model is a file of the plan as a mesh is.
+        var missing = Assert.Throws<FileNotFoundException>(() => PlayerWriter.WriteJob(PlanFixtures.Full(), folder, files));
+        Assert.Contains("material 'Terrain'", missing.Message);
+        files["maps/surface.png"] = MeshFile();
+        PlayerWriter.WriteJob(PlanFixtures.Full(), folder, files);
 
         Assert.Equal([9], File.ReadAllBytes(Path.Combine(folder, "model.ply")));
         Assert.True(File.Exists(Path.Combine(folder, "meshes", "far.glb")));
+        Assert.True(File.Exists(Path.Combine(folder, "maps", "surface.png")));
+        Assert.Equal(
+            ["model.ply", "meshes/far.glb", "surface.ply", "maps/surface.png"],
+            PlayerWriter.FilesOf(PlanFixtures.Full()).Select(f => f.Path));
+    }
+
+    [Fact]
+    public void SingleFile_CarriesTheImageOfAMaterial_AsItCarriesAMesh()
+    {
+        string script = PlayerWriter.SingleFile(PlanFixtures.Full(), new Dictionary<string, byte[]>
+        {
+            ["surface.ply"] = [1, 2, 3], ["maps/surface.png"] = [4, 5, 6, 250],
+        });
+
+        Assert.Contains("    \"maps/surface.png\": \"BAUG+g==\",\n", script);
+        Assert.Contains("    \"surface.ply\": \"AQID\",\n", script);
+        Assert.Contains("thide_player.modules.textured_materials", script);
     }
 
     [Fact]

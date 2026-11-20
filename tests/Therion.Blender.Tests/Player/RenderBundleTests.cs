@@ -401,11 +401,47 @@ public class RenderBundleTests : IDisposable
         };
         var content = Content(spec);
 
-        Assert.Equal(["lighting.hdriPath", "surface"], content.NotCarried);
+        Assert.Equal(["lighting.hdriPath"], content.NotCarried);
+        // The cave of this bundle has no terrain to draw: that is said, not left out in silence.
+        Assert.Equal(["The model has no terrain surface; rendering without one."], content.Notices);
         string readme = RenderBundleWriter.Readme(content);
         Assert.Contains("NOT IN THIS SCENE", readme);
         Assert.Contains("the HDRI image lighting", readme);
-        Assert.Contains("the terrain surface (surface)", readme);
+        Assert.DoesNotContain("terrain", readme);
+    }
+
+    [Fact]
+    public void ABundleOfACaveWithATerrain_CarriesTheTerrainAndItsImage()
+    {
+        string lox = Path.Combine(_dir, "terrain.lox");
+        LoxWriter.WriteFile(InventedTerrain.Add(InventedCave.Build(InventedCaveSize.Small)), lox);
+        var source = new ResolvedModelSource { Path = lox, Format = CaveSourceFormat.Lox, Kind = ModelSourceKind.ExternalFile };
+        var spec = Orbit with { Surface = new SurfaceSpec { Mode = SurfaceMode.Textured } };
+
+        var content = RenderBundleWriter.FromModel(source, spec, Path.Combine(_dir, "work-terrain"), draft: true);
+
+        Assert.Empty(content.NotCarried);
+        Assert.Empty(content.Notices);
+        Assert.Equal(["model.ply", "surface.ply", "surface.png"], content.Files.Keys);
+        Assert.Equal("surface.png", Assert.Single(content.Plan.TexturedMaterials!).Image);
+        Assert.Equal(content.Plan.TexturedMaterials, content.Draft!.TexturedMaterials);
+
+        string zipPath = Path.Combine(_dir, "terrain.zip");
+        var entries = RenderBundleWriter.WriteZip(content, zipPath);
+        Assert.Contains("terrain/surface.ply", entries);
+        Assert.Contains("terrain/surface.png", entries);
+        Assert.Contains("terrain/thide_player/modules/textured_materials.py", entries);
+        var read = Read(zipPath);
+        Assert.Equal(File.ReadAllBytes(content.Files["surface.png"]), read["surface.png"]);
+        string readme = Text(read, "README.txt");
+        Assert.Contains("surface.ply", readme);
+        Assert.Contains("the image of a material", readme);
+        Assert.DoesNotContain("NOT IN THIS SCENE", readme);
+
+        // Without its image the bundle would not render on its own.
+        var incomplete = content with { Files = content.Files.Where(f => f.Key != "surface.png").ToDictionary() };
+        var refused = Assert.Throws<ArgumentException>(() => RenderBundleWriter.WriteZip(incomplete, Path.Combine(_dir, "incomplete.zip")));
+        Assert.Contains("material 'Terrain' (surface.png)", refused.Message);
     }
 
     [Fact]

@@ -16,7 +16,7 @@ from thide_player import api
 
 SECTION = "models"
 KEYS = [{
-    "id": None, "path": None, "translation": None, "rotation": {"axis": None, "degrees": None},
+    "id": None, "role": None, "path": None, "translation": None, "rotation": {"axis": None, "degrees": None},
     "scale": None, "material": None,
 }]
 
@@ -37,7 +37,10 @@ def build(ctx, models):
 
         obj.name = model["id"]
         place(obj, model, where)
-        api.stamp(obj, "model", model["id"])
+        # What the model is, for whoever looks for it; that it is a model, for the modules that
+        # give models their materials.
+        api.stamp(obj, model.get("role", "model"), model["id"])
+        obj["thide_model"] = True
         if model.get("material"):
             obj["thide_material"] = model["material"]  # the "look" module assigns it
         triangles += sum(len(polygon.vertices) - 2 for polygon in obj.data.polygons)

@@ -40,20 +40,32 @@ internal static class PlayerRunner
     {
         var plan = PlanFor(assets, spec);
         if (change is not null) plan = change(plan);
-        var job = PlayerWriter.WriteJob(plan, NewCase(caseName), MeshOf(assets));
+        var job = PlayerWriter.WriteJob(plan, NewCase(caseName), FilesOf(assets, plan));
         return (plan, job);
     }
 
-    public static ScenePlan PlanFor(ProbeAssets assets, SceneSpec spec) => ScenePlanBuilder.FromSpec(
-        spec with
+    /// <summary>The spec with the files of the converted cave: its mesh, and its terrain and
+    /// surface image when it was converted with them. The render writes beside the plan.</summary>
+    public static SceneSpec SpecFor(ProbeAssets assets, SceneSpec spec) => spec with
+    {
+        Source = spec.Source with
         {
-            Source = spec.Source with { PlyPath = assets.Conversion.Manifest.ModelPath },
-            Output = spec.Output with { OutputDirectory = "." },
+            PlyPath = assets.Conversion.Manifest.ModelPath,
+            SurfacePlyPath = assets.Conversion.Manifest.SurfacePath,
+            SurfaceImagePath = assets.Conversion.Manifest.SurfaceImagePath,
         },
-        assets.Framing, assets.Conversion.Meta);
+        Output = spec.Output with { OutputDirectory = "." },
+    };
+
+    public static ScenePlan PlanFor(ProbeAssets assets, SceneSpec spec)
+        => ScenePlanBuilder.FromSpec(SpecFor(assets, spec), assets.Framing, assets.Conversion.Meta);
 
     public static Dictionary<string, string> MeshOf(ProbeAssets assets)
         => new() { [Path.GetFileName(assets.Conversion.Manifest.ModelPath)] = assets.Conversion.Manifest.ModelPath };
+
+    /// <summary>The files a plan of the converted cave names, as the conversion wrote them.</summary>
+    public static Dictionary<string, string> FilesOf(ProbeAssets assets, ScenePlan plan)
+        => PlayerWriter.FilesOf(plan).ToDictionary(f => f.Path, f => Path.Combine(assets.Directory, f.Path));
 
     /// <summary>Builds the scene of <paramref name="scriptPath"/> without rendering it and
     /// returns what the probe reports.</summary>

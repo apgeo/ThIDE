@@ -65,7 +65,8 @@ public class ScenePlanValidatorTests
     [Fact]
     public void Models_HaveUniqueIds_RelativeMeshPaths_AndKnownMaterials()
     {
-        ScenePlan With(PlanModel model) => Full with { Models = [Full.Models[0], model] };
+        ScenePlan With(PlanModel model) => Full with { Models = [Full.Models[0], model], TexturedMaterials = null };
+        AssertBad(With(new PlanModel { Id = "b", Path = "a.ply", Role = "The Terrain" }), "models[1].role");
 
         AssertBad(With(new PlanModel { Id = "", Path = "a.ply" }), "models[1].id");
         AssertBad(With(new PlanModel { Id = "CaveModel", Path = "a.ply" }), "models[1].id");
@@ -80,7 +81,7 @@ public class ScenePlanValidatorTests
     [Fact]
     public void AModel_IsTurnedAboutARealAxis_AndStretchedByPositiveFactors()
     {
-        ScenePlan With(PlanModel model) => Full with { Models = [Full.Models[0], model] };
+        ScenePlan With(PlanModel model) => Full with { Models = [Full.Models[0], model], TexturedMaterials = null };
         var model = new PlanModel { Id = "b", Path = "a.ply" };
 
         AssertBad(With(model with { Rotation = new PlanRotation { Axis = CaveVector3.Zero, Degrees = 90 } }), "models[1].rotation.axis");
@@ -235,8 +236,40 @@ public class ScenePlanValidatorTests
         AssertBad(Full with { Blend = new PlanBlendFile { Path = "scene.blend1" } }, "blend.path");
         AssertBad(Full with { Blend = new PlanBlendFile { Path = "" } }, "blend.path");
         AssertBad(Full with { Features = ScenePlan.BasicFeatures }, "blend");
-        Assert.Empty(ScenePlanValidator.Validate(Full with { Blend = null, Labels = null, Texts = null, Features = ScenePlan.BasicFeatures }));
+        Assert.Empty(ScenePlanValidator.Validate(Full with { Blend = null, Labels = null, Texts = null, TexturedMaterials = null, Features = ScenePlan.BasicFeatures }));
         Assert.Empty(ScenePlanValidator.Validate(Full with { Blend = new PlanBlendFile { Path = "Scene.BLEND" }, Output = Full.Output with { Render = false } }));
+    }
+
+    // ---- materials with an image ----
+
+    private static ScenePlan WithTextured(Func<PlanTexturedMaterial, PlanTexturedMaterial> change)
+        => Full with { TexturedMaterials = [change(Full.TexturedMaterials![0])] };
+
+    [Fact]
+    public void ATexturedMaterial_NeedsItsModule_AnIdOfItsOwn_AndModelsThatHaveNoOtherMaterial()
+    {
+        AssertBad(Full with { Features = Full.Features.Where(f => f != ScenePlan.TexturedMaterialsFeature).ToList() }, "texturedMaterials");
+        AssertBad(WithTextured(m => m with { Id = "" }), "texturedMaterials[0].id");
+        AssertBad(WithTextured(m => m with { Id = "rock" }), "texturedMaterials[0].id");   // a material of the look
+        AssertBad(Full with { TexturedMaterials = [Full.TexturedMaterials![0], Full.TexturedMaterials[0] with { Models = [] }] }, "texturedMaterials[1].id");
+        AssertBad(WithTextured(m => m with { Models = ["Nowhere"] }), "texturedMaterials[0].models[0]");
+        AssertBad(WithTextured(m => m with { Models = ["CaveModel"] }), "texturedMaterials[0].models[0]");   // it has the rock
+        AssertBad(WithTextured(m => m with { Models = ["Terrain", "Terrain"] }), "texturedMaterials[0].models[1]");
+        Assert.Empty(ScenePlanValidator.Validate(WithTextured(m => m with { Models = ["Terrain", "Far"] })));
+    }
+
+    [Fact]
+    public void ATexturedMaterial_HasAColourAnOpacityWithinRange_AndAnImageBesideThePlan()
+    {
+        AssertBad(WithTextured(m => m with { Color = new ColorRgb(0, 2, 0) }), "texturedMaterials[0].color");
+        AssertBad(WithTextured(m => m with { Roughness = 1.5 }), "texturedMaterials[0].roughness");
+        AssertBad(WithTextured(m => m with { Opacity = -0.1 }), "texturedMaterials[0].opacity");
+        AssertBad(WithTextured(m => m with { BackOpacity = 2 }), "texturedMaterials[0].backOpacity");
+        AssertBad(WithTextured(m => m with { Image = "/abs/surface.png" }), "texturedMaterials[0].image");
+        AssertBad(WithTextured(m => m with { Image = "../surface.png" }), "texturedMaterials[0].image");
+        AssertBad(WithTextured(m => m with { Image = "surface.tif" }), "texturedMaterials[0].image");
+        Assert.Empty(ScenePlanValidator.Validate(WithTextured(m => m with { Image = "Surface.JPG", BackOpacity = null })));
+        Assert.Empty(ScenePlanValidator.Validate(WithTextured(m => m with { Image = null })));
     }
 
     // ---- what is written over the picture ----

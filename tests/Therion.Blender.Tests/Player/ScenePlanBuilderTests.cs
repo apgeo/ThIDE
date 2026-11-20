@@ -576,6 +576,81 @@ public class ScenePlanBuilderTests
         Assert.Throws<ArgumentOutOfRangeException>(() => ScenePlanBuilder.Draft(plan, scale: 1.5));
     }
 
+    // ---- the terrain surface ----
+
+    private static SceneSpec WithSurface(SurfaceMode mode, string? ply = "/job/surface.ply", string? image = "/job/surface.png", double opacity = 0.4)
+    {
+        var spec = PlanFixtures.WithPaths(PlanFixtures.Preset("Orbit showcase"));
+        return spec with
+        {
+            Source = spec.Source with { SurfacePlyPath = ply, SurfaceImagePath = image },
+            Surface = new SurfaceSpec { Mode = mode, Opacity = opacity },
+        };
+    }
+
+    [Fact]
+    public void ATexturedTerrain_IsASecondModel_WithAMaterialThatDrapesTheSurfaceImage()
+    {
+        var plan = ScenePlanBuilder.FromSpec(WithSurface(SurfaceMode.Textured), PlanFixtures.MediumFraming, PlanFixtures.MediumMeta);
+
+        Assert.Empty(ScenePlanValidator.Validate(plan));
+        Assert.Equal(["models", "camera_track", "look", "textured_materials", "labels", "output"], plan.Features);
+        Assert.Equal(
+            [("CaveModel", null, "model.ply", "CaveRock"), ("Terrain", "terrain", "surface.ply", null)],
+            plan.Models.Select(m => (m.Id, m.Role, m.Path, m.Material)));
+        var material = Assert.Single(plan.TexturedMaterials!);
+        // See-through from above by the spec's opacity, not there from below, casting no shadow:
+        // as the generated scripts make it.
+        Assert.Equal(
+            ("Terrain", "surface.png", 0.4, 0.0, false, 1.0, new ColorRgb(0.22, 0.25, 0.14)),
+            (material.Id, material.Image, material.Opacity, material.BackOpacity, material.Shadow, material.Roughness, material.Color));
+        Assert.Equal(["Terrain"], material.Models);
+        // The camera stays on the cave.
+        var bare = ScenePlanBuilder.FromSpec(WithSurface(SurfaceMode.Off), PlanFixtures.MediumFraming, PlanFixtures.MediumMeta);
+        Assert.Equal(bare.Camera.Track, plan.Camera.Track);
+        Assert.Equal((bare.Camera.ClipStart, bare.Camera.ClipEnd), (plan.Camera.ClipStart, plan.Camera.ClipEnd));
+        Assert.Null(bare.TexturedMaterials);
+        Assert.Single(bare.Models);
+    }
+
+    [Fact]
+    public void ASolidTerrain_OrOneWithoutAnImage_HasItsPlainColour_AndAModelWithoutATerrainHasNone()
+    {
+        var solid = ScenePlanBuilder.FromSpec(WithSurface(SurfaceMode.Solid, opacity: 1), PlanFixtures.MediumFraming);
+        Assert.Equal((null, 1.0, 0.0), (solid.TexturedMaterials![0].Image, solid.TexturedMaterials[0].Opacity, solid.TexturedMaterials[0].BackOpacity));
+
+        var imageless = WithSurface(SurfaceMode.Textured, image: null);
+        Assert.Null(ScenePlanBuilder.FromSpec(imageless, PlanFixtures.MediumFraming).TexturedMaterials![0].Image);
+        Assert.Equal(["The model has no surface image; drawing the terrain in one colour."], ScenePlanBuilder.Notices(imageless));
+
+        var none = WithSurface(SurfaceMode.Textured, ply: null, image: null);
+        var plan = ScenePlanBuilder.FromSpec(none, PlanFixtures.MediumFraming);
+        Assert.Null(plan.TexturedMaterials);
+        Assert.Single(plan.Models);
+        Assert.DoesNotContain(ScenePlan.TexturedMaterialsFeature, plan.Features);
+        Assert.Equal(["The model has no terrain surface; rendering without one."], ScenePlanBuilder.Notices(none));
+        Assert.Empty(ScenePlanBuilder.Notices(WithSurface(SurfaceMode.Textured)));
+        Assert.Empty(ScenePlanBuilder.Notices(WithSurface(SurfaceMode.Off, ply: null)));
+    }
+
+    [Fact]
+    public void Notices_SayWhenStationLabelsWereThinnedOut_AsAGeneratedScriptDoes()
+    {
+        var spec = PlanFixtures.WithPaths(PlanFixtures.Preset("Orbit showcase")) with
+        {
+            Labels = new LabelsSpec { Stations = new StationLabelSpec { Show = true, Filter = StationFilter.Named, MaxCount = 10 } },
+        };
+        int named = PlanFixtures.MediumMeta.Stations.Count;
+        Assert.True(named > 10);
+
+        Assert.Equal([$"showing 10 of {named} station labels"], ScenePlanBuilder.Notices(spec, PlanFixtures.MediumMeta));
+        Assert.Contains($"thide(\"label-cap\", \"showing 10 of {named} station labels\")",
+            Therion.Blender.Emit.ScriptGenerator.Generate(spec, null, PlanFixtures.MediumFraming, PlanFixtures.MediumMeta));
+        // Without the cave's stations there are no labels to thin out.
+        Assert.Empty(ScenePlanBuilder.Notices(spec));
+        Assert.Empty(ScenePlanBuilder.Notices(spec with { Labels = new LabelsSpec { Stations = new StationLabelSpec { Show = true, Filter = StationFilter.Named, MaxCount = 5000 } } }, PlanFixtures.MediumMeta));
+    }
+
     // ---- what a plan does not say yet ----
 
     [Fact]
@@ -595,7 +670,7 @@ public class ScenePlanBuilderTests
             Surface = new SurfaceSpec { Mode = SurfaceMode.Textured },
         };
 
-        Assert.Equal(["lighting.hdriPath", "labels.events", "surface"], ScenePlanBuilder.NotCarried(spec));
+        Assert.Equal(["lighting.hdriPath", "labels.events"], ScenePlanBuilder.NotCarried(spec));
         Assert.Empty(ScenePlanBuilder.NotCarried(new SceneSpec()));
         Assert.All(BuiltInPresets.All, preset => Assert.Empty(ScenePlanBuilder.NotCarried(preset.Spec)));
     }

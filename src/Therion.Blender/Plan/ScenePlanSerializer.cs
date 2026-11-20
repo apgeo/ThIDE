@@ -64,6 +64,12 @@ public static class ScenePlanSerializer
             foreach (var property in type.Properties)
                 if (property.Name is "hold" or "fromBlack" or "toBlack") property.ShouldSerialize = (_, value) => value is not 0.0;
         }
+        else if (type.Type == typeof(PlanTexturedMaterial))
+        {
+            // A model casts shadows unless its material says otherwise.
+            foreach (var property in type.Properties)
+                if (property.Name == "shadow") property.ShouldSerialize = (_, value) => value is false;
+        }
     }
 
     public static string Write(ScenePlan plan)

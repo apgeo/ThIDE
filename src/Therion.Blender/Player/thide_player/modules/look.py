@@ -136,7 +136,7 @@ def give_materials(scene, materials, draft=False):
     made = {}
     if draft:
         bpy.context.view_layer.update()  # where the models stand, for a ramp over height
-    for obj in api.with_role(scene, "model"):
+    for obj in [obj for obj in scene.objects if obj.get("thide_model")]:
         wanted = obj.get("thide_material")
         if not wanted:
             continue

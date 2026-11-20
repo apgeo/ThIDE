@@ -8,7 +8,8 @@
 //   scene-plan.json         the plan
 //   scene-plan.draft.json   the same plan with a fast look (optional)
 //   thide_player/...        the player
-//   model.ply ...           the meshes and any other file the plan names, at their plan paths
+//   model.ply ...           the meshes, the images and any other file the plan names, at their
+//                           plan paths (surface.ply and surface.png are a terrain and its image)
 //
 // A zip is deterministic: entries in ordinal order, one fixed time stamp, fixed permissions, so
 // the same content under the same name gives the same bytes every time on the same .NET runtime.
@@ -36,12 +37,16 @@ public sealed record RenderBundleContent
     public ScenePlan? Draft { get; init; }
 
     /// <summary>The files the plans name, as plan path → the file on disk: every model's mesh,
-    /// and the modules of the plan's module folders.</summary>
+    /// every material's image, and the modules of the plan's module folders.</summary>
     public IReadOnlyDictionary<string, string> Files { get; init; } = new Dictionary<string, string>();
 
     /// <summary>The settings the plan was made from that it does not carry
     /// (<see cref="ScenePlanBuilder.NotCarried"/>); the README names them.</summary>
     public IReadOnlyList<string> NotCarried { get; init; } = [];
+
+    /// <summary>What the render shows less of than was asked for
+    /// (<see cref="ScenePlanBuilder.Notices"/>): for whoever writes the bundle to pass on.</summary>
+    public IReadOnlyList<string> Notices { get; init; } = [];
 }
 
 /// <summary>Writes render bundles: everything Blender needs to render a scene plan, in one zip
@@ -77,13 +82,13 @@ public static class RenderBundleWriter
     {
         ["lighting.hdriPath"] = "the HDRI image lighting (the scene has a dim plain background instead)",
         ["labels.events"] = "the timed showing and hiding of labels (they are shown throughout)",
-        ["surface"] = "the terrain surface",
     };
 
     /// <summary>
     /// Converts a cave model and lowers <paramref name="spec"/> to a plan for it: the content of a
     /// bundle. The mesh is written into <paramref name="workDirectory"/> and read from there when
-    /// the bundle is written; the caller removes the folder afterwards.
+    /// the bundle is written, and so are the terrain and its image when the spec draws the
+    /// terrain surface and the model has one; the caller removes the folder afterwards.
     /// </summary>
     /// <param name="spec">The scene. Its source paths are ignored; its output is written to
     /// <see cref="OutputDirectory"/> inside the bundle under the spec's base name.</param>
@@ -106,22 +111,29 @@ public static class RenderBundleWriter
             OutputDirectory = workDirectory,
             Geometry = geometry ?? new GeometryOptions(),
             Leads = leads ?? [],
+            IncludeSurface = spec.Surface.Mode != SurfaceMode.Off,
         });
-        string modelPath = conversion.Manifest.ModelPath;
-        var plan = ScenePlanBuilder.FromSpec(
-            spec with
+        var manifest = conversion.Manifest;
+        var placed = spec with
+        {
+            Source = spec.Source with
             {
-                Source = spec.Source with { PlyPath = modelPath },
-                Output = spec.Output with { OutputDirectory = OutputDirectory },
+                PlyPath = manifest.ModelPath, SurfacePlyPath = manifest.SurfacePath, SurfaceImagePath = manifest.SurfaceImagePath,
             },
-            CameraFraming.FromGeometry(conversion.Geometry),
-            conversion.Meta);
+            Output = spec.Output with { OutputDirectory = OutputDirectory },
+        };
+        var plan = ScenePlanBuilder.FromSpec(placed, CameraFraming.FromGeometry(conversion.Geometry), conversion.Meta);
+        // What the plan names of what the conversion wrote: the mesh, and the terrain with its
+        // image when the plan draws them.
+        var written = new[] { manifest.ModelPath, manifest.SurfacePath, manifest.SurfaceImagePath }.OfType<string>();
+        var files = PlayerWriter.FilesOf(plan).ToDictionary(f => f.Path, f => written.First(w => Path.GetFileName(w) == f.Path));
         return new RenderBundleContent
         {
             Plan = plan,
             Draft = draft ? ScenePlanBuilder.Draft(plan) : null,
-            Files = new Dictionary<string, string> { [Path.GetFileName(modelPath)] = modelPath },
+            Files = files,
             NotCarried = ScenePlanBuilder.NotCarried(spec),
+            Notices = ScenePlanBuilder.Notices(placed, conversion.Meta),
         };
     }
 
@@ -291,7 +303,9 @@ public static class RenderBundleWriter
             files.Add((DraftPlanFileName, "the same scene with a fast look"));
         files.Add((PlayerFiles.PackageName + "/", $"the player (Python), version {PlayerFiles.Version}"));
         foreach (string path in content.Files.Keys.Select(Normalized).Order(StringComparer.Ordinal))
-            files.Add((path, plan.Models.Any(m => Normalized(m.Path) == path) ? "a model's mesh" : "a file the plan names"));
+            files.Add((path, plan.Models.Any(m => Normalized(m.Path) == path) ? "a model's mesh"
+                : (plan.TexturedMaterials ?? []).Any(m => m.Image is { } image && Normalized(image) == path) ? "the image of a material"
+                : "a file the plan names"));
         int width = files.Max(f => f.Item1.Length) + 2;
         foreach (var (path, what) in files)
             Line("  " + path.PadRight(width) + what);
@@ -383,9 +397,9 @@ public static class RenderBundleWriter
         }
         foreach (var plan in new[] { content.Plan, content.Draft }.OfType<ScenePlan>())
         {
-            foreach (var model in plan.Models)
-                if (!files.ContainsKey(Normalized(model.Path)))
-                    throw new ArgumentException($"The file of model '{model.Id}' ({model.Path}) is not among the bundle's files.", nameof(content));
+            foreach (var (path, what) in PlayerWriter.FilesOf(plan))
+                if (!files.ContainsKey(Normalized(path)))
+                    throw new ArgumentException($"The file of {what} ({path}) is not among the bundle's files.", nameof(content));
             foreach (string folder in plan.ModuleFolders)
                 if (!files.Keys.Any(f => f.StartsWith(Normalized(folder) + "/", StringComparison.OrdinalIgnoreCase)))
                     throw new ArgumentException($"The module folder '{folder}' has no files in the bundle.", nameof(content));

@@ -112,6 +112,7 @@ public class PlayerKnownKeysTests : IDisposable
         { "look/materials/0/stops/1", "look.materials[0].stops[1].tint" },
         { "look/lights/1", "look.lights[1].tint" },
         { "look/world", "look.world.tint" },
+        { "texturedMaterials/0", "texturedMaterials[0].tint" },
         { "labels", "labels.tint" },
         { "labels/texts", "labels.texts.tint" },
         { "labels/texts/items/0", "labels.texts.items[0].tint" },

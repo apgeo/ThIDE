@@ -10,7 +10,7 @@
     "generator": { "type": "string", "description": "What wrote the plan." },
     "name": { "type": "string" },
     "features": {
-      "description": "The player modules the plan needs, in the order they run. A player without one of them refuses the plan. The player's own: models, camera_track, look, labels, texts, blend_file, output.",
+      "description": "The player modules the plan needs, in the order they run. A player without one of them refuses the plan. The player's own: models, camera_track, look, textured_materials, labels, texts, blend_file, output.",
       "type": "array",
       "minItems": 1,
       "uniqueItems": true,
@@ -52,6 +52,7 @@
         "additionalProperties": false,
         "properties": {
           "id": { "type": "string", "minLength": 1, "description": "The model's name in the scene; unique in the plan." },
+          "role": { "$ref": "#/$defs/role", "description": "What the model is, for whoever looks for it in the scene. Default 'model'." },
           "path": { "$ref": "#/$defs/relativePath", "type": "string", "pattern": "\\.([pP][lL][yY]|[gG][lL][bB])$", "description": "A .ply or .glb file, relative to the plan." },
           "translation": { "$ref": "#/$defs/vector", "description": "Where the mesh's own origin lies in the frame." },
           "rotation": {
@@ -176,6 +177,25 @@
             "color": { "$ref": "#/$defs/color" },
             "strength": { "type": "number", "minimum": 0 }
           }
+        }
+      }
+    },
+    "texturedMaterials": {
+      "description": "Played by the module 'textured_materials', after 'models' and 'look': materials that drape an image over the models they name, by the models' own UV maps, and may let the scene show through. A terrain over a cave is a model with one of these.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "models", "color"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "minLength": 1, "description": "The material's name in the scene; unique among these and look.materials." },
+          "models": { "type": "array", "items": { "type": "string", "minLength": 1 }, "description": "The ids of the models that wear it. Such a model names no material of its own." },
+          "color": { "$ref": "#/$defs/color", "description": "The colour without an image, and on a model without a UV map." },
+          "roughness": { "type": "number", "minimum": 0, "maximum": 1, "description": "Default 1." },
+          "image": { "$ref": "#/$defs/relativePath", "type": "string", "pattern": "\\.([pP][nN][gG]|[jJ][pP][eE]?[gG])$", "description": "A .png or .jpg file, relative to the plan." },
+          "opacity": { "type": "number", "minimum": 0, "maximum": 1, "description": "How solid the material is seen from its front. Default 1." },
+          "backOpacity": { "type": "number", "minimum": 0, "maximum": 1, "description": "How solid it is seen from behind. Default: as from the front. 0 makes a terrain that is not there for a camera under it." },
+          "shadow": { "type": "boolean", "description": "False keeps the models that wear it from casting shadows. Default true." }
         }
       }
     },
@@ -353,7 +373,7 @@
       "maxItems": 3
     },
     "moduleName": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
-    "role": { "type": "string", "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$", "description": "What a label is, for whoever looks for it in the scene: the player stamps it on the object (thide_role)." },
+    "role": { "type": "string", "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$", "description": "What a label or a text is, for whoever looks for it: lower-case words joined by '-'. The player stamps a label's role on its object (thide_role)." },
     "relativePath": { "type": "string", "minLength": 1, "pattern": "^(?![/\\\\])(?!.*:)(?!(.*[/\\\\])?\\.\\.([/\\\\]|$))" }
   }
 }

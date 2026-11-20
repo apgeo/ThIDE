@@ -31,6 +31,10 @@ public class ScenePlanSerializerTests
         Assert.Equal(PlanFixtures.Full().Labels!.Markers!.Items, read.Labels.Markers!.Items);
         Assert.Equal(PlanFixtures.Full().Labels!.Markers!.Pulse, read.Labels.Markers.Pulse);
         Assert.Equal(PlanFixtures.Full().Labels!.Markers!.ByDistance, read.Labels.Markers.ByDistance);
+        Assert.Equal(
+            PlanFixtures.Full().TexturedMaterials!.Select(m => m with { Models = [] }),
+            read.TexturedMaterials!.Select(m => m with { Models = [] }));
+        Assert.Equal(["Terrain"], read.TexturedMaterials![0].Models);
         var texts = PlanFixtures.Full().Texts!;
         Assert.Equal((texts.Hold, texts.FromBlack, texts.ToBlack), (read.Texts!.Hold, read.Texts.FromBlack, read.Texts.ToBlack));
         Assert.Equal(texts.Items.Select(i => i with { Turn = null }), read.Texts.Items.Select(i => i with { Turn = null }));
@@ -233,6 +237,8 @@ public class ScenePlanSerializerTests
     [InlineData("\"radius\": 1 }", "\"radius\": 1, \"shape\": \"cube\" }", "labels.markers.items[1].shape")]
     [InlineData("\"period\": 0.56", "\"period\": 0.56, \"ease\": true", "labels.markers.pulse.ease")]
     [InlineData("\"baseName\": \"clip\"", "\"baseName\": \"clip\", \"codec\": \"av1\"", "output.codec")]
+    [InlineData("\"backOpacity\": 0,", "\"backOpacity\": 0, \"emission\": 2,", "texturedMaterials[0].emission")]
+    [InlineData("\"role\": \"terrain\",", "\"role\": \"terrain\", \"visible\": false,", "models[2].visible")]
     [InlineData("\"hold\": 3,", "\"hold\": 3, \"music\": \"song.ogg\",", "texts.music")]
     [InlineData("\"width\": 0.2,", "\"width\": 0.2, \"radius\": 3,", "texts.items[2].radius")]
     [InlineData("\"degrees\": 380 }", "\"degrees\": 380, \"ease\": 1 }", "texts.items[3].turn[2].ease")]

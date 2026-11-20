@@ -9,8 +9,9 @@
 // from the start of the clip. Camera poses are data; no camera mathematics runs in Python.
 //
 // The sections: frame and timeline (what every part shares), models, camera, look, output, the
-// optional labels (texts and markers in the scene), texts (what is written over the picture, in
-// two dimensions) and blend (the built scene saved as a Blender file), and features — the player
+// optional texturedMaterials (an image draped over a model: a terrain), labels (texts and markers
+// in the scene), texts (what is written over the picture, in two dimensions) and blend (the
+// built scene saved as a Blender file), and features — the player
 // modules the plan needs, in the order they run. Any other section belongs to a module outside
 // this library and travels in Sections; "changes" and "annotations" are reserved names for later
 // versions.
@@ -153,6 +154,10 @@ public sealed record PlanModel
     /// <summary>The model's name in the scene; unique in the plan.</summary>
     public string Id { get; init; } = "";
 
+    /// <summary>What the model is, for whoever looks for it in the scene: lower-case words joined
+    /// by '-' ("terrain"). Null is "model".</summary>
+    public string? Role { get; init; }
+
     /// <summary>The mesh file, relative to the plan: a <c>.ply</c> or a <c>.glb</c>.</summary>
     public string Path { get; init; } = "";
 
@@ -282,6 +287,38 @@ public sealed record PlanLook
 
     /// <summary>Null leaves the scene without a world: a black background that lights nothing.</summary>
     public PlanWorld? World { get; init; }
+}
+
+/// <summary>
+/// A material that drapes an image over the models it is given to, by their own UV maps, and may
+/// let the scene show through: a terrain with an aerial picture on it, over a cave.
+/// </summary>
+public sealed record PlanTexturedMaterial
+{
+    /// <summary>The material's name in the scene; unique among all materials of the plan.</summary>
+    public string Id { get; init; } = "";
+
+    /// <summary>The ids of the models that wear it. A model wears one material.</summary>
+    public IReadOnlyList<string> Models { get; init; } = [];
+
+    /// <summary>The colour without an image, and on a model without a UV map.</summary>
+    public ColorRgb Color { get; init; } = new(0.22, 0.25, 0.14);
+
+    public double Roughness { get; init; } = 1.0;
+
+    /// <summary>The image file, relative to the plan: a <c>.png</c> or a <c>.jpg</c>. Null is
+    /// the plain colour.</summary>
+    public string? Image { get; init; }
+
+    /// <summary>How solid the material is seen from its front, from 0 (not there) to 1.</summary>
+    public double Opacity { get; init; } = 1.0;
+
+    /// <summary>How solid it is seen from behind; null is as from the front. 0 makes a terrain
+    /// that is not there for a camera under it.</summary>
+    public double? BackOpacity { get; init; }
+
+    /// <summary>False keeps the models that wear it from casting shadows.</summary>
+    public bool Shadow { get; init; } = true;
 }
 
 /// <summary>A text in the scene that turns to face the camera, centred on <see cref="At"/>.</summary>
@@ -517,6 +554,10 @@ public sealed record ScenePlan
     /// <summary>The module that makes the texts and markers (<see cref="Labels"/>).</summary>
     public const string LabelsFeature = "labels";
 
+    /// <summary>The module that makes the materials with an image on them
+    /// (<see cref="TexturedMaterials"/>).</summary>
+    public const string TexturedMaterialsFeature = "textured_materials";
+
     /// <summary>The module that writes over the picture (<see cref="Texts"/>), in the second
     /// stage of the render.</summary>
     public const string TextsFeature = "texts";
@@ -532,7 +573,7 @@ public sealed record ScenePlan
     /// Labels turn to the camera; the scene is saved when all have built it and before the
     /// output renders it.</summary>
     public static readonly IReadOnlyList<string> PlayerFeatures =
-        ["models", "camera_track", "look", LabelsFeature, TextsFeature, BlendFileFeature, "output"];
+        ["models", "camera_track", "look", TexturedMaterialsFeature, LabelsFeature, TextsFeature, BlendFileFeature, "output"];
 
     public int Version { get; init; } = BlenderModule.ScenePlanSchemaVersion;
 
@@ -557,6 +598,10 @@ public sealed record ScenePlan
     public PlanCamera Camera { get; init; } = new();
 
     public PlanLook Look { get; init; } = new();
+
+    /// <summary>Materials with an image on them, each with the models that wear it; played by
+    /// the module <see cref="TexturedMaterialsFeature"/>.</summary>
+    public IReadOnlyList<PlanTexturedMaterial>? TexturedMaterials { get; init; }
 
     /// <summary>Texts and markers in the scene; played by the module
     /// <see cref="LabelsFeature"/>.</summary>

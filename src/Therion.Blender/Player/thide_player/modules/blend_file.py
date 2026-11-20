@@ -44,6 +44,14 @@ def render(ctx, blend):
     output = scene.render.filepath
     if is_inside(output, ctx.plan_dir):
         scene.render.filepath = bpy.path.relpath(output, start=folder)
+    # The images a module has loaded travel inside the file, as the meshes do: it needs nothing
+    # beside it.
+    for image in bpy.data.images:
+        if image.source == "FILE" and not image.packed_file:
+            try:
+                image.pack()
+            except RuntimeError as error:
+                api.warn('the image "%s" could not be put into the Blender file: %s' % (image.name, error))
     try:
         bpy.ops.wm.save_as_mainfile(filepath=path, copy=True, check_existing=False)
     finally:

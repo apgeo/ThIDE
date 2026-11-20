@@ -6,9 +6,11 @@
 // Station and component labels and lead markers are carried too, placed and sized by the label
 // planner, and so are the overlays: the title, the scale bar, the north arrow, the depth legend,
 // the credits and corner lines, the captions and the end card become the plan's texts, laid out
-// by ScreenTextPlanner and drawn in two dimensions over the rendered frames. Not carried, because
-// the player has no module for them: the visibility events of the labels, the HDRI light rig and
-// the terrain surface. NotCarried lists what a given spec loses.
+// by ScreenTextPlanner and drawn in two dimensions over the rendered frames. The terrain surface
+// is a second model with a material of its own, which drapes the surface image over it. Not
+// carried, because the player has no module for them: the visibility events of the labels and
+// the HDRI light rig. NotCarried lists what a given spec loses; Notices says what a render of the
+// plan cannot say for itself.
 //
 // Positions and colours are rounded to six decimals before they are written. They come through
 // sin, cos and pow, which agree between platforms only to the last bit; a micrometre is far below
@@ -29,6 +31,13 @@ public static class ScenePlanBuilder
 
     /// <summary>The id of the material made from <see cref="SceneSpec.Materials"/>.</summary>
     public const string RockMaterialId = "CaveRock";
+
+    /// <summary>The id, and the name in the scene, of the terrain surface and of its material:
+    /// the names the generated scripts give them.</summary>
+    public const string TerrainId = "Terrain";
+
+    /// <summary>The role of the terrain's model.</summary>
+    public const string TerrainRole = "terrain";
 
     /// <summary>The roles of the labels made from <see cref="SceneSpec.Labels"/>. Their ids are
     /// the names the generated scripts give them: <c>stn:</c>, <c>cmp:</c>, <c>lead:</c> and
@@ -51,8 +60,9 @@ public static class ScenePlanBuilder
     /// <param name="meta">Gives the frame its origin and coordinate system, and the labels
     /// their stations, components and leads; without it the origin is zero and there are no
     /// labels.</param>
-    /// <remarks>The model is named by the file name of <see cref="SourceSpec.PlyPath"/> alone:
-    /// a plan lies beside its meshes. The output directory is taken as it is.</remarks>
+    /// <remarks>The model is named by the file name of <see cref="SourceSpec.PlyPath"/> alone,
+    /// and so are the terrain (<see cref="SourceSpec.SurfacePlyPath"/>) and its image: a plan
+    /// lies beside its files. The output directory is taken as it is.</remarks>
     public static ScenePlan FromSpec(SceneSpec spec, CameraFraming framing, SceneMeta? meta = null)
     {
         ArgumentNullException.ThrowIfNull(spec);
@@ -66,7 +76,9 @@ public static class ScenePlanBuilder
         var camera = CameraPlanner.PlanPoses(spec, framing);
         var labels = meta is null ? null : Labels(spec, meta);
         var texts = ScreenTextPlanner.Plan(spec, camera);
+        var terrain = Terrain(spec);
         var features = ScenePlan.BasicFeatures;
+        if (terrain is not null) features = WithFeature(features, ScenePlan.TexturedMaterialsFeature);
         if (labels is not null) features = WithFeature(features, ScenePlan.LabelsFeature);
         if (texts is not null) features = WithFeature(features, ScenePlan.TextsFeature);
         return new ScenePlan
@@ -79,9 +91,16 @@ public static class ScenePlanBuilder
                 Crs = meta?.Source.CoordinateSystem,
             },
             Timeline = new PlanTimeline { Fps = spec.Animation.Fps, FrameCount = camera.FrameCount },
-            Models = [new PlanModel { Id = ModelId, Path = FileName(spec.Source.PlyPath), Material = RockMaterialId }],
+            Models = terrain is null
+                ? [new PlanModel { Id = ModelId, Path = FileName(spec.Source.PlyPath), Material = RockMaterialId }]
+                :
+                [
+                    new PlanModel { Id = ModelId, Path = FileName(spec.Source.PlyPath), Material = RockMaterialId },
+                    new PlanModel { Id = TerrainId, Role = TerrainRole, Path = FileName(spec.Source.SurfacePlyPath!) },
+                ],
             Camera = Camera(camera, spec.Animation.Fps),
             Look = Look(spec, framing.LocalBounds),
+            TexturedMaterials = terrain is null ? null : [terrain],
             Labels = labels,
             Texts = texts,
             Output = new PlanOutput
@@ -215,8 +234,50 @@ public static class ScenePlanBuilder
         var lost = new List<string>();
         if (spec.Lighting.Rig == LightingRig.HdriFile) lost.Add("lighting.hdriPath");
         if (spec.Labels.Events.Count > 0) lost.Add("labels.events");
-        if (spec.Surface.Mode != SurfaceMode.Off) lost.Add("surface");
         return lost;
+    }
+
+    /// <summary>
+    /// What a render of the plan of <paramref name="spec"/> shows less of than the spec asks for,
+    /// and cannot say itself, because a plan holds only what is there: station labels that were
+    /// thinned out, a terrain or a surface image the model does not have. A generated script
+    /// prints the same sentences; whoever plays the plan passes them on.
+    /// </summary>
+    /// <param name="meta">As for <see cref="FromSpec"/>: without it there are no labels.</param>
+    public static IReadOnlyList<string> Notices(SceneSpec spec, SceneMeta? meta = null)
+    {
+        ArgumentNullException.ThrowIfNull(spec);
+        var notices = new List<string>();
+        if (spec.Surface.Mode != SurfaceMode.Off)
+        {
+            if (string.IsNullOrWhiteSpace(spec.Source.SurfacePlyPath))
+                notices.Add("The model has no terrain surface; rendering without one.");
+            else if (spec.Surface.Mode == SurfaceMode.Textured && string.IsNullOrWhiteSpace(spec.Source.SurfaceImagePath))
+                notices.Add("The model has no surface image; drawing the terrain in one colour.");
+        }
+        if (meta is not null && LabelPlanner.Plan(spec, meta) is { StationsCapped: true } labels)
+            notices.Add($"showing {labels.Stations.Count} of {labels.StationMatchCount} station labels");
+        return notices;
+    }
+
+    /// <summary>The terrain's material, as the generated scripts make it: see-through from above
+    /// by the spec's opacity, not there from below, and casting no shadow, with the surface image
+    /// on it when the spec asks for one and the model has one. Null when the spec draws no
+    /// terrain or the model has none.</summary>
+    private static PlanTexturedMaterial? Terrain(SceneSpec spec)
+    {
+        if (spec.Surface.Mode == SurfaceMode.Off || string.IsNullOrWhiteSpace(spec.Source.SurfacePlyPath)) return null;
+        bool textured = spec.Surface.Mode == SurfaceMode.Textured && !string.IsNullOrWhiteSpace(spec.Source.SurfaceImagePath);
+        return new PlanTexturedMaterial
+        {
+            Id = TerrainId,
+            Models = [TerrainId],
+            Color = Rounded(ScriptGenerator.TerrainColor),
+            Image = textured ? FileName(spec.Source.SurfaceImagePath!) : null,
+            Opacity = Rounded(spec.Surface.Opacity),
+            BackOpacity = 0,
+            Shadow = false,
+        };
     }
 
     private static PlanCamera Camera(CameraPlan plan, int fps) => new()
