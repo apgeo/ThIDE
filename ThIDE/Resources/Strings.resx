@@ -431,6 +431,9 @@
   <data name="Blender_UI_Height" xml:space="preserve"><value>Height</value></data>
   <data name="Blender_UI_BaseName" xml:space="preserve"><value>File name</value></data>
   <data name="Blender_UI_SelfContained" xml:space="preserve"><value>Self-contained script</value></data>
+  <data name="Blender_UI_SelfContained_Tip" xml:space="preserve"><value>An exported script carries the scene's data (labels, legend) itself instead of reading scene-meta.json beside it. The model's mesh stays beside it, unless it is embedded too.</value></data>
+  <data name="Blender_UI_EmbedMesh" xml:space="preserve"><value>Embed the meshes in the script</value></data>
+  <data name="Blender_UI_EmbedMesh_Tip" xml:space="preserve"><value>The self-contained script also carries the model's mesh, and the terrain with its image: one file that renders anywhere, but a much larger one.</value></data>
   <data name="Blender_UI_Labels" xml:space="preserve"><value>Labels</value></data>
   <data name="Blender_UI_StationLabels" xml:space="preserve"><value>Station labels</value></data>
   <data name="Blender_UI_LeadMarkers" xml:space="preserve"><value>Lead markers</value></data>

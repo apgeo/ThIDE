@@ -142,6 +142,61 @@ public class BlenderPanelTests
     }
 
     [UiFact]
+    public async Task A_self_contained_script_carries_the_meshes_only_when_asked_to()
+    {
+        if (!OnPath("therion")) return;
+        var dir = await BuiltDemoCaveAsync();
+        var exports = Path.Combine(dir, "exports");
+        var environment = new Dictionary<string, string>
+        {
+            ["PATH"] = StubBlenderDirectory() + Path.PathSeparator + Environment.GetEnvironmentVariable("PATH"),
+        };
+
+        await using var app = await ThideApp.StartAsync(environment, dir, "demo.thconfig");
+        await OpenPanelAsync(app, Path.Combine(dir, "renders"));
+
+        // The meshes can go into the script only when it is self-contained.
+        await app.WaitAsync("#Blender.EmbedMesh");
+        Assert.False(await app.ExistsAsync("#Blender.SelfContained;state:checked"));
+        Assert.False(await app.ExistsAsync("#Blender.EmbedMesh;state:enabled"));
+        await app.InvokeAsync("#Blender.SelfContained", "toggle");
+        await app.WaitAsync("#Blender.EmbedMesh;state:enabled");
+        Assert.False(await app.ExistsAsync("#Blender.EmbedMesh;state:checked"));
+
+        async Task<string> ExportAsync(string name)
+        {
+            string folder = Path.Combine(exports, name);
+            await app.SetTextAsync("#Blender.ExportDirectory", folder);
+            await app.WaitAsync("#Blender.ExportScript;state:enabled");
+            await app.InvokeAsync("#Blender.ExportScript");
+            await app.WaitAsync("#Blender.Outputs >> role:Text;name:" + Path.Combine(folder, "render.py"), timeoutMs: 60_000);
+            return File.ReadAllText(Path.Combine(folder, "render.py"));
+        }
+
+        // Self-contained, as before: the scene's data inside, the mesh read from beside it.
+        string beside = await ExportAsync("beside");
+        Assert.Contains("SCENE_META_JSON = ", beside);
+        Assert.DoesNotContain("PLY_BASE64 = ", beside);
+
+        // The meshes inside as well.
+        await app.InvokeAsync("#Blender.EmbedMesh", "toggle");
+        await app.WaitAsync("#Blender.EmbedMesh;state:checked");
+        string inside = await ExportAsync("inside");
+        Assert.Contains("SCENE_META_JSON = ", inside);
+        Assert.Contains("PLY_BASE64 = ", inside);
+
+        // Not self-contained: the second option goes off with the first.
+        await app.InvokeAsync("#Blender.SelfContained", "toggle");
+        for (int tries = 0; await app.ExistsAsync("#Blender.EmbedMesh;state:enabled") && tries < 50; tries++)
+            await Task.Delay(100);
+        Assert.False(await app.ExistsAsync("#Blender.EmbedMesh;state:enabled"));
+        Assert.False(await app.ExistsAsync("#Blender.EmbedMesh;state:checked"));
+        string plain = await ExportAsync("plain");
+        Assert.DoesNotContain("SCENE_META_JSON = ", plain);
+        Assert.DoesNotContain("PLY_BASE64 = ", plain);
+    }
+
+    [UiFact]
     public async Task Render_of_a_project_never_built_exports_the_model_outside_the_project()
     {
         if (!OnPath("therion")) return;
