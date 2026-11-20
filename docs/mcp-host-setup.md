@@ -218,7 +218,7 @@ these tools.
 | Tool | What it does |
 |---|---|
 | `list_render_presets` | the built-in presets and your saved ones: camera move, output, size, length, samples |
-| `start_render` | starts a render and answers at once with a job id |
+| `start_render` | starts a render, or a quick draft of it (`draft`), and answers at once with a job id |
 | `render_status` | how the job is getting on; `waitSeconds` (up to 60) waits for it and streams progress |
 | `cancel_render` | stops the job, Blender included |
 | `export_render_script` | writes the Blender script, mesh and scene data into a workspace folder, without running Blender |
@@ -228,7 +228,12 @@ it, then ask `render_status` until it says `succeeded`, `failed` (with a `failur
 `blenderNotFound` and the path of Blender's log) or `cancelled`. One render runs at a time; a second
 `start_render` answers `render_busy`. `start_render` takes a preset name and optionally a `.lox`/`.3d` in
 the workspace, the output kind (`video`, `frames`, `still`), width, height, length, samples, output folder
-and file name. Without a model it renders the project's own: the last build output, or — when that is
+and file name. `draft: true` renders a quick preview (seconds, in Blender's solid view) to look at before
+the long render. `title`, `credits`, `endCard` (with `endCardSeconds`) and `captions` (each
+`"<start>-<end>:<text>"`, times in seconds) are written over the picture, and captions also as `.srt` and
+`.vtt` beside the movie. `builder` (`auto`, `player`, `generator`) chooses what builds the scene;
+`render_status` says which did (`builder`), why the script generator was used (`notCarried`) and what the
+render does not show (`leftOut`). Without a model it renders the project's own: the last build output, or — when that is
 missing or older than the sources — a fresh export of the model alone by Therion, on a copy of the
 thconfig without its `system` lines. Outputs go to a folder in the workspace, or to a temporary folder
 that `render_status` names; paths outside the workspace and the project's config folder are refused.

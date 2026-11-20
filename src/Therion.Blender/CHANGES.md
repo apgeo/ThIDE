@@ -1,5 +1,124 @@
 # Therion.Blender — changes for consumers
 
+## 2026-11-20 — texts over the picture in a second stage, the terrain in plans, two scene builders
+
+### Breaking changes
+- **`IBlenderRenderService.RenderAsync` takes `RenderOptions`.** The new overload
+  `RenderAsync(spec, source, options, progress, ct)` is the one an implementation provides; the
+  four-argument overload is now a default method of the interface that calls it with
+  `new RenderOptions()`. Migration: an implementation (a fake in a test, a decorator) adds the
+  `RenderOptions options` parameter after `source`; callers of the four-argument overload change
+  nothing.
+- **The plan's `texts` section is defined, and is an object.** It was a reserved name whose value
+  had to be an array. `ScenePlan.Texts` holds it; it no longer arrives in `ScenePlan.Sections`, and
+  `ScenePlanSerializer.Read` refuses `"texts": []`. Migration: a plan that wrote the empty reserved
+  array leaves the key out; one that wants texts writes the object described below.
+- **`RenderPhase.Composing`** stands between `Rendering` and `CollectingOutputs`, so the numbers
+  of `CollectingOutputs` and `Done` are one higher. Migration: none for code that names the
+  members; anything that stored the numbers must store the names.
+- **`ScenePlanBuilder.NotCarried` no longer names `labels.overlays` and `surface`**: a plan
+  carries both now. Only `lighting.hdriPath` and `labels.events` are left. Migration: code that
+  looked for those two paths to warn about them can drop the check.
+
+### Additive API
+- **Texts over the picture** (`ScenePlan.Texts`, JSON `texts`, played by the new player module
+  `texts`; `ScenePlan.TextsFeature`). `PlanScreenTexts` holds `Items` and three times for the movie
+  as a whole: `Hold` (seconds the last frame of the scene stands still after the scene, for an end
+  card), `FromBlack` and `ToBlack`. A `PlanScreenItem` is a `Text`, a `Box` of one colour or an
+  `Arrow` that turns about its middle with a letter at its tip; it has an `Id`, an optional `Role`,
+  a place `At` (`PlanPoint`: from the left edge and from the bottom edge, 0 to 1), a `Size` or a
+  `Width` and `Height` as shares of the picture, `AlignX`/`AlignY`, `Color`, `Opacity`, `Backing`
+  (a dark box behind a text), `Wrap`, `Start`/`End` and `FadeIn`/`FadeOut` in seconds, `Turn` (an
+  arrow's angles over time, `PlanTurn`), and `Slot`: of the items that name the same slot only the
+  one that started last is drawn, which is how one caption replaces another. Later items lie over
+  earlier ones. The schema, the validator and the serializer know all of it; an item takes one
+  line of JSON and so does each turn of an arrow. `ScenePlan.HasTexts` says whether a plan needs
+  the second stage and `ScenePlan.OutputFrameCount` how long its movie is, the hold included.
+- **`ScreenTextPlanner`** lowers a spec's overlays to those items, laid out inside a margin of
+  5 %: the title at the top (or, with `TitleSeconds`, a title card in the middle that fades out),
+  the scale bar bottom left as a round length at the distance the camera looks from (one for each
+  still of a still set), the north arrow top right, the depth legend at the right edge, the credits
+  bottom right, a corner line top left, captions bottom centre, and the end card over everything.
+  `ScreenTextPlanner.Headings(camera, frames)` is the camera's heading at every frame, clockwise
+  from north and without jumps; the arrow's turns are those headings, thinned to the frames that
+  do not lie on a straight line between their neighbours. A producer without a `SceneSpec` writes
+  the same `turn` list itself: one entry per frame, or per camera pose.
+- **`OverlaySpec`** gains `Credits`, `Corner`, `Captions` and `CornerCaptions` (`CaptionSpec`:
+  text, start, end), `Subtitle` and `TitleSeconds` for the title, `EndCard` (`EndCardSpec`: text,
+  subtitle, seconds) and `FadeFromBlack`/`FadeToBlack`. They are written to a spec's JSON only when
+  set, so every existing spec keeps its JSON and its `SPEC_HASH`. `OverlaySpec.Any` and
+  `.HasFlatOnlyTexts` say whether anything is written over the picture, and whether any of it is
+  something only the second stage draws. `SceneSpecValidator` checks the new fields.
+- **`Subtitles`**: `Srt(captions)` and `Vtt(captions)` write captions as SubRip and WebVTT;
+  `OneAtATime(captions)` is the captions as they are shown (a later caption replaces an earlier
+  one it overlaps); `TryParseCaption("2.5-6:Sala Mare", out caption)` reads one from a command
+  line.
+- **Materials with an image** (`ScenePlan.TexturedMaterials`, JSON `texturedMaterials`, played by
+  the new player module `textured_materials`; `ScenePlan.TexturedMaterialsFeature`). A
+  `PlanTexturedMaterial` names the `Models` that wear it, its plain `Color`, its `Image` (a `.png`
+  or `.jpg` beside the plan, laid on a model by the model's own UV map), `Opacity` and
+  `BackOpacity` (how solid it is from the front and from behind) and `Shadow`. `PlanModel.Role`
+  (JSON `role`) says what a model is; the player stamps it on the object.
+- **`ScenePlanBuilder.FromSpec` carries the terrain surface**: a second model `Terrain` (role
+  `terrain`, `ScenePlanBuilder.TerrainId`/`TerrainRole`) from `SourceSpec.SurfacePlyPath`, with a
+  material that is see-through from above by the spec's opacity, not there from below and casts no
+  shadow, with `SourceSpec.SurfaceImagePath` on it for `SurfaceMode.Textured`. In Blender it is the
+  terrain a generated script makes, and renders the same picture.
+- **`ScenePlanBuilder.Notices(spec, meta)`**: what a render of the plan shows less of than the
+  spec asks for and cannot say itself, in the sentences a generated script prints: station labels
+  that were thinned out, a terrain or a surface image the model does not have.
+- **`SceneBuilder`** (`Auto`, `Player`, `Generator`), **`RenderOptions`** (`Builder`, `Draft`,
+  `KeepFrames`, `ComposeOnly`, `FramesDirectory`) and **`SceneBuilders.Choose(spec, options)`**,
+  which says which builder a spec gets, what the player does not carry when that decided, what the
+  chosen builder does not show, and why a combination is refused.
+  `SceneBuilders.NotDrawnByTheGenerator(spec)` lists the overlays a generated script leaves out.
+- **`RenderResult`** gains `Builder`, `NotCarried`, `LeftOut` and `FramesDirectory`;
+  **`RenderFailureKind.BuilderRefused`** is a render that cannot be made with the builder asked
+  for.
+- **`PlayerWriter.FilesOf(plan)`**: every file a plan names, meshes and images. `WriteJob` checks
+  that all of them are in the folder, `SingleFile` carries any of them, and a render bundle must
+  hold them all.
+- **`RenderBundleContent.Notices`** and **`.Captions`**; `RenderBundleWriter.FromModel` converts
+  the terrain when the spec draws it and fills both. A bundle with captions holds them as
+  `<output folder>/<base name>.srt` and `.vtt` (`RenderBundleWriter.SubtitlePath`).
+
+### Behaviour changes
+- **A plan with texts is rendered in two stages**, each in a Blender of its own. The first
+  renders the scene as PNG frames (`frame_0001.png` onwards) into a frames folder, with a note of
+  what they were rendered from (`frames.json`: a digest of every part of the plan that shapes the
+  frames and of every file the modules read). The second lays the frames and the texts into the
+  video editor of an empty scene and writes the plan's output. Run as before
+  (`blender -b --factory-startup --python render.py`), the player does both, starting the second
+  Blender itself; the frames are removed when the output is written.
+- **The player's command line** has `--stage frames|compose|all` (the first stage only; the
+  second only, from the frames that are there; everything, the default), `--frames DIR` (the
+  frames folder; default `frames` beside the plan) and `--keep-frames` (keep them, and render in
+  two stages whatever the plan says).
+- **A first stage that was stopped goes on**: frames that are there are kept when their note says
+  they belong to this scene, a frame that was left empty or cut short is rendered again
+  (`THIDE:resumed=<kept>/<all>`), and frames of another scene are replaced. The second stage
+  refuses frames whose note names another scene, and takes frames without a note as they are.
+  A change to the texts or to the output's name leaves the frames valid.
+- **Player modules can take part in the second stage**: `two_stage(section)`, `compose(ctx,
+  section)`, `finish(ctx, section)` and `IN_FRAMES = False`, beside `build` and `render` (see
+  `thide_player/api.py`). `ctx.frames` is the frames folder, or `None` in a render of one stage.
+  The core passes the script it was started with to `core.main(..., script=...)`.
+- **The second stage's progress** is reported with `THIDE:phase=compose`, and
+  `RenderProgressParser` gives the frames that follow the phase `RenderPhase.Composing`.
+- **A saved scene packs its images** (`blend_file`), so a `.blend` with a terrain's image can be
+  moved alone, as one with meshes only already could.
+- **A draft leaves a see-through terrain out**, with a warning: Blender's solid view cannot draw
+  one model see-through. A terrain with opacity 1 is drawn in its plain colour.
+- **The bundle's run scripts** pass `--stage` to the player and take `--compose`
+  (`sh render.sh --compose`, `render.cmd --compose`) to write the output again from the frames.
+  The README describes the two stages when the plan has texts, counts the held frames in the
+  movie's length, and no longer lists overlays or the terrain among what a plan leaves out.
+- The player still calls itself 1.1 and the plan is still version 1: both additions are a new
+  module name in `features`, which an earlier player refuses by name.
+- The script generator is unchanged: it draws the title, the scale bar, the north arrow and the
+  depth legend as objects in the scene and none of the newer texts, and its goldens are the same
+  bytes.
+
 ## 2026-11-18 (follow-ups) — terrain, player plans, lead captions, bundles
 
 ### Additive API
