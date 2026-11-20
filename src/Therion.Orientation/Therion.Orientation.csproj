@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(TherionLibraryTargetFrameworks)</TargetFrameworks>
+  </PropertyGroup>
+
+  <!--
+    Orientation statistics for structural readings: azimuth folding, strike / dip-direction
+    conversion and poles, the lower-hemisphere equal-area projection, Kamb density contouring and
+    Watson's two-sample U² test.
+    Deliberately references nothing but the base class library — no other Therion module and no
+    package — so that an application that must not take a survey-format dependency (a domain layer
+    with its own rules about what it may know) can still use the maths. Keep it that way: anything
+    that needs the survey object graph belongs in Therion.Structural, not here.
+  -->
+
+</Project>
