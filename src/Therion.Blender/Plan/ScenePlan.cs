@@ -179,7 +179,109 @@ public sealed record PlanModel
 
 /// <summary>One camera pose: at <see cref="T"/> seconds the camera is at <see cref="Eye"/> and
 /// looks at <see cref="Target"/>, with its own focal length when <see cref="Lens"/> is set.</summary>
-public readonly record struct PlanCameraKey(double T, CaveVector3 Eye, CaveVector3 Target, double? Lens = null);
+public readonly record struct PlanCameraKey(double T, CaveVector3 Eye, CaveVector3 Target, double? Lens = null)
+{
+    /// <summary>
+    /// How the camera is turned, when the pose says so itself: the camera then looks where this
+    /// turn points it, with the roll it gives, and <see cref="Target"/> is only where it focuses.
+    /// Null aims the camera at <see cref="Target"/> with a level horizon. Either every pose of a
+    /// track has one or none has.
+    /// </summary>
+    public PlanQuaternion? Orientation { get; init; }
+}
+
+/// <summary>
+/// A turn as a unit quaternion (<see cref="W"/>, <see cref="X"/>, <see cref="Y"/>,
+/// <see cref="Z"/>) in the plan's frame (X east, Y north, Z up). For a camera it turns the
+/// camera's own axes into the frame the way Blender has them: the camera looks along its −Z and
+/// the top of its picture is its +Y. No turn at all (1, 0, 0, 0) is a camera that looks straight
+/// down with north at the top of the picture.
+/// </summary>
+public readonly record struct PlanQuaternion(double W, double X, double Y, double Z)
+{
+    /// <summary>No turn.</summary>
+    public static readonly PlanQuaternion Identity = new(1, 0, 0, 0);
+
+    public double Length => Math.Sqrt(W * W + X * X + Y * Y + Z * Z);
+
+    /// <summary>Where the turn takes a vector.</summary>
+    public CaveVector3 Rotate(CaveVector3 v)
+    {
+        // v + 2w(q × v) + 2 q × (q × v), with q the vector part.
+        var q = new CaveVector3(X, Y, Z);
+        var t = q.Cross(v) * 2;
+        return v + t * W + q.Cross(t);
+    }
+
+    /// <summary>The way a camera turned so looks.</summary>
+    public CaveVector3 Forward => Rotate(new CaveVector3(0, 0, -1));
+
+    /// <summary>The top of the picture of a camera turned so.</summary>
+    public CaveVector3 Up => Rotate(new CaveVector3(0, 1, 0));
+
+    /// <summary>
+    /// The turn of a camera that looks along <paramref name="forward"/> with the top of its
+    /// picture towards <paramref name="up"/>. Neither needs to be of unit length, and
+    /// <paramref name="up"/> only needs to lie off the line of sight: the part of it along that
+    /// line is taken away. Straight down with north up, for example, is
+    /// <c>FromView((0, 0, -1), (0, 1, 0))</c>, which is <see cref="Identity"/>.
+    /// </summary>
+    /// <exception cref="ArgumentException">A vector is not finite, <paramref name="forward"/>
+    /// has no length, or <paramref name="up"/> lies along it.</exception>
+    public static PlanQuaternion FromView(CaveVector3 forward, CaveVector3 up)
+    {
+        if (!IsFinite(forward) || !IsFinite(up))
+            throw new ArgumentException("The directions must be finite.");
+        if (forward.Length < 1e-12)
+            throw new ArgumentException("The direction the camera looks in has no length.", nameof(forward));
+        var f = forward / forward.Length;
+        var top = up - f * up.Dot(f);
+        if (top.Length < 1e-9 * Math.Max(1.0, up.Length))
+            throw new ArgumentException("The top of the picture cannot lie along the line of sight.", nameof(up));
+        var u = top / top.Length;
+        // The camera's own axes in the frame: X to the right of the picture, Y up it, Z back.
+        var x = f.Cross(u);
+        var z = f * -1;
+        return FromAxes(x, u, z);
+    }
+
+    /// <summary>The turn whose matrix has the columns <paramref name="x"/>, <paramref name="y"/>
+    /// and <paramref name="z"/> (orthonormal, right-handed).</summary>
+    private static PlanQuaternion FromAxes(CaveVector3 x, CaveVector3 y, CaveVector3 z)
+    {
+        double m00 = x.X, m10 = x.Y, m20 = x.Z;
+        double m01 = y.X, m11 = y.Y, m21 = y.Z;
+        double m02 = z.X, m12 = z.Y, m22 = z.Z;
+        double trace = m00 + m11 + m22;
+        PlanQuaternion q;
+        if (trace > 0)
+        {
+            double s = Math.Sqrt(trace + 1) * 2;
+            q = new(s / 4, (m21 - m12) / s, (m02 - m20) / s, (m10 - m01) / s);
+        }
+        else if (m00 > m11 && m00 > m22)
+        {
+            double s = Math.Sqrt(1 + m00 - m11 - m22) * 2;
+            q = new((m21 - m12) / s, s / 4, (m01 + m10) / s, (m02 + m20) / s);
+        }
+        else if (m11 > m22)
+        {
+            double s = Math.Sqrt(1 + m11 - m00 - m22) * 2;
+            q = new((m02 - m20) / s, (m01 + m10) / s, s / 4, (m12 + m21) / s);
+        }
+        else
+        {
+            double s = Math.Sqrt(1 + m22 - m00 - m11) * 2;
+            q = new((m10 - m01) / s, (m02 + m20) / s, (m12 + m21) / s, s / 4);
+        }
+        double length = q.Length;
+        // One of the two quaternions of every turn: the one with W not negative.
+        double sign = q.W < 0 ? -1 : 1;
+        return new(sign * q.W / length, sign * q.X / length, sign * q.Y / length, sign * q.Z / length);
+    }
+
+    private static bool IsFinite(CaveVector3 v) => double.IsFinite(v.X) && double.IsFinite(v.Y) && double.IsFinite(v.Z);
+}
 
 /// <summary>The camera and its timed poses. One pose is a camera that stands still.</summary>
 public sealed record PlanCamera
@@ -200,6 +302,8 @@ public sealed record PlanCamera
 
     public PlanInterpolation Interpolation { get; init; } = PlanInterpolation.Linear;
 
+    /// <summary>The poses, in rising order of time. Either every pose has an
+    /// <see cref="PlanCameraKey.Orientation"/> or none has.</summary>
     public IReadOnlyList<PlanCameraKey> Track { get; init; } = [];
 }
 

@@ -37,7 +37,7 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
     {
         nameof(CameraTemplate), nameof(EngineKind), nameof(Gpu), nameof(Samples), nameof(Fps),
         nameof(DurationSeconds), nameof(OutputKind), nameof(Container), nameof(Width), nameof(Height),
-        nameof(BaseName), nameof(SelfContained), nameof(ShowStationLabels), nameof(ShowLeadMarkers),
+        nameof(BaseName), nameof(SelfContained), nameof(EmbedMesh), nameof(ShowStationLabels), nameof(ShowLeadMarkers),
         nameof(LeadMarkerSizing), nameof(LabelRoof), nameof(SurfaceMode), nameof(SurfaceOpacity),
         nameof(Credits), nameof(EndCardText), nameof(EndCardSeconds),
     };
@@ -115,6 +115,9 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
     [ObservableProperty] private int _height;
     [ObservableProperty] private string _baseName = "cave-render";
     [ObservableProperty] private bool _selfContained;
+    /// <summary>The self-contained script carries the meshes too, so it needs no file beside
+    /// it. Only with <see cref="SelfContained"/>; turning that off turns this off.</summary>
+    [ObservableProperty] private bool _embedMesh;
     [ObservableProperty] private bool _showStationLabels;
     [ObservableProperty] private bool _showLeadMarkers;
     [ObservableProperty] private LeadMarkerSizing _leadMarkerSizing;
@@ -223,7 +226,7 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
             Engine = _spec.Engine with { Kind = EngineKind, Gpu = Gpu, Samples = Samples },
             Animation = _spec.Animation with { Fps = Fps, DurationSeconds = DurationSeconds },
             Output = _spec.Output with { Kind = OutputKind, Container = Container, Width = Width, Height = Height, BaseName = BaseName },
-            Source = _spec.Source with { SelfContained = SelfContained },
+            Source = _spec.Source with { SelfContained = SelfContained, EmbedMesh = SelfContained && EmbedMesh },
             Labels = _spec.Labels with
             {
                 Stations = _spec.Labels.Stations with { Show = ShowStationLabels },
@@ -258,6 +261,7 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         Height = spec.Output.Height;
         BaseName = string.IsNullOrWhiteSpace(spec.Output.BaseName) ? "cave-render" : spec.Output.BaseName;
         SelfContained = spec.Source.SelfContained;
+        EmbedMesh = spec.Source.SelfContained && spec.Source.EmbedMesh;
         ShowStationLabels = spec.Labels.Stations.Show;
         ShowLeadMarkers = spec.Labels.Leads.Show;
         LeadMarkerSizing = spec.Labels.Leads.Sizing;
@@ -475,6 +479,11 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
     partial void OnNewPresetNameChanged(string value) => SavePresetCommand.NotifyCanExecuteChanged();
     partial void OnSelectedPresetChanging(PresetItem? value) => DeletePresetCommand.NotifyCanExecuteChanged();
     partial void OnExportDirectoryChanged(string? value) => ExportScriptCommand.NotifyCanExecuteChanged();
+
+    partial void OnSelfContainedChanged(bool value)
+    {
+        if (!value) EmbedMesh = false;
+    }
 
     // ---- helpers ----
 

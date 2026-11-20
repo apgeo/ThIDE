@@ -431,6 +431,9 @@
   <data name="Blender_UI_Height" xml:space="preserve"><value>Înălțime</value></data>
   <data name="Blender_UI_BaseName" xml:space="preserve"><value>Nume fișier</value></data>
   <data name="Blender_UI_SelfContained" xml:space="preserve"><value>Script autonom</value></data>
+  <data name="Blender_UI_SelfContained_Tip" xml:space="preserve"><value>Un script exportat conține el însuși datele scenei (etichete, legendă), în loc să citească scene-meta.json de lângă el. Rețeaua de poligoane a modelului rămâne lângă el, dacă nu este inclusă și ea.</value></data>
+  <data name="Blender_UI_EmbedMesh" xml:space="preserve"><value>Include rețelele de poligoane în script</value></data>
+  <data name="Blender_UI_EmbedMesh_Tip" xml:space="preserve"><value>Scriptul autonom conține și rețeaua de poligoane a modelului, precum și terenul cu imaginea lui: un singur fișier care se randează oriunde, dar mult mai mare.</value></data>
   <data name="Blender_UI_Labels" xml:space="preserve"><value>Etichete</value></data>
   <data name="Blender_UI_StationLabels" xml:space="preserve"><value>Etichete stații</value></data>
   <data name="Blender_UI_LeadMarkers" xml:space="preserve"><value>Marcaje continuări</value></data>

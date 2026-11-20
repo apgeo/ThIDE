@@ -1,3 +1,7 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 """Feature "texts": what is written over the picture, in two dimensions: titles, captions, credits,
 a scale bar, a north arrow, a card at the end.
 

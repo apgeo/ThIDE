@@ -42,8 +42,13 @@ public class BlenderAnimationViewModelTests
             return Task.FromResult(Result);
         }
 
+        public SceneSpec? LastExportSpec { get; private set; }
+
         public Task<string> ExportScriptAsync(SceneSpec spec, RenderSource source, string outputDir, IProgress<RenderProgress>? progress = null, CancellationToken ct = default, bool interactive = false)
-            => Task.FromResult(Path.Combine(outputDir, "render.py"));
+        {
+            LastExportSpec = spec;
+            return Task.FromResult(Path.Combine(outputDir, "render.py"));
+        }
     }
 
     private sealed class FakeSources : IBlenderSourceProvider
@@ -195,6 +200,44 @@ public class BlenderAnimationViewModelTests
         await vm.RenderCommand.ExecuteAsync(null);
         Assert.Null(slot.Holder);
         Assert.Equal(2, vm.Jobs.Count);
+    }
+
+    [Fact]
+    public async Task ASelfContainedScript_CarriesTheMeshesOnlyWhenAskedTo_AndNeverWithoutBeingSelfContained()
+    {
+        var svc = new FakeRenderService();
+        var vm = WithSource(Vm(svc));
+        vm.ExportDirectory = "exports";
+        Assert.False(vm.SelfContained);
+        Assert.False(vm.EmbedMesh);
+
+        // Self-contained, the meshes beside it: as the one option did before.
+        vm.SelfContained = true;
+        Assert.Equal((true, false), (vm.CurrentSpec.Source.SelfContained, vm.CurrentSpec.Source.EmbedMesh));
+        await vm.ExportScriptCommand.ExecuteAsync(null);
+        Assert.Equal((true, false), (svc.LastExportSpec!.Source.SelfContained, svc.LastExportSpec.Source.EmbedMesh));
+
+        // The meshes inside it too: one file.
+        vm.EmbedMesh = true;
+        Assert.Equal((true, true), (vm.CurrentSpec.Source.SelfContained, vm.CurrentSpec.Source.EmbedMesh));
+        Assert.Empty(vm.Blockers);
+        await vm.ExportScriptCommand.ExecuteAsync(null);
+        Assert.Equal((true, true), (svc.LastExportSpec!.Source.SelfContained, svc.LastExportSpec.Source.EmbedMesh));
+
+        // Not self-contained, the meshes cannot be inside it: the second option goes off with the first.
+        vm.SelfContained = false;
+        Assert.False(vm.EmbedMesh);
+        Assert.Equal((false, false), (vm.CurrentSpec.Source.SelfContained, vm.CurrentSpec.Source.EmbedMesh));
+        vm.EmbedMesh = true;
+        Assert.False(vm.CurrentSpec.Source.EmbedMesh);
+        Assert.Empty(vm.Blockers);
+
+        // Both come back from a preset as it has them: a built-in one has neither.
+        vm.SelfContained = true;
+        vm.EmbedMesh = true;
+        vm.SelectedPreset = vm.Presets.First(p => p.BuiltIn);
+        Assert.Equal((false, false), (vm.SelfContained, vm.EmbedMesh));
+        Assert.Equal((false, false), (vm.CurrentSpec.Source.SelfContained, vm.CurrentSpec.Source.EmbedMesh));
     }
 
     [Fact]

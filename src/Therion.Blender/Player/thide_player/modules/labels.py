@@ -1,3 +1,7 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 """Feature "labels": texts that turn to face the camera, and glowing balls that mark places.
 
 Where each one stands, how large it is and what it says comes from the plan; nothing is laid out

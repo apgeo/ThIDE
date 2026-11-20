@@ -41,6 +41,7 @@ public static class ScenePlanSerializer
             new JsonStringEnumConverter(JsonNamingPolicy.CamelCase, allowIntegerValues: false),
             new VectorConverter(),
             new ColorConverter(),
+            new QuaternionConverter(),
             new CameraKeyConverter(),
             new ColorStopConverter(),
             new TextConverter(),
@@ -184,6 +185,8 @@ public static class ScenePlanSerializer
 
     private static string Text(ColorRgb c) => Triple(c.R, c.G, c.B);
 
+    private static string Text(PlanQuaternion q) => $"[{Num(q.W)}, {Num(q.X)}, {Num(q.Y)}, {Num(q.Z)}]";
+
     /// <summary>A text as a JSON string, escaped as the rest of the document is.</summary>
     private static string Quoted(string text, JsonSerializerOptions options) => JsonSerializer.Serialize(text, options);
 
@@ -212,6 +215,26 @@ public static class ScenePlanSerializer
             => writer.WriteRawValue(Text(value));
     }
 
+    private sealed class QuaternionConverter : JsonConverter<PlanQuaternion>
+    {
+        public override PlanQuaternion Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options)
+        {
+            const string expected = "Expected an array of four numbers (w, x, y, z).";
+            if (reader.TokenType != JsonTokenType.StartArray) throw new JsonException(expected);
+            Span<double> values = stackalloc double[4];
+            for (int i = 0; i < 4; i++)
+            {
+                if (!reader.Read() || reader.TokenType != JsonTokenType.Number) throw new JsonException(expected);
+                values[i] = reader.GetDouble();
+            }
+            if (!reader.Read() || reader.TokenType != JsonTokenType.EndArray) throw new JsonException(expected);
+            return new PlanQuaternion(values[0], values[1], values[2], values[3]);
+        }
+
+        public override void Write(Utf8JsonWriter writer, PlanQuaternion value, JsonSerializerOptions options)
+            => writer.WriteRawValue(Text(value));
+    }
+
     private sealed class ColorConverter : JsonConverter<ColorRgb>
     {
         public override ColorRgb Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options)
@@ -230,6 +253,7 @@ public static class ScenePlanSerializer
         public required CaveVector3 Eye { get; init; }
         public required CaveVector3 Target { get; init; }
         public double? Lens { get; init; }
+        public PlanQuaternion? Orientation { get; init; }
     }
 
     private sealed class CameraKeyConverter : JsonConverter<PlanCameraKey>
@@ -237,14 +261,15 @@ public static class ScenePlanSerializer
         public override PlanCameraKey Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options)
         {
             var key = JsonSerializer.Deserialize<KeyJson>(ref reader, options) ?? throw new JsonException("Expected a camera pose.");
-            return new PlanCameraKey(key.T, key.Eye, key.Target, key.Lens);
+            return new PlanCameraKey(key.T, key.Eye, key.Target, key.Lens) { Orientation = key.Orientation };
         }
 
         public override void Write(Utf8JsonWriter writer, PlanCameraKey value, JsonSerializerOptions options)
         {
             string lens = value.Lens is { } l ? $", \"lens\": {Num(l)}" : "";
+            string orientation = value.Orientation is { } q ? $", \"orientation\": {Text(q)}" : "";
             writer.WriteRawValue(
-                $"{TrackIndent}{{ \"t\": {Num(value.T)}, \"eye\": {Text(value.Eye)}, \"target\": {Text(value.Target)}{lens} }}");
+                $"{TrackIndent}{{ \"t\": {Num(value.T)}, \"eye\": {Text(value.Eye)}, \"target\": {Text(value.Target)}{lens}{orientation} }}");
         }
     }
 

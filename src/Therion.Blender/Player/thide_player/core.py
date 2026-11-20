@@ -1,3 +1,7 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 """The core of the player: read the plan, check it, find its modules, let each play its section.
 
 It knows no feature. What it owns of the plan is what every module shares: the version, the list

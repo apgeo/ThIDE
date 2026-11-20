@@ -1,3 +1,7 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 """The ThIDE player: builds a Blender scene from a scene plan and renders it.
 
 The plan (scene-plan.json) is data: placed models, timed camera poses, the look, the output. The
@@ -13,7 +17,7 @@ Only bpy, mathutils and the standard library are used: a Blender packaged by a L
 runs on the system Python and has no numpy.
 """
 
-PLAYER_VERSION = "1.1"
+PLAYER_VERSION = "1.2"
 
 # The newest scene-plan version this player reads.
 PLAN_VERSION = 1

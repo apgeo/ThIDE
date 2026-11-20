@@ -104,7 +104,8 @@
                 <TextBox AutomationProperties.AutomationId="Blender.Height" AutomationProperties.Name="{l:Loc Blender_UI_Height}" Text="{Binding Blender.Height}" /></DockPanel>
             <DockPanel><TextBlock Text="{l:Loc Blender_UI_BaseName}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
                 <TextBox AutomationProperties.AutomationId="Blender.BaseName" AutomationProperties.Name="{l:Loc Blender_UI_BaseName}" Text="{Binding Blender.BaseName}" /></DockPanel>
-            <CheckBox AutomationProperties.AutomationId="Blender.SelfContained" Content="{l:Loc Blender_UI_SelfContained}" IsChecked="{Binding Blender.SelfContained}" />
+            <CheckBox AutomationProperties.AutomationId="Blender.SelfContained" Content="{l:Loc Blender_UI_SelfContained}" IsChecked="{Binding Blender.SelfContained}" ToolTip.Tip="{l:Loc Blender_UI_SelfContained_Tip}" />
+            <CheckBox AutomationProperties.AutomationId="Blender.EmbedMesh" Content="{l:Loc Blender_UI_EmbedMesh}" IsChecked="{Binding Blender.EmbedMesh}" IsEnabled="{Binding Blender.SelfContained}" Margin="20,0,0,0" ToolTip.Tip="{l:Loc Blender_UI_EmbedMesh_Tip}" />
 
             <!-- labels -->
             <TextBlock Text="{l:Loc Blender_UI_Labels}" FontWeight="Bold" />

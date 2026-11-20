@@ -3,6 +3,8 @@
 // folder, named after the zip, so that unpacking it anywhere makes that folder and nothing else:
 //
 //   README.txt              what the files are and how to render them
+//   LICENSE, NOTICE         the player's licence (MPL-2.0), and what the player is and where its
+//                           source is
 //   render.sh, render.cmd   start Blender with the player; --draft plays the draft plan, --compose
 //                           writes the output again from the frames that are there
 //   out/<name>.srt, .vtt    the captions as subtitles, where the movie will be (when it has any)
@@ -65,6 +67,15 @@ public static class RenderBundleWriter
     public const string ReadmeFileName = "README.txt";
     public const string ShellScriptName = "render.sh";
     public const string WindowsScriptName = "render.cmd";
+
+    /// <summary>The player's licence in a bundle: the Mozilla Public License 2.0.</summary>
+    public const string LicenseFileName = "LICENSE";
+
+    /// <summary>What the player is and where its source is.</summary>
+    public const string NoticeFileName = "NOTICE";
+
+    /// <summary>Where the player's source is.</summary>
+    public const string SourceUrl = "https://github.com/apgeo/ThIDE";
 
     /// <summary>Where <see cref="FromModel"/> lets the render write, relative to the plan.</summary>
     public const string OutputDirectory = "out";
@@ -330,6 +341,7 @@ public static class RenderBundleWriter
         if (content.Draft is not null)
             files.Add((DraftPlanFileName, "the same scene with a fast look"));
         files.Add((PlayerFiles.PackageName + "/", $"the player (Python), version {PlayerFiles.Version}"));
+        files.Add(($"{LicenseFileName}, {NoticeFileName}", "the player's licence (MPL-2.0), and where its source is"));
         foreach (string path in content.Files.Keys.Select(Normalized).Order(StringComparer.Ordinal))
             files.Add((path, plan.Models.Any(m => Normalized(m.Path) == path) ? "a model's mesh"
                 : (plan.TexturedMaterials ?? []).Any(m => m.Image is { } image && Normalized(image) == path) ? "the image of a material"
@@ -340,6 +352,9 @@ public static class RenderBundleWriter
         Line();
         Line("Every value in the plans is resolved: positions in metres (X east, Y north, Z up), times in");
         Line("seconds, colours as linear RGB. Change a plan with any text editor and render again.");
+        Line();
+        Line("The player is part of ThIDE and is subject to the Mozilla Public License 2.0 (LICENSE). Its");
+        Line($"source is in the ThIDE repository: {SourceUrl}");
 
         if (content.NotCarried.Count > 0)
         {
@@ -409,7 +424,7 @@ public static class RenderBundleWriter
         var reserved = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             ScenePlanSerializer.FileName, DraftPlanFileName, ReadmeFileName, ShellScriptName, WindowsScriptName,
-            PlayerFiles.EntryFileName,
+            LicenseFileName, NoticeFileName, PlayerFiles.EntryFileName,
         };
         var files = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var (planPath, source) in content.Files ?? new Dictionary<string, string>())
@@ -438,8 +453,10 @@ public static class RenderBundleWriter
         {
             Text(ScenePlanSerializer.FileName, ScenePlanSerializer.Write(content.Plan)),
             Text(ReadmeFileName, Readme(content)),
-            Text(ShellScriptName, Script("render.sh").ReplaceLineEndings("\n"), executable: true),
-            Text(WindowsScriptName, Script("render.cmd").ReplaceLineEndings("\r\n")),
+            Text(ShellScriptName, BundleFile(ShellScriptName).ReplaceLineEndings("\n"), executable: true),
+            Text(WindowsScriptName, BundleFile(WindowsScriptName).ReplaceLineEndings("\r\n")),
+            Text(LicenseFileName, BundleFile(LicenseFileName).ReplaceLineEndings("\n")),
+            Text(NoticeFileName, BundleFile(NoticeFileName).ReplaceLineEndings("\n")),
         };
         if (content.Draft is { } d) entries.Add(Text(DraftPlanFileName, ScenePlanSerializer.Write(d)));
         if (content.Captions is { Count: > 0 } captions)
@@ -499,11 +516,12 @@ public static class RenderBundleWriter
     private static string Normalized(string path)
         => string.Join('/', path.Split('/', '\\').Where(part => part.Length > 0 && part != "."));
 
-    private static string Script(string name)
+    /// <summary>A file every bundle has as it is: a run script, the licence, the notice.</summary>
+    private static string BundleFile(string name)
     {
         var assembly = typeof(RenderBundleWriter).Assembly;
         using var stream = assembly.GetManifestResourceStream("bundle/" + name)
-                           ?? throw new InvalidOperationException($"The run script {name} is not in the assembly.");
+                           ?? throw new InvalidOperationException($"The bundle file {name} is not in the assembly.");
         using var reader = new StreamReader(stream);
         return reader.ReadToEnd();
     }

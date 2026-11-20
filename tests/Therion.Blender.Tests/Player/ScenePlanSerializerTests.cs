@@ -126,14 +126,33 @@ public class ScenePlanSerializerTests
         Assert.Contains("\"rotation\": {\n        \"axis\": [0, 0, 1],\n        \"degrees\": 30\n      },", json);
         Assert.Contains("\"scale\": [1, 1, 2]", json);
         Assert.Contains("\"interpolation\": \"bezier\"", json);
-        Assert.Contains("      { \"t\": 0, \"eye\": [10, -20, 5.5], \"target\": [0, 0, 0] },\n", json);
-        Assert.Contains("      { \"t\": 1, \"eye\": [20, -10, 6], \"target\": [0, 0, 1], \"lens\": 50 },\n", json);
+        Assert.Contains("      { \"t\": 0, \"eye\": [10, -20, 5.5], \"target\": [0, 0, 0], \"orientation\": [1, 0, 0, 0] },\n", json);
+        Assert.Contains("      { \"t\": 1, \"eye\": [20, -10, 6], \"target\": [0, 0, 1], \"lens\": 50, \"orientation\": [0.5, 0.5, -0.5, 0.5] },\n", json);
         Assert.Contains("\"engine\": \"eevee\"", json);
         Assert.Contains("\"device\": \"optix\"", json);
         Assert.Contains("\"kind\": \"heightRamp\"", json);
         Assert.Contains("{ \"at\": 1, \"color\": [1, 0.5, 0] }", json);
         Assert.Contains("\"kind\": \"headlamp\"", json);
         Assert.Contains("\"container\": \"webm\"", json);
+    }
+
+    [Fact]
+    public void APoseWithoutAnOrientation_HasNone_AndOneWithAnOrientation_KeepsItsEveryDigit()
+    {
+        var turn = PlanQuaternion.FromView(new CaveVector3(1, 2, -3), new CaveVector3(0, 0, 1));
+        var plan = PlanFixtures.Full();
+        plan = plan with { Camera = plan.Camera with { Track = [plan.Camera.Track[0] with { Orientation = turn }] } };
+
+        var read = ScenePlanSerializer.Read(ScenePlanSerializer.Write(plan));
+
+        Assert.Equal(turn, read.Camera.Track[0].Orientation);
+        var plain = PlanFixtures.Full() with
+        {
+            Camera = PlanFixtures.Full().Camera with { Track = [.. PlanFixtures.Full().Camera.Track.Select(k => k with { Orientation = null })] },
+        };
+        string json = ScenePlanSerializer.Write(plain);
+        Assert.DoesNotContain("orientation", json);
+        Assert.All(ScenePlanSerializer.Read(json).Camera.Track, k => Assert.Null(k.Orientation));
     }
 
     [Fact]
@@ -274,6 +293,8 @@ public class ScenePlanSerializerTests
     [InlineData("{ \"version\": 1, \"look\": { \"engine\": 1 } }", "Malformed")]
     [InlineData("{ \"version\": 1, \"frame\": { \"origin\": [1, 2] } }", "Malformed")]
     [InlineData("{ \"version\": 1, \"camera\": { \"track\": [{ \"t\": 0, \"eye\": [1, 2, 3] }] } }", "Malformed")]
+    [InlineData("{ \"version\": 1, \"camera\": { \"track\": [{ \"t\": 0, \"eye\": [1, 2, 3], \"target\": [0, 0, 0], \"orientation\": [1, 0, 0] }] } }", "Malformed")]
+    [InlineData("{ \"version\": 1, \"camera\": { \"track\": [{ \"t\": 0, \"eye\": [1, 2, 3], \"target\": [0, 0, 0], \"orientation\": [1, 0, 0, 0, 0] }] } }", "Malformed")]
     public void BadJson_IsRefused(string json, string expected)
     {
         var ex = Assert.Throws<ScenePlanFormatException>(() => ScenePlanSerializer.Read(json));

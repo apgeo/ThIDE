@@ -89,7 +89,7 @@
         "fStop": { "type": "number", "minimum": 0.5, "maximum": 1000, "description": "Turns depth of field on, focused on the target." },
         "interpolation": { "enum": ["linear", "bezier", "constant"], "description": "Between poses. Default linear." },
         "track": {
-          "description": "The poses, in rising order of time. One pose is a camera that stands still.",
+          "description": "The poses, in rising order of time. One pose is a camera that stands still. Either every pose has an orientation or none has.",
           "type": "array",
           "minItems": 1,
           "items": {
@@ -100,7 +100,8 @@
               "t": { "type": "number", "minimum": 0 },
               "eye": { "$ref": "#/$defs/vector" },
               "target": { "$ref": "#/$defs/vector" },
-              "lens": { "type": "number", "minimum": 1, "maximum": 1200 }
+              "lens": { "type": "number", "minimum": 1, "maximum": 1200 },
+              "orientation": { "$ref": "#/$defs/quaternion", "description": "How the camera is turned, as a unit quaternion [w, x, y, z] in the plan's frame; the camera looks along its own -Z with its own +Y at the top of the picture, so [1, 0, 0, 0] looks straight down with north up. With it the camera keeps this turn, roll included, and the target is only where it focuses; without it the camera looks at the target with a level horizon. Blender interpolates the turn as the track's interpolation says." }
             }
           }
         }
@@ -359,6 +360,12 @@
       "items": { "type": "number" },
       "minItems": 3,
       "maxItems": 3
+    },
+    "quaternion": {
+      "type": "array",
+      "items": { "type": "number", "minimum": -1, "maximum": 1 },
+      "minItems": 4,
+      "maxItems": 4
     },
     "point": {
       "type": "array",

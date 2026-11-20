@@ -130,6 +130,34 @@ public class ScenePlanValidatorTests
     }
 
     [Fact]
+    public void Orientations_AreUnitQuaternions_OnEveryPoseOrOnNone()
+    {
+        var eye = new CaveVector3(1, 2, 3);
+        var target = new CaveVector3(0, 0, 0);
+        PlanCameraKey Key(double t, PlanQuaternion? turn) => new(t, eye, target) { Orientation = turn };
+        ScenePlan With(params PlanCameraKey[] track) => Full with { Camera = Full.Camera with { Track = track } };
+        var down = PlanQuaternion.Identity;
+
+        Assert.Empty(ScenePlanValidator.Validate(With(Key(0, down), Key(1, new PlanQuaternion(0, 0, 0, -1)))));
+        Assert.Empty(ScenePlanValidator.Validate(With(Key(0, null), Key(1, null))));
+        // Written with six decimals, a unit quaternion is a little off unit length; that is taken.
+        Assert.Empty(ScenePlanValidator.Validate(With(Key(0, new PlanQuaternion(0.707107, 0.707107, 0, 0)))));
+        Assert.Empty(ScenePlanValidator.Validate(With(Key(0, new PlanQuaternion(1 + 0.9e-4, 0, 0, 0)))));
+
+        AssertBad(With(Key(0, new PlanQuaternion(1 + 1.1e-4, 0, 0, 0))), "camera.track[0].orientation");
+        AssertBad(With(Key(0, new PlanQuaternion(0.5, 0.5, 0.5, 0))), "camera.track[0].orientation");
+        AssertBad(With(Key(0, new PlanQuaternion(0, 0, 0, 0))), "camera.track[0].orientation");
+        AssertBad(With(Key(0, new PlanQuaternion(double.NaN, 0, 0, 0))), "camera.track[0].orientation");
+        AssertBad(With(Key(0, new PlanQuaternion(1, double.PositiveInfinity, 0, 0))), "camera.track[0].orientation");
+
+        // Turned by the poses or towards the target, not first one and then the other.
+        var mixed = ScenePlanValidator.Validate(With(Key(0, down), Key(1, down), Key(2, null)));
+        Assert.Equal(["camera.track[2].orientation"], mixed.Select(e => e.Path));
+        Assert.Equal("Either every pose has an orientation or none has.", mixed[0].Message);
+        Assert.Equal(["camera.track[1].orientation"], ScenePlanValidator.Validate(With(Key(0, null), Key(1, down))).Select(e => e.Path));
+    }
+
+    [Fact]
     public void Look_HasSaneQualityAndSize()
     {
         ScenePlan With(PlanLook look) => Full with { Look = look };

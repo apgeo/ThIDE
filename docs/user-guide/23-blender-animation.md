@@ -147,8 +147,14 @@ Blender…** use the script generator.
 ## Other ways to run it
 
 - **Export script…** — instead of rendering, ThIDE writes the `render.py` script plus its
-  `model.ply` and `scene-meta.json` (or a single self-contained `.py`) to a folder you pick, so
-  you can run it yourself later with `blender -b --python render.py`, or archive/share it.
+  `model.ply` and `scene-meta.json` to a folder you pick, so you can run it yourself later with
+  `blender -b --python render.py`, or archive/share it. Two options under **Output** change what
+  the script needs beside it:
+  - **Self-contained script** puts the scene's data (labels, legend) inside the script, so it no
+    longer reads `scene-meta.json`. It still reads the model's mesh, `model.ply`, from beside it.
+  - **Embed the meshes in the script**, which can be ticked only while the script is
+    self-contained, puts the mesh in as well (and the terrain with its image, when the scene draws
+    it): one `.py` file that renders anywhere, but a much larger one. It is off unless you tick it.
 - **Open in Blender…** — opens the scene in Blender's *interactive* window so you can inspect or
   tweak it by hand before rendering.
 - **Save preset** — store the current settings as your own preset; they appear in the strip
@@ -210,7 +216,9 @@ therion-cli blender <model.lox|.3d> [--preset "Full flythrough" | --spec spec.js
 The bundle holds the scene plan (`scene-plan.json`: the camera move, the look and the output, as
 plain JSON), the cave's mesh (`model.ply`), the player that builds the scene in Blender
 (`render.py` and `thide_player/`), the run scripts `render.sh` (Linux, macOS) and `render.cmd`
-(Windows), and a `README.txt` that says how to render it. The zip holds one folder named after
+(Windows), a `README.txt` that says how to render it, and the player's licence: `LICENSE` (the
+Mozilla Public License 2.0) and a `NOTICE` that says what the player is and that its source is in
+the ThIDE repository on GitHub. The zip holds one folder named after
 it (`cave-bundle` for `cave-bundle.zip`), so unpacking it anywhere makes that folder and nothing
 else. Whoever receives it unpacks it and runs `sh render.sh` or `render.cmd` in that folder; the
 result lands in the bundle's `out` folder. The scripts find Blender on the PATH (and in its usual install folder on macOS and
