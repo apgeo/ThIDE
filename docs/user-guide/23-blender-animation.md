@@ -261,6 +261,6 @@ text in `scene-plan.json` was changed. Captions are in the bundle as subtitles a
 | The source dropdown is empty | Compile the project first (**Compile → Compile**), or tick **Use an external file**. |
 | The render failed | Open the **job log** from the notification or the panel — it has Blender's full output. |
 | EEVEE render fails on a server | Switch the engine to **Cycles**. |
-| *"The player cannot build this scene…"* | The scene asks for something the player does not show yet (the message names it). Set **Scene builder** to *Auto* or *Generator*. |
+| *"The player cannot make this scene…"* | The scene asks for something the player does not show yet (the message names it). Set **Scene builder** to *Auto* or *Generator*. |
 | The preview has no terrain | A see-through terrain is left out of previews; the render draws it. |
 | A title or the north arrow is hidden by the walls | The script generator built the scene (it draws them in the scene). Set **Scene builder** to *Auto* or *Player*. |
