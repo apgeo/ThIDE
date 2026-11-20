@@ -22,6 +22,9 @@ public enum RenderPhase
     GeneratingScript,
     /// <summary>Blender is rendering frames (BA-B10/B11).</summary>
     Rendering,
+    /// <summary>Blender is writing the output from the rendered frames, with the texts over them:
+    /// the second stage of a render in two stages.</summary>
+    Composing,
     /// <summary>Collecting/verifying output products (BA-B11).</summary>
     CollectingOutputs,
     /// <summary>Terminal: the job finished (success or handled failure).</summary>

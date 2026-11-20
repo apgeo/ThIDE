@@ -394,9 +394,11 @@
   <data name="Blender_Status_Acquiring" xml:space="preserve"><value>Acquiring source…</value></data>
   <data name="Blender_Status_Cancelled" xml:space="preserve"><value>Canceled.</value></data>
   <data name="Blender_Status_Failed" xml:space="preserve"><value>Render failed.</value></data>
+  <data name="Blender_ReExport_Failed" xml:space="preserve"><value>Therion could not export the model of {0}: {1}. Log: {2}</value></data>
   <data name="Blender_Status_Exporting" xml:space="preserve"><value>Exporting script…</value></data>
   <data name="Blender_Status_Exported" xml:space="preserve"><value>Script exported.</value></data>
   <data name="Blender_Status_Done" xml:space="preserve"><value>Render complete.</value></data>
+  <data name="Blender_Status_AgentRendering" xml:space="preserve"><value>An agent is rendering in Blender; renders run one at a time.</value></data>
   <data name="Blender_Phase_Acquiring" xml:space="preserve"><value>Acquiring source…</value></data>
   <data name="Blender_Phase_Converting" xml:space="preserve"><value>Converting model…</value></data>
   <data name="Blender_Phase_Generating" xml:space="preserve"><value>Generating script…</value></data>
@@ -414,6 +416,7 @@
   <data name="Blender_UI_ExternalFile" xml:space="preserve"><value>Model file path</value></data>
   <data name="Blender_UI_WorkspaceArtifact" xml:space="preserve"><value>Workspace model</value></data>
   <data name="Blender_UI_ReloadArtifacts" xml:space="preserve"><value>Refresh</value></data>
+  <data name="Blender_UI_ProjectModel" xml:space="preserve"><value>Project model (exported with Therion when out of date)</value></data>
   <data name="Blender_UI_Camera" xml:space="preserve"><value>Camera</value></data>
   <data name="Blender_UI_Template" xml:space="preserve"><value>Template</value></data>
   <data name="Blender_UI_Engine" xml:space="preserve"><value>Engine</value></data>
@@ -431,6 +434,14 @@
   <data name="Blender_UI_Labels" xml:space="preserve"><value>Labels</value></data>
   <data name="Blender_UI_StationLabels" xml:space="preserve"><value>Station labels</value></data>
   <data name="Blender_UI_LeadMarkers" xml:space="preserve"><value>Lead markers</value></data>
+  <data name="Blender_UI_LeadMarkerSize" xml:space="preserve"><value>Lead marker size</value></data>
+  <data name="Blender_UI_LeadMarkerSize_Tip" xml:space="preserve"><value>Auto: from the passage in a flythrough, from the whole cave otherwise. Cave: always from the whole cave. Passage: always from the passage. CameraDistance: about the same size in the picture at any distance, its caption with it. HiddenInFlythrough: from the whole cave, and none in a flythrough.</value></data>
+  <data name="Blender_UI_LabelRoof" xml:space="preserve"><value>Labels above</value></data>
+  <data name="Blender_UI_LabelRoof_Tip" xml:space="preserve"><value>The roof a station label is lifted above. SurveyFirst: the surveyed up distance, else the walls. WallsFirst: the walls, else the surveyed up distance. WallsOnly: the walls only. None: labels sit on their stations.</value></data>
+  <data name="Blender_UI_Surface" xml:space="preserve"><value>Terrain</value></data>
+  <data name="Blender_UI_Surface_Tip" xml:space="preserve"><value>The terrain surface of a .lox model, above the cave. Off: none. Solid: in one color. Textured: with the surface image draped over it (in one color when the model has no image). From above it is see-through, as much as Terrain opacity says, so the cave shows under it; from below it is invisible. The camera still frames the cave.</value></data>
+  <data name="Blender_UI_SurfaceOpacity" xml:space="preserve"><value>Terrain opacity</value></data>
+  <data name="Blender_UI_SurfaceOpacity_Tip" xml:space="preserve"><value>How opaque the terrain is seen from above: at 0 % it cannot be seen, at 100 % it hides the cave under it. The default is 40 %.</value></data>
   <data name="Blender_UI_Render" xml:space="preserve"><value>Render</value></data>
   <data name="Blender_UI_Export" xml:space="preserve"><value>Export script…</value></data>
   <data name="Blender_UI_ExportDir" xml:space="preserve"><value>Export folder</value></data>
@@ -1646,6 +1657,9 @@ Apply the changes? Steps that could not preview run now.</value></data>
   <data name="Notif_SaveFailedTitle" xml:space="preserve"><value>Save failed</value></data>
   <data name="Notif_SaveFailedMsg" xml:space="preserve"><value>{0} could not be written: {1} Your edits are still in the editor, unsaved.</value></data>
   <data name="Exit_SaveAll" xml:space="preserve"><value>Save all</value></data>
+  <data name="Exit_RenderRunningTitle" xml:space="preserve"><value>Blender render running</value></data>
+  <data name="Exit_RenderRunningMsg" xml:space="preserve"><value>A Blender render is still running. Closing ThIDE stops it. Close anyway?</value></data>
+  <data name="Exit_StopRenderAndClose" xml:space="preserve"><value>Stop render and close</value></data>
   <data name="Replace_EncodingRefused" xml:space="preserve"><value>Nothing replaced: {0} cannot hold '{1}' in {2}, the encoding the file declares. No file was changed.</value></data>
   <data name="Replace_UndoRefused" xml:space="preserve"><value>Nothing restored: {0} was changed after the replace. No file was changed.</value></data>
   <data name="Notif_SaveUndecodable" xml:space="preserve"><value>{0} holds bytes that are not valid {2}; they show as '{1}'. Saving would replace them for good. Add an `encoding` line naming the file's real encoding with another editor and reopen it, or retype the characters shown as '{1}'.</value></data>
@@ -2127,6 +2141,22 @@ This cannot be undone.</value></data>
   <data name="Notif_StateUnreadableMsg" xml:space="preserve"><value>The defaults are in use. A copy of the unreadable file was kept as {0}.</value></data>
   <data name="Blender_UI_RenderDir" xml:space="preserve"><value>Render folder</value></data>
   <data name="Blender_UI_RenderDirTip" xml:space="preserve"><value>Where the video, frames or still are saved. Leave empty to keep them in the temporary job folder.</value></data>
+  <data name="Blender_UI_Builder" xml:space="preserve"><value>Scene builder (advanced)</value></data>
+  <data name="Blender_UI_Builder_Tip" xml:space="preserve"><value>What makes the scene in Blender. Auto: the player when it can show everything the scene asks for, otherwise the script generator. Player: writes the texts over the finished frames, so nothing hides them. Generator: the earlier builder, kept for comparison; it draws the title in the scene and no credits, end card or captions. A preview is always the player's.</value></data>
+  <data name="Blender_UI_Preview" xml:space="preserve"><value>Preview</value></data>
+  <data name="Blender_UI_Preview_Tip" xml:space="preserve"><value>A quick draft of the render: half the size, without lights and shadows, a fraction of a second per frame. For checking the camera move, the framing and the texts before the long render. It is saved beside the render, with -draft added to its name.</value></data>
+  <data name="Blender_UI_Credits" xml:space="preserve"><value>Credits line</value></data>
+  <data name="Blender_UI_Credits_Tip" xml:space="preserve"><value>A small line that stays in the bottom right corner of the picture: who surveyed, who drew, a licence. Empty for none.</value></data>
+  <data name="Blender_UI_EndCard" xml:space="preserve"><value>End card</value></data>
+  <data name="Blender_UI_EndCard_Tip" xml:space="preserve"><value>A text on a black picture that the movie ends on, after its last frame. Empty for none.</value></data>
+  <data name="Blender_UI_EndCardSeconds" xml:space="preserve"><value>End card (seconds)</value></data>
+  <data name="Blender_Phase_Composing" xml:space="preserve"><value>Composing the movie</value></data>
+  <data name="Blender_Status_PreviewDone" xml:space="preserve"><value>Preview complete.</value></data>
+  <data name="Blender_Job_Preview" xml:space="preserve"><value>{0} (preview)</value></data>
+  <data name="Blender_Builder_Fallback" xml:space="preserve"><value>The script generator made this scene: the player does not carry {0}.</value></data>
+  <data name="Blender_Builder_LeftOutGenerator" xml:space="preserve"><value>The script generator does not draw {0}.</value></data>
+  <data name="Blender_Builder_LeftOutPreview" xml:space="preserve"><value>The preview does not show {0}.</value></data>
+  <data name="Blender_Fail_BuilderRefused" xml:space="preserve"><value>The player cannot make this scene: it does not carry {0}. Choose the script generator, or Auto.</value></data>
   <data name="Count_Warnings_One" xml:space="preserve"><value>{0} warning</value></data>
   <data name="Count_Warnings_Few" xml:space="preserve"><value>{0} warnings</value></data>
   <data name="Count_Warnings_Many" xml:space="preserve"><value>{0} warnings</value></data>

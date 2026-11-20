@@ -1,5 +1,14 @@
 # Therion.Build — changes for consumers
 
+## 2026-11 — model export from a temporary folder
+
+### Additive API
+- `ModelExportConfig.Create(configPath, readText, outputFileName = "model.lox")`: the text of a
+  thconfig that exports only a project's 3-D model (`export model -fmt loch`) and can run from any
+  folder. `source`, `input` and `load` paths become absolute; a top-level `input` config is inlined;
+  the project's own `export` and `system` commands and its `layout`/`lookup` blocks are left out.
+  Texts are read and written as Latin-1 so the original bytes survive. Migration: none.
+
 ## 2026-11 (round 5)
 
 ### Behaviour changes

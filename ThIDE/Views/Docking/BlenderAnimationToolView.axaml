@@ -67,6 +67,11 @@
             <TextBlock Text="{l:Loc Blender_UI_Camera}" FontWeight="Bold" />
             <DockPanel><TextBlock Text="{l:Loc Blender_UI_Template}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
                 <ComboBox AutomationProperties.AutomationId="Blender.CameraTemplate" AutomationProperties.Name="{l:Loc Blender_UI_Template}" HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.CameraTemplates}" SelectedItem="{Binding Blender.CameraTemplate}" /></DockPanel>
+            <DockPanel><TextBlock Text="{l:Loc Blender_UI_Surface}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                <ComboBox AutomationProperties.AutomationId="Blender.Surface" AutomationProperties.Name="{l:Loc Blender_UI_Surface}" HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.SurfaceModes}" SelectedItem="{Binding Blender.SurfaceMode}" ToolTip.Tip="{l:Loc Blender_UI_Surface_Tip}" /></DockPanel>
+            <DockPanel IsEnabled="{Binding Blender.HasSurface}"><TextBlock Text="{l:Loc Blender_UI_SurfaceOpacity}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding Blender.SurfaceOpacity, StringFormat='{}{0:0%}'}" DockPanel.Dock="Right" MinWidth="40" TextAlignment="Right" VerticalAlignment="Center" />
+                <Slider AutomationProperties.AutomationId="Blender.SurfaceOpacity" AutomationProperties.Name="{l:Loc Blender_UI_SurfaceOpacity}" Minimum="0" Maximum="1" SmallChange="0.05" LargeChange="0.1" TickFrequency="0.05" IsSnapToTickEnabled="True" Value="{Binding Blender.SurfaceOpacity}" ToolTip.Tip="{l:Loc Blender_UI_SurfaceOpacity_Tip}" /></DockPanel>
 
             <TextBlock Text="{l:Loc Blender_UI_Engine}" FontWeight="Bold" />
             <DockPanel><TextBlock Text="{l:Loc Blender_UI_Engine}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
@@ -75,6 +80,8 @@
                 <ComboBox AutomationProperties.AutomationId="Blender.Gpu" AutomationProperties.Name="{l:Loc Blender_UI_Gpu}" HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.GpuModes}" SelectedItem="{Binding Blender.Gpu}" /></DockPanel>
             <DockPanel><TextBlock Text="{l:Loc Blender_UI_Samples}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
                 <TextBox AutomationProperties.AutomationId="Blender.Samples" AutomationProperties.Name="{l:Loc Blender_UI_Samples}" Text="{Binding Blender.Samples}" /></DockPanel>
+            <DockPanel><TextBlock Text="{l:Loc Blender_UI_Builder}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" TextWrapping="Wrap" />
+                <ComboBox AutomationProperties.AutomationId="Blender.Builder" AutomationProperties.Name="{l:Loc Blender_UI_Builder}" HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.Builders}" SelectedItem="{Binding Blender.Builder}" ToolTip.Tip="{l:Loc Blender_UI_Builder_Tip}" /></DockPanel>
 
             <!-- animation -->
             <TextBlock Text="{l:Loc Blender_UI_Animation}" FontWeight="Bold" />
@@ -103,6 +110,16 @@
             <TextBlock Text="{l:Loc Blender_UI_Labels}" FontWeight="Bold" />
             <CheckBox AutomationProperties.AutomationId="Blender.StationLabels" Content="{l:Loc Blender_UI_StationLabels}" IsChecked="{Binding Blender.ShowStationLabels}" />
             <CheckBox AutomationProperties.AutomationId="Blender.LeadMarkers" Content="{l:Loc Blender_UI_LeadMarkers}" IsChecked="{Binding Blender.ShowLeadMarkers}" />
+            <DockPanel><TextBlock Text="{l:Loc Blender_UI_LeadMarkerSize}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                <ComboBox AutomationProperties.AutomationId="Blender.LeadMarkerSize" AutomationProperties.Name="{l:Loc Blender_UI_LeadMarkerSize}" HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.LeadMarkerSizings}" SelectedItem="{Binding Blender.LeadMarkerSizing}" ToolTip.Tip="{l:Loc Blender_UI_LeadMarkerSize_Tip}" /></DockPanel>
+            <DockPanel><TextBlock Text="{l:Loc Blender_UI_LabelRoof}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                <ComboBox AutomationProperties.AutomationId="Blender.LabelRoof" AutomationProperties.Name="{l:Loc Blender_UI_LabelRoof}" HorizontalAlignment="Stretch" ItemsSource="{Binding Blender.LabelRoofSources}" SelectedItem="{Binding Blender.LabelRoof}" ToolTip.Tip="{l:Loc Blender_UI_LabelRoof_Tip}" /></DockPanel>
+            <DockPanel><TextBlock Text="{l:Loc Blender_UI_Credits}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                <TextBox AutomationProperties.AutomationId="Blender.Credits" AutomationProperties.Name="{l:Loc Blender_UI_Credits}" Text="{Binding Blender.Credits}" ToolTip.Tip="{l:Loc Blender_UI_Credits_Tip}" /></DockPanel>
+            <DockPanel><TextBlock Text="{l:Loc Blender_UI_EndCard}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                <TextBox AutomationProperties.AutomationId="Blender.EndCard" AutomationProperties.Name="{l:Loc Blender_UI_EndCard}" Text="{Binding Blender.EndCardText}" AcceptsReturn="True" TextWrapping="Wrap" ToolTip.Tip="{l:Loc Blender_UI_EndCard_Tip}" /></DockPanel>
+            <DockPanel><TextBlock Text="{l:Loc Blender_UI_EndCardSeconds}" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" TextWrapping="Wrap" />
+                <TextBox AutomationProperties.AutomationId="Blender.EndCardSeconds" AutomationProperties.Name="{l:Loc Blender_UI_EndCardSeconds}" Text="{Binding Blender.EndCardSeconds}" /></DockPanel>
 
             <Separator />
 
@@ -127,6 +144,7 @@
             </DockPanel>
             <WrapPanel>
                 <Button AutomationProperties.AutomationId="Blender.Render" Content="{l:Loc Blender_UI_Render}" Command="{Binding Blender.RenderCommand}" Margin="0,0,6,6" />
+                <Button AutomationProperties.AutomationId="Blender.Preview" Content="{l:Loc Blender_UI_Preview}" Command="{Binding Blender.PreviewCommand}" ToolTip.Tip="{l:Loc Blender_UI_Preview_Tip}" Margin="0,0,6,6" />
                 <Button AutomationProperties.AutomationId="Blender.ExportScript" Content="{l:Loc Blender_UI_Export}" Command="{Binding Blender.ExportScriptCommand}" Margin="0,0,6,6" />
                 <Button AutomationProperties.AutomationId="Blender.OpenInBlender" Content="{l:Loc Blender_UI_OpenInBlender}" Command="{Binding Blender.OpenInBlenderGuiCommand}" Margin="0,0,6,6" />
                 <Button AutomationProperties.AutomationId="Blender.Cancel" Content="{l:Loc Blender_UI_Cancel}" Command="{Binding Blender.CancelCommand}" IsVisible="{Binding Blender.IsBusy}" Margin="0,0,6,6" />

@@ -21,7 +21,19 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Therion.Cave3D\Therion.Cave3D.csproj" />
+    <ProjectReference Include="..\..\src\Therion.CaveGeometry\Therion.CaveGeometry.csproj" />
     <ProjectReference Include="..\..\src\Therion.Blender\Therion.Blender.csproj" />
+    <ProjectReference Include="..\..\src\Therion.Blender.Execution\Therion.Blender.Execution.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Run inside Blender by the scene-probe tests, next to the generated script. -->
+    <None Update="SceneProbe\scene_probe.py" CopyToOutputDirectory="PreserveNewest" />
+    <!-- For the player tests: a feature module outside the player, and a GLB made of two parts. -->
+    <None Update="Player\ExtraModules\*.py" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Player\two_part_glb.py" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Player\draft_colours.py" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

@@ -83,8 +83,33 @@ public sealed class ToolContractFuzzTests : IDisposable
         services.AddSingleton<IProjectMetadataStore>(new ProjectMetadataStore(Path.Combine(_sidecar, "metadata")));
         services.AddSingleton<ILeadStatusStore>(new LeadStatusStore(Path.Combine(_sidecar, "leads")));
         services.AddSingleton<IExternalToolLocator>(new NoTherion());
+        // A Blender host brings in the render tools; its renderer runs nothing.
+        services.AddSingleton<IBlenderRenderHost>(new NoBlender(Path.Combine(_root, "caves", "upper.3d")));
         services.AddToolServices();
         return new ToolDispatcher(services.BuildServiceProvider());
+    }
+
+    /// <summary>Finds the model it is asked for and "renders" it without writing anything.</summary>
+    private sealed class NoBlender(string workspaceModel) : IBlenderRenderHost, Therion.Blender.IBlenderRenderService
+    {
+        public Therion.Blender.IBlenderRenderService Renderer => this;
+        public IReadOnlyList<Therion.Blender.Presets.RenderPreset> UserPresets() => [];
+
+        public Task<Therion.Blender.RenderSource> AcquireAsync(Therion.Blender.Sources.ModelSourceRequest request, CancellationToken ct = default) =>
+            Task.FromResult(new Therion.Blender.RenderSource(new Therion.Blender.Sources.ResolvedModelSource
+            {
+                Path = request.ExternalFilePath ?? workspaceModel,
+                Format = Therion.Cave3D.CaveSourceFormat.Survex3d,
+                Kind = Therion.Blender.Sources.ModelSourceKind.WorkspaceArtifact,
+            }));
+
+        public Task<Therion.Blender.RenderResult> RenderAsync(Therion.Blender.SceneSpec spec, Therion.Blender.RenderSource source,
+            Therion.Blender.RenderOptions options, IProgress<Therion.Blender.RenderProgress>? progress = null, CancellationToken ct = default) =>
+            Task.FromResult(new Therion.Blender.RenderResult { FailureKind = Therion.Blender.RenderFailureKind.BlenderNotFound, ErrorMessage = "No Blender here." });
+
+        public Task<string> ExportScriptAsync(Therion.Blender.SceneSpec spec, Therion.Blender.RenderSource source, string outputDir,
+            IProgress<Therion.Blender.RenderProgress>? progress = null, CancellationToken ct = default, bool interactive = false) =>
+            Task.FromResult(Path.Combine(outputDir, "render.py"));
     }
 
     private static readonly HashSet<string> KnownCodes = typeof(ToolErrorCodes)

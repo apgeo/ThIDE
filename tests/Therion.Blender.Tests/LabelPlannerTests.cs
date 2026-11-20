@@ -3,7 +3,8 @@
 
 using Therion.Blender;
 using Therion.Blender.Emit;
-using Therion.Blender.Geometry;
+using Therion.Cave3D;
+using Therion.CaveGeometry;
 
 namespace Therion.Blender.Tests;
 
@@ -143,6 +144,96 @@ public class LabelPlannerTests
         Assert.Equal(["goes big", "y.3"], plan.Leads.Select(l => l.Text));
         Assert.All(plan.Leads, l => Assert.True(l.ShowText));
         Assert.All(plan.Leads, l => Assert.True(l.Radius > 0));
+    }
+
+    [Fact]
+    public void InAFlythrough_ALeadMarkerIsSizedFromItsPassage_ElsewhereFromTheCave()
+    {
+        var stations = new[] { Station("x.9", 0, 0, 0) with { Roof = 2.0 }, Station("y.3", 1, 1, 1) };
+        var leads = new[]
+        {
+            new SceneMetaLead { Station = "x.9", Position = new SceneMetaVec(0, 0, 0) },
+            new SceneMetaLead { Station = "y.3", Position = new SceneMetaVec(1, 1, 1) }, // no roof known
+        };
+        var meta = Meta(stations, leads: leads);
+        var labels = new LabelsSpec { Leads = new LeadMarkerSpec { Show = true } };
+        var orbit = LabelPlanner.Plan(Spec(labels), meta);
+        var flythrough = LabelPlanner.Plan(Spec(labels) with { Camera = new CameraSpec { Template = CameraTemplate.Flythrough } }, meta);
+
+        double outside = orbit.Leads[0].Radius;
+        Assert.Equal(outside, orbit.Leads[1].Radius);
+        Assert.True(outside > 1.0, $"seen from outside a marker shows across the cave ({outside:F2} m)");
+        // At the top of its pulse (×1.5) the ball is under half the roof height across.
+        Assert.Equal(0.3, flythrough.Leads[0].Radius, 9);
+        Assert.True(flythrough.Leads[1].Radius < 0.5, "a station without a roof gets a passage-sized default");
+        Assert.All(flythrough.Leads, l => Assert.True(l.TextSize <= l.Radius));
+    }
+
+    [Theory]
+    [InlineData(LeadMarkerSizing.Cave, false, "cave")]
+    [InlineData(LeadMarkerSizing.Cave, true, "cave")]
+    [InlineData(LeadMarkerSizing.Passage, false, "passage")]
+    [InlineData(LeadMarkerSizing.Passage, true, "passage")]
+    [InlineData(LeadMarkerSizing.Auto, false, "cave")]
+    [InlineData(LeadMarkerSizing.Auto, true, "passage")]
+    [InlineData(LeadMarkerSizing.HiddenInFlythrough, false, "cave")]
+    [InlineData(LeadMarkerSizing.HiddenInFlythrough, true, "none")]
+    [InlineData(LeadMarkerSizing.CameraDistance, true, "cave")]
+    public void EachLeadMarkerSizing_GivesItsSize(LeadMarkerSizing sizing, bool flythrough, string expected)
+    {
+        var meta = Meta([Station("x.9", 0, 0, 0) with { Roof = 2.0 }],
+            leads: [new SceneMetaLead { Station = "x.9", Position = new SceneMetaVec(0, 0, 0) }]);
+        var spec = Spec(new LabelsSpec { Leads = new LeadMarkerSpec { Show = true, Sizing = sizing } });
+        if (flythrough) spec = spec with { Camera = new CameraSpec { Template = CameraTemplate.Flythrough } };
+
+        var plan = LabelPlanner.Plan(spec, meta);
+
+        double cave = Math.Sqrt(3) * 100 * 0.01;
+        switch (expected)
+        {
+            case "none": Assert.Empty(plan.Leads); break;
+            case "cave": Assert.Equal(cave, Assert.Single(plan.Leads).Radius, 9); break;
+            case "passage": Assert.Equal(0.3, Assert.Single(plan.Leads).Radius, 9); break;
+        }
+        Assert.Equal(sizing == LeadMarkerSizing.CameraDistance, plan.LeadsByDistance is not null);
+        if (plan.LeadsByDistance is { } d)
+        {
+            Assert.Equal(cave, d.MaxRadius, 9);
+            Assert.True(d.MinRadius < d.MaxRadius && d.Factor > 0);
+        }
+    }
+
+    [Theory]
+    [InlineData(LabelRoofSource.SurveyFirst, 2.0)]
+    [InlineData(LabelRoofSource.WallsFirst, 3.0)]
+    [InlineData(LabelRoofSource.WallsOnly, 3.0)]
+    [InlineData(LabelRoofSource.None, null)]
+    public void EachRoofSource_LiftsTheLabelByItsRoof(LabelRoofSource source, double? roof)
+    {
+        var meta = Meta([Station("a", 0, 0, 0, entrance: true) with { Roof = 2.0, SurveyedRoof = 2.0, WallRoof = 3.0 },
+                         Station("b", 5, 0, 0, entrance: true) with { Roof = 2.0, SurveyedRoof = 2.0 }]);
+        var spec = Spec(new LabelsSpec { Roof = source, Stations = new StationLabelSpec { Show = true } });
+
+        var plan = LabelPlanner.Plan(spec, meta);
+
+        var a = plan.Stations.Single(l => l.Text == "a");
+        double lift = a.Position.Z;
+        if (roof is null) Assert.Equal(0.0, lift);
+        else Assert.Equal(roof.Value + a.Size * 0.75, lift, 9);
+        // "b" has no wall roof: WallsOnly leaves it on its station, the others use the survey.
+        double liftB = plan.Stations.Single(l => l.Text == "b").Position.Z;
+        Assert.Equal(source is LabelRoofSource.WallsOnly or LabelRoofSource.None, liftB == 0.0);
+    }
+
+    [Fact]
+    public void ADocumentWithOnlyTheCombinedRoof_StillLiftsItsLabels()
+    {
+        var meta = Meta([Station("a", 0, 0, 0, entrance: true) with { Roof = 2.0 }]);
+        foreach (var source in new[] { LabelRoofSource.SurveyFirst, LabelRoofSource.WallsFirst, LabelRoofSource.WallsOnly })
+        {
+            var plan = LabelPlanner.Plan(Spec(new LabelsSpec { Roof = source, Stations = new StationLabelSpec { Show = true } }), meta);
+            Assert.True(plan.Stations[0].Position.Z > 2.0, source.ToString());
+        }
     }
 
     [Fact]

@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Therion and Survex 3-D cave models: the CaveModel records and the .lox (Therion loch) and .3d
+    (Survex) readers, plus a .lox writer. No geometry, no Blender, no process starting: the part a
+    server or a web tool can take on its own.
+  -->
+
+  <PropertyGroup>
+    <TargetFrameworks>$(TherionLibraryTargetFrameworks)</TargetFrameworks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Therion.Blender.Tests" />
+  </ItemGroup>
+
+</Project>

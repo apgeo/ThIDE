@@ -1,12 +1,15 @@
-// Tubes skinned over generated centreline graphs: every triangle faces out of the tube (the sides away
-// from the leg axis, the end caps along it), a ring reaches exactly the left, right, up and down wall
-// distances on the observer's own left, right, up and down, and models with nothing in them still give
+// Tubes skinned over generated centreline graphs. Each leg as a tube of its own (JoinTubes off): every
+// triangle faces out of the tube (the sides away from the leg axis, the end caps along it), and a ring reaches
+// exactly the left, right, up and down wall distances on the observer's own left, right, up and down. Joined
+// where legs meet: whatever the legs, no tube is turned inside out. And models with nothing in them still give
 // scene metadata that is valid JSON. Seeds are fixed (Therion.TestSupport.GeneratedRuns).
 
 using System.Text.Json;
-using Therion.Blender.Geometry;
-using Therion.Blender.Parsing;
 using Therion.Blender.Writers;
+using Therion.Cave3D;
+using Therion.Cave3D.Parsing;
+using Therion.CaveGeometry;
+using Therion.CaveGeometry.Writers;
 using Therion.TestSupport;
 
 namespace Therion.Blender.Tests;
@@ -52,6 +55,47 @@ public class TubeMesherPropertyTests
         return legs;
     }
 
+    // Legs that also branch: a leg starts where the last one ended, at any earlier station (a junction), or somewhere
+    // new, and now and then ends on an earlier station (a loop, a leg surveyed twice, a passage doubling back).
+    private static List<Leg> GenerateNetwork(Random random)
+    {
+        var legs = new List<Leg>();
+        var stations = new List<CaveVector3> { new(random.NextDouble() * 1e5, random.NextDouble() * 1e5, random.NextDouble() * 500) };
+        var here = stations[0];
+        int count = random.Next(2, 25);
+        for (int i = 0; i < count; i++)
+        {
+            CaveVector3 to = random.Next(10) switch
+            {
+                0 => here + new CaveVector3(0, 0, (random.NextDouble() - 0.5) * 30),                       // vertical
+                1 => here + new CaveVector3((random.NextDouble() - 0.5) * 2e-3, (random.NextDouble() - 0.5) * 2e-3, 0), // around the cut-off
+                2 => here + new CaveVector3((random.NextDouble() - 0.5) * 2, (random.NextDouble() - 0.5) * 2, (random.NextDouble() - 0.5) * 0.2), // short
+                3 => stations[random.Next(stations.Count)],                                                // back to a station there already is
+                _ => here + new CaveVector3((random.NextDouble() - 0.5) * 40, (random.NextDouble() - 0.5) * 40, (random.NextDouble() - 0.5) * 20),
+            };
+            var flags = random.Next(8) switch
+            {
+                0 => CaveShotFlags.Splay,
+                1 => CaveShotFlags.Surface,
+                2 => CaveShotFlags.Duplicate,
+                3 => CaveShotFlags.NotLrud | CaveShotFlags.NotVisible,
+                _ => CaveShotFlags.None,
+            };
+            var shot = new CaveShot { FromPosition = here, ToPosition = to, Flags = flags, FromLrud = RandomLrud(random), ToLrud = RandomLrud(random) };
+            bool meshed = (flags & (CaveShotFlags.Splay | CaveShotFlags.Surface | CaveShotFlags.Duplicate)) == 0 && (to - here).Length >= 1e-3;
+            legs.Add(new Leg(shot, meshed));
+            stations.Add(to);
+            here = random.Next(5) switch
+            {
+                0 => stations[random.Next(stations.Count)],
+                1 => new CaveVector3(random.NextDouble() * 1e5, random.NextDouble() * 1e5, random.NextDouble() * 500),
+                _ => to,
+            };
+            if (!stations.Contains(here)) stations.Add(here);
+        }
+        return legs;
+    }
+
     // Distances to the four walls: measured, or not (a value at or below zero stands for "not measured"), or absent.
     private static CaveLrud? RandomLrud(Random random) => random.Next(6) switch
     {
@@ -75,7 +119,7 @@ public class TubeMesherPropertyTests
             {
                 // From four sides up. A three-sided section is a triangle whose facets can fold over when the
                 // two ends differ a lot (see A_three_sided_tube_with_the_same_walls_at_both_ends_faces_out).
-                TubeSides = random.Next(4, 13), CapTubes = random.Next(4) != 0,
+                TubeSides = random.Next(4, 13), CapTubes = random.Next(4) != 0, JoinTubes = false,
                 DefaultTubeRadius = 0.2 + random.NextDouble() * 2, DepthTint = false,
             };
 
@@ -118,6 +162,80 @@ public class TubeMesherPropertyTests
         });
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Generated_joined_tubes_are_never_inside_out(bool branching)
+    {
+        GeneratedRuns.ForEachSeed(SeedBase + (branching ? 30_000 : 20_000), 400, seed =>
+        {
+            var random = new Random(seed);
+            var legs = branching ? GenerateNetwork(random) : GenerateLegs(random);
+            var options = new GeometryOptions
+            {
+                // From four sides up, as above: the sides of a three-sided section pass close by the leg, where
+                // two ends that differ a lot fold them over.
+                TubeSides = random.Next(4, 13), CapTubes = random.Next(4) != 0,
+                DefaultTubeRadius = 0.2 + random.NextDouble() * 2, DepthTint = false,
+            };
+
+            var tubes = TubeMesher.Legs(legs.Select(l => l.Shot).ToList(), options);
+            var mesh = TubeMesher.BuildFromLegs(tubes, options);
+            var ends = TubeJoints.Plan(tubes);
+
+            Assert.Equal(legs.Count(l => l.Meshed), tubes.Count);
+            Assert.All(mesh.Vertices, v => Assert.True(double.IsFinite(v.X + v.Y + v.Z), "a vertex is not finite"));
+
+            // Each leg in turn: its walls (two triangles a side, more when it has a rim cut to fit), then the cap of each closed end.
+            int sides = options.TubeSides, next = 0;
+            for (int i = 0; i < tubes.Count; i++)
+            {
+                var axis = (tubes[i].To.Station - tubes[i].From.Station).Normalized();
+                int walls = 2 * sides * Math.Max(ends[2 * i].Steps(sides), ends[2 * i + 1].Steps(sides));
+                string leg = $"leg {i} ({ends[2 * i].Kind} to {ends[2 * i + 1].Kind}, {sides} sides, length {(tubes[i].To.Station - tubes[i].From.Station).Length:0.####} m)";
+
+                // The first triangle of each wall quad is (start, end, next end). Every wall runs on along the leg, and
+                // both rings run counter-clockwise seen from behind it, as the cross-section does. Legs this unlike each
+                // other (a metre of leg between walls five metres off, a crawl leaving a chamber) lean their walls any
+                // way, but a ring that kept its sense with its walls running forward is not inside out.
+                var start = new List<CaveVector3>();
+                var end = new List<CaveVector3>();
+                for (int t = 0; t < walls; t++)
+                {
+                    var tri = mesh.Triangles[next++];
+                    Assert.True(tri.A < mesh.Vertices.Count && tri.B < mesh.Vertices.Count && tri.C < mesh.Vertices.Count, $"{leg}: index out of range");
+                    if (t % 2 != 0) continue;
+                    start.Add(mesh.Vertices[(int)tri.A]);
+                    end.Add(mesh.Vertices[(int)tri.B]);
+                    Assert.True((end[^1] - start[^1]).Dot(axis) > 0, $"{leg}: wall {t / 2} runs back along the leg");
+                }
+                Assert.True(Turn(start).Dot(axis) < 0, $"{leg}: the ring at its start runs the wrong way round");
+                Assert.True(Turn(end).Dot(axis) < 0, $"{leg}: the ring at its end runs the wrong way round");
+
+                if (!options.CapTubes) continue;
+                for (int capped = 2 * i; capped <= 2 * i + 1; capped++)
+                {
+                    if (ends[capped].Kind != TubeEndKind.Closed) continue;
+                    for (int t = 0; t < sides; t++)
+                    {
+                        var tri = mesh.Triangles[next++];
+                        var normal = (mesh.Vertices[(int)tri.B] - mesh.Vertices[(int)tri.A]).Cross(mesh.Vertices[(int)tri.C] - mesh.Vertices[(int)tri.A]);
+                        Assert.True(normal.Dot(axis) * (capped % 2 == 0 ? -1 : 1) > 0, $"{leg}: a cap triangle faces into the tube");
+                    }
+                }
+            }
+            Assert.Equal(mesh.Triangles.Count, next);
+        });
+    }
+
+    /// <summary>Twice the area of a ring, as a vector along its normal: toward the viewer who sees it run counter-clockwise.</summary>
+    private static CaveVector3 Turn(IReadOnlyList<CaveVector3> ring)
+    {
+        var sum = CaveVector3.Zero;
+        for (int i = 0; i < ring.Count; i++) sum += (ring[i] - ring[0]).Cross(ring[(i + 1) % ring.Count] - ring[0]);
+        return sum;
+    }
+
     [Fact]
     public void A_three_sided_tube_with_the_same_walls_at_both_ends_faces_out()
     {
@@ -152,7 +270,7 @@ public class TubeMesherPropertyTests
             var random = new Random(seed);
             var legs = GenerateLegs(random);
             // A multiple of four sides puts a vertex on each of the four wall directions.
-            var options = new GeometryOptions { TubeSides = 4 * random.Next(1, 5), CapTubes = random.Next(2) == 0, DefaultTubeRadius = 0.3 + random.NextDouble() * 2 };
+            var options = new GeometryOptions { TubeSides = 4 * random.Next(1, 5), CapTubes = random.Next(2) == 0, JoinTubes = false, DefaultTubeRadius = 0.3 + random.NextDouble() * 2 };
             int sides = options.TubeSides;
 
             var mesh = TubeMesher.Build(legs.Select(l => l.Shot).ToList(), options);

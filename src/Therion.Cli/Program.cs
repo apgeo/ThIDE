@@ -61,7 +61,17 @@ static void PrintHelp()
     Console.WriteLine("  therion-cli structural <file.th> [--keyword geo] [--declination <deg>|survey] [--format table|csv]");
     Console.WriteLine("                                         Fit geological planes (strike/dip) from 'geo' shots.");
     Console.WriteLine("  therion-cli blender <model.lox|.3d> [--preset \"<name>\" | --spec <spec.json>] [--out <dir>] [--export <dir>] [--blender <path>]");
-    Console.WriteLine("                                         Render (or --export) a Blender presentation of a 3D model, headless.");
+    Console.WriteLine("                     [--draft] [--builder auto|player|generator] [--keep-frames] [--compose-only] [--frames <dir>]");
+    Console.WriteLine("                     [--title <text>] [--credits <text>] [--end-card <text> [--end-card-seconds <n>]] [--caption \"<start>-<end>:<text>\"]…");
+    Console.WriteLine("                                         Render (or --export) a Blender presentation of a 3D model, headless. --draft renders a quick");
+    Console.WriteLine("                                         preview instead. A render with texts over the picture takes two stages: its frames, then the");
+    Console.WriteLine("                                         movie; run again after it was stopped, it goes on. --compose-only writes the movie again from");
+    Console.WriteLine("                                         the frames (kept with --keep-frames) after a text changed.");
+    Console.WriteLine("  therion-cli blender <model.lox|.3d> [--preset \"<name>\" | --spec <spec.json>] --bundle <file.zip|folder> [--draft]");
+    Console.WriteLine("                     [--render [--render-plan full|draft|both]] [--out <dir>] [--blender <path>]");
+    Console.WriteLine("                                         Write a render bundle (scene plan, mesh, player, run scripts) to render with any Blender 4.2+;");
+    Console.WriteLine("                                         --draft adds a quick draft plan, --render renders the bundle here: its draft when it has one,");
+    Console.WriteLine("                                         else the full plan, or what --render-plan names.");
     Console.WriteLine("  therion-cli build <thconfig|folder> [--all] [--therion <path>] [--quiet] [--no-log] [--json] [--stop-on-failure]");
     Console.WriteLine("                                         Compile with Therion and print a summary; exit 0 only if all succeed.");
     Console.WriteLine("  therion-cli new --list                 List project templates (built-in and imported).");

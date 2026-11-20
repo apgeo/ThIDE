@@ -230,10 +230,4 @@ public sealed class BuildTools(IWorkspaceHost host, ITherionCompiler compiler, I
 
     private static ToolResult<BuildResult> Fail(string code, string message) =>
         ToolResult<BuildResult>.Failure(code, message);
-
-    /// <summary>Runs the callback on the reporting thread, so a report has happened by the time it returns.</summary>
-    private sealed class InlineProgress<T>(Action<T> onReport) : IProgress<T>
-    {
-        public void Report(T value) => onReport(value);
-    }
 }

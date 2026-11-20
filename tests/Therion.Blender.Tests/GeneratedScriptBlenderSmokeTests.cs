@@ -17,14 +17,14 @@
 // summary in %TEMP%/thide-blender-smoke/report.md — built for an agent/dev fix loop:
 // patch ScriptGenerator → rerun → read the report.
 
-using System.Diagnostics;
 using System.Text;
 using Therion.Blender;
 using Therion.Blender.Emit;
 using Therion.Blender.Execution;
-using Therion.Blender.Parsing;
 using Therion.Blender.Presets;
 using Therion.Blender.Sources;
+using Therion.Cave3D;
+using Therion.Cave3D.Parsing;
 using Xunit.Abstractions;
 
 namespace Therion.Blender.Tests;
@@ -90,7 +90,8 @@ public class GeneratedScriptBlenderSmokeTests
             string scriptPath = Path.Combine(caseDir, "render.py");
             await File.WriteAllTextAsync(scriptPath, script, new UTF8Encoding(false));
 
-            var (exitCode, log) = await RunBlenderAsync(blender, scriptPath, caseDir);
+            var (exitCode, log) = await BlenderTestProcess.RunAsync(
+                blender, ["--python", scriptPath], caseDir, CaseTimeoutSeconds);
             await File.WriteAllTextAsync(Path.Combine(caseDir, "run.log"), log);
             results.Add(Evaluate(smokeCase, spec, exitCode, log, caseDir));
         }
@@ -187,7 +188,7 @@ public class GeneratedScriptBlenderSmokeTests
         var problems = new List<string>();
         if (exitCode != 0) problems.Add($"exit code {exitCode}");
         if (log.Contains("Traceback (most recent call last)", StringComparison.Ordinal))
-            problems.Add("python traceback: " + ExceptionLine(log));
+            problems.Add("python traceback: " + BlenderTestProcess.ExceptionLine(log));
         if (smokeCase.Purpose == ScriptPurpose.Render)
         {
             if (!log.Contains("THIDE:done=1", StringComparison.Ordinal)) problems.Add("no THIDE:done=1");
@@ -202,61 +203,6 @@ public class GeneratedScriptBlenderSmokeTests
         }
         return new CaseResult(smokeCase.Name, problems.Count == 0,
             problems.Count == 0 ? "ok" : string.Join("; ", problems), caseDir);
-    }
-
-    /// <summary>The first meaningful Python exception line (e.g. "TypeError: …"), for compact reports.</summary>
-    private static string ExceptionLine(string log)
-    {
-        string[] lines = log.Split('\n');
-        int start = Array.FindIndex(lines, l => l.StartsWith("Traceback", StringComparison.Ordinal));
-        if (start < 0) return "?";
-        // The exception line is the first non-indented line after the frames of the (last)
-        // traceback block; Blender prints its own noise after it, so stop at the first hit.
-        for (int i = start + 1; i < lines.Length; i++)
-        {
-            string line = lines[i].TrimEnd();
-            if (line.Length > 0 && !char.IsWhiteSpace(lines[i][0]))
-                return line;
-        }
-        return lines[start].TrimEnd();
-    }
-
-    private static async Task<(int ExitCode, string Log)> RunBlenderAsync(string blender, string scriptPath, string workDir)
-    {
-        var psi = new ProcessStartInfo(blender)
-        {
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            WorkingDirectory = workDir,
-        };
-        // Same argv the runner uses, plus --python-exit-code so an uncaught Python exception
-        // fails the process instead of exiting 0.
-        foreach (var arg in new[] { "-b", "--factory-startup", "--python-exit-code", "64", "--python", scriptPath })
-            psi.ArgumentList.Add(arg);
-        psi.Environment["PYTHONIOENCODING"] = "utf-8";
-
-        var log = new StringBuilder();
-        using var process = new Process { StartInfo = psi };
-        process.OutputDataReceived += (_, e) => { if (e.Data is not null) lock (log) log.AppendLine(e.Data); };
-        process.ErrorDataReceived += (_, e) => { if (e.Data is not null) lock (log) log.AppendLine(e.Data); };
-        process.Start();
-        process.BeginOutputReadLine();
-        process.BeginErrorReadLine();
-
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(CaseTimeoutSeconds));
-        try
-        {
-            await process.WaitForExitAsync(timeout.Token);
-        }
-        catch (OperationCanceledException)
-        {
-            try { process.Kill(entireProcessTree: true); } catch { /* already gone */ }
-            lock (log) log.AppendLine($"[smoke] TIMEOUT after {CaseTimeoutSeconds}s — killed.");
-            return (-2, log.ToString());
-        }
-        return (process.ExitCode, log.ToString());
     }
 
     private static string WriteReport(string root, string blender, string version, List<CaseResult> results)

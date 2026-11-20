@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Finding and running Blender: the locator, the runner that starts Blender headless, progress
+    parsing, disk checks, output collection and the render service. The only part of the Blender
+    libraries that starts a process.
+  -->
+
+  <PropertyGroup>
+    <TargetFrameworks>$(TherionLibraryTargetFrameworks)</TargetFrameworks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Therion.Blender.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Therion.Blender\Therion.Blender.csproj" />
+  </ItemGroup>
+
+</Project>

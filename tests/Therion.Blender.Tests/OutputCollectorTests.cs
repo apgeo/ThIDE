@@ -41,6 +41,25 @@ public class OutputCollectorTests : IDisposable
     }
 
     [Fact]
+    public void ADraftWrittenBesideTheRender_IsNotTheRendersOutput()
+    {
+        // A draft has the render's base name with -draft added, and lies in the same folder.
+        Write("cave.mp4");
+        Write("cave-draft.mp4");
+        foreach (int n in new[] { 1, 2 })
+        {
+            Write($"cave_{n:0000}.png");
+            Write($"cave-draft_{n:0000}.png");
+        }
+
+        Assert.Equal(["cave.mp4"], OutputCollector.Collect(Output(OutputKind.Video), 2).Files.Select(f => Path.GetFileName(f.Path)));
+        Assert.Equal(["cave-draft.mp4"], OutputCollector.Collect(Output(OutputKind.Video, "cave-draft"), 2).Files.Select(f => Path.GetFileName(f.Path)));
+        var frames = OutputCollector.Collect(Output(OutputKind.FrameSequence), 2);
+        Assert.True(frames.Verified);
+        Assert.Equal(["cave_0001.png", "cave_0002.png"], frames.Files.Select(f => Path.GetFileName(f.Path)));
+    }
+
+    [Fact]
     public void Video_WebmExtension_IsMatched()
     {
         Write("cave.webm");

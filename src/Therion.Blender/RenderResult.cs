@@ -26,6 +26,10 @@ public enum RenderFailureKind
     DiskSpace,
     /// <summary>Blender reported success but no output files were found on disk (BA-B11).</summary>
     NoOutput,
+    /// <summary>The render cannot be made with the scene builder that was asked for: the player
+    /// does not carry the scene, or the script generator cannot do what was asked.
+    /// <see cref="RenderResult.NotCarried"/> names what the player does not carry.</summary>
+    BuilderRefused,
 }
 
 /// <summary>Result of a render job.</summary>
@@ -61,4 +65,23 @@ public sealed class RenderResult
 
     /// <summary>Non-fatal notices the script surfaced (label caps, GPU fallback, …).</summary>
     public IReadOnlyList<string> Warnings { get; init; } = [];
+
+    /// <summary>What built the scene, the player or the script generator; null when no scene
+    /// was built, or when whoever made the result does not say.</summary>
+    public SceneBuilder? Builder { get; init; }
+
+    /// <summary>The settings of the spec the player does not carry, as field paths, when they
+    /// decided the builder: with <see cref="SceneBuilder.Auto"/> they are why the script
+    /// generator built the scene, with <see cref="SceneBuilder.Player"/> why the render was
+    /// refused (<see cref="RenderFailureKind.BuilderRefused"/>). Empty otherwise.</summary>
+    public IReadOnlyList<string> NotCarried { get; init; } = [];
+
+    /// <summary>The settings of the spec the render does not show, as field paths: texts only
+    /// the player draws when the script generator built the scene; what the player does not
+    /// carry when it rendered a draft all the same.</summary>
+    public IReadOnlyList<string> LeftOut { get; init; } = [];
+
+    /// <summary>The folder with the frames of a render in two stages, when they are still
+    /// there: they were kept, or the render did not finish and can go on from them.</summary>
+    public string? FramesDirectory { get; init; }
 }

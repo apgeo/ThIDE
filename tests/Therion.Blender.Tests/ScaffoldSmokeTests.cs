@@ -5,6 +5,7 @@
 // them as the module grows.
 
 using Therion.Blender;
+using Therion.Cave3D;
 
 namespace Therion.Blender.Tests;
 

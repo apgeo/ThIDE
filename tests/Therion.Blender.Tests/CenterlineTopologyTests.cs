@@ -2,8 +2,8 @@
 // degree, junction and dead-end classification, per-leg length/azimuth/dip, shortest paths,
 // the counters for what the build lost, and the reduced graph the measures are defined over.
 
-using Therion.Blender;
-using Therion.Blender.Geometry;
+using Therion.Cave3D;
+using Therion.CaveGeometry;
 
 namespace Therion.Blender.Tests;
 

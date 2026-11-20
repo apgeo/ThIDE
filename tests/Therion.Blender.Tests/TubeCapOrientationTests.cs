@@ -1,7 +1,8 @@
 // A capped tube must have a consistent orientation: every triangle, side or cap, wound so
 // its right-hand normal points away from the tube's interior.
 
-using Therion.Blender.Geometry;
+using Therion.Cave3D;
+using Therion.CaveGeometry;
 
 namespace Therion.Blender.Tests;
 

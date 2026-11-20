@@ -20,7 +20,6 @@ public static class BuiltInPresets
         OrbitShowcase(),
         HelixDescent(),
         FullFlythrough(),
-        MapReveal(),
         DocumentationStills(),
     ];
 
@@ -93,8 +92,9 @@ public static class BuiltInPresets
         },
     };
 
-    /// <summary>A near-top-down survey of the cave with component labels revealed over time.
-    /// (A true growing-cave reveal awaits the per-component mesh split — see BA-B8 note.)</summary>
+    /// <summary>A near-top-down orbit with component labels fading in. Not in <see cref="All"/>:
+    /// it reveals only labels, not the cave, so it stays out of the gallery until a real reveal of
+    /// the cave exists.</summary>
     public static RenderPreset MapReveal() => new()
     {
         Name = "Map reveal",

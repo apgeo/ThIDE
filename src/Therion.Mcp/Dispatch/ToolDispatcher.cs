@@ -27,8 +27,8 @@ public sealed record ToolCallOutcome(bool Found, bool Ok, JsonElement Result, st
 public static class TherionMcpCatalog
 {
     /// <summary>The tool classes a host with this profile registers (the same lists as the server).</summary>
-    public static IReadOnlyList<Type> ToolTypes(McpProfile profile, bool includeUi) =>
-        TherionMcpBuilderExtensions.ToolTypes(profile, includeUi);
+    public static IReadOnlyList<Type> ToolTypes(McpProfile profile, bool includeUi, bool includeBlender = false) =>
+        TherionMcpBuilderExtensions.ToolTypes(profile, includeUi, includeBlender);
 
     /// <summary>The services the tools need, with the server's defaults (a host's own registrations win).</summary>
     public static IServiceCollection AddToolServices(this IServiceCollection services)
@@ -44,7 +44,9 @@ public sealed class ToolDispatcher
 
     public ToolDispatcher(IServiceProvider provider, McpProfile profile = McpProfile.Full, bool includeUi = false)
     {
-        foreach (var type in TherionMcpCatalog.ToolTypes(profile, includeUi))
+        // As on the server, the render tools come with a Blender the services provide.
+        bool includeBlender = provider.GetService<IBlenderRenderHost>() is not null;
+        foreach (var type in TherionMcpCatalog.ToolTypes(profile, includeUi, includeBlender))
         {
             object? target = null;
             foreach (var method in type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static))

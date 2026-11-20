@@ -1,8 +1,8 @@
 // Synthesized tubes for a Survex .3d centerline must use the file's measured passage
 // dimensions (XSECT LRUD), not the default radius.
 
-using Therion.Blender.Geometry;
-using Therion.Blender.Parsing;
+using Therion.Cave3D.Parsing;
+using Therion.CaveGeometry;
 
 namespace Therion.Blender.Tests;
 

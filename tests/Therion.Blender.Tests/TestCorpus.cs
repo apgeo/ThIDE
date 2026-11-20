@@ -3,7 +3,7 @@
 // deep-compare CaveModels (record equality alone won't do — records holding
 // IReadOnlyList members compare list references, not elements).
 
-using Therion.Blender;
+using Therion.Cave3D;
 
 namespace Therion.Blender.Tests;
 
