@@ -31,6 +31,50 @@ public class ScenePlanSerializerTests
         Assert.Equal(PlanFixtures.Full().Labels!.Markers!.Items, read.Labels.Markers!.Items);
         Assert.Equal(PlanFixtures.Full().Labels!.Markers!.Pulse, read.Labels.Markers.Pulse);
         Assert.Equal(PlanFixtures.Full().Labels!.Markers!.ByDistance, read.Labels.Markers.ByDistance);
+        var texts = PlanFixtures.Full().Texts!;
+        Assert.Equal((texts.Hold, texts.FromBlack, texts.ToBlack), (read.Texts!.Hold, read.Texts.FromBlack, read.Texts.ToBlack));
+        Assert.Equal(texts.Items.Select(i => i with { Turn = null }), read.Texts.Items.Select(i => i with { Turn = null }));
+        Assert.Equal(texts.Items[3].Turn, read.Texts.Items[3].Turn);
+    }
+
+    [Fact]
+    public void AThingWrittenOverThePicture_TakesOneLine_AndSoDoesEachTurnOfAnArrow()
+    {
+        string json = ScenePlanSerializer.Write(PlanFixtures.Full());
+
+        Assert.Contains(
+            "  \"texts\": {\n" +
+            "    \"hold\": 3,\n" +
+            "    \"fromBlack\": 0.5,\n" +
+            "    \"toBlack\": 1,\n" +
+            "    \"items\": [\n" +
+            "      { \"id\": \"title\", \"role\": \"title\", \"kind\": \"text\", \"at\": [0.5, 0.95], \"text\": \"Peștera \\\"de sus\\\"\", \"size\": 0.06, \"alignY\": \"top\", \"wrap\": 0.6, \"end\": 4.8, \"fadeOut\": 0.8 },\n" +
+            "      { \"id\": \"caption.1\", \"role\": \"caption\", \"kind\": \"text\", \"at\": [0.5, 0.12], \"text\": \"two\\nlines\", \"size\": 0.042, \"alignX\": \"left\", \"alignY\": \"bottom\", \"color\": [1, 0.9, 0.6], \"opacity\": 0.9, \"backing\": true, \"start\": 0.4, \"end\": 1.6, \"fadeIn\": 0.2, \"fadeOut\": 0.2, \"slot\": \"caption\" },\n" +
+            "      { \"id\": \"scale-bar\", \"role\": \"scale-bar\", \"kind\": \"box\", \"at\": [0.15, 0.054], \"width\": 0.2, \"height\": 0.008 },\n" +
+            "      { \"id\": \"north-arrow\", \"role\": \"north-arrow\", \"kind\": \"arrow\", \"at\": [0.9, 0.85], \"text\": \"N\", \"size\": 0.1, \"turn\": [\n" +
+            "        { \"t\": 0, \"degrees\": 30 },\n" +
+            "        { \"t\": 1, \"degrees\": 395.5 },\n" +
+            "        { \"t\": 2, \"degrees\": 380 }\n" +
+            "      ] }\n" +
+            "    ]\n" +
+            "  },\n", json);
+
+        // Times that are nothing are not written.
+        string plain = ScenePlanSerializer.Write(PlanFixtures.Full() with { Texts = new PlanScreenTexts() });
+        Assert.Contains("  \"texts\": {\n    \"items\": []\n  },\n", plain);
+        Assert.False(ScenePlanSerializer.Read(plain).HasTexts);
+    }
+
+    [Fact]
+    public void AMovieWithTexts_IsAsLongAsItsSceneAndTheTimeItsLastFrameIsHeld()
+    {
+        var plan = PlanFixtures.Full();   // 51 frames at 25 fps, held for 3 seconds
+
+        Assert.True(plan.HasTexts);
+        Assert.Equal(51 + 75, plan.OutputFrameCount);
+        Assert.Equal(51, (plan with { Texts = null }).OutputFrameCount);
+        Assert.Equal(1, (plan with { Output = plan.Output with { Kind = PlanOutputKind.Still } }).OutputFrameCount);
+        Assert.True((plan with { Texts = new PlanScreenTexts { FromBlack = 1 } }).HasTexts);
     }
 
     [Fact]
@@ -189,6 +233,9 @@ public class ScenePlanSerializerTests
     [InlineData("\"radius\": 1 }", "\"radius\": 1, \"shape\": \"cube\" }", "labels.markers.items[1].shape")]
     [InlineData("\"period\": 0.56", "\"period\": 0.56, \"ease\": true", "labels.markers.pulse.ease")]
     [InlineData("\"baseName\": \"clip\"", "\"baseName\": \"clip\", \"codec\": \"av1\"", "output.codec")]
+    [InlineData("\"hold\": 3,", "\"hold\": 3, \"music\": \"song.ogg\",", "texts.music")]
+    [InlineData("\"width\": 0.2,", "\"width\": 0.2, \"radius\": 3,", "texts.items[2].radius")]
+    [InlineData("\"degrees\": 380 }", "\"degrees\": 380, \"ease\": 1 }", "texts.items[3].turn[2].ease")]
     public void AnUnknownKeyInsideAKnownSection_IsRefused_ByItsPath(string original, string changed, string path)
     {
         string full = ScenePlanSerializer.Write(PlanFixtures.Full());

@@ -251,10 +251,13 @@ public class SceneProbeTests
 
     // ---- known defects: each states the wanted behaviour and is skipped until it is fixed ----
 
+    // The player does not have this defect: it writes the title over the finished frames, in a
+    // second stage (PlayerTwoStageBlenderTests.Flythrough_TitleIsNeverHiddenByTheWalls). The
+    // script generator is kept as it is.
     [BlenderKnownDefectFact(
-        "the title floats 3 m in front of the camera, so in a flythrough the walls of a narrow passage " +
-        "hide it. Texts that must stay readable belong in a second, 2-D stage.")]
-    public async Task Flythrough_TitleIsNeverHiddenByTheWalls()
+        "in a generated script the title floats 3 m in front of the camera, so in a flythrough the " +
+        "walls of a narrow passage hide it.")]
+    public async Task Flythrough_TitleOfAGeneratedScript_IsNeverHiddenByTheWalls()
     {
         var labels = new LabelsSpec { Overlays = new OverlaySpec { Title = "Invented Cave" } };
         var report = await SceneProbeRunner.RunAsync("flythrough-title", Medium.Value, Flythrough(labels), EveryFrame);

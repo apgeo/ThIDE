@@ -47,6 +47,7 @@ public class PlayerWriterTests : IDisposable
                 "thide_player/modules/look.py",
                 "thide_player/modules/models.py",
                 "thide_player/modules/output.py",
+                "thide_player/modules/texts.py",
                 "thide_player/registry.py",
             ],
             PlayerFiles.JobFiles.Select(f => f.Path).Order(StringComparer.Ordinal));
@@ -86,8 +87,9 @@ public class PlayerWriterTests : IDisposable
     {
         string[] allowed =
         [
-            "argparse", "atexit", "base64", "importlib", "importlib.abc", "importlib.util", "json", "math", "os", "re", "shutil",
-            "sys", "tempfile", "traceback", "bpy", "bmesh", "mathutils", "thide_player", ".", ".registry",
+            "argparse", "atexit", "base64", "hashlib", "importlib", "importlib.abc", "importlib.util", "json", "math", "os", "re",
+            "shutil", "struct", "subprocess", "sys", "tempfile", "traceback", "zlib", "bpy", "bmesh", "mathutils", "thide_player",
+            ".", ".registry",
         ];
         foreach (var file in PlayerFiles.JobFiles)
         {
@@ -181,7 +183,7 @@ public class PlayerWriterTests : IDisposable
                      "thide_player.modules.output", "thide_player.modules.blend_file", "thide_player.modules.labels",
                  })
             Assert.Contains($"    \"{module}\": r'''\n", script);
-        Assert.EndsWith("core.main(os.path.dirname(os.path.abspath(__file__)), PLAN, FILES)\n", script);
+        Assert.EndsWith("core.main(os.path.dirname(os.path.abspath(__file__)), PLAN, FILES, script=os.path.abspath(__file__))\n", script);
         Assert.DoesNotContain('\r', script);
     }
 

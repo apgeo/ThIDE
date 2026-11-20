@@ -4,9 +4,11 @@
 // same look.
 //
 // Station and component labels and lead markers are carried too, placed and sized by the label
-// planner. Not carried, because the player has no module for them: overlays, the visibility
-// events of the labels, the HDRI light rig and the terrain surface. NotCarried lists what a given
-// spec loses.
+// planner, and so are the overlays: the title, the scale bar, the north arrow, the depth legend,
+// the credits and corner lines, the captions and the end card become the plan's texts, laid out
+// by ScreenTextPlanner and drawn in two dimensions over the rendered frames. Not carried, because
+// the player has no module for them: the visibility events of the labels, the HDRI light rig and
+// the terrain surface. NotCarried lists what a given spec loses.
 //
 // Positions and colours are rounded to six decimals before they are written. They come through
 // sin, cos and pow, which agree between platforms only to the last bit; a micrometre is far below
@@ -63,10 +65,14 @@ public static class ScenePlanBuilder
 
         var camera = CameraPlanner.PlanPoses(spec, framing);
         var labels = meta is null ? null : Labels(spec, meta);
+        var texts = ScreenTextPlanner.Plan(spec, camera);
+        var features = ScenePlan.BasicFeatures;
+        if (labels is not null) features = WithFeature(features, ScenePlan.LabelsFeature);
+        if (texts is not null) features = WithFeature(features, ScenePlan.TextsFeature);
         return new ScenePlan
         {
             Name = string.IsNullOrWhiteSpace(spec.Name) ? null : spec.Name,
-            Features = labels is null ? ScenePlan.BasicFeatures : WithFeature(ScenePlan.BasicFeatures, ScenePlan.LabelsFeature),
+            Features = features,
             Frame = new PlanFrame
             {
                 Origin = meta is null ? CaveVector3.Zero : new CaveVector3(meta.Offset.X, meta.Offset.Y, meta.Offset.Z),
@@ -77,6 +83,7 @@ public static class ScenePlanBuilder
             Camera = Camera(camera, spec.Animation.Fps),
             Look = Look(spec, framing.LocalBounds),
             Labels = labels,
+            Texts = texts,
             Output = new PlanOutput
             {
                 Kind = spec.Output.Kind switch
@@ -156,7 +163,8 @@ public static class ScenePlanBuilder
     /// </summary>
     /// <param name="scale">The picture's size as a share of the plan's, above 0 and up to 1.</param>
     /// <remarks>The draft writes beside the real output, under the base name with
-    /// <c>-draft</c> added. It always renders, and does not save the scene as a Blender file.</remarks>
+    /// <c>-draft</c> added. It always renders, and does not save the scene as a Blender file.
+    /// What the plan writes over the picture, the draft writes too.</remarks>
     public static ScenePlan Draft(ScenePlan plan, double scale = 0.5, PlanEngine engine = PlanEngine.Workbench)
     {
         ArgumentNullException.ThrowIfNull(plan);
@@ -206,9 +214,6 @@ public static class ScenePlanBuilder
         ArgumentNullException.ThrowIfNull(spec);
         var lost = new List<string>();
         if (spec.Lighting.Rig == LightingRig.HdriFile) lost.Add("lighting.hdriPath");
-        var overlays = spec.Labels.Overlays;
-        if (!string.IsNullOrWhiteSpace(overlays.Title) || overlays.ScaleBar || overlays.NorthArrow || overlays.DepthLegend)
-            lost.Add("labels.overlays");
         if (spec.Labels.Events.Count > 0) lost.Add("labels.events");
         if (spec.Surface.Mode != SurfaceMode.Off) lost.Add("surface");
         return lost;

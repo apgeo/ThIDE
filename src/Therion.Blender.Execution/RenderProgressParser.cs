@@ -4,6 +4,8 @@
 //
 //   Tier 1 (primary): our generated script's `THIDE:key=value` lines (phase/frames/frame/
 //     device/output/error/done/render-cancel). See the key list atop Emit/ScriptGenerator.cs.
+//     The player adds phase=compose (the second stage of a render in two stages: the frames
+//     that follow are composed, not rendered) and resumed=n/m.
 //   Tier 2 (fallback): Blender's own `Fra:N …` lines, used ONLY while tier 1 is silent
 //     (a user-edited script) — total comes from the expected frame count seeded here.
 //   Tier 3 (spinner): a null-Fraction tick the runner emits at start; not this class.
@@ -20,6 +22,7 @@ public sealed partial class RenderProgressParser
     private readonly List<string> _warnings = [];
     private int _lastNativeFrame = -1;
     private bool _inTraceback;
+    private RenderPhase _phase = RenderPhase.Rendering;
 
     /// <param name="expectedFrameCount">Total frames the render should produce, so the tier-2
     /// native fallback can compute a fraction (tier 1 carries its own total).</param>
@@ -50,6 +53,10 @@ public sealed partial class RenderProgressParser
     public int? FrameCount { get; private set; }
 
     public int? CurrentFrame { get; private set; }
+
+    /// <summary>The frames that were there already when a first stage went on where an earlier
+    /// one had stopped (<c>THIDE:resumed</c>); null when it started from nothing.</summary>
+    public int? ResumedFrames { get; private set; }
 
     /// <summary>Non-fatal notices the script surfaced (label caps, missing HDRI, …).</summary>
     public IReadOnlyList<string> Warnings => _warnings;
@@ -94,7 +101,11 @@ public sealed partial class RenderProgressParser
         var value = body[(eq + 1)..].Trim();
 
         if (key.SequenceEqual("phase"))
-            return new RenderProgress(RenderPhase.Rendering, PhaseMessage(value), Device: Device);
+        {
+            // The second stage of a render in two stages: its frames are composed, not rendered.
+            if (value.SequenceEqual("compose")) _phase = RenderPhase.Composing;
+            return new RenderProgress(_phase, PhaseMessage(value), Device: Device);
+        }
 
         if (key.SequenceEqual("device"))
         {
@@ -117,6 +128,14 @@ public sealed partial class RenderProgressParser
         if (key.SequenceEqual("done")) { Done = true; return null; }
         if (key.SequenceEqual("render-cancel")) { Cancelled = true; return null; }
         if (key.SequenceEqual("warning") || key.SequenceEqual("label-cap")) { _warnings.Add(value.ToString()); return null; }
+        if (key.SequenceEqual("resumed"))
+        {
+            // A first stage that goes on where an earlier one stopped: n of m frames are there.
+            int slash = value.IndexOf('/');
+            if (slash > 0 && int.TryParse(value[..slash], NumberStyles.Integer, CultureInfo.InvariantCulture, out int there))
+                ResumedFrames = there;
+            return null;
+        }
 
         return null; // spec-hash / blender / triangles: informational
     }
@@ -131,7 +150,8 @@ public sealed partial class RenderProgressParser
         CurrentFrame = n;
         FrameCount = m;
         double? fraction = m > 0 ? Math.Clamp((double)n / m, 0.0, 1.0) : null;
-        return new RenderProgress(RenderPhase.Rendering, $"Rendering frame {n} of {m}", fraction, n, m, Device: Device);
+        string doing = _phase == RenderPhase.Composing ? "Composing" : "Rendering";
+        return new RenderProgress(_phase, $"{doing} frame {n} of {m}", fraction, n, m, Device: Device);
     }
 
     private RenderProgress? ParseNative(string line)
@@ -155,6 +175,7 @@ public sealed partial class RenderProgressParser
         _ when phase.SequenceEqual("import") => "Importing model",
         _ when phase.SequenceEqual("engine") => "Configuring engine",
         _ when phase.SequenceEqual("render") => "Rendering",
+        _ when phase.SequenceEqual("compose") => "Composing the output",
         _ => "Working",
     };
 

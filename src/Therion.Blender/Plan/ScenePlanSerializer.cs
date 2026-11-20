@@ -1,7 +1,7 @@
 // scene-plan.json reading and writing. camelCase keys, enums as camelCase words, vectors and
-// colours as [x, y, z] and [r, g, b]. A camera pose, a colour stop, a text and a marker take one
-// line each, so a track of a thousand poses is a thousand lines a person can still read and
-// compare. Lines end
+// colours as [x, y, z] and [r, g, b]. A camera pose, a colour stop, a text, a marker, a thing
+// written over the picture and a turn of its arrow take one line each, so a track of a thousand
+// poses is a thousand lines a person can still read and compare. Lines end
 // in LF on every platform, and numbers are written the same under every culture, so the same plan
 // is the same bytes everywhere.
 //
@@ -45,16 +45,25 @@ public static class ScenePlanSerializer
             new ColorStopConverter(),
             new TextConverter(),
             new MarkerConverter(),
+            new PointConverter(),
+            new ScreenItemConverter(),
         },
     };
 
     /// <summary>An output renders unless it says otherwise, so "render" is written only when
-    /// it is false.</summary>
+    /// it is false; the times of the texts as a whole are written only when they are not zero.</summary>
     private static void WriteRenderOnlyWhenOff(JsonTypeInfo type)
     {
-        if (type.Type != typeof(PlanOutput)) return;
-        foreach (var property in type.Properties)
-            if (property.Name == "render") property.ShouldSerialize = (_, value) => value is false;
+        if (type.Type == typeof(PlanOutput))
+        {
+            foreach (var property in type.Properties)
+                if (property.Name == "render") property.ShouldSerialize = (_, value) => value is false;
+        }
+        else if (type.Type == typeof(PlanScreenTexts))
+        {
+            foreach (var property in type.Properties)
+                if (property.Name is "hold" or "fromBlack" or "toBlack") property.ShouldSerialize = (_, value) => value is not 0.0;
+        }
     }
 
     public static string Write(ScenePlan plan)
@@ -153,6 +162,8 @@ public static class ScenePlanSerializer
     private const string TrackIndent = "\n      ";
     private const string StopsIndent = "\n          ";
     private const string LabelIndent = "\n        ";
+    private const string ScreenIndent = "\n      ";
+    private const string TurnIndent = "\n        ";
 
     private static string Num(double value)
     {
@@ -299,5 +310,115 @@ public static class ScenePlanSerializer
             writer.WriteRawValue(
                 $"{LabelIndent}{{ \"id\": {Quoted(value.Id, options)}{role}, \"at\": {Text(value.At)}, \"radius\": {Num(value.Radius)} }}");
         }
+    }
+
+    private sealed class PointConverter : JsonConverter<PlanPoint>
+    {
+        public override PlanPoint Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options)
+        {
+            const string expected = "Expected an array of two numbers.";
+            if (reader.TokenType != JsonTokenType.StartArray) throw new JsonException(expected);
+            Span<double> values = stackalloc double[2];
+            for (int i = 0; i < 2; i++)
+            {
+                if (!reader.Read() || reader.TokenType != JsonTokenType.Number) throw new JsonException(expected);
+                values[i] = reader.GetDouble();
+            }
+            if (!reader.Read() || reader.TokenType != JsonTokenType.EndArray) throw new JsonException(expected);
+            return new PlanPoint(values[0], values[1]);
+        }
+
+        public override void Write(Utf8JsonWriter writer, PlanPoint value, JsonSerializerOptions options)
+            => writer.WriteRawValue($"[{Num(value.X)}, {Num(value.Y)}]");
+    }
+
+    private sealed record TurnJson
+    {
+        public required double T { get; init; }
+        public required double Degrees { get; init; }
+    }
+
+    private sealed record ScreenItemJson
+    {
+        public required string Id { get; init; }
+        public string? Role { get; init; }
+        public required PlanScreenItemKind Kind { get; init; }
+        public required PlanPoint At { get; init; }
+        public string? Text { get; init; }
+        public double? Size { get; init; }
+        public double? Width { get; init; }
+        public double? Height { get; init; }
+        public PlanAlignX AlignX { get; init; } = PlanAlignX.Center;
+        public PlanAlignY AlignY { get; init; } = PlanAlignY.Center;
+        public ColorRgb? Color { get; init; }
+        public double? Opacity { get; init; }
+        public bool Backing { get; init; }
+        public double? Wrap { get; init; }
+        public double? Start { get; init; }
+        public double? End { get; init; }
+        public double? FadeIn { get; init; }
+        public double? FadeOut { get; init; }
+        public List<TurnJson>? Turn { get; init; }
+        public string? Slot { get; init; }
+    }
+
+    private sealed class ScreenItemConverter : JsonConverter<PlanScreenItem>
+    {
+        public override PlanScreenItem Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options)
+        {
+            var item = JsonSerializer.Deserialize<ScreenItemJson>(ref reader, options)
+                       ?? throw new JsonException("Expected a thing written over the picture.");
+            return new PlanScreenItem
+            {
+                Id = item.Id, Role = item.Role, Kind = item.Kind, At = item.At, Text = item.Text, Size = item.Size,
+                Width = item.Width, Height = item.Height, AlignX = item.AlignX, AlignY = item.AlignY, Color = item.Color,
+                Opacity = item.Opacity, Backing = item.Backing, Wrap = item.Wrap, Start = item.Start, End = item.End,
+                FadeIn = item.FadeIn, FadeOut = item.FadeOut, Slot = item.Slot,
+                Turn = item.Turn?.Select(t => new PlanTurn(t.T, t.Degrees)).ToList(),
+            };
+        }
+
+        public override void Write(Utf8JsonWriter writer, PlanScreenItem value, JsonSerializerOptions options)
+        {
+            var line = new StringBuilder(ScreenIndent);
+            line.Append("{ \"id\": ").Append(Quoted(value.Id, options));
+            if (value.Role is { } role) line.Append(", \"role\": ").Append(Quoted(role, options));
+            line.Append(", \"kind\": ").Append(Quoted(Word(value.Kind), options));
+            line.Append(", \"at\": [").Append(Num(value.At.X)).Append(", ").Append(Num(value.At.Y)).Append(']');
+            if (value.Text is { } text) line.Append(", \"text\": ").Append(Quoted(text, options));
+            Number("size", value.Size);
+            Number("width", value.Width);
+            Number("height", value.Height);
+            if (value.AlignX != PlanAlignX.Center) line.Append(", \"alignX\": ").Append(Quoted(Word(value.AlignX), options));
+            if (value.AlignY != PlanAlignY.Center) line.Append(", \"alignY\": ").Append(Quoted(Word(value.AlignY), options));
+            if (value.Color is { } color) line.Append(", \"color\": ").Append(Text(color));
+            Number("opacity", value.Opacity);
+            if (value.Backing) line.Append(", \"backing\": true");
+            Number("wrap", value.Wrap);
+            Number("start", value.Start);
+            Number("end", value.End);
+            Number("fadeIn", value.FadeIn);
+            Number("fadeOut", value.FadeOut);
+            if (value.Slot is { } slot) line.Append(", \"slot\": ").Append(Quoted(slot, options));
+            if (value.Turn is { } turns)
+            {
+                line.Append(", \"turn\": [");
+                for (int i = 0; i < turns.Count; i++)
+                    line.Append(i == 0 ? "" : ",").Append(TurnIndent)
+                        .Append("{ \"t\": ").Append(Num(turns[i].T)).Append(", \"degrees\": ").Append(Num(turns[i].Degrees)).Append(" }");
+                line.Append(turns.Count == 0 ? "]" : ScreenIndent + "]");
+            }
+            line.Append(" }");
+            writer.WriteRawValue(line.ToString());
+
+            void Number(string key, double? number)
+            {
+                if (number is { } n) line.Append(", \"").Append(key).Append("\": ").Append(Num(n));
+            }
+        }
+
+        /// <summary>An enum's word as the rest of the document writes it.</summary>
+        private static string Word<T>(T value) where T : struct, Enum
+            => JsonNamingPolicy.CamelCase.ConvertName(value.ToString());
     }
 }

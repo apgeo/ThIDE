@@ -112,6 +112,33 @@ internal static class PlanFixtures
                 ],
             },
         },
+        Texts = new PlanScreenTexts
+        {
+            Hold = 3, FromBlack = 0.5, ToBlack = 1,
+            Items =
+            [
+                new PlanScreenItem
+                {
+                    Id = "title", Role = "title", Kind = PlanScreenItemKind.Text, At = new PlanPoint(0.5, 0.95), Text = "Peștera \"de sus\"",
+                    Size = 0.06, AlignY = PlanAlignY.Top, Wrap = 0.6, End = 4.8, FadeOut = 0.8,
+                },
+                new PlanScreenItem
+                {
+                    Id = "caption.1", Role = "caption", Kind = PlanScreenItemKind.Text, At = new PlanPoint(0.5, 0.12), Text = "two\nlines",
+                    Size = 0.042, AlignX = PlanAlignX.Left, AlignY = PlanAlignY.Bottom, Color = new ColorRgb(1, 0.9, 0.6), Opacity = 0.9,
+                    Backing = true, Start = 0.4, End = 1.6, FadeIn = 0.2, FadeOut = 0.2, Slot = "caption",
+                },
+                new PlanScreenItem
+                {
+                    Id = "scale-bar", Role = "scale-bar", Kind = PlanScreenItemKind.Box, At = new PlanPoint(0.15, 0.054), Width = 0.2, Height = 0.008,
+                },
+                new PlanScreenItem
+                {
+                    Id = "north-arrow", Role = "north-arrow", Kind = PlanScreenItemKind.Arrow, At = new PlanPoint(0.9, 0.85), Size = 0.1, Text = "N",
+                    Turn = [new PlanTurn(0, 30), new PlanTurn(1, 395.5), new PlanTurn(2, 380)],
+                },
+            ],
+        },
         Output = new PlanOutput { Kind = PlanOutputKind.Video, Container = PlanContainer.Webm, Directory = "out", BaseName = "clip" },
         Blend = new PlanBlendFile { Path = "project/scene.blend" },
     };

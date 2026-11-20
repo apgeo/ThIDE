@@ -595,7 +595,7 @@ public class ScenePlanBuilderTests
             Surface = new SurfaceSpec { Mode = SurfaceMode.Textured },
         };
 
-        Assert.Equal(["lighting.hdriPath", "labels.overlays", "labels.events", "surface"], ScenePlanBuilder.NotCarried(spec));
+        Assert.Equal(["lighting.hdriPath", "labels.events", "surface"], ScenePlanBuilder.NotCarried(spec));
         Assert.Empty(ScenePlanBuilder.NotCarried(new SceneSpec()));
         Assert.All(BuiltInPresets.All, preset => Assert.Empty(ScenePlanBuilder.NotCarried(preset.Spec)));
     }

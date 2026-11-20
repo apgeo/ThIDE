@@ -235,8 +235,69 @@ public class ScenePlanValidatorTests
         AssertBad(Full with { Blend = new PlanBlendFile { Path = "scene.blend1" } }, "blend.path");
         AssertBad(Full with { Blend = new PlanBlendFile { Path = "" } }, "blend.path");
         AssertBad(Full with { Features = ScenePlan.BasicFeatures }, "blend");
-        Assert.Empty(ScenePlanValidator.Validate(Full with { Blend = null, Labels = null, Features = ScenePlan.BasicFeatures }));
+        Assert.Empty(ScenePlanValidator.Validate(Full with { Blend = null, Labels = null, Texts = null, Features = ScenePlan.BasicFeatures }));
         Assert.Empty(ScenePlanValidator.Validate(Full with { Blend = new PlanBlendFile { Path = "Scene.BLEND" }, Output = Full.Output with { Render = false } }));
+    }
+
+    // ---- what is written over the picture ----
+
+    private static ScenePlan WithItem(Func<PlanScreenItem, PlanScreenItem> change, int index = 0)
+    {
+        var items = Full.Texts!.Items.ToList();
+        items[index] = change(items[index]);
+        return Full with { Texts = Full.Texts with { Items = items } };
+    }
+
+    [Fact]
+    public void Texts_NeedTheirModule_AndTimesThatAreNotNegative()
+    {
+        AssertBad(Full with { Features = Full.Features.Where(f => f != ScenePlan.TextsFeature).ToList() }, "texts");
+        AssertBad(Full with { Texts = Full.Texts! with { Hold = -1 } }, "texts.hold");
+        AssertBad(Full with { Texts = Full.Texts! with { FromBlack = double.NaN } }, "texts.fromBlack");
+        AssertBad(Full with { Texts = Full.Texts! with { ToBlack = -0.5 } }, "texts.toBlack");
+        Assert.Empty(ScenePlanValidator.Validate(Full with { Texts = new PlanScreenTexts() }));
+    }
+
+    [Fact]
+    public void AnItem_HasAnIdOfItsOwn_APlaceInThePicture_AndWhatItsKindNeeds()
+    {
+        AssertBad(WithItem(i => i with { Id = "" }), "texts.items[0].id");
+        AssertBad(WithItem(i => i with { Id = "caption.1" }), "texts.items[1].id");
+        AssertBad(WithItem(i => i with { Role = "Title Card" }), "texts.items[0].role");
+        AssertBad(WithItem(i => i with { Slot = "a b" }), "texts.items[0].slot");
+        AssertBad(WithItem(i => i with { At = new PlanPoint(1.2, 0.5) }), "texts.items[0].at");
+        AssertBad(WithItem(i => i with { At = new PlanPoint(0.5, double.NaN) }), "texts.items[0].at");
+
+        AssertBad(WithItem(i => i with { Text = null }), "texts.items[0].text");
+        AssertBad(WithItem(i => i with { Size = null }), "texts.items[0].size");
+        AssertBad(WithItem(i => i with { Size = 1.5 }), "texts.items[0].size");
+        AssertBad(WithItem(i => i with { Wrap = 0 }), "texts.items[0].wrap");
+        AssertBad(WithItem(i => i with { Width = null }, 2), "texts.items[2].width");
+        AssertBad(WithItem(i => i with { Height = 0 }, 2), "texts.items[2].height");
+        AssertBad(WithItem(i => i with { Size = null }, 3), "texts.items[3].size");
+        AssertBad(WithItem(i => i with { Kind = (PlanScreenItemKind)9 }), "texts.items[0].kind");
+    }
+
+    [Fact]
+    public void AnItem_ShowsForATimeThatEndsAfterItStarts_InAColourAndAnOpacityWithinRange()
+    {
+        AssertBad(WithItem(i => i with { Start = -1 }), "texts.items[0].start");
+        AssertBad(WithItem(i => i with { Start = 5, End = 5 }), "texts.items[0].end");
+        AssertBad(WithItem(i => i with { End = 0 }), "texts.items[0].end");
+        AssertBad(WithItem(i => i with { FadeIn = -0.1 }), "texts.items[0].fadeIn");
+        AssertBad(WithItem(i => i with { FadeOut = double.PositiveInfinity }), "texts.items[0].fadeOut");
+        AssertBad(WithItem(i => i with { Color = new ColorRgb(1.5, 0, 0) }), "texts.items[0].color");
+        AssertBad(WithItem(i => i with { Opacity = 1.1 }), "texts.items[0].opacity");
+    }
+
+    [Fact]
+    public void OnlyAnArrowTurns_AtTimesInRisingOrder()
+    {
+        AssertBad(WithItem(i => i with { Turn = [new PlanTurn(0, 0)] }), "texts.items[0].turn");
+        AssertBad(WithItem(i => i with { Turn = [new PlanTurn(1, 0), new PlanTurn(1, 10)] }, 3), "texts.items[3].turn[1].t");
+        AssertBad(WithItem(i => i with { Turn = [new PlanTurn(-1, 0)] }, 3), "texts.items[3].turn[0].t");
+        AssertBad(WithItem(i => i with { Turn = [new PlanTurn(0, double.NaN)] }, 3), "texts.items[3].turn[0].degrees");
+        Assert.Empty(ScenePlanValidator.Validate(WithItem(i => i with { Turn = null, Text = null }, 3)));
     }
 
     [Fact]

@@ -56,6 +56,12 @@ public static partial class ScenePlanValidator
             NeedsFeature(plan, "labels", ScenePlan.LabelsFeature, Bad);
         }
 
+        if (plan.Texts is { } texts)
+        {
+            ValidateTexts(texts, Bad);
+            NeedsFeature(plan, "texts", ScenePlan.TextsFeature, Bad);
+        }
+
         // ---- output ----
         if (string.IsNullOrWhiteSpace(plan.Output.Directory))
             Bad("output.directory", "An output directory is required ('.' is the plan's own folder).");
@@ -280,6 +286,87 @@ public static partial class ScenePlanValidator
                 if (!IsFinite(marker.At)) bad(path + ".at", "The position must be finite.");
                 if (!(marker.Radius > 0) || !double.IsFinite(marker.Radius)) bad(path + ".radius", "The radius of a marker must be positive.");
             }
+        }
+    }
+
+    private static void ValidateTexts(PlanScreenTexts texts, Action<string, string> bad)
+    {
+        void Seconds(double value, string path, string what)
+        {
+            if (!(value >= 0) || !double.IsFinite(value))
+                bad(path, $"{what} is in seconds, not negative.");
+        }
+        static bool IsShare(double? value) => value is { } v && v > 0 && v <= 1;
+
+        Seconds(texts.Hold, "texts.hold", "The time the last frame is held");
+        Seconds(texts.FromBlack, "texts.fromBlack", "The time out of black");
+        Seconds(texts.ToBlack, "texts.toBlack", "The time to black");
+
+        var ids = new HashSet<string>(StringComparer.Ordinal);
+        for (int i = 0; i < texts.Items.Count; i++)
+        {
+            var item = texts.Items[i];
+            string path = $"texts.items[{i}]";
+            if (item is null)
+            {
+                bad(path, "An item is missing.");
+                continue;
+            }
+            if (string.IsNullOrWhiteSpace(item.Id))
+                bad(path + ".id", "An item needs an id.");
+            else if (!ids.Add(item.Id))
+                bad(path + ".id", $"The id '{item.Id}' is used twice.");
+            if (item.Role is not null && !RoleName().IsMatch(item.Role))
+                bad(path + ".role", "A role is lower-case letters and digits, in words joined by '-'.");
+            if (item.Slot is not null && !RoleName().IsMatch(item.Slot))
+                bad(path + ".slot", "A slot is lower-case letters and digits, in words joined by '-'.");
+            if (!(item.At.X >= 0 && item.At.X <= 1 && item.At.Y >= 0 && item.At.Y <= 1))
+                bad(path + ".at", "A place in the picture is two numbers within 0–1: from the left edge and from the bottom edge.");
+
+            switch (item.Kind)
+            {
+                case PlanScreenItemKind.Text:
+                    if (string.IsNullOrEmpty(item.Text)) bad(path + ".text", "A text needs what it says.");
+                    if (!IsShare(item.Size)) bad(path + ".size", "The height of a text's letters is a share of the picture's height, above 0 and at most 1.");
+                    if (item.Wrap is not null && !IsShare(item.Wrap)) bad(path + ".wrap", "The widest line is a share of the picture's width, above 0 and at most 1.");
+                    break;
+                case PlanScreenItemKind.Box:
+                    if (!IsShare(item.Width)) bad(path + ".width", "The width of a box is a share of the picture's width, above 0 and at most 1.");
+                    if (!IsShare(item.Height)) bad(path + ".height", "The height of a box is a share of the picture's height, above 0 and at most 1.");
+                    break;
+                case PlanScreenItemKind.Arrow:
+                    if (!IsShare(item.Size)) bad(path + ".size", "The length of an arrow is a share of the picture's height, above 0 and at most 1.");
+                    break;
+                default:
+                    bad(path + ".kind", "An item is a text, a box or an arrow.");
+                    break;
+            }
+            if (item.Turn is { } turns)
+            {
+                if (item.Kind != PlanScreenItemKind.Arrow)
+                    bad(path + ".turn", "Only an arrow turns.");
+                double last = double.NegativeInfinity;
+                for (int k = 0; k < turns.Count; k++)
+                {
+                    if (!(turns[k].T >= 0) || !double.IsFinite(turns[k].T))
+                        bad($"{path}.turn[{k}].t", "A time is in seconds from the start, not negative.");
+                    else if (!(turns[k].T > last))
+                        bad($"{path}.turn[{k}].t", "Turns are in rising order of time.");
+                    if (double.IsFinite(turns[k].T)) last = Math.Max(last, turns[k].T);
+                    if (!double.IsFinite(turns[k].Degrees))
+                        bad($"{path}.turn[{k}].degrees", "The angle must be finite.");
+                }
+            }
+
+            if (item.Color is { } color && !IsUnitColor(color))
+                bad(path + ".color", "Colour channels must be within 0–1.");
+            if (item.Opacity is { } opacity && !(opacity >= 0 && opacity <= 1))
+                bad(path + ".opacity", "Opacity must be within 0–1.");
+            if (item.Start is { } start) Seconds(start, path + ".start", "The time an item appears");
+            if (item.End is { } end && !(end > (item.Start ?? 0.0) && double.IsFinite(end)))
+                bad(path + ".end", "An item goes after it appears.");
+            if (item.FadeIn is { } fadeIn) Seconds(fadeIn, path + ".fadeIn", "The time an item takes to appear");
+            if (item.FadeOut is { } fadeOut) Seconds(fadeOut, path + ".fadeOut", "The time an item takes to go");
         }
     }
 

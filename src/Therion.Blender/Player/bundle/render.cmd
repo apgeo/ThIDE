@@ -3,6 +3,12 @@ rem Renders the scene of this folder with Blender 4.2 or newer.
 rem
 rem   render.cmd            the scene as planned (scene-plan.json)
 rem   render.cmd --draft    a quick draft of it (scene-plan.draft.json), when the bundle has one
+rem   render.cmd --compose  the output again from the frames that are there: after a text of the
+rem                         plan was changed (a title, a caption), nothing is rendered again
+rem
+rem A scene with texts over the picture is rendered in two stages: its frames first, into "frames"
+rem beside this script, then the output from them. A render that was stopped goes on where it
+rem stopped when this script is started again.
 rem
 rem What it writes goes to the folder the plan names, "out" beside this script. Blender is looked
 rem for on the PATH and in "%ProgramFiles%\Blender Foundation"; to use another one, name it in
@@ -22,13 +28,19 @@ exit /b 1
 
 :found
 set "PLAN=%HERE%scene-plan.json"
+set "STAGE=all"
+:options
+if /i "%~1"=="--compose" goto compose
 if /i not "%~1"=="--draft" goto arguments
 set "PLAN=%HERE%scene-plan.draft.json"
-if exist "%PLAN%" goto draft
+if exist "%PLAN%" goto option
 echo This bundle has no draft (scene-plan.draft.json). 1>&2
 exit /b 1
-:draft
+:compose
+set "STAGE=compose"
+:option
 shift
+goto options
 
 :arguments
 set ARGS=
@@ -39,5 +51,5 @@ shift
 goto next
 
 :run
-"%BLENDER%" -b --factory-startup --python-exit-code 64 --python "%HERE%render.py" -- --plan "%PLAN%" %ARGS%
+"%BLENDER%" -b --factory-startup --python-exit-code 64 --python "%HERE%render.py" -- --plan "%PLAN%" --stage %STAGE% %ARGS%
 exit /b %ERRORLEVEL%

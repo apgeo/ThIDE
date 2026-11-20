@@ -3,6 +3,12 @@
 #
 #   sh render.sh            the scene as planned (scene-plan.json)
 #   sh render.sh --draft    a quick draft of it (scene-plan.draft.json), when the bundle has one
+#   sh render.sh --compose  the output again from the frames that are there: after a text of the
+#                           plan was changed (a title, a caption), nothing is rendered again
+#
+# A scene with texts over the picture is rendered in two stages: its frames first, into "frames"
+# beside this script, then the output from them. A render that was stopped goes on where it
+# stopped when this script is started again.
 #
 # What it writes goes to the folder the plan names, "out" beside this script. Blender is looked
 # for on the PATH, and in /Applications on a Mac; to use another one, name it in BLENDER:
@@ -23,12 +29,17 @@ if [ -z "$BLENDER" ]; then
     fi
 fi
 PLAN="$HERE/scene-plan.json"
-if [ "$1" = "--draft" ]; then
-    PLAN="$HERE/scene-plan.draft.json"
-    if [ ! -f "$PLAN" ]; then
-        echo "This bundle has no draft (scene-plan.draft.json)." >&2
-        exit 1
+STAGE=all
+while [ "$1" = "--draft" ] || [ "$1" = "--compose" ]; do
+    if [ "$1" = "--compose" ]; then
+        STAGE=compose
+    else
+        PLAN="$HERE/scene-plan.draft.json"
+        if [ ! -f "$PLAN" ]; then
+            echo "This bundle has no draft (scene-plan.draft.json)." >&2
+            exit 1
+        fi
     fi
     shift
-fi
-exec "$BLENDER" -b --factory-startup --python-exit-code 64 --python "$HERE/render.py" -- --plan "$PLAN" "$@"
+done
+exec "$BLENDER" -b --factory-startup --python-exit-code 64 --python "$HERE/render.py" -- --plan "$PLAN" --stage "$STAGE" "$@"

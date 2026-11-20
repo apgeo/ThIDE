@@ -1,6 +1,11 @@
 """Feature "output": what the render writes (a video, numbered frames or one still), and the
 render itself, with its progress reported frame by frame. With "render": false the output is set
 up and nothing is rendered: the plan is for a scene that is saved and rendered later.
+
+In a render of two stages the first stage writes the scene as PNG frames into the frames folder
+instead, and leaves alone the frames that are there already, so a render that was stopped goes on
+where it stopped. The second stage puts those frames into the video editor, under whatever other
+modules lay over them, and writes the output from there.
 """
 
 import os
@@ -11,6 +16,11 @@ from thide_player import api
 
 SECTION = "output"
 KEYS = {"kind": None, "container": None, "directory": None, "baseName": None, "render": None}
+# Where the output goes and what it is called changes no frame of the first stage.
+IN_FRAMES = False
+
+# The channel of the video editor the frames lie on; everything else lies over them.
+FRAMES_CHANNEL = 1
 
 CONTAINERS = {"mp4": ("MPEG4", ".mp4"), "mkv": ("MKV", ".mkv"), "webm": ("WEBM", ".webm")}
 
@@ -70,9 +80,42 @@ def render(ctx, output):
     scene = ctx.scene
     if scene.camera is None:
         raise api.PlanError('there is no camera to render through; the plan\'s "features" need "camera_track"')
+    if ctx.frames is not None:
+        render_frames(ctx, output)
+        return
     os.makedirs(os.path.dirname(scene.render.filepath), exist_ok=True)
-    total = ctx.frame_count
+    api.report("phase", "render")
+    render_reporting(scene, ctx.frame_count, still=output["kind"] == "still")
+    api.report("output", scene.render.filepath)
 
+
+def render_frames(ctx, output):
+    """The first of two stages: the scene as PNG frames in the frames folder. A frame that is
+    there is not rendered again; Blender marks the one it is at with an empty file."""
+    scene = ctx.scene
+    count = 1 if output["kind"] == "still" else ctx.frame_count
+    there = ctx.frames.begin(count)
+    set_png(scene)
+    scene.render.filepath = ctx.frames.pattern
+    scene.render.use_file_extension = True
+    scene.render.use_overwrite = False
+    scene.render.use_placeholder = True
+    scene.frame_start, scene.frame_end = 1, count
+    api.report("phase", "render")
+    if there:
+        api.report("resumed", "%d/%d" % (there, count))
+    if there < count:
+        render_reporting(scene, count, still=False)
+    else:
+        api.report("frames", count)
+    missing = ctx.frames.missing()
+    if missing:
+        raise api.PlanError("the render stopped with %d of %d frames to go" % (len(missing), count))
+    api.report("frames-folder", ctx.frames.folder)
+
+
+def render_reporting(scene, total, still):
+    """Renders, and reports every frame as it is written."""
     # Blender has changed what it passes to handlers; take anything.
     def frame_written(*_):
         api.report("frame", "%d/%d" % (bpy.context.scene.frame_current, total))
@@ -82,14 +125,46 @@ def render(ctx, output):
 
     bpy.app.handlers.render_write.append(frame_written)
     bpy.app.handlers.render_cancel.append(cancelled)
-    api.report("phase", "render")
     api.report("frames", total)
     try:
-        if output["kind"] == "still":
+        if still:
             bpy.ops.render.render(write_still=True)
         else:
             bpy.ops.render.render(animation=True)
     finally:
         bpy.app.handlers.render_write.remove(frame_written)
         bpy.app.handlers.render_cancel.remove(cancelled)
+
+
+# ---- the second stage ----
+
+def compose(ctx, output):
+    """Lays the frames of the first stage into the video editor, as large as they are. The scene's
+    picture has their size already."""
+    if not output:
+        raise api.PlanError('the plan has no "output"')
+    scene = ctx.scene
+    frames = ctx.frames
+    count = 1 if output.get("kind") == "still" else ctx.frame_count
+    frames.expect(count, "output")
+    build(ctx, output)
+
+    strip = api.image_strip(scene, "Frames", frames.path(1), FRAMES_CHANNEL, 1)
+    for number in range(2, count + 1):
+        strip.elements.append(os.path.basename(frames.path(number)))
+
+
+def finish(ctx, output):
+    """Writes the output from the video editor, when every module has put its strips there. A
+    scene that goes on after its last frame (a card at the end) shows that frame meanwhile."""
+    scene = ctx.scene
+    still = output["kind"] == "still"
+    if still:
+        scene.frame_start = scene.frame_end = 1
+    strip = api.strips(scene)["Frames"]
+    last = os.path.basename(ctx.frames.path(ctx.frames.count))
+    for _ in range(scene.frame_end - len(strip.elements)):
+        strip.elements.append(last)
+    os.makedirs(os.path.dirname(scene.render.filepath), exist_ok=True)
+    render_reporting(scene, scene.frame_end, still)
     api.report("output", scene.render.filepath)

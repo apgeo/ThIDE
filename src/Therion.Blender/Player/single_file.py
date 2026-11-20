@@ -27,4 +27,4 @@ sys.dont_write_bytecode = True  # leave an extra module folder as it was
 
 from thide_player import core  # noqa: E402
 
-core.main(os.path.dirname(os.path.abspath(__file__)), PLAN, FILES)
+core.main(os.path.dirname(os.path.abspath(__file__)), PLAN, FILES, script=os.path.abspath(__file__))

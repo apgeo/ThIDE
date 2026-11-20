@@ -10,7 +10,7 @@
     "generator": { "type": "string", "description": "What wrote the plan." },
     "name": { "type": "string" },
     "features": {
-      "description": "The player modules the plan needs, in the order they run. A player without one of them refuses the plan. The player's own: models, camera_track, look, labels, blend_file, output.",
+      "description": "The player modules the plan needs, in the order they run. A player without one of them refuses the plan. The player's own: models, camera_track, look, labels, texts, blend_file, output.",
       "type": "array",
       "minItems": 1,
       "uniqueItems": true,
@@ -279,7 +279,59 @@
     },
     "changes": { "type": "array", "description": "Reserved: timed changes of visibility, colour and strength." },
     "annotations": { "type": "array", "description": "Reserved: labels, callouts, markers and photos anchored in the scene." },
-    "texts": { "type": "array", "description": "Reserved: titles, captions and credits, drawn in two dimensions." }
+    "texts": {
+      "description": "Played by the module 'texts': what is written over the picture, in two dimensions. A plan with texts is rendered in two stages: the scene as numbered PNG frames, then those frames with the texts over them, in Blender's video editor, as the output. Places and sizes are shares of the picture: x from its left edge, y from its bottom edge, each 0 to 1. Later items lie over earlier ones.",
+      "type": "object",
+      "required": ["items"],
+      "additionalProperties": false,
+      "properties": {
+        "hold": { "type": "number", "minimum": 0, "description": "Seconds the movie goes on after the last frame of the scene, which stands still meanwhile: the time of an end card. A still has none. Default 0." },
+        "fromBlack": { "type": "number", "minimum": 0, "description": "Seconds the picture takes to come out of black at the start, texts and all. A still has none. Default 0." },
+        "toBlack": { "type": "number", "minimum": 0, "description": "Seconds the picture takes to go to black at the end. Default 0." },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "kind", "at"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string", "minLength": 1, "description": "The item's name in the video editor; unique among the items." },
+              "role": { "$ref": "#/$defs/role", "description": "What the item is: title, caption, credits ... An item with the role 'caption' is what a subtitle file would say." },
+              "kind": { "enum": ["text", "box", "arrow"], "description": "text: lines of text. box: a rectangle of one colour. arrow: an arrow that turns about its middle, with an optional letter at its tip." },
+              "at": { "$ref": "#/$defs/point", "description": "The point of a text that alignX and alignY name; the middle of a box or an arrow." },
+              "text": { "type": "string", "description": "What a text says; the letter at the tip of an arrow." },
+              "size": { "type": "number", "exclusiveMinimum": 0, "maximum": 1, "description": "The height of a text's letters, or the length of an arrow, as a share of the picture's height." },
+              "width": { "type": "number", "exclusiveMinimum": 0, "maximum": 1, "description": "Of a box, as a share of the picture's width." },
+              "height": { "type": "number", "exclusiveMinimum": 0, "maximum": 1, "description": "Of a box, as a share of the picture's height." },
+              "alignX": { "enum": ["left", "center", "right"], "description": "Which side of a text lies on 'at', and how its lines are set. Default center." },
+              "alignY": { "enum": ["top", "center", "bottom"], "description": "Default center." },
+              "color": { "$ref": "#/$defs/color", "description": "Default white." },
+              "opacity": { "type": "number", "minimum": 0, "maximum": 1, "description": "Default 1." },
+              "backing": { "type": "boolean", "description": "A text on a dark box of its own." },
+              "wrap": { "type": "number", "exclusiveMinimum": 0, "maximum": 1, "description": "The widest a text's line may be before it is broken, as a share of the picture's width. Default 0.9." },
+              "start": { "type": "number", "minimum": 0, "description": "Seconds from the start of the movie at which the item appears. Default: from the first frame." },
+              "end": { "type": "number", "exclusiveMinimum": 0, "description": "Seconds at which the item is gone. Default: never." },
+              "fadeIn": { "type": "number", "minimum": 0, "description": "Seconds the item takes to appear." },
+              "fadeOut": { "type": "number", "minimum": 0, "description": "Seconds the item takes to go." },
+              "slot": { "$ref": "#/$defs/role", "description": "A place only one item has at a time: of the items that name the same slot, the one that started last is drawn, and an earlier one goes when it appears. Captions share one." },
+              "turn": {
+                "description": "Of an arrow, in rising order of time: at 't' seconds it is turned 'degrees' counter-clockwise from pointing up. Between two turns the angle changes evenly; it may pass 360. Without it the arrow points up. For a north arrow, 'degrees' is the camera's heading, clockwise from north, at that time: one turn per frame, or per pose of the camera.",
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["t", "degrees"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "t": { "type": "number", "minimum": 0 },
+                    "degrees": { "type": "number" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
   },
   "$defs": {
     "vector": {
@@ -287,6 +339,12 @@
       "items": { "type": "number" },
       "minItems": 3,
       "maxItems": 3
+    },
+    "point": {
+      "type": "array",
+      "items": { "type": "number", "minimum": 0, "maximum": 1 },
+      "minItems": 2,
+      "maxItems": 2
     },
     "color": {
       "type": "array",

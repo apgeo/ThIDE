@@ -4,6 +4,9 @@
 #   blender -b --factory-startup --python render.py
 #   blender -b --factory-startup --python render.py -- --plan other-plan.json --modules my_modules
 #   blender --python render.py -- --build-only        builds the scene and leaves it open
+#   blender -b --factory-startup --python render.py -- --stage compose
+#                                                     writes the output again from the frames that
+#                                                     are there, after a text of the plan changed
 #
 # The options are described in thide_player/core.py.
 
@@ -16,4 +19,4 @@ sys.dont_write_bytecode = True  # leave the folder as it was written
 
 from thide_player import core  # noqa: E402
 
-core.main(HERE)
+core.main(HERE, script=os.path.abspath(__file__))

@@ -9,10 +9,15 @@
 // from the start of the clip. Camera poses are data; no camera mathematics runs in Python.
 //
 // The sections: frame and timeline (what every part shares), models, camera, look, output, the
-// optional labels (texts and markers in the scene) and blend (the built scene saved as a Blender
-// file), and features — the player modules the plan needs, in the order they run. Any other
-// section belongs to a module outside this library and travels in Sections; "changes",
-// "annotations" and "texts" are reserved names for later versions.
+// optional labels (texts and markers in the scene), texts (what is written over the picture, in
+// two dimensions) and blend (the built scene saved as a Blender file), and features — the player
+// modules the plan needs, in the order they run. Any other section belongs to a module outside
+// this library and travels in Sections; "changes" and "annotations" are reserved names for later
+// versions.
+//
+// A plan with texts is rendered in two stages. The first renders the scene as numbered PNG
+// frames; the second lays the texts over those frames in Blender's video editor and writes the
+// output. Changing a text then costs the second stage only.
 
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -353,6 +358,130 @@ public sealed record PlanLabels
     public PlanMarkers? Markers { get; init; }
 }
 
+/// <summary>What a thing written over the picture is.</summary>
+public enum PlanScreenItemKind
+{
+    /// <summary>A line or a few lines of text.</summary>
+    Text,
+    /// <summary>A rectangle of one colour: a bar, a swatch, a card behind a text.</summary>
+    Box,
+    /// <summary>An arrow that turns about its middle, with an optional letter at its tip: a
+    /// north arrow.</summary>
+    Arrow,
+}
+
+public enum PlanAlignX
+{
+    Left,
+    Center,
+    Right,
+}
+
+public enum PlanAlignY
+{
+    Top,
+    Center,
+    Bottom,
+}
+
+/// <summary>A place in the picture: <see cref="X"/> from its left edge and <see cref="Y"/> from
+/// its bottom edge, each from 0 to 1.</summary>
+public readonly record struct PlanPoint(double X, double Y);
+
+/// <summary>At <see cref="T"/> seconds an arrow is turned <see cref="Degrees"/> counter-clockwise
+/// from pointing up. Between two turns the angle changes evenly; it may pass 360.</summary>
+public readonly record struct PlanTurn(double T, double Degrees);
+
+/// <summary>
+/// One thing written over the picture. Places and sizes are shares of the picture, so the same
+/// plan reads the same at every size; times are seconds from the start of the movie.
+/// </summary>
+public sealed record PlanScreenItem
+{
+    /// <summary>The item's name in the video editor; unique among the items.</summary>
+    public string Id { get; init; } = "";
+
+    /// <summary>What the item is, for whoever looks for it: lower-case words joined by '-'
+    /// ("title", "caption", "credits").</summary>
+    public string? Role { get; init; }
+
+    public PlanScreenItemKind Kind { get; init; } = PlanScreenItemKind.Text;
+
+    /// <summary>Where the item is: the point of a text that <see cref="AlignX"/> and
+    /// <see cref="AlignY"/> name, the middle of a box or an arrow.</summary>
+    public PlanPoint At { get; init; } = new(0.5, 0.5);
+
+    /// <summary>What a text says, or the letter at the tip of an arrow.</summary>
+    public string? Text { get; init; }
+
+    /// <summary>The height of a text's letters, or the length of an arrow, as a share of the
+    /// picture's height.</summary>
+    public double? Size { get; init; }
+
+    /// <summary>The width of a box, as a share of the picture's width.</summary>
+    public double? Width { get; init; }
+
+    /// <summary>The height of a box, as a share of the picture's height.</summary>
+    public double? Height { get; init; }
+
+    /// <summary>Which side of a text lies on <see cref="At"/>, and how its lines are set.</summary>
+    public PlanAlignX AlignX { get; init; } = PlanAlignX.Center;
+
+    public PlanAlignY AlignY { get; init; } = PlanAlignY.Center;
+
+    /// <summary>Null is white.</summary>
+    public ColorRgb? Color { get; init; }
+
+    /// <summary>From 0 (not there) to 1 (solid); null is 1.</summary>
+    public double? Opacity { get; init; }
+
+    /// <summary>A text on a dark box of its own, readable over any picture.</summary>
+    public bool Backing { get; init; }
+
+    /// <summary>The widest a text's line may be before it is broken, as a share of the picture's
+    /// width; null is 0.9.</summary>
+    public double? Wrap { get; init; }
+
+    /// <summary>When the item appears; null is from the first frame.</summary>
+    public double? Start { get; init; }
+
+    /// <summary>When the item is gone; null is never.</summary>
+    public double? End { get; init; }
+
+    /// <summary>How long the item takes to appear, in seconds.</summary>
+    public double? FadeIn { get; init; }
+
+    /// <summary>How long the item takes to go, in seconds.</summary>
+    public double? FadeOut { get; init; }
+
+    /// <summary>The turns of an arrow, in rising order of time; null points up throughout.</summary>
+    public IReadOnlyList<PlanTurn>? Turn { get; init; }
+
+    /// <summary>A place only one item has at a time: of the items that name the same slot, the
+    /// one that started last is drawn, and an earlier one goes when it appears. Captions share
+    /// one. Lower-case words joined by '-'.</summary>
+    public string? Slot { get; init; }
+}
+
+/// <summary>What is written over the picture, in two dimensions: titles, captions, credits, a
+/// scale bar, a north arrow. Everything is laid out; the player only draws it, in a second
+/// stage, over the rendered frames. Later items lie over earlier ones.</summary>
+public sealed record PlanScreenTexts
+{
+    /// <summary>How long the movie goes on after the last frame of the scene, which stands
+    /// still meanwhile: the time of an end card. Seconds; a still has none.</summary>
+    public double Hold { get; init; }
+
+    /// <summary>How long the picture takes to come out of black at the start, texts and all.
+    /// Seconds; a still has none.</summary>
+    public double FromBlack { get; init; }
+
+    /// <summary>How long the picture takes to go to black at the end.</summary>
+    public double ToBlack { get; init; }
+
+    public IReadOnlyList<PlanScreenItem> Items { get; init; } = [];
+}
+
 public sealed record PlanOutput
 {
     public PlanOutputKind Kind { get; init; } = PlanOutputKind.Video;
@@ -388,6 +517,10 @@ public sealed record ScenePlan
     /// <summary>The module that makes the texts and markers (<see cref="Labels"/>).</summary>
     public const string LabelsFeature = "labels";
 
+    /// <summary>The module that writes over the picture (<see cref="Texts"/>), in the second
+    /// stage of the render.</summary>
+    public const string TextsFeature = "texts";
+
     /// <summary>The module that saves the scene as a Blender file (<see cref="Blend"/>).</summary>
     public const string BlendFileFeature = "blend_file";
 
@@ -399,7 +532,7 @@ public sealed record ScenePlan
     /// Labels turn to the camera; the scene is saved when all have built it and before the
     /// output renders it.</summary>
     public static readonly IReadOnlyList<string> PlayerFeatures =
-        ["models", "camera_track", "look", LabelsFeature, BlendFileFeature, "output"];
+        ["models", "camera_track", "look", LabelsFeature, TextsFeature, BlendFileFeature, "output"];
 
     public int Version { get; init; } = BlenderModule.ScenePlanSchemaVersion;
 
@@ -429,6 +562,10 @@ public sealed record ScenePlan
     /// <see cref="LabelsFeature"/>.</summary>
     public PlanLabels? Labels { get; init; }
 
+    /// <summary>What is written over the picture; played by the module
+    /// <see cref="TextsFeature"/> in a second stage, after the frames are rendered.</summary>
+    public PlanScreenTexts? Texts { get; init; }
+
     public PlanOutput Output { get; init; } = new();
 
     /// <summary>Set, the built scene is saved as a Blender file; played by the module
@@ -439,4 +576,17 @@ public sealed record ScenePlan
     /// the sections reserved for later versions. Kept as it was read.</summary>
     [JsonExtensionData]
     public Dictionary<string, JsonElement>? Sections { get; init; }
+
+    /// <summary>True when the plan is rendered in two stages whoever renders it: it has
+    /// something to write over the picture, or does something to it as a whole.</summary>
+    [JsonIgnore]
+    public bool HasTexts => Texts is { } texts
+        && (texts.Items.Count > 0 || texts.Hold > 0 || texts.FromBlack > 0 || texts.ToBlack > 0);
+
+    /// <summary>The frames of the finished movie or frame sequence: the scene's, and those the
+    /// last one is held for (<see cref="PlanScreenTexts.Hold"/>). A still is one frame.</summary>
+    [JsonIgnore]
+    public int OutputFrameCount => Output.Kind == PlanOutputKind.Still
+        ? 1
+        : Timeline.FrameCount + (HasTexts ? (int)Math.Round(Texts!.Hold * Timeline.Fps) : 0);
 }

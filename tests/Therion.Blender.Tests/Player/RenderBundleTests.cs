@@ -251,13 +251,14 @@ public class RenderBundleTests : IDisposable
         string sh = Text(entries, "render.sh");
         Assert.StartsWith("#!/bin/sh\n", sh);
         Assert.DoesNotContain('\r', sh);
-        Assert.Contains("-b --factory-startup --python-exit-code 64 --python \"$HERE/render.py\" -- --plan \"$PLAN\" \"$@\"", sh);
+        Assert.Contains("-b --factory-startup --python-exit-code 64 --python \"$HERE/render.py\" -- --plan \"$PLAN\" --stage \"$STAGE\" \"$@\"", sh);
         Assert.Contains("$BLENDER", sh);
 
         string cmd = Text(entries, "render.cmd");
         Assert.StartsWith("@echo off\r\n", cmd);
         Assert.Equal(cmd.Split('\n').Length - 1, cmd.Split("\r\n").Length - 1); // no bare LF
-        Assert.Contains("-b --factory-startup --python-exit-code 64 --python \"%HERE%render.py\" -- --plan \"%PLAN%\" %ARGS%", cmd);
+        Assert.Contains("-b --factory-startup --python-exit-code 64 --python \"%HERE%render.py\" -- --plan \"%PLAN%\" --stage %STAGE% %ARGS%", cmd);
+        Assert.Contains("--compose", cmd);
         Assert.Contains("scene-plan.draft.json", cmd);
 
         using var zip = ZipFile.OpenRead(zipPath);
@@ -285,12 +286,23 @@ public class RenderBundleTests : IDisposable
         Assert.Equal(0, code);
         Assert.Equal(
             ["-b", "--factory-startup", "--python-exit-code", "64", "--python", Path.Combine(folder, "render.py"),
-             "--", "--plan", Path.Combine(folder, "scene-plan.json"), "--build-only"],
+             "--", "--plan", Path.Combine(folder, "scene-plan.json"), "--stage", "all", "--build-only"],
             output.TrimEnd('\n').Split('\n'));
 
         (code, output) = await RunScript(folder, fake, "--draft");
         Assert.Equal(0, code);
-        Assert.Equal(Path.Combine(folder, "scene-plan.draft.json"), output.TrimEnd('\n').Split('\n')[^1]);
+        Assert.Equal([Path.Combine(folder, "scene-plan.draft.json"), "--stage", "all"], output.TrimEnd('\n').Split('\n')[^3..]);
+
+        // The output again from the frames that are there, of the plan or of its draft, with
+        // whatever else the player is to be told.
+        (code, output) = await RunScript(folder, fake, "--compose");
+        Assert.Equal(0, code);
+        Assert.Equal(["--plan", Path.Combine(folder, "scene-plan.json"), "--stage", "compose"], output.TrimEnd('\n').Split('\n')[^4..]);
+        (code, output) = await RunScript(folder, fake, "--compose", more: ["--draft", "--keep-frames"]);
+        Assert.Equal(0, code);
+        Assert.Equal(
+            ["--plan", Path.Combine(folder, "scene-plan.draft.json"), "--stage", "compose", "--keep-frames"],
+            output.TrimEnd('\n').Split('\n')[^5..]);
 
         File.Delete(Path.Combine(folder, RenderBundleWriter.DraftPlanFileName));
         (code, output) = await RunScript(folder, fake, "--draft");
@@ -311,7 +323,8 @@ public class RenderBundleTests : IDisposable
 
     /// <summary>Runs render.sh as a user would, by its executable bit, and returns its exit code
     /// and its standard output and error together.</summary>
-    private static async Task<(int, string)> RunScript(string folder, string? blender, string? argument = null, string? path = null)
+    private static async Task<(int, string)> RunScript(
+        string folder, string? blender, string? argument = null, string? path = null, string[]? more = null)
     {
         var start = new ProcessStartInfo(Path.Combine(folder, "render.sh"))
         {
@@ -320,6 +333,7 @@ public class RenderBundleTests : IDisposable
             WorkingDirectory = Path.GetTempPath(), // the script finds its folder itself
         };
         if (argument is not null) start.ArgumentList.Add(argument);
+        foreach (string another in more ?? []) start.ArgumentList.Add(another);
         if (blender is null) start.Environment.Remove("BLENDER");
         else start.Environment["BLENDER"] = blender;
         if (path is not null) start.Environment["PATH"] = path;
@@ -387,11 +401,10 @@ public class RenderBundleTests : IDisposable
         };
         var content = Content(spec);
 
-        Assert.Equal(["lighting.hdriPath", "labels.overlays", "surface"], content.NotCarried);
+        Assert.Equal(["lighting.hdriPath", "surface"], content.NotCarried);
         string readme = RenderBundleWriter.Readme(content);
         Assert.Contains("NOT IN THIS SCENE", readme);
         Assert.Contains("the HDRI image lighting", readme);
-        Assert.Contains("(labels.overlays)", readme);
         Assert.Contains("the terrain surface (surface)", readme);
     }
 

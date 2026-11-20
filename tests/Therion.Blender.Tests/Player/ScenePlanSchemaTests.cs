@@ -35,7 +35,7 @@ public class ScenePlanSchemaTests
     [Fact]
     public void SectionsOfOtherModules_AreAllowed_AndTheReservedOnesAreArrays()
     {
-        string withCustom = FullPlan.TrimEnd().TrimEnd('}') + ",\n  \"marker_cube\": { \"points\": [] },\n  \"texts\": []\n}\n";
+        string withCustom = FullPlan.TrimEnd().TrimEnd('}') + ",\n  \"marker_cube\": { \"points\": [] },\n  \"changes\": []\n}\n";
         string reservedMisused = FullPlan.TrimEnd().TrimEnd('}') + ",\n  \"annotations\": {}\n}\n";
 
         Assert.Empty(Problems(withCustom));
