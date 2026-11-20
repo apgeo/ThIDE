@@ -163,8 +163,28 @@ public static partial class ScenePlanValidator
                 bad(path + ".target", "The camera cannot look at the point it stands on.");
             if (key.Lens is { } lens && !IsFocalLength(lens))
                 bad(path + ".lens", $"Focal length must be within {SceneSpecValidator.MinFocalLength}–{SceneSpecValidator.MaxFocalLength} mm.");
+            if (key.Orientation is { } q)
+            {
+                if (!(double.IsFinite(q.W) && double.IsFinite(q.X) && double.IsFinite(q.Y) && double.IsFinite(q.Z)))
+                    bad(path + ".orientation", "The orientation must be finite.");
+                else if (!(Math.Abs(q.Length - 1) <= OrientationLengthTolerance))
+                    bad(path + ".orientation", $"The orientation must be a unit quaternion (its length within {OrientationLengthTolerance} of 1).");
+            }
+        }
+
+        // Blender turns the camera either by the poses' orientations or towards the target; a
+        // track that did both would jump from one to the other between two poses.
+        int oriented = camera.Track.Count(k => k.Orientation is not null);
+        if (oriented > 0 && oriented < camera.Track.Count)
+        {
+            bool first = camera.Track[0].Orientation is not null;
+            int odd = Enumerable.Range(0, camera.Track.Count).First(i => (camera.Track[i].Orientation is not null) != first);
+            bad($"camera.track[{odd}].orientation", "Either every pose has an orientation or none has.");
         }
     }
+
+    /// <summary>How far the length of a pose's orientation may be from 1.</summary>
+    public const double OrientationLengthTolerance = 1e-4;
 
     private static void ValidateLook(PlanLook look, PlanOutput output, Action<string, string> bad)
     {

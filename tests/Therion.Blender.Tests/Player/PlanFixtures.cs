@@ -65,9 +65,9 @@ internal static class PlanFixtures
             Interpolation = PlanInterpolation.Bezier,
             Track =
             [
-                new PlanCameraKey(0, new CaveVector3(10, -20, 5.5), new CaveVector3(0, 0, 0)),
-                new PlanCameraKey(1, new CaveVector3(20, -10, 6), new CaveVector3(0, 0, 1), 50),
-                new PlanCameraKey(2, new CaveVector3(30, 0, 7), new CaveVector3(0, 1e-7, 2)),
+                new PlanCameraKey(0, new CaveVector3(10, -20, 5.5), new CaveVector3(0, 0, 0)) { Orientation = PlanQuaternion.Identity },
+                new PlanCameraKey(1, new CaveVector3(20, -10, 6), new CaveVector3(0, 0, 1), 50) { Orientation = new PlanQuaternion(0.5, 0.5, -0.5, 0.5) },
+                new PlanCameraKey(2, new CaveVector3(30, 0, 7), new CaveVector3(0, 1e-7, 2)) { Orientation = new PlanQuaternion(0, 0.6, 0, -0.8) },
             ],
         },
         Look = new PlanLook
