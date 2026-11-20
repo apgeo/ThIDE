@@ -157,9 +157,16 @@ O previzualizare este mereu a playerului, orice s-ar alege aici. **Exportă scri
 ## Alte moduri de rulare
 
 - **Exportă scriptul…** — în loc să randeze, ThIDE scrie scriptul `render.py` împreună cu
-  `model.ply` și `scene-meta.json` (sau un singur `.py` autonom) într-un dosar ales de
-  dumneavoastră, ca să îl puteți rula singur mai târziu cu `blender -b --python render.py` sau să îl
-  arhivați/distribuiți.
+  `model.ply` și `scene-meta.json` într-un dosar ales de dumneavoastră, ca să îl puteți rula singur
+  mai târziu cu `blender -b --python render.py` sau să îl arhivați/distribuiți. Două opțiuni de la
+  **Ieșire** schimbă ce îi trebuie scriptului lângă el:
+  - **Script autonom** pune datele scenei (etichete, legendă) în script, așa că acesta nu mai
+    citește `scene-meta.json`. Rețeaua de poligoane a modelului, `model.ply`, o citește în
+    continuare de lângă el.
+  - **Include rețelele de poligoane în script**, care se poate bifa doar cât timp scriptul este
+    autonom, pune în script și rețeaua de poligoane (și terenul cu imaginea lui, când scena îl
+    desenează): un singur fișier `.py` care se randează oriunde, dar mult mai mare. Este oprită
+    dacă nu o bifați.
 - **Deschide în Blender…** — deschide scena în fereastra *interactivă* a Blender, ca să o
   inspectați sau să o ajustați manual înainte de randare.
 - **Salvează** presetarea — stochează setările curente ca presetare proprie; aceasta apare în bandă
@@ -224,7 +231,9 @@ therion-cli blender <model.lox|.3d> [--preset "Full flythrough" | --spec spec.js
 Pachetul conține planul scenei (`scene-plan.json`: mișcarea camerei, aspectul și ieșirea, ca JSON
 simplu), rețeaua de poligoane a peșterii (`model.ply`), playerul care construiește scena în
 Blender (`render.py` și `thide_player/`), scripturile de rulare `render.sh` (Linux, macOS) și
-`render.cmd` (Windows) și un fișier `README.txt` care explică cum se randează. Arhiva conține un
+`render.cmd` (Windows), un fișier `README.txt` care explică cum se randează și licența playerului:
+`LICENSE` (Mozilla Public License 2.0) și un `NOTICE` care spune ce este playerul și că sursa lui se
+află în depozitul ThIDE de pe GitHub. Arhiva conține un
 singur dosar, cu numele ei (`cave-bundle` pentru `cave-bundle.zip`), așa că dezarhivată oriunde
 face doar acel dosar. Cine o primește o dezarhivează și rulează `sh render.sh` sau `render.cmd` în
 acel dosar; rezultatul ajunge în dosarul `out` al pachetului. Scripturile caută Blender în PATH (și în dosarul obișnuit de instalare pe macOS și

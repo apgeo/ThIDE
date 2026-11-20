@@ -1,5 +1,58 @@
 # Therion.Blender — changes for consumers
 
+## 2026-11-20 (later) — a turn for each camera pose, the player's licence in its files and bundles
+
+### Breaking change
+- **A bundle's `LICENSE` and `NOTICE` are its own.** `RenderBundleWriter` refuses a file of
+  `RenderBundleContent.Files` at either path (in any case), as it refuses `README.txt` or
+  `render.py`. Migration: a consumer that put a file of its own there gives it another name or
+  puts it in a folder (`docs/LICENSE`).
+
+### Additive API
+- **An orientation for each camera pose** (`PlanCameraKey.Orientation`, JSON
+  `camera.track[n].orientation`): how the camera is turned, as a unit quaternion `[w, x, y, z]`
+  (`PlanQuaternion`) in the plan's frame, X east, Y north, Z up. It turns the camera's own axes
+  the way Blender has them: the camera looks along its −Z and the top of its picture is its +Y,
+  so `[1, 0, 0, 0]` looks straight down with north at the top. With it the player keys the
+  camera's rotation (quaternion mode) and puts no `TRACK_TO` on it: the camera keeps the turn,
+  roll included, also straight down or straight up, where aiming at a target loses the heading.
+  The target is then only where the camera focuses (depth of field). Without it nothing changes.
+- **Either every pose of a track has an orientation or none has.** A camera turned by its poses
+  for part of a track and aimed at targets for the rest would jump between the two; the
+  validator refuses the mix at the first pose that differs, and so does the player.
+- Between two poses Blender interpolates the four numbers as the track's `interpolation` says
+  (linear, bezier, constant) and the turn is that quaternion made unit length. q and −q are the
+  same turn; the player takes each pose's quaternion as the one of the two nearer the pose before,
+  so the camera turns the short way. A producer that wants a particular path between two turns
+  writes poses close enough together (one per frame needs no interpolation at all).
+- `PlanQuaternion.FromView(forward, up)` is the turn of a camera that looks along `forward` with
+  the top of its picture towards `up` (neither of unit length; the part of `up` along the line
+  of sight is taken away); `Forward`, `Up` and `Rotate(v)` go the other way; `Identity` is no
+  turn.
+- `ScenePlanValidator` refuses an orientation that is not finite or whose length is more than
+  `ScenePlanValidator.OrientationLengthTolerance` (1e-4) from 1, so six decimals are enough; the
+  player turns it to unit length. The schema has `$defs/quaternion` (four numbers from −1 to 1),
+  and an orientation takes its place on the pose's one line of JSON, after `lens`.
+- **The licence travels with the player.** Every Python file of the player (`render.py`,
+  `thide_player/**`, and the start of a single-file script) begins with the notice of the Mozilla
+  Public License 2.0, and a single-file script says at its top that the player in it is ThIDE's
+  and under that licence. A render bundle carries `LICENSE` (the text of the MPL-2.0, as
+  `src/Therion.Blender/LICENSE` has it) and `NOTICE` (what the player is, and that its source is
+  in the ThIDE repository, https://github.com/apgeo/ThIDE); the README lists both and says where
+  the source is. `RenderBundleWriter.LicenseFileName`, `.NoticeFileName` and `.SourceUrl` name
+  them.
+
+### Behaviour changes
+- The player calls itself **1.2**. The plan stays version 1: a player 1.1 refuses a pose with an
+  `orientation` by name ("camera.track[0].orientation is not known to player 1.1; a newer player
+  may be needed"), and an earlier build of this library refuses it on reading, so neither plays
+  an oriented track as an aimed one.
+- A bundle has two more entries, so its bytes differ from those of an earlier build; the same
+  content under the same name still gives the same bytes every time.
+- The north arrow's turns that `ScreenTextPlanner` makes come from a `SceneSpec`'s camera, which
+  has no orientations; a producer that writes oriented poses and an arrow writes the arrow's
+  turns from its own views (looking straight down, the heading of the top of the picture).
+
 ## 2026-11-20 — texts over the picture in a second stage, the terrain in plans, two scene builders
 
 ### Breaking changes
