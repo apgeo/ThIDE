@@ -39,6 +39,7 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         nameof(DurationSeconds), nameof(OutputKind), nameof(Container), nameof(Width), nameof(Height),
         nameof(BaseName), nameof(SelfContained), nameof(ShowStationLabels), nameof(ShowLeadMarkers),
         nameof(LeadMarkerSizing), nameof(LabelRoof), nameof(SurfaceMode), nameof(SurfaceOpacity),
+        nameof(Credits), nameof(EndCardText), nameof(EndCardSeconds),
     };
 
     private SceneSpec _spec;
@@ -83,7 +84,11 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         _spec = BuiltInPresets.OrbitShowcase().Spec;
         LoadPresets();
         ReloadArtifacts();
-        PushSpecToKnobs(_spec);
+        // The knobs take the spec's values, one after another; the spec is not rebuilt from the
+        // half of them that have theirs.
+        _suspend = true;
+        try { PushSpecToKnobs(_spec); }
+        finally { _suspend = false; }
         Revalidate();
     }
 
@@ -123,6 +128,20 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
 
     /// <summary>True when a terrain is drawn: only then does its opacity matter.</summary>
     public bool HasSurface => SurfaceMode != SurfaceMode.Off;
+
+    /// <summary>The credits line; empty is none.</summary>
+    [ObservableProperty] private string _credits = "";
+
+    /// <summary>The text of the card the movie ends on; empty is no card.</summary>
+    [ObservableProperty] private string _endCardText = "";
+
+    /// <summary>How long the end card stays, in seconds.</summary>
+    [ObservableProperty] private double _endCardSeconds = new EndCardSpec().Seconds;
+
+    // ---- how the render is made (not part of the scene, so not of a preset) ----
+
+    /// <summary>What builds the scene in Blender; a preview is always the player's.</summary>
+    [ObservableProperty] private SceneBuilder _builder = SceneBuilder.Auto;
 
     // ---- export target ----
     [ObservableProperty] private string? _exportDirectory;
@@ -169,6 +188,7 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
     public IReadOnlyList<LeadMarkerSizing> LeadMarkerSizings { get; } = Enum.GetValues<LeadMarkerSizing>();
     public IReadOnlyList<LabelRoofSource> LabelRoofSources { get; } = Enum.GetValues<LabelRoofSource>();
     public IReadOnlyList<SurfaceMode> SurfaceModes { get; } = Enum.GetValues<SurfaceMode>();
+    public IReadOnlyList<SceneBuilder> Builders { get; } = Enum.GetValues<SceneBuilder>();
 
     // ---- change wiring ----
 
@@ -209,6 +229,14 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
                 Stations = _spec.Labels.Stations with { Show = ShowStationLabels },
                 Leads = _spec.Labels.Leads with { Show = ShowLeadMarkers, Sizing = LeadMarkerSizing },
                 Roof = LabelRoof,
+                Overlays = _spec.Labels.Overlays with
+                {
+                    Credits = string.IsNullOrWhiteSpace(Credits) ? null : Credits.Trim(),
+                    // What a preset's end card has beside its text and its time stays.
+                    EndCard = string.IsNullOrWhiteSpace(EndCardText)
+                        ? null
+                        : (_spec.Labels.Overlays.EndCard ?? new EndCardSpec()) with { Text = EndCardText.Trim(), Seconds = EndCardSeconds },
+                },
             },
             // A slider's steps are not exact in binary; the spec keeps whole percents.
             Surface = _spec.Surface with { Mode = SurfaceMode, Opacity = Math.Round(SurfaceOpacity, 2) },
@@ -236,6 +264,9 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         LabelRoof = spec.Labels.Roof;
         SurfaceMode = spec.Surface.Mode;
         SurfaceOpacity = spec.Surface.Opacity;
+        Credits = spec.Labels.Overlays.Credits ?? "";
+        EndCardText = spec.Labels.Overlays.EndCard?.Text ?? "";
+        EndCardSeconds = spec.Labels.Overlays.EndCard?.Seconds ?? new EndCardSpec().Seconds;
     }
 
     private void Revalidate()
@@ -256,6 +287,7 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         OnPropertyChanged(nameof(EstimatedFrameCount));
         OnPropertyChanged(nameof(CurrentSpec));
         RenderCommand.NotifyCanExecuteChanged();
+        PreviewCommand.NotifyCanExecuteChanged();
         ExportScriptCommand.NotifyCanExecuteChanged();
         OpenInBlenderGuiCommand.NotifyCanExecuteChanged();
     }
@@ -285,6 +317,7 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         OnPropertyChanged(nameof(AgentRendering));
         if (AgentRendering && !IsBusy) StatusMessage = Tr.Get("Blender_Status_AgentRendering");
         RenderCommand.NotifyCanExecuteChanged();
+        PreviewCommand.NotifyCanExecuteChanged();
     }
 
     private void OnAgentRenderEnded(AgentRenderFinished finished)
@@ -302,7 +335,14 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
     // ---- commands ----
 
     [RelayCommand(CanExecute = nameof(CanStart))]
-    private async Task RenderAsync()
+    private Task RenderAsync() => RunRenderAsync(draft: false);
+
+    /// <summary>A quick draft of the render, to see the camera move, the framing and the texts
+    /// before the long render. Always built by the player.</summary>
+    [RelayCommand(CanExecute = nameof(CanStart))]
+    private Task PreviewAsync() => RunRenderAsync(draft: true);
+
+    private async Task RunRenderAsync(bool draft)
     {
         if (_slot is not null && !_slot.TryTake(PanelHolder))
         {
@@ -314,6 +354,7 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         LastError = null;
         IsBusy = true;
         RenderCommand.NotifyCanExecuteChanged();
+        PreviewCommand.NotifyCanExecuteChanged();
         _cts = new CancellationTokenSource();
         try
         {
@@ -323,8 +364,9 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
             var spec = string.IsNullOrWhiteSpace(RenderDirectory)
                 ? _spec
                 : _spec with { Output = _spec.Output with { OutputDirectory = RenderDirectory.Trim() } };
-            var result = await _renderService!.RenderAsync(spec, source, progress, _cts.Token).ConfigureAwait(true);
-            ApplyResult(result);
+            var options = new RenderOptions { Builder = Builder, Draft = draft };
+            var result = await _renderService!.RenderAsync(spec, source, options, progress, _cts.Token).ConfigureAwait(true);
+            ApplyResult(result, draft);
         }
         catch (OperationCanceledException)
         {
@@ -461,7 +503,8 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         ProgressFraction = p.Fraction ?? 0.0;
         if (p.Device is not null) Device = p.Device;
         StatusMessage = p is { Frame: int f, FrameCount: int n }
-            ? string.Format(System.Globalization.CultureInfo.CurrentCulture, "{0} {1}/{2}", Tr.Get("Blender_Phase_Rendering"), f, n)
+            ? string.Format(System.Globalization.CultureInfo.CurrentCulture, "{0} {1}/{2}",
+                Tr.Get(p.Phase == RenderPhase.Composing ? "Blender_Phase_Composing" : "Blender_Phase_Rendering"), f, n)
             : Tr.Get(PhaseKey(p.Phase));
     }
 
@@ -471,25 +514,34 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         RenderPhase.ParsingModel or RenderPhase.ConvertingGeometry => "Blender_Phase_Converting",
         RenderPhase.GeneratingScript => "Blender_Phase_Generating",
         RenderPhase.Rendering => "Blender_Phase_Rendering",
+        RenderPhase.Composing => "Blender_Phase_Composing",
         RenderPhase.CollectingOutputs => "Blender_Phase_Collecting",
         RenderPhase.Done => "Blender_Phase_Done",
         _ => "Blender_Phase_Working",
     };
 
-    private void ApplyResult(RenderResult result)
+    private void ApplyResult(RenderResult result, bool draft = false)
     {
         Device = result.Device;
         _lastJobLogPath = result.JobLogPath;
         BlenderMissing = result.FailureKind is RenderFailureKind.BlenderNotFound or RenderFailureKind.BlenderTooOld;
         foreach (var warning in result.Warnings) Warnings.Add(warning);
+        // Which builder built the scene when it was not the one to expect, and what is not shown.
+        if (result.Builder == SceneBuilder.Generator && result.NotCarried.Count > 0)
+            Warnings.Add(string.Format(Tr.Get("Blender_Builder_Fallback"), string.Join(", ", result.NotCarried)));
+        if (result.LeftOut.Count > 0)
+            Warnings.Add(string.Format(
+                Tr.Get(result.Builder == SceneBuilder.Generator ? "Blender_Builder_LeftOutGenerator" : "Blender_Builder_LeftOutPreview"),
+                string.Join(", ", result.LeftOut)));
 
         string jobName = string.IsNullOrWhiteSpace(BaseName) ? Tr.Get("Blender_Tool_Title") : BaseName;
+        if (draft) jobName = string.Format(Tr.Get("Blender_Job_Preview"), jobName);
         if (result.Succeeded)
         {
             foreach (var path in result.OutputPaths) Outputs.Add(path);
-            StatusMessage = Tr.Get("Blender_Status_Done");
+            StatusMessage = Tr.Get(draft ? "Blender_Status_PreviewDone" : "Blender_Status_Done");
             Jobs.Insert(0, new JobHistoryEntry(jobName, true, StatusMessage, [.. result.OutputPaths], result.JobLogPath, result.Duration));
-            _notifications?.Success(Tr.Get("Blender_Tool_Title"), Tr.Get("Blender_Status_Done"),
+            _notifications?.Success(Tr.Get("Blender_Tool_Title"), StatusMessage,
                 _shell is not null && result.OutputPaths.Length > 0 ? Tr.Get("Blender_Notify_OpenFolder") : null,
                 _shell is not null && result.OutputPaths.Length > 0 ? () => RevealOutput(result.OutputPaths[0]) : null);
         }
@@ -515,6 +567,8 @@ public sealed partial class BlenderAnimationViewModel : ObservableObject
         RenderFailureKind.BlenderTooOld => Tr.Get("Blender_Fail_TooOld"),
         RenderFailureKind.DiskSpace => Tr.Get("Blender_Fail_DiskSpace"),
         RenderFailureKind.Cancelled => Tr.Get("Blender_Status_Cancelled"),
+        RenderFailureKind.BuilderRefused when result.NotCarried.Count > 0
+            => string.Format(Tr.Get("Blender_Fail_BuilderRefused"), string.Join(", ", result.NotCarried)),
         _ => result.ErrorMessage ?? Tr.Get("Blender_Status_Failed"),
     };
 

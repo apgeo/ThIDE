@@ -97,6 +97,51 @@ public class BlenderPanelTests
     }
 
     [UiFact]
+    public async Task Preview_writes_a_draft_and_the_script_generator_can_still_be_chosen()
+    {
+        if (!OnPath("therion")) return;
+        var dir = await BuiltDemoCaveAsync();
+        var renders = Path.Combine(dir, "renders");
+        var scripts = Path.Combine(dir, "stub-scripts");
+        var environment = new Dictionary<string, string>
+        {
+            ["PATH"] = StubBlenderDirectory() + Path.PathSeparator + Environment.GetEnvironmentVariable("PATH"),
+            ["THIDE_STUB_BLENDER_SCRIPTS"] = scripts,
+        };
+
+        await using var app = await ThideApp.StartAsync(environment, dir, "demo.thconfig");
+        await OpenPanelAsync(app, renders);
+        await app.WaitAsync("#Blender.Preview;state:enabled");
+
+        // A preview is a draft of the same scene, under its own name beside where the render goes.
+        await app.SetTextAsync("#Blender.Credits", "Survey: the demo team");
+        await app.InvokeAsync("#Blender.Preview");
+        await app.WaitAsync("role:Text;name:Preview complete.", timeoutMs: 60_000);
+        var draft = Assert.Single(Directory.GetFiles(renders));
+        Assert.Equal("cave-render-draft.mp4", Path.GetFileName(draft));
+        // The credits line makes it a render in two stages: the frames, then the movie from them.
+        var plans = Directory.GetFiles(scripts).Order(StringComparer.Ordinal).ToArray();
+        Assert.Equal(2, plans.Length);
+        Assert.All(plans, p =>
+        {
+            var plan = File.ReadAllText(p);
+            Assert.Contains("\"engine\": \"workbench\"", plan);
+            Assert.Contains("\"text\": \"Survey: the demo team\"", plan);
+        });
+
+        // The earlier builder, chosen by name, is given a generated script.
+        await app.KeyAsync("#Blender.Builder", "Down", "Down");
+        Assert.Equal("Generator", (await app.GetAsync("#Blender.Builder", "DataContext.Blender.Builder")).GetProperty("properties").GetProperty("DataContext.Blender.Builder").ToString());
+        await app.InvokeAsync("#Blender.Render");
+        await app.WaitAsync("role:Text;name:Render complete.", timeoutMs: 60_000);
+        Assert.Contains(Path.Combine(renders, "cave-render.mp4"), Directory.GetFiles(renders));
+        var script = File.ReadAllText(Assert.Single(Directory.GetFiles(scripts, "render-*.py")));
+        Assert.Contains("LEAD_MARKERS = [", script);
+        Assert.Contains("\"draught in the boulders\"", script);
+        Assert.Contains("\"demo.4\"", script);
+    }
+
+    [UiFact]
     public async Task Render_of_a_project_never_built_exports_the_model_outside_the_project()
     {
         if (!OnPath("therion")) return;

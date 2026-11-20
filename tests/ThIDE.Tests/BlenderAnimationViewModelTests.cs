@@ -12,6 +12,7 @@ using Therion.Blender;
 using Therion.Blender.Presets;
 using Therion.Blender.Sources;
 using Therion.Cave3D;
+using ThIDE.Resources;
 using ThIDE.Services;
 using ThIDE.ViewModels;
 
@@ -29,11 +30,13 @@ public class BlenderAnimationViewModelTests
             FrameCount = 2,
         };
         public SceneSpec? LastSpec { get; private set; }
+        public RenderOptions? LastOptions { get; private set; }
         public int RenderCalls { get; private set; }
 
         public Task<RenderResult> RenderAsync(SceneSpec spec, RenderSource source, RenderOptions options, IProgress<RenderProgress>? progress = null, CancellationToken ct = default)
         {
             LastSpec = spec;
+            LastOptions = options;
             RenderCalls++;
             progress?.Report(new RenderProgress(RenderPhase.Rendering, "rendering", 0.5, 1, 2, Device: "CPU"));
             return Task.FromResult(Result);
@@ -295,6 +298,186 @@ public class BlenderAnimationViewModelTests
         Assert.Null(vm.LastError);
         // The spec the service received reflects the edited knobs.
         Assert.Equal(CameraTemplate.Orbit, svc.LastSpec!.Camera.Template);
+    }
+
+    [Fact]
+    public async Task Render_LeavesTheBuilderToBeChosen_UnlessOneIsPicked_AndIsNotADraft()
+    {
+        var svc = new FakeRenderService();
+        var vm = WithSource(Vm(svc));
+        Assert.Equal([SceneBuilder.Auto, SceneBuilder.Player, SceneBuilder.Generator], vm.Builders);
+        Assert.Equal(SceneBuilder.Auto, vm.Builder);
+
+        await vm.RenderCommand.ExecuteAsync(null);
+        Assert.Equal(new RenderOptions(), svc.LastOptions);
+
+        vm.Builder = SceneBuilder.Generator;
+        await vm.RenderCommand.ExecuteAsync(null);
+        Assert.Equal(new RenderOptions { Builder = SceneBuilder.Generator }, svc.LastOptions);
+        // The builder is how a render is made, not what it shows: a preset neither holds nor changes it.
+        vm.SelectedPreset = vm.Presets.First(p => p.Name == "Helix descent");
+        Assert.Equal(SceneBuilder.Generator, vm.Builder);
+    }
+
+    [Fact]
+    public async Task Preview_RendersADraft_OfTheSameScene_AndSaysSo()
+    {
+        var svc = new FakeRenderService
+        {
+            Result = new RenderResult { Succeeded = true, OutputPaths = ImmutableArray.Create("out/render-draft.mp4"), Builder = SceneBuilder.Player },
+        };
+        var vm = WithSource(Vm(svc));
+        vm.Builder = SceneBuilder.Generator;
+        Assert.True(vm.PreviewCommand.CanExecute(null));
+
+        await vm.PreviewCommand.ExecuteAsync(null);
+
+        Assert.Equal(new RenderOptions { Builder = SceneBuilder.Generator, Draft = true }, svc.LastOptions);
+        Assert.Equal(vm.CurrentSpec.Camera, svc.LastSpec!.Camera);
+        Assert.Contains("out/render-draft.mp4", vm.Outputs);
+        Assert.Equal(
+            (string.Format(Tr.Get("Blender_Job_Preview"), "cave-render"), Tr.Get("Blender_Status_PreviewDone")),
+            (vm.Jobs[0].Name, vm.Jobs[0].Status));
+        Assert.False(vm.IsBusy);
+
+        // Nothing to preview without a model, as there is nothing to render.
+        var empty = Vm(svc);
+        Assert.False(empty.PreviewCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task TheResult_SaysWhichBuilderBuiltTheScene_WhenItWasNotThePlayer_AndWhatIsNotShown()
+    {
+        var svc = new FakeRenderService
+        {
+            Result = new RenderResult
+            {
+                Succeeded = true, OutputPaths = ImmutableArray.Create("out/render.mp4"), Builder = SceneBuilder.Generator,
+                NotCarried = ["lighting.hdriPath"], LeftOut = ["labels.overlays.credits", "labels.overlays.endCard"], Warnings = ["a notice"],
+            },
+        };
+        var vm = WithSource(Vm(svc));
+
+        await vm.RenderCommand.ExecuteAsync(null);
+
+        Assert.Equal(
+            [
+                "a notice",
+                string.Format(Tr.Get("Blender_Builder_Fallback"), "lighting.hdriPath"),
+                string.Format(Tr.Get("Blender_Builder_LeftOutGenerator"), "labels.overlays.credits, labels.overlays.endCard"),
+            ],
+            vm.Warnings);
+
+        // A preview that cannot show everything says what it leaves out; a plain result says nothing.
+        svc.Result = new RenderResult { Succeeded = true, Builder = SceneBuilder.Player, LeftOut = ["lighting.hdriPath"] };
+        await vm.PreviewCommand.ExecuteAsync(null);
+        Assert.Equal([string.Format(Tr.Get("Blender_Builder_LeftOutPreview"), "lighting.hdriPath")], vm.Warnings);
+        svc.Result = new RenderResult { Succeeded = true, Builder = SceneBuilder.Player };
+        await vm.RenderCommand.ExecuteAsync(null);
+        Assert.Empty(vm.Warnings);
+    }
+
+    [Fact]
+    public async Task ARenderThePlayerRefuses_SaysWhatItDoesNotCarry_InTheUsersLanguage()
+    {
+        var svc = new FakeRenderService
+        {
+            Result = new RenderResult
+            {
+                FailureKind = RenderFailureKind.BuilderRefused, ErrorMessage = "The player cannot build this scene: …",
+                NotCarried = ["lighting.hdriPath", "labels.events"],
+            },
+        };
+        var vm = WithSource(Vm(svc));
+        vm.Builder = SceneBuilder.Player;
+
+        await vm.RenderCommand.ExecuteAsync(null);
+
+        Assert.Equal(string.Format(Tr.Get("Blender_Fail_BuilderRefused"), "lighting.hdriPath, labels.events"), vm.LastError);
+        Assert.Empty(vm.Outputs);
+    }
+
+    [Fact]
+    public void Credits_AndAnEndCard_ReachTheSpec_AndComeBackFromAPreset()
+    {
+        var store = new PresetStore(Path.Combine(Path.GetTempPath(), "thide-vm-texts-" + Guid.NewGuid().ToString("N")));
+        try
+        {
+            var vm = Vm(store: store);
+            Assert.Equal(("", "", 4.0), (vm.Credits, vm.EndCardText, vm.EndCardSeconds));
+            Assert.Null(vm.CurrentSpec.Labels.Overlays.Credits);
+            Assert.Null(vm.CurrentSpec.Labels.Overlays.EndCard);
+
+            vm.Credits = "  Survey: the invented team ";
+            vm.EndCardText = "The end";
+            vm.EndCardSeconds = 6;
+            Assert.Equal("Survey: the invented team", vm.CurrentSpec.Labels.Overlays.Credits);
+            Assert.Equal(new EndCardSpec { Text = "The end", Seconds = 6 }, vm.CurrentSpec.Labels.Overlays.EndCard);
+            Assert.Empty(vm.Blockers.Where(b => b.StartsWith("labels.", StringComparison.Ordinal)));
+
+            vm.NewPresetName = "With texts";
+            vm.SavePresetCommand.Execute(null);
+            vm.Credits = "";
+            vm.EndCardText = " ";
+            Assert.Null(vm.CurrentSpec.Labels.Overlays.Credits);
+            Assert.Null(vm.CurrentSpec.Labels.Overlays.EndCard);
+
+            vm.SelectedPreset = vm.Presets.Single(p => p.Name == "With texts");
+            Assert.Equal(("Survey: the invented team", "The end", 6.0), (vm.Credits, vm.EndCardText, vm.EndCardSeconds));
+            // What the panel has no field for stays in the scene: a title, an end card's subtitle.
+            vm.SelectedPreset = new PresetItem("by hand", null, false, new RenderPreset
+            {
+                Name = "by hand",
+                Spec = vm.CurrentSpec with
+                {
+                    Labels = new LabelsSpec
+                    {
+                        Overlays = new OverlaySpec { Title = "Invented Cave", EndCard = new EndCardSpec { Text = "End", Subtitle = "thanks", Seconds = 2 } },
+                    },
+                },
+            });
+            vm.EndCardSeconds = 3;
+            Assert.Equal(new EndCardSpec { Text = "End", Subtitle = "thanks", Seconds = 3 }, vm.CurrentSpec.Labels.Overlays.EndCard);
+            Assert.Equal("Invented Cave", vm.CurrentSpec.Labels.Overlays.Title);
+
+            // A time that is no time is said before the render, not by Blender.
+            vm.EndCardSeconds = 0;
+            Assert.Contains(vm.Blockers, b => b.StartsWith("labels.overlays.endCard.seconds", StringComparison.Ordinal));
+        }
+        finally
+        {
+            try { Directory.Delete(store.Directory, recursive: true); } catch { /* best effort */ }
+        }
+    }
+
+    [Fact]
+    public async Task TheSecondStage_IsShownAsComposing()
+    {
+        var svc = new ComposingService();
+        var vm = WithSource(new BlenderAnimationViewModel(svc, new FakeSources(), null));
+        var seen = new List<string>();
+        vm.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(vm.StatusMessage)) seen.Add(vm.StatusMessage); };
+
+        await vm.RenderCommand.ExecuteAsync(null);
+        await Task.Delay(50);   // Progress<T> posts its reports
+
+        Assert.Contains($"{Tr.Get("Blender_Phase_Composing")} 3/8", seen);
+        Assert.Contains($"{Tr.Get("Blender_Phase_Rendering")} 2/4", seen);
+    }
+
+    private sealed class ComposingService : IBlenderRenderService
+    {
+        public async Task<RenderResult> RenderAsync(SceneSpec spec, RenderSource source, RenderOptions options, IProgress<RenderProgress>? progress = null, CancellationToken ct = default)
+        {
+            progress?.Report(new RenderProgress(RenderPhase.Rendering, "rendering", 0.5, 2, 4));
+            await Task.Delay(20, ct);
+            progress?.Report(new RenderProgress(RenderPhase.Composing, "composing", 0.4, 3, 8));
+            await Task.Delay(20, ct);
+            return new RenderResult { Succeeded = true };
+        }
+
+        public Task<string> ExportScriptAsync(SceneSpec spec, RenderSource source, string outputDir, IProgress<RenderProgress>? progress = null, CancellationToken ct = default, bool interactive = false)
+            => Task.FromResult(Path.Combine(outputDir, "render.py"));
     }
 
     [Fact]
