@@ -29,7 +29,7 @@ public class BlenderPanelB13Tests
             Device = "CPU",
             JobLogPath = "/out/job.log",
         };
-        public Task<RenderResult> RenderAsync(SceneSpec spec, RenderSource source, IProgress<RenderProgress>? p = null, CancellationToken ct = default)
+        public Task<RenderResult> RenderAsync(SceneSpec spec, RenderSource source, RenderOptions options, IProgress<RenderProgress>? p = null, CancellationToken ct = default)
             => Task.FromResult(Result);
         public bool LastInteractive { get; private set; }
         public Task<string> ExportScriptAsync(SceneSpec spec, RenderSource source, string outputDir, IProgress<RenderProgress>? p = null, CancellationToken ct = default, bool interactive = false)

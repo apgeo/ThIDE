@@ -10,7 +10,8 @@ using Therion.Cave3D.Parsing;
 
 namespace Therion.Mcp.Tools;
 
-/// <param name="Phase">acquiringSource, parsingModel, convertingGeometry, generatingScript, rendering, collectingOutputs, or done.</param>
+/// <param name="Phase">acquiringSource, parsingModel, convertingGeometry, generatingScript, rendering, composing
+/// (the second stage of a render with texts over the picture: the movie from its frames), collectingOutputs, or done.</param>
 /// <param name="Fraction">How much of the whole render is done, 0–1, when Blender says.</param>
 public sealed record RenderProgressDto(string Phase, string Message, double? Fraction, int? Frame, int? FrameCount);
 
@@ -28,7 +29,13 @@ public sealed record RenderProgressDto(string Phase, string Message, double? Fra
 /// <param name="Warnings">Non-fatal notices: an untested Blender version, labels left out, a GPU fallback.</param>
 /// <param name="JobLog">Blender's whole output, for a failed or cancelled render (absolute path).</param>
 /// <param name="FailureKind">Why it did not succeed: blenderNotFound, blenderTooOld, scriptError, crashed,
-/// cancelled, diskSpace, noOutput, modelUnavailable, invalidSpec, or error.</param>
+/// cancelled, diskSpace, noOutput, builderRefused, modelUnavailable, invalidSpec, or error.</param>
+/// <param name="Draft">True for a quick draft: half the size named here, in Blender's solid view.</param>
+/// <param name="Builder">What built the scene in Blender, once the render has ended: player or generator.</param>
+/// <param name="NotCarried">The settings the player does not carry, when they are why the script generator
+/// built the scene.</param>
+/// <param name="LeftOut">The settings of the scene the render does not show: texts only the player draws,
+/// when the script generator built it; what the player does not carry, in a draft.</param>
 public sealed record RenderJobStatus(
     string JobId,
     string State,
@@ -49,7 +56,11 @@ public sealed record RenderJobStatus(
     IReadOnlyList<string> Warnings,
     string? JobLog,
     string? FailureKind,
-    string? Error);
+    string? Error,
+    bool Draft = false,
+    string? Builder = null,
+    IReadOnlyList<string>? NotCarried = null,
+    IReadOnlyList<string>? LeftOut = null);
 
 /// <summary>
 /// The renders started on this server: the running one and the last few finished ones, whose outcome
@@ -116,6 +127,7 @@ internal sealed class BlenderRenderJob
     private readonly string _root;
     private readonly string _preset;
     private readonly SceneSpec _spec;
+    private readonly bool _draft;
     private readonly DateTimeOffset _started = DateTimeOffset.UtcNow;
 
     private RenderProgress? _progress;
@@ -126,11 +138,13 @@ internal sealed class BlenderRenderJob
 
     /// <param name="root">The workspace root paths are reported against.</param>
     /// <param name="spec">The scene to render; an empty output directory means a temporary folder.</param>
-    public BlenderRenderJob(string root, string preset, SceneSpec spec)
+    /// <param name="draft">The render is a quick draft of the scene.</param>
+    public BlenderRenderJob(string root, string preset, SceneSpec spec, bool draft = false)
     {
         _root = root;
         _preset = preset;
         _spec = spec;
+        _draft = draft;
     }
 
     public string Id { get; } = Guid.NewGuid().ToString("N")[..12];
@@ -234,7 +248,11 @@ internal sealed class BlenderRenderJob
                 Warnings: result?.Warnings ?? [],
                 JobLog: result?.JobLogPath,
                 FailureKind: failureKind,
-                Error: error);
+                Error: error,
+                Draft: _draft,
+                Builder: result?.Builder is { } builder ? Camel(builder.ToString()) : null,
+                NotCarried: result is { NotCarried.Count: > 0 } ? result.NotCarried : null,
+                LeftOut: result is { LeftOut.Count: > 0 } ? result.LeftOut : null);
         }
     }
 

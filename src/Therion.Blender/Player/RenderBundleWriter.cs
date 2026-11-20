@@ -3,7 +3,9 @@
 // folder, named after the zip, so that unpacking it anywhere makes that folder and nothing else:
 //
 //   README.txt              what the files are and how to render them
-//   render.sh, render.cmd   start Blender with the player; --draft plays the draft plan
+//   render.sh, render.cmd   start Blender with the player; --draft plays the draft plan, --compose
+//                           writes the output again from the frames that are there
+//   out/<name>.srt, .vtt    the captions as subtitles, where the movie will be (when it has any)
 //   render.py               the player's entry script
 //   scene-plan.json         the plan
 //   scene-plan.draft.json   the same plan with a fast look (optional)
@@ -47,6 +49,10 @@ public sealed record RenderBundleContent
     /// <summary>What the render shows less of than was asked for
     /// (<see cref="ScenePlanBuilder.Notices"/>): for whoever writes the bundle to pass on.</summary>
     public IReadOnlyList<string> Notices { get; init; } = [];
+
+    /// <summary>The captions of the scene, written into the bundle as subtitles
+    /// (<see cref="Subtitles"/>) where the plan's output will be, under its base name.</summary>
+    public IReadOnlyList<CaptionSpec> Captions { get; init; } = [];
 }
 
 /// <summary>Writes render bundles: everything Blender needs to render a scene plan, in one zip
@@ -134,6 +140,7 @@ public static class RenderBundleWriter
             Files = files,
             NotCarried = ScenePlanBuilder.NotCarried(spec),
             Notices = ScenePlanBuilder.Notices(placed, conversion.Meta),
+            Captions = plan.Output.Kind == PlanOutputKind.Still ? [] : Subtitles.OneAtATime(spec.Labels.Overlays.Captions),
         };
     }
 
@@ -283,12 +290,33 @@ public static class RenderBundleWriter
         Line("To look at the scene in Blender's window instead of rendering it:");
         Line();
         Line("  blender --factory-startup --python render.py -- --build-only");
+        if (plan.HasTexts)
+        {
+            Line();
+            Line("TWO STAGES");
+            Line();
+            Line("This scene has texts over the picture. It is rendered in two stages: the scene as PNG");
+            Line("frames into the folder \"frames\", then the output from those frames with the texts over");
+            Line("them. The frames are removed when the output is written.");
+            Line();
+            Line("If the render is stopped, start it again: the frames that are there are kept and the");
+            Line("render goes on. To change a text (\"texts\" in scene-plan.json: a title, a caption) without");
+            Line("rendering the scene again, keep the frames the first time and compose from them after:");
+            Line();
+            Line("  Linux, macOS:   sh render.sh --keep-frames      then   sh render.sh --compose");
+            Line("  Windows:        render.cmd --keep-frames        then   render.cmd --compose");
+            Line();
+            Line("The second stage refuses frames that were rendered from another scene: change anything");
+            Line("but the texts and the output's name, and the frames are rendered again.");
+        }
         Line();
         Line("WHAT IT WRITES");
         Line();
         foreach (string line in Writes(plan, "")) Line(line);
         if (content.Draft is { } draft)
             foreach (string line in Writes(draft, "The draft: ")) Line(line);
+        if (content.Captions.Count > 0)
+            Line($"{SubtitlePath(plan, Subtitles.SrtExtension)} and {Path.GetFileName(SubtitlePath(plan, Subtitles.VttExtension))} are there already: the captions as subtitles, for a video player or a web page.");
         Line();
         Line("THE FILES");
         Line();
@@ -333,7 +361,8 @@ public static class RenderBundleWriter
         var output = plan.Output;
         string folder = Normalized(output.Directory);
         string In(string file) => folder.Length == 0 ? file : folder + "/" + file;
-        string seconds = (plan.Timeline.FrameCount / (double)plan.Timeline.Fps).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+        int frames = plan.OutputFrameCount;
+        string seconds = (frames / (double)plan.Timeline.Fps).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
         string look = $"{plan.Look.Width}x{plan.Look.Height} pixels, {EngineName(plan.Look.Engine)}";
         if (plan.Blend is { } blend)
             yield return prefix + $"{Normalized(blend.Path)}: the built scene as a Blender file, to change by hand or render later.";
@@ -346,12 +375,12 @@ public static class RenderBundleWriter
         {
             case PlanOutputKind.Video:
                 string extension = output.Container.ToString().ToLowerInvariant();
-                yield return prefix + $"{In(output.BaseName + "." + extension)}, a video of {plan.Timeline.FrameCount} frames at {plan.Timeline.Fps} fps ({seconds} s), {look}.";
+                yield return prefix + $"{In(output.BaseName + "." + extension)}, a video of {frames} frames at {plan.Timeline.Fps} fps ({seconds} s), {look}.";
                 if (prefix.Length == 0)
                     yield return $"  (A Blender that cannot write video writes numbered PNG frames instead: {In(output.BaseName + "_0001.png")} ...)";
                 break;
             case PlanOutputKind.Frames:
-                yield return prefix + $"{In(output.BaseName + "_0001.png")} to {In(output.BaseName + "_" + plan.Timeline.FrameCount.ToString("0000", System.Globalization.CultureInfo.InvariantCulture) + ".png")}, {look}.";
+                yield return prefix + $"{In(output.BaseName + "_0001.png")} to {In(output.BaseName + "_" + frames.ToString("0000", System.Globalization.CultureInfo.InvariantCulture) + ".png")}, {look}.";
                 break;
             default:
                 yield return prefix + $"{In(output.BaseName + ".png")}, one picture, {look}.";
@@ -413,6 +442,11 @@ public static class RenderBundleWriter
             Text(WindowsScriptName, Script("render.cmd").ReplaceLineEndings("\r\n")),
         };
         if (content.Draft is { } d) entries.Add(Text(DraftPlanFileName, ScenePlanSerializer.Write(d)));
+        if (content.Captions is { Count: > 0 } captions)
+        {
+            entries.Add(Text(SubtitlePath(content.Plan, Subtitles.SrtExtension), Subtitles.Srt(captions)));
+            entries.Add(Text(SubtitlePath(content.Plan, Subtitles.VttExtension), Subtitles.Vtt(captions)));
+        }
         entries.AddRange(PlayerFiles.JobFiles.Select(f => Text(f.Path, f.Text)));
         entries.AddRange(files.Select(f => new Entry(f.Key, () => File.OpenRead(f.Value))));
         entries.Sort((a, b) => string.CompareOrdinal(a.Path, b.Path));
@@ -429,6 +463,15 @@ public static class RenderBundleWriter
             throw new ArgumentException(
                 $"The {which}'s output directory '{plan.Output.Directory}' does not lie beside it; a bundle renders into its own folder.",
                 nameof(plan));
+    }
+
+    /// <summary>Where a subtitle file of the plan lies in the bundle: where the plan's output
+    /// will be, under its base name.</summary>
+    public static string SubtitlePath(ScenePlan plan, string extension)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        string folder = Normalized(plan.Output.Directory);
+        return (folder.Length == 0 ? "" : folder + "/") + plan.Output.BaseName + extension;
     }
 
     private static Entry Text(string path, string text, bool executable = false)

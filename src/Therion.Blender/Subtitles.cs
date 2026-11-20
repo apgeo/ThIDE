@@ -76,6 +76,28 @@ public static class Subtitles
 
     private static IReadOnlyList<CaptionSpec> Ordered(IEnumerable<CaptionSpec> captions) => OneAtATime(captions);
 
+    /// <summary>
+    /// Reads a caption written on one line as <c>&lt;start&gt;-&lt;end&gt;:&lt;text&gt;</c>, the times in
+    /// seconds with a dot for the decimals: <c>2.5-6:Sala Mare</c>. For a command line, where a
+    /// caption is one argument.
+    /// </summary>
+    public static bool TryParseCaption(string? line, out CaptionSpec caption)
+    {
+        caption = new CaptionSpec();
+        if (line is null) return false;
+        int colon = line.IndexOf(':');
+        int dash = colon < 0 ? -1 : line.IndexOf('-', 0, colon);
+        if (dash <= 0) return false;
+        const NumberStyles style = NumberStyles.AllowDecimalPoint | NumberStyles.AllowLeadingWhite | NumberStyles.AllowTrailingWhite;
+        if (!double.TryParse(line.AsSpan(0, dash), style, CultureInfo.InvariantCulture, out double start)
+            || !double.TryParse(line.AsSpan(dash + 1, colon - dash - 1), style, CultureInfo.InvariantCulture, out double end))
+            return false;
+        string text = line[(colon + 1)..].Trim();
+        if (text.Length == 0 || !(start >= 0) || !(end > start)) return false;
+        caption = new CaptionSpec { Text = text, Start = start, End = end };
+        return true;
+    }
+
     /// <summary>A cue's text: its lines without the empty ones, which would end the cue.</summary>
     private static string Lines(string text)
         => string.Join('\n', text.ReplaceLineEndings("\n").Split('\n').Select(line => line.Trim()).Where(line => line.Length > 0));

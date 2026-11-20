@@ -1,6 +1,9 @@
 // `therion-cli blender` (BA-B14) — render or export a Blender presentation of a cave model,
 // headless, reusing the whole Therion.Blender module; or write it as a render bundle (a scene
-// plan, its mesh, the player and run scripts in one zip) and optionally render that. Kept in its
+// plan, its mesh, the player and run scripts in one zip) and optionally render that. A render can
+// be a quick draft (--draft), built by either scene builder (--builder), keep its frames
+// (--keep-frames) and be written again from them after a text changed (--compose-only); a
+// render in two stages that is stopped goes on when the same command is run again. Kept in its
 // own class (not a Program.cs local function) so it is unit-testable with in-memory writers and no
 // real Blender.
 
@@ -51,9 +54,29 @@ public static class BlenderVerb
         string? bundle = Option(args, "--bundle");
         bool draft = Flag(args, "--draft"), render = Flag(args, "--render");
         string? renderPlan = Option(args, "--render-plan");
-        if (bundle is null && (draft || render || renderPlan is not null))
+        if (bundle is null && (render || renderPlan is not null))
         {
-            stderr.WriteLine("error: --draft, --render and --render-plan go with --bundle <file.zip|folder>.");
+            stderr.WriteLine("error: --render and --render-plan go with --bundle <file.zip|folder>.");
+            return 2;
+        }
+        // How a render is made: these are for the render itself, not for a bundle or an export.
+        bool keepFrames = Flag(args, "--keep-frames"), composeOnly = Flag(args, "--compose-only");
+        string? builderName = Option(args, "--builder"), framesDir = Option(args, "--frames");
+        bool staged = keepFrames || composeOnly || builderName is not null || framesDir is not null;
+        if (staged && (bundle is not null || Option(args, "--export") is not null))
+        {
+            stderr.WriteLine("error: --builder, --keep-frames, --compose-only and --frames go with a render, not with --bundle or --export.");
+            return 2;
+        }
+        if (draft && bundle is null && Option(args, "--export") is not null)
+        {
+            stderr.WriteLine("error: --draft goes with a render or with --bundle, not with --export.");
+            return 2;
+        }
+        var builder = SceneBuilder.Auto;
+        if (builderName is not null && !Enum.TryParse(builderName, ignoreCase: true, out builder))
+        {
+            stderr.WriteLine($"error: --builder takes auto, player or generator, not '{builderName}'.");
             return 2;
         }
         if (!TryRenderPlans(renderPlan, draft, render, stderr, out var plans)) return 2;
@@ -90,15 +113,39 @@ public static class BlenderVerb
                 return 0;
             }
 
-            var result = await service.RenderAsync(spec, renderSource, progress).ConfigureAwait(false);
+            // The frames of a render in two stages have a place of their own beside the outputs,
+            // so that the same command, run again, goes on with them or writes the output from them.
+            var options = new RenderOptions
+            {
+                Builder = builder,
+                Draft = draft,
+                KeepFrames = keepFrames,
+                ComposeOnly = composeOnly,
+                FramesDirectory = Path.GetFullPath(framesDir ?? Path.Combine(outDir, spec.Output.BaseName + (draft ? "-draft" : "") + "-frames")),
+            };
+            var result = await service.RenderAsync(spec, renderSource, options, progress).ConfigureAwait(false);
+            foreach (string warning in result.Warnings) stderr.WriteLine($"warning: {warning}");
+            if (result.Builder == SceneBuilder.Generator && result.NotCarried.Count > 0)
+                stderr.WriteLine($"built by the script generator: the player does not carry {string.Join(", ", result.NotCarried)}");
+            if (result.LeftOut.Count > 0)
+                stderr.WriteLine($"warning: the {(result.Builder == SceneBuilder.Generator ? "script generator" : "player")} does not show {string.Join(", ", result.LeftOut)}");
             if (result.Succeeded)
             {
                 foreach (var path in result.OutputPaths) stdout.WriteLine(path);
-                stderr.WriteLine($"rendered {result.FrameCount} frame(s) on {result.Device} in {result.Duration.TotalSeconds:0.0}s");
+                string what = composeOnly ? "wrote" : draft ? "rendered a draft of" : "rendered";
+                stderr.WriteLine($"{what} {result.FrameCount} frame(s){(result.Device is null ? "" : " on " + result.Device)} in {result.Duration.TotalSeconds:0.0}s");
+                if (result.FramesDirectory is not null) stderr.WriteLine($"the frames are in {result.FramesDirectory}");
                 return 0;
             }
 
+            if (result.FailureKind == RenderFailureKind.BuilderRefused)
+            {
+                stderr.WriteLine($"error: {result.ErrorMessage}");
+                return 2;
+            }
             stderr.WriteLine($"error: render failed ({result.FailureKind}): {result.ErrorMessage}");
+            if (result.FramesDirectory is not null)
+                stderr.WriteLine($"the frames rendered so far are in {result.FramesDirectory}; run the same command again to go on from them");
             return 1;
         }
         catch (ArgumentException ex)
@@ -193,6 +240,7 @@ public static class BlenderVerb
 
         foreach (string lost in content.NotCarried)
             stderr.WriteLine($"warning: the bundle leaves out '{lost}': a scene plan cannot say it yet.");
+        foreach (string notice in content.Notices) stderr.WriteLine($"warning: {notice}");
         stdout.WriteLine(Path.GetFullPath(bundle));
         stderr.WriteLine($"wrote a render bundle{(draft ? " with a draft" : "")} to {bundle}");
         if (plans == RenderPlans.None) return 0;
@@ -226,11 +274,13 @@ public static class BlenderVerb
         var progress = new Progress<RenderProgress>(p => stderr.WriteLine($"[{p.Phase}] {p.Message}"));
         foreach (var (plan, file) in toRender)
         {
+            // The player takes a plan with texts through both of its stages itself.
             var job = new RenderJob(
-                Path.Combine(folder, PlayerFiles.EntryFileName), folder, plan.Timeline.FrameCount,
-                OutputOf(plan, Path.GetFullPath(Path.Combine(folder, plan.Output.Directory))))
+                Path.Combine(folder, PlayerFiles.EntryFileName), folder, plan.OutputFrameCount,
+                PlanOutputs.SpecOf(plan, Path.GetFullPath(Path.Combine(folder, plan.Output.Directory))))
             {
                 ScriptArguments = ["--plan", Path.Combine(folder, file)],
+                ExtraBytes = plan.HasTexts ? PlanOutputs.FrameBytes(plan) : 0,
             };
             var result = await new BlenderRunner(new RealBlenderProcessLauncher()).RunAsync(blender, job, progress).ConfigureAwait(false);
             if (!result.Succeeded)
@@ -242,6 +292,13 @@ public static class BlenderVerb
             foreach (string warning in result.Warnings) stderr.WriteLine($"warning: {warning}");
 
             var outputs = result.OutputPaths.ToList();
+            // The captions' subtitles lie where the movie was written; they go where it goes.
+            if (ReferenceEquals(plan, content.Plan) && content.Captions.Count > 0)
+                foreach (string extension in new[] { Subtitles.SrtExtension, Subtitles.VttExtension })
+                {
+                    string subtitles = Path.Combine(folder, RenderBundleWriter.SubtitlePath(plan, extension).Replace('/', Path.DirectorySeparatorChar));
+                    if (File.Exists(subtitles)) outputs.Add(subtitles);
+                }
             if (destination is not null)
             {
                 Directory.CreateDirectory(destination);
@@ -258,27 +315,6 @@ public static class BlenderVerb
         if (unpacked is not null) TryDelete(unpacked);
         return 0;
     }
-
-    /// <summary>The output of a plan as the runner collects it.</summary>
-    private static OutputSpec OutputOf(ScenePlan plan, string directory) => new()
-    {
-        Kind = plan.Output.Kind switch
-        {
-            PlanOutputKind.Video => OutputKind.Video,
-            PlanOutputKind.Frames => OutputKind.FrameSequence,
-            _ => OutputKind.Still,
-        },
-        Container = plan.Output.Container switch
-        {
-            PlanContainer.Mkv => VideoContainer.Mkv,
-            PlanContainer.Webm => VideoContainer.WebM,
-            _ => VideoContainer.Mp4,
-        },
-        Width = plan.Look.Width,
-        Height = plan.Look.Height,
-        BaseName = plan.Output.BaseName,
-        OutputDirectory = directory,
-    };
 
     private static string TempFolder(string prefix)
     {
@@ -302,10 +338,8 @@ public static class BlenderVerb
             if (!File.Exists(specPath)) { stderr.WriteLine($"error: spec file not found: {specPath}"); return false; }
             try { spec = SceneSpecSerializer.ReadFile(specPath); }
             catch (SceneSpecFormatException ex) { stderr.WriteLine($"error: bad spec: {ex.Message}"); return false; }
-            return true;
         }
-
-        if (Option(args, "--preset") is { } presetName)
+        else if (Option(args, "--preset") is { } presetName)
         {
             var preset = BuiltInPresets.ByName(presetName);
             if (preset is null)
@@ -315,7 +349,52 @@ public static class BlenderVerb
             }
             spec = preset.Spec;
         }
+        return TryAddTexts(args, stderr, ref spec);
+    }
+
+    /// <summary>
+    /// The texts over the picture that are given on the command line, added to the preset's or
+    /// the spec's: <c>--title</c>, <c>--credits</c>, <c>--end-card</c> (with
+    /// <c>--end-card-seconds</c>) and any number of <c>--caption "&lt;start&gt;-&lt;end&gt;:&lt;text&gt;"</c>.
+    /// </summary>
+    private static bool TryAddTexts(IReadOnlyList<string> args, TextWriter stderr, ref SceneSpec spec)
+    {
+        var overlays = spec.Labels.Overlays;
+        if (Option(args, "--title") is { } title) overlays = overlays with { Title = title };
+        if (Option(args, "--credits") is { } credits) overlays = overlays with { Credits = credits };
+        if (Option(args, "--end-card") is { } card) overlays = overlays with { EndCard = (overlays.EndCard ?? new EndCardSpec()) with { Text = card } };
+        if (Option(args, "--end-card-seconds") is { } seconds)
+        {
+            if (overlays.EndCard is null
+                || !double.TryParse(seconds, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double time))
+            {
+                stderr.WriteLine("error: --end-card-seconds takes a number of seconds, and goes with an end card (--end-card <text>).");
+                return false;
+            }
+            overlays = overlays with { EndCard = overlays.EndCard with { Seconds = time } };
+        }
+        var captions = new List<CaptionSpec>();
+        foreach (string line in Options(args, "--caption"))
+        {
+            if (!Subtitles.TryParseCaption(line, out var caption))
+            {
+                stderr.WriteLine($"error: --caption takes \"<start>-<end>:<text>\" with the times in seconds (\"2.5-6:Sala Mare\"), not '{line}'.");
+                return false;
+            }
+            captions.Add(caption);
+        }
+        if (captions.Count > 0) overlays = overlays with { Captions = [.. overlays.Captions, .. captions] };
+        if (!ReferenceEquals(overlays, spec.Labels.Overlays))
+            spec = spec with { Labels = spec.Labels with { Overlays = overlays } };
         return true;
+    }
+
+    /// <summary>The values of every occurrence of an option.</summary>
+    private static IEnumerable<string> Options(IReadOnlyList<string> args, string name)
+    {
+        for (int i = 1; i < args.Count - 1; i++)
+            if (string.Equals(args[i], name, StringComparison.OrdinalIgnoreCase))
+                yield return args[i + 1];
     }
 
     private static bool Flag(IReadOnlyList<string> args, string name)

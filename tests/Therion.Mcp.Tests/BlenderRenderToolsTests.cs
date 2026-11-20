@@ -355,6 +355,90 @@ public sealed class BlenderRenderToolsTests : IDisposable
     }
 
     [Fact]
+    public async Task A_draft_and_a_builder_reach_the_renderer_and_the_status_says_what_built_the_scene()
+    {
+        var (render, status) = await ToolsAsync();
+        _blender.Renderer.Outcome = new RenderResult
+        {
+            Succeeded = true, Builder = SceneBuilder.Generator, NotCarried = ["lighting.hdriPath"], LeftOut = ["labels.overlays.credits"],
+        };
+
+        var started = await render.StartRender(model: "out/cave.3d", draft: true, builder: "Generator");
+        Assert.True(started.Ok, started.Error?.Message);
+        Assert.True(started.Data!.Draft);
+        Assert.Null(started.Data.Builder);
+        var done = await FinishedAsync(status, started.Data.JobId);
+
+        Assert.Equal(new RenderOptions { Builder = SceneBuilder.Generator, Draft = true }, _blender.Renderer.LastOptions);
+        Assert.Equal(("generator", true), (done.Builder, done.Draft));
+        Assert.Equal(["lighting.hdriPath"], done.NotCarried);
+        Assert.Equal(["labels.overlays.credits"], done.LeftOut);
+
+        // Left alone, the builder is chosen automatically and the render is the real one.
+        _blender.Renderer.Outcome = null;
+        started = await render.StartRender(model: "out/cave.3d");
+        done = await FinishedAsync(status, started.Data!.JobId);
+        Assert.Equal(new RenderOptions(), _blender.Renderer.LastOptions);
+        Assert.Equal((null, false, null, null), (done.Builder, done.Draft, done.NotCarried, done.LeftOut));
+    }
+
+    [Fact]
+    public async Task A_builder_that_does_not_exist_or_cannot_build_the_scene_is_refused_before_a_job_starts()
+    {
+        _blender.Saved.Add(new RenderPreset
+        {
+            Name = "Under a sky", Spec = new SceneSpec { Lighting = new LightingSpec { Rig = LightingRig.HdriFile, HdriPath = "sky.hdr" } },
+        });
+        var (render, _) = await ToolsAsync();
+
+        var unknown = await render.StartRender(builder: "blender");
+        var refused = await render.StartRender(preset: "Under a sky", builder: "player");
+
+        Assert.Equal(ToolErrorCodes.InvalidArgument, unknown.Error!.Code);
+        Assert.Contains("auto, player, generator", unknown.Error.Message);
+        Assert.Equal(ToolErrorCodes.InvalidArgument, refused.Error!.Code);
+        Assert.Contains("does not carry lighting.hdriPath", refused.Error.Message);
+        Assert.Empty(_blender.Requests);
+        // The same preset is rendered when the builder is left to be chosen, or as a draft.
+        Assert.True((await render.StartRender(preset: "Under a sky", model: "out/cave.3d", draft: true, builder: "player")).Ok);
+    }
+
+    [Fact]
+    public async Task Texts_over_the_picture_are_added_to_the_presets()
+    {
+        var (render, status) = await ToolsAsync();
+
+        var started = await render.StartRender(model: "out/cave.3d", title: " Peștera Inventată ", credits: "echipa",
+            endCard: "Sfârșit", endCardSeconds: 2.5, captions: ["1-2.5:Sala Mare", " 3 - 4.5 : Sifonul: capăt"]);
+        Assert.True(started.Ok, started.Error?.Message);
+        await FinishedAsync(status, started.Data!.JobId);
+
+        var overlays = _blender.Renderer.LastSpec!.Labels.Overlays;
+        Assert.Equal(("Peștera Inventată", "echipa"), (overlays.Title, overlays.Credits));
+        Assert.Equal(new EndCardSpec { Text = "Sfârșit", Seconds = 2.5 }, overlays.EndCard);
+        Assert.Equal(
+            [new CaptionSpec { Text = "Sala Mare", Start = 1, End = 2.5 }, new CaptionSpec { Text = "Sifonul: capăt", Start = 3, End = 4.5 }],
+            overlays.Captions);
+    }
+
+    [Theory]
+    [InlineData("Sala Mare")]
+    [InlineData("4-2:backwards")]
+    [InlineData("1-2:")]
+    [InlineData("a-b:letters")]
+    public async Task A_caption_that_cannot_be_read_is_refused_with_how_to_write_one(string caption)
+    {
+        var (render, _) = await ToolsAsync();
+
+        var refused = await render.StartRender(captions: ["0-1:fine", caption]);
+
+        Assert.Equal(ToolErrorCodes.InvalidArgument, refused.Error!.Code);
+        Assert.Contains("<start>-<end>:<text>", refused.Error.Message);
+        Assert.Equal(ToolErrorCodes.InvalidArgument, (await render.StartRender(endCardSeconds: 3)).Error!.Code);
+        Assert.Empty(_blender.Requests);
+    }
+
+    [Fact]
     public async Task Settings_the_renderer_would_reject_are_refused_before_a_job_starts()
     {
         var (render, _) = await ToolsAsync();
@@ -507,12 +591,14 @@ public sealed class BlenderRenderToolsTests : IDisposable
         public TaskCompletionSource Reached { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public RenderResult? Outcome { get; set; }
         public SceneSpec? LastSpec { get; private set; }
+        public RenderOptions? LastOptions { get; private set; }
         public bool SawCancellation { get; private set; }
 
-        public async Task<RenderResult> RenderAsync(SceneSpec spec, RenderSource source,
+        public async Task<RenderResult> RenderAsync(SceneSpec spec, RenderSource source, RenderOptions options,
             IProgress<RenderProgress>? progress = null, CancellationToken ct = default)
         {
             LastSpec = spec;
+            LastOptions = options;
             progress?.Report(new RenderProgress(RenderPhase.Rendering, "Rendering", 0.5, 1, 2, Device: "CPU"));
             Reached.TrySetResult();
             if (Gate is not null)

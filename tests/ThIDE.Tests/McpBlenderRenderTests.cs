@@ -1,6 +1,7 @@
 // The Blender render tools as an agent reaches them: through the in-app MCP host over HTTP, with the
 // app's own renderer, model sources and presets behind them. Blender itself is a fake process that
-// writes the image the script asks for; one opt-in test runs the real Blender. Every model is invented.
+// writes the image the plan or the script asks for; one opt-in test runs the real Blender. Every model
+// is invented.
 
 using System;
 using System.Collections.Generic;
@@ -104,10 +105,50 @@ public sealed class McpBlenderRenderTests : IDisposable
         Assert.True(File.Exists(Path.Combine(_project, "renders", "cave-render.png")));
         Assert.Equal("cave.3d", done.GetProperty("model").GetString());
         Assert.Equal("CPU", done.GetProperty("device").GetString());
-        // Blender ran the generated script, with factory settings, and nothing else.
+        // The player built the scene: it carries all of this preset.
+        Assert.Equal("player", done.GetProperty("builder").GetString());
+        Assert.False(done.GetProperty("draft").GetBoolean());
+        // Blender ran the player's script, with factory settings, and nothing else.
         var run = Assert.Single(launcher.Runs);
         Assert.Contains("--factory-startup", run);
         Assert.EndsWith("render.py", run[^1]);
+        Assert.Equal([true], launcher.Played);
+    }
+
+    [Fact]
+    public async Task An_agent_picks_the_builder_and_renders_a_draft_first()
+    {
+        var launcher = new FakeLauncher();
+        await using var session = await Session.StartAsync(_scratch, RenderHost(FakeBlender(), launcher));
+        var client = session.Client;
+        await CallAsync(client, "load_workspace", new() { ["path"] = Path.Combine(_project, "project.thconfig") });
+        var still = new Dictionary<string, object?>
+        {
+            ["model"] = "cave.3d", ["outputKind"] = "still", ["width"] = 64, ["height"] = 48, ["samples"] = 1, ["outputDirectory"] = "renders",
+        };
+
+        // A draft: the player's, under its own name beside where the render goes.
+        var started = await CallAsync(client, "start_render", new(still) { ["draft"] = true, ["builder"] = "generator" });
+        Assert.True(started.GetProperty("draft").GetBoolean());
+        var draft = await FinishedAsync(client, started.GetProperty("jobId").GetString()!);
+        Assert.Equal("succeeded", draft.GetProperty("state").GetString());
+        Assert.Equal("renders/cave-render-draft.png", Assert.Single(draft.GetProperty("outputs").EnumerateArray()).GetString());
+        Assert.Equal("player", draft.GetProperty("builder").GetString());
+
+        // The script generator, asked for by name.
+        started = await CallAsync(client, "start_render", new(still) { ["builder"] = "generator" });
+        var generated = await FinishedAsync(client, started.GetProperty("jobId").GetString()!);
+        Assert.Equal("succeeded", generated.GetProperty("state").GetString());
+        Assert.Equal("generator", generated.GetProperty("builder").GetString());
+        Assert.Equal([true, false], launcher.Played);
+
+        // A title: the still is made in two stages, its one frame and then the title over it.
+        started = await CallAsync(client, "start_render", new(still) { ["title"] = "Invented Cave" });
+        var titled = await FinishedAsync(client, started.GetProperty("jobId").GetString()!);
+        Assert.Equal("succeeded", titled.GetProperty("state").GetString());
+        Assert.Equal(4, launcher.Runs.Count);
+        Assert.Equal(["--stage", "frames"], launcher.Runs[2].SkipWhile(a => a != "--").Skip(1).Take(2));
+        Assert.Equal(["--stage", "compose"], launcher.Runs[3].SkipWhile(a => a != "--").Skip(1).Take(2));
     }
 
     [Fact]
@@ -238,13 +279,41 @@ public sealed class McpBlenderRenderTests : IDisposable
     {
         public List<IReadOnlyList<string>> Runs { get; } = [];
 
+        /// <summary>For each run, whether Blender was given a scene plan to play (true) or a
+        /// generated script (false).</summary>
+        public List<bool> Played { get; } = [];
+
         public IBlenderProcess Start(string exe, IReadOnlyList<string> args, string cwd)
         {
             Runs.Add(args);
-            var script = File.ReadAllText(args[^1]);
+            var arguments = args.ToList();
+            string scriptPath = arguments[arguments.IndexOf("--python") + 1];
+            string planPath = Path.Combine(cwd, "scene-plan.json");
+            byte[] png = [0x89, 0x50, 0x4e, 0x47];
+            if (File.Exists(planPath))
+            {
+                // The player: it writes what its plan names, or, in the first of two stages, the
+                // frame the second is made from.
+                Played.Add(true);
+                var plan = Therion.Blender.Plan.ScenePlanSerializer.ReadFile(planPath);
+                int frames = arguments.IndexOf("--frames");
+                if (arguments.Contains("frames") && frames > 0)
+                {
+                    Directory.CreateDirectory(arguments[frames + 1]);
+                    File.WriteAllBytes(Path.Combine(arguments[frames + 1], "frame_0001.png"), png);
+                }
+                else
+                {
+                    Directory.CreateDirectory(plan.Output.Directory);
+                    File.WriteAllBytes(Path.Combine(plan.Output.Directory, plan.Output.BaseName + ".png"), png);
+                }
+                return new FakeProcess();
+            }
+            Played.Add(false);
+            var script = File.ReadAllText(scriptPath);
             var outDir = JsonSerializer.Deserialize<string>(Line(script, "OUT_DIR = "))!;
             Directory.CreateDirectory(outDir);
-            File.WriteAllBytes(Path.Combine(outDir, "cave-render.png"), [0x89, 0x50, 0x4e, 0x47]);
+            File.WriteAllBytes(Path.Combine(outDir, "cave-render.png"), png);
             return new FakeProcess();
         }
 

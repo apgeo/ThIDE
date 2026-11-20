@@ -104,7 +104,7 @@ public sealed class ToolContractFuzzTests : IDisposable
             }));
 
         public Task<Therion.Blender.RenderResult> RenderAsync(Therion.Blender.SceneSpec spec, Therion.Blender.RenderSource source,
-            IProgress<Therion.Blender.RenderProgress>? progress = null, CancellationToken ct = default) =>
+            Therion.Blender.RenderOptions options, IProgress<Therion.Blender.RenderProgress>? progress = null, CancellationToken ct = default) =>
             Task.FromResult(new Therion.Blender.RenderResult { FailureKind = Therion.Blender.RenderFailureKind.BlenderNotFound, ErrorMessage = "No Blender here." });
 
         public Task<string> ExportScriptAsync(Therion.Blender.SceneSpec spec, Therion.Blender.RenderSource source, string outputDir,

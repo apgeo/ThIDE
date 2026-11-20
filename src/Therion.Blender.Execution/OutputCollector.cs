@@ -71,9 +71,18 @@ public static class OutputCollector
     private static OutputCollection CollectGlob(string dir, string baseName, string extension, int expected)
     {
         // Blender may decorate the base name (e.g. a frame range on a video, the frame number
-        // on a sequence), so match by prefix + extension rather than an exact name.
+        // on a sequence), so match by prefix + extension rather than an exact name. What stands
+        // between the two is then only digits, '_' and '-': a draft of the same render, written
+        // beside it as <base name>-draft, is another render's output.
         IEnumerable<string> matches;
-        try { matches = Directory.EnumerateFiles(dir, baseName + "*" + extension); }
+        try
+        {
+            matches = Directory.EnumerateFiles(dir, baseName + "*" + extension)
+                .Where(path => Path.GetFileName(path) is { } name
+                               && name.AsSpan(baseName.Length, name.Length - baseName.Length - extension.Length)
+                                   .IndexOfAnyExcept("0123456789_-") < 0)
+                .ToList();
+        }
         catch (IOException) { return new OutputCollection([], false, "The output directory could not be read."); }
 
         var files = new List<CollectedOutput>();

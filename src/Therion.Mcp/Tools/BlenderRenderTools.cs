@@ -57,7 +57,10 @@ public sealed class BlenderRenderTools(IWorkspaceHost host, IBlenderRenderHost b
                + "a time. The model is the project's own unless you name a .lox or .3d: its last build "
                + "output, or, when that is missing or older than the sources, a fresh export by Therion of "
                + "the model alone (the thconfig's system commands are left out). Outputs go to "
-               + "outputDirectory in the workspace, or to a temporary folder that render_status names.")]
+               + "outputDirectory in the workspace, or to a temporary folder that render_status names. "
+               + "draft: true renders a quick preview first (seconds, not minutes): look at it before the "
+               + "long render. title, credits, endCard and captions are written over the picture; a movie "
+               + "with captions also gets them as .srt and .vtt subtitles.")]
     public async Task<ToolResult<RenderJobStatus>> StartRender(
         [Description("Preset name from list_render_presets. Defaults to \"Orbit showcase\".")]
         string preset = DefaultPreset,
@@ -80,16 +83,45 @@ public sealed class BlenderRenderTools(IWorkspaceHost host, IBlenderRenderHost b
         [Description("When rendering the project's own model and its build output is missing or out of date, "
                    + "export it with Therion first. Defaults to true; false renders the build output as it is.")]
         bool reExport = true,
+        [Description("True renders a quick draft instead: half the size, in Blender's solid view (no lights, no "
+                   + "shadows), a fraction of a second per frame, written as <baseName>-draft. For checking the "
+                   + "camera move, the framing and the texts before the long render.")]
+        bool draft = false,
+        [Description("What builds the scene in Blender: auto (the default: the player when it carries the whole "
+                   + "scene, otherwise the script generator; render_status says which and why), player, or "
+                   + "generator. A draft is always the player's.")]
+        string? builder = null,
+        [Description("A title written at the top of the picture. Omit to keep the preset's.")]
+        string? title = null,
+        [Description("A small line that stays in a corner of the picture: who surveyed, a licence.")]
+        string? credits = null,
+        [Description("The text of a card the movie ends on, over a black picture.")]
+        string? endCard = null,
+        [Description("How long the end card stays, in seconds; the movie is that much longer. 0 keeps the default (4).")]
+        double endCardSeconds = 0,
+        [Description("Captions shown at the bottom of the picture, each as \"<start>-<end>:<text>\" with the times in "
+                   + "seconds from the start of the movie, e.g. \"2.5-6:Sala Mare\". One is shown at a time.")]
+        string[]? captions = null,
         CancellationToken ct = default)
     {
         var (snapshot, error) = await host.TryGetSnapshotAsync(ct);
         if (error is not null) return ToolResult<RenderJobStatus>.Failure(error);
 
         var (plan, refused) = Plan(snapshot!.Root, preset, model, outputKind, width, height, durationSeconds,
-            samples, outputDirectory, baseName, reExport, needsDirectory: false);
+            samples, outputDirectory, baseName, reExport, needsDirectory: false,
+            new RenderTexts(title, credits, endCard, endCardSeconds, captions));
         if (refused is not null) return ToolResult<RenderJobStatus>.Failure(refused);
 
-        var job = new BlenderRenderJob(snapshot.Root, plan!.Preset, plan.Spec);
+        // Which builder, and whether it can build this scene, before a job is started for it.
+        var chosen = SceneBuilder.Auto;
+        if (!string.IsNullOrWhiteSpace(builder) && !ToolEnums.TryParse(builder, out chosen))
+            return ToolResult<RenderJobStatus>.Failure(ToolErrorCodes.InvalidArgument,
+                $"Unknown builder '{builder}'. Use one of: {ToolEnums.Names<SceneBuilder>()}.");
+        var options = new RenderOptions { Builder = chosen, Draft = draft };
+        if (SceneBuilders.Choose(plan!.Spec, options).Refusal is { } refusal)
+            return ToolResult<RenderJobStatus>.Failure(ToolErrorCodes.InvalidArgument, refusal);
+
+        var job = new BlenderRenderJob(snapshot.Root, plan.Preset, plan.Spec, draft);
         string name = $"{plan.Spec.Output.BaseName} (agent {job.Id})";
         if (jobs.Find(null) is { IsFinished: false } running)
             return Busy(running);
@@ -107,7 +139,7 @@ public sealed class BlenderRenderTools(IWorkspaceHost host, IBlenderRenderHost b
                 running.Report(new RenderProgress(RenderPhase.AcquiringSource, "Finding the model"));
                 var source = await blender.AcquireAsync(plan.Request, token).ConfigureAwait(false);
                 running.SetModel(source.Model);
-                result = await blender.Renderer.RenderAsync(plan.Spec, source, new InlineProgress<RenderProgress>(running.Report), token)
+                result = await blender.Renderer.RenderAsync(plan.Spec, source, options, new InlineProgress<RenderProgress>(running.Report), token)
                     .ConfigureAwait(false);
                 return result;
             }
@@ -236,6 +268,9 @@ public sealed class BlenderRenderTools(IWorkspaceHost host, IBlenderRenderHost b
     /// <summary>A checked request: the preset's scene with the caller's overrides, and the model to find.</summary>
     private sealed record RenderPlan(string Preset, SceneSpec Spec, ModelSourceRequest Request);
 
+    /// <summary>The texts over the picture a caller adds to the preset's.</summary>
+    private sealed record RenderTexts(string? Title, string? Credits, string? EndCard, double EndCardSeconds, string[]? Captions);
+
     /// <summary>
     /// The scene and model request for a render or export, or the error to answer with. Every path is
     /// held to the workspace; the output folder may not be the project's config folder.
@@ -243,7 +278,7 @@ public sealed class BlenderRenderTools(IWorkspaceHost host, IBlenderRenderHost b
     private (RenderPlan? Plan, ToolError? Error) Plan(
         string root, string preset, string? model, string? outputKind, int width, int height,
         double durationSeconds, int samples, string? outputDirectory, string? baseName, bool reExport,
-        bool needsDirectory)
+        bool needsDirectory, RenderTexts? texts = null)
     {
         static (RenderPlan?, ToolError?) Refuse(string code, string message) => (null, new ToolError(code, message));
 
@@ -272,6 +307,30 @@ public sealed class BlenderRenderTools(IWorkspaceHost host, IBlenderRenderHost b
         if (durationSeconds > 0) spec = spec with { Animation = spec.Animation with { DurationSeconds = durationSeconds } };
         if (samples > 0) spec = spec with { Engine = spec.Engine with { Samples = samples } };
         if (!string.IsNullOrWhiteSpace(baseName)) spec = spec with { Output = spec.Output with { BaseName = baseName.Trim() } };
+        if (texts is not null)
+        {
+            var overlays = spec.Labels.Overlays;
+            if (!string.IsNullOrWhiteSpace(texts.Title)) overlays = overlays with { Title = texts.Title.Trim() };
+            if (!string.IsNullOrWhiteSpace(texts.Credits)) overlays = overlays with { Credits = texts.Credits.Trim() };
+            if (!string.IsNullOrWhiteSpace(texts.EndCard))
+                overlays = overlays with { EndCard = (overlays.EndCard ?? new EndCardSpec()) with { Text = texts.EndCard.Trim() } };
+            if (texts.EndCardSeconds > 0)
+            {
+                if (overlays.EndCard is null)
+                    return Refuse(ToolErrorCodes.InvalidArgument, "endCardSeconds goes with an end card: give its text (endCard).");
+                overlays = overlays with { EndCard = overlays.EndCard with { Seconds = texts.EndCardSeconds } };
+            }
+            var captions = new List<CaptionSpec>();
+            foreach (string line in texts.Captions ?? [])
+            {
+                if (!Subtitles.TryParseCaption(line, out var caption))
+                    return Refuse(ToolErrorCodes.InvalidArgument,
+                        $"'{line}' is not a caption. Write each as \"<start>-<end>:<text>\" with the times in seconds, e.g. \"2.5-6:Sala Mare\".");
+                captions.Add(caption);
+            }
+            if (captions.Count > 0) overlays = overlays with { Captions = [.. overlays.Captions, .. captions] };
+            spec = spec with { Labels = spec.Labels with { Overlays = overlays } };
+        }
 
         // Always replaced: a user preset may carry the folder it was saved with, which is no business of
         // an agent's render.

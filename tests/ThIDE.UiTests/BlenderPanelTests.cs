@@ -6,8 +6,8 @@ namespace ThIDE.UiTests;
 /// The Blender Animation panel, driven like a user drives it: open it from the Tools menu, pick
 /// the workspace's model, set the output folder, render, and see the result. A stub Blender
 /// (tests/ui-fixtures/stub-blender) stands in for the real one, so the flow runs wherever
-/// Therion does; it keeps the scripts it was given so the test can check what the app generated.
-/// The real-Blender variant runs when THIDE_BLENDER_SMOKE=1 as well.
+/// Therion does; it keeps the scene plans and scripts it was given so the test can check what the
+/// app made. The real-Blender variant runs when THIDE_BLENDER_SMOKE=1 as well.
 /// </summary>
 public class BlenderPanelTests
 {
@@ -89,11 +89,11 @@ public class BlenderPanelTests
         Assert.Single(written);
         await app.WaitAsync("#Blender.Outputs >> role:Text;name:" + written[0]);
 
-        // The lead flagged in demo.th reached the generated scene, named by its station.
-        var script = File.ReadAllText(Assert.Single(Directory.GetFiles(scripts)));
-        Assert.Contains("LEAD_MARKERS = [", script);
-        Assert.Contains("\"draught in the boulders\"", script);
-        Assert.Contains("\"demo.4\"", script);
+        // The scene was planned for the player, and the lead flagged in demo.th is in the plan,
+        // named by its station.
+        var plan = File.ReadAllText(Assert.Single(Directory.GetFiles(scripts)));
+        Assert.Contains("\"features\": [", plan);
+        Assert.Contains("\"id\": \"lead:demo.4\", \"role\": \"lead-marker\"", plan);
     }
 
     [UiFact]
@@ -120,8 +120,8 @@ public class BlenderPanelTests
 
             // The model came from a re-export: the lead is marked, and the project folder holds
             // nothing it did not hold before (no model, no temporary thconfig, no log).
-            var script = File.ReadAllText(Assert.Single(Directory.GetFiles(scripts)));
-            Assert.Contains("\"demo.4\"", script);
+            var plan = File.ReadAllText(Assert.Single(Directory.GetFiles(scripts)));
+            Assert.Contains("\"lead:demo.4\"", plan);
             var after = Directory.GetFileSystemEntries(dir).Order(StringComparer.Ordinal).ToArray();
             Assert.Equal(before, after);
         }

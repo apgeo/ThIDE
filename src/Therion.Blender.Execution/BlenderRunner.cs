@@ -22,6 +22,14 @@ public sealed record RenderJob(
     /// <summary>Arguments for the script, passed after <c>--</c> on Blender's command line: for
     /// the player, <c>--plan</c> and the plan to play.</summary>
     public IReadOnlyList<string> ScriptArguments { get; init; } = [];
+
+    /// <summary>Bytes that what follows this job will write beside what the job itself writes:
+    /// the movie a second stage makes from this job's frames. The disk preflight counts them, so
+    /// a render in two stages does not find the disk full after its long first one.</summary>
+    public long ExtraBytes { get; init; }
+
+    /// <summary>The name of the log file in <see cref="WorkingDirectory"/>.</summary>
+    public string LogFileName { get; init; } = "job.log";
 }
 
 /// <summary>A running Blender process: merged output lines, exit code, and a tree kill.</summary>
@@ -76,7 +84,8 @@ public sealed class BlenderRunner
         var stopwatch = Stopwatch.StartNew();
 
         // Disk preflight: fail fast rather than mid-render (skipped when free space is unknown).
-        long estimate = DiskPreflight.EstimateBytes(job.FrameCount, job.Output.Width, job.Output.Height, job.Output.Kind);
+        long estimate = DiskPreflight.EstimateBytes(job.FrameCount, job.Output.Width, job.Output.Height, job.Output.Kind)
+                        + Math.Max(0L, job.ExtraBytes);
         // Probe where the outputs land — the caller's output directory when it differs from the job folder.
         string outputVolume = string.IsNullOrWhiteSpace(job.Output.OutputDirectory) ? job.WorkingDirectory : job.Output.OutputDirectory;
         if (_freeSpaceProbe(outputVolume) is { } free && !DiskPreflight.IsSufficient(estimate, free))
@@ -89,7 +98,7 @@ public sealed class BlenderRunner
             };
 
         progress?.Report(new RenderProgress(RenderPhase.Rendering, "Starting Blender…")); // tier-3 spinner
-        string jobLogPath = Path.Combine(job.WorkingDirectory, "job.log");
+        string jobLogPath = Path.Combine(job.WorkingDirectory, job.LogFileName);
         // --python-exit-code: an UNcaught Python exception (e.g. a Blender API rename the
         // script's probes missed) otherwise exits 0 and looks like a silent no-output run.
         string[] args = ["-b", "--factory-startup", "--python-exit-code", "64", "--python", job.ScriptPath];

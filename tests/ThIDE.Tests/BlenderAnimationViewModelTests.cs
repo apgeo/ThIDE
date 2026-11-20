@@ -31,7 +31,7 @@ public class BlenderAnimationViewModelTests
         public SceneSpec? LastSpec { get; private set; }
         public int RenderCalls { get; private set; }
 
-        public Task<RenderResult> RenderAsync(SceneSpec spec, RenderSource source, IProgress<RenderProgress>? progress = null, CancellationToken ct = default)
+        public Task<RenderResult> RenderAsync(SceneSpec spec, RenderSource source, RenderOptions options, IProgress<RenderProgress>? progress = null, CancellationToken ct = default)
         {
             LastSpec = spec;
             RenderCalls++;

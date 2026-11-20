@@ -39,13 +39,25 @@ public interface IBlenderRenderService
     /// </summary>
     /// <param name="spec">The render presentation (camera/materials/lighting/labels/output).</param>
     /// <param name="source">The resolved model + leads to render.</param>
+    /// <param name="options">How the render is made: which scene builder, a draft, what becomes
+    /// of the frames of a render in two stages.</param>
     /// <param name="progress">Receives progress ticks; may be <c>null</c>.</param>
     /// <param name="ct">Cancels the job (and tears down Blender) cooperatively.</param>
     Task<RenderResult> RenderAsync(
         SceneSpec spec,
         RenderSource source,
+        RenderOptions options,
         IProgress<RenderProgress>? progress = null,
         CancellationToken ct = default);
+
+    /// <summary>The render with the default <see cref="RenderOptions"/>: the scene builder is
+    /// chosen automatically, and nothing is kept of a render's frames.</summary>
+    Task<RenderResult> RenderAsync(
+        SceneSpec spec,
+        RenderSource source,
+        IProgress<RenderProgress>? progress = null,
+        CancellationToken ct = default)
+        => RenderAsync(spec, source, new RenderOptions(), progress, ct);
 
     /// <summary>
     /// Export-only mode (FR-10a): convert + generate, writing the Blender Python script and its
