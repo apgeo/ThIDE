@@ -8,6 +8,7 @@
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 
 namespace Therion.Blender;
 
@@ -24,6 +25,7 @@ public static class SceneSpecSerializer
         Converters = { new JsonStringEnumConverter() },
         // Diacritics in names/paths stay readable — the file is UTF-8.
         Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        TypeInfoResolver = new DefaultJsonTypeInfoResolver { Modifiers = { WriteLaterTextsOnlyWhenSet } },
     };
 
     private static readonly JsonSerializerOptions CanonicalOptions = new()
@@ -31,7 +33,31 @@ public static class SceneSpecSerializer
         WriteIndented = false,
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         Converters = { new JsonStringEnumConverter() },
+        TypeInfoResolver = new DefaultJsonTypeInfoResolver { Modifiers = { WriteLaterTextsOnlyWhenSet } },
     };
+
+    /// <summary>The credits and corner lines, the end card, the captions, the title's subtitle
+    /// and time, and the fades were added to the overlays after the format's first release. They
+    /// are written only when a spec has them, so a spec without them is the same JSON, and has
+    /// the same hash, as before they existed.</summary>
+    private static void WriteLaterTextsOnlyWhenSet(JsonTypeInfo type)
+    {
+        if (type.Type == typeof(EndCardSpec))
+        {
+            foreach (var property in type.Properties)
+                if (property.Name == "subtitle") property.ShouldSerialize = (_, value) => value is not null;
+        }
+        if (type.Type != typeof(OverlaySpec)) return;
+        foreach (var property in type.Properties)
+        {
+            if (property.Name is "credits" or "endCard" or "subtitle" or "titleSeconds" or "corner")
+                property.ShouldSerialize = (_, value) => value is not null;
+            else if (property.Name is "captions" or "cornerCaptions")
+                property.ShouldSerialize = (_, value) => value is IReadOnlyList<CaptionSpec> { Count: > 0 };
+            else if (property.Name is "fadeFromBlack" or "fadeToBlack")
+                property.ShouldSerialize = (_, value) => value is not 0.0;
+        }
+    }
 
     /// <summary>Serializes the spec (indented, camelCase, string enums).</summary>
     public static string Write(SceneSpec spec)
