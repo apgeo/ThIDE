@@ -439,7 +439,7 @@
   <data name="Blender_UI_LabelRoof" xml:space="preserve"><value>Labels above</value></data>
   <data name="Blender_UI_LabelRoof_Tip" xml:space="preserve"><value>The roof a station label is lifted above. SurveyFirst: the surveyed up distance, else the walls. WallsFirst: the walls, else the surveyed up distance. WallsOnly: the walls only. None: labels sit on their stations.</value></data>
   <data name="Blender_UI_Surface" xml:space="preserve"><value>Terrain</value></data>
-  <data name="Blender_UI_Surface_Tip" xml:space="preserve"><value>The terrain surface of a .lox model, above the cave. Off: none. Solid: in one colour. Textured: with the surface image draped over it (in one colour when the model has no image). From above it is see-through, as much as Terrain opacity says, so the cave shows under it; from below it is invisible. The camera still frames the cave.</value></data>
+  <data name="Blender_UI_Surface_Tip" xml:space="preserve"><value>The terrain surface of a .lox model, above the cave. Off: none. Solid: in one color. Textured: with the surface image draped over it (in one color when the model has no image). From above it is see-through, as much as Terrain opacity says, so the cave shows under it; from below it is invisible. The camera still frames the cave.</value></data>
   <data name="Blender_UI_SurfaceOpacity" xml:space="preserve"><value>Terrain opacity</value></data>
   <data name="Blender_UI_SurfaceOpacity_Tip" xml:space="preserve"><value>How opaque the terrain is seen from above: at 0 % it cannot be seen, at 100 % it hides the cave under it. The default is 40 %.</value></data>
   <data name="Blender_UI_Render" xml:space="preserve"><value>Render</value></data>
