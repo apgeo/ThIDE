@@ -1,0 +1,14 @@
+The ThIDE player
+================
+
+render.py and the folder thide_player/ are the ThIDE player: Python that builds a Blender scene
+from a scene plan (scene-plan.json) and renders it. render.sh and render.cmd start Blender with
+it. They are part of ThIDE, a program for cave surveys drawn with Therion, and are subject to the
+Mozilla Public License, v. 2.0: see LICENSE beside this file, or https://mozilla.org/MPL/2.0/.
+
+The source of the player is in the ThIDE repository on GitHub:
+
+  https://github.com/apgeo/ThIDE   (src/Therion.Blender/Player)
+
+The scene itself (the plans, the meshes, the images) and what is rendered from it are not part
+of the player.

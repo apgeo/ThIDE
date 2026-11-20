@@ -104,6 +104,23 @@ public class PlayerWriterTests : IDisposable
         }
     }
 
+    [Fact]
+    public void EveryFileOfThePlayer_StartsWithTheNoticeOfItsLicence()
+    {
+        const string notice =
+            "# This Source Code Form is subject to the terms of the Mozilla Public\n" +
+            "# License, v. 2.0. If a copy of the MPL was not distributed with this\n" +
+            "# file, You can obtain one at https://mozilla.org/MPL/2.0/.\n\n";
+        Assert.All(PlayerFiles.JobFiles, file => Assert.StartsWith(notice, file.Text, StringComparison.Ordinal));
+        Assert.StartsWith(notice, PlayerFiles.SingleFileStart, StringComparison.Ordinal);
+
+        // A single-file script says it at its top as well, for the player it carries.
+        string script = PlayerWriter.SingleFile(OneModelPlan);
+        string top = script[..script.IndexOf("PLAN = ", StringComparison.Ordinal)];
+        Assert.Contains("https://github.com/apgeo/ThIDE", top);
+        Assert.Contains("Mozilla Public License, v. 2.0: https://mozilla.org/MPL/2.0/", top);
+    }
+
     // ---- job folder ----
 
     [Fact]

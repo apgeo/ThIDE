@@ -1,3 +1,7 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 """Feature "look": render engine and quality, picture size, materials, lights and the world.
 
 Runs after "models" and "camera_track": it gives the models the materials they ask for, and a

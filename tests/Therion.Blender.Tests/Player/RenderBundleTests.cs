@@ -70,7 +70,7 @@ public class RenderBundleTests : IDisposable
 
         string[] inside =
         [
-            "README.txt", "model.ply", "render.cmd", "render.py", "render.sh", "scene-plan.draft.json", "scene-plan.json",
+            "LICENSE", "NOTICE", "README.txt", "model.ply", "render.cmd", "render.py", "render.sh", "scene-plan.draft.json", "scene-plan.json",
             .. PlayerFiles.JobFiles.Select(f => f.Path).Where(p => p.StartsWith("thide_player/", StringComparison.Ordinal)),
         ];
         Array.Sort(inside, StringComparer.Ordinal);
@@ -83,6 +83,34 @@ public class RenderBundleTests : IDisposable
         var entries = Read(zipPath);
         Assert.All(PlayerFiles.JobFiles, f => Assert.Equal(f.Text, Text(entries, f.Path)));
         Assert.Equal(File.ReadAllBytes(Path.Combine(_dir, "work", "model.ply")), entries["model.ply"]);
+    }
+
+    [Fact]
+    public void TheZip_CarriesThePlayersLicence_AndANoticeOfWhereItsSourceIs()
+    {
+        string zipPath = Path.Combine(_dir, "cave.zip");
+        RenderBundleWriter.WriteZip(Content(draft: false), zipPath);
+        var entries = Read(zipPath);
+
+        // The licence is the text of the Mozilla Public License 2.0, as the library ships it.
+        string licence = Text(entries, RenderBundleWriter.LicenseFileName);
+        Assert.StartsWith("Mozilla Public License Version 2.0\n", licence);
+        Assert.Contains("Exhibit A - Source Code Form License Notice", licence);
+        Assert.Contains("Exhibit B - \"Incompatible With Secondary Licenses\" Notice", licence);
+        Assert.DoesNotContain('\r', licence);
+        Assert.EndsWith("  defined by the Mozilla Public License, v. 2.0.\n", licence);
+
+        string notice = Text(entries, RenderBundleWriter.NoticeFileName);
+        Assert.Contains("render.py and the folder thide_player/ are the ThIDE player", notice);
+        Assert.Contains("Mozilla Public License, v. 2.0: see LICENSE beside this file", notice);
+        Assert.Contains("https://github.com/apgeo/ThIDE", notice);
+        Assert.DoesNotContain('\r', notice);
+
+        string readme = Text(entries, RenderBundleWriter.ReadmeFileName);
+        Assert.Contains("  LICENSE, NOTICE ", readme);
+        Assert.Contains("the player's licence (MPL-2.0), and where its source is", readme);
+        Assert.Contains("Mozilla Public License 2.0 (LICENSE)", readme);
+        Assert.Contains("source is in the ThIDE repository: https://github.com/apgeo/ThIDE\n", readme);
     }
 
     [Fact]
@@ -192,7 +220,7 @@ public class RenderBundleTests : IDisposable
         string mesh = content.Files["model.ply"];
         using var sink = new MemoryStream();
 
-        foreach (string path in new[] { "../model.ply", "/abs/model.ply", "C:/model.ply", "render.py", "README.TXT", "thide_player/core.py" })
+        foreach (string path in new[] { "../model.ply", "/abs/model.ply", "C:/model.ply", "render.py", "README.TXT", "LICENSE", "notice", "thide_player/core.py" })
         {
             var bad = content with { Files = new Dictionary<string, string>(content.Files) { [path] = mesh } };
             Assert.Throws<ArgumentException>(() => RenderBundleWriter.WriteZip(bad, sink, "cave"));

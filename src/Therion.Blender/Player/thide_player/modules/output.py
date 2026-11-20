@@ -1,3 +1,7 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 """Feature "output": what the render writes (a video, numbered frames or one still), and the
 render itself, with its progress reported frame by frame. With "render": false the output is set
 up and nothing is rendered: the plan is for a scene that is saved and rendered later.

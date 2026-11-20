@@ -1,3 +1,7 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 """Feature "camera_track": the camera and its timed poses.
 
 Every pose comes from the plan. Nothing is worked out here but the frame a time falls on; Blender

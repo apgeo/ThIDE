@@ -1,3 +1,7 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
 """Feature "textured_materials": materials that drape an image over a model and let the scene
 show through it: a terrain over a cave, with an aerial picture or a map on it.
 

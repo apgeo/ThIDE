@@ -89,6 +89,9 @@ public static class PlayerWriter
         text.Append("#\n");
         text.Append("# PLAN is the plan (JSON), FILES the files it names that travel with it (base64), and\n");
         text.Append("# SOURCES the player: one text per Python module, loaded by the code at the end.\n");
+        text.Append("#\n");
+        text.Append("# The player is part of ThIDE (https://github.com/apgeo/ThIDE). Its code, in SOURCES and at\n");
+        text.Append("# the end, is subject to the Mozilla Public License, v. 2.0: https://mozilla.org/MPL/2.0/.\n");
         text.Append('\n');
 
         // In a raw string nothing is an escape, so the JSON arrives as it is. An apostrophe can

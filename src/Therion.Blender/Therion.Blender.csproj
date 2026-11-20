@@ -23,6 +23,9 @@
     <!-- The run scripts of a render bundle (RenderBundleWriter). -->
     <EmbeddedResource Include="Player\bundle\render.sh" LogicalName="bundle/render.sh" />
     <EmbeddedResource Include="Player\bundle\render.cmd" LogicalName="bundle/render.cmd" />
+    <!-- A bundle carries the player's licence and a note of where its source is. -->
+    <EmbeddedResource Include="LICENSE" LogicalName="bundle/LICENSE" />
+    <EmbeddedResource Include="Player\bundle\NOTICE" LogicalName="bundle/NOTICE" />
   </ItemGroup>
 
   <!--
