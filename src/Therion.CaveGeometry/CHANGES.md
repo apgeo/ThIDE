@@ -1,5 +1,18 @@
 # Therion.CaveGeometry — changes for consumers
 
+## 2026-11-20 — recentring moves surfaces too
+
+### Behaviour change
+- **`GeometryResult.RecenteredModel.Surfaces` and `.SurfaceBitmaps` are in the local frame**, like
+  stations, shots and scraps: the recentre offset is subtracted from each grid's calibration
+  origin and heights, and from each bitmap's calibration origin (so an image still lands on its
+  grid). They used to be passed through in world coordinates. Surfaces still do not count toward
+  `OriginalBounds`/`LocalBounds` or the offset: a terrain tile is usually much larger than the cave.
+  Migration: code that meshed `RecenteredModel.Surfaces` with `TerrainMesher.Build(grid, offset)`
+  passes `CaveVector3.Zero` as the offset now; code that meshes the source model's surfaces with
+  `geometry.Offset` (as `CaveConversionPipeline` does) changes nothing.
+- `RecenteredModel` keeps the source model's `UnknownChunkTypes`.
+
 ## 2026-11-18 — terrain mesher and texture coordinates
 
 ### Additive API
