@@ -70,6 +70,64 @@ public class RenderBundleBlenderTests
         Assert.Equal(["out"], Directory.GetDirectories(folder).Select(Path.GetFileName).Where(d => d != PlayerFiles.PackageName));
     }
 
+    [BlenderFact]
+    public async Task ABundleWithTextsAndATerrain_RendersInTwoStages_AndItsMovieIsWrittenAgainAfterATextWasChanged()
+    {
+        if (OperatingSystem.IsWindows()) return;
+        string root = Path.Combine(SceneProbeRunner.Root, "bundle-texts");
+        if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+        string work = Path.Combine(root, "work");
+        Directory.CreateDirectory(work);
+        string lox = Path.Combine(work, "cave.lox");
+        LoxWriter.WriteFile(InventedTerrain.Add(InventedCave.Build(InventedCaveSize.Small)), lox);
+        var spec = PlanFixtures.Preset("Orbit showcase") with
+        {
+            Engine = new EngineSpec { Kind = RenderEngineKind.Cycles, Samples = 1, Denoise = false, Gpu = GpuMode.CpuOnly },
+            Camera = new CameraSpec { Template = CameraTemplate.Orbit, Orbit = new OrbitParams { Revolutions = 0.25 } },
+            Labels = new LabelsSpec
+            {
+                Overlays = new OverlaySpec
+                {
+                    Title = "Invented Cave", NorthArrow = true, EndCard = new EndCardSpec { Text = "The end", Seconds = 0.5 },
+                    Captions = [new CaptionSpec { Text = "A caption", Start = 0, End = 0.3 }],
+                },
+            },
+            Surface = new SurfaceSpec { Mode = SurfaceMode.Textured },
+            Animation = new AnimationSpec { Fps = 10, DurationSeconds = 0.4 },
+            Output = new OutputSpec { Kind = OutputKind.Video, Width = 160, Height = 90, BaseName = "clip" },
+        };
+        var content = RenderBundleWriter.FromModel(
+            new ResolvedModelSource { Path = lox, Format = CaveSourceFormat.Lox, Kind = ModelSourceKind.ExternalFile }, spec, work);
+        Assert.Empty(content.NotCarried);
+        string folder = Path.Combine(root, "bundle");
+        RenderBundleWriter.WriteFolder(content, folder);
+        Directory.Delete(work, recursive: true);
+        Assert.True(File.Exists(Path.Combine(folder, "surface.png")));
+        Assert.True(File.Exists(Path.Combine(folder, "out", "clip.srt")));
+
+        // Both stages, the frames kept for what follows.
+        var (code, log) = await RunScript(folder, "--keep-frames");
+        Assert.True(code == 0, $"render.sh failed (exit code {code}): {Failure(log)}\n  logs: {root}");
+        Assert.Equal(["scene", "import", "engine", "render", "compose"], PlayerRunner.Reported(log, "phase"));
+        Assert.Empty(PlayerRunner.Reported(log, "warning"));
+        string movie = Path.Combine(folder, "out", "clip.mp4");
+        Assert.Equal(4 + 5, (await SceneProbeRunner.ReadMovieAsync(movie)).Frames);
+        Assert.Equal(4, Directory.GetFiles(Path.Combine(folder, "frames"), "frame_*.png").Length);
+        byte[] first = await File.ReadAllBytesAsync(movie);
+
+        // Another title, written into the plan by hand as the README says; then only the second stage.
+        string planPath = Path.Combine(folder, "scene-plan.json");
+        string plan = await File.ReadAllTextAsync(planPath);
+        Assert.Contains("\"text\": \"Invented Cave\"", plan);
+        await File.WriteAllTextAsync(planPath, plan.Replace("\"text\": \"Invented Cave\"", "\"text\": \"Peștera Inventată\""));
+        (code, log) = await RunScript(folder, "--compose");
+        Assert.True(code == 0, $"render.sh --compose failed (exit code {code}): {Failure(log)}\n  logs: {root}");
+        Assert.Equal(["compose"], PlayerRunner.Reported(log, "phase"));
+        Assert.NotEqual(first, await File.ReadAllBytesAsync(movie));
+        Assert.Equal(9, (await SceneProbeRunner.ReadMovieAsync(movie)).Frames);
+        Assert.False(Directory.Exists(Path.Combine(folder, "frames")), "composing without --keep-frames removes the frames");
+    }
+
     /// <summary>Unpacks with the system's unzip when there is one, as a user would; with .NET's
     /// own reader otherwise. Either keeps render.sh executable.</summary>
     private static void Unzip(string zip, string folder)
