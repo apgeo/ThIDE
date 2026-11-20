@@ -6,9 +6,10 @@ using System.Buffers.Binary;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
-using Therion.Blender;
-using Therion.Blender.Geometry;
-using Therion.Blender.Writers;
+using Therion.Cave3D;
+using Therion.Cave3D.Parsing;
+using Therion.CaveGeometry;
+using Therion.CaveGeometry.Writers;
 
 namespace Therion.Blender.Tests;
 
@@ -142,6 +143,24 @@ public class MeshWriterTests
         Assert.True(binLen >= declaredBuffer); // padded to a 4-byte boundary
     }
 
+    [Fact]
+    public void Glb_IsYUp_AsGltfDefinesIt()
+    {
+        // A mesh vertex (east, north, up) is written (east, up, south).
+        var mesh = Cube();
+        var bytes = GlbWriter.Write(mesh);
+        uint jsonLen = BinaryPrimitives.ReadUInt32LittleEndian(bytes.AsSpan(12));
+        int bin = 20 + (int)jsonLen + 8;
+
+        for (int i = 0; i < mesh.Vertices.Count; i++)
+        {
+            var v = mesh.Vertices[i];
+            Assert.Equal((float)v.X, BinaryPrimitives.ReadSingleLittleEndian(bytes.AsSpan(bin + i * 12)));
+            Assert.Equal((float)v.Z, BinaryPrimitives.ReadSingleLittleEndian(bytes.AsSpan(bin + i * 12 + 4)));
+            Assert.Equal((float)-v.Y, BinaryPrimitives.ReadSingleLittleEndian(bytes.AsSpan(bin + i * 12 + 8)));
+        }
+    }
+
     [Theory]
     [InlineData("ply")]
     [InlineData("stl")]
@@ -163,7 +182,7 @@ public class MeshWriterTests
     [CorpusFact]
     public void RealAvBravo_ConvertsToPlyWithWalls()
     {
-        var result = GeometryStage.Build(Parsing.LoxReader.ReadFile(TestCorpus.AvBravoLox()));
+        var result = GeometryStage.Build(LoxReader.ReadFile(TestCorpus.AvBravoLox()));
         var bytes = PlyWriter.Write(result.Walls);
 
         var (vertices, colors, faces) = ReadPly(bytes);

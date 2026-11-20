@@ -4,8 +4,8 @@
 // reparse must reproduce the model exactly, and the extracted content must look like
 // the cave the export came from (station labels, survey tree, UTM-scale coordinates).
 
-using Therion.Blender;
-using Therion.Blender.Parsing;
+using Therion.Cave3D;
+using Therion.Cave3D.Parsing;
 
 namespace Therion.Blender.Tests;
 

@@ -4,6 +4,7 @@
 // CameraEngineTests; this file guards the spec surface only.
 
 using Therion.Blender;
+using Therion.Cave3D;
 
 namespace Therion.Blender.Tests;
 

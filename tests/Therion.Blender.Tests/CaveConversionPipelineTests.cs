@@ -3,10 +3,10 @@
 // drives the leads-enrichment path; additional formats and determinism are checked.
 
 using System.Text.Json;
-using Therion.Blender;
-using Therion.Blender.Geometry;
-using Therion.Blender.Parsing;
 using Therion.Blender.Sources;
+using Therion.Cave3D;
+using Therion.Cave3D.Parsing;
+using Therion.CaveGeometry;
 
 namespace Therion.Blender.Tests;
 

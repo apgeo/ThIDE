@@ -1,11 +1,14 @@
 // Phase-1 conversion pipeline (BA-B4) — the G1 deliverable and the surface the CLI
 // (BA-B14) and UI (BA-B12) call: resolve a model source → parse → geometry stage →
 // scene-meta (+ leads) → write model.ply (transport, D-06) + scene-meta.json (+ any
-// requested extra mesh formats) → return a manifest describing what landed.
+// requested extra mesh formats, + the terrain surface and its image when asked for) → return
+// a manifest describing what landed.
 
-using Therion.Blender.Geometry;
-using Therion.Blender.Parsing;
 using Therion.Blender.Writers;
+using Therion.Cave3D;
+using Therion.Cave3D.Parsing;
+using Therion.CaveGeometry;
+using Therion.CaveGeometry.Writers;
 
 namespace Therion.Blender.Sources;
 
@@ -38,6 +41,14 @@ public sealed record ConversionOptions
 
     /// <summary>Extra mesh formats to also write (same base name, format extension).</summary>
     public IReadOnlyList<MeshFormat> AdditionalFormats { get; init; } = [];
+
+    /// <summary>Also mesh the model's terrain surface, when it has one, into
+    /// <see cref="SurfaceFileName"/> in the model's local frame, and save its surface image next
+    /// to it as <c>surface.png</c> or <c>surface.jpg</c> (see <see cref="TerrainMesher"/>).</summary>
+    public bool IncludeSurface { get; init; }
+
+    /// <summary>File name of the terrain mesh (binary PLY with texture coordinates).</summary>
+    public string SurfaceFileName { get; init; } = "surface.ply";
 }
 
 /// <summary>What a conversion produced.</summary>
@@ -56,6 +67,12 @@ public sealed record ConversionManifest
     public required int LeadCount { get; init; }
     public required CaveVector3 Offset { get; init; }
     public required BoundingBox WorldBounds { get; init; }
+    /// <summary>The terrain PLY, or null when it was not asked for or the model has no usable
+    /// surface.</summary>
+    public string? SurfacePath { get; init; }
+    /// <summary>The surface image draped over the terrain, or null when there is none (no
+    /// image for the surface, or one whose format or size could not be read).</summary>
+    public string? SurfaceImagePath { get; init; }
 }
 
 /// <summary>A conversion's manifest plus the in-memory geometry and metadata, for callers
@@ -115,6 +132,10 @@ public sealed class CaveConversionPipeline
             meshPaths.Add(path);
         }
 
+        var (surfacePath, surfaceImagePath) = options.IncludeSurface
+            ? WriteSurface(model, geometry.Offset, options)
+            : (null, null);
+
         string metaPath = Path.Combine(options.OutputDirectory, options.SceneMetaFileName);
         SceneMetaWriter.WriteFile(meta, metaPath);
 
@@ -131,8 +152,31 @@ public sealed class CaveConversionPipeline
             LeadCount = meta.Leads.Count,
             Offset = geometry.Offset,
             WorldBounds = geometry.OriginalBounds,
+            SurfacePath = surfacePath,
+            SurfaceImagePath = surfaceImagePath,
         };
         return new ConversionResult(manifest, geometry, meta);
+    }
+
+    /// <summary>Meshes the model's first surface (Loch shows only the first one, too) and saves
+    /// the image that belongs to it. Returns the files written.</summary>
+    private static (string? Mesh, string? Image) WriteSurface(CaveModel model, CaveVector3 offset, ConversionOptions options)
+    {
+        if (model.Surfaces.Count == 0) return (null, null);
+        var grid = model.Surfaces[0];
+        var bitmap = model.SurfaceBitmaps.FirstOrDefault(b => b.SurfaceId == grid.Id);
+        var image = bitmap is null ? null : SurfaceImage.TryRead(bitmap);
+        var terrain = TerrainMesher.Build(grid, offset, image);
+        if (terrain is null) return (null, null);
+
+        string meshPath = Path.Combine(options.OutputDirectory, options.SurfaceFileName);
+        PlyWriter.WriteFile(terrain.Mesh, meshPath);
+        if (image is null || !terrain.Mesh.HasTextureCoordinates) return (meshPath, null);
+
+        string imagePath = Path.Combine(
+            options.OutputDirectory, Path.GetFileNameWithoutExtension(options.SurfaceFileName) + image.Extension);
+        File.WriteAllBytes(imagePath, image.Bitmap.Data);
+        return (meshPath, imagePath);
     }
 
     private static void WriteMesh(CaveMesh mesh, MeshFormat format, string path)

@@ -3,8 +3,8 @@
 // reconstruct the same cave. .3d coordinates are centimetre-quantized s32 while .lox
 // keeps full doubles — geometric comparisons therefore use a 1 cm tolerance.
 
-using Therion.Blender;
-using Therion.Blender.Parsing;
+using Therion.Cave3D;
+using Therion.Cave3D.Parsing;
 
 namespace Therion.Blender.Tests;
 

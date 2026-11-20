@@ -1,3 +1,5 @@
+using Therion.Cave3D;
+
 namespace Therion.Blender.Sources;
 
 /// <summary>How a resolved model source was obtained.</summary>

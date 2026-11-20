@@ -4,6 +4,8 @@
 // the planner (Emit/CameraPlanner.cs) fills them in. Coordinates for explicit viewpoints
 // are LOCAL (recentered, matching the PLY) — see SceneMeta / D-15.
 
+using Therion.Cave3D;
+
 namespace Therion.Blender;
 
 /// <summary>Which camera motion the render uses (FR-04). <see cref="Static"/> is the
@@ -99,19 +101,30 @@ public sealed record HelixParams
     public TurnDirection Direction { get; init; } = TurnDirection.CounterClockwise;
 }
 
-/// <summary>Centerline-flythrough parameters (FR-04). The route is the survey's longest
-/// structural passage (from the geometry stage); collision avoidance is best-effort
-/// (R-09), not guaranteed.</summary>
+/// <summary>Centerline-flythrough parameters. The route is the survey's longest
+/// structural passage (from the geometry stage). The camera speeds up from rest and slows
+/// down to rest, and its view turns at a limited rate and never points straight up or down.
+/// Collision avoidance is best-effort, not guaranteed.</summary>
 public sealed record FlythroughParams
 {
-    /// <summary>How far ahead along the path the camera looks (metres).</summary>
+    /// <summary>How far ahead along the route the camera looks (metres). The view follows
+    /// that point smoothly rather than exactly; at least one metre is used.</summary>
     public double LookAheadMeters { get; init; } = 6.0;
 
-    /// <summary>Minimum distance the camera is pushed off the nearest wall (metres, 0 =
-    /// ride the raw centerline).</summary>
+    /// <summary>
+    /// The distance the camera keeps from the walls where the passage is wide enough (metres).
+    /// A narrower passage is flown down its middle: with synthesized tube walls the route
+    /// follows the middle of each leg's cross-section, leaving it only to round corners and
+    /// only as far as this clearance (or 60 % of the room there is, if that is less) allows,
+    /// and it starts and ends about a passage radius inside the first and last leg. With real
+    /// scrap walls the route is moved away from the nearest wall vertices until they are this
+    /// far off or equally near on both sides. 0 = ride the raw centerline, station to station.
+    /// </summary>
     public double ClearanceMeters { get; init; } = 1.5;
 
-    /// <summary>Chaikin smoothing passes over the centerline before flying it.</summary>
+    /// <summary>How finely corners are rounded: each is drawn with 2^n straight pieces, on
+    /// the curve that Chaikin corner cutting converges to (shortened where the passage is too
+    /// narrow for it). 0 = fly the corners as they are.</summary>
     public int SmoothingIterations { get; init; } = 2;
 
     /// <summary>Fly the passage from its far end back to the start.</summary>

@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Geometry of a 3-D cave model: the centreline graph and paths, tube and scrap meshing, the
+    model's bounds and depth ramp, and mesh writers (PLY, STL, OBJ, glb). Pure: no Blender, no
+    process starting.
+  -->
+
+  <PropertyGroup>
+    <TargetFrameworks>$(TherionLibraryTargetFrameworks)</TargetFrameworks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Tests exercise a few internal helpers (cross-section framing, model translation). -->
+    <InternalsVisibleTo Include="Therion.Blender.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Therion.Cave3D\Therion.Cave3D.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -2,9 +2,9 @@
 // mesh topology counts, recentering math, scraps-vs-tubes selection, depth tint, and
 // the real av_bravo .lox producing a non-empty wall mesh.
 
-using Therion.Blender;
-using Therion.Blender.Geometry;
-using Therion.Blender.Parsing;
+using Therion.Cave3D;
+using Therion.Cave3D.Parsing;
+using Therion.CaveGeometry;
 
 namespace Therion.Blender.Tests;
 

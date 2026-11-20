@@ -4,8 +4,8 @@
 // exception type, or allocate from attacker-controlled counts.
 
 using System.Buffers.Binary;
-using Therion.Blender;
-using Therion.Blender.Parsing;
+using Therion.Cave3D;
+using Therion.Cave3D.Parsing;
 
 namespace Therion.Blender.Tests;
 

@@ -64,6 +64,13 @@ public static class TherionMcpBuilderExtensions
         typeof(CommandTools),
     ];
 
+    /// <summary>
+    /// Blender rendering — registered only when the caller supplied an <see cref="IBlenderRenderHost"/>.
+    /// The read-only half goes with ring R1 (both profiles), the half that runs Blender with R2.
+    /// </summary>
+    private static readonly Type BlenderReadToolType = typeof(BlenderStatusTools);
+    private static readonly Type BlenderRenderToolType = typeof(BlenderRenderTools);
+
     /// <summary>Read-only MCP resources — a URI-addressable view of the R1 reads, in both profiles (T-04.1).</summary>
     private static readonly Type[] ResourceTypes =
     [
@@ -80,6 +87,7 @@ public static class TherionMcpBuilderExtensions
     /// Registers the Therion tool catalog on an MCP server builder. Call <em>after</em> registering
     /// an <see cref="IUiBridge"/> if the host has a UI: the presence of one at this point is what
     /// selects the R3 catalog. Hosts without a UI get <see cref="NullUiBridge"/> and no R3 tools.
+    /// Likewise an <see cref="IBlenderRenderHost"/> registered beforehand adds the Blender render tools.
     /// A host that wants the server to open a workspace at startup registers its own
     /// <see cref="WorkspaceHost"/> beforehand; otherwise an empty one is created and the model must
     /// call <c>load_workspace</c>.
@@ -94,12 +102,13 @@ public static class TherionMcpBuilderExtensions
         ArgumentNullException.ThrowIfNull(builder);
 
         bool hasUi = builder.Services.Any(d => d.ServiceType == typeof(IUiBridge));
+        bool hasBlender = builder.Services.Any(d => d.ServiceType == typeof(IBlenderRenderHost));
         AddToolServices(builder.Services);
 
         // The named argument is load-bearing: a bare WithTools(someTypeArray) binds to the generic
         // WithTools<TToolType>(target) overload with TToolType = Type[], which registers nothing and
         // fails only later, as a missing tools/list capability.
-        builder.WithTools(toolTypes: ToolTypes(profile, hasUi).ToArray());
+        builder.WithTools(toolTypes: ToolTypes(profile, hasUi, hasBlender).ToArray());
 
         // Resources mirror the read-only tools, so they ship in both profiles. WorkspaceResources delegates
         // to DiagnosticsTools/GraphTools, so those must be resolvable services: the SDK builds tool types by
@@ -116,12 +125,14 @@ public static class TherionMcpBuilderExtensions
     }
 
     /// <summary>The tool classes for a profile, in registration order (also used by the in-process dispatcher).</summary>
-    internal static IReadOnlyList<Type> ToolTypes(McpProfile profile, bool includeUi)
+    internal static IReadOnlyList<Type> ToolTypes(McpProfile profile, bool includeUi, bool includeBlender = false)
     {
         var types = new List<Type>(ReadOnlyToolTypes);
+        if (includeBlender) types.Add(BlenderReadToolType);
         if (profile is McpProfile.Full)
         {
             types.AddRange(MutatingToolTypes);
+            if (includeBlender) types.Add(BlenderRenderToolType);
             if (includeUi) types.AddRange(UiToolTypes);
         }
         return types;
@@ -152,6 +163,9 @@ public static class TherionMcpBuilderExtensions
         // One compile at a time. The in-app host registers the IDE's gate first, so run_build and the
         // Build pane share it; a headless host gets one of its own, shared by every run_build call.
         services.TryAddSingleton<Build.ICompileGate>(_ => new Build.CompileGate());
+        // The renders agents started; built only when a host lent the render tools a Blender. Disposed
+        // with the server, which cancels a render still running.
+        services.TryAddSingleton<BlenderRenderJobs>();
 
         // Resources delegate to these two, so they must be resolvable services too.
         services.TryAddSingleton<DiagnosticsTools>();

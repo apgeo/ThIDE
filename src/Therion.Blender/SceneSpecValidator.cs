@@ -33,6 +33,7 @@ public static class SceneSpecValidator
     public const double MaxLightStrength = 100;
     public const double MaxProceduralScale = 10_000;
     public const double MaxBumpStrength = 10;
+    public const double MaxEndCardSeconds = 600;
 
     /// <summary>All problems with <paramref name="spec"/>; empty means valid.</summary>
     public static IReadOnlyList<SpecError> Validate(SceneSpec spec)
@@ -72,6 +73,10 @@ public static class SceneSpecValidator
             Bad("materials.bumpStrength", $"Bump strength must be within 0–{MaxBumpStrength}.");
         if (!IsUnitColor(spec.Materials.BaseColor))
             Bad("materials.baseColor", "Colour channels must be within 0–1.");
+
+        // ---- surface ----
+        if (spec.Surface.Opacity is < 0 or > 1 || double.IsNaN(spec.Surface.Opacity))
+            Bad("surface.opacity", "Surface opacity must be within 0–1.");
 
         // ---- lighting ----
         if (spec.Lighting.Strength is < 0 or > MaxLightStrength || double.IsNaN(spec.Lighting.Strength))
@@ -148,6 +153,23 @@ public static class SceneSpecValidator
 
         if (!IsUnitColor(labels.Color))
             bad("labels.color", "Label colour channels must be within 0–1.");
+
+        var overlays = labels.Overlays;
+        if (overlays.EndCard is { } card)
+        {
+            if (string.IsNullOrWhiteSpace(card.Text))
+                bad("labels.overlays.endCard.text", "An end card needs its text.");
+            if (!(card.Seconds > 0 && card.Seconds <= MaxEndCardSeconds))
+                bad("labels.overlays.endCard.seconds", $"An end card stays for more than 0 and at most {MaxEndCardSeconds} seconds.");
+        }
+        if (overlays.TitleSeconds is { } titleSeconds && !(titleSeconds > 0 && titleSeconds <= MaxDurationSeconds))
+            bad("labels.overlays.titleSeconds", "A title card stays for more than 0 seconds.");
+        if (!(overlays.FadeFromBlack >= 0 && overlays.FadeFromBlack <= MaxEndCardSeconds))
+            bad("labels.overlays.fadeFromBlack", $"A fade takes from 0 to {MaxEndCardSeconds} seconds.");
+        if (!(overlays.FadeToBlack >= 0 && overlays.FadeToBlack <= MaxEndCardSeconds))
+            bad("labels.overlays.fadeToBlack", $"A fade takes from 0 to {MaxEndCardSeconds} seconds.");
+        ValidateCaptions(overlays.Captions, "labels.overlays.captions", bad);
+        ValidateCaptions(overlays.CornerCaptions, "labels.overlays.cornerCaptions", bad);
 
         for (int i = 0; i < labels.Events.Count; i++)
         {
@@ -240,6 +262,23 @@ public static class SceneSpecValidator
             default:
                 bad("camera.template", $"Unknown camera template {spec.Camera.Template}.");
                 break;
+        }
+    }
+
+    private static void ValidateCaptions(IReadOnlyList<CaptionSpec> captions, string path, Action<string, string> bad)
+    {
+        for (int i = 0; i < captions.Count; i++)
+        {
+            var caption = captions[i];
+            if (caption is null || string.IsNullOrWhiteSpace(caption.Text))
+            {
+                bad($"{path}[{i}].text", "A caption needs its text.");
+                if (caption is null) continue;
+            }
+            if (!(caption.Start >= 0) || !double.IsFinite(caption.Start))
+                bad($"{path}[{i}].start", "A caption starts at 0 seconds or later.");
+            if (!(caption.End > caption.Start) || !double.IsFinite(caption.End))
+                bad($"{path}[{i}].end", "A caption ends after it starts.");
         }
     }
 

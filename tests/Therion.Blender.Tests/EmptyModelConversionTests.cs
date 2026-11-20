@@ -3,6 +3,8 @@
 
 using Therion.Blender.Sources;
 using Therion.Blender.Writers;
+using Therion.Cave3D;
+using Therion.CaveGeometry.Writers;
 
 namespace Therion.Blender.Tests;
 

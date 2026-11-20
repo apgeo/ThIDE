@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "generator": "ThIDE Blender module",
+  "name": "Golden plan",
+  "features": [
+    "models",
+    "camera_track",
+    "look",
+    "output"
+  ],
+  "moduleFolders": [],
+  "frame": {
+    "units": "metres",
+    "upAxis": "Z",
+    "origin": [0, 0, 0]
+  },
+  "timeline": {
+    "fps": 8,
+    "frameCount": 16
+  },
+  "models": [
+    {
+      "id": "CaveModel",
+      "path": "model.ply",
+      "material": "CaveRock"
+    }
+  ],
+  "camera": {
+    "sensorWidth": 36,
+    "lens": 35,
+    "clipStart": 0.06708203932499368,
+    "clipEnd": 670.8203932499368,
+    "interpolation": "linear",
+    "track": [
+      { "t": 0, "eye": [220.121658, 10, 76.478029], "target": [10, 10, 0] },
+      { "t": 0.125, "eye": [212.961936, 64.383487, 76.478029], "target": [10, 10, 0] },
+      { "t": 0.25, "eye": [191.970694, 115.060829, 76.478029], "target": [10, 10, 0] },
+      { "t": 0.5, "eye": [158.578449, 158.578449, 76.478029], "target": [10, 10, 0] },
+      { "t": 0.625, "eye": [115.060829, 191.970694, 76.478029], "target": [10, 10, 0] },
+      { "t": 0.75, "eye": [64.383487, 212.961936, 76.478029], "target": [10, 10, 0] },
+      { "t": 1, "eye": [10, 220.121658, 76.478029], "target": [10, 10, 0] },
+      { "t": 1.125, "eye": [-44.383487, 212.961936, 76.478029], "target": [10, 10, 0] },
+      { "t": 1.25, "eye": [-95.060829, 191.970694, 76.478029], "target": [10, 10, 0] },
+      { "t": 1.375, "eye": [-138.578449, 158.578449, 76.478029], "target": [10, 10, 0] },
+      { "t": 1.5, "eye": [-171.970694, 115.060829, 76.478029], "target": [10, 10, 0] },
+      { "t": 1.75, "eye": [-192.961936, 64.383487, 76.478029], "target": [10, 10, 0] },
+      { "t": 1.875, "eye": [-200.121658, 10, 76.478029], "target": [10, 10, 0] }
+    ]
+  },
+  "look": {
+    "engine": "cycles",
+    "samples": 32,
+    "denoise": true,
+    "device": "cpu",
+    "seed": 5,
+    "transparent": false,
+    "width": 960,
+    "height": 540,
+    "materials": [
+      {
+        "id": "CaveRock",
+        "kind": "heightRamp",
+        "color": [0.55, 0.45, 0.38],
+        "roughness": 0.9,
+        "stops": [
+          { "at": 0, "color": [0.0185, 0.035601, 0.132868] },
+          { "at": 0.25, "color": [0.107023, 0.155926, 0.341914] },
+          { "at": 0.5, "color": [0.391572, 0.155926, 0.102242] },
+          { "at": 0.75, "color": [0.693872, 0.391572, 0.14996] },
+          { "at": 1, "color": [0.887923, 0.745404, 0.434154] }
+        ],
+        "low": -20,
+        "high": 20
+      }
+    ],
+    "lights": [
+      {
+        "id": "Sun",
+        "kind": "sun",
+        "energy": 3,
+        "direction": [-0.544224, 0.576777, -0.609219]
+      }
+    ],
+    "world": {
+      "kind": "sky",
+      "strength": 0.5
+    }
+  },
+  "output": {
+    "kind": "video",
+    "container": "mp4",
+    "directory": "out",
+    "baseName": "golden-plan"
+  }
+}

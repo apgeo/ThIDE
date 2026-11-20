@@ -4,7 +4,8 @@
 // IModelReExporter); the app supplies the mechanism (OutputArtifactCollector /
 // ITherionCompiler) at wiring time so the library stays dependency-free (D-20).
 
-using Therion.Blender.Parsing;
+using Therion.Cave3D;
+using Therion.Cave3D.Parsing;
 
 namespace Therion.Blender.Sources;
 

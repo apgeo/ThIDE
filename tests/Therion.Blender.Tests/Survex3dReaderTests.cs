@@ -4,8 +4,8 @@
 // all date encodings, XSECT passages and traverse error info — plus version gating.
 // Real-file and cross-format tests live in Survex3dRealFileTests / batch-4 suites.
 
-using Therion.Blender;
-using Therion.Blender.Parsing;
+using Therion.Cave3D;
+using Therion.Cave3D.Parsing;
 
 namespace Therion.Blender.Tests;
 

@@ -6,7 +6,8 @@
 using System.Buffers.Binary;
 using System.Diagnostics;
 using System.Text;
-using Therion.Blender.Parsing;
+using Therion.Cave3D;
+using Therion.Cave3D.Parsing;
 using Therion.TestSupport;
 
 namespace Therion.Blender.Tests;

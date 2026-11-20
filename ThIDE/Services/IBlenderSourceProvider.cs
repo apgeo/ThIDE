@@ -17,6 +17,10 @@ public interface IBlenderSourceProvider
     /// (for the source dropdown). Empty when there is no workspace or no build output.</summary>
     IReadOnlyList<ModelArtifact> DiscoverArtifacts();
 
+    /// <summary>True when a project is open, so its model can be asked for as such: the newest
+    /// build output, or a re-export when that is missing or out of date.</summary>
+    bool HasProject => false;
+
     /// <summary>Resolves a source request into a <see cref="RenderSource"/> (the model file
     /// plus the workspace leads), re-exporting via Therion when asked and allowed. Throws
     /// <see cref="ModelSourceNotFoundException"/> when nothing usable can be produced.</summary>

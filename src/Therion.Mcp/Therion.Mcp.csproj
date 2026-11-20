@@ -22,6 +22,9 @@
     <ProjectReference Include="..\Therion.Structural\Therion.Structural.csproj" />
     <ProjectReference Include="..\Therion.Build\Therion.Build.csproj" />
     <ProjectReference Include="..\Therion.Processing.Abstractions\Therion.Processing.Abstractions.csproj" />
+    <!-- The pure half only: scene descriptions, presets and the render-service seam. Finding and
+         running Blender (Therion.Blender.Execution) stays with the host; see IBlenderRenderHost. -->
+    <ProjectReference Include="..\Therion.Blender\Therion.Blender.csproj" />
   </ItemGroup>
 
 </Project>

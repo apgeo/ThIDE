@@ -6,7 +6,8 @@
 // Leads/QM enrichment from the workspace leads register is added by BA-B4 (the `Leads`
 // list is intentionally present-but-empty here so the schema is stable).
 
-using Therion.Blender.Geometry;
+using Therion.Cave3D;
+using Therion.CaveGeometry;
 
 namespace Therion.Blender;
 
@@ -56,6 +57,18 @@ public sealed record SceneMetaStation
     public bool Surface { get; init; }
     public uint RawFlags { get; init; }
     public uint? SurveyId { get; init; }
+
+    /// <summary>How far above the station the roof of its passage is, in metres: from the
+    /// surveyed up distances of a tube model's level legs, else from the walls above the station.
+    /// Null when neither gives one — a station halfway down a shaft, a model without walls,
+    /// documents written before this field existed.</summary>
+    public double? Roof { get; init; }
+
+    /// <summary>The roof from the walls alone (see <see cref="Roof"/>); null when they give none.</summary>
+    public double? WallRoof { get; init; }
+
+    /// <summary>The roof from the surveyed up distances alone (tube models); null when there is none.</summary>
+    public double? SurveyedRoof { get; init; }
 }
 
 /// <summary>A survey-tree node (from <c>.lox</c>; empty for <c>.3d</c>).</summary>
@@ -119,12 +132,22 @@ public sealed record SceneMeta
         ArgumentNullException.ThrowIfNull(geometry);
         var model = geometry.RecenteredModel;
 
+        var roofs = geometry.HasWalls ? new RoofFinder(geometry.Walls) : null;
+        var surveyedRoofs = SurveyedRoofs(geometry.TubeLegs);
         var stations = new List<SceneMetaStation>();
         foreach (var s in model.Stations)
         {
             if ((s.Flags & CaveStationFlags.Anonymous) != 0) continue;
+            // Tubes are built from the surveyed distances, so those are the roof; a ray up
+            // through the walls can leave by a junction's opening and find another level.
+            double? surveyedRoof = surveyedRoofs.TryGetValue(s.Position, out double surveyed) ? surveyed : null;
+            double? wallRoof = roofs?.HeightNear(s.Position);
+            double? roof = surveyedRoof ?? wallRoof;
             stations.Add(new SceneMetaStation
             {
+                Roof = roof is { } r ? Math.Round(r, 3) : null,
+                WallRoof = wallRoof is { } w ? Math.Round(w, 3) : null,
+                SurveyedRoof = surveyedRoof is { } u ? Math.Round(u, 3) : null,
                 Name = s.Name,
                 Position = SceneMetaVec.From(s.Position),
                 Entrance = s.IsEntrance,
@@ -172,4 +195,32 @@ public sealed record SceneMeta
             Components = components,
         };
     }
+
+    /// <summary>
+    /// The roof above each station of a tube model as surveyed: the largest height of the up
+    /// distance of the tube sections at the station, counting only sections of legs that are not
+    /// steep (in a shaft the "up" of a cross-section points sideways). Used before the walls: a
+    /// pitch head has no floor under it, so the walls give it no roof, and at a junction a ray up
+    /// can leave through the opening and find another level. Empty for scrap walls.
+    /// </summary>
+    private static Dictionary<CaveVector3, double> SurveyedRoofs(IReadOnlyList<TubeLeg> legs)
+    {
+        var roofs = new Dictionary<CaveVector3, double>();
+        foreach (var leg in legs)
+        {
+            foreach (var section in new[] { leg.From, leg.To })
+            {
+                if (section.UpAxis.Z < SteepLegUpZ) continue;
+                double height = section.Up * section.UpAxis.Z;
+                if (height <= 0.0) continue;
+                if (!roofs.TryGetValue(section.Station, out double known) || height > known)
+                    roofs[section.Station] = height;
+            }
+        }
+        return roofs;
+    }
+
+    /// <summary>The vertical part of a cross-section's up axis below which its leg counts as
+    /// steep (about 60° from horizontal).</summary>
+    private const double SteepLegUpZ = 0.5;
 }

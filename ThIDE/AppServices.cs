@@ -288,7 +288,18 @@ internal static class AppServices
         services.AddSingleton<IBlenderSourceProvider>(sp =>
             new BlenderSourceProvider(
                 () => sp.GetRequiredService<IWorkspaceSession>().RootPath,
-                sp.GetRequiredService<IOutputArtifactCollector>()));
+                sp.GetRequiredService<IOutputArtifactCollector>(),
+                () => BlenderSourceProvider.OpenLeads(
+                    sp.GetRequiredService<IDocumentService>().Workspace,
+                    sp.GetRequiredService<ILeadStatusStore>(),
+                    sp.GetRequiredService<IWorkspaceSession>().RootPath),
+                new BlenderModelReExporter(
+                    () => sp.GetRequiredService<IWorkspaceSession>().ActiveThconfig?.FullPath,
+                    sp.GetRequiredService<ITherionCompiler>(),
+                    BlenderModelReExporter.DefaultRoot()),
+                () => BlenderSourceProvider.NewestSource(
+                    sp.GetRequiredService<IDocumentService>().Workspace,
+                    sp.GetRequiredService<IWorkspaceSession>().ActiveThconfig?.FullPath)));
         services.AddSingleton<Therion.Blender.IBlenderRenderService>(sp =>
         {
             var service = new Therion.Blender.Execution.BlenderRenderService(
@@ -303,6 +314,13 @@ internal static class AppServices
         });
         services.AddSingleton<IBlenderGuiLauncher>(sp =>
             new BlenderGuiLauncher(sp.GetRequiredService<Therion.Blender.Execution.BlenderLocator>(), () => BlenderOverridePath(sp)));
+        // The same renderer, sources and presets, lent to the in-app MCP server's render tools.
+        services.AddSingleton<BlenderRenderSlot>();
+        services.AddSingleton<Therion.Mcp.IBlenderRenderHost>(sp => new McpBlenderRenderHost(
+            sp.GetRequiredService<Therion.Blender.IBlenderRenderService>(),
+            sp.GetRequiredService<IBlenderSourceProvider>(),
+            sp.GetRequiredService<Therion.Blender.Presets.PresetStore>(),
+            sp.GetRequiredService<BlenderRenderSlot>()));
         services.AddSingleton<BlenderAnimationViewModel>();
         services.AddSingleton<ViewModels.Docking.BlenderAnimationToolViewModel>();
 

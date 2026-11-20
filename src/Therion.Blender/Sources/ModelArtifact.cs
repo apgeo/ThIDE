@@ -1,3 +1,5 @@
+using Therion.Cave3D;
+
 namespace Therion.Blender.Sources;
 
 /// <summary>

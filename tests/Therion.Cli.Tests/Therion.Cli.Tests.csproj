@@ -27,6 +27,8 @@
   <ItemGroup>
     <!-- The write-path fixture matrix, shared by every test project that has a writer to check. -->
     <Compile Include="..\Shared\WritePath\*.cs" LinkBase="Shared\WritePath" />
+    <!-- Invented caves for the render-bundle tests: no surveyed data. -->
+    <Compile Include="..\Therion.Blender.Tests\SceneProbe\InventedCave.cs" Link="Blender\InventedCave.cs" />
   </ItemGroup>
 
 </Project>

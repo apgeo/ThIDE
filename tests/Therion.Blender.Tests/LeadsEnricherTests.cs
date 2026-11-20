@@ -2,8 +2,9 @@
 // ambiguous-segment and absent-station drops, local coordinates, determinism.
 
 using Therion.Blender;
-using Therion.Blender.Geometry;
 using Therion.Blender.Sources;
+using Therion.Cave3D;
+using Therion.CaveGeometry;
 
 namespace Therion.Blender.Tests;
 

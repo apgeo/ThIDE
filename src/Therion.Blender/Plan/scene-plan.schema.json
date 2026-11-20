@@ -1,0 +1,379 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:thide:scene-plan:1",
+  "title": "ThIDE scene plan, version 1",
+  "description": "A resolved description of one render, played in Blender by the ThIDE player. Positions are metres in one frame (X east, Y north, Z up) about frame.origin; times are seconds from the start of the clip; colours are linear RGB, each channel 0 to 1. Unknown top-level sections are allowed: they belong to player modules outside this schema. Every other object is closed: the player and the library refuse a key it does not list, which may be one a newer version added.",
+  "type": "object",
+  "required": ["version", "features", "frame", "timeline"],
+  "properties": {
+    "version": { "const": 1 },
+    "generator": { "type": "string", "description": "What wrote the plan." },
+    "name": { "type": "string" },
+    "features": {
+      "description": "The player modules the plan needs, in the order they run. A player without one of them refuses the plan. The player's own: models, camera_track, look, textured_materials, labels, texts, blend_file, output.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/moduleName" }
+    },
+    "moduleFolders": {
+      "description": "Folders beside the plan that hold more modules, as paths relative to the plan.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/relativePath" }
+    },
+    "frame": {
+      "description": "The coordinate frame of every position in the plan.",
+      "type": "object",
+      "required": ["units", "upAxis", "origin"],
+      "additionalProperties": false,
+      "properties": {
+        "units": { "const": "metres" },
+        "upAxis": { "const": "Z" },
+        "origin": { "$ref": "#/$defs/vector", "description": "Where the plan's origin lies in the world: world = plan + origin." },
+        "crs": { "type": "string", "description": "The coordinate system of the origin." }
+      }
+    },
+    "timeline": {
+      "description": "The length of the clip. Time 0 is frame 1; a time t falls on frame 1 + round(t * fps).",
+      "type": "object",
+      "required": ["fps", "frameCount"],
+      "additionalProperties": false,
+      "properties": {
+        "fps": { "type": "integer", "minimum": 1, "maximum": 240 },
+        "frameCount": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "models": {
+      "description": "Played by the module 'models'.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "path"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "minLength": 1, "description": "The model's name in the scene; unique in the plan." },
+          "role": { "$ref": "#/$defs/role", "description": "What the model is, for whoever looks for it in the scene. Default 'model'." },
+          "path": { "$ref": "#/$defs/relativePath", "type": "string", "pattern": "\\.([pP][lL][yY]|[gG][lL][bB])$", "description": "A .ply or .glb file, relative to the plan." },
+          "translation": { "$ref": "#/$defs/vector", "description": "Where the mesh's own origin lies in the frame." },
+          "rotation": {
+            "description": "A turn of the mesh about its own origin, by the right-hand rule: about [0, 0, 1], 90 degrees turn east to north.",
+            "type": "object",
+            "required": ["axis", "degrees"],
+            "additionalProperties": false,
+            "properties": {
+              "axis": { "$ref": "#/$defs/vector", "description": "The direction of the axis; any length but zero." },
+              "degrees": { "type": "number" }
+            }
+          },
+          "scale": {
+            "description": "A stretch along the mesh's own X, Y and Z axes, applied before the rotation. Default [1, 1, 1].",
+            "type": "array",
+            "items": { "type": "number", "exclusiveMinimum": 0 },
+            "minItems": 3,
+            "maxItems": 3
+          },
+          "material": { "type": "string", "description": "The id of one of look.materials. Without it the model keeps what its file brings." }
+        }
+      }
+    },
+    "camera": {
+      "description": "Played by the module 'camera_track'.",
+      "type": "object",
+      "required": ["lens", "clipStart", "clipEnd", "track"],
+      "additionalProperties": false,
+      "properties": {
+        "sensorWidth": { "type": "number", "exclusiveMinimum": 0, "description": "Millimetres; with the lens it gives the horizontal field of view. Default 36." },
+        "lens": { "type": "number", "minimum": 1, "maximum": 1200, "description": "Focal length in millimetres." },
+        "clipStart": { "type": "number", "exclusiveMinimum": 0 },
+        "clipEnd": { "type": "number", "exclusiveMinimum": 0 },
+        "fStop": { "type": "number", "minimum": 0.5, "maximum": 1000, "description": "Turns depth of field on, focused on the target." },
+        "interpolation": { "enum": ["linear", "bezier", "constant"], "description": "Between poses. Default linear." },
+        "track": {
+          "description": "The poses, in rising order of time. One pose is a camera that stands still.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["t", "eye", "target"],
+            "additionalProperties": false,
+            "properties": {
+              "t": { "type": "number", "minimum": 0 },
+              "eye": { "$ref": "#/$defs/vector" },
+              "target": { "$ref": "#/$defs/vector" },
+              "lens": { "type": "number", "minimum": 1, "maximum": 1200 }
+            }
+          }
+        }
+      }
+    },
+    "look": {
+      "description": "Played by the module 'look'.",
+      "type": "object",
+      "required": ["width", "height"],
+      "additionalProperties": false,
+      "properties": {
+        "engine": { "enum": ["cycles", "eevee", "workbench"], "description": "workbench is Blender's solid view, for a draft: no lights, shadows or noise; every model in the colours of its material, a ramp over height included. Default cycles." },
+        "samples": { "type": "integer", "minimum": 1, "maximum": 16384, "description": "For workbench the anti-aliasing: 1 is none, up to 4 a fast approximation, then the largest of 5, 8, 11, 16 and 32 that it reaches." },
+        "denoise": { "type": "boolean" },
+        "device": { "enum": ["auto", "cpu", "optix", "cuda", "hip", "oneapi", "metal"], "description": "For Cycles; falls back to the CPU." },
+        "seed": { "type": "integer" },
+        "transparent": { "type": "boolean" },
+        "width": { "type": "integer", "minimum": 16, "maximum": 16384 },
+        "height": { "type": "integer", "minimum": 16, "maximum": 16384 },
+        "materials": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "kind", "color"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "kind": { "enum": ["flat", "vertexColor", "heightRamp", "noiseRamp"] },
+              "color": { "$ref": "#/$defs/color", "description": "The colour of a flat material, and of a vertexColor one on a mesh without colours." },
+              "roughness": { "type": "number", "minimum": 0, "maximum": 1 },
+              "stops": {
+                "description": "The colours of a heightRamp or a noiseRamp, in rising order of 'at'.",
+                "type": "array",
+                "minItems": 2,
+                "items": {
+                  "type": "object",
+                  "required": ["at", "color"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "at": { "type": "number", "minimum": 0, "maximum": 1 },
+                    "color": { "$ref": "#/$defs/color" }
+                  }
+                }
+              },
+              "low": { "type": "number", "description": "The height (Z) where a heightRamp starts." },
+              "high": { "type": "number", "description": "The height where a heightRamp ends." },
+              "scale": { "type": "number", "exclusiveMinimum": 0, "description": "Of a noiseRamp's noise; larger is finer." },
+              "bump": { "type": "number", "minimum": 0, "description": "How strongly a noiseRamp's noise bumps the surface." }
+            }
+          }
+        },
+        "lights": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "kind", "energy"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "kind": { "enum": ["sun", "headlamp"], "description": "A headlamp is a small area light that rides the camera." },
+              "energy": { "type": "number", "minimum": 0 },
+              "direction": { "$ref": "#/$defs/vector", "description": "The way a sun's light travels." },
+              "size": { "type": "number", "exclusiveMinimum": 0, "description": "The side of a headlamp's emitter, in metres." }
+            }
+          }
+        },
+        "world": {
+          "description": "Without it the background is black and lights nothing.",
+          "type": "object",
+          "required": ["kind"],
+          "additionalProperties": false,
+          "properties": {
+            "kind": { "enum": ["color", "sky"] },
+            "color": { "$ref": "#/$defs/color" },
+            "strength": { "type": "number", "minimum": 0 }
+          }
+        }
+      }
+    },
+    "texturedMaterials": {
+      "description": "Played by the module 'textured_materials', after 'models' and 'look': materials that drape an image over the models they name, by the models' own UV maps, and may let the scene show through. A terrain over a cave is a model with one of these.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "models", "color"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "minLength": 1, "description": "The material's name in the scene; unique among these and look.materials." },
+          "models": { "type": "array", "items": { "type": "string", "minLength": 1 }, "description": "The ids of the models that wear it. Such a model names no material of its own." },
+          "color": { "$ref": "#/$defs/color", "description": "The colour without an image, and on a model without a UV map." },
+          "roughness": { "type": "number", "minimum": 0, "maximum": 1, "description": "Default 1." },
+          "image": { "$ref": "#/$defs/relativePath", "type": "string", "pattern": "\\.([pP][nN][gG]|[jJ][pP][eE]?[gG])$", "description": "A .png or .jpg file, relative to the plan." },
+          "opacity": { "type": "number", "minimum": 0, "maximum": 1, "description": "How solid the material is seen from its front. Default 1." },
+          "backOpacity": { "type": "number", "minimum": 0, "maximum": 1, "description": "How solid it is seen from behind. Default: as from the front. 0 makes a terrain that is not there for a camera under it." },
+          "shadow": { "type": "boolean", "description": "False keeps the models that wear it from casting shadows. Default true." }
+        }
+      }
+    },
+    "labels": {
+      "description": "Played by the module 'labels', after 'camera_track': texts that turn to face the camera, and glowing balls that mark places. Every position and size is given; ids are unique among texts and markers.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "texts": {
+          "type": "object",
+          "required": ["color", "items"],
+          "additionalProperties": false,
+          "properties": {
+            "color": { "$ref": "#/$defs/color", "description": "The colour the texts glow in." },
+            "strength": { "type": "number", "minimum": 0, "description": "How strongly they glow. Default 1.5." },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["id", "text", "at", "size"],
+                "additionalProperties": false,
+                "properties": {
+                  "id": { "type": "string", "minLength": 1, "description": "The text's name in the scene." },
+                  "role": { "$ref": "#/$defs/role", "description": "Default 'label'." },
+                  "text": { "type": "string" },
+                  "at": { "$ref": "#/$defs/vector", "description": "The middle of the text." },
+                  "size": { "type": "number", "exclusiveMinimum": 0, "description": "The height of the letters, in metres." },
+                  "follows": { "type": "string", "minLength": 1, "description": "The id of a marker the text moves and grows with, as a caption does with a marker sized byDistance: 'at' and 'size' are where it stands and how large it is while the marker has the radius it is built with." }
+                }
+              }
+            }
+          }
+        },
+        "markers": {
+          "type": "object",
+          "required": ["color", "items"],
+          "additionalProperties": false,
+          "properties": {
+            "color": { "$ref": "#/$defs/color" },
+            "strength": { "type": "number", "minimum": 0, "description": "How strongly they glow. Default 2." },
+            "pulse": {
+              "description": "Every marker grows to 'scale' times its size over 'period' seconds, again and again.",
+              "type": "object",
+              "required": ["period"],
+              "additionalProperties": false,
+              "properties": {
+                "period": { "type": "number", "exclusiveMinimum": 0, "description": "At least one frame long." },
+                "scale": { "type": "number", "exclusiveMinimum": 0, "description": "Default 1.5." }
+              }
+            },
+            "byDistance": {
+              "description": "Markers that keep about the same size in the picture: a marker's radius is 'factor' times its distance from the camera, kept within minRadius and maxRadius.",
+              "type": "object",
+              "required": ["factor", "minRadius", "maxRadius"],
+              "additionalProperties": false,
+              "properties": {
+                "factor": { "type": "number", "exclusiveMinimum": 0 },
+                "minRadius": { "type": "number", "exclusiveMinimum": 0 },
+                "maxRadius": { "type": "number", "exclusiveMinimum": 0 }
+              }
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["id", "at", "radius"],
+                "additionalProperties": false,
+                "properties": {
+                  "id": { "type": "string", "minLength": 1, "description": "The marker's name in the scene." },
+                  "role": { "$ref": "#/$defs/role", "description": "Default 'marker'." },
+                  "at": { "$ref": "#/$defs/vector" },
+                  "radius": { "type": "number", "exclusiveMinimum": 0, "description": "In metres; with byDistance, the radius the ball is built with." }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "output": {
+      "description": "Played by the module 'output'.",
+      "type": "object",
+      "required": ["kind", "baseName"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "enum": ["video", "frames", "still"], "description": "video: <baseName>.<container>; frames: <baseName>_0001.png onwards; still: <baseName>.png of the first frame." },
+        "container": { "enum": ["mp4", "mkv", "webm"] },
+        "directory": { "type": "string", "minLength": 1, "description": "Relative to the plan, or absolute. Default: the plan's folder." },
+        "baseName": { "type": "string", "minLength": 1 },
+        "render": { "type": "boolean", "description": "False sets the output up and renders nothing: for a plan that only saves the scene ('blend'), to be rendered from that file later. Default true." }
+      }
+    },
+    "blend": {
+      "description": "Played by the module 'blend_file': the built scene is saved as a Blender file, before anything is rendered. In the file the render's output is named relative to the file where it lies in the plan's folder, so the folder can be moved and rendered elsewhere: blender -b scene.blend -s 1 -e 100 -a.",
+      "type": "object",
+      "required": ["path"],
+      "additionalProperties": false,
+      "properties": {
+        "path": { "$ref": "#/$defs/relativePath", "type": "string", "pattern": "\\.[bB][lL][eE][nN][dD]$", "description": "A .blend file, relative to the plan." }
+      }
+    },
+    "changes": { "type": "array", "description": "Reserved: timed changes of visibility, colour and strength." },
+    "annotations": { "type": "array", "description": "Reserved: labels, callouts, markers and photos anchored in the scene." },
+    "texts": {
+      "description": "Played by the module 'texts': what is written over the picture, in two dimensions. A plan with texts is rendered in two stages: the scene as numbered PNG frames, then those frames with the texts over them, in Blender's video editor, as the output. Places and sizes are shares of the picture: x from its left edge, y from its bottom edge, each 0 to 1. Later items lie over earlier ones.",
+      "type": "object",
+      "required": ["items"],
+      "additionalProperties": false,
+      "properties": {
+        "hold": { "type": "number", "minimum": 0, "description": "Seconds the movie goes on after the last frame of the scene, which stands still meanwhile: the time of an end card. A still has none. Default 0." },
+        "fromBlack": { "type": "number", "minimum": 0, "description": "Seconds the picture takes to come out of black at the start, texts and all. A still has none. Default 0." },
+        "toBlack": { "type": "number", "minimum": 0, "description": "Seconds the picture takes to go to black at the end. Default 0." },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "kind", "at"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string", "minLength": 1, "description": "The item's name in the video editor; unique among the items." },
+              "role": { "$ref": "#/$defs/role", "description": "What the item is: title, caption, credits ... An item with the role 'caption' is what a subtitle file would say." },
+              "kind": { "enum": ["text", "box", "arrow"], "description": "text: lines of text. box: a rectangle of one colour. arrow: an arrow that turns about its middle, with an optional letter at its tip." },
+              "at": { "$ref": "#/$defs/point", "description": "The point of a text that alignX and alignY name; the middle of a box or an arrow." },
+              "text": { "type": "string", "description": "What a text says; the letter at the tip of an arrow." },
+              "size": { "type": "number", "exclusiveMinimum": 0, "maximum": 1, "description": "The height of a text's letters, or the length of an arrow, as a share of the picture's height." },
+              "width": { "type": "number", "exclusiveMinimum": 0, "maximum": 1, "description": "Of a box, as a share of the picture's width." },
+              "height": { "type": "number", "exclusiveMinimum": 0, "maximum": 1, "description": "Of a box, as a share of the picture's height." },
+              "alignX": { "enum": ["left", "center", "right"], "description": "Which side of a text lies on 'at', and how its lines are set. Default center." },
+              "alignY": { "enum": ["top", "center", "bottom"], "description": "Default center." },
+              "color": { "$ref": "#/$defs/color", "description": "Default white." },
+              "opacity": { "type": "number", "minimum": 0, "maximum": 1, "description": "Default 1." },
+              "backing": { "type": "boolean", "description": "A text on a dark box of its own." },
+              "wrap": { "type": "number", "exclusiveMinimum": 0, "maximum": 1, "description": "The widest a text's line may be before it is broken, as a share of the picture's width. Default 0.9." },
+              "start": { "type": "number", "minimum": 0, "description": "Seconds from the start of the movie at which the item appears. Default: from the first frame." },
+              "end": { "type": "number", "exclusiveMinimum": 0, "description": "Seconds at which the item is gone. Default: never." },
+              "fadeIn": { "type": "number", "minimum": 0, "description": "Seconds the item takes to appear." },
+              "fadeOut": { "type": "number", "minimum": 0, "description": "Seconds the item takes to go." },
+              "slot": { "$ref": "#/$defs/role", "description": "A place only one item has at a time: of the items that name the same slot, the one that started last is drawn, and an earlier one goes when it appears. Captions share one." },
+              "turn": {
+                "description": "Of an arrow, in rising order of time: at 't' seconds it is turned 'degrees' counter-clockwise from pointing up. Between two turns the angle changes evenly; it may pass 360. Without it the arrow points up. For a north arrow, 'degrees' is the camera's heading, clockwise from north, at that time: one turn per frame, or per pose of the camera.",
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["t", "degrees"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "t": { "type": "number", "minimum": 0 },
+                    "degrees": { "type": "number" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "vector": {
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "point": {
+      "type": "array",
+      "items": { "type": "number", "minimum": 0, "maximum": 1 },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "color": {
+      "type": "array",
+      "items": { "type": "number", "minimum": 0, "maximum": 1 },
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "moduleName": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+    "role": { "type": "string", "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$", "description": "What a label or a text is, for whoever looks for it: lower-case words joined by '-'. The player stamps a label's role on its object (thide_role)." },
+    "relativePath": { "type": "string", "minLength": 1, "pattern": "^(?![/\\\\])(?!.*:)(?!(.*[/\\\\])?\\.\\.([/\\\\]|$))" }
+  }
+}

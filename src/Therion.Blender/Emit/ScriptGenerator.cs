@@ -17,6 +17,8 @@
 //   device=<OPTIX|CUDA|HIP|ONEAPI|METAL|CPU|EEVEE>  frames=<N>  frame=<n>/<N>
 //   output=<path>  error=<message>  done=1
 
+using Therion.CaveGeometry;
+
 namespace Therion.Blender.Emit;
 
 /// <summary>
@@ -31,6 +33,14 @@ public sealed record ScriptAssets
     /// <summary>The transport PLY bytes to embed base64 (required when the spec sets
     /// <see cref="SourceSpec.EmbedMesh"/>).</summary>
     public byte[]? PlyBytes { get; init; }
+
+    /// <summary>The terrain PLY bytes to embed base64 (required when the mesh is embedded and
+    /// the spec draws a terrain from <see cref="SourceSpec.SurfacePlyPath"/>).</summary>
+    public byte[]? SurfacePlyBytes { get; init; }
+
+    /// <summary>The surface image bytes to embed base64 (required when the mesh is embedded and
+    /// a textured terrain drapes <see cref="SourceSpec.SurfaceImagePath"/>).</summary>
+    public byte[]? SurfaceImageBytes { get; init; }
 }
 
 /// <summary>What a generated script is for: a headless render, or an interactive scene the
@@ -72,6 +82,10 @@ public static class ScriptGenerator
             throw new ArgumentException("Self-contained mode needs ScriptAssets.SceneMetaJson.", nameof(assets));
         if (spec.Source is { SelfContained: true, EmbedMesh: true } && assets?.PlyBytes is null)
             throw new ArgumentException("EmbedMesh needs ScriptAssets.PlyBytes.", nameof(assets));
+        if (EmbedsTerrain(spec) && assets?.SurfacePlyBytes is null)
+            throw new ArgumentException("EmbedMesh with a terrain needs ScriptAssets.SurfacePlyBytes.", nameof(assets));
+        if (EmbedsTerrainImage(spec) && assets?.SurfaceImageBytes is null)
+            throw new ArgumentException("EmbedMesh with a textured terrain needs ScriptAssets.SurfaceImageBytes.", nameof(assets));
 
         // Camera keyframes and label selection are precomputed here (D-16/R-13). Static
         // needs no framing; animated templates throw a clear ArgumentException without it.
@@ -85,6 +99,7 @@ public static class ScriptGenerator
         EmitSceneReset(w, spec, purpose);
         EmitImport(w, spec);
         EmitMaterials(w, spec);
+        EmitSurface(w, spec);
         EmitCamera(w, spec, camera);
         EmitLighting(w, spec);
         EmitAnnotations(w, spec, labels);
@@ -207,7 +222,32 @@ public static class ScriptGenerator
         {
             w.Line($"PLY_BASE64 = {PyWriter.Str(Convert.ToBase64String(assets.PlyBytes!))}");
         }
+        if (EmbedsTerrain(spec))
+            w.Line($"SURFACE_PLY_BASE64 = {PyWriter.Str(Convert.ToBase64String(assets.SurfacePlyBytes!))}");
+        if (EmbedsTerrainImage(spec))
+            w.Line($"SURFACE_IMAGE_BASE64 = {PyWriter.Str(Convert.ToBase64String(assets.SurfaceImageBytes!))}");
         w.Blank();
+    }
+
+    /// <summary>A script that carries its mesh carries the terrain too, so that it draws the
+    /// terrain without its files.</summary>
+    private static bool EmbedsTerrain(SceneSpec spec)
+        => spec.Source is { SelfContained: true, EmbedMesh: true }
+           && spec.Surface.Mode != SurfaceMode.Off
+           && !string.IsNullOrWhiteSpace(spec.Source.SurfacePlyPath);
+
+    private static bool EmbedsTerrainImage(SceneSpec spec)
+        => EmbedsTerrain(spec) && spec.Surface.Mode == SurfaceMode.Textured
+           && !string.IsNullOrWhiteSpace(spec.Source.SurfaceImagePath);
+
+    /// <summary>Writes an embedded file to a temporary file with the extension it had, and names
+    /// it in <paramref name="pathVariable"/>.</summary>
+    private static void EmitUnpacked(PyWriter w, string file, string pathVariable, string base64Variable, string extension)
+    {
+        w.Line($"{file} = tempfile.NamedTemporaryFile(suffix={PyWriter.Str(extension)}, delete=False)");
+        w.Line($"{file}.write(base64.b64decode({base64Variable}))");
+        w.Line($"{file}.close()");
+        w.Line($"{pathVariable} = {file}.name");
     }
 
     private static void EmitSceneReset(PyWriter w, SceneSpec spec, ScriptPurpose purpose)
@@ -239,10 +279,7 @@ public static class ScriptGenerator
         w.Line("thide(\"phase\", \"import\")");
         if (spec.Source is { SelfContained: true, EmbedMesh: true })
         {
-            w.Line("_ply_file = tempfile.NamedTemporaryFile(suffix=\".ply\", delete=False)");
-            w.Line("_ply_file.write(base64.b64decode(PLY_BASE64))");
-            w.Line("_ply_file.close()");
-            w.Line("PLY_PATH = _ply_file.name");
+            EmitUnpacked(w, "_ply_file", "PLY_PATH", "PLY_BASE64", ".ply");
         }
         else
         {
@@ -296,6 +333,88 @@ public static class ScriptGenerator
         w.Blank();
     }
 
+    /// <summary>The terrain's colour where no image is draped: a muted olive earth (linear RGB).</summary>
+    internal static readonly ColorRgb TerrainColor = new(0.22, 0.25, 0.14);
+
+    /// <summary>
+    /// The terrain surface, after the model's bounds are taken so it never changes the framing.
+    /// It is see-through from above (alpha = opacity) and invisible from below (alpha 0 on back
+    /// faces, which works the same in Cycles and EEVEE, unlike backface culling), and it casts no
+    /// shadow, so the sun rigs still light the cave under it. A missing terrain or image is a
+    /// warning, never a failed render.
+    /// </summary>
+    private static void EmitSurface(PyWriter w, SceneSpec spec)
+    {
+        var surface = spec.Surface;
+        if (surface.Mode == SurfaceMode.Off) return;
+        if (surface.Mode is not (SurfaceMode.Solid or SurfaceMode.Textured))
+            throw new ArgumentOutOfRangeException(nameof(spec), surface.Mode, "Unknown surface mode.");
+
+        w.Line($"# ---- terrain surface: {surface.Mode.ToString().ToLowerInvariant()} ----");
+        if (string.IsNullOrWhiteSpace(spec.Source.SurfacePlyPath))
+        {
+            w.Line("thide(\"warning\", \"The model has no terrain surface; rendering without one.\")");
+            w.Blank();
+            return;
+        }
+        bool textured = surface.Mode == SurfaceMode.Textured && !string.IsNullOrWhiteSpace(spec.Source.SurfaceImagePath);
+        if (surface.Mode == SurfaceMode.Textured && !textured)
+            w.Line("thide(\"warning\", \"The model has no surface image; drawing the terrain in one colour.\")");
+        if (EmbedsTerrain(spec))
+            EmitUnpacked(w, "_tply_file", "SURFACE_PLY_PATH", "SURFACE_PLY_BASE64", ".ply");
+        else
+            w.Line($"SURFACE_PLY_PATH = {PyWriter.Str(spec.Source.SurfacePlyPath)}");
+        if (EmbedsTerrainImage(spec))
+            EmitUnpacked(w, "_timg_file", "SURFACE_IMAGE_PATH", "SURFACE_IMAGE_BASE64", Path.GetExtension(spec.Source.SurfaceImagePath!).ToLowerInvariant());
+        else if (textured)
+            w.Line($"SURFACE_IMAGE_PATH = {PyWriter.Str(spec.Source.SurfaceImagePath!)}");
+        w.Line("terrain = None");
+        using (w.Block("if os.path.exists(SURFACE_PLY_PATH):"))
+        {
+            w.Line("bpy.ops.wm.ply_import(filepath=SURFACE_PLY_PATH)");
+            w.Line("terrain = bpy.context.selected_objects[0] if bpy.context.selected_objects else None");
+        }
+        using (w.Block("else:"))
+            w.Line("thide(\"warning\", \"terrain file not found: \" + SURFACE_PLY_PATH)");
+        using (w.Block("if terrain is not None:"))
+        {
+            w.Line("terrain.name = \"Terrain\"");
+            w.Line("terrain.select_set(False)");
+            using (w.Block("if hasattr(terrain, \"visible_shadow\"):"))
+                w.Line("terrain.visible_shadow = False");
+            w.Line("_tmat = bpy.data.materials.new(\"Terrain\")");
+            w.Line("_tmat.use_nodes = True");
+            w.Line("_tnt = _tmat.node_tree");
+            w.Line("_tbsdf = next(n for n in _tnt.nodes if n.type == 'BSDF_PRINCIPLED')");
+            w.Line("_tbsdf.inputs[\"Roughness\"].default_value = 1.0");
+            w.Line($"_tbsdf.inputs[\"Base Color\"].default_value = {Rgba(TerrainColor)}");
+            if (textured)
+            {
+                using (w.Block("if os.path.exists(SURFACE_IMAGE_PATH) and terrain.data.uv_layers:"))
+                {
+                    w.Line("_timg = _tnt.nodes.new(\"ShaderNodeTexImage\")");
+                    w.Line("_timg.image = bpy.data.images.load(SURFACE_IMAGE_PATH)");
+                    w.Line("_timg.extension = 'EXTEND'");
+                    w.Line("_tco = _tnt.nodes.new(\"ShaderNodeTexCoord\")");
+                    w.Line("_tnt.links.new(_tco.outputs[\"UV\"], _timg.inputs[\"Vector\"])");
+                    w.Line("_tnt.links.new(_timg.outputs[\"Color\"], _tbsdf.inputs[\"Base Color\"])");
+                }
+                using (w.Block("else:"))
+                    w.Line("thide(\"warning\", \"surface image not found or terrain has no UV map: \" + SURFACE_IMAGE_PATH)");
+            }
+            // alpha = opacity − opacity × backfacing: the opacity from above, 0 from below.
+            w.Line("_tgeo = _tnt.nodes.new(\"ShaderNodeNewGeometry\")");
+            w.Line("_talpha = _tnt.nodes.new(\"ShaderNodeMath\")");
+            w.Line("_talpha.operation = 'MULTIPLY_ADD'");
+            w.Line($"_talpha.inputs[1].default_value = {PyWriter.Num(-surface.Opacity)}");
+            w.Line($"_talpha.inputs[2].default_value = {PyWriter.Num(surface.Opacity)}");
+            w.Line("_tnt.links.new(_tgeo.outputs[\"Backfacing\"], _talpha.inputs[0])");
+            w.Line("_tnt.links.new(_talpha.outputs[\"Value\"], _tbsdf.inputs[\"Alpha\"])");
+            w.Line("terrain.data.materials.append(_tmat)");
+        }
+        w.Blank();
+    }
+
     private static void EmitProceduralRock(PyWriter w, MaterialsSpec m)
     {
         w.Line("_coord = _nt.nodes.new(\"ShaderNodeTexCoord\")");
@@ -326,7 +445,7 @@ public static class ScriptGenerator
         w.Line("_ramp = _nt.nodes.new(\"ShaderNodeValToRGB\")");
         w.Line("_cr = _ramp.color_ramp");
         // Fac 0 = bottom of the cave, 1 = top; GradientStops is top→bottom, so reverse.
-        var stops = Geometry.DepthRamp.GradientStops;
+        var stops = DepthRamp.GradientStops;
         int last = stops.Count - 1;
         w.Line("_cr.elements[0].position = 0.0");
         w.Line($"_cr.elements[0].color = {Rgba(FromSrgb(stops[last]))}"); // bottom
@@ -365,7 +484,10 @@ public static class ScriptGenerator
             case LightingRig.Headlamp:
                 w.Line("_hl = bpy.data.lights.new(\"Headlamp\", type='AREA')");
                 w.Line("_hl.energy = 80.0 * _light_strength");
-                w.Line("_hl.size = max(0.5, bounds_radius * 0.15)");
+                // A head-torch-sized emitter. Sized from the whole model it grew to tens of
+                // metres in any real cave, mostly outside the passage the camera is in, and the
+                // walls shadowed nearly all of it.
+                w.Line("_hl.size = 0.3");
                 w.Line("_hlo = bpy.data.objects.new(\"Headlamp\", _hl)");
                 w.Line("scene.collection.objects.link(_hlo)");
                 w.Line("_hlo.parent = cam"); // rides the camera, emits along its -Z view axis
@@ -450,7 +572,7 @@ public static class ScriptGenerator
                 w.Blank();
             }
             EmitTextLabelGroup(w, "_component_labels", "COMPONENT_LABELS", "cmp", plan.Components);
-            EmitLeadMarkers(w, spec, plan.Leads);
+            EmitLeadMarkers(w, spec, plan.Leads, plan.LeadsByDistance);
         }
         if (hasOverlays) EmitOverlays(w, spec);
         if (hasEvents) EmitVisibilityEvents(w, spec);
@@ -509,7 +631,7 @@ public static class ScriptGenerator
         w.Blank();
     }
 
-    private static void EmitLeadMarkers(PyWriter w, SceneSpec spec, IReadOnlyList<LeadItem> leads)
+    private static void EmitLeadMarkers(PyWriter w, SceneSpec spec, IReadOnlyList<LeadItem> leads, LeadDistanceSizing? byDistance)
     {
         if (leads.Count == 0) return; // bucket is already defined by EmitAnnotations
 
@@ -545,24 +667,64 @@ public static class ScriptGenerator
                     w.Line("_fc.modifiers.new(type='CYCLES')");
             }
         }
+        if (byDistance is not null)
+        {
+            // A driver scales each marker with its distance from the camera. The expression is
+            // one Blender evaluates itself (a "simple expression"), so it needs no Python
+            // auto-run; the pulse, when asked for, is part of it.
+            string pulse = spec.Labels.Leads.Pulse ? " * (1.25 - 0.25 * cos((frame - 1) * 0.4488))" : "";
+            w.Blank();
+            using (w.Block("def _thide_lead_by_distance(obj, radius):"))
+            {
+                w.Line($"_expr = \"min({PyWriter.Num(byDistance.MaxRadius)}, max({PyWriter.Num(byDistance.MinRadius)}, d * {PyWriter.Num(byDistance.Factor)})) / \" + repr(radius) + {PyWriter.Str(pulse)}");
+                using (w.Block("for _i in range(3):"))
+                {
+                    w.Line("_drv = obj.driver_add(\"scale\", _i).driver");
+                    w.Line("_drv.type = 'SCRIPTED'");
+                    w.Line("_var = _drv.variables.new()");
+                    w.Line("_var.name = \"d\"");
+                    w.Line("_var.type = 'LOC_DIFF'");
+                    w.Line("_var.targets[0].id = cam");
+                    w.Line("_var.targets[1].id = obj");
+                    w.Line("_drv.expression = _expr");
+                }
+            }
+        }
         w.Blank();
 
         w.Line("LEAD_MARKERS = [");
         using (w.Indented())
         {
             foreach (var lead in leads)
-                w.Line($"({PyWriter.Str(lead.Text)}, {PyWriter.Num(lead.Position.X)}, {PyWriter.Num(lead.Position.Y)}, {PyWriter.Num(lead.Position.Z)}, {PyWriter.Num(lead.Radius)}, {PyWriter.Num(lead.TextSize)}),");
+                w.Line($"({PyWriter.Str(lead.Text)}, {PyWriter.Num(lead.Position.X)}, {PyWriter.Num(lead.Position.Y)}, {PyWriter.Num(lead.Position.Z)}, {PyWriter.Num(lead.Radius)}, {PyWriter.Num(lead.TextSize)}, {PyWriter.Str(lead.Station ?? lead.Text)}),");
         }
         w.Line("]");
         using (w.Block("for _d in LEAD_MARKERS:"))
         {
-            w.Line("_dm = _thide_lead(\"lead:\" + _d[0], (_d[1], _d[2], _d[3]), _d[4])");
-            if (spec.Labels.Leads.Pulse)
+            // Objects are named by station (_d[6]); the caption shows the note (_d[0]).
+            w.Line("_dm = _thide_lead(\"lead:\" + _d[6], (_d[1], _d[2], _d[3]), _d[4])");
+            if (byDistance is not null)
+                w.Line("_thide_lead_by_distance(_dm, _d[4])");
+            else if (spec.Labels.Leads.Pulse)
                 w.Line("_thide_pulse(_dm)");
-            if (spec.Labels.Leads.ShowText)
-                w.Line("_thide_label(\"leadtxt:\" + _d[0], _d[0], (_d[1], _d[2], _d[3] + _d[4] * 2.0), _d[5], _lead_markers)");
+            if (spec.Labels.Leads.ShowText && byDistance is not null)
+            {
+                // The caption is the marker's child, so the driver's scale applies to both: it
+                // stays two radii above the ball and in proportion to it. The parent inverse is
+                // the ball's place, where the caption's location is given.
+                w.Line("_dt = _thide_label(\"leadtxt:\" + _d[6], _d[0], (_d[1], _d[2], _d[3] + _d[4] * 2.0), _d[5], _lead_markers)");
+                w.Line("_dt.parent = _dm");
+                w.Line("_dt.matrix_parent_inverse = mathutils.Matrix.Translation((_d[1], _d[2], _d[3])).inverted()");
+            }
+            else if (spec.Labels.Leads.ShowText)
+            {
+                w.Line("_thide_label(\"leadtxt:\" + _d[6], _d[0], (_d[1], _d[2], _d[3] + _d[4] * 2.0), _d[5], _lead_markers)");
+            }
         }
     }
+
+    /// <summary>How far in front of the camera the HUD overlays float, in metres.</summary>
+    private const double HudDepth = 3.0;
 
     private static bool OverlaysActive(OverlaySpec o)
         => !string.IsNullOrWhiteSpace(o.Title) || o.ScaleBar || o.NorthArrow || o.DepthLegend;
@@ -571,6 +733,21 @@ public static class ScriptGenerator
     {
         var o = spec.Labels.Overlays;
         w.Line("# presentation overlays (camera HUD + world markers)");
+        // The half-width and half-height of the picture at the HUD's depth, so the title and the
+        // legend stay inside the frame whatever the aspect ratio. Blender's AUTO sensor fit
+        // spreads the sensor width over the longer side.
+        w.Line($"_HUD_DEPTH = {PyWriter.Num(HudDepth)}");
+        w.Line($"_hud_w, _hud_h = {PyWriter.Num(spec.Output.Width)}, {PyWriter.Num(spec.Output.Height)}");
+        w.Line("_hud_fit = cam_data.sensor_fit");
+        using (w.Block("if _hud_fit == 'AUTO':"))
+            w.Line("_hud_fit = 'HORIZONTAL' if _hud_w >= _hud_h else 'VERTICAL'");
+        w.Line("_hud_sensor = cam_data.sensor_height if cam_data.sensor_fit == 'VERTICAL' else cam_data.sensor_width");
+        w.Line("_hud_half = _HUD_DEPTH * _hud_sensor / 2.0 / cam_data.lens");
+        using (w.Block("if _hud_fit == 'HORIZONTAL':"))
+            w.Line("_hud_half_x, _hud_half_y = _hud_half, _hud_half * _hud_h / _hud_w");
+        using (w.Block("else:"))
+            w.Line("_hud_half_x, _hud_half_y = _hud_half * _hud_w / _hud_h, _hud_half");
+        w.Line("_hud_unit = min(_hud_half_x, _hud_half_y)  # sizes follow the shorter side");
         // A flat, camera-parented HUD label (no billboard constraint — it rides the frame).
         using (w.Block("def _thide_hud(name, body, loc, size):"))
         {
@@ -600,7 +777,7 @@ public static class ScriptGenerator
         w.Blank();
 
         if (!string.IsNullOrWhiteSpace(o.Title))
-            w.Line($"_thide_hud(\"overlay:title\", {PyWriter.Str(o.Title!.ReplaceLineEndings(" "))}, (0.0, -1.15, -3.0), 0.16)");
+            w.Line($"_thide_hud(\"overlay:title\", {PyWriter.Str(o.Title!.ReplaceLineEndings(" "))}, (0.0, -_hud_half_y * 0.8, -_HUD_DEPTH), _hud_unit * 0.18)");
 
         if (o.NorthArrow)
         {
@@ -631,7 +808,7 @@ public static class ScriptGenerator
         if (o.DepthLegend)
         {
             // A camera-parented column of the depth-ramp stops, warm (top) → cool (bottom).
-            var stops = Geometry.DepthRamp.GradientStops;
+            var stops = DepthRamp.GradientStops;
             var colors = new List<string>(stops.Count);
             foreach (var s in stops) colors.Add(Rgba(FromSrgb(s)));
             w.Line($"_legend = [{string.Join(", ", colors)}]");
@@ -650,8 +827,8 @@ public static class ScriptGenerator
                 w.Line("_lp.name = \"overlay:legend\" + str(_idx)");
                 w.Line("_lp.data.materials.append(_lm)");
                 w.Line("_lp.parent = cam");
-                w.Line("_lp.scale = (0.05, 0.05, 0.05)");
-                w.Line("_lp.location = (1.15, 0.5 - _idx * 0.13, -3.0)");
+                w.Line("_lp.scale = (_hud_unit * 0.06, _hud_unit * 0.06, _hud_unit * 0.06)");
+                w.Line("_lp.location = (_hud_half_x * 0.88, _hud_half_y * (0.55 - _idx * 0.15), -_HUD_DEPTH)");
                 w.Line("_overlays.append(_lp)");
             }
         }
@@ -728,12 +905,12 @@ public static class ScriptGenerator
     private static string Rgba(ColorRgb c)
         => $"({PyWriter.Num(c.R)}, {PyWriter.Num(c.G)}, {PyWriter.Num(c.B)}, 1.0)";
 
-    private static ColorRgb Scale(ColorRgb c, double factor) => new(
+    internal static ColorRgb Scale(ColorRgb c, double factor) => new(
         Math.Clamp(c.R * factor, 0, 1), Math.Clamp(c.G * factor, 0, 1), Math.Clamp(c.B * factor, 0, 1));
 
     /// <summary>Converts an sRGB display colour (0–255) to the linear RGB Blender node
     /// colours expect, so the shader gradient matches the intended palette.</summary>
-    private static ColorRgb FromSrgb(Geometry.CaveColor c) => new(SrgbToLinear(c.R), SrgbToLinear(c.G), SrgbToLinear(c.B));
+    internal static ColorRgb FromSrgb(CaveColor c) => new(SrgbToLinear(c.R), SrgbToLinear(c.G), SrgbToLinear(c.B));
 
     private static double SrgbToLinear(byte channel)
     {

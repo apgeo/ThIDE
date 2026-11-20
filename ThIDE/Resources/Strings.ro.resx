@@ -394,9 +394,11 @@
   <data name="Blender_Status_Acquiring" xml:space="preserve"><value>Se obține sursa…</value></data>
   <data name="Blender_Status_Cancelled" xml:space="preserve"><value>Oprit.</value></data>
   <data name="Blender_Status_Failed" xml:space="preserve"><value>Randare eșuată.</value></data>
+  <data name="Blender_ReExport_Failed" xml:space="preserve"><value>Therion nu a putut exporta modelul din {0}: {1}. Jurnal: {2}</value></data>
   <data name="Blender_Status_Exporting" xml:space="preserve"><value>Se exportă scriptul…</value></data>
   <data name="Blender_Status_Exported" xml:space="preserve"><value>Script exportat.</value></data>
   <data name="Blender_Status_Done" xml:space="preserve"><value>Randare completă.</value></data>
+  <data name="Blender_Status_AgentRendering" xml:space="preserve"><value>Un agent randează în Blender; randările rulează pe rând.</value></data>
   <data name="Blender_Phase_Acquiring" xml:space="preserve"><value>Se obține sursa…</value></data>
   <data name="Blender_Phase_Converting" xml:space="preserve"><value>Se convertește modelul…</value></data>
   <data name="Blender_Phase_Generating" xml:space="preserve"><value>Se generează scriptul…</value></data>
@@ -414,6 +416,7 @@
   <data name="Blender_UI_ExternalFile" xml:space="preserve"><value>Cale fișier model</value></data>
   <data name="Blender_UI_WorkspaceArtifact" xml:space="preserve"><value>Modelul spațiului de lucru</value></data>
   <data name="Blender_UI_ReloadArtifacts" xml:space="preserve"><value>Reîmprospătează</value></data>
+  <data name="Blender_UI_ProjectModel" xml:space="preserve"><value>Modelul proiectului (exportat cu Therion când e depășit)</value></data>
   <data name="Blender_UI_Camera" xml:space="preserve"><value>Cameră</value></data>
   <data name="Blender_UI_Template" xml:space="preserve"><value>Șablon</value></data>
   <data name="Blender_UI_Engine" xml:space="preserve"><value>Motor</value></data>
@@ -431,6 +434,14 @@
   <data name="Blender_UI_Labels" xml:space="preserve"><value>Etichete</value></data>
   <data name="Blender_UI_StationLabels" xml:space="preserve"><value>Etichete stații</value></data>
   <data name="Blender_UI_LeadMarkers" xml:space="preserve"><value>Marcaje continuări</value></data>
+  <data name="Blender_UI_LeadMarkerSize" xml:space="preserve"><value>Mărimea marcajelor</value></data>
+  <data name="Blender_UI_LeadMarkerSize_Tip" xml:space="preserve"><value>Auto: după galerie într-un zbor prin peșteră, după toată peștera altfel. Cave: mereu după toată peștera. Passage: mereu după galerie. CameraDistance: cam aceeași mărime în imagine la orice distanță, cu tot cu textul lui. HiddenInFlythrough: după toată peștera, și deloc într-un zbor prin peșteră.</value></data>
+  <data name="Blender_UI_LabelRoof" xml:space="preserve"><value>Etichete deasupra</value></data>
+  <data name="Blender_UI_LabelRoof_Tip" xml:space="preserve"><value>Tavanul deasupra căruia se ridică eticheta unei stații. SurveyFirst: distanța în sus măsurată, altfel pereții. WallsFirst: pereții, altfel distanța în sus măsurată. WallsOnly: doar pereții. None: etichetele stau pe stații.</value></data>
+  <data name="Blender_UI_Surface" xml:space="preserve"><value>Teren</value></data>
+  <data name="Blender_UI_Surface_Tip" xml:space="preserve"><value>Suprafața terenului unui model .lox, deasupra peșterii. Off: fără. Solid: într-o singură culoare. Textured: cu imaginea suprafeței așezată pe el (într-o singură culoare când modelul nu are imagine). Văzut de sus e transparent, cât spune Opacitatea terenului, ca peștera să se vadă dedesubt; văzut de jos nu se vede. Camera încadrează tot peștera.</value></data>
+  <data name="Blender_UI_SurfaceOpacity" xml:space="preserve"><value>Opacitatea terenului</value></data>
+  <data name="Blender_UI_SurfaceOpacity_Tip" xml:space="preserve"><value>Cât de opac e terenul văzut de sus: la 0 % nu se vede, la 100 % ascunde peștera de sub el. Implicit 40 %.</value></data>
   <data name="Blender_UI_Render" xml:space="preserve"><value>Randează</value></data>
   <data name="Blender_UI_Export" xml:space="preserve"><value>Exportă scriptul…</value></data>
   <data name="Blender_UI_ExportDir" xml:space="preserve"><value>Folder export</value></data>
@@ -1646,6 +1657,9 @@ Aplici modificările? Pașii care nu au putut fi previzualizați rulează acum.<
   <data name="Notif_SaveFailedTitle" xml:space="preserve"><value>Salvare eșuată</value></data>
   <data name="Notif_SaveFailedMsg" xml:space="preserve"><value>{0} nu a putut fi scris: {1} Modificările sunt încă în editor, nesalvate.</value></data>
   <data name="Exit_SaveAll" xml:space="preserve"><value>Salvează tot</value></data>
+  <data name="Exit_RenderRunningTitle" xml:space="preserve"><value>Randare Blender în curs</value></data>
+  <data name="Exit_RenderRunningMsg" xml:space="preserve"><value>O randare Blender este încă în curs. Închiderea ThIDE o oprește. Închideți totuși?</value></data>
+  <data name="Exit_StopRenderAndClose" xml:space="preserve"><value>Oprește randarea și închide</value></data>
   <data name="Replace_EncodingRefused" xml:space="preserve"><value>Nu s-a înlocuit nimic: {0} nu poate conține „{1}” în {2}, codificarea declarată de fișier. Niciun fișier nu a fost modificat.</value></data>
   <data name="Replace_UndoRefused" xml:space="preserve"><value>Nu s-a restaurat nimic: {0} a fost modificat după înlocuire. Niciun fișier nu a fost modificat.</value></data>
   <data name="Notif_SaveUndecodable" xml:space="preserve"><value>{0} conține octeți care nu sunt valizi în {2}; apar ca „{1}”. Salvarea i-ar înlocui definitiv. Adăugați cu alt editor o linie `encoding` cu codificarea reală a fișierului și redeschideți-l, sau rescrieți caracterele afișate ca „{1}”.</value></data>
@@ -2127,6 +2141,22 @@ Acțiunea nu poate fi anulată.</value></data>
   <data name="Notif_StateUnreadableMsg" xml:space="preserve"><value>Se folosesc valorile implicite. S-a păstrat o copie a fișierului care nu a putut fi citit: {0}.</value></data>
   <data name="Blender_UI_RenderDir" xml:space="preserve"><value>Folder randare</value></data>
   <data name="Blender_UI_RenderDirTip" xml:space="preserve"><value>Unde se salvează videoclipul, cadrele sau imaginea. Lăsați gol pentru a le păstra în folderul temporar al lucrării.</value></data>
+  <data name="Blender_UI_Builder" xml:space="preserve"><value>Constructor de scenă (avansat)</value></data>
+  <data name="Blender_UI_Builder_Tip" xml:space="preserve"><value>Ce construiește scena în Blender. Auto: playerul, când poate arăta tot ce cere scena, altfel generatorul de scripturi. Player: scrie textele peste cadrele terminate, așa că nimic nu le ascunde. Generator: constructorul mai vechi, păstrat pentru comparație; desenează titlul în scenă și nu desenează creditele, cadrul de final sau subtitrările. O previzualizare este mereu a playerului.</value></data>
+  <data name="Blender_UI_Preview" xml:space="preserve"><value>Previzualizare</value></data>
+  <data name="Blender_UI_Preview_Tip" xml:space="preserve"><value>O schiță rapidă a randării: jumătate din mărime, fără lumini și umbre, o fracțiune de secundă pe cadru. Pentru a verifica mișcarea camerei, încadrarea și textele înainte de randarea lungă. Se salvează lângă randare, cu -draft adăugat la nume.</value></data>
+  <data name="Blender_UI_Credits" xml:space="preserve"><value>Linie de credite</value></data>
+  <data name="Blender_UI_Credits_Tip" xml:space="preserve"><value>O linie mică ce rămâne în colțul din dreapta jos al imaginii: cine a topografiat, cine a desenat, o licență. Gol pentru niciuna.</value></data>
+  <data name="Blender_UI_EndCard" xml:space="preserve"><value>Cadru de final</value></data>
+  <data name="Blender_UI_EndCard_Tip" xml:space="preserve"><value>Un text pe o imagine neagră cu care se încheie filmul, după ultimul cadru. Gol pentru niciunul.</value></data>
+  <data name="Blender_UI_EndCardSeconds" xml:space="preserve"><value>Cadru de final (secunde)</value></data>
+  <data name="Blender_Phase_Composing" xml:space="preserve"><value>Se compune filmul</value></data>
+  <data name="Blender_Status_PreviewDone" xml:space="preserve"><value>Previzualizare completă.</value></data>
+  <data name="Blender_Job_Preview" xml:space="preserve"><value>{0} (previzualizare)</value></data>
+  <data name="Blender_Builder_Fallback" xml:space="preserve"><value>Construită de generatorul de scripturi: playerul nu redă {0}.</value></data>
+  <data name="Blender_Builder_LeftOutGenerator" xml:space="preserve"><value>Generatorul de scripturi nu desenează {0}.</value></data>
+  <data name="Blender_Builder_LeftOutPreview" xml:space="preserve"><value>Previzualizarea nu arată {0}.</value></data>
+  <data name="Blender_Fail_BuilderRefused" xml:space="preserve"><value>Playerul nu poate construi această scenă: nu redă {0}. Alegeți generatorul de scripturi sau Auto.</value></data>
   <data name="Count_Warnings_One" xml:space="preserve"><value>{0} avertisment</value></data>
   <data name="Count_Warnings_Few" xml:space="preserve"><value>{0} avertismente</value></data>
   <data name="Count_Warnings_Many" xml:space="preserve"><value>{0} de avertismente</value></data>

@@ -72,7 +72,13 @@ public sealed class ThideApp : IAsyncDisposable
     }
 
     /// <summary>Starts ThIDE with <paramref name="files"/> (opened relative to <paramref name="cwd"/>).</summary>
-    public static async Task<ThideApp> StartAsync(string? cwd = null, params string[] files)
+    public static Task<ThideApp> StartAsync(string? cwd = null, params string[] files)
+        => StartAsync(new Dictionary<string, string>(), cwd, files);
+
+    /// <summary>As <see cref="StartAsync(string?, string[])"/>, with extra or changed environment
+    /// variables for the app (such as a PATH that finds a stub tool first).</summary>
+    public static async Task<ThideApp> StartAsync(
+        IReadOnlyDictionary<string, string> environment, string? cwd, params string[] files)
     {
         var home = Path.Combine(Path.GetTempPath(), "thide-ui-profile-" + Guid.NewGuid().ToString("N")[..8]);
         Directory.CreateDirectory(home);
@@ -97,6 +103,7 @@ public sealed class ThideApp : IAsyncDisposable
         psi.Environment["XDG_CONFIG_HOME"] = Directory.CreateDirectory(Path.Combine(home, "config")).FullName;
         psi.Environment["XDG_DATA_HOME"] = Directory.CreateDirectory(Path.Combine(home, "data")).FullName;
         psi.Environment["XDG_CACHE_HOME"] = Directory.CreateDirectory(Path.Combine(home, "cache")).FullName;
+        foreach (var (name, value) in environment) psi.Environment[name] = value;
 
         var process = Process.Start(psi) ?? throw new InvalidOperationException("Could not start ThIDE.");
         var app = new ThideApp(process, home);

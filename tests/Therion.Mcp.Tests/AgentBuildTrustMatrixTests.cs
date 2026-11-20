@@ -25,6 +25,11 @@ public class AgentBuildTrustMatrixTests
         Compiles,
         /// <summary>Saves through the IDE: the app's save hooks run, and they ask the folder's trust.</summary>
         SavesInIde,
+        /// <summary>
+        /// May run Therion to export the model for a Blender render, on a copy of the thconfig without its
+        /// system lines (the host's re-exporter, tested in ThIDE.Tests): nothing is left to approve.
+        /// </summary>
+        ExportsModelOnly,
         /// <summary>Runs nothing the project defines.</summary>
         Inert,
     }
@@ -34,18 +39,20 @@ public class AgentBuildTrustMatrixTests
         ["run_build"] = Reach.Compiles,
         ["run_command"] = Reach.Compiles,
         ["save_all"] = Reach.SavesInIde,
+        ["start_render"] = Reach.ExportsModelOnly,
+        ["export_render_script"] = Reach.ExportsModelOnly,
     };
 
     private static readonly string[] InertTools =
     [
-        "add_map_members", "convert_coordinates", "convert_units", "data_quality_report", "deps_graph",
+        "add_map_members", "cancel_render", "convert_coordinates", "convert_units", "data_quality_report", "deps_graph",
         "describe_command", "drawing_status", "edit_file", "explain_diagnostic", "export_gis", "export_tables",
         "find_equate_candidates", "find_references", "focus_tool", "format_file", "generate_report",
         "get_declination", "get_diagnostics", "get_file_outline", "get_open_documents", "get_setting",
         "get_ui_state", "goto_definition", "goto_symbol", "import_survey", "list_commands", "list_files",
-        "list_leads", "list_settings", "list_stations", "list_survey_info", "list_symbols", "list_todos",
+        "list_leads", "list_render_presets", "list_settings", "list_stations", "list_survey_info", "list_symbols", "list_todos",
         "load_workspace", "open_file", "project_metadata_get", "project_metadata_set", "query_legs",
-        "read_file", "rename_symbol", "reset_layout", "scaffold_th2", "scaffold_topodroid_project",
+        "read_file", "rename_symbol", "render_status", "reset_layout", "scaffold_th2", "scaffold_topodroid_project",
         "search_thbook", "server_info", "set_active_thconfig", "set_layout", "set_lead_status", "set_setting",
         "show_in_3d", "show_toast", "structural_analysis", "survey_graph", "survey_stats", "workspace_info",
     ];

@@ -117,6 +117,19 @@ public class BlenderRunnerTests : IDisposable
             launcher.Args);
     }
 
+    [Fact]
+    public async Task ScriptArguments_FollowADoubleDash()
+    {
+        var launcher = new FakeLauncher(() => new FakeProcess(["THIDE:done=1"], 0));
+        var runner = new BlenderRunner(launcher, _ => 10_000_000_000L);
+        await runner.RunAsync(Blender, Job() with { ScriptArguments = ["--plan", "scene-plan.draft.json"] }, null);
+
+        Assert.Equal(
+            ["-b", "--factory-startup", "--python-exit-code", "64", "--python", Path.Combine(_dir, "render.py"),
+             "--", "--plan", "scene-plan.draft.json"],
+            launcher.Args);
+    }
+
     // ---- failure taxonomy ----
 
     [Fact]

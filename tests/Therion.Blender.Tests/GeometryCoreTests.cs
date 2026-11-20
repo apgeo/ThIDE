@@ -2,8 +2,8 @@
 // box, centerline component graph, arc-length path (+ Chaikin smoothing), k-d tree
 // nearest-neighbour, and the depth ramp.
 
-using Therion.Blender;
-using Therion.Blender.Geometry;
+using Therion.Cave3D;
+using Therion.CaveGeometry;
 
 namespace Therion.Blender.Tests;
 

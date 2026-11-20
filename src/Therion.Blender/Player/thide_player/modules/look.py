@@ -1,0 +1,300 @@
+"""Feature "look": render engine and quality, picture size, materials, lights and the world.
+
+Runs after "models" and "camera_track": it gives the models the materials they ask for, and a
+headlamp rides the camera.
+
+The engine "workbench" is the draft look: Blender's solid view, many times faster than a real
+render. It knows no lights and no node materials, so every model is given the colours of its
+material as a colour attribute, which that engine does show.
+"""
+
+import bpy
+import mathutils
+
+from thide_player import api
+
+SECTION = "look"
+KEYS = {
+    "engine": None, "samples": None, "denoise": None, "device": None, "seed": None,
+    "transparent": None, "width": None, "height": None,
+    "materials": [{
+        "id": None, "kind": None, "color": None, "roughness": None,
+        "stops": [{"at": None, "color": None}], "low": None, "high": None, "scale": None, "bump": None,
+    }],
+    "lights": [{"id": None, "kind": None, "energy": None, "direction": None, "size": None}],
+    "world": {"kind": None, "color": None, "strength": None},
+}
+
+GPU_BACKENDS = {"optix": "OPTIX", "cuda": "CUDA", "hip": "HIP", "oneapi": "ONEAPI", "metal": "METAL"}
+
+
+def build(ctx, look):
+    api.report("phase", "engine")
+    scene = ctx.scene
+    scene.render.resolution_x = look["width"]
+    scene.render.resolution_y = look["height"]
+    scene.render.resolution_percentage = 100
+    scene.render.film_transparent = bool(look.get("transparent", False))
+
+    engine = look.get("engine", "cycles")
+    if engine == "cycles":
+        use_cycles(scene, look)
+    elif engine == "eevee":
+        use_eevee(scene, look)
+    elif engine == "workbench":
+        use_workbench(scene, look)
+    else:
+        raise api.PlanError('look.engine: unknown engine "%s"' % engine)
+
+    give_materials(scene, look.get("materials", []), draft=engine == "workbench")
+    for index, light in enumerate(look.get("lights", [])):
+        add_light(scene, light, "look.lights[%d]" % index)
+    if look.get("world"):
+        set_world(scene, look["world"])
+    else:
+        scene.world = None  # black, and it lights nothing
+
+
+# ---- engine ----
+
+def use_cycles(scene, look):
+    scene.render.engine = "CYCLES"
+    cycles = scene.cycles
+    cycles.samples = look.get("samples", 128)
+    cycles.use_denoising = bool(look.get("denoise", True))
+    cycles.seed = look.get("seed", 1)
+    # A closed cave is noisy under global illumination: capped bounces give a much cleaner
+    # picture for the same samples, at the cost of a little bounced light.
+    cycles.max_bounces = 8
+    cycles.diffuse_bounces = 3
+    cycles.glossy_bounces = 3
+    cycles.transmission_bounces = 4
+    cycles.caustics_reflective = False
+    cycles.caustics_refractive = False
+
+    device = look.get("device", "auto")
+    if device != "cpu" and device != "auto" and device not in GPU_BACKENDS:
+        raise api.PlanError('look.device: unknown device "%s"' % device)
+    wanted = [] if device == "cpu" else list(GPU_BACKENDS.values()) if device == "auto" else [GPU_BACKENDS[device]]
+    for backend in wanted:
+        try:
+            if enable_gpu(backend):
+                cycles.device = "GPU"
+                api.report("device", backend)
+                return
+        except Exception:
+            continue
+    cycles.device = "CPU"
+    api.report("device", "CPU")
+
+
+def enable_gpu(backend):
+    preferences = bpy.context.preferences.addons["cycles"].preferences
+    preferences.compute_device_type = backend
+    # The call that lists the devices has moved between versions.
+    if hasattr(preferences, "refresh_devices"):
+        preferences.refresh_devices()
+    else:
+        preferences.get_devices()
+    found = False
+    for device in preferences.devices:
+        device.use = device.type == backend
+        found = found or device.use
+    return found
+
+
+def use_eevee(scene, look):
+    if api.set_enum(scene.render, "engine", ("BLENDER_EEVEE_NEXT", "BLENDER_EEVEE")) is None:
+        raise api.PlanError("look.engine: this Blender has no EEVEE engine")
+    scene.eevee.taa_render_samples = look.get("samples", 128)
+    for switch in ("use_gtao", "use_shadows", "use_raytracing"):
+        if hasattr(scene.eevee, switch):
+            setattr(scene.eevee, switch, True)
+    api.report("device", "EEVEE")
+
+
+def use_workbench(scene, look):
+    scene.render.engine = "BLENDER_WORKBENCH"
+    shading = scene.display.shading
+    shading.light = "STUDIO"
+    shading.color_type = "VERTEX"  # the colour attribute of each mesh: see show_in_draft
+    shading.show_cavity = True     # darkens creases, which is what shows the shape of a passage
+    # The samples pick the anti-aliasing: none, a fast approximation, or one of five levels.
+    samples = look.get("samples", 8)
+    levels = [level for level in (5, 8, 11, 16, 32) if level <= samples]
+    scene.display.render_aa = str(levels[-1]) if levels else "FXAA" if samples > 1 else "OFF"
+    api.report("device", "WORKBENCH")
+
+
+# ---- materials ----
+
+DRAFT_COLOURS = "ThideDraft"
+
+
+def give_materials(scene, materials, draft=False):
+    specs = {spec["id"]: spec for spec in materials}
+    made = {}
+    if draft:
+        bpy.context.view_layer.update()  # where the models stand, for a ramp over height
+    for obj in [obj for obj in scene.objects if obj.get("thide_model")]:
+        wanted = obj.get("thide_material")
+        if not wanted:
+            continue
+        if wanted not in specs:
+            raise api.PlanError(
+                'the model "%s" asks for the material "%s", which look.materials does not have'
+                % (obj.name, wanted))
+        spec = specs[wanted]
+        # A model without vertex colours gets the plain colour instead of a black surface.
+        plain = spec.get("kind") == "vertexColor" and not obj.data.color_attributes
+        key = (wanted, plain)
+        if key not in made:
+            made[key] = make_material(spec, plain)
+        obj.data.materials.clear()
+        obj.data.materials.append(made[key])
+        if draft and not (spec.get("kind") == "vertexColor" and not plain):
+            show_in_draft(obj, spec)
+
+
+def show_in_draft(obj, spec):
+    """Gives the mesh the colours of its material as a colour attribute, and makes it the one
+    the solid view shows: one colour, or a ramp over the height of each vertex. A noise ramp
+    shows as the material's plain colour."""
+    mesh = obj.data
+    if spec.get("kind") == "heightRamp":
+        low, span = spec["low"], spec["high"] - spec["low"]
+        colours = []
+        for vertex in mesh.vertices:
+            height = (obj.matrix_world @ vertex.co).z
+            colours.extend(rgba(ramp_colour(spec["stops"], (height - low) / span if span > 0.0 else 0.0)))
+    else:
+        colours = rgba(spec["color"]) * len(mesh.vertices)
+    attribute = mesh.color_attributes.new(DRAFT_COLOURS, "FLOAT_COLOR", "POINT")
+    attribute.data.foreach_set("color", colours)
+    mesh.color_attributes.active_color = attribute
+
+
+def ramp_colour(stops, at):
+    """The colour of a ramp at a place between 0 and 1: straight from stop to stop, as the
+    ramp of the material mixes them."""
+    if at <= stops[0]["at"]:
+        return stops[0]["color"]
+    for low, high in zip(stops, stops[1:]):
+        if at <= high["at"]:
+            span = high["at"] - low["at"]
+            share = (at - low["at"]) / span if span > 0.0 else 1.0
+            return [a + (b - a) * share for a, b in zip(low["color"], high["color"])]
+    return stops[-1]["color"]
+
+
+def rgba(colour):
+    return (colour[0], colour[1], colour[2], 1.0)
+
+
+def make_material(spec, plain):
+    kind = "flat" if plain else spec.get("kind", "flat")
+    material = bpy.data.materials.new(spec["id"])
+    if "color" in spec:
+        material.diffuse_color = rgba(spec["color"])  # in Blender's solid view
+    material.use_nodes = True
+    tree = material.node_tree
+    shader = next(node for node in tree.nodes if node.type == "BSDF_PRINCIPLED")
+    shader.inputs["Roughness"].default_value = spec.get("roughness", 0.9)
+    colour = shader.inputs["Base Color"]
+
+    if kind == "flat":
+        colour.default_value = rgba(spec["color"])
+    elif kind == "vertexColor":
+        # With no layer named, the node reads the mesh's default colour attribute.
+        attribute = tree.nodes.new("ShaderNodeVertexColor")
+        tree.links.new(attribute.outputs["Color"], colour)
+    elif kind == "heightRamp":
+        # Height (world Z) between "low" and "high" picks the colour.
+        geometry = tree.nodes.new("ShaderNodeNewGeometry")
+        separate = tree.nodes.new("ShaderNodeSeparateXYZ")
+        tree.links.new(geometry.outputs["Position"], separate.inputs["Vector"])
+        span = tree.nodes.new("ShaderNodeMapRange")
+        span.inputs["From Min"].default_value = spec["low"]
+        span.inputs["From Max"].default_value = spec["high"]
+        tree.links.new(separate.outputs["Z"], span.inputs["Value"])
+        ramp = make_ramp(tree, spec["stops"])
+        tree.links.new(span.outputs["Result"], ramp.inputs["Fac"])
+        tree.links.new(ramp.outputs["Color"], colour)
+    elif kind == "noiseRamp":
+        # Noise picks the colour and raises the surface a little: rock without any data.
+        coordinates = tree.nodes.new("ShaderNodeTexCoord")
+        noise = tree.nodes.new("ShaderNodeTexNoise")
+        noise.inputs["Scale"].default_value = spec.get("scale", 8.0)
+        tree.links.new(coordinates.outputs["Object"], noise.inputs["Vector"])
+        ramp = make_ramp(tree, spec["stops"])
+        tree.links.new(noise.outputs["Fac"], ramp.inputs["Fac"])
+        tree.links.new(ramp.outputs["Color"], colour)
+        bump = tree.nodes.new("ShaderNodeBump")
+        bump.inputs["Strength"].default_value = spec.get("bump", 0.15)
+        tree.links.new(noise.outputs["Fac"], bump.inputs["Height"])
+        tree.links.new(bump.outputs["Normal"], shader.inputs["Normal"])
+    else:
+        raise api.PlanError('look.materials: unknown kind "%s" for "%s"' % (kind, spec["id"]))
+    return material
+
+
+def make_ramp(tree, stops):
+    """A colour ramp with the plan's stops. A new ramp has two; the rest are added."""
+    if len(stops) < 2:
+        raise api.PlanError("look.materials: a ramp needs at least two stops")
+    node = tree.nodes.new("ShaderNodeValToRGB")
+    elements = node.color_ramp.elements
+    for index, stop in enumerate(stops):
+        element = elements[index] if index < 2 else elements.new(stop["at"])
+        element.position = stop["at"]
+        element.color = rgba(stop["color"])
+    return node
+
+
+# ---- lights and world ----
+
+def add_light(scene, light, where):
+    kind = light.get("kind")
+    if kind == "sun":
+        data = bpy.data.lights.new(light["id"], type="SUN")
+        data.energy = light["energy"]
+        obj = bpy.data.objects.new(light["id"], data)
+        scene.collection.objects.link(obj)
+        # A light shines along its own -Z axis.
+        obj.rotation_euler = mathutils.Vector(light["direction"]).to_track_quat("-Z", "Y").to_euler()
+    elif kind == "headlamp":
+        if scene.camera is None:
+            raise api.PlanError(
+                '%s: a headlamp rides the camera; list "camera_track" before "look" in "features"' % where)
+        data = bpy.data.lights.new(light["id"], type="AREA")
+        data.energy = light["energy"]
+        data.size = light.get("size", 0.3)
+        obj = bpy.data.objects.new(light["id"], data)
+        scene.collection.objects.link(obj)
+        obj.parent = scene.camera
+        obj.location = (0.0, 0.0, 0.0)
+    else:
+        raise api.PlanError('%s.kind: unknown light "%s"' % (where, kind))
+    api.stamp(obj, "light", light["id"])
+
+
+def set_world(scene, spec):
+    world = bpy.data.worlds.new("CaveWorld")
+    scene.world = world
+    world.use_nodes = True
+    tree = world.node_tree
+    background = next(node for node in tree.nodes if node.type == "BACKGROUND")
+    strength = spec.get("strength", 1.0)
+    background.inputs["Strength"].default_value = strength
+    kind = spec.get("kind", "color")
+    if kind == "color":
+        background.inputs["Color"].default_value = rgba(spec["color"])
+        world.color = [min(1.0, channel * strength) for channel in spec["color"]]  # the draft's background
+    elif kind == "sky":
+        world.color = [min(1.0, channel * strength) for channel in (0.35, 0.55, 0.9)]  # a draft has no sky
+        sky = tree.nodes.new("ShaderNodeTexSky")
+        # Blender 4 calls the physical sky NISHITA; Blender 5 has the two scattering models instead.
+        api.set_enum(sky, "sky_type", ("NISHITA", "MULTIPLE_SCATTERING", "SINGLE_SCATTERING"))
+        tree.links.new(sky.outputs["Color"], background.inputs["Color"])
+    else:
+        raise api.PlanError('look.world.kind: unknown world "%s"' % kind)

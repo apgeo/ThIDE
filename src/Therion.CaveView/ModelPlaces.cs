@@ -2,8 +2,8 @@
 // surveyors commented. Each is named by the path CaveView gives the station, so the page finds
 // every one of them in the model it shows.
 
-using Therion.Blender;
-using Therion.Blender.Parsing;
+using Therion.Cave3D;
+using Therion.Cave3D.Parsing;
 
 namespace Therion.CaveView;
 

@@ -9,7 +9,7 @@ import sys
 import bpy
 import mathutils
 
-SPEC_HASH = "729df23f57cecb5954d45281fb1c77fc89434d52b5a7f0731ef6375c90973ff8"
+SPEC_HASH = "3bedd587bb69e97c18ec91f90b78457ba215c2b1f973f2583fbff22075e050ef"
 
 
 def thide(key, value):
@@ -205,12 +205,24 @@ def _thide_lead(name, loc, radius):
     return _o
 
 LEAD_MARKERS = [
-    ("strong draught", 0, 0, -10, 1.5620499351813308, 1.874459922217597),
-    ("sump.3", -20, 10, -25, 1.5620499351813308, 1.874459922217597),
+    ("strong draught", 0, 0, -10, 1.5620499351813308, 1.874459922217597, "gallery.12"),
+    ("sump.3", -20, 10, -25, 1.5620499351813308, 1.874459922217597, "sump.3"),
 ]
 for _d in LEAD_MARKERS:
-    _dm = _thide_lead("lead:" + _d[0], (_d[1], _d[2], _d[3]), _d[4])
+    _dm = _thide_lead("lead:" + _d[6], (_d[1], _d[2], _d[3]), _d[4])
 # presentation overlays (camera HUD + world markers)
+_HUD_DEPTH = 3
+_hud_w, _hud_h = 960, 540
+_hud_fit = cam_data.sensor_fit
+if _hud_fit == 'AUTO':
+    _hud_fit = 'HORIZONTAL' if _hud_w >= _hud_h else 'VERTICAL'
+_hud_sensor = cam_data.sensor_height if cam_data.sensor_fit == 'VERTICAL' else cam_data.sensor_width
+_hud_half = _HUD_DEPTH * _hud_sensor / 2.0 / cam_data.lens
+if _hud_fit == 'HORIZONTAL':
+    _hud_half_x, _hud_half_y = _hud_half, _hud_half * _hud_h / _hud_w
+else:
+    _hud_half_x, _hud_half_y = _hud_half * _hud_w / _hud_h, _hud_half
+_hud_unit = min(_hud_half_x, _hud_half_y)  # sizes follow the shorter side
 def _thide_hud(name, body, loc, size):
     _c = bpy.data.curves.new(name, type='FONT')
     _c.body = body
@@ -232,7 +244,7 @@ def _thide_nice(v):
             return _f * _base
     return 10.0 * _base
 
-_thide_hud("overlay:title", "Peștera de Aur", (0.0, -1.15, -3.0), 0.16)
+_thide_hud("overlay:title", "Peștera de Aur", (0.0, -_hud_half_y * 0.8, -_HUD_DEPTH), _hud_unit * 0.18)
 _north_r = bounds_radius * 0.05
 _north_pos = (bounds_center.x, bounds_max.y + bounds_radius * 0.15, bounds_max.z)
 bpy.ops.mesh.primitive_cone_add(radius1=_north_r, depth=_north_r * 3.0, location=_north_pos, rotation=(-math.pi / 2.0, 0.0, 0.0))
@@ -264,8 +276,8 @@ for _idx, _col in enumerate(_legend):
     _lp.name = "overlay:legend" + str(_idx)
     _lp.data.materials.append(_lm)
     _lp.parent = cam
-    _lp.scale = (0.05, 0.05, 0.05)
-    _lp.location = (1.15, 0.5 - _idx * 0.13, -3.0)
+    _lp.scale = (_hud_unit * 0.06, _hud_unit * 0.06, _hud_unit * 0.06)
+    _lp.location = (_hud_half_x * 0.88, _hud_half_y * (0.55 - _idx * 0.15), -_HUD_DEPTH)
     _overlays.append(_lp)
 
 # visibility / fade events
