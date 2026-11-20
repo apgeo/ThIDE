@@ -166,6 +166,7 @@ public static class GeometryStage
             Surfaces = model.Surfaces,
             SurfaceBitmaps = model.SurfaceBitmaps,
             Passages = model.Passages,
+            UnknownChunkTypes = model.UnknownChunkTypes,
             TraverseErrors = model.TraverseErrors,
         };
     }

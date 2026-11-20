@@ -7,7 +7,8 @@
 // position+size pairs). Strings are NUL-terminated UTF-8, the stored size includes the
 // NUL, and size <= 1 means "absent". Multiple chunks of the same type are legal and
 // accumulate. Chunk types: 1 survey, 2 station, 3 shot, 4 scrap (walls), 5 surface
-// grid, 6 surface bitmap.
+// grid, 6 surface bitmap. A chunk of any other type (a newer Therion) is skipped: its
+// header already bounds it, and its type is listed in CaveModel.UnknownChunkTypes.
 //
 // The format is unpublished; the layout above was established from Therion's own
 // reader/writer `lxFile.h`/`lxFile.cxx` and writer `thexpmodel.cxx` (GPL-2.0-or-later,
@@ -22,8 +23,9 @@ namespace Therion.Cave3D.Parsing;
 
 /// <summary>
 /// Parses Therion loch <c>.lox</c> files into a <see cref="CaveModel"/>, extracting
-/// every field the format carries (D-19). Throws <see cref="CaveFileFormatException"/>
-/// on malformed input.
+/// every field the format carries. Chunks of a type this reader does not know are
+/// skipped and listed in <see cref="CaveModel.UnknownChunkTypes"/>. Throws
+/// <see cref="CaveFileFormatException"/> on malformed input.
 /// </summary>
 public static class LoxReader
 {
@@ -68,6 +70,7 @@ public static class LoxReader
         var scraps = new List<CaveScrap>();
         var surfaces = new List<CaveSurfaceGrid>();
         var bitmaps = new List<CaveSurfaceBitmap>();
+        var unknownTypes = new List<uint>();
 
         int pos = 0;
         while (pos < data.Length)
@@ -108,7 +111,9 @@ public static class LoxReader
                     ParseSurfaceBitmaps(records, heap, recCount, bitmaps);
                     break;
                 default:
-                    throw Corrupt($"unknown chunk type {type} at offset {pos}");
+                    // A chunk type from a newer Therion: its sizes were checked above, so skip it.
+                    if (!unknownTypes.Contains(type)) unknownTypes.Add(type);
+                    break;
             }
 
             pos += ChunkHeaderSize + (int)recSize + (int)dataSize;
@@ -126,6 +131,7 @@ public static class LoxReader
             Scraps = scraps,
             Surfaces = surfaces,
             SurfaceBitmaps = bitmaps,
+            UnknownChunkTypes = unknownTypes,
         };
     }
 
