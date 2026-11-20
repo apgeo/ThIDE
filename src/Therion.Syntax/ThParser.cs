@@ -41,7 +41,8 @@ public sealed class ThParser
         int cursor = 0;
         var children = ParseBlockBody(
             lines, ref cursor, filePath, options,
-            blockTerminator: null, blockKeyword: null, parentBlock: null, diagnostics);
+            blockTerminator: null, blockKeyword: null, parentBlock: null, diagnostics,
+            enclosingTerminators: NoTerminators);
 
         var fileSpan = TherionTokenizer.WholeFileSpan(filePath, sourceText);
 
@@ -63,9 +64,17 @@ public sealed class ThParser
         string? blockKeyword,
         string? parentBlock,
         ImmutableArray<Diagnostic>.Builder diagnostics,
-        string? blockId = null)
+        ImmutableHashSet<string> enclosingTerminators,
+        string? blockId = null,
+        bool interleavedData = false)
     {
         var children = ImmutableArray.CreateBuilder<TherionNode>();
+        // Whether the `data` order in force names stations on their own rows (`station … newline
+        // …`): a one-column row is then a station row, not a malformed shot. A group inherits it.
+        // What this block's children see as "open": every enclosing terminator plus our own.
+        var openTerminators = blockTerminator is null
+            ? enclosingTerminators
+            : enclosingTerminators.Add(NormalizeCentrelineAlias(blockTerminator));
 
         while (cursor < lines.Length)
         {
@@ -103,9 +112,12 @@ public sealed class ThParser
                 return children.ToImmutable();
             }
 
-            // If we see a different block terminator while parsing a block, surface it
-            // and stop � caller will report a missing-terminator diagnostic. Only the real
+            // A different block terminator while parsing a block is surfaced. Only the real
             // terminators count: a data row whose station is `END` or `endpoint` is not one.
+            // It ends this block early only when it closes a block that encloses this one (a
+            // missing `endcentreline` before `endsurvey`): the enclosing block consumes it. A
+            // terminator that closes nothing open (`endscrap` inside a survey) is kept here as an
+            // unknown command, so the rest of this block's children are not re-parented.
             if (blockTerminator is not null && IsBlockTerminator(kw))
             {
                 diagnostics.Add(Diagnostic.Create(
@@ -113,7 +125,12 @@ public sealed class ThParser
                     DiagnosticSeverity.Error,
                     $"Expected '{blockTerminator}' to close '{blockKeyword}' but found '{kw}'.",
                     line.Span));
-                return children.ToImmutable();
+                if (enclosingTerminators.Contains(NormalizeCentrelineAlias(kw)))
+                    return children.ToImmutable();
+                // Kept as an unknown command (not a one-column data row inside a centreline).
+                cursor++;
+                children.Add(new UnknownCommand(line.Span, kw, JoinFrom(line, 1)));
+                continue;
             }
 
             TherionStrings.ReportUnterminated(line.Tokens, diagnostics);
@@ -121,7 +138,8 @@ public sealed class ThParser
             // Children see the surrounding context. For most blocks parentBlock == blockKeyword;
             // a context-transparent `group` passes its enclosing context through instead.
             var node = ParseLine(line, lines, ref cursor, filePath, options,
-                parentBlock: parentBlock ?? blockKeyword, diagnostics);
+                parentBlock: parentBlock ?? blockKeyword, diagnostics, openTerminators, interleavedData);
+            if (node is DataCommand data) interleavedData = DataStyles.IsStationInterleaved(data.Fields);
             if (node is not null) children.Add(node);
         }
 
@@ -147,15 +165,17 @@ public sealed class ThParser
         string filePath,
         ParserOptions options,
         string? parentBlock,
-        ImmutableArray<Diagnostic>.Builder diagnostics)
+        ImmutableArray<Diagnostic>.Builder diagnostics,
+        ImmutableHashSet<string> openTerminators,
+        bool interleavedData)
     {
         var kw = line.Keyword;
 
         return kw.ToLowerInvariant() switch
         {
-            "survey"                       => ParseSurvey(line, lines, ref cursor, filePath, options, diagnostics),
-            "centreline" or "centerline"   => ParseCentreline(line, lines, ref cursor, filePath, options, diagnostics),
-            "group"                        => ParseGroup(line, lines, ref cursor, filePath, options, parentBlock, diagnostics),
+            "survey"                       => ParseSurvey(line, lines, ref cursor, filePath, options, diagnostics, openTerminators),
+            "centreline" or "centerline"   => ParseCentreline(line, lines, ref cursor, filePath, options, diagnostics, openTerminators),
+            "group"                        => ParseGroup(line, lines, ref cursor, filePath, options, parentBlock, diagnostics, openTerminators, interleavedData),
             "surface"                      => ParseSurface(line, lines, ref cursor, diagnostics, options),
             "scan"                         => ParseScan(line, lines, ref cursor, diagnostics, options),
             "map"                          => ParseMap(line, lines, ref cursor, diagnostics, options),
@@ -201,7 +221,7 @@ public sealed class ThParser
                                            => new UnknownCommand(line.Span, line.Keyword, JoinFrom(line, 1)),
             // `comment … endcomment` — a multi-line comment block (consumed opaquely, see below).
             "comment"                      => ParseCommentBlock(line, lines, ref cursor),
-            _ => ParseViaRegistryOrFallback(line, parentBlock, options, filePath, diagnostics),
+            _ => ParseViaRegistryOrFallback(line, parentBlock, options, filePath, diagnostics, interleavedData),
         };
     }
 
@@ -211,7 +231,7 @@ public sealed class ThParser
     /// </summary>
     private TherionNode ParseViaRegistryOrFallback(
         LogicalLine line, string? parentBlock, ParserOptions options, string filePath,
-        ImmutableArray<Diagnostic>.Builder diagnostics)
+        ImmutableArray<Diagnostic>.Builder diagnostics, bool interleavedData)
     {
         if (_registry is not null && _registry.TryGet(line.Keyword, out var handler))
         {
@@ -231,7 +251,7 @@ public sealed class ThParser
                     line.Span));
             }
         }
-        return ParseUnknownOrDataRow(line, parentBlock, options, diagnostics);
+        return ParseUnknownOrDataRow(line, parentBlock, options, diagnostics, interleavedData);
     }
 
     /// <summary>
@@ -240,7 +260,7 @@ public sealed class ThParser
     /// </summary>
     private TherionNode ParseUnknownOrDataRow(
         LogicalLine line, string? parentBlock, ParserOptions options,
-        ImmutableArray<Diagnostic>.Builder diagnostics)
+        ImmutableArray<Diagnostic>.Builder diagnostics, bool interleavedData)
     {
         if (parentBlock is not null &&
             (string.Equals(parentBlock, "centreline", StringComparison.OrdinalIgnoreCase) ||
@@ -253,7 +273,8 @@ public sealed class ThParser
             // would otherwise swallow silently. Corpus-verified safe: across 2362 .th files / ~830k
             // rows the ONLY 1-column rows are genuine errors — deeper arity checks aren't done here
             // because `data … newline …` formats legitimately produce short continuation lines.
-            if (values.Length < 2)
+            // Under a `data … station …` order a lone station name is exactly such a line.
+            if (values.Length < 2 && !interleavedData)
                 diagnostics.Add(Diagnostic.Create(
                     DiagnosticCodes.MalformedDataRow,
                     options.Mode == ParserMode.Strict ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
@@ -274,7 +295,8 @@ public sealed class ThParser
         ref int cursor,
         string filePath,
         ParserOptions options,
-        ImmutableArray<Diagnostic>.Builder diagnostics)
+        ImmutableArray<Diagnostic>.Builder diagnostics,
+        ImmutableHashSet<string> enclosingTerminators)
     {
         var (name, rest) = HeadAndRest(line, fromIndex: 1);
         if (line.Tokens.Length > 1 && TherionIdentifiers.FirstIllegal(name) is { } bad)
@@ -285,7 +307,7 @@ public sealed class ThParser
                 line.Tokens[1].Span));
         var inner = ParseBlockBody(lines, ref cursor, filePath, options,
             blockTerminator: "endsurvey", blockKeyword: "survey", parentBlock: "survey", diagnostics,
-            blockId: name);
+            enclosingTerminators, blockId: name);
 
         var endSpan = inner.Length > 0 ? inner[^1].Span : line.Span;
         var fullSpan = SpanUnion(line.Span, endSpan);
@@ -304,11 +326,13 @@ public sealed class ThParser
         ref int cursor,
         string filePath,
         ParserOptions options,
-        ImmutableArray<Diagnostic>.Builder diagnostics)
+        ImmutableArray<Diagnostic>.Builder diagnostics,
+        ImmutableHashSet<string> enclosingTerminators)
     {
         var rest = JoinFrom(line, 1);
         var inner = ParseBlockBody(lines, ref cursor, filePath, options,
-            blockTerminator: "endcentreline", blockKeyword: line.Keyword, parentBlock: "centreline", diagnostics);
+            blockTerminator: "endcentreline", blockKeyword: line.Keyword, parentBlock: "centreline", diagnostics,
+            enclosingTerminators);
 
         var endSpan = inner.Length > 0 ? inner[^1].Span : line.Span;
         return new CentrelineCommand(SpanUnion(line.Span, endSpan), rest, inner, IsTerminated: true);
@@ -452,10 +476,13 @@ public sealed class ThParser
         string filePath,
         ParserOptions options,
         string? parentBlock,
-        ImmutableArray<Diagnostic>.Builder diagnostics)
+        ImmutableArray<Diagnostic>.Builder diagnostics,
+        ImmutableHashSet<string> enclosingTerminators,
+        bool interleavedData)
     {
         var inner = ParseBlockBody(lines, ref cursor, filePath, options,
-            blockTerminator: "endgroup", blockKeyword: "group", parentBlock: parentBlock, diagnostics);
+            blockTerminator: "endgroup", blockKeyword: "group", parentBlock: parentBlock, diagnostics,
+            enclosingTerminators, interleavedData: interleavedData);
         var endSpan = inner.Length > 0 ? inner[^1].Span : line.Span;
         return new GroupCommand(SpanUnion(line.Span, endSpan), inner, IsTerminated: true);
     }
@@ -1259,6 +1286,9 @@ public sealed class ThParser
     };
 
     private static bool IsBlockTerminator(string kw) => BlockTerminators.Contains(kw);
+
+    private static readonly ImmutableHashSet<string> NoTerminators =
+        ImmutableHashSet.Create<string>(StringComparer.OrdinalIgnoreCase);
 
     // Therion treats "centerline" and "centreline" (and their "end*" forms) as equivalent.
     private static string NormalizeCentrelineAlias(string kw) =>

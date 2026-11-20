@@ -80,6 +80,11 @@ public sealed class CaveModel
     /// <summary>Passage cross-section tubes (<c>.3d</c> only).</summary>
     public IReadOnlyList<CavePassage> Passages { get; init; } = [];
 
+    /// <summary>Chunk types a <c>.lox</c> file carried that the reader does not know
+    /// (written by a newer Therion), in first-seen order, each once. Those chunks were
+    /// skipped; everything else was read. Empty for <c>.3d</c>.</summary>
+    public IReadOnlyList<uint> UnknownChunkTypes { get; init; } = [];
+
     /// <summary>Per-traverse loop-closure error info (<c>.3d</c> only).</summary>
     public IReadOnlyList<CaveTraverseError> TraverseErrors { get; init; } = [];
 

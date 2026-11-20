@@ -112,6 +112,61 @@ public class GeometryStageTests
     }
 
     [Fact]
+    public void Stage_Recenter_MovesSurfacesAndBitmapsByTheSameDelta()
+    {
+        var grid = new CaveSurfaceGrid
+        {
+            Id = 1, Width = 2, Height = 2,
+            Calibration = [1000.0, 2000.0, 10, 0, 0, 10], Heights = [300.0, 300, double.NaN, 310],
+        };
+        var bitmap = new CaveSurfaceBitmap
+        {
+            SurfaceId = 1, Calibration = [995.0, 1995.0, 0.5, 0, 0, 0.5], Data = [1, 2, 3],
+        };
+        var model = new CaveModel
+        {
+            SourceFormat = CaveSourceFormat.Lox,
+            Stations =
+            [
+                new CaveStation { Id = 0, Name = "0", Position = new CaveVector3(1000, 2000, 300) },
+                new CaveStation { Id = 1, Name = "1", Position = new CaveVector3(1010, 2010, 300) },
+            ],
+            Surfaces = [grid],
+            SurfaceBitmaps = [bitmap],
+        };
+
+        var result = GeometryStage.Build(model, new GeometryOptions { Recenter = true });
+
+        Assert.Equal(new CaveVector3(1005, 2005, 300), result.Offset); // surfaces do not move the offset
+        var g = Assert.Single(result.RecenteredModel.Surfaces);
+        Assert.Equal(new[] { -5.0, -5.0, 10, 0, 0, 10 }, g.Calibration);
+        Assert.Equal(0.0, g.Heights[0]);
+        Assert.True(double.IsNaN(g.Heights[2]));
+        Assert.Equal(10.0, g.Heights[3]);
+        var b = Assert.Single(result.RecenteredModel.SurfaceBitmaps);
+        Assert.Equal(new[] { -10.0, -10.0, 0.5, 0, 0, 0.5 }, b.Calibration);
+        Assert.Same(bitmap.Data, b.Data);
+        // The station and the grid point it sits on still coincide after recentring.
+        Assert.Equal(result.RecenteredModel.Stations[0].Position,
+            new CaveVector3(g.Calibration[0], g.Calibration[1], g.Heights[0]));
+        // The input model is not changed.
+        Assert.Equal(new[] { 1000.0, 2000.0, 10, 0, 0, 10 }, grid.Calibration);
+        Assert.Equal(300.0, grid.Heights[0]);
+    }
+
+    [Fact]
+    public void Stage_Recenter_KeepsUnknownChunkTypes()
+    {
+        var model = new CaveModel
+        {
+            Stations = [new CaveStation { Id = 0, Name = "a", Position = new CaveVector3(1000, 2000, 100) }],
+            UnknownChunkTypes = [7u],
+        };
+        var result = GeometryStage.Build(model, new GeometryOptions { Recenter = true });
+        Assert.Equal(new uint[] { 7 }, result.RecenteredModel.UnknownChunkTypes);
+    }
+
+    [Fact]
     public void Stage_RecenterDisabled_KeepsWorldCoordinates()
     {
         var model = new CaveModel

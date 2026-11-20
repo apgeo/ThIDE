@@ -196,11 +196,57 @@ public class LoxReaderTests
     }
 
     [Fact]
-    public void UnknownChunkType_Throws()
+    public void UnknownChunkType_IsSkippedAndListed()
     {
         var bytes = new byte[16];
         bytes[0] = 99; // type 99, zero records/data
+        var model = LoxReader.Read(bytes);
+        Assert.Equal(new uint[] { 99 }, model.UnknownChunkTypes);
+        Assert.Empty(model.Stations);
+    }
+
+    [Fact]
+    public void UnknownChunkWithPayload_BetweenKnownChunks_DoesNotHideThem()
+    {
+        var valid = LoxWriter.Write(BuildSyntheticModel());
+        // Unknown chunks (type 7 and 42, 8 record bytes + 5 data bytes each) before and
+        // after the known ones: the known chunks must all still be read.
+        static byte[] Unknown(uint type)
+        {
+            var c = new byte[16 + 8 + 5];
+            System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian(c, type);
+            System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian(c.AsSpan(4), 8);
+            System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian(c.AsSpan(8), 1);
+            System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian(c.AsSpan(12), 5);
+            for (int i = 16; i < c.Length; i++) c[i] = 0xAB;
+            return c;
+        }
+        var bytes = Unknown(7).Concat(valid).Concat(Unknown(42)).Concat(Unknown(7)).ToArray();
+
+        var expected = LoxReader.Read(valid);
+        var model = LoxReader.Read(bytes);
+
+        Assert.Equal(expected.Stations.Count, model.Stations.Count);
+        Assert.Equal(expected.Shots.Count, model.Shots.Count);
+        Assert.Equal(expected.Scraps.Count, model.Scraps.Count);
+        Assert.Equal(expected.Surfaces.Count, model.Surfaces.Count);
+        Assert.Equal(expected.SurfaceBitmaps.Count, model.SurfaceBitmaps.Count);
+        Assert.Equal(new uint[] { 7, 42 }, model.UnknownChunkTypes);
+        Assert.Empty(expected.UnknownChunkTypes);
+        // A file that starts with an unknown chunk is still recognised as .lox by content.
+        Assert.Equal(CaveSourceFormat.Lox, CaveModelReader.Detect(bytes));
+        Assert.Equal(expected.Stations.Count, CaveModelReader.Read(bytes).Stations.Count);
+    }
+
+    [Fact]
+    public void UnknownChunkDeclaringMoreBytesThanPresent_StillThrows()
+    {
+        var bytes = new byte[16];
+        bytes[0] = 7;
+        bytes[12] = 32; // 32 data bytes that are not there
         Assert.Throws<CaveFileFormatException>(() => LoxReader.Read(bytes));
+        // …and such a header is not taken for a .lox by content either.
+        Assert.Equal(CaveSourceFormat.Unknown, CaveModelReader.Detect(bytes));
     }
 
     [Fact]
