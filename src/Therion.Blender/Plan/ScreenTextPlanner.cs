@@ -241,9 +241,10 @@ public static class ScreenTextPlanner
         // The picture's width shows sensor / lens metres at one metre from the camera.
         int step = Math.Max(1, (end - first) / 200);
         var perMetre = new List<double>();
+        var path = new CameraPath(camera);
         for (int frame = first; frame < end; frame += step)
         {
-            var pose = PoseAt(camera, frame);
+            var pose = path.At(frame);
             double distance = (pose.Target - pose.Eye).Length;
             if (distance > 1e-6) perMetre.Add(pose.Lens / (CameraPlanner.SensorWidthMm * distance));
         }
@@ -298,10 +299,11 @@ public static class ScreenTextPlanner
     {
         ArgumentNullException.ThrowIfNull(camera);
         var headings = new double[Math.Max(frames, 0)];
+        var path = new CameraPath(camera);
         double last = 0;
         for (int frame = 1; frame <= frames; frame++)
         {
-            var pose = PoseAt(camera, frame);
+            var pose = path.At(frame);
             var look = pose.Target - pose.Eye;
             double level = Math.Sqrt(look.X * look.X + look.Y * look.Y);
             double heading = level <= 1e-9 * Math.Max(1.0, look.Length) ? 0.0 : Math.Atan2(look.X, look.Y) * 180.0 / Math.PI;
@@ -342,30 +344,133 @@ public static class ScreenTextPlanner
 
     /// <summary>
     /// Where the camera is at a frame, as Blender puts it between the poses of the plan: on the
-    /// straight line between two poses, at an even pace for a linear track and eased in and out
-    /// of each pose for an eased one; a track that jumps holds each pose until the next.
+    /// straight line between two poses at an even pace for a linear track; eased in and out for
+    /// an eased one (see <see cref="EasedSlopes"/>); a track that jumps holds each pose until the
+    /// next.
     /// </summary>
     internal static (CaveVector3 Eye, CaveVector3 Target, double Lens) PoseAt(CameraPlan camera, int frame)
-    {
-        var keys = camera.Keyframes;
-        if (keys.Count == 0) return (new CaveVector3(0, -1, 0), CaveVector3.Zero, camera.FocalLength);
-        int next = 0;
-        while (next < keys.Count && keys[next].Frame <= frame) next++;
-        if (next == 0) return Pose(keys[0], camera);
-        var before = keys[next - 1];
-        if (next == keys.Count || camera.Interpolation == KeyInterpolation.Constant || before.Frame == frame)
-            return Pose(before, camera);
+        => new CameraPath(camera).At(frame);
 
-        var after = keys[next];
-        double u = (frame - before.Frame) / (double)(after.Frame - before.Frame);
-        if (camera.Interpolation == KeyInterpolation.Bezier) u = u * u * (3 - 2 * u);
-        var (eye, target, lens) = Pose(before, camera);
-        var (eye2, target2, lens2) = Pose(after, camera);
-        return (eye + (eye2 - eye) * u, target + (target2 - target) * u, lens + (lens2 - lens) * u);
+    /// <summary>The poses of a camera plan, ready to be asked for the camera at any frame.</summary>
+    private sealed class CameraPath
+    {
+        private readonly CameraPlan _camera;
+        private readonly IReadOnlyList<CameraKeyframe> _keys;
+        private readonly double[][]? _values;   // per channel: eye x, y, z, target x, y, z, lens
+        private readonly double[][]? _slopes;
+
+        public CameraPath(CameraPlan camera)
+        {
+            _camera = camera;
+            _keys = camera.Keyframes;
+            if (camera.Interpolation != KeyInterpolation.Bezier || _keys.Count < 2) return;
+            double[] frames = _keys.Select(k => (double)k.Frame).ToArray();
+            _values = new double[7][];
+            _slopes = new double[7][];
+            for (int channel = 0; channel < 7; channel++)
+            {
+                _values[channel] = _keys.Select(k => Channel(k, channel)).ToArray();
+                _slopes[channel] = EasedSlopes(frames, _values[channel]);
+            }
+        }
+
+        public (CaveVector3 Eye, CaveVector3 Target, double Lens) At(int frame)
+        {
+            if (_keys.Count == 0) return (new CaveVector3(0, -1, 0), CaveVector3.Zero, _camera.FocalLength);
+            int next = 0;
+            while (next < _keys.Count && _keys[next].Frame <= frame) next++;
+            if (next == 0) return Pose(_keys[0]);
+            var before = _keys[next - 1];
+            if (next == _keys.Count || _camera.Interpolation == KeyInterpolation.Constant || before.Frame == frame)
+                return Pose(before);
+
+            var after = _keys[next];
+            double span = after.Frame - before.Frame, u = (frame - before.Frame) / span;
+            if (_values is null || _slopes is null)
+            {
+                var (eye, target, lens) = Pose(before);
+                var (eye2, target2, lens2) = Pose(after);
+                return (eye + (eye2 - eye) * u, target + (target2 - target) * u, lens + (lens2 - lens) * u);
+            }
+
+            // A cubic through the two poses with the slopes Blender gives them.
+            double u2 = u * u, u3 = u2 * u;
+            double h00 = 2 * u3 - 3 * u2 + 1, h10 = u3 - 2 * u2 + u, h01 = -2 * u3 + 3 * u2, h11 = u3 - u2;
+            double Eased(int channel) =>
+                h00 * _values[channel][next - 1] + h10 * span * _slopes[channel][next - 1]
+                + h01 * _values[channel][next] + h11 * span * _slopes[channel][next];
+            return (new CaveVector3(Eased(0), Eased(1), Eased(2)), new CaveVector3(Eased(3), Eased(4), Eased(5)), Eased(6));
+        }
+
+        private (CaveVector3, CaveVector3, double) Pose(CameraKeyframe key)
+            => (key.Location, key.Target, Channel(key, 6));
+
+        private double Channel(CameraKeyframe key, int channel) => channel switch
+        {
+            0 => key.Location.X, 1 => key.Location.Y, 2 => key.Location.Z,
+            3 => key.Target.X, 4 => key.Target.Y, 5 => key.Target.Z,
+            _ => _camera.KeyframeFocal ? key.FocalLength ?? _camera.FocalLength : _camera.FocalLength,
+        };
     }
 
-    private static (CaveVector3, CaveVector3, double) Pose(CameraKeyframe key, CameraPlan camera)
-        => (key.Location, key.Target, camera.KeyframeFocal ? key.FocalLength ?? camera.FocalLength : camera.FocalLength);
+    /// <summary>
+    /// The slope of an eased curve at each of its keys, as Blender's animation curves have it
+    /// for keys with automatic handles (its default): level at the first and the last key and at
+    /// every key that is a peak or a dip, and elsewhere such that the curve's acceleration does
+    /// not jump at the key. A slope is then held back to three times the slope of the straight
+    /// line to either neighbour, which keeps the curve from overshooting them.
+    /// </summary>
+    internal static double[] EasedSlopes(IReadOnlyList<double> frames, IReadOnlyList<double> values)
+    {
+        int n = frames.Count;
+        var slopes = new double[n];
+        if (n < 3) return slopes;
+        var free = new bool[n];
+        for (int i = 1; i < n - 1; i++)
+        {
+            double before = values[i - 1] - values[i], after = values[i + 1] - values[i];
+            free[i] = !((before <= 0 && after <= 0) || (before >= 0 && after >= 0));
+        }
+
+        for (int first = 1; first < n - 1; first++)
+        {
+            if (!free[first]) continue;
+            int last = first;
+            while (last + 1 < n - 1 && free[last + 1]) last++;
+
+            // The keys from first to last, between two level ones: a tridiagonal system, solved
+            // by elimination. Row i: a·s[i-1] + b·s[i] + c·s[i+1] = d.
+            int count = last - first + 1;
+            var upper = new double[count];
+            var right = new double[count];
+            for (int k = 0; k < count; k++)
+            {
+                int i = first + k;
+                double h0 = frames[i] - frames[i - 1], h1 = frames[i + 1] - frames[i];
+                double a = 1 / h0, c = 1 / h1, b = 2 * (a + c);
+                double d = 3 * ((values[i] - values[i - 1]) / (h0 * h0) + (values[i + 1] - values[i]) / (h1 * h1));
+                if (k > 0)
+                {
+                    b -= a * upper[k - 1];
+                    d -= a * right[k - 1];
+                }
+                upper[k] = c / b;
+                right[k] = d / b;
+            }
+            for (int k = count - 1; k >= 0; k--)
+                slopes[first + k] = right[k] - (k + 1 < count ? upper[k] * slopes[first + k + 1] : 0);
+
+            for (int i = first; i <= last; i++)
+            {
+                double towards = Math.Abs((values[i] - values[i - 1]) / (frames[i] - frames[i - 1]));
+                double onwards = Math.Abs((values[i + 1] - values[i]) / (frames[i + 1] - frames[i]));
+                double limit = 3 * Math.Min(towards, onwards);
+                slopes[i] = Math.Clamp(slopes[i], -limit, limit);
+            }
+            first = last;
+        }
+        return slopes;
+    }
 
     // ---- helpers ----
 

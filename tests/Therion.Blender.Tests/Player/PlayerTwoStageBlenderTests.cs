@@ -349,6 +349,60 @@ public class PlayerTwoStageBlenderTests
     }
 
     [BlenderFact]
+    public async Task TheHeadingsWorkedOutForTheNorthArrow_AreTheOnesBlendersCameraHas_AtEveryFrame()
+    {
+        // The north arrow is turned by headings worked out before Blender starts. They have to be
+        // the camera's own: here Blender is asked where its camera looks, frame by frame.
+        const int Frames = 60;
+        var viewpoints = new CameraSpec
+        {
+            Template = CameraTemplate.Viewpoints,
+            Viewpoints = new ViewpointParams
+            {
+                Viewpoints =
+                [
+                    new CameraViewpoint { Position = new Therion.Cave3D.CaveVector3(-60, -40, 20), Target = new Therion.Cave3D.CaveVector3(0, 0, 0) },
+                    new CameraViewpoint { Position = new Therion.Cave3D.CaveVector3(50, -60, 30), Target = new Therion.Cave3D.CaveVector3(10, 5, -5) },
+                    new CameraViewpoint { Position = new Therion.Cave3D.CaveVector3(120, 40, 45), Target = new Therion.Cave3D.CaveVector3(20, 10, -10) },
+                    new CameraViewpoint { Position = new Therion.Cave3D.CaveVector3(60, 90, 10), Target = new Therion.Cave3D.CaveVector3(0, 10, 0) },
+                ],
+            },
+        };
+        var cases = new (string Name, SceneSpec Spec, double Tolerance)[]
+        {
+            ("orbit", PlanFixtures.Preset("Orbit showcase"), 0.05),
+            ("helix", PlanFixtures.Preset("Helix descent"), 0.05),
+            ("flythrough", PlanFixtures.Preset("Full flythrough"), 0.05),
+            // Blender eases through the poses on curves of its own making, which the planner
+            // works out as well: level at the ends and at every turning point, smooth between.
+            ("eased", PlanFixtures.Preset("Orbit showcase") with { Camera = viewpoints }, 0.05),
+        };
+        foreach (var (name, preset, tolerance) in cases)
+        {
+            var spec = preset with
+            {
+                Labels = new LabelsSpec(),
+                Animation = new AnimationSpec { Fps = 10, DurationSeconds = Frames / 10.0 },
+                Output = new OutputSpec { Kind = OutputKind.Video, Width = 320, Height = 180 },
+            };
+            var headings = ScreenTextPlanner.Headings(
+                Emit.CameraPlanner.PlanPoses(PlanFixtures.WithPaths(spec), Medium.Value.Framing), Frames);
+            var (_, job) = PlayerRunner.WriteJob("stages-headings-" + name, Medium.Value, spec);
+
+            var report = await PlayerRunner.ProbeAsync(job.ScriptPath, new ProbeOptions { Frames = Enumerable.Range(1, Frames).ToList() });
+
+            double worst = 0;
+            foreach (var frame in report.Frames)
+            {
+                var forward = frame.Camera!.Forward;
+                double seen = Math.Atan2(forward[0], forward[1]) * 180 / Math.PI;
+                worst = Math.Max(worst, Math.Abs(Math.IEEERemainder(seen - headings[frame.Frame - 1], 360)));
+            }
+            Assert.True(worst <= tolerance, $"{name}: the heading is off by up to {worst:F3}° (allowed {tolerance}°)");
+        }
+    }
+
+    [BlenderFact]
     public async Task RomanianLetters_AreDrawnWithTheirMarks()
     {
         // One frame for each text: a letter with its mark, then the letter without.

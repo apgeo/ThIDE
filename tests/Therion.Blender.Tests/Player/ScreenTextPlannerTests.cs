@@ -339,6 +339,23 @@ public class ScreenTextPlannerTests
     }
 
     [Fact]
+    public void AnEasedCurve_IsLevelAtItsEndsAndTurningPoints_AndSmoothBetween()
+    {
+        // Two keys: level at both, which is the plain ease in and out.
+        Assert.Equal([0, 0], ScreenTextPlanner.EasedSlopes([1, 11], [0, 10]));
+        // A peak in the middle is level too.
+        Assert.Equal([0, 0, 0], ScreenTextPlanner.EasedSlopes([1, 11, 21], [0, 10, 0]));
+        // A key on the way up, between two level ones ten frames away on either side: the curve
+        // passes it at one and a half times the slope of the straight line.
+        var rising = ScreenTextPlanner.EasedSlopes([1, 11, 21], [0, 10, 20]);
+        Assert.Equal([0, 1.5, 0], rising.Select(s => Math.Round(s, 9)));
+        // Where the straight line to one neighbour is nearly level, the slope is held back to
+        // three times that line's, so the curve does not dip below the neighbour.
+        var held = ScreenTextPlanner.EasedSlopes([1, 11, 21], [0, 0.1, 20]);
+        Assert.Equal(0.03, held[1], 9);
+    }
+
+    [Fact]
     public void Turns_LeaveOutTheFramesThatLieOnTheLineBetweenTheirNeighbours()
     {
         // Steady for ten frames, then twice as fast, then still.
