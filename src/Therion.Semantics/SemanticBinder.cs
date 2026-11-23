@@ -128,6 +128,9 @@ public sealed class SemanticBinder
         // `calibrate` command is part of the same state (and saved and restored by `group` with it).
         var units = initialUnits ?? ReadingUnits.Default;
         TrivialComment? pendingComment = null;
+        // `data … station … newline …` (interleaved): rows alternate between a station row and the
+        // readings of the shot to the next station row. Reset by a new `data` order and by `break`.
+        var interleave = new InterleaveState();
         // The survey these direct children belong to (team/date attach here).
         QualifiedName? currentSurvey = scope.IsEmpty ? null : new QualifiedName(scope);
         foreach (var node in children)
@@ -174,6 +177,14 @@ public sealed class SemanticBinder
                     break;
                 case DataCommand d:
                     currentFields = d;
+                    interleave = new InterleaveState();
+                    break;
+                case BreakCommand:
+                    interleave = new InterleaveState();
+                    break;
+                case DataRow irow when currentFields is { } idata && DataStyles.IsStationInterleaved(idata.Fields):
+                    BindInterleavedRow(irow, idata, ref interleave, ctx, scope, activeFlags,
+                        CombineComments(AdjacentLeadingComment(pendingComment, irow), irow.TrailingComment), units);
                     break;
                 case DataRow row:
                     // A centreline with no `data` command uses Therion's default reading order
@@ -568,18 +579,94 @@ public sealed class SemanticBinder
         if (fromIdx < 0 || toIdx < 0) return;
         if (row.Values.Length <= Math.Max(fromIdx, toIdx)) return;
 
+        BindLeg(row.Values[fromIdx], ValueSpan(row, fromIdx), row.Values[toIdx], ValueSpan(row, toIdx),
+                row, data, ctx, scope, flags, comment, units);
+    }
+
+    /// <summary>
+    /// One row of station-interleaved data (<c>data normal station newline length compass clino</c>).
+    /// A station row names a station (and may carry its depth, count or LRUD); the row after it holds
+    /// the readings of the shot from that station to the station of the next station row. The shot
+    /// is bound when that next station row arrives, with the readings row as its
+    /// <see cref="ShotSymbol.SourceRow"/> and the readings after <c>newline</c> as its
+    /// <see cref="ShotSymbol.FieldDefinition"/>, so column lookups by reading name work on it as on
+    /// any other shot. An order without <c>newline</c> (<c>dimensions station …</c>) has only
+    /// station rows and binds no shots.
+    /// </summary>
+    private void BindInterleavedRow(DataRow row, DataCommand data, ref InterleaveState state, BindContext ctx,
+        ImmutableArray<string> scope, ShotFlags flags, string? comment, ReadingUnits units)
+    {
+        if (!ReferenceEquals(state.Data, data))
+        {
+            var (stationReadings, legReadings) = DataStyles.SplitInterleaved(data.Fields);
+            state = new InterleaveState
+            {
+                Data = data,
+                StationData = new DataCommand(data.Span, data.Style, stationReadings),
+                LegData = legReadings.IsEmpty ? null : new DataCommand(data.Span, data.Style, legReadings),
+            };
+        }
+
+        if (state.ExpectLeg && state.LegData is { } legData)
+        {
+            ValidateRowArity(row, legData, ctx);
+            ValidateRowValues(row, legData, ctx, units.Compass, units.Clino);
+            state.Leg = new PendingLeg(row, flags, comment, units);
+            state.ExpectLeg = false;
+            return;
+        }
+
+        var stationData = state.StationData!;
+        ValidateRowArity(row, stationData, ctx);
+        ValidateRowValues(row, stationData, ctx, units.Compass, units.Clino);
+        int idx = IndexOf(stationData.Fields, "station");
+        if (idx < 0 || idx >= row.Values.Length) return;
+        var raw = row.Values[idx];
+        var span = ValueSpan(row, idx);
+
+        if (state.Previous is { } prev && state.Leg is { } leg)
+            BindLeg(prev.Raw, prev.Span, raw, span, leg.Row, state.LegData!, ctx, scope,
+                leg.Flags, leg.Comment, leg.Units);
+        else if (!IsSplayMarker(raw))
+        {
+            // The first station of a run: declared here, as a shot endpoint would be.
+            var qn = QualifyLocal(raw, scope);
+            DeclareImplicit(ctx, qn, span.IsEmpty ? row.Span : span);
+            AddStationOccurrence(ctx, qn, span, raw, OccurrenceRole.Reference);
+            RecordAtQualifiedStationRef(ctx, raw, span, scope);
+        }
+
+        state.Previous = (raw, span);
+        state.Leg = null;
+        state.ExpectLeg = state.LegData is not null;
+    }
+
+    private sealed record PendingLeg(DataRow Row, ShotFlags Flags, string? Comment, ReadingUnits Units);
+
+    private struct InterleaveState
+    {
+        public DataCommand? Data;
+        public DataCommand? StationData;
+        public DataCommand? LegData;
+        public (string Raw, SourceSpan Span)? Previous;
+        public PendingLeg? Leg;
+        public bool ExpectLeg;
+    }
+
+    /// <summary>Binds one shot between two named endpoints, its readings taken from
+    /// <paramref name="row"/> laid out by <paramref name="data"/>.</summary>
+    private void BindLeg(string fromRaw, SourceSpan fromSpan, string toRaw, SourceSpan toSpan,
+        DataRow row, DataCommand data, BindContext ctx, ImmutableArray<string> scope,
+        ShotFlags flags, string? comment, ReadingUnits units)
+    {
         // A '.' or '-' endpoint is not a station: the shot is a splay (one real station + a
         // ray to a feature/wall). Don't create a phantom station for the marker, and tag the
         // shot as a splay so connectivity skips it (it doesn't extend the survey skeleton).
-        var fromRaw = row.Values[fromIdx];
-        var toRaw   = row.Values[toIdx];
         bool fromSplay = IsSplayMarker(fromRaw);
         bool toSplay   = IsSplayMarker(toRaw);
 
         var from = fromSplay ? QualifiedName.Of(fromRaw) : QualifyLocal(fromRaw, scope);
         var to   = toSplay   ? QualifiedName.Of(toRaw)   : QualifyLocal(toRaw,   scope);
-        var fromSpan = ValueSpan(row, fromIdx);
-        var toSpan   = ValueSpan(row, toIdx);
         // Each endpoint is declared at its own token, not at the shared row span: go-to-definition
         // returns the declaration span and rename / find-refs turn it back into the station, so two
         // stations first written in one row must not share it.

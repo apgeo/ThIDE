@@ -112,7 +112,10 @@ public static class GeometryStage
         return colors;
     }
 
-    /// <summary>World bounds over every kind of geometry a model carries.</summary>
+    /// <summary>World bounds over the cave's own geometry: stations, shots and scraps. Surface
+    /// grids are left out on purpose: a terrain tile is usually far larger than the cave, so
+    /// including it would move the recentre offset (and the bounds a camera frames) off the
+    /// cave. Surfaces are still translated by the same offset, see <see cref="Translate"/>.</summary>
     private static BoundingBox MeasureBounds(CaveModel model)
     {
         var box = BoundingBox.Empty;
@@ -127,9 +130,10 @@ public static class GeometryStage
         return box;
     }
 
-    /// <summary>Returns a copy of the model with all station/shot/scrap coordinates
-    /// shifted by <paramref name="delta"/> (surfaces are passed through unchanged —
-    /// surface meshing lands with surface materials, BA-B7).</summary>
+    /// <summary>Returns a copy of the model with every coordinate shifted by
+    /// <paramref name="delta"/>: stations, shots, scraps, surface grids (calibration origin
+    /// and heights) and surface bitmaps (calibration origin, so an image still lands on its
+    /// grid). Passages and traverse errors carry no coordinates and are passed through.</summary>
     internal static CaveModel Translate(CaveModel model, CaveVector3 delta)
     {
         var stations = new List<CaveStation>(model.Stations.Count);
@@ -148,6 +152,18 @@ public static class GeometryStage
             scraps.Add(scrap with { Points = points });
         }
 
+        var surfaces = new List<CaveSurfaceGrid>(model.Surfaces.Count);
+        foreach (var grid in model.Surfaces)
+        {
+            var heights = new double[grid.Heights.Count];
+            for (int i = 0; i < heights.Length; i++) heights[i] = grid.Heights[i] + delta.Z;
+            surfaces.Add(grid with { Calibration = ShiftOrigin(grid.Calibration, delta), Heights = heights });
+        }
+
+        var bitmaps = new List<CaveSurfaceBitmap>(model.SurfaceBitmaps.Count);
+        foreach (var bitmap in model.SurfaceBitmaps)
+            bitmaps.Add(bitmap with { Calibration = ShiftOrigin(bitmap.Calibration, delta) });
+
         return new CaveModel
         {
             SourcePath = model.SourcePath,
@@ -163,10 +179,22 @@ public static class GeometryStage
             Stations = stations,
             Shots = shots,
             Scraps = scraps,
-            Surfaces = model.Surfaces,
-            SurfaceBitmaps = model.SurfaceBitmaps,
+            Surfaces = surfaces,
+            SurfaceBitmaps = bitmaps,
             Passages = model.Passages,
+            UnknownChunkTypes = model.UnknownChunkTypes,
             TraverseErrors = model.TraverseErrors,
         };
+    }
+
+    // Calibration coefficients are [originX, originY, 2×2 step matrix]: a translation moves
+    // only the origin. A malformed calibration (fewer than two values) is kept as it is.
+    private static IReadOnlyList<double> ShiftOrigin(IReadOnlyList<double> calibration, CaveVector3 delta)
+    {
+        if (calibration.Count < 2) return calibration;
+        var shifted = calibration.ToArray();
+        shifted[0] += delta.X;
+        shifted[1] += delta.Y;
+        return shifted;
     }
 }

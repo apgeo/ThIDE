@@ -21,7 +21,7 @@
 | `TH0033` | lenient | Unknown data style `<style>`. | `ThParser` |
 | `TH0034` | lenient | Unknown data reading `<keyword>`. | `ThParser` |
 | `TH0036` | lenient | `data` reading order names no shot endpoints (`from` and `to`, or `station` / `newline`). | `ThParser` |
-| `TH0037` | lenient | Single-column line in a centreline (`<tok>`): not a valid command or survey shot. | `ThParser` |
+| `TH0037` | lenient | Single-column line in a centreline (`<tok>`): not a valid command or survey shot (not reported under a `data … station …` order, where a lone station name is a station row). | `ThParser` |
 | `TH0038` | lenient | Malformed `sd` (needs `<quantity…> <value> <unit>`). | `ThParser` |
 | `TH0039` | lenient | Malformed `grid-angle` / `vthreshold` (needs a numeric value). | `ThParser` |
 | `TH0040` | lenient | Malformed `units` (unknown quantity / missing unit). | `ThParser` |

@@ -109,6 +109,33 @@ public static class DataStyles
         return (from, to);
     }
 
+    /// <summary>
+    /// True when the order names stations on rows of their own (<c>station</c>, thbook
+    /// §centreline/data "interleaved data"), so a shot joins the station rows around it rather
+    /// than naming its <c>from</c>/<c>to</c> ends.
+    /// </summary>
+    public static bool IsStationInterleaved(ImmutableArray<string> readings)
+    {
+        foreach (var r in readings)
+            if (string.Equals(r, "station", StringComparison.OrdinalIgnoreCase)) return true;
+        return false;
+    }
+
+    /// <summary>
+    /// Splits a station-interleaved order at its first <c>newline</c>: the readings of a station
+    /// row (<c>station</c> plus per-station readings such as <c>depth</c> or LRUD) and the
+    /// readings of a shot row. <c>LegReadings</c> is empty when the order has no <c>newline</c>
+    /// (e.g. <c>dimensions station left right up down</c>): every row is then a station row.
+    /// </summary>
+    public static (ImmutableArray<string> StationReadings, ImmutableArray<string> LegReadings)
+        SplitInterleaved(ImmutableArray<string> readings)
+    {
+        for (int i = 0; i < readings.Length; i++)
+            if (string.Equals(readings[i], "newline", StringComparison.OrdinalIgnoreCase))
+                return (readings[..i], readings[(i + 1)..]);
+        return (readings, ImmutableArray<string>.Empty);
+    }
+
     // =====================================================================================
     // data <style> <readings> order validation — direct encoding of Therion's
     // thdata.cxx set_data_data (verified; spec §5.3). Aliases are canonicalized first.

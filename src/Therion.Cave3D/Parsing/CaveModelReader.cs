@@ -40,16 +40,13 @@ public static class CaveModelReader
         if (data.Length >= SurvexMagic.Length && data[..SurvexMagic.Length].SequenceEqual(SurvexMagic))
             return CaveSourceFormat.Survex3d;
 
-        // A .lox file starts straight with a chunk header: type 1-6 and sizes that fit
-        // the file. (An empty file is a valid, empty .lox model.)
+        // A .lox file starts straight with a chunk header whose sizes fit the file. The
+        // type is not limited to the six known ones: a newer Therion may write others,
+        // which the reader skips. (An empty file is a valid, empty .lox model.)
         if (data.Length == 0)
             return CaveSourceFormat.Lox;
-        if (data.Length >= 16)
-        {
-            uint type = System.Buffers.Binary.BinaryPrimitives.ReadUInt32LittleEndian(data);
-            if (type is >= 1 and <= 6)
-                return CaveSourceFormat.Lox;
-        }
+        if (IsPlausibleLoxChunkHeader(data))
+            return CaveSourceFormat.Lox;
 
         var extension = sourcePath is null ? null : Path.GetExtension(sourcePath).ToLowerInvariant();
         return extension switch
@@ -58,5 +55,20 @@ public static class CaveModelReader
             ".3d" => CaveSourceFormat.Survex3d,
             _ => CaveSourceFormat.Unknown,
         };
+    }
+
+    // A known chunk type (1-6) is taken as .lox as before, so a damaged file is still
+    // reported as a corrupt .lox. Any other type must look like a real chunk: non-zero,
+    // a small number, and a record + data size that fit the file.
+    private static bool IsPlausibleLoxChunkHeader(ReadOnlySpan<byte> data)
+    {
+        const int headerSize = 16;
+        if (data.Length < headerSize) return false;
+        uint type = System.Buffers.Binary.BinaryPrimitives.ReadUInt32LittleEndian(data);
+        if (type is >= 1 and <= 6) return true;
+        if (type is 0 or > 0xFFFF) return false;
+        ulong recSize = System.Buffers.Binary.BinaryPrimitives.ReadUInt32LittleEndian(data[4..]);
+        ulong dataSize = System.Buffers.Binary.BinaryPrimitives.ReadUInt32LittleEndian(data[12..]);
+        return headerSize + recSize + dataSize <= (ulong)data.Length;
     }
 }
