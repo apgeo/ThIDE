@@ -203,7 +203,7 @@ public class ScenePlanValidatorTests
 
         AssertBad(Full with { Look = Full.Look with { World = new PlanWorld { Kind = PlanWorldKind.Color } } }, "look.world.color");
         AssertBad(Full with { Look = Full.Look with { World = new PlanWorld { Kind = PlanWorldKind.Sky, Strength = -1 } } }, "look.world.strength");
-        Assert.Empty(ScenePlanValidator.Validate(Full with { Look = Full.Look with { World = null } }));
+        Assert.Empty(ScenePlanValidator.Validate(Full with { Look = Full.Look with { World = null }, Changes = null }));
     }
 
     [Fact]
@@ -235,7 +235,7 @@ public class ScenePlanValidatorTests
         AssertBad(Full with { Labels = labels with { Texts = texts with { Color = new ColorRgb(0, 1.5, 0) } } }, "labels.texts.color");
         AssertBad(Full with { Labels = labels with { Markers = markers with { Strength = -1 } } }, "labels.markers.strength");
         AssertBad(Full with { Features = [.. ScenePlan.BasicFeatures, ScenePlan.BlendFileFeature] }, "labels");
-        Assert.Empty(ScenePlanValidator.Validate(Full with { Labels = new PlanLabels() }));
+        Assert.Empty(ScenePlanValidator.Validate(Full with { Labels = new PlanLabels(), Changes = null }));
     }
 
     [Fact]
@@ -264,7 +264,7 @@ public class ScenePlanValidatorTests
         AssertBad(Full with { Blend = new PlanBlendFile { Path = "scene.blend1" } }, "blend.path");
         AssertBad(Full with { Blend = new PlanBlendFile { Path = "" } }, "blend.path");
         AssertBad(Full with { Features = ScenePlan.BasicFeatures }, "blend");
-        Assert.Empty(ScenePlanValidator.Validate(Full with { Blend = null, Labels = null, Texts = null, TexturedMaterials = null, Features = ScenePlan.BasicFeatures }));
+        Assert.Empty(ScenePlanValidator.Validate(Full with { Blend = null, Labels = null, Changes = null, Texts = null, TexturedMaterials = null, Features = ScenePlan.BasicFeatures }));
         Assert.Empty(ScenePlanValidator.Validate(Full with { Blend = new PlanBlendFile { Path = "Scene.BLEND" }, Output = Full.Output with { Render = false } }));
     }
 

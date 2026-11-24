@@ -10,7 +10,7 @@
     "generator": { "type": "string", "description": "What wrote the plan." },
     "name": { "type": "string" },
     "features": {
-      "description": "The player modules the plan needs, in the order they run. A player without one of them refuses the plan. The player's own: models, camera_track, look, textured_materials, labels, texts, blend_file, output.",
+      "description": "The player modules the plan needs, in the order they run. A player without one of them refuses the plan. The player's own: models, camera_track, look, textured_materials, labels, changes, texts, blend_file, output.",
       "type": "array",
       "minItems": 1,
       "uniqueItems": true,
@@ -276,6 +276,103 @@
         }
       }
     },
+    "changes": {
+      "description": "Played by the module 'changes', after the modules that make what it changes ('look', 'textured_materials', 'labels'): what changes while the clip runs. Each entry names a target and gives every property that changes its keys, in rising order of time, each on a frame of its own within the clip: at 't' seconds the property has the key's value. Between two keys it moves as the later key's 'easing' says; before its first key a property has that key's value and after its last one it keeps it, so a single key is a value for the whole clip. An entry without a target is of the scene itself (worldColor). Two entries do not change the same property of the same thing. Not carried: a change of a material's image.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "target": {
+            "description": "The one thing with this id (a model, a text or a marker of the plan), or every thing with this role (stated in its section, or 'model', 'label', 'marker'). One of the two.",
+            "type": "object",
+            "additionalProperties": false,
+            "minProperties": 1,
+            "maxProperties": 1,
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "role": { "$ref": "#/$defs/role" }
+            }
+          },
+          "visible": {
+            "description": "When the target is shown and hidden; each key says the opposite of the one before it. Before the first key the target is the other way round: a first key that shows it at 2 seconds keeps it hidden until then.",
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["t", "value"],
+              "additionalProperties": false,
+              "properties": {
+                "t": { "type": "number", "minimum": 0 },
+                "value": { "type": "boolean", "description": "true: shown from 't' on; false: hidden." },
+                "fade": { "type": "number", "minimum": 0, "description": "Seconds the change takes, starting at 't': the target appears little by little, or goes little by little and is hidden when it has gone. Evenly. Default 0: at once." }
+              }
+            }
+          },
+          "opacity": {
+            "description": "How much of the target is there, over what its material lets through by itself.",
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["t", "value"],
+              "additionalProperties": false,
+              "properties": {
+                "t": { "type": "number", "minimum": 0 },
+                "value": { "type": "number", "minimum": 0, "maximum": 1, "description": "0: nothing of it; 1: as its material has it." },
+                "easing": { "$ref": "#/$defs/easing" }
+              }
+            }
+          },
+          "tint": {
+            "description": "A colour laid over the target's own colours (a ramp, an image, the colours of its vertices). Light and shadow fall on it as before.",
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["t", "color", "strength"],
+              "additionalProperties": false,
+              "properties": {
+                "t": { "type": "number", "minimum": 0 },
+                "color": { "$ref": "#/$defs/color" },
+                "strength": { "type": "number", "minimum": 0, "maximum": 1, "description": "0: none of the colour; 1: nothing but it." },
+                "easing": { "$ref": "#/$defs/easing" }
+              }
+            }
+          },
+          "scale": {
+            "description": "Of a model only: its stretch along its own X, Y and Z axes, as the model's 'scale' has it; [1, 1, 2] doubles the heights.",
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["t", "value"],
+              "additionalProperties": false,
+              "properties": {
+                "t": { "type": "number", "minimum": 0 },
+                "value": { "type": "array", "items": { "type": "number", "exclusiveMinimum": 0 }, "minItems": 3, "maxItems": 3 },
+                "easing": { "$ref": "#/$defs/easing" }
+              }
+            }
+          },
+          "worldColor": {
+            "description": "Of an entry without a target: the colour of look.world, which must be of the kind 'color'.",
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["t", "value"],
+              "additionalProperties": false,
+              "properties": {
+                "t": { "type": "number", "minimum": 0 },
+                "value": { "$ref": "#/$defs/color" },
+                "easing": { "$ref": "#/$defs/easing" }
+              }
+            }
+          }
+        }
+      }
+    },
     "output": {
       "description": "Played by the module 'output'.",
       "type": "object",
@@ -298,7 +395,6 @@
         "path": { "$ref": "#/$defs/relativePath", "type": "string", "pattern": "\\.[bB][lL][eE][nN][dD]$", "description": "A .blend file, relative to the plan." }
       }
     },
-    "changes": { "type": "array", "description": "Reserved: timed changes of visibility, colour and strength." },
     "annotations": { "type": "array", "description": "Reserved: labels, callouts, markers and photos anchored in the scene." },
     "texts": {
       "description": "Played by the module 'texts': what is written over the picture, in two dimensions. A plan with texts is rendered in two stages: the scene as numbered PNG frames, then those frames with the texts over them, in Blender's video editor, as the output. Places and sizes are shares of the picture: x from its left edge, y from its bottom edge, each 0 to 1. Later items lie over earlier ones.",
@@ -379,6 +475,7 @@
       "minItems": 3,
       "maxItems": 3
     },
+    "easing": { "enum": ["linear", "smooth", "constant"], "description": "How the value gets to this key from the key before it: evenly (linear, the default), eased in and out (smooth: 3x² − 2x³ of the way at the share x of the time), or not at all, so that it jumps at this key's time (constant)." },
     "moduleName": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
     "role": { "type": "string", "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$", "description": "What a label or a text is, for whoever looks for it: lower-case words joined by '-'. The player stamps a label's role on its object (thide_role)." },
     "relativePath": { "type": "string", "minLength": 1, "pattern": "^(?![/\\\\])(?!.*:)(?!(.*[/\\\\])?\\.\\.([/\\\\]|$))" }

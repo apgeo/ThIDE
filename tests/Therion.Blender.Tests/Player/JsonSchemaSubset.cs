@@ -85,6 +85,16 @@ internal static class JsonSchemaSubset
                     }
                     break;
 
+                case "minProperties":
+                    if (value.ValueKind == JsonValueKind.Object && value.EnumerateObject().Count() < k.GetInt32())
+                        errors.Add($"{path}: fewer than {k.GetInt32()} properties");
+                    break;
+
+                case "maxProperties":
+                    if (value.ValueKind == JsonValueKind.Object && value.EnumerateObject().Count() > k.GetInt32())
+                        errors.Add($"{path}: more than {k.GetInt32()} properties");
+                    break;
+
                 case "minItems":
                     if (value.ValueKind == JsonValueKind.Array && value.GetArrayLength() < k.GetInt32())
                         errors.Add($"{path}: fewer than {k.GetInt32()} items");

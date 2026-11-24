@@ -1,7 +1,7 @@
 // scene-plan.json reading and writing. camelCase keys, enums as camelCase words, vectors and
-// colours as [x, y, z] and [r, g, b]. A camera pose, a colour stop, a text, a marker, a thing
-// written over the picture and a turn of its arrow take one line each, so a track of a thousand
-// poses is a thousand lines a person can still read and compare. Lines end
+// colours as [x, y, z] and [r, g, b]. A camera pose, a colour stop, a text, a marker, a key of a
+// change, a thing written over the picture and a turn of its arrow take one line each, so a track
+// of a thousand poses is a thousand lines a person can still read and compare. Lines end
 // in LF on every platform, and numbers are written the same under every culture, so the same plan
 // is the same bytes everywhere.
 //
@@ -48,6 +48,12 @@ public static class ScenePlanSerializer
             new MarkerConverter(),
             new PointConverter(),
             new ScreenItemConverter(),
+            new ChangeTargetConverter(),
+            new VisibleKeyConverter(),
+            new NumberKeyConverter(),
+            new TintKeyConverter(),
+            new VectorKeyConverter(),
+            new ColorKeyConverter(),
         },
     };
 
@@ -171,6 +177,7 @@ public static class ScenePlanSerializer
     private const string LabelIndent = "\n        ";
     private const string ScreenIndent = "\n      ";
     private const string TurnIndent = "\n        ";
+    private const string ChangeKeyIndent = "\n        ";
 
     private static string Num(double value)
     {
@@ -447,9 +454,142 @@ public static class ScenePlanSerializer
                 if (number is { } n) line.Append(", \"").Append(key).Append("\": ").Append(Num(n));
             }
         }
+    }
 
-        /// <summary>An enum's word as the rest of the document writes it.</summary>
-        private static string Word<T>(T value) where T : struct, Enum
-            => JsonNamingPolicy.CamelCase.ConvertName(value.ToString());
+    // ---- changes ----
+
+    /// <summary>An enum's word as the rest of the document writes it.</summary>
+    private static string Word<T>(T value) where T : struct, Enum
+        => JsonNamingPolicy.CamelCase.ConvertName(value.ToString());
+
+    /// <summary>The easing of a key, written only when it is not the even move a key has
+    /// without one.</summary>
+    private static string Easing(PlanEasing easing, JsonSerializerOptions options)
+        => easing == PlanEasing.Linear ? "" : $", \"easing\": {Quoted(Word(easing), options)}";
+
+    private sealed record TargetJson
+    {
+        public string? Id { get; init; }
+        public string? Role { get; init; }
+    }
+
+    private sealed class ChangeTargetConverter : JsonConverter<PlanChangeTarget>
+    {
+        public override PlanChangeTarget Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options)
+        {
+            var target = JsonSerializer.Deserialize<TargetJson>(ref reader, options) ?? throw new JsonException("Expected the target of a change.");
+            return new PlanChangeTarget { Id = target.Id, Role = target.Role };
+        }
+
+        public override void Write(Utf8JsonWriter writer, PlanChangeTarget value, JsonSerializerOptions options)
+        {
+            var parts = new List<string>(2);
+            if (value.Id is { } id) parts.Add($"\"id\": {Quoted(id, options)}");
+            if (value.Role is { } role) parts.Add($"\"role\": {Quoted(role, options)}");
+            writer.WriteRawValue(parts.Count == 0 ? "{}" : "{ " + string.Join(", ", parts) + " }");
+        }
+    }
+
+    private sealed record VisibleKeyJson
+    {
+        public required double T { get; init; }
+        public required bool Value { get; init; }
+        public double Fade { get; init; }
+    }
+
+    private sealed class VisibleKeyConverter : JsonConverter<PlanVisibleKey>
+    {
+        public override PlanVisibleKey Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options)
+        {
+            var key = JsonSerializer.Deserialize<VisibleKeyJson>(ref reader, options) ?? throw new JsonException("Expected a key of a change.");
+            return new PlanVisibleKey(key.T, key.Value, key.Fade);
+        }
+
+        public override void Write(Utf8JsonWriter writer, PlanVisibleKey value, JsonSerializerOptions options)
+        {
+            string fade = value.Fade != 0 ? $", \"fade\": {Num(value.Fade)}" : "";
+            writer.WriteRawValue($"{ChangeKeyIndent}{{ \"t\": {Num(value.T)}, \"value\": {(value.Value ? "true" : "false")}{fade} }}");
+        }
+    }
+
+    private sealed record NumberKeyJson
+    {
+        public required double T { get; init; }
+        public required double Value { get; init; }
+        public PlanEasing Easing { get; init; } = PlanEasing.Linear;
+    }
+
+    private sealed class NumberKeyConverter : JsonConverter<PlanNumberKey>
+    {
+        public override PlanNumberKey Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options)
+        {
+            var key = JsonSerializer.Deserialize<NumberKeyJson>(ref reader, options) ?? throw new JsonException("Expected a key of a change.");
+            return new PlanNumberKey(key.T, key.Value, key.Easing);
+        }
+
+        public override void Write(Utf8JsonWriter writer, PlanNumberKey value, JsonSerializerOptions options)
+            => writer.WriteRawValue(
+                $"{ChangeKeyIndent}{{ \"t\": {Num(value.T)}, \"value\": {Num(value.Value)}{Easing(value.Easing, options)} }}");
+    }
+
+    private sealed record TintKeyJson
+    {
+        public required double T { get; init; }
+        public required ColorRgb Color { get; init; }
+        public required double Strength { get; init; }
+        public PlanEasing Easing { get; init; } = PlanEasing.Linear;
+    }
+
+    private sealed class TintKeyConverter : JsonConverter<PlanTintKey>
+    {
+        public override PlanTintKey Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options)
+        {
+            var key = JsonSerializer.Deserialize<TintKeyJson>(ref reader, options) ?? throw new JsonException("Expected a key of a change.");
+            return new PlanTintKey(key.T, key.Color, key.Strength, key.Easing);
+        }
+
+        public override void Write(Utf8JsonWriter writer, PlanTintKey value, JsonSerializerOptions options)
+            => writer.WriteRawValue(
+                $"{ChangeKeyIndent}{{ \"t\": {Num(value.T)}, \"color\": {Text(value.Color)}, \"strength\": {Num(value.Strength)}{Easing(value.Easing, options)} }}");
+    }
+
+    private sealed record VectorKeyJson
+    {
+        public required double T { get; init; }
+        public required CaveVector3 Value { get; init; }
+        public PlanEasing Easing { get; init; } = PlanEasing.Linear;
+    }
+
+    private sealed class VectorKeyConverter : JsonConverter<PlanVectorKey>
+    {
+        public override PlanVectorKey Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options)
+        {
+            var key = JsonSerializer.Deserialize<VectorKeyJson>(ref reader, options) ?? throw new JsonException("Expected a key of a change.");
+            return new PlanVectorKey(key.T, key.Value, key.Easing);
+        }
+
+        public override void Write(Utf8JsonWriter writer, PlanVectorKey value, JsonSerializerOptions options)
+            => writer.WriteRawValue(
+                $"{ChangeKeyIndent}{{ \"t\": {Num(value.T)}, \"value\": {Text(value.Value)}{Easing(value.Easing, options)} }}");
+    }
+
+    private sealed record ColorKeyJson
+    {
+        public required double T { get; init; }
+        public required ColorRgb Value { get; init; }
+        public PlanEasing Easing { get; init; } = PlanEasing.Linear;
+    }
+
+    private sealed class ColorKeyConverter : JsonConverter<PlanColorKey>
+    {
+        public override PlanColorKey Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options)
+        {
+            var key = JsonSerializer.Deserialize<ColorKeyJson>(ref reader, options) ?? throw new JsonException("Expected a key of a change.");
+            return new PlanColorKey(key.T, key.Value, key.Easing);
+        }
+
+        public override void Write(Utf8JsonWriter writer, PlanColorKey value, JsonSerializerOptions options)
+            => writer.WriteRawValue(
+                $"{ChangeKeyIndent}{{ \"t\": {Num(value.T)}, \"value\": {Text(value.Value)}{Easing(value.Easing, options)} }}");
     }
 }

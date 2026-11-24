@@ -10,11 +10,11 @@
 //
 // The sections: frame and timeline (what every part shares), models, camera, look, output, the
 // optional texturedMaterials (an image draped over a model: a terrain), labels (texts and markers
-// in the scene), texts (what is written over the picture, in two dimensions) and blend (the
-// built scene saved as a Blender file), and features — the player
-// modules the plan needs, in the order they run. Any other section belongs to a module outside
-// this library and travels in Sections; "changes" and "annotations" are reserved names for later
-// versions.
+// in the scene), changes (what appears, goes, fades, takes a tint or is stretched while the clip
+// runs), texts (what is written over the picture, in two dimensions) and blend (the built scene
+// saved as a Blender file), and features — the player modules the plan needs, in the order they
+// run. Any other section belongs to a module outside this library and travels in Sections;
+// "annotations" is a reserved name for a later version.
 //
 // A plan with texts is rendered in two stages. The first renders the scene as numbered PNG
 // frames; the second lays the texts over those frames in Blender's video editor and writes the
@@ -623,6 +623,80 @@ public sealed record PlanScreenTexts
     public IReadOnlyList<PlanScreenItem> Items { get; init; } = [];
 }
 
+/// <summary>How a changing value gets to a key from the key before it.</summary>
+public enum PlanEasing
+{
+    /// <summary>Evenly.</summary>
+    Linear,
+    /// <summary>Eased in and out: 3x² − 2x³ of the way at the share x of the time.</summary>
+    Smooth,
+    /// <summary>Not at all: the value of the key before holds until this key's time.</summary>
+    Constant,
+}
+
+/// <summary>What a change is of: the one thing with <see cref="Id"/>, or every thing with
+/// <see cref="Role"/>. A model, a text and a marker each have an id, and a role (stated, or
+/// "model", "label", "marker"). Exactly one of the two is set.</summary>
+public sealed record PlanChangeTarget
+{
+    public string? Id { get; init; }
+
+    public string? Role { get; init; }
+}
+
+/// <summary>From <see cref="T"/> seconds on the target is shown (<see cref="Value"/> true) or
+/// hidden. With a <see cref="Fade"/> the change starts at <see cref="T"/> and takes that many
+/// seconds: the target appears little by little, or goes little by little and is hidden when it
+/// has gone.</summary>
+public readonly record struct PlanVisibleKey(double T, bool Value, double Fade = 0);
+
+/// <summary>At <see cref="T"/> seconds the number is <see cref="Value"/>.</summary>
+public readonly record struct PlanNumberKey(double T, double Value, PlanEasing Easing = PlanEasing.Linear);
+
+/// <summary>At <see cref="T"/> seconds <see cref="Color"/> lies over the target's own colours by
+/// <see cref="Strength"/>: 0 is none of it, 1 nothing else.</summary>
+public readonly record struct PlanTintKey(double T, ColorRgb Color, double Strength, PlanEasing Easing = PlanEasing.Linear);
+
+/// <summary>At <see cref="T"/> seconds the three numbers are <see cref="Value"/>.</summary>
+public readonly record struct PlanVectorKey(double T, CaveVector3 Value, PlanEasing Easing = PlanEasing.Linear);
+
+/// <summary>At <see cref="T"/> seconds the colour is <see cref="Value"/>.</summary>
+public readonly record struct PlanColorKey(double T, ColorRgb Value, PlanEasing Easing = PlanEasing.Linear);
+
+/// <summary>
+/// What changes of one target while the clip runs: each property that changes has its keys, in
+/// rising order of time. Between two keys the value moves as the later key's easing says; before
+/// its first key a property has that key's value, and after its last one it keeps it, so one key
+/// is a value for the whole clip. A change without a target is of the scene itself
+/// (<see cref="WorldColor"/>).
+/// </summary>
+public sealed record PlanChange
+{
+    /// <summary>Null for a change of the scene itself.</summary>
+    public PlanChangeTarget? Target { get; init; }
+
+    /// <summary>When the target is shown and hidden; each key says the opposite of the one
+    /// before it. Before the first key the target is the other way round: a first key that shows
+    /// it at 2 seconds keeps it hidden until then.</summary>
+    public IReadOnlyList<PlanVisibleKey>? Visible { get; init; }
+
+    /// <summary>How much of the target is there, from 0 (nothing) to 1, over what its material
+    /// lets through by itself.</summary>
+    public IReadOnlyList<PlanNumberKey>? Opacity { get; init; }
+
+    /// <summary>A colour laid over the target's own colours. Light and shadow fall on it as
+    /// before.</summary>
+    public IReadOnlyList<PlanTintKey>? Tint { get; init; }
+
+    /// <summary>A model's stretch along its own axes, as <see cref="PlanModel.Scale"/> has it.
+    /// Only a model has one: the size of a text or a marker is that of its own section.</summary>
+    public IReadOnlyList<PlanVectorKey>? Scale { get; init; }
+
+    /// <summary>The colour of the world (<see cref="PlanWorld.Color"/>), for a change without a
+    /// target. The look's world must be of the kind <see cref="PlanWorldKind.Color"/>.</summary>
+    public IReadOnlyList<PlanColorKey>? WorldColor { get; init; }
+}
+
 public sealed record PlanOutput
 {
     public PlanOutputKind Kind { get; init; } = PlanOutputKind.Video;
@@ -662,6 +736,10 @@ public sealed record ScenePlan
     /// (<see cref="TexturedMaterials"/>).</summary>
     public const string TexturedMaterialsFeature = "textured_materials";
 
+    /// <summary>The module that keys what changes while the clip runs
+    /// (<see cref="Changes"/>).</summary>
+    public const string ChangesFeature = "changes";
+
     /// <summary>The module that writes over the picture (<see cref="Texts"/>), in the second
     /// stage of the render.</summary>
     public const string TextsFeature = "texts";
@@ -674,10 +752,10 @@ public sealed record ScenePlan
     public static readonly IReadOnlyList<string> BasicFeatures = ["models", "camera_track", "look", "output"];
 
     /// <summary>Every module of the player in this library, in the order a plan runs them.
-    /// Labels turn to the camera; the scene is saved when all have built it and before the
-    /// output renders it.</summary>
+    /// Labels turn to the camera; what changes is made by the modules before; the scene is saved
+    /// when all have built it and before the output renders it.</summary>
     public static readonly IReadOnlyList<string> PlayerFeatures =
-        ["models", "camera_track", "look", TexturedMaterialsFeature, LabelsFeature, TextsFeature, BlendFileFeature, "output"];
+        ["models", "camera_track", "look", TexturedMaterialsFeature, LabelsFeature, ChangesFeature, TextsFeature, BlendFileFeature, "output"];
 
     public int Version { get; init; } = BlenderModule.ScenePlanSchemaVersion;
 
@@ -710,6 +788,10 @@ public sealed record ScenePlan
     /// <summary>Texts and markers in the scene; played by the module
     /// <see cref="LabelsFeature"/>.</summary>
     public PlanLabels? Labels { get; init; }
+
+    /// <summary>What changes while the clip runs; played by the module
+    /// <see cref="ChangesFeature"/>, after the modules that make what it changes.</summary>
+    public IReadOnlyList<PlanChange>? Changes { get; init; }
 
     /// <summary>What is written over the picture; played by the module
     /// <see cref="TextsFeature"/> in a second stage, after the frames are rendered.</summary>
