@@ -61,6 +61,13 @@ public static partial class ScenePlanValidator
             NeedsFeature(plan, "labels", ScenePlan.LabelsFeature, Bad);
         }
 
+        // An empty list is what the section's name was reserved with: it needs no module.
+        if (plan.Changes is { Count: > 0 } changes)
+        {
+            ValidateChanges(plan, changes, Bad);
+            NeedsFeature(plan, "changes", ScenePlan.ChangesFeature, Bad);
+        }
+
         if (plan.Texts is { } texts)
         {
             ValidateTexts(texts, Bad);
@@ -356,6 +363,167 @@ public static partial class ScenePlanValidator
                 Id(marker.Id, marker.Role, path);
                 if (!IsFinite(marker.At)) bad(path + ".at", "The position must be finite.");
                 if (!(marker.Radius > 0) || !double.IsFinite(marker.Radius)) bad(path + ".radius", "The radius of a marker must be positive.");
+            }
+        }
+    }
+
+    /// <summary>What a change can name: a model, a text or a marker.</summary>
+    private sealed record Thing(string Id, string Role, bool IsModel, bool HasMaterial);
+
+    private static void ValidateChanges(ScenePlan plan, IReadOnlyList<PlanChange> changes, Action<string, string> bad)
+    {
+        // The things the sections of this library make. A module from elsewhere may make more,
+        // which only the player can know: a plan with one is not held to this list.
+        var draped = (plan.TexturedMaterials ?? []).Where(m => m is not null).SelectMany(m => m.Models).ToHashSet(StringComparer.Ordinal);
+        var things = new List<Thing>();
+        foreach (var model in plan.Models)
+            things.Add(new Thing(model.Id, model.Role ?? "model", IsModel: true,
+                // A GLB may bring a material of its own; a PLY has none.
+                HasMaterial: model.Material is not null || draped.Contains(model.Id)
+                             || model.Path?.EndsWith(".glb", StringComparison.OrdinalIgnoreCase) == true));
+        foreach (var text in plan.Labels?.Texts?.Items ?? [])
+            things.Add(new Thing(text.Id, text.Role ?? "label", IsModel: false, HasMaterial: true));
+        foreach (var marker in plan.Labels?.Markers?.Items ?? [])
+            things.Add(new Thing(marker.Id, marker.Role ?? "marker", IsModel: false, HasMaterial: true));
+        bool knowsTheScene = plan.Features.All(f => ScenePlan.PlayerFeatures.Contains(f, StringComparer.Ordinal));
+
+        var taken = new Dictionary<(string Id, bool IsModel, string Property), int>();
+        for (int i = 0; i < changes.Count; i++)
+        {
+            var change = changes[i];
+            string path = $"changes[{i}]";
+            if (change is null)
+            {
+                bad(path, "A change is missing.");
+                continue;
+            }
+            if (change is { Visible: null, Opacity: null, Tint: null, Scale: null, WorldColor: null })
+                bad(path, "A change needs the keys of at least one property.");
+
+            // ---- the target ----
+            IReadOnlyList<Thing> targets = [];
+            if (change.Target is not { } target)
+            {
+                if (change.Visible is not null || change.Opacity is not null || change.Tint is not null || change.Scale is not null)
+                    bad(path + ".target", "A change of visibility, opacity, tint or scale needs a target.");
+            }
+            else
+            {
+                bool byId = !string.IsNullOrEmpty(target.Id), byRole = !string.IsNullOrEmpty(target.Role);
+                if (byId == byRole)
+                    bad(path + ".target", "A target is an id or a role, one of the two.");
+                else if (byRole && !RoleName().IsMatch(target.Role!))
+                    bad(path + ".target.role", "A role is lower-case letters and digits, in words joined by '-'.");
+                else
+                {
+                    targets = things.Where(t => byId ? t.Id == target.Id : t.Role == target.Role).ToList();
+                    if (targets.Count == 0 && knowsTheScene)
+                        bad(path + (byId ? ".target.id" : ".target.role"),
+                            byId ? $"The plan has no model, text or marker with the id '{target.Id}'."
+                                 : $"The plan has no model, text or marker with the role '{target.Role}'.");
+                }
+                if (change.WorldColor is not null)
+                    bad(path + ".worldColor", "The world's colour is a change without a target.");
+            }
+
+            void Once(string property)
+            {
+                foreach (var thing in targets)
+                    if (!taken.TryAdd((thing.Id, thing.IsModel, property), i))
+                    {
+                        bad($"{path}.{property}", $"changes[{taken[(thing.Id, thing.IsModel, property)]}] changes this of '{thing.Id}' already.");
+                        return;
+                    }
+            }
+            void NeedsMaterial(string property)
+            {
+                if (targets.FirstOrDefault(t => !t.HasMaterial) is { } bare)
+                    bad($"{path}.{property}", $"The model '{bare.Id}' has no material to change; give it one.");
+            }
+
+            // ---- the keys ----
+            if (change.Visible is { } visible)
+            {
+                Once("visible");
+                Times(visible.Select(k => k.T).ToList(), path + ".visible");
+                for (int k = 0; k < visible.Count; k++)
+                {
+                    if (k > 0 && visible[k].Value == visible[k - 1].Value)
+                        bad($"{path}.visible[{k}].value", "A key says the opposite of the key before it.");
+                    if (!(visible[k].Fade >= 0) || !double.IsFinite(visible[k].Fade))
+                        bad($"{path}.visible[{k}].fade", "A fade is in seconds, not negative.");
+                }
+                if (visible.Any(k => k.Fade > 0)) NeedsMaterial("visible");
+            }
+            if (change.Opacity is { } opacity)
+            {
+                Once("opacity");
+                NeedsMaterial("opacity");
+                Times(opacity.Select(k => k.T).ToList(), path + ".opacity");
+                for (int k = 0; k < opacity.Count; k++)
+                    if (!(opacity[k].Value >= 0 && opacity[k].Value <= 1))
+                        bad($"{path}.opacity[{k}].value", "Opacity must be within 0–1.");
+            }
+            if (change.Tint is { } tint)
+            {
+                Once("tint");
+                NeedsMaterial("tint");
+                Times(tint.Select(k => k.T).ToList(), path + ".tint");
+                for (int k = 0; k < tint.Count; k++)
+                {
+                    if (!IsUnitColor(tint[k].Color))
+                        bad($"{path}.tint[{k}].color", "Colour channels must be within 0–1.");
+                    if (!(tint[k].Strength >= 0 && tint[k].Strength <= 1))
+                        bad($"{path}.tint[{k}].strength", "The strength of a tint must be within 0–1.");
+                }
+            }
+            if (change.Scale is { } scale)
+            {
+                Once("scale");
+                if (targets.FirstOrDefault(t => !t.IsModel) is { } label)
+                    bad(path + ".scale", $"Only a model is scaled; the size of '{label.Id}' is that of its own section.");
+                Times(scale.Select(k => k.T).ToList(), path + ".scale");
+                for (int k = 0; k < scale.Count; k++)
+                    if (!(IsFinite(scale[k].Value) && scale[k].Value.X > 0 && scale[k].Value.Y > 0 && scale[k].Value.Z > 0))
+                        bad($"{path}.scale[{k}].value", "The scale must be positive along every axis.");
+            }
+            if (change.WorldColor is { } world)
+            {
+                if (change.Target is null && !taken.TryAdd(("", false, "worldColor"), i))
+                    bad(path + ".worldColor", $"changes[{taken[("", false, "worldColor")]}] changes the world's colour already.");
+                if (plan.Look.World is not { Kind: PlanWorldKind.Color })
+                    bad(path + ".worldColor", "The world's colour changes only when look.world is of the kind 'color'.");
+                Times(world.Select(k => k.T).ToList(), path + ".worldColor");
+                for (int k = 0; k < world.Count; k++)
+                    if (!IsUnitColor(world[k].Value))
+                        bad($"{path}.worldColor[{k}].value", "Colour channels must be within 0–1.");
+            }
+        }
+
+        // The keys of one property: at least one, in rising order, each on a frame of its own
+        // (two on one frame would leave only the later), none after the clip.
+        void Times(IReadOnlyList<double> times, string path)
+        {
+            if (times.Count == 0)
+            {
+                bad(path, "At least one key is needed.");
+                return;
+            }
+            int last = 0;
+            for (int k = 0; k < times.Count; k++)
+            {
+                double t = times[k];
+                if (!(t >= 0) || !double.IsFinite(t))
+                {
+                    bad($"{path}[{k}].t", "A time is in seconds from the start, not negative.");
+                    continue;
+                }
+                int frame = FrameAt(t, plan.Timeline.Fps);
+                if (frame <= last)
+                    bad($"{path}[{k}].t", $"Keys are in rising order of time, each on a frame of its own ({plan.Timeline.Fps} fps).");
+                else if (frame > plan.Timeline.FrameCount)
+                    bad($"{path}[{k}].t", $"The key lies after the last frame ({plan.Timeline.FrameCount} frames at {plan.Timeline.Fps} fps).");
+                last = Math.Max(last, frame);
             }
         }
     }

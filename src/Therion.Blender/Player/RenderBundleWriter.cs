@@ -98,7 +98,6 @@ public static class RenderBundleWriter
     private static readonly Dictionary<string, string> NotCarriedText = new(StringComparer.Ordinal)
     {
         ["lighting.hdriPath"] = "the HDRI image lighting (the scene has a dim plain background instead)",
-        ["labels.events"] = "the timed showing and hiding of labels (they are shown throughout)",
     };
 
     /// <summary>

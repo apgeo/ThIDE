@@ -121,6 +121,29 @@ internal static class PlanFixtures
                 ],
             },
         },
+        Changes =
+        [
+            new PlanChange
+            {
+                Target = new PlanChangeTarget { Role = "station-label" },
+                Visible = [new PlanVisibleKey(0.4, true, 0.6), new PlanVisibleKey(1.6, false)],
+            },
+            new PlanChange
+            {
+                Target = new PlanChangeTarget { Id = "CaveModel" },
+                Opacity = [new PlanNumberKey(0, 1), new PlanNumberKey(2, 0.25, PlanEasing.Smooth)],
+                Tint =
+                [
+                    new PlanTintKey(0.52, new ColorRgb(1, 0.5, 0), 0),
+                    new PlanTintKey(1, new ColorRgb(1, 0.5, 0), 0.7, PlanEasing.Constant),
+                ],
+                Scale = [new PlanVectorKey(0, new CaveVector3(1, 1, 1)), new PlanVectorKey(2, new CaveVector3(1, 1, 2.5), PlanEasing.Smooth)],
+            },
+            new PlanChange
+            {
+                WorldColor = [new PlanColorKey(0, new ColorRgb(0.05, 0.05, 0.05)), new PlanColorKey(1.2, new ColorRgb(0.2, 0.4, 0.8))],
+            },
+        ],
         Texts = new PlanScreenTexts
         {
             Hold = 3, FromBlack = 0.5, ToBlack = 1,

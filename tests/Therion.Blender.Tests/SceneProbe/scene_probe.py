@@ -21,6 +21,11 @@
 #   --sheet-samples N   render samples for the sheet (default 16)
 #   --movie PATH        report a movie file's size, frame count and frame rate; nothing else
 #
+# At every sampled frame the report also has what can change of each mesh, text and curve (hidden
+# or not, its scale, and the numbers the player's "changes" module puts on it for its material:
+# fade, opacity, tint), and the world's colour; and for every material, whether its links make it
+# read those numbers.
+#
 # Objects are told apart by the names the generator gives them (CaveModel, Terrain, Camera,
 # stn:<station>, cmp:<n>, lead:<station>, leadtxt:<station>, overlay:<kind>), or by the role the player stamps on
 # what it makes (the custom property "thide_role").
@@ -240,6 +245,81 @@ def uv_samples(obj):
     return samples
 
 
+# The numbers the player's "changes" module puts on an object for its material to read.
+CHANGE_NUMBERS = (("fade", "thide_fade"), ("opacity", "thide_opacity"), ("tint", "thide_tint"),
+                  ("tintStrength", "thide_tint_strength"))
+
+
+def thing_at(obj, depsgraph):
+    """What can change of an object, as it is at the current frame."""
+    evaluated = obj.evaluated_get(depsgraph)
+    info = {
+        "name": obj.name,
+        "hidden": bool(evaluated.hide_render),
+        "hiddenInViewport": bool(evaluated.hide_viewport),
+        "scale": [round(float(s), 6) for s in evaluated.matrix_world.to_scale()],
+    }
+    for key, name in CHANGE_NUMBERS:
+        value = evaluated.get(name)
+        if value is not None:
+            info[key] = round(float(value), 6) if isinstance(value, (int, float)) else vec(value)
+    return info
+
+
+def world_at(scene, depsgraph):
+    """The world's own colour and strength at the current frame, and the colour the solid view
+    shows; the colour is None when something else gives the background its colour (a sky)."""
+    world = scene.evaluated_get(depsgraph).world
+    if world is None:
+        return None
+    info = {"color": None, "strength": None, "viewportColor": vec(world.color)}
+    if world.node_tree is not None:
+        background = next((node for node in world.node_tree.nodes if node.type == "BACKGROUND"), None)
+        if background is not None:
+            info["strength"] = round(float(background.inputs["Strength"].default_value), 6)
+            if not background.inputs["Color"].is_linked:
+                info["color"] = vec(background.inputs["Color"].default_value[:3])
+    return info
+
+
+def object_number_read(socket):
+    """The name of the object's number a socket reads through an Attribute node, or None."""
+    if socket is None or not socket.is_linked:
+        return None
+    node = socket.links[0].from_node
+    return node.attribute_name if node.type == "ATTRIBUTE" and node.attribute_type == "OBJECT" else None
+
+
+def describe_material(material):
+    """Whether the material reads the numbers of the object it is on: seeThrough when its surface
+    is mixed with a transparent one by the object's fade times its opacity, tinted when the
+    object's tint is mixed over its shader's colour by the tint's strength. Read from the links
+    alone, whatever the nodes are called."""
+    info = {"name": material.name, "seeThrough": False, "tinted": False}
+    tree = material.node_tree
+    outputs = [node for node in tree.nodes if node.type == "OUTPUT_MATERIAL"] if tree is not None else []
+    output = next((node for node in outputs if node.is_active_output), outputs[0] if outputs else None)
+    if output is None or not output.inputs["Surface"].is_linked:
+        return info
+    shader = output.inputs["Surface"].links[0].from_node
+    if shader.type == "MIX_SHADER" and shader.inputs[0].is_linked and shader.inputs[1].is_linked and shader.inputs[2].is_linked:
+        share = shader.inputs[0].links[0].from_node
+        read = set()
+        if share.type == "MATH" and share.operation == "MULTIPLY":
+            read = {object_number_read(share.inputs[0]), object_number_read(share.inputs[1])}
+        if read == {"thide_fade", "thide_opacity"} and shader.inputs[1].links[0].from_node.type == "BSDF_TRANSPARENT":
+            info["seeThrough"] = True
+            shader = shader.inputs[2].links[0].from_node
+    colour = shader.inputs.get("Base Color") or shader.inputs.get("Color")
+    if colour is not None and colour.is_linked:
+        mix = colour.links[0].from_node
+        if mix.type == "MIX" and mix.data_type == "RGBA":
+            by_identifier = {socket.identifier: socket for socket in mix.inputs}
+            info["tinted"] = (object_number_read(by_identifier.get("Factor_Float")) == "thide_tint_strength"
+                              and object_number_read(by_identifier.get("B_Color")) == "thide_tint")
+    return info
+
+
 def in_frame(x, y, depth, camera_data):
     return 0.0 <= x <= 1.0 and 0.0 <= y <= 1.0 and camera_data.clip_start <= depth <= camera_data.clip_end
 
@@ -257,11 +337,13 @@ def frame_coverage(scene, camera, corners):
     return round((max(xs) - min(xs)) * (max(ys) - min(ys)), 6)
 
 
-def sample_frame(scene, frame, model, sampled_vertices, annotations):
+def sample_frame(scene, frame, model, sampled_vertices, annotations, things):
     scene.frame_set(frame)
     depsgraph = bpy.context.evaluated_depsgraph_get()
     fps = scene.render.fps / scene.render.fps_base
     entry = {"frame": frame, "seconds": round((frame - scene.frame_start) / fps, 6)}
+    entry["things"] = [thing_at(obj, depsgraph) for obj in things]
+    entry["world"] = world_at(scene, depsgraph)
     if scene.camera is None:
         return entry
 
@@ -517,7 +599,9 @@ def main():
             {"name": i.name, "path": i.filepath, "size": [i.size[0], i.size[1]], "loaded": bool(i.has_data)}
             for i in bpy.data.images if i.source == "FILE"
         ]
-        report["frames"] = [sample_frame(scene, f, model, sampled_vertices, annotations) for f in frames]
+        report["materials"] = [describe_material(m) for m in sorted(bpy.data.materials, key=lambda m: m.name)]
+        things = [o for o in objects if o.type in GEOMETRY_TYPES]
+        report["frames"] = [sample_frame(scene, f, model, sampled_vertices, annotations, things) for f in frames]
         if args.sheet:
             report["sheet"] = write_contact_sheet(
                 scene, frames, os.path.abspath(args.sheet), size_of(args.sheet_cell), args.sheet_samples, work_dir)

@@ -13,6 +13,7 @@ internal sealed record SceneReport
     public ProbeScene Scene { get; init; } = new();
     public IReadOnlyList<ProbeObject> Objects { get; init; } = [];
     public IReadOnlyList<ProbeImage> Images { get; init; } = [];
+    public IReadOnlyList<ProbeMaterial> Materials { get; init; } = [];
     public IReadOnlyList<ProbeFrame> Frames { get; init; } = [];
     public IReadOnlyList<ProbePixels> Pixels { get; init; } = [];
     public ProbeSheet? Sheet { get; init; }
@@ -30,6 +31,11 @@ internal sealed record SceneReport
                $"The scene has no object named '{name}'. It has: {string.Join(", ", Objects.Select(o => o.Name))}");
 
     public IReadOnlyList<ProbeObject> WithRole(string role) => Objects.Where(o => o.Role == role).ToList();
+
+    public ProbeMaterial Material(string name)
+        => Materials.FirstOrDefault(m => m.Name == name)
+           ?? throw new InvalidOperationException(
+               $"The scene has no material named '{name}'. It has: {string.Join(", ", Materials.Select(m => m.Name))}");
 
     public ProbeFrame Frame(int frame)
         => Frames.FirstOrDefault(f => f.Frame == frame)
@@ -114,6 +120,43 @@ internal sealed record ProbeImage(string Name, string Path, int[] Size, bool Loa
 
 internal sealed record ProbeUvSample(double[] Position, double[] Uv, double[]? ImageColour);
 
+/// <summary>Whether a material reads numbers of the object it is on, as its links have it.</summary>
+/// <param name="SeeThrough">Its surface is mixed with a transparent one by the object's fade
+/// times its opacity.</param>
+/// <param name="Tinted">The object's tint is mixed over its shader's colour by the tint's
+/// strength.</param>
+internal sealed record ProbeMaterial(string Name, bool SeeThrough, bool Tinted);
+
+/// <summary>What can change of a mesh, a text or a curve, as it is at one frame.</summary>
+internal sealed record ProbeThing
+{
+    public string Name { get; init; } = "";
+
+    /// <summary>Hidden from the render at this frame.</summary>
+    public bool Hidden { get; init; }
+    public bool HiddenInViewport { get; init; }
+
+    /// <summary>Its size along its own axes, in the scene.</summary>
+    public double[] Scale { get; init; } = [];
+
+    /// <summary>The numbers its material reads; null when the object has none.</summary>
+    public double? Fade { get; init; }
+    public double? Opacity { get; init; }
+    public double[]? Tint { get; init; }
+    public double? TintStrength { get; init; }
+}
+
+/// <summary>The world at one frame.</summary>
+internal sealed record ProbeWorld
+{
+    /// <summary>The background's own colour; null when something else gives it (a sky).</summary>
+    public double[]? Color { get; init; }
+    public double? Strength { get; init; }
+
+    /// <summary>The colour the solid view, and so a draft, shows.</summary>
+    public double[] ViewportColor { get; init; } = [];
+}
+
 internal sealed record ProbeFrame
 {
     public int Frame { get; init; }
@@ -121,6 +164,16 @@ internal sealed record ProbeFrame
     public ProbeCamera? Camera { get; init; }
     public ProbeModelView? Model { get; init; }
     public IReadOnlyList<ProbeObjectView> Objects { get; init; } = [];
+
+    /// <summary>Every mesh, text and curve of the scene, as it is at this frame.</summary>
+    public IReadOnlyList<ProbeThing> Things { get; init; } = [];
+
+    /// <summary>Null when the scene has no world.</summary>
+    public ProbeWorld? World { get; init; }
+
+    public ProbeThing Thing(string name)
+        => Things.FirstOrDefault(t => t.Name == name)
+           ?? throw new InvalidOperationException($"Frame {Frame} has nothing named '{name}'.");
 
     public ProbeObjectView Object(string name)
         => Objects.FirstOrDefault(o => o.Name == name)

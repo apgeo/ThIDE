@@ -153,6 +153,19 @@ public class BlenderRenderServiceBuilderTests : IDisposable
         Assert.Equal(["labels.overlays.credits", "labels.overlays.captions"], hdri.LeftOut);
 
         Assert.All(BuiltInPresets.All, preset => Assert.Equal(SceneBuilder.Player, SceneBuilders.Choose(preset.Spec).Builder));
+
+        // Labels that are shown, hidden and faded by events are the player's too.
+        var events = Orbit() with
+        {
+            Labels = new LabelsSpec
+            {
+                Stations = new StationLabelSpec { Show = true },
+                Events = [new VisibilityEvent { Target = VisibilityTarget.StationLabels, ShowFrame = 10, FadeSeconds = 1 }],
+            },
+        };
+        Assert.Equal((SceneBuilder.Player, null), (SceneBuilders.Choose(events).Builder, SceneBuilders.Choose(events).Refusal));
+        Assert.Null(SceneBuilders.Choose(events, new RenderOptions { Builder = SceneBuilder.Player }).Refusal);
+        Assert.Equal(SceneBuilder.Player, SceneBuilders.Choose(BuiltInPresets.MapReveal().Spec).Builder);
     }
 
     [Fact]

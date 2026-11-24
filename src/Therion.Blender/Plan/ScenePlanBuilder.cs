@@ -7,10 +7,13 @@
 // planner, and so are the overlays: the title, the scale bar, the north arrow, the depth legend,
 // the credits and corner lines, the captions and the end card become the plan's texts, laid out
 // by ScreenTextPlanner and drawn in two dimensions over the rendered frames. The terrain surface
-// is a second model with a material of its own, which drapes the surface image over it. Not
-// carried, because the player has no module for them: the visibility events of the labels and
-// the HDRI light rig. NotCarried lists what a given spec loses; Notices says what a render of the
-// plan cannot say for itself.
+// is a second model with a material of its own, which drapes the surface image over it. The
+// visibility events of the labels become the plan's changes: each group is shown and hidden on
+// the frames the generated scripts show and hide it on, and where a script grows a group in, the
+// plan fades it in over the same frames. The events of the overlays become the times of the
+// texts, which are drawn where no change of the scene reaches. Not carried, because the player
+// has no module for it: the HDRI light rig. NotCarried lists what a given spec loses; Notices
+// says what a render of the plan cannot say for itself.
 //
 // Positions and colours are rounded to six decimals before they are written. They come through
 // sin, cos and pow, which agree between platforms only to the last bit; a micrometre is far below
@@ -75,11 +78,13 @@ public static class ScenePlanBuilder
 
         var camera = CameraPlanner.PlanPoses(spec, framing);
         var labels = meta is null ? null : Labels(spec, meta);
-        var texts = ScreenTextPlanner.Plan(spec, camera);
+        var texts = OverlayEvents(ScreenTextPlanner.Plan(spec, camera), spec, camera.FrameCount);
+        var changes = Changes(spec, labels, camera.FrameCount);
         var terrain = Terrain(spec);
         var features = ScenePlan.BasicFeatures;
         if (terrain is not null) features = WithFeature(features, ScenePlan.TexturedMaterialsFeature);
         if (labels is not null) features = WithFeature(features, ScenePlan.LabelsFeature);
+        if (changes is not null) features = WithFeature(features, ScenePlan.ChangesFeature);
         if (texts is not null) features = WithFeature(features, ScenePlan.TextsFeature);
         return new ScenePlan
         {
@@ -102,6 +107,7 @@ public static class ScenePlanBuilder
             Look = Look(spec, framing.LocalBounds),
             TexturedMaterials = terrain is null ? null : [terrain],
             Labels = labels,
+            Changes = changes,
             Texts = texts,
             Output = new PlanOutput
             {
@@ -233,7 +239,6 @@ public static class ScenePlanBuilder
         ArgumentNullException.ThrowIfNull(spec);
         var lost = new List<string>();
         if (spec.Lighting.Rig == LightingRig.HdriFile) lost.Add("lighting.hdriPath");
-        if (spec.Labels.Events.Count > 0) lost.Add("labels.events");
         return lost;
     }
 
@@ -346,6 +351,166 @@ public static class ScenePlanBuilder
             },
         };
     }
+
+    // ---- visibility events ----
+
+    /// <summary>One step of a label group's visibility: from <see cref="Frame"/> on it is shown
+    /// or hidden, and takes <see cref="FadeFrames"/> frames to appear.</summary>
+    private readonly record struct VisibilityStep(int Frame, bool Visible, int FadeFrames);
+
+    /// <summary>
+    /// When the events of <paramref name="spec"/> show and hide <paramref name="target"/>, as
+    /// steps that say the opposite of one another in turn; before the first step the group is the
+    /// other way round. A show event shows the group from its frame on and a hide event hides it
+    /// from its frame on, as in a generated script; of two on one frame the later event decides,
+    /// and within one event the hiding. Steps after the clip are left out. Empty when no event
+    /// changes anything.
+    /// </summary>
+    private static List<VisibilityStep> VisibilitySteps(SceneSpec spec, VisibilityTarget target, int frameCount)
+    {
+        var shown = new SortedDictionary<int, bool>();
+        var fades = new Dictionary<int, int>();
+        foreach (var e in spec.Labels.Events.Where(e => e.Target == target))
+        {
+            if (e.ShowFrame is { } show)
+            {
+                shown[show] = true;
+                // The frames a generated script grows the group in over.
+                fades[show] = (int)Math.Round(spec.Animation.Fps * e.FadeSeconds);
+            }
+            if (e.HideFrame is { } hide) shown[hide] = false;
+        }
+        var steps = new List<VisibilityStep>();
+        if (shown.Count == 0) return steps;
+
+        bool before = !shown.First().Value;
+        bool state = before;
+        foreach (var (frame, visible) in shown)
+        {
+            if (frame > frameCount) break;
+            // On the first frame there is no "before": a group that is to appear there is keyed
+            // only when it fades in.
+            bool appearsAtOnce = frame == 1 && visible && fades[frame] == 0;
+            if (visible != state && !appearsAtOnce)
+                steps.Add(new VisibilityStep(frame, visible, visible ? fades[frame] : 0));
+            state = visible;
+        }
+        // A group whose first event lies after the clip stays as it was before it.
+        if (steps.Count == 0 && !before && shown.First().Key > 1) steps.Add(new VisibilityStep(1, false, 0));
+        return steps;
+    }
+
+    /// <summary>The visibility events of the label groups as changes: every group that has
+    /// events and labels in the plan is shown and hidden by the roles of its labels. A lead's
+    /// caption goes with its marker, as in the generated scripts. Null when nothing changes.</summary>
+    private static IReadOnlyList<PlanChange>? Changes(SceneSpec spec, PlanLabels? labels, int frameCount)
+    {
+        if (labels is null || spec.Labels.Events.Count == 0) return null;
+        var roles = (labels.Texts?.Items ?? []).Select(t => t.Role)
+            .Concat((labels.Markers?.Items ?? []).Select(m => m.Role)).ToHashSet(StringComparer.Ordinal);
+        int fps = spec.Animation.Fps;
+        var changes = new List<PlanChange>();
+        foreach (var (target, targetRoles) in new (VisibilityTarget, string[])[]
+                 {
+                     (VisibilityTarget.StationLabels, [StationLabelRole]),
+                     (VisibilityTarget.ComponentLabels, [ComponentLabelRole]),
+                     (VisibilityTarget.LeadMarkers, [LeadMarkerRole, LeadTextRole]),
+                 })
+        {
+            var steps = VisibilitySteps(spec, target, frameCount);
+            if (steps.Count == 0) continue;
+            var keys = new List<PlanVisibleKey>();
+            for (int i = 0; i < steps.Count; i++)
+            {
+                // A fade the next step cuts short ends there.
+                int fade = i + 1 < steps.Count ? Math.Min(steps[i].FadeFrames, steps[i + 1].Frame - steps[i].Frame) : steps[i].FadeFrames;
+                keys.Add(new PlanVisibleKey(Seconds(steps[i].Frame, fps), steps[i].Visible, Rounded(fade / (double)fps)));
+            }
+            foreach (string role in targetRoles)
+                if (roles.Contains(role))
+                    changes.Add(new PlanChange { Target = new PlanChangeTarget { Role = role }, Visible = keys });
+        }
+        return changes.Count == 0 ? null : changes;
+    }
+
+    /// <summary>The roles of the texts that stand for what a generated script draws as overlays
+    /// in the scene, and its visibility events show and hide.</summary>
+    private static readonly string[] OverlayRoles =
+    [
+        ScreenTextPlanner.TitleRole, ScreenTextPlanner.SubtitleRole, ScreenTextPlanner.ScaleBarRole,
+        ScreenTextPlanner.NorthArrowRole, ScreenTextPlanner.DepthLegendRole,
+    ];
+
+    /// <summary>
+    /// The visibility events of the overlays, as the times of the texts that stand for them: the
+    /// title, the scale bar, the north arrow and the depth legend are written over the picture
+    /// in the second stage, where a change of the scene does not reach, and each has a time it
+    /// appears at, a time it goes at and a fade of its own. A text that is shown, hidden and
+    /// shown again is written once for each time it is there. A still has the texts that are
+    /// there on its frame.
+    /// </summary>
+    private static PlanScreenTexts? OverlayEvents(PlanScreenTexts? texts, SceneSpec spec, int frameCount)
+    {
+        if (texts is null) return null;
+        var steps = VisibilitySteps(spec, VisibilityTarget.Overlays, frameCount);
+        if (steps.Count == 0) return texts;
+
+        // The spans the overlays are there for: from a frame, to a frame or to the end.
+        var spans = new List<(int From, int? To, int Fade)>();
+        (int From, int Fade)? open = steps[0].Visible ? null : (1, 0);
+        foreach (var step in steps)
+        {
+            if (step.Visible) open = (step.Frame, step.FadeFrames);
+            else if (open is { } o)
+            {
+                if (step.Frame > o.From) spans.Add((o.From, step.Frame, o.Fade));
+                open = null;
+            }
+        }
+        if (open is { } last) spans.Add((last.From, null, last.Fade));
+
+        int fps = spec.Animation.Fps;
+        var items = new List<PlanScreenItem>();
+        foreach (var item in texts.Items)
+        {
+            if (!OverlayRoles.Contains(item.Role, StringComparer.Ordinal))
+            {
+                items.Add(item);
+                continue;
+            }
+            if (spec.Output.Kind == OutputKind.Still)
+            {
+                if (spans.Any(span => span.From == 1)) items.Add(item);
+                continue;
+            }
+            int pieces = 0;
+            foreach (var (from, to, fade) in spans)
+            {
+                double own = item.Start ?? 0.0, shown = Seconds(from, fps);
+                double start = Math.Max(own, shown);
+                double? hidden = to is { } frame ? Seconds(frame, fps) : null;
+                double? end = item.End is { } e && (hidden is null || e <= hidden) ? e : hidden;
+                if (end is { } stop && stop <= start) continue;
+                bool appears = shown >= own, goes = hidden is not null && end == hidden;
+                double? fadeIn = !appears ? item.FadeIn
+                    : fade > 0 ? Rounded(Math.Min(fade / (double)fps, (end ?? double.MaxValue) - start))
+                    : shown > own ? null : item.FadeIn;
+                items.Add(item with
+                {
+                    Id = pieces++ == 0 ? item.Id : $"{item.Id}#{pieces}",
+                    Start = start > 0 ? Rounded(start) : null,
+                    End = end is { } at ? Rounded(at) : null,
+                    FadeIn = fadeIn,
+                    FadeOut = goes && !(item.End is { } itemEnd && itemEnd <= hidden) ? null : item.FadeOut,
+                });
+            }
+        }
+        var planned = texts with { Items = items };
+        return planned.Items.Count == 0 && planned.Hold == 0 && planned.FromBlack == 0 && planned.ToBlack == 0 ? null : planned;
+    }
+
+    /// <summary>The time a frame starts at: frame 1 is time 0.</summary>
+    private static double Seconds(int frame, int fps) => Rounded((frame - 1) / (double)fps);
 
     /// <summary>An id no other label has: a second label of the same name gets <c>.001</c>,
     /// as Blender names a second object.</summary>

@@ -97,23 +97,25 @@ def set_enum(obj, prop, candidates):
 
 def fcurves(idblock):
     """The animation curves of a datablock: on the action itself up to Blender 4.3, under the
-    channelbag of its action slot from 4.4."""
+    channelbag of its action slot from 4.4. From 4.4 two datablocks may share one action, each
+    with a slot of its own (a world and its node tree do), and the action's own list is then
+    that of its first slot only: the slot is asked first."""
     data = getattr(idblock, "animation_data", None)
     if not data or not data.action:
         return []
-    curves = getattr(data.action, "fcurves", None)
-    if curves:
-        return list(curves)
-    curves = []
-    try:
-        for layer in data.action.layers:
-            for strip in layer.strips:
-                bag = strip.channelbag(data.action_slot)
-                if bag:
-                    curves = list(bag.fcurves) + curves
-    except Exception:
-        return []
-    return curves
+    slot = getattr(data, "action_slot", None)
+    if slot is not None:
+        curves = []
+        try:
+            for layer in data.action.layers:
+                for strip in layer.strips:
+                    bag = strip.channelbag(slot)
+                    if bag:
+                        curves = list(bag.fcurves) + curves
+            return curves
+        except Exception:
+            pass
+    return list(getattr(data.action, "fcurves", None) or [])
 
 
 def set_interpolation(idblock, mode):
